@@ -26,7 +26,7 @@ static void
 _disk_commit_done(u3_disk* log_u)
 {
   c3_d eve_d = log_u->sav_u.eve_d;
-  c3_w len_w = log_u->sav_u.len_w;
+  c3_d len_d = log_u->sav_u.len_d;
   c3_o ret_o = log_u->sav_u.ret_o;
 
 #ifdef VERBOSE_DISK
@@ -44,11 +44,11 @@ _disk_commit_done(u3_disk* log_u)
 #endif
 
   if ( c3y == ret_o ) {
-    log_u->dun_d += len_w;
+    log_u->dun_d += len_d;
   }
 
   if ( log_u->sav_u.don_f ) {
-    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_w - 1), ret_o);
+    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_d - 1), ret_o);
   }
  
   {
@@ -94,7 +94,7 @@ _disk_commit_cb(uv_work_t* ted_u)
 
   log_u->sav_u.ret_o = u3_lmdb_save(log_u->mdb_u,
                                     log_u->sav_u.eve_d,
-                                    log_u->sav_u.len_w,
+                                    log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
                                     log_u->sav_u.siz_i);
 }
@@ -118,7 +118,7 @@ _disk_commit_start(u3_disk* log_u)
 size_t
 u3_disk_etch(u3_disk* log_u,
              u3_noun    eve,
-             c3_l     mug_l,
+             c3_h     mug_h,
              c3_y**   out_y)
 {
   size_t len_i;
@@ -137,10 +137,10 @@ u3_disk_etch(u3_disk* log_u,
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);
 
-    dat_y[0] = mug_l & 0xff;
-    dat_y[1] = (mug_l >> 8) & 0xff;
-    dat_y[2] = (mug_l >> 16) & 0xff;
-    dat_y[3] = (mug_l >> 24) & 0xff;
+    dat_y[0] = mug_h & 0xff;
+    dat_y[1] = (mug_h >> 8) & 0xff;
+    dat_y[2] = (mug_h >> 16) & 0xff;
+    dat_y[3] = (mug_h >> 24) & 0xff;
     u3r_bytes(0, len_w, dat_y + 4, mat);
 
     u3z(mat);
@@ -160,32 +160,32 @@ static c3_o
 _disk_batch(u3_disk* log_u)
 {
   u3_feat* fet_u = log_u->put_u.ext_u;
-  c3_w     len_w = log_u->sen_d - log_u->dun_d;
+  c3_d len_d = log_u->sen_d - log_u->dun_d;
 
-  if ( !len_w || (c3y == log_u->sav_u.ted_o) ) {
+  if ( !len_d || (c3y == log_u->sav_u.ted_o) ) {
     return c3n;
   }
 
-  len_w = c3_min(len_w, 100);
+  len_d = c3_min(len_d, 100);
 
   u3_assert( fet_u );
   u3_assert( (1ULL + log_u->dun_d ) == fet_u->eve_d );
 
   log_u->sav_u.ret_o = c3n;
   log_u->sav_u.eve_d = fet_u->eve_d;
-  log_u->sav_u.len_w = len_w;
+  log_u->sav_u.len_d = len_d;
 
-  for ( c3_w i_w = 0ULL; i_w < len_w; ++i_w) {
+  for ( c3_d i_d = 0ULL; i_d < len_d; ++i_d) {
     u3_assert( fet_u );
-    u3_assert( (log_u->sav_u.eve_d + i_w) == fet_u->eve_d );
+    u3_assert( (log_u->sav_u.eve_d + i_d) == fet_u->eve_d );
 
-    log_u->sav_u.byt_y[i_w] = fet_u->hun_y;
-    log_u->sav_u.siz_i[i_w] = fet_u->len_i;
+    log_u->sav_u.byt_y[i_d] = fet_u->hun_y;
+    log_u->sav_u.siz_i[i_d] = fet_u->len_i;
 
     fet_u  = fet_u->nex_u;
   }
 
-  log_u->hit_w[len_w]++;
+  log_u->hit_h[len_d]++;
 
   return c3y;
 }
@@ -216,12 +216,12 @@ _disk_commit(u3_disk* log_u)
 */
 static void
 _disk_plan(u3_disk* log_u,
-           c3_l     mug_l,
+           c3_h     mug_h,
            u3_noun    job)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
   fet_u->eve_d = ++log_u->sen_d;
-  fet_u->len_i = u3_disk_etch(log_u, job, mug_l, &fet_u->hun_y);
+  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -241,7 +241,7 @@ u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 {
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
-  _disk_plan(log_u, tac_u->mug_l, tac_u->job);
+  _disk_plan(log_u, tac_u->mug_h, tac_u->job);
 
   _disk_commit(log_u);
 }
@@ -275,7 +275,7 @@ u3_disk_sync(u3_disk* log_u)
   if ( c3y == _disk_batch(log_u) ) {
     ret_o = u3_lmdb_save(log_u->mdb_u,
                          log_u->sav_u.eve_d,
-                         log_u->sav_u.len_w,
+                         log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
                          log_u->sav_u.siz_i);
 
@@ -308,7 +308,7 @@ c3_o
 u3_disk_sift(u3_disk* log_u,
              size_t   len_i,
              c3_y*    dat_y,
-             c3_l*    mug_l,
+             c3_h*    mug_h,
              u3_noun*   job)
 {
   if ( 4 >= len_i ) {
@@ -321,7 +321,7 @@ u3_disk_sift(u3_disk* log_u,
 
   //  XX check version in log_u
   //
-  *mug_l = dat_y[0]
+  *mug_h = dat_y[0]
          ^ (dat_y[1] <<  8)
          ^ (dat_y[2] << 16)
          ^ (dat_y[3] << 24);
@@ -340,7 +340,7 @@ u3_disk_sift(u3_disk* log_u,
 struct _cd_list {
   u3_disk* log_u;
   u3_noun    eve;
-  c3_l     mug_l;
+  c3_h     mug_h;
 };
 
 /* _disk_read_list_cb(): lmdb read callback, invoked for each event in order
@@ -353,13 +353,13 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 
   {
     u3_noun job;
-    c3_l  mug_l;
+    c3_h  mug_h;
 
-    if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
+    if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_h, &job) ) {
       return c3n;
     }
 
-    ven_u->mug_l = mug_l;
+    ven_u->mug_h = mug_h;
     ven_u->eve   = u3nc(job, ven_u->eve);
   }
 
@@ -369,7 +369,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 /* u3_disk_read_list(): synchronously read a cons list of events.
 */
 u3_weak
-u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
+u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_h* mug_h)
 {
   struct _cd_list ven_u = { log_u, u3_nul, 0 };
 
@@ -382,7 +382,7 @@ u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
     return u3_none;
   }
 
-  *mug_l = ven_u.mug_l;
+  *mug_h = ven_u.mug_h;
   return u3kb_flop(ven_u.eve);
 }
 
@@ -440,7 +440,7 @@ u3_disk_walk_step(u3_disk_walk* wok_u, u3_fact* tac_u)
 
   if ( c3n == u3_disk_sift(log_u, len_i,
                            (c3_y*)buf_v,
-                           &tac_u->mug_l,
+                           &tac_u->mug_h,
                            &tac_u->job) )
   {
     fprintf(stderr, "disk: (%" PRIu64 "): sift fail\r\n", tac_u->eve_d);
@@ -462,15 +462,15 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_h len_h, c3_y* byt_y)
 {
   //  strip trailing zeroes.
   //
-  while ( len_w && !byt_y[len_w - 1] ) {
-    len_w--;
+  while ( len_h && !byt_y[len_h - 1] ) {
+    len_h--;
   }
 
-  return u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
+  return u3_lmdb_save_meta(mdb_u, key_c, len_h, byt_y);
 }
 
 /* u3_disk_save_meta(): save metadata.
@@ -478,14 +478,14 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
-  u3_assert( c3y == u3a_is_cat(met_u->lif_w) );
+  u3_assert( c3y == u3a_is_cat((c3_w)met_u->lif_h) );
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
-  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
+  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_h), (c3_y*)&met_u->ver_h))
      || (c3n == _disk_save_meta(mdb_u, "who", 2 * sizeof(c3_d), (c3_y*)met_u->who_d))
      || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
-     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
+     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_h), (c3_y*)&met_u->lif_h)) )
   {
     u3z(who);
     return c3n;
@@ -546,7 +546,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
-  c3_w ver_w, lif_w;
+  c3_h ver_h, lif_h;
   c3_d who_d[2];
   c3_o fak_o;
 
@@ -556,7 +556,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //
   u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
 
-  ver_w = val_u.buf_y[0];
+  ver_h = val_u.buf_y[0];
 
   //  identity
   //
@@ -628,23 +628,23 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   }
 
   byt_y = val_u.buf_y;
-  lif_w = (c3_w)byt_y[0]
-        | (c3_w)byt_y[1] << 8
-        | (c3_w)byt_y[2] << 16
-        | (c3_w)byt_y[3] << 24;
+  lif_h = (c3_h)byt_y[0]
+        | (c3_h)byt_y[1] << 8
+        | (c3_h)byt_y[2] << 16
+        | (c3_h)byt_y[3] << 24;
 
   {
     c3_o val_o = c3y;
 
-    if ( U3D_VERLAT < ver_w ) {
-      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_w);
+    if ( U3D_VERLAT < ver_h ) {
+      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_h);
       val_o = c3n;
     }
     else if ( !((c3y == fak_o ) || (c3n == fak_o )) ) {
       fprintf(stderr, "disk: read meta: invalid fake bit\r\n");
       val_o = c3n;
     }
-    else if ( c3n == u3a_is_cat(lif_w) ) {
+    else if ( c3n == u3a_is_cat((c3_w)lif_h) ) {
       fprintf(stderr, "disk: read meta: invalid lifecycle length\r\n");
       val_o = c3n;
     }
@@ -657,10 +657,10 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //  NB: we read metadata from LMDB even when met_u is null because sometimes
   //      because sometimes we call this just to ensure metadata exists
   if ( met_u ) {
-    met_u->ver_w = ver_w;
+    met_u->ver_h = ver_h;
     memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
     met_u->fak_o = fak_o;
-    met_u->lif_w = lif_w;
+    met_u->lif_h = lif_h;
   }
 
   return c3y;
@@ -671,12 +671,12 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 static c3_c*
 _disk_lock(c3_c* pax_c)
 {
-  c3_w  len_w = strlen(pax_c) + sizeof("/.vere.lock");
-  c3_c* paf_c = c3_malloc(len_w);
+  c3_h  len_h = strlen(pax_c) + sizeof("/.vere.lock");
+  c3_c* paf_c = c3_malloc(len_h);
   c3_i  wit_i;
 
-  wit_i = snprintf(paf_c, len_w, "%s/.vere.lock", pax_c);
-  u3_assert(wit_i + 1 == len_w);
+  wit_i = snprintf(paf_c, len_h, "%s/.vere.lock", pax_c);
+  u3_assert(wit_i + 1 == len_h);
   return paf_c;
 }
 
@@ -687,7 +687,7 @@ _disk_acquire(c3_c* pax_c)
 {
   c3_c* paf_c    = _disk_lock(pax_c);
   c3_y  dat_y[13] = {0};
-  c3_w  pid_w    = 0;
+  c3_h  pid_h    = 0;
   c3_i  fid_i, ret_i;
 
   if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
@@ -723,7 +723,7 @@ _disk_acquire(c3_c* pax_c)
 
 
     if ( len_y ) {
-      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_w, &ret_i))
+      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_h, &ret_i))
          || (0 >= ret_i)
          || ('\n' != *(dat_y + ret_i)) )
       {
@@ -745,8 +745,8 @@ _disk_acquire(c3_c* pax_c)
           && (EINTR == (ret_i = errno)) );
 
     if ( ret_i ) {
-      if ( pid_w ) {
-        fprintf(stderr, "pier: locked by PID %u\r\n", pid_w);
+      if ( pid_h ) {
+        fprintf(stderr, "pier: locked by PID %u\r\n", pid_h);
       }
       else {
         fprintf(stderr, "pier: strange: locked by empty lockfile\r\n");
@@ -893,14 +893,14 @@ u3_disk_slog(u3_disk* log_u)
           log_u->dun_d);
 
   {
-    c3_w len_w, i_w;
+    c3_h len_h, i_h;
 
     u3l_log("    batch:");
 
-    for ( i_w = 0; i_w < 100; i_w++ ) {
-      len_w = log_u->hit_w[i_w];
-      if ( len_w ) {
-        u3l_log("      %u: %u", i_w, len_w);
+    for ( i_h = 0; i_h < 100; i_h++ ) {
+      len_h = log_u->hit_h[i_h];
+      if ( len_h ) {
+        u3l_log("      %u: %u", i_h, len_h);
       }
     }
   }
@@ -923,11 +923,11 @@ static c3_o
 _disk_epoc_meta(u3_disk*    log_u,
                 c3_d        epo_d,
                 const c3_c* met_c,
-                c3_w        max_w,
+                c3_h        max_h,
                 c3_c*       buf_c)
 {
   struct stat buf_u;
-  c3_w red_w, len_w;
+  c3_h red_h, len_h;
   c3_i ret_i, fid_i;
   c3_c*       pat_c;
 
@@ -943,18 +943,18 @@ _disk_epoc_meta(u3_disk*    log_u,
                     met_c, epo_d);
     return c3n;
   }
-  else if ( buf_u.st_size >= max_w ) {
+  else if ( buf_u.st_size >= max_h ) {
     fprintf(stderr, "disk: %s.txt in epoch 0i%" PRIc3_d " too large "
                     "(%" PRIc3_z ")\r\n",
                     met_c, epo_d, (c3_z)buf_u.st_size);
     return c3n;
   }
 
-  len_w = buf_u.st_size;
-  red_w = read(fid_i, buf_c, len_w);
+  len_h = buf_u.st_size;
+  red_h = read(fid_i, buf_c, len_h);
   close(fid_i);
 
-  if ( len_w != red_w ) {
+  if ( len_h != red_h ) {
     fprintf(stderr, "disk: failed to read %s.txt in epoch 0i%" PRIc3_d "\r\n",
                     met_c, epo_d);
     return c3n;
@@ -963,9 +963,9 @@ _disk_epoc_meta(u3_disk*    log_u,
   //  trim trailing whitespace
   //
   do {
-    buf_c[len_w] = 0;
+    buf_c[len_h] = 0;
   }
-  while ( len_w-- && isspace(buf_c[len_w]) );
+  while ( len_h-- && isspace(buf_c[len_h]) );
 
   return c3y;
 }
@@ -1164,7 +1164,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   // write the metadata to the database
-  old_u.ver_w = U3D_VERLAT;
+  old_u.ver_h = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     goto fail3;
@@ -1184,7 +1184,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
-  log_u->ver_w = U3D_VERLAT;
+  log_u->ver_h = U3D_VERLAT;
 
   //  success
   return c3y;
@@ -1424,7 +1424,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  olm_u.ver_w = U3D_VERLAT;
+  olm_u.ver_h = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
@@ -1669,6 +1669,13 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
       u3_migrate_v5(eve_d);
       u3m_save();
     }
+    // case U3V_VER5: {
+    //   u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    //   u3e_live(c3n, strdup(dir_c));
+    //   u3m_pave(c3y);
+    //   u3_migrate_v6(eve_d);
+    //   u3m_save();
+    // }
   }
 
   munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
@@ -1686,13 +1693,13 @@ _disk_migrate_old(u3_disk* log_u)
 
   log_u->sen_d = log_u->dun_d = las_d;
 
-  switch ( log_u->ver_w ) {
+  switch ( log_u->ver_h ) {
     case U3D_VER1: {
       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
 
       //  set version to 2 (migration in progress)
-      log_u->ver_w = U3D_VER2;
-      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_w) ) {
+      log_u->ver_h = U3D_VER2;
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_h) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }
@@ -1714,7 +1721,7 @@ _disk_migrate_old(u3_disk* log_u)
     } break;
 
     default: {
-      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_w);
+      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_h);
       u3_assert(0);
     }
   }
@@ -1735,7 +1742,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 {
   //  check latest epoc version
   //
-  c3_w ver_w;
+  c3_h ver_h;
   {
     c3_c ver_c[8];
     c3_i car_i;
@@ -1749,7 +1756,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       return _epoc_gone;
     }
 
-    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_h, &car_i))
           && (0 < car_i)
           && ('\0' == *(ver_c + car_i)) ) )
     {
@@ -1757,7 +1764,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       return _epoc_fail;
     }
 
-    if ( (U3E_VER1 > ver_w) || (U3E_VERLAT < ver_w) ) {
+    if ( (U3E_VER1 > ver_h) || (U3E_VERLAT < ver_h) ) {
       fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d' - '%d'\r\n",
                       ver_c, U3E_VER1, U3E_VERLAT);
       return _epoc_late;
@@ -1807,7 +1814,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   //  NB: by virtue of getting here, we know the *pier* version number is at least 3
   //  (ie, this is the epoch system)
   //
-  switch ( ver_w ) {
+  switch ( ver_h ) {
     case U3E_VER1: {
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
@@ -1866,7 +1873,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
+      if (  (u3C.wag_h & u3o_yolo)  // XX better argument to disable autoroll
          || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
          || (c3n == _disk_vere_diff(log_u)) )
       {
@@ -2050,15 +2057,15 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         c3_free(log_u); // XX leaks dire(s)
         return 0;
       }
-      log_u->ver_w = met_u.ver_w;
+      log_u->ver_h = met_u.ver_h;
     }
 
-    if ( U3D_VERLAT < log_u->ver_w ) {
-      fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
+    if ( U3D_VERLAT < log_u->ver_h ) {
+      fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_h);
       c3_free(log_u); // XX leaks dire(s)
       return 0;
     }
-    else if ( U3D_VERLAT > log_u->ver_w ) {
+    else if ( U3D_VERLAT > log_u->ver_h ) {
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);

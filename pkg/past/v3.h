@@ -3,6 +3,21 @@
 
 #include "v4.h"
 
+  /***  {c3,noun}/types.h
+  ***/
+#     define  c3_v3_l                 c3_v4_l
+#     define  c3_v3_w                 c3_v4_w
+#     define  u3_v3_noun              u3_v4_noun
+#     define  u3_v3_none              u3_v4_none
+#     define  u3_v3_weak              u3_v4_weak
+#     define  u3_v3_post              u3_v4_post
+#     define  u3v3p(type)             u3_v3_post
+
+  /***  c3/defs.h
+  ***/
+#     define  c3_v3_wiseof        c3_v4_wiseof
+#     define  c3_v3_align         c3_v4_align
+
   /***  allocate.h
   ***/
 #     define  u3_Loom_v3          u3_Loom_v4

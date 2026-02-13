@@ -82,10 +82,10 @@ u3_migrate_v3(c3_d eve_d)
   hom_u.rod_u = rod_u;
 
   //  place the new home over the old one
-  c3_w *mem_w = u3_Loom_v3 + u3a_v3_walign;
-  c3_w  len_w = u3C.wor_i - u3a_v3_walign;
-  c3_w  siz_w = c3_wiseof(u3v_v3_home);
-  c3_w *mat_w = c3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);
+  c3_v3_w *mem_w = u3_Loom_v3 + u3a_v3_walign;
+  c3_v3_w  len_w = u3C.wor_i - u3a_v3_walign;
+  c3_v3_w  siz_w = c3_v3_wiseof(u3v_v3_home);
+  c3_v3_w *mat_w = c3_v3_align(mem_w + len_w - siz_w, u3a_v3_balign, C3_ALGLO);
   memcpy(mat_w, &hom_u, sizeof(u3v_v3_home));
 
   //  set globals

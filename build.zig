@@ -107,6 +107,7 @@ const BuildCfg = struct {
     urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
+    vere32: bool = false,
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
@@ -193,6 +194,12 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
+    const vere32 = b.option(
+        bool,
+        "vere32",
+        "Compile in 32-bit mode",
+    ) orelse false;
+
     const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
     const tracy_callstack = b.option(bool, "tracy-callstack", "Enable Tracy callstack capture") orelse false;
     const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
@@ -233,6 +240,7 @@ pub fn build(b: *std.Build) !void {
         .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
+        .vere32 = vere32,
         .tracy_enable = tracy_enable,
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
@@ -357,6 +365,9 @@ fn buildBinary(
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
 
+    if (!cfg.vere32)
+        try urbit_flags.appendSlice(&.{"-DVERE64"});
+
     if (cfg.urth_mass)
         try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
 
@@ -434,11 +445,12 @@ fn buildBinary(
         .copt = copts,
     });
 
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-    });
+    // XX re-enable for migration work
+    // const pkg_past = if (cfg.vere32) b.dependency("pkg_past", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    //     .copt = copts,
+    // }) else null;
 
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
@@ -446,6 +458,8 @@ fn buildBinary(
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        // XX re-enable for migration work
+        // .vere32 = cfg.vere32,
     });
 
     const curl = b.dependency("curl", .{
@@ -564,7 +578,9 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
-    urbit.linkLibrary(pkg_past.artifact("past"));
+    // if (cfg.vere32) {
+    //     urbit.linkLibrary(pkg_past.?.artifact("past"));
+    // }
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 

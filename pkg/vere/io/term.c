@@ -26,13 +26,13 @@ u3_write_fd(c3_i fid_i, const void* buf_v, size_t len_i)
   ssize_t ret_i;
 
   while ( len_i > 0 ) {
-    c3_w lop_w = 0;
+    c3_h lop_h = 0;
     //  retry interrupt/async errors
     //
     do {
       //  abort pathological retry loop
     //
-    if ( 100 == ++lop_w ) {
+    if ( 100 == ++lop_h ) {
       fprintf(stderr, "term: write loop: %s\r\n", strerror(errno));
       return;
     }
@@ -131,8 +131,8 @@ u3_term_log_init(void)
     //
     {
       uty_u->tat_u.mir.lin   = u3_nul;
-      uty_u->tat_u.mir.rus_w = 0;
-      uty_u->tat_u.mir.cus_w = 0;
+      uty_u->tat_u.mir.rus_h = 0;
+      uty_u->tat_u.mir.cus_h = 0;
 
       uty_u->tat_u.esc.ape = c3n;
       uty_u->tat_u.esc.bra = c3n;
@@ -140,16 +140,16 @@ u3_term_log_init(void)
       uty_u->tat_u.esc.ton_y = 0;
       uty_u->tat_u.esc.col_y = 0;
 
-      uty_u->tat_u.fut.len_w = 0;
-      uty_u->tat_u.fut.wid_w = 0;
+      uty_u->tat_u.fut.len_h = 0;
+      uty_u->tat_u.fut.wid_h = 0;
       uty_u->tat_u.fut.imp   = u3_nul;
     }
 
     //  default size
     //
     {
-      uty_u->tat_u.siz.col_l = 80;
-      uty_u->tat_u.siz.row_l = 0;
+      uty_u->tat_u.siz.col_h = 80;
+      uty_u->tat_u.siz.row_h = 0;
     }
 
     //  initialize spinner state
@@ -164,7 +164,7 @@ u3_term_log_init(void)
   //  This is terminal 1, linked in host.
   //
   {
-    uty_u->tid_l = 1;
+    uty_u->tid_h = 1;
     uty_u->nex_u = 0;
     u3_Host.uty_u = uty_u;
   }
@@ -303,10 +303,10 @@ _term_it_dump_buf(u3_utty*  uty_u,
 */
 static void
 _term_it_dump(u3_utty*    uty_u,
-              c3_w        len_w,
+              c3_h        len_h,
               const c3_y* hun_y)
 {
-  uv_buf_t buf_u = uv_buf_init((c3_c*)hun_y, len_w);
+  uv_buf_t buf_u = uv_buf_init((c3_c*)hun_y, len_h);
   _term_it_dump_buf(uty_u, &buf_u);
 }
 
@@ -314,11 +314,11 @@ _term_it_dump(u3_utty*    uty_u,
 */
 static void
 _term_it_send(u3_utty* uty_u,
-              c3_w     len_w,
+              c3_h     len_h,
               c3_y*    hun_y)
 {
-  if ( len_w ) {
-    uv_buf_t buf_u = uv_buf_init((c3_c*)hun_y, len_w);
+  if ( len_h ) {
+    uv_buf_t buf_u = uv_buf_init((c3_c*)hun_y, len_h);
     _term_it_write(uty_u, &buf_u, (void*)hun_y);
   }
   else {
@@ -329,26 +329,26 @@ _term_it_send(u3_utty* uty_u,
 /* _term_it_send_csi(): send csi escape sequence
 */
 static void
-_term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_w num_w, ...)
+_term_it_send_csi(u3_utty *uty_u, c3_c cmd_c, c3_h num_h, ...)
 {
   va_list ap;
-  va_start(ap, num_w);
+  va_start(ap, num_h);
 
   //  allocate for escape sequence (2), command char (1),
   //  argument digits (5 per arg) and separators (1 per arg, minus 1).
   //  freed via _term_it_write.
   //
-  c3_c* pas_c = c3_malloc( 2 + num_w * 6 );
+  c3_c* pas_c = c3_malloc( 2 + num_h * 6 );
   c3_y  len_y = 0;
 
   pas_c[len_y++] = '\033';
   pas_c[len_y++] = '[';
 
-  while ( num_w-- ) {
-    c3_w par_w = va_arg(ap, c3_w);
-    len_y += sprintf(pas_c+len_y, "%d", par_w);
+  while ( num_h-- ) {
+    c3_h par_h = va_arg(ap, c3_h);
+    len_y += sprintf(pas_c+len_y, "%u", par_h);
 
-    if ( num_w ) {
+    if ( num_h ) {
       pas_c[len_y++] = ';';
     }
   }
@@ -380,7 +380,7 @@ _term_it_clear_line(u3_utty* uty_u)
 
   //  if we're clearing the bottom line, clear our mirror of it too
   //
-  if ( uty_u->tat_u.siz.row_l - 1 == uty_u->tat_u.mir.rus_w ) {
+  if ( uty_u->tat_u.siz.row_h - 1 == uty_u->tat_u.mir.rus_h ) {
     _term_it_free_line(uty_u);
   }
 }
@@ -401,63 +401,63 @@ _term_it_show_blank(u3_utty* uty_u)
  *    it is clipped to stay within the window.
  */
 static void
-_term_it_move_cursor(u3_utty* uty_u, c3_w col_w, c3_w row_w)
+_term_it_move_cursor(u3_utty* uty_u, c3_m col_m, c3_m row_m)
 {
-  c3_l row_l = uty_u->tat_u.siz.row_l;
-  c3_l col_l = uty_u->tat_u.siz.col_l;
-  if ( row_w >= row_l ) { row_w = row_l - 1; }
-  if ( col_w >= col_l ) { col_w = col_l - 1; }
+  c3_h row_h = uty_u->tat_u.siz.row_h;
+  c3_h col_h = uty_u->tat_u.siz.col_h;
+  if ( row_m >= row_h ) { row_h = row_h - 1; }
+  if ( col_m >= col_h ) { col_h = col_h - 1; }
 
-  _term_it_send_csi(uty_u, 'H', 2, row_w + 1, col_w + 1);
+  _term_it_send_csi(uty_u, 'H', 2, row_m + 1, col_m + 1);
   _term_it_dump_buf(uty_u, &uty_u->ufo_u.suc_u);
 
-  uty_u->tat_u.mir.rus_w = row_w;
-  uty_u->tat_u.mir.cus_w = col_w;
+  uty_u->tat_u.mir.rus_h = row_m;
+  uty_u->tat_u.mir.cus_h = col_m;
 }
 
 /* _term_it_show_line(): print at cursor
 */
 static void
-_term_it_show_line(u3_utty* uty_u, c3_w* lin_w, c3_w wor_w)
+_term_it_show_line(u3_utty* uty_u, c3_h* lin_h, c3_h wor_h)
 {
   u3_utat* tat_u = &uty_u->tat_u;
-  c3_y*    hun_y = (c3_y*)lin_w;
-  c3_w     byt_w = 0;
+  c3_y*    hun_y = (c3_y*)lin_h;
+  c3_h     byt_h = 0;
 
-  //  convert lin_w in-place from utf-32 to utf-8
+  //  convert lin_h in-place from utf-32 to utf-8
   //
   //    (this is just a hand-translation of +tuft)
   //    XX refactor for use here and in a jet
   //
   {
-    c3_w car_w, i_w;
+    c3_h car_h, i_h;
 
-    for ( i_w = 0; i_w < wor_w; i_w++ ) {
-      car_w = lin_w[i_w];
+    for ( i_h = 0; i_h < wor_h; i_h++ ) {
+      car_h = lin_h[i_h];
 
-      if ( 0x7f >= car_w ) {
-        hun_y[byt_w++] = car_w;
+      if ( 0x7f >= car_h ) {
+        hun_y[byt_h++] = car_h;
       }
-      else if ( 0x7ff >= car_w ) {
-        hun_y[byt_w++] = 0xc0 ^ ((car_w >>  6) & 0x1f);
-        hun_y[byt_w++] = 0x80 ^ (car_w & 0x3f);
+      else if ( 0x7ff >= car_h ) {
+        hun_y[byt_h++] = 0xc0 ^ ((car_h >>  6) & 0x1f);
+        hun_y[byt_h++] = 0x80 ^ (car_h & 0x3f);
       }
-      else if ( 0xffff >= car_w ) {
-        hun_y[byt_w++] = 0xe0 ^ ((car_w >> 12) &  0xf);
-        hun_y[byt_w++] = 0x80 ^ ((car_w >>  6) & 0x3f);
-        hun_y[byt_w++] = 0x80 ^ (car_w & 0x3f);
+      else if ( 0xffff >= car_h ) {
+        hun_y[byt_h++] = 0xe0 ^ ((car_h >> 12) &  0xf);
+        hun_y[byt_h++] = 0x80 ^ ((car_h >>  6) & 0x3f);
+        hun_y[byt_h++] = 0x80 ^ (car_h & 0x3f);
       }
       else {
-        hun_y[byt_w++] = 0xf0 ^ ((car_w >> 18) &  0x7);
-        hun_y[byt_w++] = 0x80 ^ ((car_w >> 12) & 0x3f);
-        hun_y[byt_w++] = 0x80 ^ ((car_w >>  6) & 0x3f);
-        hun_y[byt_w++] = 0x80 ^ (car_w & 0x3f);
+        hun_y[byt_h++] = 0xf0 ^ ((car_h >> 18) &  0x7);
+        hun_y[byt_h++] = 0x80 ^ ((car_h >> 12) & 0x3f);
+        hun_y[byt_h++] = 0x80 ^ ((car_h >>  6) & 0x3f);
+        hun_y[byt_h++] = 0x80 ^ (car_h & 0x3f);
       }
     }
   }
 
-  //NOTE  lin_w freed through hun_y by _send
-  _term_it_send(uty_u, byt_w, hun_y);
+  //NOTE  lin_h freed through hun_y by _send
+  _term_it_send(uty_u, byt_h, hun_y);
   _term_it_dump_buf(uty_u, &uty_u->ufo_u.ruc_u);
 }
 
@@ -468,7 +468,7 @@ _term_it_restore_line(u3_utty* uty_u)
 {
   u3_utat* tat_u = &uty_u->tat_u;
 
-  _term_it_send_csi(uty_u, 'H', 2, tat_u->siz.row_l, 1);
+  _term_it_send_csi(uty_u, 'H', 2, tat_u->siz.row_h, 1);
   _term_it_dump_buf(uty_u, &uty_u->ufo_u.cel_u);
   _term_it_send_stub(uty_u, u3k(tat_u->mir.lin));
   //NOTE  send_stub restores cursor position
@@ -486,9 +486,9 @@ _term_it_save_stub(u3_utty* uty_u, u3_noun tub)
   //  after printfs or spinners.
   //  -t mode doesn't need this logic, because it doesn't render the spinner.
   //
-  if ( ( tat_u->siz.row_l - 1 == tat_u->mir.rus_w ) &&
+  if ( ( tat_u->siz.row_h - 1 == tat_u->mir.rus_h ) &&
        ( c3n == u3_Host.ops_u.tem ) ) {
-    lin = u3dq("wail:klr:format", lin, tat_u->mir.cus_w, u3k(tub), ' ');
+    lin = u3dq("wail:klr:format", lin, tat_u->mir.cus_h, u3k(tub), ' ');
     lin = u3do("pact:klr:format", lin);
   }
 
@@ -502,16 +502,16 @@ static void
 _term_it_show_nel(u3_utty* uty_u)
 {
   if ( c3y == u3_Host.ops_u.tem ) {
-    _term_it_dump(uty_u, TERM_LIT("\n"));
+    _term_it_dump(uty_u, TERM_LIT("\r\n"));
   }
   else {
     _term_it_dump(uty_u, TERM_LIT("\r\n"));
     _term_it_dump_buf(uty_u, &uty_u->ufo_u.suc_u);
   }
 
-  uty_u->tat_u.mir.cus_w = 0;
-  if ( uty_u->tat_u.mir.rus_w < uty_u->tat_u.siz.row_l - 1 ) {
-    uty_u->tat_u.mir.rus_w++;
+  uty_u->tat_u.mir.cus_h = 0;
+  if ( uty_u->tat_u.mir.rus_h < uty_u->tat_u.siz.row_h - 1 ) {
+    uty_u->tat_u.mir.rus_h++;
   }
   else {
     //  newline at bottom of screen, so bottom line is now empty
@@ -525,7 +525,7 @@ _term_it_show_nel(u3_utty* uty_u)
 static c3_c*
 _term_it_path(u3_noun pax)
 {
-  c3_w len_w = 0;
+  c3_h len_h = 0;
   c3_c *pas_c;
 
   //  measure
@@ -534,28 +534,33 @@ _term_it_path(u3_noun pax)
     u3_noun wiz = pax;
 
     while ( u3_nul != wiz ) {
-      len_w += (1 + u3r_met(3, u3h(wiz)));
+      c3_w met_w = u3r_met(3, u3h(wiz));
+      u3_assert( (UINT32_MAX - 1 - len_h) >= met_w );
+      len_h += 1 + met_w;
       wiz = u3t(wiz);
     }
   }
 
   //  cut
   //
-  pas_c = c3_malloc(len_w + 1);
-  pas_c[len_w] = '\0';
+  pas_c = c3_malloc(len_h + 1);
+  pas_c[len_h] = '\0';
   {
     u3_noun wiz   = pax;
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_w tis_w = u3r_met(3, u3h(wiz));
+      //  XX truncation
+      c3_w met_w = u3r_met(3, u3h(wiz));
+      u3_assert( UINT32_MAX >= met_w );
+      c3_h tis_h = met_w;
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '.';
       } else *waq_c++ = '/';
 
-      u3r_bytes(0, tis_w, (c3_y*)waq_c, u3h(wiz));
-      waq_c += tis_w;
+      u3r_bytes(0, tis_h, (c3_y*)waq_c, u3h(wiz));
+      waq_c += tis_h;
 
       wiz = u3t(wiz);
     }
@@ -596,12 +601,12 @@ _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
 static void
 _term_io_belt(u3_utty* uty_u, u3_noun blb)
 {
-  //  XX s/b u3dc("scot", c3__ud, uty_u->tid_l)
+  //  XX s/b u3dc("scot", c3__ud, uty_u->tid_h)
   //
   u3_noun wir = u3nt(c3__term, '1', u3_nul);
   u3_noun cad = u3nc(c3__belt, blb);
 
-  u3_assert( 1 == uty_u->tid_l );
+  u3_assert( 1 == uty_u->tid_h );
   u3_assert( uty_u->car_u );
 
   {
@@ -716,7 +721,7 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
     else {
       c3_y row_y = cay_y - 32;
       //  only acknowledge button 1 presses within our known window
-      if ( 1 != tat_u->esc.ton_y && row_y <= tat_u->siz.row_l ) {
+      if ( 1 != tat_u->esc.ton_y && row_y <= tat_u->siz.row_h ) {
         _term_io_spit(uty_u, u3nt(c3__hit, tat_u->esc.col_y - 1, row_y - 1));
       }
       tat_u->esc.mou = c3n;
@@ -725,18 +730,18 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
   }
   //  unicode inputs
   //
-  else if ( 0 != tat_u->fut.wid_w ) {
-    tat_u->fut.syb_y[tat_u->fut.len_w++] = cay_y;
+  else if ( 0 != tat_u->fut.wid_h ) {
+    tat_u->fut.syb_y[tat_u->fut.len_h++] = cay_y;
 
-    if ( tat_u->fut.len_w == tat_u->fut.wid_w ) {
-      u3_noun huv = u3i_bytes(tat_u->fut.wid_w, tat_u->fut.syb_y);
+    if ( tat_u->fut.len_h == tat_u->fut.wid_h ) {
+      u3_noun huv = u3i_bytes(tat_u->fut.wid_h, tat_u->fut.syb_y);
       u3_noun wug;
 
       //  XX  implement directly here and jet
       //
       wug = u3do("taft", huv);
 
-      tat_u->fut.len_w = tat_u->fut.wid_w = 0;
+      tat_u->fut.len_h = tat_u->fut.wid_h = 0;
       tat_u->fut.imp = u3nc(wug, tat_u->fut.imp);
     }
   }
@@ -764,14 +769,14 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       tat_u->esc.ape = c3y;
     }
     else if ( cay_y >= 128 ) {
-      tat_u->fut.len_w = 1;
+      tat_u->fut.len_h = 1;
       tat_u->fut.syb_y[0] = cay_y;
 
       if ( cay_y < 224 ) {
-        tat_u->fut.wid_w = 2;
+        tat_u->fut.wid_h = 2;
       } else if ( cay_y < 240 ) {
-        tat_u->fut.wid_w = 3;
-      } else tat_u->fut.wid_w = 4;
+        tat_u->fut.wid_h = 3;
+      } else tat_u->fut.wid_h = 4;
     }
   }
 }
@@ -780,7 +785,7 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
 */
 
 /*
- * `nread` (siz_w) is > 0 if there is data available, 0 if libuv is done reading for
+ * `nread` (siz_h) is > 0 if there is data available, 0 if libuv is done reading for
  * now, or < 0 on error.
  *
  * The callee is responsible for closing the stream when an error happens
@@ -799,7 +804,7 @@ _term_suck(u3_utty* uty_u, const c3_y* buf, ssize_t siz_i)
       return;
     }
     else if ( siz_i < 0 ) {
-      u3l_log("term %d: read: %s", uty_u->tid_l, uv_strerror(siz_i));
+      u3l_log("term %u: read: %s", uty_u->tid_h, uv_strerror(siz_i));
     }
     else {
       c3_i i;
@@ -830,19 +835,19 @@ static void
 _term_spin_step(u3_utty* uty_u)
 {
   u3_utat* tat_u = &uty_u->tat_u;
-  c3_w     bac_w;
+  c3_h     bac_h;
 
   //  calculate backoff from end of line, or bail out
   //
   {
-    c3_w cus_w = tat_u->mir.cus_w;
-    c3_l col_l = tat_u->siz.col_l;
+    c3_h cus_h = tat_u->mir.cus_h;
+    c3_h col_h = tat_u->siz.col_h;
 
-    if ( cus_w >= col_l ) {  //  shenanigans!
+    if ( cus_h >= col_h ) {  //  shenanigans!
       return;
     }
 
-    bac_w = col_l - 1 - cus_w;
+    bac_h = col_h - 1 - cus_h;
   }
 
   c3_d       lag_d   = tat_u->sun_u.eve_d++;
@@ -850,7 +855,7 @@ _term_spin_step(u3_utty* uty_u)
   //               | + « + why + » + \0
   c3_c       buf_c[1 + 2 +  4  + 2 + 1];
   c3_c*      cur_c   = buf_c;
-  c3_w       sol_w   = 1;  //  spinner length (utf-32)
+  c3_h       sol_h   = 1;  //  spinner length (utf-32)
 
   //  set spinner char
   //
@@ -861,7 +866,7 @@ _term_spin_step(u3_utty* uty_u)
   if ( tat_u->sun_u.why_c[0] ) {
     *cur_c++ = '\xc2';
     *cur_c++ = '\xab';
-    sol_w++;
+    sol_h++;
 
     {
       c3_c* why_c = tat_u->sun_u.why_c;
@@ -871,12 +876,12 @@ _term_spin_step(u3_utty* uty_u)
       *cur_c++ = *why_c;
       //  XX assumes one glyph per char
       //
-      sol_w += 4;
+      sol_h += 4;
     }
 
     *cur_c++ = '\xc2';
     *cur_c++ = '\xbb';
-    sol_w++;
+    sol_h++;
   }
 
   *cur_c = '\0';
@@ -895,13 +900,13 @@ _term_spin_step(u3_utty* uty_u)
       //  if we know where the bottom line is, and the cursor is not on it,
       //  move it to the bottom left
       //
-      if ( tat_u->siz.row_l && tat_u->mir.rus_w < tat_u->siz.row_l - 1 ) {
-        _term_it_send_csi(uty_u, 'H', 2, tat_u->siz.row_l, 1);
+      if ( tat_u->siz.row_h && tat_u->mir.rus_h < tat_u->siz.row_h - 1 ) {
+        _term_it_send_csi(uty_u, 'H', 2, tat_u->siz.row_h, 1);
       }
 
-      c3_w i_w;
-      for ( i_w = bac_w; i_w < sol_w; i_w++ ) {
-        if ( lef_u.len != write(fid_i, lef_u.base, lef_u.len) ) {
+      c3_h i_h;
+      for ( i_h = bac_h; i_h < sol_h; i_h++ ) {
+        if ( (ssize_t)lef_u.len != write(fid_i, lef_u.base, lef_u.len) ) {
           return;
         }
       }
@@ -910,16 +915,16 @@ _term_spin_step(u3_utty* uty_u)
     }
 
     {
-      c3_w len_w = cur_c - buf_c;
-      if ( len_w != write(fid_i, buf_c, len_w) ) {
+      c3_h len_h = cur_c - buf_c;
+      if ( (ssize_t)len_h != write(fid_i, buf_c, len_h) ) {
         return;
       }
     }
 
     //  Cursor stays on spinner.
     //
-    while ( sol_w-- ) {
-      if ( lef_u.len != write(fid_i, lef_u.base, lef_u.len) ) {
+    while ( sol_h-- ) {
+      if ( (ssize_t)lef_u.len != write(fid_i, lef_u.base, lef_u.len) ) {
         return;
       }
     }
@@ -1013,13 +1018,13 @@ _term_main()
 /* _term_ef_get(): terminal by id.
 */
 static u3_utty*
-_term_ef_get(c3_l tid_l)
+_term_ef_get(c3_h tid_h)
 {
-  if ( 0 != tid_l ) {
+  if ( 0 != tid_h ) {
     u3_utty* uty_u;
 
     for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
-      if ( tid_l == uty_u->tid_l ) {
+      if ( tid_h == uty_u->tid_h ) {
         return uty_u;
       }
     }
@@ -1030,19 +1035,19 @@ _term_ef_get(c3_l tid_l)
 /* u3_term_get_blew(): return window size [columns rows].
 */
 u3_noun
-u3_term_get_blew(c3_l tid_l)
+u3_term_get_blew(c3_h tid_h)
 {
-  u3_utty*       uty_u = _term_ef_get(tid_l);
-  c3_l           col_l = 80, row_l = 24;
+  u3_utty*       uty_u = _term_ef_get(tid_h);
+  c3_h           col_h = 80, row_h = 24;
 
   if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
-       (c3y == uty_u->wsz_f(uty_u, &col_l, &row_l)) )
+       (c3y == uty_u->wsz_f(uty_u, &col_h, &row_h)) )
   {
-    uty_u->tat_u.siz.col_l = col_l;
-    uty_u->tat_u.siz.row_l = row_l;
+    uty_u->tat_u.siz.col_h = col_h;
+    uty_u->tat_u.siz.row_h = row_h;
   }
 
-  return u3nc(col_l, row_l);
+  return u3nc(col_h, row_h);
 }
 
 /* u3_term_ef_winc(): window change.  Just console right now.
@@ -1056,7 +1061,7 @@ u3_term_ef_winc(void)
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
     u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
 
-    u3_assert( 1 == u3_Host.uty_u->tid_l );
+    u3_assert( 1 == u3_Host.uty_u->tid_h );
 
     _term_ovum_plan(u3_Host.uty_u->car_u, wir, cad);
   }
@@ -1073,30 +1078,31 @@ u3_term_ef_ctlc(void)
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
     u3_noun cad = u3nq(c3__belt, c3__mod, c3__ctl, 'c');
 
-    u3_assert( 1 == uty_u->tid_l );
+    u3_assert( 1 == uty_u->tid_h );
     _term_ovum_plan(uty_u->car_u, wir, cad);
   }
 }
 
 /*  _term_it_put_value(): put numeric color value on lin_w.
 */
-static c3_w
-_term_it_put_value(c3_w*   lin_w,
+static c3_h
+_term_it_put_value(c3_h*   lin_h,
                    u3_atom val)
 {
   c3_c str_c[4];
-  c3_w len = snprintf(str_c, 4, "%d", val % 256);
-  for ( c3_w i_w = 0; i_w < len; i_w++ ) {
-    lin_w[i_w] = str_c[i_w];
+  u3_assert( UINT32_MAX >= val );
+  c3_h len = snprintf(str_c, 4, "%u", (c3_h)val % 256);
+  for ( c3_h i_h = 0ULL; i_h < len; i_h++ ) {
+    lin_h[i_h] = str_c[i_h];
   }
   u3z(val);
   return len;
 }
 
-/* _term_it_put_tint(): put ansi color id on lin_w. RETAINS col.
+/* _term_it_put_tint(): put ansi color id on lin_h. RETAINS col.
 */
-static c3_w
-_term_it_put_tint(c3_w*   lin_w,
+static c3_h
+_term_it_put_tint(c3_h*   lin_h,
                   u3_noun col)
 {
   u3_noun red, gre, blu;
@@ -1105,26 +1111,26 @@ _term_it_put_tint(c3_w*   lin_w,
   //  24-bit color
   //
   if ( c3y == tru ) {
-    c3_w n = 0;
+    c3_h n = 0ULL;
 
-    *lin_w++ = '8';
-    *lin_w++ = ';';
-    *lin_w++ = '2';
-    *lin_w++ = ';';
+    *lin_h++ = '8';
+    *lin_h++ = ';';
+    *lin_h++ = '2';
+    *lin_h++ = ';';
 
-    c3_w m = _term_it_put_value(lin_w, red);
+    c3_h m = _term_it_put_value(lin_h, red);
     n     += m;
-    lin_w += m;
+    lin_h += m;
 
-    *lin_w++ = ';';
+    *lin_h++ = ';';
 
-    m      = _term_it_put_value(lin_w, gre);
+    m      = _term_it_put_value(lin_h, gre);
     n     += m;
-    lin_w += m;
+    lin_h += m;
 
-    *lin_w++ = ';';
+    *lin_h++ = ';';
 
-    n     += _term_it_put_value(lin_w, blu);
+    n     += _term_it_put_value(lin_h, blu);
 
     return n + 6;
   }
@@ -1133,32 +1139,32 @@ _term_it_put_tint(c3_w*   lin_w,
   else {
     switch ( col ) {
       default:
-      case u3_nul: *lin_w = '9'; break;
-      case 'k':    *lin_w = '0'; break;
-      case 'r':    *lin_w = '1'; break;
-      case 'g':    *lin_w = '2'; break;
-      case 'y':    *lin_w = '3'; break;
-      case 'b':    *lin_w = '4'; break;
-      case 'm':    *lin_w = '5'; break;
-      case 'c':    *lin_w = '6'; break;
-      case 'w':    *lin_w = '7'; break;
+      case u3_nul: *lin_h = '9'; break;
+      case 'k':    *lin_h = '0'; break;
+      case 'r':    *lin_h = '1'; break;
+      case 'g':    *lin_h = '2'; break;
+      case 'y':    *lin_h = '3'; break;
+      case 'b':    *lin_h = '4'; break;
+      case 'm':    *lin_h = '5'; break;
+      case 'c':    *lin_h = '6'; break;
+      case 'w':    *lin_h = '7'; break;
     }
     return 1;
   }
 }
 
-/* _term_it_put_deco(): put ansi sgr code on lin_w. RETAINS dec.
+/* _term_it_put_deco(): put ansi sgr code on lin_h. RETAINS dec.
 */
 static void
-_term_it_put_deco(c3_w* lin_w,
+_term_it_put_deco(c3_h* lin_h,
                   u3_noun dec)
 {
   switch ( dec ) {
     default:
-    case u3_nul: *lin_w = '0'; break;
-    case c3__br: *lin_w = '1'; break;
-    case c3__un: *lin_w = '4'; break;
-    case c3__bl: *lin_w = '5'; break;
+    case u3_nul: *lin_h = '0'; break;
+    case c3__br: *lin_h = '1'; break;
+    case c3__un: *lin_h = '4'; break;
+    case c3__bl: *lin_h = '5'; break;
   }
 }
 
@@ -1168,16 +1174,16 @@ static void
 _term_it_send_stub(u3_utty* uty_u,
                    u3_noun    tub)
 {
-  c3_w tuc_w = u3qb_lent(tub);
+  c3_h tuc_h = u3qb_lent(tub);
 
   //  count the amount of characters across all stubs
   //
-  c3_w lec_w = 0;
+  c3_h lec_h = 0ULL;
   {
     u3_noun nub = tub;
     while ( u3_nul != nub ) {
       u3_noun nib = u3t(u3h(nub));
-      lec_w = lec_w + u3qb_lent(nib);
+      lec_h = lec_h + u3qb_lent(nib);
       nub = u3t(nub);
     }
   }
@@ -1188,12 +1194,12 @@ _term_it_send_stub(u3_utty* uty_u,
   //      2 for opening, 7 for decorations, 2x16 for colors, 4 for closing,
   //      and 3 as separators between decorations and colors.
   //
-  c3_w* lin_w = c3_malloc(  sizeof(c3_w) * (lec_w + (48 * tuc_w))  );
+  c3_h* lin_h = c3_malloc(  sizeof(c3_h) * (lec_h + (48 * tuc_h))  );
 
   //  write the contents to the buffer,
   //  tracking total and escape characters written
   //
-  c3_w   i_w = 0;
+  c3_h   i_h = 0ULL;
   {
     u3_noun nub = tub;
     while ( u3_nul != nub ) {
@@ -1211,8 +1217,8 @@ _term_it_send_stub(u3_utty* uty_u,
       //
       if ( c3y == tyl_o ) {
         c3_o mor_o = c3n;
-        lin_w[i_w++] = 27;
-        lin_w[i_w++] = '[';
+        lin_h[i_h++] = 27;
+        lin_h[i_h++] = '[';
 
         //  text decorations
         //
@@ -1221,9 +1227,9 @@ _term_it_send_stub(u3_utty* uty_u,
           u3_noun des = dos;
           while ( u3_nul != des ) {
             if ( c3y == mor_o ) {
-              lin_w[i_w++] = ';';
+              lin_h[i_h++] = ';';
             }
-            _term_it_put_deco(&lin_w[i_w++], u3h(des));
+            _term_it_put_deco(&lin_h[i_h++], u3h(des));
             mor_o = c3y;
             des = u3t(des);
           }
@@ -1234,11 +1240,11 @@ _term_it_send_stub(u3_utty* uty_u,
         //
         if ( u3_nul != bag ) {
           if ( c3y == mor_o ) {
-            lin_w[i_w++] = ';';
+            lin_h[i_h++] = ';';
           }
-          lin_w[i_w++] = '4';
-          c3_w put_w = _term_it_put_tint(&lin_w[i_w], bag);
-          i_w += put_w;
+          lin_h[i_h++] = '4';
+          c3_h put_h = _term_it_put_tint(&lin_h[i_h], bag);
+          i_h += put_h;
           mor_o = c3y;
         }
 
@@ -1246,37 +1252,37 @@ _term_it_send_stub(u3_utty* uty_u,
         //
         if ( u3_nul != fog ) {
           if ( c3y == mor_o ) {
-            lin_w[i_w++] = ';';
+            lin_h[i_h++] = ';';
           }
-          lin_w[i_w++] = '3';
-          c3_w put_w = _term_it_put_tint(&lin_w[i_w], fog);
-          i_w += put_w;
+          lin_h[i_h++] = '3';
+          c3_h put_h = _term_it_put_tint(&lin_h[i_h], fog);
+          i_h += put_h;
           mor_o = c3y;
         }
 
-        lin_w[i_w++] = 'm';
+        lin_h[i_h++] = 'm';
       }
 
       //  write the text itself
       //
-      for ( ; u3_nul != nib; i_w++, nib = u3t(nib) ) {
-        lin_w[i_w] = u3r_word(0, u3h(nib));
+      for ( ; u3_nul != nib; i_h++, nib = u3t(nib) ) {
+        lin_h[i_h] = u3r_half(0, u3h(nib));
       }
 
       //  if we applied any styles, toggle them off
       //
       if ( c3y == tyl_o ) {
-        lin_w[i_w++] = 27;
-        lin_w[i_w++] = '[';
-        lin_w[i_w++] = '0';
-        lin_w[i_w++] = 'm';
+        lin_h[i_h++] = 27;
+        lin_h[i_h++] = '[';
+        lin_h[i_h++] = '0';
+        lin_h[i_h++] = 'm';
       }
 
       nub = u3t(nub);
     }
   }
 
-  _term_it_show_line(uty_u, lin_w, i_w);
+  _term_it_show_line(uty_u, lin_h, i_h);
 
   u3z(tub);
 }
@@ -1298,19 +1304,19 @@ _term_it_show_tour(u3_utty* uty_u,
                    u3_noun    lin)
 {
   {
-    c3_w  len_w = u3qb_lent(lin);
-    c3_w* lin_w = c3_malloc( sizeof(c3_w) * len_w );
+    c3_h  len_h = u3qb_lent(lin);
+    c3_h* lin_h = c3_malloc( sizeof(c3_h) * len_h );
     u3_noun nil = lin;
 
     {
-      c3_w i_w;
+      c3_h i_h;
 
-      for ( i_w = 0; u3_nul != lin; i_w++, lin = u3t(lin) ) {
-        lin_w[i_w] = u3r_word(0, u3h(lin));
+      for ( i_h = 0; u3_nul != lin; i_h++, lin = u3t(lin) ) {
+        lin_h[i_h] = u3r_word(0, u3h(lin));
       }
     }
 
-    _term_it_show_line(uty_u, lin_w, len_w);
+    _term_it_show_line(uty_u, lin_h, len_h);
 
     lin = nil;
   }
@@ -1343,7 +1349,7 @@ _term_ef_blit(u3_utty* uty_u,
     case c3__hop: {
       u3_noun pos = u3t(blt);
       if ( c3y == u3ud(pos) ) {
-        _term_it_move_cursor(uty_u, pos, uty_u->tat_u.siz.row_l - 1);
+        _term_it_move_cursor(uty_u, pos, uty_u->tat_u.siz.row_h - 1);
       }
       else {
         _term_it_move_cursor(uty_u, u3h(pos), u3t(pos));
@@ -1354,8 +1360,8 @@ _term_ef_blit(u3_utty* uty_u,
       _term_it_show_stub(uty_u, u3k(u3t(blt)));
     } break;
 
-    case c3__lin: {  //TMP  backwards compatibility
-      _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_l - 1);
+    case c3__lin: {  //new  backwards compatibility
+      _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_h - 1);
       _term_it_clear_line(uty_u);
     }  //
     case c3__put: {
@@ -1371,7 +1377,7 @@ _term_ef_blit(u3_utty* uty_u,
         }
         break;
       }
-      //TMP  fall through to nel for backwards compatibility
+      //new  fall through to nel for backwards compatibility
     }
     case c3__nel: {
       _term_it_show_nel(uty_u);
@@ -1418,7 +1424,7 @@ _term_ef_blit_lame(u3_utty* uty_u,
       _term_it_show_nel(uty_u);
     } break;
 
-    case c3__lin:  //TMP  backwards compatibility
+    case c3__lin:  //new  backwards compatibility
     case c3__put: {
       _term_it_show_tour(uty_u, u3k(u3t(blt)));
       _term_it_show_nel(uty_u);
@@ -1449,7 +1455,7 @@ u3_term_io_hija(void)
 {
   u3_utty* uty_u = _term_main();
 
-  if ( uty_u && uty_u->tat_u.siz.row_l ) {
+  if ( uty_u && uty_u->tat_u.siz.row_h ) {
     if ( uty_u->fid_i > 2 ) {
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
@@ -1465,7 +1471,7 @@ u3_term_io_hija(void)
         //  move the cursor to the bottom left corner,
         //  and wipe that bottom line.
         //
-        _term_it_send_csi(uty_u, 'H', 2, uty_u->tat_u.siz.row_l, 1);
+        _term_it_send_csi(uty_u, 'H', 2, uty_u->tat_u.siz.row_h, 1);
         _term_it_dump_buf(uty_u, &uty_u->ufo_u.cel_u);
       }
     }
@@ -1480,7 +1486,7 @@ u3_term_io_loja(int x, FILE* f)
 {
   u3_utty* uty_u = _term_main();
 
-  if ( uty_u && uty_u->tat_u.siz.row_l ) {
+  if ( uty_u && uty_u->tat_u.siz.row_h ) {
     if ( uty_u->fid_i > 2 ) {
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
@@ -1489,7 +1495,7 @@ u3_term_io_loja(int x, FILE* f)
     }
     else {
       if ( c3y == u3_Host.ops_u.tem ) {
-        fprintf(f, "\n");
+        fprintf(f, "\r\n");
         fflush(f);
       }
       else {
@@ -1500,7 +1506,7 @@ u3_term_io_loja(int x, FILE* f)
         //  push the printfs up one more line,
         //  and re-render the bottom-most line, which we clobbered.
         //
-        _term_it_dump(uty_u, TERM_LIT("\n"));
+        _term_it_dump(uty_u, TERM_LIT("\r\n"));
         _term_it_restore_line(uty_u);
       }
     }
@@ -1630,7 +1636,7 @@ _term_io_talk(u3_auto* car_u)
  *    number is always '1'.
  */
 static u3_noun
-_reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
+_reck_orchid(u3_noun fot, u3_noun txt, c3_h* tid_h)
 {
   c3_c* str = u3r_string(txt);
   c3_d ato_d = strtol(str, NULL, 10);
@@ -1639,7 +1645,7 @@ _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
   if ( ato_d >= 0x80000000ULL ) {
     return c3n;
   } else {
-    *tid_l = (c3_l) ato_d;
+    *tid_h = (c3_h) ato_d;
 
     return c3y;
   }
@@ -1681,11 +1687,11 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
   else {
     u3_noun pud = t_wir;
     u3_noun p_pud, q_pud;
-    c3_l    tid_l;
+    c3_h    tid_h;
 
     if (  (c3n == u3r_cell(pud, &p_pud, &q_pud))
        || (u3_nul != q_pud)
-       || (c3n == _reck_orchid(c3__ud, u3k(p_pud), &tid_l)) )
+       || (c3n == _reck_orchid(c3__ud, u3k(p_pud), &tid_h)) )
     {
       u3l_log("term: bad tire");
       ret_o = c3n;
@@ -1700,9 +1706,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
           ret_o = c3y;
 
           {
-            u3_utty* uty_u = _term_ef_get(tid_l);
+            u3_utty* uty_u = _term_ef_get(tid_h);
             if ( 0 == uty_u ) {
-              // u3l_log("no terminal %d", tid_l);
+              // u3l_log("no terminal %"PRIc3_h, tid_h);
               // u3l_log("uty_u %p", u3_Host.uty_u);
             }
             else {
@@ -1790,7 +1796,7 @@ _term_io_mark(u3_auto* car_u, c3_w *out_w)
     all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.fut.imp);
     all_u[len_w]->siz_w *= 4;
 
-    asprintf(&(all_u[len_w]->nam_c), "term-%u-%d", uty_u->tid_l, uty_u->fid_i);
+    asprintf(&(all_u[len_w]->nam_c), "term-%u-%d", uty_u->tid_h, uty_u->fid_i);
 
     tot_w += all_u[len_w]->siz_w;
     len_w++;
@@ -1813,7 +1819,7 @@ _term_io_exit(u3_auto* car_u)
   if ( c3n == u3_Host.ops_u.tem ) {
     //  move cursor to the end
     //
-    _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_l - 1);
+    _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_h - 1);
 
     //  NB, closed in u3_term_log_exit()
     //

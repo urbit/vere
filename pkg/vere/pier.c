@@ -62,8 +62,8 @@ _pier_work_send(u3_work* wok_u)
   {
     //  XX work depth, or full lord send-stack depth?
     //
-    if ( PIER_WORK_BATCH > god_u->dep_w ) {
-      len_w = PIER_WORK_BATCH - god_u->dep_w;
+    if ( PIER_WORK_BATCH > god_u->dep_h ) {
+      len_w = PIER_WORK_BATCH - god_u->dep_h;
     }
   }
 
@@ -405,7 +405,7 @@ _czar_boot_data(c3_c* czar_c,
   c3_y* hun_y = 0;
 
   if ( bone_w != NULL ) {
-    sprintf(url, "https://%s.urbit.org/~/boot/%s/%d",
+    sprintf(url, "https://%s.urbit.org/~/boot/%s/%"PRIc3_w,
             czar_c+1, who_c, *bone_w );
   } else {
     sprintf(url, "https://%s.urbit.org/~/boot/%s", czar_c+1, who_c);
@@ -816,14 +816,14 @@ _pier_wyrd_card(u3_pier* pir_u)
   u3_noun    sen;
 
   {
-    c3_l  sev_l;
+    c3_m  sev_m;
     u3_noun now;
     struct timeval tim_u;
     gettimeofday(&tim_u, 0);
 
     now   = u3m_time_in_tv(&tim_u);
-    sev_l = u3r_mug(now);
-    sen   = u3dc("scot", c3__uv, sev_l);
+    sev_m = u3r_mug(now);
+    sen   = u3dc("scot", c3__uv, sev_m);
 
     u3z(now);
   }
@@ -881,15 +881,15 @@ _pier_wyrd_init(u3_pier* pir_u)
 /* _pier_on_lord_slog(): debug printf from worker.
 */
 static void
-_pier_on_lord_slog(void* ptr_v, c3_w pri_w, u3_noun tan)
+_pier_on_lord_slog(void* ptr_v, c3_h pri_h, u3_noun tan)
 {
   u3_pier* pir_u = ptr_v;
 
   if ( 0 != pir_u->sog_f ) {
-    pir_u->sog_f(pir_u->sop_p, pri_w, u3k(tan));
+    pir_u->sog_f(pir_u->sop_p, pri_h, u3k(tan));
   }
 
-  u3_pier_tank(0, pri_w, tan);
+  u3_pier_tank(0, pri_h, tan);
 }
 
 /* _pier_on_lord_save(): worker (non-portable) snapshot complete.
@@ -1061,7 +1061,7 @@ u3_pier_slog(u3_pier* pir_u)
 /* _pier_init(): create a pier, loading existing.
 */
 static u3_pier*
-_pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
+_pier_init(c3_h wag_h, c3_c* pax_c, u3_weak ryf)
 {
   //  create pier
   //
@@ -1102,7 +1102,7 @@ _pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
       .exit_f = _pier_on_lord_exit
     };
 
-    if ( !(pir_u->god_u = u3_lord_init(pax_c, wag_w, key_d, cb_u)) )
+    if ( !(pir_u->god_u = u3_lord_init(pax_c, wag_h, key_d, cb_u)) )
     {
       c3_free(pir_u);
       return 0;
@@ -1115,11 +1115,11 @@ _pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
 /* u3_pier_stay(): restart an existing pier.
 */
 u3_pier*
-u3_pier_stay(c3_w wag_w, u3_noun pax, u3_weak ryf)
+u3_pier_stay(c3_h wag_h, u3_noun pax, u3_weak ryf)
 {
   u3_pier* pir_u;
 
-  if ( !(pir_u = _pier_init(wag_w, u3r_string(pax), ryf)) ) {
+  if ( !(pir_u = _pier_init(wag_h, u3r_string(pax), ryf)) ) {
     fprintf(stderr, "pier: stay: init fail\r\n");
     u3_king_bail();
     return 0;
@@ -1258,9 +1258,9 @@ u3_pier_exit(u3_pier* pir_u)
 /* c3_rand(): fill a 512-bit (16-word) buffer.
 */
 void
-c3_rand(c3_w* rad_w)
+c3_rand(c3_h* rad_h)
 {
-  if ( 0 != ent_getentropy(rad_w, 64) ) {
+  if ( 0 != ent_getentropy(rad_h, 64) ) {
     fprintf(stderr, "c3_rand getentropy: %s\n", strerror(errno));
     //  XX review
     //
@@ -1318,10 +1318,10 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 /* u3_pier_tank(): dump single tank.
 */
 void
-u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
+u3_pier_tank(c3_h tab_h, c3_h pri_h, u3_noun tac)
 {
   u3_noun blu = u3_term_get_blew(0);
-  c3_l  col_l = u3h(blu);
+  c3_h  col_h = u3h(blu);
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
@@ -1333,7 +1333,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   }
 
   if ( c3n == u3_Host.ops_u.tem ) {
-    switch ( pri_w ) {
+    switch ( pri_h ) {
         case 3: fprintf(fil_u, "\033[31m>>> "); break;
         case 2: fprintf(fil_u, "\033[33m>>  "); break;
         case 1: fprintf(fil_u, "\033[32m>   "); break;
@@ -1341,7 +1341,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     }
   }
   else {
-    switch ( pri_w ) {
+    switch ( pri_h ) {
         case 3: fprintf(fil_u, ">>> "); break;
         case 2: fprintf(fil_u, ">>  "); break;
         case 1: fprintf(fil_u, ">   "); break;
@@ -1358,7 +1358,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     }
   }
   else {
-    u3_noun low = u3dc("(slum soft wash)", u3nc(tab_l, col_l), u3k(tac));
+    u3_noun low = u3dc("(slum soft wash)", u3nc(tab_h, col_h), u3k(tac));
     u3_noun wol;
     if (c3y == u3r_cell(low, NULL, &wol)) {
       u3k(wol); u3z(low);
@@ -1389,12 +1389,12 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
 /* u3_pier_punt(): dump tank list.
 */
 void
-u3_pier_punt(c3_l tab_l, u3_noun tac)
+u3_pier_punt(c3_h tab_h, u3_noun tac)
 {
   u3_noun cat = tac;
 
   while ( c3y == u3du(cat) ) {
-    u3_pier_tank(tab_l, 0, u3k(u3h(cat)));
+    u3_pier_tank(tab_h, 0, u3k(u3h(cat)));
     cat = u3t(cat);
   }
 
@@ -1442,11 +1442,11 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
 /* u3_pier_sway(): print trace.
 */
 void
-u3_pier_sway(c3_l tab_l, u3_noun tax)
+u3_pier_sway(c3_h tab_h, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 
-  u3_pier_punt(tab_l, u3k(u3t(mok)));
+  u3_pier_punt(tab_h, u3k(u3t(mok)));
   u3z(mok);
 }
 

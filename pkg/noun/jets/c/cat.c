@@ -11,7 +11,7 @@
            u3_atom b,
            u3_atom c)
   {
-    if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
     else {
@@ -41,7 +41,7 @@
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a,
                                 u3x_sam_6, &b,
-                                u3x_sam_7, &c, 0)) ||
+                                u3x_sam_7, &c, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) )

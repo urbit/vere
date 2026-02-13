@@ -8,7 +8,7 @@
 u3_atom
 u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
 {
-  if ( !_(u3a_is_cat(boq)) || (boq >= 32) ) {
+  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -31,8 +31,8 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
     return u3i_word(tot_w);
   }
   else {
-    c3_w wid_w = tot_w >>  5;
-    c3_w bit_w = tot_w  & 31;
+    c3_w wid_w = tot_w >>  u3a_word_bits_log;
+    c3_w bit_w = tot_w  & (u3a_word_bits - 1);
     c3_w wor_w;
 
     if ( bit_w ) {
@@ -40,7 +40,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
       wor_w &= (1 << bit_w) - 1;
 
       if ( wor_w ) {
-        return bit_w - (32 - c3_lz_w(wor_w));
+        return bit_w - (u3a_word_bits - c3_lz_w(wor_w));
       }
     }
 
@@ -52,7 +52,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
         break;
       }
 
-      bit_w += 32;
+      bit_w += u3a_word_bits;
     }
 
     return u3i_word(bit_w);

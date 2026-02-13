@@ -2,42 +2,42 @@
 #include "options.h"
 
 static c3_d
-_v4_hash(u3_noun foo)
+_v4_hash(u3_v4_noun foo)
 {
   return foo * 11400714819323198485ULL;
 }
 
 static c3_i
-_v4_cmp(u3_noun a, u3_noun b)
+_v4_cmp(u3_v4_noun a, u3_v4_noun b)
 {
   return a == b;
 }
 
 #define NAME    _v4_to_v5
-#define KEY_TY  u3_noun
-#define VAL_TY  u3_noun
+#define KEY_TY  u3_v5_noun
+#define VAL_TY  u3_v5_noun
 #define HASH_FN _v4_hash
 #define CMPR_FN _v4_cmp
 #include "verstable.h"
 
 typedef struct {
-  u3_weak    hed;
+  u3_v4_weak    hed;
   u3_v4_noun cel;
 } _copy_frame;
 
 typedef struct {
-  _v4_to_v5  map_u;
-  c3_w       len_w;
-  c3_w       siz_w;
+  _v4_to_v5    map_u;
+  c3_v5_w      len_w;
+  c3_v5_w      siz_w;
   _copy_frame *tac;
-  u3_post    ham_p;
+  u3_v5_post   ham_p;
 } _copy_ctx;
 
-static u3_atom
-_copy_atom(u3_atom old)
+static u3_v5_atom
+_copy_atom(u3_v5_atom old)
 {
   u3a_v4_atom *old_u = u3a_v4_to_ptr(old);
-  c3_w        *nov_w = u3a_v5_walloc(old_u->len_w + c3_wiseof(u3a_v5_atom));
+  c3_v5_w     *nov_w = u3a_v5_walloc(old_u->len_w + c3_v5_wiseof(u3a_v5_atom));
   u3a_v5_atom *vat_u = (void *)nov_w;
 
   vat_u->use_w = 1;
@@ -49,8 +49,8 @@ _copy_atom(u3_atom old)
   return u3a_v5_to_pug(u3a_v5_outa(nov_w));
 }
 
-static u3_noun
-_copy_v4_next(_copy_ctx *cop_u, u3_noun old)
+static u3_v5_noun
+_copy_v4_next(_copy_ctx *cop_u, u3_v5_noun old)
 {
   _v4_to_v5_itr vit_u;
   _copy_frame  *top_u;
@@ -63,7 +63,7 @@ _copy_v4_next(_copy_ctx *cop_u, u3_noun old)
     if ( !vt_is_end(vit_u) ) return u3a_v5_gain(vit_u.data->val);
 
     if ( c3n == u3a_v4_is_cell(old) ) {
-      u3_atom new = _copy_atom(old);
+      u3_v5_atom new = _copy_atom(old);
       vit_u = vt_insert( &(cop_u->map_u), old, new );
       u3_assert( !vt_is_end(vit_u) );
       return new;
@@ -82,13 +82,13 @@ _copy_v4_next(_copy_ctx *cop_u, u3_noun old)
   }
 }
 
-static u3_noun
-_copy_v4_noun(_copy_ctx *cop_u, u3_noun old)
+static u3_v5_noun
+_copy_v4_noun(_copy_ctx *cop_u, u3_v5_noun old)
 {
   _v4_to_v5_itr vit_u;
   _copy_frame  *top_u;
   u3a_v4_cell  *cel_u;
-  u3_noun         new;
+  u3_v5_noun         new;
 
   cop_u->len_w = 0;
 
@@ -97,7 +97,7 @@ _copy_v4_noun(_copy_ctx *cop_u, u3_noun old)
   while ( cop_u->len_w ) {
     top_u = &(cop_u->tac[cop_u->len_w - 1]);
 
-    if ( u3_none == top_u->hed ) {
+    if ( u3_v4_none == top_u->hed ) {
       top_u->hed = new;
       new = _copy_v4_next(cop_u, u3a_v4_tail(top_u->cel));
     }
@@ -113,11 +113,11 @@ _copy_v4_noun(_copy_ctx *cop_u, u3_noun old)
 }
 
 static void
-_copy_v4_hamt(u3_noun kev, void* ptr_v)
+_copy_v4_hamt(u3_v5_noun kev, void* ptr_v)
 {
   _copy_ctx *cop_u = ptr_v;
-  u3_noun key = _copy_v4_noun(cop_u, u3a_v4_head(kev));
-  u3_noun val = _copy_v4_noun(cop_u, u3a_v4_tail(kev));
+  u3_v5_noun key = _copy_v4_noun(cop_u, u3a_v4_head(kev));
+  u3_v5_noun val = _copy_v4_noun(cop_u, u3a_v4_tail(kev));
   u3h_v5_put(cop_u->ham_p, key, val);
   u3a_v5_lose(key);
 }

@@ -3,6 +3,21 @@
 
 #include "v3.h"
 
+  /***  {c3,noun}/types.h
+  ***/
+#     define  c3_v2_l                 c3_v3_l
+#     define  c3_v2_w                 c3_v3_w
+#     define  u3_v2_noun              u3_v3_noun
+#     define  u3_v2_none              u3_v3_none
+#     define  u3_v2_weak              u3_v3_weak
+#     define  u3_v2_post              u3_v3_post
+#     define  u3v2p(type)             u3_v2_post
+
+  /***  c3/defs.h
+  ***/
+#     define  c3_v2_wiseof            c3_v3_wiseof
+#     define  c3_v2_align             c3_v3_align
+
   /***  allocate.h
   ***/
 #     define  u3_Loom_v2          u3_Loom_v3
@@ -44,67 +59,67 @@
     /* u3a_v2_road: contiguous allocation and execution context.
     */
       typedef struct _u3a_v2_road {
-        u3p(struct _u3a_v2_road) par_p;          //  parent road
-        u3p(struct _u3a_v2_road) kid_p;          //  child road list
-        u3p(struct _u3a_v2_road) nex_p;          //  sibling road
+        u3v2p(struct _u3a_v2_road) par_p;          //  parent road
+        u3v2p(struct _u3a_v2_road) kid_p;          //  child road list
+        u3v2p(struct _u3a_v2_road) nex_p;          //  sibling road
 
-        u3p(c3_w) cap_p;                      //  top of transient region
-        u3p(c3_w) hat_p;                      //  top of durable region
-        u3p(c3_w) mat_p;                      //  bottom of transient region
-        u3p(c3_w) rut_p;                      //  bottom of durable region
-        u3p(c3_w) ear_p;                      //  original cap if kid is live
+        u3v2p(c3_v2_w) cap_p;                      //  top of transient region
+        u3v2p(c3_v2_w) hat_p;                      //  top of durable region
+        u3v2p(c3_v2_w) mat_p;                      //  bottom of transient region
+        u3v2p(c3_v2_w) rut_p;                      //  bottom of durable region
+        u3v2p(c3_v2_w) ear_p;                      //  original cap if kid is live
 
-        c3_w fut_w[32];                       //  futureproof buffer
+        c3_v2_w fut_w[32];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
             jmp_buf buf;
-            c3_w buf_w[256];                  //  futureproofing
+            c3_v2_w buf_w[256];                  //  futureproofing
           };
         } esc;
 
         struct {                              //  miscellaneous config
-          c3_w fag_w;                         //  flag bits
+          c3_v2_w fag_w;                         //  flag bits
         } how;                                //
 
         struct {                                   //  allocation pools
-          u3p(u3a_v2_fbox) fre_p[u3a_v2_fbox_no];  //  heap by node size log
-          u3p(u3a_v2_fbox) cel_p;                //  custom cell allocator
-          c3_w fre_w;                         //  number of free words
-          c3_w max_w;                         //  maximum allocated
+          u3v2p(u3a_v2_fbox) fre_p[u3a_v2_fbox_no];  //  heap by node size log
+          u3v2p(u3a_v2_fbox) cel_p;                //  custom cell allocator
+          c3_v2_w fre_w;                         //  number of free words
+          c3_v2_w max_w;                         //  maximum allocated
         } all;
 
         struct {
-          u3p(u3h_root) hot_p;                  //  hot state (home road only)
-          u3p(u3h_root) war_p;                  //  warm state
-          u3p(u3h_root) cod_p;                  //  cold state
-          u3p(u3h_root) han_p;                  //  hank cache
-          u3p(u3h_root) bas_p;                  //  battery hashes
+          u3v2p(u3h_root) hot_p;                  //  hot state (home road only)
+          u3v2p(u3h_root) war_p;                  //  warm state
+          u3v2p(u3h_root) cod_p;                  //  cold state
+          u3v2p(u3h_root) han_p;                  //  hank cache
+          u3v2p(u3h_root) bas_p;                  //  battery hashes
         } jed;                                //  jet dashboard
 
         struct {                              // bytecode state
-          u3p(u3h_root) har_p;                // formula->post of bytecode
+          u3v2p(u3h_root) har_p;                // formula->post of bytecode
         } byc;
 
         struct {                              //  namespace
-          u3_noun gul;                        //  (list $+(* (unit (unit)))) now
+          u3_v2_noun gul;                        //  (list $+(* (unit (unit)))) now
         } ski;
 
         struct {                              //  trace stack
-          u3_noun tax;                        //  (list ,*)
-          u3_noun mer;                        //  emergency buffer to release
+          u3_v2_noun tax;                        //  (list ,*)
+          u3_v2_noun mer;                        //  emergency buffer to release
         } bug;
 
         struct {                              //  profile stack
           c3_d    nox_d;                      //  nock steps
           c3_d    cel_d;                      //  cell allocations
-          u3_noun don;                        //  (list batt)
-          u3_noun trace;                      //  (list trace)
-          u3_noun day;                        //  doss, only in u3H (moveme)
+          u3_v2_noun don;                        //  (list batt)
+          u3_v2_noun trace;                      //  (list trace)
+          u3_v2_noun day;                        //  doss, only in u3H (moveme)
         } pro;
 
         struct {                              //  memoization
-          u3p(u3h_v2_root) har_p;             //  (map (pair term noun) noun)
+          u3v2p(u3h_v2_root) har_p;             //  (map (pair term noun) noun)
         } cax;
       } u3a_v2_road;
 
@@ -151,7 +166,7 @@
      */
     typedef struct {
       c3_l    sip_l;
-      u3_noun key;
+      u3_v2_noun key;
     } u3n_v2_memo;
 
   /* u3n_v2_prog: program compiled from nock
@@ -159,23 +174,23 @@
   typedef struct _u3n_v2_prog {
     struct {
       c3_o      own_o;                // program owns ops_y?
-      c3_w      len_w;                // length of bytecode (bytes)
+      c3_v2_w      len_w;                // length of bytecode (bytes)
       c3_y*     ops_y;                // actual array of bytes
     } byc_u;                          // bytecode
     struct {
-      c3_w      len_w;                // number of literals
-      u3_noun*  non;                  // array of literals
+      c3_v2_w      len_w;                // number of literals
+      u3_v2_noun*  non;                  // array of literals
     } lit_u;                          // literals
     struct {
-      c3_w      len_w;                // number of memo slots
+      c3_v2_w      len_w;                // number of memo slots
       u3n_v2_memo* sot_u;             // array of memo slots
     } mem_u;                          // memo slot data
     struct {
-      c3_w      len_w;                // number of calls sites
+      c3_v2_w      len_w;                // number of calls sites
       u3j_v2_site* sit_u;             // array of sites
     } cal_u;                          // call site data
     struct {
-      c3_w      len_w;                // number of registration sites
+      c3_v2_w      len_w;                // number of registration sites
       u3j_v2_rite* rit_u;             // array of sites
     } reg_u;                          // registration site data
   } u3n_v2_prog;

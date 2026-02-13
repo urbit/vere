@@ -30,7 +30,7 @@
   }
 
   static inline void
-  _set_rounding(c3_w a)
+  _set_rounding(c3_y a)
   {
     switch ( a )
     {
@@ -73,7 +73,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -105,7 +105,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -137,7 +137,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -169,7 +169,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -232,7 +232,7 @@
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_6, &b, u3x_sam_7, &c, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_6, &b, u3x_sam_7, &c, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ||
          c3n == u3ud(c) )
@@ -262,7 +262,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -291,7 +291,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -320,7 +320,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -349,7 +349,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -378,7 +378,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {

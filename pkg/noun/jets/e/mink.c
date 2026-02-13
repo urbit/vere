@@ -13,7 +13,7 @@
     if ( c3n == u3r_mean(cor, u3x_sam_4, &bus,
                               u3x_sam_5, &fol,
                               u3x_sam_3, &gul,
-                              0) )
+                              u3_nul) )
     {
       return u3m_bail(c3__exit);
     }

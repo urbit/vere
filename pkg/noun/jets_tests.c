@@ -378,10 +378,10 @@ _ud_good(c3_w num_w, const c3_c* num_c)
   u3_weak out;
   if ( num_w != (out = u3s_sift_ud_bytes(strlen(num_c), (c3_y*)num_c)) ) {
     if ( u3_none == out ) {
-      fprintf(stderr, "sift_ud: %s fail; expected %u\r\n", num_c, num_w);
+      fprintf(stderr, "sift_ud: %s fail; expected %"PRIc3_w"\r\n", num_c, num_w);
     }
     else {
-      fprintf(stderr, "sift_ud: %s wrong; expected %u: actual %u\r\n", num_c, num_w, out);
+      fprintf(stderr, "sift_ud: %s wrong; expected %"PRIc3_w": actual %"PRIc3_w"\r\n", num_c, num_w, out);
     }
     return 0;
   }
@@ -726,7 +726,7 @@ _expect_fein_ob_w(c3_w inp_w, c3_w exp_w)
   c3_w act_w = _fein_ob_w(inp_w);
 
   if ( act_w != exp_w ) {
-    fprintf(stderr, "fein: inp=0x%08x exp=0x%08x act=0x%08x\n",
+    fprintf(stderr, "fein: inp=0x%08"PRIxc3_w" exp=0x%08"PRIxc3_w" act=0x%08"PRIxc3_w"\n",
                     inp_w, exp_w, act_w);
     return 0;
   }
@@ -771,7 +771,7 @@ _expect_fynd_ob_w(c3_w exp_w, c3_w inp_w)
   c3_w act_w = _fynd_ob_w(inp_w);
 
   if ( act_w != exp_w ) {
-    fprintf(stderr, "fynd: inp=0x%08x exp=0x%08x act=0x%08x\n",
+    fprintf(stderr, "fynd: inp=0x%08"PRIxc3_w" exp=0x%08"PRIxc3_w" act=0x%08"PRIxc3_w"\n",
                     inp_w, exp_w, act_w);
     return 0;
   }
@@ -814,14 +814,14 @@ _exhaust_roundtrip_fein_fynd_ob(void)
       fyn_w = u3r_word(0, fyn);
 
       if ( i_w != fyn_w ) {
-        fprintf(stderr, "fein/fynd: inp=0x%08x fein=0x%08x fynd=0x%08x\n",
+        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_w" fein=0x%08"PRIxc3_w" fynd=0x%08"PRIxc3_w"\n",
                         i_w, u3r_word(0, fen), fyn_w);
         ret_i = 0;
       }
       u3z(fen); u3z(fyn);
 
       if ( !(i_w % 0x1000000) ) {
-        fprintf(stderr, "fein/fynd: 0x%x done\n", i_w);
+        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_w" done\n", i_w);
       }
     }
   }
@@ -833,13 +833,13 @@ _exhaust_roundtrip_fein_fynd_ob(void)
       fen_w = _fein_ob_w(i_w);
       fyn_w = _fynd_ob_w(fen_w);
       if ( i_w != fyn_w ) {
-        fprintf(stderr, "fein/fynd: inp=0x%08x fein=0x%08x fynd=0x%08x\n",
+        fprintf(stderr, "fein/fynd: inp=0x%08"PRIxc3_w" fein=0x%08"PRIxc3_w" fynd=0x%08"PRIxc3_w"\n",
                         i_w, fen_w, fyn_w);
         ret_i = 0;
       }
 
       if ( !(i_w % 0x1000000) ) {
-        fprintf(stderr, "fein/fynd: 0x%x done\n", i_w);
+        fprintf(stderr, "fein/fynd: 0x%"PRIxc3_w" done\n", i_w);
       }
     }
     while ( ++i_w );
@@ -867,12 +867,12 @@ _test_mas(void)
   u3_atom res;
 
   if ( 0x4000 != (res = u3qc_mas(0x8000)) ) {
-    fprintf(stderr, "test mas fail: (mas 0x8000) != 0x4000: 0x'%x'\r\n", res);
+    fprintf(stderr, "test mas fail: (mas 0x8000) != 0x4000: 0x'%"PRIxc3_w"'\r\n", res);
     ret_i = 0;
   }
 
   if ( 0x20000000 != (res = u3qc_mas(0x40000000)) ) {
-    fprintf(stderr, "test mas fail: (mas 0x4000.0000) != 0x2000.0000: 0x%x\r\n", res);
+    fprintf(stderr, "test mas fail: (mas 0x4000.0000) != 0x2000.0000: 0x%"PRIxc3_w"\r\n", res);
     ret_i = 0;
   }
 

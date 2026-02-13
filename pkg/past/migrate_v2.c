@@ -259,7 +259,7 @@ _migrate_seek(const u3a_v2_road *rod_u)
       u3_assert(box_u->siz_w);
       u3_assert(box_u->use_w);
       box_w[box_u->siz_w - 1] = new_p;
-      new_p = c3_align(new_p + box_u->siz_w, 2, C3_ALGHI);
+      new_p = c3_v2_align(new_p + box_u->siz_w, 2, C3_ALGHI);
     }
 }
 

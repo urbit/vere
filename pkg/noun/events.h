@@ -20,7 +20,7 @@
     */
       typedef struct _u3e_control {
         u3e_version ver_w;                  //  version number
-        c3_w        has_w;                  //  control checksum
+        c3_m        has_w;                  //  control checksum
         c3_w        tot_w;                  //  new page count
         c3_w        pgs_w;                  //  number of changed pages
         u3e_line    mem_u[];                //  per page
@@ -48,7 +48,7 @@
       typedef struct _u3e_pool {
         c3_c*     dir_c;                     //  path to
         c3_i      eph_i;                     //  ephemeral file descriptor
-        c3_w      dit_w[u3a_pages >> 5];     //  touched since last save
+        c3_w*     dit_w;     //  touched since last save
         c3_w      pag_w;                     //  number of pages (<= u3a_pages)
         c3_w      gar_w;                     //  guard page
         u3e_image img_u;                     //  image
