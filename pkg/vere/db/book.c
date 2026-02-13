@@ -486,8 +486,62 @@ _book_scan_back(u3_book* txt_u, c3_d* off_d)
       return c3n;
     }
 
-    //  deed is valid — use header's las_d as authoritative
+    //  deed is valid — verify batch checksum before accepting
     c3_free(red_u.buf_y);
+
+    if ( txt_u->hed_u.bat_w > 0 ) {
+      //  walk backward through bat_w deeds to find batch start
+      c3_d  cur_d = pos_d;
+
+      for ( c3_d i_d = 0; i_d < txt_u->hed_u.bat_w; i_d++ ) {
+        if ( cur_d < BOOK_DEED_BASE + sizeof(c3_d) ) {
+          *off_d = BOOK_DEED_BASE;
+          return c3n;
+        }
+
+        c3_d tet_d;
+        ret_zs = pread(txt_u->fid_i, &tet_d, sizeof(c3_d),
+                       cur_d - sizeof(c3_d));
+        if ( ret_zs != sizeof(c3_d) ) {
+          *off_d = BOOK_DEED_BASE;
+          return c3n;
+        }
+
+        c3_d ded_d = _book_deed_size(tet_d);
+        if ( ded_d > cur_d - BOOK_DEED_BASE ) {
+          *off_d = BOOK_DEED_BASE;
+          return c3n;
+        }
+
+        cur_d -= ded_d;
+      }
+
+      //  read the batch region and verify checksum
+      c3_d  byt_d = pos_d - cur_d;
+      c3_y* bat_y = c3_malloc(byt_d);
+
+      if ( !bat_y ) {
+        *off_d = BOOK_DEED_BASE;
+        return c3n;
+      }
+
+      ret_zs = pread(txt_u->fid_i, bat_y, byt_d, cur_d);
+      if ( ret_zs != (c3_zs)byt_d ) {
+        c3_free(bat_y);
+        *off_d = BOOK_DEED_BASE;
+        return c3n;
+      }
+
+      c3_w sum_w = (c3_w)crc32(0, bat_y, byt_d);
+      c3_free(bat_y);
+
+      if ( sum_w != txt_u->hed_u.sum_w ) {
+        fprintf(stderr, "book: batch checksum mismatch\r\n");
+        *off_d = BOOK_DEED_BASE;
+        return c3n;
+      }
+    }
+
     *off_d = pos_d;
     txt_u->las_d = txt_u->hed_u.las_d;
     return c3y;
@@ -578,6 +632,8 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
 
     //  update header to match recovered state
     txt_u->hed_u.las_d = las_d;
+    txt_u->hed_u.sum_w = 0;
+    txt_u->hed_u.bat_w = 0;
     _book_save_head(txt_u);
   } else {
     txt_u->las_d = las_d;
@@ -585,6 +641,106 @@ _book_scan_fore(u3_book* txt_u, c3_d* off_d)
 
   *off_d = cur_d;
   return c3y;
+}
+
+/* _book_check_batch(): verify batch integrity and roll back if corrupt.
+**
+**   verifies that the latest batch of deeds matches the checksum
+**   stored in the header. if the checksum fails, truncates the
+**   file to remove the corrupt batch and updates the header.
+**
+**   this protects against power failure where the header is flushed
+**   to disk but deed data is only partially written.
+*/
+static void
+_book_check_batch(u3_book* txt_u)
+{
+  if ( 0 == txt_u->hed_u.bat_w ) {
+    return;
+  }
+
+  //  walk backward through bat_w deeds to find batch start
+  c3_d cur_d = txt_u->off_d;
+
+  for ( c3_d i_d = 0; i_d < txt_u->hed_u.bat_w; i_d++ ) {
+    if ( cur_d < BOOK_DEED_BASE + sizeof(c3_d) ) {
+      return;
+    }
+
+    c3_d  tet_d;
+    c3_zs ret_zs = pread(txt_u->fid_i, &tet_d, sizeof(c3_d),
+                         cur_d - sizeof(c3_d));
+    if ( ret_zs != sizeof(c3_d) ) {
+      return;
+    }
+
+    c3_d ded_d = _book_deed_size(tet_d);
+    if ( ded_d > cur_d - BOOK_DEED_BASE ) {
+      return;
+    }
+
+    cur_d -= ded_d;
+  }
+
+  //  read the batch region and verify checksum
+  c3_d  byt_d = txt_u->off_d - cur_d;
+  c3_y* bat_y = c3_malloc(byt_d);
+
+  if ( !bat_y ) {
+    return;
+  }
+
+  c3_zs ret_zs = pread(txt_u->fid_i, bat_y, byt_d, cur_d);
+  if ( ret_zs != (c3_zs)byt_d ) {
+    c3_free(bat_y);
+    return;
+  }
+
+  c3_w sum_w = (c3_w)crc32(0, bat_y, byt_d);
+  c3_free(bat_y);
+
+  if ( sum_w == txt_u->hed_u.sum_w ) {
+    return;  //  checksum valid
+  }
+
+  //  batch is corrupt — roll back
+  u3l_log("book: batch checksum mismatch, rolling back\r\n");
+
+  //  count valid events before the corrupt batch
+  c3_d pre_d = 0;
+  c3_d pos_d = BOOK_DEED_BASE;
+
+  while ( pos_d < cur_d ) {
+    c3_d len_d;
+    ret_zs = pread(txt_u->fid_i, &len_d, sizeof(c3_d), pos_d);
+    if ( ret_zs != sizeof(c3_d) || 0 == len_d ) {
+      break;
+    }
+
+    c3_d siz_d = _book_deed_size(len_d);
+    if ( pos_d + siz_d > cur_d ) {
+      break;
+    }
+
+    pos_d += siz_d;
+    pre_d++;
+  }
+
+  c3_d las_d = ( pre_d > 0 )
+             ? txt_u->hed_u.fir_d + pre_d
+             : txt_u->hed_u.fir_d;
+
+  //  truncate and update state
+  if ( -1 != ftruncate(txt_u->fid_i, cur_d) ) {
+    c3_sync(txt_u->fid_i);
+  }
+
+  txt_u->off_d       = cur_d;
+  txt_u->las_d       = las_d;
+  txt_u->hed_u.las_d = las_d;
+  txt_u->hed_u.sum_w = 0;
+  txt_u->hed_u.bat_w = 0;
+  _book_save_head(txt_u);
 }
 
 /* _book_pull_epoc(): parse epoch number from directory path.
@@ -688,6 +844,10 @@ u3_book_init(const c3_c* pax_c)
       //  fall back to forward scan for recovery
       _book_scan_fore(txt_u, &txt_u->off_d);
     }
+
+    //  verify latest batch integrity (catches content corruption
+    //  that structural checks miss, e.g. header flushed but deeds not)
+    _book_check_batch(txt_u);
 
     //  fir_d pre-initialized but no events found: set las_d to match
     if ( txt_u->hed_u.fir_d && !txt_u->las_d ) {
@@ -873,6 +1033,7 @@ u3_book_save(u3_book* txt_u,
   struct iovec iov_u[max_ded_d * 3];
   c3_d now_d = txt_u->off_d;
   c3_d dun_d = 0;
+  c3_w chk_w = (c3_w)crc32(0, Z_NULL, 0);
 
   while ( dun_d < len_d ) {
     c3_d cun_d = c3_min(len_d - dun_d, max_ded_d);
@@ -889,6 +1050,10 @@ u3_book_save(u3_book* txt_u,
       iov_u[idx_d + 1].iov_len  = siz_i[src_d];
       iov_u[idx_d + 2].iov_base = &siz_i[src_d];
       iov_u[idx_d + 2].iov_len  = sizeof(c3_d);
+
+      chk_w = (c3_w)crc32(chk_w, (const c3_y*)&siz_i[src_d], sizeof(c3_d));
+      chk_w = (c3_w)crc32(chk_w, buf_y, siz_i[src_d]);
+      chk_w = (c3_w)crc32(chk_w, (const c3_y*)&siz_i[src_d], sizeof(c3_d));
 
       cun_z += sizeof(c3_d) + siz_i[src_d] + sizeof(c3_d);
     }
@@ -907,6 +1072,8 @@ u3_book_save(u3_book* txt_u,
 
   c3_d new_las_d = eve_d + len_d - 1;
   txt_u->hed_u.las_d = new_las_d;
+  txt_u->hed_u.sum_w = chk_w;
+  txt_u->hed_u.bat_w = len_d;
 
   //  commit header: write to inactive slot, fsync, swap active
   if ( c3n == _book_save_head(txt_u) ) {

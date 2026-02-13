@@ -7,17 +7,19 @@
 
   /* book: mostly append-only event log
   **
-  **   uses double-buffered headers for single-fsync commits (like LMDB).
-  **   two header slots alternate; the one with higher valid seq_d is current.
+  **   uses double-buffered headers for single-fsync commits (like LMDB)
+  **   two header slots alternate; the one with higher valid seq_d is current
   */
-    /* u3_book_head: on-disk file header (32 bytes, page-aligned slots)
+    /* u3_book_head: on-disk file header (48 bytes, page-aligned slots)
     **
-    **   fir_d is write-once (set on first event save).
-    **   las_d is updated after each batch of events is committed.
-    **   seq_d is monotonically increasing; determines which slot is current.
-    **   crc_w is CRC32 of preceding fields to detect partial writes.
+    **   fir_d is write-once (set on first event save)
+    **   las_d is updated after each batch of events is committed
+    **   seq_d is monotonically increasing; determines which slot is current
+    **   bat_w is the number of deeds in the latest batch written
+    **   sum_w is CRC32 of the latest batch of deeds (for integrity check)
+    **   crc_w is CRC32 of preceding fields to detect partial writes
     **
-    **   two header slots at offsets 0 and 4096; deeds start at 8192.
+    **   two header slots at offsets 0 and 4096; deeds start at 8192
     */
       typedef struct _u3_book_head {
         c3_w mag_w;      //  magic number: 0x424f4f4b ("BOOK")
@@ -25,6 +27,8 @@
         c3_d fir_d;      //  first event number in file
         c3_d las_d;      //  last event number (commit marker)
         c3_d seq_d;      //  sequence number (for double-buffer)
+        c3_d bat_w;      //  number of deeds in latest batch
+        c3_w sum_w;      //  CRC32 of latest deed batch data
         c3_w crc_w;      //  CRC32 checksum (of preceding fields)
       } u3_book_head;
 

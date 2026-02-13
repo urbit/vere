@@ -1241,6 +1241,136 @@ cleanup:
   return ret_i;
 }
 
+/* _test_partial_batch_recovery(): simulate power failure where header is
+**   flushed but deed data is corrupt.
+**
+**   writes two batches: event 1 (batch 1), events 2-3 (batch 2).
+**   corrupts deed 3's buffer data while keeping its len_d/let_d framing
+**   intact. on reopen, the batch 2 checksum should fail and recovery
+**   should roll back batch 2, leaving only event 1.
+*/
+static c3_i
+_test_partial_batch_recovery(void)
+{
+  c3_c* dir_c = _test_make_tmpdir();
+  if ( !dir_c ) return 0;
+
+  c3_i     ret_i = 1;
+  u3_book* txt_u = u3_book_init(dir_c);
+  c3_y*    ev1_y = 0;
+  c3_y*    ev2_y = 0;
+  c3_y*    ev3_y = 0;
+  c3_z     siz_z;
+  c3_c     pax_c[8192];
+
+  if ( !txt_u ) {
+    fprintf(stderr, "  partial_batch: init failed\r\n");
+    ret_i = 0;
+    goto cleanup;
+  }
+
+  //  batch 1: write event 1
+  ev1_y = _test_make_event(&siz_z, 1);
+  {
+    void* byt_p[1] = { ev1_y };
+    c3_z  siz_i[1] = { siz_z };
+
+    if ( c3n == u3_book_save(txt_u, 1, 1, byt_p, siz_i, 0) ) {
+      fprintf(stderr, "  partial_batch: save batch 1 failed\r\n");
+      ret_i = 0;
+      goto cleanup;
+    }
+  }
+
+  //  batch 2: write events 2-3
+  ev2_y = _test_make_event(&siz_z, 2);
+  ev3_y = _test_make_event(&siz_z, 3);
+  {
+    void* byt_p[2] = { ev2_y, ev3_y };
+    c3_z  siz_i[2] = { siz_z, siz_z };
+
+    if ( c3n == u3_book_save(txt_u, 2, 2, byt_p, siz_i, 0) ) {
+      fprintf(stderr, "  partial_batch: save batch 2 failed\r\n");
+      ret_i = 0;
+      goto cleanup;
+    }
+  }
+
+  u3_book_exit(txt_u);
+  txt_u = 0;
+
+  //  corrupt deed 3's buffer data while keeping framing intact
+  //
+  //  each deed: len_d (8) + buffer (siz_z) + let_d (8)
+  //
+  snprintf(pax_c, sizeof(pax_c), "%s/book.log", dir_c);
+  {
+    c3_d ded_d = 8 + siz_z + 8;
+    c3_d dee_d = BOOK_DEED_BASE + (ded_d * 2);
+    c3_d buf_d = dee_d + 8;
+
+    c3_y jnk_y[64];
+    memset(jnk_y, 0xFF, sizeof(jnk_y));
+    if ( c3n == _test_write_raw(pax_c, buf_d, jnk_y, siz_z) ) {
+      fprintf(stderr, "  partial_batch: corrupt failed\r\n");
+      ret_i = 0;
+      goto cleanup;
+    }
+  }
+
+  //  reopen — batch 2 checksum should fail, recovery rolls back batch 2
+  txt_u = u3_book_init(dir_c);
+  if ( !txt_u ) {
+    fprintf(stderr, "  partial_batch: reopen failed\r\n");
+    ret_i = 0;
+    goto cleanup;
+  }
+
+  //  verify only event 1 remains (batch 2 rolled back)
+  {
+    c3_d low_d, hig_d;
+    u3_book_gulf(txt_u, &low_d, &hig_d);
+
+    if ( hig_d != 1 ) {
+      fprintf(stderr, "  partial_batch: expected hig=1, got %" PRIu64 "\r\n", hig_d);
+      ret_i = 0;
+    }
+  }
+
+  //  verify event 1 is still readable and correct
+  {
+    _test_read_ctx ctx_u = {0};
+
+    if ( c3n == u3_book_read(txt_u, &ctx_u, 1, 1, _test_read_cb) ) {
+      fprintf(stderr, "  partial_batch: read event 1 failed\r\n");
+      ret_i = 0;
+    }
+    else {
+      if ( ctx_u.len_z != siz_z ||
+           0 != memcmp(ctx_u.buf_y, ev1_y, siz_z) )
+      {
+        fprintf(stderr, "  partial_batch: event 1 data mismatch\r\n");
+        ret_i = 0;
+      }
+      _free(ctx_u.buf_y);
+    }
+  }
+
+  u3_book_exit(txt_u);
+  txt_u = 0;
+
+cleanup:
+  if ( txt_u ) u3_book_exit(txt_u);
+  if ( ev1_y ) _free(ev1_y);
+  if ( ev2_y ) _free(ev2_y);
+  if ( ev3_y ) _free(ev3_y);
+  _test_rm_rf(dir_c);
+  _free(dir_c);
+
+  fprintf(stderr, "  partial_batch_recovery: %s\r\n", ret_i ? "ok" : "FAILED");
+  return ret_i;
+}
+
 //==============================================================================
 // Benchmarks
 //==============================================================================
@@ -1627,6 +1757,7 @@ main(int argc, char* argv[])
 
   //  crash recovery tests
   ret_i &= _test_truncated_file_recovery();
+  ret_i &= _test_partial_batch_recovery();
 
   //  iterator tests
   ret_i &= _test_walk_single_event();
@@ -1646,7 +1777,7 @@ main(int argc, char* argv[])
   //  benchmarks
   // ret_i &= _bench_write_speed(1000, 128);
   // ret_i &= _bench_write_speed_batched(100000, 1280, 1000);
-  ret_i &= _bench_write_speed_mixed(10000, 128);
+  // ret_i &= _bench_write_speed_mixed(10000, 128);
 
   fprintf(stderr, "\r\n");
   if ( ret_i ) {
