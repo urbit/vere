@@ -1719,7 +1719,6 @@ _disk_migrate_old(u3_disk* log_u)
     }
   }
 }
-#endif
 
 typedef enum {
   _epoc_good = 0,  // load successfully

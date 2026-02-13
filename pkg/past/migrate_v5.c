@@ -41,7 +41,7 @@ _copy_atom(u3_atom old)
   u3a_v5_atom *vat_u = (void *)nov_w;
 
   vat_u->use_w = 1;
-  vat_u->mug_w = old_u->mug_w;
+  vat_u->mug_h = old_u->mug_w;
   vat_u->len_w = old_u->len_w;
 
   memcpy(vat_u->buf_w, old_u->buf_w, old_u->len_w << 2);
