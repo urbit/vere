@@ -445,12 +445,12 @@ fn buildBinary(
         .copt = copts,
     });
 
-    // XX re-enable for migration work
-    // const pkg_past = if (cfg.vere32) b.dependency("pkg_past", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    //     .copt = copts,
-    // }) else null;
+    const pkg_past = b.dependency("pkg_past", .{
+        .target = target,
+        .optimize = optimize,
+        .copt = copts,
+        .vere32 = cfg.vere32,
+    });
 
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
@@ -458,8 +458,6 @@ fn buildBinary(
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
-        // XX re-enable for migration work
-        // .vere32 = cfg.vere32,
     });
 
     const curl = b.dependency("curl", .{
@@ -578,9 +576,7 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
-    // if (cfg.vere32) {
-    //     urbit.linkLibrary(pkg_past.?.artifact("past"));
-    // }
+    urbit.linkLibrary(pkg_past.artifact("past"));
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 

@@ -1,13 +1,7 @@
 #ifndef U3_V5_H
 #define U3_V5_H
 
-#include "allocate.h"
-#include "hashtable.h"
-#include "imprison.h"
-#include "jets.h"
-#include "nock.h"
-#include "retrieve.h"
-#include "vortex.h"
+#include "v6.h"
 
   /***  current
   ***/
@@ -56,5 +50,16 @@
 #     define  u3h_v5_slot_is_null u3h_slot_is_null
 #     define  u3h_v5_noun_to_slot u3h_noun_to_slot
 #     define  u3h_v5_slot_to_noun u3h_slot_to_noun
+
+  /***  c3/{defs,types}.h
+  ***/
+      typedef uint32_t         c3_v5_w;
+
+  /***  allocate.h
+  ***/
+
+#     define  u3_Loom_v5       (u3_Loom + ((c3_z)1 << u3a_v5_bits_max))
+#     define  u3a_v5_vits      2
+#     define  u3a_v5_bits_max  ((c3_v5_w)8 * sizeof(c3_v5_w) + u3a_v5_vits)
 
 #endif /* U3_V5_H */

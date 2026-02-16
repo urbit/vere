@@ -8,7 +8,11 @@
 #include <types.h>
 
 #include "migrate.h"
+#ifndef VERE64
 #include "v4.h"
+#else
+#include "v5.h"
+#endif
 
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
@@ -1550,8 +1554,9 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
   }
 }
 
+#ifndef VERE64
 static void
-_disk_unlink_stale_loom(c3_c* dir_c)
+_disk_unlink_v4_loom(c3_c* dir_c)
 {
   c3_c bin_c[8193];
   snprintf(bin_c, 8193, "%s/.urb/chk/north.bin", dir_c);
@@ -1572,7 +1577,7 @@ _disk_unlink_stale_loom(c3_c* dir_c)
 }
 
 static c3_i
-_disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
+_disk_load_v4_loom(c3_c* dir_c, c3_z len_z)
 {
   // map at fixed address.
   //
@@ -1649,11 +1654,26 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     return nod_i;
   }
 }
+#endif
 
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
-  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+#ifdef VERE64
+  c3_i fid_i = _disk_load_v5_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  c3_w lom_w = *(u3_Loom_v5 + u3C.wor_i - 1);
+
+  switch ( lom_w ) {
+    case U3V_VER1:
+    case U3V_VER2:
+    case U3V_VER3:
+    case U3V_VER4: {
+      fprintf(stderr, "disk: run the latest 32-bit version first: %s\r\n",
+                      "https://github.com/urbit/vere/releases");
+      abort();
+    }
+#else
+  c3_i fid_i = _disk_load_v4_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
   c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
 
   //  NB: all fallthru, all the time
@@ -1668,6 +1688,14 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
       u3m_save();
+    }
+#endif
+    case U3V_VER5: {
+      // u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+      // u3e_live(c3n, strdup(dir_c));
+      // u3m_pave(c3y);
+      // u3_migrate_v6(eve_d);
+      // u3m_save();
     }
   }
 
@@ -1699,7 +1727,7 @@ _disk_migrate_old(u3_disk* log_u)
     }  // fallthru
 
     case U3D_VER2: {
-      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      _disk_unlinke_v4_loom(log_u->dir_u->pax_c);
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( c3n == _disk_migrate_epoc(log_u, las_d) ) {
@@ -1823,7 +1851,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      _disk_unlinke_v4_loom(log_u->dir_u->pax_c);
       return _epoc_good;
     } break;
 
