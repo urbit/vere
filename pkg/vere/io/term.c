@@ -149,7 +149,7 @@ u3_term_log_init(void)
     //
     {
       uty_u->tat_u.siz.col_l = 80;
-      uty_u->tat_u.siz.row_l = 24;
+      uty_u->tat_u.siz.row_l = 0;
     }
 
     //  initialize spinner state
@@ -1038,11 +1038,6 @@ u3_term_get_blew(c3_l tid_l)
   if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
        (c3y == uty_u->wsz_f(uty_u, &col_l, &row_l)) )
   {
-    //  clamp to defaults if ioctl returns zero
-    //  (e.g. Docker PTY with no attached reader)
-    //
-    if ( 0 == col_l ) { col_l = 80; }
-    if ( 0 == row_l ) { row_l = 24; }
     uty_u->tat_u.siz.col_l = col_l;
     uty_u->tat_u.siz.row_l = row_l;
   }
