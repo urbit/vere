@@ -7,10 +7,9 @@ pub fn build(b: *std.Build) !void {
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
 
-    const pkg_ur = b.addStaticLibrary(.{
+    const pkg_ur = b.addLibrary(.{
         .name = "ur",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     const murmur3 = b.dependency("murmur3", .{

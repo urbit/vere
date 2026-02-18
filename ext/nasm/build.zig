@@ -8,8 +8,10 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "nasm",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     exe.addIncludePath(b.path("include"));
@@ -31,7 +33,7 @@ pub fn build(b: *std.Build) void {
 
     if (b.graph.host.result.os.tag == .windows) {
         exe.addConfigHeader(b.addConfigHeader(.{
-            .style = .{ .autoconf = b.path("config/config.h.in") },
+            .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
             .ABORT_ON_PANIC = have(optimize == .Debug),
@@ -252,7 +254,7 @@ pub fn build(b: *std.Build) void {
         }));
     } else if (b.graph.host.result.os.tag.isDarwin()) {
         exe.addConfigHeader(b.addConfigHeader(.{
-            .style = .{ .autoconf = b.path("config/config.h.in") },
+            .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
             // Define to 1 to call abort() on panics (internal errors), for debugging.
@@ -504,7 +506,7 @@ pub fn build(b: *std.Build) void {
         }));
     } else if (b.graph.host.result.os.tag == .linux) {
         exe.addConfigHeader(b.addConfigHeader(.{
-            .style = .{ .autoconf = b.path("config/config.h.in") },
+            .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
             .ABORT_ON_PANIC = have(optimize == .Debug),
