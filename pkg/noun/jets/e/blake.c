@@ -46,7 +46,7 @@
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &msg,
                               u3x_sam_6, &key,
-                              u3x_sam_7, &out, 0) ||
+                              u3x_sam_7, &out, u3_nul) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(key, &wik, &dak) || u3ud(wik) || u3ud(dak) ||
                 u3ud(out) )
@@ -88,7 +88,7 @@
 
     if ( c3n == u3r_mean(cor, u3x_sam_2, &out,
                               u3x_sam_3, &msg,
-                              u3x_con_sam, &sam, 0) ||
+                              u3x_con_sam, &sam, u3_nul) ||
                 u3ud(out) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(sam, &key, &flags) || u3ud(key) || u3ud(flags) )
@@ -127,7 +127,7 @@
     if ( c3n == u3r_mean(cor, u3x_sam_2, &counter,
                               u3x_sam_3, &msg,
                               u3x_con_sam_2, &key,
-                              u3x_con_sam_3, &flags, 0) ||
+                              u3x_con_sam_3, &flags, u3_nul) ||
                 u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3ud(key) || u3ud(flags))
     {

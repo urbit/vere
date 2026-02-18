@@ -8,7 +8,7 @@
 #     define  u3a_v4_north_is_normal  u3a_v5_north_is_normal
 #     define  u3n_v4_prog             u3n_v5_prog
 
-#     define  u3a_v4_boxed(len_w)  (len_w + c3_wiseof(u3a_v4_box) + 1)
+#     define  u3a_v4_boxed(len_w)  (len_w + c3_v4_wiseof(u3a_v4_box) + 1)
 #     define  u3a_v4_boxto(box_v)  ( (void *) \
                                    ( (u3a_v4_box *)(void *)(box_v) + 1 ) )
 #     define  u3a_v4_botox(tox_v)  ( (u3a_v4_box *)(void *)(tox_v) - 1 )
@@ -20,8 +20,8 @@ u3v_v4_home* u3v_v4_Home;
 /***  allocate.c
 ***/
 
-static c3_w
-_box_v4_slot(c3_w siz_w)
+static c3_v4_w
+_box_v4_slot(c3_v4_w siz_w)
 {
   if ( u3a_v4_minimum == siz_w ) {
     return 0;
@@ -30,17 +30,17 @@ _box_v4_slot(c3_w siz_w)
     return 1;
   }
   else {
-    c3_w bit_w = c3_bits_word(siz_w) - 3;
-    c3_w max_w = u3a_v4_fbox_no - 1;
+    c3_v4_w bit_w = c3_bits_word(siz_w) - 3;
+    c3_v4_w max_w = u3a_v4_fbox_no - 1;
     return c3_min(bit_w, max_w);
   }
 }
 
 static u3a_v4_box*
-_box_v4_make(void* box_v, c3_w siz_w, c3_w use_w)
+_box_v4_make(void* box_v, c3_v4_w siz_w, c3_v4_w use_w)
 {
   u3a_v4_box* box_u = box_v;
-  c3_w*    box_w = box_v;
+  c3_v4_w*    box_w = box_v;
 
   u3_assert(siz_w >= u3a_v4_minimum);
 
@@ -56,14 +56,14 @@ _box_v4_make(void* box_v, c3_w siz_w, c3_w use_w)
 static void
 _box_v4_attach(u3a_v4_box* box_u)
 {
-  u3_assert(box_u->siz_w >= (1 + c3_wiseof(u3a_v4_fbox)));
+  u3_assert(box_u->siz_w >= (1 + c3_v4_wiseof(u3a_v4_fbox)));
   u3_assert(0 != u3v4of(u3a_v4_fbox, box_u));
 
   {
-    c3_w           sel_w = _box_v4_slot(box_u->siz_w);
-    u3p(u3a_v4_fbox)  fre_p = u3v4of(u3a_v4_fbox, box_u);
-    u3p(u3a_v4_fbox)* pfr_p = &u3R_v4->all.fre_p[sel_w];
-    u3p(u3a_v4_fbox)  nex_p = *pfr_p;
+    c3_v4_w           sel_w = _box_v4_slot(box_u->siz_w);
+    u3v4p(u3a_v4_fbox)  fre_p = u3v4of(u3a_v4_fbox, box_u);
+    u3v4p(u3a_v4_fbox)* pfr_p = &u3R_v4->all.fre_p[sel_w];
+    u3v4p(u3a_v4_fbox)  nex_p = *pfr_p;
 
     u3v4to(u3a_v4_fbox, fre_p)->pre_p = 0;
     u3v4to(u3a_v4_fbox, fre_p)->nex_p = nex_p;
@@ -79,9 +79,9 @@ _box_v4_attach(u3a_v4_box* box_u)
 static void
 _box_v4_detach(u3a_v4_box* box_u)
 {
-  u3p(u3a_v4_fbox) fre_p = u3v4of(u3a_v4_fbox, box_u);
-  u3p(u3a_v4_fbox) pre_p = u3v4to(u3a_v4_fbox, fre_p)->pre_p;
-  u3p(u3a_v4_fbox) nex_p = u3v4to(u3a_v4_fbox, fre_p)->nex_p;
+  u3v4p(u3a_v4_fbox) fre_p = u3v4of(u3a_v4_fbox, box_u);
+  u3v4p(u3a_v4_fbox) pre_p = u3v4to(u3a_v4_fbox, fre_p)->pre_p;
+  u3v4p(u3a_v4_fbox) nex_p = u3v4to(u3a_v4_fbox, fre_p)->nex_p;
 
   if ( nex_p ) {
     if ( u3v4to(u3a_v4_fbox, nex_p)->pre_p != fre_p ) {
@@ -96,7 +96,7 @@ _box_v4_detach(u3a_v4_box* box_u)
     u3v4to(u3a_v4_fbox, pre_p)->nex_p = nex_p;
   }
   else {
-    c3_w sel_w = _box_v4_slot(box_u->siz_w);
+    c3_v4_w sel_w = _box_v4_slot(box_u->siz_w);
 
     if ( fre_p != u3R_v4->all.fre_p[sel_w] ) {
       u3_assert(!"loom: corrupt");
@@ -108,22 +108,22 @@ _box_v4_detach(u3a_v4_box* box_u)
 /* _ca_box_make_hat(): allocate directly on the hat.
 */
 static u3a_v4_box*
-_ca_v4_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
+_ca_v4_box_make_hat(c3_v4_w len_w, c3_v4_w ald_w, c3_v4_w off_w, c3_v4_w use_w)
 {
-  c3_w
+  c3_v4_w
     pad_w,                      /* padding between returned pointer and box */
     siz_w;                      /* total size of allocation */
-  u3_post
+  u3_v4_post
     box_p,                      /* start of box */
     all_p;                      /* start of returned pointer */
 
   //  NB: always north
   {
     box_p = all_p = u3R_v4->hat_p;
-    all_p += c3_wiseof(u3a_v4_box) + off_w;
-    pad_w = c3_align(all_p, ald_w, C3_ALGHI)
+    all_p += c3_v4_wiseof(u3a_v4_box) + off_w;
+    pad_w = c3_v4_align(all_p, ald_w, C3_ALGHI)
       - all_p;
-    siz_w = c3_align(len_w + pad_w, u3a_v4_walign, C3_ALGHI);
+    siz_w = c3_v4_align(len_w + pad_w, u3a_v4_walign, C3_ALGHI);
 
     if ( (siz_w >= (u3R_v4->cap_p - u3R_v4->hat_p)) ) {
       //  XX wat do
@@ -142,17 +142,17 @@ _ca_v4_box_make_hat(c3_w len_w, c3_w ald_w, c3_w off_w, c3_w use_w)
 /* _ca_willoc(): u3a_v4_walloc() internals.
 */
 static void*
-_ca_v4_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
+_ca_v4_willoc(c3_v4_w len_w, c3_v4_w ald_w, c3_v4_w off_w)
 {
-  c3_w siz_w = c3_max(u3a_v4_minimum, u3a_v4_boxed(len_w));
-  c3_w sel_w = _box_v4_slot(siz_w);
+  c3_v4_w siz_w = c3_max(u3a_v4_minimum, u3a_v4_boxed(len_w));
+  c3_v4_w sel_w = _box_v4_slot(siz_w);
 
   if ( (sel_w != 0) && (sel_w != u3a_v4_fbox_no - 1) ) {
     sel_w += 1;
   }
 
   while ( 1 ) {
-    u3p(u3a_v4_fbox) *pfr_p = &u3R_v4->all.fre_p[sel_w];
+    u3v4p(u3a_v4_fbox) *pfr_p = &u3R_v4->all.fre_p[sel_w];
 
     while ( 1 ) {
       /* increment until we get a non-null freelist */
@@ -170,10 +170,10 @@ _ca_v4_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
         }
       }
       else {                    /* we got a non-null freelist */
-        u3_post all_p = *pfr_p;
-        all_p += c3_wiseof(u3a_v4_box) + off_w;
-        c3_w pad_w = c3_align(all_p, ald_w, C3_ALGHI) - all_p;
-        c3_w des_w = c3_align(siz_w + pad_w, u3a_v4_walign, C3_ALGHI);
+        u3_v4_post all_p = *pfr_p;
+        all_p += c3_v4_wiseof(u3a_v4_box) + off_w;
+        c3_v4_w pad_w = c3_v4_align(all_p, ald_w, C3_ALGHI) - all_p;
+        c3_v4_w des_w = c3_v4_align(siz_w + pad_w, u3a_v4_walign, C3_ALGHI);
 
         if ( (des_w) > u3v4to(u3a_v4_fbox, *pfr_p)->box_u.siz_w ) {
           /* This free block is too small.  Continue searching.
@@ -219,9 +219,9 @@ _ca_v4_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
           if ( (des_w + u3a_v4_minimum) <= box_u->siz_w ) {
             /* Split the block.
             */
-            c3_w* box_w = ((c3_w *)(void *)box_u);
-            c3_w* end_w = box_w + des_w;
-            c3_w  lef_w = (box_u->siz_w - des_w);
+            c3_v4_w* box_w = ((c3_v4_w *)(void *)box_u);
+            c3_v4_w* end_w = box_w + des_w;
+            c3_v4_w  lef_w = (box_u->siz_w - des_w);
 
             _box_v4_attach(_box_v4_make(end_w, lef_w, 0));
             return u3a_v4_boxto(_box_v4_make(box_w, des_w, 1));
@@ -238,7 +238,7 @@ _ca_v4_willoc(c3_w len_w, c3_w ald_w, c3_w off_w)
 }
 
 static void*
-_ca_v4_walloc(c3_w len_w, c3_w ald_w, c3_w off_w)
+_ca_v4_walloc(c3_v4_w len_w, c3_v4_w ald_w, c3_v4_w off_w)
 {
   void* ptr_v;
   ptr_v = _ca_v4_willoc(len_w, ald_w, off_w);
@@ -248,7 +248,7 @@ _ca_v4_walloc(c3_w len_w, c3_w ald_w, c3_w off_w)
 /* u3a_v4_walloc(): allocate storage words on hat heap.
 */
 void*
-u3a_v4_walloc(c3_w len_w)
+u3a_v4_walloc(c3_v4_w len_w)
 {
   void* ptr_v;
   ptr_v = _ca_v4_walloc(len_w, 1, 0);
@@ -261,7 +261,7 @@ u3a_v4_walloc(c3_w len_w)
 static void
 _box_v4_free(u3a_v4_box* box_u)
 {
-  c3_w* box_w = (c3_w *)(void *)box_u;
+  c3_v4_w* box_w = (c3_v4_w *)(void *)box_u;
 
   u3_assert(box_u->use_w != 0);
   box_u->use_w -= 1;
@@ -274,7 +274,7 @@ _box_v4_free(u3a_v4_box* box_u)
     /* Try to coalesce with the block below.
     */
     if ( box_w != u3a_v4_into(u3R_v4->rut_p) ) {
-      c3_w       laz_w = *(box_w - 1); /* the size of a box stored at the end of its allocation */
+      c3_v4_w       laz_w = *(box_w - 1); /* the size of a box stored at the end of its allocation */
       u3a_v4_box* pox_u = (u3a_v4_box*)(void *)(box_w - laz_w); /* the head of the adjacent box below */
 
       if ( 0 == pox_u->use_w ) {
@@ -282,7 +282,7 @@ _box_v4_free(u3a_v4_box* box_u)
         _box_v4_make(pox_u, (laz_w + box_u->siz_w), 0);
 
         box_u = pox_u;
-        box_w = (c3_w*)(void *)pox_u;
+        box_w = (c3_v4_w*)(void *)pox_u;
       }
     }
 
@@ -319,9 +319,9 @@ u3a_v4_free(void* tox_v)
   if (NULL == tox_v)
     return;
 
-  c3_w* tox_w = tox_v;
-  c3_w  pad_w = tox_w[-1];
-  c3_w* org_w = tox_w - (pad_w + 1);
+  c3_v4_w* tox_w = tox_v;
+  c3_v4_w  pad_w = tox_w[-1];
+  c3_v4_w* org_w = tox_w - (pad_w + 1);
 
   u3a_v4_wfree(org_w);
 }
@@ -329,11 +329,11 @@ u3a_v4_free(void* tox_v)
 /* _me_lose_north(): lose on a north road.
 */
 static void
-_me_v4_lose_north(u3_noun dog)
+_me_v4_lose_north(u3_v4_noun dog)
 {
 top:
   if ( c3y == u3a_v4_north_is_normal(u3R_v4, dog) ) {
-    c3_w*       dog_w = u3a_v4_to_ptr(dog);
+    c3_v4_w*       dog_w = u3a_v4_to_ptr(dog);
     u3a_v4_box* box_u = u3a_v4_botox(dog_w);
 
     if ( box_u->use_w > 1 ) {
@@ -347,8 +347,8 @@ top:
       else {
         if ( _(u3a_v4_is_pom(dog)) ) {
           u3a_v4_cell* dog_u = (void *)dog_w;
-          u3_noun     h_dog = dog_u->hed;
-          u3_noun     t_dog = dog_u->tel;
+          u3_v4_noun     h_dog = dog_u->hed;
+          u3_v4_noun     t_dog = dog_u->tel;
 
           if ( !_(u3a_v4_is_cat(h_dog)) ) {
             _me_v4_lose_north(h_dog);
@@ -370,7 +370,7 @@ top:
 /* u3a_v4_lose(): lose a reference count.
 */
 void
-u3a_v4_lose(u3_noun som)
+u3a_v4_lose(u3_v4_noun som)
 {
   if ( !_(u3a_v4_is_cat(som)) ) {
     _me_v4_lose_north(som);
@@ -382,9 +382,9 @@ u3a_v4_lose(u3_noun som)
 void
 u3a_v4_ream(void)
 {
-  u3p(u3a_v4_fbox) lit_p;
+  u3v4p(u3a_v4_fbox) lit_p;
   u3a_v4_fbox*     fox_u;
-  c3_w     sel_w, i_w;
+  c3_v4_w     sel_w, i_w;
 
   for ( i_w = 0; i_w < u3a_v4_fbox_no; i_w++ ) {
     lit_p = u3R_v4->all.fre_p[i_w];
@@ -398,9 +398,9 @@ u3a_v4_ream(void)
         //  inlined _box_detach()
         //
         {
-          u3p(u3a_v4_fbox) fre_p = u3v4of(u3a_v4_fbox, &(fox_u->box_u));
-          u3p(u3a_v4_fbox) pre_p = u3v4to(u3a_v4_fbox, fre_p)->pre_p;
-          u3p(u3a_v4_fbox) nex_p = u3v4to(u3a_v4_fbox, fre_p)->nex_p;
+          u3v4p(u3a_v4_fbox) fre_p = u3v4of(u3a_v4_fbox, &(fox_u->box_u));
+          u3v4p(u3a_v4_fbox) pre_p = u3v4to(u3a_v4_fbox, fre_p)->pre_p;
+          u3v4p(u3a_v4_fbox) nex_p = u3v4to(u3a_v4_fbox, fre_p)->nex_p;
 
           if ( nex_p ) {
             if ( u3v4to(u3a_v4_fbox, nex_p)->pre_p != fre_p ) {
@@ -424,9 +424,9 @@ u3a_v4_ream(void)
 
         //  inlined _box_attach()
         {
-          u3p(u3a_v4_fbox)  fre_p = u3v4of(u3a_v4_fbox, &(fox_u->box_u));
-          u3p(u3a_v4_fbox)* pfr_p = &u3R_v4->all.fre_p[sel_w];
-          u3p(u3a_v4_fbox)  nex_p = *pfr_p;
+          u3v4p(u3a_v4_fbox)  fre_p = u3v4of(u3a_v4_fbox, &(fox_u->box_u));
+          u3v4p(u3a_v4_fbox)* pfr_p = &u3R_v4->all.fre_p[sel_w];
+          u3v4p(u3a_v4_fbox)  nex_p = *pfr_p;
 
           u3v4to(u3a_v4_fbox, fre_p)->pre_p = 0;
           u3v4to(u3a_v4_fbox, fre_p)->nex_p = nex_p;
@@ -455,22 +455,24 @@ u3a_v4_rewrite_ptr(void* ptr_v)
   return c3y;
 }
 
-u3_post
-u3a_v4_rewritten(u3_post ptr_v)
+u3_v4_post
+u3a_v4_rewritten(u3_v4_post ptr_v)
 {
   u3a_v4_box* box_u = u3a_v4_botox(u3a_v4_into(ptr_v));
-  c3_w* box_w = (c3_w*) box_u;
-  return (u3_post)box_w[box_u->siz_w - 1];
+  c3_v4_w* box_w = (c3_v4_w*) box_u;
+  return (u3_v4_post)box_w[box_u->siz_w - 1];
 }
 
-  /***  jets.h
+  /***  defs.c
   ***/
-/* _cj_fink_free(): lose and free everything in a u3j_fink.
-*/
+c3_v4_w c3_v4_align_w(c3_v4_w x, c3_v4_w al, align_dir hilo);
+
+  /***  jets.c
+  ***/
 static void
-_cj_v4_fink_free(u3p(u3j_v4_fink) fin_p)
+_cj_v4_fink_free(u3v4p(u3j_v4_fink) fin_p)
 {
-  c3_w i_w;
+  c3_v4_w i_w;
   u3j_v4_fink* fin_u = u3v4to(u3j_v4_fink, fin_p);
   u3a_v4_lose(fin_u->sat);
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
@@ -516,7 +518,7 @@ u3j_v4_rite_lose(u3j_v4_rite* rit_u)
 /* u3j_free_hank(): free an entry from the hank cache.
 */
 void
-u3j_v4_free_hank(u3_noun kev)
+u3j_v4_free_hank(u3_v4_noun kev)
 {
   u3a_v4_cell* kev_u = (u3a_v4_cell*) u3a_v4_to_ptr(kev);
   u3j_v4_hank* han_u = u3v4to(u3j_v4_hank, kev_u->tel);
@@ -532,12 +534,12 @@ u3j_v4_free_hank(u3_noun kev)
   ***/
 /* u3h_v4_new_cache(): create hashtable with bounded size.
 */
-u3p(u3h_v4_root)
-u3h_v4_new_cache(c3_w max_w)
+u3v4p(u3h_v4_root)
+u3h_v4_new_cache(c3_v4_w max_w)
 {
-  u3h_v4_root*     har_u = u3a_v4_walloc(c3_wiseof(u3h_v4_root));
-  u3p(u3h_v4_root) har_p = u3v4of(u3h_v4_root, har_u);
-  c3_w        i_w;
+  u3h_v4_root*     har_u = u3a_v4_walloc(c3_v4_wiseof(u3h_v4_root));
+  u3v4p(u3h_v4_root) har_p = u3v4of(u3h_v4_root, har_u);
+  c3_v4_w        i_w;
 
   har_u->max_w       = max_w;
   har_u->use_w       = 0;
@@ -552,7 +554,7 @@ u3h_v4_new_cache(c3_w max_w)
 
 /* u3h_v4_new(): create hashtable.
 */
-u3p(u3h_v4_root)
+u3v4p(u3h_v4_root)
 u3h_v4_new(void)
 {
   return u3h_v4_new_cache(0);
@@ -564,7 +566,7 @@ static void
 _ch_v4_free_buck(u3h_v4_buck* hab_u)
 {
   //fprintf(stderr, "free buck\r\n");
-  c3_w i_w;
+  c3_v4_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3a_v4_lose(u3h_v4_slot_to_noun(hab_u->sot_w[i_w]));
@@ -575,15 +577,15 @@ _ch_v4_free_buck(u3h_v4_buck* hab_u)
 /* _ch_free_node(): free node.
 */
 static void
-_ch_v4_free_node(u3h_v4_node* han_u, c3_w lef_w, c3_o pin_o)
+_ch_v4_free_node(u3h_v4_node* han_u, c3_v4_w lef_w, c3_o pin_o)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
-  c3_w i_w;
+  c3_v4_w len_w = c3_pc_w(han_u->map_w);
+  c3_v4_w i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_v4_w sot_w = han_u->sot_w[i_w];
     if ( _(u3h_v4_slot_is_null(sot_w))) {
     }  else if ( _(u3h_v4_slot_is_noun(sot_w)) ) {
       u3a_v4_lose(u3h_v4_slot_to_noun(sot_w));
@@ -603,13 +605,13 @@ _ch_v4_free_node(u3h_v4_node* han_u, c3_w lef_w, c3_o pin_o)
 /* u3h_v4_free(): free hashtable.
 */
 void
-u3h_v4_free(u3p(u3h_v4_root) har_p)
+u3h_v4_free(u3v4p(u3h_v4_root) har_p)
 {
   u3h_v4_root* har_u = u3v4to(u3h_v4_root, har_p);
-  c3_w        i_w;
+  c3_v4_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    c3_v4_w sot_w = har_u->sot_w[i_w];
 
     if ( _(u3h_v4_slot_is_noun(sot_w)) ) {
       u3a_v4_lose(u3h_v4_slot_to_noun(sot_w));
@@ -627,9 +629,9 @@ u3h_v4_free(u3p(u3h_v4_root) har_p)
 /* _ch_walk_buck(): walk bucket for gc.
 */
 static void
-_ch_v4_walk_buck(u3h_v4_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v4_walk_buck(u3h_v4_buck* hab_u, void (*fun_f)(u3_v4_noun, void*), void* wit)
 {
-  c3_w i_w;
+  c3_v4_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     fun_f(u3h_v4_slot_to_noun(hab_u->sot_w[i_w]), wit);
@@ -639,18 +641,18 @@ _ch_v4_walk_buck(u3h_v4_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 /* _ch_walk_node(): walk node for gc.
 */
 static void
-_ch_v4_walk_node(u3h_v4_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_v4_walk_node(u3h_v4_node* han_u, c3_v4_w lef_w, void (*fun_f)(u3_v4_noun, void*), void* wit)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
-  c3_w i_w;
+  c3_v4_w len_w = c3_pc_w(han_u->map_w);
+  c3_v4_w i_w;
 
   lef_w -= 5;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_w sot_w = han_u->sot_w[i_w];
+    c3_v4_w sot_w = han_u->sot_w[i_w];
 
     if ( _(u3h_v4_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v4_slot_to_noun(sot_w);
+      u3_v4_noun kev = u3h_v4_slot_to_noun(sot_w);
 
       fun_f(kev, wit);
     }
@@ -670,18 +672,18 @@ _ch_v4_walk_node(u3h_v4_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), 
  *                  argument; RETAINS.
 */
 void
-u3h_v4_walk_with(u3p(u3h_v4_root) har_p,
-              void (*fun_f)(u3_noun, void*),
+u3h_v4_walk_with(u3v4p(u3h_v4_root) har_p,
+              void (*fun_f)(u3_v4_noun, void*),
               void* wit)
 {
   u3h_v4_root* har_u = u3v4to(u3h_v4_root, har_p);
-  c3_w        i_w;
+  c3_v4_w        i_w;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
-    c3_w sot_w = har_u->sot_w[i_w];
+    c3_v4_w sot_w = har_u->sot_w[i_w];
 
     if ( _(u3h_v4_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_v4_slot_to_noun(sot_w);
+      u3_v4_noun kev = u3h_v4_slot_to_noun(sot_w);
 
       fun_f(kev, wit);
     }
@@ -693,19 +695,19 @@ u3h_v4_walk_with(u3p(u3h_v4_root) har_p,
   }
 }
 
-/* _ch_walk_plain(): use plain u3_noun fun_f for each node
+/* _ch_walk_plain(): use plain u3_v4_noun fun_f for each node
  */
 static void
-_ch_v4_walk_plain(u3_noun kev, void* wit)
+_ch_v4_walk_plain(u3_v4_noun kev, void* wit)
 {
-  void (*fun_f)(u3_noun) = (void (*)(u3_noun))wit;
+  void (*fun_f)(u3_v4_noun) = (void (*)(u3_v4_noun))wit;
   fun_f(kev);
 }
 
 /* u3h_v4_walk(): u3h_v4_walk_with, but with no data argument
 */
 void
-u3h_v4_walk(u3p(u3h_v4_root) har_p, void (*fun_f)(u3_noun))
+u3h_v4_walk(u3v4p(u3h_v4_root) har_p, void (*fun_f)(u3_v4_noun))
 {
   u3h_v4_walk_with(har_p, _ch_v4_walk_plain, (void *)fun_f);
 }
@@ -730,19 +732,19 @@ _cn_v4_prog_free(u3n_v4_prog* pog_u)
 {
   //  ream pointers inline
   //
-  c3_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
-  c3_w pod_w = pog_u->lit_u.len_w % 2;
-  c3_w ped_w = pog_u->mem_u.len_w % 2;
+  c3_v4_w pad_w = (8 - pog_u->byc_u.len_w % 8) % 8;
+  c3_v4_w pod_w = pog_u->lit_u.len_w % 2;
+  c3_v4_w ped_w = pog_u->mem_u.len_w % 2;
 
   pog_u->byc_u.ops_y = (c3_y*)((void*) pog_u) + sizeof(u3n_v4_prog);
-  pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
-  pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
+  pog_u->lit_u.non   = (u3_v4_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
+  pog_u->mem_u.sot_u = (u3n_v4_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
   pog_u->cal_u.sit_u = (u3j_v4_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
   pog_u->reg_u.rit_u = (u3j_v4_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
 
   //  NB: site reaming elided
 
-  c3_w dex_w;
+  c3_v4_w dex_w;
   for (dex_w = 0; dex_w < pog_u->lit_u.len_w; ++dex_w) {
     u3a_v4_lose(pog_u->lit_u.non[dex_w]);
   }
@@ -761,7 +763,7 @@ _cn_v4_prog_free(u3n_v4_prog* pog_u)
 /* _n_feb(): u3h_walk helper for u3n_free
  */
 static void
-_n_v4_feb(u3_noun kev)
+_n_v4_feb(u3_v4_noun kev)
 {
   u3a_v4_cell* kev_u = (u3a_v4_cell*) u3a_v4_to_ptr(kev);
   _cn_v4_prog_free(u3v4to(u3n_v4_prog, kev_u->tel));
@@ -772,7 +774,7 @@ _n_v4_feb(u3_noun kev)
 void
 u3n_v4_free()
 {
-  u3p(u3h_v4_root) har_p = u3R_v4->byc.har_p;
+  u3v4p(u3h_v4_root) har_p = u3R_v4->byc.har_p;
   u3h_v4_walk(har_p, _n_v4_feb);
   u3h_v4_free(har_p);
 }
@@ -810,14 +812,14 @@ u3m_v4_reclaim(void)
 void
 u3_v4_load(c3_z wor_i)
 {
-  c3_w ver_w = *(u3_Loom_v4 + wor_i - 1);
+  c3_v4_w ver_w = *(u3_Loom_v4 + wor_i - 1);
 
   u3_assert( U3V_VER4 == ver_w );
 
-  c3_w* mem_w = u3_Loom_v4 + u3a_v4_walign;
-  c3_w  siz_w = c3_wiseof(u3v_v4_home);
-  c3_w  len_w = wor_i - u3a_v4_walign;
-  c3_w* mat_w = c3_align(mem_w + len_w - siz_w, u3a_v4_balign, C3_ALGLO);
+  c3_v4_w* mem_w = u3_Loom_v4 + u3a_v4_walign;
+  c3_v4_w  siz_w = c3_v4_wiseof(u3v_v4_home);
+  c3_v4_w  len_w = wor_i - u3a_v4_walign;
+  c3_v4_w* mat_w = c3_v4_align(mem_w + len_w - siz_w, u3a_v4_balign, C3_ALGLO);
 
   u3H_v4 = (void *)mat_w;
   u3R_v4 = &u3H_v4->rod_u;

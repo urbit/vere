@@ -122,39 +122,49 @@
 
       /* u3r_mug_both(): Join two mugs.
       */
-        c3_l
-        u3r_mug_both(c3_w lef_w, c3_w rit_w);
+        c3_h
+        u3r_mug_both(c3_h lef_h, c3_h rit_h);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
       */
-        c3_l
+        c3_h
         u3r_mug_bytes(const c3_y *buf_y,
-                      c3_w        len_w);
+                      c3_h        len_h);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */
-        c3_l
+        c3_h
         u3r_mug_c(const c3_c *a_c);
 
       /* u3r_mug_cell(): Compute the mug of the cell `[hed tel]`.
       */
-        c3_l
+        c3_h
         u3r_mug_cell(u3_noun hed,
                      u3_noun tel);
 
       /* u3r_mug_chub(): Compute the mug of `num`, LSW first.
       */
-        c3_l
+        c3_h
         u3r_mug_chub(c3_d num_d);
 
       /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
       */
-        c3_l
-        u3r_mug_words(const c3_w* key_w, c3_w len_w);
+        c3_h
+        u3r_mug_halfs(const c3_h* key_h, c3_w len_w);
+
+      /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
+      */
+        c3_h
+        u3r_mug_chubs(const c3_d* key_d, c3_w len_w);
+
+      /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
+      */
+        c3_h
+        u3r_mug_words(const c3_w* key_d, c3_w len_w);
 
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
-        c3_l
+        c3_h
         u3r_mug(u3_noun veb);
 
       /* u3r_fing():
@@ -461,6 +471,22 @@
       **
       **   Return word (a_w) of (b).
       */
+        c3_h
+        u3r_half(c3_w    a_w,
+                 u3_atom b);
+
+      /* u3r_chub():
+      **
+      **   Return double-word (a_w) of (b).
+      */
+        c3_d
+        u3r_chub(c3_w    a_w,
+                 u3_atom b);
+
+      /* u3r_word():
+      **
+      **   Return double-word (a_w) of (b).
+      */
         c3_w
         u3r_word(c3_w    a_w,
                  u3_atom b);
@@ -471,25 +497,33 @@
       **   Fill (out_w) with (a) if it fits, returning success.
       */
         c3_t
+        u3r_half_fit(c3_h*   out_w,
+                     u3_atom a);
+
+      /* u3r_chub_fit():
+      **
+      **   Fill (out_w) with (a) if it fits, returning success.
+      */
+        c3_t
+        u3r_chub_fit(c3_d*   out_w,
+                     u3_atom a);
+
+      /* u3r_word_fit():
+      **
+      **   Fill (out_w) with (a) if it fits, returning success.
+      */
+        c3_t
         u3r_word_fit(c3_w*   out_w,
                      u3_atom a);
 
-      /* u3r_chub():
-      **
-      **   Return double-word (a_w) of (b).
-      */
-        c3_d
-        u3r_chub(c3_w    a_w,
-                 u3_atom b);
-
       /* u3r_words():
       **
-      **  Copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
+      **  copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
       */
         void
-        u3r_words(c3_w    a_w,
+        u3r_halfs(c3_w    a_w,
                   c3_w    b_w,
-                  c3_w*   c_w,
+                  c3_h*   c_w,
                   u3_atom d);
 
       /* u3r_chubs():
@@ -502,6 +536,17 @@
                   c3_d*   c_d,
                   u3_atom d);
 
+
+      /* u3r_words():
+      **
+      **  Copy double-words (a_w) through (a_w + b_w - 1) from (d) to (c).
+      */
+        void
+        u3r_words(c3_w    a_w,
+                  c3_w    b_w,
+                  c3_w*   c_w,
+                  u3_atom d);
+
       /* u3r_safe_byte(): validate and retrieve byte.
       */
         c3_o
@@ -510,12 +555,17 @@
       /* u3r_safe_word(): validate and retrieve word.
       */
         c3_o
-        u3r_safe_word(u3_noun dat, c3_w* out_w);
+        u3r_safe_half(u3_noun dat, c3_h* out_w);
 
       /* u3r_safe_chub(): validate and retrieve chub.
       */
         c3_o
         u3r_safe_chub(u3_noun dat, c3_d* out_d);
+
+      /* u3r_safe_word(): validate and retrieve word.
+      */
+        c3_o
+        u3r_safe_word(u3_noun dat, c3_w* out_w);
 
       /* u3r_string(): `a`, a text atom, as malloced C string.
       */

@@ -19,7 +19,7 @@ u3qc_sew(u3_atom a,
        !_(u3r_safe_word(c, &c_w)) ) {
     return u3_none;
   }
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -60,7 +60,7 @@ u3wc_sew(u3_noun cor)
                              u3x_sam_12, &b,
                                     106, &c,
                                     107, &d,
-                              u3x_sam_7, &e, 0)) ||
+                              u3x_sam_7, &e, u3_nul)) ||
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b)) ||
        (c3n == u3ud(c)) ||

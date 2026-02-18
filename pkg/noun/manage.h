@@ -47,7 +47,8 @@
       **    %oops               ::  assertion failure
       */
         c3_i
-        u3m_bail(c3_m how_m) __attribute__((noreturn));
+        //u3m_bail(c3_m how_m) __attribute__((noreturn));
+        u3m_bail(u3_noun how_m) __attribute__((noreturn));
 
       /* u3m_fault(): handle a memory event with libsigsegv protocol.
       */
@@ -92,7 +93,7 @@
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
-        u3m_signal(u3_noun sig_l);
+        u3m_signal(c3_m sig_m);
 
       /* u3m_file(): load file, as atom, or bail.
       */

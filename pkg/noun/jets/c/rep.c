@@ -10,9 +10,9 @@
   Get the lowest `n` bits of a word `w` using a bitmask.
 */
 #define TAKEBITS(n,w) \
-  ((n)==32) ? (w) :   \
+  ((n)==u3a_word_bits) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_w)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -24,7 +24,7 @@
 static u3_noun
 _bit_rep(u3_atom bits, u3_noun blox)
 {
-  if ( (c3n == u3a_is_cat(bits) || bits==0 || bits>31) ) {
+  if ( (c3n == u3a_is_cat(bits) || bits==0 || bits>(u3a_word_bits-1)) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -33,9 +33,9 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //
   c3_w num_blox_w = u3qb_lent(blox);
   c3_w bit_widt_w = num_blox_w * bits;
-  c3_w wor_widt_w = DIVCEIL(bit_widt_w, 32);
+  c3_w wor_widt_w = DIVCEIL(bit_widt_w, u3a_word_bits);
   u3i_slab  sab_u;
-  u3i_slab_bare(&sab_u, 5, wor_widt_w);
+  u3i_slab_bare(&sab_u, u3a_word_bits_log, wor_widt_w);
 
   //
   //  Fill the atom buffer with bits from each block.
@@ -54,17 +54,17 @@ _bit_rep(u3_atom bits, u3_noun blox)
 #   define SLICE(sz,off,val) TAKEBITS(sz, val) << off
 
     for (c3_w i=0; i<num_blox_w; i++) {
-      u3_noun blok_n = u3h(blox);
+      u3_noun blok_h = u3h(blox);
       blox = u3t(blox);
 
-      if ( c3n == u3a_is_cat(blok_n) ) {
+      if ( c3n == u3a_is_cat(blok_h) ) {
         return u3m_bail(c3__fail);
       }
 
-      c3_w blok_w = blok_n;
+      c3_w blok_w = blok_h;
 
       for (c3_w rem_in_blok_w=bits; rem_in_blok_w;) {
-        c3_w rem_in_acc_w = 32 - use_w;
+        c3_w rem_in_acc_w = u3a_word_bits - use_w;
         if (rem_in_blok_w == rem_in_acc_w) {              //  EQ
           acc_w |= SLICE(rem_in_blok_w, use_w, blok_w);
           FLUSH();
@@ -100,7 +100,7 @@ static u3_noun
 _block_rep(u3_atom a,
            u3_noun b)
 {
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
   else {
@@ -164,6 +164,11 @@ u3qc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
 {
+  if ( c3n == u3a_is_cat(a) ||
+       c3n == u3a_is_cat(b) ) {
+    return u3m_bail(c3__fail);
+  }
+
   if ( 1 == b ) {
     return _block_rep(a, c);
   }
@@ -172,8 +177,32 @@ u3qc_rep(u3_atom a,
     return _bit_rep(b, c);
   }
 
-  u3l_log("rep: stub");
-  return u3_none;
+  c3_w  len_w = u3qb_lent(c);
+
+  if ( c3n == u3a_is_cat(len_w) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  if (a >= u3a_word_bits) {
+    return u3m_bail(c3__fail);
+  }
+
+  c3_w sep_w = b * len_w;
+  u3i_slab sab_u;
+  u3i_slab_init(&sab_u, a, sep_w);
+  c3_w    i_w = 0;
+  
+  while ( u3_nul != c ) {
+    u3_noun i_c = u3h(c);
+    if ( c3n == u3a_is_atom(i_c) ) {
+      return u3m_bail(c3__exit);
+    }
+    u3r_chop(a, 0, b, b * i_w, sab_u.buf_w, i_c);
+    c = u3t(c);
+    i_w++;
+  }
+  
+  return u3i_slab_mint(&sab_u);
 }
 
 u3_noun
@@ -182,7 +211,7 @@ u3wc_rep(u3_noun cor)
   u3_atom bloq, step;
   u3_noun a, b;
   u3x_mean(cor, u3x_sam_2, &a,
-                u3x_sam_3, &b, 0);
+                u3x_sam_3, &b, u3_nul);
   u3x_bite(a, &bloq, &step);
 
   return u3qc_rep(bloq, step, b);

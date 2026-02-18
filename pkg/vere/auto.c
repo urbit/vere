@@ -16,7 +16,7 @@ u3_auto_plan(u3_auto* car_u, u3_ovum *egg_u)
 
     egg_u->pre_u = egg_u->nex_u = 0;
     car_u->ent_u = car_u->ext_u = egg_u;
-    car_u->dep_w = 1;
+    car_u->dep_h = 1;
   }
   //  enqueue at driver entry (back of the line)
   //
@@ -29,7 +29,7 @@ u3_auto_plan(u3_auto* car_u, u3_ovum *egg_u)
 
     car_u->ent_u->nex_u = egg_u;
     car_u->ent_u = egg_u;
-    car_u->dep_w++;
+    car_u->dep_h++;
   }
 
   u3_pier_spin(car_u->pir_u);
@@ -44,14 +44,14 @@ u3_auto_redo(u3_auto* car_u, u3_ovum *egg_u)
 {
   u3_assert( egg_u->car_u == car_u );
 
-  egg_u->try_w++;
+  egg_u->try_h++;
 
   if ( !car_u->ent_u ) {
     u3_assert(!car_u->ext_u);
 
     egg_u->pre_u = egg_u->nex_u = 0;
     car_u->ent_u = car_u->ext_u = egg_u;
-    car_u->dep_w = 1;
+    car_u->dep_h = 1;
   }
   //  enqueue at driver exit (front of the line)
   //
@@ -61,7 +61,7 @@ u3_auto_redo(u3_auto* car_u, u3_ovum *egg_u)
 
     car_u->ext_u->pre_u = egg_u;
     car_u->ext_u = egg_u;
-    car_u->dep_w++;
+    car_u->dep_h++;
   }
 
   u3_pier_spin(car_u->pir_u);
@@ -92,7 +92,7 @@ u3_auto_bail_slog(u3_ovum* egg_u, u3_noun lud)
   c3_w  len_w = 1;
 
   while ( u3_nul != dul ) {
-    u3l_log("%s: bail %u", car_c, len_w++);
+    u3l_log("%s: bail %" PRIc3_w, car_c, len_w++);
     u3_pier_punt_goof(car_c, u3k(u3h(dul)));
 
     dul = u3t(dul);
@@ -112,9 +112,9 @@ u3_auto_bail(u3_ovum* egg_u, u3_noun lud)
   //  optional
   //
   if ( egg_u->cb_u.bail_f ) {
-    c3_l cod_l = u3a_lush(egg_u->car_u->nam_m);
+    c3_w cod_w = u3a_lush(egg_u->car_u->nam_m);
     egg_u->cb_u.bail_f(egg_u, lud);
-    u3a_lop(cod_l);
+    u3a_lop(cod_w);
   }
   else {
     u3_auto_bail_slog(egg_u, lud);
@@ -130,9 +130,9 @@ _auto_news(u3_ovum* egg_u, u3_ovum_news new_e)
   // optional
   //
   if ( egg_u->cb_u.news_f ) {
-    c3_l cod_l = u3a_lush(egg_u->car_u->nam_m);
+    c3_w cod_w = u3a_lush(egg_u->car_u->nam_m);
     egg_u->cb_u.news_f(egg_u, new_e);
-    u3a_lop(cod_l);
+    u3a_lop(cod_w);
   }
 }
 
@@ -179,7 +179,7 @@ u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u)
       egg_u->nex_u->pre_u = egg_u->pre_u;
     }
 
-    egg_u->car_u->dep_w--;
+    egg_u->car_u->dep_h--;
 
     egg_u->nex_u = egg_u->pre_u = 0;
   }
@@ -211,11 +211,11 @@ u3_auto_next(u3_auto* car_u, u3_noun* ovo)
       if ( egg_u->nex_u ) {
         egg_u->nex_u->pre_u = 0;
         car_u->ext_u = egg_u->nex_u;
-        car_u->dep_w--;
+        car_u->dep_h--;
       }
       else {
         car_u->ent_u = car_u->ext_u = 0;
-        car_u->dep_w = 0;
+        car_u->dep_h = 0;
       }
 
       egg_u->nex_u = 0;
@@ -253,9 +253,9 @@ _auto_kick_lost(u3_noun pax, u3_noun fav)
 static c3_o
 _auto_kick(u3_auto* car_u, u3_noun pax, u3_noun fav)
 {
-  c3_l cod_l = u3a_lush(car_u->nam_m);
+  c3_w cod_w = u3a_lush(car_u->nam_m);
   c3_o kik_o = car_u->io.kick_f(car_u, pax, fav);
-  u3a_lop(cod_l);
+  u3a_lop(cod_w);
   return kik_o;
 }
 
@@ -314,12 +314,12 @@ u3_auto_live(u3_auto* car_u)
 void
 u3_auto_talk(u3_auto* car_u)
 {
-  c3_l cod_l;
+  c3_w cod_w;
 
   while ( car_u ) {
-    cod_l = u3a_lush(car_u->nam_m);
+    cod_w = u3a_lush(car_u->nam_m);
     car_u->io.talk_f(car_u);
-    u3a_lop(cod_l);
+    u3a_lop(cod_w);
     car_u = car_u->nex_u;
   }
 }
@@ -330,7 +330,7 @@ void
 u3_auto_exit(u3_auto* car_u)
 {
   u3_auto* nex_u;
-  c3_l     cod_l;
+  c3_w     cod_w;
 
   while ( car_u ) {
     nex_u = car_u->nex_u;
@@ -346,9 +346,9 @@ u3_auto_exit(u3_auto* car_u)
       }
     }
 
-    cod_l = u3a_lush(car_u->nam_m);
+    cod_w = u3a_lush(car_u->nam_m);
     car_u->io.exit_f(car_u);
-    u3a_lop(cod_l);
+    u3a_lop(cod_w);
 
     car_u = nex_u;
   }
@@ -383,17 +383,17 @@ u3_auto_slog(u3_auto* car_u)
     nex_u = car_u->nex_u;
 
     u3l_log("    %.*s: live=%s, queue=%u",
-            u3r_met(3, car_u->nam_m),
+            (c3_h)u3r_met(3, car_u->nam_m),
             (c3_c*)&car_u->nam_m,
             ( c3y == car_u->liv_o ) ? "&" : "|",
-            car_u->dep_w);
+            car_u->dep_h);
 
     //  XX details
     //
     if ( car_u->io.slog_f ) {
-      c3_l cod_l = u3a_lush(car_u->nam_m);
+      c3_w cod_w = u3a_lush(car_u->nam_m);
       car_u->io.slog_f(car_u);
-      u3a_lop(cod_l);
+      u3a_lop(cod_w);
     }
 
     car_u = nex_u;

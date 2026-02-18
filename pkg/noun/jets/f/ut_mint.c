@@ -12,7 +12,7 @@ u3wfu_mint(u3_noun cor)
 
   if (  (c3n == u3r_mean(cor, u3x_sam_2, &gol,
                               u3x_sam_3, &gen,
-                              u3x_con, &van, 0))
+                              u3x_con, &van, u3_nul))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {

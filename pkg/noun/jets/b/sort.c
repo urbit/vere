@@ -6,11 +6,13 @@
 #include "noun.h"
 
 
-static_assert( (UINT32_MAX > u3a_cells),
+//  c3_w must be able to represent all possible list lengths
+//
+static_assert( (c3_w_max > u3a_cells),
                "length precision" );
 
 static_assert(
-  (UINT32_MAX < (SIZE_MAX / (3 * sizeof(u3_noun)))),
+  (u3a_cells < (SIZE_MAX / (3 * sizeof(u3_noun)))),
   "allocation size overflow"
 );
 

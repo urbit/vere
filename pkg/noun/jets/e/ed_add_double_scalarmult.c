@@ -59,7 +59,7 @@
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &a,
                                u3x_sam_6, &b,
                                u3x_sam_14, &c,
-                               u3x_sam_15, &d, 0)) ||
+                               u3x_sam_15, &d, u3_nul)) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ||

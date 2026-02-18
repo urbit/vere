@@ -170,6 +170,7 @@ pub fn build(b: *std.Build) !void {
     try flags.appendSlice(&.{
         // "-pedantic",
         "-std=gnu23",
+        // "-Wconversion",         // ;;: todo: enable in a bit
     });
     try flags.appendSlice(copts);
 

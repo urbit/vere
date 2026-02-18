@@ -14,15 +14,32 @@
 #endif
 
 #ifdef __IMMINTRIN_H
-#define _addcarry_w _addcarry_u32
+  #ifdef VERE64
+    #define _addcarry_w _addcarry_u64
+    #define _addcarry_w_ptr(p)  ((unsigned long long*)(p))
+  #else
+    #define _addcarry_w _addcarry_u32
+    #define _addcarry_w_ptr(p)  ((unsigned int*)(p))
+  #endif
 #else
-static inline c3_b
-_addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
-{
-  c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
-  *c_w = (c3_w)sum_d;
-  return (c3_b)(sum_d >> 32);
-}
+  #ifdef VERE64
+    static inline c3_b
+    _addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_q sum = (c3_q)car_b + (c3_q)a_w + (c3_q)b_w;
+      *c_w = (c3_w)sum;
+      return (c3_b)(sum >> 64);
+    }
+  #else
+    static inline c3_b
+    _addcarry_w(c3_b car_b, c3_w a_w, c3_w b_w, c3_w* restrict c_w)
+    {
+      c3_d sum_d = (c3_d)car_b + (c3_d)a_w + (c3_d)b_w;
+      *c_w = (c3_w)sum_d;
+      return (c3_b)(sum_d >> 32);
+    }
+  #endif
+  #define _addcarry_w_ptr(p)  (p)
 #endif
 
 /* _ci_slab_size(): calculate slab bloq-size, checking for overflow.
@@ -31,7 +48,7 @@ static c3_w
 _ci_slab_size(c3_g met_g, c3_d len_d)
 {
   c3_d bit_d = len_d << met_g;
-  c3_d wor_d = (bit_d + 0x1f) >> 5;
+  c3_d wor_d = (bit_d + (u3a_word_bits - 1)) >> u3a_word_bits_log;
   c3_w wor_w = (c3_w)wor_d;
 
   if (  (wor_w != wor_d)
@@ -39,7 +56,6 @@ _ci_slab_size(c3_g met_g, c3_d len_d)
   {
     return (c3_w)u3m_bail(c3__fail);
   }
-
   return wor_w;
 }
 
@@ -53,7 +69,7 @@ _ci_slab_init(u3i_slab* sab_u, c3_w len_w)
   u3a_atom* vat_u = (void *)nov_w;
 
   vat_u->use_w = 1;
-  vat_u->mug_w = 0;
+  vat_u->mug_h = 0;
   vat_u->len_w = len_w;
 
 #ifdef U3_MEMORY_DEBUG
@@ -127,7 +143,7 @@ u3i_slab_init(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
   u3i_slab_bare(sab_u, met_g, len_d);
 
   u3t_on(mal_o);
-  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * 4);
+  memset(sab_u->buf_y, 0, (size_t)sab_u->len_w * u3a_word_bytes);
   u3t_off(mal_o);
 }
 
@@ -170,14 +186,14 @@ u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d)
   //  if necessary, mask off extra most-significant bits
   //  from most-significant word
   //
-  if ( (5 > met_g) && (u3r_met(5, a) >= sab_u->len_w) ) {
+  if ( (u3a_word_bits_log > met_g) && (u3r_met(u3a_word_bits_log, a) >= sab_u->len_w) ) {
     //  NB: overflow already checked in _ci_slab_size()
     //
     c3_d bit_d = len_d << met_g;
-    c3_w wor_w = bit_d >> 5;
-    c3_w bit_w = bit_d & 0x1f;
+    c3_w bit_w = bit_d & (u3a_word_bits-1);
 
     if ( bit_w ) {
+      c3_w wor_w = bit_d >> u3a_word_bits_log;
       sab_u->buf_w[wor_w] &= ((c3_w)1 << bit_w) - 1;
     }
   }
@@ -217,7 +233,7 @@ u3i_slab_grow(u3i_slab* sab_u, c3_g met_g, c3_d len_d)
       {
         c3_y*  buf_y = (void*)(sab_u->buf_w + old_w);
         size_t dif_i = wor_w - old_w;
-        memset(buf_y, 0, dif_i * 4);
+        memset(buf_y, 0, dif_i * u3a_word_bytes);
       }
     }
   }
@@ -320,23 +336,26 @@ u3i_slab_moot(u3i_slab* sab_u)
 /* u3i_word(): construct u3_atom from c3_w.
 */
 u3_atom
-u3i_word(c3_w dat_w)
+u3i_half(c3_h dat_h)
 {
+#ifdef VERE64
+  return dat_h;
+#else
   u3_atom pro;
 
   u3t_on(mal_o);
 
-  if ( c3y == u3a_is_cat(dat_w) ) {
-    pro = (u3_atom)dat_w;
+  if ( c3y == u3a_is_cat((c3_w)dat_h) ) {
+    pro = (u3_atom)dat_h;
   }
   else {
     c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
     u3a_atom* vat_u = (void *)nov_w;
 
     vat_u->use_w = 1;
-    vat_u->mug_w = 0;
+    vat_u->mug_h = 0;
     vat_u->len_w = 1;
-    vat_u->buf_w[0] = dat_w;
+    vat_u->buf_w[0] = dat_h;
 
     pro = u3a_to_pug(u3a_outa(nov_w));
   }
@@ -344,6 +363,7 @@ u3i_word(c3_w dat_w)
   u3t_off(mal_o);
 
   return pro;
+#endif
 }
 
 /* u3i_chub(): construct u3_atom from c3_d.
@@ -351,17 +371,42 @@ u3i_word(c3_w dat_w)
 u3_atom
 u3i_chub(c3_d dat_d)
 {
+#ifndef VERE64
   if ( c3y == u3a_is_cat(dat_d) ) {
     return (u3_atom)dat_d;
   }
   else {
-    c3_w dat_w[2] = {
+    c3_h dat_h[2] = {
       dat_d & 0xffffffffULL,
       dat_d >> 32
     };
 
-    return u3i_words(2, dat_w);
+    return u3i_halfs(2, dat_h);
   }
+#else
+  u3_atom pro;
+
+  u3t_on(mal_o);
+
+  if ( c3y == u3a_is_cat((c3_w)dat_d) ) {
+    pro = (u3_atom)dat_d;
+  }
+  else {
+    c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+    u3a_atom* vat_u = (void *)nov_w;
+
+    vat_u->use_w = 1;
+    vat_u->mug_h = 0;
+    vat_u->len_w = 1;
+    vat_u->buf_w[0] = dat_d;
+
+    pro = u3a_to_pug(u3a_outa(nov_w));
+  }
+
+  u3t_off(mal_o);
+
+  return pro;
+#endif
 }
 
 /* u3i_bytes(): Copy [a] bytes from [b] to an LSB first atom.
@@ -400,24 +445,27 @@ u3i_bytes(c3_w        a_w,
 /* u3i_words(): Copy [a] words from [b] into an atom.
 */
 u3_atom
-u3i_words(c3_w        a_w,
-          const c3_w* b_w)
+u3i_halfs(c3_w        a_w,
+          const c3_h* b_h)
 {
   //  strip trailing zeroes.
   //
-  while ( a_w && !b_w[a_w - 1] ) {
+  while ( a_w && !b_h[a_w - 1] ) {
     a_w--;
   }
 
   if ( !a_w ) {
     return (u3_atom)0;
   }
+  else if ( 1 == a_w ) {
+    return u3i_half(b_h[0]);
+  }
   else {
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 5, a_w);
 
     u3t_on(mal_o);
-    memcpy(sab_u.buf_w, b_w, (size_t)4 * a_w);
+    memcpy(sab_u.buf_w, b_h, (size_t)4 * a_w);
     u3t_off(mal_o);
 
     return u3i_slab_moot(&sab_u);
@@ -447,21 +495,47 @@ u3i_chubs(c3_w        a_w,
     u3i_slab_bare(&sab_u, 6, a_w);
 
     u3t_on(mal_o);
+#ifndef VERE64
+// XX: why exactly different?
     {
-      c3_w* buf_w = sab_u.buf_w;
-      c3_w    i_w;
+      c3_h* buf_h = (c3_h*)sab_u.buf_w;
+      c3_h    i_h;
       c3_d    i_d;
 
-      for ( i_w = 0; i_w < a_w; i_w++ ) {
-        i_d = b_d[i_w];
-        *buf_w++ = i_d & 0xffffffffULL;
-        *buf_w++ = i_d >> 32;
+      for ( i_h = 0; i_h < a_w; i_h++ ) {
+        i_d = b_d[i_h];
+        *buf_h++ = i_d & 0xffffffffULL;
+        *buf_h++ = i_d >> 32;
       }
     }
+#else
+    memcpy(sab_u.buf_w, b_d, (size_t)8 * a_w);
+#endif
     u3t_off(mal_o);
 
     return u3i_slab_mint(&sab_u);
   }
+}
+
+u3_atom
+u3i_word(c3_w dat_w) {
+  return
+#ifndef VERE64
+    u3i_half(dat_w);
+#else
+    u3i_chub(dat_w);
+#endif
+}
+
+u3_atom
+u3i_words(c3_w        a_w,
+          const c3_w* b_w) {
+  return
+#ifndef VERE64
+    u3i_halfs(a_w, b_w);
+#else
+    u3i_chubs(a_w, b_w);
+#endif
 }
 
 /* u3i_mp(): Copy the GMP integer [a] into an atom, and clear it.
@@ -492,7 +566,7 @@ u3i_vint(u3_noun a)
   u3_assert(u3_none != a);
 
   if ( c3_likely(_(u3a_is_cat(a))) ) {
-    return ( c3_unlikely(a == 0x7fffffff) ) ? u3i_word(a + 1) : (a + 1);
+    return ( c3_unlikely(a == u3a_direct_max) ) ? u3i_word(a + 1) : (a + 1);
   }
   else if ( c3_unlikely(_(u3a_is_cell(a))) ) {
     return u3m_bail(c3__exit);
@@ -509,7 +583,7 @@ u3i_vint(u3_noun a)
     c3_w *b_buf_w = sab_u.buf_w;
 
     for (; i_w < pug_u->len_w && car_b; i_w++) {
-      car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, &b_buf_w[i_w]);
+      car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, _addcarry_w_ptr(&b_buf_w[i_w]));
     }
 
     if (car_b) {
@@ -538,7 +612,7 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
     u3a_cell* nov_u = (void *)nov_w;
 
     nov_u->use_w = 1;
-    nov_u->mug_w = 0;
+    nov_u->mug_h = 0;
 
 #ifdef U3_MEMORY_DEBUG
     nov_u->hed = u3_none;
@@ -568,7 +642,7 @@ u3i_cell(u3_noun a, u3_noun b)
     u3a_cell* nov_u = (void *)nov_w;
 
     nov_u->use_w = 1;
-    nov_u->mug_w = 0;
+    nov_u->mug_h = 0;
     nov_u->hed = a;
     nov_u->tel = b;
 
@@ -677,7 +751,9 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
       do {
         u3a_cell*  big_u = u3a_to_ptr(big);
         u3_noun*     old = (u3_noun*)&(big_u->hed);
-        const c3_y bit_y = 1 & (axe_w[dep_w >> 5] >> (dep_w & 31));
+        const c3_y bit_y =
+          1 & ( axe_w[dep_w >> u3a_word_bits_log] >> 
+                (dep_w & (u3a_word_bits - 1)) );
 
         if ( c3n == u3a_is_cell(big) ) {
           return u3m_bail(c3__exit);
@@ -686,7 +762,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
           *out = big;
           out  = &(old[bit_y]);
           big  = *out;
-          big_u->mug_w = 0;
+          big_u->mug_h = 0;
         }
         else  {
           u3_noun  luz = big;

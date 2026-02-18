@@ -28,7 +28,7 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid, u3x_sam_3, &dat, 0)) ||
+    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid, u3x_sam_3, &dat, u3_nul)) ||
          (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {

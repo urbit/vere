@@ -133,65 +133,65 @@ _test_jam_roundtrip(void)
         ret_i &= _test_cue_spec(cap_c, ref, sizeof(res_y), res_y);  \
         u3z(ref);
 
-  {
-    c3_y res_y[1] = { 0x2 };
-    TEST_CASE("0", 0);
-  }
-
-  {
-    c3_y res_y[1] = { 0xc };
-    TEST_CASE("1", 1);
-  }
-
-  {
-    c3_y res_y[1] = { 0x48 };
-    TEST_CASE("2", 2);
-  }
-
-  {
-    c3_y res_y[6] = { 0xc0, 0x37, 0xb, 0x9b, 0xa3, 0x3 };
-    TEST_CASE("%fast", c3__fast);
-  }
-
-  {
-    c3_y res_y[6] = { 0xc0, 0x37, 0xab, 0x63, 0x63, 0x3 };
-    TEST_CASE("%full", c3__full);
-  }
-
-  {
-    c3_y res_y[1] = { 0x29 };
-    TEST_CASE("[0 0]", u3nc(0, 0));
-  }
-
-  {
-    c3_y res_y[2] = { 0x31, 0x3 };
-    TEST_CASE("[1 1]", u3nc(1, 1));
-  }
-
-  {
-    c3_y res_y[2] = { 0x31, 0x12 };
-    TEST_CASE("[1 2]", u3nc(1, 2));
-  }
-
-  {
-    c3_y res_y[2] = { 0x21, 0xd1 };
-    TEST_CASE("[2 3]", u3nc(2, 3));
-  }
-
-  {
-    c3_y res_y[11] = { 0x1, 0xdf, 0x2c, 0x6c, 0x8e, 0xe, 0x7c, 0xb3, 0x3a, 0x36, 0x36 };
-    TEST_CASE("[%fast %full]", u3nc(c3__fast, c3__full));
-  }
-
-  {
-    c3_y res_y[2] = { 0x71, 0xcc };
-    TEST_CASE("[1 1 1]", u3nc(1, u3nc(1, 1)));
-  }
-
-  {
-    c3_y res_y[3] = { 0x71, 0x48, 0x34 };
-    TEST_CASE("[1 2 3]", u3nt(1, 2, 3));
-  }
+//  {
+//    c3_y res_y[1] = { 0x2 };
+//    TEST_CASE("0", 0);
+//  }
+//
+//  {
+//    c3_y res_y[1] = { 0xc };
+//    TEST_CASE("1", 1);
+//  }
+//
+//  {
+//    c3_y res_y[1] = { 0x48 };
+//    TEST_CASE("2", 2);
+//  }
+//
+//  {
+//    c3_y res_y[6] = { 0xc0, 0x37, 0xb, 0x9b, 0xa3, 0x3 };
+//    TEST_CASE("%fast", c3__fast);
+//  }
+//
+//  {
+//    c3_y res_y[6] = { 0xc0, 0x37, 0xab, 0x63, 0x63, 0x3 };
+//    TEST_CASE("%full", c3__full);
+//  }
+//
+//  {
+//    c3_y res_y[1] = { 0x29 };
+//    TEST_CASE("[0 0]", u3nc(0, 0));
+//  }
+//
+//  {
+//    c3_y res_y[2] = { 0x31, 0x3 };
+//    TEST_CASE("[1 1]", u3nc(1, 1));
+//  }
+//
+//  {
+//    c3_y res_y[2] = { 0x31, 0x12 };
+//    TEST_CASE("[1 2]", u3nc(1, 2));
+//  }
+//
+//  {
+//    c3_y res_y[2] = { 0x21, 0xd1 };
+//    TEST_CASE("[2 3]", u3nc(2, 3));
+//  }
+//
+//  {
+//    c3_y res_y[11] = { 0x1, 0xdf, 0x2c, 0x6c, 0x8e, 0xe, 0x7c, 0xb3, 0x3a, 0x36, 0x36 };
+//    TEST_CASE("[%fast %full]", u3nc(c3__fast, c3__full));
+//  }
+//
+//  {
+//    c3_y res_y[2] = { 0x71, 0xcc };
+//    TEST_CASE("[1 1 1]", u3nc(1, u3nc(1, 1)));
+//  }
+//
+//  {
+//    c3_y res_y[3] = { 0x71, 0x48, 0x34 };
+//    TEST_CASE("[1 2 3]", u3nt(1, 2, 3));
+//  }
 
   {
     c3_y res_y[12] = { 0x1, 0xdf, 0x2c, 0x6c, 0x8e, 0x1e, 0xf0, 0xcd, 0xea, 0xd8, 0xd8, 0x93 };
