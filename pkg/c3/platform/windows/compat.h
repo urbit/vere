@@ -17,6 +17,7 @@ uint32_t getppid();
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+int shm_open(const char *name, int oflag, mode_t mode);
 
 #define SIGUSR1       10
 #define SIGALRM       14

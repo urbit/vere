@@ -609,3 +609,51 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
 
   return (ssize_t)len;
 }
+
+int shm_open(const char *name, int oflag, mode_t mode)
+{
+    if (!name || name[0] == '\0') {
+      errno = EINVAL;
+      return -1;
+    }
+
+    if (name[0] == '/') name++;
+
+    DWORD protect = PAGE_READWRITE;
+    DWORD desiredAccess = FILE_MAP_ALL_ACCESS;
+
+    if ((oflag & O_ACCMODE) == O_RDONLY) {
+      protect = PAGE_READONLY;
+      desiredAccess = FILE_MAP_READ;
+    }
+
+    HANDLE h = NULL;
+
+    if (oflag & O_CREAT) {
+      h = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, protect, 0, 0, name);
+      if (!h) {
+        errno = err_win_to_posix(GetLastError());
+        return -1;
+      }
+      if ((oflag & O_EXCL) && GetLastError() == ERROR_ALREADY_EXISTS) {
+        CloseHandle(h);
+        errno = EEXIST;
+        return -1;
+      }
+    } else {
+      h = OpenFileMappingA(desiredAccess, FALSE, name);
+      if (!h) {
+        errno = err_win_to_posix(GetLastError());
+        return -1;
+      }
+    }
+
+    int fd = _open_osfhandle((intptr_t)h, 0);
+    if (fd < 0) {
+      CloseHandle(h);
+      errno = EMFILE;
+      return -1;
+    }
+
+    return fd;
+}

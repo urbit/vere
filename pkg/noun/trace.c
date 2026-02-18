@@ -17,6 +17,12 @@
 #include "retrieve.h"
 #include "vortex.h"
 
+#ifdef U3_OS_windows
+int err_win_to_posix(DWORD winerr);
+/* Relies on single-threadness like windows/rsignal.c */
+static HANDLE _spin_handle_win;
+#endif
+
 /** Global variables.
 **/
 u3t_spin *stk_u;
@@ -557,12 +563,19 @@ u3t_file_cnt(void)
   return _file_cnt_w;
 }
 
+#ifdef U3_OS_windows
+static void
+_win_spin_timer_cb(PVOID param, BOOLEAN timedOut)
+{
+  u3t_samp();
+}
+#endif
+
 /* u3t_boot(): turn sampling on.
 */
 void
 u3t_boot(void)
 {
-#ifndef U3_OS_windows
   if ( u3C.wag_w & u3o_debug_cpu ) {
     _ct_lop_o = c3n;
 #if defined(U3_OS_PROF)
@@ -571,7 +584,7 @@ u3t_boot(void)
     if ( 0 == u3A->roc ) {
       return;
     }
-
+    #ifndef U3_OS_windows
     // Register _ct_sigaction to be called on `SIGPROF`.
     {
       struct sigaction sig_s = {{0}};
@@ -597,9 +610,22 @@ u3t_boot(void)
       itm_v.it_value = itm_v.it_interval;
       setitimer(ITIMER_PROF, &itm_v, 0);
     }
+    #else  // Windows
+    if ( _spin_handle_win != NULL ) {
+      DeleteTimerQueueTimer(NULL, _spin_handle_win, NULL);
+      _spin_handle_win = NULL;
+    }
+    //  10 ms initial timer, 10 ms period
+    //
+    if ( !CreateTimerQueueTimer(&_spin_handle_win, NULL,
+      _win_spin_timer_cb, NULL, 10, 10, 0) )
+    {
+      errno = err_win_to_posix(GetLastError());
+      u3l_log("trace: could not create timer: %s", strerror(errno));
+    }
+    #endif
 #endif
   }
-#endif
 }
 
 /* u3t_boff(): turn profile sampling off.
@@ -607,9 +633,9 @@ u3t_boot(void)
 void
 u3t_boff(void)
 {
-#ifndef U3_OS_windows
   if ( u3C.wag_w & u3o_debug_cpu ) {
 #if defined(U3_OS_PROF)
+    #ifndef U3_OS_windows
     // Mask SIGPROF signals in this thread (and this is the only
     // thread that unblocked them).
     {
@@ -634,9 +660,14 @@ u3t_boff(void)
       sig_s.sa_handler = SIG_IGN;
       sigaction(SIGPROF, &sig_s, 0);
     }
+    #else
+    if ( _spin_handle_win ) {
+      DeleteTimerQueueTimer(NULL, _spin_handle_win, NULL);
+      _spin_handle_win = NULL;
+    }
+    #endif
 #endif
   }
-#endif
 }
 
 
@@ -1133,7 +1164,6 @@ u3t_etch_meme(c3_l mod_l)
 void
 u3t_sstack_init()
 {
-#ifndef U3_OS_windows
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
   c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
@@ -1157,10 +1187,8 @@ u3t_sstack_init()
   stk_u->off_w = 0;
   stk_u->fow_w = 0;
   u3t_sstack_push(c3__root);
-#endif
 }
 
-#ifndef U3_OS_windows
 /* u3t_sstack_open: initalize a root node on the spin stack 
  */
 u3t_spin*
@@ -1185,7 +1213,6 @@ u3t_sstack_open()
 
   return stk_u;
 }
-#endif
 /* u3t_sstack_exit: shutdown the shared memory for thespin stack 
 */
 void
