@@ -2597,13 +2597,23 @@ u3m_init(size_t len_i)
 
 extern void u3je_secp_stop(void);
 
-/* u3m_stop(): graceful shutdown cleanup.
+/* u3m_stop_mars(): graceful shutdown cleanup of the mars process.
 */
 void
-u3m_stop(void)
+u3m_stop_mars(void)
 {
-  u3t_sstack_exit();
+  fprintf(stderr, "stopping mars...\r\n");
+  u3e_stop();
+  u3je_secp_stop();
+}
 
+/* u3m_stop_urth(): graceful shutdown cleanup of the urth process.
+*/
+void
+u3m_stop_urth(void)
+{
+  fprintf(stderr, "stopping urth...\r\n");
+  u3t_sstack_exit();
   u3e_stop();
   u3je_secp_stop();
 }

@@ -1815,7 +1815,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 
       _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
-      u3m_stop();
+      u3m_stop_mars();
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
