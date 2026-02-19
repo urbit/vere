@@ -998,12 +998,6 @@ u3m_bail(u3_noun how)
     }
   }
 
-  // Reset the spin stack pointer
-  if ( NULL != stk_u ) {
-    stk_u->off_w = u3R->off_w;
-    stk_u->fow_w = u3R->fow_w;
-  }
-
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1134,10 +1128,10 @@ u3m_leap(c3_w pad_w)
     u3R->kid_p = u3of(u3_road, rod_u);
   }
 
-  // Add slow stack pointer to rod_u
+  // Stash slow stack pointer
   if ( NULL != stk_u ) {
-    rod_u->off_w = stk_u->off_w;
-    rod_u->fow_w = stk_u->fow_w;
+    u3R->off_w = stk_u->off_w;
+    u3R->fow_w = stk_u->fow_w;
   } 
 
   /* Set up the new road.
@@ -1352,6 +1346,12 @@ u3m_love(u3_noun pro)
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
+
+  // restore slow stack pointer
+  if ( NULL != stk_u ) {
+    stk_u->off_w = u3R->off_w;
+    stk_u->fow_w = u3R->fow_w;
+  }
 
   //  copy product and caches off our stack
   //
