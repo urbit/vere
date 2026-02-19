@@ -994,13 +994,6 @@ _king_loop_init()
   uv_timer_start(&u3K.tim_u, _boothack_cb, 0, 0);
 }
 
-/* _king_loop_exit(): cleanup after event loop
-*/
-void
-_king_loop_exit()
-{
-}
-
 static void
 _king_boot_ivory(void)
 {
@@ -1101,9 +1094,9 @@ u3_king_commence()
   //  run the loop
   //
   _king_loop_init();
+  // does not return becase u3_king_done does not return
+  //
   uv_run(u3L, UV_RUN_DEFAULT);
-  _king_loop_exit();
-  u3m_stop();
 }
 
 /* u3_king_stub(): get the One Pier for unreconstructed code.
@@ -1692,7 +1685,7 @@ _king_done_cb(uv_handle_t* han_u)
   }
 }
 
-/* u3_king_done(): all piers closed. s/b callback
+/* u3_king_done(): all piers closed. s/b callback. Does not return
 */
 void
 u3_king_done(void)
@@ -1757,6 +1750,7 @@ u3_king_done(void)
 
   //  XX remove move
   //
+  u3m_stop_urth();
   exit(u3_Host.xit_i);
 }
 
@@ -1775,9 +1769,7 @@ u3_king_bail(void)
 {
   u3_Host.xit_i = 1;
   _king_forall_unlink(u3_pier_bail);
-  _king_loop_exit();
   u3_king_done();
-  exit(u3_Host.xit_i);
 }
 
 /* u3_king_grab(): gc the daemon
