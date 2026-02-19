@@ -17,7 +17,8 @@ uint32_t getppid();
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
-int shm_open(const char *name, int oflag, mode_t mode);
+int shm_make_path(char *out, size_t outsz, const char *name, const char *dir);
+int shm_open_with_path(const char *name, int oflag, mode_t mode, const char *dir);
 
 #define SIGUSR1       10
 #define SIGALRM       14

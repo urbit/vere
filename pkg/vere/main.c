@@ -3053,8 +3053,10 @@ _cw_work(c3_i argc, c3_c* argv[])
 
   //  start reading
   //
+  fprintf(stderr, "START READING\r\n");
   u3_newt_read(&inn_u);
   uv_run(lup_u, UV_RUN_DEFAULT);
+  fprintf(stderr, "about to stop\r\n");
   u3m_stop();
 }
 

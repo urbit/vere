@@ -2602,6 +2602,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  fprintf(stderr, "stopping\r\n");
   u3t_sstack_exit();
 
   u3e_stop();

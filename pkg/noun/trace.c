@@ -1128,6 +1128,11 @@ u3t_etch_meme(c3_l mod_l)
   }
 }
 
+#ifdef U3_OS_windows
+#define shm_open(name, flags, mode) \
+  shm_open_with_path(name, flags, mode, u3C.dir_c)
+#endif
+
 /* u3t_sstack_init: initalize a root node on the spin stack 
 */
 void
@@ -1188,6 +1193,17 @@ void
 u3t_sstack_exit()
 {
   munmap(stk_u, u3a_page);
+  
+  #ifdef U3_OS_windows
+    c3_c shm_name[256];
+    snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+    c3_c shm_path[2 * MAX_PATH];
+    if ( !shm_make_path(shm_path, sizeof(shm_path), shm_name, u3C.dir_c) ) {
+      return;
+    }
+    fprintf(stderr, "deleting: %s\r\n", shm_path);
+    DeleteFile(shm_path);
+  #endif
 }
 
 /* u3t_sstack_push: push a noun on the spin stack.
