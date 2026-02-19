@@ -625,7 +625,7 @@ _shm_make_path(char *out, size_t outsz, const char *name)
 
     if ( name[0] == '/' ) name++;
 
-    int len_path = _snprintf(out, outsz, "%s\\urbit_spin_shm_%s", tmp_dir, name);
+    int len_path = _snprintf(out, outsz, "%s\\urbit_shm_%s", tmp_dir, name);
     if ( len_path >= outsz - 1 ) return 0;
     out[outsz - 1] = 0;
     return 1;
