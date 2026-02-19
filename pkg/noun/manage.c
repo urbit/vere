@@ -2597,13 +2597,19 @@ u3m_init(size_t len_i)
 
 extern void u3je_secp_stop(void);
 
-/* u3m_stop(): graceful shutdown cleanup.
+/* u3m_stop_*(): graceful shutdown cleanup of urth/mars.
 */
 void
-u3m_stop(void)
+u3m_stop_urth(void)
 {
-  u3t_sstack_exit();
+  u3t_sstack_exit();  // only initialized in urth
+  u3e_stop();
+  u3je_secp_stop();
+}
 
+void
+u3m_stop_mars(void)
+{
   u3e_stop();
   u3je_secp_stop();
 }
