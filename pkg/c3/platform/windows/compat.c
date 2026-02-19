@@ -615,33 +615,36 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
 static BOOL
 _shm_make_path(char *out, size_t outsz, const char *name)
 {
-    char tmp_dir[MAX_PATH];
-    DWORD len_tmp_dir = GetTempPathA((DWORD)sizeof(tmp_dir), tmp_dir);
-    if ( len_tmp_dir == 0 || len_tmp_dir >= sizeof(tmp_dir) ) {
-        tmp_dir[0] = '.';
-        tmp_dir[1] = '\\';
-        tmp_dir[2] = 0;
-    }
+  char tmp_dir[MAX_PATH];
+  DWORD len_tmp_dir = GetTempPathA((DWORD)sizeof(tmp_dir), tmp_dir);
+  if ( len_tmp_dir == 0 || len_tmp_dir >= sizeof(tmp_dir) ) {
+    tmp_dir[0] = '.';
+    tmp_dir[1] = '\\';
+    tmp_dir[2] = 0;
+  }
 
-    if ( name[0] == '/' ) name++;
+  if ( name[0] == '/' ) name++;
 
-    int len_path = _snprintf(out, outsz, "%s\\urbit_shm_%s", tmp_dir, name);
-    if ( len_path >= outsz - 1 ) return 0;
-    out[outsz - 1] = 0;
-    return 1;
+  int len_path = _snprintf(out, outsz, "%s\\urbit_shm_%s", tmp_dir, name);
+  if ( len_path >= outsz - 1 ) return 0;
+  out[outsz - 1] = 0;
+  return 1;
 }
 
 int shm_open(const char *name, int oflag, mode_t mode)
 {
-    if (!name || !*name) { errno = EINVAL; return -1; }
+  if ( !name || '\0' == name[0] ) {
+    errno = EINVAL;
+    return -1;
+  }
 
-    char path[MAX_PATH * 2];
-    if ( !_shm_make_path(path, sizeof(path), name) ) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    
-    oflag |= _O_BINARY;
-    if ( oflag & _O_CREAT ) return _open(path, oflag, mode);
-    return _open(path, oflag);
+  char path[MAX_PATH * 2];
+  if ( !_shm_make_path(path, sizeof(path), name) ) {
+    errno = ENAMETOOLONG;
+    return -1;
+  }
+  
+  oflag |= _O_BINARY;
+  if ( oflag & _O_CREAT ) return _open(path, oflag, mode);
+  return _open(path, oflag);
 }
