@@ -10,6 +10,7 @@
 
 #include "c3/c3.h"
 #include "db/lmdb.h"
+#include "db/book.h"
 #include "noun.h"
 #include "uv.h"
 #include <types.h>
@@ -533,7 +534,8 @@
           c3_i             lok_i;               //  lockfile
           c3_o             liv_o;               //  live
           c3_w             ver_w;               //  version (see version.h)
-          void*            mdb_u;               //  lmdb env of current epoch
+          MDB_env*         mdb_u;               //  lmdb env for top-level metadata
+          u3_book*         txt_u;               //  book env of current epoch
           c3_d             sen_d;               //  commit requested
           c3_d             dun_d;               //  committed
           c3_d             epo_d;               //  current epoch number
@@ -875,12 +877,12 @@
         void
         u3_disk_exit(u3_disk* log_u);
 
-      /* u3_disk_read_meta(): read metadata.
+      /* u3_disk_read_meta(): read metadata from lmdb.
       */
         c3_o
         u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u);
 
-      /* u3_disk_save_meta(): save metadata.
+      /* u3_disk_save_meta(): save metadata to lmdb.
       */
         c3_o
         u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u);

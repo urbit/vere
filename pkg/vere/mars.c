@@ -1948,7 +1948,10 @@ u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
     exit(1);  //  XX cleanup
   }
 
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, &met_u) ) {
+  if ( c3n == u3_book_save_meta(log_u->txt_u, "version", sizeof(c3_w), (c3_y*)&met_u.ver_w)
+     || c3n == u3_book_save_meta(log_u->txt_u, "who", sizeof(met_u.who_d), (c3_y*)met_u.who_d)
+     || c3n == u3_book_save_meta(log_u->txt_u, "fake", sizeof(c3_o), (c3_y*)&met_u.fak_o)
+     || c3n == u3_book_save_meta(log_u->txt_u, "life", sizeof(c3_w), (c3_y*)&met_u.lif_w) ) {
     exit(1);  //  XX cleanup
   }
 
