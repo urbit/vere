@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "sigsegv",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
@@ -34,7 +33,7 @@ pub fn build(b: *std.Build) void {
 
     const config_h = b.addConfigHeader(.{
         .style = .{
-            .autoconf = dep_c.path("config.h.in"),
+            .autoconf_undef = dep_c.path("config.h.in"),
         },
         .include_path = "config.h",
     }, .{

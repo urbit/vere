@@ -5,10 +5,9 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
-    const murmur3 = b.addStaticLibrary(.{
+    const murmur3 = b.addLibrary(.{
         .name = "murmur3",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     murmur3.linkLibC();

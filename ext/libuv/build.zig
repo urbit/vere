@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const uv = b.addStaticLibrary(.{
+    const uv = b.addLibrary(.{
         .name = "libuv",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     uv.linkLibC();
@@ -21,7 +20,7 @@ pub fn build(b: *std.Build) !void {
     uv.addIncludePath(uv_c.path("src"));
     uv.addIncludePath(uv_c.path("include"));
 
-    var uv_flags = std.ArrayList([]const u8).init(b.allocator);
+    var uv_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer uv_flags.deinit();
 
     try uv_flags.appendSlice(&.{
@@ -76,6 +75,14 @@ pub fn build(b: *std.Build) !void {
         },
         .flags = uv_flags.items,
     });
+
+    if (t.os.tag == .windows) {
+        uv.addCSourceFiles(.{
+            .files = &.{"patches/libuv/src/win/tty.c"},
+            .flags = uv_flags.items,
+        });
+        uv.addIncludePath(uv_c.path("src/win"));
+    }
 
     uv.installHeadersDirectory(uv_c.path("include"), "", .{});
 
@@ -162,7 +169,6 @@ const uv_srcs_windows = uv_srcs ++ [_][]const u8{
     "win/snprintf.c",
     "win/stream.c",
     "win/tcp.c",
-    "win/tty.c",
     "win/udp.c",
     "win/util.c",
     "win/winapi.c",
