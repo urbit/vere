@@ -2602,7 +2602,6 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop_urth(void)
 {
-  u3t_sstack_exit();  // only initialized in urth
   u3e_stop();
   u3je_secp_stop();
 }
@@ -2610,6 +2609,7 @@ u3m_stop_urth(void)
 void
 u3m_stop_mars(void)
 {
+  u3t_sstack_exit();  // global variable only initialized in mars
   u3e_stop();
   u3je_secp_stop();
 }
