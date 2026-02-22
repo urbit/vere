@@ -268,7 +268,6 @@
         c3_w    hap_w;                      //  -C, cap transient memo cache
         c3_o    dry;                        //  -D, dry compute, no checkpoint
         c3_o    dem;                        //  -d, daemon
-        c3_c*   gat_c;                      //  -g, PKI gateway node url
         c3_c*   fak_c;                      //  -F, fake ship
         c3_c*   gen_c;                      //  -G, czar generator
         c3_o    gab;                        //  -g, test garbage collection
@@ -298,6 +297,7 @@
         c3_o    tem;                        //  -t, Disable terminal/tty assumptions
         c3_c*   url_c;                      //  -u, pill url
         c3_o    veb;                        //  -v, verbose (inverse of -q)
+        c3_c*   gat_c;                      //  -W, PKI gateway node url
         c3_c*   who_c;                      //  -w, begin with ticket
         c3_c*   pek_c;                      //  -X, scry path (/vc/desk/path)
         c3_o    tex;                        //  -x, exit after loading
