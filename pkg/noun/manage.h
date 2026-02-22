@@ -28,9 +28,9 @@
         c3_d
         u3m_boot_lite(size_t len_i);
 
-      /* u3m_stop_*(): graceful shutdown cleanup of a urth/mars process. */
-        void u3m_stop_mars(void);
-        void u3m_stop_urth(void);
+      /* u3m_stop(): graceful shutdown cleanup. */
+        void
+        u3m_stop(void);
 
       /* u3m_bail(): bail out.  Does not return.
       **
