@@ -2917,8 +2917,9 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //  start reading
   //
   u3_newt_read(&inn_u);
+  // does not return because _mars_flush does not return
+  //
   uv_run(lup_u, UV_RUN_DEFAULT);
-  u3m_stop();
 }
 
 /* _cw_work(): resume and run; replay and start event processing
@@ -3054,8 +3055,8 @@ _cw_work(c3_i argc, c3_c* argv[])
   //  start reading
   //
   u3_newt_read(&inn_u);
+  // does not return becase _mars_flush does not return
   uv_run(lup_u, UV_RUN_DEFAULT);
-  u3m_stop();
 }
 
 
