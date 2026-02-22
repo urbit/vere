@@ -866,7 +866,7 @@ top:
 
       //  XX dispose [mar_u], exit cb ?
       //
-      u3m_stop_mars();
+      u3m_stop();
       exit(0);
     }
   }

@@ -1521,7 +1521,7 @@ _cw_info(c3_i argc, c3_c* argv[])
   u3_lmdb_stat(log_u->mdb_u, stdout);
   u3_disk_exit(log_u);
 
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_grab(): gc pier.
@@ -1610,7 +1610,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);  //  NB: readonly
   u3C.wag_w |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_cram(): jam persistent state (rock), and exit.
@@ -1717,7 +1717,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_queu(): cue rock, save, and exit.
@@ -1837,7 +1837,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     u3_disk_exit(log_u);
 
     fprintf(stderr, "urbit: queu: rock loaded at event %" PRIu64 "\r\n", eve_d);
-    u3m_stop_urth();
+    u3m_stop();
   }
 }
 
@@ -1933,7 +1933,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3m_save();
   u3_disk_exit(log_u);
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_melt(): canonicalize persistent nouns.
@@ -2025,7 +2025,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3m_save();
   u3_disk_exit(log_u);
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_next(): request upgrade
@@ -2198,7 +2198,7 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
   u3m_save();
   u3_disk_exit(log_u);
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_play_slog(): print during replay.
@@ -2352,7 +2352,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     u3_disk_exit(mar_u.log_u);
   }
 
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_prep(): prepare for upgrade
@@ -2514,7 +2514,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
   u3_disk_chop(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_roll(): rollover to new epoch
@@ -2580,7 +2580,7 @@ _cw_roll(c3_i argc, c3_c* argv[])
   u3_disk_roll(log_u, u3_Host.eve_d);
 
   u3_disk_exit(log_u);
-  u3m_stop_urth();
+  u3m_stop();
 }
 
 /* _cw_vere(): download vere

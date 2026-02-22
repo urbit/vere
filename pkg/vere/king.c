@@ -1707,7 +1707,7 @@ u3_king_done(void)
 
   //  XX remove move
   //
-  u3m_stop_urth();
+  u3m_stop();
   exit(u3_Host.xit_i);
 }
 
