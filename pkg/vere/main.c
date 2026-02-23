@@ -314,7 +314,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "jael-sources",        required_argument, NULL, 13 },
-    { "gc-abort",            no_argument,       NULL, 13 },
+    { "gc-abort",            no_argument,       NULL, 14 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -372,7 +372,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3_Host.ops_u.src_c = strdup(optarg);
         break;
       }
-      case 13: {
+      case 14: {
         u3_Host.ops_u.gab_abort = c3y;
         u3_Host.ops_u.gab = c3y;
         break;

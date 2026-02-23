@@ -354,9 +354,9 @@ _stun_time_gap(struct timeval sar_tv)
 {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
-  u3_noun now = u3_time_in_tv(&tim_tv);
-  u3_noun den = u3_time_in_tv(&sar_tv);
-  return u3_time_gap_ms(den, now);
+  u3_noun now = u3m_time_in_tv(&tim_tv);
+  u3_noun den = u3m_time_in_tv(&sar_tv);
+  return u3m_time_gap_ms(den, now);
 }
 
 c3_o _ames_lamp_lane(u3_auto*, u3_ship, sockaddr_in*);

@@ -955,7 +955,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
 
   if ( c3y == req_u->peq_u->las_o ) {
     c3_o pro_o;
-    u3_noun our = u3dc("scot", 'p', u3i_chubs(2, htd_u->car_u.pir_u->who_d));
+    u3_noun our = u3dc("scot", 'p', u3_ship_to_noun(htd_u->car_u.pir_u->who_u));
     if ( c3y == u3r_sing(our, bem_u->who) ) {
       pro_o = c3y;
       u3_pier_peek_last(htd_u->car_u.pir_u, u3k(gang), c3__ex,
