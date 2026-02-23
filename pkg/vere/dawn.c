@@ -248,9 +248,9 @@ _dawn_turf(c3_c* dns_c)
 /* _dawn_sponsor(): retrieve sponsor from point
 */
 static u3_noun
-_dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
+_dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot, c3_o azi_o)
 {
-  u3_noun uni = u3dc("sponsor:dawn", u3k(who), u3k(pot));
+  u3_noun uni = u3dt("sponsor:dawn", u3k(who), u3k(pot), azi_o);
 
   if ( c3n == u3h(uni) ) {
     _dawn_fail(who, rac, u3nc(u3t(uni), u3_nul));
@@ -264,29 +264,53 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
   return pos;
 }
 
+/* _dawn_is_az(): check whether azimuth ship
+*/
+static u3_noun
+_dawn_is_az(u3_noun who, u3_noun fed)
+{
+  u3_noun rank = u3do("clan:title", who);
+
+  if ( c3__pawn != rank ) {
+    u3z(fed);
+    return c3y;
+  }
+
+  u3_noun suite = u3do("suite:dawn", fed);
+
+  if ( u3_nul == suite || c3__b == u3t(suite) ) {
+    return c3y;
+  }
+
+  u3z(suite);
+  return c3n;
+}
+
 /* u3_dawn_vent(): validated boot event
 */
 u3_noun
 u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 {
-  u3_noun fed, pos, pon, zar, tuf, src;
+  u3_noun fed, pos, pon, zar, tuf, src, sax;
 
   u3_noun rank = u3do("clan:title", u3k(ship));
+
+  c3_o azi_o = _dawn_is_az(u3k(ship), u3k(feed));
 
   c3_c url_c[4096];
 
   {
-    //  +point:azimuth: on-chain state
+    //  +point:jael: gateway state
     //
     u3_noun pot;
 
-    if ( c3__pawn == rank ) {
+    if ( c3__pawn == rank && c3y == azi_o ) {
       //  irrelevant, just bunt +point
       //
-      pot = u3v_wish("*point:azimuth");
+      pot = u3v_wish("*point:jael");
     }
     else  if ( c3__earl == rank ) {
-      pot = u3v_wish("*point:azimuth");
+      pot = u3v_wish("*point:jael");
     }
     else {
       u3l_log("boot: retrieving %s's public keys",
@@ -332,7 +356,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
     *rift = u3k(u3h(u3t(u3t(u3t(fed)))));
 
     u3l_log("boot: getting sponsor");
-    pos = _dawn_sponsor(u3k(ship), u3k(rank), u3k(pot));
+    pos = _dawn_sponsor(u3k(ship), u3k(rank), u3k(pot), azi_o);
     u3z(pot); u3z(liv);
   }
 
@@ -359,9 +383,31 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
             u3_Host.ops_u.gat_c);
     u3_noun tuf = u3_king_get_noun(url_c);
   }
+  
+  //  (list ship): %saxo sponsorship chain
+  //
+  {
+    u3l_log("boot: retrieving sponsorship chain");
+    u3_noun who = u3dc("scot", 'p', u3k(pos));
+    c3_c* who_c = u3r_string(who);
+    sprintf(url_c, "%s/_~_/=saxo=/j/%s",
+            u3_Host.ops_u.gat_c, who_c);
+    sax = u3_king_get_noun(url_c);
+    
+    // shouldn't occur as saxo includes the ship itself
+    //
+    if ( u3_nul == sax ) {
+      u3l_log("boot: sponsorship chain empty");
+      _dawn_fail(ship, rank, u3_nul);
+      return u3_none;
+    }
+
+    u3z(who);
+    c3_free(who_c);
+  }
 
   pon = u3_nul;
-  while (c3__czar != rank) {
+  while (u3_nul != sax) {
     u3_noun son;
     //  print message
     //
@@ -373,7 +419,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
       c3_free(who_c);
     }
 
-    //  retrieve +point:azimuth of pos (sponsor of ship)
+    //  retrieve +point:jael of pos (sponsor of ship)
     //
     {
       u3_noun top = u3dc("scot", c3__p, u3k(pos));
@@ -389,13 +435,16 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
       //
       pon = u3nc(u3nc(u3k(pos), son), pon);
     }
-
-    // find next sponsor
+    
+    // next sponsor
     //
     u3z(ship); u3z(rank);
     ship = pos;
     rank = u3do("clan:title", u3k(ship));
-    pos = _dawn_sponsor(u3k(ship), u3k(rank), u3k(son));
+    sax = u3t(sax);
+    if ( u3_nul != sax ) {
+      pos = u3h(sax);
+    }
 
     u3z(son);
   }
@@ -407,14 +456,14 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
     src = u3_nul;
   }
 
-  //  [%dawn seed sponsors galaxies domains block eth-url sources]
+  //  [%dawn %1 seed sponsors galaxies domains eth-url sources]
   //
   //NOTE  blocknum of 0 is fine because jael ignores it.
   //      should probably be removed from dawn event.
   u3_noun ven = u3nc(c3__dawn,
-                     u3nq(u3k(u3t(fed)), pon, zar, u3nq(tuf, 0, u3_nul, src)));
+                     u3nq(1, u3k(u3t(fed)), pon, u3nq(zar, tuf, u3_nul, src)));
 
-  u3z(fed); u3z(rank); u3z(pos); u3z(ship); u3z(feed);
+  u3z(fed); u3z(rank); u3z(pos); u3z(ship); u3z(feed); u3z(sax);
 
   return ven;
 }
