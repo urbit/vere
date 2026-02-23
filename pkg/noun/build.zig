@@ -7,12 +7,12 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
-    
+
     // Parse Tracy-related compiler options from copts to determine if Tracy is enabled
     var tracy_enabled = false;
     var tracy_callstack = false;
     var tracy_no_exit = false;
-    
+
     for (copts) |opt| {
         if (std.mem.eql(u8, opt, "-DTRACY_ENABLE")) {
             tracy_enabled = true;
@@ -23,10 +23,9 @@ pub fn build(b: *std.Build) !void {
         }
     }
 
-    const pkg_noun = b.addStaticLibrary(.{
+    const pkg_noun = b.addLibrary(.{
         .name = "noun",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
@@ -138,8 +137,6 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
     pkg_noun.linkLibrary(gmp.artifact("gmp"));
 
-
-
     pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
     pkg_noun.linkLibrary(openssl.artifact("ssl"));
     pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
@@ -168,7 +165,7 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows)
         pkg_noun.addIncludePath(b.path("platform/windows"));
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
         // "-pedantic",
@@ -185,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
-            .files = &.{"veh_handler.c", "rsignal.c"},
+            .files = &.{ "veh_handler.c", "rsignal.c" },
             .flags = flags.items,
         });
     }
@@ -197,7 +194,7 @@ pub fn build(b: *std.Build) !void {
         .linux => "platform/linux/rsignal.h",
         .windows => "platform/windows/rsignal.h",
         else => "",
-    }), "platform/rsignal.h");
+    }), "rsignal.h");
 
     b.installArtifact(pkg_noun);
 }

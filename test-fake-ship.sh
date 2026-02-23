@@ -4,7 +4,7 @@ set -x
 
 urbit_binary=$GITHUB_WORKSPACE/$URBIT_BINARY
 
-$urbit_binary --lite-boot --daemon --gc ./pier 2> urbit-output
+$urbit_binary --lite-boot --daemon --gc-abort ./pier 2> urbit-output
 
 port=$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $1}')
 

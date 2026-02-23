@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "backtrace",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -23,7 +22,7 @@ pub fn build(b: *std.Build) void {
     if (t.os.tag != .windows) {
         config_h = b.addConfigHeader(.{
             .style = .{
-                .autoconf = dep_c.path("config.h.in"),
+                .autoconf_undef = dep_c.path("config.h.in"),
             },
             .include_path = "config.h",
         }, .{
@@ -92,7 +91,7 @@ pub fn build(b: *std.Build) void {
     } else {
         config_h = b.addConfigHeader(.{
             .style = .{
-                .autoconf = dep_c.path("config.h.in"),
+                .autoconf_undef = dep_c.path("config.h.in"),
             },
             .include_path = "config.h",
         }, .{

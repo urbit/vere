@@ -69,7 +69,7 @@ static c3_w
 _measure(u3_noun a);
 
 static void
-_serialize(json_buffer*, u3_noun);
+serialize(json_buffer*, u3_noun);
 
 /*
 ** core jet logic
@@ -253,7 +253,7 @@ _serialize_array(json_buffer *buf_u, u3_noun a)
 
     while ( u3_nul != t ) {
       u3x_cell(t, &i, &t);
-      _serialize(buf_u, i);
+      serialize(buf_u, i);
       _append_char(buf_u, ',');
     }
 
@@ -302,7 +302,7 @@ _serialize_object_helper(json_buffer *buf_u, u3_noun a)
 
     _serialize_string(buf_u, pn_a);
     _append_char(buf_u, ':');
-    _serialize(buf_u, qn_a);
+    serialize(buf_u, qn_a);
     _append_char(buf_u, ',');
 
     _serialize_object_helper(buf_u, l_a);
@@ -359,7 +359,7 @@ _measure(u3_noun a)
 }
 
 static void
-_serialize(json_buffer *buf_u, u3_noun a)
+serialize(json_buffer *buf_u, u3_noun a)
 {
   if ( u3_nul == a ) {
     _append_text(buf_u, _JSON_NULL, sizeof(_JSON_NULL) - 1);
@@ -396,7 +396,7 @@ u3qe_json_en(u3_noun a)
   buf_u->len_w = 0;
 
   // note that it's structurally integral to call measure before serialize
-  _serialize(buf_u, a);
+  serialize(buf_u, a);
 
   return u3i_slab_mint_bytes(&sab_u);
 }

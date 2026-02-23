@@ -6,7 +6,7 @@
 #include "events.h" // XX remove, see full replay in _cw_play()
 #include "ivory.h"
 #include "ur/ur.h"
-#include "platform/rsignal.h"
+#include "rsignal.h"
 #include "vere.h"
 
 #ifndef U3_OS_windows
@@ -166,7 +166,12 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
+#if defined(U3_OS_windows)
+  u3_Host.ops_u.map = c3n;
+#else
   u3_Host.ops_u.map = c3y;
+#endif
+
   u3_Host.ops_u.net = c3y;
   u3_Host.ops_u.lit = c3n;
   u3_Host.ops_u.nuu = c3n;
@@ -309,6 +314,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "jael-sources",        required_argument, NULL, 13 },
+    { "gc-abort",            no_argument,       NULL, 13 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -364,6 +370,11 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 13: { //  jael-sources
         u3_Host.ops_u.src_c = strdup(optarg);
+        break;
+      }
+      case 13: {
+        u3_Host.ops_u.gab_abort = c3y;
+        u3_Host.ops_u.gab = c3y;
         break;
       }
       //  special args
@@ -902,6 +913,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-file FILE          Add a prop into the boot sequence\n"
     "    --prop-url URL            Download a prop into the boot sequence\n",
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
+    "    --gc-abort                Abort the process on leaks, implies -g\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -1607,6 +1619,9 @@ _cw_grab(c3_i argc, c3_c* argv[])
   if ( _(u3_Host.ops_u.gab) ) {
     u3C.wag_w |= u3o_debug_ram;
   }
+  if ( _(u3_Host.ops_u.gab_abort) ) {
+    u3C.wag_w |= u3o_leak_crash;
+  }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);  //  NB: readonly
   u3C.wag_w |= u3o_hashless;
@@ -1628,6 +1643,7 @@ _cw_cram(c3_i argc, c3_c* argv[])
     { "swap",          no_argument,       NULL, 7 },
     { "swap-to",       required_argument, NULL, 8 },
     { "lmdb-map-size", required_argument, NULL, 9 },
+    { "yolo",          no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1664,6 +1680,10 @@ _cw_cram(c3_i argc, c3_c* argv[])
         }
         break;
       }
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
+      } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -1732,6 +1752,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     { "swap-to",       required_argument, NULL, 8 },
     { "lmdb-map-size", required_argument, NULL, 9 },
     { "replay-from",   required_argument, NULL, 'r' },
+    { "yolo",          no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1771,6 +1792,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
       case 'r': {
         roc_c = strdup(optarg);
+      } break;
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
       } break;
 
       case '?': {
@@ -1941,6 +1966,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
     { "gc-early",  no_argument,       NULL, 9 },
+    { "yolo",      no_argument,       NULL, 'y' },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1975,6 +2001,10 @@ _cw_melt(c3_i argc, c3_c* argv[])
         u3C.wag_w |= u3o_check_corrupt;
         break;
       }
+
+      case 'y': {
+        u3C.wag_w |= u3o_yolo;
+      } break;
 
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
@@ -2310,6 +2340,9 @@ _cw_play(c3_i argc, c3_c* argv[])
   */
   if ( _(u3_Host.ops_u.gab) ) {
     u3C.wag_w |= u3o_debug_ram;
+  }
+  if ( _(u3_Host.ops_u.gab_abort) ) {
+    u3C.wag_w |= u3o_leak_crash;
   }
 
   u3C.wag_w |= u3o_hashless;
@@ -3239,6 +3272,9 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.gab) ) {
         u3C.wag_w |= u3o_debug_ram;
+      }
+      if ( _(u3_Host.ops_u.gab_abort) ) {
+        u3C.wag_w |= u3o_leak_crash;
       }
 
       /*  Set no-demand flag.

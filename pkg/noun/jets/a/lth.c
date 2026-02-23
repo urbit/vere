@@ -8,30 +8,7 @@
 u3_noun
 u3qa_lth(u3_atom a, u3_atom b)
 {
-  if (c3y == u3a_is_cat(a) || c3y == u3a_is_cat(b))
-  {
-    return __( a < b );
-  }
-
-  if (a == b) return c3n;
-
-  u3a_atom* a_u = u3a_to_ptr(a);
-  u3a_atom* b_u = u3a_to_ptr(b);
-
-  if (a_u->len_w != b_u->len_w)
-  {
-    return __( a_u->len_w < b_u->len_w );
-  }
-
-  c3_w* a_w = a_u->buf_w;
-  c3_w* b_w = b_u->buf_w;
-  for (c3_w i_w = a_u->len_w; i_w--;)
-  {
-    if (a_w[i_w] < b_w[i_w]) return c3y;
-    if (a_w[i_w] > b_w[i_w]) return c3n;
-  }
-
-  return c3n;
+  return __( -1 == u3r_comp(a, b) );
 }
 
 u3_noun

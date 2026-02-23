@@ -178,7 +178,7 @@ u3_ptty_init(uv_loop_t* lup_u, const c3_c** err_c)
     pty_u->raw_u.c_cflag &= ~(CSIZE | PARENB);
     pty_u->raw_u.c_cflag |= CS8;
     pty_u->raw_u.c_oflag &= ~(OPOST);
-    pty_u->raw_u.c_cc[VMIN] = 0;
+    pty_u->raw_u.c_cc[VMIN] = 1;
     pty_u->raw_u.c_cc[VTIME] = 0;
   }
 

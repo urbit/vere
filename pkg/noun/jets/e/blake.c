@@ -112,6 +112,7 @@
       c3_y flags_y = u3r_byte(0, flags);
       u3r_bytes(0, 32, cv_y, cv);
       urcrypt_blake3_chunk_output(wid_w, dat_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
+      u3a_free(dat_y);
       return u3i_cell(u3i_bytes(32, cv_y), u3i_qual(u3k(counter), u3i_bytes(64, block_y), block_len, flags_y));
     }
   }
