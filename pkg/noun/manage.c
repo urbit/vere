@@ -314,9 +314,9 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != stk_u ) {
-    stk_u->off_w = u3H->rod_u.off_w;
-    stk_u->fow_w = u3H->rod_u.fow_w;
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3H->rod_u.off_w;
+    u3t_Spin->fow_w = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
@@ -1135,9 +1135,9 @@ u3m_leap(c3_w pad_w)
   }
 
   // Stash slow stack pointer
-  if ( NULL != stk_u ) {
-    u3R->off_w = stk_u->off_w;
-    u3R->fow_w = stk_u->fow_w;
+  if ( NULL != u3t_Spin ) {
+    u3R->off_w = u3t_Spin->off_w;
+    u3R->fow_w = u3t_Spin->fow_w;
   } 
 
   /* Set up the new road.

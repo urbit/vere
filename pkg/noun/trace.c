@@ -19,7 +19,7 @@
 
 /** Global variables.
 **/
-u3t_spin *stk_u;
+u3t_spin *u3t_Spin;
 u3t_trace u3t_Trace;
 
 static c3_o _ct_lop_o;
@@ -1147,9 +1147,9 @@ u3t_sstack_init()
     return;
   }
 
-  stk_u = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  u3t_Spin = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   
-  if ( MAP_FAILED == stk_u ) {
+  if ( MAP_FAILED == u3t_Spin ) {
     perror("mmap failed");
     return;
   }
@@ -1166,15 +1166,15 @@ u3t_sstack_init()
     u3l_log("CreateFileMapping error");
     return;
   }
-  stk_u = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, TRACE_PSIZE);
-  if ( !stk_u ) {
+  u3t_Spin = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, TRACE_PSIZE);
+  if ( !u3t_Spin ) {
     u3l_log("MapViewOfFile error in u3t_sstack_init");
     return;
   }
 #endif
 
-  stk_u->off_w = 0;
-  stk_u->fow_w = 0;
+  u3t_Spin->off_w = 0;
+  u3t_Spin->fow_w = 0;
   u3t_sstack_push(c3__root);
 }
 
@@ -1222,7 +1222,7 @@ u3t_sstack_open()
 void
 u3t_sstack_exit()
 {
-  munmap(stk_u, u3a_page);
+  munmap(u3t_Spin, u3a_page);
 }
 
 /* u3t_sstack_push: push a noun on the spin stack.
@@ -1230,7 +1230,7 @@ u3t_sstack_exit()
 void
 u3t_sstack_push(u3_noun nam)
 {
-  if ( !stk_u ) {
+  if ( !u3t_Spin ) {
     u3z(nam);
     return;
   }
@@ -1243,17 +1243,17 @@ u3t_sstack_push(u3_noun nam)
   c3_w  met_w = u3r_met(3, nam);
   
   // Exit if full
-  if ( 0 < stk_u->fow_w || 
-       sizeof(stk_u->dat_y) < stk_u->off_w + met_w + sizeof(c3_w) ) {
-    stk_u->fow_w++;
+  if ( 0 < u3t_Spin->fow_w || 
+       sizeof(u3t_Spin->dat_y) < u3t_Spin->off_w + met_w + sizeof(c3_w) ) {
+    u3t_Spin->fow_w++;
     return;
   }
 
-  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_w), nam);
-  stk_u->off_w += met_w;
+  u3r_bytes(0, met_w, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_w), nam);
+  u3t_Spin->off_w += met_w;
 
-  memcpy(&stk_u->dat_y[stk_u->off_w], &met_w, sizeof(c3_w));
-  stk_u->off_w += sizeof(c3_w);
+  memcpy(&u3t_Spin->dat_y[u3t_Spin->off_w], &met_w, sizeof(c3_w));
+  u3t_Spin->off_w += sizeof(c3_w);
   u3z(nam);
 }
 
@@ -1262,12 +1262,12 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
-  if (  !stk_u ) return;
-  if ( 0 < stk_u->fow_w ) {
-    stk_u->fow_w--;
+  if (  !u3t_Spin ) return;
+  if ( 0 < u3t_Spin->fow_w ) {
+    u3t_Spin->fow_w--;
   } else {
-    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_w - sizeof(c3_w)];
-    stk_u->off_w -= (len_w+sizeof(c3_w));
+    c3_w len_w = (c3_w) u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)];
+    u3t_Spin->off_w -= (len_w+sizeof(c3_w));
   }
 }
 
