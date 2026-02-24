@@ -19,7 +19,7 @@
 
 /** Global variables.
 **/
-u3t_spin *stk_u;
+u3t_spin *u3t_Spin;
 u3t_trace u3t_Trace;
 
 static c3_o _ct_lop_o;
@@ -1134,9 +1134,9 @@ u3t_etch_meme(c3_w mod_w)
 void
 u3t_sstack_init()
 {
-#ifndef U3_OS_windows
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+#ifndef U3_OS_windows
   c3_h shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
@@ -1148,28 +1148,46 @@ u3t_sstack_init()
     return;
   }
 
-  stk_u = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  u3t_Spin = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   
-  if ( MAP_FAILED == stk_u ) {
+  if ( MAP_FAILED == u3t_Spin ) {
     perror("mmap failed");
     return;
   }
-
-  stk_u->off_h = 0;
-  stk_u->fow_h = 0;
-  u3t_sstack_push(c3__root);
+#else
+  HANDLE hstk_u = CreateFileMappingA(
+    INVALID_HANDLE_VALUE,
+    NULL,
+    PAGE_READWRITE,
+    0,
+    (DWORD)TRACE_PSIZE,
+    shm_name
+  );
+  if ( !hstk_u ) {
+    u3l_log("CreateFileMapping error");
+    return;
+  }
+  u3t_Spin = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, TRACE_PSIZE);
+  if ( !u3t_Spin ) {
+    u3l_log("MapViewOfFile error in u3t_sstack_init");
+    return;
+  }
 #endif
+
+  u3t_Spin->off_h = 0;
+  u3t_Spin->fow_h = 0;
+  u3t_sstack_push(c3__root);
 }
 
-#ifndef U3_OS_windows
 /* u3t_sstack_open: initalize a root node on the spin stack 
- */
+*/
 u3t_spin*
 u3t_sstack_open()
 {
   //Setup spin stack
   c3_c shm_name[256];
   snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+#ifndef U3_OS_windows
   c3_h shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
@@ -1183,16 +1201,29 @@ u3t_sstack_open()
     perror("mmap failed");
     return NULL; 
   }
+#else
+  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, shm_name);
+  if ( !hstk_u ) {
+    u3l_log("OpenFileMapping error");
+    return NULL;
+  }
+  
+  u3t_spin* stk_u = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+  CloseHandle(hstk_u);
+  if ( !stk_u ) {
+    u3l_log("MapViewOfFile error in u3t_sstack_open");
+    return NULL;
+  }
+#endif
 
   return stk_u;
 }
-#endif
 /* u3t_sstack_exit: shutdown the shared memory for thespin stack 
 */
 void
 u3t_sstack_exit()
 {
-  munmap(stk_u, u3a_page);
+  munmap(u3t_Spin, u3a_page);
 }
 
 /* u3t_sstack_push: push a noun on the spin stack.
@@ -1200,7 +1231,7 @@ u3t_sstack_exit()
 void
 u3t_sstack_push(u3_noun nam)
 {
-  if ( !stk_u ) {
+  if ( !u3t_Spin ) {
     u3z(nam);
     return;
   }
@@ -1211,19 +1242,21 @@ u3t_sstack_push(u3_noun nam)
   }
 
   c3_w met_w = u3r_met(3, nam);
+  u3_assert( met_w < 0xfffffff );
+  c3_h met_h = (c3_h)met_w;
   
   // Exit if full
-  if ( 0 < stk_u->fow_h || 
-       sizeof(stk_u->dat_y) < stk_u->off_h + met_w + sizeof(c3_w) ) {
-    stk_u->fow_h++;
+  if ( 0 < u3t_Spin->fow_h || 
+       sizeof(u3t_Spin->dat_y) < u3t_Spin->off_h + met_h + sizeof(c3_h) ) {
+    u3t_Spin->fow_h++;
     return;
   }
 
-  u3r_bytes(0, met_w, (c3_y*)(stk_u->dat_y+stk_u->off_h), nam);
-  stk_u->off_h += met_w;
+  u3r_bytes(0, met_h, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_h), nam);
+  u3t_Spin->off_h += met_h;
 
-  memcpy(&stk_u->dat_y[stk_u->off_h], &met_w, sizeof(c3_w));
-  stk_u->off_h += sizeof(c3_w);
+  memcpy(&u3t_Spin->dat_y[u3t_Spin->off_h], &met_h, sizeof(c3_h));
+  u3t_Spin->off_h += sizeof(c3_h);
   u3z(nam);
 }
 
@@ -1232,12 +1265,12 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
-  if (  !stk_u ) return;
-  if ( 0 < stk_u->fow_h ) {
-    stk_u->fow_h--;
+  if (  !u3t_Spin ) return;
+  if ( 0 < u3t_Spin->fow_h ) {
+    u3t_Spin->fow_h--;
   } else {
-    c3_w len_w = (c3_w) stk_u->dat_y[stk_u->off_h - sizeof(c3_w)];
-    stk_u->off_h -= (len_w+sizeof(c3_w));
+    c3_h len_h = (c3_h) u3t_Spin->dat_y[u3t_Spin->off_h - sizeof(c3_h)];
+    u3t_Spin->off_h -= (len_h+sizeof(c3_h));
   }
 }
 

@@ -319,9 +319,9 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != stk_u ) {
-    stk_u->off_h = u3H->rod_u.off_w;
-    stk_u->fow_h = u3H->rod_u.fow_w;
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_h = u3H->rod_u.off_w;
+    u3t_Spin->fow_h = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
@@ -1001,14 +1001,6 @@ u3m_bail(u3_noun how)
     }
   }
 
-  // Reset the spin stack pointer
-  if ( NULL != stk_u ) {
-    stk_u->off_h = u3R->off_w;
-    stk_u->fow_h = u3R->fow_w;
-  }
-
-  /* Longjmp, with an underscore.
-  */
 #ifndef VERE64
   _longjmp(u3R->esc.buf, how);
 #else
@@ -1144,10 +1136,10 @@ u3m_leap(c3_w pad_w)
     u3R->kid_p = u3of(u3_road, rod_u);
   }
 
-  // Add slow stack pointer to rod_u
-  if ( NULL != stk_u ) {
-    rod_u->off_w = stk_u->off_h;
-    rod_u->fow_w = stk_u->fow_h;
+  // Stash slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3R->off_w = u3t_Spin->off_h;
+    u3R->fow_w = u3t_Spin->fow_h;
   } 
 
   /* Set up the new road.
@@ -1362,6 +1354,12 @@ u3m_love(u3_noun pro)
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
+
+  // restore slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_h = u3R->off_w;
+    u3t_Spin->fow_h = u3R->fow_w;
+  }
 
   //  copy product and caches off our stack
   //
