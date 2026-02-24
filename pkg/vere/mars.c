@@ -1705,7 +1705,7 @@ _mars_boot_make(u3_boot_opts* inp_u,
 
       case c3__dawn: {
         met_u->fak_o = c3n;
-        who          = u3h(u3t(u3h(dat)));
+        who          = u3h(u3t(u3h(u3t(dat))));
       } break;
     }
   }

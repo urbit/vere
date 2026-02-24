@@ -381,7 +381,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 
     sprintf(url_c, "%s/_~_/=turf=/j",
             u3_Host.ops_u.gat_c);
-    u3_noun tuf = u3_king_get_noun(url_c);
+    tuf = u3_king_get_noun(url_c);
   }
   
   //  (list ship): %saxo sponsorship chain
