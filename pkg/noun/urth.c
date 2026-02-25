@@ -17,7 +17,6 @@
 #include "serial.h"
 #include "ur/ur.h"
 #include "vortex.h"
-// XX: 64 more to do
 
 /* _cu_atom_to_ref(): allocate indirect atom off-loom.
 */

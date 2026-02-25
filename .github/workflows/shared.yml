@@ -234,6 +234,65 @@ jobs:
             (echo "upload to $dest failed." && exit $exitcode);
           done
 
+  migration-test:
+    name: Migration roundtrip test (v5↔v6)
+    runs-on: ubuntu-22.04
+    needs: [urbit]
+    if: ${{ inputs.fake_tests }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set swap space
+        run: |
+          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+          if test -z "${SWAP_FILE}"; then
+              export SWAP_FILE=/swapfile
+          else
+              sudo swapoff -a
+              sudo rm "${SWAP_FILE}"
+          fi
+          sudo fallocate -l 10G "${SWAP_FILE}"
+          sudo chmod 600 "${SWAP_FILE}"
+          sudo mkswap "${SWAP_FILE}"
+          sudo swapon "${SWAP_FILE}"
+
+      - name: Set memory overcommit
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build 64-bit migration binary
+        run: |
+          zig build                           \
+            -Doptimize=ReleaseFast            \
+            -Dpace=${{inputs.pace}}           \
+            -Dbinary-name=vere-migration     \
+            --summary all
+
+      - name: Build 32-bit migration binary
+        run: |
+          zig build                           \
+            -Dvere32                          \
+            -Doptimize=ReleaseFast            \
+            -Dpace=${{inputs.pace}}           \
+            -Dbinary-name=vere32-migration   \
+            --summary all
+
+      - name: Run v5↔v6 roundtrip migration test
+        env:
+          VERE64_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
+          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./migration-test.sh
+
+      - name: Run legacy v1–v4 migration tests
+        env:
+          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./tests/fixtures/test-legacy.sh
+
   upload-version-string:
     name: Upload latest deployed version string to GCP
     runs-on: ubuntu-latest
