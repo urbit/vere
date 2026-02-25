@@ -665,6 +665,8 @@ _find_home(void)
   if (!u3R->lop_p) {
     u3R->lop_p = u3h_new();
   }
+  
+  memset(u3R->fut_w, 0, sizeof(u3R->fut_w));
 }
 
 /* u3m_pave(): instantiate or activate image.
