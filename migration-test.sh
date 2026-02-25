@@ -102,7 +102,7 @@ rm -rf "$pier"
 wait_for_port "$pier"
 port=$(grep loopback "$pier/.http.ports" | awk -F ' ' '{print $1}')
 
-lensd "$port" '+vat %base'
+lensd "$port" '+vats %base'
 [ 3 -eq "$(lensd "$port" 3)" ]
 
 lensa "$port" hood '+hood/exit'
@@ -120,7 +120,7 @@ rm -f "$pier/.http.ports"
 wait_for_port "$pier"
 port=$(grep loopback "$pier/.http.ports" | awk -F ' ' '{print $1}')
 
-lensd "$port" '+vat %base'
+lensd "$port" '+vats %base'
 [ 3 -eq "$(lensd "$port" 3)" ]
 
 lensa "$port" hood '+hood/exit'
@@ -138,7 +138,7 @@ rm -f "$pier/.http.ports"
 wait_for_port "$pier"
 port=$(grep loopback "$pier/.http.ports" | awk -F ' ' '{print $1}')
 
-lensd "$port" '+vat %base'
+lensd "$port" '+vats %base'
 [ 3 -eq "$(lensd "$port" 3)" ]
 
 lensa "$port" hood '+hood/exit'

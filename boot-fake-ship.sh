@@ -43,7 +43,7 @@ check() {
   [ 3 -eq $(lensd 3) ]
 }
 
-lensd '+vat %base'
+lensd '+vats %base'
 
 if check && sleep 10 && check; then
   echo "boot success"
