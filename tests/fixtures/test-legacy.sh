@@ -141,6 +141,25 @@ for fixture in "${fixtures[@]}"; do
     continue
   fi
 
+  # Check arvo state mug hash against golden file if present.
+  computed_mug=$(lensd "$port" '(mug .(now 0, eny 0))')
+  mug_file="$fixtures_dir/$name.mug"
+  if [ -f "$mug_file" ]; then
+    expected_mug=$(< "$mug_file")
+    if [ "$computed_mug" != "$expected_mug" ]; then
+      echo "FAILED: $name: arvo state mug mismatch (expected $expected_mug, got $computed_mug)" >&2
+      lensa "$port" hood '+hood/exit' || true
+      wait_for_shutdown "$pier" || true
+      ((failures++))
+      rm -rf "$tmpdir"
+      continue
+    fi
+    echo "$name: mug verified ($computed_mug)"
+  else
+    echo "$name: no golden mug file; computed mug is $computed_mug" >&2
+    echo "$name: to record it: echo $computed_mug > tests/fixtures/$name.mug" >&2
+  fi
+
   lensa "$port" hood '+hood/exit'
   wait_for_shutdown "$pier"
 
