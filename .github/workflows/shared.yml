@@ -235,7 +235,7 @@ jobs:
           done
 
   migration-test:
-    name: Migration roundtrip test (v5↔v6)
+    name: Migration roundtrip tests
     runs-on: ubuntu-22.04
     needs: [urbit]
     if: ${{ inputs.fake_tests }}
