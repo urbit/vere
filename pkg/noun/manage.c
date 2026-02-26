@@ -618,6 +618,10 @@ _find_home(void)
     u3R->mat_p = u3R->cap_p = top_p;
   }
 
+  for (c3_w i_w = 0; i_w < c3_array_len(u3R->fut_w); i_w++) {
+    u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
+  }
+
   //  check for obvious corruption
   //
   {
