@@ -277,6 +277,8 @@ _cm_stack_recover(u3a_road* rod_u)
 }
 #endif
 
+static u3_noun _skip_traps(u3_noun tax);
+
 /* _cm_stack_unwind(): unwind to the top level, preserving all frames.
 */
 static u3_noun
@@ -284,16 +286,18 @@ _cm_stack_unwind(void)
 {
   u3_noun tax;
 
-  while ( u3R != &(u3H->rod_u) ) {
-    u3_noun yat = u3R->bug.tax;
+  if ( u3R != &(u3H->rod_u) ) {
+    u3_noun yat = _skip_traps(u3R->bug.tax);
     u3m_fall();
     yat = u3a_take(yat);
-    //  pop the stack
-    //
     u3a_drop_heap(u3R->cap_p, u3R->ear_p);
     u3R->cap_p = u3R->ear_p;
     u3R->ear_p = 0;
+    u3R->bug.tax = u3kb_weld(yat, u3R->bug.tax);
+  }
 
+  while ( u3R != &(u3H->rod_u) ) {
+    u3_noun yat = u3m_love(u3R->bug.tax);
     u3R->bug.tax = u3kb_weld(yat, u3R->bug.tax);
   }
   tax = u3R->bug.tax;
@@ -368,7 +372,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 #else
     tax = _cm_stack_unwind();
 #endif
-    pro = u3nt(3, sig_l, tax);
+    pro = u3nt(5, sig_l, tax);
     _cm_signal_reset();
 
     u3z(arg);
@@ -993,7 +997,7 @@ u3m_bail(u3_noun how)
       } break;
 
       default: {
-        how = u3nt(3, how, u3R->bug.tax);
+        how = u3nt(3, how, _skip_traps(u3R->bug.tax));
       } break;
     }
   }
@@ -1375,6 +1379,56 @@ u3m_love(u3_noun pro)
   return pro;
 }
 
+// RETAINS args
+static u3_noun
+_fall_mean(u3_noun som, u3_noun def)
+{
+  u3_noun tag;
+  u3_assert(c3y == u3r_cell(som, &tag, NULL));
+  return ( c3__mean == tag ) ? u3k(def) : u3k(som);
+}
+
+static u3_noun*
+_append_defcon(u3_noun* tel, u3_noun som)
+{
+  u3_noun *i, *t;
+  *tel = u3i_defcons(&i, &t);
+  *i = som;
+  return t;
+}
+
+static u3_noun
+_skip_traps(u3_noun tax)
+{
+  c3_w tax_len = u3qb_lent(tax);
+  c3_w for_w = 0;
+  u3_noun tax_new, hed;
+  u3_noun* cur = &tax_new;
+  u3_noun def = u3nc(c3__mean, c3_s4('#', '#', '#', '#'));
+  while ( u3_nul != tax && for_w < 512 ) {
+    u3_assert(c3y == u3r_cell(tax, &hed, &tax));
+    for_w++;
+    cur = _append_defcon(cur, _fall_mean(hed, def));
+  }
+  
+  u3_noun skip = u3nc(c3__mean, c3__skip);
+  while (tax_len - for_w > 512) {
+    u3_assert(c3y == u3r_cell(tax, &hed, &tax));
+    for_w++;
+    cur = _append_defcon(cur, u3k(skip));
+  }
+  u3z(skip);
+
+  while ( u3_nul != tax ) {
+    u3_assert(c3y == u3r_cell(tax, &hed, &tax));
+    cur = _append_defcon(cur, _fall_mean(hed, def));
+  }
+
+  *cur = u3_nul;
+  u3z(tax); u3z(def);
+  return tax_new;
+}
+
 /* u3m_warm(): return product from leap without promoting state
 */
 u3_noun
@@ -1401,13 +1455,15 @@ u3m_pour(u3_noun why)
 {
   u3_assert(c3y == u3du(why));
   switch (u3h(why)) {
-    case 0:
-    case 1: {
+    default: {
       return u3m_love(why);
     } break;
 
-    default: {
-      return u3m_warm(why);
+    case 3: {
+      why = u3m_warm(why);
+      u3_noun out = u3nc(5, u3k(u3t(why)));
+      u3z(why);
+      return out;
     } break;
   }
 }
@@ -1672,11 +1728,20 @@ u3m_soft_cax(u3_funq fun_f,
           pro = u3nc(u3m_love(why), u3_nul);
         } break;
 
-        case 3: {                             //  failure; rebail w/trace
+        case 3: {                             //  failure on our road; rebail w/trace
           u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
-            (u3nt(3,
+            (u3nt(5,
+                  u3a_take(u3h(yod)),
+                  u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
+        } break;
+
+        case 5: {                             //  failure in child; rebail w/trace
+          u3_noun yod = u3m_love(u3t(why));
+
+          u3m_bail
+            (u3nt(5,
                   u3a_take(u3h(yod)),
                   u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
         } break;
@@ -1775,17 +1840,26 @@ u3m_soft_run(u3_noun gul,
           pro = u3m_love(why);
         } break;
 
-        case 3: {                             //  failure; rebail w/trace
+        case 3: {                             //  failure on our road; rebail w/trace
           u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
-            (u3nt(3,
+            (u3nt(5,
                   u3a_take(u3h(yod)),
                   u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
         } break;
 
         case 4: {                             //  meta-bail
           u3m_bail(u3m_pour(u3t(why)));
+        } break;
+        
+        case 5: {                             // failure in the child road; rebail w/trace
+          u3_noun yod = u3m_love(u3t(why));
+
+          u3m_bail
+            (u3nt(5,
+                  u3a_take(u3h(yod)),
+                  u3kb_weld(u3t(yod), u3k(u3R->bug.tax))));
         } break;
       }
     }
@@ -1921,8 +1995,14 @@ u3m_soft(c3_w    mil_w,
         cod = c3__exit;
         tax = u3t(why);
       } break;
-
       case 3: {
+        cod = u3h(u3t(why));
+        tax = u3t(u3t(why));
+        u3_noun why_new = u3nt(5, u3k(cod), _skip_traps(u3k(tax)));
+        u3z(why);
+        why = why_new;
+      }  // fallthrough
+      case 5: {
         cod = u3h(u3t(why));
         tax = u3t(u3t(why));
       } break;
