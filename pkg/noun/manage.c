@@ -287,12 +287,7 @@ _cm_stack_unwind(void)
   u3_noun tax;
 
   if ( u3R != &(u3H->rod_u) ) {
-    u3_noun yat = _skip_traps(u3R->bug.tax);
-    u3m_fall();
-    yat = u3a_take(yat);
-    u3a_drop_heap(u3R->cap_p, u3R->ear_p);
-    u3R->cap_p = u3R->ear_p;
-    u3R->ear_p = 0;
+    u3_noun yat = u3m_warm(_skip_traps(u3R->bug.tax));
     u3R->bug.tax = u3kb_weld(yat, u3R->bug.tax);
   }
 
