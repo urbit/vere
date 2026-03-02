@@ -39,6 +39,7 @@
 #   define c3__axis   c3_s4('a','x','i','s')
 #   define c3__b      c3_s1('b')
 #   define c3__bac    c3_s3('b','a','c')
+#   define c3__bad    c3_s3('b','a','d')
 #   define c3__bach   c3_s4('b','a','c','h')
 #   define c3__bag    c3_s3('b','a','g')
 #   define c3__bail   c3_s4('b','a','i','l')

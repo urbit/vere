@@ -516,9 +516,10 @@ u3i_vint(u3_noun a)
       b_buf_w[pug_u->len_w] = 1;
     }
     else {
-      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (pug_u->len_w - i_w) << 2);
+      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (pug_u->len_w - i_w) * sizeof(c3_w));
     }
 
+    u3z(a);
     return u3i_slab_mint(&sab_u);
   }
 }

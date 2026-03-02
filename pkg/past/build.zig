@@ -7,10 +7,9 @@ pub fn build(b: *std.Build) !void {
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
 
-    const pkg_past = b.addStaticLibrary(.{
+    const pkg_past = b.addLibrary(.{
         .name = "past",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
@@ -48,7 +47,7 @@ pub fn build(b: *std.Build) !void {
     pkg_past.linkLibrary(pkg_noun.artifact("noun"));
     pkg_past.linkLibrary(gmp.artifact("gmp"));
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
     try flags.appendSlice(&.{
         // "-pedantic",

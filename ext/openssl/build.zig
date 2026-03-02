@@ -60,10 +60,9 @@ fn libcrypto(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "crypto",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.pie = true;
@@ -330,7 +329,7 @@ fn libcrypto(
         });
     }
 
-    var srcs = std.ArrayList([]const u8).init(b.allocator);
+    var srcs = std.array_list.Managed([]const u8).init(b.allocator);
     defer srcs.deinit();
     try srcs.appendSlice(&common_crypto_sources);
 
@@ -400,10 +399,9 @@ fn libssl(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "ssl",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.pie = true;
