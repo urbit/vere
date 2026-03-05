@@ -94,7 +94,20 @@
         void
         u3m_signal(u3_noun sig_l);
 
-        void u3m_signal_probe(void);
+
+
+       #ifndef U3_OS_windows
+       #include <signal.h>
+       #endif
+
+       extern rsignal_jmpbuf u3_Signal;
+       extern volatile c3_l  u3_SignalFlag;
+
+      static inline void u3m_signal_probe(void) {
+        if ( u3_SignalFlag ) {
+          rsignal_longjmp(u3_Signal, u3_SignalFlag);
+        }
+      }
 
       /* u3m_file(): load file, as atom, or bail.
       */

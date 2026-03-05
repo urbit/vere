@@ -107,8 +107,8 @@
 //  do not manipulate signals, do not modify shared state, and always either
 //  return or longjmp.
 //
-static rsignal_jmpbuf u3_Signal;
-static volatile c3_l  u3_SignalFlag;
+rsignal_jmpbuf u3_Signal;
+volatile c3_l  u3_SignalFlag;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -459,14 +459,6 @@ u3m_signal(u3_noun sig_l)
   u3_SignalFlag = sig_l;
 }
 
-void
-u3m_signal_probe(void)
-{
-  c3_l sig_l = u3_SignalFlag;
-  if ( sig_l ) {
-    rsignal_longjmp(u3_Signal, sig_l);
-  }
-}
 
 /* u3m_file(): load file, as atom, or bail.
 */

@@ -2218,7 +2218,11 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 #ifdef VERBOSE_BYTECODE
   #define BURN() fprintf(stderr, "%s ", opcode_names[pog[ip_w]]); goto *lab[pog[ip_w++]]
 #else
-  #define BURN() goto *lab[pog[ip_w++]]
+#define BURN()  \
+  do { \
+    if (u3_SignalFlag) goto signal_handler; \
+    goto *lab[pog[ip_w++]]; \
+  } while(0);
 #endif
   BURN();
   {
@@ -2420,7 +2424,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       fam->pog_u = pog_u;
       _n_push(mov, off, x);
     nock_out:
-      u3m_signal_probe();
       pog_u = _n_find(u3_nul, o);
       pog   = pog_u->byc_u.ops_y;
       ip_w  = 0;
@@ -2572,7 +2575,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       sit_u = &(pog_u->cal_u.sit_u[x]);
       top   = _n_peek(off);
       o     = *top;
-      u3m_signal_probe();
       *top = _n_kick(o, sit_u);
       if ( u3_none == *top ) {
         _n_pop(mov);
@@ -2611,7 +2613,6 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       sit_u = &(pog_u->cal_u.sit_u[x]);
       top   = _n_peek(off);
       o     = *top;
-      u3m_signal_probe();
       *top = _n_kick(o, sit_u);
       if ( u3_none == *top ) {
         *top  = o;
@@ -2925,6 +2926,9 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     edit_in:
       *top = u3i_edit(*top, x, o);
       BURN();
+
+    signal_handler:
+      rsignal_longjmp(u3_Signal, u3_SignalFlag);
   }
 }
 
