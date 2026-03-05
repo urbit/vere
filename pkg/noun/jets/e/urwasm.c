@@ -2452,6 +2452,7 @@ u3we_lia_run_v1(u3_noun cor)
       m3_SetAllocators(_calloc_box, _free_box, _realloc_box);
       m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
       m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+      m3_SetPoller(u3m_signal_probe);
       jmp_buf esc;
       CodeArena->esc_u = BoxArena->esc_u = &esc;
       c3_i jmp_i;
@@ -2636,6 +2637,7 @@ u3we_lia_run_v1(u3_noun cor)
     m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
     m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
     m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+    m3_SetPoller(u3m_signal_probe);
 
     wasm3_env = m3_NewEnvironment();
     if (!wasm3_env)
@@ -2926,6 +2928,7 @@ u3we_lia_run_once(u3_noun cor)
   m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
   m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
   m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
+  m3_SetPoller(u3m_signal_probe);
 
   IM3Environment wasm3_env = m3_NewEnvironment();
   if (!wasm3_env)
