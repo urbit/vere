@@ -140,6 +140,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 static void
 _cs_jam_fib_atom_cb(u3_atom a, void* ptr_v)
 {
+  u3m_signal_probe();
   struct _cs_jam_fib* fib_u = ptr_v;
   u3_weak b = u3h_git(fib_u->har_p, a);
 
@@ -174,6 +175,7 @@ _cs_jam_fib_atom_cb(u3_atom a, void* ptr_v)
 static c3_o
 _cs_jam_fib_cell_cb(u3_noun a, void* ptr_v)
 {
+  u3m_signal_probe();
   struct _cs_jam_fib* fib_u = ptr_v;
   u3_weak b = u3h_git(fib_u->har_p, a);
 
