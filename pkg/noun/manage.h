@@ -94,6 +94,8 @@
         void
         u3m_signal(u3_noun sig_l);
 
+        void u3m_signal_probe(void);
+
       /* u3m_file(): load file, as atom, or bail.
       */
         u3_noun

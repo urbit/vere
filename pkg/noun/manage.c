@@ -108,6 +108,7 @@
 //  return or longjmp.
 //
 static rsignal_jmpbuf u3_Signal;
+static volatile c3_l  u3_SignalFlag;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -421,6 +422,7 @@ _cm_signal_done(void)
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
   rsignal_deinstall_handler(SIGVTALRM);
+  u3_SignalFlag = 0;
 
 #ifndef NO_OVERFLOW
 #ifndef U3_OS_windows
@@ -454,7 +456,16 @@ _cm_signal_done(void)
 void
 u3m_signal(u3_noun sig_l)
 {
-  rsignal_longjmp(u3_Signal, sig_l);
+  u3_SignalFlag = sig_l;
+}
+
+void
+u3m_signal_probe(void)
+{
+  c3_l sig_l = u3_SignalFlag;
+  if ( sig_l ) {
+    rsignal_longjmp(u3_Signal, sig_l);
+  }
 }
 
 /* u3m_file(): load file, as atom, or bail.
