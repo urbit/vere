@@ -1002,15 +1002,12 @@ u3m_bail(u3_noun how)
     }
   }
 
-<<<<<<< HEAD
   // Reset the spin stack pointer
   if ( NULL != stk_u ) {
     stk_u->off_w = u3R->off_w;
     stk_u->fow_w = u3R->fow_w;
   }
 
-=======
->>>>>>> next/kelvin/408
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1371,15 +1368,12 @@ u3m_love(u3_noun pro)
 
   if ( _(tim_o) ) _m_renew_now();
 
-<<<<<<< HEAD
-=======
   // restore slow stack pointer
   if ( NULL != u3t_Spin ) {
     u3t_Spin->off_w = u3R->off_w;
     u3t_Spin->fow_w = u3R->fow_w;
   }
 
->>>>>>> next/kelvin/408
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
