@@ -1003,9 +1003,9 @@ u3m_bail(u3_noun how)
   }
 
   // Reset the spin stack pointer
-  if ( NULL != stk_u ) {
-    stk_u->off_w = u3R->off_w;
-    stk_u->fow_w = u3R->fow_w;
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3R->off_w;
+    u3t_Spin->fow_w = u3R->fow_w;
   }
 
   _longjmp(u3R->esc.buf, how);
@@ -1353,10 +1353,6 @@ u3m_love(u3_noun pro)
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
-
-  //  are there any timers on the road?
-  //
-  c3_o tim_o = u3du(u3R->tim);
 
   //  are there any timers on the road?
   //
