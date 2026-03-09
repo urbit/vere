@@ -138,26 +138,17 @@ uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
   }
   else
   {
-    u3_noun ton = u3n_nock_an(cor, bat);
-    
-    u3_noun tag, res;
-    if (c3n == u3r_cell(ton, &tag, &res))
-    {
-      return u3m_bail(c3__fail);
-    }
-    if (0 == tag)
-    {
-      u3k(res);
-      u3z(ton);
-      pro = res;
-    }
-    else if (2 == tag)
-    {
-      return u3m_bail(c3__exit);
-    }
-    else
-    {
-      return u3m_bail(c3__fail);
+    u3_noun tag, ton = u3n_nock_an(cor, bat);
+    if ( c3n == u3r_cell(ton, &tag, &pro) ) return u3m_bail(c3__fail);
+
+    switch ( tag ) {
+      case 0: {
+        u3k(pro);
+        u3z(ton);
+      } break;
+
+      case 2:  return u3m_bail(c3__exit);
+      default: return u3m_bail(c3__fail);
     }
   }
 
