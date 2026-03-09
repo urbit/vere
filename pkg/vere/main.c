@@ -159,6 +159,7 @@ _main_init(void)
   u3_Host.ops_u.dem = c3n;
   u3_Host.ops_u.dry = c3n;
   u3_Host.ops_u.gab = c3n;
+  u3_Host.ops_u.gab_abort = c3n;
   u3_Host.ops_u.git = c3n;
 
   //  always disable hashboard
@@ -1533,6 +1534,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   c3_w arg_w;
 
   u3_Host.ops_u.gab = c3n;
+  u3_Host.ops_u.gab_abort = c3n;
 
   static struct option lop_u[] = {
     { "gc",        no_argument,       NULL, 'g' },
@@ -1540,6 +1542,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "gc-abort",  no_argument,       NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -1569,6 +1572,12 @@ _cw_grab(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_w |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  // gc-abort
+        u3_Host.ops_u.gab_abort = c3y;
+        u3_Host.ops_u.gab = c3y;
         break;
       }
 
@@ -2232,6 +2241,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   u3_disk_load_e lod_e = u3_dlod_last;
 
   u3_Host.ops_u.gab = c3n;
+  u3_Host.ops_u.gab_abort = c3n;
 
   static struct option lop_u[] = {
     { "gc",                no_argument,       NULL, 'g' },
@@ -2239,6 +2249,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "no-demand",         no_argument,       NULL, 6 },
     { "auto-meld",         no_argument,       NULL, 7 },
     { "soft-mugs",         no_argument,       NULL, 8 },
+    { "gc-abort",          no_argument,       NULL, 9 },
     { "full",              no_argument,       NULL, 'f' },
     { "replay-to",         required_argument, NULL, 'n' },
     { "snap-at",           required_argument, NULL, 's' },
@@ -2270,6 +2281,12 @@ _cw_play(c3_i argc, c3_c* argv[])
       case 8: {  //  soft-mugs
         u3C.wag_w |= u3o_soft_mugs;
       } break;
+
+      case 9: { // gc-abort
+        u3_Host.ops_u.gab_abort = c3y;
+        u3_Host.ops_u.gab = c3y;
+        break;
+      }
 
       case 'f': {
         lod_e = u3_dlod_epoc;
@@ -2917,8 +2934,9 @@ _cw_boot(c3_i argc, c3_c* argv[])
   //  start reading
   //
   u3_newt_read(&inn_u);
+  // does not return because _mars_flush does not return
+  //
   uv_run(lup_u, UV_RUN_DEFAULT);
-  u3m_stop();
 }
 
 /* _cw_work(): resume and run; replay and start event processing
@@ -3054,8 +3072,8 @@ _cw_work(c3_i argc, c3_c* argv[])
   //  start reading
   //
   u3_newt_read(&inn_u);
+  // does not return becase _mars_flush does not return
   uv_run(lup_u, UV_RUN_DEFAULT);
-  u3m_stop();
 }
 
 
