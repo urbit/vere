@@ -1,6 +1,7 @@
 .{
-    .name = "avahi",
+    .name = .avahi,
     .version = "0.0.1",
+    .fingerprint = 0xfc7bcfe41113f7c8,
     .dependencies = .{
         .avahi = .{
             .url = "https://github.com/lathiat/avahi/releases/download/v0.8/avahi-0.8.tar.gz",

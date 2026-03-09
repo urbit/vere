@@ -650,16 +650,18 @@ _unix_scan_mount_point(u3_unix* unx_u, u3_umon* mon_u)
   }
 }
 
-static u3_noun _unix_free_node(u3_unix* unx_u, u3_unod* nod_u);
+static u3_noun _unix_free_node(u3_unix* unx_u, u3_unod* nod_u, c3_t del_t);
 
 /* _unix_free_file(): free file, unlinking it
 */
 static void
-_unix_free_file(u3_ufil *fil_u)
+_unix_free_file(u3_ufil *fil_u, c3_t del_t)
 {
-  if ( 0 != c3_unlink(fil_u->pax_c) && ENOENT != errno ) {
-    u3l_log("error unlinking %s: %s", fil_u->pax_c, strerror(errno));
-    u3_assert(0);
+  if ( del_t ) {
+    if ( 0 != c3_unlink(fil_u->pax_c) && ENOENT != errno ) {
+      u3l_log("error unlinking %s: %s", fil_u->pax_c, strerror(errno));
+      u3_assert(0);
+    }
   }
 
   c3_free(fil_u->pax_c);
@@ -669,9 +671,9 @@ _unix_free_file(u3_ufil *fil_u)
 /* _unix_free_dir(): free directory, deleting everything within
 */
 static void
-_unix_free_dir(u3_udir *dir_u)
+_unix_free_dir(u3_udir *dir_u, c3_t del_t)
 {
-  _unix_rm_r(dir_u->pax_c);
+  if (del_t) _unix_rm_r(dir_u->pax_c);
 
   if ( dir_u->kid_u ) {
     fprintf(stderr, "don't kill me, i've got a family %s\r\n", dir_u->pax_c);
@@ -691,7 +693,7 @@ _unix_free_dir(u3_udir *dir_u)
 **  also deletes from parent list if in it
 */
 static u3_noun
-_unix_free_node(u3_unix* unx_u, u3_unod* nod_u)
+_unix_free_node(u3_unix* unx_u, u3_unod* nod_u, c3_t del_t)
 {
   u3_noun can;
   if ( nod_u->par_u ) {
@@ -716,15 +718,15 @@ _unix_free_node(u3_unix* unx_u, u3_unod* nod_u)
     u3_unod* nud_u = ((u3_udir*) nod_u)->kid_u;
     while ( nud_u ) {
       u3_unod* nex_u = nud_u->nex_u;
-      can = u3kb_weld(_unix_free_node(unx_u, nud_u), can);
+      can = u3kb_weld(_unix_free_node(unx_u, nud_u, del_t), can);
       nud_u = nex_u;
     }
-    _unix_free_dir((u3_udir *)nod_u);
+    _unix_free_dir((u3_udir *)nod_u, del_t);
   }
   else {
     can = u3nc(u3nc(_unix_string_to_path(unx_u, nod_u->pax_c), u3_nul),
                u3_nul);
-    _unix_free_file((u3_ufil *)nod_u);
+    _unix_free_file((u3_ufil *)nod_u, del_t);
   }
 
   return can;
@@ -739,12 +741,12 @@ _unix_free_node(u3_unix* unx_u, u3_unod* nod_u)
 **  tread carefully
 */
 static void
-_unix_free_mount_point(u3_unix* unx_u, u3_umon* mon_u)
+_unix_free_mount_point(u3_unix* unx_u, u3_umon* mon_u, c3_t del_t)
 {
   u3_unod* nod_u;
   for ( nod_u = mon_u->dir_u.kid_u; nod_u; ) {
     u3_unod* nex_u = nod_u->nex_u;
-    u3z(_unix_free_node(unx_u, nod_u));
+    u3z(_unix_free_node(unx_u, nod_u, del_t));
     nod_u = nex_u;
   }
 
@@ -756,7 +758,7 @@ _unix_free_mount_point(u3_unix* unx_u, u3_umon* mon_u)
 /* _unix_delete_mount_point(): remove mount point from list and free
 */
 static void
-_unix_delete_mount_point(u3_unix* unx_u, u3_noun mon)
+_unix_delete_mount_point(u3_unix* unx_u, u3_noun mon, c3_t del_t)
 {
   if ( c3n == u3ud(mon) ) {
     u3_assert(!"mount point must be an atom");
@@ -775,7 +777,7 @@ _unix_delete_mount_point(u3_unix* unx_u, u3_noun mon)
   }
   if ( 0 == strcmp(nam_c, mon_u->nam_c) ) {
     unx_u->mon_u = mon_u->nex_u;
-    _unix_free_mount_point(unx_u, mon_u);
+    _unix_free_mount_point(unx_u, mon_u, del_t);
     goto _delete_mount_point_out;
   }
 
@@ -792,7 +794,7 @@ _unix_delete_mount_point(u3_unix* unx_u, u3_noun mon)
 
   tem_u = mon_u->nex_u;
   mon_u->nex_u = mon_u->nex_u->nex_u;
-  _unix_free_mount_point(unx_u, tem_u);
+  _unix_free_mount_point(unx_u, tem_u, del_t);
 
 _delete_mount_point_out:
   c3_free(nam_c);
@@ -871,6 +873,8 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
 
   _unix_mkdir(pax_c);
   _unix_watch_dir(dir_u, par_u, pax_c);
+  
+  c3_free(pax_c);
 }
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
@@ -982,7 +986,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
           DIR* red_u = c3_opendir(nod_u->pax_c);
           if ( 0 == red_u ) {
             u3_unod* nex_u = nod_u->nex_u;
-            can = u3kb_weld(_unix_free_node(unx_u, nod_u), can);
+            can = u3kb_weld(_unix_free_node(unx_u, nod_u, true), can);
             nod_u = nex_u;
           }
           else {
@@ -1001,7 +1005,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
             }
 
             u3_unod* nex_u = nod_u->nex_u;
-            can = u3kb_weld(_unix_free_node(unx_u, nod_u), can);
+            can = u3kb_weld(_unix_free_node(unx_u, nod_u, true), can);
             nod_u = nex_u;
           }
           else {
@@ -1104,7 +1108,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
   }
 
   if ( !dir_u->kid_u ) {
-    return u3kb_weld(_unix_free_node(unx_u, (u3_unod*) dir_u), can);
+    return u3kb_weld(_unix_free_node(unx_u, (u3_unod*) dir_u, true), can);
   }
 
   // get change list
@@ -1326,7 +1330,7 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
 
   if ( u3_nul == mim ) {
     if ( nod_u ) {
-      u3z(_unix_free_node(unx_u, nod_u));
+      u3z(_unix_free_node(unx_u, nod_u, true));
     }
   }
   else {
@@ -1336,7 +1340,6 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
       u3_ufil* fil_u = c3_malloc(sizeof(u3_ufil));
       _unix_watch_file(unx_u, fil_u, par_u, pax_c);
       fil_u->gum_w = gum_w;
-      goto _unix_sync_file_out;
     }
     else {
       _unix_write_file_soft((u3_ufil*) nod_u, u3k(u3t(mim)));
@@ -1344,8 +1347,6 @@ _unix_sync_file(u3_unix* unx_u, u3_udir* par_u, u3_noun nam, u3_noun ext, u3_nou
   }
 
   c3_free(pax_c);
-
-_unix_sync_file_out:
   u3z(mim);
 }
 
@@ -1402,6 +1403,8 @@ _unix_sync_change(u3_unix* unx_u, u3_udir* dir_u, u3_noun pax, u3_noun mim)
       }
 
       _unix_sync_change(unx_u, (u3_udir*) nod_u, u3k(t_pax), mim);
+      
+      c3_free(nam_c);
     }
   }
   u3z(pax);
@@ -1449,7 +1452,7 @@ u3_unix_ef_ergo(u3_unix* unx_u, u3_noun mon, u3_noun can)
 void
 u3_unix_ef_ogre(u3_unix* unx_u, u3_noun mon)
 {
-  _unix_delete_mount_point(unx_u, mon);
+  _unix_delete_mount_point(unx_u, mon, true);
 }
 
 /* u3_unix_ef_hill(): enumerate mount points
@@ -1579,6 +1582,14 @@ static void
 _unix_io_exit(u3_auto* car_u)
 {
   u3_unix* unx_u = (u3_unix*)car_u;
+
+  u3_umon* mon_u = unx_u->mon_u;
+  u3_umon* nex_u;
+  while ( mon_u ) {
+    nex_u = mon_u->nex_u;
+    _unix_free_mount_point(unx_u, mon_u, false);
+    mon_u = nex_u;
+  }
 
   u3z(unx_u->sat);
   c3_free(unx_u->pax_c);

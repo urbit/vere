@@ -10,10 +10,9 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "unwind",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -141,7 +140,7 @@ pub fn build(b: *std.Build) !void {
     if (t.cpu.arch == .x86_64)
         lib.addIncludePath(dep_c.path("include/tdep-x86_64"));
 
-    var srcs = std.ArrayList([]const u8).init(b.allocator);
+    var srcs = std.array_list.Managed([]const u8).init(b.allocator);
     defer srcs.deinit();
 
     try srcs.appendSlice(&.{

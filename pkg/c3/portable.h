@@ -132,7 +132,11 @@
 
 
 
-#   define U3_BIN_ALIAS ".run"
+#   if defined(U3_OS_windows)
+#     define U3_BIN_ALIAS ".run.exe"
+#   else
+#     define U3_BIN_ALIAS ".run"
+#   endif
 
 /** Address space layout.
 ***

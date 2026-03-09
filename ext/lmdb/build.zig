@@ -9,17 +9,16 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const lmdb = b.addStaticLibrary(.{
+    const lmdb = b.addLibrary(.{
         .name = "lmdb",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lmdb.linkLibC();
 
     lmdb.addIncludePath(lmdb_c.path("libraries/liblmdb"));
 
-    var flags = std.ArrayList([]const u8).init(b.allocator);
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
 
     try flags.appendSlice(&.{
@@ -34,19 +33,9 @@ pub fn build(b: *std.Build) !void {
         "-Wuninitialized",
     });
 
-    if (target.result.os.tag.isDarwin()) {
-        try flags.appendSlice(&.{"-DURBIT_RUNTIME_OS_DARWIN"});
-    }
-
     lmdb.addCSourceFiles(.{
         .root = lmdb_c.path("libraries/liblmdb"),
-        .files = &.{"midl.c"},
-        .flags = flags.items,
-    });
-
-    lmdb.addCSourceFiles(.{
-        .root = b.path("patches/lmdb-0.9.29"),
-        .files = &.{"mdb.c"},
+        .files = &.{ "midl.c", "mdb.c" },
         .flags = flags.items,
     });
 

@@ -8,11 +8,7 @@ pub fn build(b: *std.Build) void {
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
 
-    const pkg_c3 = b.addStaticLibrary(.{
-        .name = "c3",
-        .target = target,
-        .optimize = optimize,
-    });
+    const pkg_c3 = b.addLibrary(.{ .name = "c3", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -40,10 +36,10 @@ pub fn build(b: *std.Build) void {
         pkg_c3.addIncludePath(b.path("platform/windows"));
         pkg_c3.installHeadersDirectory(b.path("platform/windows"), "", .{});
         pkg_c3.addCSourceFiles(.{
-        .root = b.path(""),
-        .files = &.{"platform/windows/compat.c"},
-        .flags = copts,
-    });
+            .root = b.path(""),
+            .files = &.{"platform/windows/compat.c"},
+            .flags = copts,
+        });
     }
 
     pkg_c3.installHeader(b.path("c3.h"), "c3/c3.h");

@@ -14,10 +14,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "urcrypt",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -85,10 +84,9 @@ fn libaes_siv(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "aes_siv",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibrary(openssl.artifact("ssl"));
@@ -129,10 +127,9 @@ fn libsecp256k1(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "secp256k1",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -195,10 +192,9 @@ fn libargon2(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "argon2",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -249,15 +245,16 @@ fn libblake3(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step.Compile {
+    const t = target.result;
+
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "blake3",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -270,15 +267,26 @@ fn libblake3(
 
     lib.addIncludePath(dep_c.path("blake3"));
 
+    const unix_assembly = .{
+        "blake3_sse2_x86-64_unix.S",
+        "blake3_sse41_x86-64_unix.S",
+        "blake3_avx2_x86-64_unix.S",
+        "blake3_avx512_x86-64_unix.S",
+    };
+
+    const windows_assembly = .{
+        "blake3_sse2_x86-64_windows_gnu.S",
+        "blake3_sse41_x86-64_windows_gnu.S",
+        "blake3_avx2_x86-64_windows_gnu.S",
+        "blake3_avx512_x86-64_windows_gnu.S",
+    };
+
+    const assembly_files = if (t.os.tag == .windows) windows_assembly else unix_assembly;
+
     if (target.result.cpu.arch == .x86_64) {
         lib.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
-            .files = &(common_files ++ .{
-                "blake3_sse2_x86-64_unix.S",
-                "blake3_sse41_x86-64_unix.S",
-                "blake3_avx2_x86-64_unix.S",
-                "blake3_avx512_x86-64_unix.S",
-            }),
+            .files = &(common_files ++ assembly_files),
             .flags = &.{
                 "-O2",
                 "-fno-omit-frame-pointer",
@@ -314,10 +322,9 @@ fn libed25519(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "ed25519",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -363,10 +370,9 @@ fn libge_additions(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "ge_additions",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -380,7 +386,6 @@ fn libge_additions(
         .flags = &.{
             "-O2",
             "-fno-omit-frame-pointer",
-            "-fno-sanitize=all",
             "-Werror",
             "-pedantic",
             "-std=gnu99",
@@ -402,10 +407,9 @@ fn libkeccak_tiny(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "keccak_tiny",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -441,10 +445,9 @@ fn libmonocypher(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "monocypher",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();
@@ -476,10 +479,9 @@ fn libscrypt(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "scrypt",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     lib.linkLibC();

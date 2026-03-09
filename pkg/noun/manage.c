@@ -285,7 +285,14 @@ _cm_stack_unwind(void)
   u3_noun tax;
 
   while ( u3R != &(u3H->rod_u) ) {
-    u3_noun yat = u3m_love(u3R->bug.tax);
+    u3_noun yat = u3R->bug.tax;
+    u3m_fall();
+    yat = u3a_take(yat);
+    //  pop the stack
+    //
+    u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+    u3R->cap_p = u3R->ear_p;
+    u3R->ear_p = 0;
 
     u3R->bug.tax = u3kb_weld(yat, u3R->bug.tax);
   }
@@ -307,9 +314,9 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != stk_u ) {
-    stk_u->off_w = u3H->rod_u.off_w;
-    stk_u->fow_w = u3H->rod_u.fow_w;
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3H->rod_u.off_w;
+    u3t_Spin->fow_w = u3H->rod_u.fow_w;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
@@ -609,6 +616,10 @@ _find_home(void)
     //  where it's wrong
     //
     u3R->mat_p = u3R->cap_p = top_p;
+  }
+
+  for (c3_w i_w = 0; i_w < c3_array_len(u3R->fut_w); i_w++) {
+    u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
   }
 
   //  check for obvious corruption
@@ -991,12 +1002,15 @@ u3m_bail(u3_noun how)
     }
   }
 
+<<<<<<< HEAD
   // Reset the spin stack pointer
   if ( NULL != stk_u ) {
     stk_u->off_w = u3R->off_w;
     stk_u->fow_w = u3R->fow_w;
   }
 
+=======
+>>>>>>> next/kelvin/408
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1127,10 +1141,10 @@ u3m_leap(c3_w pad_w)
     u3R->kid_p = u3of(u3_road, rod_u);
   }
 
-  // Add slow stack pointer to rod_u
-  if ( NULL != stk_u ) {
-    rod_u->off_w = stk_u->off_w;
-    rod_u->fow_w = stk_u->fow_w;
+  // Stash slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3R->off_w = u3t_Spin->off_w;
+    u3R->fow_w = u3t_Spin->fow_w;
   } 
 
   /* Set up the new road.
@@ -1347,12 +1361,25 @@ u3m_love(u3_noun pro)
   //
   c3_o tim_o = u3du(u3R->tim);
 
+  //  are there any timers on the road?
+  //
+  c3_o tim_o = u3du(u3R->tim);
+
   //  fallback to parent road (child heap on parent's stack)
   //
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
 
+<<<<<<< HEAD
+=======
+  // restore slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3R->off_w;
+    u3t_Spin->fow_w = u3R->fow_w;
+  }
+
+>>>>>>> next/kelvin/408
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
@@ -1375,6 +1402,43 @@ u3m_love(u3_noun pro)
   u3z_reap(u3z_memo_ford, for_p);
 
   return pro;
+}
+
+/* u3m_warm(): return product from leap without promoting state
+*/
+u3_noun
+u3m_warm(u3_noun pro)
+{
+  c3_o tim_o = u3du(u3R->tim);
+  u3m_fall();
+  if ( _(tim_o) ) _m_renew_now();
+  pro = u3a_take(pro);
+
+  //  pop the stack
+  //
+  u3a_drop_heap(u3R->cap_p, u3R->ear_p);
+  u3R->cap_p = u3R->ear_p;
+  u3R->ear_p = 0;
+  return pro;
+}
+
+/* u3m_pour(): return error ball from leap, promoting the state if the error
+ * is deterministic
+*/
+u3_noun
+u3m_pour(u3_noun why)
+{
+  u3_assert(c3y == u3du(why));
+  switch (u3h(why)) {
+    case 0:
+    case 1: {
+      return u3m_love(why);
+    } break;
+
+    default: {
+      return u3m_warm(why);
+    } break;
+  }
 }
 
 /* u3m_golf(): record cap_p length for u3m_flog().
@@ -1507,7 +1571,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   else {
     /* Overload the error result.
     */
-    pro = u3m_love(why);
+    pro = u3m_pour(why);
   }
 
   /* Revert to external signal regime.
@@ -1638,7 +1702,7 @@ u3m_soft_cax(u3_funq fun_f,
         } break;
 
         case 3: {                             //  failure; rebail w/trace
-          u3_noun yod = u3m_love(u3t(why));
+          u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
             (u3nt(3,
@@ -1741,7 +1805,7 @@ u3m_soft_run(u3_noun gul,
         } break;
 
         case 3: {                             //  failure; rebail w/trace
-          u3_noun yod = u3m_love(u3t(why));
+          u3_noun yod = u3m_warm(u3t(why));
 
           u3m_bail
             (u3nt(3,
@@ -1750,7 +1814,7 @@ u3m_soft_run(u3_noun gul,
         } break;
 
         case 4: {                             //  meta-bail
-          u3m_bail(u3m_love(u3t(why)));
+          u3m_bail(u3m_pour(u3t(why)));
         } break;
       }
     }
@@ -1810,7 +1874,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     /* Push the error back up to the calling context - not the run we
     ** are in, but the caller of the run, matching pure nock semantics.
     */
-    u3m_bail(u3nc(4, u3m_love(why)));
+    u3m_bail(u3nc(4, u3m_pour(why)));
   }
 
   /* Release the sample.  Note that we used it above, but in a junior
@@ -1822,6 +1886,16 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   /* Return the product.
   */
   return pro;
+}
+
+void
+u3m_mark_mute(void)
+{
+  u3m_quac** arr_u = u3m_mark();
+  for (c3_w i_w = 0; arr_u[i_w]; i_w++) {
+    u3a_quac_free(arr_u[i_w]);
+  }
+  c3_free(arr_u);
 }
 
 /* u3m_grab(): garbage-collect the world, plus extra roots.
@@ -1848,7 +1922,7 @@ u3m_grab(u3_noun som, ...)   // terminate with u3_none
     }
     va_end(vap);
   }
-  u3m_mark(); // XX leaks
+  u3m_mark_mute();
   u3a_sweep();
 }
 
