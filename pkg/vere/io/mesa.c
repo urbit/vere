@@ -107,7 +107,7 @@ typedef struct _u3_gage {
   c3_h     wnd_h;  // cwnd
   c3_h     wnf_h;  // cwnd fraction
   c3_h     sst_h;  // ssthresh
-  c3_h     con_h;  // counter
+  c3_h     try_h;  // tries
   //
 } u3_gage;
 
@@ -395,7 +395,7 @@ _log_gage(u3_gage* gag_u)
   u3l_log("cwnd: %u", gag_u->wnd_h);
   u3l_log("cwnd fraction: %f", gag_u->wnf_h / (float)gag_u->wnd_h );
   u3l_log("ssthresh: %u", gag_u->sst_h);
-  u3l_log("counter: %u", gag_u->con_h);
+  u3l_log("tries: %u", gag_u->try_h);
   //u3l_log("algorithm: %s", gag_u->alg_c);
 }
 
@@ -585,7 +585,7 @@ _init_gage(u3_gage* gag_u)  //  microseconds
   /* gag_u->rto_w = 200 * 1000;  // ~s1 */
   /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
   /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
-  gag_u->con_h = 0;
+  gag_u->try_h = 1;
   gag_u->wnd_h = 1;
   gag_u->sst_h = 10000;
 }
@@ -761,15 +761,12 @@ _mesa_put_gage(u3_mesa* sam_u, u3_ship her_u, u3_gage* gag_u)
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
   /* _log_gage(gag_u); */
-  gag_u->con_h++;
 
   c3_d now_d = _get_now_micros();
   c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
 
   c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_h);
 
-  gag_u->rtt_h = (rtt_d + (gag_u->rtt_h * 7)) >> 3;
-  gag_u->rtv_h = (err_d + (gag_u->rtv_h * 7)) >> 3;
   gag_u->rto_h = _clamp_rto(gag_u->rtt_h + (4*gag_u->rtv_h));
 
   if ( gag_u->wnd_h < gag_u->sst_h ) {
@@ -777,6 +774,11 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   } else if ( gag_u->wnd_h <= ++gag_u->wnf_h ) {
     gag_u->wnd_h++;
     gag_u->wnf_h = 0;
+  }
+
+  if (gag_u->try_h == 1) {
+    gag_u->rtt_h = (rtt_d + (gag_u->rtt_h * 7)) >> 3;
+    gag_u->rtv_h = (err_d + (gag_u->rtv_h * 7)) >> 3;
   }
 }
 
@@ -1200,6 +1202,7 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   if ( c3y == los_o ) {
     /* _mesa_send_buf2(req_u->per_u->sam_u, ads_u, bus_u, int_u, i_w); */
     /* _mesa_send_buf2(req_u->per_u->sam_u, req_u->per_u->dan_u, bfs_u, i_w); */
+    req_u->gag_u->try_h++;
     req_u->gag_u->sst_h = c3_max(1, req_u->gag_u->wnd_h / 2);
     req_u->gag_u->wnd_h = req_u->gag_u->sst_h;
     req_u->gag_u->rto_h = _clamp_rto(req_u->gag_u->rto_h * 2);
