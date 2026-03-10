@@ -1161,6 +1161,23 @@ u3r_bytes_all(c3_w* len_w, u3_atom a)
   return u3r_bytes_alloc(0, met_w, a);
 }
 
+/* _mpz_init_set_word():
+**
+**   Initialize (a_mp) from a single word (b_w).
+**   Uses mpz_import when unsigned long is narrower than c3_w (e.g. Windows).
+*/
+static void
+_mpz_init_set_word(mpz_t a_mp, c3_w b_w)
+{
+  if ( sizeof(unsigned long int) >= sizeof(b_w) ) {
+    mpz_init_set_ui(a_mp, b_w);
+  }
+  else {
+    mpz_init2(a_mp, u3a_word_bits);
+    mpz_import(a_mp, 1, -1, sizeof(c3_w), 0, 0, &b_w);
+  }
+}
+
 /* u3r_mp():
 **
 **   Copy (b) into (a_mp).
@@ -1173,7 +1190,7 @@ u3r_mp(mpz_t   a_mp,
   u3_assert(_(u3a_is_atom(b)));
 
   if ( _(u3a_is_cat(b)) ) {
-    mpz_init_set_ui(a_mp, b);
+    _mpz_init_set_word(a_mp, b);
   }
   else {
     u3a_atom* b_u = u3a_to_ptr(b);

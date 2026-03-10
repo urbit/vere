@@ -36,7 +36,7 @@ static u3_mojo      out_u;             //  output stream
 /* Require unsigned char
  */
 //STATIC_ASSERT(( 0 == CHAR_MIN && UCHAR_MAX == CHAR_MAX ),
-              //"unsigned char required");
+               //"unsigned char required");
 
 /* _main_self_path(): get binary self-path.
 */

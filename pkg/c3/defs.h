@@ -49,11 +49,7 @@
     /* Size in words.
     */
 // (probably some of that belongs here)
-#ifndef VERE64
-#     define c3_wiseof(x)  (((sizeof (x)) + 3) >> 2)
-#else
-#     define c3_wiseof(x)  (((sizeof (x)) + 7) >> 3)
-#endif
+#     define c3_wiseof(x)  ((sizeof(x) + sizeof(c3_w) - 1) / sizeof(c3_w))
 
     /* Bit counting.
     */
