@@ -92,41 +92,71 @@ uw_slam_nock(u3_noun gat, u3_noun sam)
   return uw_kick_nock(cor, 2);
 }
 
+// memory arena with exponential growth
+typedef struct {
+  c3_h      siz_h;  // size in bytes
+  c3_y      pad_y;  // alignment padding
+  c3_t      ini_t;  // already initialized
+  u3i_slab  sab_u;  // associated slab
+  c3_y*     buf_y;  // allocated buffer
+  c3_y*     nex_y;  // next allocation
+  c3_y*     end_y;  // end of arena
+  jmp_buf*  esc_u;  // escape buffer
+} uw_arena;
+
+// Struct/array allocation: [len_d cap_d data]
+// BoxArena->esc_u MUST be initialized by the caller to handle OOM
+//
+static uw_arena* BoxArena;
+
+// Code page allocation: simple bump allocator for non-growing objects,
+// i.e. code pages
+// save allocation length for realloc
+// CodeArena->esc_u MUST be initialized by the caller to handle OOM
+//
+static uw_arena* CodeArena;
+
 static u3_noun
 uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
 {
   u3_noun bat = u3k(u3h(gat));
   u3_noun cor = u3nc(u3k(bat), u3nc(sam, u3k(u3t(u3t(gat)))));
   u3z(gat);
+  u3_noun pro;
+  M3GlobalSettable stash_u;
+
+  //  any unconstrained nock computation is a potential urwasm reentry:
+  //  save the pointers before that, restore after
+  //
+  uw_arena* box_arena_stash = BoxArena;
+  uw_arena* code_arena_stash = CodeArena;
+  m3_StashSettable(&stash_u);
 
   if (!is_stateful)
   {
-    return u3n_nock_on(cor, bat);
+    pro = u3n_nock_on(cor, bat);
   }
   else
   {
-    u3_noun ton = u3n_nock_an(cor, bat);
-    
-    u3_noun tag, pro;
-    if (c3n == u3r_cell(ton, &tag, &pro))
-    {
-      return u3m_bail(c3__fail);
-    }
-    if (0 == tag)
-    {
-      u3k(pro);
-      u3z(ton);
-      return pro;
-    }
-    else if (2 == tag)
-    {
-      return u3m_bail(c3__exit);
-    }
-    else
-    {
-      return u3m_bail(c3__fail);
+    u3_noun tag, ton = u3n_nock_an(cor, bat);
+    if ( c3n == u3r_cell(ton, &tag, &pro) ) return u3m_bail(c3__fail);
+
+    switch ( tag ) {
+      case 0: {
+        u3k(pro);
+        u3z(ton);
+      } break;
+
+      case 2:  return u3m_bail(c3__exit);
+      default: return u3m_bail(c3__fail);
     }
   }
+
+  BoxArena = box_arena_stash;
+  CodeArena = code_arena_stash;
+  m3_RestoreSettable(&stash_u);
+
+  return pro;
 }
 
 static inline void
@@ -198,18 +228,6 @@ typedef struct {
   u3_noun get_all_glob_ctx;
   u3_noun set_all_glob_ctx;
 } match_data_struct;
-
-// memory arena with exponential growth
-typedef struct {
-  c3_h      siz_h;  // size in bytes
-  c3_y      pad_y;  // alignment padding
-  c3_t      ini_t;  // already initialized
-  u3i_slab  sab_u;  // associated slab
-  c3_y*     buf_y;  // allocated buffer
-  c3_y*     nex_y;  // next allocation
-  c3_y*     end_y;  // end of arena
-  jmp_buf*  esc_u;  // escape buffer
-} uw_arena;
 
 typedef struct {
   IM3Module wasm_module;    // p
@@ -316,13 +334,6 @@ _uw_arena_free(uw_arena* ren_u)
   ren_u->ini_t = 0;
 }
 
-// Code page allocation: simple bump allocator for non-growing objects,
-// i.e. code pages
-// save allocation length for realloc
-// CodeArena->esc_u MUST be initialized by the caller to handle OOM
-//
-static uw_arena* CodeArena;
-
 static void*
 _calloc_code(size_t num_i, size_t len_i)
 {
@@ -397,11 +408,6 @@ _free_code(void* lag_v)
   }
   // noop
 }
-
-// Struct/array allocation: [len_d cap_d data]
-// BoxArena->esc_u MUST be initialized by the caller to handle OOM
-//
-static uw_arena* BoxArena;
 
 //  allocate with capacity
 //  the allocated buffer 
@@ -1001,17 +1007,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
-        //  any unconstrained nock computation is a potential urwasm reentry:
-        //  save the pointers before that, restore after
-        uw_arena* box_arena_frame = BoxArena;
-        uw_arena* code_arena_frame = CodeArena;
         monad_cont = uw_slam_check(
           u3k(cont),
           u3k(u3t(yil)),
           sat_u->is_stateful
         );
-        BoxArena = box_arena_frame;
-        CodeArena = code_arena_frame;
         u3z(yil);
         yil = u3_none;
       }
@@ -1068,15 +1068,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
-        uw_arena* box_arena_frame = BoxArena;
-        uw_arena* code_arena_frame = CodeArena;
         monad_cont = uw_slam_check(
           u3k(cont),
           u3k(u3t(yil)),
           sat_u->is_stateful
         );
-        BoxArena = box_arena_frame;
-        CodeArena = code_arena_frame;
         u3z(yil);
         yil = u3_none;
       }
@@ -1116,15 +1112,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
         if (0 == u3h(yil))
         {
-          uw_arena* box_arena_frame = BoxArena;
-          uw_arena* code_arena_frame = CodeArena;
           monad_cont = uw_slam_check(
             u3k(cont),
             u3k(u3t(yil)),
             sat_u->is_stateful
           );
-          BoxArena = box_arena_frame;
-          CodeArena = code_arena_frame;
           u3z(yil);
           yil = u3_none;
         }
@@ -1575,15 +1567,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(frame);
           u3_noun p_res = u3t(sat_u->resolution);
-          uw_arena* box_arena_frame = BoxArena;
-          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = uw_slam_check(
             u3k(cont),
             u3k(p_res),
             sat_u->is_stateful
           );
-          BoxArena = box_arena_frame;
-          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1614,15 +1602,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(u3t(frame));
           u3_noun p_res = u3t(sat_u->resolution);
-          uw_arena* box_arena_frame = BoxArena;
-          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = uw_slam_check(
             u3k(cont),
             u3k(p_res),
             sat_u->is_stateful
           );
-          BoxArena = box_arena_frame;
-          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1675,15 +1659,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           else  // %0
           {
             u3_noun p_res = u3t(yil);
-            uw_arena* box_arena_frame = BoxArena;
-            uw_arena* code_arena_frame = CodeArena;
             u3_noun monad_cont = uw_slam_check(
               u3k(cont),
               u3k(p_res),
               sat_u->is_stateful
             );
-            BoxArena = box_arena_frame;
-            CodeArena = code_arena_frame;
             u3z(sat_u->resolution);
             u3z(yil);
             sat_u->resolution = _reduce_monad(monad_cont, sat_u);
@@ -1713,15 +1693,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           u3_noun cont = u3t(frame);
           u3_noun p_res = u3t(sat_u->resolution);
-          uw_arena* box_arena_frame = BoxArena;
-          uw_arena* code_arena_frame = CodeArena;
           u3_noun monad_cont = uw_slam_check(
             u3k(cont),
             u3k(p_res),
             sat_u->is_stateful
           );
-          BoxArena = box_arena_frame;
-          CodeArena = code_arena_frame;
           u3z(sat_u->resolution);
           sat_u->resolution = _reduce_monad(monad_cont, sat_u);
         }
@@ -1838,11 +1814,7 @@ _link_wasm_with_arrow_map(
     m3_SuspendStackPushExtTag(runtime);
   }
 
-  uw_arena* box_arena_frame = BoxArena;
-  uw_arena* code_arena_frame = CodeArena;
   u3_noun script = uw_slam_check(arrow, coin_wasm_list, sat_u->is_stateful);
-  BoxArena = box_arena_frame;
-  CodeArena = code_arena_frame;
   u3_noun yil = _reduce_monad(script, sat_u); 
 
   M3Result result = m3Err_none;
