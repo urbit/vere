@@ -15,8 +15,11 @@ void *memmem(const void *h0, size_t k, const void *n0, size_t l);
 
 uint32_t getppid();
 
+struct iovec { void *iov_base; size_t iov_len; };
+
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+ssize_t pwritev(int fd, const struct iovec* iov, size_t iovcnt, off_t offset);
 
 #define SIGUSR1       10
 #define SIGALRM       14

@@ -43,6 +43,7 @@ typedef c3_h       u3e_version;
 */
 #define U3E_VER1   1               //  north+south.bin
 #define U3E_VER2   2               //  image.bin
-#define U3E_VERLAT U3E_VER2
+#define U3E_VER3   3               //  book.log
+#define U3E_VERLAT U3E_VER3
 
 #endif /* ifndef U3_VERSION_H */
