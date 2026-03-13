@@ -46,6 +46,8 @@ _har(u3a_road* rod_u, u3z_cid cid)
       return rod_u->cax.har_p;
     case u3z_memo_keep:
       return rod_u->cax.per_p;
+    case u3z_memo_ford:
+      return rod_u->cax.for_p;  // design cache key to handle arvo changes that invalidate
   }
   u3_assert(0);
 }
