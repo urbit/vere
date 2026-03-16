@@ -7,6 +7,16 @@
 #include "retrieve.h"
 #include "xtract.h"
 
+
+// TODO:
+// when trim is called by the rest of the code? how original implementation
+// treated trim? can't we just remove all entries until N are left without
+// touching M last entries?
+// store structs on road instead of a post, only have a post for the array.
+// API should just take a pointer to the struct
+
+
+
 /* asserting noun deconstruction to make sure hashtables are bail-safe
 */
 static inline u3_noun
@@ -57,23 +67,14 @@ u3h_new(void)
     }                                                                           \
   } while (0)
 
-#define _h_for_kev(...)                                                         \
-  do {                                                                          \
-    u3_noun* kevs_u = u3to(u3_noun, har_u->kev_p);                               \
-    c3_w loc_w = har_u->loc_w;                                                  \
-    for (c3_w i_w = 0; i_w < loc_w; i_w++) {                                    \
-      u3_noun* vek_u = &kevs_u[i_w];                                                 \
-      if ( *vek_u ) {                                                              \
-        __VA_ARGS__                                                             \
-      }                                                                         \
-    }                                                                           \
-  } while (0)
-
 static void _h_walk_with(u3h_root* har_u,
               void (*fun_f)(u3_noun, void*),
               void* wit)
 {
-  _h_for_kev( fun_f(*vek_u, wit); );
+  u3_noun* kev_u = u3to(u3_noun, har_u->kev_p);
+  for (c3_w i_w = 0; i_w < har_u->loc_w; i_w++) {
+    if ( kev_u[i_w] ) fun_f(kev_u[i_w], wit);
+  }
 }
 
 static void
@@ -293,7 +294,9 @@ u3h_free(u3p(u3h_root) har_p)
 {
   u3h_root* har_u = u3to(u3h_root, har_p);
   u3_noun* kev_u = u3to(u3_noun, har_u->kev_p);
-  _h_for_kev( u3z(*vek_u); );
+  for (c3_w i_w = 0; i_w < har_u->loc_w; i_w++) {
+    if ( kev_u[i_w] ) u3z(kev_u[i_w]);
+  }
   u3a_wfree(kev_u);
   u3a_wfree(har_u);
 }
@@ -306,9 +309,9 @@ u3h_mark(u3p(u3h_root) har_p)
   c3_w tot_w = 0;
   u3h_root* har_u = u3to(u3h_root, har_p);
   u3_noun* kev_u = u3to(u3_noun, har_u->kev_p);
-  _h_for_kev(
-    tot_w += u3a_mark_noun(*vek_u);
-  );
+  for (c3_w i_w = 0; i_w < har_u->loc_w; i_w++) {
+    if ( kev_u[i_w] ) tot_w += u3a_mark_noun(kev_u[i_w]);
+  }
   tot_w += u3a_mark_ptr(kev_u);
   tot_w += u3a_mark_ptr(har_u);
   return tot_w;
