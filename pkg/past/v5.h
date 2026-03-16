@@ -48,13 +48,43 @@
 #     define  u3j_v5_rite         u3j_rite
 #     define  u3j_v5_site         u3j_site
 
-#     define  u3h_v5_buck         u3h_buck
-#     define  u3h_v5_node         u3h_node
-#     define  u3h_v5_root         u3h_root
-#     define  u3h_v5_slot_is_node u3h_slot_is_node
-#     define  u3h_v5_slot_is_noun u3h_slot_is_noun
-#     define  u3h_v5_slot_is_null u3h_slot_is_null
-#     define  u3h_v5_noun_to_slot u3h_noun_to_slot
-#     define  u3h_v5_slot_to_noun u3h_slot_to_noun
+// #     define  u3h_v5_buck         u3h_buck
+// #     define  u3h_v5_node         u3h_node
+// #     define  u3h_v5_root         u3h_root
+
+ typedef c3_w u3h_v5_slot;
+
+      /* u3h_node: map node.
+      */
+        typedef struct {
+          c3_w     map_w;     // bitmap for [sot_w]
+          u3h_v5_slot sot_w[];   // filled slots
+        } u3h_v5_node;
+
+      /* u3h_root: hash root table
+      */
+        typedef struct {
+          c3_w     max_w;     // number of cache lines (0 for no trimming)
+          c3_w     use_w;     // number of lines currently filled
+          struct {
+            c3_w  mug_w;      // current hash
+            c3_w  inx_w;      // index into current hash bucket
+            c3_o  buc_o;      // XX remove
+          } arm_u;            // clock arm
+          u3h_v5_slot sot_w[64]; // slots
+        } u3h_v5_root;
+
+      /* u3h_buck: bottom bucket.
+      */
+        typedef struct {
+          c3_w     len_w;     // length of [sot_w]
+          u3h_v5_slot sot_w[];   // filled slots
+        } u3h_v5_buck;
+
+#     define  u3h_v5_slot_is_node(sot) (u3a_into(((sot) & 0x3fffffff) << u3a_vits))
+#     define  u3h_v5_slot_is_noun(sot) ((1 == ((sot) >> 31)) ? c3y : c3n)
+#     define  u3h_v5_slot_is_null(sot) ((0 == ((sot) >> 30)) ? c3y : c3n)
+#     define  u3h_v5_noun_to_slot(sot) ((sot) | 0x40000000)
+#     define  u3h_v5_slot_to_noun(sot) (0x40000000 | (sot))
 
 #endif /* U3_V5_H */
