@@ -319,20 +319,7 @@ u3h_mark(u3p(u3h_root) har_p)
 void
 u3h_relocate(u3p(u3h_root) *har_p)
 {
-  u3_post new_p, old_p = *har_p;
-  u3h_root*  har_u = u3to(u3h_root, old_p);
-  u3_noun* kev_u = u3to(u3_noun, har_u->kev_p);
-  c3_t    fir_t;
-  new_p  = u3a_mark_relocate_post(old_p, &fir_t);
-  *har_p = new_p;
-
-  if ( !fir_t ) return;
-
-  for (c3_w i_w = 0; i_w < har_u->loc_w; i_w++) {
-    if ( kev_u[i_w] ) {
-      u3a_relocate_noun(&kev_u[i_w]);
-    }
-  }
+  c3_stub;  //  XX store structs of hashtables instead of posts; post of array only
 }
 
 /* u3h_count(): count hashtable for gc.
