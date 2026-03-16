@@ -25,10 +25,10 @@
     #define u3h_load_factor_percent 70
 
     typedef struct {
-      c3_w      use_w;  // number of valid items
-      c3_w      loc_w;  // number of allocated slots
-      c3_w      max_w;  // bounded size if max_w > 0
-      u3_noun   kev[0];
+      c3_w          use_w;  // number of valid items
+      c3_w          loc_w;  // number of allocated slots
+      c3_w          max_w;  // bounded size if max_w > 0
+      u3p(u3_noun)  kev_p;
     } u3h_root;
 
     /**  Functions.
