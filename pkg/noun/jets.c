@@ -111,7 +111,7 @@ _cj_bash(u3_noun bat)
   u3_weak pro;
   u3a_road* rod_u = u3R;
   while ( 1 ) {
-    pro = u3h_get(rod_u->jed.bas_p, bat);
+    pro = u3h_get(&rod_u->jed.bas_u, bat);
 
     if ( u3_none != pro ) {
       break;
@@ -131,7 +131,7 @@ _cj_bash(u3_noun bat)
       urcrypt_shay(fat_y, met_w, dig_y);
 
       pro = u3i_bytes(32, dig_y);
-      u3h_put(u3R->jed.bas_p, bat, u3k(pro));
+      u3h_put(&u3R->jed.bas_u, bat, u3k(pro));
       u3i_slab_free(&sab_u);
       break;
     }
@@ -327,14 +327,14 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
         c3_w j_w;
         for ( j_w = 0; 0 != kid_u->bas_u[j_w]; j_w++ ) {
           u3_noun key = _cj_hash(kid_u->bas_u[j_w]),
-                  hot = u3h_git(u3R->jed.hot_p, key),
+                  hot = u3h_git(&u3R->jed.hot_u, key),
                   old = ( u3_none == hot ) ? u3_none : u3k(u3h(hot)),
                   reg = _cj_gust(old, kid_u->axe_l, u3k(pel), u3k(loc)),
                   huc = u3t(u3t(loc)),
                   hap = _cj_warm_hump(jax_l, huc),
                   toh = u3nq(reg, jax_l, hap, u3k(bal));
 
-          u3h_put(u3R->jed.hot_p, key, toh);
+          u3h_put(&u3R->jed.hot_u, key, toh);
           u3z(key);
         }
       }
@@ -470,7 +470,7 @@ _cj_find_cold(u3_noun bat)
   u3a_road* rod_u = u3R;
 
   while ( 1 ) {
-    u3_weak bar = u3h_get(rod_u->jed.cod_p, bat);
+    u3_weak bar = u3h_get(&rod_u->jed.cod_u, bat);
 
     if ( u3_none != bar ) {
       return bar;
@@ -492,7 +492,7 @@ _cj_find_warm(u3_noun loc)
   u3a_road* rod_u = u3R;
 
   while ( 1 ) {
-    u3_weak ank = u3h_get(rod_u->jed.war_p, loc);
+    u3_weak ank = u3h_get(&rod_u->jed.war_u, loc);
 
     if ( u3_none != ank ) {
       return ank;
@@ -596,7 +596,7 @@ _cj_spot_hot(u3_noun cor, u3_noun bas, u3_noun* loc)
 {
   u3_noun bat = u3h(cor);
   u3_weak act = u3_none,
-          hot = u3h_get(u3H->rod_u.jed.hot_p, bas);
+          hot = u3h_get(&u3H->rod_u.jed.hot_u, bas);
   if ( u3_none != hot ) {
     u3_noun reg, jax, hap, bal;
     c3_l    jax_l;
@@ -648,13 +648,13 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       u3_weak act = _cj_spot_hot(cor, *bas, &loc);
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
-        u3h_put(u3R->jed.cod_p, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
+        u3h_put(&u3R->jed.cod_u, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
         /* caution: could overwrites old value, debug batteries etc.
         **          old value contains old _cj_jit (from different
         **          battery). if we change jit to (map battery *),
         **          will need to merge with that map here.
         */
-        u3h_put(u3R->jed.war_p, loc, act);
+        u3h_put(&u3R->jed.war_u, loc, act);
       }
     }
   }
@@ -815,9 +815,9 @@ u3j_boot(c3_o nuu_o)
   memset(u3D.ray_u, 0, (u3D.all_l * sizeof(u3j_core)));
 
   if ( c3n == nuu_o ) {
-    u3h_free(u3R->jed.hot_p);
+    u3h_free(&u3R->jed.hot_u);
   }
-  u3R->jed.hot_p = u3h_new();
+   u3h_new(&u3R->jed.hot_u);
 
   return _cj_install(u3D.ray_u, 1,
                      (c3_l) (long long) u3D.dev_u[0].par_u,
@@ -1080,7 +1080,7 @@ static u3j_hank*
 _cj_hank_find(u3_noun pre, u3_noun tam)
 {
   u3_noun key = u3nc(u3k(pre), u3k(tam));
-  u3_noun got = u3h_git(u3R->jed.han_p, key);
+  u3_noun got = u3h_git(&u3R->jed.han_u, key);
 
   if ( u3_none != got ) {
     u3z(key);
@@ -1092,7 +1092,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
 
     while ( rod_u->par_p && u3_none == got ) {
       rod_u = u3to(u3a_road, rod_u->par_p);
-      got   = u3h_git(rod_u->jed.han_p, key);
+      got   = u3h_git(&rod_u->jed.han_u, key);
     }
 
     if ( u3_none == got ) {
@@ -1108,7 +1108,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
       }
     }
 
-    u3h_put(u3R->jed.han_p, key, _cj_of_hank(new_u));
+    u3h_put(&u3R->jed.han_u, key, _cj_of_hank(new_u));
     u3z(key);
     return new_u;
   }
@@ -1867,8 +1867,8 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 
     hap   = _cj_warm_hump(jax_l, u3t(u3t(loc)));
     act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
-    u3h_put(u3R->jed.cod_p, bat, u3nc(u3k(bas), reg));
-    u3h_put(u3R->jed.war_p, loc, act); // see note in _cj_spot
+    u3h_put(&u3R->jed.cod_u, bat, u3nc(u3k(bas), reg));
+    u3h_put(&u3R->jed.war_u, loc, act); // see note in _cj_spot
     u3z(pel); u3z(axe);
   }
 
@@ -2022,11 +2022,12 @@ _cj_take_hank_cb(c3_w nah_w)
 u3a_jets
 u3j_take(u3a_jets jed_u)
 {
-  jed_u.war_p = u3h_take(jed_u.war_p);
-  jed_u.cod_p = u3h_take(jed_u.cod_p);
-  jed_u.han_p = u3h_take_with(jed_u.han_p, _cj_take_hank_cb);
-  jed_u.bas_p = u3h_take(jed_u.bas_p);
-  return jed_u;
+  u3a_jets out_u;
+  u3h_take(&out_u.war_u, &jed_u.war_u);
+  u3h_take(&out_u.cod_u, &jed_u.cod_u);
+  u3h_take_with(&out_u.han_u, &jed_u.han_u, _cj_take_hank_cb);
+  u3h_take(&out_u.bas_u, &jed_u.bas_u);
+  return out_u;
 }
 
 /* _cj_merge_hank_cb(): u3h_uni_with cb for integrating taken hanks
@@ -2035,7 +2036,7 @@ u3j_take(u3a_jets jed_u)
 static void
 _cj_merge_hank_cb(u3_noun kev, void* wit)
 {
-  u3p(u3h_root) han_p = *(u3p(u3h_root)*)wit;
+  u3h_root* hat_u = wit;
   u3j_hank* nah_u;
   u3_noun key;
   c3_w nah_w;
@@ -2048,7 +2049,7 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
   }
   else {
     u3j_hank* han_u;
-    u3_weak     got = u3h_git(u3R->jed.han_p, key);
+    u3_weak     got = u3h_git(&u3R->jed.han_u, key);
 
     if ( u3_none == got )  {
       han_u = nah_u;
@@ -2065,7 +2066,7 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
       u3a_wfree(nah_u);
     }
 
-    u3h_put(han_p, key, _cj_of_hank(han_u));
+    u3h_put(hat_u, key, _cj_of_hank(han_u));
   }
 }
 
@@ -2074,17 +2075,17 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
 void
 u3j_reap(u3a_jets jed_u)
 {
-  u3h_uni(u3R->jed.war_p, jed_u.war_p);
-  u3h_free(jed_u.war_p);
+  u3h_uni(&u3R->jed.war_u, &jed_u.war_u);
+  u3h_free(&jed_u.war_u);
 
-  u3h_uni(u3R->jed.cod_p, jed_u.cod_p);
-  u3h_free(jed_u.cod_p);
+  u3h_uni(&u3R->jed.cod_u, &jed_u.cod_u);
+  u3h_free(&jed_u.cod_u);
 
-  u3h_walk_with(jed_u.han_p, _cj_merge_hank_cb, &u3R->jed.han_p);
-  u3h_free(jed_u.han_p);
+  u3h_walk_with(&jed_u.han_u, _cj_merge_hank_cb, &u3R->jed.han_u);
+  u3h_free(&jed_u.han_u);
 
-  u3h_uni(u3R->jed.bas_p, jed_u.bas_p);
-  u3h_free(jed_u.bas_p);
+  u3h_uni(&u3R->jed.bas_u, &jed_u.bas_u);
+  u3h_free(&jed_u.bas_u);
 }
 
 /* _cj_ream(): ream list of battery [bash registry] pairs. RETAIN.
@@ -2116,7 +2117,7 @@ _cj_ream(u3_noun all)
       u3m_p("old jet", bal);
       u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
 #endif
-      u3h_put(u3R->jed.war_p, loc, act);
+      u3h_put(&u3R->jed.war_u, loc, act);
     }
     u3z(rul);
 
@@ -2155,7 +2156,7 @@ _cj_ream(u3_noun all)
         u3m_p("old jet", bal);
         u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
 #endif
-        u3h_put(u3R->jed.war_p, loc, act);
+        u3h_put(&u3R->jed.war_u, loc, act);
       }
     }
     u3z(lop);
@@ -2187,13 +2188,13 @@ u3j_ream(void)
 {
   u3_noun rel = u3_nul;
   u3_assert(u3R == &(u3H->rod_u));
-  u3h_free(u3R->jed.war_p);
-  u3R->jed.war_p = u3h_new();
-  u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &rel);
+  u3h_free(&u3R->jed.war_u);
+   u3h_new(&u3R->jed.war_u);
+  u3h_walk_with(&u3R->jed.cod_u, _cj_warm_tap, &rel);
   _cj_ream(rel);
   u3z(rel);
 
-  u3h_walk(u3R->jed.han_p, _cj_ream_hank);
+  u3h_walk(&u3R->jed.han_u, _cj_ream_hank);
 }
 
 /* u3j_stay(): extract cold state
@@ -2203,7 +2204,7 @@ u3j_stay(void)
 {
   u3_noun rel = u3_nul;
   u3_assert(u3R == &(u3H->rod_u));
-  u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &rel);
+  u3h_walk_with(&u3R->jed.cod_u, _cj_warm_tap, &rel);
   return rel;
 }
 
@@ -2217,7 +2218,7 @@ u3j_load(u3_noun rel)
 
   while ( u3_nul != ler ) {
     u3x_cell(ler, &lor, &ler);
-    u3h_put(u3R->jed.cod_p, u3h(lor), u3k(u3t(lor)));
+    u3h_put(&u3R->jed.cod_u, u3h(lor), u3k(u3t(lor)));
   }
 
   u3z(rel);
@@ -2328,23 +2329,23 @@ u3j_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
-  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * 4;
+  qua_u[0]->siz_w = u3h_mark(&u3R->jed.war_u) * 4;
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("cold jet state");
-  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * 4;
+  qua_u[1]->siz_w = u3h_mark(&u3R->jed.cod_u) * 4;
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("hank cache");
-  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * 4;
+  qua_u[2]->siz_w = u3h_mark(&u3R->jed.han_u) * 4;
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * 4;
+  qua_u[3]->siz_w = u3h_mark(&u3R->jed.bas_u) * 4;
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
-  u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
+  u3h_walk_with(&u3R->jed.han_u, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w *= 4;
 
   c3_w sum_w = 0;
@@ -2358,7 +2359,7 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[5]->siz_w = u3h_mark(&u3R->jed.hot_u) * 4;
 
     sum_w += qua_u[5]->siz_w;
 
@@ -2396,13 +2397,13 @@ u3j_free_hank(u3_noun kev)
 void
 u3j_free(void)
 {
-  u3h_walk(u3R->jed.han_p, u3j_free_hank);
-  u3h_free(u3R->jed.war_p);
-  u3h_free(u3R->jed.cod_p);
-  u3h_free(u3R->jed.han_p);
-  u3h_free(u3R->jed.bas_p);
+  u3h_walk(&u3R->jed.han_u, u3j_free_hank);
+  u3h_free(&u3R->jed.war_u);
+  u3h_free(&u3R->jed.cod_u);
+  u3h_free(&u3R->jed.han_u);
+  u3h_free(&u3R->jed.bas_u);
   if ( u3R == &(u3H->rod_u) ) {
-    u3h_free(u3R->jed.hot_p);
+    u3h_free(&u3R->jed.hot_u);
   }
 }
 
@@ -2420,9 +2421,9 @@ u3j_reclaim(void)
   // }
   //  clear the jet hank cache
   //
-  u3h_walk(u3R->jed.han_p, u3j_free_hank);
-  u3h_free(u3R->jed.han_p);
-  u3R->jed.han_p = u3h_new();
+  u3h_walk(&u3R->jed.han_u, u3j_free_hank);
+  u3h_free(&u3R->jed.han_u);
+  u3h_new(&u3R->jed.han_u);
 }
 
 /* u3j_rewrite_compact(): rewrite jet state for compaction.
@@ -2436,12 +2437,12 @@ u3j_reclaim(void)
 void
 u3j_rewrite_compact(void)
 {
-  u3h_relocate(&(u3R->jed.war_p));
-  u3h_relocate(&(u3R->jed.cod_p));
-  u3h_relocate(&(u3R->jed.han_p));
-  u3h_relocate(&(u3R->jed.bas_p));
+  u3h_relocate(&(u3R->jed.war_u));
+  u3h_relocate(&(u3R->jed.cod_u));
+  u3h_relocate(&(u3R->jed.han_u));
+  u3h_relocate(&(u3R->jed.bas_u));
 
   if ( u3R == &(u3H->rod_u) ) {
-    u3h_relocate(&(u3R->jed.hot_p));
+    u3h_relocate(&(u3R->jed.hot_u));
   }
 }

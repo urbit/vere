@@ -38,14 +38,14 @@ u3z_key_5(c3_m fun, u3_noun one, u3_noun two, u3_noun tri, u3_noun qua, u3_noun 
 
 /* _har(): get the memo cache for the given cid.
 */
-static u3p(u3h_root)
+static u3h_root*
 _har(u3a_road* rod_u, u3z_cid cid)
 {
   switch ( cid ) {
     case u3z_memo_toss:
-      return rod_u->cax.har_p;
+      return &rod_u->cax.har_u;
     case u3z_memo_keep:
-      return rod_u->cax.per_p;
+      return &rod_u->cax.per_u;
   }
   u3_assert(0);
 }
@@ -148,10 +148,10 @@ u3z_uniq(u3z_cid cid, u3_noun som)
 /* u3z_reap(): promote memoization cache state.
 */
 void
-u3z_reap(u3z_cid cid, u3p(u3h_root) har_p)
+u3z_reap(u3z_cid cid, u3h_root* har_u)
 {
   u3_assert(u3z_memo_toss != cid);
 
-  u3h_uni(_har(u3R, cid), har_p);
-  u3h_free(har_p);
+  u3h_uni(_har(u3R, cid), har_u);
+  u3h_free(har_u);
 }

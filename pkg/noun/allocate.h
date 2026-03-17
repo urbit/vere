@@ -2,6 +2,7 @@
 #define U3_ALLOCATE_H
 
 #include "error.h"
+#include "hashtable.h"
 #include "manage.h"
 #include "rsignal.h"
 
@@ -123,11 +124,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_jets: jet dashboard
     */
       typedef struct _u3a_jets {
-        u3p(u3h_root) hot_p;                  //  hot state (home road only)
-        u3p(u3h_root) war_p;                  //  warm state
-        u3p(u3h_root) cod_p;                  //  cold state
-        u3p(u3h_root) han_p;                  //  hank cache
-        u3p(u3h_root) bas_p;                  //  battery hashes
+        u3h_root hot_u;                  //  hot state (home road only)
+        u3h_root war_u;                  //  warm state
+        u3h_root cod_u;                  //  cold state
+        u3h_root han_u;                  //  hank cache
+        u3h_root bas_u;                  //  battery hashes
       } u3a_jets;
 
     /* u3a_road: contiguous allocation and execution context.
@@ -145,7 +146,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         c3_w off_w;                           //  spin stack offset
         c3_w fow_w;                           //  spin stack overflow count
-        u3p(u3h_root) lop_p;                  //  %loop hint set
+        u3h_root lop_u;                  //  %loop hint set
         u3_noun tim;                          //  list of absolute deadlines
 
         c3_w fut_w[28];                       //  futureproof buffer
@@ -188,7 +189,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3a_jets jed;                         //  jet dashboard
 
         struct {                              //  bytecode state
-          u3p(u3h_root) har_p;                //  formula->post of bytecode
+          u3h_root har_u;                //  formula->post of bytecode
         } byc;
 
         struct {                              //  scry namespace
@@ -209,8 +210,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         } pro;
 
         struct {                              //  memoization caches
-          u3p(u3h_root) har_p;                //  transient
-          u3p(u3h_root) per_p;                //  persistent
+          u3h_root har_u;                //  transient
+          u3h_root per_u;                //  persistent
         } cax;
       } u3a_road;
       typedef u3a_road u3_road;

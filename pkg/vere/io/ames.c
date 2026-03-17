@@ -40,7 +40,7 @@ typedef enum u3_stun_state {
 */
   typedef struct _u3_fine {
     c3_y              ver_y;            //  fine protocol
-    u3p(u3h_root)     sac_p;            //  scry cache hashtable
+    u3h_root          sac_u;            //  scry cache hashtable
     struct _u3_ames*  sam_u;            //  ames backpointer
   } u3_fine;
 
@@ -58,7 +58,7 @@ typedef enum u3_stun_state {
     ur_cue_test_t*   tes_u;             //  cue-test handle
     u3_cue_xeno*     sil_u;             //  cue handle
     c3_y             ver_y;             //  protocol version
-    u3p(u3h_root)    lax_p;             //  lane scry cache
+    u3h_root         lax_u;             //  lane scry cache
     struct _u3_panc* pan_u;             //  outbound packet queue, backward
     struct {                            //
       c3_c       dom_c[251];            //    domain
@@ -828,20 +828,20 @@ u3_ames_encode_lane(u3_lane lan) {
 /* _ames_lane_into_cache(): put las for who into cache, including timestamp
 */
 static void
-_ames_lane_into_cache(u3p(u3h_root) lax_p, u3_noun who, u3_noun las) {
+_ames_lane_into_cache(u3h_root* lax_u, u3_noun who, u3_noun las) {
   struct timeval tim_tv;
   gettimeofday(&tim_tv, 0);
   u3_noun now = u3m_time_in_tv(&tim_tv);
   u3_noun val = u3nc(las, now);
-  u3h_put(lax_p, who, val);
+  u3h_put(lax_u, who, val);
   u3z(who);
 }
 
 /* _ames_lane_from_cache(): retrieve lane for who from cache, if any
 */
 static u3_weak
-_ames_lane_from_cache(u3p(u3h_root) lax_p, u3_noun who, c3_o nal_o) {
-  u3_weak lac = u3h_git(lax_p, who);
+_ames_lane_from_cache(u3h_root* lax_u, u3_noun who, c3_o nal_o) {
+  u3_weak lac = u3h_git(lax_u, who);
 
   if ( u3_none == lac ) {
     u3z(who);
@@ -974,7 +974,7 @@ static u3_weak
 _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
 {
   u3_noun key = u3nc(u3k(pax), u3i_word(fra_w));
-  u3_weak pro = u3h_git(sam_u->fin_s.sac_p, key);
+  u3_weak pro = u3h_git(&sam_u->fin_s.sac_u, key);
   u3z(key);
   return pro;
 }
@@ -986,13 +986,13 @@ _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
 {
   if ( (FINE_PEND == lis) || (FINE_DEAD == lis) ) {
     u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
-    u3h_put(sam_u->fin_s.sac_p, key, lis);
+    u3h_put(&sam_u->fin_s.sac_u, key, lis);
     u3z(key);
   }
   else {
     while ( u3_nul != lis ) {
       u3_noun key = u3nc(u3k(pax), u3i_word(lop_w));
-      u3h_put(sam_u->fin_s.sac_p, key, u3k(u3h(lis)));
+      u3h_put(&sam_u->fin_s.sac_u, key, u3k(u3h(lis)));
       u3z(key);
 
       lis = u3t(lis);
@@ -1549,7 +1549,7 @@ _ames_lane_scry_cb(void* vod_p, u3_noun nun)
 
     //  cache the scry result for later use
     //
-    _ames_lane_into_cache(sam_u->lax_p,
+    _ames_lane_into_cache(&sam_u->lax_u,
                           u3i_chubs(2, pac_u->pre_u.rec_d),
                           u3k(las));
 
@@ -1595,7 +1595,7 @@ _ames_try_send(u3_pact* pac_u, c3_o for_o)
   //
   else {
     u3_noun key = u3i_chubs(2, pac_u->pre_u.rec_d);
-    lac = _ames_lane_from_cache(sam_u->lax_p, key, sam_u->nal_o);
+    lac = _ames_lane_from_cache(&sam_u->lax_u, key, sam_u->nal_o);
   }
 
   //  if we know there's no lane, drop the packet
@@ -2679,7 +2679,7 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
     case c3__nail: {
       u3_noun who = u3k(u3h(dat));
       u3_noun las = u3k(u3t(dat));
-      _ames_lane_into_cache(sam_u->lax_p, who, las);
+      _ames_lane_into_cache(&sam_u->lax_u, who, las);
       sam_u->nal_o = c3y;
       ret_o = c3y;
     } break;
@@ -2759,7 +2759,7 @@ _ames_exit_cb(uv_handle_t* had_u)
     pan_u = nex_u;
   }
 
-  u3h_free(sam_u->lax_p);
+  u3h_free(&sam_u->lax_u);
 
   u3s_cue_xeno_done(sam_u->sil_u);
   ur_cue_test_done(sam_u->tes_u);
@@ -2791,20 +2791,20 @@ _ames_io_info(u3_auto* car_u)
   u3_ames*    sam_u = (u3_ames*)car_u;
   c3_w sac_w, lax_w;
 
-  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
-  u3h_discount(sam_u->fin_s.sac_p);
+  sac_w = u3h_count(&sam_u->fin_s.sac_u) * 4;
+  u3h_discount(&sam_u->fin_s.sac_u);
 
-  lax_w = u3h_count(sam_u->lax_p) * 4;
-  u3h_discount(sam_u->lax_p);
+  lax_w = u3h_count(&sam_u->lax_u) * 4;
+  u3h_discount(&sam_u->lax_u);
 
   return u3i_list(
     u3_pier_mase("filtering",        sam_u->fig_u.fit_o),
     u3_pier_mase("can-send",         net_o),
     u3_pier_mase("can-scry",         sam_u->fig_u.see_o),
     u3_pier_mase("stun-working",     sam_u->sun_u.wok_o),
-    u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(sam_u->fin_s.sac_p))),
+    u3_pier_mase("scry-cache",       u3i_word(u3h_wyt(&sam_u->fin_s.sac_u))),
     u3_pier_mase("scry-cache-size",  u3i_word(sac_w)),
-    u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("lane-cache",       u3i_word(u3h_wyt(&sam_u->lax_u))),
     u3_pier_mase("lane-cache-size",  u3i_word(lax_w)),
     u3_pier_mase("dropped",          u3i_chub(sam_u->sat_u.dop_d)),
     u3_pier_mase("forwards-dropped", u3i_chub(sam_u->sat_u.fod_d)),
@@ -2819,7 +2819,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
     u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
     u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
-    u3_pier_mase("cached-lanes",     u3i_word(u3h_wyt(sam_u->lax_p))),
+    u3_pier_mase("cached-lanes",     u3i_word(u3h_wyt(&sam_u->lax_u))),
     u3_none);
 }
 
@@ -2831,11 +2831,11 @@ _ames_io_slog(u3_auto* car_u)
   u3_ames*    sam_u = (u3_ames*)car_u;
   c3_w sac_w, lax_w;
 
-  sac_w = u3h_count(sam_u->fin_s.sac_p) * 4;
-  u3h_discount(sam_u->fin_s.sac_p);
+  sac_w = u3h_count(&sam_u->fin_s.sac_u) * 4;
+  u3h_discount(&sam_u->fin_s.sac_u);
 
-  lax_w = u3h_count(sam_u->lax_p) * 4;
-  u3h_discount(sam_u->lax_p);
+  lax_w = u3h_count(&sam_u->lax_u) * 4;
+  u3h_discount(&sam_u->lax_u);
 
 
 # define FLAG(a) ( (c3y == a) ? "&" : "|" )
@@ -2849,8 +2849,8 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("      stun:");
   u3l_log("        working: %s", FLAG(sam_u->sun_u.wok_o));
   u3l_log("      caches:");
-  u3l_log("        cached lanes: %u, %u B", u3h_wyt(sam_u->lax_p), lax_w);
-  u3l_log("        cached meows: %u, %u B", u3h_wyt(sam_u->fin_s.sac_p), sac_w);
+  u3l_log("        cached lanes: %u, %u B", u3h_wyt(&sam_u->lax_u), lax_w);
+  u3l_log("        cached meows: %u, %u B", u3h_wyt(&sam_u->fin_s.sac_u), sac_w);
   u3l_log("      counters:");
   u3l_log("                 dropped: %" PRIu64, sam_u->sat_u.dop_d);
   u3l_log("        forwards dropped: %" PRIu64, sam_u->sat_u.fod_d);
@@ -2865,7 +2865,7 @@ _ames_io_slog(u3_auto* car_u)
   u3l_log("                 crashed: %" PRIu64, sam_u->sat_u.fal_d);
   u3l_log("                    evil: %" PRIu64, sam_u->sat_u.vil_d);
   u3l_log("         lane scry fails: %" PRIu64, sam_u->sat_u.saw_d);
-  u3l_log("            cached lanes: %u", u3h_wyt(sam_u->lax_p));
+  u3l_log("            cached lanes: %u", u3h_wyt(&sam_u->lax_u));
 }
 
 static u3m_quac**
@@ -2876,12 +2876,12 @@ _ames_io_mark(u3_auto* car_u, c3_w *out_w)
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("scry cache");
-  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->siz_w = 4 * u3h_mark(&sam_u->fin_s.sac_u);
   all_u[0]->qua_u = 0;
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("lane cache");
-  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->siz_w = 4 * u3h_mark(&sam_u->lax_u);
   all_u[1]->qua_u = 0;
 
   all_u[2] = 0;
@@ -2923,7 +2923,7 @@ u3_ames_io_init(u3_pier* pir_u)
   //
   // 1500 bytes per packet * 100_000 = 150MB
   // 50 bytes (average) per path * 100_000 = 5MB
-  sam_u->fin_s.sac_p = u3h_new_cache(100000);
+   u3h_new_cache(&sam_u->fin_s.sac_u, 100000);
 
   //NOTE  some numbers on memory usage for the lane cache
   //
@@ -2940,7 +2940,7 @@ u3_ames_io_init(u3_pier* pir_u)
   //    we could afford more, but 500k entries is more than we'll likely use
   //    in the near future.
   //
-  sam_u->lax_p = u3h_new_cache(500000);
+  u3h_new_cache(&sam_u->lax_u, 500000);
 
   u3_assert( !uv_udp_init(u3L, &sam_u->wax_u) );
   u3_assert( !uv_udp_init_ex(u3L, &u3_Host.wax_u, UV_UDP_RECVMMSG) );

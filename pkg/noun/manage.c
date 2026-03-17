@@ -515,14 +515,14 @@ _pave_parts(void)
     u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
   }
 
-  u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
-  u3R->jed.war_p = u3h_new();
-  u3R->jed.cod_p = u3h_new();
-  u3R->jed.han_p = u3h_new();
-  u3R->jed.bas_p = u3h_new();
-  u3R->byc.har_p = u3h_new();
-  u3R->lop_p     = u3h_new();
+  u3h_new_cache(&u3R->cax.har_u, u3C.hap_w);  //  transient
+  u3h_new_cache(&u3R->cax.per_u, u3C.per_w);  //  persistent
+  u3h_new(&u3R->jed.war_u);
+  u3h_new(&u3R->jed.cod_u);
+  u3h_new(&u3R->jed.han_u);
+  u3h_new(&u3R->jed.bas_u);
+  u3h_new(&u3R->byc.har_u);
+  u3h_new(&u3R->lop_u);
   u3R->tim       = u3_nul;
   u3R->how.fag_w = 0;
 }
@@ -661,13 +661,6 @@ _find_home(void)
     u3n_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
-  }
-
-  //  if lop_p is zero than it is an old pier pre %loop hint, initialize the
-  //  HAMT
-  //
-  if (!u3R->lop_p) {
-    u3R->lop_p = u3h_new();
   }
 }
 
@@ -1335,11 +1328,13 @@ u3m_timer_pop(void)
 u3_noun
 u3m_love(u3_noun pro)
 {
-  //  save cache pointers from current road
+  //  save cache structs from current road
   //
-  u3p(u3h_root) byc_p = u3R->byc.har_p;
-  u3a_jets      jed_u = u3R->jed;
-  u3p(u3h_root) per_p = u3R->cax.per_p;
+  u3h_root byc_u = u3R->byc.har_u;
+  u3a_jets jed_u = u3R->jed;
+  u3h_root per_u = u3R->cax.per_u;
+
+  u3h_root take_byc_u, take_per_u;
 
   //  are there any timers on the road?
   //
@@ -1361,8 +1356,8 @@ u3m_love(u3_noun pro)
   //
   pro   = u3a_take(pro);
   jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
-  per_p = u3h_take(per_p);
+  u3n_take(&take_byc_u, &byc_u);
+  u3h_take(&take_per_u, &per_u);
 
   //  pop the stack
   //
@@ -1373,8 +1368,8 @@ u3m_love(u3_noun pro)
   //  integrate junior caches
   //
   u3j_reap(jed_u);
-  u3n_reap(byc_p);
-  u3z_reap(u3z_memo_keep, per_p);
+  u3n_reap(&take_byc_u);
+  u3z_reap(u3z_memo_keep, &take_per_u);
 
   return pro;
 }
@@ -1654,7 +1649,7 @@ u3m_soft_cax(u3_funq fun_f,
 
     /* Produce success, on the old road.
     */
-    u3h_walk_with(u3R->cax.per_p, _hamt_map, &cax);
+    u3h_walk_with(&u3R->cax.per_u, _hamt_map, &cax);
     pro = u3nc(u3nc(0, pro), cax);
     pro = u3m_love(pro);
   }

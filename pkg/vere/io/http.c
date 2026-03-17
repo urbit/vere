@@ -112,8 +112,8 @@ typedef struct _u3_httd {
   u3_hfig            fig_u;             //  http configuration
   u3_http*           htp_u;             //  http servers
   SSL_CTX*           tls_u;             //  server SSL_CTX*
-  u3p(u3h_root)      sax_p;             //  url->scry cache
-  u3p(u3h_root)      nax_p;             //  scry->noun cache
+  u3h_root           sax_u;             //  url->scry cache
+  u3h_root           nax_u;             //  scry->noun cache
   u3t_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
@@ -821,7 +821,7 @@ _http_scry_cb(void* vod_p, u3_noun nun)
      && (u3_nul != nun) )
   {
     u3_noun key = u3nc(auth, u3k(peq_u->pax));
-    u3h_put(htd_u->nax_p, key, nun);
+    u3h_put(&htd_u->nax_u, key, nun);
     u3z(key);
   }
   else {
@@ -975,7 +975,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
       u3k(bem_u->des), u3k(bem_u->cas), u3k(spur));
     c3_o auth_o = u3du(gang);
     u3_noun key = u3nc(auth_o, u3k(bam));
-    u3_weak nac = u3h_get(htd_u->nax_p, key);
+    u3_weak nac = u3h_get(&htd_u->nax_u, key);
     u3z(key);
     
     if (  (u3_none == nac)
@@ -1206,7 +1206,7 @@ _http_cache_scry_cb(void* vod_p, u3_noun nun)
     _http_cache_respond(req_u, u3k(nun));
   }
 
-  u3h_put(htd_u->nax_p, peq_u->pax, nun);
+  u3h_put(&htd_u->nax_u, peq_u->pax, nun);
   u3z(peq_u->pax);
   c3_free(peq_u);
 }
@@ -1226,14 +1226,14 @@ _http_req_cache(u3_hreq* req_u)
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
-  u3_weak sac = u3h_get(htd_u->sax_p, url);
+  u3_weak sac = u3h_get(&htd_u->sax_u, url);
   u3z(url);
   
   if ( u3_none == sac ) {
     return c3n;
   }
 
-  u3_weak nac = u3h_get(htd_u->nax_p, sac);
+  u3_weak nac = u3h_get(&htd_u->nax_u, sac);
   if ( u3_none == nac ) {
     // noun not in cache; scry it
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
@@ -2772,7 +2772,7 @@ _http_ef_http_server(u3_httd* htd_u,
     // cache paths are /cache/(scot %ud aeon)/(scot %t url)
     u3_noun pax = u3k(dat);
     u3_noun url = u3h(u3t(u3t(pax)));
-    u3h_put(htd_u->sax_p, url, pax);
+    u3h_put(&htd_u->sax_u, url, pax);
   }
   //  responds to an open request
   //
@@ -3059,12 +3059,12 @@ _http_io_mark(u3_auto* car_u, c3_w *out_w)
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("url->scry cache");
-  all_u[1]->siz_w = 4 * u3h_mark(htd_u->sax_p);
+  all_u[1]->siz_w = 4 * u3h_mark(&htd_u->sax_u);
   all_u[1]->qua_u = 0;
 
   all_u[2] = c3_malloc(sizeof(**all_u));
   all_u[2]->nam_c = strdup("scry->noun cache");
-  all_u[2]->siz_w = 4 * u3h_mark(htd_u->nax_p);
+  all_u[2]->siz_w = 4 * u3h_mark(&htd_u->nax_u);
   all_u[2]->qua_u = 0;
 
   all_u[3] = 0;
@@ -3081,8 +3081,8 @@ _http_io_exit(u3_auto* car_u)
 {
   u3_httd* htd_u = (u3_httd*)car_u;
 
-  u3h_free(htd_u->sax_p);
-  u3h_free(htd_u->nax_p);
+  u3h_free(&htd_u->sax_u);
+  u3h_free(&htd_u->nax_u);
 
   if ( NULL != htd_u->stk_u ) {
     munmap(htd_u->stk_u, u3a_page);
@@ -3176,8 +3176,8 @@ u3_auto*
 u3_http_io_init(u3_pier* pir_u)
 {
   u3_httd* htd_u = c3_calloc(sizeof(*htd_u));
-  htd_u->sax_p = u3h_new();
-  htd_u->nax_p = u3h_new_cache(512);
+  u3h_new(&htd_u->sax_u);
+  u3h_new_cache(&htd_u->nax_u, 512);
 
   {
     u3_noun key = u3dt("cat", 3,

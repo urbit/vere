@@ -175,8 +175,8 @@ u3_melt_all(FILE *fil_u)
 
   _melt_canon_ptr(&can_u, &(u3A->roc));
 
-  u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
-  u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
+  u3h_walk_with(&u3R->jed.cod_u, _melt_walk_hamt, &can_u);
+  u3h_walk_with(&u3R->cax.per_u, _melt_walk_hamt, &can_u);
 
   u3j_boot(c3n);
   u3j_ream();
@@ -201,8 +201,8 @@ u3_meld_all(FILE *fil_u)
 {
   c3_w pre_w = u3a_open(u3R);
 
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3h_free(&u3R->cax.per_u);
+  u3h_new_cache(&u3R->cax.per_u, u3C.per_w);
 
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();

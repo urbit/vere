@@ -357,14 +357,14 @@ _cr_sing_atom(u3_atom a, u3_noun b)
 /* _cr_sing_cape_test(): check for previous comparison of [a] and [b].
 */
 static inline c3_o
-_cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
+_cr_sing_cape_test(u3h_root* har_u, u3_noun a, u3_noun b)
 {
   u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
                      u3a_to_off(b) >> u3a_vits);
   u3_noun val;
 
   u3t_off(euq_o);
-  val = u3h_git(har_p, key);
+  val = u3h_git(har_u, key);
   u3t_on(euq_o);
 
   u3z(key);
@@ -376,7 +376,7 @@ _cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
 **                       are cons'd as offsets (direct atoms) to avoid refcount churn.
 */
 static inline void
-_cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
+_cr_sing_cape_keep(u3h_root* har_u, u3_noun a, u3_noun b)
 {
   //  only store if [a] and [b] are copies of each other
   //
@@ -386,7 +386,7 @@ _cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
     u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
                        u3a_to_off(b) >> u3a_vits);
     u3t_off(euq_o);
-    u3h_put(har_p, key, c3y);
+    u3h_put(har_u, key, c3y);
     u3t_on(euq_o);
     u3z(key);
   }
@@ -404,7 +404,7 @@ _cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
  *                  (tightly coupled to _cr_sing)
  */
 static c3_o
-_cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
+_cr_sing_cape(u3a_pile* pil_u, u3h_root* har_u)
 {
   eqframe* fam_u = u3a_peek(pil_u);
   u3_noun   a, b;
@@ -449,7 +449,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
           }
           //  short-circuiting re-comparison check
           //
-          else if ( c3y == _cr_sing_cape_test(har_p, a, b) ) {
+          else if ( c3y == _cr_sing_cape_test(har_u, a, b) ) {
             fam_u = u3a_pop(pil_u);
             continue;
           }
@@ -492,7 +492,7 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
 
     //  track equal pairs to short-circuit possible (re-)comparison
     //
-    _cr_sing_cape_keep(har_p, a, b);
+    _cr_sing_cape_keep(har_u, a, b);
 
     fam_u = u3a_pop(pil_u);
   }
@@ -598,9 +598,10 @@ _cr_sing(u3_noun a, u3_noun b)
     //  subsequent comparisons by maintaining a set of equal pairs.
     //
     if ( 0 == ++ovr_s ) {
-      u3p(u3h_root) har_p = u3h_new();
-      c3_o ret_o = _cr_sing_cape(&pil_u, har_p);
-      u3h_free(har_p);
+      u3h_root har_u;
+      u3h_new(&har_u);
+      c3_o ret_o = _cr_sing_cape(&pil_u, &har_u);
+      u3h_free(&har_u);
       u3R->cap_p = pil_u.top_p;
       return ret_o;
     }

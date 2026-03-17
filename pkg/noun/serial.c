@@ -28,7 +28,7 @@ const c3_y u3s_dit_y[64] = {
 */
 struct _cs_jam_fib {
   u3i_slab*     sab_u;
-  u3p(u3h_root) har_p;
+  u3h_root      har_u;
   c3_w          a_w;
   c3_w          b_w;
   c3_w          bit_w;
@@ -141,12 +141,12 @@ static void
 _cs_jam_fib_atom_cb(u3_atom a, void* ptr_v)
 {
   struct _cs_jam_fib* fib_u = ptr_v;
-  u3_weak b = u3h_git(fib_u->har_p, a);
+  u3_weak b = u3h_git(&fib_u->har_u, a);
 
   //  if [a] has no backref, encode atom and put cursor into [har_p]
   //
   if ( u3_none == b ) {
-    u3h_put(fib_u->har_p, a, u3i_words(1, &(fib_u->bit_w)));
+    u3h_put(&fib_u->har_u, a, u3i_words(1, &(fib_u->bit_w)));
     _cs_jam_fib_chop(fib_u, 1, 0);
     _cs_jam_fib_mat(fib_u, a);
   }
@@ -175,12 +175,12 @@ static c3_o
 _cs_jam_fib_cell_cb(u3_noun a, void* ptr_v)
 {
   struct _cs_jam_fib* fib_u = ptr_v;
-  u3_weak b = u3h_git(fib_u->har_p, a);
+  u3_weak b = u3h_git(&fib_u->har_u, a);
 
   //  if [a] has no backref, encode cell and put cursor into [har_p]
   //
   if ( u3_none == b ) {
-    u3h_put(fib_u->har_p, a, u3i_words(1, &(fib_u->bit_w)));
+    u3h_put(&fib_u->har_u, a, u3i_words(1, &(fib_u->bit_w)));
     _cs_jam_fib_chop(fib_u, 2, 1);
     return c3y;
   }
@@ -202,7 +202,7 @@ c3_w
 u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
 {
   struct _cs_jam_fib fib_u;
-  fib_u.har_p = u3h_new();
+  u3h_new(&fib_u.har_u);
   fib_u.sab_u = sab_u;
 
   //  fib(12) is small enough to be reasonably fast to allocate.
@@ -216,12 +216,12 @@ u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
 
   u3a_walk_fore(a, &fib_u, _cs_jam_fib_atom_cb, _cs_jam_fib_cell_cb);
 
-  u3h_free(fib_u.har_p);
+  u3h_free(&fib_u.har_u);
   return fib_u.bit_w;
 }
 
 typedef struct _jam_xeno_s {
-  u3p(u3h_root) har_p;
+  u3h_root      har_u;
   ur_bsw_t      rit_u;
 } _jam_xeno_t;
 
@@ -274,11 +274,11 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
 {
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
-  u3_weak        bak = u3h_git(jam_u->har_p, a);
+  u3_weak        bak = u3h_git(&jam_u->har_u, a);
   c3_w         met_w = u3r_met(0, a);
 
   if ( u3_none == bak ) {
-    u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
+    u3h_put(&jam_u->har_u, a, _cs_coin_chub(rit_u->bits));
     _cs_jam_bsw_atom(rit_u, met_w, a);
   }
   else {
@@ -300,10 +300,10 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
 {
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
-  u3_weak        bak = u3h_git(jam_u->har_p, a);
+  u3_weak        bak = u3h_git(&jam_u->har_u, a);
 
   if ( u3_none == bak ) {
-    u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
+    u3h_put(&jam_u->har_u, a, _cs_coin_chub(rit_u->bits));
     ur_bsw_cell(rit_u);
     return c3y;
   }
@@ -320,11 +320,11 @@ u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
   _jam_xeno_t jam_u = {0};
   ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
-  jam_u.har_p = u3h_new();
+  u3h_new(&jam_u.har_u);
 
   u3a_walk_fore(a, &jam_u, _cs_jam_xeno_atom, _cs_jam_xeno_cell);
 
-  u3h_free(jam_u.har_p);
+  u3h_free(&jam_u.har_u);
   return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
 }
 
@@ -351,7 +351,7 @@ _cs_rub(u3_atom cur, u3_atom a)
 */
 static inline u3_noun
 _cs_cue_next(u3a_pile*     pil_u,
-             u3p(u3h_root) har_p,
+             u3h_root*     har_u,
              u3_atom         cur,
              u3_atom           a,
              u3_atom*        wid)
@@ -369,7 +369,7 @@ _cs_cue_next(u3a_pile*     pil_u,
       u3_noun bur = _cs_rub(u3i_vint(cur), a);
       u3_noun pro = u3k(u3t(bur));
 
-      u3h_put(har_p, cur, u3k(pro));
+      u3h_put(har_u, cur, u3k(pro));
       *wid = u3qa_inc(u3h(bur));
 
       u3z(bur);
@@ -390,7 +390,7 @@ _cs_cue_next(u3a_pile*     pil_u,
       //
       if ( 1 == tag_y ) {
         u3_noun bur = _cs_rub(u3ka_add(2, cur), a);
-        u3_noun pro = u3x_good(u3h_get(har_p, u3t(bur)));
+        u3_noun pro = u3x_good(u3h_get(har_u, u3t(bur)));
 
         *wid = u3qa_add(2, u3h(bur));
 
@@ -428,7 +428,8 @@ u3s_cue(u3_atom a)
   u3_noun         pro;
   u3_atom         wid;
   _cs_cue*      fam_u;
-  u3p(u3h_root) har_p = u3h_new();
+  u3h_root har_u;
+  u3h_new(&har_u);
   u3a_pile      pil_u;
 
   //  initialize stack control
@@ -437,7 +438,7 @@ u3s_cue(u3_atom a)
 
   //  commence cueing at bit-position 0
   //
-  pro = _cs_cue_next(&pil_u, har_p, 0, a, &wid);
+  pro = _cs_cue_next(&pil_u, &har_u, 0, a, &wid);
 
   //  process cell results
   //
@@ -456,7 +457,7 @@ u3s_cue(u3_atom a)
         //  continue reading at the bit-position after [pro]
         {
           u3_noun cur = u3ka_add(2, u3qa_add(wid, fam_u->cur));
-          pro = _cs_cue_next(&pil_u, har_p, cur, a, &wid);
+          pro = _cs_cue_next(&pil_u, &har_u, cur, a, &wid);
         }
 
         fam_u = u3a_peek(&pil_u);
@@ -465,7 +466,7 @@ u3s_cue(u3_atom a)
       //
       else {
         pro   = u3nc(fam_u->hed, pro);
-        u3h_put(har_p, fam_u->cur, u3k(pro));
+        u3h_put(&har_u, fam_u->cur, u3k(pro));
         u3z(fam_u->cur);
         wid   = u3ka_add(2, u3ka_add(wid, fam_u->wid));
         fam_u = u3a_pop(&pil_u);
@@ -474,7 +475,7 @@ u3s_cue(u3_atom a)
   }
 
   u3z(wid);
-  u3h_free(har_p);
+  u3h_free(&har_u);
 
   return pro;
 }
@@ -733,10 +734,10 @@ _cs_cue_need(ur_cue_res_e res_e)
 /* _cs_cue_get(): u3h_get wrapper handling allocation and refcounts.
 */
 static inline u3_weak
-_cs_cue_get(u3p(u3h_root) har_p, c3_d key_d)
+_cs_cue_get(u3h_root* har_u, c3_d key_d)
 {
   u3_atom key = _cs_coin_chub(key_d);
-  u3_weak pro = u3h_get(har_p, key);
+  u3_weak pro = u3h_get(har_u, key);
   u3z(key);
   return pro;
 }
@@ -744,10 +745,10 @@ _cs_cue_get(u3p(u3h_root) har_p, c3_d key_d)
 /* _cs_cue_put(): u3h_put wrapper handling allocation and refcounts.
 */
 static inline u3_noun
-_cs_cue_put(u3p(u3h_root) har_p, c3_d key_d, u3_noun val)
+_cs_cue_put(u3h_root* har_u, c3_d key_d, u3_noun val)
 {
   u3_atom key = _cs_coin_chub(key_d);
-  u3h_put(har_p, key, u3k(val));
+  u3h_put(har_u, key, u3k(val));
   u3z(key);
   return val;
 }
@@ -756,7 +757,7 @@ _cs_cue_put(u3p(u3h_root) har_p, c3_d key_d, u3_noun val)
 */
 static inline u3_noun
 _cs_cue_bytes_next(u3a_pile*     pil_u,
-                   u3p(u3h_root) har_p,
+                   u3h_root*     har_u,
                    ur_bsr_t*     red_u)
 {
   while ( 1 ) {
@@ -784,7 +785,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
         }
         else {
           c3_d  bak_d = ur_bsr64_any(red_u, len_d);
-          u3_weak bak = _cs_cue_get(har_p, bak_d);
+          u3_weak bak = _cs_cue_get(har_u, bak_d);
           return u3x_good(bak);
         }
       }
@@ -805,7 +806,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
           vat = u3i_slab_mint_bytes(&sab_u);
         }
 
-        return _cs_cue_put(har_p, bit_d, vat);
+        return _cs_cue_put(har_u, bit_d, vat);
       }
     }
   }
@@ -819,7 +820,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
   ur_bsr_t      red_u = {0};
   u3a_pile      pil_u;
   _cue_frame_t* fam_u;
-  u3p(u3h_root) har_p;
+  u3h_root      har_u;
   u3_noun         ref;
 
   //  initialize stack control
@@ -828,7 +829,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 
   //  initialize a hash table for dereferencing backrefs
   //
-  har_p = u3h_new();
+  u3h_new(&har_u);
 
   //  init bitstream-reader
   //
@@ -842,7 +843,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 
   //  advance into stream
   //
-  ref = _cs_cue_bytes_next(&pil_u, har_p, &red_u);
+  ref = _cs_cue_bytes_next(&pil_u, &har_u, &red_u);
 
   //  process cell results
   //
@@ -854,21 +855,21 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
       //
       if ( u3_none == fam_u->ref ) {
         fam_u->ref = ref;
-        ref        = _cs_cue_bytes_next(&pil_u, har_p, &red_u);
+        ref        = _cs_cue_bytes_next(&pil_u, &har_u, &red_u);
         fam_u      = u3a_peek(&pil_u);
       }
       //  f is a tail-frame; pop the stack and continue
       //
       else {
         ref   = u3nc(fam_u->ref, ref);
-        _cs_cue_put(har_p, fam_u->bit_d, ref);
+        _cs_cue_put(&har_u, fam_u->bit_d, ref);
         fam_u = u3a_pop(&pil_u);
       }
     }
     while ( c3n == u3a_pile_done(&pil_u) );
   }
 
-  u3h_free(har_p);
+  u3h_free(&har_u);
 
   return ref;
 }

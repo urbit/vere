@@ -1700,7 +1700,7 @@ static u3n_prog*
 _n_find(u3_noun pre, u3_noun fol)
 {
   u3_noun key = u3nc(u3k(pre), u3k(fol));
-  u3_weak pog = u3h_git(u3R->byc.har_p, key);
+  u3_weak pog = u3h_git(&u3R->byc.har_u, key);
   if ( u3_none != pog ) {
     u3z(key);
     return _cn_to_prog(pog);
@@ -1709,7 +1709,7 @@ _n_find(u3_noun pre, u3_noun fol)
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
       rod_u = u3to(u3a_road, rod_u->par_p);
-      pog   = u3h_git(rod_u->byc.har_p, key);
+      pog   = u3h_git(&rod_u->byc.har_u, key);
       if ( u3_none != pog ) {
         c3_w i_w;
         u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
@@ -1723,7 +1723,7 @@ _n_find(u3_noun pre, u3_noun fol)
           sit_u->pog_p = 0;
           sit_u->fon_o = c3n;
         }
-        u3h_put(u3R->byc.har_p, key, _cn_of_prog(old));
+        u3h_put(&u3R->byc.har_u, key, _cn_of_prog(old));
         u3z(key);
         return old;
       }
@@ -1732,7 +1732,7 @@ _n_find(u3_noun pre, u3_noun fol)
 
   {
     u3n_prog* gop = _n_bite(fol);
-    u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
+    u3h_put(&u3R->byc.har_u, key, _cn_of_prog(gop));
     u3z(key);
     return gop;
   }
@@ -1905,19 +1905,19 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 
   switch ( tag ) {
     case c3__cash: {
-      u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
-      u3h_discount(u3R->cax.har_p);
-      u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
-      u3h_discount(u3R->cax.per_p);
+      u3_atom har = u3i_word(u3h_count(&u3R->cax.har_u));
+      u3h_discount(&u3R->cax.har_u);
+      u3_atom per = u3i_word(u3h_count(&u3R->cax.per_u));
+      u3h_discount(&u3R->cax.per_u);
       *out = u3i_cell(tag, u3i_cell(har, per));
     } break;
 
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+      if ( u3_none != u3h_git(&u3R->lop_u, key) ) {
         u3m_bail(c3__fail);
       }
-      u3h_put(u3R->lop_p, key, u3_nul);
+      u3h_put(&u3R->lop_u, key, u3_nul);
       *out = u3nc(tag, key);
     } break;
 
@@ -1964,7 +1964,7 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3h_del(u3R->lop_p, q_tok);
+    u3h_del(&u3R->lop_u, q_tok);
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
     u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(q_tok));
@@ -1977,15 +1977,15 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
             (c3__cash == p_tok) ) {
     c3_c str_c[4096];
 
-    u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
-    u3h_discount(u3R->cax.har_p);
+    u3_atom har = u3i_word(u3h_count(&u3R->cax.har_u));
+    u3h_discount(&u3R->cax.har_u);
     u3_atom har_delta = u3ka_sub(har, u3k(q_tok));
     u3a_print_memory_str(str_c, "ephemeral cache",
                      u3r_word(0, har_delta));
     u3t_slog(u3nc(0, u3i_string(str_c)));
 
-    u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
-    u3h_discount(u3R->cax.per_p);
+    u3_atom per = u3i_word(u3h_count(&u3R->cax.per_u));
+    u3h_discount(&u3R->cax.per_u);
     u3_atom per_delta = u3ka_sub(per, u3k(r_tok));
     u3a_print_memory_str(str_c, "persistent cache",
                      u3r_word(0, per_delta));
@@ -2035,11 +2035,11 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
-      if ( u3_none != u3h_git(u3R->lop_p, key) ) {
+      if ( u3_none != u3h_git(&u3R->lop_u, key) ) {
         u3t_mean(*clu);
         u3m_bail(c3__fail);
       }
-      u3h_put(u3R->lop_p, key, u3_nul);
+      u3h_put(&u3R->lop_u, key, u3_nul);
       u3z(*clu);
       *clu = u3nc(tag, key);
     } break;
@@ -2116,7 +2116,7 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     u3t_sstack_pop();
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
-    u3h_del(u3R->lop_p, q_tok);
+    u3h_del(&u3R->lop_u, q_tok);
   }
   else if ( (c3y == u3r_trel(tok, &p_tok, &q_tok, &r_tok)) && (c3__bout == p_tok) ) {
     // get the microseconds elapsed
@@ -3042,10 +3042,10 @@ _cn_take_prog_cb(c3_w pog_w)
 
 /* u3n_take(): copy junior bytecode state.
 */
-u3p(u3h_root)
-u3n_take(u3p(u3h_root) har_p)
+void
+u3n_take(u3h_root* new_u, u3h_root* har_u)
 {
-  return u3h_take_with(har_p, _cn_take_prog_cb);
+  return u3h_take_with(new_u, har_u, _cn_take_prog_cb);
 }
 
 /* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
@@ -3085,7 +3085,7 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 static void
 _cn_merge_prog_cb(u3_noun kev, void* wit)
 {
-  u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
+  u3h_root* har_u = wit;
   u3n_prog*     pog_u;
   u3_weak         got;
   u3_noun         key;
@@ -3093,7 +3093,7 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
   u3x_cell(kev, &key, &pog_w);
 
   pog_u = _cn_to_prog(pog_w);
-  got   = u3h_git(har_p, key);
+  got   = u3h_git(har_u, key);
 
   if ( u3_none != got ) {
     u3n_prog* sep_u = _cn_to_prog(got);
@@ -3102,17 +3102,17 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
     pog_u = sep_u;
   }
 
-  u3h_put(har_p, key, _cn_of_prog(pog_u));
+  u3h_put(har_u, key, _cn_of_prog(pog_u));
 }
 
 /* u3n_reap(): promote bytecode state.
 */
 void
-u3n_reap(u3p(u3h_root) har_p)
+u3n_reap(u3h_root* har_u)
 {
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
+  u3h_walk_with(har_u, _cn_merge_prog_cb, &u3R->byc.har_u);
   // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
+  u3h_free(har_u);
 }
 
 /* _n_ream(): ream program call sites
@@ -3143,7 +3143,7 @@ void
 u3n_ream()
 {
   u3_assert(u3R == &(u3H->rod_u));
-  u3h_walk(u3R->byc.har_p, _n_ream);
+  u3h_walk(&u3R->byc.har_u, _n_ream);
 }
 
 /* _n_prog_mark(): mark program for gc.
@@ -3193,13 +3193,12 @@ u3n_mark()
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("bytecode programs");
 
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
+  u3h_walk_with(&u3R->byc.har_u, _n_bam, &qua_u[0]->siz_w);
   qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+  qua_u[1]->siz_w = u3h_mark(&u3R->byc.har_u) * 4;
 
   qua_u[2] = NULL;
 
@@ -3222,7 +3221,7 @@ u3n_reclaim(void)
   //    Note that the hank cache *must* also be freed (in u3j_reclaim())
   //
   u3n_free();
-  u3R->byc.har_p = u3h_new();
+  u3h_new(&u3R->byc.har_u);
 }
 
 /* u3n_rewrite_compact(): rewrite the bytecode cache for compaction.
@@ -3241,7 +3240,7 @@ u3n_reclaim(void)
 void
 u3n_rewrite_compact()
 {
-  u3h_relocate(&(u3R->byc.har_p));
+  u3h_relocate(&(u3R->byc.har_u));
 }
 
 
@@ -3258,9 +3257,8 @@ _n_feb(u3_noun kev)
 void
 u3n_free()
 {
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk(har_p, _n_feb);
-  u3h_free(har_p);
+  u3h_walk(&u3R->byc.har_u, _n_feb);
+  u3h_free(&u3R->byc.har_u);
 }
 
 /* u3n_kick_on(): fire `gat` without changing the sample.

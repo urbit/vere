@@ -114,12 +114,12 @@
     /* u3n_reap(): promote bytecode state.
      */
       void
-      u3n_reap(u3p(u3h_root) har_p);
+      u3n_reap(u3h_root* har_u);
 
     /* u3n_take(): copy junior bytecode state.
      */
-      u3p(u3h_root)
-      u3n_take(u3p(u3h_root) har_p);
+      void
+      u3n_take(u3h_root* new_u, u3h_root* har_u);
 
     /* u3n_mark(): mark bytecode cache.
      */

@@ -4,6 +4,7 @@
 #define U3_ZAVE_H
 
 #include "c3/c3.h"
+#include "hashtable.h"
 #include "types.h"
 
   /**  Memoization.
@@ -54,7 +55,7 @@
     /* u3z_reap(): promote memoization cache state.
     */
       void
-      u3z_reap(u3z_cid cid, u3p(u3h_root) har_p);
+      u3z_reap(u3z_cid cid, u3h_root* har_u);
 
     /* u3z_free(): free memoization cache.
     */

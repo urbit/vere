@@ -231,11 +231,11 @@ static ur_nref
 _cu_all_from_loom(ur_root_t* rot_u, ur_nvec_t* cod_u)
 {
   ur_nref   ken = _cu_from_loom(rot_u, u3A->roc);
-  c3_w    cod_w = u3h_wyt(u3R->jed.cod_p);
+  c3_w    cod_w = u3h_wyt(&u3R->jed.cod_u);
   _cu_vec dat_u = { .vec_u = cod_u, .rot_u = rot_u };
 
   ur_nvec_init(cod_u, cod_w);
-  u3h_walk_with(u3R->jed.cod_p, _cu_hamt_walk, &dat_u);
+  u3h_walk_with(&u3R->jed.cod_u, _cu_hamt_walk, &dat_u);
 
   return ken;
 }
@@ -349,7 +349,7 @@ _cu_all_to_loom(ur_root_t* rot_u, ur_nref ken, ur_nvec_t* cod_u)
     for ( i_d = 0; i_d < max_d; i_d++) {
       ref = cod_u->refs[i_d];
       kev = lom_u.cel[ur_nref_idx(ref)];
-      u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
+      u3h_put(&u3R->jed.cod_u, u3h(kev), u3k(u3t(kev)));
       u3z(kev);
     }
   }
@@ -475,9 +475,9 @@ _cj_warm_tap(u3_noun kev, void* wit)
 }
 
 static inline u3_weak
-_cu_melt_get(u3p(u3h_root) set_p, u3_noun som)
+_cu_melt_get(u3h_root* set_u, u3_noun som)
 {
-  u3_post hav_p = u3h_git(set_p, som);
+  u3_post hav_p = u3h_git(set_u, som);
 
   if ( u3_none == hav_p ) {
     return u3_none;
@@ -489,16 +489,16 @@ _cu_melt_get(u3p(u3h_root) set_p, u3_noun som)
 }
 
 static inline void
-_cu_melt_put(u3p(u3h_root) set_p, u3_noun som)
+_cu_melt_put(u3h_root* set_u, u3_noun som)
 {
   //  strip tag bits from [som] to skip refcounts
   //
   u3_post hav_p = u3a_to_off(som);
-  u3h_put(set_p, som, hav_p);
+  u3h_put(set_u, som, hav_p);
 }
 
 static void
-_cu_melt_noun(u3p(u3h_root) set_p, u3_noun* mos)
+_cu_melt_noun(u3h_root* set_u, u3_noun* mos)
 {
   u3_noun som = *mos;
   u3_weak hav;
@@ -511,7 +511,7 @@ _cu_melt_noun(u3p(u3h_root) set_p, u3_noun* mos)
 
   //  [som] equals [hav], and [hav] is canonical
   //
-  if ( u3_none != (hav = _cu_melt_get(set_p, som)) ) {
+  if ( u3_none != (hav = _cu_melt_get(set_u, som)) ) {
     if ( hav != som ) {
       u3z(som);
       *mos = u3k(hav);
@@ -523,13 +523,13 @@ _cu_melt_noun(u3p(u3h_root) set_p, u3_noun* mos)
   //
   if ( c3y == u3a_is_cell(som) ) {
     u3a_cell *cel_u = u3a_to_ptr(som);
-    _cu_melt_noun(set_p, &cel_u->hed);
-    _cu_melt_noun(set_p, &cel_u->tel);
+    _cu_melt_noun(set_u, &cel_u->hed);
+    _cu_melt_noun(set_u, &cel_u->tel);
   }
 
   //  [som] is canonical
   //
-  _cu_melt_put(set_p, som);
+  _cu_melt_put(set_u, som);
 }
 
 /* u3u_melt(): globally deduplicate memory and pack in-place.
@@ -546,23 +546,24 @@ u3u_melt(void)
   // Store a cons list of the cold jet registrations in `cod`
   //
   u3_noun cod = u3_nul;
-  u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
+  u3h_walk_with(&u3R->jed.cod_u, _cj_warm_tap, &cod);
 
   u3m_reclaim();     // refresh the byte-code interpreter.
 
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3h_free(&u3R->cax.per_u);
+  u3h_new_cache(&u3R->cax.per_u, u3C.per_w);
 
-  u3h_free(u3R->jed.cod_p);
-  u3R->jed.cod_p = u3h_new();
+  u3h_free(&u3R->jed.cod_u);
+  u3h_new(&u3R->jed.cod_u);
 
   {
-    u3p(u3h_root) set_p = u3h_new(); // temp hashtable
+    u3h_root set_u;
+    u3h_new(&set_u); // temp hashtable
 
-    _cu_melt_noun(set_p, &cod);      // melt the jets
-    _cu_melt_noun(set_p, &u3A->roc); // melt the kernel
+    _cu_melt_noun(&set_u, &cod);      // melt the jets
+    _cu_melt_noun(&set_u, &u3A->roc); // melt the kernel
 
-    u3h_free(set_p);  // release the temp hashtable
+    u3h_free(&set_u);  // release the temp hashtable
   }
 
   // re-initialize the jets
@@ -577,7 +578,7 @@ u3u_melt(void)
 
     while(u3_nul != cod) {
       u3_noun kev = u3h(cod);
-      u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
+      u3h_put(&u3R->jed.cod_u, u3h(kev), u3k(u3t(kev)));
       cod = u3t(cod);
     }
 
