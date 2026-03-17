@@ -177,11 +177,12 @@ _h_trim_one(u3h_root* har_u)
   if ( 0 == har_u->use_w ) return;
   c3_w idx_w = har_u->arm_w,
        mak_w = har_u->loc_w - 1;
-
+  // c3_w cool = 0, iter = 0;
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
   while ( 1 ) {
     if ( sot_u[idx_w] > u3h_slot_tomb ) {
       if ( c3y == u3h_slot_is_warm(sot_u[idx_w]) ) {
+        // cool++;
         sot_u[idx_w] = u3h_slot_be_cold(sot_u[idx_w]);
       }
       else {
@@ -189,13 +190,16 @@ _h_trim_one(u3h_root* har_u)
         sot_u[idx_w] = u3h_slot_tomb;
         u3z(old);
         har_u->use_w--;
+        idx_w = (idx_w + 1) & mak_w;
         break;
       }
     }
     idx_w = (idx_w + 1) & mak_w;
+    // iter++;
   }
 
   har_u->arm_w = idx_w;
+  // fprintf(stderr, "cool: %d, iter: %d\r\n", cool, iter);
 }
 
 /* u3h_put(): insert in hashtable.
