@@ -24,19 +24,27 @@ _h_tel(u3_noun som)
   return ((u3a_cell *)u3a_to_ptr(som))->tel;
 }
 
+static void
+u3h_new_cache_sized(u3h_root* har_u, c3_w siz_w, c3_w max_w)
+{
+  u3_assert(1 == c3_pc_w(siz_w));
+
+  har_u->use_w = 0;
+  har_u->loc_w = siz_w;
+  har_u->max_w = max_w;
+  har_u->fil_w = 0;
+  har_u->arm_w = 0;
+  u3h_slot* sot_u = u3a_walloc(siz_w);
+  har_u->sot_p = u3of(u3_noun, sot_u);
+  memset(sot_u, u3h_slot_free, siz_w * sizeof(c3_w));
+}
+
 /* u3h_new_cache(): create hashtable with bounded size.
 */
 void
 u3h_new_cache(u3h_root* har_u, c3_w max_w)
 {
-  har_u->use_w = 0;
-  har_u->loc_w = u3h_size_min;
-  har_u->max_w = max_w;
-  har_u->fil_w = 0;
-  har_u->arm_w = 0;
-  u3h_slot* sot_u = u3a_walloc(u3h_size_min);
-  har_u->sot_p = u3of(u3_noun, sot_u);
-  memset(sot_u, u3h_slot_free, u3h_size_min * sizeof(c3_w));
+  u3h_new_cache_sized(har_u, u3h_size_min, max_w);
 }
 
 /* u3h_new(): create hashtable.
@@ -54,6 +62,8 @@ u3h_new(u3h_root* har_u)
 static inline c3_w
 _h_walk_empty(u3h_root* har_u, u3_noun key)
 {
+  u3_assert(har_u->fil_w < har_u->loc_w);
+
   c3_w mug_w = u3r_mug(key),
        mak_w = har_u->loc_w - 1,
        idx_w = mug_w & mak_w,
@@ -63,7 +73,9 @@ _h_walk_empty(u3h_root* har_u, u3_noun key)
   u3h_slot old_u;
 
   while ( (old_u = sot_u[idx_w]) ) {
-    if ( idx_w + inc_w < idx_w ) u3m_bail(c3__fail);
+    if ( idx_w + inc_w < idx_w ) {
+      u3m_bail(c3__fail);
+    }
     idx_w = (idx_w + inc_w) & mak_w;
     inc_w++;
   }
@@ -407,8 +419,25 @@ _h_kev_take_with(u3_noun kov, void* dat_v)
   _take_with_dat* dat_u = dat_v;
   u3_noun key = u3a_take(_h_hed(kov));
   u3_noun val = dat_u->fun_f(_h_tel(kov));
-  u3h_put(dat_u->new_u, key, val);
-  u3z(key);
+  c3_w idx_w = _h_walk_empty(dat_u->new_u, key);
+  u3h_slot* sot_u = u3to(u3_noun, dat_u->new_u->sot_p);
+  u3_noun kev = u3nc(key, val);
+  sot_u[idx_w] = kev;
+  dat_u->new_u->use_w++;
+  dat_u->new_u->fil_w++;
+}
+
+static void
+_h_kev_take(u3_noun kov, void* dat_v)
+{
+  u3h_root* new_u = dat_v;
+
+  u3_noun kev = u3a_take(kov);
+  c3_w idx_w = _h_walk_empty(new_u, _h_hed(kev));
+  u3h_slot* sot_u = u3to(u3_noun, new_u->sot_p);
+  sot_u[idx_w] = kev;
+  new_u->use_w++;
+  new_u->fil_w++;
 }
 
 /* u3h_take_with(): gain hashtable, copying junior keys
@@ -417,7 +446,7 @@ _h_kev_take_with(u3_noun kov, void* dat_v)
 void
 u3h_take_with(u3h_root* new_u, u3h_root* har_u, u3_funk fun_f)
 {
-  u3h_new_cache(new_u, har_u->max_w);
+  u3h_new_cache_sized(new_u, har_u->loc_w, har_u->max_w);
   _take_with_dat dat = {new_u, fun_f};
   u3h_walk_with(har_u, _h_kev_take_with, &dat);
 }
@@ -427,7 +456,8 @@ u3h_take_with(u3h_root* new_u, u3h_root* har_u, u3_funk fun_f)
 void
 u3h_take(u3h_root* new_u, u3h_root* har_u)
 {
-  return u3h_take_with(new_u, har_u, u3a_take);
+  u3h_new_cache_sized(new_u, har_u->loc_w, har_u->max_w);
+  u3h_walk_with(har_u, _h_kev_take, new_u);
 }
 
 #undef _h_for_full
