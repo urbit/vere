@@ -47,6 +47,26 @@ u3h_new(u3h_root* har_u)
   return u3h_new_cache(har_u, 0);
 }
 
+static inline c3_w
+_h_walk_empty(u3h_root* har_u, u3_noun key)
+{
+  c3_w mug_w = u3r_mug(key),
+       mak_w = har_u->loc_w - 1,
+       idx_w = mug_w & mak_w,
+       inc_w = 1;
+
+  u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
+  u3h_slot old_u;
+
+  while ( (old_u = sot_u[idx_w]) ) {
+    if ( idx_w + inc_w < idx_w ) u3m_bail(c3__fail);
+    idx_w = (idx_w + inc_w) & mak_w;
+    inc_w++;
+  }
+
+  return idx_w;
+}
+
 // walk to an empty or tombstoned slot or a slot with the same key, whichever
 // comes first
 //
@@ -94,24 +114,16 @@ u3h_walk_with(u3h_root* har_u,
   );
 }
 
-void
-_h_put_kev(u3h_root* har_u, u3_noun kev)
-{
-  u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
-  c3_w idx_w = _h_walk(har_u, _h_hed(kev));
-
-  u3_assert(u3h_slot_free == sot_u[idx_w]);
-
-  sot_u[idx_w] = kev;
-  har_u->use_w++;
-  har_u->fil_w++;
-}
-
 static void
 _ch_uni_steal(u3_noun kev, void* wit)
 {
   u3h_root* har_u = wit;
-  _h_put_kev(har_u, kev);
+  u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
+  c3_w idx_w = _h_walk_empty(har_u, _h_hed(kev));
+
+  sot_u[idx_w] = kev;
+  har_u->use_w++;
+  har_u->fil_w++;
 }
 
 static void
