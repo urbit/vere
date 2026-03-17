@@ -47,6 +47,10 @@ u3h_new(u3h_root* har_u)
   return u3h_new_cache(har_u, 0);
 }
 
+//  walk to an empty slot. naturally it would skip equal keys and tombstones.
+//  it is used when rehashing a table to avoid doing extra work
+//
+//  key is RETAINED
 static inline c3_w
 _h_walk_empty(u3h_root* har_u, u3_noun key)
 {
