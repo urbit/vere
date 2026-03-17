@@ -109,7 +109,6 @@ _test_no_cache(void)
   u3h_new(&har_u);
 
   for ( i_w = 0; i_w < max_w; i_w++ ) {
-    fprintf(stderr, "i_w: %d\r\n", i_w);
     u3h_put(&har_u, i_w, i_w + max_w);
   }
 
@@ -210,6 +209,7 @@ _test_hashtable(void)
   ret_i &= _test_bit_manipulation();
   fprintf(stderr, "_test_no_cache\r\n");
   ret_i &= _test_no_cache();
+  fprintf(stderr, "_test_cache_trimming\r\n");
   ret_i &= _test_cache_trimming();
   fprintf(stderr, "_test_cache_replace_value\r\n");
   ret_i &= _test_cache_replace_value();

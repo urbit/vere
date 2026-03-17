@@ -94,6 +94,32 @@ u3h_walk_with(u3h_root* har_u,
   );
 }
 
+void
+_h_put_kev(u3h_root* har_u, u3_noun kev)
+{
+  u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
+  c3_w idx_w = _h_walk(har_u, _h_hed(kev));
+
+  u3_assert(u3h_slot_free == sot_u[idx_w]);
+
+  sot_u[idx_w] = kev;
+  har_u->use_w++;
+  har_u->fil_w++;
+}
+
+static void
+_ch_uni_steal(u3_noun kev, void* wit)
+{
+  u3h_root* har_u = wit;
+  _h_put_kev(har_u, kev);
+}
+
+static void
+_h_uni_steal(u3h_root* har_u, u3h_root* rah_u)
+{
+  u3h_walk_with(rah_u, _ch_uni_steal, har_u);
+}
+
 static c3_o
 _h_rehash_grow(u3h_root* har_u, c3_o inc_o)
 {
@@ -104,10 +130,12 @@ _h_rehash_grow(u3h_root* har_u, c3_o inc_o)
   //  if the table is full of tombstones and rehashing would be enough to double
   //  its capacity, don't grow
   inc_o = c3a(inc_o,
-    __( (har_u->use_w * 2 + 1) * 100 < (har_u->loc_w * u3h_grow_threshold) )
+    __( (har_u->use_w * 2 + 1) * 100 >= (har_u->loc_w * u3h_grow_threshold) )
   );
 
-  if ( c3y == inc_o ) loc_w *= 2;
+  if ( c3y == inc_o ) {
+    loc_w *= 2;
+  }
 
   if ( loc_w < har_u->loc_w ) return u3m_bail(c3__fail);
 
@@ -120,7 +148,7 @@ _h_rehash_grow(u3h_root* har_u, c3_o inc_o)
   har_u->sot_p    = u3of(u3_noun, sot_u);
   memset(sot_u, u3h_slot_free, loc_w * sizeof(c3_w));
 
-  u3h_uni(har_u, &old_u);
+  _h_uni_steal(har_u, &old_u);
   u3a_wfree(u3to(u3h_root, old_u.sot_p));
   return c3y;
 }
@@ -145,15 +173,15 @@ u3h_walk(u3h_root* har_u, void (*fun_f)(u3_noun))
 static void
 _h_trim_one(u3h_root* har_u)
 {
+  u3_assert(har_u->use_w <= har_u->fil_w);
   if ( 0 == har_u->use_w ) return;
   c3_w idx_w = har_u->arm_w,
        mak_w = har_u->loc_w - 1;
 
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
-
   while ( 1 ) {
     if ( sot_u[idx_w] > u3h_slot_tomb ) {
-      if ( u3h_slot_is_warm(sot_u[idx_w]) ) {
+      if ( c3y == u3h_slot_is_warm(sot_u[idx_w]) ) {
         sot_u[idx_w] = u3h_slot_be_cold(sot_u[idx_w]);
       }
       else {
@@ -225,7 +253,7 @@ _ch_uni_with(u3_noun kev, void* wit)
 void
 u3h_uni(u3h_root* har_u, u3h_root* rah_u)
 {
-  u3h_walk_with(rah_u, _ch_uni_with, rah_u);
+  u3h_walk_with(rah_u, _ch_uni_with, har_u);
 }
 
 /* u3h_get(): read from hashtable.
