@@ -1,5 +1,6 @@
 /// @file
 
+#include <time.h>
 #include "noun.h"
 #define TEST_SIZE 100000
 
@@ -201,20 +202,43 @@ _test_cache_replace_value(void)
   return ret_i;
 }
 
+static long
+_elapsed_ms(struct timespec a, struct timespec b)
+{
+  return (b.tv_sec - a.tv_sec) * 1000L +
+         (b.tv_nsec - a.tv_nsec) / 1000000L;
+}
+
 static c3_i
 _test_hashtable(void)
 {
   c3_i ret_i = 1;
+  struct timespec t0, t1;
 
+  clock_gettime(CLOCK_MONOTONIC, &t0);
   ret_i &= _test_bit_manipulation();
-  fprintf(stderr, "_test_no_cache\r\n");
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+  fprintf(stderr, "_test_bit_manipulation: %ld ms\r\n", _elapsed_ms(t0, t1));
+
+  clock_gettime(CLOCK_MONOTONIC, &t0);
   ret_i &= _test_no_cache();
-  fprintf(stderr, "_test_cache_trimming\r\n");
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+  fprintf(stderr, "_test_no_cache: %ld ms\r\n", _elapsed_ms(t0, t1));
+
+  clock_gettime(CLOCK_MONOTONIC, &t0);
   ret_i &= _test_cache_trimming();
-  fprintf(stderr, "_test_cache_replace_value\r\n");
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+  fprintf(stderr, "_test_cache_trimming: %ld ms\r\n", _elapsed_ms(t0, t1));
+
+  clock_gettime(CLOCK_MONOTONIC, &t0);
   ret_i &= _test_cache_replace_value();
-  fprintf(stderr, "_test_put_del\r\n");
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+  fprintf(stderr, "_test_cache_replace_value: %ld ms\r\n", _elapsed_ms(t0, t1));
+
+  clock_gettime(CLOCK_MONOTONIC, &t0);
   ret_i &= _test_put_del();
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+  fprintf(stderr, "_test_put_del: %ld ms\r\n", _elapsed_ms(t0, t1));
 
   return ret_i;
 }
