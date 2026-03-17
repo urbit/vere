@@ -210,8 +210,7 @@ _test_hashtable(void)
   ret_i &= _test_bit_manipulation();
   fprintf(stderr, "_test_no_cache\r\n");
   ret_i &= _test_no_cache();
-  // ret_i &= _test_skip_slot();
-  // ret_i &= _test_cache_trimming();
+  ret_i &= _test_cache_trimming();
   fprintf(stderr, "_test_cache_replace_value\r\n");
   ret_i &= _test_cache_replace_value();
   fprintf(stderr, "_test_put_del\r\n");
