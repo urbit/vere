@@ -6,7 +6,9 @@
 #include "imprison.h"
 #include "retrieve.h"
 #include "xtract.h"
+#include "options.h"
 
+#define BEX32_PHI 0x9e3779b9u  // 2^32 divided by golden ratio
 
 /* asserting noun deconstruction to make sure hashtables are bail-safe
 */
@@ -55,8 +57,9 @@ u3h_new(u3h_root* har_u)
   return u3h_new_cache(har_u, 0);
 }
 
-//  walk to an empty slot. naturally it would skip equal keys and tombstones.
-//  it is used when rehashing a table to avoid doing extra work
+//  walk to an empty slot. naturally it would skip equal keys.
+//  it is used when rehashing a table to avoid doing extra work, since there
+//  are no duplicate keys and no tombstones in the new table
 //
 //  key is RETAINED
 static inline c3_w
@@ -73,9 +76,6 @@ _h_walk_empty(u3h_root* har_u, u3_noun key)
   u3h_slot old_u;
 
   while ( (old_u = sot_u[idx_w]) ) {
-    if ( idx_w + inc_w < idx_w ) {
-      u3m_bail(c3__fail);
-    }
     idx_w = (idx_w + inc_w) & mak_w;
     inc_w++;
   }
@@ -83,8 +83,9 @@ _h_walk_empty(u3h_root* har_u, u3_noun key)
   return idx_w;
 }
 
-// walk to an empty or tombstoned slot or a slot with the same key, whichever
-// comes first
+// walk to an empty slot or a slot with the same key, whichever comes first
+// returns the index we walked to or the index of the first tombstone if the
+// key was not found and we did see a tombstone
 //
 // key is RETAINED
 static inline c3_w
@@ -97,16 +98,23 @@ _h_walk(u3h_root* har_u, u3_noun key)
 
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
   u3h_slot old_u;
+  c3_w tom_w = u3_none;
 
   while ( (old_u = sot_u[idx_w]) ) {
-    if ( u3h_slot_tomb == old_u ) break;
-    if ( c3y == u3r_sing(key, _h_hed(u3h_slot_to_noun(old_u))) ) break;
-    if ( idx_w + inc_w < idx_w ) u3m_bail(c3__fail);
+    if ( u3h_slot_tomb != old_u ) {
+      if ( c3y == u3r_sing(key, _h_hed(u3h_slot_to_noun(old_u))) ) {
+        return idx_w;
+      }
+    }
+    else {
+      tom_w = (u3_none == tom_w) ? idx_w : tom_w;
+    }
+
     idx_w = (idx_w + inc_w) & mak_w;
     inc_w++;
   }
 
-  return idx_w;
+  return ( u3_none == tom_w ) ? idx_w : tom_w;
 }
 
 #define _h_for_full(HAR, KEV, ...)                                              \
@@ -204,13 +212,13 @@ _h_trim_one(u3h_root* har_u)
   u3_assert(har_u->use_w <= har_u->fil_w);
   if ( 0 == har_u->use_w ) return;
   c3_w idx_w = har_u->arm_w,
-       mak_w = har_u->loc_w - 1;
-  // c3_w cool = 0, iter = 0;
+       mak_w = har_u->loc_w - 1,
+       bit_w = c3_bits_word(mak_w),
+       tep_w = (BEX32_PHI >> (32 - bit_w)) | 1;  // har_u->loc_w / phi
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
   while ( 1 ) {
     if ( sot_u[idx_w] > u3h_slot_tomb ) {
       if ( c3y == u3h_slot_is_warm(sot_u[idx_w]) ) {
-        // cool++;
         sot_u[idx_w] = u3h_slot_be_cold(sot_u[idx_w]);
       }
       else {
@@ -218,16 +226,14 @@ _h_trim_one(u3h_root* har_u)
         sot_u[idx_w] = u3h_slot_tomb;
         u3z(old);
         har_u->use_w--;
-        idx_w = (idx_w + 1) & mak_w;
+        idx_w = (idx_w + tep_w) & mak_w;
         break;
       }
     }
-    idx_w = (idx_w + 1) & mak_w;
-    // iter++;
+    idx_w = (idx_w + tep_w) & mak_w;
   }
 
   har_u->arm_w = idx_w;
-  // fprintf(stderr, "cool: %d, iter: %d\r\n", cool, iter);
 }
 
 /* u3h_put(): insert in hashtable.
