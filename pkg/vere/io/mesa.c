@@ -93,8 +93,8 @@ typedef struct _u3_mesa_stat {
 struct _u3_mesa_pact;
 
 typedef struct _u3_pact_stat {
-  c3_y  tie_y; // tries
   c3_d  sen_d; // last sent
+  c3_y  tie_y; // tries
   c3_y  sip_y; // skips
 } u3_pact_stat;
 
@@ -107,7 +107,6 @@ typedef struct _u3_gage {
   c3_w     wnd_w;  // cwnd
   c3_w     wnf_w;  // cwnd fraction
   c3_w     sst_w;  // ssthresh
-  c3_w     try_w;  // tries
   //
 } u3_gage;
 
@@ -395,7 +394,6 @@ _log_gage(u3_gage* gag_u)
   u3l_log("cwnd: %u", gag_u->wnd_w);
   u3l_log("cwnd fraction: %f", gag_u->wnf_w / (float)gag_u->wnd_w );
   u3l_log("ssthresh: %u", gag_u->sst_w);
-  u3l_log("tries: %u", gag_u->try_w);
   //u3l_log("algorithm: %s", gag_u->alg_c);
 }
 
@@ -585,7 +583,6 @@ _init_gage(u3_gage* gag_u)  //  microseconds
   /* gag_u->rto_w = 200 * 1000;  // ~s1 */
   /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
   /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
-  gag_u->try_w = 1;
   gag_u->wnd_w = 1;
   gag_u->sst_w = 10000;
 }
@@ -776,7 +773,7 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
     gag_u->wnf_w = 0;
   }
 
-  if (gag_u->try_w == 1) {
+  if (pat_u->tie_y == 1) {
     gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
     gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
   }
@@ -822,7 +819,9 @@ static void
 _mesa_req_pact_resent(u3_pend_req* req_u, u3_mesa_name* nam_u, c3_d now_d)
 {
   req_u->wat_u[nam_u->fra_d].sen_d = now_d;
-  req_u->wat_u[nam_u->fra_d].tie_y++;
+  if (req_u->wat_u[nam_u->fra_d].tie_y < 255) {
+    req_u->wat_u[nam_u->fra_d].tie_y++;
+  }
 }
 
 /* _mesa_req_pact_sent(): mark packet as sent
@@ -838,7 +837,7 @@ _mesa_req_pact_sent(u3_pend_req* req_u, c3_d fra_d, c3_d now_d)
   // TODO: optional assertions?
   req_u->wat_u[fra_d].sen_d = now_d;
   req_u->wat_u[fra_d].sip_y = 0;
-  req_u->wat_u[fra_d].tie_y++;
+  req_u->wat_u[fra_d].tie_y = 1;
 }
 
 /* _ames_alloc(): libuv buffer allocator.
@@ -1202,7 +1201,6 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   if ( c3y == los_o ) {
     /* _mesa_send_buf2(req_u->per_u->sam_u, ads_u, bus_u, int_u, i_w); */
     /* _mesa_send_buf2(req_u->per_u->sam_u, req_u->per_u->dan_u, bfs_u, i_w); */
-    req_u->gag_u->try_w++;
     req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
     req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
     req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
