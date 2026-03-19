@@ -182,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
-            .files = &.{ "veh_handler.c", "rsignal.c" },
+            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c" },
             .flags = flags.items,
         });
     }
