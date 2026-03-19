@@ -28,14 +28,8 @@ static c3_o dop_o = c3n;
 
 static c3_y are_y[524288];
 
-/* FILE* packs; */
-/* static c3_d tim_y[200000] = {0}; */
-/* static c3_o done = c3y; */
-
-/* #define PACKET_TEST c3y */
 
 // #define MESA_DEBUG     c3y
-//#define MESA_TEST
 #define RED_TEXT    "\033[0;31m"
 #define DEF_TEXT    "\033[0m"
 #define REORDER_THRESH  5
@@ -424,7 +418,6 @@ _log_pend_req(u3_pend_req* req_u)
   u3l_log("next: %"PRIu64, req_u->nex_d);
   u3l_log("total: %" PRIu64, req_u->tof_d);
   u3l_log("gage: %c", req_u->gag_u == NULL ? 'n' : 'y');
-  //u3l_log("timer in: %" PRIu64 " ms", uv_timer_get_due_in(&req_u->tim_u));
 }
 
 static void
@@ -432,7 +425,6 @@ _log_mesa_data(u3_mesa_data dat_u)
 {
   u3l_log("total bytes: %" PRIu64, dat_u.tob_d);
   u3l_log("frag len: %u", dat_u.len_w);
-  // u3l_log("frag: %xxx", dat_u.fra_y);
 }
 
 /* _mesa_lop(): find beginning of page containing fra_d
@@ -577,12 +569,9 @@ _mesa_request_key(u3_mesa_name* nam_u)
 static void
 _init_gage(u3_gage* gag_u)  //  microseconds
 {
-  gag_u->rto_w = 200 * 1000;  // ~s1
+  gag_u->rto_w = 200 * 1000;
   gag_u->rtt_w = 1000 * 1000;  // ~s1
   gag_u->rtv_w = 1000 * 1000;  // ~s1
-  /* gag_u->rto_w = 200 * 1000;  // ~s1 */
-  /* gag_u->rtt_w = 82 * 1000;  // ~s1 */
-  /* gag_u->rtv_w = 100 * 1000;  // ~s1 */
   gag_u->wnd_w = 1;
   gag_u->sst_w = 10000;
 }
@@ -757,8 +746,6 @@ _mesa_put_gage(u3_mesa* sam_u, u3_ship her_u, u3_gage* gag_u)
 // congestion control update
 static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
 {
-  /* _log_gage(gag_u); */
-
   c3_d now_d = _get_now_micros();
   c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
 
@@ -799,17 +786,9 @@ _safe_sub(c3_d a, c3_d b) {
 static c3_w
 _mesa_req_get_cwnd(u3_pend_req* req_u)
 {
-  /* c3_w liv_w = bitset_wyt(&req_u->was_u); */
   c3_w rem_w = _mesa_req_get_remaining(req_u);
-  /* u3l_log("rem_w %u wnd_w %u", rem_w, req_u->gag_u->wnd_w); */
-
-  /* u3l_log("rem_w %u", rem_w); */
-  /* u3l_log("wnd_w %u", req_u->gag_u->wnd_w); */
-  /* u3l_log("out_d %"PRIu64, req_u->out_d); */
-  /* return c3_min(rem_w, _safe_sub(3500, req_u->out_d)); */
   c3_d ava_d = _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d);
   return c3_min(rem_w, ava_d);
-  /* return c3_min(rem_w, 5000 - req_u->out_d); */
 }
 
 /* _mesa_req_pact_resent(): mark packet as resent
@@ -895,100 +874,8 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
 
   if ( sas_i ) {
     u3l_log("mesa: send fail_async: %s", uv_strerror(sas_i));
-    //sam_u->fig_u.net_o = c3n;
   }
-  else {
-    //sam_u->fig_u.net_o = c3y;
-  }
-
   _mesa_free_seal(sel_u);
-}
-
-static void
-_mesa_send_cb2(uv_udp_send_t* req_u, c3_i sas_i)
-{
-  if ( sas_i ) {
-    u3l_log("mesa: send fail_async: %s", uv_strerror(sas_i));
-    //sam_u->fig_u.net_o = c3n;
-  }
-  c3_free(req_u);
-}
-
-typedef struct _send_helper {
-  uv_udp_send_t snd_u;
-  u3_pend_req* req_u;
-  c3_d fra_d;
-} send_helper;
-
-static void
-_mesa_send_cb3(uv_udp_send_t* snt_u, c3_i sas_i)
-{
-  send_helper* snd_u = (send_helper*)snt_u;
-  if ( sas_i ) {
-    u3l_log("mesa: send fail_async: %s", uv_strerror(sas_i));
-    //sam_u->fig_u.net_o = c3n;
-  } else {
-    /* _mesa_req_pact_sent(snd_u->req_u, snd_u->fra_d); */
-  }
-  c3_free(snd_u);
-}
-
-static c3_i _mesa_send_buf2(struct sockaddr** ads_u, uv_buf_t** bfs_u, c3_w* int_u, c3_w num_w)
-{
-
-  /* add_u.sin_family = AF_INET; */
-
- /* if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) { */
-  /*   return; */
-  /* } */
-
-#ifdef MESA_DEBUG
-  /* c3_c* sip_c = inet_ntoa(add_u.sin_addr); */
-  // u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
-#endif
-  c3_i sas_i = uv_udp_try_send2(&u3_Host.wax_u, num_w, bfs_u, int_u, ads_u, 0);
-  if ( sas_i < 0 ) {
-    u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
-    return 0;
-  }
-  return sas_i;
-//  else if ( sas_i < (c3_i)num_w) {
-//    for ( c3_i i = sas_i; i < (c3_i)num_w; i++) {
-//      uv_udp_send_t* req_u = c3_malloc(sizeof(*req_u));
-//      uv_udp_send(req_u, &u3_Host.wax_u, bfs_u[i], 1, ads_u[0], _mesa_send_cb2);
-//    }
-//  }
-}
-static void _mesa_send_buf3(sockaddr_in add_u, uv_buf_t buf_u)
-{
-
-  add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
-  /* add_u.sin_family = AF_INET; */
-
-  if ( u3_Host.ops_u.net && (add_u.sin_addr.s_addr == 0 || add_u.sin_addr.s_addr == 0xffffffff) ) {
-    return;
-  }
-
-#ifdef MESA_DEBUG
-  // c3_c* sip_c = inet_ntoa(add_u.sin_addr);
-  // u3l_log("mesa: sending packet to %s:%u", sip_c, por_s);
-#endif
-
-
-  uv_udp_send_t* snd_u = c3_malloc(sizeof(*snd_u));
-
-  c3_i     sas_i = uv_udp_send((uv_udp_send_t*)snd_u,
-                               &u3_Host.wax_u,
-                               &buf_u, 1,
-                               (const struct sockaddr*)&add_u,
-                               _mesa_send_cb3);
-
-  if ( sas_i ) {
-    u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
-    /*if ( c3y == sam_u->fig_u.net_o ) {
-      //sam_u->fig_u.net_o = c3n;
-    }*/
-  }
 }
 
 static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w len_w)
@@ -1024,9 +911,6 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 
   if ( sas_i ) {
     u3l_log("ames: send fail_sync: %s", uv_strerror(sas_i));
-    /*if ( c3y == sam_u->fig_u.net_o ) {
-      //sam_u->fig_u.net_o = c3n;
-    }*/
     _mesa_free_seal(sel_u);
   }
 }
@@ -1125,7 +1009,6 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
 
 static uv_buf_t
 _mesa_peek_buf(c3_c* pek_c, c3_d fra_d, c3_w pek_w)
-// 43
 {
   if (fra_d <= 0xff) {
     return uv_buf_init(pek_c+(fra_d*pek_w), pek_w);
@@ -1159,55 +1042,22 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
   c3_o los_o = c3n;
   c3_d now_d = _get_now_micros();
   u3_mesa_pact *pac_u = &req_u->pic_u->pac_u;
-
-  /* c3_y buf_y[PACT_SIZE]; */
-  /* arena scr_u = req_u->are_u; */
-  /* uv_buf_t* bfs_u = new(&scr_u, uv_buf_t, 1); */
-  // c3_w i_w = 0;
   for ( c3_d i_d = req_u->lef_d; i_d < nex_d; i_d++ ) {
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
     if ( (c3n == bitset_has(&req_u->was_u, i_d)) &&
         (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
-      // u3l_log("now_d %"PRIu64, now_d);
-      // u3l_log("sen_d %"PRIu64, req_u->wat_u[i_d].sen_d);
-      // u3l_log("rto_w %u", req_u->gag_u->rto_w);
       los_o = c3y;
-      /* u3l_log("resend fra_w: %llu", i_d); */
-
       uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, i_d, req_u->pek_w);
-      /* if (buf_u.base < req_u->pek_c) { */
-      /*     u3l_log("peek overflow, dying, fragment %"PRIu64, i_d); */
-      /*     abort(); */
-      /* } */
-      /* new(&scr_u, uv_buf_t, 1); */
-      /* bfs_u[i_w] = buf_u; */
-      /* c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u); */
-      /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, i_d); */
       _mesa_send_modal(req_u->per_u, buf_u, NULL);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u, now_d);
-      // i_w++;
     }
   }
-  /* c3_w* int_u = new(&scr_u, c3_w, i_w); */
-  /* struct sockaddr** ads_u = new(&scr_u, struct sockaddr*, i_w); */
-  /* uv_buf_t** bus_u = new(&scr_u, uv_buf_t*, i_w); */
-  /* for (c3_w j_w = 0; j_w < i_w; j_w++) { */
-  /*   ads_u[j_w] = (struct sockaddr*)&req_u->per_u->dan_u; */
-  /*   bus_u[j_w] = &bfs_u[j_w]; */
-  /*   int_u[j_w] = 1; */
-  /* } */
 
   if ( c3y == los_o ) {
-    /* _mesa_send_buf2(req_u->per_u->sam_u, ads_u, bus_u, int_u, i_w); */
-    /* _mesa_send_buf2(req_u->per_u->sam_u, req_u->per_u->dan_u, bfs_u, i_w); */
     req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
     req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
     req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
-    // u3l_log("loss");
-    // u3l_log("resent %u", i_w);
-    // u3l_log("counter %u hav_d %"PRIu64 " nex_d %"PRIu64 " ack_d %"PRIu64 " lef_d %"PRIu64 " old_d %"PRIu64, req_u->los_u->counter, req_u->hav_d, req_u->nex_d, req_u->ack_d, req_u->lef_d, req_u->old_d);
-    // _log_gage(req_u->gag_u);
   }
 }
 
@@ -1220,30 +1070,8 @@ _update_resend_timer(u3_pend_req *req_u)
 {
   // scan in flight packets, find oldest
   c3_w idx_d = req_u->lef_d;
-  /* c3_d now_d = _get_now_micros(); */
-  /* c3_d wen_d = now_d; */
-  /* for ( c3_d i = req_u->lef_d; i < req_u->nex_d; i++ ) { */
-  /*   // u3l_log("fra %u (%u)", i, __LINE__); */
-  /*   if ( c3n == bitset_has(&req_u->was_u, i) && */
-	/*        wen_d > req_u->wat_u[i].sen_d */
-  /*      ) { */
-  /*     wen_d = req_u->wat_u[i].sen_d; */
-  /*     idx_d = i; */
-  /*   } */
-  /* } */
-/*   if ( now_d == wen_d ) { */
-/* #ifdef MESA_DEBUG */
-/*     /\* u3l_log("failed to find new oldest"); *\/ */
-/* #endif */
-/*   } */
-  /* req_u->old_d = idx_d; */
   req_u->tim_u.data = req_u;
-  // c3_d gap_d = req_u->wat_u[idx_d].sen_d == 0 ?
-  //               0 :
-  //               now_d - req_u->wat_u[idx_d].sen_d;
   c3_d next_expiry = req_u->gag_u->rto_w;
-  // u3l_log("next_expiry %llu", next_expiry / 1000);
-  // u3l_log("DUE %llu", uv_timer_get_due_in(&req_u->tim_u));
   uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry / 1000, 0);
 }
 
@@ -1252,7 +1080,6 @@ _update_resend_timer(u3_pend_req *req_u)
 static void
 _mesa_packet_timeout(uv_timer_t* tim_u) {
   u3_pend_req* req_u = (u3_pend_req*)tim_u->data;
-  // u3l_log("old %llu nex %llu packet timed out", req_u->old_d, req_u->nex_d);
   _try_resend(req_u, req_u->nex_d);
   _update_resend_timer(req_u);
 }
@@ -1277,11 +1104,9 @@ _mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w ack_w)
       u3l_log("fail to burn %" PRIu64 " %" PRIu64, num_d + ack_w, req_u->tof_d);
       break;
     }
-    // u3l_log("size %u counter %u num %u fra %u inx %u lef_d %u", siz_w, req_u->los_u->counter , num_w, fra_d, (req_u->los_u->counter + num_w + 1), lef_d);
   }
 
   // ratchet forward
-  /* u3l_log("burned %llu", num_d); */
   num_d++; // account for the in-ordered packet processed in _mesa_req_pact_done
   req_u->lef_d += num_d;
   req_u->hav_d += num_d;
@@ -1314,8 +1139,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   // received duplicate
   if ( c3y == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
-    // MESA_LOG(sam_u, DUPE);
-    /* _update_resend_timer(req_u); */
     return;
   }
 
@@ -1332,15 +1155,10 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   if ( req_u->los_u->counter != nam_u->fra_d ) {
     // insert into misordered queue
-    /* u3l_log("insert into misordered queue fra: %llu [counter %u]", */
-    /*         nam_u->fra_d, */
-    /*         req_u->los_u->counter); */
     req_u->out_d--;
     bitset_put(&req_u->was_u, nam_u->fra_d);
 
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
-    /* _try_resend(req_u, nam_u->fra_d); */
-    /* _update_resend_timer(req_u); */
     return;
   }
   else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
@@ -1355,10 +1173,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     _mesa_del_request(sam_u, nam_u);
     return;
   }
-  else {
-    // u3l_log("about to other free");
-  }
-
   if ( nam_u->fra_d > req_u->ack_d ) {
     req_u->ack_d = nam_u->fra_d;
   }
@@ -1458,7 +1272,6 @@ _mesa_get_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 static void
 _mesa_del_pit(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
-  /* u3l_log("deleting %llu", nam_u->fra_d); */
   vt_erase(&sam_u->pit_u, nam_u->str_u);
 }
 
@@ -1567,56 +1380,6 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y);
 
-static void time_elapsed(c3_d fra_d, c3_d total, c3_d begin, c3_d end)
-{
-  c3_d elapsed = end - begin;
-  double percent = 100.0 * ((double)elapsed / (double)total);
-  u3l_log("  %"PRIu64": %"PRIu64"(%.2f%%)", fra_d, elapsed, percent);
-}
-
-static void
-packet_test(u3_mesa* sam_u, c3_c* fil_c) {
-  FILE* fd = fopen(fil_c, "rb");
-  fseek(fd, 0L, SEEK_END);
-  c3_d sz = ftell(fd);
-  c3_y* packets = c3_malloc(sz);
-  fseek(fd, 0L, SEEK_SET);
-
-  const struct sockaddr adr_u = {
-    .sa_family = AF_INET,
-    .sa_data = {
-      0x00, 0x50,             // Port 80 in network byte order
-      0xa7, 0xac, 0xa8, 0x17, // IP 167.172.168.23
-      0x00, 0x00, 0x00, 0x00, // Padding
-      0x00, 0x00, 0x00, 0x00  // Padding
-    }
-  };
-
-  fread(packets, 1, sz, fd);
-  fclose(fd);
-
-  c3_d now_d = _get_now_micros();
-  c3_d tidx = 0;
-
-  for (c3_d i = 0; i < sz;) {
-    c3_w len_w = *(c3_w*)(packets+i);
-    /* u3l_log("len_w %u i %"PRIu64, len_w, i); */
-    i += 4;
-    _mesa_hear(sam_u, &adr_u, len_w, packets + i);
-    /* tim_y[tidx] = _get_now_micros(); */
-    sam_u->are_u.beg = (char*)are_y;
-    i += len_w;
-    /* tidx++; */
-  }
-  c3_d end_d = _get_now_micros();
-  c3_d total_d = end_d - now_d;
-  /* for (c3_d i = 1; i < tidx; i++) { */
-  /*   time_elapsed(i, total_d, tim_y[i-1], tim_y[i]); */
-  /* } */
-  u3l_log("packet_test took %"PRIu64, total_d);
-  c3_free(packets);
-}
-
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
@@ -1678,13 +1441,9 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     }
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     res_u->tim_u.data = res_u;
-    #ifdef PACKET_TEST
-    packet_test(sam_u, "pages.packs");
-    #else
 
     _mesa_send_bufs(sam_u, NULL, buf_y, len_w, dat_u->las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
-    #endif
   }
 
   u3z(pac);
@@ -1710,10 +1469,8 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__push: {
       u3_noun las, pac;
       if ( c3n == u3r_cell(dat, &las, &pac) ) {
-        // u3l_log(" mesa: send old");
         ret_o = c3n;
       } else {
-        // u3l_log(" mesa: send new");
         _mesa_ef_send(sam_u, u3k(las), u3k(pac));
         ret_o = c3y;
       }
@@ -1723,7 +1480,6 @@ static c3_o _mesa_kick(u3_mesa* sam_u, u3_noun tag, u3_noun dat)
     case c3__saxo: {
       #ifdef MESA_DEBUG
         c3_c* tag_c = u3r_string(tag);
-        /* u3l_log("mesa: send old %s", tag_c); */
         c3_free(tag_c);
       #endif
       ret_o = _ames_kick_newt(u3_Host.sam_u, u3k(tag), u3k(dat));
@@ -1845,9 +1601,6 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
   u3_noun boq = _dire_etch_ud(31); // XX make configurable
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  // u3_noun wer = nam_u->nit_o == c3y
-  //   ? u3nc(c3__init, pax)
-  //   : u3nt(nam_u->aut_o == c3y ? c3__auth : c3__data, fag, pax);
 
   //  XX only boq_y of MAX JUMBO allowed
   u3_noun wer = u3nt(c3__data, fag, pax);
@@ -1962,7 +1715,6 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 #ifdef MESA_DEBUG
   // u3l_log(" sending leaf packet, fra_d: %"PRIu64, nam_u->fra_d);
 #endif
-  // log_pact(pac_u);
   _mesa_send_pact_single(sam_u, adr_u, pac_u);
 }
 
@@ -2107,9 +1859,6 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     _mesa_del_pit(sam_u, nam_u);
   }
 
-
-  /* _mesa_send_jumbo_pieces(sam_u, lin_u, NULL); */
-
   u3z(res);
   arena_free(&han_u->are_u);
   return;
@@ -2162,7 +1911,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
   u3_mesa* sam_u = per_u->sam_u;
 
   u3_weak las    = u3r_at(7, nun);
-  // u3m_p("_forward_lanes_cb", las);
 
   if ( las != u3_none ) {
     u3_peer* new_u = _mesa_get_peer(per_u->sam_u, per_u->her_u);
@@ -2243,18 +1991,12 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
   c3_w win_w = _mesa_req_get_cwnd(req_u);
   u3_mesa_pict* nex_u = req_u->pic_u;
   c3_w nex_d = req_u->nex_d;
-  /* arena scr_u = req_u->are_u; */
-  /* uv_buf_t* bfs_u = new(&scr_u, uv_buf_t, win_w); */
-  /* uv_buf_t** bus_u = new(&scr_u, uv_buf_t*, win_w); */
-  /* struct sockaddr** ads_u = new(&scr_u, struct sockaddr*, win_w); */
-  /* c3_w* int_u = new(&scr_u, c3_w, win_w); */
   c3_d now_d = _get_now_micros();
   for ( c3_w i = 0; i < win_w; i++ ) {
     c3_w fra_w = nex_d + i;
     if ( fra_w >= req_u->tof_d ) {
       break;
     }
-    // u3l_log("next fra_w: %u", fra_w);
     nex_u->pac_u.pek_u.nam_u.fra_d = fra_w;
     uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, nex_d+i, req_u->pek_w);
     if (buf_u.base < req_u->pek_c) {
@@ -2262,30 +2004,16 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
         abort();
     }
     mesa_etch_pact_to_buf((c3_y*)buf_u.base, buf_u.len, &nex_u->pac_u);
-    /* bfs_u[i] = buf_u; */
-    /* bus_u[i] = &bfs_u[i]; */
-    /* ads_u[i] = (struct sockaddr*)&lan_u; */
-    /* int_u[i] = 1; */
     _mesa_req_pact_sent(req_u, fra_w, now_d);
 
-    /* _mesa_send_buf3(req_u->per_u->dan_u, buf_u, req_u, fra_w); */
     _mesa_send_modal(req_u->per_u, buf_u, NULL);
-    /* _mesa_send(nex_u, lan_u); */
   }
-  /* if ( i > 0 ) { */
-  /*   c3_i sen_i = _mesa_send_buf2(ads_u, bus_u, int_u, i); */
-  /*   for (c3_w i = 0; i < sen_i; i++) { */
-  /*     c3_w fra_w = nex_d + i; */
-  /*     _mesa_req_pact_sent(req_u, fra_w, now_d); */
-  /*   } */
-  /* } */
 }
 
 static void
 _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
 {
   u3_mesa_cb_data* ver_u = vod_p;
-  #ifndef PACKET_TEST
   u3_pend_req* req_u = _mesa_get_request(ver_u->sam_u, &ver_u->nam_u);
   if ( !req_u ) {
     return;
@@ -2301,7 +2029,6 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
   else {
     u3l_log("mesa: %%veri returned strange value");
   }
-  #endif
   c3_free(ver_u);
 }
 
@@ -2321,7 +2048,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
     u3_assert( gag_u != NULL );
   }
 
-  // _log_gage(gag_u);
   u3_mesa_pact exa_u;
   exa_u.hed_u.typ_y = PACT_PEEK;
   exa_u.pek_u.nam_u = *nam_u;
@@ -2350,7 +2076,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
   req_u->gag_u = gag_u;
   req_u->tob_d = dat_u->tob_d;
-  /* req_u->out_d = 4000; */
   req_u->out_d = 0;
   req_u->tof_d = mesa_num_leaves(dat_u->tob_d); // NOTE: only correct for bloq 13!
   assert( req_u->tof_d != 1 ); // these should be injected directly by _mesa_hear_page
@@ -2436,18 +2161,6 @@ _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockadd
   hed_u->nex_y = HOP_SHORT;
 }
 
-/* static c3_d avg_time() { */
-/*   c3_d sum = 0; */
-/*   c3_w i; */
-/*   for (i = 0; tim_y[i] != 0; i++) { */
-/*     if (tim_y[i] > 1000) { */
-/*       u3l_log("dingding fra %u time %"PRIu64, i, tim_y[i]); */
-/*     } */
-/*     sum += tim_y[i]; */
-/*   } */
-/*  return sum / i; */
-/* } */
-
 static void
 _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
@@ -2468,7 +2181,6 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     return;
   }
   if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
-  // if ( c3y == sam_u->for_o ) {
     sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     if ( _mesa_is_lane_zero(lin_u) == c3y) {
       c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
@@ -2517,17 +2229,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
-  // if ( pac_u->hed_u.hop_y == 0 ) {
-  //   u3l_log(" received direct page");
-  // } else {
-  //   u3l_log(" received forwarded page");
-  // }
   _hear_peer(sam_u, per_u, lan_u, dir_o);
-
-  if ( new_o == c3y ) {
-    //u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
-    //_log_lane(&lan_u);
-  }
 
   _mesa_put_peer(sam_u, nam_u->her_u, per_u);
 
@@ -2620,18 +2322,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   if ( c3y == done_with_jumbo_frame ) {
     u3_noun cad;
 
-    // u3l_log(" received last packet, tof_d: %" PRIu64 " tob_d: %" PRIu64,
-    //         req_u->tof_d,
-    //         req_u->tob_d);
-
-    /* c3_d now_d = _get_now_micros(); */
-    /* u3l_log("%" PRIu64 " kilobytes took %f ms", */
-    /*         req_u->tof_d, */
-    /*         (now_d - sam_u->tim_d)/1000.0); */
-    // u3l_log("page handling took %"PRIu64, avg_time());
-    //done = c3y;
-
-    #ifndef PACKET_TEST
     {
       // construct jumbo frame
       u3_noun lan = u3_mesa_encode_lane(lan_u);
@@ -2657,9 +2347,6 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
     u3_auto_plan(&sam_u->car_u,
                  u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
-   #else
-    _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
-   #endif
   } else if ( req_u->hav_d < lev_d ) {
     _mesa_request_next_fragments(sam_u, req_u, lan_u);
   }
@@ -2687,8 +2374,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   pac_u->pek_u.nam_u.fra_d = bat_d;
 
-  /* u3l_log("hear peek fra %llu", fra_d); */
-
   // if we have the page, send it
   u3_mesa_line* lin_u = _mesa_get_jumbo_cache(sam_u, &pac_u->pek_u.nam_u);
 
@@ -2707,7 +2392,6 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   // otherwise, if blocked or NULL scry
   lin_u = (u3_mesa_line*)CTAG_WAIT;
-  /* _mesa_copy_name(&lin_u->nam_u, &pac_u->pek_u.nam_u);  // XX */
 
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
@@ -2767,13 +2451,6 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   if ( pac_u->hed_u.hop_y == 0 ) {
     new_o = c3y;
     _hear_peer(sam_u, per_u, lan_u, dir_o);
-    // u3l_log("learnt lane");
-  } else {
-    // u3l_log("received forwarded poke");
-  }
-  if ( new_o == c3y ) {
-    // u3l_log("new lane is direct %c", c3y == dir_o ? 'y' : 'n');
-    // _log_lane(lan_u);
   }
   //  XX _meet_peer, in the _saxo_cb, is already putting the peer in her_p
   //
@@ -2781,7 +2458,6 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   u3_pend_req* req_u = _mesa_get_request(sam_u, &pac_u->pok_u.pay_u);
   if ( req_u != NULL) {
-    // u3l_log("req pending");
     return;
   }
 
@@ -2822,9 +2498,6 @@ _mesa_hear(u3_mesa* sam_u,
            c3_w     len_w,
            c3_y*    hun_y)
 {
-  /* fwrite(&len_w, 4, 1, packs); */
-  /* fwrite(hun_y, 1, len_w, packs); */
-  // c3_d now_d = _get_now_micros();
   if ( c3n == mesa_is_new_pact(hun_y, len_w) ) {
     c3_y* han_y = c3_malloc(len_w);
     memcpy(han_y, hun_y, len_w);
@@ -2853,18 +2526,6 @@ _mesa_hear(u3_mesa* sam_u,
       _mesa_hear_poke(pic_u, sdr_u);
     } break;
   }
-  // if (done == c3n) {
-    // if (tidx < 200000) {
-      // tim_y[tidx] = _get_now_micros() - now_d;
-      // tidx++;
-    // } else {
-      // u3l_log("peek handling took %"PRIu64, avg_time());
-      // tidx = 0;
-    // }
-  // } else {
-    // tidx = 0;
-    // done = c3n;
-  // }
 }
 
 static void _mesa_recv_cb(uv_udp_t*        wax_u,
@@ -2939,12 +2600,6 @@ _mesa_io_talk(u3_auto* car_u)
     {
       u3l_log("mesa: bind: %s", uv_strerror(ret_i));
 
-      /*if ( (c3__czar == rac) &&
-           (UV_EADDRINUSE == ret_i) )
-      {
-        u3l_log("    ...perhaps you've got two copies of vere running?");
-      }*/
-
       //  XX revise
       //
       u3_pier_bail(u3_king_stub());
@@ -2997,7 +2652,6 @@ u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
   u3l_log("mesa: INIT");
-  /* packs = fopen("/home/ec2-user/pages.packs", "rb"); */
   arena par_u     = arena_create(67108864);
   u3_mesa* sam_u  = new(&par_u, u3_mesa, 1);
   sam_u->par_u    = par_u;
@@ -3049,18 +2703,6 @@ u3_mesa_io_init(u3_pier* pir_u)
   car_u->io.slog_f = _mesa_io_slog;
   car_u->io.kick_f = _mesa_io_kick;
   car_u->io.exit_f = _mesa_io_exit;
-
-
-
-  /*{
-    u3_noun now;
-    struct timeval tim_u;
-    gettimeofday(&tim_u, 0);
-
-    now = u3m_time_in_tv(&tim_u);
-    //sam_u->sev_l = u3r_mug(now);
-    u3z(now);
-  }*/
 
   return car_u;
 }
