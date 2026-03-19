@@ -20,10 +20,10 @@
     ***  This hashtable implementation is inspired by the one in Jai module
     ***  shipped with the compiler.
     **/
-    #define u3h_size_min    32  // must be a power of two
+    #define u3h_size_min    262144  // must be a power of two
     #define u3h_slot_free  0
     #define u3h_slot_tomb  1
-    #define u3h_trim_threshold 60
+    #define u3h_trim_threshold 40
     #define u3h_grow_threshold 70
 
     typedef c3_w u3h_slot;
@@ -39,6 +39,12 @@
       c3_w          max_w;  // bounded size if max_w > 0
       c3_w          fil_w;  // number of filled slots (live + tombstone)
       c3_w          arm_w;  // reclamation clock arm
+      c3_w          red_w;
+      c3_w          rit_w;
+      struct {
+        c3_w        red_w;
+        c3_w        rit_w;
+      } col;
       u3p(u3h_slot) sot_p;
     } u3h_root;
 

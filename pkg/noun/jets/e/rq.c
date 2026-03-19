@@ -59,6 +59,7 @@
             u3_atom b,
             u3_atom r)
   {
+    u3C.wag_w ^= u3o_soft_mugs;
     union quad c, d, e;
     _set_rounding(r);
     c.c = alloca(16);

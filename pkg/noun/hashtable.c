@@ -31,11 +31,9 @@ u3h_new_cache_sized(u3h_root* har_u, c3_w siz_w, c3_w max_w)
 {
   u3_assert(1 == c3_pc_w(siz_w));
 
-  har_u->use_w = 0;
+  memset(har_u, 0, sizeof(*har_u));
   har_u->loc_w = siz_w;
   har_u->max_w = max_w;
-  har_u->fil_w = 0;
-  har_u->arm_w = 0;
   u3h_slot* sot_u = u3a_walloc(siz_w);
   har_u->sot_p = u3of(u3_noun, sot_u);
   memset(sot_u, u3h_slot_free, siz_w * sizeof(c3_w));
@@ -46,7 +44,8 @@ u3h_new_cache_sized(u3h_root* har_u, c3_w siz_w, c3_w max_w)
 void
 u3h_new_cache(u3h_root* har_u, c3_w max_w)
 {
-  u3h_new_cache_sized(har_u, u3h_size_min, max_w);
+  // u3h_new_cache_sized(har_u, u3h_size_min, max_w);
+  u3h_new_cache_sized(har_u, u3h_size_min, 0);
 }
 
 /* u3h_new(): create hashtable.
@@ -89,7 +88,7 @@ _h_walk_empty(u3h_root* har_u, u3_noun key)
 //
 // key is RETAINED
 static inline c3_w
-_h_walk(u3h_root* har_u, u3_noun key)
+_h_walk(u3h_root* har_u, u3_noun key, c3_w* col_w)
 {
   c3_w mug_w = u3r_mug(key),
        mak_w = har_u->loc_w - 1,
@@ -110,6 +109,7 @@ _h_walk(u3h_root* har_u, u3_noun key)
       tom_w = (u3_none == tom_w) ? idx_w : tom_w;
     }
 
+    if ( col_w ) (*col_w)++;
     idx_w = (idx_w + inc_w) & mak_w;
     inc_w++;
   }
@@ -175,11 +175,28 @@ _h_rehash_grow(u3h_root* har_u, c3_o inc_o)
 
   if ( loc_w < har_u->loc_w ) return u3m_bail(c3__fail);
 
+  if ( u3C.wag_w & u3o_soft_mugs ) {
+    fprintf(stderr, "\r\nread collision rate: %f, "
+                        "write collision rate: %f, "
+                        "fullness: %f, size: %d\r\n",
+      (double)har_u->col.red_w / (double)har_u->red_w,
+      (double)har_u->col.rit_w / (double)har_u->rit_w,
+      (double)har_u->use_w     / (double)har_u->loc_w,
+      har_u->loc_w
+    );
+  }
+
+
   u3h_root old_u = *har_u;
 
   har_u->use_w = 0;
   har_u->loc_w = loc_w;
   har_u->fil_w = 0;
+  har_u->col.red_w = 0;
+  har_u->col.rit_w = 0;
+  har_u->rit_w = 0;
+  har_u->red_w = 0;
+
   u3h_slot* sot_u = u3a_walloc(loc_w);
   har_u->sot_p    = u3of(u3_noun, sot_u);
   memset(sot_u, u3h_slot_free, loc_w * sizeof(c3_w));
@@ -209,6 +226,8 @@ u3h_walk(u3h_root* har_u, void (*fun_f)(u3_noun))
 static void
 _h_trim_one(u3h_root* har_u)
 {
+  u3_assert(!"no trim");
+
   u3_assert(har_u->use_w <= har_u->fil_w);
   if ( 0 == har_u->use_w ) return;
   c3_w idx_w = har_u->arm_w,
@@ -257,7 +276,7 @@ u3h_put(u3h_root* har_u, u3_noun key, u3_noun val)
   u3_noun kev = u3nc(u3k(key), val);
 
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
-  c3_w idx_w = _h_walk(har_u, key);
+  c3_w idx_w = _h_walk(har_u, key, &har_u->col.rit_w);
 
   if ( sot_u[idx_w] ) {
     har_u->fil_w--;
@@ -272,6 +291,7 @@ u3h_put(u3h_root* har_u, u3_noun key, u3_noun val)
   sot_u[idx_w] = kev;
   har_u->use_w++;
   har_u->fil_w++;
+  har_u->rit_w++;
 }
 
 /* _ch_uni_with(): key/value callback, put into [*wit]
@@ -312,7 +332,8 @@ u3h_get(u3h_root* har_u, u3_noun key)
 u3_weak
 u3h_git(u3h_root* har_u, u3_noun key)
 {
-  c3_w idx_w = _h_walk(har_u, key);
+  c3_w idx_w = _h_walk(har_u, key, &har_u->col.red_w);
+  har_u->red_w++;
   
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
   
@@ -328,7 +349,7 @@ u3h_git(u3h_root* har_u, u3_noun key)
 void
 u3h_del(u3h_root* har_u, u3_noun key)
 {
-  c3_w idx_w = _h_walk(har_u, key);
+  c3_w idx_w = _h_walk(har_u, key, NULL);
   
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
   if ( sot_u[idx_w] <= u3h_slot_tomb ) return;

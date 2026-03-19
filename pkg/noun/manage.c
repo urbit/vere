@@ -1335,6 +1335,17 @@ u3m_love(u3_noun pro)
   u3h_root per_u = u3R->cax.per_u;
 
   u3h_root take_byc_u, take_per_u;
+  if ( u3C.wag_w & u3o_soft_mugs ) {
+    fprintf(stderr, "\r\nread collision rate: %f, "
+                        "write collision rate: %f, "
+                        "fullness: %f, size: %d\r\n",
+      (double)u3R->cax.har_u.col.red_w / (double)u3R->cax.har_u.red_w,
+      (double)u3R->cax.har_u.col.rit_w / (double)u3R->cax.har_u.rit_w,
+      (double)u3R->cax.har_u.use_w     / (double)u3R->cax.har_u.loc_w,
+      u3R->cax.har_u.loc_w
+    );
+    u3C.wag_w ^= u3o_soft_mugs;
+  }
 
   //  are there any timers on the road?
   //
