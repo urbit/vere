@@ -8,6 +8,23 @@
 #include "xtract.h"
 #include "options.h"
 
+
+/*
+  Performs best when doesn't have to grow, as otherwise the hash collision rate
+  is a bit too high (1.3 in testing for writes, an expected one would be the
+  average between F / (1 - F) for F = 0.35, 0.7, which if 1.43). This means you
+  want the table to be as big as possible to begin with.
+  XX superexponential growth?
+
+  Overhead of copying out is proportional to the size of the table though. This
+  means you do want a HAMT of some sort for persistent stuff.
+
+  XX how bad are Hoon maps anyway? You could just get the noun from the senior
+  road and promote it later, copying a few cells out in addition to the kevs.
+  Is quering much slower so it's not worth it?
+
+*/
+
 #define BEX32_PHI 0x9e3779b9u  // 2^32 divided by golden ratio
 
 /* asserting noun deconstruction to make sure hashtables are bail-safe
@@ -232,9 +249,11 @@ _h_trim_one(u3h_root* har_u)
   if ( 0 == har_u->use_w ) return;
   c3_w idx_w = har_u->arm_w,
        mak_w = har_u->loc_w - 1,
-       bit_w = c3_bits_word(mak_w),
-       tep_w = (BEX32_PHI >> (32 - bit_w)) | 1;  // har_u->loc_w / phi
+       // (har_u->loc_w / phi), +1 if the result is even
+       tep_w = (BEX32_PHI >> c3_lz_w(mak_w)) | 1;
+
   u3h_slot* sot_u = u3to(u3_noun, har_u->sot_p);
+
   while ( 1 ) {
     if ( sot_u[idx_w] > u3h_slot_tomb ) {
       if ( c3y == u3h_slot_is_warm(sot_u[idx_w]) ) {
