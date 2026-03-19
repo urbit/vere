@@ -2220,9 +2220,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   c3_o our_o = u3_ships_equal(nam_u->her_u, sam_u->pir_u->who_d);
 
   u3_peer* per_u = _mesa_get_peer(sam_u, nam_u->her_u);
-  c3_o new_o = c3n;
   if ( NULL == per_u ) {
-    new_o = c3y;
     per_u = new(&sam_u->par_u, u3_peer, 1);
     _init_peer(sam_u, per_u);
     _meet_peer(sam_u, per_u, nam_u->her_u);
@@ -2439,9 +2437,7 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   //  XX if this lane management stuff is necessary
   // it should be deferred to after successful event processing
   u3_peer* per_u = _mesa_get_peer(sam_u, pac_u->pok_u.pay_u.her_u);
-  c3_o new_o = c3n;
   if ( NULL == per_u ) {
-    new_o = c3y;
     per_u = new(&sam_u->par_u, u3_peer, 1);
     _init_peer(sam_u, per_u);
     _meet_peer(sam_u, per_u, pac_u->pok_u.pay_u.her_u);
@@ -2449,7 +2445,6 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   c3_o dir_o = __(pac_u->hed_u.hop_y == 0);
   if ( pac_u->hed_u.hop_y == 0 ) {
-    new_o = c3y;
     _hear_peer(sam_u, per_u, lan_u, dir_o);
   }
   //  XX _meet_peer, in the _saxo_cb, is already putting the peer in her_p
