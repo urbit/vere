@@ -114,6 +114,11 @@
         u3_noun
         u3m_love(u3_noun pro);
 
+      /* u3m_warm(): return product from leap without promoting state.
+      */
+        u3_noun
+        u3m_warm(u3_noun pro);
+
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **
       **  Produces [%$ result] or [%error (list tank)].
