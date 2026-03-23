@@ -35,11 +35,17 @@ static u3h_slot
 _push_pair(u3_noun kev, u3_noun kov, c3_w mug_w, c3_w mog_w)
 {
   u3_noun *hed, *tel, *tmp, out = u3i_defcons(&hed, &tel);
-  while (1) {
+
+  while ( 1 ) {
+    if ( 1 == mug_w ) {
+      *hed = u3h_kev_to_slot(kev);
+      *tel = u3nc(u3h_kev_to_slot(kov), u3_nul);
+      return out;
+    }
     if ( (mug_w & 1) != (mog_w & 1) ) {
       if ( (mug_w & 1) ) SWAP(kev, kov);
-      *hed = kev;
-      *tel = kov;
+      *hed = u3h_kev_to_slot(kev);
+      *tel = u3h_kev_to_slot(kov);
       return out;
     }
     if ( (mug_w & 1) ) {
@@ -59,31 +65,30 @@ _push_pair(u3_noun kev, u3_noun kov, c3_w mug_w, c3_w mog_w)
 
 // kev in transferred, sot_w is RETAINED
 static u3h_slot
-_put_slot(u3h_slot sot_w, u3_noun key, u3_noun kev, c3_w mug_w)
+_put_slot(u3h_slot sot_w, u3_noun key, u3_noun kev, c3_w mug_w, c3_o* rep_o)
 {
   if ( 1 == mug_w ) {
     //  mug exhausted, we got to a list of kevs
-    u3_assert(c3y == u3a_is_cell(sot_w));
-    if ( 0 == sot_w ) return kev;
-    return u3nc(kev, u3k(sot_w));
+    //  XX linear search
+    c3_stub;
   }
 
   if ( c3n == u3h_slot_is_kev(sot_w) ) {
     // a pair of slots
     u3_assert(c3y == u3a_is_cell(sot_w));
     if ( 0 == (mug_w & 1) ) {
-      return u3nc(_put_slot(u3h(sot_w), key, kev, mug_w >> 1), u3k(u3t(sot_w)));
+      return u3nc(_put_slot(u3h(sot_w), key, kev, mug_w >> 1, rep_o), u3k(u3t(sot_w)));
     }
-    return u3nc(u3k(u3h(sot_w)), _put_slot(u3t(sot_w), key, kev, mug_w >> 1));
+    return u3nc(u3k(u3h(sot_w)), _put_slot(u3t(sot_w), key, kev, mug_w >> 1, rep_o));
   }
 
   u3_noun kov = u3h_slot_to_noun(sot_w);
   if ( c3y == u3r_sing(key, u3h(kov)) ) {
+    *rep_o = c3y;
     return u3h_kev_to_slot(kev);
   }
-  return _push_pair(kev, u3k(kov), mug_w,
-    (u3r_mug(kov) | (1 << 31)) >> c3_lz_w(mug_w)
-  );
+  *rep_o = c3n;
+  return _push_pair(kev, u3k(kov), mug_w, (u3r_mug(kov) | (1 << 31)) >> c3_lz_w(mug_w));
 }
 
 /* u3h_put(): insert in hashtable.
@@ -94,19 +99,21 @@ void
 u3h_put(u3h_root* har_u, u3_noun key, u3_noun val)
 {
   u3_noun kev = u3nc(u3k(key), val);
+  c3_o rep_o;
 
   if ( 0 == har_u->sot_w ) {
     har_u->sot_w = u3h_kev_to_slot(kev);
+    rep_o = c3n;
   }
   else {
     c3_w mug_w = u3r_mug(key);
-    u3h_slot new_w = _put_slot(har_u->sot_w, key, kev, mug_w | (1 << 31));
+    u3h_slot new_w = _put_slot(har_u->sot_w, key, kev, mug_w | (1 << 31), &rep_o);
     c3_w old_w = har_u->sot_w;
     har_u->sot_w = new_w;
     u3z(u3h_slot_to_noun(old_w));
   }
 
-  har_u->use_w++;
+  if (c3n == rep_o) har_u->use_w++;
 }
 
 /* u3h_get(): read from hashtable.
@@ -133,7 +140,17 @@ _h_git_slot(u3h_slot sot_w, u3_noun key, c3_w mug_w)
     mug_w >>= 1;
   }
 
-  u3_assert(!"mug exhausted");
+  // list of kevs
+  u3_noun i, t = sot_w;
+  while ( t != u3_nul ) {
+    u3r_cell(t, &i, &t);
+    u3_noun kev = u3h_slot_to_noun(i);
+    if ( c3y == u3r_sing(key, u3h(kev)) ) {
+      return u3t(kev);
+    }
+  }
+
+  return u3_none;
 }
 
 /* u3h_git(): read from hashtable, retaining result.
@@ -153,7 +170,23 @@ u3h_git(u3h_root* har_u, u3_noun key)
 void
 u3h_trim_to(u3h_root* har_u, c3_w n_w)
 {
-  c3_stub;
+  // stub
+
+}
+
+static void
+_h_free_slot(u3h_slot sot_w, c3_s dep_s)
+{
+  if ( 0 == sot_w ) return;
+  if ( 30 == dep_s ) {  //  XX 30?
+    u3h_slot i_h;
+    u3_noun t1, t = sot_w;
+    while ( t ) {
+      u3r_cell(t, &i_h, &t1);
+      u3z(u3h_slot_to_noun(i_h));
+      u3k(t1); u3z()
+    }
+  }
 }
 
 /* u3h_free(): free hashtable.
@@ -161,7 +194,7 @@ u3h_trim_to(u3h_root* har_u, c3_w n_w)
 void
 u3h_free(u3h_root* har_u)
 {
-  c3_stub;
+  _h_free_slot(har_u->sot_w, 0);
 }
 
 /* u3h_mark(): mark hashtable for gc.
