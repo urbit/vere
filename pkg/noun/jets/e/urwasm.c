@@ -1990,6 +1990,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       }
       else
       {
+        u3_prep_setjmp();
         if (jmp_i == c3__code)
         {
           _uw_arena_grow(CodeArena);
@@ -2526,6 +2527,7 @@ u3we_lia_run_v1(u3_noun cor)
         }
         else
         {
+          u3_prep_setjmp();
           // escaped, grow arena and retry
           if (wasm3_runtime)
           {

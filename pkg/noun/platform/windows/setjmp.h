@@ -16,10 +16,11 @@ typedef struct jmp_buf {
 //  spilling in the caller function so that it doesn't have to save the register
 //  file. We clobber caller-saved registers by calling a setjmp function and
 //  we clobber the rest manually
-#define u3_prep_setjmp() asm volatile("" ::: "rbx", "rbp", "r12", "r13", "r14", \
-                                             "r15", "xmm6", "xmm7", "xmm8",     \
-                                             "xmm9", "xmm10", "xmm11", "xmm12", \
-                                             "xmm13", "xmm14", "xmm15")
+#define u3_prep_setjmp() asm volatile("" ::: "rbx", "rbp", "rdi", "rsi", "rsp", \
+                                             "r12", "r13", "r14", "r15", "xmm6",\
+                                             "xmm7", "xmm8", "xmm9", "xmm10",   \
+                                             "xmm11", "xmm12", "xmm13", "xmm14",\
+                                             "xmm15")
 
 __attribute__((naked,returns_twice,noinline)) int windows_setjmp(void** buf);
 

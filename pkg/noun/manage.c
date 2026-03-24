@@ -1445,6 +1445,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   _cm_signal_deep();
   u3_prep_setjmp();
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
+    u3_prep_setjmp();
     //  reinitialize trace state
     //
     u3t_init();
@@ -1492,6 +1493,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, u3m_love(pro));
   }
   else {
+    u3_prep_setjmp();
     /* Overload the error result.
     */
     pro = u3m_love(why);
@@ -1608,6 +1610,7 @@ u3m_soft_cax(u3_funq fun_f,
     pro = u3m_love(pro);
   }
   else {
+    u3_prep_setjmp();
     u3t_init();
 
     /* Produce - or fall again.
@@ -1708,6 +1711,7 @@ u3m_soft_run(u3_noun gul,
     pro = u3nc(0, u3m_love(pro));
   }
   else {
+    u3_prep_setjmp();
     u3t_init();
 
     /* Produce - or fall again.
@@ -1795,6 +1799,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     pro = u3m_love(pro);
   }
   else {
+    u3_prep_setjmp();
     u3t_init();
 
     /* Push the error back up to the calling context - not the run we
