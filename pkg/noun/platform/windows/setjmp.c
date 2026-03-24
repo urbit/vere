@@ -3,7 +3,7 @@
 // write our own. See https://github.com/llvm/llvm-project/pull/186843 for
 // details.
 
-__attribute__((naked,returns_twice))
+__attribute__((naked,returns_twice,noinline))
 int windows_setjmp(void** buf)
 {
   // We store the frame pointer, instruction pointer and stack pointer into the

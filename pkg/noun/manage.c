@@ -41,15 +41,6 @@
 //
 #undef NO_OVERFLOW
 
-      /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
-      */
-#if 0
-        c3_o
-        u3m_trap(void);
-#else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
-#endif
-
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
@@ -1452,7 +1443,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   /* Enter internal signal regime.
    */
   _cm_signal_deep();
-
+  u3_prep_setjmp();
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
     //
@@ -1477,6 +1468,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
+  u3_prep_setjmp();
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = fun_f(arg);
 
@@ -1589,6 +1581,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
+  u3_prep_setjmp();
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
@@ -1690,6 +1683,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
+  u3_prep_setjmp();
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
@@ -1792,6 +1786,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
+  u3_prep_setjmp();
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 

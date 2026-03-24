@@ -269,4 +269,9 @@
 #     define STATIC_ASSERT(e,m) \
         enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(int)(!!(e)) }
 
+
+#ifndef u3_prep_setjmp
+#   define u3_prep_setjmp()
+#endif
+
 #endif /* ifndef C3_PORTABLE_H */
