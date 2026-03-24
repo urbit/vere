@@ -105,6 +105,7 @@ const BuildCfg = struct {
     c3dbg: bool = false,
     snapshot_validation: bool = false,
     urth_mass: bool = false,
+    unsafe_dawn: bool = false,
     ubsan: bool = false,
     asan: bool = false,
     tracy_enable: bool = false,
@@ -169,6 +170,12 @@ pub fn build(b: *std.Build) !void {
         "Enable |mass in urth process (-DU3_URTH_MASS)",
     ) orelse false;
 
+    const unsafe_dawn = b.option(
+        bool,
+        "unsafe-dawn",
+        "Enable unsafe dawn code paths (-Dunsafe_dawn)",
+    ) orelse false;
+
     const binary_name = b.option(
         []const u8,
         "binary-name",
@@ -231,6 +238,7 @@ pub fn build(b: *std.Build) !void {
         .c3dbg = c3dbg,
         .snapshot_validation = snapshot_validation,
         .urth_mass = urth_mass,
+        .unsafe_dawn = unsafe_dawn,
         .asan = asan,
         .ubsan = ubsan,
         .tracy_enable = tracy_enable,
@@ -359,6 +367,9 @@ fn buildBinary(
 
     if (cfg.urth_mass)
         try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
+
+    if (cfg.unsafe_dawn)
+        try urbit_flags.appendSlice(&.{"-Dunsafe_dawn"});
 
     if (cfg.tracy_enable) {
         try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});

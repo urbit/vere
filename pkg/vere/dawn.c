@@ -286,6 +286,28 @@ _dawn_is_az(u3_noun who, u3_noun fed)
   return c3n;
 }
 
+#ifdef unsafe_dawn
+/*  _dawn_feed_to_point: convert feed to point:jael
+*/
+static u3_noun
+_dawn_feed_to_point(u3_noun fed)
+{
+  u3_noun pon = u3do("feed-to-point:dawn", fed);
+  
+  return pon;
+}
+
+/*  _dawn_lift_feed: convert feed [%2 ~], highest life
+*/
+static u3_noun
+_dawn_lift_feed(u3_noun fed)
+{
+  u3_noun pon = u3do("lift-feed:dawn", fed);
+  
+  return pon;
+}
+#endif
+
 /* u3_dawn_vent(): validated boot event
 */
 u3_noun
@@ -299,6 +321,20 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 
   c3_c url_c[4096];
 
+#ifdef unsafe_dawn
+  {
+    u3_noun put = _dawn_feed_to_point(u3k(feed));
+    u3_noun pot = _dawn_need_unit(put, "boot: keyfile missing keys");
+    pon = u3nc(u3nc(u3k(ship), pot), u3_nul);
+    
+    fed = _dawn_lift_feed(u3k(feed));
+    if ( u3_nul == fed ) {
+      u3l_log("boot: keyfile missing keys");
+      _dawn_fail(ship, rank, u3_nul);
+      return u3_none;
+    }
+  }
+#else
   {
     //  +point:jael: gateway state
     //
@@ -359,7 +395,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
     pos = _dawn_sponsor(u3k(ship), u3k(rank), u3k(pot), azi_o);
     u3z(pot); u3z(liv);
   }
-
+#endif
 
   //  (map ship [=rift =life =pass]): galaxy table
   //
@@ -383,7 +419,8 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
             u3_Host.ops_u.gat_c);
     tuf = u3_king_get_noun(url_c);
   }
-  
+
+#ifndef unsafe_dawn
   //  (list ship): %saxo sponsorship chain
   //
   {
@@ -430,7 +467,7 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
       u3_noun nos = u3_king_get_noun(url_c);
       c3_free(pot_c);
 
-      son = _dawn_need_unit(top, "boot: failed to retrieve public keys");
+      son = _dawn_need_unit(nos, "boot: failed to retrieve public keys");
       // append to sponsor chain list
       //
       pon = u3nc(u3nc(u3k(pos), son), pon);
@@ -445,9 +482,8 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
     if ( u3_nul != sax ) {
       pos = u3h(sax);
     }
-
-    u3z(son);
   }
+#endif
   
   if ( 0 != u3_Host.ops_u.src_c ) {
     src = u3v_wish(u3_Host.ops_u.src_c);
@@ -458,12 +494,13 @@ u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)
 
   //  [%dawn %1 seed sponsors galaxies domains eth-url sources]
   //
-  //NOTE  blocknum of 0 is fine because jael ignores it.
-  //      should probably be removed from dawn event.
   u3_noun ven = u3nc(c3__dawn,
                      u3nq(1, u3k(u3t(fed)), pon, u3nq(zar, tuf, u3_nul, src)));
 
-  u3z(fed); u3z(rank); u3z(pos); u3z(ship); u3z(feed); u3z(sax);
+  u3z(fed); u3z(rank); u3z(ship); u3z(feed);
+#ifndef unsafe_dawn
+  u3z(pos); u3z(sax);
+#endif
 
   return ven;
 }

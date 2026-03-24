@@ -609,6 +609,10 @@ _main_getopt(c3_i argc, c3_c** argv)
     u3_Host.ops_u.tem = c3y;
   }
 
+  if ( 0 == u3_Host.ops_u.gat_c ) {
+    u3_Host.ops_u.gat_c = "https://lamp.lmao.wang";
+  }
+
   {
     struct stat s;
     //  catch invalid boot

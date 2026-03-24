@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) !void {
     // @panic("Missing required option: pace");
     const version = b.option([]const u8, "version", "") orelse "3.5";
     // @panic("Missing required option: version");
+    const unsafe_dawn = b.option(bool, "unsafe-dawn", "") orelse false;
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
@@ -195,6 +196,7 @@ pub fn build(b: *std.Build) !void {
         "-std=gnu23",
     });
     try flags.appendSlice(copts);
+    if (unsafe_dawn) try flags.append("-Dunsafe_dawn");
 
     pkg_vere.addCSourceFiles(.{
         .root = b.path(""),
