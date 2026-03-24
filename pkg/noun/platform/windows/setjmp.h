@@ -12,7 +12,14 @@ typedef struct jmp_buf {
 #define longjmp(buf, val) {(buf).retval = (val); __builtin_longjmp((void**)((buf).buffer), 1);}
 #define setjmp(buf) (windows_setjmp((void**)(buf.buffer)) ? (buf.retval) : 0)
 
-#define u3_prep_setjmp() asm volatile("" ::: "rbx", "rbp", "r12", "r13", "r14", "r15", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10", "xmm11", "xmm12", "xmm13", "xmm14", "xmm15")
+//  __builtin_setjmp, in addition to saving the pointers, also forces register
+//  spilling in the caller function so that it doesn't have to save the register
+//  file. We clobber caller-saved registers by calling a setjmp function and
+//  we clobber the rest manually
+#define u3_prep_setjmp() asm volatile("" ::: "rbx", "rbp", "r12", "r13", "r14", \
+                                             "r15", "xmm6", "xmm7", "xmm8",     \
+                                             "xmm9", "xmm10", "xmm11", "xmm12", \
+                                             "xmm13", "xmm14", "xmm15")
 
 __attribute__((naked,returns_twice,noinline)) int windows_setjmp(void** buf);
 
