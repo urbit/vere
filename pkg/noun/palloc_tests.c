@@ -116,7 +116,7 @@ _test_palloc(void)
   fprintf(stderr, "palloc_tests: pre-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memcpy(&tmp_u, &hep_u, sizeof(tmp_u));
-  u3m_leap(1U << u3a_page);
+  u3m_leap(((c3_w)1) << u3a_page);
 
   fprintf(stderr, "palloc_tests: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
@@ -204,7 +204,7 @@ _test_palloc_64(void)
   fprintf(stderr, "palloc_tests_64: pre-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memcpy(&tmp_u, &hep_u, sizeof(tmp_u));
-  u3m_leap(1U << u3a_page);
+  u3m_leap(((c3_w)1) << u3a_page);
 
   fprintf(stderr, "palloc_tests_64: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 

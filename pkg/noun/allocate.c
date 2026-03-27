@@ -330,7 +330,7 @@ u3a_celloc(void)
     cel_p = u3to(u3_post, u3R->cel.cel_p);
 
     if ( !u3R->cel.hav_w ) {
-      _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page),
+      _rake_chunks(c3_wiseof(*cel_u), (((c3_w)1) << u3a_page),
                    (u3R->cel.bat_w++ & 1), &u3R->cel.hav_w, cel_p);
     }
 
@@ -356,7 +356,7 @@ u3a_cfree(c3_w* cel_w)
   u3_post *cel_p;
 
   if ( u3R->cel.cel_p ) {
-    if ( u3R->cel.hav_w < (1U << u3a_page) ) {
+    if ( u3R->cel.hav_w < (((c3_w)1) << u3a_page) ) {
       cel_p = u3to(u3_post, u3R->cel.cel_p);
       cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
       return;
@@ -1464,7 +1464,7 @@ u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w)
 {
   u3_assert( 0 != str_c );
 
-  c3_z byt_z = ((c3_z)wor_w * 4);
+  c3_z byt_z = ((c3_z)wor_w * sizeof(c3_w));
   c3_z gib_z = (byt_z / 1000000000);
   c3_z mib_z = (byt_z % 1000000000) / 1000000;
   c3_z kib_z = (byt_z % 1000000) / 1000;

@@ -1525,7 +1525,7 @@ _count_post(u3_post som_p, c3_y rat_y)
       case 1: {  //  refcounted
         //  NB: "premarked"
         //
-        if ( 0x80000000 == u3a_Mark.buf_w[pag_w] ) {
+        if ( (((c3_w)1) << (u3a_word_bits-1)) == u3a_Mark.buf_w[pag_w] ) {
           u3a_Mark.buf_w[pag_w] = 1;
         }
         else {
@@ -1536,7 +1536,7 @@ _count_post(u3_post som_p, c3_y rat_y)
 
       case 2: {  //  refcounted, pre-mark
         if ( !u3a_Mark.buf_w[pag_w] ) {
-          u3a_Mark.buf_w[pag_w] = 0x80000000;
+          u3a_Mark.buf_w[pag_w] = (((c3_w)1) << (u3a_word_bits-1));
         }
       } break;
 
@@ -1615,7 +1615,7 @@ _count_post(u3_post som_p, c3_y rat_y)
       case 1: {  //  refcounted
         //  NB: "premarked"
         //
-        if ( 0x80000000 == mar_w[pos_w] ) {
+        if ( (((c3_w)1) << (u3a_word_bits-1)) == mar_w[pos_w] ) {
           mar_w[pos_w] = 1;
         }
         else {
@@ -1626,7 +1626,7 @@ _count_post(u3_post som_p, c3_y rat_y)
 
       case 2: {  //  refcounted, pre-mark
         if ( !mar_w[pos_w] ) {
-          mar_w[pos_w] = 0x80000000;
+          mar_w[pos_w] = (((c3_w)1) << (u3a_word_bits-1));
         }
       } break;
 
@@ -1706,7 +1706,7 @@ _sweep_counts(void)
             tot_w += siz_w << u3a_page;
           }
         }
-        else if ( 0x80000000 == u3a_Mark.buf_w[pag_w] ) {
+        else if ( (((c3_w)1) << (u3a_word_bits-1)) == u3a_Mark.buf_w[pag_w] ) {
           fprintf(stderr, "sweep: error: premarked %"PRIc3_w" pages at 0x%"PRIxc3_w"\r\n",
                           siz_w, som_p);
           u3_assert(0);
@@ -1758,7 +1758,7 @@ _sweep_counts(void)
                   tot_w += siz_w;
                 }
               }
-              else if ( 0x80000000 == mar_w[pos_w] ) {
+              else if ( (((c3_w)1) << (u3a_word_bits-1)) == mar_w[pos_w] ) {
                 fprintf(stderr, "sweep: error: premarked 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n",
                                 som_p, i_s, pag_w);
                 u3_assert(0);

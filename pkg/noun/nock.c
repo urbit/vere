@@ -3194,11 +3194,11 @@ u3n_mark()
 
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
+  qua_u[0]->siz_w = qua_u[0]->siz_w * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+  qua_u[1]->siz_w = u3h_mark(har_p) * sizeof(c3_w);
 
   qua_u[2] = NULL;
 

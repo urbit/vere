@@ -2793,10 +2793,10 @@ _ames_io_info(u3_auto* car_u)
   u3_ames*    sam_u = (u3_ames*)car_u;
   c3_h sac_h, lax_h;
 
-  sac_h = u3h_count(sam_u->fin_s.sac_p) * 4;
+  sac_h = u3h_count(sam_u->fin_s.sac_p) * sizeof(c3_w);
   u3h_discount(sam_u->fin_s.sac_p);
 
-  lax_h = u3h_count(sam_u->lax_p) * 4;
+  lax_h = u3h_count(sam_u->lax_p) * sizeof(c3_w);
   u3h_discount(sam_u->lax_p);
 
   return u3i_list(
@@ -2833,10 +2833,10 @@ _ames_io_slog(u3_auto* car_u)
   u3_ames*    sam_u = (u3_ames*)car_u;
   c3_h sac_h, lax_h;
 
-  sac_h = u3h_count(sam_u->fin_s.sac_p) * 4;
+  sac_h = u3h_count(sam_u->fin_s.sac_p) * sizeof(c3_w);
   u3h_discount(sam_u->fin_s.sac_p);
 
-  lax_h = u3h_count(sam_u->lax_p) * 4;
+  lax_h = u3h_count(sam_u->lax_p) * sizeof(c3_w);
   u3h_discount(sam_u->lax_p);
 
 

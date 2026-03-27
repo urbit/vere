@@ -368,11 +368,11 @@ u3v_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
-  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
+  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[1]->nam_c = strdup("wish cache");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
   qua_u[2] = NULL;
 

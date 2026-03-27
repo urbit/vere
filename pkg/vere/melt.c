@@ -119,14 +119,14 @@ _melt_canon(_melt_ctx *can_u, u3_noun can)
   while ( can_u->len_w ) {
     top = &(can_u->tac[can_u->len_w - 1]);
 
-    if ( !(*top >> 31) ) {                       // head frame
+    if ( !(*top >> (u3a_word_bits - 1)) ) {                       // head frame
       cel_u = u3to(u3a_cell, *top << u3a_vits);
       _melt_xchange(can, &cel_u->hed);
-      *top |= 1U << 31;                          // tail frame
+      *top |= ((c3_w)1) << (u3a_word_bits - 1);                          // tail frame
       can   = _melt_canon_next(can_u, cel_u->tel);
     }
     else {
-      *top  &= (1U << 31) - 1;
+      *top  &= (((c3_w)1) << (u3a_word_bits - 1)) - 1;
       *top <<= u3a_vits;
       cel_u  = u3to(u3a_cell, *top);
       _melt_xchange(can, &cel_u->tel);

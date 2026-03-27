@@ -517,7 +517,7 @@ _pave_parts(void)
   u3a_init_heap();
 
   if ( &(u3H->rod_u) != u3R ) {
-    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
+    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(((c3_w)1) << u3a_page));
   }
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
@@ -553,7 +553,7 @@ static void
 _pave_home(void)
 {
   u3_post top_p = u3C.wor_i - u3a_walign;
-  u3_post bot_p = 1U << u3a_page;
+  u3_post bot_p = ((c3_w)1) << u3a_page;
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, sizeof(u3v_home));
@@ -568,7 +568,7 @@ _pave_home(void)
   _pave_parts();
 }
 
-STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
+STATIC_ASSERT( (c3_wiseof(u3v_home) <= (((c3_w)1) << u3a_page)),
                "home road size" );
 STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
@@ -601,8 +601,8 @@ _find_home(void)
     abort();
   }
   if ( (12 + ((pam_d >> 3) & 7)) != (u3a_page + 2) ) {
-    fprintf(stderr, "page-size mismatch: %u in snapshot; %" PRIc3_w " in binary\r\n",
-                    1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
+    fprintf(stderr, "page-size mismatch: %" PRIc3_w " in snapshot; %" PRIc3_w " in binary\r\n",
+                    ((c3_w)1) << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
     abort();
   }
 

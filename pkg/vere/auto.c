@@ -463,7 +463,7 @@ u3_auto_mark(u3_auto* car_u, c3_w *out_w)
       all_u[len_w]->qua_u = car_u->io.mark_f(car_u, &(all_u[len_w]->siz_w));
     }
 
-    all_u[len_w]->siz_w += _mark_ova(car_u->ext_u) * 4;
+    all_u[len_w]->siz_w += _mark_ova(car_u->ext_u) * sizeof(c3_w);
 
     tot_w += all_u[len_w]->siz_w;
     car_u  = car_u->nex_u;

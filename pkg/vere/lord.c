@@ -977,7 +977,7 @@ u3_lord_mark(u3_lord* god_u)
 
   u3m_quac* qac_u = c3_malloc(sizeof(*qac_u));
   qac_u->nam_c = strdup("lord ipc");
-  qac_u->siz_w = siz_w * 4;
+  qac_u->siz_w = siz_w * sizeof(c3_w);
   qac_u->qua_u = 0;
 
   return qac_u;

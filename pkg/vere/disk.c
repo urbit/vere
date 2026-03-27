@@ -1676,7 +1676,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       u3_assert(0);
     }
 
-    const c3_z pag_z = 1U << (u3a_page + 2);
+    const c3_z pag_z = ((c3_w)1) << (u3a_page + 2);
     void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
     c3_zs     ret_zs;
     c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);

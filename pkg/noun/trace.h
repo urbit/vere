@@ -16,7 +16,7 @@
 #endif
 
 #define SLOW_STACK_NAME  "/spin_stack_page_%d"
-#define TRACE_PSIZE (1U << (u3a_page +2))
+#define TRACE_PSIZE (((c3_w)1) << (u3a_page +2))
 
   /** Data structures.
   **/

@@ -162,7 +162,7 @@
         u3_noun tel;
       } u3a_cell;
 
-STATIC_ASSERT( (1U << u3a_min_log) == u3a_minimum,
+STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
 STATIC_ASSERT( u3a_vits <= u3a_min_log,
                "virtual-bit alignment" );
