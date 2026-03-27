@@ -1043,6 +1043,11 @@ u3_term_get_blew(c3_h tid_h)
   if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
        (c3y == uty_u->wsz_f(uty_u, &col_h, &row_h)) )
   {
+    //  clamp to defaults if ioctl returns zero
+    //  (e.g. Docker PTY with no attached reader)
+    //
+    if ( 0 == col_h ) { col_h = 80; }
+    if ( 0 == row_h ) { row_h = 24; }
     uty_u->tat_u.siz.col_h = col_h;
     uty_u->tat_u.siz.row_h = row_h;
   }
