@@ -10,7 +10,7 @@ typedef struct jmp_buf {
 #define _setjmp setjmp
 #define _longjmp longjmp
 #define longjmp(buf, val) {(buf).retval = (val); __builtin_longjmp((void**)((buf).buffer), 1);}
-#define setjmp(buf) (windows_setjmp((void**)(buf.buffer)) ? (buf.retval) : 0)
+#define setjmp(buf) ((__builtin_setjmp((void**)(buf->buffer)), windows_setjmp((void**)(buf->buffer))) ? (buf->retval) : 0)
 
 __attribute__((naked,returns_twice)) int windows_setjmp(void** buf);
 

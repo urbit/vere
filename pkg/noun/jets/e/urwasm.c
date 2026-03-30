@@ -1957,7 +1957,12 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     {
       wasm3_runtime->base_transient = CodeArena->buf_y;
       
-      if (0 == (jmp_i = setjmp(esc)))
+#ifndef U3_OS_windows
+        if ( 0 == (jmp_i = _setjmp(esc)) )
+#else
+        jmp_buf* jbuf_u = &esc;
+        if ( 0 == (jmp_i = _setjmp(jbuf_u)) )
+#endif
       {
         for (c3_w i = 0; i < n_imports; i++)
         {
@@ -2430,7 +2435,12 @@ u3we_lia_run_v1(u3_noun cor)
 
       while (1)
       {
-        if (0 == (jmp_i = setjmp(esc)))
+#ifndef U3_OS_windows
+        if ( 0 == (jmp_i = _setjmp(esc)) )
+#else
+        jmp_buf* jbuf_u = &esc;
+        if ( 0 == (jmp_i = _setjmp(jbuf_u)) )
+#endif
         {
           bin_y = _calloc_box(bin_len_w, 1);
           u3r_bytes(0, bin_len_w, bin_y, u3x_atom(q_octs));

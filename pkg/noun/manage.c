@@ -1452,8 +1452,12 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   /* Enter internal signal regime.
    */
   _cm_signal_deep();
-
+#ifndef U3_OS_windows
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
+#else
+  jmp_buf* sig_jbuf_u = &u3_Signal.jb;
+  if ( 0 != (sig_l = rsignal_setjmp(u3_Signal, sig_jbuf_u)) ) {
+#endif
     //  reinitialize trace state
     //
     u3t_init();
@@ -1477,7 +1481,12 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
+#ifndef U3_OS_windows
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  jmp_buf* jbuf_u = &u3R->esc.buf;
+  if ( 0 == (why = (u3_noun)_setjmp(jbuf_u)) ) {
+#endif
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1589,7 +1598,12 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
+#ifndef U3_OS_windows
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  jmp_buf* jbuf_u = &u3R->esc.buf;
+  if ( 0 == (why = (u3_noun)_setjmp(jbuf_u)) ) {
+#endif
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1690,7 +1704,12 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
+#ifndef U3_OS_windows
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  jmp_buf* jbuf_u = &u3R->esc.buf;
+  if ( 0 == (why = (u3_noun)_setjmp(jbuf_u)) ) {
+#endif
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1792,7 +1811,12 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
+#ifndef U3_OS_windows
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  jmp_buf* jbuf_u = &u3R->esc.buf;
+  if ( 0 == (why = (u3_noun)_setjmp(jbuf_u)) ) {
+#endif
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
