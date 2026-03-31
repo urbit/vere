@@ -7,6 +7,7 @@
 #include "types.h"
 #include "allocate.h"
 #include "manage.h"
+#include "retrieve.h"
 
   /**  Constants.
   **/
@@ -157,6 +158,11 @@
       **   Axes must be sorted in tree order.
       */
         void
-        u3x_mean(u3_noun a, ...);
+        u3x_vmean(u3_noun a, mean_pair pairs[], c3_z len_z);
+
+        #define u3x_mean(a, ...) u3x_vmean(a,                                               \
+            (mean_pair[]){__VA_ARGS__},                                                     \
+            ( sizeof((mean_pair[]){__VA_ARGS__}) / sizeof((mean_pair[]){__VA_ARGS__}[0]) )  \
+          )
 
 #endif /* ifndef U3_XTRACT_H */

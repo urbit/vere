@@ -146,14 +146,9 @@ u3r_at(u3_atom a, u3_noun b)
 **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
 **   Axes must be sorted in tree order.
 */
-  struct _mean_pair {
-    c3_w    axe_w;
-    u3_noun* som;
-  };
-
   static c3_w
   _mean_cut(c3_w               len_w,
-            struct _mean_pair* prs_m)
+            mean_pair* prs_m)
   {
     c3_w i_w, cut_t, cut_w;
 
@@ -174,7 +169,7 @@ u3r_at(u3_atom a, u3_noun b)
   static c3_o
   _mean_extract(u3_noun            som,
                 c3_w               len_w,
-                struct _mean_pair* prs_m)
+                mean_pair* prs_m)
   {
     if ( len_w == 0 ) {
       return c3y;
@@ -197,61 +192,10 @@ u3r_at(u3_atom a, u3_noun b)
   }
 
 c3_o
-u3r_vmean(u3_noun som, va_list ap)
+u3r_vmean(u3_noun a, mean_pair pairs[], c3_z len_z)
 {
-  va_list            aq;
-  c3_w               len_w;
-  struct _mean_pair* prs_m;
-
-  u3_assert(u3_none != som);
-
-  //  traverse copy of va_list for alloca
-  //
-  va_copy(aq, ap);
-  len_w = 0;
-
-  while ( 1 ) {
-    if ( 0 == va_arg(aq, c3_w) ) {
-      break;
-    }
-    va_arg(aq, u3_noun*);
-    len_w++;
-  }
-
-  va_end(aq);
-
-  u3_assert( 0 != len_w );
-  prs_m = alloca(len_w * sizeof(struct _mean_pair));
-
-  //  traverse va_list and extract args
-  //
-  {
-    c3_w i_w;
-
-    for ( i_w = 0; i_w < len_w; i_w++ ) {
-      prs_m[i_w].axe_w = va_arg(ap, c3_w);
-      prs_m[i_w].som = va_arg(ap, u3_noun*);
-    }
-
-    va_end(ap);
-  }
-
-  //  extract axis from som
-  //
-  return _mean_extract(som, len_w, prs_m);
-}
-
-c3_o
-u3r_mean(u3_noun som, ...)
-{
-  c3_o    ret_o;
-  va_list ap;
-
-  va_start(ap, som);
-  ret_o = u3r_vmean(som, ap);
-  va_end(ap);
-
-  return ret_o;
+  u3_assert(len_z < UINT32_MAX);
+  return _mean_extract(a, (c3_w)len_z, pairs);
 }
 
 //  stack frame for tracking noun comparison and unification
