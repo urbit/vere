@@ -1911,19 +1911,19 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     u3_noun susp_list;
 
     if ( c3n == u3r_mean(get,
-        2,   &yil_previous,
-        6,   &queue,
-        56,  &p_box_buffer,
-        57,  &q_box_buffer,
-        29,  &pad_box,
-        120, &p_mem_buffer,
-        121, &q_mem_buffer,
-        61,  &stack_offset,
-        62,  &runtime_offset,
-        126, &lia_shop,
-        254, &acc,
-        255, &susp_list,
-        0) 
+        (c3_w)2,   &yil_previous,
+        (c3_w)6,   &queue,
+        (c3_w)56,  &p_box_buffer,
+        (c3_w)57,  &q_box_buffer,
+        (c3_w)29,  &pad_box,
+        (c3_w)120, &p_mem_buffer,
+        (c3_w)121, &q_mem_buffer,
+        (c3_w)61,  &stack_offset,
+        (c3_w)62,  &runtime_offset,
+        (c3_w)126, &lia_shop,
+        (c3_w)254, &acc,
+        (c3_w)255, &susp_list,
+        u3_nul)
     )
     {
       return u3m_bail(c3__fail);

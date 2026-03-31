@@ -1093,7 +1093,7 @@ _test_cells()
     }
 
     a2 = 0;
-    u3r_mean(q, 2, &a2, u3_nul);
+    u3r_mean(q, (c3_w)2, &a2, u3_nul);
     if (a2 != a){
       printf("*** _test_cells: complicated (via u3r_list) a\n");
     }
