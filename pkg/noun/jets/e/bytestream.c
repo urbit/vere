@@ -13,8 +13,8 @@ static void
 _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
   if (c3n == u3r_mean(octs,
-             2, p_octs,
-             3, q_octs, u3_nul)){
+             (c3_w)2, p_octs,
+             (c3_w)3, q_octs, u3_nul)){
     u3m_bail(c3__exit);
   }
 
@@ -732,7 +732,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
   u3_atom pos;
   u3_noun octs;
 
-  u3x_mean(sea, 2, &pos, 3, &octs, u3_nul);
+  u3x_mean(sea, (c3_w)2, &pos, (c3_w)3, &octs, u3_nul);
 
   c3_w pos_w;
 
@@ -766,7 +766,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
     u3_atom sip, ken;
     c3_w sip_w, ken_w;
 
-    u3x_mean(ext, 2, &sip, 3, &ken, u3_nul);
+    u3x_mean(ext, (c3_w)2, &sip, (c3_w)3, &ken, u3_nul);
 
     if (c3n == u3r_safe_word(sip, &sip_w)) {
       // XX is u3z necessary here?
@@ -829,7 +829,7 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   u3_atom pos;
   u3_noun octs;
 
-  u3x_mean(sea, 2, &pos, 3, &octs, u3_nul);
+  u3x_mean(sea, (c3_w)2, &pos, (c3_w)3, &octs, u3_nul);
 
   c3_w pos_w;
 
@@ -863,7 +863,7 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
     u3_atom sip, ken;
     c3_w sip_w, ken_w;
 
-    u3x_mean(ext, 2, &sip, 3, &ken, u3_nul);
+    u3x_mean(ext, (c3_w)2, &sip, (c3_w)3, &ken, u3_nul);
 
     if (c3n == u3r_safe_word(sip, &sip_w)) {
       // XX is u3z necessary here?
@@ -932,9 +932,9 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   u3_atom num, bit;
   u3_noun bays;
 
-  u3x_mean(bits, 2, &num,
-                 6, &bit,
-                 7, &bays, u3_nul);
+  u3x_mean(bits, (c3_w)2, &num,
+                 (c3_w)6, &bit,
+                 (c3_w)7, &bays, u3_nul);
 
 
   c3_w n_w, num_w;
@@ -975,7 +975,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   u3_noun octs;
 
 
-  u3x_mean(bays, 2, &pos, 3, &octs, u3_nul);
+  u3x_mean(bays, (c3_w)2, &pos, (c3_w)3, &octs, u3_nul);
 
   if (c3n == u3r_safe_word(pos, &pos_w)) {
     return u3_none;
@@ -1039,9 +1039,9 @@ _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
   u3_atom num, bit;
   u3_noun bays;
 
-  u3x_mean(bits, 2, &num,
-                 6, &bit,
-                 7, &bays, u3_nul);
+  u3x_mean(bits, (c3_w)2, &num,
+                 (c3_w)6, &bit,
+                 (c3_w)7, &bays, u3_nul);
 
   c3_w n_w, num_w;
   c3_d bit_d;
@@ -1090,9 +1090,9 @@ _qe_bytestream_peek_bits(u3_atom n, u3_noun bits)
   u3_atom num, bit;
   u3_noun bays;
 
-  u3x_mean(bits, 2, &num,
-                 6, &bit,
-                 7, &bays, u3_nul);
+  u3x_mean(bits, (c3_w)2, &num,
+                 (c3_w)6, &bit,
+                 (c3_w)7, &bays, u3_nul);
 
   c3_w n_w, num_w;
   c3_d bit_d;
@@ -1147,9 +1147,9 @@ _qe_bytestream_read_bits(u3_atom n, u3_noun bits)
   u3_atom num, bit;
   u3_noun bays;
 
-  u3x_mean(bits, 2, &num,
-                 6, &bit,
-                 7, &bays, u3_nul);
+  u3x_mean(bits, (c3_w)2, &num,
+                 (c3_w)6, &bit,
+                 (c3_w)7, &bays, u3_nul);
 
   c3_w n_w, num_w;
   c3_d bit_d;
@@ -1209,9 +1209,9 @@ _qe_bytestream_byte_bits(u3_noun bits)
   u3_atom num, bit;
   u3_noun bays;
 
-  u3x_mean(bits, 2, &num,
-                 6, &bit,
-                 7, &bays, u3_nul);
+  u3x_mean(bits, (c3_w)2, &num,
+                 (c3_w)6, &bit,
+                 (c3_w)7, &bays, u3_nul);
 
   c3_w num_w;
   c3_d bit_d;

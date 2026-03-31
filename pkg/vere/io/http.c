@@ -2831,7 +2831,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
     if ( c3y == u3a_is_atom(tan) ) {
       u3_noun lin = u3i_list(u3i_string("data:"),
                              u3k(tan),
-                             c3_s2('\n', '\n'),
+                             (u3_noun)c3_s2('\n', '\n'),
                              u3_none);
       u3_atom txt = u3qc_rap(3, lin);
       data = u3nt(u3_nul, u3r_met(3, txt), txt);
@@ -2861,7 +2861,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
         while ( u3_nul != low ) {
           u3_noun lin = u3i_list(u3i_string("data:"),
                                  u3qc_rap(3, u3h(low)),
-                                 c3_s2('\n', '\n'),
+                                 (u3_noun)c3_s2('\n', '\n'),
                                  u3_none);
           paz = u3kb_weld(paz, lin);
           low = u3t(low);
@@ -2933,7 +2933,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
-                             c3_s2('\n', '\n'),
+                             (u3_noun)c3_s2('\n', '\n'),
                              u3_none);
       u3_atom txt = u3qc_rap(3, lin);
       u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);

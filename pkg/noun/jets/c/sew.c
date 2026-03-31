@@ -58,8 +58,8 @@ u3wc_sew(u3_noun cor)
   u3_noun a, b, c, d, e;
   if ( (c3n == u3r_mean(cor, u3x_sam_2,  &a,
                              u3x_sam_12, &b,
-                                    106, &c,
-                                    107, &d,
+                                    (c3_w)106, &c,
+                                    (c3_w)107, &d,
                               u3x_sam_7, &e, u3_nul)) ||
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b)) ||

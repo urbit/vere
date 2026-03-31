@@ -3246,10 +3246,10 @@
     } else {
       u3_noun x_shape, x_bloq, x_kind, x_tail;
       if ( c3n == u3r_mean(x_meta,
-                            2, &x_shape,
-                            6, &x_bloq,
-                           14, &x_kind,
-                           15, &x_tail,
+                            (c3_w)2, &x_shape,
+                            (c3_w)6, &x_bloq,
+                           (c3_w)14, &x_kind,
+                           (c3_w)15, &x_tail,
                             u3_nul)
          )
       {
