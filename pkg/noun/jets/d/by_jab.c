@@ -55,9 +55,9 @@ u3_noun
 u3wdb_jab(u3_noun cor)
 {
   u3_noun a, key, fun;
-  u3x_mean(cor, u3x_sam_2,   &key,
-                u3x_sam_3,   &fun,
-                u3x_con_sam, &a, u3_nul);
+  u3x_mean(cor, {u3x_sam_2,   &key},
+                {u3x_sam_3,   &fun},
+                {u3x_con_sam, &a});
 
   return u3qdb_jab(a, key, fun);
 }

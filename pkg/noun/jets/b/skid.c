@@ -57,6 +57,6 @@ u3_noun
 u3wb_skid(u3_noun cor)
 {
   u3_noun a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
+  u3x_mean(cor, {u3x_sam_2, &a}, {u3x_sam_3, &b});
   return u3qb_skid(a, b);
 }

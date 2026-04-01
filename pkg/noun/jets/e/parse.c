@@ -168,9 +168,9 @@
   {
     u3_noun van, raq, vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
-                               u3x_sam_3, &sab,
-                               u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex},
+                               {u3x_sam_3, &sab},
+                               {u3x_con, &van})) ||
          (u3_none == (raq = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -215,8 +215,8 @@
   {
     u3_noun van, cus, sef, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
-         (c3n == u3r_mean(van, u3x_sam_2, &cus, u3x_sam_3, &sef, u3_nul)) )
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
+         (c3n == u3r_mean(van, {u3x_sam_2, &cus}, {u3x_sam_3, &sef})) )
     {
       return u3m_bail(c3__fail);
     } else {
@@ -266,8 +266,8 @@
   {
     u3_noun van, poq, sef, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
-         (c3n == u3r_mean(van, u3x_sam_2, &poq, u3x_sam_3, &sef, u3_nul)) )
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
+         (c3n == u3r_mean(van, {u3x_sam_2, &poq}, {u3x_sam_3, &sef})) )
     {
       return u3m_bail(c3__fail);
     } else {
@@ -327,9 +327,9 @@
   {
     u3_noun van, raq, vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
-                               u3x_sam_3, &sab,
-                               u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex},
+                               {u3x_sam_3, &sab},
+                               {u3x_con, &van})) ||
          (u3_none == (raq = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -358,7 +358,7 @@
   {
     u3_noun van, huf, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
          (u3_none == (huf = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -433,9 +433,9 @@
   {
     u3_noun van, bus, vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
-                                u3x_sam_3, &sab,
-                                u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex},
+                                {u3x_sam_3, &sab},
+                                {u3x_con, &van})) ||
          (u3_none == (bus = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -492,8 +492,8 @@
   {
     u3_noun van, hez, sef, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
-         (c3n == u3r_mean(van, u3x_sam_2, &hez, u3x_sam_3, &sef, u3_nul)) )
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
+         (c3n == u3r_mean(van, {u3x_sam_2, &hez}, {u3x_sam_3, &sef})) )
     {
       return u3m_bail(c3__fail);
     }
@@ -529,7 +529,7 @@
   {
     u3_noun van, daf, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
          (u3_none == (daf = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -568,7 +568,7 @@
   {
     u3_noun van, bud, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
          (u3_none == (bud = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -611,7 +611,7 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, u3_nul)) ) {
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex}, {u3x_sam_3, &sab})) ) {
       return u3m_bail(c3__exit);
     } else {
       return _cqe_pfix(vex, sab);
@@ -666,7 +666,7 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, u3_nul)) ) {
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex}, {u3x_sam_3, &sab})) ) {
       return u3m_bail(c3__exit);
     } else {
       return _cqe_plug(vex, sab);
@@ -702,7 +702,7 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, u3_nul)) ) {
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex}, {u3x_sam_3, &sab})) ) {
       return u3m_bail(c3__exit);
     } else {
       return u3qe_pose(vex, sab);
@@ -757,7 +757,7 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, u3_nul)) ) {
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &vex}, {u3x_sam_3, &sab})) ) {
       return u3m_bail(c3__exit);
     } else {
       return _cqe_sfix(vex, sab);
@@ -801,7 +801,7 @@
   {
     u3_noun van, zep, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
          (u3_none == (zep = u3r_at(u3x_sam, van))) )
     {
       return u3m_bail(c3__fail);
@@ -848,8 +848,8 @@
   {
     u3_noun van, gob, sef, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
-         (c3n == u3r_mean(van, u3x_sam_2, &gob, u3x_sam_3, &sef, u3_nul)) )
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
+         (c3n == u3r_mean(van, {u3x_sam_2, &gob}, {u3x_sam_3, &sef})) )
     {
       return u3m_bail(c3__fail);
     } else {
@@ -943,7 +943,7 @@
   {
     u3_noun con, hel, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &con, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &con})) ||
          (u3_none == (hel = u3r_at(2, con))) )
     {
       return u3m_bail(c3__fail);
@@ -1035,11 +1035,10 @@
   {
     u3_noun van, rud, raq, fel, tub;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, u3_nul)) ||
-         (c3n == u3r_mean(van, u3x_sam_2, &rud,
-                               u3x_sam_6, &raq,
-                               u3x_sam_7, &fel,
-                               u3_nul)) )
+    if ( (c3n == u3r_mean(cor, {u3x_sam, &tub}, {u3x_con, &van})) ||
+         (c3n == u3r_mean(van, {u3x_sam_2, &rud},
+                               {u3x_sam_6, &raq},
+                               {u3x_sam_7, &fel})) )
     {
       return u3m_bail(c3__fail);
     } else {

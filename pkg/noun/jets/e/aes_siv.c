@@ -189,9 +189,9 @@ u3wea_siva_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+  if ( c3n == u3r_mean(cor, {u3x_sam, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -223,11 +223,11 @@ u3wea_siva_de(u3_noun cor)
   u3_noun key, ads, iv, len, txt;
 
   if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+                       {u3x_sam_2, &iv},
+                       {u3x_sam_6, &len},
+                       {u3x_sam_7, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -257,9 +257,9 @@ u3wea_sivb_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+  if ( c3n == u3r_mean(cor, {u3x_sam, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -291,11 +291,11 @@ u3wea_sivb_de(u3_noun cor)
   u3_noun key, ads, iv, len, txt;
 
   if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+                       {u3x_sam_2, &iv},
+                       {u3x_sam_6, &len},
+                       {u3x_sam_7, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -324,9 +324,9 @@ u3wea_sivc_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+  if ( c3n == u3r_mean(cor, {u3x_sam, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
@@ -358,11 +358,11 @@ u3wea_sivc_de(u3_noun cor)
   u3_noun key, ads, iv, len, txt;
 
   if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, u3_nul) ||
+                       {u3x_sam_2, &iv},
+                       {u3x_sam_6, &len},
+                       {u3x_sam_7, &txt},
+                       {u3x_con_sam_2, &key},
+                       {u3x_con_sam_3, &ads}) ||
        c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
