@@ -181,14 +181,14 @@
         **   Mutate `som` with a 0-terminated list of axis, noun pairs.
         **   Axes must be cats (31 bit).
         */
-          typedef struct {c3_w axe_w; u3_noun som;} molt_pair;
+          typedef struct {c3_w axe_w; u3_noun som;} u3i_molt_pair;
 
           u3_noun
-          u3i_vmolt(u3_noun som, molt_pair pairs[], c3_z len_z);
+          u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z);
 
-          #define u3i_molt(a, ...) u3i_vmolt(a,                         \
-            (molt_pair[]){__VA_ARGS__},                                 \
-            ( sizeof((molt_pair[]){__VA_ARGS__}) / sizeof(molt_pair) )  \
+          #define u3i_molt(a, ...) u3i_vmolt(a,                                 \
+            (u3i_molt_pair[]){__VA_ARGS__},                                     \
+            ( sizeof((u3i_molt_pair[]){__VA_ARGS__}) / sizeof(u3i_molt_pair) )  \
           )
 
 #endif /* ifndef U3_IMPRISON_H */

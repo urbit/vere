@@ -147,8 +147,8 @@ u3r_at(u3_atom a, u3_noun b)
 **   Axes must be sorted in tree order.
 */
   static c3_w
-  _mean_cut(c3_w       len_w,
-            mean_pair* prs_m)
+  _mean_cut(c3_w           len_w,
+            u3r_mean_pair* prs_m)
   {
     c3_w i_w, cut_t, cut_w;
 
@@ -167,9 +167,9 @@ u3r_at(u3_atom a, u3_noun b)
   }
 
   static c3_o
-  _mean_extract(u3_noun    som,
-                c3_w       len_w,
-                mean_pair* prs_m)
+  _mean_extract(u3_noun        som,
+                c3_w           len_w,
+                u3r_mean_pair* prs_m)
   {
     if ( len_w == 0 ) {
       return c3y;
@@ -192,7 +192,7 @@ u3r_at(u3_atom a, u3_noun b)
   }
 
 c3_o
-u3r_vmean(u3_noun a, mean_pair pairs[], c3_z len_z)
+u3r_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z)
 {
   u3_assert(len_z < c3_w_max);
   return _mean_extract(a, (c3_w)len_z, pairs);

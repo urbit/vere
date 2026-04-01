@@ -158,11 +158,11 @@
       **   Axes must be sorted in tree order.
       */
         void
-        u3x_vmean(u3_noun a, mean_pair pairs[], c3_z len_z);
+        u3x_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z);
 
-        #define u3x_mean(a, ...) u3x_vmean(a,                           \
-            (mean_pair[]){__VA_ARGS__},                                 \
-            ( sizeof((mean_pair[]){__VA_ARGS__}) / sizeof(mean_pair) )  \
+        #define u3x_mean(a, ...) u3x_vmean(a,                                   \
+            (u3r_mean_pair[]){__VA_ARGS__},                                     \
+            ( sizeof((u3r_mean_pair[]){__VA_ARGS__}) / sizeof(u3r_mean_pair) )  \
           )
 
 #endif /* ifndef U3_XTRACT_H */

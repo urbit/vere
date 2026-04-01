@@ -115,14 +115,14 @@
       **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
       **   Axes must be sorted in tree order.
       */
-        typedef struct {c3_w axe_w; u3_noun* som;} mean_pair;
+        typedef struct {c3_w axe_w; u3_noun* som;} u3r_mean_pair;
 
         c3_o
-        u3r_vmean(u3_noun a, mean_pair pairs[], c3_z len_z);
+        u3r_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z);
 
-        #define u3r_mean(a, ...) u3r_vmean(a,                           \
-            (mean_pair[]){__VA_ARGS__},                                 \
-            ( sizeof((mean_pair[]){__VA_ARGS__}) / sizeof(mean_pair) )  \
+        #define u3r_mean(a, ...) u3r_vmean(a,                                   \
+            (u3r_mean_pair[]){__VA_ARGS__},                                     \
+            ( sizeof((u3r_mean_pair[]){__VA_ARGS__}) / sizeof(u3r_mean_pair) )  \
           )
 
       /* u3r_mug_both(): Join two mugs.

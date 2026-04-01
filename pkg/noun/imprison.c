@@ -767,7 +767,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 
   static c3_w
   _molt_cut(c3_w       len_w,
-            molt_pair* pms_m)
+            u3i_molt_pair* pms_m)
   {
     c3_w i_w, cut_t, cut_w;
 
@@ -788,7 +788,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
   static u3_noun                    //  transfer
   _molt_apply(u3_noun    som,       //  retain
               c3_w       len_w,
-              molt_pair* pms_m)     //  transfer
+              u3i_molt_pair* pms_m)     //  transfer
   {
     if ( len_w == 0 ) {
       return u3k(som);
@@ -811,7 +811,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
   }
 
 u3_noun
-u3i_vmolt(u3_noun som, molt_pair pairs[], c3_z len_z)
+u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z)
 {
   u3_assert(len_z < c3_w_max);
   u3_noun pro = _molt_apply(som, (c3_w)len_z, pairs);
