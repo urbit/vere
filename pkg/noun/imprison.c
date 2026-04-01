@@ -687,43 +687,17 @@ u3i_tape(const c3_c* txt_c)
   } else return u3i_cell(*txt_c, u3i_tape(txt_c + 1));
 }
 
-/* u3i_list(): list from `u3_none`-terminated varargs.
+/* u3i_list(): build a list
 */
 u3_noun
-u3i_list(u3_weak som, ...)
+u3i_vlist(u3_noun* som, c3_z len_z)
 {
-  u3_noun  lit = u3_nul;
-  u3_noun* let = &lit;
-  u3_noun  *hed, *tel;
-  va_list  ap;
+  u3_noun lit = u3_nul;
 
-  if ( u3_none == som ) {
-    return lit;
-  }
-  else {
-    *let = u3i_defcons(&hed, &tel);
-    *hed = som;
-    let = tel;
+  while ( len_z-- ) {
+    lit = u3nc(som[len_z], lit);
   }
 
-  {
-    u3_noun tem;
-
-    va_start(ap, som);
-    while ( 1 ) {
-      if ( u3_none == (tem = va_arg(ap, u3_weak)) ) {
-        break;
-      }
-      else {
-        *let = u3i_defcons(&hed, &tel);
-        *hed = tem;
-        let = tel;
-      }
-    }
-    va_end(ap);
-  }
-
-  *let = u3_nul;
   return lit;
 }
 

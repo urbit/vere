@@ -1546,8 +1546,7 @@ _mars_wyrd_card(c3_m nam_m, c3_h ver_h, c3_l sev_l)
                u3nc(c3__lull, VERE_LULL),
                u3nc(c3__arvo, VERE_ARVO),
                u3nc(c3__hoon, VERE_HOON),
-               u3nc(c3__nock, VERE_NOCK),
-               u3_none);
+               u3nc(c3__nock, VERE_NOCK));
   }
   //  XX speculative!
   //

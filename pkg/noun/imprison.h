@@ -160,7 +160,12 @@
         /* u3i_list(): list from `u3_none`-terminated varargs.
         */
           u3_noun
-          u3i_list(u3_weak som, ...);
+          u3i_vlist(u3_noun* som, c3_z len_z);
+
+#         define u3i_list(...) u3i_vlist((u3_noun[]){__VA_ARGS__},                      \
+            ( sizeof((u3_noun[]){__VA_ARGS__}) / sizeof((u3_noun[]){__VA_ARGS__}[0]) )  \
+          )
+
 #         define u3nl u3i_list
 
         /* u3i_edit():

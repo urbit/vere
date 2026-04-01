@@ -1017,8 +1017,7 @@ u3_pier_info(u3_pier* pir_u)
     c3__pier,
     u3i_list(
       nat,
-      u3_lord_info(pir_u->god_u),
-      u3_none));
+      u3_lord_info(pir_u->god_u)));
 }
 
 /* u3_pier_slog(): print status info.
