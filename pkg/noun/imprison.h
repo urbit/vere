@@ -162,8 +162,8 @@
           u3_noun
           u3i_vlist(u3_noun* som, c3_z len_z);
 
-#         define u3i_list(...) u3i_vlist((u3_noun[]){__VA_ARGS__},                      \
-            ( sizeof((u3_noun[]){__VA_ARGS__}) / sizeof((u3_noun[]){__VA_ARGS__}[0]) )  \
+#         define u3i_list(...) u3i_vlist((u3_noun[]){__VA_ARGS__},  \
+            ( sizeof((u3_noun[]){__VA_ARGS__}) / sizeof(u3_noun) )  \
           )
 
 #         define u3nl u3i_list
@@ -186,9 +186,9 @@
           u3_noun
           u3i_vmolt(u3_noun som, molt_pair pairs[], c3_z len_z);
 
-          #define u3i_molt(a, ...) u3i_vmolt(a,                                             \
-            (molt_pair[]){__VA_ARGS__},                                                     \
-            ( sizeof((molt_pair[]){__VA_ARGS__}) / sizeof((molt_pair[]){__VA_ARGS__}[0]) )  \
+          #define u3i_molt(a, ...) u3i_vmolt(a,                         \
+            (molt_pair[]){__VA_ARGS__},                                 \
+            ( sizeof((molt_pair[]){__VA_ARGS__}) / sizeof(molt_pair) )  \
           )
 
 #endif /* ifndef U3_IMPRISON_H */

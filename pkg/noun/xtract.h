@@ -160,9 +160,9 @@
         void
         u3x_vmean(u3_noun a, mean_pair pairs[], c3_z len_z);
 
-        #define u3x_mean(a, ...) u3x_vmean(a,                                               \
-            (mean_pair[]){__VA_ARGS__},                                                     \
-            ( sizeof((mean_pair[]){__VA_ARGS__}) / sizeof((mean_pair[]){__VA_ARGS__}[0]) )  \
+        #define u3x_mean(a, ...) u3x_vmean(a,                           \
+            (mean_pair[]){__VA_ARGS__},                                 \
+            ( sizeof((mean_pair[]){__VA_ARGS__}) / sizeof(mean_pair) )  \
           )
 
 #endif /* ifndef U3_XTRACT_H */
