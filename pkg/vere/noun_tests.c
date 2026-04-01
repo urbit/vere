@@ -1606,7 +1606,7 @@ _test_imprison_complex()
     u3_noun axis_2 = 6;
     u3_noun newval_2 = 777;
 
-    u3_noun hacked = u3i_molt(q, axis_1, newval_1, axis_2, newval_2, u3_nul);
+    u3_noun hacked = u3i_molt(q, {axis_1, newval_1}, {axis_2, newval_2});
 
     u3_noun read_1;
     u3_noun read_2;

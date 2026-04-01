@@ -790,14 +790,10 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 **   Mutate `som` with a 0-terminated list of axis, noun pairs.
 **   Axes must be cats (31 bit).
 */
-  struct _molt_pair {
-    c3_w    axe_w;
-    u3_noun som;
-  };
 
   static c3_w
-  _molt_cut(c3_w               len_w,
-            struct _molt_pair* pms_m)
+  _molt_cut(c3_w       len_w,
+            molt_pair* pms_m)
   {
     c3_w i_w, cut_t, cut_w;
 
@@ -815,10 +811,10 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     return cut_t ? cut_w : i_w;
   }
 
-  static u3_noun                            //  transfer
-  _molt_apply(u3_noun            som,       //  retain
-              c3_w               len_w,
-              struct _molt_pair* pms_m)     //  transfer
+  static u3_noun                    //  transfer
+  _molt_apply(u3_noun    som,       //  retain
+              c3_w       len_w,
+              molt_pair* pms_m)     //  transfer
   {
     if ( len_w == 0 ) {
       return u3k(som);
@@ -841,47 +837,10 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
   }
 
 u3_noun
-u3i_molt(u3_noun som, ...)
+u3i_vmolt(u3_noun som, molt_pair pairs[], c3_z len_z)
 {
-  va_list            ap;
-  c3_w               len_w;
-  struct _molt_pair* pms_m;
-  u3_noun            pro;
-
-  //  Count.
-  //
-  len_w = 0;
-  {
-    va_start(ap, som);
-    while ( 1 ) {
-      if ( 0 == va_arg(ap, c3_w) ) {
-        break;
-      }
-      va_arg(ap, u3_weak*);
-      len_w++;
-    }
-    va_end(ap);
-  }
-
-  u3_assert( 0 != len_w );
-  pms_m = alloca(len_w * sizeof(struct _molt_pair));
-
-  //  Install.
-  //
-  {
-    c3_w i_w;
-
-    va_start(ap, som);
-    for ( i_w = 0; i_w < len_w; i_w++ ) {
-      pms_m[i_w].axe_w = va_arg(ap, c3_w);
-      pms_m[i_w].som = va_arg(ap, u3_noun);
-    }
-    va_end(ap);
-  }
-
-  //  Apply.
-  //
-  pro = _molt_apply(som, len_w, pms_m);
+  u3_assert(len_z < c3_w_max);
+  u3_noun pro = _molt_apply(som, (c3_w)len_z, pairs);
   u3z(som);
   return pro;
 }
