@@ -285,26 +285,39 @@ _cm_stack_unwind(c3_l sig_l)
   u3_noun tax;
 
   if ( c3__meme == sig_l ) {
-    u3_noun xat = u3R->bug.tax;
+    //  heuristic: if we crash with %meme then our stacktrace might be too big
+    //  to copy, so we trim it.
+    //
+    //  we abuse the fact that the cells in the stacktrace list are not
+    //  structurally shared with anything else
+    //  we also use the fact that the mug hashes of the stacktrace list
+    //  do not matter (since this is a nondeterministic crash, so the
+    //  stacktrace won't get materialized as a product of the outer
+    //  computation), thus we are allowed to edit the noun in place.
+    //
+    u3_noun beg = u3R->bug.tax;
+    //  512 is from +mook to make things more consistent
+    //
     for (c3_w i_w = 0; i_w < 512; i_w++) {
-      if ( u3_nul == xat ) break;
-      xat = u3t(xat);
+      if ( u3_nul == beg ) break;
+      beg = u3t(beg);
     }
 
-    if ( u3_nul != xat ) {
-      //  heuristic: if we crash with %meme then our stacktrace might be too big
-      //  to copy, so we trim it.
-      //
-      //  we abuse the fact that the cells in the stacktrace list are not
-      //  structurally shared with anything else
-      //  we also use the fact that the mug hashes of the stacktrace list
-      //  do not matter (since this is a nondeterministic crash, so the
-      //  stacktrace won't get materialized as a product of the outer
-      //  computation), thus we are allowed to edit the noun in place.
-      //
-      u3a_cell* pom_u = u3a_to_ptr(xat);
-      u3z(pom_u->tel);
-      pom_u->tel = u3nc(u3nc(c3__mean, u3i_string("meme: trace")), u3_nul);
+    if ( u3_nul != beg ) {
+      u3_noun end = u3R->bug.tax, xat = beg;
+      c3_w len_w = 0;
+      while (u3_nul != xat) {
+        xat = u3t(xat);
+        end = u3t(end);
+        len_w++;
+      }
+
+      if (len_w > 512) {
+        u3k(end);
+        u3a_cell* beg_u = u3a_to_ptr(beg);
+        u3z(beg_u->tel);
+        beg_u->tel = u3nc(u3nc(c3__mean, u3i_string("meme: trace")), end);
+      }
     }
   }
 
