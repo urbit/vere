@@ -157,7 +157,7 @@
           u3_noun
           u3i_tape(const c3_c* txt_c);
 
-        /* u3i_list(): list from `u3_none`-terminated varargs.
+        /* u3i_list(): list from the arguments
         */
           u3_noun
           u3i_vlist(u3_noun* som, c3_z len_z);
@@ -178,7 +178,7 @@
 
         /* u3i_molt():
         **
-        **   Mutate `som` with a 0-terminated list of axis, noun pairs.
+        **   Mutate `som` with a list of axis, noun pairs.
         **   Axes must be cats (31 bit).
         */
           typedef struct {c3_w axe_w; u3_noun som;} u3i_molt_pair;

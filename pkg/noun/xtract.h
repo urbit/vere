@@ -154,7 +154,7 @@
 
       /* u3x_mean():
       **
-      **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
+      **   Attempt to deconstruct `a` by axis, noun pairs.
       **   Axes must be sorted in tree order.
       */
         void

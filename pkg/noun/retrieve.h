@@ -112,7 +112,7 @@
 
       /* u3r_mean():
       **
-      **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
+      **   Attempt to deconstruct `a` by axis, noun pairs.
       **   Axes must be sorted in tree order.
       */
         typedef struct {c3_w axe_w; u3_noun* som;} u3r_mean_pair;

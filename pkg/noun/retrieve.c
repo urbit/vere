@@ -143,7 +143,7 @@ u3r_at(u3_atom a, u3_noun b)
 
 /* u3r_mean():
 **
-**   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
+**   Attempt to deconstruct `a` by axis, noun pairs.
 **   Axes must be sorted in tree order.
 */
   static c3_w

@@ -761,7 +761,7 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
 
 /* u3i_molt():
 **
-**   Mutate `som` with a 0-terminated list of axis, noun pairs.
+**   Mutate `som` with a list of axis, noun pairs.
 **   Axes must be cats (31 bit).
 */
 
