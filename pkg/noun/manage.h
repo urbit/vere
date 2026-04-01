@@ -174,9 +174,10 @@
         void
         u3m_vgrab(u3_noun* som, c3_z len_z);
 
-        #define u3m_grab(...) u3m_vgrab((u3_noun[]){__VA_ARGS__},   \
-            ( sizeof((u3_noun[]){__VA_ARGS__}) / sizeof(u3_noun) )  \
-          )
+#       define u3m_grab(...) ({                               \
+          u3_noun _args[] = {__VA_ARGS__};                    \
+          u3m_vgrab(_args, sizeof(_args) / sizeof(u3_noun));  \
+          })
 
       /* u3m_water(): produce high and low watermarks.  Asserts u3R == u3H.
       */

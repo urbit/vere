@@ -120,10 +120,10 @@
         c3_o
         u3r_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z);
 
-        #define u3r_mean(a, ...) u3r_vmean(a,                                   \
-            (u3r_mean_pair[]){__VA_ARGS__},                                     \
-            ( sizeof((u3r_mean_pair[]){__VA_ARGS__}) / sizeof(u3r_mean_pair) )  \
-          )
+#       define u3r_mean(a, ...) ({                                      \
+          u3r_mean_pair _pairs[] = {__VA_ARGS__};                       \
+          u3r_vmean(a, _pairs, sizeof(_pairs) / sizeof(u3r_mean_pair)); \
+        })
 
       /* u3r_mug_both(): Join two mugs.
       */
