@@ -285,7 +285,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
     /* u3a_is_north(): yes if road [r] is north road.
     */
-#     define  u3a_is_north(r)  __((r)->cap_p > (r)->hat_p)
+#     define  u3a_is_north(r)  __((r)->mat_p > (r)->rut_p)
 
     /* u3a_is_south(): yes if road [r] is south road.
     */

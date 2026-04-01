@@ -398,8 +398,8 @@ _cm_signal_deep(void)
   // go utterly haywire.
   //
   if ( 0 == u3H->rod_u.bug.mer ) {
-    u3H->rod_u.bug.mer = u3i_string(
-      "emergency buffer with sufficient space to cons the trace and bail"
+    u3H->rod_u.bug.mer = u3i_tape(
+      "emergency buffer"
     );
   }
 
@@ -1209,8 +1209,8 @@ u3m_hate(c3_w pad_w)
   u3R->ear_p = u3R->cap_p;
   u3m_leap(pad_w);
 
-  u3R->bug.mer = u3i_string(
-    "emergency buffer with sufficient space to cons the trace and bail"
+  u3R->bug.mer = u3i_tape(
+    "emergency buffer"
   );
 }
 
