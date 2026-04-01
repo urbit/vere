@@ -280,9 +280,33 @@ _cm_stack_recover(u3a_road* rod_u)
 /* _cm_stack_unwind(): unwind to the top level, preserving all frames.
 */
 static u3_noun
-_cm_stack_unwind(void)
+_cm_stack_unwind(c3_l sig_l)
 {
   u3_noun tax;
+
+  if ( c3__meme == sig_l ) {
+    u3_noun xat = u3R->bug.tax;
+    for (c3_w i_w = 0; i_w < 512; i_w++) {
+      if ( u3_nul == xat ) break;
+      xat = u3t(xat);
+    }
+
+    if ( u3_nul != xat ) {
+      //  heuristic: if we crash with %meme then our stacktrace might be too big
+      //  to copy, so we trim it.
+      //
+      //  we abuse the fact that the cells in the stacktrace list are not
+      //  structurally shared with anything else
+      //  we also use the fact that the mug hashes of the stacktrace list
+      //  do not matter (since this is a nondeterministic crash, so the
+      //  stacktrace won't get materialized as a product of the outer
+      //  computation), thus we are allowed to edit the noun in place.
+      //
+      u3a_cell* pom_u = u3a_to_ptr(xat);
+      u3z(pom_u->tel);
+      pom_u->tel = u3nc(u3nc(c3__mean, u3i_string("meme: trace")), u3_nul);
+    }
+  }
 
   while ( u3R != &(u3H->rod_u) ) {
     u3_noun yat = u3m_love(u3R->bug.tax);
@@ -359,7 +383,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
       }
     }
 #else
-    tax = _cm_stack_unwind();
+    tax = _cm_stack_unwind(sig_l);
 #endif
     pro = u3nt(3, sig_l, tax);
     _cm_signal_reset();
