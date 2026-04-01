@@ -1503,7 +1503,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
         u3a_print_memory(stderr, "execute: top", u3R->all.max_w);
       }
 #endif
-      u3m_grab(pro, u3_none);
+      u3m_grab(pro);
     }
 
     /* Revert to external signal regime.
@@ -1622,7 +1622,7 @@ u3m_soft_cax(u3_funq fun_f,
     */
 #ifdef U3_MEMORY_DEBUG
     if ( u3C.wag_h & u3o_debug_ram ) {
-      u3m_grab(pro, u3_none);
+      u3m_grab(pro);
     }
 #endif
 
@@ -1730,7 +1730,7 @@ u3m_soft_run(u3_noun gul,
     */
 #ifdef U3_MEMORY_DEBUG
     if ( u3C.wag_h & u3o_debug_ram ) {
-      u3m_grab(pro, u3_none);
+      u3m_grab(pro);
     }
 #endif
 
@@ -2663,7 +2663,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
-    u3m_grab(u3_none);
+    u3m_grab();
     u3C.wag_h &= ~u3o_check_corrupt;
     u3l_log("boot: gc complete");
   }

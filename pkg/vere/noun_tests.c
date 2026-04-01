@@ -2182,7 +2182,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   //  XX the following tests leak memory
   //  fix and move to _test_noun()
