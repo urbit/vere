@@ -172,7 +172,11 @@
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */
         void
-        u3m_grab(u3_noun som, ...);   // terminate with u3_none
+        u3m_vgrab(u3_noun* som, c3_z len_z);
+
+        #define u3m_grab(...) u3m_vgrab((u3_noun[]){__VA_ARGS__},                       \
+            ( sizeof((u3_noun[]){__VA_ARGS__}) / sizeof((u3_noun[]){__VA_ARGS__}[0]) )  \
+          )
 
       /* u3m_water(): produce high and low watermarks.  Asserts u3R == u3H.
       */

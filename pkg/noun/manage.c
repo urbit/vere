@@ -1867,30 +1867,19 @@ u3m_mark_mute(void)
   c3_free(arr_u);
 }
 
-/* u3m_grab(): garbage-collect the world, plus extra roots.
+/* u3m_vgrab(): garbage-collect the world, plus extra roots.
 */
 void
-u3m_grab(u3_noun som, ...)   // terminate with u3_none
+u3m_vgrab(u3_noun* som, c3_z len_z)
 {
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
   u3a_mark_init();
-  {
-    va_list vap;
-    u3_noun tur;
-
-    va_start(vap, som);
-
-    if ( som != u3_none ) {
-      u3a_mark_noun(som);
-
-      while ( u3_none != (tur = va_arg(vap, u3_noun)) ) {
-        u3a_mark_noun(tur);
-      }
-    }
-    va_end(vap);
+  for (c3_z i_z = 0; i_z < len_z; i_z++) {
+    u3a_mark_noun(som[i_z]);
   }
+
   u3m_mark_mute();
   u3a_sweep();
 }
