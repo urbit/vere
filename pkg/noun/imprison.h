@@ -157,10 +157,16 @@
           u3_noun
           u3i_tape(const c3_c* txt_c);
 
-        /* u3i_list(): list from `u3_none`-terminated varargs.
+        /* u3i_list(): list from the arguments
         */
           u3_noun
-          u3i_list(u3_weak som, ...);
+          u3i_vlist(u3_noun* som, c3_z len_z);
+
+#         define u3i_list(...) ({                               \
+            u3_noun _args[] = {__VA_ARGS__};                    \
+            u3i_vlist(_args, sizeof(_args) / sizeof(u3_noun));  \
+          })
+
 #         define u3nl u3i_list
 
         /* u3i_edit():
@@ -173,10 +179,17 @@
 
         /* u3i_molt():
         **
-        **   Mutate `som` with a 0-terminated list of axis, noun pairs.
+        **   Mutate `som` with a list of axis, noun pairs.
         **   Axes must be cats (31 bit).
         */
+          typedef struct {c3_w axe_w; u3_noun som;} u3i_molt_pair;
+
           u3_noun
-          u3i_molt(u3_noun som, ...);
+          u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z);
+
+#         define u3i_molt(a, ...) ({                                      \
+            u3i_molt_pair _pairs[] = {__VA_ARGS__};                       \
+            u3i_vmolt(a, _pairs, sizeof(_pairs) / sizeof(u3i_molt_pair)); \
+          })
 
 #endif /* ifndef U3_IMPRISON_H */

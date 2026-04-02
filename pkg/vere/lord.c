@@ -936,8 +936,7 @@ u3_lord_info(u3_lord* god_u)
       u3_pier_mase("live",  god_u->liv_o),
       u3_pier_mase("event", u3i_chub(god_u->eve_d)),
       u3_pier_mase("queue", u3i_half(god_u->dep_h)),
-      u3_newt_moat_info(&god_u->out_u),
-      u3_none));
+      u3_newt_moat_info(&god_u->out_u)));
 }
 
 /* u3_lord_slog(): print status info.

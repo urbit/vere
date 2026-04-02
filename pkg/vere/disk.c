@@ -869,8 +869,7 @@ u3_disk_info(u3_disk* log_u)
 {
   u3_noun lit = u3i_list(
     u3_pier_mase("live",        log_u->liv_o),
-    u3_pier_mase("event", u3i_chub(log_u->dun_d)),
-    u3_none);
+    u3_pier_mase("event", u3i_chub(log_u->dun_d)));
 
   //  XX revise, include batches
   //
@@ -880,8 +879,7 @@ u3_disk_info(u3_disk* log_u)
         c3__save,
         u3i_list(
           u3_pier_mase("save-start", u3i_chub(log_u->put_u.ext_u->eve_d)),
-          u3_pier_mase("save-final", u3i_chub(log_u->put_u.ent_u->eve_d)),
-          u3_none)),
+          u3_pier_mase("save-final", u3i_chub(log_u->put_u.ent_u->eve_d)))),
       lit);
   }
 

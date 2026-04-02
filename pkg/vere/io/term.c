@@ -1327,7 +1327,7 @@ _term_it_show_tour(u3_utty* uty_u,
   }
 
   {
-    u3_noun tub = u3i_list(u3nc(u3nt(u3_nul, u3_nul, u3_nul), lin), u3_none);
+    u3_noun tub = u3i_list(u3nc(u3nt(u3_nul, u3_nul, u3_nul), lin));
     _term_it_save_stub(uty_u, tub);
   }
 

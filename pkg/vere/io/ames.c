@@ -2821,8 +2821,7 @@ _ames_io_info(u3_auto* car_u)
     u3_pier_mase("crashed",          u3i_chub(sam_u->sat_u.fal_d)),
     u3_pier_mase("evil",             u3i_chub(sam_u->sat_u.vil_d)),
     u3_pier_mase("lane-scry-fails",  u3i_chub(sam_u->sat_u.saw_d)),
-    u3_pier_mase("cached-lanes",     u3i_half(u3h_wyt(sam_u->lax_p))),
-    u3_none);
+    u3_pier_mase("cached-lanes",     u3i_half(u3h_wyt(sam_u->lax_p))));
 }
 
 /* _ames_io_slog(): print status info.

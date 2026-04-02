@@ -119,7 +119,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
     if ( u3C.wag_h & (u3o_debug_ram | u3o_check_corrupt) ) {
-      u3m_grab(sac, u3_none);
+      u3m_grab(sac);
     }
     return u3_nul;
   }
@@ -1546,8 +1546,7 @@ _mars_wyrd_card(c3_m nam_m, c3_h ver_h, c3_l sev_l)
                u3nc(c3__lull, VERE_LULL),
                u3nc(c3__arvo, VERE_ARVO),
                u3nc(c3__hoon, VERE_HOON),
-               u3nc(c3__nock, VERE_NOCK),
-               u3_none);
+               u3nc(c3__nock, VERE_NOCK));
   }
   //  XX speculative!
   //

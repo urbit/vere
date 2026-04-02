@@ -68,13 +68,13 @@
     u3_noun haj, boq, out, wik, key, wid, dat;
 
     // sample is [[haj boq out] [wik key] [wid dat]]
-    if ( (c3n == u3r_mean(cor, u3x_sam_4,  &haj,
-                               (c3_w)50,         &boq, // +<->-
-                               (c3_w)51,         &out, // +<->+
-                               u3x_sam_12, &wik,
-                               u3x_sam_13, &key,
-                               u3x_sam_14, &wid,
-                               u3x_sam_15, &dat, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam_4,  &haj},
+                               {50,         &boq}, {// +<->-
+                               (c3_w)51,         &out}, {// +<->+
+                               u3x_sam_12, &wik},
+                               {u3x_sam_13, &key},
+                               {u3x_sam_14, &wid},
+                               {u3x_sam_15, &dat})) ||
          (c3n == u3ud(boq)) ||
          (c3n == u3a_is_cat(boq)) ||
          (c3n == u3ud(out)) ||

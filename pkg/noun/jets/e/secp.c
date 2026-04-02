@@ -127,9 +127,8 @@ u3we_sign(u3_noun cor)
   u3_noun has, prv;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &has,
-                        u3x_sam_3,  &prv,
-                        u3_nul)) ||
+                        {u3x_sam_2,  &has},
+                        {u3x_sam_3,  &prv})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv))) {
     return u3m_bail(c3__exit);
@@ -169,11 +168,10 @@ u3we_reco(u3_noun cor)
     siv, sir, sis;  /* signature: v, r, s */
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,   &has,
-                        u3x_sam_6,   &siv,
-                        u3x_sam_14,  &sir,
-                        u3x_sam_15,  &sis,
-                        u3_nul)) ||
+                        {u3x_sam_2,   &has},
+                        {u3x_sam_6,   &siv},
+                        {u3x_sam_14,  &sir},
+                        {u3x_sam_15,  &sis})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(siv)) ||
        (c3n == u3ud(sir)) ||
@@ -208,9 +206,8 @@ u3we_make(u3_noun cor)
 {
   u3_noun has, prv;
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &has,
-                        u3x_sam_3,  &prv,
-                        u3_nul)) ||
+                        {u3x_sam_2,  &has},
+                        {u3x_sam_3,  &prv})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv)) ) {
     return u3m_bail(c3__exit);
@@ -251,10 +248,9 @@ u3we_sosi(u3_noun cor)
   u3_noun key, mes, aux;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &key,
-                        u3x_sam_6,  &mes,
-                        u3x_sam_7,  &aux,
-                        u3_nul)) ||
+                        {u3x_sam_2,  &key},
+                        {u3x_sam_6,  &mes},
+                        {u3x_sam_7,  &aux})) ||
        (c3n == u3ud(key)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(aux)) )
@@ -292,10 +288,9 @@ u3we_sove(u3_noun cor)
   u3_noun pub, mes, sig;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &pub,
-                        u3x_sam_6,  &mes,
-                        u3x_sam_7,  &sig,
-                        u3_nul)) ||
+                        {u3x_sam_2,  &pub},
+                        {u3x_sam_6,  &mes},
+                        {u3x_sam_7,  &sig})) ||
        (c3n == u3ud(pub)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(sig)) )

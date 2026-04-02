@@ -95,7 +95,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "ames okeedokee\n");
   return 0;

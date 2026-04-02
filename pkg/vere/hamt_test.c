@@ -129,7 +129,7 @@ main(int argc, char* argv[])
 
   u3h_free(pit_p);
 
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "test unix: ok\r\n");
   return 0;

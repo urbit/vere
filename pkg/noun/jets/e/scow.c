@@ -26,6 +26,6 @@ u3_noun
 u3we_scow(u3_noun cor)
 {
   u3_atom a, b;
-  u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, u3_nul);
+  u3x_mean(cor, {u3x_sam_2, &a}, {u3x_sam_3, &b});
   return u3qe_scow(u3x_atom(a), u3x_atom(b));
 }

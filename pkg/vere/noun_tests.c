@@ -1093,7 +1093,7 @@ _test_cells()
     }
 
     a2 = 0;
-    u3r_mean(q, (c3_w)2, &a2, u3_nul);
+    u3r_mean(q, {2, &a2});
     if (a2 != a){
       printf("*** _test_cells: complicated (via u3r_list) a\n");
     }
@@ -1573,7 +1573,7 @@ _test_imprison_complex()
     u3_noun hacked = u3i_edit(q, axis, newval);
 
     u3_noun read_1;
-    u3r_mean(hacked, axis, &read_1, u3_nul);
+    u3r_mean(hacked, {axis, &read_1});
 
     if (newval != read_1){
       printf("*** u3i_edit 1\n");
@@ -1606,11 +1606,11 @@ _test_imprison_complex()
     u3_noun axis_2 = 6;
     u3_noun newval_2 = 777;
 
-    u3_noun hacked = u3i_molt(q, axis_1, newval_1, axis_2, newval_2, u3_nul);
+    u3_noun hacked = u3i_molt(q, {axis_1, newval_1}, {axis_2, newval_2});
 
     u3_noun read_1;
     u3_noun read_2;
-    u3r_mean(hacked, axis_1, &read_1, axis_2, &read_2, u3_nul);
+    u3r_mean(hacked, {axis_1, &read_1}, {axis_2, &read_2});
 
     if (newval_1 != read_1){
       printf("*** u3i_molt 1\n");
@@ -2182,7 +2182,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   //  XX the following tests leak memory
   //  fix and move to _test_noun()

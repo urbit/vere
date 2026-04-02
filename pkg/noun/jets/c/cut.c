@@ -51,10 +51,10 @@
   {
     u3_noun a, b, c, d;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2,  &a,
-                                u3x_sam_12, &b,
-                                u3x_sam_13, &c,
-                                u3x_sam_7,  &d, u3_nul)) ||
+    if ( (c3n == u3r_mean(cor, {u3x_sam_2,  &a},
+                                {u3x_sam_12, &b},
+                                {u3x_sam_13, &c},
+                                {u3x_sam_7,  &d})) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ||

@@ -7,6 +7,7 @@
 #include "types.h"
 #include "allocate.h"
 #include "manage.h"
+#include "retrieve.h"
 
   /**  Constants.
   **/
@@ -153,10 +154,15 @@
 
       /* u3x_mean():
       **
-      **   Attempt to deconstruct `a` by axis, noun pairs; 0 terminates.
+      **   Attempt to deconstruct `a` by axis, noun pairs.
       **   Axes must be sorted in tree order.
       */
         void
-        u3x_mean(u3_noun a, ...);
+        u3x_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z);
+
+#       define u3x_mean(a, ...) ({                                      \
+          u3r_mean_pair _pairs[] = {__VA_ARGS__};                       \
+          u3x_vmean(a, _pairs, sizeof(_pairs) / sizeof(u3r_mean_pair)); \
+        })
 
 #endif /* ifndef U3_XTRACT_H */

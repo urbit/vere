@@ -838,8 +838,7 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
                      u3nc(c3__arvo, 235),        //  XX from both king and serf?
                      u3nc(c3__hoon, 136),        //  god_u->hon_y
-                     u3nc(c3__nock, 4),          //  god_u->noc_y
-                     u3_none);
+                     u3nc(c3__nock, 4));         //  god_u->noc_y
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
 }
 
@@ -1017,8 +1016,7 @@ u3_pier_info(u3_pier* pir_u)
     c3__pier,
     u3i_list(
       nat,
-      u3_lord_info(pir_u->god_u),
-      u3_none));
+      u3_lord_info(pir_u->god_u)));
 }
 
 /* u3_pier_slog(): print status info.

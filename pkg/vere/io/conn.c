@@ -516,9 +516,8 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
                    u3nc(c3__mass, u3_nul),
                    u3nc(c3__quic, u3_nul),
                    u3nc(c3__port,
-                        u3i_list((u3_noun)c3__ames, (u3_noun)c3__htls, (u3_noun)c3__http, u3_none)),
-                   u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul),
-                   u3_none));
+                        u3i_list(c3__ames, c3__htls, c3__http)),
+                   u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul)));
       } break;
       //  simple health check.
       //

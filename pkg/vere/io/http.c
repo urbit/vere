@@ -1610,8 +1610,7 @@ _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
                           u3nc(u3i_string("Cache-Control"),
                                u3i_string("no-cache")),
                           u3nc(u3i_string("Connection"),
-                               u3i_string("keep-alive")),
-                          u3_none);
+                               u3i_string("keep-alive")));
 
     _http_start_respond(req_u, 200, hed, u3_nul, c3n);
 
@@ -1646,8 +1645,7 @@ _http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
                           u3nc(u3i_string("Cache-Control"),
                                u3i_string("no-cache")),
                           u3nc(u3i_string("Connection"),
-                               u3i_string("keep-alive")),
-                          u3_none);
+                               u3i_string("keep-alive")));
 
     _http_start_respond(req_u, 200, hed, u3_nul, c3n);
 
@@ -2831,8 +2829,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
     if ( c3y == u3a_is_atom(tan) ) {
       u3_noun lin = u3i_list(u3i_string("data:"),
                              u3k(tan),
-                             (u3_noun)c3_s2('\n', '\n'),
-                             u3_none);
+                             c3_s2('\n', '\n'));
       u3_atom txt = u3qc_rap(3, lin);
       data = u3nt(u3_nul, u3r_met(3, txt), txt);
       u3z(lin);
@@ -2861,8 +2858,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
         while ( u3_nul != low ) {
           u3_noun lin = u3i_list(u3i_string("data:"),
                                  u3qc_rap(3, u3h(low)),
-                                 (u3_noun)c3_s2('\n', '\n'),
-                                 u3_none);
+                                 c3_s2('\n', '\n'));
           paz = u3kb_weld(paz, lin);
           low = u3t(low);
         }
@@ -2933,8 +2929,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
-                             (u3_noun)c3_s2('\n', '\n'),
-                             u3_none);
+                             c3_s2('\n', '\n'));
       u3_atom txt = u3qc_rap(3, lin);
       u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
 
@@ -3135,8 +3130,7 @@ _http_io_info(u3_auto* car_u)
   }
   res = u3i_list(
     u3_pier_mase("instance", htd_u->sev_l),
-    u3_pier_mase("open-slogstreams", u3i_word(sec_w)),
-    u3_none);
+    u3_pier_mase("open-slogstreams", u3i_word(sec_w)));
 
   while ( 0 != htp_u ) {
     res = u3nc(
@@ -3147,8 +3141,7 @@ _http_io_info(u3_auto* car_u)
           u3_pier_mase("loopback",    htp_u->lop),
           u3_pier_mase("live",        htp_u->liv),
           u3_pier_mase("port",        htp_u->por_s),
-          u3_pier_mase("connections", htp_u->coq_l),
-          u3_none)),
+          u3_pier_mase("connections", htp_u->coq_l))),
       res);
     htp_u = htp_u->nex_u;
   }

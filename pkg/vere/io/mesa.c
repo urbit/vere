@@ -2133,7 +2133,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_noun her = u3dc("scot", c3__p, u3_ship_to_noun(nam_u->her_u));
   u3_noun rut = u3dc("scot", c3__uv, u3i_bytes(32, root));
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun sky = u3i_list(typ, her, aut, rut, pax, u3_none);
+  u3_noun sky = u3i_list(typ, her, aut, rut, pax);
   u3_mesa_cb_data* ver_u = c3_malloc(sizeof(u3_mesa_cb_data));
   ver_u->sam_u = sam_u;
   ver_u->nam_u = req_u->pic_u->pac_u.pek_u.nam_u;
