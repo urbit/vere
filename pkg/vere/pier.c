@@ -559,7 +559,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       } else {
         // Trying to boot old ship after breach
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "you are trying to boot an existing ship from a keyfile,"
+                "you are trying to boot an existing ship from a keyfile, "
                 "resume the latest version of the ship or breach\r\n"
                 "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                 who_c);

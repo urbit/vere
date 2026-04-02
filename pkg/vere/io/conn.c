@@ -704,6 +704,7 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _conn_moor_poke;
   can_u->mor_u.bal_f = _conn_moor_bail;
+  can_u->mor_u.fag_w = 1; // XX cleanup, nonzero means ignore EOF
   can_u->coq_l = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
@@ -866,6 +867,10 @@ _conn_ef_handle(u3_conn*  con_u,
     else {
       can_u->mor_u.bal_f(can_u, -4, "handle-unknown");
       u3_king_bail();
+    }
+
+    if ( !uv_is_readable((uv_stream_t*)&con_u->san_u->pyp_u) ) {
+      _conn_close_chan(con_u->san_u, can_u);
     }
   }
   else {
