@@ -474,7 +474,7 @@ _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
 
   if ( !BIT_SET(map_w, bit_w) ) {
     har_u->arm_u.mug_w = _ch_skip_slot(har_u->arm_u.mug_w, lef_w);
-    return c3n;
+    return u3_none;
   }
 
   rem_w = CUT_END(rem_w, lef_w);
