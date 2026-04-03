@@ -14,9 +14,11 @@
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
 #ifndef VERE64
-#     define u3a_vits    2
+#     define u3a_vits   2
+#     define u3a_wits   0  //  word-size: 0==32-bit, 1==64-bit
 #else
-#     define u3a_vits    0
+#     define u3a_vits   0
+#     define u3a_wits   1  //  word-size: 0==32-bit, 1==64-bit
 #endif
 
 #     define u3a_word_bytes  (sizeof(c3_w))

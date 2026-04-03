@@ -1748,9 +1748,11 @@ _disk_migrate_loom_back(c3_c* dir_c, c3_d eve_d)
   c3_i fid_i = _disk_load_v6_loom(dir_c, lom_z);
 
   c3_d lom_d = *((c3_d *)u3_Loom_v6);
+  c3_d pam_d = *((c3_d *)u3_Loom_v6 + 1);
 
-  if ( U3V_VER6 != lom_d ) {
-    fprintf(stderr, "loom: unknown stale v6 loom version: %" PRIu64 "\r\n", lom_d);
+  if ( (pam_d & 1) == u3a_wits ) {
+    fprintf(stderr, "loom: expected 64-bit loom, got 32-bit "
+                    "(ver=%" PRIu64 ", pam=%" PRIu64 ")\r\n", lom_d, pam_d);
     u3_assert(0);
   }
 
@@ -1992,43 +1994,43 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 
 #ifdef VERE64
-      //  detect a v5 (32-bit) loom in chk and migrate it to v6 (64-bit)
-      //  before loading into the main loom
+      //  detect a 32-bit loom in chk and migrate it to 64-bit
+      //  before loading into the main loom; use pam_d word-size bit (u3a_wits)
       //
       {
         c3_c img_c[8193];
         snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
 
-        c3_d ver_d = 0;
+        c3_d pam_d = 0;
         c3_i fid_i = open(img_c, O_RDONLY);
         if ( -1 != fid_i ) {
-          pread(fid_i, &ver_d, sizeof(ver_d), 0);
+          pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
           close(fid_i);
-        }
 
-        if ( U3V_VER5 == ver_d ) {
-          _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
-          u3m_stop();
+          if ( (pam_d & 1) != u3a_wits ) {
+            _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
+            u3m_stop();
+          }
         }
       }
 #else
-      //  detect a v6 (64-bit) loom in chk and migrate it back to v5 (32-bit)
-      //  before loading into the main loom
+      //  detect a 64-bit loom in chk and migrate it back to 32-bit
+      //  before loading into the main loom; use pam_d word-size bit (u3a_wits)
       //
       {
         c3_c img_c[8193];
         snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
 
-        c3_d ver_d = 0;
+        c3_d pam_d = 0;
         c3_i fid_i = open(img_c, O_RDONLY);
         if ( -1 != fid_i ) {
-          pread(fid_i, &ver_d, sizeof(ver_d), 0);
+          pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
           close(fid_i);
-        }
 
-        if ( U3V_VER6 == ver_d ) {
-          _disk_migrate_loom_back(log_u->dir_u->pax_c, log_u->dun_d);
-          u3m_stop();
+          if ( (pam_d & 1) != u3a_wits ) {
+            _disk_migrate_loom_back(log_u->dir_u->pax_c, log_u->dun_d);
+            u3m_stop();
+          }
         }
       }
 #endif
