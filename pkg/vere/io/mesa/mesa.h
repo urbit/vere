@@ -190,6 +190,7 @@ typedef struct _u3_gage {
   c3_w     wnf_w;  // cwnd fraction
   c3_w     sst_w;  // ssthresh
   c3_w     con_w;  // counter
+  c3_w     try_w;  // tries
   //
 } u3_gage;
 
