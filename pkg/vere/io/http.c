@@ -82,14 +82,21 @@ typedef struct _u3_h2o_serv {
     struct _u3_httd* htd_u;             //  device backpointer
   } u3_http;
 
+  typedef struct _u3_cert {
+    u3_noun          tuf;               //  domain (as turf, %$ == *)
+    uv_buf_t         key_u;             //  PEM RSA private key
+    uv_buf_t         cer_u;             //  PEM certificate chain
+    SSL_CTX*         ctx_u;             //  domain-specific SSL context
+    struct _u3_cert* nex_u;
+  } u3_cert;
+
 /* u3_form: http config from %eyre
 */
   typedef struct _u3_form {
     c3_o             pro;               //  proxy
     c3_o             log;               //  keep access log
     c3_o             red;               //  redirect to HTTPS
-    uv_buf_t         key_u;             //  PEM RSA private key
-    uv_buf_t         cer_u;             //  PEM certificate chain
+    struct _u3_cert* cer_u;             //  available certs
   } u3_form;
 
 /* u3_hfig: general http configuration
@@ -2356,6 +2363,60 @@ _http_wain_to_buf(u3_noun wan)
   return uv_buf_init(buf_c, len_w);
 }
 
+static c3_o
+_http_match_turf(const c3_c* sen_c, u3_noun tuf)
+{
+  u3_noun fut = u3kb_flop(u3k(tuf));  // (list @t)
+
+  while (u3_nul != fut) {
+    c3_s len_s = 0;
+    while ( '.' != *(sen_c + len_s) &&
+              0 != *(sen_c + len_s) )
+    {
+      len_s++;
+    }
+
+    u3_noun seg = u3i_bytes(len_s, (c3_y*)sen_c);
+    sen_c = sen_c + len_s + 1;
+
+    if (u3_nul == u3h(fut) || 0 == u3r_comp(u3h(fut), seg)) {
+      fut = u3t(fut);
+      continue;
+    }
+    else {
+      return c3n;
+    }
+  }
+  if ( 0 == *(sen_c-1) ) {
+    return c3y;
+  }
+  return c3n;
+}
+
+static int
+_http_sni_cb(SSL* ssl_u, int* ad, void* arg)
+{
+  u3_httd* htd_u = (u3_httd*)arg;
+  u3_cert* cer_u = htd_u->fig_u.for_u->cer_u;
+
+  const c3_c* sen_c = SSL_get_servername(ssl_u, TLSEXT_NAMETYPE_host_name);
+  if ( 0 != sen_c ) {
+    while ( 0 != cer_u ) {
+      if ( c3y == _http_match_turf(sen_c, cer_u->tuf) ) {
+        //  swap out context to use matching cert
+        //
+        SSL_set_SSL_CTX(ssl_u, cer_u->ctx_u);
+        return SSL_TLSEXT_ERR_OK;
+      }
+      cer_u = cer_u->nex_u;
+    }
+  }
+
+  //  retained default context
+  //
+  return SSL_TLSEXT_ERR_OK;
+}
+
 /* _http_init_tls: initialize OpenSSL context
 */
 static SSL_CTX*
@@ -2433,6 +2494,21 @@ _http_init_tls(uv_buf_t key_u, uv_buf_t cer_u)
   }
 
   return tls_u;
+}
+
+/* _http_init_bootstrap_tls: initialize default OpenSSL context
+*/
+static SSL_CTX*
+_http_init_bootstrap_tls(u3_httd* htd_u, uv_buf_t key_u, uv_buf_t cer_u)
+{
+  SSL_CTX* ssl_ctx = _http_init_tls(key_u, cer_u);
+
+  //  install the SNI callback on the default SSL_CTX
+  //
+  SSL_CTX_set_tlsext_servername_callback(ssl_ctx, _http_sni_cb);
+  SSL_CTX_set_tlsext_servername_arg(ssl_ctx, (void*)htd_u);
+
+  return ssl_ctx;
 }
 
 /* _http_write_ports_file(): update .http.ports
@@ -2531,6 +2607,7 @@ _http_serv_start_all(u3_httd* htd_u)
   u3_noun   non = u3_none;
   u3_noun   dis;
   u3_form*  for_u = htd_u->fig_u.for_u;
+  u3_cert*  cer_u = for_u->cer_u;
 
   u3_assert( 0 != for_u );
 
@@ -2538,8 +2615,13 @@ _http_serv_start_all(u3_httd* htd_u)
   htd_u->tls_u = 0;
 
   //  HTTPS server.
-  if ( (0 != for_u->key_u.base) && (0 != for_u->cer_u.base) ) {
-    htd_u->tls_u = _http_init_tls(for_u->key_u, for_u->cer_u);
+  if ( 0 != cer_u ) {
+    //  use lowest priority / "most general" cert for bootstrap tls
+    //
+    while ( 0 != cer_u->nex_u ) {
+      cer_u = cer_u->nex_u;
+    }
+    htd_u->tls_u = _http_init_bootstrap_tls(htd_u, cer_u->key_u, cer_u->cer_u);
 
     // Note: if tls_u is used for additional servers,
     // its reference count must be incremented with SSL_CTX_up_ref
@@ -2602,7 +2684,6 @@ _http_serv_start_all(u3_httd* htd_u)
   }
 
   _http_write_ports_file(htd_u, u3_Host.dir_c);
-  _http_form_free(htd_u);
 }
 
 /* _http_serv_restart(): gracefully shutdown, then start servers.
@@ -2620,6 +2701,7 @@ _http_serv_restart(u3_httd* htd_u)
 
     while ( 0 != htp_u ) {
       if ( c3y == htp_u->liv ) {
+        //NOTE  last one that closes ends up calling _http_serv_start_all
         _http_serv_close(htp_u);
       }
       htp_u = htp_u->nex_u;
@@ -2640,12 +2722,15 @@ _http_form_free(u3_httd* htd_u)
     return;
   }
 
-  if ( 0 != for_u->key_u.base ) {
-    c3_free(for_u->key_u.base);
-  }
+  while ( 0 != for_u->cer_u ) {
+    u3_cert* old_u = for_u->cer_u;
+    for_u->cer_u = old_u->nex_u;
 
-  if ( 0 != for_u->cer_u.base ) {
-    c3_free(for_u->cer_u.base);
+    u3z(old_u->tuf);
+    c3_free(old_u->key_u.base);
+    c3_free(old_u->cer_u.base);
+    SSL_CTX_free(old_u->ctx_u);
+    c3_free(old_u);
   }
 
   c3_free(for_u);
@@ -2670,10 +2755,18 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   u3_noun sec, pro, log, red;
 
   if ( (c3n == u3r_qual(fig, &sec, &pro, &log, &red) ) ||
-       // confirm sec is a valid (unit ^)
-       !( u3_nul == sec || ( c3y == u3du(sec) &&
-                             c3y == u3du(u3t(sec)) &&
-                             u3_nul == u3h(sec) ) ) ||
+       // confirm sec is either (unit ^) or (list [* ^])
+       !( //  empty
+          u3_nul == sec
+          //  unit value (old style)
+       || ( c3y == u3du(sec) &&
+            c3y == u3du(u3t(sec)) &&
+            u3_nul == u3h(sec) )
+          //  non-empty list (new style)
+       || ( c3y == u3du(sec) &&
+            c3y == u3du(u3h(sec)) &&
+            c3y == u3du(u3t(u3h(sec))) )
+       ) ||
        // confirm valid flags ("loobeans")
        !( c3y == pro || c3n == pro ) ||
        !( c3y == log || c3n == log ) ||
@@ -2689,15 +2782,54 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   for_u->red = (c3_o)red;
 
   if ( u3_nul != sec ) {
-    u3_noun key = u3h(u3t(sec));
-    u3_noun cer = u3t(u3t(sec));
+    //  (unit ^) case
+    //
+    if (u3_nul == u3h(sec)) {
+      u3_cert* cer_u = c3_malloc(sizeof(*cer_u));
 
-    for_u->key_u = _http_wain_to_buf(u3k(key));
-    for_u->cer_u = _http_wain_to_buf(u3k(cer));
+      u3_noun key = u3h(u3t(sec));
+      u3_noun cer = u3t(u3t(sec));
+
+      cer_u->key_u = _http_wain_to_buf(u3k(key));
+      cer_u->cer_u = _http_wain_to_buf(u3k(cer));
+      cer_u->ctx_u = _http_init_tls(cer_u->key_u, cer_u->cer_u);
+      cer_u->nex_u = 0;
+
+      for_u->cer_u = cer_u;
+    }
+    //  (list [* ^]) case
+    //
+    else {
+      sec = u3kb_flop(u3k(sec));
+      while (u3_nul != sec) {
+        u3_cert* cer_u = c3_malloc(sizeof(*cer_u));
+
+        u3_noun nod = u3h(sec);
+        u3_noun key = u3h(u3t(nod));
+        u3_noun cer = u3t(u3t(nod));
+
+        cer_u->tuf   = u3k(u3h(nod));
+        cer_u->key_u = _http_wain_to_buf(u3k(key));
+        cer_u->cer_u = _http_wain_to_buf(u3k(cer));
+        cer_u->ctx_u = _http_init_tls(cer_u->key_u, cer_u->cer_u);
+        cer_u->nex_u = 0;
+
+        if (0 == for_u->cer_u) {
+          for_u->cer_u = cer_u;
+        }
+        else {
+          cer_u->nex_u = for_u->cer_u;
+          for_u->cer_u = cer_u;
+        }
+
+        u3z(nod);
+        sec = u3t(sec);
+      }
+      u3z(sec);
+    }
   }
   else {
-    for_u->key_u = uv_buf_init(0, 0);
-    for_u->cer_u = uv_buf_init(0, 0);
+    for_u->cer_u = 0;
   }
 
   u3z(fig);
