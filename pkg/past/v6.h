@@ -177,6 +177,7 @@
         struct {
           c3_v6_w har_p;
           c3_v6_w per_p;
+          c3_v6_w for_p;
         } cax;
       } u3a_v6_road;
 
