@@ -737,8 +737,10 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.for_p));
     }
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -748,6 +750,7 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -761,9 +764,12 @@ _mars_post(u3_mars* mar_u)
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 0: per_p %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
+      u3l_log("mars: threshold 0: for_p %"PRIc3_w, u3h_wyt(u3R->cax.for_p));
     }
     u3h_free(u3R->cax.per_p);
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
     u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
     u3l_log("");
   }
@@ -1519,10 +1525,10 @@ u3_mars_work(u3_mars* mar_u)
 }
 
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  409
-#define VERE_LULL  321
-#define VERE_ARVO  235
-#define VERE_HOON  136
+#define VERE_ZUSE  408
+#define VERE_LULL  320
+#define VERE_ARVO  234
+#define VERE_HOON  135
 #define VERE_NOCK  4
 
 /* _mars_wyrd_card(): construct %wyrd.
@@ -1913,7 +1919,7 @@ u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
   //  XX source kelvin from args?
   //
   inp_u.ver_u.nam_m = c3__zuse;
-  inp_u.ver_u.ver_h = 409;
+  inp_u.ver_u.ver_h = 408;
 
   gettimeofday(&inp_u.tim_u, 0);
   c3_rand(inp_u.eny_h);

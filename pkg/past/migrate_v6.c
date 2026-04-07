@@ -178,6 +178,8 @@ u3_migrate_v6(c3_d eve_d)
   u3h_v5_walk_with(u3R_v5->jed.cod_p, _copy_v5_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.per_p;
   u3h_v5_walk_with(u3R_v5->cax.per_p, _copy_v5_hamt, &cop_u);
+  cop_u.ham_p = u3R->cax.for_p;
+  u3h_v5_walk_with(u3R_v5->cax.for_p, _copy_v5_hamt, &cop_u);
 
   //  NB: pave does *not* allocate hot_p
   //

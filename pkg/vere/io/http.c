@@ -2896,7 +2896,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_h;
+    c3_w pos_w      = stk_u->off_w;
     c3_w out_w      = 0;
 
     while (pos_w > 4) {
@@ -2925,7 +2925,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     }
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_h ) {
+    if ( 0 != stk_u->off_w ) {
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
