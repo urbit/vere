@@ -2422,8 +2422,8 @@ _http_sni_cb(SSL* ssl_u, int* ad, void* arg)
 static SSL_CTX*
 _http_init_tls(uv_buf_t key_u, uv_buf_t cer_u)
 {
-  // XX require 1.1.0 and use TLS_server_method()
-  SSL_CTX* tls_u = SSL_CTX_new(SSLv23_server_method());
+  // XX require 1.1.0 and use TLS_server_method()  //TODO  that compiles. just do it?
+  SSL_CTX* tls_u = SSL_CTX_new(TLS_server_method());
   // XX use SSL_CTX_set_max_proto_version() and SSL_CTX_set_min_proto_version()
   SSL_CTX_set_options(tls_u, SSL_OP_NO_SSLv2 |
                              SSL_OP_NO_SSLv3 |
