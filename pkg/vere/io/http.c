@@ -114,7 +114,7 @@ typedef struct _u3_httd {
   SSL_CTX*           tls_u;             //  server SSL_CTX*
   u3p(u3h_root)      sax_p;             //  url->scry cache
   u3p(u3h_root)      nax_p;             //  scry->noun cache
-  u3t_spin*          stk_u;             //  spin stack 
+  u3t_spin*          stk_u;             //  spin stack
 } u3_httd;
 
 static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
@@ -502,7 +502,7 @@ _http_spin_unlink(u3_hreq* req_u)
 
     if ( 0 != req_u->nex_u ) {
       req_u->nex_u->pre_u = 0;
-    } 
+    }
     else if (req_u->tim_u != NULL) {
         uv_timer_stop(req_u->tim_u);
     }
@@ -977,7 +977,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
     u3_noun key = u3nc(auth_o, u3k(bam));
     u3_weak nac = u3h_get(htd_u->nax_p, key);
     u3z(key);
-    
+
     if (  (u3_none == nac)
        || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
     {
@@ -1062,7 +1062,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_noun gang = ( _(_http_req_is_auth(fig_u, rec_u)) )
                    ? u3nc(u3_nul, u3_nul)
                    : u3_nul;
-      
+
       h2o_headers_t req_headers = req_u->rec_u->headers;
       byte_range rng_u;
       c3_o rng_o = _get_range(req_headers, &rng_u);
@@ -1228,7 +1228,7 @@ _http_req_cache(u3_hreq* req_u)
   u3_noun url = u3dc("scot", 't', _http_vec_to_atom(req_u->rec_u->path));
   u3_weak sac = u3h_get(htd_u->sax_p, url);
   u3z(url);
-  
+
   if ( u3_none == sac ) {
     return c3n;
   }
@@ -1450,14 +1450,14 @@ _http_continue_respond(u3_hreq* req_u,
     u3z(data); u3z(complete);
     return;
   }
-  
+
   u3_hgen* gen_u = req_u->gen_u;
-  
+
   if ( u3_hgen_done == gen_u->sat_e ) {
     u3z(data); u3z(complete);
     return;
   }
-  
+
   uv_timer_stop(req_u->tim_u);
 
   gen_u->sat_e = ( c3y == complete ) ? u3_hgen_done : u3_hgen_wait;
@@ -1584,7 +1584,7 @@ static c3_i
 _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
   u3_hcon* hon_u = _http_rec_sock(rec_u);
-  
+
   if ( NULL == hon_u->htp_u->htd_u->stk_u ) {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
     req_u->sat_e = u3_rsat_plan;
@@ -2737,7 +2737,7 @@ _http_io_talk(u3_auto* car_u)
 
   //Setup spin stack
   htd_u->stk_u = u3t_sstack_open();
-  
+
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");
   }
@@ -2891,7 +2891,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
 */
 static void
 _http_spin_timer_cb(uv_timer_t* tim_u)
-{ 
+{
   u3_httd* htd_u = tim_u->data;
   u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
@@ -2942,7 +2942,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
         _http_continue_respond(siq_u, u3k(dat), c3n);
         siq_u = siq_u->nex_u;
       }
-      u3z(dat); u3z(lin); 
+      u3z(dat); u3z(lin);
     }
     uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
                    SPIN_TIMER, 0);
