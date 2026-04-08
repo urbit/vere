@@ -1,4 +1,4 @@
-#include "v5.h"
+#include "../32/v5.h"
 #include "options.h"
 
 #ifdef VERE64
@@ -15,7 +15,7 @@ _v5_cmp(u3_v5_noun a, u3_v5_noun b)
   return a == b;
 }
 
-#define NAME    _v5_to_v6
+#define NAME    _v5_to_native
 #define KEY_TY  u3_v5_noun
 #define VAL_TY  u3_noun
 #define HASH_FN _v5_hash
@@ -23,28 +23,28 @@ _v5_cmp(u3_v5_noun a, u3_v5_noun b)
 #include "verstable.h"
 
 typedef struct {
-  u3_weak    hed;  // v6 noun head (u3_none if not yet copied)
-  u3_v5_noun cel;  // v5 cell being processed
+  u3_weak    hed;  // native noun head (u3_none if not yet copied)
+  u3_v5_noun cel;  // v5 32-bit cell being processed
 } _copy_frame;
 
 typedef struct {
-  _v5_to_v6   map_u;
-  c3_w        len_w;
-  c3_w        siz_w;
-  _copy_frame *tac;
+  _v5_to_native map_u;
+  c3_w          len_w;
+  c3_w          siz_w;
+  _copy_frame  *tac;
   u3p(u3h_root) ham_p;
 } _copy_ctx;
 
-/* _copy_atom(): copy a v5 (32-bit) indirect atom into the v6 (64-bit) loom.
+/* _copy_atom(): copy a v5 32-bit indirect atom into the native 64-bit loom.
 **
-**   v5 atoms: len_w counts uint32_t words in buf_w
-**   v6 atoms: len_w counts uint64_t words in buf_w
+**   v5 32-bit atoms: len_w counts uint32_t words in buf_w
+**   native 64-bit atoms: len_w counts uint64_t words in buf_w
 **   conversion: new_len_w = ceil(old_len_w / 2) = (old_len_w + 1) / 2
 **
-**   normalization: v5 cats are 31-bit (≤ 2^31-1); v6 cats are 63-bit (≤ 2^63-1).
-**   v5 indirect atoms with values < 2^63 must be returned as v6 cats, or
-**   u3r_comp() will compare raw noun pointers instead of atom values and
-**   produce wrong results (indirect-atom pointer has bit 63 set > any cat)
+**   normalization: v5 32-bit cats are 31-bit (≤ 2^31-1); native cats are 63-bit
+**   (≤ 2^63-1). v5 indirect atoms with values < 2^63 must be returned as native
+**   cats, or u3r_comp() will compare raw noun pointers instead of atom values
+**   and produce wrong results (indirect-atom pointer has bit 63 set > any cat)
 */
 static u3_atom
 _copy_atom(u3_v5_noun old)
@@ -52,7 +52,7 @@ _copy_atom(u3_v5_noun old)
   u3a_v5_atom *old_u    = (u3a_v5_atom *)u3a_v5_to_ptr(old);
   c3_v5_w      old_w    = old_u->len_w;
 
-  /*  normalize small atoms to v6 cats (values < 2^63 don't need indirection) */
+  /*  normalize small atoms to native cats (values < 2^63 don't need indirection) */
   if ( old_w <= 2 ) {
     c3_d val_d = ( old_w >= 1 ) ? (c3_d)old_u->buf_w[0] : 0;
     if ( 2 == old_w ) val_d |= ((c3_d)old_u->buf_w[1] << 32);
@@ -80,8 +80,8 @@ _copy_atom(u3_v5_noun old)
 static u3_noun
 _copy_v5_next(_copy_ctx *cop_u, u3_v5_noun old)
 {
-  _v5_to_v6_itr vit_u;
-  _copy_frame  *top_u;
+  _v5_to_native_itr vit_u;
+  _copy_frame      *top_u;
 
   while ( 1 ) {
     if ( c3y == u3a_v5_is_cat(old) ) return (u3_noun)old;
@@ -113,9 +113,9 @@ _copy_v5_next(_copy_ctx *cop_u, u3_v5_noun old)
 static u3_noun
 _copy_v5_noun(_copy_ctx *cop_u, u3_v5_noun old)
 {
-  _v5_to_v6_itr vit_u;
-  _copy_frame  *top_u;
-  u3_noun        new;
+  _v5_to_native_itr vit_u;
+  _copy_frame      *top_u;
+  u3_noun            new;
 
   cop_u->len_w = 0;
 
@@ -150,7 +150,7 @@ _copy_v5_hamt(u3_v5_noun kev, void* ptr_v)
 }
 
 void
-u3_migrate_v6(c3_d eve_d)
+u3_migrate_64(c3_d eve_d)
 {
   _copy_ctx cop_u = {0};
 
@@ -159,7 +159,7 @@ u3_migrate_v6(c3_d eve_d)
   u3_v5_load(u3C.wor_i);
 
   if ( eve_d != u3A_v5->eve_d ) {
-    fprintf(stderr, "loom: migrate (v6) stale snapshot: have %"
+    fprintf(stderr, "loom: migrate (to 64-bit) stale snapshot: have %"
                     PRIu64 ", need %" PRIu64 "\r\n",
                     u3A_v5->eve_d, eve_d);
     abort();

@@ -284,7 +284,7 @@ jobs:
             -Dbinary-name=vere32-migration   \
             --summary all
 
-      - name: Run v5↔v6 roundtrip migration test
+      - name: Run 32↔64 roundtrip migration test
         env:
           VERE64_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
           VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"

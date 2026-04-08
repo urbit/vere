@@ -1,11 +1,11 @@
 #!/bin/bash
 # migration-test.sh: roundtrip migration test for the vere loom.
 #
-# Tests the v5↔v6 loom migration path by running three sequential boots on
+# Tests the 32↔64-bit loom migration path by running three sequential boots on
 # the same fake pier:
-#   1. 32-bit vere: fresh boot from pill → saves a v5 (32-bit) loom snapshot
-#   2. 64-bit vere: re-boots same pier   → migrates v5→v6 (u3_migrate_v6)
-#   3. 32-bit vere: re-boots same pier   → restores v6→v5 (u3_restore_v5)
+#   1. 32-bit vere: fresh boot from pill → saves a 32-bit loom snapshot
+#   2. 64-bit vere: re-boots same pier   → migrates 32→64 (u3_migrate_64)
+#   3. 32-bit vere: re-boots same pier   → migrates 64→32 (u3_migrate_32)
 #
 # Required environment variables:
 #   VERE32_BINARY   32-bit vere binary path, relative to GITHUB_WORKSPACE or PWD
@@ -89,9 +89,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ── Step 1: 32-bit vere → create v5 snapshot ─────────────────────────────────
+# ── Step 1: 32-bit vere → create 32-bit snapshot ─────────────────────────────
 
-echo "=== migration step 1: boot with 32-bit vere (create v5 snapshot) ==="
+echo "=== migration step 1: boot with 32-bit vere (create 32-bit snapshot) ==="
 
 rm -rf "$pier"
 "$vere32" --lite-boot --daemon --fake bus \
@@ -108,11 +108,11 @@ lensd "$port" '+vats %base'
 lensa "$port" hood '+hood/exit'
 wait_for_shutdown "$pier"
 
-echo "=== step 1 done: v5 snapshot saved ==="
+echo "=== step 1 done: 32-bit snapshot saved ==="
 
-# ── Step 2: 64-bit vere → migrate v5→v6 ──────────────────────────────────────
+# ── Step 2: 64-bit vere → migrate 32→64 ──────────────────────────────────────
 
-echo "=== migration step 2: boot with 64-bit vere (v5→v6 migration) ==="
+echo "=== migration step 2: boot with 64-bit vere (32→64 migration) ==="
 
 rm -f "$pier/.http.ports"
 "$vere64" --lite-boot --daemon "$pier"
@@ -126,11 +126,11 @@ lensd "$port" '+vats %base'
 lensa "$port" hood '+hood/exit'
 wait_for_shutdown "$pier"
 
-echo "=== step 2 done: v5→v6 migration succeeded ==="
+echo "=== step 2 done: 32→64 migration succeeded ==="
 
-# ── Step 3: 32-bit vere → restore v6→v5 ──────────────────────────────────────
+# ── Step 3: 32-bit vere → migrate 64→32 ──────────────────────────────────────
 
-echo "=== migration step 3: boot with 32-bit vere (v6→v5 restore) ==="
+echo "=== migration step 3: boot with 32-bit vere (64→32 migration) ==="
 
 rm -f "$pier/.http.ports"
 "$vere32" --lite-boot --daemon "$pier"
@@ -144,5 +144,5 @@ lensd "$port" '+vats %base'
 lensa "$port" hood '+hood/exit'
 wait_for_shutdown "$pier"
 
-echo "=== step 3 done: v6→v5 restore succeeded ==="
+echo "=== step 3 done: 64→32 migration succeeded ==="
 echo "Migration roundtrip complete."

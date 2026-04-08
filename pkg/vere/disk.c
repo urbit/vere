@@ -9,10 +9,10 @@
 
 #include "migrate.h"
 #ifdef VERE64
-#include "v5.h"
+#include "32/v5.h"
 #else
-#include "v4.h"
-#include "v6.h"
+#include "32/v4.h"
+#include "64/v5.h"
 #endif
 
 struct _u3_disk_walk {
@@ -1701,19 +1701,19 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 }
 
 #ifndef VERE64
-/* _disk_load_v6_loom(): open v6 image.bin and map it at u3_Loom_v6.
+/* _disk_load_v5_64_loom(): open v5 64-bit image.bin and map it at u3_Loom_v5_64.
 */
 static c3_i
-_disk_load_v6_loom(c3_c* dir_c, c3_z lom_z)
+_disk_load_v5_64_loom(c3_c* dir_c, c3_z lom_z)
 {
   c3_z img_z;
-  c3_i fid_i = u3e_v6_image_open_any("/.urb/chk/image", dir_c, &img_z);
+  c3_i fid_i = u3e_v5_64_image_open_any("/.urb/chk/image", dir_c, &img_z);
 
   u3_assert( -1 != fid_i );
 
   //  the 32-bit loom is capped at 2^u3a_bits_max = 16GB by pointer compression
   //  (u3a_vits=2 means only 30 bits of offset, shifted left 2, addressing 16GB).
-  //  a v6 snapshot larger than this cannot be migrated back.
+  //  a 64-bit snapshot larger than this cannot be migrated back.
   //
   if ( img_z > lom_z ) {
     fprintf(stderr, "loom: migration error\r\n\r\n");
@@ -1723,15 +1723,15 @@ _disk_load_v6_loom(c3_c* dir_c, c3_z lom_z)
     exit(1);
   }
 
-  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_v6, fid_i, img_z);
+  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_v5_64, fid_i, img_z);
 
-  if ( MAP_FAILED == mmap((void*)u3_Loom_v6,
+  if ( MAP_FAILED == mmap((void*)u3_Loom_v5_64,
                           img_z,
                           (PROT_READ | PROT_WRITE),
                           (MAP_FIXED | MAP_PRIVATE),
                           fid_i, 0) )
   {
-    fprintf(stderr, "loom: v6 file-backed mmap failed: %s\r\n",
+    fprintf(stderr, "loom: v5-64 file-backed mmap failed: %s\r\n",
                     strerror(errno));
     u3_assert(0);
   }
@@ -1739,16 +1739,16 @@ _disk_load_v6_loom(c3_c* dir_c, c3_z lom_z)
   return fid_i;
 }
 
-/* _disk_migrate_loom_back(): migrate a v6 (64-bit) loom back to v5 (32-bit).
+/* _disk_migrate_to_32(): migrate a 64-bit loom back to 32-bit.
 */
 static void
-_disk_migrate_loom_back(c3_c* dir_c, c3_d eve_d)
+_disk_migrate_to_32(c3_c* dir_c, c3_d eve_d)
 {
   c3_z lom_z = (size_t)1 << u3_Host.ops_u.lom_y;
-  c3_i fid_i = _disk_load_v6_loom(dir_c, lom_z);
+  c3_i fid_i = _disk_load_v5_64_loom(dir_c, lom_z);
 
-  c3_d lom_d = *((c3_d *)u3_Loom_v6);
-  c3_d pam_d = *((c3_d *)u3_Loom_v6 + 1);
+  c3_d lom_d = *((c3_d *)u3_Loom_v5_64);
+  c3_d pam_d = *((c3_d *)u3_Loom_v5_64 + 1);
 
   if ( (pam_d & 1) == u3a_wits ) {
     fprintf(stderr, "loom: expected 64-bit loom, got 32-bit "
@@ -1760,11 +1760,11 @@ _disk_migrate_loom_back(c3_c* dir_c, c3_d eve_d)
     u3m_init(lom_z);
     u3e_live(c3n, strdup(dir_c));
     u3m_pave(c3y);
-    u3_restore_v5(eve_d);
+    u3_migrate_32(eve_d);
     u3m_save();
   }
 
-  munmap((void*)u3_Loom_v6, lom_z);
+  munmap((void*)u3_Loom_v5_64, lom_z);
   close(fid_i);
 }
 #endif /* !VERE64 */
@@ -1788,7 +1788,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
     u3e_live(c3n, strdup(dir_c));
     u3m_pave(c3y);
-    u3_migrate_v6(eve_d);
+    u3_migrate_64(eve_d);
     u3m_save();
   }
 #else
@@ -2028,7 +2028,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
           close(fid_i);
 
           if ( (pam_d & 1) != u3a_wits ) {
-            _disk_migrate_loom_back(log_u->dir_u->pax_c, log_u->dun_d);
+            _disk_migrate_to_32(log_u->dir_u->pax_c, log_u->dun_d);
             u3m_stop();
           }
         }

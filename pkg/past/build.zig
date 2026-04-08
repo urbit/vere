@@ -58,37 +58,37 @@ pub fn build(b: *std.Build) !void {
 
     const c_source_files: []const []const u8 = if (vere32)
         &.{
-            "v1.c",
-            "v2.c",
-            "v3.c",
-            "v4.c",
-            "v6.c",
-            "migrate_v2.c",
-            "migrate_v3.c",
-            "migrate_v4.c",
-            "migrate_v5.c",
-            "restore_v5.c",
+            "32/v1.c",
+            "32/v2.c",
+            "32/v3.c",
+            "32/v4.c",
+            "64/v5.c",
+            "32/migrate_v2.c",
+            "32/migrate_v3.c",
+            "32/migrate_v4.c",
+            "32/migrate_v5.c",
+            "32/migrate.c",
         }
     else
         &.{
-            "v5.c",
-            "migrate_v6.c",
+            "32/v5.c",
+            "64/migrate.c",
         };
 
     const install_headers: []const []const u8 = if (vere32)
         &.{
-            "v1.h",
-            "v2.h",
-            "v3.h",
-            "v4.h",
-            "v5.h",
-            "v6.h",
+            "32/v1.h",
+            "32/v2.h",
+            "32/v3.h",
+            "32/v4.h",
+            "32/v5.h",
+            "64/v5.h",
             "migrate.h",
         }
     else
         &.{
-            "v5.h",
-            "v6.h",
+            "32/v5.h",
+            "64/v5.h",
             "migrate.h",
         };
 

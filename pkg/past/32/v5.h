@@ -2,7 +2,7 @@
 #define U3_V5_H
 
 #ifdef VERE64
-#include "v6.h"
+#include "../64/v5.h"
 
       typedef uint32_t c3_v5_w;
       typedef int32_t  c3_v5_ws;
