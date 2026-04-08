@@ -94,6 +94,7 @@
       typedef struct _u3_moat {
         uv_pipe_t        pyp_u;             //  input stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
         u3_moor_poke     pok_f;             //  action function
         u3_mess          mes_u;             //  message in progress
@@ -107,6 +108,7 @@
       typedef struct _u3_mojo {
         uv_pipe_t        pyp_u;             //  output stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
       } u3_mojo;
 
@@ -114,6 +116,7 @@
       typedef struct _u3_moor {
         uv_pipe_t        pyp_u;             //  duplex stream
         u3_moor_bail     bal_f;             //  error response function
+        c3_w             fag_w;
         void*            ptr_v;             //  callback pointer
         u3_moor_poke     pok_f;             //  action function
         u3_mess          mes_u;             //  message in progress
@@ -275,6 +278,7 @@
         c3_c*   fak_c;                      //  -F, fake ship
         c3_c*   gen_c;                      //  -G, czar generator
         c3_o    gab;                        //  -g, test garbage collection
+        c3_o    gab_abort;                  //  --gc-abort, abort on leaks
         c3_c*   dns_c;                      //  -H, ames bootstrap domain
         c3_c*   jin_c;                      //  -I, inject raw event
         c3_c*   imp_c;                      //  -i, import pier state

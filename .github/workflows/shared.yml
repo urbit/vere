@@ -116,6 +116,7 @@ jobs:
             -Dmem-dbg                  \
             -Dc3dbg                    \
             -Dsnapshot-validation      \
+            -Durth-mass                \
             --summary all
 
       - name: Boot fake ship
