@@ -2064,7 +2064,7 @@ _a_dupe(u3_noun som, u3p(u3h_root) cax_p)
     u3a_atom* pug_u = u3a_to_ptr(som);
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 5, pug_u->len_w);
-    memcpy(sab_u.buf_y, (c3_y*)pug_u->buf_w, pug_u->len_w << 2);
+    memcpy(sab_u.buf_y, (c3_y*)pug_u->buf_w, pug_u->len_w * sizeof(c3_w));
     pro = u3i_slab_moot(&sab_u);
   }
 
