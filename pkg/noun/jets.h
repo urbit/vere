@@ -75,6 +75,7 @@
         struct _u3j_hood* huc_u;        //  blank-terminated static list
         struct _u3j_core* par_u;        //  dynamic parent pointer
         c3_l              jax_l;        //  index in global dashboard
+        struct _u3j_sten* ste_u;        //  stencil list (off-loom, linked)
       } u3j_core;
 
     /* u3j_dash, u3_Dash, u3D: jet dashboard singleton
@@ -101,12 +102,31 @@
         u3j_fist fis_u[];             //  fists
       } u3j_fink;
 
+    /* u3j_sten: stencil -- pre-compiled identity matcher for a core.
+    **
+    **   Static stencils (dyn_o == c3n) match by whole-core pointer
+    **   equality.  Dynamic stencils (dyn_o == c3y) match by battery
+    **   pointer equality plus recursive parent check.
+    **
+    **   Stored off-loom on u3j_core dashboard entries.
+    */
+      typedef struct _u3j_sten {
+        c3_o              dyn_o;      //  dynamic stencil?
+        u3_noun           bat;        //  battery (unified reference)
+        u3_noun           cor;        //  whole core if static, u3_none if dynamic
+        u3_noun           loc;        //  location noun (for warm state lookup)
+        u3_noun           pax;        //  parent axis if dynamic, 0 if static
+        struct _u3j_sten* par_u;      //  parent stencil if dynamic, NULL otherwise
+        struct _u3j_sten* nex_u;      //  next stencil in list
+      } u3j_sten;
+
     /* u3j_rite: site of a %fast, used to skip re-mining.
     */
       typedef struct {
         c3_o          own_o;          //  rite owns fink?
         u3_weak       clu;            //  cached product of clue formula
         u3p(u3j_fink) fin_p;          //  fine check
+        u3j_sten*     ste_u;          //  cached stencil (off-loom, or NULL)
       } u3j_rite;
 
     /* u3j_site: site of a kick (nock 9), used to cache call target.
@@ -124,6 +144,7 @@
         u3j_core*     cop_u;          //  jet core
         u3j_harm*     ham_u;          //  jet arm
         u3p(u3j_fink) fin_p;          //  fine check
+        u3j_sten*     ste_u;          //  cached stencil (off-loom, or NULL)
       } u3j_site;
 
       /* u3j_hank: cached hook information.
@@ -273,6 +294,11 @@
        */
         void
         u3j_gate_lose(u3j_site* sit_u);
+
+      /* u3j_sten_free(): free a stencil linked list.
+      */
+        void
+        u3j_sten_free(u3j_sten* ste_u);
 
       /* u3j_rite_mark(): mark u3j_rite for gc.
       */

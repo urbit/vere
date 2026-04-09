@@ -817,6 +817,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           rit_u->own_o = c3n;
           rit_u->clu   = u3_none;
           rit_u->fin_p = 0;
+          rit_u->ste_u = NULL;
           break;
         }
       }
@@ -926,6 +927,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           sit_u->cop_u = NULL;
           sit_u->ham_u = NULL;
           sit_u->fin_p = 0;
+          sit_u->ste_u = NULL;
           break;
         }
       }
@@ -2165,15 +2167,52 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
 }
 
 /* _n_kick(): stop tracing noc and kick a u3j_site.
+ *
+ *   Inlined stencil fast path: when a stencil is cached and matches
+ *   the core (by pointer equality on the whole core for static, or
+ *   the battery for dynamic), and the jet is perfect/enabled, call
+ *   the jet function directly. Bypasses the wrapper chain
+ *   u3j_site_kick -> _cj_site_kick -> _cj_site_kick_hot -> _cj_kick_z
+ *   for the common case.
  */
 static u3_weak
 _n_kick(u3_noun cor, u3j_site* sit_u)
 {
-  u3_weak pro;
-  u3t_off(noc_o);
-  pro = u3j_site_kick(cor, sit_u);
-  u3t_on(noc_o);
-  return pro;
+  u3j_sten* ste_u = sit_u->ste_u;
+  u3j_harm* ham_u = sit_u->ham_u;
+
+  //  fast path: stencil hit + perfect/enabled jet, no profiling/tracing.
+  //  battery match alone is sufficient for dynamic stencils -- if a
+  //  battery has multiple registrations the slow path catches it.
+  //
+  if (  ste_u
+     && ham_u
+     && (0 != ham_u->fun_f)
+     && (c3y == ham_u->liv)
+     && (c3y == ham_u->ice)
+     && !(u3C.wag_w & (u3o_debug_cpu | u3o_trace)) )
+  {
+    c3_o match_o = ( c3n == ste_u->dyn_o )
+                 ? __(cor == ste_u->cor)
+                 : __(c3y == u3du(cor) && u3h(cor) == ste_u->bat);
+    if ( c3y == match_o ) {
+      u3_weak pro = ham_u->fun_f(cor);
+      if ( u3_none != pro ) {
+        u3z(cor);
+        return pro;
+      }
+    }
+  }
+
+  //  slow path
+  //
+  {
+    u3_weak pro;
+    u3t_off(noc_o);
+    pro = u3j_site_kick(cor, sit_u);
+    u3t_on(noc_o);
+    return pro;
+  }
 }
 
 /* _n_kale(): bail(exit) if not cell
