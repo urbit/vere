@@ -515,8 +515,12 @@ static c3_d
 _sift_bits(u3_sifter* sif_u, c3_h wid_h)
 {
   assert ( wid_h <= 64 );
+  if ( sif_u->rem_h == 0 ) {
+    _sift_fail(sif_u, "unexpected end of packet");
+    return 0;
+  }
   while ( sif_u->off_y < wid_h ) {
-    c3_d byt_d = (sif_u->rem_h > 0) ? sif_u->buf_y[0] : 0;
+    c3_d byt_d = sif_u->buf_y[0];
     sif_u->buf_y += 1;
     sif_u->rem_h -= 1;
     sif_u->bit_d |= (byt_d << sif_u->off_y);
