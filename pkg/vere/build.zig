@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) !void {
     // @panic("Missing required option: pace");
     const version = b.option([]const u8, "version", "") orelse "3.5";
     // @panic("Missing required option: version");
-    const vere32 = b.option(bool, "vere32", "") orelse false;
+    const vere64 = b.option(bool, "vere64", "") orelse false;
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
-        .vere32 = vere32,
+        .vere64 = vere64,
     });
 
     const avahi = b.dependency("avahi", .{

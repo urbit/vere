@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
-    const vere32: bool = b.option(bool, "vere32", "") orelse false;
+    const vere64: bool = b.option(bool, "vere64", "") orelse false;
 
     const pkg_past = b.addLibrary(.{
         .name = "past",
@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    const c_source_files: []const []const u8 = if (vere32)
+    const c_source_files: []const []const u8 = if (!vere64)
         &.{
             "32/v1.c",
             "32/v2.c",
@@ -75,7 +75,7 @@ pub fn build(b: *std.Build) !void {
             "64/migrate.c",
         };
 
-    const install_headers: []const []const u8 = if (vere32)
+    const install_headers: []const []const u8 = if (!vere64)
         &.{
             "32/v1.h",
             "32/v2.h",

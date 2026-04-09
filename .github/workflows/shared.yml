@@ -86,24 +86,24 @@ jobs:
 
       - name: Build binaries
         run: |
-          # Add -Dvere32 flag for 32-bit builds
-          VERE32_FLAG=""
-          if [[ "${{ matrix.bits }}" == "32" ]]; then
-            VERE32_FLAG="-Dvere32"
+          # Add -Dvere64 flag for 64-bit builds
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
           fi
 
           if [[ "${{ inputs.pace }}" == "live" ]]; then
             zig build                  \
               -Dall                    \
               -Drelease                \
-              $VERE32_FLAG             \
+              $VERE64_FLAG             \
               --summary all
           else
             zig build                  \
               -Dall                    \
               -Doptimize=ReleaseFast   \
               -Dpace=${{inputs.pace}}  \
-              $VERE32_FLAG             \
+              $VERE64_FLAG             \
               --summary all
           fi
       - name: Run unit tests
@@ -124,10 +124,10 @@ jobs:
       - name: Build test binary
         if: ${{ inputs.fake_tests }}
         run: |
-          # Add -Dvere32 flag for 32-bit builds
-          VERE32_FLAG=""
-          if [[ "${{ matrix.bits }}" == "32" ]]; then
-            VERE32_FLAG="-Dvere32"
+          # Add -Dvere64 flag for 64-bit builds
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
           fi
 
           zig build                    \
@@ -139,7 +139,7 @@ jobs:
             -Dc3dbg                    \
             -Dsnapshot-validation      \
             -Durth-mass                \
-            $VERE32_FLAG               \
+            $VERE64_FLAG               \
             --summary all
 
       - name: Boot fake ship
@@ -270,6 +270,7 @@ jobs:
       - name: Build 64-bit migration binary
         run: |
           zig build                           \
+            -Dvere64                          \
             -Doptimize=ReleaseFast            \
             -Dpace=${{inputs.pace}}           \
             -Dbinary-name=vere-migration     \
@@ -278,7 +279,6 @@ jobs:
       - name: Build 32-bit migration binary
         run: |
           zig build                           \
-            -Dvere32                          \
             -Doptimize=ReleaseFast            \
             -Dpace=${{inputs.pace}}           \
             -Dbinary-name=vere32-migration   \

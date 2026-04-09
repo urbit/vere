@@ -107,7 +107,7 @@ const BuildCfg = struct {
     urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
-    vere32: bool = false,
+    vere64: bool = false,
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
@@ -194,10 +194,10 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
-    const vere32 = b.option(
+    const vere64 = b.option(
         bool,
-        "vere32",
-        "Compile in 32-bit mode",
+        "vere64",
+        "Compile in 64-bit mode",
     ) orelse false;
 
     const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
@@ -240,7 +240,7 @@ pub fn build(b: *std.Build) !void {
         .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
-        .vere32 = vere32,
+        .vere64 = vere64,
         .tracy_enable = tracy_enable,
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
@@ -365,7 +365,7 @@ fn buildBinary(
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
 
-    if (!cfg.vere32)
+    if (cfg.vere64)
         try urbit_flags.appendSlice(&.{"-DVERE64"});
 
     if (cfg.urth_mass)
@@ -449,6 +449,7 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .vere64 = cfg.vere64,
     });
 
     const pkg_vere = b.dependency("pkg_vere", .{
@@ -457,7 +458,7 @@ fn buildBinary(
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
-        .vere32 = cfg.vere32,
+        .vere64 = cfg.vere64,
     });
 
     const curl = b.dependency("curl", .{
