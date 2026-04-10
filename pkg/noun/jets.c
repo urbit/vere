@@ -651,11 +651,6 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
         u3h_put(u3R->jed.cod_p, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
-        /* caution: could overwrites old value, debug batteries etc.
-        **          old value contains old _cj_jit (from different
-        **          battery). if we change jit to (map battery *),
-        **          will need to merge with that map here.
-        */
         u3h_put(u3R->jed.war_p, loc, act);
       }
     }
@@ -1664,6 +1659,30 @@ _cj_fink_free(u3p(u3j_fink) fin_p)
   u3a_wfree(fin_u);
 }
 
+/* u3j_fink_free(): public wrapper for _cj_fink_free.
+*/
+void
+u3j_fink_free(u3p(u3j_fink) fin_p)
+{
+  _cj_fink_free(fin_p);
+}
+
+/* u3j_fink_mark(): mark a u3j_fink for gc.
+*/
+c3_w
+u3j_fink_mark(u3p(u3j_fink) fin_p)
+{
+  c3_w     tot_w = 0;
+  u3j_fink* fin_u = u3to(u3j_fink, fin_p);
+  tot_w += u3a_mark_noun(fin_u->sat);
+  for ( c3_w i_w = 0; i_w < fin_u->len_w; ++i_w ) {
+    tot_w += u3a_mark_noun(fin_u->fis_u[i_w].bat);
+    tot_w += u3a_mark_noun(fin_u->fis_u[i_w].pax);
+  }
+  tot_w += u3a_mark_ptr(fin_u);
+  return tot_w;
+}
+
 /* u3j_rite_take(): copy junior rite references. [dst_u] is uninitialized
 */
 void
@@ -1975,39 +1994,83 @@ u3j_site_kick(u3_noun cor, u3j_site* sit_u)
 
 /* u3n_call_kick(): see nock.h.  Slow path for the bytecode
 **                  interpreter when the per-prog dispatcher misses.
-**                  No per-call-site cache state — everything is
-**                  computed fresh per call from cor + cal_u->axe.
+**                  Caches loc/fin_p/jet_o per call site so repeat
+**                  kicks of the same cor structure bypass _cj_spot
+**                  via _cj_fine (fink structural check).
 */
 u3_weak
 u3n_call_kick(u3_noun cor, u3n_call* cal_u)
 {
   u3t_on(glu_o);
 
-  //  identify cor's location.  May be u3_none for non-jetted cors.
-  //  Note: _cj_spot has REGISTRATION side effects (via _cj_spot_hot
-  //  it can populate cod_p/war_p when it discovers a core), so we
-  //  cannot skip it via a negative-result cache without breaking
-  //  later _cj_mine parent lookups.
+  //  Fink fast path: if loc is cached and cor structurally matches
+  //  the cached fink, we know _cj_spot would return the same loc.
+  //  Skip the HAMT lookups and use cached cop_u/ham_u directly.
+  //
+  if ( u3_none != cal_u->loc ) {
+    if ( c3y == _cj_fine(cor, cal_u->fin_p) ) {
+      if ( c3y == cal_u->jet_o && cal_u->ham_u ) {
+        //  Jet fires via cached state — no _cj_spot, no _cj_nail.
+        //
+        u3_weak pro;
+        u3t_off(glu_o);
+        pro = _cj_kick_z(cor, cal_u->cop_u, cal_u->ham_u, cal_u->axe);
+        u3t_on(glu_o);
+
+        if ( u3_none != pro ) {
+          u3t_off(glu_o);
+          return pro;
+        }
+        //  Jet declined.  Fall through to bytecode.  Need pog_p set.
+        //
+        {
+          u3_weak fol = u3r_at(cal_u->axe, cor);
+          if ( u3_none != fol ) {
+            cal_u->pog_p = u3n_find(u3_nul, fol);
+          }
+        }
+        u3t_off(glu_o);
+        return u3_none;
+      }
+      //  Cached loc but no jet.  Fall through to bytecode.
+      //
+      {
+        u3_weak fol = u3r_at(cal_u->axe, cor);
+        if ( u3_none != fol ) {
+          cal_u->pog_p = u3n_find(u3_nul, fol);
+        }
+      }
+      u3t_off(glu_o);
+      return u3_none;
+    }
+    //  Structural mismatch.  Discard cached state and re-resolve.
+    //
+    u3z(cal_u->loc);
+    cal_u->loc   = u3_none;
+    cal_u->fin_p = 0;
+    cal_u->jet_o = c3n;
+    cal_u->cop_u = NULL;
+    cal_u->ham_u = NULL;
+  }
+
+  //  Cold path: _cj_spot for auto-discovery + location resolution.
   //
   u3_weak loc = _cj_spot(cor, NULL);
 
-  //  Cache the called formula's prog.  We need this set BEFORE
-  //  returning, because the bytecode interpreter jumps to
-  //  cal_u->pog_p after a jet miss (return u3_none).
-  //
-  //  Use the loc-AGNOSTIC key (u3_nul, fol) because that matches
-  //  what _cj_dispatch_install_arms uses via u3n_find_lookup —
-  //  otherwise the install populates one prog's dis_u and the
-  //  dispatcher reads from a different one and never fires.
-  //
-  //  Re-resolve on EVERY call so polymorphic call sites where the
-  //  formula at axe varies with cor's battery still get the right
-  //  prog.  (axe filtering in the dispatcher disambiguates.)
+  //  Cache the called formula's prog.  Skip u3n_find if pog_p is
+  //  already set and the formula at axe is the same pointer as the
+  //  last call (identity check).  Same battery → same formula at
+  //  battery-side axes → same prog.  Uses cal_u->bas as the
+  //  cached formula pointer (not the battery hash).
   //
   {
     u3_weak fol = u3r_at(cal_u->axe, cor);
     if ( u3_none != fol ) {
-      cal_u->pog_p = u3n_find(u3_nul, fol);
+      if ( !cal_u->pog_p || fol != cal_u->bas ) {
+        cal_u->pog_p = u3n_find(u3_nul, fol);
+        if ( u3_none != cal_u->bas ) u3z(cal_u->bas);
+        cal_u->bas   = u3k(fol);
+      }
     }
   }
 
@@ -2022,6 +2085,14 @@ u3n_call_kick(u3_noun cor, u3n_call* cal_u)
   u3j_core* cop_u = NULL;
   u3j_harm* ham_u = NULL;
   c3_o jet_o = _cj_nail(loc, cal_u->axe, &lab, &cop_u, &ham_u);
+
+  //  Cache loc + fink + jet state for the fink fast path.
+  //
+  cal_u->loc   = u3k(loc);
+  cal_u->fin_p = _cj_cast(cor, loc);
+  cal_u->jet_o = jet_o;
+  cal_u->cop_u = cop_u;
+  cal_u->ham_u = ham_u;
 
   //  install per-prog dispatch on every arm of the dashboard core
   //  so future kicks at any site that compiles those arms hit the

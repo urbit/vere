@@ -26,9 +26,9 @@
   **
   **   Mirrors the spirit of nockets' compiled `pullNock` closure.
   **
-  **   pog_p caches the called formula's prog.  bat caches u3h(cor)
-  **   so polymorphic call sites can detect when the formula at axe
-  **   has changed (same battery → same formula → same prog).
+  **   pog_p caches the called formula's prog.  loc/fin_p/jet_o cache
+  **   the result of _cj_spot + _cj_nail so repeat kicks of the same
+  **   cor structure can skip HAMT lookups via _cj_fine (fink check).
   **
   **   lab is u3_none until tracing/profiling needs it.
   */
@@ -37,7 +37,12 @@
     u3p(struct _u3n_prog) pog_p;      // cached prog of called formula
     u3_noun               axe;        // axis being kicked
     u3_weak               lab;        // tracing label (or u3_none)
-    u3_weak               bat;        // last cor's u3h (or u3_none)
+    u3_weak               loc;        // cached location (or u3_none)
+    u3_weak               bas;        // last formula at axe (or u3_none)
+    u3p(u3j_fink)         fin_p;      // structural verifier (or 0)
+    c3_o                  jet_o;      // cached: has jet driver?
+    u3j_core*             cop_u;      // cached jet core (or NULL)
+    u3j_harm*             ham_u;      // cached jet driver (or NULL)
   } u3n_call;
 
   /* u3n_dis_ent: one entry in a per-prog dispatch table.

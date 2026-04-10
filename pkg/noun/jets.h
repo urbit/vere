@@ -322,6 +322,16 @@
         u3j_mine(u3_noun clu,
                    u3_noun cor);
 
+      /* u3j_fink_free(): free a u3j_fink and all its contents.
+      */
+        void
+        u3j_fink_free(u3p(u3j_fink) fin_p);
+
+      /* u3j_fink_mark(): mark a u3j_fink for gc.
+      */
+        c3_w
+        u3j_fink_mark(u3p(u3j_fink) fin_p);
+
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
         void

@@ -928,7 +928,12 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           cal_u->axe   = u3k(u3t(op));
           cal_u->pog_p = 0;
           cal_u->lab   = u3_none;
-          cal_u->bat   = u3_none;
+          cal_u->loc   = u3_none;
+          cal_u->bas   = u3_none;
+          cal_u->fin_p = 0;
+          cal_u->jet_o = c3n;
+          cal_u->cop_u = NULL;
+          cal_u->ham_u = NULL;
           break;
         }
       }
@@ -2381,11 +2386,16 @@ void
 u3n_call_take(u3n_call* dst_u, u3n_call* src_u)
 {
   dst_u->axe   = u3a_take(src_u->axe);
-  dst_u->pog_p = 0;  // re-derived on first kick
+  dst_u->pog_p = 0;
   dst_u->lab   = ( u3_none == src_u->lab )
                ? u3_none
                : u3a_take(src_u->lab);
-  dst_u->bat   = u3_none;
+  dst_u->loc   = u3_none;
+  dst_u->bas   = u3_none;
+  dst_u->fin_p = 0;
+  dst_u->jet_o = c3n;
+  dst_u->cop_u = NULL;
+  dst_u->ham_u = NULL;
 }
 
 /* u3n_call_merge(): see nock.h
@@ -2397,8 +2407,18 @@ u3n_call_merge(u3n_call* dst_u, u3n_call* src_u)
   dst_u->axe = src_u->axe;
   if ( u3_none != dst_u->lab ) u3z(dst_u->lab);
   dst_u->lab = src_u->lab;
-  dst_u->pog_p = 0;  // re-derived
-  dst_u->bat   = u3_none;
+  dst_u->pog_p = 0;
+  //  NB: do NOT free dst_u->loc or dst_u->fin_p here.  The senior
+  //  prog's cached state may reference inner-road allocations that
+  //  have already been recycled.  Just clear the fields — the stale
+  //  fink will be reclaimed when the road is freed.
+  //
+  dst_u->loc   = u3_none;
+  dst_u->bas   = u3_none;
+  dst_u->fin_p = 0;
+  dst_u->jet_o = c3n;
+  dst_u->cop_u = NULL;
+  dst_u->ham_u = NULL;
 }
 
 /* u3n_call_ream(): see nock.h
@@ -2407,7 +2427,22 @@ void
 u3n_call_ream(u3n_call* cal_u)
 {
   cal_u->pog_p = 0;
-  cal_u->bat   = u3_none;
+  if ( u3_none != cal_u->loc ) {
+    u3z(cal_u->loc);
+    if ( cal_u->fin_p ) {
+      u3j_fink_free(cal_u->fin_p);
+    }
+    cal_u->loc   = u3_none;
+    cal_u->fin_p = 0;
+  }
+  if ( u3_none != cal_u->bas ) {
+    u3z(cal_u->bas);
+    cal_u->bas = u3_none;
+  }
+  cal_u->fin_p = 0;
+  cal_u->jet_o = c3n;
+  cal_u->cop_u = NULL;
+  cal_u->ham_u = NULL;
 }
 
 /* u3n_call_lose(): see nock.h
@@ -2417,6 +2452,13 @@ u3n_call_lose(u3n_call* cal_u)
 {
   if ( u3_none != cal_u->axe ) u3z(cal_u->axe);
   if ( u3_none != cal_u->lab ) u3z(cal_u->lab);
+  if ( u3_none != cal_u->loc ) {
+    u3z(cal_u->loc);
+    if ( cal_u->fin_p ) {
+      u3j_fink_free(cal_u->fin_p);
+    }
+  }
+  if ( u3_none != cal_u->bas ) u3z(cal_u->bas);
 }
 
 /* u3n_call_mark(): see nock.h
@@ -2427,6 +2469,11 @@ u3n_call_mark(u3n_call* cal_u)
   c3_w tot_w = 0;
   if ( u3_none != cal_u->axe ) tot_w += u3a_mark_noun(cal_u->axe);
   if ( u3_none != cal_u->lab ) tot_w += u3a_mark_noun(cal_u->lab);
+  if ( u3_none != cal_u->loc ) {
+    tot_w += u3a_mark_noun(cal_u->loc);
+    tot_w += u3j_fink_mark(cal_u->fin_p);
+  }
+  if ( u3_none != cal_u->bas ) tot_w += u3a_mark_noun(cal_u->bas);
   return tot_w;
 }
 
