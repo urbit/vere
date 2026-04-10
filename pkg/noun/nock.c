@@ -8,6 +8,7 @@
 #include "jets.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "log.h"
 #include "manage.h"
 #include "options.h"
 #include "retrieve.h"
@@ -703,7 +704,7 @@ static u3n_prog*
 _n_prog_new(c3_w byc_w, c3_w cal_w,
             c3_w reg_w, c3_w lit_w, c3_w mem_w)
 {
-  c3_w cab_w = (sizeof(u3j_site) * cal_w),
+  c3_w cab_w = (sizeof(u3n_call) * cal_w),
        reb_w = (sizeof(u3j_rite) * reg_w),
        lib_w = (sizeof(u3_noun) * lit_w),
        meb_w = (sizeof(u3n_memo) * mem_w),
@@ -725,10 +726,13 @@ _n_prog_new(c3_w byc_w, c3_w cal_w,
   pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
 
   pog_u->cal_u.len_w = cal_w;
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->cal_u.cls_u = (u3n_call*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
 
   pog_u->reg_u.len_w = reg_w;
-  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
+  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.cls_u + pog_u->cal_u.len_w);
+
+  pog_u->dis_u.ent_w = 0;
+  pog_u->dis_u.dis_f = NULL;
 
   return pog_u;
 }
@@ -739,7 +743,7 @@ _n_prog_new(c3_w byc_w, c3_w cal_w,
 static u3n_prog*
 _n_prog_old(u3n_prog* sep_u)
 {
-  c3_w cab_w = sizeof(u3j_site) * sep_u->cal_u.len_w,
+  c3_w cab_w = sizeof(u3n_call) * sep_u->cal_u.len_w,
        reb_w = sizeof(u3j_rite) * sep_u->reg_u.len_w,
        lib_w = sizeof(u3_noun) * sep_u->lit_u.len_w,
        meb_w = sizeof(u3n_memo) * sep_u->mem_u.len_w,
@@ -760,10 +764,16 @@ _n_prog_old(u3n_prog* sep_u)
   pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
 
   pog_u->cal_u.len_w = sep_u->cal_u.len_w;
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->cal_u.cls_u = (u3n_call*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
 
   pog_u->reg_u.len_w = sep_u->reg_u.len_w;
-  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
+  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.cls_u + pog_u->cal_u.len_w);
+
+  //  dispatch table holds road-local stencil pointers; the senior
+  //  prog repopulates lazily on first kick.
+  //
+  pog_u->dis_u.ent_w = 0;
+  pog_u->dis_u.dis_f = NULL;
 
   memcpy(pog_u->lit_u.non, sep_u->lit_u.non, dat_w);
   return pog_u;
@@ -817,7 +827,6 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
           rit_u->own_o = c3n;
           rit_u->clu   = u3_none;
           rit_u->fin_p = 0;
-          rit_u->ste_u = NULL;
           break;
         }
       }
@@ -915,19 +924,11 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* call site index args */
         case TICB: case KICB: {
           _n_prog_asm_inx(buf_y, &i_w, cal_s, cod);
-          u3j_site* sit_u = &(pog_u->cal_u.sit_u[cal_s++]);
-          sit_u->axe   = u3k(u3t(op));
-          sit_u->pog_p = 0;
-          sit_u->bat   = u3_none;
-          sit_u->bas   = u3_none;
-          sit_u->loc   = u3_none;
-          sit_u->lab   = u3_none;
-          sit_u->jet_o = c3n;
-          sit_u->fon_o = c3n;
-          sit_u->cop_u = NULL;
-          sit_u->ham_u = NULL;
-          sit_u->fin_p = 0;
-          sit_u->ste_u = NULL;
+          u3n_call* cal_u = &(pog_u->cal_u.cls_u[cal_s++]);
+          cal_u->axe   = u3k(u3t(op));
+          cal_u->pog_p = 0;
+          cal_u->lab   = u3_none;
+          cal_u->bat   = u3_none;
           break;
         }
       }
@@ -1728,10 +1729,8 @@ _n_find(u3_noun pre, u3_noun fol)
           rit_u->own_o = c3n;
         }
         for ( i_w = 0; i_w < old->cal_u.len_w; ++i_w ) {
-          u3j_site* sit_u = &(old->cal_u.sit_u[i_w]);
-          sit_u->bat   = u3_none;
-          sit_u->pog_p = 0;
-          sit_u->fon_o = c3n;
+          u3n_call* cal_u = &(old->cal_u.cls_u[i_w]);
+          cal_u->pog_p = 0;
         }
         u3h_put(u3R->byc.har_p, key, _cn_of_prog(old));
         u3z(key);
@@ -1774,7 +1773,7 @@ _cn_prog_free(u3n_prog* pog_u)
     u3z(pog_u->mem_u.sot_u[dex_w].key);
   }
   for (dex_w = 0; dex_w < pog_u->cal_u.len_w; ++dex_w) {
-    u3j_site_lose(&(pog_u->cal_u.sit_u[dex_w]));
+    u3n_call_lose(&(pog_u->cal_u.cls_u[dex_w]));
   }
   for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
     u3j_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
@@ -2166,50 +2165,312 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
   u3z(tok);
 }
 
-/* _n_kick(): stop tracing noc and kick a u3j_site.
- *
- *   Inlined stencil fast path: when a stencil is cached and matches
- *   the core (by pointer equality on the whole core for static, or
- *   the battery for dynamic), and the jet is perfect/enabled, call
- *   the jet function directly. Bypasses the wrapper chain
- *   u3j_site_kick -> _cj_site_kick -> _cj_site_kick_hot -> _cj_kick_z
- *   for the common case.
- */
-static u3_weak
-_n_kick(u3_noun cor, u3j_site* sit_u)
+/* _n_dis_match(): pointer-eq verify a stencil against cor.
+*/
+__attribute__((always_inline))
+static inline c3_o
+_n_dis_match(u3_noun cor, u3j_sten* ste_u)
 {
-  u3j_sten* ste_u = sit_u->ste_u;
-  u3j_harm* ham_u = sit_u->ham_u;
+  return ( c3n == ste_u->dyn_o )
+       ? __(cor == ste_u->cor)
+       : __(c3y == u3du(cor) && u3h(cor) == ste_u->bat);
+}
 
-  //  fast path: stencil hit + perfect/enabled jet, no profiling/tracing.
-  //  battery match alone is sufficient for dynamic stencils -- if a
-  //  battery has multiple registrations the slow path catches it.
-  //
-  if (  ste_u
-     && ham_u
-     && (0 != ham_u->fun_f)
+/* _n_dis_jet(): call ham_u->fun_f(cor) iff perfect/enabled and
+**               not profiling/tracing.  Returns u3_none on miss
+**               or unfit conditions; transfers cor on hit.
+*/
+__attribute__((always_inline))
+static inline u3_weak
+_n_dis_jet(u3_noun cor, u3j_harm* ham_u)
+{
+  if (  (0 != ham_u->fun_f)
      && (c3y == ham_u->liv)
      && (c3y == ham_u->ice)
      && !(u3C.wag_w & (u3o_debug_cpu | u3o_trace)) )
   {
-    c3_o match_o = ( c3n == ste_u->dyn_o )
-                 ? __(cor == ste_u->cor)
-                 : __(c3y == u3du(cor) && u3h(cor) == ste_u->bat);
-    if ( c3y == match_o ) {
-      u3_weak pro = ham_u->fun_f(cor);
+    u3_weak pro = ham_u->fun_f(cor);
+    if ( u3_none != pro ) {
+      u3z(cor);
+      return pro;
+    }
+  }
+  return u3_none;
+}
+
+/* _n_dis_nope(): "no jet possible" dispatcher.  Returns u3_none
+**                immediately.  Set on progs whose slow path has
+**                determined they are non-jetted, so subsequent
+**                kicks short-circuit without re-running the slow
+**                path.  _cj_mine overwrites this if a jet later
+**                gets registered (via _n_dis_recompile).
+*/
+static u3_weak
+_n_dis_nope(u3_noun cor, u3n_prog* pog_u, u3_atom axe)
+{
+  return u3_none;
+}
+
+/* _n_dis_one_sta(): specialized dispatcher for a prog with one
+**                   cached static stencil.
+*/
+static u3_weak
+_n_dis_one_sta(u3_noun cor, u3n_prog* pog_u, u3_atom axe)
+{
+  u3n_dis_ent* ent = &pog_u->dis_u.ent_v[0];
+  if ( ent->axe_l != axe ) return u3_none;
+  u3j_sten* ste_u = ent->ste_u;
+  if ( cor == ste_u->cor ) {
+    return _n_dis_jet(cor, ent->ham_u);
+  }
+  if ( c3y == u3r_sing(cor, ste_u->cor) ) {
+    return _n_dis_jet(cor, ent->ham_u);
+  }
+  return u3_none;
+}
+
+/* _n_dis_one_dyn(): specialized dispatcher for a prog with one
+**                   cached dynamic stencil.  Quick battery filter
+**                   then full strict structural check.
+*/
+static u3_weak
+_n_dis_one_dyn(u3_noun cor, u3n_prog* pog_u, u3_atom axe)
+{
+  u3n_dis_ent* ent = &pog_u->dis_u.ent_v[0];
+  if ( ent->axe_l != axe ) return u3_none;
+  u3j_sten* ste_u = ent->ste_u;
+  if ( c3n == u3du(cor) ) return u3_none;
+  if (  (u3h(cor) != ste_u->bat)
+     && (c3n == u3r_sing(u3h(cor), ste_u->bat)) )
+  {
+    return u3_none;
+  }
+  if ( c3n == u3j_sten_check_strict(cor, ste_u) ) {
+    return u3_none;
+  }
+  return _n_dis_jet(cor, ent->ham_u);
+}
+
+/* _n_dis_many(): general N-entry dispatcher (1 < N <= U3N_DIS_INLINE).
+*/
+static u3_weak
+_n_dis_many(u3_noun cor, u3n_prog* pog_u, u3_atom axe)
+{
+  c3_w n_w = pog_u->dis_u.ent_w;
+  for ( c3_w i_w = 0; i_w < n_w; ++i_w ) {
+    u3n_dis_ent* ent = &pog_u->dis_u.ent_v[i_w];
+    if ( ent->axe_l != axe ) continue;
+    if ( c3y == u3j_sten_check_strict(cor, ent->ste_u) ) {
+      return _n_dis_jet(cor, ent->ham_u);
+    }
+  }
+  return u3_none;
+}
+
+/* _n_dis_recompile(): pick the specialized dispatcher template for
+**                     the prog's current dispatch table.
+*/
+static void
+_n_dis_recompile(u3n_prog* pog_u)
+{
+  c3_w n_w = pog_u->dis_u.ent_w;
+  if ( U3N_DIS_POLY == n_w || 0 == n_w ) {
+    pog_u->dis_u.dis_f = NULL;
+  }
+  else if ( 1 == n_w ) {
+    u3j_sten* ste_u = pog_u->dis_u.ent_v[0].ste_u;
+    pog_u->dis_u.dis_f = ( c3n == ste_u->dyn_o )
+                       ? _n_dis_one_sta
+                       : _n_dis_one_dyn;
+  }
+  else {
+    pog_u->dis_u.dis_f = _n_dis_many;
+  }
+}
+
+/* u3n_find_lookup(): see nock.h
+*/
+u3p(u3n_prog)
+u3n_find_lookup(u3_noun fol)
+{
+  u3_noun key = u3nc(u3_nul, u3k(fol));
+  u3_weak pog = u3h_git(u3R->byc.har_p, key);
+  u3z(key);
+  if ( u3_none == pog ) {
+    return 0;
+  }
+  return ((u3_post)(c3_w)pog) << u3a_vits;
+}
+
+/* u3n_dis_mark_nojet(): see nock.h
+*/
+void
+u3n_dis_mark_nojet(u3p(u3n_prog) pog_p)
+{
+  if ( !pog_p ) return;
+  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
+  if ( NULL == pog_u->dis_u.dis_f && 0 == pog_u->dis_u.ent_w ) {
+    pog_u->dis_u.dis_f = _n_dis_nope;
+  }
+}
+
+/* u3n_dis_is_nojet(): see nock.h
+*/
+c3_o
+u3n_dis_is_nojet(u3n_prog* pog_u)
+{
+  return __(pog_u && pog_u->dis_u.dis_f == _n_dis_nope);
+}
+
+/* u3n_dis_install(): see nock.h
+*/
+void
+u3n_dis_install(u3p(u3n_prog) pog_p,
+                u3_atom       axe_l,
+                u3j_sten*     ste_u,
+                u3j_harm*     ham_u)
+{
+  if ( !pog_p || !ste_u || !ham_u ) return;
+
+  //  Refuse dynamic stencils whose top-level parent is unresolved.
+  //  Per-prog dispatch uses u3j_sten_check_strict, which walks the
+  //  full parent chain — a dynamic stencil with par_p == 0 cannot
+  //  be safely cached because the strict check would fall back to
+  //  battery-only matching at the root, conflating contexts.
+  //
+  if ( (c3y == ste_u->dyn_o) && (0 == ste_u->par_p) ) {
+    return;
+  }
+
+  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
+  c3_w      n_w   = pog_u->dis_u.ent_w;
+
+  if ( U3N_DIS_POLY == n_w ) {
+    return;
+  }
+
+  //  no-op if (axe_l, ste_u, ham_u) already in the table
+  //
+  for ( c3_w i_w = 0; i_w < n_w; ++i_w ) {
+    if (  pog_u->dis_u.ent_v[i_w].axe_l == axe_l
+       && pog_u->dis_u.ent_v[i_w].ste_u == ste_u
+       && pog_u->dis_u.ent_v[i_w].ham_u == ham_u )
+    {
+      return;
+    }
+  }
+
+  if ( n_w >= U3N_DIS_INLINE ) {
+    //  table full -> mark polymorphic, disable per-prog dispatch.
+    //
+    pog_u->dis_u.ent_w = U3N_DIS_POLY;
+    pog_u->dis_u.dis_f = NULL;
+    return;
+  }
+
+  pog_u->dis_u.ent_v[n_w].axe_l = axe_l;
+  pog_u->dis_u.ent_v[n_w].ste_u = ste_u;
+  pog_u->dis_u.ent_v[n_w].ham_u = ham_u;
+  pog_u->dis_u.ent_w = n_w + 1;
+  _n_dis_recompile(pog_u);
+}
+
+/* u3n_call_take(): see nock.h
+*/
+void
+u3n_call_take(u3n_call* dst_u, u3n_call* src_u)
+{
+  dst_u->axe   = u3a_take(src_u->axe);
+  dst_u->pog_p = 0;  // re-derived on first kick
+  dst_u->lab   = ( u3_none == src_u->lab )
+               ? u3_none
+               : u3a_take(src_u->lab);
+  dst_u->bat   = u3_none;
+}
+
+/* u3n_call_merge(): see nock.h
+*/
+void
+u3n_call_merge(u3n_call* dst_u, u3n_call* src_u)
+{
+  u3z(dst_u->axe);
+  dst_u->axe = src_u->axe;
+  if ( u3_none != dst_u->lab ) u3z(dst_u->lab);
+  dst_u->lab = src_u->lab;
+  dst_u->pog_p = 0;  // re-derived
+  dst_u->bat   = u3_none;
+}
+
+/* u3n_call_ream(): see nock.h
+*/
+void
+u3n_call_ream(u3n_call* cal_u)
+{
+  cal_u->pog_p = 0;
+  cal_u->bat   = u3_none;
+}
+
+/* u3n_call_lose(): see nock.h
+*/
+void
+u3n_call_lose(u3n_call* cal_u)
+{
+  if ( u3_none != cal_u->axe ) u3z(cal_u->axe);
+  if ( u3_none != cal_u->lab ) u3z(cal_u->lab);
+}
+
+/* u3n_call_mark(): see nock.h
+*/
+c3_w
+u3n_call_mark(u3n_call* cal_u)
+{
+  c3_w tot_w = 0;
+  if ( u3_none != cal_u->axe ) tot_w += u3a_mark_noun(cal_u->axe);
+  if ( u3_none != cal_u->lab ) tot_w += u3a_mark_noun(cal_u->lab);
+  return tot_w;
+}
+
+/* _n_kick(): stop tracing noc and kick a u3n_call.
+ *
+ *   The fast path is the per-prog specialized dispatcher (dis_f),
+ *   selected by _n_dis_recompile to be optimal for the prog's current
+ *   dispatch table.  This is the only fast path: matches nockets'
+ *   model where dispatch lives on the formula, not the call site.
+ *
+ *   Marked always-inline so the bytecode interpreter's KICB/TICB
+ *   handlers don't pay a function-call penalty for the hot path.
+ */
+__attribute__((always_inline))
+static inline u3_weak
+_n_kick(u3_noun cor, u3n_call* cal_u)
+{
+  //  fast path: per-prog specialized dispatcher.
+  //
+  if ( cal_u->pog_p ) {
+    u3n_prog* pog_u = u3to(u3n_prog, cal_u->pog_p);
+    u3n_dis_f dis_f = pog_u->dis_u.dis_f;
+    if ( dis_f ) {
+      u3_weak pro = dis_f(cor, pog_u, (u3_atom)cal_u->axe);
       if ( u3_none != pro ) {
-        u3z(cor);
         return pro;
+      }
+      //  If the prog is marked as "no jet possible", short-circuit
+      //  without re-running the slow path.  _cj_mine will overwrite
+      //  the nope sentinel if a jet gets registered later.
+      //
+      if ( c3y == u3n_dis_is_nojet(pog_u) ) {
+        return u3_none;
       }
     }
   }
 
-  //  slow path
+  //  slow path (first call, or genuine dispatcher miss on a prog
+  //  that hasn't been marked nojet yet)
   //
   {
     u3_weak pro;
     u3t_off(noc_o);
-    pro = u3j_site_kick(cor, sit_u);
+    pro = u3n_call_kick(cor, cal_u);
     u3t_on(noc_o);
     return pro;
   }
@@ -2246,7 +2507,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
   static void* lab[] = { OPCODES };
 # undef X
 
-  u3j_site* sit_u;
+  u3n_call* cal_u;
   u3j_rite* rit_u;
   u3n_memo* mem_u;
   c3_y *pog = pog_u->byc_u.ops_y;
@@ -2615,10 +2876,10 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     do_kicb:
       x = pog[ip_w++];
     kick_in:
-      sit_u = &(pog_u->cal_u.sit_u[x]);
+      cal_u = &(pog_u->cal_u.cls_u[x]);
       top   = _n_peek(off);
       o     = *top;
-      *top = _n_kick(o, sit_u);
+      *top = _n_kick(o, cal_u);
       if ( u3_none == *top ) {
         _n_pop(mov);
 
@@ -2627,14 +2888,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         fam->ip_w   = ip_w;
         fam->pog_u  = pog_u;
 
-        pog_u = u3to(u3n_prog, sit_u->pog_p);
+        pog_u = u3to(u3n_prog, cal_u->pog_p);
         pog   = pog_u->byc_u.ops_y;
         ip_w  = 0;
 #ifdef U3_CPU_DEBUG
     u3R->pro.nox_d += 1;
 #endif
 #ifdef VERBOSE_BYTECODE
-        fprintf(stderr, "\r\nhead kick jump: %u, sp: %p\r\n", u3r_at(sit_u->axe, cor), top);
+        fprintf(stderr, "\r\nhead kick jump: %u, sp: %p\r\n", u3r_at(cal_u->axe, cor), top);
         _n_print_byc(pog, ip_w);
 #endif
         _n_push(mov, off, o);
@@ -2653,20 +2914,20 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     do_ticb:
       x = pog[ip_w++];
     tick_in:
-      sit_u = &(pog_u->cal_u.sit_u[x]);
+      cal_u = &(pog_u->cal_u.cls_u[x]);
       top   = _n_peek(off);
       o     = *top;
-      *top = _n_kick(o, sit_u);
+      *top = _n_kick(o, cal_u);
       if ( u3_none == *top ) {
         *top  = o;
-        pog_u = u3to(u3n_prog, sit_u->pog_p);
+        pog_u = u3to(u3n_prog, cal_u->pog_p);
         pog   = pog_u->byc_u.ops_y;
         ip_w  = 0;
 #ifdef U3_CPU_DEBUG
     u3R->pro.nox_d += 1;
 #endif
 #ifdef VERBOSE_BYTECODE
-        fprintf(stderr, "\r\ntail kick jump: %u, sp: %p\r\n", u3x_at(sit_u->axe, o);, top);
+        fprintf(stderr, "\r\ntail kick jump: %u, sp: %p\r\n", u3x_at(cal_u->axe, o);, top);
         _n_print_byc(pog, ip_w);
 #endif
       }
@@ -3060,8 +3321,8 @@ _cn_take_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_take(&(dst_u->cal_u.sit_u[i_w]),
-                  &(src_u->cal_u.sit_u[i_w]));
+    u3n_call_take(&(dst_u->cal_u.cls_u[i_w]),
+                  &(src_u->cal_u.cls_u[i_w]));
   }
 
   for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
@@ -3127,8 +3388,8 @@ _cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_merge(&(dst_u->cal_u.sit_u[i_w]),
-                   &(src_u->cal_u.sit_u[i_w]));
+    u3n_call_merge(&(dst_u->cal_u.cls_u[i_w]),
+                   &(src_u->cal_u.cls_u[i_w]));
   }
 
   for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
@@ -3186,12 +3447,17 @@ _n_ream(u3_noun kev)
   pog_u->byc_u.ops_y = (c3_y*) _n_prog_dat(pog_u);
   pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
   pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
-  pog_u->cal_u.sit_u = (u3j_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
-  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
+  pog_u->cal_u.cls_u = (u3n_call*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->reg_u.rit_u = (u3j_rite*) (pog_u->cal_u.cls_u + pog_u->cal_u.len_w);
 
   for ( c3_w i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
-    u3j_site_ream(&(pog_u->cal_u.sit_u[i_w]));
+    u3n_call_ream(&(pog_u->cal_u.cls_u[i_w]));
   }
+
+  //  dispatch table holds stencil pointers that ream will rebuild
+  //
+  pog_u->dis_u.ent_w = 0;
+  pog_u->dis_u.dis_f = NULL;
 }
 
 /* u3n_ream(): refresh after restoring from checkpoint.
@@ -3219,7 +3485,7 @@ _n_prog_mark(u3n_prog* pog_u)
   }
 
   for ( i_w = 0; i_w < pog_u->cal_u.len_w; ++i_w ) {
-    tot_w += u3j_site_mark(&(pog_u->cal_u.sit_u[i_w]));
+    tot_w += u3n_call_mark(&(pog_u->cal_u.cls_u[i_w]));
   }
 
   for ( i_w = 0; i_w < pog_u->reg_u.len_w; ++i_w ) {

@@ -506,6 +506,8 @@ _cj_find_warm(u3_noun loc)
 }
 
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);
+static void _cj_dispatch_install_arms(c3_l jax_l, u3_noun cor,
+                                      u3_noun huc, u3j_sten* ste_u);
 
 /* _cj_reg_find(): locate core within registry. RETAIN.
  */
@@ -726,66 +728,9 @@ _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
   return u3r_sing(fin_u->sat, cor);
 }
 
-/* _cj_sten_check(): check that a core matches a stencil. RETAIN.
- *
- *   Static stencils: pointer equality, with u3r_sing fallback for
- *   first encounter (which unifies for future O(1) checks).
- *   Dynamic stencils: battery pointer check + recursive parent.
- */
-static c3_o
-_cj_sten_check(u3_noun cor, u3j_sten* ste_u)
-{
-  if ( c3n == ste_u->dyn_o ) {
-    //  static: whole-core identity.
-    //  pointer equality after unification; u3r_sing on first encounter.
-    //
-    if ( cor == ste_u->cor ) {
-      return c3y;
-    }
-    return u3r_sing(cor, ste_u->cor);
-  }
-  else {
-    //  dynamic: battery identity + parent recurse.
-    //
-    if ( u3h(cor) != ste_u->bat ) {
-      if ( c3n == u3r_sing(u3h(cor), ste_u->bat) ) {
-        return c3n;
-      }
-    }
-    //  if parent stencil not resolved, trust the battery alone.
-    //  this is correct for kernel jets where each battery uniquely
-    //  identifies the jet. the slow path catches mismatches.
-    //
-    if ( NULL == ste_u->par_u ) {
-      return c3y;
-    }
-    {
-      u3_weak par = u3r_at(ste_u->pax, cor);
-      if ( u3_none == par ) {
-        return c3n;
-      }
-      return _cj_sten_check(par, ste_u->par_u);
-    }
-  }
-}
-
-/* _cj_sten_find(): find a matching stencil for cor on jet core jax_l.
- *                  returns NULL if no stencil matches. RETAIN.
- */
-static u3j_sten*
-_cj_sten_find(u3_noun cor, c3_l jax_l)
-{
-  u3j_sten* ste_u;
-  if ( 0 == jax_l ) {
-    return NULL;
-  }
-  for ( ste_u = u3D.ray_u[jax_l].ste_u; ste_u; ste_u = ste_u->nex_u ) {
-    if ( c3y == _cj_sten_check(cor, ste_u) ) {
-      return ste_u;
-    }
-  }
-  return NULL;
-}
+//  u3j_sten_check / u3j_sten_check_strict are now static inline in jets.h
+//
+#define _cj_sten_check u3j_sten_check
 
 /* _cj_loc_is_static(): check if a location represents a static core.
  *
@@ -800,28 +745,114 @@ _cj_loc_is_static(u3_noun loc)
 
   if ( c3y == u3h(pat) ) {
     if ( c3y == u3h(u3t(pat)) ) {
-      //  root: [%& %& ...] -- always static
-      //
       return c3y;
     }
     else {
-      //  static child: [%& %| parent-location]
-      //  static iff parent location is also static
-      //
       return _cj_loc_is_static(u3t(u3t(pat)));
     }
   }
-
-  //  dynamic: [%| axis parent-location]
-  //
   return c3n;
 }
 
-/* _cj_sten_make(): create a stencil for a registered core. RETAIN.
+/* _cj_of_meta(): pack loom-allocated meta pointer as a noun.
+ */
+static inline c3_w
+_cj_of_meta(u3j_meta* met_u)
+{
+  return ((c3_w)u3of(u3j_meta, met_u)) >> u3a_vits;
+}
+
+/* _cj_to_meta(): unpack a meta pointer from a noun value.
+ */
+static inline u3j_meta*
+_cj_to_meta(c3_w met_w)
+{
+  u3_post met_p = ((u3_post)met_w) << u3a_vits;
+  return u3to(u3j_meta, met_p);
+}
+
+/* _cj_meta_get(): look up cell metadata. returns NULL if absent.
+ */
+static u3j_meta*
+_cj_meta_get(u3_noun cel)
+{
+  u3a_road* rod_u = u3R;
+  while ( 1 ) {
+    u3_weak val = u3h_get(rod_u->jed.met_p, cel);
+    if ( u3_none != val ) {
+      return _cj_to_meta(val);
+    }
+    if ( rod_u->par_p ) {
+      rod_u = u3to(u3a_road, rod_u->par_p);
+    }
+    else {
+      return NULL;
+    }
+  }
+}
+
+/* _cj_meta_make(): get-or-create cell metadata on the current road.
  *
- *   Creates static stencils for static cores (root and static-child)
- *   and dynamic stencils for dynamic cores.
- *   Prepends to the stencil list on u3D.ray_u[jax_l].
+ *   Does not walk parent roads — we must not mutate a parent road's
+ *   metadata from a junior, since junior's stencil allocations are
+ *   reclaimed when the junior folds.  Each road owns its own metadata
+ *   entries; take/reap propagates them.
+ */
+static u3j_meta*
+_cj_meta_make(u3_noun cel)
+{
+  u3_weak val = u3h_get(u3R->jed.met_p, cel);
+  if ( u3_none != val ) {
+    return _cj_to_meta(val);
+  }
+
+  u3j_meta* met_u = u3a_walloc(c3_wiseof(u3j_meta));
+  met_u->sta_p = 0;
+  met_u->bat_p = 0;
+  u3h_put(u3R->jed.met_p, cel, _cj_of_meta(met_u));
+  return met_u;
+}
+
+/* _cj_sten_free_list(): free a loom-allocated stencil linked list.
+ */
+static void
+_cj_sten_free_list(u3p(u3j_sten) ste_p)
+{
+  while ( ste_p ) {
+    u3j_sten* ste_u = u3to(u3j_sten, ste_p);
+    u3p(u3j_sten) nex_p = ste_u->nex_p;
+    u3a_wfree(ste_u);
+    ste_p = nex_p;
+  }
+}
+
+/* _cj_meta_free_cb(): u3h_walk callback that frees the stencil and
+ *                     battery structs hanging off each metadata entry.
+ *                     The metadata struct itself is loom-allocated and
+ *                     freed by u3h_free.
+ */
+static void
+_cj_meta_free_cb(u3_noun kev)
+{
+  u3j_meta* met_u = _cj_to_meta(u3t(kev));
+  if ( met_u->sta_p ) {
+    u3a_wfree(u3to(u3j_sten, met_u->sta_p));
+    met_u->sta_p = 0;
+  }
+  if ( met_u->bat_p ) {
+    u3j_battery* bat_u = u3to(u3j_battery, met_u->bat_p);
+    _cj_sten_free_list(bat_u->roo_p);
+    _cj_sten_free_list(bat_u->chi_p);
+    u3a_wfree(bat_u);
+    met_u->bat_p = 0;
+  }
+}
+
+/* _cj_sten_make(): create a stencil for a registered core and store
+ *                  it in cell metadata.  Loom road-local.  RETAIN.
+ *
+ *   Static stencils are stored on the core cell's metadata.
+ *   Dynamic stencils are stored on the battery cell's metadata.
  */
 static u3j_sten*
 _cj_sten_make(u3_noun cor, u3_noun loc, c3_l jax_l)
@@ -832,80 +863,160 @@ _cj_sten_make(u3_noun cor, u3_noun loc, c3_l jax_l)
     return NULL;
   }
 
-  ste_u = c3_calloc(sizeof(u3j_sten));
-
-  ste_u->bat = u3h(cor);
-  ste_u->loc = loc;
-
   if ( c3y == _cj_loc_is_static(loc) ) {
-    //  static stencil: store whole core for O(1) matching
+    //  static: store whole-core stencil on the core's metadata.
+    //  if a static stencil already exists for this cell, reuse it
+    //  (don't overwrite — child stencils may hold par_p offsets
+    //  to the existing one).
     //
+    u3j_meta* met_u = _cj_meta_make(cor);
+    if ( met_u->sta_p ) {
+      return u3to(u3j_sten, met_u->sta_p);
+    }
+    ste_u = u3a_walloc(c3_wiseof(u3j_sten));
+    ste_u->bat   = u3h(cor);
+    ste_u->loc   = loc;
     ste_u->dyn_o = c3n;
     ste_u->cor   = cor;
     ste_u->pax   = 0;
-    ste_u->par_u = NULL;
+    ste_u->par_p = 0;
+    ste_u->nex_p = 0;
+    met_u->sta_p = u3of(u3j_sten, ste_u);
   }
   else {
-    //  dynamic stencil: store battery + parent axis + parent stencil
+    //  dynamic: store on the battery's metadata, prepended to its list
     //
     u3_noun pat = u3h(loc);
     u3_noun axe = ( c3n == u3h(pat) )
                 ? u3h(u3t(pat))
                 : 3;
+    u3_noun par_loc = u3t(u3t(pat));
+    u3j_battery* bat_u;
 
-    u3_weak     par     = u3r_at(axe, cor);
-    u3j_sten*   par_ste = NULL;
+    u3j_meta* bat_meta = _cj_meta_make(u3h(cor));
+    if ( !bat_meta->bat_p ) {
+      bat_u = u3a_walloc(c3_wiseof(u3j_battery));
+      bat_u->pax_l = (c3_l)axe;
+      bat_u->roo_p = 0;
+      bat_u->chi_p = 0;
+      bat_meta->bat_p = u3of(u3j_battery, bat_u);
+    }
+    else {
+      bat_u = u3to(u3j_battery, bat_meta->bat_p);
+    }
 
-    //  resolve parent stencil via warm state (no _cj_spot call)
+    //  skip if a stencil for this loc already exists (re-mine).
+    //  Search both lists.
     //
     {
-      u3_noun par_loc = u3t(u3t(pat));
-      u3_weak par_act = _cj_find_warm(par_loc);
-      if ( u3_none != par_act ) {
-        c3_l par_jax = (c3_l)u3h(par_act);
-        u3z(par_act);
-        if ( u3_none != par && par_jax ) {
-          par_ste = _cj_sten_find(par, par_jax);
+      u3p(u3j_sten) lists[2] = { bat_u->roo_p, bat_u->chi_p };
+      for ( c3_w l_w = 0; l_w < 2; ++l_w ) {
+        u3p(u3j_sten) exist_p = lists[l_w];
+        while ( exist_p ) {
+          u3j_sten* exist = u3to(u3j_sten, exist_p);
+          if ( c3y == u3r_sing(exist->loc, loc) ) {
+            return exist;
+          }
+          exist_p = exist->nex_p;
         }
       }
+    }
+
+    ste_u = u3a_walloc(c3_wiseof(u3j_sten));
+    ste_u->bat = u3h(cor);
+    ste_u->loc = loc;
+
+    //  resolve parent stencil: extract the parent core, look up its
+    //  metadata, and find the stencil whose location matches the
+    //  parent location embedded in our pattern.  if parent metadata
+    //  is missing, recursively populate it (bottom-up build after
+    //  ream or first kick).
+    //
+    c3_o par_static_o = c3n;
+    {
+      u3_weak       par = u3r_at(axe, cor);
+      u3p(u3j_sten) par_p = 0;
+      if ( u3_none != par && c3y == u3du(par) ) {
+        c3_w try_w;
+        for ( try_w = 0; try_w < 2 && !par_p; ++try_w ) {
+          u3j_meta* par_meta = _cj_meta_get(par);
+          if ( !par_meta ) {
+            par_meta = _cj_meta_get(u3h(par));
+          }
+          if ( par_meta ) {
+            if ( par_meta->sta_p ) {
+              u3j_sten* sta_u = u3to(u3j_sten, par_meta->sta_p);
+              if ( c3y == u3r_sing(sta_u->loc, par_loc) ) {
+                par_p = par_meta->sta_p;
+                par_static_o = c3y;
+              }
+            }
+            if ( !par_p && par_meta->bat_p ) {
+              u3j_battery* par_bat = u3to(u3j_battery, par_meta->bat_p);
+              u3p(u3j_sten) plists[2] = { par_bat->roo_p, par_bat->chi_p };
+              for ( c3_w l_w = 0; l_w < 2 && !par_p; ++l_w ) {
+                u3p(u3j_sten) it_p = plists[l_w];
+                while ( it_p ) {
+                  u3j_sten* it = u3to(u3j_sten, it_p);
+                  if ( c3y == u3r_sing(it->loc, par_loc) ) {
+                    par_p = it_p;
+                    //  parent is dynamic (it lives in a battery list)
+                    par_static_o = c3n;
+                    break;
+                  }
+                  it_p = it->nex_p;
+                }
+              }
+            }
+          }
+          if ( par_p || try_w > 0 ) break;
+          //  recursively populate parent stencil from warm state
+          //
+          {
+            u3_weak par_act = _cj_find_warm(par_loc);
+            if ( u3_none == par_act ) break;
+            {
+              c3_l par_jax_l = u3h(par_act);
+              u3z(par_act);
+              if ( !par_jax_l ) break;
+              _cj_sten_make(par, par_loc, par_jax_l);
+            }
+          }
+        }
+      }
+      ste_u->par_p = par_p;
     }
 
     ste_u->dyn_o = c3y;
     ste_u->cor   = u3_none;
     ste_u->pax   = axe;
-    ste_u->par_u = par_ste;
-  }
 
-  //  prepend to jet core's stencil list
-  //
-  ste_u->nex_u = u3D.ray_u[jax_l].ste_u;
-  u3D.ray_u[jax_l].ste_u = ste_u;
+    //  prepend to the appropriate list based on parent kind.
+    //  No parent (par_p == 0) is treated as dynamic-parent (the
+    //  conservative case for verification).
+    //
+    if ( c3y == par_static_o ) {
+      ste_u->nex_p = bat_u->roo_p;
+      bat_u->roo_p = u3of(u3j_sten, ste_u);
+    }
+    else {
+      ste_u->nex_p = bat_u->chi_p;
+      bat_u->chi_p = u3of(u3j_sten, ste_u);
+    }
+  }
 
   return ste_u;
 }
 
-/* u3j_sten_free(): free a stencil linked list.
- */
-void
-u3j_sten_free(u3j_sten* ste_u)
-{
-  while ( ste_u ) {
-    u3j_sten* nex_u = ste_u->nex_u;
-    c3_free(ste_u);
-    ste_u = nex_u;
-  }
-}
-
-/* _cj_sten_free_all(): free all stencils from dashboard.
+/* _cj_meta_free_all(): walk met_p and free off-loom data hanging
+ *                      off each metadata entry.  The metadata struct
+ *                      itself is loom-allocated and freed by
+ *                      u3h_free.  Caller must follow with u3h_free.
  */
 static void
-_cj_sten_free_all(void)
+_cj_meta_free_all(void)
 {
-  c3_l i_l;
-  for ( i_l = 0; i_l < u3D.len_l; i_l++ ) {
-    u3j_sten_free(u3D.ray_u[i_l].ste_u);
-    u3D.ray_u[i_l].ste_u = NULL;
-  }
+  u3h_walk(u3R->jed.met_p, _cj_meta_free_cb);
 }
 
 /* _cj_nail(): resolve hot state for arm at axis within cores located
@@ -1314,11 +1425,6 @@ _cj_hank_fine(u3j_hank* han_u, u3_noun cor, u3_noun *inn)
     }
     else {
       u3j_site* sit_u = &(han_u->sit_u);
-      if ( sit_u->ste_u ) {
-        return _cj_sten_check(*inn, sit_u->ste_u);
-      }
-      //  no stencil cached yet: use fine check
-      //
       u3_assert(u3_none != sit_u->loc);
       return _cj_fine(*inn, sit_u->fin_p);
     }
@@ -1367,7 +1473,6 @@ _cj_hank_fill(u3j_hank* han_u, u3_noun tam, u3_noun cor)
       sit_u->loc   = u3k(loc);
       sit_u->fin_p = _cj_cast(cor, loc);
       sit_u->fon_o = c3y;
-      sit_u->ste_u = NULL;
       if ( 0 == (sit_u->axe = _cj_axis(fol)) ) {
         sit_u->jet_o = c3n;
         sit_u->pog_p = _cj_prog(loc, fol);
@@ -1564,8 +1669,6 @@ _cj_fink_free(u3p(u3j_fink) fin_p)
 void
 u3j_rite_take(u3j_rite* dst_u, u3j_rite* src_u)
 {
-  dst_u->ste_u = NULL;
-
   if ( u3_none == src_u->clu ) {
     dst_u->clu   = u3_none;
     dst_u->fin_p = 0;
@@ -1586,8 +1689,6 @@ u3j_rite_take(u3j_rite* dst_u, u3j_rite* src_u)
 void
 u3j_rite_merge(u3j_rite* dst_u, u3j_rite* src_u)
 {
-  dst_u->ste_u = NULL;
-
   if ( u3_none != src_u->clu ) {
     if ( u3_none != dst_u->clu ) {
       u3z(dst_u->clu);
@@ -1615,8 +1716,6 @@ u3j_site_take(u3j_site* dst_u, u3j_site* src_u)
   dst_u->bat   = u3_none;
   dst_u->bas   = u3_none;
   dst_u->pog_p = 0;
-
-  dst_u->ste_u = NULL;
 
   if ( u3_none == src_u->loc ) {
     dst_u->loc   = u3_none;
@@ -1653,7 +1752,6 @@ u3j_site_merge(u3j_site* dst_u, u3j_site* src_u)
 {
   u3z(dst_u->axe);
   dst_u->axe = src_u->axe;
-  dst_u->ste_u = NULL;  //  off-loom pointer, survives merge
 
   if ( u3_none != src_u->loc ) {
     u3z(dst_u->loc);  //  XX these may be u3_none
@@ -1683,8 +1781,6 @@ u3j_site_merge(u3j_site* dst_u, u3j_site* src_u)
 void
 u3j_site_ream(u3j_site* sit_u)
 {
-  sit_u->ste_u = NULL;
-
   if ( u3_none != sit_u->loc ) {
     u3z(sit_u->lab);
     sit_u->jet_o = _cj_nail(sit_u->loc, sit_u->axe,
@@ -1776,9 +1872,8 @@ _cj_site_kick_hot(u3_noun loc, u3_noun cor, u3j_site* sit_u, c3_o lok_o)
 
 /* _cj_site_kick(): execute site's kick on core.
  *
- *   Hot path: stencil check (cached on the site).
- *   Warm path: fine check fallback after a road promotion clears
- *              the cached stencil; repopulates the stencil for next time.
+ *   Hot path: metadata fast path filtered by the site's jax_l.
+ *   Warm path: fine check fallback if metadata absent but loc cached.
  *   Miss path: _cj_spot (cold/warm/hot) to find location.
  */
 static u3_weak
@@ -1786,25 +1881,26 @@ _cj_site_kick(u3_noun cor, u3j_site* sit_u)
 {
   u3_weak pro = u3_none;
 
-  //  stencil cache hit: O(1) for static cores
-  //
-  if ( sit_u->ste_u ) {
-    if ( c3y == _cj_sten_check(cor, sit_u->ste_u) ) {
-      return _cj_site_kick_hot(sit_u->ste_u->loc, cor, sit_u, c3y);
-    }
-    //  stencil mismatch: core changed, clear cache
-    //
-    sit_u->ste_u = NULL;
-  }
-
-  //  fine check fallback: when stencil was cleared (e.g., after road
-  //  promotion) but location is still valid.  repopulates the stencil
-  //  for next time.
+  //  fine check: when location is still valid for cor, dispatch
+  //  via the cached ham_u + install dispatch on the prog so the
+  //  per-prog dispatcher catches future kicks.
   //
   if ( u3_none != sit_u->loc ) {
     if ( c3y == _cj_fine(cor, sit_u->fin_p) ) {
       if ( c3y == sit_u->jet_o ) {
-        sit_u->ste_u = _cj_sten_find(cor, sit_u->cop_u->jax_l);
+        u3_weak act = _cj_find_warm(sit_u->loc);
+        if ( u3_none != act ) {
+          c3_l jax_l = u3h(act);
+          u3z(act);
+          if ( jax_l ) {
+            u3j_sten* ste_u = _cj_sten_make(cor, sit_u->loc, jax_l);
+            if ( ste_u ) {
+              _cj_dispatch_install_arms(jax_l, cor,
+                                        u3t(u3t(sit_u->loc)),
+                                        ste_u);
+            }
+          }
+        }
       }
       return _cj_site_kick_hot(sit_u->loc, cor, sit_u, c3y);
     }
@@ -1829,13 +1925,24 @@ _cj_site_kick(u3_noun cor, u3j_site* sit_u)
       sit_u->jet_o = _cj_nail(loc, sit_u->axe,
           &(sit_u->lab), &(sit_u->cop_u), &(sit_u->ham_u));
 
-      //  find stencil (created during mine/ream on home road)
+      //  install per-prog dispatch on every arm of the dashboard
+      //  core, so future kicks at any site that compiles those
+      //  arms hit the per-prog fast path.
       //
       if ( c3y == sit_u->jet_o ) {
-        sit_u->ste_u = _cj_sten_find(cor, sit_u->cop_u->jax_l);
-      }
-      else {
-        sit_u->ste_u = NULL;
+        u3_weak act = _cj_find_warm(loc);
+        if ( u3_none != act ) {
+          c3_l jax_l = u3h(act);
+          u3z(act);
+          if ( jax_l ) {
+            u3j_sten* ste_u = _cj_sten_make(cor, loc, jax_l);
+            if ( ste_u ) {
+              _cj_dispatch_install_arms(jax_l, cor,
+                                        u3t(u3t(loc)),
+                                        ste_u);
+            }
+          }
+        }
       }
 
       pro = _cj_site_kick_hot(loc, cor, sit_u, c3y);
@@ -1862,6 +1969,120 @@ u3j_site_kick(u3_noun cor, u3j_site* sit_u)
   u3_weak pro;
   u3t_on(glu_o);
   pro = _cj_site_kick(cor, sit_u);
+  u3t_off(glu_o);
+  return pro;
+}
+
+/* u3n_call_kick(): see nock.h.  Slow path for the bytecode
+**                  interpreter when the per-prog dispatcher misses.
+**                  No per-call-site cache state — everything is
+**                  computed fresh per call from cor + cal_u->axe.
+*/
+u3_weak
+u3n_call_kick(u3_noun cor, u3n_call* cal_u)
+{
+  u3t_on(glu_o);
+
+  //  identify cor's location.  May be u3_none for non-jetted cors.
+  //  Note: _cj_spot has REGISTRATION side effects (via _cj_spot_hot
+  //  it can populate cod_p/war_p when it discovers a core), so we
+  //  cannot skip it via a negative-result cache without breaking
+  //  later _cj_mine parent lookups.
+  //
+  u3_weak loc = _cj_spot(cor, NULL);
+
+  //  Cache the called formula's prog.  We need this set BEFORE
+  //  returning, because the bytecode interpreter jumps to
+  //  cal_u->pog_p after a jet miss (return u3_none).
+  //
+  //  Use the loc-AGNOSTIC key (u3_nul, fol) because that matches
+  //  what _cj_dispatch_install_arms uses via u3n_find_lookup —
+  //  otherwise the install populates one prog's dis_u and the
+  //  dispatcher reads from a different one and never fires.
+  //
+  //  Re-resolve on EVERY call so polymorphic call sites where the
+  //  formula at axe varies with cor's battery still get the right
+  //  prog.  (axe filtering in the dispatcher disambiguates.)
+  //
+  {
+    u3_weak fol = u3r_at(cal_u->axe, cor);
+    if ( u3_none != fol ) {
+      cal_u->pog_p = u3n_find(u3_nul, fol);
+    }
+  }
+
+  if ( u3_none == loc ) {
+    u3t_off(glu_o);
+    return u3_none;
+  }
+
+  //  find the jet driver for (loc, axe)
+  //
+  u3_noun lab = u3_none;
+  u3j_core* cop_u = NULL;
+  u3j_harm* ham_u = NULL;
+  c3_o jet_o = _cj_nail(loc, cal_u->axe, &lab, &cop_u, &ham_u);
+
+  //  install per-prog dispatch on every arm of the dashboard core
+  //  so future kicks at any site that compiles those arms hit the
+  //  per-prog fast path.  axe_l filtering in the dispatcher
+  //  templates disambiguates byte-equal multi-arm conflations.
+  //
+  if ( c3y == jet_o ) {
+    u3_weak act = _cj_find_warm(loc);
+    if ( u3_none != act ) {
+      c3_l jax_l = u3h(act);
+      u3z(act);
+      if ( jax_l ) {
+        u3j_sten* ste_u = _cj_sten_make(cor, loc, jax_l);
+        if ( ste_u ) {
+          _cj_dispatch_install_arms(jax_l, cor, u3t(u3t(loc)), ste_u);
+        }
+      }
+    }
+  }
+  //  Note: we cannot mark nojet here, because a prog is shared across
+  //  many cors (same formula, different contexts).  One cor having no
+  //  jet doesn't mean another cor sharing the prog also has no jet.
+  //  More importantly, auto-discovery side effects in _cj_spot fire
+  //  per-cor — short-circuiting this slow path would break parent
+  //  registration chains for cors that share the prog.
+
+  //  cache lab for tracing if not yet set
+  //
+  if ( (u3_none == cal_u->lab) && (u3_none != lab) ) {
+    cal_u->lab = u3k(lab);
+  }
+
+  //  dispatch via _cj_kick_z which handles the ice (verification)
+  //  flag, debug-cpu profiling, and trace-mode hooks the same way
+  //  the legacy _cj_site_kick_hot path does.
+  //
+  u3_weak pro = u3_none;
+  if ( c3y == jet_o ) {
+    c3_o pof_o = __(u3C.wag_w & u3o_debug_cpu);
+    c3_o trc_o = __(u3C.wag_w & u3o_trace);
+
+    if ( c3n == pof_o && c3n == trc_o ) {
+      u3t_off(glu_o);
+      pro = _cj_kick_z(cor, cop_u, ham_u, cal_u->axe);
+      u3t_on(glu_o);
+    }
+    else {
+      if ( _(pof_o) ) pof_o = u3t_come(lab);
+      if ( _(trc_o) ) trc_o = u3t_nock_trace_push(lab);
+
+      u3t_off(glu_o);
+      pro = _cj_kick_z(cor, cop_u, ham_u, cal_u->axe);
+      u3t_on(glu_o);
+
+      if ( c3y == pof_o ) u3t_flee();
+      if ( c3y == trc_o ) u3t_nock_trace_pop();
+    }
+  }
+
+  u3z(loc);
+  if ( u3_none != lab ) u3z(lab);
   u3t_off(glu_o);
   return pro;
 }
@@ -1926,7 +2147,6 @@ u3j_gate_prep(u3j_site* sit_u, u3_noun cor)
   sit_u->bas   = u3_none;
   sit_u->axe   = 2;
   sit_u->bat   = cor; // a lie, this isn't really the battery!
-  sit_u->ste_u = NULL;
   sit_u->loc   = loc = _cj_spot(cor, &(sit_u->bas));
   sit_u->pog_p = _cj_prog(loc, u3h(cor));
   if ( u3_none != loc ) {
@@ -2033,6 +2253,75 @@ _cj_print_tas(u3_noun tas)
   u3l_log("/%s", str_c);
 }
 
+/* _cj_dispatch_install_arms(): for a freshly registered jet core,
+**                              walk the dashboard core's arms and
+**                              install per-prog dispatch on every
+**                              arm formula's prog that's already
+**                              in the bytecode cache.  Skips arms
+**                              that haven't been compiled yet —
+**                              they'll be picked up lazily by the
+**                              slow-path install in _cj_site_kick.
+**
+**                              RETAIN cor, huc; ste_u must be the
+**                              stencil for cor at jax_l.
+*/
+static void
+_cj_dispatch_install_arms(c3_l jax_l,
+                          u3_noun cor,
+                          u3_noun huc,
+                          u3j_sten* ste_u)
+{
+  if ( !jax_l || !ste_u ) return;
+
+  u3j_core* cop_u = &u3D.ray_u[jax_l];
+  if ( !cop_u->arm_u ) return;
+
+  c3_l    i_l;
+
+  for ( i_l = 0; cop_u->arm_u[i_l].fcs_c; ++i_l ) {
+    u3j_harm* har_u = &cop_u->arm_u[i_l];
+    if ( !har_u->fun_f ) continue;
+    if ( c3y != har_u->liv ) continue;
+
+    //  determine the axis of this arm within the battery, the
+    //  same way _cj_warm_hump does.
+    //
+    c3_l axe_l = 0;
+    if ( '.' == *(har_u->fcs_c) ) {
+      c3_d axe_d = 0;
+      if (  (1 == sscanf(har_u->fcs_c+1, "%" SCNu64, &axe_d))
+         && !(axe_d >> 32ULL)
+         && !(((c3_w)1 << 31) & (c3_w)axe_d)
+         && (axe_d >= 2) )
+      {
+        axe_l = (c3_l)axe_d;
+      }
+    }
+    else {
+      u3_noun nam = u3i_string(har_u->fcs_c);
+      u3_noun fol = u3kdb_get(u3k(huc), nam);
+      u3z(nam);
+      if ( u3_none != fol ) {
+        axe_l = _cj_axis(fol);
+        u3z(fol);
+      }
+    }
+    if ( axe_l < 2 ) continue;
+
+    //  extract the arm formula from cor and look up its prog,
+    //  without triggering compilation.  axe_l is "axis within cor"
+    //  per the dashboard convention (matching the call site axe).
+    //
+    u3_weak fol = u3r_at(axe_l, cor);
+    if ( u3_none == fol ) continue;
+
+    u3p(u3n_prog) pog_p = u3n_find_lookup(fol);
+    if ( pog_p ) {
+      u3n_dis_install(pog_p, (u3_atom)axe_l, ste_u, har_u);
+    }
+  }
+}
+
 /* _cj_mine(): declare a core and produce location. RETAIN.
 */
 static u3_weak
@@ -2096,10 +2385,15 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     u3h_put(u3R->jed.cod_p, bat, u3nc(u3k(bas), reg));
     u3h_put(u3R->jed.war_p, loc, act); // see note in _cj_spot
 
-    //  create stencil for this jetted core
+    //  create stencil for this jetted core, and eagerly install
+    //  per-prog dispatch on every arm formula's prog that's
+    //  already in the bytecode cache.
     //
     if ( jax_l ) {
-      _cj_sten_make(cor, loc, jax_l);
+      u3j_sten* ste_u = _cj_sten_make(cor, loc, jax_l);
+      if ( ste_u ) {
+        _cj_dispatch_install_arms(jax_l, cor, u3t(u3t(loc)), ste_u);
+      }
     }
 
     u3z(pel); u3z(axe);
@@ -2206,23 +2500,7 @@ u3j_rite_mine(u3j_rite* rit_u, u3_noun clu, u3_noun cor)
 
   non_t = (u3_none == rit_u->clu);
 
-  //  stencil fast path: if stencil matches, skip re-mining
-  //
-  if ( !non_t && rit_u->ste_u ) {
-    if ( c3y == u3r_sing(rit_u->clu, clu) &&
-         c3y == _cj_sten_check(cor, rit_u->ste_u) )
-    {
-      u3z(clu);
-      u3z(cor);
-      u3t_off(glu_o);
-      return;
-    }
-    else {
-      rit_u->ste_u = NULL;
-    }
-  }
-
-  //  fine check fallback: use existing fink if available
+  //  fine check: use existing fink if available
   //
   if ( non_t ||
        c3n == u3r_sing(rit_u->clu, clu) ||
@@ -2235,17 +2513,6 @@ u3j_rite_mine(u3j_rite* rit_u, u3_noun clu, u3_noun cor)
       rit_u->own_o    = c3y;
       rit_u->clu      = u3k(clu);
       rit_u->fin_p    = _cj_cast(cor, loc);
-
-      //  cache the stencil that _cj_mine just created
-      //
-      {
-        u3_weak act = _cj_find_warm(loc);
-        if ( u3_none != act ) {
-          rit_u->ste_u = _cj_sten_find(cor, (c3_l)u3h(act));
-          u3z(act);
-        }
-      }
-
       u3z(loc);
 
       if ( !non_t && (c3y == own_o) ) {
@@ -2254,6 +2521,7 @@ u3j_rite_mine(u3j_rite* rit_u, u3_noun clu, u3_noun cor)
       }
     }
   }
+
   u3z(clu);
   u3z(cor);
   u3t_off(glu_o);
@@ -2279,6 +2547,164 @@ _cj_take_hank_cb(c3_w nah_w)
   return _cj_of_hank(han_u);
 }
 
+/* _cj_take_map: junior→senior offset map used during u3j_take.
+**
+**   Two parallel arrays of u3p offsets, lookups via linear scan
+**   (small N — bounded by # of stencils + batteries on the junior
+**   road, typically a few hundred).  Lifetime is one u3j_take call.
+*/
+static struct {
+  c3_w   cap_w;
+  c3_w   len_w;
+  c3_w*  jun_v;
+  c3_w*  sen_v;
+} _cj_take_sten_map, _cj_take_bat_map;
+
+static void
+_cj_take_map_init(void)
+{
+  _cj_take_sten_map.cap_w = 64;
+  _cj_take_sten_map.len_w = 0;
+  _cj_take_sten_map.jun_v = c3_malloc(64 * sizeof(c3_w));
+  _cj_take_sten_map.sen_v = c3_malloc(64 * sizeof(c3_w));
+  _cj_take_bat_map.cap_w  = 16;
+  _cj_take_bat_map.len_w  = 0;
+  _cj_take_bat_map.jun_v  = c3_malloc(16 * sizeof(c3_w));
+  _cj_take_bat_map.sen_v  = c3_malloc(16 * sizeof(c3_w));
+}
+
+static void
+_cj_take_map_free(void)
+{
+  c3_free(_cj_take_sten_map.jun_v);
+  c3_free(_cj_take_sten_map.sen_v);
+  c3_free(_cj_take_bat_map.jun_v);
+  c3_free(_cj_take_bat_map.sen_v);
+  _cj_take_sten_map.jun_v = NULL;
+  _cj_take_sten_map.sen_v = NULL;
+  _cj_take_bat_map.jun_v  = NULL;
+  _cj_take_bat_map.sen_v  = NULL;
+}
+
+static c3_w
+_cj_take_map_get(typeof(_cj_take_sten_map)* map, c3_w jun_w)
+{
+  for ( c3_w i_w = 0; i_w < map->len_w; ++i_w ) {
+    if ( map->jun_v[i_w] == jun_w ) return map->sen_v[i_w];
+  }
+  return 0;
+}
+
+static void
+_cj_take_map_put(typeof(_cj_take_sten_map)* map, c3_w jun_w, c3_w sen_w)
+{
+  if ( map->len_w == map->cap_w ) {
+    map->cap_w *= 2;
+    map->jun_v = c3_realloc(map->jun_v, map->cap_w * sizeof(c3_w));
+    map->sen_v = c3_realloc(map->sen_v, map->cap_w * sizeof(c3_w));
+  }
+  map->jun_v[map->len_w] = jun_w;
+  map->sen_v[map->len_w] = sen_w;
+  ++map->len_w;
+}
+
+/* _cj_take_sten(): deep-copy a single stencil from junior to senior,
+**                  using the junior→senior map for identity.
+*/
+static u3p(u3j_sten)
+_cj_take_sten(u3p(u3j_sten) jun_p)
+{
+  if ( !jun_p ) return 0;
+
+  c3_w got_w = _cj_take_map_get(&_cj_take_sten_map, (c3_w)jun_p);
+  if ( got_w ) return (u3p(u3j_sten))got_w;
+
+  u3j_sten* jun_u = u3to(u3j_sten, jun_p);
+  u3j_sten* sen_u = u3a_walloc(c3_wiseof(u3j_sten));
+  u3p(u3j_sten) sen_p = u3of(u3j_sten, sen_u);
+
+  //  Insert BEFORE recursing on par_p, in case of cycles.
+  //
+  _cj_take_map_put(&_cj_take_sten_map, (c3_w)jun_p, (c3_w)sen_p);
+
+  sen_u->dyn_o = jun_u->dyn_o;
+  sen_u->bat   = u3a_take(jun_u->bat);
+  sen_u->cor   = ( u3_none == jun_u->cor )
+               ? u3_none
+               : u3a_take(jun_u->cor);
+  sen_u->loc   = u3a_take(jun_u->loc);
+  sen_u->pax   = jun_u->pax;
+  sen_u->par_p = _cj_take_sten(jun_u->par_p);
+  sen_u->nex_p = 0;  //  reset; list head re-links via _cj_take_sten_list
+
+  return sen_p;
+}
+
+/* _cj_take_sten_list(): deep-copy a stencil linked list, preserving order.
+*/
+static u3p(u3j_sten)
+_cj_take_sten_list(u3p(u3j_sten) jun_head_p)
+{
+  u3p(u3j_sten) head_p = 0;
+  u3p(u3j_sten) tail_p = 0;
+  u3p(u3j_sten) cur_p  = jun_head_p;
+
+  while ( cur_p ) {
+    u3j_sten* cur_u = u3to(u3j_sten, cur_p);
+    u3p(u3j_sten) sen_p = _cj_take_sten(cur_p);
+    //  link senior copy into the new list
+    //
+    u3to(u3j_sten, sen_p)->nex_p = 0;
+    if ( !head_p ) {
+      head_p = sen_p;
+    }
+    else {
+      u3to(u3j_sten, tail_p)->nex_p = sen_p;
+    }
+    tail_p = sen_p;
+    cur_p = cur_u->nex_p;
+  }
+  return head_p;
+}
+
+/* _cj_take_battery(): deep-copy a battery struct from junior to senior.
+*/
+static u3p(u3j_battery)
+_cj_take_battery(u3p(u3j_battery) jun_p)
+{
+  if ( !jun_p ) return 0;
+
+  c3_w got_w = _cj_take_map_get(&_cj_take_bat_map, (c3_w)jun_p);
+  if ( got_w ) return (u3p(u3j_battery))got_w;
+
+  u3j_battery* jun_u = u3to(u3j_battery, jun_p);
+  u3j_battery* sen_u = u3a_walloc(c3_wiseof(u3j_battery));
+  u3p(u3j_battery) sen_p = u3of(u3j_battery, sen_u);
+
+  _cj_take_map_put(&_cj_take_bat_map, (c3_w)jun_p, (c3_w)sen_p);
+
+  sen_u->pax_l = jun_u->pax_l;
+  sen_u->roo_p = _cj_take_sten_list(jun_u->roo_p);
+  sen_u->chi_p = _cj_take_sten_list(jun_u->chi_p);
+
+  return sen_p;
+}
+
+/* _cj_take_meta_cb(): u3h_take_with cb for cell metadata entries.
+**
+**   Deep-copies the meta struct and its stencils/batteries onto the
+**   senior road, preserving stencil identity via the per-take maps.
+*/
+static c3_w
+_cj_take_meta_cb(c3_w nim_w)
+{
+  u3j_meta* nim_u = _cj_to_meta(nim_w);
+  u3j_meta* met_u = u3a_walloc(c3_wiseof(u3j_meta));
+  met_u->sta_p = _cj_take_sten(nim_u->sta_p);
+  met_u->bat_p = _cj_take_battery(nim_u->bat_p);
+  return _cj_of_meta(met_u);
+}
+
 /* u3j_take(): copy junior jet state.
 */
 u3a_jets
@@ -2288,6 +2714,11 @@ u3j_take(u3a_jets jed_u)
   jed_u.cod_p = u3h_take(jed_u.cod_p);
   jed_u.han_p = u3h_take_with(jed_u.han_p, _cj_take_hank_cb);
   jed_u.bas_p = u3h_take(jed_u.bas_p);
+
+  _cj_take_map_init();
+  jed_u.met_p = u3h_take_with(jed_u.met_p, _cj_take_meta_cb);
+  _cj_take_map_free();
+
   return jed_u;
 }
 
@@ -2347,11 +2778,18 @@ u3j_reap(u3a_jets jed_u)
 
   u3h_uni(u3R->jed.bas_p, jed_u.bas_p);
   u3h_free(jed_u.bas_p);
+
+  //  metadata: union into senior. on key collision senior wins;
+  //  junior's u3j_meta struct is left orphaned (small leak).
+  //
+  u3h_uni(u3R->jed.met_p, jed_u.met_p);
+  u3h_free(jed_u.met_p);
 }
 
-/* _cj_ream_loc(): ream a single location, creating warm state + stencil.
+/* _cj_ream_loc(): ream a single location, rebuilding warm state.
  *                 RETAIN bat, loc. Returns without effect if the parent
- *                 hasn't been reamed yet (caller retries).
+ *                 hasn't been reamed yet (caller retries).  Stencils
+ *                 are populated lazily later, in _cj_site_kick.
  */
 static void
 _cj_ream_loc(u3_noun bat, u3_noun loc)
@@ -2386,24 +2824,10 @@ _cj_ream_loc(u3_noun bat, u3_noun loc)
   act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
   u3h_put(u3R->jed.war_p, loc, act);
 
-  //  create a dynamic stencil with par_u=NULL.  battery match alone
-  //  is sufficient (see _cj_sten_check).  this avoids the fragile
-  //  parent-chain reconstruction needed for true static stencils.
+  //  stencils are populated lazily by _cj_site_kick (which has the
+  //  actual core in hand and can resolve par_u via parent core).
+  //  ream only rebuilds warm state.
   //
-  if ( jax_l ) {
-    u3j_sten* ste_u = c3_calloc(sizeof(u3j_sten));
-
-    ste_u->dyn_o = c3y;
-    ste_u->bat   = bat;
-    ste_u->cor   = u3_none;
-    ste_u->loc   = loc;
-    ste_u->pax   = ( c3y == u3h(pat) )
-                 ? (( c3y == u3h(u3t(pat)) ) ? 0 : 3)
-                 : u3h(u3t(pat));
-    ste_u->par_u = NULL;
-    ste_u->nex_u = u3D.ray_u[jax_l].ste_u;
-    u3D.ray_u[jax_l].ste_u = ste_u;
-  }
 }
 
 /* _cj_ream(): ream list of battery [bash registry] pairs. RETAIN.
@@ -2512,9 +2936,11 @@ u3j_ream(void)
   u3_noun rel = u3_nul;
   u3_assert(u3R == &(u3H->rod_u));
 
-  //  free all stencils (rebuilt below from cold state)
+  //  free all cell metadata and its stencils (rebuilt below from cold state)
   //
-  _cj_sten_free_all();
+  _cj_meta_free_all();
+  u3h_free(u3R->jed.met_p);
+  u3R->jed.met_p = u3h_new();
 
   u3h_free(u3R->jed.war_p);
   u3R->jed.war_p = u3h_new();
@@ -2648,12 +3074,38 @@ _cj_mark_hank(u3_noun kev, void* dat)
   }
 }
 
+/* _cj_mark_meta(): mark cell metadata + its stencils for gc.
+*/
+static void
+_cj_mark_meta(u3_noun kev, void* dat)
+{
+  c3_w* tot_w = (c3_w*) dat;
+  u3j_meta* met_u = _cj_to_meta(u3t(kev));
+  *tot_w += u3a_mark_ptr(met_u);
+  if ( met_u->sta_p ) {
+    *tot_w += u3a_mark_ptr(u3to(u3j_sten, met_u->sta_p));
+  }
+  if ( met_u->bat_p ) {
+    u3j_battery* bat_u = u3to(u3j_battery, met_u->bat_p);
+    *tot_w += u3a_mark_ptr(bat_u);
+    u3p(u3j_sten) lists[2] = { bat_u->roo_p, bat_u->chi_p };
+    for ( c3_w l_w = 0; l_w < 2; ++l_w ) {
+      u3p(u3j_sten) ste_p = lists[l_w];
+      while ( ste_p ) {
+        u3j_sten* ste_u = u3to(u3j_sten, ste_p);
+        *tot_w += u3a_mark_ptr(ste_u);
+        ste_p = ste_u->nex_p;
+      }
+    }
+  }
+}
+
 /* u3j_mark(): mark jet state for gc.
 */
 u3m_quac*
 u3j_mark()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 7);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 8);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
@@ -2676,8 +3128,14 @@ u3j_mark()
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w *= 4;
 
+  qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+  qua_u[5]->nam_c = strdup("cell metadata");
+  qua_u[5]->siz_w = u3h_mark(u3R->jed.met_p);
+  u3h_walk_with(u3R->jed.met_p, _cj_mark_meta, &qua_u[5]->siz_w);
+  qua_u[5]->siz_w *= 4;
+
   c3_w sum_w = 0;
-  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
@@ -2685,20 +3143,20 @@ u3j_mark()
   tot_u->nam_c = strdup("total jet stuff");
 
   if ( u3R == &(u3H->rod_u) ) {
-    qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
-    qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
+    qua_u[6]->nam_c = strdup("hot jet state");
+    qua_u[6]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
 
-    sum_w += qua_u[5]->siz_w;
+    sum_w += qua_u[6]->siz_w;
 
-    qua_u[6] = NULL;
+    qua_u[7] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
 
     return tot_u;
   } else {
-    qua_u[5] = NULL;
+    qua_u[6] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
@@ -2725,12 +3183,13 @@ u3j_free_hank(u3_noun kev)
 void
 u3j_free(void)
 {
-  _cj_sten_free_all();
+  _cj_meta_free_all();
   u3h_walk(u3R->jed.han_p, u3j_free_hank);
   u3h_free(u3R->jed.war_p);
   u3h_free(u3R->jed.cod_p);
   u3h_free(u3R->jed.han_p);
   u3h_free(u3R->jed.bas_p);
+  u3h_free(u3R->jed.met_p);
   if ( u3R == &(u3H->rod_u) ) {
     u3h_free(u3R->jed.hot_p);
   }
@@ -2741,21 +3200,19 @@ u3j_free(void)
 void
 u3j_reclaim(void)
 {
-  //  re-establish the warm jet state
-  //
-  //    XX might this reduce fragmentation?
-  //
-  // if ( &(u3H->rod_u) == u3R ) {
-  //   u3j_ream();
-  // }
-  //  NB: stencils are not freed here.  they are tiny, off-loom, and
-  //  cleared/rebuilt only by u3j_ream.
-  //
   //  clear the jet hank cache
   //
   u3h_walk(u3R->jed.han_p, u3j_free_hank);
   u3h_free(u3R->jed.han_p);
   u3R->jed.han_p = u3h_new();
+
+  //  clear cell metadata.  the loom-allocated stencils are tiny
+  //  and get rebuilt lazily on subsequent kicks.  this also lets
+  //  u3j_rewrite_compact avoid relocating the inner stencil pointers.
+  //
+  _cj_meta_free_all();
+  u3h_free(u3R->jed.met_p);
+  u3R->jed.met_p = u3h_new();
 }
 
 /* u3j_rewrite_compact(): rewrite jet state for compaction.
@@ -2773,6 +3230,7 @@ u3j_rewrite_compact(void)
   u3h_relocate(&(u3R->jed.cod_p));
   u3h_relocate(&(u3R->jed.han_p));
   u3h_relocate(&(u3R->jed.bas_p));
+  u3h_relocate(&(u3R->jed.met_p));
 
   if ( u3R == &(u3H->rod_u) ) {
     u3h_relocate(&(u3R->jed.hot_p));

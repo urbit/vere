@@ -515,6 +515,7 @@ _pave_parts(void)
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
+  u3R->jed.met_p = u3h_new();
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;

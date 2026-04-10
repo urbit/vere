@@ -5,6 +5,7 @@
 
 #include "allocate.h"
 #include "c3/c3.h"
+#include "retrieve.h"
 #include "types.h"
 
   /** Noun semantics.
@@ -75,7 +76,6 @@
         struct _u3j_hood* huc_u;        //  blank-terminated static list
         struct _u3j_core* par_u;        //  dynamic parent pointer
         c3_l              jax_l;        //  index in global dashboard
-        struct _u3j_sten* ste_u;        //  stencil list (off-loom, linked)
       } u3j_core;
 
     /* u3j_dash, u3_Dash, u3D: jet dashboard singleton
@@ -108,17 +108,52 @@
     **   equality.  Dynamic stencils (dyn_o == c3y) match by battery
     **   pointer equality plus recursive parent check.
     **
-    **   Stored off-loom on u3j_core dashboard entries.
+    **   Loom-allocated; reachable via loom offsets so it survives
+    **   road promotion and snapshot/restore.
     */
+      struct _u3j_sten;
       typedef struct _u3j_sten {
-        c3_o              dyn_o;      //  dynamic stencil?
-        u3_noun           bat;        //  battery (unified reference)
-        u3_noun           cor;        //  whole core if static, u3_none if dynamic
-        u3_noun           loc;        //  location noun (for warm state lookup)
-        u3_noun           pax;        //  parent axis if dynamic, 0 if static
-        struct _u3j_sten* par_u;      //  parent stencil if dynamic, NULL otherwise
-        struct _u3j_sten* nex_u;      //  next stencil in list
+        c3_o                dyn_o;    //  dynamic stencil?
+        u3_noun             bat;      //  battery (unified reference)
+        u3_noun             cor;      //  whole core if static, u3_none if dynamic
+        u3_noun             loc;      //  location noun (for warm state lookup)
+        u3_noun             pax;      //  parent axis if dynamic, 0 if static
+        u3p(struct _u3j_sten) par_p;  //  parent stencil if dynamic, 0 otherwise
+        u3p(struct _u3j_sten) nex_p;  //  next stencil in list (0 = end)
       } u3j_sten;
+
+    /* u3j_battery: stencil registry for a single battery cell.
+    **
+    **   Lives inside u3j_meta when the cell is a battery.  Holds two
+    **   linked lists of stencils that share this battery, indexed by
+    **   the kind of parent stencil:
+    **
+    **     - roo_p: stencils whose parent stencil is static (root or
+    **       static child).  Verifying these is fast: one whole-core
+    **       structural compare for the parent.
+    **     - chi_p: stencils whose parent stencil is dynamic.
+    **       Verifying these requires recursively walking the parent
+    **       chain via u3j_sten_check.
+    **
+    **   Mirrors nockets' Battery.roots / Battery.children split.
+    **   Loom-allocated.
+    */
+      typedef struct _u3j_battery {
+        c3_l           pax_l;         //  parent axis (consistent across stencils)
+        u3p(u3j_sten)  roo_p;         //  stencils with static parent (0 = empty)
+        u3p(u3j_sten)  chi_p;         //  stencils with dynamic parent (0 = empty)
+      } u3j_battery;
+
+    /* u3j_meta: per-cell jet metadata.
+    **
+    **   Stored in u3R->jed.met_p, keyed by the cell value.  Loom-allocated
+    **   with u3a_walloc; addressed via the loom by met_p.  Mirrors nockets's
+    **   UrbitCellMeta minus the compiled-nock field (vere has byc.har_p).
+    */
+      typedef struct _u3j_meta {
+        u3p(u3j_sten)    sta_p;       //  static stencil if cell IS a static core
+        u3p(u3j_battery) bat_p;       //  battery info if cell IS a battery
+      } u3j_meta;
 
     /* u3j_rite: site of a %fast, used to skip re-mining.
     */
@@ -126,10 +161,15 @@
         c3_o          own_o;          //  rite owns fink?
         u3_weak       clu;            //  cached product of clue formula
         u3p(u3j_fink) fin_p;          //  fine check
-        u3j_sten*     ste_u;          //  cached stencil (off-loom, or NULL)
       } u3j_rite;
 
-    /* u3j_site: site of a kick (nock 9), used to cache call target.
+    /* u3j_site: site of a kick (nock 9).
+    **
+    **   The fast dispatch path is per-formula via
+    **   u3n_prog->dis_u.dis_f (set up by _cj_dispatch_install_arms).
+    **   The fields below are slow-path / hank-cache state used when
+    **   the per-prog dispatcher misses and we need to identify the
+    **   cor's location and resolve a jet driver.
     */
       struct _u3n_prog;
       typedef struct {
@@ -144,7 +184,6 @@
         u3j_core*     cop_u;          //  jet core
         u3j_harm*     ham_u;          //  jet arm
         u3p(u3j_fink) fin_p;          //  fine check
-        u3j_sten*     ste_u;          //  cached stencil (off-loom, or NULL)
       } u3j_site;
 
       /* u3j_hank: cached hook information.
@@ -163,6 +202,71 @@
 
     /**  Functions.
     **/
+      /* u3j_sten_check(): structurally verify cor matches a stencil.
+      **
+      **   Uses pointer equality where possible (battery pointer for
+      **   dynamic, whole-core pointer for static), with u3r_sing
+      **   fallback on first encounter, and recurses up the parent
+      **   chain.  When a parent stencil is unresolved (par_p == 0),
+      **   trusts the battery alone — safe for the per-site cache
+      **   which is bound to a single jet context.
+      **
+      **   Static-inlined so the kick fast path has no cross-TU
+      **   function call.  The recursive tail call still inlines for
+      **   shallow chains (depth ≤ compiler limit).
+      */
+        static inline c3_o
+        u3j_sten_check(u3_noun cor, u3j_sten* ste_u)
+        {
+          if ( c3n == ste_u->dyn_o ) {
+            if ( cor == ste_u->cor ) return c3y;
+            return u3r_sing(cor, ste_u->cor);
+          }
+          else {
+            if ( c3n == u3du(cor) ) return c3n;
+            if (  (u3h(cor) != ste_u->bat)
+               && (c3n == u3r_sing(u3h(cor), ste_u->bat)) )
+            {
+              return c3n;
+            }
+            if ( 0 == ste_u->par_p ) return c3y;
+            {
+              u3_weak par = u3r_at(ste_u->pax, cor);
+              if ( u3_none == par ) return c3n;
+              return u3j_sten_check(par, u3to(u3j_sten, ste_u->par_p));
+            }
+          }
+        }
+
+      /* u3j_sten_check_strict(): like u3j_sten_check, but rejects
+      **                          stencils with unresolved parents at
+      **                          any level.  Used by per-prog
+      **                          dispatch where cross-context
+      **                          conflation is possible.
+      */
+        static inline c3_o
+        u3j_sten_check_strict(u3_noun cor, u3j_sten* ste_u)
+        {
+          if ( c3n == ste_u->dyn_o ) {
+            if ( cor == ste_u->cor ) return c3y;
+            return u3r_sing(cor, ste_u->cor);
+          }
+          else {
+            if ( c3n == u3du(cor) ) return c3n;
+            if (  (u3h(cor) != ste_u->bat)
+               && (c3n == u3r_sing(u3h(cor), ste_u->bat)) )
+            {
+              return c3n;
+            }
+            if ( 0 == ste_u->par_p ) return c3n;
+            {
+              u3_weak par = u3r_at(ste_u->pax, cor);
+              if ( u3_none == par ) return c3n;
+              return u3j_sten_check_strict(par, u3to(u3j_sten, ste_u->par_p));
+            }
+          }
+        }
+
       /* u3j_boot(): initialize jet system.
       */
         c3_w
@@ -294,11 +398,6 @@
        */
         void
         u3j_gate_lose(u3j_site* sit_u);
-
-      /* u3j_sten_free(): free a stencil linked list.
-      */
-        void
-        u3j_sten_free(u3j_sten* ste_u);
 
       /* u3j_rite_mark(): mark u3j_rite for gc.
       */

@@ -128,6 +128,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(u3h_root) cod_p;                  //  cold state
         u3p(u3h_root) han_p;                  //  hank cache
         u3p(u3h_root) bas_p;                  //  battery hashes
+        u3p(u3h_root) met_p;                  //  cell metadata: cell -> u3j_meta
       } u3a_jets;
 
     /* u3a_road: contiguous allocation and execution context.

@@ -737,8 +737,14 @@ _cn_v4_prog_free(u3n_v4_prog* pog_u)
   pog_u->byc_u.ops_y = (c3_y*)((void*) pog_u) + sizeof(u3n_v4_prog);
   pog_u->lit_u.non   = (u3_noun*) (pog_u->byc_u.ops_y + pog_u->byc_u.len_w + pad_w);
   pog_u->mem_u.sot_u = (u3n_memo*) (pog_u->lit_u.non + pog_u->lit_u.len_w + pod_w);
-  pog_u->cal_u.sit_u = (u3j_v4_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
-  pog_u->reg_u.rit_u = (u3j_v4_rite*) (pog_u->cal_u.sit_u + pog_u->cal_u.len_w);
+
+  //  v4 layout used u3j_v4_site here, with that struct's size, NOT
+  //  the new lean u3n_call.  Compute offsets using v4 site size.
+  //
+  u3j_v4_site* v4_sit_u =
+    (u3j_v4_site*) (pog_u->mem_u.sot_u + pog_u->mem_u.len_w + ped_w);
+  pog_u->cal_u.cls_u = (u3n_call*) v4_sit_u;
+  pog_u->reg_u.rit_u = (u3j_rite*) (v4_sit_u + pog_u->cal_u.len_w);
 
   //  NB: site reaming elided
 
@@ -750,7 +756,7 @@ _cn_v4_prog_free(u3n_v4_prog* pog_u)
     u3a_v4_lose(pog_u->mem_u.sot_u[dex_w].key);
   }
   for (dex_w = 0; dex_w < pog_u->cal_u.len_w; ++dex_w) {
-    u3j_v4_site_lose(&(pog_u->cal_u.sit_u[dex_w]));
+    u3j_v4_site_lose(&(v4_sit_u[dex_w]));
   }
   for (dex_w = 0; dex_w < pog_u->reg_u.len_w; ++dex_w) {
     u3j_v4_rite_lose(&(pog_u->reg_u.rit_u[dex_w]));
