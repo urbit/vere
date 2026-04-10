@@ -1992,6 +1992,46 @@ u3j_site_kick(u3_noun cor, u3j_site* sit_u)
   return pro;
 }
 
+/*  _cj_spot_neg: global direct-mapped negative cache for _cj_spot.
+**
+**    Caches (battery → "not jetted") results so non-jetted kicks skip
+**    _cj_spot entirely.  Keyed by battery identity (raw noun pointer).
+**    Invalidated per-slot by _cj_mine when a new core is registered.
+**    Cleared wholesale on ream.
+**
+**    Safe because _cj_spot returns u3_none with ZERO side effects for
+**    batteries not in cod_p or hot_p.  Stale entries (battery address
+**    reused) cause missed jets (bytecode fallback, correct but slow)
+**    until _cj_mine invalidates.
+*/
+#define CJ_SPOT_NEG_SIZE  (1 << 14)
+#define CJ_SPOT_NEG_MASK  (CJ_SPOT_NEG_SIZE - 1)
+
+static u3_noun _cj_spot_neg[CJ_SPOT_NEG_SIZE];
+
+static inline c3_o
+_cj_spot_neg_check(u3_noun bat)
+{
+  c3_w idx = u3r_mug(bat) & CJ_SPOT_NEG_MASK;
+  return __(bat == _cj_spot_neg[idx]);
+}
+
+static inline void
+_cj_spot_neg_put(u3_noun bat)
+{
+  c3_w idx = u3r_mug(bat) & CJ_SPOT_NEG_MASK;
+  _cj_spot_neg[idx] = bat;
+}
+
+static inline void
+_cj_spot_neg_invalidate(u3_noun bat)
+{
+  c3_w idx = u3r_mug(bat) & CJ_SPOT_NEG_MASK;
+  if ( bat == _cj_spot_neg[idx] ) {
+    _cj_spot_neg[idx] = 0;
+  }
+}
+
 /* u3n_call_kick(): see nock.h.  Slow path for the bytecode
 **                  interpreter when the per-prog dispatcher misses.
 **                  Caches loc/fin_p/jet_o per call site so repeat
@@ -2053,6 +2093,27 @@ u3n_call_kick(u3_noun cor, u3n_call* cal_u)
     cal_u->ham_u = NULL;
   }
 
+  //  Negative cache: if this battery was previously checked by
+  //  _cj_spot and returned u3_none (not jetted), skip the HAMT
+  //  lookups entirely.  ONE pointer compare, ~1ns.
+  //
+  if ( c3y == u3du(cor) && c3y == _cj_spot_neg_check(u3h(cor)) ) {
+    //  Still need pog_p set for bytecode fallthrough.
+    //
+    {
+      u3_weak fol = u3r_at(cal_u->axe, cor);
+      if ( u3_none != fol ) {
+        if ( !cal_u->pog_p || fol != cal_u->bas ) {
+          cal_u->pog_p = u3n_find(u3_nul, fol);
+          if ( u3_none != cal_u->bas ) u3z(cal_u->bas);
+          cal_u->bas   = u3k(fol);
+        }
+      }
+    }
+    u3t_off(glu_o);
+    return u3_none;
+  }
+
   //  Cold path: _cj_spot for auto-discovery + location resolution.
   //
   u3_weak loc = _cj_spot(cor, NULL);
@@ -2075,6 +2136,11 @@ u3n_call_kick(u3_noun cor, u3n_call* cal_u)
   }
 
   if ( u3_none == loc ) {
+    //  Cache this battery as "not jetted" for future kicks.
+    //
+    if ( c3y == u3du(cor) ) {
+      _cj_spot_neg_put(u3h(cor));
+    }
     u3t_off(glu_o);
     return u3_none;
   }
@@ -2456,6 +2522,10 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
     u3h_put(u3R->jed.cod_p, bat, u3nc(u3k(bas), reg));
     u3h_put(u3R->jed.war_p, loc, act); // see note in _cj_spot
+
+    //  Invalidate negative cache: this battery is now registered.
+    //
+    _cj_spot_neg_invalidate(bat);
 
     //  create stencil for this jetted core, and eagerly install
     //  per-prog dispatch on every arm formula's prog that's
@@ -3007,6 +3077,10 @@ u3j_ream(void)
 {
   u3_noun rel = u3_nul;
   u3_assert(u3R == &(u3H->rod_u));
+
+  //  clear the negative spot cache (stale after restore)
+  //
+  memset(_cj_spot_neg, 0, sizeof(_cj_spot_neg));
 
   //  free all cell metadata and its stencils (rebuilt below from cold state)
   //
