@@ -2327,11 +2327,11 @@ _cj_print_tas(u3_noun tas)
 /* _cj_dispatch_install_arms(): for a freshly registered jet core,
 **                              walk the dashboard core's arms and
 **                              install per-prog dispatch on every
-**                              arm formula's prog that's already
-**                              in the bytecode cache.  Skips arms
-**                              that haven't been compiled yet —
-**                              they'll be picked up lazily by the
-**                              slow-path install in _cj_site_kick.
+**                              arm formula's prog.  Eagerly compiles
+**                              arm formulas that aren't in the
+**                              bytecode cache yet, so dispatchers
+**                              are installed at registration time
+**                              (not lazily on first kick).
 **
 **                              RETAIN cor, huc; ste_u must be the
 **                              stencil for cor at jax_l.
@@ -2379,14 +2379,15 @@ _cj_dispatch_install_arms(c3_l jax_l,
     }
     if ( axe_l < 2 ) continue;
 
-    //  extract the arm formula from cor and look up its prog,
-    //  without triggering compilation.  axe_l is "axis within cor"
-    //  per the dashboard convention (matching the call site axe).
+    //  Extract the arm formula from cor and compile it eagerly.
+    //  u3n_find compiles on demand, ensuring the prog exists when
+    //  we install the dispatcher.  This way _cj_mine installs
+    //  dispatchers for ALL arms at registration time, not lazily.
     //
     u3_weak fol = u3r_at(axe_l, cor);
     if ( u3_none == fol ) continue;
 
-    u3p(u3n_prog) pog_p = u3n_find_lookup(fol);
+    u3p(u3n_prog) pog_p = u3n_find(u3_nul, fol);
     if ( pog_p ) {
       u3n_dis_install(pog_p, (u3_atom)axe_l, ste_u, har_u);
     }
