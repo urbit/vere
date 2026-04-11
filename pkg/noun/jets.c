@@ -651,6 +651,11 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
         u3h_put(u3R->jed.cod_p, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
+        /* caution: could overwrites old value, debug batteries etc.
+        **          old value contains old _cj_jit (from different
+        **          battery). if we change jit to (map battery *),
+        **          will need to merge with that map here.
+        */
         u3h_put(u3R->jed.war_p, loc, act);
       }
     }
@@ -3346,6 +3351,13 @@ u3j_free(void)
 void
 u3j_reclaim(void)
 {
+  //  re-establish the warm jet state
+  //
+  //    XX might this reduce fragmentation?
+  //
+  // if ( &(u3H->rod_u) == u3R ) {
+  //   u3j_ream();
+  // }
   //  clear the jet hank cache
   //
   u3h_walk(u3R->jed.han_p, u3j_free_hank);
