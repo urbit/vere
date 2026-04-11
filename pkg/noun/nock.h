@@ -134,13 +134,6 @@
       void
       u3n_road_tick(void);
 
-    /* u3n_find_lookup(): return cached prog for fol on the current
-    **                    road, or 0 if not yet compiled.  Does NOT
-    **                    trigger compilation.  RETAIN fol.
-    */
-      u3p(u3n_prog)
-      u3n_find_lookup(u3_noun fol);
-
     /* u3n_call_kick(): slow path called when the per-prog dispatcher
     **                  misses.  Resolves cor's location fresh, finds
     **                  the jet driver, dispatches it, and installs

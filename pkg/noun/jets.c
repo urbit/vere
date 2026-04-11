@@ -2183,12 +2183,6 @@ u3n_call_kick(u3_noun cor, u3n_call* cal_u)
       }
     }
   }
-  //  Note: we cannot mark nojet here, because a prog is shared across
-  //  many cors (same formula, different contexts).  One cor having no
-  //  jet doesn't mean another cor sharing the prog also has no jet.
-  //  More importantly, auto-discovery side effects in _cj_spot fire
-  //  per-cor — short-circuiting this slow path would break parent
-  //  registration chains for cors that share the prog.
 
   //  cache lab for tracing if not yet set
   //

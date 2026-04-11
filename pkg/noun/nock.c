@@ -2338,19 +2338,6 @@ _n_dis_recompile(u3n_prog* pog_u)
   }
 }
 
-/* u3n_find_lookup(): see nock.h
-*/
-u3p(u3n_prog)
-u3n_find_lookup(u3_noun fol)
-{
-  u3_noun key = u3nc(u3_nul, u3k(fol));
-  u3_weak pog = u3h_git(u3R->byc.har_p, key);
-  u3z(key);
-  if ( u3_none == pog ) {
-    return 0;
-  }
-  return ((u3_post)(c3_w)pog) << u3a_vits;
-}
 
 /* u3n_dis_install(): see nock.h
 */
@@ -2528,8 +2515,7 @@ _n_kick(u3_noun cor, u3n_call* cal_u)
     }
   }
 
-  //  slow path (first call, or genuine dispatcher miss on a prog
-  //  that hasn't been marked nojet yet)
+  //  slow path (first call, or genuine dispatcher miss)
   //
   {
     u3_weak pro;
