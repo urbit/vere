@@ -1709,17 +1709,63 @@ _cn_to_prog(c3_w pog_w)
   return u3to(u3n_prog, pog_p);
 }
 
+/*  _n_find_cache: direct-mapped formula → prog cache.
+**
+**    Eliminates u3n_find's key cell allocation + HAMT lookup for the
+**    common case (prefix = u3_nul, same road generation).  Keyed by
+**    formula identity + road generation counter.  Entries auto-
+**    invalidate on road transitions (generation mismatch).
+*/
+#define N_FIND_CACHE_SIZE  (1 << 14)
+#define N_FIND_CACHE_MASK  (N_FIND_CACHE_SIZE - 1)
+
+static c3_d _n_find_gen_d = 0;  // bumped on every road push/pop
+
+static struct {
+  u3_noun    fol;
+  c3_d       gen_d;
+  u3n_prog*  pog_u;
+} _n_find_cache[N_FIND_CACHE_SIZE];
+
+/* u3n_road_tick(): see nock.h.
+*/
+void
+u3n_road_tick(void)
+{
+  ++_n_find_gen_d;
+}
+
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
 static u3n_prog*
 _n_find(u3_noun pre, u3_noun fol)
 {
+  //  Direct-mapped cache for the common case (prefix = u3_nul).
+  //  Skip key cell allocation + HAMT lookup entirely.
+  //
+  if ( u3_nul == pre ) {
+    c3_w idx = u3r_mug(fol) & N_FIND_CACHE_MASK;
+    if (  _n_find_cache[idx].fol == fol
+       && _n_find_cache[idx].gen_d == _n_find_gen_d
+       && _n_find_cache[idx].pog_u )
+    {
+      return _n_find_cache[idx].pog_u;
+    }
+  }
+
   u3_noun key = u3nc(u3k(pre), u3k(fol));
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
     u3z(key);
-    return _cn_to_prog(pog);
+    u3n_prog* pog_u = _cn_to_prog(pog);
+    if ( u3_nul == pre ) {
+      c3_w idx = u3r_mug(fol) & N_FIND_CACHE_MASK;
+      _n_find_cache[idx].fol   = fol;
+      _n_find_cache[idx].gen_d = _n_find_gen_d;
+      _n_find_cache[idx].pog_u = pog_u;
+    }
+    return pog_u;
   }
   else if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
@@ -1739,6 +1785,12 @@ _n_find(u3_noun pre, u3_noun fol)
         }
         u3h_put(u3R->byc.har_p, key, _cn_of_prog(old));
         u3z(key);
+        if ( u3_nul == pre ) {
+          c3_w idx = u3r_mug(fol) & N_FIND_CACHE_MASK;
+          _n_find_cache[idx].fol   = fol;
+          _n_find_cache[idx].gen_d = _n_find_gen_d;
+          _n_find_cache[idx].pog_u = old;
+        }
         return old;
       }
     }
@@ -1748,6 +1800,12 @@ _n_find(u3_noun pre, u3_noun fol)
     u3n_prog* gop = _n_bite(fol);
     u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
+    if ( u3_nul == pre ) {
+      c3_w idx = u3r_mug(fol) & N_FIND_CACHE_MASK;
+      _n_find_cache[idx].fol   = fol;
+      _n_find_cache[idx].gen_d = _n_find_gen_d;
+      _n_find_cache[idx].pog_u = gop;
+    }
     return gop;
   }
 }
@@ -3513,6 +3571,7 @@ void
 u3n_ream()
 {
   u3_assert(u3R == &(u3H->rod_u));
+  memset(_n_find_cache, 0, sizeof(_n_find_cache));
   u3h_walk(u3R->byc.har_p, _n_ream);
 }
 
@@ -3628,6 +3687,10 @@ _n_feb(u3_noun kev)
 void
 u3n_free()
 {
+  //  Clear the formula→prog direct cache (entries hold dangling
+  //  prog pointers after the HAMT is freed below).
+  //
+  memset(_n_find_cache, 0, sizeof(_n_find_cache));
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk(har_p, _n_feb);
   u3h_free(har_p);

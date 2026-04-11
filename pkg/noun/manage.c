@@ -1143,6 +1143,7 @@ u3m_leap(c3_w pad_w)
   {
     u3R = rod_u;
     _pave_parts();
+    u3n_road_tick();
   }
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
@@ -1204,6 +1205,7 @@ u3m_fall(void)
   */
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
+  u3n_road_tick();
 }
 
 /* u3m_hate(): new, integrated leap mechanism (enter).

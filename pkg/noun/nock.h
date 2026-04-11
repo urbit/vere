@@ -127,6 +127,13 @@
                       u3j_sten*     ste_u,
                       u3j_harm*     ham_u);
 
+    /* u3n_road_tick(): bump prog-cache generation counter.
+    **                 Must be called on every road push/pop so the
+    **                 direct-mapped formula→prog cache auto-invalidates.
+    */
+      void
+      u3n_road_tick(void);
+
     /* u3n_dis_mark_nojet(): set the prog's dispatcher to a "no jet"
     **                      template so subsequent kicks short-circuit.
     **                      No-op if a real dispatcher is already set.
