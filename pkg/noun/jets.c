@@ -728,10 +728,6 @@ _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
   return u3r_sing(fin_u->sat, cor);
 }
 
-//  u3j_sten_check / u3j_sten_check_strict are now static inline in jets.h
-//
-#define _cj_sten_check u3j_sten_check
-
 /* _cj_loc_is_static(): check if a location represents a static core.
  *
  *   A location is static if it's a root, or a static child whose
