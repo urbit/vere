@@ -134,20 +134,6 @@
       void
       u3n_road_tick(void);
 
-    /* u3n_dis_mark_nojet(): set the prog's dispatcher to a "no jet"
-    **                      template so subsequent kicks short-circuit.
-    **                      No-op if a real dispatcher is already set.
-    */
-      void
-      u3n_dis_mark_nojet(u3p(u3n_prog) pog_p);
-
-    /* u3n_dis_is_nojet(): is this prog's dispatcher the no-jet
-    **                    sentinel?  Used by _n_kick to skip the
-    **                    slow path entirely.
-    */
-      c3_o
-      u3n_dis_is_nojet(u3n_prog* pog_u);
-
     /* u3n_find_lookup(): return cached prog for fol on the current
     **                    road, or 0 if not yet compiled.  Does NOT
     **                    trigger compilation.  RETAIN fol.

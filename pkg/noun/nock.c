@@ -2261,19 +2261,6 @@ _n_dis_jet(u3_noun cor, u3j_harm* ham_u)
   return u3_none;
 }
 
-/* _n_dis_nope(): "no jet possible" dispatcher.  Returns u3_none
-**                immediately.  Set on progs whose slow path has
-**                determined they are non-jetted, so subsequent
-**                kicks short-circuit without re-running the slow
-**                path.  _cj_mine overwrites this if a jet later
-**                gets registered (via _n_dis_recompile).
-*/
-static u3_weak
-_n_dis_nope(u3_noun cor, u3n_prog* pog_u, u3_atom axe)
-{
-  return u3_none;
-}
-
 /* _n_dis_one_sta(): specialized dispatcher for a prog with one
 **                   cached static stencil.
 */
@@ -2363,26 +2350,6 @@ u3n_find_lookup(u3_noun fol)
     return 0;
   }
   return ((u3_post)(c3_w)pog) << u3a_vits;
-}
-
-/* u3n_dis_mark_nojet(): see nock.h
-*/
-void
-u3n_dis_mark_nojet(u3p(u3n_prog) pog_p)
-{
-  if ( !pog_p ) return;
-  u3n_prog* pog_u = u3to(u3n_prog, pog_p);
-  if ( NULL == pog_u->dis_u.dis_f && 0 == pog_u->dis_u.ent_w ) {
-    pog_u->dis_u.dis_f = _n_dis_nope;
-  }
-}
-
-/* u3n_dis_is_nojet(): see nock.h
-*/
-c3_o
-u3n_dis_is_nojet(u3n_prog* pog_u)
-{
-  return __(pog_u && pog_u->dis_u.dis_f == _n_dis_nope);
 }
 
 /* u3n_dis_install(): see nock.h
@@ -2490,8 +2457,7 @@ u3n_call_ream(u3n_call* cal_u)
     if ( cal_u->fin_p ) {
       u3j_fink_free(cal_u->fin_p);
     }
-    cal_u->loc   = u3_none;
-    cal_u->fin_p = 0;
+    cal_u->loc = u3_none;
   }
   if ( u3_none != cal_u->bas ) {
     u3z(cal_u->bas);
@@ -2558,13 +2524,6 @@ _n_kick(u3_noun cor, u3n_call* cal_u)
       u3_weak pro = dis_f(cor, pog_u, (u3_atom)cal_u->axe);
       if ( u3_none != pro ) {
         return pro;
-      }
-      //  If the prog is marked as "no jet possible", short-circuit
-      //  without re-running the slow path.  _cj_mine will overwrite
-      //  the nope sentinel if a jet gets registered later.
-      //
-      if ( c3y == u3n_dis_is_nojet(pog_u) ) {
-        return u3_none;
       }
     }
   }
