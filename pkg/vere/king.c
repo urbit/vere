@@ -1262,6 +1262,7 @@ _king_link_run(c3_c* bin_c)
 c3_i
 u3_king_vere(c3_c* pac_c,  // pace
              c3_c* ver_c,  // version
+             c3_c* bit_c,  // bit width ("32" or "64")
              c3_c* arc_c,  // architecture
              c3_c* dir_c,  // output directory
              c3_t  lin_t)  // link to $pier/.run
@@ -1271,7 +1272,7 @@ u3_king_vere(c3_c* pac_c,  // pace
   FILE* fil_u;
   c3_i  fid_i, ret_i;
 
-  ret_i = asprintf(&bin_c, "%s/vere-v%s-%s", dir_c, ver_c, arc_c);
+  ret_i = asprintf(&bin_c, "%s/vere%s-v%s-%s", dir_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   if (   (-1 == (fid_i = open(bin_c, O_WRONLY | O_CREAT | O_EXCL, 0755)))
@@ -1289,8 +1290,8 @@ u3_king_vere(c3_c* pac_c,  // pace
     }
   }
 
-  ret_i = asprintf(&url_c, "%s/%s/v%s/vere-v%s-%s",
-                   ver_hos_c, pac_c, ver_c, ver_c, arc_c);
+  ret_i = asprintf(&url_c, "%s/%s/v%s/vere%s-v%s-%s",
+                   ver_hos_c, pac_c, ver_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   if ( (ret_i = _king_save_file(url_c, fil_u)) ) {
@@ -1368,7 +1369,7 @@ _king_do_upgrade(c3_c* pac_c, c3_c* ver_c)
 
   //  XX get link option
   //
-  if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 1) ) {
+  if ( u3_king_vere(pac_c, ver_c, u3_Host.bit_c, arc_c, dir_c, 1) ) {
     u3l_log("vere: upgrade failed");
     u3_king_bail();
     exit(1);
@@ -1563,7 +1564,7 @@ done1:
 /* _king_copy_vere(): copy current binary into $pier/.bin (COW if possible)
 */
 static c3_i
-_king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
+_king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* bit_c, c3_c* arc_c, c3_t lin_t)
 {
   c3_c* bin_c;
   c3_i  ret_i;
@@ -1572,8 +1573,8 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
     return -1; // XX
   }
 
-  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s",
-                           u3_Host.dir_c, pac_c, ver_c, arc_c);
+  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere%s-v%s-%s",
+                           u3_Host.dir_c, pac_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   ret_i = _king_copy_file(u3_Host.dem_c, bin_c);
@@ -1605,14 +1606,21 @@ void
 u3_king_dock(c3_c* pac_c)
 {
   c3_c* arc_c = "unknown";
+  c3_c* bit_c;
 
 #ifdef U3_OS_ARCH
   arc_c = U3_OS_ARCH;
 #endif
 
+#ifdef VERE64
+  bit_c = "64";
+#else
+  bit_c = "32";
+#endif
+
   //  XX get link option
   //
-  if ( _king_copy_vere(pac_c, URBIT_VERSION, arc_c, 1) ) {
+  if ( _king_copy_vere(pac_c, URBIT_VERSION, bit_c, arc_c, 1) ) {
     u3l_log("vere: binary copy failed");
     u3_king_bail();
     exit(1);

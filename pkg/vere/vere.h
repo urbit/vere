@@ -339,6 +339,7 @@
         u3_utty*   uty_u;                   //  linked terminal list
         c3_o       nex_o;                   //  upgrade requested
         c3_c*      arc_c;                   //  upgrade to arch
+        c3_c*      bit_c;                   //  upgrade bit width ("32" or "64")
         u3_opts    ops_u;                   //  commandline options
         c3_o       pep_o;                   //  prep for upgrade
         c3_i       xit_i;                   //  exit code for shutdown
@@ -1426,6 +1427,7 @@
         c3_i
         u3_king_vere(c3_c* pac_c,  // pace
                      c3_c* ver_c,  // version
+                     c3_c* bit_c,  // bit width ("32" or "64")
                      c3_c* arc_c,  // architecture
                      c3_c* dir_c,  // output directory
                      c3_t  lin_t); // link to $pier/.run

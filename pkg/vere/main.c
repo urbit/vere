@@ -2074,7 +2074,11 @@ _cw_next(c3_i argc, c3_c* argv[])
   while ( -1 != (ch_i=getopt_long(argc, argv, "a:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case 'a': {
-        u3_Host.arc_c = strdup(optarg);
+        if ( 0 != strcmp(optarg, "32") && 0 != strcmp(optarg, "64") ) {
+          fprintf(stderr, "invalid --arch, must be 32 or 64\r\n");
+          exit(1);
+        }
+        u3_Host.bit_c = strdup(optarg);
       } break;
 
       case c3__loom: {
@@ -2125,6 +2129,14 @@ _cw_next(c3_i argc, c3_c* argv[])
   if ( optind + 1 != argc ) {
     fprintf(stderr, "invalid command\r\n");
     exit(1);
+  }
+
+  if ( !u3_Host.bit_c ) {
+#ifdef VERE64
+    u3_Host.bit_c = "64";
+#else
+    u3_Host.bit_c = "32";
+#endif
   }
 
   u3_Host.pep_o = c3y;
@@ -2720,9 +2732,18 @@ _cw_vere(c3_i argc, c3_c* argv[])
   }
 
 
-  if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 0) ) {
-    u3l_log("vere: download failed");
-    exit(1);
+  {
+    c3_c* bit_c;
+#ifdef VERE64
+    bit_c = "64";
+#else
+    bit_c = "32";
+#endif
+
+    if ( u3_king_vere(pac_c, ver_c, bit_c, arc_c, dir_c, 0) ) {
+      u3l_log("vere: download failed");
+      exit(1);
+    }
   }
 
   u3l_log("vere: download succeeded");
