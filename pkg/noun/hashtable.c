@@ -1243,26 +1243,26 @@ u3h_relocate(u3p(u3h_root) *har_p)
 
 /* _ch_count_buck(): count bucket for gc.
 */
-c3_h
+c3_w
 _ch_count_buck(u3h_buck* hab_u)
 {
-  c3_h tot_h = 0;
+  c3_w tot_w = 0;
   c3_h i_h;
 
   for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
-    tot_h += u3a_count_noun(u3h_slot_to_noun(hab_u->sot_w[i_h]));
+    tot_w += u3a_count_noun(u3h_slot_to_noun(hab_u->sot_w[i_h]));
   }
-  tot_h += u3a_count_ptr(hab_u);
+  tot_w += u3a_count_ptr(hab_u);
 
-  return tot_h;
+  return tot_w;
 }
 
 /* _ch_count_node(): count node for gc.
 */
-c3_h
+c3_w
 _ch_count_node(u3h_node* han_u, c3_h lef_h)
 {
-  c3_h tot_h = 0;
+  c3_w tot_w = 0;
   c3_h len_h = _ch_popcount(han_u->map_h);
   c3_h i_h;
 
@@ -1274,22 +1274,22 @@ _ch_count_node(u3h_node* han_u, c3_h lef_h)
     if ( _(u3h_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_slot_to_noun(sot_w);
 
-      tot_h += u3a_count_noun(kev);
+      tot_w += u3a_count_noun(kev);
     }
     else {
       void* hav_v = u3h_slot_to_node(sot_w);
 
       if ( 0 == lef_h ) {
-        tot_h += _ch_count_buck(hav_v);
+        tot_w += _ch_count_buck(hav_v);
       } else {
-        tot_h += _ch_count_node(hav_v, lef_h);
+        tot_w += _ch_count_node(hav_v, lef_h);
       }
     }
   }
 
-  tot_h += u3a_count_ptr(han_u);
+  tot_w += u3a_count_ptr(han_u);
 
-  return tot_h;
+  return tot_w;
 }
 
 /* u3h_count(): count hashtable for gc.
@@ -1323,26 +1323,26 @@ u3h_count(u3p(u3h_root) har_p)
 
 /* _ch_discount_buck(): discount bucket for gc.
 */
-c3_h
+c3_w
 _ch_discount_buck(u3h_buck* hab_u)
 {
-  c3_h tot_h = 0;
+  c3_w tot_w = 0;
   c3_h i_h;
 
   for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
-    tot_h += u3a_discount_noun(u3h_slot_to_noun(hab_u->sot_w[i_h]));
+    tot_w += u3a_discount_noun(u3h_slot_to_noun(hab_u->sot_w[i_h]));
   }
-  tot_h += u3a_discount_ptr(hab_u);
+  tot_w += u3a_discount_ptr(hab_u);
 
-  return tot_h;
+  return tot_w;
 }
 
 /* _ch_discount_node(): discount node for gc.
 */
-c3_h
+c3_w
 _ch_discount_node(u3h_node* han_u, c3_h lef_h)
 {
-  c3_h tot_h = 0;
+  c3_w tot_w = 0;
   c3_h len_h = _ch_popcount(han_u->map_h);
   c3_h i_h;
 
@@ -1354,22 +1354,22 @@ _ch_discount_node(u3h_node* han_u, c3_h lef_h)
     if ( _(u3h_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_slot_to_noun(sot_w);
 
-      tot_h += u3a_discount_noun(kev);
+      tot_w += u3a_discount_noun(kev);
     }
     else {
       void* hav_v = u3h_slot_to_node(sot_w);
 
       if ( 0 == lef_h ) {
-        tot_h += _ch_discount_buck(hav_v);
+        tot_w += _ch_discount_buck(hav_v);
       } else {
-        tot_h += _ch_discount_node(hav_v, lef_h);
+        tot_w += _ch_discount_node(hav_v, lef_h);
       }
     }
   }
 
-  tot_h += u3a_discount_ptr(han_u);
+  tot_w += u3a_discount_ptr(han_u);
 
-  return tot_h;
+  return tot_w;
 }
 
 /* u3h_discount(): discount hashtable for gc.

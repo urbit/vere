@@ -499,11 +499,10 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   c3_y  buf_y[_ce_page];
   c3_zs ret_zs;
 
-  if ( U3P_VERLAT != pat_u->con_u->ver_w ) {
-    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %"PRIc3_w"\r\n",
-        // XX: remove cast?
-                    (c3_w)pat_u->con_u->ver_w,
-                    (c3_w)U3D_VERLAT);
+  if ( U3P_VERLAT != pat_u->con_u->ver_h ) {
+    fprintf(stderr, "loom: patch version mismatch: have %u, need %u\r\n",
+                    pat_u->con_u->ver_h,
+                    U3P_VERLAT);
     return c3n;
   }
 
@@ -729,7 +728,7 @@ _ce_patch_compose(c3_w max_w)
     _ce_patch_create(pat_u);
     len_w = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
     pat_u->con_u = c3_malloc(len_w);
-    pat_u->con_u->ver_w = U3P_VERLAT;
+    pat_u->con_u->ver_h = U3P_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < max_w; i_w++ ) {

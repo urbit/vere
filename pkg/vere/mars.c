@@ -581,7 +581,8 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
     case c3__poke: {
       u3_noun tim, job;
-      c3_h  mil_h, pre_h;
+      c3_h  mil_h;
+      c3_w  pre_w;
 
       if ( (c3n == u3r_cell(dat, &tim, &job)) ||
            (c3n == u3r_safe_half(tim, &mil_h)) )
@@ -603,7 +604,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
       u3z(jar);
 
-      pre_h = u3a_open(u3R);
+      pre_w = u3a_open(u3R);
       mar_u->sen_d++;
 
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
@@ -611,7 +612,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         mar_u->mug_h = u3r_mug(u3A->roc);
         mar_u->fag_w |= _mars_fag_mute;
 
-        pro = _mars_sure_feck(mar_u, pre_h, pro);
+        pro = _mars_sure_feck(mar_u, pre_w, pro);
 
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
       }

@@ -10,7 +10,6 @@
 static c3_w
 _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
 {
-  // XX: 64 what do
   c3_w len_w, wor_w;
 
   {
@@ -20,7 +19,6 @@ _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
 
     len_w = sab_u.len_w;
 
-    //XX: 64 CHECK!
     while ( len_w && !sab_u.buf_w[len_w - 1] ) {
       len_w--;
     }

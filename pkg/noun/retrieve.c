@@ -68,7 +68,6 @@ _frag_word(c3_w a_w, u3_noun b)
 static u3_weak
 _frag_deep(c3_w a_w, u3_noun b)
 {
-  // XX this is right, right?
   c3_w dep_w = u3a_word_bits;
 
   while ( dep_w ) {
