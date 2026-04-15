@@ -178,6 +178,7 @@ u3_melt_all(FILE *fil_u)
 
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
+  u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
 
   u3j_boot(c3n);
   u3j_ream();
@@ -207,6 +208,9 @@ u3_meld_all(FILE *fil_u)
   
   u3z(u3R->dir_ka);
   u3R->dir_ka = u3_nul;
+
+  u3h_free(u3R->cax.for_p);
+  u3R->cax.for_p = u3h_new_cache(u3C.per_w);
 
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();
