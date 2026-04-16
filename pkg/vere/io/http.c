@@ -2326,6 +2326,16 @@ _http_serv_start(u3_http* htp_u)
           }
         }
 
+        // Libuv defers uv_bind EADDRINUSE on windows to a per-handle
+        // delayed_error struct field that gets returned in uv_listen.
+
+        // This field never gets cleared, and regenerating the handle here
+        // involves adding asynchronicity with uv_close, instead we muck
+        // around with the handle internals to get what we want, see also
+        // https://github.com/libuv/libuv/issues/5125.
+
+        ((uv_tcp_t*)&htp_u->wax_u)->delayed_error = 0;
+
         continue;
       }
 
