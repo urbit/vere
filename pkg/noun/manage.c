@@ -2411,6 +2411,12 @@ u3m_ward(void)
 static void
 _cm_signals(void)
 {
+#ifdef U3_FUZZ
+  //  Fuzz builds intentionally skip installing the libsigsegv and Windows
+  //  vectored exception handlers so that real faults reach ASan / AFL++
+  //  directly. See doc/FUZZING.md §3.1.
+  return;
+#else
 #ifndef U3_OS_windows
   if ( 0 != sigsegv_install_handler(u3m_fault) ) {
     u3l_log("boot: sigsegv install failed");
@@ -2439,6 +2445,7 @@ _cm_signals(void)
     exit(1);
   }
 #endif
+#endif /* U3_FUZZ */
 }
 
 /* _cm_malloc_ssl(): openssl-shaped malloc

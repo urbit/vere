@@ -545,6 +545,14 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           return res_e;
         }
 
+        //  reject atom claims that exceed the remaining bitstream.
+        //  same guard as _cs_cue_bytes_next; without it a tiny crafted
+        //  input can demand a huge allocation.
+        //
+        if ( len_d > ((red_u->left << 3) - red_u->off) ) {
+          return ur_cue_meme;
+        }
+
         if ( 31 >= len_d ) {
           *out = (u3_noun)ur_bsr32_any(red_u, len_d);
         }
@@ -793,6 +801,16 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
         u3_atom vat;
 
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
+
+        //  reject atom claims that exceed the remaining bitstream.
+        //  without this, a tiny crafted input can demand a huge
+        //  allocation that overflows the loom — segfaulting in
+        //  palloc rather than rejecting cleanly. mirrors the same
+        //  guard added to pkg/ur/serial.c::_cue_next.
+        //
+        if ( len_d > ((red_u->left << 3) - red_u->off) ) {
+          return u3m_bail(c3__meme);
+        }
 
         if ( 31 >= len_d ) {
           vat = (u3_noun)ur_bsr32_any(red_u, len_d);

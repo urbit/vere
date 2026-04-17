@@ -26,11 +26,29 @@
         .pkg_vere = .{
             .path = "./pkg/vere",
         },
+        .backtrace = .{
+            .path = "./ext/backtrace",
+        },
         .curl = .{
             .path = "./ext/curl",
         },
         .gmp = .{
             .path = "./ext/gmp",
+        },
+        .murmur3 = .{
+            .path = "./ext/murmur3",
+        },
+        .pdjson = .{
+            .path = "./ext/pdjson",
+        },
+        .softblas = .{
+            .path = "./ext/softblas",
+        },
+        .softfloat = .{
+            .path = "./ext/softfloat",
+        },
+        .unwind = .{
+            .path = "./ext/unwind",
         },
         .h2o = .{
             .path = "./ext/h2o",

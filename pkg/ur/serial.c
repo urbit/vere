@@ -239,6 +239,18 @@ _cue_next(ur_root_t      *r,
           *out = (ur_nref)ur_bsr64_any(bsr, len);
         }
         else {
+          //  reject atom claims that exceed the remaining bitstream.
+          //  without this, a tiny crafted jam can demand a gigantic
+          //  calloc (a 9-byte input can claim a 64 PiB atom), which
+          //  either triggers a remote-reachable _oom abort or silently
+          //  zero-pads the atom from ur_bsr_bytes_any's "infinite
+          //  stream" semantics. both are bogus: if the atom does not
+          //  fit in the input, the input is not a valid jam.
+          //
+          if ( len > ((bsr->left << 3) - bsr->off) ) {
+            return ur_cue_meme;
+          }
+
           uint64_t len_byt = (len >> 3) + !!ur_mask_3(len);
           uint8_t     *byt = _oom("cue_next bytes", calloc(len_byt, 1));
 
@@ -250,7 +262,18 @@ _cue_next(ur_root_t      *r,
             len_byt--;
           }
 
-          *out = ur_coin_bytes_unsafe(r, len_byt, byt);
+          //  an all-zero atom buffer collapses to the direct atom 0.
+          //  without this, ur_coin_bytes_unsafe would create an iatom
+          //  with len=0, which ur_met0_bytes_unsafe (defs.h:75) then
+          //  walks off the front of via "last = len - 1" underflow.
+          //
+          if ( 0 == len_byt ) {
+            free(byt);
+            *out = (ur_nref)0;
+          }
+          else {
+            *out = ur_coin_bytes_unsafe(r, len_byt, byt);
+          }
         }
 
         ur_dict64_put(r, dict, bits, (uint64_t)*out);
@@ -452,6 +475,16 @@ _cue_test_next(_cue_test_stack_t *s,
         else if ( 62 < len ) {
           return ur_cue_meme;
         }
+        //  reject backref claims that exceed the remaining bitstream.
+        //  without this, a tiny crafted input can advance the cursor
+        //  past 2^62 via ur_bsr_skip_any, and the next iteration's
+        //  `bits` snapshot has high tag bits set, causing
+        //  ur_nref_mug to dereference NULL on a NULL root pointer.
+        //  see fuzz/findings/010-*.
+        //
+        else if ( len > ((bsr->left << 3) - bsr->off) ) {
+          return ur_cue_meme;
+        }
         else {
           uint64_t bak = ur_bsr64_any(bsr, len);
           return ur_dict_get((ur_root_t*)0, dict, bak)
@@ -463,6 +496,13 @@ _cue_test_next(_cue_test_stack_t *s,
       case ur_jam_atom: {
         if ( ur_cue_good != (res = ur_bsr_rub_len(bsr, &len)) ) {
           return res;
+        }
+
+        //  same bound as the backref case: reject claims that exceed
+        //  the remaining bitstream. see fuzz/findings/010-*.
+        //
+        if ( len > ((bsr->left << 3) - bsr->off) ) {
+          return ur_cue_meme;
         }
 
         ur_bsr_skip_any(bsr, len);

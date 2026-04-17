@@ -41,7 +41,10 @@ bitset_wyt(u3_bitset* bit_u)
 
 void bitset_put(u3_bitset* bit_u, c3_w mem_w)
 {
-  if (( mem_w > bit_u->len_w )) {
+  //  fix: guard was `>` (allowing mem_w == len_w), which sets a bit
+  //  outside the intended range [0, len_w).
+  //
+  if ( mem_w >= bit_u->len_w ) {
     u3l_log("overrun %u, %u", mem_w, bit_u->len_w);
     return;
   }
@@ -54,12 +57,14 @@ void bitset_put(u3_bitset* bit_u, c3_w mem_w)
 
 c3_o
 bitset_has(u3_bitset* bit_u, c3_w mem_w) {
-  if (( mem_w > bit_u->len_w )) {
+  //  fix: guard was `>` but the assert below was `<`, so mem_w ==
+  //  len_w passed the guard and aborted on the assert. finding #012.
+  //
+  if ( mem_w >= bit_u->len_w ) {
     u3l_log("overrun %u, %u", mem_w, bit_u->len_w);
     return c3n;
   }
 
-  u3_assert( mem_w < bit_u->len_w );
   c3_w idx_w = mem_w >> 3;
   c3_y rem_y = mem_w & 0x7;
   return __( (bit_u->buf_y[idx_w] >> rem_y) & 0x1);
@@ -68,7 +73,13 @@ bitset_has(u3_bitset* bit_u, c3_w mem_w) {
 void
 bitset_del(u3_bitset* bit_u, c3_w mem_w)
 {
-  u3_assert( mem_w < bit_u->len_w );
+  //  fix: had no runtime guard, only an assert — crafted mesa
+  //  fragment indices aborted the process. finding #011.
+  //
+  if ( mem_w >= bit_u->len_w ) {
+    u3l_log("overrun %u, %u", mem_w, bit_u->len_w);
+    return;
+  }
   c3_w idx_w = mem_w >> 3;
   c3_w byt_y = bit_u->buf_y[idx_w];
   c3_y rem_y = mem_w & 0x7;

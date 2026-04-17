@@ -1,0 +1,55 @@
+# AFL++ dictionary for JSON parsing.
+
+# structural tokens
+"{"
+"}"
+"["
+"]"
+":"
+","
+"\""
+
+# value keywords
+"true"
+"false"
+"null"
+
+# escape sequences
+"\\\""
+"\\\\"
+"\\/"
+"\\b"
+"\\f"
+"\\n"
+"\\r"
+"\\t"
+"\\u0000"
+"\\u00ff"
+
+# numeric edges
+"0"
+"-0"
+"1e10"
+"1E+10"
+"1e-10"
+"1.5"
+"-1"
+"1234567890"
+"0.0"
+
+# unicode high-surrogate / low-surrogate pair
+"\\uD83D\\uDE00"
+
+# common keys
+"\"name\":"
+"\"value\":"
+"\"id\":"
+"\"data\":"
+
+# whitespace at unusual positions
+" "
+"\t"
+"\r\n"
+
+# UTF-8 BOM
+"\xef\xbb\xbf"

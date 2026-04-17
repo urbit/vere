@@ -623,11 +623,16 @@ ur_bsr_log(ur_bsr_t *bsr, uint8_t *out)
         return _bsr_log_meme(bsr);
       }
 
-      byt = b[++skip];
-
+      //  bounds-check BEFORE the read. previously this loop did
+      //  `byt = b[++skip]` and then checked `skip == left`, which
+      //  reads one byte past the end of the buffer. reachable via
+      //  every cue caller — see fuzz/findings/008-*.
+      //
+      ++skip;
       if ( skip == left ) {
         return _bsr_set_gone(bsr, (skip << 3) - off);
       }
+      byt = b[skip];
     }
 
     {

@@ -1,0 +1,29 @@
+# AFL++ dictionary for u3_newt_decode framing.
+#
+# Header layout:
+#   byte 0: version tag, must be 0x00
+#   bytes 1-4: little-endian length of body
+#   bytes 5..: body (jam'd noun bytes)
+
+# valid version tag
+"\x00"
+
+# common length-prefix shapes (LE)
+"\x00\x00\x00\x00\x00"   # zero-length body (rejected)
+"\x00\x01\x00\x00\x00"   # 1-byte body
+"\x00\x02\x00\x00\x00"   # 2-byte body
+"\x00\x10\x00\x00\x00"   # 16-byte body
+"\x00\x40\x00\x00\x00"   # 64-byte body
+"\x00\x00\x01\x00\x00"   # 256-byte body
+"\x00\x00\x10\x00\x00"   # 4 KiB body
+"\x00\x00\x00\x01\x00"   # 16 MiB body
+"\x00\xff\xff\xff\xff"   # max length (4 GiB - 1)
+
+# bad version tags (decoder should reject)
+"\x01"
+"\xff"
+
+# small jam payloads to use after a valid header
+"\x02"   # atom 0
+"\x29"   # cell [0 0]
+"\x31\x03"  # cell [1 1]

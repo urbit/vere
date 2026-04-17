@@ -1,0 +1,38 @@
+# AFL++ dictionary for mesa packet parsing.
+#
+# Mesa header layout (4 bytes):
+#   byte 0:
+#     bit 0:    next-byte flag
+#     bits 1-2: protocol version
+#     bits 3-4: protocol type (0=peek, 1=poke, 2=page)
+#     bits 5-7: hop count (low)
+#   bytes 1-3: mug check (20 bits) and rest of hop count
+#
+# Plus per-packet name + data + auth fields.
+
+# version bytes (low bits = next/version)
+"\x00"
+"\x01"
+"\x02"
+"\x03"
+"\xff"
+
+# packet type discriminators
+"peek"
+"poke"
+"page"
+
+# common path separators in mesa names
+"/"
+"//"
+
+# rank tags (ship class) — galaxy/star/planet/moon
+"\x00"
+"\x01"
+"\x02"
+"\x03"
+
+# common short names
+"~zod"
+"~nec"
+"~bus"

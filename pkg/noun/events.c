@@ -432,9 +432,15 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
   }
   
   pat_u->con_u = c3_malloc(len_w);
+  //  validate that len_w is large enough to safely dereference
+  //  con_u->pgs_w in the size check below; otherwise a tiny
+  //  control.bin (any size < sizeof(u3e_control)) leads to a
+  //  heap OOB read.
+  //
   if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
-        (len_w != sizeof(u3e_control) +
-                  (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
+       (len_w  < sizeof(u3e_control)) ||
+       (len_w != sizeof(u3e_control) +
+                 (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
   {
     c3_free(pat_u->con_u);
     pat_u->con_u = 0;

@@ -111,6 +111,7 @@ const BuildCfg = struct {
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
     gen_cdb: bool = false,
+    fuzz: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -217,6 +218,12 @@ pub fn build(b: *std.Build) !void {
 
     const gen_cdb = b.option(bool, "generate-commands", "generate compile_commands.json fragments") orelse false;
 
+    const fuzz = b.option(
+        bool,
+        "fuzz",
+        "Install third-party dependency archives to zig-out/lib for use by fuzz/build.sh. See doc/FUZZING.md.",
+    ) orelse false;
+
     //
     // Build
     //
@@ -238,6 +245,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
         .gen_cdb = gen_cdb,
+        .fuzz = fuzz,
     };
 
     if (all) {
@@ -250,7 +258,7 @@ pub fn build(b: *std.Build) !void {
             b,
             if (t.os.tag == .linux and
                 target.query.isNative() and
-                !asan and !ubsan)
+                !asan and !ubsan and !fuzz)
                 b.resolveTargetQuery(.{ .abi = .musl })
             else
                 target,
@@ -360,6 +368,13 @@ fn buildBinary(
     if (cfg.urth_mass)
         try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
 
+    if (cfg.fuzz)
+        // ASAN_ENABLED picks a loom base (0x10007ffff000 on linux x64)
+        // that sits outside ASan's shadow-gap region; the fuzz harness
+        // links this libnoun.a against an ASan-instrumented main, so
+        // the loom must live in ASan-safe territory.
+        try urbit_flags.appendSlice(&.{ "-DU3_FUZZ", "-DASAN_ENABLED" });
+
     if (cfg.tracy_enable) {
         try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});
         if (cfg.tracy_callstack) {
@@ -458,6 +473,36 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    // These are not linked against the main urbit binary directly
+    // — they come in transitively through pkg_noun — but the fuzz
+    // install list below pulls them into zig-out/lib/ so fuzz/build.sh
+    // can link harnesses against them without touching the wrong
+    // .zig-cache entry.
+    const backtrace_dep = if (cfg.fuzz) b.dependency("backtrace", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const murmur3_dep = if (cfg.fuzz) b.dependency("murmur3", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const pdjson_dep = if (cfg.fuzz) b.dependency("pdjson", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const softblas_dep = if (cfg.fuzz) b.dependency("softblas", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const softfloat_dep = if (cfg.fuzz) b.dependency("softfloat", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const unwind_dep = if (cfg.fuzz) b.dependency("unwind", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+
     const h2o = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
@@ -546,7 +591,15 @@ fn buildBinary(
             },
         },
     });
-    b.getInstallStep().dependOn(&target_output.step);
+    // Skip the main urbit binary install under -Dfuzz. With
+    // -DASAN_ENABLED the noun source references __asan_*_memory_region
+    // helpers that require linking the ASan runtime, which zig's
+    // native link step doesn't do. The fuzz flow only needs the
+    // dependency libraries — afl-clang-fast links harnesses against
+    // them with its own ASan runtime.
+    if (!cfg.fuzz) {
+        b.getInstallStep().dependOn(&target_output.step);
+    }
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -625,6 +678,48 @@ fn buildBinary(
     // CI needs generated version.h so we install libvere as a quick fix
     const vere_install = b.addInstallArtifact(pkg_vere.artifact("vere"), .{});
     b.getInstallStep().dependOn(&vere_install.step);
+
+    // Fuzz builds: install the full set of static archives fuzz/build.sh
+    // links against. These are normal (uninstrumented) builds of the
+    // third-party dependencies plus our own pkg_* libs — Option 3 hybrid
+    // per doc/FUZZING.md. AFL instrumentation is added by afl-clang-fast
+    // when it recompiles the pkg_* sources; third-party libs stay
+    // uninstrumented to keep coverage feedback focused on Vere code.
+    if (cfg.fuzz) {
+        const fuzz_artifacts = [_]*std.Build.Step.Compile{
+            pkg_c3.artifact("c3"),
+            pkg_ent.artifact("ent"),
+            pkg_ur.artifact("ur"),
+            pkg_noun.artifact("noun"),
+            pkg_past.artifact("past"),
+            gmp.artifact("gmp"),
+            libuv.artifact("libuv"),
+            lmdb.artifact("lmdb"),
+            openssl.artifact("ssl"),
+            openssl.artifact("crypto"),
+            urcrypt.artifact("urcrypt"),
+            whereami.artifact("whereami"),
+            wasm3.artifact("wasm3"),
+            natpmp.artifact("natpmp"),
+            zlib.artifact("z"),
+            // Transitive noun deps
+            backtrace_dep.?.artifact("backtrace"),
+            murmur3_dep.?.artifact("murmur3"),
+            pdjson_dep.?.artifact("pdjson"),
+            softblas_dep.?.artifact("softblas"),
+            softfloat_dep.?.artifact("softfloat"),
+        };
+        for (fuzz_artifacts) |art| {
+            const inst = b.addInstallArtifact(art, .{});
+            b.getInstallStep().dependOn(&inst.step);
+        }
+        if (t.os.tag != .windows) {
+            const sigsegv_inst = b.addInstallArtifact(sigsegv.artifact("sigsegv"), .{});
+            b.getInstallStep().dependOn(&sigsegv_inst.step);
+            const unwind_inst = b.addInstallArtifact(unwind_dep.?.artifact("unwind"), .{});
+            b.getInstallStep().dependOn(&unwind_inst.step);
+        }
+    }
 
     if (cfg.gen_cdb) {
         const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");

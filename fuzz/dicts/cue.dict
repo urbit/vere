@@ -1,0 +1,49 @@
+# AFL++ dictionary for jam/cue bit-stream format.
+#
+# jam tags (LSB first in the bit stream):
+#   0       atom: followed by length-mat then atom bits
+#   10      backref: followed by mat-encoded position
+#   11      cell: followed by jam(head) then jam(tail)
+#
+# These are single-bit tokens; on byte boundaries they manifest as the
+# patterns below. We include byte-aligned versions and a few short
+# encoded prefixes observed in the test vectors.
+
+# single-byte atoms
+"\x02"  # atom 0
+"\x0c"  # atom 1
+"\x48"  # atom 2
+
+# cells (byte-aligned)
+"\x29"  # [0 0]
+"\x31"  # [1 *]
+"\x21"  # [2 *]
+"\x71"  # [1 1 1]-ish
+"\xc5"  # [[.. ..] ..]
+"\xa5"  # cell prefix
+
+# backref tag prefixes
+"\x80"
+"\xc0"
+
+# two-byte length-mat patterns
+"\x31\x03"
+"\x31\x12"
+"\x71\xcc"
+"\x71\x48"
+
+# longer atom headers observed in the corpus
+"\xc0\x37"
+
+# all-bits and all-zero — exercise bitstream edge cases
+"\x00"
+"\xff"
+
+# length-mat "large atom" starts
+"\x01"
+"\x03"
+"\x07"
+"\x0f"
+"\x1f"
+"\x3f"
+"\x7f"

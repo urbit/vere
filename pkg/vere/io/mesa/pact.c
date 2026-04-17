@@ -364,12 +364,13 @@ _etch_next(u3_etcher* ech_u, c3_w len_w)
 static c3_y*
 _sift_next(u3_sifter* sif_u, c3_w len_w)
 {
-  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
   if ( sif_u->err_c ) {
     return NULL;
   }
-  else if ( len_w > sif_u->rem_w ) {
+  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
+  if ( len_w > sif_u->rem_w ) {
     _sift_fail(sif_u, "unexpected eof");
+    return NULL;
   }
   c3_y *res_y = sif_u->buf_y;
   sif_u->buf_y += len_w;
@@ -460,14 +461,21 @@ _etch_var_word(u3_etcher* ech_u, c3_w val_w, c3_w len_w)
 static c3_w
 _sift_var_word(u3_sifter* sif_u, c3_w len_w)
 {
-  assert ( len_w <= 4 );
+  //  reject crafted lengths that would overflow c3_w. previously
+  //  this was an assert; finding #009 showed the bit-field
+  //  callers can pass values > 4 from untrusted input.
+  //
+  if ( len_w > 4 ) {
+    _sift_fail(sif_u, "var-word len > 4");
+    return 0;
+  }
   c3_y *res_y = _sift_next(sif_u, len_w);
   if ( NULL == res_y ) {
     return 0;
   }
   c3_w val_w = 0;
   for ( c3_w i = 0; i < len_w; i++ ) {
-    val_w |= (res_y[i] << (8*i));
+    val_w |= ((c3_w)res_y[i] << (8*i));
   }
   return val_w;
 }
@@ -651,8 +659,15 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
   nam_u->boq_y = _sift_byte(sif_u);
 
   if ( met_u.nit_y ) {
-    assert( !met_u.tau_y );
-    assert( !met_u.gaf_y );
+    //  init packets must have tau_y and gaf_y both clear. previously
+    //  this was two asserts; finding #006 showed crafted input can
+    //  set all three bits at once. degrade gracefully via _sift_fail
+    //  so the parser rejects rather than aborts the process.
+    //
+    if ( met_u.tau_y || met_u.gaf_y ) {
+      _sift_fail(sif_u, "init packet has tau or gaf set");
+      return;
+    }
     // XX init packet
     nam_u->fra_d = 0;
   }
@@ -662,16 +677,9 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 
   nam_u->pat_s = _sift_short(sif_u);
 
-  nam_u->pat_c = (c3_c*)sif_u->buf_y;
-  /* nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); */
-  /* _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s); */
-
-  sif_u->buf_y += nam_u->pat_s;
-  sif_u->rem_w -= nam_u->pat_s;
+  nam_u->pat_c = (c3_c*)_sift_next(sif_u, nam_u->pat_s);
 
   nam_u->str_u.len_w = rem_w - sif_u->rem_w;
-
-  /* nam_u->pat_c[nam_u->pat_s] = 0; */
 }
 
 static void
@@ -895,6 +903,7 @@ _mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
     }
   }
 
+  if ( !sif_u->err_c )
   {
     c3_w mug_w = u3r_mug_bytes(mug_y, pre_w - sif_u->rem_w)
                & 0xFFFFF;
