@@ -58,18 +58,16 @@
 #     define  u3a_v5_64_head(som)     (((u3a_v5_64_cell *)u3a_v5_64_to_ptr(som))->hed)
 #     define  u3a_v5_64_tail(som)     (((u3a_v5_64_cell *)u3a_v5_64_to_ptr(som))->tel)
 
-      typedef struct __attribute__((aligned(8))) {
+      typedef struct {
         c3_v5_64_w    use_w;
-        c3_h          mug_h;
-        c3_h          fut_h;
+        c3_w          mug_w;
         c3_v5_64_w    len_w;
         c3_v5_64_w    buf_w[0];
       } u3a_v5_64_atom;
 
-      typedef struct __attribute__((aligned(8))) {
+      typedef struct {
         c3_v5_64_w    use_w;
-        c3_h          mug_h;
-        c3_h          fut_h;
+        c3_w          mug_w;
         u3_v5_64_noun hed;
         u3_v5_64_noun tel;
       } u3a_v5_64_cell;

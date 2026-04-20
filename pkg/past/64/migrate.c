@@ -64,8 +64,7 @@ _copy_atom(u3_v5_noun old)
   u3a_atom    *vat_u    = (void *)nov_w;
 
   vat_u->use_w = 1;
-  vat_u->mug_h = old_u->mug_h;
-  vat_u->fut_h = 0;
+  vat_u->mug_w = old_u->mug_w;
   vat_u->len_w = new_w;
 
   if ( new_w ) {

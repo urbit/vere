@@ -307,7 +307,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
       return _ce_img_size;
     }
     else if ( pgs_z > c3_w_max ) {
-      fprintf(stderr, "loom: %s overflow %zu\r\n", img_u->nam_c, siz_z);
+      fprintf(stderr, "loom: image overflow %zu\r\n", siz_z);
       return _ce_img_fail;
     }
     else {

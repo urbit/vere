@@ -136,30 +136,21 @@
       } u3a_rate;
     /* u3a_atom, u3a_cell: logical atom and cell structures.
     */
-      typedef struct __attribute__((aligned(4))) {
+      typedef struct {
         c3_w use_w;
-        c3_h mug_h;
-        #ifdef VERE64
-          c3_h fut_h;
-        #endif
+        c3_w mug_w;
       } u3a_noun;
 
-      typedef struct __attribute__((aligned(4))) {
+      typedef struct {
         c3_w use_w;
-        c3_h mug_h;
-        #ifdef VERE64
-          c3_h fut_h;
-        #endif
+        c3_w mug_w;
         c3_w len_w;
         c3_w buf_w[0];
       } u3a_atom;
 
-      typedef struct __attribute__((aligned(4))) {
+      typedef struct {
         c3_w  use_w;
-        c3_h  mug_h;
-        #ifdef VERE64
-          c3_h fut_h;
-        #endif
+        c3_w  mug_w;
         u3_noun hed;
         u3_noun tel;
       } u3a_cell;

@@ -21,7 +21,7 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
   u3a_atom *b_u = u3a_to_ptr(b);
 
   //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_h != b_u->mug_h ) return 0;
+  if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   if ( a_u->len_w != b_u->len_w ) return 0;
 
@@ -43,7 +43,7 @@ _melt_cmp_cells(u3_cell a, u3_cell b)
   u3a_cell *b_u = u3a_to_ptr(b);
 
   //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_h != b_u->mug_h ) return 0;
+  if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   c3_d *a_d = (c3_d*)&(a_u->hed);
   c3_d *b_d = (c3_d*)&(b_u->hed);

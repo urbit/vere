@@ -405,9 +405,9 @@ _me_wash_north(u3_noun dog)
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
-    if ( dog_u->mug_h == 0 ) return;
+    if ( dog_u->mug_w == 0 ) return;
 
-    dog_u->mug_h = 0;    //  power wash
+    dog_u->mug_w = 0;    //  power wash
 
     if ( _(u3a_is_pom(dog)) ) {
       u3a_cell* god_u = (u3a_cell *)(void *)dog_u;
@@ -437,9 +437,9 @@ _me_wash_south(u3_noun dog)
   {
     u3a_noun* dog_u = u3a_to_ptr(dog);
 
-    if ( dog_u->mug_h == 0 ) return;
+    if ( dog_u->mug_w == 0 ) return;
 
-    dog_u->mug_h = 0;    //  power wash
+    dog_u->mug_w = 0;    //  power wash
 
     if ( _(u3a_is_pom(dog)) ) {
       u3a_cell* god_u = (u3a_cell *)(void *)dog_u;
@@ -518,10 +518,7 @@ _ca_take_atom(u3a_atom* old_u)
 
   //  XX use memcpy?
   //
-  new_u->mug_h = old_u->mug_h;
-#ifdef VERE64
-  new_u->fut_h = old_u->fut_h;
-#endif
+  new_u->mug_w = old_u->mug_w;
   new_u->len_w = old_u->len_w;
   {
     c3_w i_w;
@@ -533,12 +530,7 @@ _ca_take_atom(u3a_atom* old_u)
 
   //  borrow mug slot to record new destination in [old_u]
   //
-#ifndef VERE64
-  old_u->mug_h = new;
-#else
-  old_u->mug_h = new >> 32; // we need dog bit on mug_h
-  old_u->fut_h = new & c3_w_max; // we need dog bit on mug_h
-#endif
+  old_u->mug_w = new;
 
   return new;
 }
@@ -561,20 +553,12 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
 #endif
 
   new_u->use_w = 1;
-  new_u->mug_h = old_u->mug_h;
-#ifdef VERE64
-  new_u->fut_h = old_u->fut_h;
-#endif
+  new_u->mug_w = old_u->mug_w;
   new_u->hed   = hed;
   new_u->tel   = tel;
   //  borrow mug slot to record new destination in [old_u]
   //
-#ifndef VERE64
-  old_u->mug_h = new;
-#else
-  old_u->mug_h = new >> 32; // we need dog bit on mug_h
-  old_u->fut_h = new & c3_w_max; // we need dog bit on mug_h
-#endif
+  old_u->mug_w = new;
 
   return new;
 }
@@ -614,14 +598,8 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
 
       //  32-bit mug_w: already copied [veb] and [mug_w] is the new ref.
       //
-      if ( veb_u->mug_h >> 31 ) {
-#ifndef VERE64
-        u3_noun nov = (u3_noun)veb_u->mug_h;
-#else
-        u3_noun nov =
-          (u3_noun)
-            (((c3_w)veb_u->mug_h << 32) | (c3_w)veb_u->fut_h);
-#endif
+      if ( veb_u->mug_w >> 31 ) {
+        u3_noun nov = (u3_noun)veb_u->mug_w;
 
         u3_assert( c3y == u3a_north_is_normal(u3R, nov) );
 
@@ -675,14 +653,8 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
 
       //  32-bit mug_w: already copied [veb] and [mug_w] is the new ref.
       //
-      if ( veb_u->mug_h >> 31 ) {
-#ifndef VERE64
-        u3_noun nov = (u3_noun)veb_u->mug_h;
-#else
-        u3_noun nov =
-          (u3_noun)
-            (((c3_w)veb_u->mug_h << 32) | (c3_w)veb_u->fut_h);
-#endif
+      if ( veb_u->mug_w >> 31 ) {
+        u3_noun nov = (u3_noun)veb_u->mug_w;
 
         u3_assert( c3y == u3a_south_is_normal(u3R, nov) );
 
@@ -822,7 +794,7 @@ u3a_left(u3_noun som)
   else {
     u3a_noun* dog_u = u3a_to_ptr(som);
 
-    return __(0 != (dog_u->mug_h >> 31));
+    return __(0 != (dog_u->mug_w >> 31));
   }
 }
 

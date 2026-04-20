@@ -243,7 +243,7 @@ _cr_sing_mug(u3a_noun* a_u, u3a_noun* b_u)
   //  XX add debug assertions that both mugs are 31-bit
   //  (ie, not u3a_take() relocation references)
   //
-  if ( a_u->mug_h && b_u->mug_h && (a_u->mug_h != b_u->mug_h) ) {
+  if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) {
     return c3n;
   }
 
@@ -1921,15 +1921,15 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
       //
       //    XX add debug assertion that mug is 31-bit?
       //
-      if ( veb_u->mug_h ) {
-        return (c3_h)veb_u->mug_h;
+      if ( veb_u->mug_w ) {
+        return (c3_h)veb_u->mug_w;
       }
       //  veb is an indirect atom, mug its bytes and memoize
       //
       else if ( c3y == u3a_is_atom(veb) ) {
         u3a_atom* vat_u = (u3a_atom*)veb_u;
         c3_h      mug_h = u3r_mug_words(vat_u->buf_w, vat_u->len_w);
-        vat_u->mug_h = mug_h;
+        vat_u->mug_w = mug_h;
         return mug_h;
       }
       //  veb is a cell, push a stack frame to mark head-recursion
@@ -1989,7 +1989,7 @@ u3r_mug(u3_noun veb)
         u3a_cell* cel_u = u3a_to_ptr(fam_u->cel);
 
         mug_h        = u3r_mug_both(fam_u->mug_h, mug_h);
-        cel_u->mug_h = mug_h;
+        cel_u->mug_w = mug_h;
         fam_u        = u3a_pop(&pil_u);
       }
     }

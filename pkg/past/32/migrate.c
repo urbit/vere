@@ -69,7 +69,7 @@ _copy_atom(u3_v5_64_noun old)
   u3a_atom *vat_u = (void *)nov_w;
 
   vat_u->use_w = 1;
-  vat_u->mug_h = old_u->mug_h;
+  vat_u->mug_w = old_u->mug_w;
   vat_u->len_w = new_w;
 
   memcpy(vat_u->buf_w, buf_w, (size_t)new_w * sizeof(c3_w));
@@ -105,7 +105,7 @@ _copy_v5_64_next(_copy_ctx *cop_u, u3_v5_64_noun old)
         u3a_atom *vat_u = (void *)nov_w;
 
         vat_u->use_w = 1;
-        vat_u->mug_h = 0;  //  mug not precomputed for large v5 64-bit cats
+        vat_u->mug_w = 0;  //  mug not precomputed for large v5 64-bit cats
         vat_u->len_w = len_w;
         vat_u->buf_w[0] = lo_w;
         if ( len_w > 1 ) vat_u->buf_w[1] = hi_w;
