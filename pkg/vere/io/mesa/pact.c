@@ -364,12 +364,13 @@ _etch_next(u3_etcher* ech_u, c3_h len_h)
 static c3_y*
 _sift_next(u3_sifter* sif_u, c3_h len_h)
 {
-  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
   if ( sif_u->err_c ) {
     return NULL;
   }
-  else if ( len_h > sif_u->rem_h ) {
+  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
+  if ( len_h > sif_u->rem_h ) {
     _sift_fail(sif_u, "unexpected eof");
+    return NULL;
   }
   c3_y *res_y = sif_u->buf_y;
   sif_u->buf_y += len_h;
@@ -460,14 +461,17 @@ _etch_var_word(u3_etcher* ech_u, c3_h val_h, c3_h len_h)
 static c3_h
 _sift_var_word(u3_sifter* sif_u, c3_h len_h)
 {
-  assert ( len_h <= 4 );
+  if (len_h > 4) {
+    _sift_fail(sif_u, "var_word too long");
+    return 0;
+  }
   c3_y *res_y = _sift_next(sif_u, len_h);
   if ( NULL == res_y ) {
     return 0;
   }
   c3_h val_h = 0;
   for ( c3_h i = 0; i < len_h; i++ ) {
-    val_h |= (res_y[i] << (8*i));
+    val_h |= ((c3_h)res_y[i] << (8*i));
   }
   return val_h;
 }
@@ -662,16 +666,9 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 
   nam_u->pat_s = _sift_short(sif_u);
 
-  nam_u->pat_c = (c3_c*)sif_u->buf_y;
-  /* nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); */
-  /* _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s); */
-
-  sif_u->buf_y += nam_u->pat_s;
-  sif_u->rem_h -= nam_u->pat_s;
+  nam_u->pat_c = (c3_c*)_sift_next(sif_u, nam_u->pat_s);
 
   nam_u->str_u.len_h = rem_h - sif_u->rem_h;
-
-  /* nam_u->pat_c[nam_u->pat_s] = 0; */
 }
 
 static void
@@ -895,6 +892,7 @@ _mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
     }
   }
 
+  if ( !sif_u->err_c )
   {
     c3_h mug_h = u3r_mug_bytes(mug_y, pre_h - sif_u->rem_h)
                & 0xFFFFF;

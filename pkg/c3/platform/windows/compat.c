@@ -193,6 +193,8 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
 
     void * map = MAP_FAILED;
 
+    const DWORD lenLow = (DWORD)(len & 0xFFFFFFFFL);
+    const DWORD lenHigh = (DWORD)((len >> 32) & 0xFFFFFFFFL);
     const DWORD dwFileOffsetLow = (sizeof(off_t) <= sizeof(DWORD)) ?
                     (DWORD)off : (DWORD)(off & 0xFFFFFFFFL);
     const DWORD dwFileOffsetHigh = (sizeof(off_t) <= sizeof(DWORD)) ?
@@ -225,7 +227,7 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     }
     else h = INVALID_HANDLE_VALUE;
 
-    fm = CreateFileMapping(h, NULL, protect, dwMaxSizeHigh, dwMaxSizeLow, NULL);
+    fm = CreateFileMapping(h, NULL, protect, lenHigh, lenLow, NULL);
 
     if (fm == NULL)
     {
