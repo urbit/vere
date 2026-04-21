@@ -25,9 +25,6 @@
 #     define  _ce_len_64(i)   ((size_t)(i) << (u3a_64_page + u3a_64_word_bytes_shift))
 #     define  _ce_page_64     _ce_len_64(1)
 
-      c3_i
-      u3e_64_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z);
-
       typedef c3_64_w u3_64_noun;
       typedef c3_64_w u3h_64_slot;
 

@@ -27,9 +27,6 @@
 #     define  _ce_page_32          _ce_len_32(1)
 #     define  _ce_ptr_32(i)        ((void *)((c3_c*)u3_Loom_32 + _ce_len_32(i)))
 
-      c3_i
-      u3e_32_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z);
-
       typedef c3_32_w u3_32_noun;
 
 #     define  u3a_32_walign   ((c3_32_w)1 << u3a_32_vits)

@@ -353,13 +353,11 @@ _ce_ephemeral_open(c3_i* eph_i)
   return c3y;
 }
 
-/* _ce_image_open(): open or create image.
+/* _ce_image_open(): open image with the given open(2) mode.
 */
 static _ce_img_stat
-_ce_image_open(u3e_image* img_u, c3_c* ful_c)
+_ce_image_open(u3e_image* img_u, c3_c* ful_c, c3_i mod_i)
 {
-  c3_i mod_i = O_RDWR | O_CREAT;
-
   c3_c pax_c[8192];
   snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
@@ -371,11 +369,11 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
 }
 
 c3_i
-u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
+u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i)
 {
   u3e_image img_u = { .nam_c = nam_c };
 
-  switch ( _ce_image_open(&img_u, dir_c) ) {
+  switch ( _ce_image_open(&img_u, dir_c, mod_i) ) {
     case _ce_img_good: {
       *len_z = _ce_len(img_u.pgs_w);
       return img_u.fid_i;
@@ -1229,7 +1227,7 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
   if (  (0 != access(nux_c, F_OK))
-     || (_ce_img_good != _ce_image_open(&nux_u, pux_c)) )
+     || (_ce_img_good != _ce_image_open(&nux_u, pux_c, O_RDWR | O_CREAT)) )
   {
     fprintf(stderr, "loom: couldn't open image at %s\r\n", pux_c);
     return c3n;
@@ -1434,7 +1432,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     c3_c chk_c[8193];
     snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
 
-    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c);
+    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c, O_RDWR | O_CREAT);
 
     if ( _ce_img_fail == sat_e ) {
       fprintf(stderr, "boot: image failed\r\n");

@@ -126,6 +126,6 @@
       u3e_ward(u3_post low_p, u3_post hig_p);
 
       c3_i
-      u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z);
+      u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i);
 
 #endif /* ifndef U3_EVENTS_H */

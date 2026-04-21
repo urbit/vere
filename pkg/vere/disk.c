@@ -1634,7 +1634,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       }
     }
 
-    c3_i nod_i = u3e_32_image_open_any("/.urb/chk/image", dir_c, &lom_z);
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/image", dir_c, &lom_z, O_RDONLY);
 
     u3_assert( -1 != nod_i );
 
@@ -1655,7 +1655,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     return nod_i;
 #else
-    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z);
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z, O_RDONLY);
 
     u3_assert( -1 != nod_i );
 
@@ -1677,7 +1677,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     const c3_z pag_z = ((c3_w)1) << (u3a_page + 2);
     void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
     c3_zs     ret_zs;
-    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);
+    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z, O_RDONLY);
 
     u3_assert( -1 != nod_i );
     u3_assert( pag_z == lom_z );
@@ -1707,7 +1707,7 @@ static c3_i
 _disk_load_64_loom(c3_c* dir_c, c3_z lom_z)
 {
   c3_z img_z;
-  c3_i fid_i = u3e_64_image_open_any("/.urb/chk/image", dir_c, &img_z);
+  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDONLY);
 
   u3_assert( -1 != fid_i );
 
