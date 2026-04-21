@@ -2780,6 +2780,7 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   for_u->pro = (c3_o)pro;
   for_u->log = (c3_o)log;
   for_u->red = (c3_o)red;
+  for_u->cer_u = 0;
 
   if ( u3_nul != sec ) {
     //  (unit ^) case
