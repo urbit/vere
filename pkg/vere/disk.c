@@ -9,10 +9,10 @@
 
 #include "migrate.h"
 #ifdef VERE64
-#include "32/v5.h"
+#include "64.h"
 #else
-#include "32/v4.h"
-#include "64/v5.h"
+#include "v4.h"
+#include "32.h"
 #endif
 
 struct _u3_disk_walk {
@@ -1581,7 +1581,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
   //
   {
 #ifdef VERE64
-    void* map_v = mmap((void *)u3_Loom_v5,
+    void* map_v = mmap((void *)u3_Loom_32,
 #else
     void* map_v = mmap((void *)u3_Loom_v4,
 #endif
@@ -1634,15 +1634,15 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       }
     }
 
-    c3_i nod_i = u3e_v5_image_open_any("/.urb/chk/image", dir_c, &lom_z);
+    c3_i nod_i = u3e_32_image_open_any("/.urb/chk/image", dir_c, &lom_z);
 
     u3_assert( -1 != nod_i );
 
-    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_v5, nod_i, lom_z);
+    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_32, nod_i, lom_z);
 
     //  XX respect --no-demand flag
     //
-    if ( MAP_FAILED == mmap(u3_Loom_v5,
+    if ( MAP_FAILED == mmap(u3_Loom_32,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
                             (MAP_FIXED | MAP_PRIVATE),
@@ -1701,13 +1701,13 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 }
 
 #ifndef VERE64
-/* _disk_load_v5_64_loom(): open v5 64-bit image.bin and map it at u3_Loom_v5_64.
+/* _disk_load_64_loom(): open 64-bit image.bin and map it at u3_Loom_64.
 */
 static c3_i
-_disk_load_v5_64_loom(c3_c* dir_c, c3_z lom_z)
+_disk_load_64_loom(c3_c* dir_c, c3_z lom_z)
 {
   c3_z img_z;
-  c3_i fid_i = u3e_v5_64_image_open_any("/.urb/chk/image", dir_c, &img_z);
+  c3_i fid_i = u3e_64_image_open_any("/.urb/chk/image", dir_c, &img_z);
 
   u3_assert( -1 != fid_i );
 
@@ -1723,15 +1723,15 @@ _disk_load_v5_64_loom(c3_c* dir_c, c3_z lom_z)
     exit(1);
   }
 
-  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_v5_64, fid_i, img_z);
+  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_64, fid_i, img_z);
 
-  if ( MAP_FAILED == mmap((void*)u3_Loom_v5_64,
+  if ( MAP_FAILED == mmap((void*)u3_Loom_64,
                           img_z,
                           (PROT_READ | PROT_WRITE),
                           (MAP_FIXED | MAP_PRIVATE),
                           fid_i, 0) )
   {
-    fprintf(stderr, "loom: v5-64 file-backed mmap failed: %s\r\n",
+    fprintf(stderr, "loom: 64 file-backed mmap failed: %s\r\n",
                     strerror(errno));
     u3_assert(0);
   }
@@ -1745,10 +1745,10 @@ static void
 _disk_migrate_to_32(c3_c* dir_c, c3_d eve_d)
 {
   c3_z lom_z = (size_t)1 << u3_Host.ops_u.lom_y;
-  c3_i fid_i = _disk_load_v5_64_loom(dir_c, lom_z);
+  c3_i fid_i = _disk_load_64_loom(dir_c, lom_z);
 
-  c3_d lom_d = *((c3_d *)u3_Loom_v5_64);
-  c3_d pam_d = *((c3_d *)u3_Loom_v5_64 + 1);
+  c3_d lom_d = *((c3_d *)u3_Loom_64);
+  c3_d pam_d = *((c3_d *)u3_Loom_64 + 1);
 
   if ( (pam_d & 1) == u3a_wits ) {
     fprintf(stderr, "loom: expected 64-bit loom, got 32-bit "
@@ -1764,7 +1764,7 @@ _disk_migrate_to_32(c3_c* dir_c, c3_d eve_d)
     u3m_save();
   }
 
-  munmap((void*)u3_Loom_v5_64, lom_z);
+  munmap((void*)u3_Loom_64, lom_z);
   close(fid_i);
 }
 #endif /* !VERE64 */
@@ -1777,7 +1777,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 #ifdef VERE64
   //  v5 (32-bit) home is at loom position 0; version is the first c3_d
   //
-  c3_d lom_d = *((c3_d *)u3_Loom_v5);
+  c3_d lom_d = *((c3_d *)u3_Loom_32);
 
   if ( U3V_VER5 != lom_d ) {
     fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
@@ -1812,7 +1812,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 #endif
 
 #ifdef VERE64
-  munmap(u3_Loom_v5, (size_t)1 << u3_Host.ops_u.lom_y);
+  munmap(u3_Loom_32, (size_t)1 << u3_Host.ops_u.lom_y);
 #else
   munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
 #endif
