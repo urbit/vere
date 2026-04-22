@@ -1,0 +1,25 @@
+# AFL++ dictionary for fuzz_stun_xor.
+#
+# `u3_stun_find_xor_mapped_address` scans for the 4-byte tag
+# {type=0x0020 (XOR-MAPPED-ADDRESS), length=0x0008} in a STUN
+# attribute chain. Without this dictionary entry the fuzzer almost
+# never crosses the memmem() branch, so the audit flagged the
+# harness as low-coverage despite the target having a genuine OOB
+# read when the tag sits near the buffer end.
+#
+# Also seed the STUN message header and family markers.
+
+# XOR-MAPPED-ADDRESS TLV (type=0x0020, length=0x0008 for IPv4)
+"\x00\x20\x00\x08"
+
+# MAPPED-ADDRESS TLV (type=0x0001) — legacy but still parsed by some paths
+"\x00\x01\x00\x08"
+
+# STUN magic cookie (RFC 5389)
+"\x21\x12\xa4\x42"
+
+# IPv4 family byte + reserved zero
+"\x00\x01"
+
+# IPv6 family byte + reserved zero
+"\x00\x02"

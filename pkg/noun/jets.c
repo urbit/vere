@@ -835,6 +835,61 @@ _cj_soft(u3_noun cor, u3_noun axe)
   return u3n_nock_on(cor, u3k(arm));
 }
 
+#ifdef U3_FUZZ
+/* u3j_Fuzz_testing: see jets.h. */
+c3_o u3j_Fuzz_testing = c3n;
+
+/* u3j_Fuzz_mismatch: see jets.h. */
+c3_o u3j_Fuzz_mismatch = c3n;
+
+/* _cj_fuzz_walk(): recurse dev_u tree, flip ice=c3n on arms of every
+**                  core whose cos_c matches nam_c. Returns count of
+**                  arms flipped.
+*/
+static c3_w
+_cj_fuzz_walk(u3j_core* dev_u, const c3_c* nam_c)
+{
+  c3_w fou_w = 0;
+  c3_w i_w;
+
+  if ( 0 == dev_u ) {
+    return 0;
+  }
+  for ( i_w = 0; 0 != dev_u[i_w].cos_c; i_w++ ) {
+    u3j_core* kid_u = &dev_u[i_w];
+
+    if ( 0 == strcmp(kid_u->cos_c, nam_c) ) {
+      if ( 0 != kid_u->arm_u ) {
+        c3_w j_w;
+        for ( j_w = 0; 0 != kid_u->arm_u[j_w].fcs_c; j_w++ ) {
+          kid_u->arm_u[j_w].ice = c3n;
+          fou_w++;
+        }
+      }
+    }
+
+    fou_w += _cj_fuzz_walk(kid_u->dev_u, nam_c);
+  }
+  return fou_w;
+}
+
+/* u3j_fuzz_arm(): see jets.h.
+*/
+c3_o
+u3j_fuzz_arm(const c3_c* nam_c)
+{
+  c3_w fou_w = _cj_fuzz_walk(u3D.dev_u, nam_c);
+
+  if ( 0 == fou_w ) {
+    fprintf(stderr, "u3j_fuzz_arm: core '%s' not found\n", nam_c);
+    return c3n;
+  }
+  fprintf(stderr, "u3j_fuzz_arm: flipped %u arm(s) in core '%s'\n",
+          fou_w, nam_c);
+  return c3y;
+}
+#endif
+
   void
   find_error(u3_noun cor,
              u3_noun old,
@@ -870,7 +925,11 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
     }
 #endif
 
-    if ( _(ham_u->ice) ) {
+    if ( _(ham_u->ice)
+#ifdef U3_FUZZ
+         || _(u3j_Fuzz_testing)
+#endif
+       ) {
       u3_weak pro = ham_u->fun_f(cor);
 
 #ifdef U3_MEMORY_DEBUG
@@ -883,6 +942,14 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
     }
     else {
       u3_weak pro, ame;
+
+#ifdef U3_FUZZ
+      /* Suppress nested oracle invocations for the duration of BOTH
+       * the jet call and the hoon call. Either side can trigger
+       * further jet dispatches; if any of those are also under test
+       * the recursion would blow up nock time quadratically. */
+      u3j_Fuzz_testing = c3y;
+#endif
 
       ham_u->ice = c3y;
       pro = ham_u->fun_f(cor);
@@ -899,14 +966,38 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       ame = _cj_soft(cor, axe);
       ham_u->liv = c3y;
 
+#ifdef U3_FUZZ
+      u3j_Fuzz_testing = c3n;
+#endif
+
       if ( c3n == u3r_sing(ame, pro) ) {
         u3l_log("test: %s %s: mismatch: good %x, bad %x",
                cop_u->cos_c,
                (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
                u3r_mug(ame),
                u3r_mug(pro));
+#ifdef U3_FUZZ
+        /* Dump atom bytes for debugging when both sides are atoms. */
+        if ( _(u3a_is_atom(ame)) && _(u3a_is_atom(pro)) ) {
+          c3_w am_w = u3r_met(3, ame);
+          c3_w pr_w = u3r_met(3, pro);
+          c3_y* ab = calloc(1, am_w + 1);
+          c3_y* pb = calloc(1, pr_w + 1);
+          u3r_bytes(0, am_w, ab, ame);
+          u3r_bytes(0, pr_w, pb, pro);
+          fprintf(stderr, "  good (hoon) %u bytes: ", am_w);
+          for ( c3_w i = 0; i < am_w; i++ ) fprintf(stderr, "%02x", ab[am_w-1-i]);
+          fprintf(stderr, "\n  bad  (jet)  %u bytes: ", pr_w);
+          for ( c3_w i = 0; i < pr_w; i++ ) fprintf(stderr, "%02x", pb[pr_w-1-i]);
+          fprintf(stderr, "\n");
+          free(ab); free(pb);
+        }
+#endif
         ham_u->liv = c3n;
 
+#ifdef U3_FUZZ
+        u3j_Fuzz_mismatch = c3y;
+#endif
         return u3m_bail(c3__fail);
       }
       else {

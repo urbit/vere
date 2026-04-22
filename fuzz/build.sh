@@ -421,7 +421,10 @@ build_vere_harness() {
     cached_libs+=("$(find_cached_lib "$n")")
   done
 
-  local all_src=("$harness" "${UR_SRC[@]}" "${extra_src[@]}")
+  # compat_strlcpy.c provides strlcpy/strlcat stubs for avahi-common,
+  # which is pulled in transitively by libvere's mdns code but expects
+  # glibc ≥2.38. The fuzz fleet target is ≥2.35 (Ubuntu 22.04).
+  local all_src=("$harness" "$FUZZ_DIR/harnesses/compat_strlcpy.c" "${UR_SRC[@]}" "${extra_src[@]}")
   local sys_libs=(-lpthread -ldl -lm -lrt)
 
   # -ffunction-sections + -Wl,--gc-sections drops unused functions
@@ -608,6 +611,78 @@ build_fuzz_lick_ipc() {
   build_noun_harness "fuzz_lick_ipc"
 }
 
+# ======================================================================
+# Phase 3: Data-entry sub-parser harnesses (H27+)
+# ======================================================================
+
+# --- G1: ames / mesa / stun sub-parsers (all vere-flavor, muldefs) ----
+build_fuzz_ames_head()    { build_vere_harness "fuzz_ames_head";    }
+build_fuzz_ames_prel()    { build_vere_harness "fuzz_ames_prel";    }
+build_fuzz_lane_decode()  { build_vere_harness "fuzz_lane_decode";  }
+build_fuzz_fine_wail()    { build_vere_harness "fuzz_fine_wail";    }
+build_fuzz_fine_meow()    { build_vere_harness "fuzz_fine_meow";    }
+build_fuzz_stun_xor()     { build_vere_harness "fuzz_stun_xor";     }
+
+# --- G2: cttp HTTP-client response parsers (inlined helpers) ----------
+build_fuzz_cttp_head()    { build_noun_harness "fuzz_cttp_head";    }
+build_fuzz_cttp_body()    { build_noun_harness "fuzz_cttp_body";    }
+
+# --- G3: HTTP server sub-parsers --------------------------------------
+build_fuzz_http_range()   { build_noun_harness "fuzz_http_range";   }
+build_fuzz_http_cookie()  { build_noun_harness "fuzz_http_cookie";  }
+build_fuzz_tls_pem()      { build_noun_harness "fuzz_tls_pem";      }
+
+# --- G6: crypto verifier jets -----------------------------------------
+build_fuzz_ed_veri()      { build_noun_harness "fuzz_ed_veri";      }
+build_fuzz_secp_reco()    { build_noun_harness "fuzz_secp_reco";    }
+build_fuzz_secp_schnorr() { build_noun_harness "fuzz_secp_schnorr"; }
+# argon2 #includes jets/e/argon2.c → needs -z muldefs (vere-harness).
+build_fuzz_argon2()       { build_vere_harness "fuzz_argon2";       }
+build_fuzz_blake2b()      { build_noun_harness "fuzz_blake2b";      }
+build_fuzz_aes_siv()      { build_noun_harness "fuzz_aes_siv";      }
+
+# --- G7: text-decoder jets --------------------------------------------
+build_fuzz_jet_trip()     { build_noun_harness "fuzz_jet_trip";     }
+build_fuzz_jet_leer()     { build_noun_harness "fuzz_jet_leer";     }
+build_fuzz_jet_lore()     { build_noun_harness "fuzz_jet_lore";     }
+
+# --- G8: bit/byte manipulation jets -----------------------------------
+build_fuzz_jet_cut()      { build_noun_harness "fuzz_jet_cut";      }
+build_fuzz_jet_rip_rep()  { build_noun_harness "fuzz_jet_rip_rep";  }
+build_fuzz_jet_lsh()      { build_noun_harness "fuzz_jet_lsh";      }
+build_fuzz_jet_hew_sew()  { build_noun_harness "fuzz_jet_hew_sew";  }
+
+# --- G9: parser combinators / mink / bytestream -----------------------
+build_fuzz_nock_mink()    { build_noun_harness "fuzz_nock_mink";    }
+build_fuzz_parse_combi()  { build_noun_harness "fuzz_parse_combi";  }
+build_fuzz_bytestream()   { build_noun_harness "fuzz_bytestream";   }
+
+# --- G10: serial.c aura parsers / etchers ------------------------------
+build_fuzz_serial_sift_ud()         { build_noun_harness "fuzz_serial_sift_ud";         }
+build_fuzz_serial_rtrip()  { build_noun_harness "fuzz_serial_rtrip";  }
+build_fuzz_serial_etch_all()        { build_noun_harness "fuzz_serial_etch_all";        }
+
+# --- G11: differential jet fuzzing via ice oracle ---------------------
+# Layer 1 (math): forces _cj_kick_z's differential path on add/dec/sub/
+# mul/div/mod/gte/gth/lte/lth/max/min/cap/mas/peg/dvr via u3j_fuzz_arm.
+# Needs libvere for u3v_wish + the ivory pill boot symbols.
+build_fuzz_jet_l1_math()            { build_vere_harness "fuzz_jet_l1_math";            }
+build_fuzz_jet_l2_bits()            { build_vere_harness "fuzz_jet_l2_bits";            }
+build_fuzz_jet_l3_list()            { build_vere_harness "fuzz_jet_l3_list";            }
+build_fuzz_jet_l4a_crypto()         { build_vere_harness "fuzz_jet_l4a_crypto";         }
+build_fuzz_jet_l4b_encode()         { build_vere_harness "fuzz_jet_l4b_encode";         }
+build_fuzz_jet_l5_float()           { build_vere_harness "fuzz_jet_l5_float";           }
+build_fuzz_jet_l6_map()             { build_vere_harness "fuzz_jet_l6_map";             }
+build_fuzz_jet_l7_parse()           { build_vere_harness "fuzz_jet_l7_parse";           }
+build_fuzz_jet_l8_nock()            { build_vere_harness "fuzz_jet_l8_nock";            }
+build_fuzz_jet_l9_mapops()          { build_vere_harness "fuzz_jet_l9_mapops";          }
+build_fuzz_jet_l10_crypto()         { build_noun_harness "fuzz_jet_l10_crypto";         }
+build_pill_test()                   { build_vere_harness "pill_test";                   }
+build_fuzz_jet_l11_base()           { build_vere_harness "fuzz_jet_l11_base";           }
+build_fuzz_jet_probe()              { build_vere_harness "fuzz_jet_probe";              }
+build_rub_roundtrip()               { build_vere_harness "rub_roundtrip";               }
+build_blake2b_probe()               { build_vere_harness "blake2b_probe";               }
+
 # --- H14: fuzz_json_de ------------------------------------------------
 # Targets u3qe_json_de — the JSON decoder jet. Highest-yield single
 # target per the §2.13 survey. Compiles json_de.c directly into the
@@ -657,6 +732,44 @@ HARNESSES=(
   fuzz_fore_inject
   fuzz_http_request
   fuzz_lick_ipc
+  # --- Phase 3 data-entry sub-parsers (H27+) ---
+  fuzz_ames_head
+  fuzz_ames_prel
+  fuzz_lane_decode
+  fuzz_fine_wail
+  fuzz_fine_meow
+  fuzz_stun_xor
+  fuzz_cttp_head
+  fuzz_cttp_body
+  fuzz_http_range
+  fuzz_http_cookie
+  fuzz_tls_pem
+  fuzz_ed_veri
+  fuzz_secp_reco
+  fuzz_secp_schnorr
+  fuzz_argon2
+  fuzz_blake2b
+  fuzz_aes_siv
+  fuzz_jet_trip
+  fuzz_jet_leer
+  fuzz_jet_lore
+  fuzz_jet_cut
+  fuzz_jet_rip_rep
+  fuzz_jet_lsh
+  fuzz_jet_hew_sew
+  fuzz_nock_mink
+  fuzz_parse_combi
+  fuzz_bytestream
+  # --- Phase 4 serial.c aura parsers / etchers ---
+  fuzz_serial_sift_ud
+  fuzz_serial_rtrip
+  fuzz_serial_etch_all
+  # --- Phase 5 differential jet fuzzing ---
+  fuzz_jet_l1_math
+  fuzz_jet_l2_bits
+  fuzz_jet_l3_list
+  fuzz_jet_l4a_crypto
+  fuzz_jet_l4b_encode
 )
 
 build_one() {

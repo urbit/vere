@@ -319,4 +319,34 @@
         void
         u3j_rewrite_compact(void);
 
+#ifdef U3_FUZZ
+      /* u3j_fuzz_arm(): flip ice=c3n on every arm in every core whose
+      **                 cos_c matches `nam_c`, forcing _cj_kick_z to
+      **                 take the differential-oracle path (run jet AND
+      **                 hoon, compare, bail %fail on mismatch).
+      */
+        c3_o
+        u3j_fuzz_arm(const c3_c* nam_c);
+
+      /* u3j_Fuzz_testing: while c3y, nested calls into _cj_kick_z
+      **                   take the fast (jet-only) path regardless
+      **                   of ham_u->ice. Prevents O(n^2) oracle
+      **                   recursion when jet A's Hoon formula calls
+      **                   jet B that is also under test. The outer
+      **                   oracle still catches mismatches; inner
+      **                   calls trust the jet.
+      */
+        extern c3_o u3j_Fuzz_testing;
+
+      /* u3j_Fuzz_mismatch: set to c3y by _cj_kick_z RIGHT BEFORE it
+      **                    bails c3__fail on a genuine C-vs-Hoon
+      **                    mismatch. The harness can read this
+      **                    flag after u3m_soft returns to
+      **                    distinguish oracle mismatches (real
+      **                    findings) from other c3__fail bails
+      **                    (Hoon-side errors, sample shape bugs).
+      */
+        extern c3_o u3j_Fuzz_mismatch;
+#endif
+
 #endif /* ifndef U3_JETS_H */

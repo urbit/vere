@@ -16,11 +16,13 @@ mkdir -p "$OUT_BASE"
 
 # All harnesses currently in the build, in priority order.
 ALL_HARNESSES=(
+  # Phase 1 ur + noun cue
   fuzz_ur_cue
   fuzz_ur_cue_test
   fuzz_ur_jam_cue_diff
   fuzz_u3_cue_bytes
   fuzz_u3_cue_xeno
+  # Phase 1 IO / disk / jets
   fuzz_newt_decode
   fuzz_mesa_sift_pact
   fuzz_ames_sift_packet
@@ -34,6 +36,46 @@ ALL_HARNESSES=(
   fuzz_scot_slaw
   fuzz_zlib_de
   fuzz_base_decode
+  # Phase 2 ...
+  fuzz_mesa_bitset
+  fuzz_mesa_page_flow
+  fuzz_u3r_sing
+  fuzz_fore_inject
+  fuzz_http_request
+  fuzz_lick_ipc
+  # Phase 3 data-entry sub-parsers
+  # fuzz_ames_head — DROPPED: target is pure bit-shifts with zero
+  # branches; 3 "paths" were all scaffolding. Per audit.
+  fuzz_ames_prel
+  fuzz_lane_decode
+  fuzz_fine_wail
+  fuzz_fine_meow
+  fuzz_stun_xor
+  fuzz_cttp_head
+  fuzz_cttp_body
+  fuzz_http_range
+  fuzz_http_cookie
+  fuzz_tls_pem
+  fuzz_ed_veri
+  fuzz_secp_reco
+  fuzz_secp_schnorr
+  fuzz_argon2
+  fuzz_blake2b
+  fuzz_aes_siv
+  fuzz_jet_trip
+  fuzz_jet_leer
+  fuzz_jet_lore
+  fuzz_jet_cut
+  fuzz_jet_rip_rep
+  fuzz_jet_lsh
+  fuzz_jet_hew_sew
+  fuzz_nock_mink
+  fuzz_parse_combi
+  fuzz_bytestream
+  # Phase 4 serial.c aura parsers / etchers
+  fuzz_serial_sift_ud
+  fuzz_serial_rtrip
+  fuzz_serial_etch_all
 )
 
 if [[ $# -gt 0 ]]; then
@@ -81,6 +123,12 @@ for h in "${HARNESSES[@]}"; do
   fi
 
   tag="${h#fuzz_}"
+  # afl-fuzz rejects -M sync_id > 24 chars with a silent abort inside
+  # the detached screen session. Catch it here so the failure is loud.
+  if (( ${#tag} + 5 > 24 )); then
+    echo "error: harness name '${h}' produces -M tag '${tag}-main' (${#tag}+5 chars) that exceeds afl-fuzz's 24-char limit. Rename the harness." >&2
+    exit 2
+  fi
   session_dir="$OUT_BASE/${h}-${ts}"
   mkdir -p "$session_dir"
 

@@ -30,7 +30,11 @@
       if ( (0 == c_w) || (b_w >= len_w) ) {
         return 0;
       }
-      if ( b_w + c_w > len_w ) {
+      //  clamp c_w against len_w - b_w: written this way to avoid the
+      //  32-bit overflow that (b_w + c_w) would wrap into if c_w is
+      //  near UINT32_MAX (reachable e.g. through u3qe_rub passing a
+      //  decoded length prefix without bounds-checking).
+      if ( c_w > (len_w - b_w) ) {
         c_w = (len_w - b_w);
       }
       if ( (b_w == 0) && (c_w == len_w) ) {
