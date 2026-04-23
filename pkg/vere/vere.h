@@ -133,6 +133,14 @@
         struct _u3_dent* nex_u;
       } u3_dent;
 
+    /* u3_array: dynamically sized array
+    */
+      typedef struct _u3_array {
+        c3_y* buf_y;
+        c3_d  len_d;
+        c3_d  cap_d;
+      } u3_array;
+
     /* u3_dire: simple directory state.
     */
       typedef struct _u3_dire {
