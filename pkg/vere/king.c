@@ -341,19 +341,13 @@ _king_pier(u3_noun pier)
   u3z(pier);
 }
 
-typedef struct _king_buf_t {
-  c3_y* buf_y;
-  c3_d  len_d;
-  c3_d  cap_d;
-} king_buf_t;
-
 /* king_curl_alloc(): allocate a response buffer for curl
 **  XX deduplicate with dawn.c
 */
 size_t
 king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 {
-  king_buf_t* buf_u = buf_v;
+  u3_array* buf_u = buf_v;
   c3_d siz_d = uni_t * mem_t;
   while ( buf_u->cap_d < buf_u->len_d + siz_d + 1 ) {
     c3_d new_d = (buf_u->cap_d + 1) * 2;
@@ -371,7 +365,7 @@ king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 size_t
 king_curl_header(char* hed_c, size_t uni_t, size_t mem_t, void* buf_v)
 {
-  king_buf_t* buf_u = buf_v;
+  u3_array* buf_u = buf_v;
   size_t siz_t = uni_t * mem_t;
 
   static c3_c key_c[] = "content-length:";
@@ -410,7 +404,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
   CURLcode res_i;
   long     cod_i;
   c3_y     try_y = 0;
-  king_buf_t buf_u = {0};
+  u3_array buf_u = {0};
 
   if ( !(cul_u = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
