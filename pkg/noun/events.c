@@ -1535,7 +1535,9 @@ u3e_yolo(void)
     return c3n;
   }
 
+#ifdef U3_GUARD_PAGE
   u3_assert( !_ce_ward_protect() );
+#endif
 
   return c3y;
 }
