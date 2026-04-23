@@ -679,9 +679,16 @@ build_fuzz_jet_l9_mapops()          { build_vere_harness "fuzz_jet_l9_mapops";  
 build_fuzz_jet_l10_crypto()         { build_noun_harness "fuzz_jet_l10_crypto";         }
 build_pill_test()                   { build_vere_harness "pill_test";                   }
 build_fuzz_jet_l11_base()           { build_vere_harness "fuzz_jet_l11_base";           }
+build_fuzz_jet_l14_kdf()            { build_vere_harness "fuzz_jet_l14_kdf";            }
+build_fuzz_jet_l16_parse()          { build_vere_harness "fuzz_jet_l16_parse";          }
+build_fuzz_jet_l12_aes()            { build_vere_harness "fuzz_jet_l12_aes";            }
+build_fuzz_jet_l13_asym()           { build_vere_harness "fuzz_jet_l13_asym";           }
+build_fuzz_jet_l15_misc()           { build_vere_harness "fuzz_jet_l15_misc";           }
+build_fuzz_jet_l17_lists()          { build_vere_harness "fuzz_jet_l17_lists";          }
 build_fuzz_jet_probe()              { build_vere_harness "fuzz_jet_probe";              }
 build_rub_roundtrip()               { build_vere_harness "rub_roundtrip";               }
 build_blake2b_probe()               { build_vere_harness "blake2b_probe";               }
+build_jet_wish_probe()              { build_vere_harness "jet_wish_probe";              }
 
 # --- H14: fuzz_json_de ------------------------------------------------
 # Targets u3qe_json_de — the JSON decoder jet. Highest-yield single
