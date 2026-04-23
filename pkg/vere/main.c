@@ -184,7 +184,7 @@ _main_init(void)
 
 #if defined(U3_OS_windows)
   u3_Host.ops_u.map = c3n;
-  u3C.wag_w |= u3o_no_demand;
+  u3C.wag_h |= u3o_no_demand;
 #else
   u3_Host.ops_u.map = c3y;
 #endif

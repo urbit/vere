@@ -31,14 +31,14 @@
 **     U3C_NEW_A_LOSE     target refcount lose         (u3a_lose / u3a_v5_lose)
 **     U3C_NEW_A_WALLOC   target word allocator
 **     U3C_NEW_A_TO_PUG   target indirect-atom tag
-**     U3C_NEW_A_OUTA    target outa
+**     U3C_NEW_A_OUTA     target outa
 **     U3C_NEW_ATOM_T     target atom struct type      (u3a_atom / u3a_v5_atom)
 **
 **   Optional overrides:
 **
 **     U3C_COPY_CAT(old)  expression run on cat-tagged source nouns, before
 **                        the dedup check.  Default: identity ((u3_noun)(old)).
-**                        Override when the target cat boundary is narrower
+**                        override when the target cat boundary is narrower
 **                        than the source (64 -> 32 must promote large cats
 **                        to indirect atoms).
 **
