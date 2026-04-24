@@ -38,9 +38,7 @@ u3_migrate_v5(c3_d eve_d)
 
   fprintf(stderr, "loom: allocator migration running...\r\n");
 
-  cop_u.siz_w = 32;
-  cop_u.tac   = c3_malloc(sizeof(*cop_u.tac) * cop_u.siz_w);
-  vt_init(&(cop_u.map_u));
+  _copy_v4_init(&cop_u);
 
   //  XX install cel_p temporarily?
 
@@ -57,9 +55,7 @@ u3_migrate_v5(c3_d eve_d)
   u3j_v5_boot(c3y);
   u3j_v5_ream();
 
-  vt_cleanup(&cop_u.map_u);
-
-  c3_free(cop_u.tac);
+  _copy_v4_done(&cop_u);
 
   fprintf(stderr, "loom: allocator migration done\r\n");
 }

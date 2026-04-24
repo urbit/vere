@@ -314,6 +314,22 @@ U3C_SYM(_hamt)(U3C_OLD_NOUN kev, void *ptr_v)
   U3C_NEW_A_LOSE(key);
 }
 
+static void
+U3C_SYM(_init)(U3C_SYM(_ctx) *cop_u)
+{
+  cop_u->len_w = 0;
+  cop_u->siz_w = 32;
+  cop_u->tac   = c3_malloc(sizeof(*cop_u->tac) * cop_u->siz_w);
+  vt_init(&(cop_u->map_u));
+}
+
+static void
+U3C_SYM(_done)(U3C_SYM(_ctx) *cop_u)
+{
+  vt_cleanup(&(cop_u->map_u));
+  c3_free(cop_u->tac);
+}
+
 #undef U3C_PREFIX
 #undef U3C_OLD_NOUN
 #undef U3C_OLD_ATOM_T

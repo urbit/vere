@@ -119,9 +119,7 @@ u3_migrate_64(c3_d eve_d)
 
   fprintf(stderr, "loom: 32->64 migration running...\r\n");
 
-  cop_u.siz_w = 32;
-  cop_u.tac   = c3_malloc(sizeof(*cop_u.tac) * cop_u.siz_w);
-  vt_init(&(cop_u.map_u));
+  _copy_32_init(&cop_u);
 
   u3A->eve_d = u3A_32->eve_d;
   u3A->roc   = _copy_32_noun(&cop_u, u3A_32->roc);
@@ -138,9 +136,7 @@ u3_migrate_64(c3_d eve_d)
   u3j_boot(c3y);
   u3j_ream();
 
-  vt_cleanup(&cop_u.map_u);
-
-  c3_free(cop_u.tac);
+  _copy_32_done(&cop_u);
 
   fprintf(stderr, "loom: 32->64 migration done\r\n");
 }
