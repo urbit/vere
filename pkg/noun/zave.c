@@ -53,6 +53,7 @@ _har(u3a_road* rod_u, u3z_cid cid)
 }
 
 //  RETAINS
+//  on hit returns the containing road via out_u
 static u3_weak
 _find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
 {
@@ -82,7 +83,7 @@ u3z_find(u3z_cid cid, u3_noun key)
     //
     u3a_road* rod_u;
     u3_noun pro = _find_in_roads(cid, key, &rod_u);
-    if ( rod_u != u3R && u3_none != pro ) {
+    if ( u3_none != pro && rod_u != u3R ) {
       u3h_put(_har(u3R, cid), key, u3k(pro));
     }
     return pro;
@@ -94,7 +95,7 @@ u3z_find(u3z_cid cid, u3_noun key)
     //
     return u3h_get(_har(u3R, cid), key);
   }
-  
+
   return _find_in_roads(cid, key, NULL);
 }
 
