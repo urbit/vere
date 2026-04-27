@@ -32,6 +32,7 @@
     h2o_http1client_t* cli_u;           //  h2o client
     u3_csat            sat_e;           //  connection state
     c3_o               sec;             //  yes == https
+    c3_o               str_o;           //  yes == streaming mode
     c3_w               ipf_w;           //  IP
     c3_c*              ipf_c;           //  IP (string)
     c3_c*              hot_c;           //  host
@@ -542,7 +543,7 @@ _cttp_creq_free(u3_creq* ceq_u)
  *   We start with the (?? - JB)
  */
 static u3_creq*
-_cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
+_cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes, c3_o str_o)
 {
   u3_creq* ceq_u = c3_calloc(sizeof(*ceq_u));
 
@@ -551,6 +552,8 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
     u3z(hes);
     return 0;
   }
+
+  ceq_u->str_o = str_o;
 
   //  parse the url out of the new style url passed to us.
   //
@@ -727,6 +730,56 @@ _cttp_http_client_receive(u3_creq* ceq_u, c3_w sas_w, u3_noun mes, u3_noun uct)
   u3_auto_plan(&ctp_u->car_u, u3_ovum_init(0, c3__i, wir, cad));
 }
 
+/* _cttp_http_client_send: dispatch a pre-built http-event for a request
+*/
+static void
+_cttp_http_client_send(u3_creq* ceq_u, u3_noun evt)
+{
+  u3_cttp* ctp_u = ceq_u->ctp_u;
+  u3_noun wir = u3nt(u3i_string("http-client"),
+                     u3dc("scot", c3__uv, ctp_u->sev_l),
+                     u3_nul);
+  u3_noun cad = u3nt(u3i_string("receive"), ceq_u->num_l, evt);
+  u3_auto_plan(&ctp_u->car_u, u3_ovum_init(0, c3__i, wir, cad));
+}
+
+/* _cttp_creq_send_start_open: %start with no body, complete=%.n (stream)
+*/
+static void
+_cttp_creq_send_start_open(u3_creq* ceq_u)
+{
+  u3_cres* res_u = ceq_u->res_u;
+  //  [%start [sas hed] ~ %.n]
+  u3_noun evt = u3nq(u3i_string("start"),
+                     u3nc(res_u->sas_w, u3k(res_u->hed)),
+                     u3_nul,
+                     c3n);
+  _cttp_http_client_send(ceq_u, evt);
+}
+
+/* _cttp_creq_send_chunk: %continue with chunk, complete=%.n (stream)
+*/
+static void
+_cttp_creq_send_chunk(u3_creq* ceq_u, size_t len, const c3_y* dat_y)
+{
+  u3_noun oct = u3nc((c3_w)len, u3i_bytes((c3_w)len, dat_y));
+  //  [%continue [~ oct] %.n]
+  u3_noun evt = u3nt(u3i_string("continue"),
+                     u3nc(u3_nul, oct),
+                     c3n);
+  _cttp_http_client_send(ceq_u, evt);
+}
+
+/* _cttp_creq_send_end: %continue empty, complete=%.y (stream EOS)
+*/
+static void
+_cttp_creq_send_end(u3_creq* ceq_u)
+{
+  //  [%continue ~ %.y]
+  u3_noun evt = u3nt(u3i_string("continue"), u3_nul, c3y);
+  _cttp_http_client_send(ceq_u, evt);
+}
+
 /* _cttp_creq_fail(): dispatch error response
 */
 static void
@@ -771,6 +824,18 @@ _cttp_creq_on_body(h2o_http1client_t* cli_u, const c3_c* err_c)
 
   h2o_buffer_t* buf_u = cli_u->sock->input;
 
+  if ( c3y == ceq_u->str_o ) {
+    if ( buf_u->size ) {
+      _cttp_creq_send_chunk(ceq_u, buf_u->size, (c3_y*)buf_u->bytes);
+      h2o_buffer_consume(&cli_u->sock->input, buf_u->size);
+    }
+    if ( h2o_http1client_error_is_eos == err_c ) {
+      _cttp_creq_send_end(ceq_u);
+      _cttp_creq_free(ceq_u);
+    }
+    return 0;
+  }
+
   if ( buf_u->size ) {
     _cttp_cres_fire_body(ceq_u->res_u,
                          _cttp_bod_new(buf_u->size, buf_u->bytes));
@@ -802,6 +867,19 @@ _cttp_creq_on_head(h2o_http1client_t* cli_u, const c3_c* err_c, c3_i ver_i,
 
   _cttp_cres_new(ceq_u, (c3_w)sas_i);
   ceq_u->res_u->hed = _cttp_heds_to_noun(hed_u, hed_t);
+
+  if ( c3y == ceq_u->str_o ) {
+    //  fire %start now (empty body, not complete) so iris records headers
+    _cttp_creq_send_start_open(ceq_u);
+
+    if ( h2o_http1client_error_is_eos == err_c ) {
+      //  zero-byte response: emit terminating %continue and clean up
+      _cttp_creq_send_end(ceq_u);
+      _cttp_creq_free(ceq_u);
+      return 0;
+    }
+    return _cttp_creq_on_body;
+  }
 
   if ( h2o_http1client_error_is_eos == err_c ) {
     _cttp_creq_respond(ceq_u);
@@ -997,21 +1075,26 @@ _cttp_ef_http_client(u3_cttp* ctp_u, u3_noun tag, u3_noun dat)
   c3_o     ret_o;
 
   if ( c3y == u3r_sing_c("request", tag) ) {
-    u3_noun num, req;
+    u3_noun num, req, str;
     c3_l  num_l;
+    c3_o  str_o;
 
-    if (  (c3n == u3r_cell(dat, &num, &req))
-       || (c3n == u3r_safe_word(num, &num_l)) )
+    if (  (c3n == u3r_trel(dat, &num, &req, &str))
+       || (c3n == u3r_safe_word(num, &num_l))
+       || ((c3y != str) && (c3n != str)) )
     {
       u3l_log("cttp: strange request");
       ret_o = c3n;
     }
-    else if ( (ceq_u = _cttp_creq_new(ctp_u, num_l, u3k(req))) ) {
-      _cttp_creq_start(ceq_u);
-      ret_o = c3y;
-    }
     else {
-      ret_o = c3n;
+      str_o = (c3y == str) ? c3y : c3n;
+      if ( (ceq_u = _cttp_creq_new(ctp_u, num_l, u3k(req), str_o)) ) {
+        _cttp_creq_start(ceq_u);
+        ret_o = c3y;
+      }
+      else {
+        ret_o = c3n;
+      }
     }
   }
   else if ( c3y == u3r_sing_c("cancel-request", tag) ) {
