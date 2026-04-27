@@ -52,30 +52,50 @@ _har(u3a_road* rod_u, u3z_cid cid)
   u3_assert(0);
 }
 
+//  RETAINS
+static u3_weak
+_find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
+{
+  //  XX needs to be benchmarked (up vs. down search)
+  u3a_road* rod_u = &(u3H->rod_u);
+  while ( 1 ) {
+    u3_weak got = u3h_get(_har(rod_u, cid), key);
+    if ( u3_none != got ) {
+      if ( out_u ) *out_u = rod_u;
+      return got;
+    }
+    if ( 0 == rod_u->kid_p ) {
+      return u3_none;
+    }
+    rod_u = u3to(u3a_road, rod_u->kid_p);
+  }
+}
+
 /* u3z_find(): find in memo cache.  Arguments retained.
 */
 u3_weak
 u3z_find(u3z_cid cid, u3_noun key)
 {
+  if ( (u3z_memo_keep == cid) && (u3R->how.fag_w & u3a_flag_cash) ) {
+    //  XX jet mismatch in +mice when portable memo hints are nested
+    //  XX put +mice behind runtime flag?
+    //
+    u3a_road* rod_u;
+    u3_noun pro = _find_in_roads(cid, key, &rod_u);
+    if ( rod_u != u3R && u3_none != pro ) {
+      u3h_put(_har(u3R, cid), key, u3k(pro));
+    }
+    return pro;
+  }
+
   if ( (u3z_memo_toss == cid) || (u3R->how.fag_w & u3a_flag_cash) ) {
-    // XX under cash lookup in parent roads,
-    // copying cache hits into the current road
+    //  we have to check the current road only so that we don't skip portable
+    //  memo hints
+    //
     return u3h_get(_har(u3R, cid), key);
   }
-  else {
-    //  XX needs to be benchmarked (up vs. down search)
-    u3a_road* rod_u = &(u3H->rod_u);
-    while ( 1 ) {
-      u3_weak got = u3h_get(_har(rod_u, cid), key);
-      if ( u3_none != got ) {
-        return got;
-      }
-      if ( 0 == rod_u->kid_p ) {
-        return u3_none;
-      }
-      rod_u = u3to(u3a_road, rod_u->kid_p);
-    };
-  }
+  
+  return _find_in_roads(cid, key, NULL);
 }
 
 /* u3z_find_up(): find in persistent memo cache,
