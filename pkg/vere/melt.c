@@ -48,7 +48,7 @@ _melt_cmp_cells(u3_cell a, u3_cell b)
   c3_d *a_d = (c3_d*)&(a_u->hed);
   c3_d *b_d = (c3_d*)&(b_u->hed);
 
-  return *a_d == *b_d;
+  return a_u->hed == b_u->hed && a_u->tel == b_u->tel;
 }
 
 #define NAME    _cells
