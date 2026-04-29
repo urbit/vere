@@ -676,8 +676,15 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         } break;
 
         case c3__meld: {
+          c3_o per_o = c3n, for_o = c3n;
+          u3_noun pers, ford;
+          if ( c3y == u3r_cell(dat, &pers, &ford) ) {
+            per_o = pers < 2 ? pers : per_o;
+            for_o = ford < 2 ? ford : for_o;
+          }
           u3z(jar);
-          u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
+          u3a_print_memory(stderr, "mars: meld: gained",
+            u3_meld_all(stderr, per_o, for_o));
         } break;
       }
 
@@ -1398,7 +1405,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //  XX pack before meld?
           //
           if ( u3C.wag_w & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
+            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr, c3y, c3n));
           }
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());

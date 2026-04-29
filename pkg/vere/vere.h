@@ -1476,6 +1476,6 @@
       /* u3_meld_all(): canonicalize persistent nouns and compact state.
       */
         c3_w
-        u3_meld_all(FILE*);
+        u3_meld_all(FILE*, c3_o, c3_o);
 
 #endif /* ifndef U3_VERE_H */
