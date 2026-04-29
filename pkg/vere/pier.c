@@ -1152,13 +1152,13 @@ u3_pier_save(u3_pier* pir_u)
 /* u3_pier_meld(): globally deduplicate persistent state.
 */
 void
-u3_pier_meld(u3_pier* pir_u)
+u3_pier_meld(u3_pier* pir_u, u3_noun dat)
 {
 #ifdef VERBOSE_PIER
   fprintf(stderr, "pier: (%" PRIu64 "): meld: plan\r\n", pir_u->god_u->eve_d);
 #endif
 
-  u3_lord_meld(pir_u->god_u);
+  u3_lord_meld(pir_u->god_u, dat);
 }
 
 /* u3_pier_pack(): defragment persistent state.

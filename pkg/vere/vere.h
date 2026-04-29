@@ -1027,7 +1027,7 @@
       /* u3_lord_meld(): globally deduplicate persistent state.
       */
         void
-        u3_lord_meld(u3_lord* god_u);
+        u3_lord_meld(u3_lord* god_u, u3_noun dat);
 
       /* u3_lord_pack(): defragment persistent state.
       */
@@ -1295,7 +1295,7 @@
       /* u3_pier_meld(): globally deduplicate persistent state.
       */
         void
-        u3_pier_meld(u3_pier* pir_u);
+        u3_pier_meld(u3_pier* pir_u, u3_noun dat);
 
       /* u3_pier_pack(): defragment persistent state.
       */

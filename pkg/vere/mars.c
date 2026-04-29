@@ -655,10 +655,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
     //  $%  [%live ?(%meld %pack) ~] :: XX rename
     //
     case c3__live: {
-      u3_noun com, nul;
+      u3_noun com, arg;
 
-      if ( (c3n == u3r_cell(dat, &com, &nul)) ||
-           (u3_nul != nul) )
+      if ( (c3n == u3r_cell(dat, &com, &arg)) )
       {
         u3z(jar);
         return c3n;
@@ -678,7 +677,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         case c3__meld: {
           c3_o per_o = c3n, for_o = c3n;
           u3_noun pers, ford;
-          if ( c3y == u3r_cell(dat, &pers, &ford) ) {
+          if ( c3y == u3r_cell(arg, &pers, &ford) ) {
             per_o = pers < 2 ? pers : per_o;
             for_o = ford < 2 ? ford : for_o;
           }

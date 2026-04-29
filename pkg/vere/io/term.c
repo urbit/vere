@@ -1745,7 +1745,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__meld: {
           ret_o = c3y;
-          u3_pier_meld(car_u->pir_u);
+          u3_pier_meld(car_u->pir_u, u3k(dat));
         } break;
 
         case c3__pack: {
