@@ -38,6 +38,11 @@ u3qdb_put(u3_noun a,
       if ( c3y == u3qc_gor(b, pn_a) ) {
         d = u3qdb_put(l_a, b, c);
 
+        if ( d == l_a ) {
+          u3z(d);
+          return u3k(a);
+        }
+
         if ( c3y == u3qc_mor(pn_a, u3h(u3h(d))) ) {
           return u3nt(u3k(n_a),
                       d,
@@ -58,6 +63,11 @@ u3qdb_put(u3_noun a,
       }
       else {
         d = u3qdb_put(r_a, b, c);
+
+        if ( d == r_a ) {
+          u3z(d);
+          return u3k(a);
+        }
 
         if ( c3y == u3qc_mor(pn_a, u3h(u3h(d))) ) {
           return u3nt(u3k(n_a),

@@ -28,6 +28,7 @@
 #include "jets/q.h"
 #include "log.h"
 #include "nock.h"
+#include "nock_migrate.h"
 #include "openssl/crypto.h"
 #include "options.h"
 #include "retrieve.h"
@@ -519,6 +520,8 @@ _pave_parts(void)
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
   u3R->how.fag_w = 0;
+  u3R->byc_dar_p = u3h_new();
+  u3R->byc_lar_p = u3h_new();
 }
 
 static c3_d
@@ -556,6 +559,7 @@ _pave_home(void)
   u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
+  u3R->dir_ka = u3_nul;
 }
 
 STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
@@ -648,6 +652,26 @@ _find_home(void)
 
   _rod_vaal(u3R);
 
+  u3n_version nock_ver_w = ((pam_d >> 6) & 31);
+  if ( nock_ver_w != U3N_VERLAT ) {
+    switch ( nock_ver_w ) {
+      default: u3_assert(!"unrecognized bytecode version");
+      case U3N_VER1:
+      case U3N_VER2: {
+        fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
+        u3j_nv2_ream();
+        u3n_nv2_ream();
+        u3n_nv2_reclaim();
+        u3j_nv2_reclaim();
+        u3H->pam_d = _pave_params();
+      } break;
+  
+      case U3N_VER3: break;
+    }
+  }
+
+  //  Simple migration for zero-initialized u3a_road members
+  //  from futureproof buffer
   if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
     fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
     u3j_ream();
@@ -660,6 +684,10 @@ _find_home(void)
   //  properly initialize things from zero-initialize future proof buffer
   //  XX cax.for_p
   //
+  if ( !u3R->lop_p )     u3R->lop_p     = u3h_new();
+  if ( !u3R->jed_pax_p ) u3R->jed_pax_p = u3h_new();
+  if ( !u3R->byc_dar_p ) u3R->byc_dar_p = u3h_new();
+  if ( !u3R->byc_lar_p ) u3R->byc_lar_p = u3h_new();
   if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
 }
@@ -1142,6 +1170,7 @@ u3m_leap(c3_w pad_w)
   {
     u3R = rod_u;
     _pave_parts();
+    u3R->dir_ka = u3to(u3_road, u3R->par_p)->dir_ka;
   }
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
@@ -1342,9 +1371,11 @@ u3m_love(u3_noun pro)
 {
   //  save cache pointers from current road
   //
-  u3p(u3h_root) byc_p = u3R->byc.har_p;
+  u3p(u3h_root) byc_har_p = u3R->byc.har_p;
+  u3p(u3h_root) byc_dar_p = u3R->byc_dar_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
+  u3_noun       ka    = u3R->dir_ka;
   u3p(u3h_root) for_p = u3R->cax.for_p;
 
   //  are there any timers on the road?
@@ -1366,8 +1397,10 @@ u3m_love(u3_noun pro)
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
+  ka    = u3a_take(ka);
   jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
+  byc_har_p = u3n_take(byc_har_p);
+  byc_dar_p = u3n_take(byc_dar_p);
   per_p = u3h_take(per_p);
   for_p = u3h_take(for_p);
 
@@ -1380,8 +1413,10 @@ u3m_love(u3_noun pro)
   //  integrate junior caches
   //
   u3j_reap(jed_u);
-  u3n_reap(byc_p);
+  u3n_reap(byc_har_p);
+  u3n_reap_direct(byc_dar_p);
   u3z_reap(u3z_memo_keep, per_p);
+  u3z(u3R->dir_ka), u3R->dir_ka = ka;
   u3z_reap(u3z_memo_ford, for_p);
 
   return pro;
