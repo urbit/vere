@@ -239,10 +239,16 @@ _disk_plan(u3_disk* log_u,
 void
 u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 {
+  if ( u3C.wag_w & u3o_dryrun ) {
+    log_u->sen_d++;
+    log_u->dun_d++;
+    // XX invoke don_f?
+    return;
+  }
+
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
   _disk_plan(log_u, tac_u->mug_l, tac_u->job);
-
   _disk_commit(log_u);
 }
 

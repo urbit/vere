@@ -1487,7 +1487,7 @@ u3_mars_work(u3_mars* mar_u)
 
   //  XX do something better
   //
-  if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
+  if ( mar_u->log_u->dun_d > mar_u->dun_d && !(u3C.wag_w & u3o_dryrun) ) {
     u3_disk_exit(mar_u->log_u);
     exit(0);
   }
