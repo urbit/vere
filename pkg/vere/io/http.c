@@ -211,9 +211,9 @@ _cttp_bod_from_octs(u3_noun oct)
     u3m_bail(c3__fail);
   }
 
-  c3_w wor_w = u3r_met(5, u3t(oct));
+  c3_w len_buf_w = u3r_met(3, u3t(oct));
   u3_hbod* bod_u;
-  if ( wor_w * sizeof(c3_w) <= len_w ) {
+  if ( len_buf_w <= len_w ) {
     bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
     bod_u->atom = u3_nul;
     bod_u->hun_y = (c3_y*)(bod_u + 1);
