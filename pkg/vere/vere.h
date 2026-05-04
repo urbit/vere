@@ -1027,7 +1027,7 @@
       /* u3_lord_meld(): globally deduplicate persistent state.
       */
         void
-        u3_lord_meld(u3_lord* god_u);
+        u3_lord_meld(u3_lord* god_u, u3_noun dat);
 
       /* u3_lord_pack(): defragment persistent state.
       */
@@ -1295,7 +1295,7 @@
       /* u3_pier_meld(): globally deduplicate persistent state.
       */
         void
-        u3_pier_meld(u3_pier* pir_u);
+        u3_pier_meld(u3_pier* pir_u, u3_noun dat);
 
       /* u3_pier_pack(): defragment persistent state.
       */
@@ -1476,6 +1476,6 @@
       /* u3_meld_all(): canonicalize persistent nouns and compact state.
       */
         c3_w
-        u3_meld_all(FILE*);
+        u3_meld_all(FILE*, c3_o, c3_o);
 
 #endif /* ifndef U3_VERE_H */
