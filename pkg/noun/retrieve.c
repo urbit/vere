@@ -614,7 +614,7 @@ _cr_sing(u3_noun a, u3_noun b)
 /* u3r_sing(): Yes iff [a] and [b] are the same noun.
 */
 c3_o
-u3r_sing(u3_noun a, u3_noun b)
+u3r_sing_imp(u3_noun a, u3_noun b)
 {
   c3_o ret_o;
   u3t_on(euq_o);
