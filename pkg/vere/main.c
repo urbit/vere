@@ -1881,8 +1881,12 @@ _cw_meld(c3_i argc, c3_c* argv[])
     { "swap-to",       required_argument, NULL, 8 },
     { "gc-early",      no_argument,       NULL, 9 },
     { "lmdb-map-size", required_argument, NULL, 10 },
+    { "memo-drop",     no_argument,       NULL, 11 },
+    { "ford-drop",     no_argument,       NULL, 12 },
     { NULL, 0, NULL, 0 }
   };
+
+  c3_o per_o = c3n, for_o = c3n;
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
@@ -1923,6 +1927,16 @@ _cw_meld(c3_i argc, c3_c* argv[])
         break;
       }
 
+      case 11: {  //  memo-drop
+        per_o = c3y;
+        break;
+      }  
+
+      case 12: {  //  ford-drop
+        for_o = c3y;
+        break;
+      }
+
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
@@ -1954,7 +1968,7 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr));
+  u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr, per_o, for_o));
 
   u3m_save();
   u3_disk_exit(log_u);

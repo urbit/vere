@@ -198,15 +198,19 @@ u3_melt_all(FILE *fil_u)
 }
 
 c3_w
-u3_meld_all(FILE *fil_u)
+u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
 {
   c3_w pre_w = u3a_open(u3R);
 
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  if ( _(per_o) ) {
+    u3h_free(u3R->cax.per_p);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  }
 
-  u3h_free(u3R->cax.for_p);
-  u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( _(for_o) ) {
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  }
 
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();

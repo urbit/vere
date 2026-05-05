@@ -663,12 +663,18 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     case c3__urth: {
       switch (dat) {
         default: {
+          u3_noun p;
+          if ( c3y == u3r_p(dat, c3__meld, &p) ) {
+            _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
+            u3_pier_meld(con_u->car_u.pir_u, u3k(p));
+            break;
+          }
           err_i = -7; err_c = "urth-bad";
           goto _moor_poke_out;
         } break;
         case c3__meld: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
-          u3_pier_meld(con_u->car_u.pir_u);
+          u3_pier_meld(con_u->car_u.pir_u, u3_nul);
         } break;
         case c3__pack: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));

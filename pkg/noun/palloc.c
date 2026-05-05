@@ -1698,7 +1698,9 @@ _sweep_counts(void)
           use_w = u3to(c3_w, som_p);
 
           if ( *use_w != u3a_Mark.buf_w[pag_w] ) {
-            fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
+            if ( u3C.wag_h & u3o_verbose ) {
+              fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
+            }
             *use_w = u3a_Mark.buf_w[pag_w];
             weq_w += siz_w << u3a_page;;
           }
@@ -1749,8 +1751,10 @@ _sweep_counts(void)
                 use_w = u3to(c3_w, som_p);
 
                 if ( *use_w != mar_w[pos_w] ) {
-                  fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, mar_w[pos_w]);
-                  _print_chunk(stderr, som_p, siz_w);
+                  if ( u3C.wag_h & u3o_verbose ) {
+                    fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, mar_w[pos_w]);
+                    _print_chunk(stderr, som_p, siz_w);
+                  }
                   *use_w = mar_w[pos_w];
                   weq_w += siz_w;
                 }
@@ -1790,7 +1794,9 @@ _sweep_counts(void)
     }
   }
   if ( weq_w ) {
-    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    if ( u3C.wag_h & u3o_verbose ) {
+      u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    }
     // u3_assert(0);
   }
 
