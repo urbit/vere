@@ -128,4 +128,27 @@
       c3_i
       u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i);
 
+    /* u3_{32,64}_load(): locate u3v_{32,64}_home in the mapped 32-bit /
+    ** 64-bit image.
+    */
+      void
+      u3_32_load(c3_z wor_i);
+
+      void
+      u3_64_load(c3_z wor_i);
+
+    /* u3_migrate_32(): migrate the loaded 64-bit snapshot into the native
+    ** 32-bit loom.  Called from disk.c on a 32-bit vere reading a 64-bit
+    ** snapshot.
+    */
+      void
+      u3_migrate_32(c3_d eve_d);
+
+    /* u3_migrate_64(): migrate the loaded 32-bit snapshot into the native
+    ** 64-bit loom.  Called from disk.c on a 64-bit vere reading a 32-bit
+    ** snapshot.
+    */
+      void
+      u3_migrate_64(c3_d eve_d);
+
 #endif /* ifndef U3_EVENTS_H */

@@ -51,13 +51,6 @@ pub fn build(b: *std.Build) !void {
         .copt = copts,
     });
 
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-        .vere64 = vere64,
-    });
-
     const avahi = b.dependency("avahi", .{
         .target = target,
         .optimize = optimize,
@@ -162,7 +155,15 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
-    pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    if (!vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = vere64,
+        });
+        pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    }
     pkg_vere.linkLibC();
 
     var files = std.array_list.Managed([]const u8).init(b.allocator);

@@ -13,11 +13,13 @@
 
     /* u3a_vits: number of virtual bits in a noun reference gained via shifting
     */
+#     define u3a_32_vits   2
+#     define u3a_64_vits   0
 #ifndef VERE64
-#     define u3a_vits   2
+#     define u3a_vits   u3a_32_vits
 #     define u3a_wits   0  //  word-size: 0==32-bit, 1==64-bit
 #else
-#     define u3a_vits   0
+#     define u3a_vits   u3a_64_vits
 #     define u3a_wits   1  //  word-size: 0==32-bit, 1==64-bit
 #endif
 
@@ -43,8 +45,8 @@
 #     define u3a_word_bits  u3a_half_bits
 #     define u3a_word_bytes_shift  u3a_half_bytes_shift
 #     define u3a_word_bits_log u3a_half_bits_log
-#     define u3a_indirect_mask  u3a_32_indirect_mask 
-#     define u3a_direct_max  u3a_32_direct_max 
+#     define u3a_indirect_mask  u3a_32_indirect_mask
+#     define u3a_direct_max  u3a_32_direct_max
 #     define u3a_indirect_flag  u3a_32_indirect_flag
 #     define u3a_cell_flag  u3a_32_cell_flag
 #     define u3a_word_words 1
@@ -52,8 +54,8 @@
 #     define u3a_word_bits  u3a_chub_bits
 #     define u3a_word_bytes_shift  u3a_chub_bytes_shift
 #     define u3a_word_bits_log u3a_chub_bits_log
-#     define u3a_indirect_mask  u3a_64_indirect_mask 
-#     define u3a_direct_max  u3a_64_direct_max 
+#     define u3a_indirect_mask  u3a_64_indirect_mask
+#     define u3a_direct_max  u3a_64_direct_max
 #     define u3a_indirect_flag  u3a_64_indirect_flag
 #     define u3a_cell_flag  u3a_64_cell_flag
 #     define u3a_word_words 2
@@ -61,22 +63,42 @@
 
     /* u3a_walign: references into the loom are guaranteed to be word-aligned to:
     */
-#     define u3a_walign  ((c3_w)1 << u3a_vits)
+#     define u3a_32_walign  ((c3_h)1 << u3a_32_vits)
+#     define u3a_64_walign  ((c3_d)1 << u3a_64_vits)
+#ifndef VERE64
+#     define u3a_walign  u3a_32_walign
+#else
+#     define u3a_walign  u3a_64_walign
+#endif
 
     /* u3a_balign: u3a_walign in bytes
     */
-#     define u3a_balign  (sizeof(c3_w)*u3a_walign)
+#     define u3a_32_balign  (sizeof(c3_h) * u3a_32_walign)
+#     define u3a_64_balign  (sizeof(c3_d) * u3a_64_walign)
+#ifndef VERE64
+#     define u3a_balign  u3a_32_balign
+#else
+#     define u3a_balign  u3a_64_balign
+#endif
 
      /* u3a_bits_max: max loom bex
      */
-#    define u3a_bits_max ((c3_w)8 * sizeof(c3_w) + u3a_vits)
+#     define u3a_32_bits_max ((c3_h)8 * sizeof(c3_h) + u3a_32_vits)
+#     define u3a_64_bits_max ((c3_d)8 * sizeof(c3_d) + u3a_64_vits)
+#ifndef VERE64
+#     define u3a_bits_max  u3a_32_bits_max
+#else
+#     define u3a_bits_max  u3a_64_bits_max
+#endif
 
     /* u3a_page: number of bits in word-addressed page.  12 == 16K page
     */
+#     define u3a_32_page    12ULL
+#     define u3a_64_page    11ULL
 #ifndef VERE64
-#     define u3a_page    12ULL
+#     define u3a_page    u3a_32_page
 #else
-#     define u3a_page    11ULL
+#     define u3a_page    u3a_64_page
 #endif
 
     /* u3a_pages: maximum number of pages in memory.
@@ -134,26 +156,92 @@
         c3_w use_w;
         c3_w buf_w[0];
       } u3a_rate;
-    /* u3a_atom, u3a_cell: logical atom and cell structures.
+    /* u3a_noun: shared atom/cell prefix.
     */
       typedef struct {
         c3_w use_w;
         c3_w mug_w;
       } u3a_noun;
 
-      typedef struct {
-        c3_w use_w;
-        c3_w mug_w;
-        c3_w len_w;
-        c3_w buf_w[0];
-      } u3a_atom;
+    /* Bit-pinned format declarations.  Both 32-bit and 64-bit loom layouts
+    ** are declared unconditionally; native u3a_atom / u3a_cell / u3a_road
+    ** typedef-alias the matching bitness.
+    */
+      typedef uint32_t c3_32_w;
+      typedef int32_t  c3_32_ws;
+      typedef uint64_t c3_64_w;
+      typedef int64_t  c3_64_ws;
+
+      typedef c3_32_w u3_32_noun;
+      typedef c3_64_w u3_64_noun;
+
+#     define  u3a_32_crag_no  10u
+#     define  u3a_64_crag_no  10u
+
+#     define  _ce_len_32(i)        ((size_t)(i) << (u3a_32_page + u3a_half_bytes_shift))
+#     define  _ce_len_words_32(i)  ((size_t)(i) << u3a_32_page)
+#     define  _ce_page_32          _ce_len_32(1)
+#     define  _ce_ptr_32(i)        ((void *)((c3_c*)u3_Loom_32 + _ce_len_32(i)))
+#     define  _ce_len_64(i)        ((size_t)(i) << (u3a_64_page + u3a_chub_bytes_shift))
+#     define  _ce_page_64          _ce_len_64(1)
+
+#     define  u3a_32_is_cat(som)   (((som) >> 31) ? c3n : c3y)
+#     define  u3a_32_is_pug(som)   ((0b10 == ((som) >> 30)) ? c3y : c3n)
+#     define  u3a_32_is_pom(som)   ((0b11 == ((som) >> 30)) ? c3y : c3n)
+#     define  u3a_32_is_cell(som)  u3a_32_is_pom(som)
+#     define  u3a_64_is_cat(som)   (((som) >> 63) ? c3n : c3y)
+#     define  u3a_64_is_pug(som)   ((0x2ULL == ((som) >> 62)) ? c3y : c3n)
+#     define  u3a_64_is_pom(som)   ((0x3ULL == ((som) >> 62)) ? c3y : c3n)
+#     define  u3a_64_is_cell(som)  u3a_64_is_pom(som)
+
+#     define  u3a_32_to_off(som)   (((som) & 0x3fffffffu) << u3a_32_vits)
+#     define  u3a_32_to_ptr(som)   (u3a_32_into(u3a_32_to_off(som)))
+#     define  u3a_32_to_pug(off)   (((off) >> u3a_32_vits) | 0x80000000u)
+#     define  u3a_64_to_off(som)   ((som) & 0x3fffffffffffffffULL)
+#     define  u3a_64_to_ptr(som)   (u3a_64_into(u3a_64_to_off(som)))
 
       typedef struct {
-        c3_w  use_w;
-        c3_w  mug_w;
-        u3_noun hed;
-        u3_noun tel;
-      } u3a_cell;
+        c3_32_w    use_w;
+        c3_32_w    mug_w;
+        c3_32_w    len_w;
+        c3_32_w    buf_w[0];
+      } u3a_32_atom;
+
+      typedef struct {
+        c3_32_w    use_w;
+        c3_32_w    mug_w;
+        u3_32_noun hed;
+        u3_32_noun tel;
+      } u3a_32_cell;
+
+      typedef struct {
+        c3_64_w     use_w;
+        c3_w        mug_w;
+        c3_64_w     len_w;
+        c3_64_w     buf_w[0];
+      } u3a_64_atom;
+
+      typedef struct {
+        c3_64_w     use_w;
+        c3_w        mug_w;
+        u3_64_noun  hed;
+        u3_64_noun  tel;
+      } u3a_64_cell;
+
+#     define  u3a_32_head(som)  (((u3a_32_cell *)u3a_32_to_ptr(som))->hed)
+#     define  u3a_32_tail(som)  (((u3a_32_cell *)u3a_32_to_ptr(som))->tel)
+#     define  u3a_64_head(som)  (((u3a_64_cell *)u3a_64_to_ptr(som))->hed)
+#     define  u3a_64_tail(som)  (((u3a_64_cell *)u3a_64_to_ptr(som))->tel)
+
+    /* u3a_atom, u3a_cell: native logical atom and cell (alias matching bitness).
+    */
+#ifndef VERE64
+      typedef u3a_32_atom u3a_atom;
+      typedef u3a_32_cell u3a_cell;
+#else
+      typedef u3a_64_atom u3a_atom;
+      typedef u3a_64_cell u3a_cell;
+#endif
 
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
@@ -179,107 +267,186 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_w                  siz_w;     //  number of pages
       } u3a_dell;
 
-    /* u3a_jets: jet dashboard
+    /* u3a_{32,64}_jets: 32-bit / 64-bit jet dashboard layouts.
     */
-      typedef struct _u3a_jets {
-        u3p(u3h_root) hot_p;                  //  hot state (home road only)
-        u3p(u3h_root) war_p;                  //  warm state
-        u3p(u3h_root) cod_p;                  //  cold state
-        u3p(u3h_root) han_p;                  //  hank cache
-        u3p(u3h_root) bas_p;                  //  battery hashes
-      } u3a_jets;
+      typedef struct _u3a_32_jets {
+        c3_32_w hot_p;
+        c3_32_w war_p;
+        c3_32_w cod_p;
+        c3_32_w han_p;
+        c3_32_w bas_p;
+      } u3a_32_jets;
 
-    /* u3a_road: contiguous allocation and execution context.
+      typedef struct _u3a_64_jets {
+        c3_64_w hot_p;
+        c3_64_w war_p;
+        c3_64_w cod_p;
+        c3_64_w han_p;
+        c3_64_w bas_p;
+      } u3a_64_jets;
+
+    /* u3a_jets: native jet dashboard (alias matching bitness).
     */
-      typedef struct _u3a_road {
-        u3p(struct _u3a_road) par_p;          //  parent road
-        u3p(struct _u3a_road) kid_p;          //  child road list
-        u3p(struct _u3a_road) nex_p;          //  sibling road
+#ifndef VERE64
+      typedef u3a_32_jets u3a_jets;
+#else
+      typedef u3a_64_jets u3a_jets;
+#endif
 
-        u3p(c3_w) cap_p;                      //  top of transient region
-        u3p(c3_w) hat_p;                      //  top of durable region
-        u3p(c3_w) mat_p;                      //  bottom of transient region
-        u3p(c3_w) rut_p;                      //  bottom of durable region
-        u3p(c3_w) ear_p;                      //  original cap if kid is live
+    /* u3a_{32,64}_road: 32-bit and 64-bit contiguous allocation and
+    ** execution context layouts.
+    */
+      typedef struct _u3a_32_road {
+        c3_32_w par_p;
+        c3_32_w kid_p;
+        c3_32_w nex_p;
 
-        c3_w off_w;                           //  spin stack offset
-        c3_w fow_w;                           //  spin stack overflow count
-        u3p(u3h_root) lop_p;                  //  %loop hint set
-        u3_noun tim;                          //  list of absolute deadlines
+        c3_32_w cap_p;
+        c3_32_w hat_p;
+        c3_32_w mat_p;
+        c3_32_w rut_p;
+        c3_32_w ear_p;
 
-        c3_w fut_w[28];                       //  futureproof buffer
+        c3_32_w    off_w;
+        c3_32_w    fow_w;
+        c3_32_w    lop_p;
+        u3_32_noun tim;
 
-        struct {                              //  escape buffer
+        c3_32_w fut_w[28];
+
+        struct {
           union {
-            #ifndef VERE64
             jmp_buf buf;
-            #else
-            struct {
-              jmp_buf buf;
-              c3_w why_w;                     //  how
-            };
-            #endif
-            c3_w buf_w[256];                  //  futureproofing
+            c3_32_w buf_w[256];
           };
         } esc;
 
-        struct {                              //  miscellaneous config
-          c3_w fag_w;                         //  flag bits
-        } how;                                //
+        struct { c3_32_w fag_w; } how;
 
-        //  XX re/move
-        struct {                              //  allocation pools
-          c3_w fre_w;                         //  number of free words
-          c3_w max_w;                         //  maximum allocated
+        struct {
+          c3_32_w fre_w;
+          c3_32_w max_w;
         } all;
 
-        struct {                              //    heap allocator
-          u3p(u3a_dell)  fre_p;               //  free list entry
-          u3p(u3a_dell)  erf_p;               //  free list exit
-          u3p(u3a_dell)  cac_p;               //  cached pgfree struct
-          c3_ws          dir_ws;              //  1 || -1 (multiplicand for local offsets)
-          c3_ws          off_ws;              //  0 || -1 (word-offset for hat && rut)
-          c3_w           siz_w;               //  directory size
-          c3_w           len_w;               //  directory entries
-          u3p(u3a_crag*) pag_p;               //  directory
-          u3p(u3a_crag)  wee_p[u3a_crag_no];  //  chunk lists
+        struct {
+          c3_32_w  fre_p;
+          c3_32_w  erf_p;
+          c3_32_w  cac_p;
+          c3_32_ws dir_ws;
+          c3_32_ws off_ws;
+          c3_32_w  siz_w;
+          c3_32_w  len_w;
+          c3_32_w  pag_p;
+          c3_32_w  wee_p[u3a_32_crag_no];
         } hep;
 
-        struct {                              //    cell pool
-          u3_post cel_p;                      //  array of cells
-          c3_w    hav_w;                      //  length
-          c3_w    bat_w;                      //  batch counter
+        struct {
+          c3_32_w cel_p;
+          c3_32_w hav_w;
+          c3_32_w bat_w;
         } cel;
 
-        u3a_jets jed;                         //  jet dashboard
+        u3a_32_jets jed;
 
-        struct {                              //  bytecode state
-          u3p(u3h_root) har_p;                //  formula->post of bytecode
-        } byc;
+        struct { c3_32_w    har_p;                } byc;
+        struct { u3_32_noun gul;                  } ski;
+        struct { u3_32_noun tax; u3_32_noun mer;  } bug;
 
-        struct {                              //  scry namespace
-          u3_noun gul;                        //  (list $+(* (unit (unit)))) now
-        } ski;
-
-        struct {                              //  trace stack
-          u3_noun tax;                        //  (list ,*)
-          u3_noun mer;                        //  emergency buffer to release
-        } bug;
-
-        struct {                              //  profile stack
-          c3_d    nox_d;                      //  nock steps
-          c3_d    cel_d;                      //  cell allocations
-          u3_noun don;                        //  (list batt)
-          u3_noun trace;                      //  (list trace)
-          u3_noun day;                        //  doss, only in u3H (moveme)
+        struct {
+          c3_d       nox_d;
+          c3_d       cel_d;
+          u3_32_noun don;
+          u3_32_noun trace;
+          u3_32_noun day;
         } pro;
 
-        struct {                              //  memoization caches
-          u3p(u3h_root) har_p;                //  transient
-          u3p(u3h_root) per_p;                //  persistent
-          u3p(u3h_root) for_p;                //  ford
+        struct {
+          c3_32_w har_p;
+          c3_32_w per_p;
+          c3_32_w for_p;
         } cax;
-      } u3a_road;
+      } u3a_32_road;
+
+      typedef struct _u3a_64_road {
+        c3_64_w par_p;
+        c3_64_w kid_p;
+        c3_64_w nex_p;
+
+        c3_64_w cap_p;
+        c3_64_w hat_p;
+        c3_64_w mat_p;
+        c3_64_w rut_p;
+        c3_64_w ear_p;
+
+        c3_64_w    off_w;
+        c3_64_w    fow_w;
+        c3_64_w    lop_p;
+        u3_64_noun tim;
+
+        c3_64_w fut_w[28];
+
+        struct {
+          union {
+            jmp_buf buf;
+            c3_64_w why_w;
+            c3_64_w buf_w[256];
+          };
+        } esc;
+
+        struct { c3_64_w fag_w; } how;
+
+        struct {
+          c3_64_w fre_w;
+          c3_64_w max_w;
+        } all;
+
+        struct {
+          c3_64_w  fre_p;
+          c3_64_w  erf_p;
+          c3_64_w  cac_p;
+          c3_64_ws dir_ws;
+          c3_64_ws off_ws;
+          c3_64_w  siz_w;
+          c3_64_w  len_w;
+          c3_64_w  pag_p;
+          c3_64_w  wee_p[u3a_64_crag_no];
+        } hep;
+
+        struct {
+          c3_64_w cel_p;
+          c3_64_w hav_w;
+          c3_64_w bat_w;
+        } cel;
+
+        u3a_64_jets jed;
+
+        struct { c3_64_w    har_p;                        } byc;
+        struct { u3_64_noun gul;                          } ski;
+        struct { u3_64_noun tax; u3_64_noun mer;          } bug;
+
+        struct {
+          c3_d        nox_d;
+          c3_d        cel_d;
+          u3_64_noun  don;
+          u3_64_noun  trace;
+          u3_64_noun  day;
+        } pro;
+
+        struct {
+          c3_64_w har_p;
+          c3_64_w per_p;
+          c3_64_w for_p;
+        } cax;
+      } u3a_64_road;
+
+    /* u3a_road: native contiguous allocation and execution context
+    ** (alias matching bitness).
+    */
+#ifndef VERE64
+      typedef u3a_32_road u3a_road;
+#else
+      typedef u3a_64_road u3a_road;
+#endif
       typedef u3a_road u3_road;
 
     /* u3a_flag: flags for how.fag_w.  All arena related.
@@ -501,15 +668,35 @@ typedef struct {
       extern c3_w u3_Code;
 #endif
 
-#   define u3_Loom      ((c3_w *)(void *)U3_OS_LoomBase)
+#ifdef VERE64
+#   define u3_Loom_64   ((c3_d *)(void *)U3_OS_LoomBase)
+#   define u3_Loom_32   ((c3_h *)((c3_c *)U3_OS_LoomBase + ((c3_z)8 << u3a_32_bits_max)))
+#   define u3_Loom      u3_Loom_64
+#else
+#   define u3_Loom_32   ((c3_h *)(void *)U3_OS_LoomBase)
+#   define u3_Loom_64   ((c3_d *)((c3_c *)U3_OS_LoomBase + ((c3_z)8 << u3a_32_bits_max)))
+#   define u3_Loom      u3_Loom_32
+#endif
+
+  /* u3a_{32,64}_into(): convert loom offset [x] into generic pointer.
+   */
+#   define u3a_32_into(x)  ((void *)(u3_Loom_32 + (x)))
+#   define u3a_64_into(x)  ((void *)(u3_Loom_64 + (x)))
+
+  /* u3a_{32,64}_outa(): convert pointer [p] into word offset into loom.
+   */
+#   define u3a_32_outa(p)  ((c3_h *)(void *)(p) - u3_Loom_32)
+#   define u3a_64_outa(p)  ((c3_d *)(void *)(p) - u3_Loom_64)
 
   /* u3a_into(): convert loom offset [x] into generic pointer.
    */
-#   define u3a_into(x)  ((void *)(u3_Loom + (x)))
-
-  /* u3a_outa(): convert pointer [p] into word offset into loom.
-   */
-#   define u3a_outa(p)  ((c3_w *)(void *)(p) - u3_Loom)
+#ifdef VERE64
+#   define u3a_into(x)  u3a_64_into(x)
+#   define u3a_outa(p)  u3a_64_outa(p)
+#else
+#   define u3a_into(x)  u3a_32_into(x)
+#   define u3a_outa(p)  u3a_32_outa(p)
+#endif
 
   /* u3a_to_off(): mask off bits 30 and 31 from noun [som].
    */

@@ -11,9 +11,5 @@ void
 u3_migrate_v4(c3_d eve_d);
 void
 u3_migrate_v5(c3_d eve_d);
-void
-u3_migrate_32(c3_d eve_d);
-void
-u3_migrate_64(c3_d eve_d);
 
 #endif /* U3_MIGRATE_H */

@@ -8,6 +8,8 @@ pub fn build(b: *std.Build) !void {
         b.option([]const []const u8, "copt", "") orelse &.{};
     const vere64: bool = b.option(bool, "vere64", "") orelse false;
 
+    if (vere64) return;
+
     const pkg_past = b.addLibrary(.{
         .name = "past",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
@@ -56,40 +58,25 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    const c_source_files: []const []const u8 = if (!vere64)
-        &.{
-            "v1.c",
-            "v2.c",
-            "v3.c",
-            "v4.c",
-            "migrate_v2.c",
-            "migrate_v3.c",
-            "migrate_v4.c",
-            "migrate_v5.c",
-            "32.c",
-        }
-    else
-        &.{
-            "64.c",
-        };
+    const c_source_files: []const []const u8 = &.{
+        "v1.c",
+        "v2.c",
+        "v3.c",
+        "v4.c",
+        "migrate_v2.c",
+        "migrate_v3.c",
+        "migrate_v4.c",
+        "migrate_v5.c",
+    };
 
-    const install_headers: []const []const u8 = if (!vere64)
-        &.{
-            "v1.h",
-            "v2.h",
-            "v3.h",
-            "v4.h",
-            "v5.h",
-            "32.h",
-            "copy_migrate.h",
-            "migrate.h",
-        }
-    else
-        &.{
-            "64.h",
-            "copy_migrate.h",
-            "migrate.h",
-        };
+    const install_headers: []const []const u8 = &.{
+        "v1.h",
+        "v2.h",
+        "v3.h",
+        "v4.h",
+        "v5.h",
+        "migrate.h",
+    };
 
     pkg_past.addCSourceFiles(.{
         .root = b.path(""),

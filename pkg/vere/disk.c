@@ -7,12 +7,9 @@
 #include "db/lmdb.h"
 #include <types.h>
 
+#ifndef VERE64
 #include "migrate.h"
-#ifdef VERE64
-#include "64.h"
-#else
 #include "v4.h"
-#include "32.h"
 #endif
 
 struct _u3_disk_walk {

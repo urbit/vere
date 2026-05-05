@@ -445,13 +445,6 @@ fn buildBinary(
         .copt = copts,
     });
 
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-        .vere64 = cfg.vere64,
-    });
-
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
@@ -577,7 +570,15 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
-    urbit.linkLibrary(pkg_past.artifact("past"));
+    if (!cfg.vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = cfg.vere64,
+        });
+        urbit.linkLibrary(pkg_past.artifact("past"));
+    }
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 

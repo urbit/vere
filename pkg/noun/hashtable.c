@@ -901,22 +901,22 @@ u3h_free(u3p(u3h_root) har_p)
   u3a_wfree(har_u);
 }
 
-/* _ch_walk_buck(): walk bucket for gc.
+/* _ch_32_walk_buck(): walk 32-bit HAMT bucket.
 */
 static void
-_ch_walk_buck(u3h_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_32_walk_buck(u3h_32_buck* hab_u, void (*fun_f)(c3_h, void*), void* wit)
 {
   c3_h i_h;
 
   for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
-    fun_f(u3h_slot_to_noun(hab_u->sot_w[i_h]), wit);
+    fun_f(u3h_32_slot_to_noun(hab_u->sot_w[i_h]), wit);
   }
 }
 
-/* _ch_walk_node(): walk node for gc.
+/* _ch_32_walk_node(): walk 32-bit HAMT node.
 */
 static void
-_ch_walk_node(u3h_node* han_u, c3_h lef_h, void (*fun_f)(u3_noun, void*), void* wit)
+_ch_32_walk_node(u3h_32_node* han_u, c3_h lef_h, void (*fun_f)(c3_h, void*), void* wit)
 {
   c3_h len_h = _ch_popcount(han_u->map_h);
   c3_h i_h;
@@ -924,48 +924,105 @@ _ch_walk_node(u3h_node* han_u, c3_h lef_h, void (*fun_f)(u3_noun, void*), void* 
   lef_h -= 5;
 
   for ( i_h = 0; i_h < len_h; i_h++ ) {
-    u3h_slot sot_w = han_u->sot_w[i_h];
+    u3h_32_slot sot_w = han_u->sot_w[i_h];
 
-    if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-
-      fun_f(kev, wit);
+    if ( _(u3h_32_slot_is_noun(sot_w)) ) {
+      fun_f(u3h_32_slot_to_noun(sot_w), wit);
     }
     else {
-      void* hav_v = u3h_slot_to_node(sot_w);
+      void* hav_v = u3h_32_slot_to_node(sot_w);
 
       if ( 0 == lef_h ) {
-        _ch_walk_buck(hav_v, fun_f, wit);
+        _ch_32_walk_buck(hav_v, fun_f, wit);
       } else {
-        _ch_walk_node(hav_v, lef_h, fun_f, wit);
+        _ch_32_walk_node(hav_v, lef_h, fun_f, wit);
       }
     }
   }
 }
 
-/* u3h_walk_with(): traverse hashtable with key, value fn and data
- *                  argument; RETAINS.
+/* u3h_32_walk_with(): traverse 32-bit HAMT with key, value fn and data
+ *                     argument; RETAINS.
 */
 void
-u3h_walk_with(u3p(u3h_root) har_p,
-              void (*fun_f)(u3_noun, void*),
-              void* wit)
+u3h_32_walk_with(c3_h har_p, void (*fun_f)(c3_h, void*), void* wit)
 {
-  u3h_root* har_u = u3to(u3h_root, har_p);
-  c3_h        i_h;
+  u3h_32_root* har_u = (u3h_32_root *)u3a_32_into(har_p);
+  c3_h         i_h;
 
   for ( i_h = 0; i_h < 64; i_h++ ) {
-    u3h_slot sot_w = har_u->sot_w[i_h];
+    u3h_32_slot sot_w = har_u->sot_w[i_h];
 
-    if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-
-      fun_f(kev, wit);
+    if ( _(u3h_32_slot_is_noun(sot_w)) ) {
+      fun_f(u3h_32_slot_to_noun(sot_w), wit);
     }
-    else if ( _(u3h_slot_is_node(sot_w)) ) {
-      u3h_node* han_u = u3h_slot_to_node(sot_w);
+    else if ( _(u3h_32_slot_is_node(sot_w)) ) {
+      u3h_32_node* han_u = (u3h_32_node *)u3h_32_slot_to_node(sot_w);
 
-      _ch_walk_node(han_u, 25, fun_f, wit);
+      _ch_32_walk_node(han_u, 25, fun_f, wit);
+    }
+  }
+}
+
+/* _ch_64_walk_buck(): walk 64-bit HAMT bucket.
+*/
+static void
+_ch_64_walk_buck(u3h_64_buck* hab_u, void (*fun_f)(c3_d, void*), void* wit)
+{
+  c3_h i_h;
+
+  for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
+    fun_f(u3h_64_slot_to_noun(hab_u->sot_w[i_h]), wit);
+  }
+}
+
+/* _ch_64_walk_node(): walk 64-bit HAMT node.
+*/
+static void
+_ch_64_walk_node(u3h_64_node* han_u, c3_h lef_h, void (*fun_f)(c3_d, void*), void* wit)
+{
+  c3_h len_h = _ch_popcount(han_u->map_h);
+  c3_h i_h;
+
+  lef_h -= 5;
+
+  for ( i_h = 0; i_h < len_h; i_h++ ) {
+    u3h_64_slot sot_w = han_u->sot_w[i_h];
+
+    if ( _(u3h_64_slot_is_noun(sot_w)) ) {
+      fun_f(u3h_64_slot_to_noun(sot_w), wit);
+    }
+    else {
+      void* hav_v = u3h_64_slot_to_node(sot_w);
+
+      if ( 0 == lef_h ) {
+        _ch_64_walk_buck(hav_v, fun_f, wit);
+      } else {
+        _ch_64_walk_node(hav_v, lef_h, fun_f, wit);
+      }
+    }
+  }
+}
+
+/* u3h_64_walk_with(): traverse 64-bit HAMT with key, value fn and data
+ *                     argument; RETAINS.
+*/
+void
+u3h_64_walk_with(c3_d har_p, void (*fun_f)(c3_d, void*), void* wit)
+{
+  u3h_64_root* har_u = (u3h_64_root *)u3a_64_into(har_p);
+  c3_h         i_h;
+
+  for ( i_h = 0; i_h < 64; i_h++ ) {
+    u3h_64_slot sot_w = har_u->sot_w[i_h];
+
+    if ( _(u3h_64_slot_is_noun(sot_w)) ) {
+      fun_f(u3h_64_slot_to_noun(sot_w), wit);
+    }
+    else if ( _(u3h_64_slot_is_node(sot_w)) ) {
+      u3h_64_node* han_u = (u3h_64_node *)u3h_64_slot_to_node(sot_w);
+
+      _ch_64_walk_node(han_u, 25, fun_f, wit);
     }
   }
 }
