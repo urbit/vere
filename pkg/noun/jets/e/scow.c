@@ -64,15 +64,14 @@ _print_da(u3_noun cor, u3_atom raw_da)
   u3_noun out = 0;
 
   u3_atom age, year, month, day, hour, min, sec, f;
-  if (c3n == u3r_mean(yod, 4, &age,
-                      5, &year,
-                      6, &month,
-                      14, &day,
-                      30, &hour,
-                      62, &min,
-                      126, &sec,
-                      127, &f,
-                      0)) {
+  if (((u3_none == (age = u3r_head_weak(u3r_head(yod)))) ||
+       (u3_none == (year = u3r_tail_weak(u3r_head(yod)))) ||
+       (u3_none == (month = u3r_head_weak(u3r_tail(yod)))) ||
+       (u3_none == (day = u3r_head_weak(u3r_tail_weak(u3r_tail(yod))))) ||
+       (u3_none == (hour = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(yod)))))) ||
+       (u3_none == (min = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(yod))))))) ||
+       (u3_none == (sec = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(yod)))))))) ||
+       (u3_none == (f = u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(yod)))))))))) {
     return u3m_bail(c3__exit);
   }
 

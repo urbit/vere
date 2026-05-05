@@ -27,9 +27,9 @@
   {
     u3_noun boz, len, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &boz,
-                               u3x_sam_6, &len,
-                               u3x_sam_7, &dat, 0)) ||
+    if ( (u3_none == (boz = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+         (u3_none == (len = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+         (u3_none == (dat = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          (c3n == u3ud(boz)) ||
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) )

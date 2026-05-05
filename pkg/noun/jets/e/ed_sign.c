@@ -34,7 +34,8 @@
   {
     u3_noun msg, sed;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &msg, u3x_sam_3, &sed, 0) ||
+    if ( ((u3_none == (msg = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (sed = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3r_cell(msg, &len, &dat) ||
          c3n == u3ud(sed) ||
          c3n == u3ud(len) ||
@@ -75,7 +76,9 @@
   {
     u3_noun msg, pub, sek;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &msg, u3x_sam_6, &pub, u3x_sam_7, &sek, 0) ||
+    if ( ((u3_none == (msg = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (pub = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+          (u3_none == (sek = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
          c3n == u3r_cell(msg, &len, &dat) ||
          c3n == u3ud(pub) ||
          c3n == u3ud(sek) ||
@@ -113,8 +116,8 @@
   u3wee_sign(u3_noun cor)
   {
     u3_noun msg, sed;
-    if ( c3n == u3r_mean(cor,
-                         u3x_sam_2, &msg, u3x_sam_3, &sed, 0) ||
+    if ( ((u3_none == (msg = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (sed = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(msg) ||
          c3n == u3ud(sed) ) {
       return u3m_bail(c3__fail);
@@ -154,8 +157,9 @@
   u3wee_sign_raw(u3_noun cor)
   {
     u3_noun msg, pub, sek;
-    if ( c3n == u3r_mean(cor,
-                         u3x_sam_2, &msg, u3x_sam_6, &pub, u3x_sam_7, &sek, 0) ||
+    if ( ((u3_none == (msg = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (pub = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+          (u3_none == (sek = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(msg) ||
          c3n == u3ud(pub) ||
          c3n == u3ud(sek) ) {

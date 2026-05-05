@@ -122,9 +122,9 @@
     // and then produces a gate. we jet that inner gate.
     // this does mean that the config params have gotten buried
     // pretty deep in the subject, hence the +510.
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &wmsg,
-                              u3x_sam_3, &wsat,
-                              510, &arg, 0) ||
+    if ( ((u3_none == (wmsg = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (wsat = u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (arg = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))))))) ||
                 u3r_cell(wmsg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(wsat, &wis, &sat) || u3ud(wis) || u3ud(sat) ||
                 //

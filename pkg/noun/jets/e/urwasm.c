@@ -1894,20 +1894,18 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     u3_noun acc;
     u3_noun susp_list;
 
-    if ( c3n == u3r_mean(get,
-        2,   &yil_previous,
-        6,   &queue,
-        56,  &p_box_buffer,
-        57,  &q_box_buffer,
-        29,  &pad_box,
-        120, &p_mem_buffer,
-        121, &q_mem_buffer,
-        61,  &stack_offset,
-        62,  &runtime_offset,
-        126, &lia_shop,
-        254, &acc,
-        255, &susp_list,
-        0) 
+    if ( ((u3_none == (yil_previous = u3r_head(get))) ||
+          (u3_none == (queue = u3r_head_weak(u3r_tail(get)))) ||
+          (u3_none == (p_box_buffer = u3r_head_weak(u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_tail(get))))))) ||
+          (u3_none == (q_box_buffer = u3r_tail_weak(u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_tail(get))))))) ||
+          (u3_none == (pad_box = u3r_tail_weak(u3r_head_weak(u3r_tail_weak(u3r_tail(get)))))) ||
+          (u3_none == (p_mem_buffer = u3r_head_weak(u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get)))))))) ||
+          (u3_none == (q_mem_buffer = u3r_tail_weak(u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get)))))))) ||
+          (u3_none == (stack_offset = u3r_tail_weak(u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get))))))) ||
+          (u3_none == (runtime_offset = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get))))))) ||
+          (u3_none == (lia_shop = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get)))))))) ||
+          (u3_none == (acc = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get))))))))) ||
+          (u3_none == (susp_list = u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(get)))))))))) 
     )
     {
       return u3m_bail(c3__fail);

@@ -46,7 +46,8 @@
   {
     u3_noun vur, sed;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &vur, u3x_sam_3, &sed, 0) ) {
+    if ( ((u3_none == (vur = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (sed = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_cons(vur, sed);

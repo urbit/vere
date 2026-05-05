@@ -21,7 +21,8 @@
   {
     u3_noun hed, tal;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &hed, u3x_sam_3, &tal, 0) ) {
+    if ( ((u3_none == (hed = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (tal = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_cell(hed, tal);

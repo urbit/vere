@@ -33,9 +33,9 @@
   {
     u3_noun sig, msg, pub;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor,
-                         u3x_sam_2, &sig, u3x_sam_6, &msg,
-                         u3x_sam_7, &pub, 0) ||
+    if ( ((u3_none == (sig = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (msg = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+          (u3_none == (pub = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
          c3n == u3r_cell(msg, &len, &dat) ||
          (c3n == u3ud(sig)) ||
          (c3n == u3ud(pub)) ||
@@ -72,9 +72,9 @@
   u3wee_veri(u3_noun cor)
   {
     u3_noun a, b, c;
-    if ( (c3n == u3r_mean(cor,
-                         u3x_sam_2, &a, u3x_sam_6, &b,
-                         u3x_sam_7, &c, 0)) ||
+    if ( (u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+         (u3_none == (b = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+         (u3_none == (c = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) ||
          (c3n == u3ud(c)) ) {

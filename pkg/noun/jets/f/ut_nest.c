@@ -12,12 +12,12 @@ u3wfu_nest_dext(u3_noun dext_core)
   u3_noun bat, sut, ref, van, seg, reg, gil;
 
   if (  (u3_none == (nest_in_core = u3r_at(3, dext_core)))
-     || (c3n == u3r_mean(nest_in_core, u3x_sam_2, &seg,
-                                       u3x_sam_6, &reg,
-                                       u3x_sam_7, &gil,
-                                       u3x_con, &nest_core, 0))
-     || (c3n == u3r_mean(nest_core, u3x_sam_3, &ref,
-                                    u3x_con, &van, 0))
+     || (u3_none == (seg = u3r_head_weak(u3r_head_weak(u3r_tail(nest_in_core))))) ||
+        (u3_none == (reg = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(nest_in_core)))))) ||
+        (u3_none == (gil = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(nest_in_core)))))) ||
+        (u3_none == (nest_core = u3r_tail_weak(u3r_tail(nest_in_core))))
+     || (u3_none == (ref = u3r_tail_weak(u3r_head_weak(u3r_tail(nest_core))))) ||
+        (u3_none == (van = u3r_tail_weak(u3r_tail(nest_core))))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {

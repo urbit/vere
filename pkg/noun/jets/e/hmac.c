@@ -68,13 +68,13 @@
     u3_noun haj, boq, out, wik, key, wid, dat;
 
     // sample is [[haj boq out] [wik key] [wid dat]]
-    if ( (c3n == u3r_mean(cor, u3x_sam_4,  &haj,
-                               50,         &boq, // +<->-
-                               51,         &out, // +<->+
-                               u3x_sam_12, &wik,
-                               u3x_sam_13, &key,
-                               u3x_sam_14, &wid,
-                               u3x_sam_15, &dat, 0)) ||
+    if ( (u3_none == (haj = u3r_head_weak(u3r_head_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+         (u3_none == (boq = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+         (u3_none == (out = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+         (u3_none == (wik = u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+         (u3_none == (key = u3r_tail_weak(u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+         (u3_none == (wid = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+         (u3_none == (dat = u3r_tail_weak(u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
          (c3n == u3ud(boq)) ||
          (c3n == u3a_is_cat(boq)) ||
          (c3n == u3ud(out)) ||

@@ -64,7 +64,8 @@ u3wf_fitz(u3_noun cor)
 {
   u3_noun yaz, wix;
 
-  if ( (c3n == u3r_mean(cor, u3x_sam_2, &yaz, u3x_sam_3, &wix, 0)) ||
+  if ( (u3_none == (yaz = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+       (u3_none == (wix = u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))) ||
        (c3n == u3ud(yaz)) ||
        (c3n == u3ud(wix)) )
   {

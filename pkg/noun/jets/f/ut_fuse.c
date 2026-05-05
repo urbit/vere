@@ -10,7 +10,8 @@ u3wfu_fuse(u3_noun cor)
 {
   u3_noun bat, sut, ref, van;
 
-  if (  (c3n == u3r_mean(cor, u3x_sam, &ref, u3x_con, &van, 0))
+  if (  (u3_none == (ref = u3r_head_weak(u3r_tail(cor)))) ||
+        (u3_none == (van = u3r_tail_weak(u3r_tail(cor))))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {

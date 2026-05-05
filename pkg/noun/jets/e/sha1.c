@@ -28,7 +28,8 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &wid, u3x_sam_3, &dat, 0)) ||
+    if ( (u3_none == (wid = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+         (u3_none == (dat = u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))) ||
          (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {
