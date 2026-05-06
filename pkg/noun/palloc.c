@@ -505,7 +505,7 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 }
 
 static u3_post
-_alloc_words(c3_w len_w)  //  4-2.048, inclusive
+_alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
 {
   c3_g      bit_g = (c3_g)c3_bits_word(len_w - 1) - u3a_min_log;  // 0-9, inclusive
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[bit_g]);
@@ -1352,12 +1352,12 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
   c3_w *ptr_w = u3to(c3_w, som_p);
 
   fprintf(fil_u, "{ ");
-  //  XX log minimum or u3a_minimum
-  for ( c3_w j_w = 0; j_w < 4; j_w++ ) {
+  c3_w lim_w = c3_min(siz_w, u3a_minimum);
+  for ( c3_w j_w = 0; j_w < lim_w; j_w++ ) {
     fprintf(fil_u, "0x%"PRIxc3_w", ", ptr_w[j_w]);
   }
 
-  if ( siz_w > 4 ) {
+  if ( siz_w > u3a_minimum ) {
     fprintf(fil_u, "... ");
   }
 
