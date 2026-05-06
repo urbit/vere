@@ -536,7 +536,7 @@ _pave_params(void)
   //
   //
   return 0
-         ^ u3a_wits
+         ^ ((8 == sizeof(c3_w)) ? 1 : 0)
          ^ (u3a_vits << 1)
          ^ ((u3a_page + 2 - 12) << 3)
          ^ (U3N_VERLAT << 6);
@@ -586,10 +586,11 @@ _find_home(void)
 
   c3_d pam_d = *((c3_d*)u3_Loom + 1);
 
-  if ( (pam_d & 1) != u3a_wits ) {
+  c3_d wit_d = (sizeof(c3_w) == 8) ? 1 : 0;
+  if ( (pam_d & 1) != wit_d ) {
     fprintf(stderr, "word-size mismatch: %s snapshot in %s binary\r\n",
                     (pam_d & 1) ? "64-bit" : "32-bit",
-                    u3a_wits    ? "64-bit" : "32-bit");
+                    wit_d       ? "64-bit" : "32-bit");
     abort();
   }
   if ( ((pam_d >> 1) & 3) != u3a_vits ) {

@@ -1747,7 +1747,7 @@ _disk_migrate_to_32(c3_c* dir_c, c3_d eve_d)
   c3_d lom_d = *((c3_d *)u3_Loom_64);
   c3_d pam_d = *((c3_d *)u3_Loom_64 + 1);
 
-  if ( (pam_d & 1) == u3a_wits ) {
+  if ( !(pam_d & 1) ) {
     fprintf(stderr, "loom: expected 64-bit loom, got 32-bit "
                     "(ver=%" PRIu64 ", pam=%" PRIu64 ")\r\n", lom_d, pam_d);
     u3_assert(0);
@@ -1992,7 +1992,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
 #ifdef VERE64
       //  detect a 32-bit loom in chk and migrate it to 64-bit
-      //  before loading into the main loom; use pam_d word-size bit (u3a_wits)
+      //  before loading into the main loom; pam_d word-size bit 0 means 32-bit
       //
       {
         c3_c img_c[8193];
@@ -2004,7 +2004,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
           pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
           close(fid_i);
 
-          if ( (pam_d & 1) != u3a_wits ) {
+          if ( !(pam_d & 1) ) {
             _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
             u3m_stop();
           }
@@ -2012,7 +2012,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       }
 #else
       //  detect a 64-bit loom in chk and migrate it back to 32-bit
-      //  before loading into the main loom; use pam_d word-size bit (u3a_wits)
+      //  before loading into the main loom; pam_d word-size bit 1 means 64-bit
       //
       {
         c3_c img_c[8193];
@@ -2024,7 +2024,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
           pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
           close(fid_i);
 
-          if ( (pam_d & 1) != u3a_wits ) {
+          if ( pam_d & 1 ) {
             _disk_migrate_to_32(log_u->dir_u->pax_c, log_u->dun_d);
             u3m_stop();
           }

@@ -17,10 +17,8 @@
 #     define u3a_64_vits   0
 #ifndef VERE64
 #     define u3a_vits   u3a_32_vits
-#     define u3a_wits   0  //  word-size: 0==32-bit, 1==64-bit
 #else
 #     define u3a_vits   u3a_64_vits
-#     define u3a_wits   1  //  word-size: 0==32-bit, 1==64-bit
 #endif
 
 #     define u3a_word_bytes  (sizeof(c3_w))
