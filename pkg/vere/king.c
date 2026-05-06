@@ -347,16 +347,51 @@ _king_pier(u3_noun pier)
 size_t
 king_curl_alloc(void* dat_v, size_t uni_t, size_t mem_t, void* buf_v)
 {
-  uv_buf_t* buf_u = buf_v;
+  u3_array* buf_u = buf_v;
+  c3_d siz_d = uni_t * mem_t;
+  while ( buf_u->cap_d < buf_u->len_d + siz_d + 1 ) {
+    c3_d new_d = (buf_u->cap_d + 1) * 2;
+    buf_u->buf_y = c3_realloc(buf_u->buf_y, new_d);
+    buf_u->cap_d = new_d;
+  }
 
+  memcpy(buf_u->buf_y + buf_u->len_d, dat_v, siz_d);
+  buf_u->len_d += siz_d;
+  buf_u->buf_y[buf_u->len_d] = 0;
+
+  return siz_d;
+}
+
+size_t
+king_curl_header(char* hed_c, size_t uni_t, size_t mem_t, void* buf_v)
+{
+  u3_array* buf_u = buf_v;
   size_t siz_t = uni_t * mem_t;
-  buf_u->base = c3_realloc(buf_u->base, 1 + siz_t + buf_u->len);
 
-  memcpy(buf_u->base + buf_u->len, dat_v, siz_t);
-  buf_u->len += siz_t;
-  buf_u->base[buf_u->len] = 0;
+  static c3_c key_c[] = "content-length:";
+  c3_d key_d = sizeof(key_c) - 1;
 
-  return siz_t;
+  if ( siz_t > key_d ) {
+    c3_i mat_i = 1;
+    for ( c3_d i_d = 0; i_d < key_d; i_d++ ) {
+      if ( tolower(hed_c[i_d]) != key_c[i_d] ) {
+        mat_i = 0;
+        break;
+      }
+    }
+
+    if ( mat_i ) {
+      c3_c* end_c = 0;
+      c3_d  len_d = strtoull(hed_c + key_d, &end_c, 10);
+
+      if ( end_c != 0 ) {
+        c3_d nee_d = len_d + 1;
+        buf_u->buf_y = c3_malloc(nee_d);
+        buf_u->cap_d = nee_d;
+      }
+    }
+  }
+  return siz_t;  /* must return bytes "handled" or libcurl aborts */
 }
 
 /* king_curl_bytes(): HTTP GET url_c, produce response body bytes.
@@ -369,7 +404,7 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
   CURLcode res_i;
   long     cod_i;
   c3_y     try_y = 0;
-  uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
+  u3_array buf_u = {0};
 
   if ( !(cul_u = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
@@ -379,6 +414,8 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
 
   u3K.ssl_curl_f(cul_u);
   curl_easy_setopt(cul_u, CURLOPT_URL, url_c);
+  curl_easy_setopt(cul_u, CURLOPT_HEADERFUNCTION, king_curl_header);
+  curl_easy_setopt(cul_u, CURLOPT_HEADERDATA, (void*)&buf_u);
   curl_easy_setopt(cul_u, CURLOPT_WRITEFUNCTION, king_curl_alloc);
   curl_easy_setopt(cul_u, CURLOPT_WRITEDATA, (void*)&buf_u);
   curl_easy_setopt(cul_u, CURLOPT_SERVER_RESPONSE_TIMEOUT, 30);
@@ -403,8 +440,8 @@ king_curl_bytes(c3_c* url_c, c3_w* len_w, c3_y** hun_y, c3_t veb_t, c3_y tri_y)
       break;
     }
     else {
-      *len_w = buf_u.len;
-      *hun_y = (c3_y*)buf_u.base;
+      *len_w = buf_u.len_d;
+      *hun_y = (c3_y*)buf_u.buf_y;
       ret_i = 0;
       break;
     }

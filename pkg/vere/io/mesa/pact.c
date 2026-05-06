@@ -364,12 +364,13 @@ _etch_next(u3_etcher* ech_u, c3_w len_w)
 static c3_y*
 _sift_next(u3_sifter* sif_u, c3_w len_w)
 {
-  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
   if ( sif_u->err_c ) {
     return NULL;
   }
-  else if ( len_w > sif_u->rem_w ) {
+  assert ( sif_u->off_y == 0 ); // ensure all bits were sifted
+  if ( len_w > sif_u->rem_w ) {
     _sift_fail(sif_u, "unexpected eof");
+    return NULL;
   }
   c3_y *res_y = sif_u->buf_y;
   sif_u->buf_y += len_w;
@@ -460,14 +461,17 @@ _etch_var_word(u3_etcher* ech_u, c3_w val_w, c3_w len_w)
 static c3_w
 _sift_var_word(u3_sifter* sif_u, c3_w len_w)
 {
-  assert ( len_w <= 4 );
+  if (len_w > 4) {
+    _sift_fail(sif_u, "var_word too long");
+    return 0;
+  }
   c3_y *res_y = _sift_next(sif_u, len_w);
   if ( NULL == res_y ) {
     return 0;
   }
   c3_w val_w = 0;
   for ( c3_w i = 0; i < len_w; i++ ) {
-    val_w |= (res_y[i] << (8*i));
+    val_w |= ((c3_w)res_y[i] << (8*i));
   }
   return val_w;
 }
@@ -515,8 +519,12 @@ static c3_d
 _sift_bits(u3_sifter* sif_u, c3_w wid_w)
 {
   assert ( wid_w <= 64 );
+  if ( sif_u->rem_w == 0 ) {
+    _sift_fail(sif_u, "unexpected end of packet");
+    return 0;
+  }
   while ( sif_u->off_y < wid_w ) {
-    c3_d byt_d = (sif_u->rem_w > 0) ? sif_u->buf_y[0] : 0;
+    c3_d byt_d = sif_u->buf_y[0];
     sif_u->buf_y += 1;
     sif_u->rem_w -= 1;
     sif_u->bit_d |= (byt_d << sif_u->off_y);
@@ -658,16 +666,9 @@ _mesa_sift_name(u3_sifter* sif_u, u3_mesa_name* nam_u)
 
   nam_u->pat_s = _sift_short(sif_u);
 
-  nam_u->pat_c = (c3_c*)sif_u->buf_y;
-  /* nam_u->pat_c = c3_calloc(nam_u->pat_s + 1); */
-  /* _sift_bytes(sif_u, (c3_y*)nam_u->pat_c, nam_u->pat_s); */
-
-  sif_u->buf_y += nam_u->pat_s;
-  sif_u->rem_w -= nam_u->pat_s;
+  nam_u->pat_c = (c3_c*)_sift_next(sif_u, nam_u->pat_s);
 
   nam_u->str_u.len_w = rem_w - sif_u->rem_w;
-
-  /* nam_u->pat_c[nam_u->pat_s] = 0; */
 }
 
 static void
@@ -891,6 +892,7 @@ _mesa_sift_pact(u3_sifter* sif_u, u3_mesa_pact* pac_u)
     }
   }
 
+  if ( !sif_u->err_c )
   {
     c3_w mug_w = u3r_mug_bytes(mug_y, pre_w - sif_u->rem_w)
                & 0xFFFFF;
