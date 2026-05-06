@@ -398,9 +398,7 @@ _cm_signal_deep(void)
   // go utterly haywire.
   //
   if ( 0 == u3H->rod_u.bug.mer ) {
-    u3H->rod_u.bug.mer = u3i_string(
-      "emergency buffer with sufficient space to cons the trace and bail"
-    );
+    u3H->rod_u.bug.mer = u3i_tape("emergency buffer");
   }
 
   u3t_boot();
@@ -1217,13 +1215,12 @@ u3m_hate(c3_w pad_w)
   c3_w fag_w = u3R->how.fag_w;
   u3m_leap(pad_w);
 
+  u3R->bug.mer = u3i_tape("emergency buffer");
+
   //  inherit forward-flowing flags
   //
   u3R->how.fag_w |= (fag_w & u3a_flag_cash);
 
-  u3R->bug.mer = u3i_string(
-    "emergency buffer with sufficient space to cons the trace and bail"
-  );
 }
 
 //  RETAINS `now`.
