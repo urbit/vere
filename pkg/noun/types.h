@@ -23,14 +23,16 @@
 typedef c3_w      u3_post;
 #define u3p(type) u3_post
 
-/// Tagged noun pointer.
+/// Tagged noun pointer.  Bit numbers are for 32-bit (64-bit) mode.
 ///
-/// If bit 31 is 0, the noun is a direct 31-bit atom (also called a "cat").
-/// If bit 31 is 1 and bit 30 is 0, an indirect atom (also called a "pug").
-/// If bit 31 is 1 and bit 30 is 1, an indirect cell (also called a "pom").
+/// If bit 31 (63) is 0, the noun is a direct atom (also called a "cat").
+/// If bit 31 (63) is 1 and bit 30 (62) is 0, it's an indirect atom ("pug").
+/// If bit 31 (63) is 1 and bit 30 (62) is 1, it's an indirect cell ("pom").
 ///
-/// Bits 0-29 are a word offset (i.e. u3_post) against the loom.
-typedef c3_w u3_noun;
+/// Bits 0-29 (0-61) are a word offset (i.e. u3_post) against the loom.
+typedef c3_w      u3_noun;
+typedef c3_32_w   u3_32_noun;
+typedef c3_64_w   u3_64_noun;
 
 /// Optional noun type.
 ///

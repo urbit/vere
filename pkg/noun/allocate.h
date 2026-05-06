@@ -4,6 +4,7 @@
 #include "error.h"
 #include "manage.h"
 #include "rsignal.h"
+#include "c3/c3.h"
 
   /**  Constants.
   **/
@@ -67,16 +68,6 @@
 #     define u3a_walign  u3a_32_walign
 #else
 #     define u3a_walign  u3a_64_walign
-#endif
-
-    /* u3a_balign: u3a_walign in bytes
-    */
-#     define u3a_32_balign  (sizeof(c3_h) * u3a_32_walign)
-#     define u3a_64_balign  (sizeof(c3_d) * u3a_64_walign)
-#ifndef VERE64
-#     define u3a_balign  u3a_32_balign
-#else
-#     define u3a_balign  u3a_64_balign
 #endif
 
      /* u3a_bits_max: max loom bex
@@ -165,14 +156,6 @@
     ** are declared unconditionally; native u3a_atom / u3a_cell / u3a_road
     ** typedef-alias the matching bitness.
     */
-      typedef uint32_t c3_32_w;
-      typedef int32_t  c3_32_ws;
-      typedef uint64_t c3_64_w;
-      typedef int64_t  c3_64_ws;
-
-      typedef c3_32_w u3_32_noun;
-      typedef c3_64_w u3_64_noun;
-
 #     define  u3a_32_crag_no  10u
 #     define  u3a_64_crag_no  10u
 

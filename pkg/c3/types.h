@@ -37,6 +37,13 @@
         typedef int32_t c3_ws;
       #endif
 
+    /* Types for bidirectional bit-width migrations.
+    */
+      typedef uint32_t c3_32_w;
+      typedef int32_t  c3_32_ws;
+      typedef uint64_t c3_64_w;
+      typedef int64_t  c3_64_ws;
+
     /* Deprecated integers.
     */
       typedef char      c3_c;      // does not match int8_t or uint8_t
