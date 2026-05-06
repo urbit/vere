@@ -698,6 +698,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "events-test",
+                .file = "pkg/noun/events_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
@@ -808,6 +813,13 @@ fn buildBinary(
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
+            }
+            //  events-test #includes events.c, which #includes "murmur3.h".
+            //  the noun artifact already links murmur3, but the header isn't
+            //  on the test's compile include path — add it explicitly.
+            //
+            if (std.mem.eql(u8, tst.name, "events-test")) {
+                test_exe.addIncludePath(b.path("ext/murmur3/vendor"));
             }
             if (cfg.tracy_enable) {
                 test_exe.linkLibrary(tracy.?.artifact("tracy"));
