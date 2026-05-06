@@ -165,6 +165,8 @@ u3_melt_all(FILE *fil_u)
   //
   u3_assert( &(u3H->rod_u) == u3R );
 
+  u3z(u3H->rod_u.bug.mer);
+
   can_u.siz_w = 32;
   can_u.tac   = c3_malloc(sizeof(*can_u.tac) * can_u.siz_w);
 
@@ -193,6 +195,8 @@ u3_melt_all(FILE *fil_u)
   vt_cleanup(&can_u.cel_u);
 
   c3_free(can_u.tac);
+
+  u3H->rod_u.bug.mer = u3i_tape("emergency buffer");
 
   return u3a_idle(u3R) - pre_w;
 }
