@@ -993,8 +993,8 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
     c3_h  mug_h;
 
     if ( tac_u->mug_h && (tac_u->mug_h != (mug_h = u3r_mug(cor))) ) {
-      fprintf(stderr, "play (%" PRIu64 "): mug mismatch "
-                      "expected %08"PRIxc3_m", actual %08"PRIxc3_m"\r\n",
+      fprintf(stderr, "play (%" PRIc3_d "): mug mismatch "
+                      "expected %08u, actual %08u\r\n",
                       tac_u->eve_d, tac_u->mug_h, mug_h);
 
       if ( !(u3C.wag_h & u3o_soft_mugs) ) {
