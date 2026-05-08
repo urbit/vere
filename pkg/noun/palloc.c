@@ -1357,7 +1357,7 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
     fprintf(fil_u, "0x%"PRIxc3_w", ", ptr_w[j_w]);
   }
 
-  if ( siz_w > u3a_minimum ) {
+  if ( siz_w > c3_min(c3_wiseof(u3a_cell), siz_w) ) {
     fprintf(fil_u, "... ");
   }
 
