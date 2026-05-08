@@ -64,7 +64,7 @@ _build_patch(c3_c* dir_c, u3_ce_patch* pat_u, c3_w n_w)
   c3_c pax_c[8192];
   c3_z len_z = sizeof(u3e_control) + (n_w * sizeof(u3e_line));
   u3e_control* con_u = c3_malloc(len_z);
-  c3_y page_y[_ce_page];
+  c3_y pag_y[_ce_page];
 
   con_u->ver_h = U3P_VERLAT;
   con_u->tot_w = n_w + 4;          //  arbitrary total > n_w
@@ -75,10 +75,10 @@ _build_patch(c3_c* dir_c, u3_ce_patch* pat_u, c3_w n_w)
   u3_assert(-1 != mem_i);
 
   for ( c3_w i_w = 0; i_w < n_w; i_w++ ) {
-    memset(page_y, 0xa0 + (c3_y)i_w, _ce_page);
-    u3_assert(_ce_page == pwrite(mem_i, page_y, _ce_page, _ce_len(i_w)));
+    memset(pag_y, 0xa0 + (c3_y)i_w, _ce_page);
+    u3_assert(_ce_page == pwrite(mem_i, pag_y, _ce_page, _ce_len(i_w)));
     con_u->mem_u[i_w].pag_w = (i_w * 2) + 1;
-    con_u->mem_u[i_w].has_h = _ce_muk_page(page_y);
+    con_u->mem_u[i_w].has_h = _ce_muk_page(pag_y);
   }
 
   {
@@ -295,10 +295,10 @@ _test_patch_control_roundtrip(void)
     u3_assert( 7 == rdo_u.con_u->tot_w );    //  n_w + 4
 
     for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
-      c3_y page_y[_ce_page];
-      memset(page_y, 0xa0 + (c3_y)i_w, _ce_page);
+      c3_y pag_y[_ce_page];
+      memset(pag_y, 0xa0 + (c3_y)i_w, _ce_page);
       u3_assert( ((i_w * 2) + 1) == rdo_u.con_u->mem_u[i_w].pag_w );
-      u3_assert( _ce_muk_page(page_y) == rdo_u.con_u->mem_u[i_w].has_h );
+      u3_assert( _ce_muk_page(pag_y) == rdo_u.con_u->mem_u[i_w].has_h );
     }
 
     _close_patch(&rdo_u);
@@ -406,16 +406,16 @@ _test_patch_verify_version_mismatch(void)
   c3_w  n_w = 1;
   c3_z  len_z = sizeof(u3e_control) + (n_w * sizeof(u3e_line));
   u3e_control* con_u = c3_malloc(len_z);
-  c3_y  page_y[_ce_page];
+  c3_y  pag_y[_ce_page];
   c3_i  mem_i, ctl_i;
 
-  memset(page_y, 0xab, _ce_page);
+  memset(pag_y, 0xab, _ce_page);
 
   con_u->ver_h = U3P_VERLAT + 1;             //  bad version
   con_u->tot_w = 5;
   con_u->pgs_w = n_w;
   con_u->mem_u[0].pag_w = 0;
-  con_u->mem_u[0].has_h = _ce_muk_page(page_y);
+  con_u->mem_u[0].has_h = _ce_muk_page(pag_y);
 
   {
     c3_z off_z = offsetof(u3e_control, tot_w);
@@ -425,7 +425,7 @@ _test_patch_verify_version_mismatch(void)
   snprintf(pax_c, sizeof(pax_c), "%s/memory.bin", dir_c);
   mem_i = c3_open(pax_c, O_RDWR | O_CREAT | O_EXCL, 0600);
   u3_assert(-1 != mem_i);
-  u3_assert( _ce_page == pwrite(mem_i, page_y, _ce_page, 0) );
+  u3_assert( _ce_page == pwrite(mem_i, pag_y, _ce_page, 0) );
 
   snprintf(pax_c, sizeof(pax_c), "%s/control.bin", dir_c);
   ctl_i = c3_open(pax_c, O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -488,13 +488,13 @@ _test_patch_apply_roundtrip(void)
   c3_c      pax_c[8192];
   u3e_image sav_u = u3P.img_u;
   c3_i      fid_i;
-  c3_y      page_a[_ce_page], page_b[_ce_page];
-  c3_y      zero_y[_ce_page];
-  c3_y      check_y[_ce_page];
+  c3_y      pag_a[_ce_page], pag_b[_ce_page];
+  c3_y      nun_y[_ce_page];
+  c3_y      chk_y[_ce_page];
 
-  memset(page_a, 0x11, _ce_page);
-  memset(page_b, 0x22, _ce_page);
-  memset(zero_y, 0x00, _ce_page);
+  memset(pag_a, 0x11, _ce_page);
+  memset(pag_b, 0x22, _ce_page);
+  memset(nun_y, 0x00, _ce_page);
 
   snprintf(pax_c, sizeof(pax_c), "%s/image.bin", dir_c);
   fid_i = c3_open(pax_c, O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -514,9 +514,9 @@ _test_patch_apply_roundtrip(void)
   con_u->tot_w = 4;
   con_u->pgs_w = n_w;
   con_u->mem_u[0].pag_w = 1;
-  con_u->mem_u[0].has_h = _ce_muk_page(page_a);
+  con_u->mem_u[0].has_h = _ce_muk_page(pag_a);
   con_u->mem_u[1].pag_w = 3;
-  con_u->mem_u[1].has_h = _ce_muk_page(page_b);
+  con_u->mem_u[1].has_h = _ce_muk_page(pag_b);
   {
     c3_z off_z = offsetof(u3e_control, tot_w);
     con_u->has_h = _ce_muk_buf(len_z - off_z, (c3_y*)con_u + off_z);
@@ -525,8 +525,8 @@ _test_patch_apply_roundtrip(void)
   snprintf(pax_c, sizeof(pax_c), "%s/memory.bin", dir_c);
   c3_i mem_i = c3_open(pax_c, O_RDWR | O_CREAT | O_EXCL, 0600);
   u3_assert(-1 != mem_i);
-  u3_assert( _ce_page == pwrite(mem_i, page_a, _ce_page, _ce_len(0)) );
-  u3_assert( _ce_page == pwrite(mem_i, page_b, _ce_page, _ce_len(1)) );
+  u3_assert( _ce_page == pwrite(mem_i, pag_a, _ce_page, _ce_len(0)) );
+  u3_assert( _ce_page == pwrite(mem_i, pag_b, _ce_page, _ce_len(1)) );
 
   snprintf(pax_c, sizeof(pax_c), "%s/control.bin", dir_c);
   c3_i ctl_i = c3_open(pax_c, O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -540,14 +540,14 @@ _test_patch_apply_roundtrip(void)
 
   u3_assert( 4 == u3P.img_u.pgs_w );
 
-  u3_assert( _ce_page == pread(fid_i, check_y, _ce_page, _ce_len(0)) );
-  u3_assert( 0 == memcmp(check_y, zero_y, _ce_page) );
-  u3_assert( _ce_page == pread(fid_i, check_y, _ce_page, _ce_len(1)) );
-  u3_assert( 0 == memcmp(check_y, page_a, _ce_page) );
-  u3_assert( _ce_page == pread(fid_i, check_y, _ce_page, _ce_len(2)) );
-  u3_assert( 0 == memcmp(check_y, zero_y, _ce_page) );
-  u3_assert( _ce_page == pread(fid_i, check_y, _ce_page, _ce_len(3)) );
-  u3_assert( 0 == memcmp(check_y, page_b, _ce_page) );
+  u3_assert( _ce_page == pread(fid_i, chk_y, _ce_page, _ce_len(0)) );
+  u3_assert( 0 == memcmp(chk_y, nun_y, _ce_page) );
+  u3_assert( _ce_page == pread(fid_i, chk_y, _ce_page, _ce_len(1)) );
+  u3_assert( 0 == memcmp(chk_y, pag_a, _ce_page) );
+  u3_assert( _ce_page == pread(fid_i, chk_y, _ce_page, _ce_len(2)) );
+  u3_assert( 0 == memcmp(chk_y, nun_y, _ce_page) );
+  u3_assert( _ce_page == pread(fid_i, chk_y, _ce_page, _ce_len(3)) );
+  u3_assert( 0 == memcmp(chk_y, pag_b, _ce_page) );
 
   c3_free(con_u);
   close(ctl_i);
