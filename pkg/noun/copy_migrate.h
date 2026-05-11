@@ -219,7 +219,7 @@ U3C_SYM(_atom)(U3C_OLD_NOUN old)
   //  Normalize to a native 32-bit cat when the result fits.
   //
   if ( 0 == new_w ) return (u3_noun)0;
-  if ( 1 == new_w && buf_w[0] <= u3a_32_direct_max ) {
+  if ( 1 == new_w && buf_w[0] <= u3a_direct_max_h ) {
     return (u3_noun)buf_w[0];
   }
 

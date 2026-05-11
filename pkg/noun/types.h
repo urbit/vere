@@ -31,8 +31,8 @@ typedef c3_w      u3_post;
 ///
 /// Bits 0-29 (0-61) are a word offset (i.e. u3_post) against the loom.
 typedef c3_w      u3_noun;
-typedef c3_32_w   u3_32_noun;
-typedef c3_64_w   u3_64_noun;
+typedef c3_h      u3_noun_h;
+typedef c3_d      u3_noun_d;
 
 /// Optional noun type.
 ///

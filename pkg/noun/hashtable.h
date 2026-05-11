@@ -35,21 +35,21 @@
       **     02 - entry, stale
       **     03 - entry, fresh
       */
-        typedef c3_h u3h_32_slot;
-        typedef c3_d u3h_64_slot;
+        typedef c3_h u3h_slot_h;
+        typedef c3_d u3h_slot_d;
 
       /* u3h_{32,64}_node: map node.
       */
         typedef struct {
           c3_h        map_h;     // bitmap for [sot_w]
-          u3h_32_slot sot_w[];   // filled slots
-        } u3h_32_node;
+          u3h_slot_h sot_w[];   // filled slots
+        } u3h_node_h;
 
         typedef struct {
           c3_h        map_h;
           c3_h        pad_h;
-          u3h_64_slot sot_w[];
-        } u3h_64_node;
+          u3h_slot_d sot_w[];
+        } u3h_node_d;
 
       /* u3h_{32,64}_root: hash root table
       */
@@ -61,8 +61,8 @@
             c3_h  inx_h;
             c3_h  buc_o;        // XX remove
           } arm_u;
-          u3h_32_slot sot_w[64];
-        } u3h_32_root;
+          u3h_slot_h sot_w[64];
+        } u3h_root_h;
 
         typedef struct {
           c3_d        max_w;
@@ -74,95 +74,95 @@
             c3_y    pad_y[3];
           } arm_u;
           c3_y        pad_y[4];
-          u3h_64_slot sot_w[64];
-        } u3h_64_root;
+          u3h_slot_d sot_w[64];
+        } u3h_root_d;
 
       /* u3h_{32,64}_buck: bottom bucket.
       */
         typedef struct {
           c3_h        len_h;     // length of [sot_w]
-          u3h_32_slot sot_w[];
-        } u3h_32_buck;
+          u3h_slot_h sot_w[];
+        } u3h_buck_h;
 
         typedef struct {
           c3_h        len_h;
           c3_h        pad_h;
-          u3h_64_slot sot_w[];
-        } u3h_64_buck;
+          u3h_slot_d sot_w[];
+        } u3h_buck_d;
 
       /* Native u3h_slot/node/buck/root: aliases of the matching bitness.
       */
 #ifndef VERE64
-        typedef u3h_32_slot u3h_slot;
-        typedef u3h_32_node u3h_node;
-        typedef u3h_32_buck u3h_buck;
-        typedef u3h_32_root u3h_root;
+        typedef u3h_slot_h u3h_slot;
+        typedef u3h_node_h u3h_node;
+        typedef u3h_buck_h u3h_buck;
+        typedef u3h_root_h u3h_root;
 #else
-        typedef u3h_64_slot u3h_slot;
-        typedef u3h_64_node u3h_node;
-        typedef u3h_64_buck u3h_buck;
-        typedef u3h_64_root u3h_root;
+        typedef u3h_slot_d u3h_slot;
+        typedef u3h_node_d u3h_node;
+        typedef u3h_buck_d u3h_buck;
+        typedef u3h_root_d u3h_root;
 #endif
 
     /**  HAMT macros.
     ***
     ***  Coordinate with u3_noun definition!
     **/
-      /* u3h_*_slot_is_null(): yes iff slot is empty
-      ** u3h_*_slot_is_noun(): yes iff slot contains a key/value cell
-      ** u3h_*_slot_is_node(): yes iff slot contains a subtable/bucket
-      ** u3h_*_slot_is_warm(): yes iff fresh bit is set
-      ** u3h_*_slot_to_node(): slot to node pointer
-      ** u3h_*_node_to_slot(): node pointer to slot
-      ** u3h_*_slot_to_noun(): slot to cell
-      ** u3h_*_noun_to_slot(): cell to slot
-      ** u3h_*_noun_be_warm(): warm mutant
-      ** u3h_*_noun_be_cold(): cold mutant
+      /* u3h_slot_is_null_*(): yes iff slot is empty
+      ** u3h_slot_is_noun_*(): yes iff slot contains a key/value cell
+      ** u3h_slot_is_node_*(): yes iff slot contains a subtable/bucket
+      ** u3h_slot_is_warm_*(): yes iff fresh bit is set
+      ** u3h_slot_to_node_*(): slot to node pointer
+      ** u3h_node_to_slot_*(): node pointer to slot
+      ** u3h_slot_to_noun_*(): slot to cell
+      ** u3h_noun_to_slot_*(): cell to slot
+      ** u3h_noun_be_warm_*(): warm mutant
+      ** u3h_noun_be_cold_*(): cold mutant
       */
-#     define  u3h_32_slot_is_null(sot)  ((0 == ((sot) >> 30)) ? c3y : c3n)
-#     define  u3h_32_slot_is_node(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
-#     define  u3h_32_slot_is_noun(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
-#     define  u3h_32_slot_is_warm(sot)  (((sot) & 0x40000000) ? c3y : c3n)
-#     define  u3h_32_slot_to_node(sot)  (u3a_32_into(((sot) & 0x3fffffff) << u3a_32_vits))
-#     define  u3h_32_node_to_slot(ptr)  ((u3a_32_outa((ptr)) >> u3a_32_vits) | 0x40000000)
-#     define  u3h_32_noun_be_warm(sot)  ((sot) | 0x40000000)
-#     define  u3h_32_noun_be_cold(sot)  ((sot) & ~0x40000000)
-#     define  u3h_32_slot_to_noun(sot)  (0x40000000 | (sot))
-#     define  u3h_32_noun_to_slot(som)  (u3h_32_noun_be_warm(som))
+#     define  u3h_slot_is_null_h(sot)  ((0 == ((sot) >> 30)) ? c3y : c3n)
+#     define  u3h_slot_is_node_h(sot)  ((1 == ((sot) >> 30)) ? c3y : c3n)
+#     define  u3h_slot_is_noun_h(sot)  ((1 == ((sot) >> 31)) ? c3y : c3n)
+#     define  u3h_slot_is_warm_h(sot)  (((sot) & 0x40000000) ? c3y : c3n)
+#     define  u3h_slot_to_node_h(sot)  (u3a_into_h(((sot) & 0x3fffffff) << u3a_vits_h))
+#     define  u3h_node_to_slot_h(ptr)  ((u3a_outa_h((ptr)) >> u3a_vits_h) | 0x40000000)
+#     define  u3h_noun_be_warm_h(sot)  ((sot) | 0x40000000)
+#     define  u3h_noun_be_cold_h(sot)  ((sot) & ~0x40000000)
+#     define  u3h_slot_to_noun_h(sot)  (0x40000000 | (sot))
+#     define  u3h_noun_to_slot_h(som)  (u3h_noun_be_warm_h(som))
 
-#     define  u3h_64_slot_is_null(sot)  ((0 == ((sot) >> 62)) ? c3y : c3n)
-#     define  u3h_64_slot_is_node(sot)  ((1 == ((sot) >> 62)) ? c3y : c3n)
-#     define  u3h_64_slot_is_noun(sot)  ((1 == ((sot) >> 63)) ? c3y : c3n)
-#     define  u3h_64_slot_is_warm(sot)  (((sot) & 0x4000000000000000ULL) ? c3y : c3n)
-#     define  u3h_64_slot_to_node(sot)  (u3a_64_into(((sot) & 0x3fffffffffffffff) << u3a_64_vits))
-#     define  u3h_64_node_to_slot(ptr)  ((u3a_64_outa((ptr)) >> u3a_64_vits) | 0x4000000000000000ULL)
-#     define  u3h_64_noun_be_warm(sot)  ((sot) | 0x4000000000000000ULL)
-#     define  u3h_64_noun_be_cold(sot)  ((sot) & ~0x4000000000000000ULL)
-#     define  u3h_64_slot_to_noun(sot)  (0x4000000000000000ULL | (sot))
-#     define  u3h_64_noun_to_slot(som)  (u3h_64_noun_be_warm(som))
+#     define  u3h_slot_is_null_d(sot)  ((0 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_node_d(sot)  ((1 == ((sot) >> 62)) ? c3y : c3n)
+#     define  u3h_slot_is_noun_d(sot)  ((1 == ((sot) >> 63)) ? c3y : c3n)
+#     define  u3h_slot_is_warm_d(sot)  (((sot) & 0x4000000000000000ULL) ? c3y : c3n)
+#     define  u3h_slot_to_node_d(sot)  (u3a_into_d(((sot) & 0x3fffffffffffffff) << u3a_vits_d))
+#     define  u3h_node_to_slot_d(ptr)  ((u3a_outa_d((ptr)) >> u3a_vits_d) | 0x4000000000000000ULL)
+#     define  u3h_noun_be_warm_d(sot)  ((sot) | 0x4000000000000000ULL)
+#     define  u3h_noun_be_cold_d(sot)  ((sot) & ~0x4000000000000000ULL)
+#     define  u3h_slot_to_noun_d(sot)  (0x4000000000000000ULL | (sot))
+#     define  u3h_noun_to_slot_d(som)  (u3h_noun_be_warm_d(som))
 
 #ifndef VERE64
-#     define  u3h_slot_is_null  u3h_32_slot_is_null
-#     define  u3h_slot_is_node  u3h_32_slot_is_node
-#     define  u3h_slot_is_noun  u3h_32_slot_is_noun
-#     define  u3h_slot_is_warm  u3h_32_slot_is_warm
-#     define  u3h_slot_to_node  u3h_32_slot_to_node
-#     define  u3h_node_to_slot  u3h_32_node_to_slot
-#     define  u3h_noun_be_warm  u3h_32_noun_be_warm
-#     define  u3h_noun_be_cold  u3h_32_noun_be_cold
-#     define  u3h_slot_to_noun  u3h_32_slot_to_noun
-#     define  u3h_noun_to_slot  u3h_32_noun_to_slot
+#     define  u3h_slot_is_null  u3h_slot_is_null_h
+#     define  u3h_slot_is_node  u3h_slot_is_node_h
+#     define  u3h_slot_is_noun  u3h_slot_is_noun_h
+#     define  u3h_slot_is_warm  u3h_slot_is_warm_h
+#     define  u3h_slot_to_node  u3h_slot_to_node_h
+#     define  u3h_node_to_slot  u3h_node_to_slot_h
+#     define  u3h_noun_be_warm  u3h_noun_be_warm_h
+#     define  u3h_noun_be_cold  u3h_noun_be_cold_h
+#     define  u3h_slot_to_noun  u3h_slot_to_noun_h
+#     define  u3h_noun_to_slot  u3h_noun_to_slot_h
 #else
-#     define  u3h_slot_is_null  u3h_64_slot_is_null
-#     define  u3h_slot_is_node  u3h_64_slot_is_node
-#     define  u3h_slot_is_noun  u3h_64_slot_is_noun
-#     define  u3h_slot_is_warm  u3h_64_slot_is_warm
-#     define  u3h_slot_to_node  u3h_64_slot_to_node
-#     define  u3h_node_to_slot  u3h_64_node_to_slot
-#     define  u3h_noun_be_warm  u3h_64_noun_be_warm
-#     define  u3h_noun_be_cold  u3h_64_noun_be_cold
-#     define  u3h_slot_to_noun  u3h_64_slot_to_noun
-#     define  u3h_noun_to_slot  u3h_64_noun_to_slot
+#     define  u3h_slot_is_null  u3h_slot_is_null_d
+#     define  u3h_slot_is_node  u3h_slot_is_node_d
+#     define  u3h_slot_is_noun  u3h_slot_is_noun_d
+#     define  u3h_slot_is_warm  u3h_slot_is_warm_d
+#     define  u3h_slot_to_node  u3h_slot_to_node_d
+#     define  u3h_node_to_slot  u3h_node_to_slot_d
+#     define  u3h_noun_be_warm  u3h_noun_be_warm_d
+#     define  u3h_noun_be_cold  u3h_noun_be_cold_d
+#     define  u3h_slot_to_noun  u3h_slot_to_noun_d
+#     define  u3h_noun_to_slot  u3h_noun_to_slot_d
 #endif
     /**  Functions.
     ***
@@ -257,19 +257,19 @@
       **                  argument; RETAINS.  Aliases the matching bitness.
       */
         void
-        u3h_32_walk_with(c3_h har_p,
+        u3h_walk_with_h(c3_h har_p,
                          void (*fun_f)(c3_h, void*),
                          void* wit);
 
         void
-        u3h_64_walk_with(c3_d har_p,
+        u3h_walk_with_d(c3_d har_p,
                          void (*fun_f)(c3_d, void*),
                          void* wit);
 
 #ifndef VERE64
-#       define u3h_walk_with u3h_32_walk_with
+#       define u3h_walk_with u3h_walk_with_h
 #else
-#       define u3h_walk_with u3h_64_walk_with
+#       define u3h_walk_with u3h_walk_with_d
 #endif
 
       /* u3h_walk(): u3h_walk_with, but with no data argument

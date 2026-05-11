@@ -1,5 +1,5 @@
 #include "allocate.h"
-#include "events.h"
+#include "migrate.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
@@ -15,29 +15,29 @@
 ** during a migration; the matching-bitness slot is unused (the native
 ** loom has u3H/u3R).
 */
-u3v_32_home* u3v_32_Home;
-u3v_64_home* u3v_64_Home;
-u3a_32_road* u3a_32_Road;
-u3a_64_road* u3a_64_Road;
+u3v_home_h* u3v_Home_h;
+u3v_home_d* u3v_Home_d;
+u3a_road_h* u3a_Road_h;
+u3a_road_d* u3a_Road_d;
 
-/* u3_32_load(): locate u3v_32_home in the mapped 32-bit image.
+/* u3_load_h(): locate u3v_home_h in the mapped 32-bit image.
 */
 void
-u3_32_load(c3_z wor_i)
+u3_load_h(c3_z wor_i)
 {
   (void)wor_i;
-  u3H_32 = (u3v_32_home *)u3_Loom_32;
-  u3R_32 = &u3H_32->rod_u;
+  u3H_h = (u3v_home_h *)u3_Loom_h;
+  u3R_h = &u3H_h->rod_u;
 }
 
-/* u3_64_load(): locate u3v_64_home in the mapped 64-bit image.
+/* u3_load_d(): locate u3v_home_d in the mapped 64-bit image.
 */
 void
-u3_64_load(c3_z wor_i)
+u3_load_d(c3_z wor_i)
 {
   (void)wor_i;
-  u3H_64 = (u3v_64_home *)u3_Loom_64;
-  u3R_64 = &u3H_64->rod_u;
+  u3H_d = (u3v_home_d *)u3_Loom_d;
+  u3R_d = &u3H_d->rod_u;
 }
 
 #ifdef VERE64
@@ -46,13 +46,13 @@ u3_64_load(c3_z wor_i)
 */
 
 #define U3C_PREFIX        32
-#define U3C_OLD_NOUN      u3_32_noun
-#define U3C_OLD_ATOM_T    u3a_32_atom
-#define U3C_OLD_IS_CAT    u3a_32_is_cat
-#define U3C_OLD_IS_CELL   u3a_32_is_cell
-#define U3C_OLD_TO_PTR    u3a_32_to_ptr
-#define U3C_OLD_HEAD      u3a_32_head
-#define U3C_OLD_TAIL      u3a_32_tail
+#define U3C_OLD_NOUN      u3_noun_h
+#define U3C_OLD_ATOM_T    u3a_atom_h
+#define U3C_OLD_IS_CAT    u3a_is_cat_h
+#define U3C_OLD_IS_CELL   u3a_is_cell_h
+#define U3C_OLD_TO_PTR    u3a_to_ptr_h
+#define U3C_OLD_HEAD      u3a_head_h
+#define U3C_OLD_TAIL      u3a_tail_h
 #define U3C_ATOM_MODE     U3C_ATOM_32_TO_64
 #define U3C_NEW_I_CELL    u3i_cell
 #define U3C_NEW_H_PUT     u3h_put
@@ -65,18 +65,18 @@ u3_64_load(c3_z wor_i)
 #include "copy_migrate.h"
 
 void
-u3_migrate_64(c3_d eve_d)
+u3_migrate_d(c3_d eve_d)
 {
   _copy_32_ctx cop_u = {0};
 
   //  XX assumes u3m_init() and u3m_pave(c3y) have already been called
 
-  u3_32_load(u3C.wor_i);
+  u3_load_h(u3C.wor_i);
 
-  if ( eve_d != u3A_32->eve_d ) {
+  if ( eve_d != u3A_h->eve_d ) {
     fprintf(stderr, "loom: migrate (to 64-bit) stale snapshot: have %"
                     PRIu64 ", need %" PRIu64 "\r\n",
-                    u3A_32->eve_d, eve_d);
+                    u3A_h->eve_d, eve_d);
     abort();
   }
 
@@ -84,15 +84,15 @@ u3_migrate_64(c3_d eve_d)
 
   _copy_32_init(&cop_u);
 
-  u3A->eve_d = u3A_32->eve_d;
-  u3A->roc   = _copy_32_noun(&cop_u, u3A_32->roc);
+  u3A->eve_d = u3A_h->eve_d;
+  u3A->roc   = _copy_32_noun(&cop_u, u3A_h->roc);
 
   cop_u.ham_p = u3R->jed.cod_p;
-  u3h_32_walk_with(u3R_32->jed.cod_p, _copy_32_hamt, &cop_u);
+  u3h_walk_with_h(u3R_h->jed.cod_p, _copy_32_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.per_p;
-  u3h_32_walk_with(u3R_32->cax.per_p, _copy_32_hamt, &cop_u);
+  u3h_walk_with_h(u3R_h->cax.per_p, _copy_32_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.for_p;
-  u3h_32_walk_with(u3R_32->cax.for_p, _copy_32_hamt, &cop_u);
+  u3h_walk_with_h(u3R_h->cax.for_p, _copy_32_hamt, &cop_u);
 
   //  NB: pave does *not* allocate hot_p
   //
@@ -116,9 +116,9 @@ u3_migrate_64(c3_d eve_d)
 **   snapshot does not precompute mugs for cats).
 */
 static u3_noun
-_copy_64_cat(u3_64_noun old)
+_copy_64_cat(u3_noun_d old)
 {
-  if ( old <= u3a_32_direct_max ) {
+  if ( old <= u3a_direct_max_h ) {
     return (u3_noun)old;
   }
 
@@ -139,13 +139,13 @@ _copy_64_cat(u3_64_noun old)
 }
 
 #define U3C_PREFIX        64
-#define U3C_OLD_NOUN      u3_64_noun
-#define U3C_OLD_ATOM_T    u3a_64_atom
-#define U3C_OLD_IS_CAT    u3a_64_is_cat
-#define U3C_OLD_IS_CELL   u3a_64_is_cell
-#define U3C_OLD_TO_PTR    u3a_64_to_ptr
-#define U3C_OLD_HEAD      u3a_64_head
-#define U3C_OLD_TAIL      u3a_64_tail
+#define U3C_OLD_NOUN      u3_noun_d
+#define U3C_OLD_ATOM_T    u3a_atom_d
+#define U3C_OLD_IS_CAT    u3a_is_cat_d
+#define U3C_OLD_IS_CELL   u3a_is_cell_d
+#define U3C_OLD_TO_PTR    u3a_to_ptr_d
+#define U3C_OLD_HEAD      u3a_head_d
+#define U3C_OLD_TAIL      u3a_tail_d
 #define U3C_ATOM_MODE     U3C_ATOM_64_TO_32
 #define U3C_COPY_CAT(old) _copy_64_cat(old)
 #define U3C_NEW_I_CELL    u3i_cell
@@ -159,18 +159,18 @@ _copy_64_cat(u3_64_noun old)
 #include "copy_migrate.h"
 
 void
-u3_migrate_32(c3_d eve_d)
+u3_migrate_h(c3_d eve_d)
 {
   _copy_64_ctx cop_u = {0};
 
   //  XX assumes u3m_init() and u3m_pave(c3y) have already been called
 
-  u3_64_load(0);
+  u3_load_d(0);
 
-  if ( eve_d != u3A_64->eve_d ) {
+  if ( eve_d != u3A_d->eve_d ) {
     fprintf(stderr, "loom: migrate (to 32-bit) stale snapshot: have %"
                     PRIu64 ", need %" PRIu64 "\r\n",
-                    u3A_64->eve_d, eve_d);
+                    u3A_d->eve_d, eve_d);
     abort();
   }
 
@@ -178,15 +178,15 @@ u3_migrate_32(c3_d eve_d)
 
   _copy_64_init(&cop_u);
 
-  u3A->eve_d = u3A_64->eve_d;
-  u3A->roc   = _copy_64_noun(&cop_u, u3A_64->roc);
+  u3A->eve_d = u3A_d->eve_d;
+  u3A->roc   = _copy_64_noun(&cop_u, u3A_d->roc);
 
   cop_u.ham_p = u3R->jed.cod_p;
-  u3h_64_walk_with(u3R_64->jed.cod_p, _copy_64_hamt, &cop_u);
+  u3h_walk_with_d(u3R_d->jed.cod_p, _copy_64_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.per_p;
-  u3h_64_walk_with(u3R_64->cax.per_p, _copy_64_hamt, &cop_u);
+  u3h_walk_with_d(u3R_d->cax.per_p, _copy_64_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.for_p;
-  u3h_64_walk_with(u3R_64->cax.for_p, _copy_64_hamt, &cop_u);
+  u3h_walk_with_d(u3R_d->cax.for_p, _copy_64_hamt, &cop_u);
 
   //  NB: pave does *not* allocate hot_p
   //

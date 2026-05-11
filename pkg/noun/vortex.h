@@ -13,42 +13,42 @@
     /* u3v_{32,64}_arvo, u3v_{32,64}_home: 32-bit and 64-bit image-state
     ** layouts.  Native u3v_arvo / u3v_home typedef-alias matching bitness.
     */
-      typedef struct _u3v_32_arvo {
+      typedef struct _u3v_arvo_h {
         c3_d        eve_d;
-        u3_32_noun  roc;
-        u3_32_noun  yot;
-      } u3v_32_arvo;
+        u3_noun_h  roc;
+        u3_noun_h  yot;
+      } u3v_arvo_h;
 
-      typedef struct _u3v_64_arvo {
+      typedef struct _u3v_arvo_d {
         c3_d        eve_d;
-        u3_64_noun  roc;
-        u3_64_noun  yot;
-      } u3v_64_arvo;
+        u3_noun_d  roc;
+        u3_noun_d  yot;
+      } u3v_arvo_d;
 
-      typedef struct _u3v_32_home {
+      typedef struct _u3v_home_h {
         u3v_version ver_d;
         c3_d        pam_d;
-        u3v_32_arvo arv_u;
-        u3a_32_road rod_u;
-      } u3v_32_home;
+        u3v_arvo_h arv_u;
+        u3a_road_h rod_u;
+      } u3v_home_h;
 
-      typedef struct _u3v_64_home {
+      typedef struct _u3v_home_d {
         u3v_version ver_d;
         c3_d        pam_d;
-        u3v_64_arvo arv_u;
-        u3a_64_road rod_u;
-      } u3v_64_home;
+        u3v_arvo_d arv_u;
+        u3a_road_d rod_u;
+      } u3v_home_d;
 
     /* u3v_arvo: modern arvo structure.
     ** u3v_home: all internal (within image) state.  NB: version must be
     ** first for ease of migration.
     */
 #ifndef VERE64
-      typedef u3v_32_arvo u3v_arvo;
-      typedef u3v_32_home u3v_home;
+      typedef u3v_arvo_h u3v_arvo;
+      typedef u3v_home_h u3v_home;
 #else
-      typedef u3v_64_arvo u3v_arvo;
-      typedef u3v_64_home u3v_home;
+      typedef u3v_arvo_d u3v_arvo;
+      typedef u3v_home_d u3v_home;
 #endif
 
   /**  Globals.
@@ -58,16 +58,16 @@
 #       define u3H  u3v_Home
 #       define u3A  (&(u3v_Home->arv_u))
 
-      extern u3v_32_home* u3v_32_Home;
-      extern u3v_64_home* u3v_64_Home;
-      extern u3a_32_road* u3a_32_Road;
-      extern u3a_64_road* u3a_64_Road;
-#       define u3H_32  u3v_32_Home
-#       define u3R_32  u3a_32_Road
-#       define u3A_32  (&(u3v_32_Home->arv_u))
-#       define u3H_64  u3v_64_Home
-#       define u3R_64  u3a_64_Road
-#       define u3A_64  (&(u3v_64_Home->arv_u))
+      extern u3v_home_h* u3v_Home_h;
+      extern u3v_home_d* u3v_Home_d;
+      extern u3a_road_h* u3a_Road_h;
+      extern u3a_road_d* u3a_Road_d;
+#       define u3H_h  u3v_Home_h
+#       define u3R_h  u3a_Road_h
+#       define u3A_h  (&(u3v_Home_h->arv_u))
+#       define u3H_d  u3v_Home_d
+#       define u3R_d  u3a_Road_d
+#       define u3A_d  (&(u3v_Home_d->arv_u))
 
   /**  Functions.
   **/

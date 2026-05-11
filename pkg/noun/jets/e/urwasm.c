@@ -1927,23 +1927,23 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     {
       return u3m_bail(c3__fail);
     }
-    c3_h box_len_h = (u3a_32_direct_max > p_box_buffer)
+    c3_h box_len_h = (u3a_direct_max_h > p_box_buffer)
       ? p_box_buffer
       : u3m_bail(c3__fail);
     
-    c3_h pad_h = (u3a_32_direct_max > pad_box)
+    c3_h pad_h = (u3a_direct_max_h > pad_box)
       ? pad_box
       : u3m_bail(c3__fail);
     
-    c3_h run_off_h = (u3a_32_direct_max > runtime_offset)
+    c3_h run_off_h = (u3a_direct_max_h > runtime_offset)
       ? runtime_offset
       : u3m_bail(c3__fail);
     
-    c3_h len_buf_h = (u3a_32_direct_max > p_mem_buffer)
+    c3_h len_buf_h = (u3a_direct_max_h > p_mem_buffer)
       ? p_mem_buffer
       : u3m_bail(c3__fail);
 
-    c3_h stk_off_h = (u3a_32_direct_max > stack_offset)
+    c3_h stk_off_h = (u3a_direct_max_h > stack_offset)
       ? stack_offset
       : u3m_bail(c3__fail);
     
@@ -2178,13 +2178,13 @@ _move_state(
   IM3Runtime run_u = sat_u->wasm_module->runtime;
   M3MemoryHeader* mem_u = run_u->memory.mallocated;
   c3_h stk_off_h = (u8*)mem_u->maxStack - BoxArena->buf_y;
-  if (u3a_32_direct_max < stk_off_h)
+  if (u3a_direct_max_h < stk_off_h)
   {
     u3m_bail(c3__fail);
   }
 
   c3_w len_buf_w = mem_u->length;
-  if (u3a_32_direct_max < len_buf_w)
+  if (u3a_direct_max_h < len_buf_w)
   {
     u3m_bail(c3__fail);
   }
@@ -2195,7 +2195,7 @@ _move_state(
 
   m3_RewritePointersRuntime(run_u, BoxArena->buf_y, 1 /*is_store*/);
   c3_h run_off_h = (c3_y*)run_u - BoxArena->buf_y;
-  if (u3a_32_direct_max < run_off_h)
+  if (u3a_direct_max_h < run_off_h)
   {
     u3m_bail(c3__fail);
   }
@@ -2203,7 +2203,7 @@ _move_state(
   _uw_arena_free(CodeArena);
 
   c3_h box_len_h = BoxArena->siz_h;
-  if (u3a_32_direct_max < box_len_h)
+  if (u3a_direct_max_h < box_len_h)
   {
     u3m_bail(c3__fail);
   }

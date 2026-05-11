@@ -754,7 +754,7 @@ static void _test_imprison_words()
 
   // edge case: single word at 64-bit max direct atom
   {
-    c3_w at_max_w[] = { u3a_64_direct_max };
+    c3_w at_max_w[] = { u3a_direct_max_d };
     a = u3i_words(1, at_max_w);
     memset(output_w, 0, out_len_w * sizeof(c3_w));
     u3r_words(0, 1, output_w, a);
@@ -1977,7 +1977,7 @@ _test_u3r_at()
   a_h = u3x_dep(0b100);
   a_h = u3x_dep( ((c3_h) (((c3_d) 1  << 32) - 1)) );
   a_h = u3x_dep( ((c3_h) (((c3_d) 1  << 33) - 1)) );
-  a_h = u3x_dep( u3a_64_direct_max );
+  a_h = u3x_dep( u3a_direct_max_d );
 #endif
 
   u3_weak ret;

@@ -171,7 +171,7 @@ _test_palloc(void)
 
 #ifdef VERE64
 static void
-_test_palloc_64(void)
+_test_palloc_d(void)
 {
   c3_w *wor_w;
   u3_post pos_p, sop_p;
@@ -201,12 +201,12 @@ _test_palloc_64(void)
   _ifree(pos_p);
   _ifree(sop_p);
 
-  fprintf(stderr, "palloc_tests_64: pre-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
+  fprintf(stderr, "palloc_tests_d: pre-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memcpy(&tmp_u, &hep_u, sizeof(tmp_u));
   u3m_leap(((c3_w)1) << u3a_page);
 
-  fprintf(stderr, "palloc_tests_64: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
+  fprintf(stderr, "palloc_tests_d: post-leap: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   memset(&(HEAP), 0x0, sizeof(HEAP));
   u3R->hat_p = u3R->rut_p;  // reset heap to empty state
@@ -229,12 +229,12 @@ _test_palloc_64(void)
   _ifree(pos_p);
   _ifree(sop_p);
 
-  fprintf(stderr, "palloc_tests_64: pre-fall: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
+  fprintf(stderr, "palloc_tests_d: pre-fall: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   u3m_fall();
   memcpy(&hep_u, &tmp_u, sizeof(tmp_u));
 
-  fprintf(stderr, "palloc_tests_64: post-fall: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
+  fprintf(stderr, "palloc_tests_d: post-fall: hat=0x%"PRIxc3_w" cap=0x%"PRIxc3_w"\n", u3R->hat_p, u3R->cap_p);
 
   pos_p = _imalloc(siz_w);
 
@@ -276,8 +276,8 @@ main(int argc, char* argv[])
   fprintf(stderr, "palloc okeedokee\n\n");
 
 #ifdef VERE64
-  _test_palloc_64();
-  fprintf(stderr, "palloc_64 okeedokee\n");
+  _test_palloc_d();
+  fprintf(stderr, "palloc_d okeedokee\n");
 #endif
 
   return 0;

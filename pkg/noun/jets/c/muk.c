@@ -13,7 +13,7 @@ u3qc_muk(u3_atom sed,
          u3_atom key)
 {
   //if ( c3n == u3a_is_cat(len) ) {
-  if ( len > u3a_32_direct_max ) {
+  if ( len > u3a_direct_max_h ) {
     return u3m_bail(c3__fail);
   }
   else {

@@ -1341,7 +1341,7 @@ u3r_halfs(c3_w    a_w,
   if ( b_w == 0 ) {
     return;
   }
-  if ( d <= u3a_32_direct_max ) {
+  if ( d <= u3a_direct_max_h ) {
     if ( a_w == 0 ) {
       *c_h = (c3_h)d;
       memset((c3_y*)(c_h + 1), 0, (b_w - 1) << u3a_half_bytes_shift);
