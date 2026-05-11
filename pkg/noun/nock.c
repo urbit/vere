@@ -1032,6 +1032,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__nara:
       case c3__hela:
       case c3__loop:
+      case c3__drop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1918,6 +1919,11 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
       u3h_discount(u3R->cax.per_p);
       *out = u3i_cell(tag, u3i_cell(har, per));
+    } break;
+
+    case c3__drop: {
+      u3C.wag_w |= u3o_free_ford;
+      *out = u3_nul;
     } break;
 
     case c3__loop: {
