@@ -1525,6 +1525,14 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   */
   u3z(arg);
 
+  /* Clear build caches if needed.
+  */
+  if ( !u3R->par_p && (u3C.wag_w & u3o_free_ford) ) {
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+    u3C.wag_w &= ~(c3_w)u3o_free_ford;
+  }
+
   /* Return the product.
   */
   return pro;
