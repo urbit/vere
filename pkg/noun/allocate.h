@@ -368,8 +368,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
         struct {
           union {
-            jmp_buf buf;
-            c3_d why_w;
+            struct {
+              jmp_buf buf;
+              c3_d why_w;
+            };
             c3_d buf_w[256];
           };
         } esc;
