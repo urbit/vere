@@ -236,7 +236,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_w                  pag_w;     //  page index
         c3_s                  log_s;     //  size log2
         c3_s                  fre_s;     //  free chunks
-        c3_w                  map_w[1];  //  free-chunk bitmap
+        c3_h                  map_h[1];  //  free-chunk bitmap
       } u3a_crag;
 
     /* u3a_dell: page free-list entry
