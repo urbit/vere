@@ -1922,7 +1922,7 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
     } break;
 
     case c3__drop: {
-      u3m_Ford_fresh_road_depth_w = u3m_road_depth();
+      u3m_Ford_fresh_road_depth_w = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_w);
       u3h_free(u3R->cax.for_p);
       u3R->cax.for_p = u3h_new_cache(u3C.per_w);
       *out = u3_nul;
