@@ -758,7 +758,6 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
-    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
