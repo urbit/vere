@@ -181,48 +181,28 @@
 #     define  u3a_to_off_d(som)   ((som) & 0x3fffffffffffffffULL)
 #     define  u3a_to_ptr_d(som)   (u3a_into_d(u3a_to_off_d(som)))
 
-      typedef struct {
-        c3_h    use_w;
-        c3_h    mug_w;
-        c3_h    len_w;
-        c3_h    buf_w[0];
-      } u3a_atom_h;
+    /* u3a_{atom,cell}_{h,d}: 32- and 64-bit logical atom and cell
+    ** layouts.  u3a_atom / u3a_cell typedef-alias matching bitness.
+    */
+#define U3A_ATOM_BODY(S) \
+  U3_W(S) use_w;         \
+  U3_W(S) mug_w;         \
+  U3_W(S) len_w;         \
+  U3_W(S) buf_w[0];
 
-      typedef struct {
-        c3_h    use_w;
-        c3_h    mug_w;
-        u3_noun_h hed;
-        u3_noun_h tel;
-      } u3a_cell_h;
+#define U3A_CELL_BODY(S) \
+  U3_W(S) use_w;         \
+  U3_W(S) mug_w;         \
+  U3_N(S) hed;           \
+  U3_N(S) tel;
 
-      typedef struct {
-        c3_d     use_w;
-        c3_d     mug_w;
-        c3_d     len_w;
-        c3_d     buf_w[0];
-      } u3a_atom_d;
-
-      typedef struct {
-        c3_d       use_w;
-        c3_d       mug_w;
-        u3_noun_d  hed;
-        u3_noun_d  tel;
-      } u3a_cell_d;
+      U3_DEFINE_PAIR(u3a_atom, U3A_ATOM_BODY);
+      U3_DEFINE_PAIR(u3a_cell, U3A_CELL_BODY);
 
 #     define  u3a_head_h(som)  (((u3a_cell_h *)u3a_to_ptr_h(som))->hed)
 #     define  u3a_tail_h(som)  (((u3a_cell_h *)u3a_to_ptr_h(som))->tel)
 #     define  u3a_head_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->hed)
 #     define  u3a_tail_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->tel)
-
-    /* u3a_atom, u3a_cell: native logical atom and cell (alias matching bitness).
-    */
-#ifndef VERE64
-      typedef u3a_atom_h u3a_atom;
-      typedef u3a_cell_h u3a_cell;
-#else
-      typedef u3a_atom_d u3a_atom;
-      typedef u3a_cell_d u3a_cell;
-#endif
 
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
@@ -248,188 +228,108 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_w                  siz_w;     //  number of pages
       } u3a_dell;
 
-    /* u3a_{32,64}_jets: 32-bit / 64-bit jet dashboard layouts.
+    /* u3a_jets_{h,d}: 32- / 64-bit jet dashboard layouts.
+    ** u3a_jets typedef-aliases the variant matching this build.
     */
-      typedef struct _u3a_jets_h {
-        c3_h hot_p;
-        c3_h war_p;
-        c3_h cod_p;
-        c3_h han_p;
-        c3_h bas_p;
-      } u3a_jets_h;
+#define U3A_JETS_BODY(S) \
+  U3_W(S) hot_p;         \
+  U3_W(S) war_p;         \
+  U3_W(S) cod_p;         \
+  U3_W(S) han_p;         \
+  U3_W(S) bas_p;
 
-      typedef struct _u3a_jets_d {
-        c3_d hot_p;
-        c3_d war_p;
-        c3_d cod_p;
-        c3_d han_p;
-        c3_d bas_p;
-      } u3a_jets_d;
+      U3_DEFINE_PAIR(u3a_jets, U3A_JETS_BODY);
 
-    /* u3a_jets: native jet dashboard (alias matching bitness).
+    /* u3a_road_esc_{h,d}: setjmp escape state.  The 64-bit variant
+    ** additionally carries a `why_w` slot adjacent to the jmp_buf.
     */
-#ifndef VERE64
-      typedef u3a_jets_h u3a_jets;
-#else
-      typedef u3a_jets_d u3a_jets;
-#endif
+      typedef struct {
+        union {
+          jmp_buf buf;
+          c3_h    buf_w[256];
+        };
+      } u3a_road_esc_h;
 
-    /* u3a_{32,64}_road: 32-bit and 64-bit contiguous allocation and
-    ** execution context layouts.
-    */
-      typedef struct _u3a_road_h {
-        c3_h par_p;
-        c3_h kid_p;
-        c3_h nex_p;
-
-        c3_h cap_p;
-        c3_h hat_p;
-        c3_h mat_p;
-        c3_h rut_p;
-        c3_h ear_p;
-
-        c3_h    off_w;
-        c3_h    fow_w;
-        c3_h    lop_p;
-        u3_noun_h tim;
-
-        c3_h fut_w[28];
-
-        struct {
-          union {
+      typedef struct {
+        union {
+          struct {
             jmp_buf buf;
-            c3_h    buf_w[256];
+            c3_d    why_w;
           };
-        } esc;
+          c3_d buf_w[256];
+        };
+      } u3a_road_esc_d;
 
-        struct { c3_h fag_w; } how;
-
-        struct {
-          c3_h fre_w;
-          c3_h max_w;
-        } all;
-
-        struct {
-          c3_h  fre_p;
-          c3_h  erf_p;
-          c3_h  cac_p;
-          c3_hs dir_ws;
-          c3_hs off_ws;
-          c3_h  siz_w;
-          c3_h  len_w;
-          c3_h  pag_p;
-          c3_h  wee_p[u3a_crag_no_h];
-        } hep;
-
-        struct {
-          c3_h cel_p;
-          c3_h hav_w;
-          c3_h bat_w;
-        } cel;
-
-        u3a_jets_h jed;
-
-        struct { c3_h    har_p;                } byc;
-        struct { u3_noun_h gul;                  } ski;
-        struct { u3_noun_h tax; u3_noun_h mer;  } bug;
-
-        struct {
-          c3_d       nox_d;
-          c3_d       cel_d;
-          u3_noun_h don;
-          u3_noun_h trace;
-          u3_noun_h day;
-        } pro;
-
-        struct {
-          c3_h har_p;
-          c3_h per_p;
-          c3_h for_p;
-        } cax;
-      } u3a_road_h;
-
-      typedef struct _u3a_road_d {
-        c3_d par_p;
-        c3_d kid_p;
-        c3_d nex_p;
-
-        c3_d cap_p;
-        c3_d hat_p;
-        c3_d mat_p;
-        c3_d rut_p;
-        c3_d ear_p;
-
-        c3_d    off_w;
-        c3_d    fow_w;
-        c3_d    lop_p;
-        u3_noun_d tim;
-
-        c3_d fut_w[28];
-
-        struct {
-          union {
-            struct {
-              jmp_buf buf;
-              c3_d why_w;
-            };
-            c3_d buf_w[256];
-          };
-        } esc;
-
-        struct { c3_d fag_w; } how;
-
-        struct {
-          c3_d fre_w;
-          c3_d max_w;
-        } all;
-
-        struct {
-          c3_d  fre_p;
-          c3_d  erf_p;
-          c3_d  cac_p;
-          c3_d  dir_ws;
-          c3_d  off_ws;
-          c3_d  siz_w;
-          c3_d  len_w;
-          c3_d  pag_p;
-          c3_d  wee_p[u3a_crag_no_d];
-        } hep;
-
-        struct {
-          c3_d cel_p;
-          c3_d hav_w;
-          c3_d bat_w;
-        } cel;
-
-        u3a_jets_d jed;
-
-        struct { c3_d    har_p;                        } byc;
-        struct { u3_noun_d gul;                          } ski;
-        struct { u3_noun_d tax; u3_noun_d mer;          } bug;
-
-        struct {
-          c3_d       nox_d;
-          c3_d       cel_d;
-          u3_noun_d  don;
-          u3_noun_d  trace;
-          u3_noun_d  day;
-        } pro;
-
-        struct {
-          c3_d har_p;
-          c3_d per_p;
-          c3_d for_p;
-        } cax;
-      } u3a_road_d;
-
-    /* u3a_road: native contiguous allocation and execution context
-    ** (alias matching bitness).
+    /* u3a_road_{h,d}: 32- and 64-bit contiguous allocation and
+    ** execution context layouts.  u3a_road typedef-aliases the
+    ** variant matching this build.
     */
-#ifndef VERE64
-      typedef u3a_road_h u3a_road;
-#else
-      typedef u3a_road_d u3a_road;
-#endif
+#define U3A_ROAD_BODY(S)                              \
+  U3_W(S) par_p;                                      \
+  U3_W(S) kid_p;                                      \
+  U3_W(S) nex_p;                                      \
+                                                      \
+  U3_W(S) cap_p;                                      \
+  U3_W(S) hat_p;                                      \
+  U3_W(S) mat_p;                                      \
+  U3_W(S) rut_p;                                      \
+  U3_W(S) ear_p;                                      \
+                                                      \
+  U3_W(S) off_w;                                      \
+  U3_W(S) fow_w;                                      \
+  U3_W(S) lop_p;                                      \
+  U3_N(S) tim;                                        \
+                                                      \
+  U3_W(S) fut_w[28];                                  \
+                                                      \
+  U3_PASTE(u3a_road_esc, S) esc;                      \
+                                                      \
+  struct { U3_W(S) fag_w; } how;                      \
+                                                      \
+  struct {                                            \
+    U3_W(S) fre_w;                                    \
+    U3_W(S) max_w;                                    \
+  } all;                                              \
+                                                      \
+  struct {                                            \
+    U3_W(S)  fre_p;                                   \
+    U3_W(S)  erf_p;                                   \
+    U3_W(S)  cac_p;                                   \
+    U3_WS(S) dir_ws;                                  \
+    U3_WS(S) off_ws;                                  \
+    U3_W(S)  siz_w;                                   \
+    U3_W(S)  len_w;                                   \
+    U3_W(S)  pag_p;                                   \
+    U3_W(S)  wee_p[U3_PASTE_(u3a_crag_no, S)];        \
+  } hep;                                              \
+                                                      \
+  struct {                                            \
+    U3_W(S) cel_p;                                    \
+    U3_W(S) hav_w;                                    \
+    U3_W(S) bat_w;                                    \
+  } cel;                                              \
+                                                      \
+  U3_PASTE(u3a_jets, S) jed;                          \
+                                                      \
+  struct { U3_W(S) har_p;             } byc;          \
+  struct { U3_N(S) gul;               } ski;          \
+  struct { U3_N(S) tax; U3_N(S) mer;  } bug;          \
+                                                      \
+  struct {                                            \
+    c3_d    nox_d;                                    \
+    c3_d    cel_d;                                    \
+    U3_N(S) don;                                      \
+    U3_N(S) trace;                                    \
+    U3_N(S) day;                                      \
+  } pro;                                              \
+                                                      \
+  struct {                                            \
+    U3_W(S) har_p;                                    \
+    U3_W(S) per_p;                                    \
+    U3_W(S) for_p;                                    \
+  } cax;
+
+      U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 
     /* u3a_flag: flags for how.fag_w.  All arena related.

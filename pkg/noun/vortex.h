@@ -10,46 +10,23 @@
 
   /**  Data structures.
   **/
-    /* u3v_{32,64}_arvo, u3v_{32,64}_home: 32-bit and 64-bit image-state
-    ** layouts.  Native u3v_arvo / u3v_home typedef-alias matching bitness.
+    /* u3v_arvo_{h,d}, u3v_home_{h,d}: 32- and 64-bit image-state
+    ** layouts.  u3v_arvo / u3v_home typedef-alias matching bitness.
+    ** u3v_home: NB version must be first for ease of migration.
     */
-      typedef struct _u3v_arvo_h {
-        c3_d        eve_d;
-        u3_noun_h  roc;
-        u3_noun_h  yot;
-      } u3v_arvo_h;
+#define U3V_ARVO_BODY(S)              \
+  c3_d    eve_d;                      \
+  U3_N(S) roc;                        \
+  U3_N(S) yot;
 
-      typedef struct _u3v_arvo_d {
-        c3_d        eve_d;
-        u3_noun_d  roc;
-        u3_noun_d  yot;
-      } u3v_arvo_d;
+#define U3V_HOME_BODY(S)              \
+  u3v_version           ver_d;        \
+  c3_d                  pam_d;        \
+  U3_PASTE(u3v_arvo, S) arv_u;        \
+  U3_PASTE(u3a_road, S) rod_u;
 
-      typedef struct _u3v_home_h {
-        u3v_version ver_d;
-        c3_d        pam_d;
-        u3v_arvo_h arv_u;
-        u3a_road_h rod_u;
-      } u3v_home_h;
-
-      typedef struct _u3v_home_d {
-        u3v_version ver_d;
-        c3_d        pam_d;
-        u3v_arvo_d arv_u;
-        u3a_road_d rod_u;
-      } u3v_home_d;
-
-    /* u3v_arvo: modern arvo structure.
-    ** u3v_home: all internal (within image) state.  NB: version must be
-    ** first for ease of migration.
-    */
-#ifndef VERE64
-      typedef u3v_arvo_h u3v_arvo;
-      typedef u3v_home_h u3v_home;
-#else
-      typedef u3v_arvo_d u3v_arvo;
-      typedef u3v_home_d u3v_home;
-#endif
+      U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
+      U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);
 
   /**  Globals.
   **/

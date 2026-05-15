@@ -24,7 +24,7 @@
     ***  native one.  Native u3h_slot/node/buck/root are typedef aliases
     ***  to whichever bitness matches this build.
     **/
-      /* u3h_{32,64}_slot: map slot.
+      /* u3h_slot_{h,d}: map slot.
       **
       **   Either a key-value cell or a loom offset, decoded as a pointer
       **   to a u3h_node, or a u3h_buck at the bottom.  Matches the u3_noun
@@ -38,70 +38,43 @@
         typedef c3_h u3h_slot_h;
         typedef c3_d u3h_slot_d;
 
-      /* u3h_{32,64}_node: map node.
+      /* u3h_node_{h,d}: map node.
       */
-        typedef struct {
-          c3_h        map_h;     // bitmap for [sot_w]
-          u3h_slot_h sot_w[];   // filled slots
-        } u3h_node_h;
+#define U3H_NODE_BODY(S)                       \
+  c3_h                  map_h;                 \
+  U3_PASTE(u3h_slot, S) sot_w[];
 
-        typedef struct {
-          c3_h        map_h;
-          c3_h        pad_h;
-          u3h_slot_d sot_w[];
-        } u3h_node_d;
+        U3_DEFINE_PAIR(u3h_node, U3H_NODE_BODY);
 
-      /* u3h_{32,64}_root: hash root table
+      /* u3h_root_{h,d}: hash root table.
       */
-        typedef struct {
-          c3_h        max_w;
-          c3_h        use_w;
-          struct {
-            c3_h  mug_h;
-            c3_h  inx_h;
-            c3_h  buc_o;        // XX remove
-          } arm_u;
-          u3h_slot_h sot_w[64];
-        } u3h_root_h;
+#define U3H_ROOT_BODY(S)                       \
+  U3_W(S) max_w;                               \
+  U3_W(S) use_w;                               \
+  struct {                                     \
+    c3_h mug_h;                                \
+    c3_h inx_h;                                \
+    c3_o buc_o;  /* XX remove */               \
+  } arm_u;                                     \
+  U3_PASTE(u3h_slot, S) sot_w[64];
 
-        typedef struct {
-          c3_d        max_w;
-          c3_d        use_w;
-          struct {
-            c3_h    mug_h;
-            c3_h    inx_h;
-            c3_o    buc_o;
-            c3_y    pad_y[3];
-          } arm_u;
-          c3_y        pad_y[4];
-          u3h_slot_d sot_w[64];
-        } u3h_root_d;
+        U3_DEFINE_PAIR(u3h_root, U3H_ROOT_BODY);
 
-      /* u3h_{32,64}_buck: bottom bucket.
+      /* u3h_buck_{h,d}: bottom bucket.
       */
-        typedef struct {
-          c3_h        len_h;     // length of [sot_w]
-          u3h_slot_h sot_w[];
-        } u3h_buck_h;
+#define U3H_BUCK_BODY(S)                       \
+  c3_h                  len_h;                 \
+  U3_PASTE(u3h_slot, S) sot_w[];
 
-        typedef struct {
-          c3_h        len_h;
-          c3_h        pad_h;
-          u3h_slot_d sot_w[];
-        } u3h_buck_d;
+        U3_DEFINE_PAIR(u3h_buck, U3H_BUCK_BODY);
 
-      /* Native u3h_slot/node/buck/root: aliases of the matching bitness.
+      /* native u3h_slot: alias of the matching bitness. node/buck/root
+      ** native aliases are emitted by U3_DEFINE_PAIR above.
       */
 #ifndef VERE64
         typedef u3h_slot_h u3h_slot;
-        typedef u3h_node_h u3h_node;
-        typedef u3h_buck_h u3h_buck;
-        typedef u3h_root_h u3h_root;
 #else
         typedef u3h_slot_d u3h_slot;
-        typedef u3h_node_d u3h_node;
-        typedef u3h_buck_d u3h_buck;
-        typedef u3h_root_d u3h_root;
 #endif
 
     /**  HAMT macros.
