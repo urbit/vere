@@ -11,6 +11,8 @@
 #include "version.h"
 #include "rsignal.h"
 
+extern c3_h u3m_Ford_fresh_road_depth_h;
+
     /** System management.
     **/
       /* u3m_boot(): start the u3 system. return next event, starting from 1.
@@ -114,6 +116,9 @@
       */
         u3_noun
         u3m_love(u3_noun pro);
+
+        c3_w
+        u3m_road_depth(void);
 
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **

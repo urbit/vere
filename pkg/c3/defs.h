@@ -94,8 +94,16 @@
 
     /* Min and max.
     */
-#     define c3_max(x, y) ( ((x) > (y)) ? (x) : (y) )
-#     define c3_min(x, y) ( ((x) < (y)) ? (x) : (y) )
+#     define c3_max(x, y) ({  \
+        typeof(x) _x = x;     \
+        typeof(y) _y = y;     \
+        (_x > _y) ? _x : _y;  \
+      })
+#     define c3_min(x, y) ({  \
+        typeof(x) _x = x;     \
+        typeof(y) _y = y;     \
+        (_x < _y) ? _x : _y;  \
+      })
 
 
 //! Round up/down (respectively).

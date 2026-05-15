@@ -164,7 +164,7 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
     *result = NULL;
     return (errno);  // either success or error code
   } else {
-    memcpy(entry, tmp_u, sizeof(struct dirent));
+    memcpy(entry, tmp_u, tmp_u->d_reclen);
     *result = entry;
   }
 

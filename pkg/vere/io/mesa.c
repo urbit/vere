@@ -929,8 +929,7 @@ typedef struct _u3_mesa_request_data {
   u3_mesa_name* nam_u;
   c3_y*         buf_y;
   c3_h          len_h;
-  u3_pit_addr*  las_u;
-  arena         are_u;
+  u3_noun       las;
 } u3_mesa_request_data;
 
 typedef struct _u3_mesa_resend_data {
@@ -945,6 +944,7 @@ static void
 _mesa_free_cb(uv_handle_t *han_u)
 {
   u3_mesa_resend_data* res_u = han_u->data;
+  u3z(res_u->dat_u.las);
   arena_free(&res_u->are_u);
 }
 
@@ -1325,6 +1325,21 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
   return;
 }
 
+static u3_pit_addr*
+_mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
+  u3_pit_addr* adr_u = NULL;
+  u3_noun lan, t = las;
+  while ( t != u3_nul ) {
+    u3x_cell(t, &lan, &t);
+    u3_pit_addr* new_u = new(are_u, u3_pit_addr, 1);
+    new_u->sdr_u = _realise_lane(u3k(lan));
+    new_u->nex_p = adr_u;
+    adr_u = new_u;
+  }
+  return adr_u;
+}
+
+
 static void
 _mesa_resend_timer_cb(uv_timer_t* tim_u)
 {
@@ -1346,11 +1361,10 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #endif
   }
 
-  _mesa_send_bufs(dat_u->sam_u,
-                  NULL,
-                  dat_u->buf_y,
-                  dat_u->len_h,
-                  dat_u->las_u);
+  arena scratch = res_u->are_u;
+  u3_pit_addr* las_u = _mesa_lanes_to_addrs(dat_u->las, &scratch);
+
+  _mesa_send_bufs(dat_u->sam_u, NULL, dat_u->buf_y, dat_u->len_h, las_u);
 
   if ( res_u->ret_y ) {
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
@@ -1359,20 +1373,6 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     _mesa_del_request(res_u->dat_u.sam_u, res_u->dat_u.nam_u);
     _mesa_free_resend_data(res_u);
   }
-}
-
-static u3_pit_addr*
-_mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
-  u3_pit_addr* adr_u = NULL;
-  u3_noun lan, t = las;
-  while ( t != u3_nul ) {
-    u3x_cell(t, &lan, &t);
-    u3_pit_addr* new_u = new(are_u, u3_pit_addr, 1);
-    new_u->sdr_u = _realise_lane(u3k(lan));
-    new_u->nex_p = adr_u;
-    adr_u = new_u;
-  }
-  return adr_u;
 }
 
 static void
@@ -1432,7 +1432,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       dat_u->sam_u = sam_u;
       u3_ship_copy(dat_u->her_u, nam_u->her_u);
       dat_u->nam_u = nam_u;
-      dat_u->las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
+      dat_u->las   = u3k(las);
       dat_u->buf_y = buf_y;
       dat_u->len_h = len_w;
     }
@@ -1443,7 +1443,8 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     res_u->tim_u.data = res_u;
 
-    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, dat_u->las_u);
+    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &sam_u->are_u);
+    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
 
