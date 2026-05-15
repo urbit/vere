@@ -7,6 +7,10 @@
 #include "db/lmdb.h"
 #include <types.h>
 #include "../noun/migrate.h"
+ #ifndef VERE64
+ #include "../past/migrate.h"
+ #include "../past/v4.h"
+ #endif
 
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
