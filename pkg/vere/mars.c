@@ -1349,13 +1349,16 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     c3_d  mem_d = 0;             // last event to meme
     c3_w  try_w = 0;             // [mem_d] retry count
     c3_c* wen_c;
+    c3_w  bat_w;
 
     while ( mar_u->dun_d < eve_d ) {
       _mars_step_trace(mar_u->dir_c);
 
       //  XX get batch from args
       //
-      switch ( _mars_play_batch(mar_u, c3y, 1024, &wen_c) ) {
+      bat_w = c3_min(1024ULL, eve_d - mar_u->dun_d);
+
+      switch ( _mars_play_batch(mar_u, c3y, bat_w, &wen_c) ) {
         case _play_yes_e: {
           c3_c* now_c;
 
