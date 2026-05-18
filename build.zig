@@ -522,6 +522,8 @@ fn buildBinary(
         .optimize = optimize,
     }) });
 
+    urbit.lto = if (optimize != .Debug) .full else null;
+
     if (t.os.tag == .windows) {
         urbit.stack_size = 67108864;
     } else {

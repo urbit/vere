@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    murmur3.lto = if (optimize != .Debug) .full else null;
+
     murmur3.linkLibC();
 
     murmur3.addIncludePath(b.path("."));

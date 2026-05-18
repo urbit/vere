@@ -19,6 +19,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    curl.lto = if (optimize != .Debug) .full else null;
+
     curl.linkLibC();
     curl.linkLibrary(openssl.artifact("ssl"));
     curl.linkLibrary(openssl.artifact("crypto"));

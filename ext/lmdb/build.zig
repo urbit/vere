@@ -14,6 +14,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lmdb.lto = if (optimize != .Debug) .full else null;
+
     lmdb.linkLibC();
 
     lmdb.addIncludePath(lmdb_c.path("libraries/liblmdb"));

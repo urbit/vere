@@ -14,6 +14,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    tracy.lto = if (optimize != .Debug) .full else null;
+
     tracy.linkLibC();
     tracy.linkLibCpp();
 

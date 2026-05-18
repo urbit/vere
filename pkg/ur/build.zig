@@ -12,6 +12,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    pkg_ur.lto = if (optimize != .Debug) .full else null;
+
     const murmur3 = b.dependency("murmur3", .{
         .target = target,
         .optimize = optimize,

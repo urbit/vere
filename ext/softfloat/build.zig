@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
+
     const dep_c = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,

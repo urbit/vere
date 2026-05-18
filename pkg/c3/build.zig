@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) void {
 
     const pkg_c3 = b.addLibrary(.{ .name = "c3", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
+    pkg_c3.lto = if (optimize != .Debug) .full else null;
+
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,

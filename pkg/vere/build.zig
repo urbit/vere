@@ -14,6 +14,8 @@ pub fn build(b: *std.Build) !void {
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
+    pkg_vere.lto = if (optimize != .Debug) .full else null;
+
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
             .target = target,

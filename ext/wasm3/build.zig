@@ -20,6 +20,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    wasm3.lto = if (optimize != .Debug) .full else null;
+
     wasm3.linkLibC();
 
     wasm3.addIncludePath(wasm3_c.path("source/"));

@@ -65,6 +65,7 @@ fn libcrypto(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.pie = true;
 
     switch (optimize) {
@@ -404,6 +405,7 @@ fn libssl(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.pie = true;
 
     switch (optimize) {

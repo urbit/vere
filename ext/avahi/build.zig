@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    expat.lto = if (optimize != .Debug) .full else null;
     expat.linkLibC();
 
     const expat_cmake_config = b.addConfigHeader(.{
@@ -76,6 +77,7 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    dbus.lto = if (optimize != .Debug) .full else null;
     dbus.linkLibC();
     dbus.linkLibrary(expat);
 
@@ -525,6 +527,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    avahi.lto = if (optimize != .Debug) .full else null;
     avahi.linkLibC();
     avahi.linkLibrary(dbus);
 

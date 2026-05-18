@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.linkLibrary(libsecp256k1(b, target, optimize));
@@ -89,6 +90,7 @@ fn libaes_siv(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibrary(openssl.artifact("ssl"));
     lib.linkLibrary(openssl.artifact("crypto"));
 
@@ -132,6 +134,7 @@ fn libsecp256k1(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("src"));
@@ -197,6 +200,7 @@ fn libargon2(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     const flags = .{
@@ -257,6 +261,7 @@ fn libblake3(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     const common_files = .{
@@ -327,6 +332,7 @@ fn libed25519(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("ed25519/src"));
@@ -375,6 +381,7 @@ fn libge_additions(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("ed25519/src"));
@@ -412,6 +419,7 @@ fn libkeccak_tiny(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("keccak-tiny"));
@@ -450,6 +458,7 @@ fn libmonocypher(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("monocypher"));
@@ -484,6 +493,7 @@ fn libscrypt(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("scrypt"));

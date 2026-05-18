@@ -22,6 +22,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    pkg_ent.lto = if (optimize != .Debug) .full else null;
+
     pkg_ent.linkLibC();
 
     pkg_ent.addIncludePath(b.path(""));

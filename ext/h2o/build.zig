@@ -45,6 +45,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    cloexec.lto = if (optimize != .Debug) .full else null;
     cloexec.linkLibC();
 
     cloexec.addIncludePath(h2o_c.path("deps/cloexec"));
@@ -68,6 +69,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    klib.lto = if (optimize != .Debug) .full else null;
     klib.linkLibrary(curl.artifact("curl"));
     klib.linkLibrary(zlib.artifact("z"));
     klib.linkLibC();
@@ -121,6 +123,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    libgkc.lto = if (optimize != .Debug) .full else null;
     libgkc.linkLibC();
 
     libgkc.addIncludePath(h2o_c.path("deps/libgkc"));
@@ -140,6 +143,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    libyrmcds.lto = if (optimize != .Debug) .full else null;
     libyrmcds.linkLibC();
 
     libyrmcds.addIncludePath(h2o_c.path("deps/libyrmcds"));
@@ -178,6 +182,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    picohttpparser.lto = if (optimize != .Debug) .full else null;
     picohttpparser.linkLibC();
 
     picohttpparser.addIncludePath(h2o_c.path("deps/picohttpparser"));
@@ -205,6 +210,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    cifra.lto = if (optimize != .Debug) .full else null;
     cifra.linkLibC();
 
     cifra.addIncludePath(h2o_c.path("deps/picotls/deps/cifra/src"));
@@ -252,6 +258,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    micro_ecc.lto = if (optimize != .Debug) .full else null;
     micro_ecc.linkLibC();
 
     micro_ecc.addIncludePath(h2o_c.path("deps/picotls/deps/micro-ecc"));
@@ -270,6 +277,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    picotls.lto = if (optimize != .Debug) .full else null;
     picotls.linkLibrary(openssl.artifact("ssl"));
     picotls.linkLibrary(cifra);
     picotls.linkLibrary(micro_ecc);
@@ -327,6 +335,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    h2o.lto = if (optimize != .Debug) .full else null;
     h2o.linkLibrary(openssl.artifact("ssl"));
     h2o.linkLibrary(openssl.artifact("crypto"));
     h2o.linkLibrary(zlib.artifact("z"));

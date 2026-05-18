@@ -14,6 +14,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    exe.lto = if (optimize != .Debug) .full else null;
+
     exe.addIncludePath(b.path("include"));
     exe.addIncludePath(b.path("asm"));
     exe.addIncludePath(b.path("x86"));

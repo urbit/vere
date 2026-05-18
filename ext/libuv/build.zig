@@ -15,6 +15,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    uv.lto = if (optimize != .Debug) .full else null;
+
     uv.linkLibC();
 
     uv.addIncludePath(uv_c.path("src"));
