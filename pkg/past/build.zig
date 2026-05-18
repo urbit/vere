@@ -11,8 +11,8 @@ pub fn build(b: *std.Build) !void {
         .name = "past",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    pkg_past.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    pkg_past.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -30,17 +30,20 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto
     });
 
     pkg_past.linkLibC();

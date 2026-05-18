@@ -4,10 +4,12 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
 
     const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const wasm3_c = b.dependency("wasm3", .{
@@ -19,8 +21,7 @@ pub fn build(b: *std.Build) void {
         .name = "wasm3",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    wasm3.lto = if (optimize != .Debug) .full else null;
+    wasm3.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     wasm3.linkLibC();
 

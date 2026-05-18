@@ -14,8 +14,8 @@ pub fn build(b: *std.Build) !void {
         .name = "libuv",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    uv.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    uv.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     uv.linkLibC();
 

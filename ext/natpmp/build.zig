@@ -9,8 +9,8 @@ pub fn build(b: *std.Build) void {
         .name = "natpmp",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    lib.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     const dep_c = b.dependency("natpmp", .{
         .target = target,

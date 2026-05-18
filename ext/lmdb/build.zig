@@ -13,8 +13,8 @@ pub fn build(b: *std.Build) !void {
         .name = "lmdb",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    lmdb.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    lmdb.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     lmdb.linkLibC();
 

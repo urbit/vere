@@ -14,8 +14,8 @@ pub fn build(b: *std.Build) void {
         .name = "sigsegv",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    lib.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{

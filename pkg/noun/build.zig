@@ -27,8 +27,8 @@ pub fn build(b: *std.Build) !void {
         .name = "noun",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    pkg_noun.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    pkg_noun.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -46,73 +46,87 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ent = b.dependency("pkg_ent", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ur = b.dependency("pkg_ur", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const backtrace = b.dependency("backtrace", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const murmur3 = b.dependency("murmur3", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const pdjson = b.dependency("pdjson", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const sigsegv = b.dependency("sigsegv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const softblas = b.dependency("softblas", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const unwind = b.dependency("unwind", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const urcrypt = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const whereami = b.dependency("whereami", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const zlib = b.dependency("zlib", .{
@@ -123,11 +137,13 @@ pub fn build(b: *std.Build) !void {
     const wasm3 = b.dependency("wasm3", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const tracy = if (tracy_enabled) b.dependency("tracy", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     }) else null;
 
     pkg_noun.linkLibC();

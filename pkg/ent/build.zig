@@ -21,8 +21,8 @@ pub fn build(b: *std.Build) !void {
         .name = "ent",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    pkg_ent.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    pkg_ent.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     pkg_ent.linkLibC();
 

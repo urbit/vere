@@ -9,8 +9,8 @@ pub fn build(b: *std.Build) void {
         b.option([]const []const u8, "copt", "") orelse &.{};
 
     const pkg_c3 = b.addLibrary(.{ .name = "c3", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
-
-    pkg_c3.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    pkg_c3.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{

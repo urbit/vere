@@ -9,8 +9,8 @@ pub fn build(b: *std.Build) void {
         .name = "murmur3",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    murmur3.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    murmur3.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     murmur3.linkLibC();
 

@@ -13,8 +13,8 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-
-    exe.lto = if (optimize != .Debug) .full else null;
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    exe.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     exe.addIncludePath(b.path("include"));
     exe.addIncludePath(b.path("asm"));

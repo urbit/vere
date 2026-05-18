@@ -111,6 +111,7 @@ const BuildCfg = struct {
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
     gen_cdb: bool = false,
+    no_lto: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -193,6 +194,10 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
+    const no_lto = 
+        b.option(bool, "no-lto", "Supress link-time optimizations") orelse false
+        or target.result.os.tag == .macos;
+
     const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
     const tracy_callstack = b.option(bool, "tracy-callstack", "Enable Tracy callstack capture") orelse false;
     const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
@@ -238,11 +243,14 @@ pub fn build(b: *std.Build) !void {
         .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
         .gen_cdb = gen_cdb,
+        .no_lto = no_lto,
     };
 
     if (all) {
         for (targets) |t| {
-            try buildBinary(b, b.resolveTargetQuery(t), optimize, build_cfg);
+            var build_cfg_copy: BuildCfg = build_cfg;
+            build_cfg_copy.no_lto = build_cfg_copy.no_lto or (t.os_tag == .macos);
+            try buildBinary(b, b.resolveTargetQuery(t), optimize, build_cfg_copy);
         }
     } else {
         const t = target.result;
@@ -414,30 +422,35 @@ fn buildBinary(
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = cfg.no_lto,
     });
 
     const pkg_ent = b.dependency("pkg_ent", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = cfg.no_lto,
     });
 
     const pkg_ur = b.dependency("pkg_ur", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = cfg.no_lto,
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = cfg.no_lto,
     });
 
     const pkg_past = b.dependency("pkg_past", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = cfg.no_lto,
     });
 
     const pkg_vere = b.dependency("pkg_vere", .{
@@ -446,56 +459,67 @@ fn buildBinary(
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        .no_lto = cfg.no_lto,
     });
 
     const curl = b.dependency("curl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const h2o = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const libuv = b.dependency("libuv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const lmdb = b.dependency("lmdb", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const sigsegv = b.dependency("sigsegv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const urcrypt = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const whereami = b.dependency("whereami", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const zlib = b.dependency("zlib", .{
@@ -506,11 +530,13 @@ fn buildBinary(
     const wasm3 = b.dependency("wasm3", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     });
 
     const tracy = if (cfg.tracy_enable) b.dependency("tracy", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = cfg.no_lto,
     }) else null;
 
     //
@@ -522,7 +548,7 @@ fn buildBinary(
         .optimize = optimize,
     }) });
 
-    urbit.lto = if (optimize != .Debug) .full else null;
+    urbit.lto = if (optimize != .Debug and !cfg.no_lto) .full else null;
 
     if (t.os.tag == .windows) {
         urbit.stack_size = 67108864;

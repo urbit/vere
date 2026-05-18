@@ -3,35 +3,37 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
         .name = "urcrypt",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
-
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
-    lib.linkLibrary(libsecp256k1(b, target, optimize));
-    lib.linkLibrary(libargon2(b, target, optimize));
-    lib.linkLibrary(libblake3(b, target, optimize));
-    lib.linkLibrary(libed25519(b, target, optimize));
-    lib.linkLibrary(libge_additions(b, target, optimize));
-    lib.linkLibrary(libkeccak_tiny(b, target, optimize));
-    lib.linkLibrary(libmonocypher(b, target, optimize));
-    lib.linkLibrary(libscrypt(b, target, optimize));
+    lib.linkLibrary(libsecp256k1(b, target, optimize, no_lto));
+    lib.linkLibrary(libargon2(b, target, optimize, no_lto));
+    lib.linkLibrary(libblake3(b, target, optimize, no_lto));
+    lib.linkLibrary(libed25519(b, target, optimize, no_lto));
+    lib.linkLibrary(libge_additions(b, target, optimize, no_lto));
+    lib.linkLibrary(libkeccak_tiny(b, target, optimize, no_lto));
+    lib.linkLibrary(libmonocypher(b, target, optimize, no_lto));
+    lib.linkLibrary(libscrypt(b, target, optimize, no_lto));
 
-    lib.linkLibrary(libaes_siv(b, target, optimize));
+    lib.linkLibrary(libaes_siv(b, target, optimize, no_lto));
     lib.linkLibrary(openssl.artifact("ssl"));
     lib.linkLibrary(openssl.artifact("crypto"));
 
@@ -74,15 +76,18 @@ fn libaes_siv(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const dep_c = b.dependency("aes_siv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
@@ -90,7 +95,7 @@ fn libaes_siv(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibrary(openssl.artifact("ssl"));
     lib.linkLibrary(openssl.artifact("crypto"));
 
@@ -123,6 +128,7 @@ fn libsecp256k1(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("secp256k1", .{
         .target = target,
@@ -134,7 +140,7 @@ fn libsecp256k1(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("src"));
@@ -189,6 +195,7 @@ fn libargon2(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -200,7 +207,7 @@ fn libargon2(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     const flags = .{
@@ -248,6 +255,7 @@ fn libblake3(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const t = target.result;
 
@@ -261,7 +269,7 @@ fn libblake3(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     const common_files = .{
@@ -321,6 +329,7 @@ fn libed25519(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -332,7 +341,7 @@ fn libed25519(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("ed25519/src"));
@@ -370,6 +379,7 @@ fn libge_additions(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -381,7 +391,7 @@ fn libge_additions(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("ed25519/src"));
@@ -408,6 +418,7 @@ fn libkeccak_tiny(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -419,7 +430,7 @@ fn libkeccak_tiny(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("keccak-tiny"));
@@ -447,6 +458,7 @@ fn libmonocypher(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -458,7 +470,7 @@ fn libmonocypher(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("monocypher"));
@@ -482,6 +494,7 @@ fn libscrypt(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const dep_c = b.dependency("urcrypt", .{
         .target = target,
@@ -493,7 +506,7 @@ fn libscrypt(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.lto = if (optimize != .Debug) .full else null;
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.linkLibC();
 
     lib.addIncludePath(dep_c.path("scrypt"));
