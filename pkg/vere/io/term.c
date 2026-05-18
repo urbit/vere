@@ -1454,7 +1454,7 @@ u3_term_io_hija(void)
 {
   u3_utty* uty_u = _term_main();
 
-  if ( uty_u && uty_u->tat_u.siz.row_l ) {
+  if ( uty_u && uty_u->tat_u.siz.row_l && u3_nul != uty_u->tat_u.mir.lin ) {
     if ( uty_u->fid_i > 2 ) {
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
@@ -1485,7 +1485,7 @@ u3_term_io_loja(int x, FILE* f)
 {
   u3_utty* uty_u = _term_main();
 
-  if ( uty_u && uty_u->tat_u.siz.row_l ) {
+  if ( uty_u && uty_u->tat_u.siz.row_l && u3_nul != uty_u->tat_u.mir.lin ) {
     if ( uty_u->fid_i > 2 ) {
       //  We *should* in fact, produce some kind of fake FILE* for
       //  non-console terminals.  If we use this interface enough...
