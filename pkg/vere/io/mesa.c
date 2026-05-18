@@ -2647,7 +2647,6 @@ static void _mesa_clear_pit(uv_timer_t *tim_u)
 u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
-  u3l_log("mesa: INIT");
   arena par_u     = arena_create(67108864);
   u3_mesa* sam_u  = new(&par_u, u3_mesa, 1);
   sam_u->par_u    = par_u;
