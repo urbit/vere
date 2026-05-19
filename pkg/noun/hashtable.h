@@ -39,9 +39,12 @@
         typedef c3_d u3h_slot_d;
 
       /* u3h_node_{h,d}: map node.
+      **
+      ** NB: `map_h` widens to c3_d on VERE64 so the trailing slot array is
+      ** naturally 8-byte aligned, but only the low 32 bits are ever used.
       */
 #define U3H_NODE_BODY(S)                       \
-  c3_h                  map_h;                 \
+  U3_W(S)               map_h;                 \
   U3_PASTE(u3h_slot, S) sot_w[];
 
         U3_DEFINE_PAIR(u3h_node, U3H_NODE_BODY);
@@ -63,7 +66,7 @@
       /* u3h_buck_{h,d}: bottom bucket.
       */
 #define U3H_BUCK_BODY(S)                       \
-  c3_h                  len_h;                 \
+  U3_W(S)               len_h;                 \
   U3_PASTE(u3h_slot, S) sot_w[];
 
         U3_DEFINE_PAIR(u3h_buck, U3H_BUCK_BODY);
