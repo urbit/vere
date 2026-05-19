@@ -84,11 +84,7 @@
     */
 #     define u3a_page_h    12ULL
 #     define u3a_page_d    11ULL
-#ifndef VERE64
-#     define u3a_page    u3a_page_h
-#else
-#     define u3a_page    u3a_page_d
-#endif
+#     define u3a_page      U3_NATIVE(u3a_page)
 
     /* u3a_pages: maximum number of pages in memory.
     */
@@ -121,17 +117,17 @@
 
     /* u3a_min_log: log2(u3a_minimum)
     */
-#ifndef VERE64
-#     define u3a_min_log  (c3_w)2
-#else
-#     define u3a_min_log  (c3_w)1
-#endif
+#     define u3a_min_log_h  (c3_w)2
+#     define u3a_min_log_d  (c3_w)1
+#     define u3a_min_log    U3_NATIVE(u3a_min_log)
 
 // XX: add static asserts for u3a_minimum, u3a_min_log, and u3a_cell (probably u3a_atom too?)
 
-    /* u3a_crag_no: number of hunk (small allocation) sizes
+    /* u3a_crag_no: number of hunk (small allocation) sizes.
     */
-#     define u3a_crag_no  (u3a_page - u3a_min_log)
+#     define u3a_crag_no_h  (u3a_page_h - u3a_min_log_h)
+#     define u3a_crag_no_d  (u3a_page_d - u3a_min_log_d)
+#     define u3a_crag_no    U3_NATIVE(u3a_crag_no)
 
     /* page table constants
     */
@@ -156,9 +152,6 @@
     ** are declared unconditionally; native u3a_atom / u3a_cell / u3a_road
     ** typedef-alias the matching bitness.
     */
-#     define  u3a_crag_no_h  10u
-#     define  u3a_crag_no_d  10u
-
 #     define  _ce_len_h(i)        ((size_t)(i) << (u3a_page_h + u3a_half_bytes_shift))
 #     define  _ce_len_words_h(i)  ((size_t)(i) << u3a_page_h)
 #     define  _ce_page_h          _ce_len_h(1)
