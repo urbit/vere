@@ -3,7 +3,11 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
 
     const openssl = b.dependency("openssl", .{
         .target = target,

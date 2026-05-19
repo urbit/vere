@@ -13,7 +13,11 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    const no_lto = b.option(bool, "no_lto", "") orelse @panic("no_lto flag missing in config struct");
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
     exe.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     exe.addIncludePath(b.path("include"));
