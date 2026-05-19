@@ -1266,7 +1266,8 @@ u3t_sstack_pop()
   if ( 0 < u3t_Spin->fow_w ) {
     u3t_Spin->fow_w--;
   } else {
-    c3_w len_w = (c3_w) u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)];
+    c3_w len_w;
+    memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)], sizeof(c3_w));
     u3t_Spin->off_w -= (len_w+sizeof(c3_w));
   }
 }
