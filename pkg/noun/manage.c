@@ -315,8 +315,8 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
   u3H->rod_u.bug.tax = 0;
 
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3H->rod_u.off_w;
-    u3t_Spin->fow_w = u3H->rod_u.fow_w;
+    u3t_Spin->off_h = u3H->rod_u.off_h;
+    u3t_Spin->fow_h = u3H->rod_u.fow_h;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
@@ -1004,8 +1004,8 @@ u3m_bail(u3_noun how)
 
   // Reset the spin stack pointer
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
+    u3t_Spin->off_h = u3R->off_h;
+    u3t_Spin->fow_h = u3R->fow_h;
   }
 
 #ifndef VERE64
@@ -1145,9 +1145,9 @@ u3m_leap(c3_w pad_w)
 
   // Stash slow stack pointer
   if ( NULL != u3t_Spin ) {
-    u3R->off_w = u3t_Spin->off_w;
-    u3R->fow_w = u3t_Spin->fow_w;
-  } 
+    u3R->off_h = u3t_Spin->off_h;
+    u3R->fow_h = u3t_Spin->fow_h;
+  }
 
   /* Set up the new road.
   */
@@ -1380,8 +1380,8 @@ u3m_love(u3_noun pro)
 
   // restore slow stack pointer
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
+    u3t_Spin->off_h = u3R->off_h;
+    u3t_Spin->fow_h = u3R->fow_h;
   }
 
   //  copy product and caches off our stack

@@ -1174,8 +1174,8 @@ u3t_sstack_init()
   }
 #endif
 
-  u3t_Spin->off_w = 0;
-  u3t_Spin->fow_w = 0;
+  u3t_Spin->off_h = 0;
+  u3t_Spin->fow_h = 0;
   u3t_sstack_push(c3__root);
 }
 
@@ -1246,17 +1246,17 @@ u3t_sstack_push(u3_noun nam)
   c3_h met_h = (c3_h)met_w;
   
   // Exit if full
-  if ( 0 < u3t_Spin->fow_w || 
-       sizeof(u3t_Spin->dat_y) < u3t_Spin->off_w + met_h + sizeof(c3_h) ) {
-    u3t_Spin->fow_w++;
+  if ( 0 < u3t_Spin->fow_h ||
+       sizeof(u3t_Spin->dat_y) < u3t_Spin->off_h + met_h + sizeof(c3_h) ) {
+    u3t_Spin->fow_h++;
     return;
   }
 
-  u3r_bytes(0, met_h, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_w), nam);
-  u3t_Spin->off_w += met_h;
+  u3r_bytes(0, met_h, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_h), nam);
+  u3t_Spin->off_h += met_h;
 
-  memcpy(&u3t_Spin->dat_y[u3t_Spin->off_w], &met_h, sizeof(c3_h));
-  u3t_Spin->off_w += sizeof(c3_h);
+  memcpy(&u3t_Spin->dat_y[u3t_Spin->off_h], &met_h, sizeof(c3_h));
+  u3t_Spin->off_h += sizeof(c3_h);
   u3z(nam);
 }
 
@@ -1266,11 +1266,11 @@ void
 u3t_sstack_pop()
 {
   if (  !u3t_Spin ) return;
-  if ( 0 < u3t_Spin->fow_w ) {
-    u3t_Spin->fow_w--;
+  if ( 0 < u3t_Spin->fow_h ) {
+    u3t_Spin->fow_h--;
   } else {
-    c3_h len_h = (c3_h) u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_h)];
-    u3t_Spin->off_w -= (len_h+sizeof(c3_h));
+    c3_h len_h = (c3_h) u3t_Spin->dat_y[u3t_Spin->off_h - sizeof(c3_h)];
+    u3t_Spin->off_h -= (len_h+sizeof(c3_h));
   }
 }
 

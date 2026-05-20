@@ -2906,36 +2906,36 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
     c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
     if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_w;
+    c3_h pos_h      = stk_u->off_h;
     c3_w out_w      = 0;
 
-    while (pos_w > 4) {
-      c3_w  len_w;
-      pos_w -=4;
+    while (pos_h > sizeof(c3_h)) {
+      c3_h  len_h;
+      pos_h -= sizeof(c3_h);
 
-      if ( siz_w < out_w + 4 ) {
+      if ( siz_w < out_w + sizeof(c3_h) ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
          siz_w *= 2;
       }
 
-      memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
-      pos_w -= len_w;
+      memcpy(&len_h, &stk_u->dat_y[pos_h], sizeof(c3_h));
+      pos_h -= len_h;
 
       if ( siz_w < out_w + 4 ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
       }
       buf_c[out_w++] = '/';
 
-      if ( siz_w < out_w + len_w ) {
+      if ( siz_w < out_w + len_h ) {
          buf_c = c3_realloc(buf_c, siz_w*2);
       }
 
-      memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
-      out_w += len_w;
+      memcpy(buf_c + out_w, &stk_u->dat_y[pos_h], len_h);
+      out_w += len_h;
     }
     buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
+    if ( 0 != stk_u->off_h ) {
       u3_noun tan = u3i_string(buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,

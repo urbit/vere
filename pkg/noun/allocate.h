@@ -268,8 +268,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_W(S) rut_p;                                      \
   U3_W(S) ear_p;                                      \
                                                       \
-  U3_W(S) off_w;                                      \
-  U3_W(S) fow_w;                                      \
+  c3_h    off_h;                                      \
+  c3_h    fow_h;                                      \
   U3_W(S) lop_p;                                      \
   U3_N(S) tim;                                        \
                                                       \
