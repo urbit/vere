@@ -559,7 +559,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       } else {
         // Trying to boot old ship after breach
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "you are trying to boot an existing ship from a keyfile,"
+                "you are trying to boot an existing ship from a keyfile, "
                 "resume the latest version of the ship or breach\r\n"
                 "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                 who_c);
@@ -707,8 +707,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  409
-#define VERE_LULL  321
+#define VERE_ZUSE  408
+#define VERE_LULL  320
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -836,8 +836,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 235),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 136),        //  god_u->hon_y
+                     u3nc(c3__arvo, 234),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 135),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
@@ -1152,13 +1152,13 @@ u3_pier_save(u3_pier* pir_u)
 /* u3_pier_meld(): globally deduplicate persistent state.
 */
 void
-u3_pier_meld(u3_pier* pir_u)
+u3_pier_meld(u3_pier* pir_u, u3_noun dat)
 {
 #ifdef VERBOSE_PIER
   fprintf(stderr, "pier: (%" PRIu64 "): meld: plan\r\n", pir_u->god_u->eve_d);
 #endif
 
-  u3_lord_meld(pir_u->god_u);
+  u3_lord_meld(pir_u->god_u, dat);
 }
 
 /* u3_pier_pack(): defragment persistent state.

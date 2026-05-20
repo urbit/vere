@@ -15,22 +15,6 @@
 */
 #define BIT_SET(a_w, b_w) ((a_w) & ((c3_w)1 << (b_w)))
 
-/* asserting noun deconstruction to make sure HAMTs are bail-safe
-*/
-static inline u3_noun
-_h_need(u3_noun som)
-{
-  u3_assert( _(u3a_is_cell(som)) );
-  return ((u3a_cell *)u3a_to_ptr(som))->hed;
-}
-
-static inline u3_noun
-_t_need(u3_noun som)
-{
-  u3_assert( _(u3a_is_cell(som)) );
-  return ((u3a_cell *)u3a_to_ptr(som))->tel;
-}
-
 static u3_weak
 _ch_trim_slot(u3h_root* har_u, u3h_slot *sot_w, c3_w lef_w, c3_w rem_w);
 
@@ -151,7 +135,7 @@ _ch_buck_add(u3h_buck* hab_u, u3_noun kev, c3_w *use_w)
   //
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun kov = u3h_slot_to_noun(hab_u->sot_w[i_w]);
-    if ( c3y == u3r_sing(_h_need(kev), _h_need(kov)) ) {
+    if ( c3y == u3r_sing(u3h(kev), u3h(kov)) ) {
       hab_u->sot_w[i_w] = u3h_noun_to_slot(kev);
       u3z(kov);
       return hab_u;
@@ -249,13 +233,13 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
   else {
     u3_noun  kov   = u3h_slot_to_noun(*sot_w);
     u3h_slot add_w = u3h_noun_be_warm(u3h_noun_to_slot(kev));
-    if ( c3y == u3r_sing(_h_need(kev), _h_need(kov)) ) {
+    if ( c3y == u3r_sing(u3h(kev), u3h(kov)) ) {
       // replace old value
       u3z(kov);
       *sot_w = add_w;
     }
     else {
-      c3_w ham_w = CUT_END(u3r_mug(_h_need(kov)), lef_w);
+      c3_w ham_w = CUT_END(u3r_mug(u3h(kov)), lef_w);
       *sot_w     = _ch_two(*sot_w, add_w, lef_w, ham_w, rem_w);
       *use_w    += 1;
     }
@@ -325,7 +309,7 @@ _ch_buck_del(u3h_slot* sot_w, u3_noun key)
   //
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun kov = u3h_slot_to_noun(hab_u->sot_w[i_w]);
-    if ( c3y == u3r_sing(key, _h_need(kov)) ) {
+    if ( c3y == u3r_sing(key, u3h(kov)) ) {
       fin_w = i_w;
       u3z(kov);
       break;
@@ -462,7 +446,7 @@ _ch_uni_with(u3_noun kev, void* wit)
 {
   u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
   u3_noun key, val;
-  u3_assert(c3y == u3r_cell(kev, &key, &val));
+  u3x_cell(kev, &key, &val);
 
   u3h_put(har_p, key, u3k(val));
 }
@@ -490,7 +474,7 @@ _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_w lef_w, c3_w rem_w)
 
   if ( !BIT_SET(map_w, bit_w) ) {
     har_u->arm_u.mug_w = _ch_skip_slot(har_u->arm_u.mug_w, lef_w);
-    return c3n;
+    return u3_none;
   }
 
   rem_w = CUT_END(rem_w, lef_w);
@@ -666,7 +650,7 @@ _ch_buck_hum(u3h_buck* hab_u, c3_w mug_w)
   c3_w i_w;
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
-    if ( mug_w == u3r_mug(_h_need(u3h_slot_to_noun(hab_u->sot_w[i_w]))) ) {
+    if ( mug_w == u3r_mug(u3h(u3h_slot_to_noun(hab_u->sot_w[i_w]))) ) {
       return c3y;
     }
   }
@@ -695,7 +679,7 @@ _ch_node_hum(u3h_node* han_u, c3_w lef_w, c3_w rem_w, c3_w mug_w)
     if ( _(u3h_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_slot_to_noun(sot_w);
 
-      if ( mug_w == u3r_mug(_h_need(kev)) ) {
+      if ( mug_w == u3r_mug(u3h(kev)) ) {
         return c3y;
       }
       else {
@@ -731,7 +715,7 @@ u3h_hum(u3p(u3h_root) har_p, c3_w mug_w)
   else if ( _(u3h_slot_is_noun(sot_w)) ) {
     u3_noun kev = u3h_slot_to_noun(sot_w);
 
-    if ( mug_w == u3r_mug(_h_need(kev)) ) {
+    if ( mug_w == u3r_mug(u3h(kev)) ) {
       return c3y;
     }
     else {
@@ -754,8 +738,8 @@ _ch_buck_git(u3h_buck* hab_u, u3_noun key)
 
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun kev = u3h_slot_to_noun(hab_u->sot_w[i_w]);
-    if ( _(u3r_sing(key, _h_need(kev))) ) {
-      return _t_need(kev);
+    if ( _(u3r_sing(key, u3h(kev))) ) {
+      return u3t(kev);
     }
   }
   return u3_none;
@@ -783,8 +767,8 @@ _ch_node_git(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun key)
     if ( _(u3h_slot_is_noun(sot_w)) ) {
       u3_noun kev = u3h_slot_to_noun(sot_w);
 
-      if ( _(u3r_sing(key, _h_need(kev))) ) {
-        return _t_need(kev);
+      if ( _(u3r_sing(key, u3h(kev))) ) {
+        return u3t(kev);
       }
       else {
         return u3_none;
@@ -820,9 +804,9 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
   else if ( _(u3h_slot_is_noun(sot_w)) ) {
     u3_noun kev = u3h_slot_to_noun(sot_w);
 
-    if ( _(u3r_sing(key, _h_need(kev))) ) {
+    if ( _(u3r_sing(key, u3h(kev))) ) {
       har_u->sot_w[inx_w] = u3h_noun_be_warm(sot_w);
-      return _t_need(kev);
+      return u3t(kev);
     }
     else {
       return u3_none;
@@ -1007,8 +991,8 @@ static u3h_slot
 _ch_take_noun(u3h_slot sot_w, u3_funk fun_f)
 {
   u3_noun kov = u3h_slot_to_noun(sot_w);
-  u3_noun kev = u3nc(u3a_take(_h_need(kov)),
-                     fun_f(_t_need(kov)));
+  u3_noun kev = u3nc(u3a_take(u3h(kov)),
+                     fun_f(u3t(kov)));
 
   return u3h_noun_to_slot(kev);
 }

@@ -664,12 +664,18 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     case c3__urth: {
       switch (dat) {
         default: {
+          u3_noun p;
+          if ( c3y == u3r_p(dat, c3__meld, &p) ) {
+            _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
+            u3_pier_meld(con_u->car_u.pir_u, u3k(p));
+            break;
+          }
           err_i = -7; err_c = "urth-bad";
           goto _moor_poke_out;
         } break;
         case c3__meld: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
-          u3_pier_meld(con_u->car_u.pir_u);
+          u3_pier_meld(con_u->car_u.pir_u, u3_nul);
         } break;
         case c3__pack: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
@@ -704,6 +710,7 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _conn_moor_poke;
   can_u->mor_u.bal_f = _conn_moor_bail;
+  can_u->mor_u.fag_w = 1; // XX cleanup, nonzero means ignore EOF
   can_u->coq_l = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
@@ -866,6 +873,10 @@ _conn_ef_handle(u3_conn*  con_u,
     else {
       can_u->mor_u.bal_f(can_u, -4, "handle-unknown");
       u3_king_bail();
+    }
+
+    if ( !uv_is_readable((uv_stream_t*)&con_u->san_u->pyp_u) ) {
+      _conn_close_chan(con_u->san_u, can_u);
     }
   }
   else {

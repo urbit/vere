@@ -769,14 +769,14 @@ u3_lord_save(u3_lord* god_u)
 /* u3_lord_meld(): globally deduplicate persistent state.
 */
 void
-u3_lord_meld(u3_lord* god_u)
+u3_lord_meld(u3_lord* god_u, u3_noun dat)
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_live;
 
   //  XX set callback
   //
-  _lord_send(god_u, u3nt(c3__live, c3__meld, u3_nul));
+  _lord_send(god_u, u3nt(c3__live, c3__meld, dat));
 }
 
 /* u3_lord_pack(): defragment persistent state.

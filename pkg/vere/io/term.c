@@ -1038,6 +1038,11 @@ u3_term_get_blew(c3_l tid_l)
   if ( (c3n == u3_Host.ops_u.tem) && uty_u &&
        (c3y == uty_u->wsz_f(uty_u, &col_l, &row_l)) )
   {
+    //  clamp to defaults if ioctl returns zero
+    //  (e.g. Docker PTY with no attached reader)
+    //
+    if ( 0 == col_l ) { col_l = 80; }
+    if ( 0 == row_l ) { row_l = 24; }
     uty_u->tat_u.siz.col_l = col_l;
     uty_u->tat_u.siz.row_l = row_l;
   }
@@ -1740,7 +1745,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
         case c3__meld: {
           ret_o = c3y;
-          u3_pier_meld(car_u->pir_u);
+          u3_pier_meld(car_u->pir_u, u3k(dat));
         } break;
 
         case c3__pack: {

@@ -81,8 +81,16 @@
 
     /* Min and max.
     */
-#     define c3_max(x, y) ( ((x) > (y)) ? (x) : (y) )
-#     define c3_min(x, y) ( ((x) < (y)) ? (x) : (y) )
+#     define c3_max(x, y) ({  \
+        typeof(x) _x = x;     \
+        typeof(y) _y = y;     \
+        (_x > _y) ? _x : _y;  \
+      })
+#     define c3_min(x, y) ({  \
+        typeof(x) _x = x;     \
+        typeof(y) _y = y;     \
+        (_x < _y) ? _x : _y;  \
+      })
 
 
 //! Round up/down (respectively).
@@ -282,5 +290,7 @@ c3_align_p(void const * p, size_t al, align_dir hilo) {
 
 #define c3_likely(x)    ( __builtin_expect(!!(x), 1) )
 #define c3_unlikely(x)  ( __builtin_expect(!!(x), 0) )
+
+#define c3_array_len(arr)  ( sizeof(arr) / sizeof(arr[0]) )
 
 #endif /* ifndef C3_DEFS_H */

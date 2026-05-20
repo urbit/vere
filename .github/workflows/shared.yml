@@ -74,7 +74,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.1
+          version: 0.15.2
 
       - name: Build binaries
         run: |
@@ -116,6 +116,7 @@ jobs:
             -Dmem-dbg                  \
             -Dc3dbg                    \
             -Dsnapshot-validation      \
+            -Durth-mass                \
             --summary all
 
       - name: Boot fake ship

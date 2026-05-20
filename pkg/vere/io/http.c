@@ -1400,7 +1400,7 @@ _http_start_respond(u3_hreq* req_u,
     }
     else {
       h2o_add_header_by_str(&rec_u->pool, &rec_u->res.headers,
-                            hed_u->nam_c, hed_u->nam_w, 0, 0,
+                            hed_u->nam_c, hed_u->nam_w, 1, 0,
                             hed_u->val_c, hed_u->val_w);
     }
 
@@ -2185,6 +2185,17 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
   h2o_u->cep_u.hosts = h2o_u->fig_u.hosts;
   h2o_u->cep_u.ssl_ctx = tls_u;
 
+  //  register compression filter first
+  //
+  {
+    h2o_compress_args_t com_u;
+    memset(&com_u, 0, sizeof(com_u));
+    com_u.min_size = 128;
+    com_u.gzip.quality = 6;
+    com_u.brotli.quality = 5;
+    h2o_compress_register(&h2o_u->hos_u->fallback_path, &com_u);
+  }
+
   h2o_u->han_u = h2o_create_handler(&h2o_u->hos_u->fallback_path,
                                     sizeof(*h2o_u->han_u));
   if ( c3y == red ) {
@@ -2248,8 +2259,6 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     u3z(now);
 #endif
   }
-
-  // XX h2o_compress_register
 
   h2o_context_init(&h2o_u->ctx_u, u3L, &h2o_u->fig_u);
 
@@ -2316,6 +2325,16 @@ _http_serv_start(u3_http* htp_u)
             }
           }
         }
+
+        // Libuv defers uv_bind EADDRINUSE on windows to a per-handle
+        // delayed_error struct field that gets returned in uv_listen.
+
+        // This field never gets cleared, and regenerating the handle here
+        // involves adding asynchronicity with uv_close, instead we muck
+        // around with the handle internals to get what we want, see also
+        // https://github.com/libuv/libuv/issues/5125.
+
+        ((uv_tcp_t*)&htp_u->wax_u)->delayed_error = 0;
 
         continue;
       }
@@ -2727,13 +2746,11 @@ _http_io_talk(u3_auto* car_u)
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
   //Setup spin stack
-#ifndef U3_OS_windows
   htd_u->stk_u = u3t_sstack_open();
   
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");
   }
-#endif
 
   //  XX set liv_o on done/swap?
   //

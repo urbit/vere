@@ -9,10 +9,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const tracy = b.addStaticLibrary(.{
+    const tracy = b.addLibrary(.{
         .name = "tracy",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
     tracy.linkLibC();
