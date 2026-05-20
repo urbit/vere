@@ -1967,7 +1967,6 @@ _get_peer_lanes(u3_mesa* sam_u, u3_peer* per_u)
                   u3dc("scot", 'p', her),
                   u3i_string("lanes"),
                   u3_nul);
-  u3m_p("pax", pax);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
 }
 
@@ -2649,7 +2648,6 @@ static void _mesa_clear_pit(uv_timer_t *tim_u)
 u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
-  u3l_log("mesa: INIT");
   arena par_u     = arena_create(67108864);
   u3_mesa* sam_u  = new(&par_u, u3_mesa, 1);
   sam_u->par_u    = par_u;

@@ -2331,51 +2331,6 @@ _ames_io_start(u3_ames* sam_u)
     }
   }
 
-  //  Bind and stuff.
-  {
-    struct sockaddr_in add_u;
-    c3_i               add_i = sizeof(add_u);
-
-    memset(&add_u, 0, sizeof(add_u));
-    add_u.sin_family = AF_INET;
-    add_u.sin_addr.s_addr = _(u3_Host.ops_u.net) ?
-                              htonl(INADDR_ANY) :
-                              htonl(INADDR_LOOPBACK);
-    add_u.sin_port = htons(por_s);
-    u3l_log("ames: skipping port: %u", por_s);
-
-    /*if ( (ret_i = uv_udp_bind(&sam_u->wax_u,
-                              (const struct sockaddr*)&add_u, 0)) != 0 )
-    {
-      u3l_log("ames: port: %u", por_s);
-      u3l_log("ames: bind: %s", uv_strerror(ret_i));
-
-      if ( (c3y == zar_o) &&
-           (UV_EADDRINUSE == ret_i) )
-      {
-        u3l_log("    ...perhaps you've got two copies of vere running?");
-      }
-
-      //  XX revise
-      //
-      u3_pier_bail(u3_king_stub());
-      }*/
-
-    /*
-      uv_udp_getsockname(&sam_u->wax_u, (struct sockaddr *)&add_u, &add_i);
-      u3_assert(add_u.sin_port);
-
-      sam_u->pir_u->por_s = ntohs(add_u.sin_port);
-    */
-  }
-
-  if ( c3y == u3_Host.ops_u.net ) {
-    u3l_log("ames: live on %d", sam_u->pir_u->por_s);
-  }
-  else {
-    u3l_log("ames: live on %d (localhost only)", sam_u->pir_u->por_s);
-  }
-
   {
     u3_noun our = u3dc("scot", 'p', u3k(who));
     char* our_s = u3r_string(our);
@@ -2390,10 +2345,6 @@ _ames_io_start(u3_ames* sam_u)
 #endif
     c3_free(our_s);
   }
-
-  /*
-  uv_udp_recv_start(&sam_u->wax_u, _ames_alloc, _ames_recv_cb);
-  */
 
   sam_u->car_u.liv_o = c3y;
   u3z(who);
