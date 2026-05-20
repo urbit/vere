@@ -1950,6 +1950,11 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   //
   switch ( ver_h ) {
     case U3E_VER1: {
+      if ( u3C.wag_h & u3o_no_migrate ) {
+        //  --no-migrate: keep epoch at its existing version; no loom rewrite
+        u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
+        return _epoc_good;
+      }
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
@@ -1994,7 +1999,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       //  detect a 32-bit loom in chk and migrate it to 64-bit
       //  before loading into the main loom; pam_d word-size bit 0 means 32-bit
       //
-      {
+      if ( !(u3C.wag_h & u3o_no_migrate) ) {
         c3_c img_c[8193];
         snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
 
@@ -2014,7 +2019,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       //  detect a 64-bit loom in chk and migrate it back to 32-bit
       //  before loading into the main loom; pam_d word-size bit 1 means 64-bit
       //
-      {
+      if ( !(u3C.wag_h & u3o_no_migrate) ) {
         c3_c img_c[8193];
         snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
 
@@ -2242,6 +2247,21 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return 0;
     }
     else if ( U3D_VERLAT > log_u->ver_h ) {
+      if ( u3C.wag_h & u3o_no_migrate ) {
+        //  --no-migrate: use flat-layout events in place; no epoch rollover.
+        //  Same path for both replay (u3_dlod_epoc) and boot (u3_dlod_last);
+        //  caller is responsible for managing .urb/chk contents.
+        c3_d fir_d, las_d;
+        if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+          fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+          exit(1);
+        }
+        log_u->sen_d = log_u->dun_d = las_d;
+        log_u->epo_d = 0;
+        u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
+        log_u->liv_o = c3y;
+        return log_u;
+      }
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);

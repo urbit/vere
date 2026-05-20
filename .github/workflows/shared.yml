@@ -296,6 +296,16 @@ jobs:
           VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
         run: ./tests/fixtures/test-legacy.sh
 
+      - name: Run yolo-replay tests (32-bit)
+        env:
+          VERE_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./tests/fixtures/test-yolo-replay.sh
+
+      - name: Run yolo-replay tests (64-bit)
+        env:
+          VERE_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
+        run: ./tests/fixtures/test-yolo-replay.sh
+
   upload-version-string:
     name: Upload latest deployed version string to GCP
     runs-on: ubuntu-latest

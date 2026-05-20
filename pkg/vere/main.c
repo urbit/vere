@@ -331,6 +331,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "serf-bin",            required_argument, NULL, 11 },
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "gc-abort",            no_argument,       NULL, 13 },
+    { "no-migrate",          no_argument,       NULL, 14 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -388,6 +389,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 13: {
         u3_Host.ops_u.gab_abort = c3y;
         u3_Host.ops_u.gab = c3y;
+        break;
+      }
+      case 14: {  //  no-migrate
+        u3C.wag_h |= u3o_no_migrate;
         break;
       }
       //  special args
@@ -2296,6 +2301,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "replay-to",         required_argument, NULL, 'n' },
     { "snap-at",           required_argument, NULL, 's' },
     { "yolo",              no_argument,       NULL, 'y' },
+    { "no-migrate",        no_argument,       NULL, 10 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2350,6 +2356,10 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 'y': {
         u3C.wag_h |= u3o_yolo;
+      } break;
+
+      case 10: {  //  no-migrate
+        u3C.wag_h |= u3o_no_migrate;
       } break;
 
       case '?': {
