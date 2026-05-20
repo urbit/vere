@@ -1966,7 +1966,6 @@ _get_peer_lanes(u3_mesa* sam_u, u3_peer* per_u)
                   u3dc("scot", 'p', her),
                   u3i_string("lanes"),
                   u3_nul);
-  u3m_p("pax", pax);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
 }
 
