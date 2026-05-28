@@ -253,6 +253,11 @@ _ca_bump(c3_w len_w)
   len_w +=   (1U << u3a_min_log) - 1;
   len_w &= ~((1U << u3a_min_log) - 1);
 
+  //  XX: branch-free version
+  //
+  // pot_p  = u3R->hat_p + (u3R->hep.off_ws * (c3_ws)len_w);
+  // u3R->hat_p += u3R->hep.dir_ws * (c3_ws)len_w;
+
   if ( c3y == u3a_is_north(u3R) ) {
     pot_p       = u3R->hat_p;
     u3R->hat_p += len_w;
