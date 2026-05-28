@@ -86,7 +86,23 @@ u3a_init_once(void)
 void
 u3a_init_heap(void)
 {
-  _init_heap();
+  //  empty, page-aligned heap
+  //
+  u3_assert( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
+  u3_assert( u3R->hat_p == u3R->rut_p );
+
+  if ( c3y == u3a_is_north(u3R) ) {
+    u3R->hep.dir_ws = 1;
+    u3R->hep.off_ws = 0;
+  }
+  else {
+    u3R->hep.dir_ws = -1;
+    u3R->hep.off_ws = -1;
+  }
+
+  if ( !(u3R->how.fag_w & u3a_flag_sand) ) {
+    _init_heap();
+  }
 }
 
 void
@@ -229,11 +245,49 @@ _ca_reclaim_half(void)
 #endif
 }
 
+static void*
+_ca_bump(c3_w len_w)
+{
+  u3_post pot_p;
+
+  len_w +=   (1U << u3a_min_log) - 1;
+  len_w &= ~((1U << u3a_min_log) - 1);
+
+  if ( c3y == u3a_is_north(u3R) ) {
+    pot_p       = u3R->hat_p;
+    u3R->hat_p += len_w;
+
+#ifndef U3_GUARD_PAGE
+    if ( u3R->hat_p >= u3R->cap_p ) {
+      u3m_bail(c3__meme);
+    }
+#endif
+  }
+  else {
+    u3R->hat_p -= len_w;
+    pot_p       = u3R->hat_p;
+
+#ifndef U3_GUARD_PAGE
+    if ( u3R->cap_p >= u3R->hat_p ) {
+      u3m_bail(c3__meme);
+    }
+#endif
+  }
+
+  c3_dessert( !(pot_p & ((1U << u3a_min_log) - 1)) );
+
+  return u3a_into(pot_p);
+}
+
 /* u3a_walloc(): allocate storage words on hat heap.
 */
 void*
 u3a_walloc(c3_w len_w)
 {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return _ca_bump(len_w);
+  }
+
   return u3a_into(_imalloc(len_w));
 }
 
@@ -242,12 +296,18 @@ u3a_walloc(c3_w len_w)
 void*
 u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 {
-  (void)old_w;
-
   if ( !lag_v ) {
+    (void)old_w;
     return u3a_walloc(len_w);
   }
 
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    void* new_v = _ca_bump(len_w);
+    memcpy(new_v, lag_v, (c3_z)c3_min(old_w, len_w) << 2);
+    return new_v;
+  }
+
+  (void)old_w;
   return u3a_into(_irealloc(u3a_outa(lag_v), len_w));
 }
 
@@ -275,6 +335,10 @@ u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
 void
 u3a_wfree(void* tox_v)
 {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return;
+  }
+
   if ( tox_v ) {
     _ifree(u3a_outa(tox_v));
   }
@@ -346,6 +410,10 @@ u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z)
 void
 u3a_free(void* tox_v)
 {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return;
+  }
+
   u3a_wfree((c3_w*)tox_v);
 }
 
@@ -357,7 +425,10 @@ u3a_celloc(void)
   u3a_cell *cel_u;
   u3_post  *cel_p;
 
-  if ( u3R->cel.cel_p ) {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    cel_u = _ca_bump(c3_wiseof(*cel_u));
+  }
+  else if ( u3R->cel.cel_p ) {
     cel_p = u3to(u3_post, u3R->cel.cel_p);
 
     if ( !u3R->cel.hav_w ) {
@@ -386,7 +457,10 @@ u3a_cfree(c3_w* cel_w)
 {
   u3_post *cel_p;
 
-  if ( u3R->cel.cel_p ) {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return;
+  }
+  else if ( u3R->cel.cel_p ) {
     if ( u3R->cel.hav_w < (1U << u3a_page) ) {
       cel_p = u3to(u3_post, u3R->cel.cel_p);
       cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
@@ -939,6 +1013,10 @@ top:
 u3_noun
 u3a_gain(u3_noun som)
 {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return som;
+  }
+
   u3t_on(mal_o);
   u3_assert(u3_none != som);
 
@@ -957,6 +1035,10 @@ u3a_gain(u3_noun som)
 void
 u3a_lose(u3_noun som)
 {
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    return;
+  }
+
   u3t_on(mal_o);
   if ( !_(u3a_is_cat(som)) ) {
     if ( _(u3a_is_north(u3R)) ) {

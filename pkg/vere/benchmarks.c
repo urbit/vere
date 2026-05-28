@@ -12,7 +12,7 @@
 static void
 _setup(void)
 {
-  u3m_boot_lite(1 << 24);
+  u3m_boot_lite(1 << 25);
 }
 
 /* _bench_ns(): monotonic timestamp in nanoseconds.

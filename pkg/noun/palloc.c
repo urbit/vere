@@ -87,18 +87,7 @@ _init_heap(void)
 {
   u3p(u3a_crag) *dir_u;
 
-  if ( c3y == u3a_is_north(u3R) ) {
-    HEAP.dir_ws = 1;
-    HEAP.off_ws = 0;
-  }
-  else {
-    HEAP.dir_ws = -1;
-    HEAP.off_ws = -1;
-  }
-
-  assert( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
   assert( u3R->hat_p > u3a_rest_pg );
-  assert( u3R->hat_p == u3R->rut_p );
 
   //  XX check for overflow
 

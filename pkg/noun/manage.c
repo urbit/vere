@@ -503,7 +503,9 @@ _pave_parts(void)
 {
   u3a_init_heap();
 
-  if ( &(u3H->rod_u) != u3R ) {
+  if (  !(u3R->how.fag_w & u3a_flag_sand)
+     && (&(u3H->rod_u) != u3R) )
+  {
     u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
   }
 
@@ -517,7 +519,6 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
-  u3R->how.fag_w = 0;
 }
 
 static c3_d
@@ -1140,6 +1141,7 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
+    u3R->how.fag_w |= u3a_flag_sand;
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
