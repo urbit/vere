@@ -54,7 +54,7 @@ typedef enum u3_stun_state {
       uv_udp_t       wax_u;             //
       uv_handle_t    had_u;             //
     };                                  //
-    c3_m             sev_l;             //  instance number
+    c3_h             sev_h;             //  instance number
     ur_cue_test_t*   tes_u;             //  cue-test handle
     u3_cue_xeno*     sil_u;             //  cue handle
     c3_y             ver_y;             //  protocol version
@@ -114,7 +114,7 @@ typedef enum u3_stun_state {
     c3_y ver_y;                         //  protocol version
     c3_y sac_y;                         //  sender class
     c3_y rac_y;                         //  receiver class
-    c3_m mug_l;                         //  truncated mug hash of u3_body
+    c3_h mug_h;                         //  truncated mug hash of u3_body
     c3_o rel_o;                         //  relayed?
   } u3_head;
 
@@ -359,7 +359,7 @@ _ames_check_mug(u3_pact* pac_u)
   //          (mug_l & 0xfffff),
   //          (pac_u->hed_u.mug_l & 0xfffff));
   return (
-    ((mug_h & 0xfffff) == (pac_u->hed_u.mug_l & 0xfffff))
+    ((mug_h & 0xfffff) == (pac_u->hed_u.mug_h & 0xfffff))
     ? c3y : c3n);
 }
 
@@ -402,7 +402,7 @@ _ames_sift_head(u3_head* hed_u, c3_y buf_y[4])
   hed_u->ver_y = (hed_h >>  4) & 0x7;
   hed_u->sac_y = (hed_h >>  7) & 0x3;
   hed_u->rac_y = (hed_h >>  9) & 0x3;
-  hed_u->mug_l = (hed_h >> 11) & 0xfffff; // 20 bits
+  hed_u->mug_h = (hed_h >> 11) & 0xfffff; // 20 bits
   hed_u->rel_o = (hed_h >> 31) & 0x1;
 }
 
@@ -571,7 +571,7 @@ _ames_etch_head(u3_head* hed_u, c3_y buf_y[4])
              ^ ((hed_u->ver_y       &     0x7) <<  4)
              ^ ((hed_u->sac_y       &     0x3) <<  7)
              ^ ((hed_u->rac_y       &     0x3) <<  9)
-             ^ ((hed_u->mug_l       & 0xfffff) << 11)
+             ^ ((hed_u->mug_h       & 0xfffff) << 11)
              ^ (((c3_h)hed_u->rel_o &     0x1) << 31);
 
   c3_etch_half(buf_y, hed_h);
@@ -718,7 +718,7 @@ _fine_etch_response(u3_pact* pac_u)
   //  calculate mug and write header
   //
   rog_h = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
-  pac_u->hed_u.mug_l = u3r_mug_bytes(pac_u->hun_y + rog_h,
+  pac_u->hed_u.mug_h = u3r_mug_bytes(pac_u->hun_y + rog_h,
                                      pac_u->len_h - rog_h);
   _ames_etch_head(&pac_u->hed_u, pac_u->hun_y);
 
@@ -1831,7 +1831,7 @@ _fine_hear_request(u3_pact* req_u, c3_h cur_h)
       .ver_y = req_u->hed_u.ver_y,
       .sac_y = req_u->hed_u.rac_y,
       .rac_y = req_u->hed_u.sac_y,
-      .mug_l = 0,  //  filled in later
+      .mug_h = 0,  //  filled in later
       .rel_o = c3n
     };
 
@@ -2925,7 +2925,7 @@ u3_ames_io_init(u3_pier* pir_u)
     gettimeofday(&tim_u, 0);
 
     now = u3m_time_in_tv(&tim_u);
-    sam_u->sev_l = u3r_mug(now);
+    sam_u->sev_h = u3r_mug(now);
     u3z(now);
   }
 
