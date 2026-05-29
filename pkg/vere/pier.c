@@ -1364,6 +1364,9 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
     else if ( c3__leaf == u3h(tac) ) {
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
     }
+    else {
+      fprintf(fil_u, "pier: malformed tank\r\n");
+    }
   }
   else {
     u3_noun low = u3dc("(slum soft wash)", u3nc(tab_l, col_l), u3k(tac));
