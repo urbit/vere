@@ -28,7 +28,6 @@
 #include "jets/q.h"
 #include "log.h"
 #include "nock.h"
-#include "openssl/crypto.h"
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
@@ -2466,42 +2465,6 @@ _cm_signals(void)
 #endif
 }
 
-/* _cm_malloc_ssl(): openssl-shaped malloc
-*/
-static void*
-_cm_malloc_ssl(size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-               , const char* file, int line
-#endif
-               )
-{
-  return u3a_malloc(len_i);
-}
-
-/* _cm_realloc_ssl(): openssl-shaped realloc.
-*/
-static void*
-_cm_realloc_ssl(void* lag_v, size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-                , const char* file, int line
-#endif
-                )
-{
-  return u3a_realloc(lag_v, len_i);
-}
-
-/* _cm_free_ssl(): openssl-shaped free.
-*/
-static void
-_cm_free_ssl(void* tox_v
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-             , const char* file, int line
-#endif
-             )
-{
-  u3a_free(tox_v);
-}
-
 extern void u3je_secp_init(void);
 
 /* _cm_crypto(): initialize openssl and crypto jets.
@@ -2509,16 +2472,6 @@ extern void u3je_secp_init(void);
 static void
 _cm_crypto(void)
 {
-  /* Initialize OpenSSL with loom allocation functions. */
-#ifndef U3_URTH_MASS
-  if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
-                                     &_cm_realloc_ssl,
-                                     &_cm_free_ssl) ) {
-    u3l_log("%s", "openssl initialization failed");
-    abort();
-  }
-#endif
-
   u3je_secp_init();
 }
 
