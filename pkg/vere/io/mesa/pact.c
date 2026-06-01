@@ -182,7 +182,7 @@ log_name(u3_mesa_name* nam_u)
 static void
 _log_data(u3_mesa_data* dat_u)
 {
-  u3l_log("tob_d: %" PRIu64 "  len_w: %u  ",
+  u3l_log("tob_d: %" PRIu64 "  len_h: %u  ",
                   dat_u->tob_d, dat_u->len_h);
 
   switch ( dat_u->aut_u.typ_e ) {
@@ -914,7 +914,7 @@ mesa_etch_pact_to_buf(c3_y* buf_y, c3_h cap_h, u3_mesa_pact *pac_u) {
   #ifdef MESA_ROUNDTRIP
     u3_mesa_pact poc_u;
     u3_sifter sif_u;
-    sifter_init(&sif_u, ech_u.buf_y, ech_u.len_w);
+    sifter_init(&sif_u, ech_u.buf_y, ech_u.len_h);
     _mesa_sift_pact(&sif_u, &poc_u);
     if ( sif_u.rem_h && !sif_u.err_c ) {
       u3l_log("mesa: etch roundtrip failed: %u trailing bytes", sif_u.rem_h);
@@ -935,17 +935,22 @@ c3_c*
 mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_h len_h) {
   u3_sifter sif_u;
   sifter_init(&sif_u, buf_y, len_h);
+
+  if ( len_h > PACT_SIZE ) {
+    _sift_fail(&sif_u, "packet too large");
+  }
+
   _mesa_sift_pact(&sif_u, pac_u);
   if ( sif_u.rem_h && !sif_u.err_c ) {
     _sift_fail(&sif_u, "trailing bytes");
   }
 
   #ifdef MESA_ROUNDTRIP
-    c3_y* bof_y = c3_calloc(len_w);
+    c3_y* bof_y = c3_calloc(len_h);
     u3_etcher ech_u;
-    etcher_init(&ech_u, bof_y, len_w);
+    etcher_init(&ech_u, bof_y, len_h);
     _mesa_etch_pact(&ech_u, pac_u);
-    u3_assert( 0 == memcmp(bof_y, buf_y, len_w) );
+    u3_assert( 0 == memcmp(bof_y, buf_y, len_h) );
     c3_free(bof_y);
   #endif
 
@@ -1098,7 +1103,7 @@ _mesa_encode_path(c3_h len_h, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_w[sab_u.len_w - 1] = 0;
+        sab_u.buf_w[sab_u.len_h - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);
@@ -1197,7 +1202,7 @@ static c3_i
 _test_pact(u3_mesa_pact* pac_u)
 {
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w  len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
+  c3_w  len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
   c3_i  ret_i = 0;
   c3_i  bot_i = 0;
   c3_h  sif_h;
@@ -1205,22 +1210,22 @@ _test_pact(u3_mesa_pact* pac_u)
   u3_mesa_pact nex_u;
   memset(&nex_u, 0, sizeof(u3_mesa_pact));
 
-  if ( !len_w ) {
+  if ( !len_h ) {
     fprintf(stderr, "pact: etch failed\r\n");
     ret_i = 1; goto done;
   }
-  else if ( len_w > PACT_SIZE ) {
-    fprintf(stderr, "pact: etch overflowed: %"PRIc3_w"\r\n", len_w);
+  else if ( len_h > PACT_SIZE ) {
+    fprintf(stderr, "pact: etch overflowed: %u"\r\n", len_h);
     ret_i = 1; goto done;
   }
 
   u3_sifter sif_u;
-  sifter_init(&sif_u, buf_y, len_w);
+  sifter_init(&sif_u, buf_y, len_h);
   _mesa_sift_pact(&sif_u, &nex_u);
 
   if ( sif_u.rem_h && !sif_u.err_c ) {
-    fprintf(stderr, "pact: sift failed len=%"PRIc3_w" sif=%u\r\n", len_w, sif_u.rem_h);
-    _log_buf(buf_y, len_w);
+    fprintf(stderr, "pact: sift failed len=%u" sif=%u\r\n", len_h, sif_u.rem_h);
+    _log_buf(buf_y, len_h);
     ret_i = 1; goto done;
   }
 
@@ -1275,7 +1280,7 @@ done:
   if ( ret_i ) {
     _log_head(&pac_u->hed_u);
     log_pact(pac_u);
-    _log_buf(buf_y, len_w);
+    _log_buf(buf_y, len_h);
 
     if ( bot_i ) {
       u3l_log(RED_TEXT);
