@@ -7,8 +7,8 @@
             .path = "../softfloat",
         },
         .softblas = .{
-            .url = "https://github.com/urbit/SoftBLAS/archive/40ff4fa0a3fba0a566ac5fcb8ab93d280fddf7af.tar.gz",
-            .hash = "N-V-__8AAObNNABARc0F3nVusDf1nQ4yxZH78h5A6HkWWAA9",
+            .url = "https://github.com/urbit/SoftBLAS/archive/4e702725445ca24d1fda5785b89c607aeb23e3eb.tar.gz",
+            .hash = "N-V-__8AAHqeNgCJpLl6qqnAsLF-YvRnkIFV2A1drRDlV7MH",
         },
     },
     .paths = .{
