@@ -31,6 +31,18 @@ pub fn build(b: *std.Build) void {
 
     lib.linkLibC();
 
+    // SIZEOF_LONG / SIZEOF_SIZE_T are target-dependent (long is 4 bytes on
+    // LLP64 Windows, 8 on LP64 unix), so they're derived from the target here
+    // rather than hardcoded in the vendored config.h.
+    const long_bytes = target.result.cTypeByteSize(.long);
+    const size_t_bytes = target.result.ptrBitWidth() / 8;
+
+    // alloca lives in <alloca.h> on unix but in <malloc.h> on Windows; pick the
+    // header the same target-driven way (config.h's alloca block keys off these).
+    const is_windows = target.result.os.tag == .windows;
+    const has_alloca_h: u1 = if (is_windows) 0 else 1;
+    const has_malloc_h: u1 = if (is_windows) 1 else 0;
+
     // vendored config.h + version.h (see comment above)
     lib.addIncludePath(b.path("gen"));
     // nettle source root (nettle-types.h, sha2.h, macros.h, ...)
@@ -43,6 +55,10 @@ pub fn build(b: *std.Build) void {
             "-fno-omit-frame-pointer",
             "-fno-sanitize=all",
             "-DHAVE_CONFIG_H=1",
+            b.fmt("-DSIZEOF_LONG={d}", .{long_bytes}),
+            b.fmt("-DSIZEOF_SIZE_T={d}", .{size_t_bytes}),
+            b.fmt("-DHAVE_ALLOCA_H={d}", .{has_alloca_h}),
+            b.fmt("-DHAVE_MALLOC_H={d}", .{has_malloc_h}),
         },
         .files = &.{
             "aes-decrypt-internal.c",

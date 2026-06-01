@@ -10,8 +10,10 @@
 /* Define to 1 if you have 'alloca', as a function or macro. */
 #define HAVE_ALLOCA 1
 
-/* Define to 1 if <alloca.h> works. */
-#define HAVE_ALLOCA_H 1
+/* Define to 1 if <alloca.h> works. Target-dependent (unix has <alloca.h>,
+   Windows finds alloca in <malloc.h>); defined on the command line by
+   build.zig along with HAVE_MALLOC_H. */
+/* #undef HAVE_ALLOCA_H */
 
 /* Define if __builtin_bswap64 is available */
 #define HAVE_BUILTIN_BSWAP64 1
@@ -168,11 +170,12 @@
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "4.0"
 
-/* The size of 'long', as computed by sizeof. */
-#define SIZEOF_LONG 8
-
-/* The size of 'size_t', as computed by sizeof. */
-#define SIZEOF_SIZE_T 8
+/* The size of 'long' and 'size_t', as computed by sizeof, are target-dependent
+   (e.g. long is 8 bytes on LP64 unix but 4 bytes on LLP64 Windows). They are
+   defined on the compiler command line by build.zig instead of being hardcoded
+   here. */
+/* #undef SIZEOF_LONG */
+/* #undef SIZEOF_SIZE_T */
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
