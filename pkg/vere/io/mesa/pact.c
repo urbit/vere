@@ -1103,7 +1103,7 @@ _mesa_encode_path(c3_h len_h, c3_y* buf_y)
       if ( 47 == car_y ) {
         tem_w = buf_y - fub_y - 1;
         u3i_slab_bare(&sab_u, 3, tem_w);
-        sab_u.buf_w[sab_u.len_h - 1] = 0;
+        sab_u.buf_w[sab_u.len_w - 1] = 0;
         memcpy(sab_u.buf_y, fub_y, tem_w);
 
         *lit  = u3i_defcons(&hed, &tel);
@@ -1215,7 +1215,7 @@ _test_pact(u3_mesa_pact* pac_u)
     ret_i = 1; goto done;
   }
   else if ( len_h > PACT_SIZE ) {
-    fprintf(stderr, "pact: etch overflowed: %u"\r\n", len_h);
+    fprintf(stderr, "pact: etch overflowed: %u\r\n", len_h);
     ret_i = 1; goto done;
   }
 
@@ -1224,7 +1224,7 @@ _test_pact(u3_mesa_pact* pac_u)
   _mesa_sift_pact(&sif_u, &nex_u);
 
   if ( sif_u.rem_h && !sif_u.err_c ) {
-    fprintf(stderr, "pact: sift failed len=%u" sif=%u\r\n", len_h, sif_u.rem_h);
+    fprintf(stderr, "pact: sift failed len=%u sif=%u\r\n", len_h, sif_u.rem_h);
     _log_buf(buf_y, len_h);
     ret_i = 1; goto done;
   }
