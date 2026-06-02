@@ -48,7 +48,6 @@
 
     /* Size in words.
     */
-// (probably some of that belongs here)
 #     define c3_wiseof(x)  ((sizeof(x) + sizeof(c3_w) - 1) / sizeof(c3_w))
 
     /* Bit counting.
