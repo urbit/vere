@@ -166,7 +166,7 @@ typedef enum u3_stun_state {
   typedef struct _u3_body {
     c3_s    con_s;                      //  content size
     c3_y*   con_y;                      //  content
-    c3_m    mug_l;                      //  checksum
+    c3_h    mug_h;                      //  checksum
   } u3_body;
 
 /* u3_ptag: packet-type tag
@@ -520,7 +520,7 @@ _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
   c3_h max_h = sig_h + num_h + FINE_FRAG;
 
   if ( (len_h < min_h) || (len_h > max_h) ) {
-    u3l_log("sift_meow len_w %u (min_w %u, max_w %u)", len_h, min_h, max_h);
+    u3l_log("sift_meow len_h %u (min_h %u, max_h %u)", len_h, min_h, max_h);
     ret_o = c3n;
   }
   else {

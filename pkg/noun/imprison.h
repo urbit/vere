@@ -73,8 +73,7 @@
 
       /* General constructors.
       */
-        /* u3i_word(): construct u3_atom from c3_w.
-        **         XX: remove post-migration
+        /* u3i_half(): construct u3_atom from c3_h.
         */
           u3_atom
           u3i_half(c3_h dat_h);
