@@ -45,7 +45,7 @@ _cqes_in_order(u3_atom a)
   static_assert(0 == sizeof(c3_w) % sizeof(c3_h));
   
   static const c3_w* now_w = (c3_w*)now_h;
-  static const c3_z now_z = sizeof(now_h) / sizeof(c3_w);
+  static const c3_z now_z = sizeof(now_h) / (sizeof(c3_w));
 
   if ( 0 == a ) {
     return 0;
