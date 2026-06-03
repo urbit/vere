@@ -7,9 +7,8 @@
             .path = "../softfloat",
         },
         .wasm3 = .{
-            // .path = "../../../../wasm3"
-            .url = "https://github.com/urbit/wasm3/archive/be8cbeafa8b2301350484ecb494ed0288589d985.tar.gz",
-            .hash = "N-V-__8AAHEiSQD6ts4e3wCZ7CFp6FAQU4Dg5kBTwgSQpIDY",
+            .url = "https://github.com/urbit/wasm3/archive/2ae500b190061eeef8030cccbc7e75ba0a3871ba.tar.gz",
+            .hash = "N-V-__8AADEjSQBL4MURIYrQ4IY1tfWScuEmG15IVamEJ8lY",
         },
     },
     .paths = .{
