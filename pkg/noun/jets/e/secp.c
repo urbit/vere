@@ -47,7 +47,7 @@ _cqes_in_order(u3_atom a)
 #else
   static const c3_w now_w[4] = {
     0xbfd25e8cd0364141ULL, 0xbaaedce6af48a03bULL,
-    0xffffffffffffffffULL, 0xffffffffffffffffULL
+    0xfffffffffffffffeULL, 0xffffffffffffffffULL
   };
   static const c3_z now_z = 4;
 #endif
@@ -60,12 +60,12 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w len_w = a_u->len_w * 2;
+    c3_w len_w = a_u->len_w * sizeof(c3_w);
 
-    if ( len_w < 8 ) {
+    if ( len_w < 32 ) {
       return 1;
     }
-    else if ( len_w > 8 ) {
+    else if ( len_w > 32 ) {
       return 0;
     }
     else {
