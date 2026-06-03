@@ -38,19 +38,14 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-#ifndef VERE64
-  static const c3_w now_w[8] = {
+  static const c3_h now_h[8] = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
-  static const c3_z now_z = 8;
-#else
-  static const c3_w now_w[4] = {
-    0xbfd25e8cd0364141ULL, 0xbaaedce6af48a03bULL,
-    0xfffffffffffffffeULL, 0xffffffffffffffffULL
-  };
-  static const c3_z now_z = 4;
-#endif
+  static_assert(0 == sizeof(c3_w) % sizeof(c3_h));
+  
+  static const c3_w* now_w = (c3_w*)now_h;
+  static const c3_z now_z = sizeof(now_h) / sizeof(c3_w);
 
   if ( 0 == a ) {
     return 0;
