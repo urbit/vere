@@ -38,12 +38,11 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-  static const c3_h now_h[8] __attribute__((aligned(alignof(c3_d)))) = {
+  static const c3_h now_h[8] __attribute__((aligned(alignof(c3_w)))) = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
   static_assert(0 == sizeof(c3_w) % sizeof(c3_h));
-  static_assert(alignof(now_h) >= alignof(c3_w));
   
   static const c3_w* now_w = (c3_w*)now_h;
   static const c3_z now_z = sizeof(now_h) / (sizeof(c3_w));
