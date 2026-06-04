@@ -525,7 +525,7 @@ _alloc_words(c3_w len_w)  //  4-2.048, inclusive
 
     out_p = bas_p + ((off_w + pos_g) << pag_u->log_s);
     ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), hun_u->len_s << 2);
-    //  XX poison suffix
+    ASAN_POISON_MEMORY_REGION(u3a_into(out_p + len_w), (c3_z)(hun_u->len_s - len_w) << 2);
 
     return out_p;
   }
@@ -968,8 +968,8 @@ _irealloc(u3_post som_p, c3_w len_w)
     if (  (len_w <= old_w)
        && ((len_w > (old_w >> 1)) || (u3a_minimum == old_w)) )
     {
-      //  XX junk
-      //  XX unpoison prefix, poison suffix
+      ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)old_w << 2);
+      ASAN_POISON_MEMORY_REGION(u3a_into(som_p + len_w), (c3_z)(old_w - len_w) << 2);
       return som_p;
     }
   }
@@ -977,6 +977,7 @@ _irealloc(u3_post som_p, c3_w len_w)
   {
     u3_post new_p = _imalloc(len_w);
 
+    ASAN_UNPOISON_MEMORY_REGION(u3a_into(som_p), (c3_z)old_w << 2);
     memcpy(u3a_into(new_p), u3a_into(som_p), (c3_z)c3_min(len_w, old_w) << 2);
     _ifree(som_p);
 
