@@ -63,9 +63,9 @@ _cqes_in_order(u3_atom a)
       c3_y i_y;
       c3_w *buf_w = a_u->buf_w;
       // loop from most to least significant words
-      for ( i_y = 8; i_y > 0; ) {
+      for ( i_y = 8; i_y--; ) {
         c3_w b_w = buf_w[i_y],
-             o_w = now_w[--i_y];
+             o_w = now_w[i_y];
         if ( b_w < o_w ) {
           return 1;
         }
