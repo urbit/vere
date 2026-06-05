@@ -11,9 +11,10 @@
             .hash = "N-V-__8AAJ4DSwC7aDpt90TmGPWKAI6q4-titwp4M0zsZ2vY",
         },
         // openssl-free urcrypt: depends on nettle, with libaes_siv vendored
-        // under aes_siv/ (retargeted onto nettle). Temporarily a local checkout.
+        // under aes_siv/ (retargeted onto nettle).
         .urcrypt = .{
-            .path = "../../../urcrypt",
+            .url = "https://github.com/urbit/urcrypt/archive/f327ea6f0fe5c53cbab7de9064b6a47db513c648.tar.gz",
+            .hash = "N-V-__8AABlhTAA8p3NZNJm6-FEc5mR-O7h56QUp_elv9dqa",
         },
     },
     .paths = .{
