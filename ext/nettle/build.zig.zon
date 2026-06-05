@@ -4,8 +4,11 @@
     .version = "0.0.1",
     .dependencies = .{
         .nettle = .{
-            .url = "https://github.com/gnutls/nettle/archive/refs/tags/nettle_4.0_release_20260205.tar.gz",
-            .hash = "N-V-__8AAHcjZwChQdAC62bRM5ZDzApJg_-9Z2TqoX8_fJok",
+            // Canonical, GPG-signed GNU release tarball (not the gnutls/nettle
+            // GitHub mirror, whose auto-generated archive checksums are not
+            // byte-stable). Same nettle 4.0 sources; ext/nettle/gen/ still applies.
+            .url = "https://ftp.gnu.org/gnu/nettle/nettle-4.0.tar.gz",
+            .hash = "N-V-__8AAELFfwAzz_JIXQezf1h2f-MSCzZnebvp-RKgwZz9",
         },
     },
     .paths = .{
