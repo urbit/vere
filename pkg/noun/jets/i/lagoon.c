@@ -423,13 +423,16 @@
           float16_t y_val16 = ((float16_t*)y_bytes)[i];
           // Perform division x/n
           float16_t div_result16 = f16_div(x_val16, y_val16);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
           float16_t quot_round_f16 = i64_to_f16(quot_round16);
           // Multiply n by round(x/n)
           float16_t mult_result16 = f16_mul(y_val16, quot_round_f16);
           // Compute remainder: x - n * round(x/n)
           ((float16_t*)y_bytes)[i] = f16_sub(x_val16, mult_result16);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result16.v & 0x7c00) == 0x7c00 ) { ((float16_t*)y_bytes)[i] = (float16_t){ 0x7e00 }; }
         }
         break;
 
@@ -439,13 +442,16 @@
           float32_t y_val32 = ((float32_t*)y_bytes)[i];
           // Perform division x/n
           float32_t div_result32 = f32_div(x_val32, y_val32);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t quot_round_f32 = i64_to_f32(quot_round32);
           // Multiply n by round(x/n)
           float32_t mult_result32 = f32_mul(y_val32, quot_round_f32);
           // Compute remainder: x - n * round(x/n)
           ((float32_t*)y_bytes)[i] = f32_sub(x_val32, mult_result32);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result32.v & 0x7f800000) == 0x7f800000 ) { ((float32_t*)y_bytes)[i] = (float32_t){ 0x7fc00000 }; }
         }
         break;
 
@@ -455,13 +461,16 @@
           float64_t y_val64 = ((float64_t*)y_bytes)[i];
           // Perform division x/n
           float64_t div_result64 = f64_div(x_val64, y_val64);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
           float64_t quot_round_f64 = i64_to_f64(quot_round64);
           // Multiply n by round(x/n)
           float64_t mult_result64 = f64_mul(y_val64, quot_round_f64);
           // Compute remainder: x - n * round(x/n)
           ((float64_t*)y_bytes)[i] = f64_sub(x_val64, mult_result64);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result64.v & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL ) { ((float64_t*)y_bytes)[i] = (float64_t){ 0x7ff8000000000000ULL }; }
         }
         break;
 
@@ -472,8 +481,8 @@
           // Perform division x/n
           float128_t div_result128;
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
           float128_t quot_round_f128;
           i64_to_f128M(quot_round128, &quot_round_f128);
           // Multiply n by round(x/n)
@@ -481,6 +490,9 @@
           f128M_mul(((float128_t*)&y_val128), ((float128_t*)&quot_round_f128), ((float128_t*)&mult_result128));
           // Compute remainder: x - n * round(x/n)
           f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)y_bytes)[i]));
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result128.v[1] & 0x7fff000000000000ULL) == 0x7fff000000000000ULL ) { ((float128_t*)y_bytes)[i] = (float128_t){{ 0, 0x7fff800000000000ULL }}; }
         }
         break;
     }
@@ -1625,13 +1637,16 @@
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
           // Perform division x/n
           float16_t div_result16 = f16_mul(in16, x_val16);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
           float16_t quot_round_f16 = i64_to_f16(quot_round16);
           // Multiply n by round(x/n)
           float16_t mult_result16 = f16_mul(n16, quot_round_f16);
           // Compute remainder: x - n * round(x/n)
           ((float16_t*)x_bytes)[i] = f16_sub(x_val16, mult_result16);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result16.v & 0x7c00) == 0x7c00 ) { ((float16_t*)x_bytes)[i] = (float16_t){ 0x7e00 }; }
         }
         break;
 
@@ -1643,13 +1658,16 @@
           float32_t x_val32 = ((float32_t*)x_bytes)[i];
           // Perform division x/n
           float32_t div_result32 = f32_mul((float32_t)in32, (float32_t)x_val32);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
           float32_t quot_round_f32 = i64_to_f32(quot_round32);
           // Multiply n by round(x/n)
           float32_t mult_result32 = f32_mul(n32, quot_round_f32);
           // Compute remainder: x - n * round(x/n)
           ((float32_t*)x_bytes)[i] = f32_sub(x_val32, mult_result32);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result32.v & 0x7f800000) == 0x7f800000 ) { ((float32_t*)x_bytes)[i] = (float32_t){ 0x7fc00000 }; }
         }
         break;
 
@@ -1661,13 +1679,16 @@
           float64_t x_val64 = ((float64_t*)x_bytes)[i];
           // Perform division x/n
           float64_t div_result64 = f64_mul(in64, x_val64);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
           float64_t quot_round_f64 = i64_to_f64(quot_round64);
           // Multiply n by round(x/n)
           float64_t mult_result64 = f64_mul(n64, quot_round_f64);
           // Compute remainder: x - n * round(x/n)
           ((float64_t*)x_bytes)[i] = f64_sub(x_val64, mult_result64);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result64.v & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL ) { ((float64_t*)x_bytes)[i] = (float64_t){ 0x7ff8000000000000ULL }; }
         }
         break;
 
@@ -1680,8 +1701,8 @@
           // Perform division x/n
           float128_t div_result128;
           f128M_mul((float128_t*)&in128, (float128_t*)&x_val128, (float128_t*)&div_result128);
-          // Round the quotient using the active rounding mode (matches Hoon toi)
-          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_roundingMode, false);
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
           float128_t quot_round_f128;
           i64_to_f128M(quot_round128, &quot_round_f128);
           // Multiply n by round(x/n)
@@ -1689,6 +1710,9 @@
           f128M_mul(((float128_t*)&n128), ((float128_t*)&quot_round_f128), ((float128_t*)&mult_result128));
           // Compute remainder: x - n * round(x/n)
           f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)x_bytes)[i]));
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result128.v[1] & 0x7fff000000000000ULL) == 0x7fff000000000000ULL ) { ((float128_t*)x_bytes)[i] = (float128_t){{ 0, 0x7fff800000000000ULL }}; }
         }
         break;
     }
