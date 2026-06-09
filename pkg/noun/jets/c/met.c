@@ -13,7 +13,7 @@
     if ( 0 == b ) {
       return 0;
     }
-    else if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    else if ( !_(u3a_is_cat(a)) || (a >= 36) ) {
       return u3m_bail(c3__fail);;
     }
     else {
