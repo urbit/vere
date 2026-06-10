@@ -623,11 +623,15 @@ ur_bsr_log(ur_bsr_t *bsr, uint8_t *out)
         return _bsr_log_meme(bsr);
       }
 
-      byt = b[++skip];
-
-      if ( skip == left ) {
+      //  check the bound *before* dereferencing: incrementing skip to [left]
+      //  means there are no more bytes (valid indices are 0..left-1), so
+      //  reading b[skip] here would be a one-byte over-read.
+      //
+      if ( ++skip == left ) {
         return _bsr_set_gone(bsr, (skip << 3) - off);
       }
+
+      byt = b[skip];
     }
 
     {

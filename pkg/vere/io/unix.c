@@ -164,7 +164,14 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
     *result = NULL;
     return (errno);  // either success or error code
   } else {
-    memcpy(entry, tmp_u, tmp_u->d_reclen);
+    //  SECURITY (L5): [entry] is a fixed-size struct dirent. A filesystem
+    //  reporting d_reclen larger than that would overflow it; clamp the copy.
+    //
+    size_t cpy_i = tmp_u->d_reclen;
+    if ( cpy_i > sizeof(*entry) ) {
+      cpy_i = sizeof(*entry);
+    }
+    memcpy(entry, tmp_u, cpy_i);
     *result = entry;
   }
 

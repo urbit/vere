@@ -35,6 +35,14 @@ _stun_has_fingerprint(c3_y* buf_y, c3_w buf_len_w)
     fin_y = memmem(buf_y + i, buf_len_w - i, ned_y, sizeof(ned_y));
     if ( fin_y != 0 ) {
       c3_w lin_w = fin_y - buf_y;
+      //  SECURITY (L2): need the 4-byte attribute header plus the 4-byte CRC
+      //  value after fin_y. Bound the read before c3_sift_word — memmem can
+      //  match the needle right at the end of the buffer, so fin_y + 4 .. +8
+      //  may lie past it. (The == buf_len_w check below runs only afterward.)
+      //
+      if ( lin_w + 8 > buf_len_w ) {
+        return c3n;
+      }
       // Skip attribute type and length
       c3_w fingerprint = c3_sift_word(fin_y + sizeof(ned_y));
       c3_w init = crc32(0L, Z_NULL, 0);

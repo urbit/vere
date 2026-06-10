@@ -131,11 +131,20 @@ _cttp_bods_to_octs(u3_hbod* bod_u)
   {
     u3_hbod* bid_u = bod_u;
 
-    len_w = 0;
+    //  SECURITY (M3): sum in 64 bits and reject totals past the 2 GB cat
+    //  limit. Accumulating into a 32-bit len_w lets a >4 GB response wrap to
+    //  a small value, undersizing the malloc below and overflowing it in the
+    //  copy loop.
+    //
+    c3_d tot_d = 0;
     while ( bid_u ) {
-      len_w += bid_u->len_w;
+      tot_d += bid_u->len_w;
       bid_u = bid_u->nex_u;
     }
+    if ( tot_d > 0x7fffffffULL ) {
+      return u3m_bail(c3__fail);
+    }
+    len_w = (c3_w)tot_d;
   }
   buf_y = c3_malloc(1 + len_w);
   buf_y[len_w] = 0;
@@ -772,6 +781,13 @@ _cttp_creq_on_body(h2o_http1client_t* cli_u, const c3_c* err_c)
   h2o_buffer_t* buf_u = cli_u->sock->input;
 
   if ( buf_u->size ) {
+    //  SECURITY (M3): buf_u->size is a size_t; _cttp_bod_new takes a c3_w, so
+    //  a >4 GB chunk would truncate. Reject rather than silently truncate.
+    //
+    if ( buf_u->size > 0x7fffffffULL ) {
+      _cttp_creq_fail(ceq_u, "response body chunk too large");
+      return -1;
+    }
     _cttp_cres_fire_body(ceq_u->res_u,
                          _cttp_bod_new(buf_u->size, buf_u->bytes));
     h2o_buffer_consume(&cli_u->sock->input, buf_u->size);
