@@ -114,7 +114,7 @@
     f128M_sub(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
