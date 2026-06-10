@@ -45,6 +45,26 @@ struct _u3_udir;
 struct _u3_ufil;
 struct _u3_unix;
 
+/* auto-sync heuristics, tuned for editor save patterns (write-temp-
+** then-rename, delete-then-write, truncate-then-write):
+**
+**   SYNC_QUIET_MS:   scan only after the filesystem has been quiet
+**                    this long, so multi-step saves coalesce
+**   SYNC_CAP_MS:     but never delay a scan longer than this past
+**                    the first change, so a busy writer can't
+**                    starve sync entirely
+**   SYNC_GRACE_MS:   a missing file must stay missing this long
+**                    before its deletion is synced, so a file
+**                    deleted moments before being rewritten never
+**                    propagates a transient deletion
+**   SYNC_RECHECK_MS: how soon to recheck files awaiting the grace
+**                    period (must exceed SYNC_GRACE_MS)
+*/
+#define SYNC_QUIET_MS    100
+#define SYNC_CAP_MS     1000
+#define SYNC_GRACE_MS    300
+#define SYNC_RECHECK_MS  350
+
 /* u3_unod: file or directory.
 */
   typedef struct _u3_unod {
@@ -64,6 +84,7 @@ struct _u3_unix;
     struct _u3_udir*  par_u;            //  parent
     struct _u3_unod*  nex_u;            //  internal list
     c3_w              gum_w;            //  mug of last %ergo
+    c3_d              dum_d;            //  first seen missing (ms), or 0
   } u3_ufil;
 
 /* u3_ufil: synchronized directory.
@@ -128,6 +149,8 @@ struct _u3_unix;
     c3_o        dyr;                    //  ready to update
     u3_noun     sat;                    //  (sane %ta) handle
     uv_timer_t* syt_u;                  //  auto-sync debounce timer
+    c3_d        fir_d;                  //  debounce window start (ms)
+    c3_o        dum_o;                  //  doomed files await recheck
     u3_usyc*    pen_u;                  //  scan accumulator, if scanning
 #ifdef SYNCLOG
     c3_w         lot_w;                 //  sync-slot
@@ -976,6 +999,7 @@ _unix_watch_file(u3_unix* unx_u, u3_ufil* fil_u, u3_udir* par_u, c3_c* pax_c)
   fil_u->par_u = par_u;
   fil_u->nex_u = NULL;
   fil_u->gum_w = 0;
+  fil_u->dum_d = 0;
 
   if ( par_u ) {
     fil_u->nex_u = par_u->kid_u;
@@ -1070,7 +1094,31 @@ _unix_node_mount(u3_unix* unx_u, u3_unod* nod_u)
   return NULL;
 }
 
-/* _unix_time_cb(): auto-sync debounce timer fired; scan watched mounts.
+static void
+_unix_time_cb(uv_timer_t* tim_u);
+
+/* _unix_doom_recheck(): if a scan deferred any deletions, schedule
+**                       a follow-up scan to confirm them.
+*/
+static void
+_unix_doom_recheck(u3_unix* unx_u)
+{
+  if ( c3y == unx_u->dum_o ) {
+    unx_u->dum_o = c3n;
+
+    if ( !uv_is_active((uv_handle_t*)unx_u->syt_u) ) {
+      unx_u->fir_d = uv_now(u3L);
+      uv_timer_start(unx_u->syt_u, _unix_time_cb, SYNC_RECHECK_MS, 0);
+    }
+  }
+}
+
+/* _unix_time_cb(): auto-sync debounce timer fired.
+**
+**  scans every mount: on watched mounts, wet subtrees are pending
+**  fs events; on unwatched mounts nothing is ever wet between
+**  commits except files awaiting a deletion-grace recheck, so the
+**  scan is surgical either way.
 */
 static void
 _unix_time_cb(uv_timer_t* tim_u)
@@ -1079,10 +1127,10 @@ _unix_time_cb(uv_timer_t* tim_u)
   u3_umon* mon_u;
 
   for ( mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
-    if ( c3y == mon_u->syn_o ) {
-      _unix_update_mount(unx_u, mon_u, c3n);
-    }
+    _unix_update_mount(unx_u, mon_u, c3n);
   }
+
+  _unix_doom_recheck(unx_u);
 }
 
 /* _unix_event_cb(): fs event on a watched directory.
@@ -1158,11 +1206,22 @@ _unix_event_cb(uv_fs_event_t* eve_u,
     }
   }
 
-  //  debounce: scan shortly after the first change, batching any
-  //  changes that arrive in the window
+  //  debounce until quiescence: each change extends the window, so
+  //  multi-step editor saves (write-rename, delete-write) coalesce
+  //  into one scan; but never delay more than SYNC_CAP_MS past the
+  //  first change, so a busy writer can't starve sync
   //
-  if ( !uv_is_active((uv_handle_t*)unx_u->syt_u) ) {
-    uv_timer_start(unx_u->syt_u, _unix_time_cb, 100, 0);
+  {
+    c3_d now_d = uv_now(u3L);
+
+    if ( !uv_is_active((uv_handle_t*)unx_u->syt_u) ) {
+      unx_u->fir_d = now_d;
+      uv_timer_start(unx_u->syt_u, _unix_time_cb, SYNC_QUIET_MS, 0);
+    }
+    else if ( (now_d - unx_u->fir_d) < SYNC_CAP_MS ) {
+      uv_timer_start(unx_u->syt_u, _unix_time_cb, SYNC_QUIET_MS, 0);
+    }
+    //  else: cap reached, let the pending scan fire
   }
 }
 
@@ -1656,6 +1715,32 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
     if ( ENOENT == errno ) {
+      c3_d now_d = uv_now(u3L);
+
+      //  deletion grace: editors often delete a file moments before
+      //  rewriting it. only emit the deletion once the file has
+      //  stayed missing through a recheck.
+      //
+      if ( !fil_u->dum_d || ((now_d - fil_u->dum_d) < SYNC_GRACE_MS) ) {
+        u3_udir* par_u;
+
+        if ( !fil_u->dum_d ) {
+          fil_u->dum_d = now_d;
+        }
+
+        //  stay wet, and keep ancestors wet, so the recheck
+        //  scan descends back to this node
+        //
+        fil_u->dry = c3n;
+        for ( par_u = fil_u->par_u; par_u; par_u = par_u->par_u ) {
+          par_u->dry = c3n;
+        }
+
+        unx_u->dum_o = c3y;
+        return u3_nul;
+      }
+
+      fil_u->dum_d = 0;
       return u3nc(u3nc(_unix_string_to_path(unx_u, fil_u->pax_c), u3_nul), u3_nul);
     }
     else {
@@ -1664,6 +1749,10 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
       return u3_nul;
     }
   }
+
+  //  the file exists: clear any pending doom
+  //
+  fil_u->dum_d = 0;
 
   len_ws = buf_u.st_size;
   dat_y = c3_malloc(len_ws);
@@ -1751,9 +1840,20 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
           c3_i  fid_i = c3_open(nod_u->pax_c, O_RDONLY, 0644);
 
           if ( (fid_i < 0) || (fstat(fid_i, &buf_u) < 0) ) {
+            u3_ufil* fil_u = (u3_ufil*)nod_u;
+
             if ( ENOENT != errno ) {
               u3l_log("_unix_update_dir: error opening file %s: %s",
                       nod_u->pax_c, strerror(errno));
+            }
+            else if ( !fil_u->dum_d
+                   || ((uv_now(u3L) - fil_u->dum_d) < SYNC_GRACE_MS) )
+            {
+              //  deletion grace: leave the node in place; the file
+              //  pass will doom it and schedule a recheck
+              //
+              nod_u = nod_u->nex_u;
+              continue;
             }
 
             u3_unod* nex_u = nod_u->nex_u;
@@ -2251,6 +2351,7 @@ u3_unix_ef_wath(u3_unix* unx_u, u3_noun mon)
   //
   _unix_mark_wet(&mon_u->dir_u);
   _unix_update_mount(unx_u, mon_u, c3n);
+  _unix_doom_recheck(unx_u);
 }
 
 /* u3_unix_ef_wend(): stop auto-syncing a mount point.
@@ -2303,6 +2404,7 @@ u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, u3_noun all)
       //
       _unix_mark_wet(&mon_u->dir_u);
       _unix_update_mount(unx_u, mon_u, all);
+      _unix_doom_recheck(unx_u);
     }
   }
   u3z(mon);
@@ -2442,6 +2544,8 @@ u3_unix_io_init(u3_pier* pir_u)
   unx_u->dyr = c3n;
   unx_u->sat = u3do("sane", c3__ta);
   unx_u->pen_u = NULL;
+  unx_u->fir_d = 0;
+  unx_u->dum_o = c3n;
 
   unx_u->syt_u = c3_malloc(sizeof(*unx_u->syt_u));
   uv_timer_init(u3L, unx_u->syt_u);
