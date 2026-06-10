@@ -1011,6 +1011,52 @@ u3r_met(c3_y  a_y,
   return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
 }
 
+c3_d
+u3r_met_d(c3_y  a_y,
+          u3_atom b)
+{
+  c3_dessert(u3_none != b);
+  c3_dessert(_(u3a_is_atom(b)));
+
+  if ( b == 0 ) {
+    return 0;
+  }
+  /* gal_d: number of words besides (daz_w) in (b).
+  ** daz_w: top word in (b).
+  */
+  c3_d gal_d;
+  c3_w daz_w;
+
+  if ( _(u3a_is_cat(b)) ) {
+    gal_d = 0;
+    daz_w = b;
+  }
+  else {
+    u3a_atom* b_u = u3a_to_ptr(b);
+
+    gal_d = (b_u->len_w) - 1;
+    daz_w = b_u->buf_w[gal_d];
+  }
+
+  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
+     aka log2(CHAR_BIT * sizeof gal_d)
+     a_y < 5 informs whether we shift return left or right
+     */
+  if (a_y < 5) {
+    c3_y max_y = (1 << a_y) - 1;
+    c3_y gow_y = 5 - a_y;
+
+    if (gal_d > ((UINT64_MAX - (32 + max_y)) >> gow_y))
+      return u3m_bail(c3__fail);
+
+    return (gal_d << gow_y)
+      + ((c3_bits_word(daz_w) + max_y)
+         >> a_y);
+  }
+  c3_y gow_y = (a_y - 5);
+  return ((gal_d + 1) + ((1 << gow_y) - 1)) >> gow_y;
+}
+
 /* u3r_bit():
 **
 **   Return bit (a_w) of (b).
@@ -1457,9 +1503,9 @@ u3r_chop_bits(c3_g  bif_g,
 */
 void
 u3r_chop_words(c3_g  met_g,
-               c3_w  fum_w,
-               c3_w  wid_w,
-               c3_w  tou_w,
+               c3_d  fum_d,
+               c3_d  wid_d,
+               c3_d  tou_d,
                c3_w* dst_w,
                c3_w  len_w,
          const c3_w* src_w)
@@ -1471,17 +1517,17 @@ u3r_chop_words(c3_g  met_g,
 
     {
       c3_g   hut_g = met_g - 5;
-      size_t fum_i = (size_t)fum_w << hut_g;
-      size_t tou_i = (size_t)tou_w << hut_g;
+      size_t fum_i = (size_t)fum_d << hut_g;
+      size_t tou_i = (size_t)tou_d << hut_g;
       size_t tot_i;
 
-      wid_i = (size_t)wid_w << hut_g;
+      wid_i = (size_t)wid_d << hut_g;
       tot_i = fum_i + wid_i;
 
       //  since [dst_w] must have space for (tou_w + wid_w) bloqs,
       //  neither conversion can overflow
       //
-      if ( (fum_i >> hut_g != fum_w) || (tot_i  - wid_i != fum_i) ) {
+      if ( (fum_i >> hut_g != fum_d) || (tot_i  - wid_i != fum_i) ) {
         u3m_bail(c3__fail);
         return;
       }
@@ -1504,18 +1550,20 @@ u3r_chop_words(c3_g  met_g,
   //  operate on bits
   //
   else {
-    c3_d wid_d = (c3_d)wid_w << met_g;
     c3_g bif_g, bit_g;
+    wid_d <<= met_g;
 
     {
       c3_d len_d = (c3_d)len_w << 5;
-      c3_d fum_d = (c3_d)fum_w << met_g;
-      c3_d tou_d = (c3_d)tou_w << met_g;
-      c3_d tot_d = fum_d + wid_d;
+      c3_d tot_d;
+      c3_d old_fum_d = fum_d;
+      fum_d <<= met_g;
+      tou_d <<= met_g;
+      tot_d = fum_d + wid_d;
 
       // see above
       //
-      if ( (fum_d >> met_g != fum_w) || (tot_d  - wid_d != fum_d) ) {
+      if ( (fum_d >> met_g != old_fum_d) || (tot_d  - wid_d != fum_d) ) {
         u3m_bail(c3__fail);
         return;
       }
@@ -1547,9 +1595,9 @@ u3r_chop_words(c3_g  met_g,
 */
 void
 u3r_chop(c3_g  met_g,
-         c3_w  fum_w,
-         c3_w  wid_w,
-         c3_w  tou_w,
+         c3_d  fum_d,
+         c3_d  wid_d,
+         c3_d  tou_d,
          c3_w* dst_w,
          u3_atom src)
 {
@@ -1570,7 +1618,7 @@ u3r_chop(c3_g  met_g,
     src_w = src_u->buf_w;
   }
 
-  u3r_chop_words(met_g, fum_w, wid_w, tou_w, dst_w, len_w, src_w);
+  u3r_chop_words(met_g, fum_d, wid_d, tou_d, dst_w, len_w, src_w);
 }
 
 /* u3r_string(): `a` as malloced C string.

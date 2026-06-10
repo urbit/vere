@@ -348,6 +348,18 @@
         u3r_met(c3_y    a_y,
                 u3_atom b);
 
+      /* u3r_met_d():
+      **
+      **   Return the size of (b) in bits, rounded up to
+      **   (1 << a_y).
+      **
+      **   For example, (a_y == 3) returns the size in bytes.
+      **   NB: (a_y) must be < 69.
+      */
+        c3_d
+        u3r_met_d(c3_y    a_y,
+                  u3_atom b);
+
       /* u3r_bit():
       **
       **   Return bit (a_w) of (b).
@@ -424,9 +436,9 @@
       */
         void
         u3r_chop_words(c3_g  met_g,
-                       c3_w  fum_w,
-                       c3_w  wid_w,
-                       c3_w  tou_w,
+                       c3_d  fum_d,
+                       c3_d  wid_d,
+                       c3_d  tou_d,
                        c3_w* dst_w,
                        c3_w  len_w,
                  const c3_w* src_w);
@@ -441,9 +453,9 @@
       */
         void
         u3r_chop(c3_g  met_g,
-                 c3_w  fum_w,
-                 c3_w  wid_w,
-                 c3_w  tou_w,
+                 c3_d  fum_d,
+                 c3_d  wid_d,
+                 c3_d  tou_d,
                  c3_w* dst_w,
                  u3_atom src);
 
