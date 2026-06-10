@@ -84,7 +84,19 @@ _test_safe()
   return ret_i;
 }
 
-/* _test_lod(): mug-cache insert, update, delete; sorted order.
+/* _ut_lod_add(): append a cache entry; calls must be in sorted order.
+*/
+static void
+_ut_lod_add(u3_umon* mon_u, const c3_c* pax_c, c3_w mug_w)
+{
+  mon_u->lod_u = c3_realloc(mon_u->lod_u,
+                            (1 + mon_u->lod_w) * sizeof(u3_umug));
+  mon_u->lod_u[mon_u->lod_w].pax_c = strdup(pax_c);
+  mon_u->lod_u[mon_u->lod_w].mug_w = mug_w;
+  mon_u->lod_w++;
+}
+
+/* _test_lod(): mug-cache fold (tree wins, union otherwise) and delete.
 */
 static c3_i
 _test_lod()
@@ -92,49 +104,48 @@ _test_lod()
   c3_i     ret_i = 1;
   u3_unix  unx_u;
   u3_umon  mon_u;
+  u3_ufil* fil_u = c3_malloc(sizeof(u3_ufil));
+  u3_ufil* fol_u = c3_malloc(sizeof(u3_ufil));
 
   memset(&unx_u, 0, sizeof(unx_u));
   _ut_mon_init(&mon_u, "base", "/p");
   unx_u.pax_c = "/p";
   unx_u.mon_u = &mon_u;
 
-  //  out-of-order inserts land sorted
+  //  cache: a (stale) and c; tree: a (fresh) and b
   //
-  _unix_lod_put(&mon_u, "/p/base/b.txt", 2);
-  _unix_lod_put(&mon_u, "/p/base/a.txt", 1);
-  _unix_lod_put(&mon_u, "/p/base/c.txt", 3);
+  _ut_lod_add(&mon_u, "/p/base/a.txt", 1);
+  _ut_lod_add(&mon_u, "/p/base/c.txt", 3);
+
+  _unix_watch_file(&unx_u, fil_u, &mon_u.dir_u, "/p/base/b.txt");
+  _unix_watch_file(&unx_u, fol_u, &mon_u.dir_u, "/p/base/a.txt");
+  fil_u->gum_w = 2;
+  fol_u->gum_w = 9;
+
+  _unix_fold_mugs(&mon_u);
 
   if (  (3 != mon_u.lod_w)
      || (0 != strcmp(mon_u.lod_u[0].pax_c, "/p/base/a.txt"))
      || (0 != strcmp(mon_u.lod_u[1].pax_c, "/p/base/b.txt"))
      || (0 != strcmp(mon_u.lod_u[2].pax_c, "/p/base/c.txt"))
-     || (1 != mon_u.lod_u[0].mug_w)
+     || (9 != mon_u.lod_u[0].mug_w)
      || (2 != mon_u.lod_u[1].mug_w)
      || (3 != mon_u.lod_u[2].mug_w) )
   {
-    fprintf(stderr, "_lod fail: insert order\r\n");
-    ret_i = 0;
-  }
-
-  //  put on an existing path updates in place
-  //
-  _unix_lod_put(&mon_u, "/p/base/b.txt", 9);
-
-  if ( (3 != mon_u.lod_w) || (9 != mon_u.lod_u[1].mug_w) ) {
-    fprintf(stderr, "_lod fail: update\r\n");
+    fprintf(stderr, "_lod fail: fold\r\n");
     ret_i = 0;
   }
 
   //  deleting a file removes its entry, keeping order
   //
   {
-    u3_ufil fil_u;
-    memset(&fil_u, 0, sizeof(fil_u));
-    fil_u.dir   = c3n;
-    fil_u.pax_c = "/p/base/b.txt";
-    fil_u.par_u = &mon_u.dir_u;
+    u3_ufil del_u;
+    memset(&del_u, 0, sizeof(del_u));
+    del_u.dir   = c3n;
+    del_u.pax_c = "/p/base/b.txt";
+    del_u.par_u = &mon_u.dir_u;
 
-    _unix_lod_del(&unx_u, &fil_u);
+    _unix_lod_del(&unx_u, &del_u);
 
     if (  (2 != mon_u.lod_w)
        || (0 != strcmp(mon_u.lod_u[0].pax_c, "/p/base/a.txt"))
@@ -146,8 +157,8 @@ _test_lod()
 
     //  deleting a missing path is a no-op
     //
-    fil_u.pax_c = "/p/base/nope.txt";
-    _unix_lod_del(&unx_u, &fil_u);
+    del_u.pax_c = "/p/base/nope.txt";
+    _unix_lod_del(&unx_u, &del_u);
 
     if ( 2 != mon_u.lod_w ) {
       fprintf(stderr, "_lod fail: missing delete\r\n");
@@ -173,7 +184,7 @@ _test_seed()
   unx_u.pax_c = "/p";
   unx_u.mon_u = &mon_u;
 
-  _unix_lod_put(&mon_u, "/p/base/a.txt", 0xabcd);
+  _ut_lod_add(&mon_u, "/p/base/a.txt", 0xabcd);
 
   {
     u3_ufil* fil_u = c3_malloc(sizeof(u3_ufil));
@@ -274,9 +285,9 @@ _test_mug_cache()
     unx_u.mon_u = &mon_u;
 
     snprintf(pax_c, sizeof(pax_c), "%s/base/a.txt", pir_c);
-    _unix_lod_put(&mon_u, pax_c, 0x1111);
+    _ut_lod_add(&mon_u, pax_c, 0x1111);
     snprintf(pax_c, sizeof(pax_c), "%s/base/sub/b.hoon", pir_c);
-    _unix_lod_put(&mon_u, pax_c, 0x2222);
+    _ut_lod_add(&mon_u, pax_c, 0x2222);
 
     _unix_save_mugs(&unx_u, &mon_u);
     _unix_load_mugs(&unx_u, &won_u);

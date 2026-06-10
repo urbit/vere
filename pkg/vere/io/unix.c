@@ -112,6 +112,7 @@ struct _u3_unix;
 */
   typedef struct _u3_usyc {
     struct _u3_unix*  unx_u;            //  driver backpointer
+    c3_c*             nam_c;            //  mount point name
     c3_w              len_w;            //  entries used
     c3_w              siz_w;            //  entries allocated
     struct _u3_usye {
@@ -190,8 +191,8 @@ _unix_free_lod(u3_umon* mon_u);
 static void
 _unix_lod_del(struct _u3_unix* unx_u, u3_ufil* fil_u);
 
-static void
-_unix_lod_put(u3_umon* mon_u, const c3_c* pax_c, c3_w mug_w);
+static c3_i
+_unix_lod_cmp(const void* lef_v, const void* rit_v);
 
 /* u3_unix_cane(): true iff (unix) path is canonical.
 */
@@ -543,9 +544,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     mug_w = 0;
   }
   else {
-    //  mug the full octet-stream as written, so that a subsequent
-    //  scan of the file (which mugs all [siz_w] bytes, including
-    //  trailing zeros) compares equal
+    //  mug all [siz_w] bytes, matching a later scan of the file
     //
     mug_w = u3r_mug_bytes(dat_y, siz_w);
   }
@@ -627,9 +626,7 @@ _unix_write_file_soft(u3_ufil* fil_u, u3_noun mim)
   c3_free(old_y);
 
   if ( old_w == _unix_mim_mug(mim) ) {
-    //  the disk file already has clay's contents: nothing to write.
-    //  this is the common case when the file just came in via %into
-    //  and clay is echoing it back out
+    //  the disk file already has clay's contents
     //
     fil_u->gum_w = old_w;
     u3z(mim);
@@ -782,7 +779,7 @@ static u3_noun _unix_free_node(u3_unix* unx_u, u3_unod* nod_u, c3_t del_t);
 static void
 _unix_watch_close_cb(uv_handle_t* han_u)
 {
-  //  the handle is the first member of u3_uwat
+  //  frees the containing u3_uwat; the handle is its first member
   //
   c3_free(han_u);
 }
@@ -1145,9 +1142,7 @@ _unix_event_cb(uv_fs_event_t* eve_u,
   u3_udir* dir_u = wat_u->dir_u;
   u3_unix* unx_u = wat_u->unx_u;
 
-  //  watcher is pending close
-  //
-  if ( !dir_u ) {
+  if ( !dir_u ) {  //  watcher is pending close
     return;
   }
 
@@ -1182,7 +1177,7 @@ _unix_event_cb(uv_fs_event_t* eve_u,
       }
     }
     else {
-      //  we don't know what changed: re-examine the whole subtree
+      //  no filename from the platform: re-examine the whole subtree
       //
       _unix_mark_wet(dir_u);
     }
@@ -1206,10 +1201,8 @@ _unix_event_cb(uv_fs_event_t* eve_u,
     }
   }
 
-  //  debounce until quiescence: each change extends the window, so
-  //  multi-step editor saves (write-rename, delete-write) coalesce
-  //  into one scan; but never delay more than SYNC_CAP_MS past the
-  //  first change, so a busy writer can't starve sync
+  //  debounce until quiescence, capped so a busy writer can't
+  //  starve sync (see SYNC_QUIET_MS/SYNC_CAP_MS)
   //
   {
     c3_d now_d = uv_now(u3L);
@@ -1341,6 +1334,7 @@ _unix_sync_free(u3_usyc* syc_u)
   for ( i_w = 0; i_w < syc_u->len_w; i_w++ ) {
     c3_free(syc_u->ent_u[i_w].pax_c);
   }
+  c3_free(syc_u->nam_c);
   c3_free(syc_u->ent_u);
   c3_free(syc_u);
 }
@@ -1355,20 +1349,26 @@ _unix_sync_done(u3_usyc* syc_u)
   u3_umon* mon_u;
   c3_w     i_w;
 
+  //  the mount may have been deleted while the event was in flight
+  //
+  for ( mon_u = unx_u->mon_u;
+        mon_u && (0 != strcmp(mon_u->nam_c, syc_u->nam_c));
+        mon_u = mon_u->nex_u )
+  { }
+
+  if ( !mon_u ) {
+    return;
+  }
+
   for ( i_w = 0; i_w < syc_u->len_w; i_w++ ) {
-    for ( mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
-      u3_unod* nod_u = _unix_find_node(&mon_u->dir_u,
-                                       syc_u->ent_u[i_w].pax_c);
-      if ( nod_u && (c3n == nod_u->dir) ) {
-        ((u3_ufil*)nod_u)->gum_w = syc_u->ent_u[i_w].mug_w;
-        break;
-      }
+    u3_unod* nod_u = _unix_find_node(&mon_u->dir_u,
+                                     syc_u->ent_u[i_w].pax_c);
+    if ( nod_u && (c3n == nod_u->dir) ) {
+      ((u3_ufil*)nod_u)->gum_w = syc_u->ent_u[i_w].mug_w;
     }
   }
 
-  for ( mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
-    _unix_save_mugs(unx_u, mon_u);
-  }
+  _unix_save_mugs(unx_u, mon_u);
 }
 
 /* _unix_sync_news(): notification of %into event status.
@@ -1426,33 +1426,83 @@ _unix_mug_pax(u3_unix* unx_u, u3_umon* mon_u, const c3_c* suf_c)
 
 #define SYNC_MUG_HEAD "vere-sync-mug-v1"
 
-/* _unix_fold_mugs_dir(): merge a directory tree's mugs into the cache.
+/* _unix_grab_mugs_dir(): collect a directory tree's mugs, unsorted.
 */
 static void
-_unix_fold_mugs_dir(u3_umon* mon_u, u3_udir* dir_u)
+_unix_grab_mugs_dir(u3_udir* dir_u, u3_umug** ent_u, c3_w* len_w, c3_w* siz_w)
 {
   u3_unod* nod_u;
 
   for ( nod_u = dir_u->kid_u; nod_u; nod_u = nod_u->nex_u ) {
     if ( c3y == nod_u->dir ) {
-      _unix_fold_mugs_dir(mon_u, (u3_udir*)nod_u);
+      _unix_grab_mugs_dir((u3_udir*)nod_u, ent_u, len_w, siz_w);
     }
     else {
       u3_ufil* fic_u = (u3_ufil*)nod_u;
 
       if ( fic_u->gum_w ) {
-        _unix_lod_put(mon_u, fic_u->pax_c, fic_u->gum_w);
+        if ( *len_w == *siz_w ) {
+          *siz_w = *siz_w ? (2 * *siz_w) : 256;
+          *ent_u = c3_realloc(*ent_u, *siz_w * sizeof(**ent_u));
+        }
+        (*ent_u)[*len_w].pax_c = strdup(fic_u->pax_c);
+        (*ent_u)[*len_w].mug_w = fic_u->gum_w;
+        (*len_w)++;
       }
     }
   }
 }
 
+/* _unix_fold_mugs(): merge the node tree's mugs into the cache.
+**
+**  the tree is built lazily, so it may cover only part of the mount;
+**  tree state takes precedence over cache entries for the same path.
+*/
+static void
+_unix_fold_mugs(u3_umon* mon_u)
+{
+  u3_umug* tre_u = NULL;
+  c3_w     tre_w = 0, sat_w = 0;
+
+  _unix_grab_mugs_dir(&mon_u->dir_u, &tre_u, &tre_w, &sat_w);
+
+  if ( !tre_w ) {
+    return;
+  }
+
+  qsort(tre_u, tre_w, sizeof(u3_umug), _unix_lod_cmp);
+
+  {
+    u3_umug* new_u = c3_malloc((tre_w + mon_u->lod_w) * sizeof(u3_umug));
+    c3_w     new_w = 0, t_w = 0, l_w = 0;
+
+    while ( (t_w < tre_w) || (l_w < mon_u->lod_w) ) {
+      c3_i cmp_i = (t_w == tre_w)        ?  1
+                 : (l_w == mon_u->lod_w) ? -1
+                 : strcmp(tre_u[t_w].pax_c, mon_u->lod_u[l_w].pax_c);
+
+      if ( cmp_i < 0 ) {
+        new_u[new_w++] = tre_u[t_w++];
+      }
+      else if ( cmp_i > 0 ) {
+        new_u[new_w++] = mon_u->lod_u[l_w++];
+      }
+      else {
+        new_u[new_w++] = tre_u[t_w++];
+        c3_free(mon_u->lod_u[l_w].pax_c);
+        l_w++;
+      }
+    }
+
+    c3_free(tre_u);
+    c3_free(mon_u->lod_u);
+    mon_u->lod_u = new_u;
+    mon_u->lod_w = new_w;
+  }
+}
+
 /* _unix_save_mugs(): persist a mount point's synced mugs, so that
 **                    a post-restart scan only sends real changes.
-**
-**  the node tree is built lazily, so it may cover only part of the
-**  mount; tree state is merged into the cache loaded at startup
-**  (updated as files are deleted) rather than replacing it.
 */
 static void
 _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
@@ -1470,7 +1520,7 @@ _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
     return;
   }
 
-  _unix_fold_mugs_dir(mon_u, &mon_u->dir_u);
+  _unix_fold_mugs(mon_u);
 
   fprintf(fil_u, "%s\n", SYNC_MUG_HEAD);
 
@@ -1632,42 +1682,6 @@ _unix_seed_mug(u3_unix* unx_u, u3_ufil* fil_u)
   }
 }
 
-/* _unix_lod_put(): update or insert a mug cache entry.
-*/
-static void
-_unix_lod_put(u3_umon* mon_u, const c3_c* pax_c, c3_w mug_w)
-{
-  u3_umug key_u;
-  c3_w    i_w;
-
-  key_u.pax_c = (c3_c*)pax_c;
-
-  if ( mon_u->lod_w ) {
-    u3_umug* fon_u = bsearch(&key_u, mon_u->lod_u, mon_u->lod_w,
-                             sizeof(u3_umug), _unix_lod_cmp);
-    if ( fon_u ) {
-      fon_u->mug_w = mug_w;
-      return;
-    }
-  }
-
-  //  insert, keeping the array sorted
-  //
-  mon_u->lod_u = c3_realloc(mon_u->lod_u,
-                            (1 + mon_u->lod_w) * sizeof(u3_umug));
-
-  for ( i_w = mon_u->lod_w;
-        i_w && (0 < strcmp(mon_u->lod_u[i_w - 1].pax_c, pax_c));
-        i_w-- )
-  {
-    mon_u->lod_u[i_w] = mon_u->lod_u[i_w - 1];
-  }
-
-  mon_u->lod_u[i_w].pax_c = strdup(pax_c);
-  mon_u->lod_u[i_w].mug_w = mug_w;
-  mon_u->lod_w++;
-}
-
 /* _unix_lod_del(): remove a deleted file from its mount's mug cache.
 */
 static void
@@ -1697,6 +1711,25 @@ _unix_lod_del(u3_unix* unx_u, u3_ufil* fil_u)
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 
+/* _unix_doom_hold(): a file is missing; hold its deletion until it
+**                     has stayed missing through the grace period.
+**
+**  editors often delete a file moments before rewriting it, so a
+**  deletion only syncs once it survives a recheck.
+*/
+static c3_t
+_unix_doom_hold(u3_ufil* fil_u)
+{
+  c3_d now_d = uv_now(u3L);
+
+  if ( !fil_u->dum_d ) {
+    fil_u->dum_d = now_d;
+    return 1;
+  }
+
+  return (now_d - fil_u->dum_d) < SYNC_GRACE_MS;
+}
+
 /* _unix_update_file(): update file, producing list of changes
 **
 **  when scanning through files, if dry, do nothing. otherwise,
@@ -1724,18 +1757,8 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
     if ( ENOENT == errno ) {
-      c3_d now_d = uv_now(u3L);
-
-      //  deletion grace: editors often delete a file moments before
-      //  rewriting it. only emit the deletion once the file has
-      //  stayed missing through a recheck.
-      //
-      if ( !fil_u->dum_d || ((now_d - fil_u->dum_d) < SYNC_GRACE_MS) ) {
+      if ( _unix_doom_hold(fil_u) ) {
         u3_udir* par_u;
-
-        if ( !fil_u->dum_d ) {
-          fil_u->dum_d = now_d;
-        }
 
         //  stay wet, and keep ancestors wet, so the recheck
         //  scan descends back to this node
@@ -1759,8 +1782,6 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
     }
   }
 
-  //  the file exists: clear any pending doom
-  //
   fil_u->dum_d = 0;
 
   len_ws = buf_u.st_size;
@@ -1849,18 +1870,12 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
           c3_i  fid_i = c3_open(nod_u->pax_c, O_RDONLY, 0644);
 
           if ( (fid_i < 0) || (fstat(fid_i, &buf_u) < 0) ) {
-            u3_ufil* fil_u = (u3_ufil*)nod_u;
-
             if ( ENOENT != errno ) {
               u3l_log("_unix_update_dir: error opening file %s: %s",
                       nod_u->pax_c, strerror(errno));
             }
-            else if ( !fil_u->dum_d
-                   || ((uv_now(u3L) - fil_u->dum_d) < SYNC_GRACE_MS) )
-            {
-              //  deletion grace: leave the node in place; the file
-              //  pass will doom it and schedule a recheck
-              //
+            else if ( _unix_doom_hold((u3_ufil*)nod_u) ) {
+              unx_u->dum_o = c3y;
               nod_u = nod_u->nex_u;
               continue;
             }
@@ -2011,6 +2026,7 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, u3_noun all)
     u3_assert( !unx_u->pen_u );
     syc_u = c3_calloc(sizeof(*syc_u));
     syc_u->unx_u = unx_u;
+    syc_u->nam_c = strdup(mon_u->nam_c);
     unx_u->pen_u = syc_u;
 
     for ( nod_u = mon_u->dir_u.kid_u; nod_u; nod_u = nod_u->nex_u ) {
@@ -2409,8 +2425,6 @@ u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, u3_noun all)
     }
     c3_free(nam_c);
     if ( mon_u ) {
-      //  a commit re-examines the whole mount
-      //
       _unix_mark_wet(&mon_u->dir_u);
       _unix_update_mount(unx_u, mon_u, all);
       _unix_doom_recheck(unx_u);
