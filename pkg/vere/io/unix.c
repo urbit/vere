@@ -1480,7 +1480,16 @@ _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
             mon_u->lod_u[i_w].pax_c + bas_w + 1);
   }
 
-  if ( fclose(fil_u) || (0 != rename(tmp_c, pax_c)) ) {
+  //  atomically replace the previous cache.  mingw's rename() fails
+  //  if the destination exists, so use MoveFileEx on windows.
+  //
+#ifdef U3_OS_windows
+  if ( fclose(fil_u)
+    || !MoveFileExA(tmp_c, pax_c, MOVEFILE_REPLACE_EXISTING) )
+#else
+  if ( fclose(fil_u) || (0 != rename(tmp_c, pax_c)) )
+#endif
+  {
     u3l_log("unix: can't save mug cache %s: %s", pax_c, strerror(errno));
     c3_unlink(tmp_c);
   }
