@@ -99,12 +99,21 @@ struct _u3_unix;
     }* ent_u;                           //  entry array
   } u3_usyc;
 
+/* u3_umug: a persisted mug-cache entry.
+*/
+  typedef struct _u3_umug {
+    c3_c*             pax_c;            //  absolute unix path
+    c3_w              mug_w;            //  mug of content at last sync
+  } u3_umug;
+
 /* u3_ufil: synchronized mount point.
 */
   typedef struct _u3_umon {
     u3_udir          dir_u;             //  root directory, must be first
     c3_c*            nam_c;             //  mount point name
     c3_o             syn_o;             //  auto-sync (fs-event watch) on
+    u3_umug*         lod_u;             //  mug cache loaded from disk
+    c3_w             lod_w;             //  entries in lod_u
     struct _u3_umon* nex_u;             //  internal list
   } u3_umon;
 
@@ -145,6 +154,21 @@ _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u);
 
 static void
 _unix_drop_mugs(u3_unix* unx_u, u3_umon* mon_u);
+
+static u3_umon*
+_unix_node_mount(u3_unix* unx_u, u3_unod* nod_u);
+
+static void
+_unix_seed_mug(struct _u3_unix* unx_u, u3_ufil* fil_u);
+
+static void
+_unix_free_lod(u3_umon* mon_u);
+
+static void
+_unix_lod_del(struct _u3_unix* unx_u, u3_ufil* fil_u);
+
+static void
+_unix_lod_put(u3_umon* mon_u, const c3_c* pax_c, c3_w mug_w);
 
 /* u3_unix_cane(): true iff (unix) path is canonical.
 */
@@ -632,6 +656,8 @@ _unix_get_mount_point(u3_unix* unx_u, u3_noun mon)
     mon_u = c3_malloc(sizeof(u3_umon));
     mon_u->nam_c = nam_c;
     mon_u->syn_o = c3n;
+    mon_u->lod_u = NULL;
+    mon_u->lod_w = 0;
     mon_u->dir_u.dir = c3y;
     mon_u->dir_u.dry = c3n;
     mon_u->dir_u.pax_c = strdup(unx_u->pax_c);
@@ -845,6 +871,7 @@ _unix_free_node(u3_unix* unx_u, u3_unod* nod_u, c3_t del_t)
   else {
     can = u3nc(u3nc(_unix_string_to_path(unx_u, nod_u->pax_c), u3_nul),
                u3_nul);
+    _unix_lod_del(unx_u, (u3_ufil *)nod_u);
     _unix_free_file((u3_ufil *)nod_u, del_t);
   }
 
@@ -870,6 +897,7 @@ _unix_free_mount_point(u3_unix* unx_u, u3_umon* mon_u, c3_t del_t)
   }
 
   _unix_watch_disarm(&mon_u->dir_u);
+  _unix_free_lod(mon_u);
 
   c3_free(mon_u->dir_u.pax_c);
   c3_free(mon_u->nam_c);
@@ -952,6 +980,7 @@ _unix_watch_file(u3_unix* unx_u, u3_ufil* fil_u, u3_udir* par_u, c3_c* pax_c)
   if ( par_u ) {
     fil_u->nex_u = par_u->kid_u;
     par_u->kid_u = (u3_unod*) fil_u;
+    _unix_seed_mug(unx_u, fil_u);
   }
 }
 
@@ -1338,22 +1367,22 @@ _unix_mug_pax(u3_unix* unx_u, u3_umon* mon_u, const c3_c* suf_c)
 
 #define SYNC_MUG_HEAD "vere-sync-mug-v1"
 
-/* _unix_save_mugs_dir(): write mug cache lines for a directory tree.
+/* _unix_fold_mugs_dir(): merge a directory tree's mugs into the cache.
 */
 static void
-_unix_save_mugs_dir(FILE* fil_u, u3_udir* dir_u, c3_w bas_w)
+_unix_fold_mugs_dir(u3_umon* mon_u, u3_udir* dir_u)
 {
   u3_unod* nod_u;
 
   for ( nod_u = dir_u->kid_u; nod_u; nod_u = nod_u->nex_u ) {
     if ( c3y == nod_u->dir ) {
-      _unix_save_mugs_dir(fil_u, (u3_udir*)nod_u, bas_w);
+      _unix_fold_mugs_dir(mon_u, (u3_udir*)nod_u);
     }
     else {
       u3_ufil* fic_u = (u3_ufil*)nod_u;
 
       if ( fic_u->gum_w ) {
-        fprintf(fil_u, "%08x %s\n", fic_u->gum_w, fic_u->pax_c + bas_w + 1);
+        _unix_lod_put(mon_u, fic_u->pax_c, fic_u->gum_w);
       }
     }
   }
@@ -1361,6 +1390,10 @@ _unix_save_mugs_dir(FILE* fil_u, u3_udir* dir_u, c3_w bas_w)
 
 /* _unix_save_mugs(): persist a mount point's synced mugs, so that
 **                    a post-restart scan only sends real changes.
+**
+**  the node tree is built lazily, so it may cover only part of the
+**  mount; tree state is merged into the cache loaded at startup
+**  (updated as files are deleted) rather than replacing it.
 */
 static void
 _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
@@ -1368,6 +1401,8 @@ _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
   c3_c* pax_c = _unix_mug_pax(unx_u, mon_u, "");
   c3_c* tmp_c = _unix_mug_pax(unx_u, mon_u, ".tmp");
   FILE* fil_u = fopen(tmp_c, "w");
+  c3_w  bas_w = strlen(unx_u->pax_c);
+  c3_w  i_w;
 
   if ( !fil_u ) {
     u3l_log("unix: can't write mug cache %s: %s", tmp_c, strerror(errno));
@@ -1376,8 +1411,15 @@ _unix_save_mugs(u3_unix* unx_u, u3_umon* mon_u)
     return;
   }
 
+  _unix_fold_mugs_dir(mon_u, &mon_u->dir_u);
+
   fprintf(fil_u, "%s\n", SYNC_MUG_HEAD);
-  _unix_save_mugs_dir(fil_u, &mon_u->dir_u, strlen(unx_u->pax_c));
+
+  for ( i_w = 0; i_w < mon_u->lod_w; i_w++ ) {
+    fprintf(fil_u, "%08x %s\n",
+            mon_u->lod_u[i_w].mug_w,
+            mon_u->lod_u[i_w].pax_c + bas_w + 1);
+  }
 
   if ( fclose(fil_u) || (0 != rename(tmp_c, pax_c)) ) {
     u3l_log("unix: can't save mug cache %s: %s", pax_c, strerror(errno));
@@ -1399,7 +1441,35 @@ _unix_drop_mugs(u3_unix* unx_u, u3_umon* mon_u)
   c3_free(pax_c);
 }
 
-/* _unix_load_mugs(): seed gum_w from the persisted mug cache.
+/* _unix_lod_cmp(): mug cache comparator, by path.
+*/
+static c3_i
+_unix_lod_cmp(const void* lef_v, const void* rit_v)
+{
+  return strcmp(((const u3_umug*)lef_v)->pax_c,
+                ((const u3_umug*)rit_v)->pax_c);
+}
+
+/* _unix_free_lod(): free a mount point's loaded mug cache.
+*/
+static void
+_unix_free_lod(u3_umon* mon_u)
+{
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < mon_u->lod_w; i_w++ ) {
+    c3_free(mon_u->lod_u[i_w].pax_c);
+  }
+  c3_free(mon_u->lod_u);
+  mon_u->lod_u = NULL;
+  mon_u->lod_w = 0;
+}
+
+/* _unix_load_mugs(): load the persisted mug cache for a mount point.
+**
+**  the node tree is built lazily by scans, so entries can't be
+**  applied here; they're kept on the mount point and consulted as
+**  file nodes are created (_unix_watch_file).
 */
 static void
 _unix_load_mugs(u3_unix* unx_u, u3_umon* mon_u)
@@ -1408,6 +1478,9 @@ _unix_load_mugs(u3_unix* unx_u, u3_umon* mon_u)
   FILE* fil_u = fopen(pax_c, "r");
   c3_c  lin_c[8192];
   c3_w  bas_w = strlen(unx_u->pax_c);
+  c3_w  siz_w = 0;
+
+  _unix_free_lod(mon_u);
 
   if ( !fil_u ) {
     c3_free(pax_c);
@@ -1432,36 +1505,126 @@ _unix_load_mugs(u3_unix* unx_u, u3_umon* mon_u)
       lin_c[--len_w] = '\0';
     }
 
-    //  "%08x <path>": malformed lines abort the load; mugs already
-    //  applied are only hints, so this is safe
+    //  "%08x <path>": a malformed line discards the whole cache,
+    //  which safely degrades to a full reconciliation
     //
     if ( (len_w < 10) || (' ' != lin_c[8])
        || (1 != sscanf(lin_c, "%8x", &mug_w)) )
     {
       u3l_log("unix: discarding malformed mug cache %s", pax_c);
+      _unix_free_lod(mon_u);
       break;
     }
 
     rel_c = lin_c + 9;
 
+    if ( mon_u->lod_w == siz_w ) {
+      siz_w = siz_w ? (2 * siz_w) : 256;
+      mon_u->lod_u = c3_realloc(mon_u->lod_u, siz_w * sizeof(u3_umug));
+    }
+
     {
       c3_w  abs_w = bas_w + 1 + strlen(rel_c) + 1;
       c3_c* abs_c = c3_malloc(abs_w);
-      u3_unod* nod_u;
 
       snprintf(abs_c, abs_w, "%s/%s", unx_u->pax_c, rel_c);
-      nod_u = _unix_find_node(&mon_u->dir_u, abs_c);
-
-      if ( nod_u && (c3n == nod_u->dir) ) {
-        ((u3_ufil*)nod_u)->gum_w = mug_w;
-      }
-
-      c3_free(abs_c);
+      mon_u->lod_u[mon_u->lod_w].pax_c = abs_c;
+      mon_u->lod_u[mon_u->lod_w].mug_w = mug_w;
+      mon_u->lod_w++;
     }
+  }
+
+  if ( mon_u->lod_w ) {
+    qsort(mon_u->lod_u, mon_u->lod_w, sizeof(u3_umug), _unix_lod_cmp);
   }
 
   fclose(fil_u);
   c3_free(pax_c);
+}
+
+/* _unix_seed_mug(): seed a new file node's mug from the loaded cache.
+*/
+static void
+_unix_seed_mug(u3_unix* unx_u, u3_ufil* fil_u)
+{
+  u3_umon* mon_u = _unix_node_mount(unx_u, (u3_unod*)fil_u);
+  u3_umug  key_u;
+  u3_umug* fon_u;
+
+  if ( !mon_u || !mon_u->lod_w ) {
+    return;
+  }
+
+  key_u.pax_c = fil_u->pax_c;
+  fon_u = bsearch(&key_u, mon_u->lod_u, mon_u->lod_w,
+                  sizeof(u3_umug), _unix_lod_cmp);
+
+  if ( fon_u ) {
+    fil_u->gum_w = fon_u->mug_w;
+  }
+}
+
+/* _unix_lod_put(): update or insert a mug cache entry.
+*/
+static void
+_unix_lod_put(u3_umon* mon_u, const c3_c* pax_c, c3_w mug_w)
+{
+  u3_umug key_u;
+  c3_w    i_w;
+
+  key_u.pax_c = (c3_c*)pax_c;
+
+  if ( mon_u->lod_w ) {
+    u3_umug* fon_u = bsearch(&key_u, mon_u->lod_u, mon_u->lod_w,
+                             sizeof(u3_umug), _unix_lod_cmp);
+    if ( fon_u ) {
+      fon_u->mug_w = mug_w;
+      return;
+    }
+  }
+
+  //  insert, keeping the array sorted
+  //
+  mon_u->lod_u = c3_realloc(mon_u->lod_u,
+                            (1 + mon_u->lod_w) * sizeof(u3_umug));
+
+  for ( i_w = mon_u->lod_w;
+        i_w && (0 < strcmp(mon_u->lod_u[i_w - 1].pax_c, pax_c));
+        i_w-- )
+  {
+    mon_u->lod_u[i_w] = mon_u->lod_u[i_w - 1];
+  }
+
+  mon_u->lod_u[i_w].pax_c = strdup(pax_c);
+  mon_u->lod_u[i_w].mug_w = mug_w;
+  mon_u->lod_w++;
+}
+
+/* _unix_lod_del(): remove a deleted file from its mount's mug cache.
+*/
+static void
+_unix_lod_del(u3_unix* unx_u, u3_ufil* fil_u)
+{
+  u3_umon* mon_u = _unix_node_mount(unx_u, (u3_unod*)fil_u);
+  u3_umug  key_u;
+  u3_umug* fon_u;
+
+  if ( !mon_u || !mon_u->lod_w ) {
+    return;
+  }
+
+  key_u.pax_c = fil_u->pax_c;
+  fon_u = bsearch(&key_u, mon_u->lod_u, mon_u->lod_w,
+                  sizeof(u3_umug), _unix_lod_cmp);
+
+  if ( fon_u ) {
+    c3_w i_w = fon_u - mon_u->lod_u;
+
+    c3_free(fon_u->pax_c);
+    memmove(fon_u, fon_u + 1,
+            (mon_u->lod_w - i_w - 1) * sizeof(u3_umug));
+    mon_u->lod_w--;
+  }
 }
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
@@ -2112,8 +2275,8 @@ u3_unix_ef_hill(u3_unix* unx_u, u3_noun hil)
 
   for ( mon = hil; c3y == u3du(mon); mon = u3t(mon) ) {
     u3_umon* mon_u = _unix_get_mount_point(unx_u, u3k(u3h(mon)));
-    _unix_scan_mount_point(unx_u, mon_u);
     _unix_load_mugs(unx_u, mon_u);
+    _unix_scan_mount_point(unx_u, mon_u);
   }
 
   unx_u->car_u.liv_o = c3y;
