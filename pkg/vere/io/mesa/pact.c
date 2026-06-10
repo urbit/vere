@@ -936,10 +936,6 @@ mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_h len_h) {
   u3_sifter sif_u;
   sifter_init(&sif_u, buf_y, len_h);
 
-  if ( len_h > PACT_SIZE ) {
-    _sift_fail(&sif_u, "packet too large");
-  }
-
   _mesa_sift_pact(&sif_u, pac_u);
   if ( sif_u.rem_h && !sif_u.err_c ) {
     _sift_fail(&sif_u, "trailing bytes");
