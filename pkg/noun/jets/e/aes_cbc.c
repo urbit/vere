@@ -20,10 +20,21 @@ typedef int (*urcrypt_cbc)(c3_y**,
   _cqea_cbc_help(c3_y* key_y, u3_atom iv, u3_atom msg, urcrypt_cbc low_f)
   {
     u3_atom ret;
-    c3_w    met_w;
     c3_y    iv_y[16];
-    c3_y*   msg_y = u3r_bytes_all(&met_w, msg);
-    size_t  len = met_w;
+
+    //  urcrypt_cbc_* modifies the buffer in place and may realloc it
+    //  via u3a_realloc, so we need a heap-owned writable buffer.
+    //  view the input (mmap for bobs, no full-blob loom alloc) then
+    //  copy into a fresh heap allocation.
+    //
+    u3r_view vu_u;
+    u3r_view_init(&vu_u, msg);
+    size_t len   = vu_u.len_w;
+    c3_y*  msg_y = u3a_malloc(len ? len : 1);
+    if ( len ) {
+      memcpy(msg_y, vu_u.byt_y, len);
+    }
+    u3r_view_done(&vu_u);
 
     u3r_bytes(0, 16, iv_y, iv);
     if ( 0 != (*low_f)(&msg_y, &len, key_y, iv_y, &u3a_realloc) ) {

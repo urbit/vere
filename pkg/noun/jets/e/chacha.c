@@ -6,6 +6,8 @@
 #include "noun.h"
 #include "urcrypt.h"
 
+#include <string.h>
+
   static u3_atom
   _cqe_chacha_crypt(u3_atom rounds, u3_atom key, u3_atom nonce, u3_atom counter, u3_atom wid, u3_atom dat)
   {
@@ -14,16 +16,29 @@
     if ( !u3r_word_fit(&rounds_w, rounds) || !u3r_word_fit(&wid_w, wid) || c3n == u3r_safe_chub(counter, &counter_d) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y key_y[32], nonce_y[8];
-      u3r_bytes(0, 32, key_y, key);
-      u3r_bytes(0, 8, nonce_y, nonce);
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
-      urcrypt_chacha_crypt(rounds_w, key_y, nonce_y, counter_d, wid_w, dat_y);
-      u3_noun cry = u3i_bytes(wid_w, dat_y);
-      u3a_free(dat_y);
-      return u3i_cell(wid, cry);
+
+    c3_y key_y[32], nonce_y[8];
+    u3r_bytes(0, 32, key_y, key);
+    u3r_bytes(0, 8, nonce_y, nonce);
+
+    //  allocate output slab directly; copy plaintext from view (mmap
+    //  for bobs) into the slab; chacha mutates in place.  saves both
+    //  a full-blob loom allocation (from u3r_bytes_alloc → u3r_blob_load)
+    //  and the intermediate heap buffer.
+    //
+    u3i_slab sab_u;
+    u3i_slab_init(&sab_u, 3, wid_w);
+
+    if ( wid_w ) {
+      u3r_view vu_u;
+      u3r_view_padded(&vu_u, dat, wid_w);
+      memcpy(sab_u.buf_y, vu_u.byt_y, wid_w);
+      u3r_view_done(&vu_u);
     }
+
+    urcrypt_chacha_crypt(rounds_w, key_y, nonce_y, counter_d, wid_w, sab_u.buf_y);
+
+    return u3i_cell(wid, u3i_slab_mint_bytes(&sab_u));
   }
 
   u3_noun

@@ -106,22 +106,28 @@ _cqea_siv_en(c3_y*   key_y,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w txt_w;
   c3_w soc_w;
-  c3_y *txt_y, *out_y, iv_y[16];
+  c3_y *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
-  dat_u = _cqea_ads_alloc(ads, &soc_w);
-  txt_y = u3r_bytes_all(&txt_w, txt);
-  out_y = u3a_malloc(txt_w);
+  //  zero-copy view on the plaintext.  urcrypt_siv's signature
+  //  takes non-const c3_y* but treats the buffer as input-only;
+  //  the encrypted output goes to out_y.  cast-away is safe.
+  //
+  u3r_view vu_u;
+  u3r_view_init(&vu_u, txt);
+  c3_w txt_w = vu_u.len_w;
 
-  ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
+  dat_u = _cqea_ads_alloc(ads, &soc_w);
+  out_y = u3a_malloc(txt_w ? txt_w : 1);
+
+  ret = ( 0 != (*low_f)((c3_y*)vu_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
              u3i_word(txt_w),
              u3i_bytes(txt_w, out_y));
 
-  u3a_free(txt_y);
+  u3r_view_done(&vu_u);
   u3a_free(out_y);
   _cqea_ads_free(dat_u);
   return ret;
@@ -143,21 +149,29 @@ _cqea_siv_de(c3_y*   key_y,
   else {
     u3_noun ret;
     c3_w soc_w;
-    c3_y *txt_y, *out_y, iv_y[16];
+    c3_y *out_y, iv_y[16];
     urcrypt_aes_siv_data *dat_u;
 
     u3r_bytes(0, 16, iv_y, iv);
     dat_u = _cqea_ads_alloc(ads, &soc_w);
-    txt_y = u3r_bytes_alloc(0, txt_w, txt);
-    out_y = u3a_malloc(txt_w);
 
-    if ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
+    //  zero-copy view on the ciphertext; zero-pad if atom is shorter
+    //  than the declared length.
+    //
+    u3r_view vu_u;
+    u3r_view_padded(&vu_u, txt, txt_w);
+    out_y = u3a_malloc(txt_w ? txt_w : 1);
+
+    if ( 0 != (*low_f)((c3_y*)vu_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
+      u3r_view_done(&vu_u);
+      u3a_free(out_y);
+      _cqea_ads_free(dat_u);
       return u3m_bail(c3__evil);
     }
 
     ret = u3nc(0, u3i_bytes(txt_w, out_y));
 
-    u3a_free(txt_y);
+    u3r_view_done(&vu_u);
     u3a_free(out_y);
     _cqea_ads_free(dat_u);
 

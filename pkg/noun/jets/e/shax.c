@@ -16,23 +16,23 @@
     if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y  out_y[32];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_shay(dat_y, len_w, out_y);
-      u3a_free(dat_y);
-      return u3i_bytes(32, out_y);
-    }
+
+    c3_y out_y[32];
+    u3r_view vu_u;
+    u3r_view_padded(&vu_u, dat, len_w);
+    urcrypt_shay((c3_y*)vu_u.byt_y, len_w, out_y);
+    u3r_view_done(&vu_u);
+    return u3i_bytes(32, out_y);
   }
 
   static u3_atom
   _cqe_shax(u3_atom a)
   {
-    c3_w  len_w;
-    c3_y  out_y[32];
-    c3_y* dat_y = u3r_bytes_all(&len_w, a);
-    urcrypt_shay(dat_y, len_w, out_y);
-    u3a_free(dat_y);
+    c3_y out_y[32];
+    u3r_view vu_u;
+    u3r_view_init(&vu_u, a);
+    urcrypt_shay((c3_y*)vu_u.byt_y, vu_u.len_w, out_y);
+    u3r_view_done(&vu_u);
     return u3i_bytes(32, out_y);
   }
 
@@ -44,27 +44,30 @@
     if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y  out_y[64];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_shal(dat_y, len_w, out_y);
-      u3a_free(dat_y);
-      return u3i_bytes(64, out_y);
-    }
+
+    c3_y out_y[64];
+    u3r_view vu_u;
+    u3r_view_padded(&vu_u, dat, len_w);
+    urcrypt_shal((c3_y*)vu_u.byt_y, len_w, out_y);
+    u3r_view_done(&vu_u);
+    return u3i_bytes(64, out_y);
   }
 
   static u3_atom
   _cqe_shas(u3_atom sal,
             u3_atom ruz)
   {
-    c3_w sal_w, ruz_w;
-    c3_y *sal_y, *ruz_y, out_y[32];
+    c3_y out_y[32];
 
-    sal_y = u3r_bytes_all(&sal_w, sal);
-    ruz_y = u3r_bytes_all(&ruz_w, ruz);
-    urcrypt_shas(sal_y, sal_w, ruz_y, ruz_w, out_y);
-    u3a_free(sal_y);
-    u3a_free(ruz_y);
+    u3r_view sa_u, ru_u;
+    u3r_view_init(&sa_u, sal);
+    u3r_view_init(&ru_u, ruz);
+
+    urcrypt_shas((c3_y*)sa_u.byt_y, sa_u.len_w,
+                 (c3_y*)ru_u.byt_y, ru_u.len_w, out_y);
+
+    u3r_view_done(&sa_u);
+    u3r_view_done(&ru_u);
     return u3i_bytes(32, out_y);
   }
 

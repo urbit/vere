@@ -18,25 +18,22 @@ u3qe_crc32(u3_noun input_octs)
   if ( c3n == u3r_safe_word(head, &hed_w) ) {
     return u3m_bail(c3__fail);
   }
-  c3_y* input;
-
-  if (c3y == u3a_is_cat(tail)) {
-    input = (c3_y*)&tail;
-  }
-  else {
-    u3a_atom* vat_u = u3a_to_ptr(tail);
-    // XX: little endian
-    input = (c3_y*)vat_u->buf_w;
-  }
 
   if ( tel_w > hed_w ) {
     return u3m_error("subtract-underflow");
   }
 
-  c3_w led_w = hed_w - tel_w;
-  c3_w crc_w = 0;
+  //  zero-copy view of the atom's significant bytes (mmap for bob).
+  //  NB: the legacy vat_u->buf_w path returned seq_w for bob atoms;
+  //  u3r_view gives the actual file bytes.
+  //
+  u3r_view vu_u;
+  u3r_view_init(&vu_u, tail);
 
-  crc_w = crc32(crc_w, input, tel_w);
+  c3_w led_w = hed_w - tel_w;
+  c3_w crc_w = crc32(0, vu_u.byt_y, tel_w);
+
+  u3r_view_done(&vu_u);
 
   while ( led_w > 0 ) {
     c3_y byt_y = 0;

@@ -634,6 +634,8 @@ static u3j_core _135_tri__sha_d[] =
     {}
   };
 
+static u3j_harm _135_tri_jam_shax_a[] = {{".2", u3we_jam_shax}, {}};
+
 static u3j_harm _135_tri_shax_a[] = {{".2", u3we_shax}, {}};
 static u3j_harm _135_tri_shay_a[] = {{".2", u3we_shay}, {}};
 static u3j_harm _135_tri_shas_a[] = {{".2", u3we_shas}, {}};
@@ -1107,6 +1109,7 @@ static u3j_core _135_tri_d[] =
     { "shay", 7, _135_tri_shay_a, 0,               no_hashes },
     { "shas", 7, _135_tri_shas_a, 0,               no_hashes },
     { "shal", 7, _135_tri_shal_a, 0,               no_hashes },
+    { "jam-shax", 7, _135_tri_jam_shax_a, 0,       no_hashes },
 
     { "ob", 3, 0, _135_ob_d, no_hashes, _135_ob_ho },
     {}
