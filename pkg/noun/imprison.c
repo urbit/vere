@@ -71,9 +71,8 @@ static void
 _ci_slab_grow(u3i_slab* sab_u, c3_w len_w)
 {
   c3_w*     old_w = (void*)sab_u->_._vat_u;
-  //    XX implement a more efficient u3a_wealloc()
-  //
-  c3_w*     nov_w = u3a_wealloc(old_w, len_w + c3_wiseof(u3a_atom));
+  c3_w*     nov_w = u3a_wealloc(old_w, sab_u->len_w + c3_wiseof(u3a_atom),
+                                       len_w + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
 
   vat_u->len_w = len_w;

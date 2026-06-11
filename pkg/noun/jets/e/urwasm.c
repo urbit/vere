@@ -61,12 +61,6 @@
 #define KICK1(TRAP)         uw_kick_nock(TRAP, 2)
 #define KICK2(TRAP)         KICK1(KICK1(TRAP))
 
-static void*
-_road_realloc(void* lag_v, size_t old_i, size_t new_i)
-{
-  return u3a_realloc(lag_v, new_i);
-}
-
 // [a b c d e f g h]
 static inline u3_noun
 uw_octo(u3_noun a,
@@ -2040,7 +2034,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 {
   m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
   m3_SetTransientAllocators(_calloc_bail, _free_bail, _realloc_bail);
-  m3_SetMemoryAllocators(u3a_calloc, u3a_free, _road_realloc);
+  m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
 
   if (input_tag == c3y)
   {
@@ -2429,7 +2423,7 @@ u3we_lia_run_v1(u3_noun cor)
 
       m3_SetAllocators(_calloc_box, _free_box, _realloc_box);
       m3_SetTransientAllocators(_calloc_code, _free_code, _realloc_code);
-      m3_SetMemoryAllocators(u3a_calloc, u3a_free, _road_realloc);
+      m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
       jmp_buf esc;
       CodeArena->esc_u = BoxArena->esc_u = &esc;
       c3_i jmp_i;
@@ -2611,9 +2605,9 @@ u3we_lia_run_v1(u3_noun cor)
                                                  : u3m_bail(c3__fail);
     c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
 
-    m3_SetAllocators(u3a_calloc, u3a_free, _road_realloc);
-    m3_SetTransientAllocators(u3a_calloc, u3a_free, _road_realloc);
-    m3_SetMemoryAllocators(u3a_calloc, u3a_free, _road_realloc);
+    m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
+    m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
+    m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
 
     wasm3_env = m3_NewEnvironment();
     if (!wasm3_env)
@@ -2901,9 +2895,9 @@ u3we_lia_run_once(u3_noun cor)
 
   M3Result result;
 
-  m3_SetAllocators(u3a_calloc, u3a_free, _road_realloc);
-  m3_SetTransientAllocators(u3a_calloc, u3a_free, _road_realloc);
-  m3_SetMemoryAllocators(u3a_calloc, u3a_free, _road_realloc);
+  m3_SetAllocators(u3a_calloc, u3a_free, u3a_realloc);
+  m3_SetTransientAllocators(u3a_calloc, u3a_free, u3a_realloc);
+  m3_SetMemoryAllocators(u3a_calloc, u3a_free, u3a_realloc);
 
   IM3Environment wasm3_env = m3_NewEnvironment();
   if (!wasm3_env)

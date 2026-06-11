@@ -240,8 +240,10 @@ u3a_walloc(c3_w len_w)
 /* u3a_wealloc(): realloc in words.
 */
 void*
-u3a_wealloc(void* lag_v, c3_w len_w)
+u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 {
+  (void)old_w;
+
   if ( !lag_v ) {
     return u3a_walloc(len_w);
   }
@@ -322,15 +324,21 @@ u3a_malloc(c3_z len_z)
 /* u3a_realloc(): aligned realloc in bytes.
 */
 void*
-u3a_realloc(void* lag_v, c3_z len_z)
+u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z)
 {
   if ( !lag_v ) {
+    (void)old_z;
     return u3a_malloc(len_z);
   }
 
+  c3_z wol_z = (old_z + 3) >> 2;
   c3_z wen_z = (len_z + 3) >> 2;
-  if (wen_z > UINT32_MAX ) return (u3m_bail(c3__fail), (void*)0);
-  return u3a_wealloc(lag_v, (c3_w)wen_z);
+
+  if ( (wol_z > UINT32_MAX) || (wen_z > UINT32_MAX) ) {
+    return (u3m_bail(c3__fail), (void*)0);
+  }
+
+  return u3a_wealloc(lag_v, (c3_w)wol_z, (c3_w)wen_z);
 }
 
 /* u3a_free(): free for aligned malloc.
