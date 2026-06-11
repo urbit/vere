@@ -1139,7 +1139,9 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
-    u3R->how.fag_w |= u3a_flag_sand;
+    if ( !(u3C.wag_w & u3o_no_sand) ) {
+      u3R->how.fag_w |= u3a_flag_sand;
+    }
     _pave_parts();
   }
 #ifdef U3_MEMORY_DEBUG
