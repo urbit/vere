@@ -502,7 +502,10 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  c3_w*     new_w = u3a_walloc(old_u->len_w + c3_wiseof(u3a_atom));
+  //  use masked length; bob atoms carry u3a_blob_flag in len_w
+  //
+  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
+  c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
@@ -523,7 +526,7 @@ _ca_take_atom(u3a_atom* old_u)
   {
     c3_w i_w;
 
-    for ( i_w=0; i_w < old_u->len_w; i_w++ ) {
+    for ( i_w=0; i_w < dat_w; i_w++ ) {
       new_u->buf_w[i_w] = old_u->buf_w[i_w];
     }
   }
@@ -842,6 +845,83 @@ _me_gain_south(u3_noun dog)
   }
 }
 
+/* u3a_blob_get(): look up blb_p entry for (mug_h, seq_h).  RETAINS.
+*/
+u3a_blob*
+u3a_blob_get(c3_h mug_h, c3_h seq_h)
+{
+  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3_weak bv  = u3h_get(u3H->blb_p, bid);
+  u3z(bid);
+
+  if ( u3_none == bv ) return 0;
+
+  c3_d off_d = 0;
+  u3r_safe_chub(bv, &off_d);
+  u3z(bv);
+
+  return (u3a_blob*)u3a_into((u3_post)off_d);
+}
+
+/* u3a_blob_new(): allocate fresh u3a_blob and install it under (mug_h, seq_h).
+*/
+u3a_blob*
+u3a_blob_new(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
+  blb_u->use_w = 0;
+  blb_u->eve_w = 0;
+  blb_u->les_h = 0;
+  blb_u->mug_h = mug_h;
+  blb_u->seq_h = seq_h;
+
+  u3_post off_p = u3a_outa(blb_u);
+  u3_noun bid   = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3h_put(u3H->blb_p, bid, u3i_chub((c3_d)off_p));
+  u3z(bid);
+
+  return blb_u;
+}
+
+/* u3a_blob_drop(): remove blb_p entry and free underlying u3a_blob.
+*/
+void
+u3a_blob_drop(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  if ( !blb_u ) return;
+
+  u3a_wfree(blb_u);
+
+  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3h_del(u3H->blb_p, bid);
+  u3z(bid);
+}
+
+/* _me_bob_dead(): bob atom's loom refcount just hit zero.
+**
+**   Decrements u3a_blob.use_w (atom cardinality contribution).  If
+**   use_w hits zero, calls blob_del_f — mars wipes the file and drops
+**   the blb_p entry; king releases its lease (%blrl) and drops its
+**   local entry, never touching files.
+*/
+static void
+_me_bob_dead(u3a_atom* atm_u)
+{
+  if ( !u3C.blob_del_f ) return;
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+  if ( !blb_u ) return;
+
+  if ( blb_u->use_w > 0 ) {
+    blb_u->use_w -= 1;
+  }
+
+  if ( 0 == blb_u->use_w ) {
+    u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);
+  }
+}
+
 /* _me_lose_north(): lose on a north road.
 */
 static void
@@ -874,6 +954,10 @@ top:
           }
         }
         else {
+          u3a_atom* atm_u = (u3a_atom*)box_u;
+          if ( atm_u->len_w & u3a_blob_flag ) {
+            _me_bob_dead(atm_u);
+          }
           u3a_wfree(box_u);
         }
       }
@@ -913,6 +997,10 @@ top:
           }
         }
         else {
+          u3a_atom* atm_u = (u3a_atom*)box_u;
+          if ( atm_u->len_w & u3a_blob_flag ) {
+            _me_bob_dead(atm_u);
+          }
           u3a_wfree(box_u);
         }
       }
@@ -1152,8 +1240,18 @@ u3a_relocate_noun(u3_noun *som)
     old_p = u3a_to_off(old);
 
     if ( c3n == u3a_is_cell(old) ) {
-      new_p = _pack_relocate(old_p);
-      *som = u3a_to_pug(new_p);
+      //  indirect atom: mark-tracked relocate so bob atoms can rewrite
+      //  their u3a_blob pointer at old_p exactly once.
+      //
+      new_p = _pack_relocate_mark(old_p, &fir_t);
+      *som  = u3a_to_pug(new_p);
+
+      if ( fir_t ) {
+        u3a_atom* atm_u = u3to(u3a_atom, old_p);
+        if ( atm_u->len_w & u3a_blob_flag ) {
+          u3a_relocate_post((u3_post*)&atm_u->buf_w[0]);
+        }
+      }
       return;
     }
 

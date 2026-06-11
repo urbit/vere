@@ -23,7 +23,8 @@
   u3v_version           ver_d;        \
   c3_d                  pam_d;        \
   U3_PASTE(u3v_arvo, S) arv_u;        \
-  U3_PASTE(u3a_road, S) rod_u;
+  U3_PASTE(u3a_road, S) rod_u;        \
+  U3_W(S)               blb_p;
 
       U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
       U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);

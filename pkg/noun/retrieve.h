@@ -416,6 +416,49 @@
         u3r_bytes_all(c3_w*   len_w,
                       u3_atom a);
 
+      /* u3r_view: read-only byte view over an atom's significant bytes.
+      **
+      **   For bob atoms, mmaps the underlying blob file — the caller sees
+      **   [byt_y, len_w) without any loom allocation.  For normal atoms,
+      **   falls back to malloc + u3r_bytes (same cost as u3r_bytes_all).
+      **
+      **   Lifecycle: u3r_view_init / ...use byt_y[0..len_w]... /
+      **              u3r_view_done.  byt_y is invalid after _done.
+      **
+      **   len_w matches u3r_met(3, a): significant-byte length (trailing
+      **   zero bytes stripped).  For bob atoms this may be less than the
+      **   on-disk file size; callers only see the logical bytes.
+      */
+        typedef struct {
+          const c3_y* byt_y;    //  bytes (mmap or heap)
+          c3_w        len_w;    //  significant byte length
+          c3_d        map_d;    //  mmap size for unmap (0 if heap-backed)
+          c3_y*       ali_y;    //  heap allocation to free (0 if mmap-backed)
+        } u3r_view;
+
+      /* u3r_view_init(): open a read-only byte view of [a].
+      */
+        void
+        u3r_view_init(u3r_view* vu_u, u3_atom a);
+
+      /* u3r_view_padded(): open a view of at least [wid_w] bytes.
+      **
+      **   After the call, byt_y[0..wid_w] is valid; len_w == wid_w.
+      **   If the atom already has >= wid_w significant bytes we keep
+      **   the zero-copy path (mmap for bobs, still cheap for cats
+      **   that fit in a single word).  Otherwise we allocate a
+      **   wid_w-byte heap buffer, copy what's there, and zero-pad
+      **   the rest — exactly the semantics that callers previously
+      **   got from u3r_bytes_alloc(0, wid_w, a).
+      */
+        void
+        u3r_view_padded(u3r_view* vu_u, u3_atom a, c3_w wid_w);
+
+      /* u3r_view_done(): release the view's backing memory.
+      */
+        void
+        u3r_view_done(u3r_view* vu_u);
+
       /* u3r_chop_bits():
       **
       **   XOR `wid_d` bits from`src_w` at `bif_g` to `dst_w` at `bif_g`
@@ -616,5 +659,38 @@
       */
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
+
+      /* u3r_blob_load(): materialize a bob atom by loading from the blob store.
+      **
+      **   Returns a normal indirect atom with the blob's bytes, or u3_none on
+      **   failure. [pax_c] is the pier path ($pier/).
+      **   Does NOT consume [a]; caller must manage refcounts as usual.
+      */
+      u3_weak
+      u3r_blob_load(u3_atom a, const c3_c* pax_c);
+
+      /* u3r_blob_map(): mmap a bob atom's blob file for direct byte access.
+      **
+      **   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
+      **   Release with u3r_blob_unmap(ptr, *len_d) when done.
+      **   Uses u3C.dir_c as the pier path.
+      **   No loom allocation is performed.
+      */
+      const c3_y*
+      u3r_blob_map(u3_atom a, c3_d* len_d);
+
+      /* u3r_blob_unmap(): release a mapping from u3r_blob_map().
+      */
+      void
+      u3r_blob_unmap(const c3_y* ptr_y, c3_d len_d);
+
+      /* u3r_blob_met(): compute bit-length of a bob atom without materialization.
+      **
+      **   Equivalent to u3r_met(0, materialized) but avoids loom allocation.
+      **   Scans the last byte to strip trailing zeroes.
+      **   Returns 0 on error.
+      */
+      c3_d
+      u3r_blob_met(u3_atom a);
 
 #endif /* ifndef U3_RETRIEVE_H */

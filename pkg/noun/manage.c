@@ -523,6 +523,7 @@ _pave_parts(void)
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
   u3R->how.fag_w = 0;
+
 }
 
 static c3_d
@@ -561,6 +562,10 @@ _pave_home(void)
   u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
+
+  //  initialize blob bank HAMTs (home road only)
+  //
+  u3H->blb_p = u3h_new();
 }
 
 STATIC_ASSERT( (c3_wiseof(u3v_home) <= (((c3_w)1) << u3a_page)),
@@ -569,6 +574,25 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
+
+/* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
+**   use_w and zero les_h on each u3a_blob.  Leases are transient IPC
+**   state backed by a C-heap PQ that is not persisted; after restart
+**   the PQ is empty, so any les_h count from the previous boot is stale.
+*/
+static void
+_find_home_zero_les_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3_noun val = u3t(kev);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  blb_u->use_w -= blb_u->les_h;
+  blb_u->les_h  = 0;
+}
 
 /* _find_home(): in restored image, point to home road.
 */
@@ -665,8 +689,19 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
   //
+  //  lazy-init blob bank HAMTs (zero if snapshot predates blob store)
+  //
+  if ( !u3H->blb_p ) {
+    u3H->blb_p = u3h_new();
+  }
+
+
+  //  reset all les_h to 0: leases are transient IPC state backed by a
+  //  C-heap PQ that is not persisted.  after restart the PQ is empty,
+  //  so any les_h count from the previous boot is stale.
+  //
+  u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
   if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
 }

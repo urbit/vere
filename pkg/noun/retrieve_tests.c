@@ -2,6 +2,12 @@
 
 #include "noun.h"
 
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 /* _setup(): prepare for tests.
 */
 static void
@@ -1135,6 +1141,142 @@ _test_cell_trel_qual(void)
     exit(1);
 }
 
+/* _test_view(): u3r_view_init on both regular and bob atoms.
+*/
+static void
+_test_view(void)
+{
+  //  regular indirect atom: view falls back to heap alloc+copy
+  //
+  {
+    const c3_y src_y[] = "hello, u3r_view on a normal atom";
+    const c3_w src_w   = sizeof(src_y) - 1;
+    u3_atom a = u3i_bytes(src_w, src_y);
+
+    u3r_view vu_u;
+    u3r_view_init(&vu_u, a);
+
+    if ( vu_u.len_w != src_w ) {
+      fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_w
+                      " vs %" PRIc3_w "\r\n",
+              vu_u.len_w, src_w);
+      exit(1);
+    }
+    if ( vu_u.map_d != 0 ) {
+      fprintf(stderr, "_test_view(): normal atom should not be mmap-backed\r\n");
+      exit(1);
+    }
+    if ( vu_u.ali_y == 0 ) {
+      fprintf(stderr, "_test_view(): normal atom should have heap allocation\r\n");
+      exit(1);
+    }
+    if ( 0 != memcmp(vu_u.byt_y, src_y, src_w) ) {
+      fprintf(stderr, "_test_view(): normal bytes mismatch\r\n");
+      exit(1);
+    }
+
+    u3r_view_done(&vu_u);
+    if ( vu_u.byt_y != 0 || vu_u.len_w != 0 ) {
+      fprintf(stderr, "_test_view(): normal view not reset on done\r\n");
+      exit(1);
+    }
+    u3z(a);
+  }
+
+  //  zero atom: view should be empty, no allocation, no mmap
+  //
+  {
+    u3r_view vu_u;
+    u3r_view_init(&vu_u, 0);
+    if ( vu_u.len_w != 0 || vu_u.map_d != 0 || vu_u.ali_y != 0 ) {
+      fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
+      exit(1);
+    }
+    u3r_view_done(&vu_u);
+  }
+
+  //  bob atom: view mmaps the underlying blob file
+  //
+  {
+    //  set up a temp pier dir with a blob at .urb/bob/<mug>/<seq>
+    //
+    c3_c dir_c[1024];
+    snprintf(dir_c, sizeof(dir_c), "/tmp/vere-view-test-XXXXXX");
+    if ( !mkdtemp(dir_c) ) {
+      fprintf(stderr, "_test_view(): mkdtemp failed: %s\r\n", strerror(errno));
+      exit(1);
+    }
+
+    c3_c pax_c[2048];
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);         mkdir(pax_c, 0755);
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c);     mkdir(pax_c, 0755);
+
+    const c3_h mug_h = 0xabcd1234;
+    const c3_h seq_h = 7;
+
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+    mkdir(pax_c, 0755);
+
+    const c3_y bob_y[] = "bob atom backed by a real file";
+    const c3_d bob_d   = sizeof(bob_y) - 1;
+
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+             dir_c, (unsigned)mug_h, (unsigned)seq_h);
+    FILE* fil_f = fopen(pax_c, "wb");
+    if ( !fil_f ) {
+      fprintf(stderr, "_test_view(): fopen %s: %s\r\n", pax_c, strerror(errno));
+      exit(1);
+    }
+    fwrite(bob_y, 1, bob_d, fil_f);
+    fclose(fil_f);
+
+    //  set u3C.dir_c so u3r_blob_map finds the blob
+    //
+    u3C.dir_c = dir_c;
+
+    u3_atom a = u3i_blob(mug_h, seq_h);
+
+    u3r_view vu_u;
+    u3r_view_init(&vu_u, a);
+
+    //  expect mmap-backed view: map_d > 0, ali_y == 0
+    //
+    if ( vu_u.map_d == 0 ) {
+      fprintf(stderr, "_test_view(): bob atom should be mmap-backed "
+                      "(len=%" PRIc3_w " map_d=%" PRIc3_d " ali=%p)\r\n",
+              vu_u.len_w, vu_u.map_d, (void*)vu_u.ali_y);
+      exit(1);
+    }
+    if ( vu_u.ali_y != 0 ) {
+      fprintf(stderr, "_test_view(): bob atom should not have heap alloc\r\n");
+      exit(1);
+    }
+    if ( vu_u.len_w == 0 || (c3_d)vu_u.len_w > bob_d ) {
+      fprintf(stderr, "_test_view(): bob len_w=%" PRIc3_w
+                      " out of range [1..%" PRIc3_d "]\r\n",
+              vu_u.len_w, bob_d);
+      exit(1);
+    }
+    //  first bytes must match the source; trailing bytes past len_w are
+    //  still in the mapping (full file size) but out of logical scope
+    //
+    if ( 0 != memcmp(vu_u.byt_y, bob_y, vu_u.len_w) ) {
+      fprintf(stderr, "_test_view(): bob bytes mismatch\r\n");
+      exit(1);
+    }
+
+    u3r_view_done(&vu_u);
+    u3z(a);
+
+    //  clean up temp pier
+    //
+    c3_c cmd_c[2048];
+    snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", dir_c);
+    (void)system(cmd_c);
+    u3C.dir_c = 0;
+  }
+}
+
 /* main(): run all test cases.
 */
 int
@@ -1149,6 +1291,7 @@ main(int argc, char* argv[])
   _test_words();
   _test_safe();
   _test_cell_trel_qual();
+  _test_view();
 
   //  GC
   //
