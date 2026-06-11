@@ -417,6 +417,32 @@ u3a_free(void* tox_v)
   u3a_wfree((c3_w*)tox_v);
 }
 
+void
+u3a_cellblock(void)
+{
+  u3_post   *cel_p = u3to(u3_post, u3R->cel.cel_p);
+  u3a_cell  *cel_u;
+  const c3_w max_w = (1U << u3a_page) / c3_wiseof(u3a_cell);
+
+  if ( u3R->cel.hav_w ) return;
+
+  u3R->cel.bat_w++;
+
+  if ( !(u3R->how.fag_w & u3a_flag_sand) ) {
+    _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page),
+                 (u3R->cel.bat_w & 1), &u3R->cel.hav_w, cel_p);
+  }
+  else {
+    cel_u = u3a_walloc(1U << u3a_page);
+
+    for ( c3_w i_w = 0; i_w < max_w; i_w++ ) {
+      cel_p[i_w] = u3a_outa(&(cel_u[i_w]));
+    }
+
+    u3R->cel.hav_w = max_w;
+  }
+}
+
 /* u3a_celloc(): allocate a cell.
 */
 c3_w*
@@ -425,17 +451,9 @@ u3a_celloc(void)
   u3a_cell *cel_u;
   u3_post  *cel_p;
 
-  if ( u3R->how.fag_w & u3a_flag_sand ) {
-    cel_u = _ca_bump(c3_wiseof(*cel_u));
-  }
-  else if ( u3R->cel.cel_p ) {
+  if ( u3R->cel.cel_p ) {
+    if ( !u3R->cel.hav_w ) u3a_cellblock();
     cel_p = u3to(u3_post, u3R->cel.cel_p);
-
-    if ( !u3R->cel.hav_w ) {
-      _rake_chunks(c3_wiseof(*cel_u), (1U << u3a_page),
-                   (u3R->cel.bat_w++ & 1), &u3R->cel.hav_w, cel_p);
-    }
-
     cel_u = u3to(u3a_cell, cel_p[--u3R->cel.hav_w]);
   }
   else {
@@ -457,10 +475,7 @@ u3a_cfree(c3_w* cel_w)
 {
   u3_post *cel_p;
 
-  if ( u3R->how.fag_w & u3a_flag_sand ) {
-    return;
-  }
-  else if ( u3R->cel.cel_p ) {
+  if ( u3R->cel.cel_p ) {
     if ( u3R->cel.hav_w < (1U << u3a_page) ) {
       cel_p = u3to(u3_post, u3R->cel.cel_p);
       cel_p[u3R->cel.hav_w++] = u3a_outa(cel_w);
