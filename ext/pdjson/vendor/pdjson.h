@@ -29,7 +29,7 @@ enum json_type {
 
 struct json_allocator {
     void *(*malloc)(size_t);
-    void *(*realloc)(void *, size_t);
+    void *(*realloc)(void *, size_t, size_t);  /* ptr, old size, new size */
     void (*free)(void *);
 };
 

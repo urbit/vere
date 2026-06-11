@@ -62,8 +62,9 @@ push(json_stream *json, enum json_type type)
 
     if (json->stack_top >= json->stack_size) {
         struct json_stack *stack;
+        size_t old_size = json->stack_size * sizeof(*json->stack);
         size_t size = (json->stack_size + PDJSON_STACK_INC) * sizeof(*json->stack);
-        stack = (struct json_stack *)json->alloc.realloc(json->stack, size);
+        stack = (struct json_stack *)json->alloc.realloc(json->stack, old_size, size);
         if (stack == NULL) {
             json_error(json, "%s", "out of memory");
             return JSON_ERROR;
@@ -118,6 +119,12 @@ static int stream_peek(struct json_source *source)
     return c;
 }
 
+static void *default_realloc(void *ptr, size_t old_size, size_t size)
+{
+    (void)old_size;
+    return realloc(ptr, size);
+}
+
 static void init(json_stream *json)
 {
     json->lineno = 1;
@@ -136,7 +143,7 @@ static void init(json_stream *json)
     json->source.position = 0;
 
     json->alloc.malloc = malloc;
-    json->alloc.realloc = realloc;
+    json->alloc.realloc = default_realloc;
     json->alloc.free = free;
 }
 
@@ -157,7 +164,8 @@ static int pushchar(json_stream *json, int c)
 {
     if (json->data.string_fill == json->data.string_size) {
         size_t size = json->data.string_size * 2;
-        char *buffer = (char *)json->alloc.realloc(json->data.string, size);
+        char *buffer = (char *)json->alloc.realloc(json->data.string,
+                                                   json->data.string_size, size);
         if (buffer == NULL) {
             json_error(json, "%s", "out of memory");
             return -1;

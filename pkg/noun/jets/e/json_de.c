@@ -73,6 +73,13 @@ _json_get_string_as_atom(json_stream *sam_u) {
           u3i_bytes(len_i - 1, (const c3_y *)str_c);
 }
 
+static void*
+_json_realloc(void* lag_v, size_t old_i, size_t len_i)
+{
+  (void)old_i;
+  return u3a_realloc(lag_v, len_i);
+}
+
 static u3_noun
 _parse(u3_atom txt)
 {
@@ -82,7 +89,7 @@ _parse(u3_atom txt)
 
   u3qedj_coll *tak_u;
 
-  json_allocator loc_u = {u3a_malloc, u3a_realloc, u3a_free};
+  json_allocator loc_u = {u3a_malloc, _json_realloc, u3a_free};
   json_stream    sem_u;
   json_stream*   sam_u = &sem_u;
 
