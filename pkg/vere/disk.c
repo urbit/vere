@@ -1962,6 +1962,17 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
     u3_assert(0);
   }
 
+  //  bitness migrations are only defined for U3V_VERLAT snapshots;
+  //  older snapshots must first be migrated by a same-bitness binary
+  //
+  if ( U3V_VERLAT != lom_d ) {
+    fprintf(stderr, "loom: 64-bit snapshot is v%" PRIu64 "; boot once with "
+                    "a 64-bit vere to migrate it to v%" PRIu64 ", "
+                    "then retry\r\n",
+                    lom_d, U3V_VERLAT);
+    exit(1);
+  }
+
   {
     u3m_init(lom_z);
     u3e_live(c3n, strdup(dir_c));
@@ -1981,13 +1992,19 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
 #ifdef VERE64
-  //  v5 (32-bit) home is at loom position 0; version is the first c3_d
+  //  v5+ (32-bit) home is at loom position 0; version is the first c3_d
+  //
+  //  bitness migrations are only defined for U3V_VERLAT snapshots;
+  //  older snapshots must first be migrated by a same-bitness binary
   //
   c3_d lom_d = *((c3_d *)u3_Loom_h);
 
-  if ( U3V_VER5 != lom_d ) {
-    fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
-    u3_assert(0);
+  if ( U3V_VERLAT != lom_d ) {
+    fprintf(stderr, "loom: 32-bit snapshot is v%" PRIu64 "; boot once with "
+                    "a 32-bit vere >= 5.0 to migrate it to v%" PRIu64 ", "
+                    "then retry\r\n",
+                    lom_d, U3V_VERLAT);
+    exit(1);
   }
 
   {

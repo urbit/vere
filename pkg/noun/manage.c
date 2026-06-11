@@ -594,18 +594,46 @@ _find_home_zero_les_cb(u3_noun kev, void* ptr_v)
   blb_u->les_h  = 0;
 }
 
+/* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
+**
+**   v6 appends blb_p (blob bank) to u3v_home, within the first page,
+**   which is zero beyond the v5 struct end in every snapshot
+**   (allocation starts at page 1).  lop_p and cax.for_p were appended
+**   to u3a_road mid-v5 without a version bump; fold them in here.
+**
+**   Idempotent: a crash before the next checkpoint leaves the on-disk
+**   snapshot at v5, and we simply re-migrate on the next boot.
+*/
+static void
+_migrate_v6(void)
+{
+  fprintf(stderr, "loom: migrating snapshot to v6\r\n");
+
+  u3H->blb_p = u3h_new();
+
+  if ( !u3R->lop_p )     u3R->lop_p     = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+
+  u3H->ver_d = U3V_VER6;
+}
+
 /* _find_home(): in restored image, point to home road.
 */
 static void
 _find_home(void)
 {
   c3_d ver_d = *((c3_d*)u3_Loom);
+  c3_o mig_o = c3n;
 
-  if ( ver_d != U3V_VERLAT ) {
-    fprintf(stderr, "loom: checkpoint version mismatch: "
-                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
-                    ver_d, U3V_VERLAT);
-    abort();
+  switch ( ver_d ) {
+    case U3V_VER5: mig_o = c3y; break;
+    case U3V_VER6: break;
+    default: {
+      fprintf(stderr, "loom: checkpoint version mismatch: "
+                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                      ver_d, U3V_VERLAT);
+      abort();
+    }
   }
 
   c3_d pam_d = *((c3_d*)u3_Loom + 1);
@@ -688,22 +716,15 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  properly initialize things from zero-initialize future proof buffer
-  //
-  //  lazy-init blob bank HAMTs (zero if snapshot predates blob store)
-  //
-  if ( !u3H->blb_p ) {
-    u3H->blb_p = u3h_new();
+  if ( c3y == mig_o ) {
+    _migrate_v6();
   }
-
 
   //  reset all les_h to 0: leases are transient IPC state backed by a
   //  C-heap PQ that is not persisted.  after restart the PQ is empty,
   //  so any les_h count from the previous boot is stale.
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
 }
 
 /* u3m_pave(): instantiate or activate image.
