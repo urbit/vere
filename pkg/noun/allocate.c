@@ -261,24 +261,15 @@ _ca_bump(c3_w len_w)
   if ( c3y == u3a_is_north(u3R) ) {
     pot_p       = u3R->hat_p;
     u3R->hat_p += len_w;
-
-#ifndef U3_GUARD_PAGE
-    if ( u3R->hat_p >= u3R->cap_p ) {
-      u3m_bail(c3__meme);
-    }
-#endif
   }
   else {
     u3R->hat_p -= len_w;
     pot_p       = u3R->hat_p;
-
-#ifndef U3_GUARD_PAGE
-    if ( u3R->cap_p >= u3R->hat_p ) {
-      u3m_bail(c3__meme);
-    }
-#endif
   }
 
+#ifndef U3_GUARD_PAGE
+  if ( c3n == u3a_is_sound(u3R) ) return u3m_bail(c3__meme);
+#endif
   c3_dessert( !(pot_p & ((1U << u3a_min_log) - 1)) );
 
   return u3a_into(pot_p);

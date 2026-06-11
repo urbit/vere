@@ -292,6 +292,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     */
 #     define  u3a_is_south(r)  !u3a_is_north((r))
 
+    /* u3a_is_sound(): yes if road [r] has not overflowed.
+    */
+#     define  u3a_is_sound(r)  __(  ((r)->mat_p > (r)->rut_p) \
+                                 == ((r)->cap_p > (r)->hat_p) )
+
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
