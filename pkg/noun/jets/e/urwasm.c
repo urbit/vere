@@ -62,7 +62,7 @@
 #define KICK2(TRAP)         KICK1(KICK1(TRAP))
 
 static void*
-_road_realloc(void* lag_v, size_t new_i, size_t old_i)
+_road_realloc(void* lag_v, size_t old_i, size_t new_i)
 {
   return u3a_realloc(lag_v, new_i);
 }
