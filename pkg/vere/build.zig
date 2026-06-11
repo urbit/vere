@@ -216,6 +216,7 @@ pub fn build(b: *std.Build) !void {
 
 const c_source_files = [_][]const u8{
     "auto.c",
+    "blob.c",
     "ca_bundle/ca_bundle.c",
     "dawn.c",
     "db/lmdb.c",
@@ -248,6 +249,7 @@ const c_source_files = [_][]const u8{
 };
 
 const install_headers = [_][]const u8{
+    "blob.h",
     "db/lmdb.h",
     "dns_sd.h",
     "io/ames/stun.h",
