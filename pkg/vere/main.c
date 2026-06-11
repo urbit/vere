@@ -2582,6 +2582,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   u3_disk_chop(log_u, u3_Host.eve_d);
 
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }

@@ -5,12 +5,14 @@
 #include "vere.h"
 #include "version.h"
 #include "db/lmdb.h"
+#include "blob.h"
+#include <dirent.h>
 #include <types.h>
 #include "../noun/migrate.h"
- #ifndef VERE64
- #include "../past/migrate.h"
- #include "../past/v4.h"
- #endif
+#ifndef VERE64
+  #include "../past/migrate.h"
+  #include "../past/v4.h"
+#endif
 
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
@@ -129,23 +131,25 @@ u3_disk_etch(u3_disk* log_u,
   u3t_event_trace("disk etch", 'B');
 #endif
 
-  //  XX check version number in log_u
-  //  XX needs api redesign to limit allocations
+  //  serialize event with ram (reference-aware encoding for bob atoms)
+  //  output: [4B mug][ram_bytes...]
   //
   {
-    u3_atom mat = u3qe_jam(eve);
-    c3_w  len_w = u3r_met(3, mat);
+    c3_d  ram_d;
+    c3_y* ram_y;
 
-    len_i = 4 + len_w;
+    u3s_ram_xeno(eve, &ram_d, &ram_y);
+
+    len_i = 4 + ram_d;
     dat_y = c3_malloc(len_i);
 
-    dat_y[0] = mug_h & 0xff;
-    dat_y[1] = (mug_h >> 8) & 0xff;
+    dat_y[0] =  mug_h        & 0xff;
+    dat_y[1] = (mug_h >>  8) & 0xff;
     dat_y[2] = (mug_h >> 16) & 0xff;
     dat_y[3] = (mug_h >> 24) & 0xff;
-    u3r_bytes(0, len_w, dat_y + 4, mat);
+    memcpy(dat_y + 4, ram_y, ram_d);
 
-    u3z(mat);
+    c3_free(ram_y);
   }
 
 #ifdef DISK_TRACE_JAM
@@ -321,16 +325,27 @@ u3_disk_sift(u3_disk* log_u,
   u3t_event_trace("disk sift", 'B');
 #endif
 
-  //  XX check version in log_u
-  //
   *mug_h = dat_y[0]
          ^ (dat_y[1] <<  8)
          ^ (dat_y[2] << 16)
          ^ (dat_y[3] << 24);
 
-  //  XX u3m_soft?
+  //  try ram (VER3 events) first, fall back to jam (VER1/VER2 events)
   //
-  *job = u3ke_cue(u3i_bytes(len_i - 4, dat_y + 4));
+  {
+    c3_d    pay_d = len_i - 4;
+    c3_y*   pay_y = dat_y + 4;
+    u3_weak tap   = u3s_tap_xeno(pay_d, pay_y);
+
+    if ( u3_none != tap ) {
+      *job = tap;
+    }
+    else {
+      //  XX u3m_soft?
+      //
+      *job = u3ke_cue(u3i_bytes(pay_d, pay_y));
+    }
+  }
 
 #ifdef DISK_TRACE_CUE
   u3t_event_trace("disk sift", 'E');
@@ -1210,6 +1225,9 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
 
+  //  blob log is rebuilt post-chop by u3_disk_chop, not per-epoch.
+  //
+
   //  delete files in epoch directory
   u3_dire* dir_u = u3_foil_folder(epo_c);
   u3_dent* den_u = dir_u->all_u;
@@ -1485,6 +1503,192 @@ _disk_vere_diff(u3_disk* log_u)
   return c3n;
 }
 
+/* _disk_chop_collect: accumulator for collecting blb_p keys to delete.
+*/
+typedef struct {
+  const c3_c* pax_c;
+  c3_d*       bid_d;   //  array of bid keys
+  c3_z        len_z;
+  c3_z        cap_z;
+} _disk_chop_collect;
+
+/* _disk_chop_zero_cb(): u3h_walk_with callback — subtract eve_w from
+**   use_w and zero eve_w.  Preserves atom cardinality + lease counts.
+**   The walk over LMDB blob refs (step 2) re-increments both.
+*/
+static void
+_disk_chop_zero_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3_noun val = u3t(kev);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  blb_u->use_w -= blb_u->eve_w;
+  blb_u->eve_w  = 0;
+}
+
+/* _disk_chop_delete_cb(): u3h_walk_with callback — collect dead blobs.
+**
+**   Checks if u3a_blob is fully unreferenced; if so, wipes the blob
+**   file and collects the bid for post-walk HAMT/struct cleanup.
+*/
+static void
+_disk_chop_delete_cb(u3_noun kev, void* ptr_v)
+{
+  _disk_chop_collect* del_u = ptr_v;
+  u3_noun key = u3h(kev);
+  u3_noun val = u3t(kev);
+
+  c3_d bid_d = 0;
+  u3r_safe_chub(key, &bid_d);
+  c3_h mug_h = (c3_h)(bid_d >> 32);
+  c3_h seq_h = (c3_h)(bid_d & 0xFFFFFFFF);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+
+  c3_o ded_o = ( 0 == blb_u->use_w ) ? c3y : c3n;
+
+  fprintf(stderr,
+          "chop: %010" PRIc3_h "/%010" PRIc3_h
+          " use=%" PRIc3_w " eve=%" PRIc3_w " les=%" PRIc3_h "%s\r\n",
+          mug_h, seq_h,
+          blb_u->use_w, blb_u->eve_w, blb_u->les_h,
+          (c3y == ded_o) ? "  [DELETE]" : "");
+
+  if ( c3y == ded_o ) {
+    u3_blob_wipe(del_u->pax_c, mug_h, seq_h);
+
+    //  collect bid for post-walk blb_p cleanup
+    //
+    if ( del_u->len_z == del_u->cap_z ) {
+      del_u->cap_z = del_u->cap_z ? del_u->cap_z * 2 : 8;
+      del_u->bid_d = c3_realloc(del_u->bid_d, del_u->cap_z * sizeof(c3_d));
+    }
+    del_u->bid_d[del_u->len_z++] = bid_d;
+  }
+}
+
+/* _disk_chop_orphan_cb(): u3_blob_walk callback — collect on-disk blob
+**   files that have no blb_p entry.
+**
+**   Orphans arise when accounting is lost while files survive: a crash
+**   between staging-move and entry creation, or a bitness migration
+**   (which paves a fresh home, dropping blb_p wholesale).  No runtime
+**   path can ever delete them, so chop reconciles the store against
+**   the bank.
+*/
+static void
+_disk_chop_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
+{
+  _disk_chop_collect* orf_u = ptr_v;
+
+  if ( u3a_blob_get(mug_h, seq_h) ) {
+    return;
+  }
+
+  if ( orf_u->len_z == orf_u->cap_z ) {
+    orf_u->cap_z = orf_u->cap_z ? orf_u->cap_z * 2 : 8;
+    orf_u->bid_d = c3_realloc(orf_u->bid_d, orf_u->cap_z * sizeof(c3_d));
+  }
+  orf_u->bid_d[orf_u->len_z++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+}
+
+/* _disk_chop_blobs_cb(): u3_lmdb_walk_blobs callback — increment eve_w
+**   and use_w in place for each blob ID referenced by an event.
+*/
+static void
+_disk_chop_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
+{
+  (void)ptr_v;
+  (void)eve_d;
+
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
+    c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFF);
+
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    if ( blb_u ) {
+      blb_u->eve_w += 1;
+      blb_u->use_w += 1;
+    }
+  }
+}
+
+/* _disk_chop_rebuild_blobs(): rebuild blob accounting after epoch deletion.
+**
+**   1. zero all eve_w in place (les_h was already zeroed at boot)
+**   2. scan BLOBS table for remaining events, increment eve_w for each ref
+**   3. delete blob files whose total refcount is now zero
+**   4. delete orphaned files on disk that have no blb_p entry
+*/
+static void
+_disk_chop_rebuild_blobs(u3_disk* log_u)
+{
+  //  step 1: zero all eve_w in place
+  //
+  u3h_walk_with(u3H->blb_p, _disk_chop_zero_cb, 0);
+
+  //  step 2: scan BLOBS table for remaining events, rebuild eve_w
+  //
+  c3_d lo_d = 0, hi_d = 0;
+  u3_lmdb_gulf(log_u->mdb_u, &lo_d, &hi_d);
+
+  if ( lo_d && hi_d >= lo_d ) {
+    u3_lmdb_walk_blobs(log_u->mdb_u, lo_d, hi_d, 0,
+                       _disk_chop_blobs_cb);
+  }
+
+  //  step 3: delete unreferenced blobs and clean up blb_p
+  //
+  {
+    c3_w tot_w = u3h_wyt(u3H->blb_p);
+    fprintf(stderr, "chop: scanning %" PRIc3_w " blob(s)\r\n", tot_w);
+
+    _disk_chop_collect del_u = { .pax_c = log_u->dir_u->pax_c };
+    u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
+
+    for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
+      c3_h mug_h = (c3_h)(del_u.bid_d[i_z] >> 32);
+      c3_h seq_h = (c3_h)(del_u.bid_d[i_z] & 0xFFFFFFFF);
+      u3a_blob_drop(mug_h, seq_h);
+    }
+
+    fprintf(stderr,
+            "chop: deleted %" PRIc3_z " blob(s), kept %" PRIc3_w "\r\n",
+            del_u.len_z, tot_w - (c3_w)del_u.len_z);
+
+    c3_free(del_u.bid_d);
+  }
+
+  //  step 4: reconcile the on-disk store against the bank — delete
+  //  files with no blb_p entry (collect first; the walk must not race
+  //  its own deletions)
+  //
+  {
+    _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
+    u3_blob_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
+
+    for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
+      c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
+      c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
+      u3_blob_wipe(orf_u.pax_c, mug_h, seq_h);
+    }
+
+    if ( orf_u.len_z ) {
+      fprintf(stderr,
+              "chop: deleted %" PRIc3_z " orphaned blob file(s)\r\n",
+              orf_u.len_z);
+    }
+
+    c3_free(orf_u.bid_d);
+  }
+}
+
 /* u3_disk_chop(): delete all but the latest 2 epocs.
 */
 void
@@ -1501,23 +1705,28 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
     exit(0);  //  enjoy
   }
 
-  //  delete all but the last two epochs
+  //  delete all but the last two epochs.
   //
   //    XX parameterize the number of epochs to chop
   //
   for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
-    fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n",
-                    sot_d[i_z]);
+    fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
     if ( c3y != _disk_epoc_kill(log_u, sot_d[i_z]) ) {
       fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
       exit(1);
     }
   }
 
-  // cleanup
   c3_free(sot_d);
 
-  // success
+  //  rebuild blob log after chop.
+  //
+  //  step 1: zero all log and les via collect-then-modify on blb_p
+  //  step 2: scan remaining LMDB events for bob atoms, rebuild log
+  //  step 3: delete blobs with all-zero refcounts
+  //
+  _disk_chop_rebuild_blobs(log_u);
+
   fprintf(stderr, "chop: event log truncation complete\r\n");
 }
 
@@ -1869,6 +2078,12 @@ typedef enum {
   _epoc_late = 4   // format from the future
 } _epoc_kind;
 
+/* NOTE: _disk_blb_rebuild_from_epochs removed.
+**   Blob log-refs are now tracked via LMDB blob-ref events (tag 0x02),
+**   not via blobs.txt files.  u3a_blob structs in blb_p persist in the
+**   loom snapshot; on replay, blob-ref events reconstruct the counters.
+*/
+
 /* _disk_epoc_load(): load existing epoch, enumerating failures
 */
 static _epoc_kind
@@ -1973,6 +2188,13 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       return _epoc_good;
     } break;
 
+    case U3E_VER3: {
+      //  VER3 is the current epoch format (image.bin + ram events).
+      //  Load path is identical to VER2; no migration needed.
+      //  Fall through to VER2 handling.
+      //
+    } // fallthrough
+
     case U3E_VER2: {
       if ( u3_dlod_epoc == lod_e ) {
         c3_c chk_c[8193];
@@ -2039,6 +2261,10 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
+      //  u3a_blob structs in blb_p persist in the loom snapshot.
+      //  on replay, LMDB blob-ref events will reconstruct eve_w.
+      //
+
       if ( log_u->dun_d < u3A->eve_d ) {
         //  XX bad, add to enum
         fprintf(stderr, "mars: corrupt pier, snapshot (%" PRIu64
@@ -2058,6 +2284,16 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
          || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
          || (c3n == _disk_vere_diff(log_u)) )
       {
+        //  VER2 epoch: always roll to VER3 if snapshot is up-to-date
+        //
+        if (  (U3E_VER2 == ver_h)
+           && (log_u->dun_d == u3A->eve_d) )
+        {
+          if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+            fprintf(stderr, "disk: failed to roll VER2 epoch to VER3\r\n");
+            exit(1);
+          }
+        }
         return _epoc_good;
       }
       else if ( log_u->dun_d != u3A->eve_d ) {
@@ -2146,6 +2382,11 @@ u3_disk_make(c3_c* pax_c)
     }
   }
 
+  //  make $pier/.urb/bob (blob store) and .urb/bob/stg/ (staging area)
+  //
+  u3_blob_init(pax_c);
+  u3_blob_stg_init(pax_c);
+
   return c3y;
 }
 
@@ -2213,6 +2454,12 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       c3_free(log_u); // XX leaks dire(s)
       return 0;
     }
+
+  //  initialize blob store (creates .urb/bob/ if needed) and staging area
+  //
+  u3_blob_init(pax_c);
+  u3_blob_stg_init(pax_c);
+
 
     //  XX move this into u3_disk_make
     //

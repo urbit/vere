@@ -91,4 +91,29 @@
       void
       u3_lmdb_walk_done(u3_lmdb_walk* itr_u);
 
+    /* u3_lmdb_save_blobs(): save blob IDs for an event into BLOBS table.
+    */
+      c3_o
+      u3_lmdb_save_blobs(MDB_env* env_u,
+                         c3_d     eve_d,
+                         c3_d*    ids_d,
+                         c3_z     len_z);
+
+    /* u3_lmdb_read_blobs(): read blob IDs for an event from BLOBS table.
+    */
+      c3_o
+      u3_lmdb_read_blobs(MDB_env* env_u,
+                         c3_d     eve_d,
+                         c3_d**   out_d,
+                         c3_z*    out_z);
+
+    /* u3_lmdb_walk_blobs(): iterate BLOBS table for events in a range.
+    */
+      void
+      u3_lmdb_walk_blobs(MDB_env* env_u,
+                         c3_d     lo_d,
+                         c3_d     hi_d,
+                         void*    ptr_v,
+                         void  (*fun_f)(void*, c3_d, c3_d*, c3_z));
+
 #endif /* ifndef U3_VERE_DB_LMDB_H */
