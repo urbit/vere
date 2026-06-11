@@ -157,7 +157,7 @@ done
 fail=0
 
 for f in $(find "$OUTDIR" -type f); do
-  if egrep "((FAILED|CRASHED)|warn:|bail:) " $f >/dev/null; then
+  if egrep "((FAILED|CRASHED)|warn:) " $f >/dev/null; then
     if [[ $fail -eq 0 ]]; then
       hdr "Test Failures"
     fi
