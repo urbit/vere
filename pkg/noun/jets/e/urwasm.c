@@ -378,7 +378,7 @@ _calloc_code(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_code(void* lag_v, size_t new_i, size_t old_i)
+_realloc_code(void* lag_v, size_t old_i, size_t new_i)
 {
   if (!CodeArena->ini_t)
   {
@@ -465,7 +465,7 @@ _calloc_box(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_box(void* lag_v, size_t new_i, size_t old_i)
+_realloc_box(void* lag_v, size_t old_i, size_t new_i)
 {
   if (!BoxArena->ini_t)
   {
@@ -524,7 +524,7 @@ _calloc_bail(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_bail(void* lag_v, size_t new_i, size_t old_i)
+_realloc_bail(void* lag_v, size_t old_i, size_t new_i)
 {
   u3m_bail(c3__fail);
 }
