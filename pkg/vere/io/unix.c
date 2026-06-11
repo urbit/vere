@@ -59,11 +59,16 @@ struct _u3_unix;
 **                    propagates a transient deletion
 **   SYNC_RECHECK_MS: how soon to recheck files awaiting the grace
 **                    period (must exceed SYNC_GRACE_MS)
+**   SYNC_SWEEP_MS:   backstop: rescan auto-synced mounts at least
+**                    this often, in case an fs event was dropped
+**                    (inotify queue overflow, unwatchable edge
+**                    cases, etc)
 */
 #define SYNC_QUIET_MS    100
 #define SYNC_CAP_MS     1000
 #define SYNC_GRACE_MS    300
 #define SYNC_RECHECK_MS  350
+#define SYNC_SWEEP_MS  30000
 
 /* u3_unod: file or directory.
 */
@@ -150,6 +155,7 @@ struct _u3_unix;
     c3_o        dyr;                    //  ready to update
     u3_noun     sat;                    //  (sane %ta) handle
     uv_timer_t* syt_u;                  //  auto-sync debounce timer
+    uv_timer_t* swt_u;                  //  auto-sync backstop sweep timer
     c3_d        fir_d;                  //  debounce window start (ms)
     c3_o        dum_o;                  //  doomed files await recheck
     u3_usyc*    pen_u;                  //  scan accumulator, if scanning
@@ -1128,6 +1134,37 @@ _unix_time_cb(uv_timer_t* tim_u)
   }
 
   _unix_doom_recheck(unx_u);
+}
+
+/* _unix_sweep_cb(): periodic backstop sweep.
+**
+**  fs events can be dropped (inotify queue overflow, exhausted
+**  watch descriptors, platform edge cases), so periodically treat
+**  every auto-synced mount as if an event had fired for its whole
+**  tree.  the scan re-reads wet files but only syncs those whose
+**  contents changed, so a quiescent tree produces no event.
+*/
+static void
+_unix_sweep_cb(uv_timer_t* tim_u)
+{
+  u3_unix* unx_u = tim_u->data;
+  u3_umon* mon_u;
+  c3_o     wet_o = c3n;
+
+  for ( mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
+    if ( c3y == mon_u->syn_o ) {
+      _unix_mark_wet(&mon_u->dir_u);
+      wet_o = c3y;
+    }
+  }
+
+  //  schedule the scan through the debounce path, so a sweep
+  //  landing mid-save coalesces with the save's own events
+  //
+  if ( (c3y == wet_o) && !uv_is_active((uv_handle_t*)unx_u->syt_u) ) {
+    unx_u->fir_d = uv_now(u3L);
+    uv_timer_start(unx_u->syt_u, _unix_time_cb, SYNC_QUIET_MS, 0);
+  }
 }
 
 /* _unix_event_cb(): fs event on a watched directory.
@@ -2549,6 +2586,7 @@ _unix_io_exit(u3_auto* car_u)
   }
 
   uv_close((uv_handle_t*)unx_u->syt_u, _unix_timer_close_cb);
+  uv_close((uv_handle_t*)unx_u->swt_u, _unix_timer_close_cb);
 
   u3z(unx_u->sat);
   c3_free(unx_u->pax_c);
@@ -2573,6 +2611,11 @@ u3_unix_io_init(u3_pier* pir_u)
   unx_u->syt_u = c3_malloc(sizeof(*unx_u->syt_u));
   uv_timer_init(u3L, unx_u->syt_u);
   unx_u->syt_u->data = unx_u;
+
+  unx_u->swt_u = c3_malloc(sizeof(*unx_u->swt_u));
+  uv_timer_init(u3L, unx_u->swt_u);
+  unx_u->swt_u->data = unx_u;
+  uv_timer_start(unx_u->swt_u, _unix_sweep_cb, SYNC_SWEEP_MS, SYNC_SWEEP_MS);
 
   u3_auto* car_u = &unx_u->car_u;
   car_u->nam_m = c3__unix;
