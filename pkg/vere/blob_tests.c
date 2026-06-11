@@ -27,6 +27,10 @@ _setup(void)
 {
   u3m_init(1 << 20);
   u3m_pave(c3y);
+
+  //  hot jet state, required by the meld path (u3j_boot/u3j_ream)
+  //
+  u3j_boot(c3y);
 }
 
 static void
@@ -643,6 +647,186 @@ _test_install_stg_dedup(void)
 
 /* _test_met(): u3_blob_met matches u3r_met on the materialized atom.
 */
+
+/* _test_blob_del_cb(): test blob_del_f — count deletion requests.
+*/
+static c3_w _test_del_count_w;
+
+static void
+_test_blob_del_cb(c3_h mug_h, c3_h seq_h)
+{
+  (void)mug_h; (void)seq_h;
+  _test_del_count_w += 1;
+}
+
+/* _test_sane(): u3a_blob_sane catches counter corruption.
+*/
+static void
+_test_sane(void)
+{
+  _tmp_make();
+  u3_blob_init(_tmp_pier);
+  u3_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+  u3C.blob_del_f = _test_blob_del_cb;
+
+  const c3_y dat_y[] = "sane test blob";
+  c3_h mug_h = 0, seq_h = 0;
+  u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
+
+  //  one live atom in the kernel root, plus a synthetic log ref
+  //
+  u3_noun bob = u3i_blob(mug_h, seq_h);
+  u3_noun old = u3A->roc;
+  u3A->roc    = u3nc(bob, u3_nul);
+
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  blb_u->eve_w += 1;
+  blb_u->use_w += 1;
+
+  if ( c3y != u3a_blob_sane(c3y) ) {
+    fprintf(stderr, "\033[31msane: balanced bank reported corrupt\033[0m\r\n");
+    exit(1);
+  }
+
+  //  cheap tier: use_w below the durable floor
+  //
+  blb_u->use_w -= 2;
+  if ( c3n != u3a_blob_sane(c3n) ) {
+    fprintf(stderr, "\033[31msane: use < eve+les not caught\033[0m\r\n");
+    exit(1);
+  }
+
+  //  deep tier: counters look plausible but cardinality is wrong
+  //
+  blb_u->use_w += 3;   //  use = eve + les + 2, only 1 live atom
+  if ( c3n != u3a_blob_sane(c3y) ) {
+    fprintf(stderr, "\033[31msane: cardinality mismatch not caught\033[0m\r\n");
+    exit(1);
+  }
+  blb_u->use_w -= 1;
+
+  //  cleanup: drop the atom, then the entry
+  //
+  u3z(u3A->roc);
+  u3A->roc = old;
+
+  if ( _test_del_count_w ) {
+    fprintf(stderr, "\033[31msane: blob deleted with eve_w held\033[0m\r\n");
+    exit(1);
+  }
+
+  blb_u = u3a_blob_get(mug_h, seq_h);
+  blb_u->eve_w = 0;
+  blb_u->use_w = 0;
+  u3a_blob_drop(mug_h, seq_h);
+
+  u3C.blob_del_f = 0;
+  _tmp_clean();
+  fprintf(stderr, "test blob sane: ok\r\n");
+}
+
+/* _test_meld(): |meld unifies duplicate bob atoms and preserves the bank.
+*/
+static void
+_test_meld(void)
+{
+  _tmp_make();
+  u3_blob_init(_tmp_pier);
+  u3_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+  u3C.blob_del_f = _test_blob_del_cb;
+  _test_del_count_w = 0;
+
+  const c3_y dat_y[] = "meld test blob";
+  c3_h mug_h = 0, seq_h = 0;
+  u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
+
+  //  two distinct bob atoms for the same bid, both in the kernel root,
+  //  plus a synthetic log ref: use = eve(1) + cardinality(2) = 3
+  //
+  u3_noun bo1 = u3i_blob(mug_h, seq_h);
+  u3_noun bo2 = u3i_blob(mug_h, seq_h);
+  u3_noun old = u3A->roc;
+  u3A->roc    = u3nc(bo1, bo2);
+
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    blb_u->eve_w += 1;
+    blb_u->use_w += 1;
+
+    if ( 3 != blb_u->use_w ) {
+      fprintf(stderr, "\033[31mmeld: setup use_w %" PRIc3_w " != 3\033[0m\r\n",
+              blb_u->use_w);
+      exit(1);
+    }
+  }
+
+  (void)u3_meld_all(0, c3n, c3n);
+
+  //  the duplicates must be unified (one atom box), the freed copy's
+  //  cardinality decremented, the bank entry and log ref intact, and
+  //  the surviving atom's blob pointer valid post-pack
+  //
+  {
+    u3a_cell* cel_u = u3a_to_ptr(u3A->roc);
+    if ( cel_u->hed != cel_u->tel ) {
+      fprintf(stderr, "\033[31mmeld: duplicate bobs not unified\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    if ( !blb_u ) {
+      fprintf(stderr, "\033[31mmeld: bank entry lost\033[0m\r\n");
+      exit(1);
+    }
+    if ( (2 != blb_u->use_w) || (1 != blb_u->eve_w) ) {
+      fprintf(stderr, "\033[31mmeld: counts use=%" PRIc3_w " eve=%" PRIc3_w
+                      " want use=2 eve=1\033[0m\r\n",
+              blb_u->use_w, blb_u->eve_w);
+      exit(1);
+    }
+    if (  (mug_h != u3a_bob_mug(u3h(u3A->roc)))
+       || (seq_h != u3a_bob_seq(u3h(u3A->roc))) )
+    {
+      fprintf(stderr, "\033[31mmeld: bob blob pointer stale\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  if ( _test_del_count_w ) {
+    fprintf(stderr, "\033[31mmeld: blob deleted with refs held\033[0m\r\n");
+    exit(1);
+  }
+
+  //  drop the last atom: cardinality reaches 0, but eve_w must keep
+  //  the file alive (no deletion request)
+  //
+  u3z(u3A->roc);
+  u3A->roc = old;
+
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    if ( (1 != blb_u->use_w) || _test_del_count_w ) {
+      fprintf(stderr, "\033[31mmeld: post-drop use=%" PRIc3_w " del=%" PRIc3_w
+                      "\033[0m\r\n", blb_u->use_w, _test_del_count_w);
+      exit(1);
+    }
+
+    //  release the log ref: now deletion is legitimate
+    //
+    blb_u->eve_w = 0;
+    blb_u->use_w = 0;
+    u3a_blob_drop(mug_h, seq_h);
+  }
+
+  u3C.blob_del_f = 0;
+  _tmp_clean();
+  fprintf(stderr, "test blob meld: ok\r\n");
+}
+
 static void
 _test_met(void)
 {
@@ -1008,6 +1192,8 @@ main(int argc, char* argv[])
   _test_walk();
   _test_install_stg();
   _test_install_stg_dedup();
+  _test_sane();
+  _test_meld();
   _test_met();
   _test_map();
   _test_lifecycle();

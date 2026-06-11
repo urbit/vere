@@ -25,6 +25,19 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
 
   if ( a_u->len_w != b_u->len_w ) return 0;
 
+  //  bob atoms: len_w carries u3a_blob_flag, so the raw memcmp below
+  //  would read ~2^31 words.  equal iff both reference the same
+  //  u3a_blob (same buf_w[0] => same bid).  len_w equality above
+  //  already rules out bob-vs-plain pairs.
+  //
+  //  NB: unifying duplicates frees them via u3z -> _me_bob_dead, which
+  //  is the correct cardinality bookkeeping (each duplicate was
+  //  counted at its own u3i_blob birth).
+  //
+  if ( a_u->len_w & u3a_blob_flag ) {
+    return a_u->buf_w[0] == b_u->buf_w[0];
+  }
+
   return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
 }
 
@@ -216,6 +229,9 @@ u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
     u3R->cax.for_p = u3h_new_cache(u3C.per_w);
   }
 
+  //  NB: u3m_pack runs the deep blob-bank invariant check
+  //  (u3a_blob_sane) on its way out
+  //
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();
 

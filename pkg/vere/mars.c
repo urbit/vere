@@ -137,10 +137,26 @@ _mars_pq_pop(_mars_lease_pq* pq_u)
 }
 
 /* _mars_blob_del(): delete blob file and clean up blb_p entry.
+**
+**   invariant guard: a blob file must survive until NO event-log ref,
+**   lease, or loom atom references it.  use_w == 0 with eve_w or les_h
+**   nonzero means the counters are corrupt — never destroy data on an
+**   accounting bug; report loudly and keep the file.
 */
 static void
 _mars_blob_del(c3_h mug_h, c3_h seq_h)
 {
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
+    fprintf(stderr, "mars: blob %08" PRIx32 "/%08" PRIx32 ": refusing "
+                    "delete: use=%" PRIc3_w " eve=%" PRIc3_w
+                    " les=%" PRIc3_h " (counter corruption)\r\n",
+                    mug_h, seq_h,
+                    blb_u->use_w, blb_u->eve_w, blb_u->les_h);
+    return;
+  }
+
   u3_blob_wipe(u3C.dir_c, mug_h, seq_h);
   u3a_blob_drop(mug_h, seq_h);
 }

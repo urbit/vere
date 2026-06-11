@@ -2876,6 +2876,12 @@ u3m_pack(void)
   //
   u3a_pack_move(u3R);
 
+  if (  (&(u3H->rod_u) == u3R)
+     && (c3n == u3a_blob_sane(c3y)) )
+  {
+    fprintf(stderr, "pack: blob accounting violated (see above)\r\n");
+  }
+
   return (u3a_open(u3R) - pre_w);
 }
 

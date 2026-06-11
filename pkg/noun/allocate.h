@@ -981,6 +981,15 @@ u3a_post_info(u3_post);
           void
           u3a_blob_drop(c3_h mug_h, c3_h seq_h);
 
+        /* u3a_blob_sane(): blob-bank invariant check; home road only.
+        **   Verifies use_w == eve_w + les_h + atom cardinality per
+        **   entry.  [dep_o] adds a noun-graph walk counting live bob
+        **   atoms; without it only use_w >= eve_w + les_h is checked.
+        **   Loud per-entry reports; returns c3n on any violation.
+        */
+          c3_o
+          u3a_blob_sane(c3_o dep_o);
+
         /* u3a_ream(): ream free-lists.
         */
           void

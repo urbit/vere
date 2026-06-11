@@ -1738,7 +1738,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
     fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", u3_Host.eve_d);
   }
 
-  //  save even on failure, as we just did all the work of deduplication
+  //  NB: cram no longer dedups the loom as a side effect; this save
+  //  just persists whatever state boot/replay left behind
   //
   u3m_save();
   u3_disk_exit(log_u);
