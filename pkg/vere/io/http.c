@@ -2,6 +2,7 @@
 
 #include "vere.h"
 
+#include "blob.h"
 #include "h2o.h"
 #include "noun.h"
 #include "openssl/err.h"
@@ -168,6 +169,15 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 }
 
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
+**
+**   Bodies >= U3_BLOB_THRESH are persisted to the blob store and
+**   handed to arvo as a bob-atom reference instead of being copied
+**   into the loom.  h2o has already buffered the whole entity in
+**   memory (capped by fig_u.max_request_entity_size), so this
+**   inline save is fine — same model as mesa.c for large packets.
+**
+**   If the blob save fails (disk full, permissions, etc.) fall
+**   back to a regular indirect atom.
 */
 static u3_noun
 _http_vec_to_octs(h2o_iovec_t vec_u)
@@ -176,12 +186,32 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
     return u3_nul;
   }
 
+  u3_atom bod = u3_none;
+
+  if ( (c3_d)vec_u.len >= U3_BLOB_THRESH ) {
+    c3_h mug_h;
+    c3_h seq_h;
+    if ( c3y == u3_blob_save(u3C.dir_c, (const c3_y*)vec_u.base,
+                              (c3_d)vec_u.len, &mug_h, &seq_h) )
+    {
+      bod = u3i_blob(mug_h, seq_h);
+    }
+  }
+  if ( u3_none == bod ) {
+    bod = _http_vec_to_atom(vec_u);
+  }
+
   // XX correct size_t -> atom?
-  return u3nt(u3_nul, u3i_chubs(1, (const c3_d*)&vec_u.len),
-                      _http_vec_to_atom(vec_u));
+  return u3nt(u3_nul, u3i_chubs(1, (const c3_d*)&vec_u.len), bod);
 }
 
 /* _cttp_bods_free(): free body structure.
+**
+**   Ownership rule for mmap-backed chains (see u3_hbod in vere.h):
+**   the owner chunk (tail in bob chains) carries own_y != 0 and
+**   map_d != 0; earlier view chunks carry map_y != 0 but own_y == 0.
+**   Free walks head→tail, so the owner is released only after every
+**   view that referenced its mapping.
 */
 static void
 _cttp_bods_free(u3_hbod* bod_u)
@@ -189,12 +219,94 @@ _cttp_bods_free(u3_hbod* bod_u)
   while ( bod_u ) {
     u3_hbod* nex_u = bod_u->nex_u;
 
+    if ( bod_u->own_y ) {
+      //  owner: release the whole mapping
+      u3_blob_umap(bod_u->own_y, bod_u->map_d);
+    }
+    else if ( bod_u->map_y ) {
+      //  view: hint kernel to drop page-cache pages we've already sent
+      //
+      madvise(bod_u->map_y, bod_u->len_w, MADV_DONTNEED);
+    }
     c3_free(bod_u);
     bod_u = nex_u;
   }
 }
 
+//  chunk size for mmap-backed response streaming.  Each h2o_send call
+//  covers up to this many bytes so TLS output pools / HTTP/2 frame
+//  buffers / libuv write queues stay bounded and flow control drives
+//  the next fetch from the mmap.
+//
+#define U3_HTTP_BOB_CHUNK  (1U << 20)
+
+/* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
+**   mmap-backed hbods — no copy, no loom allocation.
+**
+**   The blob is mmap'd once; the chain slices the mapping into
+**   U3_HTTP_BOB_CHUNK-sized views.  Ownership of the mapping is
+**   carried by the tail chunk (own_y = mmap base, map_d = map size);
+**   earlier chunks are pure views (own_y = 0).
+**
+**   Returns 0 if the blob can't be mapped (missing file, empty, etc.);
+**   caller should fall back to the inline path.
+*/
+static u3_hbod*
+_cttp_bod_from_bob(u3_atom a, c3_w len_w)
+{
+  c3_h mug_h = u3a_bob_mug(a);
+  c3_h seq_h = u3a_bob_seq(a);
+  c3_d map_d = 0;
+
+  const c3_y* map_y = u3_blob_mmap(u3C.dir_c, mug_h, seq_h, &map_d);
+  if ( !map_y || (c3_d)len_w > map_d ) {
+    if ( map_y ) {
+      u3_blob_umap(map_y, map_d);
+    }
+    return 0;
+  }
+
+  u3_hbod* hed_u = 0;
+  u3_hbod* tal_u = 0;
+  c3_w     off_w = 0;
+
+  while ( off_w < len_w ) {
+    c3_w rem_w = len_w - off_w;
+    c3_w cnk_w = (rem_w > U3_HTTP_BOB_CHUNK) ? U3_HTTP_BOB_CHUNK : rem_w;
+
+    u3_hbod* bod_u = c3_malloc(sizeof(*bod_u));
+    bod_u->nex_u = 0;
+    bod_u->len_w = cnk_w;
+    bod_u->map_y = (c3_y*)map_y + off_w;    //  iovec base (this slice)
+    bod_u->own_y = 0;                        //  view, not owner
+    bod_u->map_d = 0;
+
+    if ( !hed_u ) hed_u = bod_u;
+    else          tal_u->nex_u = bod_u;
+    tal_u = bod_u;
+
+    off_w += cnk_w;
+  }
+
+  //  last chunk is promoted to owner.  map_y still points at its own
+  //  slice (for its iovec), while own_y + map_d cover the full mmap
+  //  region so _cttp_bods_free can munmap the whole thing at once.
+  //
+  tal_u->own_y = (c3_y*)map_y;
+  tal_u->map_d = map_d;
+  return hed_u;
+}
+
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
+**
+**   Bob atoms take the zero-copy path: we mmap the blob file on the
+**   king's side and hand h2o a pointer into the mapping.  Without
+**   this, u3r_bytes would call u3r_blob_load, which allocates a
+**   full-blob-sized atom in king's loom — that's where you'd see
+**   the RSS of the king process spike to match file size.
+**
+**   Smaller bodies (or bob atoms whose blob file is missing) fall
+**   through to the original materialize-into-heap path.
 */
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
@@ -206,10 +318,26 @@ _cttp_bod_from_octs(u3_noun oct)
   }
   len_w = u3h(oct);
 
+  //  zero-copy path for bob atoms
+  //
+  if ( c3y == u3a_is_bob(u3t(oct)) ) {
+    u3_hbod* bod_u = _cttp_bod_from_bob(u3t(oct), len_w);
+    if ( bod_u ) {
+      u3z(oct);
+      return bod_u;
+    }
+    //  fall through: blob file missing; u3r_bytes below will bail
+    //  through the u3r_blob_load → u3m_bail path.  not ideal but
+    //  matches pre-blob semantics.
+  }
+
   {
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
+    bod_u->map_y = 0;
+    bod_u->own_y = 0;
+    bod_u->map_d = 0;
     u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
 
     bod_u->nex_u = 0;
@@ -241,7 +369,8 @@ _cttp_bods_to_vec(u3_hbod* bod_u, c3_w* tot_w)
   len_w = 0;
 
   while( bod_u ) {
-    vec_u[len_w] = h2o_iovec_init(bod_u->hun_y, bod_u->len_w);
+    c3_y* base_y = bod_u->map_y ? bod_u->map_y : bod_u->hun_y;
+    vec_u[len_w] = h2o_iovec_init(base_y, bod_u->len_w);
     len_w++;
     bod_u = bod_u->nex_u;
   }
@@ -1067,23 +1196,25 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       byte_range rng_u;
       c3_o rng_o = _get_range(req_headers, &rng_u);
 
-      // prepare spur for eyre range scry
+      //  if no Range header, synthesize bytes=0- so the response is
+      //  always a chunked 206 with Content-Range (not a 200 with the
+      //  entire body).  this lets the browser discover accept-ranges
+      //  and switch to Range-based seeking — critical for large video
+      //  files with moov-at-end.
       //
-      u3_noun spur;
       if ( c3n == rng_o ) {
-        // full range: '/range/0//foo'
-        spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3k(bem.pur));
+        rng_u.beg_z = 0;
+        rng_u.end_z = SIZE_MAX;
       }
-      else {
-        _chunk_align(&rng_u);
 
-        u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
-                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
-        u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
-                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+      _chunk_align(&rng_u);
 
-        spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
-      }
+      u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
+                    u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
+      u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
+                    u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+
+      u3_noun spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
 
       if ( c3n == _http_peek_dispatch(req_u, &bem, gang, spur) ) {
         u3z(req_u->peq_u->pax);
@@ -1268,47 +1399,96 @@ _http_hgen_dispose(void* ptr_v)
 }
 
 /* _http_hgen_send(): send (some/more of a) response.
+**
+**   Pops up to U3_HTTP_BOB_CHUNK bytes of pending body from gen_u->bod_u
+**   and hands them to h2o in one h2o_send call.  If any body remains
+**   after this pop, or if we're still waiting on a %continue from arvo
+**   (u3_hgen_wait), the send is marked IN_PROGRESS and h2o will call
+**   back via _http_hgen_proceed when it's ready for the next batch.
+**   FINAL fires only when there's nothing left to emit.
+**
+**   Inline (small) bodies fit in a single chunk so this is a no-op
+**   change for them.  Large bob-atom bodies chunk naturally because
+**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized views — this
+**   is what keeps king's memory and h2o's internal buffers bounded
+**   while streaming multi-GiB files.
 */
 static void
 _http_hgen_send(u3_hgen* gen_u)
 {
-  u3_hreq*     req_u = gen_u->req_u;
-  h2o_req_t*   rec_u = req_u->rec_u;
-  c3_w         len_w;
-  h2o_iovec_t* vec_u = _cttp_bods_to_vec(gen_u->bod_u, &len_w);
+  u3_hreq*   req_u = gen_u->req_u;
+  h2o_req_t* rec_u = req_u->rec_u;
 
-  //  not ready again until _proceed
-  //
   u3_assert( c3y == gen_u->red );
   gen_u->red = c3n;
 
-  //  stash [bod_u] to free later
+  //  detach up to U3_HTTP_BOB_CHUNK bytes of body from the head of
+  //  gen_u->bod_u into a private sub-chain to send this round.
+  //
+  u3_hbod* send_u = 0;
+  u3_hbod* tal_u  = 0;
+  c3_d     acc_d  = 0;
+
+  while ( gen_u->bod_u && acc_d < U3_HTTP_BOB_CHUNK ) {
+    u3_hbod* cur_u = gen_u->bod_u;
+    gen_u->bod_u   = cur_u->nex_u;
+    cur_u->nex_u   = 0;
+
+    if ( !send_u ) send_u = cur_u;
+    else           tal_u->nex_u = cur_u;
+    tal_u = cur_u;
+
+    acc_d += cur_u->len_w;
+  }
+
+  //  free the previous round's sent chunks; the current batch becomes
+  //  the new "just sent" set.  its memory must stay live until h2o is
+  //  done with the iovecs we're about to hand it.
   //
   _cttp_bods_free(gen_u->nud_u);
-  gen_u->nud_u = gen_u->bod_u;
-  gen_u->bod_u = 0;
+  gen_u->nud_u = send_u;
 
+  //  build iovec for this batch
+  //
+  c3_w         len_w = 0;
+  h2o_iovec_t* vec_u = _cttp_bods_to_vec(send_u, &len_w);
+
+  //  pick h2o send state based on whether any body still pending
+  //
+  h2o_send_state_t ste_e;
   switch ( gen_u->sat_e ) {
     case u3_hgen_wait: {
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
-      uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
+      ste_e = H2O_SEND_STATE_IN_PROGRESS;
     } break;
 
     case u3_hgen_done: {
-      //  close connection if shutdown pending
-      //
-      u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
-
-      if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
-        rec_u->http1_is_persistent = 0;
+      if ( gen_u->bod_u ) {
+        ste_e = H2O_SEND_STATE_IN_PROGRESS;
       }
-
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+      else {
+        //  last batch — close connection if shutdown pending
+        //
+        u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
+        if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
+          rec_u->http1_is_persistent = 0;
+        }
+        ste_e = H2O_SEND_STATE_FINAL;
+      }
     } break;
 
     case u3_hgen_fail: {
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_ERROR);
+      ste_e = H2O_SEND_STATE_ERROR;
     } break;
+
+    default: {
+      ste_e = H2O_SEND_STATE_ERROR;   //  unreachable
+    } break;
+  }
+
+  h2o_send(rec_u, vec_u, len_w, ste_e);
+
+  if ( H2O_SEND_STATE_IN_PROGRESS == ste_e ) {
+    uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
   }
 
   c3_free(vec_u);
@@ -1385,6 +1565,7 @@ _http_start_respond(u3_hreq* req_u,
   u3_hhed* deh_u = hed_u;
 
   c3_i has_len_i = 0;
+  size_t con_len = 0;
 
   while ( 0 != hed_u ) {
     if ( 0x200 <= rec_u->version ) {
@@ -1397,6 +1578,7 @@ _http_start_respond(u3_hreq* req_u,
     }
     if ( 0 == strncmp(hed_u->nam_c, "content-length", 14) ) {
       has_len_i = 1;
+      con_len   = strtoull(hed_u->val_c, 0, 10);
     }
     else {
       h2o_add_header_by_str(&rec_u->pool, &rec_u->res.headers,
@@ -1421,12 +1603,13 @@ _http_start_respond(u3_hreq* req_u,
   gen_u->hed_u = deh_u;
   gen_u->req_u = req_u;
 
-  //  if we don't explicitly set this field, h2o will send with
-  //  transfer-encoding: chunked
+  //  tell h2o the true content-length from eyre's response headers.
+  //  without this, h2o defaults to transfer-encoding: chunked.
+  //  the old code used gen_u->bod_u->len_w which is only the first
+  //  chunk (1MB for bob-streamed bodies), not the total — wrong.
   //
   if ( 1 == has_len_i ) {
-    rec_u->res.content_length = ( 0 == gen_u->bod_u ) ?
-                                0 : gen_u->bod_u->len_w;
+    rec_u->res.content_length = con_len;
   }
 
   req_u->gen_u = gen_u;
