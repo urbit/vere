@@ -67,7 +67,8 @@ _newt_meat_poke(u3_moat* mot_u)
   if ( met_u ) {
     uv_timer_start(&mot_u->tim_u, _newt_meat_next_cb, 0, 0);
 
-    if ( c3y == mot_u->pok_f(mot_u->ptr_v, met_u->len_d, met_u->hun_y) ) {
+    if ( c3y == mot_u->pok_f(mot_u->ptr_v, met_u->ver_y,
+                             met_u->len_d, met_u->hun_y) ) {
       mot_u->ext_u = met_u->nex_u;
 
       if ( !mot_u->ext_u ) {
@@ -124,15 +125,20 @@ u3_newt_decode(u3_moat* mot_u, c3_y* buf_y, c3_d len_d)
                      | (((c3_d)hed_y[3]) << 16)
                      | (((c3_d)hed_y[4]) << 24);
 
-          //  check for version tag and nonzero length
+          //  check for version tag (0x00=jam, 0x01=ram) and nonzero length
           //
-          if ( 0x0 != hed_y[0] || !met_d ) {
+          if ( (0x0 != hed_y[0] && 0x1 != hed_y[0]) || !met_d ) {
             return c3n;
           }
 
-          //  await body
+          //  NB: hed_y points into mes_u->hed_u, which shares storage with
+          //  mes_u->tal_u via a union.  _newt_mess_tail writes tal_u.met_u,
+          //  clobbering hed_y[0..4].  Capture the version byte BEFORE that
+          //  write, then stash it into the allocated meat.
           //
+          c3_y ver_y = hed_y[0];
           _newt_mess_tail(mes_u, met_d);
+          mes_u->tal_u.met_u->ver_y = ver_y;
         }
       } break;
 
@@ -380,18 +386,18 @@ u3_newt_mojo_stop(u3_mojo* moj_u, u3_moor_bail bal_f)
   uv_close((uv_handle_t*)&moj_u->pyp_u, _mojo_stop_cb);
 }
 
-/* u3_newt_send(): write buffer to stream.
+/* u3_newt_send_vers(): write buffer with explicit version byte to stream.
 */
 void
-u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y)
+u3_newt_send_vers(u3_mojo* moj_u, c3_y ver_y, c3_d len_d, c3_y* byt_y)
 {
   n_req* req_u = c3_malloc(sizeof(*req_u));
   req_u->moj_u = moj_u;
   req_u->buf_y = byt_y;
 
-  //  write header
+  //  write header: [ver_y][len LE 4B]
   //
-  req_u->hed_y[0] = 0x0;
+  req_u->hed_y[0] = ver_y;
   req_u->hed_y[1] = ( len_d        & 0xff);
   req_u->hed_y[2] = ((len_d >>  8) & 0xff);
   req_u->hed_y[3] = ((len_d >> 16) & 0xff);
@@ -415,4 +421,12 @@ u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y)
       moj_u->bal_f(moj_u->ptr_v, sas_i, uv_strerror(sas_i));
     }
   }
+}
+
+/* u3_newt_send(): write buffer to stream (legacy v0x00 / jam).
+*/
+void
+u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y)
+{
+  u3_newt_send_vers(moj_u, 0x00, len_d, byt_y);
 }

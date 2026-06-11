@@ -134,4 +134,35 @@
         u3_weak
         u3s_sift_ud(u3_atom a);
 
+    /*  Ram/Tap — reference-aware serialization that encodes bob atoms.
+    **
+    **  Ram extends jam with a 2-bit tag scheme:
+    **    00 = normal atom   (costs 1 extra bit vs jam)
+    **    01 = blob ref      (mat(mug) + mat(seq))
+    **    10 = cell
+    **    11 = backref
+    **
+    **  Wire format: [magic "RAM\0" 4B][version 0x01 1B][ram_bits...]
+    */
+
+      /* u3s_ram_xeno(): ram with off-loom buffer (re-)allocation.
+      **
+      **   Encodes bob atoms as 01-tagged blob refs.
+      **   Normal atoms (including large non-bob atoms) are 00-tagged.
+      **   Does NOT blobify atoms — caller must do that first.
+      **
+      **   Returns number of bytes written (including 5-byte header).
+      **   On error returns 0 and *byt_y is unchanged.
+      */
+        c3_d
+        u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
+
+      /* u3s_tap_xeno(): tap on-loom, with off-loom dictionary.
+      **
+      **   Decodes ram bytes. 01-tagged blob refs become bob atoms.
+      **   Returns u3_none on any error.
+      */
+        u3_weak
+        u3s_tap_xeno(c3_d len_d, const c3_y* byt_y);
+
 #endif /* ifndef U3_SERIAL_H */
