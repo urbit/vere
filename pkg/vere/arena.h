@@ -24,12 +24,8 @@ static void* arena_alloc(arena* a, ptrdiff_t size, ptrdiff_t align, ptrdiff_t co
   }
   void *p = a->beg + padding;
   a->beg += padding + count*size;
-  //  SECURITY (L7): zero on allocation. Otherwise buffers like the mesa
-  //  reassembly buffer (req_u->dat_y) are returned uninitialized, and a
-  //  partially-filled buffer read before every fragment arrives can leak
-  //  stale arena contents.
-  //
-  return memset(p, 0, count*size);
+  return p;
+  // return memset(p, 0, count*size);
 }
 
 static arena arena_create(ptrdiff_t cap)

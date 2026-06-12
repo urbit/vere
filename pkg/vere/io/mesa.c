@@ -1144,29 +1144,19 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
   //  this fragment against the established request before the memcpy, or an
   //  attacker writes len_w bytes at an arbitrary offset (wild heap write).
   //  Done before the duplicate check so an out-of-range fra_d never indexes
-  //  the bitset / per-fragment arrays.
+  //  the bitset / per-fragment arrays. The boq/fra checks short-circuit so
+  //  the final term sees boq 13 (off_d = 1024 * fra_d, fra_d < tof_d).
   //
   if (  (dat_u->tob_d != req_u->tob_d)   //  must match the message we sized for
      || (13 != nam_u->boq_y)             //  buffer assumes boq 13 (1024-byte leaves)
-     || (nam_u->fra_d >= req_u->tof_d) ) //  fragment index within the message
+     || (nam_u->fra_d >= req_u->tof_d)   //  fragment index within the message
+     || (dat_u->len_w > (req_u->tob_d - ((c3_d)1024 * nam_u->fra_d))) ) //  fits in buffer
   {
     MESA_LOG(sam_u, STRANGE);
     return;
   }
 
   c3_w siz_w = (1 << (nam_u->boq_y - 3));
-
-  //  bound the destination window [off_d, off_d + len_w) against the buffer
-  //
-  {
-    c3_d off_d = (c3_d)siz_w * nam_u->fra_d;
-    if (  (off_d > req_u->tob_d)
-       || (dat_u->len_w > (req_u->tob_d - off_d)) )
-    {
-      MESA_LOG(sam_u, STRANGE);
-      return;
-    }
-  }
 
   // received duplicate
   if ( c3y == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
@@ -2070,19 +2060,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_mesa_name* nam_u = &pac_u->pag_u.nam_u;
   u3_mesa_data* dat_u = &pac_u->pag_u.dat_u;
 
-  //  SECURITY (H2): drop malformed page-inits gracefully rather than
-  //  aborting the process. tob_d == 0 makes arena_create(0) -> malloc(0)
-  //  and the first new() aborts; an absurd tob_d yields a failing/huge
-  //  malloc that also aborts; and the buffer math below assumes boq 13.
-  //
-  if (  (0 == dat_u->tob_d)
-     || (dat_u->tob_d > JUMBO_CACHE_MAX_SIZE)
-     || (13 != nam_u->boq_y) )
-  {
-    MESA_LOG(sam_u, STRANGE);
-    return;
-  }
-
   u3_gage* gag_u = _mesa_get_gage(sam_u, nam_u->her_u);
   if ( gag_u == NULL ) {
     gag_u = new(&sam_u->par_u, u3_gage, 1);
@@ -2116,8 +2093,8 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
 
   uv_timer_init(u3L, &req_u->tim_u);
 
-  //  boq 13 is enforced at function entry (H2); see the guard above
-  //
+  u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
+
   req_u->gag_u = gag_u;
   req_u->tob_d = dat_u->tob_d;
   req_u->out_d = 0;
@@ -2294,6 +2271,14 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_del_pit(sam_u, nam_u);
   }
 
+  //  mesa_num_leaves assumes boq 13 (1024-byte leaves); reject other block
+  //  sizes before computing the leaf count
+  //
+  if ( 13 != nam_u->boq_y ) {
+    MESA_LOG(sam_u, STRANGE);
+    return;
+  }
+
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
@@ -2304,9 +2289,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
       return;
     }
     // process incoming response to ourselves
-    // if single-leaf message, inject directly into Arvo
+    // a message with fewer than two fragments (including the degenerate
+    // tob_d == 0 case) has no multi-fragment state to build, so inject it
+    // directly into Arvo rather than spinning up a request
     c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
-    if ( 1 == lev_d ) {
+    if ( lev_d < 2 ) {
       u3_noun cad;
       {
         u3_noun lan = u3_mesa_encode_lane(lan_u);

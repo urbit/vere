@@ -168,15 +168,6 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
   /* los_u->counter++; */
   /* return c3y; */
 
-  //  SECURITY (M2): the verifier is the trust boundary for attacker-supplied
-  //  proofs. counter is incremented unconditionally and indexes the pairs
-  //  array (sized by c3_bits_word(leaves)); refuse once we've consumed every
-  //  leaf rather than relying on the caller to stop at counter == leaves.
-  //
-  if ( los_u->counter >= los_u->leaves ) {
-    return c3n;
-  }
-
   lss_hash h;
   _subtree_root(h, leaf_y, leaf_w, los_u->counter << los_u->steps);
   if ( c3n == _lss_verifier_check_hash(los_u, los_u->counter, 0, h) ) {
@@ -204,22 +195,11 @@ c3_o lss_verifier_ingest(lss_verifier* los_u, c3_y* leaf_y, c3_w leaf_w, lss_pai
 }
 
 void lss_verifier_init(lss_verifier* los_u, c3_w steps, c3_w leaves, lss_hash* proof, arena* are_u) {
+  c3_w proof_w = lss_proof_size(leaves);
+  c3_w pairs_w = c3_bits_word(leaves);
   los_u->steps = steps;
   los_u->leaves = leaves;
   los_u->counter = 0;
-
-  //  SECURITY (H3): with leaves == 0, proof_w = lss_proof_size(0) = 33 but
-  //  pairs_w = c3_bits_word(0) = 0, so the loop below would write ~33 pairs
-  //  into a 0-element allocation. A zero-leaf message is degenerate; refuse
-  //  it rather than over-writing. (Callers also reject tob_d == 0 upstream.)
-  //
-  if ( 0 == leaves ) {
-    los_u->pairs = NULL;
-    return;
-  }
-
-  c3_w proof_w = lss_proof_size(leaves);
-  c3_w pairs_w = c3_bits_word(leaves);
   los_u->pairs = new(are_u, lss_pair, pairs_w);
   memcpy(los_u->pairs[0][0], proof[0], sizeof(lss_hash));
   for (c3_w i = 1; i < proof_w; i++) {

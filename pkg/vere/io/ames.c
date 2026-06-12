@@ -353,10 +353,7 @@ _ames_check_mug(u3_pact* pac_u)
 {
   c3_w rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
 
-  //  reject packets too small to contain the metered region; otherwise
-  //  [len_w - rog_w] underflows (unsigned) and u3r_mug_bytes over-reads
-  //  ~4 GB. _ames_hear runs this check before the prelude-size check that
-  //  would otherwise enforce a large enough packet.
+  //  prevents underflow
   //
   if ( pac_u->len_w < rog_w ) {
     return c3n;

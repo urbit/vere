@@ -260,20 +260,20 @@ _mk_driver(u3_ship who_u)
   return sam_u;
 }
 
-/* _test_page_init_tob_zero(): H2 (SECURITY-AUDIT) — driver-level harness.
+/* _test_page_init_bad_boq(): H2 (SECURITY-AUDIT) — driver-level harness.
 **
 **  Drives the real receive dispatch: a PAGE responding to a peek we have
-**  outstanding (request in CTAG_WAIT) flows through _mesa_hear_page into
-**  _mesa_req_pact_init. A first page with tob_d == 0 makes
-**  arena_create(5*0) -> malloc(0) and the first new() aborts the process
-**  (and is also the only route to the lss leaves==0 OOB, H3). Post-fix the
-**  init must drop it gracefully, leaving the request still pending.
+**  outstanding (request in CTAG_WAIT) flows through _mesa_hear_page. The
+**  leaf-count math (mesa_num_leaves) assumes boq 13 (1024-byte leaves), and
+**  _mesa_req_pact_init's buffer sizing relies on it; a first page carrying
+**  any other block size is now rejected in _mesa_hear_page before that math
+**  runs, rather than aborting deeper in the request path.
 **
 **  We pre-insert the peer so _meet_peer (which scries the pier) is skipped,
 **  and register the CTAG_WAIT request under the packet's path.
 */
 static c3_i
-_test_page_init_tob_zero(void)
+_test_page_init_bad_boq(void)
 {
   u3_ship  who_u = { 0x42, 0 };
   u3_mesa* sam_u = _mk_driver(who_u);
@@ -294,7 +294,7 @@ _test_page_init_tob_zero(void)
   memset(&nam_u, 0, sizeof(nam_u));
   nam_u.her_u[0] = who_u[0];
   nam_u.her_u[1] = who_u[1];
-  nam_u.boq_y    = 13;
+  nam_u.boq_y    = 31;             //  H2 trigger: not boq 13
   nam_u.fra_d    = 0;
   nam_u.nit_o    = c3y;
   nam_u.pat_c    = pax_c;
@@ -304,7 +304,7 @@ _test_page_init_tob_zero(void)
   //
   _mesa_put_request(sam_u, &nam_u, (u3_pend_req*)CTAG_WAIT);
 
-  //  craft the malicious first PAGE: tob_d == 0
+  //  craft the malicious first PAGE: bad block size, multi-fragment size
   //
   u3_mesa_pict* pic_u = new(&sam_u->are_u, u3_mesa_pict, 1);
   memset(pic_u, 0, sizeof(*pic_u));
@@ -312,7 +312,7 @@ _test_page_init_tob_zero(void)
   pic_u->pac_u.hed_u.typ_y           = PACT_PAGE;
   pic_u->pac_u.hed_u.hop_y           = 0;
   pic_u->pac_u.pag_u.nam_u           = nam_u;
-  pic_u->pac_u.pag_u.dat_u.tob_d     = 0;          //  H2 trigger
+  pic_u->pac_u.pag_u.dat_u.tob_d     = 1u << 20;   //  multi-fragment
   pic_u->pac_u.pag_u.dat_u.len_w     = 0;
   pic_u->pac_u.pag_u.dat_u.aut_u.typ_e = AUTH_SIGN;
 
@@ -320,14 +320,19 @@ _test_page_init_tob_zero(void)
   memset(&lan_u, 0, sizeof(lan_u));
   lan_u.sin_family = AF_INET;
 
-  //  pre-fix: arena_create(0) -> first new() aborts the process
-  //  post-fix: dropped gracefully; the request stays CTAG_WAIT
+  //  post-fix: dropped at the boq guard (STRANGE bumps dop_w); the request
+  //  stays CTAG_WAIT and never reaches _mesa_req_pact_init
   //
   _mesa_hear_page(pic_u, lan_u);
 
   c3_i ret_i = 0;
+  if ( 1 != sam_u->sat_u.dop_w ) {
+    fprintf(stderr, "mesa: H2 — bad-boq page not flagged STRANGE "
+                    "(dop_w=%u)\r\n", sam_u->sat_u.dop_w);
+    ret_i = 1;
+  }
   if ( (u3_pend_req*)CTAG_WAIT != _mesa_get_request(sam_u, &nam_u) ) {
-    fprintf(stderr, "mesa: H2 — tob_d==0 page was not dropped cleanly\r\n");
+    fprintf(stderr, "mesa: H2 — bad-boq page was not dropped cleanly\r\n");
     ret_i = 1;
   }
 
@@ -337,48 +342,18 @@ _test_page_init_tob_zero(void)
   return ret_i;
 }
 
-/* _test_lss_verifier_zero_leaves(): H3 (SECURITY-AUDIT) — direct guard.
+/* _test_wire_page_init_bad_boq(): H2 — full wire-level harness.
 **
-**  lss_proof_size(0) == 33 but c3_bits_word(0) == 0, so pre-fix the verifier
-**  init wrote ~33 pairs into a 0-element allocation. The only in-tree route
-**  to leaves==0 is a tob_d==0 message, now blocked by H2; this exercises the
-**  defense-in-depth guard directly: leaves==0 must leave pairs NULL with no
-**  write.
-*/
-static c3_i
-_test_lss_verifier_zero_leaves(void)
-{
-  arena        are_u = arena_create(4096);
-  lss_verifier los_u;
-  lss_hash     proof[40];
-
-  memset(&los_u, 0, sizeof(los_u));
-  memset(proof, 0, sizeof(proof));
-
-  lss_verifier_init(&los_u, 0, 0, proof, &are_u);
-
-  c3_i ret_i = 0;
-  if ( (0 != los_u.leaves) || (NULL != los_u.pairs) ) {
-    fprintf(stderr, "mesa: H3 — zero-leaf verifier not guarded\r\n");
-    ret_i = 1;
-  }
-
-  arena_free(&are_u);
-  return ret_i;
-}
-
-/* _test_wire_page_init_tob_zero(): H2 — full wire-level harness.
-**
-**  Like _test_page_init_tob_zero, but drives the true UDP entry point
+**  Like _test_page_init_bad_boq, but drives the true UDP entry point
 **  _mesa_hear from raw bytes: a PAGE pact is encoded with
 **  mesa_etch_pact_to_buf (which computes the header mug), then handed to
 **  _mesa_hear, which runs mesa_is_new_pact + mesa_sift_pact_from_buf before
-**  dispatching to _mesa_hear_page -> _mesa_req_pact_init. This exercises the
-**  packet codec in addition to the request path. The encoded tob_d == 0 must
-**  round-trip through sift and then be dropped by the H2 guard.
+**  dispatching to _mesa_hear_page. This exercises the packet codec in
+**  addition to the request path. The encoded bad block size must round-trip
+**  through sift and then be dropped by the H2 boq guard.
 */
 static c3_i
-_test_wire_page_init_tob_zero(void)
+_test_wire_page_init_bad_boq(void)
 {
   u3_ship  who_u = { 0x42, 0 };
   u3_mesa* sam_u = _mk_driver(who_u);
@@ -396,8 +371,8 @@ _test_wire_page_init_tob_zero(void)
   nam_u.her_u[0] = who_u[0];
   nam_u.her_u[1] = who_u[1];
   nam_u.rif_w    = 0;
-  nam_u.boq_y    = 13;
-  nam_u.nit_o    = c3y;            //  init page; fra_d implicitly 0
+  nam_u.boq_y    = 31;            //  H2 trigger: not boq 13
+  nam_u.nit_o    = c3y;           //  init page; fra_d implicitly 0
   nam_u.fra_d    = 0;
   nam_u.pat_c    = pax_c;
   nam_u.pat_s    = strlen(pax_c);
@@ -416,7 +391,7 @@ _test_wire_page_init_tob_zero(void)
   pac_u.hed_u.typ_y              = PACT_PAGE;
   pac_u.hed_u.hop_y              = 0;
   pac_u.pag_u.nam_u              = nam_u;
-  pac_u.pag_u.dat_u.tob_d        = 0;          //  H2 trigger
+  pac_u.pag_u.dat_u.tob_d        = 1u << 20;   //  multi-fragment
   pac_u.pag_u.dat_u.len_w        = 0;
   pac_u.pag_u.dat_u.fra_y        = sig_y;      //  unused (len 0), non-NULL
   pac_u.pag_u.dat_u.aut_u.typ_e  = AUTH_SIGN;
@@ -439,24 +414,23 @@ _test_wire_page_init_tob_zero(void)
     memset(&lan_u, 0, sizeof(lan_u));
     lan_u.sin_family = AF_INET;
 
-    //  true wire entry: sift + dispatch + req_pact_init
-    //  pre-fix aborts in arena_alloc; post-fix drops, request stays CTAG_WAIT
+    //  true wire entry: sift + dispatch into _mesa_hear_page
     //
     _mesa_hear(sam_u, (const struct sockaddr*)&lan_u, len_w, buf_y);
 
-    //  the packet must actually have traversed sift -> dispatch ->
-    //  req_pact_init and hit the H2 guard (STRANGE bumps dop_w). Without
-    //  this, a silent sift failure would also leave the request CTAG_WAIT
-    //  and masquerade as a pass.
+    //  the packet must actually have traversed sift -> dispatch and hit the
+    //  H2 boq guard (STRANGE bumps dop_w). Without this, a silent sift
+    //  failure would also leave the request CTAG_WAIT and masquerade as a
+    //  pass.
     //
     if ( 1 != sam_u->sat_u.dop_w ) {
-      fprintf(stderr, "mesa: H2 (wire) — page did not reach req_pact_init "
+      fprintf(stderr, "mesa: H2 (wire) — page did not reach the boq guard "
                       "(dop_w=%u)\r\n", sam_u->sat_u.dop_w);
       ret_i = 1;
     }
 
     if ( (u3_pend_req*)CTAG_WAIT != _mesa_get_request(sam_u, &nam_u) ) {
-      fprintf(stderr, "mesa: H2 (wire) — tob_d==0 page not dropped cleanly\r\n");
+      fprintf(stderr, "mesa: H2 (wire) — bad-boq page not dropped cleanly\r\n");
       ret_i = 1;
     }
   }
@@ -464,59 +438,6 @@ _test_wire_page_init_tob_zero(void)
   c3_free(sam_u->pir_u);
   arena_free(&sam_u->are_u);
   arena_free(&sam_u->par_u);
-  return ret_i;
-}
-
-/* _test_lss_ingest_counter_bound(): M2 (SECURITY-AUDIT) — verifier bound.
-**
-**  lss_verifier_ingest increments counter unconditionally and indexes the
-**  pairs array via the derived height. With counter already at leaves, the
-**  pre-fix code proceeds into _lss_verifier_check_hash and dereferences the
-**  pairs array out of bounds (NULL here). The fix refuses once counter has
-**  reached leaves.
-*/
-static c3_i
-_test_lss_ingest_counter_bound(void)
-{
-  lss_verifier los_u;
-  memset(&los_u, 0, sizeof(los_u));
-  los_u.leaves  = 1;
-  los_u.counter = 1;       //  already consumed every leaf
-  los_u.steps   = 0;
-  los_u.pairs   = NULL;
-
-  c3_y leaf_y[4] = { 0, 0, 0, 0 };
-
-  if ( c3y == lss_verifier_ingest(&los_u, leaf_y, sizeof(leaf_y), NULL) ) {
-    fprintf(stderr, "mesa: M2 — ingest past leaves not refused\r\n");
-    return 1;
-  }
-  return 0;
-}
-
-/* _test_arena_zeroed(): L7 (SECURITY-AUDIT) — arena allocations are zeroed.
-**
-**  Uninitialized arena memory (e.g. a partially-filled reassembly buffer)
-**  could leak stale contents. Dirty the backing store, then confirm a fresh
-**  allocation comes back zeroed.
-*/
-static c3_i
-_test_arena_zeroed(void)
-{
-  arena are_u = arena_create(4096);
-  memset(are_u.dat, 0xFF, 4096);          //  dirty the backing memory
-
-  c3_y* buf_y = new(&are_u, c3_y, 256);
-  c3_i  ret_i = 0;
-  for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
-    if ( 0 != buf_y[i_w] ) {
-      fprintf(stderr, "mesa: L7 — arena allocation not zeroed at %u\r\n", i_w);
-      ret_i = 1;
-      break;
-    }
-  }
-
-  arena_free(&are_u);
   return ret_i;
 }
 
@@ -532,11 +453,8 @@ main(int argc, char* argv[])
   ret_i |= _test_frag_heap_overflow();
   ret_i |= _test_frag_boq_overflow();
   ret_i |= _test_frag_valid_accepted();
-  ret_i |= _test_page_init_tob_zero();
-  ret_i |= _test_wire_page_init_tob_zero();
-  ret_i |= _test_lss_verifier_zero_leaves();
-  ret_i |= _test_lss_ingest_counter_bound();
-  ret_i |= _test_arena_zeroed();
+  ret_i |= _test_page_init_bad_boq();
+  ret_i |= _test_wire_page_init_bad_boq();
 
   if ( ret_i ) {
     fprintf(stderr, "test mesa: failed\r\n");

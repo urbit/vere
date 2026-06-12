@@ -2920,13 +2920,10 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
       pos_w -= len_w;
 
-      //  ensure room for the separator '/', the component, and a trailing
-      //  NUL. Grow in a loop and keep siz_w in sync with the real capacity —
-      //  the previous code grew the buffer in branches that never updated
-      //  siz_w, and a single doubling could be insufficient when len_w was
-      //  large, so the memcpy below could overflow the buffer.
+      //  ensure room for the separator '/' and the component, growing in a
+      //  loop and keeping siz_w in sync with the real capacity
       //
-      while ( siz_w < out_w + 1 + len_w + 1 ) {
+      while ( siz_w < out_w + 1 + len_w ) {
         siz_w *= 2;
         buf_c = c3_realloc(buf_c, siz_w);
       }
@@ -2935,10 +2932,9 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
       out_w += len_w;
     }
-    buf_c[out_w] = '\0';
 
     if ( 0 != stk_u->off_w ) {
-      u3_noun tan = u3i_string(buf_c);
+      u3_noun tan = u3i_bytes(out_w, (c3_y*)buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
                              c3_s2('\n', '\n'),

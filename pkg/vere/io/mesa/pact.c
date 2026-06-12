@@ -519,15 +519,14 @@ static c3_d
 _sift_bits(u3_sifter* sif_u, c3_w wid_w)
 {
   assert ( wid_w <= 64 );
-  //  SECURITY (L6): check rem_w *inside* the loop. A multi-byte field with
-  //  too few bytes left would otherwise consume past the end and underflow
-  //  rem_w (unsigned) to ~4 G, defeating every later bounds check.
+  //  check that enough bytes remain for the whole field up front; otherwise a
+  //  multi-byte field could consume past the end and underflow rem_w
   //
+  if ( sif_u->rem_w < ((wid_w + 7) >> 3) ) {
+    _sift_fail(sif_u, "unexpected end of packet");
+    return 0;
+  }
   while ( sif_u->off_y < wid_w ) {
-    if ( sif_u->rem_w == 0 ) {
-      _sift_fail(sif_u, "unexpected end of packet");
-      return 0;
-    }
     c3_d byt_d = sif_u->buf_y[0];
     sif_u->buf_y += 1;
     sif_u->rem_w -= 1;
