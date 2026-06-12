@@ -1438,13 +1438,28 @@ typedef enum {
 
 /* _mars_play_blobs_cb(): u3_lmdb_walk_blobs callback — increment eve_w
 ** (and use_w) for each blob ref in a replayed event.
+**
+**   a blob whose file is missing from the store is unreproducible
+**   data the log still depends on: report it (all of them — keep
+**   scanning) and flag the replay as failed via [ptr_v].
 */
 static void
 _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 {
+  c3_o* oky_o = ptr_v;
+
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
     c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFFULL);
+
+    if ( c3n == u3_blob_live(u3C.dir_c, mug_h, seq_h) ) {
+      fprintf(stderr, "play (%" PRIu64 "): blob %08" PRIx32 "/%08" PRIx32
+                      " missing from store: the log references data "
+                      "that no longer exists\r\n",
+                      eve_d, mug_h, seq_h);
+      *oky_o = c3n;
+      continue;
+    }
 
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
@@ -1457,17 +1472,24 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 ** events in [fir_d, las_d].  snapshot has counts correct up to snapshot
 ** time; replay covers the gap from snapshot to head.
 **
+**   returns c3n if any referenced blob file is missing — replay of
+**   those events cannot reproduce their state, so the caller must
+**   fail hard rather than continue with silent corruption.
+**
 **   NB: opens its own read txn, so it must run after the batch's disk
 **   walk is done — a nested read txn on the same thread fails with
 **   MDB_BAD_RSLOT.
 */
-static void
+static c3_o
 _mars_play_blobs(u3_mars* mar_u, c3_d fir_d, c3_d las_d)
 {
-  if ( las_d < fir_d ) return;
+  c3_o oky_o = c3y;
+
+  if ( las_d < fir_d ) return c3y;
 
   u3_lmdb_walk_blobs(mar_u->log_u->mdb_u, fir_d, las_d,
-                     0, _mars_play_blobs_cb);
+                     &oky_o, _mars_play_blobs_cb);
+  return oky_o;
 }
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
@@ -1493,7 +1515,7 @@ _mars_play_batch(u3_mars* mar_u,
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);
-      _mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
+      (void)_mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
       return _play_log_e;
     }
 
@@ -1508,7 +1530,7 @@ _mars_play_batch(u3_mars* mar_u,
 
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
-      _mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
+      (void)_mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
 
       u3_assert( c3y == u3r_safe_half(u3h(dud), &mot_m) );
 
@@ -1546,7 +1568,14 @@ _mars_play_batch(u3_mars* mar_u,
   }
 
   u3_disk_walk_done(wok_u);
-  _mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
+
+  //  missing blob files make the replayed range unreproducible:
+  //  fail hard rather than continue with silent corruption
+  //
+  if ( c3n == _mars_play_blobs(mar_u, fir_d, mar_u->dun_d) ) {
+    u3z(wen);
+    return _play_bad_e;
+  }
 
   *wen_c = u3r_string(wen);
   u3z(wen);
