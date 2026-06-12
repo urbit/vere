@@ -125,7 +125,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       {
         src_w[0] = (c3_w)a_d;
         src_w[1] = (c3_w)(a_d >> 32);
-        u3r_chop_words(0, 0, b_w - 1, bit_d, buf_w, 1, src_w);
+        u3r_chop_words(0, 0, b_w - 1, bit_d, buf_w, 2, src_w);
         bit_d += b_w - 1;
       }
 
@@ -257,7 +257,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_d met_d, u3_atom a)
 /* _cs_jam_bsw_back(): encode in/direct backref in bitstream.
 */
 static inline void
-_cs_jam_bsw_back(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
+_cs_jam_bsw_back(ur_bsw_t* rit_u, c3_d met_d, u3_atom a)
 {
   c3_d bak_d = ( c3y == u3a_is_cat(a) )
              ? (c3_d)a
@@ -265,7 +265,7 @@ _cs_jam_bsw_back(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
 
   //  XX need a ur_bsw_back32()
   //
-  ur_bsw_back64(rit_u, (c3_y)met_w, bak_d);
+  ur_bsw_back64(rit_u, (c3_y)met_d, bak_d);
 }
 
 /* _cs_jam_xeno_atom(): encode atom or backref in bitstream.
@@ -280,16 +280,16 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
-    _cs_jam_bsw_atom(rit_u, met_w, a);
+    _cs_jam_bsw_atom(rit_u, met_d, a);
   }
   else {
     c3_d bak_d = u3r_met_d(0, bak);
 
     if ( met_d <= bak_d ) {
-      _cs_jam_bsw_atom(rit_u, met_w, a);
+      _cs_jam_bsw_atom(rit_u, met_d, a);
     }
     else {
-      _cs_jam_bsw_back(rit_u, bak_w, bak);
+      _cs_jam_bsw_back(rit_u, bak_d, bak);
     }
   }
 }
@@ -309,7 +309,7 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
     return c3y;
   }
   else {
-    _cs_jam_bsw_back(rit_u, u3r_met(0, bak), bak);
+    _cs_jam_bsw_back(rit_u, u3r_met_d(0, bak), bak);
     return c3n;
   }
 }
