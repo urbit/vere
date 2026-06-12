@@ -2541,6 +2541,11 @@ _mesa_hear(u3_mesa* sam_u,
     return;
   }
 
+  if ( len_h > PACT_SIZE ) {
+    u3l_log("mesa: packet too large");
+    return;
+  }
+
   u3_mesa_pict* pic_u = new(&sam_u->are_u, u3_mesa_pict, 1);
   pic_u->sam_u = sam_u;
   c3_c* err_c = mesa_sift_pact_from_buf(&pic_u->pac_u, hun_y, len_h);
