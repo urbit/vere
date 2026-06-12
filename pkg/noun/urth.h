@@ -4,6 +4,7 @@
 #define U3_URTH_H
 
 #include "c3/c3.h"
+#include "serial.h"
 
     /**  Functions.
     **/
@@ -19,9 +20,12 @@
         c3_o
         u3u_cram(c3_c* dir_c, c3_d eve_d);
       /* u3u_uncram(): restore persistent state from a rock.
+      **   cued atoms larger than [thr_d] bytes stream through [snk_u]
+      **   (blobified) instead of materializing on the loom; NULL [snk_u]
+      **   disables.
       */
         c3_o
-        u3u_uncram(c3_c* dir_c, c3_d eve_d);
+        u3u_uncram(c3_c* dir_c, c3_d eve_d, c3_d thr_d, u3s_bsink* snk_u);
 
       /* u3u_mmap_read(): open and mmap the file at [pat_c] for reading.
       */

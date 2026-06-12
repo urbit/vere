@@ -564,11 +564,17 @@ typedef struct _cue_frame_s {
 } _cue_frame_t;
 
 /* _cs_cue_xeno_next(): read next value from bitstream, dictionary off-loom.
+**
+**   when [snk_u] is set, atoms larger than [thr_d] bytes are streamed
+**   through it in chunks instead of being allocated on the loom; the
+**   sink's don_f supplies the decoded atom (typically a bob atom).
 */
 static inline ur_cue_res_e
 _cs_cue_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
                   ur_dictn_t* dic_u,
+                  c3_d        thr_d,
+                  u3s_bsink*  snk_u,
                   u3_noun*       out)
 {
   ur_root_t* rot_u = 0;
@@ -622,6 +628,48 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
         if ( (u3a_word_bits-1) >= len_d ) {
           *out = (u3_noun)ur_bsrn_any(red_u, len_d);
         }
+        else if ( snk_u && (((len_d + 0x7) >> 3) > thr_d) ) {
+          //  stream the atom's bytes through the sink, off-loom, in
+          //  byte-multiple chunks (so they concatenate); the final
+          //  chunk carries the bit remainder
+          //
+          if ( c3n == snk_u->opn_f(snk_u->ptr_v) ) {
+            return ur_cue_gone;
+          }
+
+          {
+            static const c3_d chk_d = ((c3_d)1 << 23);  //  8M bits = 1MB
+            c3_y* buf_y = c3_malloc(chk_d >> 3);
+            c3_d  rem_d = len_d;
+            c3_o  oky_o = c3y;
+
+            while ( rem_d ) {
+              c3_d lim_d = c3_min(rem_d, chk_d);
+              ur_bsr_bytes_any(red_u, lim_d, buf_y);
+              if ( c3n == snk_u->wri_f(snk_u->ptr_v, buf_y,
+                                       (c3_z)((lim_d + 0x7) >> 3)) )
+              {
+                oky_o = c3n;
+                break;
+              }
+              rem_d -= lim_d;
+            }
+
+            c3_free(buf_y);
+
+            if ( c3n == oky_o ) {
+              return ur_cue_gone;
+            }
+          }
+
+          {
+            u3_weak bob = snk_u->don_f(snk_u->ptr_v);
+            if ( u3_none == bob ) {
+              return ur_cue_gone;
+            }
+            *out = bob;
+          }
+        }
         else {
           c3_d     byt_d = (len_d + 0x7) >> 3;
           u3i_slab sab_u;
@@ -645,6 +693,8 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
 
 struct _u3_cue_xeno {
   ur_dictn_t dic_u;
+  c3_d       thr_d;  //  blob threshold in bytes (0 = disabled)
+  u3s_bsink* snk_u;  //  byte sink for streamed large atoms
 };
 
 /* _cs_cue_xeno(): cue on-loom, with off-loom dictionary in handle.
@@ -679,7 +729,8 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
 
   //  advance into stream
   //
-  res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u, &ref);
+  res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u,
+                            sil_u->thr_d, sil_u->snk_u, &ref);
 
   //  process cell results
   //
@@ -693,7 +744,8 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
       //
       if ( u3_none == fam_u->ref ) {
         fam_u->ref = ref;
-        res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u, &ref);
+        res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u,
+                                  sil_u->thr_d, sil_u->snk_u, &ref);
         fam_u = u3a_peek(&pil_u);
       }
       //  f is a tail-frame; pop the stack and continue
@@ -739,6 +791,17 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
   ur_dictn_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
 
   return sil_u;
+}
+
+/* u3s_cue_xeno_blob(): install a byte sink on a cue_xeno handle.
+*/
+void
+u3s_cue_xeno_blob(u3_cue_xeno* sil_u,
+                  c3_d         thr_d,
+                  u3s_bsink*   snk_u)
+{
+  sil_u->thr_d = thr_d;
+  sil_u->snk_u = snk_u;
 }
 
 /* u3s_cue_xeno_init(): initialize a cue_xeno handle.

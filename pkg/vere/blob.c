@@ -778,3 +778,99 @@ u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   munmap(map_v, (size_t)len_d);
   return met_d;
 }
+/* u3_blob_bsink: streaming byte sink for blob-aware cue.
+**
+**   receives a large atom's bytes in chunks, writes them to a staging
+**   file, then installs the file into the blob store (mug, dedup,
+**   rename via u3_blob_move_stg) and returns a bob atom.  the atom's
+**   bytes never touch the loom.
+*/
+
+static c3_o
+_blob_bsink_opn(void* ptr_v)
+{
+  u3_blob_bsink* bsk_u = ptr_v;
+
+  snprintf(bsk_u->stg_c, sizeof(bsk_u->stg_c),
+           "%s/.urb/bob/stg/cue-XXXXXX", bsk_u->pax_c);
+
+  bsk_u->fid_i = mkstemp(bsk_u->stg_c);
+
+  if ( bsk_u->fid_i < 0 ) {
+    fprintf(stderr, "blob: bsink: mkstemp failed (%s): %s\r\n",
+            bsk_u->stg_c, strerror(errno));
+    return c3n;
+  }
+
+  return c3y;
+}
+
+static c3_o
+_blob_bsink_wri(void* ptr_v, const c3_y* byt_y, c3_z len_z)
+{
+  u3_blob_bsink* bsk_u = ptr_v;
+
+  while ( len_z ) {
+    ssize_t ret_i = write(bsk_u->fid_i, byt_y, len_z);
+
+    if ( ret_i < 0 ) {
+      if ( (EINTR == errno) || (EAGAIN == errno) ) {
+        continue;
+      }
+      fprintf(stderr, "blob: bsink: write failed (%s): %s\r\n",
+              bsk_u->stg_c, strerror(errno));
+      close(bsk_u->fid_i);
+      c3_unlink(bsk_u->stg_c);
+      bsk_u->fid_i = -1;
+      return c3n;
+    }
+
+    byt_y += ret_i;
+    len_z -= (c3_z)ret_i;
+  }
+
+  return c3y;
+}
+
+static u3_weak
+_blob_bsink_don(void* ptr_v)
+{
+  u3_blob_bsink* bsk_u = ptr_v;
+  c3_h mug_h = 0;
+  c3_h seq_h = 0;
+
+  if ( bsk_u->fid_i < 0 ) {
+    return u3_none;
+  }
+
+  c3_sync(bsk_u->fid_i);
+  close(bsk_u->fid_i);
+  bsk_u->fid_i = -1;
+
+  if ( c3n == u3_blob_move_stg(bsk_u->pax_c, bsk_u->stg_c,
+                               &mug_h, &seq_h) )
+  {
+    fprintf(stderr, "blob: bsink: install failed (%s)\r\n", bsk_u->stg_c);
+    c3_unlink(bsk_u->stg_c);
+    return u3_none;
+  }
+
+  bsk_u->num_w += 1;
+
+  return u3i_blob(mug_h, seq_h);
+}
+
+/* u3_blob_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
+*/
+void
+u3_blob_bsink_init(u3_blob_bsink* bsk_u, const c3_c* pax_c)
+{
+  memset(bsk_u, 0, sizeof(*bsk_u));
+
+  bsk_u->pax_c       = pax_c;
+  bsk_u->fid_i       = -1;
+  bsk_u->snk_u.ptr_v = bsk_u;
+  bsk_u->snk_u.opn_f = _blob_bsink_opn;
+  bsk_u->snk_u.wri_f = _blob_bsink_wri;
+  bsk_u->snk_u.don_f = _blob_bsink_don;
+}

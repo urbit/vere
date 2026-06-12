@@ -827,6 +827,156 @@ _test_meld(void)
   fprintf(stderr, "test blob meld: ok\r\n");
 }
 
+/* _test_cue_blob(): blob-aware cue streams large atoms into the store.
+**
+**   jam a noun holding a large patterned atom (twice — the second
+**   occurrence backrefs) and a small atom; cue it with a 1KB threshold
+**   and a blob sink.  the large atom must come back as a bob atom
+**   (shared via the backref), byte-identical, with the small atom left
+**   plain and the bank consistent.
+*/
+static void
+_test_cue_blob(void)
+{
+  _tmp_make();
+  u3_blob_init(_tmp_pier);
+  u3_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+  u3C.blob_del_f = _test_blob_del_cb;
+  _test_del_count_w = 0;
+
+  //  ~100KB patterned payload (nonzero tail for exact bit-length)
+  //
+  const c3_z len_z = 100 * 1024;
+  c3_y* dat_y = c3_malloc(len_z);
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    dat_y[i_z] = (c3_y)(137 + (i_z * 31));
+  }
+  dat_y[len_z - 1] |= 0x80;
+
+  u3_noun big = u3i_bytes((c3_w)len_z, dat_y);
+  u3_noun ref = u3nt(u3k(big), 0x77, big);
+
+  c3_d  jam_d;
+  c3_y* jam_y;
+  u3s_jam_xeno(ref, &jam_d, &jam_y);
+
+  u3_noun out;
+  {
+    u3_blob_bsink bsk_u;
+    u3_blob_bsink_init(&bsk_u, _tmp_pier);
+
+    u3_cue_xeno* sil_u = u3s_cue_xeno_init();
+    u3s_cue_xeno_blob(sil_u, 1024, &bsk_u.snk_u);
+    out = u3s_cue_xeno_with(sil_u, jam_d, jam_y);
+    u3s_cue_xeno_done(sil_u);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "\033[31mcue blob: cue failed\033[0m\r\n");
+      exit(1);
+    }
+    if ( 1 != bsk_u.num_w ) {
+      fprintf(stderr, "\033[31mcue blob: %" PRIc3_w " installs, want 1"
+                      "\033[0m\r\n", bsk_u.num_w);
+      exit(1);
+    }
+  }
+
+  u3_noun hed = u3h(out);
+  u3_noun mid = u3h(u3t(out));
+  u3_noun tel = u3t(u3t(out));
+
+  if (  (c3n == u3a_is_bob(hed))
+     || (c3n == u3a_is_bob(tel)) )
+  {
+    fprintf(stderr, "\033[31mcue blob: large atoms not blobified\033[0m\r\n");
+    exit(1);
+  }
+  if ( hed != tel ) {
+    fprintf(stderr, "\033[31mcue blob: backref not shared\033[0m\r\n");
+    exit(1);
+  }
+  if ( 0x77 != mid ) {
+    fprintf(stderr, "\033[31mcue blob: small atom mangled\033[0m\r\n");
+    exit(1);
+  }
+
+  //  bytes must round-trip through the blob file
+  //
+  {
+    c3_y* git_y = c3_malloc(len_z);
+    u3r_bytes(0, (c3_w)len_z, git_y, hed);
+    if ( 0 != memcmp(git_y, dat_y, len_z) ) {
+      fprintf(stderr, "\033[31mcue blob: bytes mangled\033[0m\r\n");
+      exit(1);
+    }
+    c3_free(git_y);
+  }
+
+  //  structural equality with the original, and bank consistency:
+  //  one live bob atom, no log refs
+  //
+  if ( c3n == u3r_sing(ref, out) ) {
+    fprintf(stderr, "\033[31mcue blob: result != original\033[0m\r\n");
+    exit(1);
+  }
+
+  {
+    c3_h mug_h = u3a_bob_mug(hed);
+    c3_h seq_h = u3a_bob_seq(hed);
+
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    if ( !blb_u || (1 != blb_u->use_w) ) {
+      fprintf(stderr, "\033[31mcue blob: bad bank entry\033[0m\r\n");
+      exit(1);
+    }
+
+    //  re-cue: the store must dedup to the same (mug, seq)
+    //
+    {
+      u3_blob_bsink bsk_u;
+      u3_blob_bsink_init(&bsk_u, _tmp_pier);
+
+      u3_cue_xeno* sil_u = u3s_cue_xeno_init();
+      u3s_cue_xeno_blob(sil_u, 1024, &bsk_u.snk_u);
+      u3_noun two = u3s_cue_xeno_with(sil_u, jam_d, jam_y);
+      u3s_cue_xeno_done(sil_u);
+
+      u3_noun bob = u3h(two);
+      if (  (mug_h != u3a_bob_mug(bob))
+         || (seq_h != u3a_bob_seq(bob)) )
+      {
+        fprintf(stderr, "\033[31mcue blob: re-cue did not dedup\033[0m\r\n");
+        exit(1);
+      }
+      if ( 2 != blb_u->use_w ) {
+        fprintf(stderr, "\033[31mcue blob: use_w %" PRIc3_w " after re-cue, "
+                        "want 2\033[0m\r\n", blb_u->use_w);
+        exit(1);
+      }
+      u3z(two);
+    }
+
+    //  cleanup: drop nouns (no log refs, so the last atom death
+    //  legitimately requests deletion), then any remaining entry
+    //
+    u3z(out);
+    u3z(ref);
+
+    if ( (blb_u = u3a_blob_get(mug_h, seq_h)) ) {
+      blb_u->use_w = 0;
+      blb_u->eve_w = 0;
+      u3a_blob_drop(mug_h, seq_h);
+    }
+  }
+
+  c3_free(jam_y);
+  c3_free(dat_y);
+  u3C.blob_del_f = 0;
+  _tmp_clean();
+  fprintf(stderr, "test blob cue: ok\r\n");
+}
+
 static void
 _test_met(void)
 {
@@ -1194,6 +1344,7 @@ main(int argc, char* argv[])
   _test_install_stg_dedup();
   _test_sane();
   _test_meld();
+  _test_cue_blob();
   _test_met();
   _test_map();
   _test_lifecycle();

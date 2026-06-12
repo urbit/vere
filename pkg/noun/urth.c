@@ -485,9 +485,13 @@ u3u_munmap(c3_d len_d, c3_y* byt_y)
 }
 
 /* u3u_uncram(): restore persistent state from a rock.
+**
+**   when [snk_u] is set, cued atoms larger than [thr_d] bytes stream
+**   through it instead of materializing on the loom — vere passes a
+**   blob-store sink so cram-expanded blobs come back as bob atoms.
 */
 c3_o
-u3u_uncram(c3_c* dir_c, c3_d eve_d)
+u3u_uncram(c3_c* dir_c, c3_d eve_d, c3_d thr_d, u3s_bsink* snk_u)
 {
   c3_c* nam_c;
   c3_d  len_d;
@@ -526,6 +530,11 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
     //  XX tune the initial dictionary size for less reallocation
     //
     u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib33, ur_fib34);
+
+    if ( snk_u ) {
+      u3s_cue_xeno_blob(sil_u, thr_d, snk_u);
+    }
+
     u3_weak        ref = u3s_cue_xeno_with(sil_u, len_d, byt_y);
     u3_noun   roc, doc, tag, cod;
 

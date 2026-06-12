@@ -134,4 +134,24 @@
       c3_d
       u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
 
+    /* u3_blob_bsink: streaming byte sink for blob-aware cue (u3s_bsink).
+    **
+    ** Streams a large cued atom's bytes to a staging file, installs it
+    ** into the blob store (dedup via u3_blob_move_stg), and yields a bob
+    ** atom — the bytes never touch the loom.  Pass &bsk_u->snk_u to
+    ** u3s_cue_xeno_blob(); num_w counts installed blobs.
+    */
+      typedef struct _u3_blob_bsink {
+        u3s_bsink   snk_u;          //  callback table (pass to cue)
+        const c3_c* pax_c;          //  pier path
+        c3_i        fid_i;          //  staging fd (-1 = closed)
+        c3_w        num_w;          //  blobs installed
+        c3_c        stg_c[8192];    //  staging file path
+      } u3_blob_bsink;
+
+    /* u3_blob_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
+    */
+      void
+      u3_blob_bsink_init(u3_blob_bsink* bsk_u, const c3_c* pax_c);
+
 #endif /* ifndef U3_VERE_BLOB_H */

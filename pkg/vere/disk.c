@@ -1599,7 +1599,8 @@ _disk_chop_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
 }
 
 /* _disk_chop_blobs_cb(): u3_lmdb_walk_blobs callback — increment eve_w
-**   and use_w in place for each blob ID referenced by an event.
+**   and use_w for each blob ID referenced by an event, creating the
+**   bank entry if absent (e.g. after queu repaved the home road).
 */
 static void
 _disk_chop_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
@@ -1612,10 +1613,32 @@ _disk_chop_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFF);
 
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    if ( blb_u ) {
-      blb_u->eve_w += 1;
-      blb_u->use_w += 1;
-    }
+    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
+
+    blb_u->eve_w += 1;
+    blb_u->use_w += 1;
+  }
+}
+
+/* u3_disk_blob_refs(): rebuild blob event-log refcounts from the
+**   BLOBS table over the entire retained log.
+**
+**   zeroes every entry's eve_w, then rescans, creating entries as
+**   needed.  used by queu: rock import repaves the home road, wiping
+**   the bank, so eve_w must be reconstructed or the deletion
+**   invariant cannot be enforced on the imported pier.
+*/
+void
+u3_disk_blob_refs(u3_disk* log_u)
+{
+  u3h_walk_with(u3H->blb_p, _disk_chop_zero_cb, 0);
+
+  c3_d lo_d = 0, hi_d = 0;
+  u3_lmdb_gulf(log_u->mdb_u, &lo_d, &hi_d);
+
+  if ( lo_d && hi_d >= lo_d ) {
+    u3_lmdb_walk_blobs(log_u->mdb_u, lo_d, hi_d, 0,
+                       _disk_chop_blobs_cb);
   }
 }
 

@@ -24,6 +24,7 @@
 #include "libgen.h"
 #include "pthread.h"
 
+#include "blob.h"
 #include "ca_bundle.h"
 #include "pace.h"
 #include "version.h"
@@ -1855,13 +1856,40 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
 
+    //  blob-aware import: atoms over U3_BLOB_THRESH stream from the
+    //  rock straight into the blob store (content-dedup re-links files
+    //  surviving from before the import) and decode as bob atoms,
+    //  never touching the loom
+    //
+    u3_blob_bsink bsk_u;
+
+    u3_blob_init(u3_Host.dir_c);
+    u3_blob_stg_init(u3_Host.dir_c);
+    u3_blob_bsink_init(&bsk_u, u3_Host.dir_c);
+
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
     //  workaround is to delete/move the checkpoint in case of corruption
     //
-    if ( c3n == u3u_uncram(u3_Host.dir_c, eve_d) ) {
+    if ( c3n == u3u_uncram(u3_Host.dir_c, eve_d,
+                           U3_BLOB_THRESH, &bsk_u.snk_u) )
+    {
       fprintf(stderr, "urbit: queu: failed\r\n");
       exit(1);
+    }
+
+    if ( bsk_u.num_w ) {
+      fprintf(stderr, "urbit: queu: blobified %" PRIc3_w " atom(s)\r\n",
+                      bsk_u.num_w);
+    }
+
+    //  uncram repaved the home road, wiping the blob bank: rebuild
+    //  eve_w from the log's BLOBS table, then check the invariant
+    //
+    u3_disk_blob_refs(log_u);
+
+    if ( c3n == u3a_blob_sane(c3y) ) {
+      fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");
     }
 
     u3m_save();
