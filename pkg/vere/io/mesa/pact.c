@@ -1198,7 +1198,7 @@ static c3_i
 _test_pact(u3_mesa_pact* pac_u)
 {
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w  len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
+  c3_h  len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
   c3_i  ret_i = 0;
   c3_i  bot_i = 0;
   c3_h  sif_h;

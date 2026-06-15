@@ -1347,7 +1347,9 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    pac_u->len_h = u3r_met(3, pac);
+    c3_w len_w = u3r_met(3, pac);
+    u3_assert( UINT32_MAX >= len_w );
+    pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
 
     u3r_bytes(0, pac_u->len_h, pac_u->hun_y, pac);
@@ -2388,8 +2390,8 @@ _ames_czar_here(u3_ames* sam_u, c3_y imp_y, c3_h pip_h)
   sam_u->zar_u.pip_h[imp_y] = pip_h;
 
   {
-    c3_h blk_h = imp_y >> 5;
-    c3_h bit_h = 1 << (imp_y & u3a_half_bits);
+    c3_h blk_h = imp_y >> u3a_half_bits_log;
+    c3_h bit_h = (c3_h)1 << (imp_y & (u3a_half_bits - 1));
 
     sam_u->zar_u.log_h[blk_h] &= ~bit_h;
   }
