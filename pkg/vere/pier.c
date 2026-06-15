@@ -1350,11 +1350,22 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
 
   c3_t bad_t = 0;
   //  if we have no arvo kernel and can't evaluate nock
-  //  only print %leaf tanks
+  //  only print %leaf tanks and bare cords
   //
   if ( 0 == u3A->roc ) {
-    if ( c3__leaf == u3h(tac) ) {
+    if ( _(u3a_is_atom(tac)) ) {
+      //  bare cord slog (e.g. %bout timing reports from _n_hilt_hind);
+      //  print the bytes directly.
+      //
+      c3_c* str_c = u3r_string(tac);
+      fprintf(fil_u, "%s", str_c);
+      c3_free(str_c);
+    }
+    else if ( c3__leaf == u3h(tac) ) {
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
+    }
+    else {
+      fprintf(fil_u, "pier: malformed tank\r\n");
     }
   }
   else {
