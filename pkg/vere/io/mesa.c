@@ -1923,7 +1923,7 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
     per_u->ful_o = c3y;
     per_u->imp_y = gal;
-    u3_noun sal = u3k(u3t(las));
+    u3_noun sal = u3t(las);
     u3_noun lan;
     while ( sal != u3_nul ) {
       u3x_cell(sal, &lan, &sal);
@@ -1935,7 +1935,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
         per_u->dan_u = lan_u;
       }
     }
-    u3z(sal);
     _mesa_put_peer(per_u->sam_u, per_u->her_u, per_u);
   }
 
@@ -2404,7 +2403,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   dat_u->sam_u = sam_u;
   _mesa_copy_name(&dat_u->nam_u, &pac_u->pek_u.nam_u, &han_u->are_u);
 
-  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), han_u, _mesa_page_scry_jumbo_cb);
+  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3nq(1, c3__beam, c3__ax, bem), han_u, _mesa_page_scry_jumbo_cb);
 }
 
 static void
