@@ -19,12 +19,12 @@ u3qc_end(u3_atom a,
   else {
     c3_g a_g   = a;
     c3_w b_w   = b;
-    c3_w len_w = u3r_met(a_g, c);
+    c3_d len_d = u3r_met(a_g, c);
 
     if ( 0 == b_w ) {
       return 0;
     }
-    else if ( b_w >= len_w ) {
+    else if ( b_w >= len_d ) {
       return u3k(c);
     }
     else {

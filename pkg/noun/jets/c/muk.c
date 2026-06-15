@@ -16,11 +16,11 @@ u3qc_muk(u3_atom sed,
   }
   else {
     c3_w len_w = (c3_w)len;
-    c3_w key_w = u3r_met(3, key);
+    c3_d key_d = u3r_met(3, key);
 
     //  NB: this condition is implicit in the pad subtraction
     //
-    if ( key_w > len_w ) {
+    if ( key_d > len_w ) {
       return u3m_bail(c3__exit);
     }
     else {
@@ -32,7 +32,7 @@ u3qc_muk(u3_atom sed,
       //  if we're hashing more bytes than we have, allocate and copy
       //  to ensure trailing null bytes
       //
-      if ( len_w > key_w ) {
+      if ( len_w > key_d ) {
         loc_o = c3y;
         key_y = u3a_calloc(sizeof(c3_y), len_w);
         u3r_bytes(0, len_w, key_y, key);

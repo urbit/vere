@@ -1313,22 +1313,22 @@ _test_met()
    {
     atom = 1;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (1 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (1 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(4, atom);
+    ret_w = (c3_w)u3r_met(4, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1338,22 +1338,22 @@ _test_met()
    {
     atom = 2;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (2 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (1 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1363,22 +1363,22 @@ _test_met()
    {
     atom = 8;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (4 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (1 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1388,22 +1388,22 @@ _test_met()
    {
     atom = 0xff;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (8 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (1 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1413,22 +1413,22 @@ _test_met()
    {
     atom = 0x100;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (9 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (2 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1442,22 +1442,22 @@ _test_met()
   {
     atom = 0xffffffffULL;
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (32 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (4 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (1 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (1 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1470,22 +1470,22 @@ _test_met()
     c3_w data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
     atom = u3i_words(4, data_w);
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (128 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (16 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (4 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (2 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }
@@ -1497,22 +1497,22 @@ _test_met()
     c3_w data_w[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
     atom = u3i_words(4, data_w);
 
-    ret_w = u3r_met(0, atom);
+    ret_w = (c3_w)u3r_met(0, atom);
     if (97 != ret_w){
       printf("*** _test_met bit of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(3, atom);
+    ret_w = (c3_w)u3r_met(3, atom);
     if (13 != ret_w){
       printf("*** _test_met byte of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(5, atom);
+    ret_w = (c3_w)u3r_met(5, atom);
     if (4 != ret_w){
       printf("*** _test_met _w of 1 = %d \n", ret_w);
     }
 
-    ret_w = u3r_met(6, atom);
+    ret_w = (c3_w)u3r_met(6, atom);
     if (2 != ret_w){
       printf("*** _test_met _d of 1 = %d \n", ret_w);
     }

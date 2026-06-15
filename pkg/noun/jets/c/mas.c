@@ -21,7 +21,12 @@ u3qc_mas(u3_atom a)
     }
   }
   else {
-    b_w = u3r_met(0, a);
+    c3_d b_d = u3r_met(0, a);
+
+    if ( UINT32_MAX < b_d ) {
+      u3m_bail(c3__fail);
+    }
+    b_w = (c3_w)b_d;
 
     if ( 64 > b_w ) {
       c3_d a_d = u3r_chub(0, a);

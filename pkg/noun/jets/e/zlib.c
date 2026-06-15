@@ -38,7 +38,11 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_w len_w = u3r_met(3, q_octs);
+  c3_d len_d = u3r_met(3, q_octs);
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
 
   int leading_zeros = 0;
 

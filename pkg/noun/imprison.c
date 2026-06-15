@@ -669,7 +669,11 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      c3_d        dep_d = u3r_met(0, u3x_atom(axe)) - 2;
+      if ( UINT32_MAX < dep_d ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w        dep_w = (c3_w)dep_d;
       const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
                         : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;

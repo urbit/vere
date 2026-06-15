@@ -132,7 +132,11 @@ u3_disk_etch(u3_disk* log_u,
   //
   {
     u3_atom mat = u3qe_jam(eve);
-    c3_w  len_w = u3r_met(3, mat);
+    c3_d  len_d = u3r_met(3, mat);
+    if ( UINT32_MAX < len_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w  len_w = (c3_w)len_d;
 
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);

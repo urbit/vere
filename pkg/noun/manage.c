@@ -2064,7 +2064,11 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       return len_w;
     }
     else {
-      c3_w len_w = u3r_met(3, som);
+      c3_d len_d = u3r_met(3, som);
+      if ( UINT32_MAX < len_d ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w len_w = (c3_w)len_d;
 
       if ( _(_cm_is_tas(som, len_w)) ) {
         if ( str_c ) {
@@ -2167,7 +2171,11 @@ _cm_in_pretty_path(u3_noun som, c3_c* str_c)
     return sel_w + one_w + two_w;
   }
   else {
-    c3_w len_w = u3r_met(3, som);
+    c3_d len_d = u3r_met(3, som);
+    if ( UINT32_MAX < len_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w len_w = (c3_w)len_d;
     if ( str_c && len_w ) {
       u3r_bytes(0, len_w, (c3_y *)str_c, som);
       str_c += len_w;

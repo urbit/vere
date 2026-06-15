@@ -24,7 +24,13 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
     return u3m_bail(c3__fail);
   }
 
-  c3_w met_w = u3r_met(0, a);
+  c3_d met_d = u3r_met(0, a);
+  c3_w met_w;
+
+  if ( UINT32_MAX < met_d ) {
+    u3m_bail(c3__fail);
+  }
+  met_w = (c3_w)met_d;
 
   if ( met_w <= tot_w ) {
     tot_w -= met_w;

@@ -181,7 +181,11 @@ u3_mcut_char(c3_c* buf_c, c3_w len_w, c3_c chr_c)
 c3_w
 u3_mcut_cord(c3_c* buf_c, c3_w len_w, u3_noun san)
 {
-  c3_w ten_w = u3r_met(3, san);
+  c3_d ten_d = u3r_met(3, san);
+  if ( UINT32_MAX < ten_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w ten_w = (c3_w)ten_d;
 
   if ( buf_c ) {
     u3r_bytes(0, ten_w, (c3_y *)(buf_c + len_w), san);

@@ -94,7 +94,11 @@ _parse(u3_atom txt)
 
   const c3_y *byt_y;
   c3_z        cnt_z;
-  c3_w        len_w = u3r_met(3, txt);
+  c3_d        len_d = u3r_met(3, txt);
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w        len_w = (c3_w)len_d;
 
   //
   // initialization

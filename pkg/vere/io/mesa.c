@@ -1383,7 +1383,11 @@ _mesa_hear(u3_mesa* sam_u,
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  c3_w len_w = u3r_met(3, pac);
+  c3_d len_d = u3r_met(3, pac);
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1798,7 +1802,11 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    c3_w jumbo_w = u3r_met(3, pac);
+    c3_d jumbo_d = u3r_met(3, pac);
+    if ( UINT32_MAX < jumbo_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w jumbo_w = (c3_w)jumbo_d;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     u3r_bytes(0, jumbo_w, jumbo_y, pac);
 

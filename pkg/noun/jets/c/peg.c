@@ -22,18 +22,22 @@ u3qc_peg(u3_atom a, u3_atom b)
     b_d = b;
   }
   else {
-    c3_w d_w = u3r_met(0, a);
+    c3_d d_d = u3r_met(0, a);
+    c3_d c_d = u3r_met(0, b) - 1;
     c3_d e_d;
 
-    c_w = u3r_met(0, b) - 1;
-    e_d = (c3_d)c_w + d_w;
+    if ( UINT32_MAX < c_d ) {
+      u3m_bail(c3__fail);
+    }
+    c_w = (c3_w)c_d;
+    e_d = (c3_d)c_w + d_d;
 
     if ( 64 <= e_d ) {
       u3i_slab sab_u;
       u3i_slab_init(&sab_u, 0, e_d);
 
       u3r_chop(0, 0, c_w,   0, sab_u.buf_w, b);
-      u3r_chop(0, 0, d_w, c_w, sab_u.buf_w, a);
+      u3r_chop(0, 0, d_d, c_w, sab_u.buf_w, a);
 
       return u3i_slab_moot(&sab_u);
     }

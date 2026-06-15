@@ -8,9 +8,15 @@
 u3_atom
 u3qc_ham(u3_atom a)
 {
-  c3_w len_w = u3r_met(5, a);
+  c3_d len_d = u3r_met(5, a);
   c3_d pop_d = 0;
+  c3_w len_w;
   c3_w wor_w;
+
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  len_w = (c3_w)len_d;
 
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
     wor_w  = u3r_word(i_w, a);

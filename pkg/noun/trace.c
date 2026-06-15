@@ -87,7 +87,11 @@ u3t_heck(u3_atom cog)
 #if 0
   u3R->pro.cel_d++;
 #else
-  c3_w len_w = u3r_met(3, cog);
+  c3_d len_d = u3r_met(3, cog);
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
   c3_c* str_c = alloca(1 + len_w);
 
   u3r_bytes(0, len_w, (c3_y *)str_c, cog);
@@ -1240,8 +1244,12 @@ u3t_sstack_push(u3_noun nam)
     nam = c3__cell;
   }
 
-  c3_w  met_w = u3r_met(3, nam);
-  
+  c3_d  met_d = u3r_met(3, nam);
+  if ( UINT32_MAX < met_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w  met_w = (c3_w)met_d;
+
   // Exit if full
   if ( 0 < u3t_Spin->fow_w || 
        sizeof(u3t_Spin->dat_y) < u3t_Spin->off_w + met_w + sizeof(c3_w) ) {

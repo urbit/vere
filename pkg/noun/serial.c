@@ -87,7 +87,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    c3_d   a_d = u3r_met_d(0, a);
+    c3_d   a_d = u3r_met(0, a);
     c3_w   b_w = c3_bits_dabl(a_d);
     c3_d bit_d = fib_u->bit_d;
 
@@ -152,8 +152,8 @@ _cs_jam_fib_atom_cb(u3_atom a, void* ptr_v)
     _cs_jam_fib_mat(fib_u, a);
   }
   else {
-    c3_d a_d = u3r_met_d(0, a);
-    c3_d b_d = u3r_met_d(0, b);
+    c3_d a_d = u3r_met(0, a);
+    c3_d b_d = u3r_met(0, b);
 
     //  if [a] is smaller than the backref, encode atom
     //
@@ -276,14 +276,14 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  c3_d         met_d = u3r_met_d(0, a);
+  c3_d         met_d = u3r_met(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
     _cs_jam_bsw_atom(rit_u, met_d, a);
   }
   else {
-    c3_d bak_d = u3r_met_d(0, bak);
+    c3_d bak_d = u3r_met(0, bak);
 
     if ( met_d <= bak_d ) {
       _cs_jam_bsw_atom(rit_u, met_d, a);
@@ -309,7 +309,7 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
     return c3y;
   }
   else {
-    _cs_jam_bsw_back(rit_u, u3r_met_d(0, bak), bak);
+    _cs_jam_bsw_back(rit_u, u3r_met(0, bak), bak);
     return c3n;
   }
 }
@@ -879,7 +879,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 u3_noun
 u3s_cue_atom(u3_atom a)
 {
-  c3_w  len_w = u3r_met(3, a);
+  c3_d  len_d = u3r_met(3, a);
   c3_y* byt_y;
 
   // XX assumes little-endian
@@ -892,7 +892,7 @@ u3s_cue_atom(u3_atom a)
     byt_y = (c3_y*)vat_u->buf_w;
   }
 
-  return u3s_cue_bytes((c3_d)len_w, byt_y);
+  return u3s_cue_bytes(len_d, byt_y);
 }
 
 /* _cs_etch_ud_size(): output length in @ud for given mpz_t.
@@ -1103,8 +1103,12 @@ u3s_etch_ux(u3_atom a)
     return c3_s3('0', 'x', '0');
   }
 
-  c3_w     sep_w = u3r_met(4, a) - 1;                //  number of separators
-  c3_w     las_w = u3r_met(2, u3r_short(sep_w, a));  //  digits before separator
+  c3_d     mes_d = u3r_met(4, a);
+  if ( UINT32_MAX < mes_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w     sep_w = (c3_w)mes_d - 1;                  //  number of separators
+  c3_w     las_w = (c3_w)u3r_met(2, u3r_short(sep_w, a));  //  digits before separator
   c3_w     len_w = 2 + las_w + (sep_w * 5);          //  output bytes
   u3i_slab sab_u;
   u3i_slab_bare(&sab_u, 3, len_w);
@@ -1126,8 +1130,12 @@ u3s_etch_ux_c(u3_atom a, c3_c** out_c)
   }
 
   c3_y*  buf_y;
-  c3_w   sep_w = u3r_met(4, a) - 1;
-  c3_w   las_w = u3r_met(2, u3r_short(sep_w, a));
+  c3_d   mes_d = u3r_met(4, a);
+  if ( UINT32_MAX < mes_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w   sep_w = (c3_w)mes_d - 1;
+  c3_w   las_w = (c3_w)u3r_met(2, u3r_short(sep_w, a));
   size_t len_i = 2 + las_w + (sep_w * 5);
 
   buf_y = c3_malloc(1 + len_i);
@@ -1147,7 +1155,11 @@ u3s_etch_ux_c(u3_atom a, c3_c** out_c)
 static inline size_t
 _cs_etch_uv_size(u3_atom a, c3_w* out_w)
 {
-  c3_w met_w = u3r_met(0, a);
+  c3_d met_d = u3r_met(0, a);
+  if ( UINT32_MAX < met_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_w sep_w = _divc_nz(met_w, 25) - 1;  //  number of separators
   c3_w max_w = sep_w * 25;
   c3_w end_w = 0;
@@ -1241,7 +1253,11 @@ u3s_etch_uv_c(u3_atom a, c3_c** out_c)
 static inline size_t
 _cs_etch_uw_size(u3_atom a, c3_w* out_w)
 {
-  c3_w met_w = u3r_met(0, a);
+  c3_d met_d = u3r_met(0, a);
+  if ( UINT32_MAX < met_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_w sep_w = _divc_nz(met_w, 30) - 1;  //  number of separators
   c3_w max_w = sep_w * 30;
   c3_w end_w = 0;
@@ -1440,7 +1456,11 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 u3_weak
 u3s_sift_ud(u3_atom a)
 {
-  c3_w  len_w = u3r_met(3, a);
+  c3_d  len_d = u3r_met(3, a);
+  if ( UINT32_MAX < len_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w  len_w = (c3_w)len_d;
   c3_y* byt_y;
 
   // XX assumes little-endian

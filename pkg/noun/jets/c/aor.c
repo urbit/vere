@@ -25,8 +25,17 @@
       else {
         if ( c3n == u3ud(b) ) return c3y;
         {
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);;
+          c3_d len_a_d = u3r_met(3, a);
+          c3_d len_b_d = u3r_met(3, b);
+          c3_w len_a_w, len_b_w;
+          if ( UINT32_MAX < len_a_d ) {
+            u3m_bail(c3__fail);
+          }
+          if ( UINT32_MAX < len_b_d ) {
+            u3m_bail(c3__fail);
+          }
+          len_a_w = (c3_w)len_a_d;
+          len_b_w = (c3_w)len_b_d;
           c3_y *buf_a_y, *buf_b_y;
           c3_y cut_a_y, cut_b_y;
           if ( c3y == u3a_is_cat(a) ) {
