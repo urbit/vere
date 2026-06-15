@@ -2177,9 +2177,13 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
 
     _get_peer_lanes(sam_u, per_u); // forward-lanes
+    _mesa_put_peer(sam_u, per_u->her_u, per_u);
+
     return;
   }
-  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  if ( c3y == sam_u->for_o
+       && c3y == per_u->ful_o
+       && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
     sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     if ( _mesa_is_lane_zero(lin_u) == c3y) {
       c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
