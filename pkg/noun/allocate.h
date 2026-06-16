@@ -608,7 +608,7 @@ u3a_post_info(u3_post);
         /* u3a_wealloc(): word realloc.
         */
           void*
-          u3a_wealloc(void* lag_v, c3_w len_w);
+          u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w);
 
         /* u3a_pile_prep(): initialize stack control.
         */
@@ -620,17 +620,17 @@ u3a_post_info(u3_post);
         /* u3a_malloc(): aligned storage measured in bytes.
         */
           void*
-          u3a_malloc(size_t len_i);
+          u3a_malloc(c3_z len_z);
 
         /* u3a_calloc(): aligned storage measured in bytes.
         */
           void*
-          u3a_calloc(size_t num_i, size_t len_i);
+          u3a_calloc(c3_z num_z, c3_z len_z);
 
         /* u3a_realloc(): aligned realloc in bytes.
         */
           void*
-          u3a_realloc(void* lag_v, size_t len_i);
+          u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z);
 
         /* u3a_free(): free for aligned malloc.
         */

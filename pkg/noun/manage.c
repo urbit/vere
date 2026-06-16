@@ -2475,14 +2475,6 @@ _cm_crypto(void)
   u3je_secp_init();
 }
 
-/* _cm_realloc2(): gmp-shaped realloc.
-*/
-static void*
-_cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
-{
-  return u3a_realloc(lag_v, new_i);
-}
-
 /* _cm_free2(): gmp-shaped free.
 */
 static void
@@ -2504,7 +2496,7 @@ u3m_init(size_t len_i)
 
   //  make sure GMP uses our malloc.
   //
-  mp_set_memory_functions(u3a_malloc, _cm_realloc2, _cm_free2);
+  mp_set_memory_functions(u3a_malloc, u3a_realloc, _cm_free2);
 
   //  make sure that [len_i] is a fully-addressible non-zero power of two.
   //

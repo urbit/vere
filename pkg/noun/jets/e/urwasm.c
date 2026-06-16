@@ -372,7 +372,7 @@ _calloc_code(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_code(void* lag_v, size_t len_i)
+_realloc_code(void* lag_v, size_t old_i, size_t new_i)
 {
   if (!CodeArena->ini_t)
   {
@@ -380,7 +380,7 @@ _realloc_code(void* lag_v, size_t len_i)
   }
   if (!lag_v)
   {
-    return _calloc_code(len_i, 1);
+    return _calloc_code(new_i, 1);
   }
   c3_d old1_d = *((c3_d*)lag_v - 1);
   c3_d old2_d = *((c3_d*)lag_v - 2);
@@ -388,11 +388,11 @@ _realloc_code(void* lag_v, size_t len_i)
   {
     u3m_bail(c3__fail);
   }
-  if (len_i >= UINT64_MAX)
+  if (new_i >= UINT64_MAX)
   {
     u3m_bail(c3__fail);
   }
-  c3_d len_d = len_i;
+  c3_d len_d = new_i;
   void* new_v = _calloc_code(len_d, 1);
   memcpy(new_v, lag_v, c3_min(len_d, old1_d));
 
@@ -459,7 +459,7 @@ _calloc_box(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_box(void* lag_v, size_t len_i)
+_realloc_box(void* lag_v, size_t old_i, size_t new_i)
 {
   if (!BoxArena->ini_t)
   {
@@ -467,15 +467,15 @@ _realloc_box(void* lag_v, size_t len_i)
   }
   if (!lag_v)
   {
-    return _calloc_box(len_i, 1);
+    return _calloc_box(new_i, 1);
   }
   c3_d old_d = *((c3_d*)lag_v - 2);
   c3_d cap_d = *((c3_d*)lag_v - 1);
-  if (len_i >= UINT64_MAX)
+  if (new_i >= UINT64_MAX)
   {
     u3m_bail(c3__fail);
   }
-  c3_d len_d = len_i;
+  c3_d len_d = new_i;
   if (len_d <= cap_d)
   {
     *((c3_d*)lag_v - 2) = len_d;
@@ -518,7 +518,7 @@ _calloc_bail(size_t num_i, size_t len_i)
 }
 
 static void*
-_realloc_bail(void* lag_v, size_t len_i)
+_realloc_bail(void* lag_v, size_t old_i, size_t new_i)
 {
   u3m_bail(c3__fail);
 }
