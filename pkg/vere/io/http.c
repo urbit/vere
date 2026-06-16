@@ -338,31 +338,22 @@ _http_heds_from_noun(u3_noun hed)
   return hed_u;
 }
 
-/* _http_req_is_auth(): returns c3y if rec_u contains a valid auth cookie
+/* _http_req_get_auth(): get auth value (if present) for local cookie key
 */
-static c3_o
-_http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+static u3_weak
+_http_req_get_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
 {
+  //TODO  check Authentication header also
+
   //  try to find a cookie header
   //
-  h2o_iovec_t coo_u = {0, 0};
+  ssize_t hin_i = -1;
+  while (-1 != (hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, hin_i)))
   {
-    //TODO  http2 allows the client to put multiple 'cookie' headers,
-    //      runtime should support that once eyre does too.
-    ssize_t hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, -1);
-    if ( hin_i != -1 ) {
-      coo_u = rec_u->headers.entries[hin_i].value;
-    }
-  }
+    h2o_iovec_t coo_u = rec_u->headers.entries[hin_i].value;
 
-  //  if there is no cookie header, it can't possibly be authenticated
-  //
-  if ( NULL == coo_u.base ) {
-    return c3n;
-  }
-  //  if there is a cookie, see if it contains a valid auth token
-  //
-  else {
+    //  see if the cookie contains a valid auth token
+    //
     c3_c* key_c = fig_u->key_c;
     c3_c  val_c[128];
     c3_y  val_y = 0;
@@ -377,13 +368,13 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
       if (key_c[j_i] == '\0' && coo_u.base[i_i] == '=') {
         i_i++;
         while ( i_i < coo_u.len
-             && coo_u.base[i_i] != ';'
-             && val_y < sizeof(val_c) ) {
+            && coo_u.base[i_i] != ';'
+            && val_y < sizeof(val_c) ) {
           val_c[val_y] = coo_u.base[i_i];
           val_y++;
           i_i++;
         }
-        break;
+        return u3i_bytes(val_y, (c3_y*)val_c);
       }
       //  keep reading the key as long as it matches
       //
@@ -395,12 +386,25 @@ _http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
       }
       i_i++;
     }
-
-    u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3i_bytes(val_y, (c3_y*)val_c));
-    u3_assert(c3y == aut || c3n == aut);
-
-    return aut;
   }
+  return u3_none;
+}
+
+/* _http_req_is_auth(): returns c3y if rec_u contains a valid auth cookie
+*/
+static c3_o
+_http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+{
+  u3_weak tok = _http_req_get_auth(fig_u, rec_u);
+  if (u3_none == tok) {
+    return c3n;
+  }
+
+  u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3k(tok));
+  u3_assert(c3y == aut || c3n == aut);
+
+  u3z(tok);
+  return aut;
 }
 
 /* _http_req_find(): find http request in connection by sequence.
