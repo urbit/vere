@@ -199,7 +199,8 @@
     **   Single-counter design: the blob file is deleted iff use_w == 0.
     **   use_w is the sum of three component sources:
     **     - eve_w: event-log refcount (rebuilt on chop)
-    **     - les_h: active king-held lease count (transient; zeroed on boot)
+    **     - les_h: active king-held lease count (durable in LMDB LEASES;
+    **              the loom copy is zeroed on boot and rebuilt from it)
     **     - implicit atom cardinality: number of live bob atoms whose
     **       buf_w[0] points here.  Updated only on atom alloc/free; not
     **       affected by normal noun-refcount transitions.
@@ -214,13 +215,15 @@
     **   leaking king; blobs in mars->king gifts come from committed state
     **   and need no lease.
     **
-    **   On boot we zero les_h (and subtract from use_w); eve_w and atom
-    **   cardinality survive the snapshot.
+    **   les_h is durable: each lease is a row in the LMDB LEASES table.
+    **   On boot we zero the snapshot's les_h (and subtract from use_w),
+    **   then rebuild it from that table (_mars_play_leases); eve_w and
+    **   atom cardinality survive the snapshot.
     */
       typedef struct __attribute__((aligned(4))) {
         c3_w  use_w;   //  total refs: eve_w + les_h + atom cardinality
         c3_w  eve_w;   //  event-log refcount (rebuildable from LMDB)
-        c3_h  les_h;   //  active king-held leases (transient; zeroed on boot)
+        c3_h  les_h;   //  active king-held leases (rebuilt from LMDB LEASES)
         c3_h  mug_h;   //  blob mug — identifies file in .urb/bob
         c3_h  seq_h;   //  blob seq — identifies file in .urb/bob
       } u3a_blob;

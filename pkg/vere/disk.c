@@ -1642,6 +1642,66 @@ u3_disk_blob_refs(u3_disk* log_u)
   }
 }
 
+/* u3_disk_blob_gc(): reclaim unreferenced blobs against the bank.
+**
+**   1. delete blob files (and blb_p entries) whose use_w == 0
+**   2. delete on-disk files that have no blb_p entry (orphans)
+**
+**   safe to run whenever use_w is fully reconstructed: after a chop's
+**   eve_w rebuild, or at boot once replay has restored eve_w and the
+**   LEASES table has restored les_h.  collect-then-act so neither walk
+**   races its own deletions.
+*/
+void
+u3_disk_blob_gc(u3_disk* log_u)
+{
+  //  step 1: delete unreferenced blobs and clean up blb_p
+  //
+  {
+    c3_w tot_w = u3h_wyt(u3H->blb_p);
+
+    _disk_chop_collect del_u = { .pax_c = log_u->dir_u->pax_c };
+    u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
+
+    for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
+      c3_h mug_h = (c3_h)(del_u.bid_d[i_z] >> 32);
+      c3_h seq_h = (c3_h)(del_u.bid_d[i_z] & 0xFFFFFFFF);
+      u3a_blob_drop(mug_h, seq_h);
+    }
+
+    if ( del_u.len_z ) {
+      fprintf(stderr,
+              "blob: gc: deleted %" PRIc3_z " blob(s), kept %" PRIc3_w "\r\n",
+              del_u.len_z, tot_w - (c3_w)del_u.len_z);
+    }
+
+    c3_free(del_u.bid_d);
+  }
+
+  //  step 2: reconcile the on-disk store against the bank — delete
+  //  files with no blb_p entry (collect first; the walk must not race
+  //  its own deletions)
+  //
+  {
+    _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
+    u3_blob_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
+
+    for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
+      c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
+      c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
+      u3_blob_wipe(orf_u.pax_c, mug_h, seq_h);
+    }
+
+    if ( orf_u.len_z ) {
+      fprintf(stderr,
+              "blob: gc: deleted %" PRIc3_z " orphaned blob file(s)\r\n",
+              orf_u.len_z);
+    }
+
+    c3_free(orf_u.bid_d);
+  }
+}
+
 /* _disk_chop_rebuild_blobs(): rebuild blob accounting after epoch deletion.
 **
 **   1. zero all eve_w in place (les_h was already zeroed at boot)
@@ -1666,50 +1726,9 @@ _disk_chop_rebuild_blobs(u3_disk* log_u)
                        _disk_chop_blobs_cb);
   }
 
-  //  step 3: delete unreferenced blobs and clean up blb_p
+  //  steps 3-4: delete unreferenced blobs and reconcile orphans
   //
-  {
-    c3_w tot_w = u3h_wyt(u3H->blb_p);
-    fprintf(stderr, "chop: scanning %" PRIc3_w " blob(s)\r\n", tot_w);
-
-    _disk_chop_collect del_u = { .pax_c = log_u->dir_u->pax_c };
-    u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
-
-    for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(del_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(del_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3a_blob_drop(mug_h, seq_h);
-    }
-
-    fprintf(stderr,
-            "chop: deleted %" PRIc3_z " blob(s), kept %" PRIc3_w "\r\n",
-            del_u.len_z, tot_w - (c3_w)del_u.len_z);
-
-    c3_free(del_u.bid_d);
-  }
-
-  //  step 4: reconcile the on-disk store against the bank — delete
-  //  files with no blb_p entry (collect first; the walk must not race
-  //  its own deletions)
-  //
-  {
-    _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
-    u3_blob_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
-
-    for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3_blob_wipe(orf_u.pax_c, mug_h, seq_h);
-    }
-
-    if ( orf_u.len_z ) {
-      fprintf(stderr,
-              "chop: deleted %" PRIc3_z " orphaned blob file(s)\r\n",
-              orf_u.len_z);
-    }
-
-    c3_free(orf_u.bid_d);
-  }
+  u3_disk_blob_gc(log_u);
 }
 
 /* u3_disk_chop(): delete all but the latest 2 epocs.

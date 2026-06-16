@@ -32,6 +32,26 @@ _blob_mug_dir(c3_c* out_c, const c3_c* pax_c, c3_h mug_h)
   snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h, pax_c, mug_h);
 }
 
+/* _blob_sync_dir(): fsync a mug bucket directory so a freshly-created
+**   entry survives a crash before the next global sync.  No-op on
+**   Windows, which cannot open a directory as a file descriptor.
+*/
+static void
+_blob_sync_dir(const c3_c* pax_c, c3_h mug_h)
+{
+#ifndef U3_OS_windows
+  c3_c dir_c[8192];
+  _blob_mug_dir(dir_c, pax_c, mug_h);
+
+  c3_i dir_i = open(dir_c, O_RDONLY);
+  if ( -1 == dir_i ) {
+    return;
+  }
+  c3_sync(dir_i);
+  close(dir_i);
+#endif
+}
+
 /* _blob_lock_path(): write path to $pier/.urb/bob/<mug>/lock into [out_c].
 */
 static void
@@ -672,6 +692,12 @@ u3_blob_move_stg(const c3_c* pax_c,
     close(dst_i);
     c3_unlink(stg_c);
   }
+
+  //  fsync the bucket directory so the new entry survives a crash
+  //  before the next global sync — a committed lease row must never
+  //  reference a blob whose directory entry was lost
+  //
+  _blob_sync_dir(pax_c, *mug_h);
 
   *seq_h = nex_h;
   return c3y;

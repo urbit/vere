@@ -973,6 +973,13 @@
         void
         u3_disk_blob_refs(u3_disk* log_u);
 
+      /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
+      **   orphans with no bank entry.  run at boot (after replay and
+      **   lease restore) or as part of chop, once use_w is reconstructed.
+      */
+        void
+        u3_disk_blob_gc(u3_disk* log_u);
+
       /* u3_disk_roll(): rollover to a new epoc.
        */
         void

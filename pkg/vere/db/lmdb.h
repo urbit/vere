@@ -116,4 +116,28 @@
                          void*    ptr_v,
                          void  (*fun_f)(void*, c3_d, c3_d*, c3_z));
 
+    /* u3_lmdb_save_lease(): durably record a king lease (MDB_DUPSORT).
+    **
+    **   keyed by blob id [bid_d]; value is the pair [exp_d, lea_d] where
+    **   [lea_d] is a unique id disambiguating duplicate-key rows.
+    */
+      c3_o
+      u3_lmdb_save_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d);
+
+    /* u3_lmdb_delete_lease(): remove one lease row by (bid, exp, lea).
+    **
+    **   idempotent — a missing row or table is treated as success.
+    */
+      c3_o
+      u3_lmdb_delete_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d);
+
+    /* u3_lmdb_walk_leases(): iterate every lease row.
+    **
+    **   calls [fun_f](ptr, bid, exp, lea) once per duplicate row.
+    */
+      void
+      u3_lmdb_walk_leases(MDB_env* env_u,
+                          void*    ptr_v,
+                          void  (*fun_f)(void*, c3_d, c3_d, c3_d));
+
 #endif /* ifndef U3_VERE_DB_LMDB_H */

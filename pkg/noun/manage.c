@@ -576,9 +576,9 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
 /* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
-**   use_w and zero les_h on each u3a_blob.  Leases are transient IPC
-**   state backed by a C-heap PQ that is not persisted; after restart
-**   the PQ is empty, so any les_h count from the previous boot is stale.
+**   use_w and zero les_h on each u3a_blob.  The snapshot's les_h is
+**   stale after a restart; pkg/vere rebuilds the live count from the
+**   durable LMDB LEASES table (_mars_play_leases) once the disk is open.
 */
 static void
 _find_home_zero_les_cb(u3_noun kev, void* ptr_v)

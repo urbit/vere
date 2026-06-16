@@ -1324,6 +1324,331 @@ _test_lifecycle(void)
   fprintf(stderr, "test blob lifecycle: ok\r\n");
 }
 
+/* _lease_seen / _lease_collect_cb: accumulator for u3_lmdb_walk_leases.
+*/
+typedef struct { c3_d bid_d; c3_d exp_d; c3_d lea_d; } _lease_seen;
+static _lease_seen _lease_arr[64];
+static c3_z        _lease_num;
+
+static void
+_lease_collect_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
+{
+  (void)ptr_v;
+  if ( _lease_num < 64 ) {
+    _lease_arr[_lease_num].bid_d = bid_d;
+    _lease_arr[_lease_num].exp_d = exp_d;
+    _lease_arr[_lease_num].lea_d = lea_d;
+  }
+  _lease_num += 1;
+}
+
+static c3_z
+_lease_count(MDB_env* env_u)
+{
+  _lease_num = 0;
+  u3_lmdb_walk_leases(env_u, 0, _lease_collect_cb);
+  return _lease_num;
+}
+
+/* _lease_has(): does the accumulator hold a row matching (bid, exp, lea)?
+*/
+static c3_o
+_lease_has(c3_d bid_d, c3_d exp_d, c3_d lea_d)
+{
+  for ( c3_z i_z = 0; i_z < _lease_num && i_z < 64; i_z++ ) {
+    if (  (_lease_arr[i_z].bid_d == bid_d)
+       && (_lease_arr[i_z].exp_d == exp_d)
+       && (_lease_arr[i_z].lea_d == lea_d) )
+    {
+      return c3y;
+    }
+  }
+  return c3n;
+}
+
+/* _test_lease(): durable LEASES table — multiple leases per bid
+**   (MDB_DUPSORT), exact-row delete, idempotency, missing-table walk.
+*/
+static void
+_test_lease(void)
+{
+  _tmp_make();
+
+  //  u3_lmdb_init opens an env at an existing directory
+  //
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  if ( 0 != mkdir(log_c, 0700) ) {
+    fprintf(stderr, "lease: mkdir %s failed: %s\r\n", log_c, strerror(errno));
+    exit(1);
+  }
+
+  MDB_env* env_u = u3_lmdb_init(log_c, 1ULL << 30);
+  if ( !env_u ) {
+    fprintf(stderr, "lease: lmdb init failed\r\n");
+    exit(1);
+  }
+
+  //  walking a not-yet-created table yields nothing
+  //
+  if ( 0 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease: empty table not empty\r\n");
+    exit(1);
+  }
+
+  c3_d bid1 = ((c3_d)0xdeadbeef << 32) | 1;
+  c3_d bid2 = ((c3_d)0xdeadbeef << 32) | 2;
+
+  //  two live leases on one blob (duplicate key) + one on another
+  //
+  if (  (c3n == u3_lmdb_save_lease(env_u, bid1, 100, 1))
+     || (c3n == u3_lmdb_save_lease(env_u, bid1, 200, 2))
+     || (c3n == u3_lmdb_save_lease(env_u, bid2, 300, 3)) )
+  {
+    fprintf(stderr, "lease: save failed\r\n");
+    exit(1);
+  }
+
+  if ( 3 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease: expected 3 rows, got %zu\r\n", _lease_num);
+    exit(1);
+  }
+  if (  (c3n == _lease_has(bid1, 100, 1))
+     || (c3n == _lease_has(bid1, 200, 2))
+     || (c3n == _lease_has(bid2, 300, 3)) )
+  {
+    fprintf(stderr, "lease: missing a row after save\r\n");
+    exit(1);
+  }
+
+  //  delete one specific duplicate; its sibling under bid1 survives
+  //
+  if ( c3n == u3_lmdb_delete_lease(env_u, bid1, 100, 1) ) {
+    fprintf(stderr, "lease: delete failed\r\n");
+    exit(1);
+  }
+  if ( 2 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease: expected 2 rows after delete, got %zu\r\n",
+            _lease_num);
+    exit(1);
+  }
+  if (  (c3y == _lease_has(bid1, 100, 1))
+     || (c3n == _lease_has(bid1, 200, 2))
+     || (c3n == _lease_has(bid2, 300, 3)) )
+  {
+    fprintf(stderr, "lease: wrong duplicate deleted\r\n");
+    exit(1);
+  }
+
+  //  deleting a now-absent row is idempotent success
+  //
+  if ( c3n == u3_lmdb_delete_lease(env_u, bid1, 100, 1) ) {
+    fprintf(stderr, "lease: idempotent delete reported failure\r\n");
+    exit(1);
+  }
+  if ( 2 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease: idempotent delete changed table\r\n");
+    exit(1);
+  }
+
+  //  drain
+  //
+  u3_lmdb_delete_lease(env_u, bid1, 200, 2);
+  u3_lmdb_delete_lease(env_u, bid2, 300, 3);
+  if ( 0 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease: table not drained\r\n");
+    exit(1);
+  }
+
+  u3_lmdb_exit(env_u);
+  _tmp_clean();
+  fprintf(stderr, "test blob lease: ok\r\n");
+}
+
+/* _lease_env(): make a fresh pier + LMDB env for a lease test.
+*/
+static MDB_env*
+_lease_env(void)
+{
+  _tmp_make();
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  if ( 0 != mkdir(log_c, 0700) ) {
+    fprintf(stderr, "lease: mkdir %s failed: %s\r\n", log_c, strerror(errno));
+    exit(1);
+  }
+
+  MDB_env* env_u = u3_lmdb_init(log_c, 1ULL << 30);
+  if ( !env_u ) {
+    fprintf(stderr, "lease: lmdb init failed\r\n");
+    exit(1);
+  }
+  return env_u;
+}
+
+/* _lease_reopen(): close and reopen the env — stands in for a crash +
+**   restart, exercising on-disk durability.
+*/
+static MDB_env*
+_lease_reopen(MDB_env* env_u)
+{
+  u3_lmdb_exit(env_u);
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+
+  MDB_env* new_u = u3_lmdb_init(log_c, 1ULL << 30);
+  if ( !new_u ) {
+    fprintf(stderr, "lease: lmdb reopen failed\r\n");
+    exit(1);
+  }
+  return new_u;
+}
+
+/* _test_lease_persist(): leases (and their deletions) survive a close +
+**   reopen, and coexist with the BLOBS table in the same env.
+*/
+static void
+_test_lease_persist(void)
+{
+  MDB_env* env_u = _lease_env();
+
+  c3_d bid_a = ((c3_d)0x0a11ce << 32) | 7;
+  c3_d bid_b = ((c3_d)0x000b0b << 32) | 9;
+
+  //  two leases on bid_a (duplicate key) + one on bid_b
+  //
+  if (  (c3n == u3_lmdb_save_lease(env_u, bid_a, 1000, 10))
+     || (c3n == u3_lmdb_save_lease(env_u, bid_a, 2000, 11))
+     || (c3n == u3_lmdb_save_lease(env_u, bid_b, 3000, 12)) )
+  {
+    fprintf(stderr, "lease persist: save failed\r\n");
+    exit(1);
+  }
+
+  //  an unrelated BLOBS row, to prove the tables are independent and
+  //  maxdbs accommodates both
+  //
+  {
+    c3_d ids_d[2] = { bid_a, bid_b };
+    if ( c3n == u3_lmdb_save_blobs(env_u, 42, ids_d, 2) ) {
+      fprintf(stderr, "lease persist: blobs save failed\r\n");
+      exit(1);
+    }
+  }
+
+  //  "crash" and restart
+  //
+  env_u = _lease_reopen(env_u);
+
+  //  every lease survived, values intact
+  //
+  if ( 3 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease persist: expected 3 rows after reopen, got %zu\r\n",
+            _lease_num);
+    exit(1);
+  }
+  if (  (c3n == _lease_has(bid_a, 1000, 10))
+     || (c3n == _lease_has(bid_a, 2000, 11))
+     || (c3n == _lease_has(bid_b, 3000, 12)) )
+  {
+    fprintf(stderr, "lease persist: a lease did not survive reopen\r\n");
+    exit(1);
+  }
+
+  //  the BLOBS row survived independently
+  //
+  {
+    c3_d* out_d = 0;
+    c3_z  out_z = 0;
+    if (  (c3n == u3_lmdb_read_blobs(env_u, 42, &out_d, &out_z))
+       || (2 != out_z)
+       || (bid_a != out_d[0])
+       || (bid_b != out_d[1]) )
+    {
+      fprintf(stderr, "lease persist: blobs row corrupt after reopen\r\n");
+      exit(1);
+    }
+    c3_free(out_d);
+  }
+
+  //  a deletion is durable too
+  //
+  if ( c3n == u3_lmdb_delete_lease(env_u, bid_a, 1000, 10) ) {
+    fprintf(stderr, "lease persist: delete failed\r\n");
+    exit(1);
+  }
+  env_u = _lease_reopen(env_u);
+
+  if ( 2 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease persist: deletion did not persist (%zu rows)\r\n",
+            _lease_num);
+    exit(1);
+  }
+  if ( c3y == _lease_has(bid_a, 1000, 10) ) {
+    fprintf(stderr, "lease persist: deleted row reappeared\r\n");
+    exit(1);
+  }
+
+  u3_lmdb_exit(env_u);
+  _tmp_clean();
+  fprintf(stderr, "test blob lease persist: ok\r\n");
+}
+
+/* _test_lease_dups(): many leases on one blob, deleting specific rows
+**   leaves the others untouched (the multi-lease-per-bid invariant).
+*/
+static void
+_test_lease_dups(void)
+{
+  MDB_env* env_u = _lease_env();
+
+  c3_d bid_d = ((c3_d)0xd00d << 32) | 3;
+
+  //  five concurrent leases on the same blob
+  //
+  for ( c3_d i_d = 0; i_d < 5; i_d++ ) {
+    if ( c3n == u3_lmdb_save_lease(env_u, bid_d, 5000 + i_d, 100 + i_d) ) {
+      fprintf(stderr, "lease dups: save %" PRIu64 " failed\r\n", i_d);
+      exit(1);
+    }
+  }
+
+  if ( 5 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease dups: expected 5 rows, got %zu\r\n", _lease_num);
+    exit(1);
+  }
+
+  //  drop the first and last; the middle three remain
+  //
+  if (  (c3n == u3_lmdb_delete_lease(env_u, bid_d, 5000, 100))
+     || (c3n == u3_lmdb_delete_lease(env_u, bid_d, 5004, 104)) )
+  {
+    fprintf(stderr, "lease dups: delete failed\r\n");
+    exit(1);
+  }
+
+  if ( 3 != _lease_count(env_u) ) {
+    fprintf(stderr, "lease dups: expected 3 rows after delete, got %zu\r\n",
+            _lease_num);
+    exit(1);
+  }
+  if (  (c3y == _lease_has(bid_d, 5000, 100))
+     || (c3n == _lease_has(bid_d, 5001, 101))
+     || (c3n == _lease_has(bid_d, 5002, 102))
+     || (c3n == _lease_has(bid_d, 5003, 103))
+     || (c3y == _lease_has(bid_d, 5004, 104)) )
+  {
+    fprintf(stderr, "lease dups: wrong rows survived\r\n");
+    exit(1);
+  }
+
+  u3_lmdb_exit(env_u);
+  _tmp_clean();
+  fprintf(stderr, "test blob lease dups: ok\r\n");
+}
+
 /* main(): run all blob tests.
 */
 int
@@ -1348,6 +1673,9 @@ main(int argc, char* argv[])
   _test_met();
   _test_map();
   _test_lifecycle();
+  _test_lease();
+  _test_lease_persist();
+  _test_lease_dups();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;
