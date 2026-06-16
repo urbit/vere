@@ -1262,13 +1262,20 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
-  if (  !u3t_Spin ) return;
+  if ( !u3t_Spin ) return;
   if ( 0 < u3t_Spin->fow_w ) {
     u3t_Spin->fow_w--;
   } else {
     c3_w len_w;
     memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)], sizeof(c3_w));
-    u3t_Spin->off_w -= (len_w+sizeof(c3_w));
+
+    if ( (len_w+sizeof(c3_w)) > u3t_Spin->off_w ) {
+      fprintf(stderr, "spin: would underflow off=%u siz=%u\r\n",
+                      u3t_Spin->off_w, len_w+sizeof(c3_w));
+    }
+    else {
+      u3t_Spin->off_w -= (len_w+sizeof(c3_w));
+    }
   }
 }
 
