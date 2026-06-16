@@ -14,17 +14,17 @@
     ** layouts.  u3v_arvo / u3v_home typedef-alias matching bitness.
     ** u3v_home: NB version must be first for ease of migration.
     */
-#define U3V_ARVO_BODY(S)              \
-  c3_d    eve_d;                      \
-  U3_N(S) roc;                        \
+#define U3V_ARVO_BODY(S)                                                       \
+  c3_d    eve_d;                                                               \
+  U3_N(S) roc;                                                                 \
   U3_N(S) yot;
 
-#define U3V_HOME_BODY(S)              \
-  u3v_version           ver_d;        \
-  c3_d                  pam_d;        \
-  U3_PASTE(u3v_arvo, S) arv_u;        \
-  U3_PASTE(u3a_road, S) rod_u;        \
-  U3_W(S)               blb_p;
+#define U3V_HOME_BODY(S)                                                       \
+  u3v_version           ver_d;                                                 \
+  c3_d                  pam_d;                                                 \
+  U3_PASTE(u3v_arvo, S) arv_u;                                                 \
+  U3_PASTE(u3a_road, S) rod_u;                                                 \
+  U3_W(S)               blb_p;  //  u3p(u3h_root) - bid -> u3a_blob*
 
       U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
       U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);
