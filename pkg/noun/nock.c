@@ -1032,6 +1032,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__nara:
       case c3__hela:
       case c3__loop:
+      case c3__drop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1143,7 +1144,15 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         {
           u3_weak con = u3r_skip(hod);
           if ( (u3_none != con) && (c3y == u3du(con)) ) {
-            cid = u3z_memo_keep;
+            if (  (c3y == u3du(u3t(con)))
+               && (c3__clay == u3h(con))
+               && (c3__ford == u3h(u3t(con))) )
+            {
+              cid = u3z_memo_ford;
+            }
+            else {
+              cid = u3z_memo_keep;
+            }
           }
         }
         ++tot_w; _n_emit(ops, u3nq(op_y, cid, mem_w, u3k(nef)));
@@ -1910,6 +1919,13 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       u3_atom per = u3i_word(u3h_count(u3R->cax.per_p));
       u3h_discount(u3R->cax.per_p);
       *out = u3i_cell(tag, u3i_cell(har, per));
+    } break;
+
+    case c3__drop: {
+      u3m_Ford_fresh_road_depth_w = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_w);
+      u3h_free(u3R->cax.for_p);
+      u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+      *out = u3_nul;
     } break;
 
     case c3__loop: {
@@ -2754,7 +2770,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     skim_out:
       o     = u3k(mem_u->key);
       x     = u3nc(x, o);
-      o     = u3z_find_m(mem_u->cid, 144 + c3__nock, x);
+      switch ( mem_u->cid ) {
+        case u3z_memo_ford: {
+          o = u3z_find_m(mem_u->cid, 136 + c3__ford, x);
+        } break;
+        default: {
+          o = u3z_find_m(mem_u->cid, 144 + c3__nock, x);
+        }
+      }
       if ( u3_none == o ) {
         _n_push(mov, off, u3nc(mem_u->cid, x));
         _n_push(mov, off, u3k(u3h(x)));
@@ -2770,9 +2793,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x   = _n_pep(mov, off);  // product
       top = _n_peek(off);
       o   = *top;
-      if ( ( u3z_memo_toss == u3h(o) )
+      if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
+        u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
+      }
+      else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
-         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
+         : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
         u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?

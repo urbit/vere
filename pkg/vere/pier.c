@@ -559,7 +559,7 @@ _boot_scry_cb(void* vod_p, u3_noun nun)
       } else {
         // Trying to boot old ship after breach
         u3l_log("boot: failed: double-boot detected, refusing to boot %s\r\n"
-                "you are trying to boot an existing ship from a keyfile,"
+                "you are trying to boot an existing ship from a keyfile, "
                 "resume the latest version of the ship or breach\r\n"
                 "see https://docs.urbit.org/user-manual/id/guide-to-resets",
                 who_c);
@@ -707,8 +707,8 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 //  XX organizing version constants
 //
 #define VERE_NAME  "vere"
-#define VERE_ZUSE  409
-#define VERE_LULL  321
+#define VERE_ZUSE  408
+#define VERE_LULL  320
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
 */
@@ -836,8 +836,8 @@ _pier_wyrd_card(u3_pier* pir_u)
                      u3_nul);
   u3_noun kel = u3nl(u3nc(c3__zuse, VERE_ZUSE),  //  XX from both king and serf?
                      u3nc(c3__lull, VERE_LULL),  //  XX from both king and serf?
-                     u3nc(c3__arvo, 235),        //  XX from both king and serf?
-                     u3nc(c3__hoon, 136),        //  god_u->hon_y
+                     u3nc(c3__arvo, 234),        //  XX from both king and serf?
+                     u3nc(c3__hoon, 135),        //  god_u->hon_y
                      u3nc(c3__nock, 4),          //  god_u->noc_y
                      u3_none);
   return u3nt(c3__wyrd, u3nc(sen, ver), kel);
@@ -1152,13 +1152,13 @@ u3_pier_save(u3_pier* pir_u)
 /* u3_pier_meld(): globally deduplicate persistent state.
 */
 void
-u3_pier_meld(u3_pier* pir_u)
+u3_pier_meld(u3_pier* pir_u, u3_noun dat)
 {
 #ifdef VERBOSE_PIER
   fprintf(stderr, "pier: (%" PRIu64 "): meld: plan\r\n", pir_u->god_u->eve_d);
 #endif
 
-  u3_lord_meld(pir_u->god_u);
+  u3_lord_meld(pir_u->god_u, dat);
 }
 
 /* u3_pier_pack(): defragment persistent state.
@@ -1350,11 +1350,22 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
 
   c3_t bad_t = 0;
   //  if we have no arvo kernel and can't evaluate nock
-  //  only print %leaf tanks
+  //  only print %leaf tanks and bare cords
   //
   if ( 0 == u3A->roc ) {
-    if ( c3__leaf == u3h(tac) ) {
+    if ( _(u3a_is_atom(tac)) ) {
+      //  bare cord slog (e.g. %bout timing reports from _n_hilt_hind);
+      //  print the bytes directly.
+      //
+      c3_c* str_c = u3r_string(tac);
+      fprintf(fil_u, "%s", str_c);
+      c3_free(str_c);
+    }
+    else if ( c3__leaf == u3h(tac) ) {
       _pier_dump_tape(fil_u, u3k(u3t(tac)));
+    }
+    else {
+      fprintf(fil_u, "pier: malformed tank\r\n");
     }
   }
   else {

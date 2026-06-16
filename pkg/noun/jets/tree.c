@@ -20,6 +20,7 @@
 #include "c3/c3.h"
 #include "jets.h"
 #include "jets/w.h"
+#include "jets/136/w.h"
 
 static c3_c* no_hashes[] = { 0 };
 
@@ -576,7 +577,7 @@ static c3_c* _140_pen_look_ha[] = {
   "fdda2166a2b9e1a9bda6ab375dd6fb6c610e18f54636a5e89896b45fd0a7169b",
   0
 };
-static u3j_harm _140_pen_loot_a[] = {{".2", u3wf_loot}, {}};
+static u3j_harm _140_pen_loot_a[] = {{".2", u3wf_loot_136}, {}};
 static c3_c* _140_pen_loot_ha[] = {
   "e275da4562ae6da9bd333aeae6b9829e886874c8b891898c0ef5306268eb45c1",
   0
@@ -2638,6 +2639,7 @@ u3j_core _a50_d[] =
 
 extern u3j_core _k137_d[];
 extern u3j_core _k136_d[];
+extern u3j_core _k135_d[];
 
 static u3j_core _d[] =
 { { "k140", 0, 0, _k140_d, _k140_ha,  0, (u3j_core*) 140,     0 },
@@ -2645,6 +2647,7 @@ static u3j_core _d[] =
   { "k138", 0, 0, _k138_d, no_hashes, 0, (u3j_core*) 138,     0 },
   { "k137", 0, 0, _k137_d, no_hashes, 0, (u3j_core*) 137,     0 },
   { "k136", 0, 0, _k136_d, no_hashes, 0, (u3j_core*) 136,     0 },
+  { "k135", 0, 0, _k135_d, no_hashes, 0, (u3j_core*) 135,     0 },
   { "a50",  0, 0, _a50_d,  _k140_ha,  0, (u3j_core*) c3__a50, 0 },
   {}
 };

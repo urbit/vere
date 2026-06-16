@@ -165,6 +165,8 @@ u3_melt_all(FILE *fil_u)
   //
   u3_assert( &(u3H->rod_u) == u3R );
 
+  u3z(u3H->rod_u.bug.mer);
+
   can_u.siz_w = 32;
   can_u.tac   = c3_malloc(sizeof(*can_u.tac) * can_u.siz_w);
 
@@ -177,6 +179,7 @@ u3_melt_all(FILE *fil_u)
 
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
+  u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
 
   u3j_boot(c3n);
   u3j_ream();
@@ -193,16 +196,25 @@ u3_melt_all(FILE *fil_u)
 
   c3_free(can_u.tac);
 
+  u3H->rod_u.bug.mer = u3i_tape("emergency buffer");
+
   return u3a_idle(u3R) - pre_w;
 }
 
 c3_w
-u3_meld_all(FILE *fil_u)
+u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
 {
   c3_w pre_w = u3a_open(u3R);
 
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  if ( _(per_o) ) {
+    u3h_free(u3R->cax.per_p);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  }
+
+  if ( _(for_o) ) {
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  }
 
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();

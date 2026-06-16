@@ -182,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
-            .files = &.{ "veh_handler.c", "rsignal.c" },
+            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c" },
             .flags = flags.items,
         });
     }
@@ -392,6 +392,8 @@ const c_source_files = [_][]const u8{
     "jets/tree.c",
     "jets/137/tree.c",
     "jets/136/tree.c",
+    "jets/136/loot.c",
+    "jets/135/tree.c",
     "log.c",
     "manage.c",
     "palloc.c",
@@ -417,6 +419,7 @@ const install_headers = [_][]const u8{
     "jets/k.h",
     "jets/q.h",
     "jets/w.h",
+    "jets/136/w.h",
     "log.h",
     "manage.h",
     "nock.h",
