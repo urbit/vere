@@ -1096,6 +1096,15 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
         spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
       }
 
+      //TODO  deduplicate with call for gang above
+      u3_weak tok = _http_req_get_auth(fig_u, rec_u);
+      if (u3_none == tok) {
+        tok = u3_nul;
+      }
+
+      // /token/[auth-token]/rest-of-spur
+      spur = u3nt(u3i_string("token"), tok, spur);
+
       if ( c3n == _http_peek_dispatch(req_u, &bem, gang, spur) ) {
         u3z(req_u->peq_u->pax);
         c3_free(req_u->peq_u);
