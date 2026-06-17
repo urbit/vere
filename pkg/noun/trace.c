@@ -26,6 +26,11 @@ u3t_trace u3t_Trace;
 /// the root is never popped, so off_w must never fall below this.
 static c3_w _spin_bas_w = 0;
 
+/// %spin stack shared-memory object name, saved for shm_unlink at teardown.
+/// stored because the serf keys the name on getppid(), which is unreliable
+/// at exit (the king may have died and reparented us to init).
+static c3_c _spin_nam_c[256] = {0};
+
 static c3_o _ct_lop_o;
 
 /// Nock PID.
@@ -1137,10 +1142,9 @@ u3t_etch_meme(c3_l mod_l)
 void
 u3t_sstack_init()
 {
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+  snprintf(_spin_nam_c, sizeof(_spin_nam_c), SLOW_STACK_NAME, getppid());
 #ifndef U3_OS_windows
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+  c3_w shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;
@@ -1148,10 +1152,15 @@ u3t_sstack_init()
 
   if ( -1 == ftruncate(shm_fd, TRACE_PSIZE)) {
     perror("truncate failed");
+    close(shm_fd);
     return;
   }
 
   u3t_Spin = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+
+  //  the mapping keeps the object alive; the fd is no longer needed
+  //
+  close(shm_fd);
 
   if ( MAP_FAILED == u3t_Spin ) {
     perror("mmap failed");
@@ -1165,7 +1174,7 @@ u3t_sstack_init()
     PAGE_READWRITE,
     0,
     (DWORD)TRACE_PSIZE,
-    shm_name
+    _spin_nam_c
   );
   if ( !hstk_u ) {
     u3l_log("CreateFileMapping error");
@@ -1198,24 +1207,27 @@ u3t_spin*
 u3t_sstack_open()
 {
   //Setup spin stack
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+  snprintf(_spin_nam_c, sizeof(_spin_nam_c), SLOW_STACK_NAME, getpid());
 #ifndef U3_OS_windows
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
+  c3_w shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
-    return NULL; 
+    return NULL;
   }
 
-  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE, 
+  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE,
                          PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+
+  //  the mapping keeps the object alive; the fd is no longer needed
+  //
+  close(shm_fd);
+
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
-    return NULL; 
+    return NULL;
   }
 #else
-  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, shm_name);
+  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, _spin_nam_c);
   if ( !hstk_u ) {
     u3l_log("OpenFileMapping error");
     return NULL;
@@ -1231,12 +1243,41 @@ u3t_sstack_open()
 
   return stk_u;
 }
-/* u3t_sstack_exit: shutdown the shared memory for thespin stack 
+/* _sstack_unlink: remove the shm name so the region is reclaimed once every
+**                 mapping is gone (ie when both the serf and king are dead).
+**                 best-effort: the peer process may have unlinked it already.
+*/
+static void
+_sstack_unlink(void)
+{
+#ifndef U3_OS_windows
+  if ( _spin_nam_c[0] ) {
+    shm_unlink(_spin_nam_c);
+  }
+#endif
+}
+
+/* u3t_sstack_exit: tear down the spin stack (serf side).
 */
 void
 u3t_sstack_exit()
 {
-  munmap(u3t_Spin, u3a_page);
+  if ( NULL != u3t_Spin ) {
+    munmap(u3t_Spin, TRACE_PSIZE);
+    u3t_Spin = NULL;
+  }
+  _sstack_unlink();
+}
+
+/* u3t_sstack_close: tear down a spin stack mapping (king side).
+*/
+void
+u3t_sstack_close(u3t_spin* stk_u)
+{
+  if ( NULL != stk_u ) {
+    munmap(stk_u, TRACE_PSIZE);
+  }
+  _sstack_unlink();
 }
 
 /* u3t_sstack_push: push a noun on the spin stack.

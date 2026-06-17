@@ -202,10 +202,15 @@
       u3t_spin*
       u3t_sstack_open(void);
 
-    /* u3t_sstack_exit: initalize a root node on the spin stack 
+    /* u3t_sstack_exit: tear down the spin stack (serf side).
      */
       void
       u3t_sstack_exit(void);
+
+    /* u3t_sstack_close: tear down a spin stack mapping (king side).
+     */
+      void
+      u3t_sstack_close(u3t_spin* stk_u);
 
     /* u3t_sstack_push: push a noun on the spin stack.
      */

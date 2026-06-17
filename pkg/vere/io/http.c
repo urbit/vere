@@ -3094,9 +3094,8 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
-  if ( NULL != htd_u->stk_u ) {
-    munmap(htd_u->stk_u, u3a_page);
-  }
+  u3t_sstack_close(htd_u->stk_u);
+  htd_u->stk_u = NULL;
 
   //  dispose of configuration to avoid restarts
   //
