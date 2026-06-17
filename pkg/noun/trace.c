@@ -1209,14 +1209,20 @@ u3t_sstack_open()
   //Setup spin stack
   snprintf(_spin_nam_c, sizeof(_spin_nam_c), SLOW_STACK_NAME, getpid());
 #ifndef U3_OS_windows
-  c3_w shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0);
+  //  the king only reads the spin stack (to render "spinning on" status);
+  //  the serf creates and writes it. open and map read-only so a king-side
+  //  bug can never corrupt the serf's view. no O_CREAT: if the serf hasn't
+  //  created the object yet, fail rather than mint a zero-length region
+  //  (which would SIGBUS on read).
+  //
+  c3_w shm_fd = shm_open(_spin_nam_c, O_RDONLY, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return NULL;
   }
 
   u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE,
-                         PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+                         PROT_READ, MAP_SHARED, shm_fd, 0);
 
   //  the mapping keeps the object alive; the fd is no longer needed
   //
@@ -1227,13 +1233,13 @@ u3t_sstack_open()
     return NULL;
   }
 #else
-  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, _spin_nam_c);
+  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _spin_nam_c);
   if ( !hstk_u ) {
     u3l_log("OpenFileMapping error");
     return NULL;
   }
-  
-  u3t_spin* stk_u = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
+  u3t_spin* stk_u = MapViewOfFile(hstk_u, FILE_MAP_READ, 0, 0, 0);
   CloseHandle(hstk_u);
   if ( !stk_u ) {
     u3l_log("MapViewOfFile error in u3t_sstack_open");
