@@ -22,10 +22,6 @@
 u3t_spin *u3t_Spin;
 u3t_trace u3t_Trace;
 
-/// %spin stack baseline: off_w right after the root sentinel is pushed.
-/// the root is never popped, so off_w must never fall below this.
-static c3_w _spin_bas_w = 0;
-
 /// %spin stack shared-memory object name, saved for shm_unlink at teardown.
 /// stored because the serf keys the name on getppid(), which is unreliable
 /// at exit (the king may have died and reparented us to init).
@@ -1191,10 +1187,6 @@ u3t_sstack_init()
   u3t_Spin->fow_w = 0;
   u3t_sstack_push(c3__root);
 
-  //  record the post-root baseline; the root sentinel is never popped.
-  //
-  _spin_bas_w = u3t_Spin->off_w;
-
   //  clobber any saved offsets restored from the snapshot
   //
   u3H->rod_u.off_w = u3t_Spin->off_w;
@@ -1325,30 +1317,20 @@ u3t_sstack_pop()
 {
   if ( !u3t_Spin ) return;
 
-  if ( u3t_Spin->fow_w ) {
+  if ( 0 < u3t_Spin->fow_w ) {
     u3t_Spin->fow_w--;
     return;
   }
 
-  //  the base entry is never popped
-  //
-  if ( u3t_Spin->off_w <= _spin_bas_w ) {
-    fprintf(stderr, "spin: pop underflow off=%u bas=%u\r\n",
-                    u3t_Spin->off_w, _spin_bas_w);
-    u3t_Spin->off_w = _spin_bas_w;
-    return;
-  }
-
-  c3_w len_w, hav_w = u3t_Spin->off_w - _spin_bas_w;
+  c3_w len_w;
   memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)],
                  sizeof(c3_w));
 
-  //  guard against overflow, a corrupted length word, or a corrupted offset
+  //  guard against underflow
   //
-  if ( (len_w > TRACE_PSIZE) || ((len_w + sizeof(c3_w)) > hav_w) ) {
-    fprintf(stderr, "spin: corrupt entry off=%u len=%u bas=%u; resync to root\r\n",
-                    u3t_Spin->off_w, len_w, _spin_bas_w);
-    u3t_Spin->off_w = _spin_bas_w;
+  if ( (len_w + sizeof(c3_w)) > u3t_Spin->off_w ) {
+    fprintf(stderr, "spin: would underflow off=%u siz=%u\r\n",
+                    u3t_Spin->off_w, len_w + (c3_w)sizeof(c3_w));
     return;
   }
 
