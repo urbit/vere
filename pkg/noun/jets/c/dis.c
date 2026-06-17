@@ -10,8 +10,18 @@
   u3qc_dis(u3_atom a,
            u3_atom b)
   {
-    c3_w lna_w = u3r_met(5, a);
-    c3_w lnb_w = u3r_met(5, b);
+    c3_d lna_d = u3r_met(5, a);
+    c3_d lnb_d = u3r_met(5, b);
+    c3_w lna_w, lnb_w;
+
+    if ( UINT32_MAX < lna_d ) {
+      u3m_bail(c3__fail);
+    }
+    if ( UINT32_MAX < lnb_d ) {
+      u3m_bail(c3__fail);
+    }
+    lna_w = (c3_w)lna_d;
+    lnb_w = (c3_w)lnb_d;
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;

@@ -238,8 +238,16 @@ _cttp_heds_free(u3_hhed* hed_u)
 static u3_hhed*
 _cttp_hed_new(u3_atom nam, u3_atom val)
 {
-  c3_w     nam_w = u3r_met(3, nam);
-  c3_w     val_w = u3r_met(3, val);
+  c3_d     nam_d = u3r_met(3, nam);
+  c3_d     val_d = u3r_met(3, val);
+  if ( UINT32_MAX < nam_d ) {
+    u3m_bail(c3__fail);
+  }
+  if ( UINT32_MAX < val_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w     nam_w = (c3_w)nam_d;
+  c3_w     val_w = (c3_w)val_d;
   u3_hhed* hed_u = c3_malloc(sizeof(*hed_u));
 
   hed_u->nam_c = c3_malloc(1 + nam_w);

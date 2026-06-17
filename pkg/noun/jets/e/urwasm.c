@@ -732,7 +732,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun args = u3at(arr_sam_3, monad);
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( UINT32_MAX < met_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -1146,7 +1150,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_atom value = u3x_atom(u3at(arr_sam_3, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( UINT32_MAX < met_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -1218,7 +1226,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     //  global-get
     u3_atom name = u3x_atom(u3at(arr_sam, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( UINT32_MAX < met_d ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -1468,7 +1480,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         u3m_bail(c3__fail);
       }
       u3_noun name = u3t(frame);
-      c3_w met_w = u3r_met(3, name);
+      c3_d met_d = u3r_met(3, name);
+      if ( UINT32_MAX < met_d ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       c3_c* name_c = u3a_malloc(met_w + 1);
       u3r_bytes(0, met_w, (c3_y*)name_c, name);
       u3z(frame);

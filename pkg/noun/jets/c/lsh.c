@@ -20,7 +20,13 @@ u3qc_lsh(u3_atom a,
   else {
     c3_g a_g   = a;
     c3_w b_w   = b;
-    c3_w len_w = u3r_met(a_g, c);
+    c3_d len_d = u3r_met(a_g, c);
+    c3_w len_w;
+
+    if ( UINT32_MAX < len_d ) {
+      u3m_bail(c3__fail);
+    }
+    len_w = (c3_w)len_d;
 
     if ( 0 == len_w ) {
       return 0;

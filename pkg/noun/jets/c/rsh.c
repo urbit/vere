@@ -20,16 +20,16 @@ u3qc_rsh(u3_atom a,
   else {
     c3_g a_g   = a;
     c3_w b_w   = b;
-    c3_w len_w = u3r_met(a_g, c);
+    c3_d len_d = u3r_met(a_g, c);
 
-    if ( b_w >= len_w ) {
+    if ( b_w >= len_d ) {
       return 0;
     }
     else {
       u3i_slab sab_u;
-      u3i_slab_init(&sab_u, a_g, (len_w - b_w));
+      u3i_slab_init(&sab_u, a_g, (len_d - b_w));
 
-      u3r_chop(a_g, b_w, (len_w - b_w), 0, sab_u.buf_w, c);
+      u3r_chop(a_g, b_w, (len_d - b_w), 0, sab_u.buf_w, c);
 
       return u3i_slab_mint(&sab_u);
     }

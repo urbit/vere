@@ -60,13 +60,13 @@ _feis_ob(c3_w m_w)
 u3_atom
 u3qe_fein_ob(u3_atom pyn)
 {
-  c3_w sor_w = u3r_met(4, pyn);
+  c3_d sor_d = u3r_met(4, pyn);
 
-  if ( (sor_w < 2) || (sor_w > 4) ) {
+  if ( (sor_d < 2) || (sor_d > 4) ) {
     return u3k(pyn);
   }
 
-  if ( 2 == sor_w ) {
+  if ( 2 == sor_d ) {
     return u3i_word(_feis_ob(u3r_word(0, pyn)));
   }
   else {

@@ -1800,7 +1800,11 @@ _cj_minx(u3_noun cey, u3_noun cor)
 static void
 _cj_print_tas(u3_noun tas)
 {
-  c3_w  met_w = u3r_met(3, tas);
+  c3_d  met_d = u3r_met(3, tas);
+  if ( UINT32_MAX < met_d ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w  met_w = (c3_w)met_d;
   c3_c* str_c = alloca(met_w + 1);
   u3r_bytes(0, met_w, (c3_y*)str_c, tas);
   str_c[met_w] = 0;

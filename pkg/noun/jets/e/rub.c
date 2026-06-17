@@ -16,7 +16,11 @@
 
     u3_atom m;
     {
-      c3_w  bit_w = u3r_met(0, b);
+      c3_d  bit_d = u3r_met(0, b);
+      if ( UINT32_MAX < bit_d ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w  bit_w = (c3_w)bit_d;
       u3_noun bit = u3i_words(1, &bit_w);
       m = u3qa_add(a, bit);
       u3z(bit);

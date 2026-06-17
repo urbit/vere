@@ -14,7 +14,11 @@
     }
 
     {
-      c3_w end_w  = u3r_met(3, lub) - 1;
+      c3_d met_d  = u3r_met(3, lub);
+      if ( UINT32_MAX < met_d ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w end_w  = (c3_w)met_d - 1;
       c3_w pos_w  = end_w;
       u3_noun lin = u3_nul;
 

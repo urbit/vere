@@ -183,7 +183,7 @@ _cue_bench(void)
     gettimeofday(&b4, 0);
 
     {
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -207,7 +207,7 @@ _cue_bench(void)
     {
       u3_cue_xeno* sil_u = u3s_cue_xeno_init();
 
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -231,7 +231,7 @@ _cue_bench(void)
     gettimeofday(&b4, 0);
 
     {
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -255,7 +255,7 @@ _cue_bench(void)
     {
       ur_cue_test_t *t = ur_cue_test_init();
 
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -281,7 +281,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u = ur_root_init();
       ur_nref      ref;
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
@@ -307,7 +307,7 @@ _cue_bench(void)
     {
       ur_root_t* rot_u;
       ur_nref      ref;
-      c3_w  len_w = u3r_met(3, vat);
+      c3_w  len_w = (c3_w)u3r_met(3, vat);
       // XX assumes little-endian
       //
       c3_y* byt_y = ( c3y == u3a_is_cat(vat) )
