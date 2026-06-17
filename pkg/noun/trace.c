@@ -1183,6 +1183,7 @@ u3t_sstack_init()
   }
 #endif
 
+  u3t_Spin->seq_w = 0;
   u3t_Spin->off_w = 0;
   u3t_Spin->fow_w = 0;
   u3t_sstack_push(c3__root);
@@ -1278,6 +1279,27 @@ u3t_sstack_close(u3t_spin* stk_u)
   _sstack_unlink();
 }
 
+/* the serf is the spin stack's sole writer; the king (urth) maps it read-only
+** and snapshots it from another process. bracket every mutation of the shared
+** off_w/dat_y in a seqlock so the reader can detect a concurrent change: seq_w
+** is odd while a write is in flight, and bumped to the next even value once it
+** lands. single writer, so plain stores suffice -- only the ordering matters.
+** see _http_spin_timer_cb() for the consumer.
+*/
+static inline void
+_sstack_writ_beg(void)
+{
+  __atomic_store_n(&u3t_Spin->seq_w, u3t_Spin->seq_w + 1, __ATOMIC_RELAXED);
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+static inline void
+_sstack_writ_end(void)
+{
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  __atomic_store_n(&u3t_Spin->seq_w, u3t_Spin->seq_w + 1, __ATOMIC_RELAXED);
+}
+
 /* u3t_sstack_push: push a noun on the spin stack.
 */
 void
@@ -1302,11 +1324,14 @@ u3t_sstack_push(u3_noun nam)
     return;
   }
 
+  _sstack_writ_beg();
   u3r_bytes(0, met_w, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_w), nam);
   u3t_Spin->off_w += met_w;
 
   memcpy(&u3t_Spin->dat_y[u3t_Spin->off_w], &met_w, sizeof(c3_w));
   u3t_Spin->off_w += sizeof(c3_w);
+  _sstack_writ_end();
+
   u3z(nam);
 }
 
@@ -1334,6 +1359,8 @@ u3t_sstack_pop()
     return;
   }
 
+  _sstack_writ_beg();
   u3t_Spin->off_w -= (len_w + sizeof(c3_w));
+  _sstack_writ_end();
 }
 

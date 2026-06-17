@@ -34,9 +34,10 @@
    /* u3t_spin: %spin hint stack
     */
     typedef struct {
+      c3_w seq_w;  //  seqlock: odd while the serf is mid-write, else even
       c3_w off_w;
       c3_w fow_w;
-      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
+      c3_y dat_y[TRACE_PSIZE - 3*sizeof(c3_w)];
     } u3t_spin;
 
   /**  Macros.
