@@ -22,6 +22,10 @@
 u3t_spin *u3t_Spin;
 u3t_trace u3t_Trace;
 
+/// %spin stack baseline: off_w right after the root sentinel is pushed.
+/// the root is never popped, so off_w must never fall below this.
+static c3_w _spin_bas_w = 0;
+
 static c3_o _ct_lop_o;
 
 /// Nock PID.
@@ -1148,9 +1152,10 @@ u3t_sstack_init()
   }
 
   u3t_Spin = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+
   if ( MAP_FAILED == u3t_Spin ) {
     perror("mmap failed");
+    u3t_Spin = NULL;
     return;
   }
 #else
@@ -1176,6 +1181,15 @@ u3t_sstack_init()
   u3t_Spin->off_w = 0;
   u3t_Spin->fow_w = 0;
   u3t_sstack_push(c3__root);
+
+  //  record the post-root baseline; the root sentinel is never popped.
+  //
+  _spin_bas_w = u3t_Spin->off_w;
+
+  //  clobber any saved offsets restored from the snapshot
+  //
+  u3H->rod_u.off_w = u3t_Spin->off_w;
+  u3H->rod_u.fow_w = u3t_Spin->fow_w;
 }
 
 /* u3t_sstack_open: initalize a root node on the spin stack 
@@ -1263,19 +1277,34 @@ void
 u3t_sstack_pop()
 {
   if ( !u3t_Spin ) return;
-  if ( 0 < u3t_Spin->fow_w ) {
-    u3t_Spin->fow_w--;
-  } else {
-    c3_w len_w;
-    memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)], sizeof(c3_w));
 
-    if ( (len_w+sizeof(c3_w)) > u3t_Spin->off_w ) {
-      fprintf(stderr, "spin: would underflow off=%u siz=%u\r\n",
-                      u3t_Spin->off_w, len_w+sizeof(c3_w));
-    }
-    else {
-      u3t_Spin->off_w -= (len_w+sizeof(c3_w));
-    }
+  if ( u3t_Spin->fow_w ) {
+    u3t_Spin->fow_w--;
+    return;
   }
+
+  //  the base entry is never popped
+  //
+  if ( u3t_Spin->off_w <= _spin_bas_w ) {
+    fprintf(stderr, "spin: pop underflow off=%u bas=%u\r\n",
+                    u3t_Spin->off_w, _spin_bas_w);
+    u3t_Spin->off_w = _spin_bas_w;
+    return;
+  }
+
+  c3_w len_w, hav_w = u3t_Spin->off_w - _spin_bas_w;
+  memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)],
+                 sizeof(c3_w));
+
+  //  guard against overflow, a corrupted length word, or a corrupted offset
+  //
+  if ( (len_w > TRACE_PSIZE) || ((len_w + sizeof(c3_w)) > hav_w) ) {
+    fprintf(stderr, "spin: corrupt entry off=%u len=%u bas=%u; resync to root\r\n",
+                    u3t_Spin->off_w, len_w, _spin_bas_w);
+    u3t_Spin->off_w = _spin_bas_w;
+    return;
+  }
+
+  u3t_Spin->off_w -= (len_w + sizeof(c3_w));
 }
 
