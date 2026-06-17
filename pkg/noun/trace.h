@@ -34,9 +34,10 @@
    /* u3t_spin: %spin hint stack
     */
     typedef struct {
+      c3_w seq_w;  //  seqlock: odd while the serf is mid-write, else even
       c3_w off_w;
       c3_w fow_w;
-      c3_y dat_y[TRACE_PSIZE - 2*sizeof(c3_w)];
+      c3_y dat_y[TRACE_PSIZE - 3*sizeof(c3_w)];
     } u3t_spin;
 
   /**  Macros.
@@ -202,10 +203,15 @@
       u3t_spin*
       u3t_sstack_open(void);
 
-    /* u3t_sstack_exit: initalize a root node on the spin stack 
+    /* u3t_sstack_exit: tear down the spin stack (serf side).
      */
       void
       u3t_sstack_exit(void);
+
+    /* u3t_sstack_close: tear down a spin stack mapping (king side).
+     */
+      void
+      u3t_sstack_close(u3t_spin* stk_u);
 
     /* u3t_sstack_push: push a noun on the spin stack.
      */

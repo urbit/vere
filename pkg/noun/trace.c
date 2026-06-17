@@ -22,6 +22,11 @@
 u3t_spin *u3t_Spin;
 u3t_trace u3t_Trace;
 
+/// %spin stack shared-memory object name, saved for shm_unlink at teardown.
+/// stored because the serf keys the name on getppid(), which is unreliable
+/// at exit (the king may have died and reparented us to init).
+static c3_c _spin_nam_c[256] = {0};
+
 static c3_o _ct_lop_o;
 
 /// Nock PID.
@@ -1133,10 +1138,9 @@ u3t_etch_meme(c3_l mod_l)
 void
 u3t_sstack_init()
 {
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+  snprintf(_spin_nam_c, sizeof(_spin_nam_c), SLOW_STACK_NAME, getppid());
 #ifndef U3_OS_windows
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+  c3_w shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
     return;
@@ -1144,13 +1148,19 @@ u3t_sstack_init()
 
   if ( -1 == ftruncate(shm_fd, TRACE_PSIZE)) {
     perror("truncate failed");
+    close(shm_fd);
     return;
   }
 
   u3t_Spin = mmap(NULL, TRACE_PSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+
+  //  the mapping keeps the object alive; the fd is no longer needed
+  //
+  close(shm_fd);
+
   if ( MAP_FAILED == u3t_Spin ) {
     perror("mmap failed");
+    u3t_Spin = NULL;
     return;
   }
 #else
@@ -1160,7 +1170,7 @@ u3t_sstack_init()
     PAGE_READWRITE,
     0,
     (DWORD)TRACE_PSIZE,
-    shm_name
+    _spin_nam_c
   );
   if ( !hstk_u ) {
     u3l_log("CreateFileMapping error");
@@ -1173,9 +1183,15 @@ u3t_sstack_init()
   }
 #endif
 
+  u3t_Spin->seq_w = 0;
   u3t_Spin->off_w = 0;
   u3t_Spin->fow_w = 0;
   u3t_sstack_push(c3__root);
+
+  //  clobber any saved offsets restored from the snapshot
+  //
+  u3H->rod_u.off_w = u3t_Spin->off_w;
+  u3H->rod_u.fow_w = u3t_Spin->fow_w;
 }
 
 /* u3t_sstack_open: initalize a root node on the spin stack 
@@ -1184,30 +1200,39 @@ u3t_spin*
 u3t_sstack_open()
 {
   //Setup spin stack
-  c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+  snprintf(_spin_nam_c, sizeof(_spin_nam_c), SLOW_STACK_NAME, getpid());
 #ifndef U3_OS_windows
-  c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
+  //  the king only reads the spin stack (to render "spinning on" status);
+  //  the serf creates and writes it. open and map read-only so a king-side
+  //  bug can never corrupt the serf's view. no O_CREAT: if the serf hasn't
+  //  created the object yet, fail rather than mint a zero-length region
+  //  (which would SIGBUS on read).
+  //
+  c3_w shm_fd = shm_open(_spin_nam_c, O_RDONLY, 0);
   if ( -1 == shm_fd) {
     perror("shm_open failed");
-    return NULL; 
+    return NULL;
   }
 
-  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE, 
-                         PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  
+  u3t_spin* stk_u = mmap(NULL, TRACE_PSIZE,
+                         PROT_READ, MAP_SHARED, shm_fd, 0);
+
+  //  the mapping keeps the object alive; the fd is no longer needed
+  //
+  close(shm_fd);
+
   if ( MAP_FAILED == stk_u ) {
     perror("mmap failed");
-    return NULL; 
+    return NULL;
   }
 #else
-  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, shm_name);
+  HANDLE hstk_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _spin_nam_c);
   if ( !hstk_u ) {
     u3l_log("OpenFileMapping error");
     return NULL;
   }
-  
-  u3t_spin* stk_u = MapViewOfFile(hstk_u, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
+  u3t_spin* stk_u = MapViewOfFile(hstk_u, FILE_MAP_READ, 0, 0, 0);
   CloseHandle(hstk_u);
   if ( !stk_u ) {
     u3l_log("MapViewOfFile error in u3t_sstack_open");
@@ -1217,12 +1242,62 @@ u3t_sstack_open()
 
   return stk_u;
 }
-/* u3t_sstack_exit: shutdown the shared memory for thespin stack 
+/* _sstack_unlink: remove the shm name so the region is reclaimed once every
+**                 mapping is gone (ie when both the serf and king are dead).
+**                 best-effort: the peer process may have unlinked it already.
+*/
+static void
+_sstack_unlink(void)
+{
+#ifndef U3_OS_windows
+  if ( _spin_nam_c[0] ) {
+    shm_unlink(_spin_nam_c);
+  }
+#endif
+}
+
+/* u3t_sstack_exit: tear down the spin stack (serf side).
 */
 void
 u3t_sstack_exit()
 {
-  munmap(u3t_Spin, u3a_page);
+  if ( NULL != u3t_Spin ) {
+    munmap(u3t_Spin, TRACE_PSIZE);
+    u3t_Spin = NULL;
+  }
+  _sstack_unlink();
+}
+
+/* u3t_sstack_close: tear down a spin stack mapping (king side).
+*/
+void
+u3t_sstack_close(u3t_spin* stk_u)
+{
+  if ( NULL != stk_u ) {
+    munmap(stk_u, TRACE_PSIZE);
+  }
+  _sstack_unlink();
+}
+
+/* the serf is the spin stack's sole writer; the king (urth) maps it read-only
+** and snapshots it from another process. bracket every mutation of the shared
+** off_w/dat_y in a seqlock so the reader can detect a concurrent change: seq_w
+** is odd while a write is in flight, and bumped to the next even value once it
+** lands. single writer, so plain stores suffice -- only the ordering matters.
+** see _http_spin_timer_cb() for the consumer.
+*/
+static inline void
+_sstack_writ_beg(void)
+{
+  __atomic_store_n(&u3t_Spin->seq_w, u3t_Spin->seq_w + 1, __ATOMIC_RELAXED);
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+static inline void
+_sstack_writ_end(void)
+{
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  __atomic_store_n(&u3t_Spin->seq_w, u3t_Spin->seq_w + 1, __ATOMIC_RELAXED);
 }
 
 /* u3t_sstack_push: push a noun on the spin stack.
@@ -1249,11 +1324,14 @@ u3t_sstack_push(u3_noun nam)
     return;
   }
 
+  _sstack_writ_beg();
   u3r_bytes(0, met_w, (c3_y*)(u3t_Spin->dat_y+u3t_Spin->off_w), nam);
   u3t_Spin->off_w += met_w;
 
   memcpy(&u3t_Spin->dat_y[u3t_Spin->off_w], &met_w, sizeof(c3_w));
   u3t_Spin->off_w += sizeof(c3_w);
+  _sstack_writ_end();
+
   u3z(nam);
 }
 
@@ -1262,13 +1340,27 @@ u3t_sstack_push(u3_noun nam)
 void
 u3t_sstack_pop()
 {
-  if (  !u3t_Spin ) return;
+  if ( !u3t_Spin ) return;
+
   if ( 0 < u3t_Spin->fow_w ) {
     u3t_Spin->fow_w--;
-  } else {
-    c3_w len_w;
-    memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)], sizeof(c3_w));
-    u3t_Spin->off_w -= (len_w+sizeof(c3_w));
+    return;
   }
+
+  c3_w len_w;
+  memcpy(&len_w, &u3t_Spin->dat_y[u3t_Spin->off_w - sizeof(c3_w)],
+                 sizeof(c3_w));
+
+  //  guard against underflow
+  //
+  if ( (len_w + sizeof(c3_w)) > u3t_Spin->off_w ) {
+    fprintf(stderr, "spin: would underflow off=%u siz=%u\r\n",
+                    u3t_Spin->off_w, len_w + (c3_w)sizeof(c3_w));
+    return;
+  }
+
+  _sstack_writ_beg();
+  u3t_Spin->off_w -= (len_w + sizeof(c3_w));
+  _sstack_writ_end();
 }
 

@@ -132,6 +132,7 @@ static void _http_spin_timer_cb(uv_timer_t* tim_u);
 static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
 static const c3_w SPIN_TIMER = 100; // XX make this a command line arguement
+static const c3_w SPIN_READ_TRIES = 16; // seqlock snapshot attempts per tick
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -2906,54 +2907,86 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
   u3_hreq* siq_u = htd_u->fig_u.siq_u;
 
   if ( 0 != siq_u ) {
-    c3_w siz_w      = 1024;
-    c3_c* buf_c     = c3_malloc(siz_w);
     u3t_spin* stk_u = htd_u->stk_u;
-    if ( NULL == stk_u ) return;
-    c3_w pos_w      = stk_u->off_w;
-    c3_w out_w      = 0;
 
-    while (pos_w > 4) {
-      c3_w  len_w;
-      pos_w -=4;
+    if ( NULL != stk_u ) {
+      c3_y loc_y[sizeof(stk_u->dat_y)];  //  private snapshot of the used region
+      c3_w off_w = 0;
+      c3_o red_o = c3n;
+      c3_w try_w, s1_w, s2_w;
 
-      if ( siz_w < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
-         siz_w *= 2;
+      //  seqlock read: the serf writes this shared memory concurrently. copy
+      //  the used region under a consistency check (seq_w unchanged and even
+      //  across the copy) so a push/pop mid-read can't tear or crash us; build
+      //  the response from the private copy only. retry on conflict, but bail
+      //  after a bounded number of attempts (serf churning or wedged) and just
+      //  skip this frame -- the client keeps the previous "spinning on".
+      //
+      for ( try_w = 0; try_w < SPIN_READ_TRIES; try_w++ ) {
+        s1_w = __atomic_load_n(&stk_u->seq_w, __ATOMIC_ACQUIRE);
+
+        if ( s1_w & 1 ) {
+          continue;                            //  serf mid-write
+        }
+
+        off_w = stk_u->off_w;
+
+        if ( off_w > sizeof(stk_u->dat_y) ) {
+          continue;                            //  torn/garbage offset
+        }
+
+        memcpy(loc_y, stk_u->dat_y, off_w);
+
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        s2_w = __atomic_load_n(&stk_u->seq_w, __ATOMIC_RELAXED);
+
+        if ( s1_w == s2_w ) {
+          red_o = c3y;                         //  consistent snapshot
+          break;
+        }
       }
 
-      memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
-      pos_w -= len_w;
+      if ( (c3y == red_o) && (sizeof(c3_w) < off_w) ) {
+        //  output buffer can't exceed stack buffer + "data:" and 2 newlines
+        //
+        c3_c dat_c[] = "data:";
+        c3_y buf_y[sizeof(stk_u->dat_y) + sizeof(dat_c) - 1 + 2];
+        c3_w pos_w = off_w;
+        c3_w out_w = 0;
 
-      if ( siz_w < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
+        strcpy((c3_c*)buf_y, dat_c);
+        out_w += sizeof(dat_c) - 1;
+
+        while ( pos_w > sizeof(c3_w) ) {
+          c3_w len_w;
+          pos_w -= sizeof(c3_w);
+          memcpy(&len_w, &loc_y[pos_w], sizeof(c3_w));
+
+          //  malformed frame in the snapshot: stop rather than walk OOB
+          //
+          if ( len_w > pos_w ) break;
+          pos_w -= len_w;
+
+          buf_y[out_w++] = '/';
+          memcpy(buf_y + out_w, &loc_y[pos_w], len_w);
+          out_w += len_w;
+        }
+        buf_y[out_w++] = '\n';
+        buf_y[out_w++] = '\n';
+
+        {
+          u3_atom txt = u3i_bytes(out_w, buf_y);
+          u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
+
+          while ( 0 != siq_u ) {
+            _http_continue_respond(siq_u, u3k(dat), c3n);
+            siq_u = siq_u->nex_u;
+          }
+          u3z(dat);
+        }
       }
-      buf_c[out_w++] = '/';
-
-      if ( siz_w < out_w + len_w ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
-      }
-
-      memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
-      out_w += len_w;
     }
-    buf_c[out_w] = '\0';
 
-    if ( 0 != stk_u->off_w ) {
-      u3_noun tan = u3i_string(buf_c);
-      u3_noun lin = u3i_list(u3i_string("data:"),
-                             tan,
-                             c3_s2('\n', '\n'),
-                             u3_none);
-      u3_atom txt = u3qc_rap(3, lin);
-      u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
-
-      while ( 0 != siq_u ) {
-        _http_continue_respond(siq_u, u3k(dat), c3n);
-        siq_u = siq_u->nex_u;
-      }
-      u3z(dat); u3z(lin); 
-    }
     uv_timer_start(htd_u->fig_u.sin_u, _http_spin_timer_cb,
                    SPIN_TIMER, 0);
   }
@@ -3094,9 +3127,8 @@ _http_io_exit(u3_auto* car_u)
   u3h_free(htd_u->sax_p);
   u3h_free(htd_u->nax_p);
 
-  if ( NULL != htd_u->stk_u ) {
-    munmap(htd_u->stk_u, u3a_page);
-  }
+  u3t_sstack_close(htd_u->stk_u);
+  htd_u->stk_u = NULL;
 
   //  dispose of configuration to avoid restarts
   //
