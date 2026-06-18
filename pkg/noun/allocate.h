@@ -148,7 +148,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(u3h_root) lop_p;                  //  %loop hint set
         u3_noun tim;                          //  list of absolute deadlines
 
-        c3_w fut_w[28];                       //  futureproof buffer
+        c3_w san_w;                           //  saved u3o_sand, restored on fall
+        c3_w fut_w[27];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {

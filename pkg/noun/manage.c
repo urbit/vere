@@ -1133,13 +1133,17 @@ u3m_leap(c3_w pad_w)
   if ( NULL != u3t_Spin ) {
     u3R->off_w = u3t_Spin->off_w;
     u3R->fow_w = u3t_Spin->fow_w;
-  } 
+  }
+
+  //  stash bump-allocation state
+  //
+  u3R->san_w = u3C.wag_w & u3o_sand;
 
   /* Set up the new road.
   */
   {
     u3R = rod_u;
-    if ( !(u3C.wag_w & u3o_no_sand) ) {
+    if ( u3C.wag_w & u3o_sand ) {
       u3R->how.fag_w |= u3a_flag_sand;
     }
     _pave_parts();
@@ -1204,6 +1208,10 @@ u3m_fall(void)
   */
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
+
+  //  restore bump-allocation state
+  //
+  u3C.wag_w = (u3C.wag_w & ~u3o_sand) | u3R->san_w;
 }
 
 /* u3m_hate(): new, integrated leap mechanism (enter).

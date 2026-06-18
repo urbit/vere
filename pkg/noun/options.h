@@ -47,7 +47,7 @@
         u3o_toss          = 1 << 13,          //  reclaim often
         u3o_leak_crash    = 1 << 14,          //  crash if leak when gc
         u3o_yolo          = 1 << 15,          //  no brakes!
-        u3o_no_sand       = 1 << 16,          //  disable inner-road bump allocation
+        u3o_sand          = 1 << 16,          //  enable inner-road bump allocation
       };
 
   /** Globals.

@@ -511,13 +511,11 @@ _alloc_row(const c3_c* lab_c,
 {
   c3_d bum_d, pal_d, hom_d = 0;
 
-  u3C.wag_w &= ~u3o_no_sand;
+  u3C.wag_w |= u3o_sand;
   bum_d = _alloc_run(fun_f, u3k(arg), rep_w);
 
-  u3C.wag_w |= u3o_no_sand;
+  u3C.wag_w &= ~u3o_sand;
   pal_d = _alloc_run(fun_f, u3k(arg), rep_w);
-
-  u3C.wag_w &= ~u3o_no_sand;
 
   if ( c3y == hom_o ) {
     hom_d = _alloc_run_home(fun_f, u3k(arg), rep_w);
@@ -539,8 +537,8 @@ _alloc_row(const c3_c* lab_c,
   fprintf(stderr, "\r\n");
 }
 
-/* _alloc_bench(): compare bump allocation (the inner-road default)
-**                 against the palloc free-list allocator (u3o_no_sand),
+/* _alloc_bench(): compare opt-in bump allocation (u3o_sand) against the
+**                 default palloc free-list allocator on inner roads,
 **                 with home-road timings for reference.
 */
 static void
