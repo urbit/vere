@@ -1131,10 +1131,17 @@ u3t_etch_meme(c3_l mod_l)
 /* u3t_sstack_init: initalize a root node on the spin stack 
 */
 void
-u3t_sstack_init()
+u3t_sstack_init(c3_d* who_d)
 {
   c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getppid());
+
+  u3_atom who = u3dc("scot", c3__p, u3i_chubs(2, who_d));
+  c3_c*   nam_c = u3r_string(who);
+
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, nam_c, getppid());
+  u3z(who);
+  c3_free(nam_c);
+
 #ifndef U3_OS_windows
   c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
   if ( -1 == shm_fd) {
@@ -1181,11 +1188,17 @@ u3t_sstack_init()
 /* u3t_sstack_open: initalize a root node on the spin stack 
 */
 u3t_spin*
-u3t_sstack_open()
+u3t_sstack_open(c3_d* who_d)
 {
   //Setup spin stack
   c3_c shm_name[256];
-  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, getpid());
+
+  u3_atom who = u3dc("scot", c3__p, u3i_chubs(2, who_d));
+  c3_c*   nam_c = u3r_string(who);
+
+  snprintf(shm_name, sizeof(shm_name), SLOW_STACK_NAME, nam_c, getpid());
+  u3z(who);
+  c3_free(nam_c);
 #ifndef U3_OS_windows
   c3_w shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0);
   if ( -1 == shm_fd) {
