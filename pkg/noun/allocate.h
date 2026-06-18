@@ -148,7 +148,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3p(u3h_root) lop_p;                  //  %loop hint set
         u3_noun tim;                          //  list of absolute deadlines
 
-        c3_w fut_w[28];                       //  futureproof buffer
+        c3_w san_w;                           //  saved u3o_sand, restored on fall
+        c3_w fut_w[27];                       //  futureproof buffer
 
         struct {                              //  escape buffer
           union {
@@ -219,7 +220,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
       };
 
@@ -292,6 +293,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     */
 #     define  u3a_is_south(r)  !u3a_is_north((r))
 
+    /* u3a_is_sound(): yes if road [r] has not overflowed.
+    */
+#     define  u3a_is_sound(r)  __(  ((r)->mat_p > (r)->rut_p) \
+                                 == ((r)->cap_p > (r)->hat_p) )
+
     /* u3a_open(): words of contiguous free space in road [r]
     */
 #     define  u3a_open(r)  ( (c3y == u3a_is_north(r)) \
@@ -356,7 +362,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          :  u3a_south_is_senior(r, som) )
 
 #     define  u3a_is_mutable(r, som) \
-                ( _(u3a_is_atom(som)) \
+                ( ((r)->how.fag_w & u3a_flag_sand) \
+                  ? c3n \
+                  : _(u3a_is_atom(som)) \
                   ? c3n \
                   : _(u3a_is_senior(r, som)) \
                   ? c3n \

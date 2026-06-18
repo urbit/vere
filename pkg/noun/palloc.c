@@ -87,18 +87,7 @@ _init_heap(void)
 {
   u3p(u3a_crag) *dir_u;
 
-  if ( c3y == u3a_is_north(u3R) ) {
-    HEAP.dir_ws = 1;
-    HEAP.off_ws = 0;
-  }
-  else {
-    HEAP.dir_ws = -1;
-    HEAP.off_ws = -1;
-  }
-
-  assert( !(u3R->hat_p & ((1U << u3a_page) - 1)) );
   assert( u3R->hat_p > u3a_rest_pg );
-  assert( u3R->hat_p == u3R->rut_p );
 
   //  XX check for overflow
 
@@ -144,16 +133,7 @@ _extend_directory(c3_w siz_w)  // num pages
 
   //  XX depend on the guard page for these?
   //
-  if ( 1 == HEAP.dir_ws ) {
-    if ( u3R->hat_p >= u3R->cap_p ) {
-      u3m_bail(c3__meme); return;
-    }
-  }
-  else {
-    if ( u3R->hat_p <= u3R->cap_p ) {
-      u3m_bail(c3__meme); return;
-    }
-  }
+  if ( c3n == u3a_is_sound(u3R) ) u3m_bail(c3__meme);
 
   dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   pag_w = post_to_page(HEAP.pag_p);
@@ -210,16 +190,7 @@ _extend_heap(c3_w siz_w)  // num pages
 
   //  XX depend on the guard page for these?
   //
-  if ( 1 == HEAP.dir_ws ) {
-    if ( u3R->hat_p >= u3R->cap_p ) {
-      return u3m_bail(c3__meme);
-    }
-  }
-  else {
-    if ( u3R->hat_p <= u3R->cap_p ) {
-      return u3m_bail(c3__meme);
-    }
-  }
+  if ( c3n == u3a_is_sound(u3R) ) return u3m_bail(c3__meme);
 
   HEAP.len_w += siz_w;
 
