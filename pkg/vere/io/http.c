@@ -2927,7 +2927,7 @@ _http_io_talk(u3_auto* car_u)
   u3_auto_plan(car_u, u3_ovum_init(0, c3__e, wir, cad));
 
   //Setup spin stack
-  htd_u->stk_u = u3t_sstack_open();
+  htd_u->stk_u = u3t_sstack_open(htd_u->car_u.pir_u->who_d);
   
   if ( NULL == htd_u->stk_u ) {
     u3l_log("http.c: failed to open spin stack");

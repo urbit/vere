@@ -15,7 +15,7 @@
 # include "options.h"
 #endif
 
-#define SLOW_STACK_NAME  "/spin_stack_page_%d"
+#define SLOW_STACK_NAME  "/spin_stack_page_%s_%d"
 #define TRACE_PSIZE (((c3_w)1) << (u3a_page +2))
 
   /** Data structures.
@@ -192,15 +192,15 @@
       u3_noun
       u3t_etch_meme(c3_w mod_w);
 
-    /* u3t_sstack_init: initalize a root node on the spin stack 
+    /* u3t_sstack_init: initalize a root node on the spin stack
      */
       void
-      u3t_sstack_init(void);
+      u3t_sstack_init(c3_d* who_d);
 
     /* u3t_sstack_init: initalize a root node on the spin stack 
      */
       u3t_spin*
-      u3t_sstack_open(void);
+      u3t_sstack_open(c3_d* who_d);
 
     /* u3t_sstack_exit: initalize a root node on the spin stack 
      */
