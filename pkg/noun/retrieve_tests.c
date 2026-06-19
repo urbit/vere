@@ -1153,30 +1153,30 @@ _test_view(void)
     const c3_w src_w   = sizeof(src_y) - 1;
     u3_atom a = u3i_bytes(src_w, src_y);
 
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, a);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
 
-    if ( vu_u.len_w != src_w ) {
+    if ( vue_u.len_w != src_w ) {
       fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_w
                       " vs %" PRIc3_w "\r\n",
-              vu_u.len_w, src_w);
+              vue_u.len_w, src_w);
       exit(1);
     }
-    if ( vu_u.map_d != 0 ) {
+    if ( vue_u.map_d != 0 ) {
       fprintf(stderr, "_test_view(): normal atom should not be mmap-backed\r\n");
       exit(1);
     }
-    if ( vu_u.ali_y == 0 ) {
+    if ( vue_u.ali_y == 0 ) {
       fprintf(stderr, "_test_view(): normal atom should have heap allocation\r\n");
       exit(1);
     }
-    if ( 0 != memcmp(vu_u.byt_y, src_y, src_w) ) {
+    if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
       fprintf(stderr, "_test_view(): normal bytes mismatch\r\n");
       exit(1);
     }
 
-    u3r_view_done(&vu_u);
-    if ( vu_u.byt_y != 0 || vu_u.len_w != 0 ) {
+    u3r_view_done(&vue_u);
+    if ( vue_u.byt_y != 0 || vue_u.len_w != 0 ) {
       fprintf(stderr, "_test_view(): normal view not reset on done\r\n");
       exit(1);
     }
@@ -1186,13 +1186,13 @@ _test_view(void)
   //  zero atom: view should be empty, no allocation, no mmap
   //
   {
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, 0);
-    if ( vu_u.len_w != 0 || vu_u.map_d != 0 || vu_u.ali_y != 0 ) {
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, 0);
+    if ( vue_u.len_w != 0 || vue_u.map_d != 0 || vue_u.ali_y != 0 ) {
       fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
       exit(1);
     }
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
   }
 
   //  bob atom: view mmaps the underlying blob file
@@ -1236,36 +1236,36 @@ _test_view(void)
 
     u3_atom a = u3i_blob(mug_h, seq_h);
 
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, a);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
 
     //  expect mmap-backed view: map_d > 0, ali_y == 0
     //
-    if ( vu_u.map_d == 0 ) {
+    if ( vue_u.map_d == 0 ) {
       fprintf(stderr, "_test_view(): bob atom should be mmap-backed "
                       "(len=%" PRIc3_w " map_d=%" PRIc3_d " ali=%p)\r\n",
-              vu_u.len_w, vu_u.map_d, (void*)vu_u.ali_y);
+              vue_u.len_w, vue_u.map_d, (void*)vue_u.ali_y);
       exit(1);
     }
-    if ( vu_u.ali_y != 0 ) {
+    if ( vue_u.ali_y != 0 ) {
       fprintf(stderr, "_test_view(): bob atom should not have heap alloc\r\n");
       exit(1);
     }
-    if ( vu_u.len_w == 0 || (c3_d)vu_u.len_w > bob_d ) {
+    if ( vue_u.len_w == 0 || (c3_d)vue_u.len_w > bob_d ) {
       fprintf(stderr, "_test_view(): bob len_w=%" PRIc3_w
                       " out of range [1..%" PRIc3_d "]\r\n",
-              vu_u.len_w, bob_d);
+              vue_u.len_w, bob_d);
       exit(1);
     }
     //  first bytes must match the source; trailing bytes past len_w are
     //  still in the mapping (full file size) but out of logical scope
     //
-    if ( 0 != memcmp(vu_u.byt_y, bob_y, vu_u.len_w) ) {
+    if ( 0 != memcmp(vue_u.byt_y, bob_y, vue_u.len_w) ) {
       fprintf(stderr, "_test_view(): bob bytes mismatch\r\n");
       exit(1);
     }
 
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
     u3z(a);
 
     //  clean up temp pier

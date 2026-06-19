@@ -439,7 +439,7 @@
       /* u3r_view_init(): open a read-only byte view of [a].
       */
         void
-        u3r_view_init(u3r_view* vu_u, u3_atom a);
+        u3r_view_init(u3r_view* vue_u, u3_atom a);
 
       /* u3r_view_padded(): open a view of at least [wid_w] bytes.
       **
@@ -452,12 +452,12 @@
       **   got from u3r_bytes_alloc(0, wid_w, a).
       */
         void
-        u3r_view_padded(u3r_view* vu_u, u3_atom a, c3_w wid_w);
+        u3r_view_padded(u3r_view* vue_u, u3_atom a, c3_w wid_w);
 
       /* u3r_view_done(): release the view's backing memory.
       */
         void
-        u3r_view_done(u3r_view* vu_u);
+        u3r_view_done(u3r_view* vue_u);
 
       /* u3r_chop_bits():
       **

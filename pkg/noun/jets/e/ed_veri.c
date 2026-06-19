@@ -20,10 +20,10 @@
       return c3n;
     }
 
-    u3r_view vu_u;
-    u3r_view_padded(&vu_u, dat, len_w);
-    c3_t val_t = urcrypt_ed_veri((c3_y*)vu_u.byt_y, len_w, pub_y, sig_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, len_w, pub_y, sig_y);
+    u3r_view_done(&vue_u);
 
     return val_t ? c3y : c3n;
   }
@@ -59,10 +59,10 @@
       return c3n;
     }
 
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, m);
-    c3_t val_t = urcrypt_ed_veri((c3_y*)vu_u.byt_y, vu_u.len_w, pub_y, sig_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, m);
+    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sig_y);
+    u3r_view_done(&vue_u);
 
     return val_t ? c3y : c3n;
   }

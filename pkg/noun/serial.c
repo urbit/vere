@@ -1029,10 +1029,10 @@ u3s_cue_atom(u3_atom a)
   //  the whole cue so the bitstream reader can scan freely.
   //
   if ( c3y == u3a_is_bob(a) ) {
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, a);
-    u3_noun res = u3s_cue_bytes((c3_d)vu_u.len_w, (c3_y*)vu_u.byt_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
+    u3_noun res = u3s_cue_bytes((c3_d)vue_u.len_w, (c3_y*)vue_u.byt_y);
+    u3r_view_done(&vue_u);
     return res;
   }
 

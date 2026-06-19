@@ -174,24 +174,24 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
     return;
   }
 
-  u3r_view vu_u = {0};
+  u3r_view vue_u = {0};
   c3_w     bit_w;
 
   if ( _(u3a_is_cat(a)) ) {
     bit_w = (c3_g)c3_bits_word(a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    u3r_view_init(&vu_u, a);
-    bit_w = _js_bob_met(vu_u.byt_y, vu_u.len_w);
+    u3r_view_init(&vue_u, a);
+    bit_w = _js_bob_met(vue_u.byt_y, vue_u.len_w);
     if ( 0 == bit_w ) {
-      u3r_view_done(&vu_u);
+      u3r_view_done(&vue_u);
       _js_mat_w(ctx, 0);
       return;
     }
   }
   else {
     bit_w = u3r_met(0, a);
-    u3r_view_init(&vu_u, a);
+    u3r_view_init(&vue_u, a);
   }
 
   //  mat header: encodes the bit-length
@@ -206,11 +206,11 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   else {
     c3_w full_w = bit_w >> 3;
     c3_g rem_g  = bit_w & 7;
-    _js_bytes(ctx, vu_u.byt_y, full_w);
+    _js_bytes(ctx, vue_u.byt_y, full_w);
     if ( rem_g > 0 ) {
-      _js_bits(ctx, vu_u.byt_y[full_w], rem_g);
+      _js_bits(ctx, vue_u.byt_y[full_w], rem_g);
     }
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
   }
 }
 

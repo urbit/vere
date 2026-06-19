@@ -1391,16 +1391,16 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   //  the resend timer.  using u3r_view skips the full-blob loom alloc
   //  that u3r_bytes → u3r_blob_load would have caused.
   //
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, pac);
-  c3_w len_w = vu_u.len_w;
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, pac);
+  c3_w len_w = vue_u.len_w;
   u3_assert( UINT32_MAX >= len_w );
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
   if ( len_w ) {
-    memcpy(buf_y, vu_u.byt_y, len_w);
+    memcpy(buf_y, vue_u.byt_y, len_w);
   }
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
 
   u3_mesa_pact pac_u;
   memset(&pac_u, 0x11, sizeof(pac_u));
@@ -1816,14 +1816,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     //  we still copy into a c3_calloc'd buffer because mesa_sift_pact_from_buf
     //  expects a stable, mutable buffer that outlives the view.
     //
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, pac);
-    c3_w jumbo_w = vu_u.len_w;
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, pac);
+    c3_w jumbo_w = vue_u.len_w;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     if ( jumbo_w ) {
-      memcpy(jumbo_y, vu_u.byt_y, jumbo_w);
+      memcpy(jumbo_y, vue_u.byt_y, jumbo_w);
     }
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
 
     u3_mesa_pact jum_u;
     c3_c* err_c = mesa_sift_pact_from_buf(&jum_u, jumbo_y, jumbo_w);

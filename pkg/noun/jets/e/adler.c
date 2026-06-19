@@ -40,10 +40,10 @@ u3_noun _qe_adler32(u3_noun octs)
   //  using u3r_view fixes that bug in addition to avoiding the
   //  full-blob materialization.
   //
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, q_octs);
-  const c3_y* buf_y = vu_u.byt_y;
-  c3_w        len_w = vu_u.len_w;
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, q_octs);
+  const c3_y* buf_y = vue_u.byt_y;
+  c3_w        len_w = vue_u.len_w;
 
   //  clamp the bytes we'll actually scan to the declared width; the
   //  remainder is "leading zeros" and handled below.
@@ -75,7 +75,7 @@ u3_noun _qe_adler32(u3_noun octs)
     sum2_w %= BASE;
   }
 
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
 
   // Process leading zeros
   //

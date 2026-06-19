@@ -523,7 +523,6 @@ _pave_parts(void)
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
   u3R->how.fag_w = 0;
-
 }
 
 static c3_d

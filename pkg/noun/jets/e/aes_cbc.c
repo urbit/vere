@@ -27,14 +27,14 @@ typedef int (*urcrypt_cbc)(c3_y**,
     //  view the input (mmap for bobs, no full-blob loom alloc) then
     //  copy into a fresh heap allocation.
     //
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, msg);
-    size_t len   = vu_u.len_w;
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, msg);
+    size_t len   = vue_u.len_w;
     c3_y*  msg_y = u3a_malloc(len ? len : 1);
     if ( len ) {
-      memcpy(msg_y, vu_u.byt_y, len);
+      memcpy(msg_y, vue_u.byt_y, len);
     }
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
 
     u3r_bytes(0, 16, iv_y, iv);
     if ( 0 != (*low_f)(&msg_y, &len, key_y, iv_y, &u3a_realloc) ) {

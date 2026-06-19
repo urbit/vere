@@ -288,6 +288,7 @@ _cr_sing_atom(u3_atom a, u3_noun b)
              && (a_u->buf_w[0] == b_u->buf_w[0]) ) ? c3y : c3n;
     }
     //  bob vs normal (or normal vs bob): materialize the bob
+    //  XX: read bytes from disk for streaming bytewise comparison
     //
     if ( (c3y == a_bob) || (c3y == b_bob) ) {
       u3_atom bob = (c3y == a_bob) ? a : (u3_atom)b;
@@ -1228,13 +1229,13 @@ u3r_bytes_all(c3_w* len_w, u3_atom a)
 **   u3r_bytes_all semantics.
 */
 void
-u3r_view_init(u3r_view* vu_u, u3_atom a)
+u3r_view_init(u3r_view* vue_u, u3_atom a)
 {
   c3_w met_w = u3r_met(3, a);
-  vu_u->len_w = met_w;
-  vu_u->map_d = 0;
-  vu_u->ali_y = 0;
-  vu_u->byt_y = 0;
+  vue_u->len_w = met_w;
+  vue_u->map_d = 0;
+  vue_u->ali_y = 0;
+  vue_u->byt_y = 0;
 
   if ( 0 == met_w ) {
     return;
@@ -1244,8 +1245,8 @@ u3r_view_init(u3r_view* vu_u, u3_atom a)
     c3_d        map_d = 0;
     const c3_y* map_y = u3r_blob_map(a, &map_d);
     if ( map_y ) {
-      vu_u->byt_y = map_y;
-      vu_u->map_d = map_d;
+      vue_u->byt_y = map_y;
+      vue_u->map_d = map_d;
       return;
     }
     //  fall through to alloc-and-copy; note that u3r_bytes_alloc below
@@ -1253,21 +1254,21 @@ u3r_view_init(u3r_view* vu_u, u3_atom a)
   }
 
   c3_y* buf_y = u3r_bytes_alloc(0, met_w, a);
-  vu_u->byt_y = buf_y;
-  vu_u->ali_y = buf_y;
+  vue_u->byt_y = buf_y;
+  vue_u->ali_y = buf_y;
 }
 
 /* u3r_view_padded(): open a view of exactly [wid_w] bytes (zero-padded).
 */
 void
-u3r_view_padded(u3r_view* vu_u, u3_atom a, c3_w wid_w)
+u3r_view_padded(u3r_view* vue_u, u3_atom a, c3_w wid_w)
 {
-  u3r_view_init(vu_u, a);
+  u3r_view_init(vue_u, a);
 
   //  atom has enough bytes — keep the zero-copy view; just cap len_w
   //
-  if ( vu_u->len_w >= wid_w ) {
-    vu_u->len_w = wid_w;
+  if ( vue_u->len_w >= wid_w ) {
+    vue_u->len_w = wid_w;
     return;
   }
 
@@ -1276,34 +1277,34 @@ u3r_view_padded(u3r_view* vu_u, u3_atom a, c3_w wid_w)
   //  point the view at the padded buffer.
   //
   c3_y* pad_y = u3a_malloc(wid_w);
-  if ( vu_u->len_w && vu_u->byt_y ) {
-    memcpy(pad_y, vu_u->byt_y, vu_u->len_w);
+  if ( vue_u->len_w && vue_u->byt_y ) {
+    memcpy(pad_y, vue_u->byt_y, vue_u->len_w);
   }
-  memset(pad_y + vu_u->len_w, 0, wid_w - vu_u->len_w);
+  memset(pad_y + vue_u->len_w, 0, wid_w - vue_u->len_w);
 
-  u3r_view_done(vu_u);
+  u3r_view_done(vue_u);
 
-  vu_u->byt_y = pad_y;
-  vu_u->len_w = wid_w;
-  vu_u->map_d = 0;
-  vu_u->ali_y = pad_y;
+  vue_u->byt_y = pad_y;
+  vue_u->len_w = wid_w;
+  vue_u->map_d = 0;
+  vue_u->ali_y = pad_y;
 }
 
 /* u3r_view_done(): release the view's backing memory.
 */
 void
-u3r_view_done(u3r_view* vu_u)
+u3r_view_done(u3r_view* vue_u)
 {
-  if ( vu_u->map_d ) {
-    u3r_blob_unmap(vu_u->byt_y, vu_u->map_d);
+  if ( vue_u->map_d ) {
+    u3r_blob_unmap(vue_u->byt_y, vue_u->map_d);
   }
-  else if ( vu_u->ali_y ) {
-    u3a_free(vu_u->ali_y);
+  else if ( vue_u->ali_y ) {
+    u3a_free(vue_u->ali_y);
   }
-  vu_u->byt_y = 0;
-  vu_u->len_w = 0;
-  vu_u->map_d = 0;
-  vu_u->ali_y = 0;
+  vue_u->byt_y = 0;
+  vue_u->len_w = 0;
+  vue_u->map_d = 0;
+  vue_u->ali_y = 0;
 }
 
 /* _mpz_init_set_word():

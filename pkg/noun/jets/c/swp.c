@@ -29,25 +29,25 @@ u3qc_swp(u3_atom a,
     c3_g shf_g = a_g - 3;
     c3_w blq_b = (c3_w)1 << shf_g;         //  bytes per bloq
 
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, b);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, b);
 
     for ( c3_w i = 0; i < len_w; i++ ) {
       c3_w src_b = i * blq_b;
       c3_w dst_b = (len_w - i - 1) * blq_b;
       c3_w cpy_b = blq_b;
 
-      if ( src_b >= vu_u.len_w ) {
+      if ( src_b >= vue_u.len_w ) {
         //  past the view — dest bytes stay zero (slab_init)
         continue;
       }
-      if ( src_b + cpy_b > vu_u.len_w ) {
-        cpy_b = vu_u.len_w - src_b;
+      if ( src_b + cpy_b > vue_u.len_w ) {
+        cpy_b = vue_u.len_w - src_b;
       }
-      memcpy(sab_u.buf_y + dst_b, vu_u.byt_y + src_b, cpy_b);
+      memcpy(sab_u.buf_y + dst_b, vue_u.byt_y + src_b, cpy_b);
     }
 
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
     return u3i_slab_mint(&sab_u);
   }
 

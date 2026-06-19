@@ -68,13 +68,13 @@
             c3_w pos_b = pos_w << shf_g;
             c3_w len_b = ((c3_w)pi_cab) << shf_g;
 
-            u3r_view vu_u;
-            u3r_view_init(&vu_u, qi_cab);
-            c3_w cpy_w = (vu_u.len_w < len_b) ? vu_u.len_w : len_b;
+            u3r_view vue_u;
+            u3r_view_init(&vue_u, qi_cab);
+            c3_w cpy_w = (vue_u.len_w < len_b) ? vue_u.len_w : len_b;
             if ( cpy_w ) {
-              memcpy(sab_u.buf_y + pos_b, vu_u.byt_y, cpy_w);
+              memcpy(sab_u.buf_y + pos_b, vue_u.byt_y, cpy_w);
             }
-            u3r_view_done(&vu_u);
+            u3r_view_done(&vue_u);
           }
           else {
             u3r_chop(a_g, 0, pi_cab, pos_w, sab_u.buf_w, qi_cab);

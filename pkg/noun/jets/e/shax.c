@@ -18,10 +18,10 @@
     }
 
     c3_y out_y[32];
-    u3r_view vu_u;
-    u3r_view_padded(&vu_u, dat, len_w);
-    urcrypt_shay((c3_y*)vu_u.byt_y, len_w, out_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    urcrypt_shay((c3_y*)vue_u.byt_y, len_w, out_y);
+    u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
   }
 
@@ -29,10 +29,10 @@
   _cqe_shax(u3_atom a)
   {
     c3_y out_y[32];
-    u3r_view vu_u;
-    u3r_view_init(&vu_u, a);
-    urcrypt_shay((c3_y*)vu_u.byt_y, vu_u.len_w, out_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
+    urcrypt_shay((c3_y*)vue_u.byt_y, vue_u.len_w, out_y);
+    u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
   }
 
@@ -46,10 +46,10 @@
     }
 
     c3_y out_y[64];
-    u3r_view vu_u;
-    u3r_view_padded(&vu_u, dat, len_w);
-    urcrypt_shal((c3_y*)vu_u.byt_y, len_w, out_y);
-    u3r_view_done(&vu_u);
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    urcrypt_shal((c3_y*)vue_u.byt_y, len_w, out_y);
+    u3r_view_done(&vue_u);
     return u3i_bytes(64, out_y);
   }
 

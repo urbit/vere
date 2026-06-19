@@ -32,7 +32,7 @@ u3qc_sew(u3_atom a,
   //  view is only used for the bob path; done() is a no-op on a
   //  zero-init struct, so we can unconditionally call it at the end.
   //
-  u3r_view vu_u = {0};
+  u3r_view vue_u = {0};
 
   if ( _(u3a_is_cat(e)) ) {
     len_src_w = e ? 1 : 0;
@@ -45,9 +45,9 @@ u3qc_sew(u3_atom a,
     //  within the mapped last page read as zero, so the word-at-a-time
     //  read by u3r_chop_words is safe.
     //
-    u3r_view_init(&vu_u, e);
-    len_src_w = (vu_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
-    src_w = (c3_w*)vu_u.byt_y;
+    u3r_view_init(&vue_u, e);
+    len_src_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+    src_w = (c3_w*)vue_u.byt_y;
   }
   else {
     u3a_atom* src_u = u3a_to_ptr(e);
@@ -67,7 +67,7 @@ u3qc_sew(u3_atom a,
              len_src_w,
              src_w);
   }
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
   return u3i_slab_mint(&sab_u);
 }
 

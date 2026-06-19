@@ -114,20 +114,20 @@ _cqea_siv_en(c3_y*   key_y,
   //  takes non-const c3_y* but treats the buffer as input-only;
   //  the encrypted output goes to out_y.  cast-away is safe.
   //
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, txt);
-  c3_w txt_w = vu_u.len_w;
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, txt);
+  c3_w txt_w = vue_u.len_w;
 
   dat_u = _cqea_ads_alloc(ads, &soc_w);
   out_y = u3a_malloc(txt_w ? txt_w : 1);
 
-  ret = ( 0 != (*low_f)((c3_y*)vu_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
+  ret = ( 0 != (*low_f)((c3_y*)vue_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
              u3i_word(txt_w),
              u3i_bytes(txt_w, out_y));
 
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
   u3a_free(out_y);
   _cqea_ads_free(dat_u);
   return ret;
@@ -158,12 +158,12 @@ _cqea_siv_de(c3_y*   key_y,
     //  zero-copy view on the ciphertext; zero-pad if atom is shorter
     //  than the declared length.
     //
-    u3r_view vu_u;
-    u3r_view_padded(&vu_u, txt, txt_w);
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, txt, txt_w);
     out_y = u3a_malloc(txt_w ? txt_w : 1);
 
-    if ( 0 != (*low_f)((c3_y*)vu_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
-      u3r_view_done(&vu_u);
+    if ( 0 != (*low_f)((c3_y*)vue_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
+      u3r_view_done(&vue_u);
       u3a_free(out_y);
       _cqea_ads_free(dat_u);
       return u3m_bail(c3__evil);
@@ -171,7 +171,7 @@ _cqea_siv_de(c3_y*   key_y,
 
     ret = u3nc(0, u3i_bytes(txt_w, out_y));
 
-    u3r_view_done(&vu_u);
+    u3r_view_done(&vue_u);
     u3a_free(out_y);
     _cqea_ads_free(dat_u);
 

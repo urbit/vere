@@ -27,13 +27,13 @@ u3qe_crc32(u3_noun input_octs)
   //  NB: the legacy vat_u->buf_w path returned seq_w for bob atoms;
   //  u3r_view gives the actual file bytes.
   //
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, tail);
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, tail);
 
   c3_w led_w = hed_w - tel_w;
-  c3_w crc_w = crc32(0, vu_u.byt_y, tel_w);
+  c3_w crc_w = crc32(0, vue_u.byt_y, tel_w);
 
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
 
   while ( led_w > 0 ) {
     c3_y byt_y = 0;

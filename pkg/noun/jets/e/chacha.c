@@ -30,10 +30,10 @@
     u3i_slab_init(&sab_u, 3, wid_w);
 
     if ( wid_w ) {
-      u3r_view vu_u;
-      u3r_view_padded(&vu_u, dat, wid_w);
-      memcpy(sab_u.buf_y, vu_u.byt_y, wid_w);
-      u3r_view_done(&vu_u);
+      u3r_view vue_u;
+      u3r_view_padded(&vue_u, dat, wid_w);
+      memcpy(sab_u.buf_y, vue_u.byt_y, wid_w);
+      u3r_view_done(&vue_u);
     }
 
     urcrypt_chacha_crypt(rounds_w, key_y, nonce_y, counter_d, wid_w, sab_u.buf_y);

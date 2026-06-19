@@ -30,11 +30,11 @@ _leer_cut_view(const c3_y* src_y, c3_w pos_w, c3_w len_w)
 u3_noun
 u3qe_lore(u3_atom lub)
 {
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, lub);
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, lub);
 
-  const c3_y* src_y = vu_u.byt_y;
-  c3_w        len_w = vu_u.len_w;
+  const c3_y* src_y = vue_u.byt_y;
+  c3_w        len_w = vue_u.len_w;
   c3_w        pos_w = 0;
   u3_noun     tez   = u3_nul;
 
@@ -58,18 +58,18 @@ u3qe_lore(u3_atom lub)
     }
 
     if ((byt_y == 0) && ((pos_w + meg_w + 1) < len_w)) {
-      u3r_view_done(&vu_u);
+      u3r_view_done(&vue_u);
       return u3m_bail(c3__exit);
     }
 
     if ( !_(end_y) && pos_w >= len_w ) {
-      u3r_view_done(&vu_u);
+      u3r_view_done(&vue_u);
       return u3kb_flop(tez);
     }
     else {
       tez = u3nc(_leer_cut_view(src_y, pos_w, meg_w), tez);
       if ( _(end_y) ) {
-        u3r_view_done(&vu_u);
+        u3r_view_done(&vue_u);
         return u3kb_flop(tez);
       }
       pos_w += (meg_w + 1);
@@ -97,10 +97,10 @@ u3qe_leer(u3_atom txt)
   u3_noun  pro;
   u3_noun* lit = &pro;
 
-  u3r_view vu_u;
-  u3r_view_init(&vu_u, txt);
-  const c3_y* src_y = vu_u.byt_y;
-  c3_w        len_w = vu_u.len_w;
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, txt);
+  const c3_y* src_y = vue_u.byt_y;
+  c3_w        len_w = vue_u.len_w;
 
   {
     c3_w pos_w, i_w = 0;
@@ -127,7 +127,7 @@ u3qe_leer(u3_atom txt)
   }
 
   *lit = u3_nul;
-  u3r_view_done(&vu_u);
+  u3r_view_done(&vue_u);
 
   return pro;
 }

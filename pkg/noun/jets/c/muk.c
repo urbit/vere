@@ -34,10 +34,10 @@ u3qc_muk(u3_atom sed,
   //  buf_w pointer and produced wrong hashes), heap-backed with
   //  zero-padding for atoms shorter than len_h.
   //
-  u3r_view vu_u;
-  u3r_view_padded(&vu_u, key, len_h);
-  MurmurHash3_x86_32((c3_y*)vu_u.byt_y, len_h, sed_h, &out_h);
-  u3r_view_done(&vu_u);
+  u3r_view vue_u;
+  u3r_view_padded(&vue_u, key, len_h);
+  MurmurHash3_x86_32((c3_y*)vue_u.byt_y, len_h, sed_h, &out_h);
+  u3r_view_done(&vue_u);
 
   return u3i_halfs(1, &out_h);
 }
