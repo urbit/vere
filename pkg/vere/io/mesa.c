@@ -1442,7 +1442,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     res_u->tim_u.data = res_u;
 
-    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &sam_u->are_u);
+    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
     _mesa_send_bufs(sam_u, NULL, buf_y, len_w, las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
