@@ -1688,11 +1688,37 @@ u3a_mark_road()
 
   qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
   qua_u[6]->nam_c = strdup("transient memoization cache");
-  qua_u[6]->siz_w = u3h_mark(u3R->cax.har_p) * 4;
+  qua_u[6]->siz_w = u3h_mark_tot(u3R->cax.har_p) * 4;
 
   qua_u[7] = c3_calloc(sizeof(*qua_u[7]));
   qua_u[7]->nam_c = strdup("persistent memoization cache");
-  qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->cax.per_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[7]->qua_u = mua_u;
+    qua_u[7]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
 
   qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
   qua_u[8]->nam_c = strdup("page directory");
@@ -1751,7 +1777,33 @@ u3a_mark_road()
 
   qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
   qua_u[12]->nam_c = strdup("loop hint set");
-  qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->lop_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[12]->qua_u = mua_u;
+    qua_u[12]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
   
   qua_u[13] = c3_calloc(sizeof(*qua_u[13]));
   qua_u[13]->nam_c = strdup("timer stack");
@@ -1759,7 +1811,33 @@ u3a_mark_road()
   
   qua_u[14] = c3_calloc(sizeof(*qua_u[14]));
   qua_u[14]->nam_c = strdup("ford memoization cache");
-  qua_u[14]->siz_w = u3h_mark(u3R->cax.for_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->cax.for_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[14]->qua_u = mua_u;
+    qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
 
   qua_u[15] = NULL;
 

@@ -2328,19 +2328,71 @@ u3j_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
-  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->jed.war_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[0]->qua_u = mua_u;
+    qua_u[0]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("cold jet state");
-  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->jed.cod_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[1]->qua_u = mua_u;
+    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("hank cache");
-  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * 4;
+  qua_u[2]->siz_w = u3h_mark_tot(u3R->jed.han_p) * 4;
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * 4;
+  qua_u[3]->siz_w = u3h_mark_tot(u3R->jed.bas_p) * 4;
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
@@ -2358,7 +2410,7 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[5]->siz_w = u3h_mark_tot(u3R->jed.hot_p) * 4;
 
     sum_w += qua_u[5]->siz_w;
 

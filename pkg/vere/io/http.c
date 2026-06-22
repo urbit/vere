@@ -3069,12 +3069,12 @@ _http_io_mark(u3_auto* car_u, c3_w *out_w)
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("url->scry cache");
-  all_u[1]->siz_w = 4 * u3h_mark(htd_u->sax_p);
+  all_u[1]->siz_w = 4 * u3h_mark_tot(htd_u->sax_p);
   all_u[1]->qua_u = 0;
 
   all_u[2] = c3_malloc(sizeof(**all_u));
   all_u[2]->nam_c = strdup("scry->noun cache");
-  all_u[2]->siz_w = 4 * u3h_mark(htd_u->nax_p);
+  all_u[2]->siz_w = 4 * u3h_mark_tot(htd_u->nax_p);
   all_u[2]->qua_u = 0;
 
   all_u[3] = 0;

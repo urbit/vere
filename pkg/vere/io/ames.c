@@ -2827,12 +2827,12 @@ _ames_io_mark(u3_auto* car_u, c3_w *out_w)
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("scry cache");
-  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->siz_w = 4 * u3h_mark_tot(sam_u->fin_s.sac_p);
   all_u[0]->qua_u = 0;
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("lane cache");
-  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->siz_w = 4 * u3h_mark_tot(sam_u->lax_p);
   all_u[1]->qua_u = 0;
 
   all_u[2] = 0;
