@@ -187,6 +187,7 @@ static void
 _cttp_bods_free(u3_hbod* bod_u)
 {
   while ( bod_u ) {
+    u3z(bod_u->atom);
     u3_hbod* nex_u = bod_u->nex_u;
 
     c3_free(bod_u);
@@ -206,17 +207,28 @@ _cttp_bod_from_octs(u3_noun oct)
   }
   len_w = u3h(oct);
 
-  {
-    u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
-    bod_u->hun_y[len_w] = 0;
-    bod_u->len_w = len_w;
-    u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
-
-    bod_u->nex_u = 0;
-
-    u3z(oct);
-    return bod_u;
+  if ( !_(u3ud(u3t(oct))) ) {
+    u3m_bail(c3__fail);
   }
+
+  c3_w len_buf_w = u3r_met(3, u3t(oct));
+  u3_hbod* bod_u;
+  if ( len_buf_w <= len_w ) {
+    bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
+    bod_u->atom = u3_nul;
+    bod_u->hun_y = (c3_y*)(bod_u + 1);
+    bod_u->hun_y[len_w] = 0;
+    u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
+  }
+  else  {
+    bod_u = c3_malloc(sizeof(*bod_u));
+    bod_u->atom = u3k(u3t(oct));
+    bod_u->hun_y = (c3_y*)u3r_word_buffer(&bod_u->atom, NULL);
+  }
+  bod_u->len_w = len_w;
+  bod_u->nex_u = 0;
+  u3z(oct);
+  return bod_u;
 }
 
 /* _cttp_bods_to_vec(): translate body buffers to array of h2o_iovec_t
