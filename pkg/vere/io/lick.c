@@ -9,7 +9,7 @@
 */
 typedef struct _u3_chan {
   struct _u3_moor   mor_u;            //  message handler
-  c3_l              coq_l;            //  connection number
+  c3_h              coq_h;            //  connection number
   c3_o              liv_o;            //  connection live
   struct _u3_shan*  san_u;            //  server backpointer
 } u3_chan;
@@ -18,7 +18,7 @@ typedef struct _u3_chan {
 */
 typedef struct _u3_shan {
   uv_pipe_t          pyp_u;           //  server stream handler
-  c3_l               nex_l;           //  next connection number
+  c3_h               nex_l;           //  next connection number
   struct _u3_port*   gen_u;           //  port backpointer
   struct _u3_chan*   can_u;           //  connection list
 } u3_shan;
@@ -270,7 +270,7 @@ _lick_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _lick_moor_poke;
   can_u->mor_u.bal_f = _lick_moor_bail;
-  can_u->coq_l = san_u->nex_l++;
+  can_u->coq_h = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
   u3_assert(!err_i);
@@ -309,13 +309,13 @@ _lick_close_sock(u3_shan* san_u)
     _lick_close_chan(san_u->can_u);
   }
 
-  c3_w len_w = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
-  c3_c* paf_c = c3_malloc(len_w);
+  c3_h len_h = strlen(lic_u->fod_c) + strlen(san_u->gen_u->nam_c) + 2;
+  c3_c* paf_c = c3_malloc(len_h);
   c3_i  wit_i;
-  wit_i = snprintf(paf_c, len_w, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);
+  wit_i = snprintf(paf_c, len_h, "%s/%s", lic_u->fod_c, san_u->gen_u->nam_c);
 
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(len_h == (c3_h)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {

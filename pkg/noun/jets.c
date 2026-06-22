@@ -18,6 +18,7 @@
 #include "vortex.h"
 #include "xtract.h"
 
+//static c3_d _calls_d = 0;
 
 /**  Functions.
 **/
@@ -96,15 +97,12 @@ _cj_hash(c3_c* has_c)
   return pro;
 }
 
-// in the jam jet file
-c3_w* u3qe_jam_buf(u3_noun, c3_w* bit_w);
-
 /* _cj_bash(): battery hash. RETAIN.
  */
 static u3_noun
 _cj_bash(u3_noun bat)
 {
-  if ( u3C.wag_w & u3o_hashless ) {
+  if ( u3C.wag_h & u3o_hashless ) {
     return u3_nul;
   }
 
@@ -396,7 +394,7 @@ _cj_chum(u3_noun chu)
       c3_c  buf[33];
 
       memset(buf, 0, 33);
-      snprintf(buf, 32, "%s%d", h_chu_c, t_chu);
+      snprintf(buf, 32, "%s%"PRIc3_w, h_chu_c, t_chu);
 
       c3_free(h_chu_c);
       return strdup(buf);
@@ -644,7 +642,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       *bas = _cj_bash(u3h(cor));
     }
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       u3_weak act = _cj_spot_hot(cor, *bas, &loc);
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
@@ -776,7 +774,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
     par_u = &u3D.ray_u[par_l];
     dev_u = par_u->dev_u;
   }
-    else {
+  else {
     par_u = 0;
     dev_u = u3D.dev_u;
   }
@@ -788,7 +786,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
     while ( (cop_u = &dev_u[i_l])->cos_c ) {
       if ( _(u3r_sing_c(cop_u->cos_c, nam)) ) {
 #if 0
-        u3l_log("hot: bound jet %d/%s/%s/",
+        u3l_log("hot: bound jet %"PRIc3_w"/%s/%s/",
                         cop_u->jax_l,
                         cop_u->cos_c,
                         par_u ? par_u->cos_c : "~");
@@ -1264,8 +1262,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
       if ( u3_none == (inx = u3kdb_get(u3k(hap), u3k(axe))) ) {
         u3t_off(glu_o);
         {
-          c3_o pof_o = __(u3C.wag_w & u3o_debug_cpu);
-          c3_o trc_o = __(u3C.wag_w & u3o_trace);
+          c3_o pof_o = __(u3C.wag_h & u3o_debug_cpu);
+          c3_o trc_o = __(u3C.wag_h & u3o_trace);
 
           if ( _(pof_o) ) {
             pof_o = u3t_come(bal);
@@ -1294,8 +1292,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
         u3j_core* cop_u = &u3D.ray_u[jax_l];
         c3_l      inx_l = inx;
         u3j_harm* ham_u = &cop_u->arm_u[inx_l];
-        c3_o      pof_o = __(u3C.wag_w & u3o_debug_cpu);
-        c3_o      trc_o = __(u3C.wag_w & u3o_trace);
+        c3_o      pof_o = __(u3C.wag_h & u3o_debug_cpu);
+        c3_o      trc_o = __(u3C.wag_h & u3o_trace);
         u3_noun   pro;
 
         if ( _(pof_o) ) {
@@ -1528,8 +1526,8 @@ _cj_site_kick_hot(u3_noun loc, u3_noun cor, u3j_site* sit_u, c3_o lok_o)
 {
   u3_weak pro = u3_none;
   c3_o jet_o  = sit_u->jet_o;
-  c3_o pof_o  =  __(u3C.wag_w & u3o_debug_cpu);
-  c3_o trc_o  =  __(u3C.wag_w & u3o_trace);
+  c3_o pof_o  =  __(u3C.wag_h & u3o_debug_cpu);
+  c3_o trc_o  =  __(u3C.wag_h & u3o_trace);
 
   if ( c3n == pof_o && c3n == trc_o ) {
     if ( c3y == jet_o ) {
@@ -1784,7 +1782,7 @@ _cj_minx(u3_noun cey, u3_noun cor)
     }
     pel = _cj_spot(par, NULL);
     if ( u3_none == pel ) {
-      u3l_log("fund: in %s, parent %x not found at %d",
+      u3l_log("fund: in %s, parent %x not found at %"PRIc3_w,
                       u3r_string(nam),
                       u3r_mug(u3h(par)),
                       axe);
@@ -1843,10 +1841,10 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     jax_l = _cj_hot_mean(par_l, nam);
 #if 0
     u3m_p("new jet", bal);
-    u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+    u3l_log("  bat %x, jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       if ( jax_l ) {
         c3_y dig_y[32];
         c3_w i_w;
@@ -1856,7 +1854,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
           _cj_print_tas(u3h(i));
           i = u3t(i);
         }
-        u3l_log("\r\n  axe %d, jax %d,\r\n  bash ", axe, jax_l);
+        u3l_log("\r\n  axe %"PRIc3_w", jax %"PRIc3_w",\r\n  bash ", axe, jax_l);
         u3r_bytes(0, 32, dig_y, bas);
         for ( i_w = 32; i_w > 0; ) {
           u3l_log("%02x", dig_y[--i_w]);
@@ -1891,7 +1889,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 
     if ( c3n == hav_o ) {
       u3m_p("unregistered battery", bal);
-      u3l_log("hash: %x", bas);
+      u3l_log("hash: %"PRIxc3_w, bas);
     }
     u3z(bas);
   }
@@ -2114,7 +2112,7 @@ _cj_ream(u3_noun all)
       act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
       u3m_p("old jet", bal);
-      u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+      u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
       u3h_put(u3R->jed.war_p, loc, act);
     }
@@ -2153,7 +2151,7 @@ _cj_ream(u3_noun all)
         act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
         u3m_p("old jet", bal);
-        u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+        u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
         u3h_put(u3R->jed.war_p, loc, act);
       }
@@ -2328,24 +2326,24 @@ u3j_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
-  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * 4;
+  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("cold jet state");
-  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * 4;
+  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * sizeof(c3_w);
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("hank cache");
-  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * 4;
+  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * sizeof(c3_w);
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * 4;
+  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * sizeof(c3_w);
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
-  qua_u[4]->siz_w *= 4;
+  qua_u[4]->siz_w *= sizeof(c3_w);
 
   c3_w sum_w = 0;
   for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
@@ -2358,7 +2356,7 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * sizeof(c3_w);
 
     sum_w += qua_u[5]->siz_w;
 

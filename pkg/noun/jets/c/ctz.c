@@ -21,7 +21,7 @@ u3qc_ctz(u3_atom a)
 
   {
     c3_w bit_d = i_w - 1;
-    bit_d *= 32;
+    bit_d *= u3a_word_bits;
     bit_d += c3_tz_w(wor_w);
     return u3i_chub(bit_d);
   }

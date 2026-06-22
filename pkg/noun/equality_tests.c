@@ -157,7 +157,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "test equality: ok\r\n");
   return 0;

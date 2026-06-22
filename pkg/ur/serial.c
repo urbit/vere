@@ -102,8 +102,8 @@ ur_jam_t*
 ur_jam_init_with(ur_root_t    *r,
                  uint64_t d_prev,
                  uint64_t d_size,
-                 uint32_t s_prev,
-                 uint32_t s_size)
+                 ur_serial_size_t s_prev,
+                 ur_serial_size_t s_size)
 {
   ur_jam_t *j = _oom("jam_init", calloc(sizeof(*j), 1));
   j->w = ur_walk_fore_init_with(r, s_prev, s_size);
@@ -167,9 +167,9 @@ typedef struct _cue_frame_s {
 } _cue_frame_t;
 
 typedef struct _cue_stack_s {
-  uint32_t   prev;
-  uint32_t   size;
-  uint32_t   fill;
+  ur_serial_size_t   prev;
+  ur_serial_size_t   size;
+  ur_serial_size_t   fill;
   _cue_frame_t* f;
 } _cue_stack_t;
 
@@ -196,7 +196,7 @@ _cue_next(ur_root_t      *r,
         //  reallocate the stack if full
         //
         if ( s->fill == s->size ) {
-          uint32_t next = s->prev + s->size;
+          ur_serial_size_t next = s->prev + s->size;
           s->f = _oom("cue_next stack", realloc(s->f, next * sizeof(*s->f)));
           s->prev = s->size;
           s->size = next;
@@ -329,8 +329,8 @@ ur_cue_t*
 ur_cue_init_with(ur_root_t    *r,
                  uint64_t d_prev,
                  uint64_t d_size,
-                 uint32_t s_prev,
-                 uint32_t s_size)
+                 ur_serial_size_t s_prev,
+                 ur_serial_size_t s_size)
 {
   ur_cue_t* c = _oom("cue_init", calloc(sizeof(*c), 1));
   c->r = r;
@@ -402,9 +402,9 @@ typedef struct _cue_test_frame_s {
 } _cue_test_frame_t;
 
 typedef struct _cue_test_stack_s {
-  uint32_t        prev;
-  uint32_t        size;
-  uint32_t        fill;
+  ur_serial_size_t        prev;
+  ur_serial_size_t        size;
+  ur_serial_size_t        fill;
   _cue_test_frame_t* f;
 } _cue_test_stack_t;
 
@@ -429,7 +429,7 @@ _cue_test_next(_cue_test_stack_t *s,
         //  reallocate the stack if full
         //
         if ( s->fill == s->size ) {
-          uint32_t next = s->prev + s->size;
+          ur_serial_size_t next = s->prev + s->size;
           s->f = _oom("cue_test", realloc(s->f, next * sizeof(*s->f)));
           s->prev = s->size;
           s->size = next;
@@ -533,8 +533,8 @@ _cue_test(ur_cue_test_t   *t,
 ur_cue_test_t*
 ur_cue_test_init_with(uint64_t d_prev,
                       uint64_t d_size,
-                      uint32_t s_prev,
-                      uint32_t s_size)
+                      ur_serial_size_t s_prev,
+                      ur_serial_size_t s_size)
 {
   ur_cue_test_t* t = _oom("cue_test_init", calloc(sizeof(*t), 1));
 

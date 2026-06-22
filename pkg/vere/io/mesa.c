@@ -50,31 +50,31 @@ static c3_y are_y[524288];
 #endif
 
 typedef struct _u3_mesa_stat {
-  c3_w dop_w;  // dropped for other reasons
-  c3_w ser_w;  // dropped for serialisation
-  c3_w aut_w;  // droppped for auth
-  c3_w apa_w;  // dropped bc no interest
-  c3_w inv_w;  // non-fatal invariant violation
-  c3_w dup_w;  // duplicates
+  c3_h dop_h;  // dropped for other reasons
+  c3_h ser_h;  // dropped for serialisation
+  c3_h aut_h;  // droppped for auth
+  c3_h apa_h;  // dropped bc no interest
+  c3_h inv_h;  // non-fatal invariant violation
+  c3_h dup_h;  // duplicates
 } u3_mesa_stat;
 
 #define MESA_DESC_STRANGE "dropped strange packet"
-#define MESA_FIELD_STRANGE dop_w
+#define MESA_FIELD_STRANGE dop_h
 
 #define MESA_DESC_SERIAL "dropped packet (serialisation)"
-#define MESA_FIELD_SERIAL ser_w
+#define MESA_FIELD_SERIAL ser_h
 
 #define MESA_DESC_AUTH "dropped packet (authentication)"
-#define MESA_FIELD_AUTH aut_w
+#define MESA_FIELD_AUTH aut_h
 
 #define MESA_DESC_INVARIANT "invariant violation"
-#define MESA_FIELD_INVARIANT inv_w
+#define MESA_FIELD_INVARIANT inv_h
 
 #define MESA_DESC_APATHY "dropped packet (no interest)"
-#define MESA_FIELD_APATHY apa_w
+#define MESA_FIELD_APATHY apa_h
 
 #define MESA_DESC_DUPE "dropped packet (duplicate)"
-#define MESA_FIELD_DUPE dup_w
+#define MESA_FIELD_DUPE dup_h
 
 // routing table sentinels
 #define MESA_CZAR         1  // pending dns lookup
@@ -82,7 +82,7 @@ typedef struct _u3_mesa_stat {
 //
 // hop enum
 
-#define _mesa_met3_w(a_w) ((c3_bits_word(a_w) + 0x7) >> 3)
+#define _mesa_met3_h(a_h) ((c3_bits_half(a_h) + 0x7) >> 3)
 
 struct _u3_mesa_pact;
 
@@ -95,12 +95,12 @@ typedef struct _u3_pact_stat {
 struct _u3_mesa;
 
 typedef struct _u3_gage {
-  c3_w     rtt_w;  // rtt
-  c3_w     rto_w;  // rto
-  c3_w     rtv_w;  // rttvar
-  c3_w     wnd_w;  // cwnd
-  c3_w     wnf_w;  // cwnd fraction
-  c3_w     sst_w;  // ssthresh
+  c3_h     rtt_h;  // rtt
+  c3_h     rto_h;  // rto
+  c3_h     rtv_h;  // rttvar
+  c3_h     wnd_h;  // cwnd
+  c3_h     wnf_h;  // cwnd fraction
+  c3_h     sst_h;  // ssthresh
   //
 } u3_gage;
 
@@ -115,8 +115,8 @@ typedef struct _u3_mesa_pict {
 typedef struct _u3_lane_state {
   c3_d  sen_d;  //  last sent date
   c3_d  her_d;  //  last heard date
-  c3_w  rtt_w;  //  round-trip time
-  c3_w  rtv_w;  //  round-trip time variance
+  c3_h  rtt_h;  //  round-trip time
+  c3_h  rtv_h;  //  round-trip time variance
 } u3_lane_state;
 
 /* _u3_mesa: next generation networking
@@ -167,7 +167,7 @@ static void u3_free_str( u3_str key )
 static uint64_t u3_hash_str( u3_str key )
 {
   c3_d hash = 0xcbf29ce484222325ull;
-  for (c3_w i = 0; i < key.len_w; i++) {
+  for (c3_h i = 0; i < key.len_h; i++) {
     hash = ( (unsigned char)*(key.str_c)++ ^ hash ) * 0x100000001b3ull;
   }
   return hash;
@@ -175,7 +175,7 @@ static uint64_t u3_hash_str( u3_str key )
 
 static uint64_t u3_cmpr_str( u3_str key1, u3_str key2 )
 {
-  return key1.len_w == key2.len_w && memcmp( key1.str_c, key2.str_c, key1.len_w ) == 0;
+  return key1.len_h == key2.len_h && memcmp( key1.str_c, key2.str_c, key1.len_h ) == 0;
 }
 
 static uint64_t u3_cmpr_shap( u3_shap ship1, u3_shap ship2 )
@@ -232,9 +232,9 @@ typedef struct _u3_scry_handle {
 typedef struct _u3_mesa_line {
   u3_mesa_name nam_u;  //  full name for data, ready to serialize
   u3_auth_data aut_u;  //  message authenticator
-  c3_w         tob_d;  //  number of bytes in whole message
-  c3_w         dat_w;  //  size in bytes of dat_y
-  c3_w         len_w;  //  total allocated size, in bytes
+  c3_h         tob_h;  //  number of bytes in whole message
+  c3_h         dat_h;  //  size in bytes of dat_y
+  c3_h         len_h;  //  total allocated size, in bytes
   c3_y*        tip_y;  //  initial Merkle spine, nullable
   c3_y*        dat_y;  //  fragment data (1024 bytes per fragment)
   c3_y*        haz_y;  //  hash pairs    (64 bytes per fragment)
@@ -276,7 +276,7 @@ typedef struct _u3_mesa {
     uv_handle_t      had_u;
   };
   u3_mesa_stat       sat_u;       //  statistics
-  c3_l               sev_l;       //  XX: ??
+  c3_m               sev_m;       //  XX: ??
   c3_o               for_o;       //  is forwarding
   per_map            per_u;       //  (map ship u3_peer)
   c3_d               jum_d;       //  bytes in jumbo cache
@@ -321,7 +321,7 @@ typedef struct _u3_pend_req {
   u3_pact_stat*          wat_u; // ((mop @ud packet-state) lte)
   u3_bitset              was_u; // ((mop @ud ?) lte)
   c3_c*                  pek_c;
-  c3_w                   pek_w;
+  c3_h                   pek_h;
   c3_d                   pek_d;
   //  stats TODO: use
   c3_d                   beg_d; // date when request began
@@ -348,7 +348,7 @@ typedef struct _u3_cace_enty {
 typedef struct _u3_seal {
   uv_udp_send_t    snd_u;  // udp send request
   u3_mesa*         sam_u;
-  c3_w             len_w;
+  c3_h             len_h;
   c3_y*            buf_y;
   arena            are_u;
 } u3_seal;
@@ -370,10 +370,10 @@ get_millis() {
 }
 
 static void
-_log_buf(c3_y* buf_y, c3_w len_w)
+_log_buf(c3_y* buf_y, c3_h len_h)
 {
-  for( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-    fprintf(stderr, "%02x", buf_y[i_w]);
+  for( c3_h i_h = 0; i_h < len_h; i_h++ ) {
+    fprintf(stderr, "%02x", buf_y[i_h]);
   }
   fprintf(stderr, "\r\n");
 }
@@ -382,19 +382,19 @@ static void
 _log_gage(u3_gage* gag_u)
 {
   u3l_log("gauge at %p", gag_u);
-  u3l_log("rtt: %f", ((double)gag_u->rtt_w / 1000));
-  u3l_log("rto: %f", ((double)gag_u->rto_w / 1000));
-  u3l_log("rttvar: %f", ((double)gag_u->rtv_w / 1000));
-  u3l_log("cwnd: %u", gag_u->wnd_w);
-  u3l_log("cwnd fraction: %f", gag_u->wnf_w / (float)gag_u->wnd_w );
-  u3l_log("ssthresh: %u", gag_u->sst_w);
+  u3l_log("rtt: %f", ((double)gag_u->rtt_h / 1000));
+  u3l_log("rto: %f", ((double)gag_u->rto_h / 1000));
+  u3l_log("rttvar: %f", ((double)gag_u->rtv_h / 1000));
+  u3l_log("cwnd: %u", gag_u->wnd_h);
+  u3l_log("cwnd fraction: %f", gag_u->wnf_h / (float)gag_u->wnd_h );
+  u3l_log("ssthresh: %u", gag_u->sst_h);
   //u3l_log("algorithm: %s", gag_u->alg_c);
 }
 
 static void
 _log_lane(u3_lane* lan_u)
 {
-  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_word(lan_u->pip_w))), lan_u->por_s);
+  u3l_log("mesa: lane (%s,%u)", u3r_string(u3dc("scot", c3__if, u3i_half(lan_u->pip_h))), lan_u->por_s);
 }
 
 static void _log_peer(u3_peer* per_u)
@@ -424,7 +424,7 @@ static void
 _log_mesa_data(u3_mesa_data dat_u)
 {
   u3l_log("total bytes: %" PRIu64, dat_u.tob_d);
-  u3l_log("frag len: %u", dat_u.len_w);
+  u3l_log("frag len: %u", dat_u.len_h);
 }
 
 /* _mesa_lop(): find beginning of page containing fra_d
@@ -470,7 +470,7 @@ _mesa_is_direct_mode(u3_peer* per_u)
 /*  _mesa_encode_path(): produce buf_y as a parsed path
 */
 static u3_noun
-_mesa_encode_path(c3_w len_w, c3_y* buf_y)
+_mesa_encode_path(c3_h len_h, c3_y* buf_y)
 {
   u3_noun  pro;
   u3_noun* lit = &pro;
@@ -480,21 +480,21 @@ _mesa_encode_path(c3_w len_w, c3_y* buf_y)
     u3_noun*   tel;
     c3_y*    fub_y = buf_y;
     c3_y     car_y;
-    c3_w     tem_w;
+    c3_h     tem_h;
     u3i_slab sab_u;
 
-    while ( len_w-- ) {
+    while ( len_h-- ) {
       car_y = *buf_y++;
-      if ( len_w == 0 ) {
+      if ( len_h == 0 ) {
         buf_y++;
         car_y = 47;
       }
 
       if ( 47 == car_y ) {
-        tem_w = buf_y - fub_y - 1;
-        u3i_slab_bare(&sab_u, 3, tem_w);
+        tem_h = buf_y - fub_y - 1;
+        u3i_slab_bare(&sab_u, 3, tem_h);
         sab_u.buf_w[sab_u.len_w - 1] = 0;
-        memcpy(sab_u.buf_y, fub_y, tem_w);
+        memcpy(sab_u.buf_y, fub_y, tem_h);
 
         *lit  = u3i_defcons(&hed, &tel);
         *hed  = u3i_slab_moot(&sab_u);
@@ -534,8 +534,8 @@ _mesa_copy_name(u3_mesa_name* des_u, u3_mesa_name* src_u, arena* are_u)
 {
   memcpy(des_u, src_u, sizeof(u3_mesa_name));
   u3_ship_copy(des_u->her_u, src_u->her_u);
-  des_u->str_u.str_c = new(are_u, c3_c, src_u->str_u.len_w);
-  memcpy(des_u->str_u.str_c, src_u->str_u.str_c, src_u->str_u.len_w);
+  des_u->str_u.str_c = new(are_u, c3_c, src_u->str_u.len_h);
+  memcpy(des_u->str_u.str_c, src_u->str_u.str_c, src_u->str_u.len_h);
   des_u->pat_c = des_u->str_u.str_c + (src_u->pat_c - src_u->str_u.str_c);
 }
 
@@ -552,8 +552,8 @@ _dire_etch_ud(c3_d num_d)
 {
   c3_y  hun_y[26];
   c3_y* buf_y = u3s_etch_ud_smol(num_d, hun_y);
-  c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
-  return u3i_bytes(26 - dif_w, buf_y); // XX known-non-null
+  c3_h  dif_h = (c3_p)buf_y - (c3_p)hun_y;
+  return u3i_bytes(26 - dif_h, buf_y); // XX known-non-null
 }
 
 /* _mesa_request_key(): produce key for request hashtable sam_u->req_p from nam_u
@@ -562,18 +562,18 @@ u3_noun
 _mesa_request_key(u3_mesa_name* nam_u)
 {
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun res = u3nc(u3i_word(nam_u->rif_w), pax);
+  u3_noun res = u3nc(u3i_half(nam_u->rif_h), pax);
   return res;
 }
 
 static void
 _init_gage(u3_gage* gag_u)  //  microseconds
 {
-  gag_u->rto_w = 200 * 1000;
-  gag_u->rtt_w = 1000 * 1000;  // ~s1
-  gag_u->rtv_w = 1000 * 1000;  // ~s1
-  gag_u->wnd_w = 1;
-  gag_u->sst_w = 10000;
+  gag_u->rto_h = 200 * 1000;
+  gag_u->rtt_h = 1000 * 1000;  // ~s1
+  gag_u->rtv_h = 1000 * 1000;  // ~s1
+  gag_u->wnd_h = 1;
+  gag_u->sst_h = 10000;
 }
 
 /* u3_mesa_encode_lane(): serialize lane to noun
@@ -581,9 +581,9 @@ _init_gage(u3_gage* gag_u)  //  microseconds
 static u3_noun
 u3_mesa_encode_lane(sockaddr_in lan_u) {
   // [%if ip=@ port=@]
-  c3_w pip_w = ntohl(lan_u.sin_addr.s_addr);
+  c3_h pip_h = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
-  return u3nt(c3__if, u3i_word(pip_w), por_s);
+  return u3nt(c3__if, u3i_half(pip_h), por_s);
 }
 
 static u3_peer*
@@ -749,20 +749,20 @@ static void _mesa_handle_ack(u3_gage* gag_u, u3_pact_stat* pat_u)
   c3_d now_d = _get_now_micros();
   c3_d rtt_d = now_d < pat_u->sen_d ? 0 : now_d - pat_u->sen_d;
 
-  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_w);
+  c3_d err_d = _abs_dif(rtt_d, gag_u->rtt_h);
 
-  gag_u->rto_w = _clamp_rto(gag_u->rtt_w + (4*gag_u->rtv_w));
+  gag_u->rto_h = _clamp_rto(gag_u->rtt_h + (4*gag_u->rtv_h));
 
-  if ( gag_u->wnd_w < gag_u->sst_w ) {
-    gag_u->wnd_w++;
-  } else if ( gag_u->wnd_w <= ++gag_u->wnf_w ) {
-    gag_u->wnd_w++;
-    gag_u->wnf_w = 0;
+  if ( gag_u->wnd_h < gag_u->sst_h ) {
+    gag_u->wnd_h++;
+  } else if ( gag_u->wnd_h <= ++gag_u->wnf_h ) {
+    gag_u->wnd_h++;
+    gag_u->wnf_h = 0;
   }
 
   if (pat_u->tie_y == 1) {
-    gag_u->rtt_w = (rtt_d + (gag_u->rtt_w * 7)) >> 3;
-    gag_u->rtv_w = (err_d + (gag_u->rtv_w * 7)) >> 3;
+    gag_u->rtt_h = (rtt_d + (gag_u->rtt_h * 7)) >> 3;
+    gag_u->rtv_h = (err_d + (gag_u->rtv_h * 7)) >> 3;
   }
 }
 
@@ -783,12 +783,12 @@ _safe_sub(c3_d a, c3_d b) {
  * saves next fragment number and preallocated pact into the passed pointers.
  * Will not do so if returning 0
 */
-static c3_w
+static c3_d
 _mesa_req_get_cwnd(u3_pend_req* req_u)
 {
-  c3_w rem_w = _mesa_req_get_remaining(req_u);
-  c3_d ava_d = _safe_sub((c3_d)req_u->gag_u->wnd_w, req_u->out_d);
-  return c3_min(rem_w, ava_d);
+  c3_h rem_h = _mesa_req_get_remaining(req_u);
+  c3_d ava_d = _safe_sub((c3_d)req_u->gag_u->wnd_h, req_u->out_d);
+  return c3_min(rem_h, ava_d);
 }
 
 /* _mesa_req_pact_resent(): mark packet as resent
@@ -847,7 +847,7 @@ u3_mesa_decode_lane(u3_atom lan) {
   //
 
   adr_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ?
-                          htonl((c3_w)lan_d) : htonl(0x7f000001);
+                          htonl((c3_h)lan_d) : htonl(0x7f000001);
   adr_u.sin_port = htons((c3_s)(lan_d >> 32));
 
   return adr_u;
@@ -878,7 +878,7 @@ _mesa_send_cb(uv_udp_send_t* req_u, c3_i sas_i)
   _mesa_free_seal(sel_u);
 }
 
-static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w len_w)
+static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_h len_h)
 {
 
   add_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? add_u.sin_addr.s_addr  : htonl(0x7f000001);
@@ -891,7 +891,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
 
   u3_seal* sel_u = c3_calloc(sizeof(*sel_u));
   sel_u->buf_y = buf_y;
-  sel_u->len_w = len_w;
+  sel_u->len_h = len_h;
   sel_u->sam_u = sam_u;
 
 
@@ -901,7 +901,7 @@ static void _mesa_send_buf(u3_mesa* sam_u, sockaddr_in add_u, c3_y* buf_y, c3_w 
   u3l_log("mesa: sending packet to %s:%u", sip_c, ntohs(add_u.sin_port));
 #endif
 
-  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_w);
+  uv_buf_t buf_u = uv_buf_init((c3_c*)buf_y, len_h);
 
   c3_i     sas_i = uv_udp_send(&sel_u->snd_u,
                                &u3_Host.wax_u,
@@ -919,8 +919,8 @@ static void _mesa_send(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
   u3_mesa* sam_u = pic_u->sam_u;
   c3_y  *buf_y  = c3_calloc(PACT_SIZE);
-  c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, &pic_u->pac_u);
-  _mesa_send_buf(sam_u, lan_u, buf_y, len_w);
+  c3_h len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, &pic_u->pac_u);
+  _mesa_send_buf(sam_u, lan_u, buf_y, len_h);
 }
 
 typedef struct _u3_mesa_request_data {
@@ -928,7 +928,7 @@ typedef struct _u3_mesa_request_data {
   u3_ship       her_u;
   u3_mesa_name* nam_u;
   c3_y*         buf_y;
-  c3_w          len_w;
+  c3_h          len_h;
   u3_noun       las;
 } u3_mesa_request_data;
 
@@ -960,7 +960,7 @@ static void
 _mesa_send_bufs(u3_mesa* sam_u,
                 u3_peer* per_u,
                 c3_y* buf_y,
-                c3_w len_w,
+                c3_h len_h,
                 u3_pit_addr* las_u);
 
 static void
@@ -969,9 +969,9 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
   u3_mesa* sam_u = per_u->sam_u;
   c3_d now_d = _get_now_micros();
 
-  c3_w len_w = buf_u.len;
-  c3_y* sen_y = c3_calloc(len_w);
-  memcpy(sen_y, buf_u.base, len_w);
+  c3_h len_h = buf_u.len;
+  c3_y* sen_y = c3_calloc(len_h);
+  memcpy(sen_y, buf_u.base, len_h);
 
   u3_ship gal_u = {0};
   gal_u[0] = per_u->imp_y;
@@ -981,11 +981,11 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
        // if we are the sponsor of the ship, don't send to ourselves
        (our_o == c3y) )  {
     // u3l_log("mesa: direct");
-    _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_w);
+    _mesa_send_buf(sam_u, per_u->dan_u, sen_y, len_h);
     per_u->dir_u.sen_d = now_d;
   }
   else if ( las_u != NULL ) {
-    _mesa_send_bufs(sam_u, per_u, sen_y, len_w, las_u);
+    _mesa_send_bufs(sam_u, per_u, sen_y, len_h, las_u);
   } else {
     #ifdef MESA_DEBUG
       /* c3_c* gal_c = u3_ship_to_string(gal_u); */
@@ -994,13 +994,13 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
     #endif
     //
     sockaddr_in imp_u = _mesa_get_czar_lane(sam_u, per_u->imp_y);
-    _mesa_send_buf(sam_u, imp_u, sen_y, len_w);
+    _mesa_send_buf(sam_u, imp_u, sen_y, len_h);
     per_u->ind_u.sen_d = now_d;
 
     if ( c3n == _mesa_is_lane_zero(per_u->dan_u) ) {
-      c3_y* san_y = c3_calloc(len_w);
-      memcpy(san_y, buf_u.base, len_w);
-      _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_w);
+      c3_y* san_y = c3_calloc(len_h);
+      memcpy(san_y, buf_u.base, len_h);
+      _mesa_send_buf(sam_u, per_u->dan_u, san_y, len_h);
       per_u->dir_u.sen_d = now_d;
     }
   }
@@ -1008,31 +1008,32 @@ _mesa_send_modal(u3_peer* per_u, uv_buf_t buf_u, u3_pit_addr* las_u)
 
 
 static uv_buf_t
-_mesa_peek_buf(c3_c* pek_c, c3_d fra_d, c3_w pek_w)
+_mesa_peek_buf(c3_c* pek_c, c3_d fra_d, c3_h pek_h)
+// 43
 {
   if (fra_d <= 0xff) {
-    return uv_buf_init(pek_c+(fra_d*pek_w), pek_w);
+    return uv_buf_init(pek_c+(fra_d*pek_h), pek_h);
   }
   if (fra_d <= 0xffff) {
     return uv_buf_init(
-      pek_c + (0x100 * pek_w) + ((fra_d - 0x100) * (pek_w + 1)),
-      pek_w + 1
+      pek_c + (0x100 * pek_h) + ((fra_d - 0x100) * (pek_h + 1)),
+      pek_h + 1
     );
   }
   if (fra_d <= 0xffffff) {
     return uv_buf_init(
-      pek_c + (0x100 * pek_w) +
-      ((fra_d - 0x100) * (pek_w + 1)) +
-      ((fra_d - 0x10000) * (pek_w + 3)),
-      pek_w + 3
+      pek_c + (0x100 * pek_h) +
+      ((fra_d - 0x100) * (pek_h + 1)) +
+      ((fra_d - 0x10000) * (pek_h + 3)),
+      pek_h + 3
     );
   }
   return uv_buf_init(
-    pek_c + (0xff * pek_w) +
-    ((fra_d - 0x100) * (pek_w + 1)) +
-    ((fra_d - 0x10000) * (pek_w + 3)) +
-    ((fra_d - 0x1000000ULL) * (pek_w + 7)),
-    pek_w + 7
+    pek_c + (0xff * pek_h) +
+    ((fra_d - 0x100) * (pek_h + 1)) +
+    ((fra_d - 0x10000) * (pek_h + 3)) +
+    ((fra_d - 0x1000000ULL) * (pek_h + 7)),
+    pek_h + 7
   );
 }
 
@@ -1046,18 +1047,18 @@ _try_resend(u3_pend_req* req_u, c3_d nex_d)
     //  TODO: make fast recovery different from slow
     //  TODO: track skip count but not dupes, since dupes are meaningless
     if ( (c3n == bitset_has(&req_u->was_u, i_d)) &&
-        (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_w) ) {
+        (now_d - req_u->wat_u[i_d].sen_d > req_u->gag_u->rto_h) ) {
       los_o = c3y;
-      uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, i_d, req_u->pek_w);
+      uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, i_d, req_u->pek_h);
       _mesa_send_modal(req_u->per_u, buf_u, NULL);
       _mesa_req_pact_resent(req_u, &pac_u->pek_u.nam_u, now_d);
     }
   }
 
   if ( c3y == los_o ) {
-    req_u->gag_u->sst_w = c3_max(1, req_u->gag_u->wnd_w / 2);
-    req_u->gag_u->wnd_w = req_u->gag_u->sst_w;
-    req_u->gag_u->rto_w = _clamp_rto(req_u->gag_u->rto_w * 2);
+    req_u->gag_u->sst_h = c3_max(1, req_u->gag_u->wnd_h / 2);
+    req_u->gag_u->wnd_h = req_u->gag_u->sst_h;
+    req_u->gag_u->rto_h = _clamp_rto(req_u->gag_u->rto_h * 2);
   }
 }
 
@@ -1071,7 +1072,7 @@ _update_resend_timer(u3_pend_req *req_u)
   // scan in flight packets, find oldest
   c3_w idx_d = req_u->lef_d;
   req_u->tim_u.data = req_u;
-  c3_d next_expiry = req_u->gag_u->rto_w;
+  c3_d next_expiry = req_u->gag_u->rto_h;
   uv_timer_start(&req_u->tim_u, _mesa_packet_timeout, next_expiry / 1000, 0);
 }
 
@@ -1085,23 +1086,23 @@ _mesa_packet_timeout(uv_timer_t* tim_u) {
 }
 
 static c3_o
-_mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_w ack_w)
+_mesa_burn_misorder_queue(u3_pend_req* req_u, c3_y boq_y, c3_h ack_h)
 {
   c3_d num_d;
   c3_d max_d = req_u->tof_d;
   c3_o res_o = c3y;
-  for ( num_d = 0; (num_d + ack_w) < max_d; num_d++ ) {
-    c3_w siz_w = (1 << (boq_y - 3));  // XX
-    c3_y* fra_y = req_u->dat_y + (siz_w * (ack_w + num_d));
-    c3_w len_w = (num_d + ack_w) == (max_d - 1) ? req_u->tob_d % 1024 : 1024;
-    lss_pair* pur_u =  &req_u->mis_u[ack_w + num_d];
-    lss_pair* par_u = (0 == memcmp(pur_u, &(lss_pair){0}, sizeof(lss_pair))) ? NULL : &req_u->mis_u[ack_w + num_d];
-    if ( c3n == bitset_has(&req_u->was_u, (num_d + ack_w)) ) {
+  for ( num_d = 0; (num_d + ack_h) < max_d; num_d++ ) {
+    c3_h siz_h = (1 << (boq_y - 3));  // XX
+    c3_y* fra_y = req_u->dat_y + (siz_h * (ack_h + num_d));
+    c3_h len_h = (num_d + ack_h) == (max_d - 1) ? req_u->tob_d % 1024 : 1024;
+    lss_pair* pur_u =  &req_u->mis_u[ack_h + num_d];
+    lss_pair* par_u = (0 == memcmp(pur_u, &(lss_pair){0}, sizeof(lss_pair))) ? NULL : &req_u->mis_u[ack_h + num_d];
+    if ( c3n == bitset_has(&req_u->was_u, (num_d + ack_h)) ) {
       break;
     }
-    if ( c3y != lss_verifier_ingest(req_u->los_u, fra_y, len_w, par_u) ) {
+    if ( c3y != lss_verifier_ingest(req_u->los_u, fra_y, len_h, par_u) ) {
       res_o = c3n;
-      u3l_log("fail to burn %" PRIu64 " %" PRIu64, num_d + ack_w, req_u->tof_d);
+      u3l_log("fail to burn %" PRIu64 " %" PRIu64, num_d + ack_h, req_u->tof_d);
       break;
     }
   }
@@ -1144,8 +1145,8 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   lss_pair* par_u = NULL;
 
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
-  memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
+  c3_h siz_h = (1 << (nam_u->boq_y - 3));
+  memcpy(req_u->dat_y + (siz_h * nam_u->fra_d), dat_u->fra_y, dat_u->len_h);
 
   if ( dat_u->aut_u.typ_e == AUTH_PAIR ) {
     par_u = &req_u->mis_u[nam_u->fra_d];
@@ -1161,7 +1162,7 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     _mesa_handle_ack(req_u->gag_u, &req_u->wat_u[nam_u->fra_d]);
     return;
   }
-  else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_w, par_u) ) {
+  else if ( c3y != lss_verifier_ingest(req_u->los_u, dat_u->fra_y, dat_u->len_h, par_u) ) {
     u3l_log("auth fail frag %"PRIu64, nam_u->fra_d);
     u3l_log("nit_o %u", nam_u->nit_o);
     _mesa_del_request(sam_u, nam_u);
@@ -1221,7 +1222,7 @@ _realise_lane(u3_noun lan) {
     u3_noun tag, pip, por;
     u3x_trel(lan, &tag, &pip, &por);
     if ( tag == c3__if ) {
-      lan_u.sin_addr.s_addr = htonl(u3r_word(0, pip));
+      lan_u.sin_addr.s_addr = htonl(u3r_half(0, pip));
       u3_assert( c3y == u3a_is_cat(por) && por <= 0xFFFF);
       lan_u.sin_port = htons(por);
     } else {
@@ -1237,7 +1238,7 @@ static void
 _mesa_send_bufs(u3_mesa* sam_u,
                 u3_peer* per_u, // null for response packets
                 c3_y* buf_y,
-                c3_w len_w,
+                c3_h len_h,
                 u3_pit_addr* las_u)
 {
 
@@ -1248,9 +1249,9 @@ _mesa_send_bufs(u3_mesa* sam_u,
     if ( !lan_u.sin_port ) {
       u3l_log("mesa: failed to realise lane");
     } else {
-      c3_y* sen_y = c3_calloc(len_w);
-      memcpy(sen_y, buf_y, len_w);
-      _mesa_send_buf(sam_u, lan_u, sen_y, len_w);
+      c3_y* sen_y = c3_calloc(len_h);
+      memcpy(sen_y, buf_y, len_h);
+      _mesa_send_buf(sam_u, lan_u, sen_y, len_h);
       if ( per_u && (c3y == _mesa_lanes_equal(lan_u, per_u->dan_u)) ) {
         per_u->dir_u.sen_d = _get_now_micros();
       }
@@ -1292,9 +1293,9 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
     adr_u->sdr_u = lan_u;
     ent_u->adr_u = adr_u;
 
-    c3_c* str_c = new(&ent_u->are_u, c3_c, nam_u->str_u.len_w);
-    memcpy(str_c, nam_u->str_u.str_c, nam_u->str_u.len_w);
-    u3_str str_u = {str_c, nam_u->str_u.len_w};
+    c3_c* str_c = new(&ent_u->are_u, c3_c, nam_u->str_u.len_h);
+    memcpy(str_c, nam_u->str_u.str_c, nam_u->str_u.len_h);
+    u3_str str_u = {str_c, nam_u->str_u.len_h};
 
     itr_u = vt_insert(&sam_u->pit_u, str_u, ent_u);
 
@@ -1363,7 +1364,7 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
   arena scratch = res_u->are_u;
   u3_pit_addr* las_u = _mesa_lanes_to_addrs(dat_u->las, &scratch);
 
-  _mesa_send_bufs(dat_u->sam_u, NULL, dat_u->buf_y, dat_u->len_w, las_u);
+  _mesa_send_bufs(dat_u->sam_u, NULL, dat_u->buf_y, dat_u->len_h, las_u);
 
   if ( res_u->ret_y ) {
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
@@ -1377,13 +1378,14 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
 static void
 _mesa_hear(u3_mesa* sam_u,
            const struct sockaddr* adr_u,
-           c3_w     len_w,
+           c3_h     len_h,
            c3_y*    hun_y);
 
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
   c3_w len_w = u3r_met(3, pac);
+  u3_assert( UINT32_MAX >= len_w );
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
   u3r_bytes(0, len_w, buf_y, pac);
@@ -1392,7 +1394,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   memset(&pac_u, 0x11, sizeof(pac_u));
   c3_c* err_c = mesa_sift_pact_from_buf(&pac_u, buf_y, len_w);
   if ( err_c ) {
-    u3l_log("mesa: ef_send: sift failed: %u %s", len_w, err_c);
+    u3l_log("mesa: ef_send: sift failed: %" PRIc3_w " %s", len_w, err_c);
     u3z(pac);
     u3z(las);
     arena_free(&are_u);
@@ -1433,7 +1435,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       dat_u->nam_u = nam_u;
       dat_u->las   = u3k(las);
       dat_u->buf_y = buf_y;
-      dat_u->len_w = len_w;
+      dat_u->len_h = len_w;
     }
     {
       res_u->ret_y = 9;
@@ -1580,8 +1582,8 @@ _init_lane_state(u3_lane_state* sat_u)
 {
   sat_u->sen_d = 0;
   sat_u->her_d = 0;
-  sat_u->rtt_w = 1000000;
-  sat_u->rtv_w = 1000000;
+  sat_u->rtt_h = 1000000;
+  sat_u->rtv_h = 1000000;
 }
 
 static void
@@ -1598,7 +1600,7 @@ _init_peer(u3_mesa* sam_u, u3_peer* per_u)
 static u3_noun
 _name_to_jumbo_scry(u3_mesa_name* nam_u)
 {
-  u3_noun rif = _dire_etch_ud(nam_u->rif_w);
+  u3_noun rif = _dire_etch_ud(nam_u->rif_h);
   u3_noun boq = _dire_etch_ud(31); // XX make configurable
   u3_noun fag = _dire_etch_ud(0); // XX 1
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
@@ -1611,7 +1613,7 @@ _name_to_jumbo_scry(u3_mesa_name* nam_u)
 }
 
 
-static c3_w
+static c3_h
 _name_to_jumbo_str(u3_mesa_name* nam_u, c3_y* buf_y)
 {
   u3_mesa_name tmp_u = *nam_u;
@@ -1622,15 +1624,15 @@ _name_to_jumbo_str(u3_mesa_name* nam_u, c3_y* buf_y)
   u3_etcher ech_u;
   etcher_init(&ech_u, buf_y, PACT_SIZE);
   _mesa_etch_name(&ech_u, &tmp_u);
-  return ech_u.len_w;
+  return ech_u.len_h;
 }
 
 static u3_mesa_line*
 _mesa_get_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u)
 {
   c3_y buf_y[PACT_SIZE];
-  c3_w len_w = _name_to_jumbo_str(nam_u, buf_y);
-  u3_str str_u = {(c3_c*)buf_y, len_w};
+  c3_h len_h = _name_to_jumbo_str(nam_u, buf_y);
+  u3_str str_u = {(c3_c*)buf_y, len_h};
 
   jum_map_itr itr_u = vt_get(&sam_u->jum_u, str_u);
   if ( vt_is_end(itr_u) ) {
@@ -1644,8 +1646,8 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
 {
   c3_y* buf_y = c3_malloc(PACT_SIZE);
 
-  c3_w len_w = _name_to_jumbo_str(nam_u, buf_y);
-  u3_str str_u = {(c3_c*)buf_y, len_w};
+  c3_h len_h = _name_to_jumbo_str(nam_u, buf_y);
+  u3_str str_u = {(c3_c*)buf_y, len_h};
 
   // CTAG_BLOCK, CTAG_WAIT
   if ( lin_u > (u3_mesa_line*)2 ) {
@@ -1654,7 +1656,7 @@ _mesa_put_jumbo_cache(u3_mesa* sam_u, u3_mesa_name* nam_u, u3_mesa_line* lin_u)
       sam_u->jum_d = 0;
     }
 
-    sam_u->jum_d += lin_u->tob_d;
+    sam_u->jum_d += lin_u->tob_h;
   }
 
   jum_map_itr itr_u = vt_insert(&sam_u->jum_u, str_u, lin_u);
@@ -1671,8 +1673,8 @@ _mesa_send_pact_single(u3_mesa*      sam_u,
                        u3_mesa_pact* pac_u)
 {
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
-  _mesa_send_buf(sam_u, adr_u, buf_y, len_w);
+  c3_h len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
+  _mesa_send_buf(sam_u, adr_u, buf_y, len_h);
 }
 
 static void
@@ -1682,8 +1684,8 @@ _mesa_send_pact(u3_mesa*      sam_u,
                 u3_mesa_pact* pac_u)
 {
   c3_y* buf_y = c3_calloc(PACT_SIZE);
-  c3_w len_w = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
-  _mesa_send_bufs(sam_u, per_u, buf_y, len_w, las_u);
+  c3_h len_h = mesa_etch_pact_to_buf(buf_y, PACT_SIZE, pac_u);
+  _mesa_send_bufs(sam_u, per_u, buf_y, len_h, las_u);
 }
 
 static void
@@ -1699,9 +1701,9 @@ _mesa_send_leaf(u3_mesa*      sam_u,
 
   nam_u->fra_d = fra_d;
   c3_d i_d = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
-  c3_w cur_w = i_d * 1024;
-  dat_u->fra_y = lin_u->dat_y + cur_w;
-  dat_u->len_w = c3_min(lin_u->dat_w - cur_w, 1024);
+  c3_d cur_d = i_d * 1024;
+  dat_u->fra_y = lin_u->dat_y + cur_d;
+  dat_u->len_h = c3_min(lin_u->dat_h - cur_d, 1024);
 
   lss_pair* pair = ((lss_pair*)lin_u->haz_y) + i_d;
 
@@ -1728,24 +1730,24 @@ _mesa_send_piece(u3_mesa* sam_u, u3_mesa_line* lin_u, u3_mesa_name* nam_u, c3_d 
     hed_u->pro_y = 1;
     hed_u->typ_y = PACT_PAGE;
     hed_u->hop_y = 0;
-    //  mug_w varies by fragment
+    //  mug_h varies by fragment
   }
   pac_u.pag_u.nam_u = *nam_u;
 
   u3_mesa_data* dat_u = &pac_u.pag_u.dat_u;
   {
-    dat_u->tob_d = lin_u->tob_d;
+    dat_u->tob_d = lin_u->tob_h;
     dat_u->aut_u = lin_u->aut_u;
     //  aut_u, len_w, and fra_y vary by fragment
   }
 
   c3_d mev_d = mesa_num_leaves(dat_u->tob_d);
-  c3_w pro_w = lss_proof_size(mev_d);
+  c3_h pro_h = lss_proof_size(mev_d);
   if ( 0 == nam_u->fra_d && c3y == nam_u->nit_o ) {
-    if ( pro_w > 1 ) {
-      dat_u->len_w = pro_w * sizeof(lss_hash);
-      c3_y* pro_y = c3_malloc(dat_u->len_w);
-      memcpy(pro_y, lin_u->tip_y, dat_u->len_w);
+    if ( pro_h > 1 ) {
+      dat_u->len_h = pro_h * sizeof(lss_hash);
+      c3_y* pro_y = c3_malloc(dat_u->len_h);
+      memcpy(pro_y, lin_u->tip_y, dat_u->len_h);
       dat_u->fra_y = pro_y;
       _mesa_send_pact_single(sam_u, adr_u, &pac_u);
       c3_free(pro_y);
@@ -1813,29 +1815,34 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
+    //  every 32-bit frame size below (tip/dat/haz/len, tob) is bounded by
+    //  the whole-message byte count; enforce it fits to rule out truncation
+    //
+    u3_assert( UINT32_MAX >= dat_u->tob_d );
+
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
-    c3_w tip_w = // bytes in Merkle spine
+    c3_h tip_h = // bytes in Merkle spine
       (mev_d > 1 && jum_u.pag_u.nam_u.fra_d == 0)?
       lss_proof_size(mev_d) * sizeof(lss_hash):
       0;
-    c3_w dat_w = dat_u->len_w; // bytes in fragment data in this jumbo frame
-    c3_w lev_w = mesa_num_leaves(dat_w); // number of leaves in this frame
-    c3_w haz_w = lev_w * sizeof(lss_pair); // bytes in hash pairs
-    c3_w len_w = tip_w + dat_w + haz_w;
+    c3_h dat_h = dat_u->len_h; // bytes in fragment data in this jumbo frame
+    c3_h lev_h = mesa_num_leaves(dat_h); // number of leaves in this frame
+    c3_h haz_h = lev_h * sizeof(lss_pair); // bytes in hash pairs
+    c3_h len_h = tip_h + dat_h + haz_h;  //  bounded by tob_d (asserted above)
 
-    arena are_u = arena_create(sizeof(u3_mesa_line) + len_w + 2048);
+    arena are_u = arena_create(sizeof(u3_mesa_line) + len_h + 2048);
 
     lin_u = new(&are_u, u3_mesa_line, 1);
     lin_u->are_u = are_u;
     _mesa_copy_name(&lin_u->nam_u, &jum_u.pek_u.nam_u, &lin_u->are_u);
     lin_u->aut_u = dat_u->aut_u;
-    lin_u->tob_d = dat_u->tob_d;
-    lin_u->dat_w = dat_w;
-    lin_u->len_w = len_w;
-    lin_u->tip_y = new(&lin_u->are_u, c3_y, len_w);
-    lin_u->dat_y = lin_u->tip_y + tip_w;
-    lin_u->haz_y = lin_u->dat_y + dat_w;
-    memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_w);
+    lin_u->tob_h = dat_u->tob_d;
+    lin_u->dat_h = dat_h;
+    lin_u->len_h = len_h;
+    lin_u->tip_y = new(&lin_u->are_u, c3_y, len_h);
+    lin_u->dat_y = lin_u->tip_y + tip_h;
+    lin_u->haz_y = lin_u->dat_y + dat_h;
+    memcpy(lin_u->dat_y, dat_u->fra_y, dat_u->len_h);
 
     c3_y* haz_y = lin_u->haz_y;
     while ( pas != u3_nul ) {
@@ -1844,7 +1851,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       pas = u3t(pas);
     }
 
-    u3r_bytes(0, tip_w, lin_u->tip_y, pof);
+    u3r_bytes(0, tip_h, lin_u->tip_y, pof);
     c3_free(jumbo_y);
 
   }
@@ -1871,7 +1878,7 @@ _mesa_hear_bail(u3_ovum* egg_u, u3_noun lud)
 {
   u3l_log("mesa: hear bail");
   c3_w len_w = u3qb_lent(lud);
-  u3l_log("len_w: %i", len_w);
+  u3l_log("len_w: %" PRIc3_w, len_w);
   if( len_w == 2 ) {
     u3_pier_punt_goof("hear", u3k(u3h(lud)));
     u3_pier_punt_goof("crud", u3k(u3h(u3t(lud))));
@@ -1988,23 +1995,23 @@ _mesa_request_next_fragments(u3_mesa* sam_u,
 
   lan_u.sin_addr.s_addr = ( u3_Host.ops_u.net == c3y ) ? lan_u.sin_addr.s_addr : htonl(0x7f000001);
 
-  c3_w win_w = _mesa_req_get_cwnd(req_u);
+  c3_d win_d = _mesa_req_get_cwnd(req_u);
   u3_mesa_pict* nex_u = req_u->pic_u;
-  c3_w nex_d = req_u->nex_d;
+  c3_d nex_d = req_u->nex_d;
   c3_d now_d = _get_now_micros();
-  for ( c3_w i = 0; i < win_w; i++ ) {
-    c3_w fra_w = nex_d + i;
-    if ( fra_w >= req_u->tof_d ) {
+  for ( c3_d i = 0; i < win_d; i++ ) {
+    c3_d fra_d = nex_d + i;
+    if ( fra_d >= req_u->tof_d ) {
       break;
     }
-    nex_u->pac_u.pek_u.nam_u.fra_d = fra_w;
-    uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, nex_d+i, req_u->pek_w);
+    nex_u->pac_u.pek_u.nam_u.fra_d = fra_d;
+    uv_buf_t buf_u = _mesa_peek_buf(req_u->pek_c, nex_d+i, req_u->pek_h);
     if (buf_u.base < req_u->pek_c) {
-        u3l_log("peek overflow, dying, fragment %u", nex_d+i);
+        u3l_log("peek overflow, dying, fragment %" PRIc3_d, nex_d+i);
         abort();
     }
     mesa_etch_pact_to_buf((c3_y*)buf_u.base, buf_u.len, &nex_u->pac_u);
-    _mesa_req_pact_sent(req_u, fra_w, now_d);
+    _mesa_req_pact_sent(req_u, fra_d, now_d);
 
     _mesa_send_modal(req_u->per_u, buf_u, NULL);
   }
@@ -2054,13 +2061,13 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   exa_u.pek_u.nam_u.fra_d = 0;
   exa_u.pek_u.nam_u.nit_o = c3n;
   exa_u.pek_u.nam_u.aut_o = c3n;
-  c3_w pek_w = mesa_size_pact(&exa_u);
+  c3_h pek_h = mesa_size_pact(&exa_u);
   c3_d tof_d = mesa_num_leaves(dat_u->tob_d);
-  c3_w pof_w = lss_proof_size(tof_d);
-  c3_w pairs_w = c3_bits_word(pof_w);
+  c3_d pof_d = lss_proof_size(tof_d);
+  c3_d pairs_d = c3_bits_chub(pof_d);
   c3_d pek_d = dat_u->tob_d;
 
-  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+  if ( dat_u->len_h != pof_d*sizeof(lss_hash) ) {
     return; // TODO: handle like other auth failures
   }
 
@@ -2099,16 +2106,16 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   req_u->old_d = 0;
   req_u->ack_d = 0;
 
-  lss_hash* pof_u = new(&req_u->are_u, lss_hash, pof_w);
-  for ( int i = 0; i < pof_w; i++ ) {
+  lss_hash* pof_u = new(&req_u->are_u, lss_hash, pof_d);
+  for ( int i = 0; i < pof_d; i++ ) {
     memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
   }
   lss_hash root;
-  lss_root(root, pof_u, pof_w);
+  lss_root(root, pof_u, pof_d);
   req_u->los_u = new(&req_u->are_u, lss_verifier, 1);
   lss_verifier_init(req_u->los_u, 0, req_u->tof_d, pof_u, &req_u->are_u);
 
-  req_u->pek_w = pek_w;
+  req_u->pek_h = pek_h;
   req_u->pek_d = pek_d;
   req_u->pek_c = new(&req_u->are_u, c3_c, pek_d);
 
@@ -2134,7 +2141,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   u3_noun her = u3dc("scot", c3__p, u3_ship_to_noun(nam_u->her_u));
   u3_noun rut = u3dc("scot", c3__uv, u3i_bytes(32, root));
   u3_noun pax = _mesa_encode_path(nam_u->pat_s, (c3_y*)nam_u->pat_c);
-  u3_noun sky = u3i_list(typ, her, aut, rut, pax, u3_none);
+  u3_noun sky = u3i_list(typ, her, aut, rut, pax);
   u3_mesa_cb_data* ver_u = c3_malloc(sizeof(u3_mesa_cb_data));
   ver_u->sam_u = sam_u;
   ver_u->nam_u = req_u->pic_u->pac_u.pek_u.nam_u;
@@ -2156,9 +2163,9 @@ _mesa_page_bail_cb(u3_ovum* egg_u, u3_ovum_news new_e)
 static void
 _mesa_add_hop(c3_y hop_y, u3_mesa_head* hed_u, u3_mesa_page_pact* pag_u, sockaddr_in lan_u)
 {
-  c3_w pip_w = ntohl(lan_u.sin_addr.s_addr);
+  c3_h pip_h = ntohl(lan_u.sin_addr.s_addr);
   c3_s por_s = ntohs(lan_u.sin_port);
-  c3_etch_word(pag_u->sot_u, pip_w);
+  c3_etch_half(pag_u->sot_u, pip_h);
   c3_etch_short(pag_u->sot_u + 4, por_s);
   hed_u->nex_y = HOP_SHORT;
 }
@@ -2245,7 +2252,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     #endif
 
     inc_hopcount(&pac_u->hed_u);
-    c3_etch_word(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
+    c3_etch_half(pac_u->pag_u.sot_u, ntohl(lan_u.sin_addr.s_addr));
     c3_etch_short(pac_u->pag_u.sot_u + 4, ntohs(lan_u.sin_port));
 
     //  stick next hop in packet
@@ -2307,7 +2314,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   sockaddr_in lon_u = {0};
   if ( HOP_SHORT == pac_u->hed_u.nex_y ) {
     lon_u.sin_family = AF_INET;
-    lon_u.sin_addr.s_addr = htonl(c3_sift_word(pac_u->pag_u.sot_u));
+    lon_u.sin_addr.s_addr = htonl(c3_sift_half(pac_u->pag_u.sot_u));
     lon_u.sin_port = htons(c3_sift_short(pac_u->pag_u.sot_u + 4));
   }
   else {
@@ -2334,13 +2341,13 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
         pac_u->pag_u.nam_u.boq_y = boq_y;
         pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
         pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
-        pac_u->pag_u.dat_u.len_w = req_u->tob_d;
+        pac_u->pag_u.dat_u.len_h = req_u->tob_d;
         pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
         pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
         c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
-        c3_w res_w = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
-        pac = u3i_bytes(res_w, buf_y);
+        c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
+        pac = u3i_bytes(res_h, buf_y);
         c3_free(buf_y);
       }
       cad = u3nt(c3__heer, lan, pac);
@@ -2490,30 +2497,30 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 void
 _ames_hear(void*    sam_u,
            const struct sockaddr* adr_u,
-           c3_w     len_w,
+           c3_h     len_h,
            c3_y*    hun_y);
 
 static void
 _mesa_hear(u3_mesa* sam_u,
            const struct sockaddr* adr_u,
-           c3_w     len_w,
+           c3_h     len_h,
            c3_y*    hun_y)
 {
-  if ( c3n == mesa_is_new_pact(hun_y, len_w) ) {
-    c3_y* han_y = c3_malloc(len_w);
-    memcpy(han_y, hun_y, len_w);
-    _ames_hear(u3_Host.sam_u, adr_u, len_w, han_y);
+  if ( c3n == mesa_is_new_pact(hun_y, len_h) ) {
+    c3_y* han_y = c3_malloc(len_h);
+    memcpy(han_y, hun_y, len_h);
+    _ames_hear(u3_Host.sam_u, adr_u, len_h, han_y);
     return;
   }
 
-  if ( len_w > PACT_SIZE ) {
+  if ( len_h > PACT_SIZE ) {
     u3l_log("mesa: packet too large");
     return;
   }
 
   u3_mesa_pict* pic_u = new(&sam_u->are_u, u3_mesa_pict, 1);
   pic_u->sam_u = sam_u;
-  c3_c* err_c = mesa_sift_pact_from_buf(&pic_u->pac_u, hun_y, len_w);
+  c3_c* err_c = mesa_sift_pact_from_buf(&pic_u->pac_u, hun_y, len_h);
   if ( err_c ) {
     u3l_log("mesa: hear: sift failed: %s", err_c);
     return;
@@ -2542,19 +2549,22 @@ static void _mesa_recv_cb(uv_udp_t*        wax_u,
 {
   u3_mesa* sam_u = (u3_mesa*)wax_u->data;
   if ( 0 > nrd_i ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mesa: recv: fail: %s", uv_strerror(nrd_i));
     }
   }
   else if ( 0 == nrd_i ) {
   }
   else if ( flg_i & UV_UDP_PARTIAL ) {
-    if ( u3C.wag_w & u3o_verbose ) {
+    if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mesa: recv: fail: message truncated");
     }
   }
   else {
-    _mesa_hear(wax_u->data, adr_u, (c3_w)nrd_i, (c3_y*)buf_u->base);
+    //  NB: [nrd_i] will never exceed max datagram length from the alloc cb
+    //
+    u3_assert( UINT32_MAX >= (c3_d)nrd_i );
+    _mesa_hear(wax_u->data, adr_u, (c3_h)nrd_i, (c3_y*)buf_u->base);
   }
 }
 
@@ -2564,7 +2574,7 @@ _mesa_io_talk(u3_auto* car_u)
   u3_mesa* sam_u = (u3_mesa*)car_u;
   sam_u->dns_c = "urbit.org"; // TODO: receive turf
   {
-    //  XX remove [sev_l]
+    //  XX remove [sev_m]
     //
     u3_noun wir = u3nc(c3__ames, u3_nul);
     u3_noun cad = u3nc(c3__born, u3_nul);

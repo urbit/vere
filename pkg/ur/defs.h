@@ -25,6 +25,11 @@ typedef uint8_t  ur_bool_t;
 #define ur_fib34     5702887
 
 /*
+**  ur direct max
+*/
+#define ur_direct_max  0x3fffffffffffffffULL
+
+/*
 **  bit-masking helpers
 */
 #define ur_mask_3(a)   (a & 0x7)

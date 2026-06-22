@@ -37,6 +37,8 @@ jobs:
   urbit:
     strategy:
       fail-fast: false
+      matrix:
+        bits: [64, 32]
 
     runs-on: ubuntu-22.04
 
@@ -72,22 +74,36 @@ jobs:
           swapon --show
           echo
 
+      - name: Set memory overcommit
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+          echo "vm.overcommit_memory=1" | sudo tee -a /etc/sysctl.conf
+          sysctl vm.overcommit_memory
+
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
 
       - name: Build binaries
         run: |
+          # Add -Dvere64 flag for 64-bit builds
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
           if [[ "${{ inputs.pace }}" == "live" ]]; then
             zig build                  \
               -Dall                    \
               -Drelease                \
+              $VERE64_FLAG             \
               --summary all
           else
             zig build                  \
               -Dall                    \
               -Doptimize=ReleaseFast   \
               -Dpace=${{inputs.pace}}  \
+              $VERE64_FLAG             \
               --summary all
           fi
       - name: Run unit tests
@@ -100,6 +116,7 @@ jobs:
             pact-test equality-test    \
             boot-test newt-test        \
             vere-noun-test unix-test   \
+            palloc-test events-test    \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
@@ -108,6 +125,12 @@ jobs:
       - name: Build test binary
         if: ${{ inputs.fake_tests }}
         run: |
+          # Add -Dvere64 flag for 64-bit builds
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
           zig build                    \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
@@ -117,6 +140,7 @@ jobs:
             -Dc3dbg                    \
             -Dsnapshot-validation      \
             -Durth-mass                \
+            $VERE64_FLAG               \
             --summary all
 
       - name: Boot fake ship
@@ -149,13 +173,30 @@ jobs:
         if: ${{ inputs.upload }}
         run: |
           sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
-          declare -a targets=(
-            "aarch64-linux-musl linux-aarch64"
-            "aarch64-macos-none macos-aarch64"
-            "x86_64-linux-musl linux-x86_64"
-            "x86_64-macos-none macos-x86_64"
-            "x86_64-windows-gnu windows-x86_64"
+
+          # Define all targets with bits field
+          declare -a all_targets=(
+            "aarch64-linux-musl linux-aarch64 64"
+            "aarch64-macos-none macos-aarch64 64"
+            "x86_64-linux-musl linux-x86_64 64"
+            "x86_64-macos-none macos-x86_64 64"
+            "x86_64-windows-gnu windows-x86_64 64"
+            "aarch64-linux-musl linux-aarch64 32"
+            "aarch64-macos-none macos-aarch64 32"
+            "x86_64-linux-musl linux-x86_64 32"
+            "x86_64-macos-none macos-x86_64 32"
+            "x86_64-windows-gnu windows-x86_64 32"
           )
+
+          # Filter targets based on matrix.bits
+          declare -a targets=()
+          for t in "${all_targets[@]}"; do
+            IFS=' ' read zig_target target bits_flag <<< "${t}"
+            if [[ "$bits_flag" == "${{ matrix.bits }}" ]]; then
+              targets+=("$zig_target $target")
+            fi
+          done
+
           for t in "${targets[@]}"
           do
             IFS=' ' read zig_target target <<< "${t}"
@@ -164,11 +205,19 @@ jobs:
             else
               urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
             fi
+
+            # Determine binary prefix (vere32 or vere64)
+            if [[ "${{ matrix.bits }}" == "32" ]]; then
+              binary_prefix="vere32"
+            else
+              binary_prefix="vere64"
+            fi
+
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
-              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
+              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
             else
-              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
+              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
             fi
 
             args=""
@@ -185,6 +234,77 @@ jobs:
             ([ $exitcode -eq 0 ] && echo "upload to $dest complete.") ||
             (echo "upload to $dest failed." && exit $exitcode);
           done
+
+  migration-test:
+    name: Migration roundtrip tests
+    runs-on: ubuntu-22.04
+    needs: [urbit]
+    if: ${{ inputs.fake_tests }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Set swap space
+        run: |
+          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+          if test -z "${SWAP_FILE}"; then
+              export SWAP_FILE=/swapfile
+          else
+              sudo swapoff -a
+              sudo rm "${SWAP_FILE}"
+          fi
+          sudo fallocate -l 10G "${SWAP_FILE}"
+          sudo chmod 600 "${SWAP_FILE}"
+          sudo mkswap "${SWAP_FILE}"
+          sudo swapon "${SWAP_FILE}"
+
+      - name: Set memory overcommit
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build 64-bit migration binary
+        run: |
+          zig build                           \
+            -Dvere64                          \
+            -Doptimize=ReleaseFast            \
+            -Dpace=${{inputs.pace}}           \
+            -Dbinary-name=vere-migration     \
+            --summary all
+
+      - name: Build 32-bit migration binary
+        run: |
+          zig build                           \
+            -Doptimize=ReleaseFast            \
+            -Dpace=${{inputs.pace}}           \
+            -Dbinary-name=vere32-migration   \
+            --summary all
+
+      - name: Run 32↔64 roundtrip migration test
+        env:
+          VERE64_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
+          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./migration-test.sh
+
+      - name: Run legacy v1–v4 migration tests
+        env:
+          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./tests/fixtures/test-legacy.sh
+
+      - name: Run yolo-replay tests (32-bit)
+        env:
+          VERE_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+        run: ./tests/fixtures/test-yolo-replay.sh
+
+      - name: Run yolo-replay tests (64-bit)
+        env:
+          VERE_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
+        run: ./tests/fixtures/test-yolo-replay.sh
 
   upload-version-string:
     name: Upload latest deployed version string to GCP

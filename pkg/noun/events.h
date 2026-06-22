@@ -13,14 +13,14 @@
     */
       typedef struct _u3e_line {
         c3_w pag_w;
-        c3_w has_w;
+        c3_h has_h;
       } u3e_line;
 
     /* u3e_control: memory change, control file.
     */
       typedef struct _u3e_control {
-        u3e_version ver_w;                  //  version number
-        c3_w        has_w;                  //  control checksum
+        u3e_version ver_h;                  //  version number
+        c3_h        has_h;                  //  control checksum
         c3_w        tot_w;                  //  new page count
         c3_w        pgs_w;                  //  number of changed pages
         u3e_line    mem_u[];                //  per page
@@ -48,7 +48,7 @@
       typedef struct _u3e_pool {
         c3_c*     dir_c;                     //  path to
         c3_i      eph_i;                     //  ephemeral file descriptor
-        c3_w      dit_w[u3a_pages >> 5];     //  touched since last save
+        c3_d*     dit_d;                     //  touched since last save
         c3_w      pag_w;                     //  number of pages (<= u3a_pages)
         c3_w      gar_w;                     //  guard page
         u3e_image img_u;                     //  image
@@ -126,6 +126,6 @@
       u3e_ward(u3_post low_p, u3_post hig_p);
 
       c3_i
-      u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z);
+      u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i);
 
 #endif /* ifndef U3_EVENTS_H */

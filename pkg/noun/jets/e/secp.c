@@ -38,10 +38,14 @@ static c3_t
 _cqes_in_order(u3_atom a)
 {
   // this is the "n" parameter of the secp256k1 curve
-  static const c3_w now_w[8] = {
+  static const c3_h now_h[8] __attribute__((aligned(alignof(c3_w)))) = {
     0xd0364141, 0xbfd25e8c, 0xaf48a03b, 0xbaaedce6,
     0xfffffffe, 0xffffffff, 0xffffffff, 0xffffffff
   };
+  static_assert(0 == sizeof(c3_w) % sizeof(c3_h));
+  
+  static const c3_w* now_w = (c3_w*)now_h;
+  static const c3_z now_z = sizeof(now_h) / (sizeof(c3_w));
 
   if ( 0 == a ) {
     return 0;
@@ -51,19 +55,20 @@ _cqes_in_order(u3_atom a)
   }
   else {
     u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w len_w = a_u->len_w;
+    c3_w len_w = a_u->len_w * sizeof(c3_w);
 
-    if ( len_w < 8 ) {
+    if ( len_w < 32 ) {
       return 1;
     }
-    else if ( len_w > 8 ) {
+    else if ( len_w > 32 ) {
       return 0;
     }
     else {
       c3_y i_y;
+      // assumes little endian in 64 bit
       c3_w *buf_w = a_u->buf_w;
       // loop from most to least significant words
-      for ( i_y = 8; i_y--; ) {
+      for ( i_y = now_z; i_y--; ) {
         c3_w b_w = buf_w[i_y],
              o_w = now_w[i_y];
         if ( b_w < o_w ) {
@@ -117,9 +122,8 @@ u3we_sign(u3_noun cor)
   u3_noun has, prv;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &has,
-                        u3x_sam_3,  &prv,
-                        0)) ||
+                        {u3x_sam_2,  &has},
+                        {u3x_sam_3,  &prv})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv))) {
     return u3m_bail(c3__exit);
@@ -159,11 +163,10 @@ u3we_reco(u3_noun cor)
     siv, sir, sis;  /* signature: v, r, s */
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,   &has,
-                        u3x_sam_6,   &siv,
-                        u3x_sam_14,  &sir,
-                        u3x_sam_15,  &sis,
-                        0)) ||
+                        {u3x_sam_2,   &has},
+                        {u3x_sam_6,   &siv},
+                        {u3x_sam_14,  &sir},
+                        {u3x_sam_15,  &sis})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(siv)) ||
        (c3n == u3ud(sir)) ||
@@ -198,9 +201,8 @@ u3we_make(u3_noun cor)
 {
   u3_noun has, prv;
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &has,
-                        u3x_sam_3,  &prv,
-                        0)) ||
+                        {u3x_sam_2,  &has},
+                        {u3x_sam_3,  &prv})) ||
        (c3n == u3ud(has)) ||
        (c3n == u3ud(prv)) ) {
     return u3m_bail(c3__exit);
@@ -241,10 +243,9 @@ u3we_sosi(u3_noun cor)
   u3_noun key, mes, aux;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &key,
-                        u3x_sam_6,  &mes,
-                        u3x_sam_7,  &aux,
-                        0)) ||
+                        {u3x_sam_2,  &key},
+                        {u3x_sam_6,  &mes},
+                        {u3x_sam_7,  &aux})) ||
        (c3n == u3ud(key)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(aux)) )
@@ -282,10 +283,9 @@ u3we_sove(u3_noun cor)
   u3_noun pub, mes, sig;
 
   if ( (c3n == u3r_mean(cor,
-                        u3x_sam_2,  &pub,
-                        u3x_sam_6,  &mes,
-                        u3x_sam_7,  &sig,
-                        0)) ||
+                        {u3x_sam_2,  &pub},
+                        {u3x_sam_6,  &mes},
+                        {u3x_sam_7,  &sig})) ||
        (c3n == u3ud(pub)) ||
        (c3n == u3ud(mes)) ||
        (c3n == u3ud(sig)) )

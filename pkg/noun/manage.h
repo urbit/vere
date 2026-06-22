@@ -11,7 +11,7 @@
 #include "version.h"
 #include "rsignal.h"
 
-extern c3_w u3m_Ford_fresh_road_depth_w;
+extern c3_h u3m_Ford_fresh_road_depth_h;
 
     /** System management.
     **/
@@ -49,7 +49,8 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
       **    %oops               ::  assertion failure
       */
         c3_i
-        u3m_bail(c3_m how_m) __attribute__((noreturn));
+        //u3m_bail(c3_m how_m) __attribute__((noreturn));
+        u3m_bail(u3_noun how_m) __attribute__((noreturn));
 
       /* u3m_fault(): handle a memory event with libsigsegv protocol.
       */
@@ -94,7 +95,7 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
-        u3m_signal(u3_noun sig_l);
+        u3m_signal(c3_m sig_m);
 
       /* u3m_file(): load file, as atom, or bail.
       */
@@ -176,7 +177,12 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */
         void
-        u3m_grab(u3_noun som, ...);   // terminate with u3_none
+        u3m_vgrab(u3_noun* som, c3_z len_z);
+
+#       define u3m_grab(...) ({                               \
+          u3_noun _args[] = {__VA_ARGS__};                    \
+          u3m_vgrab(_args, sizeof(_args) / sizeof(u3_noun));  \
+          })
 
       /* u3m_water(): produce high and low watermarks.  Asserts u3R == u3H.
       */

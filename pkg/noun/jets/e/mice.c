@@ -11,9 +11,8 @@ u3_noun
 u3we_mice(u3_noun cor) {
   u3_noun bus, fol;
 
-  if ( c3n == u3r_mean(cor, u3x_sam_2, &bus,
-                            u3x_sam_3, &fol,
-                            0) )
+  if ( c3n == u3r_mean(cor, {u3x_sam_2, &bus},
+                            {u3x_sam_3, &fol}) )
   {
     return u3m_bail(c3__exit);
   }

@@ -9,8 +9,8 @@
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
   if (c3n == u3r_mean(octs,
-             2, p_octs,
-             3, q_octs, 0)){
+             {2, p_octs},
+             {3, q_octs})){
     u3m_bail(c3__exit);
   }
 
@@ -121,7 +121,7 @@ u3we_adler32(u3_noun cor)
 {
   u3_noun octs;
 
-  u3x_mean(cor, u3x_sam, &octs, 0);
+  u3x_mean(cor, {u3x_sam, &octs});
 
   return _qe_adler32(octs);
 }

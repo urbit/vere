@@ -28,7 +28,7 @@ _test_nock_meme(void)
   };
   u3_noun fol = u3s_cue_bytes(sizeof(buf_y), buf_y);
   u3_noun gon;
-  c3_w    i_w;
+  c3_h    i_w;
   c3_i  ret_i = 1;
 
   for ( i_w = 0; i_w < 3; i_w++ ) {
@@ -76,7 +76,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "test meme: ok\r\n");
   return 0;

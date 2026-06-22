@@ -6,11 +6,13 @@
 #include "noun.h"
 
 
-static_assert( (UINT32_MAX > u3a_cells),
+//  c3_w must be able to represent all possible list lengths
+//
+static_assert( (c3_w_max > u3a_cells),
                "length precision" );
 
 static_assert(
-  (UINT32_MAX < (SIZE_MAX / (3 * sizeof(u3_noun)))),
+  (u3a_cells < (SIZE_MAX / (3 * sizeof(u3_noun)))),
   "allocation size overflow"
 );
 
@@ -106,7 +108,7 @@ u3wb_sort(u3_noun cor)
 {
   u3_noun a, b;
 
-  if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) )
+  if ( c3n == u3r_mean(cor, {u3x_sam_2, &a}, {u3x_sam_3, &b}) )
   {
     return u3m_bail(c3__exit);
   }

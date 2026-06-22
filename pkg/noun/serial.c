@@ -96,7 +96,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     {
       c3_w met_w = a_w + (2 * b_w);
 
-      if ( a_w > (UINT32_MAX - 64) ) {
+      if ( a_w > (c3_w_max - 64) ) {
         u3m_bail(c3__fail);
         return;
       }
@@ -106,17 +106,27 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     }
 
     {
+#ifndef VERE64
       c3_w  src_w[2];
+#else
+      c3_w  src_w[1];
+#endif
+
       c3_w* buf_w = fib_u->sab_u->buf_w;
 
       //  _cs_jam_fib_chop(fib_u, b_w+1, 1 << b_w);
       //
       {
+#ifndef VERE64
         c3_d dat_d = (c3_d)1 << b_w;
         src_w[0]   = (c3_w)dat_d;
         src_w[1]   = dat_d >> 32;
-
         u3r_chop_words(0, 0, b_w + 1, bit_w, buf_w, 2, src_w);
+#else
+        src_w[0] = (c3_d)1 << b_w;
+        u3r_chop_words(0, 0, b_w + 1, bit_w, buf_w, 1, src_w);
+#endif
+
         bit_w += b_w + 1;
       }
 
@@ -230,7 +240,7 @@ typedef struct _jam_xeno_s {
 static inline u3_atom
 _cs_coin_chub(c3_d a_d)
 {
-  return ( 0x7fffffffULL >= a_d ) ? a_d : u3i_chubs(1, &a_d);
+  return ( ((c3_d)u3a_direct_max) >= a_d ) ? a_d : u3i_chubs(1, &a_d);
 }
 
 /* _cs_jam_xeno_atom(): encode in/direct atom in bitstream.
@@ -495,7 +505,7 @@ typedef struct _cue_frame_s {
 static inline ur_cue_res_e
 _cs_cue_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
-                  ur_dict32_t* dic_u,
+                  ur_dictn_t* dic_u,
                   u3_noun*       out)
 {
   ur_root_t* rot_u = 0;
@@ -524,6 +534,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
         if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
           return res_e;
         }
+        //  XX: not 63?
         else if ( 62 < len_d ) {
           return ur_cue_meme;
         }
@@ -531,7 +542,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           c3_d bak_d = ur_bsr64_any(red_u, len_d);
           c3_w bak_w;
 
-          if ( !ur_dict32_get(rot_u, dic_u, bak_d, &bak_w) ) {
+          if ( !ur_dictn_get(rot_u, dic_u, bak_d, &bak_w) ) {
             return ur_cue_back;
           }
 
@@ -545,14 +556,14 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           return res_e;
         }
 
-        if ( 31 >= len_d ) {
-          *out = (u3_noun)ur_bsr32_any(red_u, len_d);
+        if ( (u3a_word_bits-1) >= len_d ) {
+          *out = (u3_noun)ur_bsrn_any(red_u, len_d);
         }
         else {
           c3_d     byt_d = (len_d + 0x7) >> 3;
           u3i_slab sab_u;
 
-          if ( 0xffffffffULL < byt_d) {
+          if ( c3_w_max < byt_d) {
             return ur_cue_meme;
           }
           else {
@@ -562,7 +573,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
           }
         }
 
-        ur_dict32_put(rot_u, dic_u, bit_d, *out);
+        ur_dictn_put(rot_u, dic_u, bit_d, *out);
         return ur_cue_good;
       }
     }
@@ -570,7 +581,7 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
 }
 
 struct _u3_cue_xeno {
-  ur_dict32_t dic_u;
+  ur_dictn_t dic_u;
 };
 
 /* _cs_cue_xeno(): cue on-loom, with off-loom dictionary in handle.
@@ -581,7 +592,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
              const c3_y*  byt_y)
 {
   ur_bsr_t      red_u = {0};
-  ur_dict32_t*  dic_u = &sil_u->dic_u;
+  ur_dictn_t*  dic_u = &sil_u->dic_u;
   u3a_pile      pil_u;
   _cue_frame_t* fam_u;
   ur_cue_res_e  res_e;
@@ -598,6 +609,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
   }
   //  bit-cursor (and backreferences) must fit in 62-bit direct atoms
   //
+  //  XX: not 63?
   else if ( 0x7ffffffffffffffULL < len_d ) {
     return c3n;
   }
@@ -627,7 +639,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
         ur_root_t* rot_u = 0;
 
         ref   = u3nc(fam_u->ref, ref);
-        ur_dict32_put(rot_u, dic_u, fam_u->bit_d, ref);
+        ur_dictn_put(rot_u, dic_u, fam_u->bit_d, ref);
         fam_u = u3a_pop(&pil_u);
       }
     }
@@ -661,7 +673,7 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
   u3_cue_xeno* sil_u;
 
   sil_u = c3_calloc(sizeof(*sil_u));
-  ur_dict32_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
+  ur_dictn_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
 
   return sil_u;
 }
@@ -686,7 +698,7 @@ u3s_cue_xeno_with(u3_cue_xeno* sil_u,
   u3_assert( &(u3H->rod_u) == u3R );
 
   som = _cs_cue_xeno(sil_u, len_d, byt_y);
-  ur_dict32_wipe(&sil_u->dic_u);
+  ur_dictn_wipe(&sil_u->dic_u);
   return som;
 }
 
@@ -779,6 +791,7 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
       case ur_jam_back: {
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
 
+        //  XX: not 63?
         if ( 62 < len_d ) {
           return u3m_bail(c3__meme);
         }
@@ -794,8 +807,8 @@ _cs_cue_bytes_next(u3a_pile*     pil_u,
 
         _cs_cue_need(ur_bsr_rub_len(red_u, &len_d));
 
-        if ( 31 >= len_d ) {
-          vat = (u3_noun)ur_bsr32_any(red_u, len_d);
+        if ( (u3a_word_bits-1) >= len_d ) {
+          vat = (u3_noun)ur_bsrn_any(red_u, len_d);
         }
         else {
           u3i_slab sab_u;
@@ -835,7 +848,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
   _cs_cue_need(ur_bsr_init(&red_u, len_d, byt_y));
 
   //  bit-cursor (and backreferences) must fit in 62-bit direct atoms
-  //
+  //  XX: not 63?
   if ( 0x7ffffffffffffffULL < len_d ) {
     return u3m_bail(c3__meme);
   }
@@ -1152,6 +1165,7 @@ _cs_etch_uv_size(u3_atom a, c3_w* out_w)
   c3_w end_w = 0;
   u3r_chop(0, max_w, 25, 0, &end_w, a);
 
+  // XX: 64 what do 
   c3_w bit_w = c3_bits_word(end_w);
   c3_w las_w = _divc_nz(bit_w, 5);       //  digits before separator
 
@@ -1246,6 +1260,7 @@ _cs_etch_uw_size(u3_atom a, c3_w* out_w)
   c3_w end_w = 0;
   u3r_chop(0, max_w, 30, 0, &end_w, a);
 
+  // XX: 64 what do
   c3_w bit_w = c3_bits_word(end_w);
   c3_w las_w = _divc_nz(bit_w, 6);       //  digits before separator
 
@@ -1402,8 +1417,8 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
     //
     mpz_t a_mp;
     {
-      c3_d bit_d = (c3_d)(len_w / 4) * 10;
-      mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
+      c3_d bit_d = (c3_d)(len_w / sizeof(c3_w)) * 10;
+      mpz_init2(a_mp, (c3_w)c3_min(bit_d, c3_w_max));
       mpz_set_ui(a_mp, val_s);
     }
 

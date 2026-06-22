@@ -10,24 +10,23 @@
 
   /**  Data structures.
   **/
-    /* u3v_arvo: modern arvo structure.
+    /* u3v_arvo_{h,d}, u3v_home_{h,d}: 32- and 64-bit image-state
+    ** layouts.  u3v_arvo / u3v_home typedef-alias matching bitness.
+    ** u3v_home: NB version must be first for ease of migration.
     */
-      typedef struct _u3v_arvo {
-        c3_d  eve_d;                      //  event number
-        u3_noun roc;                      //  kernel core
-        u3_noun yot;                      //  cached gates
-      } u3v_arvo;
+#define U3V_ARVO_BODY(S)              \
+  c3_d    eve_d;                      \
+  U3_N(S) roc;                        \
+  U3_N(S) yot;
 
-    /* u3v_home: all internal (within image) state.
-    **       NB: version must first for ease of migration.
-    */
-      typedef struct _u3v_home {
-        u3v_version ver_d;                //  version number
-        c3_d        pam_d;                //  parameters
-        u3v_arvo    arv_u;                //  arvo state
-        u3a_road    rod_u;                //  storage state
-      } u3v_home;
+#define U3V_HOME_BODY(S)              \
+  u3v_version           ver_d;        \
+  c3_d                  pam_d;        \
+  U3_PASTE(u3v_arvo, S) arv_u;        \
+  U3_PASTE(u3a_road, S) rod_u;
 
+      U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
+      U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);
 
   /**  Globals.
   **/
@@ -35,6 +34,17 @@
       extern u3v_home* u3v_Home;
 #       define u3H  u3v_Home
 #       define u3A  (&(u3v_Home->arv_u))
+
+      extern u3v_home_h* u3v_Home_h;
+      extern u3v_home_d* u3v_Home_d;
+      extern u3a_road_h* u3a_Road_h;
+      extern u3a_road_d* u3a_Road_d;
+#       define u3H_h  u3v_Home_h
+#       define u3R_h  u3a_Road_h
+#       define u3A_h  (&(u3v_Home_h->arv_u))
+#       define u3H_d  u3v_Home_d
+#       define u3R_d  u3a_Road_d
+#       define u3A_d  (&(u3v_Home_d->arv_u))
 
   /**  Functions.
   **/
@@ -53,10 +63,10 @@
       c3_o
       u3v_boot_lite(u3_noun lit);
 
-    /* u3v_wish_n(): text expression with cache.
+    /* u3v_wish_w(): text expression with cache.
     */
       u3_noun
-      u3v_wish_n(const u3_noun txt);
+      u3v_wish_w(const u3_noun txt);
 
     /* u3v_do(): use a kernel function.
     */
