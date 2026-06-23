@@ -122,13 +122,13 @@ _cj_bash(u3_noun bat)
     }
     else {
       u3i_slab sab_u;
-      c3_w     bit_w = u3s_jam_fib(&sab_u, bat);
-      c3_w     met_w = (bit_w + 0x7) >> 3;
+      c3_d     bit_d = u3s_jam_fib(&sab_u, bat);
+      c3_d     met_d = (bit_d + 0x7) >> 3;
       //  XX assumes little-endian
       //
       c3_y*    fat_y = sab_u.buf_y;
       c3_y     dig_y[32];
-      urcrypt_shay(fat_y, met_w, dig_y);
+      urcrypt_shay(fat_y, met_d, dig_y);
 
       pro = u3i_bytes(32, dig_y);
       u3h_put(u3R->jed.bas_p, bat, u3k(pro));
