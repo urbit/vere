@@ -75,26 +75,32 @@
     }
     else {
       u3_atom ret;
-      c3_y *key_y = u3r_bytes_alloc(0, wik_w, key),
-           *ex_y  = u3r_bytes_alloc(0, wix_w, extra),
-           *dat_y = u3r_bytes_alloc(0, wid_w, dat),
-           *sat_y = u3r_bytes_alloc(0, wis_w, sat),
-           *out_y = u3a_malloc(out_w);
+
+      //  read inputs through u3r_view (mmap for bobs, heap copy for
+      //  normal atoms); padded so each buffer is exactly its declared
+      //  width, zero-filled.
+      //
+      u3r_view key_u, ex_u, dat_u, sat_u;
+      u3r_view_padded(&key_u, key,   wik_w);
+      u3r_view_padded(&ex_u,  extra, wix_w);
+      u3r_view_padded(&dat_u, dat,   wid_w);
+      u3r_view_padded(&sat_u, sat,   wis_w);
+      c3_y* out_y = u3a_malloc(out_w);
 
       const c3_c* err_c = urcrypt_argon2(
           typ_u, ver_h, ted_h, mem_h, tim_h,
-          wik_w, key_y,
-          wix_w,  ex_y,
-          wid_w, dat_y,
-          wis_w, sat_y,
+          wik_w, (c3_y*)key_u.byt_y,
+          wix_w, (c3_y*)ex_u.byt_y,
+          wid_w, (c3_y*)dat_u.byt_y,
+          wis_w, (c3_y*)sat_u.byt_y,
           out_w, out_y,
           &argon2_alloc,
           &argon2_free);
 
-      u3a_free(key_y);
-      u3a_free(ex_y);
-      u3a_free(dat_y);
-      u3a_free(sat_y);
+      u3r_view_done(&key_u);
+      u3r_view_done(&ex_u);
+      u3r_view_done(&dat_u);
+      u3r_view_done(&sat_u);
 
       if ( NULL == err_c ) {
         ret = u3i_bytes(out_w, out_y);
