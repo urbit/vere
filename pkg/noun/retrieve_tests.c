@@ -1277,6 +1277,100 @@ _test_view(void)
   }
 }
 
+/* _aor_write_blob(): write [byt_y/len_w] to .urb/bob/<mug>/<seq> under [dir_c].
+*/
+static void
+_aor_write_blob(const c3_c* dir_c, c3_h mug_h, c3_h seq_h,
+                const c3_y* byt_y, c3_w len_w)
+{
+  c3_c pax_c[2048];
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+  mkdir(pax_c, 0755);
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+           dir_c, (unsigned)mug_h, (unsigned)seq_h);
+  FILE* fil_f = fopen(pax_c, "wb");
+  if ( !fil_f ) {
+    fprintf(stderr, "_aor_write_blob(): fopen %s: %s\r\n", pax_c, strerror(errno));
+    exit(1);
+  }
+  fwrite(byt_y, 1, len_w, fil_f);
+  fclose(fil_f);
+}
+
+/* _test_aor(): u3qc_aor must order bob atoms by their bytes, not by the
+**              loom offset stored in buf_w.  regression for the direct
+**              buf_w read that returned garbage for bob operands.
+*/
+static void
+_test_aor(void)
+{
+  c3_c dir_c[1024];
+  snprintf(dir_c, sizeof(dir_c), "/tmp/vere-aor-test-XXXXXX");
+  if ( !mkdtemp(dir_c) ) {
+    fprintf(stderr, "_test_aor(): mkdtemp failed: %s\r\n", strerror(errno));
+    exit(1);
+  }
+
+  c3_c pax_c[2048];
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);     mkdir(pax_c, 0755);
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c); mkdir(pax_c, 0755);
+
+  //  two blobs with distinct, equal-length byte content
+  //
+  const c3_y a_y[] = "aor regression bob content AAAA";
+  const c3_y b_y[] = "aor regression bob content BBBB";
+  const c3_w a_w   = sizeof(a_y) - 1;
+  const c3_w b_w   = sizeof(b_y) - 1;
+
+  const c3_h mga_h = 0x11112222, sqa_h = 1;
+  const c3_h mgb_h = 0x33334444, sqb_h = 2;
+
+  _aor_write_blob(dir_c, mga_h, sqa_h, a_y, a_w);
+  _aor_write_blob(dir_c, mgb_h, sqb_h, b_y, b_w);
+
+  u3C.dir_c = dir_c;
+
+  //  normal (in-loom) atoms serve as the trusted oracle
+  //
+  u3_atom nor_a = u3i_bytes(a_w, a_y);
+  u3_atom nor_b = u3i_bytes(b_w, b_y);
+  u3_atom bob_a = u3i_blob(mga_h, sqa_h);
+  u3_atom bob_b = u3i_blob(mgb_h, sqb_h);
+
+  //  each bob must equal its in-loom twin (validates the oracle)
+  //
+  if ( (c3y != u3r_sing(nor_a, bob_a)) || (c3y != u3r_sing(nor_b, bob_b)) ) {
+    fprintf(stderr, "_test_aor(): bob atom not equal to normal twin\r\n");
+    exit(1);
+  }
+
+  //  oracle ordering over the normal atoms (must be antisymmetric)
+  //
+  u3_noun exp_ab = u3qc_aor(nor_a, nor_b);
+  u3_noun exp_ba = u3qc_aor(nor_b, nor_a);
+  if ( exp_ab == exp_ba ) {
+    fprintf(stderr, "_test_aor(): oracle not antisymmetric\r\n");
+    exit(1);
+  }
+
+  //  aor over bobs (and mixed bob/normal) must match the oracle
+  //
+  if ( (u3qc_aor(bob_a, bob_b) != exp_ab) ||
+       (u3qc_aor(bob_b, bob_a) != exp_ba) ||
+       (u3qc_aor(bob_a, nor_b) != exp_ab) ||
+       (u3qc_aor(nor_a, bob_b) != exp_ab) ) {
+    fprintf(stderr, "_test_aor(): bob ordering disagrees with oracle\r\n");
+    exit(1);
+  }
+
+  u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
+
+  c3_c cmd_c[2048];
+  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", dir_c);
+  (void)system(cmd_c);
+  u3C.dir_c = 0;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -1292,6 +1386,7 @@ main(int argc, char* argv[])
   _test_safe();
   _test_cell_trel_qual();
   _test_view();
+  _test_aor();
 
   //  GC
   //
