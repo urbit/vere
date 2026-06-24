@@ -82,9 +82,19 @@ Capture a trace:
 Without a connected server the client runs with negligible overhead and simply
 drops events — useful for confirming the build, not for capturing data.
 
-> This host cannot capture headlessly: `kernel.perf_event_paranoid = 4` blocks
-> Tracy's *sampling*, and no `tracy-capture` is installed. Tracy's *instrumented
-> zones* still work and need no privileges — capture on a host with the GUI.
+**Headless capture** (no GUI, no kernel privileges) works via `tracy-capture` +
+`tracy-csvexport` built from the pinned Tracy v0.12.2. See
+[`PROFILING-tracy.md`](PROFILING-tracy.md) for how to build them and
+[`capture-trace.sh`](capture-trace.sh) to capture a trace + per-zone summary in
+one step:
+
+```sh
+TRACY_CAPTURE=./tools/tracy-capture TRACY_CSVEXPORT=./tools/tracy-csvexport \
+  doc/benchmarks/capture-trace.sh trace.tracy /path/to/zig
+```
+
+> Note: Tracy's *sampling* profiler still needs `perf` access
+> (`kernel.perf_event_paranoid`), but the *instrumented zones* used here do not.
 
 ### perf (Linux sampling; needs relaxed paranoia)
 
