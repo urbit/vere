@@ -45,10 +45,10 @@ Instrumentation uses the zero-cost wrappers in `pkg/noun/tracy.h`
 
 | zone | file | what |
 |---|---|---|
-| `bench:jam` / `bench:cue` / `bench:cue_soft` / `bench:edit` | `pkg/vere/benchmarks.c` | outer group spans + one frame each |
+| `bench:{jam,cue,cue_soft,edit,nock,ack,slam,alloc}` | `pkg/vere/benchmarks.c` | outer group spans + one frame each |
 | `u3s_jam_fib`, `u3s_jam_xeno` | `pkg/noun/serial.c` | jam entry points |
 | `u3s_cue`, `u3s_cue_xeno` | `pkg/noun/serial.c` | cue entry points |
-| `u3n_nock_on` | `pkg/noun/nock.c` | Nock eval entry |
+| `u3n_nock_on` | `pkg/noun/nock.c` | Nock eval entry (covers dec/ack) |
 
 The group zones nest the runtime entry-point zones in the Tracy timeline.
 This is a starting set — the next layer (per the perf report's Phase 0) is

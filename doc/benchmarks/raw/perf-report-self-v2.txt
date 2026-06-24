@@ -1,0 +1,36 @@
+     5.40%  benchmarks  benchmarks        [.] u3i_edit
+     3.41%  benchmarks  benchmarks        [.] calloc
+     2.75%  benchmarks  benchmarks        [.] u3a_celloc
+     2.05%  benchmarks  benchmarks        [.] _n_burn
+     1.56%  benchmarks  [unknown]         [k] 0xffffffffbbb0410b
+     1.39%  benchmarks  benchmarks        [.] u3a_gain
+     1.25%  benchmarks  benchmarks        [.] ur_dict64_put
+     1.13%  benchmarks  [unknown]         [k] 0xffffffffbba0128c
+     1.13%  benchmarks  [unknown]         [k] 0xffffffffbba00ba0
+     1.03%  benchmarks  benchmarks        [.] memset
+     0.95%  benchmarks  [unknown]         [k] 0xffffffffbbb04109
+     0.89%  benchmarks  benchmarks        [.] u3a_pile_prep
+     0.87%  benchmarks  [unknown]         [k] 0xffffffffba6dcc91
+                       0xffffffffba6dc483
+                       0xffffffffba6dc9ff
+                       0xffffffffbaa3ae64
+                       0xffffffffbaa33435
+                       0xffffffffbaa34558
+                       0xffffffffbaa369bf
+                       0xffffffffbaa36b2d
+                       0xffffffffbaa36c5b
+                       0xffffffffba6073dc
+                       0xffffffffbb827151
+                       0xffffffffbba00130
+     0.81%  benchmarks  benchmarks        [.] u3r_mug
+     0.70%  benchmarks  benchmarks        [.] _free_words
+     0.69%  benchmarks  benchmarks        [.] u3r_sing_imp
+     0.69%  benchmarks  benchmarks        [.] u3r_at
+     0.68%  benchmarks  benchmarks        [.] alloc_slot
+     0.65%  benchmarks  benchmarks        [.] _me_lose_north
+     0.65%  benchmarks  [unknown]         [k] 0xffffffffbb7aebc7
+     0.60%  benchmarks  benchmarks        [.] __libc_malloc_impl
+     0.59%  benchmarks  benchmarks        [.] u3i_cell
+     0.59%  benchmarks  benchmarks        [.] u3r_met
+     0.54%  benchmarks  benchmarks        [.] u3h_git
+     0.52%  benchmarks  benchmarks        [.] MurmurHash3_x86_32

@@ -446,6 +446,290 @@ _edit_bench(void)
   }
 }
 
+/* _bench_dec_fol(): the canonical Nock decrement formula.
+**
+**   *[a FOL] == (a - 1), for a > 0.  Nock has no decrement opcode, so this is
+**   a tight interpreter loop: per step, nock-6 (if), nock-5 (eq), nock-4
+**   (increment) and a nock-9 self-kick (warm after the first lookup). It thus
+**   exercises the bytecode dispatch loop (_n_burn) and the kick/jet-dispatch
+**   path together — neither of which the jam/cue/edit benchmarks touch.
+*/
+static u3_noun
+_bench_dec_fol(void)
+{
+  u3_noun a7  = u3nc(0, 7);                          //  [0 7]   sample (a)
+  u3_noun a6  = u3nc(0, 6);                          //  [0 6]   counter
+  u3_noun in6 = u3nt(4, 0, 6);                       //  [4 0 6] +(counter)
+  u3_noun eqt = u3nt(5, u3k(a7), u3k(in6));          //  [5 [0 7] [4 0 6]]
+  u3_noun cor = u3nc(u3nc(0, 2), u3nc(in6, a7));     //  [[0 2] [[4 0 6] [0 7]]]
+  u3_noun rec = u3nt(9, 2, cor);                     //  [9 2 [...]]  rebuild+kick
+  u3_noun lop = u3nq(6, eqt, a6, rec);               //  [6 eq [0 6] rec]
+  u3_noun ic8 = u3nt(8, u3nc(1, lop), u3nq(9, 2, 0, 1));
+  return u3nt(8, u3nc(1, 0), ic8);                   //  [8 [1 0] [8 [1 lop] [9 2 0 1]]]
+}
+
+static u3_noun _dec_fol_g = 0;
+
+/* _dec_run(): u3m_soft-compatible decrement of [a].
+*/
+static u3_noun
+_dec_run(u3_noun a)
+{
+  return u3n_nock_on(a, u3k(_dec_fol_g));
+}
+
+/* _nock_bench(): pure-interpreter (Nock dispatch + kick) microbenchmark.
+*/
+static void
+_nock_bench(void)
+{
+  struct timeval b4, f2, d0;
+  c3_w mil_w;
+  c3_w cnt_w = 200000;
+
+  fprintf(stderr, "\r\nnock interpreter microbenchmark:\r\n");
+
+  _dec_fol_g = _bench_dec_fol();
+
+  //  validate the formula (soft, so a mistake can't crash the suite)
+  //
+  {
+    u3_noun tot = u3m_soft(0, _dec_run, 7);
+    c3_o     ok = c3n;
+
+    if ( (c3y == u3a_is_cell(tot)) && (0 == u3h(tot)) ) {
+      ok = ( 6 == u3t(tot) ) ? c3y : c3n;
+    }
+    u3z(tot);
+
+    if ( c3n == ok ) {
+      fprintf(stderr, "  nock dec: formula invalid, skipping\r\n");
+      u3z(_dec_fol_g);
+      _dec_fol_g = 0;
+      return;
+    }
+  }
+
+  {
+    gettimeofday(&b4, 0);
+
+    u3z(u3m_soft(0, _dec_run, cnt_w));   //  dec(cnt_w): cnt_w loop iterations
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  nock dec %uk loop: %u ms\r\n", cnt_w / 1000, mil_w);
+  }
+
+  u3z(_dec_fol_g);
+  _dec_fol_g = 0;
+}
+
+static u3_noun _slam_gate_g = 0;
+
+/* _slam_run(): u3m_soft-compatible slam of the benchmark gate.
+*/
+static u3_noun
+_slam_run(u3_noun sam)
+{
+  return u3n_slam_on(u3k(_slam_gate_g), sam);
+}
+
+/* _slam_bench(): nock-9 kick / jet-dispatch microbenchmark.
+**
+**   Builds a trivial gate (arm = +(sample)) and slams it repeatedly. The arm
+**   is tiny, so this isolates the per-call kick path: core construction,
+**   u3j_kick warm/cold lookup, and bytecode dispatch.
+*/
+static void
+_slam_bench(void)
+{
+  struct timeval b4, f2, d0;
+  c3_w  mil_w, i_w, max_w = 500000;
+  //  gate = [arm [sample context]] ; arm [4 0 6] = +(sample)
+  //
+  u3_noun gat = u3nc(u3nt(4, 0, 6), u3nc(0, 0));
+
+  fprintf(stderr, "\r\nnock-9 slam (dispatch) microbenchmark:\r\n");
+
+  _slam_gate_g = gat;
+
+  //  validate (soft)
+  //
+  {
+    u3_noun tot = u3m_soft(0, _slam_run, 5);
+    c3_o     ok = ( (c3y == u3a_is_cell(tot)) && (0 == u3h(tot))
+                    && (6 == u3t(tot)) ) ? c3y : c3n;
+    u3z(tot);
+    if ( c3n == ok ) {
+      fprintf(stderr, "  slam: gate invalid, skipping\r\n");
+      u3z(gat);
+      _slam_gate_g = 0;
+      return;
+    }
+  }
+
+  {
+    gettimeofday(&b4, 0);
+
+    for ( i_w = 0; i_w < max_w; i_w++ ) {
+      u3z(u3n_slam_on(u3k(gat), i_w));
+    }
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  slam 500k: %u ms\r\n", mil_w);
+  }
+
+  u3z(gat);
+  _slam_gate_g = 0;
+}
+
+/* _alloc_list(): build a list of [len_w] cells: [len-1 [len-2 ... [0 0]]].
+*/
+static u3_noun
+_alloc_list(c3_w len_w)
+{
+  u3_noun lit = 0;
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    lit = u3nc(i_w, lit);
+  }
+  return lit;
+}
+
+/* _alloc_bench(): allocator churn (u3a_celloc + free + free-list reuse).
+**
+**   perf shows the suite is allocation/page-fault-bound; this isolates the
+**   cell allocate/free fast path. Sized to fit the 16MB lite loom.
+*/
+static void
+_alloc_bench(void)
+{
+  struct timeval b4, f2, d0;
+  c3_w  mil_w, i_w;
+  c3_w  len_w = 100000;   //  ~1.6MB of cells; fits, leaves headroom
+  c3_w  rep_w = 10;
+
+  fprintf(stderr, "\r\nallocator churn microbenchmark:\r\n");
+
+  {
+    gettimeofday(&b4, 0);
+
+    for ( i_w = 0; i_w < rep_w; i_w++ ) {
+      u3z(_alloc_list(len_w));
+    }
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  cons/free 100k x10: %u ms\r\n", mil_w);
+  }
+
+  {
+    gettimeofday(&b4, 0);
+
+    for ( i_w = 0; i_w < rep_w; i_w++ ) {
+      u3z(u3qb_reap(len_w, 0));
+    }
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  reap/free 100k x10: %u ms\r\n", mil_w);
+  }
+}
+
+/* _bench_ack_fol(): the Ackermann function as a Nock formula.
+**
+**   *[ [m n] FOL ] == ack(m, n), where
+**     ack(0,n) = n+1 ; ack(m,0) = ack(m-1,1) ;
+**     ack(m,n) = ack(m-1, ack(m,n-1))
+**
+**   Doubly-recursive and non-tail: unlike dec it drives the interpreter's
+**   frame stack deep, so it stresses kick/dispatch under deep recursion. The
+**   core is [BAT [m n]] (m at axis 6, n at axis 7); dec(m)/dec(n) reuse the
+**   validated decrement formula via Nock-7 composition.
+*/
+static u3_noun
+_bench_ack_fol(void)
+{
+  u3_noun dec  = _bench_dec_fol();
+  u3_noun decm = u3nt(7, u3nc(0, 6), u3k(dec));      //  [7 [0 6] DEC]  = m-1
+  u3_noun decn = u3nt(7, u3nc(0, 7), dec);           //  [7 [0 7] DEC]  = n-1
+
+  //  inner = ack(m, n-1)  ; recurse with core [BAT [m (n-1)]]
+  u3_noun inr = u3nt(9, 2, u3nc(u3nc(0, 2), u3nc(u3nc(0, 6), decn)));
+  //  els  = ack(m-1, ack(m,n-1))  ; recurse with [BAT [(m-1) inner]]
+  u3_noun els = u3nt(9, 2, u3nc(u3nc(0, 2), u3nc(u3k(decm), inr)));
+  //  th2  = ack(m-1, 1)           ; recurse with [BAT [(m-1) 1]]
+  u3_noun th2 = u3nt(9, 2, u3nc(u3nc(0, 2), u3nc(decm, u3nc(1, 1))));
+
+  u3_noun n0  = u3nt(5, u3nc(1, 0), u3nc(0, 7));     //  n == 0 ?
+  u3_noun in6 = u3nq(6, n0, th2, els);              //  [6 (n==0) th2 els]
+  u3_noun m0  = u3nt(5, u3nc(1, 0), u3nc(0, 6));     //  m == 0 ?
+  u3_noun bat = u3nq(6, m0, u3nt(4, 0, 7), in6);     //  [6 (m==0) [4 0 7] in6]
+
+  return u3nt(8, u3nc(1, bat), u3nq(9, 2, 0, 1));    //  [8 [1 BAT] [9 2 0 1]]
+}
+
+static u3_noun _ack_fol_g = 0;
+
+/* _ack_run(): u3m_soft-compatible ack([m n]).
+*/
+static u3_noun
+_ack_run(u3_noun mn)
+{
+  return u3n_nock_on(mn, u3k(_ack_fol_g));
+}
+
+/* _ack_bench(): Ackermann — deep doubly-recursive interpreter stress.
+*/
+static void
+_ack_bench(void)
+{
+  struct timeval b4, f2, d0;
+  c3_w mil_w;
+
+  fprintf(stderr, "\r\nackermann microbenchmark:\r\n");
+
+  _ack_fol_g = _bench_ack_fol();
+
+  //  validate ack(2,2) == 7 (soft)
+  //
+  {
+    u3_noun tot = u3m_soft(0, _ack_run, u3nc(2, 2));
+    c3_o     ok = ( (c3y == u3a_is_cell(tot)) && (0 == u3h(tot))
+                    && (7 == u3t(tot)) ) ? c3y : c3n;
+    u3z(tot);
+    if ( c3n == ok ) {
+      fprintf(stderr, "  ack: formula invalid, skipping\r\n");
+      u3z(_ack_fol_g);
+      _ack_fol_g = 0;
+      return;
+    }
+  }
+
+  //  ack(3,5) == 253 ; ~42k recursive calls.  Bump to (3,6)/(3,7) for a
+  //  heavier deep-recursion stress (≈170k / ≈690k calls).
+  //
+  {
+    gettimeofday(&b4, 0);
+
+    u3z(u3m_soft(0, _ack_run, u3nc(3, 5)));
+
+    gettimeofday(&f2, 0);
+    timersub(&f2, &b4, &d0);
+    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
+    fprintf(stderr, "  ack(3,5): %u ms\r\n", mil_w);
+  }
+
+  u3z(_ack_fol_g);
+  _ack_fol_g = 0;
+}
+
 /* main(): run all benchmarks
 */
 int
@@ -466,6 +750,14 @@ main(int argc, char* argv[])
     _cue_soft_bench(); u3_tc_zone_end(zon); u3_tc_frame_named("cue_soft"); }
   { u3_tc_zone_named(zon, "bench:edit");
     _edit_bench();     u3_tc_zone_end(zon); u3_tc_frame_named("edit"); }
+  { u3_tc_zone_named(zon, "bench:nock");
+    _nock_bench();     u3_tc_zone_end(zon); u3_tc_frame_named("nock"); }
+  { u3_tc_zone_named(zon, "bench:ack");
+    _ack_bench();      u3_tc_zone_end(zon); u3_tc_frame_named("ack"); }
+  { u3_tc_zone_named(zon, "bench:slam");
+    _slam_bench();     u3_tc_zone_end(zon); u3_tc_frame_named("slam"); }
+  { u3_tc_zone_named(zon, "bench:alloc");
+    _alloc_bench();    u3_tc_zone_end(zon); u3_tc_frame_named("alloc"); }
 
   //  GC
   //

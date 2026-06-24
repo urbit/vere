@@ -69,6 +69,40 @@ The profile independently corroborates several findings:
 | `MurmurHash3_x86_32` on 64-bit | **P7** (swap Murmur for crc32c/xxHash3) |
 | legacy `u3s_cue` ≈2.5× `u3s_cue_xeno`/call (Tracy) | **S7** (retire legacy cue) |
 
+## Update — with the added interpreter/dispatch/alloc benchmarks
+
+After adding `nock dec`, `ack`, `slam`, and `alloc` (branch
+`mw/benchmark_improvements`), a second profile (`raw/perf-report-self-v2.txt`,
+`perf -F 1500`) surfaces the runtime internals the jam/cue-only suite hid:
+
+```
+ 5.40%  u3i_edit            (edit bench, as before)
+ 3.41%  calloc              cue allocation
+ 2.75%  u3a_celloc          loom cell allocate  ← report M3/M7
+ 2.05%  _n_burn             bytecode dispatch loop  ← report N3–N5
+ 1.39%  u3a_gain            refcount INCREMENT  ← report M1 (eager per-op RC)
+ 1.25%  ur_dict64_put       cue backref hashtable  ← report S1/S2
+ 1.03%  memset
+ 0.89%  u3a_pile_prep       stack-frame setup
+ 0.81%  u3r_mug             hashing
+ 0.70%  _free_words / alloc_slot   allocator free path
+ 0.69%  u3r_sing_imp        structural equality  ← report N6
+ 0.65%  _me_lose_north      refcount DECREMENT  ← report M1
+```
+
+`u3a_gain` + `_me_lose_north` (refcount inc/dec) appearing directly in the hot
+set is the on-CPU evidence for the report's #1 memory finding (**M1**, eager
+reference counting); `_n_burn` confirms the interpreter-dispatch cost behind the
+48.5% frontend-bound figure.
+
+### Tracy with sampling
+
+With `perf_event_paranoid ≤ 1`, the same data is viewable in the Tracy GUI:
+`zig build benchmarks -Dtracy=true -Dtracy-callstack=true`, captured with
+`tracy-capture` (see `PROFILING-tracy.md`) — open the trace and use
+Statistics → sampling for per-function self time, or hover an instrumented zone
+for its sampled callstack.
+
 ## Caveats
 
 - This suite is **jam/cue/edit-heavy and allocation-dominated**; it is *not*
