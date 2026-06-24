@@ -73,23 +73,30 @@ const CdbGenStep = struct {
 
 const VERSION = "4.6";
 
+//  x86-64 release floor. The default baseline is x86_64-v1 (SSE2 only); raise
+//  it to v2 (SSE4.2 + POPCNT, universal on ~2015+ CPUs) so popcount/clz/ctz
+//  (met/bex jets, bit math) and memcpy-heavy noun copies get modern codegen on
+//  distributed binaries. Native dev builds are unaffected — they already use
+//  `-mcpu native`. Determinism-safe (integer instructions; no FP change).
+const x86_64_v2 = std.Target.Query.CpuModel{ .explicit = &std.Target.x86.cpu.x86_64_v2 };
+
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null, .cpu_model = x86_64_v2 },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl, .cpu_model = x86_64_v2 },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu, .cpu_model = x86_64_v2 },
 };
 
 const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
-    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos, .abi = null, .cpu_model = x86_64_v2 },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl, .cpu_model = x86_64_v2 },
     .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
-    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .cpu_model = x86_64_v2 },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 }, .cpu_model = x86_64_v2 },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu, .cpu_model = x86_64_v2 },
 };
 
 const targets: []const std.Target.Query = main_targets;
