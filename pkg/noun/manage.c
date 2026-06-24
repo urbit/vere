@@ -124,6 +124,8 @@ static uint8_t Sigstk[SIGSTKSZ];
 #include "veh_handler.h"
 #endif
 
+static c3_w u3m_Ford_fresh_road_depth_w = 0;
+
 #if 0
 /* _cm_punt(): crudely print trace.
 */
@@ -398,9 +400,7 @@ _cm_signal_deep(void)
   // go utterly haywire.
   //
   if ( 0 == u3H->rod_u.bug.mer ) {
-    u3H->rod_u.bug.mer = u3i_string(
-      "emergency buffer with sufficient space to cons the trace and bail"
-    );
+    u3H->rod_u.bug.mer = u3i_tape("emergency buffer");
   }
 
   u3t_boot();
@@ -1217,13 +1217,12 @@ u3m_hate(c3_w pad_w)
   c3_w fag_w = u3R->how.fag_w;
   u3m_leap(pad_w);
 
+  u3R->bug.mer = u3i_tape("emergency buffer");
+
   //  inherit forward-flowing flags
   //
   u3R->how.fag_w |= (fag_w & u3a_flag_cash);
 
-  u3R->bug.mer = u3i_string(
-    "emergency buffer with sufficient space to cons the trace and bail"
-  );
 }
 
 //  RETAINS `now`.
@@ -1335,6 +1334,16 @@ u3m_timer_pop(void)
   _m_renew_now();
 }
 
+c3_w
+u3m_road_depth(void)
+{
+  c3_w dep_w = 0;
+  for (u3a_road* r_u = u3R; r_u->par_p; r_u = u3to(u3a_road, r_u->par_p)) {
+    dep_w++;
+  }
+  return dep_w;
+}
+
 /* u3m_love(): return product from leap.
 */
 u3_noun
@@ -1376,6 +1385,19 @@ u3m_love(u3_noun pro)
   u3a_drop_heap(u3R->cap_p, u3R->ear_p);
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
+
+  //  free stale ford caches
+  //  NB: apparently this needs to be done after u3h_take, otherwise double
+  //  frees are possible, resulting in bail: foul
+  //
+  {
+    c3_w dep_w = u3m_road_depth();
+    if ( dep_w < u3m_Ford_fresh_road_depth_w ) {
+      u3h_free(u3R->cax.for_p);
+      u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+      u3m_Ford_fresh_road_depth_w = dep_w;
+    }
+  }
 
   //  integrate junior caches
   //
@@ -1467,6 +1489,9 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   /* Enter internal signal regime.
    */
   _cm_signal_deep();
+
+  u3_assert(u3R == &u3H->rod_u);
+  u3m_Ford_fresh_road_depth_w = 0;
 
   if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state

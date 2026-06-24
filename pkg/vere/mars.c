@@ -655,10 +655,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
     //  $%  [%live ?(%meld %pack) ~] :: XX rename
     //
     case c3__live: {
-      u3_noun com, nul;
+      u3_noun com, arg;
 
-      if ( (c3n == u3r_cell(dat, &com, &nul)) ||
-           (u3_nul != nul) )
+      if ( (c3n == u3r_cell(dat, &com, &arg)) )
       {
         u3z(jar);
         return c3n;
@@ -676,8 +675,17 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         } break;
 
         case c3__meld: {
+          c3_o per_o = c3n, for_o = c3n;
+          u3_noun pers, ford;
+          if ( c3y == u3r_cell(arg, &pers, &ford)
+            && pers < 2
+            && ford < 2) {
+            per_o = pers;
+            for_o = ford;
+          }
           u3z(jar);
-          u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
+          u3a_print_memory(stderr, "mars: meld: gained",
+            u3_meld_all(stderr, per_o, for_o));
         } break;
       }
 
@@ -750,7 +758,6 @@ _mars_post(u3_mars* mar_u)
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
-    u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
     u3m_reclaim();
   }
 
@@ -1398,7 +1405,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //  XX pack before meld?
           //
           if ( u3C.wag_w & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr));
+            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr, c3y, c3n));
           }
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
@@ -1478,7 +1485,7 @@ u3_mars_work(u3_mars* mar_u)
   _mars_sign_move();
 
   //  Initalize the spin stack
-  u3t_sstack_init();
+  u3t_sstack_init(mar_u->met_u.who_d);
 
   //  wire up signal controls
   //

@@ -17,6 +17,7 @@
     } u3m_shadow;
 
     extern u3m_shadow* u3m_Shadow;
+    extern c3_w        u3m_Ford_fresh_road_depth_w;
 
     /** System management.
     **/
@@ -120,6 +121,9 @@
       */
         u3_noun
         u3m_love(u3_noun pro);
+
+        c3_w
+        u3m_road_depth(void);
 
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **

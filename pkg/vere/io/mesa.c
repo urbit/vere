@@ -929,8 +929,7 @@ typedef struct _u3_mesa_request_data {
   u3_mesa_name* nam_u;
   c3_y*         buf_y;
   c3_w          len_w;
-  u3_pit_addr*  las_u;
-  arena         are_u;
+  u3_noun       las;
 } u3_mesa_request_data;
 
 typedef struct _u3_mesa_resend_data {
@@ -945,6 +944,7 @@ static void
 _mesa_free_cb(uv_handle_t *han_u)
 {
   u3_mesa_resend_data* res_u = han_u->data;
+  u3z(res_u->dat_u.las);
   arena_free(&res_u->are_u);
 }
 
@@ -1324,6 +1324,21 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
   return;
 }
 
+static u3_pit_addr*
+_mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
+  u3_pit_addr* adr_u = NULL;
+  u3_noun lan, t = las;
+  while ( t != u3_nul ) {
+    u3x_cell(t, &lan, &t);
+    u3_pit_addr* new_u = new(are_u, u3_pit_addr, 1);
+    new_u->sdr_u = _realise_lane(u3k(lan));
+    new_u->nex_p = adr_u;
+    adr_u = new_u;
+  }
+  return adr_u;
+}
+
+
 static void
 _mesa_resend_timer_cb(uv_timer_t* tim_u)
 {
@@ -1345,11 +1360,10 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     #endif
   }
 
-  _mesa_send_bufs(dat_u->sam_u,
-                  NULL,
-                  dat_u->buf_y,
-                  dat_u->len_w,
-                  dat_u->las_u);
+  arena scratch = res_u->are_u;
+  u3_pit_addr* las_u = _mesa_lanes_to_addrs(dat_u->las, &scratch);
+
+  _mesa_send_bufs(dat_u->sam_u, NULL, dat_u->buf_y, dat_u->len_w, las_u);
 
   if ( res_u->ret_y ) {
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
@@ -1358,20 +1372,6 @@ _mesa_resend_timer_cb(uv_timer_t* tim_u)
     _mesa_del_request(res_u->dat_u.sam_u, res_u->dat_u.nam_u);
     _mesa_free_resend_data(res_u);
   }
-}
-
-static u3_pit_addr*
-_mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
-  u3_pit_addr* adr_u = NULL;
-  u3_noun lan, t = las;
-  while ( t != u3_nul ) {
-    u3x_cell(t, &lan, &t);
-    u3_pit_addr* new_u = new(are_u, u3_pit_addr, 1);
-    new_u->sdr_u = _realise_lane(u3k(lan));
-    new_u->nex_p = adr_u;
-    adr_u = new_u;
-  }
-  return adr_u;
 }
 
 static void
@@ -1431,7 +1431,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       dat_u->sam_u = sam_u;
       u3_ship_copy(dat_u->her_u, nam_u->her_u);
       dat_u->nam_u = nam_u;
-      dat_u->las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
+      dat_u->las   = u3k(las);
       dat_u->buf_y = buf_y;
       dat_u->len_w = len_w;
     }
@@ -1442,7 +1442,8 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     res_u->tim_u.data = res_u;
 
-    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, dat_u->las_u);
+    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
+    _mesa_send_bufs(sam_u, NULL, buf_y, len_w, las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
 
@@ -1807,6 +1808,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       u3l_log("mesa: jumbo frame parse failure: %s", err_c);
       arena_free(&han_u->are_u);
       u3z(res);
+      c3_free(jumbo_y);
       return;
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
@@ -1922,7 +1924,7 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
     per_u->ful_o = c3y;
     per_u->imp_y = gal;
-    u3_noun sal = u3k(u3t(las));
+    u3_noun sal = u3t(las);
     u3_noun lan;
     while ( sal != u3_nul ) {
       u3x_cell(sal, &lan, &sal);
@@ -1934,7 +1936,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
         per_u->dan_u = lan_u;
       }
     }
-    u3z(sal);
     _mesa_put_peer(per_u->sam_u, per_u->her_u, per_u);
   }
 
@@ -1965,7 +1966,6 @@ _get_peer_lanes(u3_mesa* sam_u, u3_peer* per_u)
                   u3dc("scot", 'p', her),
                   u3i_string("lanes"),
                   u3_nul);
-  u3m_p("pax", pax);
   u3_pier_peek_last(sam_u->pir_u, gan, c3__ax, u3_nul, pax, per_u, _forward_lanes_cb);
 }
 
@@ -2059,6 +2059,11 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   c3_w pof_w = lss_proof_size(tof_d);
   c3_w pairs_w = c3_bits_word(pof_w);
   c3_d pek_d = dat_u->tob_d;
+
+  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+    return; // TODO: handle like other auth failures
+  }
+
   arena are_u = arena_create(5*dat_u->tob_d);
   u3_pend_req* req_u = new(&are_u, u3_pend_req, 1);
   req_u->are_u = are_u;
@@ -2095,9 +2100,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   req_u->ack_d = 0;
 
   lss_hash* pof_u = new(&req_u->are_u, lss_hash, pof_w);
-  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
-    return; // TODO: handle like other auth failures
-  }
   for ( int i = 0; i < pof_w; i++ ) {
     memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
   }
@@ -2178,9 +2180,13 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
 
     _get_peer_lanes(sam_u, per_u); // forward-lanes
+    _mesa_put_peer(sam_u, per_u->her_u, per_u);
+
     return;
   }
-  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  if ( c3y == sam_u->for_o
+       && c3y == per_u->ful_o
+       && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
     sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     if ( _mesa_is_lane_zero(lin_u) == c3y) {
       c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
@@ -2404,7 +2410,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   dat_u->sam_u = sam_u;
   _mesa_copy_name(&dat_u->nam_u, &pac_u->pek_u.nam_u, &han_u->are_u);
 
-  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), han_u, _mesa_page_scry_jumbo_cb);
+  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3nq(1, c3__beam, c3__ax, bem), han_u, _mesa_page_scry_jumbo_cb);
 }
 
 static void
@@ -2497,6 +2503,11 @@ _mesa_hear(u3_mesa* sam_u,
     c3_y* han_y = c3_malloc(len_w);
     memcpy(han_y, hun_y, len_w);
     _ames_hear(u3_Host.sam_u, adr_u, len_w, han_y);
+    return;
+  }
+
+  if ( len_w > PACT_SIZE ) {
+    u3l_log("mesa: packet too large");
     return;
   }
 
@@ -2646,7 +2657,6 @@ static void _mesa_clear_pit(uv_timer_t *tim_u)
 u3_auto*
 u3_mesa_io_init(u3_pier* pir_u)
 {
-  u3l_log("mesa: INIT");
   arena par_u     = arena_create(67108864);
   u3_mesa* sam_u  = new(&par_u, u3_mesa, 1);
   sam_u->par_u    = par_u;

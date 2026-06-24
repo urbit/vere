@@ -1032,6 +1032,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__nara:
       case c3__hela:
       case c3__loop:
+      case c3__drop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1920,6 +1921,13 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3i_cell(tag, u3i_cell(har, per));
     } break;
 
+    case c3__drop: {
+      u3m_Ford_fresh_road_depth_w = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_w);
+      u3h_free(u3R->cax.for_p);
+      u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+      *out = u3_nul;
+    } break;
+
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
       if ( u3_none != u3h_git(u3R->lop_p, key) ) {
@@ -2785,12 +2793,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x   = _n_pep(mov, off);  // product
       top = _n_peek(off);
       o   = *top;
-      if ( u3z_memo_ford == u3h(o) ) {
+      if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
         u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
-         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
+         : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
         u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
