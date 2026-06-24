@@ -81,6 +81,12 @@ Build for all [supported targets](#supported-targets).
 Release flag. Builds with `-Doptimize=ReleaseFast` and `-Dpace=live`, and omits
 git rev from binary version.
 
+#### `-Dlto`
+Enable ThinLTO across the urbit-owned libraries (`c3`, `ur`, `noun`, `past`,
+`vere`) and the executable, so the hot Nock loop can inline noun/alloc
+primitives that live in other translation units. Defaults on for `-Drelease`.
+Determinism-safe (codegen only). See `doc/benchmarks/opt-01-lto.md`.
+
 #### `-Dpace=[enum]`
 Release train.
 

@@ -111,6 +111,7 @@ const BuildCfg = struct {
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
     gen_cdb: bool = false,
+    lto: bool = false,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -217,6 +218,12 @@ pub fn build(b: *std.Build) !void {
 
     const gen_cdb = b.option(bool, "generate-commands", "generate compile_commands.json fragments") orelse false;
 
+    //  Link-time optimization across the urbit-owned libraries (c3/ur/noun/
+    //  past/vere) and the executable, so the hot Nock loop can inline the
+    //  noun/alloc primitives that live in other translation units. Defaults on
+    //  for release builds.
+    const lto = b.option(bool, "lto", "Enable ThinLTO on urbit-owned code") orelse release;
+
     //
     // Build
     //
@@ -238,6 +245,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_no_exit = tracy_no_exit,
         .include_test_steps = !all,
         .gen_cdb = gen_cdb,
+        .lto = lto,
     };
 
     if (all) {
@@ -568,6 +576,18 @@ fn buildBinary(
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
+    //  ThinLTO across urbit-owned code: emit bitcode for our libraries and the
+    //  exe so the cross-translation-unit / cross-library calls in the hot Nock
+    //  loop (u3a_*, u3i_*, u3h_*) can inline. Third-party libs are left alone.
+    if (cfg.lto) {
+        urbit.want_lto = true;
+        pkg_c3.artifact("c3").want_lto = true;
+        pkg_ur.artifact("ur").want_lto = true;
+        pkg_noun.artifact("noun").want_lto = true;
+        pkg_past.artifact("past").want_lto = true;
+        pkg_vere.artifact("vere").want_lto = true;
+    }
+
     urbit.linkLibrary(gmp.artifact("gmp"));
 
     urbit.linkLibrary(h2o.artifact("h2o"));
@@ -763,6 +783,8 @@ fn buildBinary(
                 .target = target,
                 .optimize = optimize,
             }) });
+
+            if (cfg.lto) test_exe.want_lto = true;
 
             if (t.os.tag.isDarwin() and !target.query.isNative()) {
                 const macos_sdk = b.lazyDependency("macos_sdk", .{
