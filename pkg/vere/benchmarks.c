@@ -2,6 +2,7 @@
 
 #include "noun.h"
 #include "jets/q.h"
+#include "tracy.h"
 #include "ur/ur.h"
 #include "vere.h"
 
@@ -452,10 +453,19 @@ main(int argc, char* argv[])
 {
   _setup();
 
-  _jam_bench();
-  _cue_bench();
-  _cue_soft_bench();
-  _edit_bench();
+  u3_tc_msg("vere microbenchmarks");
+
+  //  each group is an outer Tracy zone; runtime entry-point zones
+  //  (u3s_jam_*, u3s_cue*, u3n_nock_on) nest inside. one frame per group.
+  //
+  { u3_tc_zone_named(zon, "bench:jam");
+    _jam_bench();      u3_tc_zone_end(zon); u3_tc_frame_named("jam"); }
+  { u3_tc_zone_named(zon, "bench:cue");
+    _cue_bench();      u3_tc_zone_end(zon); u3_tc_frame_named("cue"); }
+  { u3_tc_zone_named(zon, "bench:cue_soft");
+    _cue_soft_bench(); u3_tc_zone_end(zon); u3_tc_frame_named("cue_soft"); }
+  { u3_tc_zone_named(zon, "bench:edit");
+    _edit_bench();     u3_tc_zone_end(zon); u3_tc_frame_named("edit"); }
 
   //  GC
   //

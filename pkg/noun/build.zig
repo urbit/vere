@@ -429,6 +429,7 @@ const install_headers = [_][]const u8{
     "serial.h",
     "ship.h",
     "trace.h",
+    "tracy.h",
     "types.h",
     "urth.h",
     "version.h",

@@ -11,6 +11,7 @@
 #include "jets/q.h"
 #include "retrieve.h"
 #include "serial.h"
+#include "tracy.h"
 #include "ur/ur.h"
 #include "vortex.h"
 #include "xtract.h"
@@ -202,6 +203,7 @@ c3_w
 u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
 {
   struct _cs_jam_fib fib_u;
+  u3_tc_zone_named(zon, "u3s_jam_fib");
   fib_u.har_p = u3h_new();
   fib_u.sab_u = sab_u;
 
@@ -217,6 +219,7 @@ u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
   u3a_walk_fore(a, &fib_u, _cs_jam_fib_atom_cb, _cs_jam_fib_cell_cb);
 
   u3h_free(fib_u.har_p);
+  u3_tc_zone_end(zon);
   return fib_u.bit_w;
 }
 
@@ -319,13 +322,18 @@ c3_d
 u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
   _jam_xeno_t jam_u = {0};
+  u3_tc_zone_named(zon, "u3s_jam_xeno");
   ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
   jam_u.har_p = u3h_new();
 
   u3a_walk_fore(a, &jam_u, _cs_jam_xeno_atom, _cs_jam_xeno_cell);
 
   u3h_free(jam_u.har_p);
-  return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+  {
+    c3_d ret_d = ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+    u3_tc_zone_end(zon);
+    return ret_d;
+  }
 }
 
 /* _cs_cue: stack frame for tracking intermediate cell results
@@ -430,6 +438,7 @@ u3s_cue(u3_atom a)
   _cs_cue*      fam_u;
   u3p(u3h_root) har_p = u3h_new();
   u3a_pile      pil_u;
+  u3_tc_zone_named(zon, "u3s_cue");
 
   //  initialize stack control
   //
@@ -476,6 +485,7 @@ u3s_cue(u3_atom a)
   u3z(wid);
   u3h_free(har_p);
 
+  u3_tc_zone_end(zon);
   return pro;
 }
 
@@ -707,12 +717,14 @@ u3s_cue_xeno(c3_d        len_d,
 {
   u3_cue_xeno* sil_u;
   u3_weak        som;
+  u3_tc_zone_named(zon, "u3s_cue_xeno");
 
   u3_assert( &(u3H->rod_u) == u3R );
 
   sil_u = u3s_cue_xeno_init();
   som   = _cs_cue_xeno(sil_u, len_d, byt_y);
   u3s_cue_xeno_done(sil_u);
+  u3_tc_zone_end(zon);
   return som;
 }
 

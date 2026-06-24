@@ -39,6 +39,27 @@ include path), so files under `pkg/noun` (e.g. `nock.c`, `allocate.c`,
 `serial.c`) and the benchmark exe can carry Tracy zones. Zones compile to
 **nothing** when `-Dtracy` is off, so they do not affect the baseline.
 
+Instrumentation uses the zero-cost wrappers in `pkg/noun/tracy.h`
+(`u3_tc_zone` / `u3_tc_zone_named` / `u3_tc_zone_end` / `u3_tc_frame` /
+`u3_tc_plot` / `u3_tc_msg`). Zones in place so far:
+
+| zone | file | what |
+|---|---|---|
+| `bench:jam` / `bench:cue` / `bench:cue_soft` / `bench:edit` | `pkg/vere/benchmarks.c` | outer group spans + one frame each |
+| `u3s_jam_fib`, `u3s_jam_xeno` | `pkg/noun/serial.c` | jam entry points |
+| `u3s_cue`, `u3s_cue_xeno` | `pkg/noun/serial.c` | cue entry points |
+| `u3n_nock_on` | `pkg/noun/nock.c` | Nock eval entry |
+
+The group zones nest the runtime entry-point zones in the Tracy timeline.
+This is a starting set — the next layer (per the perf report's Phase 0) is
+zones inside the bytecode dispatch loop (`_n_burn`), jet dispatch, the
+allocator fast/slow paths, and snapshot save. Add them with the same wrappers
+as the corresponding code is optimized, so each zone lands with its change.
+
+Verified: with `-Dtracy` **off**, the benchmark timings are statistically
+identical to the pristine baseline (every phase within its recorded stdev),
+confirming the zones are zero-cost.
+
 Build options (see `INSTALL.md`):
 
 ```sh

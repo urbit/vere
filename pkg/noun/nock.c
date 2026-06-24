@@ -12,6 +12,7 @@
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
+#include "tracy.h"
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
@@ -2997,6 +2998,7 @@ u3_noun
 u3n_nock_on(u3_noun bus, u3_noun fol)
 {
   u3_noun pro;
+  u3_tc_zone_named(zon, "u3n_nock_on");
 
   u3t_on(noc_o);
 #if 0
@@ -3006,6 +3008,7 @@ u3n_nock_on(u3_noun bus, u3_noun fol)
 #endif
   u3t_off(noc_o);
 
+  u3_tc_zone_end(zon);
   return pro;
 }
 
