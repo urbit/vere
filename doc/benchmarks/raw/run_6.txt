@@ -1,0 +1,25 @@
+loom: mapped 16MB
+
+jam microbenchmark:
+  jam og: 9 ms
+  jam xeno: 7 ms
+  jam cons: 224 ms
+  jam cons with: 4 ms
+
+cue microbenchmark:
+  cue og: 56 ms
+  cue atom: 18 ms
+  cue xeno: 22 ms
+  cue xeno with: 10 ms
+  cue test: 16 ms
+  cue test with: 5 ms
+  cue cons: 416 ms
+  cue re-cons: 594 ms
+
+cue virtual microbenchmark:
+  cue virtual og: 50 ms
+  cue virtual atom: 14 ms
+
+opcode 10 microbenchmark:
+  opcode 10 1k list: 0 ms
+  opcode 10 10k list: 91 ms
