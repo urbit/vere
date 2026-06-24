@@ -7,10 +7,17 @@ re-measure and to profile with Tracy.
 
 ## Files
 
-- `baseline-2026-06-24.md` — the recorded baseline (provenance + 10-run table).
-- `run-benchmarks.sh` — reproducible harness: builds ReleaseFast, runs N times,
-  prints a min/median/mean/max/stdev table. Does **not** touch the runtime.
-- `raw/` — raw per-run output captured for the baseline.
+- `baseline-2026-06-24.md` — recorded timing baseline (provenance + 10-run
+  table), incl. the added interpreter/dispatch/alloc benchmarks.
+- `baseline-perf-2026-06-24.md` — `perf` hardware-counter + hotspot baseline.
+- `baseline-pier-2026-06-24.md` — boot / snapshot / replay + **warm** jet
+  dispatch (via `urbit eval`), from `pier-bench.sh`.
+- `run-benchmarks.sh` — builds ReleaseFast, runs `benchmarks.c` N times, prints
+  a min/median/mean/max/stdev table. Does **not** touch the runtime.
+- `pier-bench.sh` — pier/eval-level harness: warm jet dispatch (Tier 1, no
+  network) + boot/snapshot/replay timing (Tier 2, needs a pill).
+- `capture-trace.sh` / `PROFILING-tracy.md` — headless Tracy capture.
+- `raw/` — raw per-run output + perf dumps captured for the baselines.
 
 ## Toolchain
 
