@@ -1,0 +1,57 @@
+loom: mapped 16MB
+
+jam microbenchmark:
+  jam og: 8 ms
+  jam xeno: 7 ms
+  jam cons: 226 ms
+  jam cons with: 4 ms
+
+cue microbenchmark:
+  cue og: 57 ms
+  cue atom: 18 ms
+  cue xeno: 23 ms
+  cue xeno with: 10 ms
+  cue test: 16 ms
+  cue test with: 6 ms
+  cue cons: 435 ms
+  cue re-cons: 620 ms
+
+cue virtual microbenchmark:
+  cue virtual og: 52 ms
+  cue virtual atom: 14 ms
+
+opcode 10 microbenchmark:
+  opcode 10 1k list: 0 ms
+  opcode 10 10k list: 92 ms
+
+ Performance counter stats for 'zig-out/bin/benchmarks':
+
+          1,570.64 msec task-clock                       #    0.982 CPUs utilized             
+               274      context-switches                 #  174.452 /sec                      
+                25      cpu-migrations                   #   15.917 /sec                      
+           875,408      page-faults                      #  557.359 K/sec                     
+     7,868,223,250      cycles                           #    5.010 GHz                         (35.74%)
+     3,816,843,803      stalled-cycles-frontend          #   48.51% frontend cycles idle        (35.63%)
+    13,341,779,491      instructions                     #    1.70  insn per cycle            
+                                                  #    0.29  stalled cycles per insn     (35.79%)
+     2,641,004,510      branches                         #    1.681 G/sec                       (35.66%)
+       134,319,169      branch-misses                    #    5.09% of all branches             (35.84%)
+     4,181,310,279      L1-dcache-loads                  #    2.662 G/sec                       (35.66%)
+       102,426,235      L1-dcache-load-misses            #    2.45% of all L1-dcache accesses   (35.74%)
+   <not supported>      LLC-loads                                                             
+   <not supported>      LLC-load-misses                                                       
+     2,445,608,886      L1-icache-loads                  #    1.557 G/sec                       (35.62%)
+         7,404,424      L1-icache-load-misses            #    0.30% of all L1-icache accesses   (35.79%)
+         9,392,766      dTLB-loads                       #    5.980 M/sec                       (35.67%)
+         1,720,743      dTLB-load-misses                 #   18.32% of all dTLB cache accesses  (35.81%)
+             2,265      iTLB-loads                       #    1.442 K/sec                       (35.67%)
+         1,975,711      iTLB-load-misses                 # 87227.86% of all iTLB cache accesses  (35.79%)
+        25,290,898      L1-dcache-prefetches             #   16.102 M/sec                       (35.59%)
+   <not supported>      L1-dcache-prefetch-misses                                             
+
+       1.599705091 seconds time elapsed
+
+       0.488608000 seconds user
+       1.082411000 seconds sys
+
+

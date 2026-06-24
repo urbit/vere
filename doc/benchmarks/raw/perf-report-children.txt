@@ -1,0 +1,40 @@
+    57.99%     0.00%  benchmarks  benchmarks        [.] libc_start_main_stage2
+            |
+            ---libc_start_main_stage2
+               main
+               |          
+               |--37.92%--_cue_bench
+               |          |          
+               |          |--28.92%--ur_cue
+               |          |          |          
+               |          |          |--18.26%--_cue
+               |          |          |          |          
+               |          |          |          |--13.97%--_cue_next
+               |          |          |          |          |          
+               |          |          |          |           --13.62%--ur_dict64_put
+               |          |          |          |                     |          
+               |          |          |          |                      --11.93%--0xffffffffbba00bc7
+               |          |          |          |                                |          
+               |          |          |          |                                 --10.72%--0xffffffffbb82d4a3
+               |          |          |          |                                           |          
+               |          |          |          |                                            --9.54%--0xffffffffba6d7e69
+               |          |          |          |                                                      |          
+               |          |          |          |                                                       --8.72%--0xffffffffbaa2dbcd
+               |          |          |          |                                                                 |          
+               |          |          |          |                                                                  --8.15%--0xffffffffbaa2d8ef
+               |          |          |          |                                                                            |          
+               |          |          |          |                                                                             --7.36%--0xffffffffbaa2d27e
+               |          |          |          |                                                                                       |          
+               |          |          |          |                                                                                        --7.23%--0xffffffffbaa260c5
+               |          |          |          |                                                                                                  |          
+               |          |          |          |                                                                                                   --2.23%--0xffffffffbaa21400
+               |          |          |          |                                                                                                             |          
+               |          |          |          |                                                                                                              --2.05%--0xffffffffbaa95304
+               |          |          |          |                                                                                                                        |          
+               |          |          |          |                                                                                                                         --1.61%--0xffffffffbaa94f91
+               |          |          |          |          
+               |          |          |           --3.11%--ur_dict64_put
+               |          |          |                     |          
+               |          |          |                      --2.74%--0xffffffffbba00bc7
+               |          |          |                                |          
+               |          |          |                                 --2.48%--0xffffffffbb82d4a3
