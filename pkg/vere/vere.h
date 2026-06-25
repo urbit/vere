@@ -36,10 +36,27 @@
       } u3_hhed;
 
     /* u3_hbod: http body block.  Also used for responses.
+    **
+    **   Three shapes:
+    **     (a) inline    — payload in hun_y[0..len_w]; map_y == own_y == 0.
+    **     (b) mmap view — map_y points into a shared mmap at the chunk's
+    **                     offset; own_y == 0 (this chunk does not own the
+    **                     mapping).  hun_y is unused.
+    **     (c) mmap owner — same as (b) for the iovec (map_y = base + off),
+    **                      plus own_y = mmap base and map_d = mmap size
+    **                      so _cttp_bods_free can munmap.
+    **
+    **   Bob-streaming chains (see _cttp_bod_from_bob) are built as a
+    **   head→tail list of views with the owner as the tail chunk.
+    **   Head-first free then MADV_DONTNEED's every view before the
+    **   owner finally munmaps.
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
         c3_w             len_w;
+        c3_y*            map_y;   //  iovec base (mmap view) or NULL (inline)
+        c3_y*            own_y;   //  mmap base to munmap (NULL if not owner)
+        c3_d             map_d;   //  mmap size for munmap (0 if not owner)
         c3_y             hun_y[0];
       } u3_hbod;
 
@@ -51,8 +68,12 @@
       } u3_lane;
 
     /* u3_moor_poke: poke callback function.
+    **
+    **   ver_y is the newt protocol version byte from the message header
+    **   (0x00 = jam, 0x01 = ram).  Handlers that decode the payload use it
+    **   to pick the correct deserializer; raw-bytes handlers may ignore it.
     */
-      typedef c3_o (*u3_moor_poke)(void*, c3_d, c3_y*);
+      typedef c3_o (*u3_moor_poke)(void*, c3_y ver_y, c3_d, c3_y*);
 
     /* u3_moor_bail: bailout callback function.
     */
@@ -63,6 +84,7 @@
       typedef struct _u3_meat {
         struct _u3_meat* nex_u;
         c3_d             len_d;
+        c3_y             ver_y;    //  protocol version: 0x00=jam, 0x01=ram
         c3_y             hun_y[0];
       } u3_meat;
 
@@ -462,7 +484,8 @@
           u3_writ_peek = 1,
           u3_writ_live = 2,
           u3_writ_exit = 3,
-          u3_writ_quiz = 4
+          u3_writ_quiz = 4,
+          u3_writ_blob = 5    //  blob-install request
         } u3_writ_type;
 
       /* u3_writ: ipc message from urth to mars
@@ -481,6 +504,11 @@
               void*        ptr_v;               //    driver
               void (*qiz_f)(c3_m, void*, u3_noun);  //  callback
             } qiz_u;                                //
+            struct {                            //  blob-install:
+              c3_c*        pax_c;               //    staging path (heap-alloc'd)
+              void*        ptr_v;               //    callback context
+              void (*fun_f)(void*, c3_h, c3_h, c3_o);  //  ack cb(ctx, mug, seq, ok)
+            } blb_u;                            //
           };
         } u3_writ;
 
@@ -939,6 +967,19 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
+      /* u3_disk_blob_refs(): rebuild blob eve_w from the BLOBS table
+      **   over the entire retained log, creating entries as needed.
+      */
+        void
+        u3_disk_blob_refs(u3_disk* log_u);
+
+      /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
+      **   orphans with no bank entry.  run at boot (after replay and
+      **   lease restore) or as part of chop, once use_w is reconstructed.
+      */
+        void
+        u3_disk_blob_gc(u3_disk* log_u);
+
       /* u3_disk_roll(): rollover to a new epoc.
        */
         void
@@ -1052,6 +1093,28 @@
       */
         void
         u3_lord_peek(u3_lord* god_u, u3_pico* pic_u);
+
+      /* u3_lord_blob_install(): request Mars install a staged blob file.
+      **
+      ** [pax_c] is the path to a temp file in $pier/.urb/bob/stg/.
+      ** When Mars finishes (mug+dedup+rename), it calls fun_f(ptr_v, mug, seq, ok).
+      ** Ownership of [pax_c] passes to the writ; do not free it.
+      */
+        void
+        u3_lord_blob_install(u3_lord* god_u,
+                             c3_c*    pax_c,
+                             void*    ptr_v,
+                             void   (*fun_f)(void*, c3_h, c3_h, c3_o));
+
+      /* u3_lord_blob_lease(): tell Mars king is acquiring a blob lease.
+      */
+        void
+        u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h);
+
+      /* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
+      */
+        void
+        u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h);
 
     /**  Filesystem (async).
     **/
@@ -1228,6 +1291,11 @@
       */
         void
         u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y);
+
+      /* u3_newt_send_vers(): write versioned buffer to stream.
+      */
+        void
+        u3_newt_send_vers(u3_mojo* moj_u, c3_y ver_y, c3_d len_d, c3_y* byt_y);
 
       /* u3_newt_read(): activate reading on input stream.
       */

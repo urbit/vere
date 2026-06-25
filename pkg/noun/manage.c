@@ -561,6 +561,10 @@ _pave_home(void)
   u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
+
+  //  initialize blob bank HAMTs (home road only)
+  //
+  u3H->blb_p = u3h_new();
 }
 
 STATIC_ASSERT( (c3_wiseof(u3v_home) <= (((c3_w)1) << u3a_page)),
@@ -570,18 +574,65 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
+/* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
+**   use_w and zero les_h on each u3a_blob.  The snapshot's les_h is
+**   stale after a restart; pkg/vere rebuilds the live count from the
+**   durable LMDB LEASES table (_mars_play_leases) once the disk is open.
+*/
+static void
+_find_home_zero_les_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3_noun val = u3t(kev);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  blb_u->use_w -= blb_u->les_h;
+  blb_u->les_h  = 0;
+}
+
+/* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
+**
+**   v6 appends blb_p (blob bank) to u3v_home, within the first page,
+**   which is zero beyond the v5 struct end in every snapshot
+**   (allocation starts at page 1).  lop_p and cax.for_p were appended
+**   to u3a_road mid-v5 without a version bump; fold them in here.
+**
+**   Idempotent: a crash before the next checkpoint leaves the on-disk
+**   snapshot at v5, and we simply re-migrate on the next boot.
+*/
+static void
+_migrate_v6(void)
+{
+  fprintf(stderr, "loom: migrating snapshot to v6\r\n");
+
+  u3H->blb_p = u3h_new();
+
+  if ( !u3R->lop_p )     u3R->lop_p     = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+
+  u3H->ver_d = U3V_VER6;
+}
+
 /* _find_home(): in restored image, point to home road.
 */
 static void
 _find_home(void)
 {
   c3_d ver_d = *((c3_d*)u3_Loom);
+  c3_o mig_o = c3n;
 
-  if ( ver_d != U3V_VERLAT ) {
-    fprintf(stderr, "loom: checkpoint version mismatch: "
-                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
-                    ver_d, U3V_VERLAT);
-    abort();
+  switch ( ver_d ) {
+    case U3V_VER5: mig_o = c3y; break;
+    case U3V_VER6: break;
+    default: {
+      fprintf(stderr, "loom: checkpoint version mismatch: "
+                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                      ver_d, U3V_VERLAT);
+      abort();
+    }
   }
 
   c3_d pam_d = *((c3_d*)u3_Loom + 1);
@@ -664,11 +715,15 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
+  if ( c3y == mig_o ) {
+    _migrate_v6();
+  }
+
+  //  reset all les_h to 0: leases are transient IPC state backed by a
+  //  C-heap PQ that is not persisted.  after restart the PQ is empty,
+  //  so any les_h count from the previous boot is stale.
   //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -2819,6 +2874,12 @@ u3m_pack(void)
   //  sweep the heap, relocating objects to their new locations
   //
   u3a_pack_move(u3R);
+
+  if (  (&(u3H->rod_u) == u3R)
+     && (c3n == u3a_blob_sane(c3y)) )
+  {
+    fprintf(stderr, "pack: blob accounting violated (see above)\r\n");
+  }
 
   return (u3a_open(u3R) - pre_w);
 }

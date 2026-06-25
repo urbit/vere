@@ -15,7 +15,11 @@
 # include "options.h"
 #endif
 
-#define SLOW_STACK_NAME  "/spin_stack_page_%s_%d"
+#ifdef U3_OS_osx
+  #define SLOW_STACK_NAME  "/spin_stack_page_%d"
+#else
+  #define SLOW_STACK_NAME  "/spin_stack_page_%s_%d"
+#endif
 #define TRACE_PSIZE (((c3_w)1) << (u3a_page +2))
 
   /** Data structures.

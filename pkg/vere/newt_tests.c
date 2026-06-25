@@ -430,9 +430,9 @@ _test_newt_sick_vers(void)
 
   memset(&mot_u, 0, sizeof(u3_moat));
 
-  //  construct message with invalid version
+  //  construct message with truly invalid version (0x02+)
   //
-  buf_y[0] = 0x1;  // invalid version (should be 0x0)
+  buf_y[0] = 0x2;  // invalid version (valid: 0x00=jam, 0x01=ram)
   buf_y[1] = 0x1;  // length = 1
   buf_y[2] = 0x0;
   buf_y[3] = 0x0;
@@ -443,6 +443,24 @@ _test_newt_sick_vers(void)
   if ( c3n != u3_newt_decode(&mot_u, buf_y, 5) ) {
     fprintf(stderr, "newt invalid version fail: should have rejected\n");
     exit(1);
+  }
+
+  //  version 0x01 (ram) should be accepted
+  //
+  memset(&mot_u, 0, sizeof(u3_moat));
+  buf_y[0] = 0x1;  // valid: ram version
+  buf_y[1] = 0x1;  // length = 1
+  buf_y[2] = 0x0;
+  buf_y[3] = 0x0;
+  buf_y[4] = 0x0;
+  if ( c3y != u3_newt_decode(&mot_u, buf_y, 5) ) {
+    fprintf(stderr, "newt ram version fail: should have accepted 0x01\n");
+    exit(1);
+  }
+  //  clean up allocated meat if any
+  //
+  if ( u3_mess_tail == mot_u.mes_u.sat_e ) {
+    c3_free(mot_u.mes_u.tal_u.met_u);
   }
 }
 

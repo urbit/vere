@@ -1347,12 +1347,22 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    c3_w len_w = u3r_met(3, pac);
+    //  zero-copy read from [pac] (mmap if it's a bob) into the owned
+    //  packet buffer.  hun_y is long-lived (mutated in place for origin
+    //  forwarding, freed on send), so we still copy into it — but using
+    //  u3r_view skips the full-blob loom alloc that u3r_bytes →
+    //  u3r_blob_load would have caused.
+    //
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, pac);
+    c3_w len_w = vue_u.len_w;
     u3_assert( UINT32_MAX >= len_w );
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
-
-    u3r_bytes(0, pac_u->len_h, pac_u->hun_y, pac);
+    if ( len_w ) {
+      memcpy(pac_u->hun_y, vue_u.byt_y, len_w);
+    }
+    u3r_view_done(&vue_u);
 
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
     pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);

@@ -93,6 +93,9 @@ _cttp_bod_new(c3_w len_w, c3_c* hun_c)
   u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
   bod_u->hun_y[len_w] = 0;
   bod_u->len_w = len_w;
+  bod_u->map_y = 0;
+  bod_u->own_y = 0;
+  bod_u->map_d = 0;
   memcpy(bod_u->hun_y, (const c3_y*)hun_c, len_w);
 
   bod_u->nex_u = 0;
@@ -114,6 +117,9 @@ _cttp_bod_from_hed(u3_hhed* hed_u)
   memcpy(bod_u->hun_y + hed_u->nam_w + 2 + hed_u->val_w, "\r\n", 2);
 
   bod_u->len_w = len_w;
+  bod_u->map_y = 0;
+  bod_u->own_y = 0;
+  bod_u->map_d = 0;
   bod_u->nex_u = 0;
 
   return bod_u;
@@ -170,6 +176,9 @@ _cttp_bod_from_octs(u3_noun oct)
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
+    bod_u->map_y = 0;
+    bod_u->own_y = 0;
+    bod_u->map_d = 0;
     u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
 
     bod_u->nex_u = 0;

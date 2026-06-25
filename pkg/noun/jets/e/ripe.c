@@ -13,18 +13,17 @@
     if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      u3_atom ret;
-      c3_y out_y[20];
-      c3_y *dat_y = u3r_bytes_alloc(0, len_w, dat);
 
-      ret = ( 0 == urcrypt_ripemd160(dat_y, len_w, out_y) )
-          ? u3i_bytes(20, out_y)
-          : u3_none;
+    c3_y out_y[20];
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
 
-      u3a_free(dat_y);
-      return ret;
-    }
+    u3_atom ret = ( 0 == urcrypt_ripemd160((c3_y*)vue_u.byt_y, len_w, out_y) )
+                ? u3i_bytes(20, out_y)
+                : u3_none;
+
+    u3r_view_done(&vue_u);
+    return ret;
   }
 
   u3_noun

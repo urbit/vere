@@ -20,36 +20,6 @@ static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
   }
 }
 
-static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
-                           c3_w* p_octs_w, c3_y** buf_y,
-                           c3_w* len_w, c3_w* lead_w)
-{
-  if (c3n == u3r_safe_word(*p_octs, p_octs_w)) {
-    return c3n;
-  }
-
-  *len_w = u3r_met(3, *q_octs);
-
-  if (c3y == u3a_is_cat(*q_octs)) {
-    *buf_y = (c3_y*)q_octs;
-  }
-  else {
-    u3a_atom* ptr_a = u3a_to_ptr(*q_octs);
-    *buf_y = (c3_y*)ptr_a->buf_w;
-  }
-
-  *lead_w = 0;
-
-  if (*p_octs_w > *len_w) {
-    *lead_w = *p_octs_w - *len_w;
-  }
-  else {
-    *len_w = *p_octs_w;
-  }
-
-  return c3y;
-}
-
 #define BASE 65521
 #define NMAX 5552
 
@@ -59,21 +29,32 @@ u3_noun _qe_adler32(u3_noun octs)
 
   _x_octs(octs, &p_octs, &q_octs);
 
-  c3_w p_octs_w, len_w, lead_w;
-  c3_y *buf_y;
-
-  if (c3n == _x_octs_buffer(&p_octs, &q_octs,
-                            &p_octs_w, &buf_y,
-                            &len_w, &lead_w)) {
+  c3_w p_octs_w;
+  if (c3n == u3r_safe_word(p_octs, &p_octs_w)) {
     return u3_none;
   }
 
-  c3_w adler_w, sum2_w;
+  //  zero-copy view of the atom's significant bytes (mmap for bob).
+  //  NB: the legacy direct-pointer path through ptr_a->buf_w read
+  //  seq_w for bob atoms, which silently produced wrong checksums;
+  //  using u3r_view fixes that bug in addition to avoiding the
+  //  full-blob materialization.
+  //
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, q_octs);
+  const c3_y* buf_y = vue_u.byt_y;
+  c3_w        len_w = vue_u.len_w;
 
-  adler_w = 0x1;
-  sum2_w = 0x0;
+  //  clamp the bytes we'll actually scan to the declared width; the
+  //  remainder is "leading zeros" and handled below.
+  //
+  if (p_octs_w < len_w) {
+    len_w = p_octs_w;
+  }
 
-  c3_w pos_w = 0;
+  c3_w adler_w = 0x1;
+  c3_w sum2_w  = 0x0;
+  c3_w pos_w   = 0;
 
   // Process all non-zero bytes
   //
@@ -93,6 +74,8 @@ u3_noun _qe_adler32(u3_noun octs)
     adler_w %= BASE;
     sum2_w %= BASE;
   }
+
+  u3r_view_done(&vue_u);
 
   // Process leading zeros
   //

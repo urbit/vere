@@ -20,13 +20,13 @@
     else if ( !u3r_word_fit(&len_w, len) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y  sig_y[64];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_ed_sign(dat_y, len_w, sed_y, sig_y);
-      u3a_free(dat_y);
-      return u3i_bytes(64, sig_y);
-    }
+
+    c3_y sig_y[64];
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    urcrypt_ed_sign((c3_y*)vue_u.byt_y, len_w, sed_y, sig_y);
+    u3r_view_done(&vue_u);
+    return u3i_bytes(64, sig_y);
   }
 
   u3_noun
@@ -61,13 +61,13 @@
     else if ( !u3r_word_fit(&len_w, len) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y  sig_y[64];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_ed_sign_raw(dat_y, len_w, pub_y, sek_y, sig_y);
-      u3a_free(dat_y);
-      return u3i_bytes(64, sig_y);
-    }
+
+    c3_y sig_y[64];
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, len_w, pub_y, sek_y, sig_y);
+    u3r_view_done(&vue_u);
+    return u3i_bytes(64, sig_y);
   }
 
   u3_noun
@@ -97,16 +97,13 @@
       // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
-    else {
-      c3_y  sig_y[64];
-      c3_w  met_w;
-      c3_y* msg_y = u3r_bytes_all(&met_w, msg);
 
-      urcrypt_ed_sign(msg_y, met_w, sed_y, sig_y);
-      u3a_free(msg_y);
-
-      return u3i_bytes(64, sig_y);
-    }
+    c3_y sig_y[64];
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, msg);
+    urcrypt_ed_sign((c3_y*)vue_u.byt_y, vue_u.len_w, sed_y, sig_y);
+    u3r_view_done(&vue_u);
+    return u3i_bytes(64, sig_y);
   }
 
   u3_noun
@@ -138,16 +135,13 @@
       // hoon asserts size
       return u3m_bail(c3__exit);
     }
-    else {
-      c3_y  sig_y[64];
-      c3_w  met_w;
-      c3_y* msg_y = u3r_bytes_all(&met_w, msg);
 
-      urcrypt_ed_sign_raw(msg_y, met_w, pub_y, sek_y, sig_y);
-      u3a_free(msg_y);
-
-      return u3i_bytes(64, sig_y);
-    }
+    c3_y sig_y[64];
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, msg);
+    urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sek_y, sig_y);
+    u3r_view_done(&vue_u);
+    return u3i_bytes(64, sig_y);
   }
 
   u3_noun

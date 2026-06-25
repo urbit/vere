@@ -85,6 +85,10 @@ _lord_writ_free(u3_writ* wit_u)
     case u3_writ_peek: {
       u3z(wit_u->pek_u->sam);
     } break;
+
+    case u3_writ_blob: {
+      c3_free(wit_u->blb_u.pax_c);
+    } break;
   }
 
   c3_free(wit_u);
@@ -156,6 +160,7 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_live: return "live";
     case u3_writ_exit: return "exit";
     case u3_writ_quiz: return "quiz";
+    case u3_writ_blob: return "blob";
   }
 }
 
@@ -403,6 +408,55 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
   wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
 }
 
+/* _lord_plea_blob(): handle blob-ack / blob-nack from serf.
+**
+** Expected dat: [c3y mug seq] on success, [c3n reason] on failure.
+*/
+static void
+_lord_plea_blob(u3_lord* god_u, u3_noun dat)
+{
+  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_blob);
+
+  if ( !wit_u ) {
+    u3z(dat);
+    return;
+  }
+
+  void*   ptr_v = wit_u->blb_u.ptr_v;
+  void  (*fun_f)(void*, c3_h, c3_h, c3_o) = wit_u->blb_u.fun_f;
+  c3_free(wit_u->blb_u.pax_c);
+  c3_free(wit_u);
+
+  if ( c3n == u3a_is_cell(dat) ) {
+    //  malformed response — treat as nack
+    //
+    if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
+    u3z(dat);
+    return;
+  }
+
+  if ( c3y == u3h(dat) ) {
+    //  [c3y mug seq]
+    //
+    u3_noun mug_a, seq_a;
+    c3_h mug_h = 0;
+    c3_h seq_h = 0;
+
+    if ( (c3y == u3r_cell(u3t(dat), &mug_a, &seq_a)) ) {
+      u3r_safe_half(mug_a, &mug_h);
+      u3r_safe_half(seq_a, &seq_h);
+    }
+    if ( fun_f ) fun_f(ptr_v, mug_h, seq_h, c3y);
+  }
+  else {
+    //  [c3n reason]
+    //
+    if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
+  }
+
+  u3z(dat);
+}
+
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
  static void
@@ -503,7 +557,7 @@ _lord_plea_work(u3_lord* god_u, u3_noun dat)
 /* _lord_on_plea(): handle plea from serf.
 */
 static c3_o
-_lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
+_lord_on_plea(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
 {
   u3_lord* god_u = ptr_v;
   u3_noun    tag, dat;
@@ -518,7 +572,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
   u3t_event_trace("king ipc cue", 'B');
 #endif
 
-  jar = u3s_cue_xeno_with(god_u->sil_u, len_d, byt_y);
+  //  pick decoder by protocol version (0x01 = ram, 0x00 = jam)
+  //
+  jar = ( 0x01 == ver_y )
+      ? u3s_tap_xeno(len_d, byt_y)
+      : u3s_cue_xeno_with(god_u->sil_u, len_d, byt_y);
 
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'E');
@@ -571,7 +629,11 @@ _lord_on_plea(void* ptr_v, c3_d len_d, c3_y* byt_y)
 
     case c3__quiz: {
       _lord_plea_quiz(god_u, u3k(dat));
-    }
+    } break;
+
+    case c3__blob: {
+      _lord_plea_blob(god_u, u3k(dat));
+    } break;
   }
 
   u3z(jar);
@@ -632,10 +694,18 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
 
     case u3_writ_quiz: {
       msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
-    }
+    } break;
 
     case u3_writ_exit: {
       msg = u3nc(c3__exit, u3_nul);
+    } break;
+
+    case u3_writ_blob: {
+      //  [%blob path-atom]  — path is a null-terminated C string
+      //
+      msg = u3nc(c3__blob,
+                 u3i_bytes(strlen(wit_u->blb_u.pax_c),
+                           (const c3_y*)wit_u->blb_u.pax_c));
     } break;
   }
 
@@ -663,13 +733,13 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3t_event_trace("king ipc jam", 'B');
 #endif
 
-    u3s_jam_xeno(jar, &len_d, &byt_y);
+    u3s_ram_xeno(jar, &len_d, &byt_y);
 
 #ifdef LORD_TRACE_JAM
     u3t_event_trace("king ipc jam", 'E');
 #endif
 
-    u3_newt_send(&god_u->inn_u, len_d, byt_y);
+    u3_newt_send_vers(&god_u->inn_u, 0x01, len_d, byt_y);
     u3z(jar);
   }
 }
@@ -686,13 +756,13 @@ _lord_send(u3_lord* god_u, u3_noun jar)
   u3t_event_trace("king ipc jam", 'B');
 #endif
 
-  u3s_jam_xeno(jar, &len_d, &byt_y);
+  u3s_ram_xeno(jar, &len_d, &byt_y);
 
 #ifdef LORD_TRACE_JAM
   u3t_event_trace("king ipc jam", 'E');
 #endif
 
-  u3_newt_send(&god_u->inn_u, len_d, byt_y);
+  u3_newt_send_vers(&god_u->inn_u, 0x01, len_d, byt_y);
   u3z(jar);
 }
 
@@ -755,6 +825,47 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
   }
 
   _lord_send(god_u, _lord_writ_make(god_u, wit_u));
+}
+
+/* u3_lord_blob_install(): request Mars install a staged blob file.
+*/
+void
+u3_lord_blob_install(u3_lord* god_u,
+                     c3_c*    pax_c,
+                     void*    ptr_v,
+                     void   (*fun_f)(void*, c3_h, c3_h, c3_o))
+{
+  u3_writ* wit_u = _lord_writ_new(god_u);
+  wit_u->typ_e       = u3_writ_blob;
+  wit_u->blb_u.pax_c = pax_c;
+  wit_u->blb_u.ptr_v = ptr_v;
+  wit_u->blb_u.fun_f = fun_f;
+
+  _lord_writ_send(god_u, wit_u);
+}
+
+/* u3_lord_blob_lease(): acquire/renew a king lease on a blob (%blas).
+**
+**   sent by the king's renewal timer (king.c) for every blob it still
+**   references, so a blob-bearing event pending in mars can't outlive
+**   the 15-min lease TTL and lose its file before commit.
+*/
+void
+u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h)
+{
+  _lord_send(god_u, u3nt(c3_s4('b','l','a','s'),
+                         u3i_word(mug_h),
+                         u3i_word(seq_h)));
+}
+
+/* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
+*/
+void
+u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h)
+{
+  _lord_send(god_u, u3nt(c3_s4('b','l','r','l'),
+                         u3i_word(mug_h),
+                         u3i_word(seq_h)));
 }
 
 /* u3_lord_save(): save a snapshot.
@@ -1193,11 +1304,15 @@ _lord_on_serf_boot_bail(void*       ptr_v,
 /* _lord_on_plea_boot(): handle plea from serf.
 */
 static c3_o
-_lord_on_plea_boot(void* ptr_v, c3_d len_d, c3_y* byt_y)
+_lord_on_plea_boot(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
 {
   _lord_boot* bot_u = ptr_v;
 
-  u3_weak jar = u3s_cue_xeno_with(bot_u->sil_u, len_d, byt_y);
+  //  pick decoder by protocol version (0x01 = ram, 0x00 = jam)
+  //
+  u3_weak jar = ( 0x01 == ver_y )
+              ? u3s_tap_xeno(len_d, byt_y)
+              : u3s_cue_xeno_with(bot_u->sil_u, len_d, byt_y);
   u3_noun tag, dat;
 
   if ( u3_none == jar ) {
@@ -1368,8 +1483,8 @@ u3_lord_boot(c3_c* pax_c,
   {
     c3_d  len_d;
     c3_y* byt_y;
-    u3s_jam_xeno(msg, &len_d, &byt_y);
-    u3_newt_send(&bot_u->inn_u, len_d, byt_y);
+    u3s_ram_xeno(msg, &len_d, &byt_y);
+    u3_newt_send_vers(&bot_u->inn_u, 0x01, len_d, byt_y);
     u3z(msg);
   }
 }

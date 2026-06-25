@@ -190,6 +190,9 @@
     u3_noun u3we_shal(u3_noun);
     u3_noun u3we_sha1(u3_noun);
 
+    u3_noun u3we_jam_shax(u3_noun);
+    u3_noun u3qe_jam_shax(u3_noun);
+
     u3_noun u3we_fein_ob(u3_noun);
     u3_noun u3we_fynd_ob(u3_noun);
 

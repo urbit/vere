@@ -336,6 +336,7 @@ const c_source_files = [_][]const u8{
     "jets/e/fynd_ob.c",
     "jets/e/hmac.c",
     "jets/e/jam.c",
+    "jets/e/jam_shax.c",
     "jets/e/json_de.c",
     "jets/e/json_en.c",
     "jets/e/keccak.c",

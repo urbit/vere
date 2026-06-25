@@ -190,6 +190,55 @@
 #     define  u3a_head_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->hed)
 #     define  u3a_tail_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->tel)
 
+    /* u3a_blob: loom-resident metadata for a blob file.
+    **
+    **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, with one
+    **   entry per (mug_h, seq_h).  Each bob atom's buf_w[0] is the loom
+    **   offset of its u3a_blob.
+    **
+    **   Single-counter design: the blob file is deleted iff use_w == 0.
+    **   use_w is the sum of three component sources:
+    **     - eve_w: event-log refcount (rebuilt on chop)
+    **     - les_h: active king-held lease count (durable in LMDB LEASES;
+    **              the loom copy is zeroed on boot and rebuilt from it)
+    **     - implicit atom cardinality: number of live bob atoms whose
+    **       buf_w[0] points here.  Updated only on atom alloc/free; not
+    **       affected by normal noun-refcount transitions.
+    **
+    **   Leases are king-acquired and mars-issued: they exist only to keep
+    **   a blob alive while the king holds a reference that mars has not
+    **   yet durably recorded (no eve_w, no snapshot cardinality) — i.e.
+    **   the window between %blob install and the commit of the event that
+    **   references it.  The king renews via %blas while it still holds the
+    **   blob, and releases via %blrl when its last reference dies.  Each
+    **   lease carries a 15-min TTL as a failsafe against a crashed or
+    **   leaking king; blobs in mars->king gifts come from committed state
+    **   and need no lease.
+    **
+    **   les_h is durable: each lease is a row in the LMDB LEASES table.
+    **   On boot we zero the snapshot's les_h (and subtract from use_w),
+    **   then rebuild it from that table (_mars_play_leases); eve_w and
+    **   atom cardinality survive the snapshot.
+    **
+    **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
+    **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
+    **   bitness migration reads the off-loom blob through the matching
+    **   off-bitness struct):
+    **     use_w  total refs: eve_w + les_h + atom cardinality
+    **     eve_w  event-log refcount (rebuildable from LMDB)
+    **     les_h  active king-held leases (rebuilt from LMDB LEASES)
+    **     mug_h  blob mug — identifies file in .urb/bob
+    **     seq_h  blob seq — identifies file in .urb/bob
+    */
+#define U3A_BLOB_BODY(S) \
+  U3_W(S) use_w;         \
+  U3_W(S) eve_w;         \
+  c3_h    les_h;         \
+  c3_h    mug_h;         \
+  c3_h    seq_h;
+
+      U3_DEFINE_PAIR(u3a_blob, U3A_BLOB_BODY);
+
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
 STATIC_ASSERT( u3a_vits <= u3a_min_log,
@@ -363,6 +412,23 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_is_cell: yes if noun [som] is cell.
     */
 #     define u3a_is_cell(som)    u3a_is_pom(som)
+
+    /* u3a_blob_flag: MSB of u3a_atom.len_w marks an indirect atom as a bob
+    **   (blob reference backed by an on-disk file rather than loom data).
+    **   The remaining bits hold the actual data word count.
+    **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
+    */
+#     define u3a_blob_flag_h  ((c3_h)0x80000000U)
+#     define u3a_blob_mask_h  ((c3_h)0x7FFFFFFFU)
+#     define u3a_blob_flag_d  ((c3_d)0x8000000000000000ULL)
+#     define u3a_blob_mask_d  ((c3_d)0x7FFFFFFFFFFFFFFFULL)
+#     ifdef VERE64
+#       define u3a_blob_flag  u3a_blob_flag_d
+#       define u3a_blob_mask  u3a_blob_mask_d
+#     else
+#       define u3a_blob_flag  u3a_blob_flag_h
+#       define u3a_blob_mask  u3a_blob_mask_h
+#     endif
 #     define u3du(som)           u3a_is_cell(som)
 
     /* u3a_h(): get head of cell [som]. Bail if [som] is not cell.
@@ -665,6 +731,49 @@ typedef struct {
             return (pil_u->top_p == u3R->cap_p) ? c3y : c3n;
           }
 
+    /* u3a_is_bob(): yes if [som] is an indirect atom flagged as a bob (blob ref).
+    **   Follows naming convention: u3a_is_cat, u3a_is_pug, u3a_is_pom, u3a_is_bob.
+    */
+    static inline c3_o
+    u3a_is_bob(u3_atom som) {
+      if ( c3n == u3a_is_pug(som) ) return c3n;
+      u3a_atom* atm_u = u3a_to_ptr(som);
+      return (atm_u->len_w & u3a_blob_flag) ? c3y : c3n;
+    }
+
+    /* u3a_bob_blob(): u3a_blob* referenced by a bob atom (via buf_w[0]).
+    */
+    static inline u3a_blob*
+    u3a_bob_blob(u3_atom som) {
+      u3a_atom* atm_u = u3a_to_ptr(som);
+      return (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+    }
+
+    /* u3a_bob_mug(): content mug of a bob atom (= blob directory name).
+    **   Stored redundantly on the atom (mug_w) for fast u3r_mug.
+    */
+    static inline c3_h
+    u3a_bob_mug(u3_atom som) {
+      return (c3_h)((u3a_atom*)u3a_to_ptr(som))->mug_w;
+    }
+
+    /* u3a_bob_seq(): sequence number within mug bucket.
+    */
+    static inline c3_h
+    u3a_bob_seq(u3_atom som) {
+      return u3a_bob_blob(som)->seq_h;
+    }
+
+    /* u3a_bob_bid(): blob ID = (mug << 32) | seq.
+    **   On VERE64 this is a direct atom (63 bits).
+    **   On 32-bit this is a c3_d that must go through u3i_chub().
+    */
+    static inline c3_d
+    u3a_bob_bid(u3_atom som) {
+      u3a_blob* blb_u = u3a_bob_blob(som);
+      return ((c3_d)blb_u->mug_h << 32) | (c3_d)blb_u->seq_h;
+    }
+
   /**  Functions.
   **/
 
@@ -870,6 +979,34 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_idle(u3a_road* rod_u);
+
+        /* u3a_blob_get(): look up blb_p entry by (mug_h, seq_h).
+        **   Returns NULL if no entry exists.  RETAINS.
+        */
+          u3a_blob*
+          u3a_blob_get(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_new(): allocate a fresh u3a_blob and install it in
+        **   blb_p under (mug_h, seq_h).  Caller is responsible for
+        **   ensuring no entry exists; struct is zero-initialized.
+        */
+          u3a_blob*
+          u3a_blob_new(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_drop(): remove blb_p entry for (mug_h, seq_h) and
+        **   free the underlying u3a_blob.  No-op if no entry.
+        */
+          void
+          u3a_blob_drop(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_sane(): blob-bank invariant check; home road only.
+        **   Verifies use_w == eve_w + les_h + atom cardinality per
+        **   entry.  [dep_o] adds a noun-graph walk counting live bob
+        **   atoms; without it only use_w >= eve_w + les_h is checked.
+        **   Loud per-entry reports; returns c3n on any violation.
+        */
+          c3_o
+          u3a_blob_sane(c3_o dep_o);
 
         /* u3a_ream(): ream free-lists.
         */

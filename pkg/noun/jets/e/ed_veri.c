@@ -19,13 +19,13 @@
          !u3r_word_fit(&len_w, len) ) {
       return c3n;
     }
-    else {
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      c3_t  val_t = urcrypt_ed_veri(dat_y, len_w, pub_y, sig_y);
-      u3a_free(dat_y);
 
-      return val_t ? c3y : c3n;
-    }
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, len_w, pub_y, sig_y);
+    u3r_view_done(&vue_u);
+
+    return val_t ? c3y : c3n;
   }
 
   u3_noun
@@ -58,14 +58,13 @@
          (0 != u3r_bytes_fit(32, pub_y, pk)) ) {
       return c3n;
     }
-    else {
-      c3_w  met_w;
-      c3_y* mes_y = u3r_bytes_all(&met_w, m);
-      c3_t  val_t = urcrypt_ed_veri(mes_y, met_w, pub_y, sig_y);
-      u3a_free(mes_y);
 
-      return val_t ? c3y : c3n;
-    }
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, m);
+    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sig_y);
+    u3r_view_done(&vue_u);
+
+    return val_t ? c3y : c3n;
   }
 
   u3_noun

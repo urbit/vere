@@ -3,6 +3,7 @@
 #include "vortex.h"
 
 #include "allocate.h"
+#include "hashtable.h"
 #include "imprison.h"
 #include "jets/k.h"
 #include "jets/q.h"
@@ -382,9 +383,17 @@ u3v_mark()
   qua_u[0]->nam_c = strdup("kernel");
   qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
-  qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("wish cache");
   qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
+
+  //  mark blob bank HAMT.  values are atoms encoding loom offsets of
+  //  u3a_blob structs; the structs themselves are walloc'd blocks not
+  //  subject to noun mark/sweep.  u3h_mark covers nodes, keys, values.
+  //
+  if ( u3H->blb_p ) {
+    u3h_mark(u3H->blb_p);
+  }
 
   qua_u[2] = NULL;
 
@@ -411,6 +420,31 @@ u3v_reclaim(void)
   }
 }
 
+/* _v_rewrite_blb_cb(): u3h_walk_with callback for compaction.
+**
+**   Each blb_p value atom encodes the loom offset of a u3a_blob struct.
+**   pack_seek determines new offsets but the integer values stored
+**   inside the value atoms are not noun pointers, so u3h_relocate
+**   doesn't update them.  We mutate cell->tel in place to the new
+**   offset.  Must run BEFORE u3h_relocate(&blb_p) — at that point
+**   slot pointers and cells are still at their pre-pack addresses,
+**   so u3a_to_ptr(kev) resolves correctly.
+*/
+static void
+_v_rewrite_blb_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3a_cell* cel_u = (u3a_cell*)u3a_to_ptr(kev);
+
+  //  tel is a direct atom; its value is the loom offset of the
+  //  u3a_blob.  loom offsets always fit in cat range on both VERE32
+  //  (≤30 bits) and VERE64 (≤34 bits).
+  //
+  u3_post off_p = (u3_post)cel_u->tel;
+  u3a_relocate_post(&off_p);
+  cel_u->tel = (u3_noun)off_p;
+}
+
 /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
@@ -420,4 +454,14 @@ u3v_rewrite_compact(void)
   //
   u3a_relocate_noun(&(u3A->roc));
   u3a_relocate_noun(&(u3A->yot));
+
+  //  relocate blob bank HAMT.  The values are atoms encoding loom
+  //  offsets of u3a_blob structs; rewrite those offsets BEFORE the
+  //  HAMT structure is relocated so we can still read kev cells at
+  //  their pre-pack addresses.
+  //
+  if ( u3H->blb_p ) {
+    u3h_walk_with(u3H->blb_p, _v_rewrite_blb_cb, 0);
+    u3h_relocate(&(u3H->blb_p));
+  }
 }

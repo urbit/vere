@@ -502,7 +502,10 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  c3_w*     new_w = u3a_walloc(old_u->len_w + c3_wiseof(u3a_atom));
+  //  use masked length; bob atoms carry u3a_blob_flag in len_w
+  //
+  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
+  c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
 
@@ -523,7 +526,7 @@ _ca_take_atom(u3a_atom* old_u)
   {
     c3_w i_w;
 
-    for ( i_w=0; i_w < old_u->len_w; i_w++ ) {
+    for ( i_w=0; i_w < dat_w; i_w++ ) {
       new_u->buf_w[i_w] = old_u->buf_w[i_w];
     }
   }
@@ -842,6 +845,307 @@ _me_gain_south(u3_noun dog)
   }
 }
 
+/* u3a_blob_get(): look up blb_p entry for (mug_h, seq_h).  RETAINS.
+*/
+u3a_blob*
+u3a_blob_get(c3_h mug_h, c3_h seq_h)
+{
+  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3_weak bv  = u3h_get(u3H->blb_p, bid);
+  u3z(bid);
+
+  if ( u3_none == bv ) return 0;
+
+  c3_d off_d = 0;
+  u3r_safe_chub(bv, &off_d);
+  u3z(bv);
+
+  return (u3a_blob*)u3a_into((u3_post)off_d);
+}
+
+/* u3a_blob_new(): allocate fresh u3a_blob and install it under (mug_h, seq_h).
+*/
+u3a_blob*
+u3a_blob_new(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
+  blb_u->use_w = 0;
+  blb_u->eve_w = 0;
+  blb_u->les_h = 0;
+  blb_u->mug_h = mug_h;
+  blb_u->seq_h = seq_h;
+
+  u3_post off_p = u3a_outa(blb_u);
+  u3_noun bid   = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3h_put(u3H->blb_p, bid, u3i_chub((c3_d)off_p));
+  u3z(bid);
+
+  return blb_u;
+}
+
+/* u3a_blob_drop(): remove blb_p entry and free underlying u3a_blob.
+*/
+void
+u3a_blob_drop(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  if ( !blb_u ) return;
+
+  u3a_wfree(blb_u);
+
+  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3h_del(u3H->blb_p, bid);
+  u3z(bid);
+}
+
+/* _sane_posts: C-heap visited set for u3a_blob_sane().
+**
+**   the checker must not allocate on the loom it is checking: a loom
+**   HAMT visited set (one entry per live noun) advances hat, which
+**   skews u3a_open-based "gained" metrics and fragments a
+**   freshly-packed heap.
+*/
+static c3_d
+_sane_hash(u3_post som_p)
+{
+  return (c3_d)som_p * 11400714819323198485ULL;
+}
+
+static c3_i
+_sane_cmp(u3_post a_p, u3_post b_p)
+{
+  return a_p == b_p;
+}
+
+#define NAME    _sane_posts
+#define KEY_TY  u3_post
+#define HASH_FN _sane_hash
+#define CMPR_FN _sane_cmp
+#include "verstable.h"
+
+/* _blob_sane: u3a_blob_sane() context.
+**
+**   [set_u]: visited-box set keyed by loom offset (pointer identity,
+**   not structural equality — cardinality counts atom boxes).
+**   [car_u]: per-bid live bob-atom counts (C-heap; banks are small,
+**   linear scan is fine).
+*/
+typedef struct {
+  _sane_posts set_u;
+  struct _blob_sane_car {
+    c3_d bid_d;
+    c3_w qty_w;
+  }*   car_u;
+  c3_z len_z;
+  c3_z cap_z;
+  c3_o ok_o;
+  c3_o dep_o;
+} _blob_sane_ctx;
+
+static c3_o
+_blob_sane_seen(_blob_sane_ctx* ctx_u, u3_noun som)
+{
+  u3_post som_p = u3a_to_off(som);
+  c3_z    pre_z = vt_size(&ctx_u->set_u);
+
+  _sane_posts_itr itr_u = vt_get_or_insert(&ctx_u->set_u, som_p);
+  u3_assert( !vt_is_end(itr_u) );  //  OOM
+
+  return ( vt_size(&ctx_u->set_u) == pre_z ) ? c3y : c3n;
+}
+
+static void
+_blob_sane_atom_cb(u3_atom a, void* ptr_v)
+{
+  _blob_sane_ctx* ctx_u = ptr_v;
+
+  if (  (c3n == u3a_is_bob(a))
+     || (c3y == _blob_sane_seen(ctx_u, a)) )
+  {
+    return;
+  }
+
+  c3_d bid_d = ((c3_d)u3a_bob_mug(a) << 32) | (c3_d)u3a_bob_seq(a);
+
+  for ( c3_z i_z = 0; i_z < ctx_u->len_z; i_z++ ) {
+    if ( ctx_u->car_u[i_z].bid_d == bid_d ) {
+      ctx_u->car_u[i_z].qty_w += 1;
+      return;
+    }
+  }
+
+  if ( ctx_u->len_z == ctx_u->cap_z ) {
+    ctx_u->cap_z = ctx_u->cap_z ? ctx_u->cap_z * 2 : 8;
+    ctx_u->car_u = c3_realloc(ctx_u->car_u,
+                              ctx_u->cap_z * sizeof(*ctx_u->car_u));
+  }
+  ctx_u->car_u[ctx_u->len_z].bid_d = bid_d;
+  ctx_u->car_u[ctx_u->len_z].qty_w = 1;
+  ctx_u->len_z += 1;
+}
+
+static c3_o
+_blob_sane_cell_cb(u3_noun n, void* ptr_v)
+{
+  _blob_sane_ctx* ctx_u = ptr_v;
+
+  //  skip already-visited subtrees (shared structure)
+  //
+  return ( c3y == _blob_sane_seen(ctx_u, n) ) ? c3n : c3y;
+}
+
+static void
+_blob_sane_hamt_cb(u3_noun kev, void* ptr_v)
+{
+  u3a_walk_fore(kev, ptr_v, _blob_sane_atom_cb, _blob_sane_cell_cb);
+}
+
+static c3_w
+_blob_sane_card(_blob_sane_ctx* ctx_u, c3_d bid_d)
+{
+  for ( c3_z i_z = 0; i_z < ctx_u->len_z; i_z++ ) {
+    if ( ctx_u->car_u[i_z].bid_d == bid_d ) {
+      return ctx_u->car_u[i_z].qty_w;
+    }
+  }
+  return 0;
+}
+
+static void
+_blob_sane_bank_cb(u3_noun kev, void* ptr_v)
+{
+  _blob_sane_ctx* ctx_u = ptr_v;
+  u3_noun key = u3h(kev);
+  u3_noun val = u3t(kev);
+
+  c3_d bid_d = 0;
+  u3r_safe_chub(key, &bid_d);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+
+  c3_w sum_w = blb_u->eve_w + (c3_w)blb_u->les_h;
+
+  //  cheap tier: implied cardinality must be non-negative
+  //
+  if ( blb_u->use_w < sum_w ) {
+    fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_w " < eve=%"
+                    PRIc3_w " + les=%" PRIc3_h " (counters corrupt)\r\n",
+                    (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                    blb_u->use_w, blb_u->eve_w, blb_u->les_h);
+    ctx_u->ok_o = c3n;
+  }
+  //  deep tier: implied cardinality must match counted live atoms
+  //
+  else if ( c3y == ctx_u->dep_o ) {
+    c3_w qty_w = _blob_sane_card(ctx_u, bid_d);
+
+    if ( blb_u->use_w != (sum_w + qty_w) ) {
+      fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_w " != eve=%"
+                      PRIc3_w " + les=%" PRIc3_h " + atoms=%" PRIc3_w
+                      "%s\r\n",
+                      (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                      blb_u->use_w, blb_u->eve_w, blb_u->les_h, qty_w,
+                      ( blb_u->use_w < (sum_w + qty_w) )
+                        ? " (counters corrupt)"
+                        : " (leak, or root unscanned)");
+      ctx_u->ok_o = c3n;
+    }
+  }
+}
+
+/* u3a_blob_sane(): blob-bank invariant check.
+**
+**   Verifies, for every blb_p entry,
+**     use_w == eve_w + les_h + live bob-atom cardinality.
+**
+**   Cheap tier (always): use_w >= eve_w + les_h — a violation means
+**   refcounts were lost below the durable floor, the precondition for
+**   deleting a blob the event log still references.
+**
+**   Deep tier ([dep_o]): counts live bob atoms by walking the noun
+**   graph from the home-road roots (arvo state, wish cache, cold jets,
+**   memo/ford caches, trace) with a visited set, and checks the full
+**   equation; also flags counted bids missing from the bank.  An
+**   unscanned root reads as a leak-direction mismatch, so the message
+**   distinguishes the two directions.
+**
+**   Home road only.  Returns c3n (after loud per-entry reports) on any
+**   violation.
+*/
+c3_o
+u3a_blob_sane(c3_o dep_o)
+{
+  //  bank and roots are home-road state; nothing to check elsewhere
+  //
+  if ( &(u3H->rod_u) != u3R ) return c3y;
+
+  if ( !u3H->blb_p ) return c3y;
+
+  _blob_sane_ctx ctx_u = {0};
+  ctx_u.ok_o  = c3y;
+  ctx_u.dep_o = dep_o;
+
+  if ( c3y == dep_o ) {
+    vt_init(&ctx_u.set_u);
+
+    u3a_walk_fore(u3A->roc, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+    u3a_walk_fore(u3A->yot, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+    u3a_walk_fore(u3R->bug.tax, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+    u3a_walk_fore(u3R->bug.mer, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+    u3h_walk_with(u3R->jed.cod_p, _blob_sane_hamt_cb, &ctx_u);
+    u3h_walk_with(u3R->cax.per_p, _blob_sane_hamt_cb, &ctx_u);
+    u3h_walk_with(u3R->cax.for_p, _blob_sane_hamt_cb, &ctx_u);
+  }
+
+  u3h_walk_with(u3H->blb_p, _blob_sane_bank_cb, &ctx_u);
+
+  //  deep tier: every counted bid must exist in the bank
+  //
+  if ( c3y == dep_o ) {
+    for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
+      c3_d bid_d = ctx_u.car_u[i_z].bid_d;
+      if ( !u3a_blob_get((c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF)) ) {
+        fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": %" PRIc3_w " live atom(s) "
+                        "with no bank entry\r\n",
+                        (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                        ctx_u.car_u[i_z].qty_w);
+        ctx_u.ok_o = c3n;
+      }
+    }
+
+    vt_cleanup(&ctx_u.set_u);
+  }
+
+  c3_free(ctx_u.car_u);
+  return ctx_u.ok_o;
+}
+
+/* _me_bob_dead(): bob atom's loom refcount just hit zero.
+**
+**   Decrements u3a_blob.use_w (atom cardinality contribution).  If
+**   use_w hits zero, calls blob_del_f — mars wipes the file and drops
+**   the blb_p entry; king releases its lease (%blrl) and drops its
+**   local entry, never touching files.
+*/
+static void
+_me_bob_dead(u3a_atom* atm_u)
+{
+  if ( !u3C.blob_del_f ) return;
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+  if ( !blb_u ) return;
+
+  if ( blb_u->use_w > 0 ) {
+    blb_u->use_w -= 1;
+  }
+
+  if ( 0 == blb_u->use_w ) {
+    u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);
+  }
+}
+
 /* _me_lose_north(): lose on a north road.
 */
 static void
@@ -874,6 +1178,10 @@ top:
           }
         }
         else {
+          u3a_atom* atm_u = (u3a_atom*)box_u;
+          if ( atm_u->len_w & u3a_blob_flag ) {
+            _me_bob_dead(atm_u);
+          }
           u3a_wfree(box_u);
         }
       }
@@ -913,6 +1221,10 @@ top:
           }
         }
         else {
+          u3a_atom* atm_u = (u3a_atom*)box_u;
+          if ( atm_u->len_w & u3a_blob_flag ) {
+            _me_bob_dead(atm_u);
+          }
           u3a_wfree(box_u);
         }
       }
@@ -1152,8 +1464,18 @@ u3a_relocate_noun(u3_noun *som)
     old_p = u3a_to_off(old);
 
     if ( c3n == u3a_is_cell(old) ) {
-      new_p = _pack_relocate(old_p);
-      *som = u3a_to_pug(new_p);
+      //  indirect atom: mark-tracked relocate so bob atoms can rewrite
+      //  their u3a_blob pointer at old_p exactly once.
+      //
+      new_p = _pack_relocate_mark(old_p, &fir_t);
+      *som  = u3a_to_pug(new_p);
+
+      if ( fir_t ) {
+        u3a_atom* atm_u = u3to(u3a_atom, old_p);
+        if ( atm_u->len_w & u3a_blob_flag ) {
+          u3a_relocate_post((u3_post*)&atm_u->buf_w[0]);
+        }
+      }
       return;
     }
 

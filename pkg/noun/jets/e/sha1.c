@@ -13,14 +13,13 @@
     if ( !u3r_word_fit(&len_w, wid) ) {
       return u3m_bail(c3__fail);
     }
-    else {
-      c3_y out_y[20];
-      c3_y *dat_y = u3r_bytes_alloc(0, len_w, dat);
 
-      urcrypt_sha1(dat_y, len_w, out_y);
-      u3a_free(dat_y);
-      return u3i_bytes(20, out_y);
-    }
+    c3_y out_y[20];
+    u3r_view vue_u;
+    u3r_view_padded(&vue_u, dat, len_w);
+    urcrypt_sha1((c3_y*)vue_u.byt_y, len_w, out_y);
+    u3r_view_done(&vue_u);
+    return u3i_bytes(20, out_y);
   }
 
   u3_noun

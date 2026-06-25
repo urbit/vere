@@ -2,11 +2,13 @@
 
 #include "imprison.h"
 
+#include "hashtable.h"
 #include "jets/k.h"
 #include "jets/q.h"
 #include "manage.h"
 #include "retrieve.h"
 #include "trace.h"
+#include "vortex.h"
 #include "xtract.h"
 
 #if defined(__x86_64__)
@@ -572,6 +574,19 @@ u3i_vint(u3_noun a)
     return u3m_bail(c3__exit);
   }
   else {
+    //  bob atoms must be materialized before incrementing:
+    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is a seq number,
+    //  not atom data.
+    //
+    if ( c3y == u3a_is_bob(a) ) {
+      u3_atom mat = u3r_blob_load(a, u3C.dir_c);
+      if ( u3_none == mat ) {
+        return u3m_bail(c3__fail);
+      }
+      u3z(a);
+      return u3i_vint(mat);
+    }
+
     u3i_slab sab_u;
     u3i_slab_init(&sab_u, 0, u3r_met(0, a) + 1);
 
@@ -817,4 +832,31 @@ u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z)
   u3_noun pro = _molt_apply(som, (c3_w)len_z, pairs);
   u3z(som);
   return pro;
+}
+
+/* u3i_blob(): construct a bob atom (blob reference).
+**
+**   Allocates a fresh u3a_atom whose buf_w[0] points at the u3a_blob
+**   for (mug_h, seq_h).  Looks up or creates the u3a_blob and bumps
+**   its use_w (atom cardinality).  No interning: each call yields a
+**   new atom.
+*/
+u3_atom
+u3i_blob(c3_h mug_h, c3_h seq_h)
+{
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
+  blb_u->use_w += 1;
+
+  c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+  u3a_atom* vat_u = (void *)nov_w;
+
+  vat_u->use_w    = 1;
+  vat_u->mug_w    = mug_h;
+  vat_u->len_w    = 0 | u3a_blob_flag;
+  vat_u->buf_w[0] = (c3_w)u3a_outa(blb_u);
+
+  return u3a_to_pug(u3a_outa(nov_w));
 }

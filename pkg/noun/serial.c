@@ -7,8 +7,10 @@
 
 #include "allocate.h"
 #include "hashtable.h"
+#include "imprison.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "options.h"
 #include "retrieve.h"
 #include "serial.h"
 #include "ur/ur.h"
@@ -87,7 +89,43 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    c3_w   a_w = u3r_met(0, a);
+    //  for bob atoms, mmap the blob file directly to avoid loom allocation.
+    //  for normal atoms, use u3r_met as before.
+    //
+    c3_o         bob_o = u3a_is_bob(a);
+    c3_d         byt_d = 0;
+    const c3_y*  byt_y = 0;
+
+    c3_w   a_w;
+    if ( c3y == bob_o ) {
+      byt_y = u3r_blob_map(a, &byt_d);
+      if ( !byt_y ) {
+        u3m_bail(c3__fail);
+        return;
+      }
+      //  compute bit-length (met) from mmap'd bytes; strip trailing zero bytes
+      //  and find the MSB position of the last non-zero byte.
+      //
+      {
+        c3_d pos_d = byt_d;
+        while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
+          pos_d--;
+        }
+        if ( 0 == pos_d ) {
+          //  blob is all zeros → atom value is 0; treat as zero atom
+          u3r_blob_unmap(byt_y, byt_d);
+          _cs_jam_fib_chop(fib_u, 1, 1);
+          return;
+        }
+        c3_y top_y = byt_y[pos_d - 1];
+        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
+        a_w = (c3_w)((pos_d - 1) * 8 + (c3_d)(8 - clz_y));
+      }
+    }
+    else {
+      a_w = u3r_met(0, a);
+    }
+
     c3_w   b_w = c3_bits_word(a_w);
     c3_w bit_w = fib_u->bit_w;
 
@@ -97,6 +135,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       c3_w met_w = a_w + (2 * b_w);
 
       if ( a_w > (c3_w_max - 64) ) {
+        if ( byt_y ) u3r_blob_unmap(byt_y, byt_d);
         u3m_bail(c3__fail);
         return;
       }
@@ -140,7 +179,16 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
       //  _cs_jam_fib_chop(fib_u, a_w, a);
       //
-      u3r_chop(0, 0, a_w, bit_w, buf_w, a);
+      if ( byt_y ) {
+        //  write bob atom bytes directly from mmap, no loom allocation
+        //
+        c3_w len_w = (c3_w)((byt_d + sizeof(c3_w) - 1) / sizeof(c3_w));
+        u3r_chop_words(0, 0, a_w, bit_w, buf_w, len_w, (const c3_w*)byt_y);
+        u3r_blob_unmap(byt_y, byt_d);
+      }
+      else {
+        u3r_chop(0, 0, a_w, bit_w, buf_w, a);
+      }
     }
   }
 }
@@ -253,6 +301,16 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     //
     ur_bsw_atom64(rit_u, (c3_y)met_w, (c3_d)a);
   }
+  else if ( c3y == u3a_is_bob(a) ) {
+    //  bob atom: mmap the blob file and write bytes directly into the bitstream
+    //
+    c3_d        len_d;
+    const c3_y* byt_y = u3r_blob_map(a, &len_d);
+    if ( byt_y ) {
+      ur_bsw_atom_bytes(rit_u, (c3_d)met_w, (c3_y*)byt_y);
+      u3r_blob_unmap(byt_y, len_d);
+    }
+  }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
     //  XX assumes little-endian
@@ -285,7 +343,12 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  c3_w         met_w = u3r_met(0, a);
+  //  for bob atoms, use the blob met to avoid materializing the large atom;
+  //  met_w must fit in 32 bits here (jam uses c3_w for bit lengths)
+  //
+  c3_w         met_w = ( c3y == u3a_is_bob(a) )
+                     ? (c3_w)u3r_blob_met(a)
+                     : u3r_met(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
@@ -501,11 +564,17 @@ typedef struct _cue_frame_s {
 } _cue_frame_t;
 
 /* _cs_cue_xeno_next(): read next value from bitstream, dictionary off-loom.
+**
+**   when [snk_u] is set, atoms larger than [thr_d] bytes are streamed
+**   through it in chunks instead of being allocated on the loom; the
+**   sink's don_f supplies the decoded atom (typically a bob atom).
 */
 static inline ur_cue_res_e
 _cs_cue_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
                   ur_dictn_t* dic_u,
+                  c3_d        thr_d,
+                  u3s_bsink*  snk_u,
                   u3_noun*       out)
 {
   ur_root_t* rot_u = 0;
@@ -559,6 +628,48 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
         if ( (u3a_word_bits-1) >= len_d ) {
           *out = (u3_noun)ur_bsrn_any(red_u, len_d);
         }
+        else if ( snk_u && (((len_d + 0x7) >> 3) > thr_d) ) {
+          //  stream the atom's bytes through the sink, off-loom, in
+          //  byte-multiple chunks (so they concatenate); the final
+          //  chunk carries the bit remainder
+          //
+          if ( c3n == snk_u->opn_f(snk_u->ptr_v) ) {
+            return ur_cue_gone;
+          }
+
+          {
+            static const c3_d chk_d = ((c3_d)1 << 23);  //  8M bits = 1MB
+            c3_y* buf_y = c3_malloc(chk_d >> 3);
+            c3_d  rem_d = len_d;
+            c3_o  oky_o = c3y;
+
+            while ( rem_d ) {
+              c3_d lim_d = c3_min(rem_d, chk_d);
+              ur_bsr_bytes_any(red_u, lim_d, buf_y);
+              if ( c3n == snk_u->wri_f(snk_u->ptr_v, buf_y,
+                                       (c3_z)((lim_d + 0x7) >> 3)) )
+              {
+                oky_o = c3n;
+                break;
+              }
+              rem_d -= lim_d;
+            }
+
+            c3_free(buf_y);
+
+            if ( c3n == oky_o ) {
+              return ur_cue_gone;
+            }
+          }
+
+          {
+            u3_weak bob = snk_u->don_f(snk_u->ptr_v);
+            if ( u3_none == bob ) {
+              return ur_cue_gone;
+            }
+            *out = bob;
+          }
+        }
         else {
           c3_d     byt_d = (len_d + 0x7) >> 3;
           u3i_slab sab_u;
@@ -582,6 +693,8 @@ _cs_cue_xeno_next(u3a_pile*    pil_u,
 
 struct _u3_cue_xeno {
   ur_dictn_t dic_u;
+  c3_d       thr_d;  //  blob threshold in bytes (0 = disabled)
+  u3s_bsink* snk_u;  //  byte sink for streamed large atoms
 };
 
 /* _cs_cue_xeno(): cue on-loom, with off-loom dictionary in handle.
@@ -616,7 +729,8 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
 
   //  advance into stream
   //
-  res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u, &ref);
+  res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u,
+                            sil_u->thr_d, sil_u->snk_u, &ref);
 
   //  process cell results
   //
@@ -630,7 +744,8 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
       //
       if ( u3_none == fam_u->ref ) {
         fam_u->ref = ref;
-        res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u, &ref);
+        res_e = _cs_cue_xeno_next(&pil_u, &red_u, dic_u,
+                                  sil_u->thr_d, sil_u->snk_u, &ref);
         fam_u = u3a_peek(&pil_u);
       }
       //  f is a tail-frame; pop the stack and continue
@@ -676,6 +791,17 @@ u3s_cue_xeno_init_with(c3_d pre_d, c3_d siz_d)
   ur_dictn_grow((ur_root_t*)0, &sil_u->dic_u, pre_d, siz_d);
 
   return sil_u;
+}
+
+/* u3s_cue_xeno_blob(): install a byte sink on a cue_xeno handle.
+*/
+void
+u3s_cue_xeno_blob(u3_cue_xeno* sil_u,
+                  c3_d         thr_d,
+                  u3s_bsink*   snk_u)
+{
+  sil_u->thr_d = thr_d;
+  sil_u->snk_u = snk_u;
 }
 
 /* u3s_cue_xeno_init(): initialize a cue_xeno handle.
@@ -891,20 +1017,30 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 u3_noun
 u3s_cue_atom(u3_atom a)
 {
-  c3_w  len_w = u3r_met(3, a);
-  c3_y* byt_y;
-
   // XX assumes little-endian
   //
   if ( c3y == u3a_is_cat(a) ) {
-     byt_y = (c3_y*)&a;
-   }
-   else {
-    u3a_atom* vat_u = u3a_to_ptr(a);
-    byt_y = (c3_y*)vat_u->buf_w;
+    c3_w len_w = u3r_met(3, a);
+    return u3s_cue_bytes((c3_d)len_w, (c3_y*)&a);
   }
 
-  return u3s_cue_bytes((c3_d)len_w, byt_y);
+  //  bob atom: mmap the backing file instead of dereferencing buf_w
+  //  (which for a bob would yield seq_h).  The view stays live for
+  //  the whole cue so the bitstream reader can scan freely.
+  //
+  if ( c3y == u3a_is_bob(a) ) {
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
+    u3_noun res = u3s_cue_bytes((c3_d)vue_u.len_w, (c3_y*)vue_u.byt_y);
+    u3r_view_done(&vue_u);
+    return res;
+  }
+
+  {
+    c3_w      len_w = u3r_met(3, a);
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    return u3s_cue_bytes((c3_d)len_w, (c3_y*)vat_u->buf_w);
+  }
 }
 
 /* _cs_etch_ud_size(): output length in @ud for given mpz_t.
@@ -1463,9 +1599,427 @@ u3s_sift_ud(u3_atom a)
      byt_y = (c3_y*)&a;
    }
    else {
+     u3_assert(c3n == u3a_is_bob(a));
+     u3a_atom* vat_u = u3a_to_ptr(a);
+     byt_y = (c3_y*)vat_u->buf_w;
+   }
+
+   return u3s_sift_ud_bytes(len_w, byt_y);
+}
+
+/*
+**  Ram/Tap — reference-aware serialization
+**
+**  Ram extends jam's bit-encoding with a 2-bit fixed tag:
+**    00 = normal atom   (mat-encoded value follows)
+**    01 = blob ref      (mat-encoded mug, then mat-encoded seq)
+**    10 = cell
+**    11 = backref       (mat-encoded bit-position follows)
+**
+**  All tags are exactly 2 bits (LSB first).
+**  Wire format: ["RAM\0" 4B][0x01 1B][ram_bits...]
+**
+**  Ram does NOT blobify atoms. Caller must ensure large atoms are
+**  already bob atoms before calling u3s_ram_xeno().
+*/
+
+#define U3S_RAM_MAGIC  "\x52\x41\x4d\x00"   /* "RAM\0" */
+#define U3S_RAM_VERSION  0x01
+
+/* Ram 2-bit tag values (LSB first)
+*/
+#define U3S_RAM_TAG_ATOM  0   /* 00 */
+#define U3S_RAM_TAG_BOB   1   /* 01 */
+#define U3S_RAM_TAG_CELL  2   /* 10 */
+#define U3S_RAM_TAG_BACK  3   /* 11 */
+
+/* _ram_xeno_t: state for the ram encoding walk.
+*/
+typedef struct _ram_xeno_s {
+  u3p(u3h_root) har_p;
+  ur_bsw_t      rit_u;
+} _ram_xeno_t;
+
+/* _cs_ram_bsw_2tag(): write a 2-bit ram tag to the bitstream.
+*/
+static inline void
+_cs_ram_bsw_2tag(ur_bsw_t* rit_u, c3_y tag_y)
+{
+  ur_bsw8(rit_u, 2, tag_y & 3);
+}
+
+/* _cs_ram_bsw_normal_atom(): encode a normal (non-bob) atom as tag 00 + mat.
+*/
+static inline void
+_cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
+{
+  //  write 2-bit tag 00
+  //
+  _cs_ram_bsw_2tag(rit_u, U3S_RAM_TAG_ATOM);
+
+  if ( c3y == u3a_is_cat(a) ) {
+    ur_bsw_mat64(rit_u, (c3_y)met_w, (c3_d)a);
+  }
+  else {
     u3a_atom* vat_u = u3a_to_ptr(a);
-    byt_y = (c3_y*)vat_u->buf_w;
+    c3_y*     byt_y = (c3_y*)vat_u->buf_w;
+    ur_bsw_mat_bytes(rit_u, (c3_d)met_w, byt_y);
+  }
+}
+
+/* _cs_ram_bsw_bob(): encode a bob atom as tag 01 + mat(mug) + mat(seq).
+*/
+static inline void
+_cs_ram_bsw_bob(ur_bsw_t* rit_u, u3_atom a)
+{
+  c3_h mug_h = u3a_bob_mug(a);
+  c3_h seq_h = u3a_bob_seq(a);
+
+  //  write 2-bit tag 01
+  //
+  _cs_ram_bsw_2tag(rit_u, U3S_RAM_TAG_BOB);
+
+  //  write mat(mug) and mat(seq)
+  //
+  ur_bsw_mat64(rit_u, u3r_met(0, (u3_atom)mug_h), (c3_d)mug_h);
+  ur_bsw_mat64(rit_u, u3r_met(0, (u3_atom)seq_h), (c3_d)seq_h);
+}
+
+/* _cs_ram_bsw_back(): encode a backref as tag 11 + mat(bit-position).
+*/
+static inline void
+_cs_ram_bsw_back(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
+{
+  c3_d bak_d = ( c3y == u3a_is_cat(a) )
+             ? (c3_d)a
+             : u3r_chub(0, a);
+
+  //  write 2-bit tag 11
+  //
+  _cs_ram_bsw_2tag(rit_u, U3S_RAM_TAG_BACK);
+  ur_bsw_mat64(rit_u, (c3_y)met_w, bak_d);
+}
+
+/* _cs_ram_xeno_atom(): encode atom (or backref) in ram bitstream.
+*/
+static void
+_cs_ram_xeno_atom(u3_atom a, void* ptr_v)
+{
+  _ram_xeno_t* ram_u = ptr_v;
+  ur_bsw_t*    rit_u = &(ram_u->rit_u);
+  u3_weak        bak = u3h_git(ram_u->har_p, a);
+  c3_o         bob_o = u3a_is_bob(a);
+  //  for bob atoms, use the blob's true bit-length for backref comparison.
+  //  for normal atoms, use u3r_met as before.
+  //
+  c3_w         met_w = (c3n == bob_o) ? u3r_met(0, a)
+                                       : (c3_w)u3r_blob_met(a);
+
+  if ( u3_none == bak ) {
+    u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));
+    if ( c3y == bob_o ) {
+      _cs_ram_bsw_bob(rit_u, a);
+    }
+    else {
+      _cs_ram_bsw_normal_atom(rit_u, met_w, a);
+    }
+  }
+  else {
+    c3_w bak_w = u3r_met(0, bak);
+
+    if ( met_w <= bak_w ) {
+      if ( c3y == bob_o ) {
+        _cs_ram_bsw_bob(rit_u, a);
+      }
+      else {
+        _cs_ram_bsw_normal_atom(rit_u, met_w, a);
+      }
+    }
+    else {
+      _cs_ram_bsw_back(rit_u, bak_w, bak);
+    }
+  }
+}
+
+/* _cs_ram_xeno_cell(): encode cell (or backref) in ram bitstream.
+*/
+static c3_o
+_cs_ram_xeno_cell(u3_noun a, void* ptr_v)
+{
+  _ram_xeno_t* ram_u = ptr_v;
+  ur_bsw_t*    rit_u = &(ram_u->rit_u);
+  u3_weak        bak = u3h_git(ram_u->har_p, a);
+
+  if ( u3_none == bak ) {
+    u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));
+    //  write 2-bit tag 10 (cell)
+    //
+    _cs_ram_bsw_2tag(rit_u, U3S_RAM_TAG_CELL);
+    return c3y;
+  }
+  else {
+    _cs_ram_bsw_back(rit_u, u3r_met(0, bak), bak);
+    return c3n;
+  }
+}
+
+/* u3s_ram_xeno(): ram with off-loom buffer (re-)allocation.
+*/
+c3_d
+u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
+{
+  _ram_xeno_t ram_u = {0};
+  ur_bsw_init(&ram_u.rit_u, ur_fib11, ur_fib12);
+  ram_u.har_p = u3h_new();
+
+  u3a_walk_fore(a, &ram_u, _cs_ram_xeno_atom, _cs_ram_xeno_cell);
+
+  u3h_free(ram_u.har_p);
+
+  {
+    c3_d   raw_bytes_d;  //  byte count of raw ram bits
+    c3_y*  raw_y;
+    c3_d   out_d;
+    c3_y*  out_y;
+
+    //  ur_bsw_done() returns bit count, sets raw_bytes_d to byte count
+    //
+    ur_bsw_done(&ram_u.rit_u, &raw_bytes_d, &raw_y);
+
+    //  prepend 5-byte header: "RAM\0" + version
+    //
+    out_d = 5 + raw_bytes_d;
+    out_y = malloc(out_d);
+    if ( !out_y ) {
+      free(raw_y);
+      *len_d = 0;
+      return 0;
+    }
+
+    memcpy(out_y, U3S_RAM_MAGIC, 4);
+    out_y[4] = U3S_RAM_VERSION;
+    memcpy(out_y + 5, raw_y, raw_bytes_d);
+    free(raw_y);
+
+    *len_d = out_d;
+    *byt_y = out_y;
+    return out_d;
+  }
+}
+
+/*
+**  Tap — ram deserialization
+*/
+
+/* _tap_frame_t: stack frame for cell reconstruction.
+*/
+typedef struct _tap_frame_s {
+  u3_weak ref;    //  taken head, or u3_none if still on head
+  c3_d    bit_d;  //  bit position of this noun
+} _tap_frame_t;
+
+/* _cs_tap_xeno_next(): read next value from ram bitstream.
+*/
+static inline ur_cue_res_e
+_cs_tap_xeno_next(u3a_pile*    pil_u,
+                  ur_bsr_t*    red_u,
+                  ur_dictn_t*  dic_u,
+                  u3_noun*     out)
+{
+  ur_root_t* rot_u = 0;
+
+  while ( 1 ) {
+    c3_d  len_d;
+    c3_d  bit_d = red_u->bits;
+    c3_y  tag_y;
+    ur_cue_res_e res_e;
+
+    //  read 2-bit ram tag (LSB first)
+    //
+    tag_y = ur_bsr8_any(red_u, 2);
+
+    switch ( tag_y ) {
+      default:
+        return ur_cue_gone;
+
+      case U3S_RAM_TAG_CELL: {
+        //  push a head-frame and continue reading head
+        //
+        _tap_frame_t* fam_u = u3a_push(pil_u);
+        fam_u->ref   = u3_none;
+        fam_u->bit_d = bit_d;
+        continue;
+      }
+
+      case U3S_RAM_TAG_BACK: {
+        if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
+          return res_e;
+        }
+        else if ( 62 < len_d ) {
+          return ur_cue_meme;
+        }
+        else {
+          c3_d  bak_d = ur_bsr64_any(red_u, len_d);
+          c3_w  bak_w;
+
+          if ( !ur_dictn_get(rot_u, dic_u, bak_d, &bak_w) ) {
+            return ur_cue_back;
+          }
+
+          *out = u3k((u3_noun)bak_w);
+          return ur_cue_good;
+        }
+      }
+
+      case U3S_RAM_TAG_ATOM: {
+        //  read mat-encoded value (same as cue atom path)
+        //
+        if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
+          return res_e;
+        }
+
+        if ( (u3a_word_bits - 1) >= len_d ) {
+          *out = (u3_noun)ur_bsrn_any(red_u, len_d);
+        }
+        else {
+          c3_d     byt_d = (len_d + 0x7) >> 3;
+          u3i_slab sab_u;
+
+          if ( c3_w_max < byt_d ) {
+            return ur_cue_meme;
+          }
+          u3i_slab_init(&sab_u, 3, byt_d);
+          ur_bsr_bytes_any(red_u, len_d, sab_u.buf_y);
+          *out = u3i_slab_mint_bytes(&sab_u);
+        }
+
+        ur_dictn_put(rot_u, dic_u, bit_d, *out);
+        return ur_cue_good;
+      }
+
+      case U3S_RAM_TAG_BOB: {
+        //  read mat(mug) + mat(seq) and produce bob atom
+        //
+        c3_d mug_d, seq_d;
+
+        if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
+          return res_e;
+        }
+        else if ( 62 < len_d ) {
+          return ur_cue_meme;
+        }
+        mug_d = ur_bsr64_any(red_u, len_d);
+
+        if ( ur_cue_good != (res_e = ur_bsr_rub_len(red_u, &len_d)) ) {
+          return res_e;
+        }
+        else if ( 62 < len_d ) {
+          return ur_cue_meme;
+        }
+        seq_d = ur_bsr64_any(red_u, len_d);
+
+        *out = u3i_blob((c3_h)mug_d, (c3_h)seq_d);
+
+        ur_dictn_put(rot_u, dic_u, bit_d, *out);
+        return ur_cue_good;
+      }
+    }
+  }
+}
+
+/* _cs_tap_xeno(): tap on-loom, with off-loom dictionary.
+*/
+static u3_weak
+_cs_tap_xeno(u3_cue_xeno*  sil_u,
+             c3_d          len_d,
+             const c3_y*   byt_y)
+{
+  ur_bsr_t      red_u = {0};
+  ur_dictn_t*   dic_u = &sil_u->dic_u;
+  u3a_pile      pil_u;
+  _tap_frame_t* fam_u;
+  ur_cue_res_e  res_e;
+  u3_noun         ref;
+
+  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+
+  if ( ur_cue_good != (res_e = ur_bsr_init(&red_u, len_d, byt_y)) ) {
+    return u3_none;
+  }
+  else if ( 0x7ffffffffffffffULL < len_d ) {
+    return u3_none;
   }
 
-  return u3s_sift_ud_bytes(len_w, byt_y);
+  res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+
+  if (  (c3n == u3a_pile_done(&pil_u))
+     && (ur_cue_good == res_e) )
+  {
+    fam_u = u3a_peek(&pil_u);
+
+    do {
+      //  head-frame: stash result and read the tail
+      //
+      if ( u3_none == fam_u->ref ) {
+        fam_u->ref = ref;
+        res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+        fam_u = u3a_peek(&pil_u);
+      }
+      //  tail-frame: build cell and pop stack
+      //
+      else {
+        ur_root_t* rot_u = 0;
+        ref   = u3nc(fam_u->ref, ref);
+        ur_dictn_put(rot_u, dic_u, fam_u->bit_d, ref);
+        fam_u = u3a_pop(&pil_u);
+      }
+    }
+    while (  (c3n == u3a_pile_done(&pil_u))
+          && (ur_cue_good == res_e) );
+  }
+
+  if ( ur_cue_good == res_e ) {
+    return ref;
+  }
+
+  //  on failure, unwind and discard intermediates
+  //
+  if ( c3n == u3a_pile_done(&pil_u) ) {
+    do {
+      if ( u3_none != fam_u->ref ) {
+        u3z(fam_u->ref);
+      }
+      fam_u = u3a_pop(&pil_u);
+    }
+    while ( c3n == u3a_pile_done(&pil_u) );
+  }
+
+  return u3_none;
+}
+
+/* u3s_tap_xeno(): tap on-loom, with off-loom dictionary.
+*/
+u3_weak
+u3s_tap_xeno(c3_d len_d, const c3_y* byt_y)
+{
+  //  validate header
+  //
+  if (  (len_d < 5)
+     || (0 != memcmp(byt_y, U3S_RAM_MAGIC, 4))
+     || (U3S_RAM_VERSION != byt_y[4]) )
+  {
+    return u3_none;
+  }
+
+  {
+    u3_cue_xeno* sil_u = u3s_cue_xeno_init();
+    u3_weak        som;
+
+    //  decode after the 5-byte header
+    //
+    som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5);
+    ur_dictn_wipe(&sil_u->dic_u);
+    u3s_cue_xeno_done(sil_u);
+    return som;
+  }
 }
