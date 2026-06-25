@@ -219,14 +219,25 @@
     **   On boot we zero the snapshot's les_h (and subtract from use_w),
     **   then rebuild it from that table (_mars_play_leases); eve_w and
     **   atom cardinality survive the snapshot.
+    **
+    **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
+    **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
+    **   bitness migration reads the off-loom blob through the matching
+    **   off-bitness struct):
+    **     use_w  total refs: eve_w + les_h + atom cardinality
+    **     eve_w  event-log refcount (rebuildable from LMDB)
+    **     les_h  active king-held leases (rebuilt from LMDB LEASES)
+    **     mug_h  blob mug — identifies file in .urb/bob
+    **     seq_h  blob seq — identifies file in .urb/bob
     */
-      typedef struct __attribute__((aligned(4))) {
-        c3_w  use_w;   //  total refs: eve_w + les_h + atom cardinality
-        c3_w  eve_w;   //  event-log refcount (rebuildable from LMDB)
-        c3_h  les_h;   //  active king-held leases (rebuilt from LMDB LEASES)
-        c3_h  mug_h;   //  blob mug — identifies file in .urb/bob
-        c3_h  seq_h;   //  blob seq — identifies file in .urb/bob
-      } u3a_blob;
+#define U3A_BLOB_BODY(S) \
+  U3_W(S) use_w;         \
+  U3_W(S) eve_w;         \
+  c3_h    les_h;         \
+  c3_h    mug_h;         \
+  c3_h    seq_h;
+
+      U3_DEFINE_PAIR(u3a_blob, U3A_BLOB_BODY);
 
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
@@ -407,12 +418,16 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     **   The remaining bits hold the actual data word count.
     **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
     */
+#     define u3a_blob_flag_h  ((c3_h)0x80000000U)
+#     define u3a_blob_mask_h  ((c3_h)0x7FFFFFFFU)
+#     define u3a_blob_flag_d  ((c3_d)0x8000000000000000ULL)
+#     define u3a_blob_mask_d  ((c3_d)0x7FFFFFFFFFFFFFFFULL)
 #     ifdef VERE64
-#       define u3a_blob_flag  ((c3_w)0x8000000000000000ULL)
-#       define u3a_blob_mask  ((c3_w)0x7FFFFFFFFFFFFFFFULL)
+#       define u3a_blob_flag  u3a_blob_flag_d
+#       define u3a_blob_mask  u3a_blob_mask_d
 #     else
-#       define u3a_blob_flag  ((c3_w)0x80000000U)
-#       define u3a_blob_mask  ((c3_w)0x7FFFFFFFU)
+#       define u3a_blob_flag  u3a_blob_flag_h
+#       define u3a_blob_mask  u3a_blob_mask_h
 #     endif
 #     define u3du(som)           u3a_is_cell(som)
 

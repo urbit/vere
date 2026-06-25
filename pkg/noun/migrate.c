@@ -54,6 +54,10 @@ u3_load_d(c3_z wor_i)
 #define U3C_OLD_HEAD      u3a_head_h
 #define U3C_OLD_TAIL      u3a_tail_h
 #define U3C_ATOM_MODE     U3C_ATOM_32_TO_64
+#define U3C_OLD_BLOB_FLAG u3a_blob_flag_h
+#define U3C_OLD_BLOB_T    u3a_blob_h
+#define U3C_OLD_INTO      u3a_into_h
+#define U3C_NEW_BLOB_FLAG u3a_blob_flag_d
 #define U3C_NEW_I_CELL    u3i_cell
 #define U3C_NEW_H_PUT     u3h_put
 #define U3C_NEW_A_GAIN    u3a_gain
@@ -83,6 +87,10 @@ u3_migrate_d(c3_d eve_d)
   fprintf(stderr, "loom: 32->64 migration running...\r\n");
 
   _copy_32_init(&cop_u);
+
+  //  migrate the blob bank first, so bob atoms can resolve their u3a_blob
+  //
+  u3h_walk_with_h(u3H_h->blb_p, _copy_32_blob, &cop_u);
 
   u3A->eve_d = u3A_h->eve_d;
   u3A->roc   = _copy_32_noun(&cop_u, u3A_h->roc);
@@ -148,6 +156,10 @@ _copy_64_cat(u3_noun_d old)
 #define U3C_OLD_TAIL      u3a_tail_d
 #define U3C_ATOM_MODE     U3C_ATOM_64_TO_32
 #define U3C_COPY_CAT(old) _copy_64_cat(old)
+#define U3C_OLD_BLOB_FLAG u3a_blob_flag_d
+#define U3C_OLD_BLOB_T    u3a_blob_d
+#define U3C_OLD_INTO      u3a_into_d
+#define U3C_NEW_BLOB_FLAG u3a_blob_flag_h
 #define U3C_NEW_I_CELL    u3i_cell
 #define U3C_NEW_H_PUT     u3h_put
 #define U3C_NEW_A_GAIN    u3a_gain
@@ -177,6 +189,10 @@ u3_migrate_h(c3_d eve_d)
   fprintf(stderr, "loom: 64->32 migration running...\r\n");
 
   _copy_64_init(&cop_u);
+
+  //  migrate the blob bank first, so bob atoms can resolve their u3a_blob
+  //
+  u3h_walk_with_d(u3H_d->blb_p, _copy_64_blob, &cop_u);
 
   u3A->eve_d = u3A_d->eve_d;
   u3A->roc   = _copy_64_noun(&cop_u, u3A_d->roc);
