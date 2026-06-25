@@ -486,6 +486,16 @@ u3_auto_init(u3_pier* pir_u)
   u3_auto* car_u = 0;
 
   car_u = _auto_link(u3_hind_io_init(pir_u), pir_u, car_u);
+
+  //  attach user-supplied Lua drivers (from $pier/lua/) as one contiguous
+  //  block just after the head driver (`fore`), ordered by ascending
+  //  `priority`, and start watching the folder for live reloads. [car_u] is
+  //  `fore`, the stable anchor the block is spliced after.
+  //
+  if ( car_u ) {
+    u3_lua_attach(pir_u, car_u);
+  }
+
   car_u = _auto_link(u3_behn_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_conn_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_lick_io_init(pir_u), pir_u, car_u);
@@ -497,14 +507,5 @@ u3_auto_init(u3_pier* pir_u)
   car_u = _auto_link(u3_term_io_init(pir_u), pir_u, car_u);
   car_u = _auto_link(u3_fore_io_init(pir_u), pir_u, car_u);
 
-  //  attach user-supplied Lua drivers (from $pier/lua/) as one contiguous
-  //  block just after the head driver (`fore`), ordered by ascending
-  //  `priority`, and start watching the folder for live reloads. [car_u] is
-  //  `fore`, the stable anchor the block is spliced after.
-  //
-  if ( car_u ) {
-    u3_lua_attach(pir_u, car_u);
-  }
-
-  return car_u;
+    return car_u;
 }
