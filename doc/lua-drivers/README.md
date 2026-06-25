@@ -69,15 +69,22 @@ Always build with 0.15.2.
 - [09 — Hot reload of `$pier/lua/`](09-hot-reload.md)
 - [10 — Live `ctx:plan` → Arvo injection](10-plan-injection.md)
 - [11 — Pier filesystem access](11-pier-filesystem.md)
+- [12 — More IO: scry, DNS, unix sockets, HTTP, async fs + watch](12-more-io.md)
 
 **All steps complete and verified on a live fake ship.** Example drivers live in
 [`examples/`](examples/): `10-tick` (timer), `20-echo` (effect handler),
 `30-udp-echo` / `40-tcp-echo` (sockets), `50-plan-poke` (inject into Arvo),
-`60-fs` (pier filesystem).
+`60-fs` (pier filesystem), `70-scry` (read namespace), `80-http` (HTTP client),
+`90-net` (hostname TCP / unix sockets / watch / async fs).
 
 ## Driver `ctx` API (current)
 
-`log`, `plan(vane, wire, card)`, `wish(hoon)`, `after(ms, fn)`, `every(ms, fn)`,
-`udp_open(port[, fn])`, `tcp_connect(host, port, fn)`, `tcp_listen(port, fn)`
-(+ socket `:send`/`:recv`/`:close`), and the pier filesystem: `pier_path`,
-`read`, `write`, `list`, `stat`, `exists`, `mkdir`, `remove`.
+- **Lifecycle/logging:** `log`, `plan(vane, wire, card)`, `scry(care, desk, path, fn)`,
+  `wish(hoon)`
+- **Timers:** `after(ms, fn)`, `every(ms, fn)`
+- **Sockets:** `udp_open(port[, fn])`, `tcp_connect(host, port, fn)` (IP or hostname),
+  `tcp_listen(port, fn)`, `pipe_connect(path, fn)`, `pipe_listen(path, fn)`
+  — handles expose `:send` / `:recv` / `:close`
+- **HTTP:** `http(method, url[, opts], fn)`
+- **Filesystem (pier-scoped):** `pier_path`, `read`, `write`, `list`, `stat`,
+  `exists`, `mkdir`, `remove`, `read_async`, `write_async`, `watch(path, fn)`

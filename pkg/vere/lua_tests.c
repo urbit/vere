@@ -486,6 +486,47 @@ _test_fs(void)
   u3_auto_exit(hed_u);
 }
 
+/* _test_io2_guards(): the second wave of ctx IO (scry/http/pipe/watch/async fs)
+**   is registered and fails cleanly with no pier.
+*/
+static void
+_test_io2_guards(void)
+{
+  char* dir_c = _mktmp();
+  _write(dir_c, "g.lua",
+    "return { name='g', priority=1, kick=function(ctx, w, c)              \n"
+    "  local checks = {                                                  \n"
+    "    function() ctx:scry('cy','base','/', function() end) end,       \n"
+    "    function() ctx:http('GET','http://x/', nil, function() end) end, \n"
+    "    function() ctx:pipe_connect('/tmp/x.sock', function() end) end,  \n"
+    "    function() ctx:pipe_listen('/tmp/x.sock', function() end) end,   \n"
+    "    function() ctx:watch('f', function() end) end,                   \n"
+    "    function() ctx:read_async('f', function() end) end,              \n"
+    "    function() ctx:write_async('f', 'd', function() end) end,        \n"
+    "  }                                                                  \n"
+    "  for _, fn in ipairs(checks) do                                     \n"
+    "    if pcall(fn) then return false end  -- must raise w/o a pier     \n"
+    "  end                                                                \n"
+    "  return true                                                        \n"
+    "end }                                                                \n");
+
+  u3_auto* hed_u = u3_lua_load_dir(0, dir_c);
+  if ( !hed_u ) {
+    fprintf(stderr, "lua-test: io2 driver failed to load\r\n");
+    exit(1);
+  }
+  {
+    u3_noun wir = u3nc(u3i_string("w"), u3_nul);
+    u3_noun cad = u3nc(u3i_string("c"), u3_nul);
+    if ( c3y != hed_u->io.kick_f(hed_u, u3k(wir), u3k(cad)) ) {
+      fprintf(stderr, "lua-test: io2 methods should raise without a pier\r\n");
+      exit(1);
+    }
+    u3z(wir); u3z(cad);
+  }
+  u3_auto_exit(hed_u);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -508,6 +549,7 @@ main(int argc, char* argv[])
   _test_isolation();
   _test_socket_guards();
   _test_fs();
+  _test_io2_guards();
 
   fprintf(stderr, "test_lua: ok\n");
   return 0;

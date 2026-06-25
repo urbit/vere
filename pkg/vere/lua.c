@@ -30,6 +30,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <curl/curl.h>
 
 #define U3_LUA_NOUN  "u3.noun"          //  metatable name for noun userdata
 #define U3_LUA_CTX   "u3.ctx"           //  metatable name for driver context
@@ -44,15 +45,19 @@
   struct _u3_lua_timer;
   struct _u3_lua_io;
 
+  struct _u3_lua_async;
+
   typedef struct _u3_lua_driver {
     u3_auto  car_u;                     //  driver (first field)
     u3_lua*  lua_u;                     //  this driver's isolated state
     c3_w     pri_w;                     //  priority (lower = earlier)
     c3_c*    nam_c;                     //  driver name (for logging)
+    c3_d     uid_d;                     //  liveness id (live-driver registry)
     int      tab_r;                     //  registry ref: driver table
     int      ctx_r;                     //  registry ref: ctx userdata
     struct _u3_lua_timer* tim_u;        //  live libuv timers (linked list)
     struct _u3_lua_io*    io_u;         //  live libuv sockets (linked list)
+    struct _u3_lua_watch* wat_u;        //  live fs watchers (linked list)
   } u3_lua_driver;
 
   /* u3_lua_timer: a libuv timer owned by a Lua driver.
@@ -83,10 +88,11 @@
     union {                            //  libuv handle (.data -> this)
       uv_udp_t            udp_u;
       uv_tcp_t            tcp_u;
+      uv_pipe_t           pip_u;
       uv_stream_t         str_u;
       uv_handle_t         han_u;
     };
-    c3_y                  typ_y;       //  'u' udp, 'c' tcp conn, 'l' tcp listen
+    c3_y                  typ_y;       //  'u' udp; 'c' tcp/pipe conn; 'l'/'L' listener
     u3_lua_driver*        dvr_u;       //  owning driver (borrowed)
     int                   cb_r;        //  recv/accept callback (LUA_NOREF if 0)
     c3_d                  uid_d;       //  unique id (ABA-safe validation)
@@ -110,6 +116,64 @@
 static c3_c* _lua_strdup(const c3_c* str_c);
 static c3_c* _lua_join(const c3_c* dir_c, const c3_c* nam_c);
 static c3_y* _lua_slurp(const c3_c* pax_c, size_t* len_i);
+
+static c3_d g_uid_d = 0;               //  monotonic id for handles/drivers
+
+/*  ------------------------------------------------------------------------
+ *  live-driver registry
+ *
+ *  Async operations (DNS resolve, TCP connect, scry, HTTP) can complete after
+ *  their driver is torn down by exit or hot reload. Each driver has a unique
+ *  [uid_d]; async callbacks store only that id and look the driver up here.
+ *  If the lookup misses, the driver is gone (and its lua_State closed), so the
+ *  callback drops the result without ever dereferencing freed memory.
+ *  ------------------------------------------------------------------------ */
+
+typedef struct _u3_live {
+  c3_d             uid_d;
+  u3_lua_driver*   dvr_u;
+  struct _u3_live* nex_u;
+} u3_live;
+
+static u3_live* s_live = 0;
+
+static void
+_live_add(u3_lua_driver* dvr_u)
+{
+  u3_live* liv_u = c3_calloc(sizeof(*liv_u));
+  liv_u->uid_d = dvr_u->uid_d;
+  liv_u->dvr_u = dvr_u;
+  liv_u->nex_u = s_live;
+  s_live = liv_u;
+}
+
+static void
+_live_del(c3_d uid_d)
+{
+  u3_live** pre_u = &s_live;
+  while ( *pre_u ) {
+    if ( (*pre_u)->uid_d == uid_d ) {
+      u3_live* die_u = *pre_u;
+      *pre_u = die_u->nex_u;
+      c3_free(die_u);
+      return;
+    }
+    pre_u = &(*pre_u)->nex_u;
+  }
+}
+
+/* _live_get(): the live driver for [uid_d], or 0 if it's gone.
+*/
+static u3_lua_driver*
+_live_get(c3_d uid_d)
+{
+  for ( u3_live* liv_u = s_live; liv_u; liv_u = liv_u->nex_u ) {
+    if ( liv_u->uid_d == uid_d ) {
+      return liv_u->dvr_u;
+    }
+  }
+  return 0;
+}
 
 /* _push_owned(): wrap [som] as a noun userdata, taking ownership of its ref.
 */
@@ -587,8 +651,6 @@ _lua_close_timers(u3_lua_driver* dvr_u)
 
 #define U3_LUA_IO  "u3.io"              //  metatable name for socket handles
 
-static c3_d g_uid_d = 0;               //  monotonic id for ABA-safe handles
-
 /* u3_lua_io_ref: the "u3.io" userdata -- a weak handle to a driver socket.
 */
 typedef struct {
@@ -803,12 +865,26 @@ _ctx_udp_open(lua_State* L)
 
 /*  --- TCP --- */
 
-/* u3_lua_conn: an in-flight TCP connect, carrying the connect callback ref.
+/* _io_by_uid(): the live socket with [uid_d] in [dvr_u]'s list, or 0.
+*/
+static u3_lua_io*
+_io_by_uid(u3_lua_driver* dvr_u, c3_d uid_d)
+{
+  for ( u3_lua_io* p = dvr_u->io_u; p; p = p->nex_u ) {
+    if ( (p->uid_d == uid_d) && (c3n == p->dead_o) ) {
+      return p;
+    }
+  }
+  return 0;
+}
+
+/* u3_lua_conn: an in-flight TCP/pipe connect (uid-keyed for liveness).
 */
 typedef struct {
   uv_connect_t req_u;
-  u3_lua_io*   io_u;
-  int          fn_r;
+  c3_d         dvr_uid;               //  owning driver's liveness id
+  c3_d         io_uid;                //  connecting socket's id
+  int          fn_r;                  //  connect callback
 } u3_lua_conn;
 
 static void
@@ -838,29 +914,37 @@ _tcp_read_cb(uv_stream_t* str_u, ssize_t nrd_i, const uv_buf_t* buf_u)
 }
 
 static void
-_tcp_connect_cb(uv_connect_t* req_u, c3_i sas_i)
+_stream_connect_cb(uv_connect_t* req_u, c3_i sas_i)
 {
   u3_lua_conn*   con_u = (u3_lua_conn*)req_u;
-  u3_lua_io*     io_u  = con_u->io_u;
-  u3_lua_driver* dvr_u = io_u->dvr_u;
-  lua_State*     L     = dvr_u->lua_u->lua;
-  int            fn_r  = con_u->fn_r;
+  u3_lua_driver* dvr_u = _live_get(con_u->dvr_uid);  //  driver still alive?
+
+  if ( !dvr_u ) {
+    c3_free(con_u);                                  //  gone: socket already freed
+    return;
+  }
+
+  u3_lua_io* io_u = _io_by_uid(dvr_u, con_u->io_uid);
+  if ( !io_u ) {
+    c3_free(con_u);
+    return;
+  }
+
+  lua_State* L    = dvr_u->lua_u->lua;
+  int        fn_r = con_u->fn_r;
+  c3_free(con_u);
 
   if ( sas_i < 0 ) {
-    u3l_log("lua: %s: tcp connect failed: %s", dvr_u->nam_c, uv_strerror(sas_i));
+    u3l_log("lua: %s: connect failed: %s", dvr_u->nam_c, uv_strerror(sas_i));
     luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
-    c3_free(con_u);
     _io_kill(io_u);
     return;
   }
-  c3_free(con_u);
 
-  //  hand the connection to the user, then start reading
-  //
   lua_rawgeti(L, LUA_REGISTRYINDEX, fn_r);
   _push_io(L, dvr_u, io_u);
   if ( LUA_OK != lua_pcall(L, 1, 0, 0) ) {
-    u3l_log("lua: %s: tcp connect cb error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+    u3l_log("lua: %s: connect cb error: %s", dvr_u->nam_c, lua_tostring(L, -1));
     lua_pop(L, 1);
   }
   luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
@@ -868,7 +952,84 @@ _tcp_connect_cb(uv_connect_t* req_u, c3_i sas_i)
   uv_read_start(&io_u->str_u, _io_alloc_cb, _tcp_read_cb);
 }
 
-/* ctx:tcp_connect(host, port, fn): connect; fn(conn) on success.
+/* _stream_begin_connect(): issue uv_tcp_connect on a prepared socket+addr.
+*/
+static c3_i
+_stream_begin_connect(u3_lua_driver*         dvr_u,
+                      u3_lua_io*             io_u,
+                      const struct sockaddr* adr_u,
+                      int                    fn_r)
+{
+  u3_lua_conn* con_u = c3_calloc(sizeof(*con_u));
+  con_u->dvr_uid = dvr_u->uid_d;
+  con_u->io_uid  = io_u->uid_d;
+  con_u->fn_r    = fn_r;
+
+  c3_i r_i = uv_tcp_connect(&con_u->req_u, &io_u->tcp_u, adr_u,
+                            _stream_connect_cb);
+  if ( r_i ) {
+    c3_free(con_u);
+  }
+  return r_i;
+}
+
+/* u3_lua_resolve: an in-flight getaddrinfo for a tcp_connect by hostname.
+*/
+typedef struct {
+  uv_getaddrinfo_t req_u;
+  c3_d             dvr_uid;
+  c3_d             io_uid;
+  c3_s             por_s;
+  int              fn_r;
+} u3_lua_resolve;
+
+static void
+_tcp_resolve_cb(uv_getaddrinfo_t* req_u, c3_i sas_i, struct addrinfo* aif_u)
+{
+  u3_lua_resolve* rez_u = (u3_lua_resolve*)req_u;
+  u3_lua_driver*  dvr_u = _live_get(rez_u->dvr_uid);
+
+  if ( !dvr_u ) {                                    //  driver gone
+    if ( aif_u ) uv_freeaddrinfo(aif_u);
+    c3_free(rez_u);
+    return;
+  }
+
+  u3_lua_io* io_u = _io_by_uid(dvr_u, rez_u->io_uid);
+  lua_State* L    = dvr_u->lua_u->lua;
+  int        fn_r = rez_u->fn_r;
+
+  if ( !io_u ) {
+    if ( aif_u ) uv_freeaddrinfo(aif_u);
+    luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
+    c3_free(rez_u);
+    return;
+  }
+
+  if ( (0 != sas_i) || !aif_u ) {
+    u3l_log("lua: %s: resolve failed: %s", dvr_u->nam_c, uv_strerror(sas_i));
+    if ( aif_u ) uv_freeaddrinfo(aif_u);
+    luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
+    _io_kill(io_u);
+    c3_free(rez_u);
+    return;
+  }
+
+  //  use the first ipv4 result, with the requested port
+  //
+  struct sockaddr_in adr_u;
+  memcpy(&adr_u, aif_u->ai_addr, sizeof(adr_u));
+  adr_u.sin_port = htons(rez_u->por_s);
+  uv_freeaddrinfo(aif_u);
+
+  if ( _stream_begin_connect(dvr_u, io_u, (const struct sockaddr*)&adr_u, fn_r) ) {
+    luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
+    _io_kill(io_u);
+  }
+  c3_free(rez_u);
+}
+
+/* ctx:tcp_connect(host, port, fn): connect to an IP or hostname; fn(conn).
 */
 static int
 _ctx_tcp_connect(lua_State* L)
@@ -883,35 +1044,57 @@ _ctx_tcp_connect(lua_State* L)
   luaL_checktype(L, 4, LUA_TFUNCTION);
 
   u3_lua_io* io_u = c3_calloc(sizeof(*io_u));
-  io_u->typ_y = 'c';
-  io_u->dvr_u = dvr_u;
-  io_u->cb_r  = LUA_NOREF;
-  io_u->uid_d = ++g_uid_d;
+  io_u->typ_y  = 'c';
+  io_u->dvr_u  = dvr_u;
+  io_u->cb_r   = LUA_NOREF;
+  io_u->uid_d  = ++g_uid_d;
   io_u->dead_o = c3n;
   uv_tcp_init(u3L, &io_u->tcp_u);
   io_u->tcp_u.data = io_u;
   io_u->nex_u = dvr_u->io_u;
   dvr_u->io_u = io_u;
 
-  {
-    struct sockaddr_in adr_u;
-    if ( uv_ip4_addr(hos_c, (c3_i)por_i, &adr_u) ) {
+  lua_pushvalue(L, 4);
+  int fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  //  a literal IPv4 connects directly; anything else is resolved first
+  //
+  struct sockaddr_in adr_u;
+  if ( 0 == uv_ip4_addr(hos_c, (c3_i)por_i, &adr_u) ) {
+    if ( _stream_begin_connect(dvr_u, io_u, (const struct sockaddr*)&adr_u, fn_r) ) {
+      luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
       _io_kill(io_u);
-      return luaL_error(L, "ctx:tcp_connect: bad address %s:%d", hos_c, (c3_i)por_i);
+      return luaL_error(L, "ctx:tcp_connect: connect failed");
     }
+    return 0;
+  }
 
-    u3_lua_conn* con_u = c3_calloc(sizeof(*con_u));
-    con_u->io_u = io_u;
-    lua_pushvalue(L, 4);
-    con_u->fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+  //  hostname: async DNS, then connect
+  //
+  {
+    u3_lua_resolve* rez_u = c3_calloc(sizeof(*rez_u));
+    rez_u->dvr_uid = dvr_u->uid_d;
+    rez_u->io_uid  = io_u->uid_d;
+    rez_u->por_s   = (c3_s)por_i;
+    rez_u->fn_r    = fn_r;
 
-    c3_i r_i = uv_tcp_connect(&con_u->req_u, &io_u->tcp_u,
-                              (const struct sockaddr*)&adr_u, _tcp_connect_cb);
+    struct addrinfo hin_u;
+    memset(&hin_u, 0, sizeof(hin_u));
+    hin_u.ai_family   = AF_INET;
+    hin_u.ai_socktype = SOCK_STREAM;
+    hin_u.ai_protocol = IPPROTO_TCP;
+
+    c3_c por_c[16];
+    snprintf(por_c, sizeof(por_c), "%d", (c3_i)por_i);
+
+    c3_i r_i = uv_getaddrinfo(u3L, &rez_u->req_u, _tcp_resolve_cb,
+                              hos_c, por_c, &hin_u);
     if ( r_i ) {
-      luaL_unref(L, LUA_REGISTRYINDEX, con_u->fn_r);
-      c3_free(con_u);
+      c3_free(rez_u);
+      luaL_unref(L, LUA_REGISTRYINDEX, fn_r);
       _io_kill(io_u);
-      return luaL_error(L, "ctx:tcp_connect: %s", uv_strerror(r_i));
+      return luaL_error(L, "ctx:tcp_connect: resolve %s: %s",
+                        hos_c, uv_strerror(r_i));
     }
   }
   return 0;
@@ -989,6 +1172,128 @@ _ctx_tcp_listen(lua_State* L)
       uv_close(&io_u->han_u, _io_close_free_cb);
       return luaL_error(L, "ctx:tcp_listen: :%d: %s", (c3_i)por_i, uv_strerror(r_i));
     }
+  }
+
+  lua_pushvalue(L, 3);
+  io_u->cb_r  = luaL_ref(L, LUA_REGISTRYINDEX);
+  io_u->nex_u = dvr_u->io_u;
+  dvr_u->io_u = io_u;
+
+  _push_io(L, dvr_u, io_u);
+  return 1;
+}
+
+/*  --- Unix domain sockets (named pipes) --- */
+
+/* ctx:pipe_connect(path, fn): connect to a unix socket; fn(conn) on success.
+**
+**   Reuses the stream connect/read path; the connection behaves like a TCP one
+**   (conn:send / conn:recv / conn:close).
+*/
+static int
+_ctx_pipe_connect(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:pipe_connect: unavailable without a pier");
+  }
+
+  const char* pax_c = luaL_checkstring(L, 2);
+  luaL_checktype(L, 3, LUA_TFUNCTION);
+
+  u3_lua_io* io_u = c3_calloc(sizeof(*io_u));
+  io_u->typ_y  = 'c';                                //  stream connection
+  io_u->dvr_u  = dvr_u;
+  io_u->cb_r   = LUA_NOREF;
+  io_u->uid_d  = ++g_uid_d;
+  io_u->dead_o = c3n;
+  uv_pipe_init(u3L, &io_u->pip_u, 0);
+  io_u->pip_u.data = io_u;
+  io_u->nex_u = dvr_u->io_u;
+  dvr_u->io_u = io_u;
+
+  lua_pushvalue(L, 3);
+  int fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  u3_lua_conn* con_u = c3_calloc(sizeof(*con_u));
+  con_u->dvr_uid = dvr_u->uid_d;
+  con_u->io_uid  = io_u->uid_d;
+  con_u->fn_r    = fn_r;
+
+  //  uv_pipe_connect returns void; failures arrive via the callback
+  //
+  uv_pipe_connect(&con_u->req_u, &io_u->pip_u, pax_c, _stream_connect_cb);
+  return 0;
+}
+
+static void
+_pipe_listen_cb(uv_stream_t* srv_u, c3_i sas_i)
+{
+  u3_lua_io*     lis_u = srv_u->data;
+  u3_lua_driver* dvr_u = lis_u->dvr_u;
+  lua_State*     L     = dvr_u->lua_u->lua;
+
+  if ( sas_i < 0 ) {
+    u3l_log("lua: %s: pipe listen error: %s", dvr_u->nam_c, uv_strerror(sas_i));
+    return;
+  }
+
+  u3_lua_io* io_u = c3_calloc(sizeof(*io_u));
+  io_u->typ_y  = 'c';
+  io_u->dvr_u  = dvr_u;
+  io_u->cb_r   = LUA_NOREF;
+  io_u->uid_d  = ++g_uid_d;
+  io_u->dead_o = c3n;
+  uv_pipe_init(u3L, &io_u->pip_u, 0);
+  io_u->pip_u.data = io_u;
+
+  if ( uv_accept(srv_u, &io_u->str_u) ) {
+    uv_close(&io_u->han_u, _io_close_free_cb);
+    return;
+  }
+  io_u->nex_u = dvr_u->io_u;
+  dvr_u->io_u = io_u;
+
+  if ( LUA_NOREF != lis_u->cb_r ) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, lis_u->cb_r);
+    _push_io(L, dvr_u, io_u);
+    if ( LUA_OK != lua_pcall(L, 1, 0, 0) ) {
+      u3l_log("lua: %s: pipe accept cb error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+      lua_pop(L, 1);
+    }
+  }
+  uv_read_start(&io_u->str_u, _io_alloc_cb, _tcp_read_cb);
+}
+
+/* ctx:pipe_listen(path, fn): listen on a unix socket; fn(conn) per connection.
+*/
+static int
+_ctx_pipe_listen(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:pipe_listen: unavailable without a pier");
+  }
+
+  const char* pax_c = luaL_checkstring(L, 2);
+  luaL_checktype(L, 3, LUA_TFUNCTION);
+
+  u3_lua_io* io_u = c3_calloc(sizeof(*io_u));
+  io_u->typ_y  = 'L';                                //  pipe listener
+  io_u->dvr_u  = dvr_u;
+  io_u->cb_r   = LUA_NOREF;
+  io_u->uid_d  = ++g_uid_d;
+  io_u->dead_o = c3n;
+  uv_pipe_init(u3L, &io_u->pip_u, 0);
+  io_u->pip_u.data = io_u;
+
+  c3_i r_i = uv_pipe_bind(&io_u->pip_u, pax_c);
+  if ( !r_i ) {
+    r_i = uv_listen(&io_u->str_u, 128, _pipe_listen_cb);
+  }
+  if ( r_i ) {
+    uv_close(&io_u->han_u, _io_close_free_cb);
+    return luaL_error(L, "ctx:pipe_listen: %s: %s", pax_c, uv_strerror(r_i));
   }
 
   lua_pushvalue(L, 3);
@@ -1348,12 +1653,11 @@ _ctx_remove(lua_State* L)
 
   struct stat buf_u;
   c3_i        ret_i;
-  if ( (0 == stat(pax_c, &buf_u)) && S_ISDIR(buf_u.st_mode) ) {
-    ret_i = rmdir(pax_c);
+  if ( 0 != stat(pax_c, &buf_u) ) {
+    c3_free(pax_c);
+    return 0;                                        //  already gone: idempotent
   }
-  else {
-    ret_i = unlink(pax_c);
-  }
+  ret_i = S_ISDIR(buf_u.st_mode) ? rmdir(pax_c) : unlink(pax_c);
   c3_free(pax_c);
   if ( 0 != ret_i ) {
     return luaL_error(L, "ctx:remove: %s: %s", rel_c, strerror(errno));
@@ -1361,16 +1665,624 @@ _ctx_remove(lua_State* L)
   return 0;
 }
 
+/*  ------------------------------------------------------------------------
+ *  fs watch (uv_fs_event) + async file IO (uv threadpool)
+ *  ------------------------------------------------------------------------ */
+
+/* u3_lua_watch: a pier-path watcher owned by a driver.
+*/
+typedef struct _u3_lua_watch {
+  uv_fs_event_t         fsv_u;
+  u3_lua_driver*        dvr_u;
+  int                   fn_r;
+  struct _u3_lua_watch* nex_u;
+} u3_lua_watch;
+
+static void
+_watch_close_cb(uv_handle_t* han_u)
+{
+  c3_free(han_u->data);
+}
+
+/* _lua_close_watches(): stop + close all of a driver's watchers (on exit).
+*/
+static void
+_lua_close_watches(u3_lua_driver* dvr_u)
+{
+  lua_State*    L     = dvr_u->lua_u->lua;
+  u3_lua_watch* wat_u = dvr_u->wat_u;
+  while ( wat_u ) {
+    u3_lua_watch* nex_u = wat_u->nex_u;
+    luaL_unref(L, LUA_REGISTRYINDEX, wat_u->fn_r);
+    uv_close((uv_handle_t*)&wat_u->fsv_u, _watch_close_cb);
+    wat_u = nex_u;
+  }
+  dvr_u->wat_u = 0;
+}
+
+/* _watch_cb(): a change at a watched path -> fn(filename, kind).
+**
+**   Safe to deref the driver directly: the watcher is uv_close'd on exit, so
+**   this never fires after the driver is gone.
+*/
+static void
+_watch_cb(uv_fs_event_t* fsv_u, const c3_c* nam_c, c3_i evt_i, c3_i sas_i)
+{
+  u3_lua_watch*  wat_u = fsv_u->data;
+  u3_lua_driver* dvr_u = wat_u->dvr_u;
+  lua_State*     L     = dvr_u->lua_u->lua;
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, wat_u->fn_r);
+  lua_pushstring(L, nam_c ? nam_c : "");
+  lua_pushstring(L, (evt_i & UV_RENAME) ? "rename" : "change");
+  if ( LUA_OK != lua_pcall(L, 2, 0, 0) ) {
+    u3l_log("lua: %s: watch error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+    lua_pop(L, 1);
+  }
+}
+
+/* ctx:watch(path, fn): call fn(filename, kind) when a pier path changes.
+*/
+static int
+_ctx_watch(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:watch: unavailable without a pier");
+  }
+  const c3_c* rel_c = luaL_checkstring(L, 2);
+  luaL_checktype(L, 3, LUA_TFUNCTION);
+
+  c3_c* pax_c = _fs_resolve(dvr_u, rel_c);
+  if ( !pax_c ) {
+    return luaL_error(L, "ctx:watch: unsafe path or no pier");
+  }
+
+  u3_lua_watch* wat_u = c3_calloc(sizeof(*wat_u));
+  wat_u->dvr_u = dvr_u;
+  uv_fs_event_init(u3L, &wat_u->fsv_u);
+  wat_u->fsv_u.data = wat_u;
+
+  c3_i r_i = uv_fs_event_start(&wat_u->fsv_u, _watch_cb, pax_c, 0);
+  c3_free(pax_c);
+  if ( r_i ) {
+    uv_close((uv_handle_t*)&wat_u->fsv_u, _watch_close_cb);
+    return luaL_error(L, "ctx:watch: %s: %s", rel_c, uv_strerror(r_i));
+  }
+
+  lua_pushvalue(L, 3);
+  wat_u->fn_r  = luaL_ref(L, LUA_REGISTRYINDEX);
+  wat_u->nex_u = dvr_u->wat_u;
+  dvr_u->wat_u = wat_u;
+  return 0;
+}
+
+/* u3_lua_fsop: an async file read/write running on the libuv threadpool.
+*/
+typedef struct {
+  uv_work_t req_u;
+  c3_d      dvr_uid;
+  int       fn_r;
+  c3_c*     pax_c;                    //  absolute path
+  c3_y*     dat_y;                    //  read result / write payload
+  size_t    len_i;
+  c3_o      wit_o;                    //  c3y if a write
+  c3_o      suc_o;                    //  success
+} u3_lua_fsop;
+
+static void
+_fsop_work_cb(uv_work_t* req_u)        //  threadpool: may block
+{
+  u3_lua_fsop* op_u = (u3_lua_fsop*)req_u;
+
+  if ( c3y == op_u->wit_o ) {
+    FILE* fil_u = fopen(op_u->pax_c, "wb");
+    if ( fil_u ) {
+      op_u->suc_o = ( fwrite(op_u->dat_y, 1, op_u->len_i, fil_u) == op_u->len_i )
+                    ? c3y : c3n;
+      fclose(fil_u);
+    }
+    else {
+      op_u->suc_o = c3n;
+    }
+  }
+  else {
+    op_u->dat_y = _lua_slurp(op_u->pax_c, &op_u->len_i);
+    op_u->suc_o = op_u->dat_y ? c3y : c3n;
+  }
+}
+
+static void
+_fsop_after_cb(uv_work_t* req_u, c3_i sas_i)   //  loop thread
+{
+  u3_lua_fsop*   op_u  = (u3_lua_fsop*)req_u;
+  u3_lua_driver* dvr_u = _live_get(op_u->dvr_uid);
+
+  if ( dvr_u ) {
+    lua_State* L = dvr_u->lua_u->lua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, op_u->fn_r);
+    if ( c3y == op_u->wit_o ) {
+      lua_pushboolean(L, (c3y == op_u->suc_o));
+    }
+    else if ( c3y == op_u->suc_o ) {
+      lua_pushlstring(L, (const char*)op_u->dat_y, op_u->len_i);
+    }
+    else {
+      lua_pushnil(L);
+    }
+    if ( LUA_OK != lua_pcall(L, 1, 0, 0) ) {
+      u3l_log("lua: %s: async fs error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+      lua_pop(L, 1);
+    }
+    luaL_unref(L, LUA_REGISTRYINDEX, op_u->fn_r);
+  }
+
+  if ( op_u->dat_y ) c3_free(op_u->dat_y);
+  c3_free(op_u->pax_c);
+  c3_free(op_u);
+}
+
+/* ctx:read_async(path, fn): read a file off the loop; fn(data|nil).
+*/
+static int
+_ctx_read_async(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:read_async: unavailable without a pier");
+  }
+  const c3_c* rel_c = luaL_checkstring(L, 2);
+  luaL_checktype(L, 3, LUA_TFUNCTION);
+
+  c3_c* pax_c = _fs_resolve(dvr_u, rel_c);
+  if ( !pax_c ) {
+    return luaL_error(L, "ctx:read_async: unsafe path or no pier");
+  }
+
+  u3_lua_fsop* op_u = c3_calloc(sizeof(*op_u));
+  op_u->dvr_uid = dvr_u->uid_d;
+  op_u->pax_c   = pax_c;
+  op_u->wit_o   = c3n;
+  lua_pushvalue(L, 3);
+  op_u->fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  uv_queue_work(u3L, &op_u->req_u, _fsop_work_cb, _fsop_after_cb);
+  return 0;
+}
+
+/* ctx:write_async(path, data, fn): write a file off the loop; fn(ok).
+*/
+static int
+_ctx_write_async(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:write_async: unavailable without a pier");
+  }
+  const c3_c* rel_c = luaL_checkstring(L, 2);
+  size_t      len_i;
+  const c3_c* dat_c = luaL_checklstring(L, 3, &len_i);
+  luaL_checktype(L, 4, LUA_TFUNCTION);
+
+  c3_c* pax_c = _fs_resolve(dvr_u, rel_c);
+  if ( !pax_c ) {
+    return luaL_error(L, "ctx:write_async: unsafe path or no pier");
+  }
+
+  u3_lua_fsop* op_u = c3_calloc(sizeof(*op_u));
+  op_u->dvr_uid = dvr_u->uid_d;
+  op_u->pax_c   = pax_c;
+  op_u->wit_o   = c3y;
+  op_u->len_i   = len_i;
+  op_u->dat_y   = c3_malloc(len_i ? len_i : 1);
+  memcpy(op_u->dat_y, dat_c, len_i);
+  lua_pushvalue(L, 4);
+  op_u->fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  uv_queue_work(u3L, &op_u->req_u, _fsop_work_cb, _fsop_after_cb);
+  return 0;
+}
+
+/*  ------------------------------------------------------------------------
+ *  scry: read Arvo's namespace (the read-side complement to ctx:plan)
+ *  ------------------------------------------------------------------------ */
+
+/* u3_lua_scry: an in-flight namespace read (uid-keyed for liveness).
+*/
+typedef struct {
+  c3_d dvr_uid;
+  int  fn_r;
+} u3_lua_scry;
+
+/* _path_to_knots(): "/a/b" or "a/b" -> the knot list [%a %b ~].
+*/
+static u3_noun
+_path_to_knots(const c3_c* p_c)
+{
+  while ( '/' == *p_c ) {
+    p_c++;
+  }
+  if ( 0 == *p_c ) {
+    return u3_nul;
+  }
+  const c3_c* seg_c = p_c;
+  while ( *p_c && ('/' != *p_c) ) {
+    p_c++;
+  }
+  return u3nc(u3i_bytes((c3_w)(p_c - seg_c), (const c3_y*)seg_c),
+             _path_to_knots(p_c));
+}
+
+/* _lua_scry_cb(): namespace read response -> fn(result|nil). OWNS [rep].
+*/
+static void
+_lua_scry_cb(void* ptr_v, u3_noun rep)
+{
+  u3_lua_scry*   scr_u = ptr_v;
+  u3_lua_driver* dvr_u = _live_get(scr_u->dvr_uid);
+
+  if ( dvr_u ) {
+    lua_State* L = dvr_u->lua_u->lua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, scr_u->fn_r);
+    if ( (u3_nul == rep) || (c3n == u3du(rep)) ) {
+      lua_pushnil(L);                                //  no result
+    }
+    else {
+      u3_lua_push_noun(L, u3t(rep));                 //  unwrap [~ dat], gains
+    }
+    if ( LUA_OK != lua_pcall(L, 1, 0, 0) ) {
+      u3l_log("lua: %s: scry error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+      lua_pop(L, 1);
+    }
+    luaL_unref(L, LUA_REGISTRYINDEX, scr_u->fn_r);
+  }
+
+  u3z(rep);
+  c3_free(scr_u);
+}
+
+/* ctx:scry(care, desk, path, fn): read the namespace; fn(result|nil).
+**
+**   [care] is the vane+care mote string (e.g. "cx" clay file, "cy" arch,
+**   "ax" ames, "gx" gall). [desk] is a desk string for clay, or nil. [path]
+**   is a "/a/b/c" path. Ship and case (now) are injected automatically.
+*/
+static int
+_ctx_scry(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:scry: unavailable without a pier");
+  }
+
+  size_t      cln_i;
+  const c3_c* car_c = luaL_checklstring(L, 2, &cln_i);
+  if ( (0 == cln_i) || (cln_i > 4) ) {
+    return luaL_error(L, "ctx:scry: care must be 1-4 chars");
+  }
+  const c3_c* dsk_c = luaL_optstring(L, 3, 0);       //  nil -> no desk
+  const c3_c* pax_c = luaL_checkstring(L, 4);
+  luaL_checktype(L, 5, LUA_TFUNCTION);
+
+  //  pack the care string into a mote (LSB-first cord)
+  //
+  c3_m car_m = 0;
+  for ( size_t i_i = 0; i_i < cln_i; i_i++ ) {
+    car_m |= ((c3_m)(c3_y)car_c[i_i]) << (8 * i_i);
+  }
+
+  u3_atom des = ( dsk_c && dsk_c[0] ) ? u3i_string(dsk_c) : u3_nul;
+  u3_noun pax = _path_to_knots(pax_c);
+
+  u3_lua_scry* scr_u = c3_calloc(sizeof(*scr_u));
+  scr_u->dvr_uid = dvr_u->uid_d;
+  lua_pushvalue(L, 5);
+  scr_u->fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  //  gang [~ ~]: full local access, as the control plane (conn) uses
+  //
+  u3_pier_peek_last((u3_pier*)dvr_u->car_u.pir_u,
+                    u3nc(u3_nul, u3_nul),
+                    car_m, des, pax,
+                    scr_u, _lua_scry_cb);
+  return 0;
+}
+
+/*  ------------------------------------------------------------------------
+ *  HTTP client: libcurl's multi interface driven by the libuv loop
+ *
+ *  One shared curl multi handle + one uv_timer (curl's notion of timeouts),
+ *  lazily initialized. curl tells us which sockets to watch via the socket
+ *  callback; we drive them with uv_poll_t. Completions are detected with
+ *  curl_multi_info_read and dispatched to the requesting driver (uid-keyed).
+ *  ------------------------------------------------------------------------ */
+
+typedef struct {
+  CURLM*     mul_u;                    //  curl multi handle
+  uv_timer_t tim_u;                    //  curl timeout timer
+  c3_o       ini_o;                    //  initialized?
+} u3_curl_glob;
+
+static u3_curl_glob g_curl = { 0, {0}, c3n };
+
+typedef struct {                       //  per-watched-socket
+  uv_poll_t     pol_u;
+  curl_socket_t sok_i;
+} u3_curl_ctx;
+
+typedef struct {                       //  per-request
+  CURL*              ezy_u;            //  easy handle
+  c3_d               dvr_uid;          //  liveness
+  int                fn_r;             //  completion callback
+  c3_c*              bod_c;            //  response body
+  size_t             bln_i;
+  c3_c*              hdr_c;            //  response headers (raw)
+  size_t             hln_i;
+  struct curl_slist* shd_u;            //  request headers to free
+} u3_curl_req;
+
+static void
+_curl_check_info(void)
+{
+  CURLMsg* msg_u;
+  c3_i     pen_i;
+
+  while ( (msg_u = curl_multi_info_read(g_curl.mul_u, &pen_i)) ) {
+    if ( CURLMSG_DONE == msg_u->msg ) {
+      CURL*        ezy_u = msg_u->easy_handle;
+      u3_curl_req* req_u = 0;
+      long         cod_l = 0;          //  curl writes a C long here, not c3_l
+
+      curl_easy_getinfo(ezy_u, CURLINFO_PRIVATE, (char**)&req_u);
+      curl_easy_getinfo(ezy_u, CURLINFO_RESPONSE_CODE, &cod_l);
+
+      {
+        u3_lua_driver* dvr_u = req_u ? _live_get(req_u->dvr_uid) : 0;
+        if ( dvr_u ) {
+          lua_State* L = dvr_u->lua_u->lua;
+          lua_rawgeti(L, LUA_REGISTRYINDEX, req_u->fn_r);
+          lua_pushinteger(L, (lua_Integer)cod_l);
+          lua_pushlstring(L, req_u->bod_c ? req_u->bod_c : "", req_u->bln_i);
+          lua_pushlstring(L, req_u->hdr_c ? req_u->hdr_c : "", req_u->hln_i);
+          if ( LUA_OK != lua_pcall(L, 3, 0, 0) ) {
+            u3l_log("lua: %s: http error: %s", dvr_u->nam_c, lua_tostring(L, -1));
+            lua_pop(L, 1);
+          }
+          luaL_unref(L, LUA_REGISTRYINDEX, req_u->fn_r);
+        }
+      }
+
+      curl_multi_remove_handle(g_curl.mul_u, ezy_u);
+      curl_easy_cleanup(ezy_u);
+      if ( req_u ) {
+        if ( req_u->shd_u ) curl_slist_free_all(req_u->shd_u);
+        if ( req_u->bod_c ) c3_free(req_u->bod_c);
+        if ( req_u->hdr_c ) c3_free(req_u->hdr_c);
+        c3_free(req_u);
+      }
+    }
+  }
+}
+
+static void
+_curl_poll_cb(uv_poll_t* pol_u, c3_i sas_i, c3_i evt_i)
+{
+  u3_curl_ctx* ctx_u = pol_u->data;
+  c3_i         flg_i = 0;
+  c3_i         run_i;
+
+  if ( sas_i < 0 )            flg_i |= CURL_CSELECT_ERR;
+  if ( evt_i & UV_READABLE )  flg_i |= CURL_CSELECT_IN;
+  if ( evt_i & UV_WRITABLE )  flg_i |= CURL_CSELECT_OUT;
+
+  curl_multi_socket_action(g_curl.mul_u, ctx_u->sok_i, flg_i, &run_i);
+  _curl_check_info();
+}
+
+static void
+_curl_poll_close_cb(uv_handle_t* han_u)
+{
+  c3_free(han_u->data);
+}
+
+static c3_i
+_curl_socket_cb(CURL* ezy_u, curl_socket_t sok_i, c3_i act_i,
+                void* usr_v, void* sok_v)
+{
+  u3_curl_ctx* ctx_u = sok_v;
+
+  switch ( act_i ) {
+    case CURL_POLL_IN:
+    case CURL_POLL_OUT:
+    case CURL_POLL_INOUT: {
+      if ( !ctx_u ) {
+        ctx_u = c3_calloc(sizeof(*ctx_u));
+        ctx_u->sok_i = sok_i;
+        uv_poll_init_socket(u3L, &ctx_u->pol_u, sok_i);
+        ctx_u->pol_u.data = ctx_u;
+        curl_multi_assign(g_curl.mul_u, sok_i, ctx_u);
+      }
+      {
+        c3_i evt_i = ( (act_i & CURL_POLL_IN)  ? UV_READABLE : 0 )
+                   | ( (act_i & CURL_POLL_OUT) ? UV_WRITABLE : 0 );
+        uv_poll_start(&ctx_u->pol_u, evt_i, _curl_poll_cb);
+      }
+    } break;
+
+    case CURL_POLL_REMOVE: {
+      if ( ctx_u ) {
+        uv_poll_stop(&ctx_u->pol_u);
+        uv_close((uv_handle_t*)&ctx_u->pol_u, _curl_poll_close_cb);
+        curl_multi_assign(g_curl.mul_u, sok_i, 0);
+      }
+    } break;
+  }
+  return 0;
+}
+
+static void
+_curl_timer_cb(uv_timer_t* tim_u)
+{
+  c3_i run_i;
+  curl_multi_socket_action(g_curl.mul_u, CURL_SOCKET_TIMEOUT, 0, &run_i);
+  _curl_check_info();
+}
+
+static c3_i
+_curl_timerfunc(CURLM* mul_u, long tim_l, void* usr_v)
+{
+  if ( tim_l < 0 ) {
+    uv_timer_stop(&g_curl.tim_u);
+  }
+  else {
+    uv_timer_start(&g_curl.tim_u, _curl_timer_cb,
+                   (uint64_t)(tim_l ? tim_l : 1), 0);
+  }
+  return 0;
+}
+
+static void
+_curl_accum(c3_c** buf_c, size_t* len_i, const c3_c* dat_c, size_t add_i)
+{
+  if ( !*buf_c ) {
+    *buf_c = c3_malloc(add_i + 1);
+  }
+  else {
+    *buf_c = c3_realloc(*buf_c, *len_i + add_i + 1);
+  }
+  memcpy(*buf_c + *len_i, dat_c, add_i);
+  *len_i += add_i;
+  (*buf_c)[*len_i] = 0;
+}
+
+static size_t
+_curl_write_cb(c3_c* ptr_c, size_t siz_i, size_t nme_i, void* usr_v)
+{
+  u3_curl_req* req_u = usr_v;
+  _curl_accum(&req_u->bod_c, &req_u->bln_i, ptr_c, siz_i * nme_i);
+  return siz_i * nme_i;
+}
+
+static size_t
+_curl_header_cb(c3_c* ptr_c, size_t siz_i, size_t nme_i, void* usr_v)
+{
+  u3_curl_req* req_u = usr_v;
+  _curl_accum(&req_u->hdr_c, &req_u->hln_i, ptr_c, siz_i * nme_i);
+  return siz_i * nme_i;
+}
+
+static c3_o
+_curl_ensure(void)
+{
+  if ( c3y == g_curl.ini_o ) {
+    return c3y;
+  }
+  if ( 0 != curl_global_init(CURL_GLOBAL_DEFAULT) ) {
+    return c3n;
+  }
+  if ( !(g_curl.mul_u = curl_multi_init()) ) {
+    return c3n;
+  }
+  curl_multi_setopt(g_curl.mul_u, CURLMOPT_SOCKETFUNCTION, _curl_socket_cb);
+  curl_multi_setopt(g_curl.mul_u, CURLMOPT_TIMERFUNCTION, _curl_timerfunc);
+  uv_timer_init(u3L, &g_curl.tim_u);
+  g_curl.ini_o = c3y;
+  return c3y;
+}
+
+/* ctx:http(method, url[, opts], fn): async HTTP(S) request.
+**
+**   opts (table, optional): { headers = {["K"]="V", ...}, body = "..." }.
+**   fn(status, body, headers) is called on completion (status 0 on transport
+**   failure). Follows redirects; 30s timeout.
+*/
+static int
+_ctx_http(lua_State* L)
+{
+  u3_lua_driver* dvr_u = _check_ctx(L, 1);
+  if ( !dvr_u->car_u.pir_u ) {
+    return luaL_error(L, "ctx:http: unavailable without a pier");
+  }
+  const c3_c* met_c = luaL_checkstring(L, 2);
+  const c3_c* url_c = luaL_checkstring(L, 3);
+  luaL_checktype(L, 5, LUA_TFUNCTION);
+
+  if ( c3n == _curl_ensure() ) {
+    return luaL_error(L, "ctx:http: curl init failed");
+  }
+
+  u3_curl_req* req_u = c3_calloc(sizeof(*req_u));
+  req_u->dvr_uid = dvr_u->uid_d;
+  CURL* ezy_u = curl_easy_init();
+  req_u->ezy_u = ezy_u;
+
+  curl_easy_setopt(ezy_u, CURLOPT_URL, url_c);
+  curl_easy_setopt(ezy_u, CURLOPT_CUSTOMREQUEST, met_c);
+  curl_easy_setopt(ezy_u, CURLOPT_WRITEFUNCTION, _curl_write_cb);
+  curl_easy_setopt(ezy_u, CURLOPT_WRITEDATA, req_u);
+  curl_easy_setopt(ezy_u, CURLOPT_HEADERFUNCTION, _curl_header_cb);
+  curl_easy_setopt(ezy_u, CURLOPT_HEADERDATA, req_u);
+  curl_easy_setopt(ezy_u, CURLOPT_PRIVATE, req_u);
+  curl_easy_setopt(ezy_u, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(ezy_u, CURLOPT_NOSIGNAL, 1L);
+  curl_easy_setopt(ezy_u, CURLOPT_TIMEOUT, 30L);
+
+  //  optional headers/body
+  //
+  if ( lua_istable(L, 4) ) {
+    lua_getfield(L, 4, "headers");
+    if ( lua_istable(L, -1) ) {
+      lua_pushnil(L);
+      while ( lua_next(L, -2) ) {                    //  key -2, value -1
+        const c3_c* key_c = lua_tostring(L, -2);
+        const c3_c* val_c = lua_tostring(L, -1);
+        if ( key_c && val_c ) {
+          c3_w  lin_w = (c3_w)(strlen(key_c) + 2 + strlen(val_c) + 1);
+          c3_c* lin_c = c3_malloc(lin_w);
+          snprintf(lin_c, lin_w, "%s: %s", key_c, val_c);
+          req_u->shd_u = curl_slist_append(req_u->shd_u, lin_c);
+          c3_free(lin_c);
+        }
+        lua_pop(L, 1);
+      }
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, 4, "body");
+    if ( lua_isstring(L, -1) ) {
+      size_t      bln_i;
+      const c3_c* bod_c = lua_tolstring(L, -1, &bln_i);
+      curl_easy_setopt(ezy_u, CURLOPT_POSTFIELDSIZE, (long)bln_i);
+      curl_easy_setopt(ezy_u, CURLOPT_COPYPOSTFIELDS, bod_c);  //  curl copies
+    }
+    lua_pop(L, 1);
+  }
+
+  if ( req_u->shd_u ) {
+    curl_easy_setopt(ezy_u, CURLOPT_HTTPHEADER, req_u->shd_u);
+  }
+
+  lua_pushvalue(L, 5);
+  req_u->fn_r = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  curl_multi_add_handle(g_curl.mul_u, ezy_u);
+  return 0;
+}
+
 static const luaL_Reg _ctx_methods[] = {
   { "log",         _ctx_log         },
   { "plan",        _ctx_plan        },
+  { "scry",        _ctx_scry        },
+  { "http",        _ctx_http        },
   { "wish",        _ctx_wish        },
   { "after",       _ctx_after       },
   { "every",       _ctx_every       },
-  { "udp_open",    _ctx_udp_open    },
-  { "tcp_connect", _ctx_tcp_connect },
-  { "tcp_listen",  _ctx_tcp_listen  },
-  { "pier_path",   _ctx_pier_path   },
+  { "udp_open",    _ctx_udp_open     },
+  { "tcp_connect", _ctx_tcp_connect  },
+  { "tcp_listen",  _ctx_tcp_listen   },
+  { "pipe_connect",_ctx_pipe_connect },
+  { "pipe_listen", _ctx_pipe_listen  },
+  { "pier_path",   _ctx_pier_path    },
   { "read",        _ctx_read        },
   { "write",       _ctx_write       },
   { "list",        _ctx_list        },
@@ -1378,6 +2290,9 @@ static const luaL_Reg _ctx_methods[] = {
   { "exists",      _ctx_exists      },
   { "mkdir",       _ctx_mkdir       },
   { "remove",      _ctx_remove      },
+  { "read_async",  _ctx_read_async  },
+  { "write_async", _ctx_write_async },
+  { "watch",       _ctx_watch       },
   { 0, 0 }
 };
 
@@ -1632,8 +2547,10 @@ _lua_io_exit(u3_auto* car_u)
 
   _lua_call_self(dvr_u, "exit");
 
+  _live_del(dvr_u->uid_d);                           //  async callbacks now drop
   _lua_close_timers(dvr_u);                          //  stop/close libuv timers
   _lua_close_io(dvr_u);                              //  stop/close libuv sockets
+  _lua_close_watches(dvr_u);                         //  stop/close fs watchers
   luaL_unref(L, LUA_REGISTRYINDEX, dvr_u->ctx_r);
   luaL_unref(L, LUA_REGISTRYINDEX, dvr_u->tab_r);
   c3_free(dvr_u->nam_c);
@@ -1732,8 +2649,10 @@ _lua_load_one(struct _u3_pier* pir_u, const c3_c* dir_c, const c3_c* nam_c)
   dvr_u->lua_u = lua_u;
   dvr_u->pri_w = pri_w;
   dvr_u->nam_c = dnam_c;
+  dvr_u->uid_d = ++g_uid_d;
   dvr_u->tab_r = tab_r;
   dvr_u->ctx_r = _make_ctx(L, dvr_u);
+  _live_add(dvr_u);
 
   {
     u3_auto* car_u   = &dvr_u->car_u;
