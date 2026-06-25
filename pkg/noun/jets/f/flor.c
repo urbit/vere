@@ -39,7 +39,8 @@
   {
     u3_noun bos, nif;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &bos, u3x_sam_3, &nif, 0) ) {
+    if ( ((u3_none == (bos = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (nif = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_flor(bos, nif);

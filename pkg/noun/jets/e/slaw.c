@@ -451,8 +451,8 @@ u3we_slaw(u3_noun cor)
   u3_noun mod;
   u3_noun txt;
 
-  if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
-                      u3x_sam_3, &txt, 0)) {
+  if (((u3_none == (mod = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+       (u3_none == (txt = u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) {
     return u3m_bail(c3__exit);
   }
 

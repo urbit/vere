@@ -125,7 +125,8 @@
   {
     u3_noun cog, dom;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &cog, u3x_sam_3, &dom, 0) ) {
+    if ( ((u3_none == (cog = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (dom = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_loot_136(cog, dom);

@@ -34,7 +34,8 @@
   {
     u3_noun pac, con;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &pac, u3x_sam_3, &con, 0) ) {
+    if ( ((u3_none == (pac = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (con = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_core(pac, con);

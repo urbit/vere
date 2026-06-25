@@ -73,7 +73,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -105,7 +106,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -137,7 +139,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -169,7 +172,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -232,7 +236,9 @@
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_6, &b, u3x_sam_7, &c, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
+          (u3_none == (c = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ||
          c3n == u3ud(c) )
@@ -262,7 +268,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -291,7 +298,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -320,7 +328,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -349,7 +358,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
@@ -378,7 +388,8 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
+    if ( ((u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (b = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {

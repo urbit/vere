@@ -56,11 +56,11 @@ u3_weak
 u3wc_sew(u3_noun cor)
 {
   u3_noun a, b, c, d, e;
-  if ( (c3n == u3r_mean(cor, u3x_sam_2,  &a,
-                             u3x_sam_12, &b,
-                                    106, &c,
-                                    107, &d,
-                              u3x_sam_7, &e, 0)) ||
+  if ( (u3_none == (a = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+       (u3_none == (b = u3r_head_weak(u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor))))))) ||
+       (u3_none == (c = u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))))) ||
+       (u3_none == (d = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))))) ||
+       (u3_none == (e = u3r_tail_weak(u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ||
        (c3n == u3ud(a)) ||
        (c3n == u3ud(b)) ||
        (c3n == u3ud(c)) ||

@@ -62,7 +62,8 @@
   {
     u3_noun mal, buz;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &mal, u3x_sam_3, &buz, 0) ) {
+    if ( ((u3_none == (mal = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (buz = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3_none;
     } else {
       return u3qf_comb(mal, buz);

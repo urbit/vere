@@ -9,6 +9,32 @@
 #include "gmp.h"
 #include "types.h"
 
+    #define u3r_head_weak(SOM) ({                   \
+      u3_weak _som = SOM;                           \
+      ( u3_none == _som ) ? u3_none                 \
+        : (_(u3ud(_som))) ? u3_none                 \
+        : ( ((u3a_cell *)u3a_to_ptr(_som))->hed );  \
+    })
+
+    #define u3r_tail_weak(SOM) ({                   \
+      u3_weak _som = SOM;                           \
+      ( u3_none == _som ) ? u3_none                 \
+        : (_(u3ud(_som))) ? u3_none                 \
+        : ( ((u3a_cell *)u3a_to_ptr(_som))->tel );  \
+    })
+
+    #define u3r_head(SOM) ({                      \
+      u3_noun _som = SOM;                         \
+      ( _(u3ud(_som)) ) ? u3_none                 \
+      : ( ((u3a_cell *)u3a_to_ptr(_som))->hed );  \
+    })
+
+    #define u3r_tail(SOM) ({                      \
+      u3_noun _som = SOM;                         \
+      ( _(u3ud(_som)) ) ? u3_none                 \
+      : ( ((u3a_cell *)u3a_to_ptr(_som))->tel );  \
+    })
+
     /** u3r_*: read without ever crashing.
     **/
 

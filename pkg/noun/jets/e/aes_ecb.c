@@ -41,7 +41,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -64,7 +65,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -87,7 +89,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -110,7 +113,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -133,7 +137,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
@@ -156,7 +161,8 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ||
+    if ( ((u3_none == (b = u3r_head_weak(u3r_tail(cor)))) ||
+          (u3_none == (a = u3r_head_weak(u3r_tail_weak(u3r_tail_weak(u3r_tail(cor))))))) ||
          c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);

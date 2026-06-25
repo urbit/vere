@@ -23,7 +23,8 @@
   {
     u3_noun sag, tip;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &sag, u3x_sam_3, &tip, 0) ) {
+    if ( ((u3_none == (sag = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (tip = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_hint(sag, tip);

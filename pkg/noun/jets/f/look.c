@@ -126,7 +126,8 @@
   {
     u3_noun cog, dab;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &cog, u3x_sam_3, &dab, 0) ) {
+    if ( ((u3_none == (cog = u3r_head_weak(u3r_head_weak(u3r_tail(cor))))) ||
+          (u3_none == (dab = u3r_tail_weak(u3r_head_weak(u3r_tail(cor)))))) ) {
       return u3m_bail(c3__fail);
     } else {
       return u3qf_look(cog, dab);
