@@ -473,6 +473,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const lua = b.dependency("lua", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
@@ -574,6 +579,7 @@ fn buildBinary(
     urbit.linkLibrary(curl.artifact("curl"));
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
+    urbit.linkLibrary(lua.artifact("lua"));
     urbit.linkLibrary(openssl.artifact("ssl"));
     if (t.os.tag != .windows)
         urbit.linkLibrary(sigsegv.artifact("sigsegv"));
@@ -652,6 +658,7 @@ fn buildBinary(
             gmp.artifact("gmp"),
             libuv.artifact("libuv"),
             lmdb.artifact("lmdb"),
+            lua.artifact("lua"),
             natpmp.artifact("natpmp"),
             zlib.artifact("z"),
         };
@@ -737,6 +744,11 @@ fn buildBinary(
             .{
                 .name = "unix-test",
                 .file = "pkg/vere/unix_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "lua-test",
+                .file = "pkg/vere/lua_tests.c",
                 .deps = vere_test_deps,
             },
             .{

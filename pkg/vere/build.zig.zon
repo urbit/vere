@@ -41,6 +41,9 @@
         .lmdb = .{
             .path = "../../ext/lmdb",
         },
+        .lua = .{
+            .path = "../../ext/lua",
+        },
         .natpmp = .{
             .path = "../../ext/natpmp",
         },

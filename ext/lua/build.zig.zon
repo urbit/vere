@@ -1,0 +1,14 @@
+.{
+    .name = .lua,
+    .version = "5.4.7",
+    .fingerprint = 0xd671372b08b211f6,
+    .dependencies = .{
+        .lua = .{
+            .url = "https://www.lua.org/ftp/lua-5.4.7.tar.gz",
+            .hash = "N-V-__8AAIMvFABt-Qcpk24RD10ldEN743D8Q2e19Er8x3dJ",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

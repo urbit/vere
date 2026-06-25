@@ -86,6 +86,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const lua = b.dependency("lua", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
@@ -153,6 +158,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(h2o.artifact("h2o"));
     pkg_vere.linkLibrary(libuv.artifact("libuv"));
     pkg_vere.linkLibrary(lmdb.artifact("lmdb"));
+    pkg_vere.linkLibrary(lua.artifact("lua"));
     pkg_vere.linkLibrary(openssl.artifact("ssl"));
     pkg_vere.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_vere.linkLibrary(zlib.artifact("z"));
@@ -236,6 +242,7 @@ const c_source_files = [_][]const u8{
     "ivory/ivory.c",
     "king.c",
     "lord.c",
+    "lua.c",
     "mars.c",
     "mdns.c",
     "melt.c",
@@ -253,6 +260,7 @@ const install_headers = [_][]const u8{
     "io/mesa/mesa.h",
     "io/serial.h",
     "arena.h",
+    "lua.h",
     "mars.h",
     "mdns.h",
     "vere.h",
