@@ -4,25 +4,34 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
 
     const patches = b.dependency("patches", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const curl = b.dependency("curl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const libuv = b.dependency("libuv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const zlib = b.dependency("zlib", .{
@@ -33,11 +42,13 @@ pub fn build(b: *std.Build) !void {
     const h2o_c = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const sse2neon_c = b.dependency("sse2neon", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const cloexec = b.addLibrary(.{
@@ -45,6 +56,8 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+
+    cloexec.lto = if (optimize != .Debug and !no_lto) .full else null;
     cloexec.linkLibC();
 
     cloexec.addIncludePath(h2o_c.path("deps/cloexec"));
@@ -68,6 +81,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    klib.lto = if (optimize != .Debug and !no_lto) .full else null;
     klib.linkLibrary(curl.artifact("curl"));
     klib.linkLibrary(zlib.artifact("z"));
     klib.linkLibC();
@@ -121,6 +135,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    libgkc.lto = if (optimize != .Debug and !no_lto) .full else null;
     libgkc.linkLibC();
 
     libgkc.addIncludePath(h2o_c.path("deps/libgkc"));
@@ -140,6 +155,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    libyrmcds.lto = if (optimize != .Debug and !no_lto) .full else null;
     libyrmcds.linkLibC();
 
     libyrmcds.addIncludePath(h2o_c.path("deps/libyrmcds"));
@@ -178,6 +194,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    picohttpparser.lto = if (optimize != .Debug and !no_lto) .full else null;
     picohttpparser.linkLibC();
 
     picohttpparser.addIncludePath(h2o_c.path("deps/picohttpparser"));
@@ -205,6 +222,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    cifra.lto = if (optimize != .Debug and !no_lto) .full else null;
     cifra.linkLibC();
 
     cifra.addIncludePath(h2o_c.path("deps/picotls/deps/cifra/src"));
@@ -252,6 +270,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    micro_ecc.lto = if (optimize != .Debug and !no_lto) .full else null;
     micro_ecc.linkLibC();
 
     micro_ecc.addIncludePath(h2o_c.path("deps/picotls/deps/micro-ecc"));
@@ -270,6 +289,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    picotls.lto = if (optimize != .Debug and !no_lto) .full else null;
     picotls.linkLibrary(openssl.artifact("ssl"));
     picotls.linkLibrary(cifra);
     picotls.linkLibrary(micro_ecc);
@@ -327,6 +347,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    h2o.lto = if (optimize != .Debug and !no_lto) .full else null;
     h2o.linkLibrary(openssl.artifact("ssl"));
     h2o.linkLibrary(openssl.artifact("crypto"));
     h2o.linkLibrary(zlib.artifact("z"));

@@ -9,6 +9,12 @@ pub fn build(b: *std.Build) void {
         .name = "murmur3",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    murmur3.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     murmur3.linkLibC();
 
