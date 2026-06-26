@@ -28,6 +28,7 @@
     typedef struct _u3_lua {
       lua_State*       lua;                //  interpreter
       struct _u3_pier* pir_u;             //  pier backpointer (0 in unit tests)
+      void*            emb_u;             //  luv embed harness (u3_lua_emb*), or 0
     } u3_lua;
 
   /* u3_lua_boot(): create a Lua state with the noun bridge registered.

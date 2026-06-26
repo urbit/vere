@@ -70,21 +70,31 @@ Always build with 0.15.2.
 - [10 — Live `ctx:plan` → Arvo injection](10-plan-injection.md)
 - [11 — Pier filesystem access](11-pier-filesystem.md)
 - [12 — More IO: scry, DNS, unix sockets, HTTP, async fs + watch](12-more-io.md)
+- [13 — Embed luv: the IO lives in the Lua library](13-luv-embedding.md)
 
-**All steps complete and verified on a live fake ship.** Example drivers live in
-[`examples/`](examples/): `10-tick` (timer), `20-echo` (effect handler),
-`30-udp-echo` / `40-tcp-echo` (sockets), `50-plan-poke` (inject into Arvo),
-`60-fs` (pier filesystem), `70-scry` (read namespace), `80-http` (HTTP client),
-`90-net` (hostname TCP / unix sockets / watch / async fs).
+**All steps complete and verified on a live fake ship.**
 
-## Driver `ctx` API (current)
+> **Architecture note (step 13):** the IO that steps 05–12 hand-wrote in `lua.c`
+> was replaced by embedding **luv** (the libuv↔Lua binding). Drivers now do their
+> own IO through the global `uv` library; `lua.c` shrank from ~2,990 to ~1,560
+> lines. Steps 05–12 document the *capabilities and design*; the *implementation*
+> is now luv. The kept-in-runtime bits are `ctx:plan/scry/http/wish/pier_path` and
+> the noun bridge.
 
-- **Lifecycle/logging:** `log`, `plan(vane, wire, card)`, `scry(care, desk, path, fn)`,
-  `wish(hoon)`
-- **Timers:** `after(ms, fn)`, `every(ms, fn)`
-- **Sockets:** `udp_open(port[, fn])`, `tcp_connect(host, port, fn)` (IP or hostname),
-  `tcp_listen(port, fn)`, `pipe_connect(path, fn)`, `pipe_listen(path, fn)`
-  — handles expose `:send` / `:recv` / `:close`
-- **HTTP:** `http(method, url[, opts], fn)`
-- **Filesystem (pier-scoped):** `pier_path`, `read`, `write`, `list`, `stat`,
-  `exists`, `mkdir`, `remove`, `read_async`, `write_async`, `watch(path, fn)`
+Example drivers live in [`examples/`](examples/): `10-tick` (luv timer),
+`20-echo` (effect handler), `20-net` (luv UDP/TCP/unix/DNS/watch/async-fs),
+`50-plan-poke` (inject into Arvo), `70-scry` (read namespace), `80-http` (HTTPS
+client + luv TCP server).
+
+## Driver API (current)
+
+**`uv` (global, the luv library)** — full libuv: `uv.new_timer`, `uv.new_udp`,
+`uv.new_tcp`, `uv.new_pipe`, `uv.getaddrinfo`, `uv.fs_*` (sync + async),
+`uv.new_fs_event`, `uv.spawn`, … (minus `run`/`stop`/`loop_close`).
+
+**`ctx` (Urbit-specific, kept in the runtime):**
+`log`, `plan(vane, wire, card)`, `scry(care, desk, path, fn)`,
+`http(method, url[, opts], fn)`, `wish(hoon)`, `pier_path()`.
+
+**`noun`** — build/inspect Urbit nouns (`cell`, `atom`, `cord`, `list`, `head`,
+`tail`, `eq`, `mug`, `to_int`, `to_string`, …).

@@ -66,5 +66,11 @@ pub fn build(b: *std.Build) !void {
     lua.installHeader(lua_c.path("src/lauxlib.h"), "lua/lauxlib.h");
     lua.installHeader(lua_c.path("src/lua.hpp"), "lua/lua.hpp");
 
+    //  also at the include root, so `<lua.h>` resolves (e.g. for luv.h)
+    lua.installHeader(lua_c.path("src/lua.h"), "lua.h");
+    lua.installHeader(lua_c.path("src/luaconf.h"), "luaconf.h");
+    lua.installHeader(lua_c.path("src/lualib.h"), "lualib.h");
+    lua.installHeader(lua_c.path("src/lauxlib.h"), "lauxlib.h");
+
     b.installArtifact(lua);
 }

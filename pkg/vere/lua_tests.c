@@ -315,83 +315,37 @@ _test_loader_bad(void)
   u3_auto_exit(hed_u);
 }
 
-/* _test_ctx_guards(): plan/after/every are registered and fail cleanly with no
-**   pier (the test context), without crashing the runtime.
+/* _test_ctx_guards(): the king-side ctx ops (plan/scry/http) are registered and
+**   fail cleanly with no pier (the test context), without crashing.
 */
 static void
 _test_ctx_guards(void)
 {
   char* dir_c = _mktmp();
   _write(dir_c, "io.lua",
-    "return { name = 'io', priority = 1,                                  \n"
-    "  talk = function(ctx) ctx:after(5, function() end) end,             \n"
-    "  kick = function(ctx, w, c)                                         \n"
-    "    ctx:plan('g', noun.list('wire'), noun.cell(noun.cord('poke'), 0))\n"
-    "    return true                                                      \n"
-    "  end }                                                              \n");
+    "return { name = 'io', priority = 1, kick = function(ctx, w, c)          \n"
+    "  local a = pcall(function()                                           \n"
+    "    ctx:plan('g', noun.list('wire'), noun.cell(noun.cord('poke'), 0))  \n"
+    "  end)                                                                 \n"
+    "  local b = pcall(function() ctx:scry('cy','base','/', function() end) end)\n"
+    "  local d = pcall(function() ctx:http('GET','http://x/', nil, function() end) end)\n"
+    "  return (not a) and (not b) and (not d)  -- all must raise w/o a pier  \n"
+    "end }                                                                  \n");
 
   u3_auto* hed_u = u3_lua_load_dir(0, dir_c);
   if ( !hed_u ) {
     fprintf(stderr, "lua-test: ctx driver failed to load\r\n");
     exit(1);
   }
-
-  //  talk calls ctx:after with no pier -> raises inside, caught & logged
-  //
-  u3_auto_talk(hed_u);
-
-  //  kick calls ctx:plan with no pier -> raises inside -> kick returns c3n
-  //
   {
     u3_noun wir = u3nc(u3i_string("wire"), u3_nul);
     u3_noun cad = u3nc(u3i_string("poke"), u3_nul);
-    c3_o    ret = hed_u->io.kick_f(hed_u, u3k(wir), u3k(cad));
-    if ( c3n != ret ) {
-      fprintf(stderr, "lua-test: kick should fail without a pier\r\n");
-      exit(1);
-    }
-    u3z(wir); u3z(cad);
-  }
-
-  //  no timers should remain registered (after() raised before starting one)
-  //
-  u3_auto_exit(hed_u);
-}
-
-/* _test_socket_guards(): udp_open/tcp_listen/tcp_connect exist and fail cleanly
-**   with no pier (no libuv loop) instead of crashing.
-*/
-static void
-_test_socket_guards(void)
-{
-  char* dir_c = _mktmp();
-  _write(dir_c, "s.lua",
-    "return { name='s', priority=1,                                          \n"
-    "  kick = function(ctx, w, c)                                            \n"
-    "    local ok1 = pcall(function() ctx:udp_open(40000) end)              \n"
-    "    local ok2 = pcall(function() ctx:tcp_listen(40001, function() end) end)\n"
-    "    local ok3 = pcall(function() ctx:tcp_connect('127.0.0.1', 40002, function() end) end)\n"
-    "    return (not ok1) and (not ok2) and (not ok3)                        \n"
-    "  end }                                                                 \n");
-
-  u3_auto* hed_u = u3_lua_load_dir(0, dir_c);
-  if ( !hed_u ) {
-    fprintf(stderr, "lua-test: socket driver failed to load\r\n");
-    exit(1);
-  }
-
-  //  kick returns true only if all three socket calls raised (no pier)
-  //
-  {
-    u3_noun wir = u3nc(u3i_string("w"), u3_nul);
-    u3_noun cad = u3nc(u3i_string("c"), u3_nul);
     if ( c3y != hed_u->io.kick_f(hed_u, u3k(wir), u3k(cad)) ) {
-      fprintf(stderr, "lua-test: socket calls should raise without a pier\r\n");
+      fprintf(stderr, "lua-test: plan/scry/http should raise without a pier\r\n");
       exit(1);
     }
     u3z(wir); u3z(cad);
   }
-
   u3_auto_exit(hed_u);
 }
 
@@ -434,99 +388,6 @@ _test_isolation(void)
   u3_auto_exit(hed_u);
 }
 
-/* _test_fs(): pier-scoped filesystem ops, against a fake pier root.
-*/
-static void
-_test_fs(void)
-{
-  char*   root_c = _mktmp();                 //  stands in for the pier root
-  char*   dir_c  = _mktmp();                 //  the driver folder
-  u3_pier fak_u;
-  memset(&fak_u, 0, sizeof(fak_u));
-  fak_u.pax_c = root_c;
-
-  _write(dir_c, "fs.lua",
-    "return { name='fs', priority=1, kick=function(ctx, w, c)            \n"
-    "  ctx:write('hello.txt', 'world')                                  \n"
-    "  assert(ctx:read('hello.txt') == 'world', 'read back')            \n"
-    "  assert(ctx:exists('hello.txt'), 'exists')                        \n"
-    "  ctx:mkdir('sub')                                                 \n"
-    "  local st = ctx:stat('sub'); assert(st and st.kind=='dir', 'dir') \n"
-    "  ctx:write('sub/inner.txt', 'deep')                               \n"
-    "  assert(ctx:read('sub/inner.txt') == 'deep', 'nested')           \n"
-    "  local found = false                                              \n"
-    "  for _, n in ipairs(ctx:list('.')) do                             \n"
-    "    if n == 'hello.txt' then found = true end                      \n"
-    "  end                                                              \n"
-    "  assert(found, 'list')                                            \n"
-    "  assert(not pcall(function() ctx:read('../escape') end), 'escape')\n"
-    "  assert(not pcall(function() ctx:read('/etc/passwd') end), 'abs') \n"
-    "  ctx:remove('hello.txt')                                          \n"
-    "  assert(not ctx:exists('hello.txt'), 'removed')                   \n"
-    "  assert(#ctx:pier_path() > 0, 'pier_path')                        \n"
-    "  return true                                                      \n"
-    "end }                                                              \n");
-
-  u3_auto* hed_u = u3_lua_load_dir((struct _u3_pier*)&fak_u, dir_c);
-  if ( !hed_u ) {
-    fprintf(stderr, "lua-test: fs driver failed to load\r\n");
-    exit(1);
-  }
-
-  {
-    u3_noun wir = u3nc(u3i_string("w"), u3_nul);
-    u3_noun cad = u3nc(u3i_string("c"), u3_nul);
-    if ( c3y != hed_u->io.kick_f(hed_u, u3k(wir), u3k(cad)) ) {
-      fprintf(stderr, "lua-test: fs operations failed\r\n");
-      exit(1);
-    }
-    u3z(wir); u3z(cad);
-  }
-
-  u3_auto_exit(hed_u);
-}
-
-/* _test_io2_guards(): the second wave of ctx IO (scry/http/pipe/watch/async fs)
-**   is registered and fails cleanly with no pier.
-*/
-static void
-_test_io2_guards(void)
-{
-  char* dir_c = _mktmp();
-  _write(dir_c, "g.lua",
-    "return { name='g', priority=1, kick=function(ctx, w, c)              \n"
-    "  local checks = {                                                  \n"
-    "    function() ctx:scry('cy','base','/', function() end) end,       \n"
-    "    function() ctx:http('GET','http://x/', nil, function() end) end, \n"
-    "    function() ctx:pipe_connect('/tmp/x.sock', function() end) end,  \n"
-    "    function() ctx:pipe_listen('/tmp/x.sock', function() end) end,   \n"
-    "    function() ctx:watch('f', function() end) end,                   \n"
-    "    function() ctx:read_async('f', function() end) end,              \n"
-    "    function() ctx:write_async('f', 'd', function() end) end,        \n"
-    "  }                                                                  \n"
-    "  for _, fn in ipairs(checks) do                                     \n"
-    "    if pcall(fn) then return false end  -- must raise w/o a pier     \n"
-    "  end                                                                \n"
-    "  return true                                                        \n"
-    "end }                                                                \n");
-
-  u3_auto* hed_u = u3_lua_load_dir(0, dir_c);
-  if ( !hed_u ) {
-    fprintf(stderr, "lua-test: io2 driver failed to load\r\n");
-    exit(1);
-  }
-  {
-    u3_noun wir = u3nc(u3i_string("w"), u3_nul);
-    u3_noun cad = u3nc(u3i_string("c"), u3_nul);
-    if ( c3y != hed_u->io.kick_f(hed_u, u3k(wir), u3k(cad)) ) {
-      fprintf(stderr, "lua-test: io2 methods should raise without a pier\r\n");
-      exit(1);
-    }
-    u3z(wir); u3z(cad);
-  }
-  u3_auto_exit(hed_u);
-}
-
 int
 main(int argc, char* argv[])
 {
@@ -547,9 +408,6 @@ main(int argc, char* argv[])
   _test_loader_bad();
   _test_ctx_guards();
   _test_isolation();
-  _test_socket_guards();
-  _test_fs();
-  _test_io2_guards();
 
   fprintf(stderr, "test_lua: ok\n");
   return 0;

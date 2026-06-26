@@ -1,0 +1,21 @@
+.{
+    .name = .luv,
+    .version = "1.48.0",
+    .fingerprint = 0x55a2b2ec63b765db,
+    .dependencies = .{
+        .luv = .{
+            .url = "https://github.com/luvit/luv/releases/download/1.48.0-2/luv-1.48.0-2.tar.gz",
+            .hash = "N-V-__8AALOoTABQtF_BstHnLTDT5PRGc1q5W7uIZYvB3nNu",
+        },
+        .lua = .{
+            .url = "https://www.lua.org/ftp/lua-5.4.7.tar.gz",
+            .hash = "N-V-__8AAIMvFABt-Qcpk24RD10ldEN743D8Q2e19Er8x3dJ",
+        },
+        .libuv = .{
+            .path = "../libuv",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

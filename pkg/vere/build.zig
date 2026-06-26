@@ -91,6 +91,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const luv = b.dependency("luv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
@@ -159,6 +164,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(libuv.artifact("libuv"));
     pkg_vere.linkLibrary(lmdb.artifact("lmdb"));
     pkg_vere.linkLibrary(lua.artifact("lua"));
+    pkg_vere.linkLibrary(luv.artifact("luv"));
     pkg_vere.linkLibrary(openssl.artifact("ssl"));
     pkg_vere.linkLibrary(urcrypt.artifact("urcrypt"));
     pkg_vere.linkLibrary(zlib.artifact("z"));

@@ -10,12 +10,14 @@ local d = { name = "poke", priority = 50 }
 
 function d.talk(ctx)
   ctx:log("injecting a dill %flog %text into Arvo in 2s")
-  ctx:after(2000, function(c)
+  d.timer = uv.new_timer()                            -- luv timer
+  d.timer:start(2000, 0, function()
     local tape = noun.tape("hello from a lua driver, via ctx:plan!")
     local task = noun.cell(noun.cord("text"), tape)   -- [%text tape]
     local card = noun.cell(noun.cord("flog"), task)   -- [%flog [%text tape]]
-    c:plan("d", noun.list("lua"), card)               -- -> dill (vane %d)
-    c:log("injected")
+    ctx:plan("d", noun.list("lua"), card)             -- -> dill (vane %d)
+    ctx:log("injected")
+    d.timer:close()
   end)
 end
 

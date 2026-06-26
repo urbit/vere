@@ -478,6 +478,11 @@ fn buildBinary(
         .optimize = optimize,
     });
 
+    const luv = b.dependency("luv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
@@ -580,6 +585,7 @@ fn buildBinary(
     urbit.linkLibrary(libuv.artifact("libuv"));
     urbit.linkLibrary(lmdb.artifact("lmdb"));
     urbit.linkLibrary(lua.artifact("lua"));
+    urbit.linkLibrary(luv.artifact("luv"));
     urbit.linkLibrary(openssl.artifact("ssl"));
     if (t.os.tag != .windows)
         urbit.linkLibrary(sigsegv.artifact("sigsegv"));
@@ -659,6 +665,7 @@ fn buildBinary(
             libuv.artifact("libuv"),
             lmdb.artifact("lmdb"),
             lua.artifact("lua"),
+            luv.artifact("luv"),
             natpmp.artifact("natpmp"),
             zlib.artifact("z"),
         };

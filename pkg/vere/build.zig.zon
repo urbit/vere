@@ -44,6 +44,9 @@
         .lua = .{
             .path = "../../ext/lua",
         },
+        .luv = .{
+            .path = "../../ext/luv",
+        },
         .natpmp = .{
             .path = "../../ext/natpmp",
         },
