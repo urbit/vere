@@ -48,6 +48,8 @@
     u3_lua*  lua_u;                     //  this driver's isolated state
     c3_w     pri_w;                     //  priority (lower = earlier)
     c3_c*    nam_c;                     //  driver name (for logging)
+    c3_c*    src_c;                     //  source filename (for incremental reload)
+    c3_d     mod_d;                     //  source mtime (ns), for change detection
     c3_d     uid_d;                     //  liveness id (live-driver registry)
     int      tab_r;                     //  registry ref: driver table
     int      ctx_r;                     //  registry ref: ctx userdata
@@ -1240,6 +1242,7 @@ _lua_io_exit(u3_auto* car_u)
   luaL_unref(L, LUA_REGISTRYINDEX, dvr_u->ctx_r);
   luaL_unref(L, LUA_REGISTRYINDEX, dvr_u->tab_r);
   c3_free(dvr_u->nam_c);
+  c3_free(dvr_u->src_c);
   c3_free(dvr_u);
 
   //  each driver owns its own interpreter; close it
@@ -1271,6 +1274,16 @@ _lua_load_one(struct _u3_pier* pir_u, const c3_c* dir_c, const c3_c* nam_c)
     u3l_log("lua: cannot read %s", pax_c);
     c3_free(pax_c);
     return 0;
+  }
+
+  //  capture the file's mtime (ns) for incremental-reload change detection
+  //
+  c3_d mod_d = 0;
+  {
+    struct stat buf_u;
+    if ( 0 == stat(pax_c, &buf_u) ) {
+      mod_d = ((c3_d)buf_u.st_mtim.tv_sec * 1000000000ULL) + buf_u.st_mtim.tv_nsec;
+    }
   }
 
   //  each driver runs in its own isolated lua_State, so a misbehaving driver
@@ -1335,6 +1348,8 @@ _lua_load_one(struct _u3_pier* pir_u, const c3_c* dir_c, const c3_c* nam_c)
   dvr_u->lua_u = lua_u;
   dvr_u->pri_w = pri_w;
   dvr_u->nam_c = dnam_c;
+  dvr_u->src_c = _lua_strdup(nam_c);
+  dvr_u->mod_d = mod_d;
   dvr_u->uid_d = ++g_uid_d;
   dvr_u->tab_r = tab_r;
   dvr_u->ctx_r = _make_ctx(L, dvr_u);
@@ -1461,47 +1476,143 @@ _lua_splice(u3_auto* anc_u, u3_auto* hed_u)
   }
 }
 
-/* _lua_reload(): tear down the current Lua block and rebuild it from disk.
-**
-**   Runs from the (debounced) watcher callback, i.e. on the libuv loop and
-**   never during effect dispatch, so chain surgery is reentrancy-safe.
-**
-**   NB: drivers with Arvo events *in flight* at the instant of reload are a
-**   known edge -- their freed driver would be referenced on completion. Typical
-**   drivers (timers/sockets that inject only intermittently) reload cleanly;
-**   a driver mid-injection should be quiesced before its file is changed.
+/* _lua_file_mtime(): mtime (ns) of <dir_c>/<nam_c>, or 0.
 */
+static c3_d
+_lua_file_mtime(const c3_c* dir_c, const c3_c* nam_c)
+{
+  c3_c*       pax_c = _lua_join(dir_c, nam_c);
+  struct stat buf_u;
+  c3_d        mod_d = 0;
+  if ( 0 == stat(pax_c, &buf_u) ) {
+    mod_d = ((c3_d)buf_u.st_mtim.tv_sec * 1000000000ULL) + buf_u.st_mtim.tv_nsec;
+  }
+  c3_free(pax_c);
+  return mod_d;
+}
+
+/* _lua_chain_insert(): splice [dvr_u] into the Lua block after [anc_u], keeping
+**   the block sorted by ascending priority (ties append).
+*/
+static void
+_lua_chain_insert(u3_auto* anc_u, u3_lua_driver* dvr_u)
+{
+  u3_auto* pre_u = anc_u;
+  while ( pre_u->nex_u
+       && (c3__lua == pre_u->nex_u->nam_m)
+       && (((u3_lua_driver*)pre_u->nex_u)->pri_w <= dvr_u->pri_w) ) {
+    pre_u = pre_u->nex_u;
+  }
+  dvr_u->car_u.nex_u = pre_u->nex_u;
+  pre_u->nex_u = &dvr_u->car_u;
+}
+
+/* _lua_chain_remove(): unlink [tgt_u] from the chain and exit just that driver.
+*/
+static void
+_lua_chain_remove(u3_auto* anc_u, u3_auto* tgt_u)
+{
+  u3_auto* pre_u = anc_u;
+  while ( pre_u->nex_u && (pre_u->nex_u != tgt_u) ) {
+    pre_u = pre_u->nex_u;
+  }
+  if ( pre_u->nex_u == tgt_u ) {
+    pre_u->nex_u = tgt_u->nex_u;       //  unlink
+    tgt_u->nex_u = 0;                  //  null-terminate the single node
+    u3_auto_exit(tgt_u);              //  exit + free (closes its luv loop)
+  }
+}
+
+/* _lua_reload(): incrementally reconcile the loaded Lua drivers with disk.
+**
+**   Diffs $pier/lua/ against the currently-loaded drivers (by filename + mtime)
+**   and only touches what changed: a new file is loaded and spliced at its
+**   priority slot; a deleted file's driver is exited; an edited file's driver
+**   is replaced. Unchanged drivers keep running -- their sockets, timers, and
+**   state are left alone.
+**
+**   Runs from the (debounced) watcher on the libuv loop, never during effect
+**   dispatch, so chain surgery is reentrancy-safe. (A driver with an Arvo event
+**   in flight at the instant *it* is replaced/removed remains the one edge, now
+**   scoped to just that driver.)
+*/
+#define U3_LUA_MAX_DRIVERS 256
+
 static void
 _lua_reload(u3_lua_load* lod_u)
 {
   u3_auto* anc_u = lod_u->anc_u;
 
-  //  detach the contiguous run of Lua drivers after the anchor
+  //  snapshot the current Lua block
   //
-  u3_auto* old_u = anc_u->nex_u;
-  u3_auto* tal_u = 0;
-  u3_auto* cur_u = old_u;
-  while ( cur_u && (c3__lua == cur_u->nam_m) ) {
-    tal_u = cur_u;
-    cur_u = cur_u->nex_u;
-  }
-  u3_auto* rst_u = cur_u;              //  first built-in after the block (or 0)
-
-  if ( tal_u ) {
-    anc_u->nex_u = rst_u;             //  unlink the block
-    tal_u->nex_u = 0;                //  null-terminate it
-    u3_auto_exit(old_u);             //  exit + free each old driver
+  u3_lua_driver* cur_u[U3_LUA_MAX_DRIVERS];
+  c3_o           keep_o[U3_LUA_MAX_DRIVERS];
+  c3_w           cnt_w = 0;
+  for ( u3_auto* c = anc_u->nex_u;
+        c && (c3__lua == c->nam_m) && (cnt_w < U3_LUA_MAX_DRIVERS);
+        c = c->nex_u ) {
+    cur_u[cnt_w]  = (u3_lua_driver*)c;
+    keep_o[cnt_w] = c3n;
+    cnt_w++;
   }
 
-  //  rebuild from disk, start the new drivers, splice back in
+  u3_dire* fol_u = u3_foil_folder(lod_u->dir_c);
+  if ( !fol_u ) {
+    return;
+  }
+
+  c3_w add_w = 0, chg_w = 0, del_w = 0;
+
+  //  walk the directory: add new files, replace changed ones, keep the rest
   //
-  u3_auto* new_u = u3_lua_load_dir(lod_u->pir_u, lod_u->dir_c);
-  if ( new_u ) {
-    u3_auto_talk(new_u);             //  block is null-terminated -> talks only it
-    _lua_splice(anc_u, new_u);
+  for ( u3_dent* den_u = fol_u->all_u; den_u; den_u = den_u->nex_u ) {
+    if ( c3n == _lua_is_script(den_u->nam_c) ) {
+      continue;
+    }
+    c3_d mod_d = _lua_file_mtime(lod_u->dir_c, den_u->nam_c);
+
+    u3_lua_driver* mat_u = 0;
+    c3_w           mat_w = 0;
+    for ( c3_w i_w = 0; i_w < cnt_w; i_w++ ) {
+      if ( cur_u[i_w]->src_c && (0 == strcmp(cur_u[i_w]->src_c, den_u->nam_c)) ) {
+        mat_u = cur_u[i_w];
+        mat_w = i_w;
+        break;
+      }
+    }
+
+    if ( mat_u && (mat_u->mod_d == mod_d) ) {
+      keep_o[mat_w] = c3y;             //  unchanged -> leave it running
+      continue;
+    }
+
+    //  new file, or edited (mat_u kept marked for removal below)
+    //
+    u3_lua_driver* new_u = _lua_load_one(lod_u->pir_u, lod_u->dir_c, den_u->nam_c);
+    if ( new_u ) {
+      _lua_chain_insert(anc_u, new_u);
+      new_u->car_u.io.talk_f(&new_u->car_u);   //  start just this driver
+      if ( mat_u ) { chg_w++; } else { add_w++; }
+    }
+    else if ( mat_u ) {
+      keep_o[mat_w] = c3y;             //  reload failed; keep the old one running
+    }
+  }
+  u3_dire_free(fol_u);
+
+  //  remove drivers whose file is gone or was replaced
+  //
+  for ( c3_w i_w = 0; i_w < cnt_w; i_w++ ) {
+    if ( c3n == keep_o[i_w] ) {
+      _lua_chain_remove(anc_u, &cur_u[i_w]->car_u);
+      del_w++;
+    }
   }
 
-  u3l_log("lua: reloaded drivers from %s", lod_u->dir_c);
+  if ( add_w || chg_w || del_w ) {
+    u3l_log("lua: reload: +%u added, ~%u changed, -%u removed",
+            add_w, chg_w, del_w - chg_w);
+  }
 }
 
 /* _lua_deb_cb(): debounce expiry -> perform the reload.

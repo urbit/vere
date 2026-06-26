@@ -1,8 +1,13 @@
 # Step 09 — Hot reload of `$pier/lua/`
 
-**Status:** ✅ done & verified live
+**Status:** ✅ done & verified live (incremental — see the update at the bottom)
 **Goal:** Edit, add, or remove a `.lua` file in a running ship and have the
-driver block rebuild itself — no restart.
+drivers update themselves — no restart.
+
+> **Updated to incremental reload.** This page describes the original
+> *whole-block* reload (every change reloaded every driver). It was later made
+> **incremental** — only the changed/added/removed driver is touched, siblings
+> keep running. See the "Incremental reload" section at the bottom.
 
 ## How it works
 
@@ -81,6 +86,45 @@ lua: tick: B exiting              # clean shutdown
 
 The two file writes coalesced into one reload; the old driver stopped, the new
 ones started, all without restarting the ship.
+
+## Incremental reload (update)
+
+The original `_lua_reload` tore down the *entire* Lua block and rebuilt it on any
+change — so editing one file reset every driver's state and handles. It's now a
+**diff against disk**, so only what actually changed is touched:
+
+- Each driver remembers its source **filename** and **mtime (ns)** (`src_c` /
+  `mod_d`, set in `_lua_load_one`).
+- On a watcher event, `_lua_reload` snapshots the loaded drivers, scans
+  `$pier/lua/`, and reconciles by filename + mtime:
+  - **new file** → `_lua_load_one` + `_lua_chain_insert` at its priority slot +
+    talk just that driver;
+  - **deleted file** → `_lua_chain_remove` exits just that driver;
+  - **edited file** (mtime changed) → load the new one, exit the old one;
+  - **unchanged** → left completely alone.
+- Two tiny chain helpers do the surgery: `_lua_chain_insert` (sorted insert of one
+  node) and `_lua_chain_remove` (unlink + `u3_auto_exit` of one node). A failed
+  load keeps the old driver running.
+
+So editing a driver no longer disturbs its siblings — their luv sockets, timers,
+and Lua state survive — and the in-flight-event edge is scoped to just the one
+driver you changed.
+
+### Verified live
+Boot drivers A and B (each counting on a luv timer):
+```
+lua: A: A 1 .. A 6      lua: B: B 1 .. B 6
+                        # edit only a.lua
+lua: reload: +0 added, ~1 changed, -0 removed
+lua: A: A-edited 1 ..   lua: B: B 7, B 8, B 9 ..   # B keeps counting, untouched
+                        # drop in c.lua
+lua: reload: +1 added, ~0 changed, -0 removed
+lua: C: C 1 ..          # A and B keep running
+                        # rm b.lua
+lua: reload: +0 added, ~0 changed, -1 removed
+                        # B stops; A and C keep running
+```
+With the old whole-block reload, B would have reset to `B 1` on the first edit.
 
 ## Next
 
