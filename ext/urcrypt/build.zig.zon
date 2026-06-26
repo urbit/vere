@@ -3,20 +3,17 @@
     .fingerprint = 0x590576beb64ce5db,
     .version = "0.0.1",
     .dependencies = .{
-        .aes_siv = .{
-            .url = "https://github.com/dfoxfranke/libaes_siv/archive/9681279cfaa6e6399bb7ca3afbbc27fc2e19df4b.tar.gz",
-            .hash = "N-V-__8AADRgAQComAaFJaS9o75BOcaFVew6nO8D7ZTGMRXd",
-        },
-        .openssl = .{
-            .path = "../openssl",
+        .nettle = .{
+            .path = "../nettle",
         },
         .secp256k1 = .{
             .url = "https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.5.1.tar.gz",
             .hash = "N-V-__8AAJ4DSwC7aDpt90TmGPWKAI6q4-titwp4M0zsZ2vY",
         },
+        // openssl-free urcrypt: depends on nettle, with libaes_siv vendored
+        // under aes_siv/ (retargeted onto nettle). Temporarily a local checkout.
         .urcrypt = .{
-            .url = "https://github.com/urbit/urcrypt/archive/6c93535d46adffcd1495f904bac91d43b2d6d555.tar.gz",
-            .hash = "N-V-__8AAEPPSQAFB28-gqWMJB7_zp5ZIS8wIN4boyLzAWRb",
+            .path = "../../../urcrypt",
         },
     },
     .paths = .{

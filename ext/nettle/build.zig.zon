@@ -1,0 +1,14 @@
+.{
+    .name = .nettle,
+    .fingerprint = 0x91db718f652369c8,
+    .version = "0.0.1",
+    .dependencies = .{
+        .nettle = .{
+            .url = "https://github.com/gnutls/nettle/archive/refs/tags/nettle_4.0_release_20260205.tar.gz",
+            .hash = "N-V-__8AAHcjZwChQdAC62bRM5ZDzApJg_-9Z2TqoX8_fJok",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
