@@ -1202,7 +1202,7 @@ u3a_mark_noun(u3_noun som)
     }
     else {
       c3_w* dog_w = u3a_to_ptr(som);
-      c3_w  new_w = u3a_mark_ptr(dog_w);
+      c3_w  new_w = u3a_mark_rptr(dog_w);
 
       if ( 0 == new_w || c3_w_max == new_w ) {      //  see u3a_mark_ptr()
         return siz_w;

@@ -1486,7 +1486,7 @@ u3_mars_work(u3_mars* mar_u)
   _mars_sign_move();
 
   //  Initalize the spin stack
-  u3t_sstack_init();
+  u3t_sstack_init(mar_u->met_u.who_d);
 
   //  wire up signal controls
   //

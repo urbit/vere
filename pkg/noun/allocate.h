@@ -152,13 +152,6 @@
     ** are declared unconditionally; native u3a_atom / u3a_cell / u3a_road
     ** typedef-alias the matching bitness.
     */
-#     define  _ce_len_h(i)        ((size_t)(i) << (u3a_page_h + u3a_half_bytes_shift))
-#     define  _ce_len_words_h(i)  ((size_t)(i) << u3a_page_h)
-#     define  _ce_page_h          _ce_len_h(1)
-#     define  _ce_ptr_h(i)        ((void *)((c3_c*)u3_Loom_h + _ce_len_h(i)))
-#     define  _ce_len_d(i)        ((size_t)(i) << (u3a_page_d + u3a_chub_bytes_shift))
-#     define  _ce_page_d          _ce_len_d(1)
-
 #     define  u3a_is_cat_h(som)   (((som) >> 31) ? c3n : c3y)
 #     define  u3a_is_pug_h(som)   ((0b10 == ((som) >> 30)) ? c3y : c3n)
 #     define  u3a_is_pom_h(som)   ((0b11 == ((som) >> 30)) ? c3y : c3n)

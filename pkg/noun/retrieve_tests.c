@@ -240,7 +240,7 @@ _test_mug(void)
     //  test mug on maximum direct atom
     //
     c3_h mug_h = u3r_mug(max);
-    c3_m gum_h = u3r_mug_bytes(max_y, 8);
+    c3_h gum_h = u3r_mug_bytes(max_y, 8);
     if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (n) (2): mug mismatch on max direct\r\n");
       fal_o = c3y;
@@ -299,7 +299,7 @@ _test_mug(void)
     }
 
     c3_h mug_h = u3r_mug(max);
-    c3_m gum_h = u3r_mug_bytes(max_y, 4);
+    c3_h gum_h = u3r_mug_bytes(max_y, 4);
     if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (p) (2): mug mismatch at 32-bit boundary\r\n");
       fal_o = c3y;
@@ -342,7 +342,7 @@ _test_mug(void)
     //  test mug on maximum direct atom
     //
     c3_h mug_h = u3r_mug(max);
-    c3_m gum_h = u3r_mug_bytes(max_y, 4);
+    c3_h gum_h = u3r_mug_bytes(max_y, 4);
     if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (n) (2): mug mismatch on max direct\r\n");
       fal_o = c3y;
@@ -397,7 +397,7 @@ _test_mug(void)
     u3_noun bon = u3i_halfs(3, bon_h);
 
     c3_h mug_h = u3r_mug(bon);
-    c3_m gum_h = u3r_mug_halfs(bon_h, 3);
+    c3_h gum_h = u3r_mug_halfs(bon_h, 3);
     if ( mug_h != gum_h ) {
       fprintf(stderr, "_test_mug(): fail (q) (1): mug_halfs mismatch\r\n");
       fal_o = c3y;
