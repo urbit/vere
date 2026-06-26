@@ -24,12 +24,7 @@
 #include "lua.h"
 
 #include <string.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <errno.h>
 #include <curl/curl.h>
 #include <luv/luv.h>
 
