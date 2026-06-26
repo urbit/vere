@@ -37,9 +37,16 @@
     c3_d c[2];
   };
 
-  //  $?(%n %u %d %z %a)
+  //  SoftBLAS is now stateless: rounding is passed per call. This holds
+  //  the active mode (replaces the old softblas_roundingMode global).
+  static c3_y _la_rnd = 'n';
+
+  //  Set the SoftFloat/SoftBLAS rounding mode from a rounding-mode atom.
+  //  Accepts %n %u %d %z (see +$rounding-mode); %a (nearest, ties away)
+  //  is handled too, but the hoon @rs/@rd/@rq/@rh doors never produce it.
+  //  Any other value bails.
   static inline void
-  _set_rounding(c3_y a)
+  _set_rounding_la(c3_y a)
   {
     // We could use SoftBLAS set_rounding() to set the SoftFloat
     // mode as well, but it's more explicit to do it here since
@@ -53,27 +60,27 @@
     // %n - near
     case c3__n:
       softfloat_roundingMode = softfloat_round_near_even;
-      softblas_roundingMode = 'n';
+      _la_rnd = 'n';
       break;
     // %z - zero
     case c3__z:
       softfloat_roundingMode = softfloat_round_minMag;
-      softblas_roundingMode = 'z';
+      _la_rnd = 'z';
       break;
     // %u - up
     case c3__u:
       softfloat_roundingMode = softfloat_round_max;
-      softblas_roundingMode = 'u';
+      _la_rnd = 'u';
       break;
     // %d - down
     case c3__d:
       softfloat_roundingMode = softfloat_round_min;
-      softblas_roundingMode = 'd';
+      _la_rnd = 'd';
       break;
     // %a - away
     case c3__a:
       softfloat_roundingMode = softfloat_round_near_maxMag;
-      softblas_roundingMode = 'a';
+      _la_rnd = 'a';
       break;
     }
   }
@@ -157,19 +164,19 @@
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {
       case 4:
-        haxpy(len_x, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 5:
-        saxpy(len_x, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 6:
-        daxpy(len_x, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 7:
-        qaxpy(len_x, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1, _la_rnd);
         break;
     }
 
@@ -204,35 +211,35 @@
     // syz_x is length in bytes
     c3_d syz_x = len_x * pow(2, bloq-3);
 
-    // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
-    u3r_bytes(0, syz_x, x_bytes, x_data);
+    // x_bytes is the data array (w/ leading 0x1, skipped by ?axpy; holds result)
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
 
-    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, syz_x+1, y_bytes, y_data);
-    
-    //  Switch on the block size.
+    // y_bytes is the data array (w/o leading 0x1)
+    c3_y* y_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, y_bytes, y_data);
+
+    //  Switch on the block size.  Computes x_bytes := -1*y + x = x - y.
     switch (u3x_atom(bloq)) {
       case 4:
-        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)y_bytes, 1, (float16_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 5:
-        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)y_bytes, 1, (float32_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 6:
-        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)y_bytes, 1, (float64_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 7:
-        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)y_bytes, 1, (float128_t*)x_bytes, 1, _la_rnd);
         break;
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -411,13 +418,16 @@
           float16_t y_val16 = ((float16_t*)y_bytes)[i];
           // Perform division x/n
           float16_t div_result16 = f16_div(x_val16, y_val16);
-          // Compute floor of the division result
-          c3_ds floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
-          float16_t floor_float16 = i64_to_f16(floor_result16);
-          // Multiply n by floor(x/n)
-          float16_t mult_result16 = f16_mul(y_val16, floor_float16);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
+          float16_t quot_round_f16 = i64_to_f16(quot_round16);
+          // Multiply n by round(x/n)
+          float16_t mult_result16 = f16_mul(y_val16, quot_round_f16);
+          // Compute remainder: x - n * round(x/n)
           ((float16_t*)y_bytes)[i] = f16_sub(x_val16, mult_result16);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result16.v & 0x7c00) == 0x7c00 ) { ((float16_t*)y_bytes)[i] = (float16_t){ 0x7e00 }; }
         }
         break;
 
@@ -427,13 +437,16 @@
           float32_t y_val32 = ((float32_t*)y_bytes)[i];
           // Perform division x/n
           float32_t div_result32 = f32_div(x_val32, y_val32);
-          // Compute floor of the division result
-          c3_ds floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
-          float32_t floor_float32 = i64_to_f32(floor_result32);
-          // Multiply n by floor(x/n)
-          float32_t mult_result32 = f32_mul(y_val32, floor_float32);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
+          float32_t quot_round_f32 = i64_to_f32(quot_round32);
+          // Multiply n by round(x/n)
+          float32_t mult_result32 = f32_mul(y_val32, quot_round_f32);
+          // Compute remainder: x - n * round(x/n)
           ((float32_t*)y_bytes)[i] = f32_sub(x_val32, mult_result32);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result32.v & 0x7f800000) == 0x7f800000 ) { ((float32_t*)y_bytes)[i] = (float32_t){ 0x7fc00000 }; }
         }
         break;
 
@@ -443,13 +456,16 @@
           float64_t y_val64 = ((float64_t*)y_bytes)[i];
           // Perform division x/n
           float64_t div_result64 = f64_div(x_val64, y_val64);
-          // Compute floor of the division result
-          c3_ds floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
-          float64_t floor_float64 = i64_to_f64(floor_result64);
-          // Multiply n by floor(x/n)
-          float64_t mult_result64 = f64_mul(y_val64, floor_float64);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
+          float64_t quot_round_f64 = i64_to_f64(quot_round64);
+          // Multiply n by round(x/n)
+          float64_t mult_result64 = f64_mul(y_val64, quot_round_f64);
+          // Compute remainder: x - n * round(x/n)
           ((float64_t*)y_bytes)[i] = f64_sub(x_val64, mult_result64);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result64.v & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL ) { ((float64_t*)y_bytes)[i] = (float64_t){ 0x7ff8000000000000ULL }; }
         }
         break;
 
@@ -460,15 +476,18 @@
           // Perform division x/n
           float128_t div_result128;
           f128M_div((float128_t*)&x_val128, (float128_t*)&y_val128, (float128_t*)&div_result128);
-          // Compute floor of the division result
-          c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
-          float128_t floor_float128;
-          i64_to_f128M(floor_result128, &floor_float128);
-          // Multiply n by floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
+          float128_t quot_round_f128;
+          i64_to_f128M(quot_round128, &quot_round_f128);
+          // Multiply n by round(x/n)
           float128_t mult_result128;
-          f128M_mul(((float128_t*)&y_val128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
-          // Compute remainder: x - n * floor(x/n)
+          f128M_mul(((float128_t*)&y_val128), ((float128_t*)&quot_round_f128), ((float128_t*)&mult_result128));
+          // Compute remainder: x - n * round(x/n)
           f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)y_bytes)[i]));
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result128.v[1] & 0x7fff000000000000ULL) == 0x7fff000000000000ULL ) { ((float128_t*)y_bytes)[i] = (float128_t){{ 0, 0x7fff800000000000ULL }}; }
         }
         break;
     }
@@ -589,7 +608,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f16_lt(((float16_t*)x_bytes)[i], min_val16)) {
              min_val16 = ((float16_t*)x_bytes)[i];
-             min_idx = (len_x - i - 1);
+             min_idx = i;
            }
         }
         break;}
@@ -599,7 +618,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f32_lt(((float32_t*)x_bytes)[i], min_val32)) {
              min_val32 = ((float32_t*)x_bytes)[i];
-             min_idx = (len_x - i - 1);
+             min_idx = i;
            }
         }
         break;}
@@ -609,7 +628,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f64_lt(((float64_t*)x_bytes)[i], min_val64)) {
              min_val64 = ((float64_t*)x_bytes)[i];
-             min_idx = (len_x - i - 1);
+             min_idx = i;
            }
         }
         break;}
@@ -619,7 +638,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f128M_lt(&(((float128_t*)x_bytes)[i]), &min_val128)) {
              min_val128 = *f128M_min(&min_val128, &((float128_t*)x_bytes)[i]);
-             min_idx = (len_x - i - 1);
+             min_idx = i;
            }
         }
         break;}
@@ -662,7 +681,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f16_gt(((float16_t*)x_bytes)[i], max_val16)) {
              max_val16 = ((float16_t*)x_bytes)[i];
-             max_idx = (len_x - i - 1);
+             max_idx = i;
            }
         }
         break;}
@@ -672,7 +691,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f32_gt(((float32_t*)x_bytes)[i], max_val32)) {
              max_val32 = ((float32_t*)x_bytes)[i];
-             max_idx = (len_x - i - 1);
+             max_idx = i;
            }
         }
         break;}
@@ -682,7 +701,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f64_gt(((float64_t*)x_bytes)[i], max_val64)) {
              max_val64 = ((float64_t*)x_bytes)[i];
-             max_idx = (len_x - i - 1);
+             max_idx = i;
            }
         }
         break;}
@@ -692,7 +711,7 @@
         for (c3_d i = 0; i < len_x; i++) {
            if(f128M_gt(&(((float128_t*)x_bytes)[i]), &max_val128)) {
              max_val128 = *f128M_max(&max_val128, &((float128_t*)x_bytes)[i]);
-             max_idx = (len_x - i - 1);
+             max_idx = i;
            }
         }
         break;}
@@ -1055,7 +1074,7 @@
     return r_data;
   }
 
-/* gte - x > y
+/* gte - x >= y
 */
   u3_noun
   u3qi_la_gte_i754(u3_noun x_data,
@@ -1128,7 +1147,7 @@
     return r_data;
   }
 
-/* lth - x > y
+/* lth - x < y
 */
   u3_noun
   u3qi_la_lth_i754(u3_noun x_data,
@@ -1201,7 +1220,7 @@
     return r_data;
   }
 
-/* lte - x > y
+/* lte - x <= y
 */
   u3_noun
   u3qi_la_lte_i754(u3_noun x_data,
@@ -1314,7 +1333,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float16_t*)y_bytes)[i] = n16;
         }
-        haxpy(len_x, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 5:
@@ -1323,7 +1342,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float32_t*)y_bytes)[i] = n32;
         }
-        saxpy(len_x, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 6:
@@ -1332,7 +1351,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float64_t*)y_bytes)[i] = n64;
         }
-        daxpy(len_x, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1, _la_rnd);
         break;
 
       case 7:
@@ -1341,7 +1360,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float128_t*)y_bytes)[i] = (float128_t){n128.v[0], n128.v[1]};
         }
-        qaxpy(len_x, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1, _la_rnd);
         break;
     }
 
@@ -1396,7 +1415,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float16_t*)y_bytes)[i] = n16;
         }
-        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)y_bytes, 1, (float16_t*)x_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)y_bytes, 1, (float16_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 5:
@@ -1405,7 +1424,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float32_t*)y_bytes)[i] = n32;
         }
-        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)y_bytes, 1, (float32_t*)x_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)y_bytes, 1, (float32_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 6:
@@ -1414,7 +1433,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float64_t*)y_bytes)[i] = n64;
         }
-        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)y_bytes, 1, (float64_t*)x_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)y_bytes, 1, (float64_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 7:
@@ -1423,7 +1442,7 @@
         for (c3_d i = 0; i < len_x; i++) {
           ((float128_t*)y_bytes)[i] = (float128_t){n128.v[0], n128.v[1]};
         }
-        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)y_bytes, 1, (float128_t*)x_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)y_bytes, 1, (float128_t*)x_bytes, 1, _la_rnd);
         break;
     }
 
@@ -1473,22 +1492,22 @@
     switch (u3x_atom(bloq)) {
       case 4:
         u3r_bytes(0, 2, (c3_y*)&(n16.v), n);
-        hscal(len_x, n16, (float16_t*)x_bytes, 1);
+        hscal(len_x, n16, (float16_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 5:
         u3r_bytes(0, 4, (c3_y*)&(n32.v), n);
-        sscal(len_x, n32, (float32_t*)x_bytes, 1);
+        sscal(len_x, n32, (float32_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 6:
         u3r_bytes(0, 8, (c3_y*)&(n64.v), n);
-        dscal(len_x, n64, (float64_t*)x_bytes, 1);
+        dscal(len_x, n64, (float64_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 7:
         u3r_bytes(0, 16, (c3_y*)&(n128.v[0]), n);
-        qscal(len_x, n128, (float128_t*)x_bytes, 1);
+        qscal(len_x, n128, (float128_t*)x_bytes, 1, _la_rnd);
         break;
     }
 
@@ -1538,28 +1557,28 @@
         //  XX note that in16 is doing double duty here
         u3r_bytes(0, 2, (c3_y*)&(in16.v), n);
         in16 = f16_div((float16_t){SB_REAL16_ONE}, in16);
-        hscal(len_x, in16, (float16_t*)x_bytes, 1);
+        hscal(len_x, in16, (float16_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 5:
         //  XX note that in32 is doing double duty here
         u3r_bytes(0, 4, (c3_y*)&(in32.v), n);
         in32 = f32_div((float32_t){SB_REAL32_ONE}, in32);
-        sscal(len_x, in32, (float32_t*)x_bytes, 1);
+        sscal(len_x, in32, (float32_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 6:
         //  XX note that in64 is doing double duty here
         u3r_bytes(0, 8, (c3_y*)&(in64.v), n);
         in64 = f64_div((float64_t){SB_REAL64_ONE}, in64);
-        dscal(len_x, in64, (float64_t*)x_bytes, 1);
+        dscal(len_x, in64, (float64_t*)x_bytes, 1, _la_rnd);
         break;
 
       case 7:
         //  XX note that in128 is doing double duty here
         u3r_bytes(0, 16, (c3_y*)&(in128.v[0]), n);
         f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}), &in128, &in128);
-        qscal(len_x, in128, (float128_t*)x_bytes, 1);
+        qscal(len_x, in128, (float128_t*)x_bytes, 1, _la_rnd);
         break;
     }
 
@@ -1613,13 +1632,16 @@
           float16_t x_val16 = ((float16_t*)x_bytes)[i];
           // Perform division x/n
           float16_t div_result16 = f16_mul(in16, x_val16);
-          // Compute floor of the division result
-          c3_ds floor_result16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
-          float16_t floor_float16 = i64_to_f16(floor_result16);
-          // Multiply n by floor(x/n)
-          float16_t mult_result16 = f16_mul(n16, floor_float16);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round16 = f16_to_i64(div_result16, softfloat_round_minMag, false);
+          float16_t quot_round_f16 = i64_to_f16(quot_round16);
+          // Multiply n by round(x/n)
+          float16_t mult_result16 = f16_mul(n16, quot_round_f16);
+          // Compute remainder: x - n * round(x/n)
           ((float16_t*)x_bytes)[i] = f16_sub(x_val16, mult_result16);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result16.v & 0x7c00) == 0x7c00 ) { ((float16_t*)x_bytes)[i] = (float16_t){ 0x7e00 }; }
         }
         break;
 
@@ -1631,13 +1653,16 @@
           float32_t x_val32 = ((float32_t*)x_bytes)[i];
           // Perform division x/n
           float32_t div_result32 = f32_mul(in32, x_val32);
-          // Compute floor of the division result
-          c3_ds floor_result32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
-          float32_t floor_float32 = i64_to_f32(floor_result32);
-          // Multiply n by floor(x/n)
-          float32_t mult_result32 = f32_mul(n32, floor_float32);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round32 = f32_to_i64(div_result32, softfloat_round_minMag, false);
+          float32_t quot_round_f32 = i64_to_f32(quot_round32);
+          // Multiply n by round(x/n)
+          float32_t mult_result32 = f32_mul(n32, quot_round_f32);
+          // Compute remainder: x - n * round(x/n)
           ((float32_t*)x_bytes)[i] = f32_sub(x_val32, mult_result32);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result32.v & 0x7f800000) == 0x7f800000 ) { ((float32_t*)x_bytes)[i] = (float32_t){ 0x7fc00000 }; }
         }
         break;
 
@@ -1649,34 +1674,40 @@
           float64_t x_val64 = ((float64_t*)x_bytes)[i];
           // Perform division x/n
           float64_t div_result64 = f64_mul(in64, x_val64);
-          // Compute floor of the division result
-          c3_ds floor_result64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
-          float64_t floor_float64 = i64_to_f64(floor_result64);
-          // Multiply n by floor(x/n)
-          float64_t mult_result64 = f64_mul(n64, floor_float64);
-          // Compute remainder: x - n * floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round64 = f64_to_i64(div_result64, softfloat_round_minMag, false);
+          float64_t quot_round_f64 = i64_to_f64(quot_round64);
+          // Multiply n by round(x/n)
+          float64_t mult_result64 = f64_mul(n64, quot_round_f64);
+          // Compute remainder: x - n * round(x/n)
           ((float64_t*)x_bytes)[i] = f64_sub(x_val64, mult_result64);
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result64.v & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL ) { ((float64_t*)x_bytes)[i] = (float64_t){ 0x7ff8000000000000ULL }; }
         }
         break;
 
       case 7:
         u3r_bytes(0, 16, (c3_y*)&(n128.v[0]), n);
-        f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ZERO}), &n128, &in128);
+        f128M_div(&((float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}), &n128, &in128);
 
         for (c3_d i = 0; i < len_x; i++) {
           float128_t x_val128 = ((float128_t*)x_bytes)[i];
           // Perform division x/n
           float128_t div_result128;
           f128M_mul((float128_t*)&in128, (float128_t*)&x_val128, (float128_t*)&div_result128);
-          // Compute floor of the division result
-          c3_ds floor_result128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
-          float128_t floor_float128;
-          i64_to_f128M(floor_result128, &floor_float128);
-          // Multiply n by floor(x/n)
+          // Truncate the quotient toward zero (round_minMag): C fmod, matching +mod
+          c3_ds quot_round128 = f128M_to_i64(&div_result128, softfloat_round_minMag, false);
+          float128_t quot_round_f128;
+          i64_to_f128M(quot_round128, &quot_round_f128);
+          // Multiply n by round(x/n)
           float128_t mult_result128;
-          f128M_mul(((float128_t*)&n128), ((float128_t*)&floor_float128), ((float128_t*)&mult_result128));
-          // Compute remainder: x - n * floor(x/n)
+          f128M_mul(((float128_t*)&n128), ((float128_t*)&quot_round_f128), ((float128_t*)&mult_result128));
+          // Compute remainder: x - n * round(x/n)
           f128M_sub(((float128_t*)&x_val128), ((float128_t*)&mult_result128), &(((float128_t*)x_bytes)[i]));
+          // x % 0 (or a non-finite operand) makes the quotient non-finite;
+          // return NaN to match the Hoon +mod, not the dividend.
+          if ( (div_result128.v[1] & 0x7fff000000000000ULL) == 0x7fff000000000000ULL ) { ((float128_t*)x_bytes)[i] = (float128_t){{ 0, 0x7fff800000000000ULL }}; }
         }
         break;
     }
@@ -1724,28 +1755,28 @@
     switch (u3x_atom(bloq)) {
       case 4: {
         float16_t r16[2];
-        r16[0] = hdot(len_x, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        r16[0] = hdot(len_x, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1, _la_rnd);
         r16[1].v = 0x1;
         r_data = u3i_bytes((2+1)*sizeof(c3_y), (c3_y*)r16);
         break;}
 
       case 5: {
         float32_t r32[2];
-        r32[0] = sdot(len_x, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        r32[0] = sdot(len_x, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1, _la_rnd);
         r32[1].v = 0x1;
         r_data = u3i_bytes((4+1)*sizeof(c3_y), (c3_y*)r32);
         break;}
 
       case 6: {
         float64_t r64[2];
-        r64[0] = ddot(len_x, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        r64[0] = ddot(len_x, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1, _la_rnd);
         r64[1].v = 0x1;
         r_data = u3i_bytes((8+1)*sizeof(c3_y), (c3_y*)r64);
         break;}
 
       case 7: {
         float128_t r128[2];
-        r128[0] = qdot(len_x, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        r128[0] = qdot(len_x, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1, _la_rnd);
         r128[1] = (float128_t){0x1, 0x0};
         r_data = u3i_bytes((16+1)*sizeof(c3_y), (c3_y*)r128);
         break;}
@@ -1867,6 +1898,11 @@
       return u3_none;
     }
 
+    //  Guard degenerate count: n = 0 underflows n-1 and writes out of bounds.
+    if (n < 1) {
+      return u3_none;
+    }
+
     u3_noun r_data;
 
     switch (u3x_atom(bloq)) {
@@ -1971,7 +2007,9 @@
         u3r_bytes(0, 2, (c3_y*)&(a16.v), a);
         u3r_bytes(0, 2, (c3_y*)&(b16.v), b);
         u3r_bytes(0, 2, (c3_y*)&(interval16.v), d);
-        c3_d n16 = f16_to_i64(f16_ceil(f16_div(f16_sub(b16, a16), interval16)), softfloat_round_minMag, false);
+        c3_ds raw_n16 = f16_to_i64(f16_ceil(f16_div(f16_sub(b16, a16), interval16)), softfloat_round_minMag, false);
+        if ( raw_n16 < 1 || raw_n16 > 0xffffffff ) { return u3_none; }
+        c3_d n16 = raw_n16;
         c3_y* x_bytes16 = (c3_y*)u3a_malloc(((n16+1)*2)*sizeof(c3_y));
         ((float16_t*)x_bytes16)[0] = a16;
         for (c3_d i = 1; i < n16; i++) {
@@ -1987,7 +2025,9 @@
         u3r_bytes(0, 4, (c3_y*)&(a32.v), a);
         u3r_bytes(0, 4, (c3_y*)&(b32.v), b);
         u3r_bytes(0, 4, (c3_y*)&(interval32.v), d);
-        c3_d n32 = f32_to_i64(f32_ceil(f32_div(f32_sub(b32, a32), interval32)), softfloat_round_minMag, false);
+        c3_ds raw_n32 = f32_to_i64(f32_ceil(f32_div(f32_sub(b32, a32), interval32)), softfloat_round_minMag, false);
+        if ( raw_n32 < 1 || raw_n32 > 0xffffffff ) { return u3_none; }
+        c3_d n32 = raw_n32;
         c3_y* x_bytes32 = (c3_y*)u3a_malloc(((n32+1)*4)*sizeof(c3_y));
         ((float32_t*)x_bytes32)[0] = a32;
         for (c3_d i = 1; i < n32; i++) {
@@ -2003,7 +2043,9 @@
         u3r_bytes(0, 8, (c3_y*)&(a64.v), a);
         u3r_bytes(0, 8, (c3_y*)&(b64.v), b);
         u3r_bytes(0, 8, (c3_y*)&(interval64.v), d);
-        c3_d n64 = f64_to_i64(f64_ceil(f64_div(f64_sub(b64, a64), interval64)), softfloat_round_minMag, false);
+        c3_ds raw_n64 = f64_to_i64(f64_ceil(f64_div(f64_sub(b64, a64), interval64)), softfloat_round_minMag, false);
+        if ( raw_n64 < 1 || raw_n64 > 0xffffffff ) { return u3_none; }
+        c3_d n64 = raw_n64;
         c3_y* x_bytes64 = (c3_y*)u3a_malloc(((n64+1)*8)*sizeof(c3_y));
         ((float64_t*)x_bytes64)[0] = a64;
         for (c3_d i = 1; i < n64; i++) {
@@ -2023,7 +2065,9 @@
         f128M_sub(&b128, &a128, &tmp);
         f128M_div(&tmp, &interval128, &tmp);
         f128M_ceil(&tmp, &tmp);
-        c3_d n128 = f128M_to_i64(&tmp, softfloat_round_minMag, false);
+        c3_ds raw_n128 = f128M_to_i64(&tmp, softfloat_round_minMag, false);
+        if ( raw_n128 < 1 || raw_n128 > 0xffffffff ) { return u3_none; }
+        c3_d n128 = raw_n128;
         c3_y* x_bytes128 = (c3_y*)u3a_malloc(((n128+1)*16)*sizeof(c3_y));
         float128_t i128;
         ((float128_t*)x_bytes128)[0] = a128;
@@ -2050,7 +2094,9 @@
                      u3_noun bloq)
   {
     u3_noun d_data = u3qi_la_diag(x_data, shape, bloq);
-    c3_d len_x0 = _get_dims(shape)[0];
+    c3_d *dim_x = _get_dims(shape);
+    c3_d len_x0 = dim_x[0];
+    u3a_free(dim_x);
     u3_noun r_data = u3qi_la_dot_i754(d_data, d_data, u3nt(len_x0, 0x1, u3_nul), u3k(bloq));
     return r_data;
   }
@@ -2115,19 +2161,19 @@
     //  Switch on the block size.
     switch (u3x_atom(bloq)) {
       case 4:
-        hgemm('N', 'N', M, N, P, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, N, (float16_t*)y_bytes, P, (float16_t){SB_REAL16_ZERO}, (float16_t*)r_bytes, P);
+        hgemm('N', 'N', M, N, P, (float16_t){SB_REAL16_ONE}, (float16_t*)x_bytes, N, (float16_t*)y_bytes, P, (float16_t){SB_REAL16_ZERO}, (float16_t*)r_bytes, P, _la_rnd);
         break;
 
       case 5:
-        sgemm('N', 'N', M, N, P, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, N, (float32_t*)y_bytes, P, (float32_t){SB_REAL32_ZERO}, (float32_t*)r_bytes, P);
+        sgemm('N', 'N', M, N, P, (float32_t){SB_REAL32_ONE}, (float32_t*)x_bytes, N, (float32_t*)y_bytes, P, (float32_t){SB_REAL32_ZERO}, (float32_t*)r_bytes, P, _la_rnd);
         break;
 
       case 6:
-        dgemm('N', 'N', M, N, P, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, N, (float64_t*)y_bytes, P, (float64_t){SB_REAL64_ZERO}, (float64_t*)r_bytes, P);
+        dgemm('N', 'N', M, N, P, (float64_t){SB_REAL64_ONE}, (float64_t*)x_bytes, N, (float64_t*)y_bytes, P, (float64_t){SB_REAL64_ZERO}, (float64_t*)r_bytes, P, _la_rnd);
         break;
 
       case 7:
-        qgemm('N', 'N', M, N, P, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, N, (float128_t*)y_bytes, P, (float128_t){SB_REAL128L_ZERO,SB_REAL128U_ZERO}, (float128_t*)r_bytes, P);
+        qgemm('N', 'N', M, N, P, (float128_t){SB_REAL128L_ONE,SB_REAL128U_ONE}, (float128_t*)x_bytes, N, (float128_t*)y_bytes, P, (float128_t){SB_REAL128L_ZERO,SB_REAL128U_ZERO}, (float128_t*)r_bytes, P, _la_rnd);
         break;
     }
 
@@ -2177,7 +2223,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_add_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2223,7 +2269,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_sub_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2269,7 +2315,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_mul_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2315,7 +2361,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_div_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2361,7 +2407,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_mod_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2402,7 +2448,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_cumsum_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3nc(0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2826,7 +2872,7 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       switch (x_kind) {
         case c3__i754:
-          _set_rounding(rnd);
+          _set_rounding_la(rnd);
           u3_noun r_data = u3qi_la_adds_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2861,7 +2907,7 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       switch (x_kind) {
         case c3__i754:
-          _set_rounding(rnd);
+          _set_rounding_la(rnd);
           u3_noun r_data = u3qi_la_subs_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2896,7 +2942,7 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       switch (x_kind) {
         case c3__i754:
-          _set_rounding(rnd);
+          _set_rounding_la(rnd);
           u3_noun r_data = u3qi_la_muls_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2931,7 +2977,7 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       switch (x_kind) {
         case c3__i754:
-          _set_rounding(rnd);
+          _set_rounding_la(rnd);
           u3_noun r_data = u3qi_la_divs_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2966,7 +3012,7 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       switch (x_kind) {
         case c3__i754:
-          _set_rounding(rnd);
+          _set_rounding_la(rnd);
           u3_noun r_data = u3qi_la_mods_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -3010,10 +3056,12 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_dot_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            c3_d len_x0 = _get_dims(x_shape)[0];
+            c3_d *dim_x = _get_dims(x_shape);
+            c3_d len_x0 = dim_x[0];
+            u3a_free(dim_x);
             return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
           default:
@@ -3084,7 +3132,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_linspace_i754(a, b, n, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             x_shape = u3nc(u3x_atom(n), u3_nul);
@@ -3124,7 +3172,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_range_i754(a, b, d, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             c3_d a_, b_, d_;
@@ -3198,7 +3246,9 @@
       } else {
         u3_noun r_data = u3qi_la_diag(x_data, x_shape, x_bloq);
         if (r_data == u3_none) { return u3_none; }
-        c3_d len_x0 = _get_dims(x_shape)[0];
+        c3_d *dim_x = _get_dims(x_shape);
+        c3_d len_x0 = dim_x[0];
+        u3a_free(dim_x);
         return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
       }
     }
@@ -3273,7 +3323,7 @@
       } else {
         switch (x_kind) {
           case c3__i754:
-            _set_rounding(rnd);
+            _set_rounding_la(rnd);
             u3_noun r_data = u3qi_la_mmul_i754(x_data, y_data, x_shape, y_shape, x_bloq);
             // result is already [meta data]
             return r_data;
