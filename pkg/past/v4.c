@@ -473,7 +473,7 @@ _cj_v4_fink_free(u3p(u3j_v4_fink) fin_p)
   c3_w i_w;
   u3j_v4_fink* fin_u = u3v4to(u3j_v4_fink, fin_p);
   u3a_v4_lose(fin_u->sat);
-  for ( i_w = 0; i_w < fin_u->len_l; ++i_w ) {
+  for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_v4_fist* fis_u = &(fin_u->fis_u[i_w]);
     u3a_v4_lose(fis_u->bat);
     u3a_v4_lose(fis_u->pax);

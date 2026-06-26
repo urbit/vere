@@ -48,15 +48,16 @@ static void
 _init_once(void)
 {
   u3a_hunk_dose *hun_u;
-  c3_s mun_w = 0;
+  c3_s mun_s = 0;
 
   for (c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
     hun_u = &(u3a_Hunk[bit_g]);
     hun_u->log_s = bit_g + u3a_min_log;
-    hun_u->len_s = ((c3_w)1) << hun_u->log_s;
-    hun_u->tot_s = ((c3_w)1) << (u3a_page - hun_u->log_s);
-    hun_u->map_s = (hun_u->tot_s + (u3a_half_bits-1)) >> u3a_half_bits_log;
-    hun_u->siz_s = (sizeof(u3a_crag) + (hun_u->map_s - 1) * sizeof(c3_h)
+    hun_u->len_s = 1U << hun_u->log_s;
+    hun_u->tot_s = 1U << (u3a_page - hun_u->log_s);
+    hun_u->map_s = (hun_u->tot_s + 31) >> 5;
+    //  c3_wiseof(u3a_crag) + bitmap length, accounting for minlen(1) w/o rounding up
+    hun_u->siz_s = (sizeof(u3a_crag) + ((hun_u->map_s - 1) * sizeof(c3_h))
                     + sizeof(c3_w) - 1) / sizeof(c3_w);
 
     //  metacircular base case
@@ -64,17 +65,18 @@ _init_once(void)
     //    trivially deducible from exhaustive enumeration
     //
     if ( hun_u->len_s <= (hun_u->siz_s << 1) ) {
-      hun_u->hun_s = ((c3_w)1) + ((hun_u->siz_s - 1) >> hun_u->log_s);
+      hun_u->hun_s = 1U + ((hun_u->siz_s - 1) >> hun_u->log_s);
     }
     else {
       hun_u->hun_s = 0;
     }
 
     hun_u->ful_s = hun_u->tot_s - hun_u->hun_s;
-    mun_w = c3_max(mun_w, hun_u->hun_s);
+    mun_s = c3_max(mun_s, hun_u->hun_s);
   }
 
-  u3_assert( u3a_word_bits > mun_w );
+  //  guards correctness of metadata reservation in _make_chunks
+  u3_assert( 32 > mun_s );
 }
 
 static void
@@ -177,7 +179,8 @@ _extend_directory(c3_w siz_w)  // num pages
       dir_u[pag_w + (HEAP.dir_ws * (c3_ws)i_w)] = u3a_rest_pg;
     }
 
-    memset((c3_y*)dir_u + len_z + dif_z, 0, ((c3_z)nex_w << (u3a_word_bits_log-3)) - len_z - dif_z);
+    memset((c3_y*)dir_u + len_z + dif_z, 0,
+           ((c3_z)nex_w << (u3a_word_bits_log-3)) - len_z - dif_z);
   }
 
   HEAP.len_w += dif_w;
@@ -366,7 +369,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
       map_h = pag_u->map_h;
 
       while ( !*map_h ) { map_h++; }
-      off_w = (map_h - pag_u->map_h) << u3a_half_bits_log;
+      off_w = (map_h - pag_u->map_h) << 5;
 
       if ( (max_w - hav_w) < pag_u->fre_s ) {
         while ( hav_w < max_w ) {
@@ -380,7 +383,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 
           if ( !*map_h ) {
             do { map_h++; } while ( !*map_h );
-            off_w = (map_h - pag_u->map_h) << u3a_half_bits_log;
+            off_w = (map_h - pag_u->map_h) << 5;
           }
         }
 
@@ -403,7 +406,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 
         if ( !*map_h ) {
           do { map_h++; } while ( !*map_h );
-          off_w = (map_h - pag_u->map_h) << u3a_half_bits_log;
+          off_w = (map_h - pag_u->map_h) << 5;
         }
       }
 
@@ -442,7 +445,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
     pag_u->nex_p = 0;
     //  initialize bitmap (zeros, none free)
     //
-    memset(pag_u->map_h, 0, (c3_z)hun_u->map_s << u3a_half_bytes_shift);
+    memset(pag_u->map_h, 0, (c3_z)hun_u->map_s << 2);
 
     {
       u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
@@ -482,11 +485,11 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
 
   //  initialize bitmap (ones, all free)
   //
-  if ( hun_u->tot_s < u3a_half_bits ) {
+  if ( hun_u->tot_s < 32 ) {
     pag_u->map_h[0] = (((c3_h)1) << hun_u->tot_s) - 1;
   }
   else {
-    memset(pag_u->map_h, 0xff, (c3_z)hun_u->map_s << u3a_half_bytes_shift);
+    memset(pag_u->map_h, 0xff, (c3_z)hun_u->map_s << 2);
   }
 
   //  reserve chunks stolen for pginfo
@@ -536,7 +539,7 @@ _alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
 
   {
     u3_post out_p, bas_p = page_to_post(pag_u->pag_w);
-    c3_w    off_w = (map_h - pag_u->map_h) << u3a_half_bits_log;
+    c3_w    off_w = (map_h - pag_u->map_h) << 5;
 
     out_p = bas_p + ((off_w + pos_g) << pag_u->log_s);
     ASAN_UNPOISON_MEMORY_REGION(u3a_into(out_p), hun_u->len_s << (u3a_word_bits_log-3));
@@ -821,7 +824,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     u3_assert(!"loom: corrupt"); return;
   }
 
-  if ( pag_u->map_h[pos_w >> u3a_half_bits_log] & ((c3_h)1 << (pos_w & (u3a_half_bits-1))) ) {
+  if ( pag_u->map_h[pos_w >> 5] & ((c3_h)1 << (pos_w & 31)) ) {
     fprintf(stderr, "\033[31m"
                     "palloc: double free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                     "\033[0m",
@@ -829,7 +832,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     u3_assert(!"loom: corrupt"); return;
   }
 
-  pag_u->map_h[pos_w >> u3a_half_bits_log] |= (((c3_h)1) << (pos_w & (u3a_half_bits-1)));
+  pag_u->map_h[pos_w >> 5] |= (((c3_h)1) << (pos_w & 31));
   pag_u->fre_s++;
 
   ASAN_POISON_MEMORY_REGION(u3a_into(som_p), hun_u->len_s << (u3a_word_bits_log-3));
@@ -970,7 +973,7 @@ _irealloc(u3_post som_p, c3_w len_w)
       u3_assert(!"loom: corrupt"); return 0;
     }
 
-    if ( pag_u->map_h[pos_w >> u3a_half_bits_log] & (((c3_h)1) << (pos_w & (u3a_half_bits-1))) ) {
+    if ( pag_u->map_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)) ) {
       fprintf(stderr, "\033[31m"
                       "palloc: realloc free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w"\r\n"
                       "\033[0m",
@@ -1050,7 +1053,7 @@ _post_status(u3_post som_p)
                       dir_p, hun_u->len_s);
     }
 
-    if ( pag_u->map_h[pos_w >> u3a_half_bits_log] & (((c3_h)1) << (pos_w & (u3a_half_bits-1))) ) {
+    if ( pag_u->map_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)) ) {
       fprintf(stderr, "palloc: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" len=%"PRIc3_s"\r\n",
                       som_p, dir_p, hun_u->len_s);
     }
@@ -1207,7 +1210,7 @@ _poison_words(void)
       do {
         while ( !*map_h ) { map_h++; }
         wor_h = *map_h;
-        off_w = (map_h - pag_u->map_h) << u3a_half_bits_log;
+        off_w = (map_h - pag_u->map_h) << 5;
 
         do {
           pos_g  = c3_tz_h(wor_h);
@@ -1303,7 +1306,7 @@ _mark_post(u3_post som_p)
       return 0;
     }
 
-    if ( pag_u->map_h[pos_w >> u3a_half_bits_log] & (((c3_h)1) << (pos_w & (u3a_half_bits-1))) ) {
+    if ( pag_u->map_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)) ) {
       fprintf(stderr, "palloc: mark: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
       return 0;
@@ -1314,7 +1317,7 @@ _mark_post(u3_post som_p)
     if ( u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w) ) {
       mar_h = (c3_h*)(u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w]);
 
-      if ( !(mar_h[pos_w >> u3a_half_bits_log] & (((c3_h)1) << (pos_w & (u3a_half_bits-1)))) ) {
+      if ( !(mar_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31))) ) {
         return 0;
       }
     }
@@ -1323,7 +1326,7 @@ _mark_post(u3_post som_p)
     else {
       mar_h = (c3_h*)u3a_mark_alloc(hun_u->map_s);
       u3a_Mark.buf_w[pag_w] = (c3_w*)mar_h - u3a_Mark.buf_w;
-      memset(mar_h, 0xff, (c3_z)hun_u->map_s << u3a_half_bytes_shift);
+      memset(mar_h, 0xff, (c3_z)hun_u->map_s << 2);
 
       //  mark page metadata
       //
@@ -1341,7 +1344,7 @@ _mark_post(u3_post som_p)
       u3a_Mark.bit_w[blk_w] |= ((c3_w)1) << bit_w;
     }
 
-    mar_h[pos_w >> u3a_half_bits_log] &= ~(((c3_h)1) << (pos_w & (u3a_half_bits-1)));
+    mar_h[pos_w >> 5] &= ~(((c3_h)1) << (pos_w & 31));
     siz_w = hun_u->len_s;
 
     return siz_w;
@@ -1439,7 +1442,7 @@ _sweep_directory(void)
 
         siz_w = hun_u->len_s;
 
-        if ( 0 == memcmp(mar_h, pag_u->map_h, (c3_z)hun_u->map_s << u3a_half_bytes_shift) ) {
+        if ( 0 == memcmp(mar_h, pag_u->map_h, (c3_z)hun_u->map_s << 2) ) {
           tot_w += siz_w * (hun_u->tot_s - pag_u->fre_s);
         }
         //  NB: since at least one chunk is marked,
@@ -1447,8 +1450,8 @@ _sweep_directory(void)
         //
         else {
           for ( c3_s i_s = 0; i_s < hun_u->tot_s; i_s++ ) {
-            c3_h blk_h = i_s >> u3a_half_bits_log;
-            c3_h bit_h = i_s & (u3a_half_bits-1);
+            c3_h blk_h = i_s >> 5;
+            c3_h bit_h = i_s & 31;
 
             if ( !(pag_u->map_h[blk_h] & (((c3_h)1) << bit_h)) ) {
               if ( !(mar_h[blk_h] & (((c3_h)1) << bit_h)) ) {
@@ -1574,7 +1577,7 @@ _count_post(u3_post som_p, c3_y rat_y)
       return 0;
     }
 
-    if ( pag_u->map_h[pos_w >> u3a_half_bits_log] & (((c3_h)1) << (pos_w & (u3a_half_bits-1))) ) {
+    if ( pag_u->map_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)) ) {
       fprintf(stderr, "palloc: count: words free som_p=0x%"PRIxc3_w" pag=0x%"PRIxc3_w" (%"PRIc3_w") len=%"PRIc3_s"\r\n",
                       som_p, dir_p, pag_u->pag_w, hun_u->len_s);
       return 0;
@@ -1742,8 +1745,8 @@ _sweep_counts(void)
         //  _free_words() will never free [pag_u]
         //
         for ( c3_s i_s = 0; i_s < hun_u->tot_s; i_s++ ) {
-          c3_h blk_h = i_s >> u3a_half_bits_log;
-          c3_h bit_h = i_s & (u3a_half_bits-1);
+          c3_h blk_h = i_s >> 5;
+          c3_h bit_h = i_s & 31;
           pos_w = i_s;
           som_p = bas_p + ((c3_w)i_s << pag_u->log_s);
 
@@ -1991,13 +1994,13 @@ _pack_seek_hunks(void)
       rag_u->pre_u.fre_s = pre_u.fre_s;
       rag_u->pre_u.pos_s = pre_u.pos_s;
 
-      memset(rag_u->mar_h, 0, hun_u->map_s << u3a_half_bytes_shift);
+      memset(rag_u->mar_h, 0, hun_u->map_s << 2);
 
       for ( i_w = 0; i_w < hun_u->map_s; i_w++ ) {
         hap_h[i_w] = ~(pag_u->map_h[i_w]);
       }
 
-      if ( hun_u->tot_s < u3a_half_bits ) {
+      if ( hun_u->tot_s < 32 ) {
         hap_h[0] &= (((c3_h)1) << hun_u->tot_s) - 1;
       }
 
@@ -2019,7 +2022,7 @@ _pack_seek_hunks(void)
          || (pre_u.dir_p && (pos_s > pre_u.fre_s)) )
       {
         u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
-        memset(peg_u->map_h, 0, hun_u->map_s << u3a_half_bytes_shift);
+        memset(peg_u->map_h, 0, hun_u->map_s << 2);
         peg_u->fre_s = 0;
       }
 
@@ -2068,11 +2071,11 @@ _pack_seek_hunks(void)
     if ( pre_u.dir_p ) {
       u3a_crag *peg_u = u3to(u3a_crag, pre_u.dir_p);
       c3_s      pos_s = pre_u.pos_s + hun_u->hun_s;
-      c3_s      max_s = pos_s >> u3a_half_bits_log;
+      c3_s      max_s = pos_s >> 5;
 
-      memset(peg_u->map_h, 0, max_s << u3a_half_bytes_shift);
-      peg_u->map_h[max_s++] = ~((c3_h)0) << (pos_s & (u3a_half_bits-1));
-      memset(&(peg_u->map_h[max_s]), 0xff, (hun_u->map_s - max_s) << u3a_half_bytes_shift);
+      memset(peg_u->map_h, 0, max_s << 2);
+      peg_u->map_h[max_s++] = ~((c3_h)0) << (pos_s & 31);
+      memset(&(peg_u->map_h[max_s]), 0xff, (hun_u->map_s - max_s) << 2);
 
       peg_u->fre_s = pre_u.fre_s;
     }
@@ -2131,7 +2134,7 @@ _pack_seek(void)
 
       fag_u->dir_p = dir_p;
       fag_u->log_s = pag_u->log_s;
-      memset(fag_u->mar_h, 0, (c3_z)hun_u->map_s << u3a_half_bytes_shift);
+      memset(fag_u->mar_h, 0, (c3_z)hun_u->map_s << 2);
     }
   }
 
@@ -2181,8 +2184,8 @@ static inline u3_post
 _pack_relocate_hunk(_ca_prag *rag_u, c3_w pag_w, c3_w pos_w)
 {
   const u3a_hunk_dose *hun_u = &(u3a_Hunk[rag_u->log_s - u3a_min_log]);
-  c3_h  blk_h = pos_w >> u3a_half_bits_log;
-  c3_h  bit_h = pos_w & (u3a_half_bits-1);
+  c3_h  blk_h = pos_w >> 5;
+  c3_h  bit_h = pos_w & 31;
   c3_h *hap_h = &(rag_u->mar_h[hun_u->map_s]);
   c3_h *hum_h = &(hap_h[hun_u->map_s]);
   c3_h  top_h = hap_h[blk_h] & ((((c3_h)1) << bit_h) - 1);
@@ -2239,8 +2242,8 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
     _ca_frag *fag_u = (void*)(u3a_Gack.buf_w + dir_w);
     c3_w  rem_w = som_p & ((((c3_w)1) << u3a_page) - 1);
     c3_w  pos_w = rem_w >> fag_u->log_s;  // XX c/b pos_s
-    c3_h  blk_h = pos_w >> u3a_half_bits_log;
-    c3_h  bit_h = pos_w & (u3a_half_bits-1);
+    c3_h  blk_h = pos_w >> 5;
+    c3_h  bit_h = pos_w & 31;
 
     if ( !(fag_u->mar_h[blk_h] & (((c3_h)1) << bit_h)) ) {
       fag_u->mar_h[blk_h] |= (((c3_h)1) << bit_h);
@@ -2255,8 +2258,8 @@ _pack_relocate_mark(u3_post som_p, c3_t *fir_t)
   else {
     _ca_prag *rag_u = (void*)(u3a_Gack.buf_w + (dir_w & ((((c3_w)1) << (u3a_word_bits-1)) - 1)));
     c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> rag_u->log_s;  // XX c/b pos_s
-    c3_h      blk_h = pos_w >> u3a_half_bits_log;
-    c3_h      bit_h = pos_w & (u3a_half_bits-1);
+    c3_h      blk_h = pos_w >> 5;
+    c3_h      bit_h = pos_w & 31;
 
     //  XX sanity
     //  NB map inverted, free state updated
@@ -2415,7 +2418,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     //  move up to [fre_s] chunks to (relocated) previous page
     //
     while ( (pos_s < max_s) && fre_s ) {
-      if ( hap_h[pos_s >> u3a_half_bits_log] & (((c3_h)1) << (pos_s & (u3a_half_bits-1))) ) {
+      if ( hap_h[pos_s >> 5] & (((c3_h)1) << (pos_s & 31)) ) {
         ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
         _pack_check_move(dst_w, src_w);
         memcpy(dst_w, src_w, len_i);
@@ -2430,7 +2433,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
     //  advance src position past any free chunks
     //
     while ( (pos_s < max_s) ) {
-      if ( hap_h[pos_s >> u3a_half_bits_log] & (((c3_h)1) << (pos_s & (u3a_half_bits-1))) ) {
+      if ( hap_h[pos_s >> 5] & (((c3_h)1) << (pos_s & 31)) ) {
         break;
       }
 
@@ -2455,7 +2458,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   if ( new_w == pag_w ) {
     if ( new_s == pos_s ) {
       while (  (pos_s < max_s)
-            && (hap_h[pos_s >> u3a_half_bits_log] & (((c3_h)1) << (pos_s & (u3a_half_bits-1)))) )
+            && (hap_h[pos_s >> 5] & (((c3_h)1) << (pos_s & 31))) )
       {
         _pack_check_move(src_w, src_w);
         pos_s++;
@@ -2486,7 +2489,7 @@ _pack_move_chunks(c3_w pag_w, c3_w dir_w)
   //  move remaining chunks to relocated page
   //
   while ( pos_s < max_s ) {
-    if ( hap_h[pos_s >> u3a_half_bits_log] & (((c3_h)1) << (pos_s & (u3a_half_bits-1))) ) {
+    if ( hap_h[pos_s >> 5] & (((c3_h)1) << (pos_s & 31)) ) {
       ASAN_UNPOISON_MEMORY_REGION(dst_w, len_i);
       _pack_check_move(dst_w, src_w);
       memcpy(dst_w, src_w, len_i);

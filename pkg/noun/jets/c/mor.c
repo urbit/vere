@@ -10,13 +10,13 @@
   u3qc_mor(u3_noun a,
            u3_noun b)
   {
-    c3_w c_w = u3r_mug(u3r_mug(a));
-    c3_w d_w = u3r_mug(u3r_mug(b));
+    c3_h c_h = u3r_mug(u3r_mug(a));
+    c3_h d_h = u3r_mug(u3r_mug(b));
 
-    if ( c_w == d_w ) {
+    if ( c_h == d_h ) {
       return u3qc_dor(a, b);
     }
-    else return (c_w < d_w) ? c3y : c3n;
+    else return (c_h < d_h) ? c3y : c3n;
   }
   u3_noun
   u3wc_mor(u3_noun cor)

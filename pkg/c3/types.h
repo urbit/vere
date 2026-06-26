@@ -82,16 +82,12 @@
       #define PRIc3_ws PRIi64
       #define PRIxc3_w PRIx64
       #define PRIXc3_w PRIX64
-      #define PRIc3_h  PRIu32
-      #define PRIc3_hs PRIi32
       #else
       #define SCNc3_w  SCNu32
       #define PRIc3_w  PRIu32
       #define PRIc3_ws PRIi32
       #define PRIxc3_w PRIx32
       #define PRIXc3_w PRIX32
-      #define PRIc3_h  PRIu32
-      #define PRIc3_hs PRIi32
       #endif
 
       #ifdef VERE64
@@ -99,21 +95,17 @@
       #define PRIc3_ls PRIi64
       #define PRIxc3_l PRIx64
       #define PRIXc3_l PRIX64
-      #define PRIc3_h PRIu32
-      #define PRIc3_ls_new PRIi32
-      #define PRIxc3_h PRIx32
-      #define PRIXc3_h PRIX32
       #else
       #define PRIc3_l  PRIu32
       #define PRIc3_ls PRIi32
       #define PRIxc3_l PRIx32
       #define PRIXc3_l PRIX32
-      #define PRIc3_h PRIu32
-      #define PRIc3_ls_new PRIi32
-      #define PRIxc3_h PRIx32
-      #define PRIXc3_h PRIX32
       #endif
 
+      #define PRIc3_h  PRIu32
+      #define PRIc3_hs PRIi32
+      #define PRIxc3_h PRIx32
+      #define PRIXc3_h PRIX32
       #define PRIc3_m  PRIu32
       #define PRIc3_ms PRIi32
       #define PRIxc3_m PRIx32
