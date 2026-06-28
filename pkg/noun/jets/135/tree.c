@@ -1091,9 +1091,122 @@ static u3j_core _135_non__math_d[] =
     {}
   };
 
+static u3j_harm _135_non__unum_add_a[] = {{".2", u3wi_unum_add}, {}};
+static u3j_harm _135_non__unum_sub_a[] = {{".2", u3wi_unum_sub}, {}};
+static u3j_harm _135_non__unum_mul_a[] = {{".2", u3wi_unum_mul}, {}};
+static u3j_harm _135_non__unum_div_a[] = {{".2", u3wi_unum_div}, {}};
+static u3j_harm _135_non__unum_lth_a[] = {{".2", u3wi_unum_lth}, {}};
+static u3j_harm _135_non__unum_lte_a[] = {{".2", u3wi_unum_lte}, {}};
+static u3j_harm _135_non__unum_gth_a[] = {{".2", u3wi_unum_gth}, {}};
+static u3j_harm _135_non__unum_gte_a[] = {{".2", u3wi_unum_gte}, {}};
+static u3j_harm _135_non__unum_equ_a[] = {{".2", u3wi_unum_equ}, {}};
+static u3j_harm _135_non__unum_neq_a[] = {{".2", u3wi_unum_neq}, {}};
+static u3j_harm _135_non__unum_neg_a[] = {{".2", u3wi_unum_neg}, {}};
+static u3j_harm _135_non__unum_abs_a[] = {{".2", u3wi_unum_abs}, {}};
+static u3j_harm _135_non__unum_sgn_a[] = {{".2", u3wi_unum_sgn}, {}};
+static u3j_harm _135_non__unum_sqt_a[] = {{".2", u3wi_unum_sqt}, {}};
+static u3j_harm _135_non__unum_fma_a[] = {{".2", u3wi_unum_fma}, {}};
+static u3j_harm _135_non__unum_exp_a[] = {{".2", u3wi_unum_exp}, {}};
+static u3j_harm _135_non__unum_sin_a[] = {{".2", u3wi_unum_sin}, {}};
+static u3j_harm _135_non__unum_cos_a[] = {{".2", u3wi_unum_cos}, {}};
+static u3j_harm _135_non__unum_tan_a[] = {{".2", u3wi_unum_tan}, {}};
+static u3j_harm _135_non__unum_log_a[] = {{".2", u3wi_unum_log}, {}};
+static u3j_harm _135_non__unum_log2_a[] = {{".2", u3wi_unum_log2}, {}};
+static u3j_harm _135_non__unum_log10_a[] = {{".2", u3wi_unum_log10}, {}};
+static u3j_harm _135_non__unum_cbrt_a[] = {{".2", u3wi_unum_cbrt}, {}};
+static u3j_harm _135_non__unum_atan_a[] = {{".2", u3wi_unum_atan}, {}};
+static u3j_harm _135_non__unum_asin_a[] = {{".2", u3wi_unum_asin}, {}};
+static u3j_harm _135_non__unum_acos_a[] = {{".2", u3wi_unum_acos}, {}};
+static u3j_harm _135_non__unum_factorial_a[] = {{".2", u3wi_unum_factorial}, {}};
+static u3j_harm _135_non__unum_pow_a[] = {{".2", u3wi_unum_pow}, {}};
+static u3j_harm _135_non__unum_pow_n_a[] = {{".2", u3wi_unum_pow_n}, {}};
+static u3j_harm _135_non__unum_rnd_a[] = {{".2", u3wi_unum_rnd}, {}};
+static u3j_harm _135_non__unum_flr_a[] = {{".2", u3wi_unum_flr}, {}};
+static u3j_harm _135_non__unum_cel_a[] = {{".2", u3wi_unum_cel}, {}};
+static u3j_harm _135_non__unum_sun_a[] = {{".2", u3wi_unum_sun}, {}};
+static u3j_harm _135_non__unum_san_a[] = {{".2", u3wi_unum_san}, {}};
+static u3j_harm _135_non__unum_toi_a[] = {{".2", u3wi_unum_toi}, {}};
+static u3j_harm _135_non__unum_is_close_a[] = {{".2", u3wi_unum_is_close}, {}};
+static u3j_harm _135_non__unum_to_rh_a[] = {{".2", u3wi_unum_to_rh}, {}};
+static u3j_harm _135_non__unum_to_rs_a[] = {{".2", u3wi_unum_to_rs}, {}};
+static u3j_harm _135_non__unum_to_rd_a[] = {{".2", u3wi_unum_to_rd}, {}};
+static u3j_harm _135_non__unum_to_rq_a[] = {{".2", u3wi_unum_to_rq}, {}};
+static u3j_harm _135_non__unum_from_rh_a[] = {{".2", u3wi_unum_from_rh}, {}};
+static u3j_harm _135_non__unum_from_rs_a[] = {{".2", u3wi_unum_from_rs}, {}};
+static u3j_harm _135_non__unum_from_rd_a[] = {{".2", u3wi_unum_from_rd}, {}};
+static u3j_harm _135_non__unum_from_rq_a[] = {{".2", u3wi_unum_from_rq}, {}};
+static u3j_harm _135_non__unum_p_to_q_a[] = {{".2", u3wi_unum_p_to_q}, {}};
+static u3j_harm _135_non__unum_q_to_p_a[] = {{".2", u3wi_unum_q_to_p}, {}};
+static u3j_harm _135_non__unum_q_negate_a[] = {{".2", u3wi_unum_q_negate}, {}};
+static u3j_harm _135_non__unum_q_mul_add_a[] = {{".2", u3wi_unum_q_mul_add}, {}};
+static u3j_harm _135_non__unum_q_mul_sub_a[] = {{".2", u3wi_unum_q_mul_sub}, {}};
+static u3j_harm _135_non__unum_q_add_p_a[] = {{".2", u3wi_unum_q_add_p}, {}};
+static u3j_harm _135_non__unum_q_sub_p_a[] = {{".2", u3wi_unum_q_sub_p}, {}};
+static u3j_harm _135_non__unum_q_add_q_a[] = {{".2", u3wi_unum_q_add_q}, {}};
+static u3j_harm _135_non__unum_q_sub_q_a[] = {{".2", u3wi_unum_q_sub_q}, {}};
+static u3j_harm _135_non__unum_fdp_a[] = {{".2", u3wi_unum_fdp}, {}};
+static u3j_core _135_non__unum_d[] =
+  { { "add", 7, _135_non__unum_add_a, 0, no_hashes },
+    { "sub", 7, _135_non__unum_sub_a, 0, no_hashes },
+    { "mul", 7, _135_non__unum_mul_a, 0, no_hashes },
+    { "div", 7, _135_non__unum_div_a, 0, no_hashes },
+    { "lth", 7, _135_non__unum_lth_a, 0, no_hashes },
+    { "lte", 7, _135_non__unum_lte_a, 0, no_hashes },
+    { "gth", 7, _135_non__unum_gth_a, 0, no_hashes },
+    { "gte", 7, _135_non__unum_gte_a, 0, no_hashes },
+    { "equ", 7, _135_non__unum_equ_a, 0, no_hashes },
+    { "neq", 7, _135_non__unum_neq_a, 0, no_hashes },
+    { "neg", 7, _135_non__unum_neg_a, 0, no_hashes },
+    { "abs", 7, _135_non__unum_abs_a, 0, no_hashes },
+    { "sgn", 7, _135_non__unum_sgn_a, 0, no_hashes },
+    { "sqt", 7, _135_non__unum_sqt_a, 0, no_hashes },
+    { "fma", 7, _135_non__unum_fma_a, 0, no_hashes },
+    { "exp", 7, _135_non__unum_exp_a, 0, no_hashes },
+    { "sin", 7, _135_non__unum_sin_a, 0, no_hashes },
+    { "cos", 7, _135_non__unum_cos_a, 0, no_hashes },
+    { "tan", 7, _135_non__unum_tan_a, 0, no_hashes },
+    { "log", 7, _135_non__unum_log_a, 0, no_hashes },
+    { "log-2", 7, _135_non__unum_log2_a, 0, no_hashes },
+    { "log-10", 7, _135_non__unum_log10_a, 0, no_hashes },
+    { "cbrt", 7, _135_non__unum_cbrt_a, 0, no_hashes },
+    { "atan", 7, _135_non__unum_atan_a, 0, no_hashes },
+    { "asin", 7, _135_non__unum_asin_a, 0, no_hashes },
+    { "acos", 7, _135_non__unum_acos_a, 0, no_hashes },
+    { "factorial", 7, _135_non__unum_factorial_a, 0, no_hashes },
+    { "pow", 7, _135_non__unum_pow_a, 0, no_hashes },
+    { "pow-n", 7, _135_non__unum_pow_n_a, 0, no_hashes },
+    { "rnd", 7, _135_non__unum_rnd_a, 0, no_hashes },
+    { "flr", 7, _135_non__unum_flr_a, 0, no_hashes },
+    { "cel", 7, _135_non__unum_cel_a, 0, no_hashes },
+    { "sun", 7, _135_non__unum_sun_a, 0, no_hashes },
+    { "san", 7, _135_non__unum_san_a, 0, no_hashes },
+    { "toi", 7, _135_non__unum_toi_a, 0, no_hashes },
+    { "is-close", 7, _135_non__unum_is_close_a, 0, no_hashes },
+    { "to-rh", 7, _135_non__unum_to_rh_a, 0, no_hashes },
+    { "to-rs", 7, _135_non__unum_to_rs_a, 0, no_hashes },
+    { "to-rd", 7, _135_non__unum_to_rd_a, 0, no_hashes },
+    { "to-rq", 7, _135_non__unum_to_rq_a, 0, no_hashes },
+    { "from-rh", 7, _135_non__unum_from_rh_a, 0, no_hashes },
+    { "from-rs", 7, _135_non__unum_from_rs_a, 0, no_hashes },
+    { "from-rd", 7, _135_non__unum_from_rd_a, 0, no_hashes },
+    { "from-rq", 7, _135_non__unum_from_rq_a, 0, no_hashes },
+    { "p-to-q", 7, _135_non__unum_p_to_q_a, 0, no_hashes },
+    { "q-to-p", 7, _135_non__unum_q_to_p_a, 0, no_hashes },
+    { "q-negate", 7, _135_non__unum_q_negate_a, 0, no_hashes },
+    { "q-mul-add", 7, _135_non__unum_q_mul_add_a, 0, no_hashes },
+    { "q-mul-sub", 7, _135_non__unum_q_mul_sub_a, 0, no_hashes },
+    { "q-add-p", 7, _135_non__unum_q_add_p_a, 0, no_hashes },
+    { "q-sub-p", 7, _135_non__unum_q_sub_p_a, 0, no_hashes },
+    { "q-add-q", 7, _135_non__unum_q_add_q_a, 0, no_hashes },
+    { "q-sub-q", 7, _135_non__unum_q_sub_q_a, 0, no_hashes },
+    { "fdp", 7, _135_non__unum_fdp_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _135_non_d[] =
   { { "lagoon", 7, 0, _135_non__la_core_d, no_hashes },
     { "math", 7, 0, _135_non__math_d, no_hashes },
+    { "unum", 7, 0, _135_non__unum_d, no_hashes },
     { "mice", 7, _135_non__mice_a, 0, no_hashes },
     {}
   };
