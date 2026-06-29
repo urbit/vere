@@ -429,5 +429,18 @@
     u3_noun u3wi_la_trace(u3_noun);
     u3_noun u3wi_la_mmul(u3_noun);
 
+    u3_noun u3wi_twid_add(u3_noun);
+    u3_noun u3wi_twid_sub(u3_noun);
+    u3_noun u3wi_twid_neg(u3_noun);
+    u3_noun u3wi_twid_mul(u3_noun);
+    u3_noun u3wi_twid_div(u3_noun);
+    u3_noun u3wi_twid_rem(u3_noun);
+    u3_noun u3wi_twid_pow(u3_noun);
+    u3_noun u3wi_twid_abs(u3_noun);
+    u3_noun u3wi_twid_gth(u3_noun);
+    u3_noun u3wi_twid_lth(u3_noun);
+    u3_noun u3wi_twid_lte(u3_noun);
+    u3_noun u3wi_twid_gte(u3_noun);
+
 #endif /* ifndef U3_JETS_W_H */
 
