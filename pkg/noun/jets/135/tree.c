@@ -944,9 +944,38 @@ static u3j_core _135_non__la_core_d[] =
     {}
   };
 
+static u3j_harm _135_non__twid_add_a[] = {{".2", u3wi_twid_add}, {}};
+static u3j_harm _135_non__twid_sub_a[] = {{".2", u3wi_twid_sub}, {}};
+static u3j_harm _135_non__twid_neg_a[] = {{".2", u3wi_twid_neg}, {}};
+static u3j_harm _135_non__twid_mul_a[] = {{".2", u3wi_twid_mul}, {}};
+static u3j_harm _135_non__twid_div_a[] = {{".2", u3wi_twid_div}, {}};
+static u3j_harm _135_non__twid_rem_a[] = {{".2", u3wi_twid_rem}, {}};
+static u3j_harm _135_non__twid_pow_a[] = {{".2", u3wi_twid_pow}, {}};
+static u3j_harm _135_non__twid_abs_a[] = {{".2", u3wi_twid_abs}, {}};
+static u3j_harm _135_non__twid_gth_a[] = {{".2", u3wi_twid_gth}, {}};
+static u3j_harm _135_non__twid_lth_a[] = {{".2", u3wi_twid_lth}, {}};
+static u3j_harm _135_non__twid_lte_a[] = {{".2", u3wi_twid_lte}, {}};
+static u3j_harm _135_non__twid_gte_a[] = {{".2", u3wi_twid_gte}, {}};
+static u3j_core _135_non__twid_d[] =
+  { { "add", 7, _135_non__twid_add_a, 0, no_hashes },
+    { "sub", 7, _135_non__twid_sub_a, 0, no_hashes },
+    { "neg", 7, _135_non__twid_neg_a, 0, no_hashes },
+    { "mul", 7, _135_non__twid_mul_a, 0, no_hashes },
+    { "div", 7, _135_non__twid_div_a, 0, no_hashes },
+    { "rem", 7, _135_non__twid_rem_a, 0, no_hashes },
+    { "pow", 7, _135_non__twid_pow_a, 0, no_hashes },
+    { "abs", 7, _135_non__twid_abs_a, 0, no_hashes },
+    { "gth", 7, _135_non__twid_gth_a, 0, no_hashes },
+    { "lth", 7, _135_non__twid_lth_a, 0, no_hashes },
+    { "lte", 7, _135_non__twid_lte_a, 0, no_hashes },
+    { "gte", 7, _135_non__twid_gte_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _135_non_d[] =
   { { "lagoon", 7, 0, _135_non__la_core_d, no_hashes },
     { "mice", 7, _135_non__mice_a, 0, no_hashes },
+    { "twid", 7, 0, _135_non__twid_d, no_hashes },
     {}
   };
 

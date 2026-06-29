@@ -290,6 +290,19 @@
     u3_noun u3qi_la_trace_i754(u3_noun, u3_noun, u3_noun);
     u3_noun u3qi_la_mmul_i754(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 
+    u3_noun u3qi_twid_add(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_sub(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_neg(c3_d, u3_atom);
+    u3_noun u3qi_twid_mul(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_div(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_rem(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_pow(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_abs(c3_d, u3_atom);
+    u3_noun u3qi_twid_gth(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_lth(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_lte(c3_d, u3_atom, u3_atom);
+    u3_noun u3qi_twid_gte(c3_d, u3_atom, u3_atom);
+
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58
 #   define u3qfu_van_vet  59
