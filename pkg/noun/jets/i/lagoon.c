@@ -2377,7 +2377,7 @@
 ** carries its leading-0x1 sentinel (== +spac on a 1-element ray).
 */
   static u3_noun
-  _la_int2_box(u3_noun x_shape, u3_noun x_bloq, u3_noun x_kind,
+  _la_scalar_box(u3_noun x_shape, u3_noun x_bloq, u3_noun x_kind,
                u3_noun x_tail, u3_noun r_data)
   {
     c3_d rank = 0;  u3_noun s = x_shape;
@@ -2685,12 +2685,12 @@
             _set_rounding(rnd);
             u3_noun r_data = u3qi_la_cumsum_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            return u3nc(u3nq(u3nc(0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);
 
           case c3__int2: {
             u3_noun r_data = _la_int2_sum(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);
           }
 
           default:
@@ -2852,12 +2852,12 @@
           case c3__i754: {
             u3_noun r_data = u3qi_la_min_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
 
           case c3__int2: {
             u3_noun r_data = _la_int2_minmax(x_data, x_shape, x_bloq, 0);
             if (r_data == u3_none) { return u3_none; }
-            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
 
           default:
             return u3_none;
@@ -2896,12 +2896,12 @@
           case c3__i754: {
             u3_noun r_data = u3qi_la_max_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
 
           case c3__int2: {
             u3_noun r_data = _la_int2_minmax(x_data, x_shape, x_bloq, 1);
             if (r_data == u3_none) { return u3_none; }
-            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
 
           default:
             return u3_none;
@@ -3353,13 +3353,12 @@
             _set_rounding(rnd);
             u3_noun r_data = u3qi_la_dot_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            c3_d len_x0 = _get_dims(x_shape)[0];
-            return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);
 
           case c3__int2: {
             u3_noun r_data = _la_int2_dot(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
-            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);
+            return _la_scalar_box(x_shape, x_bloq, x_kind, x_tail, r_data);
           }
 
           default:
