@@ -12,6 +12,7 @@
 
 #include <math.h>  // for pow()
 #include <stdio.h>
+#include <string.h>  // for memcpy (%int2 reduction output marshalling)
 
 #define f16_ceil(a) f16_roundToInt( a, softfloat_round_max, false )
 #define f32_ceil(a) f32_roundToInt( a, softfloat_round_max, false )
@@ -2205,6 +2206,187 @@
     return r_data;
   }
 
+/* %int2 element-wise comparison (gth/gte/lth/lte): per lane a signed
+** two's-complement compare (native signed-int compare IS that order), writing
+** 1/0 into the result ray (same shape/bloq).  Mirrors the i754 gth jet shape.
+*/
+  typedef enum { _LA_GTH, _LA_LTH, _LA_LTE, _LA_GTE } _la_cop;
+
+  static u3_noun
+  _la_int2_cmp(u3_noun x_data, u3_noun y_data, u3_noun shape, u3_noun bloq, _la_cop op)
+  {
+    c3_d bl = u3x_atom(bloq);
+    if ( bl < 3 || bl > 7 ) return u3_none;
+    c3_d len = _get_length(shape);
+    c3_d lb  = (c3_d)1 << (bl - 3);
+    c3_d syz = len * lb;
+    c3_y* xb = (c3_y*)u3a_malloc(syz * sizeof(c3_y));
+    c3_y* yb = (c3_y*)u3a_malloc((syz + 1) * sizeof(c3_y));
+    u3r_bytes(0, syz, xb, x_data);
+    u3r_bytes(0, syz + 1, yb, y_data);
+
+#define _LA_CMP(UT, ST)                                                      \
+  { UT* X = (UT*)xb;  UT* Y = (UT*)yb;                                        \
+    for ( c3_d i = 0; i < len; i++ ) {                                        \
+      ST a = (ST)X[i], b = (ST)Y[i];  c3_t t;                                 \
+      switch ( op ) {                                                         \
+        case _LA_GTH: t = (c3_t)(a >  b); break;                              \
+        case _LA_LTH: t = (c3_t)(a <  b); break;                              \
+        case _LA_LTE: t = (c3_t)(a <= b); break;                              \
+        default:      t = (c3_t)(a >= b); break;                              \
+      }                                                                       \
+      Y[i] = (UT)(t ? 1 : 0);                                                 \
+    } }
+    switch ( bl ) {
+      case 3: _LA_CMP(c3_b,       int8_t);     break;
+      case 4: _LA_CMP(c3_s,       c3_ss);      break;
+      case 5: _LA_CMP(c3_w,       c3_ws);      break;
+      case 6: _LA_CMP(c3_d,       c3_ds);      break;
+      case 7: _LA_CMP(_twoc_u128, _twoc_s128); break;
+    }
+#undef _LA_CMP
+
+    u3_noun r_data = u3i_bytes((syz + 1) * sizeof(c3_y), yb);
+    u3a_free(xb);  u3a_free(yb);
+    return r_data;
+  }
+
+/* %int2 reductions to a 1-lane scalar ray (data = [value, 0x1 sentinel]),
+** mirroring the i754 cumsum/min/max/dot output shape.  sum/dot wrap mod
+** 2^width (unsigned native add/mul); min/max use signed (two's-complement)
+** order.  `ob` holds one lane + the sentinel byte.
+*/
+  static u3_noun
+  _la_int2_sum(u3_noun x_data, u3_noun shape, u3_noun bloq)
+  {
+    c3_d bl = u3x_atom(bloq);
+    if ( bl < 3 || bl > 7 ) return u3_none;
+    c3_d len = _get_length(shape);
+    c3_d lb  = (c3_d)1 << (bl - 3);
+    c3_d syz = len * lb;
+    c3_y* xb = (c3_y*)u3a_malloc((syz + 1) * sizeof(c3_y));
+    u3r_bytes(0, syz + 1, xb, x_data);
+    c3_y ob[17] = {0};
+#define _LA_SUM(UT) { UT* X = (UT*)xb;  UT acc = 0;                          \
+    for ( c3_d i = 0; i < len; i++ ) acc = (UT)(acc + X[i]);                  \
+    memcpy(ob, &acc, sizeof(UT)); }
+    switch ( bl ) {
+      case 3: _LA_SUM(c3_b);       break;
+      case 4: _LA_SUM(c3_s);       break;
+      case 5: _LA_SUM(c3_w);       break;
+      case 6: _LA_SUM(c3_d);       break;
+      case 7: _LA_SUM(_twoc_u128); break;
+    }
+#undef _LA_SUM
+    ob[lb] = 0x1;
+    u3_noun r_data = u3i_bytes((lb + 1) * sizeof(c3_y), ob);
+    u3a_free(xb);
+    return r_data;
+  }
+
+  static u3_noun
+  _la_int2_dot(u3_noun x_data, u3_noun y_data, u3_noun shape, u3_noun bloq)
+  {
+    c3_d bl = u3x_atom(bloq);
+    if ( bl < 3 || bl > 7 ) return u3_none;
+    c3_d len = _get_length(shape);
+    c3_d lb  = (c3_d)1 << (bl - 3);
+    c3_d syz = len * lb;
+    c3_y* xb = (c3_y*)u3a_malloc(syz * sizeof(c3_y));
+    c3_y* yb = (c3_y*)u3a_malloc((syz + 1) * sizeof(c3_y));
+    u3r_bytes(0, syz, xb, x_data);
+    u3r_bytes(0, syz + 1, yb, y_data);
+    c3_y ob[17] = {0};
+#define _LA_DOT(UT) { UT* X = (UT*)xb;  UT* Y = (UT*)yb;  UT acc = 0;        \
+    for ( c3_d i = 0; i < len; i++ ) acc = (UT)(acc + (UT)(X[i] * Y[i]));     \
+    memcpy(ob, &acc, sizeof(UT)); }
+    switch ( bl ) {
+      case 3: _LA_DOT(c3_b);       break;
+      case 4: _LA_DOT(c3_s);       break;
+      case 5: _LA_DOT(c3_w);       break;
+      case 6: _LA_DOT(c3_d);       break;
+      case 7: _LA_DOT(_twoc_u128); break;
+    }
+#undef _LA_DOT
+    ob[lb] = 0x1;
+    u3_noun r_data = u3i_bytes((lb + 1) * sizeof(c3_y), ob);
+    u3a_free(xb);  u3a_free(yb);
+    return r_data;
+  }
+
+  static u3_noun
+  _la_int2_minmax(u3_noun x_data, u3_noun shape, u3_noun bloq, c3_t is_max)
+  {
+    c3_d bl = u3x_atom(bloq);
+    if ( bl < 3 || bl > 7 ) return u3_none;
+    c3_d len = _get_length(shape);
+    c3_d lb  = (c3_d)1 << (bl - 3);
+    c3_d syz = len * lb;
+    c3_y* xb = (c3_y*)u3a_malloc((syz + 1) * sizeof(c3_y));
+    u3r_bytes(0, syz + 1, xb, x_data);
+    c3_y ob[17] = {0};
+#define _LA_MM(UT, ST) { UT* X = (UT*)xb;  ST best = (ST)X[0];               \
+    for ( c3_d i = 0; i < len; i++ ) { ST v = (ST)X[i];                       \
+      if ( is_max ? (v > best) : (v < best) ) best = v; }                     \
+    { UT o = (UT)best;  memcpy(ob, &o, sizeof(UT)); } }
+    switch ( bl ) {
+      case 3: _LA_MM(c3_b,       int8_t);     break;
+      case 4: _LA_MM(c3_s,       c3_ss);      break;
+      case 5: _LA_MM(c3_w,       c3_ws);      break;
+      case 6: _LA_MM(c3_d,       c3_ds);      break;
+      case 7: _LA_MM(_twoc_u128, _twoc_s128); break;
+    }
+#undef _LA_MM
+    ob[lb] = 0x1;
+    u3_noun r_data = u3i_bytes((lb + 1) * sizeof(c3_y), ob);
+    u3a_free(xb);
+    return r_data;
+  }
+
+/* %int2 argmin/argmax -> bare index atom.  Mirrors the i754 jet exactly:
+** strict compare, reversed lane index (len - i - 1).
+*/
+  static u3_noun
+  _la_int2_argminmax(u3_noun x_data, u3_noun shape, u3_noun bloq, c3_t is_max)
+  {
+    c3_d bl = u3x_atom(bloq);
+    if ( bl < 3 || bl > 7 ) return u3_none;
+    c3_d len = _get_length(shape);
+    c3_d lb  = (c3_d)1 << (bl - 3);
+    c3_d syz = len * lb;
+    c3_y* xb = (c3_y*)u3a_malloc(syz * sizeof(c3_y));
+    u3r_bytes(0, syz, xb, x_data);
+    c3_w idx = 0;
+#define _LA_ARG(UT, ST) { UT* X = (UT*)xb;  ST best = (ST)X[0];              \
+    for ( c3_d i = 0; i < len; i++ ) { ST v = (ST)X[i];                       \
+      if ( is_max ? (v > best) : (v < best) ) { best = v; idx = (c3_w)i; } } }
+    switch ( bl ) {
+      case 3: _LA_ARG(c3_b,       int8_t);     break;
+      case 4: _LA_ARG(c3_s,       c3_ss);      break;
+      case 5: _LA_ARG(c3_w,       c3_ws);      break;
+      case 6: _LA_ARG(c3_d,       c3_ds);      break;
+      case 7: _LA_ARG(_twoc_u128, _twoc_s128); break;
+    }
+#undef _LA_ARG
+    u3a_free(xb);
+    return u3i_chub(idx);
+  }
+
+/* box a scalar reduction result as a ray, matching the Hoon +scalar-to-ray:
+** shape = all-1s of the INPUT's rank (reap (lent shape) 1); the data already
+** carries its leading-0x1 sentinel (== +spac on a 1-element ray).
+*/
+  static u3_noun
+  _la_int2_box(u3_noun x_shape, u3_noun x_bloq, u3_noun x_kind,
+               u3_noun x_tail, u3_noun r_data)
+  {
+    c3_d rank = 0;  u3_noun s = x_shape;
+    while ( c3y == u3du(s) ) { rank++;  s = u3t(s); }
+    u3_noun sh = u3_nul;
+    for ( c3_d i = 0; i < rank; i++ ) sh = u3nc(0x1, sh);
+    return u3nc(u3nq(sh, u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+  }
+
   u3_noun
   u3wi_la_add(u3_noun cor)
   {
@@ -2505,6 +2687,12 @@
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3nc(0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
+          case c3__int2: {
+            u3_noun r_data = _la_int2_sum(x_data, x_shape, x_bloq);
+            if (r_data == u3_none) { return u3_none; }
+            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);
+          }
+
           default:
             return u3_none;
         }
@@ -2541,6 +2729,10 @@
           case c3__i754: {
             u3_noun r_data = u3qi_la_argmin_i754(x_data, x_shape, x_bloq);
             // bare atom (@ index)
+            return r_data;}
+
+          case c3__int2: {
+            u3_noun r_data = _la_int2_argminmax(x_data, x_shape, x_bloq, 0);
             return r_data;}
 
           default:
@@ -2619,6 +2811,10 @@
             // bare atom (@ index)
             return r_data;}
 
+          case c3__int2: {
+            u3_noun r_data = _la_int2_argminmax(x_data, x_shape, x_bloq, 1);
+            return r_data;}
+
           default:
             return u3_none;
         }
@@ -2658,6 +2854,11 @@
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
 
+          case c3__int2: {
+            u3_noun r_data = _la_int2_minmax(x_data, x_shape, x_bloq, 0);
+            if (r_data == u3_none) { return u3_none; }
+            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
+
           default:
             return u3_none;
         }
@@ -2696,6 +2897,11 @@
             u3_noun r_data = u3qi_la_max_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
+
+          case c3__int2: {
+            u3_noun r_data = _la_int2_minmax(x_data, x_shape, x_bloq, 1);
+            if (r_data == u3_none) { return u3_none; }
+            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);}
 
           default:
             return u3_none;
@@ -2777,6 +2983,11 @@
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
+          case c3__int2: {
+            u3_noun r_data = _la_int2_cmp(x_data, y_data, x_shape, x_bloq, _LA_GTH);
+            if (r_data == u3_none) { return u3_none; }
+            return u3nc(u3k(x_meta), r_data);}
+
           default:
             return u3_none;
         }
@@ -2816,6 +3027,11 @@
         switch (x_kind) {
           case c3__i754: {
             u3_noun r_data = u3qi_la_gte_i754(x_data, y_data, x_shape, x_bloq);
+            if (r_data == u3_none) { return u3_none; }
+            return u3nc(u3k(x_meta), r_data);}
+
+          case c3__int2: {
+            u3_noun r_data = _la_int2_cmp(x_data, y_data, x_shape, x_bloq, _LA_GTE);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -2861,6 +3077,11 @@
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
+          case c3__int2: {
+            u3_noun r_data = _la_int2_cmp(x_data, y_data, x_shape, x_bloq, _LA_LTH);
+            if (r_data == u3_none) { return u3_none; }
+            return u3nc(u3k(x_meta), r_data);}
+
           default:
             return u3_none;
         }
@@ -2900,6 +3121,11 @@
         switch (x_kind) {
           case c3__i754: {
             u3_noun r_data = u3qi_la_lte_i754(x_data, y_data, x_shape, x_bloq);
+            if (r_data == u3_none) { return u3_none; }
+            return u3nc(u3k(x_meta), r_data);}
+
+          case c3__int2: {
+            u3_noun r_data = _la_int2_cmp(x_data, y_data, x_shape, x_bloq, _LA_LTE);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -3129,6 +3355,12 @@
             if (r_data == u3_none) { return u3_none; }
             c3_d len_x0 = _get_dims(x_shape)[0];
             return u3nc(u3nq(u3nt(len_x0, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+
+          case c3__int2: {
+            u3_noun r_data = _la_int2_dot(x_data, y_data, x_shape, x_bloq);
+            if (r_data == u3_none) { return u3_none; }
+            return _la_int2_box(x_shape, x_bloq, x_kind, x_tail, r_data);
+          }
 
           default:
             return u3_none;
