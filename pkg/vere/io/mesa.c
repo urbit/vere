@@ -40,6 +40,8 @@ static c3_y are_y[524288];
 
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
 
+#define PEEK_QUEUE_MAX       40
+
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
 #define MESA_SYM_FIELD(SYM) MESA_FIELD_ ## SYM
@@ -2390,6 +2392,12 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     return;
   }
 
+  u3_pier* pir_u = sam_u->car_u.pir_u;
+
+  if ( PEEK_QUEUE_MAX <= pir_u->pec_u.dep_w ) {
+    // XX log drop
+    return;
+  }
 
   // record interest
   _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
@@ -2399,7 +2407,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
-  u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
+  u3_noun our = u3i_chubs(2, pir_u->who_d);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
 
   arena are_u = arena_create(sizeof(u3_mesa_cb_data) + 1024);
@@ -2410,7 +2418,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   dat_u->sam_u = sam_u;
   _mesa_copy_name(&dat_u->nam_u, &pac_u->pek_u.nam_u, &han_u->are_u);
 
-  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3nq(1, c3__beam, c3__ax, bem), han_u, _mesa_page_scry_jumbo_cb);
+  u3_pier_peek(pir_u, u3_nul, u3nq(1, c3__beam, c3__ax, bem), han_u, _mesa_page_scry_jumbo_cb);
 }
 
 static void
