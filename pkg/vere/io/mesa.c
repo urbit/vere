@@ -41,6 +41,7 @@ static c3_y are_y[524288];
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
 
 #define PEEK_QUEUE_MAX       40
+#define POKE_QUEUE_MAX       30
 
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
@@ -2445,6 +2446,12 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_forward_request(sam_u, pic_u, lan_u);
     return;
   }
+
+  if ( POKE_QUEUE_MAX <= sam_u->car_u.dep_w ) {
+    // XX log drop
+    return;
+  }
+
   //  TODO check if lane already in pit, drop dupes
   _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
 
