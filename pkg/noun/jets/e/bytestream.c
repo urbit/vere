@@ -331,8 +331,8 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
     }
     pos_w++;
   }
-  // Newline not found, position at the end
-  if (*(sea_y + pos_w) != '\n') {
+  // Newline not found, position at the end (guard deref: pos_w may be >= len_w)
+  if (pos_w >= len_w || *(sea_y + pos_w) != '\n') {
     pos_w = p_octs;
   }
   else {

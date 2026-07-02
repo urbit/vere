@@ -80,6 +80,43 @@ _test_stun(void)
   return 0;
 }
 
+/* _test_mug_underflow(): C1 (SECURITY-AUDIT) — _ames_check_mug OOB read.
+**
+**  _ames_check_mug computes `len_w - rog_w` where rog_w = HEAD_SIZE +
+**  origin_size. _ames_hear runs this check while only guaranteeing
+**  len_w >= HEAD_SIZE (4); the prelude-size check that would require a
+**  bigger packet runs *after*. A 4-byte packet with the relay bit set gives
+**  rog_w = 10, so `len_w - rog_w` underflows to ~0xFFFFFFFF and u3r_mug_bytes
+**  reads ~4 GB off the buffer. We allocate the buffer at exactly len_w so
+**  ASan flags the over-read; the fix must drop (c3n) without dereferencing.
+*/
+static c3_i
+_test_mug_underflow(void)
+{
+  c3_w  len_w = HEAD_SIZE;             // 4: smallest packet that reaches the mug check
+  c3_y* hun_y = c3_malloc(len_w);      // exact-size: no slack for the OOB read
+
+  memset(hun_y, 0, len_w);
+
+  u3_pact pac_u;
+  memset(&pac_u, 0, sizeof(pac_u));
+  pac_u.len_w        = len_w;
+  pac_u.hun_y        = hun_y;
+  pac_u.hed_u.rel_o  = c3y;            // relay bit set -> origin_size 6 -> rog_w 10
+  pac_u.hed_u.mug_l  = 0;
+
+  c3_o ret_o = _ames_check_mug(&pac_u);
+
+  c3_free(hun_y);
+
+  if ( c3y == ret_o ) {
+    fprintf(stderr, "ames: mug underflow: undersized relay packet not dropped\r\n");
+    return 1;
+  }
+
+  return 0;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -88,6 +125,11 @@ main(int argc, char* argv[])
   _setup();
 
   _test_ames();
+
+  if ( _test_mug_underflow() ) {
+    fprintf(stderr, "ames: mug underflow test failed\r\n");
+    exit(1);
+  }
 
   if ( _test_stun() ) {
     fprintf(stderr, "ames: stun tests failed\r\n");

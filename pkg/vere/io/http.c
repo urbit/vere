@@ -2917,30 +2917,24 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
       c3_w  len_w;
       pos_w -=4;
 
-      if ( siz_w < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
-         siz_w *= 2;
-      }
-
       memcpy(&len_w, &stk_u->dat_y[pos_w], 4);
       pos_w -= len_w;
 
-      if ( siz_w < out_w + 4 ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
+      //  ensure room for the separator '/' and the component, growing in a
+      //  loop and keeping siz_w in sync with the real capacity
+      //
+      while ( siz_w < out_w + 1 + len_w ) {
+        siz_w *= 2;
+        buf_c = c3_realloc(buf_c, siz_w);
       }
+
       buf_c[out_w++] = '/';
-
-      if ( siz_w < out_w + len_w ) {
-         buf_c = c3_realloc(buf_c, siz_w*2);
-      }
-
       memcpy(buf_c + out_w, &stk_u->dat_y[pos_w], len_w);
       out_w += len_w;
     }
-    buf_c[out_w] = '\0';
 
     if ( 0 != stk_u->off_w ) {
-      u3_noun tan = u3i_string(buf_c);
+      u3_noun tan = u3i_bytes(out_w, (c3_y*)buf_c);
       u3_noun lin = u3i_list(u3i_string("data:"),
                              tan,
                              c3_s2('\n', '\n'),

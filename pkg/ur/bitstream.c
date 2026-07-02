@@ -623,11 +623,13 @@ ur_bsr_log(ur_bsr_t *bsr, uint8_t *out)
         return _bsr_log_meme(bsr);
       }
 
-      byt = b[++skip];
-
-      if ( skip == left ) {
+      //  check the bound before dereferencing to avoid a one-byte over-read
+      //
+      if ( ++skip == left ) {
         return _bsr_set_gone(bsr, (skip << 3) - off);
       }
+
+      byt = b[skip];
     }
 
     {
