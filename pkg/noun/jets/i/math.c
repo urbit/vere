@@ -707,13 +707,56 @@ typedef int64_t  c3_ds;
     ax.c = r0.c & 0x7fffffffU;
     return _rs_trigfin(0, ax.s, 0);
   }
-  //  tan = (div (sin x) (cos x)): sin/cos kernels %n, the bare div per door r
+/* @rs tan -- math.hoon ++rs ++tan/++rs-tan.  Dedicated kernel (~0.94 ULP;
+** the sin/cos ratio this replaces was ~1.2 ULP), added 2026-07-03 -- q*pi/2
+** reduction (same 3-part split as sin/cos), odd q uses the -cot path via
+** reciprocal.  Q(z)=(tan(r)/r-1)/z Chebyshev-fit, 7 coeffs; the dominant
+** linear term x is added LAST (w2=x+r), not folded into the polynomial
+** product -- see math.hoon's own comment for why that ordering matters.
+*/
+  static const uint32_t _RS_TANQ[7] = {
+    0x3b7bdd30U, 0x3a9b5ccbU, 0x3c233846U, 0x3cb11ecaU,
+    0x3d5d294dU, 0x3e088844U, 0x3eaaaaabU
+  };
+  static void _rs_tan_redq(float32_t ax, int32_t *q_out, float32_t *rhi_out, float32_t *rlo_out) {
+    int32_t q = f32_to_i32(f32_mul(ax, _rs_bits(0x3f22f983U).s), softfloat_round_near_even, 0);
+    union sing qf; qf.s = ui32_to_f32((uint32_t)(q < 0 ? -q : q));
+    union sing r1, r2, w, rhi, rlo;
+    r1.s = f32_sub(ax, f32_mul(qf.s, _rs_bits(0x3fc90000U).s));
+    r2.s = f32_sub(r1.s, f32_mul(qf.s, _rs_bits(0x39fda000U).s));
+    w.s  = f32_mul(qf.s, _rs_bits(0x33a22169U).s);
+    rhi.s = f32_sub(r2.s, w.s);
+    rlo.s = f32_sub(f32_sub(r2.s, rhi.s), w.s);
+    *q_out = q; *rhi_out = rhi.s; *rlo_out = rlo.s;
+  }
+  static float32_t _rs_ktan(float32_t x, float32_t y, int iy_is_tan) {
+    union sing z; z.s = f32_mul(x, x);
+    union sing acc; acc.c = _RS_TANQ[0];
+    for ( int i = 1; i < 7; i++ ) {
+      union sing c; c.c = _RS_TANQ[i];
+      acc.s = f32_add(f32_mul(acc.s, z.s), c.s);
+    }
+    union sing s, corrpoly, rlocorr, rr, w2;
+    s.s = f32_mul(z.s, x);
+    corrpoly.s = f32_mul(s.s, acc.s);
+    rlocorr.s = f32_mul(y, f32_add(_rs_bits(0x3f800000U).s, z.s));
+    rr.s = f32_add(corrpoly.s, rlocorr.s);
+    w2.s = f32_add(x, rr.s);
+    if ( iy_is_tan ) return w2.s;
+    return f32_div(_rs_bits(0xbf800000U).s, w2.s);
+  }
   static float32_t _rs_tan(float32_t x) {
-    float32_t s = _rs_sin(x), c = _rs_cos(x);
-    softfloat_roundingMode = _math_rnd;
-    float32_t r = f32_div(s, c);
-    softfloat_roundingMode = softfloat_round_near_even;
-    return r;
+    union sing r0; r0.s = x;
+    if ( !f32_eq(x, x) )                          { r0.c = _RS_QNAN; return r0.s; }  // NaN
+    if ( (r0.c == _RS_PINF)||(r0.c == _RS_NINF) ) { r0.c = _RS_QNAN; return r0.s; }  // +-inf -> NaN
+    if ( (r0.c == 0)||(r0.c == 0x80000000U) )     { return x; }                      // +-0 -> +-0
+    uint32_t neg = r0.c >> 31;
+    union sing ax; ax.c = r0.c & 0x7fffffffU;
+    int32_t q; float32_t rhi, rlo;
+    _rs_tan_redq(ax.s, &q, &rhi, &rlo);
+    int iy_is_tan = ((q < 0 ? -q : q) & 1) == 0;
+    float32_t t = _rs_ktan(rhi, rlo, iy_is_tan);
+    return neg ? _rs_neg(t) : t;
   }
 
 /* @rs sqt -- math.hoon ++rs ++sqt = (sqt:^rs x): correctly-rounded f32 sqrt. */
@@ -1037,73 +1080,33 @@ typedef int64_t  c3_ds;
     return _rh_scale2(p.h, k);
   }
 
-/* @rh sin/cos/tan -- math.hoon ++rh ++sin/++cos/++rh-trig/++tan
-**   x = q*(pi/2) + (rhi+rlo) (3-part pi/2), fdlibm sin/cos kernels by q&3 (each
-**   with just 2 coeffs).  tan = sin/cos (the div honors the door r).
+/* @rh sin/cos/tan -- math.hoon ++rh ++sin/++cos/++tan.  The native-f16
+** q*pi/2 reduction (3-part pi/2, fdlibm kernels) was unsafe past |x|~500:
+** q=round(|x|*2/pi) exceeds f16's 2048 exact-integer ceiling there, so its
+** own rounding error got amplified by pi/2's leading term, producing errors
+** up to 4-11 orders of magnitude past 1 ULP.  Fixed (2026-07-03) by widening
+** to f32 (exact, f16_to_f32) -- f32's 24-bit mantissa keeps q exact up to
+** 2^24, vastly beyond f16's entire dynamic range -- reusing the already-
+** correct _rs_sin/_rs_cos, and narrowing back via f32_to_f16 (correctly
+** rounded RNE).  Mirrors math.hoon's ++sin/++cos +widen-hs/+narrow-sh fix;
+** the old native-f16 kernel (_rh_ksin/_rh_kcos/_rh_trigfin) is removed.
 */
-  static const uint16_t _RH_SC[2] = { 0xb155, 0x2044 };   // sin kernel coeffs
-  static const uint16_t _RH_CC[2] = { 0x2955, 0x95b0 };   // cos kernel coeffs
-  static float16_t _rh_ksin(float16_t xx, float16_t yy) {
-    union half z, r, v, aa, bb, dd, c, half;
-    half.c = 0x3800;
-    z.h = f16_mul(xx, xx);
-    r.c = 0;                            // Horner over flop(tail sc): sc[1]
-    for ( int i = 2; i-- != 1; ) { c.c = _RH_SC[i]; r.h = f16_add(f16_mul(r.h, z.h), c.h); }
-    v.h = f16_mul(z.h, xx);
-    aa.h = f16_sub(f16_mul(half.h, yy), f16_mul(v.h, r.h));
-    bb.h = f16_sub(f16_mul(z.h, aa.h), yy);
-    dd.h = f16_sub(bb.h, f16_mul(v.h, _rh_bits(_RH_SC[0]).h));
-    return f16_sub(xx, dd.h);
-  }
-  static float16_t _rh_kcos(float16_t xx, float16_t yy) {
-    union half z, rc, hz, w2, aa, bb, c, half, one;
-    half.c = 0x3800; one.c = 0x3c00;
-    z.h = f16_mul(xx, xx);
-    rc.c = 0;                          // Horner over flop(cc): cc[1..0]
-    for ( int i = 2; i-- != 0; ) { c.c = _RH_CC[i]; rc.h = f16_add(f16_mul(rc.h, z.h), c.h); }
-    hz.h = f16_mul(half.h, z.h);
-    w2.h = f16_sub(one.h, hz.h);
-    aa.h = f16_sub(f16_sub(one.h, w2.h), hz.h);
-    bb.h = f16_sub(f16_mul(f16_mul(z.h, z.h), rc.h), f16_mul(xx, yy));
-    return f16_add(w2.h, f16_add(aa.h, bb.h));
-  }
-  //  trig-fin: is_sin ? sin(x) : cos(x); ax=|x|, sb=sign bit
-  static float16_t _rh_trigfin(int is_sin, float16_t ax, uint16_t sb) {
-    union half qf, r1, r2, w, rhi, rlo, ks, kc, v;
-    c3_ds q = (c3_ds)f16_to_i32(f16_mul(ax, _rh_bits(0x3918).h),
-                                softfloat_round_near_even, 0);          // round(ax*2/pi)
-    c3_d  aq = (c3_d)(q < 0 ? -q : q);
-    qf.h = ui32_to_f16((uint32_t)aq);
-    r1.h = f16_sub(ax, f16_mul(qf.h, _rh_bits(0x3e00).h));             // ax - qf*pio2_1
-    r2.h = f16_sub(r1.h, f16_mul(qf.h, _rh_bits(0x2c80).h));           // r1 - qf*pio2_2
-    w.h = f16_mul(qf.h, _rh_bits(0x0fed).h);                           // qf*pio2_3
-    rhi.h = f16_sub(r2.h, w.h);
-    rlo.h = f16_sub(f16_sub(r2.h, rhi.h), w.h);
-    int m = (int)(aq & 3);
-    ks.h = _rh_ksin(rhi.h, rlo.h);
-    kc.h = _rh_kcos(rhi.h, rlo.h);
-    if ( is_sin ) {
-      v.h = (m==0) ? ks.h : (m==1) ? kc.h : (m==2) ? _rh_neg(ks.h) : _rh_neg(kc.h);
-      return (sb == 1) ? _rh_neg(v.h) : v.h;
-    }
-    return (m==0) ? kc.h : (m==1) ? _rh_neg(ks.h) : (m==2) ? _rh_neg(kc.h) : ks.h;
-  }
   static float16_t _rh_sin(float16_t x) {
-    union half r0, ax;
-    r0.h = x;
-    if ( !f16_eq(x, x) )                      { r0.c = _RH_QNAN; return r0.h; }  // NaN
+    union half r0; r0.h = x;
+    if ( !f16_eq(x, x) )                          { r0.c = _RH_QNAN; return r0.h; }  // NaN
     if ( (r0.c == _RH_PINF)||(r0.c == _RH_NINF) ) { r0.c = _RH_QNAN; return r0.h; }  // +-inf -> NaN
-    if ( (r0.c == 0)||(r0.c == 0x8000U) )     { return x; }                      // +-0 -> +-0
-    ax.c = r0.c & 0x7fffU;
-    return _rh_trigfin(1, ax.h, r0.c >> 15);
+    if ( (r0.c == 0)||(r0.c == 0x8000U) )         { return x; }                      // +-0 -> +-0
+    float32_t wide = f16_to_f32(x);
+    float32_t wsin = _rs_sin(wide);
+    return f32_to_f16(wsin);
   }
   static float16_t _rh_cos(float16_t x) {
-    union half r0, ax;
-    r0.h = x;
-    if ( !f16_eq(x, x) )                      { r0.c = _RH_QNAN; return r0.h; }  // NaN
+    union half r0; r0.h = x;
+    if ( !f16_eq(x, x) )                          { r0.c = _RH_QNAN; return r0.h; }  // NaN
     if ( (r0.c == _RH_PINF)||(r0.c == _RH_NINF) ) { r0.c = _RH_QNAN; return r0.h; }  // +-inf -> NaN
-    ax.c = r0.c & 0x7fffU;
-    return _rh_trigfin(0, ax.h, 0);
+    float32_t wide = f16_to_f32(x);
+    float32_t wcos = _rs_cos(wide);
+    return f32_to_f16(wcos);
   }
   //  tan = (div (sin x) (cos x)): sin/cos kernels %n, the bare div per door r
   static float16_t _rh_tan(float16_t x) {
