@@ -20,10 +20,12 @@ _pier_peek_plan(u3_pier* pir_u, u3_pico* pic_u)
   if (!pir_u->pec_u.ent_u) {
     u3_assert( !pir_u->pec_u.ext_u );
     pir_u->pec_u.ent_u = pir_u->pec_u.ext_u = pic_u;
+    pir_u->pec_u.dep_w = 1;
   }
   else {
     pir_u->pec_u.ent_u->nex_u = pic_u;
     pir_u->pec_u.ent_u = pic_u;
+    pir_u->pec_u.dep_w++;
   }
 
   u3_pier_spin(pir_u);
@@ -43,6 +45,8 @@ _pier_peek_next(u3_pier* pir_u)
     }
 
     pic_u->nex_u = 0;
+
+    pir_u->pec_u.dep_w--;
   }
 
   return pic_u;
