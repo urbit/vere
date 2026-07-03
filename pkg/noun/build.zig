@@ -98,6 +98,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const softunum = b.dependency("softunum", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const unwind = b.dependency("unwind", .{
         .target = target,
         .optimize = optimize,
@@ -145,6 +150,7 @@ pub fn build(b: *std.Build) !void {
     }
     pkg_noun.linkLibrary(softblas.artifact("softblas"));
     pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
+    pkg_noun.linkLibrary(softunum.artifact("softunum"));
     if (t.os.tag == .linux)
         pkg_noun.linkLibrary(unwind.artifact("unwind"));
     pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
@@ -390,6 +396,7 @@ const c_source_files = [_][]const u8{
     "jets/g/plot.c",
     "jets/i/lagoon.c",
     "jets/i/math.c",
+    "jets/i/unum.c",
     "jets/tree.c",
     "jets/137/tree.c",
     "jets/136/tree.c",

@@ -1,0 +1,17 @@
+.{
+    .name = .softunum,
+    .version = "0.0.1",
+    .fingerprint = 0x971ff98ca7821752,
+    .dependencies = .{
+        .softunum = .{
+            .url = "https://github.com/sigilante/SoftUnum/archive/930fe6dd7c899cf81e8645b82af2d2efe454865d.tar.gz",
+            .hash = "N-V-__8AAPnvFgDPch9qWwuir-QuwrwY6FwHsSptxz8tdqca",
+        },
+        .gmp = .{
+            .path = "../gmp",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}
