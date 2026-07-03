@@ -995,12 +995,6 @@ u3m_bail(u3_noun how)
     }
   }
 
-  // Reset the spin stack pointer
-  // if ( NULL != u3t_Spin ) {
-  //   u3t_Spin->off_w = u3R->off_w;
-  //   u3t_Spin->fow_w = u3R->fow_w;
-  // }
-
   _longjmp(u3R->esc.buf, how);
 }
 
