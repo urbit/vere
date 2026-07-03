@@ -14,7 +14,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const gmp = b.dependency("gmp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     lib.addIncludePath(dep_c.path("include"));
+
+    //  SoftUnum's Chebyshev-basis transcendental kernels (src/posit/pgmp.h,
+    //  pulled in via ptrans.h into p8.c/p16.c/p32.c) do their g-layer combine
+    //  in arbitrary precision via GMP.  Link the project's vendored,
+    //  zig-native GMP build (ext/gmp) rather than depend on a system
+    //  install; linkLibrary also propagates gmp's installed gmp.h onto this
+    //  module's include search path (see Compile.installHeader in zig std).
+    lib.linkLibrary(gmp.artifact("gmp"));
 
     //  SoftUnum is pure-integer C -- no SoftFloat, no floating point.  Only the
     //  three per-width translation units compile; the algorithm headers
