@@ -32,7 +32,14 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //  Calculate input and output size.
   //
   c3_w num_blox_w = u3qb_lent(blox);
-  c3_w bit_widt_w = num_blox_w * bits;
+  //  guard against 32-bit overflow of the bit count: num_blox_w * bits can
+  //  wrap, undersizing the slab before the FLUSH loop writes the full count.
+  //
+  c3_d bit_widt_d = (c3_d)num_blox_w * bits;
+  if ( bit_widt_d > 0xffffffffULL ) {
+    return u3m_bail(c3__fail);
+  }
+  c3_w bit_widt_w = (c3_w)bit_widt_d;
   c3_w wor_widt_w = DIVCEIL(bit_widt_w, 32);
   u3i_slab  sab_u;
   u3i_slab_bare(&sab_u, 5, wor_widt_w);
