@@ -429,5 +429,67 @@
     u3_noun u3wi_la_trace(u3_noun);
     u3_noun u3wi_la_mmul(u3_noun);
 
+    u3_noun u3wi_rd_exp(u3_noun);
+    u3_noun u3wi_rd_log(u3_noun);
+    u3_noun u3wi_rd_sin(u3_noun);
+    u3_noun u3wi_rd_cos(u3_noun);
+    u3_noun u3wi_rd_tan(u3_noun);
+    u3_noun u3wi_rd_atan(u3_noun);
+    u3_noun u3wi_rd_atan2(u3_noun);
+    u3_noun u3wi_rd_asin(u3_noun);
+    u3_noun u3wi_rd_acos(u3_noun);
+    u3_noun u3wi_rd_sqt(u3_noun);
+    u3_noun u3wi_rd_cbt(u3_noun);
+    u3_noun u3wi_rd_pow(u3_noun);
+    u3_noun u3wi_rd_pow_n(u3_noun);
+    u3_noun u3wi_rd_log2(u3_noun);
+    u3_noun u3wi_rd_log10(u3_noun);
+    u3_noun u3wi_rs_exp(u3_noun);
+    u3_noun u3wi_rs_log(u3_noun);
+    u3_noun u3wi_rs_sin(u3_noun);
+    u3_noun u3wi_rs_cos(u3_noun);
+    u3_noun u3wi_rs_tan(u3_noun);
+    u3_noun u3wi_rs_atan(u3_noun);
+    u3_noun u3wi_rs_atan2(u3_noun);
+    u3_noun u3wi_rs_asin(u3_noun);
+    u3_noun u3wi_rs_acos(u3_noun);
+    u3_noun u3wi_rs_sqt(u3_noun);
+    u3_noun u3wi_rs_cbt(u3_noun);
+    u3_noun u3wi_rs_pow(u3_noun);
+    u3_noun u3wi_rs_pow_n(u3_noun);
+    u3_noun u3wi_rs_log2(u3_noun);
+    u3_noun u3wi_rs_log10(u3_noun);
+    u3_noun u3wi_rh_exp(u3_noun);
+    u3_noun u3wi_rh_log(u3_noun);
+    u3_noun u3wi_rh_sin(u3_noun);
+    u3_noun u3wi_rh_cos(u3_noun);
+    u3_noun u3wi_rh_tan(u3_noun);
+    u3_noun u3wi_rh_atan(u3_noun);
+    u3_noun u3wi_rh_atan2(u3_noun);
+    u3_noun u3wi_rh_asin(u3_noun);
+    u3_noun u3wi_rh_acos(u3_noun);
+    u3_noun u3wi_rh_sqt(u3_noun);
+    u3_noun u3wi_rh_cbt(u3_noun);
+    u3_noun u3wi_rh_pow(u3_noun);
+    u3_noun u3wi_rh_pow_n(u3_noun);
+    u3_noun u3wi_rh_log2(u3_noun);
+    u3_noun u3wi_rh_log10(u3_noun);
+
+    u3_noun u3wi_rq_exp(u3_noun);
+    u3_noun u3wi_rq_log(u3_noun);
+    u3_noun u3wi_rq_sin(u3_noun);
+    u3_noun u3wi_rq_cos(u3_noun);
+    u3_noun u3wi_rq_tan(u3_noun);
+    u3_noun u3wi_rq_atan(u3_noun);
+    u3_noun u3wi_rq_atan2(u3_noun);
+    u3_noun u3wi_rq_asin(u3_noun);
+    u3_noun u3wi_rq_acos(u3_noun);
+    u3_noun u3wi_rq_sqt(u3_noun);
+    u3_noun u3wi_rq_cbt(u3_noun);
+    u3_noun u3wi_rq_pow(u3_noun);
+    u3_noun u3wi_rq_pow_n(u3_noun);
+    u3_noun u3wi_rq_log2(u3_noun);
+    u3_noun u3wi_rq_log10(u3_noun);
+
 #endif /* ifndef U3_JETS_W_H */
 
