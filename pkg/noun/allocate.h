@@ -697,6 +697,11 @@ u3a_post_info(u3_post);
           c3_w
           u3a_mark_mptr(void* ptr_v);
 
+        /* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
+        */
+          c3_w
+          u3a_mark_rptr(void* ptr_v);
+
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
           c3_w

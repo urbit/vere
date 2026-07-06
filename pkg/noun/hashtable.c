@@ -1076,10 +1076,15 @@ static void
 _ch_mark_kev(u3_noun kev, u3h_mass* mas_u)
 {
   u3a_cell* kev_u = u3a_to_ptr(kev);
+  c3_w      kev_w = u3a_mark_rptr(kev_u);
 
-  mas_u->key_w += u3a_mark_noun(kev_u->hed);
-  mas_u->val_w += u3a_mark_noun(kev_u->tel);
-  mas_u->kev_w += u3a_mark_noun(kev);
+  //  size of 0 means "already marked"; skip children
+  //
+  if ( kev_w ) {
+    mas_u->key_w += u3a_mark_noun(kev_u->hed);
+    mas_u->val_w += u3a_mark_noun(kev_u->tel);
+    mas_u->kev_w += kev_w;
+  }
 }
 
 /* _ch_mark_buck(): mark bucket for gc.
