@@ -1146,7 +1146,7 @@ _test_cell_trel_qual(void)
 static void
 _test_view(void)
 {
-  //  regular indirect atom: view falls back to heap alloc+copy
+  //  regular indirect atom: view aliases the loom word buffer (zero-copy)
   //
   {
     const c3_y src_y[] = "hello, u3r_view on a normal atom";
@@ -1162,12 +1162,9 @@ _test_view(void)
               vue_u.len_w, src_w);
       exit(1);
     }
-    if ( vue_u.map_d != 0 ) {
-      fprintf(stderr, "_test_view(): normal atom should not be mmap-backed\r\n");
-      exit(1);
-    }
-    if ( vue_u.ali_y == 0 ) {
-      fprintf(stderr, "_test_view(): normal atom should have heap allocation\r\n");
+    if ( vue_u.kin_e != u3r_view_loom ) {
+      fprintf(stderr, "_test_view(): normal atom should alias the loom "
+                      "(zero-copy, no mmap or heap)\r\n");
       exit(1);
     }
     if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
@@ -1176,11 +1173,53 @@ _test_view(void)
     }
 
     u3r_view_done(&vue_u);
-    if ( vue_u.byt_y != 0 || vue_u.len_w != 0 ) {
+    if (  vue_u.byt_y != 0
+       || vue_u.len_w != 0
+       || vue_u.kin_e != u3r_view_loom )
+    {
       fprintf(stderr, "_test_view(): normal view not reset on done\r\n");
       exit(1);
     }
     u3z(a);
+  }
+
+  //  cat atom: bytes are the atom value itself, stashed inline in u.raw_d
+  //
+  {
+    const u3_atom a     = 0x44332211;
+    const c3_y    src_y[] = { 0x11, 0x22, 0x33, 0x44 };
+    const c3_w    src_w   = sizeof(src_y);
+
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, a);
+
+    if ( vue_u.len_w != src_w ) {
+      fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_w
+                      " vs %" PRIc3_w "\r\n",
+              vue_u.len_w, src_w);
+      exit(1);
+    }
+    if ( vue_u.kin_e != u3r_view_flat ) {
+      fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
+      exit(1);
+    }
+    if ( vue_u.byt_y != (const c3_y*)&vue_u.u.raw_d ) {
+      fprintf(stderr, "_test_view(): cat view should alias u.raw_d\r\n");
+      exit(1);
+    }
+    if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
+      fprintf(stderr, "_test_view(): cat bytes mismatch\r\n");
+      exit(1);
+    }
+
+    u3r_view_done(&vue_u);
+    if (  vue_u.byt_y != 0
+       || vue_u.u.raw_d != 0
+       || vue_u.kin_e != u3r_view_loom )
+    {
+      fprintf(stderr, "_test_view(): cat view not reset on done\r\n");
+      exit(1);
+    }
   }
 
   //  zero atom: view should be empty, no allocation, no mmap
@@ -1188,7 +1227,10 @@ _test_view(void)
   {
     u3r_view vue_u;
     u3r_view_init(&vue_u, 0);
-    if ( vue_u.len_w != 0 || vue_u.map_d != 0 || vue_u.ali_y != 0 ) {
+    if (  vue_u.len_w != 0
+       || vue_u.kin_e != u3r_view_loom
+       || vue_u.u.map_d != 0 )
+    {
       fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
       exit(1);
     }
@@ -1239,16 +1281,12 @@ _test_view(void)
     u3r_view vue_u;
     u3r_view_init(&vue_u, a);
 
-    //  expect mmap-backed view: map_d > 0, ali_y == 0
+    //  expect mmap-backed view: sat_e == u3r_view_blob, u.map_d > 0
     //
-    if ( vue_u.map_d == 0 ) {
+    if ( vue_u.kin_e != u3r_view_blob || vue_u.u.map_d == 0 ) {
       fprintf(stderr, "_test_view(): bob atom should be mmap-backed "
-                      "(len=%" PRIc3_w " map_d=%" PRIc3_d " ali=%p)\r\n",
-              vue_u.len_w, vue_u.map_d, (void*)vue_u.ali_y);
-      exit(1);
-    }
-    if ( vue_u.ali_y != 0 ) {
-      fprintf(stderr, "_test_view(): bob atom should not have heap alloc\r\n");
+                      "(len=%" PRIc3_w " map_d=%" PRIc3_d ")\r\n",
+              vue_u.len_w, vue_u.u.map_d);
       exit(1);
     }
     if ( vue_u.len_w == 0 || (c3_d)vue_u.len_w > bob_d ) {

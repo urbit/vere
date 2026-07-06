@@ -29,7 +29,7 @@
       if ( 0 == c_d ) return 0;
 
       c3_d        map_d = 0;
-      const c3_y* map_y = u3r_blob_map(d, &map_d);
+      const c3_y* map_y = u3r_blob_mmap(d, &map_d);
 
       if ( map_y ) {
         c3_g shf_g = a_g - 3;
@@ -47,7 +47,7 @@
         //  c_d must fit in c3_w for slab_init (max 4GB slab per cut)
         //
         if ( c_d > (c3_d)c3_w_max ) {
-          u3r_blob_unmap(map_y, map_d);
+          u3r_blob_umap(map_y, map_d);
           return u3m_bail(c3__fail);
         }
 
@@ -58,7 +58,7 @@
           memcpy(sab_u.buf_y, map_y + off_d, (size_t)cpy_d);
         }
 
-        u3r_blob_unmap(map_y, map_d);
+        u3r_blob_umap(map_y, map_d);
         return u3i_slab_mint(&sab_u);
       }
       //  mmap failed — fall through to generic path

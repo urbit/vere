@@ -31,7 +31,7 @@
 
     if ( wid_w ) {
       u3r_view vue_u;
-      u3r_view_padded(&vue_u, dat, wid_w);
+      u3r_view_padd(&vue_u, dat, wid_w);
       memcpy(sab_u.buf_y, vue_u.byt_y, wid_w);
       u3r_view_done(&vue_u);
     }

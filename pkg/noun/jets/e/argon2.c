@@ -81,10 +81,10 @@
       //  width, zero-filled.
       //
       u3r_view key_u, ex_u, dat_u, sat_u;
-      u3r_view_padded(&key_u, key,   wik_w);
-      u3r_view_padded(&ex_u,  extra, wix_w);
-      u3r_view_padded(&dat_u, dat,   wid_w);
-      u3r_view_padded(&sat_u, sat,   wis_w);
+      u3r_view_padd(&key_u, key,   wik_w);
+      u3r_view_padd(&ex_u,  extra, wix_w);
+      u3r_view_padd(&dat_u, dat,   wid_w);
+      u3r_view_padd(&sat_u, sat,   wis_w);
       c3_y* out_y = u3a_malloc(out_w);
 
       const c3_c* err_c = urcrypt_argon2(

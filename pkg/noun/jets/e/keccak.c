@@ -12,7 +12,7 @@
   { \
     c3_y  out[byts]; \
     u3r_view vue_u; \
-    u3r_view_padded(&vue_u, a, len_w); \
+    u3r_view_padd(&vue_u, a, len_w); \
     if ( 0 != urcrypt_keccak_##bits((c3_y*)vue_u.byt_y, len_w, out) ) { \
       /* urcrypt_keccak_##bits always succeeds when called correctly */ \
       u3r_view_done(&vue_u); \

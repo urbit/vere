@@ -36,7 +36,7 @@ u3qc_end(u3_atom a,
   //
   if ( (a_g >= 3) && (c3y == u3a_is_bob(c)) ) {
     c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_map(c, &map_d);
+    const c3_y* map_y = u3r_blob_mmap(c, &map_d);
 
     if ( map_y ) {
       c3_g shf_g = a_g - 3;
@@ -50,7 +50,7 @@ u3qc_end(u3_atom a,
         memcpy(sab_u.buf_y, map_y, (size_t)cpy_d);
       }
 
-      u3r_blob_unmap(map_y, map_d);
+      u3r_blob_umap(map_y, map_d);
       return u3i_slab_mint(&sab_u);
     }
     //  mmap failed — fall through

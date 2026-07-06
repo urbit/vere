@@ -24,7 +24,7 @@
           out_w = c3_max(1, c3_min(out, 64));
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     u3r_bytes(0, wik_w, dak_y, dak);
     err = urcrypt_blake2(wid_w, (c3_y*)vue_u.byt_y, wik_w, dak_y, out_w, out_y);
@@ -72,7 +72,7 @@
     c3_y flags_y = u3r_byte(0, flags);
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 3, out_w);
@@ -116,7 +116,7 @@
     u3r_bytes(0, 32, cv_y, cv);
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     urcrypt_blake3_chunk_output(wid_w, (c3_y*)vue_u.byt_y, cv_y,
                                 block_y, &block_len, &counter_d, &flags_y);

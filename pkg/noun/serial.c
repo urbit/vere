@@ -98,7 +98,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
     c3_w   a_w;
     if ( c3y == bob_o ) {
-      byt_y = u3r_blob_map(a, &byt_d);
+      byt_y = u3r_blob_mmap(a, &byt_d);
       if ( !byt_y ) {
         u3m_bail(c3__fail);
         return;
@@ -113,7 +113,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
         }
         if ( 0 == pos_d ) {
           //  blob is all zeros → atom value is 0; treat as zero atom
-          u3r_blob_unmap(byt_y, byt_d);
+          u3r_blob_umap(byt_y, byt_d);
           _cs_jam_fib_chop(fib_u, 1, 1);
           return;
         }
@@ -135,7 +135,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       c3_w met_w = a_w + (2 * b_w);
 
       if ( a_w > (c3_w_max - 64) ) {
-        if ( byt_y ) u3r_blob_unmap(byt_y, byt_d);
+        if ( byt_y ) u3r_blob_umap(byt_y, byt_d);
         u3m_bail(c3__fail);
         return;
       }
@@ -184,7 +184,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
         //
         c3_w len_w = (c3_w)((byt_d + sizeof(c3_w) - 1) / sizeof(c3_w));
         u3r_chop_words(0, 0, a_w, bit_w, buf_w, len_w, (const c3_w*)byt_y);
-        u3r_blob_unmap(byt_y, byt_d);
+        u3r_blob_umap(byt_y, byt_d);
       }
       else {
         u3r_chop(0, 0, a_w, bit_w, buf_w, a);
@@ -305,10 +305,10 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     //  bob atom: mmap the blob file and write bytes directly into the bitstream
     //
     c3_d        len_d;
-    const c3_y* byt_y = u3r_blob_map(a, &len_d);
+    const c3_y* byt_y = u3r_blob_mmap(a, &len_d);
     if ( byt_y ) {
       ur_bsw_atom_bytes(rit_u, (c3_d)met_w, (c3_y*)byt_y);
-      u3r_blob_unmap(byt_y, len_d);
+      u3r_blob_umap(byt_y, len_d);
     }
   }
   else {

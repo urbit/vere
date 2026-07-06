@@ -159,7 +159,7 @@ _cqea_siv_de(c3_y*   key_y,
     //  than the declared length.
     //
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, txt, txt_w);
+    u3r_view_padd(&vue_u, txt, txt_w);
     out_y = u3a_malloc(txt_w ? txt_w : 1);
 
     if ( 0 != (*low_f)((c3_y*)vue_u.byt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {

@@ -1101,12 +1101,12 @@ u3r_byte(c3_w    a_w,
   //
   if ( c3y == u3a_is_bob(b) ) {
     c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_map(b, &map_d);
+    const c3_y* map_y = u3r_blob_mmap(b, &map_d);
     if ( !map_y ) {
       return 0;
     }
     c3_y res = ((c3_d)a_w < map_d) ? map_y[a_w] : 0;
-    u3r_blob_unmap(map_y, map_d);
+    u3r_blob_umap(map_y, map_d);
     return res;
   }
 
@@ -1221,21 +1221,16 @@ u3r_bytes_all(c3_w* len_w, u3_atom a)
   return u3r_bytes_alloc(0, met_w, a);
 }
 
-/* u3r_view_init(): open a read-only byte view of (a).
-**
-**   For bob atoms, u3r_blob_map gives us direct access to the mmap'd
-**   blob file — no loom allocation.  For everything else, fall back
-**   to u3r_bytes_alloc (heap buffer + copy), preserving the existing
-**   u3r_bytes_all semantics.
+/* u3r_view_init(): open a blob-aware read-only byte view of (a).
 */
 void
 u3r_view_init(u3r_view* vue_u, u3_atom a)
 {
   c3_w met_w = u3r_met(3, a);
-  vue_u->len_w = met_w;
-  vue_u->map_d = 0;
-  vue_u->ali_y = 0;
-  vue_u->byt_y = 0;
+  vue_u->len_w   = met_w;
+  vue_u->kin_e   = u3r_view_loom;
+  vue_u->u.map_d = 0;
+  vue_u->byt_y   = 0;
 
   if ( 0 == met_w ) {
     return;
@@ -1243,39 +1238,38 @@ u3r_view_init(u3r_view* vue_u, u3_atom a)
 
   if ( c3y == u3a_is_bob(a) ) {
     c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_map(a, &map_d);
-    if ( map_y ) {
-      vue_u->byt_y = map_y;
-      vue_u->map_d = map_d;
-      return;
-    }
-    //  fall through to alloc-and-copy; note that u3r_bytes_alloc below
-    //  will itself bail via u3r_blob_load if the blob really is missing
+    const c3_y* map_y = u3r_blob_mmap(a, &map_d);
+    if ( !map_y ) u3m_bail(c3__fail);
+    vue_u->byt_y   = map_y;
+    vue_u->u.map_d = map_d;
+    vue_u->kin_e   = u3r_view_blob;
+    return;
   }
 
-  c3_y* buf_y = u3r_bytes_alloc(0, met_w, a);
-  vue_u->byt_y = buf_y;
-  vue_u->ali_y = buf_y;
+  if ( _(u3a_is_cat(a)) ) {
+    vue_u->u.raw_d = a;
+    vue_u->byt_y   = (const c3_y*)&vue_u->u.raw_d;
+    vue_u->kin_e   = u3r_view_flat;
+  }
+  else {
+    c3_w len_w;
+    vue_u->byt_y = (const c3_y*)u3r_word_buffer(&a, &len_w);
+    //  kin_e stays loom
+  }
 }
 
-/* u3r_view_padded(): open a view of exactly [wid_w] bytes (zero-padded).
+/* u3r_view_padd(): open a zero-padded view of [wid_w] bytes.
 */
 void
-u3r_view_padded(u3r_view* vue_u, u3_atom a, c3_w wid_w)
+u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w)
 {
   u3r_view_init(vue_u, a);
 
-  //  atom has enough bytes — keep the zero-copy view; just cap len_w
-  //
   if ( vue_u->len_w >= wid_w ) {
     vue_u->len_w = wid_w;
     return;
   }
 
-  //  atom is shorter — allocate wid_w bytes, copy what's there, zero
-  //  the tail.  release the original backing (mmap or heap) and re-
-  //  point the view at the padded buffer.
-  //
   c3_y* pad_y = u3a_malloc(wid_w);
   if ( vue_u->len_w && vue_u->byt_y ) {
     memcpy(pad_y, vue_u->byt_y, vue_u->len_w);
@@ -1286,8 +1280,7 @@ u3r_view_padded(u3r_view* vue_u, u3_atom a, c3_w wid_w)
 
   vue_u->byt_y = pad_y;
   vue_u->len_w = wid_w;
-  vue_u->map_d = 0;
-  vue_u->ali_y = pad_y;
+  vue_u->kin_e = u3r_view_heap;
 }
 
 /* u3r_view_done(): release the view's backing memory.
@@ -1295,16 +1288,19 @@ u3r_view_padded(u3r_view* vue_u, u3_atom a, c3_w wid_w)
 void
 u3r_view_done(u3r_view* vue_u)
 {
-  if ( vue_u->map_d ) {
-    u3r_blob_unmap(vue_u->byt_y, vue_u->map_d);
+  //  sat_e names what byt_y points at and thus how to release it: a bob
+  //  view owns an mmap, a padded view owns a heap buffer, and loom/flat
+  //  views borrow (loom word buffer / inline cat bytes) and free nothing.
+  //
+  switch ( vue_u->kin_e ) {
+    case u3r_view_blob: u3r_blob_umap(vue_u->byt_y, vue_u->u.map_d); break;
+    case u3r_view_heap: u3a_free((void*)vue_u->byt_y);                break;
+    default: break;  //  u3r_view_loom / u3r_view_flat: nothing to release
   }
-  else if ( vue_u->ali_y ) {
-    u3a_free(vue_u->ali_y);
-  }
-  vue_u->byt_y = 0;
-  vue_u->len_w = 0;
-  vue_u->map_d = 0;
-  vue_u->ali_y = 0;
+  vue_u->byt_y   = 0;
+  vue_u->len_w   = 0;
+  vue_u->kin_e   = u3r_view_loom;
+  vue_u->u.map_d = 0;
 }
 
 /* _mpz_init_set_word():
@@ -2566,7 +2562,7 @@ u3r_blob_load(u3_atom a, const c3_c* pax_c)
   return u3i_slab_mint_bytes(&sab_u);
 }
 
-/* u3r_blob_map(): mmap a bob atom's blob file for direct byte access.
+/* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
 **
 **   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
 **   Release with u3r_blob_unmap(ptr, *len_d) when done.
@@ -2574,7 +2570,7 @@ u3r_blob_load(u3_atom a, const c3_c* pax_c)
 **   No loom allocation is performed.
 */
 const c3_y*
-u3r_blob_map(u3_atom a, c3_d* len_d)
+u3r_blob_mmap(u3_atom a, c3_d* len_d)
 {
   u3_assert( c3y == u3a_is_bob(a) );
 
@@ -2626,7 +2622,7 @@ u3r_blob_map(u3_atom a, c3_d* len_d)
 /* u3r_blob_unmap(): release a mapping from u3r_blob_map().
 */
 void
-u3r_blob_unmap(const c3_y* ptr_y, c3_d len_d)
+u3r_blob_umap(const c3_y* ptr_y, c3_d len_d)
 {
   if ( ptr_y && len_d ) {
     munmap((void*)ptr_y, (size_t)len_d);
@@ -2645,7 +2641,7 @@ u3r_blob_met(u3_atom a)
   u3_assert( c3y == u3a_is_bob(a) );
 
   c3_d   len_d;
-  const c3_y* byt_y = u3r_blob_map(a, &len_d);
+  const c3_y* byt_y = u3r_blob_mmap(a, &len_d);
   if ( !byt_y ) {
     return 0;
   }
@@ -2662,6 +2658,6 @@ u3r_blob_met(u3_atom a)
     met_d = (pos_d - 1) * 8 + (c3_d)(8 - clz_y);
   }
 
-  u3r_blob_unmap(byt_y, len_d);
+  u3r_blob_umap(byt_y, len_d);
   return met_d;
 }

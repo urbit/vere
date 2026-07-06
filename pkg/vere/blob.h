@@ -111,7 +111,7 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
-    /* u3_blob_map(): mmap a blob file for direct byte access.
+    /* u3_blob_mmap(): mmap a blob file for direct byte access.
     **
     ** Returns a read-only pointer to the blob's bytes (length in *len_d),
     ** or NULL on failure.  The mapping must be released via u3_blob_unmap().
@@ -120,7 +120,7 @@
       const c3_y*
       u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d);
 
-    /* u3_blob_unmap(): release a mapping returned by u3_blob_map().
+    /* u3_blob_umap(): release a mapping returned by u3_blob_map().
     */
       void
       u3_blob_umap(const c3_y* ptr_y, c3_d len_d);

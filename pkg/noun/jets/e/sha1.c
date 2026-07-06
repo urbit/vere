@@ -16,7 +16,7 @@
 
     c3_y out_y[20];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_sha1((c3_y*)vue_u.byt_y, len_w, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(20, out_y);
