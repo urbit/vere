@@ -4,9 +4,29 @@ set -xeuo pipefail
 
 urbit_binary=$GITHUB_WORKSPACE/$URBIT_BINARY
 
-if ! $urbit_binary --lite-boot --daemon --gc-abort ./pier 2> urbit-output; then
-  cat urbit-output >&2
-  echo "ERROR: failed to boot fake ship"
+#  stream all runtime output to the log as it accrues
+#
+#  NB: the runtime must not inherit the CI log pipe on stdout: it puts
+#  the (shared) pipe in non-blocking mode, causing spurious write
+#  errors in subsequent commands
+#
+touch urbit-output
+tail -F urbit-output >&2 &
+tailproc=$!
+
+cleanup () {
+  kill $(cat ./pier/.vere.lock) || true
+
+  #  give tail a moment to flush before killing it
+  #
+  sleep 1
+  kill "$tailproc" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+if ! $urbit_binary --lite-boot --daemon --gc-abort ./pier >> urbit-output 2>&1; then
+  echo "ERROR: failed to boot fake ship" >&2
   exit 1
 fi
 
@@ -17,7 +37,6 @@ pierpid=$(cat ./pier/.vere.lock)
 #
 check_ship() {
   if ! kill -0 "$pierpid" 2>/dev/null; then
-    sleep 2  # let tail -F flush any remaining output
     echo "ERROR: urbit process exited unexpectedly" >&2
     exit 1
   fi
@@ -47,19 +66,6 @@ lensa() {
       exit 1
     }
 }
-
-tail -F urbit-output >&2 &
-
-tailproc=$!
-
-cleanup () {
-  kill $(cat ./pier/.vere.lock) || true
-  kill "$tailproc" 2>/dev/null || true
-
-  set +x
-}
-
-trap cleanup EXIT
 
 #  print the arvo version
 #
@@ -179,7 +185,7 @@ hdr () {
 
 for f in $(find "$OUTDIR" -type f); do
   hdr "$(basename $f)"
-  cat "$f"
+  cat "$f" || true
 done
 
 fail=0
