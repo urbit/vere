@@ -26,17 +26,40 @@ cleanup() {
 
 trap cleanup EXIT
 port=$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $1}')
+pierpid=$(< ./pier/.vere.lock)
 
+#  fail immediately if the urbit process is no longer running
+#
+check_ship() {
+  if ! kill -0 "$pierpid" 2>/dev/null; then
+    echo "ERROR: urbit process exited unexpectedly" >&2
+    exit 1
+  fi
+}
+
+#  NB: xargs chokes on quotes in the response; tolerate that (|| true),
+#  failing the pipeline only if curl itself fails
+#
 lensd() {
+  check_ship
   curl -s                                                              \
     --data "{\"source\":{\"dojo\":\"$1\"},\"sink\":{\"stdout\":null}}" \
-    "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
+    "http://localhost:$port" | { xargs printf %s | sed 's/\\n/\n/g' || true; } || {
+      check_ship
+      echo "ERROR: lens request failed" >&2
+      exit 1
+    }
 }
 
 lensa() {
+  check_ship
   curl -s                                                             \
     --data "{\"source\":{\"dojo\":\"$2\"},\"sink\":{\"app\":\"$1\"}}" \
-    "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
+    "http://localhost:$port" | { xargs printf %s | sed 's/\\n/\n/g' || true; } || {
+      check_ship
+      echo "ERROR: lens request failed" >&2
+      exit 1
+    }
 }
 
 check() {
@@ -49,6 +72,12 @@ if check && sleep 10 && check; then
   echo "boot success"
   lensa hood '+hood/exit'
   while [ -f ./pier/.vere.lock ]; do
+    if ! kill -0 "$pierpid" 2>/dev/null; then
+      sleep 1  # grace period: a clean exit removes the lock file
+      [ -f ./pier/.vere.lock ] || break
+      echo "ERROR: urbit process crashed during shutdown" >&2
+      exit 1
+    fi
     echo "waiting for pier to shut down"
     sleep 5
   done
