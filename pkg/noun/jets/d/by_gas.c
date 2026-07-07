@@ -23,6 +23,9 @@ _malt_fast(u3_noun lit)
       root = h;
     }
   }
+
+  u3k(root);
+  
   u3_noun part_l, part_r;
   u3_noun *cur_l = &part_l, *cur_r = &part_r, *old, *item;
   rest = lit;
@@ -46,7 +49,7 @@ _malt_fast(u3_noun lit)
 
   u3_noun l = _malt_fast(part_l);
   u3_noun r = _malt_fast(part_r);
-  u3_noun out = u3nt(u3k(root), l, r);
+  u3_noun out = u3nt(root, l, r);
   u3z(part_l); u3z(part_r);
   return out;
 }

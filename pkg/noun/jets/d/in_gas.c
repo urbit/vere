@@ -22,6 +22,9 @@ _silt_fast(u3_noun lit)
       root = h;
     }
   }
+
+  u3k(root);
+
   u3_noun part_l = u3_nul, part_r = u3_nul;
   rest = lit;
   while ( u3_nul != rest ) {
@@ -37,7 +40,7 @@ _silt_fast(u3_noun lit)
   }
   u3_noun l = _silt_fast(part_l);
   u3_noun r = _silt_fast(part_r);
-  u3_noun out = u3nt(u3k(root), l, r);
+  u3_noun out = u3nt(root, l, r);
   u3z(part_l); u3z(part_r);
   return out;
 }
