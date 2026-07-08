@@ -1,7 +1,8 @@
 /// @file
 
 #include "blob.h"
-#include "vere.h"
+#include "imprison.h"
+#include "retrieve.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -16,10 +17,10 @@
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
 
-/* _blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
+/* u3_blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
 */
-static void
-_blob_bob_dir(c3_c* out_c, const c3_c* pax_c)
+void
+u3_blob_bob_dir(c3_c* out_c, const c3_c* pax_c)
 {
   snprintf(out_c, 8192, "%s/.urb/bob", pax_c);
 }
@@ -69,69 +70,12 @@ u3_blob_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
            pax_c, mug_h, seq_h);
 }
 
-/* u3_blob_init(): initialize blob store; create .urb/bob/ if needed.
+/* u3_blob_stg_dir(): write path to $pier/.urb/bob/stg/ into [out_c].
 */
 void
-u3_blob_init(const c3_c* pax_c)
-{
-  c3_c bob_c[8192];
-  _blob_bob_dir(bob_c, pax_c);
-
-  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "blob: failed to create %s: %s\r\n",
-            bob_c, strerror(errno));
-  }
-}
-
-/* _blob_stg_dir(): write path to $pier/.urb/bob/stg/ into [out_c].
-*/
-static void
-_blob_stg_dir(c3_c* out_c, const c3_c* pax_c)
+u3_blob_stg_dir(c3_c* out_c, const c3_c* pax_c)
 {
   snprintf(out_c, 8192, "%s/.urb/bob/stg", pax_c);
-}
-
-/* _blob_stg_rm_rf(): recursively delete all files inside staging dir.
-**
-** Only removes regular files, not subdirectories.  Staging should
-** only ever contain flat temp files so this is sufficient.
-*/
-static void
-_blob_stg_clean(const c3_c* stg_c)
-{
-  DIR* dir_u = opendir(stg_c);
-  if ( !dir_u ) {
-    return;
-  }
-  struct dirent* ent_u;
-  while ( (ent_u = readdir(dir_u)) ) {
-    if ( '.' == ent_u->d_name[0] ) {
-      continue;
-    }
-    c3_c fil_c[8192];
-    snprintf(fil_c, sizeof(fil_c), "%s/%s", stg_c, ent_u->d_name);
-    c3_unlink(fil_c);
-  }
-  closedir(dir_u);
-}
-
-/* u3_blob_stg_init(): initialize staging area; create/clean .urb/bob/stg/.
-*/
-void
-u3_blob_stg_init(const c3_c* pax_c)
-{
-  c3_c stg_c[8192];
-  _blob_stg_dir(stg_c, pax_c);
-
-  if ( 0 != c3_mkdir(stg_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "blob: failed to create staging dir %s: %s\r\n",
-            stg_c, strerror(errno));
-    return;
-  }
-
-  //  clean any leftover temp files from a prior crash
-  //
-  _blob_stg_clean(stg_c);
 }
 
 /* _blob_lock_acquire(): acquire mug bucket lock, return next seq number.
@@ -409,33 +353,11 @@ u3_blob_save_fd(const c3_c* pax_c,
 u3_weak
 u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) ) {
-    fprintf(stderr, "blob: missing blob %" PRIc3_h "/%" PRIc3_h ": %s\r\n",
-            mug_h, seq_h, strerror(errno));
+  c3_d        len_d = 0;
+  const c3_y* map_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
+  if ( !map_y ) {
     return u3_none;
   }
-
-  c3_d len_d = (c3_d)st_u.st_size;
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "blob: failed to open %s: %s\r\n",
-            fil_c, strerror(errno));
-    return u3_none;
-  }
-
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "blob: mmap failed on %s: %s\r\n",
-            fil_c, strerror(errno));
-    return u3_none;
-  }
-  madvise(map_v, (size_t)len_d, MADV_SEQUENTIAL);
 
   //  use u3i_slab (c3_d length) to correctly handle blobs >4 GiB.
   //  bloq 3 = bytes; len_d = byte count.
@@ -446,8 +368,8 @@ u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   //
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, 3, len_d);
-  memcpy(sab_u.buf_y, map_v, (size_t)len_d);
-  munmap(map_v, (size_t)len_d);
+  memcpy(sab_u.buf_y, map_y, (size_t)len_d);
+  u3_blob_umap(map_y, len_d);
 
   return u3i_slab_mint_bytes(&sab_u);
 }
@@ -544,7 +466,7 @@ u3_blob_walk(const c3_c* pax_c,
              void      (*fun_f)(void*, c3_h, c3_h))
 {
   c3_c bob_c[8192];
-  _blob_bob_dir(bob_c, pax_c);
+  u3_blob_bob_dir(bob_c, pax_c);
 
   DIR* bob_u = opendir(bob_c);
   if ( !bob_u ) {
@@ -739,6 +661,7 @@ u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d)
     return 0;
   }
 
+  madvise(map_v, (size_t)*len_d, MADV_SEQUENTIAL);
   return (const c3_y*)map_v;
 }
 
@@ -761,31 +684,15 @@ u3_blob_umap(const c3_y* ptr_y, c3_d len_d)
 c3_d
 u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) || 0 == st_u.st_size ) {
+  c3_d        len_d = 0;
+  const c3_y* byt_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
+  if ( !byt_y ) {
     return 0;
   }
 
-  c3_d len_d = (c3_d)st_u.st_size;
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    return 0;
-  }
-
-  //  mmap and scan backward for last non-zero byte (strips trailing zeroes)
+  //  scan backward for last non-zero byte (strips trailing zeroes)
   //
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-  if ( MAP_FAILED == map_v ) {
-    return 0;
-  }
-
-  const c3_y* byt_y = (const c3_y*)map_v;
-  c3_d        pos_d = len_d;
-
+  c3_d pos_d = len_d;
   while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
     pos_d--;
   }
@@ -801,7 +708,7 @@ u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     met_d = (pos_d - 1) * 8 + (c3_d)(8 - clz_y);
   }
 
-  munmap(map_v, (size_t)len_d);
+  u3_blob_umap(byt_y, len_d);
   return met_d;
 }
 /* u3_blob_bsink: streaming byte sink for blob-aware cue.
@@ -817,8 +724,9 @@ _blob_bsink_opn(void* ptr_v)
 {
   u3_blob_bsink* bsk_u = ptr_v;
 
-  snprintf(bsk_u->stg_c, sizeof(bsk_u->stg_c),
-           "%s/.urb/bob/stg/cue-XXXXXX", bsk_u->pax_c);
+  c3_c stg_c[8192];
+  u3_blob_stg_dir(stg_c, bsk_u->pax_c);
+  snprintf(bsk_u->stg_c, sizeof(bsk_u->stg_c), "%s/cue-XXXXXX", stg_c);
 
   bsk_u->fid_i = mkstemp(bsk_u->stg_c);
 

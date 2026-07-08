@@ -9,7 +9,7 @@
 #include "io/ames/stun.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
-#include "../blob.h"
+#include "blob.h"
 #include <allocate.h>
 #include <error.h>
 #include <imprison.h>

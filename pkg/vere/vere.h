@@ -878,6 +878,17 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
+      /* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+      */
+        void
+        u3_disk_blob_init(const c3_c* pax_c);
+
+      /* u3_disk_blob_stg_init(): create + empty the blob staging dir
+      **   ($pier/.urb/bob/stg).  Cleaned on every boot.
+      */
+        void
+        u3_disk_blob_stg_init(const c3_c* pax_c);
+
       /* u3_disk_load(): load pier directories, log, and snapshot.
       */
         u3_disk*

@@ -3,6 +3,7 @@
 #include "retrieve.h"
 
 #include "allocate.h"
+#include "blob.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"
@@ -2507,157 +2508,39 @@ u3r_comp(u3_atom a, u3_atom b)
 }
 
 /* u3r_blob_load(): materialize a bob atom by loading from the blob store.
-**
-**   Opens $pier/.urb/bob/<mug>/<seq> and constructs a normal atom.
-**   Returns u3_none on any error.
 */
 u3_weak
 u3r_blob_load(u3_atom a, const c3_c* pax_c)
 {
   u3_assert( c3y == u3a_is_bob(a) );
-
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
-
-  //  build path: $pier/.urb/bob/<mug>/<seq>
-  //
-  c3_c fil_c[8192];
-  snprintf(fil_c, sizeof(fil_c), "%s/.urb/bob/%" PRIc3_h "/%" PRIc3_h,
-           pax_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) ) {
-    fprintf(stderr, "retrieve: blob missing %s: %s\r\n",
-            fil_c, strerror(errno));
-    return u3_none;
-  }
-
-  c3_d len_d = (c3_d)st_u.st_size;
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "retrieve: blob open failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return u3_none;
-  }
-
-  //  mmap the file and copy into the loom via u3i_slab (handles >4 GiB).
-  //
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "retrieve: blob mmap failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return u3_none;
-  }
-  madvise(map_v, (size_t)len_d, MADV_SEQUENTIAL);
-
-  //  bloq 3 = bytes; len_d = byte count
-  //
-  u3i_slab sab_u;
-  u3i_slab_bare(&sab_u, 3, len_d);
-  memcpy(sab_u.buf_y, map_v, (size_t)len_d);
-  munmap(map_v, (size_t)len_d);
-
-  return u3i_slab_mint_bytes(&sab_u);
+  return u3_blob_load(pax_c, u3a_bob_mug(a), u3a_bob_seq(a));
 }
 
 /* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
 **
-**   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
-**   Release with u3r_blob_unmap(ptr, *len_d) when done.
-**   Uses u3C.dir_c as the pier path.
-**   No loom allocation is performed.
+**   Returns [*len_d] bytes (NULL on failure); release with u3r_blob_umap.
+**   Uses u3C.dir_c as the pier path.  No loom allocation.
 */
 const c3_y*
 u3r_blob_mmap(u3_atom a, c3_d* len_d)
 {
   u3_assert( c3y == u3a_is_bob(a) );
-
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
-
-  c3_c fil_c[8192];
-  snprintf(fil_c, sizeof(fil_c), "%s/.urb/bob/%" PRIc3_h "/%" PRIc3_h,
-           u3C.dir_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) ) {
-    fprintf(stderr, "retrieve: blob_map: stat failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  *len_d = (c3_d)st_u.st_size;
-  if ( 0 == *len_d ) {
-    return 0;
-  }
-
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "retrieve: blob_map: open failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  void* map_v = mmap(0, (size_t)*len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "retrieve: blob_map: mmap failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  //  mirror u3_blob_load / u3_blob_save_fd: we read these forward and
-  //  rarely twice.  MADV_SEQUENTIAL lets the kernel page ahead and drop
-  //  pages we've already passed, keeping the HTTP-streaming page cache
-  //  bounded regardless of file size.
-  //
-  madvise(map_v, (size_t)*len_d, MADV_SEQUENTIAL);
-
-  return (const c3_y*)map_v;
+  return u3_blob_mmap(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a), len_d);
 }
 
-/* u3r_blob_unmap(): release a mapping from u3r_blob_map().
+/* u3r_blob_umap(): release a mapping from u3r_blob_mmap().
 */
 void
 u3r_blob_umap(const c3_y* ptr_y, c3_d len_d)
 {
-  if ( ptr_y && len_d ) {
-    munmap((void*)ptr_y, (size_t)len_d);
-  }
+  u3_blob_umap(ptr_y, len_d);
 }
 
-/* u3r_blob_met(): compute bit-length of a bob atom without materialization.
-**
-**   Equivalent to u3r_met(0, materialized) but avoids loom allocation.
-**   Scans the last byte to strip trailing zeroes.
-**   Returns 0 on error.
+/* u3r_blob_met(): bit-length of a bob atom without materialization.
 */
 c3_d
 u3r_blob_met(u3_atom a)
 {
   u3_assert( c3y == u3a_is_bob(a) );
-
-  c3_d   len_d;
-  const c3_y* byt_y = u3r_blob_mmap(a, &len_d);
-  if ( !byt_y ) {
-    return 0;
-  }
-
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-
-  c3_d met_d = 0;
-  if ( pos_d > 0 ) {
-    c3_y top_y = byt_y[pos_d - 1];
-    c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-    met_d = (pos_d - 1) * 8 + (c3_d)(8 - clz_y);
-  }
-
-  u3r_blob_umap(byt_y, len_d);
-  return met_d;
+  return u3_blob_met(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
 }

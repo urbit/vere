@@ -1863,8 +1863,8 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //
     u3_blob_bsink bsk_u;
 
-    u3_blob_init(u3_Host.dir_c);
-    u3_blob_stg_init(u3_Host.dir_c);
+    u3_disk_blob_init(u3_Host.dir_c);
+    u3_disk_blob_stg_init(u3_Host.dir_c);
     u3_blob_bsink_init(&bsk_u, u3_Host.dir_c);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
