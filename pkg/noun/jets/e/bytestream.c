@@ -204,7 +204,6 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     c3_w p_octs_w;
 
     if (c3n == u3r_safe_word(u3h(octs), &p_octs_w)) {
-      u3z(octs_list);
       return u3_none;
     }
     // Check for overflow

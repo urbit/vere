@@ -16,7 +16,8 @@
             u3_atom wid,
             u3_atom dat)
   {
-    u3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
+    u3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(out)) &&
+              _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
 
     // prep the hashing gate
     u3j_site sit_u;
@@ -52,11 +53,11 @@
 
     // append inner padding to message, then hash
     u3_atom innmsg = u3ka_add(u3kc_lsh(3, wid, innkey), dat);
-    u3_atom innhaj = u3j_gate_slam(&sit_u, u3nc((wid + boq), innmsg));
+    u3_atom innhaj = u3j_gate_slam(&sit_u, u3nc(u3i_word(wid + boq), innmsg));
 
     // prepend outer padding to result, hash again
     u3_atom outmsg = u3ka_add(u3kc_lsh(3, out, outkey), innhaj);
-    u3_atom outhaj = u3j_gate_slam(&sit_u, u3nc((out + boq), outmsg));
+    u3_atom outhaj = u3j_gate_slam(&sit_u, u3nc(u3i_word(out + boq), outmsg));
 
     u3j_gate_lose(&sit_u);
     return outhaj;

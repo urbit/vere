@@ -977,7 +977,6 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun monad_b = u3at(60, monad);
     u3_noun cont = u3at(61, monad);
     u3_weak yil;
-    u3_noun monad_cont;
     { // push on suspend stacks
       m3_SuspendStackPush64(sat_u->wasm_module->runtime, west_try);
       m3_SuspendStackPushExtTag(sat_u->wasm_module->runtime);
@@ -1007,25 +1006,19 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
-        monad_cont = uw_slam_check(
+        u3_noun monad_cont = uw_slam_check(
           u3k(cont),
           u3k(u3t(yil)),
           sat_u->is_stateful
         );
         u3z(yil);
-        yil = u3_none;
+        u3z(monad);
+        return _reduce_monad(monad_cont, sat_u);
       }
     }
 
     u3z(monad);
-    if (u3_none == yil)
-    {
-      return _reduce_monad(monad_cont, sat_u);
-    }
-    else
-    {
-      return yil;
-    }
+    return yil;
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->catch_bat))
   {
@@ -1034,7 +1027,6 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun monad_catch = u3at(121, monad);
     u3_noun cont = u3at(61, monad);
     u3_weak yil;
-    u3_noun monad_cont;
 
     {
       { // push on suspend stacks
@@ -1068,13 +1060,14 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
       if (0 == u3h(yil))
       {
-        monad_cont = uw_slam_check(
+        u3_noun monad_cont = uw_slam_check(
           u3k(cont),
           u3k(u3t(yil)),
           sat_u->is_stateful
         );
         u3z(yil);
-        yil = u3_none;
+        u3z(monad);
+        return _reduce_monad(monad_cont, sat_u);
       }
       else if (2 == u3h(yil))
       {
@@ -1112,26 +1105,20 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
         if (0 == u3h(yil))
         {
-          monad_cont = uw_slam_check(
+          u3_noun monad_cont = uw_slam_check(
             u3k(cont),
             u3k(u3t(yil)),
             sat_u->is_stateful
           );
           u3z(yil);
-          yil = u3_none;
+          u3z(monad);
+          return _reduce_monad(monad_cont, sat_u);
         }
       }
     }
 
     u3z(monad);
-    if (u3_none == yil)
-    {
-      return _reduce_monad(monad_cont, sat_u);
-    }
-    else
-    {
-      return yil;
-    }
+    return yil;
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->return_bat))
   {
@@ -2155,7 +2142,7 @@ _move_state(
       || (c3__rand == hint && 0 == u3h(yil))
   )
   {
-    u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul);
+    u3z(u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul));
     IM3Runtime run_u = sat_u->wasm_module->runtime;
     M3MemoryHeader* mem_u = run_u->memory.mallocated;
     u3a_free(mem_u);
@@ -2216,11 +2203,9 @@ _move_state(
   sat_u->susp_list = u3_none;
   sat_u->queue = u3_none;
 
-  u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul);
+  u3z(u3z_save_m(u3z_memo_keep, uw_run_m, seed_old, u3_nul));
 
-  u3z_save_m(u3z_memo_keep, uw_run_m, seed_new, stash);
-
-  u3z(stash);
+  u3z(u3z_save_m(u3z_memo_keep, uw_run_m, seed_new, stash));
 }
 
 u3_weak
@@ -2757,14 +2742,20 @@ u3we_lia_run_v1(u3_noun cor)
   u3z(match.global_get_bat);
   u3z(match.mem_grow_bat);
   u3z(match.mem_size_bat);
+  u3z(match.get_acc_bat);
+  u3z(match.set_acc_bat);
+  u3z(match.get_all_glob_bat);
+  u3z(match.set_all_glob_bat);
 
   u3z(match.call_ctx);
   u3z(match.memread_ctx);
   u3z(match.memwrite_ctx);
-  u3z(global_set_ctx);
-  u3z(global_get_ctx);
-  u3z(mem_grow_ctx);
-  u3z(mem_size_ctx);
+  u3z(match.global_set_ctx);
+  u3z(match.global_get_ctx);
+  u3z(match.mem_grow_ctx);
+  u3z(match.mem_size_ctx);
+  u3z(match.get_all_glob_ctx);
+  u3z(match.set_all_glob_ctx);
 
   #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
@@ -3044,12 +3035,12 @@ u3we_lia_run_once(u3_noun cor)
   u3z(match.call_ctx);
   u3z(match.memread_ctx);
   u3z(match.memwrite_ctx);
-  u3z(global_set_ctx);
-  u3z(global_get_ctx);
-  u3z(mem_grow_ctx);
-  u3z(mem_size_ctx);
-  u3z(get_all_glob_ctx);
-  u3z(set_all_glob_ctx);
+  u3z(match.global_set_ctx);
+  u3z(match.global_get_ctx);
+  u3z(match.mem_grow_ctx);
+  u3z(match.mem_size_ctx);
+  u3z(match.get_all_glob_ctx);
+  u3z(match.set_all_glob_ctx);
   
   #ifdef URWASM_SUBROAD
   //  exit subroad, copying the result
