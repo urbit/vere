@@ -643,7 +643,10 @@ u3a_post_info(u3_post);
         */
           u3_weak
           u3a_gain(u3_weak som);
-#         define u3k(som) u3a_gain(som)
+#         define u3k(som) ({                                                    \
+            u3_noun __som = som;                                                \
+            ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
+          })
 
         /* u3a_take(): gain, copying juniors.
         */
@@ -659,7 +662,10 @@ u3a_post_info(u3_post);
         */
           void
           u3a_lose(u3_weak som);
-#         define u3z(som) u3a_lose(som)
+#         define u3z(som) ({                                                    \
+            u3_noun __som = som;                                                \
+            ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
+          })
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */
@@ -690,6 +696,11 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_mark_mptr(void* ptr_v);
+
+        /* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
+        */
+          c3_w
+          u3a_mark_rptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */

@@ -3225,7 +3225,33 @@ u3n_mark()
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(har_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * 4;
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * 4;
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * 4;
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * 4;
+
+    mua_u[4] = NULL;
+
+    qua_u[1]->qua_u = mua_u;
+    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+  }
 
   qua_u[2] = NULL;
 

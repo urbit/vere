@@ -49,6 +49,18 @@ u3v_boot(u3_noun eve)
     u3_noun pro = u3m_soft(0, u3v_life, eve);
 
     if ( u3_blip != u3h(pro) ) {
+      u3_noun mot = u3h(pro);
+      if ( _(u3a_is_cat(mot)) ) {
+        c3_c mot_c[5] = {0};
+        mot_c[0] = (mot >>  0) & 0xff;
+        mot_c[1] = (mot >>  8) & 0xff;
+        mot_c[2] = (mot >> 16) & 0xff;
+        mot_c[3] = (mot >> 24) & 0xff;
+        fprintf(stderr, "boot: bail: %%%s\r\n", mot_c);
+      }
+      else {
+        fprintf(stderr, "boot: bail\r\n");
+      }
       u3z(pro);
       return c3n;
     }

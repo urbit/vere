@@ -215,7 +215,9 @@
         #define u3r_sing(a, b) ({                                               \
           u3_noun __a = a;                                                      \
           u3_noun __b = b;                                                      \
-          ( __a == __b ) ? c3y : u3r_sing_imp(__a, __b);                        \
+          ( __a == __b ) ? c3y :                                                \
+          ( _(c3o(u3a_is_cat(__a), u3a_is_cat(__b))) ) ? c3n :                  \
+          u3r_sing_imp(__a, __b);                                               \
         })
 
       /* u3r_sing_c(): cord/C-string value equivalence.
