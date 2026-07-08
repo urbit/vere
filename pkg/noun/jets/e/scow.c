@@ -208,7 +208,7 @@ _print_p(u3_atom cor, u3_atom p)
 
     list = u3nq(a, b, c, u3nq(d, e, f, list));
 
-    sxz = u3qc_rsh(4, 1, sxz);
+    sxz = u3kc_rsh(4, 1, sxz);
   }
 
   u3z(sxz);

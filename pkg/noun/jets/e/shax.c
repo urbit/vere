@@ -135,6 +135,7 @@
            u3_noun b,
            u3_noun c)
   {
+    u3k(c);
     u3_noun l = u3_nul;
 
     if ( !_(u3a_is_cat(b)) ) {
@@ -155,13 +156,15 @@
         m = u3nc(b, e);
         b = 0;
       } else {
-        m = u3nc(256, d);
+        m = u3nc(256, u3k(d));
+        u3z(c);
         c = d;
 
         b -= 256;
       }
       l = u3nc(m, l);
     }
+    u3z(c);
     return u3kb_flop(l);
   }
 

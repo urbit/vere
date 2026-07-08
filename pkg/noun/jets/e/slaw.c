@@ -38,6 +38,7 @@ static u3_noun
 combine(u3_noun p, u3_noun q)
 {
   if ( (c3y == u3a_is_atom(p)) || (c3y == u3a_is_atom(q)) ) {
+    u3z(p), u3z(q);
     return 0;
   }
 
@@ -59,6 +60,15 @@ combine(u3_noun p, u3_noun q)
 #define CONSUME(x)  do {                        \
     if (*cur != x) {                            \
       u3a_free(c);                              \
+      return u3_none;                           \
+    }                                           \
+    cur++;                                      \
+  } while (0)
+
+#define CONSUME_LIST(x)  do {                   \
+    if (*cur != x) {                            \
+      u3a_free(c);                              \
+      u3z(list);                                \
       return u3_none;                           \
     }                                           \
     cur++;                                      \
@@ -121,7 +131,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
     u3_noun m = combine(d_part, combine(c_part, combine(b_part, a_part)));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -155,7 +165,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
                 combine(c_part, combine(b_part, a_part)))));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -191,7 +201,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
                 combine(b_part, a_part)))))));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -268,8 +278,11 @@ _parse_p(u3_noun cor, u3_noun txt) {
     numname = cur[0] - '0';                         \
     cur++;                                          \
     while (isdigit(cur[0])) {                       \
-      numname = u3ka_mul(numname, 10);              \
-      numname = u3ka_add(numname, cur[0] - '0');    \
+      numname *= 10 ;                               \
+      numname += cur[0] - '0';                      \
+      if ( c3n == u3a_is_cat(numname) ) {           \
+        u3m_bail(c3__fail);                         \
+      }                                             \
       cur++;                                        \
     }                                               \
   } while (0)
@@ -284,8 +297,11 @@ _parse_p(u3_noun cor, u3_noun txt) {
     numname = cur[0] - '0';                         \
     cur++;                                          \
     while (isdigit(cur[0])) {                       \
-      numname = u3ka_mul(numname, 10);              \
-      numname = u3ka_add(numname, cur[0] - '0');    \
+      numname *= 10;                                \
+      numname += cur[0] - '0';                      \
+      if ( c3n == u3a_is_cat(numname) ) {           \
+        u3m_bail(c3__fail);                         \
+      }                                             \
       cur++;                                        \
     }                                               \
   } while (0)
@@ -298,6 +314,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
       out = 10 + cur[0] - 'a';                      \
     } else {                                        \
       u3a_free(c);                                  \
+      u3z(list);                                    \
       return u3_none;                               \
     }                                               \
     cur++;                                          \
@@ -408,12 +425,13 @@ _parse_da(u3_noun cor, u3_noun txt) {
       return u3nc(0, res);
     }
 
-    CONSUME('.');
+    CONSUME_LIST('.');
   }
 }
 
 #undef ENSURE_NOT_END
 #undef CONSUME
+#undef CONSUME_LIST
 #undef TRY_GET_SYLLABLE
 #undef PARSE_NONZERO_NUMBER
 #undef PARSE_HEX_DIGIT
