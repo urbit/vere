@@ -195,10 +195,14 @@ static const M3Result UrwasmArrowExit = "An imported arrow returned %2";
 
 static const c3_m uw_run_m = uw__lia + c3__run + uw_lia_run_version;
 
+//  under U3_REFCOUNT_LINT u3a_is_cat is a function declaration, not a
+//  constant expression; the assert still guards every real build
+#ifndef U3_REFCOUNT_LINT
 static_assert(
   (c3y == u3a_is_cat(uw_run_m)),
   "u3we_run key tag must be a direct atom"
 );
+#endif
 
 typedef struct {
   u3_noun call_bat;
