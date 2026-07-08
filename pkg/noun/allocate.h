@@ -236,6 +236,27 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
   /**  Macros.  Should be better commented.
   **/
+#   ifdef U3_REFCOUNT_LINT
+    /* Lint-mode declarations: the refcount checker parses with
+    ** U3_REFCOUNT_LINT defined so that noun primitives appear as plain
+    ** function calls in the AST instead of macro expansions.  These
+    ** declarations are never compiled or linked; they must stay
+    ** semantically equivalent to the macros in the #else branch.
+    */
+      c3_o u3a_is_cat(u3_noun som);
+      c3_o u3a_is_dog(u3_noun som);
+      c3_o u3a_is_pug(u3_noun som);
+      c3_o u3a_is_pom(u3_noun som);
+      c3_o u3a_is_atom(u3_noun som);
+      c3_o u3a_is_cell(u3_noun som);
+#     define u3ud(som)  u3a_is_atom(som)
+#     define u3du(som)  u3a_is_cell(som)
+
+      u3_noun u3a_h(u3_noun som);  //  RETAIN
+      u3_noun u3a_t(u3_noun som);  //  RETAIN
+#     define u3h(som) u3a_h(som)
+#     define u3t(som) u3a_t(som)
+#   else
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
 #     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
@@ -278,6 +299,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
            ? ( ((u3a_cell *)u3a_to_ptr(som))->tel )\
            : u3m_bail(c3__exit) )
 #     define u3t(som) u3a_t(som)
+#   endif
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
 #     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
@@ -643,10 +665,14 @@ u3a_post_info(u3_post);
         */
           u3_weak
           u3a_gain(u3_weak som);
+#         ifdef U3_REFCOUNT_LINT
+#           define u3k(som) u3a_gain(som)
+#         else
 #         define u3k(som) ({                                                    \
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
+#         endif
 
         /* u3a_take(): gain, copying juniors.
         */
@@ -662,10 +688,14 @@ u3a_post_info(u3_post);
         */
           void
           u3a_lose(u3_weak som);
+#         ifdef U3_REFCOUNT_LINT
+#           define u3z(som) u3a_lose(som)
+#         else
 #         define u3z(som) ({                                                    \
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
           })
+#         endif
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */

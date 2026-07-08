@@ -1,4 +1,5 @@
 //! @file events.c
+//! CUSTOM_REFCOUNT_FILE: loom snapshotting sits below the refcount machinery.
 //!
 //! incremental, orthogonal, paginated loom snapshots
 //!

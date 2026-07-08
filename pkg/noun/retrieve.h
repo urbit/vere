@@ -217,6 +217,9 @@
         c3_o
         u3r_sing_imp(u3_noun a, u3_noun b);
 
+#ifdef U3_REFCOUNT_LINT
+        #define u3r_sing(a, b) u3r_sing_imp(a, b)
+#else
         #define u3r_sing(a, b) ({                                               \
           u3_noun __a = a;                                                      \
           u3_noun __b = b;                                                      \
@@ -224,6 +227,7 @@
           ( _(c3o(u3a_is_cat(__a), u3a_is_cat(__b))) ) ? c3n :                  \
           u3r_sing_imp(__a, __b);                                               \
         })
+#endif
 
       /* u3r_sing_c(): cord/C-string value equivalence.
       */

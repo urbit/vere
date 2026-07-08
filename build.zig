@@ -55,8 +55,8 @@ const CdbGenStep = struct {
             const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
             defer self.b.allocator.free(frag);
 
-            // skip empty/whitespace-only
-            const trimmed = std.mem.trim(u8, frag, " \t\r\n");
+            // skip empty/whitespace-only; strip the fragment's trailing comma
+            const trimmed = std.mem.trimRight(u8, std.mem.trim(u8, frag, " \t\r\n"), ",");
             if (trimmed.len == 0) continue;
 
             if (!first) try w.writeByte(',');
@@ -631,6 +631,18 @@ fn buildBinary(
         const current_install = b.getInstallStep();
         cdb_gen.step.dependOn(current_install);
         b.default_step = &cdb_gen.step;
+    }
+
+    // Refcount protocol checker (needs compile_commands.json; regenerate
+    // with `rm -rf .zig-cache && zig build -Dgenerate-commands` first).
+    {
+        const rc_step = b.step("refcount-check", "check u3 noun refcount protocols (pkg/noun)");
+        const rc_run = b.addSystemCommand(&.{ "python3", "tools/refcount_check.py" });
+        rc_step.dependOn(&rc_run.step);
+
+        const rc_test_step = b.step("refcount-selftest", "run the refcount checker's seeded-bug selftest");
+        const rc_test_run = b.addSystemCommand(&.{ "python3", "tools/refcount_check.py", "--selftest" });
+        rc_test_step.dependOn(&rc_test_run.step);
     }
 
     //
