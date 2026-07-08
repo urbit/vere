@@ -1569,6 +1569,72 @@ _test_bsr_log(void)
 }
 
 /*
+**  L1 (SECURITY-AUDIT): ur_bsr_log over-reads one byte past the buffer.
+**
+**  In the zero-skip loop `byt = b[++skip]` runs *before* the `skip == left`
+**  bounds test, so when skip reaches `left` it reads b[left] (one past the
+**  end). With an all-zero buffer of length `left`, the loop scans forward
+**  until it falls off the end.
+**
+**  A 1-byte over-read won't fault on an ordinary heap buffer, so we place the
+**  buffer flush against the end of a mapped page followed by a PROT_NONE
+**  guard page: the read of b[left] then lands in the guard page and faults
+**  deterministically. The fix must return ur_cue_gone without dereferencing
+**  b[left]. (POSIX only; skipped elsewhere.)
+*/
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#include <sys/mman.h>
+#include <unistd.h>
+
+static int
+_test_bsr_log_oob(void)
+{
+  long     pag_i = sysconf(_SC_PAGESIZE);
+  size_t   pag_z = (pag_i > 0) ? (size_t)pag_i : 4096;
+  uint64_t len   = 4;
+
+  //  two pages; make the second inaccessible
+  //
+  uint8_t* map = (uint8_t*)mmap(NULL, 2 * pag_z, PROT_READ | PROT_WRITE,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if ( MAP_FAILED == map ) {
+    fprintf(stderr, "bsr log oob: mmap failed; skipping\r\n");
+    return 1;
+  }
+  if ( 0 != mprotect(map + pag_z, pag_z, PROT_NONE) ) {
+    fprintf(stderr, "bsr log oob: mprotect failed; skipping\r\n");
+    munmap(map, 2 * pag_z);
+    return 1;
+  }
+
+  //  buffer's last byte is the last byte of the first page;
+  //  b[len] therefore lands in the guard page
+  //
+  uint8_t* byt = map + pag_z - len;
+  memset(byt, 0, len);  // all-zero: log loop never finds a set bit, scans off end
+
+  ur_bsr_t     bsr = { .left = len, .bits = 0, .off = 0, .bytes = byt };
+  uint8_t      out = 0;
+  ur_cue_res_e res = ur_bsr_log(&bsr, &out);
+
+  munmap(map, 2 * pag_z);
+
+  if ( ur_cue_gone != res ) {
+    fprintf(stderr, "\033[31mbsr log oob: expected ur_cue_gone\033[0m\r\n");
+    return 0;
+  }
+
+  return 1;
+}
+#else
+static int
+_test_bsr_log_oob(void)
+{
+  return 1;  // guard-page technique is POSIX-only
+}
+#endif
+
+/*
 **  ur_bsr_tag golden master
 */
 static ur_cue_res_e
@@ -1655,6 +1721,7 @@ _test_bsr(void)
        & _test_bsr32()
        & _test_bsr64()
        & _test_bsr_log()
+       & _test_bsr_log_oob()
        & _test_bsr_tag();
 }
 

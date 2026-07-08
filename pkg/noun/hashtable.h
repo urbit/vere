@@ -59,6 +59,15 @@
           u3h_slot sot_w[];   // filled slots
         } u3h_buck;
 
+      /* u3h_mass: hamt memory usage measurements.
+      */
+        typedef struct {
+          c3_w key_w;
+          c3_w val_w;
+          c3_w kev_w;
+          c3_w nod_w;
+        } u3h_mass;
+
     /**  HAMT macros.
     ***
     ***  Coordinate with u3_noun definition!
@@ -156,8 +165,13 @@
 
       /* u3h_mark(): mark hashtable for gc.
       */
+        void
+        u3h_mark(u3p(u3h_root) har_p, u3h_mass* mas_u);
+
+      /* u3h_mark_tot(): mark hashtable for gc.
+      */
         c3_w
-        u3h_mark(u3p(u3h_root) har_p);
+        u3h_mark_tot(u3p(u3h_root) har_p);
 
       /* u3h_relocate(): relocate hashtable for compaction.
       */
