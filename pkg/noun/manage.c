@@ -1,5 +1,5 @@
 /// @file
-/// CUSTOM_REFCOUNT_FILE: implements or sits below the refcount
+/// @Refcount: custom file -- implements or sits below the refcount
 /// machinery; individual functions follow custom protocols.
 
 #include "manage.h"
@@ -1227,6 +1227,7 @@ u3m_hate(c3_w pad_w)
 }
 
 //  RETAINS `now`.
+// @Refcount: retains `now`
 //
 static void
 _m_renew_timer(u3_atom now)
@@ -1973,6 +1974,7 @@ u3m_soft(c3_w    mil_w,
 }
 
 /* _cm_is_tas(): yes iff som (RETAIN) is @tas.
+** @Refcount: retains `som`
 */
 static c3_o
 _cm_is_tas(u3_atom som, c3_w len_w)
@@ -1994,6 +1996,7 @@ _cm_is_tas(u3_atom som, c3_w len_w)
 }
 
 /* _cm_is_ta(): yes iff som (RETAIN) is @ta.
+** @Refcount: retains `som`
 */
 static c3_o
 _cm_is_ta(u3_noun som, c3_w len_w)

@@ -181,6 +181,7 @@
       **
       ** `axe` is RETAINED by the caller; `cor` is RETAINED iff there
       ** is no kick, TRANSFERRED if one.
+      ** @Refcount: custom
       */
         u3_weak
         u3j_kick(u3_noun cor, u3_noun axe);

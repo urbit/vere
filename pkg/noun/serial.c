@@ -1,5 +1,5 @@
 /// @file
-/// CUSTOM_REFCOUNT_FILE: implements or sits below the refcount
+/// @Refcount: custom file -- implements or sits below the refcount
 /// machinery; individual functions follow custom protocols.
 
 #include "serial.h"
@@ -339,6 +339,8 @@ typedef struct _cs_cue {
 } _cs_cue;
 
 /* _cs_rub: rub, TRANSFER [cur], RETAIN [a]
+** @Refcount: transfers `cur`
+** @Refcount: retains `a`
 */
 static inline u3_noun
 _cs_rub(u3_atom cur, u3_atom a)
@@ -350,6 +352,8 @@ _cs_rub(u3_atom cur, u3_atom a)
 
 /* _cs_cue_next(): advance into [a], reading next value
 **                 TRANSFER [cur], RETAIN [a]
+** @Refcount: transfers `cur`
+** @Refcount: retains `a`
 */
 static inline u3_noun
 _cs_cue_next(u3a_pile*     pil_u,

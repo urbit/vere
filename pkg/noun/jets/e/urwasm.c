@@ -76,6 +76,7 @@ uw_octo(u3_noun a,
 }
 
 // kick by nock. axe RETAINED (ignore if direct)
+// @Refcount: retains `axe`
 static u3_noun
 uw_kick_nock(u3_noun cor, u3_noun axe)
 {
@@ -564,6 +565,7 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 }
 
 //  RETAIN argument
+// @Refcount: retains arguments
 static c3_o
 _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 {
@@ -640,6 +642,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 }
 
 //  RETAIN argument
+// @Refcount: retains arguments
 static c3_o
 _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
 {
@@ -1855,6 +1858,7 @@ _link_wasm_with_arrow_map(
 //        susp_list=(list)                        ::  +255
 //    ==
 // arguments RETAINED
+// @Refcount: retains arguments
 // on success allocates sat_u->wasm_module->runtime->memory.mallocated
 // and initializes the arenas
 static c3_t
@@ -2018,6 +2022,8 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 }
 
 //  arguments RETAINED, returned yield transfered.
+// @Refcount: retains arguments
+// @Refcount: transfers product
 //  transfers sat_u->yil_previous if it is returned, and replaces
 //  the struct value with u3_none
 static u3_noun
@@ -2128,6 +2134,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 // try to save new state, replacing old state with a tombstone value
 // frees wasm3 memory buffer, releases arenas
 // RETAINS arguments, transfers sat_u->lia_shop/susp_list/queue and
+// @Refcount: retains arguments
 // replaces them with u3_none if save is succesful
 static void
 _move_state(

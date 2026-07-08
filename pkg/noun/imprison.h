@@ -155,6 +155,7 @@
         **
         **   Mutate `big` at axis `axe` with new value `som`
         **   `axe` is RETAINED.
+        ** @Refcount: retains `axe`
         */
           u3_noun
           u3i_edit(u3_noun big, u3_noun axe, u3_noun som);

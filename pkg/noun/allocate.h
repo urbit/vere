@@ -252,8 +252,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 #     define u3ud(som)  u3a_is_atom(som)
 #     define u3du(som)  u3a_is_cell(som)
 
-      u3_noun u3a_h(u3_noun som);  //  RETAIN
-      u3_noun u3a_t(u3_noun som);  //  RETAIN
+      u3_noun u3a_h(u3_noun som);  //  @Refcount: retains arguments
+      u3_noun u3a_t(u3_noun som);  //  @Refcount: retains arguments
 #     define u3h(som) u3a_h(som)
 #     define u3t(som) u3a_t(som)
 #   else
@@ -698,6 +698,7 @@ u3a_post_info(u3_post);
 #         endif
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
+        ** @Refcount: retains arguments
         */
           void
           u3a_wash(u3_noun som);
@@ -852,6 +853,7 @@ u3a_dash(void);
           u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
 
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
+        ** @Refcount: retains arguments
         */
           u3m_quac*
           u3a_prof(FILE* fil_u, u3_noun mas);

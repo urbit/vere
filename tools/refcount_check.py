@@ -10,52 +10,61 @@ reference-counting conventions documented in doc/spec/u3.md:
     and returns a product without a counted reference.
   - mixed semantics must be annotated per argument / for the product.
 
-Function-level annotations (in the leading comment of a declaration or
-definition, header comments preferred):
+Annotations use the tag `@Refcount:` followed by one clause; the tag may
+appear more than once. Keywords are case-insensitive and argument names are
+written in `backticks`. A function starts with the default protocol implied
+by its name and location (see "Prefix conventions" below); each clause then
+updates that protocol, last write winning. A later clause that sets a slot
+(the arguments, the product, or a named argument) to a value different from
+an earlier clause is reported as a conflict.
 
-  CUSTOM_REFCOUNT                  -- protocol too complex; not checked,
-                                      callers treat args/product as unknown.
-  CUSTOM_REFCOUNT_FILE             -- in a comment near the top of a file:
-                                      no function in the file is checked
-                                      (for runtime core that implements the
-                                      refcount machinery itself).
-  REFCOUNT: ASSERT TRANSFER        -- trusted transfer; body not checked.
-  REFCOUNT: ASSERT RETAIN          -- trusted retain; body not checked.
-  REFCOUNT: PASSTHROUGH <arg>      -- identity: the product is the argument
-                                      itself with unchanged ownership
-                                      (owned stays owned, borrowed stays
-                                      borrowed); counts are untouched.
-  REFCOUNT: DIRECT <arg> [...]     -- if the function returns, the listed
-                                      arguments were direct atoms (it bails
-                                      otherwise); at call sites their
-                                      references carry no count, so owned
-                                      values passed here cannot leak and
-                                      variables are refined to direct.
-  RETAIN                           -- retains arguments (checked); product
-                                      keeps its positional default.
-  REFCOUNT: TRANSFERS / RETAINS    -- explicit full semantics, arguments
-                                      and product; body still checked.
-  RETAINS arguments                -- args retained, product transferred.
-  TRANSFERS arguments              -- args transferred.
-  RETAINS product / TRANSFERS product
-  TRANSFER <arg>; RETAIN <arg>     -- per-argument protocol.
-  `arg` is RETAINED / TRANSFERRED  -- per-argument protocol.
+Function-level annotations (in the header comment of a declaration or
+definition, or in the trailing comment on a declaration's own line):
+
+  @Refcount: custom               -- protocol too complex; not checked, and
+                                     call sites treat arguments and product
+                                     as unknown. Must be the only annotation.
+  @Refcount: custom file          -- in a comment near the top of a file: no
+                                     function in the file is checked (for the
+                                     runtime core that implements the
+                                     refcount machinery itself).
+  @Refcount: assert               -- do not check the body; assume whatever
+                                     protocol the annotations describe. May
+                                     prefix any of the clauses below.
+  @Refcount: transfers product    -- the product is owned by the caller, who
+                                     must free or consume it.
+  @Refcount: transfers arguments  -- the function takes ownership of every
+                                     u3_noun argument.
+  @Refcount: transfers            -- both (arguments and product).
+  @Refcount: transfers `x`, `y`   -- takes ownership of the named arguments.
+  @Refcount: retains ...          -- as `transfers`, mutatis mutandis: the
+                                     product carries no count, arguments are
+                                     borrowed.
+  @Refcount: passthrough `x`      -- identity: the product IS argument `x`,
+                                     with unchanged ownership (owned stays
+                                     owned, borrowed stays borrowed); counts
+                                     are untouched.
+  @Refcount: direct `x`, `y`      -- if the function returns, the named
+                                     arguments were direct atoms (it bails
+                                     otherwise); at call sites their
+                                     references carry no count, so owned
+                                     values passed here cannot leak and
+                                     variables are refined to direct.
+  @Refcount: direct               -- as above, for every argument.
 
 Block-level annotations (comment immediately after an opening brace):
 
-  {  //  ASSERT TRANSFER [x y ...]   -- block consumes one reference to
-                                        each listed variable; with no
-                                        names, owned values stored to
-                                        memory inside the block are the
-                                        intended consumption.
-  {  //  ASSERT PRODUCE x            -- after the block, x holds a counted
-                                        reference owned by this function.
-  {  //  ASSERT RETAIN x             -- block does not affect x's counts;
-                                        suppresses checks on x inside.
-  {  //  ASSERT CONSTRUCT            -- block builds a noun by storing owned
-                                        references into it (deferred
-                                        construction); such stores are the
-                                        intended consumption.
+  {  // @Refcount: assert transfer [x y ...]  -- the block consumes one
+                                     reference to each listed variable; with
+                                     no names, owned values stored to memory
+                                     inside the block are the consumption.
+  {  // @Refcount: assert produce x  -- after the block, x holds a counted
+                                     reference owned by this function.
+  {  // @Refcount: assert retain x   -- the block does not affect x's counts;
+                                     suppresses checks on x inside.
+  {  // @Refcount: assert construct  -- the block builds a noun by storing
+                                     owned references into it (deferred
+                                     construction); such stores are intended.
 
 Prefix conventions (defaults, per u3.md):
 
@@ -218,7 +227,8 @@ TRANSFER, RETAIN = 'transfer', 'retain'
 
 class Sem:
     __slots__ = ('default_args', 'args', 'product', 'check', 'custom',
-                 'why', 'direct_args', 'passthrough', 'from_def')
+                 'why', 'direct_args', 'direct_all', 'passthrough',
+                 'from_def', 'warnings')
 
     def __init__(self, default_args=TRANSFER, product=TRANSFER,
                  check=True, custom=False, why='default'):
@@ -229,130 +239,136 @@ class Sem:
         self.custom = custom
         self.why = why
         self.direct_args = set()  # params proven direct if the fn returns
+        self.direct_all = False   # every argument proven direct if it returns
         self.passthrough = None   # param whose value IS the product
         self.from_def = False     # resolved with the definition visible
+        self.warnings = []        # annotation conflicts, (line, message)
 
     def arg_mode(self, name):
         return self.args.get(name, self.default_args)
 
+    def is_direct(self, name):
+        return self.direct_all or name in self.direct_args
 
-RE_CUSTOM = re.compile(r'\bCUSTOM_REFCOUNT\b')
-RE_ASSERT = re.compile(r'\bREFCOUNT:\s*ASSERT\s+(TRANSFER|RETAIN)\b')
-RE_DIRECT = re.compile(r'\bREFCOUNT:\s*DIRECT((?:\s+[A-Za-z_]\w*)+)')
-RE_EXPLICIT = re.compile(r'\bREFCOUNT:\s*(TRANSFER|RETAIN)S?\b')
-RE_PASSTHROUGH = re.compile(r'\bREFCOUNT:\s*PASSTHROUGH\s+([A-Za-z_]\w*)')
-RE_COND = re.compile(r'\b(?:RETAIN(?:S|ED)?|TRANSFER(?:S|RED)?)\b[^.;\n]{0,60}\bif\b',
-                     re.IGNORECASE)
-RE_ARGS_GENERAL = re.compile(
-    r'\b(?:(RETAIN|TRANSFER)S?\s+arguments?|arguments?\s+(retained|transferred))\b',
-    re.IGNORECASE)
-RE_PROD_GENERAL = re.compile(
-    r'\b(RETAIN|TRANSFER)(?:S|ED|RED|ING)?\s+(?:the\s+)?(?:product|result|return)\b'
-    r'|\b(?:product|result|return)\s+is\s+(RETAINED|TRANSFERRED|PRODUCED)\b',
-    re.IGNORECASE)
-RE_PER_ARG = re.compile(r'\b(TRANSFER|RETAIN)S?:?\s+`?([a-z_]\w*)`?')
-RE_BACKTICK_ARG = re.compile(r'`(\w+)`\s+is\s+(RETAINED|TRANSFERRED)\b',
-                             re.IGNORECASE)
-RE_BRACKET_ARGS = re.compile(
-    r'((?:\[\w+\](?:,?\s*(?:and\s+)?)?)+)(?:is|are)\s+(RETAINED|TRANSFERRED)\b',
-    re.IGNORECASE)
-RE_FULL_RETAIN = re.compile(r'\bRETAINS?\b\.?')
-RE_FULL_TRANSFER = re.compile(r'\bTRANSFERS?\b\.?')
+
+# one clause per @Refcount: tag, running to the end of the comment line
+RE_REFCOUNT = re.compile(r'@Refcount:[ \t]*([^\n\r]*)', re.IGNORECASE)
+RE_ARGNAME = re.compile(r'`(\w+)`')
+RE_TRAIL_COMMENT = re.compile(r'\*/\s*$')
+RE_FILE_CUSTOM = re.compile(r'@Refcount:\s*custom\s+file\b', re.IGNORECASE)
 RE_JET_DIR = re.compile(r'/jets/[a-f]/')
 
-ARG_WORDS = {'arguments', 'argument', 'args', 'product', 'result', 'return',
-             'returns', 'noun', 'nouns', 'all', 'the', 'a', 'if'}
+# words naming the arguments-slot and the product-slot in a clause
+ARG_SLOT_WORDS = {'argument', 'arguments', 'arg', 'args'}
+PROD_SLOT_WORDS = {'product', 'result', 'return'}
 
 
-def parse_fn_annotations(comment, sem):
-    """Mutate sem according to annotations found in a comment. Returns
-    True if any annotation was recognized."""
-    if not comment:
+def refcount_clauses(comment):
+    """The text of each @Refcount: clause in a comment, in order."""
+    out = []
+    for m in RE_REFCOUNT.finditer(comment or ''):
+        c = RE_TRAIL_COMMENT.sub('', m.group(1)).strip().rstrip('*').strip()
+        out.append(c)
+    return out
+
+
+def parse_fn_annotations(comment, sem, line=0):
+    """Mutate sem according to the @Refcount: clauses in a comment. Each
+    clause updates the protocol (last write wins); a clause that changes a
+    slot an earlier clause already set is recorded in sem.warnings. Returns
+    True if any clause was recognized."""
+    clauses = refcount_clauses(comment)
+    if not clauses:
         return False
-    found = False
-    if RE_CUSTOM.search(comment):
-        sem.custom = True
-        sem.check = False
-        sem.why = 'CUSTOM_REFCOUNT'
-        return True
-    m = RE_ASSERT.search(comment)
-    if m:
-        mode = TRANSFER if m.group(1) == 'TRANSFER' else RETAIN
-        sem.default_args = mode
-        sem.product = mode
-        sem.check = False
-        sem.why = f'REFCOUNT: ASSERT {m.group(1)}'
-        return True
-    m = RE_DIRECT.search(comment)
-    if m:
-        sem.direct_args.update(m.group(1).split())
-        sem.why = 'comment: DIRECT'
-        found = True
-    m = RE_PASSTHROUGH.search(comment)
-    if m:
-        # identity: the product is the argument itself, whatever its
-        # ownership; no counts change
-        sem.passthrough = m.group(1)
-        sem.why = 'comment: PASSTHROUGH'
-        return True
-    m = RE_EXPLICIT.search(comment)
-    if m:
-        # explicit full semantics (args and product); body still checked
-        mode = TRANSFER if m.group(1) == 'TRANSFER' else RETAIN
-        sem.default_args = mode
-        sem.product = mode
-        sem.why = f'comment: REFCOUNT: {m.group(1)}'
-        found = True
-    if RE_COND.search(comment):
-        # conditional protocol ("RETAINS x if ...") -- unverifiable shape
-        sem.custom = True
-        sem.check = False
-        sem.why = 'conditional protocol in comment'
-        return True
-    m = RE_ARGS_GENERAL.search(comment)
-    if m:
-        word = (m.group(1) or m.group(2)).upper()
-        sem.default_args = RETAIN if word.startswith('RETAIN') else TRANSFER
-        sem.why = 'comment: args'
-        found = True
-    m = RE_PROD_GENERAL.search(comment)
-    if m:
-        verb = (m.group(1) or m.group(2)).upper()
-        sem.product = RETAIN if verb.startswith('RETAIN') else TRANSFER
-        sem.why = 'comment: product'
-        found = True
-    for m in RE_PER_ARG.finditer(comment):
-        verb, name = m.group(1), m.group(2)
-        if name.lower() in ARG_WORDS:
+    explicit = {}  # slot -> mode, for conflict detection
+
+    def warn(msg):
+        sem.warnings.append((line, msg))
+
+    def set_slot(slot, mode, apply):
+        prev = explicit.get(slot)
+        if prev is not None and prev != mode:
+            warn(f'conflicting @Refcount: annotations set {slot} to '
+                 f'{prev} then {mode}')
+        explicit[slot] = mode
+        apply()
+
+    saw_custom = False
+    saw_other = False
+    for clause in clauses:
+        toks = clause.lower().split()
+        if not toks:
             continue
-        sem.args[name] = TRANSFER if verb == 'TRANSFER' else RETAIN
-        sem.why = 'comment: per-arg'
-        found = True
-    for m in RE_BACKTICK_ARG.finditer(comment):
-        name, verb = m.group(1), m.group(2).upper()
-        sem.args[name] = RETAIN if verb.startswith('RETAIN') else TRANSFER
-        sem.why = 'comment: per-arg'
-        found = True
-    for m in RE_BRACKET_ARGS.finditer(comment):
-        verb = m.group(2).upper()
-        mode = RETAIN if verb.startswith('RETAIN') else TRANSFER
-        for name in re.findall(r'\[(\w+)\]', m.group(1)):
-            sem.args[name] = mode
-            sem.why = 'comment: per-arg'
-            found = True
-    if not found and RE_FULL_RETAIN.search(comment):
-        # bare RETAIN marks the arguments; the product keeps its
-        # positional default (jet internals transfer their product,
-        # u3r-style accessors return uncounted references)
-        sem.default_args = RETAIN
-        sem.why = 'comment: RETAIN'
-        found = True
-    if not found and RE_FULL_TRANSFER.search(comment):
-        # bare TRANSFER(S) marks the arguments, symmetrically
-        sem.default_args = TRANSFER
-        sem.why = 'comment: TRANSFER'
-        found = True
-    return found
+        head = toks[0]
+
+        if head == 'custom':
+            saw_custom = True
+            sem.custom = True
+            sem.check = False
+            if len(toks) >= 2 and toks[1] == 'file':
+                sem.why = '@Refcount: custom file'
+            else:
+                sem.why = '@Refcount: custom'
+            continue
+
+        saw_other = True
+        if head == 'assert':
+            # trust the annotated protocol; do not check the body
+            sem.check = False
+            sem.why = '@Refcount: assert'
+            toks = toks[1:]
+            if not toks:
+                continue
+            head = toks[0]
+
+        if head == 'passthrough':
+            names = RE_ARGNAME.findall(clause)
+            if not names:
+                warn('@Refcount: passthrough requires an argument name')
+            else:
+                sem.passthrough = names[0]
+                sem.why = '@Refcount: passthrough'
+            continue
+
+        if head == 'direct':
+            names = RE_ARGNAME.findall(clause)
+            if names:
+                sem.direct_args.update(names)
+            else:
+                sem.direct_all = True
+            sem.why = '@Refcount: direct'
+            continue
+
+        if head in ('transfers', 'retains', 'transfer', 'retain'):
+            mode = TRANSFER if head.startswith('transfer') else RETAIN
+            names = RE_ARGNAME.findall(clause)
+            words = set(toks[1:])
+            hit_prod = bool(words & PROD_SLOT_WORDS)
+            hit_args = bool(words & ARG_SLOT_WORDS)
+            if names:
+                for n in names:
+                    set_slot(f'argument `{n}`', mode,
+                             lambda n=n: sem.args.__setitem__(n, mode))
+            elif hit_prod and not hit_args:
+                set_slot('product', mode,
+                         lambda: setattr(sem, 'product', mode))
+            elif hit_args and not hit_prod:
+                set_slot('arguments', mode,
+                         lambda: setattr(sem, 'default_args', mode))
+            else:
+                # bare, or naming both slots: the whole protocol
+                set_slot('product', mode,
+                         lambda: setattr(sem, 'product', mode))
+                set_slot('arguments', mode,
+                         lambda: setattr(sem, 'default_args', mode))
+            sem.why = f'@Refcount: {head}'
+            continue
+
+        warn(f'unrecognized @Refcount: clause {clause!r}')
+
+    if saw_custom and saw_other:
+        warn('@Refcount: custom must be the only annotation')
+    return True
 
 
 RE_JET_QW = re.compile(r'^u3[qw][a-z]+_')
@@ -423,7 +439,8 @@ def resolve_sem(cur, sem_cache):
     # annotations may live only on the definition (.c); a sem cached from
     # a TU that saw just the header declaration must not shadow it
     sem = prefix_sem(name, fpath, is_static)
-    parse_fn_annotations(cursor_comments(cur), sem)
+    line = cur.location.line if cur.location.file else 0
+    parse_fn_annotations(cursor_comments(cur), sem, line)
     sem.from_def = has_def
     sem_cache[key] = sem
     return sem
@@ -570,8 +587,9 @@ def binop(cur):
 # block-level ASSERT annotations
 
 RE_BLOCK_ASSERT = re.compile(
-    r'\bASSERT\s+(?:(TRANSFER|PRODUCE|RETAIN)((?:\s+[A-Za-z_]\w*)*)'
-    r'|(CONSTRUCT)\b)')
+    r'@Refcount:\s*assert\s+'
+    r'(?:(transfer|produce|retain)((?:\s+[A-Za-z_]\w*)*)'
+    r'|(construct)\b)', re.IGNORECASE)
 
 
 class FileComments:
@@ -607,7 +625,7 @@ def block_asserts(compound, fcm):
             if m.group(3):
                 out.append(('CONSTRUCT', []))
             else:
-                out.append((m.group(1), m.group(2).split()))
+                out.append((m.group(1).upper(), m.group(2).split()))
     return out
 
 
@@ -669,7 +687,7 @@ class FnChecker:
         except SkipFunction as sk:
             self.report(self.fn, 'skipped',
                         f'not analyzed ({sk.reason}); '
-                        f'annotate with CUSTOM_REFCOUNT or REFCOUNT: ASSERT')
+                        f'annotate with @Refcount: custom or @Refcount: assert')
         return self.findings
 
     # -- exit checks
@@ -932,8 +950,8 @@ class FnChecker:
             else:
                 self.report(cur, 'escape',
                             f'owned reference stored to memory; wrap in an '
-                            f'ASSERT TRANSFER block if this store is the '
-                            f'intended consumption', rname or '')
+                            f'"@Refcount: assert transfer" block if this store '
+                            f'is the intended consumption', rname or '')
                 self.consume(cur, env, rv, rname)
         else:
             self.eval_expr(lhs, env)
@@ -1086,7 +1104,7 @@ class FnChecker:
                     env[aname] = Val(UNKNOWN)
                 continue
             pname = p.spelling if p is not None else ''
-            if pname in sem.direct_args:
+            if sem.is_direct(pname):
                 # the callee bails unless this argument is a direct atom;
                 # on return its reference carries no count
                 if v.temp_id is not None:
@@ -1701,7 +1719,7 @@ def explain(entries, resource_dir, target):
             continue
         if sem.passthrough == pname:
             mode = 'PASSTHROUGH (the product is this argument itself)'
-        elif pname in sem.direct_args:
+        elif sem.is_direct(pname):
             mode = 'DIRECT (proven direct atom if the call returns)'
         else:
             mode = sem.arg_mode(pname).upper()
@@ -1725,12 +1743,12 @@ def explain(entries, resource_dir, target):
         dfile = str(defn.location.file)
         try:
             with open(dfile, 'r', errors='replace') as fh:
-                file_custom = 'CUSTOM_REFCOUNT_FILE' in fh.read(4096)
+                file_custom = bool(RE_FILE_CUSTOM.search(fh.read(4096)))
         except OSError:
             pass
     checked = sem.check and not sem.custom and not file_custom
     print(f'  body checked: {"yes" if checked else "no"}'
-          + (f' ({rel(dfile)} is CUSTOM_REFCOUNT_FILE)'
+          + (f' ({rel(dfile)} is @Refcount: custom file)'
              if file_custom else ''))
 
     comments = cursor_comments(cur).strip()
@@ -1828,9 +1846,9 @@ def main():
                 head = fh.read(4096)
         except OSError:
             head = ''
-        if 'CUSTOM_REFCOUNT_FILE' in head:
+        if RE_FILE_CUSTOM.search(head):
             if args.verbose:
-                print(f'-- {fpath}: CUSTOM_REFCOUNT_FILE, skipped')
+                print(f'-- {fpath}: @Refcount: custom file, skipped')
             continue
         fcm = FileComments(tu, fpath)
         for cur in tu.cursor.get_children():
@@ -1848,6 +1866,10 @@ def main():
             if not takes and not rets:
                 continue
             sem = resolve_sem(cur, tool.sem_cache)
+            for (wl, wmsg) in sem.warnings:
+                tool.findings.append((fpath, wl or cur.location.line,
+                                      cur.location.column, cur.spelling,
+                                      'annotation', wmsg))
             if not sem.check:
                 if args.verbose:
                     print(f'-- {cur.spelling}: trusted ({sem.why})')
@@ -1878,10 +1900,23 @@ def main():
             ('bug_uaf', 'use-after-free'),
             ('bug_borrow', 'use-after-free'),
             ('bug_smuggle', 'leak'),
+            ('warn_conflict', 'annotation'),
+        }
+        clean_fns = {
+            'bug_ok', 'ok_retain_prod', 'ok_passthrough', 'custom_unchecked',
+            'assert_unchecked', 'needs_direct', 'ok_direct_caller', 'ok_block',
         }
         got = {(fn, cat) for (_, _, _, fn, cat, _) in tool.findings}
-        clean = {fn for (_, _, _, fn, _, _) in tool.findings}
-        ok = expected <= got and 'bug_ok' not in clean
+        found_fns = {fn for (_, _, _, fn, _, _) in tool.findings}
+        missing = expected - got
+        dirty = clean_fns & found_fns
+        ok = not missing and not dirty
+        if missing:
+            print(f'selftest: missing findings: {sorted(missing)}',
+                  file=sys.stderr)
+        if dirty:
+            print(f'selftest: unexpected findings on: {sorted(dirty)}',
+                  file=sys.stderr)
         print('selftest:', 'PASS' if ok else 'FAIL', file=sys.stderr)
         return 0 if ok else 1
 

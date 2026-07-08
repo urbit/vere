@@ -656,6 +656,7 @@ u3i_list(u3_weak som, ...)
 **
 **   Mutate `big` at axis `axe` with new value `som`.
 **   `axe` is RETAINED.
+** @Refcount: retains `axe`
 */
 u3_noun
 u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
@@ -738,10 +739,13 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     return cut_t ? cut_w : i_w;
   }
 
-  static u3_noun                            //  transfer
-  _molt_apply(u3_noun            som,       //  retain
+  /* _molt_apply(): apply an array of edits to a noun.  Transfers product.
+  ** @Refcount: retains `som`
+  */
+  static u3_noun
+  _molt_apply(u3_noun            som,
               c3_w               len_w,
-              struct _molt_pair* pms_m)     //  transfer
+              struct _molt_pair* pms_m)
   {
     if ( len_w == 0 ) {
       return u3k(som);

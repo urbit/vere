@@ -1,5 +1,5 @@
 /// @file
-/// CUSTOM_REFCOUNT_FILE: implements or sits below the refcount
+/// @Refcount: custom file -- implements or sits below the refcount
 /// machinery; individual functions follow custom protocols.
 
 #include "urth.h"

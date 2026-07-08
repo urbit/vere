@@ -47,6 +47,8 @@ _quicksort(u3_noun* restrict arr_u,
 }
 
 //  RETAINS list, transfers product
+// @Refcount: retains `list`
+// @Refcount: transfers product
 //
 static u3_noun
 _sort(u3j_site* sit_u, u3_noun list)

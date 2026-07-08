@@ -1,5 +1,9 @@
 #include "noun.h"
 
+//  a sink for the block-annotation fixture below
+//
+u3_noun sink_glob;
+
 /* transfer fn that leaks its argument on one path
 */
 u3_noun
@@ -23,9 +27,10 @@ bug_double(u3_noun a)
 }
 
 /* frees a retained argument
+** @Refcount: retains `a`
 */
 u3_noun
-bug_overfree(u3_noun a)    // RETAINS a
+bug_overfree(u3_noun a)
 {
   u3z(a);                       //  BUG: freeing retained arg
   return u3_nul;
@@ -62,10 +67,91 @@ bug_ok(u3_noun a)
 }
 
 /* parks an owned product in a retained argument variable, then drops it
+** @Refcount: retains `a`
 */
 u3_noun
-bug_smuggle(u3_noun a)  //  RETAINS a
+bug_smuggle(u3_noun a)
 {
   a = u3qa_inc(a);
   return u3_nul;                //  BUG: the product parked in [a] leaks
+}
+
+/* retains its argument and returns an uncounted reference (control)
+** @Refcount: retains
+*/
+u3_noun
+ok_retain_prod(u3_noun a)
+{
+  return u3h(a);
+}
+
+/* identity function: the product is the argument itself (control)
+** @Refcount: passthrough `a`
+*/
+u3_noun
+ok_passthrough(u3_noun a)
+{
+  return a;
+}
+
+/* protocol too complex to model; body not checked despite the leak
+** @Refcount: custom
+*/
+u3_noun
+custom_unchecked(u3_noun a)
+{
+  return u3_nul;               //  would leak a, but @Refcount: custom
+}
+
+/* trusted transfer; body not checked despite the leak
+** @Refcount: assert transfers
+*/
+u3_noun
+assert_unchecked(u3_noun a)
+{
+  return u3_nul;               //  would leak a, but @Refcount: assert
+}
+
+/* bails unless `a` is a direct atom; not checked, used at a call site below
+** @Refcount: assert
+** @Refcount: direct `a`
+*/
+u3_noun
+needs_direct(u3_noun a)
+{
+  return u3_nul;
+}
+
+/* passing an owned reference to a DIRECT parameter cannot leak (control)
+*/
+u3_noun
+ok_direct_caller(u3_noun a)
+{
+  u3_noun b = needs_direct(a);  //  a refined to a direct atom here
+  u3z(b);
+  return u3_nul;
+}
+
+/* a store blessed by a block-level annotation is the intended consumption
+** @Refcount: retains `a`
+*/
+u3_noun
+ok_block(u3_noun a)
+{
+  u3_noun pro = u3k(a);
+  {  // @Refcount: assert transfer pro
+    sink_glob = pro;            //  blessed store: consumes pro
+  }
+  return u3_nul;
+}
+
+/* conflicting annotations: last write wins, but the conflict is reported
+** @Refcount: transfers
+** @Refcount: retains product
+*/
+u3_noun
+warn_conflict(u3_noun a)
+{
+  u3z(a);
+  return u3_nul;                //  BUG: conflicting @Refcount annotations
 }

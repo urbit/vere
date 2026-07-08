@@ -7,6 +7,7 @@
 
   // get p.u.q.vex from an $edge, assumes that the unit is non-empty
   //  RETAIN [vex]
+  // @Refcount: retains `vex`
   //
   static inline u3_noun
   _puq(u3_noun vex)
@@ -18,6 +19,7 @@
 
   // get q.u.q.vex from an $edge, assumes that the unit is non-empty
   //  RETAIN [vex]
+  // @Refcount: retains `vex`
   //
   static inline u3_noun
   _quq(u3_noun vex)

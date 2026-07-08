@@ -9,6 +9,7 @@
 #include "vortex.h"
 
 /* u3z_key(): construct a memo cache-key.  Arguments retained.
+** @Refcount: retains arguments
 */
 u3_noun
 u3z_key(c3_m fun, u3_noun one)
@@ -53,6 +54,7 @@ _har(u3a_road* rod_u, u3z_cid cid)
 }
 
 //  RETAINS
+// @Refcount: retains arguments
 //  on hit returns the containing road via out_u
 static u3_weak
 _find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
@@ -73,6 +75,7 @@ _find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
 }
 
 /* u3z_find(): find in memo cache.  Arguments retained.
+** @Refcount: retains arguments
 */
 u3_weak
 u3z_find(u3z_cid cid, u3_noun key)
@@ -101,6 +104,7 @@ u3z_find(u3z_cid cid, u3_noun key)
 
 /* u3z_find_up(): find in persistent memo cache,
   starting from the current road. Arguments retained
+** @Refcount: retains arguments
 */
 u3_weak
 u3z_find_up(u3_noun key)
@@ -130,6 +134,8 @@ u3z_find_m(u3z_cid cid, c3_m fun, u3_noun one)
 }
 
 /* u3z_save(): save in memo cache. TRANSFER key; RETAIN val
+** @Refcount: transfers `key`
+** @Refcount: retains `val`
 */
 u3_noun
 u3z_save(u3z_cid cid, u3_noun key, u3_noun val)
@@ -140,6 +146,7 @@ u3z_save(u3z_cid cid, u3_noun key, u3_noun val)
 }
 
 /* u3z_save_m(): save in memo cache. Arguments retained.
+** @Refcount: retains arguments
 */
 u3_noun
 u3z_save_m(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)

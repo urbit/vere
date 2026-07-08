@@ -249,6 +249,8 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
 /* u3h_put_get(): insert in caching hashtable, returning deleted key-value pair
 **
 ** `key` is RETAINED; `val` is transferred.
+** @Refcount: retains `key`
+** @Refcount: transfers `val`
 */
 u3_weak
 u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
@@ -286,6 +288,8 @@ u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
 /* u3h_put(): insert in hashtable.
 **
 ** `key` is RETAINED; `val` is transferred.
+** @Refcount: retains `key`
+** @Refcount: transfers `val`
 */
 void
 u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
@@ -422,6 +426,7 @@ _ch_some_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
 
 /* u3h_del(); delete from hashtable.
 ** `key` is RETAINED
+** @Refcount: retains `key`
 */
 void
 u3h_del(u3p(u3h_root) har_p, u3_noun key)
@@ -700,6 +705,7 @@ _ch_node_hum(u3h_node* han_u, c3_w lef_w, c3_w rem_w, c3_w mug_w)
 /* u3h_hum(): check presence in hashtable.
 **
 ** `key` is RETAINED.
+** @Refcount: retains `key`
 */
 c3_o
 u3h_hum(u3p(u3h_root) har_p, c3_w mug_w)
@@ -788,6 +794,8 @@ _ch_node_git(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun key)
 /* u3h_git(): read from hashtable.
 **
 ** `key` is RETAINED; result is RETAINED.
+** @Refcount: retains `key`
+** @Refcount: retains product
 */
 u3_weak
 u3h_git(u3p(u3h_root) har_p, u3_noun key)
@@ -822,6 +830,8 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
 /* u3h_get(): read from hashtable, incrementing refcount.
 **
 ** `key` is RETAINED; result is PRODUCED.
+** @Refcount: retains `key`
+** @Refcount: transfers product
 */
 u3_weak
 u3h_get(u3p(u3h_root) har_p, u3_noun key)
@@ -943,6 +953,7 @@ _ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* 
 
 /* u3h_walk_with(): traverse hashtable with key, value fn and data
  *                  argument; RETAINS.
+ * @Refcount: retains arguments
 */
 void
 u3h_walk_with(u3p(u3h_root) har_p,

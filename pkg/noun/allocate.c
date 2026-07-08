@@ -1,5 +1,5 @@
 /// @file
-/// CUSTOM_REFCOUNT_FILE: implements or sits below the refcount
+/// @Refcount: custom file -- implements or sits below the refcount
 /// machinery; individual functions follow custom protocols.
 
 #include "allocate.h"
@@ -466,6 +466,7 @@ _me_wash_south(u3_noun dog)
 }
 
 /* u3a_wash(): wash all lazy mugs.  RETAIN.
+** @Refcount: retains arguments
 */
 void
 u3a_wash(u3_noun som)
@@ -1565,6 +1566,7 @@ _ca_prof_mark(u3_noun som)
 }
 
 /* u3a_prof(): mark/measure/print memory profile. RETAIN.
+** @Refcount: retains arguments
 */
 u3m_quac*
 u3a_prof(FILE* fil_u, u3_noun mas)
@@ -2013,6 +2015,7 @@ _ca_detect(u3p(u3h_root) har_p, u3_noun fum, u3_noun som, c3_d axe_d)
 /* u3a_detect(): for debugging, check if (som) is referenced from (fum).
 **
 ** (som) and (fum) are both RETAINED.
+** @Refcount: retains arguments
 */
 c3_d
 u3a_detect(u3_noun fum, u3_noun som)
