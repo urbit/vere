@@ -6,8 +6,8 @@
 #include "noun.h"
 
   // get p.u.q.vex from an $edge, assumes that the unit is non-empty
-  //  RETAIN [vex]
   // @Refcount: retains `vex`
+  // @Refcount: retains product
   //
   static inline u3_noun
   _puq(u3_noun vex)
@@ -18,8 +18,8 @@
   }
 
   // get q.u.q.vex from an $edge, assumes that the unit is non-empty
-  //  RETAIN [vex]
   // @Refcount: retains `vex`
+  // @Refcount: retains product
   //
   static inline u3_noun
   _quq(u3_noun vex)
@@ -78,6 +78,7 @@
     }
   }
 
+  // @Refcount: transfer
   static u3_noun
   _last_k(u3_noun zyc, u3_noun naz)
   {
@@ -987,8 +988,10 @@
         u3x_trel(q_vex, 0, &puq_vex, &quq_vex);
 
         par_u = u3a_push(&pil_u);
-        par_u->har = u3k(p_vex);
-        par_u->res = u3k(puq_vex);
+        {  // @Refcount: assert transfer
+          par_u->har = u3k(p_vex);
+          par_u->res = u3k(puq_vex);
+        }
 
         u3z(tub);
         tub = u3k(quq_vex);

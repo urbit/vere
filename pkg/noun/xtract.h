@@ -128,6 +128,7 @@
     /** u3x_*: read, but bail with c3__exit on a crash.
     **/
       /* u3x_atom(): atom or exit.
+      ** @Refcount: passthrough `a`
       */
         inline u3_atom
         u3x_atom(u3_noun a)
@@ -136,14 +137,16 @@
         }
 
       /* u3x_good(): test for u3_none.
+      ** @Refcount: passthrough `som`
       */
         inline u3_noun
         u3x_good(u3_weak som)
         {
           return ( u3_none == som ) ? u3m_bail(c3__exit) : som;
         }
-      
+
       /* u3x_loob(): loobean or exit.
+      ** @Refcount: direct `a`
       */
         inline c3_o
         u3x_loob(u3_noun a)

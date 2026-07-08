@@ -22,7 +22,7 @@ u3qb_skim(u3_noun a, u3_noun b)
     do {
       i = u3h(a);
 
-      switch ( u3j_gate_slam(&sit_u, u3k(i)) ) {
+      switch ( u3j_gate_slam(&sit_u, u3k(i)) ) { //  @Refcount: assert construct
         case c3y: {
           *lit = u3i_defcons(&hed, &tel);
           *hed = u3k(i);

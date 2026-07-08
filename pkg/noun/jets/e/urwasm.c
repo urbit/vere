@@ -62,6 +62,7 @@
 #define KICK2(TRAP)         KICK1(KICK1(TRAP))
 
 // [a b c d e f g h]
+// @Refcount: transfers arguments
 static inline u3_noun
 uw_octo(u3_noun a,
   u3_noun b,
@@ -76,6 +77,7 @@ uw_octo(u3_noun a,
 }
 
 // kick by nock. axe RETAINED (ignore if direct)
+// @Refcount: transfers `cor`
 // @Refcount: retains `axe`
 static u3_noun
 uw_kick_nock(u3_noun cor, u3_noun axe)
@@ -85,6 +87,7 @@ uw_kick_nock(u3_noun cor, u3_noun axe)
 }
 
 // slam by nock
+// @Refcount: transfers arguments
 static u3_noun
 uw_slam_nock(u3_noun gat, u3_noun sam)
 {
@@ -117,6 +120,7 @@ static uw_arena* BoxArena;
 //
 static uw_arena* CodeArena;
 
+// @Refcount: transfers arguments
 static u3_noun
 uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
 {
@@ -160,6 +164,7 @@ uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
   return pro;
 }
 
+// @Refcount: transfers `som`
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
 {
@@ -725,6 +730,7 @@ _deterministic_trap(M3Result result)
   );
 }
 
+// @Refcount: transfers `monad`
 static u3_noun
 _reduce_monad(u3_noun monad, lia_state* sat_u)
 {
@@ -970,7 +976,9 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       u3_noun yil = u3nc(0, u3k(lia_buy));
       u3k(tel);
       u3z(sat_u->lia_shop);
-      sat_u->lia_shop = tel;
+      {  // @Refcount: assert transfer tel
+        sat_u->lia_shop = tel;
+      }
       return yil;
     }
   }
@@ -1324,7 +1332,9 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun new = u3k(u3at(arr_sam, monad));
     u3z(monad);
     u3z(sat_u->acc);
-    sat_u->acc = new;
+    {  // @Refcount: assert transfer new
+      sat_u->acc = new;
+    }
     return u3nc(0, 0);
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->get_all_glob_bat))
@@ -2043,7 +2053,9 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       {
         return u3m_bail(c3__fail);
       }
-      sat_u->queue = u3kb_weld(sat_u->queue, u3nc(u3k(p_input), u3_nul));  // snoc
+      {  // @Refcount: assert transfer
+        sat_u->queue = u3kb_weld(sat_u->queue, u3nc(u3k(p_input), u3_nul));  // snoc
+      }
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -2063,7 +2075,10 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       {
         return u3m_bail(c3__fail);
       }
-      sat_u->lia_shop = u3kb_weld(sat_u->lia_shop, u3nc(u3k(p_input), u3_nul));  // snoc
+      
+      {  // @Refcount: assert transfer
+        sat_u->lia_shop = u3kb_weld(sat_u->lia_shop, u3nc(u3k(p_input), u3_nul));  // snoc
+      }
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -2076,7 +2091,9 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
     {
       return u3m_bail(c3__fail);
     }
-    sat_u->resolution = u3nc(0, u3k(p_input));
+    {  // @Refcount: assert transfer
+      sat_u->resolution = u3nc(0, u3k(p_input));
+    }
     M3Result result = m3_Resume(run_u);
     u3_noun yil;
     if (result == m3Err_ComputationBlock)

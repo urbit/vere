@@ -74,7 +74,9 @@ _sort(u3j_site* sit_u, u3_noun list)
     //  since the list was already validated and measured
     //
     u3a_cell* cel_u = u3a_to_ptr(list);
-    arr_u[i_w] = u3k(cel_u->hed);
+    {  // @Refcount: assert transfer
+      arr_u[i_w] = u3k(cel_u->hed);
+    }
     list = cel_u->tel;
   }
 

@@ -41,13 +41,16 @@
       u3_weak u3z_find_up(u3_noun key);
 
     /* u3z_save(): save in memo cache. TRANSFER key; RETAIN val;
+    ** the product is [val] itself (gained into the cache), returned so the
+    ** caller can transfer it onward.
     ** @Refcount: transfers `key`
-    ** @Refcount: retains `val`
+    ** @Refcount: passthrough `val`
     */
       u3_noun u3z_save(u3z_cid cid, u3_noun key, u3_noun val);
 
     /* u3z_save_m(): save in memo cache. Arguments retained
     ** @Refcount: retains arguments
+    ** @Refcount: passthrough `val`
     */
       u3_noun u3z_save_m(u3z_cid cid, c3_m fun_m, u3_noun one, u3_noun val);
 

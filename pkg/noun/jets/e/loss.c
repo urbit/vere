@@ -65,8 +65,10 @@
         u3_noun  hel,
         u3_noun  hev)
   {
-    loc_u->hel = hel;
-    loc_u->lel_w = u3kb_lent(u3k(hel));
+    {  // @Refcount: assert retain hel
+      loc_u->hel = hel;
+      loc_u->lel_w = u3kb_lent(u3k(hel));
+    }
 
     //  Read hev into array.
     {
@@ -98,7 +100,9 @@
         hav = u3kdb_get(u3k(loc_u->sev), u3k(how));
         teg = u3nc(u3i_words(1, &i_w),
                    (hav == u3_none) ? u3_nul : hav);
-        loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
+        {  // @Refcount: assert transfer
+          loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
+        }
       }
     }
   }
@@ -175,7 +179,7 @@
   //  both hink(inx_w) and lonk(inx_w) are true.  lonk is false
   //  if inx_w is too high, hink is false if it is too low.
   //
-  static u3_noun
+  static c3_o
   _bink(u3_loss* loc_u,
         c3_w*    inx_w,
         c3_w     max_w,
@@ -221,11 +225,11 @@
     else {
       u3_noun i_gay = u3h(gay);
       c3_w    goy_w = u3r_word(0, i_gay);
-      u3_noun bik;
+      c3_o bik_o;
 
-      bik = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);
+      bik_o = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);
 
-      if ( c3y == bik ) {
+      if ( c3y == bik_o ) {
         _merg(loc_u, inx_w + 1, u3t(gay));
         _lune(loc_u, inx_w, goy_w);
       }

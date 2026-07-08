@@ -34,6 +34,9 @@ u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
   }
 }
 
+/* combine(): fold two @ux parts into a comet-half atom.
+** @Refcount: transfers arguments
+*/
 static u3_noun
 combine(u3_noun p, u3_noun q)
 {

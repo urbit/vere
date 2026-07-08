@@ -17,7 +17,7 @@ u3qb_weld(u3_noun a, u3_noun b)
     u3_noun* tel;
     u3_noun    i, t = a;
 
-    while ( u3_nul != t ) {
+    while ( u3_nul != t ) {  //  @Refcount: assert construct
       u3x_cell(t, &i, &t);
 
       *lit = u3i_defcons(&hed, &tel);
@@ -26,7 +26,9 @@ u3qb_weld(u3_noun a, u3_noun b)
     }
   }
 
-  *lit = u3k(b);
+  {  // @Refcount: assert transfer
+    *lit = u3k(b);
+  }
 
   return pro;
 }

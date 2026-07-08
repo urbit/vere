@@ -2111,6 +2111,7 @@ u3a_walk_fore(u3_noun    a,
 }
 
 /* u3a_string(): `a` as an on-loom c-string.
+ @Refcount: retains
 */
 c3_c*
 u3a_string(u3_atom a)

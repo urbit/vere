@@ -890,6 +890,7 @@ u3a_dash(void);
                         c3_o     (*cel_f)(u3_noun, void*));
 
         /* u3a_string(): `a` as an on-loom c-string.
+           @Refcount: retains
         */
           c3_c*
           u3a_string(u3_atom a);
