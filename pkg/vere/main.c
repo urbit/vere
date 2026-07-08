@@ -370,7 +370,7 @@ _main_getopt(c3_i argc, c3_c** argv)
 
         break;
       }
-      case 13: {
+      case 13: {  // gc-abort
         u3_Host.ops_u.gab_abort = c3y;
         u3_Host.ops_u.gab = c3y;
         break;
