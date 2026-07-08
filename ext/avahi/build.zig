@@ -18,6 +18,12 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    expat.lto = if (optimize != .Debug and !no_lto) .full else null;
     expat.linkLibC();
 
     const expat_cmake_config = b.addConfigHeader(.{
@@ -76,6 +82,7 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    dbus.lto = if (optimize != .Debug and !no_lto) .full else null;
     dbus.linkLibC();
     dbus.linkLibrary(expat);
 
@@ -525,6 +532,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    avahi.lto = if (optimize != .Debug and !no_lto) .full else null;
     avahi.linkLibC();
     avahi.linkLibrary(dbus);
 

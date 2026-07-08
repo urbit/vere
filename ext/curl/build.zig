@@ -3,10 +3,16 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const curl_c = b.dependency("curl", .{
@@ -18,6 +24,8 @@ pub fn build(b: *std.Build) void {
         .name = "curl",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    
+    curl.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     curl.linkLibC();
     curl.linkLibrary(openssl.artifact("ssl"));
