@@ -1204,7 +1204,9 @@ u3a_mark_noun(u3_noun som)
       c3_w* dog_w = u3a_to_ptr(som);
       c3_w  new_w = u3a_mark_rptr(dog_w);
 
-      if ( 0 == new_w || 0xffffffff == new_w ) {      //  see u3a_mark_ptr()
+      //  size of 0 means "already marked"; skip children
+      //
+      if ( !new_w ) {
         return siz_w;
       }
       else {
