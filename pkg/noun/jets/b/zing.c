@@ -23,7 +23,7 @@ u3qb_zing(u3_noun a)
       u3_noun* tel;
       u3_noun  i_i, t_i = i;
 
-      while ( u3_nul != t_i ) {  //  @Refcount: assert construct
+      while ( u3_nul != t_i ) {  //  @Refcount: assert transfer
         u3x_cell(t_i, &i_i, &t_i);
 
         *lit = u3i_defcons(&hed, &tel);

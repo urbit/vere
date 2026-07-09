@@ -87,10 +87,8 @@
 
     u3_noun u3_po_find_prefix(c3_y one, c3_y two, c3_y three);
     u3_noun u3_po_find_suffix(c3_y one, c3_y two, c3_y three);
-    // @Refcount: retains
-    void u3_po_to_prefix(u3_noun id, c3_y* a, c3_y* b, c3_y* c);
-    // @Refcount: retains
-    void u3_po_to_suffix(u3_noun id, c3_y* a, c3_y* b, c3_y* c);
+    void u3_po_to_prefix(u3_noun id, c3_y* a, c3_y* b, c3_y* c); // @Refcount: retains
+    void u3_po_to_suffix(u3_noun id, c3_y* a, c3_y* b, c3_y* c); // @Refcount: retains
 
   /** Tier 4.
   **/

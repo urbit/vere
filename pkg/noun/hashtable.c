@@ -423,6 +423,7 @@ _ch_node_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
 }
 
 /* _ch_some_del(): delete from node or buck
+** @Refcount: retains
 */
 static c3_o
 _ch_some_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)

@@ -97,6 +97,7 @@ _met_pair(c3_g* las_g,
   return _met_list(a_g, sep_w, b_p);
 }
 
+// @Refcount: retains arguments
 static c3_w
 _met_list(c3_g    a_g,
           c3_w  sep_w,
@@ -222,6 +223,7 @@ _fax_pair(u3i_slab* sab_u,
   return _fax_list(sab_u, a_g, sep_w, b_p);
 }
 
+// @Refcount: retains arguments
 static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,

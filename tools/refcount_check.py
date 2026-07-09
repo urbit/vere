@@ -56,15 +56,13 @@ Block-level annotations (comment immediately after an opening brace):
 
   {  // @Refcount: assert transfer [x y ...]  -- the block consumes one
                                      reference to each listed variable; with
-                                     no names, owned values stored to memory
-                                     inside the block are the consumption.
+                                     no names, any owned value stored to memory
+                                     inside the block is the intended
+                                     consumption (deferred construction).
   {  // @Refcount: assert produce x  -- after the block, x holds a counted
                                      reference owned by this function.
   {  // @Refcount: assert retain x   -- the block does not affect x's counts;
                                      suppresses checks on x inside.
-  {  // @Refcount: assert construct  -- the block builds a noun by storing
-                                     owned references into it (deferred
-                                     construction); such stores are intended.
 
 Prefix conventions (defaults, per u3.md):
 
@@ -262,13 +260,36 @@ RE_JET_DIR = re.compile(r'/jets/[a-f]/')
 ARG_SLOT_WORDS = {'argument', 'arguments', 'arg', 'args'}
 PROD_SLOT_WORDS = {'product', 'result', 'return'}
 
+# keywords that begin a clause; a comma-separated fragment that does NOT
+# start with one of these continues the previous clause (so the argument
+# list in "transfers `x`, `y`, `z`" stays a single clause)
+CLAUSE_HEADS = {'transfers', 'retains', 'transfer', 'retain',
+                'direct', 'passthrough', 'custom', 'assert'}
+
+
+def _split_commas(text):
+    """Split a clause on commas into separate clauses, unless a fragment is
+    a bare continuation (e.g. the `y`, `z` in "transfers `x`, `y`, `z`")."""
+    out = []
+    for frag in text.split(','):
+        frag = frag.strip()
+        if not frag:
+            continue
+        head = frag.split()[0].lower()
+        if head in CLAUSE_HEADS or not out:
+            out.append(frag)
+        else:
+            out[-1] = out[-1] + ', ' + frag
+    return out
+
 
 def refcount_clauses(comment):
-    """The text of each @Refcount: clause in a comment, in order."""
+    """The text of each @Refcount: clause in a comment, in order. A single
+    tag may carry several comma-separated clauses ("@Refcount: X, Y, Z")."""
     out = []
     for m in RE_REFCOUNT.finditer(comment or ''):
         c = RE_TRAIL_COMMENT.sub('', m.group(1)).strip().rstrip('*').strip()
-        out.append(c)
+        out.extend(_split_commas(c))
     return out
 
 
@@ -393,8 +414,106 @@ def prefix_sem(name, file_path, is_static):
     return Sem(TRANSFER, TRANSFER, why='default transfer')
 
 
+def _trailing_line_comment(cur):
+    """A comment on the same source line as the end of a declaration, e.g.
+    `void foo(u3_noun a);  // @Refcount: retains` (after the `;`, so it is
+    outside the cursor's own token range)."""
+    try:
+        tu = cur.translation_unit
+        end = cur.extent.end
+        fh = end.file
+        if fh is None:
+            return ''
+        a = ci.SourceLocation.from_offset(tu, fh, end.offset)
+        b = ci.SourceLocation.from_offset(tu, fh, end.offset + 200)
+        rng = ci.SourceRange.from_locations(a, b)
+        for tok in tu.get_tokens(extent=rng):
+            if tok.location.line != end.line:
+                break
+            if tok.kind == TokenKind.COMMENT:
+                return tok.spelling
+    except Exception:
+        return ''
+    return ''
+
+
+_FILE_BYTES = {}
+
+
+def _file_bytes(path):
+    if path not in _FILE_BYTES:
+        try:
+            with open(path, 'rb') as f:
+                _FILE_BYTES[path] = f.read()
+        except OSError:
+            _FILE_BYTES[path] = b''
+    return _FILE_BYTES[path]
+
+
+def _site_comment(cur):
+    """The annotation physically written at this decl/def site, read straight
+    from source via the cursor's byte offsets. Unlike clang's raw_comment
+    (which reports the definition's doc comment for the declaration too), this
+    distinguishes what is actually written at each of the .h and .c sites."""
+    loc = cur.extent.start
+    fh = loc.file
+    if fh is None:
+        return ''
+    data = _file_bytes(fh.name)
+    if not data:
+        return ''
+    head = data[:loc.offset].decode('utf-8', 'replace')
+    h = head.rstrip(' \t\r\n')
+    lead = ''
+    if h.endswith('*/'):
+        # a block comment immediately above (C comments do not nest)
+        i = h.rfind('/*')
+        if i != -1:
+            lead = h[i:]
+    else:
+        # a contiguous run of // line comments immediately above
+        out = []
+        for ln in reversed(head.splitlines()):
+            st = ln.strip()
+            if st.startswith('//'):
+                out.append(ln)
+            elif st == '' and not out:
+                continue
+            else:
+                break
+        lead = '\n'.join(reversed(out))
+    # a trailing comment on the declaration's own line (after the `;`)
+    end = cur.extent.end.offset
+    tail = data[end:end + 200].decode('utf-8', 'replace').split('\n', 1)[0]
+    mt = re.search(r'(//[^\n]*|/\*.*?\*/)', tail)
+    trail = mt.group(1) if mt else ''
+    return lead + '\n' + trail
+
+
+def _cursor_comment(cur):
+    """Comments annotating a single cursor: its doc comment, any comments in
+    the signature, and a trailing comment on the declaration's own line."""
+    texts = []
+    rc = cur.raw_comment
+    if rc:
+        texts.append(rc)
+    try:
+        for tok in cur.get_tokens():
+            if tok.kind == TokenKind.PUNCTUATION and tok.spelling == '{':
+                break
+            if tok.kind == TokenKind.COMMENT:
+                texts.append(tok.spelling)
+    except Exception:
+        pass
+    t = _trailing_line_comment(cur)
+    if t:
+        texts.append(t)
+    return texts
+
+
 def cursor_comments(cur):
-    """All comments plausibly annotating this function cursor."""
+    """All comments plausibly annotating this function (declaration and
+    definition)."""
     texts = []
     seen = set()
     try:
@@ -408,19 +527,52 @@ def cursor_comments(cur):
         if k in seen:
             continue
         seen.add(k)
-        rc = c.raw_comment
-        if rc and rc not in texts:
-            texts.append(rc)
-        # trailing comments in the signature (e.g. `u3_noun a)  //  RETAIN`)
-        try:
-            for tok in c.get_tokens():
-                if tok.kind == TokenKind.PUNCTUATION and tok.spelling == '{':
-                    break
-                if tok.kind == TokenKind.COMMENT:
-                    texts.append(tok.spelling)
-        except Exception:
-            pass
+        for t in _cursor_comment(c):
+            if t not in texts:
+                texts.append(t)
     return '\n'.join(texts)
+
+
+def _annotation_sem(name, fpath, is_static, comment, line):
+    """A Sem carrying only what a single comment's @Refcount clauses say
+    (on top of the positional default), for comparing decl vs def."""
+    sem = prefix_sem(name, fpath, is_static)
+    parse_fn_annotations(comment, sem, line)
+    return sem
+
+
+def _sem_proto_key(sem):
+    """The observable protocol of a Sem, ignoring bookkeeping fields."""
+    return (sem.default_args, tuple(sorted(sem.args.items())), sem.product,
+            sem.custom, sem.check, tuple(sorted(sem.direct_args)),
+            sem.direct_all, sem.passthrough)
+
+
+def annotation_sync_findings(cur, fpath):
+    """Report if a definition's @Refcount annotations differ from those on
+    its declaration (.h vs .c must agree). Returns [(line, message)]."""
+    decl = cur.canonical
+    if decl is None:
+        return []
+    if (decl.location.file is not None and cur.location.file is not None
+            and str(decl.location.file) == str(cur.location.file)
+            and decl.location.line == cur.location.line):
+        return []  # definition is its own sole declaration
+    name = cur.spelling
+    is_static = cur.storage_class == ci.StorageClass.STATIC
+    def_sem = _annotation_sem(name, fpath, is_static,
+                              _site_comment(cur), cur.location.line)
+    decl_sem = _annotation_sem(name, fpath, is_static,
+                               _site_comment(decl), decl.location.line)
+    if _sem_proto_key(def_sem) != _sem_proto_key(decl_sem):
+        try:
+            rel = os.path.relpath(str(decl.location.file))
+        except ValueError:
+            rel = str(decl.location.file)
+        return [(cur.location.line,
+                 f'@Refcount annotations out of sync between definition and '
+                 f'declaration at {rel}:{decl.location.line}')]
+    return []
 
 
 def resolve_sem(cur, sem_cache):
@@ -588,8 +740,7 @@ def binop(cur):
 
 RE_BLOCK_ASSERT = re.compile(
     r'@Refcount:\s*assert\s+'
-    r'(?:(transfer|produce|retain)((?:\s+[A-Za-z_]\w*)*)'
-    r'|(construct)\b)', re.IGNORECASE)
+    r'(transfer|produce|retain)((?:\s+[A-Za-z_]\w*)*)', re.IGNORECASE)
 
 
 class FileComments:
@@ -622,10 +773,7 @@ def block_asserts(compound, fcm):
     out = []
     for (_, _, text) in fcm.between(lo, hi):
         for m in RE_BLOCK_ASSERT.finditer(text):
-            if m.group(3):
-                out.append(('CONSTRUCT', []))
-            else:
-                out.append((m.group(1).upper(), m.group(2).split()))
+            out.append((m.group(1).upper(), m.group(2).split()))
     return out
 
 
@@ -813,6 +961,18 @@ class FnChecker:
         self.open_temps.append(tid)
         return tid
 
+    def discard_owned(self, cur, val):
+        """An owned call product dropped in a context that does not count
+        references (arithmetic, comparison, a non-noun sink) is leaked."""
+        if val is not None and val.temp_id is not None and val.state == OWNED:
+            self.report(cur, 'leak',
+                        'owned product discarded in a non-noun expression '
+                        '(reference is leaked)')
+            try:
+                self.open_temps.remove(val.temp_id)
+            except ValueError:
+                pass
+
     def eval_expr(self, cur, env):
         if cur is None:
             return Val(UNKNOWN)
@@ -863,8 +1023,13 @@ class FnChecker:
             if op == 'Comma':
                 self.eval_stmt_expr_result(lhs, env)
                 return self.eval_expr(rhs, env)
-            self.eval_expr(lhs, env)
-            self.eval_expr(rhs, env)
+            lv = self.eval_expr(lhs, env)
+            rv = self.eval_expr(rhs, env)
+            # an owned call product used purely in arithmetic/comparison is
+            # discarded here (its value is read, its reference dropped)
+            if op not in ('LAnd', 'LOr'):
+                self.discard_owned(cur, lv)
+                self.discard_owned(cur, rv)
             return Val(DIRECT)  # arithmetic/comparison: not a counted noun
         if k == CK.COMPOUND_ASSIGNMENT_OPERATOR:
             for c in cur.get_children():
@@ -1096,8 +1261,13 @@ class FnChecker:
                 pass_val = v
                 continue
             if not p_noun:
-                # passing &var to unknown pointer param already handled in
-                # eval_expr('&'); nothing else to do
+                # an owned call product handed to a declared non-noun
+                # parameter (e.g. u3a_malloc(u3kb_lent(..))) is leaked: its
+                # value is used, its reference dropped. (&var to a pointer
+                # param is handled in eval_expr('&'); varargs (p is None)
+                # are too ambiguous to flag.)
+                if p is not None:
+                    self.discard_owned(cur, v)
                 continue
             if sem is None or sem.custom:
                 if aname and aname in env:
@@ -1194,13 +1364,15 @@ class FnChecker:
                 self.eval_expr(kids[1], env)
                 te, fe = dict(env), dict(env)
                 if fact is not None:
-                    name, refine = fact
-                    if op == 'EQ':
-                        if refine is not None:
-                            te[name] = refine
-                    else:
-                        if refine is not None:
-                            fe[name] = refine
+                    name, eq_ref, ne_ref = fact
+                    # te is the branch where the condition is true; for EQ
+                    # that is the equal case, for NE the not-equal case
+                    true_ref, false_ref = ((eq_ref, ne_ref) if op == 'EQ'
+                                           else (ne_ref, eq_ref))
+                    if true_ref is not None:
+                        te[name] = true_ref
+                    if false_ref is not None:
+                        fe[name] = false_ref
                 return ([te], [fe])
             if op in ('LT', 'GT', 'LE', 'GE') and len(kids) == 2:
                 fact = self.bound_fact(op, kids[0], kids[1], env)
@@ -1253,8 +1425,10 @@ class FnChecker:
         return (name, on_true)
 
     def guard_fact(self, a, b, env):
-        """For a comparison a==b, return (var, refined Val for the equal
-        branch) or None."""
+        """For a comparison a==b, return (var, eq_refine, ne_refine): the Val
+        to assign var when the operands are equal / not-equal (either may be
+        None). Both branches matter: `c3n == u3a_is_cat(x)` proves x direct on
+        the NOT-equal branch (there u3a_is_cat(x) == c3y)."""
         for x, y in ((a, b), (b, a)):
             lit = int_literal_value(x)
             name = decl_ref_name(y)
@@ -1268,9 +1442,10 @@ class FnChecker:
                 if lit <= DIRECT_MAX or lit == U3_NONE:
                     old = env[name]
                     if old.state in (OWNED, BORROWED, UNKNOWN, UNINIT):
-                        return (name, Val(DIRECT))
+                        # equal to a direct literal => direct on that branch
+                        return (name, Val(DIRECT), None)
                 return None
-            # c3y/c3n == u3a_is_*(var)
+            # c3y/c3n == u3a_is_cat/dog(var)
             yc = unwrap(y)
             if (lit is not None and yc is not None
                     and yc.kind == CK.CALL_EXPR
@@ -1280,15 +1455,25 @@ class FnChecker:
                 gname = decl_ref_name(gargs[0]) if gargs else None
                 if gname and gname in env:
                     kind = GUARD_FNS[yc.referenced.spelling]
-                    truth = (lit == C3Y)
+                    if kind not in ('cat', 'dog'):
+                        return None  # is_atom/is_cell etc. don't imply direct
                     old = env[gname]
                     if old.state not in (OWNED, BORROWED, UNKNOWN):
                         return None
-                    # equal-branch refinement
-                    if kind == 'cat' and truth:
-                        return (gname, Val(DIRECT))
-                    if kind == 'dog' and not truth:
-                        return (gname, Val(DIRECT))
+                    # the guard is direct exactly when it reads c3y (cat) or
+                    # c3n (dog); the equal branch is where it reads `lit`
+                    direct_on_true = (kind == 'cat')
+                    if lit == C3Y:
+                        eq_d, ne_d = direct_on_true, not direct_on_true
+                    elif lit == C3N:
+                        eq_d, ne_d = not direct_on_true, direct_on_true
+                    else:
+                        return None
+                    eq_r = Val(DIRECT) if eq_d else None
+                    ne_r = Val(DIRECT) if ne_d else None
+                    if eq_r is None and ne_r is None:
+                        return None
+                    return (gname, eq_r, ne_r)
                 return None
         return None
 
@@ -1461,6 +1646,13 @@ class FnChecker:
             if kids:
                 v = self.eval_expr(kids[0], env)
                 root = decl_ref_name(kids[0])
+                if root is None and len(v.srcs) == 1:
+                    # the returned value came straight out of a variable
+                    # (e.g. a passthrough call `return u3z_save(.., pro)`);
+                    # that variable is what is handed back, not leaked
+                    s = next(iter(v.srcs))
+                    if s in env:
+                        root = s
                 self.check_return_val(cur, v, root, env)
                 if v.temp_id is not None:
                     try:
@@ -1568,6 +1760,12 @@ class FnChecker:
         return Flow(falls=[m] if m is not None else [])
 
     def check_return_val(self, cur, v, root, env):
+        if self.sem.passthrough is not None and (
+                root == self.sem.passthrough
+                or self.sem.passthrough in v.srcs):
+            # identity function: the product's ownership is, by definition,
+            # whatever the passed-through argument's was; nothing to check
+            return
         if self.sem.product == TRANSFER:
             if v.state == BORROWED and root not in self.frozen:
                 self.report(cur, 'return-borrowed',
@@ -1870,6 +2068,9 @@ def main():
                 tool.findings.append((fpath, wl or cur.location.line,
                                       cur.location.column, cur.spelling,
                                       'annotation', wmsg))
+            for (sl, smsg) in annotation_sync_findings(cur, fpath):
+                tool.findings.append((fpath, sl, cur.location.column,
+                                      cur.spelling, 'annotation', smsg))
             if not sem.check:
                 if args.verbose:
                     print(f'-- {cur.spelling}: trusted ({sem.why})')

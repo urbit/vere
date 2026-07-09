@@ -105,7 +105,7 @@ u3qe_leer(u3_atom txt)
 
       //  append to list
       //
-      {  //  @Refcount: assert construct
+      {  //  @Refcount: assert transfer
         *lit = u3i_defcons(&hed, &tel);
         *hed = _leer_cut(pos_w, i_w - pos_w, txt);
         lit  = tel;
