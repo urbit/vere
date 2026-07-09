@@ -68,15 +68,6 @@ combine(u3_noun p, u3_noun q)
     cur++;                                      \
   } while (0)
 
-#define CONSUME_LIST(x)  do {                   \
-    if (*cur != x) {                            \
-      u3a_free(c);                              \
-      u3z(list);                                \
-      return u3_none;                           \
-    }                                           \
-    cur++;                                      \
-  } while (0)
-
 #define TRY_GET_SYLLABLE(prefix)                                        \
   c3_c prefix##_one, prefix##_two, prefix##_three;                      \
   if (c3n == get_syllable(&cur, & prefix##_one, & prefix##_two, & prefix##_three)) { \
@@ -571,7 +562,6 @@ _parse_da(u3_noun cor, u3_noun txt) {
 
 #undef ENSURE_NOT_END
 #undef CONSUME
-#undef CONSUME_LIST
 #undef TRY_GET_SYLLABLE
 #undef PARSE_NONZERO_NUMBER
 #undef PARSE_HEX_DIGIT
