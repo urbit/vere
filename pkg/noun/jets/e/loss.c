@@ -73,6 +73,7 @@
     //  Read hev into array.
     {
       c3_w i_w;
+
       u3_noun len = u3qb_lent(hev);
       if ( c3n == u3a_is_cat(len) ) u3m_bail(c3__fail);
       loc_u->hev = u3a_malloc(len * sizeof(u3_noun));
