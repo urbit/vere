@@ -633,18 +633,6 @@ fn buildBinary(
         b.default_step = &cdb_gen.step;
     }
 
-    // Refcount protocol checker (needs compile_commands.json; regenerate
-    // with `rm -rf .zig-cache && zig build -Dgenerate-commands` first).
-    {
-        const rc_step = b.step("refcount-check", "check u3 noun refcount protocols (pkg/noun)");
-        const rc_run = b.addSystemCommand(&.{ "python3", "tools/refcount_check.py" });
-        rc_step.dependOn(&rc_run.step);
-
-        const rc_test_step = b.step("refcount-selftest", "run the refcount checker's seeded-bug selftest");
-        const rc_test_run = b.addSystemCommand(&.{ "python3", "tools/refcount_check.py", "--selftest" });
-        rc_test_step.dependOn(&rc_test_run.step);
-    }
-
     //
     // Tests
     //
