@@ -120,6 +120,15 @@ C3N = 1
 DIRECT_MAX = 0x7fffffff
 U3_NONE = 0xffffffff
 
+# cursor kinds that are expressions when they appear in statement position
+# (also: valid value-producing tails of GNU statement-expressions)
+EXPR_KINDS = (CK.CALL_EXPR, CK.BINARY_OPERATOR, CK.UNARY_OPERATOR,
+              CK.CONDITIONAL_OPERATOR, CK.COMPOUND_ASSIGNMENT_OPERATOR,
+              CK.CSTYLE_CAST_EXPR, CK.PAREN_EXPR, CK.UNEXPOSED_EXPR,
+              CK.DECL_REF_EXPR, CK.MEMBER_REF_EXPR,
+              CK.ARRAY_SUBSCRIPT_EXPR, CK.INTEGER_LITERAL,
+              CK.CHARACTER_LITERAL)
+
 # ---------------------------------------------------------------------------
 # value / environment model
 
@@ -601,10 +610,18 @@ def resolve_sem(cur, sem_cache):
 # ---------------------------------------------------------------------------
 # helpers over cursors
 
+_WRAP_KINDS = {CK.PAREN_EXPR, CK.CSTYLE_CAST_EXPR, CK.UNEXPOSED_EXPR}
+# newer libclang/bindings expose GNU statement-expressions as their own
+# kind instead of UNEXPOSED_EXPR; strip it too (its child is the compound)
+for _name in ('StmtExpr', 'STMT_EXPR'):
+    _k = getattr(CK, _name, None)
+    if _k is not None:
+        _WRAP_KINDS.add(_k)
+
+
 def unwrap(cur):
-    """Strip parens and casts."""
-    while cur is not None and cur.kind in (
-            CK.PAREN_EXPR, CK.CSTYLE_CAST_EXPR, CK.UNEXPOSED_EXPR):
+    """Strip parens, casts, and statement-expression wrappers."""
+    while cur is not None and cur.kind in _WRAP_KINDS:
         kids = list(cur.get_children())
         if not kids:
             return cur
@@ -795,6 +812,9 @@ class FnChecker:
         self.reported = set()    # dedup (line, cat, var)
         self.param_modes = {}    # name -> TRANSFER|RETAIN
         self.noun_params = []
+        self.goto_envs = {}      # label -> [envs parked by forward gotos]
+        self.label_pos = {}      # label name -> source offset (for the
+                                 # forward/backward distinction)
 
     # -- reporting
 
@@ -827,11 +847,25 @@ class FnChecker:
                 env[p.spelling] = (Val(OWNED) if mode == TRANSFER
                                    else Val(BORROWED,
                                             frozenset([p.spelling])))
+        def index_labels(c):
+            if c.kind == CK.LABEL_STMT:
+                self.label_pos[c.spelling] = c.extent.start.offset
+            for ch in c.get_children():
+                index_labels(ch)
+        index_labels(body)
         try:
             flow = self.exec_stmt(body, [env])
             for e in flow.falls:
                 self.check_exit(e, body, returned_root=None,
                                 loc_cur=None)
+            if self.goto_envs:
+                # forward gotos whose label the walker never reached
+                # (e.g. a label nested in a branch entered another way)
+                self.report(self.fn, 'skipped',
+                            f'goto target(s) '
+                            f'{", ".join(sorted(self.goto_envs))} never '
+                            f'reached by the walker; those paths are '
+                            f'unanalyzed')
         except SkipFunction as sk:
             self.report(self.fn, 'skipped',
                         f'not analyzed ({sk.reason}); '
@@ -1061,10 +1095,30 @@ class FnChecker:
                 self.eval_expr(c, env)
             return Val(UNKNOWN)
         if k == CK.COMPOUND_STMT:
-            flow = self.exec_stmt(cur, [env])
-            merged = merge_env(flow.falls) or env
+            # GNU statement-expression: execute the prefix statements,
+            # then the value is the last expression's value (this is what
+            # sees through c3_min/c3_max-style macros)
+            kids = list(cur.get_children())
+            flow = Flow(falls=[env])
+            for child in kids[:-1]:
+                if not flow.falls and not self.goto_envs:
+                    break
+                nxt = self.exec_stmt(child, flow.falls)
+                flow = Flow(nxt.falls, flow.brks + nxt.brks,
+                            flow.conts + nxt.conts)
+            merged = merge_env(flow.falls)
+            if merged is None:
+                return Val(UNKNOWN)
             env.clear()
             env.update(merged)
+            if kids and kids[-1].kind in EXPR_KINDS:
+                return self.eval_expr(kids[-1], env)
+            if kids:
+                f2 = self.exec_stmt(kids[-1], [env])
+                m2 = merge_env(f2.falls)
+                if m2 is not None:
+                    env.clear()
+                    env.update(m2)
             return Val(UNKNOWN)
         if k == CK.INIT_LIST_EXPR:
             for c in cur.get_children():
@@ -1375,12 +1429,11 @@ class FnChecker:
                         fe[name] = false_ref
                 return ([te], [fe])
             if op in ('LT', 'GT', 'LE', 'GE') and len(kids) == 2:
-                fact = self.bound_fact(op, kids[0], kids[1], env)
+                facts = self.bound_fact(op, kids[0], kids[1], env)
                 self.eval_expr(kids[0], env)
                 self.eval_expr(kids[1], env)
                 te, fe = dict(env), dict(env)
-                if fact is not None:
-                    name, on_true = fact
+                for name, on_true in facts:
                     (te if on_true else fe)[name] = Val(DIRECT)
                 return ([te], [fe])
         # bare truthiness of a noun variable: false branch implies 0,
@@ -1397,32 +1450,52 @@ class FnChecker:
         return ([dict(env)], [dict(env)])
 
     def bound_fact(self, op, a, b, env):
-        """For a relational comparison, return (var, branch) where the
-        variable is provably a direct atom (bounded below 2^31) on that
-        branch (True = comparison-true branch), or None."""
+        """For a relational comparison, return a list of (var, branch)
+        refinements: the variable is provably a direct atom (bounded
+        below 2^31) on that branch (True = comparison-true branch)."""
         name_a, lit_b = decl_ref_name(a), int_literal_value(b)
         lit_a, name_b = int_literal_value(a), decl_ref_name(b)
+
+        def refinable(n):
+            return n in env and env[n].state in (OWNED, BORROWED,
+                                                 UNKNOWN, UNINIT)
+
+        def is_direct(n):
+            return n in env and env[n].state == DIRECT
+
         if name_a and lit_b is not None:
-            name, lit = name_a, lit_b
             # var < lit (true), var <= lit (true),
             # var > lit (false), var >= lit (false)
             on_true = op in ('LT', 'LE')
             bound_incl = op in ('LE', 'GT')       # bound is <= lit
-        elif name_b and lit_a is not None:
-            name, lit = name_b, lit_a
+            limit = DIRECT_MAX if bound_incl else DIRECT_MAX + 1
+            if lit_b <= limit and refinable(name_a):
+                return [(name_a, on_true)]
+            return []
+        if name_b and lit_a is not None:
             # lit > var (true), lit >= var (true),
             # lit < var (false), lit <= var (false)
             on_true = op in ('GT', 'GE')
             bound_incl = op in ('GE', 'LT')
-        else:
-            return None
-        limit = DIRECT_MAX if bound_incl else DIRECT_MAX + 1
-        if lit > limit:
-            return None
-        if name not in env or env[name].state not in (OWNED, BORROWED,
-                                                      UNKNOWN, UNINIT):
-            return None
-        return (name, on_true)
+            limit = DIRECT_MAX if bound_incl else DIRECT_MAX + 1
+            if lit_a <= limit and refinable(name_b):
+                return [(name_b, on_true)]
+            return []
+        if name_a and name_b:
+            # var-vs-var: on the branch where x <= y, a direct y bounds
+            # x below 2^31 (this is what verifies the c3_min pattern:
+            # `(_x < _y) ? _x : _y` with one operand proven direct)
+            if op in ('LT', 'LE'):
+                small_t, big_t = name_a, name_b   # true: a bounded by b
+            else:
+                small_t, big_t = name_b, name_a   # a > b: true: b <= a
+            facts = []
+            if is_direct(big_t) and refinable(small_t):
+                facts.append((small_t, True))
+            if is_direct(small_t) and refinable(big_t):
+                facts.append((big_t, False))
+            return facts
+        return []
 
     def guard_fact(self, a, b, env):
         """For a comparison a==b, return (var, eq_refine, ne_refine): the Val
@@ -1508,6 +1581,19 @@ class FnChecker:
 
     def exec_stmt(self, cur, envs):
         """Execute statement over each env; returns Flow."""
+        if cur.kind == CK.LABEL_STMT:
+            # a label is a join point: fall-through paths meet the paths
+            # parked by forward gotos targeting it (handled here rather
+            # than exec_one so it fires even with zero incoming envs)
+            parked = self.goto_envs.pop(cur.spelling, [])
+            m = merge_env(list(envs) + parked)
+            if m is None:
+                return Flow()
+            kids = list(cur.get_children())
+            sub = kids[-1] if kids else None
+            if sub is None:
+                return Flow(falls=[m])
+            return self.exec_stmt(sub, [m])
         out = Flow()
         for env in envs:
             try:
@@ -1519,42 +1605,55 @@ class FnChecker:
                 pass
         return out
 
+    def _assert_enter(self, compound, env):
+        """Begin a block-assert scope for a compound statement: freeze the
+        named variables (snapshotting their states) and raise the depth
+        that blesses owned stores."""
+        asserts = block_asserts(compound, self.fcm)
+        frozen_here = []
+        snapshots = {}
+        for mode, names in asserts:
+            for n in names:
+                if n not in self.frozen:
+                    frozen_here.append(n)
+                    self.frozen.add(n)
+                snapshots[n] = env.get(n)
+        if asserts:
+            self.assert_depth += 1
+        return (asserts, frozen_here, snapshots)
+
+    def _assert_exit(self, ctx, envs):
+        """End a block-assert scope: unfreeze and apply the declared
+        effects to every surviving environment."""
+        asserts, frozen_here, snapshots = ctx
+        if asserts:
+            self.assert_depth -= 1
+        for n in frozen_here:
+            self.frozen.discard(n)
+        for mode, names in asserts:
+            for n in names:
+                for e in envs:
+                    if mode == 'TRANSFER':
+                        e[n] = Val(CONSUMED)
+                    elif mode == 'PRODUCE':
+                        e[n] = Val(OWNED)
+                    elif mode == 'RETAIN':
+                        if snapshots.get(n) is not None:
+                            e[n] = snapshots[n]
+
     def exec_one(self, cur, env):
         k = cur.kind
 
         if k == CK.COMPOUND_STMT:
-            asserts = block_asserts(cur, self.fcm)
-            frozen_here = []
-            snapshots = {}
-            for mode, names in asserts:
-                for n in names:
-                    if n not in self.frozen:
-                        frozen_here.append(n)
-                        self.frozen.add(n)
-                    snapshots[n] = env.get(n)
-            if asserts:
-                self.assert_depth += 1
+            ctx = self._assert_enter(cur, env)
             flow = Flow(falls=[env])
             for child in cur.get_children():
-                if not flow.falls:
-                    break
+                if not flow.falls and not self.goto_envs:
+                    break  # all paths ended and no goto can resurrect one
                 nxt = self.exec_stmt(child, flow.falls)
                 flow = Flow(nxt.falls, flow.brks + nxt.brks,
                             flow.conts + nxt.conts)
-            if asserts:
-                self.assert_depth -= 1
-            for n in frozen_here:
-                self.frozen.discard(n)
-            for mode, names in asserts:
-                for n in names:
-                    for e in flow.falls:
-                        if mode == 'TRANSFER':
-                            e[n] = Val(CONSUMED)
-                        elif mode == 'PRODUCE':
-                            e[n] = Val(OWNED)
-                        elif mode == 'RETAIN':
-                            if snapshots.get(n) is not None:
-                                e[n] = snapshots[n]
+            self._assert_exit(ctx, flow.falls + flow.brks)
             return flow
 
         if k == CK.DECL_STMT:
@@ -1568,7 +1667,15 @@ class FnChecker:
                     self.bind_init_list(d, init, env)
                 elif init is not None and init.kind != CK.TYPE_REF:
                     v = self.eval_expr(init, env)
-                    if is_noun_type(d.type):
+                    # noun-spelled decls always track; other locals track
+                    # when the initializer value is interesting (owned
+                    # products in c3_w, `typeof(a) _x = a` in c3_min-style
+                    # macros loading from tracked variables)
+                    track = (is_noun_type(d.type)
+                             or v.state in (OWNED, BORROWED, CONSUMED,
+                                            POISONED)
+                             or (v.state == DIRECT and v.srcs))
+                    if track:
                         if v.temp_id is not None:
                             try:
                                 self.open_temps.remove(v.temp_id)
@@ -1618,20 +1725,43 @@ class FnChecker:
                 self.eval_expr(kids[0], env)
             if body is None:
                 return Flow(falls=[env])
-            f = self.exec_stmt(body, [dict(env)])
-            # cases without break fall out; the switch may also match
-            # nothing -- unless it has a default case
-            def has_default(c):
+            # per-arm forking: execution may enter at every case/default
+            # label with the switch-entry state, in addition to falling
+            # through from the previous arm. Without the per-label seed,
+            # an early-terminating arm (default: return u3m_bail(..)
+            # listed first) would starve every later arm and kill all
+            # code after the switch.
+            entry = dict(env)
+            ctx = self._assert_enter(body, env)  # asserts on the body brace
+            flow = Flow()
+            has_default = False
+            for child in body.get_children():
+                if child.kind in (CK.CASE_STMT, CK.DEFAULT_STMT):
+                    if child.kind == CK.DEFAULT_STMT:
+                        has_default = True
+                    flow.falls.append(dict(entry))
+                if not flow.falls and not self.goto_envs:
+                    continue  # dead zone between arms; keep scanning
+                nxt = self.exec_stmt(child, flow.falls)
+                flow = Flow(nxt.falls, flow.brks + nxt.brks,
+                            flow.conts + nxt.conts)
+            self._assert_exit(ctx, flow.falls + flow.brks)
+            # nested default labels (inside stacked cases) still count
+            def find_default(c):
                 if c.kind == CK.DEFAULT_STMT:
                     return True
                 if c.kind == CK.SWITCH_STMT:
                     return False  # a nested switch's default is its own
-                return any(has_default(ch) for ch in c.get_children())
-            skip = [] if any(has_default(ch) for ch in body.get_children()) \
-                else [env]
-            m = merge_env(f.falls + f.brks + skip)
+                return any(find_default(ch) for ch in c.get_children())
+            if not has_default:
+                has_default = any(find_default(ch)
+                                  for ch in body.get_children())
+            # the switch may also match nothing -- unless there is a
+            # default case
+            skip = [] if has_default else [entry]
+            m = merge_env(flow.falls + flow.brks + skip)
             return Flow(falls=[m] if m is not None else [],
-                        conts=f.conts)
+                        conts=flow.conts)
 
         if k in (CK.CASE_STMT, CK.DEFAULT_STMT):
             kids = list(cur.get_children())
@@ -1666,26 +1796,40 @@ class FnChecker:
             return Flow(brks=[env])
         if k == CK.CONTINUE_STMT:
             return Flow(conts=[env])
-        if k in (CK.GOTO_STMT, CK.INDIRECT_GOTO_STMT, CK.LABEL_STMT):
-            raise SkipFunction('uses goto/labels')
+        if k == CK.GOTO_STMT:
+            kids = list(cur.get_children())
+            target = (kids[0].spelling
+                      if kids and kids[0].kind == CK.LABEL_REF else None)
+            tpos = self.label_pos.get(target)
+            if target is None or tpos is None:
+                raise SkipFunction('unresolvable goto')
+            if tpos <= cur.extent.start.offset:
+                # jumping to an earlier label forms a loop the walker
+                # cannot model
+                raise SkipFunction('backward goto (loop)')
+            # forward goto: park this path; it resumes at the label
+            bucket = self.goto_envs.get(target, [])
+            m = merge_env(bucket + [env])
+            self.goto_envs[target] = [m] if m is not None else []
+            return Flow()
+        if k == CK.INDIRECT_GOTO_STMT:
+            raise SkipFunction('computed goto')
+        if k == CK.LABEL_STMT:
+            return self.exec_stmt(cur, [env])  # handled in exec_stmt
         if k == CK.NULL_STMT:
             return Flow(falls=[env])
         if k == CK.ASM_STMT:
             return Flow(falls=[env])
 
         # expression statement or anything else expression-like
-        if k in (CK.CALL_EXPR, CK.BINARY_OPERATOR, CK.UNARY_OPERATOR,
-                 CK.CONDITIONAL_OPERATOR, CK.COMPOUND_ASSIGNMENT_OPERATOR,
-                 CK.CSTYLE_CAST_EXPR, CK.PAREN_EXPR, CK.UNEXPOSED_EXPR,
-                 CK.DECL_REF_EXPR, CK.MEMBER_REF_EXPR,
-                 CK.ARRAY_SUBSCRIPT_EXPR, CK.INTEGER_LITERAL):
+        if k in EXPR_KINDS:
             self.eval_stmt_expr_result(cur, env)
             return Flow(falls=[env])
 
         # unknown statement kind: recurse conservatively
         flow = Flow(falls=[env])
         for child in cur.get_children():
-            if not flow.falls:
+            if not flow.falls and not self.goto_envs:
                 break
             nxt = self.exec_stmt(child, flow.falls)
             flow = Flow(nxt.falls, flow.brks + nxt.brks,
@@ -2102,10 +2246,13 @@ def main():
             ('bug_borrow', 'use-after-free'),
             ('bug_smuggle', 'leak'),
             ('warn_conflict', 'annotation'),
+            ('bug_switch_tail', 'leak'),
+            ('skip_back_goto', 'skipped'),
         }
         clean_fns = {
             'bug_ok', 'ok_retain_prod', 'ok_passthrough', 'custom_unchecked',
             'assert_unchecked', 'needs_direct', 'ok_direct_caller', 'ok_block',
+            'ok_fwd_goto', 'ok_min_shape',
         }
         got = {(fn, cat) for (_, _, _, fn, cat, _) in tool.findings}
         found_fns = {fn for (_, _, _, fn, _, _) in tool.findings}

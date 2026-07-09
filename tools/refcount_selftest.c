@@ -155,3 +155,63 @@ warn_conflict(u3_noun a)
   u3z(a);
   return u3_nul;                //  BUG: conflicting @Refcount annotations
 }
+
+/* forward goto to a cleanup label: fully analyzable, no findings
+*/
+u3_noun
+ok_fwd_goto(u3_noun a)
+{
+  u3_noun pro = u3qa_inc(a);
+  if ( 0 == u3h(a) ) {
+    goto end;
+  }
+  u3z(pro);
+  pro = u3_nul;
+  end:
+  u3z(a);
+  return pro;
+}
+
+/* backward goto forms a loop the walker cannot model: skipped
+*/
+u3_noun
+skip_back_goto(u3_noun a)
+{
+  again:
+  if ( 0 == u3h(a) ) {
+    goto again;
+  }
+  u3z(a);
+  return u3_nul;
+}
+
+/* an early-terminating first arm must not starve later arms or the
+** code after the switch (the fl.c shape)
+*/
+u3_noun
+bug_switch_tail(u3_noun a, c3_m tag_m)
+{
+  u3_noun pro = u3qa_inc(a);
+  switch ( tag_m ) {
+    default:
+      u3z(pro); u3z(a);
+      return u3m_bail(c3__exit);
+    case c3__fl:
+      break;
+  }
+  u3z(a);
+  return u3_nul;              //  BUG: pro leaked after the switch
+}
+
+/* c3_min-style statement-expression with a one-sided directness guard:
+** the word-min of {>=1 direct} is direct, provable via var-vs-var bounds
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_min_shape(u3_noun a, u3_noun b)
+{
+  if ( _(u3a_is_cat(a)) || _(u3a_is_cat(b)) ) {
+    return c3_min(a, b);
+  }
+  return u3k(a);
+}

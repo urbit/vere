@@ -73,6 +73,8 @@ _json_get_string_as_atom(json_stream *sam_u) {
           u3i_bytes(len_i - 1, (const c3_y *)str_c);
 }
 
+//  @Refcount: assert, retains `txt`, transfers product
+//  (not analyzable due to pdjson invariants not being observable?)
 static u3_noun
 _parse(u3_atom txt)
 {

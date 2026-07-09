@@ -32,6 +32,7 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //  Calculate input and output size.
   //
   c3_w num_blox_w = u3qb_lent(blox);
+  if ( c3n == u3a_is_cat(num_blox_w) ) return u3m_bail(c3__fail);
   //  guard against 32-bit overflow of the bit count: num_blox_w * bits can
   //  wrap, undersizing the slab before the FLUSH loop writes the full count.
   //
