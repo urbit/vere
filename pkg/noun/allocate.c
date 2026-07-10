@@ -240,8 +240,10 @@ u3a_walloc(c3_w len_w)
 /* u3a_wealloc(): realloc in words.
 */
 void*
-u3a_wealloc(void* lag_v, c3_w len_w)
+u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 {
+  (void)old_w;
+
   if ( !lag_v ) {
     return u3a_walloc(len_w);
   }
@@ -292,14 +294,15 @@ u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w)
 /* u3a_calloc(): allocate and zero-initialize array
 */
 void*
-u3a_calloc(size_t num_i, size_t len_i)
+u3a_calloc(c3_z num_z, c3_z len_z)
 {
-  size_t byt_i = num_i * len_i;
-  c3_w* out_w;
+  c3_z   byt_z = num_z * len_z;
+  c3_w *out_w;
 
-  u3_assert(byt_i / len_i == num_i);
-  out_w = u3a_malloc(byt_i);
-  memset(out_w, 0, byt_i);
+  if ( num_z != (byt_z / len_z) ) return (u3m_bail(c3__fail), (void*)0);
+
+  out_w = u3a_malloc(byt_z);
+  memset(out_w, 0, byt_z);
 
   return out_w;
 }
@@ -311,9 +314,39 @@ u3a_calloc(size_t num_i, size_t len_i)
 
 */
 void*
-u3a_malloc(size_t len_i)
+u3a_malloc(c3_z len_z)
 {
-  return u3a_walloc((len_i + 3) >> 2);
+  c3_z wor_z = (len_z + 3) >> 2;
+  if ( wor_z > UINT32_MAX ) return (u3m_bail(c3__fail), (void*)0);
+  return u3a_walloc((c3_w)wor_z);
+}
+
+/* u3a_realloc(): aligned realloc in bytes.
+*/
+void*
+u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z)
+{
+  if ( !lag_v ) {
+    (void)old_z;
+    return u3a_malloc(len_z);
+  }
+
+  c3_z wol_z = (old_z + 3) >> 2;
+  c3_z wen_z = (len_z + 3) >> 2;
+
+  if ( (wol_z > UINT32_MAX) || (wen_z > UINT32_MAX) ) {
+    return (u3m_bail(c3__fail), (void*)0);
+  }
+
+  return u3a_wealloc(lag_v, (c3_w)wol_z, (c3_w)wen_z);
+}
+
+/* u3a_free(): free for aligned malloc.
+*/
+void
+u3a_free(void* tox_v)
+{
+  u3a_wfree((c3_w*)tox_v);
 }
 
 /* u3a_celloc(): allocate a cell.
@@ -362,26 +395,6 @@ u3a_cfree(c3_w* cel_w)
   }
 
   u3a_wfree(cel_w);
-}
-
-/* u3a_realloc(): aligned realloc in bytes.
-*/
-void*
-u3a_realloc(void* lag_v, size_t len_i)
-{
-  if ( !lag_v ) {
-    return u3a_malloc(len_i);
-  }
-
-  return u3a_wealloc(lag_v, (len_i + 3) >> 2);
-}
-
-/* u3a_free(): free for aligned malloc.
-*/
-void
-u3a_free(void* tox_v)
-{
-  u3a_wfree((c3_w*)tox_v);
 }
 
 /* _me_wash_north(): clean up mug slots after copy.
