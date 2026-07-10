@@ -24,7 +24,6 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
-            "src/softblas_state.c",
             "src/blas/level1/sasum.c",
             "src/blas/level1/dasum.c",
             "src/blas/level1/hasum.c",
