@@ -37,6 +37,9 @@ static u3_atom
 _copy_atom(u3_atom old)
 {
   u3a_v4_atom *old_u = u3a_v4_to_ptr(old);
+
+  u3_assert( old_u->len_w <= u3C.wor_i );
+
   c3_w        *nov_w = u3a_v5_walloc(old_u->len_w + c3_wiseof(u3a_v5_atom));
   u3a_v5_atom *vat_u = (void *)nov_w;
 
