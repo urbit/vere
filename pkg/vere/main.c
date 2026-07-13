@@ -370,7 +370,7 @@ _main_getopt(c3_i argc, c3_c** argv)
 
         break;
       }
-      case 13: {
+      case 13: {  // gc-abort
         u3_Host.ops_u.gab_abort = c3y;
         u3_Host.ops_u.gab = c3y;
         break;
@@ -3072,7 +3072,9 @@ _cw_work(c3_i argc, c3_c* argv[])
 
     //  replay if necessary
     //
-    u3_mars_play(&mar_u, eve_d, 0); // XX sap_d from args?
+    if ( !(u3C.wag_w & u3o_dryrun) ) {
+      u3_mars_play(&mar_u, eve_d, 0); // XX sap_d from args?
+    }
     u3_mars_work(&mar_u);
 
     //  set up stdio read/write callbacks

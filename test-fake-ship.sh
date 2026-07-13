@@ -1,37 +1,71 @@
 #!/bin/bash
 
-set -x
+set -xeuo pipefail
 
 urbit_binary=$GITHUB_WORKSPACE/$URBIT_BINARY
 
-$urbit_binary --lite-boot --daemon --gc-abort ./pier 2> urbit-output
-
-port=$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $1}')
-
-lensd() {
-  curl -s                                                              \
-    --data "{\"source\":{\"dojo\":\"$1\"},\"sink\":{\"stdout\":null}}" \
-    "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
-}
-
-lensa() {
-  curl -s                                                             \
-    --data "{\"source\":{\"dojo\":\"$2\"},\"sink\":{\"app\":\"$1\"}}" \
-    "http://localhost:$port" | xargs printf %s | sed 's/\\n/\n/g'
-}
-
+#  stream all runtime output to the log as it accrues
+#
+#  NB: the runtime must not inherit the CI log pipe on stdout: it puts
+#  the (shared) pipe in non-blocking mode, causing spurious write
+#  errors in subsequent commands
+#
+touch urbit-output
 tail -F urbit-output >&2 &
-
 tailproc=$!
 
 cleanup () {
   kill $(cat ./pier/.vere.lock) || true
-  kill "$tailproc" 2>/dev/null || true
 
-  set +x
+  #  give tail a moment to flush before killing it
+  #
+  sleep 1
+  kill "$tailproc" 2>/dev/null || true
 }
 
 trap cleanup EXIT
+
+if ! $urbit_binary --lite-boot --daemon --gc-abort ./pier >> urbit-output 2>&1; then
+  echo "ERROR: failed to boot fake ship" >&2
+  exit 1
+fi
+
+port=$(grep loopback ./pier/.http.ports | awk -F ' ' '{print $1}')
+pierpid=$(cat ./pier/.vere.lock)
+
+#  fail immediately if the urbit process is no longer running
+#
+check_ship() {
+  if ! kill -0 "$pierpid" 2>/dev/null; then
+    echo "ERROR: urbit process exited unexpectedly" >&2
+    exit 1
+  fi
+}
+
+#  NB: xargs chokes on quotes in the response; tolerate that (|| true),
+#  failing the pipeline only if curl itself fails
+#
+lensd() {
+  check_ship
+  curl -s                                                              \
+    --data "{\"source\":{\"dojo\":\"$1\"},\"sink\":{\"stdout\":null}}" \
+    "http://localhost:$port" | { xargs printf %s | sed 's/\\n/\n/g' || true; } || {
+      check_ship
+      echo "ERROR: lens request failed" >&2
+      exit 1
+    }
+}
+
+lensa() {
+  check_ship
+  curl -s                                                             \
+    --data "{\"source\":{\"dojo\":\"$2\"},\"sink\":{\"app\":\"$1\"}}" \
+    "http://localhost:$port" | { xargs printf %s | sed 's/\\n/\n/g' || true; } || {
+      check_ship
+      echo "ERROR: lens request failed" >&2
+      exit 1
+    }
+}
 
 #  print the arvo version
 #
@@ -151,7 +185,7 @@ hdr () {
 
 for f in $(find "$OUTDIR" -type f); do
   hdr "$(basename $f)"
-  cat "$f"
+  cat "$f" || true
 done
 
 fail=0
@@ -164,9 +198,20 @@ for f in $(find "$OUTDIR" -type f); do
 
     echo "ERROR Test failure in $(basename $f)"
 
-    ((fail++))
+    fail=$((fail+1))
   fi
 done
+
+#  scan the full runtime output for fatal errors, which indicate a crash
+#  even if every test that managed to run reported success
+#
+if egrep "(unexpectedly shut down|serf error:|work exit: status|Assertion ')" urbit-output >/dev/null; then
+  hdr "Runtime Crash"
+
+  echo "ERROR fatal runtime error in urbit-output"
+
+  fail=$((fail+1))
+fi
 
 if [[ $fail -eq 0 ]]; then
   hdr "Success"

@@ -40,6 +40,9 @@ static c3_y are_y[524288];
 
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
 
+#define PEEK_QUEUE_MAX       40
+#define POKE_QUEUE_MAX       30
+
 // logging and debug symbols
 #define MESA_SYM_DESC(SYM) MESA_DESC_ ## SYM
 #define MESA_SYM_FIELD(SYM) MESA_FIELD_ ## SYM
@@ -1137,6 +1140,27 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
     return;
   }
 
+  //  SECURITY (C2): req_u->dat_y was allocated once, sized by the *first*
+  //  page's tob_d assuming boq 13 (1024-byte fragments). Requests are keyed
+  //  only on the path, so every later fragment maps to the same req_u while
+  //  carrying its own attacker-controlled tob_d/boq_y/fra_d/len_w. Validate
+  //  this fragment against the established request before the memcpy, or an
+  //  attacker writes len_w bytes at an arbitrary offset (wild heap write).
+  //  Done before the duplicate check so an out-of-range fra_d never indexes
+  //  the bitset / per-fragment arrays. The boq/fra checks short-circuit so
+  //  the final term sees boq 13 (off_d = 1024 * fra_d, fra_d < tof_d).
+  //
+  if (  (dat_u->tob_d != req_u->tob_d)   //  must match the message we sized for
+     || (13 != nam_u->boq_y)             //  buffer assumes boq 13 (1024-byte leaves)
+     || (nam_u->fra_d >= req_u->tof_d)   //  fragment index within the message
+     || (dat_u->len_w > (req_u->tob_d - ((c3_d)1024 * nam_u->fra_d))) ) //  fits in buffer
+  {
+    MESA_LOG(sam_u, STRANGE);
+    return;
+  }
+
+  c3_w siz_w = (1 << (nam_u->boq_y - 3));
+
   // received duplicate
   if ( c3y == bitset_has(&req_u->was_u, nam_u->fra_d) ) {
     return;
@@ -1144,7 +1168,6 @@ _mesa_req_pact_done(u3_pend_req*  req_u,
 
   lss_pair* par_u = NULL;
 
-  c3_w siz_w = (1 << (nam_u->boq_y - 3));
   memcpy(req_u->dat_y + (siz_w * nam_u->fra_d), dat_u->fra_y, dat_u->len_w);
 
   if ( dat_u->aut_u.typ_e == AUTH_PAIR ) {
@@ -1436,13 +1459,13 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
       dat_u->len_w = len_w;
     }
     {
-      res_u->ret_y = 9;
+      res_u->ret_y = 2;
       uv_timer_init(u3L, &res_u->tim_u);
     }
     _mesa_put_request(sam_u, nam_u, (u3_pend_req*)CTAG_WAIT);
     res_u->tim_u.data = res_u;
 
-    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &sam_u->are_u);
+    u3_pit_addr* las_u = _mesa_lanes_to_addrs(las, &res_u->are_u);
     _mesa_send_bufs(sam_u, NULL, buf_y, len_w, las_u);
     uv_timer_start(&res_u->tim_u, _mesa_resend_timer_cb, 1000, 0);
   }
@@ -1808,6 +1831,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       u3l_log("mesa: jumbo frame parse failure: %s", err_c);
       arena_free(&han_u->are_u);
       u3z(res);
+      c3_free(jumbo_y);
       return;
     }
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
@@ -1923,7 +1947,7 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
     // both atoms guaranteed to be cats, bc we don't call unless forwarding
     per_u->ful_o = c3y;
     per_u->imp_y = gal;
-    u3_noun sal = u3k(u3t(las));
+    u3_noun sal = u3t(las);
     u3_noun lan;
     while ( sal != u3_nul ) {
       u3x_cell(sal, &lan, &sal);
@@ -1935,7 +1959,6 @@ _forward_lanes_cb(void* vod_p, u3_noun nun)
         per_u->dan_u = lan_u;
       }
     }
-    u3z(sal);
     _mesa_put_peer(per_u->sam_u, per_u->her_u, per_u);
   }
 
@@ -2059,6 +2082,11 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   c3_w pof_w = lss_proof_size(tof_d);
   c3_w pairs_w = c3_bits_word(pof_w);
   c3_d pek_d = dat_u->tob_d;
+
+  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
+    return; // TODO: handle like other auth failures
+  }
+
   arena are_u = arena_create(5*dat_u->tob_d);
   u3_pend_req* req_u = new(&are_u, u3_pend_req, 1);
   req_u->are_u = are_u;
@@ -2074,6 +2102,7 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   uv_timer_init(u3L, &req_u->tim_u);
 
   u3_assert( pac_u->pag_u.nam_u.boq_y == 13 );
+
   req_u->gag_u = gag_u;
   req_u->tob_d = dat_u->tob_d;
   req_u->out_d = 0;
@@ -2095,9 +2124,6 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
   req_u->ack_d = 0;
 
   lss_hash* pof_u = new(&req_u->are_u, lss_hash, pof_w);
-  if ( dat_u->len_w != pof_w*sizeof(lss_hash) ) {
-    return; // TODO: handle like other auth failures
-  }
   for ( int i = 0; i < pof_w; i++ ) {
     memcpy(pof_u[i], dat_u->fra_y + (i * sizeof(lss_hash)), sizeof(lss_hash));
   }
@@ -2178,9 +2204,13 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
     per_u->her_u[1] = pac_u->pek_u.nam_u.her_u[1];
 
     _get_peer_lanes(sam_u, per_u); // forward-lanes
+    _mesa_put_peer(sam_u, per_u->her_u, per_u);
+
     return;
   }
-  if ( c3y == sam_u->for_o && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
+  if ( c3y == sam_u->for_o
+       && c3y == per_u->ful_o
+       && sam_u->pir_u->who_d[0] == per_u->imp_y ) {
     sockaddr_in lin_u = _mesa_get_direct_lane(sam_u, pac_u->pek_u.nam_u.her_u);
     if ( _mesa_is_lane_zero(lin_u) == c3y) {
       c3_c* shp_c = u3_ship_to_string(pac_u->pek_u.nam_u.her_u);
@@ -2250,6 +2280,14 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_del_pit(sam_u, nam_u);
   }
 
+  //  mesa_num_leaves assumes boq 13 (1024-byte leaves); reject other block
+  //  sizes before computing the leaf count
+  //
+  if ( 13 != nam_u->boq_y ) {
+    MESA_LOG(sam_u, STRANGE);
+    return;
+  }
+
   c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
   u3_pend_req* req_u = _mesa_get_request(sam_u, nam_u);
   if ( !req_u ) {
@@ -2260,9 +2298,11 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
       return;
     }
     // process incoming response to ourselves
-    // if single-leaf message, inject directly into Arvo
+    // a message with fewer than two fragments (including the degenerate
+    // tob_d == 0 case) has no multi-fragment state to build, so inject it
+    // directly into Arvo rather than spinning up a request
     c3_d lev_d = mesa_num_leaves(pac_u->pag_u.dat_u.tob_d);
-    if ( 1 == lev_d ) {
+    if ( lev_d < 2 ) {
       u3_noun cad;
       {
         u3_noun lan = u3_mesa_encode_lane(lan_u);
@@ -2384,6 +2424,12 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     return;
   }
 
+  u3_pier* pir_u = sam_u->car_u.pir_u;
+
+  if ( PEEK_QUEUE_MAX <= pir_u->pec_u.dep_w ) {
+    // XX log drop
+    return;
+  }
 
   // record interest
   _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
@@ -2393,7 +2439,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 
   _mesa_put_jumbo_cache(sam_u, &pac_u->pek_u.nam_u, lin_u);
   u3_noun sky = _name_to_jumbo_scry(&pac_u->pek_u.nam_u);
-  u3_noun our = u3i_chubs(2, sam_u->car_u.pir_u->who_d);
+  u3_noun our = u3i_chubs(2, pir_u->who_d);
   u3_noun bem = u3nc(u3nt(our, u3_nul, u3nc(c3__ud, 1)), sky);
 
   arena are_u = arena_create(sizeof(u3_mesa_cb_data) + 1024);
@@ -2404,7 +2450,7 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   dat_u->sam_u = sam_u;
   _mesa_copy_name(&dat_u->nam_u, &pac_u->pek_u.nam_u, &han_u->are_u);
 
-  u3_pier_peek(sam_u->car_u.pir_u, u3_nul, u3k(u3nq(1, c3__beam, c3__ax, bem)), han_u, _mesa_page_scry_jumbo_cb);
+  u3_pier_peek(pir_u, u3_nul, u3nq(1, c3__beam, c3__ax, bem), han_u, _mesa_page_scry_jumbo_cb);
 }
 
 static void
@@ -2431,6 +2477,12 @@ _mesa_hear_poke(u3_mesa_pict* pic_u, sockaddr_in lan_u)
     _mesa_forward_request(sam_u, pic_u, lan_u);
     return;
   }
+
+  if ( POKE_QUEUE_MAX <= sam_u->car_u.dep_w ) {
+    // XX log drop
+    return;
+  }
+
   //  TODO check if lane already in pit, drop dupes
   _mesa_add_lane_to_pit(sam_u, &pac_u->pek_u.nam_u, lan_u);
 
@@ -2497,6 +2549,11 @@ _mesa_hear(u3_mesa* sam_u,
     c3_y* han_y = c3_malloc(len_w);
     memcpy(han_y, hun_y, len_w);
     _ames_hear(u3_Host.sam_u, adr_u, len_w, han_y);
+    return;
+  }
+
+  if ( len_w > PACT_SIZE ) {
+    u3l_log("mesa: packet too large");
     return;
   }
 

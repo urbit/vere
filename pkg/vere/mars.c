@@ -1349,13 +1349,16 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     c3_d  mem_d = 0;             // last event to meme
     c3_w  try_w = 0;             // [mem_d] retry count
     c3_c* wen_c;
+    c3_w  bat_w;
 
     while ( mar_u->dun_d < eve_d ) {
       _mars_step_trace(mar_u->dir_c);
 
       //  XX get batch from args
       //
-      switch ( _mars_play_batch(mar_u, c3y, 1024, &wen_c) ) {
+      bat_w = c3_min(1024ULL, eve_d - mar_u->dun_d);
+
+      switch ( _mars_play_batch(mar_u, c3y, bat_w, &wen_c) ) {
         case _play_yes_e: {
           c3_c* now_c;
 
@@ -1485,7 +1488,7 @@ u3_mars_work(u3_mars* mar_u)
   _mars_sign_move();
 
   //  Initalize the spin stack
-  u3t_sstack_init();
+  u3t_sstack_init(mar_u->met_u.who_d);
 
   //  wire up signal controls
   //
@@ -1494,7 +1497,7 @@ u3_mars_work(u3_mars* mar_u)
 
   //  XX do something better
   //
-  if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
+  if ( mar_u->log_u->dun_d > mar_u->dun_d && !(u3C.wag_w & u3o_dryrun) ) {
     u3_disk_exit(mar_u->log_u);
     exit(0);
   }

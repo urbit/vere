@@ -308,11 +308,6 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3H->rod_u.off_w;
-    u3t_Spin->fow_w = u3H->rod_u.fow_w;
-  }
-
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
@@ -322,6 +317,11 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
     //  Reset the top road - the problem could be a fat cap.
     //
     _cm_signal_reset();
+
+    if ( NULL != u3t_Spin ) {
+      u3t_Spin->off_w = u3H->rod_u.off_w;
+      u3t_Spin->fow_w = u3H->rod_u.fow_w;
+    }
 
     if ( (c3__meme == sig_l) && (u3a_open(u3R) <= 256) ) {
       // Out of memory at the top level.  Error becomes c3__full,
@@ -993,12 +993,6 @@ u3m_bail(u3_noun how)
     }
   }
 
-  // Reset the spin stack pointer
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
-  }
-
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1209,6 +1203,12 @@ u3m_fall(void)
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
 
+  // restore slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3R->off_w;
+    u3t_Spin->fow_w = u3R->fow_w;
+  }
+
   //  restore bump-allocation state
   //
   u3C.wag_w = (u3C.wag_w & ~u3o_sand) | u3R->san_w;
@@ -1374,12 +1374,6 @@ u3m_love(u3_noun pro)
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
-
-  // restore slow stack pointer
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
-  }
 
   //  copy product and caches off our stack
   //
