@@ -653,6 +653,7 @@ u3a_post_info(u3_post);
           u3a_gain(u3_weak som);
 #         define u3k(som) ({                                                    \
             u3_noun __som = som;                                                \
+            ( u3R->how.fag_w & u3a_flag_sand ) ? __som :                        \
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
 
@@ -672,6 +673,7 @@ u3a_post_info(u3_post);
           u3a_lose(u3_weak som);
 #         define u3z(som) ({                                                    \
             u3_noun __som = som;                                                \
+            ( u3R->how.fag_w & u3a_flag_sand ) ? (void)0 :                      \
             ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
           })
 
