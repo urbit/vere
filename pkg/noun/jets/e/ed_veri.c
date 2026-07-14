@@ -33,11 +33,13 @@
   {
     u3_noun sig, msg, pub;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor,
-                         u3x_sam_2, &sig, u3x_sam_6, &msg,
-                         u3x_sam_7, &pub, 0) ||
-         c3n == u3r_cell(msg, &len, &dat) ||
-         (c3n == u3ud(sig)) ||
+    sig = u3h(u3h(u3t(cor)));
+    msg = u3h(u3t(u3h(u3t(cor))));
+    pub = u3t(u3t(u3h(u3t(cor))));
+    len = u3h(msg);
+    dat = u3t(msg);
+
+    if ( (c3n == u3ud(sig)) ||
          (c3n == u3ud(pub)) ||
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) ) {

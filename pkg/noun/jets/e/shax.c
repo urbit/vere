@@ -186,9 +186,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam, &b, u3x_con_sam, &a, 0) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qeo_raw(a, b);
-    }
+    b = u3h(u3t(cor));
+    a = u3h(u3t(u3t(u3t(cor))));
+    return u3qeo_raw(a, b);
   }
