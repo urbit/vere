@@ -2777,6 +2777,17 @@ u3m_pack(void)
   //
   u3m_reclaim();
 
+  //  drop the loop-hint set before compacting.  a bail:meme raised mid
+  //  cache-insertion (see urbit/vere#626) can leave a dangling noun in lop_p;
+  //  u3a_rewrite_compact() then chases the corrupt pointer and faults (observed
+  //  as SIGBUS in _pack_relocate_mark, via u3h_relocate() of lop_p).  we
+  //  deliberately do NOT u3h_free() the old table -- freeing chases the same
+  //  bad pointer -- and instead re-point the root so the stale entry becomes
+  //  unreachable and the compactor skips it.  lop_p is a pure loop-detection
+  //  hint cache and is rebuilt on demand.
+  //
+  u3R->lop_p = u3h_new();
+
   //  sweep the heap, finding and saving new locations
   //
   u3a_pack_seek(u3R);
