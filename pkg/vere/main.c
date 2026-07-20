@@ -300,6 +300,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "name",                required_argument, NULL, 'w' },
     { "scry",                required_argument, NULL, 'X' },
     { "exit",                no_argument,       NULL, 'x' },
+    { "yolo",                no_argument,       NULL, 'y' },
     { "scry-into",           required_argument, NULL, 'Y' },
     { "scry-format",         required_argument, NULL, 'Z' },
     //
@@ -321,7 +322,7 @@ _main_getopt(c3_i argc, c3_c** argv)
   };
 
   while ( -1 != (ch_i=getopt_long(argc, argv,
-                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:q:stu:vw:x",
+                 "A:B:C:DF:G:H:I:J:K:LM:PRSX:Y:Z:ab:c:de:gi:jk:ln:p:q:stu:vw:xy",
                  lop_u, &lid_i)) )
   {
     switch ( ch_i ) {
@@ -549,6 +550,7 @@ _main_getopt(c3_i argc, c3_c** argv)
       case 'S': { u3_Host.ops_u.has = c3y; break; }
       case 't': { u3_Host.ops_u.tem = c3y; break; }
       case 'v': { u3_Host.ops_u.veb = c3y; break; }
+      case 'y': { u3_Host.ops_u.yol = c3y; break; }
       //  unknown opt
       //
       case '?': default: {
@@ -3350,6 +3352,12 @@ main(c3_i   argc,
       */
       if ( _(u3_Host.ops_u.tos) ) {
         u3C.wag_w |= u3o_toss;
+      }
+
+      /*  Set yolo flog
+      */
+      if ( _(u3_Host.ops_u.yol) ) {
+        u3C.wag_w |= u3o_yolo;
       }
     }
 
