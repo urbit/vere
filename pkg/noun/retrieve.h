@@ -152,6 +152,11 @@
         c3_l
         u3r_mug_words(const c3_w* key_w, c3_w len_w);
 
+      /* u3r_mug_word(): 31-bit nonzero MurmurHash3 of a single word.
+      */
+        c3_l
+        u3r_mug_word(c3_w key_w);
+
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
         c3_l
