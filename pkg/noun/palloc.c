@@ -1780,10 +1780,10 @@ _sweep_counts(void)
     }
   }
   if ( weq_w ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    if ( u3C.wag_w & u3o_leak_crash ) {
+      u3_assert(!"weak");
     }
-    // u3_assert(0);
   }
 
   if ( u3C.wag_w & u3o_verbose ) {
