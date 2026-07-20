@@ -1780,16 +1780,16 @@ _sweep_counts(void)
     }
   }
   if ( weq_w ) {
-    if ( u3C.wag_w & u3o_verbose ) {
-      u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
-    }
+    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
     if ( u3C.wag_w & u3o_leak_crash ) {
       u3_assert(!"weak");
     }
   }
 
-  u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
-  u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  if ( u3C.wag_w & u3o_verbose ) {
+    u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Mark.len_w);
+    u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Mark.siz_w);
+  }
 
   u3a_mark_done(); // XX move
 
