@@ -158,14 +158,17 @@ u3z_uniq(u3z_cid cid, u3_noun som)
 {
   u3_noun key = u3nc(c3__uniq, u3k(som));
   u3_noun val = u3h_get(_har(u3R, cid), key);
-
+  u3_noun pro;
   if ( u3_none != val ) {
-    u3z(key); u3z(som); return val;
+    u3z(som);
+    pro = val;
   }
   else {
     u3h_put(_har(u3R, cid), key, u3k(som));
-    return som;
+    pro = som;
   }
+  u3z(key);
+  return pro;
 }
 
 /* u3z_reap(): promote memoization cache state.
