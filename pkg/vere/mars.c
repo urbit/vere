@@ -120,6 +120,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
   if ( u3_nul == sac) {
     if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
+      u3C.wag_w &= ~u3o_check_corrupt;
     }
     return u3_nul;
   }
