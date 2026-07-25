@@ -1309,6 +1309,7 @@
 #   define c3__warn   c3_s4('w','a','r','n')
 #   define c3__warx   c3_s4('w','a','r','x')
 #   define c3__wash   c3_s4('w','a','s','h')
+#   define c3__wath   c3_s4('w','a','t','h')
 #   define c3__watt   c3_s4('w','a','t','t')
 #   define c3__way    c3_s3('w','a','y')
 #   define c3__weak   c3_s4('w','e','a','k')
