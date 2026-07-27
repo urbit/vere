@@ -581,7 +581,7 @@ _http_req_close(u3_hreq* req_u)
     _http_req_kill(req_u);
   }
 
-  if ( u3_rsat_peek == req_u->sat_e ) {
+  if ( u3_rsat_peek == req_u->sat_e && req_u->peq_u ) {
     req_u->peq_u->req_u = 0;
   }
 
