@@ -436,43 +436,44 @@ _mark_ova(u3_ovum* egg_u)
 }
 
 u3m_quac**
-u3_auto_mark(u3_auto* car_u, c3_w *out_w)
+u3_auto_mark(u3_auto* car_u, c3_z *out_z)
 {
   u3m_quac** all_u;
-  c3_w       tot_w = 0, len_w = 0;
+  c3_z       tot_z = 0;
+  c3_z       len_z = 0;
 
   {
     u3_auto* rac_u = car_u;
     while ( car_u ) {
       car_u = car_u->nex_u;
-      len_w++;
+      len_z++;
     }
     car_u = rac_u;
   }
 
-  all_u = c3_calloc(sizeof(*all_u) * (len_w + 1));
-  len_w = 0;
+  all_u = c3_calloc(sizeof(*all_u) * (len_z + 1));
+  len_z = 0;
 
   while ( car_u ) {
-    all_u[len_w] = c3_malloc(sizeof(**all_u));
-    all_u[len_w]->nam_c = u3r_string(car_u->nam_m);
-    all_u[len_w]->siz_w = 0;
-    all_u[len_w]->qua_u = 0;
+    all_u[len_z] = c3_malloc(sizeof(**all_u));
+    all_u[len_z]->nam_c = u3r_string(car_u->nam_m);
+    all_u[len_z]->siz_z = 0;
+    all_u[len_z]->qua_u = 0;
 
     if ( car_u->io.mark_f ) {
-      all_u[len_w]->qua_u = car_u->io.mark_f(car_u, &(all_u[len_w]->siz_w));
+      all_u[len_z]->qua_u = car_u->io.mark_f(car_u, &(all_u[len_z]->siz_z));
     }
 
-    all_u[len_w]->siz_w += _mark_ova(car_u->ext_u) * 4;
+    all_u[len_z]->siz_z += (c3_z)_mark_ova(car_u->ext_u) * 4;
 
-    tot_w += all_u[len_w]->siz_w;
+    tot_z += all_u[len_z]->siz_z;
     car_u  = car_u->nex_u;
-    len_w++;
+    len_z++;
   }
 
-  all_u[len_w] = 0;
+  all_u[len_z] = 0;
 
-  *out_w = tot_w;
+  *out_z = tot_z;
 
   return all_u;
 }

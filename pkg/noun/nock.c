@@ -3215,13 +3215,15 @@ u3m_quac*
 u3n_mark()
 {
   u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
+  u3p(u3h_root) har_p = u3R->byc.har_p;
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("bytecode programs");
-
-  u3p(u3h_root) har_p = u3R->byc.har_p;
-  u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
+  {
+    c3_w bam_w = 0;
+    u3h_walk_with(har_p, _n_bam, &bam_w);
+    qua_u[0]->siz_z = (c3_z)bam_w * 4;
+  }
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
@@ -3233,31 +3235,31 @@ u3n_mark()
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
-    mua_u[0]->siz_w = mas_u.key_w * 4;
+    mua_u[0]->siz_z = mas_u.key_w * 4;
 
     mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
     mua_u[1]->nam_c = strdup("vals");
-    mua_u[1]->siz_w = mas_u.val_w * 4;
+    mua_u[1]->siz_z = mas_u.val_w * 4;
 
     mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
     mua_u[2]->nam_c = strdup("pairs");
-    mua_u[2]->siz_w = mas_u.kev_w * 4;
+    mua_u[2]->siz_z = mas_u.kev_w * 4;
 
     mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
     mua_u[3]->nam_c = strdup("nodes");
-    mua_u[3]->siz_w = mas_u.nod_w * 4;
+    mua_u[3]->siz_z = mas_u.nod_w * 4;
 
     mua_u[4] = NULL;
 
     qua_u[1]->qua_u = mua_u;
-    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+    qua_u[1]->siz_z = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
   }
 
   qua_u[2] = NULL;
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total nock stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
+  tot_u->siz_z = qua_u[0]->siz_z + qua_u[1]->siz_z;
   tot_u->qua_u = qua_u;
 
   return tot_u;

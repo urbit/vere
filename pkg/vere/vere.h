@@ -613,7 +613,7 @@
           u3_noun (*info_f)(struct _u3_auto*);
           void    (*slog_f)(struct _u3_auto*);
           c3_o    (*kick_f)(struct _u3_auto*, u3_noun, u3_noun);
-          u3m_quac** (*mark_f)(struct _u3_auto*, c3_w*);
+          u3m_quac** (*mark_f)(struct _u3_auto*, c3_z*);
           void    (*exit_f)(struct _u3_auto*);  // XX close_cb?
         } u3_auto_cb;
 
@@ -762,7 +762,7 @@
       /* u3_auto_mark(): mark drivers for gc.
       */
         u3m_quac**
-        u3_auto_mark(u3_auto* car_u, c3_w *out_w);
+        u3_auto_mark(u3_auto* car_u, c3_z *out_z);
       /* u3_auto_init(): initialize all drivers.
       */
         u3_auto*
@@ -1363,7 +1363,7 @@
       /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
       */
         u3m_quac**
-        u3_pier_mark(u3_pier*, c3_w*);
+        u3_pier_mark(u3_pier*, c3_z*);
 
       /* u3_pier_mase(): construct a $mass leaf.
       */
