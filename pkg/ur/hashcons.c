@@ -761,22 +761,22 @@ _print_memory(FILE *f, const char *c, uint64_t bytes)
     fprintf(f, "%s: B/0\r\n", c);
   }
   else {
-    uint32_t g = (bytes / 1000000000);
-    uint32_t m = (bytes % 1000000000) / 1000000;
-    uint32_t k = (bytes % 1000000) / 1000;
-    uint32_t b = (bytes % 1000);
+    uint64_t g = (bytes / (1UL << 30));
+    uint64_t m = (bytes % (1UL << 30)) / (1UL << 20);
+    uint64_t k = (bytes % (1UL << 20)) / (1UL << 10);
+    uint64_t b = (bytes % (1UL << 10));
 
     if ( g ) {
-      fprintf(f, "%s: GB/%d.%03d.%03d.%03d\r\n", c, g, m, k, b);
+      fprintf(f, "%s: GiB/%" PRIu64 ".%03" PRIu64 ".%03" PRIu64 ".%03" PRIu64 "\r\n", c, g, m, k, b);
     }
     else if ( m ) {
-      fprintf(f, "%s: MB/%d.%03d.%03d\r\n", c, m, k, b);
+      fprintf(f, "%s: MiB/%" PRIu64 ".%03" PRIu64 ".%03" PRIu64 "\r\n", c, m, k, b);
     }
     else if ( k ) {
-      fprintf(f, "%s: KB/%d.%03d\r\n", c, k, b);
+      fprintf(f, "%s: KiB/%" PRIu64 ".%03" PRIu64 "\r\n", c, k, b);
     }
     else if ( b ) {
-      fprintf(f, "%s: B/%d\r\n", c, b);
+      fprintf(f, "%s: B/%" PRIu64 "\r\n", c, b);
     }
   }
 }
