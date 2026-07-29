@@ -1900,7 +1900,7 @@ _http_serv_unlink(u3_http* htp_u)
   u3_http* pre_u = htp_u->htd_u->htp_u;
 
   if ( pre_u == htp_u ) {
-    pre_u = htp_u->nex_u;
+    htp_u->htd_u->htp_u = htp_u->nex_u;
   }
   else {
     //  XX glories of linear search
@@ -1908,6 +1908,7 @@ _http_serv_unlink(u3_http* htp_u)
     while ( pre_u ) {
       if ( pre_u->nex_u == htp_u ) {
         pre_u->nex_u = htp_u->nex_u;
+        return;
       }
       else pre_u = pre_u->nex_u;
     }
