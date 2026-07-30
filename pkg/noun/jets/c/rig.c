@@ -18,7 +18,7 @@ u3qc_rig_s(c3_g foq_g,
   else {
     c3_g dif_g = toq_g - foq_g;
 
-    sep_d += (1 << dif_g) - 1;
+    sep_d += (1u << dif_g) - 1;
     return sep_d >> dif_g;
   }
 }

@@ -1918,8 +1918,9 @@ u3_mars_make(u3_mars* mar_u)
 *
 */
 c3_o
-u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
+u3_mars_boot(void* ram_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_mars*     mar_u = ram_u;
   u3_disk*     log_u = mar_u->log_u;
   u3_boot_opts inp_u;
   u3_meta      met_u;

@@ -137,7 +137,7 @@ u3_unix_cane(const c3_c* pax_c)
       return 0;
     }
     pax_c = strchr(pax_c, '/');
-  } while ( 0 != pax_c++ );
+  } while ( NULL != pax_c && pax_c++ );
   return 1;
 }
 
