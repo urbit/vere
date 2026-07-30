@@ -32,9 +32,9 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            crypto.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            crypto.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            crypto.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            crypto.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            crypto.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            crypto.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
@@ -72,14 +72,14 @@ fn libcrypto(
         else => lib.root_module.strip = true,
     }
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep.path("."));
-    lib.addIncludePath(dep.path("crypto"));
-    lib.addIncludePath(dep.path("crypto/ec/curve448/"));
-    lib.addIncludePath(dep.path("crypto/ec/curve448/arch_32/"));
-    lib.addIncludePath(dep.path("crypto/modes"));
-    lib.addIncludePath(dep.path("include"));
+    lib.root_module.addIncludePath(dep.path("."));
+    lib.root_module.addIncludePath(dep.path("crypto"));
+    lib.root_module.addIncludePath(dep.path("crypto/ec/curve448/"));
+    lib.root_module.addIncludePath(dep.path("crypto/ec/curve448/arch_32/"));
+    lib.root_module.addIncludePath(dep.path("crypto/modes"));
+    lib.root_module.addIncludePath(dep.path("include"));
 
     lib.root_module.addCMacro("L_ENDIAN", "");
     lib.root_module.addCMacro("OPENSSL_PIC", "");
@@ -127,9 +127,9 @@ fn libcrypto(
         lib.root_module.addCMacro("MD5_ASM", "");
         lib.root_module.addCMacro("RC4_ASM", "");
 
-        lib.addIncludePath(b.path("gen/windows-x86_64/include"));
-        lib.addIncludePath(b.path("gen/windows-x86_64/include/crypto"));
-        lib.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/windows-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/windows-x86_64/include/crypto"));
+        lib.root_module.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
 
         const nasm_dep = b.dependency("nasm", .{
             .optimize = .ReleaseFast,
@@ -179,18 +179,18 @@ fn libcrypto(
             nasm_run.addArgs(&.{ "-f", "win64", "-g" });
 
             nasm_run.addArgs(&.{"-o"});
-            lib.addObjectFile(nasm_run.addOutputFileArg(output_basename));
+            lib.root_module.addObjectFile(nasm_run.addOutputFileArg(output_basename));
 
             nasm_run.addFileArg(b.path(input_file));
         }
     }
 
     if (t.os.tag.isDarwin() and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/macos-aarch64/include"));
-        lib.addIncludePath(b.path("gen/macos-aarch64/include/crypto"));
-        lib.addIncludePath(b.path("gen/macos-aarch64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/macos-aarch64/include"));
+        lib.root_module.addIncludePath(b.path("gen/macos-aarch64/include/crypto"));
+        lib.root_module.addIncludePath(b.path("gen/macos-aarch64/include/openssl"));
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/macos-aarch64/crypto"),
             .files = &.{
                 "aes/aesv8-armx.S",
@@ -211,11 +211,11 @@ fn libcrypto(
     }
 
     if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/linux-aarch64/include"));
+        lib.root_module.addIncludePath(b.path("gen/linux-aarch64/include/crypto"));
+        lib.root_module.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/linux-aarch64/crypto"),
             .files = &.{
                 "aes/aesv8-armx.S",
@@ -241,11 +241,11 @@ fn libcrypto(
         lib.root_module.addCMacro("MD5_ASM", "");
         lib.root_module.addCMacro("RC4_ASM", "");
 
-        lib.addIncludePath(b.path("gen/macos-x86_64/include"));
-        lib.addIncludePath(b.path("gen/macos-x86_64/include/crypto"));
-        lib.addIncludePath(b.path("gen/macos-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/macos-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/macos-x86_64/include/crypto"));
+        lib.root_module.addIncludePath(b.path("gen/macos-x86_64/include/openssl"));
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/macos-x86_64"),
             .files = &.{
                 "crypto/aes/aesni-mb-x86_64.s",
@@ -288,11 +288,11 @@ fn libcrypto(
         lib.root_module.addCMacro("MD5_ASM", "");
         lib.root_module.addCMacro("RC4_ASM", "");
 
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/linux-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/linux-x86_64/include/crypto"));
+        lib.root_module.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/linux-x86_64"),
             .files = &.{
                 "crypto/aes/aesni-mb-x86_64.s",
@@ -344,11 +344,11 @@ fn libcrypto(
             "ms/applink.c",
             "ms/uplink.c",
         });
-        lib.addIncludePath(dep.path("ms"));
-        lib.linkSystemLibrary("crypt32");
+        lib.root_module.addIncludePath(dep.path("ms"));
+        lib.root_module.linkSystemLibrary("crypt32", .{});
     }
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep.path(""),
         .files = switch (t.cpu.arch) {
             .arm, .aarch64 => &.{
@@ -375,7 +375,7 @@ fn libcrypto(
         .flags = cflags,
     });
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep.path(""),
         .files = srcs.items,
         .flags = cflags,
@@ -411,35 +411,35 @@ fn libssl(
         else => lib.root_module.strip = true,
     }
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep.path("."));
-    lib.addIncludePath(dep.path("openssl"));
-    lib.addIncludePath(dep.path("include"));
-    lib.addIncludePath(dep.path("include/internal"));
-    lib.addIncludePath(dep.path("include/openssl"));
+    lib.root_module.addIncludePath(dep.path("."));
+    lib.root_module.addIncludePath(dep.path("openssl"));
+    lib.root_module.addIncludePath(dep.path("include"));
+    lib.root_module.addIncludePath(dep.path("include/internal"));
+    lib.root_module.addIncludePath(dep.path("include/openssl"));
 
     if (t.os.tag.isDarwin() and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/macos-aarch64/include"));
-        lib.addIncludePath(b.path("gen/macos-aarch64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/macos-aarch64/include"));
+        lib.root_module.addIncludePath(b.path("gen/macos-aarch64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/macos-aarch64/include/openssl"), "openssl", .{});
     }
 
     if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/linux-aarch64/include"));
+        lib.root_module.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/linux-aarch64/include/openssl"), "openssl", .{});
     }
 
     if (t.os.tag.isDarwin() and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/macos-x86_64/include"));
-        lib.addIncludePath(b.path("gen/macos-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/macos-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/macos-x86_64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/macos-x86_64/include/openssl"), "openssl", .{});
     }
 
     if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/linux-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/linux-x86_64/include/openssl"), "openssl", .{});
     }
 
@@ -452,15 +452,15 @@ fn libssl(
         lib.root_module.addCMacro("OPENSSL_USE_APPLINK", "");
         lib.root_module.addCMacro("OPENSSL_SYS_WIN32", "");
 
-        lib.addIncludePath(b.path("gen/windows-x86_64/include"));
-        lib.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
+        lib.root_module.addIncludePath(b.path("gen/windows-x86_64/include"));
+        lib.root_module.addIncludePath(b.path("gen/windows-x86_64/include/openssl"));
         lib.installHeadersDirectory(b.path("gen/windows-x86_64/include/openssl"), "openssl", .{});
     }
 
     lib.root_module.addCMacro("OPENSSLDIR", "\"\"");
     lib.root_module.addCMacro("ENGINESDIR", "\"\"");
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep.path(""),
         .files = &.{
             "ssl/bio_ssl.c",

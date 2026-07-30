@@ -19,9 +19,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib.addIncludePath(dep_c.path("include"));
+    lib.root_module.addIncludePath(dep_c.path("include"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
             "src/softblas_state.c",
@@ -73,7 +73,7 @@ pub fn build(b: *std.Build) void {
 
     lib.installHeader(dep_c.path("include/softblas.h"), "softblas.h");
 
-    lib.linkLibC();
-    lib.linkLibrary(softfloat.artifact("softfloat"));
+    lib.root_module.link_libc = true;
+    lib.root_module.linkLibrary(softfloat.artifact("softfloat"));
     b.installArtifact(lib);
 }

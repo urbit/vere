@@ -20,9 +20,9 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    wasm3.linkLibC();
+    wasm3.root_module.link_libc = true;
 
-    wasm3.addIncludePath(wasm3_c.path("source/"));
+    wasm3.root_module.addIncludePath(wasm3_c.path("source/"));
 
     const common_flags = [_][]const u8{
         "-std=c99",
@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
         "-c",
     };
 
-    wasm3.addCSourceFiles(.{
+    wasm3.root_module.addCSourceFiles(.{
         .root = wasm3_c.path("source/"),
         .files = &.{
             "m3_bind.c",
@@ -84,7 +84,7 @@ pub fn build(b: *std.Build) void {
     wasm3.installHeader(wasm3_c.path("source/m3_rewrite.h"), "m3_rewrite.h");
     wasm3.installHeader(wasm3_c.path("source/m3_resume.h"), "m3_resume.h");
 
-    wasm3.linkLibrary(softfloat.artifact("softfloat"));
+    wasm3.root_module.linkLibrary(softfloat.artifact("softfloat"));
 
     b.installArtifact(wasm3);
 }

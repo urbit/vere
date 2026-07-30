@@ -21,13 +21,13 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            lib.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            lib.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            lib.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            lib.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            lib.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            lib.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     lib.root_module.addCMacro("HAVE_CONFIG_H", &[_]u8{});
 
@@ -125,11 +125,11 @@ pub fn build(b: *std.Build) void {
         .HAVE_STACK_OVERFLOW_RECOVERY = 1,
     });
 
-    lib.addIncludePath(dep_c.path("src"));
-    lib.addConfigHeader(config_h);
-    lib.addConfigHeader(sigsegv_h);
+    lib.root_module.addIncludePath(dep_c.path("src"));
+    lib.root_module.addConfigHeader(config_h);
+    lib.root_module.addConfigHeader(sigsegv_h);
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("src"),
         .files = &.{
             "dispatcher.c",

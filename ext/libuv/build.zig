@@ -15,10 +15,10 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    uv.linkLibC();
+    uv.root_module.link_libc = true;
 
-    uv.addIncludePath(uv_c.path("src"));
-    uv.addIncludePath(uv_c.path("include"));
+    uv.root_module.addIncludePath(uv_c.path("src"));
+    uv.root_module.addIncludePath(uv_c.path("include"));
 
     var uv_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer uv_flags.deinit();
@@ -65,7 +65,7 @@ pub fn build(b: *std.Build) !void {
         else => null,
     };
 
-    uv.addCSourceFiles(.{
+    uv.root_module.addCSourceFiles(.{
         .root = uv_c.path("src"),
         .files = switch (t.os.tag) {
             .macos => &uv_srcs_macos,
@@ -77,20 +77,20 @@ pub fn build(b: *std.Build) !void {
     });
 
     if (t.os.tag == .windows) {
-        uv.addCSourceFiles(.{
+        uv.root_module.addCSourceFiles(.{
             .files = &.{"patches/libuv/src/win/tty.c"},
             .flags = uv_flags.items,
         });
-        uv.addIncludePath(uv_c.path("src/win"));
+        uv.root_module.addIncludePath(uv_c.path("src/win"));
     }
 
     uv.installHeadersDirectory(uv_c.path("include"), "", .{});
 
     if (t.os.tag == .windows) {
-        uv.linkSystemLibrary("ole32"); // CoTaskMemFree
-        uv.linkSystemLibrary("dbghelp"); // MiniDumpWriteDump, SymGetOptions, SymSetOptions
-        uv.linkSystemLibrary("userenv"); // GetUserProfileDirectoryW
-        uv.linkSystemLibrary("iphlpapi"); // GetAdaptersAddresses, ConvertInterface*
+        uv.root_module.linkSystemLibrary("ole32", .{}); // CoTaskMemFree
+        uv.root_module.linkSystemLibrary("dbghelp", .{}); // MiniDumpWriteDump, SymGetOptions, SymSetOptions
+        uv.root_module.linkSystemLibrary("userenv", .{}); // GetUserProfileDirectoryW
+        uv.root_module.linkSystemLibrary("iphlpapi", .{}); // GetAdaptersAddresses, ConvertInterface*
     }
 
     b.installArtifact(uv);

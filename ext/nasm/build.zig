@@ -14,12 +14,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    exe.addIncludePath(b.path("include"));
-    exe.addIncludePath(b.path("asm"));
-    exe.addIncludePath(b.path("x86"));
-    exe.addIncludePath(b.path("output"));
+    exe.root_module.addIncludePath(b.path("include"));
+    exe.root_module.addIncludePath(b.path("asm"));
+    exe.root_module.addIncludePath(b.path("x86"));
+    exe.root_module.addIncludePath(b.path("output"));
 
-    exe.addConfigHeader(b.addConfigHeader(.{
+    exe.root_module.addConfigHeader(b.addConfigHeader(.{
         .style = .blank,
         .include_path = "version.h",
     }, .{
@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
     }));
 
     if (b.graph.host.result.os.tag == .windows) {
-        exe.addConfigHeader(b.addConfigHeader(.{
+        exe.root_module.addConfigHeader(b.addConfigHeader(.{
             .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
@@ -253,7 +253,7 @@ pub fn build(b: *std.Build) void {
             .vsnprintf = null,
         }));
     } else if (b.graph.host.result.os.tag.isDarwin()) {
-        exe.addConfigHeader(b.addConfigHeader(.{
+        exe.root_module.addConfigHeader(b.addConfigHeader(.{
             .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
@@ -505,7 +505,7 @@ pub fn build(b: *std.Build) void {
             .vsnprintf = null,
         }));
     } else if (b.graph.host.result.os.tag == .linux) {
-        exe.addConfigHeader(b.addConfigHeader(.{
+        exe.root_module.addConfigHeader(b.addConfigHeader(.{
             .style = .{ .autoconf_undef = b.path("config/config.h.in") },
             .include_path = "config/config.h",
         }, .{
@@ -819,11 +819,11 @@ pub fn build(b: *std.Build) void {
         "-std=c17",
         "-Wno-implicit-function-declaration",
     };
-    exe.addCSourceFiles(.{
+    exe.root_module.addCSourceFiles(.{
         .files = &files,
         .flags = &flags,
     });
-    exe.linkLibC();
+    exe.root_module.link_libc = true;
     b.installArtifact(exe);
 }
 

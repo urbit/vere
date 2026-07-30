@@ -17,11 +17,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    pkg_ur.linkLibC();
-    pkg_ur.linkLibrary(murmur3.artifact("murmur3"));
+    pkg_ur.root_module.link_libc = true;
+    pkg_ur.root_module.linkLibrary(murmur3.artifact("murmur3"));
 
-    pkg_ur.addIncludePath(b.path(""));
-    pkg_ur.addCSourceFiles(.{
+    pkg_ur.root_module.addIncludePath(b.path(""));
+    pkg_ur.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = &.{
             "bitstream.c",

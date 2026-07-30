@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     lib.root_module.addCMacro("HAVE_CONFIG_H", "");
     lib.root_module.addCMacro("_GNU_SOURCE", "");
@@ -129,16 +129,16 @@ pub fn build(b: *std.Build) !void {
         .include_path = "libunwind-common.h",
     }, .{ .PKG_MAJOR = 1, .PKG_MINOR = 8, .PKG_EXTRA = 1 });
 
-    lib.addConfigHeader(config_h);
-    lib.addConfigHeader(libunwind_h);
-    lib.addConfigHeader(libunwind_i_h);
-    lib.addConfigHeader(libunwind_common_h);
-    lib.addIncludePath(dep_c.path("src"));
-    lib.addIncludePath(dep_c.path("include"));
+    lib.root_module.addConfigHeader(config_h);
+    lib.root_module.addConfigHeader(libunwind_h);
+    lib.root_module.addConfigHeader(libunwind_i_h);
+    lib.root_module.addConfigHeader(libunwind_common_h);
+    lib.root_module.addIncludePath(dep_c.path("src"));
+    lib.root_module.addIncludePath(dep_c.path("include"));
     if (t.cpu.arch.isAARCH64())
-        lib.addIncludePath(dep_c.path("include/tdep-aarch64"));
+        lib.root_module.addIncludePath(dep_c.path("include/tdep-aarch64"));
     if (t.cpu.arch == .x86_64)
-        lib.addIncludePath(dep_c.path("include/tdep-x86_64"));
+        lib.root_module.addIncludePath(dep_c.path("include/tdep-x86_64"));
 
     var srcs = std.array_list.Managed([]const u8).init(b.allocator);
     defer srcs.deinit();
@@ -236,7 +236,7 @@ pub fn build(b: *std.Build) !void {
             // "x86_64/siglongjmp.S",
         });
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("src"),
         .files = srcs.items,
         .flags = &.{

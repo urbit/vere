@@ -18,9 +18,9 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            pkg_past.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            pkg_past.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            pkg_past.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            pkg_past.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            pkg_past.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            pkg_past.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
@@ -41,11 +41,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    pkg_past.linkLibC();
+    pkg_past.root_module.link_libc = true;
 
-    pkg_past.linkLibrary(pkg_c3.artifact("c3"));
-    pkg_past.linkLibrary(pkg_noun.artifact("noun"));
-    pkg_past.linkLibrary(gmp.artifact("gmp"));
+    pkg_past.root_module.linkLibrary(pkg_c3.artifact("c3"));
+    pkg_past.root_module.linkLibrary(pkg_noun.artifact("noun"));
+    pkg_past.root_module.linkLibrary(gmp.artifact("gmp"));
 
     var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    pkg_past.addCSourceFiles(.{
+    pkg_past.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = &c_source_files,
         .flags = flags.items,

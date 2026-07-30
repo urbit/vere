@@ -14,14 +14,14 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    tracy.linkLibC();
-    tracy.linkLibCpp();
+    tracy.root_module.link_libc = true;
+    tracy.root_module.link_libcpp = true;
 
     // Add Tracy include path
-    tracy.addIncludePath(tracy_src.path("public"));
+    tracy.root_module.addIncludePath(tracy_src.path("public"));
 
     // Add Tracy C++ client source
-    tracy.addCSourceFiles(.{
+    tracy.root_module.addCSourceFiles(.{
         .root = tracy_src.path("public"),
         .files = &.{"TracyClient.cpp"},
         .flags = &.{
@@ -35,13 +35,13 @@ pub fn build(b: *std.Build) void {
     // Platform-specific libraries
     const t = target.result;
     if (t.os.tag == .linux) {
-        tracy.linkSystemLibrary("pthread");
-        tracy.linkSystemLibrary("dl");
+        tracy.root_module.linkSystemLibrary("pthread", .{});
+        tracy.root_module.linkSystemLibrary("dl", .{});
     } else if (t.os.tag.isDarwin()) {
         // macOS might need additional frameworks
     } else if (t.os.tag == .windows) {
-        tracy.linkSystemLibrary("ws2_32");
-        tracy.linkSystemLibrary("dbghelp");
+        tracy.root_module.linkSystemLibrary("ws2_32", .{});
+        tracy.root_module.linkSystemLibrary("dbghelp", .{});
     }
 
     // Install Tracy headers for C API - install the entire public directory structure

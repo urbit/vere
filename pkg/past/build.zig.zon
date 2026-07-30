@@ -1,5 +1,6 @@
 .{
-    .name = "past",
+    .name = .past,
+    .fingerprint = 0x5014418727220854,
     .version = "0.0.1",
     .dependencies = .{
         .macos_sdk = .{

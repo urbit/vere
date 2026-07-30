@@ -16,26 +16,26 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            pkg_c3.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            pkg_c3.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            pkg_c3.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            pkg_c3.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            pkg_c3.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            pkg_c3.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
-    pkg_c3.linkLibC();
+    pkg_c3.root_module.link_libc = true;
 
-    pkg_c3.addIncludePath(b.path(""));
+    pkg_c3.root_module.addIncludePath(b.path(""));
 
-    pkg_c3.addCSourceFiles(.{
+    pkg_c3.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = &.{"defs.c"},
         .flags = copts,
     });
 
     if (t.os.tag == .windows) {
-        pkg_c3.addIncludePath(b.path("platform/windows"));
+        pkg_c3.root_module.addIncludePath(b.path("platform/windows"));
         pkg_c3.installHeadersDirectory(b.path("platform/windows"), "", .{});
-        pkg_c3.addCSourceFiles(.{
+        pkg_c3.root_module.addCSourceFiles(.{
             .root = b.path(""),
             .files = &.{"platform/windows/compat.c"},
             .flags = copts,

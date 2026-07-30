@@ -20,9 +20,9 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            pkg_vere.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            pkg_vere.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            pkg_vere.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            pkg_vere.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            pkg_vere.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            pkg_vere.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
@@ -136,32 +136,32 @@ pub fn build(b: *std.Build) !void {
         break :blk try output.toOwnedSlice();
     });
 
-    pkg_vere.addIncludePath(pace_h.getDirectory());
-    pkg_vere.addIncludePath(version_h.getDirectory());
-    pkg_vere.addIncludePath(b.path(""));
-    pkg_vere.addIncludePath(b.path("ivory"));
-    pkg_vere.addIncludePath(b.path("ca_bundle"));
+    pkg_vere.root_module.addIncludePath(pace_h.getDirectory());
+    pkg_vere.root_module.addIncludePath(version_h.getDirectory());
+    pkg_vere.root_module.addIncludePath(b.path(""));
+    pkg_vere.root_module.addIncludePath(b.path("ivory"));
+    pkg_vere.root_module.addIncludePath(b.path("ca_bundle"));
 
     if (t.os.tag == .linux) {
-        pkg_vere.linkLibrary(avahi.artifact("dns-sd"));
+        pkg_vere.root_module.linkLibrary(avahi.artifact("dns-sd"));
     }
-    pkg_vere.linkLibrary(natpmp.artifact("natpmp"));
-    pkg_vere.linkLibrary(curl.artifact("curl"));
+    pkg_vere.root_module.linkLibrary(natpmp.artifact("natpmp"));
+    pkg_vere.root_module.linkLibrary(curl.artifact("curl"));
 
-    pkg_vere.linkLibrary(gmp.artifact("gmp"));
+    pkg_vere.root_module.linkLibrary(gmp.artifact("gmp"));
 
-    pkg_vere.linkLibrary(h2o.artifact("h2o"));
-    pkg_vere.linkLibrary(libuv.artifact("libuv"));
-    pkg_vere.linkLibrary(lmdb.artifact("lmdb"));
-    pkg_vere.linkLibrary(openssl.artifact("ssl"));
-    pkg_vere.linkLibrary(urcrypt.artifact("urcrypt"));
-    pkg_vere.linkLibrary(zlib.artifact("z"));
-    pkg_vere.linkLibrary(pkg_c3.artifact("c3"));
-    pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
-    pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
-    pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
-    pkg_vere.linkLibrary(pkg_past.artifact("past"));
-    pkg_vere.linkLibC();
+    pkg_vere.root_module.linkLibrary(h2o.artifact("h2o"));
+    pkg_vere.root_module.linkLibrary(libuv.artifact("libuv"));
+    pkg_vere.root_module.linkLibrary(lmdb.artifact("lmdb"));
+    pkg_vere.root_module.linkLibrary(openssl.artifact("ssl"));
+    pkg_vere.root_module.linkLibrary(urcrypt.artifact("urcrypt"));
+    pkg_vere.root_module.linkLibrary(zlib.artifact("z"));
+    pkg_vere.root_module.linkLibrary(pkg_c3.artifact("c3"));
+    pkg_vere.root_module.linkLibrary(pkg_ent.artifact("ent"));
+    pkg_vere.root_module.linkLibrary(pkg_ur.artifact("ur"));
+    pkg_vere.root_module.linkLibrary(pkg_noun.artifact("noun"));
+    pkg_vere.root_module.linkLibrary(pkg_past.artifact("past"));
+    pkg_vere.root_module.link_libc = true;
 
     var files = std.array_list.Managed([]const u8).init(b.allocator);
     defer files.deinit();
@@ -181,7 +181,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (t.os.tag == .windows) {
-        pkg_vere.addIncludePath(b.path("platform/windows"));
+        pkg_vere.root_module.addIncludePath(b.path("platform/windows"));
         try files.appendSlice(&.{
             "platform/windows/ptty.c",
             "platform/windows/ctrlc.c",
@@ -196,7 +196,7 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    pkg_vere.addCSourceFiles(.{
+    pkg_vere.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = files.items,
         .flags = flags.items,

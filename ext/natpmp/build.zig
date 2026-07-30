@@ -15,9 +15,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib.addIncludePath(dep_c.path("include"));
+    lib.root_module.addIncludePath(dep_c.path("include"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
             "natpmp.c",
@@ -39,6 +39,6 @@ pub fn build(b: *std.Build) void {
         lib.root_module.addCMacro("ENABLE_STRNATPMPERR", "");
     }
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
     b.installArtifact(lib);
 }

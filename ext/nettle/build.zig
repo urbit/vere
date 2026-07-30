@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     // SIZEOF_LONG / SIZEOF_SIZE_T are target-dependent (long is 4 bytes on
     // LLP64 Windows, 8 on LP64 unix), so they're derived from the target here
@@ -44,11 +44,11 @@ pub fn build(b: *std.Build) void {
     const has_malloc_h: u1 = if (is_windows) 1 else 0;
 
     // vendored config.h + version.h (see comment above)
-    lib.addIncludePath(b.path("gen"));
+    lib.root_module.addIncludePath(b.path("gen"));
     // nettle source root (nettle-types.h, sha2.h, macros.h, ...)
-    lib.addIncludePath(dep_c.path(""));
+    lib.root_module.addIncludePath(dep_c.path(""));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .flags = &.{
             "-O2",

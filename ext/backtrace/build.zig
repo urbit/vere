@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     var config_h: *std.Build.Step.ConfigHeader = undefined;
 
@@ -165,11 +165,11 @@ pub fn build(b: *std.Build) void {
         .BACKTRACE_SUPPORTS_DATA = 1,
     });
 
-    lib.addConfigHeader(config_h);
-    lib.addConfigHeader(backtrace_supported_h);
-    lib.addIncludePath(dep_c.path(""));
+    lib.root_module.addConfigHeader(config_h);
+    lib.root_module.addConfigHeader(backtrace_supported_h);
+    lib.root_module.addIncludePath(dep_c.path(""));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
             // libbacktrace_la_SOURCES
