@@ -15,6 +15,8 @@
 mod ast;
 mod config;
 mod interp;
+#[allow(dead_code)]
+mod interp1; // in-progress interpreter rewrite; not wired into the driver yet
 mod sem;
 
 use std::collections::HashSet;
