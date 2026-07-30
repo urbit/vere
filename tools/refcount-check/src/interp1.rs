@@ -25,8 +25,8 @@ use clang_sys::*;
 use indexmap::IndexMap;
 
 use crate::ast::{
-    binop, decl_ref_name, int_literal_value, is_expr_kind, is_local_lvalue,
-    is_noun_type, unary_op, unwrap_expr, Cursor,
+  binop, decl_ref_name, int_literal_value, is_expr_kind, is_local_lvalue,
+  is_noun_type, unary_op, unwrap_expr, Cursor, Name,
 };
 use crate::config;
 use crate::sem::AssertMode::{Retain, Transfer};
@@ -34,22 +34,22 @@ use crate::sem::{AssertMode, Finding, Mode, Sem};
 
 /// Services the interpreter needs from the enclosing tool.
 pub trait Host {
-    /// Resolved refcount protocol of a callee (annotation + defaults).
-    fn callee_sem(&mut self, callee: &Cursor) -> Rc<Sem>;
-    /// `{ // @Refcount: assert ... }` annotations on a compound statement.
-    fn block_asserts(&self, compound: &Cursor)
-        -> Vec<(AssertMode, Vec<String>)>;
+  /// Resolved refcount protocol of a callee (annotation + defaults).
+  fn callee_sem(&mut self, callee: &Cursor) -> Rc<Sem>;
+  /// `{ // @Refcount: assert ... }` annotations on a compound statement.
+  fn block_asserts(&self, compound: &Cursor)
+    -> Vec<(AssertMode, Vec<String>)>;
 }
 
 type ValId = u32;
 #[derive(Clone)]
 enum RefcountState {
-    Uninit,             // not initialized yer
-    Borrowed,           // correctly borrowed
-    Owned {rc: u32},    // correctly owned, rc > 0
-    Conflict,           // inconsistent values across branches
-    Poisoned,           // consumed, not valid to use
-    Direct,             // direct atom, no refcounting
+  Uninit,             // not initialized yet
+  Borrowed,           // correctly borrowed
+  Owned {rc: u32},    // correctly owned, rc > 0
+  Conflict,           // inconsistent values across branches
+  Poisoned,           // consumed, not valid to use
+  Direct,             // direct atom, no refcounting
 }
 
 /// Immutable execution environment. I think of a (sufficiently simple) piece of
@@ -62,65 +62,81 @@ enum RefcountState {
 /// using it directly if the code is otherwise unreachable
 #[derive(Default, Clone)]
 struct Env {
-    values: IHashMap<ValId, RefcountState>,
-    locations: IHashMap<ValId, IHashSet<String>>,
-    locations_rev: IHashMap<String, ValId>,
-    goto_envs: IHashMap<String, Env>,
+  values: IHashMap<ValId, RefcountState>,
+  locations: IHashMap<ValId, IHashSet<Name>>,
+  locations_rev: IHashMap<Name, ValId>,
+  goto_envs: IHashMap<Name, Env>,
 }
 
 impl Env {
-    fn insert_new(&mut self, name: String, rc: RefcountState, id_gen: &mut ValId) {
-        let id: ValId = *id_gen;
-        *id_gen += 1;
-        self.values.update(id, rc);
-        let locs: IHashSet<String> = IHashSet::from([name.clone()]);
-        self.locations.update(id, locs);
-        self.locations_rev.update(name, id);
-    }
+  fn insert_new(&mut self, name: Name, rc: RefcountState, id_gen: &mut ValId) {
+    let id: ValId = *id_gen; *id_gen += 1;
+    
+    self.values.update(id, rc);
+    let locs: IHashSet<Name> = IHashSet::from([name.clone()]);
+    self.locations.update(id, locs);
+    self.locations_rev.update(name, id);
+  }
 }
 
 /// Check one function definition; returns the findings.
 pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
-    -> Vec<Finding> {
-    let mut body: Option<Cursor> = None;
-    for c in fun.children() {
-        if c.kind() == CXCursor_CompoundStmt {
-            body = Some(c);
-        }
+  -> Vec<Finding>
+{
+  let mut body: Option<Cursor> = None;
+  for c in fun.children() {
+    if c.kind() == CXCursor_CompoundStmt {
+      body = Some(c);
     }
+  }
 
-    let Some(body) = body else { return Vec::new(); };
-    let mut env = Env::default();
-    let mut id_gen: ValId = 0;
-    for p in fun.arguments() {
-        if p.kind() != CXCursor_ParmDecl || p.spelling().is_empty() {
-            continue;
-        }
-        if is_noun_type(&p.ty()) {
-            let pname = p.spelling();
-            let mode = sem.arg_mode(&pname);
-            let rc = match mode {
-                Mode::Transfer => RefcountState::Owned { rc: 1 },
-                Mode::Retain => RefcountState::Borrowed,
-            };
-            env.insert_new(pname, rc, &mut id_gen);
-        }
+  let Some(body) = body else { return vec![]; };
+  let mut env = Env::default();
+  let mut id_gen: ValId = 0;
+  for p in fun.arguments() {
+    if p.kind() != CXCursor_ParmDecl || p.spelling().is_empty() {
+      continue;
     }
+    if is_noun_type(&p.ty()) {
+      let pname = p.spelling();
+      let mode = sem.arg_mode(&pname);
+      let rc = match mode {
+        Mode::Transfer => RefcountState::Owned { rc: 1 },
+        Mode::Retain => RefcountState::Borrowed,
+      };
+      env.insert_new(pname, rc, &mut id_gen);
+    }
+  }
 
-    match execute_statement(&body, env) {
-        Err(finding) => vec![finding],
-        Ok(env) => check_exit(env, sem).into_iter().collect(),
-    }
+  match execute_statement(&body, env, &mut id_gen) {
+    Ok(env) => check_exit(env, sem, &mut id_gen),
+    Err(finding) => finding,
+  }
 }
 
-fn execute_statement(cur: &Cursor, env: Env) -> Result<Env, Finding> {
-    let k = cur.kind();
+fn execute_statement(cur: &Cursor, env: Env, id_gen: &mut ValId)
+  -> Result<Env, Vec<Finding>>
+{
+  let k = cur.kind();
 
-    
+  if k == CXCursor_CompoundStmt {
+    let mut kid = env.clone();
+    for child in cur.children() {
+      kid = execute_statement(&child, kid, id_gen)?;
+    }
+    return finalize_block(kid, env, id_gen);
+  }
 
-    todo!();
+  todo!();
 }
 
-fn check_exit(env: Env, sem: &Sem) -> Option<Finding> {
-    todo!();
+fn check_exit(env: Env, sem: &Sem, id_gen: &mut ValId) -> Vec<Finding>
+{
+  todo!();
+}
+
+fn finalize_block(env: Env, par: Env, id_gen: &mut ValId)
+  -> Result<Env, Vec<Finding>>
+{
+  todo!();
 }
