@@ -77,6 +77,11 @@ GNU statement-expression value propagation.
 
 - Findings were validated by diffing the full `pkg/noun` run against the
   Python tool (identical, including order) and by `--selftest`.
+- Translation units are checked on a thread pool (one worker per core;
+  each owns its own `CXIndex` and sem/source caches, since clang-sys
+  keeps the runtime-loaded libclang in a thread-local that every worker
+  must install). Per-entry output is buffered and emitted in sorted-entry
+  order, so results are deterministic and identical to a sequential run.
 - Python's dict-insertion-order semantics are preserved by using
   `IndexMap` for environments.
 - One deliberate micro-divergence: inside a GNU statement-expression

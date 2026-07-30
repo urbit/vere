@@ -435,6 +435,118 @@ fn parse_args() -> Args {
 }
 
 // ---------------------------------------------------------------------------
+// per-entry work (runs on a worker thread)
+
+/// Everything one translation unit produced, buffered so the main thread
+/// can emit it in deterministic (sorted-entry) order.
+#[derive(Default)]
+struct EntryOut {
+    stdout: Vec<String>,
+    stderr: Vec<String>,
+    findings: Vec<Finding>,
+    n_checked: u32,
+}
+
+fn process_entry(
+    idx: &Index,
+    e: &Entry,
+    resource_dir: Option<&str>,
+    args: &Args,
+    sem_cache: &mut SemCache,
+    src: &mut SrcCache,
+) -> EntryOut {
+    let mut out = EntryOut::default();
+    let fpath = &e.file;
+    let tu = match idx.parse(fpath, &lint_args(e, resource_dir)) {
+        Ok(t) => t,
+        Err(ex) => {
+            out.stderr.push(format!("{}: PARSE FAILED: {}", fpath, ex));
+            return out;
+        }
+    };
+    let hard = tu.error_diagnostics();
+    if !hard.is_empty() {
+        out.stderr
+            .push(format!("{}: {} parse errors (first: {})", fpath, hard.len(), hard[0]));
+        return out;
+    }
+    if re_file_custom().is_match(&read_head(fpath, 4096)) {
+        if args.verbose {
+            out.stdout
+                .push(format!("-- {}: @Refcount: custom file, skipped", fpath));
+        }
+        return out;
+    }
+    let fcm = FileComments::new(&tu, fpath);
+    for cur in tu.cursor().children() {
+        if cur.kind() != clang_sys::CXCursor_FunctionDecl || !cur.is_definition() {
+            continue;
+        }
+        match cur.location().file {
+            Some(f) if f == *fpath => {}
+            _ => continue,
+        }
+        if let Some(f) = &args.function {
+            if cur.spelling() != *f {
+                continue;
+            }
+        }
+        // only functions that take or return nouns
+        let takes = cur
+            .arguments()
+            .iter()
+            .any(|p| p.kind() == clang_sys::CXCursor_ParmDecl && is_noun_type(&p.ty()));
+        let rets = is_noun_type(&cur.result_type());
+        if !takes && !rets {
+            continue;
+        }
+        let sem = resolve_sem(&cur, sem_cache, src);
+        let loc = cur.location();
+        for (wl, wmsg) in &sem.warnings {
+            out.findings.push(Finding {
+                file: fpath.clone(),
+                line: if *wl != 0 { *wl } else { loc.line },
+                col: loc.col,
+                func: cur.spelling(),
+                cat: "annotation",
+                msg: wmsg.clone(),
+            });
+        }
+        for (sl, smsg) in annotation_sync_findings(&cur, fpath, src) {
+            out.findings.push(Finding {
+                file: fpath.clone(),
+                line: sl,
+                col: loc.col,
+                func: cur.spelling(),
+                cat: "annotation",
+                msg: smsg,
+            });
+        }
+        if !sem.check {
+            if args.verbose {
+                out.stdout
+                    .push(format!("-- {}: trusted ({})", cur.spelling(), sem.why));
+            }
+            continue;
+        }
+        out.n_checked += 1;
+        if args.verbose {
+            out.stdout.push(format!(
+                "-- {}: args={} product={} ({})",
+                cur.spelling(),
+                sem.default_args.as_str(),
+                sem.product.as_str(),
+                sem.why
+            ));
+        }
+        let mut host = DriverHost { sem_cache, src, fcm: &fcm };
+        out.findings
+            .extend(interp::check_function(&mut host, &cur, &sem));
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------
 // main
 
 fn main() {
@@ -502,100 +614,70 @@ fn run() -> i32 {
         return explain(&entries, resource_dir.as_deref(), target);
     }
 
-    let mut sem_cache = SemCache::new();
-    let mut src = SrcCache::default();
-    let mut findings: Vec<Finding> = Vec::new();
-    let idx = Index::new();
-    let mut n_checked = 0u32;
     entries.sort_by(|a, b| a.file.cmp(&b.file));
-    for e in &entries {
-        let fpath = &e.file;
-        let tu = match idx.parse(fpath, &lint_args(e, resource_dir.as_deref())) {
-            Ok(t) => t,
-            Err(ex) => {
-                eprintln!("{}: PARSE FAILED: {}", fpath, ex);
-                continue;
-            }
-        };
-        let hard = tu.error_diagnostics();
-        if !hard.is_empty() {
-            eprintln!("{}: {} parse errors (first: {})", fpath, hard.len(), hard[0]);
-            continue;
-        }
-        if re_file_custom().is_match(&read_head(fpath, 4096)) {
-            if args.verbose {
-                println!("-- {}: @Refcount: custom file, skipped", fpath);
-            }
-            continue;
-        }
-        let fcm = FileComments::new(&tu, fpath);
-        for cur in tu.cursor().children() {
-            if cur.kind() != clang_sys::CXCursor_FunctionDecl || !cur.is_definition() {
-                continue;
-            }
-            match cur.location().file {
-                Some(f) if f == *fpath => {}
-                _ => continue,
-            }
-            if let Some(f) = &args.function {
-                if cur.spelling() != *f {
-                    continue;
+
+    // Thread pool over translation units: libclang parsing dominates the
+    // runtime and every entry is independent. Each worker owns its own
+    // CXIndex and sem/source caches; results are buffered per entry and
+    // emitted in sorted-entry order, so the output is deterministic and
+    // identical to a sequential run.
+    let n_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .min(entries.len())
+        .max(1);
+    // clang-sys keeps the runtime-loaded libclang in a thread-local; each
+    // worker thread must install the main thread's handle before use.
+    let shared_lib = clang_sys::get_library();
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let mut results: Vec<Option<EntryOut>> = Vec::new();
+    results.resize_with(entries.len(), || None);
+    let slots: Vec<std::sync::Mutex<Option<EntryOut>>> =
+        results.into_iter().map(std::sync::Mutex::new).collect();
+    let entries_ref = &entries;
+    let args_ref = &args;
+    let rd = resource_dir.as_deref();
+    let next_ref = &next;
+    let slots_ref = &slots;
+    std::thread::scope(|s| {
+        for _ in 0..n_threads {
+            let shared_lib = shared_lib.clone();
+            s.spawn(move || {
+                clang_sys::set_library(shared_lib);
+                let idx = Index::new();
+                let mut sem_cache = SemCache::new();
+                let mut src = SrcCache::default();
+                loop {
+                    let i = next_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if i >= entries_ref.len() {
+                        break;
+                    }
+                    let out = process_entry(
+                        &idx,
+                        &entries_ref[i],
+                        rd,
+                        args_ref,
+                        &mut sem_cache,
+                        &mut src,
+                    );
+                    *slots_ref[i].lock().unwrap() = Some(out);
                 }
-            }
-            // only functions that take or return nouns
-            let takes = cur
-                .arguments()
-                .iter()
-                .any(|p| p.kind() == clang_sys::CXCursor_ParmDecl && is_noun_type(&p.ty()));
-            let rets = is_noun_type(&cur.result_type());
-            if !takes && !rets {
-                continue;
-            }
-            let sem = resolve_sem(&cur, &mut sem_cache, &mut src);
-            let loc = cur.location();
-            for (wl, wmsg) in &sem.warnings {
-                findings.push(Finding {
-                    file: fpath.clone(),
-                    line: if *wl != 0 { *wl } else { loc.line },
-                    col: loc.col,
-                    func: cur.spelling(),
-                    cat: "annotation",
-                    msg: wmsg.clone(),
-                });
-            }
-            for (sl, smsg) in annotation_sync_findings(&cur, fpath, &mut src) {
-                findings.push(Finding {
-                    file: fpath.clone(),
-                    line: sl,
-                    col: loc.col,
-                    func: cur.spelling(),
-                    cat: "annotation",
-                    msg: smsg,
-                });
-            }
-            if !sem.check {
-                if args.verbose {
-                    println!("-- {}: trusted ({})", cur.spelling(), sem.why);
-                }
-                continue;
-            }
-            n_checked += 1;
-            if args.verbose {
-                println!(
-                    "-- {}: args={} product={} ({})",
-                    cur.spelling(),
-                    sem.default_args.as_str(),
-                    sem.product.as_str(),
-                    sem.why
-                );
-            }
-            let mut host = DriverHost {
-                sem_cache: &mut sem_cache,
-                src: &mut src,
-                fcm: &fcm,
-            };
-            findings.extend(interp::check_function(&mut host, &cur, &sem));
+            });
         }
+    });
+
+    let mut findings: Vec<Finding> = Vec::new();
+    let mut n_checked = 0u32;
+    for slot in slots {
+        let Some(out) = slot.into_inner().unwrap() else { continue };
+        for line in &out.stdout {
+            println!("{}", line);
+        }
+        for line in &out.stderr {
+            eprintln!("{}", line);
+        }
+        findings.extend(out.findings);
+        n_checked += out.n_checked;
     }
 
     for f in &findings {
