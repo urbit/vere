@@ -12,6 +12,7 @@ MODULE.bazel.lock
 # Zig
 **/.zig-cache
 **/zig-out
+**/zig-pkg
 
 # clangd
 **/.cache

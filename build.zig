@@ -24,35 +24,33 @@ const CdbGenStep = struct {
 
     fn make(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
         const self: *CdbGenStep = @fieldParentPtr("step", step);
+        const io = self.b.graph.io;
 
-        var cwd = std.fs.cwd();
+        var cwd = std.Io.Dir.cwd();
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
-        var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+        var dir = cwd.openDir(io, self.frags_dir, .{ .iterate = true }) catch {
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         // Write compile_commands.json as a JSON array of fragment objects.
-        var out_file = try cwd.createFile(self.out_path, .{ .truncate = true });
-        defer out_file.close();
+        var out_file = try cwd.createFile(io, self.out_path, .{ .truncate = true });
+        defer out_file.close(io);
         var write_buffer: [4096]u8 = undefined;
 
-        var ww = out_file.writer(&write_buffer);
+        var ww = out_file.writer(io, &write_buffer);
         const w = &ww.interface;
 
         try w.writeByte('[');
 
         var it = dir.iterate();
         var first: bool = true;
-        while (try it.next()) |ent| {
+        while (try it.next(io)) |ent| {
             if (ent.kind != .file) continue;
 
             // zig emits one JSON object per file
-            var frag_file = try dir.openFile(ent.name, .{});
-            defer frag_file.close();
-
-            const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
+            const frag = try dir.readFileAlloc(io, ent.name, self.b.allocator, .limited(1024 * 1024));
             defer self.b.allocator.free(frag);
 
             // skip empty/whitespace-only
@@ -67,7 +65,7 @@ const CdbGenStep = struct {
         try w.writeAll("]\n");
         try w.flush();
 
-        cwd.deleteTree(self.frags_dir) catch {};
+        cwd.deleteTree(io, self.frags_dir) catch {};
     }
 };
 
@@ -198,10 +196,11 @@ pub fn build(b: *std.Build) !void {
     const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
 
     // Parse short git rev
-    var file = try std.fs.cwd().openFile(".git/logs/HEAD", .{});
-    defer file.close();
+    const io = b.graph.io;
+    var file = try std.Io.Dir.cwd().openFile(io, ".git/logs/HEAD", .{});
+    defer file.close(io);
     var buf: [4096]u8 = undefined;
-    var reader = file.reader(&buf);
+    var reader = file.reader(io, &buf);
     var last_line: [4096]u8 = undefined;
     while (reader.interface.takeDelimiterInclusive('\n')) |line| {
         if (line.len > 0)
@@ -529,7 +528,7 @@ fn buildBinary(
     }
 
     if (t.os.tag == .windows) {
-        urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.root_module.linkSystemLibrary("ws2_32", .{}); // WSA*, socket, htons, inet_*, gethostbyname, etc.
     }
 
     const target_query: std.Target.Query = .{
@@ -554,67 +553,67 @@ fn buildBinary(
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            urbit.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            urbit.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            urbit.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            urbit.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            urbit.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            urbit.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
-    urbit.linkLibC();
+    urbit.root_module.link_libc = true;
 
-    urbit.linkLibrary(pkg_vere.artifact("vere"));
-    urbit.linkLibrary(pkg_noun.artifact("noun"));
-    urbit.linkLibrary(pkg_past.artifact("past"));
-    urbit.linkLibrary(pkg_c3.artifact("c3"));
-    urbit.linkLibrary(pkg_ur.artifact("ur"));
+    urbit.root_module.linkLibrary(pkg_vere.artifact("vere"));
+    urbit.root_module.linkLibrary(pkg_noun.artifact("noun"));
+    urbit.root_module.linkLibrary(pkg_past.artifact("past"));
+    urbit.root_module.linkLibrary(pkg_c3.artifact("c3"));
+    urbit.root_module.linkLibrary(pkg_ur.artifact("ur"));
 
-    urbit.linkLibrary(gmp.artifact("gmp"));
+    urbit.root_module.linkLibrary(gmp.artifact("gmp"));
 
-    urbit.linkLibrary(h2o.artifact("h2o"));
-    urbit.linkLibrary(curl.artifact("curl"));
-    urbit.linkLibrary(libuv.artifact("libuv"));
-    urbit.linkLibrary(lmdb.artifact("lmdb"));
-    urbit.linkLibrary(openssl.artifact("ssl"));
+    urbit.root_module.linkLibrary(h2o.artifact("h2o"));
+    urbit.root_module.linkLibrary(curl.artifact("curl"));
+    urbit.root_module.linkLibrary(libuv.artifact("libuv"));
+    urbit.root_module.linkLibrary(lmdb.artifact("lmdb"));
+    urbit.root_module.linkLibrary(openssl.artifact("ssl"));
     if (t.os.tag != .windows)
-        urbit.linkLibrary(sigsegv.artifact("sigsegv"));
-    urbit.linkLibrary(urcrypt.artifact("urcrypt"));
-    urbit.linkLibrary(whereami.artifact("whereami"));
-    urbit.linkLibrary(wasm3.artifact("wasm3"));
+        urbit.root_module.linkLibrary(sigsegv.artifact("sigsegv"));
+    urbit.root_module.linkLibrary(urcrypt.artifact("urcrypt"));
+    urbit.root_module.linkLibrary(whereami.artifact("whereami"));
+    urbit.root_module.linkLibrary(wasm3.artifact("wasm3"));
 
     if (cfg.tracy_enable) {
-        urbit.linkLibrary(tracy.?.artifact("tracy"));
-        urbit.addIncludePath(tracy.?.path(""));
+        urbit.root_module.linkLibrary(tracy.?.artifact("tracy"));
+        urbit.root_module.addIncludePath(tracy.?.path(""));
     }
 
     if (t.os.tag.isDarwin()) {
         // Requires llvm@18 homebrew installation
         if (cfg.asan or cfg.ubsan)
-            urbit.addLibraryPath(.{
+            urbit.root_module.addLibraryPath(.{
                 .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
             });
-        if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan_osx_dynamic");
-        if (cfg.ubsan) urbit.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+        if (cfg.asan) urbit.root_module.linkSystemLibrary("clang_rt.asan_osx_dynamic", .{});
+        if (cfg.ubsan) urbit.root_module.linkSystemLibrary("clang_rt.ubsan_osx_dynamic", .{});
     }
 
     if (t.os.tag == .linux) {
         // Requires llvm-18 and clang-18 installation
         if (cfg.asan or cfg.ubsan)
-            urbit.addLibraryPath(.{
+            urbit.root_module.addLibraryPath(.{
                 .cwd_relative = "/usr/lib/clang/18/lib/linux",
             });
         if (t.cpu.arch == .x86_64) {
-            if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan-x86_64");
+            if (cfg.asan) urbit.root_module.linkSystemLibrary("clang_rt.asan-x86_64", .{});
             if (cfg.ubsan)
-                urbit.linkSystemLibrary("clang_rt.ubsan_standalone-x86_64");
+                urbit.root_module.linkSystemLibrary("clang_rt.ubsan_standalone-x86_64", .{});
         }
         if (t.cpu.arch == .aarch64) {
-            if (cfg.asan) urbit.linkSystemLibrary("clang_rt.asan-aarch64");
+            if (cfg.asan) urbit.root_module.linkSystemLibrary("clang_rt.asan-aarch64", .{});
             if (cfg.ubsan)
-                urbit.linkSystemLibrary("clang_rt.ubsan_standalone-aarch64");
+                urbit.root_module.linkSystemLibrary("clang_rt.ubsan_standalone-aarch64", .{});
         }
     }
 
-    urbit.addCSourceFiles(.{
+    urbit.root_module.addCSourceFiles(.{
         .root = b.path("pkg/vere"),
         .files = &.{
             "main.c",
@@ -780,36 +779,43 @@ fn buildBinary(
                     .optimize = optimize,
                 });
                 if (macos_sdk != null) {
-                    test_exe.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-                    test_exe.addLibraryPath(macos_sdk.?.path("usr/lib"));
-                    test_exe.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+                    test_exe.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+                    test_exe.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+                    test_exe.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
                 }
             }
 
             if (t.os.tag == .windows) {
-                test_exe.linkSystemLibrary("ws2_32");
+                test_exe.root_module.linkSystemLibrary("ws2_32", .{});
             }
 
             if (t.os.tag.isDarwin()) {
                 // Requires llvm@18 homebrew installation
                 if (cfg.asan or cfg.ubsan)
-                    test_exe.addLibraryPath(.{
+                    test_exe.root_module.addLibraryPath(.{
                         .cwd_relative = "/opt/homebrew/opt/llvm@18/lib/clang/18/lib/darwin",
                     });
-                if (cfg.asan) test_exe.linkSystemLibrary("clang_rt.asan_osx_dynamic");
-                if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
+                if (cfg.asan) test_exe.root_module.linkSystemLibrary("clang_rt.asan_osx_dynamic", .{});
+                if (cfg.ubsan) test_exe.root_module.linkSystemLibrary("clang_rt.ubsan_osx_dynamic", .{});
             }
 
             test_exe.stack_size = 0;
-            test_exe.linkLibC();
+            test_exe.root_module.link_libc = true;
             for (tst.deps) |dep| {
-                test_exe.linkLibrary(dep);
+                test_exe.root_module.linkLibrary(dep);
+            }
+            //  events-test #includes events.c, which #includes "murmur3.h".
+            //  the noun artifact already links murmur3, but the header isn't
+            //  on the test's compile include path — add it explicitly.
+            //
+            if (std.mem.eql(u8, tst.name, "events-test")) {
+                test_exe.root_module.addIncludePath(b.path("ext/murmur3/vendor"));
             }
             if (cfg.tracy_enable) {
-                test_exe.linkLibrary(tracy.?.artifact("tracy"));
-                test_exe.addIncludePath(tracy.?.path(""));
+                test_exe.root_module.linkLibrary(tracy.?.artifact("tracy"));
+                test_exe.root_module.addIncludePath(tracy.?.path(""));
             }
-            test_exe.addCSourceFiles(.{
+            test_exe.root_module.addCSourceFiles(.{
                 .files = &.{tst.file},
                 .flags = urbit_flags.items,
             });

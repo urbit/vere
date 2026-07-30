@@ -19,24 +19,24 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.linkLibrary(libsecp256k1(b, target, optimize));
-    lib.linkLibrary(libargon2(b, target, optimize));
-    lib.linkLibrary(libblake3(b, target, optimize));
-    lib.linkLibrary(libed25519(b, target, optimize));
-    lib.linkLibrary(libge_additions(b, target, optimize));
-    lib.linkLibrary(libkeccak_tiny(b, target, optimize));
-    lib.linkLibrary(libmonocypher(b, target, optimize));
-    lib.linkLibrary(libscrypt(b, target, optimize));
+    lib.root_module.linkLibrary(libsecp256k1(b, target, optimize));
+    lib.root_module.linkLibrary(libargon2(b, target, optimize));
+    lib.root_module.linkLibrary(libblake3(b, target, optimize));
+    lib.root_module.linkLibrary(libed25519(b, target, optimize));
+    lib.root_module.linkLibrary(libge_additions(b, target, optimize));
+    lib.root_module.linkLibrary(libkeccak_tiny(b, target, optimize));
+    lib.root_module.linkLibrary(libmonocypher(b, target, optimize));
+    lib.root_module.linkLibrary(libscrypt(b, target, optimize));
 
-    lib.linkLibrary(libaes_siv(b, target, optimize));
+    lib.root_module.linkLibrary(libaes_siv(b, target, optimize));
     // SHA, RIPEMD160 and AES (ECB/CBC) now come from nettle instead of openssl
-    lib.linkLibrary(nettle.artifact("nettle"));
+    lib.root_module.linkLibrary(nettle.artifact("nettle"));
 
-    lib.addIncludePath(dep_c.path("urcrypt"));
+    lib.root_module.addIncludePath(dep_c.path("urcrypt"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("urcrypt"),
         .files = &.{
             "aes_cbc.c",
@@ -90,15 +90,15 @@ fn libaes_siv(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibrary(nettle.artifact("nettle"));
+    lib.root_module.linkLibrary(nettle.artifact("nettle"));
 
     const config_h = b.addConfigHeader(.{
         .style = .blank,
         .include_path = "config.h",
     }, .{});
-    lib.addConfigHeader(config_h);
-    lib.addIncludePath(dep_c.path("aes_siv"));
-    lib.addCSourceFiles(.{
+    lib.root_module.addConfigHeader(config_h);
+    lib.root_module.addIncludePath(dep_c.path("aes_siv"));
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("aes_siv"),
         .files = &.{
             "aes_siv.c",
@@ -112,7 +112,7 @@ fn libaes_siv(
 
     lib.installHeader(dep_c.path("aes_siv/aes_siv.h"), "aes_siv.h");
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     return lib;
 }
@@ -132,11 +132,11 @@ fn libsecp256k1(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("src"));
+    lib.root_module.addIncludePath(dep_c.path("src"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("src"),
         .files = &.{
             "precomputed_ecmult.c",
@@ -197,7 +197,7 @@ fn libargon2(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     const flags = .{
         "-O2",
@@ -216,18 +216,18 @@ fn libargon2(
         "src/thread.c",
     };
 
-    lib.addIncludePath(dep_c.path("argon2/include"));
-    lib.addIncludePath(dep_c.path("argon2/src"));
-    lib.addIncludePath(dep_c.path("argon2/src/blake2"));
+    lib.root_module.addIncludePath(dep_c.path("argon2/include"));
+    lib.root_module.addIncludePath(dep_c.path("argon2/src"));
+    lib.root_module.addIncludePath(dep_c.path("argon2/src/blake2"));
 
     if (target.result.cpu.arch == .x86_64) {
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path("argon2"),
             .files = &(common_files ++ .{"src/opt.c"}),
             .flags = &flags,
         });
     } else {
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path("argon2"),
             .files = &(common_files ++ .{"src/ref.c"}),
             .flags = &flags,
@@ -257,7 +257,7 @@ fn libblake3(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     const common_files = .{
         "blake3.c",
@@ -265,7 +265,7 @@ fn libblake3(
         "blake3_portable.c",
     };
 
-    lib.addIncludePath(dep_c.path("blake3"));
+    lib.root_module.addIncludePath(dep_c.path("blake3"));
 
     const unix_assembly = .{
         "blake3_sse2_x86-64_unix.S",
@@ -284,7 +284,7 @@ fn libblake3(
     const assembly_files = if (t.os.tag == .windows) windows_assembly else unix_assembly;
 
     if (target.result.cpu.arch == .x86_64) {
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
             .files = &(common_files ++ assembly_files),
             .flags = &.{
@@ -294,7 +294,7 @@ fn libblake3(
             },
         });
     } else {
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path("blake3"),
             .files = &(common_files ++ .{"blake3_neon.c"}),
             .flags = &.{
@@ -327,11 +327,11 @@ fn libed25519(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("ed25519/src"));
+    lib.root_module.addIncludePath(dep_c.path("ed25519/src"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("ed25519"),
         .files = &.{
             "src/add_scalar.c",
@@ -375,12 +375,12 @@ fn libge_additions(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("ed25519/src"));
-    lib.addIncludePath(dep_c.path("ge-additions"));
+    lib.root_module.addIncludePath(dep_c.path("ed25519/src"));
+    lib.root_module.addIncludePath(dep_c.path("ge-additions"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("ge-additions"),
         .files = &.{"ge-additions.c"},
         .flags = &.{
@@ -412,11 +412,11 @@ fn libkeccak_tiny(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("keccak-tiny"));
+    lib.root_module.addIncludePath(dep_c.path("keccak-tiny"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("keccak-tiny"),
         .files = &.{"keccak-tiny.c"},
         .flags = &.{
@@ -450,11 +450,11 @@ fn libmonocypher(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("monocypher"));
+    lib.root_module.addIncludePath(dep_c.path("monocypher"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("monocypher"),
         .files = &.{"monocypher.c"},
         .flags = &.{
@@ -484,11 +484,11 @@ fn libscrypt(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("scrypt"));
+    lib.root_module.addIncludePath(dep_c.path("scrypt"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("scrypt"),
         .files = &.{
             "b64.c",

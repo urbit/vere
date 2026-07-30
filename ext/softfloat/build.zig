@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib.addIncludePath(dep_c.path("source/include"));
+    lib.root_module.addIncludePath(dep_c.path("source/include"));
 
     const flags = .{
         "-fno-sanitize=all",
@@ -24,9 +24,9 @@ pub fn build(b: *std.Build) void {
     };
 
     if (t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(dep_c.path("source/ARM-VFPv2"));
-        lib.addIncludePath(dep_c.path("build/Linux-ARM-VFPv2-GCC"));
-        lib.addCSourceFiles(.{
+        lib.root_module.addIncludePath(dep_c.path("source/ARM-VFPv2"));
+        lib.root_module.addIncludePath(dep_c.path("build/Linux-ARM-VFPv2-GCC"));
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path(""),
             .files = &.{
                 "source/s_compare96M.c",
@@ -272,14 +272,14 @@ pub fn build(b: *std.Build) void {
         lib.installHeader(dep_c.path("build/Linux-ARM-VFPv2-GCC/platform.h"), "platform.h");
     }
     if (t.cpu.arch.isX86()) {
-        lib.addIncludePath(dep_c.path("source/8086-SSE"));
-        lib.addIncludePath(dep_c.path("build/Linux-x86_64-GCC"));
+        lib.root_module.addIncludePath(dep_c.path("source/8086-SSE"));
+        lib.root_module.addIncludePath(dep_c.path("build/Linux-x86_64-GCC"));
 
         lib.root_module.addCMacro("SOFTFLOAT_FAST_INT64", "");
         lib.root_module.addCMacro("SOFTFLOAT_FAST_DIV32TO16", "");
         lib.root_module.addCMacro("SOFTFLOAT_FAST_DIV64TO32", "");
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = dep_c.path(""),
             .files = &.{
                 "source/s_eq128.c",
@@ -603,7 +603,7 @@ pub fn build(b: *std.Build) void {
         .include_extensions = &.{".h"},
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     b.installArtifact(lib);
 }

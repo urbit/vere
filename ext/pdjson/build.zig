@@ -9,11 +9,11 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(b.path("vendor"));
+    lib.root_module.addIncludePath(b.path("vendor"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = b.path("vendor"),
         .files = &.{"pdjson.c"},
         .flags = &.{

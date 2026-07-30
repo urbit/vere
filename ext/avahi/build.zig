@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
-    expat.linkLibC();
+    expat.root_module.link_libc = true;
 
     const expat_cmake_config = b.addConfigHeader(.{
         .style = .{
@@ -41,10 +41,10 @@ pub fn build(b: *std.Build) void {
         .SIZE_T = "unsigned",
     });
 
-    expat.addConfigHeader(expat_cmake_config);
-    expat.addIncludePath(expat_c.path("lib"));
+    expat.root_module.addConfigHeader(expat_cmake_config);
+    expat.root_module.addIncludePath(expat_c.path("lib"));
 
-    expat.addCSourceFiles(.{
+    expat.root_module.addCSourceFiles(.{
         .root = expat_c.path("lib"),
         .files = &.{
             "xmlrole.c",
@@ -76,8 +76,8 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
-    dbus.linkLibC();
-    dbus.linkLibrary(expat);
+    dbus.root_module.link_libc = true;
+    dbus.root_module.linkLibrary(expat);
 
     dbus.root_module.addCMacro("HAVE_ERRNO_H", "");
     dbus.root_module.addCMacro("VERSION", "1.14.8");
@@ -334,13 +334,13 @@ pub fn build(b: *std.Build) void {
         },
     );
 
-    dbus.addConfigHeader(dbus_config_h);
-    dbus.addConfigHeader(dbus_arch_deps_h);
+    dbus.root_module.addConfigHeader(dbus_config_h);
+    dbus.root_module.addConfigHeader(dbus_arch_deps_h);
 
-    dbus.addIncludePath(dbus_c.path(""));
-    dbus.addIncludePath(dbus_c.path("dbus"));
+    dbus.root_module.addIncludePath(dbus_c.path(""));
+    dbus.root_module.addIncludePath(dbus_c.path("dbus"));
 
-    dbus.addCSourceFiles(.{
+    dbus.root_module.addCSourceFiles(.{
         .root = dbus_c.path("dbus"),
         .files = &.{
             // DBUS_LIB_SOURCES
@@ -392,7 +392,7 @@ pub fn build(b: *std.Build) void {
 
     // Platform specific sources
     if (target.result.os.tag == .windows) {
-        dbus.addCSourceFiles(.{
+        dbus.root_module.addCSourceFiles(.{
             .root = dbus_c.path("dbus"),
             .files = &.{
                 // LIB
@@ -410,7 +410,7 @@ pub fn build(b: *std.Build) void {
             },
         });
     } else {
-        dbus.addCSourceFiles(.{
+        dbus.root_module.addCSourceFiles(.{
             .root = dbus_c.path("dbus"),
             .files = &.{
                 // LIB
@@ -525,8 +525,8 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    avahi.linkLibC();
-    avahi.linkLibrary(dbus);
+    avahi.root_module.link_libc = true;
+    avahi.root_module.linkLibrary(dbus);
 
     avahi.root_module.addCMacro("GETTEXT_PACKAGE", "\"avahi\"");
 
@@ -685,10 +685,10 @@ pub fn build(b: *std.Build) void {
     //     .uid_t = null,
     // });
 
-    avahi.addConfigHeader(avahi_config_h);
-    avahi.addIncludePath(avahi_c.path(""));
+    avahi.root_module.addConfigHeader(avahi_config_h);
+    avahi.root_module.addIncludePath(avahi_c.path(""));
 
-    avahi.addCSourceFiles(.{
+    avahi.root_module.addCSourceFiles(.{
         .root = avahi_c.path(""),
         .files = &.{
             // "avahi-autoipd/iface-bsd.c",

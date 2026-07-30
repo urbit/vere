@@ -10,9 +10,9 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    murmur3.linkLibC();
+    murmur3.root_module.link_libc = true;
 
-    murmur3.addIncludePath(b.path("."));
+    murmur3.root_module.addIncludePath(b.path("."));
 
     const common_flags = [_][]const u8{
         "-fno-sanitize=all",
@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         "-c",
     };
 
-    murmur3.addCSourceFiles(.{
+    murmur3.root_module.addCSourceFiles(.{
         .root = b.path("vendor"),
         .files = &.{"murmur3.c"},
         .flags = if (t.os.tag == .macos) &mac_flags else &common_flags,

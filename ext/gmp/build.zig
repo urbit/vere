@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
     // TODO: Finish this
     if (t.os.tag != .windows) {
@@ -35,33 +35,33 @@ pub fn build(b: *std.Build) void {
             .CFLAGS = "-O2 -pedantic -march=armv8-a",
         });
 
-        lib.addConfigHeader(gmp_h);
+        lib.root_module.addConfigHeader(gmp_h);
         lib.installConfigHeader(gmp_h);
     }
 
     // Static headers
-    lib.addIncludePath(dep_c.path("."));
-    lib.addIncludePath(dep_c.path("mpf"));
-    lib.addIncludePath(dep_c.path("mpn"));
-    lib.addIncludePath(dep_c.path("mpq"));
-    lib.addIncludePath(dep_c.path("mpz"));
-    lib.addIncludePath(dep_c.path("printf"));
-    lib.addIncludePath(dep_c.path("rand"));
-    lib.addIncludePath(dep_c.path("scanf"));
+    lib.root_module.addIncludePath(dep_c.path("."));
+    lib.root_module.addIncludePath(dep_c.path("mpf"));
+    lib.root_module.addIncludePath(dep_c.path("mpn"));
+    lib.root_module.addIncludePath(dep_c.path("mpq"));
+    lib.root_module.addIncludePath(dep_c.path("mpz"));
+    lib.root_module.addIncludePath(dep_c.path("printf"));
+    lib.root_module.addIncludePath(dep_c.path("rand"));
+    lib.root_module.addIncludePath(dep_c.path("scanf"));
     if (t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(dep_c.path("mpn/arm64"));
+        lib.root_module.addIncludePath(dep_c.path("mpn/arm64"));
     } else if (t.cpu.arch.isX86()) {
-        lib.addIncludePath(dep_c.path("mpn/x86_64"));
+        lib.root_module.addIncludePath(dep_c.path("mpn/x86_64"));
     }
 
     // Generated Sources
     if (t.os.tag == .macos and t.cpu.arch == .aarch64) {
-        lib.addIncludePath(b.path("gen/aarch64-macos"));
-        lib.addIncludePath(b.path("gen/aarch64-macos/mpn"));
+        lib.root_module.addIncludePath(b.path("gen/aarch64-macos"));
+        lib.root_module.addIncludePath(b.path("gen/aarch64-macos/mpn"));
         for (aarch64_macos_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
+            lib.root_module.addAssemblyFile(b.path(rel_path));
         }
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/aarch64-macos"),
             .files = &.{
                 "mpn/mp_bases.c",
@@ -73,12 +73,12 @@ pub fn build(b: *std.Build) void {
         });
     }
     if (t.os.tag == .macos and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/x86_64-macos"));
-        lib.addIncludePath(b.path("gen/x86_64-macos/mpn"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-macos"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-macos/mpn"));
         for (x86_64_macos_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
+            lib.root_module.addAssemblyFile(b.path(rel_path));
         }
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/x86_64-macos"),
             .files = &.{
                 "mpn/mp_bases.c",
@@ -90,12 +90,12 @@ pub fn build(b: *std.Build) void {
         });
     }
     if (t.os.tag == .linux and t.cpu.arch == .aarch64) {
-        lib.addIncludePath(b.path("gen/aarch64-linux"));
-        lib.addIncludePath(b.path("gen/aarch64-linux/mpn"));
+        lib.root_module.addIncludePath(b.path("gen/aarch64-linux"));
+        lib.root_module.addIncludePath(b.path("gen/aarch64-linux/mpn"));
         for (aarch64_linux_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
+            lib.root_module.addAssemblyFile(b.path(rel_path));
         }
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/aarch64-linux"),
             .files = &.{
                 "mpn/mp_bases.c",
@@ -107,12 +107,12 @@ pub fn build(b: *std.Build) void {
         });
     }
     if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/x86_64-linux"));
-        lib.addIncludePath(b.path("gen/x86_64-linux/mpn"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-linux"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-linux/mpn"));
         for (x86_64_linux_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
+            lib.root_module.addAssemblyFile(b.path(rel_path));
         }
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/x86_64-linux"),
             .files = &.{
                 "mpn/mp_bases.c",
@@ -125,12 +125,12 @@ pub fn build(b: *std.Build) void {
     }
 
     if (t.os.tag == .windows and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/x86_64-windows"));
-        lib.addIncludePath(b.path("gen/x86_64-windows/mpn"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-windows"));
+        lib.root_module.addIncludePath(b.path("gen/x86_64-windows/mpn"));
         for (x86_64_windows_asm_sources) |rel_path| {
-            lib.addAssemblyFile(b.path(rel_path));
+            lib.root_module.addAssemblyFile(b.path(rel_path));
         }
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .root = b.path("gen/x86_64-windows"),
             .files = &.{
                 "mpn/mp_bases.c",
@@ -143,7 +143,7 @@ pub fn build(b: *std.Build) void {
     }
 
     // Generic C Sources
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &generic_c_sources,
         .flags = &.{
@@ -152,7 +152,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // These files need to be compiles twice with different macros
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
             "mpn/generic/sec_div.c",
@@ -166,7 +166,7 @@ pub fn build(b: *std.Build) void {
             "-DOPERATION_sec_add_1", // sec_aors_1.c
         },
     });
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path(""),
         .files = &.{
             "mpn/generic/sec_div.c",

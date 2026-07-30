@@ -19,9 +19,9 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    curl.linkLibC();
-    curl.linkLibrary(openssl.artifact("ssl"));
-    curl.linkLibrary(openssl.artifact("crypto"));
+    curl.root_module.link_libc = true;
+    curl.root_module.linkLibrary(openssl.artifact("ssl"));
+    curl.root_module.linkLibrary(openssl.artifact("crypto"));
 
     curl.root_module.addCMacro("BUILDING_LIBCURL", "");
     curl.root_module.addCMacro("CURL_STATICLIB", "1");
@@ -67,7 +67,7 @@ pub fn build(b: *std.Build) void {
     // curl.root_module.addCMacro("CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG", "1");
 
     if (target.result.os.tag == .windows) {
-        curl.linkSystemLibrary("bcrypt");
+        curl.root_module.linkSystemLibrary("bcrypt", .{});
     } else {
         curl.root_module.addCMacro("CURL_EXTERN_SYMBOL", "__attribute__ ((__visibility__ (\"default\"))");
 
@@ -219,10 +219,10 @@ pub fn build(b: *std.Build) void {
         curl.root_module.addCMacro("_FILE_OFFSET_BITS", "64");
     }
 
-    curl.addIncludePath(curl_c.path("lib"));
-    curl.addIncludePath(curl_c.path("include"));
+    curl.root_module.addIncludePath(curl_c.path("lib"));
+    curl.root_module.addIncludePath(curl_c.path("include"));
 
-    curl.addCSourceFiles(.{
+    curl.root_module.addCSourceFiles(.{
         .root = curl_c.path("lib"),
         .files = &.{
             "vauth/krb5_sspi.c",

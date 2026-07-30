@@ -22,11 +22,11 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    pkg_ent.linkLibC();
+    pkg_ent.root_module.link_libc = true;
 
-    pkg_ent.addIncludePath(b.path(""));
+    pkg_ent.root_module.addIncludePath(b.path(""));
 
-    pkg_ent.addCSourceFiles(.{
+    pkg_ent.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = &.{"ent.c"},
         .flags = flags.items,
@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) !void {
     pkg_ent.installHeader(b.path("ent.h"), "ent/ent.h");
 
     if (t.os.tag == .windows) {
-        pkg_ent.linkSystemLibrary("bcrypt");
+        pkg_ent.root_module.linkSystemLibrary("bcrypt", .{});
     }
 
     b.installArtifact(pkg_ent);

@@ -14,11 +14,11 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
 
-    lib.addIncludePath(dep_c.path("src"));
+    lib.root_module.addIncludePath(dep_c.path("src"));
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = dep_c.path("src"),
         .files = &.{"whereami.c"},
         .flags = &.{

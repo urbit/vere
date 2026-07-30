@@ -34,9 +34,9 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         if (macos_sdk != null) {
-            pkg_noun.addSystemIncludePath(macos_sdk.?.path("usr/include"));
-            pkg_noun.addLibraryPath(macos_sdk.?.path("usr/lib"));
-            pkg_noun.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
+            pkg_noun.root_module.addSystemIncludePath(macos_sdk.?.path("usr/include"));
+            pkg_noun.root_module.addLibraryPath(macos_sdk.?.path("usr/lib"));
+            pkg_noun.root_module.addFrameworkPath(macos_sdk.?.path("System/Library/Frameworks"));
         }
     }
 
@@ -128,42 +128,42 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     }) else null;
 
-    pkg_noun.linkLibC();
+    pkg_noun.root_module.link_libc = true;
 
-    pkg_noun.linkLibrary(pkg_c3.artifact("c3"));
-    pkg_noun.linkLibrary(pkg_ent.artifact("ent"));
-    pkg_noun.linkLibrary(pkg_ur.artifact("ur"));
+    pkg_noun.root_module.linkLibrary(pkg_c3.artifact("c3"));
+    pkg_noun.root_module.linkLibrary(pkg_ent.artifact("ent"));
+    pkg_noun.root_module.linkLibrary(pkg_ur.artifact("ur"));
 
-    pkg_noun.linkLibrary(backtrace.artifact("backtrace"));
-    pkg_noun.linkLibrary(gmp.artifact("gmp"));
+    pkg_noun.root_module.linkLibrary(backtrace.artifact("backtrace"));
+    pkg_noun.root_module.linkLibrary(gmp.artifact("gmp"));
 
-    pkg_noun.linkLibrary(murmur3.artifact("murmur3"));
-    pkg_noun.linkLibrary(openssl.artifact("ssl"));
-    pkg_noun.linkLibrary(pdjson.artifact("pdjson"));
+    pkg_noun.root_module.linkLibrary(murmur3.artifact("murmur3"));
+    pkg_noun.root_module.linkLibrary(openssl.artifact("ssl"));
+    pkg_noun.root_module.linkLibrary(pdjson.artifact("pdjson"));
     if (t.os.tag != .windows) {
-        pkg_noun.linkLibrary(sigsegv.artifact("sigsegv"));
+        pkg_noun.root_module.linkLibrary(sigsegv.artifact("sigsegv"));
     }
-    pkg_noun.linkLibrary(softblas.artifact("softblas"));
-    pkg_noun.linkLibrary(softfloat.artifact("softfloat"));
+    pkg_noun.root_module.linkLibrary(softblas.artifact("softblas"));
+    pkg_noun.root_module.linkLibrary(softfloat.artifact("softfloat"));
     if (t.os.tag == .linux)
-        pkg_noun.linkLibrary(unwind.artifact("unwind"));
-    pkg_noun.linkLibrary(urcrypt.artifact("urcrypt"));
-    pkg_noun.linkLibrary(whereami.artifact("whereami"));
-    pkg_noun.linkLibrary(zlib.artifact("z"));
-    pkg_noun.linkLibrary(wasm3.artifact("wasm3"));
+        pkg_noun.root_module.linkLibrary(unwind.artifact("unwind"));
+    pkg_noun.root_module.linkLibrary(urcrypt.artifact("urcrypt"));
+    pkg_noun.root_module.linkLibrary(whereami.artifact("whereami"));
+    pkg_noun.root_module.linkLibrary(zlib.artifact("z"));
+    pkg_noun.root_module.linkLibrary(wasm3.artifact("wasm3"));
 
     if (tracy_enabled) {
-        pkg_noun.linkLibrary(tracy.?.artifact("tracy"));
-        pkg_noun.addIncludePath(tracy.?.path(""));
+        pkg_noun.root_module.linkLibrary(tracy.?.artifact("tracy"));
+        pkg_noun.root_module.addIncludePath(tracy.?.path(""));
     }
 
-    pkg_noun.addIncludePath(b.path(""));
+    pkg_noun.root_module.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
-        pkg_noun.addIncludePath(b.path("platform/darwin"));
+        pkg_noun.root_module.addIncludePath(b.path("platform/darwin"));
     if (t.os.tag == .linux)
-        pkg_noun.addIncludePath(b.path("platform/linux"));
+        pkg_noun.root_module.addIncludePath(b.path("platform/linux"));
     if (t.os.tag == .windows)
-        pkg_noun.addIncludePath(b.path("platform/windows"));
+        pkg_noun.root_module.addIncludePath(b.path("platform/windows"));
 
     var flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer flags.deinit();
@@ -173,14 +173,14 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
-    pkg_noun.addCSourceFiles(.{
+    pkg_noun.root_module.addCSourceFiles(.{
         .root = b.path(""),
         .files = &c_source_files,
         .flags = flags.items,
     });
 
     if (t.os.tag == .windows) {
-        pkg_noun.addCSourceFiles(.{
+        pkg_noun.root_module.addCSourceFiles(.{
             .root = b.path("platform/windows"),
             .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c" },
             .flags = flags.items,
