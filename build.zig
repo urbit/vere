@@ -723,6 +723,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "bytestream-test",
+                .file = "pkg/noun/bytestream_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "retrieve-test",
                 .file = "pkg/noun/retrieve_tests.c",
                 .deps = noun_test_deps,
@@ -736,6 +741,11 @@ fn buildBinary(
             .{
                 .name = "ames-test",
                 .file = "pkg/vere/ames_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "mesa-test",
+                .file = "pkg/vere/mesa_tests.c",
                 .deps = vere_test_deps,
             },
             .{

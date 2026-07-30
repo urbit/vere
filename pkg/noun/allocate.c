@@ -241,8 +241,10 @@ u3a_walloc(c3_w len_w)
 /* u3a_wealloc(): realloc in words.
 */
 void*
-u3a_wealloc(void* lag_v, c3_w len_w)
+u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 {
+  (void)old_w;
+
   if ( !lag_v ) {
     return u3a_walloc(len_w);
   }
@@ -294,14 +296,15 @@ u3a_wtrim(void* tox_v, c3_w old_w, c3_w len_w)
 /* u3a_calloc(): allocate and zero-initialize array
 */
 void*
-u3a_calloc(size_t num_i, size_t len_i)
+u3a_calloc(c3_z num_z, c3_z len_z)
 {
-  size_t byt_i = num_i * len_i;
-  c3_w* out_w;
+  c3_z   byt_z = num_z * len_z;
+  c3_w *out_w;
 
-  u3_assert(byt_i / len_i == num_i);
-  out_w = u3a_malloc(byt_i);
-  memset(out_w, 0, byt_i);
+  if ( num_z != (byt_z / len_z) ) return (u3m_bail(c3__fail), (void*)0);
+
+  out_w = u3a_malloc(byt_z);
+  memset(out_w, 0, byt_z);
 
   return out_w;
 }
@@ -313,9 +316,43 @@ u3a_calloc(size_t num_i, size_t len_i)
 
 */
 void*
-u3a_malloc(size_t len_i)
+u3a_malloc(c3_z len_z)
 {
-  return u3a_walloc((len_i + u3a_word_bytes - 1) >> u3a_word_bytes_shift);
+  c3_z wor_z = (len_z + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+#ifndef VERE64
+  if ( wor_z > UINT32_MAX ) return (u3m_bail(c3__fail), (void*)0);
+#endif
+  return u3a_walloc((c3_w)wor_z);
+}
+
+/* u3a_realloc(): aligned realloc in bytes.
+*/
+void*
+u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z)
+{
+  if ( !lag_v ) {
+    (void)old_z;
+    return u3a_malloc(len_z);
+  }
+
+  c3_z wol_z = (old_z + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+  c3_z wen_z = (len_z + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+
+#ifndef VERE64
+  if ( (wol_z > UINT32_MAX) || (wen_z > UINT32_MAX) ) {
+    return (u3m_bail(c3__fail), (void*)0);
+  }
+#endif
+
+  return u3a_wealloc(lag_v, (c3_w)wol_z, (c3_w)wen_z);
+}
+
+/* u3a_free(): free for aligned malloc.
+*/
+void
+u3a_free(void* tox_v)
+{
+  u3a_wfree((c3_w*)tox_v);
 }
 
 /* u3a_celloc(): allocate a cell.
@@ -364,26 +401,6 @@ u3a_cfree(c3_w* cel_w)
   }
 
   u3a_wfree(cel_w);
-}
-
-/* u3a_realloc(): aligned realloc in bytes.
-*/
-void*
-u3a_realloc(void* lag_v, size_t len_i)
-{
-  if ( !lag_v ) {
-    return u3a_malloc(len_i);
-  }
-
-  return u3a_wealloc(lag_v, (len_i + 3) >> 2);
-}
-
-/* u3a_free(): free for aligned malloc.
-*/
-void
-u3a_free(void* tox_v)
-{
-  u3a_wfree((c3_w*)tox_v);
 }
 
 /* _me_wash_north(): clean up mug slots after copy.
@@ -1204,7 +1221,9 @@ u3a_mark_noun(u3_noun som)
       c3_w* dog_w = u3a_to_ptr(som);
       c3_w  new_w = u3a_mark_rptr(dog_w);
 
-      if ( 0 == new_w || c3_w_max == new_w ) {      //  see u3a_mark_ptr()
+      //  size of 0 means "already marked"; skip children
+      //
+      if ( !new_w ) {
         return siz_w;
       }
       else {
@@ -1687,11 +1706,37 @@ u3a_mark_road()
 
   qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
   qua_u[6]->nam_c = strdup("transient memoization cache");
-  qua_u[6]->siz_w = u3h_mark(u3R->cax.har_p) * sizeof(c3_w);
+  qua_u[6]->siz_w = u3h_mark_tot(u3R->cax.har_p) * sizeof(c3_w);
 
   qua_u[7] = c3_calloc(sizeof(*qua_u[7]));
   qua_u[7]->nam_c = strdup("persistent memoization cache");
-  qua_u[7]->siz_w = u3h_mark(u3R->cax.per_p) * sizeof(c3_w);
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->cax.per_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[7]->qua_u = mua_u;
+    qua_u[7]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
 
   qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
   qua_u[8]->nam_c = strdup("page directory");
@@ -1750,7 +1795,33 @@ u3a_mark_road()
 
   qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
   qua_u[12]->nam_c = strdup("loop hint set");
-  qua_u[12]->siz_w = u3h_mark(u3R->lop_p) * sizeof(c3_w);
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->lop_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[12]->qua_u = mua_u;
+    qua_u[12]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
   
   qua_u[13] = c3_calloc(sizeof(*qua_u[13]));
   qua_u[13]->nam_c = strdup("timer stack");
@@ -1758,7 +1829,33 @@ u3a_mark_road()
   
   qua_u[14] = c3_calloc(sizeof(*qua_u[14]));
   qua_u[14]->nam_c = strdup("ford memoization cache");
-  qua_u[14]->siz_w = u3h_mark(u3R->cax.for_p) * sizeof(c3_w);
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->cax.for_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[14]->qua_u = mua_u;
+    qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
 
   qua_u[15] = NULL;
 

@@ -62,9 +62,7 @@
   {
     u3_noun mal, buz;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &mal}, {u3x_sam_3, &buz}) ) {
-      return u3_none;
-    } else {
-      return u3qf_comb(mal, buz);
-    }
+    mal = u3h(u3h(u3t(cor)));
+    buz = u3t(u3h(u3t(cor)));
+    return u3qf_comb(mal, buz);
   }

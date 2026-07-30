@@ -238,6 +238,7 @@ const c_source_files = [_][]const u8{
     "jets/b/slag.c",
     "jets/b/snag.c",
     "jets/b/sort.c",
+    "jets/b/spin.c",
     "jets/b/turn.c",
     "jets/b/weld.c",
     "jets/b/zing.c",

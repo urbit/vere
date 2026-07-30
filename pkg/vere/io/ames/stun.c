@@ -35,6 +35,12 @@ _stun_has_fingerprint(c3_y* buf_y, c3_h buf_len_h)
     fin_y = memmem(buf_y + i, buf_len_h - i, ned_y, sizeof(ned_y));
     if ( fin_y != 0 ) {
       c3_h lin_h = fin_y - buf_y;
+      //  bound the read before c3_sift_word: memmem can match at the end of
+      //  the buffer, so the 4-byte header + 4-byte value may lie past it
+      //
+      if ( lin_h + 8 > buf_len_h ) {
+        return c3n;
+      }
       // Skip attribute type and length
       c3_h fingerprint = c3_sift_half(fin_y + sizeof(ned_y));
       c3_h init = crc32(0L, Z_NULL, 0);

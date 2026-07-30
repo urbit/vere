@@ -1131,28 +1131,40 @@ u3h_take(u3p(u3h_root) har_p)
   return u3h_take_with(har_p, u3a_take);
 }
 
+static void
+_ch_mark_kev(u3_noun kev, u3h_mass* mas_u)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  c3_w      kev_w = u3a_mark_rptr(kev_u);
+
+  //  size of 0 means "already marked"; skip children
+  //
+  if ( kev_w ) {
+    mas_u->key_w += u3a_mark_noun(kev_u->hed);
+    mas_u->val_w += u3a_mark_noun(kev_u->tel);
+    mas_u->kev_w += kev_w;
+  }
+}
+
 /* _ch_mark_buck(): mark bucket for gc.
 */
-c3_h
-_ch_mark_buck(u3h_buck* hab_u)
+static void
+_ch_mark_buck(u3h_buck* hab_u, u3h_mass* mas_u)
 {
-  c3_h tot_h = 0;
   c3_h i_h;
 
   for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
-    tot_h += u3a_mark_noun(u3h_slot_to_noun(hab_u->sot_w[i_h]));
+    _ch_mark_kev(u3h_slot_to_noun(hab_u->sot_w[i_h]), mas_u);
   }
-  tot_h += u3a_mark_ptr(hab_u);
 
-  return tot_h;
+  mas_u->nod_w += u3a_mark_ptr(hab_u);
 }
 
 /* _ch_mark_node(): mark node for gc.
 */
-c3_h
-_ch_mark_node(u3h_node* han_u, c3_h lef_h)
+static void
+_ch_mark_node(u3h_node* han_u, c3_h lef_h, u3h_mass* mas_u)
 {
-  c3_h tot_h = 0;
   c3_h len_h = _ch_popcount(han_u->map_h);
   c3_h i_h;
 
@@ -1162,32 +1174,27 @@ _ch_mark_node(u3h_node* han_u, c3_h lef_h)
     u3h_slot sot_w = han_u->sot_w[i_h];
 
     if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-
-      tot_h += u3a_mark_noun(kev);
+      _ch_mark_kev(u3h_slot_to_noun(sot_w), mas_u);
     }
     else {
       void* hav_v = u3h_slot_to_node(sot_w);
 
       if ( 0 == lef_h ) {
-        tot_h += _ch_mark_buck(hav_v);
+        _ch_mark_buck(hav_v, mas_u);
       } else {
-        tot_h += _ch_mark_node(hav_v, lef_h);
+        _ch_mark_node(hav_v, lef_h, mas_u);
       }
     }
   }
 
-  tot_h += u3a_mark_ptr(han_u);
-
-  return tot_h;
+  mas_u->nod_w += u3a_mark_ptr(han_u);
 }
 
 /* u3h_mark(): mark hashtable for gc.
 */
-c3_w
-u3h_mark(u3p(u3h_root) har_p)
+void
+u3h_mark(u3p(u3h_root) har_p, u3h_mass* mas_u)
 {
-  c3_w tot_w = 0;
   u3h_root* har_u = u3to(u3h_root, har_p);
   c3_h        i_h;
 
@@ -1195,20 +1202,24 @@ u3h_mark(u3p(u3h_root) har_p)
     u3h_slot sot_w = har_u->sot_w[i_h];
 
     if ( _(u3h_slot_is_noun(sot_w)) ) {
-      u3_noun kev = u3h_slot_to_noun(sot_w);
-
-      tot_w += u3a_mark_noun(kev);
+      _ch_mark_kev(u3h_slot_to_noun(sot_w), mas_u);
     }
     else if ( _(u3h_slot_is_node(sot_w)) ) {
-      u3h_node* han_u = u3h_slot_to_node(sot_w);
-
-      tot_w += _ch_mark_node(han_u, 25);
+      _ch_mark_node(u3h_slot_to_node(sot_w), 25, mas_u);
     }
   }
 
-  tot_w += u3a_mark_ptr(har_u);
+  mas_u->nod_w += u3a_mark_ptr(har_u);
+}
 
-  return tot_w;
+/* u3h_mark_tot(): mark hashtable for gc.
+*/
+c3_w
+u3h_mark_tot(u3p(u3h_root) har_p)
+{
+  u3h_mass mas_u = {0};
+  u3h_mark(har_p, &mas_u);
+  return (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w);
 }
 
 static void
