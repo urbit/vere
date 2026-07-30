@@ -1022,7 +1022,7 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15, alignof(u3a_road)); // XX refactor to wiseof
     ptr_p = (c3_p)u3a_push(&pil_u);
 
     //  XX add push_once, push_once_aligned
