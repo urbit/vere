@@ -1411,12 +1411,15 @@ _sweep_directory(void)
     if ( u3a_head_pg == dir_p ) {
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
         siz_w = _free_pages(page_to_post(pag_w), pag_w, dir_p);
-        if ( 1 == siz_w ) {
-          fprintf(stderr, "palloc: leaked page %"PRIc3_w"\r\n", pag_w);
-        }
-        else {
-          fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w"\r\n",
-                          pag_w, pag_w + siz_w - 1);
+        if ( u3C.wag_h & u3o_verbose ) {
+          if ( 1 == siz_w ) {
+            fprintf(stderr, "palloc: leaked page %"PRIc3_w" (0x%"PRIxc3_w")\r\n",
+                            pag_w, page_to_post(pag_w));
+          }
+          else {
+            fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w" (0x%"PRIxc3_w")\r\n",
+                            pag_w, pag_w + siz_w - 1, page_to_post(pag_w));
+          }
         }
         leq_w += siz_w << u3a_page;
       }
@@ -1429,7 +1432,9 @@ _sweep_directory(void)
       //  entire chunk page is unmarked
       //
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
-        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
+        if ( u3C.wag_h & u3o_verbose ) {
+          fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
+        }
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
         leq_w += ((c3_w)1) << u3a_page;
       }
@@ -1460,9 +1465,12 @@ _sweep_directory(void)
               else {
                 som_p = bas_p + ((c3_w)i_s << pag_u->log_s);
 
-                fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n", som_p, i_s, pag_w);
+                if ( u3C.wag_h & u3o_verbose ) {
+                  fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n",
+                                  som_p, i_s, pag_w);
+                  _print_chunk(stderr, som_p, siz_w);
+                }
 
-                _print_chunk(stderr, som_p, siz_w);
                 _free_words(som_p, pag_w, dir_p);
                 leq_w += siz_w;
               }
@@ -1687,12 +1695,15 @@ _sweep_counts(void)
 
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
         siz_w = _free_pages(som_p, pag_w, dir_p);
-        if ( 1 == siz_w ) {
-          fprintf(stderr, "palloc: leaked page %"PRIc3_w" (0x%"PRIxc3_w")\r\n", pag_w, page_to_post(pag_w));
-        }
-        else {
-          fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w" (0x%"PRIxc3_w")\r\n",
-                          pag_w, pag_w + siz_w - 1, page_to_post(pag_w));
+        if ( u3C.wag_h & u3o_verbose ) {
+          if ( 1 == siz_w ) {
+            fprintf(stderr, "palloc: leaked page %"PRIc3_w" (0x%"PRIxc3_w")\r\n",
+                            pag_w, page_to_post(pag_w));
+          }
+          else {
+            fprintf(stderr, "palloc: leaked pages %"PRIc3_w"-%"PRIc3_w" (0x%"PRIxc3_w")\r\n",
+                            pag_w, pag_w + siz_w - 1, page_to_post(pag_w));
+          }
         }
         leq_w += siz_w << u3a_page;
       }
@@ -1704,7 +1715,8 @@ _sweep_counts(void)
 
           if ( *use_w != u3a_Mark.buf_w[pag_w] ) {
             if ( u3C.wag_h & u3o_verbose ) {
-              fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n", som_p, *use_w, u3a_Mark.buf_w[pag_w]);
+              fprintf(stderr, "weak: 0x%"PRIxc3_w" have %"PRIc3_w" need %"PRIc3_w"\r\n",
+                              som_p, *use_w, u3a_Mark.buf_w[pag_w]);
             }
             *use_w = u3a_Mark.buf_w[pag_w];
             weq_w += siz_w << u3a_page;;
@@ -1727,7 +1739,9 @@ _sweep_counts(void)
       //  entire chunk page is unmarked
       //
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
-        fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
+        if ( u3C.wag_h & u3o_verbose ) {
+          fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
+        }
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
         leq_w += ((c3_w)1) << u3a_page;
       }
@@ -1773,16 +1787,18 @@ _sweep_counts(void)
                 u3_assert(0);
               }
               else {
-                if ( (c3_ws)mar_w[pos_w] < -1 ) {
+                if ( (u3C.wag_h & u3o_verbose) && ((c3_ws)mar_w[pos_w] < -1) ) {
                   fprintf(stderr, "alias: 0x%"PRIxc3_w" count %"PRIc3_ws"\r\n", som_p, (c3_ws)mar_w[pos_w]);
                 }
                 tot_w += siz_w;
               }
             }
             else {
-              fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n", som_p, i_s, pag_w);
-
-              _print_chunk(stderr, som_p, siz_w);
+              if ( u3C.wag_h & u3o_verbose ) {
+                fprintf(stderr, "palloc: leak: 0x%"PRIxc3_w" (chunk %"PRIc3_s" in page %"PRIc3_w")\r\n",
+                                som_p, i_s, pag_w);
+                _print_chunk(stderr, som_p, siz_w);
+              }
               _free_words(som_p, pag_w, dir_p);
               leq_w += siz_w;
             }
@@ -1799,10 +1815,10 @@ _sweep_counts(void)
     }
   }
   if ( weq_w ) {
-    if ( u3C.wag_h & u3o_verbose ) {
-      u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    if ( u3C.wag_h & u3o_leak_crash ) {
+      u3_assert(!"weak");
     }
-    // u3_assert(0);
   }
 
   if ( u3C.wag_h & u3o_verbose ) {

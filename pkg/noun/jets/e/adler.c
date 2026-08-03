@@ -8,11 +8,8 @@
 
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
-  if (c3n == u3r_mean(octs,
-             {2, p_octs},
-             {3, q_octs})){
-    u3m_bail(c3__exit);
-  }
+  *p_octs = u3h(octs);
+  *q_octs = u3t(octs);
 
   if (c3n == u3a_is_atom(*p_octs) ||
       c3n == u3a_is_atom(*q_octs)) {

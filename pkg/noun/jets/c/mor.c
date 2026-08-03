@@ -10,8 +10,8 @@
   u3qc_mor(u3_noun a,
            u3_noun b)
   {
-    c3_h c_h = u3r_mug(u3r_mug(a));
-    c3_h d_h = u3r_mug(u3r_mug(b));
+    c3_h c_h = u3r_mug_word(u3r_mug(a));
+    c3_h d_h = u3r_mug_word(u3r_mug(b));
 
     if ( c_h == d_h ) {
       return u3qc_dor(a, b);
@@ -23,9 +23,7 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &a}, {u3x_sam_3, &b})) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qc_mor(a, b);
-    }
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+    return u3qc_mor(a, b);
   }

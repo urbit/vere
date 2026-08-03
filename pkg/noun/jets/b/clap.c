@@ -26,11 +26,8 @@
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &a},
-                              {u3x_sam_6, &b},
-                              {u3x_sam_7, &c}) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qb_clap(a, b, c);
-    }
+    a = u3h(u3h(u3t(cor)));
+    b = u3h(u3t(u3h(u3t(cor))));
+    c = u3t(u3t(u3h(u3t(cor))));
+    return u3qb_clap(a, b, c);
   }

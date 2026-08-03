@@ -30,8 +30,10 @@
   {
     u3_noun pub, sed;
 
-    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &pub}, {u3x_sam_3, &sed})) ||
-         (c3n == u3ud(pub)) ||
+    pub = u3h(u3h(u3t(cor)));
+    sed = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(pub)) ||
          (c3n == u3ud(sed)) )
     {
       return u3m_bail(c3__exit);
@@ -63,8 +65,10 @@
   {
     u3_noun pub, sek;
 
-    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &pub}, {u3x_sam_3, &sek})) ||
-         (c3n == u3ud(pub)) ||
+    pub = u3h(u3h(u3t(cor)));
+    sek = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(pub)) ||
          (c3n == u3ud(sek)) )
     {
       return u3m_bail(c3__exit);

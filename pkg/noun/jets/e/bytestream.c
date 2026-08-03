@@ -12,11 +12,8 @@
 static void
 _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
-  if (c3n == u3r_mean(octs,
-             {2, p_octs},
-             {3, q_octs})){
-    u3m_bail(c3__exit);
-  }
+  *p_octs = u3h(octs);
+  *q_octs = u3t(octs);
 
   if (c3n == u3a_is_atom(*p_octs) ||
       c3n == u3a_is_atom(*q_octs)) {
@@ -207,7 +204,6 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     c3_w p_octs_w;
 
     if (c3n == u3r_safe_word(u3h(octs), &p_octs_w)) {
-      u3z(octs_list);
       return u3_none;
     }
     // Check for overflow
@@ -331,8 +327,8 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
     }
     pos_w++;
   }
-  // Newline not found, position at the end
-  if (*(sea_y + pos_w) != '\n') {
+  // Newline not found, position at the end (guard deref: pos_w may be >= len_w)
+  if (pos_w >= len_w || *(sea_y + pos_w) != '\n') {
     pos_w = p_octs;
   }
   else {

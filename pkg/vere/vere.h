@@ -315,6 +315,7 @@
         c3_c*   who_c;                      //  -w, begin with ticket
         c3_c*   pek_c;                      //  -X, scry path (/vc/desk/path)
         c3_o    tex;                        //  -x, exit after loading
+        c3_o    yol;                        //  -y, yolo
         c3_c*   puk_c;                      //  -Y, scry result filename
         c3_c*   puf_c;                      //  -Z, scry result format
         c3_o    con;                        //      run conn
@@ -655,6 +656,7 @@
           struct {
             u3_pico*       ent_u;
             u3_pico*       ext_u;
+            c3_w           dep_w;
           } pec_u;
           void*            sop_p;               //  slog stream data
           void           (*sog_f)               //  slog stream callback
