@@ -406,6 +406,18 @@ impl Ty {
     }
     out
   }
+
+  /// True for union types (structs and unions both canonicalize to Record).
+  pub fn is_union(&self) -> bool {
+    unsafe {
+      clang_getCursorKind(clang_getTypeDeclaration(self.raw)) == CXCursor_UnionDecl
+    }
+  }
+
+  /// Element type of an array type.
+  pub fn elem_type(&self) -> Ty {
+    Ty { raw: unsafe { clang_getArrayElementType(self.raw) } }
+  }
 }
 
 // suppress unused warnings for imports used only through macros
