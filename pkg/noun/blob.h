@@ -122,7 +122,7 @@
       const c3_y*
       u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d);
 
-    /* u3_blob_umap(): release a mapping returned by u3_blob_map().
+    /* u3_blob_umap(): release a mapping returned by u3_blob_mmap().
     */
       void
       u3_blob_umap(const c3_y* ptr_y, c3_d len_d);

@@ -625,7 +625,7 @@ u3_blob_move_stg(const c3_c* pax_c,
   return c3y;
 }
 
-/* u3_blob_map(): mmap blob file for direct byte access.
+/* u3_blob_mmap(): mmap blob file for direct byte access.
 */
 const c3_y*
 u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d)
@@ -665,7 +665,7 @@ u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d)
   return (const c3_y*)map_v;
 }
 
-/* u3_blob_unmap(): release mapping returned by u3_blob_map().
+/* u3_blob_umap(): release mapping returned by u3_blob_mmap().
 */
 void
 u3_blob_umap(const c3_y* ptr_y, c3_d len_d)
