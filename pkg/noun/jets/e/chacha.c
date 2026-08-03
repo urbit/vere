@@ -38,7 +38,7 @@
 
     urcrypt_chacha_crypt(rounds_w, key_y, nonce_y, counter_d, wid_w, sab_u.buf_y);
 
-    return u3i_cell(wid, u3i_slab_mint_bytes(&sab_u));
+    return u3i_cell(u3k(wid), u3i_slab_mint_bytes(&sab_u));
   }
 
   u3_noun
@@ -48,10 +48,16 @@
     u3_noun rounds, key, nonce, counter, msg;
     u3_noun wid, dat;
 
-    if ( u3r_quil(sam, &rounds, &key, &nonce, &counter, &msg) ||
-         u3ud(rounds) || u3ud(key) || u3ud(nonce) || u3ud(counter) || u3r_cell(msg, &wid, &dat) )
+    if ( c3n == u3r_quil(sam, &rounds, &key, &nonce, &counter, &msg)
+         || c3n == u3ud(rounds)
+         || c3n == u3ud(key)
+         || c3n == u3ud(nonce)
+         || c3n == u3ud(counter)
+         || c3n == u3r_cell(msg, &wid, &dat)
+         || c3n == u3ud(wid)
+         || c3n == u3ud(dat) )
     {
-      return u3m_bail(c3__exit);
+      return u3m_bail(c3__fail);
     } else {
       return u3l_punt("chacha_crypt", _cqe_chacha_crypt(rounds, key, nonce, counter, wid, dat));
     }

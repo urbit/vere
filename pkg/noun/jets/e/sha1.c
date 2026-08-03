@@ -27,8 +27,10 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &wid}, {u3x_sam_3, &dat})) ||
-         (c3n == u3ud(wid)) ||
+    wid = u3h(u3h(u3t(cor)));
+    dat = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {
       return u3m_bail(c3__exit);

@@ -2179,6 +2179,14 @@ u3r_mug_words(const c3_w* key_w, c3_w len_w)
 #endif
 }
 
+/* u3r_mug_word(): 31-bit nonzero MurmurHash3 of a single word.
+*/
+c3_l
+u3r_mug_word(c3_w key_w)
+{
+  return u3r_mug_words(&key_w, 1);
+}
+
 
 /* _cr_mug: stack frame for recording cell traversal
 **          !mug == head-frame

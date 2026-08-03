@@ -35,11 +35,11 @@
   u3wee_scad(u3_noun cor)
   {
     u3_noun pub, sek, sca;
-    if ( (c3n == u3r_mean(cor,
-                         {u3x_sam_2, &pub},
-                         {u3x_sam_6, &sek},
-                         {u3x_sam_7, &sca})) ||
-         (c3n == u3ud(pub)) ||
+    pub = u3h(u3h(u3t(cor)));
+    sek = u3h(u3t(u3h(u3t(cor))));
+    sca = u3t(u3t(u3h(u3t(cor))));
+
+    if ( (c3n == u3ud(pub)) ||
          (c3n == u3ud(sek)) ||
          (c3n == u3ud(sca)) ) {
       return u3m_bail(c3__exit);
@@ -73,10 +73,10 @@
   u3wee_scas(u3_noun cor)
   {
     u3_noun sek, sca;
-    if ( (c3n == u3r_mean(cor,
-                         {u3x_sam_2, &sek},
-                         {u3x_sam_3, &sca})) ||
-         (c3n == u3ud(sek)) ||
+    sek = u3h(u3h(u3t(cor)));
+    sca = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(sek)) ||
          (c3n == u3ud(sca)) ) {
       return u3m_bail(c3__exit);
     }
@@ -109,10 +109,10 @@
   u3wee_scap(u3_noun cor)
   {
     u3_noun pub, sca;
-    if ( (c3n == u3r_mean(cor,
-                         {u3x_sam_2, &pub},
-                         {u3x_sam_3, &sca})) ||
-         (c3n == u3ud(pub)) ||
+    pub = u3h(u3h(u3t(cor)));
+    sca = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(pub)) ||
          (c3n == u3ud(sca)) ) {
       return u3m_bail(c3__exit);
     }
