@@ -19,7 +19,7 @@
 
     c3_y out_y[32];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_shay((c3_y*)vue_u.byt_y, len_w, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
@@ -47,7 +47,7 @@
 
     c3_y out_y[64];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_shal((c3_y*)vue_u.byt_y, len_w, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(64, out_y);
@@ -189,9 +189,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &b}, {u3x_con_sam, &a}) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qeo_raw(a, b);
-    }
+    b = u3h(u3t(cor));
+    a = u3h(u3t(u3t(u3t(cor))));
+    return u3qeo_raw(a, b);
   }

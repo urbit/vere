@@ -245,10 +245,16 @@ _disk_plan(u3_disk* log_u,
 void
 u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 {
+  if ( u3C.wag_h & u3o_dryrun ) {
+    log_u->sen_d++;
+    log_u->dun_d++;
+    // XX invoke don_f?
+    return;
+  }
+
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
   _disk_plan(log_u, tac_u->mug_h, tac_u->job);
-
   _disk_commit(log_u);
 }
 
@@ -2375,6 +2381,66 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   u3_assert(!"unreachable");
 }
 
+/* _disk_blob_stg_clean(): delete leftover flat temp files in the staging dir.
+**
+**   Only removes regular files, not subdirectories.  Staging should only
+**   ever contain flat mkstemp temp files, so this is sufficient.
+*/
+static void
+_disk_blob_stg_clean(const c3_c* stg_c)
+{
+  DIR* dir_u = opendir(stg_c);
+  if ( !dir_u ) {
+    return;
+  }
+  struct dirent* ent_u;
+  while ( (ent_u = readdir(dir_u)) ) {
+    if ( '.' == ent_u->d_name[0] ) {
+      continue;
+    }
+    c3_c fil_c[8192];
+    snprintf(fil_c, sizeof(fil_c), "%s/%s", stg_c, ent_u->d_name);
+    c3_unlink(fil_c);
+  }
+  closedir(dir_u);
+}
+
+/* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+*/
+void
+u3_disk_blob_init(const c3_c* pax_c)
+{
+  c3_c bob_c[8192];
+  u3_blob_bob_dir(bob_c, pax_c);
+
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
+            bob_c, strerror(errno));
+  }
+}
+
+/* u3_disk_blob_stg_init(): create + empty the blob staging dir.
+**
+**   The staging dir ($pier/.urb/bob/stg) holds mkstemp(3) temp files written
+**   before rename(2) into bob/<mug>/<seq>.  Emptied on every boot.
+*/
+void
+u3_disk_blob_stg_init(const c3_c* pax_c)
+{
+  c3_c stg_c[8192];
+  u3_blob_stg_dir(stg_c, pax_c);
+
+  if ( 0 != c3_mkdir(stg_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: failed to create blob staging dir %s: %s\r\n",
+            stg_c, strerror(errno));
+    return;
+  }
+
+  //  clean any leftover temp files from a prior crash
+  //
+  _disk_blob_stg_clean(stg_c);
+}
+
 /* u3_disk_make(): make pier directories.
 */
 c3_o
@@ -2443,8 +2509,8 @@ u3_disk_make(c3_c* pax_c)
 
   //  make $pier/.urb/bob (blob store) and .urb/bob/stg/ (staging area)
   //
-  u3_blob_init(pax_c);
-  u3_blob_stg_init(pax_c);
+  u3_disk_blob_init(pax_c);
+  u3_disk_blob_stg_init(pax_c);
 
   return c3y;
 }
@@ -2516,8 +2582,8 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
 
   //  initialize blob store (creates .urb/bob/ if needed) and staging area
   //
-  u3_blob_init(pax_c);
-  u3_blob_stg_init(pax_c);
+  u3_disk_blob_init(pax_c);
+  u3_disk_blob_stg_init(pax_c);
 
 
     //  XX move this into u3_disk_make

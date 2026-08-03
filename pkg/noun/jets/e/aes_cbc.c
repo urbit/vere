@@ -10,11 +10,7 @@
  * the ECB functions, which truncate them, hence the raw u3r_bytes unpacking.
  */
 
-typedef int (*urcrypt_cbc)(c3_y**,
-                           size_t*,
-                           c3_y*,
-                           c3_y*,
-                           urcrypt_realloc_t);
+typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
 
   static u3_atom
   _cqea_cbc_help(c3_y* key_y, u3_atom iv, u3_atom msg, urcrypt_cbc low_f)
@@ -22,27 +18,43 @@ typedef int (*urcrypt_cbc)(c3_y**,
     u3_atom ret;
     c3_y    iv_y[16];
 
-    //  urcrypt_cbc_* modifies the buffer in place and may realloc it
-    //  via u3a_realloc, so we need a heap-owned writable buffer.
-    //  view the input (mmap for bobs, no full-blob loom alloc) then
-    //  copy into a fresh heap allocation.
+    //  message length in 16-byte (bloq 7) blocks; cbc always processes at least
+    //  one block (the hoon pads an empty message to a single zero block)
     //
-    u3r_view vue_u;
-    u3r_view_init(&vue_u, msg);
-    size_t len   = vue_u.len_w;
-    c3_y*  msg_y = u3a_malloc(len ? len : 1);
-    if ( len ) {
-      memcpy(msg_y, vue_u.byt_y, len);
+    c3_d len_d = c3_max(1, u3r_met(7, msg));
+    c3_d byt_d = len_d << 4;
+    c3_w byt_w = (c3_w)byt_d;
+
+    if ( byt_w != byt_d ) {
+      return u3m_bail(c3__fail);
     }
-    u3r_view_done(&vue_u);
+
+    //  read/write buffer holding [msg] little-endian, zero-padded to the
+    //  16-byte block boundary, passed to urcrypt's unsafe (no realloc)
+    //  interface, which operates in place.
+    //
+    //  NB: view the input (mmap for bobs, no full-blob loom alloc) and copy
+    //  into the buffer by hand; u3i_slab_from would go through u3r_words,
+    //  which materializes a bob onto the loom before copying.
+    //
+    c3_y* msg_y = u3a_malloc(byt_w);
+    {
+      u3r_view vue_u;
+      u3r_view_init(&vue_u, msg);
+      if ( vue_u.len_w ) {
+        memcpy(msg_y, vue_u.byt_y, vue_u.len_w);
+      }
+      memset(msg_y + vue_u.len_w, 0, byt_w - vue_u.len_w);
+      u3r_view_done(&vue_u);
+    }
 
     u3r_bytes(0, 16, iv_y, iv);
-    if ( 0 != (*low_f)(&msg_y, &len, key_y, iv_y, &u3a_realloc) ) {
-      ret = u3_none;
-    }
-    else {
-      ret = u3i_bytes(len, msg_y);
-    }
+
+    //  the only error is a non-block-aligned length, ruled out by construction
+    //
+    u3_assert( 0 == (*low_f)(msg_y, byt_w, key_y, iv_y) );
+
+    ret = u3i_bytes(byt_w, msg_y);
     u3a_free(msg_y);
 
     return ret;
@@ -55,7 +67,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[16];
     u3r_bytes(0, 16, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_en);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_en_unsafe);
   }
 
   u3_noun
@@ -63,8 +75,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {
@@ -79,7 +94,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[16];
     u3r_bytes(0, 16, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_de);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_de_unsafe);
   }
 
   u3_noun
@@ -87,8 +102,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {
@@ -103,7 +121,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[24];
     u3r_bytes(0, 24, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_en);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_en_unsafe);
   }
 
   u3_noun
@@ -111,8 +129,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {
@@ -127,7 +148,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[24];
     u3r_bytes(0, 24, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_de);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_de_unsafe);
   }
 
   u3_noun
@@ -135,8 +156,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {
@@ -151,7 +175,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[32];
     u3r_bytes(0, 32, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_en);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_en_unsafe);
   }
 
   u3_noun
@@ -159,8 +183,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {
@@ -175,7 +202,7 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     c3_y key_y[32];
     u3r_bytes(0, 32, key_y, key);
-    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_de);
+    return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_de_unsafe);
   }
 
   u3_noun
@@ -183,8 +210,11 @@ typedef int (*urcrypt_cbc)(c3_y**,
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam, &c}, {60, &a}, {61, &b}) ||
-         c3n == u3ud(a) ||
+    c = u3h(u3t(cor));
+    a = u3h(u3h(u3t(u3t(u3t(cor)))));
+    b = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ) {
       return u3m_bail(c3__exit);
     } else {

@@ -21,7 +21,7 @@
     }
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, len_w, pub_y, sig_y);
     u3r_view_done(&vue_u);
 

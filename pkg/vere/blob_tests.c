@@ -43,7 +43,7 @@ _tmp_make(void)
   }
 
   //  blob.c assumes .urb exists (created earlier by disk code in production).
-  //  Create it here so u3_blob_init can mkdir .urb/bob.
+  //  Create it here so u3_disk_blob_init can mkdir .urb/bob.
   //
   c3_c urb_c[2048];
   snprintf(urb_c, sizeof(urb_c), "%s/.urb", _tmp_pier);
@@ -93,15 +93,15 @@ _write_tmp_file(const c3_y* dat_y, c3_d len_d)
   return strdup(tmpl_c);
 }
 
-/* _test_init(): u3_blob_init + u3_blob_stg_init create expected dirs.
+/* _test_init(): u3_disk_blob_init + u3_disk_blob_stg_init create expected dirs.
 */
 static void
 _test_init(void)
 {
   _tmp_make();
 
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   c3_c pax_c[2048];
   snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", _tmp_pier);
@@ -117,21 +117,21 @@ _test_init(void)
 
   //  idempotent: second call should not error
   //
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   _tmp_clean();
   fprintf(stderr, "test blob init: ok\r\n");
 }
 
-/* _test_stg_clean(): u3_blob_stg_init clears leftover staging files.
+/* _test_stg_clean(): u3_disk_blob_stg_init clears leftover staging files.
 */
 static void
 _test_stg_clean(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   //  drop a dummy file in staging
   //
@@ -152,7 +152,7 @@ _test_stg_clean(void)
 
   //  re-init should clean it
   //
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   if ( c3y == _path_exists(stg_c) ) {
     fprintf(stderr, "\033[31mblob stg_clean fail: %s still exists\033[0m\r\n",
@@ -187,8 +187,8 @@ static void
 _test_save_load(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "the quick brown fox jumps over the lazy dog";
   const c3_d dat_d   = sizeof(dat_y) - 1;  // drop trailing NUL
@@ -249,8 +249,8 @@ static void
 _test_dedup(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "dedup me, please and thank you";
   const c3_d dat_d   = sizeof(dat_y) - 1;
@@ -306,8 +306,8 @@ static void
 _test_save_fd(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "content delivered via file descriptor";
   const c3_d dat_d   = sizeof(dat_y) - 1;
@@ -401,8 +401,8 @@ static void
 _test_walk(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y one_y[] = "walk blob one";
   const c3_y two_y[] = "walk blob two";
@@ -469,8 +469,8 @@ static void
 _test_delete_empty_bucket(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "ephemeral blob";
   c3_h mug_h = 0;
@@ -517,8 +517,8 @@ static void
 _test_install_stg(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "payload installed from staging";
   const c3_d dat_d   = sizeof(dat_y) - 1;
@@ -587,8 +587,8 @@ static void
 _test_install_stg_dedup(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "shared bytes across save + install_stg";
   const c3_d dat_d   = sizeof(dat_y) - 1;
@@ -665,8 +665,8 @@ static void
 _test_sane(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
   u3C.dir_c = _tmp_pier;
   u3C.blob_del_f = _test_blob_del_cb;
 
@@ -732,8 +732,8 @@ static void
 _test_meld(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
   u3C.dir_c = _tmp_pier;
   u3C.blob_del_f = _test_blob_del_cb;
   _test_del_count_w = 0;
@@ -839,8 +839,8 @@ static void
 _test_cue_blob(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
   u3C.dir_c = _tmp_pier;
   u3C.blob_del_f = _test_blob_del_cb;
   _test_del_count_w = 0;
@@ -981,8 +981,8 @@ static void
 _test_met(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   //  case 1: no trailing zeros, not word-aligned (4 bytes, < 1 VERE64 word)
   //
@@ -1060,8 +1060,8 @@ static void
 _test_map(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   const c3_y dat_y[] = "mapped bytes should round-trip exactly";
   const c3_d dat_d   = sizeof(dat_y) - 1;
@@ -1118,8 +1118,8 @@ static void
 _test_lifecycle(void)
 {
   _tmp_make();
-  u3_blob_init(_tmp_pier);
-  u3_blob_stg_init(_tmp_pier);
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
 
   //  u3s_ram_xeno calls u3r_blob_met on bob atoms during encoding, which
   //  reads the blob file at $u3C.dir_c/.urb/bob/<mug>/<seq>.  Set it now

@@ -29,13 +29,13 @@ u3qc_muk(u3_atom sed,
   c3_h sed_h = u3r_half(0, sed);
   c3_h out_h;
 
-  //  u3r_view_padded gives us len_h bytes — mmap-backed for bobs
+  //  u3r_view_padd gives us len_h bytes — mmap-backed for bobs
   //  (previously would have returned seq_w bytes via the direct
   //  buf_w pointer and produced wrong hashes), heap-backed with
   //  zero-padding for atoms shorter than len_h.
   //
   u3r_view vue_u;
-  u3r_view_padded(&vue_u, key, len_h);
+  u3r_view_padd(&vue_u, key, len_h);
   MurmurHash3_x86_32((c3_y*)vue_u.byt_y, len_h, sed_h, &out_h);
   u3r_view_done(&vue_u);
 

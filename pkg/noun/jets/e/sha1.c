@@ -16,7 +16,7 @@
 
     c3_y out_y[20];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_sha1((c3_y*)vue_u.byt_y, len_w, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(20, out_y);
@@ -27,8 +27,10 @@
   {
     u3_noun wid, dat;
 
-    if ( (c3n == u3r_mean(cor, {u3x_sam_2, &wid}, {u3x_sam_3, &dat})) ||
-         (c3n == u3ud(wid)) ||
+    wid = u3h(u3h(u3t(cor)));
+    dat = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(wid)) ||
          (c3n == u3ud(dat)) )
     {
       return u3m_bail(c3__exit);

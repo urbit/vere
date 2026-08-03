@@ -39,7 +39,7 @@
 #include <ftw.h>
 
 #include "noun.h"
-#include "../blob.h"
+#include "blob.h"
 
 struct _u3_umon;
 struct _u3_udir;
@@ -177,6 +177,9 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
     *result = NULL;
     return (errno);  // either success or error code
   } else {
+    //  [entry] is a fixed-size struct dirent; a larger d_reclen would overflow it
+    //
+    u3_assert( tmp_u->d_reclen <= sizeof(*entry) );
     memcpy(entry, tmp_u, tmp_u->d_reclen);
     *result = entry;
   }

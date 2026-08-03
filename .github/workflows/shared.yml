@@ -83,6 +83,8 @@ jobs:
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
+          # 8GB cache limit chosen at random
+          cache-size-limit: 8192
 
       - name: Build binaries
         run: |
@@ -117,6 +119,7 @@ jobs:
             boot-test newt-test        \
             vere-noun-test unix-test   \
             palloc-test events-test    \
+            bytestream-test mesa-test  \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \

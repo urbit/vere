@@ -519,7 +519,10 @@ static c3_d
 _sift_bits(u3_sifter* sif_u, c3_h wid_h)
 {
   assert ( wid_h <= 64 );
-  if ( sif_u->rem_h == 0 ) {
+  //  check that enough bytes remain for the whole field up front; otherwise a
+  //  multi-byte field could consume past the end and underflow rem_h
+  //
+  if ( sif_u->rem_h < ((wid_h + 7) >> 3) ) {
     _sift_fail(sif_u, "unexpected end of packet");
     return 0;
   }

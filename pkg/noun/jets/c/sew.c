@@ -75,12 +75,13 @@ u3_weak
 u3wc_sew(u3_noun cor)
 {
   u3_noun a, b, c, d, e;
-  if ( (c3n == u3r_mean(cor, {u3x_sam_2,  &a},
-                             {u3x_sam_12, &b},
-                                    {106, &c},
-                                    {107, &d},
-                              {u3x_sam_7, &e})) ||
-       (c3n == u3ud(a)) ||
+  a = u3h(u3h(u3t(cor)));
+  b = u3h(u3h(u3t(u3h(u3t(cor)))));
+  c = u3h(u3t(u3h(u3t(u3h(u3t(cor))))));
+  d = u3t(u3t(u3h(u3t(u3h(u3t(cor))))));
+  e = u3t(u3t(u3h(u3t(cor))));
+
+  if ( (c3n == u3ud(a)) ||
        (c3n == u3ud(b)) ||
        (c3n == u3ud(c)) ||
        (c3n == u3ud(d)) ||

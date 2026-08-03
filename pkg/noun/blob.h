@@ -1,10 +1,11 @@
 /// @file
 
-#ifndef U3_VERE_BLOB_H
-#define U3_VERE_BLOB_H
+#ifndef U3_NOUN_BLOB_H
+#define U3_NOUN_BLOB_H
 
 #include "c3/c3.h"
-#include "noun.h"
+#include "types.h"
+#include "serial.h"
 
   /* Blob store: content-addressed storage for large atoms.
   **
@@ -19,19 +20,20 @@
   */
 #   define U3_BLOB_THRESH  (32ULL * 1024ULL * 1024ULL)
 
-    /* u3_blob_init(): initialize blob store; create .urb/bob/ if needed.
-    */
-      void
-      u3_blob_init(const c3_c* pax_c);
-
-    /* u3_blob_stg_init(): initialize staging area; create .urb/bob/stg/ if needed.
+    /* u3_blob_bob_dir(): write the $pier/.urb/bob path into [out_c].
     **
-    ** The staging dir holds mkstemp(3) temp files written by Earth before
-    ** they are handed to Mars for rename(2) into the final bob/<mug>/<seq>
-    ** location.  Cleaned (emptied) on every boot.
+    ** [out_c] must be at least 8192 bytes.  Pier setup (disk.c) creates this
+    ** directory; the blob store only reads/writes files beneath it.
     */
       void
-      u3_blob_stg_init(const c3_c* pax_c);
+      u3_blob_bob_dir(c3_c* out_c, const c3_c* pax_c);
+
+    /* u3_blob_stg_dir(): write the $pier/.urb/bob/stg staging path into [out_c].
+    **
+    ** [out_c] must be at least 8192 bytes.
+    */
+      void
+      u3_blob_stg_dir(c3_c* out_c, const c3_c* pax_c);
 
     /* u3_blob_save(): write bytes to blob store.
     **
@@ -111,7 +113,7 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
-    /* u3_blob_map(): mmap a blob file for direct byte access.
+    /* u3_blob_mmap(): mmap a blob file for direct byte access.
     **
     ** Returns a read-only pointer to the blob's bytes (length in *len_d),
     ** or NULL on failure.  The mapping must be released via u3_blob_unmap().
@@ -120,7 +122,7 @@
       const c3_y*
       u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d);
 
-    /* u3_blob_unmap(): release a mapping returned by u3_blob_map().
+    /* u3_blob_umap(): release a mapping returned by u3_blob_map().
     */
       void
       u3_blob_umap(const c3_y* ptr_y, c3_d len_d);

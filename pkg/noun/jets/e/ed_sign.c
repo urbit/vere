@@ -23,7 +23,7 @@
 
     c3_y sig_y[64];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_ed_sign((c3_y*)vue_u.byt_y, len_w, sed_y, sig_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(64, sig_y);
@@ -34,9 +34,12 @@
   {
     u3_noun msg, sed;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &msg}, {u3x_sam_3, &sed}) ||
-         c3n == u3r_cell(msg, &len, &dat) ||
-         c3n == u3ud(sed) ||
+    msg = u3h(u3h(u3t(cor)));
+    sed = u3t(u3h(u3t(cor)));
+    len = u3h(msg);
+    dat = u3t(msg);
+
+    if ( c3n == u3ud(sed) ||
          c3n == u3ud(len) ||
          c3n == u3ud(dat) ) {
       return u3m_bail(c3__fail);
@@ -64,7 +67,7 @@
 
     c3_y sig_y[64];
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, len_w);
+    u3r_view_padd(&vue_u, dat, len_w);
     urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, len_w, pub_y, sek_y, sig_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(64, sig_y);
@@ -75,9 +78,13 @@
   {
     u3_noun msg, pub, sek;
     u3_noun len, dat;
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &msg}, {u3x_sam_6, &pub}, {u3x_sam_7, &sek}) ||
-         c3n == u3r_cell(msg, &len, &dat) ||
-         c3n == u3ud(pub) ||
+    msg = u3h(u3h(u3t(cor)));
+    pub = u3h(u3t(u3h(u3t(cor))));
+    sek = u3t(u3t(u3h(u3t(cor))));
+    len = u3h(msg);
+    dat = u3t(msg);
+
+    if ( c3n == u3ud(pub) ||
          c3n == u3ud(sek) ||
          c3n == u3ud(len) ||
          c3n == u3ud(dat) ) {
@@ -110,9 +117,10 @@
   u3wee_sign(u3_noun cor)
   {
     u3_noun msg, sed;
-    if ( c3n == u3r_mean(cor,
-                         {u3x_sam_2, &msg}, {u3x_sam_3, &sed}) ||
-         c3n == u3ud(msg) ||
+    msg = u3h(u3h(u3t(cor)));
+    sed = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(msg) ||
          c3n == u3ud(sed) ) {
       return u3m_bail(c3__fail);
     } else {
@@ -148,9 +156,11 @@
   u3wee_sign_raw(u3_noun cor)
   {
     u3_noun msg, pub, sek;
-    if ( c3n == u3r_mean(cor,
-                         {u3x_sam_2, &msg}, {u3x_sam_6, &pub}, {u3x_sam_7, &sek}) ||
-         c3n == u3ud(msg) ||
+    msg = u3h(u3h(u3t(cor)));
+    pub = u3h(u3t(u3h(u3t(cor))));
+    sek = u3t(u3t(u3h(u3t(cor))));
+
+    if ( c3n == u3ud(msg) ||
          c3n == u3ud(pub) ||
          c3n == u3ud(sek) ) {
       return u3m_bail(c3__fail);

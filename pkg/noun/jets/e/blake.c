@@ -24,7 +24,7 @@
           out_w = c3_max(1, c3_min(out, 64));
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     u3r_bytes(0, wik_w, dak_y, dak);
     err = urcrypt_blake2(wid_w, (c3_y*)vue_u.byt_y, wik_w, dak_y, out_w, out_y);
@@ -41,16 +41,17 @@
   u3_noun
   u3we_blake2b(u3_noun cor)
   {
-    u3_noun msg, key, out, // arguments
-            wid, dat,      // destructured msg
-            wik, dak;      // destructured key
+    u3_noun msg, key, out, wid, dat, wik, dak;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &msg},
-                              {u3x_sam_6, &key},
-                              {u3x_sam_7, &out}) ||
-                u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
-                u3r_cell(key, &wik, &dak) || u3ud(wik) || u3ud(dak) ||
-                u3ud(out) )
+    msg = u3h(u3h(u3t(cor)));
+    key = u3h(u3t(u3h(u3t(cor))));
+    out = u3t(u3t(u3h(u3t(cor))));
+    wid = u3h(msg);
+    dat = u3t(msg);
+    wik = u3h(key);
+    dak = u3t(key);
+
+    if ( u3ud(wid) || u3ud(dat) || u3ud(wik) || u3ud(dak) || u3ud(out) )
     {
       return u3m_bail(c3__exit);
     } else {
@@ -72,7 +73,7 @@
     c3_y flags_y = u3r_byte(0, flags);
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     u3i_slab sab_u;
     u3i_slab_bare(&sab_u, 3, out_w);
@@ -85,16 +86,17 @@
   u3_noun
   u3we_blake3_hash(u3_noun cor)
   {
-    u3_noun out, msg,        // arguments
-            wid, dat,        // destructured msg
-            sam, key, flags; // context
+    u3_noun out, msg, wid, dat, sam, key, flags;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &out},
-                              {u3x_sam_3, &msg},
-                              {u3x_con_sam, &sam}) ||
-                u3ud(out) ||
-                u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
-                u3r_cell(sam, &key, &flags) || u3ud(key) || u3ud(flags) )
+    out = u3h(u3h(u3t(cor)));
+    msg = u3t(u3h(u3t(cor)));
+    sam = u3h(u3t(u3t(u3t(cor))));
+    wid = u3h(msg);
+    dat = u3t(msg);
+    key = u3h(sam);
+    flags = u3t(sam);
+
+    if ( u3ud(out) || u3ud(wid) || u3ud(dat) || u3ud(key) || u3ud(flags) )
     {
       return u3m_bail(c3__exit);
     } else {
@@ -116,7 +118,7 @@
     u3r_bytes(0, 32, cv_y, cv);
 
     u3r_view vue_u;
-    u3r_view_padded(&vue_u, dat, wid_w);
+    u3r_view_padd(&vue_u, dat, wid_w);
 
     urcrypt_blake3_chunk_output(wid_w, (c3_y*)vue_u.byt_y, cv_y,
                                 block_y, &block_len, &counter_d, &flags_y);
@@ -127,16 +129,16 @@
   u3_noun
   u3we_blake3_chunk_output(u3_noun cor)
   {
-    u3_noun counter, msg,      // arguments
-            wid, dat,          // destructured msg
-            key, flags;        // context
+    u3_noun counter, msg, wid, dat, key, flags;
 
-    if ( c3n == u3r_mean(cor, {u3x_sam_2, &counter},
-                              {u3x_sam_3, &msg},
-                              {u3x_con_sam_2, &key},
-                              {u3x_con_sam_3, &flags}) ||
-                u3r_cell(msg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
-                u3ud(key) || u3ud(flags))
+    counter = u3h(u3h(u3t(cor)));
+    msg = u3t(u3h(u3t(cor)));
+    key = u3h(u3h(u3t(u3t(u3t(cor)))));
+    flags = u3t(u3h(u3t(u3t(u3t(cor)))));
+    wid = u3h(msg);
+    dat = u3t(msg);
+
+    if ( u3ud(wid) || u3ud(dat) || u3ud(key) || u3ud(flags))
     {
       return u3m_bail(c3__exit);
     } else {

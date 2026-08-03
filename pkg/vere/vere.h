@@ -337,6 +337,7 @@
         c3_c*   who_c;                      //  -w, begin with ticket
         c3_c*   pek_c;                      //  -X, scry path (/vc/desk/path)
         c3_o    tex;                        //  -x, exit after loading
+        c3_o    yol;                        //  -y, yolo
         c3_c*   puk_c;                      //  -Y, scry result filename
         c3_c*   puf_c;                      //  -Z, scry result format
         c3_o    con;                        //      run conn
@@ -683,6 +684,7 @@
           struct {
             u3_pico*       ent_u;
             u3_pico*       ext_u;
+            c3_w           dep_w;
           } pec_u;
           void*            sop_p;               //  slog stream data
           void           (*sog_f)               //  slog stream callback
@@ -877,6 +879,17 @@
       */
         c3_o
         u3_disk_make(c3_c* pax_c);
+
+      /* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+      */
+        void
+        u3_disk_blob_init(const c3_c* pax_c);
+
+      /* u3_disk_blob_stg_init(): create + empty the blob staging dir
+      **   ($pier/.urb/bob/stg).  Cleaned on every boot.
+      */
+        void
+        u3_disk_blob_stg_init(const c3_c* pax_c);
 
       /* u3_disk_load(): load pier directories, log, and snapshot.
       */

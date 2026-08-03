@@ -377,7 +377,7 @@ u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 4);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
@@ -387,19 +387,52 @@ u3v_mark()
   qua_u[1]->nam_c = strdup("wish cache");
   qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
+  qua_u[2] = NULL;
+  qua_u[3] = NULL;
+
   //  mark blob bank HAMT.  values are atoms encoding loom offsets of
   //  u3a_blob structs; the structs themselves are walloc'd blocks not
   //  subject to noun mark/sweep.  u3h_mark covers nodes, keys, values.
   //
-  if ( u3H->blb_p ) {
-    u3h_mark(u3H->blb_p);
-  }
+  //  NB: home road only.  the bank lives on the home road, and u3h_mark
+  //  reaches it through u3a_mark_ptr, which (unlike u3a_mark_noun) has no
+  //  seniority check.  from an inner road that indexes the inner road's
+  //  page directory with a home-road offset, reading off the loom.
+  //
+  if ( (&(u3H->rod_u) == u3R) && u3H->blb_p ) {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3H->blb_p, &mas_u);
 
-  qua_u[2] = NULL;
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
+    qua_u[2]->nam_c = strdup("blob bank");
+    qua_u[2]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+    qua_u[2]->qua_u = mua_u;
+  }
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total arvo stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w
+               + ( qua_u[2] ? qua_u[2]->siz_w : 0 );
   tot_u->qua_u = qua_u;
 
   return tot_u;
