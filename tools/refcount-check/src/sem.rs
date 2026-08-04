@@ -544,7 +544,7 @@ pub fn resolve_sem(cur: &Cursor, sem_cache: &mut SemCache, src: &mut SrcCache) -
   let is_static = cur.is_static();
   let fpath = cur.location().file.unwrap_or_default();
   let key = (
-    if is_static { Some(fpath.clone()) } else { None },
+    if is_static { Some(fpath.to_string()) } else { None },
     name.to_string(),
   );
   let has_def = cur.definition().is_some();
@@ -593,7 +593,7 @@ pub fn annotation_sync_findings(
   let def_sem = annotation_sem(&name, fpath, is_static, &site_comment(cur, src), cloc.line);
   let decl_sem = annotation_sem(&name, fpath, is_static, &site_comment(&decl, src), dloc.line);
   if def_sem.proto_key() != decl_sem.proto_key() {
-    let dfile = dloc.file.clone().unwrap_or_else(|| "None".to_string());
+    let dfile = dloc.file.as_deref().unwrap_or("None").to_string();
     let rel = crate::relpath(&dfile);
     return vec![(
       cloc.line,

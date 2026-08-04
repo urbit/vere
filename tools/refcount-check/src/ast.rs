@@ -18,6 +18,11 @@ use std::rc::Rc;
 /// bump, never a byte copy.
 pub type Name = Rc<str>;
 
+pub fn string_to_name(s: String) -> Name
+{
+  Rc::from(s)
+}
+
 use clang_sys::*;
 
 use crate::config;
@@ -52,7 +57,7 @@ unsafe fn cx(s: CXString) -> String {
 
 #[derive(Clone, Debug, Default)]
 pub struct Loc {
-  pub file: Option<String>,
+  pub file: Option<Name>,
   pub line: u32,
   pub col: u32,
   pub offset: u32,
@@ -67,7 +72,7 @@ fn to_loc(l: CXSourceLocation) -> Loc {
   } else {
     Some(unsafe { cx(clang_getFileName(f)) })
   };
-  Loc { file, line, col, offset: off }
+  Loc { file: file.map(string_to_name), line, col, offset: off }
 }
 
 // ---------------------------------------------------------------------------

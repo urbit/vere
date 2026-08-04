@@ -16,7 +16,8 @@
 #![allow(non_upper_case_globals)]
 
 use std::cell::Ref;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::panic::Location;
 use std::rc::Rc;
 use std::todo;
 use imbl::{HashMap as IHashMap, HashSet as IHashSet, Vector as IVec};
@@ -26,11 +27,31 @@ use indexmap::IndexMap;
 
 use crate::ast::{
   binop, decl_ref_name, int_literal_value, is_expr_kind, is_local_lvalue,
-  is_noun_type, unary_op, unwrap_expr, Cursor, Name, Ty,
+  is_noun_type, unary_op, unwrap_expr, string_to_name, Cursor, Name, Ty, Loc,
 };
 use crate::config;
 use crate::sem::AssertMode::{Retain, Transfer};
 use crate::sem::{AssertMode, Finding, Mode, Sem};
+
+macro_rules! report {
+  ($g:expr, $cur:expr, $cat:expr, $($msg:tt)+) => {
+    return Err(vec![report(Some($cur), $cat, format!($($msg)+), $g)])
+  };
+}
+
+macro_rules! report_global {
+  ($g:expr, $cat:expr, $($msg:tt)+) => {
+    return Err(vec![report(None, $cat, format!($($msg)+), $g)])
+  };
+}
+
+//  like report!, but anchored at an explicit Loc (e.g. cur.extent_end()
+//  for findings about the point where control flow reconverges)
+macro_rules! report_loc {
+  ($g:expr, $loc:expr, $cat:expr, $($msg:tt)+) => {
+    return Err(vec![report_at($loc, $cat, format!($($msg)+), $g)])
+  };
+}
 
 /// Services the interpreter needs from the enclosing tool.
 pub trait Host {
@@ -52,7 +73,7 @@ enum RefcountState {
   Direct,             // direct atom, no refcounting
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct VarName {name: Name, depth: u32}
 
 /// Immutable execution environment. I think of a (sufficiently simple) piece of
@@ -66,62 +87,9 @@ struct VarName {name: Name, depth: u32}
 #[derive(Default, Clone)]
 struct Env {
   values: IHashMap<ValId, RefcountState>,
-  locations: IHashMap<ValId, IHashSet<VarName>>,
-  locations_rev: IHashMap<VarName, ValId>,
+  vars: IHashMap<ValId, IHashSet<VarName>>,
+  vars_rev: IHashMap<VarName, ValId>,
   contains: IHashMap<ValId, IHashSet<ValId>>  // noun -> (set sub-noun)
-}
-
-#[derive(Default, Clone)]
-struct Flow {
-  local: Option<Env>,                   // local environment, if code is reachable
-  goto_envs: IHashMap<Name, IVec<Env>>, // environments from goto, for goto labels
-  exit_envs: IVec<Env>,                 // environments from return, for exit
-  break_envs: IVec<Env>,
-  cont_envs: IVec<Env>,
-}
-
-type R<T> = Result<T, Vec<Finding>>;
-
-macro_rules! report {
-  ($g:expr, $cur:expr, $cat:expr, $($msg:tt)+) => {
-    return Err(vec![report(Some($cur), $cat, format!($($msg)+), $g)])
-  };
-}
-
-macro_rules! report_global {
-  ($g:expr, $cat:expr, $($msg:tt)+) => {
-    return Err(vec![report(None, $cat, format!($($msg)+), $g)])
-  };
-}
-
-impl Flow {
-  fn scope_done(mut self, depth: u32, g: &mut Gen) -> R<Flow>
-  {
-    self.local = self.local.map(|e| end_scope(e, depth, g)).transpose()?;
-    Ok(self)
-  }
-
-  fn change_local(&self, local: Option<Env>) -> Flow
-  {
-    return Flow {
-      local,
-      goto_envs: self.goto_envs.clone(),
-      exit_envs: self.exit_envs.clone(),
-      break_envs: self.break_envs.clone(),
-      cont_envs: self.cont_envs.clone(),
-    };
-  }
-
-  fn join(self, another: Option<Env>) -> R<Flow>
-  {
-    return Ok(Flow {
-      local: mayb_join(self.local, another)?,
-      goto_envs: self.goto_envs,
-      exit_envs: self.exit_envs,
-      break_envs: self.break_envs,
-      cont_envs: self.cont_envs,
-    })
-  }
 }
 
 impl Env {
@@ -129,28 +97,28 @@ impl Env {
   {
     let id: ValId = g.id_gen; g.id_gen += 1;
     
-    assert!(!self.locations.contains_key(&id));
-    assert!(!self.locations_rev.contains_key(&name));
+    assert!(!self.vars.contains_key(&id));
+    assert!(!self.vars_rev.contains_key(&name));
 
     self.values.insert(id, rc);
-    self.locations.insert(id, IHashSet::from([name.clone()]));
-    self.locations_rev.insert(name, id);
+    self.vars.insert(id, IHashSet::from([name.clone()]));
+    self.vars_rev.insert(name, id);
   }
 
   /// Add `name` as one more location of the existing value `id`.
   /// Declaration sites only: the name must be fresh.
   fn bind_decl(&mut self, name: VarName, id: ValId)
   {
-    assert!(!self.locations_rev.contains_key(&name));
+    assert!(!self.vars_rev.contains_key(&name));
 
-    self.locations.entry(id).or_default().insert(name.clone());
-    self.locations_rev.insert(name, id);
+    self.vars.entry(id).or_default().insert(name.clone());
+    self.vars_rev.insert(name, id);
   }
 
   /// Variable names currently holding value `id`, for messages.
   fn names(&self, id: ValId) -> String
   {
-    let mut ns: Vec<&str> = self.locations.get(&id)
+    let mut ns: Vec<&str> = self.vars.get(&id)
       .map(|locs| locs.iter().map(|v| v.name.as_ref()).collect())
       .unwrap_or_default();
     if ns.is_empty() {
@@ -170,8 +138,7 @@ impl Env {
       .expect("linter invariant: every ValId is present in values");
 
     match *state {
-      RefcountState::Owned {rc: 0} =>
-        unreachable!("linter invariant: Owned rc > 0"),
+      RefcountState::Owned {rc: 0} => panic!("linter invariant: Owned rc > 0"),
 
       RefcountState::Owned {rc: 1} => *state = RefcountState::Poisoned,
 
@@ -192,6 +159,40 @@ impl Env {
     Ok(self)
   }
 }
+
+#[derive(Default, Clone)]
+struct Flow {
+  local: Option<Env>,                   // local environment, if code is reachable
+  goto_envs: IHashMap<Name, IVec<Env>>, // environments from goto, for goto labels
+  exit_envs: IVec<Env>,                 // environments from return, for exit
+  break_envs: IVec<Env>,
+  cont_envs: IVec<Env>,
+  switch_env: Option<Env>,
+}
+
+impl Flow {
+  fn scope_done(mut self, loc: Loc, depth: u32, g: &mut Gen) -> R<Flow>
+  {
+    self.local = self.local.map(|e| end_scope(loc, e, depth, g)).transpose()?;
+    Ok(self)
+  }
+
+  fn change_local(&self, local: Option<Env>) -> Flow
+  {
+    let mut out = self.clone();
+    out.local = local;
+    return out;
+  }
+
+  fn join(self, loc: Loc, another: Option<Env>) -> R<Flow>
+  {
+    let mut flo = self.clone();
+    flo.local = mayb_join(loc, self.local, another)?;
+    return Ok(flo);
+  }
+}
+
+type R<T> = Result<T, Vec<Finding>>;
 
 struct Gen<'a> {
   func_cur: &'a Cursor,
@@ -251,7 +252,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
   match execute_statement(&body, flo, 0, &mut g) {
     Err(finding) => finding,
     Ok(flo) => flo.exit_envs.into_iter().chain(flo.local)
-                .map(|env| check_exit(env, sem))
+                .map(|env| check_exit(body.extent_end(), env, &g))
                 .flatten().collect()
   }
 }
@@ -275,7 +276,7 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
   if k == CXCursor_CompoundStmt {
     return cur.children().into_iter()
       .try_fold(flo, |flo, kid| execute_statement(&kid, flo, depth + 1, g))?
-      .scope_done(depth + 1, g);
+      .scope_done(cur.extent_end(), depth + 1, g);
   }
   
   else if k == CXCursor_IfStmt {
@@ -310,14 +311,14 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       match s {
         None    => Ok(flo),
         Some(s) => execute_statement(&s, flo, depth + 1, g)?
-                    .scope_done(depth + 1, g),
+                    .scope_done(s.extent_end(), depth + 1, g),
       }
     };
 
     let first      = branch(then, &flo,   t_op_env, g)?;
     let mut second = branch(els,  &first, f_op_env, g)?;
 
-    second.local = mayb_join(first.local, second.local)?;
+    second.local = mayb_join(cur.extent_end(), first.local, second.local)?;
     return Ok(second);
   }
   //  instead of doing fixpoint analysis or somesuch, we check that the body
@@ -361,9 +362,8 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
         //  we check if "continue" environment is joinable with the env before
         //  the conditional
         //
-        mayb_join(Some(env), cont)?;
-        return done_flo.scope_done(depth + 1, g)?
-                       .join(f_op_env);
+        mayb_join(cur.location(), Some(env), cont)?;
+        return done_flo.join(cur.extent_end(), f_op_env);
       }
     }
   }
@@ -405,14 +405,14 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
         "strange conditional"),
 
       (None, Some(f_env)) => return flo.change_local(Some(f_env))
-                                       .scope_done(depth + 1, g),
+                                       .scope_done(cur.extent_end(), depth + 1, g),
 
       (Some(t_env), f_op_env) => {
         let loop_flo = flo.change_local(Some(t_env));
         let (done_flo, cont) = execute_loop_body(&body,
           loop_flo, inc, depth, g)?;
-        mayb_join(cont, Some(env))?;
-        return done_flo.scope_done(depth + 1, g)?.join(f_op_env);
+        mayb_join(cur.location(), cont, Some(env))?;
+        return done_flo.join(cur.extent_end(), f_op_env);
       }
     }
   }
@@ -438,8 +438,7 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
     let (mut loop1_flo, cont) = execute_loop_body(body, flo.clone(), None,
       depth + 1, g)?;
 
-    mayb_join(cont, flo.local)?;
-    loop1_flo = loop1_flo.scope_done(depth + 1, g)?;
+    mayb_join(cur.location(), cont, flo.local)?;
 
     let Some(env) = loop1_flo.local.clone() else {
       return Ok(loop1_flo);
@@ -456,9 +455,8 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
         let (done_flo, cont) = execute_loop_body(body, loop2_flo, None,
           depth + 1, g)?;
 
-        mayb_join(cont, Some(env))?;
-        return done_flo.scope_done(depth + 1, g)?
-                       .join(f_op_env);
+        mayb_join(cur.location(), cont, Some(env))?;
+        return done_flo.join(cur.extent_end(), f_op_env);
       }
     }
   }
@@ -481,23 +479,65 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       report!(g, cur, "strange control flow",
         "switch without switch expression");
     };
-    let (_, Some(env)) = eval_expr(val, env, depth, g)? else {
+    let flo_before = flo.clone();
+    let mut flo_in = flo.clone();
+    let Some(env) = execute_expr_stmt(val, env, depth, g)? else {
       report!(g, cur, "strange control flow",
         "switch crashes immediately in the expression");
     };
-    return execute_switch_body(body, flo.change_local(Some(env)), depth + 1, g);
+    flo_in.local = Some(env.clone());
+    flo_in.switch_env = Some(env);
+    flo_in.break_envs = Default::default();
+    flo_in.goto_envs = Default::default();
+
+    let mut flo_done = execute_statement(body, flo_in, depth, g)?;
+
+    flo_done.local =
+      join_scoped(cur.extent_end(), flo_done.break_envs, flo_done.local,
+        depth, g)?;
+
+    flo_done.switch_env = flo.switch_env;
+    flo_done.goto_envs = flo_done.goto_envs
+      .union_with(flo.goto_envs, |a, b| a + b);
+    
+    flo_done.break_envs = flo.break_envs;
+    return Ok(flo_done);
   }
-  else if k == CXCursor_CaseStmt {
-    todo!()
-  }
-  else if k == CXCursor_DefaultStmt {
-    todo!()
+  else if matches!(k, CXCursor_CaseStmt | CXCursor_DefaultStmt) {
+    let kids = cur.children();
+    let min_kids = if k == CXCursor_CaseStmt { 2 } else { 1 };
+    let switch = flo.switch_env.clone();
+    let flo = flo.join(cur.location(), switch)?;
+
+    //  XX this might break on dangling range cases like this:
+    //
+    //    switch (x) {
+    //      case 1 ... 3:  /* no code after the range case */
+    //    }
+    //    ...
+    //
+    //  I am too lazy to handle this case
+    //
+    if let Some(body) = kids.last() && kids.len() >= min_kids {
+      return execute_statement(body, flo, depth, g)
+    }
+    return Ok(flo)
   }
   else if k == CXCursor_BreakStmt {
-    todo!()
+    let mut flo = flo;
+    if let Some(env) = flo.local {
+      flo.break_envs.push_back(env);
+      flo.local = None;
+    };
+    return Ok(flo)
   }
   else if k == CXCursor_ContinueStmt {
-    todo!()
+    let mut flo = flo;
+    if let Some(env) = flo.local {
+      flo.cont_envs.push_back(env);
+      flo.local = None;
+    };
+    return Ok(flo)
   }
   else if k == CXCursor_LabelStmt {
     if !g.goto_labels_allowed {
@@ -506,14 +546,12 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
          and add assertion annotations");
     }
     let label = cur.spelling();
-    let Flow { local, mut goto_envs, exit_envs, break_envs, cont_envs} = flo;
+    let mut flo = flo;
     //  all environments before label: goto sites + natural control flow if
     //  reachable
     //
-    let total = join_all(goto_envs.remove(&label).unwrap_or_default()
-      .into_iter().chain(local))?;
-
-    let flo = Flow {local: total, goto_envs, exit_envs, break_envs, cont_envs};
+    let parked = flo.goto_envs.remove(&label).unwrap_or_default();
+    flo.local = join_scoped(cur.location(), parked, flo.local, depth, g)?;
     match cur.children().last() {
       Some(sub) => execute_statement(sub, flo, depth, g),
       None => Ok(flo),
@@ -521,28 +559,29 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
   }
   else {
     //  Local ops: Env -> Env mapping
-    let Flow { local, mut goto_envs, mut exit_envs,
-      break_envs, cont_envs } = flo;
-
-    let Some(env) = local else {
-      return Ok(Flow { local: None, goto_envs, exit_envs, break_envs,
-        cont_envs });
+    let Some(env) = flo.local.clone() else {
+      let mut flo = flo;
+      flo.local = None;
+      return Ok(flo);
     };
   
     if k == CXCursor_DeclStmt {
-      let local = execute_decl(cur, env, depth, g)?;
-      return Ok(Flow { local, goto_envs, exit_envs, break_envs, cont_envs });
+      let mut flo = flo;
+      flo.local = execute_decl(cur, env, depth, g)?;
+      return Ok(flo);
     }
   
     if k == CXCursor_ReturnStmt {
+      let mut flo = flo;
       if let Some(env) = execute_return(cur, env, depth, g)? {
-        exit_envs.push_back(env);
+        flo.exit_envs.push_back(env);
       }
-      return Ok(Flow { local: None, goto_envs, exit_envs, break_envs,
-        cont_envs });
+      flo.local = None;
+      return Ok(flo);
     }
   
     if k == CXCursor_GotoStmt {
+      let mut flo = flo;
       //  park the env under the target label; joined in at the LabelStmt.
       //  (backward gotos need rejecting here once labels are tracked)
       let target = cur.children().first()
@@ -551,46 +590,46 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       let Some(target) = target else {
         report!(g, cur, "strange goto", "");
       };
-      goto_envs.entry(target).or_default().push_back(env);
-      return Ok(Flow { local: None, goto_envs, exit_envs, break_envs,
-        cont_envs });
+      flo.goto_envs.entry(target).or_default().push_back(env);
+      flo.local = None;
+
+      return Ok(flo);
     }
     if k == CXCursor_IndirectGotoStmt {
       report!(g, cur, "computed goto", "");
     }
   
-    if k == CXCursor_BreakStmt || k == CXCursor_ContinueStmt {
-      report!(g, cur, "strange control flow",
-        "break/continue outside a loop-body walker");
-    }
-  
     if k == CXCursor_NullStmt || k == CXCursor_AsmStmt {
-      return Ok(Flow { local: Some(env), goto_envs, exit_envs, break_envs,
-        cont_envs });
+      return Ok(flo);
     }
   
     //  expression in statement position: `u3z(a);`, `x = f(y);`, bare `x;`
     if is_expr_kind(k) {
-      let local = execute_expr_stmt(cur, env, depth, g)?;
-      return Ok(Flow { local, goto_envs, exit_envs, break_envs, cont_envs });
+      let mut flo = flo;
+      flo.local = execute_expr_stmt(cur, env, depth, g)?;
+      return Ok(flo);
     }
   
     report!(g, cur, "unhandled statement kind", "[{}] is not handled yet", k);
   }
 }
 
-fn report(cur: Option<&Cursor>, cat: &'static str, msg: String, g: &Gen)
-  -> Finding
+fn report_at(loc: Loc, cat: &'static str, msg: String, g: &Gen) -> Finding
 {
-  let loc = cur.unwrap_or(g.func_cur).location();
   Finding {
-    file: loc.file.unwrap_or_else(|| "None".to_string()),
+    file: loc.file.as_deref().unwrap_or("None").to_string(),
     line: loc.line,
-    col: loc.col,
+    col:  loc.col,
     func: g.funcname.to_string(),
     cat,
     msg,
   }
+}
+
+fn report(cur: Option<&Cursor>, cat: &'static str, msg: String, g: &Gen)
+  -> Finding
+{
+  report_at(cur.unwrap_or(g.func_cur).location(), cat, msg, g)
 }
 
 //  --------------------------------------------------------------------------
@@ -872,7 +911,7 @@ fn touches_nouns(cur: &Cursor, env: &Env) -> Option<String>
   }
   if cur.kind() == CXCursor_DeclRefExpr {
     let n = cur.spelling();
-    if env.locations_rev.keys().any(|v| v.name == n) {
+    if env.vars_rev.keys().any(|v| v.name == n) {
       return Some(format!("read of tracked variable `{}`", n));
     }
   }
@@ -885,7 +924,7 @@ fn holds_owned(env: &Env, vid: Option<ValId>) -> bool
     matches!(env.values.get(&v), Some(RefcountState::Owned {..})))
 }
 
-// Returns fall out flow (natural flow + break) + continue env, with the scope
+// Returns fall out flow (natural flow + break) + continue env, with the scopes
 // cleared
 //
 fn execute_loop_body(cur: &Cursor,
@@ -906,21 +945,18 @@ fn execute_loop_body(cur: &Cursor,
     }, depth, g)?;
 
   flo_done.local = match (inc, flo_done.local.clone()) {
-    (Some(i), Some(e)) => eval_expr(&i, e, depth, g)?.1,
+    (Some(i), Some(e)) => execute_expr_stmt(&i, e, depth, g)?,
     _ => flo_done.local,
   };
-    
-  let cont = join_all(flo_done.cont_envs)?
-    .map(|e| end_scope(e, depth, g)).transpose()?;
 
-  let local = join_all(flo_done.break_envs.into_iter().chain(flo_done.local))?;
-  let out = Flow {
-    local,
-    goto_envs: flo.goto_envs.union_with(flo_done.goto_envs, |a, b| a + b),
-    exit_envs: flo.exit_envs + flo_done.exit_envs,
-    break_envs: flo.break_envs,
-    cont_envs: flo.cont_envs,
-  };
+  let cont = join_scoped(cur.location(), flo_done.cont_envs, None, depth, g)?;
+  let local = join_scoped(cur.extent_end(), flo_done.break_envs,
+    flo_done.local, depth, g)?;
+
+  let mut out = flo;
+  out.local = local;
+  out.goto_envs = out.goto_envs.union_with(flo_done.goto_envs, |a, b| a + b);
+  out.exit_envs = out.exit_envs + flo_done.exit_envs;
   Ok((out, cont))
 }
 
@@ -949,25 +985,19 @@ fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   let Some(mut env) = env else { return Ok(None); };
   let Some(vid) = vid else { return Ok(Some(env)); };
 
-  if env.locations.get(&vid).is_none_or(|l| l.is_empty()) {
+  if env.vars.get(&vid).is_none_or(|l| l.is_empty()) {
     if holds_owned(&env, Some(vid)) {
       report!(g, cur, "leak",
         "owned product of the expression is discarded without being \
-         consumed");
+         captured by a variable");
     }
   }
-  // not freeing the dropped vid. consequences?
+  // Not freeing the dropped vid. Consequences?
   Ok(Some(env))
 }
 
-fn execute_switch_body(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
-  -> R<Flow>
-{
-  todo!()
-}
-
 /// gotos, breaks and continues are assumed to not be present in GNU statement-
-/// expressions. The linter will try to enforce ot too
+/// expressions. The linter will try to enforce that too
 /// 
 fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
@@ -981,35 +1011,111 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   todo!()
 }
 
-fn join(env1: Env, env2: Env) -> R<Env>
+fn join(loc: Loc, env1: Env, env2: Env) -> R<Env>
 {
   todo!();
 }
 
-fn mayb_join(env1: Option<Env>, env2: Option<Env>) -> R<Option<Env>>
+fn mayb_join(loc: Loc, env1: Option<Env>, env2: Option<Env>)
+  -> R<Option<Env>>
 {
   match (env1, env2) {
-    (Some(env1), Some(env2)) => join(env1, env2).map(Some),
+    (Some(env1), Some(env2)) => join(loc, env1, env2).map(Some),
     (env1, env2) => Ok(env1.or(env2)),
   }
 }
 
 /// Join any number of envs into one, or None if no envs
-fn join_all<I>(envs: I) -> R<Option<Env>>
+fn join_all<I>(loc: Loc, envs: I) -> R<Option<Env>>
   where I: IntoIterator<Item = Env>
 {
   let mut it = envs.into_iter();
-  it.next().map(|first| it.try_fold(first, join)).transpose()
+  it.next().map(|first| it.try_fold(first, |a, b| join(loc.clone(), a, b))).transpose()
 }
 
-fn check_exit(env: Env, sem: &Sem) -> Vec<Finding>
+// envs were parked, so we need to end their scopes using the depth of the join
+// site. `local` is in the correct scope already.
+fn join_scoped<I>(loc: Loc, envs: I, local: Option<Env>, depth: u32,
+  g: &mut Gen) -> R<Option<Env>>
+  where I: IntoIterator<Item = Env>
 {
-  todo!()
+  let scoped = envs.into_iter()
+    .map(|e| end_scope(loc.clone(), e, depth, g))
+    .collect::<R<Vec<_>>>()?;
+  join_all(loc, scoped.into_iter().chain(local))
 }
 
-fn end_scope(env: Env, depth: u32, g: &mut Gen) -> R<Env>
+fn check_exit(loc: Loc, env: Env, g: &Gen) -> Vec<Finding>
 {
-  todo!();
+  let mut leaked: Vec<(ValId, u32)> = env.values.iter()
+    .filter_map(|(id, v)| match v {
+      RefcountState::Owned {rc} => Some((*id, *rc)),
+      _ => None,
+    })
+    .collect();
+
+  leaked.sort();
+
+  leaked.into_iter().map(|(id, rc)| {
+    assert!(rc > 0, "linter invariant: rc > 0");
+    let refs = if rc > 1 { format!(" ({} references)", rc) }
+      else { String::new() };
+    
+    let msg = format!("owned reference in [{}] not consumed{}",
+      env.names(id), refs);
+  
+    report_at(loc.clone(), "leak", msg, g)
+    }).collect()
+}
+
+fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
+{
+  let mut env = env;
+
+  let mut gone: Vec<(VarName, ValId)> = env.vars_rev.iter()
+    .filter(|(k, _)| k.depth >= depth)
+    .map(|(k, id)| (k.clone(), *id))
+    .collect();
+  gone.sort();
+
+  //  remove names in gone, remove empty sets
+  for (name, id) in &gone {
+    env.vars_rev.remove(name);
+    let Some(vs) = env.vars.get_mut(id) else { continue; };
+    vs.remove(name);
+    if vs.is_empty() {
+      env.vars.remove(id);
+    }
+  }
+
+  //  values that just lost their last location won't have an entry in `vars`
+  let mut orphans: BTreeMap<ValId, Vec<Name>> = BTreeMap::new();
+  for (name, id) in &gone {
+    if !env.vars.contains_key(id) {
+      orphans.entry(*id).or_default().push(name.name.clone());
+    }
+  }
+
+  //  owned orphans leak; every orphan is poisoned (ids stay in `values`
+  //  forever, now unreachable)
+  let mut leaks: Vec<Finding> = Vec::new();
+  for (id, names) in orphans {
+    let state = env.values.get_mut(&id).expect("linter invariant");
+    let RefcountState::Owned {rc} = *state else {
+      *state = RefcountState::Poisoned;
+      continue;
+    };
+    let refs = if rc > 1 { format!(" ({} references)", rc) }
+               else { String::new() };
+
+    leaks.push(report_at(loc.clone(), "leak",
+      format!("owned reference in [{}] goes out of scope without being \
+                consumed{}", names.join(", "), refs),
+      g));
+    *state = RefcountState::Poisoned;
+  }
+
+  if leaks.is_empty() { Ok(env) } else { Err(leaks) }
 }
 
 // Splits ForStmt into (init, cond, inc, body). 

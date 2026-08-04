@@ -332,7 +332,7 @@ fn explain(entries: &[Entry], resource_dir: Option<&str>, target: &str) -> i32 {
   let mut dfile = String::new();
   if let Some(d) = &defn {
     if let Some(f) = d.location().file {
-      dfile = f;
+      dfile = f.to_string();
       file_custom = re_file_custom().is_match(&read_head(&dfile, 4096));
     }
   }
@@ -485,7 +485,7 @@ fn process_entry(
       continue;
     }
     match cur.location().file {
-      Some(f) if f == *fpath => {}
+      Some(f) if &*f == fpath.as_str() => {}
       _ => continue,
     }
     if let Some(f) = &args.function {

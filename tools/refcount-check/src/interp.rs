@@ -233,7 +233,7 @@ impl<'a> Chk<'a> {
       return;
     }
     self.findings.push(Finding {
-      file: loc.file.unwrap_or_else(|| "None".to_string()),
+      file: loc.file.as_deref().unwrap_or("None").to_string(),
       line: loc.line,
       col: loc.col,
       func: self.name.clone(),
