@@ -131,10 +131,13 @@
         u3r_mug_both(c3_h lef_h, c3_h rit_h);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
+      **
+      **   [len_d] is a byte count, not a word count; it is 64-bit so that
+      **   atoms and blobs larger than 4 GiB mug correctly under VERE64.
       */
         c3_h
         u3r_mug_bytes(const c3_y *buf_y,
-                      c3_h        len_h);
+                      c3_d        len_d);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */

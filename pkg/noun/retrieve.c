@@ -2056,7 +2056,7 @@ u3r_mug_both(c3_m lef_l, c3_m rit_l)
 */
 c3_m
 u3r_mug_bytes(const c3_y *buf_y,
-              c3_h        len_h)
+              c3_d        len_d)
 {
   c3_h syd_h = 0xcafebabe;
   c3_h   i_h = 0;
@@ -2065,7 +2065,7 @@ u3r_mug_bytes(const c3_y *buf_y,
     c3_h haz_h;
     c3_m ham_m;
 
-    MurmurHash3_x86_32(buf_y, len_h, syd_h, &haz_h);
+    MurmurHash3_x86_32(buf_y, len_d, syd_h, &haz_h);
     ham_m = (haz_h >> 31) ^ (haz_h & 0x7fffffff);
 
     if ( 0 == ham_m ) {
@@ -2112,7 +2112,7 @@ u3r_mug_chub(c3_d num_d)
 c3_m
 u3r_mug_halfs(const c3_h* key_h, c3_w len_w)
 {
-  c3_h byt_h;
+  c3_d byt_d;
 
   //  ignore trailing zeros
   //
@@ -2123,18 +2123,18 @@ u3r_mug_halfs(const c3_h* key_h, c3_w len_w)
   //  calculate byte-width a la u3r_met(3, ...)
   //
   if ( !len_w ) {
-    byt_h = 0;
+    byt_d = 0;
   }
   else {
-    c3_h gal_h = len_w - 1;
-    c3_h daz_h = key_h[gal_h];
+    c3_d gal_d = len_w - 1;
+    c3_h daz_h = key_h[gal_d];
 
-    byt_h = (gal_h << 2) + ((c3_bits_half(daz_h) + 7) >> 3);
+    byt_d = (gal_d << 2) + ((c3_bits_half(daz_h) + 7) >> 3);
   }
 
   //  XX: assumes little-endian
   //
-  return u3r_mug_bytes((c3_y*)key_h, byt_h);
+  return u3r_mug_bytes((c3_y*)key_h, byt_d);
 }
 
 /* u3r_mug_chubs(): 31-bit nonzero MurmurHash3 on raw chubs.
@@ -2142,7 +2142,7 @@ u3r_mug_halfs(const c3_h* key_h, c3_w len_w)
 c3_m
 u3r_mug_chubs(const c3_d* key_d, c3_w len_w)
 {
-  c3_d byt_w;
+  c3_d byt_d;
 
   //  ignore trailing zeros
   //
@@ -2153,18 +2153,18 @@ u3r_mug_chubs(const c3_d* key_d, c3_w len_w)
   //  calculate byte-width a la u3r_met(3, ...)
   //
   if ( !len_w ) {
-    byt_w = 0;
+    byt_d = 0;
   }
   else {
-    c3_d gal_w = len_w - 1;
-    c3_d daz_w = key_d[gal_w];
+    c3_d gal_d = len_w - 1;
+    c3_d daz_d = key_d[gal_d];
 
-    byt_w = (gal_w << 3) + ((c3_bits_chub(daz_w) + 7) >> 3);
+    byt_d = (gal_d << 3) + ((c3_bits_chub(daz_d) + 7) >> 3);
   }
 
   //  XX: assumes little-endian
   //
-  return u3r_mug_bytes((c3_y*)key_d, byt_w);
+  return u3r_mug_bytes((c3_y*)key_d, byt_d);
 }
 
 /* u3r_mug_words(): 31-bit nonzero MurmurHash3 on raw words.
