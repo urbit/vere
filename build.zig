@@ -28,7 +28,16 @@ const CdbGenStep = struct {
         var cwd = std.fs.cwd();
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
+        //
+        // Fragments are a side effect of compilation, so a fully cached build
+        // produces none and the directory may legitimately be absent. That is
+        // not an error, but it must not silently truncate an existing database
+        // to nothing either -- say so and leave the file alone.
         var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+            std.log.warn(
+                "compile-commands: nothing compiled this run, leaving {s} unchanged",
+                .{self.out_path},
+            );
             return;
         };
         defer dir.close();
@@ -70,9 +79,52 @@ const CdbGenStep = struct {
         try w.writeAll("]\n");
         try w.flush();
 
-        cwd.deleteTree(self.frags_dir) catch {};
+        // The fragment directory is deliberately kept. Zig only emits a
+        // fragment for a translation unit it actually compiles, so deleting it
+        // here would mean an incremental build regenerates the database from
+        // just the handful of files that happened to rebuild. Accumulating
+        // instead makes the database the union of everything compiled so far,
+        // which is sound because the directory name pins the flags (see
+        // cdbFragDir). Stale entries for deleted sources are harmless to
+        // clangd; remove the directory to start over.
     }
 };
+
+/// Fragment directory for this build's compile commands.
+///
+/// Fragments accumulate across builds, which is only sound if every fragment
+/// in a directory was produced with identical flags, otherwise clangd would
+/// silently pick whichever translation units it saw first. So the directory
+/// name carries a hash of everything feeding those flags: BuildCfg by
+/// reflection, so options added later are covered without touching this, plus
+/// the target and optimize mode.
+fn cdbFragDir(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    cfg: BuildCfg,
+) []const u8 {
+    var h = std.hash.Wyhash.init(0);
+
+    inline for (std.meta.fields(BuildCfg)) |f| {
+        h.update(f.name);
+        const val = @field(cfg, f.name);
+        switch (@TypeOf(val)) {
+            bool => h.update(&[_]u8{@intFromBool(val)}),
+            []const u8 => h.update(val),
+            []const []const u8 => for (val) |s| h.update(s),
+            else => @compileError("cdbFragDir: unhandled BuildCfg field '" ++ f.name ++ "'"),
+        }
+    }
+
+    const t = target.result;
+    h.update(@tagName(t.cpu.arch));
+    h.update(@tagName(t.os.tag));
+    h.update(@tagName(t.abi));
+    h.update(@tagName(optimize));
+
+    return b.fmt("cdb-{x}", .{h.final()});
+}
 
 const VERSION = "4.6";
 
@@ -286,10 +338,14 @@ fn buildBinary(
         "-Werror",
     });
 
+    const cdb_dir = if (cfg.gen_cdb)
+        cdbFragDir(b, target, optimize, cfg)
+    else
+        "";
+
     if (cfg.gen_cdb) {
-        try global_flags.appendSlice(&.{
-            "-gen-cdb-fragment-path", "cdb",
-        });
+        try global_flags.append("-gen-cdb-fragment-path");
+        try global_flags.append(cdb_dir);
     }
 
     if (!cfg.asan and !cfg.ubsan) {
@@ -630,7 +686,7 @@ fn buildBinary(
     b.getInstallStep().dependOn(&vere_install.step);
 
     if (cfg.gen_cdb) {
-        const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+        const cdb_gen = CdbGenStep.create(b, cdb_dir, "compile_commands.json");
         const current_install = b.getInstallStep();
         cdb_gen.step.dependOn(current_install);
         b.default_step = &cdb_gen.step;
