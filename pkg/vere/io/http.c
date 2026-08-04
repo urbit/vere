@@ -104,7 +104,7 @@ typedef struct _u3_h2o_serv {
   typedef struct _u3_hfig {
     u3_form*         for_u;             //  config from %eyre
     c3_c*            key_c;             //  auth token key
-    u3_noun          ses;               //  valid session tokens
+    u3_noun          ses;               //  local session tokens (map @t (unit desk))
     struct _u3_hreq* seq_u;             //  open slog requests
     struct _u3_hreq* siq_u;             //  open spin requests
     uv_timer_t*      sit_u;             //  stream heartbeat
@@ -390,21 +390,45 @@ _http_req_get_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
   return u3_none;
 }
 
-/* _http_req_is_auth(): returns c3y if rec_u contains a valid auth cookie
+/* _http_req_is_auth(): returns c3y if rec_u has valid auth for desk or root
 */
 static c3_o
-_http_req_is_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+_http_req_is_auth(u3_hfig* fig_u, u3_weak desk, h2o_req_t* rec_u)
 {
   u3_weak tok = _http_req_get_auth(fig_u, rec_u);
   if (u3_none == tok) {
+    //TODOxx  want this to redirect the user into an "obtaining auth" flow,
+    //        can do this by redirecting to /~/holm[request-url]
+    //        (once eyre has support for that on desk scopes)
     return c3n;
   }
 
-  u3_noun aut = u3kdi_has(u3k(fig_u->ses), u3k(tok));
-  u3_assert(c3y == aut || c3n == aut);
+  u3_noun aut = u3kdb_get(u3k(fig_u->ses), u3k(tok));
+  u3_noun pas;
+
+  //  unknown token in request, no auth
+  //
+  if ( u3_none == aut ) {
+    pas = c3n;
+  } else {
+    //  known token for root, always auth
+    //
+    if ( c3y == u3a_is_atom(aut) ) {
+      pas = c3y;
+    } else {
+      //  otherwise, compare desk against token scope
+      //
+      if ( u3_none == desk ) {
+        pas = c3n;
+      } else {
+        pas = u3r_sing(desk, u3t(aut));
+      }
+    }
+  }
 
   u3z(tok);
-  return aut;
+  u3z(aut);
+  return pas;
 }
 
 /* _http_req_find(): find http request in connection by sequence.
@@ -819,7 +843,7 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
   u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
-  c3_o auth = _http_req_is_auth(fig_u, req_u->rec_u);
+  c3_o auth = _http_req_is_auth(fig_u, u3_none, req_u->rec_u);
 
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
@@ -1070,7 +1094,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
       h2o_req_t* rec_u = req_u->rec_u;
 
-      u3_noun gang = ( _(_http_req_is_auth(fig_u, rec_u)) )
+      u3_noun gang = ( _(_http_req_is_auth(fig_u, u3_none, rec_u)) )
                    ? u3nc(u3_nul, u3_nul)
                    : u3_nul;
 
@@ -1104,6 +1128,13 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
 
       // /token/[auth-token]/rest-of-spur
       spur = u3nt(u3i_string("token"), tok, spur);
+
+      //REVIEWxx  but that is going to make _http_peek_dispatch and onward
+      //          put each requester's response in the cache under the
+      //          "tokenized" spur, which is stupid.
+      //          the _real_ way to implement this, is do a _separate_
+      //          /can-read/token/[auth-token]/[spur] scry first, and only if
+      //          that is true scry out the data, put it into cache, & serve
 
       if ( c3n == _http_peek_dispatch(req_u, &bem, gang, spur) ) {
         u3z(req_u->peq_u->pax);
@@ -1143,18 +1174,18 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
     //
     u3z(req);
   }
-  else if ( u3_none == u3r_at(7, nun) ) {
+  else if ( u3_none == u3r_at(15, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
   }
   else {
-    u3_noun auth, response_header, data;
-    u3x_qual(u3t(u3t(nun)), &auth, 0, &response_header, &data);
+    u3_noun desk, auth, response_header, data;
+    u3x_quil(u3t(u3t(nun)), &desk, &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
     // check auth
     if ( (c3y == auth)
-      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, desk, rec_u)) )
     {
       h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
     }
@@ -1199,7 +1230,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
 
     // check auth
     if ( (c3y == auth)
-      && (c3n == _http_req_is_auth(&htd_u->fig_u, rec_u)) )
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, u3_none, rec_u)) )
     {
       h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
     }
@@ -1612,7 +1643,8 @@ _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
     return 0;
   }
 
-  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+  //REVIEWxx  should allow spinner to be read by any cookie scope?
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, rec_u);
 
   //  if the request is not authenticated, reject it
   //
@@ -1648,7 +1680,8 @@ static c3_i
 _http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
   u3_hcon* hon_u = _http_rec_sock(rec_u);
-  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+  //REVIEWxx  would be fun to gate this behind a userspace perm...
+  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, rec_u);
 
   //  if the request is not authenticated, reject it
   //
