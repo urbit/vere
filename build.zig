@@ -55,8 +55,11 @@ const CdbGenStep = struct {
             const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
             defer self.b.allocator.free(frag);
 
-            // skip empty/whitespace-only
-            const trimmed = std.mem.trim(u8, frag, " \t\r\n");
+            // zig terminates each fragment with a trailing comma; strip it so
+            // joining them doesn't emit "},,{" (and a trailing comma before
+            // the closing bracket), which makes the whole file invalid JSON
+            // and silently drops the database in clangd.
+            const trimmed = std.mem.trim(u8, frag, " \t\r\n,");
             if (trimmed.len == 0) continue;
 
             if (!first) try w.writeByte(',');
