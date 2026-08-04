@@ -20,6 +20,25 @@
   */
 #   define U3_BLOB_THRESH  (32ULL * 1024ULL * 1024ULL)
 
+  /* U3_BLOB_MIN: least significant byte length a blob may hold.
+  **
+  ** The loom normalizes atoms: _ci_atom_mint() returns a cat whenever the
+  ** value fits, so an ordinary pug always denotes a value greater than
+  ** u3a_direct_max. u3r_sing relies on that — _cr_sing_atom rejects any
+  ** pair that is not two pugs before it ever consults u3a_is_bob — and a
+  ** bob is a pug whose value is whatever its file holds.  So a blob must
+  ** denote an atom the loom would also make indirect.
+  **
+  ** sizeof(c3_w) bytes is ambiguous (a 4- or 8-byte value is direct when
+  ** its top bit is clear); one more byte is always indirect in both
+  ** bitnesses. Callers apply the far larger U3_BLOB_THRESH as policy;
+  ** this is the floor the representation itself requires.
+  */
+#   define U3_BLOB_MIN  (sizeof(c3_w) + 1)
+
+  _Static_assert(U3_BLOB_THRESH > U3_BLOB_MIN,
+                 "blobified atoms must be indirect in the loom");
+
     /* u3_blob_bob_dir(): write the $pier/.urb/bob path into [out_c].
     **
     ** [out_c] must be at least 8192 bytes.  Pier setup (disk.c) creates this

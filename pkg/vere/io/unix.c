@@ -1435,25 +1435,32 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
     c3_h  bob_mug_h;
     c3_h  bob_seq_h;
 
-    c3_o ok_o = u3_blob_save_fd(u3C.dir_c, fid_i,
-                                (c3_d)len_ws, &bob_mug_h, &bob_seq_h);
-
-    if ( close(fid_i) < 0 ) {
-      u3l_log("error closing initial file %s: %s", pax_c, strerror(errno));
-    }
-
-    if ( c3n == ok_o ) {
-      u3l_log("blob: failed to save large initial file %s", pax_c);
-      return u3_nul;
-    }
-
+    if ( c3y == u3_blob_save_fd(u3C.dir_c, fid_i,
+                                (c3_d)len_ws, &bob_mug_h, &bob_seq_h) )
     {
+      if ( close(fid_i) < 0 ) {
+        u3l_log("unix: error closing initial file %s: %s", pax_c, strerror(errno));
+      }
+
       u3_noun rel_pax = _unix_string_to_path_helper(pax_c + strlen(bas_c) + 1);
       u3_noun mim     = u3nt(c3__text, u3i_string("plain"), u3_nul);
       u3_atom atm     = u3i_blob(bob_mug_h, bob_seq_h);
       u3_noun dat     = u3nt(mim, (u3_atom)len_ws, atm);
 
       return u3nc(u3nt(rel_pax, u3_nul, dat), u3_nul);
+    }
+
+    //  no blob: at this size the only content the store refuses is content
+    //  denoting an atom too small to blobify, i.e. all zeros (U3_BLOB_MIN).
+    //  the loom path below builds that atom correctly, and is also the right
+    //  recovery if the save simply failed — so rewind and fall through.
+    //
+    u3l_log("blob: no blob for large initial file %s, reading into loom", pax_c);
+
+    if ( -1 == lseek(fid_i, 0, SEEK_SET) ) {
+      u3l_log("error rewinding initial file %s: %s", pax_c, strerror(errno));
+      close(fid_i);
+      return u3_nul;
     }
   }
 

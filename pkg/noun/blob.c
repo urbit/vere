@@ -224,34 +224,31 @@ _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
   return 0;
 }
 
-/* _blob_mug(): compute a 31-bit mug suitable for blob bucketing.
+/* _blob_sig(): significant byte length of blob content, a la u3r_met(3, ...).
 **
-**   u3r_mug_bytes takes c3_h (uint32_t) for the length, so we cap each
-**   window at 0xFFFFFFFF bytes.  For files > 4 GiB we hash the first
-**   window, mix in the high bits of length, and mix in the last window
-**   so that files of identical size but different tail content get
-**   distinct buckets.
+**   An atom has no trailing zero bytes, but a blob file may: it is written
+**   verbatim from a request body, a packet, or a file on disk.  Scanning
+**   them off here is what makes _blob_mug agree with u3r_mug_words.
+*/
+static c3_d
+_blob_sig(const c3_y* dat_y, c3_d len_d)
+{
+  while ( len_d && !dat_y[len_d - 1] ) {
+    len_d--;
+  }
+  return len_d;
+}
+
+/* _blob_mug(): compute the 31-bit mug of blob content.
+**
+**   This is not merely a bucketing hash: u3i_blob() memoizes it as the
+**   bob atom's mug_w, so it must equal the mug the same atom would get
+**   in the loom (u3r_mug_words -> strip trailing zeros -> u3r_mug_bytes).
 */
 static c3_h
 _blob_mug(const c3_y* dat_y, c3_d len_d)
 {
-  //  cap first window to UINT32_MAX to avoid hashing 0 bytes
-  //
-  c3_h win_h = ( len_d > 0xFFFFFFFFULL ) ? 0xFFFFFFFFu : (c3_h)len_d;
-  c3_h mug_h = u3r_mug_bytes(dat_y, win_h);
-
-  //  for files larger than 4 GiB, also fold in the high length bits
-  //  and hash the last 4 GiB window for tail sensitivity
-  //
-  c3_h hig_h = (c3_h)(len_d >> 32);
-  if ( hig_h ) {
-    mug_h = u3r_mug_both(mug_h, hig_h);
-    //  hash the final window (last min(len_d, 0xFFFFFFFF) bytes)
-    c3_d off_d  = len_d > 0xFFFFFFFFULL ? len_d - 0xFFFFFFFFULL : 0;
-    c3_h tel_h = u3r_mug_bytes(dat_y + off_d, (c3_h)(len_d - off_d));
-    mug_h = u3r_mug_both(mug_h, tel_h);
-  }
-  return mug_h;
+  return u3r_mug_bytes(dat_y, _blob_sig(dat_y, len_d));
 }
 
 /* u3_blob_save(): write bytes to blob store.
@@ -263,6 +260,22 @@ u3_blob_save(const c3_c* pax_c,
              c3_h*       mug_h,
              c3_h*       seq_h)
 {
+  //  store the atom's bytes, not the caller's buffer: a blob denotes an
+  //  atom, and an atom has no trailing zeros.  this is what u3i_bytes()
+  //  does for sub-threshold content, and keeping the two in agreement is
+  //  what makes dedup (and hence bob-vs-bob u3r_sing) see "abc" and
+  //  "abc\0" as the one atom they are.
+  //
+  len_d = _blob_sig(dat_y, len_d);
+
+  //  content whose atom the loom would keep direct has no bob
+  //  representation (see U3_BLOB_MIN); the caller must use the loom.
+  //  all-zero content lands here too, denoting the atom 0.
+  //
+  if ( len_d < U3_BLOB_MIN ) {
+    return c3n;
+  }
+
   *mug_h = _blob_mug(dat_y, len_d);
 
   //  acquire lock and get next sequence number
@@ -528,30 +541,61 @@ u3_blob_move_stg(const c3_c* pax_c,
     return c3n;
   }
 
-  c3_d len_d = (c3_d)st_u.st_size;
+  //  map_d is the mapping extent and must be what munmap is given; len_d
+  //  shrinks to the atom's byte length once trailing zeros are trimmed
+  //
+  c3_d map_d = (c3_d)st_u.st_size;
+  c3_d len_d = map_d;
 
-  if ( 0 == len_d ) {
+  if ( 0 == map_d ) {
     fprintf(stderr, "blob: install_stg: refusing empty staging file %s\r\n",
             stg_c);
     return c3n;
   }
 
-  c3_i fid_i = open(stg_c, O_RDONLY);
+  //  O_RDWR so we can trim trailing zeros below; the staging file is ours
+  //
+  c3_i fid_i = open(stg_c, O_RDWR);
   if ( -1 == fid_i ) {
     fprintf(stderr, "blob: install_stg: open failed on %s: %s\r\n",
             stg_c, strerror(errno));
     return c3n;
   }
 
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
+  void* map_v = mmap(0, (size_t)map_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
 
   if ( MAP_FAILED == map_v ) {
     fprintf(stderr, "blob: install_stg: mmap failed on %s: %s\r\n",
             stg_c, strerror(errno));
+    close(fid_i);
     return c3n;
   }
-  madvise(map_v, (size_t)len_d, MADV_SEQUENTIAL);
+  madvise(map_v, (size_t)map_d, MADV_SEQUENTIAL);
+
+  //  trim to the atom's bytes before the file is installed, so that what
+  //  lands in the store is canonical (see u3_blob_save).  we only ever
+  //  read [0, len_d) of the mapping afterwards, which stays within the
+  //  truncated file, so no page can fault past EOF.
+  //
+  len_d = _blob_sig((const c3_y*)map_v, map_d);
+
+  if ( len_d < U3_BLOB_MIN ) {
+    fprintf(stderr, "blob: install_stg: %s denotes a direct atom "
+                    "(%" PRIc3_d " significant bytes)\r\n", stg_c, len_d);
+    munmap(map_v, (size_t)map_d);
+    close(fid_i);
+    return c3n;
+  }
+
+  if ( (len_d != map_d) && (0 != ftruncate(fid_i, (off_t)len_d)) ) {
+    fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
+            stg_c, strerror(errno));
+    munmap(map_v, (size_t)map_d);
+    close(fid_i);
+    return c3n;
+  }
+
+  close(fid_i);
 
   *mug_h = _blob_mug((const c3_y*)map_v, len_d);
 
@@ -559,7 +603,7 @@ u3_blob_move_stg(const c3_c* pax_c,
   //
   c3_h nex_h = _blob_lock_acquire(pax_c, *mug_h);
   if ( 0 == nex_h ) {
-    munmap(map_v, (size_t)len_d);
+    munmap(map_v, (size_t)map_d);
     return c3n;
   }
 
@@ -567,7 +611,7 @@ u3_blob_move_stg(const c3_c* pax_c,
   //
   c3_h dup_h = _blob_dedup(pax_c, *mug_h, nex_h,
                             (const c3_y*)map_v, len_d);
-  munmap(map_v, (size_t)len_d);
+  munmap(map_v, (size_t)map_d);
 
   if ( 0 != dup_h ) {
     //  duplicate found — consume staging file and return existing seq

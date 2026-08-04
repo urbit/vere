@@ -984,24 +984,27 @@ _test_met(void)
   u3_disk_blob_init(_tmp_pier);
   u3_disk_blob_stg_init(_tmp_pier);
 
-  //  case 1: no trailing zeros, not word-aligned (4 bytes, < 1 VERE64 word)
+  //  case 1: no trailing zeros, not word-aligned in either bitness
   //
-  //  bytes: { 0xab, 0xcd, 0xef, 0x01 }
-  //  last nonzero byte at pos 4, top byte = 0x01 (1 significant bit)
-  //  expected met = (4-1)*8 + 1 = 25
+  //  16 bytes, top byte = 0x01 (1 significant bit)
+  //  expected met = (16-1)*8 + 1 = 121
   //
   //  Also verifies u3_blob_load zero-initializes the loom atom's trailing
   //  word bytes: u3r_met on the loaded atom must agree with u3_blob_met.
   //
   {
-    const c3_y dat_y[] = { 0xab, 0xcd, 0xef, 0x01 };
+    const c3_y dat_y[] = { 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x9a,
+                           0xbc, 0xde, 0xf0, 0x11, 0x22, 0x33, 0x44, 0x01 };
     const c3_d dat_d   = sizeof(dat_y);
     c3_h mug_h = 0; c3_h seq_h = 0;
-    u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h);
+    if ( c3y != u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h) ) {
+      fprintf(stderr, "\033[31mblob met: dense save failed\033[0m\r\n");
+      exit(1);
+    }
 
     c3_d bit_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
-    if ( 25 != bit_d ) {
-      fprintf(stderr, "\033[31mblob met: dense got %" PRIc3_d ", expected 25"
+    if ( 121 != bit_d ) {
+      fprintf(stderr, "\033[31mblob met: dense got %" PRIc3_d ", expected 121"
                       "\033[0m\r\n", bit_d);
       exit(1);
     }
@@ -1025,18 +1028,23 @@ _test_met(void)
   //  case 2: trailing zeros — met should strip them
   //
   {
-    const c3_y dat_y[] = { 0xff, 0xff, 0x00, 0x00, 0x00 };
+    const c3_y dat_y[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                           0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                           0x00, 0x00, 0x00, 0x00 };
     const c3_d dat_d   = sizeof(dat_y);
     c3_h mug_h = 0; c3_h seq_h = 0;
-    u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h);
+    if ( c3y != u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h) ) {
+      fprintf(stderr, "\033[31mblob met: trailing-zero save failed\033[0m\r\n");
+      exit(1);
+    }
 
     c3_d bit_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
-    //  16 significant bits; high byte 0xff → 8 bits
-    //  total = 1*8 + 8 = 16
+    //  16 significant bytes; high byte 0xff → 8 bits
+    //  total = 15*8 + 8 = 128
     //
-    if ( 16 != bit_d ) {
+    if ( 128 != bit_d ) {
       fprintf(stderr, "\033[31mblob met: trailing-zero got %" PRIc3_d
-                      ", expected 16\033[0m\r\n", bit_d);
+                      ", expected 128\033[0m\r\n", bit_d);
       exit(1);
     }
   }
@@ -1649,6 +1657,182 @@ _test_lease_dups(void)
   fprintf(stderr, "test blob lease dups: ok\r\n");
 }
 
+/* _test_canon(): blobs store the atom's bytes, not the caller's buffer.
+**
+**   The mug a blob gets is memoized by u3i_blob() as the bob atom's
+**   mug_w, so it must equal the mug the same atom gets in the loom.
+**   Since an atom has no trailing zeros, content that differs only in
+**   trailing zeros is one atom and must become one blob.
+*/
+static void
+_test_canon(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  //  same atom, three spellings.  the payload is over 8 bytes so that the
+  //  atom it denotes is indirect in both bitnesses: u3r_sing's bob branch
+  //  is only reached for indirect atoms, and a real blob (> U3_BLOB_THRESH)
+  //  is always indirect.
+  //
+  const c3_y bar_y[] = "canonical bytes";
+  const c3_y pad_y[] = "canonical bytes\0";
+  const c3_y pud_y[] = "canonical bytes\0\0\0\0\0\0\0\0";
+
+  c3_h bar_mug_h, bar_seq_h;
+  c3_h pad_mug_h, pad_seq_h;
+  c3_h pud_mug_h, pud_seq_h;
+
+  if (  (c3y != u3_blob_save(_tmp_pier, bar_y, sizeof(bar_y),
+                             &bar_mug_h, &bar_seq_h))
+     || (c3y != u3_blob_save(_tmp_pier, pad_y, sizeof(pad_y),
+                             &pad_mug_h, &pad_seq_h))
+     || (c3y != u3_blob_save(_tmp_pier, pud_y, sizeof(pud_y),
+                             &pud_mug_h, &pud_seq_h)) )
+  {
+    fprintf(stderr, "\033[31mblob canon: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  if (  (bar_mug_h != pad_mug_h) || (bar_seq_h != pad_seq_h)
+     || (bar_mug_h != pud_mug_h) || (bar_seq_h != pud_seq_h) )
+  {
+    fprintf(stderr, "\033[31mblob canon: trailing zeros made distinct blobs "
+                    "(%" PRIc3_h "/%" PRIc3_h ", %" PRIc3_h "/%" PRIc3_h
+                    ", %" PRIc3_h "/%" PRIc3_h ")\033[0m\r\n",
+            bar_mug_h, bar_seq_h, pad_mug_h, pad_seq_h, pud_mug_h, pud_seq_h);
+    exit(1);
+  }
+
+  //  what landed on disk is the atom's bytes, not the caller's buffer
+  //  (every fixture above carries at least the string literal's own NUL)
+  //
+  const c3_d sig_d = strlen((const c3_c*)bar_y);
+  {
+    c3_c fil_c[8192];
+    struct stat st_u;
+    u3_blob_path(fil_c, _tmp_pier, bar_mug_h, bar_seq_h);
+    if ( (0 != stat(fil_c, &st_u)) || (sig_d != (c3_d)st_u.st_size) ) {
+      fprintf(stderr, "\033[31mblob canon: stored %lld bytes, wanted %" PRIc3_d
+                      "\033[0m\r\n", (long long)st_u.st_size, sig_d);
+      exit(1);
+    }
+  }
+
+  //  the core invariant: a bob atom mugs like the loom atom it denotes
+  //
+  {
+    u3_atom bob = u3i_blob(bar_mug_h, bar_seq_h);
+    u3_atom lom = u3i_bytes(sizeof(pud_y), pud_y);
+
+    if ( u3r_mug(bob) != u3r_mug(lom) ) {
+      fprintf(stderr, "\033[31mblob canon: bob mug %" PRIc3_h
+                      " != loom mug %" PRIc3_h "\033[0m\r\n",
+              u3r_mug(bob), u3r_mug(lom));
+      exit(1);
+    }
+    if ( c3y != u3r_sing(bob, lom) ) {
+      fprintf(stderr, "\033[31mblob canon: bob != loom atom\033[0m\r\n");
+      exit(1);
+    }
+
+    //  and two bobs for one atom are the same bob, so bob-vs-bob sing
+    //  (which compares mug and blob identity only) agrees
+    //
+    u3_atom tob = u3i_blob(pud_mug_h, pud_seq_h);
+    if ( c3y != u3r_sing(bob, tob) ) {
+      fprintf(stderr, "\033[31mblob canon: bob != bob for one atom\033[0m\r\n");
+      exit(1);
+    }
+
+    u3z(bob); u3z(lom); u3z(tob);
+  }
+
+  //  a blob must denote an atom the loom would also make indirect, else
+  //  u3r_sing compares a pug against a cat and takes the early c3n in
+  //  _cr_sing_atom.  all-zero content (atom 0) is the degenerate case.
+  //
+  {
+    const c3_y nil_y[64] = {0};
+    const c3_y sml_y[U3_BLOB_MIN - 1] = {[U3_BLOB_MIN - 2] = 0xff};
+    c3_h nil_mug_h = 0, nil_seq_h = 0;
+    c3_h sml_mug_h = 0, sml_seq_h = 0;
+
+    if ( c3n != u3_blob_save(_tmp_pier, nil_y, sizeof(nil_y),
+                             &nil_mug_h, &nil_seq_h) )
+    {
+      fprintf(stderr, "\033[31mblob canon: saved an all-zero blob\033[0m\r\n");
+      exit(1);
+    }
+    if ( c3n != u3_blob_save(_tmp_pier, sml_y, sizeof(sml_y),
+                             &sml_mug_h, &sml_seq_h) )
+    {
+      fprintf(stderr, "\033[31mblob canon: saved a direct-atom blob "
+                      "(%zu bytes)\033[0m\r\n", sizeof(sml_y));
+      exit(1);
+    }
+
+    //  one byte more is always indirect, and is accepted
+    //
+    const c3_y big_y[U3_BLOB_MIN] = {[U3_BLOB_MIN - 1] = 0xff};
+    c3_h big_mug_h = 0, big_seq_h = 0;
+
+    if ( c3y != u3_blob_save(_tmp_pier, big_y, sizeof(big_y),
+                             &big_mug_h, &big_seq_h) )
+    {
+      fprintf(stderr, "\033[31mblob canon: refused a %zu-byte blob\033[0m\r\n",
+              sizeof(big_y));
+      exit(1);
+    }
+    {
+      u3_atom bob = u3i_blob(big_mug_h, big_seq_h);
+      u3_atom lom = u3i_bytes(sizeof(big_y), big_y);
+
+      if ( c3n == u3a_is_pug(lom) ) {
+        fprintf(stderr, "\033[31mblob canon: U3_BLOB_MIN bytes still "
+                        "direct in the loom\033[0m\r\n");
+        exit(1);
+      }
+      if ( c3y != u3r_sing(bob, lom) ) {
+        fprintf(stderr, "\033[31mblob canon: floor-sized bob != loom\033[0m\r\n");
+        exit(1);
+      }
+      u3z(bob); u3z(lom);
+    }
+    u3a_blob_drop(big_mug_h, big_seq_h);
+  }
+
+  //  move_stg trims too, so the staged path stores the same blob
+  //
+  {
+    c3_c* stg_c = _write_tmp_file(pud_y, sizeof(pud_y));
+    c3_h  stg_mug_h = 0;
+    c3_h  stg_seq_h = 0;
+
+    if ( c3y != u3_blob_move_stg(_tmp_pier, stg_c, &stg_mug_h, &stg_seq_h) ) {
+      fprintf(stderr, "\033[31mblob canon: move_stg failed\033[0m\r\n");
+      exit(1);
+    }
+    if ( (stg_mug_h != bar_mug_h) || (stg_seq_h != bar_seq_h) ) {
+      fprintf(stderr, "\033[31mblob canon: move_stg made a distinct blob "
+                      "(%" PRIc3_h "/%" PRIc3_h ")\033[0m\r\n",
+              stg_mug_h, stg_seq_h);
+      exit(1);
+    }
+    c3_free(stg_c);
+  }
+
+  //  our bobs went to zero; with no blob_del_f installed nothing drops the
+  //  entry, so clear it by hand and leave the shared bank as we found it
+  //
+  u3a_blob_drop(bar_mug_h, bar_seq_h);
+
+  _tmp_clean();
+  fprintf(stderr, "test blob canon: ok\r\n");
+}
+
 /* main(): run all blob tests.
 */
 int
@@ -1662,6 +1846,7 @@ main(int argc, char* argv[])
   _test_stg_clean();
   _test_save_load();
   _test_dedup();
+  _test_canon();
   _test_save_fd();
   _test_delete_empty_bucket();
   _test_walk();

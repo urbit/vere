@@ -1145,12 +1145,16 @@ u3a_blob_sane(c3_o dep_o)
 **   use_w hits zero, calls blob_del_f — mars wipes the file and drops
 **   the blb_p entry; king releases its lease (%blrl) and drops its
 **   local entry, never touching files.
+**
+**   The refcount is intrinsic bookkeeping and is always maintained; only
+**   the notification depends on a hook being installed. The offline
+**   subcommands (queu, meld, pack) free bob atoms with no blob_del_f —
+**   _king_blob_init() runs on the daemon paths only — so gating the
+**   decrement on the hook would let use_w drift there.
 */
 static void
 _me_bob_dead(u3a_atom* atm_u)
 {
-  if ( !u3C.blob_del_f ) return;
-
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
   if ( !blb_u ) return;
 
@@ -1158,7 +1162,7 @@ _me_bob_dead(u3a_atom* atm_u)
     blb_u->use_w -= 1;
   }
 
-  if ( 0 == blb_u->use_w ) {
+  if ( (0 == blb_u->use_w) && u3C.blob_del_f ) {
     u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);
   }
 }
