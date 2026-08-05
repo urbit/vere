@@ -1635,8 +1635,11 @@ u3m_soft_cax(u3_funq fun_f,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun why = 0, pro;
+  u3_noun pro;
   u3_noun cax = u3_nul;
+#ifndef VERE64
+  u3_noun why = 0;
+#endif
 
   /* Record the cap, and leap.
   */
@@ -1656,7 +1659,11 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
+#ifndef VERE64
   if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+#else
+  if ( 0 == _setjmp(u3R->esc.buf) ) {
+#endif
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1682,6 +1689,9 @@ u3m_soft_cax(u3_funq fun_f,
     pro = u3m_love(pro);
   }
   else {
+#ifdef VERE64
+    u3_noun why = u3R->esc.why_w;
+#endif
     u3t_init();
 
     /* Produce - or fall again.

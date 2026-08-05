@@ -62,6 +62,48 @@ _test_meme(void)
   return ret_i;
 }
 
+/* _soft_cax_bail(): bail from inside a virtualization-with-cache frame.
+*/
+static u3_noun
+_soft_cax_bail(u3_noun aga, u3_noun agb)
+{
+  u3z(aga);
+  u3z(agb);
+  return u3m_bail(c3__exit);
+}
+
+/* _test_soft_cax(): u3m_soft_cax catches a bail rather than asserting.
+**
+**   Regression test for a bitness bug: u3m_soft_cax was the only one of
+**   the four _setjmp(u3R->esc.buf) trap sites without the VERE64 split.
+**   Under VERE64, u3m_bail stores the ball in u3R->esc.why_w and longjmps
+**   with a literal 1, since a 64-bit noun does not fit in longjmp's int
+**   return.  Reading the setjmp value as the bail therefore produced 1,
+**   and the catch arm's u3_assert(_(u3du(why))) failed on an atom.
+**
+**   Reachable in production through jets/e/mice.c, so any bail under
+**   mock-with-cache aborted a 64-bit runtime.
+*/
+static c3_i
+_test_soft_cax(void)
+{
+  //  a true exit produces [[2 tax] ~]
+  //
+  u3_noun pro = u3m_soft_cax(_soft_cax_bail, 0, 0);
+  c3_i  ret_i = 1;
+
+  if (  (c3n == u3du(pro))
+     || (c3n == u3du(u3h(pro)))
+     || (2 != u3h(u3h(pro))) )
+  {
+    u3m_p("test soft_cax: unexpected product", pro);
+    ret_i = 0;
+  }
+
+  u3z(pro);
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -73,6 +115,12 @@ main(int argc, char* argv[])
     fprintf(stderr, "test meme: failed\r\n");
     exit(1);
   }
+
+  if ( !_test_soft_cax() ) {
+    fprintf(stderr, "test soft_cax: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test soft_cax: ok\r\n");
 
   //  GC
   //
