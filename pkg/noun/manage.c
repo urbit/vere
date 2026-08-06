@@ -40,13 +40,34 @@
 //
 #undef NO_OVERFLOW
 
-      /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
-      */
-#if 0
-        c3_o
-        u3m_trap(void);
+    /* u3m_trap(): trap nock exceptions within the road; produces yes on
+    ** entry, no on escape, setting (why) to the bail ball.
+    **
+    **   MUST be used as the entire controlling expression of an `if`, and
+    **   (why) must be an automatic of the enclosing frame. setjmp cannot
+    **   be wrapped in a function: the jmp_buf dies with the frame that
+    **   filled it.
+    **
+    **   Under VERE64 a 64-bit ball does not fit in longjmp's int return,
+    **   so u3m_escape() stashes it in u3R->esc.why_w and longjmps with a
+    **   literal 1. The ball is latched here, in the controlling expression,
+    **   since esc.why_w lives on the road and is clobbered by the next bail.
+    */
+#ifndef VERE64
+#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
 #else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
+#     define u3m_trap(why) \
+        ( _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
+#endif
+
+    /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
+    ** return.
+    */
+#ifndef VERE64
+#     define u3m_escape(how) _longjmp(u3R->esc.buf, (how))
+#else
+#     define u3m_escape(how) \
+        ( u3R->esc.why_w = (how), _longjmp(u3R->esc.buf, 1) )
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -1007,12 +1028,7 @@ u3m_bail(u3_noun how)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
-#ifndef VERE64
-  _longjmp(u3R->esc.buf, how);
-#else
-  u3R->esc.why_w = how;
-  _longjmp(u3R->esc.buf, 1);
-#endif
+  u3m_escape(how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1502,9 +1518,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 {
   u3_noun pro;
   c3_m    sig_m = 0;
-#ifndef VERE64
   u3_noun why = 0;
-#endif
 
   /* Enter internal signal regime.
    */
@@ -1537,11 +1551,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1564,9 +1574,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, u3m_love(pro));
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     /* Overload the error result.
     */
     pro = u3m_love(why);
@@ -1637,9 +1644,7 @@ u3m_soft_cax(u3_funq fun_f,
 {
   u3_noun pro;
   u3_noun cax = u3_nul;
-#ifndef VERE64
   u3_noun why = 0;
-#endif
 
   /* Record the cap, and leap.
   */
@@ -1659,11 +1664,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1689,9 +1690,6 @@ u3m_soft_cax(u3_funq fun_f,
     pro = u3m_love(pro);
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     u3t_init();
 
     /* Produce - or fall again.
@@ -1741,9 +1739,7 @@ u3m_soft_run(u3_noun gul,
              u3_noun agb)
 {
   u3_noun pro;
-#ifndef VERE64 
   u3_noun why = 0;
-#endif
 
   c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
 
@@ -1770,11 +1766,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1798,9 +1790,6 @@ u3m_soft_run(u3_noun gul,
     pro = u3nc(0, u3m_love(pro));
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     u3t_init();
 
     /* Produce - or fall again.
@@ -1857,9 +1846,7 @@ u3_noun
 u3m_soft_esc(u3_noun ref, u3_noun sam)
 {
   u3_noun gul, pro;
-#ifndef VERE64 
   u3_noun why = 0;
-#endif
 
   /* Assert preconditions.
   */
@@ -1882,11 +1869,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -1894,9 +1877,6 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     pro = u3m_love(pro);
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     u3t_init();
 
     /* Push the error back up to the calling context - not the run we
