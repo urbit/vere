@@ -151,7 +151,8 @@ pub fn re_file_custom() -> &'static Regex {
 
 fn re_jet_dir() -> &'static Regex {
   static RE: OnceLock<Regex> = OnceLock::new();
-  RE.get_or_init(|| Regex::new(r"/jets/[a-f]/").unwrap())
+  //  a-f the classic tiers, g/i the newer ones, 135+ versioned trees
+  RE.get_or_init(|| Regex::new(r"/jets/[a-z0-9]+/").unwrap())
 }
 
 fn re_jet_qw() -> &'static Regex {

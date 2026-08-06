@@ -278,6 +278,23 @@ impl Cursor {
     to_loc(unsafe { clang_getCursorLocation(self.raw) })
   }
 
+  /// True if this cursor's token text physically lives somewhere other
+  /// than its expansion site -- i.e. it comes from a macro body.
+  pub fn is_macro_origin(&self) -> bool {
+    let l = unsafe { clang_getCursorLocation(self.raw) };
+    let mut f: CXFile = ptr::null_mut();
+    let (mut line, mut col, mut off): (c_uint, c_uint, c_uint) = (0, 0, 0);
+    unsafe { clang_getSpellingLocation(l, &mut f, &mut line, &mut col, &mut off) };
+    let spell = if f.is_null() {
+      None
+    } else {
+      Some(unsafe { cx(clang_getFileName(f)) })
+    };
+    let exp = self.location();
+    spell.as_deref() != exp.file.as_deref().map(|s| s as &str)
+      || off != exp.offset
+  }
+
   pub fn extent_start(&self) -> Loc {
     to_loc(unsafe { clang_getRangeStart(clang_getCursorExtent(self.raw)) })
   }

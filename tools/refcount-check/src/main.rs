@@ -734,6 +734,7 @@ fn run() -> i32 {
       ("warn_typo_assert", "annotation"),
       ("bug_switch_tail", "leak"),
       ("bug_slam_stale", "use-after-free"),
+      ("bug_indirect_int", "strange expression"),
       ("skip_back_goto", "complicated"),
       //  KNOWN LIMITATION: one env per branch cannot carry the
       //  disjunction "a direct OR b direct" past the || join, so the

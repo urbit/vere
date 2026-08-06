@@ -245,3 +245,13 @@ bug_slam_stale(u3_noun a, u3_noun b)
   u3j_gate_lose(&sit_u);
   return pro;
 }
+
+/* u3x_atom only proves ATOM: using the word as a raw C integer needs
+** a directness proof (u3a_is_cat) or a proper extraction (u3r_word)
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_indirect_int(u3_noun a)
+{
+  return u3i_word(2 * u3x_atom(u3h(a)));
+}

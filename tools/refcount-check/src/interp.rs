@@ -14,6 +14,7 @@
 
 #![allow(non_upper_case_globals)]
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 use imbl::{HashMap as IHashMap, HashSet as IHashSet, Vector as IVec};
@@ -137,7 +138,10 @@ impl Env {
       .expect("linter invariant: every ValId is present in values");
 
     match *state {
-      RefcountState::Owned {extra: 0} => *state = RefcountState::Poisoned,
+      RefcountState::Owned {extra: 0} => {
+        g.note_poison(id, format!("consumed at {}", loc_str(cur)));
+        *state = RefcountState::Poisoned;
+      }
 
       RefcountState::Owned {extra}
         => *state = RefcountState::Owned {extra: extra - 1},
@@ -152,7 +156,8 @@ impl Env {
         "transfer of uninitialized variable [{}]", self.names(id)),
 
       RefcountState::Poisoned => report!(g, cur, "refcount error",
-        "transfer of already-consumed value [{}]", self.names(id)),
+        "transfer of already-consumed value [{}]{}", self.names(id),
+        g.why_poisoned(id)),
 
       RefcountState::Passthrough => report!(g, cur, "refcount error",
         "losing passthrough value [{}]", self.names(id)),
@@ -206,6 +211,10 @@ struct Gen<'a> {
   //  the original parameter values: roots the CALLER holds a counted
   //  reference to, immune to the u3j_gate_slam borrowed-view sweep
   param_vids: Vec<ValId>,
+  //  why a value became Poisoned, for use-after-free messages. Keyed
+  //  by ValId (never reused within a function), so recording is
+  //  path-insensitive; consulted only when a state IS Poisoned.
+  poison_why: RefCell<HashMap<ValId, String>>,
 }
 
 impl Gen<'_> {
@@ -215,6 +224,30 @@ impl Gen<'_> {
   fn store_transfers(&self) -> bool {
     self.assert_transfer_all > 0
   }
+
+  /// Remember why `id` became Poisoned (the first cause wins).
+  fn note_poison(&self, id: ValId, why: String) {
+    self.poison_why.borrow_mut().entry(id).or_insert(why);
+  }
+
+  /// " (<why>)" suffix for messages about a poisoned value.
+  fn why_poisoned(&self, id: ValId) -> String {
+    self.poison_why.borrow().get(&id)
+      .map(|w| format!(" ({})", w))
+      .unwrap_or_default()
+  }
+}
+
+/// "file:line" for poison provenance messages.
+fn floc(l: &Loc) -> String {
+  match &l.file {
+    Some(f) => format!("{}:{}", crate::relpath(f), l.line),
+    None => format!("line {}", l.line),
+  }
+}
+
+fn loc_str(cur: &Cursor) -> String {
+  floc(&cur.location())
 }
 
 macro_rules! report_v {
@@ -246,6 +279,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     sem,
     assert_transfer_all: 0,
     param_vids: Vec::new(),
+    poison_why: RefCell::new(HashMap::new()),
   };
 
   for p in fun.arguments() {
@@ -1223,8 +1257,8 @@ fn read_check(cur: &Cursor, env: &Env, vid: ValId, g: &Gen) -> R<()>
 {
   if matches!(env.values.get(&vid), Some(RefcountState::Poisoned)) {
     report!(g, cur, "use-after-free",
-      "[{}] is (derived from) a value already consumed on this path",
-      env.names(vid));
+      "[{}] is (derived from) a value already consumed on this path{}",
+      env.names(vid), g.why_poisoned(vid));
   }
   Ok(())
 }
@@ -1256,7 +1290,7 @@ fn discard_check(cur: &Cursor, env: &Env, vid: Option<ValId>, g: &Gen)
 /// Poison every Borrowed value transitively contained in `root` (the
 /// root itself is untouched): its interior may be freed under us, by
 /// unifying equality (u3r_sing) or by consumption of the parent.
-fn poison_borrowed_within(env: &mut Env, root: ValId)
+fn poison_borrowed_within(env: &mut Env, root: ValId, why: &str, g: &Gen)
 {
   let mut stack = vec![root];
   let mut seen: HashSet<ValId> = HashSet::from([root]);
@@ -1268,6 +1302,7 @@ fn poison_borrowed_within(env: &mut Env, root: ValId)
       stack.push(k);
       if let Some(st) = env.values.get_mut(&k) {
         if matches!(*st, RefcountState::Borrowed) {
+          g.note_poison(k, why.to_string());
           *st = RefcountState::Poisoned;
         }
       }
@@ -1283,7 +1318,9 @@ fn lose_cascade(env: Env, id: ValId, cur: &Cursor, g: &Gen) -> R<Env>
   //  lose() of an already-poisoned value errors out, so Poisoned here
   //  means the transition happened just now
   if matches!(env.values.get(&id), Some(RefcountState::Poisoned)) {
-    poison_borrowed_within(&mut env, id);
+    let why = format!("view into [{}], which was consumed at {}",
+      env.names(id), loc_str(cur));
+    poison_borrowed_within(&mut env, id, &why, g);
   }
   Ok(env)
 }
@@ -1329,6 +1366,30 @@ fn bind_value(env: &mut Env, var: VarName, rvid: Option<ValId>, g: &mut Gen)
   id
 }
 
+/// A tracked noun used as a raw C integer (arithmetic, ordering,
+/// bitwise, array index): the word of an indirect atom is a loom
+/// reference, so the use is meaningless unless the value is proven
+/// direct (u3a_is_cat guard, narrow-type binding, direct annotation)
+/// or extracted properly (u3r_word/u3r_chub &co).
+fn direct_use_check(cur: &Cursor, env: &Env, vid: Option<ValId>, g: &Gen)
+  -> R<()>
+{
+  let Some(v) = vid else { return Ok(()); };
+  //  operators expanded from a macro body (u3a_to_ptr, u3h slot
+  //  encodings, c3_min) are the noun system's own deliberate word
+  //  punning; only literally-written arithmetic is the jet's doing
+  if cur.is_macro_origin() {
+    return Ok(());
+  }
+  if !matches!(env.values.get(&v), Some(RefcountState::Direct)) {
+    report!(g, cur, "strange expression",
+      "noun value [{}] used as a C integer without being proven direct: \
+       guard with u3a_is_cat, or extract with u3r_word/u3r_chub",
+      env.names(v));
+  }
+  Ok(())
+}
+
 /// Can a conditional guard refine this value to a direct atom?
 fn refinable(env: &Env, vid: ValId) -> bool
 {
@@ -1368,9 +1429,10 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   }
 
   //  no ValId for non-noun values: a caller binding one to a noun
-  //  variable makes it Direct
+  //  variable makes it Direct. CXXBoolLiteralExpr is C23 true/false.
   if matches!(k, CXCursor_IntegerLiteral | CXCursor_CharacterLiteral
-    | CXCursor_FloatingLiteral | CXCursor_StringLiteral)
+    | CXCursor_FloatingLiteral | CXCursor_StringLiteral
+    | CXCursor_CXXBoolLiteralExpr)
   {
     return Ok((None, Some(env)));
   }
@@ -1442,13 +1504,22 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       return Ok((None, mayb_join(cur.location(), t_env, f_env, g)?));
     }
     //  arithmetic/comparison: operands are read, the product is not a
-    //  counted noun
+    //  counted noun. ==/!= is noun identity and fine on any noun;
+    //  everything else treats the word as a raw C integer, which is
+    //  meaningless on an indirect atom -- directness must be proven
+    let integer_op = op != binop::EQ && op != binop::NE;
     let (lv, nxt) = eval_expr(&lhs, env, depth, g)?;
     let Some(nxt) = nxt else { return Ok((None, None)); };
     discard_check(&cur, &nxt, lv, g)?;
+    if integer_op {
+      direct_use_check(&cur, &nxt, lv, g)?;
+    }
     let (rv, nxt) = eval_expr(&rhs, nxt, depth, g)?;
     let Some(nxt) = nxt else { return Ok((None, None)); };
     discard_check(&cur, &nxt, rv, g)?;
+    if integer_op {
+      direct_use_check(&cur, &nxt, rv, g)?;
+    }
     return Ok((None, Some(nxt)));
   }
 
@@ -1525,19 +1596,27 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   }
 
   if k == CXCursor_ArraySubscriptExpr {
-    //  elements are untracked storage; base and index for effects
-    for c in cur.children() {
-      let (v, nxt) = eval_expr(&c, env, depth, g)?;
+    //  elements are untracked storage; base and index for effects.
+    //  a noun INDEX is a raw offset: directness must be proven
+    for (i, c) in cur.children().iter().enumerate() {
+      let (v, nxt) = eval_expr(c, env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
       discard_check(&cur, &nxt, v, g)?;
+      if i == 1 {
+        direct_use_check(&cur, &nxt, v, g)?;
+      }
       env = nxt;
     }
     return Ok((None, Some(env)));
   }
 
-  if k == CXCursor_InitListExpr {
+  if k == CXCursor_InitListExpr || k == CXCursor_CompoundLiteralExpr {
     //  compound literal in expression position: untracked aggregate
-    for c in cur.children() {
+    //  ((float16_t){SB_REAL16_ONE} in the lagoon i754 jets). The
+    //  TypeRef child of a compound literal is not an expression.
+    for c in cur.children().into_iter()
+      .filter(|c| is_expr_kind(c.kind()))
+    {
       let (v, nxt) = eval_expr(&c, env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
       discard_check(&c, &nxt, v, g)?;
@@ -2036,9 +2115,11 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  key lookups; see config::UNIFYING_FNS): equal interior copies may
   //  be freed and repointed, so borrowed views into the arguments die
   if config::UNIFYING_FNS.contains(&cn) {
+    let why = format!("possibly freed by unifying call to {}() at {}",
+      cn, loc_str(cur));
     for (_, _, v) in &evald {
       if let Some(v) = *v {
-        poison_borrowed_within(&mut env, v);
+        poison_borrowed_within(&mut env, v, &why, g);
       }
     }
   }
@@ -2055,7 +2136,10 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
         && !g.param_vids.contains(id))
       .map(|(id, _)| *id)
       .collect();
+    let why = format!("possibly freed during u3j_gate_slam() at {}: \
+      the gate may unify nouns it captured", loc_str(cur));
     for id in stale {
+      g.note_poison(id, why.clone());
       env.values.insert(id, RefcountState::Poisoned);
     }
   }
@@ -2213,15 +2297,35 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     if (op == binop::EQ || op == binop::NE) && kids.len() == 2 {
       let (lv, nxt) = eval_expr(&kids[0], env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
-      discard_check(&kids[0], &nxt, lv, g)?;
       let (rv, nxt) = eval_expr(&kids[1], nxt, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
-      discard_check(&kids[1], &nxt, rv, g)?;
+      //  a tracked value (owned temporaries included) compared against
+      //  a direct literal IS that direct atom on the equal branch --
+      //  `if (u3qb_lent(shape) != 2) bail;` leaks nothing on the path
+      //  that survives, so the discard check is waived for it
+      let lit_l = int_literal_value(&kids[0]);
+      let lit_r = int_literal_value(&kids[1]);
+      let direct_lit = |l: Option<u64>| l.is_some_and(|v|
+        v <= config::DIRECT_MAX || v == config::U3_NONE);
+      let mut eq_vid: Option<ValId> = None;
+      for (v, other_lit, c) in
+        [(lv, lit_r, &kids[0]), (rv, lit_l, &kids[1])]
+      {
+        if v.is_some() && direct_lit(other_lit) {
+          eq_vid = v;
+        } else {
+          discard_check(c, &nxt, v, g)?;
+        }
+      }
       //  facts resolved on the post-evaluation env, so an assignment
       //  inside the comparison refines the rebound value
       let fact = guard_fact(&kids[0], &kids[1], &nxt);
       let mut te = nxt.clone();
       let mut fe = nxt;
+      if let Some(vid) = eq_vid {
+        let eq_env = if op == binop::EQ { &mut te } else { &mut fe };
+        refine_direct(eq_env, vid);
+      }
       if let Some((vid, eq_direct, ne_direct)) = fact {
         let (t_dir, f_dir) = if op == binop::EQ {
           (eq_direct, ne_direct)
@@ -2440,8 +2544,28 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
   if env1.vars_rev.len() != env2.vars_rev.len()
     || env1.vars_rev.keys().any(|n| !env2.vars_rev.contains_key(n))
   {
+    let only = |a: &Env, b: &Env| -> String {
+      let mut ns: Vec<&str> = a.vars_rev.keys()
+        .filter(|n| !b.vars_rev.contains_key(*n))
+        .map(|n| n.name.as_ref())
+        .collect();
+      ns.sort();
+      ns.dedup();
+      ns.join(", ")
+    };
+    let o1 = only(&env1, &env2);
+    let o2 = only(&env2, &env1);
+    let mut parts = Vec::new();
+    if !o1.is_empty() {
+      parts.push(format!("[{}] tracked on one path only", o1));
+    }
+    if !o2.is_empty() {
+      parts.push(format!("[{}] tracked on the other path only", o2));
+    }
     report_loc!(g, loc, "refcount error",
-      "joining branches have conflicting alias sets");
+      "joining paths disagree about which variables are live: {} -- \
+       does one path jump over the declaration (switch fallthrough, \
+       missing break, goto past a decl)?", parts.join("; "));
   }
 
   let mut names: Vec<VarName> = env1.vars_rev.keys().cloned().collect();
@@ -2716,6 +2840,8 @@ fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
   //  forever, now unreachable)
   let mut leaks: Vec<Finding> = Vec::new();
   for (id, names) in orphans {
+    g.note_poison(id, format!("[{}] went out of scope at {}",
+      names.join(", "), floc(&loc)));
     let state = env.values.get_mut(&id).expect("linter invariant");
     let RefcountState::Owned {extra} = *state else {
       *state = RefcountState::Poisoned;
