@@ -5,7 +5,7 @@
 
 #include "noun.h"
 
-// @Refcount: direct product
+// @Refcount: transfer arguments, direct product
 static u3_noun
 _by_any(u3_noun a, u3j_site* sit_u)
 {
@@ -13,16 +13,23 @@ _by_any(u3_noun a, u3j_site* sit_u)
     return c3n;
   }
   else {
-    u3_noun n_a, l_a, r_a;
+    u3_noun n_a, l_a, r_a, q_n_a;
     u3x_trel(a, &n_a, &l_a, &r_a);
+    u3x_cell(n_a, NULL, &q_n_a);
+    u3k(l_a); u3k(r_a); u3k(q_n_a);
+    u3z(a);
 
-    switch ( u3j_gate_slam(sit_u, u3k(u3t(n_a))) ) {
-      case c3y: return c3y;
+    switch ( u3j_gate_slam(sit_u, q_n_a) ) {
+      case c3y: {
+        u3z(l_a); u3z(r_a); 
+        return c3y;
+      }
       case c3n: break;
       default:  return u3m_bail(c3__exit);
     }
 
     if ( c3y == _by_any(l_a, sit_u) ) {
+      u3z(r_a); 
       return c3y;
     }
 
@@ -37,7 +44,7 @@ u3qdb_any(u3_noun a, u3_noun b)
   u3j_site sit_u;
 
   u3j_gate_prep(&sit_u, u3k(b));
-  pro = _by_any(a, &sit_u);
+  pro = _by_any(u3k(a), &sit_u);
   u3j_gate_lose(&sit_u);
 
   return pro;
