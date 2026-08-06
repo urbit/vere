@@ -27,7 +27,7 @@
     u3_noun u3qb_clap(u3_noun, u3_noun, u3_noun);
     u3_noun u3qb_drop(u3_noun);
     u3_noun u3qb_flop(u3_noun);
-    u3_noun u3qb_lent(u3_noun);
+    u3_noun u3qb_lent(u3_noun); // @Refcount: retains arguments
     u3_noun u3qb_levy(u3_noun, u3_noun);
     u3_noun u3qb_lien(u3_noun, u3_noun);
     u3_noun u3qb_murn(u3_noun, u3_noun); // @Refcount: assert retains arguments

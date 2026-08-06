@@ -9,6 +9,9 @@
 STATIC_ASSERT( (UINT32_MAX > u3a_cells),
                "length precision" );
 
+/* u3qb_lent(): length of list.
+** @Refcount: retains arguments
+*/
 u3_noun
 u3qb_lent(u3_noun a)
 {

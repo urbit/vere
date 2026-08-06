@@ -676,6 +676,8 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
 
   _x_octs(octs, &p_octs, &q_octs);
 
+  if ( c3n == u3a_is_cat(p_octs) ) u3m_bail(c3__fail);
+
   c3_w  p_octs_w;
   c3_w  len_w, lead_w;
 

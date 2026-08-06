@@ -54,7 +54,7 @@
 static u3_noun
 _bit_rip(u3_atom bits, u3_atom atom)
 {
-  if ( !_(u3a_is_cat(bits) || bits==0 || bits>31) ) {
+  if ( !_(u3a_is_cat(bits)) || bits==0 || bits>31 ) {
     return u3m_bail(c3__fail);
   }
 

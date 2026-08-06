@@ -93,12 +93,13 @@
 **   only sound on a ray that has passed _check(), which bounds the
 **   product by the bit-width of a real atom; _check() itself does
 **   its own overflow-aware walk.
+**   @Refcount: retains arguments
 */
   static inline c3_d _get_length(u3_noun shape)
   {
     c3_d len = 1;
     while (u3_nul != shape) {
-      len = len * u3x_atom(u3h(shape));
+      len = len * u3r_cat(u3x_atom(u3h(shape)));
       shape = u3t(shape);
     }
     return len;
@@ -2214,17 +2215,17 @@
     }
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
-    c3_d M = u3x_atom(u3h(x_shape));
-    c3_d Na= u3x_atom(u3h(u3t(x_shape)));
-    c3_d Nb= u3x_atom(u3h(y_shape));
-    c3_d P = u3x_atom(u3h(u3t(y_shape)));
+    c3_d M = u3r_cat(u3h(x_shape));
+    c3_d Na= u3r_cat(u3h(u3t(x_shape)));
+    c3_d Nb= u3r_cat(u3h(y_shape));
+    c3_d P = u3r_cat(u3h(u3t(y_shape)));
 
     if ((u3_nul != u3t(u3t(x_shape))) ||
         (u3_nul != u3t(u3t(y_shape))) ||
         (Na != Nb)) {
       return u3m_bail(c3__exit);
     }
-    c3_d N = Na;
+    c3_d N = Na;  
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     // len_x is length in base units
@@ -3202,6 +3203,8 @@
       {
         return u3m_bail(c3__exit);
       } else {
+        u3_weak pro;
+        u3k(x_shape); u3k(x_bloq); u3k(x_tail);
         switch (x_kind) {
           case c3__i754:
             //  ... and the %i754 path, (cumsum (mul a b)), asserts
@@ -3213,15 +3216,25 @@
             {
               return u3m_bail(c3__exit);
             }
-            if ( c3n == _set_rounding(rnd) ) { return u3_none; }
+            if ( c3n == _set_rounding(rnd) ) {
+              pro = u3_none;
+              break;
+            }
             u3_noun r_data = u3qi_la_dot_i754(x_data, y_data, x_shape, x_bloq);
-            if (r_data == u3_none) { return u3_none; }
+            if (r_data == u3_none) {
+              pro = u3_none;
+              break;
+            }
             //  +scalar-to-ray: all-ones shape of the input's rank
-            return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+            pro = u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+            break;
 
           default:
-            return u3_none;
+            pro = u3_none;
+            break;
         }
+        u3z(x_shape); u3z(x_bloq); u3z(x_tail);
+        return pro;
       }
     }
   }
