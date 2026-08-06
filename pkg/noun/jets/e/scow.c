@@ -190,9 +190,9 @@ _print_p(u3_atom cor, u3_atom p)
 
   u3_noun list = 0;
   for (c3_w imp = 0; imp != dyy; ++imp) {
-    c3_w log = u3qc_end(4, 1, sxz);
-    c3_w prefix = u3qc_rsh(3, 1, log);
-    c3_w suffix = u3qc_end(3, 1, log);
+    c3_w log = u3r_cat(u3qc_end(4, 1, sxz));
+    c3_w prefix = u3r_cat(u3qc_rsh(3, 1, log));
+    c3_w suffix = u3r_cat(u3qc_end(3, 1, log));
 
     c3_y a, b, c, d, e, f;
     u3_po_to_prefix(prefix, &a, &b, &c);

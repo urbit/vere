@@ -113,6 +113,7 @@
           u3i_vint(u3_noun a);
 
         /* u3i_cell(): Produce the cell `[a b]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_cell(u3_noun a, u3_noun b);
@@ -125,12 +126,14 @@
           u3i_defcons(u3_noun** hed, u3_noun** tel);
 
         /* u3i_trel(): Produce the triple `[a b c]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_trel(u3_noun a, u3_noun b, u3_noun c);
 #         define u3nt(a, b, c) u3i_trel(a, b, c)
 
         /* u3i_qual(): Produce the cell `[a b c d]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_qual(u3_noun a, u3_noun b, u3_noun c, u3_noun d);

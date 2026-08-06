@@ -6,6 +6,7 @@
 
 #include "noun.h"
 
+//  @Refcount: assert retains arguments
 u3_noun
 u3qb_weld(u3_noun a, u3_noun b)
 {
@@ -17,7 +18,7 @@ u3qb_weld(u3_noun a, u3_noun b)
     u3_noun* tel;
     u3_noun    i, t = a;
 
-    while ( u3_nul != t ) {  //  @Refcount: assert transfer
+    while ( u3_nul != t ) {
       u3x_cell(t, &i, &t);
 
       *lit = u3i_defcons(&hed, &tel);
@@ -26,9 +27,7 @@ u3qb_weld(u3_noun a, u3_noun b)
     }
   }
 
-  {  // @Refcount: assert transfer
-    *lit = u3k(b);
-  }
+  *lit = u3k(b);
 
   return pro;
 }

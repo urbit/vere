@@ -196,6 +196,7 @@ _cs_jam_fib_cell_cb(u3_noun a, void* ptr_v)
 }
 
 /* u3s_jam_fib(): jam without atom allocation.
+** @Refcount: retains arguments
 **
 **   returns atom-suitable words, and *bit_w will have
 **   the length (in bits). return should be freed with u3a_wfree().
@@ -316,6 +317,7 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
 }
 
 /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation.
+** @Refcount: retains arguments
 */
 c3_d
 u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
@@ -422,6 +424,9 @@ _cs_cue_next(u3a_pile*     pil_u,
   }
 }
 
+/* u3s_cue(): cue [a]
+** @Refcount: retains arguments
+*/
 u3_noun
 u3s_cue(u3_atom a)
 {
@@ -880,6 +885,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 }
 
 /* u3s_cue_atom(): cue atom.
+** @Refcount: retains arguments
 */
 u3_noun
 u3s_cue_atom(u3_atom a)
@@ -1005,6 +1011,7 @@ u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26])
 }
 
 /* u3s_etch_ud(): atom to @ud.
+** @Refcount: retains arguments
 */
 u3_atom
 u3s_etch_ud(u3_atom a)
@@ -1034,6 +1041,7 @@ u3s_etch_ud(u3_atom a)
 }
 
 /* u3s_etch_ud_c(): atom to @ud, as a malloc'd c string.
+** @Refcount: retains arguments
 */
 size_t
 u3s_etch_ud_c(u3_atom a, c3_c** out_c)
@@ -1100,6 +1108,7 @@ _cs_etch_ux_bytes(u3_atom a, c3_w len_w, c3_y* buf_y)
 }
 
 /* u3s_etch_ux(): atom to @ux.
+** @Refcount: retains arguments
 */
 u3_atom
 u3s_etch_ux(u3_atom a)
@@ -1121,6 +1130,7 @@ u3s_etch_ux(u3_atom a)
 }
 
 /* u3s_etch_ux_c(): atom to @ux, as a malloc'd c string.
+** @Refcount: retains arguments
 */
 size_t
 u3s_etch_ux_c(u3_atom a, c3_c** out_c)
@@ -1199,6 +1209,7 @@ _cs_etch_uv_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
 }
 
 /* u3s_etch_uv(): atom to @uv.
+** @Refcount: retains arguments
 */
 u3_atom
 u3s_etch_uv(u3_atom a)
@@ -1220,6 +1231,7 @@ u3s_etch_uv(u3_atom a)
 }
 
 /* u3s_etch_uv_c(): atom to @uv, as a malloc'd c string.
+** @Refcount: retains arguments
 */
 size_t
 u3s_etch_uv_c(u3_atom a, c3_c** out_c)
@@ -1292,6 +1304,7 @@ _cs_etch_uw_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
 }
 
 /* u3s_etch_uw(): atom to @uw.
+** @Refcount: retains arguments
 */
 u3_atom
 u3s_etch_uw(u3_atom a)
@@ -1313,6 +1326,7 @@ u3s_etch_uw(u3_atom a)
 }
 
 /* u3s_etch_uw_c(): atom to @uw, as a malloc'd c string.
+** @Refcount: retains arguments
 */
 size_t
 u3s_etch_uw_c(u3_atom a, c3_c** out_c)
@@ -1441,6 +1455,7 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 #undef DIGIT
 
 /* u3s_sift_ud: parse @ud.
+** @Refcount: retains arguments
 */
 u3_weak
 u3s_sift_ud(u3_atom a)

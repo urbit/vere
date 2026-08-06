@@ -5,7 +5,7 @@
 
 #include "noun.h"
 
-
+  // @Refcount: direct product
   u3_noun
   u3qc_gor(u3_noun a,
            u3_noun b)

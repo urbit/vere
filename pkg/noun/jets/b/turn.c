@@ -5,6 +5,7 @@
 
 #include "noun.h"
 
+//  @Refcount: assert retains arguments
 u3_noun
 u3qb_turn(u3_noun a, u3_noun b)
 {
@@ -20,7 +21,7 @@ u3qb_turn(u3_noun a, u3_noun b)
     u3j_gate_prep(&sit_u, u3k(b));
     u3k(a);
 
-    do {  //  @Refcount: assert transfer
+    do {
       i = u3h(a);
 
       *lit = u3i_defcons(&hed, &tel);

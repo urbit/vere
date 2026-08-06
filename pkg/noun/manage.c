@@ -2112,6 +2112,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
 }
 
 /* u3m_pretty(): dumb prettyprint to string.
+** @Refcount: retains arguments
 */
 c3_c*
 u3m_pretty(u3_noun som)
@@ -2175,6 +2176,7 @@ _cm_in_pretty_path(u3_noun som, c3_c* str_c)
 }
 
 /* u3m_pretty_path(): prettyprint a path to string.
+** @Refcount: retains arguments
 */
 c3_c*
 u3m_pretty_path(u3_noun som)
@@ -2188,6 +2190,7 @@ u3m_pretty_path(u3_noun som)
 }
 
 /* u3m_p(): dumb print with caption.
+** @Refcount: retains arguments
 */
 void
 u3m_p(const c3_c* cap_c, u3_noun som)

@@ -315,7 +315,9 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
-    *pro = gon;
+    {  // @Refcount: assert transfer `gon`
+      *pro = gon;
+    }
     return c3n;
   }
 
@@ -331,7 +333,9 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
     }
     u3A->eve_d++;
 
-    *pro = u3k(vir);
+    {  // @Refcount: assert transfer `vir`
+      *pro = u3k(vir);
+    }
     u3z(gon);
     return c3y;
   }

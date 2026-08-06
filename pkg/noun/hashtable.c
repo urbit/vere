@@ -1100,6 +1100,7 @@ u3h_take(u3p(u3h_root) har_p)
   return u3h_take_with(har_p, u3a_take);
 }
 
+// @Refcount: retains
 static void
 _ch_mark_kev(u3_noun kev, u3h_mass* mas_u)
 {

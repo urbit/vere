@@ -1247,7 +1247,6 @@ _n_formulaic(u3_noun fol)
 /* _n_comp(): compile nock formula to reversed opcode list
  *            ops is a pointer to a list (to be emitted to)
  *            fol is the nock formula to compile. RETAIN.
- ** @Refcount: retains `fol`
  *            los_o indicates whether we should remove our
  *                  subject from the stack
  *            tel_o is yes if this formula is in tail position

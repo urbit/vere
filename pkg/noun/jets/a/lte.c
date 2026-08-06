@@ -6,6 +6,7 @@
 
 #include "noun.h"
 
+// @Refcount: direct product
 u3_noun
 u3qa_lte(u3_atom a, u3_atom b)
 {
@@ -30,6 +31,7 @@ u3wa_lte(u3_noun cor)
   }
 }
 
+// @Refcount: direct product
 u3_noun
 u3ka_lte(u3_noun a, u3_noun b)
 {

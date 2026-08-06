@@ -6,7 +6,7 @@
 #include "noun.h"
 
 //  [a] and [out] are TRANSFERRED
-// @Refcount: transfers `a`, `out`
+// @Refcount: transfers `a`
 //
 static void
 _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)
@@ -22,7 +22,9 @@ _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)
     u3k(l_a);
     u3k(r_a);
 
-    *out = u3j_gate_slam(sit_u, u3nc(n_a, *out));
+    {  // @Refcount: assert transfer
+      *out = u3j_gate_slam(sit_u, u3nc(n_a, *out));
+    }
 
     _in_rep(l_a, sit_u, out);
     _in_rep(r_a, sit_u, out);
@@ -31,6 +33,7 @@ _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)
   }
 }
 
+//  @Refcount: assert retains arguments
 u3_noun
 u3qdi_rep(u3_noun a, u3_noun b)
 {

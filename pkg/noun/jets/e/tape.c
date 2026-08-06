@@ -17,7 +17,7 @@
     }
   }
 
-  static u3_noun
+  static c3_o
   _good(u3_noun a)
   {
     while ( 1 ) {

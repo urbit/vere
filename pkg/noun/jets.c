@@ -513,6 +513,7 @@ _cj_find_warm(u3_noun loc)
   }
 }
 
+//  @Refcount: retains arguments
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);
 
 /* _cj_reg_find(): locate core within registry. RETAIN.

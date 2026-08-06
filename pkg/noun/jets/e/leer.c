@@ -83,6 +83,7 @@ u3we_lore(u3_noun cor)
   }
 }
 
+//  @Refcount: assert retains arguments
 u3_noun
 u3qe_leer(u3_atom txt)
 {

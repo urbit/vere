@@ -6,7 +6,7 @@
 
 #include "noun.h"
 
-//  RETAINS lit
+//  @Refcount: assert retains arguments
 //
 static u3_noun
 _malt_fast(u3_noun lit)

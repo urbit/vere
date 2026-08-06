@@ -15,7 +15,9 @@ _hew_in(c3_g     a_g,
   u3_noun h, t, *l, *r;
 
   while ( c3y == u3r_cell(sam, &h, &t) ) {
-    *out  = u3i_defcons(&l, &r);
+    {  // @Refcount: assert transfer
+      *out  = u3i_defcons(&l, &r);
+    }
     pos_w = _hew_in(a_g, pos_w, vat, h, l);
     sam   = t;
     out   = r;
@@ -41,11 +43,14 @@ _hew_in(c3_g     a_g,
     u3i_slab_init(&sab_u, a_g, wid_w);
     u3r_chop(a_g, pos_w, wid_w, 0, sab_u.buf_w, vat);
 
-    *out = u3i_slab_mint(&sab_u);
+    {  // @Refcount: assert transfer
+      *out = u3i_slab_mint(&sab_u);
+    }
     return new_w;
   }
 }
 
+//  @Refcount: assert retains arguments
 u3_noun
 u3qc_hew(u3_atom boq,
          u3_atom sep,

@@ -65,9 +65,11 @@
         u3_noun  hel,
         u3_noun  hev)
   {
-    {  // @Refcount: assert retain hel
-      loc_u->hel = hel;
-      loc_u->lel_w = u3kb_lent(u3k(hel));
+    loc_u->hel = hel;
+    {
+      u3_atom len = u3qb_lent(hel);
+      if ( c3n == u3a_is_cat(len) ) u3m_bail(c3__fail);
+      loc_u->lel_w = len;
     }
 
     //  Read hev into array.
@@ -276,7 +278,7 @@
     return lcs;
   }
 
-  static u3_noun
+  static c3_o
   _listp(u3_noun lix)
   {
     while ( 1 ) {

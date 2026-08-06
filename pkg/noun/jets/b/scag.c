@@ -5,6 +5,7 @@
 
 #include "noun.h"
 
+// @Refcount: assert retains arguments
 u3_noun
 u3qb_scag(u3_atom a, u3_noun b)
 {
@@ -24,7 +25,7 @@ u3qb_scag(u3_atom a, u3_noun b)
       u3_noun* tel;
       u3_noun i, t = b;
 
-      while ( len_w-- && (u3_nul != t) ) {  // @Refcount: assert transfer
+      while ( len_w-- && (u3_nul != t) ) {
         u3x_cell(t, &i, &t);
 
         *lit = u3i_defcons(&hed, &tel);

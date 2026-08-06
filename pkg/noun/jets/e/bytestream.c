@@ -8,6 +8,7 @@
 
 // XX do not crash on indirect atoms, but default to Hoon
 // XX use u3i_word to imprison all indirect atoms
+// @Refcount: destructures `octs`
 //
 static void
 _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
@@ -20,6 +21,8 @@ _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
     u3m_bail(c3__exit);
   }
 }
+
+// @Refcount: read-only `p_octs`, `q_octs`
 static c3_o
 _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,

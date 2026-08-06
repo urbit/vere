@@ -173,7 +173,7 @@ _push_list(u3_noun som, u3_noun *lit)
     u3z(som);
   }
   else
-  {
+  {  // @Refcount: assert transfer
     *lit = u3nc(som, *lit);
   }
 }
@@ -193,7 +193,9 @@ _pop_list(u3_weak *lit)
   u3k(hed);
   u3k(tel);
   u3z(*lit);
-  *lit = tel;
+  {  // @Refcount: assert transfer `tel`
+    *lit = tel;
+  }
   return hed;
 }
 
@@ -2007,16 +2009,18 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     }
 
     {
-      sat_u->yil_previous = u3k(yil_previous);
-      sat_u->queue = u3k(queue);
+      {  // @Refcount: assert transfer
+        sat_u->yil_previous = u3k(yil_previous);
+        sat_u->queue = u3k(queue);
+        sat_u->lia_shop = u3k(lia_shop);
+        sat_u->acc = u3k(acc);
+        sat_u->susp_list = u3k(susp_list);
+      }
       sat_u->wasm_module = wasm3_module;
-      sat_u->lia_shop = u3k(lia_shop);
-      sat_u->acc = u3k(acc);
       // sat_u->map to be filled afterwards
       // sat_u->match same
       // sat_u->resolution same
       sat_u->arrow_yil = u3_none;
-      sat_u->susp_list = u3k(susp_list);
       M3MemoryHeader* mem = u3a_malloc(len_buf_w + sizeof(M3MemoryHeader));
       mem->runtime = wasm3_runtime;
       mem->maxStack = BoxArena->buf_y + stk_off_w;

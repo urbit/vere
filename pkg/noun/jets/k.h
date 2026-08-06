@@ -15,15 +15,15 @@
     u3_noun u3ka_min(u3_noun a, u3_noun b);
     u3_noun u3ka_mod(u3_noun a, u3_noun b);
     u3_noun u3ka_mul(u3_noun a, u3_noun b);
-    u3_noun u3ka_gth(u3_noun a, u3_noun b);
-    u3_noun u3ka_lte(u3_noun a, u3_noun b);
+    u3_noun u3ka_gth(u3_noun a, u3_noun b);  // @Refcount: direct product
+    u3_noun u3ka_lte(u3_noun a, u3_noun b);  // @Refcount: direct product
 
   /** Tier 2.
   **/
     u3_noun u3kb_lent(u3_noun a);
     u3_noun u3kb_weld(u3_noun a, u3_noun b);
     u3_noun u3kb_flop(u3_noun a);
-    u3_noun u3kb_spin(u3_noun a, u3_noun b, u3_noun c);
+    u3_noun u3kb_spin(u3_noun a, u3_noun b, u3_noun c); //  @Refcount: assert
 
 /* u3kc: tier 3 functions
 */

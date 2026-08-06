@@ -104,6 +104,16 @@
           }
           else return c3n;
         }
+      
+      /* u3r_cat: assert direct atom
+       * @Refcount: direct arguments, direct product
+      */
+        inline u3_atom
+        u3r_cat(u3_noun a)
+        {
+          return ( c3y == u3a_is_cat(a) ) ? a : u3m_bail(c3__fail);
+        }
+
 
       /* u3r_at(): fragment `a` of `b`, or u3_none.
       */
@@ -299,6 +309,7 @@
       /* u3r_p():
       **
       **   & [0] if [a] is of the form [b *c].
+      **   @Refcount: destructures `a`
       */
         c3_o
         u3r_p(u3_noun  a,
@@ -308,6 +319,7 @@
       /* u3r_bush():
       **
       **   Factor [a] as a bush [b.[p q] c].
+      **   @Refcount: destructures `a`
       */
         c3_o
         u3r_bush(u3_noun  a,
@@ -317,6 +329,7 @@
       /* u3r_pq():
       **
       **   & [0] if [a] is of the form [b *c d].
+      **   @Refcount: destructures `a`
       */
         c3_o
         u3r_pq(u3_noun  a,
@@ -327,6 +340,7 @@
       /* u3r_pqr():
       **
       **   & [0] if [a] is of the form [b *c *d *e].
+      **   @Refcount: destructures `a`
       */
         c3_o
         u3r_pqr(u3_noun  a,
@@ -338,6 +352,7 @@
       /* u3r_pqrs():
       **
       **   & [0] if [a] is of the form [b *c *d *e *f].
+      **   @Refcount: destructures `a`
       */
         c3_o
         u3r_pqrs(u3_noun  a,
@@ -563,6 +578,7 @@
 
       /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
       ** and the length of the buffer
+      ** @Refcount: read-only `a`
       */
       c3_w*
       u3r_word_buffer(u3_atom* a, c3_w* len_w);

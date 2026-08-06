@@ -28,7 +28,9 @@ _in_run(u3_noun a, u3j_site* sit_u, u3_noun* out)
 
       u3z(new);
       u3z(*out);
-      *out = pro;
+      {  // @Refcount: assert transfer `pro`
+        *out = pro;
+      }
     }
 
     _in_run(l_a, sit_u, out);
