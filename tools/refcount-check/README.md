@@ -1,13 +1,13 @@
 # refcount-check
 
-Rust port of `tools/refcount_check.py`: a static checker that verifies
-functions over `pkg/noun` follow the u3 reference-counting conventions
-(transfer/retain protocols, `@Refcount:` annotations) documented in
-`doc/spec/u3.md` and in the Python script's docstring.
+A static checker that verifies functions over `pkg/noun` follow the u3
+reference-counting conventions (transfer/retain protocols, `@Refcount:`
+annotations) documented in `doc/spec/u3.md`.
 
-The port is behavior-identical to the Python tool: same findings, same
-output format, same exit codes, same `--selftest` / `--explain` /
-`--function` / `--only` / `--verbose` flags.
+The active interpreter is the value-numbering rewrite in `interp.rs` /
+`sem.rs` (loud policy: anything unmodeled is a finding, never a silent
+skip). The original Python-parity port has been removed; the Python
+tool itself (`tools/refcount_check.py`) remains as reference.
 
 ## Build & run
 
@@ -32,14 +32,25 @@ src/config.rs   tables: noun typedefs, noreturn fns, u3a_is_* guards,
 src/ast.rs      thin wrapper over libclang (clang-sys, runtime-loaded)
                 + generic AST utilities (unwrap_expr, decl_ref_name,
                 int_literal_value, unary_op, binop kinds, is_noun_type)
-src/sem.rs      protocol vocabulary and annotation layer: Mode, Sem,
-                Finding, AssertMode; the @Refcount: grammar parser;
-                prefix/position defaults; comment harvesting;
-                decl-vs-def sync check; FileComments / block_asserts
+src/sem.rs      protocol vocabulary and annotation layer: ArgumentMode,
+                ProductMode, Sem, Finding, AssertMode; the @Refcount:
+                grammar parser; prefix/position defaults; comment
+                harvesting; decl-vs-def sync check; block_asserts
 src/interp.rs   THE ABSTRACT INTERPRETER (self-contained)
 src/main.rs     driver: CLI, compile_commands.json handling, TU
                 iteration, --explain, --selftest, output
 ```
+
+Stores to globals/memory retain by default; a store that consumes the
+reference is annotated with a block assert, which comes in two forms:
+
+- `{ // @Refcount: assert transfer }` (nameless) blesses every store
+  inside the block: each stored value is consumed at the store site.
+- `{ // @Refcount: assert transfer kev ... }` (named) has no store-site
+  effect: after the block's own effects, one counted reference of each
+  listed name is subtracted on the fall-through path. This covers
+  transfers the walker cannot see at the store site, e.g. hashtable.c
+  slot-laundered nouns (`sot_w[i] = u3h_noun_to_slot(kev)`).
 
 `interp.rs` talks to the rest of the tool through exactly one entry
 point and one trait, both defined in `interp.rs` itself:
@@ -59,19 +70,21 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem) -> Vec<Findi
 
 Everything else the interpreter uses is read-only vocabulary:
 `ast::Cursor` (and the `ast` helper functions) to walk the AST,
-`sem::{Sem, Mode, AssertMode, Finding}` as plain data, and the tables in
-`config`. It never parses annotations, reads files, or touches the
-compile database. To rewrite the interpreter, replace `interp.rs` with
-any implementation of `check_function` with the same signature — the
-driver, annotation grammar, and clang plumbing need no changes.
+`sem::{Sem, ArgumentMode, ProductMode, AssertMode, Finding}` as plain
+data, and the tables in `config`. It never parses annotations, reads
+files, or touches the compile database. To rewrite the interpreter,
+replace `interp.rs` with any implementation of `check_function` with
+the same signature — the driver, annotation grammar, and clang plumbing
+need no changes.
 
-Interpreter internals (all private to `interp.rs`): the abstract value
-lattice `St` (uninit / owned / borrowed / consumed / direct / unknown /
-conflict / poisoned) with `merge_val`, environments as insertion-ordered
-maps from variable (or `struct.member` path) to `Val`, the
-`Flow { falls, brks, conts }` statement result, per-arm switch forking,
-forward-goto parking, an 8-iteration loop fixpoint over `env_key`, and
-GNU statement-expression value propagation.
+Interpreter internals (all private to `interp.rs`): value numbering
+(`Env` maps `ValId -> RefcountState`, names are locations of values,
+`contains` tracks sub-noun edges for consume/sing poison cascades), a
+fragment-based meet-join over alias partitions with owned-count
+conservation, verify-and-drop loop analysis (body must reproduce the
+pre-condition env; only cond-false and breaks exit), per-arm switch
+refinement of direct-range case labels, forward-goto parking (backward
+gotos are reported), and GNU statement-expression value propagation.
 
 ## Fidelity notes
 

@@ -475,6 +475,14 @@ pub fn is_noun_type(t: &Ty) -> bool {
   config::NOUN_TYPES.contains(&s)
 }
 
+/// A type too narrow to hold an indirect noun reference: a noun value
+/// bound to a variable of this type is necessarily a direct atom.
+pub fn is_direct_type(t: &Ty) -> bool {
+  let s = t.spelling().replace("const ", "");
+  let s = s.trim();
+  config::DIRECT_TYPES.contains(&s)
+}
+
 /// Value of an integer-constant expression (sees through macros, casts,
 /// and enum constants), masked to 32 bits, or None.
 pub fn int_literal_value(cur: &Cursor) -> Option<u64> {

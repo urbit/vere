@@ -215,3 +215,14 @@ ok_min_shape(u3_noun a, u3_noun b)
   }
   return u3k(a);
 }
+
+/* a typo'd block annotation must be reported, not silently ignored
+** (block_asserts only regex-matches well-formed asserts)
+*/
+u3_noun
+warn_typo_assert(u3_noun a)
+{
+  {  // @Refcount: asswert transfer
+  }
+  return a;
+}

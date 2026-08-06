@@ -3,27 +3,58 @@
 //! declaration/definition sync checking, and block-level asserts.
 //!
 //! This module (plus `ast`) is the entire vocabulary the abstract
-//! interpreter needs; the interpreter itself lives in `interp`.
+//! interpreter needs; the interpreter itself lives in `interp1`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::ast::Cursor;
+use crate::ast::{is_noun_type, Cursor};
 
+/// Refcount mode of one argument.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Mode {
+pub enum ArgumentMode {
   Transfer,
   Retain,
+  Direct,      // the callee bails unless the argument is a direct atom
+  Passthrough, // the argument's value IS the product (see ProductMode)
+  Conslike,    // consumed by being stored inside the product (u3nc-style)
+  ReadOnly,    // pointer-to-noun the callee reads through, never writes
 }
 
-impl Mode {
+impl ArgumentMode {
   pub fn as_str(self) -> &'static str {
     match self {
-      Mode::Transfer => "transfer",
-      Mode::Retain => "retain",
+      ArgumentMode::Transfer => "transfer",
+      ArgumentMode::Retain => "retain",
+      ArgumentMode::Direct => "direct",
+      ArgumentMode::Passthrough => "passthrough",
+      ArgumentMode::Conslike => "conslike",
+      ArgumentMode::ReadOnly => "read-only",
+    }
+  }
+}
+
+/// Refcount mode of the product.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ProductMode {
+  Transfer,
+  Retain,
+  Direct,                    // the product is always a direct atom
+  Passthrough, 
+  NonNoun,                   // the function does not return a noun
+}
+
+impl ProductMode {
+  pub fn as_str(&self) -> &'static str {
+    match self {
+      ProductMode::Transfer => "transfer",
+      ProductMode::Retain => "retain",
+      ProductMode::Direct => "direct",
+      ProductMode::Passthrough { .. } => "passthrough",
+      ProductMode::NonNoun => "non-noun",
     }
   }
 }
@@ -39,7 +70,9 @@ pub struct Finding {
   pub msg: String,
 }
 
-/// Block-level `{ // @Refcount: assert ... }` annotation modes.
+/// Block-level `{ // @Refcount: assert ... }` annotation modes. Only
+/// `transfer` is part of the protocol; `produce` and `retain` still parse
+/// so the interpreter can reject them loudly instead of skipping them.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum AssertMode {
   Transfer,
@@ -50,57 +83,45 @@ pub enum AssertMode {
 /// The refcount protocol of one function.
 #[derive(Clone, Debug)]
 pub struct Sem {
-  pub default_args: Mode,
-  pub args: BTreeMap<String, Mode>, // param name -> mode
-  pub product: Mode,
+  pub default_args: ArgumentMode,
+  pub args: BTreeMap<String, ArgumentMode>, // param name -> mode
+  pub destructures: Option<String>, // source arg of a destructurer
+  pub product: ProductMode,
   pub check: bool,
   pub custom: bool,
   pub why: String,
-  pub direct_args: BTreeSet<String>, // params proven direct if the fn returns
-  pub direct_all: bool,              // every argument proven direct if it returns
-  pub passthrough: Option<String>,   // param whose value IS the product
-  pub from_def: bool,                // resolved with the definition visible
-  pub warnings: Vec<(u32, String)>,  // annotation conflicts, (line, message)
+  pub from_def: bool,               // resolved with the definition visible
+  pub warnings: Vec<(u32, String)>, // annotation conflicts, (line, message)
 }
 
 impl Sem {
-  pub fn new(default_args: Mode, product: Mode, why: &str) -> Sem {
+  pub fn new(default_args: ArgumentMode, product: ProductMode, why: &str)
+    -> Sem
+  {
     Sem {
       default_args,
       args: BTreeMap::new(),
+      destructures: None,
       product,
       check: true,
       custom: false,
       why: why.to_string(),
-      direct_args: BTreeSet::new(),
-      direct_all: false,
-      passthrough: None,
       from_def: false,
       warnings: Vec::new(),
     }
   }
 
-  pub fn arg_mode(&self, name: &str) -> Mode {
+  pub fn arg_mode(&self, name: &str) -> ArgumentMode {
     self.args.get(name).copied().unwrap_or(self.default_args)
-  }
-
-  pub fn is_direct(&self, name: &str) -> bool {
-    self.direct_all || self.direct_args.contains(name)
   }
 
   /// The observable protocol, ignoring bookkeeping fields (for the
   /// decl-vs-def sync check).
   pub fn proto_key(&self) -> String {
     format!(
-      "{:?}|{:?}|{:?}|{}|{}|{:?}|{}|{:?}",
-      self.default_args,
-      self.args,
-      self.product,
-      self.custom,
-      self.check,
-      self.direct_args,
-      self.direct_all,
-      self.passthrough
+      "{:?}|{:?}|{:?}|{:?}|{}|{}",
+      self.default_args, self.args, self.destructures, self.product,
+      self.custom, self.check
     )
   }
 }
@@ -163,7 +184,8 @@ const PROD_SLOT_WORDS: &[&str] = &["product", "result", "return"];
 // keywords that begin a clause; a comma-separated fragment that does NOT
 // start with one of these continues the previous clause
 const CLAUSE_HEADS: &[&str] = &[
-  "transfers", "retains", "transfer", "retain", "direct", "passthrough", "custom", "assert",
+  "transfers", "retains", "transfer", "retain", "direct", "passthrough",
+  "conslike", "read-only", "destructures", "destructure", "custom", "assert",
 ];
 
 // ---------------------------------------------------------------------------
@@ -219,30 +241,31 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
   if clauses.is_empty() {
     return false;
   }
-  let mut explicit: HashMap<String, Mode> = HashMap::new();
+  //  slot name -> mode description; all modes share one namespace, so a
+  //  later clause of a different kind (`transfers `x`` then `direct `x``)
+  //  still conflicts
+  let mut explicit: HashMap<String, String> = HashMap::new();
 
   // records the write and warns on conflict; the caller then applies it
   fn set_slot(
-    explicit: &mut HashMap<String, Mode>,
+    explicit: &mut HashMap<String, String>,
     warnings: &mut Vec<(u32, String)>,
     line: u32,
     slot: &str,
-    mode: Mode,
+    mode: &str,
   ) {
     if let Some(prev) = explicit.get(slot) {
-      if *prev != mode {
+      if prev.as_str() != mode {
         warnings.push((
           line,
           format!(
             "conflicting @Refcount: annotations set {} to {} then {}",
-            slot,
-            prev.as_str(),
-            mode.as_str()
+            slot, prev, mode
           ),
         ));
       }
     }
-    explicit.insert(slot.to_string(), mode);
+    explicit.insert(slot.to_string(), mode.to_string());
   }
 
   let mut saw_custom = false;
@@ -279,68 +302,174 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
       head = toks[0];
     }
 
+    let names: Vec<String> = re_argname()
+      .captures_iter(clause)
+      .map(|c| c[1].to_string())
+      .collect();
+    let words: Vec<&str> = toks[1..].to_vec();
+    let hit_prod = words.iter().any(|w| PROD_SLOT_WORDS.contains(w));
+    let hit_args = words.iter().any(|w| ARG_SLOT_WORDS.contains(w));
+
     if head == "passthrough" {
-      let names: Vec<String> = re_argname()
-        .captures_iter(clause)
-        .map(|c| c[1].to_string())
-        .collect();
-      if names.is_empty() {
+      let Some(name) = names.first() else {
         sem.warnings.push((
           line,
           "@Refcount: passthrough requires an argument name".to_string(),
         ));
-      } else {
-        sem.passthrough = Some(names[0].clone());
-        sem.why = "@Refcount: passthrough".to_string();
+        continue;
+      };
+      if names.len() > 1 {
+        sem.warnings.push((
+          line,
+          "@Refcount: passthrough takes exactly one argument name"
+            .to_string(),
+        ));
       }
+      //  the product can be only one argument: a later passthrough
+      //  replaces an earlier one
+      if let Some(prev) = sem
+        .args
+        .iter()
+        .find(|(k, m)| **m == ArgumentMode::Passthrough && *k != name)
+        .map(|(k, _)| k.clone())
+      {
+        sem.warnings.push((
+          line,
+          format!(
+            "only one @Refcount: passthrough argument is allowed: `{}` \
+             replaces `{}`",
+            name, prev
+          ),
+        ));
+        sem.args.remove(&prev);
+      }
+      let slot = format!("argument `{}`", name);
+      set_slot(&mut explicit, &mut sem.warnings, line, &slot, "passthrough");
+      set_slot(&mut explicit, &mut sem.warnings, line, "product",
+        "passthrough");
+      sem.args.insert(name.clone(), ArgumentMode::Passthrough);
+      sem.product = ProductMode::Passthrough;
+      sem.why = "@Refcount: passthrough".to_string();
       continue;
     }
 
     if head == "direct" {
-      let names: Vec<String> = re_argname()
-        .captures_iter(clause)
-        .map(|c| c[1].to_string())
-        .collect();
       if !names.is_empty() {
-        sem.direct_args.extend(names);
+        for n in &names {
+          let slot = format!("argument `{}`", n);
+          set_slot(&mut explicit, &mut sem.warnings, line, &slot, "direct");
+          sem.args.insert(n.clone(), ArgumentMode::Direct);
+        }
+      } else if hit_prod && !hit_args {
+        set_slot(&mut explicit, &mut sem.warnings, line, "product", "direct");
+        sem.product = ProductMode::Direct;
       } else {
-        sem.direct_all = true;
+        // bare: every argument is proven direct
+        set_slot(&mut explicit, &mut sem.warnings, line, "arguments", "direct");
+        sem.default_args = ArgumentMode::Direct;
       }
       sem.why = "@Refcount: direct".to_string();
       continue;
     }
 
-    if matches!(head, "transfers" | "retains" | "transfer" | "retain") {
-      let mode = if head.starts_with("transfer") {
-        Mode::Transfer
-      } else {
-        Mode::Retain
+    if head == "destructures" || head == "destructure" {
+      //  the named argument is the source noun; `&var` arguments at the
+      //  call site become borrowed views into it (u3x_cell-style)
+      let Some(name) = names.first() else {
+        sem.warnings.push((
+          line,
+          "@Refcount: destructures requires the source argument name"
+            .to_string(),
+        ));
+        continue;
       };
-      let names: Vec<String> = re_argname()
-        .captures_iter(clause)
-        .map(|c| c[1].to_string())
-        .collect();
-      let words: Vec<&str> = toks[1..].to_vec();
-      let hit_prod = words.iter().any(|w| PROD_SLOT_WORDS.contains(w));
-      let hit_args = words.iter().any(|w| ARG_SLOT_WORDS.contains(w));
+      if names.len() > 1 {
+        sem.warnings.push((
+          line,
+          "@Refcount: destructures takes exactly one argument name"
+            .to_string(),
+        ));
+      }
+      let slot = format!("argument `{}`", name);
+      set_slot(&mut explicit, &mut sem.warnings, line, &slot,
+        "destructure-source");
+      sem.destructures = Some(name.clone());
+      sem.why = "@Refcount: destructures".to_string();
+      continue;
+    }
+
+    if head == "read-only" {
+      //  a pointer-to-noun parameter the callee only reads through:
+      //  `&var` at the call site is not an escape. Meaningless as a
+      //  default or on the product, so names are required.
+      if names.is_empty() {
+        sem.warnings.push((
+          line,
+          "@Refcount: read-only requires argument names".to_string(),
+        ));
+        continue;
+      }
+      for n in &names {
+        let slot = format!("argument `{}`", n);
+        set_slot(&mut explicit, &mut sem.warnings, line, &slot, "read-only");
+        sem.args.insert(n.clone(), ArgumentMode::ReadOnly);
+      }
+      sem.why = "@Refcount: read-only".to_string();
+      continue;
+    }
+
+    if head == "conslike" {
       if !names.is_empty() {
         for n in &names {
           let slot = format!("argument `{}`", n);
-          set_slot(&mut explicit, &mut sem.warnings, line, &slot, mode);
-          sem.args.insert(n.clone(), mode);
+          set_slot(&mut explicit, &mut sem.warnings, line, &slot, "conslike");
+          sem.args.insert(n.clone(), ArgumentMode::Conslike);
+        }
+      } else if hit_prod {
+        sem.warnings.push((
+          line,
+          "@Refcount: conslike applies to arguments only".to_string(),
+        ));
+        continue;
+      } else {
+        set_slot(&mut explicit, &mut sem.warnings, line, "arguments",
+          "conslike");
+        sem.default_args = ArgumentMode::Conslike;
+      }
+      sem.why = "@Refcount: conslike".to_string();
+      continue;
+    }
+
+    if matches!(head, "transfers" | "retains" | "transfer" | "retain") {
+      let transfer = head.starts_with("transfer");
+      let (amode, mname) = if transfer {
+        (ArgumentMode::Transfer, "transfer")
+      } else {
+        (ArgumentMode::Retain, "retain")
+      };
+      let pmode = if transfer {
+        ProductMode::Transfer
+      } else {
+        ProductMode::Retain
+      };
+      if !names.is_empty() {
+        for n in &names {
+          let slot = format!("argument `{}`", n);
+          set_slot(&mut explicit, &mut sem.warnings, line, &slot, mname);
+          sem.args.insert(n.clone(), amode);
         }
       } else if hit_prod && !hit_args {
-        set_slot(&mut explicit, &mut sem.warnings, line, "product", mode);
-        sem.product = mode;
+        set_slot(&mut explicit, &mut sem.warnings, line, "product", mname);
+        sem.product = pmode;
       } else if hit_args && !hit_prod {
-        set_slot(&mut explicit, &mut sem.warnings, line, "arguments", mode);
-        sem.default_args = mode;
+        set_slot(&mut explicit, &mut sem.warnings, line, "arguments", mname);
+        sem.default_args = amode;
       } else {
         // bare, or naming both slots: the whole protocol
-        set_slot(&mut explicit, &mut sem.warnings, line, "product", mode);
-        sem.product = mode;
-        set_slot(&mut explicit, &mut sem.warnings, line, "arguments", mode);
-        sem.default_args = mode;
+        set_slot(&mut explicit, &mut sem.warnings, line, "product", mname);
+        sem.product = pmode;
+        set_slot(&mut explicit, &mut sem.warnings, line, "arguments", mname);
+        sem.default_args = amode;
       }
       sem.why = format!("@Refcount: {}", head);
       continue;
@@ -366,27 +495,32 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
 
 pub fn prefix_sem(name: &str, file_path: &str, is_static: bool) -> Sem {
   if name.starts_with("u3r_") || name.starts_with("u3x_") {
-    return Sem::new(Mode::Retain, Mode::Retain, "prefix u3r/u3x");
+    return Sem::new(ArgumentMode::Retain, ProductMode::Retain,
+      "prefix u3r/u3x");
   }
   if name.starts_with("u3z_") {
     // memo cache: keys retained, products transferred (u3z_save's
     // own per-arg comment overrides this)
-    return Sem::new(Mode::Retain, Mode::Transfer, "prefix u3z");
+    return Sem::new(ArgumentMode::Retain, ProductMode::Transfer,
+      "prefix u3z");
   }
   if re_jet_qw().is_match(name) {
-    return Sem::new(Mode::Retain, Mode::Transfer, "prefix u3q/u3w");
+    return Sem::new(ArgumentMode::Retain, ProductMode::Transfer,
+      "prefix u3q/u3w");
   }
   if re_jet_k().is_match(name) {
-    return Sem::new(Mode::Transfer, Mode::Transfer, "prefix u3k jets");
+    return Sem::new(ArgumentMode::Transfer, ProductMode::Transfer,
+      "prefix u3k jets");
   }
   if (is_static || name.starts_with('_'))
     && !file_path.is_empty()
     && re_jet_dir().is_match(file_path)
   {
     // historical convention (u3.md): jet internals retain
-    return Sem::new(Mode::Retain, Mode::Transfer, "internal fn in jet dir");
+    return Sem::new(ArgumentMode::Retain, ProductMode::Transfer,
+      "internal fn in jet dir");
   }
-  Sem::new(Mode::Transfer, Mode::Transfer, "default transfer")
+  Sem::new(ArgumentMode::Transfer, ProductMode::Transfer, "default transfer")
 }
 
 // ---------------------------------------------------------------------------
@@ -559,6 +693,11 @@ pub fn resolve_sem(cur: &Cursor, sem_cache: &mut SemCache, src: &mut SrcCache) -
   let loc = cur.location();
   let line = if loc.file.is_some() { loc.line } else { 0 };
   parse_fn_annotations(&cursor_comments(cur, src), &mut sem, line);
+  //  the return type is ground truth: annotations cannot make a non-noun
+  //  product tracked
+  if !is_noun_type(&cur.result_type()) {
+    sem.product = ProductMode::NonNoun;
+  }
   sem.from_def = has_def;
   let rc = Rc::new(sem);
   sem_cache.insert(key, rc.clone());
@@ -632,6 +771,49 @@ impl FileComments {
       .filter(|(o, _, _)| lo < *o && *o < hi)
       .collect()
   }
+}
+
+//  the colon is the annotation marker (same boundary as re_refcount):
+//  prose like "see the @Refcount annotations" stays legal in comments
+fn re_refcount_mention() -> &'static Regex {
+  static RE: OnceLock<Regex> = OnceLock::new();
+  RE.get_or_init(|| Regex::new(r"(?i)@\s*refcount\s*:").unwrap())
+}
+
+/// Loud check for @Refcount comments inside a function body: the only
+/// annotation meaningful there is a block assert, and block_asserts()
+/// silently skips anything its regex does not match -- a typo like
+/// `asswert transfer` would otherwise change semantics without a peep.
+/// Every mention that is not the start of a well-formed
+/// `@Refcount: assert transfer|produce|retain [names]` is reported.
+/// Returns [(line, message)].
+pub fn body_annotation_warnings(fun: &Cursor, fcm: &FileComments)
+  -> Vec<(u32, String)>
+{
+  let lo = fun.extent_start().offset;
+  let hi = fun.extent_end().offset;
+  let mut out = Vec::new();
+  for (_, line, text) in fcm.between(lo, hi) {
+    let valid: Vec<usize> =
+      re_block_assert().find_iter(text).map(|m| m.start()).collect();
+    for m in re_refcount_mention().find_iter(text) {
+      if valid.contains(&m.start()) {
+        continue;
+      }
+      let rest = &text[m.start()..];
+      let snippet = rest.lines().next().unwrap_or(rest).trim_end();
+      let at = line + text[..m.start()].matches('\n').count() as u32;
+      out.push((
+        at,
+        format!(
+          "unrecognized @Refcount annotation inside a function body \
+           (only `assert transfer [names...]` is meaningful here): {}",
+          py_repr(snippet)
+        ),
+      ));
+    }
+  }
+  out
 }
 
 /// ASSERT annotations attached to a CompoundStmt: comments between the
