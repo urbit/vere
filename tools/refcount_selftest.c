@@ -226,3 +226,22 @@ warn_typo_assert(u3_noun a)
   }
   return a;
 }
+
+/* borrowed view held across a gate slam: the gate may have captured
+** the same noun, and unifying equality inside the slam can free the
+** caller-unprotected interior copy (the roll.c bug, PR #865)
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_slam_stale(u3_noun a, u3_noun b)
+{
+  u3j_site sit_u;
+  u3j_gate_prep(&sit_u, u3k(b));
+
+  u3_noun t   = u3t(a);
+  u3_noun res = u3j_gate_slam(&sit_u, u3k(u3h(a)));
+  u3_noun pro = u3nc(res, u3k(t));   //  BUG: t may be dangling
+
+  u3j_gate_lose(&sit_u);
+  return pro;
+}

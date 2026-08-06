@@ -45,6 +45,34 @@ pub fn destructurer_src(name: &str) -> Option<usize> {
   }
 }
 
+/// Functions that may run unifying equality (u3r_sing) over their noun
+/// arguments during execution: equal interior copies can be freed and
+/// repointed, so borrowed views into the arguments die at the call.
+/// Nock evaluation entry points are here because evaluated code can
+/// compare the subject -- or anything reachable from it -- at will.
+pub const UNIFYING_FNS: &[&str] = &[
+  //  unifying equality itself
+  "u3r_sing", "u3r_sing_imp", "u3r_sing_c", "u3r_sing_cell",
+  "u3r_sing_mixt", "u3r_sing_trel", "u3r_sing_qual",
+  //  nock evaluation entry points
+  "u3n_nock_on", "u3n_nock_in", "u3n_nock_it", "u3n_nock_an",
+  "u3n_nock_et", "u3n_slam_on", "u3n_slam_in", "u3n_slam_it",
+  "u3n_slam_et", "u3n_kick_on",
+  //  jet dispatch: evaluates the core (prep looks the battery up in
+  //  the warm state, comparing it against registered batteries)
+  "u3j_kick", "u3j_gate_slam", "u3j_gate_prep", "u3j_soft", "u3j_cook",
+  //  virtualization wrappers around nock evaluation
+  "u3m_soft", "u3m_soft_slam", "u3m_soft_nock", "u3m_soft_run",
+  "u3m_soft_sure",
+  //  vortex conveniences (u3do/u3dc/u3dt expand to u3v_do)
+  "u3v_do", "u3v_wish", "u3v_wish_n",
+  //  memo cache: lookups compare the key against stored keys
+  "u3z_find", "u3z_find_m", "u3z_find_up", "u3z_save", "u3z_save_m",
+  "u3z_uniq",
+  //  hashtable: key equality on lookup/insert/delete/union
+  "u3h_get", "u3h_git", "u3h_put", "u3h_put_get", "u3h_del", "u3h_uni",
+];
+
 pub const C3Y: u64 = 0;
 pub const C3N: u64 = 1;
 pub const DIRECT_MAX: u64 = 0x7fff_ffff;

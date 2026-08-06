@@ -91,15 +91,17 @@ struct Env {
 
 impl Env {
   fn insert_new(&mut self, name: VarName, rc: RefcountState, g: &mut Gen)
+    -> ValId
   {
     let id: ValId = g.id_gen; g.id_gen += 1;
-    
+
     assert!(!self.vars.contains_key(&id));
     assert!(!self.vars_rev.contains_key(&name));
 
     self.values.insert(id, rc);
     self.vars.insert(id, IHashSet::from([name.clone()]));
     self.vars_rev.insert(name, id);
+    id
   }
 
   /// Add `name` as one more location of the existing value `id`.
@@ -201,6 +203,9 @@ struct Gen<'a> {
   host: &'a mut dyn Host,
   sem: &'a Sem,
   assert_transfer_all: u32,
+  //  the original parameter values: roots the CALLER holds a counted
+  //  reference to, immune to the u3j_gate_slam borrowed-view sweep
+  param_vids: Vec<ValId>,
 }
 
 impl Gen<'_> {
@@ -240,6 +245,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     host,
     sem,
     assert_transfer_all: 0,
+    param_vids: Vec::new(),
   };
 
   for p in fun.arguments() {
@@ -268,7 +274,8 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
       ArgumentMode::Passthrough => RefcountState::Passthrough
 
     };
-    env.insert_new(VarName {name: pname, depth: 0}, rc, &mut g);
+    let pid = env.insert_new(VarName {name: pname, depth: 0}, rc, &mut g);
+    g.param_vids.push(pid);
   }
 
   let flo: Flow = Flow {local: Some(env), ..Default::default()};
@@ -2024,13 +2031,32 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     }
   }
 
-  //  unifying equality: equal interior copies may be freed and
-  //  repointed, so borrowed views into either operand die here
-  if matches!(cn, "u3r_sing" | "u3r_sing_imp") {
+  //  a unifying comparison -- u3r_sing itself, or any function that
+  //  can run one over its arguments (nock evaluation, memo/hashtable
+  //  key lookups; see config::UNIFYING_FNS): equal interior copies may
+  //  be freed and repointed, so borrowed views into the arguments die
+  if config::UNIFYING_FNS.contains(&cn) {
     for (_, _, v) in &evald {
       if let Some(v) = *v {
         poison_borrowed_within(&mut env, v);
       }
+    }
+  }
+
+  //  slamming a prepared gate runs arbitrary nock, and the gate may
+  //  have captured ANY noun the jet can see (PR #865: roll's gate
+  //  captured the list, and unifying equality inside the slam freed
+  //  the borrowed tail held across iterations). Parameters are safe --
+  //  the caller's counted reference protects those roots -- but every
+  //  other borrowed view may be a caller-unprotected interior copy
+  if cn == "u3j_gate_slam" {
+    let stale: Vec<ValId> = env.values.iter()
+      .filter(|(id, st)| matches!(st, RefcountState::Borrowed)
+        && !g.param_vids.contains(id))
+      .map(|(id, _)| *id)
+      .collect();
+    for id in stale {
+      env.values.insert(id, RefcountState::Poisoned);
     }
   }
 
