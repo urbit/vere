@@ -581,6 +581,11 @@ _http_req_close(u3_hreq* req_u)
     _http_req_kill(req_u);
   }
 
+  if ( u3_rsat_peek == req_u->sat_e && req_u->peq_u ) {
+    req_u->peq_u->req_u = 0;
+  }
+
+
   if ( 0 != req_u->tim_u ) {
     uv_close((uv_handle_t*)req_u->tim_u, _http_close_cb);
     req_u->tim_u = 0;
