@@ -62,12 +62,16 @@
 
     /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
     ** return.
+    **
+    **   A statement, not an expression: on windows _longjmp expands to a
+    **   brace-enclosed block, so it cannot be an operand of a comma.
     */
 #ifndef VERE64
-#     define u3m_escape(how) _longjmp(u3R->esc.buf, (how))
+#     define u3m_escape(how) \
+        do { _longjmp(u3R->esc.buf, (how)); } while ( 0 )
 #else
 #     define u3m_escape(how) \
-        ( u3R->esc.why_w = (how), _longjmp(u3R->esc.buf, 1) )
+        do { u3R->esc.why_w = (how); _longjmp(u3R->esc.buf, 1); } while ( 0 )
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
