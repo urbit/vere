@@ -22,12 +22,12 @@ static c3_i
 _term_tcsetattr(c3_i fil_i, c3_i act_i, const struct termios* tms_u)
 {
   c3_i ret_i = 0;
-  c3_w len_w = 0;
+  c3_h len_h = 0;
 
   do {
     //  abort pathological retry loop
     //
-    if ( 100 == ++len_w ) {
+    if ( 100 == ++len_h ) {
       fprintf(stderr, "term: tcsetattr loop: %s\r\n", strerror(errno));
       return -1;
     }
@@ -120,7 +120,7 @@ _ttyf_loja(u3_utty* uty_u)
 /*  _ttyf_get_winsize(): gets the tty window size.
 */
 static c3_o
-_ttyf_get_winsize(u3_utty* uty_u, c3_l* col_l, c3_l* row_l)
+_ttyf_get_winsize(u3_utty* uty_u, c3_h* col_l, c3_h* row_l)
 {
   struct winsize siz_u;
   if ( 0 == ioctl(uty_u->fid_i, TIOCGWINSZ, &siz_u) )

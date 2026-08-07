@@ -104,7 +104,7 @@
 ** _ce_page:      byte length of a single page
 ** _ce_ptr:       void pointer to a page
 */
-#define _ce_len(i)        ((size_t)(i) << (u3a_page + 2))
+#define _ce_len(i)        ((size_t)(i) << (u3a_page + u3a_word_bytes_shift))
 #define _ce_len_words(i)  ((size_t)(i) << u3a_page)
 #define _ce_page          _ce_len(1)
 #define _ce_ptr(i)        ((void *)((c3_c*)u3_Loom + _ce_len(i)))
@@ -112,15 +112,15 @@
 /// Snapshotting system.
 u3e_pool u3e_Pool;
 
-static c3_w
-_ce_muk_buf(c3_w len_w, void* ptr_v)
+static c3_h
+_ce_muk_buf(c3_z len_z, void* ptr_v)
 {
-  c3_w haz_w;
-  MurmurHash3_x86_32(ptr_v, len_w, 0xcafebabeU, &haz_w);
-  return haz_w;
+  c3_h haz_h;
+  MurmurHash3_x86_32(ptr_v, len_z, 0xcafebabeU, &haz_h);
+  return haz_h;
 }
 
-static c3_w
+static c3_h
 _ce_muk_page(void* ptr_v)
 {
   return _ce_muk_buf(_ce_page, ptr_v);
@@ -148,7 +148,7 @@ _ce_flaw_mmap(c3_w pag_w)
                           (MAP_FIXED | MAP_SHARED),
                           u3P.eph_i, _ce_len(pag_w)) )
   {
-    fprintf(stderr, "loom: fault mmap failed (%u): %s\r\n",
+    fprintf(stderr, "loom: fault mmap failed (%"PRIc3_w"): %s\r\n",
                      pag_w, strerror(errno));
     return 1;
   }
@@ -166,7 +166,7 @@ static inline c3_i
 _ce_flaw_mprotect(c3_w pag_w)
 {
   if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
-    fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
+    fprintf(stderr, "loom: fault mprotect (%"PRIc3_w"): %s\r\n",
                      pag_w, strerror(errno));
     return 1;
   }
@@ -181,7 +181,7 @@ static inline c3_i
 _ce_ward_protect(void)
 {
   if ( 0 != mprotect(_ce_ptr(u3P.gar_w), _ce_page, PROT_NONE) ) {
-    fprintf(stderr, "loom: failed to protect guard page (%u): %s\r\n",
+    fprintf(stderr, "loom: failed to protect guard page (%"PRIc3_w"): %s\r\n",
                     u3P.gar_w, strerror(errno));
     return 1;
   }
@@ -206,7 +206,7 @@ _ce_ward_clip(c3_w nop_w, c3_w sop_w)
   c3_w old_w = u3P.gar_w;
 
   if ( !u3P.gar_w || ((nop_w < u3P.gar_w) && (sop_w > u3P.gar_w)) ) {
-    fprintf(stderr, "loom: ward bogus (>%u %u %u<)\r\n",
+    fprintf(stderr, "loom: ward bogus (>%"PRIc3_w" %"PRIc3_w" %"PRIc3_w"<)\r\n",
                     nop_w, u3P.gar_w, sop_w);
     return u3e_flaw_sham;
   }
@@ -231,8 +231,8 @@ u3e_flaw
 u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 {
   c3_w pag_w = off_p >> u3a_page;
-  c3_w blk_w = pag_w >> 5;
-  c3_w bit_w = pag_w & 31;
+  c3_w blk_w = pag_w >> u3a_chub_bits_log;
+  c3_w bit_w = pag_w & (u3a_chub_bits-1);
 
 #ifdef U3_GUARD_PAGE
   c3_w gar_w = u3P.gar_w;
@@ -244,8 +244,8 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       return fal_e;
     }
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
-      fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+      fprintf(stderr, "loom: strange guard (%"PRIc3_w")\r\n", pag_w);
       return u3e_flaw_sham;
     }
 
@@ -257,12 +257,12 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-    fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
+  if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
+    fprintf(stderr, "loom: strange page (%"PRIc3_w"): %"PRIxc3_w"\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
 
-  u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+  u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
 
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
@@ -296,7 +296,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
   else {
     c3_z siz_z = buf_u.st_size;
-    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + 2);
+    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + u3a_word_bytes_shift);
 
     if ( !siz_z ) {
       *pgs_w = 0;
@@ -306,7 +306,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
       fprintf(stderr, "loom: image corrupt size %zu\r\n", siz_z);
       return _ce_img_size;
     }
-    else if ( pgs_z > UINT32_MAX ) {
+    else if ( pgs_z > c3_w_max ) {
       fprintf(stderr, "loom: image overflow %zu\r\n", siz_z);
       return _ce_img_fail;
     }
@@ -353,13 +353,11 @@ _ce_ephemeral_open(c3_i* eph_i)
   return c3y;
 }
 
-/* _ce_image_open(): open or create image.
+/* _ce_image_open(): open image with the given open(2) mode.
 */
 static _ce_img_stat
-_ce_image_open(u3e_image* img_u, c3_c* ful_c)
+_ce_image_open(u3e_image* img_u, c3_c* ful_c, c3_i mod_i)
 {
-  c3_i mod_i = O_RDWR | O_CREAT;
-
   c3_c pax_c[8192];
   snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
@@ -371,11 +369,11 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
 }
 
 c3_i
-u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
+u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i)
 {
   u3e_image img_u = { .nam_c = nam_c };
 
-  switch ( _ce_image_open(&img_u, dir_c) ) {
+  switch ( _ce_image_open(&img_u, dir_c, mod_i) ) {
     case _ce_img_good: {
       *len_z = _ce_len(img_u.pgs_w);
       return img_u.fid_i;
@@ -394,13 +392,13 @@ u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
 static void
 _ce_patch_write_control(u3_ce_patch* pat_u)
 {
-  ssize_t ret_i;
-  c3_w    len_w = sizeof(u3e_control) +
-                  (pat_u->con_u->pgs_w * sizeof(u3e_line));
+  c3_zs ret_zs;
+  c3_z  len_z = sizeof(u3e_control) +
+                (pat_u->con_u->pgs_w * sizeof(u3e_line));
 
-  if ( len_w != (ret_i = write(pat_u->ctl_i, pat_u->con_u, len_w)) ) {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: patch ctl partial write: %zu\r\n", (size_t)ret_i);
+  if ( len_z != (ret_zs = write(pat_u->ctl_i, pat_u->con_u, len_z)) ) {
+    if ( 0 < ret_zs ) {
+      fprintf(stderr, "loom: patch ctl partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
       fprintf(stderr, "loom: patch ctl write: %s\r\n", strerror(errno));
@@ -414,7 +412,7 @@ _ce_patch_write_control(u3_ce_patch* pat_u)
 static c3_o
 _ce_patch_read_control(u3_ce_patch* pat_u)
 {
-  c3_w len_w;
+  c3_z len_z;
 
   u3_assert(0 == pat_u->con_u);
   {
@@ -424,16 +422,16 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
       u3_assert(0);
       return c3n;
     }
-    len_w = (c3_w) buf_u.st_size;
+    len_z = (c3_z) buf_u.st_size;
   }
 
-  if (0 == len_w) {
+  if (0 == len_z) {
     return c3n;
   }
-  
-  pat_u->con_u = c3_malloc(len_w);
-  if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
-        (len_w != sizeof(u3e_control) +
+
+  pat_u->con_u = c3_malloc(len_z);
+  if ( (len_z != read(pat_u->ctl_i, pat_u->con_u, len_z)) ||
+        (len_z != sizeof(u3e_control) +
                   (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
   {
     c3_free(pat_u->con_u);
@@ -494,27 +492,29 @@ _ce_patch_delete(void)
 static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
-  c3_w  pag_w, has_w;
+  c3_w  pag_w;
+  c3_h  has_h;
   c3_y  buf_y[_ce_page];
   c3_zs ret_zs;
 
-  if ( U3P_VERLAT != pat_u->con_u->ver_w ) {
-    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %u\r\n",
-                    pat_u->con_u->ver_w,
+  if ( U3P_VERLAT != pat_u->con_u->ver_h ) {
+    fprintf(stderr, "loom: patch version mismatch: "
+                    "have %"PRIc3_h", need %"PRIc3_h"\r\n",
+                    pat_u->con_u->ver_h,
                     U3P_VERLAT);
     return c3n;
   }
 
   {
-    c3_w  len_w = sizeof(u3e_control) + (pat_u->con_u->pgs_w * sizeof(u3e_line));
-    c3_w  off_w = offsetof(u3e_control, tot_w);
-    c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
-    c3_w  has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+    c3_z  len_z = sizeof(u3e_control) + (pat_u->con_u->pgs_w * sizeof(u3e_line));
+    c3_z  off_z = offsetof(u3e_control, tot_w);
+    c3_y *ptr_y = (c3_y*)pat_u->con_u + off_z;
+    c3_h  has_h = _ce_muk_buf(len_z - off_z, ptr_y);
 
-    if ( has_w != pat_u->con_u->has_w ) {
+    if ( has_h != pat_u->con_u->has_h ) {
       fprintf(stderr, "loom: patch meta checksum fail: "
-                      "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
-                      has_w, pat_u->con_u->has_w);
+                      "have=0x%"PRIxc3_h", need=0x%"PRIxc3_h"\r\n",
+                      has_h, pat_u->con_u->has_h);
       return c3n;
     }
   }
@@ -523,7 +523,7 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   //
   for ( c3_z i_z = 0; i_z < pat_u->con_u->pgs_w; i_z++ ) {
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
-    has_w = pat_u->con_u->mem_u[i_z].has_w;
+    has_h = pat_u->con_u->mem_u[i_z].has_h;
 
     if ( _ce_page !=
          (ret_zs = pread(pat_u->mem_i, buf_y, _ce_page, _ce_len(i_z))) )
@@ -538,17 +538,17 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     }
 
     {
-      c3_w nas_w = _ce_muk_page(buf_y);
+      c3_h nas_h = _ce_muk_page(buf_y);
 
-      if ( has_w != nas_w ) {
+      if ( has_h != nas_h ) {
         fprintf(stderr, "loom: patch page (%"PRIc3_w") checksum fail: "
-                        "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
-                        pag_w, nas_w, has_w);
+                        "have=0x%"PRIxc3_h", need=0x%"PRIxc3_h"\r\n",
+                        pag_w, nas_h, has_h);
         return c3n;
       }
 #if 0
       else {
-        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, has_w);
+        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_h"\r\n", pag_w, i_z, has_h);
       }
 #endif
     }
@@ -646,10 +646,10 @@ _ce_patch_count_page(c3_w pag_w,
                      c3_w off_w,
                      c3_w pgc_w)
 {
-  c3_w blk_w = (pag_w >> 5);
-  c3_w bit_w = (pag_w & 31);
+  c3_w blk_w = (pag_w >> u3a_chub_bits_log);
+  c3_w bit_w = (pag_w & (u3a_chub_bits-1));
 
-  if (  (u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+  if (  (u3P.dit_d[blk_w] & ((c3_d)1 << bit_w))
      && (  (pag_w < off_w)
      || (u3R->hep.len_w <= (pag_w - off_w))
      || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
@@ -668,15 +668,15 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
                     c3_w         off_w,
                     c3_w         pgc_w)
 {
-  c3_w  blk_w = (pag_w >> 5);
-  c3_w  bit_w = (pag_w & 31);
+  c3_w  blk_w = (pag_w >> u3a_chub_bits_log);
+  c3_w  bit_w = (pag_w & (u3a_chub_bits-1));
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
     if (  (pag_w >= off_w)
        && (u3R->hep.len_w > (pag_w - off_w))
        && (u3a_free_pg == (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) )
     {
-      // fprintf(stderr, "save: skip %u\r\n", pag_w);
+      // fprintf(stderr, "save: skip %"PRIc3_w"\r\n", pag_w);
       pat_u->sip_w++;
       return pgc_w;
     }
@@ -684,11 +684,11 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
     c3_w* mem_w = _ce_ptr(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
-    pat_u->con_u->mem_u[pgc_w].has_w = _ce_muk_page(mem_w);
+    pat_u->con_u->mem_u[pgc_w].has_h = _ce_muk_page(mem_w);
 
 #if 0
-    fprintf(stderr, "loom: save page %d %x\r\n",
-                    pag_w, pat_u->con_u->mem_u[pgc_w].has_w);
+    fprintf(stderr, "loom: save page %"PRIc3_w" %"PRIxc3_h"\r\n",
+                    pag_w, pat_u->con_u->mem_u[pgc_w].has_h);
 #endif
     _ce_patch_write_page(pat_u, pgc_w, mem_w);
 
@@ -720,14 +720,15 @@ _ce_patch_compose(c3_w max_w)
   }
   else {
     u3_ce_patch* pat_u = c3_malloc(sizeof(u3_ce_patch));
-    c3_w i_w, len_w, pgc_w;
+    c3_w i_w, pgc_w;
+    c3_z len_z;
 
     pat_u->sip_w = 0;
 
     _ce_patch_create(pat_u);
-    len_w = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
-    pat_u->con_u = c3_malloc(len_w);
-    pat_u->con_u->ver_w = U3P_VERLAT;
+    len_z = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
+    pat_u->con_u = c3_malloc(len_z);
+    pat_u->con_u->ver_h = U3P_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < max_w; i_w++ ) {
@@ -740,10 +741,10 @@ _ce_patch_compose(c3_w max_w)
     pat_u->con_u->pgs_w = pgc_w;
 
     {
-      c3_w  off_w = offsetof(u3e_control, tot_w);
-      c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
+      c3_z  off_z = offsetof(u3e_control, tot_w);
+      c3_y *ptr_y = (c3_y*)pat_u->con_u + off_z;
 
-      pat_u->con_u->has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+      pat_u->con_u->has_h = _ce_muk_buf(len_z - off_z, ptr_y);
     }
 
     _ce_patch_write_control(pat_u);
@@ -793,7 +794,7 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
   if ( img_u->pgs_w > pgs_w ) {
     if ( off_z != (size_t)off_i ) {
       fprintf(stderr, "loom: image truncate: "
-                      "offset overflow (%" PRId64 ") for page %u\r\n",
+                      "offset overflow (%" PRIc3_ds ") for page %"PRIc3_w"\r\n",
                       (c3_ds)off_i, pgs_w);
       u3_assert(0);
     }
@@ -861,7 +862,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       }
     }
 #if 0
-    u3l_log("apply: %d, %x", pag_w, _ce_muk_page(buf_y));
+    u3l_log("apply: %"PRIc3_w", %"PRIxc3_w"", pag_w, _ce_muk_page(buf_y));
 #endif
   }
 }
@@ -877,11 +878,11 @@ _ce_loom_track_sane(void)
   max_w = u3P.img_u.pgs_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
 
-    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-      fprintf(stderr, "loom: insane image %u\r\n", i_w);
+    if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
+      fprintf(stderr, "loom: insane image %"PRIc3_w"\r\n", i_w);
       san_o = c3n;
     }
   }
@@ -889,11 +890,11 @@ _ce_loom_track_sane(void)
   max_w = u3P.pag_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
-      fprintf(stderr, "loom: insane open %u\r\n", i_w);
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+      fprintf(stderr, "loom: insane open %"PRIc3_w"\r\n", i_w);
       san_o = c3n;
     }
   }
@@ -903,23 +904,23 @@ _ce_loom_track_sane(void)
 
 /* _ce_loom_track(): [pgs_w] clean, followed by [dif_w] dirty.
 */
-void
+static void
 _ce_loom_track(c3_w pgs_w, c3_w dif_w)
 {
   c3_w blk_w, bit_w, i_w = 0, max_w = pgs_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
+    u3P.dit_d[blk_w] &= ~((c3_d)1 << bit_w);
   }
 
   max_w += dif_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
+    u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
   }
 }
 
@@ -932,7 +933,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
 
   if ( pgs_w ) {
     if ( 0 != mprotect(_ce_ptr(0), _ce_len(pgs_w), PROT_READ) ) {
-      fprintf(stderr, "loom: pure (%u pages): %s\r\n",
+      fprintf(stderr, "loom: pure (%"PRIc3_w" pages): %s\r\n",
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
@@ -945,7 +946,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
                        _ce_len(dif_w),
                        (PROT_READ | PROT_WRITE)) )
     {
-      fprintf(stderr, "loom: foul (%u pages, %u old): %s\r\n",
+      fprintf(stderr, "loom: foul (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
       u3_assert(0);
     }
@@ -976,7 +977,7 @@ _ce_loom_mapf_ephemeral(void)
                           (MAP_FIXED | MAP_SHARED),
                           u3P.eph_i, 0) )
   {
-    fprintf(stderr, "loom: initial ephemeral mmap failed (%u pages): %s\r\n",
+    fprintf(stderr, "loom: initial ephemeral mmap failed (%"PRIc3_w" pages): %s\r\n",
                     u3P.pag_w, strerror(errno));
     u3_assert(0);
   }
@@ -997,7 +998,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                             (MAP_FIXED | MAP_PRIVATE),
                             fid_i, 0) )
     {
-      fprintf(stderr, "loom: file-backed mmap failed (%u pages): %s\r\n",
+      fprintf(stderr, "loom: file-backed mmap failed (%"PRIc3_w" pages): %s\r\n",
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
@@ -1006,14 +1007,14 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   if ( old_w > pgs_w ) {
     dif_w = old_w - pgs_w;
 
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
       if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
                               _ce_len(dif_w),
                               (PROT_READ | PROT_WRITE),
                               (MAP_FIXED | MAP_SHARED),
                               u3P.eph_i, _ce_len(pgs_w)) )
       {
-        fprintf(stderr, "loom: ephemeral mmap failed (%u pages, %u old): %s\r\n",
+        fprintf(stderr, "loom: ephemeral mmap failed (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                         pgs_w, old_w, strerror(errno));
         u3_assert(0);
       }
@@ -1025,7 +1026,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                               (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
                               -1, 0) )
       {
-        fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
+        fprintf(stderr, "loom: anonymous mmap failed (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                         pgs_w, old_w, strerror(errno));
         u3_assert(0);
       }
@@ -1079,14 +1080,14 @@ _ce_loom_blit(c3_i fid_i, c3_w pgs_w)
 static c3_o
 _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 {
-  ssize_t ret_i;
-  c3_y    buf_y[_ce_page];
+  c3_zs ret_zs;
+  c3_y  buf_y[_ce_page];
 
   if ( _ce_page !=
-       (ret_i = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
+       (ret_zs = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
   {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: image fine partial read: %zu\r\n", (size_t)ret_i);
+    if ( 0 < ret_zs ) {
+      fprintf(stderr, "loom: image fine partial read: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
       fprintf(stderr, "loom: image fine read: %s\r\n", strerror(errno));
@@ -1095,13 +1096,13 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
   }
 
   {
-    c3_w mas_w = _ce_muk_page(_ce_ptr(pag_w));
-    c3_w fas_w = _ce_muk_page(buf_y);
+    c3_h mas_h = _ce_muk_page(_ce_ptr(pag_w));
+    c3_h fas_h = _ce_muk_page(buf_y);
 
-    if ( mas_w != fas_w ) {
+    if ( mas_h != fas_h ) {
       fprintf(stderr, "loom: image checksum mismatch: "
-                      "page %d, mem_w %x, fil_w %x\r\n",
-                      pag_w, mas_w, fas_w);
+                      "page %" PRIc3_w ", mem_h %" PRIxc3_h ", fil_h %" PRIxc3_h "\r\n",
+                      pag_w, mas_h, fas_h);
       return c3n;
     }
   }
@@ -1120,10 +1121,10 @@ _ce_loom_fine(void)
 
   for ( i_w = 0; i_w < u3P.img_u.pgs_w; i_w++ ) {
     pag_w = i_w;
-    blk_w = pag_w >> 5;
-    bit_w = pag_w & 31;
+    blk_w = pag_w >> u3a_chub_bits_log;
+    bit_w = pag_w & (u3a_chub_bits-1);
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w))
        && (  (pag_w < off_w)
           || (u3R->hep.len_w <= (pag_w - off_w))
           || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
@@ -1141,8 +1142,8 @@ _ce_loom_fine(void)
 static c3_o
 _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
 {
-  ssize_t ret_i;
-  c3_w      i_w;
+  c3_zs ret_zs;
+  c3_w  i_w;
 
   //  resize images
   //
@@ -1163,10 +1164,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
     c3_y buf_y[_ce_page];
     c3_w off_w = i_w;
 
-    if ( _ce_page != (ret_i = read(fom_u->fid_i, buf_y, _ce_page)) ) {
-      if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: image copy partial read: %zu\r\n",
-                        (size_t)ret_i);
+    if ( _ce_page != (ret_zs = read(fom_u->fid_i, buf_y, _ce_page)) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: image copy partial read: %"PRIc3_zs"\r\n",
+                        ret_zs);
       }
       else {
         fprintf(stderr, "loom: image copy read: %s\r\n",
@@ -1179,10 +1180,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
         fprintf(stderr, "loom: image copy seek: %s\r\n", strerror(errno));
         return c3n;
       }
-      if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
-        if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image copy partial write: %zu\r\n",
-                          (size_t)ret_i);
+      if ( _ce_page != (ret_zs = write(tou_u->fid_i, buf_y, _ce_page)) ) {
+        if ( 0 < ret_zs ) {
+          fprintf(stderr, "loom: image copy partial write: %"PRIc3_zs"\r\n",
+                          ret_zs);
         }
         else {
           fprintf(stderr, "loom: image copy write: %s\r\n", strerror(errno));
@@ -1228,7 +1229,7 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
   if (  (0 != access(nux_c, F_OK))
-     || (_ce_img_good != _ce_image_open(&nux_u, pux_c)) )
+     || (_ce_img_good != _ce_image_open(&nux_u, pux_c, O_RDWR | O_CREAT)) )
   {
     fprintf(stderr, "loom: couldn't open image at %s\r\n", pux_c);
     return c3n;
@@ -1281,7 +1282,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
 
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return;
   }
 
@@ -1298,8 +1299,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
     }
   }
 
-  if ( u3C.wag_w & u3o_verbose ) {
-    fprintf(stderr, "sync: skipped %u free", pat_u->sip_w);
+  if ( u3C.wag_h & u3o_verbose ) {
+    fprintf(stderr, "sync: skipped %" PRIc3_w " free", pat_u->sip_w);
     u3a_print_memory(stderr, " pages", pat_u->sip_w << u3a_page);
   }
 
@@ -1307,7 +1308,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   //
   u3a_loom_sane();
 
-  if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_h & u3o_verbose ) {
     u3a_print_memory(stderr, "sync: save", pat_u->con_u->pgs_w << u3a_page);
   }
 
@@ -1349,7 +1350,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_assert( c3y == _ce_loom_fine() );
 #endif
 
-  if ( u3C.wag_w & u3o_no_demand ) {
+  if ( u3C.wag_h & u3o_no_demand ) {
 #ifndef U3_SNAPSHOT_VALIDATION
     _ce_loom_protect(u3P.img_u.pgs_w, old_w);
 #endif
@@ -1371,7 +1372,7 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
 
   #ifndef U3_OS_windows
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
-      fprintf(stderr, "loom: madv_dontneed failed (%u pages at %u): %s\r\n",
+      fprintf(stderr, "loom: madv_dontneed failed (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
                       pgs_w, nor_w, strerror(errno));
   }
   #endif
@@ -1409,18 +1410,19 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
   u3P.eph_i = 0;
   u3P.img_u.nam_c = "image";
   u3P.pag_w = u3C.wor_i >> u3a_page;
+  u3P.dit_d = calloc(u3P.pag_w / u3a_chub_bits, sizeof(c3_d));
 
   //  XX review dryrun requirements, enable or remove
   //
 #if 0
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return c3y;
   } else
 #endif
   {
     //  Open the ephemeral space file.
     //
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
       if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
         fprintf(stderr, "boot: failed to load ephemeral file\r\n");
         exit(1);
@@ -1432,7 +1434,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     c3_c chk_c[8193];
     snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
 
-    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c);
+    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c, O_RDWR | O_CREAT);
 
     if ( _ce_img_fail == sat_e ) {
       fprintf(stderr, "boot: image failed\r\n");
@@ -1468,11 +1470,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
-        if ( u3C.wag_w & u3o_swap ) {
+        if ( u3C.wag_h & u3o_swap ) {
           _ce_loom_mapf_ephemeral();
         }
 
-        if ( u3C.wag_w & u3o_no_demand ) {
+        if ( u3C.wag_h & u3o_no_demand ) {
           _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
         }
         else {
@@ -1488,7 +1490,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         u3l_log("live: logical boot");
         nuu_o = c3y;
       }
-      else if ( u3C.wag_w & u3o_no_demand ) {
+      else if ( u3C.wag_h & u3o_no_demand ) {
         u3a_print_memory(stderr, "live: loaded", _ce_len_words(u3P.img_u.pgs_w));
       }
       else {
@@ -1516,6 +1518,7 @@ u3e_stop(void)
   }
 
   close(u3P.img_u.fid_i);
+  c3_free(u3P.dit_d);
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
@@ -1547,7 +1550,7 @@ u3e_yolo(void)
 void
 u3e_foul(void)
 {
-  memset((void*)u3P.dit_w, 0xff, sizeof(u3P.dit_w));
+  memset((void*)u3P.dit_d, 0xff, sizeof(c3_d) * u3P.pag_w / u3a_chub_bits);
 }
 
 /* u3e_init(): initialize guard page tracking, dirty loom
@@ -1556,6 +1559,7 @@ void
 u3e_init(void)
 {
   u3P.pag_w = u3C.wor_i >> u3a_page;
+  u3P.dit_d = calloc(u3P.pag_w / u3a_chub_bits, sizeof(c3_d));
 
   u3P.img_u.fid_i = -1;
 
@@ -1579,7 +1583,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < sop_w)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
     u3_assert( !_ce_flaw_mprotect(pag_w) );
-    u3_assert( u3P.dit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)) );
+    u3_assert( u3P.dit_d[pag_w >> u3a_chub_bits_log] & ((c3_d)1 << (pag_w & (u3a_chub_bits-1))) );
   }
 #endif
 }

@@ -84,7 +84,7 @@ _fore_import(u3_auto* car_u, c3_c* pax_c)
   u3_noun dat = u3nt(u3_nul, siz, imp);
 
   u3_noun req = u3nt(c3n,
-    u3nc(u3i_string("ipv4"), u3i_word(0x7f000001)),
+    u3nc(u3i_string("ipv4"), u3i_word(0x7f000001ULL)),
     u3nq(u3i_string("POST"), u3i_string("/"), u3_nul, dat));
   u3_noun wir = u3nc(u3i_string("http-server"), u3_nul);
   u3_noun cad = u3nc(u3i_string("request-local"), req);
@@ -103,11 +103,11 @@ _fore_io_talk(u3_auto* car_u)
   //  inject fresh entropy
   //
   {
-    c3_w    eny_w[16];
+    c3_h    eny_w[16];
     c3_rand(eny_w);
 
     wir = u3nc(c3__arvo, u3_nul);
-    cad = u3nc(c3__wack, u3i_words(16, eny_w));
+    cad = u3nc(c3__wack, u3i_halfs(16, eny_w));
 
     u3_auto_plan(car_u, u3_ovum_init(0, u3_blip, wir, cad));
   }

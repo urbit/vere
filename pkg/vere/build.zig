@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) !void {
     // @panic("Missing required option: pace");
     const version = b.option([]const u8, "version", "") orelse "3.5";
     // @panic("Missing required option: version");
+    const vere64 = b.option(bool, "vere64", "") orelse false;
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
 
@@ -45,12 +46,6 @@ pub fn build(b: *std.Build) !void {
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-    });
-
-    const pkg_past = b.dependency("pkg_past", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
@@ -160,7 +155,15 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
-    pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    if (!vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = vere64,
+        });
+        pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    }
     pkg_vere.linkLibC();
 
     var files = std.array_list.Managed([]const u8).init(b.allocator);

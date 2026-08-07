@@ -12,7 +12,7 @@
            u3_atom len,
            u3_atom dat)
   {
-    if ( !_(u3a_is_cat(boz)) || (boz >= 32) ||
+    if ( !_(u3a_is_cat(boz)) || (boz >= u3a_word_bits) ||
          !_(u3a_is_cat(len)) ) {
       return u3m_bail(c3__fail);
     }

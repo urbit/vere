@@ -541,8 +541,8 @@ u3h_v4_new_cache(c3_w max_w)
 
   har_u->max_w       = max_w;
   har_u->use_w       = 0;
-  har_u->arm_u.mug_w = 0;
-  har_u->arm_u.inx_w = 0;
+  har_u->arm_u.mug_h = 0;
+  har_u->arm_u.inx_h = 0;
 
   for ( i_w = 0; i_w < 64; i_w++ ) {
     har_u->sot_w[i_w] = 0;
@@ -566,7 +566,7 @@ _ch_v4_free_buck(u3h_v4_buck* hab_u)
   //fprintf(stderr, "free buck\r\n");
   c3_w i_w;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+  for ( i_w = 0; i_w < hab_u->len_h; i_w++ ) {
     u3a_v4_lose(u3h_v4_slot_to_noun(hab_u->sot_w[i_w]));
   }
   u3a_v4_wfree(hab_u);
@@ -577,7 +577,7 @@ _ch_v4_free_buck(u3h_v4_buck* hab_u)
 static void
 _ch_v4_free_node(u3h_v4_node* han_u, c3_w lef_w, c3_o pin_o)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_h);
   c3_w i_w;
 
   lef_w -= 5;
@@ -631,7 +631,7 @@ _ch_v4_walk_buck(u3h_v4_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 {
   c3_w i_w;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+  for ( i_w = 0; i_w < hab_u->len_h; i_w++ ) {
     fun_f(u3h_v4_slot_to_noun(hab_u->sot_w[i_w]), wit);
   }
 }
@@ -641,7 +641,7 @@ _ch_v4_walk_buck(u3h_v4_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 static void
 _ch_v4_walk_node(u3h_v4_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_h);
   c3_w i_w;
 
   lef_w -= 5;

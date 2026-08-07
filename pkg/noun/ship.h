@@ -24,7 +24,7 @@ u3_ship_to_string(u3_ship who_u);
 c3_o
 u3_ships_equal(u3_ship sip_u, u3_ship sap_u);
 
-c3_l
+c3_h
 u3_ship_rank(u3_ship who_u);
 
 void
@@ -45,7 +45,7 @@ u3_ship_king(u3_ship who_u);
 /**
 * Returns a ship's planet prefix.
 */
-c3_w
+c3_h
 u3_ship_duke(u3_ship who_u);
 
 /**

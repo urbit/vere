@@ -21,7 +21,7 @@ static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 
 //  stash config flags for worker
 //
-static c3_w sag_w;
+static c3_h sag_h;
 
 /*
 ::  skeleton client->king protocol
@@ -185,7 +185,7 @@ _king_boot_done(void* ptr_v, c3_o ret_o)
     u3_king_dock(U3_VERE_PACE);
   }
 
-  u3K.pir_u = u3_pier_stay(sag_w, u3i_string(u3_Host.dir_c), rift);
+  u3K.pir_u = u3_pier_stay(sag_h, u3i_string(u3_Host.dir_c), rift);
 }
 
 /* _king_prop(): events from prop arguments
@@ -243,7 +243,7 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
   c3_d  key_d[4] = {0};
   u3_noun msg    = u3nq(c3__boot, pill, vent, _king_prop());
 
-  u3_lord_boot(u3_Host.dir_c, sag_w, key_d, msg,
+  u3_lord_boot(u3_Host.dir_c, sag_h, key_d, msg,
                (void*)0, _king_boot_done);
   u3z(path);
 }
@@ -318,7 +318,7 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
     }
 
     msg = u3nq(c3__boot, pill, vent, mor);
-    u3_lord_boot(u3_Host.dir_c, sag_w, key_d, msg,
+    u3_lord_boot(u3_Host.dir_c, sag_h, key_d, msg,
                  (void*)(c3_p)rift, _king_boot_done);
   }
 
@@ -337,7 +337,7 @@ _king_pier(u3_noun pier)
     exit(1);
   }
 
-  u3K.pir_u = u3_pier_stay(sag_w, u3k(u3t(pier)), u3_none);
+  u3K.pir_u = u3_pier_stay(sag_h, u3k(u3t(pier)), u3_none);
   u3z(pier);
 }
 
@@ -478,7 +478,7 @@ _king_get_pace(void)
 {
   struct stat buf_u;
   c3_c*       pat_c;
-  c3_w red_w, len_w;
+  c3_h red_h, len_h;
   c3_i ret_i, fid_i;
 
   ret_i = asprintf(&pat_c, "%s/.bin/pace", u3_Host.dir_c);
@@ -493,22 +493,22 @@ _king_get_pace(void)
 
   c3_free(pat_c);
 
-  len_w = buf_u.st_size;
-  pat_c = c3_malloc(len_w + 1);
-  red_w = read(fid_i, pat_c, len_w);
+  len_h = buf_u.st_size;
+  pat_c = c3_malloc(len_h + 1);
+  red_h = read(fid_i, pat_c, len_h);
   close(fid_i);
 
-  if ( len_w != red_w ) {
+  if ( len_h != red_h ) {
     c3_free(pat_c);
     u3l_log("unable to read pace file, "
             "falling back to default (\"live\")\n");
     return strdup("live");
   }
 
-  pat_c[len_w] = 0;
+  pat_c[len_h] = 0;
 
-  while ( len_w-- && isspace(pat_c[len_w]) ) {
-    pat_c[len_w] = 0;
+  while ( len_h-- && isspace(pat_c[len_h]) ) {
+    pat_c[len_h] = 0;
   }
 
   return pat_c;
@@ -587,7 +587,7 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
    the command's output, up to a max of len_c characters.
 */
 static void
-_get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_c)
+_get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_h len_h)
 {
   FILE *fp = popen(cmd_c, "r");
   if ( NULL == fp ) {
@@ -595,7 +595,7 @@ _get_cmd_output(c3_c *cmd_c, c3_c *out_c, c3_w len_c)
     exit(1);
   }
 
-  if ( NULL == fgets(out_c, len_c, fp) ) {
+  if ( NULL == fgets(out_c, len_h, fp) ) {
     u3l_log("'%s' produced no output", cmd_c);
     exit(1);
   }
@@ -780,10 +780,10 @@ _boothack_doom(void)
       //
       {
         c3_c* key_c = u3r_string(kef);
-        c3_w  len_w = strlen(key_c);
+        c3_h  len_h = strlen(key_c);
 
-        if (len_w && (key_c[len_w - 1] == '\n')) {
-          key_c[len_w - 1] = '\0';
+        if (len_h && (key_c[len_h - 1] == '\n')) {
+          key_c[len_h - 1] = '\0';
           u3z(kef);
           kef = u3i_string(key_c);
         }
@@ -1046,9 +1046,9 @@ u3_king_commence()
   //  start up a "fast-compile" arvo for internal use only
   //  (with hashboard and sample-profiling always disabled)
   //
-  sag_w = u3C.wag_w;
-  u3C.wag_w |= u3o_hashless;
-  u3C.wag_w &= ~u3o_debug_cpu;
+  sag_h = u3C.wag_h;
+  u3C.wag_h |= u3o_hashless;
+  u3C.wag_h &= ~u3o_debug_cpu;
 
   //  wire up signal controls
   //
@@ -1299,6 +1299,7 @@ _king_link_run(c3_c* bin_c)
 c3_i
 u3_king_vere(c3_c* pac_c,  // pace
              c3_c* ver_c,  // version
+             c3_c* bit_c,  // bit width ("32" or "64")
              c3_c* arc_c,  // architecture
              c3_c* dir_c,  // output directory
              c3_t  lin_t)  // link to $pier/.run
@@ -1308,7 +1309,7 @@ u3_king_vere(c3_c* pac_c,  // pace
   FILE* fil_u;
   c3_i  fid_i, ret_i;
 
-  ret_i = asprintf(&bin_c, "%s/vere-v%s-%s", dir_c, ver_c, arc_c);
+  ret_i = asprintf(&bin_c, "%s/vere%s-v%s-%s", dir_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   if (   (-1 == (fid_i = open(bin_c, O_WRONLY | O_CREAT | O_EXCL, 0755)))
@@ -1326,8 +1327,8 @@ u3_king_vere(c3_c* pac_c,  // pace
     }
   }
 
-  ret_i = asprintf(&url_c, "%s/%s/v%s/vere-v%s-%s",
-                   ver_hos_c, pac_c, ver_c, ver_c, arc_c);
+  ret_i = asprintf(&url_c, "%s/%s/v%s/vere%s-v%s-%s",
+                   ver_hos_c, pac_c, ver_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   if ( (ret_i = _king_save_file(url_c, fil_u)) ) {
@@ -1405,7 +1406,7 @@ _king_do_upgrade(c3_c* pac_c, c3_c* ver_c)
 
   //  XX get link option
   //
-  if ( u3_king_vere(pac_c, ver_c, arc_c, dir_c, 1) ) {
+  if ( u3_king_vere(pac_c, ver_c, u3_Host.bit_c, arc_c, dir_c, 1) ) {
     u3l_log("vere: upgrade failed");
     u3_king_bail();
     exit(1);
@@ -1600,7 +1601,7 @@ done1:
 /* _king_copy_vere(): copy current binary into $pier/.bin (COW if possible)
 */
 static c3_i
-_king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
+_king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* bit_c, c3_c* arc_c, c3_t lin_t)
 {
   c3_c* bin_c;
   c3_i  ret_i;
@@ -1609,8 +1610,8 @@ _king_copy_vere(c3_c* pac_c, c3_c* ver_c, c3_c* arc_c, c3_t lin_t)
     return -1; // XX
   }
 
-  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere-v%s-%s",
-                           u3_Host.dir_c, pac_c, ver_c, arc_c);
+  ret_i = asprintf(&bin_c, "%s/.bin/%s/vere%s-v%s-%s",
+                           u3_Host.dir_c, pac_c, bit_c, ver_c, arc_c);
   u3_assert( ret_i > 0 );
 
   ret_i = _king_copy_file(u3_Host.dem_c, bin_c);
@@ -1642,14 +1643,21 @@ void
 u3_king_dock(c3_c* pac_c)
 {
   c3_c* arc_c = "unknown";
+  c3_c* bit_c;
 
 #ifdef U3_OS_ARCH
   arc_c = U3_OS_ARCH;
 #endif
 
+#ifdef VERE64
+  bit_c = "64";
+#else
+  bit_c = "32";
+#endif
+
   //  XX get link option
   //
-  if ( _king_copy_vere(pac_c, URBIT_VERSION, arc_c, 1) ) {
+  if ( _king_copy_vere(pac_c, URBIT_VERSION, bit_c, arc_c, 1) ) {
     u3l_log("vere: binary copy failed");
     u3_king_bail();
     exit(1);
@@ -1846,9 +1854,9 @@ u3_king_grab(void* vod_p)
 
   fflush(fil_u);
 
-  for ( c3_w i_w = 0; i_w < 7; i_w++ ) {
-    u3a_print_quac(fil_u, 0, all_u[i_w]);
-    u3a_quac_free(all_u[i_w]);
+  for ( c3_h i_h = 0; i_h < 7; i_h++ ) {
+    u3a_print_quac(fil_u, 0, all_u[i_h]);
+    u3a_quac_free(all_u[i_h]);
   }
 
   c3_free(all_u);

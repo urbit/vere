@@ -20,6 +20,11 @@
 */
 
 typedef struct ur_jam_s ur_jam_t;
+#ifndef VERE64
+typedef uint32_t ur_serial_size_t;
+#else
+typedef uint64_t ur_serial_size_t;
+#endif
 
 uint64_t
 ur_jam_unsafe(ur_root_t      *r,
@@ -38,8 +43,8 @@ ur_jam_t*
 ur_jam_init_with(ur_root_t    *r,
                  uint64_t d_prev,
                  uint64_t d_size,
-                 uint32_t s_prev,
-                 uint32_t s_size);
+                 ur_serial_size_t s_prev,
+                 ur_serial_size_t s_size);
 
 ur_jam_t*
 ur_jam_init(ur_root_t *r);
@@ -76,8 +81,8 @@ ur_cue_t*
 ur_cue_init_with(ur_root_t    *r,
                  uint64_t d_prev,
                  uint64_t d_size,
-                 uint32_t s_prev,
-                 uint32_t s_size);
+                 ur_serial_size_t s_prev,
+                 ur_serial_size_t s_size);
 
 ur_cue_t*
 ur_cue_init(ur_root_t *r);
@@ -97,8 +102,8 @@ ur_cue_test(uint64_t len, const uint8_t *byt);
 ur_cue_test_t*
 ur_cue_test_init_with(uint64_t d_prev,
                       uint64_t d_size,
-                      uint32_t s_prev,
-                      uint32_t s_size);
+                      ur_serial_size_t s_prev,
+                      ur_serial_size_t s_size);
 
 ur_cue_test_t*
 ur_cue_test_init(void);

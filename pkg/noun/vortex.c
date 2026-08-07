@@ -137,10 +137,10 @@ _cv_nock_wish(u3_noun txt)
   return pro;
 }
 
-/* u3v_wish_n(): text expression with cache. with the input as a u3_noun.
+/* u3v_wish_w(): text expression with cache. with the input as a u3_noun.
 */
 u3_noun
-u3v_wish_n(u3_noun txt)
+u3v_wish_w(u3_noun txt)
 {
   u3t_event_trace("u3v_wish", 'b');
   u3_weak exp = u3kdb_get(u3k(u3A->yot), u3k(txt));
@@ -215,14 +215,14 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
 c3_o
 u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
 {
-  c3_w    wad_w;
+  c3_w wad_w;
   u3_noun uco = u3dc("slaw", fot, u3k(txt));
   u3_noun p_uco, q_uco;
 
   if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
        (u3_nul != p_uco) ||
        (c3n == u3r_safe_word(q_uco, &wad_w)) ||
-       (wad_w & 0x80000000) )
+       (wad_w & u3a_indirect_flag) )
   {
     c3_c* txt_c = u3r_string(txt);
     u3l_log("strange lily %s", txt_c);
@@ -380,11 +380,11 @@ u3v_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
-  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
+  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[1]->nam_c = strdup("wish cache");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
   qua_u[2] = NULL;
 
