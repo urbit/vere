@@ -6,7 +6,6 @@
 
 #include "noun.h"
 
-//  @Refcount: assert retains arguments
 u3_noun
 u3qb_weld(u3_noun a, u3_noun b)
 {

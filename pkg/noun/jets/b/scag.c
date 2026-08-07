@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-// @Refcount: assert retains arguments
 u3_noun
 u3qb_scag(u3_atom a, u3_noun b)
 {

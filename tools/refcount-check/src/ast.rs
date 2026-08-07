@@ -495,6 +495,11 @@ impl Ty {
   pub fn elem_type(&self) -> Ty {
     Ty { raw: unsafe { clang_getArrayElementType(self.raw) } }
   }
+
+  /// Pointee type of a pointer type (Invalid kind for non-pointers).
+  pub fn pointee_type(&self) -> Ty {
+    Ty { raw: unsafe { clang_getPointeeType(self.raw) } }
+  }
 }
 
 // suppress unused warnings for imports used only through macros
@@ -545,6 +550,16 @@ pub fn is_noun_type(t: &Ty) -> bool {
   let s = t.spelling().replace("const ", "");
   let s = s.trim();
   config::NOUN_TYPES.contains(&s)
+}
+
+/// A single pointer to a noun (`u3_noun*` and friends): the slot-pointer
+/// type the interpreter tracks. Reads through the sugared type so the
+/// noun typedef spelling survives (canonical u3_noun* is unsigned int*).
+pub fn is_noun_ptr_type(t: &Ty) -> bool {
+  if t.canonical().kind() != CXType_Pointer {
+    return false;
+  }
+  is_noun_type(&t.pointee_type())
 }
 
 /// A type too narrow to hold an indirect noun reference: a noun value

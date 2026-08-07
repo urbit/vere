@@ -578,7 +578,7 @@
 
       /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
       ** and the length of the buffer
-      ** @Refcount: read-only `a`
+      ** @Refcount: reads `a`
       */
       c3_w*
       u3r_word_buffer(u3_atom* a, c3_w* len_w);

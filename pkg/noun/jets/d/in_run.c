@@ -6,7 +6,8 @@
 #include "noun.h"
 
 //  [a] and [out] are TRANSFERRED
-// @Refcount: transfers `a`, `out`
+//  @Refcount: transfers `a`
+//  @Refcount: consumes `out`, fills transferred `out`
 //
 static void
 _in_run(u3_noun a, u3j_site* sit_u, u3_noun* out)
@@ -28,9 +29,7 @@ _in_run(u3_noun a, u3j_site* sit_u, u3_noun* out)
 
       u3z(new);
       u3z(*out);
-      {  // @Refcount: assert transfer `pro`
-        *out = pro;
-      }
+      *out = pro;
     }
 
     _in_run(l_a, sit_u, out);

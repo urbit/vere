@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-//  @Refcount: assert retains arguments
 u3_noun
 u3qb_zing(u3_noun a)
 {

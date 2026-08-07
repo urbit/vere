@@ -22,7 +22,7 @@ _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
   }
 }
 
-// @Refcount: read-only `p_octs`, `q_octs`
+// @Refcount: reads `p_octs`, `q_octs`
 static c3_o
 _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,

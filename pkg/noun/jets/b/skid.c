@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-//  @Refcount: assert retains arguments
 u3_noun
 u3qb_skid(u3_noun a, u3_noun b)
 {
@@ -22,26 +21,26 @@ u3qb_skid(u3_noun a, u3_noun b)
     u3k(a);
 
     do {
-      i = u3h(a);
+      i = u3k(u3k(u3h(a)));
+      t = u3k(u3t(a));
+      u3z(a), a = t;
 
-      switch ( u3j_gate_slam(&sit_u, u3k(i)) ) { //  @Refcount: assert transfer
+      switch ( u3j_gate_slam(&sit_u, i) ) {
         case c3y: {
           *lef = u3i_defcons(&hed, &tel);
-          *hed = u3k(i);
+          *hed = i;
           lef  = tel;
         } break;
 
         case c3n: {
           *rig = u3i_defcons(&hed, &tel);
-          *hed = u3k(i);
+          *hed = i;
           rig  = tel;
         } break;
 
         default: u3m_bail(c3__exit);
       }
 
-      t = u3k(u3t(a));
-      u3z(a), a = t;
     }
     while ( u3_nul != a );
 

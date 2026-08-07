@@ -21,7 +21,6 @@ pub enum ArgumentMode {
   Direct,      // the callee bails unless the argument is a direct atom
   Passthrough, // the argument's value IS the product (see ProductMode)
   Conslike,    // consumed by being stored inside the product (u3nc-style)
-  ReadOnly,    // pointer-to-noun the callee reads through, never writes
 }
 
 impl ArgumentMode {
@@ -32,9 +31,24 @@ impl ArgumentMode {
       ArgumentMode::Direct => "direct",
       ArgumentMode::Passthrough => "passthrough",
       ArgumentMode::Conslike => "conslike",
-      ArgumentMode::ReadOnly => "read-only",
     }
   }
+}
+
+/// What the callee does with the noun behind a pointer-to-noun
+/// parameter. The clauses compose: an in-place accumulator update is
+/// `@Refcount: consumes `out`, fills transferred `out``.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct PointeeMode {
+  pub reads: bool,             // reads *a without consuming it
+  pub consumes: bool,          // gives away one counted ref of the old *a
+  pub fills: Option<FillMode>, // writes a new value into *a
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FillMode {
+  Transferred, // the caller owns the new pointee and must consume it
+  Retained,    // the new pointee is an uncounted view
 }
 
 /// Refcount mode of the product.
@@ -85,6 +99,7 @@ pub enum AssertMode {
 pub struct Sem {
   pub default_args: ArgumentMode,
   pub args: BTreeMap<String, ArgumentMode>, // param name -> mode
+  pub pointees: BTreeMap<String, PointeeMode>, // pointer param -> pointee mode
   pub destructures: Option<String>, // source arg of a destructurer
   pub product: ProductMode,
   pub check: bool,
@@ -101,6 +116,7 @@ impl Sem {
     Sem {
       default_args,
       args: BTreeMap::new(),
+      pointees: BTreeMap::new(),
       destructures: None,
       product,
       check: true,
@@ -119,9 +135,9 @@ impl Sem {
   /// decl-vs-def sync check).
   pub fn proto_key(&self) -> String {
     format!(
-      "{:?}|{:?}|{:?}|{:?}|{}|{}",
-      self.default_args, self.args, self.destructures, self.product,
-      self.custom, self.check
+      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}",
+      self.default_args, self.args, self.pointees, self.destructures,
+      self.product, self.custom, self.check
     )
   }
 }
@@ -203,7 +219,8 @@ const PROD_SLOT_WORDS: &[&str] = &["product", "result", "return"];
 // start with one of these continues the previous clause
 const CLAUSE_HEADS: &[&str] = &[
   "transfers", "retains", "transfer", "retain", "direct", "passthrough",
-  "conslike", "read-only", "destructures", "destructure", "custom", "assert",
+  "conslike", "reads", "consumes", "fills", "destructures", "destructure",
+  "custom", "assert",
 ];
 
 // ---------------------------------------------------------------------------
@@ -422,23 +439,61 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
       continue;
     }
 
-    if head == "read-only" {
-      //  a pointer-to-noun parameter the callee only reads through:
-      //  `&var` at the call site is not an escape. Meaningless as a
-      //  default or on the product, so names are required.
+    if head == "reads" || head == "consumes" {
+      //  pointee protocol of a pointer-to-noun parameter: the callee
+      //  reads *a (without consuming), or gives away one counted
+      //  reference of the old *a. Meaningless as a default or on the
+      //  product, so names are required.
       if names.is_empty() {
         sem.warnings.push((
           line,
-          "@Refcount: read-only requires argument names".to_string(),
+          format!("@Refcount: {} requires argument names", head),
         ));
         continue;
       }
       for n in &names {
-        let slot = format!("argument `{}`", n);
-        set_slot(&mut explicit, &mut sem.warnings, line, &slot, "read-only");
-        sem.args.insert(n.clone(), ArgumentMode::ReadOnly);
+        let slot = format!("pointee `{}` {}", n, head);
+        set_slot(&mut explicit, &mut sem.warnings, line, &slot, head);
+        let pm = sem.pointees.entry(n.clone()).or_default();
+        if head == "reads" {
+          pm.reads = true;
+        } else {
+          pm.consumes = true;
+        }
       }
-      sem.why = "@Refcount: read-only".to_string();
+      sem.why = format!("@Refcount: {}", head);
+      continue;
+    }
+
+    if head == "fills" {
+      //  the callee writes a new value into *a: `fills transferred`
+      //  hands the caller a counted reference, `fills retained` an
+      //  uncounted view
+      let (fm, mname) = match words.first().copied() {
+        Some("transferred") => (FillMode::Transferred, "fills transferred"),
+        Some("retained") => (FillMode::Retained, "fills retained"),
+        _ => {
+          sem.warnings.push((
+            line,
+            "@Refcount: fills requires `retained` or `transferred`"
+              .to_string(),
+          ));
+          continue;
+        }
+      };
+      if names.is_empty() {
+        sem.warnings.push((
+          line,
+          "@Refcount: fills requires argument names".to_string(),
+        ));
+        continue;
+      }
+      for n in &names {
+        let slot = format!("pointee `{}` fill", n);
+        set_slot(&mut explicit, &mut sem.warnings, line, &slot, mname);
+        sem.pointees.entry(n.clone()).or_default().fills = Some(fm);
+      }
+      sem.why = format!("@Refcount: {}", mname);
       continue;
     }
 

@@ -83,7 +83,6 @@ u3we_lore(u3_noun cor)
   }
 }
 
-//  @Refcount: assert retains arguments
 u3_noun
 u3qe_leer(u3_atom txt)
 {
@@ -106,11 +105,9 @@ u3qe_leer(u3_atom txt)
 
       //  append to list
       //
-      {  //  @Refcount: assert transfer
-        *lit = u3i_defcons(&hed, &tel);
-        *hed = _leer_cut(pos_w, i_w - pos_w, txt);
-        lit  = tel;
-      }
+      *lit = u3i_defcons(&hed, &tel);
+      *hed = _leer_cut(pos_w, i_w - pos_w, txt);
+      lit  = tel;
 
       i_w++;
     }

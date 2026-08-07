@@ -112,7 +112,16 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
   - `direct product`: the product is a direct atom
   - `direct arguments`/`direct`: if the function returned, all arguments were direct atoms
   - `` destructures `x` ``: pointer-to-noun out-parameters are filled with borrowed views into the noun argument x, u3x_cell-style
-  - `` read-only `x`, `y` ``: the listed pointer-to-noun parameters are only read.
+  - `` reads `x`, `y` ``: the listed pointer-to-noun parameters are read through without consuming the pointee
+  - `` consumes `x`, `y` ``: one counted reference of the noun behind each listed pointer parameter is given away inside the call (a transferring read, or a u3z of the old value before a refill -- indistinguishable from the caller's side)
+  - `` fills transferred `x`, `y` ``: the listed pointer parameters hold a fresh owned noun on return; the caller must consume it. Overwriting an unconsumed owned pointee without a `consumes` clause is reported as a leak
+  - `` fills retained `x`, `y` ``: as above, but the new pointee is an uncounted view (tied to the call's noun arguments)
+
+  The pointee clauses compose: an in-place accumulator update is `` consumes `out`, fills transferred `out` ``.
+
+- Slot pointers. The interpreter tracks `u3_noun*` locals and pointee-annotated parameters as *slot pointers*: `&var` of a tracked noun, plain pointer assignment (aliasing), reads (`*p`) and stores (`*p = x`) through them all resolve to the pointed-at slot. A call site may hand a pointee-annotated parameter either `&var` or a tracked slot pointer (so an accumulator out-param can be passed along recursively). A slot pointer that escapes anywhere else -- an unannotated parameter, a store to memory, a return value, a struct initializer -- is reported.
+
+- `u3i_defcons` is modeled natively: the product is a fresh owned cell carrying two unfilled *holes*, and the `&ptr` arguments rebind those pointer variables to them.
 
 - List of refcount directives for a code block:
 

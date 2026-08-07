@@ -255,3 +255,170 @@ bug_indirect_int(u3_noun a)
 {
   return u3i_word(2 * u3x_atom(u3h(a)));
 }
+
+/* reads through a pointer-to-noun parameter without consuming it
+** @Refcount: reads `a`
+*/
+static c3_w
+_peek_pointee(u3_atom* a)
+{
+  return *a;
+}
+
+/* caller of a reads-pointee function (control)
+*/
+u3_noun
+ok_pointee_reads(u3_noun a)
+{
+  c3_w w = _peek_pointee(&a);
+  u3z(a);
+  return u3i_word(w);
+}
+
+/* fills the out-parameter with an owned noun; old contents untouched
+** @Refcount: fills transferred `out`
+*/
+static void
+_fill_pointee(u3_noun* out)
+{
+  *out = u3nc(u3_nul, u3_nul);
+}
+
+/* an uninitialized local filled by an out-param call (control)
+*/
+u3_noun
+ok_pointee_fill(u3_noun a)
+{
+  u3_noun out;
+  u3z(a);
+  _fill_pointee(&out);
+  return out;
+}
+
+/* consumes the old pointee and fills in a new owned one
+** @Refcount: consumes `acc`, fills transferred `acc`
+*/
+static void
+_bump_pointee(u3_noun* acc)
+{
+  *acc = u3nc(*acc, u3_nul);
+}
+
+/* in-place accumulator update: old value consumed inside the call (control)
+*/
+u3_noun
+ok_pointee_update(u3_noun a)
+{
+  _bump_pointee(&a);
+  return a;
+}
+
+/* fill-only callee overwrites an owned pointee: the old reference leaks
+*/
+u3_noun
+bug_pointee_overwrite(u3_noun a)
+{
+  _fill_pointee(&a);            //  BUG: a overwritten, old value leaked
+  return a;
+}
+
+/* hands out an uncounted view of the argument's interior
+** @Refcount: retains `som`, fills retained `hed`
+*/
+static void
+_view_pointee(u3_noun som, u3_noun* hed)
+{
+  *hed = u3h(som);
+}
+
+/* a retained fill is copied before its source dies (control)
+*/
+u3_noun
+ok_pointee_view(u3_noun a)
+{
+  u3_noun hed;
+  _view_pointee(a, &hed);
+  u3_noun pro = u3k(hed);
+  u3z(a);
+  return pro;
+}
+
+/* a retained fill dies with its source
+*/
+u3_noun
+bug_pointee_view_uaf(u3_noun a)
+{
+  u3_noun hed;
+  _view_pointee(a, &hed);
+  u3z(a);
+  return u3k(hed);              //  BUG: hed view died with a
+}
+
+/* deferred-cons list builder (the turn.c shape): each iteration fills
+** the previous slot and leaves exactly one new hole (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_defcons_build(u3_noun a)
+{
+  u3_noun  pro;
+  u3_noun* lit = &pro;
+
+  while ( u3_nul != a ) {
+    u3_noun* hed;
+    u3_noun* tel;
+    *lit = u3i_defcons(&hed, &tel);
+    *hed = u3qa_inc(u3h(a));
+    lit  = tel;
+    a    = u3t(a);
+  }
+  *lit = u3_nul;
+  return pro;
+}
+
+/* the tail slot is never filled: an incomplete cell escapes
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_defcons_unfilled(u3_noun a)
+{
+  u3_noun* hed;
+  u3_noun* tel;
+  u3_noun  pro = u3i_defcons(&hed, &tel);
+  *hed = u3qa_inc(a);
+  return pro;                   //  BUG: tel's slot never filled
+}
+
+/* the same slot filled twice: the first value leaks and the cell is
+** corrupted
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_defcons_double(u3_noun a)
+{
+  u3_noun* hed;
+  u3_noun* tel;
+  u3_noun  pro = u3i_defcons(&hed, &tel);
+  *hed = u3qa_inc(a);
+  *hed = u3qa_inc(a);           //  BUG: slot already filled
+  *tel = u3_nul;
+  return pro;
+}
+
+/* two counts on one temporary: one consumed by the gate slam, one by
+** the cons -- the refactored skid.c shape (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_double_gain(u3_noun a, u3_noun b)
+{
+  u3j_site sit_u;
+  u3j_gate_prep(&sit_u, u3k(b));
+
+  u3_noun i   = u3k(u3k(u3h(a)));
+  u3_noun res = u3j_gate_slam(&sit_u, i);
+  u3_noun pro = u3nc(res, i);
+
+  u3j_gate_lose(&sit_u);
+  return pro;
+}

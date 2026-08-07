@@ -74,7 +74,8 @@ _json_get_string_as_atom(json_stream *sam_u) {
 }
 
 //  @Refcount: assert, retains `txt`, transfers product
-//  (not analyzable due to pdjson invariants not being observable?)
+//  (a bit hard to analyze as u3i_defcons passes u3_noun* to a non-local
+//  varaible)
 static u3_noun
 _parse(u3_atom txt)
 {

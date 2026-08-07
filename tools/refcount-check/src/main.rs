@@ -28,7 +28,8 @@ use std::rc::Rc;
 use ast::{is_noun_type, Cursor, Index, Tu};
 use sem::{
   annotation_sync_findings, block_asserts, body_annotation_warnings, cursor_comments,
-  prefix_sem, re_file_custom, resolve_sem, ArgumentMode, AssertMode, FileComments, Finding,
+  prefix_sem, re_file_custom, resolve_sem, ArgumentMode, AssertMode,
+  FileComments, FillMode, Finding,
   ProductMode, Sem, SemCache, SrcCache,
 };
 
@@ -461,7 +462,28 @@ fn explain(
     };
     let tspell = p.ty().spelling();
     if !is_noun_type(&p.ty()) {
-      println!("    {:<12} {:<12} (not a noun: untracked)", pname, tspell);
+      if let Some(pm) = sem.pointees.get(&pname) {
+        let mut parts: Vec<&str> = Vec::new();
+        if pm.reads {
+          parts.push("reads the pointee");
+        }
+        if pm.consumes {
+          parts.push("consumes the old pointee");
+        }
+        match pm.fills {
+          Some(FillMode::Transferred) => {
+            parts.push("fills it with an owned value (caller must u3z)")
+          }
+          Some(FillMode::Retained) => {
+            parts.push("fills it with an uncounted view")
+          }
+          None => {}
+        }
+        println!("    {:<12} {:<12} POINTEE: {}", pname, tspell,
+          parts.join("; "));
+      } else {
+        println!("    {:<12} {:<12} (not a noun: untracked)", pname, tspell);
+      }
       continue;
     }
     let mode = match sem.arg_mode(&pname) {
@@ -558,6 +580,7 @@ struct Args {
   verbose: bool,
   selftest: bool,
   no_pch: bool,
+  asserted: bool,
   explain: Option<String>,
 }
 
@@ -598,10 +621,11 @@ fn parse_args() -> Args {
       "--verbose" => a.verbose = true,
       "--selftest" => a.selftest = true,
       "--no-pch" => a.no_pch = true,
+      "--asserted" => a.asserted = true,
       "-h" | "--help" => {
         println!(
           "usage: refcount-check [--cdb F] [--filter S] [--only S] [--function F] \
-          [--libclang PATH] [--verbose] [--selftest] [--no-pch] \
+          [--libclang PATH] [--verbose] [--selftest] [--no-pch] [--asserted] \
           [--explain [FILE:]FUNCTION]"
         );
         exit(0);
@@ -645,6 +669,36 @@ impl Drop for CheckTimer {
     CHECK_US.fetch_add(self.0.elapsed().as_micros() as u64,
       std::sync::atomic::Ordering::Relaxed);
   }
+}
+
+/// One-line protocol summary for --asserted listings.
+fn sem_brief(sem: &Sem) -> String {
+  let mut parts = vec![
+    format!("args={}", sem.default_args.as_str()),
+    format!("product={}", sem.product.as_str()),
+  ];
+  for (n, m) in &sem.args {
+    parts.push(format!("{}={}", n, m.as_str()));
+  }
+  for (n, pm) in &sem.pointees {
+    let mut bits: Vec<&str> = Vec::new();
+    if pm.reads {
+      bits.push("reads");
+    }
+    if pm.consumes {
+      bits.push("consumes");
+    }
+    match pm.fills {
+      Some(FillMode::Transferred) => bits.push("fills-transferred"),
+      Some(FillMode::Retained) => bits.push("fills-retained"),
+      None => {}
+    }
+    parts.push(format!("*{}={}", n, bits.join("+")));
+  }
+  if let Some(d) = &sem.destructures {
+    parts.push(format!("destructures={}", d));
+  }
+  parts.join(", ")
 }
 
 fn process_entry(
@@ -740,6 +794,18 @@ fn process_entry(
       continue;
     }
     if !sem.check {
+      //  `assert`ed protocols in non-custom files are the annotation
+      //  debt --asserted lists: trusted claims a future analysis
+      //  (builder/slot tracking) should verify instead
+      if args.asserted && !sem.custom {
+        out.stdout.push(format!(
+          "{}:{}: {} [{}]",
+          relpath(fpath),
+          loc.line,
+          cur.spelling(),
+          sem_brief(&sem)
+        ));
+      }
       if args.verbose {
         out.stdout
           .push(format!("-- {}: trusted ({})", cur.spelling(), sem.why));
@@ -963,6 +1029,10 @@ fn run() -> i32 {
       ("bug_switch_tail", "leak"),
       ("bug_slam_stale", "use-after-free"),
       ("bug_indirect_int", "strange expression"),
+      ("bug_pointee_overwrite", "leak"),
+      ("bug_pointee_view_uaf", "use-after-free"),
+      ("bug_defcons_unfilled", "refcount error"),
+      ("bug_defcons_double", "use-after-free"),
       ("skip_back_goto", "complicated"),
       //  KNOWN LIMITATION: one env per branch cannot carry the
       //  disjunction "a direct OR b direct" past the || join, so the
@@ -980,6 +1050,16 @@ fn run() -> i32 {
       "ok_direct_caller",
       "ok_block",
       "ok_fwd_goto",
+      "ok_pointee_reads",
+      "ok_pointee_fill",
+      "ok_pointee_update",
+      "ok_pointee_view",
+      "_peek_pointee",
+      "_fill_pointee",
+      "_bump_pointee",
+      "_view_pointee",
+      "ok_defcons_build",
+      "ok_double_gain",
     ]);
     let got: HashSet<(&str, &str)> = findings
       .iter()

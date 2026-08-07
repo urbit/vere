@@ -23,10 +23,12 @@ use clang_sys::*;
 
 use crate::ast::{
   binop, decl_ref_name, int_literal_value, is_direct_type, is_expr_kind,
-  is_local_lvalue, is_noun_type, unary_op, unwrap_expr, Cursor, Name, Ty, Loc,
+  is_local_lvalue, is_noun_ptr_type, is_noun_type, unary_op, unwrap_expr,
+  Cursor, Name, Ty, Loc,
 };
 use crate::config;
-use crate::sem::{AssertMode, Finding, ArgumentMode, ProductMode, Sem};
+use crate::sem::{AssertMode, Finding, ArgumentMode, FillMode, PointeeMode,
+  ProductMode, Sem};
 
 static LI: &str = "linter invariant";
 
@@ -69,6 +71,27 @@ enum RefcountState {
   Poisoned,           // consumed, not valid to use
   Direct,             // direct atom, no refcounting
   Passthrough,             // do not touch refcounts
+  Slot,               // pointer to a noun slot; target in Env.slots
+}
+
+/// What a live slot-pointer value points at. A filled or dead slot has
+/// no entry: its value is Poisoned and any use reports.
+#[derive(Clone, PartialEq, Eq)]
+enum SlotTarget {
+  Var(VarName),         // &x: the binding cell of a tracked variable
+  Hole {owner: ValId},  // unfilled deferred-cons slot inside [owner]
+}
+
+impl SlotTarget {
+  /// The same target with the hole owner mapped through `f`; None when
+  /// the mapping is ambiguous.
+  fn remap(self, f: impl Fn(ValId) -> Option<ValId>) -> Option<SlotTarget> {
+    match self {
+      SlotTarget::Var(v) => Some(SlotTarget::Var(v)),
+      SlotTarget::Hole {owner} =>
+        f(owner).map(|o| SlotTarget::Hole {owner: o}),
+    }
+  }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -87,7 +110,8 @@ struct Env {
   values: IHashMap<ValId, RefcountState>,
   vars: IHashMap<ValId, IHashSet<VarName>>,
   vars_rev: IHashMap<VarName, ValId>,
-  contains: IHashMap<ValId, IHashSet<ValId>>  // noun -> (set sub-noun)
+  contains: IHashMap<ValId, IHashSet<ValId>>, // noun -> (set sub-noun)
+  slots: IHashMap<ValId, SlotTarget>,         // live slot-pointer targets
 }
 
 impl Env {
@@ -128,12 +152,27 @@ impl Env {
     ns.join(", ")
   }
 
+  /// Does `id` still own unfilled deferred-cons slots (u3i_defcons
+  /// holes that were never stored to)?
+  fn has_holes(&self, id: ValId) -> bool
+  {
+    self.slots.values()
+      .any(|t| matches!(t, SlotTarget::Hole {owner} if *owner == id))
+  }
+
   /// One counted reference to `id` is given away (transferred to a
   /// callee, stored, returned). Owned decrements; losing the last
   /// reference poisons the value, so later reads through any alias
   /// report use-after-transfer. Direct atoms are free to give away.
   fn lose(mut self, id: ValId, cur: &Cursor, g: &Gen) -> R<Env>
   {
+    //  an incomplete noun must not travel: every deferred slot has to
+    //  be filled before the structure is transferred or freed
+    if self.has_holes(id) {
+      report!(g, cur, "refcount error",
+        "giving away [{}] with unfilled deferred slots (u3i_defcons \
+         holes must be stored to first)", self.names(id));
+    }
     let state = self.values.get_mut(&id)
       .expect("linter invariant: every ValId is present in values");
 
@@ -161,6 +200,9 @@ impl Env {
 
       RefcountState::Passthrough => report!(g, cur, "refcount error",
         "losing passthrough value [{}]", self.names(id)),
+
+      RefcountState::Slot => report!(g, cur, "refcount error",
+        "transferring a slot pointer [{}] as a noun", self.names(id)),
     };
     Ok(self)
   }
@@ -211,6 +253,9 @@ struct Gen<'a> {
   //  the original parameter values: roots the CALLER holds a counted
   //  reference to, immune to the u3j_gate_slam borrowed-view sweep
   param_vids: Vec<ValId>,
+  //  pointee-annotated pointer parameters: the synthetic "*name"
+  //  variable, its original value, and the contract to enforce at exit
+  pointee_params: Vec<(VarName, ValId, PointeeMode)>,
   //  why a value became Poisoned, for use-after-free messages. Keyed
   //  by ValId (never reused within a function), so recording is
   //  path-insensitive; consulted only when a state IS Poisoned.
@@ -235,6 +280,13 @@ impl Gen<'_> {
     self.poison_why.borrow().get(&id)
       .map(|w| format!(" ({})", w))
       .unwrap_or_default()
+  }
+
+  /// The pointee contract of a synthetic "*param" variable, if any.
+  fn pointee_contract(&self, var: &VarName) -> Option<PointeeMode> {
+    self.pointee_params.iter()
+      .find(|(v, _, _)| v == var)
+      .map(|(_, _, pm)| *pm)
   }
 }
 
@@ -279,6 +331,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     sem,
     assert_transfer_all: 0,
     param_vids: Vec::new(),
+    pointee_params: Vec::new(),
     poison_why: RefCell::new(HashMap::new()),
   };
 
@@ -288,19 +341,48 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
       report_v!(&g, fun, "strange argument", "nameless argument");
     }
     if p.kind() != CXCursor_ParmDecl || !is_noun_type(&p.ty()) {
+      //  a pointee-annotated pointer parameter: model the pointed-at
+      //  noun as a variable "*name" (initial state per the contract)
+      //  and the parameter itself as a slot pointer to it
+      if p.kind() == CXCursor_ParmDecl {
+        if let Some(pm) = sem.pointees.get(&*pname).copied() {
+          if !is_noun_ptr_type(&p.ty()) {
+            report_v!(&g, fun, "annotation",
+              "@Refcount: pointee annotation on [{pname}], which is not \
+               a pointer to a noun");
+          }
+          let pv = VarName {
+            name: Name::from(format!("*{}", pname)), depth: 0,
+          };
+          let rc = if pm.consumes {
+            RefcountState::Owned {extra: 0}
+          } else if pm.reads {
+            RefcountState::Borrowed
+          } else {
+            RefcountState::Uninit
+          };
+          let pvid = env.insert_new(pv.clone(), rc, &mut g);
+          g.param_vids.push(pvid);
+          let sid = new_val(&mut env, RefcountState::Slot, &mut g);
+          env.slots.insert(sid, SlotTarget::Var(pv.clone()));
+          env.bind_decl(VarName {name: pname, depth: 0}, sid);
+          g.pointee_params.push((pv, pvid, pm));
+        }
+      }
       continue;
+    }
+    //  pointee clauses mark pointer-to-noun parameters, which are not
+    //  noun-typed; on a noun parameter they are an annotation mistake
+    if sem.pointees.contains_key(&*pname) {
+      report_v!(&g, fun, "annotation",
+        "@Refcount: pointee annotation (reads/consumes/fills) on \
+         noun-typed parameter [{pname}]: pointee clauses apply to \
+         pointer-to-noun parameters only");
     }
     let mode = sem.arg_mode(&pname);
     let rc = match mode {
       ArgumentMode::Conslike
         => report_v!(&g, fun, "not implmented","checking of conslike"),
-
-      //  read-only marks pointer-to-noun parameters, which are not
-      //  noun-typed; on a noun parameter it is an annotation mistake
-      ArgumentMode::ReadOnly
-        => report_v!(&g, fun, "annotation",
-             "@Refcount: read-only on noun-typed parameter [{pname}]: \
-              read-only applies to pointer-to-noun parameters only"),
 
       ArgumentMode::Transfer    => RefcountState::Owned { extra: 0 },
       ArgumentMode::Retain      => RefcountState::Borrowed,
@@ -845,7 +927,8 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     //
     if !is_record && !is_array {
       let Some(init) = init else {
-        if is_noun_type(&ty) {
+        //  slot pointers (u3_noun*) are tracked alongside nouns
+        if is_noun_type(&ty) || is_noun_ptr_type(&ty) {
           env.insert_new(var, RefcountState::Uninit, g);
         }
         continue;
@@ -1021,6 +1104,13 @@ fn eval_init_effects(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     report!(g, cur, "leak",
       "owned value discarded into an untracked aggregate initializer");
   }
+  if vid.is_some_and(|v|
+    matches!(nxt.values.get(&v), Some(RefcountState::Slot)))
+  {
+    report!(g, cur, "complicated",
+      "slot pointer in an untracked aggregate initializer, won't \
+       analyze");
+  }
   Ok(Some(nxt))
 }
 
@@ -1144,6 +1234,12 @@ fn execute_return(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   let (opt_vid, opt_env) = eval_expr(cur, env, depth, g)?;
   // let Some(vid) = opt_vid else { return Ok(opt_env) };
   let Some(mut env) = opt_env else { return Ok(None) };
+  if let Some(vid) = opt_vid {
+    if matches!(env.values.get(&vid), Some(RefcountState::Slot)) {
+      report!(g, cur, "complicated",
+        "returning a slot pointer, won't analyze");
+    }
+  }
   match g.sem.product {
     ProductMode::Retain => {},
     ProductMode::Transfer => {
@@ -1188,9 +1284,23 @@ fn execute_return(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
 fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<Option<Env>>
 {
+  let u = unwrap_expr(*cur);
+
+  //  `u3k(i), u3k(t);` -- a comma chain in statement position is a
+  //  sequence of statements: each element gets statement semantics
+  //  (notably the bare-u3k in-place upgrade below)
+  if u.kind() == CXCursor_BinaryOperator && u.binop_kind() == binop::COMMA {
+    let kids = u.children();
+    if kids.len() == 2 {
+      let Some(env) = execute_expr_stmt(&kids[0], env, depth, g)? else {
+        return Ok(None);
+      };
+      return execute_expr_stmt(&kids[1], env, depth, g);
+    }
+  }
+
   //  bare `u3k(x);` in statement position: the new count belongs to [x]
   //  itself, not to a discarded product
-  let u = unwrap_expr(*cur);
   if u.kind() == CXCursor_CallExpr {
     let rs = u.referenced().map(|r| r.spelling());
     if matches!(rs.as_deref(), Some("u3a_gain") | Some("u3a_take")) {
@@ -1213,6 +1323,8 @@ fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
               "u3k of uninitialized variable [{}]", env.names(vid)),
             RefcountState::Poisoned => report!(g, cur, "use-after-free",
               "u3k of already-consumed value [{}]", env.names(vid)),
+            RefcountState::Slot => report!(g, cur, "refcount error",
+              "u3k of slot pointer [{}]", env.names(vid)),
             RefcountState::Passthrough => report!(g, cur, "refcount error",
               "refcount operation on passthrough value [{}]",
               env.names(vid)),
@@ -1364,6 +1476,105 @@ fn bind_value(env: &mut Env, var: VarName, rvid: Option<ValId>, g: &mut Gen)
   };
   env.bind_decl(var, id);
   id
+}
+
+/// Read through a live slot pointer: the noun currently in the slot.
+fn read_slot(cur: &Cursor, env: Env, sid: ValId, g: &Gen)
+  -> R<(Option<ValId>, Option<Env>)>
+{
+  match env.slots.get(&sid).cloned().expect(LI) {
+    SlotTarget::Var(v) => {
+      let Some(tvid) = env.vars_rev.get(&v).copied() else {
+        report!(g, cur, "complicated",
+          "slot pointer target [{}] is out of scope", v.name);
+      };
+      read_check(cur, &env, tvid, g)?;
+      Ok((Some(tvid), Some(env)))
+    }
+    SlotTarget::Hole {..} => {
+      report!(g, cur, "refcount error",
+        "read through [{}], an unfilled deferred slot", env.names(sid));
+    }
+  }
+}
+
+/// `*p = v` through a live slot pointer: rebind the target variable,
+/// or fill the deferred-cons hole (the stored value's counted
+/// reference moves into the owning structure, conslike).
+fn store_slot(cur: &Cursor, env: Env, sid: ValId, rvid: Option<ValId>,
+  g: &mut Gen) -> R<(Option<ValId>, Option<Env>)>
+{
+  let mut env = env;
+  match env.slots.get(&sid).cloned().expect(LI) {
+    SlotTarget::Var(var) => {
+      let Some(old) = env.vars_rev.get(&var).copied() else {
+        report!(g, cur, "complicated",
+          "slot pointer target [{}] is out of scope", var.name);
+      };
+      if rvid == Some(old) {
+        return Ok((rvid, Some(env)));  //  *p = *p
+      }
+      //  a pointee parameter not annotated `fills` must not be written
+      if let Some(pm) = g.pointee_contract(&var) {
+        if pm.fills.is_none() {
+          report!(g, cur, "annotation",
+            "store through pointer parameter [{}] whose pointee is not \
+             annotated `fills retained|transferred`", var.name);
+        }
+      }
+      env = unbind_var(env, &var, cur, g)?;
+      let id = bind_value(&mut env, var, rvid, g);
+      Ok((Some(id), Some(env)))
+    }
+    SlotTarget::Hole {owner} => {
+      if let Some(v) = rvid {
+        match *env.values.get(&v).expect(LI) {
+          RefcountState::Owned {extra: 0} => {
+            env.values.insert(v, RefcountState::Borrowed);
+            env.contains.entry(owner).or_default().insert(v);
+          }
+          RefcountState::Owned {extra} => {
+            env.values.insert(v, RefcountState::Owned {extra: extra - 1});
+            env.contains.entry(owner).or_default().insert(v);
+          }
+          RefcountState::Direct => {}
+          RefcountState::Borrowed => report!(g, cur, "refcount error",
+            "storing an uncounted reference [{}] into a deferred slot: \
+             the cell owns its parts, u3k first", env.names(v)),
+          RefcountState::Uninit => report!(g, cur, "refcount error",
+            "storing uninitialized [{}] into a deferred slot",
+            env.names(v)),
+          RefcountState::Poisoned => report!(g, cur, "use-after-free",
+            "storing already-consumed [{}] into a deferred slot{}",
+            env.names(v), g.why_poisoned(v)),
+          RefcountState::Slot => report!(g, cur, "refcount error",
+            "storing a slot pointer [{}] into a deferred slot",
+            env.names(v)),
+          RefcountState::Passthrough => report!(g, cur, "refcount error",
+            "storing passthrough value [{}] into a deferred slot",
+            env.names(v)),
+        }
+        //  the stored value's own unfilled holes become the owner's:
+        //  filling them completes the same structure (this roll-up is
+        //  what keeps hole owners naming the ROOT, so the loop join
+        //  converges regardless of how long the built chain gets)
+        let nested: Vec<ValId> = env.slots.iter()
+          .filter(|(_, t)|
+            matches!(t, SlotTarget::Hole {owner: o} if *o == v))
+          .map(|(k, _)| *k)
+          .collect();
+        for k in nested {
+          env.slots.insert(k, SlotTarget::Hole {owner});
+        }
+      }
+      //  the slot is filled; the pointer that led here is dead
+      env.slots.remove(&sid);
+      g.note_poison(sid,
+        format!("deferred slot filled at {}", loc_str(cur)));
+      env.values.insert(sid, RefcountState::Poisoned);
+      Ok((rvid, Some(env)))
+    }
+  }
 }
 
 /// A tracked noun used as a raw C integer (arithmetic, ordering,
@@ -1554,20 +1765,28 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     };
     if op.as_deref() == Some("&") {
       if let Some(name) = decl_ref_name(child) {
-        if let Some((_, vid)) = read_var(&env, &name) {
+        if let Some((var, vid)) = read_var(&env, &name) {
           //  the address of a proven-direct atom is a plain word/byte
           //  view of the variable (sew/aor-style buffer readers): there
           //  is no refcount to corrupt and nothing to free through it
           if matches!(env.values.get(&vid), Some(RefcountState::Direct)) {
             return Ok((None, Some(env)));
           }
-          report!(g, &cur, "complicated",
-            "address of tracked noun variable [{}] escapes, won't analyze \
-             (annotate the callee `@Refcount: destructures `src`` if this \
-             is an out-param of a destructurer; `@Refcount: read-only` on \
-             the parameter if it only reads through the pointer; or prove \
-             the value direct with a u3a_is_cat guard if this is a \
-             word/byte view)", name);
+          //  &ptr (a u3_noun**) only makes sense as a u3i_defcons
+          //  argument, which intercepts it before evaluation
+          if matches!(env.values.get(&vid), Some(RefcountState::Slot)) {
+            report!(g, &cur, "complicated",
+              "address of slot pointer [{}] taken outside u3i_defcons, \
+               won't analyze", name);
+          }
+          //  the address of a tracked noun variable is a slot pointer:
+          //  reads and stores through it hit the variable. Every sink
+          //  that would let it escape (unannotated call parameters,
+          //  stores to memory, returns) reports instead.
+          let mut env = env;
+          let sid = new_val(&mut env, RefcountState::Slot, g);
+          env.slots.insert(sid, SlotTarget::Var(var));
+          return Ok((Some(sid), Some(env)));
         }
       }
       //  address of untracked storage: effects in the operand only
@@ -1588,7 +1807,21 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       let (_, nxt) = eval_expr(child, env, depth, g)?;
       return Ok((None, nxt));
     }
-    //  * ! ~ - + : the operand is read, the result is untracked
+    //  *p through a live slot pointer reads the slot's current noun
+    if op.as_deref() == Some("*") {
+      let (v, nxt) = eval_expr(child, env, depth, g)?;
+      let Some(nxt) = nxt else { return Ok((None, None)); };
+      if let Some(sid) = v {
+        if matches!(nxt.values.get(&sid), Some(RefcountState::Slot)) {
+          return read_slot(&cur, nxt, sid, g);
+        }
+        read_check(&cur, &nxt, sid, g)?;
+        discard_check(&cur, &nxt, Some(sid), g)?;
+      }
+      return Ok((None, Some(nxt)));
+    }
+
+    //  ! ~ - + : the operand is read, the result is untracked
     let (v, nxt) = eval_expr(child, env, depth, g)?;
     let Some(nxt) = nxt else { return Ok((None, None)); };
     discard_check(&cur, &nxt, v, g)?;
@@ -1763,6 +1996,11 @@ fn merge_ternary_vals(cur: &Cursor, env: &mut Env, a: ValId, b: ValId,
   };
   let sa = *env.values.get(&a).expect(LI);
   let sb = *env.values.get(&b).expect(LI);
+  if matches!(sa, RefcountState::Slot) || matches!(sb, RefcountState::Slot)
+  {
+    report!(g, cur, "complicated",
+      "conditional produces slot pointers, won't analyze");
+  }
   let a_loc = located(env, a);
   let b_loc = located(env, b);
 
@@ -1849,6 +2087,13 @@ fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize, env: Env,
     let (v, nxt) = eval_expr(a, env, depth, g)?;
     let Some(nxt) = nxt else { return Ok((None, None)); };
     discard_check(a, &nxt, v, g)?;
+    if v.is_some_and(|v|
+      matches!(nxt.values.get(&v), Some(RefcountState::Slot)))
+    {
+      report!(g, a, "complicated",
+        "slot pointer passed to a destructurer argument that is not \
+         `&var`, won't analyze");
+    }
     env = nxt;
   }
   Ok((None, Some(env)))
@@ -1897,10 +2142,35 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     };
     let (vid, nxt) = eval_expr(a0, env, depth, g)?;
     let Some(mut nxt) = nxt else { return Ok((None, None)); };
+    if let Some(v) = vid {
+      if nxt.has_holes(v) {
+        report!(g, cur, "refcount error",
+          "u3k of [{}], an incomplete noun with unfilled deferred slots",
+          nxt.names(v));
+      }
+      //  u3k of an unnamed owned temporary (`u3k(u3k(x))`, `u3k(f(x))`):
+      //  the same pointer gains one more count, so keep the value's
+      //  identity -- both counts are then consumed through it (the
+      //  skid.c double-gain shape). A fresh vid here would orphan the
+      //  inner count as a phantom leak and let the first consumption
+      //  falsely kill the second reference. Named values still get a
+      //  fresh vid: their aliases must not share the new count.
+      if let Some(RefcountState::Owned {extra}) = nxt.values.get(&v).copied()
+      {
+        if nxt.vars.get(&v).is_none_or(|l| l.is_empty()) {
+          nxt.values.insert(v, RefcountState::Owned {extra: extra + 1});
+          return Ok((Some(v), Some(nxt)));
+        }
+      }
+    }
     let prod = match vid.map(|v| (v, *nxt.values.get(&v).expect(LI))) {
       Some((v, RefcountState::Uninit)) => {
         report!(g, cur, "refcount error",
           "u3k of uninitialized variable [{}]", nxt.names(v));
+      }
+      Some((v, RefcountState::Slot)) => {
+        report!(g, cur, "refcount error",
+          "u3k of slot pointer [{}]", nxt.names(v));
       }
       Some((_, RefcountState::Direct)) => RefcountState::Direct,
       _ => RefcountState::Owned {extra: 0},
@@ -1920,6 +2190,15 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       if matches!(nxt.values.get(&parent), Some(RefcountState::Uninit)) {
         report!(g, cur, "refcount error",
           "u3h/u3t of uninitialized variable [{}]", nxt.names(parent));
+      }
+      if matches!(nxt.values.get(&parent), Some(RefcountState::Slot)) {
+        report!(g, cur, "refcount error",
+          "u3h/u3t of slot pointer [{}]", nxt.names(parent));
+      }
+      if nxt.has_holes(parent) {
+        report!(g, cur, "refcount error",
+          "u3h/u3t of [{}], an incomplete noun with unfilled deferred \
+           slots", nxt.names(parent));
       }
     }
     let id = new_val(&mut nxt, RefcountState::Borrowed, g);
@@ -1943,6 +2222,36 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  source
   if let Some(src_i) = config::destructurer_src(cn) {
     return eval_destructurer(cur, &args, src_i, env, depth, g);
+  }
+
+  //  u3i_defcons: allocate a cell whose head and tail are filled later
+  //  through the returned slot pointers. The product is a fresh owned
+  //  cell carrying two unfilled holes; each &ptr argument rebinds that
+  //  pointer variable to one of them.
+  if cn == "u3i_defcons" {
+    let cell = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
+    for a in &args {
+      let au = unwrap_expr(*a);
+      let pname = (au.kind() == CXCursor_UnaryOperator
+        && unary_op(&au).as_deref() == Some("&"))
+        .then(|| au.children().first().and_then(decl_ref_name))
+        .flatten();
+      let Some(pname) = pname else {
+        report!(g, a, "complicated",
+          "u3i_defcons out-pointer is not `&ptr` of a local pointer \
+           variable, won't analyze");
+      };
+      let Some((var, _)) = read_var(&env, &pname) else {
+        report!(g, a, "complicated",
+          "u3i_defcons out-pointer [{}] is not a tracked pointer \
+           variable, won't analyze", pname);
+      };
+      env = unbind_var(env, &var, a, g)?;
+      let h = new_val(&mut env, RefcountState::Slot, g);
+      env.slots.insert(h, SlotTarget::Hole {owner: cell});
+      env.bind_decl(var, h);
+    }
+    return Ok((Some(cell), Some(env)));
   }
 
   //  no referenced declaration: function pointer or similar
@@ -1997,33 +2306,134 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     return eval_destructurer(cur, &args, src_i, env, depth, g);
   }
 
+  //  pointee-annotated names must name actual parameters
+  for pn in sem.pointees.keys() {
+    if !params.iter().any(|p| &*p.spelling() == pn.as_str()) {
+      report!(g, cur, "annotation",
+        "@Refcount: pointee annotation names unknown parameter `{}` of \
+         {}()", pn, cn);
+    }
+  }
+
   //  phase 1: C evaluates every operand before the call
   let mut evald: Vec<(Cursor, Option<Cursor>, Option<ValId>)> = Vec::new();
+  //  pointer args to pointee-annotated params
+  enum PointeeArg {
+    Var(VarName, ValId), //  variable slot and its current value
+    Hole(ValId),         //  sid of an unfilled deferred slot
+  }
+  let mut pointee_work: Vec<(Cursor, PointeeArg, PointeeMode)> = Vec::new();
   for (i, a) in args.iter().enumerate() {
-    //  `&var` handed to a `@Refcount: read-only` pointer-to-noun
-    //  parameter: the callee reads the noun through the pointer but
-    //  never writes it, so the address does not escape -- model it as
-    //  a plain read of the variable
+    //  `&var` handed to an annotated pointer-to-noun parameter: the
+    //  pointee clauses say what the callee does through the pointer,
+    //  so the address does not escape. Read checks happen now;
+    //  consumption and refill apply after all operands evaluate --
+    //  the call itself acts on the pointee, not the operand
     if let Some(p) = params.get(i) {
-      if sem.arg_mode(&p.spelling()) == ArgumentMode::ReadOnly
-        && !is_noun_type(&p.ty())
-      {
+      if let Some(pm) = sem.pointees.get(&*p.spelling()).copied() {
+        if is_noun_type(&p.ty()) {
+          report!(g, a, "annotation",
+            "@Refcount: pointee annotation on noun-typed parameter \
+             `{}` of {}(): pointee clauses apply to pointer-to-noun \
+             parameters only", p.spelling(), cn);
+        }
+        //  resolve the argument to the variable slot it points at: a
+        //  literal `&var`, or a tracked slot-pointer value (a pointer
+        //  parameter or local handed along, e.g. recursion on an
+        //  accumulator out-param)
         let au = unwrap_expr(*a);
+        let mut parg: Option<PointeeArg> = None;
         if au.kind() == CXCursor_UnaryOperator
           && unary_op(&au).as_deref() == Some("&")
         {
           if let Some(nm) = au.children().first().and_then(decl_ref_name) {
-            if let Some((_, vid)) = read_var(&env, &nm) {
-              if matches!(env.values.get(&vid), Some(RefcountState::Uninit)) {
-                report!(g, a, "refcount error",
-                  "read-only parameter of {}() reads uninitialized \
-                   variable [{}]", cn, env.names(vid));
+            if let Some((var, vid)) = read_var(&env, &nm) {
+              if matches!(env.values.get(&vid), Some(RefcountState::Slot)) {
+                report!(g, a, "complicated",
+                  "address of slot pointer [{}] handed to the `{}` \
+                   parameter of {}(), won't analyze", nm,
+                  p.spelling(), cn);
               }
-              read_check(a, &env, vid, g)?;
-              evald.push((*a, params.get(i).copied(), None));
-              continue;
+              parg = Some(PointeeArg::Var(var, vid));
             }
           }
+          //  &untracked storage: opaque out-pointer, plain walk below
+        } else {
+          let (v, nxt) = eval_expr(a, env, depth, g)?;
+          let Some(nxt) = nxt else { return Ok((None, None)); };
+          env = nxt;
+          let Some(sid) = v else {
+            //  untracked pointer expression (NULL, global): opaque
+            evald.push((*a, params.get(i).copied(), None));
+            continue;
+          };
+          match env.values.get(&sid).copied() {
+            Some(RefcountState::Slot) => {
+              match env.slots.get(&sid).cloned().expect(LI) {
+                SlotTarget::Var(var) => {
+                  let Some(vid) = env.vars_rev.get(&var).copied() else {
+                    report!(g, a, "complicated",
+                      "slot pointer target [{}] is out of scope",
+                      var.name);
+                  };
+                  parg = Some(PointeeArg::Var(var, vid));
+                }
+                //  a callee may COMPLETE a deferred slot, but only by
+                //  storing an owned value into it: the hole holds
+                //  nothing to read or consume, and a retained fill
+                //  would put an uncounted reference inside the cell
+                SlotTarget::Hole {..} => {
+                  if pm.reads || pm.consumes {
+                    report!(g, a, "refcount error",
+                      "{}() reads through a pointer to an unfilled \
+                       deferred slot", cn);
+                  }
+                  if pm.fills != Some(FillMode::Transferred) {
+                    report!(g, a, "refcount error",
+                      "only a `fills transferred` callee may fill a \
+                       deferred slot ({}() would not store an owned \
+                       value)", cn);
+                  }
+                  parg = Some(PointeeArg::Hole(sid));
+                }
+              }
+            }
+            Some(RefcountState::Poisoned) => {
+              report!(g, a, "use-after-free",
+                "dead slot pointer [{}] passed to {}(){}",
+                env.names(sid), cn, g.why_poisoned(sid));
+            }
+            _ => {
+              report!(g, a, "complicated",
+                "cannot resolve the pointer handed to the annotated \
+                 `{}` parameter of {}(), won't analyze",
+                p.spelling(), cn);
+            }
+          }
+        }
+        match parg {
+          Some(PointeeArg::Var(var, vid)) => {
+            if pm.reads || pm.consumes {
+              if matches!(env.values.get(&vid), Some(RefcountState::Uninit))
+              {
+                report!(g, a, "refcount error",
+                  "{} parameter of {}() reads uninitialized variable \
+                   [{}]",
+                  if pm.consumes { "consuming" } else { "reading" },
+                  cn, env.names(vid));
+              }
+              read_check(a, &env, vid, g)?;
+            }
+            pointee_work.push((*a, PointeeArg::Var(var, vid), pm));
+            evald.push((*a, params.get(i).copied(), None));
+            continue;
+          }
+          Some(h @ PointeeArg::Hole(_)) => {
+            pointee_work.push((*a, h, pm));
+            evald.push((*a, params.get(i).copied(), None));
+            continue;
+          }
+          None => {}  //  opaque &untracked: plain walk below
         }
       }
     }
@@ -2037,8 +2447,27 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   let mut pass_vid: Option<ValId> = None;
   let mut cons_vids: Vec<ValId> = Vec::new();
   for (a, p, v) in &evald {
-    let Some(p) = p else { continue; };  // varargs: too ambiguous
+    let is_slot = v.is_some_and(|v|
+      matches!(env.values.get(&v), Some(RefcountState::Slot)));
+    let Some(p) = p else {
+      //  varargs: too ambiguous -- but a slot pointer must not slip in
+      if is_slot {
+        report!(g, a, "complicated",
+          "slot pointer passed to variadic {}(), won't analyze", cn);
+      }
+      continue;
+    };
     if !is_noun_type(&p.ty()) {
+      //  a pointer to a tracked noun may only go to a parameter whose
+      //  pointee behavior is declared
+      if is_slot {
+        report!(g, a, "complicated",
+          "address of a tracked noun handed to parameter `{}` of {}() \
+           without a pointee annotation: annotate the callee \
+           (`@Refcount: reads|consumes|fills retained|fills transferred \
+           `{}``, or `destructures` for u3x_cell-style out-params)",
+          p.spelling(), cn, p.spelling());
+      }
       //  an owned product handed to a declared non-noun parameter
       //  (e.g. u3a_malloc(u3kb_lent(..))) drops its reference
       discard_check(a, &env, *v, g)?;
@@ -2070,11 +2499,6 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       ArgumentMode::Passthrough => {
         pass_vid = Some(v);
       }
-      ArgumentMode::ReadOnly => {
-        report!(g, a, "annotation",
-          "@Refcount: read-only on noun-typed parameter of {}(): \
-           read-only applies to pointer-to-noun parameters only", cn);
-      }
       ArgumentMode::Conslike => {
         //  the argument's counted reference moves into the product;
         //  the name keeps an uncounted view of the noun
@@ -2101,11 +2525,27 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
             report!(g, a, "refcount error",
               "transfer of already-consumed value [{}]", env.names(v));
           }
+          RefcountState::Slot => {
+            report!(g, a, "refcount error",
+              "slot pointer [{}] passed as a noun to {}()",
+              env.names(v), cn);
+          }
           RefcountState::Passthrough => {
             report!(g, a, "refcount error",
               "losing passthrough value [{}]", env.names(v));
           }
         }
+      }
+    }
+  }
+
+  //  pointee consumption: one counted reference of the old pointee is
+  //  given away inside the call (transferring read, or u3z of the old
+  //  value before a refill -- indistinguishable from out here)
+  for (a, parg, pm) in &pointee_work {
+    if pm.consumes {
+      if let PointeeArg::Var(_, vid) = parg {
+        env = lose_cascade(env, *vid, a, g)?;
       }
     }
   }
@@ -2141,6 +2581,52 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     for id in stale {
       g.note_poison(id, why.clone());
       env.values.insert(id, RefcountState::Poisoned);
+    }
+  }
+
+  //  pointee refill: the pointed-to variable holds a fresh value on
+  //  return -- owned for `fills transferred`; an uncounted view for
+  //  `fills retained`, tied to the call's noun arguments so consuming
+  //  them poisons it. Overwriting an unconsumed owned pointee without
+  //  a `consumes` clause is a leak (unbind_var reports it)
+  for (_, parg, pm) in &pointee_work {
+    let Some(fm) = pm.fills else { continue; };
+    match parg {
+      PointeeArg::Var(var, _) => {
+        env = unbind_var(env, var, cur, g)?;
+        let rc = match fm {
+          FillMode::Transferred => RefcountState::Owned { extra: 0 },
+          FillMode::Retained => RefcountState::Borrowed,
+        };
+        let id = new_val(&mut env, rc, g);
+        env.bind_decl(var.clone(), id);
+        if matches!(fm, FillMode::Retained) {
+          for (_, p, v) in &evald {
+            if let (Some(p), Some(v)) = (p, v) {
+              if is_noun_type(&p.ty()) {
+                env.contains.entry(*v).or_default().insert(id);
+              }
+            }
+          }
+        }
+      }
+      //  the callee completed a deferred slot: a fresh owned value went
+      //  in and the structure owns it now (phase 1 admits only `fills
+      //  transferred` here)
+      PointeeArg::Hole(sid) => {
+        let SlotTarget::Hole {owner} =
+          env.slots.get(sid).cloned().expect(LI)
+        else {
+          unreachable!("{}", LI);
+        };
+        let v = new_val(&mut env, RefcountState::Borrowed, g);
+        env.contains.entry(owner).or_default().insert(v);
+        env.slots.remove(sid);
+        g.note_poison(*sid,
+          format!("deferred slot filled by {}() at {}", cn,
+            loc_str(cur)));
+        env.values.insert(*sid, RefcountState::Poisoned);
+      }
     }
   }
 
@@ -2191,6 +2677,29 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
   let (rvid, nxt) = eval_expr(rhs, env, depth, g)?;
   let Some(mut env) = nxt else { return Ok((None, None)); };
 
+  //  `*p = rhs` through a tracked slot pointer: a store to the target
+  //  variable, or a deferred-cons fill
+  let lu = unwrap_expr(*lhs);
+  if lu.kind() == CXCursor_UnaryOperator
+    && unary_op(&lu).as_deref() == Some("*")
+  {
+    if let Some(pname) = lu.children().first().and_then(decl_ref_name) {
+      if let Some((_, sid)) = read_var(&env, &pname) {
+        match env.values.get(&sid).copied() {
+          Some(RefcountState::Slot) => {
+            return store_slot(cur, env, sid, rvid, g);
+          }
+          Some(RefcountState::Poisoned) => {
+            report!(g, cur, "use-after-free",
+              "store through dead slot pointer [{}]{}", env.names(sid),
+              g.why_poisoned(sid));
+          }
+          _ => {}  //  opaque pointer: the untracked-memory store below
+        }
+      }
+    }
+  }
+
   let lname = decl_ref_name(lhs);
   if let Some(ln) = &lname {
     if let Some((var, old)) = read_var(&env, ln) {
@@ -2224,6 +2733,12 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
   let Some(mut env) = nxt else { return Ok((None, None)); };
 
   if let Some(v) = rvid {
+    //  a slot pointer stashed in memory could be written through later,
+    //  invisibly to the tracker
+    if matches!(env.values.get(&v), Some(RefcountState::Slot)) {
+      report!(g, cur, "complicated",
+        "slot pointer stored to untracked memory, won't analyze");
+    }
     if g.store_transfers() {
       env = lose_cascade(env, v, cur, g)?;
     } else if env.vars.get(&v).is_none_or(|l| l.is_empty())
@@ -2631,12 +3146,23 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
   let mut vars_joined     = <IHashMap<ValId, IHashSet<VarName>>>::new();
   let mut vars_rev_joined = <IHashMap<VarName, ValId>>::new();
   let mut values_joined   = <IHashMap<ValId, RefcountState>>::new();
+  let mut slots_joined    = <IHashMap<ValId, SlotTarget>>::new();
   let mut map1: HashMap<ValId, Vec<ValId>> = HashMap::new();
   let mut map2: HashMap<ValId, Vec<ValId>> = HashMap::new();
   let mut kept1: HashMap<ValId, u32> = HashMap::new();
   let mut kept2: HashMap<ValId, u32> = HashMap::new();
 
-  for ((k1, k2), ns) in &frags {
+  //  slot-pointer fragments join AFTER the noun fragments: hole owners
+  //  are noun values, and reconciling two holes needs the owners'
+  //  joined images (map1/map2)
+  let slot_frag = |k1: &Option<ValId>, k2: &Option<ValId>| -> bool {
+    matches!(k1.map(|v| st1(v)), Some(Slot))
+      || matches!(k2.map(|v| st2(v)), Some(Slot))
+  };
+
+  for ((k1, k2), ns) in frags.iter()
+    .filter(|((k1, k2), _)| !slot_frag(k1, k2))
+  {
     let s1 = k1.map(|v| st1(v)).unwrap_or(Uninit);
     let s2 = k2.map(|v| st2(v)).unwrap_or(Uninit);
     let split1 = matches!(s1, Owned {..})
@@ -2682,6 +3208,95 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
     }
   }
 
+  //  pass 2: slot pointers. A name must point at "the same place" on
+  //  both sides: the same variable slot, or holes of the same (joined)
+  //  owner -- hole identity itself is iteration-local, only the owner
+  //  matters. `&var` on one path vs a hole on the other is the
+  //  first-iteration shape (`lit = &pro` before any defcons): the var
+  //  must still be Uninit on the &var side and hold the hole's owner on
+  //  the other. Anything irreconcilable joins as a Poisoned pointer
+  //  (using it reports); the conservation check below still demands
+  //  every hole OBLIGATION survives.
+  let img = |o: ValId, map: &HashMap<ValId, Vec<ValId>>| -> Option<ValId> {
+    match map.get(&o) {
+      None => Some(o),  //  location-less owner keeps its identity
+      Some(is) if is.len() == 1 => Some(is[0]),
+      Some(_) => None,  //  owner split across fragments: ambiguous
+    }
+  };
+  for ((k1, k2), ns) in frags.iter()
+    .filter(|((k1, k2), _)| slot_frag(k1, k2))
+  {
+    let s1 = k1.map(|v| st1(v)).unwrap_or(Uninit);
+    let s2 = k2.map(|v| st2(v)).unwrap_or(Uninit);
+    let t1 = k1.and_then(|v| env1.slots.get(&v));
+    let t2 = k2.and_then(|v| env2.slots.get(&v));
+    use SlotTarget::*;
+    let target: Option<SlotTarget> = match (s1, s2) {
+      (Slot, Slot) => match (t1.expect(LI), t2.expect(LI)) {
+        (Var(a), Var(b)) if a == b => Some(Var(a.clone())),
+        (Hole {owner: o1}, Hole {owner: o2}) => {
+          match (img(*o1, &map1), img(*o2, &map2)) {
+            (Some(i1), Some(i2)) if i1 == i2 => Some(Hole {owner: i1}),
+            _ => None,
+          }
+        }
+        (Var(v), Hole {owner: o2}) => {
+          let uninit1 = env1.vars_rev.get(v)
+            .is_some_and(|w| matches!(st1(*w), Uninit));
+          if uninit1 && env2.vars_rev.get(v) == Some(o2) {
+            img(*o2, &map2).map(|i| Hole {owner: i})
+          } else { None }
+        }
+        (Hole {owner: o1}, Var(v)) => {
+          let uninit2 = env2.vars_rev.get(v)
+            .is_some_and(|w| matches!(st2(*w), Uninit));
+          if uninit2 && env1.vars_rev.get(v) == Some(o1) {
+            img(*o1, &map1).map(|i| Hole {owner: i})
+          } else { None }
+        }
+        _ => None,
+      },
+      //  a name Uninit on one side adopts the other side's slot
+      (Slot, Uninit) => t1.expect(LI).clone().remap(|o| img(o, &map1)),
+      (Uninit, Slot) => t2.expect(LI).clone().remap(|o| img(o, &map2)),
+      //  stale (filled/dead) on one path: reported at the next use
+      (Slot, Poisoned) | (Poisoned, Slot) => None,
+      _ => {
+        let who: Vec<&str> = ns.iter().map(|n| n.name.as_ref()).collect();
+        report_loc!(g, loc, "refcount error",
+          "joining branches disagree about [{}]: slot pointer on one \
+           path, noun on the other", who.join(", "));
+      }
+    };
+    let id = match k1 {
+      Some(v) if k1_n[v] == 1 => *v,
+      _ => { let id = g.id_gen; g.id_gen += 1; id }
+    };
+    match target {
+      Some(t) => {
+        values_joined.insert(id, Slot);
+        slots_joined.insert(id, t);
+      }
+      None => {
+        g.note_poison(id,
+          format!("slot pointer irreconcilable across the join at {}",
+            floc(&loc)));
+        values_joined.insert(id, RefcountState::Poisoned);
+      }
+    }
+    vars_joined.insert(id, ns.iter().cloned().collect());
+    for n in ns {
+      vars_rev_joined.insert(n.clone(), id);
+    }
+    if let Some(v) = k1 {
+      map1.entry(*v).or_default().push(id);
+    }
+    if let Some(v) = k2 {
+      map2.entry(*v).or_default().push(id);
+    }
+  }
+
   //  count conservation: every owned group keeps its count in exactly
   //  one fragment of the joined partition
   for (env, kept) in [(&env1, &kept1), (&env2, &kept2)] {
@@ -2711,6 +3326,54 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
       None => { values_joined.insert(*id, *st); }
       Some(prev) if prev == st => {}
       Some(_) => { values_joined.insert(*id, RefcountState::Poisoned); }
+    }
+  }
+
+  //  live orphaned holes (no pointer name left) keep their obligation:
+  //  the entry rides along under the value's own id, owner remapped to
+  //  its joined image where one exists
+  for (slots, map) in [(&env1.slots, &map1), (&env2.slots, &map2)] {
+    for (id, t) in slots.iter() {
+      if env1.vars.contains_key(id) || env2.vars.contains_key(id)
+        || slots_joined.contains_key(id)
+        || !matches!(values_joined.get(id), Some(RefcountState::Slot))
+      {
+        continue;
+      }
+      match t.clone().remap(|o| img(o, map)) {
+        Some(rt) => { slots_joined.insert(*id, rt); }
+        None => { values_joined.insert(*id, RefcountState::Poisoned); }
+      }
+    }
+  }
+
+  //  deferred-slot conservation: every unfilled hole a side tracks must
+  //  survive into the join, exactly once per obligation -- an ambiguous
+  //  pointer must not silently drop (or duplicate) the duty to fill
+  for (env, map) in [(&env1, &map1), (&env2, &map2)] {
+    let mut owners: Vec<ValId> = env.slots.values()
+      .filter_map(|t| match t {
+        SlotTarget::Hole {owner} => Some(*owner),
+        SlotTarget::Var(_) => None,
+      })
+      .collect();
+    owners.sort();
+    owners.dedup();
+    for o in owners {
+      let n = env.slots.values()
+        .filter(|t| matches!(t, SlotTarget::Hole {owner} if *owner == o))
+        .count();
+      let imgs: Vec<ValId> = map.get(&o).cloned().unwrap_or_else(|| vec![o]);
+      let nj = slots_joined.values()
+        .filter(|t| matches!(t, SlotTarget::Hole {owner}
+          if imgs.contains(owner)))
+        .count();
+      if n != nj {
+        report_loc!(g, loc, "refcount error",
+          "joining branches disagree about the deferred slots of [{}] \
+           ({} unfilled on this path, {} after the join)",
+          env.names(o), n, nj);
+      }
     }
   }
 
@@ -2751,6 +3414,7 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
     vars: vars_joined,
     vars_rev: vars_rev_joined,
     contains: cont_joined,
+    slots: slots_joined,
   })
 }
 
@@ -2788,6 +3452,83 @@ fn join_scoped<I>(loc: Loc, envs: I, local: Option<Env>, depth: u32,
 
 fn check_exit(loc: Loc, env: Env, g: &Gen) -> Vec<Finding>
 {
+  let mut env = env;
+  let mut out: Vec<Finding> = Vec::new();
+
+  //  pointee-parameter contracts on this exit path
+  for (pv, orig, pm) in &g.pointee_params {
+    let cur = env.vars_rev.get(pv).copied();
+    let state = cur.map(|v| *env.values.get(&v).expect(LI));
+    match pm.fills {
+      Some(FillMode::Transferred) => match (cur, state) {
+        (Some(v), Some(RefcountState::Owned {extra})) => {
+          //  transferred to the caller: one count is consumed here
+          let st = if extra > 0 { RefcountState::Owned {extra: extra - 1} }
+                   else { RefcountState::Poisoned };
+          env.values.insert(v, st);
+        }
+        (_, Some(RefcountState::Direct)) => {}
+        (_, Some(RefcountState::Uninit)) => {
+          out.push(report_at(loc.clone(), "refcount error", format!(
+            "pointee contract `fills transferred`: [{}] never filled \
+             on this path", pv.name), g));
+        }
+        (_, Some(RefcountState::Borrowed)) => {
+          out.push(report_at(loc.clone(), "refcount error", format!(
+            "pointee contract `fills transferred`: [{}] holds an \
+             uncounted reference at exit, u3k first", pv.name), g));
+        }
+        _ => {
+          out.push(report_at(loc.clone(), "refcount error", format!(
+            "pointee contract `fills transferred`: [{}] holds no \
+             usable value at exit{}", pv.name,
+            cur.map(|v| g.why_poisoned(v)).unwrap_or_default()), g));
+        }
+      },
+      Some(FillMode::Retained) => match state {
+        Some(RefcountState::Borrowed | RefcountState::Direct) => {}
+        Some(RefcountState::Uninit) => {
+          out.push(report_at(loc.clone(), "refcount error", format!(
+            "pointee contract `fills retained`: [{}] never filled on \
+             this path", pv.name), g));
+        }
+        _ => {
+          out.push(report_at(loc.clone(), "refcount error", format!(
+            "pointee contract `fills retained`: [{}] must hold an \
+             uncounted reference at exit (an owned one would leak)",
+            pv.name), g));
+        }
+      },
+      None => {
+        //  no fills clause: the pointer is never written, so the name
+        //  must still hold the original value (a still-owned original
+        //  under `consumes` surfaces in the leak sweep below)
+        if cur != Some(*orig) {
+          out.push(report_at(loc.clone(), "annotation", format!(
+            "[{}] was rewritten, but the pointee is not annotated \
+             `fills retained|transferred`", pv.name), g));
+        }
+      }
+    }
+  }
+
+  //  unfilled deferred slots surviving to an exit: the built structure
+  //  is incomplete
+  {
+    let mut hs: Vec<(ValId, ValId)> = env.slots.iter()
+      .filter_map(|(sid, t)| match t {
+        SlotTarget::Hole {owner} => Some((*sid, *owner)),
+        SlotTarget::Var(_) => None,
+      })
+      .collect();
+    hs.sort();
+    for (sid, owner) in hs {
+      out.push(report_at(loc.clone(), "refcount error", format!(
+        "deferred slot (pointer [{}]) never filled: cell in [{}] is \
+         incomplete", env.names(sid), env.names(owner)), g));
+    }
+  }
+
   let mut leaked: Vec<(ValId, u32)> = env.values.iter()
     .filter_map(|(id, v)| match v {
       RefcountState::Owned {extra} => Some((*id, *extra)),
@@ -2797,15 +3538,16 @@ fn check_exit(loc: Loc, env: Env, g: &Gen) -> Vec<Finding>
 
   leaked.sort();
 
-  leaked.into_iter().map(|(id, ex)| {
+  out.extend(leaked.into_iter().map(|(id, ex)| {
     let refs = if ex > 0 { format!(" ({} extra references)", ex) }
       else { String::new() };
-    
+
     let msg = format!("owned reference in [{}] not consumed{}",
       env.names(id), refs);
-  
+
     report_at(loc.clone(), "leak", msg, g)
-    }).collect()
+  }));
+  out
 }
 
 fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
@@ -2842,6 +3584,16 @@ fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
   for (id, names) in orphans {
     g.note_poison(id, format!("[{}] went out of scope at {}",
       names.join(", "), floc(&loc)));
+    //  the last pointer to an unfilled deferred slot dying means the
+    //  slot can never be filled: report here, where the name is known
+    if let Some(SlotTarget::Hole {owner}) = env.slots.get(&id) {
+      leaks.push(report_at(loc.clone(), "refcount error",
+        format!("pointer [{}] to an unfilled deferred slot of [{}] \
+                 goes out of scope: the slot can never be filled",
+          names.join(", "), env.names(*owner)),
+        g));
+      env.slots.remove(&id);
+    }
     let state = env.values.get_mut(&id).expect("linter invariant");
     let RefcountState::Owned {extra} = *state else {
       *state = RefcountState::Poisoned;

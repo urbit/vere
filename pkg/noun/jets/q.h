@@ -30,21 +30,21 @@
     u3_noun u3qb_lent(u3_noun); // @Refcount: retains arguments
     u3_noun u3qb_levy(u3_noun, u3_noun);
     u3_noun u3qb_lien(u3_noun, u3_noun);
-    u3_noun u3qb_murn(u3_noun, u3_noun); // @Refcount: assert retains arguments
+    u3_noun u3qb_murn(u3_noun, u3_noun);
     u3_noun u3qb_need(u3_noun);
     u3_noun u3qb_mate(u3_noun, u3_noun);
     u3_noun u3qb_reap(u3_atom, u3_noun);
     u3_noun u3qb_reel(u3_noun, u3_noun);
     u3_noun u3qb_roll(u3_noun, u3_noun);
-    u3_noun u3qb_skid(u3_noun, u3_noun); //  @Refcount: assert retains arguments
-    u3_noun u3qb_skim(u3_noun, u3_noun); //  @Refcount: assert retains arguments
-    u3_noun u3qb_skip(u3_noun, u3_noun); //  @Refcount: assert retains arguments
-    u3_noun u3qb_scag(u3_atom, u3_noun); //  @Refcount: assert retains arguments
+    u3_noun u3qb_skid(u3_noun, u3_noun);
+    u3_noun u3qb_skim(u3_noun, u3_noun);
+    u3_noun u3qb_skip(u3_noun, u3_noun);
+    u3_noun u3qb_scag(u3_atom, u3_noun);
     u3_noun u3qb_slag(u3_atom, u3_noun);
     u3_noun u3qb_snag(u3_atom, u3_noun);
     u3_noun u3qb_sort(u3_noun, u3_noun);
-    u3_noun u3qb_turn(u3_noun, u3_noun); //  @Refcount: assert retains arguments
-    u3_noun u3qb_weld(u3_noun, u3_noun); //  @Refcount: assert retains arguments
+    u3_noun u3qb_turn(u3_noun, u3_noun);
+    u3_noun u3qb_weld(u3_noun, u3_noun);
 
   /** Tier 3.
   **/
@@ -64,7 +64,7 @@
     u3_noun u3qc_end(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_gor(u3_atom, u3_atom);  // @Refcount: direct product
     u3_noun u3qc_ham(u3_atom);
-    u3_noun u3qc_hew(u3_atom, u3_atom, u3_atom, u3_noun); //  @Refcount: assert retains arguments
+    u3_noun u3qc_hew(u3_atom, u3_atom, u3_atom, u3_noun);
     u3_noun u3qc_lsh(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_mas(u3_atom);
     u3_noun u3qc_met(u3_atom, u3_atom);
@@ -118,7 +118,7 @@
     u3_noun u3qdi_has(u3_noun, u3_noun);
     u3_noun u3qdi_int(u3_noun, u3_noun);
     u3_noun u3qdi_put(u3_noun, u3_noun);
-    u3_noun u3qdi_rep(u3_noun, u3_noun);  //  @Refcount: assert retains arguments
+    u3_noun u3qdi_rep(u3_noun, u3_noun);
     u3_noun u3qdi_run(u3_noun, u3_noun);
     u3_noun u3qdi_tap(u3_noun);
     u3_noun u3qdi_uni(u3_noun, u3_noun);
@@ -130,7 +130,7 @@
     u3_noun u3qe_jam(u3_atom);
     u3_noun u3qe_mat(u3_atom);
     u3_noun u3qe_rub(u3_atom, u3_atom);
-    u3_noun u3qe_leer(u3_atom);  //  @Refcount: assert retains arguments
+    u3_noun u3qe_leer(u3_atom);
     u3_noun u3qe_lore(u3_atom);
     u3_noun u3qe_loss(u3_noun, u3_noun);
     u3_noun u3qe_lune(u3_atom);
