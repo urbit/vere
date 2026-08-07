@@ -1,5 +1,5 @@
 /// @file
-/// @Refcount: custom file
+/// @Refcount: all functions are custom unless asserted otherwise
 #include "imprison.h"
 
 #include "jets/k.h"

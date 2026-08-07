@@ -350,7 +350,10 @@ fn explain(entries: &[Entry], resource_dir: Option<&str>, target: &str) -> i32 {
     "  body checked: {}{}",
     if checked { "yes" } else { "no" },
     if file_custom {
-      format!(" ({} is @Refcount: custom file)", relpath(&dfile))
+      format!(
+        " ({}: all functions are custom unless asserted otherwise)",
+        relpath(&dfile)
+      )
     } else {
       String::new()
     }
@@ -481,12 +484,15 @@ fn process_entry(
       .push(format!("{}: {} parse errors (first: {})", fpath, hard.len(), hard[0]));
     return out;
   }
-  //  a custom file skips BODY checking only: annotation hygiene
+  //  a file-custom file skips BODY checking only: annotation hygiene
   //  (warnings, decl/def sync) still applies to its definitions
   let file_custom = re_file_custom().is_match(&read_head(fpath, 4096));
   if file_custom && args.verbose {
-    out.stdout
-      .push(format!("-- {}: @Refcount: custom file, bodies skipped", fpath));
+    out.stdout.push(format!(
+      "-- {}: all functions are custom unless asserted otherwise, \
+       bodies skipped",
+      fpath
+    ));
   }
   let fcm = FileComments::new(&tu, fpath);
   for cur in tu.cursor().children() {

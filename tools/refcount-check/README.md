@@ -73,7 +73,7 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
 - A refcount annotation of a file may appear in the first 4KB of a file:
 
 ```c
-//  @Refcount: assert custom file
+//  @Refcount: all functions are custom unless asserted otherwise
 ```
 
 - Unless there is ambiguity, @Refcount: X, Y, Z is same as:
@@ -116,4 +116,4 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
 
 - List of refcount directives for a file:
 
-  - `custom file`: every function in the file defaults to the custom protocol and no bodies are checked
+  - `all functions are custom unless asserted otherwise`: every function in the file defaults to the custom protocol and no bodies are checked (the whole phrase must be on one line with the `@Refcount:` tag)

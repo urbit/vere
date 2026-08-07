@@ -1,6 +1,6 @@
 /// @file
-/// @Refcount: custom file -- implements or sits below the refcount
-/// machinery; individual functions follow custom protocols.
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "jets.h"
 

@@ -1,5 +1,6 @@
 //! @file events.c
-//! @Refcount: custom file -- loom snapshotting sits below the refcount machinery.
+//! @Refcount: all functions are custom unless asserted otherwise
+//! -- loom snapshotting sits below the refcount machinery.
 //!
 //! incremental, orthogonal, paginated loom snapshots
 //!

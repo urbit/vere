@@ -144,9 +144,26 @@ fn re_trail_comment() -> &'static Regex {
   RE.get_or_init(|| Regex::new(r"\*/\s*$").unwrap())
 }
 
+// the file-level annotation: every function in the file is custom unless
+// its own annotation asserts a protocol. The phrase must fit on one line
+// (re_refcount captures a single line).
+const FILE_CUSTOM_PHRASE: &str =
+  r"all\s+functions\s+are\s+custom\s+unless\s+asserted\s+otherwise\b";
+
 pub fn re_file_custom() -> &'static Regex {
   static RE: OnceLock<Regex> = OnceLock::new();
-  RE.get_or_init(|| Regex::new(r"(?i)@Refcount:\s*custom\s+file\b").unwrap())
+  RE.get_or_init(|| {
+    Regex::new(&format!(r"(?i)@Refcount:\s*{}", FILE_CUSTOM_PHRASE)).unwrap()
+  })
+}
+
+// same phrase as a lone clause, for a comment that clang attaches to a
+// function declaration instead of the file
+fn re_file_custom_clause() -> &'static Regex {
+  static RE: OnceLock<Regex> = OnceLock::new();
+  RE.get_or_init(|| {
+    Regex::new(&format!(r"(?i)^{}", FILE_CUSTOM_PHRASE)).unwrap()
+  })
 }
 
 fn re_jet_dir() -> &'static Regex {
@@ -279,15 +296,21 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
     }
     let mut head = toks[0];
 
+    if re_file_custom_clause().is_match(clause) {
+      saw_custom = true;
+      sem.custom = true;
+      sem.check = false;
+      sem.why =
+        "@Refcount: all functions are custom unless asserted otherwise"
+          .to_string();
+      continue;
+    }
+
     if head == "custom" {
       saw_custom = true;
       sem.custom = true;
       sem.check = false;
-      if toks.len() >= 2 && toks[1] == "file" {
-        sem.why = "@Refcount: custom file".to_string();
-      } else {
-        sem.why = "@Refcount: custom".to_string();
-      }
+      sem.why = "@Refcount: custom".to_string();
       continue;
     }
 
