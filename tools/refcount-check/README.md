@@ -20,6 +20,11 @@ Requires libclang 17+ (loaded at runtime via `--libclang` or auto-found
 under `/usr/lib/llvm-*`) and a fresh `compile_commands.json`
 (`zig build -Dgenerate-commands`).
 
+By default the shared `pkg/noun` headers (`noun.h` + `jets/w.h`) are
+precompiled once per run and every translation unit is parsed against
+that PCH (about 3x faster, since header parsing dominates the runtime);
+`--no-pch` disables this and parses every TU from scratch.
+
 ## What it does
 
 This tool walks the functions (only in `pkg/noun` for now) and checks whether their

@@ -154,6 +154,165 @@ fn lint_args(e: &Entry, resource_dir: Option<&str>) -> Vec<String> {
   res
 }
 
+// ---------------------------------------------------------------------------
+// precompiled headers
+
+//  the closure of these two includes covers the expensive part of every
+//  pkg/noun TU (noun.h pulls in the whole tree except jets/w.h). The
+//  paths resolve through the entries' own -I flags, which are relative
+//  to the repo root like everything else in the compile db.
+const PCH_HEADER: &str = "#include \"noun.h\"\n#include \"jets/w.h\"\n";
+
+/// One precompiled header per distinct lint_args vector (in practice a
+/// single one: every pkg/noun entry normalizes to the same flags).
+/// Re-parsing the shared headers per TU is ~90% of the tool's CPU time;
+/// a PCH parses them once. The PCH build args must match the consumers'
+/// exactly -- clang validates some mismatches loudly (macros, -std,
+/// mtime of any recorded file) but include-path drift is accepted
+/// silently, so both sides use the same vector. Disabled by --no-pch.
+struct PchSet {
+  dir: Option<std::path::PathBuf>,
+  by_args: std::collections::HashMap<Vec<String>, String>,
+  skip: HashSet<String>,
+}
+
+/// A file with a preprocessor directive before its first #include must
+/// not be parsed against the PCH: the PCH replays the headers' macro
+/// state, turning the file's own includes into no-ops, so a macro meant
+/// to configure them (say a hypothetical U3_MEMORY_DEBUG above the
+/// includes) would be ignored with no diagnostic at all.
+fn pre_include_directives(path: &str) -> bool {
+  let text = std::fs::read_to_string(path).unwrap_or_default();
+  for line in text.lines() {
+    let t = line.trim_start();
+    if !t.starts_with('#') {
+      continue;
+    }
+    let d = t[1..].trim_start();
+    if d.starts_with("include") {
+      return false;
+    }
+    if d.starts_with("define") || d.starts_with("undef")
+      || d.starts_with("if")
+    {
+      return true;
+    }
+  }
+  false
+}
+
+impl PchSet {
+  fn none() -> PchSet {
+    PchSet {
+      dir: None,
+      by_args: std::collections::HashMap::new(),
+      skip: HashSet::new(),
+    }
+  }
+
+  fn build(entries: &[Entry], resource_dir: Option<&str>, min_group: u32)
+    -> PchSet
+  {
+    //  reclaim dirs left behind by interrupted runs: Drop never fires
+    //  on a signal, and pid-keyed names are never reused
+    if let Ok(rd) = std::fs::read_dir(std::env::temp_dir()) {
+      for ent in rd.flatten() {
+        let name = ent.file_name();
+        if let Some(pid) = name.to_string_lossy()
+          .strip_prefix("refcount-check-pch-")
+        {
+          if pid.parse::<u32>().is_ok()
+            && !Path::new(&format!("/proc/{}", pid)).exists()
+          {
+            let _ = std::fs::remove_dir_all(ent.path());
+          }
+        }
+      }
+    }
+    let mut set = PchSet::none();
+    let mut groups: std::collections::HashMap<Vec<String>, u32> =
+      std::collections::HashMap::new();
+    for e in entries {
+      if pre_include_directives(&e.file) {
+        set.skip.insert(e.file.clone());
+        continue;
+      }
+      *groups.entry(lint_args(e, resource_dir)).or_insert(0) += 1;
+    }
+    let dir = std::env::temp_dir()
+      .join(format!("refcount-check-pch-{}", std::process::id()));
+    let hdr = dir.join("prefix.h");
+    let idx = Index::new();
+    let mut n = 0u32;
+    let mut keys: Vec<&Vec<String>> = groups.keys().collect();
+    keys.sort(); // deterministic pch numbering
+    for args in keys {
+      if groups[args] < min_group.max(1) {
+        continue; // a PCH costs about one TU parse; no gain for one TU
+      }
+      if set.dir.is_none() {
+        if std::fs::create_dir_all(&dir).is_err() {
+          return set;
+        }
+        set.dir = Some(dir.clone());
+        if std::fs::write(&hdr, PCH_HEADER).is_err() {
+          return set;
+        }
+      }
+      let mut hargs = args.clone();
+      if hargs.first().map(|a| a == "-xc").unwrap_or(false) {
+        hargs[0] = "-xc-header".to_string();
+      }
+      let pch = dir.join(format!("prefix-{}.pch", n));
+      n += 1;
+      let opts = clang_sys::CXTranslationUnit_Incomplete
+        | clang_sys::CXTranslationUnit_ForSerialization;
+      let Ok(tu) = idx.parse_opts(&hdr.to_string_lossy(), &hargs, opts)
+      else {
+        continue;
+      };
+      //  a save can succeed for a TU that failed to compile; a broken
+      //  PCH must not replace working per-TU parses
+      if !tu.error_diagnostics().is_empty() {
+        continue;
+      }
+      if tu.save(&pch.to_string_lossy()).is_ok() {
+        set
+          .by_args
+          .insert(args.clone(), pch.to_string_lossy().into_owned());
+      }
+    }
+    set
+  }
+}
+
+impl Drop for PchSet {
+  fn drop(&mut self) {
+    if let Some(d) = &self.dir {
+      let _ = std::fs::remove_dir_all(d);
+    }
+  }
+}
+
+/// Parse with the entry's group PCH when there is one, plain otherwise.
+/// A PCH-rejecting parse (CXError_ASTReadError after e.g. a header was
+/// edited mid-run) falls back to a plain parse instead of failing.
+fn parse_entry(idx: &Index, file: &str, args: &[String], pchs: &PchSet)
+  -> Result<Tu, String>
+{
+  if !pchs.skip.contains(file) {
+    if let Some(p) = pchs.by_args.get(args) {
+      let mut a = args.to_vec();
+      a.push("-include-pch".to_string());
+      a.push(p.clone());
+      if let Ok(tu) = idx.parse(file, &a) {
+        return Ok(tu);
+      }
+    }
+  }
+  idx.parse(file, args)
+}
+
 fn glob_sorted(pattern: &str) -> Vec<String> {
   let mut v: Vec<String> = glob::glob(pattern)
     .map(|it| {
@@ -206,7 +365,12 @@ impl interp::Host for DriverHost<'_> {
 // ---------------------------------------------------------------------------
 // --explain
 
-fn explain(entries: &[Entry], resource_dir: Option<&str>, target: &str) -> i32 {
+fn explain(
+  entries: &[Entry],
+  resource_dir: Option<&str>,
+  pchs: &PchSet,
+  target: &str,
+) -> i32 {
   let (fpart, fname) = match target.rfind(':') {
     Some(i) => (Some(&target[..i]), &target[i + 1..]),
     None => (None, target),
@@ -222,7 +386,8 @@ fn explain(entries: &[Entry], resource_dir: Option<&str>, target: &str) -> i32 {
   let mut tus: Vec<Tu> = Vec::new(); // keep found cursors alive
   let mut found: Option<Cursor> = None;
   'outer: for e in &ordered {
-    let tu = match idx.parse(&e.file, &lint_args(e, resource_dir)) {
+    let tu = match parse_entry(&idx, &e.file, &lint_args(e, resource_dir), pchs)
+    {
       Ok(t) => t,
       Err(_) => continue,
     };
@@ -392,6 +557,7 @@ struct Args {
   libclang: Option<String>,
   verbose: bool,
   selftest: bool,
+  no_pch: bool,
   explain: Option<String>,
 }
 
@@ -431,10 +597,12 @@ fn parse_args() -> Args {
       "--explain" => a.explain = Some(value(&mut i, &argv, "--explain", inline)),
       "--verbose" => a.verbose = true,
       "--selftest" => a.selftest = true,
+      "--no-pch" => a.no_pch = true,
       "-h" | "--help" => {
         println!(
           "usage: refcount-check [--cdb F] [--filter S] [--only S] [--function F] \
-          [--libclang PATH] [--verbose] [--selftest] [--explain [FILE:]FUNCTION]"
+          [--libclang PATH] [--verbose] [--selftest] [--no-pch] \
+          [--explain [FILE:]FUNCTION]"
         );
         exit(0);
       }
@@ -461,23 +629,46 @@ struct EntryOut {
   n_checked: u32,
 }
 
+//  temporary profiling counters, reported when REFCOUNT_TIMING is set
+static PARSE_US: std::sync::atomic::AtomicU64 =
+  std::sync::atomic::AtomicU64::new(0);
+static CHECK_US: std::sync::atomic::AtomicU64 =
+  std::sync::atomic::AtomicU64::new(0);
+static PCH_US: std::sync::atomic::AtomicU64 =
+  std::sync::atomic::AtomicU64::new(0);
+static WALK_US: std::sync::atomic::AtomicU64 =
+  std::sync::atomic::AtomicU64::new(0);
+
+struct CheckTimer(std::time::Instant);
+impl Drop for CheckTimer {
+  fn drop(&mut self) {
+    CHECK_US.fetch_add(self.0.elapsed().as_micros() as u64,
+      std::sync::atomic::Ordering::Relaxed);
+  }
+}
+
 fn process_entry(
   idx: &Index,
   e: &Entry,
   resource_dir: Option<&str>,
   args: &Args,
+  pchs: &PchSet,
   sem_cache: &mut SemCache,
   src: &mut SrcCache,
 ) -> EntryOut {
   let mut out = EntryOut::default();
   let fpath = &e.file;
-  let tu = match idx.parse(fpath, &lint_args(e, resource_dir)) {
+  let t0 = std::time::Instant::now();
+  let tu = match parse_entry(idx, fpath, &lint_args(e, resource_dir), pchs) {
     Ok(t) => t,
     Err(ex) => {
       out.stderr.push(format!("{}: PARSE FAILED: {}", fpath, ex));
       return out;
     }
   };
+  PARSE_US.fetch_add(t0.elapsed().as_micros() as u64,
+    std::sync::atomic::Ordering::Relaxed);
+  let _check_timer = CheckTimer(std::time::Instant::now());
   let hard = tu.error_diagnostics();
   if !hard.is_empty() {
     out.stderr
@@ -495,7 +686,13 @@ fn process_entry(
     ));
   }
   let fcm = FileComments::new(&tu, fpath);
-  for cur in tu.cursor().children() {
+  let tw = std::time::Instant::now();
+  //  enumerate via the indexing API, not tu.cursor().children(): the
+  //  root walk would materialize every declaration the PCH brought in
+  let decls = ast::local_decls(idx, &tu);
+  WALK_US.fetch_add(tw.elapsed().as_micros() as u64,
+    std::sync::atomic::Ordering::Relaxed);
+  for cur in decls {
     if cur.kind() != clang_sys::CXCursor_FunctionDecl || !cur.is_definition() {
       continue;
     }
@@ -640,8 +837,20 @@ fn run() -> i32 {
     entries = vec![e];
   }
 
+  let t0 = std::time::Instant::now();
+  let pchs = if args.no_pch {
+    PchSet::none()
+  } else {
+    //  a PCH only pays off for 2+ TUs, except under --selftest, which
+    //  must exercise the same PCH parse path CI relies on
+    PchSet::build(&entries, resource_dir.as_deref(),
+      if args.selftest { 1 } else { 2 })
+  };
+  PCH_US.fetch_add(t0.elapsed().as_micros() as u64,
+    std::sync::atomic::Ordering::Relaxed);
+
   if let Some(target) = &args.explain {
-    return explain(&entries, resource_dir.as_deref(), target);
+    return explain(&entries, resource_dir.as_deref(), &pchs, target);
   }
 
   entries.sort_by(|a, b| a.file.cmp(&b.file));
@@ -669,6 +878,7 @@ fn run() -> i32 {
   let rd = resource_dir.as_deref();
   let next_ref = &next;
   let slots_ref = &slots;
+  let pchs_ref = &pchs;
   std::thread::scope(|s| {
     for _ in 0..n_threads {
       let shared_lib = shared_lib.clone();
@@ -690,6 +900,7 @@ fn run() -> i32 {
             &entries_ref[i],
             rd,
             args_ref,
+            pchs_ref,
             &mut sem_cache,
             &mut src,
           );
@@ -711,6 +922,17 @@ fn run() -> i32 {
     }
     findings.extend(out.findings);
     n_checked += out.n_checked;
+  }
+
+  if std::env::var_os("REFCOUNT_TIMING").is_some() {
+    eprintln!(
+      "timing: pch {:.2}s, parse {:.2}s cpu, check {:.2}s cpu \
+       (root walk {:.2}s)",
+      PCH_US.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e6,
+      PARSE_US.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e6,
+      CHECK_US.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e6,
+      WALK_US.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e6
+    );
   }
 
   for f in &findings {

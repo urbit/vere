@@ -88,6 +88,12 @@ impl Index {
   }
 
   pub fn parse(&self, file: &str, args: &[String]) -> Result<Tu, String> {
+    self.parse_opts(file, args, 0)
+  }
+
+  pub fn parse_opts(&self, file: &str, args: &[String],
+    opts: CXTranslationUnit_Flags) -> Result<Tu, String>
+  {
     let cfile = CString::new(file).map_err(|e| e.to_string())?;
     let cargs: Vec<CString> = args
       .iter()
@@ -103,7 +109,7 @@ impl Index {
         ptrs.len() as c_int,
         ptr::null_mut(),
         0,
-        0,
+        opts,
         &mut tu,
       )
     };
@@ -120,11 +126,60 @@ impl Drop for Index {
   }
 }
 
+/// Cursors of the declarations parsed in this TU itself, in source
+/// order, via the indexing API. Unlike walking the root cursor's
+/// children, this never touches declarations that entered the TU from a
+/// precompiled header -- visiting those forces deserialization of the
+/// whole PCH, which costs about as much as parsing the headers. Falls
+/// back to the full root walk if the indexer reports an error.
+pub fn local_decls(idx: &Index, tu: &Tu) -> Vec<Cursor> {
+  extern "C" fn decl_cb(client: CXClientData, info: *const CXIdxDeclInfo) {
+    unsafe {
+      let out = &mut *(client as *mut Vec<Cursor>);
+      out.push(Cursor { raw: (*info).cursor });
+    }
+  }
+  let mut out: Vec<Cursor> = Vec::new();
+  let mut cbs = IndexerCallbacks::default();
+  cbs.indexDeclaration = Some(decl_cb);
+  let failed = unsafe {
+    let action = clang_IndexAction_create(idx.raw);
+    let rc = clang_indexTranslationUnit(
+      action,
+      &mut out as *mut Vec<Cursor> as CXClientData,
+      &mut cbs,
+      std::mem::size_of::<IndexerCallbacks>() as c_uint,
+      CXIndexOptSuppressWarnings,
+      tu.raw,
+    );
+    clang_IndexAction_dispose(action);
+    rc != 0
+  };
+  if failed {
+    return tu.cursor().children();
+  }
+  out
+}
+
 pub struct Tu {
   raw: CXTranslationUnit,
 }
 
 impl Tu {
+  /// Serialize to an AST file usable via `-include-pch`. NB a save can
+  /// succeed for a TU with error diagnostics; check those first.
+  pub fn save(&self, path: &str) -> Result<(), String> {
+    let cpath = CString::new(path).map_err(|e| e.to_string())?;
+    let code = unsafe {
+      clang_saveTranslationUnit(self.raw, cpath.as_ptr(),
+        CXSaveTranslationUnit_None)
+    };
+    if code != CXSaveError_None {
+      return Err(format!("CXSaveError {}", code));
+    }
+    Ok(())
+  }
+
   pub fn cursor(&self) -> Cursor {
     Cursor { raw: unsafe { clang_getTranslationUnitCursor(self.raw) } }
   }
