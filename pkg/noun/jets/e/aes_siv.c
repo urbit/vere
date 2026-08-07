@@ -106,14 +106,29 @@ _cqea_siv_en(c3_y*   key_y,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w txt_w;
-  c3_w soc_w;
+  c3_w soc_w, txt_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
+  //  urcrypt's siv entry points reverse [message] in place (loom byte order
+  //  to crypto byte order) and do not restore it, so the buffer handed to
+  //  them must be a private copy.  view the input (mmap for bobs, no
+  //  full-blob loom alloc) and copy; passing vue_u.byt_y directly would
+  //  reverse the caller's atom where it sits on the loom.
+  //
+  {
+    u3r_view vue_u;
+    u3r_view_init(&vue_u, txt);
+    txt_w = vue_u.len_w;
+    txt_y = u3a_malloc(txt_w ? txt_w : 1);
+    if ( txt_w ) {
+      memcpy(txt_y, vue_u.byt_y, txt_w);
+    }
+    u3r_view_done(&vue_u);
+  }
+
   dat_u = _cqea_ads_alloc(ads, &soc_w);
-  txt_y = u3r_bytes_all(&txt_w, txt);
-  out_y = u3a_malloc(txt_w);
+  out_y = u3a_malloc(txt_w ? txt_w : 1);
 
   ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
@@ -148,10 +163,27 @@ _cqea_siv_de(c3_y*   key_y,
 
     u3r_bytes(0, 16, iv_y, iv);
     dat_u = _cqea_ads_alloc(ads, &soc_w);
-    txt_y = u3r_bytes_alloc(0, txt_w, txt);
-    out_y = u3a_malloc(txt_w);
+
+    //  private copy of the ciphertext, zero-padded to the declared length.
+    //  as in _cqea_siv_en, urcrypt reverses [message] in place and does not
+    //  restore it, so this must not alias the caller's atom.
+    //
+    {
+      u3r_view vue_u;
+      u3r_view_padd(&vue_u, txt, txt_w);
+      txt_y = u3a_malloc(txt_w ? txt_w : 1);
+      if ( txt_w ) {
+        memcpy(txt_y, vue_u.byt_y, txt_w);
+      }
+      u3r_view_done(&vue_u);
+    }
+
+    out_y = u3a_malloc(txt_w ? txt_w : 1);
 
     if ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) ) {
+      u3a_free(txt_y);
+      u3a_free(out_y);
+      _cqea_ads_free(dat_u);
       return u3m_bail(c3__evil);
     }
 

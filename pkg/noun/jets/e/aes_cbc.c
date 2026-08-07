@@ -15,28 +15,49 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
   static u3_atom
   _cqea_cbc_help(c3_y* key_y, u3_atom iv, u3_atom msg, urcrypt_cbc low_f)
   {
-    c3_y     iv_y[16];
+    u3_atom ret;
+    c3_y    iv_y[16];
+
     //  message length in 16-byte (bloq 7) blocks; cbc always processes at least
     //  one block (the hoon pads an empty message to a single zero block)
-    c3_d     len_d = c3_max(1, u3r_met(7, msg));
-    u3i_slab sab_u;
+    //
+    c3_d len_d = c3_max(1, u3r_met(7, msg));
+    c3_d byt_d = len_d << 4;
+    c3_w byt_w = (c3_w)byt_d;
+
+    if ( byt_w != byt_d ) {
+      return u3m_bail(c3__fail);
+    }
+
+    //  read/write buffer holding [msg] little-endian, zero-padded to the
+    //  16-byte block boundary, passed to urcrypt's unsafe (no realloc)
+    //  interface, which operates in place.
+    //
+    //  NB: view the input (mmap for bobs, no full-blob loom alloc) and copy
+    //  into the buffer by hand; u3i_slab_from would go through u3r_words,
+    //  which materializes a bob onto the loom before copying.
+    //
+    c3_y* msg_y = u3a_malloc(byt_w);
+    {
+      u3r_view vue_u;
+      u3r_view_init(&vue_u, msg);
+      if ( vue_u.len_w ) {
+        memcpy(msg_y, vue_u.byt_y, vue_u.len_w);
+      }
+      memset(msg_y + vue_u.len_w, 0, byt_w - vue_u.len_w);
+      u3r_view_done(&vue_u);
+    }
 
     u3r_bytes(0, 16, iv_y, iv);
 
-    //  read/write buffer holding [msg] little-endian, zero-padded to a 16-byte
-    //  block boundary (bloq 7), passed to urcrypt's unsafe (no realloc)
-    //  interface, which operates in place.
-    //
-    u3i_slab_from(&sab_u, msg, 7, len_d);
-
     //  the only error is a non-block-aligned length, ruled out by construction
     //
-    u3_assert( 0 == (*low_f)(sab_u.buf_y,
-                             (c3_z)sab_u.len_w << u3a_word_bytes_shift,
-                             key_y,
-                             iv_y) );
+    u3_assert( 0 == (*low_f)(msg_y, byt_w, key_y, iv_y) );
 
-    return u3i_slab_mint(&sab_u);
+    ret = u3i_bytes(byt_w, msg_y);
+    u3a_free(msg_y);
+
+    return ret;
   }
 
   static u3_atom

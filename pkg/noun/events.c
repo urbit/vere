@@ -1286,6 +1286,14 @@ u3e_save(u3_post low_p, u3_post hig_p)
     return;
   }
 
+  //  cheap blob-bank invariant check (use_w >= eve_w + les_h)
+  //
+  if (  (u3C.wag_h & u3o_check_corrupt)
+     && (c3n == u3a_blob_sane(c3n)) )
+  {
+    fprintf(stderr, "save: blob accounting violated (see above)\r\n");
+  }
+
   //  XX discard hig_p and friends
   {
     c3_w nop_w = (low_p >> u3a_page);

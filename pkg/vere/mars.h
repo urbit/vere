@@ -62,9 +62,11 @@
       u3_mars_make(u3_mars* mar_u);
 
     /* u3_mars_boot(): boot a new ship.
+    **
+    **   ver_y is the newt protocol version byte (0x00=jam, 0x01=ram).
     */
       c3_o
-      u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
+      u3_mars_boot(u3_mars* mar_u, c3_y ver_y, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_load(): load pier.
     */
@@ -77,9 +79,11 @@
       u3_mars_work(u3_mars* mar_u);
 
     /* u3_mars_kick(): try to send a task into mars.
+    **
+    **   ver_y is the newt protocol version byte (0x00=jam, 0x01=ram).
     */
       c3_o
-      u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y);
+      u3_mars_kick(void* ram_u, c3_y ver_y, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_grab(): garbage collect.
     */

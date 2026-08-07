@@ -18,457 +18,6 @@
 #include "ur/ur.h"
 #include "vortex.h"
 
-/* _cu_atom_to_ref(): allocate indirect atom off-loom.
-*/
-static inline ur_nref
-_cu_atom_to_ref(ur_root_t* rot_u, u3a_atom* vat_u)
-{
-  ur_nref ref;
-  c3_d  val_d;
-
-  switch ( vat_u->len_w ) {
-#ifndef VERE64
-    case 2: {
-      val_d = ((c3_d)vat_u->buf_w[1]) << 32
-            | ((c3_d)vat_u->buf_w[0]);
-      ref = ur_coin64(rot_u, val_d);
-    } break;
-#endif
-
-    case 1: {
-      val_d = (c3_d)vat_u->buf_w[0];
-      ref = ur_coin64(rot_u, val_d);
-    } break;
-
-    default: {
-      //  XX assumes little-endian
-      //
-      c3_y* byt_y = (c3_y*)vat_u->buf_w;
-      c3_d  len_d = ((c3_d)vat_u->len_w) << 2;
-
-      u3_assert( len_d );
-
-      //  NB: this call will account for any trailing null bytes
-      //  caused by an overestimate in [len_d]
-      //
-      ref = ur_coin_bytes(rot_u, len_d, byt_y);
-    } break;
-  }
-
-  return ref;
-}
-
-/* _cu_box_check(): check loom allocation box for relocation pointer.
-*/
-static inline c3_o
-_cu_box_check(u3a_noun* som_u, ur_nref* ref)
-{
-  c3_w*    box_w = (void*)som_u;
-
-  if ( 0xffffffff == box_w[0] ) {
-    *ref = ( ((c3_d)box_w[2]) << 32
-           | ((c3_d)box_w[1]) );
-    return c3y;
-  }
-
-  return c3n;
-}
-
-/* _cu_box_stash(): overwrite an allocation box with relocation pointer.
-*/
-static inline void
-_cu_box_stash(u3a_noun* som_u, ur_nref ref)
-{
-  c3_w*    box_w = (void*)som_u;
-
-  //  overwrite u3a_atom with reallocated reference
-  //
-  box_w[0] = 0xffffffff;
-  box_w[1] = ref & 0xffffffff;
-  box_w[2] = ref >> 32;
-}
-
-/*
-**  stack frame for recording head vs tail iteration
-**
-**    $?  [LOM_HEAD cell=*]
-**    [ref=* cell=*]
-*/
-
-#define LOM_HEAD 0xffffffffffffffffULL
-
-typedef struct _cu_frame_s
-{
-  ur_nref     ref;
-  u3a_cell* cel_u;
-} _cu_frame;
-
-typedef struct _cu_stack_s
-{
-  c3_w       pre_w;
-  c3_w       siz_w;
-  c3_w       fil_w;
-  _cu_frame* fam_u;
-} _cu_stack;
-
-/* _cu_from_loom_next(): advance off-loom reallocation traversal.
-*/
-static inline ur_nref
-_cu_from_loom_next(_cu_stack* tac_u, ur_root_t* rot_u, u3_noun a)
-{
-  while ( 1 ) {
-    //  u3 direct == ur direct
-    //
-    if ( c3y == u3a_is_cat(a) ) {
-#ifdef VERE64
-      if ( a > ur_direct_max ) {
-        return ur_coin64(rot_u, a);
-      }
-#endif
-      return (ur_nref)a;
-    }
-    else {
-      u3a_noun* som_u = u3a_to_ptr(a);
-      ur_nref   ref;
-
-      //  check for relocation pointers
-      //
-      if ( c3y == _cu_box_check(som_u, &ref) ) {
-        return ref;
-      }
-      //  reallocate indirect atoms, stashing relocation pointers
-      //
-      else if ( c3y == u3a_is_atom(a) ) {
-        ref = _cu_atom_to_ref(rot_u, (u3a_atom*)som_u);
-        _cu_box_stash(som_u, ref);
-        return ref;
-      }
-      else {
-        u3a_cell* cel_u = (u3a_cell*)som_u;
-
-        //  reallocate the stack if full
-        //
-        if ( tac_u->fil_w == tac_u->siz_w ) {
-          c3_w nex_w   = tac_u->pre_w + tac_u->siz_w; // XX overflow
-          tac_u->fam_u = c3_realloc(tac_u->fam_u, nex_w * sizeof(*tac_u->fam_u));
-          tac_u->pre_w = tac_u->siz_w;
-          tac_u->siz_w = nex_w;
-        }
-
-        //  push a head-frame and continue into the head
-        //
-        {
-          _cu_frame* fam_u = &(tac_u->fam_u[tac_u->fil_w++]);
-          fam_u->ref   = LOM_HEAD;
-          fam_u->cel_u = cel_u;
-        }
-
-        a = cel_u->hed;
-        continue;
-      }
-    }
-  }
-}
-
-/* _cu_from_loom(): reallocate [a] off loom, in [r].
-*/
-static ur_nref
-_cu_from_loom(ur_root_t* rot_u, u3_noun a)
-{
-  _cu_stack tac_u = {0};
-  ur_nref     ref;
-
-  tac_u.pre_w = ur_fib10;
-  tac_u.siz_w = ur_fib11;
-  tac_u.fam_u = c3_malloc(tac_u.siz_w * sizeof(*tac_u.fam_u));
-
-  ref = _cu_from_loom_next(&tac_u, rot_u, a);
-
-  //  incorporate reallocated ref, accounting for cells
-  //
-  while ( tac_u.fil_w ) {
-    //  peek at the top of the stack
-    //
-    _cu_frame* fam_u = &(tac_u.fam_u[tac_u.fil_w - 1]);
-
-    //  [fam_u] is a head-frame; stash ref and continue into the tail
-    //
-    if ( LOM_HEAD == fam_u->ref ) {
-      fam_u->ref = ref;
-      ref        = _cu_from_loom_next(&tac_u, rot_u, fam_u->cel_u->tel);
-    }
-    //  [fam_u] is a tail-frame; cons refs and pop the stack
-    //
-    else {
-      ref = ur_cons(rot_u, fam_u->ref, ref);
-      _cu_box_stash((u3a_noun*)fam_u->cel_u, ref);
-      tac_u.fil_w--;
-    }
-  }
-
-  c3_free(tac_u.fam_u);
-
-  return ref;
-}
-
-/* _cu_vec: parameters for cold-state hamt walk.
-*/
-typedef struct _cu_vec_s {
-  ur_nvec_t* vec_u;
-  ur_root_t* rot_u;
-} _cu_vec;
-
-/* _cu_hamt_walk(): reallocate key/value pair in hamt walk.
-*/
-static void
-_cu_hamt_walk(u3_noun kev, void* ptr)
-{
-  _cu_vec*   dat_u = (_cu_vec*)ptr;
-  ur_nvec_t* vec_u = dat_u->vec_u;
-  ur_root_t* rot_u = dat_u->rot_u;
-
-  vec_u->refs[vec_u->fill++] = _cu_from_loom(rot_u, kev);
-}
-
-/* _cu_all_from_loom(): reallocate essential persistent state off-loom.
-**
-**   NB: destroys the loom.
-*/
-static ur_nref
-_cu_all_from_loom(ur_root_t* rot_u, ur_nvec_t* cod_u)
-{
-  ur_nref   ken = _cu_from_loom(rot_u, u3A->roc);
-  c3_w    cod_w = u3h_wyt(u3R->jed.cod_p);
-  _cu_vec dat_u = { .vec_u = cod_u, .rot_u = rot_u };
-
-  ur_nvec_init(cod_u, cod_w);
-  u3h_walk_with(u3R->jed.cod_p, _cu_hamt_walk, &dat_u);
-
-  return ken;
-}
-
-typedef struct _cu_loom_s {
-  ur_dictn_t map_u;  //  direct->indirect mapping
-  u3_atom      *vat;  //  indirect atoms
-  u3_noun      *cel;  //  cells
-} _cu_loom;
-
-/* _cu_ref_to_noun(): lookup/allocate [ref] on the loom.
-*/
-static u3_noun
-_cu_ref_to_noun(ur_root_t* rot_u, ur_nref ref, _cu_loom* lom_u)
-{
-  switch ( ur_nref_tag(ref) ) {
-    default: u3_assert(0);
-
-    //  all ur indirect atoms have been pre-reallocated on the loom.
-    //
-    case ur_iatom:  return lom_u->vat[ur_nref_idx(ref)];
-
-
-    //  cells were allocated off-loom in cons-order, and are traversed
-    //  in the same order: we've already relocated any one we could need here.
-    //
-    case ur_icell:  return lom_u->cel[ur_nref_idx(ref)];
-
-    //  u3 direct atoms are 31/63-bit, while ur direct atoms are 62-bit;
-    //  we use a hashtable to deduplicate the non-overlapping space
-    //
-    case ur_direct: {
-      u3_atom vat;
-
-      if ( u3a_direct_max >= ref ) {
-        return (u3_atom)ref;
-      }
-      else if ( ur_dictn_get(rot_u, &lom_u->map_u, ref, (c3_w*)&vat) ) {
-        return vat;
-      }
-      else {
-        {
-          c3_h wor_h[2] = { ref & 0xffffffff, ref >> 32 };
-          vat = (c3_w)u3i_halfs(2, wor_h);
-        }
-
-        ur_dictn_put(0, &lom_u->map_u, ref, (c3_w)vat);
-        return vat;
-      }
-    } break;
-  }
-}
-
-/* _cu_all_to_loom(): reallocate all of [rot_u] on the loom, restore roots.
-**                NB: requires all roots to be cells
-**                    does *not* track refcounts, which must be
-**                    subsequently reconstructed via tracing.
-*/
-static void
-_cu_all_to_loom(ur_root_t* rot_u, ur_nref ken, ur_nvec_t* cod_u)
-{
-  _cu_loom  lom_u = {0};
-  c3_d i_d, fil_d;
-
-  ur_dictn_grow(0, &lom_u.map_u, ur_fib11, ur_fib12);
-
-  //  allocate all atoms on the loom.
-  //
-  {
-    c3_d*  len_d = rot_u->atoms.lens;
-    c3_y** byt_y = rot_u->atoms.bytes;
-
-    fil_d = rot_u->atoms.fill;
-    lom_u.vat = calloc(fil_d, sizeof(u3_atom));
-
-    for ( i_d = 0; i_d < fil_d; i_d++ ) {
-      lom_u.vat[i_d] = u3i_bytes(len_d[i_d], byt_y[i_d]);
-    }
-  }
-
-  //  allocate all cells on the loom.
-  //
-  {
-    ur_nref* hed = rot_u->cells.heads;
-    ur_nref* tal = rot_u->cells.tails;
-    u3_noun  cel;
-
-    fil_d = rot_u->cells.fill;
-    lom_u.cel = c3_calloc(fil_d * sizeof(u3_noun));
-
-    for ( i_d = 0; i_d < fil_d; i_d++ ) {
-      cel = u3nc(_cu_ref_to_noun(rot_u, hed[i_d], &lom_u),
-                 _cu_ref_to_noun(rot_u, tal[i_d], &lom_u));
-      lom_u.cel[i_d] = cel;
-      u3r_mug(cel);
-    }
-  }
-
-  //  restore kernel reference (always a cell)
-  //
-  u3A->roc = lom_u.cel[ur_nref_idx(ken)];
-
-  //  restore cold jet state (always cells)
-  //
-  {
-    c3_d  max_d = cod_u->fill;
-    c3_d    i_d;
-    ur_nref ref;
-    u3_noun kev;
-
-    for ( i_d = 0; i_d < max_d; i_d++) {
-      ref = cod_u->refs[i_d];
-      kev = lom_u.cel[ur_nref_idx(ref)];
-      u3h_put(u3R->jed.cod_p, u3h(kev), u3k(u3t(kev)));
-      u3z(kev);
-    }
-  }
-
-  //  dispose of relocation pointers
-  //
-  c3_free(lom_u.cel);
-  c3_free(lom_u.vat);
-  ur_dict_free((ur_dict_t*)&lom_u.map_u);
-}
-
-/* _cu_realloc(): hash-cons roots off-loom, reallocate on loom.
-*/
-static ur_nref
-_cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
-{
-#ifdef U3_MEMORY_DEBUG
-  u3_assert(0);
-#endif
-
-  //  bypassing page tracking as an optimization
-  //
-  //    NB: u3m_foul() will mark all as dirty, and
-  //    u3e_save() will reinstate protection flags
-  //
-  u3m_foul();
-
-  //  stash event number
-  //
-  c3_d eve_d = u3A->eve_d;
-
-  //  reallocate kernel and cold jet state
-  //
-  ur_root_t* rot_u = ur_root_init();
-  ur_nvec_t  cod_u;
-  ur_nref      ken = _cu_all_from_loom(rot_u, &cod_u);
-
-  //  print [rot_u] measurements
-  //
-  if ( fil_u ) {
-    ur_root_info(fil_u, rot_u);
-    fprintf(fil_u, "\r\n");
-  }
-
-  //  reinitialize loom
-  //
-  //    NB: hot jet state is not yet re-established
-  //
-  u3m_pave(c3y);
-
-  //  reallocate all nouns on the loom
-  //
-  _cu_all_to_loom(rot_u, ken, &cod_u);
-
-  //  allocate new hot jet state
-  //
-  u3j_boot(c3y);
-
-  //  establish correct refcounts via tracing
-  //
-  c3_h wag_h = u3C.wag_h;
-  u3C.wag_h |= u3o_debug_ram;
-  u3m_grab();
-  u3C.wag_h  = wag_h;
-
-  //  re-establish warm jet state
-  //
-  u3j_ream();
-
-  //  restore event number
-  //
-  u3A->eve_d = eve_d;
-
-  //  mark all pages dirty
-  //
-  u3m_foul();
-
-  *tor_u = rot_u;
-  *doc_u = cod_u;
-
-  return ken;
-}
-
-/* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
-*/
-#ifdef U3_MEMORY_DEBUG
-c3_w
-u3u_meld(void)
-{
-  fprintf(stderr, "u3: unable to meld under U3_MEMORY_DEBUG\r\n");
-  return 0;
-}
-#else
-c3_w
-u3u_meld(void)
-{
-  c3_w       pre_w = u3a_open(u3R);
-  ur_root_t* rot_u;
-  ur_nvec_t  cod_u;
-
-  u3_assert( &(u3H->rod_u) == u3R );
-
-  _cu_realloc(stderr, &rot_u, &cod_u);
-
-  //  dispose off-loom structures
-  //
-  ur_nvec_free(&cod_u);
-  ur_root_free(rot_u);
-  return (u3a_open(u3R) - pre_w);
-}
-#endif
-
 /* BEGIN helper functions for u3u_melt
    -------------------------------------------------------------------
 */
@@ -766,16 +315,16 @@ _cu_rock_save(c3_c* dir_c, c3_d eve_d, c3_d len_d, c3_y* byt_y)
   return c3y;
 }
 
-/* u3u_cram(): globably deduplicate memory, and write a rock to disk.
+/* u3u_cram(): jam persistent state (rock) and write it to disk.
+**
+**   serializes on-loom state directly through the blob-aware jam:
+**   bob atoms are expanded into the rock as regular atoms, their
+**   bytes mmap'd straight from the blob store.  rocks stay portable
+**   (standard jam; no blob refs), and the loom — including the blob
+**   bank — is untouched.  formerly routed through an off-loom ur
+**   rebuild, which repaved the home road (wiping blb_p) and read bob
+**   atoms' len_w raw; deduplication is |meld's job, not cram's.
 */
-#ifdef U3_MEMORY_DEBUG
-c3_o
-u3u_cram(c3_c* dir_c, c3_d eve_d)
-{
-  fprintf(stderr, "u3: unable to cram under U3_MEMORY_DEBUG\r\n");
-  return c3n;
-}
-#else
 c3_o
 u3u_cram(c3_c* dir_c, c3_d eve_d)
 {
@@ -786,37 +335,15 @@ u3u_cram(c3_c* dir_c, c3_d eve_d)
   u3_assert( &(u3H->rod_u) == u3R );
 
   {
-    ur_root_t* rot_u;
-    ur_nvec_t  cod_u;
-    ur_nref      ken = _cu_realloc(stderr, &rot_u, &cod_u);
+    u3_noun cod = u3_nul;
+    u3h_walk_with(u3R->jed.cod_p, _cj_warm_tap, &cod);
 
-    {
-      ur_nref roc = u3_nul;
-      c3_d  max_d = cod_u.fill;
-      c3_d    i_d;
+    u3_noun roc = u3nc(c3__arvo,
+                       u3nc(u3k(u3A->roc),
+                            u3nc(u3i_string("hashboard"), cod)));
 
-      //  cons vector of cold jet-state entries onto a list
-      //
-      for ( i_d = 0; i_d < max_d; i_d++) {
-        roc = ur_cons(rot_u, cod_u.refs[i_d], roc);
-      }
-
-      {
-        c3_c* has_c = "hashboard";
-        ur_nref has = ur_coin_bytes(rot_u, strlen(has_c), (c3_y*)has_c);
-        roc = ur_cons(rot_u, has, roc);
-      }
-
-      roc = ur_cons(rot_u, ur_coin64(rot_u, c3__arvo),
-                           ur_cons(rot_u, ken, roc));
-
-      ur_jam(rot_u, roc, &len_d, &byt_y);
-    }
-
-    //  dispose off-loom structures
-    //
-    ur_nvec_free(&cod_u);
-    ur_root_free(rot_u);
+    u3s_jam_xeno(roc, &len_d, &byt_y);
+    u3z(roc);
   }
 
   //  write jam-buffer into pier
@@ -829,7 +356,6 @@ u3u_cram(c3_c* dir_c, c3_d eve_d)
 
   return ret_o;
 }
-#endif
 
 /* u3u_mmap_read(): open and mmap the file at [pat_c] for reading.
 */
@@ -959,9 +485,13 @@ u3u_munmap(c3_d len_d, c3_y* byt_y)
 }
 
 /* u3u_uncram(): restore persistent state from a rock.
+**
+**   when [snk_u] is set, cued atoms larger than [thr_d] bytes stream
+**   through it instead of materializing on the loom — vere passes a
+**   blob-store sink so cram-expanded blobs come back as bob atoms.
 */
 c3_o
-u3u_uncram(c3_c* dir_c, c3_d eve_d)
+u3u_uncram(c3_c* dir_c, c3_d eve_d, c3_d thr_d, u3s_bsink* snk_u)
 {
   c3_c* nam_c;
   c3_d  len_d;
@@ -1000,6 +530,11 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
     //  XX tune the initial dictionary size for less reallocation
     //
     u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib33, ur_fib34);
+
+    if ( snk_u ) {
+      u3s_cue_xeno_blob(sil_u, thr_d, snk_u);
+    }
+
     u3_weak        ref = u3s_cue_xeno_with(sil_u, len_d, byt_y);
     u3_noun   roc, doc, tag, cod;
 

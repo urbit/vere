@@ -45,6 +45,18 @@
 **     U3C_OLD_NONE       value used to initialize frame->hed.  Defaults to
 **                        u3_none.
 **
+**     U3C_OLD_BLOB_FLAG  blob-aware migration (define all four together, or
+**     U3C_OLD_BLOB_T     none).  When set, the template handles bob atoms
+**     U3C_OLD_INTO       (blob references) and emits U3C_SYM(_blob), which
+**     U3C_NEW_BLOB_FLAG  migrates one blb_p entry.  Required for cross-bitness
+**                        migrations of v6+ snapshots; omit for pre-blob
+**                        (e.g. v4 -> v5) migrations.
+**                          U3C_OLD_BLOB_FLAG  source-bitness blob flag bit
+**                          U3C_OLD_BLOB_T     source-bitness u3a_blob struct
+**                          U3C_OLD_INTO       source-loom offset deref
+**                                             (u3a_into_h / u3a_into_d)
+**                          U3C_NEW_BLOB_FLAG  target-bitness blob flag bit
+**
 **   LANDMINE: U3C_NEW_* must point at the allocator family that owns the
 **   TARGET loom.  In the v4 -> v5 migration that is the v5 family
 **   (u3i_v5_cell, u3h_v5_put, ...) even though the migration runs on 32-bit
@@ -157,6 +169,33 @@ static u3_atom
 U3C_SYM(_atom)(U3C_OLD_NOUN old)
 {
   U3C_OLD_ATOM_T *old_u = (U3C_OLD_ATOM_T *)U3C_OLD_TO_PTR(old);
+
+#ifdef U3C_OLD_BLOB_FLAG
+  //  bob atom: an indirect atom flagged as a blob reference.  Its len_w
+  //  carries u3a_blob_flag and buf_w[0] is the off-loom offset of a
+  //  u3a_blob (NOT inline data).  Reproduce the bob atom in the target
+  //  loom, pointing at the u3a_blob already migrated by U3C_SYM(_blob).
+  //
+  if ( old_u->len_w & U3C_OLD_BLOB_FLAG ) {
+    U3C_OLD_BLOB_T *obl_u =
+      (U3C_OLD_BLOB_T *)U3C_OLD_INTO((U3C_OLD_NOUN)old_u->buf_w[0]);
+    u3a_blob *nbl_u = u3a_blob_get(obl_u->mug_h, obl_u->seq_h);
+
+    //  the bank is migrated before the noun graph, so the entry must exist
+    //
+    u3_assert( nbl_u );
+
+    c3_w           *nov_w = U3C_NEW_A_WALLOC(1 + c3_wiseof(U3C_NEW_ATOM_T));
+    U3C_NEW_ATOM_T *vat_u = (void *)nov_w;
+
+    vat_u->use_w    = 1;
+    vat_u->mug_w    = obl_u->mug_h;
+    vat_u->len_w    = U3C_NEW_BLOB_FLAG;
+    vat_u->buf_w[0] = (c3_w)u3a_outa(nbl_u);
+
+    return U3C_NEW_A_TO_PUG(U3C_NEW_A_OUTA(nov_w));
+  }
+#endif
 
 #if U3C_ATOM_MODE == U3C_ATOM_SAME
   c3_w            old_w = (c3_w)old_u->len_w;
@@ -314,6 +353,32 @@ U3C_SYM(_hamt)(U3C_OLD_NOUN kev, void *ptr_v)
   U3C_NEW_A_LOSE(key);
 }
 
+#ifdef U3C_OLD_BLOB_FLAG
+/* U3C_SYM(_blob)(): migrate one blob-bank (blb_p) entry.
+**
+**   The bank maps bid -> chub(off_p), where off_p is the off-loom offset
+**   of a u3a_blob.  off_p fits a direct cat in either bitness, so the
+**   value of the (cat) tail IS the offset.  Rebuild the entry in the
+**   target bank, copying the durable counters verbatim.  Run over the
+**   whole bank before the noun graph so bob atoms can resolve their blob.
+*/
+static void
+U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
+{
+  (void)ptr_v;
+
+  U3C_OLD_NOUN    val = U3C_OLD_TAIL(kev);
+  u3_assert( c3y == U3C_OLD_IS_CAT(val) );
+
+  U3C_OLD_BLOB_T *obl_u = (U3C_OLD_BLOB_T *)U3C_OLD_INTO(val);
+  u3a_blob       *nbl_u = u3a_blob_new(obl_u->mug_h, obl_u->seq_h);
+
+  nbl_u->use_w = obl_u->use_w;
+  nbl_u->eve_w = obl_u->eve_w;
+  nbl_u->les_h = obl_u->les_h;
+}
+#endif
+
 static void
 U3C_SYM(_init)(U3C_SYM(_ctx) *cop_u)
 {
@@ -349,6 +414,13 @@ U3C_SYM(_done)(U3C_SYM(_ctx) *cop_u)
 #undef U3C_NEW_ATOM_T
 #undef U3C_COPY_CAT
 #undef U3C_OLD_NONE
+
+#ifdef U3C_OLD_BLOB_FLAG
+#undef U3C_OLD_BLOB_FLAG
+#undef U3C_OLD_BLOB_T
+#undef U3C_OLD_INTO
+#undef U3C_NEW_BLOB_FLAG
+#endif
 
 #undef U3C_ATOM_SAME
 #undef U3C_ATOM_32_TO_64

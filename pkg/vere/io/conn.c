@@ -587,10 +587,14 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
 }
 
 /* _conn_moor_poke(): called on message read from u3_moor.
+**
+**   conn only speaks the legacy jam (0x00) wire format; the version byte
+**   is ignored here.
 */
 static c3_o
-_conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
+_conn_moor_poke(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
 {
+  (void)ver_y;
   u3_weak   jar;
   u3_noun   can, rid, tag, dat, rud = u3_nul, tar, wir, cad;
   u3_chan*  can_u = (u3_chan*)ptr_v;

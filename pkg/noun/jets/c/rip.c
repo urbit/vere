@@ -167,32 +167,47 @@ u3qc_rip(u3_atom a,
     return u3m_bail(c3__fail);
   }
 
+  //  correctness: the _bit_rip / _block_rip / u3r_chop paths all read
+  //  [c]'s buf_w directly (via u3r_word) or call u3r_blob_load per
+  //  chunk — the former returns seq_w (wrong) for bob atoms, the
+  //  latter allocates a full-size atom per iteration (O(n*blob)
+  //  memory churn).  Materialize the bob once up front: single full
+  //  loom allocation, correct reads thereafter.  A fully zero-copy
+  //  rip would mmap once and build chunks directly, but that needs a
+  //  deeper rewrite of _bit_rip and _block_rip.
+  //
+  u3_atom mat = u3_none;
+  if ( c3y == u3a_is_bob(c) ) {
+    mat = u3r_blob_load(c, u3C.dir_c);
+    if ( u3_none == mat ) {
+      return u3m_bail(c3__fail);
+    }
+    c = mat;
+  }
+
+  u3_noun pro;
+
   if ( 1 == b ) {
-    return _block_rip(a, c);
+    pro = _block_rip(a, c);
+  }
+  else if ( 0 == a ) {
+    pro = _bit_rip(b, c);
+  }
+  else {
+    u3i_slab sab_u;
+    pro = u3_nul;
+    c3_w len_w = DIVCEIL(u3r_met(a, c), b);
+
+    for (c3_w i_w = len_w; 0 < i_w; i_w--) {
+      u3i_slab_init(&sab_u, a, b);
+      u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
+      pro = u3nc(u3i_slab_mint(&sab_u), pro);
+    }
   }
 
-  if ( 0 == a ) {
-    return _bit_rip(b, c);
+  if ( u3_none != mat ) {
+    u3z(mat);
   }
-
-  u3i_slab sab_u;
-  u3_noun pro = u3_nul;
-  //u3_noun *lit = &pro;
-  //u3_noun *hed;
-  //u3_noun *tal;
-  c3_w len_w = DIVCEIL(u3r_met(a, c), b);
-
-  //for (c3_w i_w = 0; i_w < len_w; i_w++) {
-  for (c3_w i_w = len_w; 0 < i_w; i_w--) {
-    u3i_slab_init(&sab_u, a, b);
-    u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
-    //*lit = u3i_defcons(&hed, &tal);
-    //*hed = u3i_slab_mint(&sab_u);
-    //lit = tal;
-    pro = u3nc(u3i_slab_mint(&sab_u), pro);
-  }
-  //*lit = u3_nul;
-
   return pro;
 }
 

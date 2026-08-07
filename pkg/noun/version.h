@@ -10,7 +10,8 @@ typedef c3_d       u3v_version;
 #define U3V_VER3   (u3v_version)3  //  3.0-rc: persistent memoization
 #define U3V_VER4   (u3v_version)4  //  3.0:    bytecode alignment
 #define U3V_VER5   (u3v_version)5  //  4.0:    palloc
-#define U3V_VERLAT U3V_VER5
+#define U3V_VER6   (u3v_version)6  //  5.0:    blob store
+#define U3V_VERLAT U3V_VER6
 
 /*  bytecode semantics (within u3v_version)
  */
@@ -38,6 +39,7 @@ typedef c3_h       u3e_version;
 */
 #define U3E_VER1   1               //  north+south.bin
 #define U3E_VER2   2               //  image.bin
-#define U3E_VERLAT U3E_VER2
+#define U3E_VER3   3               //  image.bin + ram events
+#define U3E_VERLAT U3E_VER3
 
 #endif /* ifndef U3_VERSION_H */
