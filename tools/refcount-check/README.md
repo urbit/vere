@@ -16,9 +16,12 @@ cd tools/refcount-check && cargo build --release
 ./tools/refcount-check/target/release/refcount-check --explain hashtable.c:u3h_put ...
 ```
 
-Requires libclang 17+ (loaded at runtime via `--libclang` or auto-found
+Requires libclang 19 (loaded at runtime via `--libclang` or auto-found
 under `/usr/lib/llvm-*`) and a fresh `compile_commands.json`
-(`zig build -Dgenerate-commands`).
+(`zig build -Dgenerate-commands`). Older libclangs load (17+), but 18
+anchors macro-expanded operator cursors differently, defeating the
+macro-origin exemption for `u3a_to_ptr`-style word punning and raising
+false `[strange expression]` findings; CI pins 19 for this reason.
 
 By default the shared `pkg/noun` headers (`noun.h` + `jets/w.h`) are
 precompiled once per run and every translation unit is parsed against
