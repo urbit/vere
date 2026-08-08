@@ -1088,21 +1088,23 @@ u3_term_ef_ctlc(void)
 }
 
 /*  _term_it_put_value(): put numeric color value on lin_w.
+**  @Refcount: direct `val`
 */
 static c3_w
 _term_it_put_value(c3_w*   lin_w,
                    u3_atom val)
 {
   c3_c str_c[4];
+  if ( c3n == u3a_is_cat(val) ) u3m_bail(c3__fail);
   c3_w len = snprintf(str_c, 4, "%d", val % 256);
   for ( c3_w i_w = 0; i_w < len; i_w++ ) {
     lin_w[i_w] = str_c[i_w];
   }
-  u3z(val);
   return len;
 }
 
 /* _term_it_put_tint(): put ansi color id on lin_w. RETAINS col.
+** @Refcount: retains `col`
 */
 static c3_w
 _term_it_put_tint(c3_w*   lin_w,
@@ -1157,6 +1159,7 @@ _term_it_put_tint(c3_w*   lin_w,
 }
 
 /* _term_it_put_deco(): put ansi sgr code on lin_w. RETAINS dec.
+**  @Refcount: retains arguments
 */
 static void
 _term_it_put_deco(c3_w* lin_w,
@@ -1637,8 +1640,10 @@ _term_io_talk(u3_auto* car_u)
  *
  *    Parses a text string which contains a decimal number. In practice, this
  *    number is always '1'.
+ *    
+ *    @Refcount: retains
  */
-static u3_noun
+static c3_o
 _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)
 {
   c3_c* str = u3r_string(txt);
@@ -1694,7 +1699,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
     if (  (c3n == u3r_cell(pud, &p_pud, &q_pud))
        || (u3_nul != q_pud)
-       || (c3n == _reck_orchid(c3__ud, u3k(p_pud), &tid_l)) )
+       || (c3n == _reck_orchid(c3__ud, p_pud, &tid_l)) )
     {
       u3l_log("term: bad tire");
       ret_o = c3n;

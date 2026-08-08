@@ -191,6 +191,7 @@ _conn_find_chan(u3_conn* con_u, c3_l sev_l, c3_l coq_l)
 }
 
 /* _conn_read_wire(): check tag, decompose wire into /sev/coq/rid
+** @Refcount: transfer `wir`, fills transferred `rid` on `c3y`
 */
 static c3_o
 _conn_read_wire(u3_noun   wir,

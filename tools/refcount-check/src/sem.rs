@@ -43,6 +43,9 @@ pub struct PointeeMode {
   pub reads: bool,             // reads *a without consuming it
   pub consumes: bool,          // gives away one counted ref of the old *a
   pub fills: Option<FillMode>, // writes a new value into *a
+  //  `fills ... `a` on `c3y``: the fill happens exactly when the
+  //  function returns this loobean (true = c3y); None = unconditional
+  pub fill_on: Option<bool>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -92,6 +95,7 @@ pub enum AssertMode {
   Transfer,
   Produce,
   Retain,
+  Direct, // trusted claim: the named values are direct atoms
 }
 
 /// The refcount protocol of one function.
@@ -103,6 +107,9 @@ pub struct Sem {
   pub destructures: Option<String>, // source arg of a destructurer
   pub product: ProductMode,
   pub noreturn: bool,               // calling this ends execution
+  //  `doomed on `c3n``: exits returning this loobean oblige the CALLER
+  //  to die; leaks and contracts on those paths are not checked
+  pub doomed: Option<bool>,
   pub check: bool,
   pub custom: bool,
   pub why: String,
@@ -121,6 +128,7 @@ impl Sem {
       destructures: None,
       product,
       noreturn: false,
+      doomed: None,
       check: true,
       custom: false,
       why: why.to_string(),
@@ -137,9 +145,9 @@ impl Sem {
   /// decl-vs-def sync check).
   pub fn proto_key(&self) -> String {
     format!(
-      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}|{}",
+      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}|{}|{:?}",
       self.default_args, self.args, self.pointees, self.destructures,
-      self.product, self.custom, self.check, self.noreturn
+      self.product, self.custom, self.check, self.noreturn, self.doomed
     )
   }
 }
@@ -203,7 +211,7 @@ fn re_jet_k() -> &'static Regex {
 fn re_block_assert() -> &'static Regex {
   static RE: OnceLock<Regex> = OnceLock::new();
   RE.get_or_init(|| {
-    Regex::new(r"(?i)@Refcount:\s*assert\s+(transfer|produce|retain)((?:\s+[A-Za-z_]\w*)*)")
+    Regex::new(r"(?i)@Refcount:\s*assert\s+(transfer|produce|retain|direct)((?:\s+[A-Za-z_]\w*)*)")
       .unwrap()
   })
 }
@@ -222,8 +230,17 @@ const PROD_SLOT_WORDS: &[&str] = &["product", "result", "return"];
 const CLAUSE_HEADS: &[&str] = &[
   "transfers", "retains", "transfer", "retain", "direct", "passthrough",
   "conslike", "reads", "consumes", "fills", "destructures", "destructure",
-  "custom", "assert", "noreturn",
+  "custom", "assert", "noreturn", "doomed",
 ];
+
+/// `c3y`/`c3n` as a condition name.
+fn loob_name(s: &str) -> Option<bool> {
+  match s {
+    "c3y" => Some(true),
+    "c3n" => Some(false),
+    _ => None,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // annotation grammar
@@ -485,7 +502,8 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
     if head == "fills" {
       //  the callee writes a new value into *a: `fills transferred`
       //  hands the caller a counted reference, `fills retained` an
-      //  uncounted view
+      //  uncounted view. A trailing `on `c3y|c3n`` makes the fill
+      //  conditional on the function's (loobean) product.
       let (fm, mname) = match words.first().copied() {
         Some("transferred") => (FillMode::Transferred, "fills transferred"),
         Some("retained") => (FillMode::Retained, "fills retained"),
@@ -498,6 +516,28 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
           continue;
         }
       };
+      let mut names = names.clone();
+      let mut fill_on: Option<bool> = None;
+      if words.contains(&"on") {
+        let cond = names.pop().and_then(|n| loob_name(&n));
+        let Some(cond) = cond else {
+          sem.warnings.push((
+            line,
+            "@Refcount: fills ... on requires a final `c3y` or `c3n`"
+              .to_string(),
+          ));
+          continue;
+        };
+        if fm != FillMode::Transferred {
+          sem.warnings.push((
+            line,
+            "@Refcount: conditional fills support `transferred` only"
+              .to_string(),
+          ));
+          continue;
+        }
+        fill_on = Some(cond);
+      }
       if names.is_empty() {
         sem.warnings.push((
           line,
@@ -508,9 +548,31 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
       for n in &names {
         let slot = format!("pointee `{}` fill", n);
         set_slot(&mut explicit, &mut sem.warnings, line, &slot, mname);
-        sem.pointees.entry(n.clone()).or_default().fills = Some(fm);
+        let pm = sem.pointees.entry(n.clone()).or_default();
+        pm.fills = Some(fm);
+        pm.fill_on = fill_on;
       }
       sem.why = format!("@Refcount: {}", mname);
+      continue;
+    }
+
+    if head == "doomed" {
+      //  `doomed on `c3n``: an exit returning this loobean obliges the
+      //  caller to die; leaks and contracts on such paths are moot
+      let cond = words.contains(&"on")
+        .then(|| names.first().and_then(|n| loob_name(n)))
+        .flatten();
+      let Some(cond) = cond else {
+        sem.warnings.push((
+          line,
+          "@Refcount: doomed requires `on `c3y`` or `on `c3n``"
+            .to_string(),
+        ));
+        continue;
+      };
+      set_slot(&mut explicit, &mut sem.warnings, line, "doomed",
+        if cond { "doomed on c3y" } else { "doomed on c3n" });
+      sem.doomed = Some(cond);
       continue;
     }
 
@@ -772,9 +834,17 @@ pub type SemCache = HashMap<(Option<String>, String), Rc<Sem>>;
 pub fn resolve_sem(cur: &Cursor, sem_cache: &mut SemCache, src: &mut SrcCache) -> Rc<Sem> {
   let name = cur.spelling();
   let is_static = cur.is_static();
+  let is_fn = cur.kind() == clang_sys::CXCursor_FunctionDecl;
   let fpath = cur.location().file.unwrap_or_default();
+  //  non-function cursors (fn-pointer fields/variables/params) are
+  //  keyed by site: bare field names like `kick_f` recur across
+  //  unrelated structs
   let key = (
-    if is_static { Some(fpath.to_string()) } else { None },
+    if is_static || !is_fn {
+      Some(format!("{}:{}", fpath, if is_fn { 0 } else { cur.location().line }))
+    } else {
+      None
+    },
     name.to_string(),
   );
   let has_def = cur.definition().is_some();
@@ -790,8 +860,9 @@ pub fn resolve_sem(cur: &Cursor, sem_cache: &mut SemCache, src: &mut SrcCache) -
   let line = if loc.file.is_some() { loc.line } else { 0 };
   parse_fn_annotations(&cursor_comments(cur, src), &mut sem, line);
   //  the return type is ground truth: annotations cannot make a non-noun
-  //  product tracked
-  if !is_noun_type(&cur.result_type()) {
+  //  product tracked. (Declarator cursors have no result type; the
+  //  call site derives the product from the call expression instead.)
+  if is_fn && !is_noun_type(&cur.result_type()) {
     sem.product = ProductMode::NonNoun;
   }
   sem.from_def = has_def;
@@ -927,6 +998,7 @@ pub fn block_asserts(compound: &Cursor, fcm: &FileComments) -> Vec<(AssertMode, 
       let mode = match m[1].to_uppercase().as_str() {
         "TRANSFER" => AssertMode::Transfer,
         "PRODUCE" => AssertMode::Produce,
+        "DIRECT" => AssertMode::Direct,
         _ => AssertMode::Retain,
       };
       let names: Vec<String> = m[2].split_whitespace().map(|s| s.to_string()).collect();

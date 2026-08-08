@@ -504,3 +504,140 @@ ok_fnptr_decl(u3_noun a, void (*pass_f)(u3_noun))
   fun_f = pass_f;
   fun_f(a);
 }
+
+/* leaks are tolerated in a noreturn function: the process dies anyway
+** @Refcount: noreturn
+*/
+void
+ok_noreturn_leak(u3_noun a)
+{
+  c3_free(u3r_string(u3k(a)));  //  leaked copy: fine, we die
+  abort();
+}
+
+/* a noreturn function with a reachable return is an annotation error
+** @Refcount: noreturn
+*/
+void
+warn_noreturn_return(u3_noun a)
+{
+  if ( 0 == a ) {
+    return;                     //  BUG: annotated noreturn
+  }
+  abort();
+}
+
+/* _cond_fill(): fills rid with an owned value only when returning c3y
+** @Refcount: retains arguments, fills transferred `rid` on `c3y`
+*/
+c3_o
+_cond_fill(u3_noun a, u3_noun* rid)
+{
+  if ( c3n == u3a_is_cell(a) ) {
+    return c3n;
+  }
+  *rid = u3k(u3h(a));
+  return c3y;
+}
+
+/* the conditional fill lands on the matching branch (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_cond_fill(u3_noun a)
+{
+  u3_noun rid;
+  if ( c3n == _cond_fill(a, &rid) ) {
+    return u3_nul;
+  }
+  return rid;
+}
+
+/* filled but claims failure
+** @Refcount: retains arguments, fills transferred `rid` on `c3y`
+*/
+c3_o
+bug_cond_fill_wrongpath(u3_noun a, u3_noun* rid)
+{
+  *rid = u3k(a);
+  return c3n;                   //  BUG: filled on the c3n path
+}
+
+/* leaks on the failing path are fine: the caller must die on c3n
+** @Refcount: retains arguments, doomed on `c3n`
+*/
+c3_o
+ok_doomed(u3_noun a)
+{
+  u3_noun pro = u3qa_inc(a);
+  if ( c3n == u3a_is_cell(a) ) {
+    return c3n;                 //  pro leaked: the caller dies
+  }
+  u3z(pro);
+  return c3y;
+}
+
+/* out-params handed through to a destructurer
+** @Refcount: retains arguments, fills retained `hed`, `tel`
+*/
+void
+ok_slot_destructure(u3_noun a, u3_noun* hed, u3_noun* tel)
+{
+  u3x_cell(a, hed, tel);
+}
+
+/* bare u3k of a pointee upgrades it in place
+** @Refcount: retains arguments, fills transferred `out`
+*/
+void
+ok_gain_deref(u3_noun a, u3_noun* out)
+{
+  u3x_cell(a, out, 0);
+  u3k(*out);
+}
+
+/* a callback field annotated on its declarator
+*/
+typedef struct _selftest_cb {
+  void (*ret_f)(u3_noun);  //  @Refcount: retains
+} selftest_cb;
+
+/* the annotated field is called as retaining
+** @Refcount: retains arguments
+*/
+void
+ok_fnptr_field(selftest_cb* cb_u, u3_noun a)
+{
+  cb_u->ret_f(u3h(a));     //  borrowed view: fine, the field retains
+}
+
+/* the u3_mars_grab shape: a conditional destructurer fill upgraded in
+** place with a bare u3k, surviving the parent's death; the untouched
+** path keeps the u3_nul initializer
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_cond_view_gain(u3_noun a)
+{
+  u3_noun sac = u3_nul;
+  u3_noun gon = u3qa_inc(a);
+
+  if ( c3y == u3r_cell(gon, 0, &sac) ) {
+    u3k(sac);
+  }
+  u3z(gon);
+
+  return sac;
+}
+
+/* trusted directness assertion without a runtime check
+** @Refcount: retains arguments
+*/
+c3_w
+ok_assert_direct(u3_noun a)
+{
+  u3_noun inc = u3qa_inc(a);
+  { //  @Refcount: assert direct inc
+    return (c3_w)inc;
+  }
+}

@@ -953,7 +953,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 /* _http_peek_dispatch(): dispatch peek request. RETAINS gang, spur, bem
  * RETAINS req_u->peq_u and req_u->peq_u->pax if c3n is returned (no peek
  * was queued), TRANSFERS them if c3y was returned
- *  @Refcount: retains arguments
+ *  @Refcount: custom
 */
 static c3_o
 _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
@@ -1009,7 +1009,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
 }
 
 /* _http_req_dispatch(): dispatch http request. RETAINS `req`
-**  @Refcount: retains arguments
+**  @Refcount: assert retains arguments
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -1176,6 +1176,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
       h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
     }
     else {
+      u3z(req);
       h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
     }
   }

@@ -234,6 +234,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 }
 
 /* _mars_fact(): commit a fact and enqueue its effects.
+** @Refcount: assert transfer arguments
 */
 static void
 _mars_fact(u3_mars* mar_u,
@@ -658,6 +659,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
 
       mar_u->sat_e = u3_mars_save_e;
+      u3z(jar);
     } break;
 
     //  $%  [%live ?(%meld %pack) ~] :: XX rename
@@ -1116,6 +1118,9 @@ _mars_play_batch(u3_mars* mar_u,
   return _play_yes_e;
 }
 
+/* _mars_do_boot(): replay boot events. The caller must crash on c3n.
+** @Refcount: doomed on `c3n`
+*/
 static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 {
@@ -1138,7 +1143,6 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //  hack to recover structural sharing
   //
   u3_noun xev = u3m_love(u3ke_cue(u3ke_jam(u3nc(cax, eve))));
-  u3z(cax);
   u3x_cell(xev, &cax, &eve);
   u3k(eve); u3k(cax);
   u3z(xev);
@@ -1585,6 +1589,8 @@ _mars_wyrd_card(c3_m nam_m, c3_w ver_w, c3_l sev_l)
 }
 
 /* _mars_sift_pill(): extract boot formulas and module/userspace ova from pill
+** @Refcount: fills transferred `bot`, `mod`, `use`, `cax` on `c3y`
+** @Refcount: doomed on `c3n` (boot fails; the caller must crash)
 */
 static c3_o
 _mars_sift_pill(u3_noun  pil,
@@ -1688,6 +1694,8 @@ _mars_sift_pill(u3_noun  pil,
 }
 
 /* _mars_boot_make(): construct boot sequence
+** @Refcount: fills transferred `ova`, `xac` on `c3y`
+** @Refcount: doomed on `c3n` (boot fails; the caller must crash)
 */
 static c3_o
 _mars_boot_make(u3_boot_opts* inp_u,

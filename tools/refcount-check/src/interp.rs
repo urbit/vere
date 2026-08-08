@@ -112,6 +112,12 @@ struct Env {
   vars_rev: IHashMap<VarName, ValId>,
   contains: IHashMap<ValId, IHashSet<ValId>>, // noun -> (set sub-noun)
   slots: IHashMap<ValId, SlotTarget>,         // live slot-pointer targets
+  //  u3h/u3t view cache: (parent, is-tail) -> the sub-noun's value.
+  //  Nouns are immutable, so u3h(x) twice is the SAME value -- this is
+  //  what lets an is_cat guard on u3h(oct) prove a later u3h(oct)
+  //  direct. Entries with a poisoned/consumed child are ignored (and
+  //  re-minted) at lookup.
+  views: IHashMap<(ValId, bool), ValId>,
 }
 
 impl Env {
@@ -211,10 +217,16 @@ impl Env {
 #[derive(Default, Clone)]
 struct Flow {
   local: Option<Env>,                   // local environment, if code is reachable
-  goto_envs: IHashMap<Name, IVec<Env>>, // environments from goto, for goto labels
-  exit_envs: IVec<Env>,                 // environments from return, for exit
-  break_envs: IVec<Env>,
-  cont_envs: IVec<Env>,
+  //  parked environments carry a LABEL naming the path that parked
+  //  them (the goto/break/continue site, a branch extent), so join
+  //  errors can say which branches disagree
+  goto_envs: IHashMap<Name, IVec<(String, Env)>>,
+  //  environments from return: the return's location (for reports) and
+  //  the returned value when it is an integer literal (c3y/c3n --
+  //  conditional contracts key on it)
+  exit_envs: IVec<(Loc, Option<u64>, Env)>,
+  break_envs: IVec<(String, Env)>,
+  cont_envs: IVec<(String, Env)>,
   switch_env: Option<Env>,
   switch_vid: Option<ValId>,            // the switched-on noun, for case refinement
 }
@@ -260,6 +272,45 @@ struct Gen<'a> {
   //  by ValId (never reused within a function), so recording is
   //  path-insensitive; consulted only when a state IS Poisoned.
   poison_why: RefCell<HashMap<ValId, String>>,
+  //  fills deferred by a conditional-fill callee (`fills transferred
+  //  `x` on `c3y``): the enclosing condition claims them and applies
+  //  the fill on the branch whose product matches. Must be resolved by
+  //  a direct c3y/c3n comparison in the same statement.
+  pending_cond_fills: Option<Vec<PendCondFill>>,
+}
+
+/// One deferred conditional fill: the target variable (re-resolved at
+/// claim time) and the loobean product that triggers the fill.
+struct PendCondFill {
+  var: VarName,
+  on: bool, // fill happens when the product is this loobean
+  kind: PendKind,
+}
+
+enum PendKind {
+  //  annotated `fills transferred ... on`: the owned fill is deferred
+  //  until the claiming comparison, and MUST be claimed (loud if not)
+  Owned,
+  //  loobean destructurer (u3r_cell &co): the borrowed fill is applied
+  //  optimistically at the call; the claiming comparison UNDOES it on
+  //  the branch whose product says it never happened, restoring the
+  //  old value AND its state (the fill's own unbind poisoned it).
+  //  Unclaimed pendings drop silently (the optimistic fill stays --
+  //  the old, compatible behavior).
+  View { prior: ValId, prior_st: RefcountState },
+}
+
+/// Deferred-fill hygiene at a statement/condition boundary: optimistic
+/// view fills simply stay (their pendings drop), but a deferred OWNED
+/// fill that was never claimed is a loud error.
+fn drop_pending(cur: &Cursor, g: &mut Gen) -> R<()> {
+  let Some(pends) = g.pending_cond_fills.take() else { return Ok(()); };
+  if pends.iter().any(|p| matches!(p.kind, PendKind::Owned)) {
+    report!(g, cur, "complicated",
+      "a conditional-fill call was not compared against c3y/c3n; \
+       compare its product directly (`if (c3n == f(.., &out))`)");
+  }
+  Ok(())
 }
 
 impl Gen<'_> {
@@ -333,6 +384,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     param_vids: Vec::new(),
     pointee_params: Vec::new(),
     poison_why: RefCell::new(HashMap::new()),
+    pending_cond_fills: None,
   };
 
   for p in fun.arguments() {
@@ -409,8 +461,20 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
           format!("backward goto to [{}]: the label was already passed, \
                    won't analyze", labels.join(", ")), &g)];
       }
-      flo.exit_envs.into_iter().chain(flo.local)
-        .map(|env| check_exit(body.extent_end(), env, &g))
+      //  a noreturn function must actually never return: leaks inside
+      //  it are tolerated (the process dies), so a reachable exit
+      //  would silently skip all accounting -- report it loudly
+      if g.sem.noreturn {
+        if !flo.exit_envs.is_empty() || flo.local.is_some() {
+          return vec![report(None, "annotation",
+            "annotated `@Refcount: noreturn`, but a return or \
+             fall-through is reachable".to_string(), &g)];
+        }
+        return vec![];
+      }
+      flo.exit_envs.into_iter()
+        .chain(flo.local.map(|env| (body.extent_end(), None, env)))
+        .map(|(loc, ret_lit, env)| check_exit(loc, ret_lit, env, &g))
         .flatten().collect()
     }
   }
@@ -459,6 +523,10 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
   //  When gotos are disallowed via a flag and we don't have local env, we can
   //  never obtain local env. This is used to make some code walks simpler.
   //
+  //  deferred-fill hygiene: pendings never survive a statement
+  //  boundary (view fills stay applied; unclaimed owned fills are loud)
+  drop_pending(cur, g)?;
+
   if k == CXCursor_CompoundStmt {
     //  block-assert blessings for this compound. The nameless form
     //  blesses every store in the block: the eval side consults
@@ -468,16 +536,41 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
     //  block's own effects, at block end.
     let mut all_here = 0u32;
     let mut names_here: Vec<Name> = Vec::new();
+    let mut direct_here: Vec<Name> = Vec::new();
     for (mode, names) in g.host.block_asserts(cur) {
-      if !matches!(mode, AssertMode::Transfer) {
-        report!(g, cur, "annotation",
-          "block-level `assert retain/produce` is no longer supported: \
-           stores retain by default, annotate transfers only");
+      match mode {
+        AssertMode::Transfer => {
+          if names.is_empty() {
+            all_here += 1;
+          } else {
+            names_here.extend(names.into_iter().map(Name::from));
+          }
+        }
+        //  `assert direct low`: trusted claim that the named values
+        //  are direct atoms (no runtime check exists), applied at
+        //  block entry
+        AssertMode::Direct => {
+          if names.is_empty() {
+            report!(g, cur, "annotation",
+              "`assert direct` requires variable names");
+          }
+          direct_here.extend(names.into_iter().map(Name::from));
+        }
+        _ => {
+          report!(g, cur, "annotation",
+            "block-level `assert retain/produce` is no longer supported: \
+             stores retain by default, annotate transfers only");
+        }
       }
-      if names.is_empty() {
-        all_here += 1;
-      } else {
-        names_here.extend(names.into_iter().map(Name::from));
+    }
+    let mut flo = flo;
+    if let Some(env) = flo.local.as_mut() {
+      for n in &direct_here {
+        let Some((_, vid)) = read_var(env, n) else {
+          report!(g, cur, "annotation",
+            "`assert direct {}`: no variable of that name is in scope", n);
+        };
+        refine_direct(env, vid);
       }
     }
     g.assert_transfer_all += all_here;
@@ -527,10 +620,20 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       }
     };
 
-    let first      = branch(then, &flo,   t_op_env, g)?;
-    let mut second = branch(els,  &first, f_op_env, g)?;
+    let first      = branch(then.clone(), &flo,   t_op_env, g)?;
+    let mut second = branch(els.clone(),  &first, f_op_env, g)?;
 
-    second.local = mayb_join(cur.extent_end(), first.local, second.local, g)?;
+    //  label the sides with the branch extents, so join errors can
+    //  name the disagreeing branches
+    let range_lab = |c: &Option<Cursor>| -> String {
+      c.as_ref()
+        .map(|c| format!("{}..{}",
+          floc(&c.location()), c.extent_end().line))
+        .unwrap_or_default()
+    };
+    second.local = mayb_join_l(cur.extent_end(),
+      &range_lab(&then), first.local,
+      &range_lab(&els), second.local, g)?;
     return Ok(second);
   }
   //  instead of doing fixpoint analysis or somesuch, we check that the body
@@ -778,7 +881,7 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
   else if k == CXCursor_BreakStmt {
     let mut flo = flo;
     if let Some(env) = flo.local {
-      flo.break_envs.push_back(env);
+      flo.break_envs.push_back((floc(&cur.location()), env));
       flo.local = None;
     };
     return Ok(flo)
@@ -786,7 +889,7 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
   else if k == CXCursor_ContinueStmt {
     let mut flo = flo;
     if let Some(env) = flo.local {
-      flo.cont_envs.push_back(env);
+      flo.cont_envs.push_back((floc(&cur.location()), env));
       flo.local = None;
     };
     return Ok(flo)
@@ -828,7 +931,9 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
     if k == CXCursor_ReturnStmt {
       let mut flo = flo;
       if let Some(env) = execute_return(cur, env, depth, g)? {
-        flo.exit_envs.push_back(env);
+        let ret_lit = cur.children().first()
+          .and_then(int_literal_value);
+        flo.exit_envs.push_back((cur.location(), ret_lit, env));
       }
       flo.local = None;
       return Ok(flo);
@@ -844,7 +949,8 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       let Some(target) = target else {
         report!(g, cur, "strange goto", "");
       };
-      flo.goto_envs.entry(target).or_default().push_back(env);
+      flo.goto_envs.entry(target).or_default()
+        .push_back((floc(&cur.location()), env));
       flo.local = None;
 
       return Ok(flo);
@@ -1103,7 +1209,7 @@ fn eval_init_effects(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   }
   let (vid, nxt) = eval_expr(cur, env, depth, g)?;
   let Some(nxt) = nxt else { return Ok(None); };
-  if holds_owned(&nxt, vid) {
+  if holds_owned(&nxt, vid) && !g.sem.noreturn {
     report!(g, cur, "leak",
       "owned value discarded into an untracked aggregate initializer");
   }
@@ -1311,8 +1417,27 @@ fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       if args.is_empty() {
         args = u.children().into_iter().skip(1).collect();
       }
-      if let Some(nm) = args.first().and_then(decl_ref_name) {
-        if let Some((_, vid)) = read_var(&env, &nm) {
+      //  the upgraded location: a plain name, or `*p` where p is a
+      //  tracked slot pointer (`u3k(*bot);` upgrades the pointee)
+      let target = args.first().and_then(|a0| {
+        let au = unwrap_expr(*a0);
+        if let Some(nm) = decl_ref_name(&au) {
+          return read_var(&env, &nm);
+        }
+        if au.kind() == CXCursor_UnaryOperator
+          && unary_op(&au).as_deref() == Some("*")
+        {
+          let pn = au.children().first().and_then(decl_ref_name)?;
+          let (_, pid) = read_var(&env, &pn)?;
+          if let Some(SlotTarget::Var(var)) = env.slots.get(&pid) {
+            let vid = *env.vars_rev.get(var)?;
+            return Some((var.clone(), vid));
+          }
+        }
+        None
+      });
+      if let Some((_, vid)) = target {
+        {
           let mut env = env;
           match *env.values.get(&vid).expect(LI) {
             RefcountState::Borrowed => {
@@ -1343,7 +1468,7 @@ fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   let Some(vid) = vid else { return Ok(Some(env)); };
 
   if env.vars.get(&vid).is_none_or(|l| l.is_empty()) {
-    if holds_owned(&env, Some(vid)) {
+    if holds_owned(&env, Some(vid)) && !g.sem.noreturn {
       report!(g, cur, "leak",
         "owned product of the expression is discarded without being \
          captured by a variable");
@@ -1394,6 +1519,7 @@ fn discard_check(cur: &Cursor, env: &Env, vid: Option<ValId>, g: &Gen)
   let Some(v) = vid else { return Ok(()); };
   if env.vars.get(&v).is_none_or(|l| l.is_empty())
     && matches!(env.values.get(&v), Some(RefcountState::Owned {..}))
+    && !g.sem.noreturn
   {
     report!(g, cur, "leak",
       "owned product discarded in a non-noun context (reference is \
@@ -1455,11 +1581,13 @@ fn unbind_var(mut env: Env, var: &VarName, cur: &Cursor, g: &Gen) -> R<Env>
   if !env.vars.contains_key(&id) {
     let st = env.values.get_mut(&id).expect(LI);
     if let RefcountState::Owned {extra} = *st {
-      let refs = if extra > 0 { format!(" ({} extra references)", extra) }
-                 else { String::new() };
-      report!(g, cur, "leak",
-        "owned reference in [{}] overwritten without being consumed{}",
-        var.name, refs);
+      if !g.sem.noreturn {
+        let refs = if extra > 0 { format!(" ({} extra references)", extra) }
+                   else { String::new() };
+        report!(g, cur, "leak",
+          "owned reference in [{}] overwritten without being consumed{}",
+          var.name, refs);
+      }
     }
     *st = RefcountState::Poisoned;
   }
@@ -2056,8 +2184,9 @@ fn merge_ternary_vals(cur: &Cursor, env: &mut Env, a: ValId, b: ValId,
 /// the argument at `src_i` is the source noun; every other `&var`
 /// argument is an out-param whose variable is rebound to a borrowed
 /// sub-noun of the source.
-fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize, env: Env,
-  depth: u32, g: &mut Gen) -> R<(Option<ValId>, Option<Env>)>
+fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize,
+  loob: bool, env: Env, depth: u32, g: &mut Gen)
+  -> R<(Option<ValId>, Option<Env>)>
 {
   let mut env = env;
   let mut src_vid: Option<ValId> = None;
@@ -2074,12 +2203,22 @@ fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize, env: Env,
       && unary_op(&au).as_deref() == Some("&")
     {
       if let Some(nm) = au.children().first().and_then(decl_ref_name) {
-        if let Some((var, _)) = read_var(&env, &nm) {
+        if let Some((var, prior)) = read_var(&env, &nm) {
+          let prior_st = *env.values.get(&prior).expect(LI);
           env = unbind_var(env, &var, cur, g)?;
           let id = new_val(&mut env, RefcountState::Borrowed, g);
-          env.bind_decl(var, id);
+          env.bind_decl(var.clone(), id);
           if let Some(src) = src_vid {
             env.contains.entry(src).or_default().insert(id);
+          }
+          //  a loobean destructurer fills only when it returns c3y:
+          //  the fill is applied optimistically, and a claiming
+          //  comparison restores the old binding on the c3n branch
+          if loob {
+            g.pending_cond_fills.get_or_insert_with(Vec::new)
+              .push(PendCondFill {
+                var, on: true, kind: PendKind::View {prior, prior_st},
+              });
           }
           continue;
         }
@@ -2088,14 +2227,42 @@ fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize, env: Env,
       continue;
     }
     let (v, nxt) = eval_expr(a, env, depth, g)?;
-    let Some(nxt) = nxt else { return Ok((None, None)); };
+    let Some(mut nxt) = nxt else { return Ok((None, None)); };
     discard_check(a, &nxt, v, g)?;
-    if v.is_some_and(|v|
-      matches!(nxt.values.get(&v), Some(RefcountState::Slot)))
+    if let Some(v) = v.filter(|v|
+      matches!(nxt.values.get(v), Some(RefcountState::Slot)))
     {
-      report!(g, a, "complicated",
-        "slot pointer passed to a destructurer argument that is not \
-         `&var`, won't analyze");
+      //  a slot-pointer value (an out-param handed through, e.g.
+      //  `u3r_qual(dat, &typ, bot, mod, use)` with u3_noun* params):
+      //  the pointed-at variable is rebound to a borrowed sub-noun,
+      //  same as a literal `&var`
+      match nxt.slots.get(&v).cloned().expect(LI) {
+        SlotTarget::Var(var) => {
+          let prior = nxt.vars_rev.get(&var).copied();
+          let prior_st = prior
+            .map(|p| *nxt.values.get(&p).expect(LI));
+          nxt = unbind_var(nxt, &var, a, g)?;
+          let id = new_val(&mut nxt, RefcountState::Borrowed, g);
+          nxt.bind_decl(var.clone(), id);
+          if let Some(src) = src_vid {
+            nxt.contains.entry(src).or_default().insert(id);
+          }
+          if let (true, Some(prior), Some(prior_st)) =
+            (loob, prior, prior_st)
+          {
+            g.pending_cond_fills.get_or_insert_with(Vec::new)
+              .push(PendCondFill {
+                var, on: true, kind: PendKind::View {prior, prior_st},
+              });
+          }
+        }
+        SlotTarget::Hole {..} => {
+          report!(g, a, "refcount error",
+            "a destructurer would fill a deferred slot with an \
+             uncounted view; only a `fills transferred` callee may \
+             fill one");
+        }
+      }
     }
     env = nxt;
   }
@@ -2105,6 +2272,9 @@ fn eval_destructurer(cur: &Cursor, args: &[Cursor], src_i: usize, env: Env,
 fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
 {
+  //  conditional fills must be claimed by the immediately enclosing
+  //  c3y/c3n comparison; reaching another call first loses them
+  drop_pending(cur, g)?;
   let callee = cur.referenced();
   let is_fn_decl = callee.as_ref()
     .is_some_and(|c| c.kind() == CXCursor_FunctionDecl);
@@ -2207,11 +2377,23 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
           "u3h/u3t of [{}], an incomplete noun with unfilled deferred \
            slots", nxt.names(parent));
       }
+      //  nouns are immutable: a repeated u3h/u3t of the same parent
+      //  value is the SAME sub-noun -- reuse its value, so refinements
+      //  (an is_cat guard) and consumption survive across reads
+      let key = (parent, cn == "u3a_t");
+      if let Some(&cached) = nxt.views.get(&key) {
+        if !matches!(nxt.values.get(&cached),
+          Some(RefcountState::Poisoned) | None)
+        {
+          return Ok((Some(cached), Some(nxt)));
+        }
+      }
+      let id = new_val(&mut nxt, RefcountState::Borrowed, g);
+      nxt.contains.entry(parent).or_default().insert(id);
+      nxt.views.insert(key, id);
+      return Ok((Some(id), Some(nxt)));
     }
     let id = new_val(&mut nxt, RefcountState::Borrowed, g);
-    if let Some(parent) = vid {
-      nxt.contains.entry(parent).or_default().insert(id);
-    }
     return Ok((Some(id), Some(nxt)));
   }
 
@@ -2228,7 +2410,8 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  u3x_cell &co: `&var` out-params become borrowed sub-nouns of the
   //  source
   if let Some(src_i) = config::destructurer_src(cn) {
-    return eval_destructurer(cur, &args, src_i, env, depth, g);
+    return eval_destructurer(cur, &args, src_i,
+      config::destructurer_loobean(cn), env, depth, g);
   }
 
   //  u3i_defcons: allocate a cell whose head and tail are filled later
@@ -2267,7 +2450,37 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  arguments are consumed, a noun product is owned by the caller.
   //  Callback implementations must therefore follow transfer protocol.
   if !is_fn_decl {
-    for a in &args {
+    //  a call through a function pointer: the protocol comes from the
+    //  pointer declarator's own @Refcount annotation (a struct field,
+    //  variable, or parameter -- e.g. a `//  @Refcount: retains `who``
+    //  trailing comment on a callback field); the default is TRANSFER
+    let dsem: Option<Rc<Sem>> = callee.as_ref()
+      .filter(|c| matches!(c.kind(),
+        CXCursor_FieldDecl | CXCursor_VarDecl | CXCursor_ParmDecl))
+      .map(|c| g.host.callee_sem(c));
+    let dname = cname.as_deref().unwrap_or("<fn pointer>");
+    if let Some(ds) = &dsem {
+      if !ds.pointees.is_empty() || ds.destructures.is_some() {
+        report!(g, cur, "annotation",
+          "pointee/destructures clauses on function-pointer declarator \
+           [{}] are not supported yet", dname);
+      }
+    }
+    //  declarator parameter names, for per-argument annotations
+    let params: Vec<Cursor> = callee.as_ref()
+      .map(|c| c.children().into_iter()
+        .filter(|k| k.kind() == CXCursor_ParmDecl).collect())
+      .unwrap_or_default();
+    if dsem.as_ref().is_some_and(|ds| ds.noreturn) {
+      for a in &args {
+        let (_, nxt) = eval_expr(a, env, depth, g)?;
+        let Some(nxt) = nxt else { return Ok((None, None)); };
+        env = nxt;
+      }
+      return Ok((None, None));
+    }
+    let mut noun_args: Vec<ValId> = Vec::new();
+    for (i, a) in args.iter().enumerate() {
       let (v, nxt) = eval_expr(a, env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
       env = nxt;
@@ -2277,9 +2490,46 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
           "slot pointer [{}] passed through a function-pointer call, \
            won't analyze", env.names(v));
       }
-      env = lose_cascade(env, v, a, g)?;
+      noun_args.push(v);
+      let mode = dsem.as_ref()
+        .map(|ds| params.get(i)
+          .map(|p| ds.arg_mode(&p.spelling()))
+          .unwrap_or(ds.default_args))
+        .unwrap_or(ArgumentMode::Transfer);
+      match mode {
+        ArgumentMode::Transfer => {
+          env = lose_cascade(env, v, a, g)?;
+        }
+        ArgumentMode::Retain => {
+          if env.vars.get(&v).is_none_or(|l| l.is_empty())
+            && matches!(env.values.get(&v), Some(RefcountState::Owned {..}))
+            && !g.sem.noreturn
+          {
+            report!(g, a, "leak",
+              "owned product passed to retaining parameter of [{}]; \
+               reference is leaked", dname);
+          }
+        }
+        ArgumentMode::Direct => {
+          refine_direct(&mut env, v);
+        }
+        _ => {
+          report!(g, a, "annotation",
+            "unsupported argument mode on function-pointer declarator \
+             [{}] (transfer/retain/direct only)", dname);
+        }
+      }
     }
     if is_noun_type(&cur.ty()) {
+      let retain_prod = dsem.as_ref()
+        .is_some_and(|ds| ds.product == ProductMode::Retain);
+      if retain_prod {
+        let id = new_val(&mut env, RefcountState::Borrowed, g);
+        for v in noun_args {
+          env.contains.entry(v).or_default().insert(id);
+        }
+        return Ok((Some(id), Some(env)));
+      }
       let id = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
       return Ok((Some(id), Some(env)));
     }
@@ -2330,7 +2580,8 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
         "@Refcount: destructures names unknown parameter `{}` of {}()",
         srcn, cn);
     };
-    return eval_destructurer(cur, &args, src_i, env, depth, g);
+    return eval_destructurer(cur, &args, src_i,
+      config::destructurer_loobean(cn), env, depth, g);
   }
 
   //  pointee-annotated names must name actual parameters
@@ -2515,6 +2766,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       ArgumentMode::Retain => {
         if env.vars.get(&v).is_none_or(|l| l.is_empty())
           && matches!(env.values.get(&v), Some(RefcountState::Owned {..}))
+          && !g.sem.noreturn
         {
           report!(g, a, "leak",
             "owned product passed to retaining parameter of {}(); \
@@ -2622,8 +2874,25 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  `fills retained`, tied to the call's noun arguments so consuming
   //  them poisons it. Overwriting an unconsumed owned pointee without
   //  a `consumes` clause is a leak (unbind_var reports it)
-  for (_, parg, pm) in &pointee_work {
+  for (a, parg, pm) in &pointee_work {
     let Some(fm) = pm.fills else { continue; };
+    //  a conditional fill is deferred: the enclosing c3y/c3n
+    //  comparison claims it and fills the matching branch only
+    if let Some(on) = pm.fill_on {
+      if pm.reads || pm.consumes {
+        report!(g, a, "annotation",
+          "conditional fill on a parameter of {}() cannot be combined \
+           with reads/consumes clauses", cn);
+      }
+      let PointeeArg::Var(var, _) = parg else {
+        report!(g, a, "complicated",
+          "conditional fill of a deferred slot (u3i_defcons hole) by \
+           {}(), won't analyze", cn);
+      };
+      g.pending_cond_fills.get_or_insert_with(Vec::new)
+        .push(PendCondFill {var: var.clone(), on, kind: PendKind::Owned});
+      continue;
+    }
     match parg {
       PointeeArg::Var(var, _) => {
         env = unbind_var(env, var, cur, g)?;
@@ -2780,6 +3049,7 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
       env = lose_cascade(env, v, cur, g)?;
     } else if env.vars.get(&v).is_none_or(|l| l.is_empty())
       && matches!(env.values.get(&v), Some(RefcountState::Owned {..}))
+      && !g.sem.noreturn
     {
       report!(g, cur, "leak",
         "owned value stored to untracked memory; stores retain by \
@@ -2874,6 +3144,52 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       let fact = guard_fact(&kids[0], &kids[1], &nxt);
       let mut te = nxt.clone();
       let mut fe = nxt;
+      //  claim a conditional-fill callee's deferred fills: the branch
+      //  whose product matches the `on` loobean gets the owned fill,
+      //  the other branch leaves the variable untouched
+      if let Some(pends) = g.pending_cond_fills.take() {
+        let loob = [lit_l, lit_r].iter().flatten()
+          .find(|v| **v == config::C3Y || **v == config::C3N)
+          .copied();
+        //  not a loobean comparison: optimistic view fills simply
+        //  stay; an unclaimed OWNED fill is a loud error
+        if loob.is_none()
+          && pends.iter().any(|p| matches!(p.kind, PendKind::Owned))
+        {
+          report!(g, &cur, "complicated",
+            "a conditional-fill call must be compared against c3y/c3n \
+             directly");
+        }
+        //  product on the TRUE branch: l for ==, the other loobean
+        //  for !=
+        let l = loob.unwrap_or(config::C3Y);
+        let t_is_y = (op == binop::EQ) == (l == config::C3Y);
+        for p in pends.into_iter().filter(|_| loob.is_some()) {
+          match p.kind {
+            //  deferred owned fill: lands on the matching branch only
+            PendKind::Owned => {
+              let fill_env = if p.on == t_is_y { &mut te } else { &mut fe };
+              let mut env2 = std::mem::take(fill_env);
+              env2 = unbind_var(env2, &p.var, &cur, g)?;
+              let id = new_val(&mut env2,
+                RefcountState::Owned {extra: 0}, g);
+              env2.bind_decl(p.var.clone(), id);
+              *fill_env = env2;
+            }
+            //  optimistic destructurer fill: already applied; restore
+            //  the old binding AND its state on the branch where the
+            //  fill never happened (the fill's unbind poisoned it)
+            PendKind::View {prior, prior_st} => {
+              let undo_env = if p.on == t_is_y { &mut fe } else { &mut te };
+              let mut env2 = std::mem::take(undo_env);
+              env2 = unbind_var(env2, &p.var, &cur, g)?;
+              env2.values.insert(prior, prior_st);
+              env2.bind_decl(p.var.clone(), prior);
+              *undo_env = env2;
+            }
+          }
+        }
+      }
       if let Some(vid) = eq_vid {
         let eq_env = if op == binop::EQ { &mut te } else { &mut fe };
         refine_direct(eq_env, vid);
@@ -2929,6 +3245,33 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   Ok((Some(nxt.clone()), Some(nxt)))
 }
 
+/// Resolve a tracked value from an expression WITHOUT evaluating it: a
+/// plain variable name, or a u3h/u3t chain over one -- resolved through
+/// the view cache that the condition's own evaluation just populated
+/// (facts are computed on the post-evaluation env).
+fn resolve_tracked_expr(env: &Env, cur: &Cursor) -> Option<ValId> {
+  let u = unwrap_expr(*cur);
+  if let Some(n) = decl_ref_name(&u) {
+    return read_var(env, &n).map(|(_, v)| v);
+  }
+  if u.kind() == CXCursor_CallExpr {
+    if let Some(r) = u.referenced() {
+      let tail = match &*r.spelling() {
+        "u3a_h" => false,
+        "u3a_t" => true,
+        _ => return None,
+      };
+      let mut args = u.arguments();
+      if args.is_empty() {
+        args = u.children().into_iter().skip(1).collect();
+      }
+      let parent = resolve_tracked_expr(env, args.first()?)?;
+      return env.views.get(&(parent, tail)).copied();
+    }
+  }
+  None
+}
+
 /// For a comparison a==b, the (value, direct-when-equal,
 /// direct-when-unequal) refinement. Both branches matter:
 /// `c3n == u3a_is_cat(x)` proves x direct on the NOT-equal branch.
@@ -2965,9 +3308,13 @@ fn guard_fact(a: &Cursor, b: &Cursor, env: &Env)
       if yc.kind() == CXCursor_CallExpr {
         if let Some(r) = yc.referenced() {
           if let Some(kind) = config::guard_kind(&r.spelling()) {
-            let Some(gn) = yc.arguments().first().and_then(decl_ref_name)
+            let mut gargs = yc.arguments();
+            if gargs.is_empty() {
+              gargs = yc.children().into_iter().skip(1).collect();
+            }
+            let Some(vid) = gargs.first()
+              .and_then(|ga| resolve_tracked_expr(env, ga))
               else { return None; };
-            let Some((_, vid)) = read_var(env, &gn) else { return None; };
             if kind != "cat" && kind != "dog" {
               return None;  //  is_atom/is_cell etc. don't imply direct
             }
@@ -3091,6 +3438,22 @@ fn join_states(rc1: RefcountState, rc2: RefcountState)
 ///     fragments become uncounted views.
 fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
 {
+  join_l(loc, "", env1, "", env2, g)
+}
+
+/// Human name of a joining path from its label ("one path" fallbacks
+/// keep unlabeled call sites readable).
+fn side_str(lab: &str, fallback: &str) -> String {
+  if lab.is_empty() {
+    fallback.to_string()
+  } else {
+    format!("the path through [{}]", lab)
+  }
+}
+
+fn join_l(loc: Loc, lab1: &str, env1: Env, lab2: &str, env2: Env,
+  g: &mut Gen) -> R<Env>
+{
   use RefcountState::*;
 
   if env1.vars_rev.len() != env2.vars_rev.len()
@@ -3109,10 +3472,12 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
     let o2 = only(&env2, &env1);
     let mut parts = Vec::new();
     if !o1.is_empty() {
-      parts.push(format!("[{}] tracked on one path only", o1));
+      parts.push(format!("[{}] tracked on {} only", o1,
+        side_str(lab1, "one path")));
     }
     if !o2.is_empty() {
-      parts.push(format!("[{}] tracked on the other path only", o2));
+      parts.push(format!("[{}] tracked on {} only", o2,
+        side_str(lab2, "the other path")));
     }
     report_loc!(g, loc, "refcount error",
       "joining paths disagree about which variables are live: {} -- \
@@ -3221,8 +3586,11 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
         None => {
           let who: Vec<&str> = ns.iter().map(|n| n.name.as_ref()).collect();
           report_loc!(g, loc, "refcount error",
-            "joining branches have conflicting refcounts for [{}]",
-            who.join(", "))
+            "joining branches have conflicting refcounts for [{}] \
+             ({} on {}, {} on {})",
+            who.join(", "),
+            state_word(s1), side_str(lab1, "one path"),
+            state_word(s2), side_str(lab2, "the other path"))
         }
       },
     };
@@ -3336,17 +3704,44 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
 
   //  count conservation: every owned group keeps its count in exactly
   //  one fragment of the joined partition
-  for (env, kept) in [(&env1, &kept1), (&env2, &kept2)] {
+  for (env, other, kept, own_lab, oth_lab) in
+    [(&env1, &env2, &kept1, lab1, lab2),
+     (&env2, &env1, &kept2, lab2, lab1)]
+  {
     let mut groups: Vec<ValId> = env.vars.keys().copied().collect();
     groups.sort();
     for v in groups {
-      if matches!(env.values.get(&v), Some(Owned {..}))
-        && kept.get(&v).copied().unwrap_or(0) != 1
-      {
-        report_loc!(g, loc, "refcount error",
-          "joining branches disagree about ownership of [{}]",
-          env.names(v));
+      if !matches!(env.values.get(&v), Some(Owned {..})) {
+        continue;
       }
+      let k = kept.get(&v).copied().unwrap_or(0);
+      if k == 1 {
+        continue;
+      }
+      //  a count kept in NO fragment evaporated on this path -- a
+      //  leak, which a noreturn function tolerates
+      if k == 0 && g.sem.noreturn {
+        continue;
+      }
+      //  say what the other path holds under the same names
+      let mut ns: Vec<&VarName> = env.vars.get(&v)
+        .map(|s| s.iter().collect()).unwrap_or_default();
+      ns.sort();
+      let mut descs: Vec<String> = ns.iter()
+        .filter_map(|n| other.vars_rev.get(*n).map(|ov| {
+          let st = *other.values.get(ov).expect(LI);
+          format!("[{}] is {}", n.name, state_word(st))
+        }))
+        .collect();
+      descs.dedup();
+      report_loc!(g, loc, "refcount error",
+        "joining branches disagree about ownership of [{}]: {} on {}; \
+         on {}, {}",
+        env.names(v),
+        state_word(*env.values.get(&v).expect(LI)),
+        side_str(own_lab, "one path"),
+        side_str(oth_lab, "the other path"),
+        descs.join("; "));
     }
   }
 
@@ -3446,12 +3841,38 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
   let cont_joined = remap(&env1.contains, &map1)
     .union_with(remap(&env2.contains, &map2), |a, b| a + b);
 
+  //  view-cache entries survive the join when both the parent and the
+  //  child value kept their identity (unsplit groups keep their id;
+  //  location-less temporaries always do) and the child is still a
+  //  plain view; a same-key conflict (both sides minted their own view
+  //  after the split) drops the entry
+  let mut views_joined: IHashMap<(ValId, bool), ValId> = IHashMap::new();
+  let mut views_dead: HashSet<(ValId, bool)> = HashSet::new();
+  for (k, c) in env1.views.iter().chain(env2.views.iter()) {
+    if views_dead.contains(k)
+      || !values_joined.contains_key(&k.0)
+      || !matches!(values_joined.get(c),
+        Some(RefcountState::Borrowed) | Some(RefcountState::Direct))
+    {
+      continue;
+    }
+    match views_joined.get(k) {
+      None => { views_joined.insert(*k, *c); }
+      Some(prev) if prev == c => {}
+      Some(_) => {
+        views_joined.remove(k);
+        views_dead.insert(*k);
+      }
+    }
+  }
+
   Ok(Env {
     values: values_joined,
     vars: vars_joined,
     vars_rev: vars_rev_joined,
     contains: cont_joined,
     slots: slots_joined,
+    views: views_joined,
   })
 }
 
@@ -3459,43 +3880,119 @@ fn join(loc: Loc, env1: Env, env2: Env, g: &mut Gen) -> R<Env>
 fn mayb_join(loc: Loc, env1: Option<Env>, env2: Option<Env>, g: &mut Gen)
   -> R<Option<Env>>
 {
+  mayb_join_l(loc, "", env1, "", env2, g)
+}
+
+fn mayb_join_l(loc: Loc, lab1: &str, env1: Option<Env>, lab2: &str,
+  env2: Option<Env>, g: &mut Gen) -> R<Option<Env>>
+{
   match (env1, env2) {
-    (Some(env1), Some(env2)) => join(loc, env1, env2, g).map(Some),
+    (Some(env1), Some(env2)) =>
+      join_l(loc, lab1, env1, lab2, env2, g).map(Some),
     (env1, env2) => Ok(env1.or(env2)),
   }
 }
 
-/// Join any number of envs into one, or None if no envs
+/// Merge two path labels when their envs merge.
+fn merge_labs(a: String, b: &str) -> String {
+  if a.is_empty() {
+    b.to_string()
+  } else if b.is_empty() {
+    a
+  } else {
+    format!("{}, {}", a, b)
+  }
+}
+
+/// Join any number of labeled envs into one, or None if no envs
 fn join_all<I>(loc: Loc, envs: I, g: &mut Gen) -> R<Option<Env>>
-  where I: IntoIterator<Item = Env>
+  where I: IntoIterator<Item = (String, Env)>
 {
   let mut it = envs.into_iter();
   it.next()
-    .map(|first| it.try_fold(first, |a, b| join(loc.clone(), a, b, g)))
+    .map(|first| it.try_fold(first, |(la, a), (lb, b)| {
+      let e = join_l(loc.clone(), &la, a, &lb, b, g)?;
+      Ok((merge_labs(la, &lb), e))
+    }))
     .transpose()
+    .map(|o| o.map(|(_, e)| e))
 }
 
 // envs were parked, so we need to end their scopes using the depth of the join
 // site. `local` is in the correct scope already.
 fn join_scoped<I>(loc: Loc, envs: I, local: Option<Env>, depth: u32,
   g: &mut Gen) -> R<Option<Env>>
-  where I: IntoIterator<Item = Env>
+  where I: IntoIterator<Item = (String, Env)>
 {
   let scoped = envs.into_iter()
-    .map(|e| end_scope(loc.clone(), e, depth, g))
+    .map(|(l, e)| Ok((l, end_scope(loc.clone(), e, depth, g)?)))
     .collect::<R<Vec<_>>>()?;
-  join_all(loc, scoped.into_iter().chain(local), g)
+  join_all(loc, scoped.into_iter()
+    .chain(local.map(|e| (String::new(), e))), g)
 }
 
-fn check_exit(loc: Loc, env: Env, g: &Gen) -> Vec<Finding>
+/// Prose name of a refcount state, for join diagnostics.
+fn state_word(st: RefcountState) -> String {
+  use RefcountState::*;
+  match st {
+    Uninit => "uninitialized".to_string(),
+    Borrowed => "an uncounted view".to_string(),
+    Owned {extra: 0} => "owned".to_string(),
+    Owned {extra} => format!("owned with {} extra references", extra),
+    Poisoned => "already consumed".to_string(),
+    Direct => "a direct atom".to_string(),
+    Passthrough => "passthrough".to_string(),
+    Slot => "a slot pointer".to_string(),
+  }
+}
+
+/// The loobean word for a `doomed`/`fill_on` condition (c3y = 0).
+fn loob_word(b: bool) -> u64 {
+  if b { config::C3Y } else { config::C3N }
+}
+
+fn check_exit(loc: Loc, ret_lit: Option<u64>, env: Env, g: &Gen)
+  -> Vec<Finding>
 {
   let mut env = env;
   let mut out: Vec<Finding> = Vec::new();
+
+  //  a doomed exit obliges the caller to die: nothing is checked
+  if let Some(d) = g.sem.doomed {
+    if ret_lit == Some(loob_word(d)) {
+      return out;
+    }
+  }
 
   //  pointee-parameter contracts on this exit path
   for (pv, orig, pm) in &g.pointee_params {
     let cur = env.vars_rev.get(pv).copied();
     let state = cur.map(|v| *env.values.get(&v).expect(LI));
+    //  a conditional fill (`fills ... on `c3y``) keys on this exit's
+    //  literal loobean product
+    if let Some(on) = pm.fill_on {
+      let Some(l) = ret_lit else {
+        out.push(report_at(loc.clone(), "annotation", format!(
+          "conditional fill contract on [{}]: this exit does not \
+           return a literal c3y/c3n, cannot tell whether the fill \
+           happened", pv.name), g));
+        continue;
+      };
+      if l != loob_word(on) {
+        //  the no-fill product: an owned value stored here anyway
+        //  would be invisible to the caller
+        if let (Some(v), Some(RefcountState::Owned {..})) = (cur, state) {
+          out.push(report_at(loc.clone(), "leak", format!(
+            "pointee contract `fills transferred ... on {}`: [{}] \
+             filled with an owned value on a path that returns the \
+             opposite loobean; the caller will not consume it",
+            if on { "c3y" } else { "c3n" }, pv.name), g));
+          env.values.insert(v, RefcountState::Poisoned);
+        }
+        continue;
+      }
+      //  fall through to the unconditional enforcement below
+    }
     match pm.fills {
       Some(FillMode::Transferred) => match (cur, state) {
         (Some(v), Some(RefcountState::Owned {extra})) => {
@@ -3636,13 +4133,15 @@ fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
       *state = RefcountState::Poisoned;
       continue;
     };
-    let refs = if extra > 0 { format!(" ({} extra references)", extra) }
-               else { String::new() };
+    if !g.sem.noreturn {
+      let refs = if extra > 0 { format!(" ({} extra references)", extra) }
+                 else { String::new() };
 
-    leaks.push(report_at(loc.clone(), "leak",
-      format!("owned reference in [{}] goes out of scope without being \
-                consumed{}", names.join(", "), refs),
-      g));
+      leaks.push(report_at(loc.clone(), "leak",
+        format!("owned reference in [{}] goes out of scope without being \
+                  consumed{}", names.join(", "), refs),
+        g));
+    }
     *state = RefcountState::Poisoned;
   }
 

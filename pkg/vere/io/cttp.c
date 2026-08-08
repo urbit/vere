@@ -564,7 +564,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_l num_l, u3_noun hes)
   //
   u3_noun unit_pul = u3do("de-purl:html", u3k(url));
 
-  if ( c3n == u3du(unit_pul) ) {
+  if ( u3_nul == unit_pul ) {
     c3_c* url_c = u3r_string(url);
     u3l_log("cttp: unable to parse url:\n    %s", url_c);
     c3_free(url_c);

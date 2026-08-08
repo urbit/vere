@@ -34,6 +34,13 @@ pub fn guard_kind(name: &str) -> Option<&'static str> {
   })
 }
 
+/// Destructurers returning a loobean (u3r_*): the out-params are
+/// filled only when the product is c3y. The u3x_* variants bail
+/// instead of returning c3n, so their fills are unconditional.
+pub fn destructurer_loobean(name: &str) -> bool {
+  name.starts_with("u3r_")
+}
+
 /// Destructurers: source argument index; other `&var` args become
 /// retained out-params borrowed from the source.
 pub fn destructurer_src(name: &str) -> Option<usize> {

@@ -170,7 +170,7 @@ static void
 _dawn_fail(u3_noun who, u3_noun rac, u3_noun sas)
 {
   u3_noun how = u3dc("scot", 'p', u3k(who));
-  c3_c* how_c = u3r_string(u3k(how));
+  c3_c* how_c = u3r_string(how);
 
   c3_c* rac_c;
 
@@ -261,7 +261,7 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
   u3_noun uni = u3dc("sponsor:dawn", u3k(who), u3k(pot));
 
   if ( c3n == u3h(uni) ) {
-    _dawn_fail(who, rac, u3nc(u3t(uni), u3_nul));
+    _dawn_fail(who, rac, u3nc(u3k(u3t(uni)), u3_nul));
     return u3_none;
   }
 

@@ -134,7 +134,13 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
   - `` consumes `x`, `y` ``: one counted reference of the noun behind each listed pointer parameter is given away inside the call (a transferring read, or a u3z of the old value before a refill -- indistinguishable from the caller's side)
   - `` fills transferred `x`, `y` ``: the listed pointer parameters hold a fresh owned noun on return; the caller must consume it. Overwriting an unconsumed owned pointee without a `consumes` clause is reported as a leak
   - `` fills retained `x`, `y` ``: as above, but the new pointee is an uncounted view (tied to the call's noun arguments)
-  - `noreturn`: calling this function ends execution (it exits or aborts); no argument accounting applies at its call sites
+  - `` fills transferred `x` on `c3y` ``: the fill happens exactly when the function returns the given loobean. The body is checked per exit path (which must return literal `c3y`/`c3n`); at the call site the call's product must be compared against `c3y`/`c3n` directly (`if ( c3n == f(a, &out) )`), and the fill lands only on the matching branch
+  - `noreturn`: calling this function ends execution (it exits or aborts); no argument accounting applies at its call sites. Inside its body leaks are tolerated (the process dies anyway) and owned parameters are modeled as borrowed views; a reachable return or fall-through is reported as an annotation error
+  - `` doomed on `c3n` ``: an exit returning this loobean obliges the CALLER to die (boot failure); leaks and pointee contracts on such paths are not checked
+
+- Function-pointer declarators (struct callback fields, pointer variables and parameters) may carry their own `@Refcount:` annotation, e.g. a trailing `//  @Refcount: retains` on a callback field in a struct typedef; calls through the pointer follow it. Without one, a call through a function pointer TRANSFERS: noun arguments are consumed and a noun product is owned by the caller. Argument modes on declarators are limited to transfer/retain/direct (named per the declarator's parameter names, or bare).
+
+- Repeated `u3h`/`u3t` of the same noun value resolve to the SAME value (nouns are immutable), so `if ( !_(u3a_is_cat(u3h(oct))) ) u3m_bail(...); ... u3h(oct)` proves the later read direct.
 
   The pointee clauses compose: an in-place accumulator update is `` consumes `out`, fills transferred `out` ``.
 
@@ -146,6 +152,11 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
 
   - `assert transfer`: every store in the block consumes the stored value. Useful for assignments to persistent data structures (`u3A->roc = u3k(...)`) or in defcons patterns
   - `assert transfer x y z`: on falling out of the block, one counted reference of each named variable (bare names, space-separated) has been consumed, on top of the block's visible effects. Useful when the transfer happens at a store site the interpreter cannot recognize as a transfer.
+  - `assert direct x y z`: trusted claim, applied at block entry, that the named variables hold direct atoms -- for facts the checker cannot derive and no runtime check exists (e.g. an else-branch where a product is known to be `u3_nul`).
+
+- Loobean destructurers (`u3r_cell` &co) fill their out-params only when they return `c3y`: when the call's product is compared against `c3y`/`c3n`, the failing branch keeps the variables' previous values (so a `u3_nul` initializer survives an unmatched guard). The `u3x_*` variants bail instead of returning, so their fills are unconditional.
+
+- Join (control-flow merge) errors name the disagreeing paths: parked environments (break/continue/goto) carry the parking site, and if/else branches their source extents.
 
 - List of refcount directives for a file:
 

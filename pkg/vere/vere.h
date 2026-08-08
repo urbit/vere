@@ -488,15 +488,15 @@
       */
         typedef struct _u3_lord_cb {
           void* ptr_v;
-          void (*live_f)(void*, u3_atom, c3_o);
+          void (*live_f)(void*, u3_atom, c3_o);  //  @Refcount: retains
           void (*slog_f)(void*, c3_w, u3_noun);
-          void (*spin_f)(void*, u3_atom, c3_o);
+          void (*spin_f)(void*, u3_atom, c3_o);  //  @Refcount: retains
           void (*spun_f)(void*);
           void (*work_done_f)(void*, u3_ovum*, u3_noun act);
           void (*work_bail_f)(void*, u3_ovum*, u3_noun lud);
           void (*save_f)(void*);
-          void (*bail_f)(void*);
-          void (*exit_f)(void*);
+          void (*bail_f)(void*);  //  @Refcount: noreturn
+          void (*exit_f)(void*);  //  @Refcount: noreturn
         } u3_lord_cb;
 
       /* u3_lord: serf controller.
@@ -1288,6 +1288,7 @@
         u3_pier_exit(u3_pier* pir_u);
 
       /* u3_pier_bail(): immediately shutdown..
+      **  @Refcount: noreturn
       */
         void
         u3_pier_bail(u3_pier* pir_u);
@@ -1410,6 +1411,7 @@
         u3_king_dock(c3_c* pac_c);
 
       /* u3_king_done(): all piers closed
+      **  @Refcount: noreturn
       */
         void
         u3_king_done(void);
@@ -1420,6 +1422,7 @@
         u3_king_exit(void);
 
       /* u3_king_bail(): immediately shutdown.
+      **  @Refcount: noreturn
       */
         void
         u3_king_bail(void);

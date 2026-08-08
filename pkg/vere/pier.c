@@ -688,6 +688,7 @@ _pier_wyrd_good(u3_pier* pir_u, u3_ovum* egg_u)
 
 /* _pier_wyrd_fail(): %wyrd version negotation failed.
 */
+//  @Refcount: noreturn
 static void
 _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 {
@@ -917,10 +918,12 @@ _pier_on_lord_save(void* ptr_v)
   // _pier_next(pir_u);
 }
 
+//  @Refcount: noreturn
 static void
 _pier_bail_impl(u3_pier* pir_u);
 
 /* _pier_on_lord_exit(): worker shutdown.
+**  @Refcount: noreturn
 */
 static void
 _pier_on_lord_exit(void* ptr_v)
@@ -941,6 +944,7 @@ _pier_on_lord_exit(void* ptr_v)
 }
 
 /* _pier_on_lord_bail(): worker error.
+**  @Refcount: noreturn
 */
 static void
 _pier_on_lord_bail(void* ptr_v)
@@ -1210,6 +1214,7 @@ _pier_work_close(u3_work* wok_u)
 }
 
 /* _pier_bail_impl(): immediately shutdown.
+**  @Refcount: noreturn
 */
 static void
 _pier_bail_impl(u3_pier* pir_u)
@@ -1241,6 +1246,7 @@ _pier_bail_impl(u3_pier* pir_u)
 }
 
 /* u3_pier_bail(): fatal error.
+**  @Refcount: noreturn
 */
 void
 u3_pier_bail(u3_pier* pir_u)
@@ -1390,7 +1396,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       u3k(wol); u3z(low);
       _pier_dump_wall(fil_u, wol);
     }
-    else {
+    else { //  @Refcount: assert direct low
       // low == u3_nul, no need to lose it
       //
       bad_t = 1;
@@ -1463,6 +1469,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
   c3_free(tag_c);
   c3_free(wir_c);
   u3z(riw);
+  u3z(tag);
 }
 
 /* u3_pier_sway(): print trace.
