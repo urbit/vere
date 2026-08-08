@@ -337,7 +337,9 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       if ( c3__mass == u3h(fec) ) {
         //  save a copy of the %mass data
         //
-        mar_u->sac = u3k(u3t(fec));
+        { //  @Refcount: assert transfer
+          mar_u->sac = u3k(u3t(fec));
+        }
         //  replace the %mass data with ~
         //
         //    For efficient transmission to daemon.
@@ -463,7 +465,12 @@ _mars_peek(c3_w mil_w, u3_noun sam)
   return pro;
 }
 
-/* _mars_poke(): attempt to compute an event. [*eve] is RETAINED.
+/* _mars_poke(): attempt to compute an event. [*eve] is RETAINED
+** (from the caller's frame: one count of the old *eve is given away
+** and an owned *eve -- possibly the same event, possibly %crud-wrapped
+** -- is present on return).
+**  @Refcount: consumes `eve`, fills transferred `eve`
+**  @Refcount: fills transferred `out`
 */
 static c3_o
 _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
@@ -1003,7 +1010,9 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
     }
 
     u3z(u3A->roc);
-    u3A->roc = u3k(cor);
+    { //  @Refcount: assert transfer
+      u3A->roc = u3k(cor);
+    }
     u3A->eve_d++;
   }
 

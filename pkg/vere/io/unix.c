@@ -196,6 +196,7 @@ _unix_string_to_knot(c3_c* pax_c)
 }
 
 /* _unix_knot_to_string(): convert $knot to c unix path component. RETAIN.
+**  @Refcount: retains arguments
 */
 static c3_c*
 _unix_knot_to_string(u3_atom pon)

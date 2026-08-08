@@ -1347,6 +1347,7 @@ u3m_road_depth(void)
 }
 
 /* u3m_love(): return product from leap.
+** @Refcount: passthrough `pro`
 */
 u3_noun
 u3m_love(u3_noun pro)

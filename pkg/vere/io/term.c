@@ -492,7 +492,9 @@ _term_it_save_stub(u3_utty* uty_u, u3_noun tub)
     lin = u3do("pact:klr:format", lin);
   }
 
-  tat_u->mir.lin = lin;
+  { //  @Refcount: assert transfer
+    tat_u->mir.lin = lin;
+  }
   u3z(tub);
 }
 
@@ -577,6 +579,7 @@ _term_it_save(u3_noun pax, u3_noun pad)
 }
 
 /* _term_ovum_plan(): plan term ovums, configuring spinner.
+**  @Refcount: assert conslike `wir`, `cad`
 */
 static u3_ovum*
 _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
@@ -942,6 +945,7 @@ _term_spin_timer_cb(uv_timer_t* tim_u)
 #define _SPIN_IDLE_US 500UL  //  spinner cools down if stopped this long
 
 /* u3_term_start_spinner(): prepare spinner state. RETAIN.
+**  @Refcount: retains arguments
 */
 void
 u3_term_start_spinner(u3_atom say, c3_o del_o)

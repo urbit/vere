@@ -90,19 +90,23 @@ u3_ovum_init(c3_w     mil_w,
   egg_u->try_w = 0;
   egg_u->ptr_v = 0;
   egg_u->mil_w = mil_w;
-  egg_u->tar   = tar;
-  egg_u->wir   = wir;
-  egg_u->cad   = cad;
+  { //  @Refcount: assert transfer tar wir cad
+    egg_u->tar   = tar;
+    egg_u->wir   = wir;
+    egg_u->cad   = cad;
 
-  egg_u->pre_u = egg_u->nex_u = 0;
+    egg_u->pre_u = egg_u->nex_u = 0;
 
-  egg_u->cb_u.news_f = 0;
-  egg_u->cb_u.bail_f = 0;
+    egg_u->cb_u.news_f = 0;
+    egg_u->cb_u.bail_f = 0;
 
-  //  spinner defaults
-  //
-  egg_u->pin_u.lab   = u3k(u3h(wir));
-  egg_u->pin_u.del_o = c3y;
+    //  spinner defaults
+    //
+    { //  @Refcount: assert transfer
+      egg_u->pin_u.lab   = u3k(u3h(wir));
+    }
+    egg_u->pin_u.del_o = c3y;
+  }
 
   return egg_u;
 }

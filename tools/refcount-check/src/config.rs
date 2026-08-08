@@ -45,6 +45,18 @@ pub fn destructurer_src(name: &str) -> Option<usize> {
   }
 }
 
+/// Retain-product functions whose product borrows from an UNTRACKED
+/// container (a u3p hashtable), not from their noun arguments: the
+/// product must not be tied under the argument values (u3h_git's
+/// product is the stored value; freeing the lookup key does not
+/// invalidate it).
+pub const UNTIED_RETAIN_FNS: &[&str] = &["u3h_git"];
+
+/// Variadic noun-core functions that consume every noun vararg
+/// (`u3_none`-terminated lists). Varargs of any other function stay
+/// unaccounted ("too ambiguous").
+pub const VARARG_TRANSFER_FNS: &[&str] = &["u3i_list"];
+
 /// Functions that may run unifying equality (u3r_sing) over their noun
 /// arguments during execution: equal interior copies can be freed and
 /// repointed, so borrowed views into the arguments die at the call.

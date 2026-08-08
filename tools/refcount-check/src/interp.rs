@@ -382,7 +382,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     let mode = sem.arg_mode(&pname);
     let rc = match mode {
       ArgumentMode::Conslike
-        => report_v!(&g, fun, "not implmented","checking of conslike"),
+        => report_v!(&g, fun, "not implemented","checking of conslike"),
 
       ArgumentMode::Transfer    => RefcountState::Owned { extra: 0 },
       ArgumentMode::Retain      => RefcountState::Borrowed,
@@ -858,7 +858,8 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
     }
   
     //  expression in statement position: `u3z(a);`, `x = f(y);`, bare `x;`
-    if is_expr_kind(k) {
+    //  (StmtExpr: a statement-expression macro used as a statement)
+    if is_expr_kind(k) || k == CXCursor_StmtExpr {
       let mut flo = flo;
       flo.local = execute_expr_stmt(cur, env, depth, g)?;
       return Ok(flo);
@@ -915,8 +916,10 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     //
     let init = kids.last().copied().filter(|i| {
       let ik = i.kind();
+      //  ParmDecl: a function-pointer declarator's parameter list
+      //  (`void (*next)(u3_noun);`) shows up as children too
       !matches!(ik, CXCursor_TypeRef | CXCursor_StructDecl | CXCursor_UnionDecl
-        | CXCursor_EnumDecl)
+        | CXCursor_EnumDecl | CXCursor_ParmDecl)
       && (
         !is_array
         || matches!(ik, CXCursor_InitListExpr | CXCursor_StringLiteral)
@@ -2103,8 +2106,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
 {
   let callee = cur.referenced();
+  let is_fn_decl = callee.as_ref()
+    .is_some_and(|c| c.kind() == CXCursor_FunctionDecl);
   let cname: Option<Name> = callee.as_ref().map(|c| c.spelling());
-  let cn = cname.as_deref().unwrap_or("");
+  //  an indirect call may still reference the pointer variable/field:
+  //  its name must not collide with the special-cased function names
+  let cn = if is_fn_decl { cname.as_deref().unwrap_or("") } else { "" };
   let mut args = cur.arguments();
   if args.is_empty() {
     args = cur.children().into_iter().skip(1).collect();
@@ -2254,24 +2261,44 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     return Ok((Some(cell), Some(env)));
   }
 
-  //  no referenced declaration: function pointer or similar
-  let Some(cal) = callee else {
-    let mut tracked = false;
+  //  no referenced function declaration: a call through a function
+  //  pointer (referenced() may still name the pointer variable/field).
+  //  Convention: functions called through pointers TRANSFER -- noun
+  //  arguments are consumed, a noun product is owned by the caller.
+  //  Callback implementations must therefore follow transfer protocol.
+  if !is_fn_decl {
     for a in &args {
       let (v, nxt) = eval_expr(a, env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
-      tracked = tracked || v.is_some();
       env = nxt;
+      let Some(v) = v else { continue; };
+      if matches!(env.values.get(&v), Some(RefcountState::Slot)) {
+        report!(g, a, "complicated",
+          "slot pointer [{}] passed through a function-pointer call, \
+           won't analyze", env.names(v));
+      }
+      env = lose_cascade(env, v, a, g)?;
     }
-    if tracked {
-      report!(g, cur, "complicated",
-        "call through a function pointer with tracked noun arguments, \
-         won't analyze");
+    if is_noun_type(&cur.ty()) {
+      let id = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
+      return Ok((Some(id), Some(env)));
     }
     return Ok((None, Some(env)));
-  };
+  }
+  let cal = callee.expect(LI);
 
   let sem = g.host.callee_sem(&cal);
+
+  //  `@Refcount: noreturn`: execution ends at the call site; arguments
+  //  are evaluated for effect, no transfer accounting applies
+  if sem.noreturn {
+    for a in &args {
+      let (_, nxt) = eval_expr(a, env, depth, g)?;
+      let Some(nxt) = nxt else { return Ok((None, None)); };
+      env = nxt;
+    }
+    return Ok((None, None));
+  }
 
   //  a custom protocol says nothing about how arguments are treated
   if sem.custom {
@@ -2454,6 +2481,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       if is_slot {
         report!(g, a, "complicated",
           "slot pointer passed to variadic {}(), won't analyze", cn);
+      }
+      //  except u3i_list &co, whose varargs are all consumed
+      if config::VARARG_TRANSFER_FNS.contains(&cn) {
+        if let Some(v) = *v {
+          env = lose_cascade(env, v, a, g)?;
+        }
       }
       continue;
     };
@@ -2643,12 +2676,16 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       Ok((Some(id), Some(env)))
     }
     ProductMode::Retain => {
-      //  the product is (a sub-noun of) one of the arguments
+      //  the product is (a sub-noun of) one of the arguments -- except
+      //  for container lookups (u3h_git), whose product borrows from
+      //  the untracked table, not the key
       let id = new_val(&mut env, RefcountState::Borrowed, g);
-      for (_, p, v) in &evald {
-        if let (Some(p), Some(v)) = (p, v) {
-          if is_noun_type(&p.ty()) {
-            env.contains.entry(*v).or_default().insert(id);
+      if !config::UNTIED_RETAIN_FNS.contains(&cn) {
+        for (_, p, v) in &evald {
+          if let (Some(p), Some(v)) = (p, v) {
+            if is_noun_type(&p.ty()) {
+              env.contains.entry(*v).or_default().insert(id);
+            }
           }
         }
       }

@@ -734,6 +734,7 @@ u3a_post_info(u3_post);
           u3a_mark_rptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
+        ** @Refcount: retains arguments
         */
           c3_w
           u3a_mark_noun(u3_noun som);

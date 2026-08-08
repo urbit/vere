@@ -114,6 +114,7 @@ _disk_commit_start(u3_disk* log_u)
 }
 
 /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+**  @Refcount: retains arguments
 */
 size_t
 u3_disk_etch(u3_disk* log_u,
@@ -213,6 +214,7 @@ _disk_commit(u3_disk* log_u)
 }
 
 /* _disk_plan(): enqueue serialized fact (feat) for persistence.
+**  @Refcount: retains arguments
 */
 static void
 _disk_plan(u3_disk* log_u,

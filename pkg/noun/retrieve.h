@@ -86,6 +86,7 @@
         }
 
       /* u3r_hext(): factor (a) as a hext (b c d e f g)
+      **   @Refcount: destructures `a`
       */
         inline c3_o
         u3r_hext(u3_noun  a,

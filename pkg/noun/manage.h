@@ -112,6 +112,7 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
         u3m_hate(c3_w pad_w);
 
       /* u3m_love(): return product from leap.
+      ** @Refcount: passthrough `pro`
       */
         u3_noun
         u3m_love(u3_noun pro);

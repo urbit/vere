@@ -1,8 +1,8 @@
 # refcount-check
 
-A static checker that verifies functions over `pkg/noun` follow the u3
-reference-counting conventions (transfer/retain protocols, `@Refcount:`
-annotations) documented in `doc/spec/u3.md`.
+A static checker that verifies functions over `pkg/noun` and `pkg/vere`
+follow the u3 reference-counting conventions (transfer/retain protocols,
+`@Refcount:` annotations) documented in `doc/spec/u3.md`.
 
 ## Build & run
 
@@ -27,9 +27,27 @@ that PCH (about 3x faster, since header parsing dominates the runtime);
 
 ## What it does
 
-This tool walks the functions (only in `pkg/noun` for now) and checks whether their
-definitions satisfy u3 reference-counting conventions plus the validity of additional
+This tool walks the functions (in `pkg/noun` and `pkg/vere` by default;
+`--filter` is repeatable and takes comma-separated substrings to narrow
+or change the scope) and checks whether their definitions satisfy u3
+reference-counting conventions plus the validity of additional
 annotations. The check is done by running an abstract interpreter against the body of the function.
+Test harnesses (`*_test.c`, `*_tests.c`, `benchmarks.c`) are excluded.
+
+`pkg/vere` notes:
+
+- The compile db resolves the noun headers through `.zig-cache` snapshot
+  dirs; the checker substitutes the live `pkg/noun` sources in the same
+  include-search position, so `@Refcount:` edits in noun headers apply
+  immediately (no cache rebuild needed).
+- `-Werror` is dropped from the lint parse: the `U3_REFCOUNT_LINT` macro
+  swaps can raise warnings the real build does not.
+- A call through a function pointer (driver callbacks, vtables) is
+  modeled as TRANSFER: noun arguments are consumed, a noun product is
+  owned by the caller. Callback implementations must follow transfer
+  protocol; deliberate exceptions (e.g. `_pier_on_lord_live`) are
+  annotated `retains` at the definition and the convention mismatch is
+  tracked at the call site.
 
 I aimed at ~0% false negative rate, given that the code being checked at least compiles, so the interpreter is quite strict, and it will complain about noun pointers or complex struct initialization, which it does not model for now.
 
@@ -93,7 +111,7 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
 
 - A function must have the same directives across all its declarations and its definition.
 
-- If a function has no directive, and the file is not custom, then its refcount protocol is governed by the rules layed out above, in [U3 refcount protocol conventions, extended] section
+- If a function has no directive, and the file is not custom, then its refcount protocol is governed by the rules layed out above, in [U3 refcount protocol conventions, extended](#u3-refcount-protocol-conventions-extended) section
 
 - If a function has no directive, and the file is custom, the function follows "custom" transfer protocol. It can be only called by other custom functions and functions with asserted refcount protocol.
 
@@ -116,6 +134,7 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
   - `` consumes `x`, `y` ``: one counted reference of the noun behind each listed pointer parameter is given away inside the call (a transferring read, or a u3z of the old value before a refill -- indistinguishable from the caller's side)
   - `` fills transferred `x`, `y` ``: the listed pointer parameters hold a fresh owned noun on return; the caller must consume it. Overwriting an unconsumed owned pointee without a `consumes` clause is reported as a leak
   - `` fills retained `x`, `y` ``: as above, but the new pointee is an uncounted view (tied to the call's noun arguments)
+  - `noreturn`: calling this function ends execution (it exits or aborts); no argument accounting applies at its call sites
 
   The pointee clauses compose: an in-place accumulator update is `` consumes `out`, fills transferred `out` ``.
 

@@ -287,6 +287,7 @@ _http_heds_free(u3_hhed* hed_u)
 }
 
 /* _http_hed_new(): create u3_hhed from nam/val cords
+**  @Refcount: retains arguments
 */
 static u3_hhed*
 _http_hed_new(u3_atom nam, u3_atom val)
@@ -952,6 +953,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 /* _http_peek_dispatch(): dispatch peek request. RETAINS gang, spur, bem
  * RETAINS req_u->peq_u and req_u->peq_u->pax if c3n is returned (no peek
  * was queued), TRANSFERS them if c3y was returned
+ *  @Refcount: retains arguments
 */
 static c3_o
 _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
@@ -988,7 +990,9 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
        || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
     {
       u3z(req_u->peq_u->pax);
-      req_u->peq_u->pax = u3k(bam);
+      { //  @Refcount: assert transfer
+        req_u->peq_u->pax = u3k(bam);
+      }
       pro_o = c3y;
       u3_pier_peek(htd_u->car_u.pir_u, u3k(gang), u3nt(0, c3__ex, u3k(bam)),
         req_u->peq_u, _http_scry_cb);
@@ -1005,6 +1009,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
 }
 
 /* _http_req_dispatch(): dispatch http request. RETAINS `req`
+**  @Refcount: retains arguments
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -2732,7 +2737,9 @@ void
 u3_http_ef_auth(u3_httd* htd_u, u3_noun fig)
 {
   u3z(htd_u->fig_u.ses);
-  htd_u->fig_u.ses = fig;
+  { //  @Refcount: assert transfer
+    htd_u->fig_u.ses = fig;
+  }
 }
 
 /* _http_io_talk(): start http I/O.

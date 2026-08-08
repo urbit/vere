@@ -16,6 +16,7 @@
 //  XX review, move
 //
 /* _behn_bail_dire(): c3y if fatal error. RETAIN
+**  @Refcount: retains arguments
 */
 static c3_o
 _behn_bail_dire(u3_noun lud)

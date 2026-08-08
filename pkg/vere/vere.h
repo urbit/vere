@@ -794,6 +794,7 @@
         u3_auto_live(u3_auto* car_u);
 
       /* u3_auto_kick(): route effects to a linked driver. RETAIN
+      **  @Refcount: retains arguments
       */
         void
         u3_auto_kick(u3_auto* car_u, u3_noun act);
@@ -857,6 +858,7 @@
         u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+      **  @Refcount: retains arguments
       */
         size_t
         u3_disk_etch(u3_disk* log_u,
@@ -1064,6 +1066,7 @@
     /**  Terminal.
     **/
       /* u3_term_start_spinner(): prepare spinner state. RETAIN.
+      **  @Refcount: retains arguments
       */
         void
         u3_term_start_spinner(u3_noun say, c3_o del_o);
@@ -1381,6 +1384,7 @@
         u3_dawn_come(void);
 
       /* u3_dawn_vent(): validated boot event
+      **  @Refcount: fills transferred `rift`
       */
         u3_noun
         u3_dawn_vent(u3_noun ship, u3_noun seed, u3_noun* rift);

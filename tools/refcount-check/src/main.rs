@@ -124,9 +124,37 @@ fn lint_args(e: &Entry, resource_dir: Option<&str>) -> Vec<String> {
       i += 2;
       continue;
     }
-    if *a == e.file || a == "-xc" || a == "-c" {
+    //  -Werror: the lint parse (U3_REFCOUNT_LINT macro swaps) can raise
+    //  warnings the real build does not; they must not block parsing
+    if *a == e.file || a == "-xc" || a == "-c" || a == "-Werror" {
       i += 1;
       continue;
+    }
+    //  pkg/vere entries resolve the noun headers through a .zig-cache
+    //  SNAPSHOT dir; the live pkg/noun sources must win (in the same
+    //  search position, so the generated version.h still shadows
+    //  pkg/noun/version.h), or annotations edited in pkg/noun stay
+    //  invisible until the next cache rebuild
+    if a == "-I" && i + 1 < args.len() {
+      let path = &args[i + 1];
+      if path.contains(".zig-cache")
+        && Path::new(path).join("noun.h").is_file()
+      {
+        out.push("-I".to_string());
+        out.push("pkg/noun".to_string());
+        //  the snapshot flattens platform/<os>/rsignal.h into its root
+        let os_dir = if cfg!(target_os = "macos") {
+          "pkg/noun/platform/darwin"
+        } else if cfg!(target_os = "windows") {
+          "pkg/noun/platform/windows"
+        } else {
+          "pkg/noun/platform/linux"
+        };
+        out.push("-I".to_string());
+        out.push(os_dir.to_string());
+        i += 2;
+        continue;
+      }
     }
     if a == "-isystem" && i + 1 < args.len() {
       let path = &args[i + 1];
@@ -443,6 +471,12 @@ fn explain(
     if defn.is_some() { "" } else { ", declaration only" }
   );
   println!("  resolved by: {}", sem.why);
+  if sem.noreturn {
+    println!(
+      "  noreturn:    execution ends at every call site; arguments are \
+       not accounted"
+    );
+  }
   if sem.custom {
     println!(
       "  protocol:    CUSTOM -- not checked; call sites treat arguments and product as unknown"
@@ -573,7 +607,7 @@ fn explain(
 #[derive(Default)]
 struct Args {
   cdb: String,
-  filter: String,
+  filters: Vec<String>,
   only: Option<String>,
   function: Option<String>,
   libclang: Option<String>,
@@ -587,7 +621,6 @@ struct Args {
 fn parse_args() -> Args {
   let mut a = Args {
     cdb: "compile_commands.json".to_string(),
-    filter: "pkg/noun".to_string(),
     ..Default::default()
   };
   let argv: Vec<String> = std::env::args().skip(1).collect();
@@ -613,7 +646,12 @@ fn parse_args() -> Args {
     };
     match flag.as_str() {
       "--cdb" => a.cdb = value(&mut i, &argv, "--cdb", inline),
-      "--filter" => a.filter = value(&mut i, &argv, "--filter", inline),
+      "--filter" => {
+        //  repeatable, and each value may be a comma-separated list
+        let v = value(&mut i, &argv, "--filter", inline);
+        a.filters
+          .extend(v.split(',').filter(|s| !s.is_empty()).map(str::to_string));
+      }
       "--only" => a.only = Some(value(&mut i, &argv, "--only", inline)),
       "--function" => a.function = Some(value(&mut i, &argv, "--function", inline)),
       "--libclang" => a.libclang = Some(value(&mut i, &argv, "--libclang", inline)),
@@ -863,10 +901,24 @@ fn run() -> i32 {
       return 2;
     }
   };
+  let filters: Vec<String> = if args.filters.is_empty() {
+    vec!["pkg/noun".to_string(), "pkg/vere".to_string()]
+  } else {
+    args.filters.clone()
+  };
   let mut seen_files: HashSet<String> = HashSet::new();
   let mut entries: Vec<Entry> = Vec::new();
   for e in cdb {
-    if !e.file.contains(&args.filter) || !e.file.ends_with(".c") {
+    if !e.file.ends_with(".c")
+      || !filters.iter().any(|f| e.file.contains(f.as_str()))
+    {
+      continue;
+    }
+    //  test harnesses and benchmarks are outside the checked runtime
+    let base = e.file.rsplit('/').next().unwrap_or(&e.file);
+    if base.ends_with("_test.c") || base.ends_with("_tests.c")
+      || base == "benchmarks.c"
+    {
       continue;
     }
     if let Some(only) = &args.only {
@@ -881,7 +933,9 @@ fn run() -> i32 {
   }
 
   if args.selftest {
-    // borrow compile flags from any pkg/noun entry
+    // borrow compile flags from any pkg/noun entry (the fixture
+    // includes noun headers; vere flags would also work, but pin it)
+    entries.retain(|e| e.file.contains("pkg/noun"));
     if entries.is_empty() {
       eprintln!("selftest: no pkg/noun entries in cdb");
       return 2;
@@ -1033,6 +1087,8 @@ fn run() -> i32 {
       ("bug_pointee_view_uaf", "use-after-free"),
       ("bug_defcons_unfilled", "refcount error"),
       ("bug_defcons_double", "use-after-free"),
+      ("bug_fnptr_borrowed", "refcount error"),
+      ("bug_vararg_borrowed", "refcount error"),
       ("skip_back_goto", "complicated"),
       //  KNOWN LIMITATION: one env per branch cannot carry the
       //  disjunction "a direct OR b direct" past the || join, so the
@@ -1060,6 +1116,12 @@ fn run() -> i32 {
       "_view_pointee",
       "ok_defcons_build",
       "ok_double_gain",
+      "selftest_die",
+      "ok_noreturn_caller",
+      "ok_fnptr_transfer",
+      "ok_vararg_list",
+      "ok_git_untied",
+      "ok_fnptr_decl",
     ]);
     let got: HashSet<(&str, &str)> = findings
       .iter()

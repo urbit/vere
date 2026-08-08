@@ -102,6 +102,7 @@ pub struct Sem {
   pub pointees: BTreeMap<String, PointeeMode>, // pointer param -> pointee mode
   pub destructures: Option<String>, // source arg of a destructurer
   pub product: ProductMode,
+  pub noreturn: bool,               // calling this ends execution
   pub check: bool,
   pub custom: bool,
   pub why: String,
@@ -119,6 +120,7 @@ impl Sem {
       pointees: BTreeMap::new(),
       destructures: None,
       product,
+      noreturn: false,
       check: true,
       custom: false,
       why: why.to_string(),
@@ -135,9 +137,9 @@ impl Sem {
   /// decl-vs-def sync check).
   pub fn proto_key(&self) -> String {
     format!(
-      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}",
+      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}|{}",
       self.default_args, self.args, self.pointees, self.destructures,
-      self.product, self.custom, self.check
+      self.product, self.custom, self.check, self.noreturn
     )
   }
 }
@@ -220,7 +222,7 @@ const PROD_SLOT_WORDS: &[&str] = &["product", "result", "return"];
 const CLAUSE_HEADS: &[&str] = &[
   "transfers", "retains", "transfer", "retain", "direct", "passthrough",
   "conslike", "reads", "consumes", "fills", "destructures", "destructure",
-  "custom", "assert",
+  "custom", "assert", "noreturn",
 ];
 
 // ---------------------------------------------------------------------------
@@ -350,6 +352,21 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
     let words: Vec<&str> = toks[1..].to_vec();
     let hit_prod = words.iter().any(|w| PROD_SLOT_WORDS.contains(w));
     let hit_args = words.iter().any(|w| ARG_SLOT_WORDS.contains(w));
+
+    if head == "noreturn" {
+      //  calling this function ends execution: no argument accounting
+      //  applies at the call site (dying with sloppy counts is fine)
+      if !toks[1..].is_empty() {
+        sem.warnings.push((
+          line,
+          "@Refcount: noreturn takes no arguments".to_string(),
+        ));
+      }
+      set_slot(&mut explicit, &mut sem.warnings, line, "noreturn",
+        "noreturn");
+      sem.noreturn = true;
+      continue;
+    }
 
     if head == "passthrough" {
       let Some(name) = names.first() else {

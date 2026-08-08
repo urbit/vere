@@ -422,3 +422,85 @@ ok_double_gain(u3_noun a, u3_noun b)
   u3j_gate_lose(&sit_u);
   return pro;
 }
+
+/* noreturn: execution ends at the call site; sloppy counts are fine
+** @Refcount: noreturn
+*/
+void
+selftest_die(u3_noun msg)
+{
+  u3m_p("die", msg);
+  abort();
+}
+
+/* borrowed views may be handed to a noreturn callee without u3k
+** @Refcount: retains arguments
+*/
+void
+ok_noreturn_caller(u3_noun a)
+{
+  if ( c3n == u3du(a) ) {
+    selftest_die(u3h(a));
+  }
+}
+
+/* a call through a function pointer transfers: consuming an owned
+** value this way is correct (control)
+*/
+void
+ok_fnptr_transfer(u3_noun a, u3_noun (*fun_f)(u3_noun))
+{
+  u3z(fun_f(a));
+}
+
+/* a call through a function pointer transfers: passing a borrowed
+** view without u3k is an error
+** @Refcount: retains arguments
+*/
+void
+bug_fnptr_borrowed(u3_noun a, void (*fun_f)(u3_noun))
+{
+  fun_f(u3h(a));                //  BUG: borrowed view transferred
+}
+
+/* u3i_list consumes every vararg (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_vararg_list(u3_noun a)
+{
+  return u3i_list(u3k(a), u3qa_inc(a), u3_none);
+}
+
+/* u3i_list consumes every vararg: a borrowed view needs u3k
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_vararg_borrowed(u3_noun a)
+{
+  return u3i_list(u3h(a), u3_none);  //  BUG: borrowed view consumed
+}
+
+/* u3h_git's product borrows from the table, not the key: freeing the
+** key does not invalidate it (control)
+** @Refcount: retains
+*/
+u3_weak
+ok_git_untied(u3p(u3h_root) har_p, u3_noun a)
+{
+  u3_noun key = u3nc(u3k(a), 0);
+  u3_weak pro = u3h_git(har_p, key);
+  u3z(key);
+  return pro;
+}
+
+/* a local function-pointer declaration is not an initializer;
+** the call through it transfers (control)
+*/
+void
+ok_fnptr_decl(u3_noun a, void (*pass_f)(u3_noun))
+{
+  void (*fun_f)(u3_noun);
+  fun_f = pass_f;
+  fun_f(a);
+}
