@@ -1119,7 +1119,7 @@ _mars_play_batch(u3_mars* mar_u,
 }
 
 /* _mars_do_boot(): replay boot events. The caller must crash on c3n.
-** @Refcount: doomed on `c3n`
+** @Refcount: assert, doomed on `c3n` (subroad entering/exiting shenanigans)
 */
 static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
@@ -1143,6 +1143,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //  hack to recover structural sharing
   //
   u3_noun xev = u3m_love(u3ke_cue(u3ke_jam(u3nc(cax, eve))));
+  u3z(cax);
   u3x_cell(xev, &cax, &eve);
   u3k(eve); u3k(cax);
   u3z(xev);
