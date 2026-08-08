@@ -4,7 +4,7 @@
     .fingerprint = 0x328f6061a804066a,
     .dependencies = .{
         .gmp = .{
-            .url = "https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz",
+            .url = "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz",
             .hash = "N-V-__8AAE5fAwHUYgLBeqNatYSKf3qBK3l8nwdpjyY8igK0",
         },
     },
