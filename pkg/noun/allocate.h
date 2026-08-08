@@ -63,6 +63,8 @@
     */
 #     define u3a_crag_no  (u3a_page - u3a_min_log)
 
+#     define u3a_direct_max 0x7fffffff
+
     /* page table constants
     */
 #     define u3a_free_pg  (u3p(u3a_crag))0
