@@ -1,0 +1,54 @@
+name: Refcount lint
+
+on:
+  pull_request:
+    paths:
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'ext/**'
+      - '!ext/**.md'
+      - 'pkg/**'
+      - 'tools/refcount-check/**'
+      - '.github/workflows/refcount.yml'
+
+jobs:
+  refcount:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          # 8GB cache limit chosen at random
+          cache-size-limit: 8192
+
+      # the checker loads libclang (17+) at runtime; libclang-18-dev
+      # provides the unversioned /usr/lib/llvm-18/lib/libclang.so plus
+      # the clang resource headers
+      - name: Install libclang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libclang-18-dev
+
+      - name: Generate compile_commands.json
+        run: zig build -Dgenerate-commands --summary all
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/refcount-check
+
+      - name: Build refcount-check
+        run: cargo build --release --manifest-path tools/refcount-check/Cargo.toml
+
+      - name: Run selftest
+        run: |
+          ./tools/refcount-check/target/release/refcount-check \
+            --selftest \
+            --libclang /usr/lib/llvm-18/lib/libclang.so
+
+      - name: Run refcount lint
+        run: |
+          ./tools/refcount-check/target/release/refcount-check \
+            --libclang /usr/lib/llvm-18/lib/libclang.so
