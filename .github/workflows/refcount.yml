@@ -35,10 +35,6 @@ jobs:
       - name: Generate compile_commands.json
         run: zig build -Dgenerate-commands --summary all
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: tools/refcount-check
-
       - name: Build refcount-check
         run: cargo build --release --manifest-path tools/refcount-check/Cargo.toml
 
