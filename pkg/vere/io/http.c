@@ -1171,6 +1171,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
       h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
     }
     else {
+      u3z(req);
       h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
     }
   }

@@ -209,7 +209,7 @@ _lord_plea_foul(u3_lord* god_u, c3_m mot_m, u3_noun dat)
   //  XX can't unconditionally print
   //
   // u3m_p("plea", dat);
-
+  u3z(dat);
   _lord_bail(god_u);
 }
 
@@ -240,6 +240,7 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
   if ( c3y == god_u->liv_o ) {
     fprintf(stderr, "lord: received unexpected %%ripe\n");
     _lord_bail(god_u);
+    u3z(dat);
     return;
   }
 
@@ -632,7 +633,7 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
 
     case u3_writ_quiz: {
       msg = u3nt(c3__quiz, wit_u->qiz_u.qiz_m, u3_nul);
-    }
+    } break;
 
     case u3_writ_exit: {
       msg = u3nc(c3__exit, u3_nul);
@@ -1341,6 +1342,7 @@ u3_lord_boot(c3_c* pax_c,
       fprintf(stderr, "spawn: %s: %s\r\n", arg_c[0], uv_strerror(err_i));
       //  XX return error code, or defer and invoke cb
       //
+      u3z(msg);
       return;
     }
   }

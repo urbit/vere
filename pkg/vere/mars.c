@@ -651,6 +651,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
 
       mar_u->sat_e = u3_mars_save_e;
+      u3z(jar);
     } break;
 
     //  $%  [%live ?(%meld %pack) ~] :: XX rename

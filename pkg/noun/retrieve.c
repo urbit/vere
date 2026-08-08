@@ -38,6 +38,10 @@ u3r_hext(u3_noun  a,
          u3_noun* f,
          u3_noun* g);
 
+/* u3r_cat: assert direct atom
+*/
+u3_atom u3r_cat(u3_noun a);
+
 /* _frag_word(): fast fragment/branch prediction for top word.
 */
 static u3_weak
