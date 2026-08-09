@@ -186,14 +186,22 @@ fn lint_args(e: &Entry, resource_dir: Option<&str>) -> Vec<String> {
 // ---------------------------------------------------------------------------
 // precompiled headers
 
-//  the closure of these two includes covers the expensive part of every
-//  pkg/noun TU (noun.h pulls in the whole tree except jets/w.h). The
-//  paths resolve through the entries' own -I flags, which are relative
-//  to the repo root like everything else in the compile db.
-const PCH_HEADER: &str = "#include \"noun.h\"\n#include \"jets/w.h\"\n";
+//  candidate prefix headers, richest first: each args group takes the
+//  first candidate that compiles cleanly under its flags. pkg/vere
+//  groups resolve vere.h (uv.h and friends on top of noun.h); pkg/noun
+//  groups lack pkg/vere on their include path, fail fast on the missing
+//  include, and fall back to the noun-only header (whose closure covers
+//  every pkg/noun TU -- noun.h pulls in the whole tree except jets/w.h).
+//  The paths resolve through the entries' own -I flags, which are
+//  relative to the repo root like everything else in the compile db.
+const PCH_HEADERS: [&str; 2] = [
+  "#include \"vere.h\"\n#include \"noun.h\"\n#include \"jets/w.h\"\n",
+  "#include \"noun.h\"\n#include \"jets/w.h\"\n",
+];
 
-/// One precompiled header per distinct lint_args vector (in practice a
-/// single one: every pkg/noun entry normalizes to the same flags).
+/// One precompiled header per distinct lint_args vector (in practice
+/// two: every pkg/noun entry normalizes to one flags vector and every
+/// pkg/vere entry to another).
 /// Re-parsing the shared headers per TU is ~90% of the tool's CPU time;
 /// a PCH parses them once. The PCH build args must match the consumers'
 /// exactly -- clang validates some mismatches loudly (macros, -std,
@@ -270,7 +278,6 @@ impl PchSet {
     }
     let dir = std::env::temp_dir()
       .join(format!("refcount-check-pch-{}", std::process::id()));
-    let hdr = dir.join("prefix.h");
     let idx = Index::new();
     let mut n = 0u32;
     let mut keys: Vec<&Vec<String>> = groups.keys().collect();
@@ -284,31 +291,38 @@ impl PchSet {
           return set;
         }
         set.dir = Some(dir.clone());
-        if std::fs::write(&hdr, PCH_HEADER).is_err() {
-          return set;
-        }
       }
       let mut hargs = args.clone();
       if hargs.first().map(|a| a == "-xc").unwrap_or(false) {
         hargs[0] = "-xc-header".to_string();
       }
-      let pch = dir.join(format!("prefix-{}.pch", n));
-      n += 1;
       let opts = clang_sys::CXTranslationUnit_Incomplete
         | clang_sys::CXTranslationUnit_ForSerialization;
-      let Ok(tu) = idx.parse_opts(&hdr.to_string_lossy(), &hargs, opts)
-      else {
-        continue;
-      };
-      //  a save can succeed for a TU that failed to compile; a broken
-      //  PCH must not replace working per-TU parses
-      if !tu.error_diagnostics().is_empty() {
-        continue;
-      }
-      if tu.save(&pch.to_string_lossy()).is_ok() {
-        set
-          .by_args
-          .insert(args.clone(), pch.to_string_lossy().into_owned());
+      for (i, text) in PCH_HEADERS.iter().enumerate() {
+        //  never rewrite a header another group already built against:
+        //  a fresh mtime would invalidate that group's saved PCH
+        let hdr = dir.join(format!("prefix-{}.h", i));
+        if !hdr.exists() && std::fs::write(&hdr, text).is_err() {
+          continue;
+        }
+        let Ok(tu) = idx.parse_opts(&hdr.to_string_lossy(), &hargs, opts)
+        else {
+          continue;
+        };
+        //  a save can succeed for a TU that failed to compile; a broken
+        //  PCH must not replace working per-TU parses (and an
+        //  unresolvable candidate include lands here, trying the next)
+        if !tu.error_diagnostics().is_empty() {
+          continue;
+        }
+        let pch = dir.join(format!("prefix-{}.pch", n));
+        n += 1;
+        if tu.save(&pch.to_string_lossy()).is_ok() {
+          set
+            .by_args
+            .insert(args.clone(), pch.to_string_lossy().into_owned());
+          break;
+        }
       }
     }
     set
@@ -914,10 +928,13 @@ fn run() -> i32 {
     {
       continue;
     }
-    //  test harnesses and benchmarks are outside the checked runtime
+    //  test harnesses and benchmarks are outside the checked runtime;
+    //  ivory.c and ca_bundle.c are generated megabyte array literals
+    //  with no functions -- parsing them costs seconds for nothing
     let base = e.file.rsplit('/').next().unwrap_or(&e.file);
     if base.ends_with("_test.c") || base.ends_with("_tests.c")
-      || base == "benchmarks.c"
+      || base == "benchmarks.c" || base == "ivory.c"
+      || base == "ca_bundle.c"
     {
       continue;
     }

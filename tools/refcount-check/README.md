@@ -23,10 +23,13 @@ anchors macro-expanded operator cursors differently, defeating the
 macro-origin exemption for `u3a_to_ptr`-style word punning and raising
 false `[strange expression]` findings; CI pins 19 for this reason.
 
-By default the shared `pkg/noun` headers (`noun.h` + `jets/w.h`) are
-precompiled once per run and every translation unit is parsed against
-that PCH (about 3x faster, since header parsing dominates the runtime);
-`--no-pch` disables this and parses every TU from scratch.
+By default the shared headers are precompiled once per run and every
+translation unit is parsed against its group's PCH (about 2x faster,
+since header parsing dominates the runtime). Each compile-flags group
+tries the candidate prefix headers richest-first: `pkg/vere` groups get
+`vere.h` + `noun.h` + `jets/w.h`, while `pkg/noun` groups cannot resolve
+`vere.h` and fall back to `noun.h` + `jets/w.h`. `--no-pch` disables all
+of this and parses every TU from scratch.
 
 ## What it does
 
@@ -35,7 +38,8 @@ This tool walks the functions (in `pkg/noun` and `pkg/vere` by default;
 or change the scope) and checks whether their definitions satisfy u3
 reference-counting conventions plus the validity of additional
 annotations. The check is done by running an abstract interpreter against the body of the function.
-Test harnesses (`*_test.c`, `*_tests.c`, `benchmarks.c`) are excluded.
+Test harnesses (`*_test.c`, `*_tests.c`, `benchmarks.c`) are excluded,
+as are the generated data blobs `ivory.c` and `ca_bundle.c`.
 
 `pkg/vere` notes:
 
