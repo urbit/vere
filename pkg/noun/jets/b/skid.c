@@ -22,25 +22,20 @@ u3qb_skid(u3_noun a, u3_noun b)
 
     do {
       i = u3k(u3k(u3h(a)));
+
+      if ( c3y == u3x_loob(u3j_gate_slam(&sit_u, i)) ) {
+        *lef = u3i_defcons(&hed, &tel);
+        *hed = i;
+        lef  = tel;
+      }
+      else {
+        *rig = u3i_defcons(&hed, &tel);
+        *hed = i;
+        rig  = tel;
+      }
+      
       t = u3k(u3t(a));
       u3z(a), a = t;
-
-      switch ( u3j_gate_slam(&sit_u, i) ) {
-        case c3y: {
-          *lef = u3i_defcons(&hed, &tel);
-          *hed = i;
-          lef  = tel;
-        } break;
-
-        case c3n: {
-          *rig = u3i_defcons(&hed, &tel);
-          *hed = i;
-          rig  = tel;
-        } break;
-
-        default: u3m_bail(c3__exit);
-      }
-
     }
     while ( u3_nul != a );
 
