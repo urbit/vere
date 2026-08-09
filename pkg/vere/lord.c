@@ -209,7 +209,6 @@ _lord_plea_foul(u3_lord* god_u, c3_m mot_m, u3_noun dat)
   //  XX can't unconditionally print
   //
   // u3m_p("plea", dat);
-  u3z(dat);
   _lord_bail(god_u);
 }
 
@@ -240,7 +239,6 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
   if ( c3y == god_u->liv_o ) {
     fprintf(stderr, "lord: received unexpected %%ripe\n");
     _lord_bail(god_u);
-    u3z(dat);
     return;
   }
 
