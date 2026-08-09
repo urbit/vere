@@ -20,22 +20,23 @@ u3qb_skip(u3_noun a, u3_noun b)
     u3k(a);
 
     do {
-      i = u3h(a);
+      i = u3k(u3k(u3h(a)));
+      t = u3k(u3t(a));
+      u3z(a), a = t;
 
-      switch ( u3j_gate_slam(&sit_u, u3k(i)) ) {
-        case c3y: break;
+      switch ( u3j_gate_slam(&sit_u, i) ) {
+        case c3y: {
+          u3z(i);
+        } break;
 
         case c3n: {
           *lit = u3i_defcons(&hed, &tel);
-          *hed = u3k(i);
+          *hed = i;
           lit  = tel;
         } break;
 
         default: u3m_bail(c3__exit);
       }
-
-      t = u3k(u3t(a));
-      u3z(a), a = t;
     }
     while ( u3_nul != a );
 
