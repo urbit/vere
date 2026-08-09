@@ -21,22 +21,18 @@ u3qb_skim(u3_noun a, u3_noun b)
 
     do {
       i = u3k(u3k(u3h(a)));
+
+      if ( c3y == u3x_loob(u3j_gate_slam(&sit_u, i)) ) {
+        *lit = u3i_defcons(&hed, &tel);
+        *hed = i;
+        lit  = tel;
+      }
+      else {
+        u3z(i);
+      }
+      
       t = u3k(u3t(a));
       u3z(a), a = t;
-
-      switch ( u3j_gate_slam(&sit_u, i) ) {
-        case c3y: {
-          *lit = u3i_defcons(&hed, &tel);
-          *hed = i;
-          lit  = tel;
-        } break;
-
-        case c3n: {
-          u3z(i);
-        } break;
-
-        default: u3m_bail(c3__exit);
-      }
     }
     while ( u3_nul != a );
 
