@@ -229,6 +229,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_ws    mov_ws;
         c3_ws    off_ws;
         u3_post   top_p;
+        u3_post   beg_p;
 #ifdef U3_MEMORY_DEBUG
         u3a_road* rod_u;
 #endif
@@ -540,7 +541,9 @@ typedef struct {
           inline c3_o
           u3a_pile_done(const u3a_pile* pil_u)
           {
-            return (pil_u->top_p == u3R->cap_p) ? c3y : c3n;
+            if (pil_u->top_p != u3R->cap_p) return c3n;
+            u3R->cap_p = pil_u->beg_p;
+            return c3y;
           }
 
   /**  Functions.
@@ -613,7 +616,7 @@ u3a_post_info(u3_post);
         /* u3a_pile_prep(): initialize stack control.
         */
           void
-          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w);
+          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w, c3_w alg_w);
 
       /* C-style aligned allocation - *not* compatible with above.
       */
