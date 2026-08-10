@@ -236,7 +236,7 @@ _king_prop()
 void
 _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 {
-  u3_noun vent = u3nc(c3__fake, u3k(ship));
+  u3_noun vent = u3nc(c3__fake, ship);
 
   //  XX pass kelvin
   //
@@ -255,6 +255,7 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 void
 _king_come(u3_noun star, u3_noun pill, u3_noun path)
 {
+  u3z(star);
   _king_dawn(u3_dawn_come(), pill, path);
 }
 
@@ -729,7 +730,7 @@ _boothack_key(u3_noun kef)
          (c3n == u3r_sing(ship, u3t(whu))) )
     {
       u3_noun how = u3dc("scot", 'p', u3k(ship));
-      c3_c* how_c = u3r_string(u3k(how));
+      c3_c* how_c = u3r_string(how);
       u3l_log("dawn: mismatch between -w %s and -K %s",
               u3_Host.ops_u.who_c, how_c);
 
