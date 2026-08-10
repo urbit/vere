@@ -390,16 +390,17 @@ _http_req_get_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
   return u3_none;
 }
 
-/* _http_req_is_auth(): returns c3y if rec_u has valid auth for desk or root
+/* _http_req_is_auth(): returns c3y if tok (TRANSFER) is valid auth for desk or root
+*
+*    if desk is u3_none, any valid authentication token is accepted.
+*    if desk is a noun, the auth token's desk must be root, or match exactly.
 */
 static c3_o
-_http_req_is_auth(u3_hfig* fig_u, u3_weak desk, h2o_req_t* rec_u)
+_http_req_is_auth(u3_hfig* fig_u, u3_weak desk, u3_weak tok)
 {
-  u3_weak tok = _http_req_get_auth(fig_u, rec_u);
+  //  if no auth token provided, can't be authenticated
+  //
   if (u3_none == tok) {
-    //TODOxx  want this to redirect the user into an "obtaining auth" flow,
-    //        can do this by redirecting to /~/holm[request-url]
-    //        (once eyre has support for that on desk scopes)
     return c3n;
   }
 
@@ -419,7 +420,7 @@ _http_req_is_auth(u3_hfig* fig_u, u3_weak desk, h2o_req_t* rec_u)
       //  otherwise, compare desk against token scope
       //
       if ( u3_none == desk ) {
-        pas = c3n;
+        pas = c3y;
       } else {
         pas = u3r_sing(desk, u3t(aut));
       }
@@ -843,7 +844,8 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   u3_httd* htd_u = peq_u->htd_u;
   u3_hreq* req_u = peq_u->req_u;
   u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
-  c3_o auth = _http_req_is_auth(fig_u, u3_none, req_u->rec_u);
+  c3_o auth = _http_req_is_auth( fig_u, u3_none,
+                                 _http_req_get_auth(fig_u, req_u->rec_u) );
 
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
@@ -978,6 +980,24 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
   return bem;
 }
 
+static void
+_http_jump_respond(h2o_req_t* rec_u)
+{
+  u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+  req_u->sat_e   = u3_rsat_plan;
+
+  c3_c*      loc = c3_malloc(rec_u->input.path.len + 12);
+  snprintf( loc, rec_u->input.path.len + 13, "%s%s",
+            "/~/holm/jump", rec_u->input.path.base );
+
+  u3_noun    hed = u3nl(u3nc(u3i_string("Location"),
+                              u3i_string(loc)),
+                        u3_none);
+  _http_start_respond(req_u, 307, hed, u3_nul, c3y);
+
+  c3_free(loc);
+}
+
 /* _http_peek_dispatch(): dispatch peek request. RETAINS gang, spur, bem
  * RETAINS req_u->peq_u and req_u->peq_u->pax if c3n is returned (no peek
  * was queued), TRANSFERS them if c3y was returned
@@ -1094,7 +1114,8 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
       h2o_req_t* rec_u = req_u->rec_u;
 
-      u3_noun gang = ( _(_http_req_is_auth(fig_u, u3_none, rec_u)) )
+      u3_noun gang = ( _(_http_req_is_auth( fig_u, u3_none,
+                                            _http_req_get_auth(fig_u, rec_u) )) )
                    ? u3nc(u3_nul, u3_nul)
                    : u3_nul;
 
@@ -1183,15 +1204,30 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
-    // check auth
-    if ( (c3y == auth)
-      && (c3n == _http_req_is_auth(&htd_u->fig_u, desk, rec_u)) )
-    {
-      h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
-    }
-    else {
+    if ( c3n == auth ) {
+      //  the cache entry doesn't require auth, always serve it
+      //
       req_u->sat_e = u3_rsat_plan;
       _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+    }
+    else {
+      u3_weak tok = _http_req_get_auth(&htd_u->fig_u, rec_u);
+
+      //  if no auth provided _at all_: redirect to auth negotation.
+      //  else if the provided auth is no good: serve 403.
+      //  else, the provided auth is good: serve the cached response.
+      //
+      if ( u3_none == tok ) {
+        _http_jump_respond(rec_u);
+      }
+      else if ( c3n == _http_req_is_auth(&htd_u->fig_u, desk, tok) )
+      {
+        h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
+      }
+      else {
+        req_u->sat_e = u3_rsat_plan;
+        _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+      }
     }
   }
   u3z(nun);
@@ -1230,7 +1266,8 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
 
     // check auth
     if ( (c3y == auth)
-      && (c3n == _http_req_is_auth(&htd_u->fig_u, u3_none, rec_u)) )
+      && (c3n == _http_req_is_auth(&htd_u->fig_u, u3_none,
+                                   _http_req_get_auth(&htd_u->fig_u, rec_u))) )
     {
       h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
     }
@@ -1643,12 +1680,18 @@ _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
     return 0;
   }
 
-  //REVIEWxx  should allow spinner to be read by any cookie scope?
-  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, rec_u);
+  u3_weak tok = _http_req_get_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+
+  //  if the request does not have authentication, start negotiation for it
+  //
+  if ( u3_none == tok ) {
+    _http_jump_respond(rec_u);
+    return 0;
+  }
 
   //  if the request is not authenticated, reject it
   //
-  if ( c3n == aut_o ) {
+  if ( c3n == _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, tok) ) {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
     req_u->sat_e = u3_rsat_plan;
     _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
@@ -1681,11 +1724,19 @@ _http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
   u3_hcon* hon_u = _http_rec_sock(rec_u);
   //REVIEWxx  would be fun to gate this behind a userspace perm...
-  c3_o     aut_o = _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, rec_u);
+
+  u3_weak  tok   = _http_req_get_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+
+  //  if the request has no authentication at all, start negotiation for it
+  //
+  if ( u3_none == tok ) {
+    _http_jump_respond(rec_u);
+    return 0;
+  }
 
   //  if the request is not authenticated, reject it
   //
-  if ( c3n == aut_o ) {
+  if ( c3n == _http_req_is_auth(&hon_u->htp_u->htd_u->fig_u, u3_none, tok) ) {
     u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
     req_u->sat_e = u3_rsat_plan;
     _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
