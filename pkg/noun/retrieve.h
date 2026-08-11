@@ -105,6 +105,14 @@
           else return c3n;
         }
 
+      /* u3r_cat: assert direct atom
+      */
+        inline u3_atom
+        u3r_cat(u3_noun a)
+        {
+          return ( c3y == u3a_is_cat(a) ) ? a : u3m_bail(c3__fail);
+        }
+
       /* u3r_at(): fragment `a` of `b`, or u3_none.
       */
         u3_weak

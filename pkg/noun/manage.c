@@ -1060,17 +1060,8 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road), 16);
     ptr_p = (c3_p)u3a_push(&pil_u);
-
-    //  XX add push_once, push_once_aligned
-    //
-    if ( ptr_p & 15 ) {
-      ptr_p &= ~15;
-      if ( c3n == u3a_is_north(u3R) ) {
-        ptr_p += 16;
-      }
-    }
 
     rod_u = (void*)ptr_p;
     memset(rod_u, 0, sizeof(u3a_road));

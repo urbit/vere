@@ -38,6 +38,10 @@ u3r_hext(u3_noun  a,
          u3_noun* f,
          u3_noun* g);
 
+/* u3r_cat: assert direct atom
+*/
+u3_atom u3r_cat(u3_noun a);
+
 /* _frag_word(): fast fragment/branch prediction for top word.
 */
 static u3_weak
@@ -458,7 +462,7 @@ _cr_sing(u3_noun a, u3_noun b)
 
   //  initialize stack control, push arguments onto the stack (none-frame)
   //
-  u3a_pile_prep(&pil_u, sizeof(eqframe));
+  u3a_pile_prep(&pil_u, sizeof(eqframe), alignof(eqframe));
   fam_u = _cr_sing_push(&pil_u, a, b);
 
   //  loop while arguments are on the stack
@@ -1970,7 +1974,7 @@ u3r_mug(u3_noun veb)
   //
   u3_assert( u3_none != veb );
 
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  commence mugging
   //

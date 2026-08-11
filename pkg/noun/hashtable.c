@@ -399,7 +399,7 @@ _ch_node_del(u3h_slot* sot_w, u3_noun key, c3_h lef_h, c3_h rem_h)
     else {
       // shrink node in place; don't reallocate, we could be low on memory
       //
-      han_u->map_h &= ~(1 << bit_h);
+      han_u->map_h &= ~((c3_h)1 << bit_h);
       --len_h;
 
       for ( i_h = inx_h; i_h < len_h; i_h++ ) {
@@ -499,7 +499,7 @@ _ch_trim_node(u3h_root* har_u, u3h_slot* sot_w, c3_h lef_h, c3_h rem_h)
     else {
       // shrink node in place; don't reallocate, we could be low on memory
       //
-      han_u->map_h &= ~(1 << bit_h);
+      han_u->map_h &= ~((c3_h)1 << bit_h);
       --len_h;
 
       for ( i_h = inx_h; i_h < len_h; i_h++ ) {

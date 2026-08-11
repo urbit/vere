@@ -1450,6 +1450,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
   c3_free(tag_c);
   c3_free(wir_c);
   u3z(riw);
+  u3z(tag);
 }
 
 /* u3_pier_sway(): print trace.

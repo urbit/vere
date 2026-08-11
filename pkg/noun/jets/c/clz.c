@@ -37,7 +37,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
 
     if ( bit_w ) {
       wor_w  = u3r_word(wid_w, a);
-      wor_w &= (1 << bit_w) - 1;
+      wor_w &= (1u << bit_w) - 1;
 
       if ( wor_w ) {
         return bit_w - (u3a_word_bits - c3_lz_w(wor_w));

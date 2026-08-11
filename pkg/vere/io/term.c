@@ -1095,12 +1095,11 @@ _term_it_put_value(c3_h*   lin_h,
                    u3_atom val)
 {
   c3_c str_c[4];
-  u3_assert( UINT32_MAX >= val );
+  if ( UINT32_MAX >= val ) u3m_bail(c3__fail);
   c3_h len = snprintf(str_c, 4, "%u", (c3_h)val % 256);
   for ( c3_h i_h = 0ULL; i_h < len; i_h++ ) {
     lin_h[i_h] = str_c[i_h];
   }
-  u3z(val);
   return len;
 }
 
@@ -1696,7 +1695,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 
     if (  (c3n == u3r_cell(pud, &p_pud, &q_pud))
        || (u3_nul != q_pud)
-       || (c3n == _reck_orchid(c3__ud, u3k(p_pud), &tid_h)) )
+       || (c3n == _reck_orchid(c3__ud, p_pud, &tid_h)) )
     {
       u3l_log("term: bad tire");
       ret_o = c3n;
