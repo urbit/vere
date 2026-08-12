@@ -2873,10 +2873,8 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
         }
       }
       else {
-        u3_noun blu = u3_term_get_blew(0);
-        c3_l  col_l = u3h(blu);
+        c3_l col_l = u3_term_get_blew(0).col_l;
         wol = u3dc("wash", u3nc(0, col_l), u3k(tan));
-        u3z(blu);
       }
 
       if ( u3_none != wol ) {
