@@ -2546,7 +2546,7 @@ u3m_init(size_t len_i)
        || (c3n == u3_wnd_loom_init((void *)u3_Loom, len_i)) )
     {
       if ( !(u3C.wag_h & u3o_no_demand) ) {
-        u3l_log("loom: no placeholder support, disabling demand paging");
+        u3l_log("loom: demand paging disabled");
         u3C.wag_h |= u3o_no_demand;
       }
 
@@ -2575,8 +2575,15 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
+#ifdef U3_OS_windows
+      //  windows does not overcommit; the loom is charged in full up front
+      //
+      u3l_log("the whole loom must fit in RAM plus the paging file:"
+              " boot with a smaller --loom, or grow the paging file");
+#else
       u3l_log("see https://docs.urbit.org/user-manual/running/cloud-hosting"
               " for adding swap space");
+#endif
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);

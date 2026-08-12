@@ -94,8 +94,19 @@ static struct {
 static void
 _wnd_fail(const c3_c* str_c)
 {
+  DWORD err_u = GetLastError();
+
   fprintf(stderr, "loom: %s: win32 error %lu\r\n",
-                  str_c, (unsigned long)GetLastError());
+                  str_c, (unsigned long)err_u);
+
+  //  windows does not overcommit: the whole loom is charged against RAM
+  //  plus the paging file, whether or not it is ever touched.
+  //
+  if ( ERROR_COMMITMENT_LIMIT == err_u ) {
+    fprintf(stderr, "loom: insufficient commit charge for the loom.\r\n"
+                    "      either boot with a smaller --loom, or grow the\r\n"
+                    "      paging file to exceed the loom size.\r\n");
+  }
 }
 
 /* _wnd_procs(): resolve the placeholder apis.
@@ -109,18 +120,22 @@ _wnd_procs(void)
     mod_h = LoadLibraryW(L"kernelbase.dll");
   }
 
-  if ( !mod_h ) {
-    return c3n;
+  if ( mod_h ) {
+    wnd_u.val_f = (_wnd_valloc2_f)(void*)
+                    GetProcAddress(mod_h, "VirtualAlloc2");
+    wnd_u.map_f = (_wnd_mapview3_f)(void*)
+                    GetProcAddress(mod_h, "MapViewOfFile3");
+    wnd_u.unm_f = (_wnd_unmapex_f)(void*)
+                    GetProcAddress(mod_h, "UnmapViewOfFileEx");
+
+    if ( wnd_u.val_f && wnd_u.map_f && wnd_u.unm_f ) {
+      return c3y;
+    }
   }
 
-  wnd_u.val_f = (_wnd_valloc2_f)(void*)
-                  GetProcAddress(mod_h, "VirtualAlloc2");
-  wnd_u.map_f = (_wnd_mapview3_f)(void*)
-                  GetProcAddress(mod_h, "MapViewOfFile3");
-  wnd_u.unm_f = (_wnd_unmapex_f)(void*)
-                  GetProcAddress(mod_h, "UnmapViewOfFileEx");
-
-  return ( wnd_u.val_f && wnd_u.map_f && wnd_u.unm_f ) ? c3y : c3n;
+  fprintf(stderr, "loom: no placeholder support "
+                  "(windows 10 1803 or later required)\r\n");
+  return c3n;
 }
 
 /* _wnd_hold(): collapse the current mapping into one placeholder.
