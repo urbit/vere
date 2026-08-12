@@ -1,5 +1,6 @@
 /// @file
 
+#include "c3/defs.h"
 #include "allocate.h"
 
 #include "hashtable.h"

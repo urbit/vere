@@ -202,8 +202,8 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     const DWORD dwMaxSizeLow = (sizeof(len) <= sizeof(DWORD)) ?
                     (DWORD)len : (DWORD)(len & 0xFFFFFFFFL);
     const DWORD dwMaxSizeHigh = (DWORD)((len >> 32) & 0xFFFFFFFFL);
-    const DWORD protect = __map_mmap_prot_page(prot);
-    const DWORD desiredAccess = __map_mmap_prot_file(prot);
+    DWORD protect = __map_mmap_prot_page(prot);
+    DWORD desiredAccess = __map_mmap_prot_file(prot);
 
     errno = 0;
 
@@ -226,6 +226,18 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
         }
     }
     else h = INVALID_HANDLE_VALUE;
+
+		if ((flags & MAP_PRIVATE))
+		{
+			if (!(prot & PROT_READ) || !(prot & PROT_WRITE))
+			{
+				errno = EINVAL;
+				return MAP_FAILED;
+			}
+
+			protect = PAGE_WRITECOPY;
+			desiredAccess = FILE_MAP_COPY;
+		}
 
     fm = CreateFileMapping(h, NULL, protect, lenHigh, lenLow, NULL);
 
