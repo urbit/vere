@@ -151,6 +151,7 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 #ifdef U3_OS_windows
 #include "veh_handler.h"
+#include "wloom.h"
 #endif
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
@@ -2534,11 +2535,37 @@ u3m_init(size_t len_i)
   // map at fixed address.
   //
   {
-    void* map_v = mmap((void *)u3_Loom,
-                       len_i,
-                       (PROT_READ | PROT_WRITE),
-                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                       -1, 0);
+    void* map_v;
+
+#ifdef U3_OS_windows
+    //  demand paging needs the loom reserved as a placeholder, so that the
+    //  image can later be mapped over its bottom. degrade to a plain
+    //  mapping (and to blitting) if the placeholder apis are missing.
+    //
+    if (  (u3C.wag_h & u3o_no_demand)
+       || (c3n == u3_wnd_loom_init((void *)u3_Loom, len_i)) )
+    {
+      if ( !(u3C.wag_h & u3o_no_demand) ) {
+        u3l_log("loom: no placeholder support, disabling demand paging");
+        u3C.wag_h |= u3o_no_demand;
+      }
+
+      map_v = mmap((void *)u3_Loom,
+                   len_i,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                   -1, 0);
+    }
+    else {
+      map_v = (void *)u3_Loom;
+    }
+#else
+    map_v = mmap((void *)u3_Loom,
+                 len_i,
+                 (PROT_READ | PROT_WRITE),
+                 (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                 -1, 0);
+#endif
 
     if ( -1 == (c3_ps)map_v ) {
       map_v = mmap((void *)0,
