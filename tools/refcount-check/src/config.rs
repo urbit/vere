@@ -12,7 +12,7 @@ pub const NOUN_TYPES: &[&str] = &[
 /// signed variants are excluded (sign extension of a negative value
 /// could produce an indirect bit pattern).
 pub const DIRECT_TYPES: &[&str] = &[
-  "c3_b", "c3_y", "c3_s", "c3_t", "c3_o", "c3_g", "c3_l", "c3_m",
+  "c3_b", "c3_y", "c3_s", "c3_t", "c3_o", "c3_g",
 ];
 
 /// Calls that never return; execution ends at the call site.
