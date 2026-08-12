@@ -970,7 +970,7 @@
     _stir_pair* par_u;
     u3_noun     p_wag, puq_wag, quq_wag;
 
-    u3a_pile_prep(&pil_u, sizeof(*par_u));
+    u3a_pile_prep(&pil_u, sizeof(*par_u), __alignof__(*par_u));
 
     //  push incremental, successful [fel] parse results onto road stack
     //

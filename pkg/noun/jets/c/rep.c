@@ -12,7 +12,7 @@
 #define TAKEBITS(n,w) \
   ((n)==32) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_w)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
