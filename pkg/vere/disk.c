@@ -1710,7 +1710,7 @@ static c3_i
 _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
 {
   c3_z img_z;
-  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDONLY);
+  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDWR);
 
   u3_assert( -1 != fid_i );
 
@@ -1764,11 +1764,10 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
     u3e_live(c3n, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_h(eve_d);
+    munmap((void*)u3_Loom_d, lom_z);
+    close(fid_i);
     u3m_save();
   }
-
-  munmap((void*)u3_Loom_d, lom_z);
-  close(fid_i);
 }
 #endif /* !VERE64 */
 
