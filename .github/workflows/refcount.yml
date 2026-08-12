@@ -53,11 +53,11 @@ jobs:
 
       - name: Run selftest
         run: |
-          ./tools/refcount-check/target/release/refcount-check \
+          ./tools/refcount-check/target/debug/refcount-check \
             --selftest \
             --libclang /usr/lib/llvm-19/lib/libclang.so
 
       - name: Run refcount lint
         run: |
-          ./tools/refcount-check/target/release/refcount-check \
+          ./tools/refcount-check/target/debug/refcount-check \
             --libclang /usr/lib/llvm-19/lib/libclang.so
