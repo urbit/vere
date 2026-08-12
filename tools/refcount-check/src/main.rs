@@ -527,6 +527,11 @@ fn explain(
           }
           None => {}
         }
+        match pm.fill_on {
+          Some(true) => parts.push("only when returning c3y"),
+          Some(false) => parts.push("only when returning c3n"),
+          None => {}
+        }
         println!("    {:<12} {:<12} POINTEE: {}", pname, tspell,
           parts.join("; "));
       } else {
@@ -745,10 +750,10 @@ fn sem_brief(sem: &Sem) -> String {
       Some(FillMode::Retained) => bits.push("fills-retained"),
       None => {}
     }
+    if let Some(on) = pm.fill_on {
+      bits.push(if on { "on-c3y" } else { "on-c3n" });
+    }
     parts.push(format!("*{}={}", n, bits.join("+")));
-  }
-  if let Some(d) = &sem.destructures {
-    parts.push(format!("destructures={}", d));
   }
   parts.join(", ")
 }
@@ -1108,6 +1113,7 @@ fn run() -> i32 {
       ("bug_vararg_borrowed", "refcount error"),
       ("warn_noreturn_return", "annotation"),
       ("bug_cond_fill_wrongpath", "leak"),
+      ("bug_cond_view_wrongpath", "refcount error"),
       ("skip_back_goto", "complicated"),
       //  KNOWN LIMITATION: one env per branch cannot carry the
       //  disjunction "a direct OR b direct" past the || join, so the
@@ -1145,6 +1151,8 @@ fn run() -> i32 {
       "ok_gain_deref",
       "ok_fnptr_field",
       "ok_cond_view_gain",
+      "_cond_view",
+      "ok_cond_view_annot",
       "ok_assert_direct",
       "ok_fnptr_transfer",
       "ok_vararg_list",

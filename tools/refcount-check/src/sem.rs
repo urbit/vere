@@ -93,9 +93,8 @@ pub struct Finding {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum AssertMode {
   Transfer,
-  Produce,
-  Retain,
-  Direct, // trusted claim: the named values are direct atoms
+  Direct,
+  Unknown,
 }
 
 /// The refcount protocol of one function.
@@ -104,7 +103,6 @@ pub struct Sem {
   pub default_args: ArgumentMode,
   pub args: BTreeMap<String, ArgumentMode>, // param name -> mode
   pub pointees: BTreeMap<String, PointeeMode>, // pointer param -> pointee mode
-  pub destructures: Option<String>, // source arg of a destructurer
   pub product: ProductMode,
   pub noreturn: bool,               // calling this ends execution
   //  `doomed on `c3n``: exits returning this loobean oblige the CALLER
@@ -125,7 +123,6 @@ impl Sem {
       default_args,
       args: BTreeMap::new(),
       pointees: BTreeMap::new(),
-      destructures: None,
       product,
       noreturn: false,
       doomed: None,
@@ -145,9 +142,9 @@ impl Sem {
   /// decl-vs-def sync check).
   pub fn proto_key(&self) -> String {
     format!(
-      "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{}|{}|{:?}",
-      self.default_args, self.args, self.pointees, self.destructures,
-      self.product, self.custom, self.check, self.noreturn, self.doomed
+      "{:?}|{:?}|{:?}|{:?}|{}|{}|{}|{:?}",
+      self.default_args, self.args, self.pointees, self.product, self.custom,
+      self.check, self.noreturn, self.doomed
     )
   }
 }
@@ -229,7 +226,7 @@ const PROD_SLOT_WORDS: &[&str] = &["product", "result", "return"];
 // start with one of these continues the previous clause
 const CLAUSE_HEADS: &[&str] = &[
   "transfers", "retains", "transfer", "retain", "direct", "passthrough",
-  "conslike", "reads", "consumes", "fills", "destructures", "destructure",
+  "conslike", "reads", "consumes", "fills",
   "custom", "assert", "noreturn", "doomed",
 ];
 
@@ -447,32 +444,6 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
       continue;
     }
 
-    if head == "destructures" || head == "destructure" {
-      //  the named argument is the source noun; `&var` arguments at the
-      //  call site become borrowed views into it (u3x_cell-style)
-      let Some(name) = names.first() else {
-        sem.warnings.push((
-          line,
-          "@Refcount: destructures requires the source argument name"
-            .to_string(),
-        ));
-        continue;
-      };
-      if names.len() > 1 {
-        sem.warnings.push((
-          line,
-          "@Refcount: destructures takes exactly one argument name"
-            .to_string(),
-        ));
-      }
-      let slot = format!("argument `{}`", name);
-      set_slot(&mut explicit, &mut sem.warnings, line, &slot,
-        "destructure-source");
-      sem.destructures = Some(name.clone());
-      sem.why = "@Refcount: destructures".to_string();
-      continue;
-    }
-
     if head == "reads" || head == "consumes" {
       //  pointee protocol of a pointer-to-noun parameter: the callee
       //  reads *a (without consuming), or gives away one counted
@@ -528,14 +499,6 @@ pub fn parse_fn_annotations(comment: &str, sem: &mut Sem, line: u32) -> bool {
           ));
           continue;
         };
-        if fm != FillMode::Transferred {
-          sem.warnings.push((
-            line,
-            "@Refcount: conditional fills support `transferred` only"
-              .to_string(),
-          ));
-          continue;
-        }
         fill_on = Some(cond);
       }
       if names.is_empty() {
@@ -997,9 +960,8 @@ pub fn block_asserts(compound: &Cursor, fcm: &FileComments) -> Vec<(AssertMode, 
     for m in re_block_assert().captures_iter(text) {
       let mode = match m[1].to_uppercase().as_str() {
         "TRANSFER" => AssertMode::Transfer,
-        "PRODUCE" => AssertMode::Produce,
         "DIRECT" => AssertMode::Direct,
-        _ => AssertMode::Retain,
+        _ => AssertMode::Unknown,
       };
       let names: Vec<String> = m[2].split_whitespace().map(|s| s.to_string()).collect();
       out.push((mode, names));

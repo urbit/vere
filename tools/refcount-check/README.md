@@ -136,12 +136,11 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
   - `` direct `x`, `y`, `z` ``: if the function returned, the listed arguments were direct atoms
   - `direct product`: the product is a direct atom
   - `direct arguments`/`direct`: if the function returned, all arguments were direct atoms
-  - `` destructures `x` ``: pointer-to-noun out-parameters are filled with borrowed views into the noun argument x, u3x_cell-style
   - `` reads `x`, `y` ``: the listed pointer-to-noun parameters are read through without consuming the pointee
   - `` consumes `x`, `y` ``: one counted reference of the noun behind each listed pointer parameter is given away inside the call (a transferring read, or a u3z of the old value before a refill -- indistinguishable from the caller's side)
   - `` fills transferred `x`, `y` ``: the listed pointer parameters hold a fresh owned noun on return; the caller must consume it. Overwriting an unconsumed owned pointee without a `consumes` clause is reported as a leak
   - `` fills retained `x`, `y` ``: as above, but the new pointee is an uncounted view (tied to the call's noun arguments)
-  - `` fills transferred `x` on `c3y` ``: the fill happens exactly when the function returns the given loobean. The body is checked per exit path (which must return literal `c3y`/`c3n`); at the call site the call's product must be compared against `c3y`/`c3n` directly (`if ( c3n == f(a, &out) )`), and the fill lands only on the matching branch
+  - `` fills transferred|retained `x` on `c3y` ``: the fill happens exactly when the function returns the given loobean. The body is checked per exit path (which must return literal `c3y`/`c3n`). At the call site a transferred fill is deferred: the call's product must be compared against `c3y`/`c3n` directly (`if ( c3n == f(a, &out) )`), and the owned fill lands only on the matching branch. A retained fill is applied optimistically, u3r_cell-style: a claiming `c3y`/`c3n` comparison restores the variable's previous value on the branch where the fill never happened, and without one the optimistic fill simply stays. `u3r_p` &co are annotated this way
   - `noreturn`: calling this function ends execution (it exits or aborts); no argument accounting applies at its call sites. Inside its body leaks are tolerated (the process dies anyway) and owned parameters are modeled as borrowed views; a reachable return or fall-through is reported as an annotation error
   - `` doomed on `c3n` ``: an exit returning this loobean obliges the CALLER to die (boot failure); leaks and pointee contracts on such paths are not checked
 

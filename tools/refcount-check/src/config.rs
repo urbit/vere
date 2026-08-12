@@ -41,13 +41,11 @@ pub fn destructurer_loobean(name: &str) -> bool {
   name.starts_with("u3r_")
 }
 
-/// Destructurers: source argument index; other `&var` args become
-/// retained out-params borrowed from the source.
+/// Hard-wired destructurers: varargs, so the input args cant be named. So these
+/// are special cased
 pub fn destructurer_src(name: &str) -> Option<usize> {
   match name {
-    "u3x_cell" | "u3x_trel" | "u3x_qual" | "u3x_quil"
-    | "u3r_cell" | "u3r_trel" | "u3r_qual" | "u3r_quil"
-    | "u3x_mean" | "u3r_mean" | "u3r_bite" => Some(0),
+    "u3x_mean" | "u3r_mean" => Some(0),
     _ => None,
   }
 }

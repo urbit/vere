@@ -44,7 +44,7 @@ jobs:
         run: |
           zig build -Dgenerate-commands --summary all &
           zig_pid=$!
-          cargo build --release --manifest-path tools/refcount-check/Cargo.toml &
+          cargo build --manifest-path tools/refcount-check/Cargo.toml &
           cargo_pid=$!
           zig_rc=0; cargo_rc=0
           wait "$zig_pid"   || zig_rc=$?

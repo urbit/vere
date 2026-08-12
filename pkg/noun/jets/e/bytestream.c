@@ -8,7 +8,8 @@
 
 // XX do not crash on indirect atoms, but default to Hoon
 // XX use u3i_word to imprison all indirect atoms
-// @Refcount: destructures `octs`
+// @Refcount: retains `octs`
+// @Refcount: fills retained `p_octs`, `q_octs`
 //
 static void
 _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {

@@ -6,7 +6,8 @@
 #include <types.h>
 #include <xtract.h>
 
-// @Refcount: destructures `octs`
+// @Refcount: retains `octs`
+// @Refcount: fills retained `p_octs`, `q_octs`
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
   *p_octs = u3h(octs);

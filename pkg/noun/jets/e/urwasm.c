@@ -164,7 +164,7 @@ uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
   return pro;
 }
 
-// @Refcount: transfers `som`
+// @Refcount: transfers `som`, consumes `lit`, fills transferred `lit`
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
 {
@@ -178,6 +178,7 @@ _push_list(u3_noun som, u3_noun *lit)
   }
 }
 
+//  @Refcount: consumes `lit`, fills transferred `lit`
 static inline u3_weak
 _pop_list(u3_weak *lit)
 {

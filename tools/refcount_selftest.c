@@ -630,6 +630,48 @@ ok_cond_view_gain(u3_noun a)
   return sac;
 }
 
+/* _cond_view(): fills out with a borrowed view only when returning c3y
+** @Refcount: retains arguments, fills retained `out` on `c3y`
+*/
+c3_o
+_cond_view(u3_noun a, u3_noun* out)
+{
+  if ( c3n == u3a_is_cell(a) ) {
+    return c3n;
+  }
+  *out = u3h(a);
+  return c3y;
+}
+
+/* the u3_mars_grab shape through an ANNOTATED conditional retained
+** fill: the optimistic view fill is undone on the failing branch,
+** upgraded in place on the matching one
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_cond_view_annot(u3_noun a)
+{
+  u3_noun sac = u3_nul;
+  u3_noun gon = u3qa_inc(a);
+
+  if ( c3y == _cond_view(gon, &sac) ) {
+    u3k(sac);
+  }
+  u3z(gon);
+
+  return sac;
+}
+
+/* fills the view but claims failure
+** @Refcount: retains arguments, fills retained `out` on `c3y`
+*/
+c3_o
+bug_cond_view_wrongpath(u3_noun a, u3_noun* out)
+{
+  *out = u3h(a);
+  return c3n;                   //  BUG: filled on the c3n path
+}
+
 /* trusted directness assertion without a runtime check
 ** @Refcount: retains arguments
 */
