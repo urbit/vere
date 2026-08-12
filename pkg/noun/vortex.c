@@ -343,7 +343,7 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 /* u3v_tank(): dump single tank.
 */
 void
-u3v_tank(u3_blew blu_u, c3_l tab_l, u3_noun tac)
+u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
   u3v_punt(blu_u, tab_l, u3nc(tac, u3_nul));
 }
@@ -351,10 +351,10 @@ u3v_tank(u3_blew blu_u, c3_l tab_l, u3_noun tac)
 /* u3v_punt(): dump tank list.
 */
 void
-u3v_punt(u3_blew blu_u, c3_l tab_l, u3_noun tac)
+u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
 #if 0
-  u3_blew blu_u   = u3_term_get_blew(0);
+  u3v_blew blu_u   = u3_term_get_blew(0);
 #endif
   c3_l    col_l = blu_u.col_l;
   u3_noun cat   = tac;
@@ -373,7 +373,7 @@ u3v_punt(u3_blew blu_u, c3_l tab_l, u3_noun tac)
 /* u3v_sway(): print trace.
 */
 void
-u3v_sway(u3_blew blu_u, c3_l tab_l, u3_noun tax)
+u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 

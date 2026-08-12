@@ -28,12 +28,12 @@
         u3a_road    rod_u;                //  storage state
       } u3v_home;
 
-    /* u3_blew: terminal window size.
+    /* u3v_blew: terminal window size.
     */
       typedef struct {
         c3_l  col_l;                        //  columns
         c3_l  row_l;                        //  rows
-      } u3_blew;
+      } u3v_blew;
 
 
   /**  Globals.
@@ -108,17 +108,17 @@
     /* u3v_tank(): dump single tank.
     */
       void
-      u3v_tank(u3_blew blu_u, c3_l tab_l, u3_noun tac);
+      u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
 
     /* u3v_punt(): dump tank list.
     */
       void
-      u3v_punt(u3_blew blu_u, c3_l tab_l, u3_noun tac);
+      u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
 
     /* u3v_sway(): print trace.
     */
       void
-      u3v_sway(u3_blew blu_u, c3_l tab_l, u3_noun tax);
+      u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax);
 
     /* u3v_plan(): queue ovum (external).
     */
