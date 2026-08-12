@@ -352,6 +352,13 @@ static c3_o
 _ames_check_mug(u3_pact* pac_u)
 {
   c3_w rog_w = HEAD_SIZE + _ames_origin_size(&pac_u->hed_u);
+
+  //  prevents underflow
+  //
+  if ( pac_u->len_w < rog_w ) {
+    return c3n;
+  }
+
   c3_l mug_l = u3r_mug_bytes(pac_u->hun_y + rog_w,
                              pac_u->len_w - rog_w);
   //  u3l_log("len_w: %u, rog_w: %u, bod_l 0x%05x, hed_l 0x%05x",
@@ -799,6 +806,7 @@ u3_ames_decode_lane(u3_atom lan) {
   c3_d lan_d;
 
   if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
+    u3z(lan);
     return (u3_lane){0, 0};
   }
 
@@ -1738,6 +1746,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
       _ames_pact_free(pac_u);
 
       u3z(nun);
+      u3z(pax);
       return;
     }
 
@@ -2827,12 +2836,12 @@ _ames_io_mark(u3_auto* car_u, c3_w *out_w)
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("scry cache");
-  all_u[0]->siz_w = 4 * u3h_mark(sam_u->fin_s.sac_p);
+  all_u[0]->siz_w = 4 * u3h_mark_tot(sam_u->fin_s.sac_p);
   all_u[0]->qua_u = 0;
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("lane cache");
-  all_u[1]->siz_w = 4 * u3h_mark(sam_u->lax_p);
+  all_u[1]->siz_w = 4 * u3h_mark_tot(sam_u->lax_p);
   all_u[1]->qua_u = 0;
 
   all_u[2] = 0;

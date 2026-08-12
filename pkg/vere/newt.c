@@ -348,9 +348,11 @@ _newt_write_cb(uv_write_t* wri_u, c3_i sas_i)
   c3_free(req_u);
 
   if ( 0 != sas_i ) {
-    if ( UV_ECANCELED == sas_i ) {
-      fprintf(stderr, "newt: write canceled\r\n");
-    }
+    if ( UV_ECANCELED == sas_i
+         || uv_is_closing((uv_handle_t*)&moj_u->pyp_u))
+      {
+        fprintf(stderr, "newt: write canceled\r\n");
+      }
     else {
       fprintf(stderr, "newt: write failed %s\r\n", uv_strerror(sas_i));
       moj_u->bal_f(moj_u->ptr_v, sas_i, uv_strerror(sas_i));

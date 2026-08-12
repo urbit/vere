@@ -40,12 +40,14 @@
       }
       if ( c3y == u3r_sing(x, a) ) {
         u3z(x);
+        u3z(m);
         return u3nc(1, 0);
       }
       c = u3qa_sub(x, a);
       d = u3qa_inc(x);
 
       u3z(x);
+      u3z(m);
     }
 
     //  Compute e, p, q.
@@ -64,6 +66,7 @@
       p = u3qa_add(w, e);
       q = u3qc_cut(0, z, e, b);
 
+      u3z(c); u3z(d); u3z(e);
       u3z(w); u3z(x); u3z(y); u3z(z);
 
       return u3nc(p, q);
@@ -74,8 +77,10 @@
   {
     u3_noun a, b;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0)) ||
-         (c3n == u3ud(a)) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( (c3n == u3ud(a)) ||
          (c3n == u3ud(b)) )
     {
       return u3m_bail(c3__fail);

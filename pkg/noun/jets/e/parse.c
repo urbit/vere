@@ -611,11 +611,9 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return _cqe_pfix(vex, sab);
-    }
+    vex = u3h(u3h(u3t(cor)));
+    sab = u3t(u3h(u3t(cor)));
+    return _cqe_pfix(vex, sab);
   }
 
 /* plug
@@ -666,11 +664,9 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return _cqe_plug(vex, sab);
-    }
+    vex = u3h(u3h(u3t(cor)));
+    sab = u3t(u3h(u3t(cor)));
+    return _cqe_plug(vex, sab);
   }
 
 /* pose
@@ -702,11 +698,9 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qe_pose(vex, sab);
-    }
+    vex = u3h(u3h(u3t(cor)));
+    sab = u3t(u3h(u3t(cor)));
+    return u3qe_pose(vex, sab);
   }
 
 /* sfix
@@ -757,11 +751,9 @@
   {
     u3_noun vex, sab;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex, u3x_sam_3, &sab, 0)) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return _cqe_sfix(vex, sab);
-    }
+    vex = u3h(u3h(u3t(cor)));
+    sab = u3t(u3h(u3t(cor)));
+    return _cqe_sfix(vex, sab);
   }
 
 /* shim
@@ -975,7 +967,7 @@
     _stir_pair* par_u;
     u3_noun     p_wag, puq_wag, quq_wag;
 
-    u3a_pile_prep(&pil_u, sizeof(*par_u));
+    u3a_pile_prep(&pil_u, sizeof(*par_u), __alignof__(*par_u));
 
     //  push incremental, successful [fel] parse results onto road stack
     //

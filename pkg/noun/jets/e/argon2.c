@@ -118,14 +118,15 @@
             // for use during unpacking
             wmsg, wsat, arg, brg, wkey, wext;
 
+    wmsg = u3h(u3h(u3t(cor)));
+    wsat = u3t(u3h(u3t(cor)));
+    arg = u3h(u3t(u3t(u3t(u3t(u3t(u3t(u3t(cor))))))));
+
     // the hoon code for argon2 takes configuration parameters,
     // and then produces a gate. we jet that inner gate.
     // this does mean that the config params have gotten buried
     // pretty deep in the subject, hence the +510.
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &wmsg,
-                              u3x_sam_3, &wsat,
-                              510, &arg, 0) ||
-                u3r_cell(wmsg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
+    if ( u3r_cell(wmsg, &wid, &dat) || u3ud(wid) || u3ud(dat) ||
                 u3r_cell(wsat, &wis, &sat) || u3ud(wis) || u3ud(sat) ||
                 //
                 u3r_qual(arg, &out, &type, &version, &brg) ||

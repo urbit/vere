@@ -64,17 +64,14 @@ _print_da(u3_noun cor, u3_atom raw_da)
   u3_noun out = 0;
 
   u3_atom age, year, month, day, hour, min, sec, f;
-  if (c3n == u3r_mean(yod, 4, &age,
-                      5, &year,
-                      6, &month,
-                      14, &day,
-                      30, &hour,
-                      62, &min,
-                      126, &sec,
-                      127, &f,
-                      0)) {
-    return u3m_bail(c3__exit);
-  }
+  age = u3h(u3h(yod));
+  year = u3t(u3h(yod));
+  month = u3h(u3t(yod));
+  day = u3h(u3t(u3t(yod)));
+  hour = u3h(u3t(u3t(u3t(yod))));
+  min = u3h(u3t(u3t(u3t(u3t(yod)))));
+  sec = u3h(u3t(u3t(u3t(u3t(u3t(yod))))));
+  f = u3t(u3t(u3t(u3t(u3t(u3t(yod))))));
 
   if (f != 0) {
     u3_noun f_list = u3qb_flop(f);
@@ -211,7 +208,7 @@ _print_p(u3_atom cor, u3_atom p)
 
     list = u3nq(a, b, c, u3nq(d, e, f, list));
 
-    sxz = u3qc_rsh(4, 1, sxz);
+    sxz = u3kc_rsh(4, 1, sxz);
   }
 
   u3z(sxz);

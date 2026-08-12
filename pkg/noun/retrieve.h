@@ -105,6 +105,14 @@
           else return c3n;
         }
 
+      /* u3r_cat: assert direct atom
+      */
+        inline u3_atom
+        u3r_cat(u3_noun a)
+        {
+          return ( c3y == u3a_is_cat(a) ) ? a : u3m_bail(c3__fail);
+        }
+
       /* u3r_at(): fragment `a` of `b`, or u3_none.
       */
         u3_weak
@@ -151,6 +159,11 @@
       */
         c3_l
         u3r_mug_words(const c3_w* key_w, c3_w len_w);
+
+      /* u3r_mug_word(): 31-bit nonzero MurmurHash3 of a single word.
+      */
+        c3_l
+        u3r_mug_word(c3_w key_w);
 
       /* u3r_mug(): statefully mug a noun with 31-bit murmur3.
       */
@@ -215,7 +228,9 @@
         #define u3r_sing(a, b) ({                                               \
           u3_noun __a = a;                                                      \
           u3_noun __b = b;                                                      \
-          ( __a == __b ) ? c3y : u3r_sing_imp(__a, __b);                        \
+          ( __a == __b ) ? c3y :                                                \
+          ( _(c3o(u3a_is_cat(__a), u3a_is_cat(__b))) ) ? c3n :                  \
+          u3r_sing_imp(__a, __b);                                               \
         })
 
       /* u3r_sing_c(): cord/C-string value equivalence.

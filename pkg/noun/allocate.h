@@ -229,6 +229,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         c3_ws    mov_ws;
         c3_ws    off_ws;
         u3_post   top_p;
+        u3_post   beg_p;
 #ifdef U3_MEMORY_DEBUG
         u3a_road* rod_u;
 #endif
@@ -540,7 +541,9 @@ typedef struct {
           inline c3_o
           u3a_pile_done(const u3a_pile* pil_u)
           {
-            return (pil_u->top_p == u3R->cap_p) ? c3y : c3n;
+            if (pil_u->top_p != u3R->cap_p) return c3n;
+            u3R->cap_p = pil_u->beg_p;
+            return c3y;
           }
 
   /**  Functions.
@@ -608,29 +611,29 @@ u3a_post_info(u3_post);
         /* u3a_wealloc(): word realloc.
         */
           void*
-          u3a_wealloc(void* lag_v, c3_w len_w);
+          u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w);
 
         /* u3a_pile_prep(): initialize stack control.
         */
           void
-          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w);
+          u3a_pile_prep(u3a_pile* pil_u, c3_w len_w, c3_w alg_w);
 
       /* C-style aligned allocation - *not* compatible with above.
       */
         /* u3a_malloc(): aligned storage measured in bytes.
         */
           void*
-          u3a_malloc(size_t len_i);
+          u3a_malloc(c3_z len_z);
 
         /* u3a_calloc(): aligned storage measured in bytes.
         */
           void*
-          u3a_calloc(size_t num_i, size_t len_i);
+          u3a_calloc(c3_z num_z, c3_z len_z);
 
         /* u3a_realloc(): aligned realloc in bytes.
         */
           void*
-          u3a_realloc(void* lag_v, size_t len_i);
+          u3a_realloc(void* lag_v, c3_z old_z, c3_z len_z);
 
         /* u3a_free(): free for aligned malloc.
         */
@@ -643,7 +646,10 @@ u3a_post_info(u3_post);
         */
           u3_weak
           u3a_gain(u3_weak som);
-#         define u3k(som) u3a_gain(som)
+#         define u3k(som) ({                                                    \
+            u3_noun __som = som;                                                \
+            ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
+          })
 
         /* u3a_take(): gain, copying juniors.
         */
@@ -659,7 +665,10 @@ u3a_post_info(u3_post);
         */
           void
           u3a_lose(u3_weak som);
-#         define u3z(som) u3a_lose(som)
+#         define u3z(som) ({                                                    \
+            u3_noun __som = som;                                                \
+            ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
+          })
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */
@@ -690,6 +699,11 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_mark_mptr(void* ptr_v);
+
+        /* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
+        */
+          c3_w
+          u3a_mark_rptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */

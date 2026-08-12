@@ -120,6 +120,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
   if ( u3_nul == sac) {
     if ( u3C.wag_w & (u3o_debug_ram | u3o_check_corrupt) ) {
       u3m_grab(sac, u3_none);
+      u3C.wag_w &= ~u3o_check_corrupt;
     }
     return u3_nul;
   }
@@ -650,6 +651,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
 
       mar_u->sat_e = u3_mars_save_e;
+      u3z(jar);
     } break;
 
     //  $%  [%live ?(%meld %pack) ~] :: XX rename
@@ -1349,13 +1351,16 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     c3_d  mem_d = 0;             // last event to meme
     c3_w  try_w = 0;             // [mem_d] retry count
     c3_c* wen_c;
+    c3_w  bat_w;
 
     while ( mar_u->dun_d < eve_d ) {
       _mars_step_trace(mar_u->dir_c);
 
       //  XX get batch from args
       //
-      switch ( _mars_play_batch(mar_u, c3y, 1024, &wen_c) ) {
+      bat_w = c3_min(1024ULL, eve_d - mar_u->dun_d);
+
+      switch ( _mars_play_batch(mar_u, c3y, bat_w, &wen_c) ) {
         case _play_yes_e: {
           c3_c* now_c;
 
@@ -1494,7 +1499,7 @@ u3_mars_work(u3_mars* mar_u)
 
   //  XX do something better
   //
-  if ( mar_u->log_u->dun_d > mar_u->dun_d ) {
+  if ( mar_u->log_u->dun_d > mar_u->dun_d && !(u3C.wag_w & u3o_dryrun) ) {
     u3_disk_exit(mar_u->log_u);
     exit(0);
   }
@@ -1914,8 +1919,9 @@ u3_mars_make(u3_mars* mar_u)
 *
 */
 c3_o
-u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y)
+u3_mars_boot(void* ram_u, c3_d len_d, c3_y* hun_y)
 {
+  u3_mars*     mar_u = ram_u;
   u3_disk*     log_u = mar_u->log_u;
   u3_boot_opts inp_u;
   u3_meta      met_u;

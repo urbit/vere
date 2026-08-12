@@ -72,7 +72,9 @@
     {
       c3_w i_w;
 
-      loc_u->hev = u3a_malloc(u3kb_lent(u3k(hev)) * sizeof(u3_noun));
+      u3_noun len = u3qb_lent(hev);
+      if ( c3n == u3a_is_cat(len) ) u3m_bail(c3__fail);
+      loc_u->hev = u3a_malloc(len * sizeof(u3_noun));
 
       for ( i_w = 0; u3_nul != hev; i_w++ ) {
         loc_u->hev[i_w] = u3h(hev);
@@ -116,7 +118,7 @@
                (inx_w == 0) ? u3_nul
                             : u3k(loc_u->kad[inx_w - 1]));
     if ( loc_u->kct_w == inx_w ) {
-      u3_assert(loc_u->kct_w < (1 << 31));
+      u3_assert(loc_u->kct_w < ((c3_w)1 << 31));
       loc_u->kct_w++;
     } else {
       u3z(loc_u->kad[inx_w]);

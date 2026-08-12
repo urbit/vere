@@ -12,7 +12,7 @@
 #define TAKEBITS(n,w) \
   ((n)==32) ? (w) :   \
   ((n)==0)  ? 0   :   \
-  ((w) & ((1 << (n)) - 1))
+  ((w) & (((c3_w)1 << (n)) - 1))
 
 /*
   Divide, rounding up.
@@ -106,7 +106,7 @@ _block_rip(u3_atom bloq, u3_atom b)
 
     c3_w met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
     c3_w nbits_w = 1 << bloq_g;                         //  block size in bits
-    c3_w bmask_w = (1 << nbits_w) - 1;                  //  result mask
+    c3_w bmask_w = (1u << nbits_w) - 1;                  //  result mask
 
     for ( c3_w i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
       c3_w nex_w = i_w + 1;                             //  next block
@@ -127,7 +127,7 @@ _block_rip(u3_atom bloq, u3_atom b)
   c3_w    met_w = u3r_met(bloq_g, b);
   c3_w    len_w = u3r_met(5, b);
   c3_g    san_g = (bloq_g - 5);
-  c3_w    san_w = 1 << san_g;
+  c3_w    san_w = 1u << san_g;
   c3_w    dif_w = (met_w << san_g) - len_w;
   c3_w    tub_w = ((dif_w == 0) ? san_w : (san_w - dif_w));
 

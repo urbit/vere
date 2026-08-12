@@ -16,7 +16,8 @@
             u3_atom wid,
             u3_atom dat)
   {
-    u3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
+    u3_assert(_(u3a_is_cat(boq)) && _(u3a_is_cat(out)) &&
+              _(u3a_is_cat(wik)) && _(u3a_is_cat(wid)));
 
     // prep the hashing gate
     u3j_site sit_u;
@@ -52,11 +53,11 @@
 
     // append inner padding to message, then hash
     u3_atom innmsg = u3ka_add(u3kc_lsh(3, wid, innkey), dat);
-    u3_atom innhaj = u3j_gate_slam(&sit_u, u3nc((wid + boq), innmsg));
+    u3_atom innhaj = u3j_gate_slam(&sit_u, u3nc(u3i_word(wid + boq), innmsg));
 
     // prepend outer padding to result, hash again
     u3_atom outmsg = u3ka_add(u3kc_lsh(3, out, outkey), innhaj);
-    u3_atom outhaj = u3j_gate_slam(&sit_u, u3nc((out + boq), outmsg));
+    u3_atom outhaj = u3j_gate_slam(&sit_u, u3nc(u3i_word(out + boq), outmsg));
 
     u3j_gate_lose(&sit_u);
     return outhaj;
@@ -68,14 +69,15 @@
     u3_noun haj, boq, out, wik, key, wid, dat;
 
     // sample is [[haj boq out] [wik key] [wid dat]]
-    if ( (c3n == u3r_mean(cor, u3x_sam_4,  &haj,
-                               50,         &boq, // +<->-
-                               51,         &out, // +<->+
-                               u3x_sam_12, &wik,
-                               u3x_sam_13, &key,
-                               u3x_sam_14, &wid,
-                               u3x_sam_15, &dat, 0)) ||
-         (c3n == u3ud(boq)) ||
+    haj = u3h(u3h(u3h(u3t(cor))));
+    boq = u3h(u3t(u3h(u3h(u3t(cor)))));
+    out = u3t(u3t(u3h(u3h(u3t(cor)))));
+    wik = u3h(u3h(u3t(u3h(u3t(cor)))));
+    key = u3t(u3h(u3t(u3h(u3t(cor)))));
+    wid = u3h(u3t(u3t(u3h(u3t(cor)))));
+    dat = u3t(u3t(u3t(u3h(u3t(cor)))));
+
+    if ( (c3n == u3ud(boq)) ||
          (c3n == u3a_is_cat(boq)) ||
          (c3n == u3ud(out)) ||
          (c3n == u3a_is_cat(out)) ||

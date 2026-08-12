@@ -28,7 +28,6 @@
 #include "jets/q.h"
 #include "log.h"
 #include "nock.h"
-#include "openssl/crypto.h"
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
@@ -309,11 +308,6 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   tax = u3H->rod_u.bug.tax;
   u3H->rod_u.bug.tax = 0;
 
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3H->rod_u.off_w;
-    u3t_Spin->fow_w = u3H->rod_u.fow_w;
-  }
-
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
@@ -323,6 +317,11 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
     //  Reset the top road - the problem could be a fat cap.
     //
     _cm_signal_reset();
+
+    if ( NULL != u3t_Spin ) {
+      u3t_Spin->off_w = u3H->rod_u.off_w;
+      u3t_Spin->fow_w = u3H->rod_u.fow_w;
+    }
 
     if ( (c3__meme == sig_l) && (u3a_open(u3R) <= 256) ) {
       // Out of memory at the top level.  Error becomes c3__full,
@@ -995,12 +994,6 @@ u3m_bail(u3_noun how)
     }
   }
 
-  // Reset the spin stack pointer
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
-  }
-
   _longjmp(u3R->esc.buf, how);
 }
 
@@ -1029,17 +1022,8 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road), 16);
     ptr_p = (c3_p)u3a_push(&pil_u);
-
-    //  XX add push_once, push_once_aligned
-    //
-    if ( ptr_p & 15 ) {
-      ptr_p &= ~15;
-      if ( c3n == u3a_is_north(u3R) ) {
-        ptr_p += 16;
-      }
-    }
 
     rod_u = (void*)ptr_p;
     memset(rod_u, 0, sizeof(u3a_road));
@@ -1203,6 +1187,12 @@ u3m_fall(void)
   */
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
+
+  // restore slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_w = u3R->off_w;
+    u3t_Spin->fow_w = u3R->fow_w;
+  }
 }
 
 /* u3m_hate(): new, integrated leap mechanism (enter).
@@ -1365,12 +1355,6 @@ u3m_love(u3_noun pro)
   u3m_fall();
 
   if ( _(tim_o) ) _m_renew_now();
-
-  // restore slow stack pointer
-  if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
-  }
 
   //  copy product and caches off our stack
   //
@@ -2466,42 +2450,6 @@ _cm_signals(void)
 #endif
 }
 
-/* _cm_malloc_ssl(): openssl-shaped malloc
-*/
-static void*
-_cm_malloc_ssl(size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-               , const char* file, int line
-#endif
-               )
-{
-  return u3a_malloc(len_i);
-}
-
-/* _cm_realloc_ssl(): openssl-shaped realloc.
-*/
-static void*
-_cm_realloc_ssl(void* lag_v, size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-                , const char* file, int line
-#endif
-                )
-{
-  return u3a_realloc(lag_v, len_i);
-}
-
-/* _cm_free_ssl(): openssl-shaped free.
-*/
-static void
-_cm_free_ssl(void* tox_v
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-             , const char* file, int line
-#endif
-             )
-{
-  u3a_free(tox_v);
-}
-
 extern void u3je_secp_init(void);
 
 /* _cm_crypto(): initialize openssl and crypto jets.
@@ -2509,25 +2457,7 @@ extern void u3je_secp_init(void);
 static void
 _cm_crypto(void)
 {
-  /* Initialize OpenSSL with loom allocation functions. */
-#ifndef U3_URTH_MASS
-  if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
-                                     &_cm_realloc_ssl,
-                                     &_cm_free_ssl) ) {
-    u3l_log("%s", "openssl initialization failed");
-    abort();
-  }
-#endif
-
   u3je_secp_init();
-}
-
-/* _cm_realloc2(): gmp-shaped realloc.
-*/
-static void*
-_cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
-{
-  return u3a_realloc(lag_v, new_i);
 }
 
 /* _cm_free2(): gmp-shaped free.
@@ -2551,7 +2481,7 @@ u3m_init(size_t len_i)
 
   //  make sure GMP uses our malloc.
   //
-  mp_set_memory_functions(u3a_malloc, _cm_realloc2, _cm_free2);
+  mp_set_memory_functions(u3a_malloc, u3a_realloc, _cm_free2);
 
   //  make sure that [len_i] is a fully-addressible non-zero power of two.
   //
