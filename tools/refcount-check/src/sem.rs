@@ -167,6 +167,20 @@ fn re_trail_comment() -> &'static Regex {
   RE.get_or_init(|| Regex::new(r"\*/\s*$").unwrap())
 }
 
+//  prose remarks inside a clause line: `-- ...` to end of line, and
+//  parenthesized asides. Neither appears in the clause grammar, so
+//  both are stripped uniformly before parsing (`noreturn (bail_f
+//  never returns)`, `assert transfer -- the kernel owns [roc]`).
+fn re_dash_remark() -> &'static Regex {
+  static RE: OnceLock<Regex> = OnceLock::new();
+  RE.get_or_init(|| Regex::new(r"--.*").unwrap())
+}
+
+fn re_paren_remark() -> &'static Regex {
+  static RE: OnceLock<Regex> = OnceLock::new();
+  RE.get_or_init(|| Regex::new(r"\([^()]*\)").unwrap())
+}
+
 // the file-level annotation: every function in the file is custom unless
 // its own annotation asserts a protocol. The phrase must fit on one line
 // (re_refcount captures a single line).
@@ -266,11 +280,23 @@ fn split_commas(text: &str) -> Vec<String> {
   out
 }
 
-/// The text of each @Refcount: clause in a comment, in order.
+/// The text of each @Refcount: clause in a comment, in order. Prose
+/// remarks -- `-- ...` trailers and parenthesized asides -- are
+/// stripped first, so any clause may carry one.
 pub fn refcount_clauses(comment: &str) -> Vec<String> {
   let mut out = Vec::new();
   for m in re_refcount().captures_iter(comment) {
     let c = re_trail_comment().replace(&m[1], "");
+    let c = re_dash_remark().replace(&c, "");
+    let mut c = c.into_owned();
+    loop {
+      //  innermost-out, so nested parens in a remark strip cleanly
+      let next = re_paren_remark().replace_all(&c, " ").into_owned();
+      if next == c {
+        break;
+      }
+      c = next;
+    }
     let c = c.trim().trim_end_matches('*').trim();
     out.extend(split_commas(c));
   }

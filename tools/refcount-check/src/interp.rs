@@ -1102,10 +1102,19 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     //  scalar declaration
     //
     if !is_record && !is_array {
+      //  a non-noun local whose name collides with a tracked outer
+      //  variable must still SHADOW it (c3_malloc's stmt-expr local
+      //  `void* rut` vs a caller's noun `rut`): bind it as an
+      //  untracked scalar so reads resolve to this scope's variable,
+      //  not to the outer noun
+      let shadows = !is_noun_type(&ty) && !is_noun_ptr_type(&ty)
+        && read_var(&env, &name).is_some();
       let Some(init) = init else {
         //  slot pointers (u3_noun*) are tracked alongside nouns
         if is_noun_type(&ty) || is_noun_ptr_type(&ty) {
           env.insert_new(var, RefcountState::Uninit, g);
+        } else if shadows {
+          env.insert_new(var, RefcountState::Direct, g);
         }
         continue;
       };
@@ -1123,6 +1132,11 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       }
       let (vid, nxt) = eval_expr(&init, env, depth, g)?;
       let Some(mut nxt) = nxt else { return Ok(None); };
+      if vid.is_none() && shadows {
+        bind_value(&mut nxt, var, None, g);
+        env = nxt;
+        continue;
+      }
       if vid.is_some() || is_noun_type(&ty) {
         //  declared types are contracts: a possibly-u3_none initializer
         //  may only bind to a u3_weak variable
@@ -1690,6 +1704,20 @@ fn bind_value(env: &mut Env, var: VarName, rvid: Option<ValId>, g: &mut Gen)
   };
   env.bind_decl(var, id);
   id
+}
+
+/// Is this slot pointer a plain word/byte view of a proven-direct
+/// atom? Such a pointer carries no refcount obligations: it may be
+/// stored or handed around freely (the &direct-var rule, extended to
+/// existing slot values like pointee parameters).
+fn slot_is_direct_view(env: &Env, sid: ValId) -> bool
+{
+  match env.slots.get(&sid) {
+    Some(SlotTarget::Var(var)) => env.vars_rev.get(var)
+      .and_then(|tv| env.values.get(tv))
+      .is_some_and(|st| matches!(st, RefcountState::Direct)),
+    _ => false,
+  }
 }
 
 /// Read through a live slot pointer: the noun currently in the slot.
@@ -3350,8 +3378,12 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
 
   if let Some(v) = rvid {
     //  a slot pointer stashed in memory could be written through later,
-    //  invisibly to the tracker
-    if matches!(env.values.get(&v), Some(RefcountState::Slot)) {
+    //  invisibly to the tracker -- except a pointer to a PROVEN-DIRECT
+    //  atom, which is a plain word/byte view of the value (sew/aor-
+    //  style buffer readers): no refcount to corrupt through it
+    if matches!(env.values.get(&v), Some(RefcountState::Slot))
+      && !slot_is_direct_view(&env, v)
+    {
       report!(g, cur, "complicated",
         "slot pointer stored to untracked memory, won't analyze");
     }
@@ -3579,6 +3611,19 @@ fn resolve_tracked_expr(env: &Env, cur: &Cursor) -> Option<ValId> {
   let u = unwrap_expr(*cur);
   if let Some(n) = decl_ref_name(&u) {
     return read_var(env, &n).map(|(_, v)| v);
+  }
+  //  *p through a live slot pointer: the target variable's value, so
+  //  a guard over a pointee (`u3a_is_cat(*q_octs)`) refines it
+  if u.kind() == CXCursor_UnaryOperator
+    && unary_op(&u).as_deref() == Some("*")
+  {
+    let pv = resolve_tracked_expr(env, u.children().first()?)?;
+    if matches!(env.values.get(&pv), Some(RefcountState::Slot)) {
+      if let Some(SlotTarget::Var(var)) = env.slots.get(&pv) {
+        return env.vars_rev.get(var).copied();
+      }
+    }
+    return None;
   }
   if u.kind() == CXCursor_CallExpr {
     if let Some(r) = u.referenced() {

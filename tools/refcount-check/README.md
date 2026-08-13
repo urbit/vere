@@ -105,6 +105,11 @@ This linter follows that rule EXCEPT "internal functions" (interpreted as `stati
 
 The refcount protocol can be refined further or asserted with `@Refcount: X` annotations.
 
+Any clause may carry a prose remark: a parenthesized aside or a `-- ...`
+trailer (`@Refcount: noreturn (bail_f never returns)`, `@Refcount: assert
+transfer -- the kernel owns [roc]`). Remarks are stripped before parsing,
+so they never affect the protocol or the decl/def sync rule.
+
 - A refcount annotation of a function may appear in the header comment of a function definition, the header comment of a function declaration, or the same line as the function declaration if it spans for just one line:
 
 ```c
