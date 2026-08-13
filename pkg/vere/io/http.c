@@ -871,7 +871,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
   //  get beak
   //
   for ( c3_w i_w = 0; i_w < 3; ++i_w ) {
-    u3_noun* wer;
+    u3_weak* wer;
     if ( 0 == i_w ) {
       wer = &bem.who;
     }
@@ -2554,7 +2554,7 @@ _http_serv_start_all(u3_httd* htd_u)
   u3_pier*  pir_u = htd_u->car_u.pir_u;
   c3_s      por_s;
   u3_noun   sec = u3_nul;
-  u3_noun   non = u3_none;
+  u3_weak   non = u3_none;
   u3_noun   dis;
   u3_form*  for_u = htd_u->fig_u.for_u;
 
