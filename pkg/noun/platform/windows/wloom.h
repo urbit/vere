@@ -21,6 +21,33 @@
     size_t
     u3_wnd_loom_gran(void);
 
+  /* u3_wnd_loom_live(): c3y if the loom is a placeholder reservation.
+  **
+  **   c3n means we degraded to a plain mapping, which is neither sparse
+  **   nor demand-pageable.
+  */
+    c3_o
+    u3_wnd_loom_live(void);
+
+  /* u3_wnd_loom_commit(): commit [len_i] bytes at [adr_v].
+  **
+  **   idempotent, and a no-op on a loom that is not a placeholder
+  **   reservation. any range that will be written by the kernel -- read(2)
+  **   into the loom, say -- must be committed first, since the fault
+  **   handler cannot rescue a failed kernel-mode access.
+  */
+    c3_o
+    u3_wnd_loom_commit(void* adr_v, size_t len_i);
+
+  /* u3_wnd_loom_fault(): commit [len_i] at [adr_v] if it is reserved.
+  **
+  **   returns c3y if the fault was a first touch and has been resolved,
+  **   c3n if the page was already committed and the fault means something
+  **   else.
+  */
+    c3_o
+    u3_wnd_loom_fault(void* adr_v, size_t len_i);
+
   /* u3_wnd_loom_mapf(): map the low [byt_i] bytes of [fid_i] over the bottom
   **                     of the loom, backing the remainder with the pagefile
   **                     section. [byt_i] must be a multiple of the allocation

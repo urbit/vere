@@ -184,6 +184,17 @@ _ce_flaw_mprotect(c3_w pag_w)
 static inline c3_i
 _ce_ward_protect(void)
 {
+#ifdef U3_OS_windows
+  //  the guard page must be committed to be protected, and to stay
+  //  distinguishable from an ordinary first touch.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(u3P.gar_w), _ce_page) ) {
+    fprintf(stderr, "loom: failed to commit guard page (%"PRIc3_w")\r\n",
+                    u3P.gar_w);
+    return 1;
+  }
+#endif
+
   if ( 0 != mprotect(_ce_ptr(u3P.gar_w), _ce_page, PROT_NONE) ) {
     fprintf(stderr, "loom: failed to protect guard page (%"PRIc3_w"): %s\r\n",
                     u3P.gar_w, strerror(errno));
@@ -257,6 +268,16 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
       return u3e_flaw_base;
     }
 
+    return u3e_flaw_good;
+  }
+#endif
+
+#ifdef U3_OS_windows
+  //  a sparse loom faults on the first touch of a reserved page. these are
+  //  volatile pages, and so are already dirty in the bitmap -- this must
+  //  precede the dirty check, which would otherwise call them strange.
+  //
+  if ( c3y == u3_wnd_loom_fault(_ce_ptr(pag_w), _ce_page) ) {
     return u3e_flaw_good;
   }
 #endif
@@ -995,6 +1016,21 @@ _ce_loom_blit_pages(c3_i fid_i, c3_w off_w, c3_w pgs_w)
   c3_zs ret_zs;
   c3_w  i_w;
 
+  if ( !pgs_w ) {
+    return;
+  }
+
+#ifdef U3_OS_windows
+  //  pread(2) writes these pages from kernel mode, which the fault handler
+  //  cannot rescue, so they must be committed up front.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(off_w), _ce_len(pgs_w)) ) {
+    fprintf(stderr, "loom: blit commit (%"PRIc3_w" pages at %"PRIc3_w")\r\n",
+                    pgs_w, off_w);
+    u3_assert(0);
+  }
+#endif
+
   for ( i_w = off_w; i_w < (off_w + pgs_w); i_w++ ) {
     if ( _ce_page != (ret_zs = pread(fid_i, _ce_ptr(i_w),
                                      _ce_page, _ce_len(i_w))) )
@@ -1627,10 +1663,11 @@ u3e_yolo(void)
   //  NB: u3e_save() will reinstate protection flags
   //
 #ifdef U3_OS_windows
-  //  a demand-paged loom is more than one mapping, and VirtualProtect()
-  //  cannot span mappings.
+  //  a placeholder loom is more than one mapping, and may hold reserved
+  //  pages; VirtualProtect can neither span mappings nor touch reserved
+  //  pages.
   //
-  if ( !(u3C.wag_h & u3o_no_demand) ) {
+  if ( c3y == u3_wnd_loom_live() ) {
     if ( c3n == u3_wnd_loom_yolo() ) {
       return c3n;
     }

@@ -288,7 +288,13 @@ u3_wnd_loom_init(void* bas_v, size_t len_i)
   wnd_u.map_i = 0;
   wnd_u.gan_i = inf_u.dwAllocationGranularity;
 
-  wnd_u.sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
+  //  SEC_RESERVE: the section's pages are reserved, not committed, so the
+  //  loom costs commit charge only as it is touched. windows does not
+  //  overcommit, and a committed section of the whole loom cannot be
+  //  created at all on a box whose RAM plus paging file is smaller.
+  //
+  wnd_u.sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
+                                   PAGE_READWRITE | SEC_RESERVE,
                                    (DWORD)((c3_d)len_i >> 32),
                                    (DWORD)(len_i & 0xffffffffULL),
                                    NULL);
@@ -335,6 +341,64 @@ u3_wnd_loom_gran(void)
   }
 
   return wnd_u.gan_i;
+}
+
+/* u3_wnd_loom_live(): c3y if the loom is a placeholder reservation.
+*/
+c3_o
+u3_wnd_loom_live(void)
+{
+  return wnd_u.yes_o;
+}
+
+/* u3_wnd_loom_commit(): commit [len_i] bytes at [adr_v].
+*/
+c3_o
+u3_wnd_loom_commit(void* adr_v, size_t len_i)
+{
+  if ( c3y != wnd_u.yes_o ) {
+    return c3y;
+  }
+
+  //  NB: within the image view this is a no-op that succeeds; file-backed
+  //  pages are committed by the mapping.
+  //
+  if ( !VirtualAlloc(adr_v, len_i, MEM_COMMIT, PAGE_READWRITE) ) {
+    _wnd_fail("commit");
+    return c3n;
+  }
+
+  return c3y;
+}
+
+/* u3_wnd_loom_fault(): commit [len_i] at [adr_v] if it is reserved.
+*/
+c3_o
+u3_wnd_loom_fault(void* adr_v, size_t len_i)
+{
+  MEMORY_BASIC_INFORMATION inf_u;
+
+  if ( c3y != wnd_u.yes_o ) {
+    return c3n;
+  }
+
+  if ( !VirtualQuery(adr_v, &inf_u, sizeof(inf_u)) ) {
+    _wnd_fail("fault query");
+    return c3n;
+  }
+
+  //  already committed: not a first touch, and not ours to resolve
+  //
+  if ( MEM_RESERVE != inf_u.State ) {
+    return c3n;
+  }
+
+  if ( !VirtualAlloc(adr_v, len_i, MEM_COMMIT, PAGE_READWRITE) ) {
+    _wnd_fail("fault commit");
+    return c3n;
+  }
+
+  return c3y;
 }
 
 /* u3_wnd_loom_mapf(): map [byt_i] of [fid_i] over the bottom of the loom.
@@ -393,6 +457,15 @@ u3_wnd_loom_yolo(void)
 
     if ( (cur_y + siz_i) > end_y ) {
       siz_i = (size_t)(end_y - cur_y);
+    }
+
+    //  reserved but uncommitted: nothing has been written here, so there
+    //  is nothing to make writable, and VirtualProtect would fail.
+    //  committing would defeat the point of a sparse loom.
+    //
+    if ( MEM_RESERVE == inf_u.State ) {
+      cur_y += siz_i;
+      continue;
     }
 
     //  a copy-on-write region must stay copy-on-write; PAGE_READWRITE
