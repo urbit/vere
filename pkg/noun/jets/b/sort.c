@@ -14,6 +14,8 @@ static_assert(
   "allocation size overflow"
 );
 
+//  @Refcount: assert
+//  (retains nouns in arr_u array)
 static void
 _quicksort(u3_noun* restrict arr_u,
     c3_w len_w,

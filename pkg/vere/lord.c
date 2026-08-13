@@ -196,6 +196,7 @@ _lord_writ_need(u3_lord* god_u, u3_writ_type typ_e)
 }
 
 /* _lord_plea_foul():
+** @Refcount: noreturn
 */
 static void
 _lord_plea_foul(u3_lord* god_u, c3_m mot_m, u3_noun dat)
@@ -726,8 +727,9 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
                              u3k(pic_u->las_u.pax)));
       } break;
     }
-
-    wit_u->pek_u->sam = u3nc(u3k(pic_u->gan), sam);
+    {  // @Refcount: assert transfer
+      wit_u->pek_u->sam = u3nc(u3k(pic_u->gan), sam);
+    }
   }
 
   //  XX cache check, unless last

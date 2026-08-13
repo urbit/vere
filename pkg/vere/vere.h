@@ -797,6 +797,7 @@
         u3_auto_kick(u3_auto* car_u, u3_noun act);
 
       /* u3_auto_next(): select an ovum, dequeue and construct.
+      ** @Refcount: custom
       */
         u3_ovum*
         u3_auto_next(u3_auto* car_u, u3_noun* ovo);
@@ -864,6 +865,7 @@
                      c3_y**   out_y);
 
       /* u3_disk_sift(): parse a persisted event buffer.
+      ** @Refcount: fills transferred `job` on `c3y`
       */
         c3_o
         u3_disk_sift(u3_disk* log_u,

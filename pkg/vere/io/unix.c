@@ -1610,7 +1610,9 @@ u3_unix_io_init(u3_pier* pir_u)
   unx_u->pax_c = strdup(pir_u->pax_c);
   unx_u->alm = c3n;
   unx_u->dyr = c3n;
-  unx_u->sat = u3do("sane", c3__ta);
+  {  // @Refcount: assert transfer
+    unx_u->sat = u3do("sane", c3__ta);
+  }
 
   u3_auto* car_u = &unx_u->car_u;
   car_u->nam_m = c3__unix;

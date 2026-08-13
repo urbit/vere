@@ -1523,7 +1523,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
       {
         u3m_bail(c3__fail);
       }
-      sat_u->resolution = yil;
+      {  // @Refcount: assert transfer `yil`
+        sat_u->resolution = yil;
+      }
       u3a_free(name_c);
       break;
     }
@@ -1564,7 +1566,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // if %2 then nothing to do, sat_u->resolution already holds %2 result
         //
@@ -1599,7 +1603,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // %2
         //
@@ -1645,7 +1651,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           else if (1 == u3h(yil))
           {
             u3z(sat_u->resolution);
-            sat_u->resolution = yil;
+            {  // @Refcount: assert transfer
+              sat_u->resolution = yil;
+            }
           }
           else  // %0
           {
@@ -1657,7 +1665,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             );
             u3z(sat_u->resolution);
             u3z(yil);
-            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+            {  // @Refcount: assert transfer
+              sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+            }
           }
         }
         u3z(frame);
@@ -1690,7 +1700,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // if %2 then nothing to do, sat_u->resolution already holds %2 result
         //
@@ -1833,7 +1845,7 @@ _link_wasm_with_arrow_map(
       result = "non-empty sat_u->arrow_yil on block";
     }
     else
-    {
+    {  // @Refcount: assert transfer `yil`
       sat_u->arrow_yil = yil;
       result = m3Err_ComputationBlock;  // start suspending if not yet suspending
     }

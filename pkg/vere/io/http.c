@@ -860,6 +860,8 @@ _free_beam(beam* bem)
 }
 
 /* _get_beam(): get a _beam from url
+** @Refcount: custom
+** (returns a tuple of u3_weak)
 */
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
@@ -1251,7 +1253,9 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
     req_u->peq_u->req_u = req_u;
     req_u->peq_u->htd_u = htd_u;
-    req_u->peq_u->pax   = u3k(sac);
+    {  // @Refcount: assert transfer
+      req_u->peq_u->pax = u3k(sac);
+    }
 
     req_u->sat_e = u3_rsat_peek;
 

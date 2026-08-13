@@ -194,6 +194,8 @@ u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u)
 }
 
 /* u3_auto_next(): select an ovum, dequeue and construct.
+** @Refcount: custom
+** (transfers ovo iff the product pointer is not null)
 */
 u3_ovum*
 u3_auto_next(u3_auto* car_u, u3_noun* ovo)

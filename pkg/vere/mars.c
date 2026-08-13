@@ -1040,6 +1040,7 @@ typedef enum {
 } _mars_play_e;
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
+** @Refcount: assert (foobar)
 */
 static _mars_play_e
 _mars_play_batch(u3_mars* mar_u,

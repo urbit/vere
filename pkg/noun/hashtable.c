@@ -1014,6 +1014,8 @@ u3h_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun))
 }
 
 /* _ch_take_noun(): take key and call [fun_f] on val.
+** @Refcount: assert
+** (fun_f copies)
 */
 static u3h_slot
 _ch_take_noun(u3h_slot sot_w, u3_funk fun_f)

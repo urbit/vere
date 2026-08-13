@@ -53,6 +53,7 @@ _pier_peek_next(u3_pier* pir_u)
 }
 
 /* _pier_work_send(): send new events for processing
+** @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 */
 static void
 _pier_work_send(u3_work* wok_u)
@@ -514,6 +515,7 @@ _pier_work_init(u3_pier* pir_u)
   }
 }
 
+// @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 static void _pier_wyrd_init(u3_pier*);
 
 static void
@@ -856,6 +858,7 @@ _pier_wyrd_card(u3_pier* pir_u)
 }
 
 /* _pier_wyrd_init(): send %wyrd.
+** @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 */
 static void
 _pier_wyrd_init(u3_pier* pir_u)

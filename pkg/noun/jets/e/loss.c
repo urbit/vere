@@ -129,7 +129,9 @@
     } else {
       u3z(loc_u->kad[inx_w]);
     }
-    loc_u->kad[inx_w] = kad;
+    {  // @Refcount: assert transfer `kad`
+      loc_u->kad[inx_w] = kad;
+    }
   }
 
   //  extend fits top

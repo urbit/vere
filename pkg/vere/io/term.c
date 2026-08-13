@@ -740,14 +740,18 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       wug = u3do("taft", huv);
 
       tat_u->fut.len_w = tat_u->fut.wid_w = 0;
-      tat_u->fut.imp = u3nc(wug, tat_u->fut.imp);
+      {  // @Refcount: assert transfer
+        tat_u->fut.imp = u3nc(wug, tat_u->fut.imp);
+      }
     }
   }
   //  individual characters
   //
   else {
     if ( (cay_y >= 32) && (cay_y < 127) ) {  //  visual ascii
-      tat_u->fut.imp = u3nc(cay_y, tat_u->fut.imp);
+      {  // @Refcount: assert transfer
+        tat_u->fut.imp = u3nc(cay_y, tat_u->fut.imp);
+      }
     }
     else if ( 0 == cay_y ) {  //  null
       _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
