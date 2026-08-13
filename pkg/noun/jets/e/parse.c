@@ -169,7 +169,8 @@
   u3_noun
  u3we_bend_fun(u3_noun cor)
   {
-    u3_noun van, raq, vex, sab;
+    u3_weak raq;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                u3x_sam_3, &sab,
@@ -328,7 +329,8 @@
   u3_noun
  u3we_comp_fun(u3_noun cor)
   {
-    u3_noun van, raq, vex, sab;
+    u3_weak raq;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                u3x_sam_3, &sab,
@@ -359,7 +361,8 @@
   u3_noun
   u3we_easy_fun(u3_noun cor)
   {
-    u3_noun van, huf, tub;
+    u3_weak huf;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (huf = u3r_at(u3x_sam, van))) )
@@ -434,7 +437,8 @@
   u3_noun
  u3we_glue_fun(u3_noun cor)
   {
-    u3_noun van, bus, vex, sab;
+    u3_weak bus;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                 u3x_sam_3, &sab,
@@ -530,7 +534,8 @@
   u3_noun
  u3we_just_fun(u3_noun cor)
   {
-    u3_noun van, daf, tub;
+    u3_weak daf;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (daf = u3r_at(u3x_sam, van))) )
@@ -569,7 +574,8 @@
   u3_noun
  u3we_mask_fun(u3_noun cor)
   {
-    u3_noun van, bud, tub;
+    u3_weak bud;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (bud = u3r_at(u3x_sam, van))) )
@@ -794,7 +800,8 @@
   u3_noun
  u3we_shim_fun(u3_noun cor)
   {
-    u3_noun van, zep, tub;
+    u3_weak zep;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (zep = u3r_at(u3x_sam, van))) )
@@ -936,7 +943,8 @@
  u3_noun
  u3we_stew_fun(u3_noun cor)
   {
-    u3_noun con, hel, tub;
+    u3_weak hel;
+    u3_noun con, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &con, 0)) ||
          (u3_none == (hel = u3r_at(2, con))) )

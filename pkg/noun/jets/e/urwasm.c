@@ -244,17 +244,17 @@ typedef struct {
 
 typedef struct {
   IM3Module wasm_module;    // p
-  u3_noun lia_shop;         // q,   transferred
+  u3_weak lia_shop;         // q,   transferred
   u3_noun acc;              // p.r, transferred
   u3_noun map;              // q.r, retained
   match_data_struct* match;
-  u3_noun arrow_yil;        // transferred
-  u3_noun susp_list;        // transferred
-  u3_noun resolution;       // resolved %1 block, transferred
+  u3_weak arrow_yil;        // transferred
+  u3_weak susp_list;        // transferred
+  u3_weak resolution;       // resolved %1 block, transferred
   uw_arena box_arena;
   uw_arena code_arena;
-  u3_noun yil_previous;     // transferred
-  u3_noun queue;            // transferred
+  u3_weak yil_previous;     // transferred
+  u3_weak queue;            // transferred
   c3_t is_stateful;
 } lia_state;
 
@@ -818,7 +818,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         return u3m_bail(c3__fail);
       }
       m3_SuspendStackPop64(sat_u->wasm_module->runtime, NULL);
-      u3_noun frame = _pop_list(&sat_u->susp_list);
+      u3_weak frame = _pop_list(&sat_u->susp_list);
       if (u3_none != frame && lst_call != u3h(frame))
       {
         printf(ERR("wrong frame: call"));
@@ -827,7 +827,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       u3z(frame);
     }
 
-    u3_noun yil;
+    u3_weak yil;
     if (result_call == m3Err_ComputationBlock)
     {
       yil = sat_u->arrow_yil;
@@ -1009,7 +1009,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
           printf(ERR("try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (u3_none != frame && lst_try != u3h(frame))
         {
           printf(ERR("wrong frame: try"));
@@ -1063,7 +1063,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
           printf(ERR("catch-try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (u3_none != frame && lst_catch_try != u3h(frame))
         {
           printf(ERR("wrong frame: catch-try"));
@@ -1108,7 +1108,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
             printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
             return u3m_bail(c3__fail);
           }
-          u3_noun frame = _pop_list(&sat_u->susp_list);
+          u3_weak frame = _pop_list(&sat_u->susp_list);
           if (u3_none != frame && lst_catch_err != u3h(frame))
           {
             printf(ERR("wrong frame: catch-err"));
@@ -1468,7 +1468,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       c3_d f_idx_d;
       m3_SuspendStackPop64(sat_u->wasm_module->runtime, &f_idx_d);
-      u3_noun frame = _pop_list(&sat_u->susp_list);
+      u3_weak frame = _pop_list(&sat_u->susp_list);
       if (lst_call != u3h(frame))
       {
         printf(ERR("wrong frame: call"));
@@ -1548,7 +1548,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (lst_try != u3h(frame))
         {
           printf(ERR("wrong frame: try"));
@@ -1583,7 +1583,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (lst_catch_try != u3h(frame))
         {
           printf(ERR("wrong frame: catch-try"));
@@ -1674,7 +1674,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (lst_catch_err != u3h(frame))
         {
           printf(ERR("wrong frame: catch-err"));
@@ -2100,7 +2100,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       sat_u->resolution = u3nc(0, u3k(p_input));
     }
     M3Result result = m3_Resume(run_u);
-    u3_noun yil;
+    u3_weak yil;
     if (result == m3Err_ComputationBlock)
     {
       yil = sat_u->resolution;
@@ -2143,7 +2143,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
         while (u3h(yil) == 0 && sat_u->queue != u3_nul)
         {
           u3z(yil);
-          u3_noun deferred_script = _pop_list(&sat_u->queue);
+          u3_weak deferred_script = _pop_list(&sat_u->queue);
           yil = _reduce_monad(deferred_script, sat_u);
         }
       }
@@ -2412,7 +2412,7 @@ u3we_lia_run_v1(u3_noun cor)
   BoxArena = &sat.box_arena;
   CodeArena = &sat.code_arena;
 
-  u3_noun yil;
+  u3_weak yil;
   if (!omit_t)
   {
     sat.is_stateful = 1;
@@ -3006,7 +3006,7 @@ u3we_lia_run_once(u3_noun cor)
     }
   }
 
-  u3_noun yil;
+  u3_weak yil;
 
   result = m3_RunStart(wasm3_module);
 

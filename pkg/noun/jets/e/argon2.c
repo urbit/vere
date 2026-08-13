@@ -44,7 +44,7 @@
   }
 
 
-  static u3_atom
+  static u3_weak
   _cqe_argon2( // configuration params,
                u3_atom out, u3_atom type, u3_atom version,
                u3_atom threads, u3_atom mem_cost, u3_atom time_cost,
@@ -71,7 +71,7 @@
       return u3_none;
     }
     else {
-      u3_atom ret;
+      u3_weak ret;
       c3_y *key_y = u3r_bytes_alloc(0, wik_w, key),
            *ex_y  = u3r_bytes_alloc(0, wix_w, extra),
            *dat_y = u3r_bytes_alloc(0, wid_w, dat),
@@ -106,7 +106,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_argon2(u3_noun cor)
   {
     u3_noun // configuration params

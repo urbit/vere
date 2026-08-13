@@ -12,7 +12,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
   /* All of the ECB hoon truncates its key and blk inputs with +fe, in these
    * jets we unpack with an unconditional u3r_bytes */
 
-  static u3_atom
+  static u3_weak
   _cqea_ecb_help(c3_y* key_y, u3_atom blk, urcrypt_ecb low_f)
   {
     c3_y blk_y[16], out_y[16];
@@ -27,7 +27,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecba_en(u3_atom key,
                 u3_atom blk)
   {
@@ -36,7 +36,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecba_en);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecba_en(u3_noun cor)
   {
     u3_noun a, b;
@@ -52,7 +52,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecba_de(u3_atom key,
                 u3_atom blk)
   {
@@ -61,7 +61,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecba_de);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecba_de(u3_noun cor)
   {
     u3_noun a, b;
@@ -77,7 +77,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecbb_en(u3_atom key,
                 u3_atom blk)
   {
@@ -86,7 +86,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecbb_en);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecbb_en(u3_noun cor)
   {
     u3_noun a, b;
@@ -102,7 +102,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecbb_de(u3_atom key,
                 u3_atom blk)
   {
@@ -111,7 +111,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecbb_de);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecbb_de(u3_noun cor)
   {
     u3_noun a, b;
@@ -127,7 +127,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecbc_en(u3_atom key,
                 u3_atom blk)
   {
@@ -136,7 +136,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecbc_en);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecbc_en(u3_noun cor)
   {
     u3_noun a, b;
@@ -152,7 +152,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     }
   }
 
-  static u3_atom
+  static u3_weak
   _cqea_ecbc_de(u3_atom key,
                 u3_atom blk)
   {
@@ -161,7 +161,7 @@ typedef int (*urcrypt_ecb)(c3_y*, c3_y[16], c3_y[16]);
     return _cqea_ecb_help(key_y, blk, &urcrypt_aes_ecbc_de);
   }
 
-  u3_noun
+  u3_weak
   u3wea_ecbc_de(u3_noun cor)
   {
     u3_noun a, b;

@@ -850,7 +850,7 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
 u3_weak
 u3h_get(u3p(u3h_root) har_p, u3_noun key)
 {
-  u3_noun pro = u3h_git(har_p, key);
+  u3_weak pro = u3h_git(har_p, key);
 
   if ( u3_none != pro ) {
     u3k(pro);

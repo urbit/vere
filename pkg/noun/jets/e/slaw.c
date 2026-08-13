@@ -75,7 +75,7 @@ combine(u3_noun p, u3_noun q)
     return u3_none;                                                     \
   }
 
-u3_noun
+u3_weak
 _parse_p(u3_noun cor, u3_noun txt) {
   c3_c* c = u3a_string(txt);
 
@@ -314,7 +314,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
   } while(0)
 
 
-u3_noun
+u3_weak
 _parse_da(u3_noun cor, u3_noun txt) {
   c3_c* c = u3a_string(txt);
 
@@ -593,7 +593,7 @@ _parse_tas(u3_noun txt) {
   return u3nc(0, u3k(txt));
 }
 
-u3_noun
+u3_weak
 u3we_slaw(u3_noun cor)
 {
   u3_noun mod;

@@ -167,7 +167,7 @@ _block_rep(u3_atom a,
   }
 }
 
-u3_noun
+u3_weak
 u3qc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
@@ -184,7 +184,7 @@ u3qc_rep(u3_atom a,
   return u3_none;
 }
 
-u3_noun
+u3_weak
 u3wc_rep(u3_noun cor)
 {
   u3_atom bloq, step;
@@ -196,12 +196,12 @@ u3wc_rep(u3_noun cor)
   return u3qc_rep(bloq, step, b);
 }
 
-u3_noun
+u3_weak
 u3kc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
 {
-  u3_noun res = u3qc_rep(a, b, c);
+  u3_weak res = u3qc_rep(a, b, c);
   u3z(a); u3z(b); u3z(c);
   return res;
 }

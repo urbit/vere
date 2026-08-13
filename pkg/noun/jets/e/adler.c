@@ -53,7 +53,7 @@ static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
 #define BASE 65521
 #define NMAX 5552
 
-u3_noun _qe_adler32(u3_noun octs)
+u3_weak _qe_adler32(u3_noun octs)
 {
   u3_atom p_octs, q_octs;
 
@@ -116,7 +116,7 @@ u3_noun _qe_adler32(u3_noun octs)
 }
 
 
-u3_noun 
+u3_weak 
 u3we_adler32(u3_noun cor)
 {
   u3_noun octs;

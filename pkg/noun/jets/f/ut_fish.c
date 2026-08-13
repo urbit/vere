@@ -8,7 +8,8 @@
 u3_noun
 u3wfu_fish(u3_noun cor)
 {
-  u3_noun bat, sut, axe, van;
+  u3_weak bat, sut;
+  u3_noun axe, van;
 
   if (  (c3n == u3r_mean(cor, u3x_sam, &axe, u3x_con, &van, 0))
      || (c3n == u3ud(axe))

@@ -97,14 +97,14 @@ _cqea_ads_alloc(u3_noun ads, c3_w *soc_w)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_siv_en(c3_y*   key_y,
              c3_w    key_w,
              u3_noun ads,
              u3_atom txt,
              urcrypt_siv low_f)
 {
-  u3_noun ret;
+  u3_weak ret;
   c3_w txt_w, soc_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
@@ -125,7 +125,7 @@ _cqea_siv_en(c3_y*   key_y,
   return ret;
 }
 
-static u3_noun
+static u3_weak
 _cqea_siv_de(c3_y*   key_y,
              c3_w    key_w,
              u3_noun ads,
@@ -167,7 +167,7 @@ _cqea_siv_de(c3_y*   key_y,
 // have fixed maximum keysizes, so we will punt if we get a key that is too
 // large.
 
-static u3_noun
+static u3_weak
 _cqea_siva_en(u3_atom key,
               u3_noun ads,
               u3_atom txt)
@@ -182,7 +182,7 @@ _cqea_siva_en(u3_atom key,
   }
 }
 
-u3_noun
+u3_weak
 u3wea_siva_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
@@ -199,7 +199,7 @@ u3wea_siva_en(u3_noun cor)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_siva_de(u3_atom key,
               u3_noun ads,
               u3_atom iv,
@@ -216,7 +216,7 @@ _cqea_siva_de(u3_atom key,
   }
 }
 
-u3_noun
+u3_weak
 u3wea_siva_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;
@@ -235,7 +235,7 @@ u3wea_siva_de(u3_noun cor)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_sivb_en(u3_atom key,
               u3_noun ads,
               u3_atom txt)
@@ -251,7 +251,7 @@ _cqea_sivb_en(u3_atom key,
 }
 
 
-u3_noun
+u3_weak
 u3wea_sivb_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
@@ -268,7 +268,7 @@ u3wea_sivb_en(u3_noun cor)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_sivb_de(u3_atom key,
               u3_noun ads,
               u3_atom iv,
@@ -285,7 +285,7 @@ _cqea_sivb_de(u3_atom key,
   }
 }
 
-u3_noun
+u3_weak
 u3wea_sivb_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;
@@ -304,7 +304,7 @@ u3wea_sivb_de(u3_noun cor)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_sivc_en(u3_atom key,
               u3_noun ads,
               u3_atom txt)
@@ -319,7 +319,7 @@ _cqea_sivc_en(u3_atom key,
   }
 }
 
-u3_noun
+u3_weak
 u3wea_sivc_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
@@ -336,7 +336,7 @@ u3wea_sivc_en(u3_noun cor)
   }
 }
 
-static u3_noun
+static u3_weak
 _cqea_sivc_de(u3_atom key,
               u3_noun ads,
               u3_atom iv,
@@ -353,7 +353,7 @@ _cqea_sivc_de(u3_atom key,
   }
 }
 
-u3_noun
+u3_weak
 u3wea_sivc_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;

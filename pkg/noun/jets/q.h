@@ -74,12 +74,12 @@
     u3_noun u3qc_peg(u3_atom, u3_atom);
     u3_noun u3qc_pow(u3_atom, u3_atom);
     u3_noun u3qc_rap(u3_atom, u3_noun);
-    u3_noun u3qc_rep(u3_atom, u3_atom, u3_noun);
+    u3_weak u3qc_rep(u3_atom, u3_atom, u3_noun);
     u3_noun u3qc_rev(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rig(u3_atom, u3_atom, u3_atom);
-    u3_noun u3qc_rip(u3_atom, u3_atom, u3_atom);
+    u3_weak u3qc_rip(u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_rsh(u3_atom, u3_atom, u3_atom);
-    u3_noun u3qc_sew(u3_atom, u3_atom, u3_atom, u3_atom, u3_atom);
+    u3_weak u3qc_sew(u3_atom, u3_atom, u3_atom, u3_atom, u3_atom);
     u3_noun u3qc_swp(u3_atom, u3_atom);
     u3_noun u3qc_sqt(u3_atom);
 
@@ -136,10 +136,10 @@
     u3_noun u3qe_lune(u3_atom);
     u3_noun u3qe_repg(u3_noun, u3_noun, u3_noun);
     u3_noun u3qe_rexp(u3_noun, u3_noun);
-    u3_noun u3qe_trip(u3_atom);
+    u3_weak u3qe_trip(u3_atom);
 
-    u3_atom u3qe_scot(u3_atom, u3_atom);
-    u3_atom u3qe_scow(u3_atom, u3_atom);
+    u3_weak u3qe_scot(u3_atom, u3_atom);
+    u3_weak u3qe_scow(u3_atom, u3_atom);
 
     u3_noun u3qea_ecba_en(u3_atom, u3_atom);
     u3_noun u3qea_ecba_de(u3_atom, u3_atom);
@@ -225,14 +225,14 @@
     u3_noun u3qes_gte(u3_atom, u3_atom);
     u3_noun u3qes_gth(u3_atom, u3_atom);
 
-    u3_noun  u3qe_decompress_zlib(u3_atom, u3_noun);
-    u3_noun  u3qe_decompress_gzip(u3_atom, u3_noun);
+    u3_weak  u3qe_decompress_zlib(u3_atom, u3_noun);
+    u3_weak  u3qe_decompress_gzip(u3_atom, u3_noun);
 
   /** Tier 6.
   **/
     u3_noun u3qf_bull(u3_noun, u3_noun);
     u3_noun u3qf_cell(u3_noun, u3_noun);
-    u3_noun u3qf_comb(u3_noun, u3_noun);
+    u3_weak u3qf_comb(u3_noun, u3_noun);
     u3_noun u3qf_cons(u3_noun, u3_noun);
     u3_noun u3qf_core(u3_noun, u3_noun);
     u3_noun u3qf_cube(u3_noun, u3_noun);
@@ -261,34 +261,34 @@
     u3_noun u3qfp_nepo(u3_noun, u3_noun);
     u3_noun u3qfp_rake(u3_noun);
 
-    u3_noun u3qi_la_add_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_sub_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_mul_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_div_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_mod_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_adds_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_subs_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_muls_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_divs_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_mods_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_dot_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_diag(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_transpose(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_cumsum_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_argmin_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_argmax_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_ravel_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_min_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_max_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_linspace_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_range_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_abs_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_gth_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_gte_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_lth_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_lte_i754(u3_noun, u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_trace_i754(u3_noun, u3_noun, u3_noun);
-    u3_noun u3qi_la_mmul_i754(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_add_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_sub_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_mul_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_div_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_mod_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_adds_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_subs_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_muls_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_divs_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_mods_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_dot_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_diag(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_transpose(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_cumsum_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_argmin_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_argmax_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_ravel_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_min_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_max_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_linspace_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_range_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_abs_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_gth_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_gte_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_lth_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_lte_i754(u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_trace_i754(u3_noun, u3_noun, u3_noun);
+    u3_weak u3qi_la_mmul_i754(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58

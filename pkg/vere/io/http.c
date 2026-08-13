@@ -1532,7 +1532,7 @@ _http_cancel_respond(u3_hreq* req_u)
 static u3_weak
 _http_rec_to_httq(h2o_req_t* rec_u)
 {
-  u3_noun med = _http_vec_to_meth(rec_u->method);
+  u3_weak med = _http_vec_to_meth(rec_u->method);
 
   if ( u3_none == med ) {
     return u3_none;

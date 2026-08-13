@@ -41,7 +41,7 @@
   u3_noun
   u3we_mat(u3_noun cor)
   {
-    u3_noun a;
+    u3_weak a;
 
     if ( (u3_none == (a = u3r_at(u3x_sam, cor))) ) {
       return u3m_bail(c3__fail);

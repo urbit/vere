@@ -85,7 +85,7 @@ u3z_find(u3z_cid cid, u3_noun key)
     //  XX put +mice behind runtime flag?
     //
     u3a_road* rod_u;
-    u3_noun pro = _find_in_roads(cid, key, &rod_u);
+    u3_weak pro = _find_in_roads(cid, key, &rod_u);
     if ( u3_none != pro && rod_u != u3R ) {
       u3h_put(_har(u3R, cid), key, u3k(pro));
     }
@@ -168,7 +168,7 @@ u3_noun
 u3z_uniq(u3z_cid cid, u3_noun som)
 {
   u3_noun key = u3nc(c3__uniq, u3k(som));
-  u3_noun val = u3h_get(_har(u3R, cid), key);
+  u3_weak val = u3h_get(_har(u3R, cid), key);
   u3_noun pro;
   if ( u3_none != val ) {
     u3z(som);

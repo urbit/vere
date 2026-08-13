@@ -381,7 +381,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
   //    instead of directly triggering these remedial actions.
   //
   {
-    u3_noun pri = u3_none;
+    u3_weak pri = u3_none;
     c3_w pos_w = u3a_open(u3R);
 
     //  if contiguous free space shrunk, check thresholds

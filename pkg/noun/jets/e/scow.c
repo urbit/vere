@@ -55,7 +55,7 @@ _add_year(c3_w year, u3_noun out)
 }
 
 static
-u3_noun
+u3_weak
 _print_da(u3_noun cor, u3_atom raw_da)
 {
   u3_noun hok = u3j_cook("u3we_scow_print_da", u3k(cor), "yore");
@@ -165,7 +165,7 @@ _print_da(u3_noun cor, u3_atom raw_da)
 }
 
 static
-u3_noun
+u3_weak
 _print_p(u3_atom cor, u3_atom p)
 {
   // Scramble the raw number to the concealed version.
@@ -215,7 +215,7 @@ _print_p(u3_atom cor, u3_atom p)
   return u3nc('~', list);
 }
 
-u3_atom
+u3_weak
 u3qe_scow(u3_atom a, u3_atom b)
 {
   switch (a) {
@@ -239,7 +239,7 @@ u3qe_scow(u3_atom a, u3_atom b)
   }
 }
 
-u3_noun
+u3_weak
 u3we_scow(u3_noun cor)
 {
   u3_atom a, b;

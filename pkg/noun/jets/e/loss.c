@@ -98,7 +98,7 @@
 
       for ( i_w = 0; i_w < loc_u->lev_w; i_w++ ) {
         u3_noun how = loc_u->hev[i_w];
-        u3_noun hav;
+        u3_weak hav;
         u3_noun teg;
 
         hav = u3kdb_get(u3k(loc_u->sev), u3k(how));
@@ -291,7 +291,7 @@
   u3_noun
   u3we_loss(u3_noun cor)
   {
-    u3_noun hel, hev;
+    u3_weak hel, hev;
 
     if ( (u3_none == (hel = u3r_at(u3x_sam_2, cor))) ||
          (u3_none == (hev = u3r_at(u3x_sam_3, cor))) ||

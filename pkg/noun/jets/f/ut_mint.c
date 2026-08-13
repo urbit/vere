@@ -8,7 +8,8 @@
 u3_noun
 u3wfu_mint(u3_noun cor)
 {
-  u3_noun bat, sut, gol, gen, van;
+  u3_weak bat, sut;
+  u3_noun gol, gen, van;
 
   if (  (c3n == u3r_mean(cor, u3x_sam_2, &gol,
                               u3x_sam_3, &gen,
@@ -20,7 +21,7 @@ u3wfu_mint(u3_noun cor)
   }
   else {
     c3_m  fun_m = 141 + c3__mint;
-    u3_noun vet = u3r_at(u3qfu_van_vet, van);
+    u3_weak vet = u3r_at(u3qfu_van_vet, van);
     u3_noun key = u3z_key_5(fun_m, vet, sut, gol, gen, bat);
     u3_weak pro = u3z_find(u3z_memo_toss, key);
 

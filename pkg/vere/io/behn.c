@@ -21,7 +21,7 @@
 static c3_o
 _behn_bail_dire(u3_noun lud)
 {
-  u3_noun mot = u3r_at(4, lud);
+  u3_weak mot = u3r_at(4, lud);
 
   if (  (c3__meme == mot)
      || (c3__intr == mot) )

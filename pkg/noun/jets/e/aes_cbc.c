@@ -46,7 +46,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_en_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbca_en(u3_noun cor)
   {
     u3_noun a, b, c;
@@ -73,7 +73,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbca_de_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbca_de(u3_noun cor)
   {
     u3_noun a, b, c;
@@ -100,7 +100,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_en_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbcb_en(u3_noun cor)
   {
     u3_noun a, b, c;
@@ -127,7 +127,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcb_de_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbcb_de(u3_noun cor)
   {
     u3_noun a, b, c;
@@ -154,7 +154,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_en_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbcc_en(u3_noun cor)
   {
     u3_noun a, b, c;
@@ -181,7 +181,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     return _cqea_cbc_help(key_y, iv, msg, &urcrypt_aes_cbcc_de_unsafe);
   }
 
-  u3_noun
+  u3_weak
   u3wea_cbcc_de(u3_noun cor)
   {
     u3_noun a, b, c;
