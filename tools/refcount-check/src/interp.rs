@@ -22,8 +22,8 @@ use clang_sys::*;
 
 use crate::ast::{
   binop, decl_ref_name, int_literal_value, is_direct_type, is_expr_kind,
-  is_local_lvalue, is_noun_ptr_type, is_noun_type, unary_op, unwrap_expr,
-  Cursor, Name, Ty, Loc,
+  is_local_lvalue, is_noun_ptr_type, is_noun_type, is_weak_type, unary_op,
+  unwrap_expr, Cursor, Name, Ty, Loc,
 };
 use crate::config;
 use crate::sem::{AssertMode, Finding, ArgumentMode, FillMode, PointeeMode,
@@ -111,9 +111,13 @@ struct VarName {name: Name, depth: u32}
 /// to model unifying equality (UE)
 /// 
 /// "slots" tracks noun pointers (u3_noun* and similar)
-/// 
+///
 /// "views" caches head/tail lookups for a given noun
-/// 
+///
+/// "weak" marks values that may be u3_none (u3_weak products/parameters
+/// and the u3_none literal); a comparison against u3_none refines it
+/// away on the unequal branch
+///
 #[derive(Default, Clone)]
 struct Env {
   values: IHashMap<ValId, RefcountState>,
@@ -121,7 +125,8 @@ struct Env {
   vars_rev: IHashMap<VarName, ValId>,
   contains: IHashMap<ValId, IHashSet<ValId>>,
   slots: IHashMap<ValId, SlotTarget>,
-  views: IHashMap<(ValId, bool), ValId>,      
+  views: IHashMap<(ValId, bool), ValId>,
+  weak: IHashSet<ValId>,
 }
 
 impl Env {
@@ -286,6 +291,8 @@ struct Gen<'a> {
   //  delayed to a scope end or exit sweep (the value may be nameless
   //  by then).
   owned_at: HashMap<ValId, String>,
+  //  why a value may be u3_none, for [u3_none] reports.
+  weak_why: HashMap<ValId, String>,
   //  fills deferred by a conditional-fill callee (`fills transferred
   //  `x` on `c3y``): the enclosing condition claims them and applies
   //  the fill on the branch whose product matches. Must be resolved by
@@ -352,6 +359,18 @@ impl Gen<'_> {
     self.owned_at.entry(id).or_insert(whence);
   }
 
+  /// Remember why `id` may be u3_none (the first cause wins).
+  fn note_weak(&mut self, id: ValId, why: String) {
+    self.weak_why.entry(id).or_insert(why);
+  }
+
+  /// " (<why>)" suffix for messages about a possibly-none value.
+  fn why_weak(&self, id: ValId) -> String {
+    self.weak_why.get(&id)
+      .map(|w| format!(" ({})", w))
+      .unwrap_or_default()
+  }
+
   /// " (<creation site>)" suffix for delayed leak messages.
   fn where_owned(&self, id: ValId) -> String {
     self.owned_at.get(&id)
@@ -411,6 +430,7 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     pointee_params: Vec::new(),
     poison_why: HashMap::new(),
     owned_at: HashMap::new(),
+    weak_why: HashMap::new(),
     pending_cond_fills: None,
   };
 
@@ -443,6 +463,11 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
           if matches!(rc, RefcountState::Owned {..}) {
             g.note_owned(pvid, "`consumes` pointee parameter".to_string());
           }
+          if is_weak_type(&p.ty().pointee_type()) {
+            env.weak.insert(pvid);
+            g.note_weak(pvid, format!("u3_weak pointee parameter \
+              [{}]", pname));
+          }
           g.param_vids.push(pvid);
           let sid = new_val(&mut env, RefcountState::Slot, &mut g);
           env.slots.insert(sid, SlotTarget::Var(pv.clone()));
@@ -470,9 +495,14 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
       ArgumentMode::Direct      => RefcountState::Direct,
       ArgumentMode::Passthrough => RefcountState::Passthrough
     };
-    let pid = env.insert_new(VarName {name: pname, depth: 0}, rc, &mut g);
+    let pid = env.insert_new(VarName {name: pname.clone(), depth: 0}, rc,
+      &mut g);
     if matches!(rc, RefcountState::Owned {..}) {
       g.note_owned(pid, "transfer parameter".to_string());
+    }
+    if is_weak_type(&p.ty()) {
+      env.weak.insert(pid);
+      g.note_weak(pid, format!("u3_weak parameter [{}]", pname));
     }
     g.param_vids.push(pid);
   }
@@ -1076,9 +1106,27 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       let (vid, nxt) = eval_expr(&init, env, depth, g)?;
       let Some(mut nxt) = nxt else { return Ok(None); };
       if vid.is_some() || is_noun_type(&ty) {
+        //  declared types are contracts: a possibly-u3_none initializer
+        //  may only bind to a u3_weak variable
+        let weak_init = weak_desc(&nxt, g, vid, &init);
+        if is_noun_type(&ty) && !is_weak_type(&ty) {
+          if let Some(d) = weak_init {
+            report!(g, &init, "u3_none",
+              "{} initializes {} variable [{}]: declare it u3_weak, \
+               or compare against u3_none first",
+              d, ty.spelling(), name);
+          }
+        }
         //  a None vid on a noun variable means a non-noun initializer:
         //  gotta be direct (bind_value handles both)
-        bind_value(&mut nxt, var, vid, g);
+        let id = bind_value(&mut nxt, var, vid, g);
+        //  a u3_none literal bound to a u3_weak variable: the fresh
+        //  value is a known none
+        if vid.is_none() && weak_init.is_some() {
+          nxt.weak.insert(id);
+          g.note_weak(id, format!("u3_none literal at {}",
+            loc_str(&init)));
+        }
         //  a noun value narrowed into a sub-noun-width integer type
         //  (`c3_l col_l = u3h(blu)`) is necessarily a direct atom
         if let Some(v) = vid {
@@ -1275,7 +1323,20 @@ fn fill_flat_record(list: &Cursor,
     let (vid, nxt) = eval_expr(e, env, depth, g)?;
     let Some(mut nxt) = nxt else { return Ok(None); };
     if vid.is_some() || fnoun {
-      bind_value(&mut nxt, VarName {name: path(), depth}, vid, g);
+      //  field types are contracts, same as scalar declarations
+      let weak_init = weak_desc(&nxt, g, vid, e);
+      if fnoun && !is_weak_type(&f.ty()) {
+        if let Some(d) = weak_init {
+          report!(g, e, "u3_none",
+            "{} initializes {} field [{}]: compare against u3_none \
+             first", d, f.ty().spelling(), path());
+        }
+      }
+      let id = bind_value(&mut nxt, VarName {name: path(), depth}, vid, g);
+      if vid.is_none() && weak_init.is_some() {
+        nxt.weak.insert(id);
+        g.note_weak(id, format!("u3_none literal at {}", loc_str(e)));
+      }
     }
     env = nxt;
   }
@@ -1382,6 +1443,18 @@ fn execute_return(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
         "returning a slot pointer, won't analyze");
     }
   }
+  //  the signature is the contract: a possibly-u3_none product may
+  //  only leave through a u3_weak return type
+  let rty = g.func_cur.result_type();
+  if is_noun_type(&rty) && !is_weak_type(&rty) {
+    if let Some(rexpr) = cur.children().first() {
+      if let Some(d) = weak_desc(&env, g, opt_vid, rexpr) {
+        report!(g, cur, "u3_none",
+          "{} returned from a function declared to return {}: return \
+           u3_weak, or compare against u3_none first", d, rty.spelling());
+      }
+    }
+  }
   match g.sem.product {
     ProductMode::Retain => {},
     ProductMode::Transfer => {
@@ -1471,6 +1544,12 @@ fn execute_expr_stmt(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       if let Some((_, vid)) = target {
         {
           let mut env = env;
+          //  u3a_gain asserts on u3_none
+          if env.weak.contains(&vid) {
+            report!(g, cur, "u3_none",
+              "u3k of possibly-none value [{}]{}: u3a_gain asserts on \
+               u3_none, compare first", env.names(vid), g.why_weak(vid));
+          }
           match *env.values.get(&vid).expect(LI) {
             RefcountState::Borrowed => {
               env.values.insert(vid, RefcountState::Owned {extra: 0});
@@ -1729,6 +1808,30 @@ fn refine_direct(env: &mut Env, vid: ValId)
 {
   if refinable(env, vid) {
     env.values.insert(vid, RefcountState::Direct);
+  }
+}
+
+/// This branch proves the value is not u3_none (compared unequal to
+/// u3_none, or equal to a valid literal).
+fn refine_valid(env: &mut Env, vid: ValId)
+{
+  env.weak.remove(&vid);
+}
+
+/// Possibly-u3_none-ness of an evaluated expression, as a subject
+/// phrase for [u3_none] reports: a tracked value's weak flag, or the
+/// u3_none literal itself (which flows with no ValId). None = proven
+/// valid.
+fn weak_desc(env: &Env, g: &Gen, vid: Option<ValId>, expr: &Cursor)
+  -> Option<String>
+{
+  match vid {
+    Some(v) if env.weak.contains(&v) =>
+      Some(format!("possibly-none value [{}]{}", env.names(v),
+        g.why_weak(v))),
+    None if int_literal_value(expr) == Some(config::U3_NONE) =>
+      Some("a u3_none literal".to_string()),
+    _ => None,
   }
 }
 
@@ -2073,12 +2176,22 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
       None => v,
     }
   };
+  //  a u3_none literal in one arm makes the product possibly-none
+  let none_lit =
+    |c: &Cursor| int_literal_value(c) == Some(config::U3_NONE);
   let vid = match (t_vid, f_vid) {
     (None, None) => None,
     //  one branch has no tracked value (a literal: reading a direct
-    //  atom adds no obligations): the other side's value passes through
-    (Some(v), None) => Some(resolve(&te, &joined, v)),
-    (None, Some(v)) => Some(resolve(&fe, &joined, v)),
+    //  atom adds no obligations): the other side's value passes
+    //  through -- weakened if the untracked arm is u3_none
+    (Some(v), None) => {
+      let v2 = resolve(&te, &joined, v);
+      Some(weaken_ternary_val(cur, &mut joined, v2, none_lit(b), g))
+    }
+    (None, Some(v)) => {
+      let v2 = resolve(&fe, &joined, v);
+      Some(weaken_ternary_val(cur, &mut joined, v2, none_lit(a), g))
+    }
     (Some(av), Some(bv)) => {
       let a2 = resolve(&te, &joined, av);
       let b2 = resolve(&fe, &joined, bv);
@@ -2090,6 +2203,34 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
     }
   };
   Ok((vid, Some(joined)))
+}
+
+/// One ternary arm was the u3_none literal: the product may be none.
+/// The other arm's value gets a weak-marked stand-in where possible, so
+/// a live variable aliasing it is not falsely tainted; an owned value
+/// keeps its identity (its count must stay attributable) and is marked
+/// in place.
+fn weaken_ternary_val(cur: &Cursor, env: &mut Env, v: ValId,
+  weaken: bool, g: &mut Gen) -> ValId
+{
+  if !weaken || env.weak.contains(&v) {
+    return v;
+  }
+  let id = match env.values.get(&v) {
+    Some(RefcountState::Borrowed) => {
+      let id = new_val(env, RefcountState::Borrowed, g);
+      env.contains.entry(v).or_default().insert(id);
+      id
+    }
+    Some(RefcountState::Direct) => {
+      new_val(env, RefcountState::Direct, g)
+    }
+    _ => v,
+  };
+  env.weak.insert(id);
+  g.note_weak(id, format!("u3_none arm of the conditional at {}",
+    loc_str(cur)));
+  id
 }
 
 /// The two branches of a ternary produced different values: unify their
@@ -2129,6 +2270,10 @@ fn merge_ternary_vals(cur: &Cursor, env: &mut Env, a: ValId, b: ValId,
   //  keep the located side's identity so its names stay attached
   let (keep, lose) = if !a_loc && b_loc { (b, a) } else { (a, b) };
   env.values.insert(keep, merged);
+  //  possibly-none if either arm was
+  if env.weak.contains(&lose) {
+    env.weak.insert(keep);
+  }
 
   //  fold the loser's containment structure into the survivor
   let lose_kids = env.contains.get(&lose).cloned().unwrap_or_default();
@@ -2216,6 +2361,10 @@ fn eval_destructurer(_cur: &Cursor, args: &[Cursor], src_i: usize,
       let (v, nxt) = eval_expr(a, env, depth, g)?;
       let Some(nxt) = nxt else { return Ok((None, None)); };
       env = nxt;
+      if let Some(d) = weak_desc(&env, g, v, a) {
+        report!(g, a, "u3_none",
+          "destructuring {}: compare against u3_none first", d);
+      }
       src_vid = v;
       continue;
     }
@@ -2287,13 +2436,22 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     return Ok((None, None));
   }
 
-  //  u3z: give away one counted reference
+  //  u3z: give away one counted reference. A possibly-u3_none argument
+  //  is a de-facto safe no-op (u3a_north/south_is_normal return c3n
+  //  for it), so it is tolerated unless --strict-weak asks otherwise
   if cn == "u3a_lose" {
     let Some(a0) = args.first() else {
       report!(g, cur, "strange expression", "u3z without an argument");
     };
     let (vid, nxt) = eval_expr(a0, env, depth, g)?;
     let Some(mut nxt) = nxt else { return Ok((None, None)); };
+    if config::strict_weak() {
+      if let Some(d) = weak_desc(&nxt, g, vid, a0) {
+        report!(g, cur, "u3_none",
+          "u3z of {}: compare against u3_none first (reported under \
+           --strict-weak)", d);
+      }
+    }
     if let Some(vid) = vid {
       nxt.lose(vid, cur, g)?;
     }
@@ -2309,6 +2467,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     };
     let (vid, nxt) = eval_expr(a0, env, depth, g)?;
     let Some(mut nxt) = nxt else { return Ok((None, None)); };
+    //  u3a_gain asserts on u3_none: gaining a possibly-none value is
+    //  always an error
+    if let Some(d) = weak_desc(&nxt, g, vid, a0) {
+      report!(g, cur, "u3_none",
+        "u3k of {}: u3a_gain asserts on u3_none, compare first", d);
+    }
     if let Some(v) = vid {
       if nxt.has_holes(v) {
         report!(g, cur, "refcount error",
@@ -2356,6 +2520,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     };
     let (vid, nxt) = eval_expr(a0, env, depth, g)?;
     let Some(mut nxt) = nxt else { return Ok((None, None)); };
+    //  u3_none is not a cell: destructuring a possibly-none value
+    //  reads garbage
+    if let Some(d) = weak_desc(&nxt, g, vid, a0) {
+      report!(g, cur, "u3_none",
+        "u3h/u3t of {}: compare against u3_none first", d);
+    }
     if let Some(parent) = vid {
       if matches!(nxt.values.get(&parent), Some(RefcountState::Uninit)) {
         report!(g, cur, "refcount error",
@@ -2390,13 +2560,19 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     return Ok((Some(id), Some(nxt)));
   }
 
-  //  u3a_is_cat &co: reads only, loobean product
+  //  u3a_is_cat &co: reads only, loobean product. u3_none looks like
+  //  an indirect reference to these predicates (u3a_is_dog(u3_none) is
+  //  c3y), so a possibly-none argument must be checked first
   if config::guard_kind(cn).is_some() {
     let Some(a0) = args.first() else {
       report!(g, cur, "strange expression", "guard without an argument");
     };
-    let (_, nxt) = eval_expr(a0, env, depth, g)?;
+    let (v, nxt) = eval_expr(a0, env, depth, g)?;
     let Some(nxt) = nxt else { return Ok((None, None)); };
+    if let Some(d) = weak_desc(&nxt, g, v, a0) {
+      report!(g, cur, "u3_none",
+        "{}() of {}: compare against u3_none first", cn, d);
+    }
     return Ok((None, Some(nxt)));
   }
 
@@ -2494,6 +2670,18 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     }
     let mut noun_args: Vec<ValId> = Vec::new();
     for (i, (a, v)) in evald.iter().enumerate() {
+      //  the declarator's parameter type is the contract, same as a
+      //  declared call
+      if let Some(p) = params.get(i) {
+        if is_noun_type(&p.ty()) && !is_weak_type(&p.ty()) {
+          if let Some(d) = weak_desc(&env, g, *v, a) {
+            report!(g, a, "u3_none",
+              "{} passed as a {} parameter of [{}]: compare against \
+               u3_none first", d,
+              p.ty().spelling(), dname);
+          }
+        }
+      }
       let Some(v) = *v else { continue; };
       noun_args.push(v);
       let mode = dsem.as_ref()
@@ -2514,18 +2702,28 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       }
     }
     if is_noun_type(&cur.ty()) {
+      //  the call expression's type is the declarator's return type:
+      //  u3_weak products may be u3_none
+      let weak_prod = is_weak_type(&cur.ty());
       let retain_prod = dsem.as_ref()
         .is_some_and(|ds| ds.product == ProductMode::Retain);
-      if retain_prod {
+      let id = if retain_prod {
         let id = new_val(&mut env, RefcountState::Borrowed, g);
         for v in noun_args {
           env.contains.entry(v).or_default().insert(id);
         }
-        return Ok((Some(id), Some(env)));
+        id
+      } else {
+        let id = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
+        g.note_owned(id, format!("created by {}() at {}", dname,
+          loc_str(cur)));
+        id
+      };
+      if weak_prod {
+        env.weak.insert(id);
+        g.note_weak(id, format!("u3_weak product of {}() at {}", dname,
+          loc_str(cur)));
       }
-      let id = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
-      g.note_owned(id, format!("created by {}() at {}", dname,
-        loc_str(cur)));
       return Ok((Some(id), Some(env)));
     }
     return Ok((None, Some(env)));
@@ -2577,12 +2775,14 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
 
   //  phase 1: C evaluates every operand before the call
   let mut evald: Vec<(Cursor, Option<Cursor>, Option<ValId>)> = Vec::new();
-  //  pointer args to pointee-annotated params
+  //  pointer args to pointee-annotated params; the bool is whether the
+  //  parameter's pointee type is u3_weak (its fills may be u3_none)
   enum PointeeArg {
     Var(VarName, ValId), //  variable slot and its current value
     Hole(ValId),         //  sid of an unfilled deferred slot
   }
-  let mut pointee_work: Vec<(Cursor, PointeeArg, PointeeMode)> = Vec::new();
+  let mut pointee_work: Vec<(Cursor, PointeeArg, PointeeMode, bool)> =
+    Vec::new();
   for (i, a) in args.iter().enumerate() {
     //  `&var` handed to an annotated pointer-to-noun parameter: the
     //  pointee clauses say what the callee does through the pointer,
@@ -2671,6 +2871,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
             }
           }
         }
+        let weak_ptee = is_weak_type(&p.ty().pointee_type());
         match parg {
           Some(PointeeArg::Var(var, vid)) => {
             if pm.reads || pm.consumes {
@@ -2683,13 +2884,23 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
                   cn, env.names(vid));
               }
               read_check(a, &env, vid, g)?;
+              //  the pointee type is the contract: the callee reads
+              //  the pointed-at noun as valid
+              if !weak_ptee && env.weak.contains(&vid) {
+                report!(g, a, "u3_none",
+                  "pointer to possibly-none value [{}]{} handed to the \
+                   `{}` parameter of {}(): compare against u3_none \
+                   first", env.names(vid), g.why_weak(vid),
+                  p.spelling(), cn);
+              }
             }
-            pointee_work.push((*a, PointeeArg::Var(var, vid), pm));
+            pointee_work.push((*a, PointeeArg::Var(var, vid), pm,
+              weak_ptee));
             evald.push((*a, params.get(i).copied(), None));
             continue;
           }
           Some(h @ PointeeArg::Hole(_)) => {
-            pointee_work.push((*a, h, pm));
+            pointee_work.push((*a, h, pm, weak_ptee));
             evald.push((*a, params.get(i).copied(), None));
             continue;
           }
@@ -2739,6 +2950,16 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       //  (e.g. u3a_malloc(u3kb_lent(..))) drops its reference: it stays
       //  an unconsumed orphan and the scope-end sweep reports it
       continue;
+    }
+    //  the parameter type is the contract: a possibly-u3_none argument
+    //  may only flow into a u3_weak parameter
+    if !is_weak_type(&p.ty()) {
+      if let Some(d) = weak_desc(&env, g, *v, a) {
+        report!(g, a, "u3_none",
+          "{} passed as `{}`, a {} parameter of {}(): compare \
+           against u3_none first", d, p.spelling(),
+          p.ty().spelling(), cn);
+      }
     }
     let Some(v) = *v else {
       //  untracked argument value (global, literal): nothing to account
@@ -2795,7 +3016,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  pointee consumption: one counted reference of the old pointee is
   //  given away inside the call (transferring read, or u3z of the old
   //  value before a refill -- indistinguishable from out here)
-  for (a, parg, pm) in &pointee_work {
+  for (a, parg, pm, _) in &pointee_work {
     if pm.consumes {
       if let PointeeArg::Var(_, vid) = parg {
         env.lose(*vid, a, g)?;
@@ -2843,7 +3064,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   //  them poisons it. Overwriting an unconsumed owned pointee without
   //  a `consumes` clause leaves a nameless owned orphan that the
   //  scope-end/exit sweeps report as a leak
-  for (a, parg, pm) in &pointee_work {
+  for (a, parg, pm, weak_ptee) in &pointee_work {
     let Some(fm) = pm.fills else { continue; };
     //  a conditional fill keys on the call's loobean product; the
     //  enclosing c3y/c3n comparison claims it
@@ -2895,6 +3116,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
           g.note_owned(id, format!("filled by {}() at {}", cn,
             loc_str(cur)));
         }
+        //  a u3_weak* out-param may have been filled with u3_none
+        if *weak_ptee {
+          env.weak.insert(id);
+          g.note_weak(id, format!("filled through a u3_weak pointer \
+            by {}() at {}", cn, loc_str(cur)));
+        }
         env.bind_decl(var.clone(), id);
         if matches!(fm, FillMode::Retained) {
           for (_, p, v) in &evald {
@@ -2926,7 +3153,23 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     }
   }
 
+  //  the declared return type carries the none-ness contract: a
+  //  u3_weak product may be u3_none; any other noun return type
+  //  promises a valid noun (the callee's own body check enforces it),
+  //  so a passthrough product is proven valid by the signature --
+  //  this is how u3x_good blesses its u3_weak argument
+  let weak_prod = is_weak_type(&cal.result_type());
+  let mark_weak = |env: &mut Env, g: &mut Gen, id: ValId| {
+    if weak_prod {
+      env.weak.insert(id);
+      g.note_weak(id, format!("u3_weak product of {}() at {}", cn,
+        loc_str(cur)));
+    }
+  };
   if let Some(v) = pass_vid {
+    if !weak_prod && is_noun_type(&cal.result_type()) {
+      refine_valid(&mut env, v);
+    }
     return Ok((Some(v), Some(env)));
   }
   match &sem.product {
@@ -2934,6 +3177,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     ProductMode::Transfer => {
       let id = new_val(&mut env, RefcountState::Owned {extra: 0}, g);
       g.note_owned(id, format!("created by {}() at {}", cn, loc_str(cur)));
+      mark_weak(&mut env, g, id);
       for v in cons_vids {
         env.contains.entry(id).or_default().insert(v);
       }
@@ -2944,6 +3188,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       //  for container lookups (u3h_git), whose product borrows from
       //  the untracked table, not the key
       let id = new_val(&mut env, RefcountState::Borrowed, g);
+      mark_weak(&mut env, g, id);
       if !config::UNTIED_RETAIN_FNS.contains(&cn) {
         for (_, p, v) in &evald {
           if let (Some(p), Some(v)) = (p, v) {
@@ -2960,6 +3205,7 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     }
     ProductMode::Direct => {
       let id = new_val(&mut env, RefcountState::Direct, g);
+      mark_weak(&mut env, g, id);
       Ok((Some(id), Some(env)))
     }
     ProductMode::Passthrough => {
@@ -2988,6 +3234,16 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
       if let Some((_, sid)) = read_var(&env, &pname) {
         match env.values.get(&sid).copied() {
           Some(RefcountState::Slot) => {
+            //  the pointee type is the contract: only a u3_weak slot
+            //  may receive a possibly-u3_none value
+            if is_noun_type(&lu.ty()) && !is_weak_type(&lu.ty()) {
+              if let Some(d) = weak_desc(&env, g, rvid, rhs) {
+                report!(g, cur, "u3_none",
+                  "{} stored through [{}], a pointer to {}: compare \
+                   against u3_none first",
+                  d, pname, lu.ty().spelling());
+              }
+            }
             return store_slot(cur, env, sid, rvid, g);
           }
           Some(RefcountState::Poisoned) => {
@@ -3001,6 +3257,19 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
     }
   }
 
+  //  declared types are contracts: a possibly-u3_none value may only
+  //  be assigned to a u3_weak lvalue (tracked variable, lazy-tracked
+  //  local, or untracked storage alike)
+  let lty = lhs.ty();
+  let weak_rhs = weak_desc(&env, g, rvid, rhs);
+  if is_noun_type(&lty) && !is_weak_type(&lty) {
+    if let Some(d) = &weak_rhs {
+      report!(g, cur, "u3_none",
+        "{} assigned to {} lvalue: declare it u3_weak, or compare \
+         against u3_none first", d, lty.spelling());
+    }
+  }
+
   let lname = decl_ref_name(lhs);
   if let Some(ln) = &lname {
     if let Some((var, old)) = read_var(&env, ln) {
@@ -3009,6 +3278,12 @@ fn eval_assign(cur: &Cursor, lhs: &Cursor, rhs: &Cursor, env: Env,
       }
       env = unbind_var(env, &var);
       let id = bind_value(&mut env, var, rvid, g);
+      //  a u3_none literal assigned to a u3_weak variable: the fresh
+      //  value is a known none
+      if rvid.is_none() && weak_rhs.is_some() {
+        env.weak.insert(id);
+        g.note_weak(id, format!("u3_none literal at {}", loc_str(cur)));
+      }
       //  a noun value narrowed into a sub-noun-width integer type is
       //  necessarily a direct atom
       if rvid.is_some() && is_direct_type(&lhs.ty()) {
@@ -3188,6 +3463,25 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       if let Some(vid) = eq_vid {
         let eq_env = if op == binop::EQ { &mut te } else { &mut fe };
         refine_direct(eq_env, vid);
+      }
+      //  none-ness refinement: unequal to u3_none proves a valid noun;
+      //  equal to any other literal (a valid noun) does too. A
+      //  comparison against a tracked proven-valid value proves the
+      //  equal branch valid as well
+      for (v, other_lit) in [(lv, lit_r), (rv, lit_l)] {
+        let (Some(v), Some(l)) = (v, other_lit) else { continue; };
+        if l == config::U3_NONE {
+          let ne_env = if op == binop::EQ { &mut fe } else { &mut te };
+          refine_valid(ne_env, v);
+        } else {
+          let eq_env = if op == binop::EQ { &mut te } else { &mut fe };
+          refine_valid(eq_env, v);
+        }
+      }
+      if let (Some(l), Some(r), None, None) = (lv, rv, lit_l, lit_r) {
+        let eq_env = if op == binop::EQ { &mut te } else { &mut fe };
+        if !eq_env.weak.contains(&l) { refine_valid(eq_env, r); }
+        else if !eq_env.weak.contains(&r) { refine_valid(eq_env, l); }
       }
       if let Some((vid, eq_direct, ne_direct)) = fact {
         let (t_dir, f_dir) = if op == binop::EQ {
@@ -3899,6 +4193,30 @@ fn join_l(loc: Loc, lab1: &str, env1: Env, lab2: &str, env2: Env,
     }
   }
 
+  //  possibly-none on either path stays possibly-none: weak marks
+  //  follow the fragment images (a fresh fragment id inherits its
+  //  source's provenance); location-less ids keep their identity
+  let mut weak_joined: IHashSet<ValId> = IHashSet::new();
+  for (wset, map) in [(&env1.weak, &map1), (&env2.weak, &map2)] {
+    for v in wset.iter() {
+      match map.get(v) {
+        Some(imgs) => {
+          for i in imgs {
+            weak_joined.insert(*i);
+            if let Some(w) = g.weak_why.get(v).cloned() {
+              g.note_weak(*i, w);
+            }
+          }
+        }
+        None => {
+          if values_joined.contains_key(v) {
+            weak_joined.insert(*v);
+          }
+        }
+      }
+    }
+  }
+
   Ok(Env {
     values: values_joined,
     vars: vars_joined,
@@ -3906,6 +4224,7 @@ fn join_l(loc: Loc, lab1: &str, env1: Env, lab2: &str, env2: Env,
     contains: cont_joined,
     slots: slots_joined,
     views: views_joined,
+    weak: weak_joined,
   })
 }
 

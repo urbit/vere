@@ -683,3 +683,149 @@ ok_assert_direct(u3_noun a)
     return (c3_w)inc;
   }
 }
+
+/* a lookup that may miss: u3_weak product (control source for the
+** u3_none fixtures below)
+** @Refcount: retains arguments
+*/
+static u3_weak
+weak_find(u3_noun key)
+{
+  if ( c3y == u3a_is_cat(key) ) {
+    return u3k(key);
+  }
+  return u3_none;
+}
+
+/* checks a maybe-none product before using it (control)
+*/
+u3_noun
+ok_weak_flow(u3_noun a)
+{
+  u3_weak fnd = weak_find(u3h(a));
+
+  u3z(a);
+  if ( u3_none == fnd ) {
+    return u3_nul;
+  }
+  return fnd;
+}
+
+/* hands a maybe-none product to a u3_noun parameter
+*/
+u3_noun
+bug_weak_use(u3_noun a)
+{
+  u3_weak fnd = weak_find(u3h(a));
+
+  u3z(a);
+  return u3nc(fnd, u3_nul);     //  BUG: fnd may be u3_none
+}
+
+/* returns a maybe-none product from a u3_noun function
+*/
+u3_noun
+bug_weak_return(u3_noun a)
+{
+  u3_weak fnd = weak_find(u3h(a));
+
+  u3z(a);
+  return fnd;                   //  BUG: fnd may be u3_none
+}
+
+/* returns the u3_none literal from a u3_noun function
+*/
+u3_noun
+bug_weak_lit(u3_noun a)
+{
+  u3z(a);
+  return u3_none;               //  BUG: u3_noun promises a valid noun
+}
+
+/* gains a maybe-none product
+*/
+u3_noun
+bug_weak_gain(u3_noun a)
+{
+  u3_weak fnd = weak_find(u3h(a));
+
+  u3z(a);
+  return u3k(fnd);              //  BUG: u3a_gain asserts on u3_none
+}
+
+/* binds a maybe-none product to a u3_noun variable
+*/
+u3_noun
+bug_weak_bind(u3_noun a)
+{
+  u3_noun fnd = weak_find(u3h(a));  //  BUG: fnd may be u3_none
+
+  u3z(a);
+  return fnd;
+}
+
+/* loses a maybe-none product without checking: safe by default (u3z
+** no-ops on u3_none), reported under --strict-weak
+*/
+u3_noun
+weak_lose_unchecked(u3_noun a)
+{
+  u3_weak fnd = weak_find(u3h(a));
+
+  u3z(a);
+  u3z(fnd);
+  return u3_nul;
+}
+
+/* u3_weak parameter blessed by an inline check (control)
+** @Refcount: retains `may`
+*/
+u3_noun
+ok_weak_param(u3_weak may)
+{
+  if ( u3_none != may ) {
+    return u3k(may);
+  }
+  return u3_nul;
+}
+
+/* u3_weak parameter used without checking
+** @Refcount: retains `may`
+*/
+u3_noun
+bug_weak_param(u3_weak may)
+{
+  return u3k(may);              //  BUG: may can be u3_none
+}
+
+/* equality with a valid literal proves the value is not u3_none
+** @Refcount: retains `may`
+*/
+u3_noun
+ok_weak_eqlit(u3_weak may)
+{
+  if ( 42 == may ) {
+    return u3k(may);
+  }
+  return u3_nul;
+}
+
+/* u3x_good promises a valid product by its u3_noun signature
+** @Refcount: retains `may`
+*/
+u3_noun
+ok_weak_good(u3_weak may)
+{
+  return u3k(u3x_good(may));
+}
+
+/* a u3_none arm makes a conditional product maybe-none
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_weak_ternary(u3_noun a)
+{
+  u3_weak pro = ( c3y == u3a_is_cell(a) ) ? u3t(a) : u3_none;
+
+  return u3k(pro);              //  BUG: pro may be u3_none
+}

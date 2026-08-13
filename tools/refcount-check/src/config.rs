@@ -94,3 +94,14 @@ pub const C3Y: u64 = 0;
 pub const C3N: u64 = 1;
 pub const DIRECT_MAX: u64 = 0x7fff_ffff;
 pub const U3_NONE: u64 = 0xffff_ffff;
+
+/// --strict-weak: also require a proven-valid noun for u3z/u3a_lose.
+/// Off by default: u3z of u3_none is a de-facto safe no-op
+/// (u3a_north/south_is_normal return c3n for it), unlike u3k, which
+/// asserts.
+pub static STRICT_WEAK: std::sync::atomic::AtomicBool =
+  std::sync::atomic::AtomicBool::new(false);
+
+pub fn strict_weak() -> bool {
+  STRICT_WEAK.load(std::sync::atomic::Ordering::Relaxed)
+}

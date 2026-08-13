@@ -634,6 +634,7 @@ struct Args {
   selftest: bool,
   no_pch: bool,
   asserted: bool,
+  strict_weak: bool,
   explain: Option<String>,
 }
 
@@ -679,11 +680,12 @@ fn parse_args() -> Args {
       "--selftest" => a.selftest = true,
       "--no-pch" => a.no_pch = true,
       "--asserted" => a.asserted = true,
+      "--strict-weak" => a.strict_weak = true,
       "-h" | "--help" => {
         println!(
           "usage: refcount-check [--cdb F] [--filter S] [--only S] [--function F] \
           [--libclang PATH] [--verbose] [--selftest] [--no-pch] [--asserted] \
-          [--explain [FILE:]FUNCTION]"
+          [--strict-weak] [--explain [FILE:]FUNCTION]"
         );
         exit(0);
       }
@@ -905,6 +907,8 @@ fn main() {
 
 fn run() -> i32 {
   let args = parse_args();
+  config::STRICT_WEAK.store(args.strict_weak,
+    std::sync::atomic::Ordering::Relaxed);
 
   let lib = args.libclang.clone().or_else(find_libclang);
   if let Err(e) = ast::init(lib.as_deref()) {
@@ -1115,6 +1119,13 @@ fn run() -> i32 {
       ("bug_cond_fill_wrongpath", "leak"),
       ("bug_cond_view_wrongpath", "refcount error"),
       ("skip_back_goto", "complicated"),
+      ("bug_weak_use", "u3_none"),
+      ("bug_weak_return", "u3_none"),
+      ("bug_weak_lit", "u3_none"),
+      ("bug_weak_gain", "u3_none"),
+      ("bug_weak_bind", "u3_none"),
+      ("bug_weak_param", "u3_none"),
+      ("bug_weak_ternary", "u3_none"),
       //  KNOWN LIMITATION: one env per branch cannot carry the
       //  disjunction "a direct OR b direct" past the || join, so the
       //  min-shape reports instead of verifying (u3qa_min/u3qa_max
@@ -1158,6 +1169,12 @@ fn run() -> i32 {
       "ok_vararg_list",
       "ok_git_untied",
       "ok_fnptr_decl",
+      "weak_find",
+      "ok_weak_flow",
+      "ok_weak_param",
+      "ok_weak_eqlit",
+      "ok_weak_good",
+      "weak_lose_unchecked",
     ]);
     let got: HashSet<(&str, &str)> = findings
       .iter()
@@ -1168,12 +1185,42 @@ fn run() -> i32 {
     missing.sort();
     let mut dirty: Vec<_> = clean_fns.intersection(&found_fns).collect();
     dirty.sort();
-    let ok = missing.is_empty() && dirty.is_empty();
+
+    //  second pass under --strict-weak: u3z of a possibly-none value
+    //  is only tolerated by default
+    config::STRICT_WEAK.store(true, std::sync::atomic::Ordering::Relaxed);
+    let idx = Index::new();
+    let mut sem_cache = SemCache::new();
+    let mut src = SrcCache::default();
+    let strict_out = process_entry(&idx, &entries[0],
+      resource_dir.as_deref(), &args, &pchs, &mut sem_cache, &mut src);
+    config::STRICT_WEAK.store(args.strict_weak,
+      std::sync::atomic::Ordering::Relaxed);
+    let strict_got: HashSet<(&str, &str)> = strict_out.findings
+      .iter()
+      .map(|f| (f.func.as_str(), f.cat))
+      .collect();
+    let mut strict_bad: Vec<String> = Vec::new();
+    if !strict_got.contains(&("weak_lose_unchecked", "u3_none")) {
+      strict_bad.push(
+        "missing (\"weak_lose_unchecked\", \"u3_none\")".to_string());
+    }
+    for f in &strict_out.findings {
+      if f.func == "ok_weak_flow" {
+        strict_bad.push(format!("unexpected finding on ok_weak_flow: \
+          [{}] {}", f.cat, f.msg));
+      }
+    }
+
+    let ok = missing.is_empty() && dirty.is_empty() && strict_bad.is_empty();
     if !missing.is_empty() {
       eprintln!("selftest: missing findings: {:?}", missing);
     }
     if !dirty.is_empty() {
       eprintln!("selftest: unexpected findings on: {:?}", dirty);
+    }
+    if !strict_bad.is_empty() {
+      eprintln!("selftest (--strict-weak pass): {}", strict_bad.join("; "));
     }
     eprintln!("selftest: {}", if ok { "PASS" } else { "FAIL" });
     return if ok { 0 } else { 1 };

@@ -562,6 +562,13 @@ pub fn is_noun_ptr_type(t: &Ty) -> bool {
   is_noun_type(&t.pointee_type())
 }
 
+/// The u3_weak typedef: a noun reference that may be u3_none. Every
+/// other noun typedef promises a valid noun.
+pub fn is_weak_type(t: &Ty) -> bool {
+  let s = t.spelling().replace("const ", "");
+  s.trim() == "u3_weak"
+}
+
 /// A type too narrow to hold an indirect noun reference: a noun value
 /// bound to a variable of this type is necessarily a direct atom.
 pub fn is_direct_type(t: &Ty) -> bool {

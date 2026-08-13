@@ -60,6 +60,32 @@ I aimed at ~0% false negative rate, given that the code being checked at least c
 
 Currently it checks refcounting correctness and reference liveness correctness, including modelling unifying equality effects. It also complains if a u3_noun is used in integer arithmetic without checking if it is a direct atom.
 
+### u3_weak / u3_none checking
+
+Declared types are contracts: `u3_weak` means "valid noun OR u3_none",
+every other noun typedef promises a valid noun. The checker tracks
+possibly-none-ness per value ([u3_none] findings):
+
+- sources: products of functions declared to return `u3_weak` (through
+  function pointers too), `u3_weak` parameters, fills through `u3_weak*`
+  out-params, the `u3_none` literal, and conditionals with a `u3_none`
+  arm;
+- sinks (strict, at every binding): a possibly-none value must not be
+  bound to / assigned to / stored through / passed as / returned as a
+  non-weak noun type. `u3k` of a possibly-none value is always an error
+  (`u3a_gain` asserts on `u3_none`), as are `u3h`/`u3t`, the
+  `u3a_is_*` guards (`u3a_is_dog(u3_none)` is yes), and destructurers;
+- refinement: comparing `!= u3_none` proves the value valid on that
+  branch (`== u3_none` proves it valid on the other); comparing equal
+  to any valid literal or to a proven-valid value does too. A function
+  whose signature returns a non-weak noun type blesses its passthrough
+  product -- this is how `u3x_good` works, with no special-casing: its
+  own body is checked against its `u3_noun` signature;
+- exemption: `u3z`/`u3a_lose` of a possibly-none value is tolerated by
+  default -- it is a de-facto safe no-op (`u3a_north/south_is_normal`
+  return `c3n` for `u3_none`). The `--strict-weak` flag turns it into
+  a finding too.
+
 ## U3 refcount protocol conventions, extended
 
 To quote u3.md:
