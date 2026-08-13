@@ -760,6 +760,31 @@ fn sem_brief(sem: &Sem) -> String {
   parts.join(", ")
 }
 
+/// Fast textual sweep over a definition's source extent: does it
+/// mention any noun typedef as a whole word? Decides whether a
+/// function with no nouns in its signature is worth checking anyway.
+fn mentions_noun_types(cur: &Cursor, src: &mut SrcCache) -> bool {
+  let s = cur.extent_start();
+  let e = cur.extent_end();
+  let Some(f) = &s.file else { return false; };
+  let bytes = src.bytes(f);
+  let lo = s.offset as usize;
+  let hi = (e.offset as usize).min(bytes.len());
+  if lo >= hi {
+    return false;
+  }
+  let text = &bytes[lo..hi];
+  let word = |b: u8| b == b'_' || b.is_ascii_alphanumeric();
+  config::NOUN_TYPES.iter().any(|t| {
+    let t = t.as_bytes();
+    text.windows(t.len()).enumerate().any(|(i, w)| {
+      w == t
+        && (i == 0 || !word(text[i - 1]))
+        && text.get(i + t.len()).is_none_or(|b| !word(*b))
+    })
+  })
+}
+
 fn process_entry(
   idx: &Index,
   e: &Entry,
@@ -818,13 +843,15 @@ fn process_entry(
         continue;
       }
     }
-    // only functions that take or return nouns
+    // only functions that take or return nouns -- or, for a nounless
+    // signature (driver callbacks and friends), whose body mentions a
+    // noun typedef: those still hold nouns in locals and can leak
     let takes = cur
       .arguments()
       .iter()
       .any(|p| p.kind() == clang_sys::CXCursor_ParmDecl && is_noun_type(&p.ty()));
     let rets = is_noun_type(&cur.result_type());
-    if !takes && !rets {
+    if !takes && !rets && !mentions_noun_types(&cur, src) {
       continue;
     }
     let sem = resolve_sem(&cur, sem_cache, src);
