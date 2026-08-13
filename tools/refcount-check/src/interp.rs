@@ -2183,6 +2183,21 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
     (None, Some(fe)) => return Ok((f_vid, Some(fe))),
     (Some(te), Some(fe)) => (te, fe),
   };
+  //  mixed literal/value product: mint a stand-in for the product in
+  //  the value branch, so the product's facts stay per-branch instead
+  //  of fusing with the variable's own binding across the join --
+  //  `(hav == u3_none) ? u3_nul : hav` produces a proven-valid noun
+  //  even though [hav] itself is maybe-none after the join
+  let none_lit =
+    |c: &Cursor| int_literal_value(c) == Some(config::U3_NONE);
+  let (mut te, mut fe) = (te, fe);
+  let (t_vid, f_vid) = match (t_vid, f_vid) {
+    (Some(v), None) =>
+      (Some(ternary_standin(cur, &mut te, v, none_lit(b), g)), None),
+    (None, Some(v)) =>
+      (None, Some(ternary_standin(cur, &mut fe, v, none_lit(a), g))),
+    other => other,
+  };
   let mut joined = join(cur.location(), te.clone(), fe.clone(), g)?;
 
   //  branch result ids may be renamed by the join: a value that had
@@ -2194,22 +2209,13 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
       None => v,
     }
   };
-  //  a u3_none literal in one arm makes the product possibly-none
-  let none_lit =
-    |c: &Cursor| int_literal_value(c) == Some(config::U3_NONE);
   let vid = match (t_vid, f_vid) {
     (None, None) => None,
     //  one branch has no tracked value (a literal: reading a direct
-    //  atom adds no obligations): the other side's value passes
-    //  through -- weakened if the untracked arm is u3_none
-    (Some(v), None) => {
-      let v2 = resolve(&te, &joined, v);
-      Some(weaken_ternary_val(cur, &mut joined, v2, none_lit(b), g))
-    }
-    (None, Some(v)) => {
-      let v2 = resolve(&fe, &joined, v);
-      Some(weaken_ternary_val(cur, &mut joined, v2, none_lit(a), g))
-    }
+    //  atom adds no obligations): the stand-in minted above passes
+    //  through (location-less, so resolve keeps its identity)
+    (Some(v), None) => Some(resolve(&te, &joined, v)),
+    (None, Some(v)) => Some(resolve(&fe, &joined, v)),
     (Some(av), Some(bv)) => {
       let a2 = resolve(&te, &joined, av);
       let b2 = resolve(&fe, &joined, bv);
@@ -2223,32 +2229,48 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
   Ok((vid, Some(joined)))
 }
 
-/// One ternary arm was the u3_none literal: the product may be none.
-/// The other arm's value gets a weak-marked stand-in where possible, so
-/// a live variable aliasing it is not falsely tainted; an owned value
-/// keeps its identity (its count must stay attributable) and is marked
-/// in place.
-fn weaken_ternary_val(cur: &Cursor, env: &mut Env, v: ValId,
-  weaken: bool, g: &mut Gen) -> ValId
+/// The product of a ternary whose other arm is an untracked literal:
+/// a fresh stand-in value in the value-arm env carrying the branch's
+/// facts. Validity is per-branch (`(hav == u3_none) ? u3_nul : hav`
+/// produces a valid noun while [hav] stays maybe-none after the join);
+/// a u3_none arm makes the product possibly-none regardless. An owned
+/// variable hands its count to the product and keeps an uncounted
+/// view (consuming the product poisons it).
+fn ternary_standin(cur: &Cursor, env: &mut Env, v: ValId,
+  none_arm: bool, g: &mut Gen) -> ValId
 {
-  if !weaken || env.weak.contains(&v) {
-    return v;
-  }
-  let id = match env.values.get(&v) {
-    Some(RefcountState::Borrowed) => {
-      let id = new_val(env, RefcountState::Borrowed, g);
-      env.contains.entry(v).or_default().insert(id);
-      id
+  let pro = match *env.values.get(&v).expect(LI) {
+    RefcountState::Borrowed => {
+      let pro = new_val(env, RefcountState::Borrowed, g);
+      env.contains.entry(v).or_default().insert(pro);
+      pro
     }
-    Some(RefcountState::Direct) => {
-      new_val(env, RefcountState::Direct, g)
+    RefcountState::Direct => new_val(env, RefcountState::Direct, g),
+    RefcountState::Owned {extra} => {
+      let pro = new_val(env, RefcountState::Owned {extra}, g);
+      env.values.insert(v, RefcountState::Borrowed);
+      env.contains.entry(pro).or_default().insert(v);
+      if let Some(w) = g.owned_at.get(&v).cloned() {
+        g.note_owned(pro, w);
+      }
+      pro
     }
-    _ => v,
+    //  Uninit/Poisoned/Slot/Passthrough: keep the identity, the use
+    //  sites report
+    _ => return v,
   };
-  env.weak.insert(id);
-  g.note_weak(id, format!("u3_none arm of the conditional at {}",
-    loc_str(cur)));
-  id
+  if env.weak.contains(&v) {
+    env.weak.insert(pro);
+    if let Some(w) = g.weak_why.get(&v).cloned() {
+      g.note_weak(pro, w);
+    }
+  }
+  if none_arm && !env.weak.contains(&pro) {
+    env.weak.insert(pro);
+    g.note_weak(pro, format!("u3_none arm of the conditional at {}",
+      loc_str(cur)));
+  }
+  pro
 }
 
 /// The two branches of a ternary produced different values: unify their
