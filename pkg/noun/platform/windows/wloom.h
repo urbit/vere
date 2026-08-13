@@ -68,6 +68,15 @@
     c3_o
     u3_wnd_loom_unmapf(void);
 
+  /* u3_wnd_truncate(): resize [fid_i] to [off_d]. 0 on success, -1 on error.
+  **
+  **   the CRT reports every cause of a failed resize as EACCES, which does
+  **   not distinguish a still-mapped file from a sharing violation from a
+  **   permissions problem. this reports the win32 error.
+  */
+    c3_i
+    u3_wnd_truncate(c3_i fid_i, c3_d off_d);
+
   /* u3_wnd_loom_hold(): reserve a stale loom of [len_i] at [bas_v], and map
   **                     [byt_i] bytes of [fid_i] writable over its bottom.
   **

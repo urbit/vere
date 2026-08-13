@@ -820,10 +820,17 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
       u3_assert(0);
     }
 
+#ifdef U3_OS_windows
+    if ( u3_wnd_truncate(img_u->fid_i, (c3_d)off_z) ) {
+      fprintf(stderr, "loom: image truncate to %zu failed\r\n", off_z);
+      u3_assert(0);
+    }
+#else
     if ( ftruncate(img_u->fid_i, off_i) ) {
       fprintf(stderr, "loom: image truncate: %s\r\n", strerror(errno));
       u3_assert(0);
     }
+#endif
   }
 
   img_u->pgs_w = pgs_w;
@@ -1054,7 +1061,24 @@ _ce_loom_unmapf(void)
 {
 #ifdef U3_OS_windows
   if ( !(u3C.wag_h & u3o_no_demand) ) {
+    c3_c pax_c[8192];
+
     u3_assert( c3y == u3_wnd_loom_unmapf() );
+
+    //  windows keeps a file's section attached to the handle that created
+    //  it, so dropping the view is not enough to allow a truncate: the
+    //  descriptor has to be cycled as well.
+    //
+    snprintf(pax_c, 8192, "%s/.urb/chk/%s.bin", u3P.dir_c, u3P.img_u.nam_c);
+
+    if ( -1 != u3P.img_u.fid_i ) {
+      close(u3P.img_u.fid_i);
+    }
+
+    if ( -1 == (u3P.img_u.fid_i = c3_open(pax_c, O_RDWR, 0666)) ) {
+      fprintf(stderr, "loom: image reopen %s: %s\r\n", pax_c, strerror(errno));
+      u3_assert(0);
+    }
   }
 #endif
 }

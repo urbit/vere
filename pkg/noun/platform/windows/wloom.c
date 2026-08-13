@@ -148,6 +148,45 @@ _wnd_procs(void)
   return c3n;
 }
 
+/* u3_wnd_truncate(): resize [fid_i] to [off_d].
+*/
+c3_i
+u3_wnd_truncate(c3_i fid_i, c3_d off_d)
+{
+  HANDLE        fil_h = (HANDLE)_get_osfhandle(fid_i);
+  LARGE_INTEGER off_u;
+
+  if ( INVALID_HANDLE_VALUE == fil_h ) {
+    fprintf(stderr, "loom: truncate: bad fd %d\r\n", fid_i);
+    return -1;
+  }
+
+  off_u.QuadPart = (LONGLONG)off_d;
+
+  if ( !SetFilePointerEx(fil_h, off_u, NULL, FILE_BEGIN) ) {
+    _wnd_fail("truncate seek");
+    return -1;
+  }
+
+  if ( !SetEndOfFile(fil_h) ) {
+    DWORD err_u = GetLastError();
+
+    _wnd_fail("truncate");
+
+    //  1224. the file still has a section, and windows keeps one attached
+    //  to the handle that created it until that handle is closed.
+    //
+    if ( ERROR_USER_MAPPED_FILE == err_u ) {
+      fprintf(stderr, "loom: image is still mapped; a view or a descriptor "
+                      "that created one has not been released\r\n");
+    }
+
+    return -1;
+  }
+
+  return 0;
+}
+
 /* _wnd_hold(): collapse the current mapping into one placeholder.
 */
 static c3_o
@@ -544,16 +583,34 @@ u3_wnd_loom_drop(void* bas_v)
 {
   _wnd_reg* reg_u = _wnd_find(bas_v);
 
-  if ( !reg_u || (reg_u == &wnd_u[0]) ) {
+  if ( !reg_u ) {
+    fprintf(stderr, "loom: drop: no region at %p\r\n", bas_v);
+    return c3n;
+  }
+
+  if ( reg_u == &wnd_u[0] ) {
+    fprintf(stderr, "loom: drop: refusing to drop the live loom\r\n");
+    return c3n;
+  }
+
+  //  NB: the image view must go, or the file stays mapped.
+  //
+  if ( !wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
+    _wnd_fail("drop unmap low");
     return c3n;
   }
 
   if ( reg_u->map_i ) {
-    wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER);
-    wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER);
-  }
-  else {
-    wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER);
+    if ( !wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i,
+                    MEM_PRESERVE_PLACEHOLDER) )
+    {
+      _wnd_fail("drop unmap high");
+      return c3n;
+    }
+
+    //  the reservation was split, so each half is released on its own
+    //
+    VirtualFree((c3_y*)reg_u->bas_v + reg_u->map_i, 0, MEM_RELEASE);
   }
 
   VirtualFree(reg_u->bas_v, 0, MEM_RELEASE);

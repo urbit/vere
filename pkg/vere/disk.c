@@ -1828,13 +1828,13 @@ _disk_drop_stale_loom(c3_i fid_i)
 {
 #ifdef VERE64
 # ifdef U3_OS_windows
-  u3_wnd_loom_drop(u3_Loom_h);
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_h) );
 # else
   munmap(u3_Loom_h, (size_t)1 << u3_Host.ops_u.lom_y);
 # endif
 #else
 # ifdef U3_OS_windows
-  u3_wnd_loom_drop(u3_Loom_v4);
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_v4) );
 # else
   munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
 # endif
