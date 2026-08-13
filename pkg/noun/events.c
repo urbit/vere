@@ -252,7 +252,10 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 #ifdef U3_GUARD_PAGE
   c3_w gar_w = u3P.gar_w;
 
-  if ( pag_w == gar_w ) {
+  //  NB: a zero [gar_w] means unposted, not page zero. u3m_boot_lite()
+  //  paves the loom before u3e_init(), so page zero can fault first.
+  //
+  if ( gar_w && (pag_w == gar_w) ) {
     u3e_flaw fal_e = _ce_ward_clip(low_p >> u3a_page, hig_p >> u3a_page);
 
     if ( u3e_flaw_good != fal_e ) {
@@ -272,16 +275,9 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-#ifdef U3_OS_windows
-  //  a sparse loom faults on the first touch of a reserved page. these are
-  //  volatile pages, and so are already dirty in the bitmap -- this must
-  //  precede the dirty check, which would otherwise call them strange.
+  //  NB: on windows, a first touch of a reserved page has already been
+  //  resolved by u3m_fault(), which must do it before reading the road.
   //
-  if ( c3y == u3_wnd_loom_fault(_ce_ptr(pag_w), _ce_page) ) {
-    return u3e_flaw_good;
-  }
-#endif
-
   if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%"PRIc3_w"): %"PRIxc3_w"\r\n", pag_w, off_p);
     return u3e_flaw_sham;

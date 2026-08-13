@@ -2339,6 +2339,22 @@ u3m_fault(void* adr_v, c3_i ser_i)
     return 0;
   }
 
+#ifdef U3_OS_windows
+  //  a sparse loom faults on the first touch of a page. resolve that here,
+  //  ahead of everything else: u3m_water() reads the road, which lives in
+  //  the loom and may itself be untouched, and u3e_fault() cannot tell a
+  //  first touch of page 0 from a guard page that has yet to be posted.
+  //
+  {
+    size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
+    void*  pag_v = (void *)((uintptr_t)adr_w & ~(uintptr_t)(pag_i - 1));
+
+    if ( c3y == u3_wnd_loom_fault(pag_v, pag_i) ) {
+      return 1;
+    }
+  }
+#endif
+
   u3m_water(&low_p, &hig_p);
 
   switch ( u3e_fault(low_p, hig_p, u3a_outa(adr_w)) ) {
