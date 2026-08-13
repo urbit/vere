@@ -733,8 +733,19 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
         //  the output flow's local env is false env + breaks
         //
         mayb_join(cur.location(), Some(env.clone()), cont, g)?;
-        mayb_join(cur.location(), Some(env), fall, g)?;
-        return done_flo.join(cur.extent_end(), f_op_env, g);
+        mayb_join(cur.location(), Some(env), fall.clone(), g)?;
+        //  the loop also exits AFTER an iteration: the condition's
+        //  false branch over the body-end env. Joining it with the
+        //  zero-iteration exit lets a variable initialized inside the
+        //  body survive the loop (its pre-loop Uninit adopts the
+        //  initialized side); the exit refinement is re-applied by the
+        //  second cond evaluation, so it survives too
+        let f_fall = match fall {
+          Some(fe) => eval_cond(cond, fe, depth, g)?.1,
+          None => None,
+        };
+        let f_exit = mayb_join(cur.extent_end(), f_op_env, f_fall, g)?;
+        return done_flo.join(cur.extent_end(), f_exit, g);
       }
     }
   }
@@ -786,13 +797,20 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
         let (done_flo, fall, cont) = execute_loop_body(&body,
           loop_flo, inc, depth + 2, g)?;
         mayb_join(cur.location(), cont, Some(env.clone()), g)?;
-        mayb_join(cur.location(), fall, Some(env), g)?;
+        mayb_join(cur.location(), fall.clone(), Some(env), g)?;
+        //  post-iteration exit through the condition's false branch
+        //  (see WhileStmt); a condition-less for has no fall-out exit
+        let f_fall = match (&cond, fall) {
+          (Some(c), Some(fe)) => eval_cond(c, fe, depth, g)?.1,
+          _ => None,
+        };
+        let f_exit = mayb_join(cur.extent_end(), f_op_env, f_fall, g)?;
         //  the for-init scope ends here, on every exit path
         let done_flo = done_flo.scope_done(cur.extent_end(), depth + 1, g)?;
-        let f_op_env = f_op_env
+        let f_exit = f_exit
           .map(|e| end_scope(cur.extent_end(), e, depth + 1, g))
           .transpose()?;
-        return done_flo.join(cur.extent_end(), f_op_env, g);
+        return done_flo.join(cur.extent_end(), f_exit, g);
       }
     }
   }
@@ -3872,6 +3890,10 @@ fn join_l(loc: Loc, lab1: &str, env1: Env, lab2: &str, env2: Env,
   let mut map2: HashMap<ValId, Vec<ValId>> = HashMap::new();
   let mut kept1: HashMap<ValId, u32> = HashMap::new();
   let mut kept2: HashMap<ValId, u32> = HashMap::new();
+  //  every noun fragment with its source groups and their states, for
+  //  the count-rescue pass below
+  let mut frag_info: Vec<(ValId, Option<ValId>, Option<ValId>,
+    RefcountState, RefcountState)> = Vec::new();
 
   //  slot-pointer fragments join AFTER the noun fragments: hole owners
   //  are noun values, and reconciling two holes needs the owners'
@@ -3937,6 +3959,44 @@ fn join_l(loc: Loc, lab1: &str, env1: Env, lab2: &str, env2: Env,
     if let Some(v) = k2 {
       map2.entry(*v).or_default().push(id);
       if matches!(rc, Owned {..}) { *kept2.entry(*v).or_insert(0) += 1; }
+    }
+    frag_info.push((id, *k1, *k2, s1, s2));
+  }
+
+  //  count rescue: a split owned group whose count landed in NO
+  //  fragment lost it to the other path consuming the value AND
+  //  rebinding every shared name -- `if (c) { u3z(x); y = u3_nul; }
+  //  else { y = x; }` is legal, the count lives on through [y] on the
+  //  else path. The single fragment the other side has NOT consumed
+  //  keeps the count; ambiguity (several candidates) stays an error
+  for (env, kept, mine) in
+    [(&env1, &mut kept1, 1u8), (&env2, &mut kept2, 2u8)]
+  {
+    let mut groups: Vec<ValId> = env.vars.keys().copied().collect();
+    groups.sort();
+    for v in groups {
+      let Some(Owned {extra}) = env.values.get(&v).copied() else {
+        continue;
+      };
+      if kept.get(&v).copied().unwrap_or(0) != 0 {
+        continue;
+      }
+      let cands: Vec<ValId> = frag_info.iter()
+        .filter(|(id, k1, k2, s1, s2)| {
+          let (own_k, oth_s) = if mine == 1 { (k1, s2) } else { (k2, s1) };
+          *own_k == Some(v)
+            && !matches!(oth_s, Poisoned)
+            && matches!(values_joined.get(id), Some(Borrowed))
+        })
+        .map(|(id, ..)| *id)
+        .collect();
+      if let [id] = cands[..] {
+        values_joined.insert(id, Owned {extra});
+        if let Some(w) = g.owned_at.get(&v).cloned() {
+          g.note_owned(id, w);
+        }
+        kept.insert(v, 1);
+      }
     }
   }
 

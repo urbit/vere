@@ -1175,6 +1175,8 @@ fn run() -> i32 {
       "ok_weak_eqlit",
       "ok_weak_good",
       "weak_lose_unchecked",
+      "ok_loop_init",
+      "ok_consume_or_alias",
     ]);
     let got: HashSet<(&str, &str)> = findings
       .iter()

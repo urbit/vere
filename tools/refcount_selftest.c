@@ -829,3 +829,38 @@ bug_weak_ternary(u3_noun a)
 
   return u3k(pro);              //  BUG: pro may be u3_none
 }
+
+/* a variable initialized inside the loop body survives the loop: the
+** post-iteration exit joins the zero-iteration exit, and pre-loop
+** Uninit adopts the initialized side
+** @Refcount: retains `a`
+*/
+u3_noun
+ok_loop_init(u3_noun a)
+{
+  u3_noun las;
+
+  while ( u3_nul != a ) {
+    las = u3h(a);
+    a = u3t(a);
+  }
+  return u3k(las);
+}
+
+/* one path consumes the value, the other stashes it in an alias: the
+** count survives through [b] on the else path (join count rescue)
+*/
+u3_noun
+ok_consume_or_alias(u3_noun a)
+{
+  u3_noun b;
+
+  if ( c3y == u3du(a) ) {
+    u3z(a);
+    b = u3_nul;
+  }
+  else {
+    b = a;
+  }
+  return b;
+}
