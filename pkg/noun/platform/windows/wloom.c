@@ -81,10 +81,12 @@ typedef BOOL  (WINAPI *_wnd_unmapex_f)(PVOID, ULONG);
 //  the live loom; the rest are stale looms held open during migration,
 //  which sit at their own bases and coexist with it.
 //
+//  NB: occupancy is [len_i], not a c3_o. a loobean c3y is 0, so a zeroed
+//  "in use" flag reads as *yes*, and every slot would look taken.
+//
 typedef struct {
-  c3_o   yes_o;   //  slot in use
   void*  bas_v;   //  base
-  size_t len_i;   //  length, bytes
+  size_t len_i;   //  length, bytes (0 if slot free)
   size_t map_i;   //  image mapping length, bytes (0 if none)
   HANDLE sec_h;   //  pagefile section backing the volatile part
 } _wnd_reg;
@@ -288,30 +290,27 @@ static c3_o
 _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
 {
   SYSTEM_INFO inf_u;
+  HANDLE      sec_h;
 
   if ( c3n == _wnd_procs() ) {
     return c3n;
   }
 
   GetSystemInfo(&inf_u);
-
-  reg_u->bas_v = bas_v;
-  reg_u->len_i = len_i;
-  reg_u->map_i = 0;
-  wnd_gan_i    = inf_u.dwAllocationGranularity;
+  wnd_gan_i = inf_u.dwAllocationGranularity;
 
   //  SEC_RESERVE: the section's pages are reserved, not committed, so the
   //  loom costs commit charge only as it is touched. windows does not
   //  overcommit, and a committed section of the whole loom cannot be
   //  created at all on a box whose RAM plus paging file is smaller.
   //
-  reg_u->sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
-                                    PAGE_READWRITE | SEC_RESERVE,
-                                    (DWORD)((c3_d)len_i >> 32),
-                                    (DWORD)(len_i & 0xffffffffULL),
-                                    NULL);
+  sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
+                             PAGE_READWRITE | SEC_RESERVE,
+                             (DWORD)((c3_d)len_i >> 32),
+                             (DWORD)(len_i & 0xffffffffULL),
+                             NULL);
 
-  if ( !reg_u->sec_h ) {
+  if ( !sec_h ) {
     _wnd_fail("loom section");
     return c3n;
   }
@@ -321,22 +320,26 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
                   NULL, 0) )
   {
     _wnd_fail("reserve");
-    CloseHandle(reg_u->sec_h);
-    reg_u->sec_h = NULL;
+    CloseHandle(sec_h);
     return c3n;
   }
 
-  if ( !wnd_map_f(reg_u->sec_h, NULL, bas_v, 0, len_i,
+  if ( !wnd_map_f(sec_h, NULL, bas_v, 0, len_i,
                   MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
   {
     _wnd_fail("map loom");
     VirtualFree(bas_v, 0, MEM_RELEASE);
-    CloseHandle(reg_u->sec_h);
-    reg_u->sec_h = NULL;
+    CloseHandle(sec_h);
     return c3n;
   }
 
-  reg_u->yes_o = c3y;
+  //  NB: committed to the slot only on success, so that a failed
+  //  reservation leaves it free rather than half-claimed.
+  //
+  reg_u->bas_v = bas_v;
+  reg_u->len_i = len_i;
+  reg_u->map_i = 0;
+  reg_u->sec_h = sec_h;
 
   return c3y;
 }
@@ -352,7 +355,7 @@ _wnd_find(void* adr_v)
   for ( i_w = 0; i_w < _wnd_regs; i_w++ ) {
     c3_y* bas_y = (c3_y*)wnd_u[i_w].bas_v;
 
-    if (  (c3y == wnd_u[i_w].yes_o)
+    if (  wnd_u[i_w].len_i
        && (adr_y >= bas_y)
        && (adr_y < (bas_y + wnd_u[i_w].len_i)) )
     {
@@ -390,7 +393,7 @@ u3_wnd_loom_gran(void)
 c3_o
 u3_wnd_loom_live(void)
 {
-  return wnd_u[0].yes_o;
+  return wnd_u[0].len_i ? c3y : c3n;
 }
 
 /* u3_wnd_loom_commit(): commit [len_i] bytes at [adr_v].
@@ -451,7 +454,7 @@ u3_wnd_loom_fault(void* adr_v, size_t len_i)
 c3_o
 u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i)
 {
-  if ( c3y != wnd_u[0].yes_o ) {
+  if ( !wnd_u[0].len_i ) {
     fprintf(stderr, "loom: mapf without placeholder loom\r\n");
     return c3n;
   }
@@ -464,7 +467,7 @@ u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i)
 c3_o
 u3_wnd_loom_unmapf(void)
 {
-  if ( (c3y != wnd_u[0].yes_o) || !wnd_u[0].map_i ) {
+  if ( !wnd_u[0].len_i || !wnd_u[0].map_i ) {
     return c3y;
   }
 
@@ -482,7 +485,7 @@ u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
   c3_w      i_w;
 
   for ( i_w = 1; i_w < _wnd_regs; i_w++ ) {
-    if ( c3y != wnd_u[i_w].yes_o ) {
+    if ( !wnd_u[i_w].len_i ) {
       reg_u = &wnd_u[i_w];
       break;
     }
@@ -570,7 +573,7 @@ u3_wnd_loom_yolo(void)
   c3_y* end_y = bas_y + wnd_u[0].len_i;
   c3_y* cur_y = bas_y;
 
-  if ( c3y != wnd_u[0].yes_o ) {
+  if ( !wnd_u[0].len_i ) {
     return c3n;
   }
 
