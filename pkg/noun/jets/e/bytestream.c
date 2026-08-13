@@ -193,9 +193,8 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
   c3_d tot_d = 0;
 
   u3_noun octs_list_start = octs_list;
-  u3_weak octs = u3_none;
+  u3_noun octs;
   // Last non-zero octs
-  u3_weak last_octs = u3_none;
 
   while (octs_list != u3_nul) {
 
@@ -908,6 +907,9 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   u3_noun lad = u3kb_flop(dal);
   u3_weak data = _qe_bytestream_can_octs(lad);
   u3z(lad);
+  if ( u3_none == data ) {
+    return u3_none;
+  }
 
   new_sea = u3nc(u3i_word(pos_w), u3k(octs));
 
