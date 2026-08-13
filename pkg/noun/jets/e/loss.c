@@ -244,7 +244,7 @@
   {
     while ( u3_nul != loc_u->hel ) {
       u3_noun i_hel = u3h(loc_u->hel);
-      u3_noun guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
+      u3_weak guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
 
       if ( u3_none != guy ) {
         u3_noun gay = u3kb_flop(guy);
