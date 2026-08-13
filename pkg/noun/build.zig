@@ -190,6 +190,9 @@ pub fn build(b: *std.Build) !void {
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
+    if (t.os.tag == .windows)
+        pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
+
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
         .linux => "platform/linux/rsignal.h",

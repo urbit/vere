@@ -77,17 +77,25 @@ typedef PVOID (WINAPI *_wnd_mapview3_f)(HANDLE, HANDLE, PVOID, ULONG64,
                                         SIZE_T, ULONG, ULONG, void*, ULONG);
 typedef BOOL  (WINAPI *_wnd_unmapex_f)(PVOID, ULONG);
 
-static struct {
-  c3_o            yes_o;   //  placeholder apis resolved
-  void*           bas_v;   //  loom base
-  size_t          len_i;   //  loom length, bytes
-  size_t          map_i;   //  image mapping length, bytes (0 if none)
-  HANDLE          sec_h;   //  pagefile section backing the loom
-  size_t          gan_i;   //  allocation granularity
-  _wnd_valloc2_f  val_f;
-  _wnd_mapview3_f map_f;
-  _wnd_unmapex_f  unm_f;
-} wnd_u;
+//  a region of address space we have reserved as a placeholder. slot 0 is
+//  the live loom; the rest are stale looms held open during migration,
+//  which sit at their own bases and coexist with it.
+//
+typedef struct {
+  c3_o   yes_o;   //  slot in use
+  void*  bas_v;   //  base
+  size_t len_i;   //  length, bytes
+  size_t map_i;   //  image mapping length, bytes (0 if none)
+  HANDLE sec_h;   //  pagefile section backing the volatile part
+} _wnd_reg;
+
+#define _wnd_regs 2
+
+static _wnd_reg       wnd_u[_wnd_regs];
+static size_t         wnd_gan_i;   //  allocation granularity
+static _wnd_valloc2_f wnd_val_f;
+static _wnd_mapview3_f wnd_map_f;
+static _wnd_unmapex_f  wnd_unm_f;
 
 /* _wnd_fail(): report a win32 failure.
 */
@@ -121,14 +129,14 @@ _wnd_procs(void)
   }
 
   if ( mod_h ) {
-    wnd_u.val_f = (_wnd_valloc2_f)(void*)
+    wnd_val_f = (_wnd_valloc2_f)(void*)
                     GetProcAddress(mod_h, "VirtualAlloc2");
-    wnd_u.map_f = (_wnd_mapview3_f)(void*)
+    wnd_map_f = (_wnd_mapview3_f)(void*)
                     GetProcAddress(mod_h, "MapViewOfFile3");
-    wnd_u.unm_f = (_wnd_unmapex_f)(void*)
+    wnd_unm_f = (_wnd_unmapex_f)(void*)
                     GetProcAddress(mod_h, "UnmapViewOfFileEx");
 
-    if ( wnd_u.val_f && wnd_u.map_f && wnd_u.unm_f ) {
+    if ( wnd_val_f && wnd_map_f && wnd_unm_f ) {
       return c3y;
     }
   }
@@ -141,22 +149,22 @@ _wnd_procs(void)
 /* _wnd_hold(): collapse the current mapping into one placeholder.
 */
 static c3_o
-_wnd_hold(void)
+_wnd_hold(_wnd_reg* reg_u)
 {
-  c3_y* bas_y = (c3_y*)wnd_u.bas_v;
+  c3_y* bas_y = (c3_y*)reg_u->bas_v;
 
-  if ( !wnd_u.unm_f(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
+  if ( !wnd_unm_f(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
     _wnd_fail("unmap low");
     return c3n;
   }
 
-  if ( wnd_u.map_i ) {
-    if ( !wnd_u.unm_f(bas_y + wnd_u.map_i, MEM_PRESERVE_PLACEHOLDER) ) {
+  if ( reg_u->map_i ) {
+    if ( !wnd_unm_f(bas_y + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER) ) {
       _wnd_fail("unmap high");
       return c3n;
     }
 
-    if ( !VirtualFree(bas_y, wnd_u.len_i,
+    if ( !VirtualFree(bas_y, reg_u->len_i,
                       MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS) )
     {
       _wnd_fail("coalesce");
@@ -164,7 +172,7 @@ _wnd_hold(void)
     }
   }
 
-  wnd_u.map_i = 0;
+  reg_u->map_i = 0;
 
   return c3y;
 }
@@ -194,21 +202,22 @@ _wnd_image(c3_i fid_i, size_t byt_i)
   return sec_h;
 }
 
-/* _wnd_remap(): rebuild the loom mapping with [byt_i] bytes of [fid_i].
+/* _wnd_remap(): rebuild [reg_u] with [byt_i] bytes of [fid_i], leaving the
+**               image pages protected [pro_u].
 */
 static c3_o
-_wnd_remap(c3_i fid_i, size_t byt_i)
+_wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
 {
-  c3_y*  bas_y = (c3_y*)wnd_u.bas_v;
+  c3_y*  bas_y = (c3_y*)reg_u->bas_v;
   HANDLE img_h = NULL;
   DWORD  old_u;
 
-  if ( byt_i % wnd_u.gan_i ) {
+  if ( byt_i % wnd_gan_i ) {
     fprintf(stderr, "loom: unaligned image mapping (%zu)\r\n", byt_i);
     return c3n;
   }
 
-  if ( byt_i >= wnd_u.len_i ) {
+  if ( byt_i >= reg_u->len_i ) {
     fprintf(stderr, "loom: image mapping too big (%zu)\r\n", byt_i);
     return c3n;
   }
@@ -220,7 +229,7 @@ _wnd_remap(c3_i fid_i, size_t byt_i)
     return c3n;
   }
 
-  if ( c3n == _wnd_hold() ) {
+  if ( c3n == _wnd_hold(reg_u) ) {
     if ( img_h ) {
       CloseHandle(img_h);
     }
@@ -236,7 +245,7 @@ _wnd_remap(c3_i fid_i, size_t byt_i)
       return c3n;
     }
 
-    if ( !wnd_u.map_f(img_h, NULL, bas_y, 0, byt_i,
+    if ( !wnd_map_f(img_h, NULL, bas_y, 0, byt_i,
                       MEM_REPLACE_PLACEHOLDER, PAGE_WRITECOPY, NULL, 0) )
     {
       _wnd_fail("map image");
@@ -244,10 +253,13 @@ _wnd_remap(c3_i fid_i, size_t byt_i)
       return c3n;
     }
 
-    //  the view is created write-copy so that it *can* be dirtied, but
-    //  runs read-only so that dirtying faults.
+    //  the view is created write-copy so that it *can* be dirtied. the
+    //  live loom then runs it read-only, so that dirtying faults; a stale
+    //  loom is scratch, and stays writable.
     //
-    if ( !VirtualProtect(bas_y, byt_i, PAGE_READONLY, &old_u) ) {
+    if (  (PAGE_WRITECOPY != pro_u)
+       && !VirtualProtect(bas_y, byt_i, pro_u, &old_u) )
+    {
       _wnd_fail("protect image");
       CloseHandle(img_h);
       return c3n;
@@ -256,11 +268,11 @@ _wnd_remap(c3_i fid_i, size_t byt_i)
     //  the view holds its own reference
     //
     CloseHandle(img_h);
-    wnd_u.map_i = byt_i;
+    reg_u->map_i = byt_i;
   }
 
-  if ( !wnd_u.map_f(wnd_u.sec_h, NULL, bas_y + byt_i, (ULONG64)byt_i,
-                    wnd_u.len_i - byt_i,
+  if ( !wnd_map_f(reg_u->sec_h, NULL, bas_y + byt_i, (ULONG64)byt_i,
+                    reg_u->len_i - byt_i,
                     MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
   {
     _wnd_fail("map loom");
@@ -270,10 +282,10 @@ _wnd_remap(c3_i fid_i, size_t byt_i)
   return c3y;
 }
 
-/* u3_wnd_loom_init(): reserve loom address space, back it with a section.
+/* _wnd_reserve(): reserve [len_i] at [bas_v], backed by a reserved section.
 */
-c3_o
-u3_wnd_loom_init(void* bas_v, size_t len_i)
+static c3_o
+_wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
 {
   SYSTEM_INFO inf_u;
 
@@ -283,50 +295,80 @@ u3_wnd_loom_init(void* bas_v, size_t len_i)
 
   GetSystemInfo(&inf_u);
 
-  wnd_u.bas_v = bas_v;
-  wnd_u.len_i = len_i;
-  wnd_u.map_i = 0;
-  wnd_u.gan_i = inf_u.dwAllocationGranularity;
+  reg_u->bas_v = bas_v;
+  reg_u->len_i = len_i;
+  reg_u->map_i = 0;
+  wnd_gan_i    = inf_u.dwAllocationGranularity;
 
   //  SEC_RESERVE: the section's pages are reserved, not committed, so the
   //  loom costs commit charge only as it is touched. windows does not
   //  overcommit, and a committed section of the whole loom cannot be
   //  created at all on a box whose RAM plus paging file is smaller.
   //
-  wnd_u.sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
-                                   PAGE_READWRITE | SEC_RESERVE,
-                                   (DWORD)((c3_d)len_i >> 32),
-                                   (DWORD)(len_i & 0xffffffffULL),
-                                   NULL);
+  reg_u->sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
+                                    PAGE_READWRITE | SEC_RESERVE,
+                                    (DWORD)((c3_d)len_i >> 32),
+                                    (DWORD)(len_i & 0xffffffffULL),
+                                    NULL);
 
-  if ( !wnd_u.sec_h ) {
+  if ( !reg_u->sec_h ) {
     _wnd_fail("loom section");
     return c3n;
   }
 
-  if ( !wnd_u.val_f(NULL, bas_v, len_i,
-                    MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
-                    NULL, 0) )
+  if ( !wnd_val_f(NULL, bas_v, len_i,
+                  MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
+                  NULL, 0) )
   {
     _wnd_fail("reserve");
-    CloseHandle(wnd_u.sec_h);
-    wnd_u.sec_h = NULL;
+    CloseHandle(reg_u->sec_h);
+    reg_u->sec_h = NULL;
     return c3n;
   }
 
-  if ( !wnd_u.map_f(wnd_u.sec_h, NULL, bas_v, 0, len_i,
-                    MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
+  if ( !wnd_map_f(reg_u->sec_h, NULL, bas_v, 0, len_i,
+                  MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
   {
     _wnd_fail("map loom");
     VirtualFree(bas_v, 0, MEM_RELEASE);
-    CloseHandle(wnd_u.sec_h);
-    wnd_u.sec_h = NULL;
+    CloseHandle(reg_u->sec_h);
+    reg_u->sec_h = NULL;
     return c3n;
   }
 
-  wnd_u.yes_o = c3y;
+  reg_u->yes_o = c3y;
 
   return c3y;
+}
+
+/* _wnd_find(): the region containing [adr_v], if any.
+*/
+static _wnd_reg*
+_wnd_find(void* adr_v)
+{
+  c3_y* adr_y = (c3_y*)adr_v;
+  c3_w  i_w;
+
+  for ( i_w = 0; i_w < _wnd_regs; i_w++ ) {
+    c3_y* bas_y = (c3_y*)wnd_u[i_w].bas_v;
+
+    if (  (c3y == wnd_u[i_w].yes_o)
+       && (adr_y >= bas_y)
+       && (adr_y < (bas_y + wnd_u[i_w].len_i)) )
+    {
+      return &wnd_u[i_w];
+    }
+  }
+
+  return 0;
+}
+
+/* u3_wnd_loom_init(): reserve loom address space, back it with a section.
+*/
+c3_o
+u3_wnd_loom_init(void* bas_v, size_t len_i)
+{
+  return _wnd_reserve(&wnd_u[0], bas_v, len_i);
 }
 
 /* u3_wnd_loom_gran(): virtual memory allocation granularity, in bytes.
@@ -334,13 +376,13 @@ u3_wnd_loom_init(void* bas_v, size_t len_i)
 size_t
 u3_wnd_loom_gran(void)
 {
-  if ( !wnd_u.gan_i ) {
+  if ( !wnd_gan_i ) {
     SYSTEM_INFO inf_u;
     GetSystemInfo(&inf_u);
-    wnd_u.gan_i = inf_u.dwAllocationGranularity;
+    wnd_gan_i = inf_u.dwAllocationGranularity;
   }
 
-  return wnd_u.gan_i;
+  return wnd_gan_i;
 }
 
 /* u3_wnd_loom_live(): c3y if the loom is a placeholder reservation.
@@ -348,7 +390,7 @@ u3_wnd_loom_gran(void)
 c3_o
 u3_wnd_loom_live(void)
 {
-  return wnd_u.yes_o;
+  return wnd_u[0].yes_o;
 }
 
 /* u3_wnd_loom_commit(): commit [len_i] bytes at [adr_v].
@@ -356,11 +398,11 @@ u3_wnd_loom_live(void)
 c3_o
 u3_wnd_loom_commit(void* adr_v, size_t len_i)
 {
-  if ( c3y != wnd_u.yes_o ) {
+  if ( !_wnd_find(adr_v) ) {
     return c3y;
   }
 
-  //  NB: within the image view this is a no-op that succeeds; file-backed
+  //  NB: within an image view this is a no-op that succeeds; file-backed
   //  pages are committed by the mapping.
   //
   if ( !VirtualAlloc(adr_v, len_i, MEM_COMMIT, PAGE_READWRITE) ) {
@@ -378,7 +420,10 @@ u3_wnd_loom_fault(void* adr_v, size_t len_i)
 {
   MEMORY_BASIC_INFORMATION inf_u;
 
-  if ( c3y != wnd_u.yes_o ) {
+  //  NB: membership matters. this runs on every fault, and must not
+  //  commit reserved memory that belongs to something else.
+  //
+  if ( !_wnd_find(adr_v) ) {
     return c3n;
   }
 
@@ -406,12 +451,12 @@ u3_wnd_loom_fault(void* adr_v, size_t len_i)
 c3_o
 u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i)
 {
-  if ( c3y != wnd_u.yes_o ) {
+  if ( c3y != wnd_u[0].yes_o ) {
     fprintf(stderr, "loom: mapf without placeholder loom\r\n");
     return c3n;
   }
 
-  return _wnd_remap(fid_i, byt_i);
+  return _wnd_remap(&wnd_u[0], fid_i, byt_i, PAGE_READONLY);
 }
 
 /* u3_wnd_loom_unmapf(): drop the image mapping, restoring pagefile backing.
@@ -419,15 +464,101 @@ u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i)
 c3_o
 u3_wnd_loom_unmapf(void)
 {
-  if ( c3y != wnd_u.yes_o ) {
+  if ( (c3y != wnd_u[0].yes_o) || !wnd_u[0].map_i ) {
     return c3y;
   }
 
-  if ( !wnd_u.map_i ) {
-    return c3y;
+  return _wnd_remap(&wnd_u[0], -1, 0, PAGE_READONLY);
+}
+
+/* u3_wnd_loom_hold(): reserve a stale loom at [bas_v] and map [byt_i] bytes
+**                     of [fid_i] writable over its bottom.
+*/
+c3_o
+u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
+{
+  _wnd_reg* reg_u = 0;
+  size_t    map_i, tal_i;
+  c3_w      i_w;
+
+  for ( i_w = 1; i_w < _wnd_regs; i_w++ ) {
+    if ( c3y != wnd_u[i_w].yes_o ) {
+      reg_u = &wnd_u[i_w];
+      break;
+    }
   }
 
-  return _wnd_remap(-1, 0);
+  if ( !reg_u ) {
+    fprintf(stderr, "loom: no free stale loom slot\r\n");
+    return c3n;
+  }
+
+  if ( byt_i > len_i ) {
+    fprintf(stderr, "loom: stale image (%zu) exceeds loom (%zu)\r\n",
+                    byt_i, len_i);
+    return c3n;
+  }
+
+  if ( c3n == _wnd_reserve(reg_u, bas_v, len_i) ) {
+    return c3n;
+  }
+
+  //  mappings are placed at the allocation granularity, so the image is
+  //  mapped up to the last whole granule and the remainder is blitted.
+  //
+  map_i = byt_i - (byt_i % u3_wnd_loom_gran());
+  tal_i = byt_i - map_i;
+
+  //  a stale loom is scratch: it is read to migrate out of, never tracked
+  //  or saved, so its image pages stay writable rather than trapping.
+  //
+  if ( c3n == _wnd_remap(reg_u, fid_i, map_i, PAGE_WRITECOPY) ) {
+    return c3n;
+  }
+
+  if ( tal_i ) {
+    c3_y* tal_y = (c3_y*)bas_v + map_i;
+    c3_zs ret_zs;
+
+    if ( c3n == u3_wnd_loom_commit(tal_y, tal_i) ) {
+      return c3n;
+    }
+
+    if ( (c3_zs)tal_i != (ret_zs = pread(fid_i, tal_y, tal_i, map_i)) ) {
+      fprintf(stderr, "loom: stale tail read (%zu at %zu): %"PRIc3_zs"\r\n",
+                      tal_i, map_i, ret_zs);
+      return c3n;
+    }
+  }
+
+  return c3y;
+}
+
+/* u3_wnd_loom_drop(): release a stale loom.
+*/
+c3_o
+u3_wnd_loom_drop(void* bas_v)
+{
+  _wnd_reg* reg_u = _wnd_find(bas_v);
+
+  if ( !reg_u || (reg_u == &wnd_u[0]) ) {
+    return c3n;
+  }
+
+  if ( reg_u->map_i ) {
+    wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER);
+    wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER);
+  }
+  else {
+    wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER);
+  }
+
+  VirtualFree(reg_u->bas_v, 0, MEM_RELEASE);
+  CloseHandle(reg_u->sec_h);
+
+  memset(reg_u, 0, sizeof(*reg_u));
+
+  return c3y;
 }
 
 /* u3_wnd_loom_yolo(): make the whole loom writable, region by region.
@@ -435,11 +566,11 @@ u3_wnd_loom_unmapf(void)
 c3_o
 u3_wnd_loom_yolo(void)
 {
-  c3_y* bas_y = (c3_y*)wnd_u.bas_v;
-  c3_y* end_y = bas_y + wnd_u.len_i;
+  c3_y* bas_y = (c3_y*)wnd_u[0].bas_v;
+  c3_y* end_y = bas_y + wnd_u[0].len_i;
   c3_y* cur_y = bas_y;
 
-  if ( c3y != wnd_u.yes_o ) {
+  if ( c3y != wnd_u[0].yes_o ) {
     return c3n;
   }
 

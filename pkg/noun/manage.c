@@ -2331,19 +2331,15 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
-  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
-    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
-            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
-    u3m_stacktrace();
-    u3_assert(0);
-    return 0;
-  }
-
 #ifdef U3_OS_windows
   //  a sparse loom faults on the first touch of a page. resolve that here,
   //  ahead of everything else: u3m_water() reads the road, which lives in
   //  the loom and may itself be untouched, and u3e_fault() cannot tell a
   //  first touch of page 0 from a guard page that has yet to be posted.
+  //
+  //  NB: this precedes the bounds check because a migration holds a stale
+  //  loom at its own base, outside the live loom, and its first touches
+  //  are ours to resolve rather than external faults.
   //
   {
     size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
@@ -2354,6 +2350,14 @@ u3m_fault(void* adr_v, c3_i ser_i)
     }
   }
 #endif
+
+  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
+            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
+    u3m_stacktrace();
+    u3_assert(0);
+    return 0;
+  }
 
   u3m_water(&low_p, &hig_p);
 
