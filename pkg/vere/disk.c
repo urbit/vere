@@ -1817,6 +1817,31 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
 }
 #endif /* !VERE64 */
 
+/* _disk_drop_stale_loom(): release the stale loom and its image.
+**
+**   NB: must precede u3m_save(). the migrated snapshot is written back to
+**   the same image.bin the stale loom is mapped from, and windows refuses
+**   to truncate a file while any mapping of it remains open.
+*/
+static void
+_disk_drop_stale_loom(c3_i fid_i)
+{
+#ifdef VERE64
+# ifdef U3_OS_windows
+  u3_wnd_loom_drop(u3_Loom_h);
+# else
+  munmap(u3_Loom_h, (size_t)1 << u3_Host.ops_u.lom_y);
+# endif
+#else
+# ifdef U3_OS_windows
+  u3_wnd_loom_drop(u3_Loom_v4);
+# else
+  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
+# endif
+#endif
+  close(fid_i);
+}
+
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
@@ -1837,6 +1862,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     u3e_live(c3n, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_d(eve_d);
+    _disk_drop_stale_loom(fid_i);
     u3m_save();
   }
 #else
@@ -1854,25 +1880,17 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
       u3e_live(c3n, strdup(dir_c));
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
+      _disk_drop_stale_loom(fid_i);
       u3m_save();
+      return;
     }
   }
-#endif
 
-#ifdef VERE64
-# ifdef U3_OS_windows
-  u3_wnd_loom_drop(u3_Loom_h);
-# else
-  munmap(u3_Loom_h, (size_t)1 << u3_Host.ops_u.lom_y);
-# endif
-#else
-# ifdef U3_OS_windows
-  u3_wnd_loom_drop(u3_Loom_v4);
-# else
-  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
-# endif
+  //  unrecognized version: nothing was migrated, but the stale loom is
+  //  still ours to release
+  //
+  _disk_drop_stale_loom(fid_i);
 #endif
-  close(fid_i);
 }
 
 static void
