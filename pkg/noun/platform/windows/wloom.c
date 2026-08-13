@@ -91,7 +91,8 @@ typedef struct {
   HANDLE sec_h;   //  pagefile section backing the volatile part
 } _wnd_reg;
 
-#define _wnd_regs 2
+#define _wnd_regs  2
+#define _wnd_chunk ((size_t)16 << 20)
 
 static _wnd_reg       wnd_u[_wnd_regs];
 static size_t         wnd_gan_i;   //  allocation granularity
@@ -146,6 +147,47 @@ _wnd_procs(void)
   fprintf(stderr, "loom: no placeholder support "
                   "(windows 10 1803 or later required)\r\n");
   return c3n;
+}
+
+/* _wnd_read(): read [byt_i] bytes of [fid_i] to [bas_v], from its start.
+**
+**   NB: goes direct rather than through the pread() shim, whose offset is
+**   an off_t and so may be 32 bits wide. a stale image can exceed 2GB.
+*/
+static c3_o
+_wnd_read(c3_i fid_i, void* bas_v, size_t byt_i)
+{
+  HANDLE fil_h = (HANDLE)_get_osfhandle(fid_i);
+  size_t off_i = 0;
+
+  if ( INVALID_HANDLE_VALUE == fil_h ) {
+    fprintf(stderr, "loom: read: bad fd %d\r\n", fid_i);
+    return c3n;
+  }
+
+  while ( off_i < byt_i ) {
+    size_t     lef_i = byt_i - off_i;
+    DWORD      red_u = (DWORD)((lef_i > _wnd_chunk) ? _wnd_chunk : lef_i);
+    DWORD      got_u = 0;
+    OVERLAPPED ovl_u = {0};
+
+    ovl_u.Offset     = (DWORD)(off_i & 0xffffffffULL);
+    ovl_u.OffsetHigh = (DWORD)((c3_d)off_i >> 32);
+
+    if ( !ReadFile(fil_h, (c3_y*)bas_v + off_i, red_u, &got_u, &ovl_u) ) {
+      _wnd_fail("read");
+      return c3n;
+    }
+
+    if ( !got_u ) {
+      fprintf(stderr, "loom: read: short at %zu of %zu\r\n", off_i, byt_i);
+      return c3n;
+    }
+
+    off_i += got_u;
+  }
+
+  return c3y;
 }
 
 /* u3_wnd_truncate(): resize [fid_i] to [off_d].
@@ -520,7 +562,6 @@ c3_o
 u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
 {
   _wnd_reg* reg_u = 0;
-  size_t    map_i, tal_i;
   c3_w      i_w;
 
   for ( i_w = 1; i_w < _wnd_regs; i_w++ ) {
@@ -545,35 +586,28 @@ u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
     return c3n;
   }
 
-  //  mappings are placed at the allocation granularity, so the image is
-  //  mapped up to the last whole granule and the remainder is blitted.
-  //
-  map_i = byt_i - (byt_i % u3_wnd_loom_gran());
-  tal_i = byt_i - map_i;
+  if ( !byt_i ) {
+    return c3y;
+  }
 
-  //  a stale loom is scratch: it is read to migrate out of, never tracked
-  //  or saved, so its image pages stay writable rather than trapping.
+  //  NB: read, not mapped.
   //
-  if ( c3n == _wnd_remap(reg_u, fid_i, map_i, PAGE_WRITECOPY) ) {
+  //    the stale image and the migrated snapshot are the same file: a
+  //    migration reads the old image.bin and writes the new one back over
+  //    it. windows keeps a file's section attached to the handle that
+  //    created it, so a mapped stale loom holds that file against every
+  //    later resize of it -- both the crash-recovery patch u3e_live()
+  //    applies and the truncate at the end of u3m_save().
+  //
+  //    so the stale loom is read into its reservation and holds nothing.
+  //    it costs commit charge for the image, which a mapping would not,
+  //    but a migration is a one-time operation.
+  //
+  if ( c3n == u3_wnd_loom_commit(bas_v, byt_i) ) {
     return c3n;
   }
 
-  if ( tal_i ) {
-    c3_y* tal_y = (c3_y*)bas_v + map_i;
-    c3_zs ret_zs;
-
-    if ( c3n == u3_wnd_loom_commit(tal_y, tal_i) ) {
-      return c3n;
-    }
-
-    if ( (c3_zs)tal_i != (ret_zs = pread(fid_i, tal_y, tal_i, map_i)) ) {
-      fprintf(stderr, "loom: stale tail read (%zu at %zu): %"PRIc3_zs"\r\n",
-                      tal_i, map_i, ret_zs);
-      return c3n;
-    }
-  }
-
-  return c3y;
+  return _wnd_read(fid_i, bas_v, byt_i);
 }
 
 /* u3_wnd_loom_drop(): release a stale loom.
