@@ -2116,7 +2116,8 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
         while (u3h(yil) == 0 && sat_u->queue != u3_nul)
         {
           u3z(yil);
-          u3_noun deferred_script = _pop_list(&sat_u->queue);
+          u3_weak deferred_script = _pop_list(&sat_u->queue);
+          if ( u3_none == deferred_script ) return u3m_bail(c3__fail);
           yil = _reduce_monad(deferred_script, sat_u);
         }
       }
