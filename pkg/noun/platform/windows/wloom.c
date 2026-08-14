@@ -118,6 +118,13 @@ _wnd_fail(const c3_c* str_c)
                     "      either boot with a smaller --loom, or grow the\r\n"
                     "      paging file to exceed the loom size.\r\n");
   }
+
+  //  487. windows will not place a mapping over occupied address space,
+  //  so this is a leftover reservation, not a shortage of anything.
+  //
+  if ( ERROR_INVALID_ADDRESS == err_u ) {
+    fprintf(stderr, "loom: the loom address is already occupied\r\n");
+  }
 }
 
 /* _wnd_procs(): resolve the placeholder apis.
@@ -365,6 +372,9 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
   return c3y;
 }
 
+static c3_o
+_wnd_release(_wnd_reg* reg_u);
+
 /* _wnd_reserve(): reserve [len_i] at [bas_v], backed by a reserved section.
 */
 static c3_o
@@ -452,6 +462,18 @@ _wnd_find(void* adr_v)
 c3_o
 u3_wnd_loom_init(void* bas_v, size_t len_i)
 {
+  //  NB: idempotent, because mmap(MAP_FIXED) is. u3m_init() is called a
+  //  second time after a migration, and on windows a reservation that is
+  //  still standing makes the address unavailable rather than being
+  //  silently replaced.
+  //
+  if ( wnd_u[0].len_i ) {
+    if ( c3n == _wnd_release(&wnd_u[0]) ) {
+      fprintf(stderr, "loom: failed to release the previous loom\r\n");
+      return c3n;
+    }
+  }
+
   return _wnd_reserve(&wnd_u[0], bas_v, len_i);
 }
 
@@ -610,6 +632,39 @@ u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
   return _wnd_read(fid_i, bas_v, byt_i);
 }
 
+/* _wnd_release(): unmap and release a region, freeing its slot.
+*/
+static c3_o
+_wnd_release(_wnd_reg* reg_u)
+{
+  //  NB: the image view must go, or the file stays mapped.
+  //
+  if ( !wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
+    _wnd_fail("release unmap low");
+    return c3n;
+  }
+
+  if ( reg_u->map_i ) {
+    if ( !wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i,
+                    MEM_PRESERVE_PLACEHOLDER) )
+    {
+      _wnd_fail("release unmap high");
+      return c3n;
+    }
+
+    //  the reservation was split, so each half is released on its own
+    //
+    VirtualFree((c3_y*)reg_u->bas_v + reg_u->map_i, 0, MEM_RELEASE);
+  }
+
+  VirtualFree(reg_u->bas_v, 0, MEM_RELEASE);
+  CloseHandle(reg_u->sec_h);
+
+  memset(reg_u, 0, sizeof(*reg_u));
+
+  return c3y;
+}
+
 /* u3_wnd_loom_drop(): release a stale loom.
 */
 c3_o
@@ -627,32 +682,7 @@ u3_wnd_loom_drop(void* bas_v)
     return c3n;
   }
 
-  //  NB: the image view must go, or the file stays mapped.
-  //
-  if ( !wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
-    _wnd_fail("drop unmap low");
-    return c3n;
-  }
-
-  if ( reg_u->map_i ) {
-    if ( !wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i,
-                    MEM_PRESERVE_PLACEHOLDER) )
-    {
-      _wnd_fail("drop unmap high");
-      return c3n;
-    }
-
-    //  the reservation was split, so each half is released on its own
-    //
-    VirtualFree((c3_y*)reg_u->bas_v + reg_u->map_i, 0, MEM_RELEASE);
-  }
-
-  VirtualFree(reg_u->bas_v, 0, MEM_RELEASE);
-  CloseHandle(reg_u->sec_h);
-
-  memset(reg_u, 0, sizeof(*reg_u));
-
-  return c3y;
+  return _wnd_release(reg_u);
 }
 
 /* u3_wnd_loom_yolo(): make the whole loom writable, region by region.
