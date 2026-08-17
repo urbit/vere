@@ -44,6 +44,14 @@
 ///   - remapping resets every protection above the image, so the caller
 ///     must re-post the guard page.
 ///
+/// ### minimum windows
+///
+/// VirtualAlloc2() and MapViewOfFile3() arrived in windows 10 1803, and are
+/// exported from an api set rather than kernel32, so linking them raises
+/// vere's floor to that release: the loader resolves imports eagerly, and
+/// an older windows will refuse to start the binary at all. that floor is
+/// deliberate. see build.zig for the import library.
+///
 
 #include "noun.h"
 #include "wloom.h"
@@ -66,17 +74,6 @@
 #  define MEM_COALESCE_PLACEHOLDERS  0x00000001
 #endif
 
-//  NB: resolved dynamically. these live in kernelbase.dll, which mingw's
-//  import libraries do not reliably cover, and their absence is a
-//  recoverable condition (windows older than 10 1803) rather than a link
-//  error. extended parameters are unused, so they are typed void*.
-//
-typedef PVOID (WINAPI *_wnd_valloc2_f)(HANDLE, PVOID, SIZE_T, ULONG, ULONG,
-                                       void*, ULONG);
-typedef PVOID (WINAPI *_wnd_mapview3_f)(HANDLE, HANDLE, PVOID, ULONG64,
-                                        SIZE_T, ULONG, ULONG, void*, ULONG);
-typedef BOOL  (WINAPI *_wnd_unmapex_f)(PVOID, ULONG);
-
 //  a region of address space we have reserved as a placeholder. slot 0 is
 //  the live loom; the rest are stale looms held open during migration,
 //  which sit at their own bases and coexist with it.
@@ -94,11 +91,8 @@ typedef struct {
 #define _wnd_regs  2
 #define _wnd_chunk ((size_t)16 << 20)
 
-static _wnd_reg       wnd_u[_wnd_regs];
-static size_t         wnd_gan_i;   //  allocation granularity
-static _wnd_valloc2_f wnd_val_f;
-static _wnd_mapview3_f wnd_map_f;
-static _wnd_unmapex_f  wnd_unm_f;
+static _wnd_reg wnd_u[_wnd_regs];
+static size_t   wnd_gan_i;   //  allocation granularity
 
 /* _wnd_fail(): report a win32 failure.
 */
@@ -125,35 +119,6 @@ _wnd_fail(const c3_c* str_c)
   if ( ERROR_INVALID_ADDRESS == err_u ) {
     fprintf(stderr, "loom: the loom address is already occupied\r\n");
   }
-}
-
-/* _wnd_procs(): resolve the placeholder apis.
-*/
-static c3_o
-_wnd_procs(void)
-{
-  HMODULE mod_h = GetModuleHandleW(L"kernelbase.dll");
-
-  if ( !mod_h ) {
-    mod_h = LoadLibraryW(L"kernelbase.dll");
-  }
-
-  if ( mod_h ) {
-    wnd_val_f = (_wnd_valloc2_f)(void*)
-                    GetProcAddress(mod_h, "VirtualAlloc2");
-    wnd_map_f = (_wnd_mapview3_f)(void*)
-                    GetProcAddress(mod_h, "MapViewOfFile3");
-    wnd_unm_f = (_wnd_unmapex_f)(void*)
-                    GetProcAddress(mod_h, "UnmapViewOfFileEx");
-
-    if ( wnd_val_f && wnd_map_f && wnd_unm_f ) {
-      return c3y;
-    }
-  }
-
-  fprintf(stderr, "loom: no placeholder support "
-                  "(windows 10 1803 or later required)\r\n");
-  return c3n;
 }
 
 /* _wnd_read(): read [byt_i] bytes of [fid_i] to [bas_v], from its start.
@@ -243,13 +208,13 @@ _wnd_hold(_wnd_reg* reg_u)
 {
   c3_y* bas_y = (c3_y*)reg_u->bas_v;
 
-  if ( !wnd_unm_f(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
+  if ( !UnmapViewOfFileEx(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
     _wnd_fail("unmap low");
     return c3n;
   }
 
   if ( reg_u->map_i ) {
-    if ( !wnd_unm_f(bas_y + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER) ) {
+    if ( !UnmapViewOfFileEx(bas_y + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER) ) {
       _wnd_fail("unmap high");
       return c3n;
     }
@@ -335,7 +300,7 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
       return c3n;
     }
 
-    if ( !wnd_map_f(img_h, NULL, bas_y, 0, byt_i,
+    if ( !MapViewOfFile3(img_h, NULL, bas_y, 0, byt_i,
                       MEM_REPLACE_PLACEHOLDER, PAGE_WRITECOPY, NULL, 0) )
     {
       _wnd_fail("map image");
@@ -361,7 +326,7 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
     reg_u->map_i = byt_i;
   }
 
-  if ( !wnd_map_f(reg_u->sec_h, NULL, bas_y + byt_i, (ULONG64)byt_i,
+  if ( !MapViewOfFile3(reg_u->sec_h, NULL, bas_y + byt_i, (ULONG64)byt_i,
                     reg_u->len_i - byt_i,
                     MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
   {
@@ -383,10 +348,6 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
   SYSTEM_INFO inf_u;
   HANDLE      sec_h;
 
-  if ( c3n == _wnd_procs() ) {
-    return c3n;
-  }
-
   GetSystemInfo(&inf_u);
   wnd_gan_i = inf_u.dwAllocationGranularity;
 
@@ -406,7 +367,7 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
     return c3n;
   }
 
-  if ( !wnd_val_f(NULL, bas_v, len_i,
+  if ( !VirtualAlloc2(NULL, bas_v, len_i,
                   MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
                   NULL, 0) )
   {
@@ -415,7 +376,7 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
     return c3n;
   }
 
-  if ( !wnd_map_f(sec_h, NULL, bas_v, 0, len_i,
+  if ( !MapViewOfFile3(sec_h, NULL, bas_v, 0, len_i,
                   MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
   {
     _wnd_fail("map loom");
@@ -639,13 +600,13 @@ _wnd_release(_wnd_reg* reg_u)
 {
   //  NB: the image view must go, or the file stays mapped.
   //
-  if ( !wnd_unm_f(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
+  if ( !UnmapViewOfFileEx(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
     _wnd_fail("release unmap low");
     return c3n;
   }
 
   if ( reg_u->map_i ) {
-    if ( !wnd_unm_f((c3_y*)reg_u->bas_v + reg_u->map_i,
+    if ( !UnmapViewOfFileEx((c3_y*)reg_u->bas_v + reg_u->map_i,
                     MEM_PRESERVE_PLACEHOLDER) )
     {
       _wnd_fail("release unmap high");

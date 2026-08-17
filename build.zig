@@ -595,6 +595,7 @@ fn buildBinary(
 
     if (t.os.tag == .windows) {
         urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.linkSystemLibrary("api-ms-win-core-memory-l1-1-6"); // VirtualAlloc2, MapViewOfFile3
     }
 
     const target_query: std.Target.Query = .{
