@@ -17,17 +17,46 @@
 ///      must skip them?
 ///   5. what does an access violation on an uncommitted page report, so
 ///      that the fault handler can recognize it?
+///   6. which mechanism can implement _ce_toss_pages() on windows, where
+///      there is no madvise(MADV_DONTNEED)? the free space it is handed
+///      lives in the SEC_RESERVE view and contains both reserved pages and
+///      the PAGE_NOACCESS guard page, so the answer decides both *what* to
+///      call and whether the range has to be walked rather than passed
+///      whole.
 ///
 /// build and run:
 ///
 ///   zig cc -target x86_64-windows-gnu -o wloom_probe.exe wloom_probe.c
 ///   ./wloom_probe.exe
 ///
-/// every check prints PASS or FAIL. FAIL on 3 means the sparse design is
+/// checks 1-5 print PASS or FAIL. FAIL on 3 means the sparse design is
 /// unsound as written and must fall back to private placeholder memory.
+///
+/// check 6 prints measurements rather than verdicts, since there is no
+/// single right answer -- it reports, for a committed 1MB block in the
+/// section view, how many pages stay resident after each candidate:
+///
+///   [A] DiscardVirtualMemory      the direct MADV_DONTNEED analogue
+///   [B] VirtualAlloc(MEM_RESET)   no pagefile write on eviction
+///   [C] VirtualUnlock             the working-set trim hack
+///   [D] VirtualFree(MEM_DECOMMIT) can commit charge be reclaimed at all?
+///   [E] discard a reserved page   must _ce_toss_pages() walk the range?
+///   [F] discard a NOACCESS page   must it skip the guard page?
+///
+/// residency is measured per page with QueryWorkingSetEx rather than as a
+/// process-wide RSS delta, so the numbers are not confounded by whatever
+/// else the process is doing.
+///
+/// NB: this file still resolves VirtualAlloc2 and MapViewOfFile3 with
+/// GetProcAddress, though wloom.c now links them. that is deliberate:
+/// check 1 is whether they are present at all, which a probe cannot ask
+/// if the loader has already refused to start it.
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <windows.h>
+#include <psapi.h>
 
 #ifndef MEM_RESERVE_PLACEHOLDER
 #  define MEM_RESERVE_PLACEHOLDER    0x00040000
@@ -53,6 +82,45 @@ static mapview3_f MView3;
 static unmapex_f  UnmapEx;
 
 static int fail_i = 0;
+
+/* _probe_resident(): how many pages of [bas_v, +len_i) are physically
+**                    resident, per QueryWorkingSetEx.
+**
+**   a per-page answer, rather than a process-wide RSS delta, so the
+**   result is not confounded by whatever else the process is doing.
+*/
+static SIZE_T
+_probe_resident(void* bas_v, SIZE_T len_i)
+{
+  SIZE_T pgs_i = len_i / ((SIZE_T)16 << 10);
+  SIZE_T got_i = 0;
+  SIZE_T i_i;
+
+  PSAPI_WORKING_SET_EX_INFORMATION* inf_u =
+    (PSAPI_WORKING_SET_EX_INFORMATION*)
+      calloc(pgs_i, sizeof(PSAPI_WORKING_SET_EX_INFORMATION));
+
+  if ( !inf_u ) {
+    return 0;
+  }
+
+  for ( i_i = 0; i_i < pgs_i; i_i++ ) {
+    inf_u[i_i].VirtualAddress = (char*)bas_v + (i_i * ((SIZE_T)16 << 10));
+  }
+
+  if ( QueryWorkingSetEx(GetCurrentProcess(), inf_u,
+                         (DWORD)(pgs_i * sizeof(*inf_u))) )
+  {
+    for ( i_i = 0; i_i < pgs_i; i_i++ ) {
+      if ( inf_u[i_i].VirtualAttributes.Valid ) {
+        got_i++;
+      }
+    }
+  }
+
+  free(inf_u);
+  return got_i;
+}
 
 //  vectored handler state: commit the faulting page and retry, exactly as
 //  the sparse loom's fault path would.
@@ -314,6 +382,103 @@ main(void)
     }
     else {
       check("2. contents survive unmap/remap", 0, "skipped, not committed");
+    }
+  }
+
+  //  6. how to implement _ce_toss_pages() on windows.
+  //
+  //     the free space between the heap and the stack lives in the
+  //     SEC_RESERVE view, so whatever replaces madvise(MADV_DONTNEED)
+  //     has to work on a section view, and has to cope with the reserved
+  //     pages and the PAGE_NOACCESS guard page inside the range.
+  //
+  //     these checks are informational -- they do not count as failures.
+  //     what we want out of them is which mechanism actually frees pages.
+  //
+  printf("\n--- toss mechanisms (informational) ---\n");
+  {
+    char*  tos_c = bas_c + haf_i + (16 * GRAN);
+    SIZE_T tos_i = 64 * PAGE;                    //  1MB
+    DWORD  ret_u;
+    SIZE_T i_i;
+
+    if ( !VirtualAlloc(tos_c, tos_i, MEM_COMMIT, PAGE_READWRITE) ) {
+      printf("  [SKIP] could not commit the toss block: win32 %lu\n",
+             GetLastError());
+    }
+    else {
+      memset(tos_c, 0x5a, tos_i);
+      printf("  resident before: %zu of %zu pages\n",
+             _probe_resident(tos_c, tos_i), tos_i / PAGE);
+
+      //  A. DiscardVirtualMemory -- the direct MADV_DONTNEED analogue.
+      //     returns a win32 error code, not a BOOL. 0 is success.
+      //
+      ret_u = DiscardVirtualMemory(tos_c, tos_i);
+      printf("  [A] DiscardVirtualMemory       -> %s (%lu), resident now %zu\n",
+             ret_u ? "FAILED" : "ok", (unsigned long)ret_u,
+             _probe_resident(tos_c, tos_i));
+
+      if ( !ret_u ) {
+        //  contents are documented as undefined after a discard; linux
+        //  zeroes them. record which we get, so nothing comes to depend
+        //  on the wrong one.
+        //
+        int zer_i = 1;
+        for ( i_i = 0; i_i < PAGE; i_i++ ) {
+          if ( tos_c[i_i] ) { zer_i = 0; break; }
+        }
+        printf("      contents after discard: %s\n",
+               zer_i ? "zeroed (as linux)" : "retained/undefined");
+      }
+
+      //  B. MEM_RESET -- contents are worthless, skip the pagefile write
+      //     on eviction. does not free pages by itself.
+      //
+      memset(tos_c, 0x5a, tos_i);
+      printf("  [B] VirtualAlloc(MEM_RESET)    -> %s, resident now %zu\n",
+             VirtualAlloc(tos_c, tos_i, MEM_RESET, PAGE_READWRITE)
+               ? "ok" : "FAILED",
+             _probe_resident(tos_c, tos_i));
+
+      //  C. VirtualUnlock -- the working-set trim hack. expected to
+      //     return FALSE with ERROR_NOT_LOCKED (158) and trim anyway.
+      //
+      memset(tos_c, 0x5a, tos_i);
+      ret_u = VirtualUnlock(tos_c, tos_i) ? 0 : GetLastError();
+      printf("  [C] VirtualUnlock              -> %s (%lu), resident now %zu\n",
+             ret_u ? "FALSE" : "TRUE", (unsigned long)ret_u,
+             _probe_resident(tos_c, tos_i));
+
+      //  D. can committed section pages be decommitted at all? if not,
+      //     commit charge for the sparse loom is a high-water mark.
+      //
+      printf("  [D] VirtualFree(MEM_DECOMMIT)  -> %s (%lu)\n",
+             VirtualFree(tos_c, tos_i, MEM_DECOMMIT) ? "ok" : "FAILED",
+             (unsigned long)GetLastError());
+    }
+
+    //  the range _ce_toss_pages() is handed also contains reserved pages
+    //  and the guard page. if either rejects the call, the windows
+    //  implementation must walk the range with VirtualQuery rather than
+    //  making one call over the whole span.
+    //
+    {
+      char* res_c = bas_c + haf_i + (64 * GRAN);   //  never committed
+      char* nac_c = tos_c;
+
+      printf("  [E] discard a RESERVED page    -> %lu (nonzero => must walk)\n",
+             (unsigned long)DiscardVirtualMemory(res_c, PAGE));
+
+      if ( VirtualAlloc(nac_c, PAGE, MEM_COMMIT, PAGE_READWRITE)
+           && VirtualProtect(nac_c, PAGE, PAGE_NOACCESS, &old_u) )
+      {
+        printf("  [F] discard a NOACCESS page    -> %lu (nonzero => must skip guard)\n",
+               (unsigned long)DiscardVirtualMemory(nac_c, PAGE));
+      }
+      else {
+        printf("  [F] discard a NOACCESS page    -> setup failed, skipped\n");
+      }
     }
   }
 
