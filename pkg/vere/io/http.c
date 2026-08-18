@@ -2189,7 +2189,9 @@ _http_serv_close(u3_http* htp_u)
   u3l_log("http serv close %d %p", htp_u->sev_l, &htp_u->wax_u);
 #endif
 
-  uv_close((uv_handle_t*)&htp_u->wax_u, _http_serv_close_cb);
+  if ( 0 == uv_is_closing((uv_handle_t*)&htp_u->wax_u) ) {
+    uv_close((uv_handle_t*)&htp_u->wax_u, _http_serv_close_cb);
+  }
 }
 
 /* _http_serv_new(): create new http server.
