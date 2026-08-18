@@ -1498,7 +1498,11 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
   void* ptr_v = _ce_ptr(nor_w);
 
-  #ifndef U3_OS_windows
+  #ifdef U3_OS_windows
+  //  NB: returns resident pages, but not commit charge; see wloom.h.
+  //
+  u3_wnd_loom_toss(ptr_v, _ce_len(pgs_w));
+  #else
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
       fprintf(stderr, "loom: madv_dontneed failed (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
                       pgs_w, nor_w, strerror(errno));

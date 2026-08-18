@@ -43,6 +43,10 @@
 ///     a read-only view cannot be upgraded later.
 ///   - remapping resets every protection above the image, so the caller
 ///     must re-post the guard page.
+///   - committed pages of a section view cannot be decommitted; they stay
+///     committed until the view is unmapped. so the loom's commit charge
+///     is a high-water mark, and u3_wnd_loom_toss() returns resident
+///     memory without returning commit.
 ///
 /// ### minimum windows
 ///
@@ -644,6 +648,74 @@ u3_wnd_loom_drop(void* bas_v)
   }
 
   return _wnd_release(reg_u);
+}
+
+/* u3_wnd_loom_toss(): release the physical pages of [len_i] at [adr_v].
+*/
+c3_o
+u3_wnd_loom_toss(void* adr_v, size_t len_i)
+{
+  _wnd_reg* reg_u = _wnd_find(adr_v);
+  c3_y*     cur_y = (c3_y*)adr_v;
+  c3_y*     end_y = cur_y + len_i;
+  c3_y*     lim_y;
+  c3_o      san_o = c3y;
+
+  if ( !reg_u ) {
+    return c3n;
+  }
+
+  //  NB: clamped to the region. the caller derives its length from the
+  //  road watermarks, which can underflow to something enormous, and
+  //  discarding past the loom would take memory that is not ours.
+  //
+  lim_y = (c3_y*)reg_u->bas_v + reg_u->len_i;
+
+  if ( end_y > lim_y ) {
+    end_y = lim_y;
+  }
+
+  while ( cur_y < end_y ) {
+    MEMORY_BASIC_INFORMATION inf_u;
+    size_t                   siz_i;
+    DWORD                    ret_u;
+
+    if ( !VirtualQuery(cur_y, &inf_u, sizeof(inf_u)) ) {
+      _wnd_fail("toss query");
+      return c3n;
+    }
+
+    //  NB: RegionSize runs from BaseAddress, which may precede [cur_y].
+    //
+    siz_i = inf_u.RegionSize - (size_t)(cur_y - (c3_y*)inf_u.BaseAddress);
+
+    if ( !siz_i ) {
+      break;
+    }
+
+    if ( (cur_y + siz_i) > end_y ) {
+      siz_i = (size_t)(end_y - cur_y);
+    }
+
+    //  a reserved page has nothing to release, and the guard page is
+    //  PAGE_NOACCESS. DiscardVirtualMemory rejects both with
+    //  ERROR_INVALID_PARAMETER, which is why this walks the range
+    //  instead of passing it whole.
+    //
+    if (  (MEM_COMMIT == inf_u.State)
+       && !(inf_u.Protect & PAGE_NOACCESS) )
+    {
+      if ( 0 != (ret_u = DiscardVirtualMemory(cur_y, siz_i)) ) {
+        fprintf(stderr, "loom: toss discard (%zu bytes at %p): win32 %lu\r\n",
+                        siz_i, (void*)cur_y, (unsigned long)ret_u);
+        san_o = c3n;
+      }
+    }
+
+    cur_y += siz_i;
+  }
+
+  return san_o;
 }
 
 /* u3_wnd_loom_yolo(): make the whole loom writable, region by region.

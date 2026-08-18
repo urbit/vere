@@ -95,6 +95,20 @@
     c3_o
     u3_wnd_loom_drop(void* bas_v);
 
+  /* u3_wnd_loom_toss(): release the physical pages of [len_i] at [adr_v].
+  **
+  **   the windows analogue of madvise(MADV_DONTNEED). DiscardVirtualMemory
+  **   frees the pages and leaves them reading as zero, exactly as linux
+  **   does, but rejects anything not committed and accessible -- so the
+  **   range is walked and applied region by region, skipping reserved
+  **   pages and the guard page.
+  **
+  **   NB: resident memory only. committed pages of a section view cannot
+  **   be decommitted, so the loom's commit charge is a high-water mark.
+  */
+    c3_o
+    u3_wnd_loom_toss(void* adr_v, size_t len_i);
+
   /* u3_wnd_loom_yolo(): make the whole loom writable, region by region.
   **
   **   VirtualProtect() cannot span separate mappings, and a demand-paged
