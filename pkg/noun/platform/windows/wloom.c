@@ -104,9 +104,38 @@ static void
 _wnd_fail(const c3_c* str_c)
 {
   DWORD err_u = GetLastError();
+  c3_c  msg_c[256];
+  DWORD len_u;
 
-  fprintf(stderr, "loom: %s: win32 error %lu\r\n",
-                  str_c, (unsigned long)err_u);
+  //  NB: a stack buffer, not FORMAT_MESSAGE_ALLOCATE_BUFFER. this runs in
+  //  the fault handler by way of u3_wnd_loom_fault(), where a LocalAlloc
+  //  is not something to attempt.
+  //
+  len_u = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM
+                         | FORMAT_MESSAGE_IGNORE_INSERTS,
+                         NULL, err_u,
+                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                         msg_c, sizeof(msg_c), NULL);
+
+  //  FormatMessage leaves a trailing period and newline
+  //
+  while ( len_u
+       && (  ('\r' == msg_c[len_u - 1])
+          || ('\n' == msg_c[len_u - 1])
+          || ('.'  == msg_c[len_u - 1])
+          || (' '  == msg_c[len_u - 1]) ) )
+  {
+    msg_c[--len_u] = 0;
+  }
+
+  if ( len_u ) {
+    fprintf(stderr, "loom: %s: %s (win32 %lu)\r\n",
+                    str_c, msg_c, (unsigned long)err_u);
+  }
+  else {
+    fprintf(stderr, "loom: %s: win32 error %lu\r\n",
+                    str_c, (unsigned long)err_u);
+  }
 
   //  windows does not overcommit: the whole loom is charged against RAM
   //  plus the paging file, whether or not it is ever touched.
