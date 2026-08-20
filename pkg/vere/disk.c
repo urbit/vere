@@ -1581,6 +1581,32 @@ _disk_unlink_stale_loom(c3_c* dir_c)
   }
 }
 
+#ifdef U3_OS_windows
+/* _disk_patch_pending(): c3y if a crash-recovery patch is waiting in [dir_c].
+**
+**   u3e_live() applies such a patch, which resizes image.bin -- and windows
+**   refuses to resize a file while any view of it is still mapped. so a
+**   stale loom over image.bin has to be read rather than mapped when one is
+**   present. this is conservative: it does not ask whether the patch is
+**   valid, only whether u3e_live() might act on it.
+*/
+static c3_o
+_disk_patch_pending(c3_c* dir_c)
+{
+  c3_c bin_c[8193];
+
+  snprintf(bin_c, 8193, "%s/.urb/chk/control.bin", dir_c);
+
+  if ( 0 == access(bin_c, F_OK) ) {
+    return c3y;
+  }
+
+  snprintf(bin_c, 8193, "%s/.urb/chk/memory.bin", dir_c);
+
+  return ( 0 == access(bin_c, F_OK) ) ? c3y : c3n;
+}
+#endif
+
 static c3_i
 _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 {
@@ -1655,7 +1681,11 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     //  XX respect --no-demand flag
     //
 #ifdef U3_OS_windows
-    if ( c3n == u3_wnd_loom_hold(u3_Loom_h, len_z, nod_i, lom_z) ) {
+    //  NB: c3y is 0, so this cannot be a bare ternary on the loobean.
+    //
+    c3_o map_o = ( c3y == _disk_patch_pending(dir_c) ) ? c3n : c3y;
+
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_h, len_z, nod_i, lom_z, map_o) ) {
       fprintf(stderr, "loom: stale loom mapping failed\r\n");
       u3_assert(0);
     }
@@ -1685,7 +1715,13 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     //  XX respect --no-demand flag
     //
 #ifdef U3_OS_windows
-    if ( c3n == u3_wnd_loom_hold(u3_Loom_v4, len_z, nod_i, lom_z) ) {
+    //  NB: north.bin is not the file u3m_save() writes, but u3e_live()
+    //    still resizes image.bin from a pending patch, and the guard costs
+    //    nothing on a path that runs once per ship.
+    //
+    c3_o map_o = ( c3y == _disk_patch_pending(dir_c) ) ? c3n : c3y;
+
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_v4, len_z, nod_i, lom_z, map_o) ) {
       fprintf(stderr, "loom: stale loom mapping failed\r\n");
       u3_assert(0);
     }
@@ -1764,9 +1800,17 @@ _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
   fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_d, fid_i, img_z);
 
 #ifdef U3_OS_windows
-  if ( c3n == u3_wnd_loom_hold((void*)u3_Loom_d, lom_z, fid_i, img_z) ) {
-    fprintf(stderr, "loom: 64 stale loom mapping failed\r\n");
-    u3_assert(0);
+  {
+    //  NB: c3y is 0, so this cannot be a bare ternary on the loobean.
+    //
+    c3_o map_o = ( c3y == _disk_patch_pending(dir_c) ) ? c3n : c3y;
+
+    if ( c3n == u3_wnd_loom_hold((void*)u3_Loom_d, lom_z, fid_i,
+                                 img_z, map_o) )
+    {
+      fprintf(stderr, "loom: 64 stale loom mapping failed\r\n");
+      u3_assert(0);
+    }
   }
 #else
   if ( MAP_FAILED == mmap((void*)u3_Loom_d,

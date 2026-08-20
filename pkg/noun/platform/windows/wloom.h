@@ -77,18 +77,27 @@
     c3_i
     u3_wnd_truncate(c3_i fid_i, c3_d off_d);
 
-  /* u3_wnd_loom_hold(): reserve a stale loom of [len_i] at [bas_v], and read
-  **                     [byt_i] bytes of [fid_i] into its bottom.
+  /* u3_wnd_loom_hold(): reserve a stale loom of [len_i] at [bas_v], and put
+  **                     [byt_i] bytes of [fid_i] in its bottom.
   **
   **   for the old snapshot a migration reads out of. it coexists with the
   **   live loom at its own base, and is never tracked or saved.
   **
-  **   NB: read rather than mapped, deliberately. the stale image and the
-  **   migrated snapshot are the same file, and a mapping would hold it
-  **   against being resized. see wloom.c.
+  **   [map_o] maps the image copy-on-write rather than reading it, which
+  **   keeps the pages clean and file-backed instead of dirtying the
+  **   pagefile-backed section with them. pass c3n when the image is about
+  **   to be resized -- windows will not resize a file that any view still
+  **   maps -- and the whole of it is read, as it always used to be.
+  **
+  **   NB: a mapped stale loom must be dropped before the image it maps is
+  **   resized or rewritten, which for a migration means before u3m_save().
   */
     c3_o
-    u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i);
+    u3_wnd_loom_hold(void*  bas_v,
+                     size_t len_i,
+                     c3_i   fid_i,
+                     size_t byt_i,
+                     c3_o   map_o);
 
   /* u3_wnd_loom_drop(): release a stale loom.
   */

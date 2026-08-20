@@ -154,13 +154,13 @@ _wnd_fail(const c3_c* str_c)
   }
 }
 
-/* _wnd_read(): read [byt_i] bytes of [fid_i] to [bas_v], from its start.
+/* _wnd_read(): read [byt_i] bytes of [fid_i] at [bas_i] into [bas_v].
 **
 **   NB: goes direct rather than through the pread() shim, whose offset is
 **   an off_t and so may be 32 bits wide. a stale image can exceed 2GB.
 */
 static c3_o
-_wnd_read(c3_i fid_i, void* bas_v, size_t byt_i)
+_wnd_read(c3_i fid_i, void* bas_v, size_t byt_i, size_t bas_i)
 {
   HANDLE fil_h = (HANDLE)_get_osfhandle(fid_i);
   size_t off_i = 0;
@@ -175,9 +175,10 @@ _wnd_read(c3_i fid_i, void* bas_v, size_t byt_i)
     DWORD      red_u = (DWORD)((lef_i > _wnd_chunk) ? _wnd_chunk : lef_i);
     DWORD      got_u = 0;
     OVERLAPPED ovl_u = {0};
+    c3_d       fof_d = (c3_d)bas_i + off_i;
 
-    ovl_u.Offset     = (DWORD)(off_i & 0xffffffffULL);
-    ovl_u.OffsetHigh = (DWORD)((c3_d)off_i >> 32);
+    ovl_u.Offset     = (DWORD)(fof_d & 0xffffffffULL);
+    ovl_u.OffsetHigh = (DWORD)(fof_d >> 32);
 
     if ( !ReadFile(fil_h, (c3_y*)bas_v + off_i, red_u, &got_u, &ovl_u) ) {
       _wnd_fail("read");
@@ -571,13 +572,18 @@ u3_wnd_loom_unmapf(void)
   return _wnd_remap(&wnd_u[0], -1, 0, PAGE_READONLY);
 }
 
-/* u3_wnd_loom_hold(): reserve a stale loom at [bas_v] and map [byt_i] bytes
-**                     of [fid_i] writable over its bottom.
+/* u3_wnd_loom_hold(): reserve a stale loom at [bas_v] and place [byt_i]
+**                     bytes of [fid_i] over its bottom.
 */
 c3_o
-u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
+u3_wnd_loom_hold(void*  bas_v,
+                 size_t len_i,
+                 c3_i   fid_i,
+                 size_t byt_i,
+                 c3_o   map_o)
 {
   _wnd_reg* reg_u = 0;
+  size_t    map_i;
   c3_w      i_w;
 
   for ( i_w = 1; i_w < _wnd_regs; i_w++ ) {
@@ -606,24 +612,52 @@ u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
     return c3y;
   }
 
-  //  NB: read, not mapped.
+  //  the image is mapped where we can, and read where we cannot.
   //
-  //    the stale image and the migrated snapshot are the same file: a
-  //    migration reads the old image.bin and writes the new one back over
-  //    it. windows keeps a file's section attached to the handle that
-  //    created it, so a mapped stale loom holds that file against every
-  //    later resize of it -- both the crash-recovery patch u3e_live()
-  //    applies and the truncate at the end of u3m_save().
+  //    a mapping is what we want. the walk over a stale loom only ever
+  //    reads it, so a mapped image stays clean and file-backed, and the
+  //    memory manager can drop a page for free and refault it from
+  //    image.bin. read into the pagefile-backed section instead and every
+  //    one of those pages is dirty: each eviction costs a pagefile write
+  //    and each refault a pagefile read, of bytes that are already on disk
+  //    in the image. a migration walks the source in noun order, which is
+  //    to say randomly, so that churn is the whole cost of the migration.
   //
-  //    so the stale loom is read into its reservation and holds nothing.
-  //    it costs commit charge for the image, which a mapping would not,
-  //    but a migration is a one-time operation.
+  //    the view is write-copy rather than read-only. a stale loom is
+  //    scratch; nothing should write to it, but if something does it must
+  //    privatize the page rather than fault, which is what reading into
+  //    private memory used to give us.
   //
-  if ( c3n == u3_wnd_loom_commit(bas_v, byt_i) ) {
+  //    [map_o] is c3n when the caller knows the image is about to be
+  //    resized, since windows refuses to resize a file that any view still
+  //    maps. see _disk_patch_pending().
+  //
+  //    two things are read even so: the ragged tail below the allocation
+  //    granularity, which a placeholder cannot be split at, and the whole
+  //    image when it fills the loom, leaving no room for the section view
+  //    that has to sit above it.
+  //
+  map_i = ( c3y == map_o ) ? (byt_i - (byt_i % u3_wnd_loom_gran())) : 0;
+
+  if ( map_i >= len_i ) {
+    map_i = 0;
+  }
+
+  if ( map_i && (c3n == _wnd_remap(reg_u, fid_i, map_i, PAGE_WRITECOPY)) ) {
     return c3n;
   }
 
-  return _wnd_read(fid_i, bas_v, byt_i);
+  if ( byt_i > map_i ) {
+    //  NB: after the remap, which replaces every view in the region.
+    //
+    if ( c3n == u3_wnd_loom_commit((c3_y*)bas_v + map_i, byt_i - map_i) ) {
+      return c3n;
+    }
+
+    return _wnd_read(fid_i, (c3_y*)bas_v + map_i, byt_i - map_i, map_i);
+  }
+
+  return c3y;
 }
 
 /* _wnd_release(): unmap and release a region, freeing its slot.
