@@ -2560,9 +2560,8 @@ u3m_init(size_t len_i)
 #ifdef U3_OS_windows
     //  the loom is reserved as a placeholder, which makes it sparse (pages
     //  cost commit charge only once touched) and lets the image be mapped
-    //  over its bottom for demand paging. degrade to a plain mapping -- and
-    //  so to blitting, and to charging the whole loom up front -- if the
-    //  placeholder apis are missing.
+    //  over its bottom for demand paging. if --no-demand is on, degrade to
+    //  blitting and charging the whole loom to commit up front
     //
     if ( c3n == u3_wnd_loom_init((void *)u3_Loom, len_i) ) {
       if ( !(u3C.wag_h & u3o_no_demand) ) {
