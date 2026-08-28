@@ -89,6 +89,7 @@ Supported values:
 - live
 - soon
 - edge
+- lts
 
 #### `-Dcopt=[list]`
 Provide additional compiler flags. These propagate to all build artifacts.

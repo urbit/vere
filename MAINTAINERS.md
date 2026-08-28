@@ -14,11 +14,16 @@ reliably ship code. It's also simple to reason about.
 The branches and their corresponding trains that comprise the stages of the
 release pipeline are:
 
-| Branch    | Train  | Target audience    |
-|-----------|--------|--------------------|
-| `develop` | `edge` | Runtime developers |
-| `release` | `soon` | Early adopters     |
-| `master`  | `live` | Everyone else      |
+| Branch    | Train  | Target audience             |
+|-----------|--------|-----------------------------|
+| `develop` | `edge` | Runtime developers          |
+| `release` | `soon` | Early adopters              |
+| `master`  | `live` | Everyone else               |
+| `lts`     | `lts`  | Long-term support subscribers |
+
+The `lts` branch sits outside the three-stage pipeline: it is branched from
+`master` at an LTS release point and receives only backported fixes (see
+[LTS Releases](#lts-releases) below).
 
 `develop` is the default branch in the repo, which means that all new pull
 requests target it by default. The general flow of a new feature or bug fix
@@ -54,6 +59,14 @@ For `master`, each binary is given a version of the form `{version number}`,
 where `{version number}` is simply the version number listed in the
 [version file in the root of this repo][version].
 
+For `lts`, each binary is likewise given a bare `{version number}` (no commit
+SHA), but the version number is three-part: `{major}.{minor}.{patch}`, where
+`{major}.{minor}` is the `live` version the LTS line was cut from and
+`{patch}` increments with each backport release (e.g. `4.6.1`, `4.6.2`).
+Since the runtime's update check compares version strings for exact equality
+against its own train only, LTS version numbers never conflict with `live`
+version numbers.
+
 Each time a release is cut (i.e. `develop` is merged into `release` to kick off
 a release), the version number should be bumped on `develop` in anticipation of
 the next release.
@@ -68,10 +81,11 @@ is built from, and `{P}` is one of `linux-aarch64`, `linux-x86_64`,
 - https://bootstrap.urbit.org/vere/edge/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
 - https://bootstrap.urbit.org/vere/soon/v{VN}-{CS}/vere-v{VN}-{CS}-{P}
 - https://bootstrap.urbit.org/vere/live/v{VN}/vere-v{VN}-{P}
+- https://bootstrap.urbit.org/vere/lts/v{VN}/vere-v{VN}-{P}
 
 The most recently deployed version of a given train (pace) is uploaded to
 https://bootstrap.urbit.org/vere/{T}/last, where `{T}` is one of `edge`, `soon`,
-and `live`.
+`live`, and `lts`.
 
 ### `next/kelvin/*` Endpoints
 
@@ -141,6 +155,59 @@ the "General" channel of the [Urbit Community group][urbit-community].
 [urbit-community]: https://urbit.org/groups/~bitbet-bolbel/urbit-community
 [urbit-dev]: https://groups.google.com/a/urbit.org/g/dev
 [version]: https://github.com/urbit/vere/tree/develop/VERSION
+
+## LTS Releases
+
+The `lts` branch is a long-term support line: it is cut from `master` at a
+`live` release and thereafter receives only backported fixes, never new
+features or Kelvin changes. Because the LTS line freezes the runtime's
+supported Kelvin stack, LTS binaries remain compatible with LTS-era Arvo
+indefinitely; LTS ships should also source their `%base` OTAs from an
+LTS distribution so they are not offered a Kelvin-decrementing OS update
+the runtime cannot support.
+
+### Cutting a new LTS line
+
+- [ ] Reset the `lts` branch to the `master` release commit being designated
+      as the LTS base.
+- [ ] Ensure https://bootstrap.urbit.org/vere/lts/last exists before any ship
+      is switched to the `lts` train. The `next` subcommand treats a missing
+      `last` file as a hard error, and the `runtime-version` thread would
+      misread an error body as an available update. Pushing to `lts` uploads
+      it automatically; to seed it by hand:
+      `gsutil cp gs://bootstrap.urbit.org/vere/live/last gs://bootstrap.urbit.org/vere/lts/last`
+
+### Cutting an LTS point release
+
+- [ ] Cherry-pick the fixes onto the `lts` branch via a PR targeting `lts`.
+- [ ] Bump the version number on `lts` to the next patch version (e.g. `4.6`
+      to `4.6.1`), following the same process used to bump the version on
+      `develop`.
+- [ ] Tag the release `vere-v{version}` (e.g. `vere-v4.6.1`) and push the tag.
+- [ ] Merging to `lts` triggers deployment of the `lts` binaries and Docker
+      images (`tloncorp/vere:lts`), exactly as pushing to `master` deploys
+      `live`.
+- [ ] Create a GitHub release following the same checklist as a `live`
+      release, but do **not** check "Set as the latest release", and download
+      the binaries from the `lts` deploy endpoint instead of `live`.
+- [ ] Create a placeholder pill for the new version:
+      `gsutil cp gs://bootstrap.urbit.org/urbit-vOLD.pill gs://bootstrap.urbit.org/urbit-v{version}.pill`
+- [ ] If the fix also applies to the mainline, land it on `develop` through
+      the normal pipeline; the `lts` branch is never merged back into
+      `develop`, `release`, or `master`.
+
+### Switching a ship between trains
+
+A pier records its train in `<pier>/.bin/pace`. The runtime writes this file
+once when a binary docks and never overwrites it, so switching an existing
+ship to (or from) the LTS train is a manual, documented edit while the ship
+is not running:
+
+```console
+$ echo lts > <pier>/.bin/pace
+```
+
+Subsequent `urbit next` invocations will then follow the `lts` train.
 
 ## Updating Infrastructure Ships
 

@@ -126,7 +126,7 @@ pub fn build(b: *std.Build) !void {
     const release = b.option(bool, "release", "Build for release") orelse false;
     if (release) optimize = .ReleaseFast;
 
-    const Pace = enum { once, live, soon, edge };
+    const Pace = enum { once, live, soon, edge, lts };
     const pace = @tagName(b.option(
         Pace,
         "pace",
