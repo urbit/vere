@@ -194,7 +194,6 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
 
   u3_noun octs_list_start = octs_list;
   u3_noun octs;
-  // Last non-zero octs
 
   while (octs_list != u3_nul) {
 
