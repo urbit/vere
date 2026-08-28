@@ -1,0 +1,29 @@
+name: Push to lts
+
+on:
+  push:
+    branches:
+      - lts
+    paths:
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'ext/**'
+      - '!ext/**.md'
+      - 'pkg/**'
+      - '.github/workflows/**.yml'
+      - '*.sh'
+
+jobs:
+  urbit:
+    uses: ./.github/workflows/shared.yml
+    with:
+      pace: 'lts'
+      upload: true
+      fake_tests: false
+    secrets: inherit
+
+  docker:
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'lts'
+    secrets: inherit
