@@ -30,7 +30,7 @@
   }
 
   static inline void
-  _set_rounding(c3_y a)
+  _set_rounding(u3_atom a)
   {
     switch ( a )
     {
