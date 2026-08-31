@@ -210,7 +210,7 @@ _main_init(void)
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
-  u3_Host.ops_u.lut_y = 34;     /* aka 2G */
+  u3_Host.ops_u.lut_y = 34;     /* aka 16G */
   u3_Host.ops_u.lom_y = 32;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
