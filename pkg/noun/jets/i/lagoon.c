@@ -39,7 +39,7 @@
 
   //  $?(%n %u %d %z %a)
   static inline void
-  _set_rounding(c3_y a)
+  _set_rounding(u3_atom a)
   {
     // We could use SoftBLAS set_rounding() to set the SoftFloat
     // mode as well, but it's more explicit to do it here since
