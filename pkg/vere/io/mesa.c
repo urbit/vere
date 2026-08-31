@@ -1348,6 +1348,9 @@ _mesa_add_lane_to_pit(u3_mesa* sam_u, u3_mesa_name* nam_u, sockaddr_in lan_u)
   return;
 }
 
+/* _mesa_lanes_to_addrs(): convert lane list to pit addrs. RETAIN
+**  @Refcount: retains arguments
+*/
 static u3_pit_addr*
 _mesa_lanes_to_addrs(u3_noun las, arena* are_u) {
   u3_pit_addr* adr_u = NULL;
@@ -1451,7 +1454,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     res_u->are_u = are_u;
     u3_mesa_name* nam_u = _mesa_copy_name_alloc(&pac_u.pek_u.nam_u, &res_u->are_u);
     u3_mesa_request_data* dat_u = &res_u->dat_u;
-    {
+    { //  @Refcount: assert transfer
       dat_u->sam_u = sam_u;
       u3_ship_copy(dat_u->her_u, nam_u->her_u);
       dat_u->nam_u = nam_u;

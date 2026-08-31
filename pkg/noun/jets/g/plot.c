@@ -7,6 +7,7 @@
 
 // XX optimize
 //
+// @Refcount: retains arguments
 static c3_w
 _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
 {
@@ -59,11 +60,13 @@ _met_plat_m(c3_g a_g, c3_w fum_w, c3_w met_w, u3_atom vat)
   }
 }
 
+// @Refcount: retains arguments
 static c3_w
 _met_list(c3_g    a_g,
           c3_w  sep_w,
           u3_noun b_p);
 
+// @Refcount: retains arguments
 static c3_w
 _met_pair(c3_g* las_g,
           c3_w  sep_w,
@@ -94,6 +97,7 @@ _met_pair(c3_g* las_g,
   return _met_list(a_g, sep_w, b_p);
 }
 
+// @Refcount: retains arguments
 static c3_w
 _met_list(c3_g    a_g,
           c3_w  sep_w,
@@ -180,12 +184,14 @@ _met_list(c3_g    a_g,
   return sep_w;
 }
 
+// @Refcount: retains arguments
 static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,
           c3_w      sep_w,
           u3_noun     b_p);
 
+// @Refcount: retains arguments
 static c3_w
 _fax_pair(u3i_slab* sab_u,
           c3_g*     las_g,
@@ -217,6 +223,7 @@ _fax_pair(u3i_slab* sab_u,
   return _fax_list(sab_u, a_g, sep_w, b_p);
 }
 
+// @Refcount: retains arguments
 static c3_w
 _fax_list(u3i_slab* sab_u,
           c3_g        a_g,

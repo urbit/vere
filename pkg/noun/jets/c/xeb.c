@@ -19,7 +19,7 @@
   u3_noun
   u3wc_xeb(u3_noun cor)
   {
-    u3_noun a;
+    u3_weak a;
 
     if ( (u3_none == (a = u3r_at(u3x_sam, cor))) ||
          (c3n == u3ud(a)) )

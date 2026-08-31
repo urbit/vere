@@ -234,6 +234,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 }
 
 /* _mars_fact(): commit a fact and enqueue its effects.
+** @Refcount: assert transfer arguments
 */
 static void
 _mars_fact(u3_mars* mar_u,
@@ -337,7 +338,9 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       if ( c3__mass == u3h(fec) ) {
         //  save a copy of the %mass data
         //
-        mar_u->sac = u3k(u3t(fec));
+        { //  @Refcount: assert transfer
+          mar_u->sac = u3k(u3t(fec));
+        }
         //  replace the %mass data with ~
         //
         //    For efficient transmission to daemon.
@@ -378,7 +381,7 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
   //    instead of directly triggering these remedial actions.
   //
   {
-    u3_noun pri = u3_none;
+    u3_weak pri = u3_none;
     c3_w pos_w = u3a_open(u3R);
 
     //  if contiguous free space shrunk, check thresholds
@@ -463,7 +466,12 @@ _mars_peek(c3_w mil_w, u3_noun sam)
   return pro;
 }
 
-/* _mars_poke(): attempt to compute an event. [*eve] is RETAINED.
+/* _mars_poke(): attempt to compute an event. [*eve] is RETAINED
+** (from the caller's frame: one count of the old *eve is given away
+** and an owned *eve -- possibly the same event, possibly %crud-wrapped
+** -- is present on return).
+**  @Refcount: consumes `eve`, fills transferred `eve`
+**  @Refcount: fills transferred `out`
 */
 static c3_o
 _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
@@ -1004,7 +1012,9 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
     }
 
     u3z(u3A->roc);
-    u3A->roc = u3k(cor);
+    { //  @Refcount: assert transfer
+      u3A->roc = u3k(cor);
+    }
     u3A->eve_d++;
   }
 
@@ -1030,6 +1040,7 @@ typedef enum {
 } _mars_play_e;
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
+** @Refcount: assert (foobar)
 */
 static _mars_play_e
 _mars_play_batch(u3_mars* mar_u,
@@ -1108,6 +1119,9 @@ _mars_play_batch(u3_mars* mar_u,
   return _play_yes_e;
 }
 
+/* _mars_do_boot(): replay boot events. The caller must crash on c3n.
+** @Refcount: assert, doomed on `c3n` (subroad entering/exiting shenanigans)
+*/
 static c3_o
 _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 {
@@ -1577,6 +1591,8 @@ _mars_wyrd_card(c3_m nam_m, c3_w ver_w, c3_l sev_l)
 }
 
 /* _mars_sift_pill(): extract boot formulas and module/userspace ova from pill
+** @Refcount: fills transferred `bot`, `mod`, `use`, `cax` on `c3y`
+** @Refcount: doomed on `c3n` (boot fails; the caller must crash)
 */
 static c3_o
 _mars_sift_pill(u3_noun  pil,
@@ -1680,6 +1696,8 @@ _mars_sift_pill(u3_noun  pil,
 }
 
 /* _mars_boot_make(): construct boot sequence
+** @Refcount: fills transferred `ova`, `xac` on `c3y`
+** @Refcount: doomed on `c3n` (boot fails; the caller must crash)
 */
 static c3_o
 _mars_boot_make(u3_boot_opts* inp_u,

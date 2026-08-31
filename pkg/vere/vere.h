@@ -153,10 +153,7 @@
     /* u3_utat: unix terminal state.
     */
       typedef struct {
-        struct {
-          c3_l  col_l;                      //  columns
-          c3_l  row_l;                      //  rows
-        } siz;
+        u3v_blew siz;                        //  window size
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
@@ -488,15 +485,15 @@
       */
         typedef struct _u3_lord_cb {
           void* ptr_v;
-          void (*live_f)(void*, u3_atom, c3_o);
+          void (*live_f)(void*, u3_atom, c3_o);  //  @Refcount: retains
           void (*slog_f)(void*, c3_w, u3_noun);
-          void (*spin_f)(void*, u3_atom, c3_o);
+          void (*spin_f)(void*, u3_atom, c3_o);  //  @Refcount: retains
           void (*spun_f)(void*);
           void (*work_done_f)(void*, u3_ovum*, u3_noun act);
           void (*work_bail_f)(void*, u3_ovum*, u3_noun lud);
           void (*save_f)(void*);
-          void (*bail_f)(void*);
-          void (*exit_f)(void*);
+          void (*bail_f)(void*);  //  @Refcount: noreturn
+          void (*exit_f)(void*);  //  @Refcount: noreturn
         } u3_lord_cb;
 
       /* u3_lord: serf controller.
@@ -794,11 +791,13 @@
         u3_auto_live(u3_auto* car_u);
 
       /* u3_auto_kick(): route effects to a linked driver. RETAIN
+      **  @Refcount: retains arguments
       */
         void
         u3_auto_kick(u3_auto* car_u, u3_noun act);
 
       /* u3_auto_next(): select an ovum, dequeue and construct.
+      ** @Refcount: custom
       */
         u3_ovum*
         u3_auto_next(u3_auto* car_u, u3_noun* ovo);
@@ -857,6 +856,7 @@
         u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+      **  @Refcount: retains arguments
       */
         size_t
         u3_disk_etch(u3_disk* log_u,
@@ -865,6 +865,7 @@
                      c3_y**   out_y);
 
       /* u3_disk_sift(): parse a persisted event buffer.
+      ** @Refcount: fills transferred `job` on `c3y`
       */
         c3_o
         u3_disk_sift(u3_disk* log_u,
@@ -1064,6 +1065,7 @@
     /**  Terminal.
     **/
       /* u3_term_start_spinner(): prepare spinner state. RETAIN.
+      **  @Refcount: retains arguments
       */
         void
         u3_term_start_spinner(u3_noun say, c3_o del_o);
@@ -1073,9 +1075,9 @@
         void
         u3_term_stop_spinner(void);
 
-      /* u3_term_get_blew(): return window size [columns rows].
+      /* u3_term_get_blew(): return window size {columns, rows}.
       */
-        u3_noun
+        u3v_blew
         u3_term_get_blew(c3_l tid_l);
 
       /* u3_term_ef_winc(): window change.
@@ -1285,6 +1287,7 @@
         u3_pier_exit(u3_pier* pir_u);
 
       /* u3_pier_bail(): immediately shutdown..
+      **  @Refcount: noreturn
       */
         void
         u3_pier_bail(u3_pier* pir_u);
@@ -1381,6 +1384,7 @@
         u3_dawn_come(void);
 
       /* u3_dawn_vent(): validated boot event
+      **  @Refcount: fills transferred `rift`
       */
         u3_noun
         u3_dawn_vent(u3_noun ship, u3_noun seed, u3_noun* rift);
@@ -1406,6 +1410,7 @@
         u3_king_dock(c3_c* pac_c);
 
       /* u3_king_done(): all piers closed
+      **  @Refcount: noreturn
       */
         void
         u3_king_done(void);
@@ -1416,6 +1421,7 @@
         u3_king_exit(void);
 
       /* u3_king_bail(): immediately shutdown.
+      **  @Refcount: noreturn
       */
         void
         u3_king_bail(void);

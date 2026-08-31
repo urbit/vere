@@ -114,6 +114,7 @@ _disk_commit_start(u3_disk* log_u)
 }
 
 /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+**  @Refcount: retains arguments
 */
 size_t
 u3_disk_etch(u3_disk* log_u,
@@ -213,6 +214,7 @@ _disk_commit(u3_disk* log_u)
 }
 
 /* _disk_plan(): enqueue serialized fact (feat) for persistence.
+**  @Refcount: retains arguments
 */
 static void
 _disk_plan(u3_disk* log_u,
@@ -309,6 +311,7 @@ u3_disk_async(u3_disk*     log_u,
 }
 
 /* u3_disk_sift(): parse a persisted event buffer.
+** @Refcount: fills transferred `job` on `c3y`
 */
 c3_o
 u3_disk_sift(u3_disk* log_u,
@@ -366,7 +369,9 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
     }
 
     ven_u->mug_l = mug_l;
-    ven_u->eve   = u3nc(job, ven_u->eve);
+    {  // @Refcount: assert transfer
+      ven_u->eve   = u3nc(job, ven_u->eve);
+    }
   }
 
   return c3y;

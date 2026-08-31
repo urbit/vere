@@ -194,6 +194,8 @@ u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u)
 }
 
 /* u3_auto_next(): select an ovum, dequeue and construct.
+** @Refcount: custom
+** (transfers ovo iff the product pointer is not null)
 */
 u3_ovum*
 u3_auto_next(u3_auto* car_u, u3_noun* ovo)
@@ -233,6 +235,7 @@ u3_auto_next(u3_auto* car_u, u3_noun* ovo)
 }
 
 /* _auto_kick_lost(): print details of unroutable effect. RETAIN
+**  @Refcount: retains arguments
 */
 static void
 _auto_kick_lost(u3_noun pax, u3_noun fav)
@@ -260,6 +263,7 @@ _auto_kick(u3_auto* car_u, u3_noun pax, u3_noun fav)
 }
 
 /* u3_auto_kick(): route effects to a linked driver. RETAIN
+**  @Refcount: retains arguments
 */
 void
 u3_auto_kick(u3_auto* car_u, u3_noun act)

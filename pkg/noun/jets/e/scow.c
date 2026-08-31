@@ -41,7 +41,7 @@ _y_co_two(c3_w src, c3_y* a, c3_y* b)
   *a = to_digit(src / 10);
 }
 
-//
+// @Refcount: transfers
 static
 u3_noun
 _add_year(c3_w year, u3_noun out)
@@ -55,7 +55,7 @@ _add_year(c3_w year, u3_noun out)
 }
 
 static
-u3_noun
+u3_weak
 _print_da(u3_noun cor, u3_atom raw_da)
 {
   u3_noun hok = u3j_cook("u3we_scow_print_da", u3k(cor), "yore");
@@ -165,7 +165,7 @@ _print_da(u3_noun cor, u3_atom raw_da)
 }
 
 static
-u3_noun
+u3_weak
 _print_p(u3_atom cor, u3_atom p)
 {
   // Scramble the raw number to the concealed version.
@@ -190,9 +190,9 @@ _print_p(u3_atom cor, u3_atom p)
 
   u3_noun list = 0;
   for (c3_w imp = 0; imp != dyy; ++imp) {
-    c3_w log = u3qc_end(4, 1, sxz);
-    c3_w prefix = u3qc_rsh(3, 1, log);
-    c3_w suffix = u3qc_end(3, 1, log);
+    c3_w log = u3r_cat(u3qc_end(4, 1, sxz));
+    c3_w prefix = u3r_cat(u3qc_rsh(3, 1, log));
+    c3_w suffix = u3r_cat(u3qc_end(3, 1, log));
 
     c3_y a, b, c, d, e, f;
     u3_po_to_prefix(prefix, &a, &b, &c);
@@ -215,7 +215,7 @@ _print_p(u3_atom cor, u3_atom p)
   return u3nc('~', list);
 }
 
-u3_atom
+u3_weak
 u3qe_scow(u3_atom a, u3_atom b)
 {
   switch (a) {
@@ -239,7 +239,7 @@ u3qe_scow(u3_atom a, u3_atom b)
   }
 }
 
-u3_noun
+u3_weak
 u3we_scow(u3_noun cor)
 {
   u3_atom a, b;

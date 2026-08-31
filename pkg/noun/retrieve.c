@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "retrieve.h"
 
@@ -39,6 +41,7 @@ u3r_hext(u3_noun  a,
          u3_noun* g);
 
 /* u3r_cat: assert direct atom
+ * @Refcount: direct arguments, direct product
 */
 u3_atom u3r_cat(u3_noun a);
 
@@ -831,6 +834,7 @@ u3r_sing_c(const c3_c* a_c,
 /* u3r_bush():
 **
 **   Factor [a] as a bush [b.[p q] c].
+**   @Refcount: fills retained `b`, `c` on `c3y`
 */
 c3_o
 u3r_bush(u3_noun  a,
@@ -855,6 +859,7 @@ u3r_bush(u3_noun  a,
 }
 
 /* u3r_bite(): retrieve/default $bloq and $step from $bite.
+**   @Refcount: fills retained `bloq`, `step` on `c3y`
 */
 c3_o
 u3r_bite(u3_noun bite, u3_atom* bloq, u3_atom *step)
@@ -881,6 +886,7 @@ u3r_bite(u3_noun bite, u3_atom* bloq, u3_atom *step)
 /* u3r_p():
 **
 **   & [0] if [a] is of the form [b *c].
+**   @Refcount: fills retained `c` on `c3y`
 */
 c3_o
 u3r_p(u3_noun  a,
@@ -901,6 +907,7 @@ u3r_p(u3_noun  a,
 /* u3r_pq():
 **
 **   & [0] if [a] is of the form [b *c d].
+**   @Refcount: fills retained `c`, `d` on `c3y`
 */
 c3_o
 u3r_pq(u3_noun  a,
@@ -921,6 +928,7 @@ u3r_pq(u3_noun  a,
 /* u3r_pqr():
 **
 **   & [0] if [a] is of the form [b *c *d *e].
+**   @Refcount: fills retained `c`, `d`, `e` on `c3y`
 */
 c3_o
 u3r_pqr(u3_noun  a,
@@ -942,6 +950,7 @@ u3r_pqr(u3_noun  a,
 /* u3r_pqrs():
 **
 **   & [0] if [a] is of the form [b *c *d *e *f].
+**   @Refcount: fills retained `c`, `d`, `e`, `f` on `c3y`
 */
 c3_o
 u3r_pqrs(u3_noun  a,
@@ -1956,6 +1965,7 @@ u3r_safe(u3_noun fol, u3_weak* out)
 
 /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
 ** and the length of the buffer
+** @Refcount: reads `a`
 */
 c3_w*
 u3r_word_buffer(u3_atom* a, c3_w* len_w)

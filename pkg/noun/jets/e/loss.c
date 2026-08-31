@@ -66,7 +66,11 @@
         u3_noun  hev)
   {
     loc_u->hel = hel;
-    loc_u->lel_w = u3kb_lent(u3k(hel));
+    {
+      u3_atom len = u3qb_lent(hel);
+      if ( c3n == u3a_is_cat(len) ) u3m_bail(c3__fail);
+      loc_u->lel_w = len;
+    }
 
     //  Read hev into array.
     {
@@ -94,13 +98,15 @@
 
       for ( i_w = 0; i_w < loc_u->lev_w; i_w++ ) {
         u3_noun how = loc_u->hev[i_w];
-        u3_noun hav;
+        u3_weak hav;
         u3_noun teg;
 
         hav = u3kdb_get(u3k(loc_u->sev), u3k(how));
         teg = u3nc(u3i_words(1, &i_w),
                    (hav == u3_none) ? u3_nul : hav);
-        loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
+        {  // @Refcount: assert transfer
+          loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
+        }
       }
     }
   }
@@ -123,7 +129,9 @@
     } else {
       u3z(loc_u->kad[inx_w]);
     }
-    loc_u->kad[inx_w] = kad;
+    {  // @Refcount: assert transfer `kad`
+      loc_u->kad[inx_w] = kad;
+    }
   }
 
   //  extend fits top
@@ -177,7 +185,7 @@
   //  both hink(inx_w) and lonk(inx_w) are true.  lonk is false
   //  if inx_w is too high, hink is false if it is too low.
   //
-  static u3_noun
+  static c3_o
   _bink(u3_loss* loc_u,
         c3_w*    inx_w,
         c3_w     max_w,
@@ -223,11 +231,11 @@
     else {
       u3_noun i_gay = u3h(gay);
       c3_w    goy_w = u3r_word(0, i_gay);
-      u3_noun bik;
+      c3_o bik_o;
 
-      bik = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);
+      bik_o = _bink(loc_u, &inx_w, loc_u->kct_w, goy_w);
 
-      if ( c3y == bik ) {
+      if ( c3y == bik_o ) {
         _merg(loc_u, inx_w + 1, u3t(gay));
         _lune(loc_u, inx_w, goy_w);
       }
@@ -272,7 +280,7 @@
     return lcs;
   }
 
-  static u3_noun
+  static c3_o
   _listp(u3_noun lix)
   {
     while ( 1 ) {
@@ -285,7 +293,7 @@
   u3_noun
   u3we_loss(u3_noun cor)
   {
-    u3_noun hel, hev;
+    u3_weak hel, hev;
 
     if ( (u3_none == (hel = u3r_at(u3x_sam_2, cor))) ||
          (u3_none == (hev = u3r_at(u3x_sam_3, cor))) ||

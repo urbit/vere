@@ -492,7 +492,9 @@ _term_it_save_stub(u3_utty* uty_u, u3_noun tub)
     lin = u3do("pact:klr:format", lin);
   }
 
-  tat_u->mir.lin = lin;
+  { //  @Refcount: assert transfer
+    tat_u->mir.lin = lin;
+  }
   u3z(tub);
 }
 
@@ -577,6 +579,7 @@ _term_it_save(u3_noun pax, u3_noun pad)
 }
 
 /* _term_ovum_plan(): plan term ovums, configuring spinner.
+**  @Refcount: assert conslike `wir`, `cad`
 */
 static u3_ovum*
 _term_ovum_plan(u3_auto* car_u, u3_noun wir, u3_noun cad)
@@ -737,14 +740,18 @@ _term_io_suck_char(u3_utty* uty_u, c3_y cay_y)
       wug = u3do("taft", huv);
 
       tat_u->fut.len_w = tat_u->fut.wid_w = 0;
-      tat_u->fut.imp = u3nc(wug, tat_u->fut.imp);
+      {  // @Refcount: assert transfer
+        tat_u->fut.imp = u3nc(wug, tat_u->fut.imp);
+      }
     }
   }
   //  individual characters
   //
   else {
     if ( (cay_y >= 32) && (cay_y < 127) ) {  //  visual ascii
-      tat_u->fut.imp = u3nc(cay_y, tat_u->fut.imp);
+      {  // @Refcount: assert transfer
+        tat_u->fut.imp = u3nc(cay_y, tat_u->fut.imp);
+      }
     }
     else if ( 0 == cay_y ) {  //  null
       _term_it_dump_buf(uty_u, &uty_u->ufo_u.bel_u);
@@ -942,6 +949,7 @@ _term_spin_timer_cb(uv_timer_t* tim_u)
 #define _SPIN_IDLE_US 500UL  //  spinner cools down if stopped this long
 
 /* u3_term_start_spinner(): prepare spinner state. RETAIN.
+**  @Refcount: retains arguments
 */
 void
 u3_term_start_spinner(u3_atom say, c3_o del_o)
@@ -1027,9 +1035,9 @@ _term_ef_get(c3_l tid_l)
   return _term_main();
 }
 
-/* u3_term_get_blew(): return window size [columns rows].
+/* u3_term_get_blew(): return window size {columns, rows}.
 */
-u3_noun
+u3v_blew
 u3_term_get_blew(c3_l tid_l)
 {
   u3_utty*       uty_u = _term_ef_get(tid_l);
@@ -1047,7 +1055,7 @@ u3_term_get_blew(c3_l tid_l)
     uty_u->tat_u.siz.row_l = row_l;
   }
 
-  return u3nc(col_l, row_l);
+  return (u3v_blew){ .col_l = col_l, .row_l = row_l };
 }
 
 /* u3_term_ef_winc(): window change.  Just console right now.
@@ -1058,8 +1066,9 @@ u3_term_ef_winc(void)
   //  XX groace, this should be a global handler sent to each pier
   //
   if ( u3_Host.uty_u->car_u ) {
+    u3v_blew blew_u = u3_term_get_blew(1);
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
-    u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
+    u3_noun cad = u3nc(c3__blew, u3nc(blew_u.col_l, blew_u.row_l));
 
     u3_assert( 1 == u3_Host.uty_u->tid_l );
 
@@ -1084,6 +1093,7 @@ u3_term_ef_ctlc(void)
 }
 
 /*  _term_it_put_value(): put numeric color value on lin_w.
+**  @Refcount: direct `val`
 */
 static c3_w
 _term_it_put_value(c3_w*   lin_w,
@@ -1099,6 +1109,7 @@ _term_it_put_value(c3_w*   lin_w,
 }
 
 /* _term_it_put_tint(): put ansi color id on lin_w. RETAINS col.
+** @Refcount: retains `col`
 */
 static c3_w
 _term_it_put_tint(c3_w*   lin_w,
@@ -1153,6 +1164,7 @@ _term_it_put_tint(c3_w*   lin_w,
 }
 
 /* _term_it_put_deco(): put ansi sgr code on lin_w. RETAINS dec.
+**  @Refcount: retains arguments
 */
 static void
 _term_it_put_deco(c3_w* lin_w,
@@ -1617,7 +1629,8 @@ _term_io_talk(u3_auto* car_u)
   //  send terminal dimensions
   //
   {
-    cad = u3nc(c3__blew, u3_term_get_blew(1));
+    u3v_blew blew_u = u3_term_get_blew(1);
+    cad = u3nc(c3__blew, u3nc(blew_u.col_l, blew_u.row_l));
     _term_ovum_plan(car_u, u3k(wir), cad);
   }
 
@@ -1633,6 +1646,8 @@ _term_io_talk(u3_auto* car_u)
  *
  *    Parses a text string which contains a decimal number. In practice, this
  *    number is always '1'.
+ *    
+ *    @Refcount: retains
  */
 static c3_o
 _reck_orchid(u3_noun fot, u3_noun txt, c3_l* tid_l)

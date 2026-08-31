@@ -71,7 +71,7 @@
   u3_noun
   u3we_shax(u3_noun cor)
   {
-    u3_noun a;
+    u3_weak a;
 
     if ( (u3_none == (a = u3r_at(u3x_sam, cor))) ||
          (c3n == u3ud(a)) )
@@ -85,7 +85,7 @@
   u3_noun
   u3we_shay(u3_noun cor)
   {
-    u3_noun a, b;
+    u3_weak a, b;
 
     if ( (u3_none == (a = u3r_at(u3x_sam_2, cor))) ||
          (u3_none == (b = u3r_at(u3x_sam_3, cor))) ||
@@ -101,7 +101,7 @@
   u3_noun
   u3we_shal(u3_noun cor)
   {
-    u3_noun a, b;
+    u3_weak a, b;
 
     if ( (u3_none == (a = u3r_at(u3x_sam_2, cor))) ||
          (u3_none == (b = u3r_at(u3x_sam_3, cor))) ||
@@ -117,7 +117,7 @@
   u3_noun
   u3we_shas(u3_noun cor)
   {
-    u3_noun sal, ruz;
+    u3_weak sal, ruz;
 
     if ( (u3_none == (sal = u3r_at(u3x_sam_2, cor))) ||
          (u3_none == (ruz = u3r_at(u3x_sam_3, cor))) ||

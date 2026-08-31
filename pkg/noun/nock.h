@@ -57,6 +57,7 @@
 
     /* u3n_find(): return prog for given formula,
      *             split by key (u3_nul for none). RETAIN.
+     ** @Refcount: retains arguments
      */
       u3p(u3n_prog)
       u3n_find(u3_noun key, u3_noun fol);

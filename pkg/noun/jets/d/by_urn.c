@@ -5,6 +5,7 @@
 
 #include "noun.h"
 
+// @Refcount: transfer
 static u3_noun
 _by_urn(u3_noun a, u3j_site* sit_u)
 {

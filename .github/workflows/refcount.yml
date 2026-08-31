@@ -1,0 +1,63 @@
+name: Refcount lint
+
+on:
+  pull_request:
+    paths:
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'ext/**'
+      - '!ext/**.md'
+      - 'pkg/**'
+      - 'tools/refcount-check/**'
+      - '.github/workflows/refcount.yml'
+
+jobs:
+  refcount:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          # 8GB cache limit chosen at random
+          cache-size-limit: 8192
+
+      # the checker loads libclang at runtime; pin the major version the
+      # @Refcount annotations are validated against. libclang 18 anchors
+      # macro-expanded operator cursors differently, defeating the
+      # checker's macro-origin exemption (false [strange expression]
+      # findings on u3a_to_ptr-style word punning)
+      - name: Install libclang 19
+        run: |
+          sudo apt-get update
+          if ! sudo apt-get install -y --no-install-recommends libclang-19-dev; then
+            wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+            sudo bash /tmp/llvm.sh 19
+            sudo apt-get install -y --no-install-recommends libclang-19-dev
+          fi
+
+      # independent tasks: cargo does not need the compile db, only the
+      # lint run does. wait for both before failing so neither is orphaned
+      - name: Generate compile_commands.json, build refcount-check
+        run: |
+          zig build -Dgenerate-commands --summary all &
+          zig_pid=$!
+          cargo build --manifest-path tools/refcount-check/Cargo.toml &
+          cargo_pid=$!
+          zig_rc=0; cargo_rc=0
+          wait "$zig_pid"   || zig_rc=$?
+          wait "$cargo_pid" || cargo_rc=$?
+          [ "$zig_rc" -eq 0 ] && [ "$cargo_rc" -eq 0 ]
+
+      - name: Run selftest
+        run: |
+          ./tools/refcount-check/target/debug/refcount-check \
+            --selftest \
+            --libclang /usr/lib/llvm-19/lib/libclang.so
+
+      - name: Run refcount lint
+        run: |
+          ./tools/refcount-check/target/debug/refcount-check \
+            --libclang /usr/lib/llvm-19/lib/libclang.so

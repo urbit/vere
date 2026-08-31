@@ -8,7 +8,8 @@
 u3_noun
 u3wfu_mull(u3_noun cor)
 {
-  u3_noun bat, sut, gol, dox, gen, van;
+  u3_weak bat, sut;
+  u3_noun gol, dox, gen, van;
 
   if (  (c3n == u3r_mean(cor, u3x_sam_2, &gol,
                               u3x_sam_6, &dox,

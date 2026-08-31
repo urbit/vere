@@ -112,7 +112,10 @@ _ch_node_add(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun kev, c3_w *use_w)
     for ( i_w = 0; i_w < inx_w; i_w++ ) {
       nah_u->sot_w[i_w] = han_u->sot_w[i_w];
     }
-    nah_u->sot_w[inx_w] = u3h_noun_be_warm(u3h_noun_to_slot(kev));
+
+    {  //  @Refcount: assert transfer kev
+      nah_u->sot_w[inx_w] = u3h_noun_be_warm(u3h_noun_to_slot(kev));
+    }
     for ( i_w = inx_w; i_w < len_w; i_w++ ) {
       nah_u->sot_w[i_w + 1] = han_u->sot_w[i_w];
     }
@@ -136,7 +139,9 @@ _ch_buck_add(u3h_buck* hab_u, u3_noun kev, c3_w *use_w)
   for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
     u3_noun kov = u3h_slot_to_noun(hab_u->sot_w[i_w]);
     if ( c3y == u3r_sing(u3h(kev), u3h(kov)) ) {
-      hab_u->sot_w[i_w] = u3h_noun_to_slot(kev);
+      {  //  @Refcount: assert transfer kev
+        hab_u->sot_w[i_w] = u3h_noun_to_slot(kev);
+      }
       u3z(kov);
       return hab_u;
     }
@@ -146,7 +151,9 @@ _ch_buck_add(u3h_buck* hab_u, u3_noun kev, c3_w *use_w)
   //  Optimize: use u3a_wealloc().
   {
     u3h_buck* bah_u = _ch_buck_new(1 + hab_u->len_w);
-    bah_u->sot_w[0] = u3h_noun_be_warm(u3h_noun_to_slot(kev));
+    {  //  @Refcount: assert transfer kev
+      bah_u->sot_w[0] = u3h_noun_be_warm(u3h_noun_to_slot(kev));
+    }
 
     for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
       bah_u->sot_w[i_w + 1] = hab_u->sot_w[i_w];
@@ -230,7 +237,7 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
     u3_assert( c3y == u3h_slot_is_node(*sot_w) );
     *sot_w = u3h_node_to_slot(hav_v);
   }
-  else {
+  else {  //  @Refcount: assert transfer kev
     u3_noun  kov   = u3h_slot_to_noun(*sot_w);
     u3h_slot add_w = u3h_noun_be_warm(u3h_noun_to_slot(kev));
     if ( c3y == u3r_sing(u3h(kev), u3h(kov)) ) {
@@ -249,6 +256,8 @@ _ch_slot_put(u3h_slot* sot_w, u3_noun kev, c3_w lef_w, c3_w rem_w, c3_w* use_w)
 /* u3h_put_get(): insert in caching hashtable, returning deleted key-value pair
 **
 ** `key` is RETAINED; `val` is transferred.
+** @Refcount: retains `key`
+** @Refcount: transfers `val`
 */
 u3_weak
 u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
@@ -260,7 +269,7 @@ u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
   c3_w      rem_w = CUT_END(mug_w, 25);
   u3h_slot* sot_w = &(har_u->sot_w[inx_w]);
 
-  if ( c3y == u3h_slot_is_null(*sot_w) ) {
+  if ( c3y == u3h_slot_is_null(*sot_w) ) {  //  @Refcount: assert transfer kev
     *sot_w = u3h_noun_be_warm(u3h_noun_to_slot(kev));
     har_u->use_w += 1;
   }
@@ -286,6 +295,8 @@ u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
 /* u3h_put(): insert in hashtable.
 **
 ** `key` is RETAINED; `val` is transferred.
+** @Refcount: retains `key`
+** @Refcount: transfers `val`
 */
 void
 u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
@@ -297,6 +308,7 @@ u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val)
 }
 
 /* _ch_buck_del(): delete from bucket
+  @Refcount: retains
 */
 static c3_o
 _ch_buck_del(u3h_slot* sot_w, u3_noun key)
@@ -331,10 +343,11 @@ _ch_buck_del(u3h_slot* sot_w, u3_noun key)
     return c3y;
   }
 }
-
+// @Refcount: retains
 static c3_o _ch_some_del(u3h_slot*, u3_noun, c3_w, c3_w);
 
 /* _ch_slot_del(): delete from slot
+  @Refcount: retains
 */
 static c3_o
 _ch_slot_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
@@ -351,6 +364,7 @@ _ch_slot_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
 }
 
 /* _ch_slot_del(): delete from node
+ @Refcount: retains
 */
 static c3_o
 _ch_node_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
@@ -409,6 +423,7 @@ _ch_node_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
 }
 
 /* _ch_some_del(): delete from node or buck
+** @Refcount: retains
 */
 static c3_o
 _ch_some_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
@@ -422,6 +437,7 @@ _ch_some_del(u3h_slot* sot_w, u3_noun key, c3_w lef_w, c3_w rem_w)
 
 /* u3h_del(); delete from hashtable.
 ** `key` is RETAINED
+** @Refcount: retains `key`
 */
 void
 u3h_del(u3p(u3h_root) har_p, u3_noun key)
@@ -440,6 +456,7 @@ u3h_del(u3p(u3h_root) har_p, u3_noun key)
 }
 
 /* _ch_uni_with(): key/value callback, put into [*wit]
+  @Refcount: retains
 */
 static void
 _ch_uni_with(u3_noun kev, void* wit)
@@ -700,6 +717,7 @@ _ch_node_hum(u3h_node* han_u, c3_w lef_w, c3_w rem_w, c3_w mug_w)
 /* u3h_hum(): check presence in hashtable.
 **
 ** `key` is RETAINED.
+** @Refcount: retains `key`
 */
 c3_o
 u3h_hum(u3p(u3h_root) har_p, c3_w mug_w)
@@ -730,6 +748,7 @@ u3h_hum(u3p(u3h_root) har_p, c3_w mug_w)
 }
 
 /* _ch_buck_git(): read in bucket.
+  @Refcount: retains
 */
 static u3_weak
 _ch_buck_git(u3h_buck* hab_u, u3_noun key)
@@ -746,6 +765,7 @@ _ch_buck_git(u3h_buck* hab_u, u3_noun key)
 }
 
 /* _ch_node_git(): read in node.
+  @Refcount: retains
 */
 static u3_weak
 _ch_node_git(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun key)
@@ -788,6 +808,8 @@ _ch_node_git(u3h_node* han_u, c3_w lef_w, c3_w rem_w, u3_noun key)
 /* u3h_git(): read from hashtable.
 **
 ** `key` is RETAINED; result is RETAINED.
+** @Refcount: retains `key`
+** @Refcount: retains product
 */
 u3_weak
 u3h_git(u3p(u3h_root) har_p, u3_noun key)
@@ -822,11 +844,13 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
 /* u3h_get(): read from hashtable, incrementing refcount.
 **
 ** `key` is RETAINED; result is PRODUCED.
+** @Refcount: retains `key`
+** @Refcount: transfers product
 */
 u3_weak
 u3h_get(u3p(u3h_root) har_p, u3_noun key)
 {
-  u3_noun pro = u3h_git(har_p, key);
+  u3_weak pro = u3h_git(har_p, key);
 
   if ( u3_none != pro ) {
     u3k(pro);
@@ -943,6 +967,7 @@ _ch_walk_node(u3h_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* 
 
 /* u3h_walk_with(): traverse hashtable with key, value fn and data
  *                  argument; RETAINS.
+ * @Refcount: retains arguments
 */
 void
 u3h_walk_with(u3p(u3h_root) har_p,
@@ -969,6 +994,9 @@ u3h_walk_with(u3p(u3h_root) har_p,
 }
 
 /* _ch_walk_plain(): use plain u3_noun fun_f for each node
+  @Refcount: assert
+  @Refcount: transfers
+  (fun_f must transfer)
  */
 static void
 _ch_walk_plain(u3_noun kev, void* wit)
@@ -986,6 +1014,8 @@ u3h_walk(u3p(u3h_root) har_p, void (*fun_f)(u3_noun))
 }
 
 /* _ch_take_noun(): take key and call [fun_f] on val.
+** @Refcount: assert
+** (fun_f copies)
 */
 static u3h_slot
 _ch_take_noun(u3h_slot sot_w, u3_funk fun_f)
@@ -1072,6 +1102,7 @@ u3h_take(u3p(u3h_root) har_p)
   return u3h_take_with(har_p, u3a_take);
 }
 
+// @Refcount: retains
 static void
 _ch_mark_kev(u3_noun kev, u3h_mass* mas_u)
 {

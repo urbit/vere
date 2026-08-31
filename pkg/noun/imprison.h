@@ -37,6 +37,7 @@
           u3i_slab_bare(u3i_slab* sab_u, c3_g met_g, c3_d len_d);
 
         /* u3i_slab_from(): configure bloq-length slab, initialize with [a].
+        ** @Refcount: retains arguments
         */
           void
           u3i_slab_from(u3i_slab* sab_u, u3_atom a, c3_g met_g, c3_d len_d);
@@ -112,6 +113,7 @@
           u3i_vint(u3_noun a);
 
         /* u3i_cell(): Produce the cell `[a b]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_cell(u3_noun a, u3_noun b);
@@ -124,12 +126,14 @@
           u3i_defcons(u3_noun** hed, u3_noun** tel);
 
         /* u3i_trel(): Produce the triple `[a b c]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_trel(u3_noun a, u3_noun b, u3_noun c);
 #         define u3nt(a, b, c) u3i_trel(a, b, c)
 
         /* u3i_qual(): Produce the cell `[a b c d]`.
+        ** @Refcount: conslike
         */
           u3_noun
           u3i_qual(u3_noun a, u3_noun b, u3_noun c, u3_noun d);
@@ -155,6 +159,7 @@
         **
         **   Mutate `big` at axis `axe` with new value `som`
         **   `axe` is RETAINED.
+        ** @Refcount: retains `axe`
         */
           u3_noun
           u3i_edit(u3_noun big, u3_noun axe, u3_noun som);

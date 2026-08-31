@@ -32,6 +32,7 @@ _bit_rep(u3_atom bits, u3_noun blox)
   //  Calculate input and output size.
   //
   c3_w num_blox_w = u3qb_lent(blox);
+  if ( c3n == u3a_is_cat(num_blox_w) ) return u3m_bail(c3__fail);
   //  guard against 32-bit overflow of the bit count: num_blox_w * bits can
   //  wrap, undersizing the slab before the FLUSH loop writes the full count.
   //
@@ -166,7 +167,7 @@ _block_rep(u3_atom a,
   }
 }
 
-u3_noun
+u3_weak
 u3qc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
@@ -183,7 +184,7 @@ u3qc_rep(u3_atom a,
   return u3_none;
 }
 
-u3_noun
+u3_weak
 u3wc_rep(u3_noun cor)
 {
   u3_atom bloq, step;
@@ -195,12 +196,12 @@ u3wc_rep(u3_noun cor)
   return u3qc_rep(bloq, step, b);
 }
 
-u3_noun
+u3_weak
 u3kc_rep(u3_atom a,
          u3_atom b,
          u3_noun c)
 {
-  u3_noun res = u3qc_rep(a, b, c);
+  u3_weak res = u3qc_rep(a, b, c);
   u3z(a); u3z(b); u3z(c);
   return res;
 }

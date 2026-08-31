@@ -287,6 +287,7 @@ _http_heds_free(u3_hhed* hed_u)
 }
 
 /* _http_hed_new(): create u3_hhed from nam/val cords
+**  @Refcount: retains arguments
 */
 static u3_hhed*
 _http_hed_new(u3_atom nam, u3_atom val)
@@ -859,6 +860,8 @@ _free_beam(beam* bem)
 }
 
 /* _get_beam(): get a _beam from url
+** @Refcount: custom
+** (returns a tuple of u3_weak)
 */
 static beam
 _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
@@ -952,6 +955,7 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
 /* _http_peek_dispatch(): dispatch peek request. RETAINS gang, spur, bem
  * RETAINS req_u->peq_u and req_u->peq_u->pax if c3n is returned (no peek
  * was queued), TRANSFERS them if c3y was returned
+ *  @Refcount: custom
 */
 static c3_o
 _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
@@ -988,7 +992,9 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
        || ((u3_nul == gang) && (c3y == u3r_at(14, nac))) )
     {
       u3z(req_u->peq_u->pax);
-      req_u->peq_u->pax = u3k(bam);
+      { //  @Refcount: assert transfer
+        req_u->peq_u->pax = u3k(bam);
+      }
       pro_o = c3y;
       u3_pier_peek(htd_u->car_u.pir_u, u3k(gang), u3nt(0, c3__ex, u3k(bam)),
         req_u->peq_u, _http_scry_cb);
@@ -1005,6 +1011,7 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
 }
 
 /* _http_req_dispatch(): dispatch http request. RETAINS `req`
+**  @Refcount: assert retains arguments
 */
 static void
 _http_req_dispatch(u3_hreq* req_u, u3_noun req)
@@ -1246,7 +1253,9 @@ _http_req_cache(u3_hreq* req_u)
     req_u->peq_u        = c3_malloc(sizeof(*req_u->peq_u));
     req_u->peq_u->req_u = req_u;
     req_u->peq_u->htd_u = htd_u;
-    req_u->peq_u->pax   = u3k(sac);
+    {  // @Refcount: assert transfer
+      req_u->peq_u->pax = u3k(sac);
+    }
 
     req_u->sat_e = u3_rsat_peek;
 
@@ -1527,7 +1536,7 @@ _http_cancel_respond(u3_hreq* req_u)
 static u3_weak
 _http_rec_to_httq(h2o_req_t* rec_u)
 {
-  u3_noun med = _http_vec_to_meth(rec_u->method);
+  u3_weak med = _http_vec_to_meth(rec_u->method);
 
   if ( u3_none == med ) {
     return u3_none;
@@ -2734,7 +2743,9 @@ void
 u3_http_ef_auth(u3_httd* htd_u, u3_noun fig)
 {
   u3z(htd_u->fig_u.ses);
-  htd_u->fig_u.ses = fig;
+  { //  @Refcount: assert transfer
+    htd_u->fig_u.ses = fig;
+  }
 }
 
 /* _http_io_talk(): start http I/O.
@@ -2867,10 +2878,8 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
         }
       }
       else {
-        u3_noun blu = u3_term_get_blew(0);
-        c3_l  col_l = u3h(blu);
+        c3_l col_l = u3_term_get_blew(0).col_l;
         wol = u3dc("wash", u3nc(0, col_l), u3k(tan));
-        u3z(blu);
       }
 
       if ( u3_none != wol ) {

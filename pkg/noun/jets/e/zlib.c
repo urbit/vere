@@ -23,7 +23,7 @@ zlib_free(voidpf opaque, voidpf address)
   u3a_free(address);
 }
 
-u3_noun
+u3_weak
 _decompress(u3_atom pos, u3_noun octs, int window_bits)
 {
   u3_atom p_octs = u3h(octs);
@@ -177,12 +177,12 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   return u3nc(decompressed_octs, new_stream);
 }
 
-u3_noun
+u3_weak
 u3qe_decompress_gzip(u3_atom pos, u3_noun octs)
 {
   return _decompress(pos, octs, 31);
 }
-u3_noun
+u3_weak
 u3qe_decompress_zlib(u3_atom pos, u3_noun octs)
 {
   return _decompress(pos, octs, 15);

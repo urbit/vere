@@ -93,6 +93,7 @@ void _king_doom(u3_noun doom);
 static u3_noun _king_get_atom(c3_c* url_c);
 
 /* _king_defy_fate(): invalid fate
+**  @Refcount: noreturn
 */
 void
 _king_defy_fate()
@@ -287,7 +288,10 @@ _king_dawn(u3_noun feed, u3_noun pill, u3_noun path)
   //
   u3C.slog_f = 0;
 
-  {
+  //  rift's counted reference rides to _king_boot_done as the callback
+  //  baton (cast to c3_p below)
+  //
+  { //  @Refcount: assert transfer rift
     c3_d   key_d[4] = {0};
     u3_noun     msg = u3_nul;
     u3_noun     mor = _king_prop();
@@ -1681,6 +1685,7 @@ _king_done_cb(uv_handle_t* han_u)
 }
 
 /* u3_king_done(): all piers closed. s/b callback. Does not return
+**  @Refcount: noreturn
 */
 void
 u3_king_done(void)
@@ -1758,6 +1763,7 @@ u3_king_exit(void)
 }
 
 /* u3_king_bail(): immediately shutdown.
+**  @Refcount: noreturn
 */
 void
 u3_king_bail(void)

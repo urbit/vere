@@ -191,6 +191,7 @@ _conn_find_chan(u3_conn* con_u, c3_l sev_l, c3_l coq_l)
 }
 
 /* _conn_read_wire(): check tag, decompose wire into /sev/coq/rid
+** @Refcount: transfer `wir`, fills transferred `rid` on `c3y`
 */
 static c3_o
 _conn_read_wire(u3_noun   wir,
@@ -241,7 +242,9 @@ _conn_read_wire(u3_noun   wir,
         {
           u3z(uco); u3z(wir); return c3n;
         }
-        *rid = u3k(q_uco);
+        { //  @Refcount: assert transfer
+          *rid = u3k(q_uco);
+        }
         u3z(uco);
       }
     }
@@ -440,7 +443,9 @@ _conn_make_cran(u3_chan* can_u, u3_atom rid)
 {
   u3_cran*  ran_u = c3_calloc(sizeof(*ran_u));
 
-  ran_u->rid = rid;
+  { //  @Refcount: assert transfer
+    ran_u->rid = rid;
+  }
   ran_u->can_u = can_u;
   ran_u->nex_u = can_u->ran_u;
   can_u->ran_u = ran_u;

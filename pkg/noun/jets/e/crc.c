@@ -49,7 +49,7 @@ u3qe_crc32(u3_noun input_octs)
 u3_noun
 u3we_crc32(u3_noun cor)
 {
-  u3_noun a = u3r_at(u3x_sam, cor);
+  u3_weak a = u3r_at(u3x_sam, cor);
 
   if ( (u3_none != a)
   && (u3du(a) == c3y)

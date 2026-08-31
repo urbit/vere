@@ -21,7 +21,7 @@
 
       //  push list onto road stack
       //
-      do {
+      do { // @Refcount: assert transfer
         u3x_cell(t, &i, &t);
         top  = u3a_push(&pil_u);
         *top = u3k(i);

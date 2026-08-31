@@ -112,6 +112,7 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
         u3m_hate(c3_w pad_w);
 
       /* u3m_love(): return product from leap.
+      ** @Refcount: passthrough `pro`
       */
         u3_noun
         u3m_love(u3_noun pro);
@@ -184,6 +185,7 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
         u3m_water(u3_post* low_p, u3_post* hig_p);
 
       /* u3m_pretty(): dumb prettyprint to string.  RETAIN.
+      ** @Refcount: retains arguments
       */
         c3_c*
         u3m_pretty(u3_noun som);
@@ -194,11 +196,13 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
         u3m_pretty_road(u3_noun som);
 
       /* u3m_pretty_path(): prettyprint a path to string.  RETAIN.
+      ** @Refcount: retains arguments
       */
         c3_c*
         u3m_pretty_path(u3_noun som);
 
       /* u3m_p(): dumb print with caption.  RETAIN.
+      ** @Refcount: retains arguments
       */
         void
         u3m_p(const c3_c* cap_c, u3_noun som);

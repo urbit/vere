@@ -54,7 +54,7 @@
 static u3_noun
 _bit_rip(u3_atom bits, u3_atom atom)
 {
-  if ( !_(u3a_is_cat(bits) || bits==0 || bits>31) ) {
+  if ( !_(u3a_is_cat(bits)) || bits==0 || bits>31 ) {
     return u3m_bail(c3__fail);
   }
 
@@ -152,7 +152,7 @@ _block_rip(u3_atom bloq, u3_atom b)
   return acc;
 }
 
-u3_noun
+u3_weak
 u3qc_rip(u3_atom a,
          u3_atom b,
          u3_atom c)
@@ -169,7 +169,7 @@ u3qc_rip(u3_atom a,
   return u3_none;
 }
 
-u3_noun
+u3_weak
 u3wc_rip(u3_noun cor)
 {
   u3_atom bloq, step;
@@ -181,12 +181,12 @@ u3wc_rip(u3_noun cor)
   return u3qc_rip(bloq, step, u3x_atom(b));
 }
 
-u3_noun
+u3_weak
 u3kc_rip(u3_atom a,
          u3_atom b,
          u3_atom c)
 {
-  u3_noun pro = u3qc_rip(a, b, c);
+  u3_weak pro = u3qc_rip(a, b, c);
   u3z(a); u3z(b); u3z(c);
   return pro;
 }

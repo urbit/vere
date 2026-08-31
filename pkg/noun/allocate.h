@@ -63,6 +63,8 @@
     */
 #     define u3a_crag_no  (u3a_page - u3a_min_log)
 
+#     define u3a_direct_max 0x7fffffff
+
     /* page table constants
     */
 #     define u3a_free_pg  (u3p(u3a_crag))0
@@ -237,6 +239,27 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
   /**  Macros.  Should be better commented.
   **/
+#   ifdef U3_REFCOUNT_LINT
+    /* Lint-mode declarations: the refcount checker parses with
+    ** U3_REFCOUNT_LINT defined so that noun primitives appear as plain
+    ** function calls in the AST instead of macro expansions.  These
+    ** declarations are never compiled or linked; they must stay
+    ** semantically equivalent to the macros in the #else branch.
+    */
+      c3_o u3a_is_cat(u3_noun som);
+      c3_o u3a_is_dog(u3_noun som);
+      c3_o u3a_is_pug(u3_noun som);
+      c3_o u3a_is_pom(u3_noun som);
+      c3_o u3a_is_atom(u3_noun som);
+      c3_o u3a_is_cell(u3_noun som);
+#     define u3ud(som)  u3a_is_atom(som)
+#     define u3du(som)  u3a_is_cell(som)
+
+      u3_noun u3a_h(u3_noun som);  //  @Refcount: retains arguments
+      u3_noun u3a_t(u3_noun som);  //  @Refcount: retains arguments
+#     define u3h(som) u3a_h(som)
+#     define u3t(som) u3a_t(som)
+#   else
     /* u3a_is_cat(): yes if noun [som] is direct atom.
     */
 #     define u3a_is_cat(som)    (((som) >> 31) ? c3n : c3y)
@@ -279,6 +302,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
            ? ( ((u3a_cell *)u3a_to_ptr(som))->tel )\
            : u3m_bail(c3__exit) )
 #     define u3t(som) u3a_t(som)
+#   endif
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
 #     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
@@ -646,10 +670,14 @@ u3a_post_info(u3_post);
         */
           u3_weak
           u3a_gain(u3_weak som);
+#         ifdef U3_REFCOUNT_LINT
+#           define u3k(som) u3a_gain(som)
+#         else
 #         define u3k(som) ({                                                    \
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
+#         endif
 
         /* u3a_take(): gain, copying juniors.
         */
@@ -665,12 +693,17 @@ u3a_post_info(u3_post);
         */
           void
           u3a_lose(u3_weak som);
+#         ifdef U3_REFCOUNT_LINT
+#           define u3z(som) u3a_lose(som)
+#         else
 #         define u3z(som) ({                                                    \
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
           })
+#         endif
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
+        ** @Refcount: retains arguments
         */
           void
           u3a_wash(u3_noun som);
@@ -706,6 +739,7 @@ u3a_post_info(u3_post);
           u3a_mark_rptr(void* ptr_v);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
+        ** @Refcount: retains arguments
         */
           c3_w
           u3a_mark_noun(u3_noun som);
@@ -825,6 +859,7 @@ u3a_dash(void);
           u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w);
 
         /* u3a_prof(): mark/measure/print memory profile. RETAIN.
+        ** @Refcount: retains arguments
         */
           u3m_quac*
           u3a_prof(FILE* fil_u, u3_noun mas);
@@ -861,6 +896,7 @@ u3a_dash(void);
                         c3_o     (*cel_f)(u3_noun, void*));
 
         /* u3a_string(): `a` as an on-loom c-string.
+           @Refcount: retains
         */
           c3_c*
           u3a_string(u3_atom a);

@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "jets.h"
 
@@ -100,6 +102,7 @@ _cj_hash(c3_c* has_c)
 c3_w* u3qe_jam_buf(u3_noun, c3_w* bit_w);
 
 /* _cj_bash(): battery hash. RETAIN.
+** @Refcount: retains arguments
  */
 static u3_noun
 _cj_bash(u3_noun bat)
@@ -227,6 +230,7 @@ _cj_gust(u3_weak reg, u3_noun axe, u3_noun pel, u3_noun loc)
 }
 
 /* _cj_axis(): axis from formula, or 0.  `fol` is RETAINED.
+** @Refcount: retains `fol`
 */
 static c3_l
 _cj_axis(u3_noun fol)
@@ -259,6 +263,7 @@ _cj_axis(u3_noun fol)
 }
 
 /* _cj_warm_hump(): generate axis-to-arm map.  RETAIN.
+** @Refcount: retains arguments
 */
 static u3_noun
 _cj_warm_hump(c3_l jax_l, u3_noun huc)
@@ -349,6 +354,7 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
 
 #if 0
 /* _cj_by_gut(): (~(get by a) b), unifying; RETAINS a, b, AND result.
+** @Refcount: retains
 */
 static u3_weak
 _cj_by_gut(u3_noun a, u3_noun b)
@@ -463,6 +469,7 @@ _cj_je_fsck(u3_noun clu)
 
 /* _cj_find_cold(): search cold state for `bat`s [bash registry].
  *                  RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3_weak
 _cj_find_cold(u3_noun bat)
@@ -485,6 +492,7 @@ _cj_find_cold(u3_noun bat)
 
 /* _cj_find_warm(): search warm state for `loc`s activation.
  *                  RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3_weak
 _cj_find_warm(u3_noun loc)
@@ -505,9 +513,11 @@ _cj_find_warm(u3_noun loc)
   }
 }
 
+//  @Refcount: retains arguments
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);
 
 /* _cj_reg_find(): locate core within registry. RETAIN.
+** @Refcount: retains arguments
  */
 static u3_weak
 _cj_reg_find(u3_noun reg, u3_noun cor)
@@ -546,6 +556,7 @@ _cj_reg_find(u3_noun reg, u3_noun cor)
 }
 
 /* _cj_jit(): generate arbitrary warm jet-associated data.  RETAIN.
+** @Refcount: retains arguments
 */
 static u3_noun
 _cj_jit(c3_l jax_l, u3_noun bat)
@@ -554,6 +565,7 @@ _cj_jit(c3_l jax_l, u3_noun bat)
 }
 
 /* _cj_loc_axe(): axis-within-core from location (0 for root). RETAIN.
+** @Refcount: retains arguments
  */
 static u3_noun
 _cj_loc_axe(u3_noun loc)
@@ -565,6 +577,7 @@ _cj_loc_axe(u3_noun loc)
 }
 
 /* _cj_loc_pel(): parent location (or root noun, if root) of loc. RETAIN.
+** @Refcount: retains arguments
  */
 static u3_noun
 _cj_loc_pel(u3_noun loc)
@@ -574,6 +587,7 @@ _cj_loc_pel(u3_noun loc)
 
 /* _cj_spot_cold(): spot, cold dashboard only. *bar is set to
  *                  the [bash registry] found for battery. RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3_weak
 _cj_spot_cold(u3_noun cor, u3_weak* bar)
@@ -590,6 +604,7 @@ _cj_spot_cold(u3_noun cor, u3_weak* bar)
 /* _cj_spot_hot(): try to locate core by hot dashboard. if found,
  *                 the activation (warm state) is returned and the
  *                 location is produced at *loc. RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3_weak
 _cj_spot_hot(u3_noun cor, u3_noun bas, u3_noun* loc)
@@ -611,6 +626,7 @@ _cj_spot_hot(u3_noun cor, u3_noun bas, u3_noun* loc)
 }
 
 /* _cj_spot(): find location of cor. expensive. RETAIN.
+** @Refcount: retains arguments
  *             bas is complicated to make it easy to cache bashes.
  *             you can safely ignore it by passing NULL. Otherwise,
  *             if it points to u3_none, and no location is found,
@@ -669,6 +685,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
 
 /* _cj_cast(): create a u3j_fink that can be used to efficiently verify
  *             that another core is located where this one is. RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3p(u3j_fink)
 _cj_cast(u3_noun cor, u3_noun loc)
@@ -708,6 +725,7 @@ _cj_cast(u3_noun cor, u3_noun loc)
 }
 
 /* _cj_fine(): check that a core matches a u3j_fink. RETAIN.
+** @Refcount: retains arguments
  */
 static c3_o
 _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
@@ -729,6 +747,7 @@ _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
 /* _cj_nail(): resolve hot state for arm at axis within cores located
  *             at loc. a label will be PRODUCED at *lab, unconditionally.
  *             Arguments are RETAINED. Return value is yes if a jet driver
+ ** @Refcount: retains arguments
  *             is present.
  */
 static c3_o
@@ -765,6 +784,7 @@ _cj_nail(u3_noun loc, u3_noun axe,
 }
 
 /* _cj_hot_mean(): in parent, declare a core.  RETAINS.
+** @Refcount: retains arguments
 */
 static c3_l
 _cj_hot_mean(c3_l par_l, u3_noun nam)
@@ -843,6 +863,7 @@ _cj_soft(u3_noun cor, u3_noun axe)
 /* _cj_kick_z(): try to kick by jet.  If no kick, produce u3_none.
 **
 ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+** @Refcount: custom
 ** `axe` is RETAINED.
 */
 static u3_weak
@@ -1075,6 +1096,7 @@ _cj_to_hank(c3_w han_w)
 
 /* cj_hank_find(): find cached hook information, keyed by arbitrary
  *                 prefix and term cords. RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3j_hank*
 _cj_hank_find(u3_noun pre, u3_noun tam)
@@ -1117,6 +1139,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
 /* _cj_hank_fine(): check that cached hook information is valid
  *                  for given core. *inn will point to the hooked
  *                  core on return if valid. RETAIN.
+ ** @Refcount: retains arguments
  */
 static c3_o
 _cj_hank_fine(u3j_hank* han_u, u3_noun cor, u3_noun *inn)
@@ -1237,6 +1260,7 @@ _cj_sink(u3_noun cor, u3_noun axe)
 /* u3j_kick(): new kick.
 **
 ** `axe` is RETAINED by the caller; `cor` is RETAINED iff there
+** @Refcount: custom
 ** is no kick, TRANSFERRED if one.
 */
 u3_weak
@@ -1688,6 +1712,7 @@ u3j_kink(u3_noun cor, u3_noun axe)
 
 /* u3j_gate_prep(): prepare a locally cached gate to call repeatedly.
  *                  core is TRANSFERRED.
+ ** @Refcount: transfers arguments
  */
 void
 u3j_gate_prep(u3j_site* sit_u, u3_noun cor)
@@ -1727,6 +1752,7 @@ u3j_gate_prep(u3j_site* sit_u, u3_noun cor)
 
 /* u3j_gate_slam(): slam a site prepared by u3j_gate_find() with sample.
  *                  sam is TRANSFERRED.
+ ** @Refcount: transfers arguments
  */
 u3_noun
 u3j_gate_slam(u3j_site* sit_u, u3_noun sam)
@@ -1763,6 +1789,7 @@ u3j_gate_lose(u3j_site* sit_u)
 }
 
 /* _cj_minx(): produce location of core from fsck'd clue. RETAIN.
+** @Refcount: retains arguments
  */
 static u3_weak
 _cj_minx(u3_noun cey, u3_noun cor)
@@ -1808,6 +1835,7 @@ _cj_print_tas(u3_noun tas)
 }
 
 /* _cj_mine(): declare a core and produce location. RETAIN.
+** @Refcount: retains arguments
 */
 static u3_weak
 _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
@@ -2088,6 +2116,7 @@ u3j_reap(u3a_jets jed_u)
 }
 
 /* _cj_ream(): ream list of battery [bash registry] pairs. RETAIN.
+** @Refcount: retains arguments
  */
 static void
 _cj_ream(u3_noun all)

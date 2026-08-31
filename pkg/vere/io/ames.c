@@ -977,6 +977,8 @@ _ames_czar_lane(u3_ames* sam_u, c3_y imp_y, u3_lane* lan_u)
 }
 
 /* _fine_get_cache(): get packet list or status from cache. RETAIN
+ *  (the product is an uncounted view into the cache)
+ *  @Refcount: retains
  */
 static u3_weak
 _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
@@ -988,6 +990,7 @@ _fine_get_cache(u3_ames* sam_u, u3_noun pax, c3_w fra_w)
 }
 
 /* _fine_put_cache(): put packet list or status into cache. RETAIN.
+ *  @Refcount: retains arguments
  */
 static void
 _fine_put_cache(u3_ames* sam_u, u3_noun pax, c3_w lop_w, u3_noun lis)
@@ -1243,7 +1246,8 @@ _stun_start(u3_ames* sam_u, c3_w tim_w)
   uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_w, 0);
 }
 
-/* _ames_is_czar(): [who] is galaxy.
+/* _ames_is_czar(): [who] is galaxy. RETAIN
+**  @Refcount: retains arguments
 */
 static c3_o
 _ames_is_czar(u3_noun who)
@@ -1282,6 +1286,9 @@ _ames_ef_saxo(u3_ames* sam_u, u3_noun zad)
 }
 
 /* _ames_send_lane(): resolve/decode lane. RETAIN
+*/
+/* _ames_send_lane(): resolve noun lane to socket address. RETAIN
+**  @Refcount: retains arguments
 */
 static c3_o
 _ames_send_lane(u3_ames* sam_u, u3_noun lan, u3_lane* lan_u)

@@ -6,10 +6,13 @@
 
 #include "noun.h"
 
-STATIC_ASSERT( (UINT32_MAX > u3a_cells),
+STATIC_ASSERT( (u3a_direct_max > u3a_cells),
                "length precision" );
 
-u3_noun
+/* u3qb_lent(): length of list.
+** @Refcount: retains arguments, direct product
+*/
+u3_atom
 u3qb_lent(u3_noun a)
 {
   c3_w len_w = 0;
@@ -19,7 +22,9 @@ u3qb_lent(u3_noun a)
     len_w++;
   }
 
-  return u3i_word(len_w);
+  c3_dessert(len_w <= u3a_direct_max);
+
+  return len_w;
 }
 
 u3_noun

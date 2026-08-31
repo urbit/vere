@@ -72,7 +72,7 @@ u3qe_lore(u3_atom lub)
 u3_noun
 u3we_lore(u3_noun cor)
 {
-  u3_noun lub;
+  u3_weak lub;
 
   if ( (u3_none == (lub = u3r_at(u3x_sam, cor))) ||
        (c3n == u3ud(lub)) )

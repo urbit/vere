@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "nock.h"
 
@@ -1011,7 +1013,9 @@ static c3_w _n_comp(u3_noun*, u3_noun, c3_o, c3_o);
 
 /* _n_bint(): hint-processing helper for _n_comp.
  *            hif: hint-formula (first part of 11). RETAIN.
+ ** @Refcount: retains `hif`
  *            nef: next-formula (second part of 11). RETAIN.
+ ** @Refcount: retains `nef`
  */
 static c3_w
 _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
@@ -1517,6 +1521,7 @@ _n_comp(u3_noun* ops, u3_noun fol, c3_o los_o, c3_o tel_o)
 }
 
 /* _n_push(): push a noun onto the stack. RETAIN
+** @Refcount: retains arguments
  *            mov: -1 north, 1 south
  *            off: 0 north, -1 south
  */
@@ -1680,6 +1685,7 @@ _n_print_byc(c3_y* pog, c3_w her_w)
 #endif
 
 /* _n_bite(): compile a nock formula to bytecode. RETAIN.
+** @Refcount: retains arguments
  */
 static inline u3n_prog*
 _n_bite(u3_noun fol) {
@@ -1704,6 +1710,7 @@ _cn_to_prog(c3_w pog_w)
 
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
+ ** @Refcount: retains arguments
  */
 static u3n_prog*
 _n_find(u3_noun pre, u3_noun fol)
@@ -1749,6 +1756,7 @@ _n_find(u3_noun pre, u3_noun fol)
 
 /* u3n_find(): return prog for given formula,
  *             split by key (u3_nul for no key). RETAIN.
+ ** @Refcount: retains arguments
  */
 u3p(u3n_prog)
 u3n_find(u3_noun key, u3_noun fol)
@@ -1900,7 +1908,9 @@ _cn_etch_bytecode(u3_noun fol) {
 
 /* _n_hilt_fore(): literal (atomic) dynamic hint, before formula evaluation.
 **            hin: [hint-atom, formula]. TRANSFER
+** @Refcount: transfers `hin`
 **            bus: subject. RETAIN
+** @Refcount: retains `bus`
 **            out: token for _n_hilt_hind(); convention:
 **                 [hint-atom] or [hint-atom data], ~ if unused.
 **
@@ -1973,7 +1983,9 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 
 /* _n_hilt_hind(): literal (atomic) dynamic hint, after formula evaluation.
 **            tok: token from _n_hilt_fore(). TRANSFER
+** @Refcount: transfers `tok`
 **            pro: product of formula evaluation. RETAIN
+** @Refcount: retains `pro`
 */
 static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
@@ -2019,8 +2031,11 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
 
 /* _n_hint_fore(): arbitrary dynamic hint, before formula evaluation
 **            hin: [hint-atom, formula]. TRANSFER
+** @Refcount: transfers `hin`
 **            bus: subject. RETAIN
+** @Refcount: retains `bus`
 **            clu: product of the hint-formula. TRANSFER
+** @Refcount: transfers `clu`
 **                 also, token for _n_hilt_hind(); convention:
 **                 [hint-atom] or [hint-atom data], ~ if unused.
 **
@@ -2119,7 +2134,9 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 
 /* _n_hint_hind(): arbitrary dynamic hint, after formula evaluation.
 **            tok: token from _n_hint_fore(). TRANSFER
+** @Refcount: transfers `tok`
 **            pro: product of formula evaluation. RETAIN
+** @Refcount: retains `pro`
 */
 static void
 _n_hint_hind(u3_noun tok, u3_noun pro)
@@ -2202,6 +2219,7 @@ typedef struct __attribute__((__packed__)) {
 
 /* _n_burn(): pog: program
  *            bus: subject (TRANSFER)
+ ** @Refcount: transfers `bus`
  *            mov: -1 north, 1 south
  *            off: 0 north, -1 south
  */

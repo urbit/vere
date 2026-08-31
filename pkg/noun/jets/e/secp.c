@@ -91,7 +91,7 @@ _cqes_unpack_fe(u3_atom k, c3_y out_y[32])
 
 /* sign hash with priv key
  */
-static u3_noun
+static u3_weak
 _cqes_sign(u3_atom has,
            u3_atom prv)
 {
@@ -110,7 +110,7 @@ _cqes_sign(u3_atom has,
   }
 }
 
-u3_noun
+u3_weak
 u3we_sign(u3_noun cor)
 {
 
@@ -130,7 +130,7 @@ u3we_sign(u3_noun cor)
 
 /* recover pubkey from signature (which is how we verify signatures)
 */
-static u3_noun
+static u3_weak
 _cqes_reco(u3_atom has,
            u3_atom siv,  /* signature: v */
            u3_atom sir,  /* signature: r */
@@ -151,7 +151,7 @@ _cqes_reco(u3_atom has,
   }
 }
 
-u3_noun
+u3_weak
 u3we_reco(u3_noun cor)
 {
   u3_noun has, siv, sir, sis;
@@ -172,7 +172,7 @@ u3we_reco(u3_noun cor)
   }
 }
 
-static u3_atom
+static u3_weak
 _cqes_make(u3_atom has,
           u3_atom prv)
 {
@@ -190,7 +190,7 @@ _cqes_make(u3_atom has,
   }
 }
 
-u3_noun
+u3_weak
 u3we_make(u3_noun cor)
 {
   u3_noun has, prv;
@@ -231,7 +231,7 @@ _cqes_sosi(u3_atom sk, u3_atom m, u3_atom a)
   }
 }
 
-u3_noun
+u3_weak
 u3we_sosi(u3_noun cor)
 {
   u3_noun key, mes, aux;

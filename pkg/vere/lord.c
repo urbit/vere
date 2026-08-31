@@ -132,6 +132,7 @@ _lord_stop(u3_lord* god_u)
 }
 
 /* _lord_bail(): serf/lord error.
+**  @Refcount: noreturn (bail_f never returns)
 */
 static void
 _lord_bail(u3_lord* god_u)
@@ -195,6 +196,7 @@ _lord_writ_need(u3_lord* god_u, u3_writ_type typ_e)
 }
 
 /* _lord_plea_foul():
+** @Refcount: noreturn
 */
 static void
 _lord_plea_foul(u3_lord* god_u, c3_m mot_m, u3_noun dat)
@@ -725,8 +727,9 @@ u3_lord_peek(u3_lord* god_u, u3_pico* pic_u)
                              u3k(pic_u->las_u.pax)));
       } break;
     }
-
-    wit_u->pek_u->sam = u3nc(u3k(pic_u->gan), sam);
+    {  // @Refcount: assert transfer
+      wit_u->pek_u->sam = u3nc(u3k(pic_u->gan), sam);
+    }
   }
 
   //  XX cache check, unless last
@@ -742,7 +745,9 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e = u3_writ_poke;
   wit_u->wok_u.egg_u = egg_u;
-  wit_u->wok_u.job = job;
+  { //  @Refcount: assert transfer
+    wit_u->wok_u.job = job;
+  }
 
   //  if not spinning, start
   //

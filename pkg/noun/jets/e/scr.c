@@ -47,7 +47,7 @@
       return u3_none;
     }
     else {
-      u3_noun pro;
+      u3_weak pro;
       c3_d    n_d = u3r_chub(0, n);
       c3_w    r_w = u3r_word(0, r),
               z_w = u3r_word(0, z);
@@ -87,7 +87,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wes_hsl(u3_noun cor)
   {
     u3_noun p, pl, s, sl, n, r, z, d;
@@ -120,7 +120,7 @@
                      n, r, z, d);
   }
 
-  u3_noun
+  u3_weak
   u3wes_hsh(u3_noun cor)
   {
     u3_noun p, s, n, r, z, d;

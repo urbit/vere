@@ -9,6 +9,7 @@
 #include "vortex.h"
 
 /* u3z_key(): construct a memo cache-key.  Arguments retained.
+** @Refcount: retains arguments
 */
 u3_noun
 u3z_key(c3_m fun, u3_noun one)
@@ -53,6 +54,7 @@ _har(u3a_road* rod_u, u3z_cid cid)
 }
 
 //  RETAINS
+// @Refcount: retains arguments
 //  on hit returns the containing road via out_u
 static u3_weak
 _find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
@@ -73,6 +75,7 @@ _find_in_roads(u3z_cid cid, u3_noun key, u3a_road** out_u)
 }
 
 /* u3z_find(): find in memo cache.  Arguments retained.
+** @Refcount: retains arguments
 */
 u3_weak
 u3z_find(u3z_cid cid, u3_noun key)
@@ -82,7 +85,7 @@ u3z_find(u3z_cid cid, u3_noun key)
     //  XX put +mice behind runtime flag?
     //
     u3a_road* rod_u;
-    u3_noun pro = _find_in_roads(cid, key, &rod_u);
+    u3_weak pro = _find_in_roads(cid, key, &rod_u);
     if ( u3_none != pro && rod_u != u3R ) {
       u3h_put(_har(u3R, cid), key, u3k(pro));
     }
@@ -101,6 +104,7 @@ u3z_find(u3z_cid cid, u3_noun key)
 
 /* u3z_find_up(): find in persistent memo cache,
   starting from the current road. Arguments retained
+** @Refcount: retains arguments
 */
 u3_weak
 u3z_find_up(u3_noun key)
@@ -130,6 +134,10 @@ u3z_find_m(u3z_cid cid, c3_m fun, u3_noun one)
 }
 
 /* u3z_save(): save in memo cache. TRANSFER key; RETAIN val
+** the product is [val] itself (gained into the cache), returned so the
+** caller can transfer it onward.
+** @Refcount: transfers `key`
+** @Refcount: passthrough `val`
 */
 u3_noun
 u3z_save(u3z_cid cid, u3_noun key, u3_noun val)
@@ -140,6 +148,8 @@ u3z_save(u3z_cid cid, u3_noun key, u3_noun val)
 }
 
 /* u3z_save_m(): save in memo cache. Arguments retained.
+** @Refcount: retains arguments
+** @Refcount: passthrough `val`
 */
 u3_noun
 u3z_save_m(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)
@@ -152,12 +162,13 @@ u3z_save_m(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)
 }
 
 /* u3z_uniq(): uniquify with memo cache. XX not used.
+** @Refcount: transfers `som`
 */
 u3_noun
 u3z_uniq(u3z_cid cid, u3_noun som)
 {
   u3_noun key = u3nc(c3__uniq, u3k(som));
-  u3_noun val = u3h_get(_har(u3R, cid), key);
+  u3_weak val = u3h_get(_har(u3R, cid), key);
   u3_noun pro;
   if ( u3_none != val ) {
     u3z(som);

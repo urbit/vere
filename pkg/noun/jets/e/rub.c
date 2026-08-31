@@ -26,7 +26,7 @@
     {
       x = u3k(a);
 
-      while ( 0 == u3qc_cut(0, x, 1, b) ) {
+      while ( 0 == u3r_cat(u3qc_cut(0, x, 1, b)) ) {
         u3_atom y = u3qa_inc(x);
 
         //  Sanity check: crash if decoding more bits than available

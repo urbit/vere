@@ -6,7 +6,8 @@
 #include "noun.h"
 
   // get p.u.q.vex from an $edge, assumes that the unit is non-empty
-  //  RETAIN [vex]
+  // @Refcount: retains `vex`
+  // @Refcount: retains product
   //
   static inline u3_noun
   _puq(u3_noun vex)
@@ -17,7 +18,8 @@
   }
 
   // get q.u.q.vex from an $edge, assumes that the unit is non-empty
-  //  RETAIN [vex]
+  // @Refcount: retains `vex`
+  // @Refcount: retains product
   //
   static inline u3_noun
   _quq(u3_noun vex)
@@ -76,6 +78,7 @@
     }
   }
 
+  // @Refcount: transfer
   static u3_noun
   _last_k(u3_noun zyc, u3_noun naz)
   {
@@ -166,7 +169,8 @@
   u3_noun
  u3we_bend_fun(u3_noun cor)
   {
-    u3_noun van, raq, vex, sab;
+    u3_weak raq;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                u3x_sam_3, &sab,
@@ -325,7 +329,8 @@
   u3_noun
  u3we_comp_fun(u3_noun cor)
   {
-    u3_noun van, raq, vex, sab;
+    u3_weak raq;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                u3x_sam_3, &sab,
@@ -356,7 +361,8 @@
   u3_noun
   u3we_easy_fun(u3_noun cor)
   {
-    u3_noun van, huf, tub;
+    u3_weak huf;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (huf = u3r_at(u3x_sam, van))) )
@@ -431,7 +437,8 @@
   u3_noun
  u3we_glue_fun(u3_noun cor)
   {
-    u3_noun van, bus, vex, sab;
+    u3_weak bus;
+    u3_noun van, vex, sab;
 
     if ( (c3n == u3r_mean(cor, u3x_sam_2, &vex,
                                 u3x_sam_3, &sab,
@@ -527,7 +534,8 @@
   u3_noun
  u3we_just_fun(u3_noun cor)
   {
-    u3_noun van, daf, tub;
+    u3_weak daf;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (daf = u3r_at(u3x_sam, van))) )
@@ -566,7 +574,8 @@
   u3_noun
  u3we_mask_fun(u3_noun cor)
   {
-    u3_noun van, bud, tub;
+    u3_weak bud;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (bud = u3r_at(u3x_sam, van))) )
@@ -791,7 +800,8 @@
   u3_noun
  u3we_shim_fun(u3_noun cor)
   {
-    u3_noun van, zep, tub;
+    u3_weak zep;
+    u3_noun van, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &van, 0)) ||
          (u3_none == (zep = u3r_at(u3x_sam, van))) )
@@ -851,7 +861,7 @@
 
 /* stew
 */
-  static u3_noun
+  static c3_o
   _stew_wor(u3_noun ort,
             u3_noun wan)
   {
@@ -933,7 +943,8 @@
  u3_noun
  u3we_stew_fun(u3_noun cor)
   {
-    u3_noun con, hel, tub;
+    u3_weak hel;
+    u3_noun con, tub;
 
     if ( (c3n == u3r_mean(cor, u3x_sam, &tub, u3x_con, &con, 0)) ||
          (u3_none == (hel = u3r_at(2, con))) )
@@ -985,8 +996,10 @@
         u3x_trel(q_vex, 0, &puq_vex, &quq_vex);
 
         par_u = u3a_push(&pil_u);
-        par_u->har = u3k(p_vex);
-        par_u->res = u3k(puq_vex);
+        {  // @Refcount: assert transfer
+          par_u->har = u3k(p_vex);
+          par_u->res = u3k(puq_vex);
+        }
 
         u3z(tub);
         tub = u3k(quq_vex);

@@ -164,6 +164,7 @@ _dawn_eth_rpc(c3_c* url_c, u3_noun oct)
 }
 
 /* _dawn_fail(): pre-boot validation failed
+**  @Refcount: noreturn
 */
 static void
 _dawn_fail(u3_noun who, u3_noun rac, u3_noun sas)
@@ -272,6 +273,7 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
 }
 
 /* u3_dawn_vent(): validated boot event
+**  @Refcount: fills transferred `rift`
 */
 u3_noun
 u3_dawn_vent(u3_noun ship, u3_noun feed, u3_noun* rift)

@@ -31,6 +31,9 @@ GPATH
 GRTAGS
 GTAGS
 
+# Tools
+tools/__pycache__
+
 # Fake ships.
 /zod
 /nec

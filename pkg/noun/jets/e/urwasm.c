@@ -62,6 +62,7 @@
 #define KICK2(TRAP)         KICK1(KICK1(TRAP))
 
 // [a b c d e f g h]
+// @Refcount: transfers arguments
 static inline u3_noun
 uw_octo(u3_noun a,
   u3_noun b,
@@ -76,6 +77,8 @@ uw_octo(u3_noun a,
 }
 
 // kick by nock. axe RETAINED (ignore if direct)
+// @Refcount: transfers `cor`
+// @Refcount: retains `axe`
 static u3_noun
 uw_kick_nock(u3_noun cor, u3_noun axe)
 {
@@ -84,6 +87,7 @@ uw_kick_nock(u3_noun cor, u3_noun axe)
 }
 
 // slam by nock
+// @Refcount: transfers arguments
 static u3_noun
 uw_slam_nock(u3_noun gat, u3_noun sam)
 {
@@ -116,6 +120,7 @@ static uw_arena* BoxArena;
 //
 static uw_arena* CodeArena;
 
+// @Refcount: transfers arguments
 static u3_noun
 uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
 {
@@ -159,6 +164,7 @@ uw_slam_check(u3_noun gat, u3_noun sam, c3_t is_stateful)
   return pro;
 }
 
+// @Refcount: transfers `som`, consumes `lit`, fills transferred `lit`
 static inline void
 _push_list(u3_noun som, u3_noun *lit)
 {
@@ -167,11 +173,12 @@ _push_list(u3_noun som, u3_noun *lit)
     u3z(som);
   }
   else
-  {
+  {  // @Refcount: assert transfer
     *lit = u3nc(som, *lit);
   }
 }
 
+//  @Refcount: consumes `lit`, fills transferred `lit`
 static inline u3_weak
 _pop_list(u3_weak *lit)
 {
@@ -187,7 +194,9 @@ _pop_list(u3_weak *lit)
   u3k(hed);
   u3k(tel);
   u3z(*lit);
-  *lit = tel;
+  {  // @Refcount: assert transfer `tel`
+    *lit = tel;
+  }
   return hed;
 }
 
@@ -195,10 +204,14 @@ static const M3Result UrwasmArrowExit = "An imported arrow returned %2";
 
 static const c3_m uw_run_m = uw__lia + c3__run + uw_lia_run_version;
 
+//  under U3_REFCOUNT_LINT u3a_is_cat is a function declaration, not a
+//  constant expression; the assert still guards every real build
+#ifndef U3_REFCOUNT_LINT
 static_assert(
   (c3y == u3a_is_cat(uw_run_m)),
   "u3we_run key tag must be a direct atom"
 );
+#endif
 
 typedef struct {
   u3_noun call_bat;
@@ -231,17 +244,17 @@ typedef struct {
 
 typedef struct {
   IM3Module wasm_module;    // p
-  u3_noun lia_shop;         // q,   transferred
+  u3_weak lia_shop;         // q,   transferred
   u3_noun acc;              // p.r, transferred
   u3_noun map;              // q.r, retained
   match_data_struct* match;
-  u3_noun arrow_yil;        // transferred
-  u3_noun susp_list;        // transferred
-  u3_noun resolution;       // resolved %1 block, transferred
+  u3_weak arrow_yil;        // transferred
+  u3_weak susp_list;        // transferred
+  u3_weak resolution;       // resolved %1 block, transferred
   uw_arena box_arena;
   uw_arena code_arena;
-  u3_noun yil_previous;     // transferred
-  u3_noun queue;            // transferred
+  u3_weak yil_previous;     // transferred
+  u3_weak queue;            // transferred
   c3_t is_stateful;
 } lia_state;
 
@@ -560,6 +573,7 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 }
 
 //  RETAIN argument
+// @Refcount: retains arguments
 static c3_o
 _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 {
@@ -636,6 +650,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 }
 
 //  RETAIN argument
+// @Refcount: retains arguments
 static c3_o
 _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
 {
@@ -718,6 +733,7 @@ _deterministic_trap(M3Result result)
   );
 }
 
+// @Refcount: transfers `monad`
 static u3_noun
 _reduce_monad(u3_noun monad, lia_state* sat_u)
 {
@@ -802,7 +818,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         return u3m_bail(c3__fail);
       }
       m3_SuspendStackPop64(sat_u->wasm_module->runtime, NULL);
-      u3_noun frame = _pop_list(&sat_u->susp_list);
+      u3_weak frame = _pop_list(&sat_u->susp_list);
       if (u3_none != frame && lst_call != u3h(frame))
       {
         printf(ERR("wrong frame: call"));
@@ -811,7 +827,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       u3z(frame);
     }
 
-    u3_noun yil;
+    u3_weak yil;
     if (result_call == m3Err_ComputationBlock)
     {
       yil = sat_u->arrow_yil;
@@ -963,7 +979,9 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       u3_noun yil = u3nc(0, u3k(lia_buy));
       u3k(tel);
       u3z(sat_u->lia_shop);
-      sat_u->lia_shop = tel;
+      {  // @Refcount: assert transfer tel
+        sat_u->lia_shop = tel;
+      }
       return yil;
     }
   }
@@ -991,7 +1009,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
           printf(ERR("try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (u3_none != frame && lst_try != u3h(frame))
         {
           printf(ERR("wrong frame: try"));
@@ -1045,7 +1063,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
           printf(ERR("catch-try tag mismatch: %"PRIc3_d), tag);
           return u3m_bail(c3__fail);
         }
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
         if (u3_none != frame && lst_catch_try != u3h(frame))
         {
           printf(ERR("wrong frame: catch-try"));
@@ -1090,7 +1108,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
             printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
             return u3m_bail(c3__fail);
           }
-          u3_noun frame = _pop_list(&sat_u->susp_list);
+          u3_weak frame = _pop_list(&sat_u->susp_list);
           if (u3_none != frame && lst_catch_err != u3h(frame))
           {
             printf(ERR("wrong frame: catch-err"));
@@ -1317,7 +1335,9 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun new = u3k(u3at(arr_sam, monad));
     u3z(monad);
     u3z(sat_u->acc);
-    sat_u->acc = new;
+    {  // @Refcount: assert transfer new
+      sat_u->acc = new;
+    }
     return u3nc(0, 0);
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->get_all_glob_bat))
@@ -1504,7 +1524,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
       {
         u3m_bail(c3__fail);
       }
-      sat_u->resolution = yil;
+      {  // @Refcount: assert transfer `yil`
+        sat_u->resolution = yil;
+      }
       u3a_free(name_c);
       break;
     }
@@ -1546,7 +1568,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // if %2 then nothing to do, sat_u->resolution already holds %2 result
         //
@@ -1582,7 +1606,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // %2
         //
@@ -1629,7 +1655,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           else if (1 == u3h(yil))
           {
             u3z(sat_u->resolution);
-            sat_u->resolution = yil;
+            {  // @Refcount: assert transfer
+              sat_u->resolution = yil;
+            }
           }
           else  // %0
           {
@@ -1641,7 +1669,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             );
             u3z(sat_u->resolution);
             u3z(yil);
-            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+            {  // @Refcount: assert transfer
+              sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+            }
           }
         }
         u3z(frame);
@@ -1675,7 +1705,9 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
             sat_u->is_stateful
           );
           u3z(sat_u->resolution);
-          sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          {  // @Refcount: assert transfer
+            sat_u->resolution = _reduce_monad(monad_cont, sat_u);
+          }
         }
         // if %2 then nothing to do, sat_u->resolution already holds %2 result
         //
@@ -1818,7 +1850,7 @@ _link_wasm_with_arrow_map(
       result = "non-empty sat_u->arrow_yil on block";
     }
     else
-    {
+    {  // @Refcount: assert transfer `yil`
       sat_u->arrow_yil = yil;
       result = m3Err_ComputationBlock;  // start suspending if not yet suspending
     }
@@ -1856,6 +1888,7 @@ _link_wasm_with_arrow_map(
 //        susp_list=(list)                        ::  +255
 //    ==
 // arguments RETAINED
+// @Refcount: retains arguments
 // on success allocates sat_u->wasm_module->runtime->memory.mallocated
 // and initializes the arenas
 static c3_t
@@ -1994,16 +2027,18 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     }
 
     {
-      sat_u->yil_previous = u3k(yil_previous);
-      sat_u->queue = u3k(queue);
+      {  // @Refcount: assert transfer
+        sat_u->yil_previous = u3k(yil_previous);
+        sat_u->queue = u3k(queue);
+        sat_u->lia_shop = u3k(lia_shop);
+        sat_u->acc = u3k(acc);
+        sat_u->susp_list = u3k(susp_list);
+      }
       sat_u->wasm_module = wasm3_module;
-      sat_u->lia_shop = u3k(lia_shop);
-      sat_u->acc = u3k(acc);
       // sat_u->map to be filled afterwards
       // sat_u->match same
       // sat_u->resolution same
       sat_u->arrow_yil = u3_none;
-      sat_u->susp_list = u3k(susp_list);
       M3MemoryHeader* mem = u3a_malloc(len_buf_w + sizeof(M3MemoryHeader));
       mem->runtime = wasm3_runtime;
       mem->maxStack = BoxArena->buf_y + stk_off_w;
@@ -2019,6 +2054,8 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
 }
 
 //  arguments RETAINED, returned yield transfered.
+// @Refcount: retains arguments
+// @Refcount: transfers product
 //  transfers sat_u->yil_previous if it is returned, and replaces
 //  the struct value with u3_none
 static u3_noun
@@ -2038,7 +2075,9 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       {
         return u3m_bail(c3__fail);
       }
-      sat_u->queue = u3kb_weld(sat_u->queue, u3nc(u3k(p_input), u3_nul));  // snoc
+      {  // @Refcount: assert transfer
+        sat_u->queue = u3kb_weld(sat_u->queue, u3nc(u3k(p_input), u3_nul));  // snoc
+      }
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -2058,7 +2097,10 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
       {
         return u3m_bail(c3__fail);
       }
-      sat_u->lia_shop = u3kb_weld(sat_u->lia_shop, u3nc(u3k(p_input), u3_nul));  // snoc
+      
+      {  // @Refcount: assert transfer
+        sat_u->lia_shop = u3kb_weld(sat_u->lia_shop, u3nc(u3k(p_input), u3_nul));  // snoc
+      }
       u3_noun yil = sat_u->yil_previous;
       sat_u->yil_previous = u3_none;
       return yil;
@@ -2071,9 +2113,11 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
     {
       return u3m_bail(c3__fail);
     }
-    sat_u->resolution = u3nc(0, u3k(p_input));
+    {  // @Refcount: assert transfer
+      sat_u->resolution = u3nc(0, u3k(p_input));
+    }
     M3Result result = m3_Resume(run_u);
-    u3_noun yil;
+    u3_weak yil;
     if (result == m3Err_ComputationBlock)
     {
       yil = sat_u->resolution;
@@ -2130,6 +2174,7 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
 // try to save new state, replacing old state with a tombstone value
 // frees wasm3 memory buffer, releases arenas
 // RETAINS arguments, transfers sat_u->lia_shop/susp_list/queue and
+// @Refcount: retains arguments
 // replaces them with u3_none if save is succesful
 static void
 _move_state(
@@ -2385,7 +2430,7 @@ u3we_lia_run_v1(u3_noun cor)
   BoxArena = &sat.box_arena;
   CodeArena = &sat.code_arena;
 
-  u3_noun yil;
+  u3_weak yil;
   if (!omit_t)
   {
     sat.is_stateful = 1;
@@ -2979,7 +3024,7 @@ u3we_lia_run_once(u3_noun cor)
     }
   }
 
-  u3_noun yil;
+  u3_weak yil;
 
   result = m3_RunStart(wasm3_module);
 

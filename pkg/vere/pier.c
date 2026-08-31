@@ -53,6 +53,7 @@ _pier_peek_next(u3_pier* pir_u)
 }
 
 /* _pier_work_send(): send new events for processing
+** @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 */
 static void
 _pier_work_send(u3_work* wok_u)
@@ -140,7 +141,9 @@ _pier_work(u3_work* wok_u)
   }
 }
 
-/* _pier_on_lord_work_spin(): start spinner
+/* _pier_on_lord_work_spin(): start spinner. RETAIN
+**  (lord.c hands [pin] through spin_f as a borrowed view)
+**  @Refcount: retains arguments
 */
 static void
 _pier_on_lord_work_spin(void* ptr_v, u3_atom pin, c3_o del_o)
@@ -265,12 +268,14 @@ u3_pier_peek(u3_pier*   pir_u,
 {
   u3_pico* pic_u = u3_pico_init();
 
-  pic_u->ptr_v = ptr_v;
-  pic_u->fun_f = fun_f;
-  pic_u->gan   = gan;
-  //
-  pic_u->typ_e = u3_pico_full;
-  pic_u->ful   = ful;
+  { //  @Refcount: assert transfer
+    pic_u->ptr_v = ptr_v;
+    pic_u->fun_f = fun_f;
+    pic_u->gan   = gan;
+    //
+    pic_u->typ_e = u3_pico_full;
+    pic_u->ful   = ful;
+  }
 
   _pier_peek_plan(pir_u, pic_u);
 }
@@ -288,14 +293,16 @@ u3_pier_peek_last(u3_pier*   pir_u,
 {
   u3_pico* pic_u = u3_pico_init();
 
-  pic_u->ptr_v = ptr_v;
-  pic_u->fun_f = fun_f;
-  pic_u->gan   = gan;
-  //
-  pic_u->typ_e       = u3_pico_once;
-  pic_u->las_u.car_m = car_m;
-  pic_u->las_u.des   = des;
-  pic_u->las_u.pax   = pax;
+  { //  @Refcount: assert transfer
+    pic_u->ptr_v = ptr_v;
+    pic_u->fun_f = fun_f;
+    pic_u->gan   = gan;
+    //
+    pic_u->typ_e       = u3_pico_once;
+    pic_u->las_u.car_m = car_m;
+    pic_u->las_u.des   = des;
+    pic_u->las_u.pax   = pax;
+  }
 
   _pier_peek_plan(pir_u, pic_u);
 }
@@ -508,6 +515,7 @@ _pier_work_init(u3_pier* pir_u)
   }
 }
 
+// @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 static void _pier_wyrd_init(u3_pier*);
 
 static void
@@ -682,6 +690,7 @@ _pier_wyrd_good(u3_pier* pir_u, u3_ovum* egg_u)
 
 /* _pier_wyrd_fail(): %wyrd version negotation failed.
 */
+//  @Refcount: noreturn
 static void
 _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 {
@@ -715,6 +724,7 @@ _pier_wyrd_fail(u3_pier* pir_u, u3_ovum* egg_u, u3_noun lud)
 #define VERE_LULL  320
 
 /* _pier_wyrd_aver(): check for %wend effect and version downgrade. RETAIN
+**  @Refcount: retains arguments
 */
 static c3_o
 _pier_wyrd_aver(u3_noun act)
@@ -848,6 +858,7 @@ _pier_wyrd_card(u3_pier* pir_u)
 }
 
 /* _pier_wyrd_init(): send %wyrd.
+** @Refcount: assert (semitransfer in u3_auto_next with a pointer)
 */
 static void
 _pier_wyrd_init(u3_pier* pir_u)
@@ -910,10 +921,12 @@ _pier_on_lord_save(void* ptr_v)
   // _pier_next(pir_u);
 }
 
+//  @Refcount: noreturn
 static void
 _pier_bail_impl(u3_pier* pir_u);
 
 /* _pier_on_lord_exit(): worker shutdown.
+**  @Refcount: noreturn
 */
 static void
 _pier_on_lord_exit(void* ptr_v)
@@ -934,6 +947,7 @@ _pier_on_lord_exit(void* ptr_v)
 }
 
 /* _pier_on_lord_bail(): worker error.
+**  @Refcount: noreturn
 */
 static void
 _pier_on_lord_bail(void* ptr_v)
@@ -947,7 +961,9 @@ _pier_on_lord_bail(void* ptr_v)
   u3_pier_bail(pir_u);
 }
 
-/* _pier_on_lord_live(): worker is ready.
+/* _pier_on_lord_live(): worker is ready. RETAIN
+**  (lord.c hands [who] through live_f as a borrowed view)
+**  @Refcount: retains arguments
 */
 static void
 _pier_on_lord_live(void* ptr_v, u3_atom who, c3_o fak_o)
@@ -1074,7 +1090,9 @@ _pier_init(c3_w wag_w, c3_c* pax_c, u3_weak ryf)
   pir_u->pax_c = pax_c;
   pir_u->sat_e = u3_psat_init;
   pir_u->liv_o = c3n;
-  pir_u->ryf   = ryf;
+  { //  @Refcount: assert transfer
+    pir_u->ryf   = ryf;
+  }
 
   // XX revise?
   //
@@ -1199,6 +1217,7 @@ _pier_work_close(u3_work* wok_u)
 }
 
 /* _pier_bail_impl(): immediately shutdown.
+**  @Refcount: noreturn
 */
 static void
 _pier_bail_impl(u3_pier* pir_u)
@@ -1230,6 +1249,7 @@ _pier_bail_impl(u3_pier* pir_u)
 }
 
 /* u3_pier_bail(): fatal error.
+**  @Refcount: noreturn
 */
 void
 u3_pier_bail(u3_pier* pir_u)
@@ -1324,8 +1344,7 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 void
 u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
 {
-  u3_noun blu = u3_term_get_blew(0);
-  c3_l  col_l = u3h(blu);
+  c3_l  col_l = u3_term_get_blew(0).col_l;
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
@@ -1379,7 +1398,7 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
       u3k(wol); u3z(low);
       _pier_dump_wall(fil_u, wol);
     }
-    else {
+    else { //  @Refcount: assert direct low
       // low == u3_nul, no need to lose it
       //
       bad_t = 1;
@@ -1393,7 +1412,6 @@ u3_pier_tank(c3_l tab_l, c3_w pri_w, u3_noun tac)
   fflush(fil_u);
 
   u3_term_io_loja(0, fil_u);
-  u3z(blu);
   u3z(tac);
   
   if ( bad_t ) {

@@ -8,7 +8,8 @@
 u3_noun
 u3wfu_rest(u3_noun cor)
 {
-  u3_noun bat, sut, leg, van;
+  u3_weak bat, sut;
+  u3_noun leg, van;
 
   if ( (c3n == u3r_mean(cor, u3x_sam, &leg, u3x_con, &van, 0))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))

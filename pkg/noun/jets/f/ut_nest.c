@@ -8,8 +8,10 @@
 u3_noun
 u3wfu_nest_dext(u3_noun dext_core)
 {
-  u3_noun nest_in_core, nest_core;
-  u3_noun bat, sut, ref, van, seg, reg, gil;
+  u3_weak nest_in_core;
+  u3_noun nest_core;
+  u3_weak bat, sut;
+  u3_noun ref, van, seg, reg, gil;
 
   if (  (u3_none == (nest_in_core = u3r_at(3, dext_core)))
      || (c3n == u3r_mean(nest_in_core, u3x_sam_2, &seg,

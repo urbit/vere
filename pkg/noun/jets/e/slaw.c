@@ -21,7 +21,7 @@ _parse_ud(u3_noun a)
 }
 
 static
-u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
+c3_o get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
   if (islower((*cur_ptr)[0]) && islower((*cur_ptr)[1]) &&
       islower((*cur_ptr)[2])) {
     *one = (*cur_ptr)[0];
@@ -34,6 +34,9 @@ u3_noun get_syllable(c3_c** cur_ptr, c3_c* one, c3_c* two, c3_c* three) {
   }
 }
 
+/* combine(): fold two @ux parts into a comet-half atom.
+** @Refcount: transfers arguments
+*/
 static u3_noun
 combine(u3_noun p, u3_noun q)
 {
@@ -72,7 +75,7 @@ combine(u3_noun p, u3_noun q)
     return u3_none;                                                     \
   }
 
-u3_noun
+u3_weak
 _parse_p(u3_noun cor, u3_noun txt) {
   c3_c* c = u3a_string(txt);
 
@@ -311,7 +314,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
   } while(0)
 
 
-u3_noun
+u3_weak
 _parse_da(u3_noun cor, u3_noun txt) {
   c3_c* c = u3a_string(txt);
 
@@ -590,7 +593,7 @@ _parse_tas(u3_noun txt) {
   return u3nc(0, u3k(txt));
 }
 
-u3_noun
+u3_weak
 u3we_slaw(u3_noun cor)
 {
   u3_noun mod;
