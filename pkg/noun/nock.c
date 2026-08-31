@@ -1026,6 +1026,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       default: {
         return _n_comp(ops, nef, los_o, tel_o);
       }
+      case c3__bump:
       case c3__cash:
       case c3__xray:
       case c3__meme:
@@ -1913,6 +1914,14 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
   u3x_cell(hin, &tag, &fol);
 
   switch ( tag ) {
+    //  enable bump allocation for child roads created under this hint.
+    //
+    case c3__bump: {
+      c3_o had_o = (u3C.wag_w & u3o_sand) ? c3y : c3n;
+      u3C.wag_w |= u3o_sand;
+      *out = u3i_cell(tag, had_o);
+    } break;
+
     case c3__cash: {
       u3_atom har = u3i_word(u3h_count(u3R->cax.har_p));
       u3h_discount(u3R->cax.har_p);
@@ -1979,7 +1988,14 @@ static void
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
-  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
+  if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bump == p_tok) ) {
+    //  restore bump allocation to its pre-hint state
+    //
+    if ( c3n == q_tok ) {
+      u3C.wag_w &= ~u3o_sand;
+    }
+  }
+  else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
     u3h_del(u3R->lop_p, q_tok);
   }
   else if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__bout == p_tok) ) {
