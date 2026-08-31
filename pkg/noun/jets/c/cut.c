@@ -13,7 +13,7 @@
            u3_atom d)
   {
     c3_w b_w, c_w;
-    if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+    if ( !_(u3a_is_cat(a)) || (a >= 33) ) {
       return u3m_bail(c3__fail);
     }
     if ( !_(u3r_safe_word(b, &b_w)) ) {
