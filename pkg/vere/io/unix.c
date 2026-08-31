@@ -1563,18 +1563,18 @@ _unix_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 }
 
 static u3m_quac**
-_unix_io_mark(u3_auto* car_u, c3_w *out_w)
+_unix_io_mark(u3_auto* car_u, c3_z *out_z)
 {
   u3m_quac** all_u = c3_malloc(2 * sizeof(*all_u));
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("+sane handle");
-  all_u[0]->siz_w = 4 * u3a_mark_noun(((u3_unix*)car_u)->sat);
+  all_u[0]->siz_z = 4 * u3a_mark_noun(((u3_unix*)car_u)->sat);
   all_u[0]->qua_u = 0;
 
   all_u[1] = 0;
 
-  *out_w = all_u[0]->siz_w;
+  *out_z = all_u[0]->siz_z;
 
   return all_u;
 }

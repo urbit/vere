@@ -164,7 +164,7 @@ extern c3_w u3m_Ford_fresh_road_depth_w;
       */
         typedef struct _u3m_quac {
           c3_c* nam_c;
-          c3_w  siz_w;
+          c3_z  siz_z;
           struct _u3m_quac** qua_u;
         } u3m_quac;
 

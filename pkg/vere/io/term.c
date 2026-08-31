@@ -1773,37 +1773,38 @@ _term_io_exit_cb(uv_handle_t* han_u)
 }
 
 static u3m_quac**
-_term_io_mark(u3_auto* car_u, c3_w *out_w)
+_term_io_mark(u3_auto* car_u, c3_z *out_z)
 {
   u3m_quac** all_u;
   u3_utty*   uty_u;
-  c3_w       tot_w = 0, len_w = 0;
+  c3_z       tot_z = 0;
+  c3_z       len_z = 0;
 
   for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
-    len_w++;
+    len_z++;
   }
 
-  all_u = c3_malloc(sizeof(*all_u) * (len_w + 1));
-  len_w = 0;
+  all_u = c3_malloc(sizeof(*all_u) * (len_z + 1));
+  len_z = 0;
 
   for ( uty_u = u3_Host.uty_u; uty_u; uty_u = uty_u->nex_u ) {
-    all_u[len_w] = c3_malloc(sizeof(**all_u));
-    all_u[len_w]->qua_u = 0;
-    all_u[len_w]->siz_w = 0;
+    all_u[len_z] = c3_malloc(sizeof(**all_u));
+    all_u[len_z]->qua_u = 0;
+    all_u[len_z]->siz_z = 0;
 
-    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.mir.lin);
-    all_u[len_w]->siz_w += u3a_mark_noun(uty_u->tat_u.fut.imp);
-    all_u[len_w]->siz_w *= 4;
+    all_u[len_z]->siz_z += u3a_mark_noun(uty_u->tat_u.mir.lin);
+    all_u[len_z]->siz_z += u3a_mark_noun(uty_u->tat_u.fut.imp);
+    all_u[len_z]->siz_z *= 4;
 
-    asprintf(&(all_u[len_w]->nam_c), "term-%u-%d", uty_u->tid_l, uty_u->fid_i);
+    asprintf(&(all_u[len_z]->nam_c), "term-%u-%d", uty_u->tid_l, uty_u->fid_i);
 
-    tot_w += all_u[len_w]->siz_w;
-    len_w++;
+    tot_z += all_u[len_z]->siz_z;
+    len_z++;
   }
 
-  all_u[len_w] = 0;
+  all_u[len_z] = 0;
 
-  *out_w = tot_w;
+  *out_z = tot_z;
 
   return all_u;
 }

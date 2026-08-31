@@ -1821,7 +1821,7 @@ u3_king_grab(void* vod_p)
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("pier");
-  all_u[0]->qua_u = u3_pier_mark(u3_king_stub(), &(all_u[0]->siz_w));
+  all_u[0]->qua_u = u3_pier_mark(u3_king_stub(), &(all_u[0]->siz_z));
 
   u3m_quac** var_u = u3m_mark();
   all_u[1] = var_u[0];
@@ -1830,18 +1830,18 @@ u3_king_grab(void* vod_p)
   all_u[4] = var_u[3];
   c3_free(var_u);
 
-  c3_w tot_w = all_u[0]->siz_w + all_u[1]->siz_w
-                 + all_u[2]->siz_w + all_u[3]->siz_w + all_u[4]->siz_w;
+  c3_z tot_z = all_u[0]->siz_z + all_u[1]->siz_z
+                 + all_u[2]->siz_z + all_u[3]->siz_z + all_u[4]->siz_z;
 
   all_u[5] = c3_calloc(sizeof(*all_u[4]));
   all_u[5]->nam_c = strdup("total marked");
-  all_u[5]->siz_w = tot_w;
+  all_u[5]->siz_z = tot_z;
 
   //  XX sweep could be optional, gated on u3o_debug_ram or somesuch
   //  only u3a_mark_done() is required
   all_u[6] = c3_calloc(sizeof(*all_u[5]));
   all_u[6]->nam_c = strdup("sweep");
-  all_u[6]->siz_w = u3a_sweep();
+  all_u[6]->siz_z = u3a_sweep();
 
   all_u[7] = 0;
 

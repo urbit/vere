@@ -1396,27 +1396,27 @@ u3a_print_time(c3_c* str_c, c3_c* cap_c, c3_d mic_d)
 /* u3a_print_memory: print memory amount to file descriptor.
 */
 void
-u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
+u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_z wor_z)
 {
   u3_assert( 0 != fil_u );
 
-  c3_z byt_z = ((c3_z)wor_w * 4);
-  c3_z gib_z = (byt_z / 1000000000);
-  c3_z mib_z = (byt_z % 1000000000) / 1000000;
-  c3_z kib_z = (byt_z % 1000000) / 1000;
-  c3_z bib_z = (byt_z % 1000);
+  c3_z byt_z = (wor_z * 4);
+  c3_z gib_z = (byt_z / (1UL << 30));
+  c3_z mib_z = (byt_z % (1UL << 30)) / (1UL << 20);
+  c3_z kib_z = (byt_z % (1UL << 20)) / (1UL << 10);
+  c3_z bib_z = (byt_z % (1UL << 10));
 
   if ( byt_z ) {
     if ( gib_z ) {
-      fprintf(fil_u, "%s: GB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+      fprintf(fil_u, "%s: GiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, gib_z, mib_z, kib_z, bib_z);
     }
     else if ( mib_z ) {
-      fprintf(fil_u, "%s: MB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+      fprintf(fil_u, "%s: MiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, mib_z, kib_z, bib_z);
     }
     else if ( kib_z ) {
-      fprintf(fil_u, "%s: KB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
+      fprintf(fil_u, "%s: KiB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, kib_z, bib_z);
     }
     else if ( bib_z ) {
@@ -1429,27 +1429,27 @@ u3a_print_memory(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
 /* u3a_print_memory_str: print memory amount to string.
 */
 void
-u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w)
+u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_z wor_z)
 {
   u3_assert( 0 != str_c );
 
-  c3_z byt_z = ((c3_z)wor_w * 4);
-  c3_z gib_z = (byt_z / 1000000000);
-  c3_z mib_z = (byt_z % 1000000000) / 1000000;
-  c3_z kib_z = (byt_z % 1000000) / 1000;
-  c3_z bib_z = (byt_z % 1000);
+  c3_z byt_z = (wor_z * 4);
+  c3_z gib_z = (byt_z / (1UL << 30));
+  c3_z mib_z = (byt_z % (1UL << 30)) / (1UL << 20);
+  c3_z kib_z = (byt_z % (1UL << 20)) / (1UL << 10);
+  c3_z bib_z = (byt_z % (1UL << 10));
 
   if ( byt_z ) {
     if ( gib_z ) {
-      sprintf(str_c, "%s: GB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+      sprintf(str_c, "%s: GiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, gib_z, mib_z, kib_z, bib_z);
     }
     else if ( mib_z ) {
-      sprintf(str_c, "%s: MB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+      sprintf(str_c, "%s: MiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, mib_z, kib_z, bib_z);
     }
     else if ( kib_z ) {
-      sprintf(str_c, "%s: KB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
+      sprintf(str_c, "%s: KiB/%" PRIc3_z ".%03" PRIc3_z "\r\n",
               cap_c, kib_z, bib_z);
     }
     else if ( bib_z ) {
@@ -1461,37 +1461,37 @@ u3a_print_memory_str(c3_c* str_c, c3_c* cap_c, c3_w wor_w)
 
 /* u3a_maid(): maybe print memory.
 */
-c3_w
-u3a_maid(FILE* fil_u, c3_c* cap_c, c3_w wor_w)
+c3_z
+u3a_maid(FILE* fil_u, c3_c* cap_c, c3_z wor_z)
 {
   if ( 0 != fil_u ) {
-    u3a_print_memory(fil_u, cap_c, wor_w);
+    u3a_print_memory(fil_u, cap_c, wor_z);
   }
-  return wor_w;
+  return wor_z;
 }
 
 /* _ca_print_memory(): un-captioned u3a_print_memory().
 */
 static void
-_ca_print_memory(FILE* fil_u, c3_w byt_w)
+_ca_print_memory(FILE* fil_u, c3_z byt_z)
 {
-  c3_w gib_w = (byt_w / 1000000000);
-  c3_w mib_w = (byt_w % 1000000000) / 1000000;
-  c3_w kib_w = (byt_w % 1000000) / 1000;
-  c3_w bib_w = (byt_w % 1000);
+  c3_z gib_z = (byt_z / (1UL << 30));
+  c3_z mib_z = (byt_z % (1UL << 30)) / (1UL << 20);
+  c3_z kib_z = (byt_z % (1UL << 20)) / (1UL << 10);
+  c3_z bib_z = (byt_z % (1UL << 10));
 
-  if ( gib_w ) {
-    fprintf(fil_u, "GB/%d.%03d.%03d.%03d\r\n",
-            gib_w, mib_w, kib_w, bib_w);
+  if ( gib_z ) {
+    fprintf(fil_u, "GiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n",
+            gib_z, mib_z, kib_z, bib_z);
   }
-  else if ( mib_w ) {
-    fprintf(fil_u, "MB/%d.%03d.%03d\r\n", mib_w, kib_w, bib_w);
+  else if ( mib_z ) {
+    fprintf(fil_u, "MiB/%" PRIc3_z ".%03" PRIc3_z ".%03" PRIc3_z "\r\n", mib_z, kib_z, bib_z);
   }
-  else if ( kib_w ) {
-    fprintf(fil_u, "KB/%d.%03d\r\n", kib_w, bib_w);
+  else if ( kib_z ) {
+    fprintf(fil_u, "KiB/%" PRIc3_z ".%03" PRIc3_z "\r\n", kib_z, bib_z);
   }
   else {
-    fprintf(fil_u, "B/%d\r\n", bib_w);
+    fprintf(fil_u, "B/%" PRIc3_z "\r\n", bib_z);
   }
 }
 
@@ -1580,7 +1580,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
       c3_w siz_w = _ca_prof_mark(tt_mas);
 
       pro_u->nam_c = u3r_string(h_mas);
-      pro_u->siz_w = siz_w*4;
+      pro_u->siz_z = (c3_z)siz_w * 4;
       pro_u->qua_u = NULL;
       return pro_u;
 
@@ -1595,7 +1595,7 @@ u3a_prof(FILE* fil_u, u3_noun mas)
           bad_t = 1;
         } else {
           pro_u->qua_u = c3_realloc(pro_u->qua_u, (i_w + 2) * sizeof(pro_u->qua_u));
-          pro_u->siz_w += new_u->siz_w;
+          pro_u->siz_z += new_u->siz_z;
           pro_u->qua_u[i_w] = new_u;
         }
         tt_mas = u3t(tt_mas);
@@ -1634,11 +1634,11 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
 {
   u3_assert( 0 != fil_u );
 
-  if ( mas_u->siz_w ) {
+  if ( mas_u->siz_z ) {
     fprintf(fil_u, "%*s%s: ", den_w, "", mas_u->nam_c);
 
     if ( mas_u->qua_u == NULL ) {
-      _ca_print_memory(fil_u, mas_u->siz_w);
+      _ca_print_memory(fil_u, mas_u->siz_z);
     } else {
       fprintf(fil_u, "\r\n");
       c3_w i_w = 0;
@@ -1647,7 +1647,7 @@ u3a_print_quac(FILE* fil_u, c3_w den_w, u3m_quac* mas_u)
         i_w++;
       }
       fprintf(fil_u, "%*s--", den_w, "");
-      _ca_print_memory(fil_u, mas_u->siz_w);
+      _ca_print_memory(fil_u, mas_u->siz_z);
     }
   }
 }
@@ -1661,31 +1661,31 @@ u3a_mark_road()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
-  qua_u[0]->siz_w = u3a_mark_noun(u3R->ski.gul) * 4;
+  qua_u[0]->siz_z = u3a_mark_noun(u3R->ski.gul) * 4;
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("trace stack");
-  qua_u[1]->siz_w = u3a_mark_noun(u3R->bug.tax) * 4;
+  qua_u[1]->siz_z = u3a_mark_noun(u3R->bug.tax) * 4;
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("trace buffer");
-  qua_u[2]->siz_w = u3a_mark_noun(u3R->bug.mer) * 4;
+  qua_u[2]->siz_z = u3a_mark_noun(u3R->bug.mer) * 4;
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("profile batteries");
-  qua_u[3]->siz_w = u3a_mark_noun(u3R->pro.don) * 4;
+  qua_u[3]->siz_z = u3a_mark_noun(u3R->pro.don) * 4;
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("profile doss");
-  qua_u[4]->siz_w = u3a_mark_noun(u3R->pro.day) * 4;
+  qua_u[4]->siz_z = u3a_mark_noun(u3R->pro.day) * 4;
 
   qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
   qua_u[5]->nam_c = strdup("new profile trace");
-  qua_u[5]->siz_w = u3a_mark_noun(u3R->pro.trace) * 4;
+  qua_u[5]->siz_z = u3a_mark_noun(u3R->pro.trace) * 4;
 
   qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
   qua_u[6]->nam_c = strdup("transient memoization cache");
-  qua_u[6]->siz_w = u3h_mark_tot(u3R->cax.har_p) * 4;
+  qua_u[6]->siz_z = u3h_mark_tot(u3R->cax.har_p) * 4;
 
   qua_u[7] = c3_calloc(sizeof(*qua_u[7]));
   qua_u[7]->nam_c = strdup("persistent memoization cache");
@@ -1697,29 +1697,29 @@ u3a_mark_road()
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
-    mua_u[0]->siz_w = mas_u.key_w * 4;
+    mua_u[0]->siz_z = mas_u.key_w * 4;
 
     mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
     mua_u[1]->nam_c = strdup("vals");
-    mua_u[1]->siz_w = mas_u.val_w * 4;
+    mua_u[1]->siz_z = mas_u.val_w * 4;
 
     mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
     mua_u[2]->nam_c = strdup("pairs");
-    mua_u[2]->siz_w = mas_u.kev_w * 4;
+    mua_u[2]->siz_z = mas_u.kev_w * 4;
 
     mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
     mua_u[3]->nam_c = strdup("nodes");
-    mua_u[3]->siz_w = mas_u.nod_w * 4;
+    mua_u[3]->siz_z = mas_u.nod_w * 4;
 
     mua_u[4] = NULL;
 
     qua_u[7]->qua_u = mua_u;
-    qua_u[7]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+    qua_u[7]->siz_z = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
   }
 
   qua_u[8] = c3_calloc(sizeof(*qua_u[8]));
   qua_u[8]->nam_c = strdup("page directory");
-  qua_u[8]->siz_w = u3a_mark_ptr(u3a_into(u3R->hep.pag_p)) * 4;
+  qua_u[8]->siz_z = u3a_mark_ptr(u3a_into(u3R->hep.pag_p)) * 4;
 
   qua_u[9] = c3_calloc(sizeof(*qua_u[9]));
   qua_u[9]->nam_c = strdup("cell pool");
@@ -1737,7 +1737,7 @@ u3a_mark_road()
       }
     }
 
-    qua_u[9]->siz_w = cel_w * 4;
+    qua_u[9]->siz_z = cel_w * 4;
   }
 
   qua_u[10] = c3_calloc(sizeof(*qua_u[10]));
@@ -1756,7 +1756,7 @@ u3a_mark_road()
       fre_w += u3a_mark_ptr(u3a_into(u3R->hep.cac_p));
     }
 
-    qua_u[10]->siz_w = fre_w * 4;
+    qua_u[10]->siz_z = fre_w * 4;
   }
 
   qua_u[11] = c3_calloc(sizeof(*qua_u[11]));
@@ -1769,7 +1769,7 @@ u3a_mark_road()
       wee_w += u3a_Mark.wee_w[i_w];
     }
 
-    qua_u[11]->siz_w = wee_w * 4;
+    qua_u[11]->siz_z = wee_w * 4;
   }
 
   qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
@@ -1782,30 +1782,30 @@ u3a_mark_road()
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
-    mua_u[0]->siz_w = mas_u.key_w * 4;
+    mua_u[0]->siz_z = mas_u.key_w * 4;
 
     mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
     mua_u[1]->nam_c = strdup("vals");
-    mua_u[1]->siz_w = mas_u.val_w * 4;
+    mua_u[1]->siz_z = mas_u.val_w * 4;
 
     mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
     mua_u[2]->nam_c = strdup("pairs");
-    mua_u[2]->siz_w = mas_u.kev_w * 4;
+    mua_u[2]->siz_z = mas_u.kev_w * 4;
 
     mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
     mua_u[3]->nam_c = strdup("nodes");
-    mua_u[3]->siz_w = mas_u.nod_w * 4;
+    mua_u[3]->siz_z = mas_u.nod_w * 4;
 
     mua_u[4] = NULL;
 
     qua_u[12]->qua_u = mua_u;
-    qua_u[12]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+    qua_u[12]->siz_z = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
   }
-  
+
   qua_u[13] = c3_calloc(sizeof(*qua_u[13]));
   qua_u[13]->nam_c = strdup("timer stack");
-  qua_u[13]->siz_w = u3a_mark_noun(u3R->tim) * 4;
-  
+  qua_u[13]->siz_z = u3a_mark_noun(u3R->tim) * 4;
+
   qua_u[14] = c3_calloc(sizeof(*qua_u[14]));
   qua_u[14]->nam_c = strdup("ford memoization cache");
   {
@@ -1816,36 +1816,36 @@ u3a_mark_road()
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
-    mua_u[0]->siz_w = mas_u.key_w * 4;
+    mua_u[0]->siz_z = mas_u.key_w * 4;
 
     mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
     mua_u[1]->nam_c = strdup("vals");
-    mua_u[1]->siz_w = mas_u.val_w * 4;
+    mua_u[1]->siz_z = mas_u.val_w * 4;
 
     mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
     mua_u[2]->nam_c = strdup("pairs");
-    mua_u[2]->siz_w = mas_u.kev_w * 4;
+    mua_u[2]->siz_z = mas_u.kev_w * 4;
 
     mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
     mua_u[3]->nam_c = strdup("nodes");
-    mua_u[3]->siz_w = mas_u.nod_w * 4;
+    mua_u[3]->siz_z = mas_u.nod_w * 4;
 
     mua_u[4] = NULL;
 
     qua_u[14]->qua_u = mua_u;
-    qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+    qua_u[14]->siz_z = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
   }
 
   qua_u[15] = NULL;
 
-  c3_w sum_w = 0;
+  c3_z sum_z = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
-    sum_w += qua_u[i_w]->siz_w;
+    sum_z += qua_u[i_w]->siz_z;
   }
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total road stuff");
-  tot_u->siz_w = sum_w;
+  tot_u->siz_z = sum_z;
   tot_u->qua_u = qua_u;
 
   return tot_u;

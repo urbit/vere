@@ -1493,14 +1493,15 @@ _pier_mark_pico(u3_pico* pic_u)
 /* u3_pier_mark(): mark all Loom allocations in all u3_pier structs.
 */
 u3m_quac**
-u3_pier_mark(u3_pier* pir_u, c3_w *out_w)
+u3_pier_mark(u3_pier* pir_u, c3_z *out_z)
 {
   u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("drivers");
+  all_u[0]->siz_z = 0;
   if ( pir_u->wok_u ) {
-    all_u[0]->qua_u = u3_auto_mark(pir_u->wok_u->car_u, &(all_u[0]->siz_w));
+    all_u[0]->qua_u = u3_auto_mark(pir_u->wok_u->car_u, &(all_u[0]->siz_z));
   }
   else {
     all_u[0]->qua_u = 0;
@@ -1510,12 +1511,12 @@ u3_pier_mark(u3_pier* pir_u, c3_w *out_w)
 
   all_u[2] = c3_malloc(sizeof(**all_u));
   all_u[2]->nam_c = strdup("peeks");
-  all_u[2]->siz_w = 4 * _pier_mark_pico(pir_u->pec_u.ext_u);
+  all_u[2]->siz_z = (c3_z)_pier_mark_pico(pir_u->pec_u.ext_u) * 4;
   all_u[2]->qua_u = 0;
 
   all_u[3] = 0;
 
-  *out_w = all_u[0]->siz_w + all_u[1]->siz_w + all_u[2]->siz_w;
+  *out_z = all_u[0]->siz_z + all_u[1]->siz_z + all_u[2]->siz_z;
 
   return all_u;
 }

@@ -2829,24 +2829,24 @@ _ames_io_slog(u3_auto* car_u)
 }
 
 static u3m_quac**
-_ames_io_mark(u3_auto* car_u, c3_w *out_w)
+_ames_io_mark(u3_auto* car_u, c3_z *out_z)
 {
   u3m_quac** all_u = c3_malloc(4 * sizeof(*all_u));
   u3_ames   *sam_u = (u3_ames*)car_u;
 
   all_u[0] = c3_malloc(sizeof(**all_u));
   all_u[0]->nam_c = strdup("scry cache");
-  all_u[0]->siz_w = 4 * u3h_mark_tot(sam_u->fin_s.sac_p);
+  all_u[0]->siz_z = 4 * u3h_mark_tot(sam_u->fin_s.sac_p);
   all_u[0]->qua_u = 0;
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("lane cache");
-  all_u[1]->siz_w = 4 * u3h_mark_tot(sam_u->lax_p);
+  all_u[1]->siz_z = 4 * u3h_mark_tot(sam_u->lax_p);
   all_u[1]->qua_u = 0;
 
   all_u[2] = 0;
 
-  *out_w = all_u[0]->siz_w + all_u[1]->siz_w;
+  *out_z = all_u[0]->siz_z + all_u[1]->siz_z;
 
   return all_u;
 }
