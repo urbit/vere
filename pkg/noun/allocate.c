@@ -180,28 +180,6 @@ u3a_pack_done(void)
   c3_free(u3a_Gack.buf_w);
 }
 
-/* _box_count(): adjust memory count.
-*/
-#ifdef  U3_CPU_DEBUG
-static void
-_box_count(c3_ws siz_ws)
-{
-  u3R->all.fre_w += siz_ws;
-
-  {
-    c3_ws end_w = u3a_heap(u3R);
-    c3_ws all_w = (end_w - u3R->all.fre_w);
-
-    if ( all_w > u3R->all.max_w ) {
-      u3R->all.max_w = all_w;
-    }
-  }
-}
-#else
-static void
-_box_count(c3_ws siz_ws) { }
-#endif
-
 /* _ca_reclaim_half(): reclaim from memoization cache.
 */
 static void

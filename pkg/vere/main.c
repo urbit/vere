@@ -1373,7 +1373,6 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
     c3_c* pre_c;
-    u3k(som);
     //  if input is jammed khan output
     if ( c3y == kan_o ) {
       u3_noun cop, uid, mar, res, tan;
@@ -1382,10 +1381,9 @@ _cw_eval(c3_i argc, c3_c* argv[])
       if ( c3n == res ) {
         //  pretty-print tang to stderr and output only header
         u3_Host.ops_u.dem = c3y;
-        u3_pier_punt_goof("eval", tan);
+        u3_pier_punt_goof("eval", u3k(tan));
         cop = som;
-        som = u3i_trel(uid, mar, res);
-        u3k(som);
+        som = u3i_trel(u3k(uid), u3k(mar), u3k(res));
         u3z(cop);
       }
     }

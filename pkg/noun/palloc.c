@@ -35,6 +35,28 @@
 static u3_post _imalloc(c3_w);
 static void  _ifree(u3_post);
 
+/* _box_count(): adjust free count and allocation high-water mark.
+*/
+#ifdef  U3_CPU_DEBUG
+static void
+_box_count(c3_ws siz_ws)
+{
+  u3R->all.fre_w += siz_ws;
+
+  {
+    c3_w end_w = u3a_heap(u3R);
+    c3_w all_w = (end_w - u3R->all.fre_w);
+
+    if ( all_w > u3R->all.max_w ) {
+      u3R->all.max_w = all_w;
+    }
+  }
+}
+#else
+static void
+_box_count(c3_ws siz_ws) { }
+#endif
+
 static __inline__ c3_w
 _abs_dif(c3_w a_w, c3_w b_w)
 {
@@ -293,6 +315,8 @@ _alloc_pages(c3_w siz_w)  // num pages
   u3_post pag_p;
 
   if ( pag_w ) {
+    _box_count( -(c3_ws)(siz_w << u3a_page) );
+
     //  XX groace
     //
     pag_w -= HEAP.off_ws * (siz_w - 1);
@@ -312,6 +336,8 @@ _alloc_pages(c3_w siz_w)  // num pages
     pag_p = _extend_heap(siz_w);
     pag_w = post_to_page(pag_p);
     dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+    _box_count(0);  //  heap extended, check high-water mark
 
 #ifdef SANITY
     assert( pag_w < HEAP.len_w );
@@ -354,6 +380,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
   u3_post   pag_p = HEAP.wee_p[bit_g];
   u3a_crag *pag_u;
   c3_w      hav_w = *out_w;
+  c3_w      gav_w = hav_w;
 
   if ( rak_t ) {
     c3_h    *map_h;
@@ -386,6 +413,7 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
         }
 
         HEAP.wee_p[bit_g] = pag_p;
+        _box_count( -(c3_ws)((hav_w - gav_w) << hun_u->log_s) );
         *out_w = hav_w;
         return;
       }
@@ -413,12 +441,15 @@ _rake_chunks(c3_w len_w, c3_w max_w, c3_t rak_t, c3_w* out_w, u3_post* out_p)
 
       if ( hav_w == max_w ) {
         HEAP.wee_p[bit_g] = pag_p;
+        _box_count( -(c3_ws)((hav_w - gav_w) << hun_u->log_s) );
         *out_w = hav_w;
         return;
       }
     }
 
     HEAP.wee_p[bit_g] = 0;
+
+    _box_count( -(c3_ws)((hav_w - gav_w) << hun_u->log_s) );
   }
 
   //  XX s/b ful_s
@@ -503,6 +534,8 @@ _make_chunks(c3_g bit_g)  // 0-9, inclusive
   pag_u->nex_p = HEAP.wee_p[bit_g];
   HEAP.wee_p[bit_g] = hun_p;
 
+  _box_count( (c3_ws)((c3_w)hun_u->ful_s << hun_u->log_s) );
+
   return hun_p;
 }
 
@@ -529,6 +562,9 @@ _alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
   }
 
   pag_u->fre_s--;
+
+  _box_count( -(c3_ws)hun_u->len_s );
+
   map_h = pag_u->map_h;
   while ( !*map_h ) { map_h++; }
 
@@ -673,6 +709,10 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     u3R->hat_p -= HEAP.dir_ws * (c3_ws)(siz_w << u3a_page);
     HEAP.len_w -= siz_w;
 
+    //  coalesced free-list pages left the heap along with [wiz_w]
+    //
+    _box_count( -(c3_ws)((siz_w - wiz_w) << u3a_page) );
+
     // fprintf(stderr, "shrink heap 0x%"PRIxc3_w" 0x%"PRIxc3_w" %"PRIc3_w":%"PRIc3_w" (%"PRIc3_w") 0x%"PRIxc3_w"\r\n",
     //                 som_p, som_p + (siz_w << u3a_page), pag_w, wiz_w, siz_w, u3R->hat_p);
 
@@ -691,6 +731,8 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   //  XX madv_free
 
   ASAN_POISON_MEMORY_REGION(u3a_into(som_p), siz_w << (u3a_page + (u3a_word_bits_log-3)));
+
+  _box_count( (c3_ws)(siz_w << u3a_page) );
 
   //  XX add temporary freelist entry?
   // if (  !HEAP.cac_p && !HEAP.fre_p
@@ -833,6 +875,8 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   pag_u->map_h[pos_w >> 5] |= (((c3_h)1) << (pos_w & 31));
   pag_u->fre_s++;
 
+  _box_count( hun_u->len_s );
+
   ASAN_POISON_MEMORY_REGION(u3a_into(som_p), hun_u->len_s << (u3a_word_bits_log-3));
 
   {
@@ -871,6 +915,10 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
       }
 
       *bit_p = pag_u->nex_p;
+
+      //  free chunks become a free page, counted in _free_pages()
+      //
+      _box_count( -(c3_ws)((c3_w)hun_u->ful_s << hun_u->log_s) );
 
       dir_u[pag_u->pag_w] = u3a_head_pg;
       som_p = page_to_post(pag_u->pag_w); // NB: clobbers
@@ -1430,9 +1478,17 @@ _sweep_directory(void)
       //  entire chunk page is unmarked
       //
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+        //  discount free chunks, the whole page is counted in _free_pages()
+        //
+        {
+          u3a_crag* pag_u = u3to(u3a_crag, dir_p);
+          _box_count( -(c3_ws)((c3_w)pag_u->fre_s << pag_u->log_s) );
+        }
+
         if ( u3C.wag_h & u3o_verbose ) {
           fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
         }
+
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
         leq_w += ((c3_w)1) << u3a_page;
       }
@@ -1737,9 +1793,17 @@ _sweep_counts(void)
       //  entire chunk page is unmarked
       //
       if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+        //  discount free chunks, the whole page is counted in _free_pages()
+        //
+        {
+          u3a_crag* pag_u = u3to(u3a_crag, dir_p);
+          _box_count( -(c3_ws)((c3_w)pag_u->fre_s << pag_u->log_s) );
+        }
+
         if ( u3C.wag_h & u3o_verbose ) {
           fprintf(stderr, "palloc: leaked chunk page %"PRIc3_w"\r\n", pag_w);
         }
+
         (void)_free_pages(page_to_post(pag_w), pag_w, u3a_head_pg);
         leq_w += ((c3_w)1) << u3a_page;
       }
@@ -2613,6 +2677,12 @@ _pack_move(void)
   }
 
   HEAP.erf_p = 0;
+
+#ifdef U3_CPU_DEBUG
+  //  free space was rearranged wholesale; recount
+  //
+  u3R->all.fre_w = (_idle_pages() << u3a_page) + _idle_words();
+#endif
 
 #ifdef PACK_CHECK
   vt_cleanup(&pos_u);

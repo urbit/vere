@@ -1460,7 +1460,8 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       c3_d f_idx_d;
       m3_SuspendStackPop64(sat_u->wasm_module->runtime, &f_idx_d);
-      u3_noun frame = _pop_list(&sat_u->susp_list);
+      u3_weak frame = _pop_list(&sat_u->susp_list);
+      if ( u3_none == frame ) u3m_bail(c3__fail);
       if (lst_call != u3h(frame))
       {
         printf(ERR("wrong frame: call"));
@@ -1544,7 +1545,8 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
+        if ( u3_none == frame ) u3m_bail(c3__fail);
         if (lst_try != u3h(frame))
         {
           printf(ERR("wrong frame: try"));
@@ -1579,7 +1581,8 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
+        if ( u3_none == frame ) u3m_bail(c3__fail);
         if (lst_catch_try != u3h(frame))
         {
           printf(ERR("wrong frame: catch-try"));
@@ -1624,7 +1627,8 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
               printf(ERR("catch-err tag mismatch: %"PRIc3_d), tag);
               u3m_bail(c3__fail);
             }
-            u3_noun frame1 = _pop_list(&sat_u->susp_list);
+            u3_weak frame1 = _pop_list(&sat_u->susp_list);
+            if ( u3_none == frame1 ) u3m_bail(c3__fail);
             if (lst_catch_err != u3h(frame1))
             {
               printf(ERR("wrong frame: catch-err"));
@@ -1670,7 +1674,8 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
     {
       if (1 != u3h(sat_u->resolution))
       {
-        u3_noun frame = _pop_list(&sat_u->susp_list);
+        u3_weak frame = _pop_list(&sat_u->susp_list);
+        if ( u3_none == frame ) u3m_bail(c3__fail);
         if (lst_catch_err != u3h(frame))
         {
           printf(ERR("wrong frame: catch-err"));
@@ -2126,7 +2131,8 @@ _apply_diff(u3_noun input_tag, u3_noun p_input, lia_state* sat_u)
         while (u3h(yil) == 0 && sat_u->queue != u3_nul)
         {
           u3z(yil);
-          u3_noun deferred_script = _pop_list(&sat_u->queue);
+          u3_weak deferred_script = _pop_list(&sat_u->queue);
+          if ( u3_none == deferred_script ) return u3m_bail(c3__fail);
           yil = _reduce_monad(deferred_script, sat_u);
         }
       }

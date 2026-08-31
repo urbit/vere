@@ -188,13 +188,13 @@ u3qe_decompress_zlib(u3_atom pos, u3_noun octs)
   return _decompress(pos, octs, 15);
 }
 
-u3_noun
+u3_weak
 u3we_decompress_gzip(u3_noun cor)
 {
   u3_atom pos;
   u3_noun octs;
 
-  u3_noun a = u3r_at(u3x_sam, cor);
+  u3_noun a = u3x_at(u3x_sam, cor);
   u3x_cell(a, &pos, &octs);
 
   if(_(u3a_is_atom(pos)) && _(u3a_is_cell(octs))) {
@@ -206,13 +206,13 @@ u3we_decompress_gzip(u3_noun cor)
   }
 }
 
-u3_noun
+u3_weak
 u3we_decompress_zlib(u3_noun cor)
 {
   u3_atom pos;
   u3_noun octs;
 
-  u3_noun a = u3r_at(u3x_sam, cor);
+  u3_noun a = u3x_at(u3x_sam, cor);
   u3x_cell(a, &pos, &octs);
 
   if(_(u3a_is_atom(pos)) && _(u3a_is_cell(octs))) {

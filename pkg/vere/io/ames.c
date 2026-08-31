@@ -2881,6 +2881,7 @@ u3_ames_io_init(u3_pier* pir_u)
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun rac = u3do("clan:title", who);
   sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
+  u3z(rac);
 
   // hashtable for scry cache
   //

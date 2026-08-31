@@ -2693,7 +2693,7 @@ _mesa_io_talk(u3_auto* car_u)
   uv_send_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
 
   sam_u->car_u.liv_o = c3y;
-  //u3z(rac); u3z(who);
+  u3z(rac); u3z(who);
 }
 
 static void _mesa_clear_pit(uv_timer_t *tim_u)
