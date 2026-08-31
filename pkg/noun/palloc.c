@@ -211,14 +211,12 @@ _extend_heap(c3_w siz_w)  // num pages
 
   if ( 1 == HEAP.dir_ws ) {
     if ( (u3R->hat_p + wor_w) < u3R->hat_p ) {  //  overflow
-      fprintf(stderr, "\033[31mpalloc: loom overflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
   else {
     if ( wor_w >= u3R->hat_p ) {  //  underflow (zero reserved)
-      fprintf(stderr, "\033[31mpalloc: loom underflow\r\n\033[0m");
-      abort();
+      return u3m_bail(c3__meme);
     }
   }
   pag_p  = u3R->hat_p;
