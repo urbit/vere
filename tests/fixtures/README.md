@@ -10,21 +10,46 @@ The archives are stored in Git LFS (see `.gitattributes`) and total about
 
 ## Inventory
 
-| fixture | created with | event log layout | snapshot | size | golden mug |
-|---|---|---|---|---|---|
-| `zod-v1.21` | vere 1.21 | flat `.urb/log/data.mdb` (pre-epoch) | `chk/{north,south}.bin` | 197 MB | `1.875.565.524` |
-| `zod-v2.12` | vere 2.12 | flat `.urb/log/data.mdb` (pre-epoch) | `chk/{north,south}.bin` | 232 MB | `1.222.863.659` |
-| `zod-v3.3` | vere 3.3 | epochs `0i0` **and** `0i101` | `chk/{north,south}.bin` | 342 MB | `499.833.433` |
-| `zod-v4.2` | vere 4.2 | single epoch `0i0` | `chk/image.bin` | 209 MB | `738.931.621` |
+| fixture | created with | loom version | disk format | snapshot | size | golden mug |
+|---|---|---|---|---|---|---|
+| `zod-v1.21` | vere 1.21 | `U3V_VER1` | `U3D_VER1` — flat `.urb/log/data.mdb`, no epochs | `chk/{north,south}.bin` | 197 MB | `1.875.565.524` |
+| `zod-v2.12` | vere 2.12 | `U3V_VER2` | `U3D_VER1` — flat `.urb/log/data.mdb`, no epochs | `chk/{north,south}.bin` | 232 MB | `1.222.863.659` |
+| `zod-v3.3` | vere 3.3 | `U3V_VER4` | `U3D_VER3` + `U3E_VER1` — epochs `0i0` **and** `0i101` | `chk/{north,south}.bin` | 342 MB | `499.833.433` |
+| `zod-v4.2` | vere 4.2 | `U3V_VER5` | `U3D_VER3` + `U3E_VER2` — single epoch `0i0` | `chk/image.bin` | 209 MB | `738.931.621` |
 
 `zod-v1.21` and `zod-v2.12` also carry a `.urb/bhk/` snapshot backup.
 
-Note that `zod-v4.2` is **not** a legacy-loom fixture: vere 4.x already
-writes the current `palloc` loom, and its `image.bin` reads as
-`ver_d = 5, pam_d = 84` — U3V_VER5, 32-bit, `u3a_vits = 2`, 16K pages.  It
-exercises the 32-bit-to-64-bit loom migration, not the v1-v4 chain.  The
-three older fixtures are the ones that drive `_disk_migrate_loom`'s
-`U3V_VER1 -> VER2 -> VER3 -> VER4 -> VER5` fallthrough in `pkg/vere/disk.c`.
+Constants are in `pkg/noun/version.h`: `U3V_*` is the loom format, `U3D_*` the
+top-level event log layout, `U3E_*` the within-epoch layout (`U3E_VER1` is
+north+south.bin, `U3E_VER2` is image.bin).
+
+These were read out of the archives rather than assumed, and can be re-checked
+the same way:
+
+```bash
+#  loom version, v1-v4: the last word of the loom, i.e. the end of south.bin
+tar xzOf zod-v3.3.tar.gz zod-3.3/.urb/chk/south.bin \
+  | python3 -c "import sys,struct; print(struct.unpack('<I', sys.stdin.buffer.read()[-4:])[0])"
+
+#  loom version, v5: ver_d is the first chub of image.bin (pam_d the second)
+tar xzOf zod-v4.2.tar.gz zod-4.2/.urb/chk/image.bin \
+  | head -c 16 \
+  | python3 -c "import sys,struct; v,p=struct.unpack('<QQ', sys.stdin.buffer.read(16)); print(v, p)"
+
+#  epoch layout version
+tar xzOf zod-v4.2.tar.gz zod-4.2/.urb/log/0i0/epoc.txt
+```
+
+Two things the versions make clear:
+
+- **`zod-v3.3` is `U3V_VER4`, not `U3V_VER3`** — vere 3.3 writes the
+  bytecode-alignment loom.  No fixture sits at `U3V_VER3`, but nothing is
+  missed: the migration switch in `_disk_migrate_loom` falls through, so
+  booting `zod-v1.21` runs `v2 -> v3 -> v4 -> v5` and covers every step.
+- **`zod-v4.2` is not a legacy-loom fixture at all.**  vere 4.x already writes
+  the current `palloc` loom; its `image.bin` reads `ver_d = 5, pam_d = 84` —
+  `U3V_VER5`, 32-bit, `u3a_vits = 2`, 16K pages.  It exercises the
+  32-bit-to-64-bit loom migration, not the v1-v4 chain.
 
 ## The `.mug` files
 
