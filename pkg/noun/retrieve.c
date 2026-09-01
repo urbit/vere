@@ -1294,35 +1294,9 @@ u3r_words(c3_w    a_w,
           c3_w*   c_w,
           u3_atom d)
 {
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  if ( b_w == 0 ) {
-    return;
-  }
-  if ( _(u3a_is_cat(d)) ) {
-    if ( a_w == 0 ) {
-      *c_w = d;
-      memset((c3_y*)(c_w + 1), 0, (b_w - 1) << 2);
-    }
-    else {
-      memset((c3_y*)c_w, 0, b_w << 2);
-    }
-  }
-  else {
-    u3a_atom* d_u = u3a_to_ptr(d);
-    if ( a_w >= d_u->len_w ) {
-      memset((c3_y*)c_w, 0, b_w << 2);
-    }
-    else {
-      c3_w z_w = c3_min(b_w, d_u->len_w - a_w);
-      c3_w* x_w = d_u->buf_w + a_w;
-      memcpy((c3_y*)c_w, (c3_y*)x_w, z_w << 2);
-      if ( b_w > d_u->len_w - a_w ) {
-        memset((c3_y*)(c_w + z_w), 0, (b_w + a_w - d_u->len_w) << 2);
-      }
-    }
-  }
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << 2, b_w << 2, (c3_y*)c_w, d);
 }
 
 /* u3r_chubs():
@@ -1335,9 +1309,9 @@ u3r_chubs(c3_w    a_w,
           c3_d*   c_d,
           u3_atom d)
 {
-  /* XX: assumes little-endian
-  */
-  u3r_words(a_w * 2, b_w * 2, (c3_w *)c_d, d);
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << 3, b_w << 3, (c3_y*)c_d, d);
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
