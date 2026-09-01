@@ -1152,7 +1152,7 @@ u3r_bytes_alloc(c3_w    a_w,
                 u3_atom b)
 {
   c3_y* b_y = u3a_malloc(len_w);
-  u3r_bytes(a_w, a_w + len_w, b_y, b);
+  u3r_bytes(a_w, len_w, b_y, b);
   return b_y;
 }
 
