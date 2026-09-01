@@ -1087,36 +1087,41 @@ u3r_byte(c3_w    a_w,
 */
 void
 u3r_bytes(c3_w    a_w,
-            c3_w    b_w,
-            c3_y*   c_y,
-            u3_atom d)
+          c3_w    b_w,
+          c3_y*   c_y,
+          u3_atom d)
 {
   u3_assert(u3_none != d);
   u3_assert(_(u3a_is_atom(d)));
 
+  c3_y* buf_y;
+  c3_w  len_w;
+
+  //  a direct atom is its own buffer
+  //
+  //  XX: assumes little-endian
+  //
   if ( _(u3a_is_cat(d)) ) {
-    c3_w e_w = d >> (c3_min(a_w, 4) << 3);
-    c3_w m_w = c3_min(b_w, 4);
-    memcpy(c_y, (c3_y*)&e_w, m_w);
-    if ( b_w > 4 ) {
-      memset(c_y + 4, 0, b_w - 4);
-    }
+    buf_y = (c3_y*)&d;
+    len_w = 4;
   }
   else {
-    u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_w n_w = d_u->len_w << 2;
-    c3_y* x_y = (c3_y*)d_u->buf_w + a_w;
+    u3a_atom* d_u = u3a_to_ptr(d);
 
-    if ( a_w >= n_w ) {
-      memset(c_y, 0, b_w);
+    buf_y = (c3_y*)d_u->buf_w;
+    len_w = d_u->len_w << 2;
+  }
+
+  {
+    c3_w hav_w = ( a_w < len_w ) ? (len_w - a_w) : 0;
+    c3_w z_w   = c3_min(b_w, hav_w);
+
+    //  guarded so [buf_y + a_w] is only formed when in bounds
+    //
+    if ( z_w ) {
+      memcpy(c_y, buf_y + a_w, z_w);
     }
-    else {
-      c3_w z_w = c3_min(b_w, n_w - a_w);
-      memcpy(c_y, x_y, z_w);
-      if ( b_w > n_w - a_w ) {
-        memset(c_y + z_w, 0, b_w + a_w - n_w);
-      }
-    }
+    memset(c_y + z_w, 0, b_w - z_w);
   }
 }
 
