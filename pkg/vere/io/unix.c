@@ -62,7 +62,7 @@ struct _u3_ufil;
     c3_c*             pax_c;            //  absolute path
     struct _u3_udir*  par_u;            //  parent
     struct _u3_unod*  nex_u;            //  internal list
-    c3_w              gum_w;            //  mug of last %ergo
+    c3_w              gum_w;            //  mug of last accepted sync
   } u3_ufil;
 
 /* u3_ufil: synchronized directory.
@@ -76,11 +76,30 @@ struct _u3_ufil;
     u3_unod*          kid_u;            //  subnodes
   } u3_udir;
 
+struct _u3_umon;
+
+/* u3_uack: a file checksum sent in a pending %into event.
+*/
+  typedef struct _u3_uack {
+    u3_ufil*           fil_u;            //  watched file
+    c3_w               gum_w;            //  mug sent to clay
+    struct _u3_uack*   nex_u;            //  internal list
+  } u3_uack;
+
+/* u3_usyn: one pending unix-to-clay sync event.
+*/
+  typedef struct _u3_usyn {
+    struct _u3_umon*   mon_u;            //  mount, or NULL if unmounted
+    u3_uack*           ack_u;            //  checksums to accept on success
+  } u3_usyn;
+
 /* u3_ufil: synchronized mount point.
 */
   typedef struct _u3_umon {
     u3_udir          dir_u;             //  root directory, must be first
     c3_c*            nam_c;             //  mount point name
+    u3_usyn*         syn_u;             //  pending %into, if any
+    c3_o             fai_o;             //  previous %into failed
     struct _u3_umon* nex_u;             //  internal list
   } u3_umon;
 
@@ -566,6 +585,8 @@ _unix_get_mount_point(u3_unix* unx_u, u3_noun mon)
     mon_u->dir_u.par_u = NULL;
     mon_u->dir_u.nex_u = NULL;
     mon_u->dir_u.kid_u = NULL;
+    mon_u->syn_u = NULL;
+    mon_u->fai_o = c3n;
     mon_u->nex_u = unx_u->mon_u;
     unx_u->mon_u = mon_u;
   }
@@ -746,6 +767,14 @@ _unix_free_node(u3_unix* unx_u, u3_unod* nod_u, c3_t del_t)
 static void
 _unix_free_mount_point(u3_unix* unx_u, u3_umon* mon_u, c3_t del_t)
 {
+  if ( mon_u->syn_u ) {
+    //  The ovum callback owns the sync record.  It may still run after an
+    //  unrelated event unmounts this point, so detach it before freeing.
+    //
+    mon_u->syn_u->mon_u = NULL;
+    mon_u->syn_u = NULL;
+  }
+
   u3_unod* nod_u;
   for ( nod_u = mon_u->dir_u.kid_u; nod_u; ) {
     u3_unod* nex_u = nod_u->nex_u;
@@ -880,7 +909,20 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
   c3_free(pax_c);
 }
 
-static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
+static u3_noun
+_unix_update_node(u3_unix* unx_u, u3_unod* nod_u, u3_usyn* syn_u);
+
+/* _unix_ack_file(): remember the exact checksum included in %into.
+*/
+static void
+_unix_ack_file(u3_usyn* syn_u, u3_ufil* fil_u, c3_w gum_w)
+{
+  u3_uack* ack_u = c3_malloc(sizeof(*ack_u));
+  ack_u->fil_u = fil_u;
+  ack_u->gum_w = gum_w;
+  ack_u->nex_u = syn_u->ack_u;
+  syn_u->ack_u = ack_u;
+}
 
 /* _unix_update_file(): update file, producing list of changes
 **
@@ -892,7 +934,7 @@ static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 **  %into event.
 */
 static u3_noun
-_unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
+_unix_update_file(u3_unix* unx_u, u3_ufil* fil_u, u3_usyn* syn_u)
 {
   u3_assert( c3n == fil_u->dir );
 
@@ -947,6 +989,8 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
       return u3_nul;
     }
     else {
+      _unix_ack_file(syn_u, fil_u, mug_w);
+
       u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
       u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
       u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
@@ -963,7 +1007,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 **  _unix_initial_update_dir()
 */
 static u3_noun
-_unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
+_unix_update_dir(u3_unix* unx_u, u3_udir* dir_u, u3_usyn* syn_u)
 {
   u3_noun can = u3_nul;
 
@@ -1096,7 +1140,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
           else {
             u3_udir* dis_u = c3_malloc(sizeof(u3_udir));
             _unix_watch_dir(dis_u, dir_u, pax_c);
-            can = u3kb_weld(_unix_update_dir(unx_u, dis_u), can); // XXX unnecessary?
+            can = u3kb_weld(_unix_update_dir(unx_u, dis_u, syn_u), can); // XXX unnecessary?
           }
         }
       }
@@ -1117,7 +1161,7 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
   // get change list
 
   for ( nod_u = dir_u->kid_u; nod_u; nod_u = nod_u->nex_u ) {
-    can = u3kb_weld(_unix_update_node(unx_u, nod_u), can);
+    can = u3kb_weld(_unix_update_node(unx_u, nod_u, syn_u), can);
   }
 
   return can;
@@ -1126,14 +1170,87 @@ _unix_update_dir(u3_unix* unx_u, u3_udir* dir_u)
 /* _unix_update_node(): update node, producing list of changes
 */
 static u3_noun
-_unix_update_node(u3_unix* unx_u, u3_unod* nod_u)
+_unix_update_node(u3_unix* unx_u, u3_unod* nod_u, u3_usyn* syn_u)
 {
   if ( c3y == nod_u->dir ) {
-    return _unix_update_dir(unx_u, (void*)nod_u);
+    return _unix_update_dir(unx_u, (void*)nod_u, syn_u);
   }
   else {
-    return _unix_update_file(unx_u, (void*)nod_u);
+    return _unix_update_file(unx_u, (void*)nod_u, syn_u);
   }
+}
+
+/* _unix_sync_free(): dispose a completed or failed sync record.
+*/
+static void
+_unix_sync_free(u3_usyn* syn_u)
+{
+  u3_uack* ack_u = syn_u->ack_u;
+
+  while ( ack_u ) {
+    u3_uack* nex_u = ack_u->nex_u;
+    c3_free(ack_u);
+    ack_u = nex_u;
+  }
+
+  c3_free(syn_u);
+}
+
+/* _unix_sync_news(): accept sent checksums only after Clay accepts %into.
+*/
+static void
+_unix_sync_news(u3_ovum* egg_u, u3_ovum_news new_e)
+{
+  u3_usyn* syn_u = egg_u->ptr_v;
+  u3_umon* mon_u = syn_u->mon_u;
+
+  if ( u3_ovum_work == new_e ) {
+    return;
+  }
+
+  if ( mon_u ) {
+    u3_assert( mon_u->syn_u == syn_u );
+
+    if ( u3_ovum_done == new_e ) {
+      u3_uack* ack_u;
+
+      //  Clay filters unchanged files out of its resulting %ergo.  Without
+      //  acknowledging every file in the accepted %into here, files that
+      //  were already identical retain gum_w=0 and the complete mount is
+      //  sent again on every later %dirk.
+      //
+      for ( ack_u = syn_u->ack_u; ack_u; ack_u = ack_u->nex_u ) {
+        ack_u->fil_u->gum_w = ack_u->gum_w;
+      }
+
+      mon_u->fai_o = c3n;
+    }
+
+    mon_u->syn_u = NULL;
+  }
+
+  _unix_sync_free(syn_u);
+}
+
+/* _unix_sync_bail(): stop retrying a rejected full-mount import.
+*/
+static void
+_unix_sync_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3_usyn* syn_u = egg_u->ptr_v;
+  u3_umon* mon_u = syn_u->mon_u;
+
+  if ( mon_u ) {
+    u3_assert( mon_u->syn_u == syn_u );
+    mon_u->syn_u = NULL;
+    mon_u->fai_o = c3y;
+    u3l_log("unix: %%into failed for %s; host sync suspended until %%ergo or remount",
+            mon_u->nam_c);
+  }
+
+  _unix_sync_free(syn_u);
+  u3_auto_bail_slog(egg_u, lud);
+  u3_ovum_free(egg_u);
 }
 
 /* _unix_update_mount(): update mount point
@@ -1141,14 +1258,23 @@ _unix_update_node(u3_unix* unx_u, u3_unod* nod_u)
 static void
 _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
 {
-  if ( c3n == mon_u->dir_u.dry ) {
+  if (  (c3n == mon_u->dir_u.dry)
+     && !mon_u->syn_u
+     && (c3n == mon_u->fai_o) )
+  {
+    u3_usyn* syn_u = c3_calloc(sizeof(*syn_u));
+    syn_u->mon_u = mon_u;
+
     u3_noun  can = u3_nul;
     u3_unod* nod_u;
     for ( nod_u = mon_u->dir_u.kid_u; nod_u; nod_u = nod_u->nex_u ) {
-      can = u3kb_weld(_unix_update_node(unx_u, nod_u), can);
+      can = u3kb_weld(_unix_update_node(unx_u, nod_u, syn_u), can);
     }
 
-    {
+    if ( u3_nul == can ) {
+      _unix_sync_free(syn_u);
+    }
+    else {
       //  XX remove u3A->sen
       //
       u3_noun wir = u3nt(c3__sync,
@@ -1156,8 +1282,11 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
                         u3_nul);
       u3_noun cad = u3nq(c3__into, _unix_string_to_knot(mon_u->nam_c), all_o,
                          can);
+      u3_ovum* egg_u = u3_ovum_init(0, c3__c, wir, cad);
 
-      u3_auto_plan(&unx_u->car_u, u3_ovum_init(0, c3__c, wir, cad));
+      mon_u->syn_u = syn_u;
+      u3_auto_peer(egg_u, syn_u, _unix_sync_news, _unix_sync_bail);
+      u3_auto_plan(&unx_u->car_u, egg_u);
     }
   }
 }
@@ -1447,6 +1576,10 @@ u3_unix_ef_ergo(u3_unix* unx_u, u3_noun mon, u3_noun can)
 {
   u3_umon* mon_u = _unix_get_mount_point(unx_u, mon);
 
+  //  A full export (notably after %mont) is an explicit recovery boundary
+  //  for a previously rejected unix import.
+  //
+  mon_u->fai_o = c3n;
   _unix_sync_ergo(unx_u, mon_u, can);
 }
 
