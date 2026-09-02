@@ -20,12 +20,12 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
   u3a_atom *a_u = u3a_to_ptr(a);
   u3a_atom *b_u = u3a_to_ptr(b);
 
-  //  XX assume( a_u->mug_w && b_u->mug_w )
+  //  XX assume( a_u->mug_h && b_u->mug_h )
   if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   if ( a_u->len_w != b_u->len_w ) return 0;
 
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << 2);
+  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
 }
 
 #define NAME    _coins
@@ -42,13 +42,13 @@ _melt_cmp_cells(u3_cell a, u3_cell b)
   u3a_cell *a_u = u3a_to_ptr(a);
   u3a_cell *b_u = u3a_to_ptr(b);
 
-  //  XX assume( a_u->mug_w && b_u->mug_w )
+  //  XX assume( a_u->mug_h && b_u->mug_h )
   if ( a_u->mug_w != b_u->mug_w ) return 0;
 
   c3_d *a_d = (c3_d*)&(a_u->hed);
   c3_d *b_d = (c3_d*)&(b_u->hed);
 
-  return *a_d == *b_d;
+  return a_u->hed == b_u->hed && a_u->tel == b_u->tel;
 }
 
 #define NAME    _cells
@@ -119,14 +119,14 @@ _melt_canon(_melt_ctx *can_u, u3_noun can)
   while ( can_u->len_w ) {
     top = &(can_u->tac[can_u->len_w - 1]);
 
-    if ( !(*top >> 31) ) {                       // head frame
+    if ( !(*top >> (u3a_word_bits - 1)) ) {                       // head frame
       cel_u = u3to(u3a_cell, *top << u3a_vits);
       _melt_xchange(can, &cel_u->hed);
-      *top |= 1U << 31;                          // tail frame
+      *top |= ((c3_w)1) << (u3a_word_bits - 1);                          // tail frame
       can   = _melt_canon_next(can_u, cel_u->tel);
     }
     else {
-      *top  &= (1U << 31) - 1;
+      *top  &= (((c3_w)1) << (u3a_word_bits - 1)) - 1;
       *top <<= u3a_vits;
       cel_u  = u3to(u3a_cell, *top);
       _melt_xchange(can, &cel_u->tel);

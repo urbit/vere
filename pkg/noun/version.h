@@ -9,12 +9,12 @@ typedef c3_d       u3v_version;
 #define U3V_VER2   (u3v_version)2  //  2.0:    pointer compression
 #define U3V_VER3   (u3v_version)3  //  3.0-rc: persistent memoization
 #define U3V_VER4   (u3v_version)4  //  3.0:    bytecode alignment
-#define U3V_VER5   (u3v_version)5  //  ??      palloc
+#define U3V_VER5   (u3v_version)5  //  4.0:    palloc
 #define U3V_VERLAT U3V_VER5
 
 /*  bytecode semantics (within u3v_version)
  */
-typedef c3_w       u3n_version;
+typedef c3_h       u3n_version;
 
 #define U3N_VER1   (u3n_version)0  // zero-indexedfor backcompat
 #define U3N_VER2   (u3n_version)1
@@ -22,7 +22,7 @@ typedef c3_w       u3n_version;
 
 /*  snapshot patch format
  */
-typedef c3_w       u3e_version;
+typedef c3_h       u3e_version;
 
 #define U3P_VER2   (u3e_version)2  //  top-level checksum added
 #define U3P_VERLAT U3P_VER2

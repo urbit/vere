@@ -10,6 +10,7 @@ on:
       - 'ext/**'
       - '!ext/**.md'
       - 'pkg/**'
+      - 'tests/**'
       - '.github/workflows/**.yml'
       - '*.sh'
 

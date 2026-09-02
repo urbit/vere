@@ -170,6 +170,7 @@ pub fn build(b: *std.Build) !void {
     try flags.appendSlice(&.{
         // "-pedantic",
         "-std=gnu23",
+        // "-Wconversion",         // ;;: todo: enable in a bit
     });
     try flags.appendSlice(copts);
 
@@ -397,6 +398,7 @@ const c_source_files = [_][]const u8{
     "jets/135/tree.c",
     "log.c",
     "manage.c",
+    "migrate.c",
     "palloc.c",
     "nock.c",
     "options.c",
@@ -412,6 +414,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "copy_migrate.h",
     "error.h",
     "events.h",
     "hashtable.h",

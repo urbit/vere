@@ -118,7 +118,7 @@ u3we_adler32(u3_noun cor)
 {
   u3_noun octs;
 
-  u3x_mean(cor, u3x_sam, &octs, 0);
+  u3x_mean(cor, {u3x_sam, &octs});
 
   return _qe_adler32(octs);
 }
