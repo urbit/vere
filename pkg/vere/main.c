@@ -182,7 +182,10 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
-#if defined(U3_OS_windows)
+#if defined(U3_OS_windows) && defined(U3_SNAPSHOT_VALIDATION)
+  //  validation reads the loom between patch application and remap, which
+  //  on windows is a window where the image is unmapped.
+  //
   u3_Host.ops_u.map = c3n;
   u3C.wag_h |= u3o_no_demand;
 #else

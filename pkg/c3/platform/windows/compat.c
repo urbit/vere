@@ -333,6 +333,19 @@ int mprotect (void *addr, size_t len, int prot)
         return -1;
     }
 
+    // a copy-on-write mapping (the demand-paged loom image) can only be made
+    // writable as PAGE_WRITECOPY; VirtualProtect rejects PAGE_READWRITE on
+    // such a view. NB: AllocationProtect, not Protect -- an already-copied
+    // page reports PAGE_READWRITE while the view is still write-copy.
+    if (np == PAGE_READWRITE)
+    {
+        MEMORY_BASIC_INFORMATION mbi;
+
+        if (VirtualQuery(addr, &mbi, sizeof(mbi))
+            && mbi.AllocationProtect == PAGE_WRITECOPY)
+            np = PAGE_WRITECOPY;
+    }
+
     if (VirtualProtect (addr, len, np, &op))
         return 0;
 

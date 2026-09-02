@@ -99,6 +99,10 @@
 #include "murmur3.h"
 #include "options.h"
 
+#ifdef U3_OS_windows
+#include "wloom.h"
+#endif
+
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
 ** _ce_page:      byte length of a single page
@@ -180,6 +184,17 @@ _ce_flaw_mprotect(c3_w pag_w)
 static inline c3_i
 _ce_ward_protect(void)
 {
+#ifdef U3_OS_windows
+  //  the guard page must be committed to be protected, and to stay
+  //  distinguishable from an ordinary first touch.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(u3P.gar_w), _ce_page) ) {
+    fprintf(stderr, "loom: failed to commit guard page (%"PRIc3_w")\r\n",
+                    u3P.gar_w);
+    return 1;
+  }
+#endif
+
   if ( 0 != mprotect(_ce_ptr(u3P.gar_w), _ce_page, PROT_NONE) ) {
     fprintf(stderr, "loom: failed to protect guard page (%"PRIc3_w"): %s\r\n",
                     u3P.gar_w, strerror(errno));
@@ -237,7 +252,10 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 #ifdef U3_GUARD_PAGE
   c3_w gar_w = u3P.gar_w;
 
-  if ( pag_w == gar_w ) {
+  //  NB: a zero [gar_w] means unposted, not page zero. u3m_boot_lite()
+  //  paves the loom before u3e_init(), so page zero can fault first.
+  //
+  if ( gar_w && (pag_w == gar_w) ) {
     u3e_flaw fal_e = _ce_ward_clip(low_p >> u3a_page, hig_p >> u3a_page);
 
     if ( u3e_flaw_good != fal_e ) {
@@ -257,6 +275,9 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
+  //  NB: on windows, a first touch of a reserved page has already been
+  //  resolved by u3m_fault(), which must do it before reading the road.
+  //
   if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
     fprintf(stderr, "loom: strange page (%"PRIc3_w"): %"PRIxc3_w"\r\n", pag_w, off_p);
     return u3e_flaw_sham;
@@ -799,10 +820,17 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
       u3_assert(0);
     }
 
+#ifdef U3_OS_windows
+    if ( u3_wnd_truncate(img_u->fid_i, (c3_d)off_z) ) {
+      fprintf(stderr, "loom: image truncate to %zu failed\r\n", off_z);
+      u3_assert(0);
+    }
+#else
     if ( ftruncate(img_u->fid_i, off_i) ) {
       fprintf(stderr, "loom: image truncate: %s\r\n", strerror(errno));
       u3_assert(0);
     }
+#endif
   }
 
   img_u->pgs_w = pgs_w;
@@ -983,6 +1011,119 @@ _ce_loom_mapf_ephemeral(void)
   }
 }
 
+/* _ce_loom_blit_pages(): read [pgs_w] pages of [fid_i] from [off_w].
+*/
+static void
+_ce_loom_blit_pages(c3_i fid_i, c3_w off_w, c3_w pgs_w)
+{
+  c3_zs ret_zs;
+  c3_w  i_w;
+
+  if ( !pgs_w ) {
+    return;
+  }
+
+#ifdef U3_OS_windows
+  //  pread(2) writes these pages from kernel mode, which the fault handler
+  //  cannot rescue, so they must be committed up front.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(off_w), _ce_len(pgs_w)) ) {
+    fprintf(stderr, "loom: blit commit (%"PRIc3_w" pages at %"PRIc3_w")\r\n",
+                    pgs_w, off_w);
+    u3_assert(0);
+  }
+#endif
+
+  for ( i_w = off_w; i_w < (off_w + pgs_w); i_w++ ) {
+    if ( _ce_page != (ret_zs = pread(fid_i, _ce_ptr(i_w),
+                                     _ce_page, _ce_len(i_w))) )
+    {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: blit partial read: %"PRIc3_zs"\r\n", ret_zs);
+      }
+      else {
+        fprintf(stderr, "loom: blit read %s\r\n", strerror(errno));
+      }
+      u3_assert(0);
+    }
+  }
+}
+
+/* _ce_loom_unmapf(): drop the file-backed image mapping, if any.
+**
+**   NB: windows refuses to truncate a mapped file, and does not guarantee
+**   coherence between a mapped view and writes through the file handle.
+**   the image mapping must therefore be dropped before a patch is applied.
+**   a no-op everywhere else, where mmap(MAP_FIXED) simply replaces it.
+*/
+static void
+_ce_loom_unmapf(void)
+{
+#ifdef U3_OS_windows
+  if ( !(u3C.wag_h & u3o_no_demand) ) {
+    c3_c pax_c[8192];
+
+    u3_assert( c3y == u3_wnd_loom_unmapf() );
+
+    //  windows keeps a file's section attached to the handle that created
+    //  it, so dropping the view is not enough to allow a truncate: the
+    //  descriptor has to be cycled as well.
+    //
+    snprintf(pax_c, 8192, "%s/.urb/chk/%s.bin", u3P.dir_c, u3P.img_u.nam_c);
+
+    if ( -1 != u3P.img_u.fid_i ) {
+      close(u3P.img_u.fid_i);
+    }
+
+    if ( -1 == (u3P.img_u.fid_i = c3_open(pax_c, O_RDWR, 0666)) ) {
+      fprintf(stderr, "loom: image reopen %s: %s\r\n", pax_c, strerror(errno));
+      u3_assert(0);
+    }
+  }
+#endif
+}
+
+#ifdef U3_OS_windows
+/* _ce_loom_mapf(): map [pgs_w] of [fid_i] into the bottom of memory.
+**
+**   windows can only map at the allocation granularity (64KB), which is
+**   coarser than a loom page (16KB), so the granularity-floored prefix of
+**   the image is mapped and the ragged tail (at most 3 pages) is blitted.
+**
+**   NB: remapping resets all protections above the image, so the whole
+**   volatile region is re-dirtied and the guard page re-posted. this is
+**   the quiescent invariant anyway: image clean, everything else dirty.
+*/
+static void
+_ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
+{
+  c3_w gan_w = (c3_w)(u3_wnd_loom_gran() >> (u3a_page + u3a_word_bytes_shift));
+  c3_w map_w = pgs_w & ~(gan_w - 1);
+  c3_w tal_w = pgs_w - map_w;
+
+  u3_assert( c3y == u3_wnd_loom_mapf(fid_i, _ce_len(map_w)) );
+
+  if ( tal_w ) {
+    _ce_loom_blit_pages(fid_i, map_w, tal_w);
+
+    if ( 0 != mprotect(_ce_ptr(map_w), _ce_len(tal_w), PROT_READ) ) {
+      fprintf(stderr, "loom: tail pure (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
+                      tal_w, map_w, strerror(errno));
+      u3_assert(0);
+    }
+  }
+
+#ifdef U3_GUARD_PAGE
+  //  NB: not yet posted on the first mapping, from u3e_live()
+  //
+  if ( u3P.gar_w ) {
+    u3_assert( !_ce_ward_protect() );
+  }
+#endif
+
+  _ce_loom_track(pgs_w, u3P.pag_w - pgs_w);
+}
+#else
 /* _ce_loom_mapf(): map [pgs_w] of [fid_i] into the bottom of memory
 **                        (and ephemeralize [old_w - pgs_w] after if needed).
 */
@@ -1046,31 +1187,14 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 
   _ce_loom_track(pgs_w, dif_w);
 }
+#endif /* ifdef U3_OS_windows */
 
 /* _ce_loom_blit(): apply pages, in order, from the bottom of memory.
 */
 static void
 _ce_loom_blit(c3_i fid_i, c3_w pgs_w)
 {
-  c3_w    i_w;
-  void* ptr_v;
-  c3_zs ret_zs;
-
-  for ( i_w = 0; i_w < pgs_w; i_w++ ) {
-    ptr_v = _ce_ptr(i_w);
-
-    if ( _ce_page != (ret_zs = pread(fid_i, ptr_v, _ce_page, _ce_len(i_w))) ) {
-      if ( 0 < ret_zs ) {
-        fprintf(stderr, "loom: blit partial read: %"PRIc3_zs"\r\n",
-                        ret_zs);
-      }
-      else {
-        fprintf(stderr, "loom: blit read %s\r\n", strerror(errno));
-      }
-      u3_assert(0);
-    }
-  }
-
+  _ce_loom_blit_pages(fid_i, 0, pgs_w);
   _ce_loom_protect(pgs_w, 0);
 }
 
@@ -1324,6 +1448,10 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_assert( c3y == _ce_loom_fine() );
 #endif
 
+  //  the image cannot be resized or rewritten while mapped
+  //
+  _ce_loom_unmapf();
+
   _ce_patch_apply(pat_u);
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
@@ -1370,7 +1498,11 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
   void* ptr_v = _ce_ptr(nor_w);
 
-  #ifndef U3_OS_windows
+  #ifdef U3_OS_windows
+  //  NB: returns resident pages, but not commit charge; see wloom.h.
+  //
+  u3_wnd_loom_toss(ptr_v, _ce_len(pgs_w));
+  #else
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
       fprintf(stderr, "loom: madv_dontneed failed (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
                       pgs_w, nor_w, strerror(errno));
@@ -1406,6 +1538,23 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     }
   }
 
+#ifdef U3_OS_windows
+  //  mappings are placed at the allocation granularity, not the page size,
+  //  and the image mapping is floored to it. that floor is only expressible
+  //  if the granularity is a whole number of loom pages. in practice this
+  //  is always 64KB against a 16KB page.
+  //
+  if ( !(u3C.wag_h & u3o_no_demand) ) {
+    size_t gan_i = u3_wnd_loom_gran();
+
+    if ( gan_i % _ce_page ) {
+      fprintf(stderr, "loom: incompatible allocation granularity (%zuKB), "
+                      "use --no-demand\r\n", gan_i >> 10);
+      exit(1);
+    }
+  }
+#endif
+
   u3P.dir_c = dir_c;
   u3P.eph_i = 0;
   u3P.img_u.nam_c = "image";
@@ -1423,10 +1572,19 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     //  Open the ephemeral space file.
     //
     if ( u3C.wag_h & u3o_swap ) {
+#ifdef U3_OS_windows
+      //  the ephemeral file is remapped a page at a time, which windows
+      //  cannot do: mappings are placed at the 64KB allocation granularity,
+      //  and a loom page is 16KB.
+      //
+      fprintf(stderr, "boot: --swap is not supported on windows\r\n");
+      exit(1);
+#else
       if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
         fprintf(stderr, "boot: failed to load ephemeral file\r\n");
         exit(1);
       }
+#endif
     }
 
     //  Open image files.
@@ -1528,6 +1686,18 @@ u3e_yolo(void)
 {
   //  NB: u3e_save() will reinstate protection flags
   //
+#ifdef U3_OS_windows
+  //  a placeholder loom is more than one mapping, and may hold reserved
+  //  pages; VirtualProtect can neither span mappings nor touch reserved
+  //  pages.
+  //
+  if ( c3y == u3_wnd_loom_live() ) {
+    if ( c3n == u3_wnd_loom_yolo() ) {
+      return c3n;
+    }
+  }
+  else
+#endif
   if ( 0 != mprotect(_ce_ptr(0),
                      _ce_len(u3P.pag_w),
                      (PROT_READ | PROT_WRITE)) )
