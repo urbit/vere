@@ -85,7 +85,7 @@ _test_frag_heap_overflow(void)
   u3_mesa_data dat_u;
   memset(&dat_u, 0, sizeof(dat_u));
   dat_u.tob_d        = 1u << 24;    //  16 MB -> num_leaves >> fra_d, clears 1132 check
-  dat_u.len_w        = sizeof(fra_y);
+  dat_u.len_h        = sizeof(fra_y);
   dat_u.fra_y        = fra_y;
   dat_u.aut_u.typ_e  = AUTH_SIGN;   //  not AUTH_PAIR
 
@@ -138,7 +138,7 @@ _test_frag_boq_overflow(void)
   u3_mesa_data dat_u;
   memset(&dat_u, 0, sizeof(dat_u));
   dat_u.tob_d        = 16u << 20;   //  16 MB -> num_leaves ~16384 > 5000
-  dat_u.len_w        = sizeof(fra_y);
+  dat_u.len_h        = sizeof(fra_y);
   dat_u.fra_y        = fra_y;
   dat_u.aut_u.typ_e  = AUTH_SIGN;
 
@@ -202,7 +202,7 @@ _test_frag_valid_accepted(void)
   u3_mesa_data dat_u;
   memset(&dat_u, 0, sizeof(dat_u));
   dat_u.tob_d        = 2048;             //  matches the request
-  dat_u.len_w        = sizeof(fra_y);
+  dat_u.len_h        = sizeof(fra_y);
   dat_u.fra_y        = fra_y;
   dat_u.aut_u.typ_e  = AUTH_SIGN;
 
@@ -313,7 +313,7 @@ _test_page_init_bad_boq(void)
   pic_u->pac_u.hed_u.hop_y           = 0;
   pic_u->pac_u.pag_u.nam_u           = nam_u;
   pic_u->pac_u.pag_u.dat_u.tob_d     = 1u << 20;   //  multi-fragment
-  pic_u->pac_u.pag_u.dat_u.len_w     = 0;
+  pic_u->pac_u.pag_u.dat_u.len_h     = 0;
   pic_u->pac_u.pag_u.dat_u.aut_u.typ_e = AUTH_SIGN;
 
   sockaddr_in lan_u;
@@ -326,9 +326,9 @@ _test_page_init_bad_boq(void)
   _mesa_hear_page(pic_u, lan_u);
 
   c3_i ret_i = 0;
-  if ( 1 != sam_u->sat_u.dop_w ) {
+  if ( 1 != sam_u->sat_u.dop_h ) {
     fprintf(stderr, "mesa: H2 — bad-boq page not flagged STRANGE "
-                    "(dop_w=%u)\r\n", sam_u->sat_u.dop_w);
+                    "(dop_w=%u)\r\n", sam_u->sat_u.dop_h);
     ret_i = 1;
   }
   if ( (u3_pend_req*)CTAG_WAIT != _mesa_get_request(sam_u, &nam_u) ) {
@@ -370,7 +370,7 @@ _test_wire_page_init_bad_boq(void)
   memset(&nam_u, 0, sizeof(nam_u));
   nam_u.her_u[0] = who_u[0];
   nam_u.her_u[1] = who_u[1];
-  nam_u.rif_w    = 0;
+  nam_u.rif_h    = 0;
   nam_u.boq_y    = 31;            //  H2 trigger: not boq 13
   nam_u.nit_o    = c3y;           //  init page; fra_d implicitly 0
   nam_u.fra_d    = 0;
@@ -392,7 +392,7 @@ _test_wire_page_init_bad_boq(void)
   pac_u.hed_u.hop_y              = 0;
   pac_u.pag_u.nam_u              = nam_u;
   pac_u.pag_u.dat_u.tob_d        = 1u << 20;   //  multi-fragment
-  pac_u.pag_u.dat_u.len_w        = 0;
+  pac_u.pag_u.dat_u.len_h        = 0;
   pac_u.pag_u.dat_u.fra_y        = sig_y;      //  unused (len 0), non-NULL
   pac_u.pag_u.dat_u.aut_u.typ_e  = AUTH_SIGN;
   memcpy(pac_u.pag_u.dat_u.aut_u.sig_y, sig_y, sizeof(sig_y));
@@ -423,9 +423,9 @@ _test_wire_page_init_bad_boq(void)
     //  failure would also leave the request CTAG_WAIT and masquerade as a
     //  pass.
     //
-    if ( 1 != sam_u->sat_u.dop_w ) {
+    if ( 1 != sam_u->sat_u.dop_h ) {
       fprintf(stderr, "mesa: H2 (wire) — page did not reach the boq guard "
-                      "(dop_w=%u)\r\n", sam_u->sat_u.dop_w);
+                      "(dop_w=%u)\r\n", sam_u->sat_u.dop_h);
       ret_i = 1;
     }
 

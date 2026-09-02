@@ -9,7 +9,7 @@
 u3_noun
 u3qe_jam(u3_atom a)
 {
-#if 0
+#if 1
   if (c3y == u3du(a) && 1337 == u3h(a)) {
     c3_w siz_w, tot_w = 0;
     u3_noun som;
@@ -34,7 +34,7 @@ u3qe_jam(u3_atom a)
     u3a_print_memory(stderr, "total", tot_w);
     u3a_print_memory(stderr, "memoization cache", mem_w);
     u3h_root* har_u = u3to(u3h_root, u3R->cax.har_p);
-    u3l_log("memoization entries: %d", har_u->use_w);
+    u3l_log("memoization entries: %" PRIc3_w, har_u->use_w);
 		u3a_print_memory(stderr, "unused free", u3a_open(u3R));
     return tot_w;
   }

@@ -4,7 +4,7 @@
 #include "vere.h"
 
     /*  assumptions:
-    **    all measurements are in chubs (double-words, c3_d, uint64_t).
+    **    all measurements are in chubs (double-halfs, c3_d, uint64_t).
     **    little-endian addressing is ASSUMED.
     **
     **  framing:
@@ -52,23 +52,6 @@ _foil_close(uv_file fil_f)
   if ( 0 != (err_i = uv_fs_close(u3L, &ruq_u, fil_f, 0)) ) {
     _foil_fail("uv_fs_close", err_i);
   }
-}
-
-/* _foil_path(): allocate path.
-*/
-static c3_c*
-_foil_path(u3_dire*    dir_u,
-           const c3_c* nam_c)
-{
-  c3_w  len_w = strlen(dir_u->pax_c);
-  c3_c* pax_c;
-
-  pax_c = c3_malloc(1 + len_w + 1 + strlen(nam_c));
-  strcpy(pax_c, dir_u->pax_c);
-  pax_c[len_w] = '/';
-  strcpy(pax_c + len_w + 1, nam_c);
-
-  return pax_c;
 }
 
 /* u3_foil_folder(): load directory, blockingly.  null if nonexistent.

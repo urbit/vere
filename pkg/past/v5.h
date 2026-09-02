@@ -1,6 +1,8 @@
 #ifndef U3_V5_H
 #define U3_V5_H
 
+#ifndef VERE64
+
 #include "allocate.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -9,8 +11,11 @@
 #include "retrieve.h"
 #include "vortex.h"
 
-  /***  current
-  ***/
+/*
+**   Aliases mapping the v5 format onto the native allocator family,
+**   used by the v4 -> v5 in-place migration in migrate_v5.c.
+*/
+
 #     define  u3_v5_cell          u3_cell
 #     define  u3_v5_noun          u3_noun
 #     define  u3_v5_none          u3_none
@@ -57,4 +62,5 @@
 #     define  u3h_v5_noun_to_slot u3h_noun_to_slot
 #     define  u3h_v5_slot_to_noun u3h_slot_to_noun
 
+#endif /* !VERE64 */
 #endif /* U3_V5_H */

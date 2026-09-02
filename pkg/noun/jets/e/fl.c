@@ -45,7 +45,7 @@
   static u3_noun
   _mp_to_satom(mpz_t a_mp)
   {
-    c3_ws b = mpz_sgn(a_mp);
+    c3_hs b = mpz_sgn(a_mp);
     switch ( b ) {
       default: return u3m_bail(c3__fail);
       case  0: {
@@ -235,7 +235,7 @@
     }
     _xpd(&c, &d);
     switch ( i ) {
-      c3_ws x;
+      c3_hs x;
       default:
         mpz_clear(v); mpz_clear(h); mpz_clear(g);
         mpz_clear(d.minExp); mpz_clear(d.expWidth);
@@ -358,7 +358,7 @@
     mpz_init_set_ui(mn, 1);
     mpz_init(i);
     mpz_init(j);
-    c3_w se = mpz_sgn(c.e);
+    c3_hs se = mpz_sgn(c.e);
     if ( se == 1 ) {
       mpz_mul_2exp(r, r, mpz_get_ui(c.e));
       mpz_mul_2exp(mn, mn, mpz_get_ui(c.e));

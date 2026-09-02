@@ -295,7 +295,7 @@ _ch_v1_free_buck(u3h_v1_buck* hab_u)
 {
   c3_w i_w;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+  for ( i_w = 0; i_w < hab_u->len_h; i_w++ ) {
     u3a_v1_lose(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]));
   }
   u3a_v1_wfree(hab_u);
@@ -306,7 +306,7 @@ _ch_v1_free_buck(u3h_v1_buck* hab_u)
 static void
 _ch_v1_free_node(u3h_v1_node* han_u, c3_w lef_w)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_h);
   c3_w i_w;
 
   lef_w -= 5;
@@ -352,8 +352,8 @@ u3h_v1_free_nodes(u3p(u3h_v1_root) har_p)
     har_u->sot_w[i_w] = 0;
   }
   har_u->use_w       = 0;
-  har_u->arm_u.mug_w = 0;
-  har_u->arm_u.inx_w = 0;
+  har_u->arm_u.mug_h = 0;
+  har_u->arm_u.inx_h = 0;
 }
 
 /* _ch_v1_walk_buck(): walk bucket for gc.
@@ -363,7 +363,7 @@ _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 {
   c3_w i_w;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+  for ( i_w = 0; i_w < hab_u->len_h; i_w++ ) {
     fun_f(u3h_v1_slot_to_noun(hab_u->sot_w[i_w]), wit);
   }
 }
@@ -373,7 +373,7 @@ _ch_v1_walk_buck(u3h_v1_buck* hab_u, void (*fun_f)(u3_noun, void*), void* wit)
 static void
 _ch_v1_walk_node(u3h_v1_node* han_u, c3_w lef_w, void (*fun_f)(u3_noun, void*), void* wit)
 {
-  c3_w len_w = c3_pc_w(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_h);
   c3_w i_w;
 
   lef_w -= 5;
