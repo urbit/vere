@@ -1097,19 +1097,16 @@ u3r_bytes(c3_w    a_w,
   c3_y* buf_y;
   c3_w  len_w;
 
-  //  a direct atom is its own buffer
-  //
-  //  XX: assumes little-endian
-  //
+  STATIC_ASSERT(c3_endian == c3_endian_little, "");
   if ( _(u3a_is_cat(d)) ) {
     buf_y = (c3_y*)&d;
-    len_w = 4;
+    len_w = sizeof(c3_w);
   }
   else {
     u3a_atom* d_u = u3a_to_ptr(d);
 
     buf_y = (c3_y*)d_u->buf_w;
-    len_w = d_u->len_w << 2;
+    len_w = d_u->len_w * sizeof(c3_w);
   }
 
   {
