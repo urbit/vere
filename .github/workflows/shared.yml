@@ -219,8 +219,10 @@ jobs:
             if ${{ inputs.next != null }}; then
               next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
               dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
+              legacy_dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
             else
               dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
+              legacy_dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
             fi
 
             args=""
@@ -236,6 +238,21 @@ jobs:
 
             ([ $exitcode -eq 0 ] && echo "upload to $dest complete.") ||
             (echo "upload to $dest failed." && exit $exitcode);
+
+            # 32-bit remains the default, so also publish it at the
+            # pre-vere32/vere64 unprefixed path for old links/scripts
+            # that still expect "vere-v...".
+            if [[ "$binary_prefix" == "vere32" ]]; then
+              if [[ "${{ inputs.pace }}" == "live" ]]; then
+                gsutil cp -n "$dest" "$legacy_dest"
+              else
+                gsutil cp "$dest" "$legacy_dest"
+              fi
+              exitcode=$?
+
+              ([ $exitcode -eq 0 ] && echo "upload to $legacy_dest complete.") ||
+              (echo "upload to $legacy_dest failed." && exit $exitcode);
+            fi
           done
 
   migration-test:
