@@ -959,7 +959,7 @@ u3_ve_panic(c3_i argc, c3_c** argv)
 static void
 report(void)
 {
-  printf("urbit %s (%zu-bit)\n", URBIT_VERSION, 8 * sizeof(c3_w));
+  printf("urbit %s %s (%zu-bit)\n", URBIT_VERSION, U3_VERE_PACE, 8 * sizeof(c3_w));
   printf("gmp: %s\n", gmp_version);
   #ifndef U3_OS_windows
   printf("sigsegv: %d.%d\n",
