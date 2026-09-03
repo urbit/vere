@@ -574,6 +574,20 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   //  XX trim ver_c ?
   //
   if ( 0 == strcmp(ver_c, URBIT_VERSION) ) {
+    //  same version: still upgrade if a different bit width was requested
+    //  (eg, `next --arch 64` while running a 32-bit binary)
+    //
+#ifdef VERE64
+    c3_c* bit_c = "64";
+#else
+    c3_c* bit_c = "32";
+#endif
+
+    if ( u3_Host.bit_c && 0 != strcmp(u3_Host.bit_c, bit_c) ) {
+      *out_c = ver_c;
+      return 0;
+    }
+
     c3_free(ver_c);
     return -1;
   }
