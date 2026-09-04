@@ -3312,7 +3312,7 @@ main(c3_i   argc,
 
   printf("~\n");
   //  printf("welcome.\n");
-  printf("urbit %s\n", URBIT_VERSION);
+  printf("urbit %s (%zu-bit)\n", URBIT_VERSION, 8 * sizeof(c3_w));
   printf("boot: home is %s\n", u3_Host.dir_c);
   // printf("vere: hostname is %s\n", u3_Host.ops_u.nam_c);
 
