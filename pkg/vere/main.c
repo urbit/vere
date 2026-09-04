@@ -210,7 +210,11 @@ _main_init(void)
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
+#ifndef VERE64
   u3_Host.ops_u.lut_y = 34;     /* aka 16G */
+#else
+  u3_Host.ops_u.lut_y = 31;     /* aka  2G */
+#endif
   u3_Host.ops_u.lom_y = 32;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
@@ -2086,6 +2090,7 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "urth-loom", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2121,6 +2126,13 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  urth-loom
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
+          exit(1);
+        }
         break;
       }
 
