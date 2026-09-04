@@ -2090,6 +2090,7 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "urth-loom", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2125,6 +2126,13 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  urth-loom
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
+          exit(1);
+        }
         break;
       }
 
