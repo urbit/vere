@@ -1032,36 +1032,38 @@ u3r_byte(c3_w    a_w,
 */
 void
 u3r_bytes(c3_w    a_w,
-            c3_w    b_w,
-            c3_y*   c_y,
-            u3_atom d)
+          c3_w    b_w,
+          c3_y*   c_y,
+          u3_atom d)
 {
   u3_assert(u3_none != d);
   u3_assert(_(u3a_is_atom(d)));
 
+  c3_y* buf_y;
+  c3_w  len_w;
+
+  STATIC_ASSERT(c3_endian == c3_endian_little, "");
   if ( _(u3a_is_cat(d)) ) {
-    c3_w e_w = d >> (c3_min(a_w, u3a_word_bytes) << 3);
-    c3_w m_w = c3_min(b_w, u3a_word_bytes);
-    memcpy(c_y, (c3_y*)&e_w, m_w);
-    if ( b_w > u3a_word_bytes ) {
-      memset(c_y + u3a_word_bytes, 0, b_w - u3a_word_bytes);
-    }
+    buf_y = (c3_y*)&d;
+    len_w = sizeof(c3_w);
   }
   else {
-    u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_w n_w = d_u->len_w << u3a_word_bytes_shift;
-    c3_y* x_y = (c3_y*)d_u->buf_w + a_w;
+    u3a_atom* d_u = u3a_to_ptr(d);
 
-    if ( a_w >= n_w ) {
-      memset(c_y, 0, b_w);
+    buf_y = (c3_y*)d_u->buf_w;
+    len_w = d_u->len_w * sizeof(c3_w);
+  }
+
+  {
+    c3_w hav_w = ( a_w < len_w ) ? (len_w - a_w) : 0;
+    c3_w z_w   = c3_min(b_w, hav_w);
+
+    //  guarded so [buf_y + a_w] is only formed when in bounds
+    //
+    if ( z_w ) {
+      memcpy(c_y, buf_y + a_w, z_w);
     }
-    else {
-      c3_w z_w = c3_min(b_w, n_w - a_w);
-      memcpy(c_y, x_y, z_w);
-      if ( b_w > n_w - a_w ) {
-        memset(c_y + z_w, 0, b_w + a_w - n_w);
-      }
-    }
+    memset(c_y + z_w, 0, b_w - z_w);
   }
 }
 
@@ -1092,7 +1094,7 @@ u3r_bytes_alloc(c3_w    a_w,
                 u3_atom b)
 {
   c3_y* b_y = u3a_malloc(len_w);
-  u3r_bytes(a_w, a_w + len_w, b_y, b);
+  u3r_bytes(a_w, len_w, b_y, b);
   return b_y;
 }
 
@@ -1337,51 +1339,9 @@ u3r_halfs(c3_w    a_w,
           c3_h*   c_h,
           u3_atom d)
 {
-
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  if ( b_w == 0 ) {
-    return;
-  }
-  if ( d <= u3a_direct_max_h ) {
-    if ( a_w == 0 ) {
-      *c_h = (c3_h)d;
-      memset((c3_y*)(c_h + 1), 0, (b_w - 1) << u3a_half_bytes_shift);
-    }
-    else {
-      memset((c3_y*)c_h, 0, b_w << u3a_half_bytes_shift);
-    }
-  }
-  else {
-    c3_w len_w;
-    c3_h* buf_h;
-    // XX: 64 little endian. very ugly!
-#ifdef VERE64
-    if (c3y == u3a_is_cat(d)) {
-      len_w = d == c3_w_max ? 1 : 2;
-      buf_h = (c3_h*)&d;
-    }
-    else
-#endif
-    {
-      u3a_atom* d_u = u3a_to_ptr(d);
-      len_w = d_u->len_w * u3a_word_words;
-      buf_h = (c3_h*)d_u->buf_w;
-    }
-    if ( a_w >= len_w ) {
-      memset((c3_y*)c_h, 0, b_w << u3a_half_bytes_shift);
-    }
-    else {
-      c3_w z_w = c3_min(b_w, len_w - a_w);
-      // XX: 64 little endian
-      c3_h* x_h = buf_h + a_w;
-      memcpy((c3_y*)c_h, (c3_y*)x_h, z_w << u3a_half_bytes_shift);
-      if ( b_w > len_w - a_w ) {
-        memset((c3_y*)(c_h + z_w), 0, (b_w + a_w - len_w) << u3a_half_bytes_shift);
-      }
-    }
-  }
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << 2, b_w << 2, (c3_y*)c_h, d);
 }
 
 /* u3r_chubs():
@@ -1394,61 +1354,25 @@ u3r_chubs(c3_w    a_w,
           c3_d*   c_d,
           u3_atom d)
 {
-#ifndef VERE64
-  //  atom storage is 32-bit halfwords, two per chub. u3r_halfs() copies
-  //  the halfwords that exist and zero-fills the rest, which is what makes
-  //  a trailing odd halfword safe: reading it as a whole chub would run
-  //  four bytes past the atom.
-  //
   //  XX: assumes little-endian
   //
-  u3r_halfs(a_w * 2, b_w * 2, (c3_h*)c_d, d);
-#else
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  if ( b_w == 0 ) {
-    return;
-  }
-  if ( _(u3a_is_cat(d)) ) {
-    if ( a_w == 0 ) {
-      *c_d = d;
-      memset((c3_y*)(c_d + 1), 0, (b_w - 1) << u3a_chub_bytes_shift);
-    }
-    else {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
-    }
-  }
-  else {
-    u3a_atom* d_u = u3a_to_ptr(d);
-    c3_w len_w = d_u->len_w;
-
-    if ( a_w >= len_w ) {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
-    }
-    else {
-      c3_w z_w = c3_min(b_w, len_w - a_w);
-      c3_d* x_w = ((c3_d*)d_u->buf_w) + a_w;
-      memcpy((c3_y*)c_d, (c3_y*)x_w, z_w << u3a_chub_bytes_shift);
-      if ( b_w > len_w - a_w ) {
-        memset((c3_y*)(c_d + z_w), 0, (b_w + a_w - len_w) << u3a_chub_bytes_shift);
-      }
-    }
-  }
-#endif
+  u3r_bytes(a_w << 3, b_w << 3, (c3_y*)c_d, d);
 }
 
+/* u3r_words():
+**
+**  Copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
+*/
 void
 u3r_words(c3_w    a_w,
           c3_w    b_w,
           c3_w*   c_w,
           u3_atom d)
 {
-#ifndef VERE64
-  u3r_halfs(a_w, b_w, c_w, d);
-#else
-  u3r_chubs(a_w, b_w, c_w, d);
-#endif
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << u3a_word_bytes_shift,
+            b_w << u3a_word_bytes_shift, (c3_y*)c_w, d);
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
