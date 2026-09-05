@@ -387,7 +387,16 @@ u3_newt_mojo_stop(u3_mojo* moj_u, u3_moor_bail bal_f)
 void
 u3_newt_send(u3_mojo* moj_u, c3_d len_d, c3_y* byt_y)
 {
-  n_req* req_u = c3_malloc(sizeof(*req_u));
+  n_req* req_u;
+
+  //  a closing stream will never deliver this.
+  //
+  if ( uv_is_closing((uv_handle_t*)&moj_u->pyp_u) ) {
+    c3_free(byt_y);
+    return;
+  }
+
+  req_u = c3_malloc(sizeof(*req_u));
   req_u->moj_u = moj_u;
   req_u->buf_y = byt_y;
 
