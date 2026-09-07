@@ -130,6 +130,7 @@ _ce_muk_page(void* ptr_v)
   return _ce_muk_buf(_ce_page, ptr_v);
 }
 
+#ifndef U3_OS_windows
 /* _ce_flaw_mmap(): remap non-guard page after fault.
 */
 static inline c3_i
@@ -163,6 +164,7 @@ _ce_flaw_mmap(c3_w pag_w)
 
   return 0;
 }
+#endif /* ifndef U3_OS_windows */
 
 /* _ce_flaw_mprotect(): protect page after fault.
 */
@@ -285,12 +287,15 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 
   u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
 
+#ifndef U3_OS_windows
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
       return u3e_flaw_base;
     }
   }
-  else if ( _ce_flaw_mprotect(pag_w) ) {
+  else
+#endif
+  if ( _ce_flaw_mprotect(pag_w) ) {
     return u3e_flaw_base;
   }
 
@@ -338,6 +343,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
 }
 
+#ifndef U3_OS_windows
 /* _ce_ephemeral_open(): open or create ephemeral file
 */
 static c3_o
@@ -373,6 +379,7 @@ _ce_ephemeral_open(c3_i* eph_i)
   }
   return c3y;
 }
+#endif /* ifndef U3_OS_windows */
 
 /* _ce_image_open(): open image with the given open(2) mode.
 */
@@ -994,6 +1001,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
   _ce_loom_track(pgs_w, dif_w);
 }
 
+#ifndef U3_OS_windows
 /* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
 */
 static void
@@ -1010,6 +1018,7 @@ _ce_loom_mapf_ephemeral(void)
     u3_assert(0);
   }
 }
+#endif /* ifndef U3_OS_windows */
 
 /* _ce_loom_blit_pages(): read [pgs_w] pages of [fid_i] from [off_w].
 */
@@ -1628,9 +1637,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
+#ifndef U3_OS_windows
         if ( u3C.wag_h & u3o_swap ) {
           _ce_loom_mapf_ephemeral();
         }
+#endif
 
         if ( u3C.wag_h & u3o_no_demand ) {
           _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
