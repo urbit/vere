@@ -1803,7 +1803,7 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
 
   {
     u3m_init(lom_z);
-    u3e_live(c3n, strdup(dir_c));
+    u3e_live(c3y, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_h(eve_d);
 #ifdef U3_OS_windows
@@ -1885,7 +1885,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 
   {
     u3m_init((c3_z)1 << des_y);
-    u3e_live(c3n, strdup(dir_c));
+    u3e_live(c3y, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_d(eve_d);
     _disk_drop_stale_loom(fid_i, sou_z);
@@ -1903,7 +1903,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     case U3V_VER3: u3_migrate_v4(eve_d);
     case U3V_VER4: {
       u3m_init((c3_z)1 << des_y);
-      u3e_live(c3n, strdup(dir_c));
+      u3e_live(c3y, strdup(dir_c));
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
       _disk_drop_stale_loom(fid_i, sou_z);

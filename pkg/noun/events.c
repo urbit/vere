@@ -1643,14 +1643,32 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         }
 #endif
 
-        if ( u3C.wag_h & u3o_no_demand ) {
+        //  NB: an incoming [nuu_o] means the caller is about to pave a
+        //  fresh road, so whatever the image holds is about to be
+        //  discarded. loading it is wasted work -- and under demand
+        //  paging, expensively so: every page the caller then writes
+        //  takes a copy-on-write fault and a page-in, against a snapshot
+        //  nobody will read.
+        //
+        //    the descriptor and [pgs_w] are still wanted. u3e_save()
+        //    resizes the image from there, and any pending patch has
+        //    already been applied above, for crash recovery.
+        //
+        //    every page stays dirty from u3e_foul(), which is correct:
+        //    nothing in the loom matches the image.
+        //
+        if ( c3y == nuu_o ) {
+          u3a_print_memory(stderr, "live: discarded",
+                           _ce_len_words(u3P.img_u.pgs_w));
+        }
+        else if ( u3C.wag_h & u3o_no_demand ) {
           _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
+          u3l_log("boot: protected loom");
         }
         else {
           _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, 0);
+          u3l_log("boot: protected loom");
         }
-
-        u3l_log("boot: protected loom");
       }
 
       /* If the images were empty, we are logically booting.
