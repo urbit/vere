@@ -154,6 +154,55 @@ _wnd_fail(const c3_c* str_c)
   }
 }
 
+/* _wnd_report(): describe what occupies [len_i] at [bas_v].
+**
+**   for a fixed reservation that came back ERROR_INVALID_ADDRESS. on
+**   POSIX mmap(MAP_FIXED) replaces whatever is there, so a collision is
+**   invisible; here it is fatal, and the only useful question is what
+**   took the address.
+*/
+static void
+_wnd_report(void* bas_v, size_t len_i)
+{
+  c3_y* cur_y = (c3_y*)bas_v;
+  c3_y* end_y = cur_y + len_i;
+  c3_w  i_w   = 0;
+
+  fprintf(stderr, "loom: wanted %zuMB at %p, which holds:\r\n",
+                  len_i >> 20, bas_v);
+
+  while ( (cur_y < end_y) && (i_w++ < 8) ) {
+    MEMORY_BASIC_INFORMATION inf_u;
+    const c3_c*              sat_c;
+    const c3_c*              typ_c;
+
+    if ( !VirtualQuery(cur_y, &inf_u, sizeof(inf_u)) ) {
+      fprintf(stderr, "loom:   %p: query failed\r\n", (void*)cur_y);
+      return;
+    }
+
+    switch ( inf_u.State ) {
+      case MEM_FREE:    sat_c = "free";      break;
+      case MEM_RESERVE: sat_c = "reserved";  break;
+      case MEM_COMMIT:  sat_c = "committed"; break;
+      default:          sat_c = "?";         break;
+    }
+
+    switch ( inf_u.Type ) {
+      case MEM_IMAGE:   typ_c = "image";   break;
+      case MEM_MAPPED:  typ_c = "mapped";  break;
+      case MEM_PRIVATE: typ_c = "private"; break;
+      default:          typ_c = "-";       break;
+    }
+
+    fprintf(stderr, "loom:   %p +%zuMB %s %s (alloc base %p)\r\n",
+                    inf_u.BaseAddress, (size_t)inf_u.RegionSize >> 20,
+                    sat_c, typ_c, inf_u.AllocationBase);
+
+    cur_y = (c3_y*)inf_u.BaseAddress + inf_u.RegionSize;
+  }
+}
+
 /* _wnd_read(): read [byt_i] bytes of [fid_i] to [bas_v], from its start.
 **
 **   NB: goes direct rather than through the pread() shim, whose offset is
@@ -405,6 +454,7 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
                   NULL, 0) )
   {
     _wnd_fail("reserve");
+    _wnd_report(bas_v, len_i);
     CloseHandle(sec_h);
     return c3n;
   }
