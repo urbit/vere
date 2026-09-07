@@ -419,6 +419,10 @@ _cm_signal_deep(void)
     abort();
   }
 #else
+  //  windows has no alternate signal stack, so the handler needs room
+  //  reserved on the stack it will be called on. see veh_handler.c.
+  //
+  u3_windows_stack_guard();
   rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
 #endif
 #endif
@@ -2331,6 +2335,14 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
+  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
+            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
+    u3m_stacktrace();
+    u3_assert(0);
+    return 0;
+  }
+
 #ifdef U3_OS_windows
   //  a sparse loom faults on the first touch of a page. resolve that here,
   //  ahead of everything else: u3m_water() reads the road, which lives in
@@ -2350,14 +2362,6 @@ u3m_fault(void* adr_v, c3_i ser_i)
     }
   }
 #endif
-
-  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
-    fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
-            (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
-    u3m_stacktrace();
-    u3_assert(0);
-    return 0;
-  }
 
   u3m_water(&low_p, &hig_p);
 
