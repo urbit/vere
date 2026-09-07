@@ -492,18 +492,16 @@ _ch_prune_node(u3h_slot* sot_w, c3_h lef_h, c3_o (*fun_f)(u3_noun, void*), void*
   u3h_node* han_u = (u3h_node*) u3h_slot_to_node(*sot_w);
   c3_h      map_h = han_u->map_h;
   c3_h      len_h = _ch_popcount(map_h);
-  c3_h      bit_h, i_h, out_h = 0;
+  c3_h      rem_h, bit_h, i_h, out_h = 0;
 
   lef_h -= 5;
 
-  for ( bit_h = 0, i_h = 0; i_h < len_h; bit_h++ ) {
-    u3h_slot* tos_w;
+  //  (for each set bit)
+  //  "rem_h &= rem_h - 1" unsets the lowest bit.
+  for ( rem_h = map_h, i_h = 0; rem_h; rem_h &= rem_h - 1, i_h++ ) {
+    u3h_slot* tos_w = &(han_u->sot_w[i_h]);
 
-    if ( !BIT_SET(map_h, bit_h) ) {
-      continue;
-    }
-
-    tos_w = &(han_u->sot_w[i_h++]);
+    bit_h = c3_tz_h(rem_h);
     _ch_prune_slot(tos_w, lef_h, fun_f, wit, del_w);
 
     if ( 0 == *tos_w ) {
