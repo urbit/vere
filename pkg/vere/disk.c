@@ -1743,6 +1743,12 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     //  XX respect --no-demand flag
     //
 #ifdef U3_OS_windows
+    //  NB: a v1-v4 loom keeps its heap at the bottom and its stack at the
+    //  top, so the stale loom is committed at both ends and reserved in
+    //  between: north.bin below, the south page above, and a gap that
+    //  nothing should read. on windows a read into that gap is fatal
+    //  rather than a first touch; see u3m_fault().
+    //
     if ( c3n == u3_wnd_loom_hold(u3_Loom_v4, len_z, nod_i, lom_z) ) {
       fprintf(stderr, "loom: stale loom mapping failed\r\n");
       u3_assert(0);

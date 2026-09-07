@@ -2344,14 +2344,19 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
 
 #ifdef U3_OS_windows
-  //  a sparse loom faults on the first touch of a page. resolve that here,
-  //  ahead of everything else: u3m_water() reads the road, which lives in
-  //  the loom and may itself be untouched, and u3e_fault() cannot tell a
-  //  first touch of page 0 from a guard page that has yet to be posted.
+  //  a sparse loom faults on the first touch of a page. resolve that
+  //  before u3m_water(), which reads the road -- the road lives in the
+  //  loom and may itself be untouched -- and before u3e_fault(), which
+  //  cannot tell a first touch of page 0 from a guard page that has yet
+  //  to be posted.
   //
-  //  NB: this precedes the bounds check because a migration holds a stale
-  //  loom at its own base, outside the live loom, and its first touches
-  //  are ours to resolve rather than external faults.
+  //  NB: the bounds check above comes first, so a fault outside the live
+  //  loom is fatal (including one in a stale loom held for a migration),
+  //  which sits at its own base. this is safe only because
+  //  u3_wnd_loom_hold() commits the whole image extent up front; what
+  //  stays reserved is the gap above it, which nothing reads. a read into
+  //  that gap aborts rather than committing. moving this block ahead of
+  //  the bounds check would make it self-healing again.
   //
   {
     size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
