@@ -2997,24 +2997,30 @@ u3m_dedup(u3_noun som)
 }
 
 static void
-_cb_walk_dedup_prune(u3_noun kev)
+_cb_walk_dedup_prune(u3_noun kev, void* ptr_v)
 {
   u3_assert(c3y == u3a_is_cell(kev));
+  u3p(u3h_root) dup_p = *(u3p(u3h_root)*)ptr_v;
 
   u3a_cell* kev_u = u3a_to_ptr(kev);
-  u3a_noun* val_u = u3a_to_ptr(kev_u->hed);
-
   u3_assert(kev_u->hed == kev_u->tel);
-  u3_assert(c3n == u3a_is_cat(kev_u->hed));
+
+  u3_noun som = kev_u->hed;
+  u3a_noun* val_u = u3a_to_ptr(som);
+
+  u3_assert(c3n == u3a_is_cat(som));
   u3_assert(val_u->use_w > 1);
 
-  if ( kev_u->use_w == 1 && val_u->use_w == 2 ) {
-    u3h_del(u3R->dup_p, kev_u->hed);
+  if ( kev_u->use_w != 1 || val_u->use_w != 2 ) {
+    u3h_put(dup_p, som, u3k(som));
   }
 }
 
 void
 u3m_dedup_prune(void)
 {
-  u3h_walk(u3R->dup_p, _cb_walk_dedup_prune);
+  u3p(u3h_root) dup_p = u3h_new();
+  u3h_walk_with(u3R->dup_p, _cb_walk_dedup_prune, &dup_p);
+  u3h_free(u3R->dup_p);
+  u3R->dup_p = dup_p;
 }
