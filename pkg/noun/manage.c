@@ -546,6 +546,7 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
+  u3R->dup_p     = u3h_new();
   u3R->how.fag_w = 0;
 }
 
@@ -703,10 +704,9 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
   //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->lop_p ) u3R->lop_p = u3h_new();
+  if ( !u3R->dup_p ) u3R->dup_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1397,6 +1397,7 @@ u3m_love(u3_noun pro)
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
+  u3p(u3h_root) dup_p = u3R->dup_p;
 
   //  are there any timers on the road?
   //
@@ -1421,6 +1422,7 @@ u3m_love(u3_noun pro)
   byc_p = u3n_take(byc_p);
   per_p = u3h_take(per_p);
   for_p = u3h_take(for_p);
+  dup_p = u3h_take(dup_p);
 
   //  pop the stack
   //
@@ -1447,6 +1449,8 @@ u3m_love(u3_noun pro)
   u3n_reap(byc_p);
   u3z_reap(u3z_memo_keep, per_p);
   u3z_reap(u3z_memo_ford, for_p);
+  u3h_uni(u3R->dup_p, dup_p);
+  u3h_free(dup_p);
 
   return pro;
 }
@@ -2969,4 +2973,48 @@ u3m_time_gap_in_mil(c3_w mil_w)
   cub_d[0] = u3m_time_fsc_in(usc_d);
   cub_d[1] = sec_d;
   return u3i_chubs(2, cub_d);
+}
+
+u3_noun
+u3m_dedup(u3_noun som)
+{
+  if ( c3y == u3a_is_cat(som) ) return som;
+  for (u3a_road* rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p)) {
+    u3_weak got = u3h_get(rod_u->dup_p, som);
+    if ( u3_none != got ) {
+      u3z(som);
+      return got;
+    }
+  }
+  if ( c3y == u3a_is_cell(som) ) {
+    u3_noun hed = u3k(u3h(som)),
+            tel = u3k(u3t(som));
+    u3z(som);
+    som = u3nc(u3m_dedup(hed), u3m_dedup(tel));
+  }
+  u3h_put(u3R->dup_p, som, u3k(som));
+  return som;
+}
+
+static void
+_cb_walk_dedup_prune(u3_noun kev)
+{
+  u3_assert(c3y == u3a_is_cell(kev));
+
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3a_noun* val_u = u3a_to_ptr(kev_u->hed);
+
+  u3_assert(kev_u->hed == kev_u->tel);
+  u3_assert(c3n == u3a_is_cat(kev_u->hed));
+  u3_assert(val_u->use_w > 1);
+
+  if ( kev_u->use_w == 1 && val_u->use_w == 2 ) {
+    u3h_del(u3R->dup_p, kev_u->hed);
+  }
+}
+
+void
+u3m_dedup_prune(void)
+{
+  u3h_walk(u3R->dup_p, _cb_walk_dedup_prune);
 }
