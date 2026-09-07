@@ -91,8 +91,13 @@ u3_migrate_d(c3_d eve_d)
   u3h_walk_with_h(u3R_h->jed.cod_p, _copy_32_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.per_p;
   u3h_walk_with_h(u3R_h->cax.per_p, _copy_32_hamt, &cop_u);
-  cop_u.ham_p = u3R->cax.for_p;
-  u3h_walk_with_h(u3R_h->cax.for_p, _copy_32_hamt, &cop_u);
+  //  NB: for_p was introduced after v5; a snapshot that predates it holds 0
+  //  here, and walking post 0 would read the home struct as a HAMT root.
+  //
+  if ( u3R_h->cax.for_p ) {
+    cop_u.ham_p = u3R->cax.for_p;
+    u3h_walk_with_h(u3R_h->cax.for_p, _copy_32_hamt, &cop_u);
+  }
 
   //  NB: pave does *not* allocate hot_p
   //
@@ -185,8 +190,10 @@ u3_migrate_h(c3_d eve_d)
   u3h_walk_with_d(u3R_d->jed.cod_p, _copy_64_hamt, &cop_u);
   cop_u.ham_p = u3R->cax.per_p;
   u3h_walk_with_d(u3R_d->cax.per_p, _copy_64_hamt, &cop_u);
-  cop_u.ham_p = u3R->cax.for_p;
-  u3h_walk_with_d(u3R_d->cax.for_p, _copy_64_hamt, &cop_u);
+  if ( u3R_d->cax.for_p ) {
+    cop_u.ham_p = u3R->cax.for_p;
+    u3h_walk_with_d(u3R_d->cax.for_p, _copy_64_hamt, &cop_u);
+  }
 
   //  NB: pave does *not* allocate hot_p
   //

@@ -213,7 +213,11 @@ _main_init(void)
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
-  u3_Host.ops_u.lut_y = 34;     /* aka 2G */
+#ifndef VERE64
+  u3_Host.ops_u.lut_y = 34;     /* aka 16G */
+#else
+  u3_Host.ops_u.lut_y = 31;     /* aka  2G */
+#endif
   u3_Host.ops_u.lom_y = 32;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
@@ -962,7 +966,7 @@ u3_ve_panic(c3_i argc, c3_c** argv)
 static void
 report(void)
 {
-  printf("urbit %s\n", URBIT_VERSION);
+  printf("urbit %s %s (%zu-bit)\n", URBIT_VERSION, U3_VERE_PACE, 8 * sizeof(c3_w));
   printf("gmp: %s\n", gmp_version);
   #ifndef U3_OS_windows
   printf("sigsegv: %d.%d\n",
@@ -1376,7 +1380,6 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
     c3_c* pre_c;
-    u3k(som);
     //  if input is jammed khan output
     if ( c3y == kan_o ) {
       u3_noun cop, uid, mar, res, tan;
@@ -1385,10 +1388,9 @@ _cw_eval(c3_i argc, c3_c* argv[])
       if ( c3n == res ) {
         //  pretty-print tang to stderr and output only header
         u3_Host.ops_u.dem = c3y;
-        u3_pier_punt_goof("eval", tan);
+        u3_pier_punt_goof("eval", u3k(tan));
         cop = som;
-        som = u3i_trel(uid, mar, res);
-        u3k(som);
+        som = u3i_trel(u3k(uid), u3k(mar), u3k(res));
         u3z(cop);
       }
     }
@@ -2091,6 +2093,7 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "urth-loom", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2126,6 +2129,13 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  urth-loom
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
+          exit(1);
+        }
         break;
       }
 
@@ -3317,7 +3327,7 @@ main(c3_i   argc,
 
   printf("~\n");
   //  printf("welcome.\n");
-  printf("urbit %s\n", URBIT_VERSION);
+  printf("urbit %s (%zu-bit)\n", URBIT_VERSION, 8 * sizeof(c3_w));
   printf("boot: home is %s\n", u3_Host.dir_c);
   // printf("vere: hostname is %s\n", u3_Host.ops_u.nam_c);
 

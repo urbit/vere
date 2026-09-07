@@ -1240,7 +1240,6 @@ c3_d
 u3r_chub(c3_w  a_w,
            u3_atom b)
 {
-// XX: can't we just use the latter impl in vere32 too? but maybe w/ * 2 on len_n
 #ifndef VERE64
   c3_w wlo_w = u3r_half(a_w * 2, b);
   c3_w whi_w = u3r_half(1 + (a_w * 2), b);
@@ -1395,6 +1394,16 @@ u3r_chubs(c3_w    a_w,
           c3_d*   c_d,
           u3_atom d)
 {
+#ifndef VERE64
+  //  atom storage is 32-bit halfwords, two per chub. u3r_halfs() copies
+  //  the halfwords that exist and zero-fills the rest, which is what makes
+  //  a trailing odd halfword safe: reading it as a whole chub would run
+  //  four bytes past the atom.
+  //
+  //  XX: assumes little-endian
+  //
+  u3r_halfs(a_w * 2, b_w * 2, (c3_h*)c_d, d);
+#else
   u3_assert(u3_none != d);
   u3_assert(_(u3a_is_atom(d)));
 
@@ -1412,11 +1421,8 @@ u3r_chubs(c3_w    a_w,
   }
   else {
     u3a_atom* d_u = u3a_to_ptr(d);
-#ifndef VERE64
-    c3_w len_w = d_u->len_w * 2;
-#else
     c3_w len_w = d_u->len_w;
-#endif
+
     if ( a_w >= len_w ) {
       memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
     }
@@ -1429,6 +1435,7 @@ u3r_chubs(c3_w    a_w,
       }
     }
   }
+#endif
 }
 
 void

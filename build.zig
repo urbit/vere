@@ -126,7 +126,7 @@ fn cdbFragDir(
     return b.fmt("cdb-{x}", .{h.final()});
 }
 
-const VERSION = "4.6";
+const VERSION = "5.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },

@@ -1,7 +1,12 @@
 /* copy_migrate.h: template for full-noun-copy migrations.
 **
 **   Each copying migration in pkg/past/ shares the same skeleton:
-**     - verstable dedup map keyed by old noun
+**     - verstable dedup map keyed by old noun; the map RETAINS every new
+**       noun it records, and releases them all in _done().  Without that,
+**       any free during the walk (a cache table evicting past max_w, or a
+**       put replacing an entry whose key compares equal) would leave the
+**       map pointing at dead nouns, and the next dedup hit would gain a
+**       freed box (bail: foul) or worse.
 **     - iterative DFS descent over the source noun with a frame stack
 **     - HAMT walker that copies key/val pairs into the target loom
 **
@@ -256,7 +261,7 @@ U3C_SYM(_next)(U3C_SYM(_ctx) *cop_u, U3C_OLD_NOUN old)
 
     if ( c3n == U3C_OLD_IS_CELL(old) ) {
       u3_atom new = U3C_SYM(_atom)(old);
-      vit_u = vt_insert(&(cop_u->map_u), old, new);
+      vit_u = vt_insert(&(cop_u->map_u), old, U3C_NEW_A_GAIN(new));
       u3_assert( !vt_is_end(vit_u) );
       return new;
     }
@@ -295,7 +300,7 @@ U3C_SYM(_noun)(U3C_SYM(_ctx) *cop_u, U3C_OLD_NOUN old)
     }
     else {
       new = U3C_NEW_I_CELL(top_u->hed, new);
-      vit_u = vt_insert(&(cop_u->map_u), top_u->cel, new);
+      vit_u = vt_insert(&(cop_u->map_u), top_u->cel, U3C_NEW_A_GAIN(new));
       u3_assert( !vt_is_end(vit_u) );
       cop_u->len_w--;
     }
@@ -326,6 +331,19 @@ U3C_SYM(_init)(U3C_SYM(_ctx) *cop_u)
 static void
 U3C_SYM(_done)(U3C_SYM(_ctx) *cop_u)
 {
+  //  release the map's references; anything displaced during the walk
+  //  is freed here, after every dedup lookup is over.
+  //
+  {
+    U3C_ITR_TY vit_u;
+    for ( vit_u = vt_first(&(cop_u->map_u));
+          !vt_is_end(vit_u);
+          vit_u = vt_next(vit_u) )
+    {
+      U3C_NEW_A_LOSE(vit_u.data->val);
+    }
+  }
+
   vt_cleanup(&(cop_u->map_u));
   c3_free(cop_u->tac);
 }

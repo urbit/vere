@@ -1845,7 +1845,33 @@ _disk_drop_stale_loom(c3_i fid_i)
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
-  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+#ifdef VERE64
+  //  the destination (64-bit) loom is mapped at u3_Loom, and the stale 32-bit
+  //  loom at u3_Loom_h == u3_Loom + (8 << u3a_bits_max_h).  cap the destination
+  //  so that it cannot grow into the source, and reserve no more for the source
+  //  than a 32-bit loom can ever occupy.
+  //
+  //    the destination cap is never binding: a 32-bit loom is at most
+  //    2^u3a_bits_max_h, and 32->64 at most doubles it (a loom of nothing but
+  //    cells, 16 -> 32 bytes each), so 2^(u3a_bits_max_h + 3) is 4x what the
+  //    migration can need.  --loom applies in full to the boot that follows.
+  //
+  c3_y des_y = (c3_y)c3_min(u3_Host.ops_u.lom_y, u3a_bits_max_h + 3);
+  c3_z sou_z = (c3_z)1 << c3_min(des_y, u3a_bits_max_h);
+
+  if ( des_y != u3_Host.ops_u.lom_y ) {
+    u3l_log("loom: migrating with a %zuMB loom (--loom %u applies afterward)",
+            ((c3_z)1 << des_y) >> 20, (unsigned)u3_Host.ops_u.lom_y);
+  }
+#else
+  //  the v1-v4 loom keeps its south segment at the top and its version word at
+  //  the very end, so the source reservation must be the full loom size.
+  //
+  c3_y des_y = u3_Host.ops_u.lom_y;
+  c3_z sou_z = (c3_z)1 << des_y;
+#endif
+
+  c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
 
 #ifdef VERE64
   //  v5 (32-bit) home is at loom position 0; version is the first c3_d
@@ -1858,7 +1884,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   }
 
   {
-    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+    u3m_init((c3_z)1 << des_y);
     u3e_live(c3n, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_d(eve_d);
@@ -1876,7 +1902,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     case U3V_VER2: u3_migrate_v3(eve_d);
     case U3V_VER3: u3_migrate_v4(eve_d);
     case U3V_VER4: {
-      u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
+      u3m_init((c3_z)1 << des_y);
       u3e_live(c3n, strdup(dir_c));
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
@@ -1886,10 +1912,10 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     }
   }
 
-  //  unrecognized version: nothing was migrated, but the stale loom is
-  //  still ours to release
-  //
-  _disk_drop_stale_loom(fid_i);
+#ifdef VERE64
+  munmap(u3_Loom_h, sou_z);
+#else
+  munmap(u3_Loom_v4, sou_z);
 #endif
 }
 

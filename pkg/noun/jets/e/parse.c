@@ -12,8 +12,8 @@
   _puq(u3_noun vex)
   {
     u3_weak pro = u3r_at(14, vex);
-    c3_dessert(u3_none != pro);
-    return (u3_noun)pro;
+    if ( u3_none == pro ) return u3m_bail(c3__fail);
+    return pro;
   }
 
   // get q.u.q.vex from an $edge, assumes that the unit is non-empty
@@ -23,8 +23,8 @@
   _quq(u3_noun vex)
   {
     u3_weak pro = u3r_at(15, vex);
-    c3_dessert(u3_none != pro);
-    return (u3_noun)pro;
+    if ( u3_none == pro ) return u3m_bail(c3__fail);
+    return pro;
   }
 
   #define   _p    u3h

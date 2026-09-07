@@ -888,6 +888,194 @@ _test_words(void)
     exit(1);
 }
 
+/* _dirty_chunks(): fill and release small atoms, leaving 0xff in their chunks.
+**
+**   u3r_chubs() reading past a short atom is invisible on a freshly mapped
+**   page, where the bytes beyond it are already zero.  Recycling a batch of
+**   all-ones atoms of the same size class first means a subsequent short
+**   atom lands next to 0xff, so an over-read shows up as a wrong value
+**   rather than a lucky zero.
+**
+**   NB: this depends on palloc reusing just-freed chunks.  If that changes
+**   the tests below stop having teeth, but never produce a false failure.
+**   An ASAN build catches the over-read independently, via the
+**   ASAN_POISON_MEMORY_REGION that palloc applies to freed chunks.
+*/
+static void
+_dirty_chunks(void)
+{
+  c3_d    ful_d[2] = { 0xffffffffffffffffULL, 0xffffffffffffffffULL };
+  u3_noun jnk[64];
+
+  for ( c3_w i_w = 0; i_w < 64; i_w++ ) {
+    jnk[i_w] = u3i_chubs(2, ful_d);
+  }
+  for ( c3_w i_w = 0; i_w < 64; i_w++ ) {
+    u3z(jnk[i_w]);
+  }
+}
+
+/* _test_chubs(): test u3r_chubs() bulk extraction.
+**
+**   Every case expects the same result in both bitnesses; only the internal
+**   representation differs.  0x80000000 and 0x100000000 are indirect atoms
+**   on 32-bit (of one and two halfwords) but direct atoms on 64-bit, and
+**   0xffffffffffffffff is indirect either way.
+**
+**   The (0, 2) reads are the shape every u3r_chubs() caller uses to build a
+**   u3_ship: see u3_ship_of_noun(), pier.c, mars.c, ames.c, mesa/pact.c.
+*/
+static void
+_test_chubs(void)
+{
+  c3_o fal_o = c3n;
+
+  _dirty_chunks();
+
+  //  a: one odd halfword on 32-bit; reading it as a whole chub over-reads
+  //
+  {
+    c3_d out_d[2] = { 0, 0 };
+    u3_noun   a   = u3i_chub(0x80000000ULL);
+
+    u3r_chubs(0, 2, out_d, a);
+
+    if ( 0x80000000ULL != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (a) (1)\r\n");
+      fal_o = c3y;
+    }
+    if ( 0 != out_d[1] ) {
+      fprintf(stderr, "_test_chubs(): fail (a) (2)\r\n");
+      fal_o = c3y;
+    }
+
+    u3z(a);
+  }
+
+  //  b: exactly one chub
+  //
+  {
+    c3_d out_d[2] = { 0, 0 };
+    u3_noun   a   = u3i_chub(0x100000000ULL);
+
+    u3r_chubs(0, 2, out_d, a);
+
+    if ( 0x100000000ULL != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (b) (1)\r\n");
+      fal_o = c3y;
+    }
+    if ( 0 != out_d[1] ) {
+      fprintf(stderr, "_test_chubs(): fail (b) (2)\r\n");
+      fal_o = c3y;
+    }
+
+    u3z(a);
+  }
+
+  //  c: a moon-width @p, the case that motivated these tests
+  //
+  {
+    c3_d out_d[2] = { 0, 0 };
+    u3_noun   a   = u3i_chub(0xdeadbeefcafef00dULL);
+
+    u3r_chubs(0, 2, out_d, a);
+
+    if ( 0xdeadbeefcafef00dULL != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (c) (1)\r\n");
+      fal_o = c3y;
+    }
+    if ( 0 != out_d[1] ) {
+      fprintf(stderr, "_test_chubs(): fail (c) (2)\r\n");
+      fal_o = c3y;
+    }
+
+    u3z(a);
+  }
+
+  //  d: indirect in both bitnesses
+  //
+  {
+    c3_d out_d[2] = { 0, 0 };
+    u3_noun   a   = u3i_chub(0xffffffffffffffffULL);
+
+    u3r_chubs(0, 2, out_d, a);
+
+    if ( 0xffffffffffffffffULL != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (d) (1)\r\n");
+      fal_o = c3y;
+    }
+    if ( 0 != out_d[1] ) {
+      fprintf(stderr, "_test_chubs(): fail (d) (2)\r\n");
+      fal_o = c3y;
+    }
+
+    u3z(a);
+  }
+
+  //  e: a direct atom in both bitnesses
+  //
+  {
+    c3_d out_d[2] = { 0, 0 };
+
+    u3r_chubs(0, 2, out_d, 42);
+
+    if ( 42 != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (e) (1)\r\n");
+      fal_o = c3y;
+    }
+    if ( 0 != out_d[1] ) {
+      fprintf(stderr, "_test_chubs(): fail (e) (2)\r\n");
+      fal_o = c3y;
+    }
+  }
+
+  //  f: multi-chub reads, at an offset and past the end
+  //
+  {
+    c3_d cub_d[3] = { 1, 2, 0xffffffffffffffffULL };
+    c3_d out_d[5];
+    u3_noun   a   = u3i_chubs(3, cub_d);
+
+    memset(out_d, 0, sizeof(out_d));
+    u3r_chubs(0, 5, out_d, a);
+
+    if (  (1 != out_d[0])
+       || (2 != out_d[1])
+       || (0xffffffffffffffffULL != out_d[2]) )
+    {
+      fprintf(stderr, "_test_chubs(): fail (f) (1)\r\n");
+      fal_o = c3y;
+    }
+    //  past the end should be zero-filled
+    if ( (0 != out_d[3]) || (0 != out_d[4]) ) {
+      fprintf(stderr, "_test_chubs(): fail (f) (2)\r\n");
+      fal_o = c3y;
+    }
+
+    memset(out_d, 0, sizeof(out_d));
+    u3r_chubs(1, 1, out_d, a);
+
+    if ( 2 != out_d[0] ) {
+      fprintf(stderr, "_test_chubs(): fail (f) (3)\r\n");
+      fal_o = c3y;
+    }
+
+    //  entirely out of range
+    memset(out_d, 0xff, sizeof(out_d));
+    u3r_chubs(4, 2, out_d, a);
+
+    if ( (0 != out_d[0]) || (0 != out_d[1]) ) {
+      fprintf(stderr, "_test_chubs(): fail (f) (4)\r\n");
+      fal_o = c3y;
+    }
+
+    u3z(a);
+  }
+
+  if _(fal_o)
+    exit(1);
+}
+
 /* _test_safe(): test u3r_safe_*() validation functions.
 */
 static void
@@ -1147,6 +1335,7 @@ main(int argc, char* argv[])
   _test_bit_byte();
   _test_bytes();
   _test_words();
+  _test_chubs();
   _test_safe();
   _test_cell_trel_qual();
 
