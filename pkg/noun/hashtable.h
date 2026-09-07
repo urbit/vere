@@ -203,6 +203,14 @@
         void
         u3h_del(u3p(u3h_root) har_p, u3_noun key);
 
+      /* u3h_prune_with(): traverse hashtable, deleting every key-value
+      ** pair for which [fun_f] returns yes; never allocates. fun_f RETAINS
+      */
+        void
+        u3h_prune_with(u3p(u3h_root) har_p,
+                       c3_o (*fun_f)(u3_noun, void*),
+                       void* wit);
+
       /* u3h_trim_to(): trim to n key-value pairs
       */
         void
