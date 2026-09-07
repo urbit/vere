@@ -92,10 +92,26 @@ typedef struct {
   HANDLE sec_h;   //  pagefile section backing the volatile part
 } _wnd_reg;
 
+//  an address claimed at startup for a migration to use later.
+//
+//  the stale loom bases are fixed by pointer arithmetic and cannot move,
+//  but they are only *wanted* during a migration -- by which time the
+//  loader, the CRT and the ivory pill have all placed their allocations,
+//  and one of them may be sitting there. mmap(MAP_FIXED) would evict it;
+//  windows refuses, and the migration dies. so the placeholder is taken
+//  early, while the address space is still empty.
+//
+typedef struct {
+  void*  bas_v;
+  size_t len_i;   //  0 if slot free
+} _wnd_stk;
+
 #define _wnd_regs  2
+#define _wnd_stks  2
 #define _wnd_chunk ((size_t)16 << 20)
 
 static _wnd_reg wnd_u[_wnd_regs];
+static _wnd_stk wnd_stk_u[_wnd_stks];
 static size_t   wnd_gan_i;   //  allocation granularity
 
 /* _wnd_fail(): report a win32 failure.
@@ -419,6 +435,26 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
   return c3y;
 }
 
+/* _wnd_unstake(): claim the stake matching [bas_v] and [len_i], if any.
+*/
+static c3_o
+_wnd_unstake(void* bas_v, size_t len_i)
+{
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < _wnd_stks; i_w++ ) {
+    if (  (bas_v == wnd_stk_u[i_w].bas_v)
+       && (len_i == wnd_stk_u[i_w].len_i) )
+    {
+      wnd_stk_u[i_w].bas_v = 0;
+      wnd_stk_u[i_w].len_i = 0;
+      return c3y;
+    }
+  }
+
+  return c3n;
+}
+
 static c3_o
 _wnd_release(_wnd_reg* reg_u);
 
@@ -449,9 +485,13 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
     return c3n;
   }
 
-  if ( !VirtualAlloc2(NULL, bas_v, len_i,
-                  MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
-                  NULL, 0) )
+  //  a staked address is already a placeholder. reserving it again
+  //  would fail as occupied, by us.
+  //
+  if (  (c3n == _wnd_unstake(bas_v, len_i))
+     && !VirtualAlloc2(NULL, bas_v, len_i,
+                       MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
+                       NULL, 0) )
   {
     _wnd_fail("reserve");
     _wnd_report(bas_v, len_i);
@@ -499,6 +539,52 @@ _wnd_find(void* adr_v)
   }
 
   return 0;
+}
+
+/* u3_wnd_loom_stake(): claim [len_i] at [bas_v] for later use.
+*/
+c3_o
+u3_wnd_loom_stake(void* bas_v, size_t len_i)
+{
+  c3_w i_w, fre_w = _wnd_stks;
+
+  for ( i_w = 0; i_w < _wnd_stks; i_w++ ) {
+    //  idempotent: u3m_init() can run more than once in a process
+    //
+    if (  (bas_v == wnd_stk_u[i_w].bas_v)
+       && (len_i == wnd_stk_u[i_w].len_i) )
+    {
+      return c3y;
+    }
+
+    if ( !wnd_stk_u[i_w].len_i && (_wnd_stks == fre_w) ) {
+      fre_w = i_w;
+    }
+  }
+
+  if ( _wnd_stks == fre_w ) {
+    fprintf(stderr, "loom: no free stake slot for %p\r\n", bas_v);
+    return c3n;
+  }
+
+  //  NB: not fatal. a stake is protection against a collision, not a
+  //  requirement -- failing here leaves us exactly where we stood before
+  //  staking existed, and the migration that wants this address will
+  //  report the real error if it is still occupied then.
+  //
+  if ( !VirtualAlloc2(NULL, bas_v, len_i,
+                      MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
+                      NULL, 0) )
+  {
+    _wnd_fail("stake");
+    _wnd_report(bas_v, len_i);
+    return c3n;
+  }
+
+  wnd_stk_u[fre_w].bas_v = bas_v;
+  wnd_stk_u[fre_w].len_i = len_i;
+
+  return c3y;
 }
 
 /* u3_wnd_loom_init(): reserve loom address space, back it with a section.

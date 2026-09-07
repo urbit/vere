@@ -7,6 +7,21 @@
 
 #include "c3/c3.h"
 
+  /* u3_wnd_loom_stake(): claim [len_i] bytes at [bas_v] for later use.
+  **
+  **   for an address that is fixed by pointer arithmetic but only wanted
+  **   later -- the stale loom bases a migration maps at. windows will not
+  **   place a mapping over occupied space, and by migration time the
+  **   loader and the CRT have had their pick, so the placeholder is taken
+  **   at startup instead. `u3_wnd_loom_hold` claims it rather than
+  **   reserving again.
+  **
+  **   NB: advisory. a failed stake is not fatal; it leaves the address
+  **   exactly as exposed as it was before staking existed.
+  */
+    c3_o
+    u3_wnd_loom_stake(void* bas_v, size_t len_i);
+
   /* u3_wnd_loom_init(): reserve [len_i] bytes at [bas_v] and back them with
   **                     a pagefile section. returns c3n if the placeholder
   **                     apis are unavailable, in which case the caller must

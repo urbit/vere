@@ -852,6 +852,14 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
+      /* u3_disk_stake(): claim the addresses a migration will map at.
+      **
+      **   windows only; a no-op elsewhere. must run before anything else can
+      **   take them -- see wloom.h.
+      */
+        void
+        u3_disk_stake(void);
+
       /* u3_disk_load(): load pier directories, log, and snapshot.
       */
         u3_disk*

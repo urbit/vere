@@ -1581,6 +1581,64 @@ _disk_unlink_stale_loom(c3_c* dir_c)
   }
 }
 
+/* _disk_migrate_size(): destination loom bex, and source reservation length.
+**
+**   shared by the migration and by u3_disk_stake(), which claims the
+**   source address up front -- if these two ever disagreed, the stake
+**   would silently stop matching and the protection would lapse.
+*/
+static void
+_disk_migrate_size(c3_y* des_y, c3_z* sou_z)
+{
+#ifdef VERE64
+  //  the destination (64-bit) loom is mapped at u3_Loom, and the stale 32-bit
+  //  loom at u3_Loom_h == u3_Loom + (8 << u3a_bits_max_h).  cap the destination
+  //  so that it cannot grow into the source, and reserve no more for the source
+  //  than a 32-bit loom can ever occupy.
+  //
+  //    the destination cap is never binding: a 32-bit loom is at most
+  //    2^u3a_bits_max_h, and 32->64 at most doubles it (a loom of nothing but
+  //    cells, 16 -> 32 bytes each), so 2^(u3a_bits_max_h + 3) is 4x what the
+  //    migration can need.  --loom applies in full to the boot that follows.
+  //
+  *des_y = (c3_y)c3_min(u3_Host.ops_u.lom_y, u3a_bits_max_h + 3);
+  *sou_z = (c3_z)1 << c3_min(*des_y, u3a_bits_max_h);
+#else
+  //  the v1-v4 loom keeps its south segment at the top and its version word at
+  //  the very end, so the source reservation must be the full loom size.
+  //
+  *des_y = u3_Host.ops_u.lom_y;
+  *sou_z = (c3_z)1 << *des_y;
+#endif
+}
+
+/* u3_disk_stake(): claim the addresses a migration will map at.
+**
+**   a no-op off windows, where mmap(MAP_FIXED) evicts whatever occupies
+**   a fixed address and a collision cannot arise. see wloom.h.
+*/
+void
+u3_disk_stake(void)
+{
+#ifdef U3_OS_windows
+  c3_y des_y;
+  c3_z sou_z;
+
+  _disk_migrate_size(&des_y, &sou_z);
+
+# ifdef VERE64
+  //  a 32-bit v5 snapshot, read at u3_Loom_h
+  //
+  u3_wnd_loom_stake(u3_Loom_h, sou_z);
+# else
+  //  a 64-bit snapshot, read at u3_Loom_d; and a v1-v4 one, at u3_Loom_v4
+  //
+  u3_wnd_loom_stake((void*)u3_Loom_d, (c3_z)1 << u3_Host.ops_u.lom_y);
+  u3_wnd_loom_stake(u3_Loom_v4, sou_z);
+# endif
+#endif
+}
+
 static c3_i
 _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 {
@@ -1845,30 +1903,16 @@ _disk_drop_stale_loom(c3_i fid_i, c3_z sou_z)
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
-#ifdef VERE64
-  //  the destination (64-bit) loom is mapped at u3_Loom, and the stale 32-bit
-  //  loom at u3_Loom_h == u3_Loom + (8 << u3a_bits_max_h).  cap the destination
-  //  so that it cannot grow into the source, and reserve no more for the source
-  //  than a 32-bit loom can ever occupy.
-  //
-  //    the destination cap is never binding: a 32-bit loom is at most
-  //    2^u3a_bits_max_h, and 32->64 at most doubles it (a loom of nothing but
-  //    cells, 16 -> 32 bytes each), so 2^(u3a_bits_max_h + 3) is 4x what the
-  //    migration can need.  --loom applies in full to the boot that follows.
-  //
-  c3_y des_y = (c3_y)c3_min(u3_Host.ops_u.lom_y, u3a_bits_max_h + 3);
-  c3_z sou_z = (c3_z)1 << c3_min(des_y, u3a_bits_max_h);
+  c3_y des_y;
+  c3_z sou_z;
 
+  _disk_migrate_size(&des_y, &sou_z);
+
+#ifdef VERE64
   if ( des_y != u3_Host.ops_u.lom_y ) {
     u3l_log("loom: migrating with a %zuMB loom (--loom %u applies afterward)",
             ((c3_z)1 << des_y) >> 20, (unsigned)u3_Host.ops_u.lom_y);
   }
-#else
-  //  the v1-v4 loom keeps its south segment at the top and its version word at
-  //  the very end, so the source reservation must be the full loom size.
-  //
-  c3_y des_y = u3_Host.ops_u.lom_y;
-  c3_z sou_z = (c3_z)1 << des_y;
 #endif
 
   c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
