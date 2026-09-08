@@ -397,15 +397,9 @@ jobs:
             -Dbinary-name=vere32-migration   \
             --summary all
 
-      #  NB: GITHUB_WORKSPACE is emptied deliberately. on a windows
-      #  runner it holds a backslash path, and the script joins it with
-      #  forward slashes; blanking it makes the script fall back to
-      #  $(pwd), which git-bash gives in unix form.
-      #
       - name: Run 32<->64 roundtrip migration test
         shell: bash
         env:
-          GITHUB_WORKSPACE: ""
           VERE64_BINARY: "zig-out/x86_64-windows-gnu/vere-migration.exe"
           VERE32_BINARY: "zig-out/x86_64-windows-gnu/vere32-migration.exe"
         run: ./migration-test.sh
@@ -441,7 +435,6 @@ jobs:
       - name: Overflow the C stack repeatedly
         shell: bash
         env:
-          GITHUB_WORKSPACE: ""
           URBIT_BINARY: "zig-out/x86_64-windows-gnu/urbit.exe"
           OVERFLOW_RUNS: "3"
         run: ./stack-overflow-test.sh

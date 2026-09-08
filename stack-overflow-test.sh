@@ -31,6 +31,17 @@
 set -euo pipefail
 
 workspace=${GITHUB_WORKSPACE:-$(pwd)}
+
+#  on a windows runner both GITHUB_WORKSPACE and git-bash's pwd hand back
+#  a drive-letter path with backslashes ("D:\a\vere\vere"). most of the
+#  tools below cope, but gnu tar reads a leading "D:" as a remote
+#  host:path and tries to resolve the host "D". convert once, here, so
+#  every path derived from it is msys-native.
+#
+case "$workspace" in
+  [A-Za-z]:[\\/]*) workspace=$(cygpath -u "$workspace") ;;
+esac
+
 urbit_binary="$workspace/$URBIT_BINARY"
 pier=${PIER_DIR:-"$workspace/pier-overflow"}
 runs=${OVERFLOW_RUNS:-3}

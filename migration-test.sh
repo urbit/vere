@@ -14,6 +14,17 @@
 set -xeuo pipefail
 
 workspace=${GITHUB_WORKSPACE:-$(pwd)}
+
+#  on a windows runner both GITHUB_WORKSPACE and git-bash's pwd hand back
+#  a drive-letter path with backslashes ("D:\a\vere\vere"). most of the
+#  tools below cope, but gnu tar reads a leading "D:" as a remote
+#  host:path and tries to resolve the host "D". convert once, here, so
+#  every path derived from it is msys-native.
+#
+case "$workspace" in
+  [A-Za-z]:[\\/]*) workspace=$(cygpath -u "$workspace") ;;
+esac
+
 vere32="$workspace/$VERE32_BINARY"
 vere64="$workspace/$VERE64_BINARY"
 brass_pill="$workspace/brass.pill"
