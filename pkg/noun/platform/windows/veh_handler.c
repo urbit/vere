@@ -1,6 +1,8 @@
 #include "noun.h"
 #include "rsignal.h"
 
+#include <malloc.h>
+
 c3_i
 u3m_fault(void* adr_v, c3_i ser_i);
 
@@ -27,6 +29,27 @@ u3_windows_stack_guard(void)
   if ( !SetThreadStackGuarantee(&gar_u) ) {
     fprintf(stderr, "boot: stack guarantee: win32 error %lu\r\n",
                     GetLastError());
+  }
+}
+
+/* u3_windows_stack_recover(): restore the guard page after an overflow.
+**
+**   windows raises EXCEPTION_STACK_OVERFLOW once. catching it consumes
+**   the thread's guard page, and nothing puts it back -- so a second
+**   overflow has no guard page to trip, and takes the process down where
+**   it stands. that is why the first dig: over reports and the second
+**   does not.
+**
+**   _resetstkoflw() restores it, and must run once the stack has
+**   unwound. there is no POSIX analogue: an alternate signal stack needs
+**   no such rearming, so nothing in the shared path expects this.
+*/
+void
+u3_windows_stack_recover(void)
+{
+  if ( !_resetstkoflw() ) {
+    fprintf(stderr, "loom: stack guard page not restored; "
+                    "a further overflow will be fatal\r\n");
   }
 }
 

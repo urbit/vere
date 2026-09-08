@@ -1532,6 +1532,16 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     //
     u3t_init();
 
+#ifdef U3_OS_windows
+    //  a caught stack overflow consumed the thread's guard page. restore
+    //  it now that the longjmp has unwound the stack, or the next
+    //  overflow has nothing to trip and kills the process outright.
+    //
+    if ( c3__over == sig_m ) {
+      u3_windows_stack_recover();
+    }
+#endif
+
     //  return to blank state
     //
     _cm_signal_done();
