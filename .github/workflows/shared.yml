@@ -349,6 +349,56 @@ jobs:
             "${b}"
           done
 
+  windows-migration-test:
+    name: Windows migration roundtrip
+    runs-on: windows-2022
+    needs: [windows]
+    if: ${{ inputs.fake_tests }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-size-limit: 8192
+
+      - name: Build 64-bit migration binary
+        shell: bash
+        run: |
+          zig build                          \
+            -Dtarget=x86_64-windows-gnu      \
+            -Dvere64                         \
+            -Doptimize=ReleaseFast           \
+            -Dpace=${{ inputs.pace }}        \
+            -Dbinary-name=vere-migration     \
+            --summary all
+
+      - name: Build 32-bit migration binary
+        shell: bash
+        run: |
+          zig build                          \
+            -Dtarget=x86_64-windows-gnu      \
+            -Doptimize=ReleaseFast           \
+            -Dpace=${{ inputs.pace }}        \
+            -Dbinary-name=vere32-migration   \
+            --summary all
+
+      #  NB: GITHUB_WORKSPACE is emptied deliberately. on a windows
+      #  runner it holds a backslash path, and the script joins it with
+      #  forward slashes; blanking it makes the script fall back to
+      #  $(pwd), which git-bash gives in unix form.
+      #
+      - name: Run 32<->64 roundtrip migration test
+        shell: bash
+        env:
+          GITHUB_WORKSPACE: ""
+          VERE64_BINARY: "zig-out/x86_64-windows-gnu/vere-migration.exe"
+          VERE32_BINARY: "zig-out/x86_64-windows-gnu/vere32-migration.exe"
+        run: ./migration-test.sh
+
   migration-test:
     name: Migration roundtrip tests
     runs-on: ubuntu-22.04
