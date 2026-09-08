@@ -819,9 +819,24 @@ static void
 _disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-  c3_unlink(paf_c);
-  c3_free(paf_c);
+
+#ifdef U3_OS_windows
+  //  windows refuses to delete a file that is still open, so the
+  //  descriptor goes first or the lockfile outlives the pier.
+  //
+  //  NB: the reverse order is deliberate elsewhere. on POSIX, unlinking
+  //  while the descriptor is held means another process cannot acquire
+  //  the path in between, and so cannot have its lockfile unlinked by
+  //  this one.
+  //
   close(fid_i);
+  c3_unlink(paf_c);
+#else
+  c3_unlink(paf_c);
+  close(fid_i);
+#endif
+
+  c3_free(paf_c);
 }
 
 /* u3_disk_exit(): close the log.
