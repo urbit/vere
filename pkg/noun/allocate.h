@@ -218,12 +218,12 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_jets_{h,d}: 32- / 64-bit jet dashboard layouts.
     ** u3a_jets typedef-aliases the variant matching this build.
     */
-#define U3A_JETS_BODY(S) \
-  U3_W(S) hot_p;         \
-  U3_W(S) war_p;         \
-  U3_W(S) cod_p;         \
-  U3_W(S) han_p;         \
-  U3_W(S) bas_p;
+#define U3A_JETS_BODY(S)                                     \
+  U3_W(S) hot_p;          /*  hot state (home road only)  */ \
+  U3_W(S) war_p;          /*  warm state                  */ \
+  U3_W(S) cod_p;          /*  cold state                  */ \
+  U3_W(S) han_p;          /*  hank cache                  */ \
+  U3_W(S) bas_p;          /*  battery hashes              */
 
       U3_DEFINE_PAIR(u3a_jets, U3A_JETS_BODY);
 
@@ -233,7 +233,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       typedef struct {
         union {
           jmp_buf buf;
-          c3_h    buf_w[256];
+          c3_h    buf_w[256];               /*  futureproofing  */
         };
       } u3a_road_esc_h;
 
@@ -243,7 +243,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
             jmp_buf buf;
             c3_d    why_w;
           };
-          c3_d buf_w[256];
+          c3_d buf_w[256];                  /*  futureproofing  */
         };
       } u3a_road_esc_d;
 
@@ -251,70 +251,82 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     ** execution context layouts.  u3a_road typedef-aliases the
     ** variant matching this build.
     */
-#define U3A_ROAD_BODY(S)                              \
-  U3_W(S) par_p;                                      \
-  U3_W(S) kid_p;                                      \
-  U3_W(S) nex_p;                                      \
-                                                      \
-  U3_W(S) cap_p;                                      \
-  U3_W(S) hat_p;                                      \
-  U3_W(S) mat_p;                                      \
-  U3_W(S) rut_p;                                      \
-  U3_W(S) ear_p;                                      \
-                                                      \
-  c3_h    off_h;                                      \
-  c3_h    fow_h;                                      \
-  U3_W(S) lop_p;                                      \
-  U3_N(S) tim;                                        \
-  U3_N(S) dup_p;                                      \
-                                                      \
-  U3_W(S) fut_w[27];                                  \
-                                                      \
-  U3_PASTE(u3a_road_esc, S) esc;                      \
-                                                      \
-  struct { U3_W(S) fag_w; } how;                      \
-                                                      \
-  struct {                                            \
-    U3_W(S) fre_w;                                    \
-    U3_W(S) max_w;                                    \
-  } all;                                              \
-                                                      \
-  struct {                                            \
-    U3_W(S)  fre_p;                                   \
-    U3_W(S)  erf_p;                                   \
-    U3_W(S)  cac_p;                                   \
-    U3_WS(S) dir_ws;                                  \
-    U3_WS(S) off_ws;                                  \
-    U3_W(S)  siz_w;                                   \
-    U3_W(S)  len_w;                                   \
-    U3_W(S)  pag_p;                                   \
-    U3_W(S)  wee_p[U3_PASTE_(u3a_crag_no, S)];        \
-  } hep;                                              \
-                                                      \
-  struct {                                            \
-    U3_W(S) cel_p;                                    \
-    U3_W(S) hav_w;                                    \
-    U3_W(S) bat_w;                                    \
-  } cel;                                              \
-                                                      \
-  U3_PASTE(u3a_jets, S) jed;                          \
-                                                      \
-  struct { U3_W(S) har_p;             } byc;          \
-  struct { U3_N(S) gul;               } ski;          \
-  struct { U3_N(S) tax; U3_N(S) mer;  } bug;          \
-                                                      \
-  struct {                                            \
-    c3_d    nox_d;                                    \
-    c3_d    cel_d;                                    \
-    U3_N(S) don;                                      \
-    U3_N(S) trace;                                    \
-    U3_N(S) day;                                      \
-  } pro;                                              \
-                                                      \
-  struct {                                            \
-    U3_W(S) har_p;                                    \
-    U3_W(S) per_p;                                    \
-    U3_W(S) for_p;                                    \
+#define U3A_ROAD_BODY(S)                                                                         \
+  U3_W(S) par_p;                                /*  parent road                               */ \
+  U3_W(S) kid_p;                                /*  child road list                           */ \
+  U3_W(S) nex_p;                                /*  sibling road                              */ \
+                                                                                                 \
+  U3_W(S) cap_p;                                /*  top of transient region                   */ \
+  U3_W(S) hat_p;                                /*  top of durable region                     */ \
+  U3_W(S) mat_p;                                /*  bottom of transient region                */ \
+  U3_W(S) rut_p;                                /*  bottom of durable region                  */ \
+  U3_W(S) ear_p;                                /*  original cap if kid is live               */ \
+                                                                                                 \
+  c3_h    off_h;                                /*  spin stack offset                         */ \
+  c3_h    fow_h;                                /*  spin stack overflow count                 */ \
+  U3_W(S) lop_p;                                /*  %loop hint set                            */ \
+  U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
+  U3_N(S) dup_p;                                /*  deduplication set                         */ \
+                                                                                                 \
+  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+                                                                                                 \
+  U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
+                                                                                                 \
+  struct {                                      /*  miscellaneous config                      */ \
+    U3_W(S) fag_w;                              /*  flag bits                                 */ \
+  } how;                                                                                         \
+                                                                                                 \
+  /*  XX re/move  */                                                                             \
+  struct {                                      /*  allocation pools                          */ \
+    U3_W(S) fre_w;                              /*  number of free words                      */ \
+    U3_W(S) max_w;                              /*  maximum allocated                         */ \
+  } all;                                                                                         \
+                                                                                                 \
+  struct {                                      /*    heap allocator                          */ \
+    U3_W(S)  fre_p;                             /*  free list entry                           */ \
+    U3_W(S)  erf_p;                             /*  free list exit                            */ \
+    U3_W(S)  cac_p;                             /*  cached pgfree struct                      */ \
+    U3_WS(S) dir_ws;                            /*  1 || -1 (multiplicand for local offsets)  */ \
+    U3_WS(S) off_ws;                            /*  0 || -1 (word-offset for hat && rut)      */ \
+    U3_W(S)  siz_w;                             /*  directory size                            */ \
+    U3_W(S)  len_w;                             /*  directory entries                         */ \
+    U3_W(S)  pag_p;                             /*  directory                                 */ \
+    U3_W(S)  wee_p[U3_PASTE_(u3a_crag_no, S)];  /*  chunk lists                               */ \
+  } hep;                                                                                         \
+                                                                                                 \
+  struct {                                      /*    cell pool                               */ \
+    U3_W(S) cel_p;                              /*  array of cells                            */ \
+    U3_W(S) hav_w;                              /*  length                                    */ \
+    U3_W(S) bat_w;                              /*  batch counter                             */ \
+  } cel;                                                                                         \
+                                                                                                 \
+  U3_PASTE(u3a_jets, S) jed;                    /*  jet dashboard                             */ \
+                                                                                                 \
+  struct {                                      /*  bytecode state                            */ \
+    U3_W(S) har_p;                              /*  formula->post of bytecode                 */ \
+  } byc;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  scry namespace                            */ \
+    U3_N(S) gul;                                /*  (list $+(* (unit (unit)))) now            */ \
+  } ski;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  trace stack                               */ \
+    U3_N(S) tax;                                /*  (list ,*)                                 */ \
+    U3_N(S) mer;                                /*  emergency buffer to release               */ \
+  } bug;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  profile stack                             */ \
+    c3_d    nox_d;                              /*  nock steps                                */ \
+    c3_d    cel_d;                              /*  cell allocations                          */ \
+    U3_N(S) don;                                /*  (list batt)                               */ \
+    U3_N(S) trace;                              /*  (list trace)                              */ \
+    U3_N(S) day;                                /*  doss, only in u3H (moveme)                */ \
+  } pro;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  memoization caches                        */ \
+    U3_W(S) har_p;                              /*  transient                                 */ \
+    U3_W(S) per_p;                              /*  persistent                                */ \
+    U3_W(S) for_p;                              /*  ford                                      */ \
     /* road struct terminator: no data after it, no */\
     /* padding between the last real field and it   */\
     c3_y end_y[0];                                    \

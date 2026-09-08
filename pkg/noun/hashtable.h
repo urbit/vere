@@ -43,31 +43,31 @@
       ** NB: `map_h` widens to c3_d on VERE64 so the trailing slot array is
       ** naturally 8-byte aligned, but only the low 32 bits are ever used.
       */
-#define U3H_NODE_BODY(S)                       \
-  U3_W(S)               map_h;                 \
-  U3_PASTE(u3h_slot, S) sot_w[];
+#define U3H_NODE_BODY(S)                                   \
+  U3_W(S)               map_h;    /* bitmap for [sot_w] */ \
+  U3_PASTE(u3h_slot, S) sot_w[];  /* filled slots       */
 
         U3_DEFINE_PAIR(u3h_node, U3H_NODE_BODY);
 
       /* u3h_root_{h,d}: hash root table.
       */
-#define U3H_ROOT_BODY(S)                       \
-  U3_W(S) max_w;                               \
-  U3_W(S) use_w;                               \
-  struct {                                     \
-    c3_h mug_h;                                \
-    c3_h inx_h;                                \
-    c3_o buc_o;  /* XX remove */               \
-  } arm_u;                                     \
-  U3_PASTE(u3h_slot, S) sot_w[64];
+#define U3H_ROOT_BODY(S)                                                            \
+  U3_W(S) max_w;                    /* number of cache lines (0 for no trimming) */ \
+  U3_W(S) use_w;                    /* number of lines currently filled          */ \
+  struct {                                                                          \
+    c3_h mug_h;                     /* current hash                              */ \
+    c3_h inx_h;                     /* index into current hash bucket            */ \
+    c3_o buc_o;                     /* XX remove                                 */ \
+  } arm_u;                          /* clock arm                                 */ \
+  U3_PASTE(u3h_slot, S) sot_w[64];  /* slots                                     */
 
         U3_DEFINE_PAIR(u3h_root, U3H_ROOT_BODY);
 
       /* u3h_buck_{h,d}: bottom bucket.
       */
-#define U3H_BUCK_BODY(S)                       \
-  U3_W(S)               len_h;                 \
-  U3_PASTE(u3h_slot, S) sot_w[];
+#define U3H_BUCK_BODY(S)                                  \
+  U3_W(S)               len_h;    /* length of [sot_w] */ \
+  U3_PASTE(u3h_slot, S) sot_w[];  /* filled slots      */
 
         U3_DEFINE_PAIR(u3h_buck, U3H_BUCK_BODY);
 
