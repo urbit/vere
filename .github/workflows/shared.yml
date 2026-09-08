@@ -320,6 +320,10 @@ jobs:
       #  newt, unix, boot) are left out until someone has confirmed they
       #  are portable -- excluded deliberately, not forgotten.
       #
+      #  events-test is absent for a harder reason: it is posix-only
+      #  (mkdtemp, nftw, /tmp), so build.zig skips it for windows
+      #  targets and naming it here would fail to resolve a step.
+      #
       - name: Build unit tests
         shell: bash
         run: |
@@ -328,18 +332,17 @@ jobs:
             hashtable-test jets-test         \
             nock-test retrieve-test          \
             serial-test equality-test        \
-            palloc-test events-test          \
-            bytestream-test wloom-test       \
+            palloc-test bytestream-test      \
+            wloom-test                       \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \
             --summary all
 
-      #  the build step above may already have run these, but it cannot
-      #  be relied on to: zig sets skip_foreign_checks on the run step,
-      #  which succeeds *silently* when the host is judged unable to
-      #  execute the artifact. run the installed binaries directly, so a
-      #  green job cannot mean that nothing ran.
+      #  the step above already runs each test as part of building it,
+      #  but a zig run step is cached: a rerun on a warm cache reports
+      #  success without executing anything. run the installed binaries
+      #  directly, so a green job cannot mean that nothing ran.
       #
       - name: Run unit tests
         shell: bash
