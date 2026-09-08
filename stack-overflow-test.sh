@@ -60,8 +60,43 @@ trap cleanup EXIT
 
 # ── boot or resume ────────────────────────────────────────────────────────────
 
+#  the pier this step resumes is usually the one test-fake-ship.sh just
+#  finished with, and that script's cleanup only SIGTERMs the runtime --
+#  it does not wait for it. a shutdown takes a snapshot first, so the old
+#  process can still hold the fcntl lock when we get here, and the resume
+#  dies with `pier: locked by PID`. vere unlinks .vere.lock on release,
+#  so the file's absence is the signal; a lingering file whose pid is
+#  gone means an unclean kill, which is equally fine to resume over.
+#
+wait_unlocked() {
+  local lock="$pier/.vere.lock" pid
+
+  for _ in $(seq 1 120); do
+    [ -f "$lock" ] || return 0
+
+    pid=$(< "$lock") || true
+
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  echo "ERROR: $pier is still locked by PID $pid after 120s" >&2
+  return 1
+}
+
 if [ -d "$pier" ]; then
   echo "=== resuming $pier ==="
+  wait_unlocked
+
+  #  vere removes .http.ports on a clean exit, but not if it was killed.
+  #  a stale one would satisfy the wait below instantly and hand us a
+  #  port from the previous run.
+  #
+  rm -f "$pier/.http.ports"
+
   "$urbit_binary" --lite-boot --daemon "$pier" >> "$log" 2>&1
 else
   echo "=== booting a fake ship at $pier ==="
