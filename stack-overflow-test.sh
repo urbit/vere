@@ -124,7 +124,18 @@ else
     curl -LJ -o "$workspace/urbit.tar.gz" \
       "https://github.com/urbit/urbit/archive/${ARVO_COMMIT}.tar.gz"
     mkdir "$arvo_dir"
-    tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1
+
+    #  git-bash's tar wants a symlink's target to exist before it will
+    #  create the link -- but only for a target that stays inside the
+    #  extraction tree. of the tarball's 262 links, the 217 whose target
+    #  begins with "../" escape that check and are made regardless; of
+    #  the 45 that remain, the 8 whose target sorts after them in the
+    #  archive fail with ENOENT (pkg/arvo/gen/cat.hoon -> clay/cat.hoon,
+    #  and seven like it). every target exists by the second pass. posix
+    #  tar creates the links outright and gets it right the first time.
+    #
+    tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 \
+      || tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1
   fi
 
   "$urbit_binary" --lite-boot --daemon --fake bus \
