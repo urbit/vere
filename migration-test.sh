@@ -52,11 +52,17 @@ if [ ! -d "$arvo_dir" ]; then
   #  begins with "../" escape that check and are made regardless; of the
   #  45 that remain, the 8 whose target sorts after them in the archive
   #  fail with ENOENT (pkg/arvo/gen/cat.hoon -> clay/cat.hoon, and seven
-  #  like it). every target exists by the second pass. posix tar creates
-  #  the links outright and gets it right the first time.
+  #  like it). every target exists by the second pass.
+  #
+  #  that pass needs --unlink-first, because the first left four symlinks
+  #  to directories behind (pkg/arvo/lib/verb and three like it) and tar
+  #  will not extract over one: "Cannot open: File exists".
+  #
+  #  posix tar creates every link outright, so the retry never runs.
   #
   tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 \
-    || tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1
+    || tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 \
+         --unlink-first
   cp -RL "$arvo_dir/tests" "$arvo_dir/pkg/arvo/tests"
 fi
 
