@@ -255,6 +255,100 @@ jobs:
             fi
           done
 
+  windows:
+    name: Windows (${{ matrix.bits }}-bit)
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-size-limit: 8192
+
+      #  NB: -Dtarget is explicit even though this is a windows host. a
+      #  native build would default to the msvc abi, and we ship gnu --
+      #  pkg/c3/platform/windows and pkg/noun/platform/windows are mingw
+      #  code, so an msvc build would not be the thing we release.
+      #
+      - name: Build
+        shell: bash
+        run: |
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
+          zig build                          \
+            -Dtarget=x86_64-windows-gnu      \
+            -Doptimize=ReleaseFast           \
+            -Dpace=${{ inputs.pace }}        \
+            $VERE64_FLAG                     \
+            --summary all
+
+      #  the loom's mapping design rests on properties of the windows
+      #  memory api that microsoft does not document outright -- above
+      #  all, that a section's contents *and* commitment survive
+      #  unmapping and remapping its view. if that ever stops holding, a
+      #  save silently corrupts the snapshot rather than failing, so it
+      #  is re-checked on every run rather than trusted.
+      #
+      - name: Loom probe
+        shell: bash
+        run: |
+          zig cc -target x86_64-windows-gnu  \
+            -o wloom_probe.exe               \
+            pkg/noun/platform/windows/wloom_probe.c
+          ./wloom_probe.exe
+
+      #  a conservative subset: pure noun tests, which have no reason to
+      #  care about the platform. the vere io tests (ames, mesa, pact,
+      #  newt, unix, boot) are left out until someone has confirmed they
+      #  are portable -- excluded deliberately, not forgotten.
+      #
+      - name: Build unit tests
+        shell: bash
+        run: |
+          zig build                          \
+            ur-test ent-test                 \
+            hashtable-test jets-test         \
+            nock-test retrieve-test          \
+            serial-test equality-test        \
+            palloc-test events-test          \
+            bytestream-test wloom-test       \
+            -Dtarget=x86_64-windows-gnu      \
+            -Doptimize=ReleaseFast           \
+            -Dpace=${{ inputs.pace }}        \
+            --summary all
+
+      #  the build step above may already have run these, but it cannot
+      #  be relied on to: zig sets skip_foreign_checks on the run step,
+      #  which succeeds *silently* when the host is judged unable to
+      #  execute the artifact. run the installed binaries directly, so a
+      #  green job cannot mean that nothing ran.
+      #
+      - name: Run unit tests
+        shell: bash
+        run: |
+          shopt -s nullglob
+          bins=(zig-out/bin/*-test.exe)
+
+          if [ ${#bins[@]} -eq 0 ]; then
+            echo "no test binaries were installed -- nothing ran" >&2
+            exit 1
+          fi
+
+          for b in "${bins[@]}"; do
+            echo "== ${b}"
+            "${b}"
+          done
+
   migration-test:
     name: Migration roundtrip tests
     runs-on: ubuntu-22.04
