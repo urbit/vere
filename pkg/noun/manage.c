@@ -704,11 +704,26 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
+  //
+  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
+  //  proof buffer but instead it was added as a last element of the `cax` sub-
+  //  struct of the road struct. Since
+  //    1) the loom is zero-initialized,
+  //    2) the road is the final member of the u3v_home struct,
+  //    3) `cax` is the last element of the road struct,
+  //    4) `for_p` is the last element of `cax`,
+  //    5) and adding `for_p` did not change the alignment of either the road
+  //       struct or the `cax` struct,
+  //  the layout and the position of the road struct did not change, and a
+  //  simple null check was sufficient for the migration.
+  //  
+  //  The reasoning above is sound as long as we assume no downgrades, which
+  //  would not be detected by any methods present at the moment of cax.for_p
+  //  addition.
   //
   if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  if ( !u3R->dup_p )    u3R->dup_p = u3h_new();
+  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
