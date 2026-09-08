@@ -158,6 +158,14 @@ jobs:
           URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
         run: ./test-fake-ship.sh
 
+      - name: Overflow the C stack repeatedly
+        if: ${{ inputs.fake_tests }}
+        env:
+          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
+          PIER_DIR: "pier"
+          OVERFLOW_RUNS: "3"
+        run: ./stack-overflow-test.sh
+
       #
       # UPLOAD TO GCP
       #
@@ -398,6 +406,42 @@ jobs:
           VERE64_BINARY: "zig-out/x86_64-windows-gnu/vere-migration.exe"
           VERE32_BINARY: "zig-out/x86_64-windows-gnu/vere32-migration.exe"
         run: ./migration-test.sh
+
+  windows-stack-overflow:
+    name: Windows stack overflow
+    runs-on: windows-2022
+    needs: [windows]
+    if: ${{ inputs.fake_tests }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-size-limit: 8192
+
+      - name: Build
+        shell: bash
+        run: |
+          zig build                          \
+            -Dtarget=x86_64-windows-gnu      \
+            -Dvere64                         \
+            -Doptimize=ReleaseFast           \
+            -Dpace=${{ inputs.pace }}        \
+            --summary all
+
+      #  more than one run is the point: the first overflow tests that
+      #  the handler has stack to run on, the second that the guard page
+      #  it consumed was put back. a single pass cannot tell them apart.
+      #
+      - name: Overflow the C stack repeatedly
+        shell: bash
+        env:
+          GITHUB_WORKSPACE: ""
+          URBIT_BINARY: "zig-out/x86_64-windows-gnu/urbit.exe"
+          OVERFLOW_RUNS: "3"
+        run: ./stack-overflow-test.sh
 
   migration-test:
     name: Migration roundtrip tests
