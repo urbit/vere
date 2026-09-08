@@ -646,6 +646,16 @@ _find_home(void)
     u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
   }
 
+  {
+    //  Check if we downgraded to a version before e.g. cax.for_p was added:
+    //  bytes between the end of the u3v_home struct and the bottom of the heap
+    //  should normally be set to 0.
+    c3_w* byt_w = (c3_w*)u3_Loom;
+    for (c3_w i_w = sizeof(u3v_home); i_w < ((c3_w)1) << u3a_page; i_w++) {
+      u3_assert(!byt_w[i_w] && "loom: downgrade detected");
+    }
+  }
+
   //  check for obvious corruption
   //
   {
