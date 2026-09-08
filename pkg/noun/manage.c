@@ -704,9 +704,11 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
+  //  XX cax.for_p
   //
-  if ( !u3R->lop_p ) u3R->lop_p = u3h_new();
-  if ( !u3R->dup_p ) u3R->dup_p = u3h_new();
+  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->dup_p )    u3R->dup_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
