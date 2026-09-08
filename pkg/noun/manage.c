@@ -575,7 +575,7 @@ _pave_home(void)
   u3_post bot_p = ((c3_w)1) << u3a_page;
 
   u3H = u3to(u3v_home, 0);
-  memset(u3H, 0, sizeof(u3v_home));
+  memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
   u3H->ver_d = U3V_VERLAT;
   u3H->pam_d = _pave_params();
 
