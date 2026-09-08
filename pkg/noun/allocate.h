@@ -315,6 +315,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) for_p;                                    \
   } cax;
 
+  #define U3A_ROAD_LAST_FIELD cax.for_p
+
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 

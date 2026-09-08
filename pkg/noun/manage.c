@@ -650,10 +650,12 @@ _find_home(void)
     //  Check if we downgraded to a version before e.g. cax.for_p was added:
     //  bytes between the end of the u3v_home struct and the bottom of the heap
     //  should normally be set to 0.
-    c3_w* byt_w = (c3_w*)u3_Loom;
-    c3_w off_w = offsetof(u3v_home, rod_u.cax.for_p) + sizeof(u3v_Home->rod_u.cax.for_p);
-    for (c3_w i_w = off_w; i_w < ((c3_w)1) << u3a_page; i_w++) {
-      u3_assert(!byt_w[i_w] && "loom: downgrade detected");
+    c3_y* byt_y = (c3_y*)u3_Loom;
+    c3_w off_w = offsetof(u3v_home, rod_u.U3A_ROAD_LAST_FIELD)
+               + sizeof(u3v_Home->rod_u.U3A_ROAD_LAST_FIELD);
+    c3_w byte_top_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    for (c3_w i_w = off_w; i_w < byte_top_w; i_w++) {
+      u3_assert(!byt_y[i_w] && "loom: downgrade detected");
     }
   }
 
