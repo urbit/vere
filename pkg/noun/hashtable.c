@@ -441,12 +441,16 @@ u3h_del(u3p(u3h_root) har_p, u3_noun key)
   }
 }
 
-static void _ch_prune_slot(u3h_slot*, c3_h, c3_o (*)(u3_noun, void*), void*, c3_w*);
+static void _ch_prune_slot(u3h_slot*, c3_h, c3_o (*)(u3_noun, void*),
+  void*, c3_w*);
 
 /* _ch_prune_buck(): prune entries from bucket, collapsing or freeing it
 */
 static void
-_ch_prune_buck(u3h_slot* sot_w, c3_o (*fun_f)(u3_noun, void*), void* wit, c3_w* del_w)
+_ch_prune_buck(u3h_slot* sot_w,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
 {
   u3h_buck* hab_u = u3h_slot_to_node(*sot_w);
   c3_h      i_h, len_h = 0;
@@ -487,7 +491,11 @@ _ch_prune_buck(u3h_slot* sot_w, c3_o (*fun_f)(u3_noun, void*), void* wit, c3_w* 
 /* _ch_prune_node(): prune entries from node, collapsing or freeing it
 */
 static void
-_ch_prune_node(u3h_slot* sot_w, c3_h lef_h, c3_o (*fun_f)(u3_noun, void*), void* wit, c3_w* del_w)
+_ch_prune_node(u3h_slot* sot_w,
+  c3_h lef_h,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
 {
   u3h_node* han_u = (u3h_node*) u3h_slot_to_node(*sot_w);
   c3_h      map_h = han_u->map_h;
@@ -534,7 +542,11 @@ _ch_prune_node(u3h_slot* sot_w, c3_h lef_h, c3_o (*fun_f)(u3_noun, void*), void*
 /* _ch_prune_slot(): prune entries from a non-null slot
 */
 static void
-_ch_prune_slot(u3h_slot* sot_w, c3_h lef_h, c3_o (*fun_f)(u3_noun, void*), void* wit, c3_w* del_w)
+_ch_prune_slot(u3h_slot* sot_w,
+  c3_h lef_h,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
 {
   if ( c3y == u3h_slot_is_noun(*sot_w) ) {
     u3_noun kev = u3h_slot_to_noun(*sot_w);
