@@ -125,23 +125,35 @@ else
       "https://github.com/urbit/urbit/archive/${ARVO_COMMIT}.tar.gz"
     mkdir "$arvo_dir"
 
-    #  git-bash's tar wants a symlink's target to exist before it will
-    #  create the link -- but only for a target that stays inside the
-    #  extraction tree. of the tarball's 262 links, the 217 whose target
-    #  begins with "../" escape that check and are made regardless; of
-    #  the 45 that remain, the 8 whose target sorts after them in the
-    #  archive fail with ENOENT (pkg/arvo/gen/cat.hoon -> clay/cat.hoon,
-    #  and seven like it). every target exists by the second pass.
+    #  git-bash's tar cannot get this archive out in one pass. it wants
+    #  a symlink's target to exist before it will create the link -- but
+    #  only for a target that stays inside the extraction tree, so of
+    #  the 262 links the 217 beginning "../" are made regardless, and of
+    #  the 45 left, the 8 whose target sorts after them fail with ENOENT
+    #  (pkg/arvo/gen/cat.hoon -> clay/cat.hoon, and seven like it). a
+    #  second pass finds every target in place and makes all 8 -- but
+    #  then exits nonzero itself, over the four symlinks-to-directories
+    #  the first pass did create (pkg/arvo/lib/verb and three like it),
+    #  which it will not extract over.
     #
-    #  that pass needs --unlink-first, because the first left four
-    #  symlinks to directories behind (pkg/arvo/lib/verb and three like
-    #  it) and tar will not extract over one: "Cannot open: File exists".
+    #  so neither pass can be judged by its exit status. run both and
+    #  check what landed. posix tar creates every link outright and is
+    #  done in the first pass, with the second a no-op.
     #
-    #  posix tar creates every link outright, so the retry never runs.
-    #
-    tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 \
-      || tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 \
-           --unlink-first
+    tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 || true
+    tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 || true
+
+    missing=$(tar tzf "$workspace/urbit.tar.gz" | sed 's|^[^/]*/||' \
+              | while read -r mem_p; do
+                  case "$mem_p" in ''|*/) continue ;; esac
+                  [ -e "$arvo_dir/$mem_p" ] || echo "$mem_p"
+                done)
+
+    if [ -n "$missing" ]; then
+      echo "ERROR: arvo extraction is incomplete, missing:" >&2
+      echo "$missing" >&2
+      exit 1
+    fi
   fi
 
   "$urbit_binary" --lite-boot --daemon --fake bus \
