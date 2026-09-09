@@ -2992,6 +2992,37 @@ u3m_time_gap_in_mil(c3_w mil_w)
   return u3i_chubs(2, cub_d);
 }
 
+typedef struct {
+  c3_t new_t;
+  u3_noun som;
+} _frame_dedup;
+
+static u3_noun
+_dedup_next(u3a_pile* pil_u, u3_noun som)
+{
+  while (1) {
+    if ( c3y == u3a_is_cat(som) ) return som;
+    u3a_road* rod_u;
+    for ( rod_u = &u3H->rod_u; rod_u; rod_u = u3tn(u3a_road, rod_u->kid_p)) {
+      u3_weak got = u3h_get(rod_u->dup_p, som);
+      if ( u3_none != got ) {
+        u3z(som);
+        return got;
+      }
+    }
+    if ( c3y == u3a_is_atom(som) ) {
+      u3h_put(u3R->dup_p, som, u3k(som));
+      return som;
+    }
+    u3_noun hed = u3k(u3h(som)), tel = u3k(u3t(som));
+    _frame_dedup* fam_u = u3a_push(pil_u);
+    fam_u->new_t = false;
+    fam_u->som = tel;
+    u3z(som);
+    som = hed;
+  }
+}
+
 u3_noun
 u3m_dedup(u3_noun som)
 {
@@ -3004,14 +3035,29 @@ u3m_dedup(u3_noun som)
       return got;
     }
   }
-  if ( c3y == u3a_is_cell(som) ) {
-    u3_noun hed = u3k(u3h(som)),
-            tel = u3k(u3t(som));
-    u3z(som);
-    som = u3nc(u3m_dedup(hed), u3m_dedup(tel));
+
+  u3a_pile pil_u;
+  _frame_dedup* fam_u;
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
+  u3_noun new = _dedup_next(&pil_u, som);
+  if ( c3n == u3a_pile_done(&pil_u) ) {
+    fam_u = u3a_peek(&pil_u);
+    do {
+      if ( !fam_u->new_t ) {
+        som = fam_u->som;
+        fam_u->som = new;
+        fam_u->new_t = true;
+        new = _dedup_next(&pil_u, som);
+        fam_u = u3a_peek(&pil_u);
+      }
+      else {
+        new = u3nc(fam_u->som, new);
+        u3h_put(u3R->dup_p, new, u3k(new));
+        fam_u = u3a_pop(&pil_u);
+      }
+    } while ( c3n == u3a_pile_done(&pil_u) );
   }
-  u3h_put(u3R->dup_p, som, u3k(som));
-  return som;
+  return new;
 }
 
 static c3_o
@@ -3026,7 +3072,6 @@ _cb_dedup_prune(u3_noun kev, void* ptr_v)
   u3a_noun* val_u = u3a_to_ptr(som);
 
   u3_assert(c3n == u3a_is_cat(som));
-  u3_assert(val_u->use_w > 1);
 
   return __( (1 == kev_u->use_w) && (2 == val_u->use_w) );
 }
