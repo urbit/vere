@@ -575,7 +575,7 @@ _pave_home(void)
   u3_post bot_p = ((c3_w)1) << u3a_page;
 
   u3H = u3to(u3v_home, 0);
-  memset(u3H, 0, sizeof(u3v_home));
+  memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
   u3H->ver_d = U3V_VERLAT;
   u3H->pam_d = _pave_params();
 
@@ -644,6 +644,20 @@ _find_home(void)
 
   for (c3_w i_w = 0; i_w < c3_array_len(u3R->fut_w); i_w++) {
     u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
+  }
+
+  {
+    //  Check if we downgraded to a version before e.g. cax.for_p was added:
+    //  bytes between the end of the u3v_home struct and the bottom of the heap
+    //  should normally be set to 0.
+    c3_y* byt_y = (c3_y*)u3_Loom;
+    c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
+    c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    c3_t acc_y = 0;
+    for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
+      acc_y |= byt_y[i_w];
+    }
+    u3_assert(!acc_y && "loom: downgrade detected");
   }
 
   //  check for obvious corruption

@@ -5,6 +5,7 @@
 #include "manage.h"
 #include "rsignal.h"
 #include "c3/c3.h"
+#include <stddef.h>
 
   /**  Constants.
   **/
@@ -313,6 +314,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) har_p;                                    \
     U3_W(S) per_p;                                    \
     U3_W(S) for_p;                                    \
+    /* road struct terminator: no data after it, no */\
+    /* padding between the last real field and it   */\
+    c3_y end_y[0];                                    \
   } cax;
 
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
@@ -531,6 +535,11 @@ typedef struct {
       /// Current road (thread-local).
       extern u3_road* u3a_Road;
 #       define u3R  u3a_Road
+
+      static_assert(
+        offsetof(u3a_road, cax.end_y) == offsetof(u3a_road, cax.for_p)
+                                       + sizeof(u3R->cax.for_p),
+      "no padding between the last real field of u3_road and end marker");
 
     /* u3_Code: memory code.
     */
