@@ -101,10 +101,25 @@ _main_read_loom(const c3_c* nam_c, const c3_c* arg_c, c3_y* out_y)
   c3_h lom_h;
   c3_o res_o = _main_readw(arg_c, u3a_bits_max + 1, &lom_h);
   if ( res_o == c3n || (lom_h < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_w"\r\n", arg_c, (c3_w)u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %"PRIc3_w"\r\n", nam_c, (c3_w)u3a_bits_max);
     return -1;
   }
   *out_y = lom_h;
+  return 0;
+}
+
+/* _main_read_chop(): parse autochop threshold bit size from a string.
+*/
+static c3_i
+_main_read_chop(const c3_c* arg_c, c3_y* out_y)
+{
+  c3_h cho_h;
+  c3_o res_o = _main_readw(arg_c, 64, &cho_h);
+  if ( res_o == c3n || (cho_h < 20) ) {
+    fprintf(stderr, "error: --chop must be >= 20 and <= 63\r\n");
+    return -1;
+  }
+  *out_y = cho_h;
   return 0;
 }
 
@@ -197,6 +212,7 @@ _main_init(void)
   u3_Host.ops_u.rep = c3n;
   u3_Host.ops_u.eph = c3n;
   u3_Host.ops_u.tos = c3n;
+  u3_Host.ops_u.yol = c3n;
   u3_Host.ops_u.beb = c3n;
   u3_Host.ops_u.tem = c3n;
   u3_Host.ops_u.tex = c3n;
@@ -295,6 +311,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "ivory-pill",          required_argument, NULL, 'J' },
     { "json-trace",          no_argument,       NULL, 'j' },
     { "jumbo-bloq",          required_argument, NULL, c3__bloq },
+    { "chop",                required_argument, NULL, c3__chop },
     { "kernel-stage",        required_argument, NULL, 'K' },
     { "key-file",            required_argument, NULL, 'k' },
     { "loom",                required_argument, NULL, c3__loom },
@@ -413,6 +430,12 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case c3__loom: {
         if (_main_read_loom("loom", optarg, &u3_Host.ops_u.lom_y)) {
+          return c3n;
+        }
+        break;
+      }
+      case c3__chop: {
+        if (_main_read_chop(optarg, &u3_Host.ops_u.cho_y)) {
           return c3n;
         }
         break;
@@ -880,6 +903,8 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-B, --bootstrap PILL          Bootstrap from this pill\n",
     "-b, --http-ip IP              Bind HTTP server to this IP address\n",
     "-C, --memo-cache-limit LIMIT  Set memo cache max size; 0 means uncapped\n",
+    "    --chop EXPO               Roll and chop the event log when its size\n"
+    "                              exceeds 2^EXPO bytes (>= 20); off by default\n",
     "-c, --pier PIER               Create a new urbit in <pier>/\n",
     "-D, --replay                  Recompute from events\n",
     "-d, --daemon                  Daemon mode; implies -t\n",
@@ -2592,7 +2617,10 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_chop(log_u, u3_Host.eve_d);
+  if ( (c3_z)-1 == u3_disk_chop(log_u) ) {
+    u3_disk_exit(log_u);
+    exit(1);
+  }
 
   u3_disk_exit(log_u);
   u3m_stop();
@@ -2658,7 +2686,10 @@ _cw_roll(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3_disk_roll(log_u, u3_Host.eve_d);
+  if ( c3n == u3_disk_roll(log_u, u3_Host.eve_d) ) {
+    u3_disk_exit(log_u);
+    exit(1);
+  }
 
   u3_disk_exit(log_u);
   u3m_stop();
@@ -3029,6 +3060,7 @@ _cw_work(c3_i argc, c3_c* argv[])
 
     static struct option lop_u[] = {
       { "temporary-cache-size",  required_argument, NULL, 'c' },
+      { "chop",                  required_argument, NULL, 'h' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
       { "loom",                  required_argument, NULL, 'l' },
       { "snap-time",             required_argument, NULL, 'n' },
@@ -3044,7 +3076,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:n:p:r:s:t:u:w:z:",
+                   "c:e:h:k:l:n:p:r:s:t:u:w:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
@@ -3054,6 +3086,12 @@ _cw_work(c3_i argc, c3_c* argv[])
         }
         case 'e': {  //  ephemeral-file
           u3C.eph_c = (strcmp(optarg, "0") == 0 ? 0 : strdup(optarg));
+          break;
+        }
+        case 'h': {  //  chop
+          if ( _main_read_chop(optarg, &u3_Host.ops_u.cho_y) ) {
+            exit(1);
+          }
           break;
         }
         case 'l': {  //  loom

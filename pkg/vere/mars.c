@@ -835,6 +835,45 @@ _mars_damp_file(void)
   }
 }
 
+/* _mars_chop(): roll and chop the event log. failure is not fatal.
+*/
+static void
+_mars_chop(u3_mars* mar_u)
+{
+  u3_disk* log_u = mar_u->log_u;
+  c3_d     siz_d = u3_disk_size(log_u);
+
+  fprintf(stderr, "disk: autochop: log is %" PRIu64 " MiB, over 2^%u\r\n",
+                  siz_d >> 20, u3_Host.ops_u.cho_y);
+
+  if ( c3n == u3_disk_roll(log_u, mar_u->dun_d) ) {
+    fprintf(stderr, "disk: autochop: roll failed, log untouched\r\n");
+    return;
+  }
+
+  if ( (c3_z)-1 == u3_disk_chop(log_u) ) {
+    fprintf(stderr, "disk: autochop: chop failed\r\n");
+    return;
+  }
+
+  fprintf(stderr, "disk: autochop: log is now %" PRIu64 " MiB\r\n",
+                  u3_disk_size(log_u) >> 20);
+}
+
+/* _mars_chop_due(): autochop enabled and log over threshold.
+*/
+static c3_o
+_mars_chop_due(u3_mars* mar_u)
+{
+  c3_y cho_y = u3_Host.ops_u.cho_y;
+
+  if ( !cho_y || (u3C.wag_h & u3o_yolo) ) {
+    return c3n;
+  }
+
+  return __(u3_disk_size(mar_u->log_u) > ((c3_d)1 << cho_y));
+}
+
 /* _mars_flush(): send pending gifts.
 */
 static void
@@ -870,6 +909,12 @@ top:
       mar_u->sav_u.eve_d = mar_u->dun_d;
       _mars_gift(mar_u,
         u3nt(c3__sync, u3i_chub(mar_u->dun_d), mar_u->mug_h));
+
+      if ( c3y == mar_u->rol_o ) {
+        mar_u->rol_o = c3n;
+        _mars_chop(mar_u);
+      }
+
       mar_u->sat_e = u3_mars_work_e;
       goto top;
     }
@@ -948,8 +993,17 @@ _mars_timer_cb(uv_timer_t* tim_u)
 {
   u3_mars* mar_u = tim_u->data;
 
-  if ( mar_u->dun_d > mar_u->sav_u.eve_d ) {
-    mar_u->sat_e = u3_mars_save_e;
+  //  chop check first: a busy ship always has new events, and the
+  //  guard on sat_e keeps a tick from clobbering u3_mars_exit_e
+  //
+  if ( u3_mars_work_e == mar_u->sat_e ) {
+    if ( c3y == _mars_chop_due(mar_u) ) {
+      mar_u->rol_o = c3y;
+      mar_u->sat_e = u3_mars_save_e;
+    }
+    else if ( mar_u->dun_d > mar_u->sav_u.eve_d ) {
+      mar_u->sat_e = u3_mars_save_e;
+    }
   }
 
   _mars_flush(mar_u);
@@ -1450,7 +1504,10 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
      && !log_u->epo_d
      && !(u3C.wag_h & u3o_yolo) )
   {
-    u3_disk_roll(mar_u->log_u, mar_u->dun_d);
+    if ( c3n == u3_disk_roll(mar_u->log_u, mar_u->dun_d) ) {
+      u3_disk_exit(mar_u->log_u);
+      exit(1);
+    }
   }
 
   return pay_d;
@@ -1535,6 +1592,7 @@ u3_mars_work(u3_mars* mar_u)
 
   mar_u->sav_u.eve_d = mar_u->dun_d;
   mar_u->sav_u.tim_u.data = mar_u;
+  mar_u->rol_o = c3n;
 }
 
 #define VERE_NAME  "vere"

@@ -985,8 +985,8 @@ _disk_epoc_zero(c3_c* pax_c)
   c3_c epo_c[8193];
   c3_i epo_i;
   snprintf(epo_c, sizeof(epo_c), "%s/0i0", pax_c);
-  c3_d ret_d = c3_mkdir(epo_c, 0700);
-  if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
+  c3_i ret_i = c3_mkdir(epo_c, 0700);
+  if ( ( ret_i < 0 ) && ( errno != EEXIST ) ) {
     fprintf(stderr, "disk: epoch 0i0 mkdir failed: %s\r\n", strerror(errno));
     return c3n;
   }
@@ -1063,6 +1063,46 @@ _disk_epoc_zero(c3_c* pax_c)
   return c3n;
 }
 
+/* _disk_epoc_kill: delete an epoch.
+*/
+static c3_o
+_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
+{
+  //  get epoch directory
+  c3_c epo_c[8193];
+  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
+
+  //  nothing to delete if it was never made
+  if ( 0 != access(epo_c, F_OK) ) {
+    return c3y;
+  }
+
+  //  delete files in epoch directory
+  u3_dire* dir_u = u3_foil_folder(epo_c);
+  u3_dent* den_u = dir_u->all_u;
+  while ( den_u ) {
+    c3_c fil_c[8193];
+    snprintf(fil_c, sizeof(fil_c), "%s/%s", epo_c, den_u->nam_c);
+    if ( 0 != c3_unlink(fil_c) ) {
+      fprintf(stderr, "disk: failed to delete file in epoch directory\r\n");
+      return c3n;
+    }
+    den_u = den_u->nex_u;
+  }
+
+  //  delete epoch directory
+  if ( 0 != c3_rmdir(epo_c) ) {
+    fprintf(stderr, "disk: failed to delete epoch directory\r\n");
+    return c3n;
+  }
+
+  //  cleanup
+  u3_dire_free(dir_u);
+
+  //  success
+  return c3y;
+}
+
 /* _disk_epoc_roll: epoch rollover.
 */
 static c3_o
@@ -1082,8 +1122,8 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   c3_c epo_c[8193];
   c3_i epo_i;
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
-  c3_d ret_d = c3_mkdir(epo_c, 0700);
-  if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
+  c3_i ret_i = c3_mkdir(epo_c, 0700);
+  if ( ( ret_i < 0 ) && ( errno != EEXIST ) ) {
     fprintf(stderr, "disk: create epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
     return c3n;
@@ -1159,20 +1199,21 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  u3_lmdb_exit(log_u->mdb_u);
-  log_u->mdb_u = 0;
 
-  //  initialize db of new epoch
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
+  //  initialize db of new epoch; the old env stays open until the
+  //  new one is complete, so a failure here leaves log_u untouched
+  //
+  MDB_env* mdb_u;
+  if ( 0 == (mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
     fprintf(stderr, "disk: failed to initialize database\r\n");
-    c3_free(log_u);
     goto fail3;
   }
 
   // write the metadata to the database
   old_u.ver_h = U3D_VERLAT;
-  if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
+  if ( c3n == u3_disk_save_meta(mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
+    u3_lmdb_exit(mdb_u);
     goto fail3;
   }
 
@@ -1180,6 +1221,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
     fprintf(stderr, "disk: sync epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
+    u3_lmdb_exit(mdb_u);
     goto fail3;
   }
 
@@ -1188,7 +1230,10 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   fprintf(stderr, "disk: created epoch %" PRIc3_d "\r\n", epo_d);
 
-  //  load new epoch directory and set it in log_u
+  //  swap in the new epoch and close the old one
+  //
+  u3_lmdb_exit(log_u->mdb_u);
+  log_u->mdb_u = mdb_u;
   log_u->epo_d = epo_d;
   log_u->ver_h = U3D_VERLAT;
 
@@ -1196,50 +1241,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   return c3y;
 
 fail3:
-  c3_unlink(epv_c);
-  c3_unlink(biv_c);
 #ifndef U3_OS_windows
 fail2:
   close(epo_i);
 #endif
 fail1:
-  c3_rmdir(epo_c);
+  _disk_epoc_kill(log_u, epo_d);
   return c3n;
-}
-
-/* _disk_epoc_kill: delete an epoch.
-*/
-static c3_o
-_disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
-{
-  //  get epoch directory
-  c3_c epo_c[8193];
-  snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
-
-  //  delete files in epoch directory
-  u3_dire* dir_u = u3_foil_folder(epo_c);
-  u3_dent* den_u = dir_u->all_u;
-  while ( den_u ) {
-    c3_c fil_c[8193];
-    snprintf(fil_c, sizeof(fil_c), "%s/%s", epo_c, den_u->nam_c);
-    if ( 0 != c3_unlink(fil_c) ) {
-      fprintf(stderr, "disk: failed to delete file in epoch directory\r\n");
-      return c3n;
-    }
-    den_u = den_u->nex_u;
-  }
-
-  //  delete epoch directory
-  if ( 0 != c3_rmdir(epo_c) ) {
-    fprintf(stderr, "disk: failed to delete epoch directory\r\n");
-    return c3n;
-  }
-
-  //  cleanup
-  u3_dire_free(dir_u);
-
-  //  success
-  return c3y;
 }
 
 /* u3_disk_epoc_last: get latest epoch number.
@@ -1491,20 +1499,54 @@ _disk_vere_diff(u3_disk* log_u)
   return c3n;
 }
 
-/* u3_disk_chop(): delete all but the latest 2 epocs.
+/* u3_disk_size(): total size of event log data across epochs.
 */
-void
-u3_disk_chop(u3_disk* log_u, c3_d eve_d)
+c3_d
+u3_disk_size(u3_disk* log_u)
 {
   c3_z  len_z = u3_disk_epoc_list(log_u, 0);
   c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  c3_d  siz_d = 0;
+  u3_disk_epoc_list(log_u, sot_d);
+
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    c3_c pax_c[8193];
+    struct stat buf_u;
+    snprintf(pax_c, sizeof(pax_c), "%s/0i%" PRIc3_d "/data.mdb",
+                    log_u->com_u->pax_c, sot_d[i_z]);
+    if ( 0 == stat(pax_c, &buf_u) ) {
+#ifdef U3_OS_windows
+      siz_d += buf_u.st_size;
+#else
+      //  used blocks, not apparent size: lmdb with MDB_WRITEMAP
+      //  can show an apparent size unrelated to used pages
+      //
+      siz_d += (c3_d)buf_u.st_blocks * 512;
+#endif
+    }
+  }
+
+  c3_free(sot_d);
+  return siz_d;
+}
+
+/* u3_disk_chop(): delete all but the latest 2 epocs.
+**   returns epochs deleted, or (c3_z)-1 on failure.
+*/
+c3_z
+u3_disk_chop(u3_disk* log_u)
+{
+  c3_z  len_z = u3_disk_epoc_list(log_u, 0);
+  c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
+  c3_z  del_z = 0;
   u3_disk_epoc_list(log_u, sot_d);
 
   if ( len_z <= 2 ) {
     fprintf(stderr, "chop: nothing to do, try running roll first\r\n"
                     "chop: for more info see "
                     "https://docs.urbit.org/user-manual/running/vere#chop\r\n");
-    exit(0);  //  enjoy
+    c3_free(sot_d);
+    return 0;  //  enjoy
   }
 
   //  delete all but the last two epochs
@@ -1516,8 +1558,10 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
                     sot_d[i_z]);
     if ( c3y != _disk_epoc_kill(log_u, sot_d[i_z]) ) {
       fprintf(stderr, "chop: failed to delete epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
-      exit(1);
+      c3_free(sot_d);
+      return (c3_z)-1;
     }
+    del_z++;
   }
 
   // cleanup
@@ -1525,11 +1569,12 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
 
   // success
   fprintf(stderr, "chop: event log truncation complete\r\n");
+  return del_z;
 }
 
 /* u3_disk_roll(): rollover to a new epoc.
 */
-void
+c3_o
 u3_disk_roll(u3_disk* log_u, c3_d eve_d)
 {
   //  XX get fir_d from log_u
@@ -1537,23 +1582,25 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
 
   if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
     fprintf(stderr, "roll: failed to read first/last event numbers\r\n");
-    exit(1);
+    return c3n;
   }
 
-  if ( fir_d == las_d ) {
+  if ( !las_d ) {
     fprintf(stderr, "roll: latest epoch is empty\r\n");
-    exit(0);
+    return c3y;
   }
 
   if ( (eve_d != las_d) || (eve_d != log_u->dun_d) ) {
     fprintf(stderr, "roll: shenanigans!\r\n");
-    exit(1);
+    return c3n;
   }
 
   else if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");
-    exit(1);
+    return c3n;
   }
+
+  return c3y;
 }
 
 static void
