@@ -1240,6 +1240,7 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   snprintf(nax_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
   if ( -1 == (nax_u.fid_i = c3_open(nax_c, mod_i, 0666)) ) {
     fprintf(stderr, "loom: c3_open %s: %s\r\n", nax_c, strerror(errno));
+    close(nux_u.fid_i);
     return c3n;
   }
 
@@ -1248,9 +1249,12 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   {
     c3_unlink(nax_c);
     fprintf(stderr, "loom: image backup failed\r\n");
+    close(nux_u.fid_i);
+    close(nax_u.fid_i);
     return c3n;
   }
 
+  close(nux_u.fid_i);
   close(nax_u.fid_i);
   fprintf(stderr, "loom: image backup complete\r\n");
   return c3y;

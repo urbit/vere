@@ -298,6 +298,7 @@
         c3_o    lit;                        //  -l, lite mode
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
+        c3_y    cho_y;                      //      --chop bex, 0 if not given
         c3_w    per_w;                      //  -M, cap persistent memo cache
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
@@ -936,15 +937,21 @@
         c3_z
         u3_disk_epoc_list(u3_disk* log_u, c3_d* sot_d);
 
+      /* u3_disk_size(): total size of event log data across epochs.
+      */
+        c3_d
+        u3_disk_size(u3_disk* log_u);
+
       /* u3_disk_chop(): delete all but the latest 2 epocs.
-       */
-        void
-        u3_disk_chop(u3_disk* log_u, c3_d epo_d);
+      **   returns epochs deleted, or (c3_z)-1 on failure.
+      */
+        c3_z
+        u3_disk_chop(u3_disk* log_u);
 
       /* u3_disk_roll(): rollover to a new epoc.
-       */
-        void
-        u3_disk_roll(u3_disk* log_u, c3_d epo_d);
+      */
+        c3_o
+        u3_disk_roll(u3_disk* log_u, c3_d eve_d);
 
       /* u3_disk_read_list(): synchronously read a cons list of events.
       */
