@@ -325,10 +325,9 @@ jobs:
             pkg/noun/platform/windows/wloom_probe.c
           ./wloom_probe.exe
 
-      #  a conservative subset: pure noun tests, which have no reason to
-      #  care about the platform. the vere io tests (ames, mesa, pact,
-      #  newt, unix, boot) are left out until someone has confirmed they
-      #  are portable -- excluded deliberately, not forgotten.
+      #  the vere io tests (ames, mesa, pact, newt, unix, boot) were run
+      #  by hand on windows in both bitnesses before being added here.
+      #  vere-noun-test builds but has not been, so it stays out.
       #
       #  events-test is absent for a harder reason: it is posix-only
       #  (mkdtemp, nftw, /tmp), so build.zig skips it for windows
@@ -348,6 +347,9 @@ jobs:
             nock-test retrieve-test          \
             serial-test equality-test        \
             palloc-test bytestream-test      \
+            ames-test mesa-test              \
+            pact-test newt-test              \
+            unix-test boot-test              \
             wloom-test                       \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
