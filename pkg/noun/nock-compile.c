@@ -1613,7 +1613,7 @@ _nc_save(c3_w cid_w, u3_noun key, u3_noun pro)
   }
 }
 
-/* nc_frame: the caller of an activation, below its slots on the stack.
+/* nc_frame: the caller of an activation, above the callee's slots.
 */
 typedef struct __attribute__((__packed__)) {
   u3nc_prog* pog_u;   //  caller program, or 0 at the entry
@@ -2181,6 +2181,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       POP(len_w);
       fam = *(nc_frame*)TOP(_nc_frame_w);
       POP(_nc_frame_w + pog_u->tot_w);
+
       pog_u = gop_u;
       reg   = PUSH(pog_u->tot_w);
       memmove(reg, nex, len_w * sizeof(u3_noun));
