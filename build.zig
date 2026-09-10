@@ -595,6 +595,7 @@ fn buildBinary(
 
     if (t.os.tag == .windows) {
         urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.linkSystemLibrary("api-ms-win-core-memory-l1-1-6"); // VirtualAlloc2, MapViewOfFile3
     }
 
     const target_query: std.Target.Query = .{
@@ -732,6 +733,8 @@ fn buildBinary(
             name: []const u8,
             file: []const u8,
             deps: []const *std.Build.Step.Compile,
+            //  windows-only tests: the behaviour under test is win32's
+            win: bool = false,
         }{
             // pkg_ur
             .{
@@ -842,9 +845,17 @@ fn buildBinary(
                 .file = "pkg/vere/tracy_test.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "wloom-test",
+                .file = "pkg/noun/wloom_tests.c",
+                .deps = noun_test_deps,
+                .win = true,
+            },
         };
 
         for (tests) |tst| {
+            if (tst.win and t.os.tag != .windows) continue;
+
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
             const test_exe = b.addExecutable(.{ .name = tst.name, .root_module = b.createModule(.{
