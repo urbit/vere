@@ -146,4 +146,35 @@
       void
       u3n_ream(void);
 
+    /* u3n_hilt_fore(): atomic dynamic hint, before formula evaluation.
+    **                  hin: [hint-atom formula]. TRANSFER
+    **                  bus: subject. RETAIN
+    **                  out: token for u3n_hilt_hind().
+    */
+      c3_o
+      u3n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out);
+
+    /* u3n_hilt_hind(): atomic dynamic hint, after formula evaluation.
+    **                  tok: token from u3n_hilt_fore(). TRANSFER
+    **                  pro: product of formula evaluation. RETAIN
+    */
+      void
+      u3n_hilt_hind(u3_noun tok, u3_noun pro);
+
+    /* u3n_hint_fore(): arbitrary dynamic hint, before formula evaluation.
+    **                  hin: [hint-atom formula]. TRANSFER
+    **                  bus: subject. RETAIN
+    **                  clu: product of the hint-formula. TRANSFER
+    **                       replaced by the token for u3n_hint_hind().
+    */
+      c3_o
+      u3n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu);
+
+    /* u3n_hint_hind(): arbitrary dynamic hint, after formula evaluation.
+    **                  tok: token from u3n_hint_fore(). TRANSFER
+    **                  pro: product of formula evaluation. RETAIN
+    */
+      void
+      u3n_hint_hind(u3_noun tok, u3_noun pro);
+
 #endif /* ifndef U3_NOCK_H */

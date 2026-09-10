@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -46,3 +47,15 @@
     }
   }
 
+
+u3_noun
+u3uc_dvr(u3_noun* arg)
+{
+  if ( (c3n == u3ud(arg[0])) ||
+       (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  } else {
+    return u3qc_dvr(arg[0], arg[1]);
+  }
+}
