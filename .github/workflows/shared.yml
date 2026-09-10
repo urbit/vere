@@ -108,8 +108,17 @@ jobs:
               $VERE64_FLAG             \
               --summary all
           fi
+      #  NB: $VERE64_FLAG matters here as much as it does for the
+      #  binary. without it both matrix legs compile the same 32-bit
+      #  noun, and the 64-bit one is never exercised at all.
+      #
       - name: Run unit tests
         run: |
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
           zig build                    \
             ur-test ent-test           \
             hashtable-test jets-test   \
@@ -123,6 +132,7 @@ jobs:
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
+            $VERE64_FLAG               \
             --summary all
 
       - name: Build test binary
@@ -327,6 +337,11 @@ jobs:
       - name: Build unit tests
         shell: bash
         run: |
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
           zig build                          \
             ur-test ent-test                 \
             hashtable-test jets-test         \
@@ -337,6 +352,7 @@ jobs:
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \
+            $VERE64_FLAG                     \
             --summary all
 
       #  the step above already runs each test as part of building it,
