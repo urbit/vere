@@ -7,6 +7,7 @@
 #include "imprison.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "log.h"
 #include "manage.h"
 #include "nock.h"
@@ -304,10 +305,70 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
   return hap;
 }
 
+/* _cj_fcs_axis(): arm axis from a `.axe` control string, or 0.
+*/
+static c3_l
+_cj_fcs_axis(const c3_c* fcs_c)
+{
+  c3_d axe_d = 0;
+  c3_l axe_l = 0;
+
+  if (  ('.' != fcs_c[0])
+     || (1 != sscanf(fcs_c + 1, "%" SCNu64, &axe_d))
+     || (axe_d >> 32ULL)
+     || (((c3_w)1 << 31) & (axe_l = (c3_w)axe_d))
+     || (axe_l < 2) )
+  {
+    return 0;
+  }
+
+  return axe_l;
+}
+
+/* _cj_ring_put(): register the arms of a core by ring [path axis].
+**                 pax is RETAINED: the label path, leaf first.
+*/
+static void
+_cj_ring_put(u3j_core* cop_u, c3_l jax_l, u3_noun pax)
+{
+  c3_l i_l;
+
+  for ( i_l = 0; cop_u->arm_u && cop_u->arm_u[i_l].fcs_c; i_l++ ) {
+    u3j_harm* ham_u = &(cop_u->arm_u[i_l]);
+    c3_l      axe_l = _cj_fcs_axis(ham_u->fcs_c);
+    c3_l      arg_l = 0;
+    c3_l      j_l;
+
+    ham_u->cop_u = cop_u;
+
+    if ( !axe_l ) {
+      continue;
+    }
+
+    for ( j_l = 0; u3u_Harm[j_l].fun_f; j_l++ ) {
+      if ( u3u_Harm[j_l].fun_f == ham_u->fun_f ) {
+        arg_l = j_l + 1;
+        break;
+      }
+    }
+
+    {
+      u3_noun key = u3nc(u3k(pax), axe_l);
+      u3h_put(u3R->ska.pax_p, key, u3nt(jax_l, i_l, arg_l));
+      u3z(key);
+    }
+  }
+}
+
 /* _cj_install(): install dashboard entries.
 */
 static c3_w
-_cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
+_cj_install(u3j_core* ray_u,
+            c3_w      jax_l,
+            u3_noun   pel,
+            u3_noun   lab,
+            u3_noun   pax,
+            u3j_core* dev_u)
 {
   c3_w i_w;
   u3_assert(u3R == &(u3H->rod_u));
@@ -316,10 +377,12 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
     for ( i_w = 0; 0 != dev_u[i_w].cos_c; i_w++ ) {
       u3j_core* kid_u = &dev_u[i_w];
       u3_noun   loc   = _cj_core_loc(u3k(pel), kid_u),
-                bal   = u3nc(u3k(u3h(u3t(loc))), u3k(lab));
+                bal   = u3nc(u3k(u3h(u3t(loc))), u3k(lab)),
+                xap   = u3nc(u3i_string(kid_u->cos_c), u3k(pax));
 
       kid_u->jax_l   = jax_l;
       ray_u[jax_l] = *kid_u;
+      _cj_ring_put(&ray_u[jax_l], jax_l, xap);
 
       if ( kid_u->bas_u ) {
         c3_w j_w;
@@ -337,11 +400,12 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
         }
       }
 
-      jax_l = _cj_install(ray_u, ++jax_l, loc, bal, kid_u->dev_u);
+      jax_l = _cj_install(ray_u, ++jax_l, loc, bal, xap, kid_u->dev_u);
     }
   }
   u3z(pel);
   u3z(lab);
+  u3z(pax);
   return jax_l;
 }
 
@@ -814,13 +878,42 @@ u3j_boot(c3_o nuu_o)
 
   if ( c3n == nuu_o ) {
     u3h_free(u3R->jed.hot_p);
+    if ( u3R->ska.pax_p ) {
+      u3h_free(u3R->ska.pax_p);
+    }
   }
   u3R->jed.hot_p = u3h_new();
+  u3R->ska.pax_p = u3h_new();
 
   return _cj_install(u3D.ray_u, 1,
                      (c3_l) (long long) u3D.dev_u[0].par_u,
                      u3_nul,
+                     u3_nul,
                      u3D.dev_u);
+}
+
+/* u3j_ring(): find the drivers of an arm by ring [path axis]. RETAINS.
+**             sets *ham_u to the u3w arm and *arm_u to the array arm,
+**             either nullable; produces c3n if there is no such arm.
+*/
+c3_o
+u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
+{
+  u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
+  u3_noun jax, inx, arg;
+
+  *ham_u = 0;
+  *arm_u = 0;
+
+  if ( u3_none == val ) {
+    return c3n;
+  }
+
+  u3x_trel(val, &jax, &inx, &arg);
+  *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
+  *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : 0;
+
+  return c3y;
 }
 
 /* _cj_soft(): kick softly by arm axis.
@@ -920,6 +1013,16 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
     }
     return u3_none;
   }
+}
+
+/* u3j_kick_arm(): try to kick by driver arm, without a dashboard search.
+**
+** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+*/
+u3_weak
+u3j_kick_arm(u3_noun cor, u3j_harm* ham_u, c3_l axe_l)
+{
+  return _cj_kick_z(cor, ham_u->cop_u, ham_u, axe_l);
 }
 
 /* _cj_hook_in(): execute hook from core, or fail.
@@ -2408,7 +2511,8 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark_tot(u3R->jed.hot_p) * sizeof(c3_w);
+    qua_u[5]->siz_w = (  u3h_mark_tot(u3R->jed.hot_p)
+                       + u3h_mark_tot(u3R->ska.pax_p) ) * sizeof(c3_w);
 
     sum_w += qua_u[5]->siz_w;
 
@@ -2453,6 +2557,7 @@ u3j_free(void)
   u3h_free(u3R->jed.bas_p);
   if ( u3R == &(u3H->rod_u) ) {
     u3h_free(u3R->jed.hot_p);
+    u3h_free(u3R->ska.pax_p);
   }
 }
 
@@ -2493,5 +2598,6 @@ u3j_rewrite_compact(void)
 
   if ( u3R == &(u3H->rod_u) ) {
     u3h_relocate(&(u3R->jed.hot_p));
+    u3h_relocate(&(u3R->ska.pax_p));
   }
 }

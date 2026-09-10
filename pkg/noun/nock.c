@@ -1898,16 +1898,16 @@ _cn_etch_bytecode(u3_noun fol) {
 }
 
 
-/* _n_hilt_fore(): literal (atomic) dynamic hint, before formula evaluation.
+/* u3n_hilt_fore(): literal (atomic) dynamic hint, before formula evaluation.
 **            hin: [hint-atom, formula]. TRANSFER
 **            bus: subject. RETAIN
-**            out: token for _n_hilt_hind(); convention:
+**            out: token for u3n_hilt_hind(); convention:
 **                 [hint-atom] or [hint-atom data], ~ if unused.
 **
 **                 any hints herein must be whitelisted in _n_burn().
 */
-static c3_o
-_n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
+c3_o
+u3n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 {
   u3_noun tag, fol;
   u3x_cell(hin, &tag, &fol);
@@ -1971,12 +1971,12 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
   return c3y;
 }
 
-/* _n_hilt_hind(): literal (atomic) dynamic hint, after formula evaluation.
-**            tok: token from _n_hilt_fore(). TRANSFER
+/* u3n_hilt_hind(): literal (atomic) dynamic hint, after formula evaluation.
+**            tok: token from u3n_hilt_fore(). TRANSFER
 **            pro: product of formula evaluation. RETAIN
 */
-static void
-_n_hilt_hind(u3_noun tok, u3_noun pro)
+void
+u3n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if ( (c3y == u3r_cell(tok, &p_tok, &q_tok)) && (c3__loop == p_tok) ) {
@@ -2017,17 +2017,17 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
   u3z(tok);
 }
 
-/* _n_hint_fore(): arbitrary dynamic hint, before formula evaluation
+/* u3n_hint_fore(): arbitrary dynamic hint, before formula evaluation
 **            hin: [hint-atom, formula]. TRANSFER
 **            bus: subject. RETAIN
 **            clu: product of the hint-formula. TRANSFER
-**                 also, token for _n_hilt_hind(); convention:
+**                 also, token for u3n_hilt_hind(); convention:
 **                 [hint-atom] or [hint-atom data], ~ if unused.
 **
 **                 any hints herein must be whitelisted in _n_burn().
 */
-static c3_o
-_n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
+c3_o
+u3n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
 {
   u3_noun tag, fol;
   u3x_cell(hin, &tag, &fol);
@@ -2117,12 +2117,12 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
   return c3y;
 }
 
-/* _n_hint_hind(): arbitrary dynamic hint, after formula evaluation.
-**            tok: token from _n_hint_fore(). TRANSFER
+/* u3n_hint_hind(): arbitrary dynamic hint, after formula evaluation.
+**            tok: token from u3n_hint_fore(). TRANSFER
 **            pro: product of formula evaluation. RETAIN
 */
-static void
-_n_hint_hind(u3_noun tok, u3_noun pro)
+void
+u3n_hint_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
   if ( c3__jinx == tok ) {
@@ -2818,7 +2818,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
     hilt_fore_in:
       x   = u3k(pog_u->lit_u.non[x]);
       top = _n_peek(off);   // bus
-      x   = _n_hilt_fore(x, *top, &o);
+      x   = u3n_hilt_fore(x, *top, &o);
       _n_push(mov, off, o);
       _n_swap(mov, off);    // bus
       _n_push(mov, off, x); // shortcircuit if c3n
@@ -2834,7 +2834,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x   = u3k(pog_u->lit_u.non[x]);
       o   = _n_pep(mov, off);   //  [bus]
       top = _n_peek(off);
-      x   = _n_hint_fore(x, *top, &o);
+      x   = u3n_hint_fore(x, *top, &o);
       _n_push(mov, off, o);     //  [tok bus]
       _n_swap(mov, off);        //  [bus tok]
       _n_push(mov, off, x);     //  [kip bus tok]
@@ -2845,14 +2845,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       _n_swap(mov, off);        //  [tok bus]
       o   = _n_pep(mov, off);   //  [bus]
       _n_push(mov, off, x);     //  [pro bus]
-      _n_hilt_hind(o, x);
+      u3n_hilt_hind(o, x);
       BURN();
 
     do_hill:                    //  [pro tok]
       top = _n_swap(mov, off);  //  [tok pro]
       o   = _n_pep(mov, off);   //  [pro]
       top = _n_peek(off);
-      _n_hilt_hind(o, *top);
+      u3n_hilt_hind(o, *top);
       BURN();
 
     do_hink:                    //  [pro bus tok]
@@ -2860,14 +2860,14 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       _n_swap(mov, off);        //  [tok bus]
       o   = _n_pep(mov, off);   //  [bus]
       _n_push(mov, off, x);     //  [pro bus]
-      _n_hint_hind(o, x);
+      u3n_hint_hind(o, x);
       BURN();
 
     do_hinl:                    //  [pro tok]
       top = _n_swap(mov, off);  //  [tok pro]
       o   = _n_pep(mov, off);   //  [pro]
       top = _n_peek(off);
-      _n_hint_hind(o, *top);
+      u3n_hint_hind(o, *top);
       BURN();
 
     do_kuth:

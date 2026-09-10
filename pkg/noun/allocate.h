@@ -267,7 +267,14 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_W(S) lop_p;                                      \
   U3_N(S) tim;                                        \
                                                       \
-  U3_W(S) fut_w[28];                                  \
+  struct {                                            \
+    U3_N(S) cor;                                      \
+    U3_W(S) pax_p;                                    \
+    U3_W(S) dir_p;                                    \
+    U3_W(S) ent_p;                                    \
+  } ska;                                              \
+                                                      \
+  U3_W(S) fut_w[24];                                  \
                                                       \
   U3_PASTE(u3a_road_esc, S) esc;                      \
                                                       \

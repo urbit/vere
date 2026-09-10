@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -26,5 +27,18 @@ u3wa_lth(u3_noun cor)
   }
   else {
     return u3qa_lth(a, b);
+  }
+}
+
+u3_noun
+u3ua_lth(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[0])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  else {
+    return u3qa_lth(arg[0], arg[1]);
   }
 }

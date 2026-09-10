@@ -135,6 +135,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.addIncludePath(version_h.getDirectory());
     pkg_vere.addIncludePath(b.path(""));
     pkg_vere.addIncludePath(b.path("ivory"));
+    pkg_vere.addIncludePath(b.path("steel"));
     pkg_vere.addIncludePath(b.path("ca_bundle"));
 
     if (t.os.tag == .linux) {
@@ -207,6 +208,7 @@ pub fn build(b: *std.Build) !void {
 
     for (install_headers) |h| pkg_vere.installHeader(b.path(h), h);
     pkg_vere.installHeader(b.path("ivory/ivory.h"), "ivory.h");
+    pkg_vere.installHeader(b.path("steel/steel.h"), "steel.h");
     pkg_vere.installHeader(b.path("ca_bundle/ca_bundle.h"), "ca_bundle.h");
     pkg_vere.installHeader(pace_h.getDirectory().path(b, "pace.h"), "pace.h");
     pkg_vere.installHeader(version_h.getDirectory().path(b, "version.h"), "version.h");
@@ -237,6 +239,7 @@ const c_source_files = [_][]const u8{
     "io/term.c",
     "io/unix.c",
     "ivory/ivory.c",
+    "steel/steel.c",
     "king.c",
     "lord.c",
     "mars.c",
