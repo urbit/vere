@@ -53,6 +53,8 @@
 **    CSM   i s d    CSL, memoized
 **    CLQ   s t      goto t unless s is a cell
 **    EQQ   l r t    goto t unless =(l r)
+**    EQI   n s t    goto t unless =(n s), n a direct atom
+**    EQL   i s t    goto t unless =(literal i, s)
 **    BRN   s t      goto t if s is 1, crash unless s is a loobean
 **    BRZ   s t      goto t unless s is 0
 **    HOP   t        goto t
@@ -67,7 +69,8 @@
   X3(IML) X3(MOV) X3(INC) X3(CON) X3(HED) X3(TAL) X3(CEL) X3(LOB)         \
   X3(EQU) X3(HSP) X3(HSE) X3(HDP) X3(HDE) X3(SPY) X3(NOK)                 \
   X3(CAL) X3(CAM) X3(CSL) X3(CSM)                                        \
-  X3(CLQ) X3(EQQ) X3(BRN) X3(BRZ) X3(HOP) X3(JMP) X3(JSP) X3(DON)         \
+  X3(CLQ) X3(EQQ) X3(EQI) X3(EQL) X3(BRN) X3(BRZ) X3(HOP) X3(JMP) X3(JSP) \
+  X3(DON)                                                                \
   X(BOM)
 
 #define X(op) op,
@@ -84,7 +87,8 @@ enum {
   _nc_iml, _nc_mov, _nc_inc, _nc_con, _nc_hed, _nc_tal, _nc_cel, _nc_lob,
   _nc_equ, _nc_hsp, _nc_hse, _nc_hdp, _nc_hde, _nc_spy, _nc_nok,
   _nc_cal, _nc_cam, _nc_csl, _nc_csm,
-  _nc_clq, _nc_eqq, _nc_brn, _nc_brz, _nc_hop, _nc_jmp, _nc_jsp, _nc_don,
+  _nc_clq, _nc_eqq, _nc_eqi, _nc_eql, _nc_brn, _nc_brz, _nc_hop, _nc_jmp,
+  _nc_jsp, _nc_don,
   _nc_bom, _nc_imm, _nc_nop
 };
 
@@ -117,6 +121,8 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
   [_nc_csm] = { 1, 1, 1, 0 },
   [_nc_clq] = { 1, 0, 0, 1 },
   [_nc_eqq] = { 2, 0, 0, 1 },
+  [_nc_eqi] = { 1, 0, 1, 1 },
+  [_nc_eql] = { 1, 0, 1, 1 },
   [_nc_brn] = { 1, 0, 0, 1 },
   [_nc_brz] = { 1, 0, 0, 1 },
   [_nc_hop] = { 0, 0, 0, 1 },
@@ -713,6 +719,65 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_w nex_w)
   }
 }
 
+/* _nc_fold(): compare against immediates.  A register defined by an
+**             immediate is defined once, so wherever it is compared,
+**             the immediate can stand in for it.
+*/
+static void
+_nc_fold(nc_gen* gen_u)
+{
+  c3_w* def_w = u3a_malloc(gen_u->reg_w * sizeof(c3_w));
+  c3_w  i_w;
+
+  for ( i_w = 0; i_w < gen_u->reg_w; i_w++ ) {
+    def_w[i_w] = _nc_none;
+  }
+
+  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_w]);
+
+    if ( (_nc_imm == op_u->fam_y) || (_nc_iml == op_u->fam_y) ) {
+      def_w[op_u->dst_w] = i_w;
+    }
+  }
+
+  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_w]);
+    nc_op* def_u;
+
+    if ( _nc_eqq != op_u->fam_y ) {
+      continue;
+    }
+
+    if ( _nc_none == def_w[op_u->src_w[1]] ) {
+      c3_w tmp_w;
+
+      if ( _nc_none == def_w[op_u->src_w[0]] ) {
+        continue;
+      }
+      tmp_w          = op_u->src_w[0];
+      op_u->src_w[0] = op_u->src_w[1];
+      op_u->src_w[1] = tmp_w;
+    }
+
+    def_u = &(gen_u->ops_u[def_w[op_u->src_w[1]]]);
+
+    //  a wide slot makes an IMM op emit as IML: its literal is in tar_w
+    //
+    if ( _nc_imm == def_u->fam_y ) {
+      op_u->fam_y = _nc_eqi;
+      op_u->imm_w = def_u->imm_w;
+    }
+    else {
+      op_u->fam_y = _nc_eql;
+      op_u->imm_w = def_u->imm_w;
+    }
+    op_u->src_w[1] = _nc_none;
+  }
+
+  u3a_free(def_w);
+}
+
 /* _nc_translate(): translate the blocks in layout order.
 */
 static void
@@ -800,7 +865,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
     sot_w[r_w] = _nc_none;
   }
 
-  //  uses; moves into unused parameters are dropped
+  //  uses; moves into unused parameters and unused immediates are dropped
   //
   for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
@@ -809,7 +874,11 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
 
   for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
-    if ( op_u->hop_y && !use_w[op_u->dst_w] ) {
+    if (  ( op_u->hop_y
+         || (_nc_imm == op_u->fam_y)
+         || (_nc_iml == op_u->fam_y) )
+       && !use_w[op_u->dst_w] )
+    {
       op_u->fam_y = _nc_nop;
     }
   }
@@ -1031,10 +1100,17 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   return siz_w;
 }
 
-/* u3nc_Stat: counters of the last u3nc_nock_on(), printed when
-**            U3NC_VERBOSE is set.
+/* u3nc_Stat: cumulative counters, printed after each u3nc_nock_on()
+**            when U3NC_VERBOSE is set.  The ones in the interpreter
+**            loop are only kept when compiled with U3NC_STAT.
 */
 u3nc_stat u3nc_Stat;
+
+#ifdef U3NC_STAT
+#  define _nc_stat(fel)  (u3nc_Stat.fel++)
+#else
+#  define _nc_stat(fel)  ((void)0)
+#endif
 
 static c3_t _nc_verb_t;
 
@@ -1317,6 +1393,7 @@ _nc_build(u3_noun straight)
 
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
+  _nc_fold(&gen_u);
   _nc_slots(&gen_u, _nc_cat(arg));
   pog_u = _nc_emit(&gen_u, ned, _nc_cat(arg));
 
@@ -1552,22 +1629,22 @@ typedef struct __attribute__((__packed__)) {
 /* _nc_push(): push words on the stack.  mov_ws: -1 north, 1 south.
 */
 static inline void*
-_nc_push(c3_ws mov_ws, c3_w len_w)
+_nc_push(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
   u3_post bas_p;
 
   if ( mov_ws < 0 ) {
-    u3R->cap_p -= len_w;
-    bas_p = u3R->cap_p;
+    rod_u->cap_p -= len_w;
+    bas_p = rod_u->cap_p;
   }
   else {
-    bas_p = u3R->cap_p;
-    u3R->cap_p += len_w;
+    bas_p = rod_u->cap_p;
+    rod_u->cap_p += len_w;
   }
 
 #ifndef U3_GUARD_PAGE
-  if ( (mov_ws < 0) ? !(u3R->cap_p > u3R->hat_p)
-                    : !(u3R->cap_p < u3R->hat_p) )
+  if ( (mov_ws < 0) ? !(rod_u->cap_p > rod_u->hat_p)
+                    : !(rod_u->cap_p < rod_u->hat_p) )
   {
     u3m_bail(c3__meme);
   }
@@ -1579,20 +1656,29 @@ _nc_push(c3_ws mov_ws, c3_w len_w)
 /* _nc_top(): the top words of the stack.
 */
 static inline void*
-_nc_top(c3_ws mov_ws, c3_w len_w)
+_nc_top(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
-  return u3to(void, (mov_ws < 0) ? u3R->cap_p : (u3R->cap_p - len_w));
+  return u3to(void, (mov_ws < 0) ? rod_u->cap_p : (rod_u->cap_p - len_w));
 }
 
 /* _nc_pop(): pop words off the stack.
 */
 static inline void
-_nc_pop(c3_ws mov_ws, c3_w len_w)
+_nc_pop(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
-  u3R->cap_p -= mov_ws * (c3_ws)len_w;
+  rod_u->cap_p -= mov_ws * (c3_ws)len_w;
 }
 
 /* _nc_burn(): run a program on its arguments.  TRANSFERS the arguments.
+**
+**   An activation is the callee's slots, then a frame holding the
+**   caller's state, pushed only once the call is known to run: a call
+**   site copies its arguments straight into the slots of the callee's
+**   new activation, retained, and tries the array jet on them there;
+**   a hit pops the slots and leaves no other trace.  A tail call copies
+**   its arguments to a temporary above its own activation, moves the
+**   caller's references into it, drops what the caller had left, and
+**   moves the temporary down in its place, under the same frame.
 */
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
@@ -1601,19 +1687,19 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
   static const void* lab[] = { OPCODES };
 #undef X
 
+  u3a_road*  rod_u = u3R;
   c3_y*      pog;
   c3_w       ip_w;
   u3_noun*   reg;
+  u3_noun*   nex;
   nc_frame*  fam_u;
+  nc_frame   fam;
   u3nc_prog* gop_u;
   u3nc_dire* dir_u;
+  c3_w*      sot_w;
   c3_w       a_w, b_w, c_w, d_w, i_w;
   u3_noun    x, o, pro, hin;
-  u3_weak    key   = u3_none;
-  c3_w       cid_w = 0;
-  u3_post    emp_p = u3R->cap_p;
-  u3_noun    sma[32];
-  u3_noun*   big = 0;
+  u3_post    emp_p = rod_u->cap_p;
 
 #define RB()  (pog[ip_w++])
 #define RS()  ({ c3_w _v = pog[ip_w] | (pog[ip_w + 1] << 8); ip_w += 2; _v; })
@@ -1627,6 +1713,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
   })
 #define BURN()  goto *lab[pog[ip_w++]]
 #define PUT(d, v)  do { u3_noun _o = reg[d]; reg[d] = (v); u3z(_o); } while ( 0 )
+#define PUSH(n)  _nc_push(rod_u, mov_ws, n)
+#define POP(n)   _nc_pop(rod_u, mov_ws, n)
+#define TOP(n)   _nc_top(rod_u, mov_ws, n)
 
 #define ARG1(op, a)                                                      \
   do_##op##_B: a = RB(); goto op##_in;                                   \
@@ -1644,63 +1733,83 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
   do_##op##_V: a = RV(); b = RV(); c = RV();                             \
   op##_in:
 
-//  ARGS(): the arguments of a call site, from the slots.  RETAINS.
+//  FRAME(): push a frame recording this activation, its product to d_w
 //
-#define ARGS()  ({                                                       \
-    c3_w* _sot = pog_u->sot_u.sot_w + dir_u->sot_w;                      \
-    len_w = dir_u->len_w;                                                \
-    arg   = ( len_w <= c3_array_len(sma) )                               \
-          ? sma                                                          \
-          : (big = u3a_malloc(len_w * sizeof(u3_noun)));                 \
-    for ( i_w = 0; i_w < len_w; i_w++ ) {                                \
-      arg[i_w] = reg[_sot[i_w]];                                         \
-    }                                                                    \
-  })
-#define FREE_BIG()  do { if ( big ) { u3a_free(big); big = 0; } } while ( 0 )
+#define FRAME()  do {                                                    \
+    fam_u = PUSH(_nc_frame_w);                                           \
+    fam_u->pog_u = pog_u;                                                \
+    fam_u->reg   = reg;                                                  \
+    fam_u->ip_w  = ip_w;                                                 \
+    fam_u->des_w = d_w;                                                  \
+    fam_u->key   = u3_none;                                              \
+    fam_u->cid_w = 0;                                                    \
+  } while ( 0 )
 
-  fam_u = _nc_push(mov_ws, _nc_frame_w);
+//  SITE(): the call site a_w, its callee gop_u, its argument slots
+//          sot_w and their number len_w
+//
+#define SITE()  do {                                                     \
+    dir_u = &(pog_u->dir_u.dat_u[a_w]);                                  \
+    gop_u = u3to(u3nc_prog, dir_u->pog_p);                               \
+    sot_w = pog_u->sot_u.sot_w + dir_u->sot_w;                           \
+    len_w = dir_u->len_w;                                                \
+  } while ( 0 )
+
+//  GATHER(): push num words and copy the site's arguments into them
+//
+#define GATHER(num)  do {                                                \
+    nex = PUSH(num);                                                     \
+    for ( i_w = 0; i_w < len_w; i_w++ ) {                                \
+      nex[i_w] = reg[sot_w[i_w]];                                        \
+    }                                                                    \
+  } while ( 0 )
+
+  reg = PUSH(pog_u->tot_w);
+
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    reg[i_w] = arg[i_w];
+  }
+
+  fam_u = PUSH(_nc_frame_w);
   fam_u->pog_u = 0;
-  gop_u = pog_u;
 
   enter:
-    //  gop_u: the callee; arg, len_w: its arguments, transferred
+    //  pog_u: the callee, its len_w arguments in its slots at reg
     //
-    pog_u = gop_u;
-    reg   = _nc_push(mov_ws, pog_u->tot_w);
-
-    for ( i_w = 0; i_w < len_w; i_w++ ) {
-      reg[i_w] = arg[i_w];
-    }
-    for ( ; i_w < pog_u->tot_w; i_w++ ) {
+    for ( i_w = len_w; i_w < pog_u->tot_w; i_w++ ) {
       reg[i_w] = 0;
     }
 
-    FREE_BIG();
     pog  = pog_u->byc_u.ops_y;
     ip_w = 0;
     BURN();
 
   call:
-    //  gop_u: the callee; arg, len_w: its arguments, transferred;
-    //  d_w: the slot for its product; key, cid_w: memoization
+    //  gop_u: the callee; x: its one argument, transferred;
+    //  d_w: the slot for its product
     //
-    fam_u = _nc_push(mov_ws, _nc_frame_w);
-    fam_u->pog_u = pog_u;
-    fam_u->reg   = reg;
-    fam_u->ip_w  = ip_w;
-    fam_u->des_w = d_w;
-    fam_u->key   = key;
-    fam_u->cid_w = cid_w;
-    key = u3_none;
+    nex    = PUSH(gop_u->tot_w);
+    nex[0] = x;
+    FRAME();
+    pog_u  = gop_u;
+    reg    = nex;
+    len_w  = 1;
     goto enter;
 
   tail:
-    //  gop_u: the callee; arg, len_w: its arguments, transferred
+    //  gop_u: the callee; x: its one argument, transferred
     //
     for ( i_w = 0; i_w < pog_u->tot_w; i_w++ ) {
       u3z(reg[i_w]);
     }
-    _nc_pop(mov_ws, pog_u->tot_w);
+    fam = *(nc_frame*)TOP(_nc_frame_w);
+    POP(_nc_frame_w + pog_u->tot_w);
+
+    pog_u  = gop_u;
+    reg    = PUSH(pog_u->tot_w);
+    reg[0] = x;
+    *(nc_frame*)PUSH(_nc_frame_w) = fam;
+    len_w  = 1;
     goto enter;
 
   done:
@@ -1709,13 +1818,12 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
     for ( i_w = 0; i_w < pog_u->tot_w; i_w++ ) {
       u3z(reg[i_w]);
     }
-    _nc_pop(mov_ws, pog_u->tot_w);
 
-    fam_u = _nc_top(mov_ws, _nc_frame_w);
+    fam_u = TOP(_nc_frame_w);
 
     if ( !fam_u->pog_u ) {
-      _nc_pop(mov_ws, _nc_frame_w);
-      u3_assert( emp_p == u3R->cap_p );
+      POP(_nc_frame_w + pog_u->tot_w);
+      u3_assert( emp_p == rod_u->cap_p );
       return pro;
     }
 
@@ -1724,12 +1832,12 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       u3z(fam_u->key);
     }
 
+    POP(_nc_frame_w + pog_u->tot_w);
     pog_u = fam_u->pog_u;
     reg   = fam_u->reg;
     ip_w  = fam_u->ip_w;
     d_w   = fam_u->des_w;
     pog   = pog_u->byc_u.ops_y;
-    _nc_pop(mov_ws, _nc_frame_w);
     PUT(d_w, pro);
     BURN();
 
@@ -1800,12 +1908,12 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 
     ARG1(HSP, a_w)
       u3n_hilt_fore(u3k(pog_u->lit_u.non[a_w]), 0, &x);
-      *(u3_noun*)_nc_push(mov_ws, 1) = x;
+      *(u3_noun*)PUSH(1) = x;
       BURN();
 
     ARG1(HSE, a_w)
-      x = *(u3_noun*)_nc_top(mov_ws, 1);
-      _nc_pop(mov_ws, 1);
+      x = *(u3_noun*)TOP(1);
+      POP(1);
       u3n_hilt_hind(x, 0);
       BURN();
 
@@ -1856,13 +1964,13 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
         } break;
       }
 
-      *(u3_noun*)_nc_push(mov_ws, 1) = x;
+      *(u3_noun*)PUSH(1) = x;
       BURN();
 
     ARG2(HDE, a_w, b_w)
       hin = pog_u->lit_u.non[a_w];
-      x   = *(u3_noun*)_nc_top(mov_ws, 1);
-      _nc_pop(mov_ws, 1);
+      x   = *(u3_noun*)TOP(1);
+      POP(1);
 
       switch ( u3h(hin) ) {
         case c3__hunk:
@@ -1900,55 +2008,57 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       BURN();
 
     ARG3(NOK, a_w, b_w, d_w)
-      x      = reg[a_w];
-      gop_u  = _nc_entry(x, reg[b_w]);
-      sma[0] = u3k(x);
-      arg    = sma;
-      len_w  = 1;
+      x     = reg[a_w];
+      gop_u = _nc_entry(x, reg[b_w]);
+      u3k(x);
       goto call;
 
     ARG2(CAL, a_w, d_w)
-      dir_u = &(pog_u->dir_u.dat_u[a_w]);
-      ARGS();
+      SITE();
+      GATHER(gop_u->tot_w);
 
-      if ( dir_u->arm_u ) {
-        pro = dir_u->arm_u->arg_f(arg);
-
-        if ( u3_none != pro ) {
-          u3nc_Stat.jet_d++;
-          FREE_BIG();
-          PUT(d_w, pro);
-          BURN();
-        }
+      if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
+        _nc_stat(jet_d);
+        POP(gop_u->tot_w);
+        PUT(d_w, pro);
+        BURN();
       }
       goto cal_go;
 
     ARG2(CAM, a_w, d_w)
-      dir_u = &(pog_u->dir_u.dat_u[a_w]);
-      gop_u = u3to(u3nc_prog, dir_u->pog_p);
-      ARGS();
+      SITE();
+      GATHER(gop_u->tot_w);
 
       i_w = 0;
-      key = u3nc(_nc_knit(gop_u->ned, arg, &i_w), u3k(u3t(dir_u->bell)));
-      o   = u3z_find_m(dir_u->cid_w, 144 + c3__nock, key);
+      x   = u3nc(_nc_knit(gop_u->ned, nex, &i_w), u3k(u3t(dir_u->bell)));
+      o   = u3z_find_m(dir_u->cid_w, 144 + c3__nock, x);
 
       if ( u3_none != o ) {
-        FREE_BIG();
-        u3z(key);
-        key = u3_none;
+        POP(gop_u->tot_w);
+        u3z(x);
         PUT(d_w, o);
         BURN();
       }
 
-      cid_w = dir_u->cid_w;
+      for ( i_w = 0; i_w < len_w; i_w++ ) {
+        u3k(nex[i_w]);
+      }
+      FRAME();
+      fam_u->key   = x;
+      fam_u->cid_w = dir_u->cid_w;
+      goto cal_in;
 
     cal_go:
-      u3nc_Stat.dir_d++;
       for ( i_w = 0; i_w < len_w; i_w++ ) {
-        u3k(arg[i_w]);
+        u3k(nex[i_w]);
       }
-      gop_u = u3to(u3nc_prog, dir_u->pog_p);
-      goto call;
+      FRAME();
+
+    cal_in:
+      _nc_stat(dir_d);
+      pog_u = gop_u;
+      reg   = nex;
+      goto enter;
 
     ARG3(CSL, a_w, b_w, d_w)
       dir_u = &(pog_u->dir_u.dat_u[a_w]);
@@ -1958,6 +2068,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
         pro = u3j_kick_arm(u3k(x), dir_u->ham_u, u3t(dir_u->ring));
 
         if ( u3_none != pro ) {
+          _nc_stat(jet_d);
           PUT(d_w, pro);
           BURN();
         }
@@ -1968,24 +2079,31 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
     ARG3(CSM, a_w, b_w, d_w)
       dir_u = &(pog_u->dir_u.dat_u[a_w]);
       x     = reg[b_w];
-      key   = u3nc(u3k(x), u3k(u3t(dir_u->bell)));
-      o     = u3z_find_m(dir_u->cid_w, 144 + c3__nock, key);
+      o     = u3nc(u3k(x), u3k(u3t(dir_u->bell)));
+      pro   = u3z_find_m(dir_u->cid_w, 144 + c3__nock, o);
 
-      if ( u3_none != o ) {
-        u3z(key);
-        key = u3_none;
-        PUT(d_w, o);
+      if ( u3_none != pro ) {
+        u3z(o);
+        PUT(d_w, pro);
         BURN();
       }
 
-      cid_w = dir_u->cid_w;
+      _nc_stat(sub_d);
+      gop_u  = _nc_entry(x, u3t(dir_u->bell));
+      nex    = PUSH(gop_u->tot_w);
+      nex[0] = u3k(x);
+      FRAME();
+      fam_u->key   = o;
+      fam_u->cid_w = dir_u->cid_w;
+      pog_u  = gop_u;
+      reg    = nex;
+      len_w  = 1;
+      goto enter;
 
     csl_go:
-      u3nc_Stat.sub_d++;
-      gop_u  = _nc_entry(x, u3t(dir_u->bell));
-      sma[0] = u3k(x);
-      arg    = sma;
-      len_w  = 1;
+      _nc_stat(sub_d);
+      gop_u = _nc_entry(x, u3t(dir_u->bell));
+      u3k(x);
       goto call;
 
     ARG2(CLQ, a_w, b_w)
@@ -1996,6 +2114,18 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 
     ARG3(EQQ, a_w, b_w, c_w)
       if ( c3n == u3r_sing(reg[a_w], reg[b_w]) ) {
+        ip_w = c_w;
+      }
+      BURN();
+
+    ARG3(EQI, a_w, b_w, c_w)
+      if ( reg[b_w] != a_w ) {
+        ip_w = c_w;
+      }
+      BURN();
+
+    ARG3(EQL, a_w, b_w, c_w)
+      if ( c3n == u3r_sing(pog_u->lit_u.non[a_w], reg[b_w]) ) {
         ip_w = c_w;
       }
       BURN();
@@ -2021,25 +2151,41 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       BURN();
 
     ARG1(JMP, a_w)
-      dir_u = &(pog_u->dir_u.dat_u[a_w]);
-      ARGS();
+      SITE();
+      GATHER(len_w);
 
-      if ( dir_u->arm_u ) {
-        pro = dir_u->arm_u->arg_f(arg);
+      if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
+        _nc_stat(jet_d);
+        POP(len_w);
+        goto done;
+      }
 
-        if ( u3_none != pro ) {
-          u3nc_Stat.jet_d++;
-          FREE_BIG();
-          goto done;
+      //  the caller's references move to the callee: the first argument
+      //  from a slot takes its reference, any other from the same slot
+      //  finds it gone and gains one
+      //
+      _nc_stat(dir_d);
+      for ( i_w = 0; i_w < len_w; i_w++ ) {
+        u3_noun* sot = &(reg[sot_w[i_w]]);
+
+        if ( *sot ) {
+          *sot = 0;
+        }
+        else {
+          u3k(nex[i_w]);
         }
       }
-
-      u3nc_Stat.dir_d++;
-      for ( i_w = 0; i_w < len_w; i_w++ ) {
-        u3k(arg[i_w]);
+      for ( i_w = 0; i_w < pog_u->tot_w; i_w++ ) {
+        u3z(reg[i_w]);
       }
-      gop_u = u3to(u3nc_prog, dir_u->pog_p);
-      goto tail;
+      POP(len_w);
+      fam = *(nc_frame*)TOP(_nc_frame_w);
+      POP(_nc_frame_w + pog_u->tot_w);
+      pog_u = gop_u;
+      reg   = PUSH(pog_u->tot_w);
+      memmove(reg, nex, len_w * sizeof(u3_noun));
+      *(nc_frame*)PUSH(_nc_frame_w) = fam;
+      goto enter;
 
     ARG2(JSP, a_w, b_w)
       dir_u = &(pog_u->dir_u.dat_u[a_w]);
@@ -2049,20 +2195,20 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
         pro = u3j_kick_arm(u3k(x), dir_u->ham_u, u3t(dir_u->ring));
 
         if ( u3_none != pro ) {
+          _nc_stat(jet_d);
           goto done;
         }
         u3z(x);
       }
 
-      u3nc_Stat.sub_d++;
-      gop_u  = _nc_entry(x, u3t(dir_u->bell));
-      sma[0] = u3k(x);
-      arg    = sma;
-      len_w  = 1;
+      _nc_stat(sub_d);
+      gop_u    = _nc_entry(x, u3t(dir_u->bell));
+      reg[b_w] = 0;
       goto tail;
 
     ARG1(DON, a_w)
-      pro = u3k(reg[a_w]);
+      pro      = reg[a_w];
+      reg[a_w] = 0;
       goto done;
 
     do_BOM:
@@ -2074,11 +2220,15 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 #undef RV
 #undef BURN
 #undef PUT
+#undef PUSH
+#undef POP
+#undef TOP
 #undef ARG1
 #undef ARG2
 #undef ARG3
-#undef ARGS
-#undef FREE_BIG
+#undef FRAME
+#undef SITE
+#undef GATHER
 }
 
 /* _nc_burn_out(): run a program on its arguments.  TRANSFERS.
@@ -2105,7 +2255,6 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   u3_noun    pro;
 
   _nc_verb_t = !!getenv("U3NC_VERBOSE");
-  memset(&u3nc_Stat, 0, sizeof(u3nc_Stat));
 
   pog_u = _nc_entry(bus, fol);
   u3z(fol);
