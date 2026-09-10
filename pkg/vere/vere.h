@@ -852,13 +852,15 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
-      /* u3_disk_stake(): claim the addresses a migration will map at.
+      /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **
       **   windows only; a no-op elsewhere. must run before anything else can
-      **   take them -- see wloom.h.
+      **   take them -- in particular before u3_disk_load(), which opens the
+      **   60GB lmdb map before it maps the loom. [lom_i] is the length this
+      **   process will reserve at u3_Loom. see wloom.h.
       */
         void
-        u3_disk_stake(void);
+        u3_disk_stake(size_t lom_i);
 
       /* u3_disk_load(): load pier directories, log, and snapshot.
       */

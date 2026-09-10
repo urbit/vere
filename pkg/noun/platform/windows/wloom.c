@@ -107,7 +107,12 @@ typedef struct {
 } _wnd_stk;
 
 #define _wnd_regs  2
-#define _wnd_stks  2
+
+//  the loom's own base, plus the migration sources: one under VERE64
+//  (a 32-bit snapshot at u3_Loom_h), two otherwise (a 64-bit one at
+//  u3_Loom_d and a v1-v4 one at u3_Loom_v4). see u3_disk_stake().
+//
+#define _wnd_stks  3
 #define _wnd_chunk ((size_t)16 << 20)
 
 static _wnd_reg wnd_u[_wnd_regs];
@@ -435,7 +440,16 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
   return c3y;
 }
 
-/* _wnd_unstake(): claim the stake matching [bas_v] and [len_i], if any.
+/* _wnd_unstake(): claim the stake at [bas_v], if any.
+**
+**   yes: a stake of exactly [len_i] was claimed in place. the caller has
+**   a placeholder of the right shape already and must not reserve again.
+**
+**   no: nothing is in the caller's way. a stake at [bas_v] of some other
+**   length is released here to make that true -- a migration's
+**   destination loom is capped independently of --loom, so the two
+**   lengths can differ, and a stake we cannot hand over is just an
+**   occupant of the address it was meant to protect.
 */
 static c3_o
 _wnd_unstake(void* bas_v, size_t len_i)
@@ -443,13 +457,23 @@ _wnd_unstake(void* bas_v, size_t len_i)
   c3_w i_w;
 
   for ( i_w = 0; i_w < _wnd_stks; i_w++ ) {
-    if (  (bas_v == wnd_stk_u[i_w].bas_v)
-       && (len_i == wnd_stk_u[i_w].len_i) )
-    {
+    if ( bas_v != wnd_stk_u[i_w].bas_v ) {
+      continue;
+    }
+
+    if ( len_i != wnd_stk_u[i_w].len_i ) {
+      if ( !VirtualFree(bas_v, 0, MEM_RELEASE) ) {
+        _wnd_fail("unstake");
+      }
+
       wnd_stk_u[i_w].bas_v = 0;
       wnd_stk_u[i_w].len_i = 0;
-      return c3y;
+      return c3n;
     }
+
+    wnd_stk_u[i_w].bas_v = 0;
+    wnd_stk_u[i_w].len_i = 0;
+    return c3y;
   }
 
   return c3n;
