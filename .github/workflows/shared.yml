@@ -405,7 +405,17 @@ jobs:
         run: ./migration-test.sh
 
   windows-stack-overflow:
-    name: Windows stack overflow
+    name: Windows stack overflow (${{ matrix.bits }}-bit)
+
+    #  the handler itself is bitness-independent, but the stack it runs
+    #  on is whatever is left under a loom of a different size, reached
+    #  through a different interpreter. run both.
+    #
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
     runs-on: windows-2022
     needs: [windows]
     if: ${{ inputs.fake_tests }}
@@ -421,11 +431,16 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          VERE64_FLAG=""
+          if [[ "${{ matrix.bits }}" == "64" ]]; then
+            VERE64_FLAG="-Dvere64"
+          fi
+
           zig build                          \
             -Dtarget=x86_64-windows-gnu      \
-            -Dvere64                         \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \
+            $VERE64_FLAG                     \
             --summary all
 
       #  more than one run is the point: the first overflow tests that
