@@ -325,13 +325,16 @@ jobs:
             pkg/noun/platform/windows/wloom_probe.c
           ./wloom_probe.exe
 
-      #  the vere io tests (ames, mesa, pact, newt, unix, boot) were run
-      #  by hand on windows in both bitnesses before being added here.
-      #  vere-noun-test builds but has not been, so it stays out.
+      #  the linux job's tests, less events-test and plus wloom-test.
+      #  each was run by hand on windows in both bitnesses before
+      #  landing here. (hamt-test and tracy-test build for windows but
+      #  are run on no platform, so they are no more excluded here than
+      #  there.)
       #
-      #  events-test is absent for a harder reason: it is posix-only
-      #  (mkdtemp, nftw, /tmp), so build.zig skips it for windows
-      #  targets and naming it here would fail to resolve a step.
+      #  events-test does not build at all: it is posix-only (mkdtemp,
+      #  nftw, /tmp), so build.zig skips it for windows targets and
+      #  naming it here would fail to resolve a step. porting it means
+      #  porting those three, not fixing a bug.
       #
       - name: Build unit tests
         shell: bash
@@ -350,7 +353,7 @@ jobs:
             ames-test mesa-test              \
             pact-test newt-test              \
             unix-test boot-test              \
-            wloom-test                       \
+            vere-noun-test wloom-test        \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \
