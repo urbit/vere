@@ -12,6 +12,7 @@
 #include <sys/time.h>
 
 static c3_d    _time(void);
+static u3_noun _mint(u3_noun typ_txt);
 static u3_noun _nock_n(u3_noun bus_fol);
 static u3_noun _nock_nc(u3_noun bus_fol);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
@@ -58,6 +59,10 @@ _setup(const c3_c* pax_c, const c3_c* src_c)
     u3_noun fol = u3ke_cue(u3m_file((c3_c*)pax_c));
     u3_noun gat, rid;
 
+    //  also evaluate it with u3n, which registers its jets for u3n
+    //
+    u3z(_run("u3n  hoon", _nock_n, 0, fol));
+
     if ( u3_none == (gat = _run("u3nc hoon", _nock_nc, 0, fol)) ) {
       printf("*** fail _setup 4\n");
       exit(1);
@@ -74,22 +79,38 @@ _setup(const c3_c* pax_c, const c3_c* src_c)
   }
 
   //  the type of the hoon core, by compiling hoon.hoon's source with its
-  //  own compiler: the type of the file's product, then of its context
+  //  own compiler: the type of the file's product, then of its context.
+  //  In an inner road, like everything else: the memo cache is off on
+  //  the home road, and the compiler leans on it.
   //
   {
     u3_noun txt = u3m_file((c3_c*)src_c);
     c3_d    beg_d = _time();
-    u3_noun res = u3n_slam_on(u3k(_ride), u3nc(c3__noun, txt));
+    u3_noun res = u3m_soft(0, _mint, u3nc(c3__noun, txt));
 
     fprintf(stderr, "mint hoon.hoon: %" PRIu64 " us\r\n", _time() - beg_d);
 
-    _typ = u3k(u3h(res));
+    if ( 0 != u3h(res) ) {
+      u3_pier_punt_goof("mint", res);
+      printf("*** fail _setup 5\n");
+      exit(1);
+    }
+    _typ = u3k(u3h(u3t(res)));
     u3z(res);
 
-    res  = u3n_slam_on(u3k(_ride), u3nc(_typ, u3i_string("+>")));
-    _typ = u3k(u3h(res));
+    res  = u3m_soft(0, _mint, u3nc(_typ, u3i_string("+>")));
+    u3_assert( 0 == u3h(res) );
+    _typ = u3k(u3h(u3t(res)));
     u3z(res);
   }
+}
+
+/* _mint(): compile [typ txt] with the ship's compiler.  TRANSFERS.
+*/
+static u3_noun
+_mint(u3_noun typ_txt)
+{
+  return u3n_slam_on(u3k(_ride), typ_txt);
 }
 
 /* _time(): wall clock, in microseconds.
@@ -155,11 +176,15 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
   u3_weak a, b;
   c3_i    ret_i = 1;
 
-  //  twice: the first u3nc run analyzes and compiles
+  //  twice: the first u3nc run analyzes and compiles.
+  //  With U3NC_ONLY, skip u3n and take its product from u3nc.
   //
-  u3z(_run("u3n  first ", _nock_n, bus, fol));
+  if ( !getenv("U3NC_ONLY") ) {
+    u3z(_run("u3n  first ", _nock_n, bus, fol));
+  }
   u3z(_run("u3nc first ", _nock_nc, bus, fol));
-  a = _run("u3n  second", _nock_n, bus, fol);
+  a = getenv("U3NC_ONLY") ? _run("u3nc second", _nock_nc, bus, fol)
+                          : _run("u3n  second", _nock_n, bus, fol);
   b = _run("u3nc second", _nock_nc, bus, fol);
 
   if ( (u3_none == a) || (u3_none == b) ) {
@@ -177,8 +202,8 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
                     "jet ring\r\n", nam_c, u3nc_Stat.rin_d);
     ret_i = 0;
   }
-  else if ( jet_t && !u3nc_Stat.jet_d ) {
-    fprintf(stderr, "test %s: no jet hits\r\n", nam_c);
+  else if ( jet_t && !u3nc_Stat.arm_d ) {
+    fprintf(stderr, "test %s: no jetted call sites\r\n", nam_c);
     ret_i = 0;
   }
   else {
@@ -215,7 +240,8 @@ _test_ackermann(void)
                       "?:  =(0 m)  +(n)\n"
                       "?:  =(0 n)  $(m (dec m), n 1)\n"
                       "$(m (dec m), n $(n (dec n)))\n",
-                      u3nc(3, 10));
+                      u3nc(3, getenv("U3NC_ACK")
+                              ? atoi(getenv("U3NC_ACK")) : 10));
 
   return _test("ackermann", cor, u3nt(9, 2, u3nc(0, 1)), 1);
 }

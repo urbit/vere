@@ -64,7 +64,7 @@
       } sot_u;
     } u3nc_prog;
 
-  /* u3nc_stat: counters of the last u3nc_nock_on().
+  /* u3nc_stat: cumulative counters; the runtime ones need U3NC_STAT.
   */
     typedef struct {
       c3_d ent_d;   //  entry lookups
