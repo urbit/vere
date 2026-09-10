@@ -20,6 +20,7 @@
 //
 #define _tst_bas ((void*)0x3A000000000ULL)
 #define _tst_alt ((void*)0x3B000000000ULL)
+#define _tst_thr ((void*)0x3C000000000ULL)
 #define _tst_len ((size_t)64 << 20)
 
 static int fal_i = 0;
@@ -85,9 +86,10 @@ _test_stake_reserves(void)
 
 /* _test_stake_idempotent(): u3m_init can run twice in a process.
 **
-**   with two stake slots, a duplicate that consumed a slot would leave
-**   no room for a second distinct address -- which is what this checks,
-**   the slot table not being visible from here.
+**   the slot table is not visible from here, so the duplicate is caught
+**   by filling it: a process stakes its loom and its migration sources,
+**   which is every slot there is. a duplicate that consumed one would
+**   leave the last distinct address without a home.
 */
 static void
 _test_stake_idempotent(void)
@@ -97,6 +99,10 @@ _test_stake_idempotent(void)
 
   _check("5. a second distinct stake still fits",
          c3y == u3_wnd_loom_stake(_tst_alt, _tst_len),
+         "duplicate did not consume a slot");
+
+  _check("6. and so does a third, filling the table",
+         c3y == u3_wnd_loom_stake(_tst_thr, _tst_len),
          "duplicate did not consume a slot");
 }
 
@@ -109,10 +115,10 @@ _test_stake_idempotent(void)
 static void
 _test_hold_claims_stake(void)
 {
-  _check("6. hold claims a staked address",
+  _check("7. hold claims a staked address",
          c3y == u3_wnd_loom_hold(_tst_bas, _tst_len, -1, 0), "");
 
-  _check("7. drop releases it",
+  _check("8. drop releases it",
          c3y == u3_wnd_loom_drop(_tst_bas), "");
 
   //  and it is genuinely free afterward
@@ -120,12 +126,31 @@ _test_hold_claims_stake(void)
   {
     void* got_v = VirtualAlloc(_tst_bas, _tst_len, MEM_RESERVE, PAGE_NOACCESS);
 
-    _check("8. the address is free after drop", 0 != got_v, "");
+    _check("9. the address is free after drop", 0 != got_v, "");
 
     if ( got_v ) {
       VirtualFree(got_v, 0, MEM_RELEASE);
     }
   }
+}
+
+/* _test_hold_relengths(): a stake of the wrong length must not block.
+**
+**   the length staked at process start and the length finally reserved
+**   can differ -- a migration's destination loom is capped independently
+**   of --loom. a stake that cannot be handed over in place has to be
+**   released, or the protection becomes the collision it was added to
+**   prevent.
+*/
+static void
+_test_hold_relengths(void)
+{
+  _check("10. hold succeeds on a stake of another length",
+         c3y == u3_wnd_loom_hold(_tst_alt, _tst_len >> 1, -1, 0),
+         "the stake blocked its own address");
+
+  _check("11. drop releases it",
+         c3y == u3_wnd_loom_drop(_tst_alt), "");
 }
 
 int
@@ -137,6 +162,7 @@ main(int argc, char* argv[])
   _test_stake_reserves();
   _test_stake_idempotent();
   _test_hold_claims_stake();
+  _test_hold_relengths();
 
   if ( fal_i ) {
     fprintf(stderr, "wloom: %d failure%s\r\n", fal_i, (1 == fal_i) ? "" : "s");
