@@ -108,9 +108,12 @@ typedef struct {
 
 #define _wnd_regs  2
 
-//  the loom's own base, plus the migration sources: one under VERE64
-//  (a 32-bit snapshot at u3_Loom_h), two otherwise (a 64-bit one at
-//  u3_Loom_d and a v1-v4 one at u3_Loom_v4). see u3_disk_stake().
+//  the loom's own base, plus the migration sources. a 64-bit build
+//  stakes one, a v5 32-bit snapshot at u3_Loom_h: 32->64 accepts no
+//  older version, so there is no v1-v4 source to claim. a 32-bit build
+//  stakes two, a 64-bit snapshot at u3_Loom_d and a v1-v4 one at
+//  u3_Loom_v4 -- version migrations are same-bitness. see
+//  u3_disk_stake().
 //
 #define _wnd_stks  3
 #define _wnd_chunk ((size_t)16 << 20)
