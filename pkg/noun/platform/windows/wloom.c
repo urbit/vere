@@ -443,19 +443,23 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
   return c3y;
 }
 
-/* _wnd_unstake(): claim the stake at [bas_v], if any.
+/* _wnd_stake_claim(): take over the stake at [bas_v] for [len_i], if any.
 **
-**   yes: a stake of exactly [len_i] was claimed in place. the caller has
-**   a placeholder of the right shape already and must not reserve again.
+**   answers the caller's question -- is a placeholder waiting for me, or
+**   must I reserve one?
 **
-**   no: nothing is in the caller's way. a stake at [bas_v] of some other
-**   length is released here to make that true -- a migration's
+**   yes: a stake of exactly [len_i] is yours. the placeholder stays put;
+**   only the slot holding it is given up, and you map over it rather
+**   than reserving again.
+**
+**   no: the address is clear. either nothing was staked, or a stake of
+**   some other length was released here to make that so -- a migration's
 **   destination loom is capped independently of --loom, so the two
-**   lengths can differ, and a stake we cannot hand over is just an
-**   occupant of the address it was meant to protect.
+**   lengths can differ, and a stake that cannot be handed over is just
+**   an occupant of the address it was meant to protect.
 */
 static c3_o
-_wnd_unstake(void* bas_v, size_t len_i)
+_wnd_stake_claim(void* bas_v, size_t len_i)
 {
   c3_w i_w;
 
@@ -466,7 +470,7 @@ _wnd_unstake(void* bas_v, size_t len_i)
 
     if ( len_i != wnd_stk_u[i_w].len_i ) {
       if ( !VirtualFree(bas_v, 0, MEM_RELEASE) ) {
-        _wnd_fail("unstake");
+        _wnd_fail("stake claim");
       }
 
       wnd_stk_u[i_w].bas_v = 0;
@@ -515,7 +519,7 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
   //  a staked address is already a placeholder. reserving it again
   //  would fail as occupied, by us.
   //
-  if (  (c3n == _wnd_unstake(bas_v, len_i))
+  if (  (c3n == _wnd_stake_claim(bas_v, len_i))
      && !VirtualAlloc2(NULL, bas_v, len_i,
                        MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
                        NULL, 0) )

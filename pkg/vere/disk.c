@@ -1634,8 +1634,8 @@ _disk_migrate_size(c3_y* des_y, c3_z* sou_z)
 **
 **   [lom_i] is the length this process will reserve at u3_Loom -- 1 <<
 **   lut_y for a lite boot, 1 << lom_y otherwise. it wants to be exact:
-**   _wnd_unstake() hands over a stake of the same length in place, and
-**   merely releases one of any other, which costs the protection.
+**   _wnd_stake_claim() hands over a stake of the same length in place,
+**   and merely releases one of any other, which costs the protection.
 **
 **   call this before anything else in the process can allocate, and in
 **   particular before u3_disk_load(): that opens the event log first and
