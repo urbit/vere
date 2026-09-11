@@ -107,7 +107,15 @@ typedef struct {
 } _wnd_stk;
 
 #define _wnd_regs  2
-#define _wnd_stks  2
+
+//  the loom's own base, plus the migration sources. a 64-bit build
+//  stakes one, a v5 32-bit snapshot at u3_Loom_h: 32->64 accepts no
+//  older version, so there is no v1-v4 source to claim. a 32-bit build
+//  stakes two, a 64-bit snapshot at u3_Loom_d and a v1-v4 one at
+//  u3_Loom_v4 -- version migrations are same-bitness. see
+//  u3_disk_stake().
+//
+#define _wnd_stks  3
 #define _wnd_chunk ((size_t)16 << 20)
 
 static _wnd_reg wnd_u[_wnd_regs];
@@ -435,21 +443,44 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
   return c3y;
 }
 
-/* _wnd_unstake(): claim the stake matching [bas_v] and [len_i], if any.
+/* _wnd_stake_claim(): take over the stake at [bas_v] for [len_i], if any.
+**
+**   answers the caller's question -- is a placeholder waiting for me, or
+**   must I reserve one?
+**
+**   yes: a stake of exactly [len_i] is yours. the placeholder stays put;
+**   only the slot holding it is given up, and you map over it rather
+**   than reserving again.
+**
+**   no: the address is clear. either nothing was staked, or a stake of
+**   some other length was released here to make that so -- a migration's
+**   destination loom is capped independently of --loom, so the two
+**   lengths can differ, and a stake that cannot be handed over is just
+**   an occupant of the address it was meant to protect.
 */
 static c3_o
-_wnd_unstake(void* bas_v, size_t len_i)
+_wnd_stake_claim(void* bas_v, size_t len_i)
 {
   c3_w i_w;
 
   for ( i_w = 0; i_w < _wnd_stks; i_w++ ) {
-    if (  (bas_v == wnd_stk_u[i_w].bas_v)
-       && (len_i == wnd_stk_u[i_w].len_i) )
-    {
+    if ( bas_v != wnd_stk_u[i_w].bas_v ) {
+      continue;
+    }
+
+    if ( len_i != wnd_stk_u[i_w].len_i ) {
+      if ( !VirtualFree(bas_v, 0, MEM_RELEASE) ) {
+        _wnd_fail("stake claim");
+      }
+
       wnd_stk_u[i_w].bas_v = 0;
       wnd_stk_u[i_w].len_i = 0;
-      return c3y;
+      return c3n;
     }
+
+    wnd_stk_u[i_w].bas_v = 0;
+    wnd_stk_u[i_w].len_i = 0;
+    return c3y;
   }
 
   return c3n;
@@ -488,7 +519,7 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
   //  a staked address is already a placeholder. reserving it again
   //  would fail as occupied, by us.
   //
-  if (  (c3n == _wnd_unstake(bas_v, len_i))
+  if (  (c3n == _wnd_stake_claim(bas_v, len_i))
      && !VirtualAlloc2(NULL, bas_v, len_i,
                        MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS,
                        NULL, 0) )

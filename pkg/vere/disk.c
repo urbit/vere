@@ -819,9 +819,24 @@ static void
 _disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-  c3_unlink(paf_c);
-  c3_free(paf_c);
+
+#ifdef U3_OS_windows
+  //  windows refuses to delete a file that is still open, so the
+  //  descriptor goes first or the lockfile outlives the pier.
+  //
+  //  NB: the reverse order is deliberate elsewhere. on POSIX, unlinking
+  //  while the descriptor is held means another process cannot acquire
+  //  the path in between, and so cannot have its lockfile unlinked by
+  //  this one.
+  //
   close(fid_i);
+  c3_unlink(paf_c);
+#else
+  c3_unlink(paf_c);
+  close(fid_i);
+#endif
+
+  c3_free(paf_c);
 }
 
 /* u3_disk_exit(): close the log.
@@ -1612,19 +1627,33 @@ _disk_migrate_size(c3_y* des_y, c3_z* sou_z)
 #endif
 }
 
-/* u3_disk_stake(): claim the addresses a migration will map at.
+/* u3_disk_stake(): claim the fixed addresses this process will map at.
 **
 **   a no-op off windows, where mmap(MAP_FIXED) evicts whatever occupies
 **   a fixed address and a collision cannot arise. see wloom.h.
+**
+**   [lom_i] is the length this process will reserve at u3_Loom -- 1 <<
+**   lut_y for a lite boot, 1 << lom_y otherwise. it wants to be exact:
+**   _wnd_stake_claim() hands over a stake of the same length in place,
+**   and merely releases one of any other, which costs the protection.
+**
+**   call this before anything else in the process can allocate, and in
+**   particular before u3_disk_load(): that opens the event log first and
+**   maps the loom second, and lmdb's map is 60GB placed wherever windows
+**   likes -- large enough, and often near enough, to land on u3_Loom.
 */
 void
-u3_disk_stake(void)
+u3_disk_stake(size_t lom_i)
 {
 #ifdef U3_OS_windows
   c3_y des_y;
   c3_z sou_z;
 
   _disk_migrate_size(&des_y, &sou_z);
+
+  //  the loom itself
+  //
+  u3_wnd_loom_stake((void*)u3_Loom, lom_i);
 
 # ifdef VERE64
   //  a 32-bit v5 snapshot, read at u3_Loom_h
@@ -1636,6 +1665,8 @@ u3_disk_stake(void)
   u3_wnd_loom_stake((void*)u3_Loom_d, (c3_z)1 << u3_Host.ops_u.lom_y);
   u3_wnd_loom_stake(u3_Loom_v4, sou_z);
 # endif
+#else
+  (void)lom_i;
 #endif
 }
 

@@ -14,6 +14,17 @@
 set -xeuo pipefail
 
 workspace=${GITHUB_WORKSPACE:-$(pwd)}
+
+#  on a windows runner both GITHUB_WORKSPACE and git-bash's pwd hand back
+#  a drive-letter path with backslashes ("D:\a\vere\vere"). most of the
+#  tools below cope, but gnu tar reads a leading "D:" as a remote
+#  host:path and tries to resolve the host "D". convert once, here, so
+#  every path derived from it is msys-native.
+#
+case "$workspace" in
+  [A-Za-z]:[\\/]*) workspace=$(cygpath -u "$workspace") ;;
+esac
+
 vere32="$workspace/$VERE32_BINARY"
 vere64="$workspace/$VERE64_BINARY"
 brass_pill="$workspace/brass.pill"
@@ -34,7 +45,39 @@ if [ ! -d "$arvo_dir" ]; then
   curl -LJ -o "$workspace/urbit.tar.gz" \
     "https://github.com/urbit/urbit/archive/${ARVO_COMMIT}.tar.gz"
   mkdir "$arvo_dir"
-  tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1
+
+  #  git-bash's tar cannot get this archive out in one pass. it wants a
+  #  symlink's target to exist before it will create the link -- but only
+  #  for a target that stays inside the extraction tree, so of the 262
+  #  links the 217 beginning "../" are made regardless, and of the 45
+  #  left, the 8 whose target sorts after them fail with ENOENT
+  #  (pkg/arvo/gen/cat.hoon -> clay/cat.hoon, and seven like it). a
+  #  second pass finds every target in place and makes all 8 -- but then
+  #  exits nonzero itself, over the four symlinks-to-directories the
+  #  first pass did create (pkg/arvo/lib/verb and three like it), which
+  #  it will not extract over.
+  #
+  #  so neither pass can be judged by its exit status. run both and
+  #  check what landed. posix tar creates every link outright and is
+  #  done in the first pass, with the second a no-op.
+  #
+  tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 || true
+  tar xfz "$workspace/urbit.tar.gz" -C "$arvo_dir" --strip-components=1 || true
+
+  set +x
+  missing=$(tar tzf "$workspace/urbit.tar.gz" | sed 's|^[^/]*/||' \
+            | while read -r mem_p; do
+                case "$mem_p" in ''|*/) continue ;; esac
+                [ -e "$arvo_dir/$mem_p" ] || echo "$mem_p"
+              done)
+  set -x
+
+  if [ -n "$missing" ]; then
+    echo "ERROR: arvo extraction is incomplete, missing:" >&2
+    echo "$missing" >&2
+    exit 1
+  fi
+
   cp -RL "$arvo_dir/tests" "$arvo_dir/pkg/arvo/tests"
 fi
 
