@@ -441,6 +441,151 @@ u3h_del(u3p(u3h_root) har_p, u3_noun key)
   }
 }
 
+static void _ch_prune_slot(u3h_slot*, c3_h, c3_o (*)(u3_noun, void*),
+  void*, c3_w*);
+
+/* _ch_prune_buck(): prune entries from bucket, collapsing or freeing it
+*/
+static void
+_ch_prune_buck(u3h_slot* sot_w,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
+{
+  u3h_buck* hab_u = u3h_slot_to_node(*sot_w);
+  c3_h      i_h, len_h = 0;
+
+  for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
+    u3h_slot kes_w = hab_u->sot_w[i_h];
+    u3_noun  kev   = u3h_slot_to_noun(kes_w);
+
+    if ( c3y == fun_f(kev, wit) ) {
+      u3z(kev);
+      *del_w += 1;
+    }
+    else {
+      hab_u->sot_w[len_h++] = kes_w;
+    }
+  }
+
+  if ( len_h == hab_u->len_h ) {
+    // nothing deleted
+    return;
+  }
+  else if ( 0 == len_h ) {
+    // empty: free bucket
+    *sot_w = 0;
+    u3a_wfree(hab_u);
+  }
+  else if ( 1 == len_h ) {
+    // debucketize to key-value pair
+    *sot_w = hab_u->sot_w[0];
+    u3a_wfree(hab_u);
+  }
+  else {
+    // shrink bucket in place; don't reallocate.
+    hab_u->len_h = len_h;
+  }
+}
+
+/* _ch_prune_node(): prune entries from node, collapsing or freeing it
+*/
+static void
+_ch_prune_node(u3h_slot* sot_w,
+  c3_h lef_h,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
+{
+  u3h_node* han_u = (u3h_node*) u3h_slot_to_node(*sot_w);
+  c3_h      map_h = han_u->map_h;
+  c3_h      len_h = _ch_popcount(map_h);
+  c3_h      rem_h, bit_h, i_h, out_h = 0;
+
+  lef_h -= 5;
+
+  //  (for each set bit)
+  //  "rem_h &= rem_h - 1" unsets the lowest bit.
+  for ( rem_h = map_h, i_h = 0; rem_h; rem_h &= rem_h - 1, i_h++ ) {
+    u3h_slot* tos_w = &(han_u->sot_w[i_h]);
+
+    bit_h = c3_tz_h(rem_h);
+    _ch_prune_slot(tos_w, lef_h, fun_f, wit, del_w);
+
+    if ( 0 == *tos_w ) {
+      // child emptied: drop it from the map
+      han_u->map_h &= ~((c3_h)1 << bit_h);
+    }
+    else {
+      // shift child left over any dropped slots
+      han_u->sot_w[out_h++] = *tos_w;
+    }
+  }
+
+  if ( out_h == len_h ) {
+    // nothing deleted
+    return;
+  }
+  else if ( 0 == out_h ) {
+    // empty: free node
+    *sot_w = 0;
+    u3a_wfree(han_u);
+  }
+  else if ( (1 == out_h) && (c3y == u3h_slot_is_noun(han_u->sot_w[0])) ) {
+    // only one side left, and it's a noun. debucketize.
+    *sot_w = han_u->sot_w[0];
+    u3a_wfree(han_u);
+  }
+  // else: node was shrunk in place; don't reallocate, we could be low on memory
+}
+
+/* _ch_prune_slot(): prune entries from a non-null slot
+*/
+static void
+_ch_prune_slot(u3h_slot* sot_w,
+  c3_h lef_h,
+  c3_o (*fun_f)(u3_noun, void*),
+  void* wit,
+  c3_w* del_w)
+{
+  if ( c3y == u3h_slot_is_noun(*sot_w) ) {
+    u3_noun kev = u3h_slot_to_noun(*sot_w);
+
+    if ( c3y == fun_f(kev, wit) ) {
+      *sot_w = 0;
+      u3z(kev);
+      *del_w += 1;
+    }
+  }
+  else if ( 0 == lef_h ) {
+    _ch_prune_buck(sot_w, fun_f, wit, del_w);
+  }
+  else {
+    _ch_prune_node(sot_w, lef_h, fun_f, wit, del_w);
+  }
+}
+
+/* u3h_prune_with(): traverse hashtable, deleting every key-value pair for
+** which [fun_f] returns yes. Never allocates. fun_f RETAINS.
+*/
+void
+u3h_prune_with(u3p(u3h_root) har_p, c3_o (*fun_f)(u3_noun, void*), void* wit)
+{
+  u3h_root* har_u = u3to(u3h_root, har_p);
+  c3_w      del_w = 0;
+  c3_h      i_h;
+
+  for ( i_h = 0; i_h < 64; i_h++ ) {
+    u3h_slot* sot_w = &(har_u->sot_w[i_h]);
+
+    if ( c3n == u3h_slot_is_null(*sot_w) ) {
+      _ch_prune_slot(sot_w, 25, fun_f, wit, &del_w);
+    }
+  }
+
+  har_u->use_w -= del_w;
+}
+
 /* _ch_uni_with(): key/value callback, put into [*wit]
 */
 static void

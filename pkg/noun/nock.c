@@ -1714,7 +1714,9 @@ _n_find(u3_noun pre, u3_noun fol)
     u3z(key);
     return _cn_to_prog(pog);
   }
-  else if ( u3R != &u3H->rod_u ) {
+  
+  key = u3m_dedup(key);
+  if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
       rod_u = u3to(u3a_road, rod_u->par_p);
@@ -2794,12 +2796,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       top = _n_peek(off);
       o   = *top;
       if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
-        u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
          : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
-        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
       // else if ( u3z_memo_keep == u3h(o) ) {

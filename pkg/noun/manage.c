@@ -546,6 +546,7 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
+  u3R->dup_p     = u3h_new();
   u3R->how.fag_w = 0;
 }
 
@@ -703,10 +704,26 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
+  //
+  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
+  //  proof buffer but instead it was added as a last element of the `cax` sub-
+  //  struct of the road struct. Since
+  //    1) the loom is zero-initialized,
+  //    2) the road is the final member of the u3v_home struct,
+  //    3) `cax` is the last element of the road struct,
+  //    4) `for_p` is the last element of `cax`,
+  //    5) and adding `for_p` did not change the alignment of either the road
+  //       struct or the `cax` struct,
+  //  the layout and the position of the road struct did not change, and a
+  //  simple null check was sufficient for the migration.
+  //  
+  //  The reasoning above is sound as long as we assume no downgrades, which
+  //  would not be detected by any methods present at the moment of cax.for_p
+  //  addition.
   //
   if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1397,6 +1414,7 @@ u3m_love(u3_noun pro)
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
+  u3p(u3h_root) dup_p = u3R->dup_p;
 
   //  are there any timers on the road?
   //
@@ -1421,6 +1439,7 @@ u3m_love(u3_noun pro)
   byc_p = u3n_take(byc_p);
   per_p = u3h_take(per_p);
   for_p = u3h_take(for_p);
+  dup_p = u3h_take(dup_p);
 
   //  pop the stack
   //
@@ -1447,6 +1466,8 @@ u3m_love(u3_noun pro)
   u3n_reap(byc_p);
   u3z_reap(u3z_memo_keep, per_p);
   u3z_reap(u3z_memo_ford, for_p);
+  u3h_uni(u3R->dup_p, dup_p);
+  u3h_free(dup_p);
 
   return pro;
 }
@@ -2969,4 +2990,93 @@ u3m_time_gap_in_mil(c3_w mil_w)
   cub_d[0] = u3m_time_fsc_in(usc_d);
   cub_d[1] = sec_d;
   return u3i_chubs(2, cub_d);
+}
+
+typedef struct {
+  c3_t new_t;
+  u3_noun som;
+} _frame_dedup;
+
+static u3_noun
+_dedup_next(u3a_pile* pil_u, u3_noun som)
+{
+  while (1) {
+    if ( c3y == u3a_is_cat(som) ) return som;
+    u3a_road* rod_u;
+    for ( rod_u = &u3H->rod_u; rod_u; rod_u = u3tn(u3a_road, rod_u->kid_p)) {
+      u3_weak got = u3h_get(rod_u->dup_p, som);
+      if ( u3_none != got ) {
+        u3z(som);
+        return got;
+      }
+    }
+    if ( c3y == u3a_is_atom(som) ) {
+      u3h_put(u3R->dup_p, som, u3k(som));
+      return som;
+    }
+    u3_noun hed = u3k(u3h(som)), tel = u3k(u3t(som));
+    _frame_dedup* fam_u = u3a_push(pil_u);
+    fam_u->new_t = false;
+    fam_u->som = tel;
+    u3z(som);
+    som = hed;
+  }
+}
+
+u3_noun
+u3m_dedup(u3_noun som)
+{
+  if ( c3y == u3a_is_cat(som) ) return som;
+  for (u3_road* r_u = &u3H->rod_u; r_u; r_u = u3tn(u3_road, r_u->kid_p)) {
+    u3_weak got = u3h_get(r_u->dup_p, som);
+    if ( u3_none != got ) {
+      u3z(som);
+      return got;
+    }
+  }
+
+  u3a_pile pil_u;
+  _frame_dedup* fam_u;
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
+  u3_noun new = _dedup_next(&pil_u, som);
+  if ( c3n == u3a_pile_done(&pil_u) ) {
+    fam_u = u3a_peek(&pil_u);
+    do {
+      if ( !fam_u->new_t ) {
+        som = fam_u->som;
+        fam_u->som = new;
+        fam_u->new_t = true;
+        new = _dedup_next(&pil_u, som);
+        fam_u = u3a_peek(&pil_u);
+      }
+      else {
+        new = u3nc(fam_u->som, new);
+        u3h_put(u3R->dup_p, new, u3k(new));
+        fam_u = u3a_pop(&pil_u);
+      }
+    } while ( c3n == u3a_pile_done(&pil_u) );
+  }
+  return new;
+}
+
+static c3_o
+_cb_dedup_prune(u3_noun kev, void* ptr_v)
+{
+  u3_assert(c3y == u3a_is_cell(kev));
+
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+  u3_assert(kev_u->hed == kev_u->tel);
+
+  u3_noun som = kev_u->hed;
+  u3a_noun* val_u = u3a_to_ptr(som);
+
+  u3_assert(c3n == u3a_is_cat(som));
+
+  return __( (1 == kev_u->use_w) && (2 == val_u->use_w) );
+}
+
+void
+u3m_dedup_prune(void)
+{
+  u3h_prune_with(u3R->dup_p, _cb_dedup_prune, 0);
 }
