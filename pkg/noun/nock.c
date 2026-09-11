@@ -1714,7 +1714,9 @@ _n_find(u3_noun pre, u3_noun fol)
     u3z(key);
     return _cn_to_prog(pog);
   }
-  else if ( u3R != &u3H->rod_u ) {
+  
+  key = u3m_dedup(key);
+  if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
       rod_u = u3to(u3a_road, rod_u->par_p);

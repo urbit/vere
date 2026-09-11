@@ -3027,9 +3027,8 @@ u3_noun
 u3m_dedup(u3_noun som)
 {
   if ( c3y == u3a_is_cat(som) ) return som;
-  u3a_road* rod_u;
-  for ( rod_u = &u3H->rod_u; rod_u; rod_u = u3tn(u3a_road, rod_u->kid_p)) {
-    u3_weak got = u3h_get(rod_u->dup_p, som);
+  for (u3_road* r_u = &u3H->rod_u; r_u; r_u = u3tn(u3_road, r_u->kid_p)) {
+    u3_weak got = u3h_get(r_u->dup_p, som);
     if ( u3_none != got ) {
       u3z(som);
       return got;
