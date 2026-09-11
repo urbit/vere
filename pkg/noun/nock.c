@@ -2794,12 +2794,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       top = _n_peek(off);
       o   = *top;
       if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
-        u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
          : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
-        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
       // else if ( u3z_memo_keep == u3h(o) ) {
