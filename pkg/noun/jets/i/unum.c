@@ -32,7 +32,7 @@
 static inline c3_t
 _unum_bloq(u3_noun cor, c3_d* out)
 {
-  u3_noun b = u3r_at(_UNUM_BLOQ_AXIS, cor);
+  u3_weak b = u3r_at(_UNUM_BLOQ_AXIS, cor);
   if ( u3_none == b || c3n == u3ud(b) ) {
     return c3n;
   }
@@ -42,7 +42,7 @@ _unum_bloq(u3_noun cor, c3_d* out)
 
 //  binary posit -> posit op (add/sub/mul/div), bloq-dispatched.
 #define _UNUM_BINOP(nam, f8, f16, f32)                                       \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom a, u3_atom b) {                  \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom a, u3_atom b) {                  \
     c3_d ua = u3r_chub(0, a), ub = u3r_chub(0, b), r;                         \
     switch ( bloq ) {                                                        \
       case 3:  r = f8((posit8_t)ua, (posit8_t)ub);    break;                 \
@@ -52,7 +52,7 @@ _unum_bloq(u3_noun cor, c3_d* out)
     }                                                                       \
     return u3i_chubs(1, &r);                                                 \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
     u3_noun a, b;  c3_d bloq;                                                \
     if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||            \
          c3n == u3ud(a) || c3n == u3ud(b) ) return u3m_bail(c3__exit);       \
@@ -62,7 +62,7 @@ _unum_bloq(u3_noun cor, c3_d* out)
 
 //  binary posit -> loobean comparison; returns & (c3y) / | (c3n).
 #define _UNUM_CMP(nam, f8, f16, f32)                                         \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom a, u3_atom b) {                  \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom a, u3_atom b) {                  \
     c3_d ua = u3r_chub(0, a), ub = u3r_chub(0, b);  c3_t v;                  \
     switch ( bloq ) {                                                        \
       case 3:  v = f8((posit8_t)ua, (posit8_t)ub);    break;                 \
@@ -72,7 +72,7 @@ _unum_bloq(u3_noun cor, c3_d* out)
     }                                                                       \
     return v ? c3y : c3n;                                                    \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
     u3_noun a, b;  c3_d bloq;                                                \
     if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||            \
          c3n == u3ud(a) || c3n == u3ud(b) ) return u3m_bail(c3__exit);       \
@@ -82,7 +82,7 @@ _unum_bloq(u3_noun cor, c3_d* out)
 
 //  unary posit -> posit op (neg/abs/sgn/sqt), bloq-dispatched.
 #define _UNUM_UNOP(nam, f8, f16, f32)                                        \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom a) {                            \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom a) {                            \
     c3_d ua = u3r_chub(0, a), r;                                             \
     switch ( bloq ) {                                                        \
       case 3:  r = f8((posit8_t)ua);  break;                                 \
@@ -92,8 +92,8 @@ _unum_bloq(u3_noun cor, c3_d* out)
     }                                                                       \
     return u3i_chubs(1, &r);                                                 \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
-    u3_noun a = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
+    u3_weak a = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
     if ( u3_none == a || c3n == u3ud(a) ) return u3m_bail(c3__exit);         \
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;                     \
     return u3qi_unum_##nam(bloq, a);                                         \
@@ -119,7 +119,7 @@ _UNUM_UNOP(sqt, p8_sqrt, p16_sqrt, p32_sqrt)
 /* ++fma:pp -- fused multiply-add (a*b + c), single rounding.  Ternary gate:
 ** sample [a b c] = [a [b c]]: a @ sam_2, b @ sam_6, c @ sam_7.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_fma(c3_d bloq, u3_atom a, u3_atom b, u3_atom c)
   {
     c3_d ua = u3r_chub(0, a), ub = u3r_chub(0, b), uc = u3r_chub(0, c), r;
@@ -132,7 +132,7 @@ _UNUM_UNOP(sqt, p8_sqrt, p16_sqrt, p32_sqrt)
     return u3i_chubs(1, &r);
   }
 
-  u3_noun
+  u3_weak
   u3wi_unum_fma(u3_noun cor)
   {
     u3_noun a, b, c;  c3_d bloq;
@@ -165,7 +165,7 @@ _UNUM_BINOP(pow, p8_pow, p16_pow, p32_pow)
 /* ++pow-n:pp -- posit ^ @u (integer power); the exponent is a raw unsigned
 ** integer, not a posit, so it is read as a plain chub.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_pow_n(c3_d bloq, u3_atom x, u3_atom p)
   {
     c3_d ux = u3r_chub(0, x), up = u3r_chub(0, p), r;
@@ -178,7 +178,7 @@ _UNUM_BINOP(pow, p8_pow, p16_pow, p32_pow)
     return u3i_chubs(1, &r);
   }
 
-  u3_noun
+  u3_weak
   u3wi_unum_pow_n(u3_noun cor)
   {
     u3_noun x, p;  c3_d bloq;
@@ -197,7 +197,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
 /* ++sun:pp -- @u -> posit.  The argument is a raw unsigned integer (read as a
 ** full chub), NOT a posit pattern, so it is not masked to the posit width.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_sun(c3_d bloq, u3_atom v)
   {
     c3_d uv = u3r_chub(0, v), r;
@@ -209,10 +209,10 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     }
     return u3i_chubs(1, &r);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_sun(u3_noun cor)
   {
-    u3_noun v = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak v = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == v || c3n == u3ud(v) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_sun(bloq, v);
@@ -221,7 +221,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
 /* ++san:pp -- @s -> posit.  Decode the Hoon signed atom (even 2m -> +m,
 ** odd 2m-1 -> -m) to a C int64, then encode.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_san(c3_d bloq, u3_atom v)
   {
     c3_d  uv = u3r_chub(0, v);
@@ -235,10 +235,10 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     }
     return u3i_chubs(1, &r);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_san(u3_noun cor)
   {
-    u3_noun v = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak v = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == v || c3n == u3ud(v) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_san(bloq, v);
@@ -247,7 +247,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
 /* ++toi:pp -- posit -> (unit @s).  NaR -> ~ (none); else [~ @s] with the
 ** integer re-encoded into a Hoon signed atom (+m -> 2m, -m -> 2m-1).
 */
-  u3_noun
+  u3_weak
   u3qi_unum_toi(c3_d bloq, u3_atom p)
   {
     c3_d  up = u3r_chub(0, p);
@@ -262,10 +262,10 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     c3_d sa = (out >= 0) ? ((c3_d)out << 1) : (((c3_d)(-out) << 1) - 1);
     return u3nc(u3_nul, u3i_chubs(1, &sa));
   }
-  u3_noun
+  u3_weak
   u3wi_unum_toi(u3_noun cor)
   {
-    u3_noun p = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak p = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == p || c3n == u3ud(p) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_toi(bloq, p);
@@ -273,7 +273,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
 
 /* ++is-close:pp -- |a - b| <= tol, a loobean.  Ternary sample [a b tol].
 */
-  u3_noun
+  u3_weak
   u3qi_unum_is_close(c3_d bloq, u3_atom a, u3_atom b, u3_atom tol)
   {
     c3_d ua = u3r_chub(0, a), ub = u3r_chub(0, b), ut = u3r_chub(0, tol);  c3_t v;
@@ -285,7 +285,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     }
     return v ? c3y : c3n;
   }
-  u3_noun
+  u3_weak
   u3wi_unum_is_close(u3_noun cor)
   {
     u3_noun a, b, tol;  c3_d bloq;
@@ -301,7 +301,7 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
 //  is fixed by the arm.  to-rh/rs/rd and from-rh/rs/rd are 1-chub each side;
 //  to-rq / from-rq use the 128-bit (2-chub) binary128 pattern.
 #define _UNUM_TO(nam, f8, f16, f32)                                          \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom p) {                            \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom p) {                            \
     c3_d up = u3r_chub(0, p), r;                                             \
     switch ( bloq ) {                                                       \
       case 3:  r = f8((posit8_t)up);  break;                                 \
@@ -311,15 +311,15 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     }                                                                       \
     return u3i_chubs(1, &r);                                                 \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
-    u3_noun p = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
+    u3_weak p = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
     if ( u3_none == p || c3n == u3ud(p) ) return u3m_bail(c3__exit);         \
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;                     \
     return u3qi_unum_##nam(bloq, p);                                         \
   }
 
 #define _UNUM_FROM(nam, f8, f16, f32)                                        \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom r) {                            \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom r) {                            \
     c3_d ur = u3r_chub(0, r), v;                                             \
     switch ( bloq ) {                                                       \
       case 3:  v = f8(ur);  break;                                           \
@@ -329,8 +329,8 @@ _UNUM_UNOP(cel, p8_ceil, p16_ceil, p32_ceil)
     }                                                                       \
     return u3i_chubs(1, &v);                                                 \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
-    u3_noun r = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
+    u3_weak r = u3r_at(u3x_sam, cor);  c3_d bloq;                            \
     if ( u3_none == r || c3n == u3ud(r) ) return u3m_bail(c3__exit);         \
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;                     \
     return u3qi_unum_##nam(bloq, r);                                         \
@@ -345,7 +345,7 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
 
 /* ++to-rq:pp -- posit -> binary128 (2-chub result).
 */
-  u3_noun
+  u3_weak
   u3qi_unum_to_rq(c3_d bloq, u3_atom p)
   {
     c3_d up = u3r_chub(0, p), out[2];
@@ -357,10 +357,10 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }
     return u3i_chubs(2, out);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_to_rq(u3_noun cor)
   {
-    u3_noun p = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak p = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == p || c3n == u3ud(p) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_to_rq(bloq, p);
@@ -368,7 +368,7 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
 
 /* ++from-rq:pp -- binary128 (2-chub input) -> posit.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_from_rq(c3_d bloq, u3_atom r)
   {
     c3_d in[2], v;
@@ -382,10 +382,10 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }
     return u3i_chubs(1, &v);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_from_rq(u3_noun cor)
   {
-    u3_noun r = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak r = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == r || c3n == u3ud(r) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_from_rq(bloq, r);
@@ -402,7 +402,7 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     for ( int i = 0; i < qw; i++ ) buf[i] = u3r_chub(i, q);
   }
 
-  u3_noun
+  u3_weak
   u3qi_unum_p_to_q(c3_d bloq, u3_atom p)
   {
     c3_d buf[8] = {0}, up = u3r_chub(0, p);  int qw = _UNUM_QW(bloq);
@@ -414,16 +414,16 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }
     return u3i_chubs(qw, buf);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_p_to_q(u3_noun cor)
   {
-    u3_noun p = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak p = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == p || c3n == u3ud(p) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_p_to_q(bloq, p);
   }
 
-  u3_noun
+  u3_weak
   u3qi_unum_q_to_p(c3_d bloq, u3_atom q)
   {
     c3_d buf[8] = {0}, r;
@@ -436,16 +436,16 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }
     return u3i_chubs(1, &r);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_q_to_p(u3_noun cor)
   {
-    u3_noun q = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak q = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == q || c3n == u3ud(q) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_q_to_p(bloq, q);
   }
 
-  u3_noun
+  u3_weak
   u3qi_unum_q_negate(c3_d bloq, u3_atom q)
   {
     c3_d buf[8] = {0};  int qw = _UNUM_QW(bloq);
@@ -458,10 +458,10 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }
     return u3i_chubs(qw, buf);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_q_negate(u3_noun cor)
   {
-    u3_noun q = u3r_at(u3x_sam, cor);  c3_d bloq;
+    u3_weak q = u3r_at(u3x_sam, cor);  c3_d bloq;
     if ( u3_none == q || c3n == u3ud(q) ) return u3m_bail(c3__exit);
     if ( c3n == _unum_bloq(cor, &bloq) ) return u3_none;
     return u3qi_unum_q_negate(bloq, q);
@@ -469,7 +469,7 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
 
 //  q-mul-add / q-mul-sub: (quire, posit, posit) -> quire.
 #define _UNUM_QMA(nam, f8, f16, f32)                                         \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom q, u3_atom a, u3_atom b) {       \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom q, u3_atom a, u3_atom b) {       \
     c3_d buf[8] = {0}, ua = u3r_chub(0, a), ub = u3r_chub(0, b);             \
     int qw = _UNUM_QW(bloq);                                                 \
     _unum_qload(q, buf, qw);                                                 \
@@ -481,7 +481,7 @@ _UNUM_FROM(from_rd, p8_from_rd, p16_from_rd, p32_from_rd)
     }                                                                       \
     return u3i_chubs(qw, buf);                                               \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
     u3_noun q, a, b;  c3_d bloq;                                             \
     if ( c3n == u3r_mean(cor, u3x_sam_2, &q, u3x_sam_6, &a, u3x_sam_7, &b, 0) || \
          c3n == u3ud(q) || c3n == u3ud(a) || c3n == u3ud(b) )               \
@@ -495,7 +495,7 @@ _UNUM_QMA(q_mul_sub, p8_q_mul_sub, p16_q_mul_sub, p32_q_mul_sub)
 
 //  q-add-p / q-sub-p: (quire, posit) -> quire.
 #define _UNUM_QAP(nam, f8, f16, f32)                                         \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom q, u3_atom p) {                 \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom q, u3_atom p) {                 \
     c3_d buf[8] = {0}, up = u3r_chub(0, p);  int qw = _UNUM_QW(bloq);        \
     _unum_qload(q, buf, qw);                                                 \
     switch ( bloq ) {                                                       \
@@ -506,7 +506,7 @@ _UNUM_QMA(q_mul_sub, p8_q_mul_sub, p16_q_mul_sub, p32_q_mul_sub)
     }                                                                       \
     return u3i_chubs(qw, buf);                                               \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
     u3_noun q, p;  c3_d bloq;                                                \
     if ( c3n == u3r_mean(cor, u3x_sam_2, &q, u3x_sam_3, &p, 0) ||            \
          c3n == u3ud(q) || c3n == u3ud(p) ) return u3m_bail(c3__exit);       \
@@ -519,7 +519,7 @@ _UNUM_QAP(q_sub_p, p8_q_sub_p, p16_q_sub_p, p32_q_sub_p)
 
 //  q-add-q / q-sub-q: (quire, quire) -> quire.
 #define _UNUM_QAQ(nam, f8, f16, f32)                                         \
-  u3_noun u3qi_unum_##nam(c3_d bloq, u3_atom x, u3_atom y) {                 \
+  u3_weak u3qi_unum_##nam(c3_d bloq, u3_atom x, u3_atom y) {                 \
     c3_d xb[8] = {0}, yb[8] = {0};  int qw = _UNUM_QW(bloq);                 \
     if ( bloq < 3 || bloq > 5 ) return u3_none;                             \
     _unum_qload(x, xb, qw);  _unum_qload(y, yb, qw);                         \
@@ -530,7 +530,7 @@ _UNUM_QAP(q_sub_p, p8_q_sub_p, p16_q_sub_p, p32_q_sub_p)
     }                                                                       \
     return u3i_chubs(qw, xb);                                                \
   }                                                                          \
-  u3_noun u3wi_unum_##nam(u3_noun cor) {                                     \
+  u3_weak u3wi_unum_##nam(u3_noun cor) {                                     \
     u3_noun x, y;  c3_d bloq;                                                \
     if ( c3n == u3r_mean(cor, u3x_sam_2, &x, u3x_sam_3, &y, 0) ||            \
          c3n == u3ud(x) || c3n == u3ud(y) ) return u3m_bail(c3__exit);       \
@@ -545,7 +545,7 @@ _UNUM_QAQ(q_sub_q, p8_q_sub_q, p16_q_sub_q, p32_q_sub_q)
 ** accumulate directly through a quire buffer (q-mul-add per element, q-to-p
 ** once), zipping to the shorter list -- matching the Hoon.
 */
-  u3_noun
+  u3_weak
   u3qi_unum_fdp(c3_d bloq, u3_noun av, u3_noun bv)
   {
     c3_d buf[8] = {0}, r;
@@ -567,7 +567,7 @@ _UNUM_QAQ(q_sub_q, p8_q_sub_q, p16_q_sub_q, p32_q_sub_q)
     }
     return u3i_chubs(1, &r);
   }
-  u3_noun
+  u3_weak
   u3wi_unum_fdp(u3_noun cor)
   {
     u3_noun av, bv;  c3_d bloq;
