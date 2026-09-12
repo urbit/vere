@@ -38,6 +38,8 @@ _sip_bit(c3_d off_d, u3_atom a, c3_d met_d)
 //    pass 0 and never materialize the payload.  Bails on unary overrun,
 //    matching +rub's `?<  (gth c m)`.
 //
+//  @Refcount: fills transferred `val`
+//
 static void
 _sip_rub(c3_d off_d, u3_atom a, c3_d met_d, c3_d* pan_d, u3_noun* val)
 {
