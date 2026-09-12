@@ -25,6 +25,11 @@
 #define f32_nonfin(a)   ( 0x7f800000 == (0x7f800000 & (a).v) )
 #define f64_nonfin(a)   ( 0x7ff0000000000000ULL == (0x7ff0000000000000ULL & (a).v) )
 #define f128M_nonfin(a) ( 0x7fff000000000000ULL == (0x7fff000000000000ULL & (a).v[1]) )
+//  quiet or signaling NaN: exponent all ones with a nonzero significand
+#define f16_isnan(a)    ( f16_nonfin(a) && (0 != (0x03ff & (a).v)) )
+#define f32_isnan(a)    ( f32_nonfin(a) && (0 != (0x007fffff & (a).v)) )
+#define f64_isnan(a)    ( f64_nonfin(a) && (0 != (0x000fffffffffffffULL & (a).v)) )
+#define f128M_isnan(a)  ( f128M_nonfin(a) && ((0 != (a).v[0]) || (0 != (0x0000ffffffffffffULL & (a).v[1]))) )
 
   union half {
     float16_t h;
@@ -93,12 +98,13 @@
 **   only sound on a ray that has passed _check(), which bounds the
 **   product by the bit-width of a real atom; _check() itself does
 **   its own overflow-aware walk.
+**   @Refcount: retains arguments
 */
   static inline c3_d _get_length(u3_noun shape)
   {
     c3_d len = 1;
     while (u3_nul != shape) {
-      len = len * u3x_atom(u3h(shape));
+      len = len * u3r_cat(u3x_atom(u3h(shape)));
       shape = u3t(shape);
     }
     return len;
@@ -200,7 +206,7 @@
 
 /* add - axpy = 1*x+y
 */
-  u3_noun
+  u3_weak
   u3qi_la_add_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -258,7 +264,7 @@
 
 /* sub - axpy = -1*y+x
 */
-  u3_noun
+  u3_weak
   u3qi_la_sub_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -318,7 +324,7 @@
 /* mul - x.*y
    elementwise multiplication
 */
-  u3_noun
+  u3_weak
   u3qi_la_mul_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -384,7 +390,7 @@
 /* div - x/y
    elementwise division
 */
-  u3_noun
+  u3_weak
   u3qi_la_div_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -450,7 +456,7 @@
 /* mod - x % y = x - r*floor(x/r)
    remainder after division
 */
-  u3_noun
+  u3_weak
   u3qi_la_mod_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -561,7 +567,7 @@
 
 /* cumsum - x[0] + x[1] + ... x[n]
 */
-  u3_noun
+  u3_weak
   u3qi_la_cumsum_i754(u3_noun x_data,
                       u3_noun shape,
                       u3_noun bloq)
@@ -635,7 +641,7 @@
 
 /* argmin - argmin(x)
 */
-  u3_noun
+  u3_weak
   u3qi_la_argmin_i754(u3_noun x_data,
                       u3_noun shape,
                       u3_noun bloq)
@@ -708,7 +714,7 @@
 
 /* argmax - argmax(x)
 */
-  u3_noun
+  u3_weak
   u3qi_la_argmax_i754(u3_noun x_data,
                       u3_noun shape,
                       u3_noun bloq)
@@ -782,7 +788,7 @@
 /* ravel - x -> ~[x[0], x[1], ... x[n]]
    entire nd-array busted out as a linear list
 */
-  u3_noun
+  u3_weak
   u3qi_la_ravel_i754(u3_noun x_data,
                      u3_noun shape,
                      u3_noun bloq)
@@ -845,7 +851,7 @@
 
 /* min - min(x,y)
 */
-  u3_noun
+  u3_weak
   u3qi_la_min_i754(u3_noun x_data,
                    u3_noun shape,
                    u3_noun bloq)
@@ -931,7 +937,7 @@
 
 /* max - max(x,y)
 */
-  u3_noun
+  u3_weak
   u3qi_la_max_i754(u3_noun x_data,
                    u3_noun shape,
                    u3_noun bloq)
@@ -1017,7 +1023,7 @@
 
 /* abs - |x|
 */
-  u3_noun
+  u3_weak
   u3qi_la_abs_i754(u3_noun x_data,
                    u3_noun shape,
                    u3_noun bloq)
@@ -1076,7 +1082,7 @@
 
 /* gth - x > y
 */
-  u3_noun
+  u3_weak
   u3qi_la_gth_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -1149,7 +1155,7 @@
 
 /* gte - x > y
 */
-  u3_noun
+  u3_weak
   u3qi_la_gte_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -1222,7 +1228,7 @@
 
 /* lth - x > y
 */
-  u3_noun
+  u3_weak
   u3qi_la_lth_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -1295,7 +1301,7 @@
 
 /* lte - x > y
 */
-  u3_noun
+  u3_weak
   u3qi_la_lte_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -1368,7 +1374,7 @@
 
 /* adds - axpy = 1*x+[n]
 */
-  u3_noun
+  u3_weak
   u3qi_la_adds_i754(u3_noun x_data,
                     u3_noun n,
                     u3_noun shape,
@@ -1450,7 +1456,7 @@
 
 /* subs - axpy = -1*[n]+x
 */
-  u3_noun
+  u3_weak
   u3qi_la_subs_i754(u3_noun x_data,
                     u3_noun n,
                     u3_noun shape,
@@ -1533,7 +1539,7 @@
 /* muls - ?scal n * x
    elementwise multiplication
 */
-  u3_noun
+  u3_weak
   u3qi_la_muls_i754(u3_noun x_data,
                     u3_noun n,
                     u3_noun shape,
@@ -1596,7 +1602,7 @@
 /* divs - ?scal 1/n * x
    elementwise division
 */
-  u3_noun
+  u3_weak
   u3qi_la_divs_i754(u3_noun x_data,
                     u3_noun n,
                     u3_noun shape,
@@ -1670,7 +1676,7 @@
 /* mods - x % [n] = x - r*floor(x/r)
    remainder after scalar division
 */
-  u3_noun
+  u3_weak
   u3qi_la_mods_i754(u3_noun x_data,
                     u3_noun n,
                     u3_noun shape,
@@ -1777,7 +1783,7 @@
 
 /* dot - ?dot = x · y
 */
-  u3_noun
+  u3_weak
   u3qi_la_dot_i754(u3_noun x_data,
                    u3_noun y_data,
                    u3_noun shape,
@@ -1845,7 +1851,7 @@
 
 /* diag - diag(x)
 */
-  u3_noun
+  u3_weak
   u3qi_la_diag(u3_noun x_data,
                u3_noun shape,
                u3_noun bloq)
@@ -1896,7 +1902,7 @@
 
 /* transpose - x'
 */
-  u3_noun
+  u3_weak
   u3qi_la_transpose(u3_noun x_data,
                     u3_noun shape,
                     u3_noun bloq)
@@ -1947,7 +1953,7 @@
 
 /* linspace - [a a+(b-a)/n ... b]
 */
-  u3_noun
+  u3_weak
   u3qi_la_linspace_i754(u3_noun a,
                         u3_noun b,
                         u3_noun n,
@@ -2047,7 +2053,7 @@
 
 /* range - [a a+d ... b), by repeated addition of d
 */
-  u3_noun
+  u3_weak
   u3qi_la_range_i754(u3_noun a,
                      u3_noun b,
                      u3_noun d,
@@ -2064,9 +2070,12 @@
     //  per (lth (sub b a) 0).  A one-shot ceil((b-a)/d) count can
     //  disagree with the accumulated stop test (e.g. d = .0.1), so
     //  replicate the iteration: one pass to count, one to fill.
-    //  Punt on a non-finite endpoint or step, a zero step, or a
-    //  stalled accumulator (x + d == x short of b): the Nock loops
-    //  forever there, and that is its call to make.
+    //  Where the Hoon never terminates -- a NaN upper bound (the stop
+    //  test can never hold) or a stalled accumulator (x + d == x short
+    //  of b: a zero or underflowing step, a NaN, or an infinite start)
+    //  -- bail %fail: an infinite loop is a non-deterministic failure,
+    //  not a deterministic crash (%exit) and not something to punt to
+    //  the Nock.  A finite but absurd count (the cap) is still punted.
     u3_noun r_data;
 
 #define _LA_RANGE_MAX  ( (c3_d)1 << 28 )
@@ -2078,10 +2087,8 @@
         u3r_bytes(0, wyd_y, (c3_y*)&a_v, a);                           \
         u3r_bytes(0, wyd_y, (c3_y*)&b_v, b);                           \
         u3r_bytes(0, wyd_y, (c3_y*)&d_v, d);                           \
-        if ( fw##_nonfin(a_v) || fw##_nonfin(b_v) ||                   \
-             fw##_nonfin(d_v) || fw##_iszero(d_v) )                    \
-        {                                                              \
-          return u3_none;                                              \
+        if ( fw##_isnan(b_v) ) {                                       \
+          return u3m_bail(c3__fail);                                   \
         }                                                              \
         ba_v = fw##_sub(b_v, a_v);                                     \
         c3_o des_o = __(fw##_lt(ba_v, fw##_zero));                     \
@@ -2094,7 +2101,10 @@
           {                                                            \
             break;                                                     \
           }                                                            \
-          if ( fw##_same(nx_v, x_v) || (cnt_d >= _LA_RANGE_MAX) ) {    \
+          if ( fw##_same(nx_v, x_v) ) {                                \
+            return u3m_bail(c3__fail);                                 \
+          }                                                            \
+          if ( cnt_d >= _LA_RANGE_MAX ) {                              \
             return u3_none;                                            \
           }                                                            \
           cnt_d++;                                                     \
@@ -2134,11 +2144,8 @@
         u3r_bytes(0, 16, (c3_y*)&(a_v.v[0]), a);
         u3r_bytes(0, 16, (c3_y*)&(b_v.v[0]), b);
         u3r_bytes(0, 16, (c3_y*)&(d_v.v[0]), d);
-        if ( f128M_nonfin(a_v) || f128M_nonfin(b_v) ||
-             f128M_nonfin(d_v) ||
-             ((0 == d_v.v[0]) && (0 == (d_v.v[1] << 1))) )
-        {
-          return u3_none;
+        if ( f128M_isnan(b_v) ) {
+          return u3m_bail(c3__fail);
         }
         f128M_sub(&b_v, &a_v, &ba_v);
         c3_o des_o = __(f128M_lt(&ba_v, &zer_v));
@@ -2151,9 +2158,10 @@
           {
             break;
           }
-          if ( ((nx_v.v[0] == x_v.v[0]) && (nx_v.v[1] == x_v.v[1])) ||
-               (cnt_d >= _LA_RANGE_MAX) )
-          {
+          if ( (nx_v.v[0] == x_v.v[0]) && (nx_v.v[1] == x_v.v[1]) ) {
+            return u3m_bail(c3__fail);
+          }
+          if ( cnt_d >= _LA_RANGE_MAX ) {
             return u3_none;
           }
           cnt_d++;
@@ -2181,19 +2189,19 @@
 
 /* trace - tr(x)
 */
-  u3_noun
+  u3_weak
   u3qi_la_trace_i754(u3_noun x_data,
                      u3_noun shape,
                      u3_noun bloq)
   {
-    u3_noun d_data = u3qi_la_diag(x_data, shape, bloq);
+    u3_weak d_data = u3qi_la_diag(x_data, shape, bloq);
     if ( u3_none == d_data ) {
       return u3_none;
     }
     //  the diagonal is an ~[n 1] ray, where n is the first dimension;
     //  (cumsum (diag a)) sums it -- NOT (dot d d), which squares it
     u3_noun d_shape = u3nt(u3k(u3h(shape)), 0x1, u3_nul);
-    u3_noun r_data  = u3qi_la_cumsum_i754(d_data, d_shape, bloq);
+    u3_weak r_data  = u3qi_la_cumsum_i754(d_data, d_shape, bloq);
     u3z(d_data);
     u3z(d_shape);
     return r_data;
@@ -2201,7 +2209,7 @@
 
 /* mmul
 */
-  u3_noun
+  u3_weak
   u3qi_la_mmul_i754(u3_noun x_data,
                     u3_noun y_data,
                     u3_noun x_shape,
@@ -2214,10 +2222,10 @@
     }
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
-    c3_d M = u3x_atom(u3h(x_shape));
-    c3_d Na= u3x_atom(u3h(u3t(x_shape)));
-    c3_d Nb= u3x_atom(u3h(y_shape));
-    c3_d P = u3x_atom(u3h(u3t(y_shape)));
+    c3_d M = u3r_cat(u3h(x_shape));
+    c3_d Na= u3r_cat(u3h(u3t(x_shape)));
+    c3_d Nb= u3r_cat(u3h(y_shape));
+    c3_d P = u3r_cat(u3h(u3t(y_shape)));
 
     if ((u3_nul != u3t(u3t(x_shape))) ||
         (u3_nul != u3t(u3t(y_shape))) ||
@@ -2292,7 +2300,7 @@
     return u3nc(u3nq(u3nt(M_, P_, u3_nul), u3k(bloq), c3__i754, u3_nul), r_data);
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_add(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2329,7 +2337,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_add_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_add_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -2340,7 +2348,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_sub(u3_noun cor)
   {
       // Each argument is a ray, [=meta data=@ux]
@@ -2377,7 +2385,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_sub_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_sub_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -2388,7 +2396,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_mul(u3_noun cor)
   {
       // Each argument is a ray, [=meta data=@ux]
@@ -2425,7 +2433,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_mul_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_mul_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -2436,7 +2444,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_div(u3_noun cor)
   {
       // Each argument is a ray, [=meta data=@ux]
@@ -2473,7 +2481,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_div_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_div_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -2484,7 +2492,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_mod(u3_noun cor)
   {
       // Each argument is a ray, [=meta data=@ux]
@@ -2521,7 +2529,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_mod_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_mod_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -2532,7 +2540,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_cumsum(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2562,7 +2570,7 @@
         switch (x_kind) {
           case c3__i754:
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_cumsum_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_cumsum_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             //  +scalar-to-ray: all-ones shape of the input's rank
             return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -2574,7 +2582,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_argmin(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2600,7 +2608,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_argmin_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_argmin_i754(x_data, x_shape, x_bloq);
             // bare atom (@ index)
             return r_data;}
 
@@ -2611,7 +2619,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_ravel(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2641,7 +2649,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_ravel_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_ravel_i754(x_data, x_shape, x_bloq);
             // (list @)
             return r_data;}
 
@@ -2652,7 +2660,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_argmax(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2678,7 +2686,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_argmax_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_argmax_i754(x_data, x_shape, x_bloq);
             // bare atom (@ index)
             return r_data;}
 
@@ -2689,7 +2697,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_min(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2716,7 +2724,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_min_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_min_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             //  +scalar-to-ray: all-ones shape of the input's rank
             return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
@@ -2728,7 +2736,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_max(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2755,7 +2763,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_max_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_max_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             //  +scalar-to-ray: all-ones shape of the input's rank
             return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
@@ -2767,7 +2775,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_abs(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2794,7 +2802,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_abs_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_abs_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
 
@@ -2805,7 +2813,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_gth(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2837,7 +2845,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_gth_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_gth_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -2848,7 +2856,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_gte(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2880,7 +2888,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_gte_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_gte_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -2891,7 +2899,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_lth(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2923,7 +2931,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_lth_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_lth_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -2934,7 +2942,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_lte(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -2966,7 +2974,7 @@
       } else {
         switch (x_kind) {
           case c3__i754: {
-            u3_noun r_data = u3qi_la_lte_i754(x_data, y_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_lte_i754(x_data, y_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3k(x_meta), r_data);}
 
@@ -2977,7 +2985,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_adds(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3005,7 +3013,7 @@
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_adds_i754(x_data, n, x_shape, x_bloq);
+          u3_weak r_data = u3qi_la_adds_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -3015,7 +3023,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_subs(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3043,7 +3051,7 @@
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_subs_i754(x_data, n, x_shape, x_bloq);
+          u3_weak r_data = u3qi_la_subs_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -3053,7 +3061,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_muls(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3081,7 +3089,7 @@
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_muls_i754(x_data, n, x_shape, x_bloq);
+          u3_weak r_data = u3qi_la_muls_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -3091,7 +3099,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_divs(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3119,7 +3127,7 @@
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_divs_i754(x_data, n, x_shape, x_bloq);
+          u3_weak r_data = u3qi_la_divs_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -3129,7 +3137,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_mods(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3157,7 +3165,7 @@
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_mods_i754(x_data, n, x_shape, x_bloq);
+          u3_weak r_data = u3qi_la_mods_i754(x_data, n, x_shape, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3k(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
 
@@ -3167,7 +3175,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_dot(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3179,54 +3187,64 @@
     y_meta = u3h(u3t(u3h(u3t(cor))));
     y_data = u3t(u3t(u3h(u3t(cor))));
 
-    if ( c3n == u3r_sing(x_meta, y_meta) ||
-         c3n == u3ud(x_data) ||
+    if ( c3n == u3ud(x_data) ||
          c3n == u3ud(y_data) )
     {
       return u3m_bail(c3__exit);
-    } else {
-      u3_noun x_shape, x_bloq, x_kind, x_tail,
-              y_shape,
-              rnd;
-      x_shape = u3h(x_meta);          //  2
-      x_bloq = u3h(u3t(x_meta));      //  6
-      x_kind = u3h(u3t(u3t(x_meta))); // 14
-      x_tail = u3t(u3t(u3t(x_meta))); // 15
-      y_shape = u3h(y_meta);          //  2
-      rnd = u3h(u3t(u3t(u3t(cor))));  // 30
-      //  +dot asserts equal shapes for every kind ...
+    }
+
+    //  +dot asserts equal shapes for every kind ...
+    //
+    //  NB: u3r_sing unifies equal subnouns in place, so no uncounted
+    //  reference into a compared noun may outlive the comparison.
+    //  Every field below is (re)read from the sample after the last
+    //  comparison that could have rewritten it.
+    if ( c3n == u3r_sing(u3h(x_meta), u3h(y_meta)) ) {
+      return u3m_bail(c3__exit);
+    }
+
+    {
+      u3_noun x_bloq = u3h(u3t(x_meta));      //  6
+      u3_noun x_kind = u3h(u3t(u3t(x_meta))); // 14
+
       if ( c3n == u3ud(x_bloq) ||
-           c3n == u3ud(x_kind) ||
-           c3n == u3r_sing(x_shape, y_shape)
-         )
+           c3n == u3ud(x_kind) )
       {
         return u3m_bail(c3__exit);
-      } else {
-        switch (x_kind) {
-          case c3__i754:
-            //  ... and the %i754 path, (cumsum (mul a b)), asserts
-            //  equal metas and consistency in +bin-op.
-            if ( c3n == u3r_sing(x_meta, y_meta) ||
-                 c3n == _check(x_meta, x_data) ||
-                 c3n == _check(y_meta, y_data)
-               )
-            {
-              return u3m_bail(c3__exit);
-            }
-            if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_dot_i754(x_data, y_data, x_shape, x_bloq);
-            if (r_data == u3_none) { return u3_none; }
-            //  +scalar-to-ray: all-ones shape of the input's rank
-            return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
+      }
 
-          default:
-            return u3_none;
+      switch (x_kind) {
+        case c3__i754: {
+          //  ... and the %i754 path, (cumsum (mul a b)), asserts
+          //  equal metas and consistency in +bin-op.
+          if ( c3n == u3r_sing(x_meta, y_meta) ||
+               c3n == _check(x_meta, x_data) ||
+               c3n == _check(y_meta, y_data) )
+          {
+            return u3m_bail(c3__exit);
+          }
+
+          //  the metas are unified now; read the fields we return
+          u3_noun x_shape = u3h(x_meta);          //  2
+          u3_noun x_tail  = u3t(u3t(u3t(x_meta))); // 15
+          u3_noun rnd     = u3h(u3t(u3t(u3t(cor))));  // 30
+          x_bloq = u3h(u3t(x_meta));
+          x_kind = u3h(u3t(u3t(x_meta)));
+
+          if ( c3n == _set_rounding(rnd) ) { return u3_none; }
+          u3_weak r_data = u3qi_la_dot_i754(x_data, y_data, x_shape, x_bloq);
+          if (r_data == u3_none) { return u3_none; }
+          //  +scalar-to-ray: all-ones shape of the input's rank
+          return u3nc(u3nq(_ones_shape(x_shape), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
         }
+
+        default:
+          return u3_none;
       }
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_transpose(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3251,7 +3269,7 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        u3_noun r_data = u3qi_la_transpose(x_data, x_shape, x_bloq);
+        u3_weak r_data = u3qi_la_transpose(x_data, x_shape, x_bloq);
         if (r_data == u3_none) { return u3_none; }
         //  the result shape swaps the input's dimensions
         return u3nc(u3nq(u3nt(u3k(u3h(u3t(x_shape))), u3k(u3h(x_shape)), u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -3259,7 +3277,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_linspace(u3_noun cor)
   {
     u3_noun x_meta, a, b, n, rnd;
@@ -3284,7 +3302,7 @@
       switch (x_kind) {
         case c3__i754: {
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_linspace_i754(a, b, n, x_bloq);
+          u3_weak r_data = u3qi_la_linspace_i754(a, b, n, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           return u3nc(u3nq(u3nc(u3k(n), u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
         }
@@ -3295,7 +3313,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_range(u3_noun cor)
   {
     u3_noun x_meta, a, b, d, rnd;
@@ -3318,7 +3336,7 @@
       switch (x_kind) {
         case c3__i754: {
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-          u3_noun r_data = u3qi_la_range_i754(a, b, d, x_bloq);
+          u3_weak r_data = u3qi_la_range_i754(a, b, d, x_bloq);
           if (r_data == u3_none) { return u3_none; }
           //  the kernel decided the count by iterating like the
           //  Hoon; recover it from the data itself, whose block
@@ -3333,7 +3351,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_diag(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3358,7 +3376,7 @@
       {
         return u3m_bail(c3__exit);
       } else {
-        u3_noun r_data = u3qi_la_diag(x_data, x_shape, x_bloq);
+        u3_weak r_data = u3qi_la_diag(x_data, x_shape, x_bloq);
         if (r_data == u3_none) { return u3_none; }
         //  result shape is ~[n 1] where n is the (square) input's first dim
         return u3nc(u3nq(u3nt(u3k(u3h(x_shape)), 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);
@@ -3366,7 +3384,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_trace(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3393,7 +3411,7 @@
           case c3__i754: {
             //  the sum in (cumsum (diag a)) rounds per the door mode
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_trace_i754(x_data, x_shape, x_bloq);
+            u3_weak r_data = u3qi_la_trace_i754(x_data, x_shape, x_bloq);
             if (r_data == u3_none) { return u3_none; }
             return u3nc(u3nq(u3nt(0x1, 0x1, u3_nul), u3k(x_bloq), u3k(x_kind), u3k(x_tail)), r_data);}
 
@@ -3404,7 +3422,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3wi_la_mmul(u3_noun cor)
   {
     // Each argument is a ray, [=meta data=@ux]
@@ -3451,7 +3469,7 @@
               return u3_none;
             }
             if ( c3n == _set_rounding(rnd) ) { return u3_none; }
-            u3_noun r_data = u3qi_la_mmul_i754(x_data, y_data, x_shape, y_shape, x_bloq);
+            u3_weak r_data = u3qi_la_mmul_i754(x_data, y_data, x_shape, y_shape, x_bloq);
             // result is already [meta data]
             return r_data;
 
