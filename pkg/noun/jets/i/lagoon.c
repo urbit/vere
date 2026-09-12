@@ -283,35 +283,39 @@
     // syz_x is length in bytes
     c3_d syz_x = len_x * pow(2, bloq-3);
 
-    // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
-    u3r_bytes(0, syz_x, x_bytes, x_data);
+    // x_bytes holds x_data (w/ leading 0x1, skipped by ?axpy); it is the result
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
 
-    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, syz_x+1, y_bytes, y_data);
-    
-    //  Switch on the block size.
+    // y_bytes holds y_data (w/o leading 0x1), the subtrahend
+    c3_y* y_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, y_bytes, y_data);
+
+    //  Switch on the block size.  SoftBLAS ?axpy is y := a*x + y, so
+    //  (sub a b) = a - b is ?axpy(-1, b_data, a_data) with a_data as the
+    //  accumulator.  The operands were reversed here, computing b - a
+    //  (correct only when a == b, e.g. the 1-1=0 test); +sub of distinct
+    //  operands, like 5-3, returned the negated difference.
     switch (u3x_atom(bloq)) {
       case 4:
-        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)y_bytes, 1, (float16_t*)x_bytes, 1);
         break;
 
       case 5:
-        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)y_bytes, 1, (float32_t*)x_bytes, 1);
         break;
 
       case 6:
-        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)y_bytes, 1, (float64_t*)x_bytes, 1);
         break;
 
       case 7:
-        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)y_bytes, 1, (float128_t*)x_bytes, 1);
         break;
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
