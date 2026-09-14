@@ -735,6 +735,8 @@ fn buildBinary(
             deps: []const *std.Build.Step.Compile,
             //  windows-only tests: the behaviour under test is win32's
             win: bool = false,
+            //  posix-only tests: mkdtemp/nftw and /tmp, which mingw lacks
+            nix: bool = false,
         }{
             // pkg_ur
             .{
@@ -763,6 +765,7 @@ fn buildBinary(
                 .name = "events-test",
                 .file = "pkg/noun/events_tests.c",
                 .deps = noun_test_deps,
+                .nix = true,
             },
             .{
                 .name = "hashtable-test",
@@ -855,6 +858,7 @@ fn buildBinary(
 
         for (tests) |tst| {
             if (tst.win and t.os.tag != .windows) continue;
+            if (tst.nix and t.os.tag == .windows) continue;
 
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));

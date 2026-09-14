@@ -1338,10 +1338,11 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
     u3C.wag_h |= u3o_hashless;
 
-    //  claim the stale loom addresses before the ivory pill, the CRT or
-    //  anything else can land on one. windows only; see u3_disk_stake().
+    //  claim the loom and stale loom addresses before the ivory pill, the
+    //  CRT or anything else can land on one. windows only; see
+    //  u3_disk_stake().
     //
-    u3_disk_stake();
+    u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
@@ -2429,6 +2430,12 @@ _cw_play(c3_i argc, c3_c* argv[])
   signal(SIGTSTP, _cw_play_exit);
 #endif
 
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
   //  setup mars
   //
   {
@@ -2991,6 +2998,12 @@ _cw_boot(c3_i argc, c3_c* argv[])
 
   _cw_init_io(lup_u);
 
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
   //  make pier, configure i/o
   //
   u3_mars mar_u = { .dir_c = dir_c };
@@ -3126,6 +3139,12 @@ _cw_work(c3_i argc, c3_c* argv[])
     }
   }
   
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
   //  setup mars
   //
   u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
@@ -3441,7 +3460,7 @@ main(c3_i   argc,
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
     //
-    u3_disk_stake();
+    u3_disk_stake((size_t)1 << u3_Host.ops_u.lut_y);
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lut_y);
 
     //  Initialize OpenSSL for client and server

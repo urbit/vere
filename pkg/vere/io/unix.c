@@ -164,10 +164,21 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
     *result = NULL;
     return (errno);  // either success or error code
   } else {
+#ifdef U3_OS_windows
+    //  mingw's d_reclen is documented "always zero": opendir() clears it
+    //  and readdir() never sets it, so a d_reclen-sized copy copies
+    //  nothing and leaves [entry] holding whatever was on the stack --
+    //  the same junk name on every call, for every directory read. its
+    //  struct dirent is a fixed size (d_name is a char[260], not a
+    //  flexible tail), so the whole thing can be copied.
+    //
+    memcpy(entry, tmp_u, sizeof(*entry));
+#else
     //  [entry] is a fixed-size struct dirent; a larger d_reclen would overflow it
     //
     u3_assert( tmp_u->d_reclen <= sizeof(*entry) );
     memcpy(entry, tmp_u, tmp_u->d_reclen);
+#endif
     *result = entry;
   }
 
