@@ -12,6 +12,7 @@
 #include "manage.h"
 #include "nock.h"
 #include "retrieve.h"
+#include "trace.h"
 #include "vortex.h"
 #include "xtract.h"
 
@@ -121,7 +122,7 @@ u3d_match(u3_noun sub, u3_noun lis)
 }
 
 /* _d_poke(): poke the SKA core.  TRANSFERS ovo, produces the product,
-**            and replaces the core.
+**            and replaces the core.  Bails if the core crashes.
 */
 static u3_noun
 _d_poke(u3_noun ovo)
@@ -131,12 +132,36 @@ _d_poke(u3_noun ovo)
 
   u3_assert( u3_nul != cor );
 
+  c3_m    tag_m = u3h(ovo);
+  c3_d    beg_d = u3t_trace_time();
+  c3_c    tag_c[5] = {0};
+
+  memcpy(tag_c, &tag_m, 4);
+  if ( getenv("U3NC_VERBOSE") ) {
+    u3l_log("ska: poke %%%s: start, ovum mug %08x", tag_c, u3r_mug(u3t(ovo)));
+  }
+
+  //  in its own road with no scry gate: nothing in the core scries,
+  //  and persistent memoization needs the gate empty
+  //
   gat = u3n_nock_on(u3k(cor), u3nt(9, _d_poke_w, u3nc(0, 1)));
-  pro = u3n_slam_on(gat, ovo);
-  res = u3k(u3h(pro));
+  pro = u3n_slam_et(u3_nul, gat, ovo);
+
+  if ( 0 != u3h(pro) ) {
+    u3l_log("ska: poke failed");
+    u3z(pro);
+    return u3m_bail(c3__fail);
+  }
+
+  res = u3k(u3h(u3t(pro)));
+
+  if ( getenv("U3NC_VERBOSE") ) {
+    u3l_log("ska: poke %%%s: %" PRIu64 " us", tag_c,
+            u3t_trace_time() - beg_d);
+  }
 
   u3z(u3R->ska.cor);
-  u3R->ska.cor = u3k(u3t(pro));
+  u3R->ska.cor = u3k(u3t(u3t(pro)));
   u3z(pro);
 
   return res;

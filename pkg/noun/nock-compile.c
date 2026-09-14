@@ -1473,7 +1473,8 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
   }
 }
 
-/* _nc_link(): set the callee programs of the direct call sites.
+/* _nc_link(): set the callee programs of the direct call sites that
+**             have been compiled; the rest are linked when first called.
 */
 static void
 _nc_link(u3nc_prog* pog_u)
@@ -1482,50 +1483,59 @@ _nc_link(u3nc_prog* pog_u)
 
   for ( i_w = 0; i_w < pog_u->dir_u.len_w; i_w++ ) {
     u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_w]);
+    u3nc_prog* gop_u;
 
-    if ( c3y == dir_u->dir_o ) {
-      u3nc_prog* gop_u = _nc_dir_get(dir_u->bell);
-      u3_assert( gop_u );
+    if ( (c3y == dir_u->dir_o) && (gop_u = _nc_dir_get(dir_u->bell)) ) {
       dir_u->pog_p = u3of(u3nc_prog, gop_u);
     }
   }
 }
 
-/* _nc_compile(): compile a straight, then its callees that haven't
-**                been compiled, and link them all.  TRANSFERS.
+/* _nc_compile(): compile a straight and link it.  TRANSFERS.
 */
 static u3nc_prog*
 _nc_compile(u3_noun straight)
 {
-  u3nc_prog** fre_u = 0;
-  c3_w        fre_n = 0, fre_m = 0, i_w, j_w;
-  u3nc_prog*  pog_u = _nc_build(straight);
-
-  _nc_grow(fre_u, fre_n, fre_m, u3nc_prog*);
-  fre_u[fre_n++] = pog_u;
-
-  for ( i_w = 0; i_w < fre_n; i_w++ ) {
-    u3nc_prog* gop_u = fre_u[i_w];
-
-    for ( j_w = 0; j_w < gop_u->dir_u.len_w; j_w++ ) {
-      u3nc_dire* dir_u = &(gop_u->dir_u.dat_u[j_w]);
-
-      if ( (c3y == dir_u->dir_o) && !_nc_dir_get(dir_u->bell) ) {
-        u3nc_prog* new_u = _nc_build(u3d_dire(dir_u->bell));
-
-        u3h_put(u3R->ska.dir_p, dir_u->bell, _nc_of(new_u));
-        _nc_grow(fre_u, fre_n, fre_m, u3nc_prog*);
-        fre_u[fre_n++] = new_u;
-      }
-    }
-  }
-
-  for ( i_w = 0; i_w < fre_n; i_w++ ) {
-    _nc_link(fre_u[i_w]);
-  }
-
-  u3a_free(fre_u);
+  u3nc_prog* pog_u = _nc_build(straight);
+  _nc_link(pog_u);
   return pog_u;
+}
+
+/* _nc_here(): is a pointer on the current road?
+*/
+static inline c3_t
+_nc_here(void* ptr_v)
+{
+  u3_post pos_p = u3of(void, ptr_v);
+
+  return ( c3y == u3a_is_north(u3R) )
+       ? ((pos_p >= u3R->rut_p) && (pos_p < u3R->hat_p))
+       : ((pos_p >= u3R->hat_p) && (pos_p < u3R->rut_p));
+}
+
+/* _nc_callee(): the program of a direct call site, compiling it on the
+**               first call.  The site remembers it if the site is on the
+**               current road; a senior site can't point at junior memory.
+*/
+static u3nc_prog*
+_nc_callee(u3nc_dire* dir_u)
+{
+  u3nc_prog* gop_u;
+
+  if ( dir_u->pog_p ) {
+    return u3to(u3nc_prog, dir_u->pog_p);
+  }
+
+  if ( !(gop_u = _nc_dir_get(dir_u->bell)) ) {
+    gop_u = _nc_compile(u3d_dire(dir_u->bell));
+    u3h_put(u3R->ska.dir_p, dir_u->bell, _nc_of(gop_u));
+  }
+
+  if ( _nc_here(dir_u) ) {
+    dir_u->pog_p = u3of(u3nc_prog, gop_u);
+  }
+
+  return gop_u;
 }
 
 /* _nc_entry(): entry program for [sub fol], compiling it if needed.
@@ -1750,7 +1760,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 //
 #define SITE()  do {                                                     \
     dir_u = &(pog_u->dir_u.dat_u[a_w]);                                  \
-    gop_u = u3to(u3nc_prog, dir_u->pog_p);                               \
+    u3t_off(noc_o);                                                      \
+    gop_u = _nc_callee(dir_u);                                           \
+    u3t_on(noc_o);                                                       \
     sot_w = pog_u->sot_u.sot_w + dir_u->sot_w;                           \
     len_w = dir_u->len_w;                                                \
   } while ( 0 )
@@ -2009,7 +2021,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 
     ARG3(NOK, a_w, b_w, d_w)
       x     = reg[a_w];
+      u3t_off(noc_o);
       gop_u = _nc_entry(x, reg[b_w]);
+      u3t_on(noc_o);
       u3k(x);
       goto call;
 
@@ -2089,7 +2103,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       }
 
       _nc_stat(sub_d);
-      gop_u  = _nc_entry(x, u3t(dir_u->bell));
+      u3t_off(noc_o);
+      gop_u = _nc_entry(x, u3t(dir_u->bell));
+      u3t_on(noc_o);
       nex    = PUSH(gop_u->tot_w);
       nex[0] = u3k(x);
       FRAME();
@@ -2102,7 +2118,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
 
     csl_go:
       _nc_stat(sub_d);
+      u3t_off(noc_o);
       gop_u = _nc_entry(x, u3t(dir_u->bell));
+      u3t_on(noc_o);
       u3k(x);
       goto call;
 
@@ -2203,7 +2221,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_w len_w, c3_ws mov_ws)
       }
 
       _nc_stat(sub_d);
-      gop_u    = _nc_entry(x, u3t(dir_u->bell));
+      u3t_off(noc_o);
+      gop_u = _nc_entry(x, u3t(dir_u->bell));
+      u3t_on(noc_o);
       reg[b_w] = 0;
       goto tail;
 
@@ -2272,6 +2292,17 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   }
 
   return pro;
+}
+
+/* u3nc_scan(): analyze and compile [bus fol] without running it.
+*/
+void
+u3nc_scan(u3_noun bus, u3_noun fol)
+{
+  _nc_verb_t = !!getenv("U3NC_VERBOSE");
+  _nc_entry(bus, fol);
+  u3z(bus);
+  u3z(fol);
 }
 
 /* _nc_prog_free(): free a program.

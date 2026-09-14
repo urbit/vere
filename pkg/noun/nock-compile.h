@@ -85,6 +85,11 @@
       u3_noun
       u3nc_nock_on(u3_noun bus, u3_noun fol);
 
+    /* u3nc_scan(): analyze and compile [bus fol] without running it.
+    */
+      void
+      u3nc_scan(u3_noun bus, u3_noun fol);
+
     /* u3nc_take(): copy junior program tables; sets *dir_p and *ent_p
     **              to the copies.
     */
