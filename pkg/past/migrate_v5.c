@@ -25,6 +25,15 @@ typedef struct {
   u3_v4_noun cel;
 } _copy_frame;
 
+/* _copy_ctx: migration state.
+**
+**   [map_u] dedups the copy: old noun -> new noun.  it RETAINS every new
+**   noun it records and releases them all in u3_migrate_v5() once the walk
+**   is over.  without that, a free during the walk (a cache table evicting
+**   an entry past its max_w, or a put replacing an entry whose key compares
+**   equal) leaves the map pointing at dead nouns, and the next dedup hit
+**   gains a freed box (bail: foul) or corrupts whatever reused it.
+*/
 typedef struct {
   _v4_to_v5  map_u;
   c3_w       len_w;
@@ -64,7 +73,7 @@ _copy_v4_next(_copy_ctx *cop_u, u3_noun old)
 
     if ( c3n == u3a_v4_is_cell(old) ) {
       u3_atom new = _copy_atom(old);
-      vit_u = vt_insert( &(cop_u->map_u), old, new );
+      vit_u = vt_insert( &(cop_u->map_u), old, u3a_v5_gain(new) );
       u3_assert( !vt_is_end(vit_u) );
       return new;
     }
@@ -103,7 +112,7 @@ _copy_v4_noun(_copy_ctx *cop_u, u3_noun old)
     }
     else {
       new = u3i_v5_cell(top_u->hed, new);
-      vit_u = vt_insert( &(cop_u->map_u), top_u->cel, new );
+      vit_u = vt_insert( &(cop_u->map_u), top_u->cel, u3a_v5_gain(new) );
       u3_assert( !vt_is_end(vit_u) );
       cop_u->len_w--;
     }
@@ -158,6 +167,19 @@ u3_migrate_v5(c3_d eve_d)
   //
   u3j_v5_boot(c3y);
   u3j_v5_ream();
+
+  //  release the map's references; anything displaced during the walk
+  //  is freed here, after every dedup lookup is over.
+  //
+  {
+    _v4_to_v5_itr vit_u;
+    for ( vit_u = vt_first(&cop_u.map_u);
+          !vt_is_end(vit_u);
+          vit_u = vt_next(vit_u) )
+    {
+      u3a_v5_lose(vit_u.data->val);
+    }
+  }
 
   vt_cleanup(&cop_u.map_u);
 
