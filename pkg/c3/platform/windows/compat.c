@@ -227,17 +227,26 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     }
     else h = INVALID_HANDLE_VALUE;
 
-		if ((flags & MAP_PRIVATE))
-		{
-			if (!(prot & PROT_READ) || !(prot & PROT_WRITE))
-			{
-				errno = EINVAL;
-				return MAP_FAILED;
-			}
-
-			protect = PAGE_WRITECOPY;
-			desiredAccess = FILE_MAP_COPY;
-		}
+    // NB: MAP_PRIVATE is 0x0000, so a private mapping is the *absence* of
+    // MAP_SHARED. the test that stood here was `flags & MAP_PRIVATE`,
+    // which is always false -- it has been dead since it was written.
+    //
+    // reviving it as written would have been worse than leaving it dead.
+    // every private mapping in the tree is also MAP_ANON, and a
+    // pagefile-backed section cannot be copy-on-write: CreateFileMapping
+    // does not define what it does with INVALID_HANDLE_VALUE and
+    // PAGE_WRITECOPY together, so that combination must not be built.
+    //
+    // private *file* mappings are refused outright. the loom is the only
+    // thing that wants one, and it maps its own in
+    // pkg/noun/platform/windows/wloom.c, where the view is created
+    // write-copy and then protected down to PAGE_READONLY so that stores
+    // fault -- which this interface has no way to express.
+    if (!(flags & (MAP_SHARED | MAP_ANON)))
+    {
+        errno = ENOTSUP;
+        return MAP_FAILED;
+    }
 
     fm = CreateFileMapping(h, NULL, protect, lenHigh, lenLow, NULL);
 
@@ -331,6 +340,19 @@ int mprotect (void *addr, size_t len, int prot)
     {
         errno = EINVAL;
         return -1;
+    }
+
+    // a copy-on-write mapping (the demand-paged loom image) can only be made
+    // writable as PAGE_WRITECOPY; VirtualProtect rejects PAGE_READWRITE on
+    // such a view. NB: AllocationProtect, not Protect -- an already-copied
+    // page reports PAGE_READWRITE while the view is still write-copy.
+    if (np == PAGE_READWRITE)
+    {
+        MEMORY_BASIC_INFORMATION mbi;
+
+        if (VirtualQuery(addr, &mbi, sizeof(mbi))
+            && mbi.AllocationProtect == PAGE_WRITECOPY)
+            np = PAGE_WRITECOPY;
     }
 
     if (VirtualProtect (addr, len, np, &op))

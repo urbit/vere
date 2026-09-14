@@ -151,6 +151,7 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 #ifdef U3_OS_windows
 #include "veh_handler.h"
+#include "wloom.h"
 #endif
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
@@ -418,6 +419,10 @@ _cm_signal_deep(void)
     abort();
   }
 #else
+  //  windows has no alternate signal stack, so the handler needs room
+  //  reserved on the stack it will be called on. see veh_handler.c.
+  //
+  u3_windows_stack_guard();
   rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
 #endif
 #endif
@@ -1541,6 +1546,16 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     //
     u3t_init();
 
+#ifdef U3_OS_windows
+    //  a caught stack overflow consumed the thread's guard page. restore
+    //  it now that the longjmp has unwound the stack, or the next
+    //  overflow has nothing to trip and kills the process outright.
+    //
+    if ( c3__over == sig_m ) {
+      u3_windows_stack_recover();
+    }
+#endif
+
     //  return to blank state
     //
     _cm_signal_done();
@@ -2344,13 +2359,38 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
-  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
             (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
     u3m_stacktrace();
     u3_assert(0);
     return 0;
   }
+
+#ifdef U3_OS_windows
+  //  a sparse loom faults on the first touch of a page. resolve that
+  //  before u3m_water(), which reads the road -- the road lives in the
+  //  loom and may itself be untouched -- and before u3e_fault(), which
+  //  cannot tell a first touch of page 0 from a guard page that has yet
+  //  to be posted.
+  //
+  //  NB: the bounds check above comes first, so a fault outside the live
+  //  loom is fatal (including one in a stale loom held for a migration),
+  //  which sits at its own base. this is safe only because
+  //  u3_wnd_loom_hold() commits the whole image extent up front; what
+  //  stays reserved is the gap above it, which nothing reads. a read into
+  //  that gap aborts rather than committing. moving this block ahead of
+  //  the bounds check would make it self-healing again.
+  //
+  {
+    size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
+    void*  pag_v = (void *)((uintptr_t)adr_w & ~(uintptr_t)(pag_i - 1));
+
+    if ( c3y == u3_wnd_loom_fault(pag_v, pag_i) ) {
+      return 1;
+    }
+  }
+#endif
 
   u3m_water(&low_p, &hig_p);
 
@@ -2548,11 +2588,36 @@ u3m_init(size_t len_i)
   // map at fixed address.
   //
   {
-    void* map_v = mmap((void *)u3_Loom,
-                       len_i,
-                       (PROT_READ | PROT_WRITE),
-                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                       -1, 0);
+    void* map_v;
+
+#ifdef U3_OS_windows
+    //  the loom is reserved as a placeholder, which makes it sparse (pages
+    //  cost commit charge only once touched) and lets the image be mapped
+    //  over its bottom for demand paging. if --no-demand is on, degrade to
+    //  blitting and charging the whole loom to commit up front
+    //
+    if ( c3n == u3_wnd_loom_init((void *)u3_Loom, len_i) ) {
+      if ( !(u3C.wag_h & u3o_no_demand) ) {
+        u3l_log("loom: demand paging disabled");
+        u3C.wag_h |= u3o_no_demand;
+      }
+
+      map_v = mmap((void *)u3_Loom,
+                   len_i,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                   -1, 0);
+    }
+    else {
+      map_v = (void *)u3_Loom;
+    }
+#else
+    map_v = mmap((void *)u3_Loom,
+                 len_i,
+                 (PROT_READ | PROT_WRITE),
+                 (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                 -1, 0);
+#endif
 
     if ( -1 == (c3_ps)map_v ) {
       map_v = mmap((void *)0,
@@ -2562,8 +2627,15 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
+#ifdef U3_OS_windows
+      //  windows does not overcommit; the loom is charged in full up front
+      //
+      u3l_log("the whole loom must fit in RAM plus the paging file:"
+              " boot with a smaller --loom, or grow the paging file");
+#else
       u3l_log("see https://docs.urbit.org/user-manual/running/cloud-hosting"
               " for adding swap space");
+#endif
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);

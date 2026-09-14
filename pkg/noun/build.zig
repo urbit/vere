@@ -183,12 +183,20 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
-            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c" },
+            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c", "wloom.c" },
             .flags = flags.items,
         });
+
+        // VirtualAlloc2/MapViewOfFile3, used by wloom.c, are exported from
+        // this api set rather than kernel32. sets vere's floor at windows
+        // 10 1803.
+        pkg_noun.linkSystemLibrary("api-ms-win-core-memory-l1-1-6");
     }
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
+
+    if (t.os.tag == .windows)
+        pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
