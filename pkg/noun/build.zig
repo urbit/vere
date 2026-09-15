@@ -180,6 +180,19 @@ pub fn build(b: *std.Build) !void {
         .flags = flags.items,
     });
 
+    //  the u3nc interpreter loop in nock-compile.c is one register short
+    //  with the frame pointer reserved, so it's built without.  frame
+    //  pointer unwinding stops at _nc_burn; dwarf unwinding still works.
+    var burn_flags = std.array_list.Managed([]const u8).init(b.allocator);
+    defer burn_flags.deinit();
+    try burn_flags.appendSlice(flags.items);
+    try burn_flags.append("-fomit-frame-pointer");
+    pkg_noun.addCSourceFiles(.{
+        .root = b.path(""),
+        .files = &.{"nock-compile.c"},
+        .flags = burn_flags.items,
+    });
+
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
@@ -411,7 +424,6 @@ const c_source_files = [_][]const u8{
     "migrate.c",
     "palloc.c",
     "nock.c",
-    "nock-compile.c",
     "options.c",
     "retrieve.c",
     "ship.c",
