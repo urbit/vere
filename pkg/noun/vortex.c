@@ -3,6 +3,7 @@
 #include "vortex.h"
 
 #include "allocate.h"
+#include "hashtable.h"
 #include "imprison.h"
 #include "jets/k.h"
 #include "jets/q.h"
@@ -376,21 +377,62 @@ u3v_mark()
 {
   u3v_arvo* arv_u = &(u3H->arv_u);
 
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 3);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 4);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
   qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
-  qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
+  qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("wish cache");
   qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
   qua_u[2] = NULL;
+  qua_u[3] = NULL;
+
+  //  mark blob bank HAMT.  values are atoms encoding loom offsets of
+  //  u3a_blob structs; the structs themselves are walloc'd blocks not
+  //  subject to noun mark/sweep.  u3h_mark covers nodes, keys, values.
+  //
+  //  NB: home road only.  the bank lives on the home road, and u3h_mark
+  //  reaches it through u3a_mark_ptr, which (unlike u3a_mark_noun) has no
+  //  seniority check.  from an inner road that indexes the inner road's
+  //  page directory with a home-road offset, reading off the loom.
+  //
+  if ( (&(u3H->rod_u) == u3R) && u3H->blb_p ) {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3H->blb_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
+    qua_u[2]->nam_c = strdup("blob bank");
+    qua_u[2]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+    qua_u[2]->qua_u = mua_u;
+  }
 
   u3m_quac* tot_u = c3_malloc(sizeof(*tot_u));
   tot_u->nam_c = strdup("total arvo stuff");
-  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w;
+  tot_u->siz_w = qua_u[0]->siz_w + qua_u[1]->siz_w
+               + ( qua_u[2] ? qua_u[2]->siz_w : 0 );
   tot_u->qua_u = qua_u;
 
   return tot_u;
@@ -411,6 +453,31 @@ u3v_reclaim(void)
   }
 }
 
+/* _v_rewrite_blb_cb(): u3h_walk_with callback for compaction.
+**
+**   Each blb_p value atom encodes the loom offset of a u3a_blob struct.
+**   pack_seek determines new offsets but the integer values stored
+**   inside the value atoms are not noun pointers, so u3h_relocate
+**   doesn't update them.  We mutate cell->tel in place to the new
+**   offset.  Must run BEFORE u3h_relocate(&blb_p) — at that point
+**   slot pointers and cells are still at their pre-pack addresses,
+**   so u3a_to_ptr(kev) resolves correctly.
+*/
+static void
+_v_rewrite_blb_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3a_cell* cel_u = (u3a_cell*)u3a_to_ptr(kev);
+
+  //  tel is a direct atom; its value is the loom offset of the
+  //  u3a_blob.  loom offsets always fit in cat range on both VERE32
+  //  (≤30 bits) and VERE64 (≤34 bits).
+  //
+  u3_post off_p = (u3_post)cel_u->tel;
+  u3a_relocate_post(&off_p);
+  cel_u->tel = (u3_noun)off_p;
+}
+
 /* u3v_rewrite_compact(): rewrite arvo kernel for compaction.
 */
 void
@@ -420,4 +487,14 @@ u3v_rewrite_compact(void)
   //
   u3a_relocate_noun(&(u3A->roc));
   u3a_relocate_noun(&(u3A->yot));
+
+  //  relocate blob bank HAMT.  The values are atoms encoding loom
+  //  offsets of u3a_blob structs; rewrite those offsets BEFORE the
+  //  HAMT structure is relocated so we can still read kev cells at
+  //  their pre-pack addresses.
+  //
+  if ( u3H->blb_p ) {
+    u3h_walk_with(u3H->blb_p, _v_rewrite_blb_cb, 0);
+    u3h_relocate(&(u3H->blb_p));
+  }
 }

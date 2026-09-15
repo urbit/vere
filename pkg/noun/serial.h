@@ -18,6 +18,21 @@
       */
         typedef struct _u3_cue_xeno u3_cue_xeno;
 
+      /* u3s_bsink: byte sink for streaming large cued atoms off-loom.
+      **
+      **   when installed on a cue_xeno handle (u3s_cue_xeno_blob), atoms
+      **   larger than the threshold are streamed through [wri_f] in
+      **   chunks instead of being allocated on the loom; [don_f] returns
+      **   the atom to decode in their place (typically a bob atom
+      **   referencing a blob-store file built from the bytes).
+      */
+        typedef struct _u3s_bsink {
+          void*    ptr_v;                              //  callback state
+          c3_o   (*opn_f)(void*);                      //  begin atom stream
+          c3_o   (*wri_f)(void*, const c3_y*, c3_z);   //  append bytes
+          u3_weak (*don_f)(void*);                     //  finish -> atom
+        } u3s_bsink;
+
     /*  Noun serialization. All noun arguments RETAINED.
     */
 
@@ -55,6 +70,17 @@
         u3s_cue_xeno_with(u3_cue_xeno* sil_u,
                           c3_d         len_d,
                           const c3_y*  byt_y);
+
+      /* u3s_cue_xeno_blob(): install a byte sink on a cue_xeno handle.
+      **
+      **   atoms larger than [thr_d] bytes stream through [snk_u] rather
+      **   than materializing on the loom.  [thr_d] of 0 disables.  the
+      **   sink must outlive the handle's use.
+      */
+        void
+        u3s_cue_xeno_blob(u3_cue_xeno* sil_u,
+                          c3_d         thr_d,
+                          u3s_bsink*   snk_u);
 
       /* u3s_cue_xeno_init(): dispose cue_xeno handle.
       */
@@ -133,5 +159,36 @@
       */
         u3_weak
         u3s_sift_ud(u3_atom a);
+
+    /*  Ram/Tap — reference-aware serialization that encodes bob atoms.
+    **
+    **  Ram extends jam with a 2-bit tag scheme:
+    **    00 = normal atom   (costs 1 extra bit vs jam)
+    **    01 = blob ref      (mat(mug) + mat(seq))
+    **    10 = cell
+    **    11 = backref
+    **
+    **  Wire format: [magic "RAM\0" 4B][version 0x01 1B][ram_bits...]
+    */
+
+      /* u3s_ram_xeno(): ram with off-loom buffer (re-)allocation.
+      **
+      **   Encodes bob atoms as 01-tagged blob refs.
+      **   Normal atoms (including large non-bob atoms) are 00-tagged.
+      **   Does NOT blobify atoms — caller must do that first.
+      **
+      **   Returns number of bytes written (including 5-byte header).
+      **   On error returns 0 and *byt_y is unchanged.
+      */
+        c3_d
+        u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
+
+      /* u3s_tap_xeno(): tap on-loom, with off-loom dictionary.
+      **
+      **   Decodes ram bytes. 01-tagged blob refs become bob atoms.
+      **   Returns u3_none on any error.
+      */
+        u3_weak
+        u3s_tap_xeno(c3_d len_d, const c3_y* byt_y);
 
 #endif /* ifndef U3_SERIAL_H */
