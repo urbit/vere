@@ -129,6 +129,7 @@ jobs:
             vere-noun-test unix-test   \
             palloc-test events-test    \
             bytestream-test mesa-test  \
+            blob-test                  \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \

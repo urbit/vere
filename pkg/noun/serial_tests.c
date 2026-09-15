@@ -360,6 +360,12 @@ _test_ram_roundtrip(void)
   return ret_i;
 }
 
+//  the bob round-trip tests need real blob files on disk, which means
+//  mkdtemp, /tmp and a recursive teardown -- none of which mingw has.
+//  the rest of the ram/tap coverage is platform-clean and still runs.
+//
+#ifndef U3_OS_windows
+
 /* _ram_tmp_dir / _ram_setup_tmp() / _ram_cleanup_tmp() / _ram_make_blob():
 **
 **   Helpers for bob-atom round-trip tests.  The ram encoder calls
@@ -531,6 +537,8 @@ _test_ram_bob_roundtrip(void)
   return ret_i;
 }
 
+#endif  //  U3_OS_windows
+
 /* _test_ram_invalid(): u3s_tap_xeno rejects malformed input.
 */
 static c3_i
@@ -594,6 +602,7 @@ main(int argc, char* argv[])
   u3m_grab();
   fprintf(stderr, "test ram: ok\r\n");
 
+#ifndef U3_OS_windows
   if ( !_test_ram_bob_roundtrip() ) {
     fprintf(stderr, "test ram bob: failed\r\n");
     exit(1);
@@ -601,6 +610,7 @@ main(int argc, char* argv[])
 
   u3m_grab();
   fprintf(stderr, "test ram bob: ok\r\n");
+#endif
 
   if ( !_test_ram_invalid() ) {
     fprintf(stderr, "test ram invalid: failed\r\n");

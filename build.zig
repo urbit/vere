@@ -824,9 +824,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                //  posix-only: mkdtemp, /tmp, 2-arg mkdir. see events-test.
                 .name = "blob-test",
                 .file = "pkg/vere/blob_tests.c",
                 .deps = vere_test_deps,
+                .nix = true,
             },
             .{
                 .name = "vere-noun-test",

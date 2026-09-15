@@ -1425,6 +1425,11 @@ _test_view(void)
     u3r_view_done(&vue_u);
   }
 
+//  the bob cases below need real blob files on disk: mkdtemp, /tmp and a
+//  recursive teardown, none of which mingw has.  the loom-backed view
+//  coverage above is platform-clean and still runs.
+//
+#ifndef U3_OS_windows
   //  bob atom: view mmaps the underlying blob file
   //
   {
@@ -1501,7 +1506,14 @@ _test_view(void)
     (void)system(cmd_c);
     u3C.dir_c = 0;
   }
+#endif  //  U3_OS_windows
 }
+
+//  _test_aor() is entirely blob-backed: it exists to prove bob atoms
+//  order by their bytes rather than by the loom offset in buf_w.  it
+//  needs real files on disk, so it is posix-only like the block above.
+//
+#ifndef U3_OS_windows
 
 /* _aor_write_blob(): write [byt_y/len_w] to .urb/bob/<mug>/<seq> under [dir_c].
 */
@@ -1597,6 +1609,8 @@ _test_aor(void)
   u3C.dir_c = 0;
 }
 
+#endif  //  U3_OS_windows
+
 /* main(): run all test cases.
 */
 int
@@ -1613,7 +1627,9 @@ main(int argc, char* argv[])
   _test_safe();
   _test_cell_trel_qual();
   _test_view();
+#ifndef U3_OS_windows
   _test_aor();
+#endif
 
   //  GC
   //
