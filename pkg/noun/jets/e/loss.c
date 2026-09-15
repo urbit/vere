@@ -118,7 +118,7 @@
                (inx_w == 0) ? u3_nul
                             : u3k(loc_u->kad[inx_w - 1]));
     if ( loc_u->kct_w == inx_w ) {
-      u3_assert(loc_u->kct_w < (1 << 31));
+      u3_assert(loc_u->kct_w < ((c3_w)1 << 31));
       loc_u->kct_w++;
     } else {
       u3z(loc_u->kad[inx_w]);
@@ -244,7 +244,7 @@
   {
     while ( u3_nul != loc_u->hel ) {
       u3_noun i_hel = u3h(loc_u->hel);
-      u3_noun guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
+      u3_weak guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
 
       if ( u3_none != guy ) {
         u3_noun gay = u3kb_flop(guy);

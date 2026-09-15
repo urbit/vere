@@ -183,7 +183,10 @@ _main_init(void)
   //
   u3_Host.ops_u.has = c3y;
 
-#if defined(U3_OS_windows)
+#if defined(U3_OS_windows) && defined(U3_SNAPSHOT_VALIDATION)
+  //  validation reads the loom between patch application and remap, which
+  //  on windows is a window where the image is unmapped.
+  //
   u3_Host.ops_u.map = c3n;
   u3C.wag_h |= u3o_no_demand;
 #else
@@ -211,7 +214,11 @@ _main_init(void)
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
-  u3_Host.ops_u.lut_y = 34;     /* aka 2G */
+#ifndef VERE64
+  u3_Host.ops_u.lut_y = 34;     /* aka 16G */
+#else
+  u3_Host.ops_u.lut_y = 31;     /* aka  2G */
+#endif
   u3_Host.ops_u.lom_y = 32;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
@@ -960,7 +967,7 @@ u3_ve_panic(c3_i argc, c3_c** argv)
 static void
 report(void)
 {
-  printf("urbit %s\n", URBIT_VERSION);
+  printf("urbit %s %s (%zu-bit)\n", URBIT_VERSION, U3_VERE_PACE, 8 * sizeof(c3_w));
   printf("gmp: %s\n", gmp_version);
   #ifndef U3_OS_windows
   printf("sigsegv: %d.%d\n",
@@ -1331,6 +1338,13 @@ _cw_eval(c3_i argc, c3_c* argv[])
     u3_weak      pil;
 
     u3C.wag_h |= u3o_hashless;
+
+    //  claim the loom and stale loom addresses before the ivory pill, the
+    //  CRT or anything else can land on one. windows only; see
+    //  u3_disk_stake().
+    //
+    u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lom_y);
     sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
     if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
@@ -1374,7 +1388,6 @@ _cw_eval(c3_i argc, c3_c* argv[])
       exit(1);
     }
     c3_c* pre_c;
-    u3k(som);
     //  if input is jammed khan output
     if ( c3y == kan_o ) {
       u3_noun cop, uid, mar, res, tan;
@@ -1383,10 +1396,9 @@ _cw_eval(c3_i argc, c3_c* argv[])
       if ( c3n == res ) {
         //  pretty-print tang to stderr and output only header
         u3_Host.ops_u.dem = c3y;
-        u3_pier_punt_goof("eval", tan);
+        u3_pier_punt_goof("eval", u3k(tan));
         cop = som;
-        som = u3i_trel(uid, mar, res);
-        u3k(som);
+        som = u3i_trel(u3k(uid), u3k(mar), u3k(res));
         u3z(cop);
       }
     }
@@ -2117,6 +2129,7 @@ _cw_next(c3_i argc, c3_c* argv[])
     { "no-demand", no_argument,       NULL, 6 },
     { "swap",      no_argument,       NULL, 7 },
     { "swap-to",   required_argument, NULL, 8 },
+    { "urth-loom", required_argument, NULL, 9 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2152,6 +2165,13 @@ _cw_next(c3_i argc, c3_c* argv[])
         u3_Host.ops_u.eph = c3y;
         u3C.wag_h |= u3o_swap;
         u3C.eph_c = strdup(optarg);
+        break;
+      }
+
+      case 9: {  //  urth-loom
+        if (_main_read_loom("urth-loom", optarg, &u3_Host.ops_u.lut_y)) {
+          exit(1);
+        }
         break;
       }
 
@@ -2438,6 +2458,12 @@ _cw_play(c3_i argc, c3_c* argv[])
 #ifndef U3_OS_windows
   signal(SIGTSTP, _cw_play_exit);
 #endif
+
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 
   //  setup mars
   //
@@ -3002,6 +3028,12 @@ _cw_boot(c3_i argc, c3_c* argv[])
 
   _cw_init_io(lup_u);
 
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
   //  make pier, configure i/o
   //
   u3_mars mar_u = { .dir_c = dir_c };
@@ -3137,6 +3169,12 @@ _cw_work(c3_i argc, c3_c* argv[])
     }
   }
   
+  //  claim the loom and stale loom addresses before u3_disk_load() opens
+  //  the 60GB lmdb map, which windows is free to place on top of them.
+  //  windows only; see u3_disk_stake().
+  //
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+
   //  setup mars
   //
   u3_mars mar_u = { .dir_c = dir_c, .inn_u = &inn_u, .out_u = &out_u };
@@ -3344,7 +3382,7 @@ main(c3_i   argc,
 
   printf("~\n");
   //  printf("welcome.\n");
-  printf("urbit %s\n", URBIT_VERSION);
+  printf("urbit %s (%zu-bit)\n", URBIT_VERSION, 8 * sizeof(c3_w));
   printf("boot: home is %s\n", u3_Host.dir_c);
   // printf("vere: hostname is %s\n", u3_Host.ops_u.nam_c);
 
@@ -3452,6 +3490,7 @@ main(c3_i   argc,
     //  starting u3m configures OpenSSL memory functions, so we must do it
     //  before any OpenSSL allocations
     //
+    u3_disk_stake((size_t)1 << u3_Host.ops_u.lut_y);
     u3m_boot_lite((size_t)1 << u3_Host.ops_u.lut_y);
 
     //  Initialize OpenSSL for client and server

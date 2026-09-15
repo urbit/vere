@@ -843,6 +843,7 @@ u3_mesa_decode_lane(u3_atom lan) {
   c3_d lan_d;
 
   if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
+    u3z(lan);
     return adr_u;
   }
 
@@ -1928,6 +1929,7 @@ _mesa_hear_bail(u3_ovum* egg_u, u3_noun lud)
     u3_pier_punt_goof("crud", u3k(u3h(u3t(lud))));
   }
   u3_ovum_free(egg_u);
+  u3z(lud);
 }
 
 static void
@@ -2067,6 +2069,7 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
   u3_mesa_cb_data* ver_u = vod_p;
   u3_pend_req* req_u = _mesa_get_request(ver_u->sam_u, &ver_u->nam_u);
   if ( !req_u ) {
+    u3z(nun);
     return;
   }
   else if ( c3y == nun ) {  // XX
@@ -2081,6 +2084,7 @@ _mesa_veri_scry_cb(void* vod_p, u3_noun nun)
     u3l_log("mesa: %%veri returned strange value");
   }
   c3_free(ver_u);
+  u3z(nun);
 }
 
 static void
@@ -2505,6 +2509,7 @@ _mesa_poke_bail_cb(u3_ovum* egg_u, u3_noun lud)
 {
   // XX failure stuff here
   u3l_log("mesa: poke failure");
+  u3z(lud);
 }
 
 static void
@@ -2728,7 +2733,7 @@ _mesa_io_talk(u3_auto* car_u)
   uv_send_buffer_size((uv_handle_t*)&u3_Host.wax_u, &rec_i);
 
   sam_u->car_u.liv_o = c3y;
-  //u3z(rac); u3z(who);
+  u3z(rac); u3z(who);
 }
 
 static void _mesa_clear_pit(uv_timer_t *tim_u)

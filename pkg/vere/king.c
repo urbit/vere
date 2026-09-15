@@ -300,7 +300,7 @@ _king_prop()
 void
 _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 {
-  u3_noun vent = u3nc(c3__fake, u3k(ship));
+  u3_noun vent = u3nc(c3__fake, ship);
 
   //  XX pass kelvin
   //
@@ -319,6 +319,7 @@ _king_fake(u3_noun ship, u3_noun pill, u3_noun path)
 void
 _king_come(u3_noun star, u3_noun pill, u3_noun path)
 {
+  u3z(star);
   _king_dawn(u3_dawn_come(), pill, path);
 }
 
@@ -639,6 +640,20 @@ u3_king_next(c3_c* pac_c, c3_c** out_c)
   //  XX trim ver_c ?
   //
   if ( 0 == strcmp(ver_c, URBIT_VERSION) ) {
+    //  same version: still upgrade if a different bit width was requested
+    //  (eg, `next --arch 64` while running a 32-bit binary)
+    //
+#ifdef VERE64
+    c3_c* bit_c = "64";
+#else
+    c3_c* bit_c = "32";
+#endif
+
+    if ( u3_Host.bit_c && 0 != strcmp(u3_Host.bit_c, bit_c) ) {
+      *out_c = ver_c;
+      return 0;
+    }
+
     c3_free(ver_c);
     return -1;
   }
@@ -795,7 +810,7 @@ _boothack_key(u3_noun kef)
          (c3n == u3r_sing(ship, u3t(whu))) )
     {
       u3_noun how = u3dc("scot", 'p', u3k(ship));
-      c3_c* how_c = u3r_string(u3k(how));
+      c3_c* how_c = u3r_string(how);
       u3l_log("dawn: mismatch between -w %s and -K %s",
               u3_Host.ops_u.who_c, how_c);
 

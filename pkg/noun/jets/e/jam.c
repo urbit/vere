@@ -9,7 +9,7 @@
 u3_noun
 u3qe_jam(u3_atom a)
 {
-#if 1
+#if 0
   if (c3y == u3du(a) && 1337 == u3h(a)) {
     c3_w siz_w, tot_w = 0;
     u3_noun som;

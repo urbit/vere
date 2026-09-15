@@ -1,5 +1,6 @@
 /// @file
 
+#include "c3/defs.h"
 #include "allocate.h"
 
 #include "hashtable.h"
@@ -179,28 +180,6 @@ u3a_pack_done(void)
   c3_free(u3a_Gack.buf_w);
 }
 
-/* _box_count(): adjust memory count.
-*/
-#ifdef  U3_CPU_DEBUG
-static void
-_box_count(c3_ws siz_ws)
-{
-  u3R->all.fre_w += siz_ws;
-
-  {
-    c3_ws end_w = u3a_heap(u3R);
-    c3_ws all_w = (end_w - u3R->all.fre_w);
-
-    if ( all_w > u3R->all.max_w ) {
-      u3R->all.max_w = all_w;
-    }
-  }
-}
-#else
-static void
-_box_count(c3_ws siz_ws) { }
-#endif
-
 /* _ca_reclaim_half(): reclaim from memoization cache.
 */
 static void
@@ -255,17 +234,20 @@ u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 /* u3a_pile_prep(): initialize stack control.
 */
 void
-u3a_pile_prep(u3a_pile* pil_u, c3_w len_w)
+u3a_pile_prep(u3a_pile* pil_u, c3_w len_w, c3_w alg_w)
 {
   //  frame size, in words
   //
-  c3_w wor_w =
-    (len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+  c3_w wor_w = (len_w + sizeof(c3_w) - 1) / sizeof(c3_w);
+  c3_w wal_w = alg_w / sizeof(c3_w);
   c3_o nor_o = u3a_is_north(u3R);
 
   pil_u->mov_ws = (c3y == nor_o) ? -wor_w :  wor_w;
   pil_u->off_ws = (c3y == nor_o) ?      0 : -wor_w;
-  pil_u->top_p  = u3R->cap_p;
+  pil_u->beg_p  = u3R->cap_p;
+
+  align_dir dir_u = pil_u->mov_ws > 0 ? C3_ALGHI : C3_ALGLO;
+  pil_u->top_p = u3R->cap_p = c3_align_w(u3R->cap_p, wal_w, dir_u);
 
 #ifdef U3_MEMORY_DEBUG
   pil_u->rod_u  = u3R;
@@ -710,7 +692,7 @@ _ca_take_north(u3_noun veb)
   u3_noun     pro;
   _ca_take* fam_u;
   u3a_pile  pil_u;
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  commence taking
   //
@@ -750,7 +732,7 @@ _ca_take_south(u3_noun veb)
   u3_noun     pro;
   _ca_take* fam_u;
   u3a_pile  pil_u;
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  commence taking
   //
@@ -2406,7 +2388,7 @@ u3a_walk_fore(u3_noun    a,
 
   //  initialize stack control; push argument
   //
-  u3a_pile_prep(&pil_u, sizeof(u3_noun));
+  u3a_pile_prep(&pil_u, sizeof(u3_noun), alignof(u3_noun));
   top  = u3a_push(&pil_u);
   *top = a;
 

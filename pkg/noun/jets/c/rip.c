@@ -102,8 +102,8 @@ _block_rip(u3_atom bloq, u3_atom b)
     u3_noun acc     = u3_nul;
 
     c3_w met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
-    c3_w nbits_w = (c3_w)1 << bloq_g;                         //  block size in bits
-    c3_w bmask_w = ((c3_w)1 << nbits_w) - 1;                  //  result mask
+    c3_w nbits_w = (c3_w)1 << bloq_g;                   //  block size in bits
+    c3_w bmask_w = ((c3_w)1 << nbits_w) - 1;            //  result mask
 
     for ( c3_w i_w = 0; i_w < met_w; i_w++ ) {          //  `i_w` is block index
       c3_w nex_w = i_w + 1;                             //  next block

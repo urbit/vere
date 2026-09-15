@@ -40,13 +40,38 @@
 //
 #undef NO_OVERFLOW
 
-      /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
-      */
-#if 0
-        c3_o
-        u3m_trap(void);
+    /* u3m_trap(): trap nock exceptions within the road; produces yes on
+    ** entry, no on escape, setting (why) to the bail ball.
+    **
+    **   MUST be used as the entire controlling expression of an `if`, and
+    **   (why) must be an automatic of the enclosing frame. setjmp cannot
+    **   be wrapped in a function: the jmp_buf dies with the frame that
+    **   filled it.
+    **
+    **   Under VERE64 a 64-bit ball does not fit in longjmp's int return,
+    **   so u3m_escape() stashes it in u3R->esc.why_w and longjmps with a
+    **   literal 1. The ball is latched here, in the controlling expression,
+    **   since esc.why_w lives on the road and is clobbered by the next bail.
+    */
+#ifndef VERE64
+#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
 #else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
+#     define u3m_trap(why) \
+        ( _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
+#endif
+
+    /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
+    ** return.
+    **
+    **   A statement, not an expression: on windows _longjmp expands to a
+    **   brace-enclosed block, so it cannot be an operand of a comma.
+    */
+#ifndef VERE64
+#     define u3m_escape(how) \
+        do { _longjmp(u3R->esc.buf, (how)); } while ( 0 )
+#else
+#     define u3m_escape(how) \
+        do { u3R->esc.why_w = (how); _longjmp(u3R->esc.buf, 1); } while ( 0 )
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
@@ -126,6 +151,7 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 #ifdef U3_OS_windows
 #include "veh_handler.h"
+#include "wloom.h"
 #endif
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
@@ -393,6 +419,10 @@ _cm_signal_deep(void)
     abort();
   }
 #else
+  //  windows has no alternate signal stack, so the handler needs room
+  //  reserved on the stack it will be called on. see veh_handler.c.
+  //
+  u3_windows_stack_guard();
   rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
 #endif
 #endif
@@ -550,7 +580,7 @@ _pave_home(void)
   u3_post bot_p = ((c3_w)1) << u3a_page;
 
   u3H = u3to(u3v_home, 0);
-  memset(u3H, 0, sizeof(u3v_home));
+  memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
   u3H->ver_d = U3V_VERLAT;
   u3H->pam_d = _pave_params();
 
@@ -670,6 +700,21 @@ _find_home(void)
 
   for (c3_w i_w = 0; i_w < c3_array_len(u3R->fut_w); i_w++) {
     u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
+  }
+
+  {
+    //  Check if we downgraded to a version before e.g. cax.for_p was added:
+    //  bytes between the end of the u3v_home struct and the bottom of the heap
+    //  should normally be set to 0.
+    //
+    c3_y* byt_y = (c3_y*)u3_Loom;
+    c3_w off_w = offsetof(u3v_home, end_y);
+    c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    c3_t acc_y = 0;
+    for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
+      acc_y |= byt_y[i_w];
+    }
+    u3_assert(!acc_y && "loom: downgrade detected");
   }
 
   //  check for obvious corruption
@@ -1062,12 +1107,7 @@ u3m_bail(u3_noun how)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
-#ifndef VERE64
-  _longjmp(u3R->esc.buf, how);
-#else
-  u3R->esc.why_w = how;
-  _longjmp(u3R->esc.buf, 1);
-#endif
+  u3m_escape(how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1095,17 +1135,8 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road), 16);
     ptr_p = (c3_p)u3a_push(&pil_u);
-
-    //  XX add push_once, push_once_aligned
-    //
-    if ( ptr_p & 15 ) {
-      ptr_p &= ~15;
-      if ( c3n == u3a_is_north(u3R) ) {
-        ptr_p += 16;
-      }
-    }
 
     rod_u = (void*)ptr_p;
     memset(rod_u, 0, sizeof(u3a_road));
@@ -1557,9 +1588,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 {
   u3_noun pro;
   c3_m    sig_m = 0;
-#ifndef VERE64
   u3_noun why = 0;
-#endif
 
   /* Enter internal signal regime.
    */
@@ -1572,6 +1601,16 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     //  reinitialize trace state
     //
     u3t_init();
+
+#ifdef U3_OS_windows
+    //  a caught stack overflow consumed the thread's guard page. restore
+    //  it now that the longjmp has unwound the stack, or the next
+    //  overflow has nothing to trip and kills the process outright.
+    //
+    if ( c3__over == sig_m ) {
+      u3_windows_stack_recover();
+    }
+#endif
 
     //  return to blank state
     //
@@ -1592,11 +1631,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
@@ -1619,9 +1654,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, u3m_love(pro));
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     /* Overload the error result.
     */
     pro = u3m_love(why);
@@ -1690,8 +1722,9 @@ u3m_soft_cax(u3_funq fun_f,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun why = 0, pro;
+  u3_noun pro;
   u3_noun cax = u3_nul;
+  u3_noun why = 0;
 
   /* Record the cap, and leap.
   */
@@ -1711,7 +1744,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1786,9 +1819,7 @@ u3m_soft_run(u3_noun gul,
              u3_noun agb)
 {
   u3_noun pro;
-#ifndef VERE64 
   u3_noun why = 0;
-#endif
 
   c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
 
@@ -1815,11 +1846,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1843,9 +1870,6 @@ u3m_soft_run(u3_noun gul,
     pro = u3nc(0, u3m_love(pro));
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     u3t_init();
 
     /* Produce - or fall again.
@@ -1902,9 +1926,7 @@ u3_noun
 u3m_soft_esc(u3_noun ref, u3_noun sam)
 {
   u3_noun gul, pro;
-#ifndef VERE64 
   u3_noun why = 0;
-#endif
 
   /* Assert preconditions.
   */
@@ -1927,11 +1949,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-#ifndef VERE64
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
-#else
-  if ( 0 == _setjmp(u3R->esc.buf) ) {
-#endif
+  if ( u3m_trap(why) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -1939,9 +1957,6 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
     pro = u3m_love(pro);
   }
   else {
-#ifdef VERE64
-    u3_noun why = u3R->esc.why_w;
-#endif
     u3t_init();
 
     /* Push the error back up to the calling context - not the run we
@@ -2400,13 +2415,38 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
-  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
             (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
     u3m_stacktrace();
     u3_assert(0);
     return 0;
   }
+
+#ifdef U3_OS_windows
+  //  a sparse loom faults on the first touch of a page. resolve that
+  //  before u3m_water(), which reads the road -- the road lives in the
+  //  loom and may itself be untouched -- and before u3e_fault(), which
+  //  cannot tell a first touch of page 0 from a guard page that has yet
+  //  to be posted.
+  //
+  //  NB: the bounds check above comes first, so a fault outside the live
+  //  loom is fatal (including one in a stale loom held for a migration),
+  //  which sits at its own base. this is safe only because
+  //  u3_wnd_loom_hold() commits the whole image extent up front; what
+  //  stays reserved is the gap above it, which nothing reads. a read into
+  //  that gap aborts rather than committing. moving this block ahead of
+  //  the bounds check would make it self-healing again.
+  //
+  {
+    size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
+    void*  pag_v = (void *)((uintptr_t)adr_w & ~(uintptr_t)(pag_i - 1));
+
+    if ( c3y == u3_wnd_loom_fault(pag_v, pag_i) ) {
+      return 1;
+    }
+  }
+#endif
 
   u3m_water(&low_p, &hig_p);
 
@@ -2604,11 +2644,36 @@ u3m_init(size_t len_i)
   // map at fixed address.
   //
   {
-    void* map_v = mmap((void *)u3_Loom,
-                       len_i,
-                       (PROT_READ | PROT_WRITE),
-                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                       -1, 0);
+    void* map_v;
+
+#ifdef U3_OS_windows
+    //  the loom is reserved as a placeholder, which makes it sparse (pages
+    //  cost commit charge only once touched) and lets the image be mapped
+    //  over its bottom for demand paging. if --no-demand is on, degrade to
+    //  blitting and charging the whole loom to commit up front
+    //
+    if ( c3n == u3_wnd_loom_init((void *)u3_Loom, len_i) ) {
+      if ( !(u3C.wag_h & u3o_no_demand) ) {
+        u3l_log("loom: demand paging disabled");
+        u3C.wag_h |= u3o_no_demand;
+      }
+
+      map_v = mmap((void *)u3_Loom,
+                   len_i,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                   -1, 0);
+    }
+    else {
+      map_v = (void *)u3_Loom;
+    }
+#else
+    map_v = mmap((void *)u3_Loom,
+                 len_i,
+                 (PROT_READ | PROT_WRITE),
+                 (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                 -1, 0);
+#endif
 
     if ( -1 == (c3_ps)map_v ) {
       map_v = mmap((void *)0,
@@ -2618,8 +2683,15 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
+#ifdef U3_OS_windows
+      //  windows does not overcommit; the loom is charged in full up front
+      //
+      u3l_log("the whole loom must fit in RAM plus the paging file:"
+              " boot with a smaller --loom, or grow the paging file");
+#else
       u3l_log("see https://docs.urbit.org/user-manual/running/cloud-hosting"
               " for adding swap space");
+#endif
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);

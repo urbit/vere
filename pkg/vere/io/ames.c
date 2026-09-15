@@ -808,6 +808,7 @@ u3_ames_decode_lane(u3_atom lan) {
   c3_d lan_d;
 
   if ( c3n == u3r_safe_chub(lan, &lan_d) || (lan_d >> 48) != 0 ) {
+    u3z(lan);
     return (u3_lane){0, 0};
   }
 
@@ -1759,6 +1760,7 @@ _fine_hunk_scry_cb(void* vod_p, u3_noun nun)
       _ames_pact_free(pac_u);
 
       u3z(nun);
+      u3z(pax);
       return;
     }
 
@@ -2889,6 +2891,7 @@ u3_ames_io_init(u3_pier* pir_u)
   u3_noun who = u3i_chubs(2, sam_u->pir_u->who_d);
   u3_noun rac = u3do("clan:title", who);
   sam_u->sat_u.for_o = ( c3__czar == rac ) ? c3y : c3n;
+  u3z(rac);
 
   // hashtable for scry cache
   //

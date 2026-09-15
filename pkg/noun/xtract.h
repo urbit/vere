@@ -72,12 +72,12 @@
       */
 #       define u3x_mas(a_w) ({                        \
           u3_assert( 1 < a_w );                       \
-          ( (a_w & ~(1 << u3x_dep(a_w))) | (1 << (u3x_dep(a_w) - 1)) ); })
+          ( (a_w & ~(1u << u3x_dep(a_w))) | (1u << (u3x_dep(a_w) - 1)) ); })
 
       /* u3x_peg(): connect two axes.
       */
 #       define u3x_peg(a_w, b_w) \
-          ( (a_w << u3x_dep(b_w)) | (b_w &~ (1 << u3x_dep(b_w))) )
+          ( (a_w << u3x_dep(b_w)) | (b_w &~ (1u << u3x_dep(b_w))) )
 
       /* u3x_cell(): divide `a` as a cell `[b c]`.
       */

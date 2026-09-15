@@ -214,7 +214,6 @@ _lord_plea_foul(u3_lord* god_u, c3_m mot_m, u3_noun dat)
   //  XX can't unconditionally print
   //
   // u3m_p("plea", dat);
-
   _lord_bail(god_u);
 }
 
@@ -1455,6 +1454,7 @@ u3_lord_boot(c3_c* pax_c,
       fprintf(stderr, "spawn: %s: %s\r\n", arg_c[0], uv_strerror(err_i));
       //  XX return error code, or defer and invoke cb
       //
+      u3z(msg);
       return;
     }
   }

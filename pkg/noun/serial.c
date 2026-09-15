@@ -506,7 +506,7 @@ u3s_cue(u3_atom a)
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  commence cueing at bit-position 0
   //
@@ -713,7 +713,7 @@ _cs_cue_xeno(u3_cue_xeno* sil_u,
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  init bitstream-reader
   //
@@ -963,7 +963,7 @@ u3s_cue_bytes(c3_d len_d, const c3_y* byt_y)
 
   //  initialize stack control
   //
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   //  initialize a hash table for dereferencing backrefs
   //
@@ -1941,7 +1941,7 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
   ur_cue_res_e  res_e;
   u3_noun         ref;
 
-  u3a_pile_prep(&pil_u, sizeof(*fam_u));
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
   if ( ur_cue_good != (res_e = ur_bsr_init(&red_u, len_d, byt_y)) ) {
     return u3_none;

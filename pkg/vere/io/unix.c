@@ -119,7 +119,7 @@ struct _u3_ufil;
   } u3_unix_bob_ctx;
 
 void
-u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, u3_noun all);
+u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, c3_o all_o);
 
 /* u3_unix_cane(): true iff (unix) path is canonical.
 */
@@ -150,7 +150,7 @@ u3_unix_cane(const c3_c* pax_c)
       return 0;
     }
     pax_c = strchr(pax_c, '/');
-  } while ( 0 != pax_c++ );
+  } while ( NULL != pax_c && pax_c++ );
   return 1;
 }
 
@@ -162,7 +162,7 @@ u3_unix_cane(const c3_c* pax_c)
 static c3_t
 _unix_sane_ta(u3_unix* unx_u, u3_atom pat)
 {
-  return _(u3n_slam_on(u3k(unx_u->sat), pat));
+  return _(u3x_loob(u3n_slam_on(u3k(unx_u->sat), pat)));
 }
 
 /* u3_readdir_r():
@@ -177,10 +177,21 @@ u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
     *result = NULL;
     return (errno);  // either success or error code
   } else {
+#ifdef U3_OS_windows
+    //  mingw's d_reclen is documented "always zero": opendir() clears it
+    //  and readdir() never sets it, so a d_reclen-sized copy copies
+    //  nothing and leaves [entry] holding whatever was on the stack --
+    //  the same junk name on every call, for every directory read. its
+    //  struct dirent is a fixed size (d_name is a char[260], not a
+    //  flexible tail), so the whole thing can be copied.
+    //
+    memcpy(entry, tmp_u, sizeof(*entry));
+#else
     //  [entry] is a fixed-size struct dirent; a larger d_reclen would overflow it
     //
     u3_assert( tmp_u->d_reclen <= sizeof(*entry) );
     memcpy(entry, tmp_u, tmp_u->d_reclen);
+#endif
     *result = entry;
   }
 
@@ -499,7 +510,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
   else {
     //  normal atom: materialize and write in chunks
     //
-    c3_w siz_w = u3h(u3t(mim));
+    c3_w siz_w = u3r_cat(u3h(u3t(mim)));
     c3_w len_w = u3r_met(3, dat);
     c3_y* dat_y = c3_calloc(siz_w);
 
@@ -1381,7 +1392,7 @@ _unix_update_node(u3_unix* unx_u, u3_unod* nod_u)
 /* _unix_update_mount(): update mount point
 */
 static void
-_unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, u3_noun all)
+_unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
 {
   if ( c3n == mon_u->dir_u.dry ) {
     u3_noun  can = u3_nul;
@@ -1396,7 +1407,7 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, u3_noun all)
       u3_noun wir = u3nt(c3__sync,
                         u3dc("scot", c3__uv, unx_u->sev_h),
                         u3_nul);
-      u3_noun cad = u3nq(c3__into, _unix_string_to_knot(mon_u->nam_c), all,
+      u3_noun cad = u3nq(c3__into, _unix_string_to_knot(mon_u->nam_c), all_o,
                          can);
 
       u3_auto_plan(&unx_u->car_u, u3_ovum_init(0, c3__c, wir, cad));
@@ -1655,7 +1666,7 @@ _unix_sync_change(u3_unix* unx_u, u3_udir* dir_u, u3_noun pax, u3_noun mim)
   }
   else if ( c3n == u3du(u3t(pax)) ) {
     u3l_log("can't sync out file as top-level, strangely");
-    u3z(pax); u3z(mim);
+    u3z(mim);
   }
   else {
     u3_noun i_pax = u3h(pax);
@@ -1761,7 +1772,7 @@ u3_unix_ef_hill(u3_unix* unx_u, u3_noun hil)
 /* u3_unix_ef_look(): update the root of a specific mount point.
 */
 void
-u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, u3_noun all)
+u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, c3_o all_o)
 {
   if ( c3y == unx_u->dyr ) {
     c3_c* nam_c = _unix_knot_to_string(mon);
@@ -1773,7 +1784,7 @@ u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, u3_noun all)
     }
     c3_free(nam_c);
     if ( mon_u ) {
-      _unix_update_mount(unx_u, mon_u, all);
+      _unix_update_mount(unx_u, mon_u, all_o);
     }
   }
   u3z(mon);

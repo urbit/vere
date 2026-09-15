@@ -9,6 +9,11 @@
 #include <dirent.h>
 #include <types.h>
 #include "../noun/migrate.h"
+
+#ifdef U3_OS_windows
+  #include "wloom.h"
+#endif
+
 #ifndef VERE64
   #include "../past/migrate.h"
   #include "../past/v4.h"
@@ -830,9 +835,24 @@ static void
 _disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-  c3_unlink(paf_c);
-  c3_free(paf_c);
+
+#ifdef U3_OS_windows
+  //  windows refuses to delete a file that is still open, so the
+  //  descriptor goes first or the lockfile outlives the pier.
+  //
+  //  NB: the reverse order is deliberate elsewhere. on POSIX, unlinking
+  //  while the descriptor is held means another process cannot acquire
+  //  the path in between, and so cannot have its lockfile unlinked by
+  //  this one.
+  //
   close(fid_i);
+  c3_unlink(paf_c);
+#else
+  c3_unlink(paf_c);
+  close(fid_i);
+#endif
+
+  c3_free(paf_c);
 }
 
 /* u3_disk_exit(): close the log.
@@ -1828,11 +1848,90 @@ _disk_unlink_stale_loom(c3_c* dir_c)
   }
 }
 
+/* _disk_migrate_size(): destination loom bex, and source reservation length.
+**
+**   shared by the migration and by u3_disk_stake(), which claims the
+**   source address up front -- if these two ever disagreed, the stake
+**   would silently stop matching and the protection would lapse.
+*/
+static void
+_disk_migrate_size(c3_y* des_y, c3_z* sou_z)
+{
+#ifdef VERE64
+  //  the destination (64-bit) loom is mapped at u3_Loom, and the stale 32-bit
+  //  loom at u3_Loom_h == u3_Loom + (8 << u3a_bits_max_h).  cap the destination
+  //  so that it cannot grow into the source, and reserve no more for the source
+  //  than a 32-bit loom can ever occupy.
+  //
+  //    the destination cap is never binding: a 32-bit loom is at most
+  //    2^u3a_bits_max_h, and 32->64 at most doubles it (a loom of nothing but
+  //    cells, 16 -> 32 bytes each), so 2^(u3a_bits_max_h + 3) is 4x what the
+  //    migration can need.  --loom applies in full to the boot that follows.
+  //
+  *des_y = (c3_y)c3_min(u3_Host.ops_u.lom_y, u3a_bits_max_h + 3);
+  *sou_z = (c3_z)1 << c3_min(*des_y, u3a_bits_max_h);
+#else
+  //  the v1-v4 loom keeps its south segment at the top and its version word at
+  //  the very end, so the source reservation must be the full loom size.
+  //
+  *des_y = u3_Host.ops_u.lom_y;
+  *sou_z = (c3_z)1 << *des_y;
+#endif
+}
+
+/* u3_disk_stake(): claim the fixed addresses this process will map at.
+**
+**   a no-op off windows, where mmap(MAP_FIXED) evicts whatever occupies
+**   a fixed address and a collision cannot arise. see wloom.h.
+**
+**   [lom_i] is the length this process will reserve at u3_Loom -- 1 <<
+**   lut_y for a lite boot, 1 << lom_y otherwise. it wants to be exact:
+**   _wnd_stake_claim() hands over a stake of the same length in place,
+**   and merely releases one of any other, which costs the protection.
+**
+**   call this before anything else in the process can allocate, and in
+**   particular before u3_disk_load(): that opens the event log first and
+**   maps the loom second, and lmdb's map is 60GB placed wherever windows
+**   likes -- large enough, and often near enough, to land on u3_Loom.
+*/
+void
+u3_disk_stake(size_t lom_i)
+{
+#ifdef U3_OS_windows
+  c3_y des_y;
+  c3_z sou_z;
+
+  _disk_migrate_size(&des_y, &sou_z);
+
+  //  the loom itself
+  //
+  u3_wnd_loom_stake((void*)u3_Loom, lom_i);
+
+# ifdef VERE64
+  //  a 32-bit v5 snapshot, read at u3_Loom_h
+  //
+  u3_wnd_loom_stake(u3_Loom_h, sou_z);
+# else
+  //  a 64-bit snapshot, read at u3_Loom_d; and a v1-v4 one, at u3_Loom_v4
+  //
+  u3_wnd_loom_stake((void*)u3_Loom_d, (c3_z)1 << u3_Host.ops_u.lom_y);
+  u3_wnd_loom_stake(u3_Loom_v4, sou_z);
+# endif
+#else
+  (void)lom_i;
+#endif
+}
+
 static c3_i
 _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 {
   // map at fixed address.
   //
+  //   NB: on windows the reservation and the image mapping are one
+  //   operation, done below -- an anonymous mapping cannot be replaced
+  //   in place, and a committed one of loom size may not fit at all.
+  //
+#ifndef U3_OS_windows
   {
 #ifdef VERE64
     void* map_v = mmap((void *)u3_Loom_h,
@@ -1860,10 +1959,10 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       }
       exit(1);
     }
-
-    u3C.wor_i = len_z >> 2;
-    u3l_log("loom: mapped %zuMB", len_z >> 20);
   }
+#endif
+
+  u3C.wor_i = len_z >> 2;
 
   {
     c3_z lom_z;
@@ -1896,6 +1995,12 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     //  XX respect --no-demand flag
     //
+#ifdef U3_OS_windows
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_h, len_z, nod_i, lom_z) ) {
+      fprintf(stderr, "loom: stale loom mapping failed\r\n");
+      u3_assert(0);
+    }
+#else
     if ( MAP_FAILED == mmap(u3_Loom_h,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
@@ -1906,6 +2011,9 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
                       strerror(errno));
       u3_assert(0);
     }
+#endif
+
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
 
     return nod_i;
 #else
@@ -1917,6 +2025,18 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     //  XX respect --no-demand flag
     //
+#ifdef U3_OS_windows
+    //  NB: a v1-v4 loom keeps its heap at the bottom and its stack at the
+    //  top, so the stale loom is committed at both ends and reserved in
+    //  between: north.bin below, the south page above, and a gap that
+    //  nothing should read. on windows a read into that gap is fatal
+    //  rather than a first touch; see u3m_fault().
+    //
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_v4, len_z, nod_i, lom_z) ) {
+      fprintf(stderr, "loom: stale loom mapping failed\r\n");
+      u3_assert(0);
+    }
+#else
     if ( MAP_FAILED == mmap(u3_Loom_v4,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
@@ -1927,6 +2047,9 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
                       strerror(errno));
       u3_assert(0);
     }
+#endif
+
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
 
     const c3_z pag_z = ((c3_w)1) << (u3a_page + 2);
     void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
@@ -1935,6 +2058,14 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     u3_assert( -1 != nod_i );
     u3_assert( pag_z == lom_z );
+
+#ifdef U3_OS_windows
+    //  the south segment lands above the image, in reserved space
+    //
+    if ( c3n == u3_wnd_loom_commit(ptr_v, pag_z) ) {
+      u3_assert(0);
+    }
+#endif
 
     if ( pag_z != (ret_zs = pread(sod_i, ptr_v, pag_z, 0)) ) {
       if ( 0 < ret_zs ) {
@@ -1961,7 +2092,7 @@ static c3_i
 _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
 {
   c3_z img_z;
-  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDONLY);
+  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDWR);
 
   u3_assert( -1 != fid_i );
 
@@ -1979,6 +2110,12 @@ _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
 
   fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_d, fid_i, img_z);
 
+#ifdef U3_OS_windows
+  if ( c3n == u3_wnd_loom_hold((void*)u3_Loom_d, lom_z, fid_i, img_z) ) {
+    fprintf(stderr, "loom: 64 stale loom mapping failed\r\n");
+    u3_assert(0);
+  }
+#else
   if ( MAP_FAILED == mmap((void*)u3_Loom_d,
                           img_z,
                           (PROT_READ | PROT_WRITE),
@@ -1989,6 +2126,7 @@ _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
                     strerror(errno));
     u3_assert(0);
   }
+#endif
 
   return fid_i;
 }
@@ -2023,21 +2161,61 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
 
   {
     u3m_init(lom_z);
-    u3e_live(c3n, strdup(dir_c));
+    u3e_live(c3y, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_h(eve_d);
+#ifdef U3_OS_windows
+    u3_wnd_loom_drop((void*)u3_Loom_d);
+#else
+    munmap((void*)u3_Loom_d, lom_z);
+#endif
+    close(fid_i);
     u3m_save();
   }
-
-  munmap((void*)u3_Loom_d, lom_z);
-  close(fid_i);
 }
 #endif /* !VERE64 */
+
+/* _disk_drop_stale_loom(): release the stale loom and its image.
+**
+**   NB: must precede u3m_save(). the migrated snapshot is written back to
+**   the same image.bin the stale loom is mapped from, and windows refuses
+**   to truncate a file while any mapping of it remains open.
+*/
+static void
+_disk_drop_stale_loom(c3_i fid_i, c3_z sou_z)
+{
+#ifdef VERE64
+# ifdef U3_OS_windows
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_h) );
+# else
+  munmap(u3_Loom_h, sou_z);
+# endif
+#else
+# ifdef U3_OS_windows
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_v4) );
+# else
+  munmap(u3_Loom_v4, sou_z);
+# endif
+#endif
+  close(fid_i);
+}
 
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
-  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
+  c3_y des_y;
+  c3_z sou_z;
+
+  _disk_migrate_size(&des_y, &sou_z);
+
+#ifdef VERE64
+  if ( des_y != u3_Host.ops_u.lom_y ) {
+    u3l_log("loom: migrating with a %zuMB loom (--loom %u applies afterward)",
+            ((c3_z)1 << des_y) >> 20, (unsigned)u3_Host.ops_u.lom_y);
+  }
+#endif
+
+  c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
 
 #ifdef VERE64
   //  v5+ (32-bit) home is at loom position 0; version is the first c3_d
@@ -2056,10 +2234,11 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   }
 
   {
-    u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-    u3e_live(c3n, strdup(dir_c));
+    u3m_init((c3_z)1 << des_y);
+    u3e_live(c3y, strdup(dir_c));
     u3m_pave(c3y);
     u3_migrate_d(eve_d);
+    _disk_drop_stale_loom(fid_i, sou_z);
     u3m_save();
   }
 #else
@@ -2073,21 +2252,21 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     case U3V_VER2: u3_migrate_v3(eve_d);
     case U3V_VER3: u3_migrate_v4(eve_d);
     case U3V_VER4: {
-      u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-      u3e_live(c3n, strdup(dir_c));
+      u3m_init((c3_z)1 << des_y);
+      u3e_live(c3y, strdup(dir_c));
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
+      _disk_drop_stale_loom(fid_i, sou_z);
       u3m_save();
+      return;
     }
   }
-#endif
 
-#ifdef VERE64
-  munmap(u3_Loom_h, (size_t)1 << u3_Host.ops_u.lom_y);
-#else
-  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
+  //  unrecognized version: nothing was migrated, but the stale loom is
+  //  still ours to release
+  //
+  _disk_drop_stale_loom(fid_i, sou_z);
 #endif
-  close(fid_i);
 }
 
 static void
