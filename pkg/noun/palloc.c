@@ -678,13 +678,17 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
     c3_w           wiz_w = siz_w;
 
+    fre_u = u3tn(u3a_dell, HEAP.erf_p);
+
     // check if prior pages are already free
     //
-    if ( !dir_u[HEAP.len_w - (siz_w + 1)] ) {
-      assert( HEAP.erf_p );
-      fre_u = u3to(u3a_dell, HEAP.erf_p);
-      assert( (fre_u->pag_w + fre_u->siz_w) == pag_w );
-
+    //    NB: pack releases free-list entries while pages remain free
+    //    in the directory, so only coalesce with an adjacent entry
+    //
+    if (  !dir_u[HEAP.len_w - (siz_w + 1)]
+       && fre_u
+       && ((fre_u->pag_w + fre_u->siz_w) == pag_w) )
+    {
       if ( fre_u->pre_p ) {
         HEAP.erf_p = fre_u->pre_p;
         u3to(u3a_dell, fre_u->pre_p)->nex_p = 0;
@@ -2183,6 +2187,10 @@ _pack_seek(void)
       }
       _ifree(fre_p);
     }
+
+    //  NB: the pages remain free in the directory, untracked
+    //
+    HEAP.erf_p = 0;
   }
 
   _pack_seek_hunks();
@@ -2442,6 +2450,8 @@ _pack_relocate_heap(void)
       *ref_p = _pack_relocate(*ref_p);
       ref_p  = &(fre_u->nex_p);
     }
+
+    HEAP.erf_p = 0;
   }
 
   HEAP.pag_p = _pack_relocate(HEAP.pag_p);
