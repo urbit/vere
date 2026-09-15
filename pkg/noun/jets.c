@@ -336,7 +336,7 @@ _cj_ring_put(u3j_core* cop_u, c3_l jax_l, u3_noun pax)
   for ( i_l = 0; cop_u->arm_u && cop_u->arm_u[i_l].fcs_c; i_l++ ) {
     u3j_harm* ham_u = &(cop_u->arm_u[i_l]);
     c3_l      axe_l = _cj_fcs_axis(ham_u->fcs_c);
-    c3_l      arg_l = 0;
+    c3_l      arg_l = 0;  // u3u_Harm index + 1 or 0
     c3_l      j_l;
 
     ham_u->cop_u = cop_u;
@@ -344,7 +344,7 @@ _cj_ring_put(u3j_core* cop_u, c3_l jax_l, u3_noun pax)
     if ( !axe_l ) {
       continue;
     }
-
+    //  XX linear search
     for ( j_l = 0; u3u_Harm[j_l].fun_f; j_l++ ) {
       if ( u3u_Harm[j_l].fun_f == ham_u->fun_f ) {
         arg_l = j_l + 1;
@@ -902,8 +902,8 @@ u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
   u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
   u3_noun jax, inx, arg;
 
-  *ham_u = 0;
-  *arm_u = 0;
+  *ham_u = NULL;
+  *arm_u = NULL;
 
   if ( u3_none == val ) {
     return c3n;
@@ -911,7 +911,7 @@ u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
 
   u3x_trel(val, &jax, &inx, &arg);
   *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
-  *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : 0;
+  *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
 
   return c3y;
 }

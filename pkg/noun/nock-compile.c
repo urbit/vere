@@ -81,7 +81,10 @@ enum { OPCODES LAST };
 static const c3_c* _nc_name_c[] = { OPCODES };
 #undef X
 
-/*  Families of the IR ops, in the order of the widened opcodes.
+/*  Families of the IR ops, in the order of the widened opcodes. Must be in the 
+**  same order as X3 definitions in OPCODES macro.
+**  Final families are bom and imm for special-cased ops and nop for marking
+**  deleted ops.
 */
 enum {
   _nc_iml, _nc_mov, _nc_inc, _nc_con, _nc_hed, _nc_tal, _nc_cel, _nc_lob,
@@ -92,8 +95,14 @@ enum {
   _nc_bom, _nc_imm, _nc_nop
 };
 
+//  maps an IR bytecode family to its first opcode. Valid because X3-defined
+//  opcodes are kept together.
 #define _nc_base(fam)  (IML_B + (3 * (fam)))
+
 #define _nc_none       ((c3_w)-1)
+
+//  layout of an op:
+//  [OP][source_registers?][destination_register?][index?][jump_target?]
 
 /* _nc_fam: operands of a family: number of source registers, whether
 **          there is a destination register, an index immediate (literal
@@ -137,20 +146,20 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
 /* nc_op: an IR op, with registers until slots are assigned.
 */
 typedef struct {
-  c3_y  fam_y;
-  c3_y  hop_y;      //  moves a hop argument: dropped if the parameter is unused
-  c3_w  src_w[2];
-  c3_w  dst_w;
-  c3_w  imm_w;      //  index immediate, or the atom of an inline immediate
-  c3_w  tar_w;      //  target block, or the literal of an inline immediate
+  c3_y  fam_y;    //  family of the op
+  c3_y  hop_y;    //  moves a $jmp argument: dropped if the parameter is unused
+  c3_w  src_w[2]; //  source registers
+  c3_w  dst_w;    //  destination register
+  c3_w  imm_w;    //  index immediate, or the atom of an inline immediate
+  c3_w  tar_w;    //  target block, or the literal of an inline immediate
 } nc_op;
 
 /* nc_blk: a basic block.
 */
 typedef struct {
   u3_noun blob;
-  c3_w    fir_w;    //  first op
-  c3_w    len_w;    //  number of ops
+  c3_w    fir_w;    //  first op in the nc_op array
+  c3_w    len_w;    //  number of ops in the nc_op array
   c3_w    off_w;    //  byte offset
   c3_w    lay_w;    //  position in the layout, or _nc_none if unreachable
 } nc_blk;
@@ -161,7 +170,7 @@ typedef struct {
   u3_noun bell;
   u3_noun ring;
   c3_w    cid_w;
-  c3_o    dir_o;
+  c3_o    dir_o;  //  call with args or with the whole subject
   c3_w    sot_w;
   c3_w    len_w;
 } nc_dir;
@@ -173,13 +182,16 @@ typedef struct {
   nc_blk*       blk_u;
   c3_w          blk_w;
   c3_w*         lay_w;    //  block indices in layout order
-  c3_w          lay_n;
-  nc_op*        ops_u;
-  c3_w          ops_w, ops_n;
-  nc_dir*       dir_u;
-  c3_w          dir_w, dir_n;
+  c3_w          lan_w;    //    and its length
+  nc_op*        ops_u;    //  op array
+  c3_w          opc_w;    //    and its capacity
+  c3_w          opn_w;    //    and its length
+  nc_dir*       dir_u;    //  callsite array
+  c3_w          dir_w;    //    and its capacity
+  c3_w          din_w;    //    and its length
   c3_w*         pol_w;    //  argument registers of call sites
-  c3_w          pol_n, pol_m;
+  c3_w          pon_w;    //    and its length
+  c3_w          poc_w;    //    and its capacity
   u3p(u3h_root) lit_p;    //  literal -> index
   c3_w          lit_w;
   c3_w          reg_w;    //  registers
@@ -250,8 +262,8 @@ _nc_op(nc_gen* gen_u, c3_y fam_y)
 {
   nc_op* op_u;
 
-  _nc_grow(gen_u->ops_u, gen_u->ops_n, gen_u->ops_w, nc_op);
-  op_u = &(gen_u->ops_u[gen_u->ops_n++]);
+  _nc_grow(gen_u->ops_u, gen_u->opn_w, gen_u->opc_w, nc_op);
+  op_u = &(gen_u->ops_u[gen_u->opn_w++]);
 
   op_u->fam_y    = fam_y;
   op_u->hop_y    = 0;
@@ -292,25 +304,25 @@ _nc_dir(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_weak clu, u3_weak arg)
 {
   nc_dir* dir_u;
 
-  _nc_grow(gen_u->dir_u, gen_u->dir_n, gen_u->dir_w, nc_dir);
-  dir_u = &(gen_u->dir_u[gen_u->dir_n]);
+  _nc_grow(gen_u->dir_u, gen_u->din_w, gen_u->dir_w, nc_dir);
+  dir_u = &(gen_u->dir_u[gen_u->din_w]);
 
   dir_u->bell  = u3k(bell);
   dir_u->ring  = u3k(ring);
   dir_u->cid_w = ( u3_none == clu ) ? 0 : _nc_cid(clu);
   dir_u->dir_o = __(u3_none != arg);
-  dir_u->sot_w = gen_u->pol_n;
+  dir_u->sot_w = gen_u->pon_w;
   dir_u->len_w = 0;
 
   while ( (u3_none != arg) && (u3_nul != arg) ) {
     u3_noun i;
     u3x_cell(arg, &i, &arg);
-    _nc_grow(gen_u->pol_w, gen_u->pol_n, gen_u->pol_m, c3_w);
-    gen_u->pol_w[gen_u->pol_n++] = _nc_reg(gen_u, i);
+    _nc_grow(gen_u->pol_w, gen_u->pon_w, gen_u->poc_w, c3_w);
+    gen_u->pol_w[gen_u->pon_w++] = _nc_reg(gen_u, i);
     dir_u->len_w++;
   }
 
-  return gen_u->dir_n++;
+  return gen_u->din_w++;
 }
 
 /* _nc_kids(): successor blocks of a block, in the order to visit them
@@ -320,7 +332,7 @@ static c3_w
 _nc_kids(nc_gen* gen_u, u3_noun blob, c3_w* kid_w)
 {
   u3_noun fin = u3t(u3t(blob));
-  u3_noun tag, a, b, z, o;
+  u3_noun tag, a, z, o;
 
   u3x_cell(fin, &tag, &a);
 
@@ -335,14 +347,14 @@ _nc_kids(nc_gen* gen_u, u3_noun blob, c3_w* kid_w)
     }
 
     case c3__eqq: {
-      u3x_qual(a, &a, &b, &z, &o);
+      u3x_qual(a, NULL, NULL, &z, &o);
       break;
     }
 
     case c3__clq:
     case c3__brn:
     case c3__brz: {
-      u3x_trel(a, &a, &z, &o);
+      u3x_trel(a, NULL, &z, &o);
       break;
     }
   }
@@ -353,7 +365,7 @@ _nc_kids(nc_gen* gen_u, u3_noun blob, c3_w* kid_w)
 }
 
 /* _nc_blocks(): collect the blocks of a straight, and lay them out in
-**               topological order from the entry block.
+**               topological order from the entry block. RETAINS
 */
 static void
 _nc_blocks(nc_gen* gen_u, u3_noun map)
@@ -362,13 +374,14 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
   //
   {
     u3_noun* sak = 0;
-    c3_w     sak_n = 0, sak_m = 0, blk_m = 0;
+    //  size, capacity of sac array, capacity of blk_u array
+    c3_w     sak_w = 0, sac_w = 0, blk_m = 0;
 
-    _nc_grow(sak, sak_n, sak_m, u3_noun);
-    sak[sak_n++] = map;
+    _nc_grow(sak, sak_w, sac_w, u3_noun);
+    sak[sak_w++] = map;
 
-    while ( sak_n ) {
-      u3_noun nod = sak[--sak_n], n, l, r;
+    while ( sak_w ) {
+      u3_noun nod = sak[--sak_w], n, l, r;
 
       if ( u3_nul == nod ) {
         continue;
@@ -379,12 +392,12 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
       _nc_grow(gen_u->blk_u, gen_u->blk_w, blk_m, nc_blk);
       gen_u->blk_u[gen_u->blk_w].blob  = u3t(n);
       gen_u->blk_u[gen_u->blk_w].lay_w = _nc_none;
-      u3h_put(gen_u->idx_p, u3h(n), gen_u->blk_w);
+      u3h_put(gen_u->idx_p, u3h(n), _nc_cat(gen_u->blk_w));
       gen_u->blk_w++;
 
-      _nc_grow(sak, sak_n + 1, sak_m, u3_noun);
-      sak[sak_n++] = l;
-      sak[sak_n++] = r;
+      _nc_grow(sak, sak_w + 1, sac_w, u3_noun);
+      sak[sak_w++] = l;
+      sak[sak_w++] = r;
     }
 
     u3a_free(sak);
@@ -397,16 +410,17 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
     c3_w* sak_w = u3a_malloc(blk_w * sizeof(c3_w));
     c3_y* nex_y = u3a_calloc(blk_w, sizeof(c3_y));
     c3_y* saw_y = u3a_calloc(blk_w, sizeof(c3_y));
-    c3_w  sak_n = 0, kid_w[2];
+    c3_w  dep_w = 0;  // stack depth
+    c3_w  kid_w[2];
 
     gen_u->lay_w = u3a_malloc(blk_w * sizeof(c3_w));
-    gen_u->lay_n = 0;
+    gen_u->lan_w = 0;
 
-    sak_w[sak_n++] = _nc_blk(gen_u, 0);
+    sak_w[dep_w++] = _nc_blk(gen_u, 0);
     saw_y[sak_w[0]] = 1;
 
-    while ( sak_n ) {
-      c3_w top_w = sak_w[sak_n - 1];
+    while ( dep_w ) {
+      c3_w top_w = sak_w[dep_w - 1];
       c3_w kin_w = _nc_kids(gen_u, gen_u->blk_u[top_w].blob, kid_w);
 
       if ( nex_y[top_w] < kin_w ) {
@@ -414,23 +428,23 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
 
         if ( !saw_y[kid] ) {
           saw_y[kid] = 1;
-          sak_w[sak_n++] = kid;
+          sak_w[dep_w++] = kid;
         }
       }
       else {
-        sak_n--;
-        gen_u->lay_w[gen_u->lay_n++] = top_w;
+        dep_w--;
+        gen_u->lay_w[gen_u->lan_w++] = top_w;
       }
     }
 
-    for ( c3_w i_w = 0; i_w < gen_u->lay_n / 2; i_w++ ) {
-      c3_w j_w = gen_u->lay_n - 1 - i_w;
+    for ( c3_w i_w = 0; i_w < gen_u->lan_w / 2; i_w++ ) {
+      c3_w j_w = gen_u->lan_w - 1 - i_w;
       c3_w tmp_w = gen_u->lay_w[i_w];
       gen_u->lay_w[i_w] = gen_u->lay_w[j_w];
       gen_u->lay_w[j_w] = tmp_w;
     }
 
-    for ( c3_w i_w = 0; i_w < gen_u->lay_n; i_w++ ) {
+    for ( c3_w i_w = 0; i_w < gen_u->lan_w; i_w++ ) {
       gen_u->blk_u[gen_u->lay_w[i_w]].lay_w = i_w;
     }
 
@@ -733,7 +747,7 @@ _nc_fold(nc_gen* gen_u)
     def_w[i_w] = _nc_none;
   }
 
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
 
     if ( (_nc_imm == op_u->fam_y) || (_nc_iml == op_u->fam_y) ) {
@@ -741,7 +755,7 @@ _nc_fold(nc_gen* gen_u)
     }
   }
 
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
     nc_op* def_u;
 
@@ -785,15 +799,15 @@ _nc_translate(nc_gen* gen_u)
 {
   c3_w i_w;
 
-  for ( i_w = 0; i_w < gen_u->lay_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->lan_w; i_w++ ) {
     nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_w[i_w]]);
-    c3_w    nex_w = ( (i_w + 1) < gen_u->lay_n )
+    c3_w    nex_w = ( (i_w + 1) < gen_u->lan_w )
                   ? gen_u->lay_w[i_w + 1]
                   : _nc_none;
     u3_noun par, bod, fin, op;
 
     u3x_trel(blk_u->blob, &par, &bod, &fin);
-    blk_u->fir_w = gen_u->ops_n;
+    blk_u->fir_w = gen_u->opn_w;
 
     while ( u3_nul != bod ) {
       u3x_cell(bod, &op, &bod);
@@ -801,7 +815,7 @@ _nc_translate(nc_gen* gen_u)
     }
 
     _nc_fin(gen_u, fin, nex_w);
-    blk_u->len_w = gen_u->ops_n - blk_u->fir_w;
+    blk_u->len_w = gen_u->opn_w - blk_u->fir_w;
   }
 }
 
@@ -867,12 +881,12 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
 
   //  uses; moves into unused parameters and unused immediates are dropped
   //
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
     _nc_srcs(gen_u, op_u, i_w, reg_w, { use_w[*reg_w]++; });
   }
 
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
     if (  ( op_u->hop_y
          || (_nc_imm == op_u->fam_y)
@@ -885,7 +899,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
 
   //  intervals
   //
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u  = &(gen_u->ops_u[i_w]);
     c3_w   pos_w = i_w + 1;
 
@@ -943,7 +957,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
 
   //  rewrite
   //
-  for ( i_w = 0; i_w < gen_u->ops_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
 
     if ( _nc_nop == op_u->fam_y ) {
@@ -1318,7 +1332,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
       chg_t = 0;
       byc_w = 0;
 
-      for ( i_w = 0; i_w < gen_u->lay_n; i_w++ ) {
+      for ( i_w = 0; i_w < gen_u->lan_w; i_w++ ) {
         nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_w[i_w]]);
 
         if ( blk_u->off_w != byc_w ) {
@@ -1333,7 +1347,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
     } while ( chg_t );
   }
 
-  pog_u = _nc_prog_new(byc_w, gen_u->lit_w, gen_u->dir_n, gen_u->pol_n);
+  pog_u = _nc_prog_new(byc_w, gen_u->lit_w, gen_u->din_w, gen_u->pon_w);
   pog_u->tot_w = gen_u->tot_w;
   pog_u->arg_w = arg_w;
   pog_u->ned   = u3k(ned);
@@ -1342,7 +1356,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
     c3_y* buf_y = pog_u->byc_u.ops_y;
     c3_w  pos_w = 0;
 
-    for ( i_w = 0; i_w < gen_u->lay_n; i_w++ ) {
+    for ( i_w = 0; i_w < gen_u->lan_w; i_w++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_w[i_w]]);
 
       u3_assert( blk_u->off_w == pos_w );
@@ -1358,7 +1372,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
 
   u3h_walk_with(gen_u->lit_p, _nc_lit_cb, pog_u->lit_u.non);
 
-  for ( i_w = 0; i_w < gen_u->dir_n; i_w++ ) {
+  for ( i_w = 0; i_w < gen_u->din_w; i_w++ ) {
     nc_dir*    dir_u = &(gen_u->dir_u[i_w]);
     u3nc_dire* dat_u = &(pog_u->dir_u.dat_u[i_w]);
 
@@ -1372,7 +1386,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
     _nc_dire_jet(dat_u);
   }
 
-  memcpy(pog_u->sot_u.sot_w, gen_u->pol_w, gen_u->pol_n * sizeof(c3_w));
+  memcpy(pog_u->sot_u.sot_w, gen_u->pol_w, gen_u->pon_w * sizeof(c3_w));
 
   return pog_u;
 }

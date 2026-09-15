@@ -16,13 +16,17 @@
 #include "vortex.h"
 #include "xtract.h"
 
+#define _CVX_LOAD  4
+#define _CVX_PEEK 22
+#define _CVX_POKE 23
+#define _CVX_WISH 10
+
 /*  The SKA core is an arvo-shaped core whose +poke is the arm at axis 23:
 **
 **    [%full sub=* fol=^]                 ->  [%ir bell straight]
 **    [%dire bell]                        ->  [%ir bell straight]
 **    [%jets (list [ring need-ordered])]  ->  ~
 */
-#define _d_poke_w  23
 
 /* _d_loob(): assert loobean.
 */
@@ -85,7 +89,11 @@ _d_huge(u3_noun cape_one, u3_noun data_one,
     u3x_cell(data_two, &l_two, &r_two);
     _d_rip(cape_one, &lope, &rope);
     _d_rip(cape_two, &loop, &roop);
-
+    //  XX manual stack?
+    //
+    //  holding uncounted references for one side while comparing nouns
+    //  in the other should be fine because the fact that both sides make a cell
+    //  is reflected in the refcounts
     return c3a(_d_huge(lope, l_one, loop, l_two),
                _d_huge(rope, r_one, roop, r_two));
   }
@@ -103,7 +111,8 @@ u3d_match(u3_noun sub, u3_noun lis)
 
   while ( u3_nul != lis ) {
     u3x_cell(lis, &i, &lis);
-    u3x_mean(i, {4, &cape_i}, {5, &data_i});
+    cape_i = u3h(u3h(i));
+    data_i = u3t(u3h(i));
 
     if ( c3n == _d_huge(cape_i, data_i, c3y, sub) ) {
       continue;
@@ -121,8 +130,7 @@ u3d_match(u3_noun sub, u3_noun lis)
   return pro;
 }
 
-/* _d_poke(): poke the SKA core.  TRANSFERS ovo, produces the product,
-**            and replaces the core.  Bails if the core crashes.
+/* _d_poke(): poke the SKA core, rebails.
 */
 static u3_noun
 _d_poke(u3_noun ovo)
@@ -141,10 +149,9 @@ _d_poke(u3_noun ovo)
     u3l_log("ska: poke %%%s: start, ovum mug %08x", tag_c, u3r_mug(u3t(ovo)));
   }
 
-  //  in its own road with no scry gate: nothing in the core scries,
-  //  and persistent memoization needs the gate empty
+  //  SKA core uses persistent memoization at least for now
   //
-  gat = u3n_nock_on(u3k(cor), u3nt(9, _d_poke_w, u3nc(0, 1)));
+  gat = u3n_nock_on(u3k(cor), u3nt(9, _CVX_POKE, u3nc(0, 1)));
   pro = u3n_slam_et(u3_nul, gat, ovo);
 
   if ( 0 != u3h(pro) ) {
@@ -167,8 +174,7 @@ _d_poke(u3_noun ovo)
   return res;
 }
 
-/* _d_ir(): unpack [%ir bell straight].  TRANSFERS; produces the
-**          straight and, if asked, the bell.
+/* _d_ir(): unpack [%ir bell straight].
 */
 static u3_noun
 _d_ir(u3_noun pro, u3_noun* bell)
@@ -185,13 +191,14 @@ _d_ir(u3_noun pro, u3_noun* bell)
     *bell = u3k(bel);
   }
 
-  ir = u3k(ir);
+  u3k(ir);
   u3z(pro);
   return ir;
 }
 
-/* _d_shape(): need-ordered shape of the arguments at axes `axe_l`,
-**             sorted by a preorder traversal.  Consumes the axes.
+/* _d_shape(): $need-ordered from flat axis array, assumes the array is depth-
+**             first-ordered. Consumes the array. Assumes that the shape never
+**             includes %both case.
 */
 static u3_noun
 _d_shape(c3_l* axe_l, c3_w len_w)
@@ -229,7 +236,8 @@ _d_rings_cb(u3_noun kev, void* ptr_v)
 
   if ( arg ) {
     const u3u_harm* arm_u = &(u3u_Harm[arg - 1]);
-    c3_l            axe_l[arm_u->len_w];
+    //  XX VLA. Assumes sane number of arguments in the driver
+    c3_l axe_l[arm_u->len_w];
 
     memcpy(axe_l, arm_u->axe_l, sizeof(axe_l));
     *lis = u3nc(u3nc(u3k(u3h(kev)), _d_shape(axe_l, arm_u->len_w)), *lis);
@@ -283,7 +291,9 @@ u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 }
 
 /* u3d_dire(): compile a bell [sock formula] as a function of the
-**             parts of its subject that it uses.  RETAINS.
+**             parts of its subject that it uses.  RETAINS. Assumes that the
+**             analysis of its transitive caller was already done (how else
+**             would we get the bell?)
 */
 u3_noun
 u3d_dire(u3_noun bell)

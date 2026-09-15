@@ -268,10 +268,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                        \
                                                       \
   struct {                                            \
-    U3_N(S) cor;                                      \
-    U3_W(S) pax_p;                                    \
-    U3_W(S) dir_p;                                    \
-    U3_W(S) ent_p;                                    \
+    U3_N(S) cor;     /* SKA core */                   \
+    U3_W(S) pax_p;   /* [path axis] -> jet drivers */ \
+    U3_W(S) dir_p;   /* SKA direct programs */        \
+    U3_W(S) ent_p;   /* SKA entry point programs */   \
   } ska;                                              \
                                                       \
   U3_W(S) fut_w[24];                                  \

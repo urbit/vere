@@ -8,9 +8,9 @@
   /** u3u: jets with C-array arguments, for compiled nock.
   ***
   *** An array driver takes the arguments of an arm as an array of
-  *** nouns, in the order of a preorder traversal of the arm's sample.
-  *** Arguments are RETAINED, the product is transferred.  A driver
-  *** produces u3_none to decline, like a u3w driver.
+  *** nouns, in depth-first order (see +flatten-need in nock-compilation.hoon)
+  *** Arguments are RETAINED, the product is transferred.  A driver returning
+  *** u3_none punts to Nock, same as u3w* drivers.
   **/
     typedef u3_weak (*u3u_fun)(u3_noun*);
 

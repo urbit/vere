@@ -11,10 +11,9 @@
   /** u3nc: nock compiled with subject knowledge analysis.
   ***
   *** The SKA core (direct.c) turns a [subject formula] pair into a
-  *** function of the parts of the subject it uses, and its callees
-  *** into the same.  Each function is compiled here from the core's
-  *** IR to bytecode for a register machine whose registers are slots
-  *** on the road stack.
+  *** function of the parts of the subject it uses.  Each function is
+  *** compiled here from the core's IR to bytecode for a register
+  *** machine whose registers are slots on the road stack.
   ***
   *** Programs live in two tables of the road:
   ***
@@ -29,15 +28,15 @@
   */
     struct _u3nc_prog;
     typedef struct {
-      u3_noun          bell;   //  [sock formula] of the callee
-      u3_noun          ring;   //  ~ or [path axis] of its jet
-      u3p(struct _u3nc_prog) pog_p;  //  callee program, or 0 until linked
-      c3_w             sot_w;  //  first argument slot (offset in sot_u)
-      c3_w             len_w;  //  number of argument slots
-      c3_w             cid_w;  //  memo cache (u3z_cid) for a memoized call
-      c3_o             dir_o;  //  direct call: link pog_p by bell
-      u3j_harm*        ham_u;  //  jet arm taking the core, nullable
-      const u3u_harm*  arm_u;  //  jet arm taking the arguments, nullable
+      u3_noun          bell;          //  [sock formula] of the callee
+      u3_noun          ring;          //  ~ or [path axis] of its jet
+      u3p(struct _u3nc_prog) pog_p;   //  callee program, or 0 until linked
+      c3_w             sot_w;         //  first argument slot (offset in sot_u)
+      c3_w             len_w;         //  number of argument slots
+      c3_w             cid_w;         //  memo cache for a memoized call
+      c3_o             dir_o;         //  direct call: link pog_p by bell
+      u3j_harm*        ham_u;         //  jet arm taking the core, nullable
+      const u3u_harm*  arm_u;         //  jet arm taking the arguments, nullable
     } u3nc_dire;
 
   /* u3nc_prog: program compiled from the IR of one function.
