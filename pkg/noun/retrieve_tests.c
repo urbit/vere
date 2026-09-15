@@ -2,6 +2,8 @@
 
 #include "noun.h"
 
+#include "c3/tmpdir.h"
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1425,20 +1427,14 @@ _test_view(void)
     u3r_view_done(&vue_u);
   }
 
-//  the bob cases below need real blob files on disk: mkdtemp, /tmp and a
-//  recursive teardown, none of which mingw has.  the loom-backed view
-//  coverage above is platform-clean and still runs.
-//
-#ifndef U3_OS_windows
   //  bob atom: view mmaps the underlying blob file
   //
   {
     //  set up a temp pier dir with a blob at .urb/bob/<mug>/<seq>
     //
     c3_c dir_c[1024];
-    snprintf(dir_c, sizeof(dir_c), "/tmp/vere-view-test-XXXXXX");
-    if ( !mkdtemp(dir_c) ) {
-      fprintf(stderr, "_test_view(): mkdtemp failed: %s\r\n", strerror(errno));
+    if ( !c3_tmp_make(dir_c, sizeof(dir_c), "vere-view-test") ) {
+      fprintf(stderr, "_test_view(): c3_tmp_make failed: %s\r\n", strerror(errno));
       exit(1);
     }
 
@@ -1501,19 +1497,10 @@ _test_view(void)
 
     //  clean up temp pier
     //
-    c3_c cmd_c[2048];
-    snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", dir_c);
-    (void)system(cmd_c);
+    c3_tmp_kill(dir_c);
     u3C.dir_c = 0;
   }
-#endif  //  U3_OS_windows
 }
-
-//  _test_aor() is entirely blob-backed: it exists to prove bob atoms
-//  order by their bytes rather than by the loom offset in buf_w.  it
-//  needs real files on disk, so it is posix-only like the block above.
-//
-#ifndef U3_OS_windows
 
 /* _aor_write_blob(): write [byt_y/len_w] to .urb/bob/<mug>/<seq> under [dir_c].
 */
@@ -1543,9 +1530,8 @@ static void
 _test_aor(void)
 {
   c3_c dir_c[1024];
-  snprintf(dir_c, sizeof(dir_c), "/tmp/vere-aor-test-XXXXXX");
-  if ( !mkdtemp(dir_c) ) {
-    fprintf(stderr, "_test_aor(): mkdtemp failed: %s\r\n", strerror(errno));
+  if ( !c3_tmp_make(dir_c, sizeof(dir_c), "vere-aor-test") ) {
+    fprintf(stderr, "_test_aor(): c3_tmp_make failed: %s\r\n", strerror(errno));
     exit(1);
   }
 
@@ -1603,13 +1589,9 @@ _test_aor(void)
 
   u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
 
-  c3_c cmd_c[2048];
-  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", dir_c);
-  (void)system(cmd_c);
+  c3_tmp_kill(dir_c);
   u3C.dir_c = 0;
 }
-
-#endif  //  U3_OS_windows
 
 /* main(): run all test cases.
 */
@@ -1627,9 +1609,7 @@ main(int argc, char* argv[])
   _test_safe();
   _test_cell_trel_qual();
   _test_view();
-#ifndef U3_OS_windows
   _test_aor();
-#endif
 
   //  GC
   //

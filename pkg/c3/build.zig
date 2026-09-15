@@ -46,6 +46,7 @@ pub fn build(b: *std.Build) void {
     pkg_c3.installHeader(b.path("defs.h"), "c3/defs.h");
     pkg_c3.installHeader(b.path("motes.h"), "c3/motes.h");
     pkg_c3.installHeader(b.path("portable.h"), "c3/portable.h");
+    pkg_c3.installHeader(b.path("tmpdir.h"), "c3/tmpdir.h");
     pkg_c3.installHeader(b.path("types.h"), "c3/types.h");
 
     b.installArtifact(pkg_c3);

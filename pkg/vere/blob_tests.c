@@ -4,6 +4,8 @@
 #include "noun.h"
 #include "vere.h"
 
+#include "c3/tmpdir.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -13,7 +15,7 @@
 
 /* Tests for pkg/vere/blob.c — the content-addressed blob store.
 **
-** Each test creates a fresh temp pier under /tmp/vere-blob-test-XXXXXX
+** Each test creates a fresh temp pier under the system scratch directory
 ** and tears it down on exit.  Tests run sequentially and exit nonzero
 ** on first failure.
 */
@@ -36,9 +38,8 @@ _setup(void)
 static void
 _tmp_make(void)
 {
-  snprintf(_tmp_pier, sizeof(_tmp_pier), "/tmp/vere-blob-test-XXXXXX");
-  if ( !mkdtemp(_tmp_pier) ) {
-    fprintf(stderr, "blob_tests: mkdtemp failed: %s\r\n", strerror(errno));
+  if ( !c3_tmp_make(_tmp_pier, sizeof(_tmp_pier), "vere-blob-test") ) {
+    fprintf(stderr, "blob_tests: c3_tmp_make failed: %s\r\n", strerror(errno));
     exit(1);
   }
 
@@ -56,9 +57,7 @@ _tmp_make(void)
 static void
 _tmp_clean(void)
 {
-  c3_c cmd_c[2048];
-  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", _tmp_pier);
-  (void)system(cmd_c);
+  c3_tmp_kill(_tmp_pier);
 }
 
 /* _path_exists(): true if [pax_c] exists on the filesystem.
@@ -578,6 +577,84 @@ _test_install_stg(void)
   free(stg_c);
   _tmp_clean();
   fprintf(stderr, "test blob install_stg: ok\r\n");
+}
+
+/* _test_install_stg_trim(): a staging file carrying trailing zero bytes is
+**   trimmed to the atom's significant length before it is installed.
+**
+**   This is the only test that reaches u3_blob_move_stg's ftruncate: every
+**   other staging payload is already canonical, so len_d == map_d and the
+**   trim is skipped.  It matters most on windows, which refuses to resize a
+**   file while a section is open on it -- so a trim attempted under the
+**   mapping fails there and takes the whole install with it.
+*/
+static void
+_test_install_stg_trim(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  //  significant bytes, then padding the atom does not include
+  //
+  c3_y dat_y[4096] = {0};
+  const c3_d sig_d = 2048;
+
+  for ( c3_d i_d = 0; i_d < sig_d; i_d++ ) {
+    dat_y[i_d] = (c3_y)(1 + (i_d % 255));
+  }
+
+  c3_c* stg_c = _write_tmp_file(dat_y, sizeof(dat_y));
+  if ( !stg_c ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: _write_tmp_file failed"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  c3_h mug_h = 0;
+  c3_h seq_h = 0;
+  if ( c3y != u3_blob_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: install failed\033[0m\r\n");
+    exit(1);
+  }
+
+  //  the installed file is the trimmed length, not the staged one
+  //
+  c3_c fil_c[8192];
+  u3_blob_path(fil_c, _tmp_pier, mug_h, seq_h);
+
+  struct stat st_u;
+  if ( 0 != stat(fil_c, &st_u) ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: stat %s: %s\033[0m\r\n",
+            fil_c, strerror(errno));
+    exit(1);
+  }
+  if ( sig_d != (c3_d)st_u.st_size ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: expected %" PRIc3_d
+                    " bytes on disk, got %" PRIc3_d "\033[0m\r\n",
+                    sig_d, (c3_d)st_u.st_size);
+    exit(1);
+  }
+
+  //  and it still denotes the same atom the padded bytes did
+  //
+  u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+  if ( u3_none == atm ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: load u3_none\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom ref = u3i_bytes((c3_w)sizeof(dat_y), dat_y);
+  if ( c3y != u3r_sing(ref, atm) ) {
+    fprintf(stderr, "\033[31mblob install_stg_trim: atom mismatch\033[0m\r\n");
+    exit(1);
+  }
+
+  u3z(ref);
+  u3z(atm);
+  free(stg_c);
+  _tmp_clean();
+  fprintf(stderr, "test blob install_stg_trim: ok\r\n");
 }
 
 /* _test_install_stg_dedup(): installing a staging file with existing
@@ -1851,6 +1928,7 @@ main(int argc, char* argv[])
   _test_delete_empty_bucket();
   _test_walk();
   _test_install_stg();
+  _test_install_stg_trim();
   _test_install_stg_dedup();
   _test_sane();
   _test_meld();

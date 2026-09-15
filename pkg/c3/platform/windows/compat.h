@@ -5,6 +5,7 @@
 
 int link(const char *path1, const char *path2);
 char *realpath(const char *path, char *resolved_path);
+char *mkdtemp(char *tpl_c);
 int fdatasync(int fd);
 int utimes(const char *path, const struct timeval times[2]);
 long sysconf(int name);

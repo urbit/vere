@@ -2,6 +2,9 @@
 
 #include "noun.h"
 
+#include "c3/tmpdir.h"
+
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -360,12 +363,6 @@ _test_ram_roundtrip(void)
   return ret_i;
 }
 
-//  the bob round-trip tests need real blob files on disk, which means
-//  mkdtemp, /tmp and a recursive teardown -- none of which mingw has.
-//  the rest of the ram/tap coverage is platform-clean and still runs.
-//
-#ifndef U3_OS_windows
-
 /* _ram_tmp_dir / _ram_setup_tmp() / _ram_cleanup_tmp() / _ram_make_blob():
 **
 **   Helpers for bob-atom round-trip tests.  The ram encoder calls
@@ -378,9 +375,8 @@ static c3_c _ram_tmp_dir[1024];
 static c3_o
 _ram_setup_tmp(void)
 {
-  snprintf(_ram_tmp_dir, sizeof(_ram_tmp_dir), "/tmp/vere-serial-test-XXXXXX");
-  if ( !mkdtemp(_ram_tmp_dir) ) {
-    fprintf(stderr, "serial_tests: mkdtemp failed\r\n");
+  if ( !c3_tmp_make(_ram_tmp_dir, sizeof(_ram_tmp_dir), "vere-serial-test") ) {
+    fprintf(stderr, "serial_tests: c3_tmp_make failed: %s\r\n", strerror(errno));
     return c3n;
   }
   u3C.dir_c = _ram_tmp_dir;
@@ -396,9 +392,7 @@ _ram_setup_tmp(void)
 static void
 _ram_cleanup_tmp(void)
 {
-  c3_c cmd_c[2048];
-  snprintf(cmd_c, sizeof(cmd_c), "rm -rf %s", _ram_tmp_dir);
-  (void)system(cmd_c);
+  c3_tmp_kill(_ram_tmp_dir);
 }
 
 static c3_o
@@ -537,8 +531,6 @@ _test_ram_bob_roundtrip(void)
   return ret_i;
 }
 
-#endif  //  U3_OS_windows
-
 /* _test_ram_invalid(): u3s_tap_xeno rejects malformed input.
 */
 static c3_i
@@ -602,7 +594,6 @@ main(int argc, char* argv[])
   u3m_grab();
   fprintf(stderr, "test ram: ok\r\n");
 
-#ifndef U3_OS_windows
   if ( !_test_ram_bob_roundtrip() ) {
     fprintf(stderr, "test ram bob: failed\r\n");
     exit(1);
@@ -610,7 +601,6 @@ main(int argc, char* argv[])
 
   u3m_grab();
   fprintf(stderr, "test ram bob: ok\r\n");
-#endif
 
   if ( !_test_ram_invalid() ) {
     fprintf(stderr, "test ram invalid: failed\r\n");

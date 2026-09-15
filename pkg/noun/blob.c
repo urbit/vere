@@ -11,6 +11,21 @@
 #include <string.h>
 #include <sys/stat.h>
 
+//  mode for a finished blob file.
+//
+//    blobs are immutable once written, so posix creates them read-only.
+//    windows turns a mode without owner-write into
+//    FILE_ATTRIBUTE_READONLY and then refuses to delete the file, which
+//    would break u3_blob_wipe and with it blob gc and |chop.  give
+//    windows an owner-writable mode instead; nothing ever opens a blob
+//    for writing on any platform.
+//
+#ifdef U3_OS_windows
+#  define BLOB_FILE_MODE 0600
+#else
+#  define BLOB_FILE_MODE 0400
+#endif
+
 //  maximum bytes per single read()/write() call.
 //  POSIX allows read()/write() to return EINVAL if count > SSIZE_MAX;
 //  macOS returns EINVAL if count > INT_MAX.  cap conservatively at 1 GiB.
@@ -297,7 +312,7 @@ u3_blob_save(const c3_c* pax_c,
   c3_c fil_c[8192];
   u3_blob_path(fil_c, pax_c, *mug_h, nex_h);
 
-  c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, 0400);
+  c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
   if ( -1 == fid_i ) {
     fprintf(stderr, "blob: failed to create %s: %s\r\n",
             fil_c, strerror(errno));
@@ -572,10 +587,8 @@ u3_blob_move_stg(const c3_c* pax_c,
   }
   madvise(map_v, (size_t)map_d, MADV_SEQUENTIAL);
 
-  //  trim to the atom's bytes before the file is installed, so that what
-  //  lands in the store is canonical (see u3_blob_save).  we only ever
-  //  read [0, len_d) of the mapping afterwards, which stays within the
-  //  truncated file, so no page can fault past EOF.
+  //  the atom's byte length: what lands in the store must be canonical
+  //  (see u3_blob_save).  the file is trimmed to match further down.
   //
   len_d = _blob_sig((const c3_y*)map_v, map_d);
 
@@ -587,16 +600,6 @@ u3_blob_move_stg(const c3_c* pax_c,
     return c3n;
   }
 
-  if ( (len_d != map_d) && (0 != ftruncate(fid_i, (off_t)len_d)) ) {
-    fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
-            stg_c, strerror(errno));
-    munmap(map_v, (size_t)map_d);
-    close(fid_i);
-    return c3n;
-  }
-
-  close(fid_i);
-
   *mug_h = _blob_mug((const c3_y*)map_v, len_d);
 
   //  acquire mug-bucket lock and get next sequence number
@@ -604,6 +607,7 @@ u3_blob_move_stg(const c3_c* pax_c,
   c3_h nex_h = _blob_lock_acquire(pax_c, *mug_h);
   if ( 0 == nex_h ) {
     munmap(map_v, (size_t)map_d);
+    close(fid_i);
     return c3n;
   }
 
@@ -611,15 +615,34 @@ u3_blob_move_stg(const c3_c* pax_c,
   //
   c3_h dup_h = _blob_dedup(pax_c, *mug_h, nex_h,
                             (const c3_y*)map_v, len_d);
+
+  //  NB: the mapping goes before the truncate below.  windows refuses to
+  //  resize a file while a section is open on it, so trimming under the
+  //  mapping -- which posix permits -- fails there with every trailing
+  //  zero byte.  nothing reads the mapping past this point.
+  //
   munmap(map_v, (size_t)map_d);
 
   if ( 0 != dup_h ) {
     //  duplicate found — consume staging file and return existing seq
     //
+    close(fid_i);
     c3_unlink(stg_c);
     *seq_h = dup_h;
     return c3y;
   }
+
+  //  trim the trailing zeros off the file itself, now that the mapping
+  //  is gone, so the installed blob is byte-exact with the atom
+  //
+  if ( (len_d != map_d) && (0 != ftruncate(fid_i, (off_t)len_d)) ) {
+    fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
+            stg_c, strerror(errno));
+    close(fid_i);
+    return c3n;
+  }
+
+  close(fid_i);
 
   //  rename staging file into final location
   //
@@ -630,7 +653,7 @@ u3_blob_move_stg(const c3_c* pax_c,
     //  rename can fail cross-device; fall back to copy-and-unlink
     //
     c3_i src_i = open(stg_c, O_RDONLY);
-    c3_i dst_i = open(dst_c, O_WRONLY | O_CREAT | O_EXCL, 0400);
+    c3_i dst_i = open(dst_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
     if ( -1 == src_i || -1 == dst_i ) {
       fprintf(stderr, "blob: install_stg: rename+fallback failed on %s: %s\r\n",
               stg_c, strerror(errno));
