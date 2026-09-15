@@ -15,8 +15,8 @@ static c3_d    _time(void);
 static u3_noun _scan_nc(u3_noun bus_fol);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
 
-/* _setup(): boot the kernel from the ivory pill with both interpreters,
-**           and the SKA core from the steel pill.
+/* _setup(): boot the kernel from the ivory pill in u3n interpreter, analyze the
+**           pill in u3nc, and boot SKA core from steel pill.
 */
 static void
 _setup(void)
@@ -43,9 +43,6 @@ _setup(void)
   }
   u3s_cue_xeno_done(sil_u);
 
-  //  the bytecode interpreter evaluates the kernel formula, registering
-  //  its jets
-  //
   if ( c3n == u3v_boot_lite(u3k(pil)) ) {
     printf("*** fail _setup 3\n");
     exit(1);
@@ -53,10 +50,6 @@ _setup(void)
 
   u3d_boot(ska);
 
-  //  the SKA core analyzes the same formula, recording the %fast hints
-  //  it finds; the kernel core from the boot is what those registrations
-  //  describe, so it serves as the subject of the tests
-  //
   eve = u3t(pil);
   if ( u3_none == _run("u3nc scan", _scan_nc, u3t(eve), u3h(eve)) ) {
     printf("*** fail _setup 4\n");
@@ -65,7 +58,7 @@ _setup(void)
   u3z(pil);
 }
 
-/* _scan_nc(): analyze and compile [bus fol] with the SKA core.  TRANSFERS.
+/* _scan_nc(): analyze and compile [bus fol] with the SKA core.
 */
 static u3_noun
 _scan_nc(u3_noun bus_fol)
@@ -74,7 +67,7 @@ _scan_nc(u3_noun bus_fol)
   u3x_cell(bus_fol, &bus, &fol);
   u3k(bus); u3k(fol); u3z(bus_fol);
   u3nc_scan(bus, fol);
-  return 0;
+  return u3_nul;
 }
 
 /* _time(): wall clock, in microseconds.
@@ -87,7 +80,7 @@ _time(void)
   return ((c3_d)tim_u.tv_sec * 1000000) + tim_u.tv_usec;
 }
 
-/* _nock_n(): .*(bus fol) with the bytecode interpreter.  TRANSFERS.
+/* _nock_n(): .*(bus fol) with u3n interpreter
 */
 static u3_noun
 _nock_n(u3_noun bus_fol)
@@ -98,7 +91,7 @@ _nock_n(u3_noun bus_fol)
   return u3n_nock_on(bus, fol);
 }
 
-/* _nock_nc(): .*(bus fol) with compiled nock.  TRANSFERS.
+/* _nock_nc(): .*(bus fol) with u3nc interpreter
 */
 static u3_noun
 _nock_nc(u3_noun bus_fol)
@@ -140,15 +133,10 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
   u3_weak a, b;
   c3_i    ret_i = 1;
 
-  //  twice: the first u3nc run analyzes and compiles.
-  //  With U3NC_ONLY, skip u3n and take its product from u3nc.
-  //
-  if ( !getenv("U3NC_ONLY") ) {
-    u3z(_run("u3n  first ", _nock_n, bus, fol));
-  }
+  u3z(_run("u3n  first ", _nock_n, bus, fol));
   u3z(_run("u3nc first ", _nock_nc, bus, fol));
-  a = getenv("U3NC_ONLY") ? _run("u3nc second", _nock_nc, bus, fol)
-                          : _run("u3n  second", _nock_n, bus, fol);
+
+  a = _run("u3n  second", _nock_n, bus, fol);
   b = _run("u3nc second", _nock_nc, bus, fol);
 
   if ( (u3_none == a) || (u3_none == b) ) {
@@ -201,8 +189,7 @@ _test_ackermann(void)
                       "?:  =(0 m)  +(n)\n"
                       "?:  =(0 n)  $(m (dec m), n 1)\n"
                       "$(m (dec m), n $(n (dec n)))\n",
-                      u3nc(3, getenv("U3NC_ACK")
-                              ? atoi(getenv("U3NC_ACK")) : 8));
+                      u3nc(3, 8));
 
   return _test("ackermann", cor, u3nq(9, 2, 0, 1), 1);
 }
@@ -219,7 +206,7 @@ _test_iter_dec(void)
                       "[(dec i.l) $(l t.l)]\n",
                       list);
 
-  return _test("iterate", cor, u3nq(9, 2, 0, 1), 1);
+  return _test("iterate dec", cor, u3nq(9, 2, 0, 1), 1);
 }
 
 static c3_i
@@ -234,7 +221,7 @@ _test_iter_vint(void)
                       "[+(i.l) $(l t.l)]\n",
                       list);
 
-  return _test("iterate", cor, u3nq(9, 2, 0, 1), 1);
+  return _test("iterate vint", cor, u3nq(9, 2, 0, 1), 1);
 }
 
 /* main(): run all test cases.
