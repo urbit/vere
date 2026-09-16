@@ -1580,9 +1580,7 @@ _nc_here(void* ptr_v)
 **   register, so the inline fast paths of GAIN() and LOSE() don't force
 **   the interpreter state to be spilled around them.
 */
-#if defined(U3NC_NO_PRESERVE)
-#  define _nc_cold  __attribute__((always_inline)) inline
-#elif defined(__clang__) && (defined(__x86_64__) || defined(__aarch64__))
+#if defined(__clang__) && (defined(__x86_64__) || defined(__aarch64__))
 #  define _nc_cold  __attribute__((preserve_most, noinline))
 #else
 #  define _nc_cold  __attribute__((noinline))
@@ -1964,15 +1962,20 @@ _nc_take_dir_cb(u3_noun pog)
 static u3_noun
 _nc_take_ent_cb(u3_noun lis)
 {
-  u3_noun out = u3_nul, i, sock, pog;
+  u3_noun out, i, sock, pog;
+  u3_noun *h, *nex, *t = &out;
 
   while ( u3_nul != lis ) {
     u3x_cell(lis, &i, &lis);
     u3x_cell(i, &sock, &pog);
-    out = u3nc(u3nc(u3a_take(sock), _nc_take_dir_cb(pog)), out);
+    *t = u3i_defcons(&h, &nex);
+    t  = nex;
+    *h = u3nc(u3a_take(sock), _nc_take_dir_cb(pog));
   }
 
-  return u3kb_flop(out);
+  *t = u3_nul;
+
+  return out;
 }
 
 /* u3nc_take(): copy junior program tables; sets *dir_p and *ent_p
