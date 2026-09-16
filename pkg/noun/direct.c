@@ -275,7 +275,7 @@ u3d_boot(u3_noun steel)
 
   {
     u3_noun lis = _d_rings();
-    u3l_log("ska: %u jetted arms", u3qb_lent(lis));
+    u3l_log("ska: %" PRIc3_w " jetted arms", u3qb_lent(lis));
     u3z(_d_poke(u3nc(c3__jets, lis)));
   }
 }

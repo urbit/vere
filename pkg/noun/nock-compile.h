@@ -31,9 +31,9 @@
       u3_noun          bell;          //  [sock formula] of the callee
       u3_noun          ring;          //  ~ or [path axis] of its jet
       u3p(struct _u3nc_prog) pog_p;   //  callee program, or 0 until linked
-      c3_w             sot_w;         //  first argument slot (offset in sot_u)
-      c3_w             len_w;         //  number of argument slots
-      c3_w             cid_w;         //  memo cache for a memoized call
+      c3_h             sot_h;         //  first argument slot (offset in sot_u)
+      c3_h             len_h;         //  number of argument slots
+      c3_h             cid_h;         //  memo cache for a memoized call
       c3_o             dir_o;         //  direct call: link pog_p by bell
       u3j_harm*        ham_u;         //  jet arm taking the core, nullable
       const u3u_harm*  arm_u;         //  jet arm taking the arguments, nullable
@@ -42,24 +42,24 @@
   /* u3nc_prog: program compiled from the IR of one function.
   */
     typedef struct _u3nc_prog {
-      c3_w       tot_w;               //  number of slots
-      c3_w       arg_w;               //  number of arguments (first slots)
+      c3_h       tot_h;               //  number of slots
+      c3_h       arg_h;               //  number of arguments (first slots)
       u3_noun    ned;                 //  need-ordered shape of the arguments
       struct {
-        c3_w       len_w;             //  length of bytecode (bytes)
+        c3_h       len_h;             //  length of bytecode (bytes)
         c3_y*      ops_y;             //  bytecode
       } byc_u;
       struct {
-        c3_w       len_w;             //  number of literals
+        c3_h       len_h;             //  number of literals
         u3_noun*   non;               //  literals
       } lit_u;
       struct {
-        c3_w       len_w;             //  number of call sites
+        c3_h       len_h;             //  number of call sites
         u3nc_dire* dat_u;             //  call sites
       } dir_u;
       struct {
-        c3_w       len_w;             //  number of argument slots
-        c3_w*      sot_w;             //  argument slots of all call sites
+        c3_h       len_h;             //  number of argument slots
+        c3_h*      sot_h;             //  argument slots of all call sites
       } sot_u;
     } u3nc_prog;
 
