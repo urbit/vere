@@ -55,7 +55,7 @@
 
     /* u3v_boot(): evaluate boot sequence, making a kernel
     */
-      u3_weak
+      c3_o
       u3v_boot(u3_noun eve);
 
     /* u3v_boot_lite(): light bootstrap sequence, just making a kernel.

@@ -1115,22 +1115,30 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   u3_weak eve;
   c3_h  mug_h;
 
+  //  hack to recover structural sharing
+  //
+  u3m_hate(1 << 18);
 
   //  XX this function should only ever be called in epoch 0
   //  XX read_list reads *up-to* eve_d, should be exact
   //
   if ( u3_none == (eve = u3_disk_read_list(log_u, 1, eve_d, &mug_h)) ) {
     fprintf(stderr, "boot: read failed\r\n");
+    u3m_love(u3_nul);
     return c3n;
   }
 
   //  hack to recover structural sharing
   //
-  eve = u3m_dedup(eve);
-  
+  u3_noun xev = u3m_love(u3ke_cue(u3ke_jam(u3nc(cax, eve))));
+  u3z(cax);
+  u3x_cell(xev, &cax, &eve);
+  u3k(eve); u3k(cax);
+  u3z(xev);
+  xev = cax;
+
   //  prime memo cache
   //
-  u3_noun xev = cax;
   while ( u3_nul != cax ) {
     u3z_save_m(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
                u3t(u3h(cax)));
@@ -1138,26 +1146,28 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   }
   u3z(xev);
 
-  {
-    c3_d  len_d = u3_Ivory_pill_len;
-    c3_y* byt_y = u3_Ivory_pill;
-    u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
-    u3_weak pil;
+  //  install an ivory pill to support stack traces
+  //
+  //    XX support -J
+  //
+  // {
+  //   c3_d  len_d = u3_Ivory_pill_len;
+  //   c3_y* byt_y = u3_Ivory_pill;
+  //   u3_cue_xeno* sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
+  //   u3_weak pil;
 
-    if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
-      u3l_log("lite: unable to cue ivory pill");
-      exit(1);
-    }
+  //   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
+  //     u3l_log("lite: unable to cue ivory pill");
+  //     exit(1);
+  //   }
 
-    pil = u3m_dedup(pil);
+  //   u3s_cue_xeno_done(sil_u);
 
-    u3s_cue_xeno_done(sil_u);
-
-    if ( c3n == u3v_boot_lite(pil)) {
-      u3l_log("lite: boot failed");
-      exit(1);
-    }
-  }
+  //   if ( c3n == u3v_boot_lite(pil)) {
+  //     u3l_log("lite: boot failed");
+  //     exit(1);
+  //   }
+  // }
 
   u3l_log("--------------- bootstrap starting ----------------");
 
@@ -1165,10 +1175,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
 
   //  XX check mug if available
   //
-  u3_weak pro;
-  if ( u3_none != (pro = u3v_boot(eve)) ) {
-    u3_pier_punt(0, u3qb_flop(u3t(pro)));
-    u3z(pro);
+  if ( c3n == u3v_boot(eve) ) {
     return c3n;
   }
 

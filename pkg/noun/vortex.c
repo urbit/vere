@@ -35,7 +35,7 @@ u3v_life(u3_noun eve)
 
 /* u3v_boot(): evaluate boot sequence, making a kernel
 */
-u3_weak
+c3_o
 u3v_boot(u3_noun eve)
 {
   c3_d len_d;
@@ -61,7 +61,8 @@ u3v_boot(u3_noun eve)
       else {
         fprintf(stderr, "boot: bail\r\n");
       }
-      return pro;
+      u3z(pro);
+      return c3n;
     }
 
     u3z(u3A->roc);
@@ -70,7 +71,7 @@ u3v_boot(u3_noun eve)
     u3z(pro);
   }
 
-  return u3_none;
+  return c3y;
 }
 
 /* _cv_lite(): load lightweight, core-only pill.
@@ -110,7 +111,6 @@ u3v_boot_lite(u3_noun pil)
     u3_noun pro = u3m_soft(0, _cv_lite, pil);
 
     if ( u3_blip != u3h(pro) ) {
-
       u3z(pro);
       return c3n;
     }
