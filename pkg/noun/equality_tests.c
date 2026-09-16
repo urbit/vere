@@ -19,7 +19,11 @@ _test_unify_home(void)
   u3_noun  b = u3nt(0, 0, 0);
   c3_w kep_w;
 
-  u3_assert( u3t(a) < u3t(b) );
+  if ( u3t(a) > u3t(b) ) {
+    u3_noun t = a;
+    a = b;
+    b = t;
+  }
   kep_w = u3t(a);
 
   (void)u3r_sing(a, b);

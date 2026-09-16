@@ -1660,7 +1660,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 16);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -1839,7 +1839,37 @@ u3a_mark_road()
     qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
-  qua_u[15] = NULL;
+  qua_u[15] = c3_calloc(sizeof(*qua_u[15]));
+  qua_u[15]->nam_c = strdup("hashconsing table");
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->dup_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[15]->qua_u = mua_u;
+    qua_u[15]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
+
+  qua_u[16] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -1863,6 +1893,7 @@ u3a_reclaim(void)
   //
   u3h_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
+  u3m_dedup_prune();
 }
 
 /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
@@ -1880,8 +1911,9 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
-  u3h_relocate(&(u3R->lop_p));
   u3h_relocate(&(u3R->cax.for_p));
+  u3h_relocate(&(u3R->lop_p));
+  u3h_relocate(&(u3R->dup_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]

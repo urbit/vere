@@ -228,6 +228,17 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
         c3_w
         u3m_pack(void);
+        
+      /* u3m_dedup: deduplicate the noun across the hashcons sets
+      */
+        u3_noun
+        u3m_dedup(u3_noun som);
+      
+      /* u3m_dedup_prune: remove hashcons entries that have no incoming
+       * references
+      */
+        void
+        u3m_dedup_prune(void);
 
     /*  Urbit time: 128 bits, leap-free.
     **
