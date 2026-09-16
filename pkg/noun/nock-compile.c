@@ -25,12 +25,10 @@
 **  Every opcode with immediate arguments comes in three widths, for all
 **  of its immediates at once: _B, one byte each; _S, two bytes each,
 **  little-endian; _V, a length byte followed by that many bytes.
-**  Slots, literal and call site indices, and jump targets are
-**  immediates.  A jump target is the byte offset from the end of the op
-**  to the target, always ahead: the blocks form a DAG and are laid out
-**  in topological order.  At _V it takes all four bytes.  The IMM
-**  opcodes are the exception: IMM_B and IMM_S carry the atom itself,
-**  and all of them write to a one-byte slot.
+**  Slots, literal and call site indices, and jump targets (absolute byte
+**  offsets) are immediates.  The IMM opcodes are the exception: IMM_B
+**  and IMM_S carry the atom itself, and all of them write to a one-byte
+**  slot.
 **
 **    IMM_0 d        0 -> d
 **    IMM_1 d        1 -> d
@@ -161,7 +159,6 @@ typedef struct {
   c3_h  dst_h;    //  destination register
   c3_h  imm_h;    //  index immediate, or the atom of an inline immediate
   c3_h  tar_h;    //  target block, or the literal of an inline immediate
-  c3_y  wid_y;    //  width of the encoding, only ever widened
 } nc_op;
 
 /* nc_blk: a basic block.
@@ -302,7 +299,6 @@ _nc_op(nc_gen* gen_u, c3_y fam_y)
   op_u->dst_h    = _nc_none;
   op_u->imm_h    = 0;
   op_u->tar_h    = _nc_none;
-  op_u->wid_y    = 0;
 
   return op_u;
 }
@@ -1107,20 +1103,10 @@ _nc_put(c3_y* buf_y, c3_y wid_y, c3_h val_h)
   }
 }
 
-/* _nc_fits(): yes if a jump target fits a fixed width.
-*/
-static inline c3_t
-_nc_fits(c3_h rel_h, c3_y wid_y)
-{
-  return rel_h < ((c3_h)0x100 << (8 * wid_y));
-}
-
-/* _nc_encode(): write an op at byte offset pos_h, or measure it.  The
-**               width is the op's so far, or wider to fit the rest of
-**               its immediates.
+/* _nc_encode(): write an op, or measure it.
 */
 static c3_h
-_nc_encode(nc_gen* gen_u, nc_op* op_u, c3_h pos_h, c3_y* buf_y)
+_nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
 {
   nc_op tmp_u;
   c3_h  val_h[5], len_h = 0, max_h = 0, siz_h = 1, i_h;
@@ -1188,14 +1174,15 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_h pos_h, c3_y* buf_y)
   if ( _nc_fam[fam_y].dst_y ) {
     val_h[len_h++] = op_u->dst_h;
   }
+  if ( _nc_fam[fam_y].tar_y ) {
+    val_h[len_h++] = gen_u->blk_u[op_u->tar_h].off_h;
+  }
 
   for ( i_h = 0; i_h < len_h; i_h++ ) {
     max_h = c3_max(max_h, val_h[i_h]);
   }
 
   wid_y = ( max_h < 0x100 ) ? 0 : ( max_h < 0x10000 ) ? 1 : 2;
-  wid_y = c3_max(wid_y, op_u->wid_y);
-  op_u->wid_y = wid_y;
 
   if ( buf_y ) {
     buf_y[0] = _nc_base(fam_y) + wid_y;
@@ -1205,63 +1192,7 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_h pos_h, c3_y* buf_y)
     siz_h += _nc_put(buf_y ? (buf_y + siz_h) : NULL, wid_y, val_h[i_h]);
   }
 
-  //  a jump target is relative to the end of the op, so the size of the
-  //  op must not depend on it: all four bytes at _V
-  //
-  if ( _nc_fam[fam_y].tar_y ) {
-    c3_h end_h = siz_h + ( (wid_y < 2) ? (1 << wid_y) : 5 );
-
-    if ( buf_y ) {
-      c3_h rel_h = gen_u->blk_u[op_u->tar_h].off_h - (pos_h + end_h);
-
-      if ( wid_y < 2 ) {
-        u3_assert( _nc_fits(rel_h, wid_y) );
-        _nc_put(buf_y + siz_h, wid_y, rel_h);
-      }
-      else {
-        buf_y[siz_h] = 4;
-        for ( i_h = 0; i_h < 4; i_h++ ) {
-          buf_y[siz_h + 1 + i_h] = (rel_h >> (8 * i_h)) & 0xff;
-        }
-      }
-    }
-    siz_h = end_h;
-  }
-
   return siz_h;
-}
-
-/* _nc_relax(): widen the jumps whose targets don't fit the blocks as
-**              laid out.  Yes if any did.
-*/
-static c3_t
-_nc_relax(nc_gen* gen_u)
-{
-  c3_t chg_t = 0;
-  c3_h pos_h = 0, i_h, j_h;
-
-  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
-    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
-
-    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
-      nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
-
-      pos_h += _nc_encode(gen_u, op_u, pos_h, NULL);
-
-      if ( _nc_fam[op_u->fam_y].tar_y ) {
-        c3_h tar_h = gen_u->blk_u[op_u->tar_h].off_h;
-
-        u3_assert( tar_h >= pos_h );
-
-        if ( (op_u->wid_y < 2) && !_nc_fits(tar_h - pos_h, op_u->wid_y) ) {
-          op_u->wid_y++;
-          chg_t = 1;
-        }
-      }
-    }
-  }
-
-  return chg_t;
 }
 
 /* _nc_read(): read an immediate of the given width.
@@ -1363,9 +1294,7 @@ _nc_print(u3nc_prog* pog_u)
         fprintf(stderr, " -> %u", _nc_read(pog, &ip_h, wid_y));
       }
       if ( _nc_fam[fam_y].tar_y ) {
-        c3_h rel_h = _nc_read(pog, &ip_h, wid_y);
-
-        fprintf(stderr, " @%u", ip_h + rel_h);
+        fprintf(stderr, " @%u", _nc_read(pog, &ip_h, wid_y));
       }
     }
     fprintf(stderr, "\r\n");
@@ -1494,24 +1423,34 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   u3nc_prog* pog_u;
   c3_h       byc_h, i_h, j_h;
 
-  //  Lay the blocks out at the widths so far, and widen the jumps that
-  //  don't reach, until they all do.  Ops only widen and their size is
-  //  capped, so this converges.
+  //  Fixed-point loop on the block offsets. Immediate arguments only widen
+  //  and their size is capped, so this converges. 
   //
-  do {
-    byc_h = 0;
+  for ( i_h = 0; i_h < gen_u->blk_h; i_h++ ) {
+    gen_u->blk_u[i_h].off_h = 0;
+  }
 
-    for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
-      nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+  {
+    c3_t chg_t;
 
-      blk_u->off_h = byc_h;
+    do {
+      chg_t = 0;
+      byc_h = 0;
 
-      for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
-        byc_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]),
-                            byc_h, NULL);
+      for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+        nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+
+        if ( blk_u->off_h != byc_h ) {
+          blk_u->off_h = byc_h;
+          chg_t = 1;
+        }
+
+        for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+          byc_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]), NULL);
+        }
       }
-    }
-  } while ( _nc_relax(gen_u) );
+    } while ( chg_t );
+  }
 
   pog_u = _nc_prog_new(byc_h, gen_u->lit_h, gen_u->din_h, gen_u->pon_h);
   pog_u->tot_h = gen_u->tot_h;
@@ -1529,7 +1468,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
 
       for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
         pos_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]),
-                            pos_h, buf_y + pos_h);
+                            buf_y + pos_h);
       }
     }
 
@@ -1884,9 +1823,9 @@ _nc_save(c3_h cid_h, u3_noun key, u3_noun pro)
 typedef struct __attribute__((__packed__)) {
   u3nc_prog* pog_u;   //  caller program, or 0 at the entry
   u3_noun*   reg;     //  caller slots
-  c3_y*      ip;      //  caller instruction pointer
-  u3_weak    key;     //  memo key to save the product under
+  c3_h       ip_h;    //  caller instruction pointer
   c3_h       des_h;   //  caller slot for the product
+  u3_weak    key;     //  memo key to save the product under
   c3_h       cid_h;   //  memo cache
 } nc_frame;
 

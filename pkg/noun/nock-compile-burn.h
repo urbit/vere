@@ -54,7 +54,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     _v;                                                                  \
   })
 #define BURN()  goto *lab[*ip++]
-#define JUMP(t)  (ip += (t))
+#define JUMP(t)  (ip = pog_u->byc_u.ops_y + (t))
 #define PUT(d, v)  do { u3_noun _o = reg[d]; reg[d] = (v); LOSE(_o); } while ( 0 )
 #define PUSH(n)  _nc_push(rod_u, mov_ws, n)
 #define POP(n)   _nc_pop(rod_u, mov_ws, n)
@@ -82,7 +82,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     fam_u = PUSH(_nc_frame_w);                                           \
     fam_u->pog_u = pog_u;                                                \
     fam_u->reg   = reg;                                                  \
-    fam_u->ip    = ip;                                                   \
+    fam_u->ip_h  = ip - pog_u->byc_u.ops_y;                              \
     fam_u->des_h = d_h;                                                  \
     fam_u->key   = u3_none;                                              \
     fam_u->cid_h = 0;                                                    \
@@ -193,7 +193,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     POP(_nc_frame_w + pog_u->tot_h);
     pog_u = fam_u->pog_u;
     reg   = fam_u->reg;
-    ip    = fam_u->ip;
+    ip    = pog_u->byc_u.ops_y + fam_u->ip_h;
     d_h   = fam_u->des_h;
     PUT(d_h, pro);
     BURN();
