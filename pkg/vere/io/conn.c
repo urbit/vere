@@ -288,6 +288,12 @@ _conn_close_chan(u3_shan* san_u, u3_chan* can_u)
   u3_chan*  inn_u;
   u3_cran*  ran_u;
 
+  //  already closing; teardown is idempotent.
+  //
+  if ( uv_is_closing((uv_handle_t*)&can_u->mor_u.pyp_u) ) {
+    return;
+  }
+
   //  unset chan on all pending requests.
   //
   for ( ran_u = can_u->ran_u; ran_u; ran_u = ran_u->nex_u ) {
@@ -335,12 +341,24 @@ _conn_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   u3_chan*  can_u = (u3_chan*)ptr_v;
   u3_shan*  san_u = can_u->san_u;
 
+  //  already closing; freed from the close callback.
+  //
+  if ( uv_is_closing((uv_handle_t*)&can_u->mor_u.pyp_u) ) {
+    return;
+  }
+
   if ( err_i != UV_EOF ) {
     u3l_log("conn: moor bail %zd %s", err_i, err_c);
+
+    //  notify the client, unless it's already gone: writing to a dead
+    //  pipe fails again and re-enters here.
+    //
     if ( _(can_u->liv_o) ) {
-      _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_half(err_i),
-                      u3i_string(err_c)));
       can_u->liv_o = c3n;
+      if ( (UV_EPIPE != err_i) && (UV_ECONNRESET != err_i) ) {
+        _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_half(err_i),
+                        u3i_string(err_c)));
+      }
     }
   }
 
