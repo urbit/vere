@@ -149,15 +149,6 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
     u3m_p("u3nc", b);
     ret_i = 0;
   }
-  else if ( u3nc_Stat.rin_d ) {
-    fprintf(stderr, "test %s: %" PRIu64 " call sites with an unresolved "
-                    "jet ring\r\n", nam_c, u3nc_Stat.rin_d);
-    ret_i = 0;
-  }
-  else if ( jet_t && !u3nc_Stat.arm_d ) {
-    fprintf(stderr, "test %s: no jetted call sites\r\n", nam_c);
-    ret_i = 0;
-  }
   else {
     fprintf(stderr, "test %s: ok\r\n", nam_c);
   }

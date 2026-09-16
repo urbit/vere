@@ -3,6 +3,7 @@
 #include "nock-compile.h"
 
 #include "allocate.h"
+#include "c3/defs.h"
 #include "direct.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -147,7 +148,6 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
 */
 typedef struct {
   c3_y  fam_y;    //  family of the op
-  c3_y  hop_y;    //  moves a $jmp argument: dropped if the parameter is unused
   c3_w  src_w[2]; //  source registers
   c3_w  dst_w;    //  destination register
   c3_w  imm_w;    //  index immediate, or the atom of an inline immediate
@@ -179,8 +179,8 @@ typedef struct {
 */
 typedef struct {
   u3p(u3h_root) idx_p;    //  block id -> index
-  nc_blk*       blk_u;
-  c3_w          blk_w;
+  nc_blk*       blk_u;    //  blocks
+  c3_w          blk_w;    //  block index generator
   c3_w*         lay_w;    //  block indices in layout order
   c3_w          lan_w;    //    and its length
   nc_op*        ops_u;    //  op array
@@ -266,7 +266,6 @@ _nc_op(nc_gen* gen_u, c3_y fam_y)
   op_u = &(gen_u->ops_u[gen_u->opn_w++]);
 
   op_u->fam_y    = fam_y;
-  op_u->hop_y    = 0;
   op_u->src_w[0] = _nc_none;
   op_u->src_w[1] = _nc_none;
   op_u->dst_w    = _nc_none;
@@ -611,7 +610,6 @@ _nc_jump(nc_gen* gen_u, u3_noun jmp, c3_w nex_w)
 
     if ( c3y == u3du(a) ) {
       nc_op* op_u = _nc_op(gen_u, _nc_mov);
-      op_u->hop_y    = 1;
       op_u->src_w[0] = _nc_reg(gen_u, u3t(a));
       op_u->dst_w    = _nc_reg(gen_u, p);
     }
@@ -776,8 +774,6 @@ _nc_fold(nc_gen* gen_u)
 
     def_u = &(gen_u->ops_u[def_w[op_u->src_w[1]]]);
 
-    //  a wide slot makes an IMM op emit as IML: its literal is in tar_w
-    //
     if ( _nc_imm == def_u->fam_y ) {
       op_u->fam_y = _nc_eqi;
       op_u->imm_w = def_u->imm_w;
@@ -823,7 +819,7 @@ _nc_translate(nc_gen* gen_u)
 **             pointing at each in turn: its own, then those of its call
 **             site, if any.
 */
-#define _nc_srcs(gen_u, op_u, i_w, reg_w, body)                          \
+#define _nc_srcs(gen_u, op_u, reg_w, body)                               \
   do {                                                                   \
     const c3_y _nfam = (op_u)->fam_y;                                    \
     c3_w _i;                                                             \
@@ -883,12 +879,12 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
   //
   for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
-    _nc_srcs(gen_u, op_u, i_w, reg_w, { use_w[*reg_w]++; });
+    _nc_srcs(gen_u, op_u, reg_w, { use_w[*reg_w]++; });
   }
 
   for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_w]);
-    if (  ( op_u->hop_y
+    if (  ( (_nc_mov == op_u->fam_y)
          || (_nc_imm == op_u->fam_y)
          || (_nc_iml == op_u->fam_y) )
        && !use_w[op_u->dst_w] )
@@ -907,7 +903,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
       continue;
     }
 
-    _nc_srcs(gen_u, op_u, i_w, reg_w, {
+    _nc_srcs(gen_u, op_u, reg_w, {
       if ( _nc_none == sta_w[*reg_w] ) {
         sta_w[*reg_w] = 0;
       }
@@ -930,6 +926,12 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
     }
   }
 
+  //  this feels highly illegal but should be fine because we sort by
+  //  simple arithmetic comparison, i.e. by the start of the lifetime
+  //  with @uvre value as a tiebreaker, and the tie can happen only
+  //  with sta_w == 0. So the sorted array should always be the same
+  //  no matter the implementation of qsort (as long as it is not
+  //  completely broken)
   qsort(key_d, key_n, sizeof(c3_d), _nc_key_cmp);
 
   for ( i_w = 0; i_w < key_n; i_w++ ) {
@@ -951,6 +953,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
     act_w[act_n++] = r_w;
   }
 
+  //  Calling convention assertion
   for ( r_w = 0; r_w < arg_w; r_w++ ) {
     u3_assert( r_w == sot_w[r_w] );
   }
@@ -964,7 +967,7 @@ _nc_slots(nc_gen* gen_u, c3_w arg_w)
       continue;
     }
 
-    _nc_srcs(gen_u, op_u, i_w, reg_w, { *reg_w = sot_w[*reg_w]; });
+    _nc_srcs(gen_u, op_u, reg_w, { *reg_w = sot_w[*reg_w]; });
 
     if ( _nc_none != op_u->dst_w ) {
       op_u->dst_w = sot_w[op_u->dst_w];
@@ -1126,7 +1129,11 @@ u3nc_stat u3nc_Stat;
 #  define _nc_stat(fel)  ((void)0)
 #endif
 
-static c3_t _nc_verb_t;
+#ifdef U3NC_VERBOSE
+static const c3_t _nc_verb_t = 1;
+#else
+static const c3_t _nc_verb_t = 0;
+#endif
 
 /* _nc_read(): read an immediate of the given width.
 */
@@ -1303,11 +1310,13 @@ _nc_dire_jet(u3nc_dire* dir_u)
   }
 
   if ( c3n == u3j_ring(dir_u->ring, &(dir_u->ham_u), &(dir_u->arm_u)) ) {
-    u3nc_Stat.rin_d++;
-    u3l_log("u3nc: no driver for ring %s", u3m_pretty_path(u3h(dir_u->ring)));
+    _nc_stat(rin_d);
+    if ( _nc_verb_t ) {
+      u3l_log("u3nc: no driver for ring %s", u3m_pretty_path(u3h(dir_u->ring)));
+    }
   }
   else {
-    u3nc_Stat.arm_d++;
+    _nc_stat(arm_d);
   }
 }
 
@@ -1391,7 +1400,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_w arg_w)
   return pog_u;
 }
 
-/* _nc_build(): compile a straight [need n-args blocks].  TRANSFERS.
+/* _nc_build(): compile a straight [need n-args blocks].
 */
 static u3nc_prog*
 _nc_build(u3_noun straight)
@@ -1411,7 +1420,7 @@ _nc_build(u3_noun straight)
   _nc_slots(&gen_u, _nc_cat(arg));
   pog_u = _nc_emit(&gen_u, ned, _nc_cat(arg));
 
-  u3nc_Stat.com_d++;
+  _nc_stat(com_d);
   if ( _nc_verb_t ) {
     _nc_print(pog_u);
   }
@@ -1560,7 +1569,7 @@ _nc_entry(u3_noun sub, u3_noun fol)
 {
   u3nc_prog* pog_u = _nc_ent_get(sub, fol);
 
-  u3nc_Stat.ent_d++;
+  _nc_stat(ent_d);
 
   if ( !pog_u ) {
     u3_noun bell, old, lis;
@@ -2289,7 +2298,6 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   u3nc_prog* pog_u;
   u3_noun    pro;
 
-  _nc_verb_t = !!getenv("U3NC_VERBOSE");
 
   pog_u = _nc_entry(bus, fol);
   u3z(fol);
@@ -2313,7 +2321,6 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
 void
 u3nc_scan(u3_noun bus, u3_noun fol)
 {
-  _nc_verb_t = !!getenv("U3NC_VERBOSE");
   _nc_entry(bus, fol);
   u3z(bus);
   u3z(fol);
