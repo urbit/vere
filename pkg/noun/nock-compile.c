@@ -4,6 +4,7 @@
 
 #include "allocate.h"
 #include "c3/defs.h"
+#include "c3/motes.h"
 #include "direct.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -201,16 +202,19 @@ typedef struct {
 #define _nc_grow(arr, len, cap, typ)                                     \
   if ( (len) >= (cap) ) {                                                \
     c3_h _old = (cap);                                                   \
+    if ( _old >= 0x80000000 ) {                                          \
+      u3m_bail(c3__meme);                                                \
+    }                                                                    \
     (cap) = (cap) ? (2 * (cap)) : 64;                                     \
     (arr) = u3a_realloc((arr), _old * sizeof(typ), (cap) * sizeof(typ)); \
   }
 
-/* _nc_cat(): direct atom that fits a half-word, or fail.
+/* _nc_cat(): direct atom below _nc_none, or fail.
 */
 static inline c3_h
 _nc_cat(u3_noun som)
 {
-  if ( (c3n == u3a_is_cat(som)) || (som != (c3_h)som) ) {
+  if ( (c3n == u3a_is_cat(som)) || (som >= _nc_none) ) {
     u3m_bail(c3__fail);
   }
   return som;
@@ -372,7 +376,7 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
   //  the treap of the map, in preorder
   //
   {
-    u3_noun* sak = 0;
+    u3_noun* sak = NULL;
     //  size, capacity of sac array, capacity of blk_u array
     c3_h     sak_h = 0, sac_h = 0, blk_m = 0;
 
@@ -389,6 +393,9 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
       u3x_trel(nod, &n, &l, &r);
 
       _nc_grow(gen_u->blk_u, gen_u->blk_h, blk_m, nc_blk);
+      //  blk_u[i].blob holds an uncounted reference, but it's fine as long
+      //  as we don't run u3r_sing during compilation and `straight` noun
+      //  outlives this reference
       gen_u->blk_u[gen_u->blk_h].blob  = u3t(n);
       gen_u->blk_u[gen_u->blk_h].lay_h = _nc_none;
       u3h_put(gen_u->idx_p, u3h(n), _nc_cat(gen_u->blk_h));
@@ -867,7 +874,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   c3_d* key_d = u3a_malloc(reg_h * sizeof(c3_d));
   c3_h* act_h = u3a_malloc(reg_h * sizeof(c3_h));
   c3_h* fre_h = u3a_malloc(reg_h * sizeof(c3_h));
-  c3_h  key_n = 0, act_n = 0, fre_n = 0, tot_h = 0;
+  c3_h  key_n_h = 0, act_n_h = 0, fre_n_h = 0, tot_h = 0;
   c3_h  i_h, r_h;
 
   for ( r_h = 0; r_h < reg_h; r_h++ ) {
@@ -922,7 +929,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   //
   for ( r_h = 0; r_h < reg_h; r_h++ ) {
     if ( _nc_none != sta_h[r_h] ) {
-      key_d[key_n++] = ((c3_d)sta_h[r_h] << 32) | r_h;
+      key_d[key_n_h++] = ((c3_d)sta_h[r_h] << 32) | r_h;
     }
   }
 
@@ -932,25 +939,29 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   //  with sta_h == 0. So the sorted array should always be the same
   //  no matter the implementation of qsort (as long as it is not
   //  completely broken)
-  qsort(key_d, key_n, sizeof(c3_d), _nc_key_cmp);
+  qsort(key_d, key_n_h, sizeof(c3_d), _nc_key_cmp);
 
-  for ( i_h = 0; i_h < key_n; i_h++ ) {
+  for ( i_h = 0; i_h < key_n_h; i_h++ ) {
     c3_h j_h;
 
     r_h = (c3_h)key_d[i_h];
 
-    for ( j_h = 0; j_h < act_n; ) {
+    //  iterate over all active slots, freeing the stale ones by
+    //  putting them in the free list and rewriting the slot in act_h
+    //  with the item from the end. The replacing item is not yet examined
+    //  so we advance j_h in the else branch only
+    for ( j_h = 0; j_h < act_n_h; ) {
       if ( end_h[act_h[j_h]] < sta_h[r_h] ) {
-        fre_h[fre_n++] = sot_h[act_h[j_h]];
-        act_h[j_h]     = act_h[--act_n];
+        fre_h[fre_n_h++] = sot_h[act_h[j_h]];
+        act_h[j_h]     = act_h[--act_n_h];
       }
       else {
         j_h++;
       }
     }
 
-    sot_h[r_h]     = fre_n ? fre_h[--fre_n] : tot_h++;
-    act_h[act_n++] = r_h;
+    sot_h[r_h]     = fre_n_h ? fre_h[--fre_n_h] : tot_h++;
+    act_h[act_n_h++] = r_h;
   }
 
   //  Calling convention assertion
@@ -1111,7 +1122,7 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   }
 
   for ( i_h = 0; i_h < len_h; i_h++ ) {
-    siz_h += _nc_put(buf_y ? (buf_y + siz_h) : 0, wid_y, val_h[i_h]);
+    siz_h += _nc_put(buf_y ? (buf_y + siz_h) : NULL, wid_y, val_h[i_h]);
   }
 
   return siz_h;
@@ -1241,28 +1252,54 @@ _nc_print(u3nc_prog* pog_u)
   }
 }
 
+/* nc_lay: byte offsets of the sections of a program, and its size.
+*/
+typedef struct {
+  c3_w byc_w;   //  bytecode
+  c3_w lit_w;   //  literals
+  c3_w dir_w;   //  call sites
+  c3_w sot_w;   //  argument slots
+  c3_w len_w;   //  total
+} nc_lay;
+
+/* _nc_prog_lay(): lay out a program from the lengths of its sections,
+**                 each aligned for its element type.
+*/
+static nc_lay
+_nc_prog_lay(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
+{
+  nc_lay lay_u;
+  c3_w   len_w = sizeof(u3nc_prog);
+
+  lay_u.byc_w = len_w = c3_align(len_w, alignof(c3_y), C3_ALGHI);
+  len_w += byc_h;
+
+  lay_u.lit_w = len_w = c3_align(len_w, alignof(u3_noun), C3_ALGHI);
+  len_w += lit_h * sizeof(u3_noun);
+
+  lay_u.dir_w = len_w = c3_align(len_w, alignof(u3nc_dire), C3_ALGHI);
+  len_w += dir_h * sizeof(u3nc_dire);
+
+  lay_u.sot_w = len_w = c3_align(len_w, alignof(c3_h), C3_ALGHI);
+  len_w += sot_h * sizeof(c3_h);
+
+  lay_u.len_w = len_w;
+  return lay_u;
+}
+
 /* _nc_prog_fix(): set the pointers of a program from its lengths.
 */
 static void
 _nc_prog_fix(u3nc_prog* pog_u)
 {
-  c3_y* dat_y = (c3_y*)pog_u;
-  c3_w  len_w = sizeof(u3nc_prog);
+  c3_y*  dat_y = (c3_y*)pog_u;
+  nc_lay lay_u = _nc_prog_lay(pog_u->byc_u.len_h, pog_u->lit_u.len_h,
+                              pog_u->dir_u.len_h, pog_u->sot_u.len_h);
 
-  len_w = c3_align(len_w, 8, C3_ALGHI);
-  pog_u->byc_u.ops_y = dat_y + len_w;
-  len_w += pog_u->byc_u.len_h;
-
-  len_w = c3_align(len_w, 8, C3_ALGHI);
-  pog_u->lit_u.non = (u3_noun*)(dat_y + len_w);
-  len_w += pog_u->lit_u.len_h * sizeof(u3_noun);
-
-  len_w = c3_align(len_w, 8, C3_ALGHI);
-  pog_u->dir_u.dat_u = (u3nc_dire*)(dat_y + len_w);
-  len_w += pog_u->dir_u.len_h * sizeof(u3nc_dire);
-
-  len_w = c3_align(len_w, 8, C3_ALGHI);
-  pog_u->sot_u.sot_h = (c3_h*)(dat_y + len_w);
+  pog_u->byc_u.ops_y = dat_y + lay_u.byc_w;
+  pog_u->lit_u.non   = (u3_noun*)(dat_y + lay_u.lit_w);
+  pog_u->dir_u.dat_u = (u3nc_dire*)(dat_y + lay_u.dir_w);
+  pog_u->sot_u.sot_h = (c3_h*)(dat_y + lay_u.sot_w);
 }
 
 /* _nc_prog_new(): allocate a program.
@@ -1270,15 +1307,9 @@ _nc_prog_fix(u3nc_prog* pog_u)
 static u3nc_prog*
 _nc_prog_new(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
 {
-  c3_w len_w = sizeof(u3nc_prog);
-  u3nc_prog* pog_u;
+  nc_lay     lay_u = _nc_prog_lay(byc_h, lit_h, dir_h, sot_h);
+  u3nc_prog* pog_u = u3a_malloc(lay_u.len_w);
 
-  len_w = c3_align(len_w, 8, C3_ALGHI) + byc_h;
-  len_w = c3_align(len_w, 8, C3_ALGHI) + (lit_h * sizeof(u3_noun));
-  len_w = c3_align(len_w, 8, C3_ALGHI) + (dir_h * sizeof(u3nc_dire));
-  len_w = c3_align(len_w, 8, C3_ALGHI) + (sot_h * sizeof(c3_h));
-
-  pog_u = u3a_malloc(len_w);
   pog_u->byc_u.len_h = byc_h;
   pog_u->lit_u.len_h = lit_h;
   pog_u->dir_u.len_h = dir_h;
@@ -1302,8 +1333,8 @@ _nc_lit_cb(u3_noun kev, void* ptr_v)
 static void
 _nc_dire_jet(u3nc_dire* dir_u)
 {
-  dir_u->ham_u = 0;
-  dir_u->arm_u = 0;
+  dir_u->ham_u = NULL;
+  dir_u->arm_u = NULL;
 
   if ( u3_nul == dir_u->ring ) {
     return;
@@ -1328,7 +1359,8 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   u3nc_prog* pog_u;
   c3_h       byc_h, i_h, j_h;
 
-  //  block offsets: immediates only widen, so this converges
+  //  Fixed-point loop on the block offsets. Immediate arguments only widen
+  //  and their size is capped, so this converges. 
   //
   for ( i_h = 0; i_h < gen_u->blk_h; i_h++ ) {
     gen_u->blk_u[i_h].off_h = 0;
@@ -1350,7 +1382,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
         }
 
         for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
-          byc_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]), 0);
+          byc_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]), NULL);
         }
       }
     } while ( chg_t );
@@ -1411,14 +1443,16 @@ _nc_build(u3_noun straight)
 
   u3x_trel(straight, &ned, &arg, &map);
 
+  c3_h arg_h = _nc_cat(arg);
+
   gen_u.idx_p = u3h_new();
   gen_u.lit_p = u3h_new();
 
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
   _nc_fold(&gen_u);
-  _nc_slots(&gen_u, _nc_cat(arg));
-  pog_u = _nc_emit(&gen_u, ned, _nc_cat(arg));
+  _nc_slots(&gen_u, arg_h);
+  pog_u = _nc_emit(&gen_u, ned, arg_h);
 
   _nc_stat(com_d);
   if ( _nc_verb_t ) {
@@ -1458,19 +1492,14 @@ _nc_to(c3_w pog_w)
 static u3nc_prog*
 _nc_dir_get(u3_noun bell)
 {
-  u3a_road* rod_u = u3R;
-
-  while ( 1 ) {
-    u3_weak pog = u3h_git(rod_u->ska.dir_p, bell);
-
-    if ( u3_none != pog ) {
+  u3_weak pog;
+  for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
+    if ( u3_none != (pog = u3h_git(rod_u->ska.dir_p, bell)) ) {
       return _nc_to(pog);
     }
-    if ( !rod_u->par_p ) {
-      return 0;
-    }
-    rod_u = u3to(u3a_road, rod_u->par_p);
   }
+
+  return NULL;
 }
 
 /* _nc_ent_get(): entry program for [sub fol], from any road.  RETAINS.
@@ -1478,22 +1507,16 @@ _nc_dir_get(u3_noun bell)
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
-  u3a_road* rod_u = u3R;
-
-  while ( 1 ) {
-    u3_weak lis = u3h_git(rod_u->ska.ent_p, fol);
-    u3_weak got;
-
-    if (  (u3_none != lis)
+  u3_weak got, lis;
+  for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
+    if (  (u3_none != (lis = u3h_git(rod_u->ska.ent_p, fol)))
        && (u3_none != (got = u3d_match(sub, lis))) )
     {
       return _nc_to(u3t(got));
     }
-    if ( !rod_u->par_p ) {
-      return 0;
-    }
-    rod_u = u3to(u3a_road, rod_u->par_p);
   }
+
+  return NULL;
 }
 
 /* _nc_link(): set the callee programs of the direct call sites that
@@ -1806,7 +1829,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h, c3_ws mov_ws)
   }
 
   fam_u = PUSH(_nc_frame_w);
-  fam_u->pog_u = 0;
+  fam_u->pog_u = NULL;
 
   enter:
     //  pog_u: the callee, its len_h arguments in its slots at reg
@@ -2473,10 +2496,10 @@ _nc_link_ent_cb(u3_noun kev, void* ptr_v)
 void
 u3nc_reap(u3p(u3h_root) dir_p, u3p(u3h_root) ent_p)
 {
-  u3h_walk_with(dir_p, _nc_reap_dir_cb, 0);
-  u3h_walk_with(ent_p, _nc_reap_ent_cb, 0);
-  u3h_walk_with(dir_p, _nc_link_dir_cb, 0);
-  u3h_walk_with(ent_p, _nc_link_ent_cb, 0);
+  u3h_walk_with(dir_p, _nc_reap_dir_cb, NULL);
+  u3h_walk_with(ent_p, _nc_reap_ent_cb, NULL);
+  u3h_walk_with(dir_p, _nc_link_dir_cb, NULL);
+  u3h_walk_with(ent_p, _nc_link_ent_cb, NULL);
   u3h_free(dir_p);
   u3h_free(ent_p);
 }
@@ -2555,7 +2578,7 @@ u3nc_mark(void)
   qua_u[4]->nam_c = strdup("entry table");
   qua_u[4]->siz_w = u3h_mark_tot(u3R->ska.ent_p) * sizeof(c3_w);
 
-  qua_u[5] = 0;
+  qua_u[5] = NULL;
 
   tot_u->nam_c = strdup("total compiled nock");
   tot_u->qua_u = qua_u;
