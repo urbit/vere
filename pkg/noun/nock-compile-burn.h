@@ -27,7 +27,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   static const void* lab[] = { OPCODES };
 #undef X
 
-  u3a_road*  rod_u = u3R;
+  u3a_road* const rod_u = u3R;
   c3_y*      ip;          //  next byte of the bytecode
   u3_noun*   reg;
   u3_noun*   nex;
@@ -39,6 +39,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   c3_h       a_h, b_h, c_h, d_h, i_h;
   u3_noun    x, o, pro, hin;
   u3_noun    out;         //  out-parameter of hint/hilt calls, address-taken
+  u3_noun    jar[2];      //  argument array of a jet op, address-taken
   c3_h       kni_h;       //  argument cursor of _nc_knit(), address-taken
   u3_post    emp_p = rod_u->cap_p;
 
@@ -230,6 +231,20 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 
     ARG2(INC, a_h, d_h)
       PUT(d_h, u3i_vint(GAIN(reg[a_h])));
+      BURN();
+
+    //  jetted calls the interpreter knows: the jets retain their arguments
+    //
+    ARG2(DEC, a_h, d_h)
+      _nc_stat(jet_d);
+      PUT(d_h, u3ua_dec(&(reg[a_h])));
+      BURN();
+
+    ARG3(ADD, a_h, b_h, d_h)
+      _nc_stat(jet_d);
+      jar[0] = reg[a_h];
+      jar[1] = reg[b_h];
+      PUT(d_h, u3ua_add(jar));
       BURN();
 
     ARG3(CON, a_h, b_h, d_h)

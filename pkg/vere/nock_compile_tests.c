@@ -215,6 +215,21 @@ _test_iter_vint(void)
   return _test("iterate vint", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+static c3_i
+_test_iter_add(void)
+{
+  u3_noun list = u3_nul;
+  for (c3_w i_w = 0; i_w < 10000; i_w++) list = u3nc(i_w, list);
+
+  u3_noun cor = _gate("|=  l=(list @)\n"
+                      "^-  (list @)\n"
+                      "?~  l  ~\n"
+                      "[(add i.l 1) $(l t.l)]\n",
+                      list);
+
+  return _test("iterate add", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* main(): run all test cases.
 */
 int
@@ -241,6 +256,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_iter_vint() ) {
+    exit(1);
+  }
+
+  if ( !_test_iter_add() ) {
     exit(1);
   }
 

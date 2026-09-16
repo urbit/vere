@@ -37,6 +37,8 @@
 **    IML   i d      literal i -> d
 **    MOV   s d      s -> d
 **    INC   s d      +(s) -> d
+**    DEC   s d      (dec s) -> d, by the jet
+**    ADD   a b d    (add a b) -> d, by the jet
 **    CON   h t d    [h t] -> d
 **    HED   s d      -.s -> d, 0 if s is an atom
 **    TAL   s d      +.s -> d, 0 if s is an atom
@@ -68,7 +70,8 @@
 #define X3(op) X(op##_B) X(op##_S) X(op##_V)
 #define OPCODES                                                          \
   X(IMM_0) X(IMM_1) X(IMM_B) X(IMM_S)                                    \
-  X3(IML) X3(MOV) X3(INC) X3(CON) X3(HED) X3(TAL) X3(CEL) X3(LOB)         \
+  X3(IML) X3(MOV) X3(INC) X3(DEC) X3(ADD) X3(CON) X3(HED) X3(TAL)         \
+  X3(CEL) X3(LOB)                                                        \
   X3(EQU) X3(HSP) X3(HSE) X3(HDP) X3(HDE) X3(SPY) X3(NOK)                 \
   X3(CAL) X3(CAM) X3(CSL) X3(CSM)                                        \
   X3(CLQ) X3(EQQ) X3(EQI) X3(EQL) X3(BRN) X3(BRZ) X3(HOP) X3(JMP) X3(JSP) \
@@ -89,7 +92,8 @@ static const c3_c* _nc_name_c[] = { OPCODES };
 **  deleted ops.
 */
 enum {
-  _nc_iml, _nc_mov, _nc_inc, _nc_con, _nc_hed, _nc_tal, _nc_cel, _nc_lob,
+  _nc_iml, _nc_mov, _nc_inc, _nc_dec, _nc_add, _nc_con, _nc_hed, _nc_tal,
+  _nc_cel, _nc_lob,
   _nc_equ, _nc_hsp, _nc_hse, _nc_hdp, _nc_hde, _nc_spy, _nc_nok,
   _nc_cal, _nc_cam, _nc_csl, _nc_csm,
   _nc_clq, _nc_eqq, _nc_eqi, _nc_eql, _nc_brn, _nc_brz, _nc_hop, _nc_jmp,
@@ -114,6 +118,8 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
   [_nc_iml] = { 0, 1, 1, 0 },
   [_nc_mov] = { 1, 1, 0, 0 },
   [_nc_inc] = { 1, 1, 0, 0 },
+  [_nc_dec] = { 1, 1, 0, 0 },
+  [_nc_add] = { 2, 1, 0, 0 },
   [_nc_con] = { 2, 1, 0, 0 },
   [_nc_hed] = { 1, 1, 0, 0 },
   [_nc_tal] = { 1, 1, 0, 0 },
@@ -209,6 +215,24 @@ typedef struct {
     (arr) = u3a_realloc((arr), _old * sizeof(typ), (cap) * sizeof(typ)); \
   }
 
+/* u3nc_Stat: cumulative counters, printed after each u3nc_nock_on()
+**            when U3NC_VERBOSE is set.  The ones in the interpreter
+**            loop are only kept when compiled with U3NC_STAT.
+*/
+u3nc_stat u3nc_Stat;
+
+#ifdef U3NC_STAT
+#  define _nc_stat(fel)  (u3nc_Stat.fel++)
+#else
+#  define _nc_stat(fel)  ((void)0)
+#endif
+
+#ifdef U3NC_VERBOSE
+static const c3_t _nc_verb_t = 1;
+#else
+static const c3_t _nc_verb_t = 0;
+#endif
+
 /* _nc_cat(): direct atom below _nc_none, or fail.
 */
 static inline c3_h
@@ -296,6 +320,47 @@ _nc_cid(u3_noun clu)
   else {
     return u3z_memo_keep;
   }
+}
+
+/* _nc_jet_op(): an op standing in for a jetted call with arguments,
+**               for the jets the interpreter knows as ops: +dec and +add.
+**               ring: [path axis] of the jet; arg: (list register).
+**               RETAINS.  Produces NULL if there is no such op.
+*/
+static nc_op*
+_nc_jet_op(nc_gen* gen_u, u3_noun ring, u3_noun arg)
+{
+  u3j_harm*       ham_u;
+  const u3u_harm* arm_u;
+  nc_op*          op_u;
+  c3_h            len_h = 0;
+
+  for ( u3_noun l = arg; u3_nul != l; l = u3t(l) ) {
+    len_h++;
+  }
+
+  if (  (c3n == u3j_ring(ring, &ham_u, &arm_u))
+     || !arm_u
+     || (len_h != arm_u->len_w) )
+  {
+    return NULL;
+  }
+
+  if ( (u3ua_dec == arm_u->arg_f) && (1 == len_h) ) {
+    op_u = _nc_op(gen_u, _nc_dec);
+    op_u->src_h[0] = _nc_reg(gen_u, u3h(arg));
+  }
+  else if ( (u3ua_add == arm_u->arg_f) && (2 == len_h) ) {
+    op_u = _nc_op(gen_u, _nc_add);
+    op_u->src_h[0] = _nc_reg(gen_u, u3h(arg));
+    op_u->src_h[1] = _nc_reg(gen_u, u3h(u3t(arg)));
+  }
+  else {
+    return NULL;
+  }
+
+  _nc_stat(arm_d);
+  return op_u;
 }
 
 /* _nc_dir(): append a call site.  RETAINS.
@@ -559,8 +624,10 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
 
     case c3__caf: {
       u3x_qual(arg, &a, &b, &c, &d);
-      op_u = _nc_op(gen_u, _nc_cal);
-      op_u->imm_h = _nc_dir(gen_u, a, d, u3_none, b);
+      if ( !(op_u = _nc_jet_op(gen_u, d, b)) ) {
+        op_u = _nc_op(gen_u, _nc_cal);
+        op_u->imm_h = _nc_dir(gen_u, a, d, u3_none, b);
+      }
       op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
@@ -1127,24 +1194,6 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
 
   return siz_h;
 }
-
-/* u3nc_Stat: cumulative counters, printed after each u3nc_nock_on()
-**            when U3NC_VERBOSE is set.  The ones in the interpreter
-**            loop are only kept when compiled with U3NC_STAT.
-*/
-u3nc_stat u3nc_Stat;
-
-#ifdef U3NC_STAT
-#  define _nc_stat(fel)  (u3nc_Stat.fel++)
-#else
-#  define _nc_stat(fel)  ((void)0)
-#endif
-
-#ifdef U3NC_VERBOSE
-static const c3_t _nc_verb_t = 1;
-#else
-static const c3_t _nc_verb_t = 0;
-#endif
 
 /* _nc_read(): read an immediate of the given width.
 */
@@ -1784,7 +1833,7 @@ typedef struct __attribute__((__packed__)) {
 
 /* _nc_push(): push words on the stack.  mov_ws: -1 north, 1 south.
 */
-static inline void*
+static inline __attribute__((always_inline)) void*
 _nc_push(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
   u3_post bas_p;
@@ -1811,7 +1860,7 @@ _nc_push(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 
 /* _nc_top(): the top words of the stack.
 */
-static inline void*
+static inline __attribute__((always_inline)) void*
 _nc_top(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
   return u3to(void, (mov_ws < 0) ? rod_u->cap_p : (rod_u->cap_p - len_w));
@@ -1819,7 +1868,7 @@ _nc_top(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 
 /* _nc_pop(): pop words off the stack.
 */
-static inline void
+static inline __attribute__((always_inline)) void
 _nc_pop(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
   rod_u->cap_p -= mov_ws * (c3_ws)len_w;
