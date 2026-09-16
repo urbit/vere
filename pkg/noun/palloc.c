@@ -2179,6 +2179,8 @@ _pack_seek(void)
     u3_post   fre_p;
     u3a_dell *fre_u;
 
+    HEAP.erf_p = 0;
+
     while ( (fre_p = HEAP.fre_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
       HEAP.fre_p = fre_u->nex_p;
@@ -2675,18 +2677,19 @@ _pack_move(void)
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);
   u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Gack.siz_w);
 
+  u3_assert(HEAP.erf_p == 0);
   {
     u3a_dell *fre_u;
-    u3_post   fre_p;
+    u3_post fre_p, nex_p = HEAP.fre_p;
 
-    while ( (fre_p = HEAP.fre_p) ) {
+    HEAP.fre_p = 0;
+
+    while ( (fre_p = nex_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
-      HEAP.fre_p = fre_u->nex_p;
+      nex_p = fre_u->nex_p;
       _ifree(fre_p);
     }
   }
-
-  HEAP.erf_p = 0;
 
 #ifdef U3_CPU_DEBUG
   //  free space was rearranged wholesale; recount

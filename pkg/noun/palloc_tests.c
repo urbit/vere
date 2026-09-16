@@ -388,11 +388,17 @@ _pack_sane(const c3_c* cap_c)
     }
 
     for ( ; pag_w < fre_u->pag_w; pag_w++ ) {
-      bad_w += ( u3a_free_pg == dir_u[pag_w] );
+      if ( u3a_free_pg == dir_u[pag_w] ) {
+        fprintf(stderr, "pack: %s: page %"PRIc3_w" free, not listed\r\n", cap_c, pag_w);
+        bad_w++;
+      }
     }
 
     for ( ; pag_w < nex_w; pag_w++ ) {
-      bad_w += ( u3a_free_pg != dir_u[pag_w] );
+      if ( u3a_free_pg != dir_u[pag_w] ) {
+        fprintf(stderr, "pack: %s: page %"PRIc3_w" listed, not free\r\n", cap_c, pag_w);
+        bad_w++;
+      }
     }
 
     pre_p = fre_p;
@@ -400,7 +406,10 @@ _pack_sane(const c3_c* cap_c)
   }
 
   for ( ; pag_w < HEAP.len_w; pag_w++ ) {
-    bad_w += ( u3a_free_pg == dir_u[pag_w] );
+    if ( u3a_free_pg == dir_u[pag_w] ) {
+      fprintf(stderr, "pack: %s: page %"PRIc3_w" free, not listed\r\n", cap_c, pag_w);
+      bad_w++;
+    }
   }
 
   if ( HEAP.erf_p != pre_p ) {
@@ -634,6 +643,202 @@ _test_pack_split_tail(void)
   return _pack_check("split tail");
 }
 
+/* _pack_dell_page(): page holding the dell for [som_p], or 0.
+*/
+static c3_w
+_pack_dell_page(u3_post som_p)
+{
+  return post_to_page(som_p);
+}
+
+/* _test_pack_dell_page(): pack's free-list drain empties a page of dells,
+**   so _free_pages lists a new entry while the drain is running.
+**
+**   pages: [dir] [dells: E1 E2] [free] [live] [free] [live]
+*/
+static c3_t
+_test_pack_dell_page(void)
+{
+  u3p(u3a_crag) *dir_u;
+  u3a_dell      *one_u, *two_u;
+  u3_post        spa_p, hol_p, hom_p;
+  c3_w           del_w;
+  c3_g           del_g = (c3_g)c3_bits_word(c3_max(c3_wiseof(u3a_dell), u3a_minimum) - 1) - u3a_min_log;
+
+  _pack_heap();
+
+  //  drop the cached entry, so every dell comes from _imalloc()
+  //
+  _ifree(HEAP.cac_p);
+  HEAP.cac_p = 0;
+
+  spa_p = _imalloc(c3_wiseof(u3a_dell));  //  opens the dell page
+  del_w = post_to_page(spa_p);
+
+  hol_p = _pack_page();
+  (void)_pack_live(((c3_w)1) << u3a_page);
+  hom_p = _pack_page();
+  (void)_pack_live(((c3_w)1) << u3a_page);
+
+  _ifree(hol_p);
+  _ifree(hom_p);
+  _ifree(spa_p);
+
+  dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  one_u = u3tn(u3a_dell, HEAP.fre_p);
+  two_u = one_u ? u3tn(u3a_dell, one_u->nex_p) : 0;
+
+  if (  HEAP.cac_p
+     || !two_u
+     || two_u->nex_p
+     || (HEAP.erf_p != one_u->nex_p)
+     || (_pack_dell_page(HEAP.fre_p) != del_w)
+     || (_pack_dell_page(one_u->nex_p) != del_w)
+     || (u3to(u3a_crag, dir_u[del_w])->fre_s != (u3a_Hunk[del_g].ful_s - 2)) )
+  {
+    fprintf(stderr, "pack: dell page: setup failed\r\n");
+    return 0;
+  }
+
+  return _pack_check("dell page");
+}
+
+/* _test_pack_tail_dell(): the last free-list entry is the only chunk on the
+**   last heap page, and describes the page right before it.
+**
+**   pages: [dir] [live] [free] [dells: T]
+*/
+static c3_t
+_test_pack_tail_dell(void)
+{
+  u3p(u3a_crag) *dir_u;
+  u3a_dell      *tel_u;
+  u3_post        spa_p, hol_p;
+  c3_w           tal_w;
+  c3_g           del_g = (c3_g)c3_bits_word(c3_max(c3_wiseof(u3a_dell), u3a_minimum) - 1) - u3a_min_log;
+
+  _pack_heap();
+
+  _ifree(HEAP.cac_p);
+  HEAP.cac_p = 0;
+
+  (void)_pack_live(((c3_w)1) << u3a_page);
+  hol_p = _pack_page();
+  spa_p = _imalloc(c3_wiseof(u3a_dell));  //  opens the tail dell page
+
+  _ifree(hol_p);
+  _ifree(spa_p);
+
+  dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  tal_w = HEAP.len_w - 1;
+  tel_u = u3tn(u3a_dell, HEAP.erf_p);
+
+  if (  HEAP.cac_p
+     || !tel_u
+     || (HEAP.fre_p != HEAP.erf_p)
+     || (_pack_dell_page(HEAP.erf_p) != tal_w)
+     || (tel_u->pag_w != (tal_w - 1))
+     || (tel_u->siz_w != 1)
+     || (u3to(u3a_crag, dir_u[tal_w])->fre_s != (u3a_Hunk[del_g].ful_s - 1)) )
+  {
+    fprintf(stderr, "pack: tail dell: setup failed\r\n");
+    return 0;
+  }
+
+  return _pack_check("tail dell");
+}
+
+/* _test_pack_move_drain(): after compaction, freeing a leftover dell empties
+**   its page, so _free_pages lists that page during _pack_move's final drain.
+**
+**   pages: [dir] [dells: full] [A: full-2] [crags] [Q1: B1's crag]
+**          [B1: 1 chunk] [B2: 1 chunk] [Q2: B2's crag] [live]
+**
+**   during pack, Q1 empties and takes the cached dell; Q2 empties and needs
+**   a new dell page, which takes Q1's page off the free list. that page
+**   then holds only Q2's dell, which _pack_move frees at the end.
+*/
+static c3_t
+_test_pack_move_drain(void)
+{
+  static u3_post fil_p[PACK_LIVE], fiq_p[PACK_LIVE], fib_p[PACK_LIVE];
+  const u3a_hunk_dose *lag_u, *met_u;
+  u3p(u3a_crag)       *dir_u;
+  u3_post  hol_p, hom_p, spa_p, quo_p, qua_p, one_p, two_p, liv_p;
+  c3_w     fil_w, fiq_w, fib_w;
+  c3_g     lag_g, met_g;
+  c3_g     del_g = (c3_g)c3_bits_word(c3_max(c3_wiseof(u3a_dell), u3a_minimum) - 1) - u3a_min_log;
+
+  _pack_heap();
+
+  if ( !_pack_class(&lag_g, &met_g) || (del_g == lag_g) ) {
+    fprintf(stderr, "pack: move drain: no suitable class\r\n");
+    return 0;
+  }
+
+  lag_u = &(u3a_Hunk[lag_g]);
+  met_u = &(u3a_Hunk[met_g]);
+
+  //  dell page full (including the cached dell), so a new dell needs a page
+  //
+  (void)_pack_fill(del_g, 0);
+
+  (void)_pack_live(lag_u->len_s);
+  fil_w = _pack_fill(lag_g, fil_p);     //  page A full
+  (void)_pack_fill(met_g, 0);           //  its crag page full
+
+  spa_p = _imalloc(met_u->len_s);       //  opens crag page Q1
+  quo_p = page_to_post(post_to_page(spa_p));
+  hol_p = _pack_page();                 //  future page B1
+  hom_p = _pack_page();                 //  future page B2
+
+  _ifree(hol_p);
+  one_p = _pack_live(lag_u->len_s);     //  page B1, crag on Q1
+  _ifree(spa_p);
+  fiq_w = _pack_fill(met_g, fiq_p);     //  Q1 full
+  fib_w = _pack_fill(lag_g, fib_p);     //  B1 full
+
+  spa_p = _imalloc(met_u->len_s);       //  opens crag page Q2
+  qua_p = page_to_post(post_to_page(spa_p));
+
+  _ifree(hom_p);
+  two_p = _pack_live(lag_u->len_s);     //  page B2, crag on Q2
+  _ifree(spa_p);
+
+  liv_p = _pack_live(((c3_w)1) << u3a_page);  //  keeps the dell page off the tail
+
+  for ( c3_w i_w = 0; i_w < fiq_w; i_w++ ) {
+    _pack_drop(fiq_p[i_w]);
+  }
+
+  for ( c3_w i_w = 0; i_w < fib_w; i_w++ ) {
+    _pack_drop(fib_p[i_w]);
+  }
+
+  //  B1's and B2's chunks now fit on page A
+  //
+  _pack_drop(fil_p[fil_w - 1]);
+  _pack_drop(fil_p[fil_w - 2]);
+
+  dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+  if (  HEAP.fre_p
+     || !HEAP.cac_p
+     || HEAP.wee_p[del_g]
+     || (post_to_page(one_p) != post_to_page(hol_p))
+     || (post_to_page(two_p) != post_to_page(hom_p))
+     || ((post_to_page(qua_p) + 1) != post_to_page(liv_p))
+     || (post_to_page(liv_p) != (HEAP.len_w - 1))
+     || (u3to(u3a_crag, dir_u[post_to_page(quo_p)])->fre_s != (met_u->ful_s - 1))
+     || (u3to(u3a_crag, dir_u[post_to_page(qua_p)])->fre_s != (met_u->ful_s - 1)) )
+  {
+    fprintf(stderr, "pack: move drain: setup failed\r\n");
+    return 0;
+  }
+
+  return _pack_check("move drain");
+}
+
 /* _test_pack_fork(): run a pack test in a child, surviving assertions.
 */
 static c3_t
@@ -689,6 +894,9 @@ main(int argc, char* argv[])
     c3_t ok_t = 1;
     ok_t &= _test_pack_fork(_test_pack_stale_tail, "stale tail");
     ok_t &= _test_pack_fork(_test_pack_split_tail, "split tail");
+    ok_t &= _test_pack_fork(_test_pack_dell_page, "dell page");
+    ok_t &= _test_pack_fork(_test_pack_tail_dell, "tail dell");
+    ok_t &= _test_pack_fork(_test_pack_move_drain, "move drain");
 
     if ( !ok_t ) {
       exit(1);
