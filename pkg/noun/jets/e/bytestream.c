@@ -24,14 +24,14 @@ _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 //
 //    [vue_u] must be zero-initialized by the caller; it is filled in on
 //    success and the caller MUST call u3r_view_done(vue_u) before the
-//    function exits — including error paths — otherwise the mmap or
+//    function exits — including error paths — otherwise the blob hand or
 //    heap buffer leaks.  vue_u->byt_y is the bytes, *len_w is the clamped
 //    significant byte length, *lead_w is the count of implicit leading
 //    zero bytes (p_octs - met).
 //
 //    The legacy version read (c3_y*)ptr_a->buf_w directly, which for a
 //    bob atom returned seq_h rather than the blob's content.  Going
-//    through u3r_view gets the real bytes (mmap for bobs).
+//    through u3r_view gets the real bytes (the blob's hand for bobs).
 //
 static c3_o
 _x_octs_buffer(u3r_view* vue_u,

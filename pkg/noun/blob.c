@@ -2,7 +2,9 @@
 
 #include "blob.h"
 #include "imprison.h"
+#include "manage.h"
 #include "retrieve.h"
+#include "vortex.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -31,6 +33,447 @@
 //  macOS returns EINVAL if count > INT_MAX.  cap conservatively at 1 GiB.
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
+
+//  window for backward scans (u3_blob_hand_met).
+//
+#define BLOB_WIN_MAX ((size_t)4096)
+
+/* handle registry: bid -> u3_blob_hand*.
+**
+**   process-global, C heap.  values are pointers so a view's hand stays
+**   valid while later opens rehash the table.  every mutation runs inside
+**   u3m_crit_enter()/u3m_crit_leave(): the table is not async-signal-safe,
+**   and an fd must be recorded before a signal can unwind the opener.
+*/
+static c3_d
+_blob_hand_hash(c3_d bid_d)
+{
+  return bid_d * 11400714819323198485ULL;
+}
+
+static c3_i
+_blob_hand_cmp(c3_d a_d, c3_d b_d)
+{
+  return a_d == b_d;
+}
+
+#define NAME    _blob_hands
+#define KEY_TY  c3_d
+#define VAL_TY  u3_blob_hand*
+#define HASH_FN _blob_hand_hash
+#define CMPR_FN _blob_hand_cmp
+#include "verstable.h"
+
+static _blob_hands _blob_han_u;
+
+/* u3_blob_init(): initialize the handle registry.
+*/
+void
+u3_blob_init(void)
+{
+  vt_init(&_blob_han_u);
+}
+
+/* u3_blob_hands(): number of open hands.
+*/
+c3_z
+u3_blob_hands(void)
+{
+  return vt_size(&_blob_han_u);
+}
+
+/* _blob_bid(): registry key for (mug_h, seq_h).
+*/
+static inline c3_d
+_blob_bid(c3_h mug_h, c3_h seq_h)
+{
+  return ((c3_d)mug_h << 32) | seq_h;
+}
+
+/* _blob_hand_free(): close and free [han_u]; the caller erases it and
+**   holds the critical section.
+*/
+static void
+_blob_hand_free(u3_blob_hand* han_u)
+{
+  if ( han_u->fid_i >= 0 ) {
+    c3_i fid_i   = han_u->fid_i;
+    han_u->fid_i = -1;
+    close(fid_i);
+  }
+
+  c3_free(han_u->buf_y);
+  han_u->buf_y = 0;
+
+  {
+    u3_blob_ref* ref_u = han_u->ref_u;
+    while ( ref_u ) {
+      u3_blob_ref* nex_u = ref_u->nex_u;
+      c3_free(ref_u);
+      ref_u = nex_u;
+    }
+    han_u->ref_u = 0;
+  }
+
+  c3_free(han_u);
+}
+
+/* _blob_hand_gain(): add a reference to [han_u] owned by [rod_v].
+*/
+static void
+_blob_hand_gain(u3_blob_hand* han_u, void* rod_v)
+{
+  u3_blob_ref* ref_u = han_u->ref_u;
+
+  while ( ref_u && (ref_u->rod_v != rod_v) ) {
+    ref_u = ref_u->nex_u;
+  }
+
+  if ( !ref_u ) {
+    ref_u        = c3_calloc(sizeof(*ref_u));
+    ref_u->rod_v = rod_v;
+    ref_u->nex_u = han_u->ref_u;
+    han_u->ref_u = ref_u;
+  }
+
+  ref_u->ref_w += 1;
+  han_u->ref_w += 1;
+}
+
+/* _blob_hand_lose(): drop one reference to [han_u] owned by [rod_v].
+**
+**   Returns c3n if [rod_v] holds none.
+*/
+static c3_o
+_blob_hand_lose(u3_blob_hand* han_u, void* rod_v)
+{
+  u3_blob_ref** lin_u = &han_u->ref_u;
+
+  while ( *lin_u && ((*lin_u)->rod_v != rod_v) ) {
+    lin_u = &(*lin_u)->nex_u;
+  }
+
+  if ( !*lin_u ) {
+    return c3n;
+  }
+
+  {
+    u3_blob_ref* ref_u = *lin_u;
+
+    ref_u->ref_w -= 1;
+    han_u->ref_w -= 1;
+
+    if ( 0 == ref_u->ref_w ) {
+      *lin_u = ref_u->nex_u;
+      c3_free(ref_u);
+    }
+  }
+
+  return c3y;
+}
+
+/* _blob_hand_trim(): shrink the table after a burst has drained.
+*/
+static void
+_blob_hand_trim(void)
+{
+  c3_z siz_z = vt_size(&_blob_han_u);
+  c3_z buk_z = vt_bucket_count(&_blob_han_u);
+
+  if ( (buk_z > 64) && (siz_z < (buk_z / 4)) ) {
+    vt_shrink(&_blob_han_u);
+  }
+}
+
+/* u3_blob_open(): open a blob, or add a reference to its open hand.
+*/
+u3_blob_hand*
+u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+{
+  c3_d          bid_d = _blob_bid(mug_h, seq_h);
+  u3_blob_hand* han_u;
+
+  u3m_crit_enter();
+
+  {
+    _blob_hands_itr itr_u = vt_get_or_insert(&_blob_han_u, bid_d, 0);
+    u3_assert( !vt_is_end(itr_u) );  //  OOM
+
+    han_u = itr_u.data->val;
+
+    if ( !han_u ) {
+      c3_c        fil_c[8192];
+      struct stat st_u;
+
+      //  the table entry exists before the fd does, so a sweep between
+      //  the two releases whatever open() produced.
+      //
+      han_u           = c3_calloc(sizeof(*han_u));
+      han_u->bid_d    = bid_d;
+      han_u->fid_i    = -1;
+      itr_u.data->val = han_u;
+
+      u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+
+      han_u->fid_i = open(fil_c, O_RDONLY);
+
+      if ( -1 == han_u->fid_i ) {
+        fprintf(stderr, "blob: open failed %s: %s\r\n",
+                fil_c, strerror(errno));
+      }
+      else if ( -1 == fstat(han_u->fid_i, &st_u) ) {
+        fprintf(stderr, "blob: fstat failed %s: %s\r\n",
+                fil_c, strerror(errno));
+      }
+      else {
+        han_u->len_d = (c3_d)st_u.st_size;
+      }
+
+      if ( 0 == han_u->len_d ) {
+        vt_erase(&_blob_han_u, bid_d);
+        _blob_hand_free(han_u);
+        u3m_crit_leave();
+        return 0;
+      }
+    }
+
+    _blob_hand_gain(han_u, u3R);
+  }
+
+  u3m_crit_leave();
+  return han_u;
+}
+
+/* u3_blob_close(): drop the current road's reference to [han_u].
+*/
+void
+u3_blob_close(u3_blob_hand* han_u)
+{
+  u3m_crit_enter();
+
+  if ( c3n == _blob_hand_lose(han_u, u3R) ) {
+    fprintf(stderr, "blob: close: %08" PRIx32 "/%08" PRIx32 ": "
+                    "no reference from this road\r\n",
+            (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF));
+    u3_assert(!"blob close");
+  }
+
+  if ( 0 == han_u->ref_w ) {
+    vt_erase(&_blob_han_u, han_u->bid_d);
+    _blob_hand_free(han_u);
+    _blob_hand_trim();
+  }
+
+  u3m_crit_leave();
+}
+
+/* _blob_sweep_with(): release every reference whose road satisfies [own_f].
+**
+**   Returns the number of references released.
+*/
+static c3_w
+_blob_sweep_with(c3_o (*own_f)(void*, void*), void* ptr_v)
+{
+  c3_w num_w = 0;
+
+  u3m_crit_enter();
+
+  {
+    _blob_hands_itr itr_u = vt_first(&_blob_han_u);
+
+    while ( !vt_is_end(itr_u) ) {
+      u3_blob_hand* han_u = itr_u.data->val;
+      u3_blob_ref** lin_u = &han_u->ref_u;
+
+      while ( *lin_u ) {
+        u3_blob_ref* ref_u = *lin_u;
+
+        if ( c3y == own_f(ref_u->rod_v, ptr_v) ) {
+          han_u->ref_w -= ref_u->ref_w;
+          num_w        += ref_u->ref_w;
+          *lin_u        = ref_u->nex_u;
+          c3_free(ref_u);
+        }
+        else {
+          lin_u = &ref_u->nex_u;
+        }
+      }
+
+      if ( 0 == han_u->ref_w ) {
+        _blob_hand_free(han_u);
+        itr_u = vt_erase_itr(&_blob_han_u, itr_u);
+      }
+      else {
+        itr_u = vt_next(itr_u);
+      }
+    }
+
+    _blob_hand_trim();
+  }
+
+  u3m_crit_leave();
+  return num_w;
+}
+
+static c3_o
+_blob_own_rod(void* rod_v, void* ptr_v)
+{
+  return ( rod_v == ptr_v ) ? c3y : c3n;
+}
+
+static c3_o
+_blob_own_kid(void* rod_v, void* ptr_v)
+{
+  return ( rod_v != ptr_v ) ? c3y : c3n;
+}
+
+static c3_o
+_blob_own_all(void* rod_v, void* ptr_v)
+{
+  return c3y;
+}
+
+/* u3_blob_sweep(): release every reference held by road [rod_v].
+*/
+void
+u3_blob_sweep(void* rod_v)
+{
+  _blob_sweep_with(_blob_own_rod, rod_v);
+}
+
+/* u3_blob_sweep_kids(): release every reference not held by the home road.
+*/
+c3_w
+u3_blob_sweep_kids(void)
+{
+  return _blob_sweep_with(_blob_own_kid, &u3H->rod_u);
+}
+
+/* u3_blob_stop(): release every handle and the registry.
+*/
+void
+u3_blob_stop(void)
+{
+  _blob_sweep_with(_blob_own_all, 0);
+  vt_cleanup(&_blob_han_u);
+}
+
+/* u3_blob_read(): read [len_z] bytes at [off_d] into [dst_y].
+*/
+c3_z
+u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+{
+  c3_z tot_z = 0;
+
+  while ( len_z ) {
+    size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
+    ssize_t got_i = pread(han_u->fid_i, dst_y, ask_i, (off_t)off_d);
+
+    if ( got_i < 0 ) {
+      if ( EINTR == errno ) {
+        continue;
+      }
+      fprintf(stderr, "blob: read: %08" PRIx32 "/%08" PRIx32 " at %" PRIc3_d
+                      ": %s\r\n",
+              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
+              off_d, strerror(errno));
+      break;
+    }
+
+    if ( 0 == got_i ) {
+      break;
+    }
+
+    tot_z += (c3_z)got_i;
+    dst_y += got_i;
+    off_d += (c3_d)got_i;
+    len_z -= (c3_z)got_i;
+  }
+
+  return tot_z;
+}
+
+/* u3_blob_data(): the whole file, read into a heap buffer on first use.
+*/
+const c3_y*
+u3_blob_data(u3_blob_hand* han_u)
+{
+  if ( han_u->buf_y ) {
+    return han_u->buf_y;
+  }
+
+  //  the buffer is recorded on the hand before it is filled, so a signal
+  //  during the read cannot leak it; nothing observes it before we return.
+  //
+  //  it is padded with zeros to a whole number of 64-bit words: readers
+  //  such as u3r_chop_words walk a view a word at a time, which a
+  //  page-granular mapping tolerated and an exact-size heap buffer would
+  //  not.
+  //
+  c3_y* buf_y;
+  c3_z  siz_z = ((c3_z)han_u->len_d + 7) & ~(c3_z)7;
+
+  u3m_crit_enter();
+  buf_y        = c3_malloc(siz_z);
+  han_u->buf_y = buf_y;
+  u3m_crit_leave();
+
+  memset(buf_y + han_u->len_d, 0, siz_z - (c3_z)han_u->len_d);
+
+  if ( han_u->len_d != u3_blob_read(han_u, 0, buf_y, (c3_z)han_u->len_d) ) {
+    fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": short read\r\n",
+            (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF));
+
+    u3m_crit_enter();
+    han_u->buf_y = 0;
+    c3_free(buf_y);
+    u3m_crit_leave();
+    return 0;
+  }
+
+  return buf_y;
+}
+
+/* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
+**
+**   Scans backward from the end of the file for the last nonzero byte,
+**   then returns (pos * 8 + 8 - clz(byte)).  This matches u3r_met(0, atom).
+**   Returns 0 if the content is all zero or the read fails.
+*/
+c3_d
+u3_blob_hand_met(u3_blob_hand* han_u)
+{
+  if ( han_u->met_d ) {
+    return han_u->met_d;
+  }
+
+  c3_y win_y[BLOB_WIN_MAX];
+  c3_d pos_d = han_u->len_d;
+
+  while ( pos_d ) {
+    c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
+    c3_d beg_d = pos_d - ask_z;
+
+    if ( ask_z != u3_blob_read(han_u, beg_d, win_y, ask_z) ) {
+      return 0;
+    }
+
+    for ( c3_z i_z = ask_z; i_z--; ) {
+      if ( win_y[i_z] ) {
+        //  __builtin_clz operates on unsigned int (32 bits); subtract 24
+        //  to get the leading-zero count within just the low byte.
+        //
+        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)win_y[i_z]) - 24);
+        han_u->met_d = (beg_d + i_z) * 8 + (c3_d)(8 - clz_y);
+        return han_u->met_d;
+      }
+    }
+
+    pos_d = beg_d;
+  }
+
+  return 0;
+}
 
 /* u3_blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
 */
@@ -375,30 +818,38 @@ u3_blob_save_fd(const c3_c* pax_c,
 
 /* u3_blob_load(): read blob into a loom atom.
 **
-**   Uses mmap() and u3i_slab to handle blobs of any size, including >4 GiB.
-**   The mapping is released immediately after the loom copy.
+**   Reads straight from the fd into a u3i_slab, so blobs of any size
+**   (including >4 GiB) cost no heap.  The slab allocation can bail; the
+**   hand is then swept along with the road.
 */
 u3_weak
 u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
-  c3_d        len_d = 0;
-  const c3_y* map_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
-  if ( !map_y ) {
+  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
+  if ( !han_u ) {
     return u3_none;
   }
 
-  //  use u3i_slab (c3_d length) to correctly handle blobs >4 GiB.
-  //  bloq 3 = bytes; len_d = byte count.
-  //
+  c3_d len_d = han_u->len_d;
+
   //  NB: use u3i_slab_init (not u3i_slab_bare) so the trailing bytes of
   //  the last loom word are zeroed when len_d isn't word-aligned.
   //  Otherwise u3r_met/u3r_word/etc. would read garbage from those bytes.
+  //  Zeroing also touches every page, so they are mapped writable before
+  //  pread() lands in them (a syscall cannot take the loom's fault handler).
   //
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, 3, len_d);
-  memcpy(sab_u.buf_y, map_y, (size_t)len_d);
-  u3_blob_umap(map_y, len_d);
 
+  if ( len_d != u3_blob_read(han_u, 0, sab_u.buf_y, (c3_z)len_d) ) {
+    fprintf(stderr, "blob: load: %08" PRIx32 "/%08" PRIx32 ": short read\r\n",
+            mug_h, seq_h);
+    u3_blob_close(han_u);
+    u3i_slab_free(&sab_u);
+    return u3_none;
+  }
+
+  u3_blob_close(han_u);
   return u3i_slab_mint_bytes(&sab_u);
 }
 
@@ -421,6 +872,22 @@ u3_blob_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
   u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+
+  //  a wipe is driven by the blob's refcount reaching zero, so no reader
+  //  can still hold it open; an open hand here is an accounting bug.
+  //  posix keeps the inode alive for the reader regardless; windows
+  //  refuses the unlink, which the error below reports.
+  //
+  u3m_crit_enter();
+  {
+    _blob_hands_itr itr_u = vt_get(&_blob_han_u, _blob_bid(mug_h, seq_h));
+    if ( !vt_is_end(itr_u) ) {
+      fprintf(stderr, "blob: wipe: %08" PRIx32 "/%08" PRIx32 ": %" PRIc3_w
+                      " live reference(s)\r\n",
+              mug_h, seq_h, itr_u.data->val->ref_w);
+    }
+  }
+  u3m_crit_leave();
 
   if ( 0 != unlink(fil_c) && ENOENT != errno ) {
     fprintf(stderr, "blob: failed to delete %s: %s\r\n",
@@ -692,92 +1159,21 @@ u3_blob_move_stg(const c3_c* pax_c,
   return c3y;
 }
 
-/* u3_blob_mmap(): mmap blob file for direct byte access.
-*/
-const c3_y*
-u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d)
-{
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) ) {
-    fprintf(stderr, "blob: map: stat failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  *len_d = (c3_d)st_u.st_size;
-  if ( 0 == *len_d ) {
-    return 0;
-  }
-
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "blob: map: open failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  void* map_v = mmap(0, (size_t)*len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "blob: map: mmap failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  madvise(map_v, (size_t)*len_d, MADV_SEQUENTIAL);
-  return (const c3_y*)map_v;
-}
-
-/* u3_blob_umap(): release mapping returned by u3_blob_mmap().
-*/
-void
-u3_blob_umap(const c3_y* ptr_y, c3_d len_d)
-{
-  if ( ptr_y && len_d ) {
-    munmap((void*)ptr_y, (size_t)len_d);
-  }
-}
-
 /* u3_blob_met(): compute bit-length of blob content without full materialization.
-**
-**   Scans backward from end of file to find last non-zero byte, then
-**   returns (pos * 8 + 8 - clz(byte)).  This matches u3r_met(0, atom).
-**   Returns 0 if blob is missing, empty, or all-zero bytes.
 */
 c3_d
 u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
-  c3_d        len_d = 0;
-  const c3_y* byt_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
-  if ( !byt_y ) {
+  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
+  if ( !han_u ) {
     return 0;
   }
 
-  //  scan backward for last non-zero byte (strips trailing zeroes)
-  //
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-
-  c3_d met_d = 0;
-  if ( pos_d > 0 ) {
-    c3_y top_y = byt_y[pos_d - 1];
-    //  bit count = (pos_d - 1) * 8 + (8 - count_of_leading_zeros_in_top_y)
-    //  __builtin_clz operates on unsigned int (32 bits); subtract 24 to get
-    //  the leading-zero count within just the low byte.
-    //
-    c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-    met_d = (pos_d - 1) * 8 + (c3_d)(8 - clz_y);
-  }
-
-  u3_blob_umap(byt_y, len_d);
+  c3_d met_d = u3_blob_hand_met(han_u);
+  u3_blob_close(han_u);
   return met_d;
 }
+
 /* u3_blob_bsink: streaming byte sink for blob-aware cue.
 **
 **   receives a large atom's bytes in chunks, writes them to a staging

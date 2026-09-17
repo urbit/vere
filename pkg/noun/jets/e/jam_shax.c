@@ -145,7 +145,7 @@ _js_mat_w(_jam_shax* ctx, c3_w val_w)
 
 //  ---- atom encoding --------------------------------------------------
 
-//  compute bit-length of an atom from mmap'd bytes (for bob atoms).
+//  compute bit-length of an atom from viewed bytes (for bob atoms).
 //
 static c3_w
 _js_bob_met(const c3_y* byt_y, c3_d len_d)

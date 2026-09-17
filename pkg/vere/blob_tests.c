@@ -1,6 +1,8 @@
 /// @file
 
 #include "blob.h"
+#include "events.h"
+#include "jets/q.h"
 #include "noun.h"
 #include "vere.h"
 
@@ -8,7 +10,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
+#ifndef U3_OS_windows
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -28,7 +35,12 @@ static void
 _setup(void)
 {
   u3m_init(1 << 20);
+  u3t_init();
   u3m_pave(c3y);
+
+  //  the guard page, required to leap onto a child road (u3m_soft_top)
+  //
+  u3e_init();
 
   //  hot jet state, required by the meld path (u3j_boot/u3j_ream)
   //
@@ -90,6 +102,78 @@ _write_tmp_file(const c3_y* dat_y, c3_d len_d)
   }
   close(fid_i);
   return strdup(tmpl_c);
+}
+
+/* _test_mark_sweep(): mass/gc marks the bank's u3a_blob records.
+**
+**   |mass marks the loom and then sweeps, freeing every chunk the mark
+**   did not reach.  A bank record the mark skipped is freed under the
+**   bank, and every bob atom over it then names a garbage file.  With
+**   u3o_leak_crash set, a skipped record aborts the sweep outright.
+*/
+static void
+_test_mark_sweep(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_y dat_y[] = "the bank record must survive a mark and sweep";
+  const c3_d dat_d   = sizeof(dat_y) - 1;
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob mark: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  //  hold the bob in arvo state, where the mark reaches it; a C local
+  //  would itself be swept as a leak
+  //
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_noun roc = u3A->roc;
+  u3A->roc    = bob;
+
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  if ( !blb_u ) {
+    fprintf(stderr, "\033[31mblob mark: no bank record\033[0m\r\n");
+    exit(1);
+  }
+
+  {
+    c3_h wag_h = u3C.wag_h;
+    u3C.wag_h |= u3o_leak_crash;
+
+    u3a_mark_init();
+    u3m_quac** qua_u = u3m_mark();
+    u3a_sweep();
+
+    for ( c3_w i_w = 0; qua_u[i_w]; i_w++ ) {
+      u3a_quac_free(qua_u[i_w]);
+    }
+    c3_free(qua_u);
+
+    u3C.wag_h = wag_h;
+  }
+
+  //  the record is intact and the bob still resolves through it to the file
+  //
+  if (  (blb_u != u3a_blob_get(mug_h, seq_h))
+     || (blb_u->mug_h != mug_h)
+     || (blb_u->seq_h != seq_h)
+     || (u3a_bob_seq(bob) != seq_h)
+     || (u3r_met(3, bob) != (c3_w)dat_d) )
+  {
+    fprintf(stderr, "\033[31mblob mark: bank record clobbered by sweep "
+                    "(mug %08" PRIx32 " seq %" PRIc3_h ")\033[0m\r\n",
+            blb_u->mug_h, blb_u->seq_h);
+    exit(1);
+  }
+
+  u3A->roc = roc;
+  u3z(bob);
+  _tmp_clean();
+  fprintf(stderr, "test blob mark+sweep: ok\r\n");
 }
 
 /* _test_init(): u3_disk_blob_init + u3_disk_blob_stg_init create expected dirs.
@@ -299,7 +383,7 @@ _test_dedup(void)
   fprintf(stderr, "test blob dedup: ok\r\n");
 }
 
-/* _test_save_fd(): u3_blob_save_fd round-trips via mmap path.
+/* _test_save_fd(): u3_blob_save_fd round-trips via the staging mmap.
 */
 static void
 _test_save_fd(void)
@@ -1139,49 +1223,1708 @@ _test_met(void)
   fprintf(stderr, "test blob met: ok\r\n");
 }
 
-/* _test_map(): u3_blob_mmap returns byte-accurate pointer.
+/* _fd_dead(): true if [fid_i] is no longer an open descriptor.
+** _fd_live(): true if [fid_i] is still one.
+**
+**   Neither is checkable through the CRT on Windows (probing a closed fd
+**   trips the invalid-parameter handler), so both answer yes there and
+**   the registry's own counts carry the assertion.
+*/
+static c3_o
+_fd_dead(c3_i fid_i)
+{
+#ifdef U3_OS_windows
+  (void)fid_i;
+  return c3y;
+#else
+  return ( (-1 == fcntl(fid_i, F_GETFD)) && (EBADF == errno) ) ? c3y : c3n;
+#endif
+}
+
+static c3_o
+_fd_live(c3_i fid_i)
+{
+#ifdef U3_OS_windows
+  (void)fid_i;
+  return c3y;
+#else
+  return ( -1 != fcntl(fid_i, F_GETFD) ) ? c3y : c3n;
+#endif
+}
+
+/* _test_hand(): u3_blob_open/data/read/met/close round-trip.
 */
 static void
-_test_map(void)
+_test_hand(void)
 {
   _tmp_make();
   u3_disk_blob_init(_tmp_pier);
   u3_disk_blob_stg_init(_tmp_pier);
 
-  const c3_y dat_y[] = "mapped bytes should round-trip exactly";
+  const c3_y dat_y[] = "handle bytes should round-trip exactly";
   const c3_d dat_d   = sizeof(dat_y) - 1;
   c3_h mug_h = 0; c3_h seq_h = 0;
   u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h);
 
-  c3_d mlen_d = 0;
-  const c3_y* map_y = u3_blob_mmap(_tmp_pier, mug_h, seq_h, &mlen_d);
-  if ( !map_y ) {
-    fprintf(stderr, "\033[31mblob map: returned NULL\033[0m\r\n");
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  if ( !han_u ) {
+    fprintf(stderr, "\033[31mblob hand: open returned NULL\033[0m\r\n");
     exit(1);
   }
-  if ( mlen_d != dat_d ) {
-    fprintf(stderr, "\033[31mblob map: len %" PRIc3_d " != %" PRIc3_d
-                    "\033[0m\r\n", mlen_d, dat_d);
+  if ( (han_u->len_d != dat_d) || (1 != han_u->ref_w) || (1 != u3_blob_hands()) ) {
+    fprintf(stderr, "\033[31mblob hand: len %" PRIc3_d " ref %" PRIc3_w
+                    " hands %zu\033[0m\r\n",
+            han_u->len_d, han_u->ref_w, u3_blob_hands());
     exit(1);
   }
-  if ( 0 != memcmp(map_y, dat_y, dat_d) ) {
-    fprintf(stderr, "\033[31mblob map: byte mismatch\033[0m\r\n");
-    exit(1);
-  }
-  u3_blob_umap(map_y, mlen_d);
 
-  //  mapping nonexistent returns NULL
+  //  bit-length: top byte is the last one, u3r_met(0) semantics
   //
-  c3_d dlen_d = 0;
-  const c3_y* miss_y = u3_blob_mmap(_tmp_pier, 0xdeadbeef, 999, &dlen_d);
-  if ( miss_y ) {
-    fprintf(stderr, "\033[31mblob map: missing should be NULL\033[0m\r\n");
-    u3_blob_umap(miss_y, dlen_d);
+  {
+    c3_y top_y = dat_y[dat_d - 1];
+    c3_d exp_d = (dat_d - 1) * 8
+               + (c3_d)(8 - (__builtin_clz((unsigned int)top_y) - 24));
+    c3_d met_d = u3_blob_hand_met(han_u);
+    if ( met_d != exp_d ) {
+      fprintf(stderr, "\033[31mblob hand: met %" PRIc3_d " != %" PRIc3_d
+                      "\033[0m\r\n", met_d, exp_d);
+      exit(1);
+    }
+  }
+
+  //  whole-file buffer, then a window through pread
+  //
+  {
+    const c3_y* buf_y = u3_blob_data(han_u);
+    if ( !buf_y || (0 != memcmp(buf_y, dat_y, dat_d)) ) {
+      fprintf(stderr, "\033[31mblob hand: data mismatch\033[0m\r\n");
+      exit(1);
+    }
+    if ( buf_y != u3_blob_data(han_u) ) {
+      fprintf(stderr, "\033[31mblob hand: data not memoized\033[0m\r\n");
+      exit(1);
+    }
+
+    c3_y win_y[8];
+    if (  (5 != u3_blob_read(han_u, 7, win_y, 5))
+       || (0 != memcmp(win_y, dat_y + 7, 5)) )
+    {
+      fprintf(stderr, "\033[31mblob hand: read window mismatch\033[0m\r\n");
+      exit(1);
+    }
+    //  a read past the end is short, not an error
+    //
+    if ( 3 != u3_blob_read(han_u, dat_d - 3, win_y, 8) ) {
+      fprintf(stderr, "\033[31mblob hand: read past end not short\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  c3_i fid_i = han_u->fid_i;
+  u3_blob_close(han_u);
+
+  if ( (0 != u3_blob_hands()) || (c3n == _fd_dead(fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand: close left hands %zu, fd open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  //  missing blob: NULL, no bail, nothing left in the table
+  //
+  if ( u3_blob_open(_tmp_pier, 0xdeadbeef, 999) || u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand: missing should be NULL\033[0m\r\n");
     exit(1);
   }
 
   _tmp_clean();
-  fprintf(stderr, "test blob map: ok\r\n");
+  fprintf(stderr, "test blob hand: ok\r\n");
+}
+
+/* _test_hand_dedup(): two opens of one blob share one hand and one fd.
+*/
+static void
+_test_hand_dedup(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_y dat_y[] = "one fd per blob per process";
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
+
+  u3_blob_hand* one_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  u3_blob_hand* two_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+
+  if ( !one_u || (one_u != two_u) || (2 != one_u->ref_w) || (1 != u3_blob_hands()) ) {
+    fprintf(stderr, "\033[31mblob hand dedup: not shared\033[0m\r\n");
+    exit(1);
+  }
+
+  c3_i fid_i = one_u->fid_i;
+  u3_blob_close(one_u);
+
+  if ( (1 != two_u->ref_w) || (c3n == _fd_live(fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand dedup: first close released fd\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_blob_close(two_u);
+
+  if ( u3_blob_hands() || (c3n == _fd_dead(fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand dedup: last close leaked\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand dedup: ok\r\n");
+}
+
+//  shared state for the unwind tests: the blob, a bob atom over it
+//  (built on the home road), and the fd the inner road opened.
+//
+static c3_h    _han_mug_h;
+static c3_h    _han_seq_h;
+static u3_atom _han_bob;
+static c3_i    _han_fid_i;
+
+/* _hand_open_inner(): open the blob twice from the inner road.
+**
+**   Once directly and once through a u3r_view over the bob atom, so
+**   both the raw hand and the view path are held when the road unwinds.
+*/
+static u3_blob_hand*
+_hand_open_inner(void)
+{
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3_assert( han_u );
+  _han_fid_i = han_u->fid_i;
+
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, _han_bob);
+  u3_assert( vue_u.u.han_u == han_u );
+
+  return han_u;
+}
+
+static u3_noun
+_hand_bail_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+  return u3m_bail(c3__fail);
+}
+
+static u3_noun
+_hand_signal_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+  u3m_signal(c3__intr);
+  return 0;
+}
+
+static u3_noun
+_hand_leak_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+  return 0;   //  returns normally without closing anything
+}
+
+/* _hand_unwind_setup(): fresh pier with one blob and a bob atom over it.
+*/
+static void
+_hand_unwind_setup(const c3_c* nam_c)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_y dat_y[] = "unwinding must release every hand the road held";
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y) - 1,
+                           &_han_mug_h, &_han_seq_h) )
+  {
+    fprintf(stderr, "\033[31mblob hand %s: save failed\033[0m\r\n", nam_c);
+    exit(1);
+  }
+  _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
+}
+
+/* _hand_unwind_check(): after the inner road is gone, nothing is open.
+*/
+static void
+_hand_unwind_check(const c3_c* nam_c)
+{
+  if ( u3_blob_hands() || (c3n == _fd_dead(_han_fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand %s: %zu hand(s) survived the road"
+                    "\033[0m\r\n", nam_c, u3_blob_hands());
+    exit(1);
+  }
+  u3z(_han_bob);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand %s: ok\r\n", nam_c);
+}
+
+/* _test_hand_bail(): u3m_bail sweeps the bailing road's hands.
+*/
+static void
+_test_hand_bail(void)
+{
+  _hand_unwind_setup("bail");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
+  _hand_unwind_check("bail");
+}
+
+/* _test_hand_signal(): a signal unwind sweeps every child road's hands.
+*/
+static void
+_test_hand_signal(void)
+{
+  _hand_unwind_setup("signal");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_signal_cb, 0));
+  _hand_unwind_check("signal");
+}
+
+/* _test_hand_leak(): a normal return without a close is swept and logged.
+*/
+static void
+_test_hand_leak(void)
+{
+  _hand_unwind_setup("leak");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_leak_cb, 0));
+  _hand_unwind_check("leak");
+}
+
+/* _test_hand_outer(): a home-road reference survives an inner bail.
+*/
+static void
+_test_hand_outer(void)
+{
+  _hand_unwind_setup("outer");
+
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3_assert( han_u );
+
+  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
+
+  //  the inner road shared this hand; only its references went
+  //
+  if ( (1 != u3_blob_hands()) || (1 != han_u->ref_w) || (c3n == _fd_live(han_u->fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand outer: home reference swept "
+                    "(hands %zu ref %" PRIc3_w ")\033[0m\r\n",
+            u3_blob_hands(), han_u->ref_w);
+    exit(1);
+  }
+
+  c3_i fid_i = han_u->fid_i;
+  u3_blob_close(han_u);
+  _han_fid_i = fid_i;
+  _hand_unwind_check("outer");
+}
+
+/* _test_hand_many(): hundreds of distinct hands open at once, then drained.
+*/
+static void
+_test_hand_many(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  //  write the files directly (no fsync per file) into one bucket
+  //
+  const c3_h mug_h = 0x1234;
+  const c3_w num_w = 300;
+  c3_c pax_c[8192];
+
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, mug_h);
+  if ( 0 != mkdir(pax_c, 0700) ) {
+    fprintf(stderr, "\033[31mblob hand many: mkdir failed\033[0m\r\n");
+    exit(1);
+  }
+
+  for ( c3_w i_w = 1; i_w <= num_w; i_w++ ) {
+    u3_blob_path(pax_c, _tmp_pier, mug_h, i_w);
+    FILE* fil_f = fopen(pax_c, "wb");
+    if ( !fil_f ) {
+      fprintf(stderr, "\033[31mblob hand many: fopen failed\033[0m\r\n");
+      exit(1);
+    }
+    fprintf(fil_f, "blob number %08" PRIc3_w " padded past the minimum", i_w);
+    fclose(fil_f);
+  }
+
+  u3_blob_hand** han_u = c3_malloc(num_w * sizeof(*han_u));
+
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    han_u[i_w] = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    if ( !han_u[i_w] ) {
+      fprintf(stderr, "\033[31mblob hand many: open %" PRIc3_w " failed\033[0m\r\n", i_w);
+      exit(1);
+    }
+  }
+  if ( num_w != u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand many: %zu hands, expected %" PRIc3_w
+                    "\033[0m\r\n", u3_blob_hands(), num_w);
+    exit(1);
+  }
+
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    u3_blob_close(han_u[i_w]);
+  }
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand many: %zu hands left\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  c3_free(han_u);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand many: ok\r\n");
+}
+
+/* _test_hand_comp(): windowed comparison of bobs against bobs and loom atoms.
+*/
+static void
+_test_hand_comp(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  //  three 5000-byte payloads spanning more than one 4 KiB window:
+  //  [b] differs from [a] only in its top byte, [c] only in byte 100.
+  //
+  const c3_w len_w = 5000;
+  c3_y* a_y = c3_malloc(len_w);
+  c3_y* b_y = c3_malloc(len_w);
+  c3_y* c_y = c3_malloc(len_w);
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    a_y[i_w] = (c3_y)(1 + (i_w * 7) % 251);
+  }
+  memcpy(b_y, a_y, len_w);
+  memcpy(c_y, a_y, len_w);
+  a_y[len_w - 1] = 0x40;
+  b_y[len_w - 1] = 0x41;
+  c_y[100]       = (c3_y)(a_y[100] + 1);
+
+  c3_h am_h, as_h, bm_h, bs_h, cm_h, cs_h;
+  if (  (c3y != u3_blob_save(_tmp_pier, a_y, len_w, &am_h, &as_h))
+     || (c3y != u3_blob_save(_tmp_pier, b_y, len_w, &bm_h, &bs_h))
+     || (c3y != u3_blob_save(_tmp_pier, c_y, len_w, &cm_h, &cs_h)) )
+  {
+    fprintf(stderr, "\033[31mblob hand comp: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom boa = u3i_blob(am_h, as_h);
+  u3_atom bob = u3i_blob(bm_h, bs_h);
+  u3_atom boc = u3i_blob(cm_h, cs_h);
+  u3_atom loa = u3i_bytes(len_w, a_y);
+
+  #define _COMP_CHECK(cond, msg)                                          \
+    if ( !(cond) ) {                                                       \
+      fprintf(stderr, "\033[31mblob hand comp: %s\033[0m\r\n", msg);       \
+      exit(1);                                                             \
+    }
+
+  _COMP_CHECK( c3y == u3r_sing(boa, loa),  "bob != equal loom atom" );
+  _COMP_CHECK( c3y == u3r_sing(loa, boa),  "loom atom != equal bob" );
+  _COMP_CHECK( c3n == u3r_sing(boa, bob),  "top-byte difference missed" );
+  _COMP_CHECK( c3n == u3r_sing(boa, boc),  "mid-byte difference missed" );
+  _COMP_CHECK( c3n == u3r_sing(loa, bob),  "loom vs bob difference missed" );
+
+  _COMP_CHECK( 0  == u3r_comp(boa, loa),   "comp bob vs equal loom" );
+  _COMP_CHECK( -1 == u3r_comp(boa, bob),   "comp top byte a < b" );
+  _COMP_CHECK( 1  == u3r_comp(bob, boa),   "comp top byte b > a" );
+  _COMP_CHECK( -1 == u3r_comp(boa, boc),   "comp mid byte a < c" );
+  _COMP_CHECK( 1  == u3r_comp(bob, loa),   "comp bob vs smaller loom" );
+
+  _COMP_CHECK( 1 == u3r_nord(boa, loa),    "nord equal" );
+  _COMP_CHECK( 0 == u3r_nord(boa, bob),    "nord a < b" );
+  _COMP_CHECK( 2 == u3r_nord(bob, boa),    "nord b > a" );
+
+  _COMP_CHECK( 0x40     == u3r_byte(len_w - 1, boa), "byte at top" );
+  _COMP_CHECK( a_y[100] == u3r_byte(100, boa),       "byte in middle" );
+  _COMP_CHECK( 0        == u3r_byte(len_w + 5, boa), "byte past end" );
+
+  #undef _COMP_CHECK
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand comp: %zu hand(s) left open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  u3z(boa); u3z(bob); u3z(boc); u3z(loa);
+  c3_free(a_y); c3_free(b_y); c3_free(c_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand comp: ok\r\n");
+}
+
+static u3_noun
+_hand_alarm_cb(u3_noun arg)
+{
+  (void)arg;
+
+  //  hold a view for the whole spin, and churn the registry so the
+  //  event timer's SIGVTALRM can land inside a critical section as
+  //  easily as between two.  the timer counts user CPU time, which the
+  //  open/close syscalls barely consume, so each round also burns some
+  //  arithmetic.  the round cap turns a timer that never fires into a
+  //  test failure instead of a hang.
+  //
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, _han_bob);
+  _han_fid_i = vue_u.u.han_u->fid_i;
+
+  volatile c3_d sum_d = 0;
+
+  for ( c3_w rou_w = 0; rou_w < 2000000; rou_w++ ) {
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    u3_blob_close(han_u);
+
+    for ( c3_w i_w = 0; i_w < 20000; i_w++ ) {
+      sum_d += i_w;
+    }
+  }
+
+  u3r_view_done(&vue_u);
+  return 0;
+}
+
+/* _test_hand_alarm(): a real SIGVTALRM from the event timer, delivered
+**   through the production handler while hands are open and the registry
+**   is being mutated, unwinds cleanly and leaves the table consistent.
+*/
+static void
+_test_hand_alarm(void)
+{
+  _hand_unwind_setup("alarm");
+
+  u3_noun gon = u3m_soft_top(20, 1 << 12, _hand_alarm_cb, 0);
+  u3_noun tag, sig;
+
+  if (  (c3n == u3r_cell(gon, &tag, &sig))
+     || (3 != tag)
+     || (c3n == u3r_cell(sig, &sig, 0))
+     || (c3__alrm != sig) )
+  {
+    fprintf(stderr, "\033[31mblob hand alarm: no %%alrm unwind\033[0m\r\n");
+    exit(1);
+  }
+  u3z(gon);
+
+  //  the table is usable after the unwind
+  //
+  {
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    if ( !han_u || (1 != han_u->ref_w) ) {
+      fprintf(stderr, "\033[31mblob hand alarm: reopen after unwind failed"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(han_u);
+  }
+
+  _hand_unwind_check("alarm");
+}
+
+/* _test_jam_bob(): both jam encoders stream a bob identically to jamming
+**   the materialized atom.
+**
+**   The blob spans five full 8 KiB windows plus a partial one that is
+**   not word-aligned, and its top byte is 0x05 so the bit length is not a
+**   multiple of 8: the last window carries a partial byte.  The bob
+**   appears twice in the noun so the backref path runs too.
+*/
+static void
+_test_jam_bob(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_w len_w = (5 * 8192) + 1235;
+  c3_y*      dat_y = c3_malloc(len_w);
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + ((i_w * 13) % 253));
+  }
+  dat_y[len_w - 1] = 0x05;
+
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, len_w, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob jam: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_atom loa = u3i_bytes(len_w, dat_y);
+  u3_noun bon = u3nc(u3k(bob), u3nc(42, u3k(bob)));
+  u3_noun lon = u3nc(u3k(loa), u3nc(42, u3k(loa)));
+
+  //  fib encoder (loom slab)
+  //
+  {
+    u3i_slab sab_u, sal_u;
+    c3_w bib_w = u3s_jam_fib(&sab_u, bon);
+    c3_w bil_w = u3s_jam_fib(&sal_u, lon);
+
+    if (  (bib_w != bil_w)
+       || (0 != memcmp(sab_u.buf_y, sal_u.buf_y, (bib_w + 7) >> 3)) )
+    {
+      fprintf(stderr, "\033[31mblob jam: fib encoding differs "
+                      "(%" PRIc3_w " vs %" PRIc3_w " bits)\033[0m\r\n",
+              bib_w, bil_w);
+      exit(1);
+    }
+    u3i_slab_free(&sab_u);
+    u3i_slab_free(&sal_u);
+  }
+
+  //  xeno encoder (heap), then cue it back
+  //
+  {
+    c3_d  leb_d = 0, lel_d = 0;
+    c3_y* byb_y = 0;
+    c3_y* byl_y = 0;
+    u3s_jam_xeno(bon, &leb_d, &byb_y);
+    u3s_jam_xeno(lon, &lel_d, &byl_y);
+
+    if ( (leb_d != lel_d) || (0 != memcmp(byb_y, byl_y, (size_t)leb_d)) ) {
+      fprintf(stderr, "\033[31mblob jam: xeno encoding differs "
+                      "(%" PRIc3_d " vs %" PRIc3_d " bytes)\033[0m\r\n",
+              leb_d, lel_d);
+      exit(1);
+    }
+
+    u3_weak cue = u3s_cue_xeno(leb_d, byb_y);
+    if ( (u3_none == cue) || (c3n == u3r_sing(cue, lon)) ) {
+      fprintf(stderr, "\033[31mblob jam: cue of bob jam != source\033[0m\r\n");
+      exit(1);
+    }
+    u3z(cue);
+    c3_free(byb_y);
+    c3_free(byl_y);
+  }
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob jam: %zu hand(s) left open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  u3z(bon); u3z(lon); u3z(bob); u3z(loa);
+  c3_free(dat_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob jam: ok\r\n");
+}
+
+/* _test_jets_bob(): rsh, end, and cut read ranges from a bob the same
+**   way they do from the materialized atom, including ranges that touch,
+**   cross, and lie beyond the end of the file.
+*/
+static void
+_test_jets_bob(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_w len_w = 5000;
+  c3_y*      dat_y = c3_malloc(len_w);
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + ((i_w * 7) % 251));
+  }
+
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, len_w, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob jets: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_atom loa = u3i_bytes(len_w, dat_y);
+
+  #define _JET_CHECK(nam_c, a_w, b_w, c_w, bob_x, loa_x)                       \
+    {                                                                          \
+      u3_noun rb = (bob_x);                                                    \
+      u3_noun rl = (loa_x);                                                    \
+      if ( c3n == u3r_sing(rb, rl) ) {                                         \
+        fprintf(stderr, "\033[31mblob jets: %s(%u, %u, %u) differs\033[0m\r\n",\
+                nam_c, (unsigned)(a_w), (unsigned)(b_w), (unsigned)(c_w));     \
+        exit(1);                                                               \
+      }                                                                        \
+      u3z(rb); u3z(rl);                                                        \
+    }
+
+  //  rsh: byte, word, and bit bloqs; offsets inside, at, and past the end
+  //
+  {
+    const c3_w off_w[] = { 0, 1, 5, 4096, 4999, 5000, 5010 };
+    for ( c3_w i_w = 0; i_w < sizeof(off_w) / sizeof(*off_w); i_w++ ) {
+      _JET_CHECK("rsh", 3, off_w[i_w], 0,
+                 u3qc_rsh(3, off_w[i_w], bob), u3qc_rsh(3, off_w[i_w], loa));
+    }
+    const c3_w wof_w[] = { 0, 3, 1249, 1250, 1251 };
+    for ( c3_w i_w = 0; i_w < sizeof(wof_w) / sizeof(*wof_w); i_w++ ) {
+      _JET_CHECK("rsh", 5, wof_w[i_w], 0,
+                 u3qc_rsh(5, wof_w[i_w], bob), u3qc_rsh(5, wof_w[i_w], loa));
+    }
+    _JET_CHECK("rsh", 0, 13, 0, u3qc_rsh(0, 13, bob), u3qc_rsh(0, 13, loa));
+  }
+
+  //  end: same shapes
+  //
+  {
+    const c3_w len_y[] = { 0, 1, 7, 4096, 4999, 5000, 5010 };
+    for ( c3_w i_w = 0; i_w < sizeof(len_y) / sizeof(*len_y); i_w++ ) {
+      _JET_CHECK("end", 3, len_y[i_w], 0,
+                 u3qc_end(3, len_y[i_w], bob), u3qc_end(3, len_y[i_w], loa));
+    }
+    const c3_w wen_w[] = { 1, 1249, 1250, 1251 };
+    for ( c3_w i_w = 0; i_w < sizeof(wen_w) / sizeof(*wen_w); i_w++ ) {
+      _JET_CHECK("end", 5, wen_w[i_w], 0,
+                 u3qc_end(5, wen_w[i_w], bob), u3qc_end(5, wen_w[i_w], loa));
+    }
+    _JET_CHECK("end", 0, 13, 0, u3qc_end(0, 13, bob), u3qc_end(0, 13, loa));
+  }
+
+  //  cut: ranges inside, touching, crossing, and beyond the end
+  //
+  {
+    const c3_w cut_w[][2] = {
+      { 0, 0 }, { 0, 1 }, { 0, 5000 }, { 10, 4000 }, { 4095, 2 },
+      { 4990, 10 }, { 4990, 20 }, { 5000, 5 }, { 6000, 5 }
+    };
+    for ( c3_w i_w = 0; i_w < sizeof(cut_w) / sizeof(*cut_w); i_w++ ) {
+      _JET_CHECK("cut", 3, cut_w[i_w][0], cut_w[i_w][1],
+                 u3qc_cut(3, cut_w[i_w][0], cut_w[i_w][1], bob),
+                 u3qc_cut(3, cut_w[i_w][0], cut_w[i_w][1], loa));
+    }
+    const c3_w wut_w[][2] = { { 0, 1 }, { 1249, 2 }, { 1250, 1 }, { 1251, 3 } };
+    for ( c3_w i_w = 0; i_w < sizeof(wut_w) / sizeof(*wut_w); i_w++ ) {
+      _JET_CHECK("cut", 5, wut_w[i_w][0], wut_w[i_w][1],
+                 u3qc_cut(5, wut_w[i_w][0], wut_w[i_w][1], bob),
+                 u3qc_cut(5, wut_w[i_w][0], wut_w[i_w][1], loa));
+    }
+    _JET_CHECK("cut", 0, 3, 17, u3qc_cut(0, 3, 17, bob), u3qc_cut(0, 3, 17, loa));
+  }
+
+  #undef _JET_CHECK
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob jets: %zu hand(s) left open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  u3z(bob); u3z(loa);
+  c3_free(dat_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob jets: ok\r\n");
+}
+
+/* _hand_write_raw(): write a blob file directly into one bucket, no
+**   locking or fsync.  [num_w] distinguishes the content.
+*/
+static void
+_hand_write_raw(c3_h mug_h, c3_h seq_h, c3_w num_w)
+{
+  c3_c pax_c[8192];
+
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, mug_h);
+  if ( (0 != mkdir(pax_c, 0700)) && (EEXIST != errno) ) {
+    fprintf(stderr, "\033[31mblob raw: mkdir failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_blob_path(pax_c, _tmp_pier, mug_h, seq_h);
+  FILE* fil_f = fopen(pax_c, "wb");
+  if ( !fil_f ) {
+    fprintf(stderr, "\033[31mblob raw: fopen failed\033[0m\r\n");
+    exit(1);
+  }
+  fprintf(fil_f, "raw blob %08" PRIc3_w " padded past the minimum length", num_w);
+  fclose(fil_f);
+}
+
+/* _hand_unwound(): true if [gon] is a bail or signal result, not [0 pro].
+*/
+static c3_o
+_hand_unwound(u3_noun gon)
+{
+  return ( (c3y == u3du(gon)) && (0 != u3h(gon)) ) ? c3y : c3n;
+}
+
+/* _hand_mote(): the mote of a [3 mote tax] result, or 0.
+*/
+static u3_noun
+_hand_mote(u3_noun gon)
+{
+  u3_noun tag, res;
+  if (  (c3n == u3r_cell(gon, &tag, &res))
+     || (3 != tag)
+     || (c3n == u3r_cell(res, &res, 0)) )
+  {
+    return 0;
+  }
+  return res;
+}
+
+#ifndef U3_OS_windows
+//  set by _hand_intr_crit_cb once the held SIGINT has been survived
+//
+static c3_w _han_hit_w;
+
+static void
+_crit_handler_fwd(int sig)
+{
+  (void)sig;
+  _han_hit_w++;
+}
+
+static u3_noun
+_hand_intr_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+
+  //  delivered to this thread before kill() returns: the production
+  //  handler sees a child road and unwinds
+  //
+  kill(getpid(), SIGINT);
+  return 0;
+}
+
+static u3_noun
+_hand_intr_crit_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+
+  u3m_crit_enter();
+  kill(getpid(), SIGINT);
+  _han_hit_w = 1;         //  still here: the signal is pending
+  u3m_crit_leave();       //  delivered here; never returns
+  _han_hit_w = 2;
+  return 0;
+}
+
+/* _test_hand_intr(): a real SIGINT through the production handler
+**   unwinds the road and sweeps its hands.
+*/
+static void
+_test_hand_intr(void)
+{
+  _hand_unwind_setup("intr");
+
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_cb, 0);
+  if ( c3__intr != _hand_mote(gon) ) {
+    fprintf(stderr, "\033[31mblob hand intr: no %%intr unwind\033[0m\r\n");
+    exit(1);
+  }
+  u3z(gon);
+
+  _hand_unwind_check("intr");
+}
+
+/* _test_hand_intr_crit(): a SIGINT raised inside a critical section is
+**   held until the section ends, then unwinds through the production
+**   handler; the hold count is back at zero afterwards.
+*/
+static void
+_test_hand_intr_crit(void)
+{
+  _hand_unwind_setup("intr crit");
+  _han_hit_w = 0;
+
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_crit_cb, 0);
+  if ( (c3__intr != _hand_mote(gon)) || (1 != _han_hit_w) ) {
+    fprintf(stderr, "\033[31mblob hand intr crit: hit %" PRIc3_w
+                    ", expected the unwind at leave\033[0m\r\n", _han_hit_w);
+    exit(1);
+  }
+  u3z(gon);
+
+  //  the hold count is zero: a fresh section delivers at its own leave
+  //
+  {
+    void (*old_f)(int) = signal(SIGINT, _crit_handler_fwd);
+    _han_hit_w = 0;
+    u3m_crit_enter();
+    raise(SIGINT);
+    if ( _han_hit_w ) {
+      fprintf(stderr, "\033[31mblob hand intr crit: hold count not reset"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    u3m_crit_leave();
+    signal(SIGINT, old_f);
+    if ( 1 != _han_hit_w ) {
+      fprintf(stderr, "\033[31mblob hand intr crit: section not delivering"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  _hand_unwind_check("intr crit");
+}
+#endif
+
+static u3_noun
+_hand_meme_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+
+  //  a padded view opens the hand first and then u3a_malloc's the pad:
+  //  256 MiB on a 1 MiB loom bails %meme from that exact site
+  //
+  u3r_view vue_u;
+  u3r_view_padd(&vue_u, _han_bob, 1 << 28);
+  u3r_view_done(&vue_u);
+  return 0;
+}
+
+/* _test_hand_meme(): an allocation bail under a live view is swept.
+*/
+static void
+_test_hand_meme(void)
+{
+  _hand_unwind_setup("meme");
+
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_meme_cb, 0);
+  if ( c3n == _hand_unwound(gon) ) {
+    fprintf(stderr, "\033[31mblob hand meme: pad did not bail\033[0m\r\n");
+    exit(1);
+  }
+  u3z(gon);
+
+  _hand_unwind_check("meme");
+}
+
+static u3_noun
+_hand_cue_cb(u3_noun arg)
+{
+  (void)arg;
+  _hand_open_inner();
+
+  //  cue holds a view across its whole run and allocates as it goes;
+  //  the malformed bytes make it bail with the view open
+  //
+  return u3s_cue(_han_bob);
+}
+
+/* _test_hand_cue(): cue bailing under a live view is swept.
+*/
+static void
+_test_hand_cue(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  //  an atom tag followed by a run-length prefix that never terminates
+  //
+  c3_y dat_y[64];
+  memset(dat_y, 0, sizeof(dat_y));
+  dat_y[sizeof(dat_y) - 1] = 0x80;
+
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y),
+                           &_han_mug_h, &_han_seq_h) )
+  {
+    fprintf(stderr, "\033[31mblob hand cue: save failed\033[0m\r\n");
+    exit(1);
+  }
+  _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
+
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_cue_cb, 0);
+  if ( c3n == _hand_unwound(gon) ) {
+    fprintf(stderr, "\033[31mblob hand cue: garbage cued\033[0m\r\n");
+    exit(1);
+  }
+  u3z(gon);
+
+  _hand_unwind_check("cue");
+}
+
+#ifndef U3_OS_windows
+/* _test_hand_emfile(): running out of descriptors fails an open cleanly.
+*/
+static void
+_test_hand_emfile(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_h mug_h = 0x2345;
+  const c3_w num_w = 32;
+
+  for ( c3_w i_w = 1; i_w <= num_w; i_w++ ) {
+    _hand_write_raw(mug_h, i_w, i_w);
+  }
+
+  struct rlimit old_u, new_u;
+  if ( 0 != getrlimit(RLIMIT_NOFILE, &old_u) ) {
+    fprintf(stderr, "\033[31mblob hand emfile: getrlimit failed\033[0m\r\n");
+    exit(1);
+  }
+  new_u = old_u;
+  new_u.rlim_cur = 24;
+  if ( 0 != setrlimit(RLIMIT_NOFILE, &new_u) ) {
+    fprintf(stderr, "\033[31mblob hand emfile: setrlimit failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_blob_hand** han_u = c3_malloc(num_w * sizeof(*han_u));
+  c3_w           got_w = 0;
+
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    han_u[i_w] = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    if ( han_u[i_w] ) {
+      got_w++;
+    }
+  }
+
+  setrlimit(RLIMIT_NOFILE, &old_u);
+
+  if ( (got_w == num_w) || (got_w != u3_blob_hands()) ) {
+    fprintf(stderr, "\033[31mblob hand emfile: %" PRIc3_w " opened, %zu in "
+                    "table\033[0m\r\n", got_w, u3_blob_hands());
+    exit(1);
+  }
+
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    if ( han_u[i_w] ) {
+      c3_y byt_y;
+      if ( 1 != u3_blob_read(han_u[i_w], 0, &byt_y, 1) ) {
+        fprintf(stderr, "\033[31mblob hand emfile: opened hand unreadable"
+                        "\033[0m\r\n");
+        exit(1);
+      }
+      u3_blob_close(han_u[i_w]);
+    }
+  }
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand emfile: residue\033[0m\r\n");
+    exit(1);
+  }
+
+  c3_free(han_u);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand emfile: ok\r\n");
+}
+
+/* _test_hand_wipe(): wiping a blob under a live hand unlinks the file,
+**   warns, and leaves the reader on the surviving inode.
+*/
+static void
+_test_hand_wipe(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_y dat_y[] = "wiped under a live hand, still readable";
+  const c3_d dat_d   = sizeof(dat_y) - 1;
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h);
+
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  if ( !han_u ) {
+    fprintf(stderr, "\033[31mblob hand wipe: open failed\033[0m\r\n");
+    exit(1);
+  }
+  c3_i fid_i = han_u->fid_i;
+
+  u3_blob_wipe(_tmp_pier, mug_h, seq_h);
+
+  if ( c3y == u3_blob_live(_tmp_pier, mug_h, seq_h) ) {
+    fprintf(stderr, "\033[31mblob hand wipe: file survived\033[0m\r\n");
+    exit(1);
+  }
+
+  //  posix keeps the inode for the open descriptor
+  //
+  {
+    c3_y buf_y[64];
+    if (  (dat_d != u3_blob_read(han_u, 0, buf_y, (c3_z)dat_d))
+       || (0 != memcmp(buf_y, dat_y, (size_t)dat_d)) )
+    {
+      fprintf(stderr, "\033[31mblob hand wipe: read after wipe failed"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  u3_blob_close(han_u);
+
+  if ( u3_blob_hands() || (c3n == _fd_dead(fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand wipe: close leaked\033[0m\r\n");
+    exit(1);
+  }
+
+  //  a second open finds nothing
+  //
+  if ( u3_blob_open(_tmp_pier, mug_h, seq_h) ) {
+    fprintf(stderr, "\033[31mblob hand wipe: reopened a wiped blob\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand wipe: ok\r\n");
+}
+#endif
+
+/* _test_hand_stop(): u3_blob_stop releases every hand; the registry can
+**   be initialized again afterwards.
+*/
+static void
+_test_hand_stop(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_h mug_h = 0x3456;
+  c3_i       fid_i[3];
+
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    _hand_write_raw(mug_h, i_w + 1, i_w);
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    if ( !han_u ) {
+      fprintf(stderr, "\033[31mblob hand stop: open failed\033[0m\r\n");
+      exit(1);
+    }
+    fid_i[i_w] = han_u->fid_i;
+  }
+
+  u3_blob_stop();
+
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    if ( c3n == _fd_dead(fid_i[i_w]) ) {
+      fprintf(stderr, "\033[31mblob hand stop: fd %" PRIc3_w " survived"
+                      "\033[0m\r\n", i_w);
+      exit(1);
+    }
+  }
+
+  u3_blob_init();
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand stop: residue after init\033[0m\r\n");
+    exit(1);
+  }
+
+  {
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, 1);
+    if ( !han_u ) {
+      fprintf(stderr, "\033[31mblob hand stop: open after init failed"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(han_u);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand stop: ok\r\n");
+}
+
+#ifndef U3_OS_windows
+/* _test_hand_trunc(): every reader reports a file shortened under it.
+*/
+static void
+_test_hand_trunc(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_w len_w = 5000;
+  c3_y*      dat_y = c3_malloc(len_w);
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + (i_w % 200));
+  }
+
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  u3_blob_save(_tmp_pier, dat_y, len_w, &mug_h, &seq_h);
+
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  if ( !han_u ) {
+    fprintf(stderr, "\033[31mblob hand trunc: open failed\033[0m\r\n");
+    exit(1);
+  }
+
+  {
+    //  blob files are created read-only; shortening one needs write bits
+    //
+    c3_c pax_c[8192];
+    u3_blob_path(pax_c, _tmp_pier, mug_h, seq_h);
+    if ( (0 != chmod(pax_c, 0600)) || (0 != truncate(pax_c, 100)) ) {
+      fprintf(stderr, "\033[31mblob hand trunc: truncate failed\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  {
+    c3_y* buf_y = c3_malloc(len_w);
+    if ( 100 != u3_blob_read(han_u, 0, buf_y, len_w) ) {
+      fprintf(stderr, "\033[31mblob hand trunc: read not short\033[0m\r\n");
+      exit(1);
+    }
+    c3_free(buf_y);
+  }
+
+  if ( u3_blob_data(han_u) || han_u->buf_y ) {
+    fprintf(stderr, "\033[31mblob hand trunc: data did not fail cleanly"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  if ( 0 != u3_blob_hand_met(han_u) ) {
+    fprintf(stderr, "\033[31mblob hand trunc: met not zero\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_blob_close(han_u);
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand trunc: residue\033[0m\r\n");
+    exit(1);
+  }
+
+  c3_free(dat_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand trunc: ok\r\n");
+}
+#endif
+
+static u3_noun
+_hand_gone_view_cb(u3_noun arg)
+{
+  (void)arg;
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, _han_bob);
+  u3r_view_done(&vue_u);
+  return 0;
+}
+
+static u3_noun
+_hand_gone_met_cb(u3_noun arg)
+{
+  (void)arg;
+  return u3r_met(3, _han_bob);
+}
+
+static u3_noun
+_hand_gone_xeno_cb(u3_noun arg)
+{
+  (void)arg;
+  c3_d  len_d = 0;
+  c3_y* byt_y = 0;
+  u3s_jam_xeno(_han_bob, &len_d, &byt_y);
+  c3_free(byt_y);
+  return 0;
+}
+
+static u3_noun
+_hand_gone_fib_cb(u3_noun arg)
+{
+  (void)arg;
+  u3i_slab sab_u;
+  u3s_jam_fib(&sab_u, _han_bob);
+  u3i_slab_free(&sab_u);
+  return 0;
+}
+
+/* _hand_gone_expect(): [fun_f] over a bob with no file must bail %fail
+**   and leave the registry empty.
+*/
+static void
+_hand_gone_expect(const c3_c* nam_c, u3_funk fun_f)
+{
+  u3_noun gon = u3m_soft_top(0, 1 << 12, fun_f, 0);
+  if ( c3__fail != _hand_mote(gon) ) {
+    fprintf(stderr, "\033[31mblob hand gone: %s did not bail %%fail"
+                    "\033[0m\r\n", nam_c);
+    exit(1);
+  }
+  u3z(gon);
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand gone: %s left residue\033[0m\r\n",
+            nam_c);
+    exit(1);
+  }
+}
+
+/* _test_hand_gone(): a bob whose file is missing fails at every entry
+**   point the way its contract says: bail %fail for readers, u3_none
+**   for load, 0 for met.
+*/
+static void
+_test_hand_gone(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  _han_mug_h = 0x4567;
+  _han_seq_h = 1;
+  _han_bob   = u3i_blob(_han_mug_h, _han_seq_h);
+
+  _hand_gone_expect("view", _hand_gone_view_cb);
+  _hand_gone_expect("met",  _hand_gone_met_cb);
+  _hand_gone_expect("xeno", _hand_gone_xeno_cb);
+  _hand_gone_expect("fib",  _hand_gone_fib_cb);
+
+  if (  (u3_none != u3_blob_load(_tmp_pier, _han_mug_h, _han_seq_h))
+     || (0 != u3_blob_met(_tmp_pier, _han_mug_h, _han_seq_h))
+     || u3_blob_hands() )
+  {
+    fprintf(stderr, "\033[31mblob hand gone: load/met contract\033[0m\r\n");
+    exit(1);
+  }
+
+  u3z(_han_bob);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand gone: ok\r\n");
+}
+
+static u3_noun
+_hand_nest_cb(u3_noun arg)
+{
+  (void)arg;
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3_assert( han_u && (2 == han_u->ref_w) );
+  u3_blob_close(han_u);
+  return 0;
+}
+
+/* _test_hand_nest(): a child road that opens and closes normally leaves
+**   the home reference exactly as it found it.
+*/
+static void
+_test_hand_nest(void)
+{
+  _hand_unwind_setup("nest");
+
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3_assert( han_u );
+  c3_i fid_i = han_u->fid_i;
+
+  u3z(u3m_soft_top(0, 1 << 12, _hand_nest_cb, 0));
+
+  if (  (1 != u3_blob_hands()) || (1 != han_u->ref_w)
+     || (fid_i != han_u->fid_i) || (c3n == _fd_live(fid_i)) )
+  {
+    fprintf(stderr, "\033[31mblob hand nest: home reference disturbed"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_blob_close(han_u);
+  _han_fid_i = fid_i;
+  _hand_unwind_check("nest");
+}
+
+/* _test_hand_edge(): met and comparison at the 4 KiB window boundaries.
+*/
+static void
+_test_hand_edge(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  //  met: the top byte sits at the very end of, or just past, a window
+  //
+  {
+    const c3_w len_w[] = { 4095, 4096, 4097, 8192, 8193 };
+
+    for ( c3_w i_w = 0; i_w < sizeof(len_w) / sizeof(*len_w); i_w++ ) {
+      c3_y* dat_y = c3_malloc(len_w[i_w]);
+      memset(dat_y, 0x11, len_w[i_w]);
+      dat_y[len_w[i_w] - 1] = 0x03;
+
+      c3_h mug_h = 0; c3_h seq_h = 0;
+      u3_blob_save(_tmp_pier, dat_y, len_w[i_w], &mug_h, &seq_h);
+
+      u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+      c3_d    met_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
+
+      if ( (u3_none == atm) || (met_d != (c3_d)u3r_met(0, atm)) ) {
+        fprintf(stderr, "\033[31mblob hand edge: met at %" PRIc3_w
+                        " bytes\033[0m\r\n", len_w[i_w]);
+        exit(1);
+      }
+      u3z(atm);
+      c3_free(dat_y);
+    }
+  }
+
+  //  compare: 8192-byte bobs differing exactly at a window boundary
+  //
+  {
+    const c3_w len_w = 8192;
+    c3_y* a_y = c3_malloc(len_w);
+    c3_y* b_y = c3_malloc(len_w);
+    c3_y* c_y = c3_malloc(len_w);
+
+    memset(a_y, 0x22, len_w);
+    memcpy(b_y, a_y, len_w);
+    memcpy(c_y, a_y, len_w);
+    b_y[4095] = 0x23;
+    c_y[4096] = 0x21;
+
+    c3_h am_h, as_h, bm_h, bs_h, cm_h, cs_h;
+    u3_blob_save(_tmp_pier, a_y, len_w, &am_h, &as_h);
+    u3_blob_save(_tmp_pier, b_y, len_w, &bm_h, &bs_h);
+    u3_blob_save(_tmp_pier, c_y, len_w, &cm_h, &cs_h);
+
+    u3_atom boa = u3i_blob(am_h, as_h);
+    u3_atom bob = u3i_blob(bm_h, bs_h);
+    u3_atom boc = u3i_blob(cm_h, cs_h);
+    u3_atom loa = u3i_bytes(len_w, a_y);
+
+    if (  (c3y != u3r_sing(boa, loa))
+       || (c3n != u3r_sing(boa, bob))
+       || (c3n != u3r_sing(boa, boc))
+       || (-1 != u3r_comp(boa, bob))     //  b larger at byte 4095
+       || (1  != u3r_comp(boa, boc))     //  c smaller at byte 4096
+       || (1  != u3r_comp(bob, boc)) )
+    {
+      fprintf(stderr, "\033[31mblob hand edge: window-boundary compare"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+
+    u3z(boa); u3z(bob); u3z(boc); u3z(loa);
+    c3_free(a_y); c3_free(b_y); c3_free(c_y);
+  }
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand edge: residue\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand edge: ok\r\n");
+}
+
+/* _test_hand_share(): met and byte reads under a live view reuse its
+**   hand and fd instead of opening a second one.
+*/
+static void
+_test_hand_share(void)
+{
+  _hand_unwind_setup("share");
+
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, _han_bob);
+
+  u3_blob_hand* han_u = vue_u.u.han_u;
+  c3_i          fid_i = han_u->fid_i;
+
+  c3_w met_w = u3r_met(3, _han_bob);
+  c3_y byt_y = u3r_byte(3, _han_bob);
+
+  if (  (1 != u3_blob_hands()) || (1 != han_u->ref_w)
+     || (fid_i != han_u->fid_i)
+     || (met_w != vue_u.len_w) || (byt_y != vue_u.byt_y[3]) )
+  {
+    fprintf(stderr, "\033[31mblob hand share: second open under a view"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  u3r_view_done(&vue_u);
+  _han_fid_i = fid_i;
+  _hand_unwind_check("share");
+}
+
+/* _test_hand_empty(): a zero-byte blob file opens as nothing.
+*/
+static void
+_test_hand_empty(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_h mug_h = 0x5678;
+  c3_c pax_c[8192];
+
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, mug_h);
+  mkdir(pax_c, 0700);
+  u3_blob_path(pax_c, _tmp_pier, mug_h, 1);
+  fclose(fopen(pax_c, "wb"));
+
+  if (  u3_blob_open(_tmp_pier, mug_h, 1)
+     || (u3_none != u3_blob_load(_tmp_pier, mug_h, 1))
+     || (0 != u3_blob_met(_tmp_pier, mug_h, 1))
+     || u3_blob_hands() )
+  {
+    fprintf(stderr, "\033[31mblob hand empty: empty file not rejected"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand empty: ok\r\n");
+}
+
+/* _test_hand_access(): every fixed-width and range reader on a bob agrees
+**   with the materialized atom, including reads past the end, and none of
+**   them leaves a hand open.
+*/
+static void
+_test_hand_access(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_w len_w = 5000;
+  c3_y*      dat_y = c3_malloc(len_w);
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + ((i_w * 11) % 241));
+  }
+
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, len_w, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob access: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_atom loa = u3i_bytes(len_w, dat_y);
+
+  #define _ACC_CHECK(cond, nam_c, i_w)                                        \
+    if ( !(cond) ) {                                                          \
+      fprintf(stderr, "\033[31mblob access: %s at %u\033[0m\r\n",             \
+              nam_c, (unsigned)(i_w));                                        \
+      exit(1);                                                                \
+    }
+
+  //  fixed-width readers, inside and past the end
+  //
+  {
+    const c3_w bit_w[]  = { 0, 7, 8, 12345, 39999, 40000, 40008, 100000 };
+    for ( c3_w i_w = 0; i_w < sizeof(bit_w) / sizeof(*bit_w); i_w++ ) {
+      _ACC_CHECK( u3r_bit(bit_w[i_w], bob) == u3r_bit(bit_w[i_w], loa),
+                  "bit", bit_w[i_w] );
+    }
+    const c3_w sho_w[]  = { 0, 1, 2499, 2500, 2600 };
+    for ( c3_w i_w = 0; i_w < sizeof(sho_w) / sizeof(*sho_w); i_w++ ) {
+      _ACC_CHECK( u3r_short(sho_w[i_w], bob) == u3r_short(sho_w[i_w], loa),
+                  "short", sho_w[i_w] );
+    }
+    const c3_w haf_w[]  = { 0, 1, 1249, 1250, 1300 };
+    for ( c3_w i_w = 0; i_w < sizeof(haf_w) / sizeof(*haf_w); i_w++ ) {
+      _ACC_CHECK( u3r_half(haf_w[i_w], bob) == u3r_half(haf_w[i_w], loa),
+                  "half", haf_w[i_w] );
+      _ACC_CHECK( u3r_word(haf_w[i_w], bob) == u3r_word(haf_w[i_w], loa),
+                  "word", haf_w[i_w] );
+    }
+    const c3_w chb_w[]  = { 0, 1, 624, 625, 700 };
+    for ( c3_w i_w = 0; i_w < sizeof(chb_w) / sizeof(*chb_w); i_w++ ) {
+      _ACC_CHECK( u3r_chub(chb_w[i_w], bob) == u3r_chub(chb_w[i_w], loa),
+                  "chub", chb_w[i_w] );
+    }
+  }
+
+  //  range readers.  the scratch buffers must hold the widest read: on
+  //  a 64-bit loom a word is eight bytes, so 1250 words is 10000 bytes.
+  //
+  {
+    const c3_z buf_z = 16384;
+    c3_y* ba_y = c3_malloc(buf_z);
+    c3_y* bl_y = c3_malloc(buf_z);
+
+    const c3_w byt_w[][2] = { {0, 5000}, {10, 20}, {4990, 20}, {5000, 10}, {6000, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(byt_w) / sizeof(*byt_w); i_w++ ) {
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
+      u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], ba_y, bob);
+      u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "bytes", byt_w[i_w][0] );
+    }
+
+    const c3_w hfs_w[][2] = { {0, 1250}, {1249, 3}, {1250, 2}, {1300, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(hfs_w) / sizeof(*hfs_w); i_w++ ) {
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
+      u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)ba_y, bob);
+      u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "halfs", hfs_w[i_w][0] );
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
+      u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)ba_y, bob);
+      u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "words", hfs_w[i_w][0] );
+    }
+
+    const c3_w chs_w[][2] = { {0, 625}, {624, 3}, {625, 2}, {700, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(chs_w) / sizeof(*chs_w); i_w++ ) {
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
+      u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)ba_y, bob);
+      u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "chubs", chs_w[i_w][0] );
+    }
+
+    c3_free(ba_y);
+    c3_free(bl_y);
+  }
+
+  //  chop: bit, byte, and word bloqs at aligned and unaligned offsets,
+  //  into a destination that already carries bits
+  //
+  {
+    const c3_w chp_w[][4] = {   //  met, fum, wid, tou
+      { 0, 0, 40000, 0 }, { 0, 13, 1000, 7 }, { 0, 39990, 50, 3 },
+      { 3, 10, 4000, 3 }, { 3, 4990, 20, 0 }, { 3, 5000, 8, 1 },
+      { 5, 0, 1250, 0 }, { 5, 1249, 2, 1 }, { 5, 1250, 4, 0 },
+      { 6, 3, 100, 2 }
+    };
+    for ( c3_w i_w = 0; i_w < sizeof(chp_w) / sizeof(*chp_w); i_w++ ) {
+      c3_g met_g = chp_w[i_w][0];
+      c3_w wid_w = chp_w[i_w][2];
+      c3_w tou_w = chp_w[i_w][3];
+      c3_w siz_w = ((tou_w + wid_w) << met_g) + 128;
+
+      u3i_slab sa_u, sl_u;
+      u3i_slab_init(&sa_u, 0, siz_w);
+      u3i_slab_init(&sl_u, 0, siz_w);
+      sa_u.buf_w[0] = 0x5; sl_u.buf_w[0] = 0x5;
+
+      u3r_chop(met_g, chp_w[i_w][1], wid_w, tou_w, sa_u.buf_w, bob);
+      u3r_chop(met_g, chp_w[i_w][1], wid_w, tou_w, sl_u.buf_w, loa);
+
+      _ACC_CHECK( 0 == memcmp(sa_u.buf_y, sl_u.buf_y,
+                              (size_t)sa_u.len_w * u3a_word_bytes),
+                  "chop", i_w );
+      u3i_slab_free(&sa_u);
+      u3i_slab_free(&sl_u);
+    }
+  }
+
+  //  gmp import and mug
+  //
+  {
+    mpz_t ma_mp, ml_mp;
+    u3r_mp(ma_mp, bob);
+    u3r_mp(ml_mp, loa);
+    _ACC_CHECK( 0 == mpz_cmp(ma_mp, ml_mp), "mp", 0 );
+    mpz_clear(ma_mp);
+    mpz_clear(ml_mp);
+    _ACC_CHECK( u3r_mug(bob) == u3r_mug(loa), "mug", 0 );
+  }
+
+  //  padded views: a pad shorter than the bob truncates the flat view,
+  //  a longer one is heap-backed and zero-filled past the bytes
+  //
+  {
+    u3r_view vue_u;
+
+    u3r_view_padd(&vue_u, bob, 100);
+    _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (100 == vue_u.len_w)
+             && (0 == memcmp(vue_u.byt_y, dat_y, 100)) && (1 == u3_blob_hands()),
+                "padd short", 100 );
+    u3r_view_done(&vue_u);
+
+    u3r_view_padd(&vue_u, bob, 6000);
+    c3_y zer_y[1000];
+    memset(zer_y, 0, sizeof(zer_y));
+    _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (6000 == vue_u.len_w)
+             && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
+             && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
+             && (0 == u3_blob_hands()),
+                "padd long", 6000 );
+    u3r_view_done(&vue_u);
+  }
+
+  #undef _ACC_CHECK
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob access: %zu hand(s) left open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  u3z(bob); u3z(loa);
+  c3_free(dat_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand access: ok\r\n");
+}
+
+#ifndef U3_OS_windows
+static volatile sig_atomic_t _crit_hit;
+
+static void
+_crit_handler(int sig)
+{
+  (void)sig;
+  _crit_hit++;
+}
+#endif
+
+/* _test_crit(): a signal raised inside a critical section is delivered
+**   at the outermost leave, not before.
+**
+**   POSIX only: the Windows emulation delivers through rsignal_raise()
+**   from another thread, which this single-threaded test cannot drive.
+*/
+static void
+_test_crit(void)
+{
+#ifndef U3_OS_windows
+  void (*old_f)(int) = signal(SIGINT, _crit_handler);
+
+  _crit_hit = 0;
+  u3m_crit_enter();
+  raise(SIGINT);
+  if ( _crit_hit ) {
+    fprintf(stderr, "\033[31mcrit: delivered inside section\033[0m\r\n");
+    exit(1);
+  }
+  u3m_crit_leave();
+  if ( 1 != _crit_hit ) {
+    fprintf(stderr, "\033[31mcrit: not delivered at leave\033[0m\r\n");
+    exit(1);
+  }
+
+  _crit_hit = 0;
+  u3m_crit_enter();
+  u3m_crit_enter();
+  raise(SIGINT);
+  u3m_crit_leave();
+  if ( _crit_hit ) {
+    fprintf(stderr, "\033[31mcrit: delivered at inner leave\033[0m\r\n");
+    exit(1);
+  }
+  u3m_crit_leave();
+  if ( 1 != _crit_hit ) {
+    fprintf(stderr, "\033[31mcrit: not delivered at outer leave\033[0m\r\n");
+    exit(1);
+  }
+
+  signal(SIGINT, old_f);
+  fprintf(stderr, "test crit: ok\r\n");
+#else
+  fprintf(stderr, "test crit: skipped on windows\r\n");
+#endif
 }
 
 /* _test_lifecycle(): end-to-end exercise of the blob-as-atom pipeline.
@@ -1193,7 +2936,7 @@ _test_map(void)
 **        (as happens when writing to the event log or sending over newt IPC).
 **     4. On replay (or IPC receive), u3s_tap_xeno reconstructs the bob atoms.
 **     5. Arvo reads the atoms' bytes via u3r_bytes, which re-materializes
-**        each bob atom through u3r_blob_load → u3_blob_load → mmap.
+**        each bob atom through u3r_blob_load → u3_blob_load → pread.
 **
 **   Also exercises the ram encoder's backref path for bob atoms (same bob
 **   appearing multiple times in a noun) and the dedup path through
@@ -1301,7 +3044,7 @@ _test_lifecycle(void)
   }
 
   //  walk the decoded noun and pull bytes out of each bob atom.  this
-  //  exercises u3r_bytes → u3r_blob_load → u3_blob_load (mmap from disk).
+  //  exercises u3r_bytes → u3r_blob_load → u3_blob_load (pread from disk).
   //
   u3_noun tag, cel, b2, rst;
   if ( c3n == u3r_cell(out, &tag, &cel) ) {
@@ -1349,7 +3092,7 @@ _test_lifecycle(void)
   }
 
   //  materialize each bob to bytes and compare to original input.
-  //  u3r_bytes → u3r_blob_load → u3_blob_load → mmap.
+  //  u3r_bytes → u3r_blob_load → u3_blob_load → pread.
   //
   {
     c3_y* buf_y = c3_malloc(dat1_d);
@@ -1919,6 +3662,7 @@ main(int argc, char* argv[])
   _setup();
 
   _test_path();            //  no filesystem
+  _test_mark_sweep();      //  first: the sweep must see a clean process
   _test_init();
   _test_stg_clean();
   _test_save_load();
@@ -1934,7 +3678,38 @@ main(int argc, char* argv[])
   _test_meld();
   _test_cue_blob();
   _test_met();
-  _test_map();
+  _test_hand();
+  _test_hand_dedup();
+  _test_hand_bail();
+  _test_hand_signal();
+  _test_hand_leak();
+  _test_hand_outer();
+  _test_hand_many();
+  _test_hand_comp();
+  _test_crit();
+  _test_hand_alarm();
+  _test_jam_bob();
+  _test_jets_bob();
+#ifndef U3_OS_windows
+  _test_hand_intr();
+  _test_hand_intr_crit();
+#endif
+  _test_hand_meme();
+  _test_hand_cue();
+#ifndef U3_OS_windows
+  _test_hand_emfile();
+  _test_hand_wipe();
+#endif
+  _test_hand_stop();
+#ifndef U3_OS_windows
+  _test_hand_trunc();
+#endif
+  _test_hand_gone();
+  _test_hand_nest();
+  _test_hand_edge();
+  _test_hand_share();
+  _test_hand_empty();
+  _test_hand_access();
   _test_lifecycle();
   _test_lease();
   _test_lease_persist();

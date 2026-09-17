@@ -1355,7 +1355,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    //  zero-copy read from [pac] (mmap if it's a bob) into the owned
+    //  zero-copy read from [pac] (through its blob hand if it's a bob) into the owned
     //  packet buffer.  hun_y is long-lived (mutated in place for origin
     //  forwarding, freed on send), so we still copy into it — but using
     //  u3r_view skips the full-blob loom alloc that u3r_bytes →

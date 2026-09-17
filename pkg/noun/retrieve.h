@@ -438,20 +438,27 @@
       */
         typedef enum {
           u3r_view_loom = 0,    //  aliases a pug's loom word buffer; free: none
-          u3r_view_blob,        //  mmap of a bob blob file;          free: munmap
+          u3r_view_blob,        //  blob hand's whole-file buffer;    free: u3_blob_close
           u3r_view_flat,        //  cat bytes inline                  free: none
           u3r_view_heap         //  u3a_malloc'd pad buffer;          free: u3a_free
         } u3r_view_e;
 
       /* u3r_view: zero-copy read-only view over an atom's significant bytes.
+      **
+      **   A bob view holds a reference to the blob's registry hand (see
+      **   u3_blob_hand in blob.h); the bytes are the hand's buffer, shared
+      **   with every other view of the same blob and released with the
+      **   last close, or by the sweep when a bail unwinds the road.
       */
+        struct _u3_blob_hand;
+
         typedef struct {
           const c3_y* byt_y;
           c3_w        len_w;
           u3r_view_e  kin_e;
           union {
-            c3_d      map_d;    //  blob: mmap length for munmap
-            c3_d      raw_d;    //  flat: inline cat bytes
+            struct _u3_blob_hand* han_u;    //  blob: registry hand
+            c3_d                  raw_d;    //  flat: inline cat bytes
           } u;
         } u3r_view;
 
@@ -671,29 +678,32 @@
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
 
-      /* u3r_blob_load(): materialize a bob atom by loading from the blob store.
+      /* u3r_blob_load(): materialize a bob atom as a loom atom.
       **
-      **   Returns a normal indirect atom with the blob's bytes, or u3_none on
-      **   failure. [pax_c] is the pier path ($pier/).
-      **   Does NOT consume [a]; caller must manage refcounts as usual.
+      **   Reads the whole blob into a fresh atom.  Returns u3_none if the
+      **   file is missing.  Only for callers that need the atom itself;
+      **   readers of a range go through the hand (u3r_bytes and friends).
       */
-      u3_weak
-      u3r_blob_load(u3_atom a, const c3_c* pax_c);
+        u3_weak
+        u3r_blob_load(u3_atom a);
 
-      /* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
+      /* u3r_blob_cut(): [wid_w] bloqs of size [met_g] from bloq [fum_d] of bob [a].
       **
-      **   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
-      **   Release with u3r_blob_umap(ptr, *len_d) when done.
-      **   Uses u3C.dir_c as the pier path.
-      **   No loom allocation is performed.
+      **   Byte-aligned bloqs only (met_g >= 3).  Reads the range straight
+      **   from the blob into a fresh zeroed slab, so the result costs no
+      **   more than its own size; bloqs past the end of the file are zero.
+      **   Returns u3_none if the blob cannot be opened.
       */
-      const c3_y*
-      u3r_blob_mmap(u3_atom a, c3_d* len_d);
+        u3_weak
+        u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a);
 
-      /* u3r_blob_umap(): release a mapping from u3r_blob_mmap().
+      /* u3r_blob_open(): open a bob atom's blob through the handle registry.
+      **
+      **   Uses u3C.dir_c as the pier path.  Returns 0 (without bailing) if
+      **   the file is missing or empty; release with u3_blob_close().
       */
-      void
-      u3r_blob_umap(const c3_y* ptr_y, c3_d len_d);
+        struct _u3_blob_hand*
+        u3r_blob_open(u3_atom a);
 
       /* u3r_blob_met(): compute bit-length of a bob atom without materialization.
       **

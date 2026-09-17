@@ -40,10 +40,9 @@ u3qc_sew(u3_atom a,
   }
   else if ( c3y == u3a_is_bob(e) ) {
     //  zero-copy view on the blob file.  the legacy src_u->buf_w
-    //  cast would have returned seq_w for bobs; mmap is page-aligned
-    //  (therefore word-aligned) and POSIX guarantees bytes past EOF
-    //  within the mapped last page read as zero, so the word-at-a-time
-    //  read by u3r_chop_words is safe.
+    //  cast would have returned seq_w for bobs; the hand's buffer is
+    //  zero-padded to a whole number of words (see u3_blob_data), so
+    //  the word-at-a-time read by u3r_chop_words is safe.
     //
     u3r_view_init(&vue_u, e);
     len_src_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;

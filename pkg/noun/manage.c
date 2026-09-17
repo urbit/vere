@@ -20,6 +20,7 @@
 
 #include "allocate.h"
 #include "backtrace.h"
+#include "blob.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -264,6 +265,10 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
   u3R->kid_p = 0;
+
+  //  the discarded roads' blob handles go with them
+  //
+  u3_blob_sweep_kids();
 }
 
 #if 0
@@ -482,6 +487,32 @@ void
 u3m_signal(c3_m sig_m)
 {
   rsignal_longjmp(u3_Signal, sig_m);
+}
+
+//  critical-section nesting depth (see u3m_crit_enter).
+//
+static c3_w _cm_crit_w = 0;
+
+/* u3m_crit_enter(): hold the signals whose handlers longjmp.
+*/
+void
+u3m_crit_enter(void)
+{
+  if ( 0 == _cm_crit_w++ ) {
+    rsignal_block();
+  }
+}
+
+/* u3m_crit_leave(): end a critical section begun by u3m_crit_enter().
+*/
+void
+u3m_crit_leave(void)
+{
+  u3_assert( _cm_crit_w );
+
+  if ( 0 == --_cm_crit_w ) {
+    rsignal_unblock();
+  }
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -1107,6 +1138,10 @@ u3m_bail(u3_noun how)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
+  //  every blob handle this road's frames hold dies with them
+  //
+  u3_blob_sweep(u3R);
+
   u3m_escape(how);
 }
 
@@ -1598,6 +1633,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_Ford_fresh_road_depth_h = 0;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
+    //  a critical section never longjmps on its own, but a fault inside
+    //  one must not leave signals held forever
+    //
+    while ( _cm_crit_w ) {
+      u3m_crit_leave();
+    }
+
     //  reinitialize trace state
     //
     u3t_init();
@@ -1657,6 +1699,17 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     /* Overload the error result.
     */
     pro = u3m_love(why);
+  }
+
+  /* No blob handle opened under the inner road may outlive it: a bail
+  ** already swept its own road, so anything left here was leaked by a
+  ** normal return without a close.
+  */
+  {
+    c3_w num_w = u3_blob_sweep_kids();
+    if ( num_w ) {
+      u3l_log("blob: %" PRIc3_w " handle reference(s) leaked by event", num_w);
+    }
   }
 
   /* Revert to external signal regime.
@@ -2625,6 +2678,7 @@ u3m_init(size_t len_i)
   _cm_crypto();
 
   u3a_init_once();
+  u3_blob_init();
 
   //  make sure GMP uses our malloc.
   //
@@ -2711,6 +2765,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  u3_blob_stop();
   u3t_sstack_exit();
 
   u3e_stop();

@@ -52,7 +52,7 @@
       }
 
       /* Chop the list atoms in.  Byte-aligned bloqs and bob atoms
-         take the mmap+memcpy fast path.
+         take the view+memcpy fast path.
       */
       {
         u3_noun cab = b;

@@ -1682,6 +1682,9 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 #ifdef U3_URTH_MASS
       uv_timer_start(&u3K.tim_u, (uv_timer_cb)u3_king_grab, 0, 0);
 #endif
+      //  blobs the king holds open, one per blob being streamed (http)
+      //
+      u3l_log("king: blob handles: %zu", u3_blob_hands());
       ret_o = c3y;
     }
     else {

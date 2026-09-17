@@ -33,7 +33,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     //  16-byte block boundary, passed to urcrypt's unsafe (no realloc)
     //  interface, which operates in place.
     //
-    //  NB: view the input (mmap for bobs, no full-blob loom alloc) and copy
+    //  NB: view the input (blob hand for bobs, no full-blob loom alloc) and copy
     //  into the buffer by hand; u3i_slab_from would go through u3r_words,
     //  which materializes a bob onto the loom before copying.
     //

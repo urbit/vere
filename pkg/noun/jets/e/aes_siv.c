@@ -112,7 +112,7 @@ _cqea_siv_en(c3_y*   key_y,
 
   //  urcrypt's siv entry points reverse [message] in place (loom byte order
   //  to crypto byte order) and do not restore it, so the buffer handed to
-  //  them must be a private copy.  view the input (mmap for bobs, no
+  //  them must be a private copy.  view the input (blob hand for bobs, no
   //  full-blob loom alloc) and copy; passing vue_u.byt_y directly would
   //  reverse the caller's atom where it sits on the loom.
   //
