@@ -2748,38 +2748,40 @@ _test_hand_access(void)
     }
   }
 
-  //  range readers
+  //  range readers.  the scratch buffers must hold the widest read: on
+  //  a 64-bit loom a word is eight bytes, so 1250 words is 10000 bytes.
   //
   {
-    c3_y* ba_y = c3_malloc(8192);
-    c3_y* bl_y = c3_malloc(8192);
+    const c3_z buf_z = 16384;
+    c3_y* ba_y = c3_malloc(buf_z);
+    c3_y* bl_y = c3_malloc(buf_z);
 
     const c3_w byt_w[][2] = { {0, 5000}, {10, 20}, {4990, 20}, {5000, 10}, {6000, 4} };
     for ( c3_w i_w = 0; i_w < sizeof(byt_w) / sizeof(*byt_w); i_w++ ) {
-      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
       u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], ba_y, bob);
       u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], bl_y, loa);
-      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "bytes", byt_w[i_w][0] );
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "bytes", byt_w[i_w][0] );
     }
 
     const c3_w hfs_w[][2] = { {0, 1250}, {1249, 3}, {1250, 2}, {1300, 4} };
     for ( c3_w i_w = 0; i_w < sizeof(hfs_w) / sizeof(*hfs_w); i_w++ ) {
-      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
       u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)ba_y, bob);
       u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)bl_y, loa);
-      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "halfs", hfs_w[i_w][0] );
-      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "halfs", hfs_w[i_w][0] );
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
       u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)ba_y, bob);
       u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)bl_y, loa);
-      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "words", hfs_w[i_w][0] );
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "words", hfs_w[i_w][0] );
     }
 
     const c3_w chs_w[][2] = { {0, 625}, {624, 3}, {625, 2}, {700, 4} };
     for ( c3_w i_w = 0; i_w < sizeof(chs_w) / sizeof(*chs_w); i_w++ ) {
-      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      memset(ba_y, 0xee, buf_z); memset(bl_y, 0xee, buf_z);
       u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)ba_y, bob);
       u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)bl_y, loa);
-      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "chubs", chs_w[i_w][0] );
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, buf_z), "chubs", chs_w[i_w][0] );
     }
 
     c3_free(ba_y);
