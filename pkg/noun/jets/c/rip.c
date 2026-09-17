@@ -178,7 +178,7 @@ u3qc_rip(u3_atom a,
   //
   u3_atom mat = u3_none;
   if ( c3y == u3a_is_bob(c) ) {
-    mat = u3r_blob_load(c, u3C.dir_c);
+    mat = u3r_blob_load(c);
     if ( u3_none == mat ) {
       return u3m_bail(c3__fail);
     }

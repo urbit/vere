@@ -678,14 +678,24 @@
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
 
-      /* u3r_blob_load(): materialize a bob atom by loading from the blob store.
+      /* u3r_blob_load(): materialize a bob atom as a loom atom.
       **
-      **   Returns a normal indirect atom with the blob's bytes, or u3_none on
-      **   failure. [pax_c] is the pier path ($pier/).
-      **   Does NOT consume [a]; caller must manage refcounts as usual.
+      **   Reads the whole blob into a fresh atom.  Returns u3_none if the
+      **   file is missing.  Only for callers that need the atom itself;
+      **   readers of a range go through the hand (u3r_bytes and friends).
       */
-      u3_weak
-      u3r_blob_load(u3_atom a, const c3_c* pax_c);
+        u3_weak
+        u3r_blob_load(u3_atom a);
+
+      /* u3r_blob_cut(): [wid_w] bloqs of size [met_g] from bloq [fum_d] of bob [a].
+      **
+      **   Byte-aligned bloqs only (met_g >= 3).  Reads the range straight
+      **   from the blob into a fresh zeroed slab, so the result costs no
+      **   more than its own size; bloqs past the end of the file are zero.
+      **   Returns u3_none if the blob cannot be opened.
+      */
+        u3_weak
+        u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a);
 
       /* u3r_blob_open(): open a bob atom's blob through the handle registry.
       **
