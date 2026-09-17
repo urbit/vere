@@ -370,6 +370,18 @@ u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax)
   u3z(mok);
 }
 
+/* _v_mark_blb_cb(): u3h_walk_with callback marking one u3a_blob record.
+**
+**   Each blb_p value atom is the loom offset of a walloc'd u3a_blob.
+**   Accumulates the marked size, in words, into *ptr_v.
+*/
+static void
+_v_mark_blb_cb(u3_noun kev, void* ptr_v)
+{
+  u3_post off_p = (u3_post)u3r_chub(0, u3t(kev));
+  *(c3_w*)ptr_v += u3a_mark_ptr(u3a_into(off_p));
+}
+
 /* u3v_mark(): mark arvo kernel.
 */
 u3m_quac*
@@ -390,9 +402,12 @@ u3v_mark()
   qua_u[2] = NULL;
   qua_u[3] = NULL;
 
-  //  mark blob bank HAMT.  values are atoms encoding loom offsets of
-  //  u3a_blob structs; the structs themselves are walloc'd blocks not
-  //  subject to noun mark/sweep.  u3h_mark covers nodes, keys, values.
+  //  mark blob bank HAMT and the u3a_blob records it points at.  values
+  //  are atoms encoding loom offsets of u3a_blob structs; u3h_mark covers
+  //  nodes, keys, and values, and _v_mark_blb_cb marks each record.  the
+  //  records are walloc'd, so an unmarked one is "leaked" to u3a_sweep,
+  //  which frees it under the bank and leaves every bob atom over it
+  //  naming a garbage file.
   //
   //  NB: home road only.  the bank lives on the home road, and u3h_mark
   //  reaches it through u3a_mark_ptr, which (unlike u3a_mark_noun) has no
@@ -401,9 +416,11 @@ u3v_mark()
   //
   if ( (&(u3H->rod_u) == u3R) && u3H->blb_p ) {
     u3h_mass mas_u = {0};
+    c3_w     rec_w = 0;
     u3h_mark(u3H->blb_p, &mas_u);
+    u3h_walk_with(u3H->blb_p, _v_mark_blb_cb, &rec_w);
 
-    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 6);
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
@@ -421,11 +438,16 @@ u3v_mark()
     mua_u[3]->nam_c = strdup("nodes");
     mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
 
-    mua_u[4] = NULL;
+    mua_u[4] = c3_calloc(sizeof(*mua_u[4]));
+    mua_u[4]->nam_c = strdup("records");
+    mua_u[4]->siz_w = rec_w * sizeof(c3_w);
+
+    mua_u[5] = NULL;
 
     qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
     qua_u[2]->nam_c = strdup("blob bank");
-    qua_u[2]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+    qua_u[2]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w + rec_w)
+                    * sizeof(c3_w);
     qua_u[2]->qua_u = mua_u;
   }
 
