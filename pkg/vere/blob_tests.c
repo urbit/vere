@@ -2674,6 +2674,186 @@ _test_hand_empty(void)
   fprintf(stderr, "test blob hand empty: ok\r\n");
 }
 
+/* _test_hand_access(): every fixed-width and range reader on a bob agrees
+**   with the materialized atom, including reads past the end, and none of
+**   them leaves a hand open.
+*/
+static void
+_test_hand_access(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+  u3C.dir_c = _tmp_pier;
+
+  const c3_w len_w = 5000;
+  c3_y*      dat_y = c3_malloc(len_w);
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + ((i_w * 11) % 241));
+  }
+
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, len_w, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob access: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_atom loa = u3i_bytes(len_w, dat_y);
+
+  #define _ACC_CHECK(cond, nam_c, i_w)                                        \
+    if ( !(cond) ) {                                                          \
+      fprintf(stderr, "\033[31mblob access: %s at %u\033[0m\r\n",             \
+              nam_c, (unsigned)(i_w));                                        \
+      exit(1);                                                                \
+    }
+
+  //  fixed-width readers, inside and past the end
+  //
+  {
+    const c3_w bit_w[]  = { 0, 7, 8, 12345, 39999, 40000, 40008, 100000 };
+    for ( c3_w i_w = 0; i_w < sizeof(bit_w) / sizeof(*bit_w); i_w++ ) {
+      _ACC_CHECK( u3r_bit(bit_w[i_w], bob) == u3r_bit(bit_w[i_w], loa),
+                  "bit", bit_w[i_w] );
+    }
+    const c3_w sho_w[]  = { 0, 1, 2499, 2500, 2600 };
+    for ( c3_w i_w = 0; i_w < sizeof(sho_w) / sizeof(*sho_w); i_w++ ) {
+      _ACC_CHECK( u3r_short(sho_w[i_w], bob) == u3r_short(sho_w[i_w], loa),
+                  "short", sho_w[i_w] );
+    }
+    const c3_w haf_w[]  = { 0, 1, 1249, 1250, 1300 };
+    for ( c3_w i_w = 0; i_w < sizeof(haf_w) / sizeof(*haf_w); i_w++ ) {
+      _ACC_CHECK( u3r_half(haf_w[i_w], bob) == u3r_half(haf_w[i_w], loa),
+                  "half", haf_w[i_w] );
+      _ACC_CHECK( u3r_word(haf_w[i_w], bob) == u3r_word(haf_w[i_w], loa),
+                  "word", haf_w[i_w] );
+    }
+    const c3_w chb_w[]  = { 0, 1, 624, 625, 700 };
+    for ( c3_w i_w = 0; i_w < sizeof(chb_w) / sizeof(*chb_w); i_w++ ) {
+      _ACC_CHECK( u3r_chub(chb_w[i_w], bob) == u3r_chub(chb_w[i_w], loa),
+                  "chub", chb_w[i_w] );
+    }
+  }
+
+  //  range readers
+  //
+  {
+    c3_y* ba_y = c3_malloc(8192);
+    c3_y* bl_y = c3_malloc(8192);
+
+    const c3_w byt_w[][2] = { {0, 5000}, {10, 20}, {4990, 20}, {5000, 10}, {6000, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(byt_w) / sizeof(*byt_w); i_w++ ) {
+      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], ba_y, bob);
+      u3r_bytes(byt_w[i_w][0], byt_w[i_w][1], bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "bytes", byt_w[i_w][0] );
+    }
+
+    const c3_w hfs_w[][2] = { {0, 1250}, {1249, 3}, {1250, 2}, {1300, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(hfs_w) / sizeof(*hfs_w); i_w++ ) {
+      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)ba_y, bob);
+      u3r_halfs(hfs_w[i_w][0], hfs_w[i_w][1], (c3_h*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "halfs", hfs_w[i_w][0] );
+      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)ba_y, bob);
+      u3r_words(hfs_w[i_w][0], hfs_w[i_w][1], (c3_w*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "words", hfs_w[i_w][0] );
+    }
+
+    const c3_w chs_w[][2] = { {0, 625}, {624, 3}, {625, 2}, {700, 4} };
+    for ( c3_w i_w = 0; i_w < sizeof(chs_w) / sizeof(*chs_w); i_w++ ) {
+      memset(ba_y, 0xee, 8192); memset(bl_y, 0xee, 8192);
+      u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)ba_y, bob);
+      u3r_chubs(chs_w[i_w][0], chs_w[i_w][1], (c3_d*)bl_y, loa);
+      _ACC_CHECK( 0 == memcmp(ba_y, bl_y, 8192), "chubs", chs_w[i_w][0] );
+    }
+
+    c3_free(ba_y);
+    c3_free(bl_y);
+  }
+
+  //  chop: bit, byte, and word bloqs at aligned and unaligned offsets,
+  //  into a destination that already carries bits
+  //
+  {
+    const c3_w chp_w[][4] = {   //  met, fum, wid, tou
+      { 0, 0, 40000, 0 }, { 0, 13, 1000, 7 }, { 0, 39990, 50, 3 },
+      { 3, 10, 4000, 3 }, { 3, 4990, 20, 0 }, { 3, 5000, 8, 1 },
+      { 5, 0, 1250, 0 }, { 5, 1249, 2, 1 }, { 5, 1250, 4, 0 },
+      { 6, 3, 100, 2 }
+    };
+    for ( c3_w i_w = 0; i_w < sizeof(chp_w) / sizeof(*chp_w); i_w++ ) {
+      c3_g met_g = chp_w[i_w][0];
+      c3_w wid_w = chp_w[i_w][2];
+      c3_w tou_w = chp_w[i_w][3];
+      c3_w siz_w = ((tou_w + wid_w) << met_g) + 128;
+
+      u3i_slab sa_u, sl_u;
+      u3i_slab_init(&sa_u, 0, siz_w);
+      u3i_slab_init(&sl_u, 0, siz_w);
+      sa_u.buf_w[0] = 0x5; sl_u.buf_w[0] = 0x5;
+
+      u3r_chop(met_g, chp_w[i_w][1], wid_w, tou_w, sa_u.buf_w, bob);
+      u3r_chop(met_g, chp_w[i_w][1], wid_w, tou_w, sl_u.buf_w, loa);
+
+      _ACC_CHECK( 0 == memcmp(sa_u.buf_y, sl_u.buf_y,
+                              (size_t)sa_u.len_w * u3a_word_bytes),
+                  "chop", i_w );
+      u3i_slab_free(&sa_u);
+      u3i_slab_free(&sl_u);
+    }
+  }
+
+  //  gmp import and mug
+  //
+  {
+    mpz_t ma_mp, ml_mp;
+    u3r_mp(ma_mp, bob);
+    u3r_mp(ml_mp, loa);
+    _ACC_CHECK( 0 == mpz_cmp(ma_mp, ml_mp), "mp", 0 );
+    mpz_clear(ma_mp);
+    mpz_clear(ml_mp);
+    _ACC_CHECK( u3r_mug(bob) == u3r_mug(loa), "mug", 0 );
+  }
+
+  //  padded views: a pad shorter than the bob truncates the flat view,
+  //  a longer one is heap-backed and zero-filled past the bytes
+  //
+  {
+    u3r_view vue_u;
+
+    u3r_view_padd(&vue_u, bob, 100);
+    _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (100 == vue_u.len_w)
+             && (0 == memcmp(vue_u.byt_y, dat_y, 100)) && (1 == u3_blob_hands()),
+                "padd short", 100 );
+    u3r_view_done(&vue_u);
+
+    u3r_view_padd(&vue_u, bob, 6000);
+    c3_y zer_y[1000];
+    memset(zer_y, 0, sizeof(zer_y));
+    _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (6000 == vue_u.len_w)
+             && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
+             && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
+             && (0 == u3_blob_hands()),
+                "padd long", 6000 );
+    u3r_view_done(&vue_u);
+  }
+
+  #undef _ACC_CHECK
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob access: %zu hand(s) left open\033[0m\r\n",
+            u3_blob_hands());
+    exit(1);
+  }
+
+  u3z(bob); u3z(loa);
+  c3_free(dat_y);
+  _tmp_clean();
+  fprintf(stderr, "test blob hand access: ok\r\n");
+}
+
 #ifndef U3_OS_windows
 static volatile sig_atomic_t _crit_hit;
 
@@ -3514,6 +3694,7 @@ main(int argc, char* argv[])
   _test_hand_edge();
   _test_hand_share();
   _test_hand_empty();
+  _test_hand_access();
   _test_lifecycle();
   _test_lease();
   _test_lease_persist();
