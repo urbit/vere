@@ -1224,9 +1224,11 @@ _test_met(void)
 }
 
 /* _fd_dead(): true if [fid_i] is no longer an open descriptor.
+** _fd_live(): true if [fid_i] is still one.
 **
-**   Not checkable through the CRT on Windows; the registry's own count
-**   is the assertion there.
+**   Neither is checkable through the CRT on Windows (probing a closed fd
+**   trips the invalid-parameter handler), so both answer yes there and
+**   the registry's own counts carry the assertion.
 */
 static c3_o
 _fd_dead(c3_i fid_i)
@@ -1236,6 +1238,17 @@ _fd_dead(c3_i fid_i)
   return c3y;
 #else
   return ( (-1 == fcntl(fid_i, F_GETFD)) && (EBADF == errno) ) ? c3y : c3n;
+#endif
+}
+
+static c3_o
+_fd_live(c3_i fid_i)
+{
+#ifdef U3_OS_windows
+  (void)fid_i;
+  return c3y;
+#else
+  return ( -1 != fcntl(fid_i, F_GETFD) ) ? c3y : c3n;
 #endif
 }
 
@@ -1351,7 +1364,7 @@ _test_hand_dedup(void)
   c3_i fid_i = one_u->fid_i;
   u3_blob_close(one_u);
 
-  if ( (1 != two_u->ref_w) || (c3y == _fd_dead(fid_i)) ) {
+  if ( (1 != two_u->ref_w) || (c3n == _fd_live(fid_i)) ) {
     fprintf(stderr, "\033[31mblob hand dedup: first close released fd\033[0m\r\n");
     exit(1);
   }
@@ -1498,7 +1511,7 @@ _test_hand_outer(void)
 
   //  the inner road shared this hand; only its references went
   //
-  if ( (1 != u3_blob_hands()) || (1 != han_u->ref_w) || (c3y == _fd_dead(han_u->fid_i)) ) {
+  if ( (1 != u3_blob_hands()) || (1 != han_u->ref_w) || (c3n == _fd_live(han_u->fid_i)) ) {
     fprintf(stderr, "\033[31mblob hand outer: home reference swept "
                     "(hands %zu ref %" PRIc3_w ")\033[0m\r\n",
             u3_blob_hands(), han_u->ref_w);
@@ -2515,7 +2528,7 @@ _test_hand_nest(void)
   u3z(u3m_soft_top(0, 1 << 12, _hand_nest_cb, 0));
 
   if (  (1 != u3_blob_hands()) || (1 != han_u->ref_w)
-     || (fid_i != han_u->fid_i) || (c3y == _fd_dead(fid_i)) )
+     || (fid_i != han_u->fid_i) || (c3n == _fd_live(fid_i)) )
   {
     fprintf(stderr, "\033[31mblob hand nest: home reference disturbed"
                     "\033[0m\r\n");
