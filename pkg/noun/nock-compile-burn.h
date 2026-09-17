@@ -63,8 +63,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 #define BURN()  goto *lab[*ip++]
 #define JUMP(t)  (ip = pog_u->byc_u.ops_y + (t))
 #define PUT(d, v)  do {                                                         \
-    LOSE(reg[d]);                                                               \
+    u3_noun _o = reg[d];                                                        \
     reg[d] = (v);                                                               \
+    LOSE(_o);                                                                   \
   } while ( 0 )
 
 #define PUSH(n)  _nc_push(rod_u, mov_ws, n)
