@@ -28,40 +28,42 @@
       if ( c3n == u3r_safe_chub(c, &c_d) ) return u3m_bail(c3__fail);
       if ( 0 == c_d ) return 0;
 
-      c3_d        map_d = 0;
-      const c3_y* map_y = u3r_blob_mmap(d, &map_d);
+      //  the requested range is read straight from the blob into the
+      //  slab.  bailing with the hand open is safe: u3m_bail sweeps it
+      //  with the road.
+      //
+      u3_blob_hand* han_u = u3r_blob_open(d);
 
-      if ( map_y ) {
+      if ( han_u ) {
         c3_g shf_g = a_g - 3;
         c3_d off_d = b_d << shf_g;
         c3_d byt_d = c_d << shf_g;
 
         c3_d cpy_d = byt_d;
-        if ( off_d >= map_d ) {
+        if ( off_d >= han_u->len_d ) {
           cpy_d = 0;
         }
-        else if ( off_d + cpy_d > map_d ) {
-          cpy_d = map_d - off_d;
+        else if ( off_d + cpy_d > han_u->len_d ) {
+          cpy_d = han_u->len_d - off_d;
         }
 
         //  c_d must fit in c3_w for slab_init (max 4GB slab per cut)
         //
         if ( c_d > (c3_d)c3_w_max ) {
-          u3r_blob_umap(map_y, map_d);
           return u3m_bail(c3__fail);
         }
 
         u3i_slab sab_u;
         u3i_slab_init(&sab_u, a_g, (c3_w)c_d);
 
-        if ( cpy_d ) {
-          memcpy(sab_u.buf_y, map_y + off_d, (size_t)cpy_d);
+        if ( cpy_d && (cpy_d != u3_blob_read(han_u, off_d, sab_u.buf_y, (c3_z)cpy_d)) ) {
+          return u3m_bail(c3__fail);
         }
 
-        u3r_blob_umap(map_y, map_d);
+        u3_blob_close(han_u);
         return u3i_slab_mint(&sab_u);
       }
-      //  mmap failed — fall through to generic path
+      //  open failed — fall through to generic path
     }
 
     //  non-blob path: uses c3_w (offsets must fit in 32 bits)

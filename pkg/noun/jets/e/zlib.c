@@ -38,7 +38,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  //  zero-copy view on the compressed input (mmap for bobs; the
+  //  zero-copy view on the compressed input (blob hand for bobs; the
   //  legacy `vat_u->buf_w + pos_w` cast returned seq_w for bobs).
   //  the view stays live for the whole inflate loop so the stream
   //  reader can scan it freely; every return path must call

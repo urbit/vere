@@ -1,6 +1,7 @@
 /// @file
 
 #include "serial.h"
+#include "blob.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -89,38 +90,36 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    //  for bob atoms, mmap the blob file directly to avoid loom allocation.
-    //  for normal atoms, use u3r_met as before.
+    //  a bob atom streams from its blob hand in windows; it is never
+    //  materialized or buffered whole.  bailing with the hand open is
+    //  safe: u3m_bail sweeps it with the road.
     //
-    c3_o         bob_o = u3a_is_bob(a);
-    c3_d         byt_d = 0;
-    const c3_y*  byt_y = 0;
+    u3_blob_hand* han_u = 0;
+    c3_d          byt_d = 0;      //  bob: significant bytes
 
     c3_w   a_w;
-    if ( c3y == bob_o ) {
-      byt_y = u3r_blob_mmap(a, &byt_d);
-      if ( !byt_y ) {
+    if ( c3y == u3a_is_bob(a) ) {
+      han_u = u3r_blob_open(a);
+      if ( !han_u ) {
         u3m_bail(c3__fail);
         return;
       }
-      //  compute bit-length (met) from mmap'd bytes; strip trailing zero bytes
-      //  and find the MSB position of the last non-zero byte.
-      //
-      {
-        c3_d pos_d = byt_d;
-        while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-          pos_d--;
-        }
-        if ( 0 == pos_d ) {
-          //  blob is all zeros → atom value is 0; treat as zero atom
-          u3r_blob_umap(byt_y, byt_d);
-          _cs_jam_fib_chop(fib_u, 1, 1);
-          return;
-        }
-        c3_y top_y = byt_y[pos_d - 1];
-        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-        a_w = (c3_w)((pos_d - 1) * 8 + (c3_d)(8 - clz_y));
+
+      c3_d met_d = u3_blob_hand_met(han_u);
+
+      if ( 0 == met_d ) {
+        //  blob is all zeros → atom value is 0; treat as zero atom
+        u3_blob_close(han_u);
+        _cs_jam_fib_chop(fib_u, 1, 1);
+        return;
       }
+      if ( met_d > (c3_w_max - 64) ) {
+        u3m_bail(c3__fail);
+        return;
+      }
+
+      a_w   = (c3_w)met_d;
+      byt_d = (met_d + 7) >> 3;
     }
     else {
       a_w = u3r_met(0, a);
@@ -135,7 +134,6 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       c3_w met_w = a_w + (2 * b_w);
 
       if ( a_w > (c3_w_max - 64) ) {
-        if ( byt_y ) u3r_blob_umap(byt_y, byt_d);
         u3m_bail(c3__fail);
         return;
       }
@@ -179,12 +177,34 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
       //  _cs_jam_fib_chop(fib_u, a_w, a);
       //
-      if ( byt_y ) {
-        //  write bob atom bytes directly from mmap, no loom allocation
+      if ( han_u ) {
+        //  stream the bob's bytes through a word-aligned window.  each
+        //  window starts at a whole number of words into the atom, so
+        //  u3r_chop_words sees the same bit alignment it would for the
+        //  whole buffer.
         //
-        c3_w len_w = (c3_w)((byt_d + sizeof(c3_w) - 1) / sizeof(c3_w));
-        u3r_chop_words(0, 0, a_w, bit_w, buf_w, len_w, (const c3_w*)byt_y);
-        u3r_blob_umap(byt_y, byt_d);
+        c3_w win_w[2048];
+        c3_d off_d = 0;
+
+        while ( off_d < byt_d ) {
+          c3_z ask_z = ( (byt_d - off_d) < sizeof(win_w) )
+                     ? (c3_z)(byt_d - off_d)
+                     : sizeof(win_w);
+          c3_z pad_z = (ask_z + sizeof(c3_w) - 1) & ~(sizeof(c3_w) - 1);
+          c3_w wid_w = c3_min(a_w - (c3_w)(off_d * 8), (c3_w)(ask_z * 8));
+
+          if ( ask_z != u3_blob_read(han_u, off_d, (c3_y*)win_w, ask_z) ) {
+            u3m_bail(c3__fail);
+            return;
+          }
+          memset((c3_y*)win_w + ask_z, 0, pad_z - ask_z);
+
+          u3r_chop_words(0, 0, wid_w, bit_w + (c3_w)(off_d * 8), buf_w,
+                         (c3_w)(pad_z / sizeof(c3_w)), win_w);
+          off_d += ask_z;
+        }
+
+        u3_blob_close(han_u);
       }
       else {
         u3r_chop(0, 0, a_w, bit_w, buf_w, a);
@@ -302,14 +322,39 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     ur_bsw_atom64(rit_u, (c3_y)met_w, (c3_d)a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    //  bob atom: mmap the blob file and write bytes directly into the bitstream
+    //  bob atom: write the tag and length prefix, then stream the bytes
+    //  from the blob hand in windows.  the total must be exactly met_w
+    //  bits, which is what u3r_blob_met() gave the caller.
     //
-    c3_d        len_d;
-    const c3_y* byt_y = u3r_blob_mmap(a, &len_d);
-    if ( byt_y ) {
-      ur_bsw_atom_bytes(rit_u, (c3_d)met_w, (c3_y*)byt_y);
-      u3r_blob_umap(byt_y, len_d);
+    u3_blob_hand* han_u = u3r_blob_open(a);
+    if ( !han_u ) {
+      u3m_bail(c3__fail);
     }
+
+    ur_bsw_atom_head(rit_u, (c3_d)met_w);
+
+    {
+      c3_y win_y[8192];
+      c3_d off_d = 0;
+      c3_w rem_w = met_w;
+
+      while ( rem_w ) {
+        c3_w bit_w = ( rem_w < (sizeof(win_y) * 8) )
+                   ? rem_w
+                   : (c3_w)(sizeof(win_y) * 8);
+        c3_z ask_z = (bit_w + 7) >> 3;
+
+        if ( ask_z != u3_blob_read(han_u, off_d, win_y, ask_z) ) {
+          u3m_bail(c3__fail);
+        }
+
+        ur_bsw_bytes(rit_u, bit_w, win_y);
+        off_d += ask_z;
+        rem_w -= bit_w;
+      }
+    }
+
+    u3_blob_close(han_u);
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
@@ -1024,9 +1069,10 @@ u3s_cue_atom(u3_atom a)
     return u3s_cue_bytes((c3_d)len_w, (c3_y*)&a);
   }
 
-  //  bob atom: mmap the backing file instead of dereferencing buf_w
+  //  bob atom: read through a blob view instead of dereferencing buf_w
   //  (which for a bob would yield seq_h).  The view stays live for
-  //  the whole cue so the bitstream reader can scan freely.
+  //  the whole cue so the bitstream reader can scan freely; if cue
+  //  bails, u3m_bail sweeps the view's hand with the road.
   //
   if ( c3y == u3a_is_bob(a) ) {
     u3r_view vue_u;

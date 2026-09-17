@@ -21,7 +21,7 @@
     u3r_bytes(0, 32, key_y, key);
     u3r_bytes(0, 8, nonce_y, nonce);
 
-    //  allocate output slab directly; copy plaintext from view (mmap
+    //  allocate output slab directly; copy plaintext from view (blob hand
     //  for bobs) into the slab; chacha mutates in place.  saves both
     //  a full-blob loom allocation (from u3r_bytes_alloc → u3r_blob_load)
     //  and the intermediate heap buffer.

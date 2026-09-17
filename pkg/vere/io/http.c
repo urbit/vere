@@ -208,11 +208,10 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 
 /* _cttp_bods_free(): free body structure.
 **
-**   Ownership rule for mmap-backed chains (see u3_hbod in vere.h):
-**   the owner chunk (tail in bob chains) carries own_y != 0 and
-**   map_d != 0; earlier view chunks carry map_y != 0 but own_y == 0.
-**   Free walks head→tail, so the owner is released only after every
-**   view that referenced its mapping.
+**   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
+**   shares one hand; the tail carries own_o and closes it.  Free walks
+**   head→tail, so the hand is released only after every window that
+**   read through it.
 */
 static void
 _cttp_bods_free(u3_hbod* bod_u)
@@ -220,51 +219,69 @@ _cttp_bods_free(u3_hbod* bod_u)
   while ( bod_u ) {
     u3_hbod* nex_u = bod_u->nex_u;
 
-    if ( bod_u->own_y ) {
-      //  owner: release the whole mapping
-      u3_blob_umap(bod_u->own_y, bod_u->map_d);
-    }
-    else if ( bod_u->map_y ) {
-      //  view: hint kernel to drop page-cache pages we've already sent
-      //
-      madvise(bod_u->map_y, bod_u->len_w, MADV_DONTNEED);
+    if ( bod_u->han_u ) {
+      c3_free(bod_u->buf_y);
+
+      if ( c3y == bod_u->own_o ) {
+        u3_blob_close(bod_u->han_u);
+      }
     }
     c3_free(bod_u);
     bod_u = nex_u;
   }
 }
 
-//  chunk size for mmap-backed response streaming.  Each h2o_send call
+//  chunk size for blob-backed response streaming.  Each h2o_send call
 //  covers up to this many bytes so TLS output pools / HTTP/2 frame
 //  buffers / libuv write queues stay bounded and flow control drives
-//  the next fetch from the mmap.
+//  the next read from the blob.
 //
 #define U3_HTTP_BOB_CHUNK  (1U << 20)
 
 /* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
-**   mmap-backed hbods — no copy, no loom allocation.
+**   blob-backed hbods — no loom allocation, no whole-file buffer.
 **
-**   The blob is mmap'd once; the chain slices the mapping into
-**   U3_HTTP_BOB_CHUNK-sized views.  Ownership of the mapping is
-**   carried by the tail chunk (own_y = mmap base, map_d = map size);
-**   earlier chunks are pure views (own_y = 0).
+**   The blob is opened once through the handle registry; the chain is
+**   a list of U3_HTTP_BOB_CHUNK-sized windows that _http_hgen_send reads
+**   into heap buffers only as h2o asks for them.  The tail chunk owns
+**   the hand (own_o) and closes it when the chain is freed.
 **
-**   Returns 0 if the blob can't be mapped (missing file, empty, etc.);
-**   caller should fall back to the inline path.
+**   Returns 0 if the blob can't be opened (missing file, empty, too
+**   short); the caller fails the response.
 */
 static u3_hbod*
 _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 {
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
-  c3_d map_d = 0;
+  //  the hand outlives this event: it must belong to the home road,
+  //  the one road no bail or signal ever sweeps.
+  //
+  u3_assert( &(u3H->rod_u) == u3R );
 
-  const c3_y* map_y = u3_blob_mmap(u3C.dir_c, mug_h, seq_h, &map_d);
-  if ( !map_y || (c3_d)len_w > map_d ) {
-    if ( map_y ) {
-      u3_blob_umap(map_y, map_d);
-    }
+  u3_blob_hand* han_u = u3r_blob_open(a);
+
+  if ( !han_u ) {
     return 0;
+  }
+  if ( (c3_d)len_w > han_u->len_d ) {
+    u3l_log("http: bob body %" PRIc3_w " bytes exceeds blob %" PRIc3_d,
+            len_w, han_u->len_d);
+    u3_blob_close(han_u);
+    return 0;
+  }
+
+  //  a zero-length body needs no window, and no hand
+  //
+  if ( 0 == len_w ) {
+    u3_hbod* bod_u = c3_malloc(1 + sizeof(*bod_u));
+    bod_u->nex_u    = 0;
+    bod_u->len_w    = 0;
+    bod_u->buf_y    = 0;
+    bod_u->han_u    = 0;
+    bod_u->off_d    = 0;
+    bod_u->own_o    = c3n;
+    bod_u->hun_y[0] = 0;
+    u3_blob_close(han_u);
+    return bod_u;
   }
 
   u3_hbod* hed_u = 0;
@@ -278,9 +295,10 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
     u3_hbod* bod_u = c3_malloc(sizeof(*bod_u));
     bod_u->nex_u = 0;
     bod_u->len_w = cnk_w;
-    bod_u->map_y = (c3_y*)map_y + off_w;    //  iovec base (this slice)
-    bod_u->own_y = 0;                        //  view, not owner
-    bod_u->map_d = 0;
+    bod_u->buf_y = 0;              //  read at send time
+    bod_u->han_u = han_u;
+    bod_u->off_d = off_w;
+    bod_u->own_o = c3n;
 
     if ( !hed_u ) hed_u = bod_u;
     else          tal_u->nex_u = bod_u;
@@ -289,25 +307,21 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
     off_w += cnk_w;
   }
 
-  //  last chunk is promoted to owner.  map_y still points at its own
-  //  slice (for its iovec), while own_y + map_d cover the full mmap
-  //  region so _cttp_bods_free can munmap the whole thing at once.
-  //
-  tal_u->own_y = (c3_y*)map_y;
-  tal_u->map_d = map_d;
+  tal_u->own_o = c3y;
   return hed_u;
 }
 
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
 **
-**   Bob atoms take the zero-copy path: we mmap the blob file on the
-**   king's side and hand h2o a pointer into the mapping.  Without
+**   Bob atoms take the streaming path: the blob is read window by
+**   window on the king's side as h2o drains the response.  Without
 **   this, u3r_bytes would call u3r_blob_load, which allocates a
 **   full-blob-sized atom in king's loom — that's where you'd see
 **   the RSS of the king process spike to match file size.
 **
-**   Smaller bodies (or bob atoms whose blob file is missing) fall
-**   through to the original materialize-into-heap path.
+**   Returns 0 for a bob whose blob cannot be opened; the caller fails
+**   the response.  Falling back to the inline path would open the
+**   same file again and, failing again, serve zeros.
 */
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
@@ -319,26 +333,27 @@ _cttp_bod_from_octs(u3_noun oct)
   }
   len_w = u3h(oct);
 
-  //  zero-copy path for bob atoms
+  //  streaming path for bob atoms
   //
   if ( c3y == u3a_is_bob(u3t(oct)) ) {
     u3_hbod* bod_u = _cttp_bod_from_bob(u3t(oct), len_w);
-    if ( bod_u ) {
-      u3z(oct);
-      return bod_u;
+
+    if ( !bod_u ) {
+      u3l_log("http: blob %08" PRIx32 "/%08" PRIx32 " unavailable",
+              u3a_bob_mug(u3t(oct)), u3a_bob_seq(u3t(oct)));
     }
-    //  fall through: blob file missing; u3r_bytes below will bail
-    //  through the u3r_blob_load → u3m_bail path.  not ideal but
-    //  matches pre-blob semantics.
+    u3z(oct);
+    return bod_u;
   }
 
   {
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
-    bod_u->map_y = 0;
-    bod_u->own_y = 0;
-    bod_u->map_d = 0;
+    bod_u->buf_y = 0;
+    bod_u->han_u = 0;
+    bod_u->off_d = 0;
+    bod_u->own_o = c3n;
     u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
 
     bod_u->nex_u = 0;
@@ -370,7 +385,7 @@ _cttp_bods_to_vec(u3_hbod* bod_u, c3_w* tot_w)
   len_w = 0;
 
   while( bod_u ) {
-    c3_y* base_y = bod_u->map_y ? bod_u->map_y : bod_u->hun_y;
+    c3_y* base_y = bod_u->buf_y ? bod_u->buf_y : bod_u->hun_y;
     vec_u[len_w] = h2o_iovec_init(base_y, bod_u->len_w);
     len_w++;
     bod_u = bod_u->nex_u;
@@ -1416,9 +1431,11 @@ _http_hgen_dispose(void* ptr_v)
 **
 **   Inline (small) bodies fit in a single chunk so this is a no-op
 **   change for them.  Large bob-atom bodies chunk naturally because
-**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized views — this
-**   is what keeps king's memory and h2o's internal buffers bounded
-**   while streaming multi-GiB files.
+**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized windows, and a
+**   window is read from the blob only here, as it is about to be sent.
+**   At most two batches of windows are ever resident (this one and the
+**   one h2o is still draining), which is what keeps king's memory and
+**   h2o's internal buffers bounded while streaming multi-GiB files.
 */
 static void
 _http_hgen_send(u3_hgen* gen_u)
@@ -1454,6 +1471,23 @@ _http_hgen_send(u3_hgen* gen_u)
   //
   _cttp_bods_free(gen_u->nud_u);
   gen_u->nud_u = send_u;
+
+  //  read this batch's blob windows into heap buffers
+  //
+  for ( u3_hbod* cur_u = send_u; cur_u; cur_u = cur_u->nex_u ) {
+    if ( cur_u->han_u && !cur_u->buf_y ) {
+      cur_u->buf_y = c3_malloc(cur_u->len_w);
+
+      c3_z got_z = u3_blob_read(cur_u->han_u, cur_u->off_d,
+                                cur_u->buf_y, cur_u->len_w);
+
+      if ( got_z != cur_u->len_w ) {
+        u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
+        memset(cur_u->buf_y + got_z, 0, cur_u->len_w - got_z);
+        gen_u->sat_e = u3_hgen_fail;
+      }
+    }
+  }
 
   //  build iovec for this batch
   //
@@ -1610,6 +1644,17 @@ _http_start_respond(u3_hreq* req_u,
   gen_u->hed_u = deh_u;
   gen_u->req_u = req_u;
 
+  //  a bob body whose blob could not be opened: fail the response
+  //  outright rather than send a truncated or zero-filled one
+  //
+  if ( (u3_nul != data) && !emp_t && !gen_u->bod_u ) {
+    gen_u->sat_e = u3_hgen_done;
+    req_u->gen_u = gen_u;
+    h2o_send_error_500(rec_u, "Internal Server Error", "blob unavailable", 0);
+    u3z(status); u3z(headers); u3z(data); u3z(complete);
+    return;
+  }
+
   //  tell h2o the true content-length from eyre's response headers.
   //  without this, h2o defaults to transfer-encoding: chunked.
   //  the old code used gen_u->bod_u->len_w which is only the first
@@ -1655,7 +1700,12 @@ _http_continue_respond(u3_hreq* req_u,
   if ( u3_nul != data ) {
     u3_hbod* bod_u = _cttp_bod_from_octs(u3k(u3t(data)));
 
-    if ( 0 == gen_u->bod_u ) {
+    //  a bob body whose blob could not be opened: error the stream
+    //
+    if ( !bod_u ) {
+      gen_u->sat_e = u3_hgen_fail;
+    }
+    else if ( 0 == gen_u->bod_u ) {
       gen_u->bod_u = bod_u;
     }
     else {

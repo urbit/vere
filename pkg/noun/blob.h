@@ -132,25 +132,107 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
-    /* u3_blob_mmap(): mmap a blob file for direct byte access.
+    /* u3_blob_hand: process-global handle on an open blob file.
     **
-    ** Returns a read-only pointer to the blob's bytes (length in *len_d),
-    ** or NULL on failure.  The mapping must be released via u3_blob_unmap().
-    ** No loom allocation is performed.
+    **   One hand per blob per process: every concurrent reader shares the
+    **   fd and, once a flat view asks for it, the whole-file buffer.  A
+    **   hand is referenced per road; it closes when its last reference
+    **   goes, or when a bail or signal unwinds a road that still holds
+    **   references (u3_blob_sweep, u3_blob_sweep_kids).  Every mutation of
+    **   the registry runs inside u3m_crit_enter()/u3m_crit_leave(), so a
+    **   signal can neither leak the fd nor interrupt the table.
     */
-      const c3_y*
-      u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d);
+      typedef struct _u3_blob_ref {
+        void*                rod_v;    //  owning road (u3R at open)
+        c3_w                 ref_w;    //  references held by that road
+        struct _u3_blob_ref* nex_u;
+      } u3_blob_ref;
 
-    /* u3_blob_umap(): release a mapping returned by u3_blob_mmap().
+      typedef struct _u3_blob_hand {
+        c3_d         bid_d;   //  (mug_h << 32) | seq_h
+        c3_i         fid_i;   //  O_RDONLY fd, open for the hand's lifetime
+        c3_d         len_d;   //  file size
+        c3_d         met_d;   //  cached bit-length (0 until asked)
+        c3_y*        buf_y;   //  whole-file buffer (0 until u3_blob_data)
+        c3_w         ref_w;   //  total references
+        u3_blob_ref* ref_u;   //  per-road references
+      } u3_blob_hand;
+
+    /* u3_blob_init(): initialize the handle registry (from u3m_init).
     */
       void
-      u3_blob_umap(const c3_y* ptr_y, c3_d len_d);
+      u3_blob_init(void);
+
+    /* u3_blob_stop(): release every handle and the registry (from u3m_stop).
+    */
+      void
+      u3_blob_stop(void);
+
+    /* u3_blob_open(): open a blob, or add a reference to its open hand.
+    **
+    **   The reference is owned by the current road.  Returns 0 (without
+    **   bailing) if the file is missing or empty.
+    */
+      u3_blob_hand*
+      u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
+
+    /* u3_blob_close(): drop the current road's reference to [han_u].
+    **
+    **   The hand is closed and freed when its last reference goes.
+    */
+      void
+      u3_blob_close(u3_blob_hand* han_u);
+
+    /* u3_blob_read(): read [len_z] bytes at [off_d] into [dst_y].
+    **
+    **   Returns the number of bytes read; short only at end of file or
+    **   on error.  Never allocates.
+    */
+      c3_z
+      u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
+
+    /* u3_blob_data(): the whole file, read into a heap buffer on first use.
+    **
+    **   The buffer lives as long as the hand and is zero-padded to a
+    **   multiple of 8 bytes, so word-at-a-time readers stay in bounds.
+    **   Returns 0 on a short read.
+    */
+      const c3_y*
+      u3_blob_data(u3_blob_hand* han_u);
+
+    /* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
+    **
+    **   Equivalent to u3r_met(0, atom).  Scans backward from the end of the
+    **   file in small windows.  Returns 0 if the content is all zero.
+    */
+      c3_d
+      u3_blob_hand_met(u3_blob_hand* han_u);
+
+    /* u3_blob_sweep(): release every reference held by road [rod_v].
+    **
+    **   Called from u3m_bail before the longjmp: the road's C frames, and
+    **   with them every view they held, are about to vanish.
+    */
+      void
+      u3_blob_sweep(void* rod_v);
+
+    /* u3_blob_sweep_kids(): release every reference not held by the home road.
+    **
+    **   Called after a signal unwinds to the top level, and at the end of
+    **   u3m_soft_top.  Returns the number of references released.
+    */
+      c3_w
+      u3_blob_sweep_kids(void);
+
+    /* u3_blob_hands(): number of open hands.
+    */
+      c3_z
+      u3_blob_hands(void);
 
     /* u3_blob_met(): compute the bit-length of a blob without full materialization.
     **
-    ** Equivalent to u3r_met(0, materialized_atom) but avoids loading the whole
-    ** blob into the loom.  Reads only the file size and last byte.
-    ** Returns 0 on error (blob missing or empty).
+    **   Equivalent to u3r_met(0, materialized_atom) but avoids loading the whole
+    **   blob into the loom.  Returns 0 on error (blob missing or empty).
     */
       c3_d
       u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);

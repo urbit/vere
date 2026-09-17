@@ -469,43 +469,58 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     return 0;
   }
 
-  //  bob atom: stream from blob store to file
+  //  bob atom: stream from the blob store to the file through the
+  //  blob's registry hand, in windows
   //
   if ( c3y == u3a_is_bob(dat) ) {
-    c3_h bob_mug_h = u3a_bob_mug(dat);
-    c3_h bob_seq_h = u3a_bob_seq(dat);
-    c3_c src_c[8192];
-    u3_blob_path(src_c, u3C.dir_c, bob_mug_h, bob_seq_h);
+    u3_blob_hand* han_u = u3r_blob_open(dat);
 
-    c3_i src_i = open(src_c, O_RDONLY);
-    if ( src_i < 0 ) {
-      u3l_log("error opening blob %s for reading: %s",
-              src_c, strerror(errno));
+    if ( !han_u ) {
+      u3l_log("error opening blob %08" PRIx32 "/%08" PRIx32 " for reading",
+              u3a_bob_mug(dat), u3a_bob_seq(dat));
       close(fid_i);
       u3z(mim);
       return 0;
     }
 
     c3_y buf_y[65536];
-    ssize_t got_i;
-    while ( (got_i = read(src_i, buf_y, sizeof(buf_y))) > 0 ) {
+    c3_d off_d = 0;
+
+    while ( off_d < han_u->len_d ) {
+      c3_z ask_z = ( (han_u->len_d - off_d) < sizeof(buf_y) )
+                 ? (c3_z)(han_u->len_d - off_d)
+                 : sizeof(buf_y);
+      c3_z got_z = u3_blob_read(han_u, off_d, buf_y, ask_z);
+
+      if ( 0 == got_z ) {
+        u3l_log("error reading blob %08" PRIx32 "/%08" PRIx32,
+                u3a_bob_mug(dat), u3a_bob_seq(dat));
+        u3_blob_close(han_u);
+        close(fid_i);
+        u3z(mim);
+        return 0;
+      }
+
       c3_y* ptr_y = buf_y;
-      ssize_t rem_i = got_i;
-      while ( rem_i > 0 ) {
-        ssize_t wrt_i = write(fid_i, ptr_y, rem_i);
+      c3_z  rem_z = got_z;
+      while ( rem_z ) {
+        ssize_t wrt_i = write(fid_i, ptr_y, rem_z);
         if ( wrt_i <= 0 ) {
           u3l_log("error writing %s: %s", pax_c, strerror(errno));
-          close(src_i);
+          u3_blob_close(han_u);
           close(fid_i);
           u3z(mim);
           return 0;
         }
         ptr_y += wrt_i;
-        rem_i -= wrt_i;
+        rem_z -= (c3_z)wrt_i;
       }
+
+      off_d += got_z;
     }
-    close(src_i);
-    mug_h = bob_mug_h;
+
+    u3_blob_close(han_u);
+    mug_h = u3a_bob_mug(dat);
   }
   else {
     //  normal atom: materialize and write in chunks

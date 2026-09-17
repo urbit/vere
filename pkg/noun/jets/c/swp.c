@@ -20,7 +20,7 @@ u3qc_swp(u3_atom a,
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, a_g, len_w);
 
-  //  byte-aligned fast path: mmap once, reverse bloqs via memcpy.
+  //  byte-aligned fast path: view once, reverse bloqs via memcpy.
   //  the generic path below would invoke u3r_chop per bloq, each of
   //  which calls u3r_blob_load — an O(len_w * bob_size) disaster on
   //  large bob atoms.

@@ -76,7 +76,7 @@
     else {
       u3_atom ret;
 
-      //  read inputs through u3r_view (mmap for bobs, heap copy for
+      //  read inputs through u3r_view (blob hand for bobs, heap copy for
       //  normal atoms); padded so each buffer is exactly its declared
       //  width, zero-filled.
       //

@@ -173,7 +173,7 @@ u3qc_rip(u3_atom a,
   //  latter allocates a full-size atom per iteration (O(n*blob)
   //  memory churn).  Materialize the bob once up front: single full
   //  loom allocation, correct reads thereafter.  A fully zero-copy
-  //  rip would mmap once and build chunks directly, but that needs a
+  //  rip would view once and build chunks directly, but that needs a
   //  deeper rewrite of _bit_rip and _block_rip.
   //
   u3_atom mat = u3_none;

@@ -1409,7 +1409,7 @@ _mesa_hear(u3_mesa* sam_u,
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  //  zero-copy read from [pac] (mmap if it's a bob) into the arena
+  //  zero-copy read from [pac] (through its blob hand if it's a bob) into the arena
   //  buffer.  the arena is the long-lived owner — we still copy bytes
   //  into it because it gets stashed in u3_mesa_resend_data->buf_y for
   //  the resend timer.  using u3r_view skips the full-blob loom alloc
@@ -1836,7 +1836,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    //  zero-copy read of the jumbo frame bytes (mmap if [pac] is a bob).
+    //  zero-copy read of the jumbo frame bytes (through its blob hand if [pac] is a bob).
     //  we still copy into a c3_calloc'd buffer because mesa_sift_pact_from_buf
     //  expects a stable, mutable buffer that outlives the view.
     //

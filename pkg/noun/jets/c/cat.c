@@ -25,7 +25,7 @@
       return 0;
     }
 
-    //  byte-aligned fast path: mmap each bob input directly.  the
+    //  byte-aligned fast path: view each bob input directly.  the
     //  legacy u3i_slab_from + u3r_chop pair would otherwise materialize
     //  either operand if it's a bob (via u3r_words → u3r_blob_load and
     //  u3r_chop → u3r_blob_load respectively).

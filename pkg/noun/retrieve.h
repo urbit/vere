@@ -438,20 +438,27 @@
       */
         typedef enum {
           u3r_view_loom = 0,    //  aliases a pug's loom word buffer; free: none
-          u3r_view_blob,        //  mmap of a bob blob file;          free: munmap
+          u3r_view_blob,        //  blob hand's whole-file buffer;    free: u3_blob_close
           u3r_view_flat,        //  cat bytes inline                  free: none
           u3r_view_heap         //  u3a_malloc'd pad buffer;          free: u3a_free
         } u3r_view_e;
 
       /* u3r_view: zero-copy read-only view over an atom's significant bytes.
+      **
+      **   A bob view holds a reference to the blob's registry hand (see
+      **   u3_blob_hand in blob.h); the bytes are the hand's buffer, shared
+      **   with every other view of the same blob and released with the
+      **   last close, or by the sweep when a bail unwinds the road.
       */
+        struct _u3_blob_hand;
+
         typedef struct {
           const c3_y* byt_y;
           c3_w        len_w;
           u3r_view_e  kin_e;
           union {
-            c3_d      map_d;    //  blob: mmap length for munmap
-            c3_d      raw_d;    //  flat: inline cat bytes
+            struct _u3_blob_hand* han_u;    //  blob: registry hand
+            c3_d                  raw_d;    //  flat: inline cat bytes
           } u;
         } u3r_view;
 
@@ -680,20 +687,13 @@
       u3_weak
       u3r_blob_load(u3_atom a, const c3_c* pax_c);
 
-      /* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
+      /* u3r_blob_open(): open a bob atom's blob through the handle registry.
       **
-      **   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
-      **   Release with u3r_blob_umap(ptr, *len_d) when done.
-      **   Uses u3C.dir_c as the pier path.
-      **   No loom allocation is performed.
+      **   Uses u3C.dir_c as the pier path.  Returns 0 (without bailing) if
+      **   the file is missing or empty; release with u3_blob_close().
       */
-      const c3_y*
-      u3r_blob_mmap(u3_atom a, c3_d* len_d);
-
-      /* u3r_blob_umap(): release a mapping from u3r_blob_mmap().
-      */
-      void
-      u3r_blob_umap(const c3_y* ptr_y, c3_d len_d);
+        struct _u3_blob_hand*
+        u3r_blob_open(u3_atom a);
 
       /* u3r_blob_met(): compute bit-length of a bob atom without materialization.
       **

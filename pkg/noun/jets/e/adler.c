@@ -31,7 +31,7 @@ u3_noun _qe_adler32(u3_noun octs)
     return u3_none;
   }
 
-  //  zero-copy view of the atom's significant bytes (mmap for bob).
+  //  zero-copy view of the atom's significant bytes (blob hand for bob).
   //  NB: the legacy direct-pointer path through ptr_a->buf_w read
   //  seq_w for bob atoms, which silently produced wrong checksums;
   //  using u3r_view fixes that bug in addition to avoiding the
