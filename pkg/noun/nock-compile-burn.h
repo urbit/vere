@@ -667,34 +667,33 @@ OP1(JMP, a_h)
       *sot     = 0;
     }
     _nc_stat(dir_d);
-    goto jmp_go;
   }
+  else {
+    GATHER(len_h);
 
-  GATHER(len_h);
-
-  if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
-    _nc_stat(jet_d);
-    POP(len_h);
-    DONE(pro);
-  }
-
-  //  the caller's references move to the callee: the first argument
-  //  from a slot takes its reference, any other from the same slot
-  //  finds it gone and gains one
-  //
-  _nc_stat(dir_d);
-  for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
-    u3_noun* sot = &(reg[sot_h[i_h]]);
-
-    if ( *sot ) {
-      *sot = 0;
+    if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
+      _nc_stat(jet_d);
+      POP(len_h);
+      DONE(pro);
     }
-    else {
-      GAIN(nex[i_h]);
+
+    //  the caller's references move to the callee: the first argument
+    //  from a slot takes its reference, any other from the same slot
+    //  finds it gone and gains one
+    //
+    _nc_stat(dir_d);
+    for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
+      u3_noun* sot = &(reg[sot_h[i_h]]);
+
+      if ( *sot ) {
+        *sot = 0;
+      }
+      else {
+        GAIN(nex[i_h]);
+      }
     }
   }
 
-jmp_go:
   for ( c3_h i_h = 0; i_h < pog_u->tot_h; i_h++ ) {
     LOSE(reg[i_h]);
   }
