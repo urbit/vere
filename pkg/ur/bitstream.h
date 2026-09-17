@@ -231,6 +231,14 @@ void
 ur_bsw_atom_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt);
 
 /*
+**  write an atom tag (0) and the run-length prefix for N bits, but not
+**  the bits themselves: the caller streams them with ur_bsw_bytes(),
+**  which must then supply exactly N bits in total.
+*/
+void
+ur_bsw_atom_head(ur_bsw_t *bsw, uint64_t len);
+
+/*
 **  write a cell tag (1, 0)
 */
 void
