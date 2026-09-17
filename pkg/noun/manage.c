@@ -484,6 +484,32 @@ u3m_signal(c3_m sig_m)
   rsignal_longjmp(u3_Signal, sig_m);
 }
 
+//  critical-section nesting depth (see u3m_crit_enter).
+//
+static c3_w _cm_crit_w = 0;
+
+/* u3m_crit_enter(): hold the signals whose handlers longjmp.
+*/
+void
+u3m_crit_enter(void)
+{
+  if ( 0 == _cm_crit_w++ ) {
+    rsignal_block();
+  }
+}
+
+/* u3m_crit_leave(): end a critical section begun by u3m_crit_enter().
+*/
+void
+u3m_crit_leave(void)
+{
+  u3_assert( _cm_crit_w );
+
+  if ( 0 == --_cm_crit_w ) {
+    rsignal_unblock();
+  }
+}
+
 /* u3m_file(): load file, as atom, or bail.
 */
 u3_noun
@@ -1598,6 +1624,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_Ford_fresh_road_depth_h = 0;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
+    //  a critical section never longjmps on its own, but a fault inside
+    //  one must not leave signals held forever
+    //
+    while ( _cm_crit_w ) {
+      u3m_crit_leave();
+    }
+
     //  reinitialize trace state
     //
     u3t_init();

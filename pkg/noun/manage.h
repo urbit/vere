@@ -97,6 +97,20 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_signal(c3_m sig_m);
 
+      /* u3m_crit_enter(): hold the signals whose handlers longjmp.
+      **
+      **   Brackets a short critical section (no loom access, no recursion)
+      **   that must not be unwound half-done: a pending SIGINT, SIGTERM, or
+      **   SIGVTALRM is delivered at the matching u3m_crit_leave().  Nests.
+      */
+        void
+        u3m_crit_enter(void);
+
+      /* u3m_crit_leave(): end a critical section begun by u3m_crit_enter().
+      */
+        void
+        u3m_crit_leave(void);
+
       /* u3m_file(): load file, as atom, or bail.
       */
         u3_noun
