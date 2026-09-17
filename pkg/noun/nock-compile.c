@@ -10,6 +10,8 @@
 #include "imprison.h"
 #include "jets.h"
 #include "jets/k.h"
+#include "jets/q.h"
+#include "jets/u.h"
 #include "log.h"
 #include "manage.h"
 #include "nock.h"
@@ -1872,6 +1874,157 @@ static inline __attribute__((always_inline)) void
 _nc_pop(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
 {
   rod_u->cap_p -= mov_ws * (c3_ws)len_w;
+}
+
+/* _nc_hilt_fore(): static hint prologue.  tag: the hint atom, RETAIN.
+**   Produces the token for _nc_hilt_hind(): what the epilogue needs, or ~.
+**   nock-compilation.hoon passes only %bout and %xray; %xray is not
+**   implemented yet.
+*/
+static u3_noun
+_nc_hilt_fore(u3_atom tag)
+{
+  switch ( tag ) {
+    case c3__bout: {
+      return u3i_chub(u3t_trace_time());
+    }
+
+    default: {
+      return u3_nul;
+    }
+  }
+}
+
+/* _nc_hilt_hind(): static hint epilogue.  tag: RETAIN, tok: TRANSFER.
+*/
+static void
+_nc_hilt_hind(u3_atom tag, u3_noun tok)
+{
+  switch ( tag ) {
+    case c3__bout: {
+      u3_atom delta = u3ka_sub(u3i_chub(u3t_trace_time()), tok);
+      c3_c    str_c[64];
+
+      u3a_print_time(str_c, "took", u3r_chub(0, delta));
+      u3t_slog(u3nc(0, u3i_string(str_c)));
+      u3z(delta);
+    } break;
+
+    default: {
+      u3z(tok);
+    } break;
+  }
+}
+
+/* _nc_hint_fore(): dynamic hint prologue.  tag: the hint atom, RETAIN;
+**   clu: the clue, TRANSFER.  Produces the token for _nc_hint_hind().
+**   nock-compilation.hoon passes %bout, %xray, %spin, %jinx, %live,
+**   %hunk, %hand, %lose, %mean, %spot and %slog; %xray is not implemented
+**   yet, %hand is unknown, and both just drop the clue.
+*/
+static u3_noun
+_nc_hint_fore(u3_atom tag, u3_noun clu)
+{
+  switch ( tag ) {
+    case c3__hunk:
+    case c3__lose:
+    case c3__mean:
+    case c3__spot: {
+      u3t_push(u3nc(tag, clu));
+      return u3_nul;
+    }
+
+    case c3__live: {
+      if ( c3y == u3ud(clu) ) {
+        u3t_heck(clu);
+      }
+      u3z(clu);
+      return u3_nul;
+    }
+
+    case c3__slog: {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
+        u3t_slog(clu);
+      }
+      else {
+        u3z(clu);
+      }
+      return u3_nul;
+    }
+
+    case c3__jinx: {
+      if ( (c3n == u3ud(clu)) || (u3_nul == clu) ) {
+        u3z(clu);
+        return u3_nul;
+      }
+      u3m_timer_set(clu);
+      return c3__jinx;
+    }
+
+    case c3__spin: {
+      u3t_sstack_push(clu);
+      return u3_nul;
+    }
+
+    case c3__bout: {
+      return u3nc(clu, u3i_chub(u3t_trace_time()));
+    }
+
+    default: {
+      u3z(clu);
+      return u3_nul;
+    }
+  }
+}
+
+/* _nc_hint_hind(): dynamic hint epilogue.  tag: RETAIN, tok: TRANSFER.
+*/
+static void
+_nc_hint_hind(u3_atom tag, u3_noun tok)
+{
+  switch ( tag ) {
+    case c3__hunk:
+    case c3__lose:
+    case c3__mean:
+    case c3__spot: {
+      u3t_drop();
+    } break;
+
+    case c3__jinx: {
+      if ( c3__jinx == tok ) {
+        u3m_timer_pop();
+      }
+    } break;
+
+    case c3__spin: {
+      u3t_sstack_pop();
+    } break;
+
+    case c3__bout: {
+      u3_noun clu, now, pri, tan;
+      u3_atom delta;
+      c3_c    str_c[64];
+
+      u3x_cell(tok, &clu, &now);
+      delta = u3ka_sub(u3i_chub(u3t_trace_time()), u3k(now));
+      u3a_print_time(str_c, "took", u3r_chub(0, delta));
+
+      //  caption the report with the tank of the clue, if it has one
+      //
+      if ( c3y == u3r_cell(clu, &pri, &tan) ) {
+        c3_h pri_h = ( c3y == u3a_is_cat(pri) ) ? pri : 0;
+        u3t_slog_cap(pri_h, u3k(tan), u3i_string(str_c));
+      }
+      else {
+        u3t_slog(u3nc(0, u3i_string(str_c)));
+      }
+      u3z(delta);
+    } break;
+
+    default: break;
+  }
+
+  u3z(tok);
 }
 
 /* _nc_burn_north(), _nc_burn_south(): run a program on its arguments.

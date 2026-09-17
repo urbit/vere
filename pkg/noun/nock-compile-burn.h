@@ -7,6 +7,15 @@
 /// direction and the reference-counting fast paths are compile-time
 /// constants.  Not a standalone header.
 
+// IDE support
+#include "allocate.h"
+_Static_assert(1, "");
+#ifndef _nc_burn
+#  include "nock-compile.c"
+#  define _nc_mov_ws  (-999)
+#  define _nc_burn    _nc_burn_ide
+#endif
+
 /* _nc_burn(): run a program on its arguments.  TRANSFERS the arguments.
 **
 **   An activation is the callee's slots, then a frame holding the
@@ -37,25 +46,27 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   u3nc_dire* dir_u;
   c3_h*      sot_h;
   c3_h       a_h, b_h, c_h, d_h, i_h;
-  u3_noun    x, o, pro, hin;
-  u3_noun    out;         //  out-parameter of hint/hilt calls, address-taken
-  u3_noun    jar[2];      //  argument array of a jet op, address-taken
+  u3_noun    x, o, pro;
   c3_h       kni_h;       //  argument cursor of _nc_knit(), address-taken
   u3_post    emp_p = rod_u->cap_p;
 
 #define RB()  (*ip++)
 #define RS()  ({ c3_h _v = ip[0] | (ip[1] << 8); ip += 2; _v; })
-#define RV()  ({                                                         \
-    c3_y _n = *ip++;                                                     \
-    c3_h _v = 0;                                                         \
-    for ( c3_y _i = 0; _i < _n; _i++ ) {                                 \
-      _v |= ((c3_h)*ip++) << (8 * _i);                                   \
-    }                                                                    \
-    _v;                                                                  \
+#define RV()  ({                                                                \
+    c3_y _n = *ip++;                                                            \
+    c3_h _v = 0;                                                                \
+    for ( c3_y _i = 0; _i < _n; _i++ ) {                                        \
+      _v |= ((c3_h)*ip++) << (8 * _i);                                          \
+    }                                                                           \
+    _v;                                                                         \
   })
 #define BURN()  goto *lab[*ip++]
 #define JUMP(t)  (ip = pog_u->byc_u.ops_y + (t))
-#define PUT(d, v)  do { u3_noun _o = reg[d]; reg[d] = (v); LOSE(_o); } while ( 0 )
+#define PUT(d, v)  do {                                                         \
+    LOSE(reg[d]);                                                               \
+    reg[d] = (v);                                                               \
+  } while ( 0 )
+
 #define PUSH(n)  _nc_push(rod_u, mov_ws, n)
 #define POP(n)   _nc_pop(rod_u, mov_ws, n)
 #define TOP(n)   _nc_top(rod_u, mov_ws, n)
@@ -123,6 +134,8 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     }                                                                    \
   } while ( 0 )
 
+  //  begin execution: push register slots, initialize arguments
+  //
   reg = PUSH(pog_u->tot_h);
 
   for ( i_h = 0; i_h < len_h; i_h++ ) {
@@ -237,14 +250,18 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     //
     ARG2(DEC, a_h, d_h)
       _nc_stat(jet_d);
-      PUT(d_h, u3ua_dec(&(reg[a_h])));
+      if ( c3n == u3ud(reg[a_h]) ) {
+        u3m_bail(c3__fail);
+      }
+      PUT(d_h, u3qa_dec(reg[a_h]));
       BURN();
 
     ARG3(ADD, a_h, b_h, d_h)
       _nc_stat(jet_d);
-      jar[0] = reg[a_h];
-      jar[1] = reg[b_h];
-      PUT(d_h, u3ua_add(jar));
+      if ( c3n == u3ud(reg[a_h]) || c3n == u3ud(reg[b_h]) ) {
+        u3m_bail(c3__fail);
+      }
+      PUT(d_h, u3qa_add(reg[a_h], reg[b_h]));
       BURN();
 
     ARG3(CON, a_h, b_h, d_h)
@@ -274,94 +291,29 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
       BURN();
 
     ARG2(EQU, a_h, b_h)
-      u3r_sing(reg[a_h], reg[b_h]);
+      (void)u3r_sing(reg[a_h], reg[b_h]);
       BURN();
 
     ARG1(HSP, a_h)
-      u3n_hilt_fore(GAIN(pog_u->lit_u.non[a_h]), 0, &out);
-      *(u3_noun*)PUSH(1) = out;
+      x = _nc_hilt_fore(u3h(pog_u->lit_u.non[a_h]));
+      *(u3_noun*)PUSH(1) = x;
       BURN();
 
     ARG1(HSE, a_h)
       x = *(u3_noun*)TOP(1);
       POP(1);
-      u3n_hilt_hind(x, 0);
+      _nc_hilt_hind(u3h(pog_u->lit_u.non[a_h]), x);
       BURN();
 
     ARG2(HDP, a_h, b_h)
-      hin = pog_u->lit_u.non[a_h];
-      o   = GAIN(reg[b_h]);
-
-      switch ( u3h(hin) ) {
-        case c3__hunk:
-        case c3__lose:
-        case c3__mean:
-        case c3__spot: {
-          u3t_push(u3nc(GAIN(u3h(hin)), o));
-          x = u3_nul;
-        } break;
-
-        case c3__live: {
-          if ( c3y == u3ud(o) ) {
-            u3t_heck(o);
-          }
-          else {
-            LOSE(o);
-          }
-          x = u3_nul;
-        } break;
-
-        case c3__slog: {
-          if ( !(u3C.wag_h & u3o_quiet) ) {
-            u3t_slog(o);
-          }
-          else {
-            LOSE(o);
-          }
-          x = u3_nul;
-        } break;
-
-        //  %loop needs the subject, which isn't at hand; %hand is unknown
-        //
-        case c3__loop:
-        case c3__hand: {
-          LOSE(o);
-          x = u3_nul;
-        } break;
-
-        default: {
-          out = o;
-          u3n_hint_fore(GAIN(hin), 0, &out);
-          x = out;
-        } break;
-      }
-
+      x = _nc_hint_fore(u3h(pog_u->lit_u.non[a_h]), GAIN(reg[b_h]));
       *(u3_noun*)PUSH(1) = x;
       BURN();
 
     ARG2(HDE, a_h, b_h)
-      hin = pog_u->lit_u.non[a_h];
-      x   = *(u3_noun*)TOP(1);
+      x = *(u3_noun*)TOP(1);
       POP(1);
-
-      switch ( u3h(hin) ) {
-        case c3__hunk:
-        case c3__lose:
-        case c3__mean:
-        case c3__spot: {
-          u3t_drop();
-        } break;
-
-        case c3__live:
-        case c3__slog:
-        case c3__loop:
-        case c3__hand: {
-        } break;
-
-        default: {
-          u3n_hint_hind(x, 0);
-        } break;
-      }
+      _nc_hint_hind(u3h(pog_u->lit_u.non[a_h]), x);
       BURN();
 
     ARG3(SPY, a_h, b_h, d_h)
