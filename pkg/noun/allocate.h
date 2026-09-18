@@ -227,25 +227,31 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
       U3_DEFINE_PAIR(u3a_jets, U3A_JETS_BODY);
 
-    /* u3a_road_esc_{h,d}: setjmp escape state.  The 64-bit variant
-    ** additionally carries a `why_w` slot adjacent to the jmp_buf.
+    /* u3a_road_esc_{h,d}: setjmp escape state.
+    **
+    **   A fixed-layout buffer that manage.c casts to a jmp_buf (and, in
+    **   the 64-bit variant, uses the last word of as the bail reason).
+    **   It must not embed jmp_buf itself: the road is loom layout, and a
+    **   libc type's alignment is not the same in every translation unit.
+    **   On 64-bit windows, libnoun sees platform/windows/setjmp.h (an
+    **   8-aligned struct) while libvere sees mingw's 16-aligned jmp_buf,
+    **   so a union over jmp_buf gave the two libraries different offsets
+    **   for every road field after this one, and for u3v_home's rod_u.
+    **   The state here only means anything to the running event; it is
+    **   never read back from a snapshot.
     */
       typedef struct {
-        union {
-          jmp_buf buf;
-          c3_h    buf_w[256];
-        };
+        c3_h buf_w[256];
       } u3a_road_esc_h;
 
       typedef struct {
-        union {
-          struct {
-            jmp_buf buf;
-            c3_d    why_w;
-          };
-          c3_d buf_w[256];
-        };
+        c3_d buf_w[256];
       } u3a_road_esc_d;
+
+      STATIC_ASSERT( 1024 == sizeof(u3a_road_esc_h),
+                     "32-bit escape buffer size" );
+      STATIC_ASSERT( 2048 == sizeof(u3a_road_esc_d),
+                     "64-bit escape buffer size" );
 
     /* u3a_road_{h,d}: 32- and 64-bit contiguous allocation and
     ** execution context layouts.  u3a_road typedef-aliases the
