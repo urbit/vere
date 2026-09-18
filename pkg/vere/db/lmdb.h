@@ -119,7 +119,8 @@
     /* u3_lmdb_save_lease(): durably record a king lease (MDB_DUPSORT).
     **
     **   keyed by blob id [bid_d]; value is the pair [exp_d, lea_d] where
-    **   [lea_d] is a unique id disambiguating duplicate-key rows.
+    **   [exp_d] is the event number at which the lease expires (0: never)
+    **   and [lea_d] is a unique id disambiguating duplicate-key rows.
     */
       c3_o
       u3_lmdb_save_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d);
