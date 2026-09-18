@@ -42,6 +42,20 @@
                                    + sizeof(u3H->blb_p),
       "no padding between the last real field of u3v_home and end marker");
 
+      //  the home and road layouts are snapshot layouts, and every
+      //  translation unit that includes this header must agree on them.
+      //  pin the road's alignment and offset so that nothing platform-
+      //  dependent can creep into u3a_road again (see u3a_road_esc).
+      //
+      static_assert( 8 == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      static_assert( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
+      static_assert( 40 == offsetof(u3v_home_d, rod_u),
+                     "64-bit home: road offset" );
+      static_assert( 32 == offsetof(u3v_home_h, rod_u),
+                     "32-bit home: road offset" );
+
       extern u3v_home_h* u3v_Home_h;
       extern u3v_home_d* u3v_Home_d;
       extern u3a_road_h* u3a_Road_h;

@@ -17,6 +17,51 @@ _setup(void)
   u3m_pave(c3y);
 }
 
+/* _test_home_road(): the home road is where every library says it is.
+**
+**   This file is compiled with the same include view as libvere, not
+**   libnoun's.  If the two disagree on the layout of u3v_home or
+**   u3a_road, as they did on 64-bit windows while u3a_road embedded a
+**   jmp_buf, the road address computed here differs from the one
+**   libnoun paved, and a road field past the escape buffer written here
+**   is invisible to libnoun's mark.
+*/
+static void
+_test_home_road(void)
+{
+  if ( &(u3H->rod_u) != u3R ) {
+    fprintf(stderr, "home road: u3R %p != &u3H->rod_u %p\r\n",
+            (void*)u3R, (void*)&(u3H->rod_u));
+    exit(1);
+  }
+
+  //  bug.mer sits after the escape buffer.  set it from this translation
+  //  unit, then have libnoun mark and sweep: if libnoun reads the field
+  //  at another offset, the atom is unmarked and the sweep aborts.
+  //
+  {
+    c3_h wag_h = u3C.wag_h;
+    u3C.wag_h |= u3o_leak_crash;
+
+    u3R->bug.mer = u3i_tape("home road probe");
+
+    u3a_mark_init();
+    u3m_quac** qua_u = u3m_mark();
+    u3a_sweep();
+
+    for ( c3_w i_w = 0; qua_u[i_w]; i_w++ ) {
+      u3a_quac_free(qua_u[i_w]);
+    }
+    c3_free(qua_u);
+
+    u3z(u3R->bug.mer);
+    u3R->bug.mer = 0;
+    u3C.wag_h    = wag_h;
+  }
+
+  fprintf(stderr, "test home road: ok\r\n");
+}
+
 /* _test_u3r_chop: "extract bit slices from atom"
 */
 static c3_i
@@ -2174,6 +2219,8 @@ int
 main(int argc, char* argv[])
 {
    _setup();
+
+  _test_home_road();
 
   if ( !_test_noun() ) {
     fprintf(stderr, "test noun: failed\r\n");
