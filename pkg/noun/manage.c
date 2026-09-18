@@ -50,15 +50,29 @@
     **   filled it.
     **
     **   Under VERE64 a 64-bit ball does not fit in longjmp's int return,
-    **   so u3m_escape() stashes it in u3R->esc.why_w and longjmps with a
-    **   literal 1. The ball is latched here, in the controlling expression,
-    **   since esc.why_w lives on the road and is clobbered by the next bail.
+    **   so u3m_escape() stashes it in the road's escape buffer and longjmps
+    **   with a literal 1. The ball is latched here, in the controlling
+    **   expression, since that slot is clobbered by the next bail.
+    **
+    **   The road's escape buffer is a plain word array (see u3a_road_esc
+    **   in allocate.h); the jmp_buf lives at its start and the bail reason
+    **   in its last word.  This is the only translation unit that knows.
+    **   The cast is aligned in practice: roads sit at u3a_walign
+    **   boundaries (16 bytes on a 32-bit loom, 8 on a 64-bit one), which
+    **   covers every jmp_buf this file is compiled against.
     */
+#     define _cm_esc_buf(rod_u)  ( *(jmp_buf*)(rod_u)->esc.buf_w )
+#     define _cm_esc_why(rod_u)  ( (rod_u)->esc.buf_w[255] )
+
+      STATIC_ASSERT( sizeof(jmp_buf) + sizeof(c3_w)
+                       <= sizeof(((u3a_road*)0)->esc.buf_w),
+                     "jmp_buf and the bail reason fit the escape buffer" );
+
 #ifndef VERE64
-#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
+#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(_cm_esc_buf(u3R))) )
 #else
 #     define u3m_trap(why) \
-        ( _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
+        ( _setjmp(_cm_esc_buf(u3R)) ? ((why) = _cm_esc_why(u3R), 0) : 1 )
 #endif
 
     /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
@@ -69,10 +83,10 @@
     */
 #ifndef VERE64
 #     define u3m_escape(how) \
-        do { _longjmp(u3R->esc.buf, (how)); } while ( 0 )
+        do { _longjmp(_cm_esc_buf(u3R), (how)); } while ( 0 )
 #else
 #     define u3m_escape(how) \
-        do { u3R->esc.why_w = (how); _longjmp(u3R->esc.buf, 1); } while ( 0 )
+        do { _cm_esc_why(u3R) = (how); _longjmp(_cm_esc_buf(u3R), 1); } while ( 0 )
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
