@@ -210,11 +210,13 @@
     **   a blob alive while the king holds a reference that mars has not
     **   yet durably recorded (no eve_w, no snapshot cardinality) — i.e.
     **   the window between %blob install and the commit of the event that
-    **   references it.  The king renews via %blas while it still holds the
-    **   blob, and releases via %blrl when its last reference dies.  Each
-    **   lease carries a 15-min TTL as a failsafe against a crashed or
-    **   leaking king; blobs in mars->king gifts come from committed state
-    **   and need no lease.
+    **   references it.  The king releases via %blrl when its last
+    **   reference dies.  Each lease expires after a fixed number of
+    **   committed events as a failsafe against a crashed or leaking king:
+    **   the referencing event is queued behind at most the writs already
+    **   sent, so expiry is counted in commits, and a stall burns nothing.
+    **   Blobs in mars->king gifts come from committed state and need no
+    **   lease.
     **
     **   les_h is durable: each lease is a row in the LMDB LEASES table.
     **   On boot we zero the snapshot's les_h (and subtract from use_w),
