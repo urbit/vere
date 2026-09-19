@@ -47,11 +47,13 @@ _Static_assert(1, "");
 //  proper travels in callee-saved registers and survives calls out; the
 //  operands don't, so a dispatch passes zeros rather than preserve them.
 //
-#define SIG(a, b, c)                                                     \
+//  The functions take c3_w so that u3_noun fits into argument A for DONE(pro)
+//
+#define SIG(A, B, C)                                                     \
   (c3_y* ip, u3_noun* reg, u3nc_prog* pog_u, u3a_road* rod_u,            \
-   c3_w a, c3_w b, c3_w c)
-#define ARGS  SIG(a_w, b_w, c_w)
-#define PASS  ip, reg, pog_u, rod_u, a_w, b_w, c_w
+   c3_w A, c3_w B, c3_w C)
+#define ARGS  SIG(arg_a_w, arg_b_w, arg_c_w)
+#define PASS  ip, reg, pog_u, rod_u, arg_a_w, arg_b_w, arg_c_w
 #define NEXT  ip, reg, pog_u, rod_u, 0, 0, 0
 
 typedef u3_noun (*OP_F)ARGS CONV;
@@ -103,59 +105,59 @@ static const OP_F TAB[] = { OPCODES };
 #define OP0(op)                                                          \
   static u3_noun OP(op) ARGS CONV {
 
-#define OP1(op, a)                                                       \
+#define OP1(op, A)                                                       \
   static u3_noun OP(op##_in) ARGS CONV;                                  \
   static u3_noun OP(op##_B) ARGS CONV {                                  \
-    a_w = RB();                                                          \
+    arg_a_w = RB();                                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_S) ARGS CONV {                                  \
-    a_w = RS();                                                          \
+    arg_a_w = RS();                                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_V) ARGS CONV {                                  \
-    a_w = RV();                                                          \
+    arg_a_w = RV();                                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_in) ARGS CONV {                                 \
-    const c3_h a = a_w;
+    const c3_h A = arg_a_w;
 
-#define OP2(op, a, b)                                                    \
+#define OP2(op, A, B)                                                    \
   static u3_noun OP(op##_in) ARGS CONV;                                  \
   static u3_noun OP(op##_B) ARGS CONV {                                  \
-    a_w = RB(); b_w = RB();                                              \
+    arg_a_w = RB(); arg_b_w = RB();                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_S) ARGS CONV {                                  \
-    a_w = RS(); b_w = RS();                                              \
+    arg_a_w = RS(); arg_b_w = RS();                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_V) ARGS CONV {                                  \
-    a_w = RV(); b_w = RV();                                              \
+    arg_a_w = RV(); arg_b_w = RV();                                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_in) ARGS CONV {                                 \
-    const c3_h a = a_w;                                                  \
-    const c3_h b = b_w;
+    const c3_h A = arg_a_w;                                              \
+    const c3_h B = arg_b_w;
 
-#define OP3(op, a, b, c)                                                 \
+#define OP3(op, A, B, C)                                                 \
   static u3_noun OP(op##_in) ARGS CONV;                                  \
   static u3_noun OP(op##_B) ARGS CONV {                                  \
-    a_w = RB(); b_w = RB(); c_w = RB();                                  \
+    arg_a_w = RB(); arg_b_w = RB(); arg_c_w = RB();                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_S) ARGS CONV {                                  \
-    a_w = RS(); b_w = RS(); c_w = RS();                                  \
+    arg_a_w = RS(); arg_b_w = RS(); arg_c_w = RS();                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_V) ARGS CONV {                                  \
-    a_w = RV(); b_w = RV(); c_w = RV();                                  \
+    arg_a_w = RV(); arg_b_w = RV(); arg_c_w = RV();                      \
     MUSTTAIL return OP(op##_in)(PASS);                                   \
   }                                                                      \
   static u3_noun OP(op##_in) ARGS CONV {                                 \
-    const c3_h a = a_w;                                                  \
-    const c3_h b = b_w;                                                  \
-    const c3_h c = c_w;
+    const c3_h A = arg_a_w;                                              \
+    const c3_h B = arg_b_w;                                              \
+    const c3_h C = arg_c_w;
 
 #define OP_END  }
 
@@ -292,12 +294,12 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   return pro;
 }
 
-//  done: a_w is the product, transferred
+//  done: arg_a_h is the product, transferred
 //
 static u3_noun
 OP(done) ARGS CONV
 {
-  const u3_noun pro = a_w;
+  const u3_noun pro = arg_a_w;
   nc_frame*     fam_u;
   c3_h          d_h;
 
