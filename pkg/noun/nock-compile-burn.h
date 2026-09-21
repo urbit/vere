@@ -49,8 +49,8 @@ _Static_assert(1, "");
 //
 //  The functions take c3_w so that u3_noun fits into argument A for DONE(pro)
 //
-#define SIG(A, B, C)                                                     \
-  (c3_y* ip, u3_noun* reg, u3nc_prog* pog_u, u3a_road* rod_u,            \
+#define SIG(A, B, C)                                                            \
+  (c3_y* ip, u3_noun* reg, u3nc_prog* pog_u, u3a_road* rod_u,                   \
    c3_w A, c3_w B, c3_w C)
 #define ARGS  SIG(arg_a_w, arg_b_w, arg_c_w)
 #define PASS  ip, reg, pog_u, rod_u, arg_a_w, arg_b_w, arg_c_w
@@ -102,61 +102,61 @@ static const OP_F TAB[] = { OPCODES };
 //  shared body, which names them.  All open a function body: close with
 //  OP_END.
 //
-#define OP0(op)                                                          \
+#define OP0(op)                                                                 \
   static u3_noun OP(op) ARGS CONV {
 
-#define OP1(op, A)                                                       \
-  static u3_noun OP(op##_in) ARGS CONV;                                  \
-  static u3_noun OP(op##_B) ARGS CONV {                                  \
-    arg_a_w = RB();                                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_S) ARGS CONV {                                  \
-    arg_a_w = RS();                                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_V) ARGS CONV {                                  \
-    arg_a_w = RV();                                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_in) ARGS CONV {                                 \
+#define OP1(op, A)                                                              \
+  static u3_noun OP(op##_in) ARGS CONV;                                         \
+  static u3_noun OP(op##_B) ARGS CONV {                                         \
+    arg_a_w = RB();                                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_S) ARGS CONV {                                         \
+    arg_a_w = RS();                                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_V) ARGS CONV {                                         \
+    arg_a_w = RV();                                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_in) ARGS CONV {                                        \
     const c3_h A = arg_a_w;
 
-#define OP2(op, A, B)                                                    \
-  static u3_noun OP(op##_in) ARGS CONV;                                  \
-  static u3_noun OP(op##_B) ARGS CONV {                                  \
-    arg_a_w = RB(); arg_b_w = RB();                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_S) ARGS CONV {                                  \
-    arg_a_w = RS(); arg_b_w = RS();                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_V) ARGS CONV {                                  \
-    arg_a_w = RV(); arg_b_w = RV();                                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_in) ARGS CONV {                                 \
-    const c3_h A = arg_a_w;                                              \
+#define OP2(op, A, B)                                                           \
+  static u3_noun OP(op##_in) ARGS CONV;                                         \
+  static u3_noun OP(op##_B) ARGS CONV {                                         \
+    arg_a_w = RB(); arg_b_w = RB();                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_S) ARGS CONV {                                         \
+    arg_a_w = RS(); arg_b_w = RS();                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_V) ARGS CONV {                                         \
+    arg_a_w = RV(); arg_b_w = RV();                                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_in) ARGS CONV {                                        \
+    const c3_h A = arg_a_w;                                                     \
     const c3_h B = arg_b_w;
 
-#define OP3(op, A, B, C)                                                 \
-  static u3_noun OP(op##_in) ARGS CONV;                                  \
-  static u3_noun OP(op##_B) ARGS CONV {                                  \
-    arg_a_w = RB(); arg_b_w = RB(); arg_c_w = RB();                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_S) ARGS CONV {                                  \
-    arg_a_w = RS(); arg_b_w = RS(); arg_c_w = RS();                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_V) ARGS CONV {                                  \
-    arg_a_w = RV(); arg_b_w = RV(); arg_c_w = RV();                      \
-    MUSTTAIL return OP(op##_in)(PASS);                                   \
-  }                                                                      \
-  static u3_noun OP(op##_in) ARGS CONV {                                 \
-    const c3_h A = arg_a_w;                                              \
-    const c3_h B = arg_b_w;                                              \
+#define OP3(op, A, B, C)                                                        \
+  static u3_noun OP(op##_in) ARGS CONV;                                         \
+  static u3_noun OP(op##_B) ARGS CONV {                                         \
+    arg_a_w = RB(); arg_b_w = RB(); arg_c_w = RB();                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_S) ARGS CONV {                                         \
+    arg_a_w = RS(); arg_b_w = RS(); arg_c_w = RS();                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_V) ARGS CONV {                                         \
+    arg_a_w = RV(); arg_b_w = RV(); arg_c_w = RV();                             \
+    MUSTTAIL return OP(op##_in)(PASS);                                          \
+  }                                                                             \
+  static u3_noun OP(op##_in) ARGS CONV {                                        \
+    const c3_h A = arg_a_w;                                                     \
+    const c3_h B = arg_b_w;                                                     \
     const c3_h C = arg_c_w;
 
 #define OP_END  }
@@ -164,89 +164,81 @@ static const OP_F TAB[] = { OPCODES };
 //  FRAME(des): push a frame recording this activation, its product to
 //              slot des; produces the frame
 //
-#define FRAME(des)  ({                                                   \
-    nc_frame* _f = PUSH(_nc_frame_w);                                    \
-    _f->pog_u = pog_u;                                                   \
-    _f->reg   = reg;                                                     \
-    _f->ip_h  = ip - pog_u->byc_u.ops_y;                                 \
-    _f->des_h = (des);                                                   \
-    _f->key   = u3_none;                                                 \
-    _f->cid_h = 0;                                                       \
-    _f;                                                                  \
+#define FRAME(des)  ({                                                          \
+    nc_frame* _f = PUSH(_nc_frame_w);                                           \
+    _f->pog_u = pog_u;                                                          \
+    _f->reg   = reg;                                                            \
+    _f->ip_h  = ip - pog_u->byc_u.ops_y;                                        \
+    _f->des_h = (des);                                                          \
+    _f->key   = u3_none;                                                        \
+    _f->cid_h = 0;                                                              \
+    _f;                                                                         \
   })
 
 //  SITE(): the call site a_h, its callee gop_u, its argument slots
 //          sot_h and their number len_h
 //
-#define SITE()  do {                                                     \
-    dir_u = &(pog_u->dir_u.dat_u[a_h]);                                  \
-    if ( dir_u->pog_p ) {                                                \
-      gop_u = u3to(u3nc_prog, dir_u->pog_p);                             \
-    }                                                                    \
-    else {                                                               \
-      u3t_off(noc_o);                                                    \
-      gop_u = _nc_callee(dir_u);                                         \
-      u3t_on(noc_o);                                                     \
-    }                                                                    \
-    sot_h = pog_u->sot_u.sot_h + dir_u->sot_h;                           \
-    len_h = dir_u->len_h;                                                \
+#define SITE()  do {                                                            \
+    dir_u = &(pog_u->dir_u.dat_u[a_h]);                                         \
+    if ( dir_u->pog_p ) {                                                       \
+      gop_u = u3to(u3nc_prog, dir_u->pog_p);                                    \
+    }                                                                           \
+    else {                                                                      \
+      u3t_off(noc_o);                                                           \
+      gop_u = _nc_callee(dir_u);                                                \
+      u3t_on(noc_o);                                                            \
+    }                                                                           \
+    sot_h = pog_u->sot_u.sot_h + dir_u->sot_h;                                  \
+    len_h = dir_u->len_h;                                                       \
   } while ( 0 )
 
 //  GATHER(): push num words and copy the site's arguments into them
 //
-#define GATHER(num)  do {                                                \
-    nex = PUSH(num);                                                     \
-    if ( 1 == len_h ) {                                                  \
-      nex[0] = reg[sot_h[0]];                                            \
-    }                                                                    \
-    else if ( 2 == len_h ) {                                             \
-      nex[0] = reg[sot_h[0]];                                            \
-      nex[1] = reg[sot_h[1]];                                            \
-    }                                                                    \
-    else {                                                               \
-      for ( c3_h _i = 0; _i < len_h; _i++ ) {                            \
-        nex[_i] = reg[sot_h[_i]];                                        \
-      }                                                                  \
-    }                                                                    \
+#define GATHER(num)  do {                                                       \
+      nex = PUSH(num);                                                          \
+      for ( c3_h _i = 0; _i < len_h; _i++ ) {                                   \
+        nex[_i] = reg[sot_h[_i]];                                               \
+      }                                                                         \
+    }                                                                           \
   } while ( 0 )
 
 //  ENTER(len): run pog_u, its len arguments in its slots at reg
 //
-#define ENTER(len)  do {                                                 \
-    for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                   \
-      reg[_i] = 0;                                                       \
-    }                                                                    \
-    ip = pog_u->byc_u.ops_y;                                             \
-    BURN();                                                              \
+#define ENTER(len)  do {                                                        \
+    for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                          \
+      reg[_i] = 0;                                                              \
+    }                                                                           \
+    ip = pog_u->byc_u.ops_y;                                                    \
+    BURN();                                                                     \
   } while ( 0 )
 
 //  CALL(gop, arg, des): call gop on its one argument arg, transferred,
 //                       its product to slot des
 //
-#define CALL(gop, arg, des)  do {                                        \
-    u3_noun* _nex = PUSH((gop)->tot_h);                                  \
-    _nex[0] = (arg);                                                     \
-    (void)FRAME(des);                                                    \
-    pog_u = (gop);                                                       \
-    reg   = _nex;                                                        \
-    ENTER(1);                                                            \
+#define CALL(gop, arg, des)  do {                                               \
+    u3_noun* _nex = PUSH((gop)->tot_h);                                         \
+    _nex[0] = (arg);                                                            \
+    (void)FRAME(des);                                                           \
+    pog_u = (gop);                                                              \
+    reg   = _nex;                                                               \
+    ENTER(1);                                                                   \
   } while ( 0 )
 
 //  TAIL(gop, arg): call gop on its one argument arg, transferred, in
 //                  place of this activation
 //
-#define TAIL(gop, arg)  do {                                             \
-    nc_frame _fam;                                                       \
-    for ( c3_h _i = 0; _i < pog_u->tot_h; _i++ ) {                       \
-      LOSE(reg[_i]);                                                     \
-    }                                                                    \
-    _fam = *(nc_frame*)TOP(_nc_frame_w);                                 \
-    POP(_nc_frame_w + pog_u->tot_h);                                     \
-    pog_u  = (gop);                                                      \
-    reg    = PUSH(pog_u->tot_h);                                         \
-    reg[0] = (arg);                                                      \
-    *(nc_frame*)PUSH(_nc_frame_w) = _fam;                                \
-    ENTER(1);                                                            \
+#define TAIL(gop, arg)  do {                                                    \
+    nc_frame _fam;                                                              \
+    for ( c3_h _i = 0; _i < pog_u->tot_h; _i++ ) {                              \
+      LOSE(reg[_i]);                                                            \
+    }                                                                           \
+    _fam = *(nc_frame*)TOP(_nc_frame_w);                                        \
+    POP(_nc_frame_w + pog_u->tot_h);                                            \
+    pog_u  = (gop);                                                             \
+    reg    = PUSH(pog_u->tot_h);                                                \
+    reg[0] = (arg);                                                             \
+    *(nc_frame*)PUSH(_nc_frame_w) = _fam;                                       \
+    ENTER(1);                                                                   \
   } while ( 0 )
 
 //  DONE(pro): return pro, transferred, from this activation
