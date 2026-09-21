@@ -2888,7 +2888,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
     case c3n: {
       fprintf(stderr, "vile: unable to retrieve key file\r\n");
       u3_pier_punt_goof("foo", u3k(u3t(res)));
-    }
+    } break;
     case c3y: {
       u3_noun dat, vil, out;
       c3_c* out_c;
