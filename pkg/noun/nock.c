@@ -1033,7 +1033,8 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__hela:
       case c3__loop:
       case c3__drop:
-      case c3__bout: {
+      case c3__bout:
+      case c3__dupe: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
         // add appropriate hind opcode
@@ -1944,6 +1945,10 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3i_cell(tag, now);
     } break;
 
+    case c3__dupe: {
+      *out = c3__dupe;
+    }
+
     case c3__nara : {
       u3t_slog_nara(0);
       *out = u3_nul;
@@ -1975,9 +1980,10 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 
 /* _n_hilt_hind(): literal (atomic) dynamic hint, after formula evaluation.
 **            tok: token from _n_hilt_fore(). TRANSFER
-**            pro: product of formula evaluation. RETAIN
+**            pro: product of formula evaluation. TRANSFER
+**  Produces a noun to replace `pro`
 */
-static void
+static u3_noun
 _n_hilt_hind(u3_noun tok, u3_noun pro)
 {
   u3_noun p_tok, q_tok, r_tok;
@@ -2012,11 +2018,15 @@ _n_hilt_hind(u3_noun tok, u3_noun pro)
     u3z(har_delta);
     u3z(per_delta);
   }
+  else if ( c3__dupe == tok ) {
+    pro = u3m_dedup(pro);
+  }
   else {
     u3_assert( u3_nul == tok );
   }
 
   u3z(tok);
+  return pro;
 }
 
 /* _n_hint_fore(): arbitrary dynamic hint, before formula evaluation
@@ -2846,15 +2856,15 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x   = _n_pep(mov, off);   //  [bus tok]
       _n_swap(mov, off);        //  [tok bus]
       o   = _n_pep(mov, off);   //  [bus]
+      x = _n_hilt_hind(o, x);
       _n_push(mov, off, x);     //  [pro bus]
-      _n_hilt_hind(o, x);
       BURN();
 
     do_hill:                    //  [pro tok]
       top = _n_swap(mov, off);  //  [tok pro]
       o   = _n_pep(mov, off);   //  [pro]
       top = _n_peek(off);
-      _n_hilt_hind(o, *top);
+      *top = _n_hilt_hind(o, *top);
       BURN();
 
     do_hink:                    //  [pro bus tok]

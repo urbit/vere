@@ -381,6 +381,7 @@
 #   define c3__duke   c3_s4('d','u','k','e')
 #   define c3__dumb   c3_s4('d','u','m','b')
 #   define c3__dump   c3_s4('d','u','m','p')
+#   define c3__dupe   c3_s4('d','u','p','e')
 #   define c3__dust   c3_s4('d','u','s','t')
 #   define c3__dxkt   c3_s4('d','x','k','t')
 #   define c3__e      c3_s1('e')
