@@ -2638,7 +2638,7 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
     case c3__saxo: {
       _ames_ef_saxo(sam_u, u3k(dat));
       ret_o = c3y;
-    }
+    } break;
 
     case c3__nail: {
       u3_noun who = u3k(u3h(dat));
