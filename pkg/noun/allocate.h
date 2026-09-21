@@ -335,6 +335,17 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 
+    /*  the road is loom layout: every translation unit that includes this
+    **  header must agree on it, whether it is compiled into libnoun,
+    **  libvere or a test binary.  esc embeds jmp_buf, so a platform whose
+    **  libc jmp_buf is more strictly aligned than ours would shift every
+    **  field after esc.  see platform/windows/setjmp.h in pkg/c3.
+    */
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
+
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {

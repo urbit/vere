@@ -37,7 +37,7 @@ pub fn build(b: *std.Build) void {
         pkg_c3.installHeadersDirectory(b.path("platform/windows"), "", .{});
         pkg_c3.addCSourceFiles(.{
             .root = b.path(""),
-            .files = &.{"platform/windows/compat.c"},
+            .files = &.{ "platform/windows/compat.c", "platform/windows/setjmp.c" },
             .flags = copts,
         });
     }
