@@ -335,6 +335,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
+
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
