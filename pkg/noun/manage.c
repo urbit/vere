@@ -659,6 +659,11 @@ _find_home(void)
     c3_y* byt_y = (c3_y*)u3_Loom;
     c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
     c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    if ( u3C.wag_h & u3o_skip_downgrade ) {
+      fprintf(stderr, "loom: skipping downgrade detection, "
+                      "zeroing road tail\r\n");
+      memset(byt_y + off_w, 0, byte_bot_w - off_w);
+    }
     c3_t acc_y = 0;
     for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
       acc_y |= byt_y[i_w];

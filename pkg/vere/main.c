@@ -340,6 +340,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "gc-abort",            no_argument,       NULL, 13 },
     { "no-migrate",          no_argument,       NULL, 14 },
+    { "skip-downgrade-check", no_argument,      NULL, 15 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -401,6 +402,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 14: {  //  no-migrate
         u3C.wag_h |= u3o_no_migrate;
+        break;
+      }
+      case 15: {  //  skip-downgrade-check
+        u3C.wag_h |= u3o_skip_downgrade;
         break;
       }
       //  special args
@@ -929,6 +934,8 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-url URL            Download a prop into the boot sequence\n",
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
     "    --gc-abort                Abort the process on leaks, implies -g\n",
+    "    --no-migrate              Load the snapshot without loom/disk migration\n",
+    "    --skip-downgrade-check    Zero, rather than reject, road data from a newer runtime\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -2324,6 +2331,7 @@ _cw_play(c3_i argc, c3_c* argv[])
     { "snap-at",           required_argument, NULL, 's' },
     { "yolo",              no_argument,       NULL, 'y' },
     { "no-migrate",        no_argument,       NULL, 10 },
+    { "skip-downgrade-check", no_argument,    NULL, 11 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2382,6 +2390,9 @@ _cw_play(c3_i argc, c3_c* argv[])
 
       case 10: {  //  no-migrate
         u3C.wag_h |= u3o_no_migrate;
+      } break;
+      case 11: {  //  skip-downgrade-check
+        u3C.wag_h |= u3o_skip_downgrade;
       } break;
 
       case '?': {

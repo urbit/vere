@@ -48,6 +48,7 @@
         u3o_leak_crash    = 1 << 14,          //  crash if leak when gc
         u3o_yolo          = 1 << 15,          //  no brakes!
         u3o_no_migrate    = 1 << 16,          //  replay without disk migration
+        u3o_skip_downgrade = 1 << 17,         //  zero, don't check, road tail on load
       };
 
   /** Globals.
