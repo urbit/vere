@@ -35,7 +35,6 @@
       c3_h             len_h;         //  number of argument slots
       c3_h             cid_h;         //  memo cache for a memoized call
       c3_o             dir_o;         //  direct call: link pog_p by bell
-      c3_o             uni_o;         //  argument slots are all distinct
       u3j_harm*        ham_u;         //  jet arm taking the core, nullable
       const u3u_harm*  arm_u;         //  jet arm taking the arguments, nullable
     } u3nc_dire;

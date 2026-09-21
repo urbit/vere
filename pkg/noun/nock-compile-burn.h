@@ -657,42 +657,27 @@ OP1(JMP, a_h)
   u3_noun    pro;
 
   SITE();
+  GATHER(len_h);
 
-  //  without a jet to try first, distinct argument slots move to the
-  //  callee in one pass
-  //
-  if ( !dir_u->arm_u && (c3y == dir_u->uni_o) ) {
-    nex = PUSH(len_h);
-    for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
-      u3_noun* sot = &(reg[sot_h[i_h]]);
-      nex[i_h] = *sot;
-      *sot     = 0;
-    }
-    _nc_stat(dir_d);
+  if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
+    _nc_stat(jet_d);
+    POP(len_h);
+    DONE(pro);
   }
-  else {
-    GATHER(len_h);
 
-    if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
-      _nc_stat(jet_d);
-      POP(len_h);
-      DONE(pro);
+  //  the caller's references move to the callee: the first argument
+  //  from a slot takes its reference, any other from the same slot
+  //  finds it gone and gains one
+  //
+  _nc_stat(dir_d);
+  for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
+    u3_noun* sot = &(reg[sot_h[i_h]]);
+
+    if ( *sot ) {
+      *sot = 0;
     }
-
-    //  the caller's references move to the callee: the first argument
-    //  from a slot takes its reference, any other from the same slot
-    //  finds it gone and gains one
-    //
-    _nc_stat(dir_d);
-    for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
-      u3_noun* sot = &(reg[sot_h[i_h]]);
-
-      if ( *sot ) {
-        *sot = 0;
-      }
-      else {
-        GAIN(nex[i_h]);
-      }
+    else {
+      GAIN(nex[i_h]);
     }
   }
 

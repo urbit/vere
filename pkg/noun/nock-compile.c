@@ -1353,21 +1353,6 @@ _nc_prog_fix(u3nc_prog* pog_u)
   pog_u->sot_u.sot_h = (c3_h*)(dat_y + lay_u.sot_w);
 }
 
-/* _nc_uniq(): yes if the len_h slots in sot_h are all distinct.
-*/
-static c3_o
-_nc_uniq(const c3_h* sot_h, c3_h len_h)
-{
-  for ( c3_h i_h = 1; i_h < len_h; i_h++ ) {
-    for ( c3_h j_h = 0; j_h < i_h; j_h++ ) {
-      if ( sot_h[i_h] == sot_h[j_h] ) {
-        return c3n;
-      }
-    }
-  }
-  return c3y;
-}
-
 /* _nc_prog_new(): allocate a program.
 */
 static u3nc_prog*
@@ -1490,7 +1475,6 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
     dat_u->len_h = dir_u->len_h;
     dat_u->cid_h = dir_u->cid_h;
     dat_u->dir_o = dir_u->dir_o;
-    dat_u->uni_o = _nc_uniq(gen_u->pol_h + dir_u->sot_h, dir_u->len_h);
     _nc_dire_jet(dat_u);
   }
 
