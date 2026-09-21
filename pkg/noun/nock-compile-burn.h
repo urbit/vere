@@ -195,10 +195,9 @@ static const OP_F TAB[] = { OPCODES };
 //  GATHER(): push num words and copy the site's arguments into them
 //
 #define GATHER(num)  do {                                                       \
-      nex = PUSH(num);                                                          \
-      for ( c3_h _i = 0; _i < len_h; _i++ ) {                                   \
-        nex[_i] = reg[sot_h[_i]];                                               \
-      }                                                                         \
+    nex = PUSH(num);                                                            \
+    for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
+      nex[_i] = reg[sot_h[_i]];                                                 \
     }                                                                           \
   } while ( 0 )
 
