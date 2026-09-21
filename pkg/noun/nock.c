@@ -1947,7 +1947,7 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
 
     case c3__dupe: {
       *out = c3__dupe;
-    }
+    } break;
 
     case c3__nara : {
       u3t_slog_nara(0);
