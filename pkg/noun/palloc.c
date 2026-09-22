@@ -659,6 +659,12 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     }
   }
 
+  //  we're in the middle of |pack, no need to maintain free lists
+  //
+  if ( u3a_Gack.siz_w ) {
+    return siz_w;
+  }
+
   //  XX groace
   //
   if ( HEAP.off_ws ) {
@@ -684,7 +690,6 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       assert( HEAP.erf_p );
       fre_u = u3to(u3a_dell, HEAP.erf_p);
       assert( (fre_u->pag_w + fre_u->siz_w) == pag_w );
-
       if ( fre_u->pre_p ) {
         HEAP.erf_p = fre_u->pre_p;
         u3to(u3a_dell, fre_u->pre_p)->nex_p = 0;
@@ -2171,16 +2176,17 @@ _pack_seek(void)
   vt_init(&pos_u);
 #endif
 
+  //  NB: the pages remain free in the directory, untracked
+  //
   {
-    u3_post   fre_p;
     u3a_dell *fre_u;
+    u3_post fre_p, nex_p = HEAP.fre_p;
 
-    while ( (fre_p = HEAP.fre_p) ) {
+    HEAP.fre_p = HEAP.erf_p = 0;
+
+    while ( (fre_p = nex_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
-      HEAP.fre_p = fre_u->nex_p;
-      if ( HEAP.fre_p ) {
-        u3to(u3a_dell, HEAP.fre_p)->pre_p = 0;
-      }
+      nex_p = fre_u->nex_p;
       _ifree(fre_p);
     }
   }
@@ -2664,19 +2670,6 @@ _pack_move(void)
 
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);
   u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Gack.siz_w);
-
-  {
-    u3a_dell *fre_u;
-    u3_post   fre_p;
-
-    while ( (fre_p = HEAP.fre_p) ) {
-      fre_u = u3to(u3a_dell, fre_p);
-      HEAP.fre_p = fre_u->nex_p;
-      _ifree(fre_p);
-    }
-  }
-
-  HEAP.erf_p = 0;
 
 #ifdef U3_CPU_DEBUG
   //  free space was rearranged wholesale; recount

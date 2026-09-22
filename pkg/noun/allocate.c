@@ -146,6 +146,7 @@ u3a_mark_alloc(c3_w len_w) // words
 void
 u3a_pack_init(void)
 {
+  u3_assert( !u3a_Gack.siz_w );
   c3_w bit_w = (u3R->hep.len_w + (u3a_word_bits-1)) >> u3a_word_bits_log;
   u3a_Gack.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
   u3a_Gack.pap_w = c3_calloc(sizeof(c3_w) * bit_w);
@@ -178,6 +179,7 @@ u3a_pack_done(void)
   c3_free(u3a_Gack.pap_w);
   c3_free(u3a_Gack.pum_w);
   c3_free(u3a_Gack.buf_w);
+  memset(&u3a_Gack, 0, sizeof(u3a_Gack));
 }
 
 /* _ca_reclaim_half(): reclaim from memoization cache.
