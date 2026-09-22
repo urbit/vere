@@ -340,7 +340,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "gc-abort",            no_argument,       NULL, 13 },
     { "no-migrate",          no_argument,       NULL, 14 },
-    { "skip-downgrade-check", no_argument,      NULL, 15 },
+    { "no-downgrade-check",  no_argument,       NULL, 15 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -404,7 +404,7 @@ _main_getopt(c3_i argc, c3_c** argv)
         u3C.wag_h |= u3o_no_migrate;
         break;
       }
-      case 15: {  //  skip-downgrade-check
+      case 15: {  //  no-downgrade-check
         u3C.wag_h |= u3o_skip_downgrade;
         break;
       }
@@ -935,7 +935,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
     "    --gc-abort                Abort the process on leaks, implies -g\n",
     "    --no-migrate              Load the snapshot without loom/disk migration\n",
-    "    --skip-downgrade-check    Zero, rather than reject, road data from a newer runtime\n",
+    "    --no-downgrade-check      Zero, rather than reject, road data from a newer runtime\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -2320,18 +2320,18 @@ _cw_play(c3_i argc, c3_c* argv[])
   u3_Host.ops_u.gab_abort = c3n;
 
   static struct option lop_u[] = {
-    { "gc",                no_argument,       NULL, 'g' },
-    { "loom",              required_argument, NULL, c3__loom },
-    { "no-demand",         no_argument,       NULL, 6 },
-    { "auto-meld",         no_argument,       NULL, 7 },
-    { "soft-mugs",         no_argument,       NULL, 8 },
-    { "gc-abort",          no_argument,       NULL, 9 },
-    { "full",              no_argument,       NULL, 'f' },
-    { "replay-to",         required_argument, NULL, 'n' },
-    { "snap-at",           required_argument, NULL, 's' },
-    { "yolo",              no_argument,       NULL, 'y' },
-    { "no-migrate",        no_argument,       NULL, 10 },
-    { "skip-downgrade-check", no_argument,    NULL, 11 },
+    { "gc",                 no_argument,       NULL, 'g' },
+    { "loom",               required_argument, NULL, c3__loom },
+    { "no-demand",          no_argument,       NULL, 6 },
+    { "auto-meld",          no_argument,       NULL, 7 },
+    { "soft-mugs",          no_argument,       NULL, 8 },
+    { "gc-abort",           no_argument,       NULL, 9 },
+    { "full",               no_argument,       NULL, 'f' },
+    { "replay-to",          required_argument, NULL, 'n' },
+    { "snap-at",            required_argument, NULL, 's' },
+    { "yolo",               no_argument,       NULL, 'y' },
+    { "no-migrate",         no_argument,       NULL, 10 },
+    { "no-downgrade-check", no_argument,       NULL, 11 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2391,7 +2391,7 @@ _cw_play(c3_i argc, c3_c* argv[])
       case 10: {  //  no-migrate
         u3C.wag_h |= u3o_no_migrate;
       } break;
-      case 11: {  //  skip-downgrade-check
+      case 11: {  //  no-downgrade-check
         u3C.wag_h |= u3o_skip_downgrade;
       } break;
 

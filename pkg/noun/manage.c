@@ -656,17 +656,17 @@ _find_home(void)
     //  Check if we downgraded to a version before e.g. cax.for_p was added:
     //  bytes between the end of the u3v_home struct and the bottom of the heap
     //  should normally be set to 0.
-    c3_y* byt_y = (c3_y*)u3_Loom;
     c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
-    c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    c3_y* beg_y = (c3_y*)u3_Loom + off_w;
+    c3_w len_w = (((c3_w)1) << u3a_page) * sizeof(c3_w) - off_w;
     if ( u3C.wag_h & u3o_skip_downgrade ) {
       fprintf(stderr, "loom: skipping downgrade detection, "
                       "zeroing road tail\r\n");
-      memset(byt_y + off_w, 0, byte_bot_w - off_w);
+      memset(beg_y, 0, len_w);
     }
     c3_t acc_y = 0;
-    for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
-      acc_y |= byt_y[i_w];
+    for (c3_w i_w = 0; i_w < len_w; i_w++) {
+      acc_y |= beg_y[i_w];
     }
     u3_assert(!acc_y && "loom: downgrade detected");
   }
