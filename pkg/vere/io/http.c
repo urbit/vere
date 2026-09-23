@@ -986,7 +986,7 @@ _http_jump_respond(h2o_req_t* rec_u)
   u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
   req_u->sat_e   = u3_rsat_plan;
 
-  c3_c*      loc = c3_malloc(rec_u->input.path.len + 12);
+  c3_c*      loc = c3_malloc(rec_u->input.path.len + 13);
   snprintf( loc, rec_u->input.path.len + 13, "%s%s",
             "/~/holm/jump", rec_u->input.path.base );
 
