@@ -1367,7 +1367,7 @@ _term_ef_blit(u3_utty* uty_u,
     case c3__lin: {  //new  backwards compatibility
       _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_h - 1);
       _term_it_clear_line(uty_u);
-    }  //
+    }  [[fallthrough]];
     case c3__put: {
       _term_it_show_tour(uty_u, u3k(u3t(blt)));
     } break;
@@ -1382,7 +1382,7 @@ _term_ef_blit(u3_utty* uty_u,
         break;
       }
       //new  fall through to nel for backwards compatibility
-    }
+    } [[fallthrough]];
     case c3__nel: {
       _term_it_show_nel(uty_u);
     } break;
