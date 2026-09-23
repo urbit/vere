@@ -27,6 +27,15 @@ typedef struct _u3_h2o_serv {
     u3_rsat_ripe = 3,                   //  responding
   } u3_rsat;
 
+/* u3_husk: request hostname kind
+*/
+  typedef enum {
+    u3_husk_nope = 0,                   //  unknown hostname
+    u3_husk_ripe = 1,                   //  ip address
+    u3_husk_root = 2,                   //  root domain
+    u3_husk_desk = 3,                   //  desk subdomain
+  } u3_husk;
+
 /* u3_hreq: incoming http request.
 */
   typedef struct _u3_hreq {
@@ -93,7 +102,8 @@ typedef struct _u3_h2o_serv {
 /* u3_form: http config from %eyre
 */
   typedef struct _u3_form {
-    c3_o             pro;               //  proxy
+    u3_noun          dom;               //  known root domains (list @t)
+    c3_o             rip;               //  risk/ip mode enabled
     c3_o             log;               //  keep access log
     c3_o             red;               //  redirect to HTTPS
     struct _u3_cert* cer_u;             //  available certs
@@ -338,6 +348,85 @@ _http_heds_from_noun(u3_noun hed)
   return hed_u;
 }
 
+/* _http_req_get_scope(): attempt to read request hostname for target scope
+*/
+static u3_husk
+_http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
+{
+  h2o_iovec_t aut_u = rec_u->authority;
+  h2o_iovec_t hos_u;
+  uint16_t    por_s;
+  const c3_c* end_c;
+  struct in_addr  ip4_u;
+  struct in6_addr ip6_u;
+  u3_noun dom;
+
+  *desk = u3_none;
+
+  end_c = h2o_url_parse_hostport(aut_u.base, aut_u.len, &hos_u, &por_s);
+  if ( end_c != (aut_u.base + aut_u.len) ) {
+    return u3_husk_nope;
+  }
+
+  //  normalize & null-terminate (for inet_pton below) hostname
+  //
+  hos_u = h2o_strdup(&rec_u->pool, hos_u.base, hos_u.len);
+  h2o_strtolower(hos_u.base, hos_u.len);
+
+  //  detect ip address cases
+  //
+  if ( 0 == h2o_hostinfo_aton(hos_u, &ip4_u) ) {
+    return u3_husk_ripe;
+  }
+  if ( 0 != memchr(hos_u.base, ':', hos_u.len) ) {
+    return ( 1 == inet_pton(AF_INET6, hos_u.base, &ip6_u) )
+           ? u3_husk_ripe
+           : u3_husk_nope;
+  }
+
+  //  find root domain match among known domains.
+  //  for_u->dom is longest-first, so we find the longest matching root.
+  //  if it is a direct subdomain, update desk.
+  //
+  for ( dom = fig_u->for_u->dom; u3_nul != dom; dom = u3t(dom) ) {
+    u3_atom rot   = u3h(dom);
+    c3_w    len_w = u3r_met(3, rot);
+    size_t  off_z;
+    c3_w    i_w;
+
+    if ( hos_u.len < len_w ) {
+      continue;
+    }
+
+    off_z = hos_u.len - len_w;
+    for ( i_w = 0; i_w < len_w; i_w++ ) {
+      if ( (c3_y)hos_u.base[off_z + i_w] != u3r_byte(i_w, rot) ) {
+        break;
+      }
+    }
+
+    if ( i_w != len_w ) {
+      continue;
+    }
+
+    if ( 0 == off_z ) {
+      return u3_husk_root;
+    }
+
+    //  require and extract exactly one segment before the root domain
+    //
+    if (  ('.' == hos_u.base[off_z - 1])
+       && (1 < off_z)
+       && (0 == memchr(hos_u.base, '.', off_z - 1)) )
+    {
+      *desk = u3i_bytes(off_z - 1, (const c3_y*)hos_u.base);
+      return u3_husk_desk;
+    }
+  }
+
+  return u3_husk_nope;
+}
+
 /* _http_req_get_auth(): get auth value (if present) for local cookie key
 */
 static u3_weak
@@ -415,6 +504,8 @@ _http_req_is_auth(u3_hfig* fig_u, u3_weak desk, u3_weak tok)
     //  known token for root, always auth
     //
     if ( c3y == u3a_is_atom(aut) ) {
+      //NOTE  for cases where desk is %base, normal usage expects to see a
+      //      token with root scope, so such cases enter this branch too.
       pas = c3y;
     } else {
       //  otherwise, compare desk against token scope
@@ -1199,12 +1290,26 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
   }
   else {
+    u3_weak target;
+    u3_husk huk_u = _http_req_get_scope(&htd_u->fig_u, rec_u, &target);
+
+    //TODO  isn't this broken now for old eyres?
     u3_noun desk, auth, response_header, data;
     u3x_quil(u3t(u3t(nun)), &desk, &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
-    if ( c3n == auth ) {
+    //  if the request is to an ip address but that's not enabled,
+    //  or the request is to a different desk's subdomain,
+    //  reject it
+    //
+    if ( !( u3_husk_ripe == huk_u && c3y == htd_u->fig_u.for_u->rip )
+      && !( u3_husk_desk == huk_u && c3y == u3r_sing(desk, target) ) ) {
+      //TODO  not exactly. true 421 should've been caught earlier,
+      //      this is more like 404. maximally, you could redirect here.
+      h2o_send_error_generic(rec_u, 421, "Bad host", "bad host", 0);
+    }
+    else if ( c3n == auth ) {
       //  the cache entry doesn't require auth, always serve it
       //
       req_u->sat_e = u3_rsat_plan;
@@ -1229,6 +1334,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
         _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
       }
     }
+    u3z(target);
   }
   u3z(nun);
 }
@@ -2727,7 +2833,7 @@ _http_serv_start_all(u3_httd* htd_u)
 
     if ( 0 != htd_u->tls_u ) {
       if ( 0 == pir_u->pes_s ) {
-        por_s = ( c3y == for_u->pro ) ? 8443 : 443;
+        por_s = 443;
         dis = c3n;
       }
       else {
@@ -2745,7 +2851,7 @@ _http_serv_start_all(u3_httd* htd_u)
   //  HTTP server.
   {
     if ( 0 == pir_u->per_s ) {
-      por_s = ( c3y == for_u->pro ) ? 8080 : 80;
+      por_s = 80;
       dis = c3n;
     }
     else {
@@ -2846,28 +2952,50 @@ _http_auth_free(u3_httd* htd_u)
   c3_free(htd_u->fig_u.key_c);
 }
 
-/* u3_http_ef_form(): apply configuration, restart servers.
+/* u3_http_ef_form(): apply $vere-config, restart servers.
 */
 void
 u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
 {
-  u3_noun sec, pro, log, red;
+  u3_noun dom, sec, rip, log, red;
 
-  if ( (c3n == u3r_qual(fig, &sec, &pro, &log, &red) ) ||
-       // confirm sec is either (unit ^) or (list [* ^])
+  //  if we receive an old-style $http-config,
+  //  upgrade it to the new shape
+  //
+  if ( u3_nul == u3h(fig) || c3y == u3du(u3h(fig)) ) {
+    u3_noun pro;
+    if (c3n == u3r_qual(fig, &sec, &pro, &log, &red)) {
+      u3l_log("http: form: invalid card");
+      u3z(fig);
+      return;
+    }
+    if ( c3y == u3du(sec) ) {
+      //NOTE  fake turf, /$, for wildcard
+      //TODO  test!
+      sec = u3i_cell(u3i_cell(u3i_cell(u3_nul, u3_nul), u3k(u3t(sec))), u3_nul);
+    }
+    u3_noun newfig = u3i_qual(1, u3_nul, sec, u3i_trel(c3n, u3k(log), u3k(red)));
+    u3z(fig);
+    fig = newfig;
+  }
+
+  if ( 1 != u3h(fig) ) {
+    u3l_log("http: form: unrecognized");
+    u3z(fig);
+    return;
+  }
+
+  if ( (c3n == u3r_quil(u3t(fig), &dom, &sec, &rip, &log, &red) ) ||
+       // confirm sec is (list [* ^])
        !( //  empty
           u3_nul == sec
-          //  unit value (old style)
-       || ( c3y == u3du(sec) &&
-            c3y == u3du(u3t(sec)) &&
-            u3_nul == u3h(sec) )
           //  non-empty list (new style)
        || ( c3y == u3du(sec) &&
             c3y == u3du(u3h(sec)) &&
             c3y == u3du(u3t(u3h(sec))) )
        ) ||
-       // confirm valid flags ("loobeans")
-       !( c3y == pro || c3n == pro ) ||
+       //  confirm valid flags ("loobeans")
+       !( c3y == rip || c3n == rip ) ||
        !( c3y == log || c3n == log ) ||
        !( c3y == red || c3n == red ) ) {
     u3l_log("http: form: invalid card");
@@ -2876,57 +3004,39 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   }
 
   u3_form* for_u = c3_malloc(sizeof(*for_u));
-  for_u->pro = (c3_o)pro;
+  for_u->dom = u3k(dom);
+  for_u->rip = (c3_o)rip;
   for_u->log = (c3_o)log;
   for_u->red = (c3_o)red;
   for_u->cer_u = 0;
 
   if ( u3_nul != sec ) {
-    //  (unit ^) case
-    //
-    if (u3_nul == u3h(sec)) {
+    sec = u3kb_flop(u3k(sec));
+    while (u3_nul != sec) {
       u3_cert* cer_u = c3_malloc(sizeof(*cer_u));
 
-      u3_noun key = u3h(u3t(sec));
-      u3_noun cer = u3t(u3t(sec));
+      u3_noun nod = u3h(sec);
+      u3_noun key = u3h(u3t(nod));
+      u3_noun cer = u3t(u3t(nod));
 
+      cer_u->tuf   = u3k(u3h(nod));
       cer_u->key_u = _http_wain_to_buf(u3k(key));
       cer_u->cer_u = _http_wain_to_buf(u3k(cer));
       cer_u->ctx_u = _http_init_tls(cer_u->key_u, cer_u->cer_u);
       cer_u->nex_u = 0;
 
-      for_u->cer_u = cer_u;
-    }
-    //  (list [* ^]) case
-    //
-    else {
-      sec = u3kb_flop(u3k(sec));
-      while (u3_nul != sec) {
-        u3_cert* cer_u = c3_malloc(sizeof(*cer_u));
-
-        u3_noun nod = u3h(sec);
-        u3_noun key = u3h(u3t(nod));
-        u3_noun cer = u3t(u3t(nod));
-
-        cer_u->tuf   = u3k(u3h(nod));
-        cer_u->key_u = _http_wain_to_buf(u3k(key));
-        cer_u->cer_u = _http_wain_to_buf(u3k(cer));
-        cer_u->ctx_u = _http_init_tls(cer_u->key_u, cer_u->cer_u);
-        cer_u->nex_u = 0;
-
-        if (0 == for_u->cer_u) {
-          for_u->cer_u = cer_u;
-        }
-        else {
-          cer_u->nex_u = for_u->cer_u;
-          for_u->cer_u = cer_u;
-        }
-
-        u3z(nod);
-        sec = u3t(sec);
+      if (0 == for_u->cer_u) {
+        for_u->cer_u = cer_u;
       }
-      u3z(sec);
+      else {
+        cer_u->nex_u = for_u->cer_u;
+        for_u->cer_u = cer_u;
+      }
+
+      u3z(nod);
+      sec = u3t(sec);
     }
+    u3z(sec);
   }
   else {
     for_u->cer_u = 0;
@@ -2937,6 +3047,7 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
 
   htd_u->fig_u.for_u = for_u;
 
+  //TODO  only strictly needed if certs changed
   _http_serv_restart(htd_u);
 
   htd_u->car_u.liv_o = c3y;
