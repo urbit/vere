@@ -1301,10 +1301,12 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
 
     //  if the request is to an ip address but that's not enabled,
     //  or the request is to a different desk's subdomain,
+    //  or the request it to root but cache entry isn't base's
     //  reject it
     //
     if ( !( u3_husk_ripe == huk_u && c3y == htd_u->fig_u.for_u->rip )
-      && !( u3_husk_desk == huk_u && c3y == u3r_sing(desk, target) ) ) {
+      && !( u3_husk_desk == huk_u && c3y == u3r_sing(target, desk) )
+      && !( u3_husk_root == huk_u && c3y == u3r_sing_c("base", desk) ) ) {
       //TODO  not exactly. true 421 should've been caught earlier,
       //      this is more like 404. maximally, you could redirect here.
       h2o_send_error_generic(rec_u, 421, "Bad host", "bad host", 0);
