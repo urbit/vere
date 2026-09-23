@@ -2929,6 +2929,7 @@ _http_form_free(u3_httd* htd_u)
     return;
   }
 
+  u3z(for_u->dom);
   while ( 0 != for_u->cer_u ) {
     u3_cert* old_u = for_u->cer_u;
     for_u->cer_u = old_u->nex_u;
@@ -3013,11 +3014,12 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
   for_u->cer_u = 0;
 
   if ( u3_nul != sec ) {
-    sec = u3kb_flop(u3k(sec));
-    while (u3_nul != sec) {
+    u3_noun rev = u3kb_flop(u3k(sec));
+    u3_noun cur = rev;
+    while ( u3_nul != cur ) {
       u3_cert* cer_u = c3_malloc(sizeof(*cer_u));
 
-      u3_noun nod = u3h(sec);
+      u3_noun nod = u3h(cur);
       u3_noun key = u3h(u3t(nod));
       u3_noun cer = u3t(u3t(nod));
 
@@ -3035,10 +3037,9 @@ u3_http_ef_form(u3_httd* htd_u, u3_noun fig)
         for_u->cer_u = cer_u;
       }
 
-      u3z(nod);
-      sec = u3t(sec);
+      cur = u3t(cur);
     }
-    u3z(sec);
+    u3z(rev);
   }
   else {
     for_u->cer_u = 0;
@@ -3401,6 +3402,7 @@ _http_io_mark(u3_auto* car_u, c3_w *out_w)
   all_u[0]->siz_w = 4 * u3a_mark_noun(htd_u->fig_u.ses);
   all_u[0]->qua_u = 0;
 
+  //TODO  mark fig_u.for_u->dom, fig_u.for_u->cer_u ?
 
   all_u[1] = c3_malloc(sizeof(**all_u));
   all_u[1]->nam_c = strdup("url->scry cache");
