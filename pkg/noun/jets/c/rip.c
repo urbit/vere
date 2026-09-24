@@ -51,14 +51,21 @@
   Last, we slice out those bits from the two words, combine them into
   one word, and cons them onto the front of the result.
 */
+/* _rip_word(): word [i_w] of a word buffer, zero past its end.
+*/
+static inline c3_w
+_rip_word(const c3_w* buf_w, c3_w len_w, c3_w i_w)
+{
+  return ( i_w < len_w ) ? buf_w[i_w] : 0;
+}
+
 static u3_noun
-_bit_rip(u3_atom bits, u3_atom atom)
+_bit_rip(u3_atom bits, const c3_w* buf_w, c3_w len_w, c3_w bit_width)
 {
   if ( bits==0 || bits>(u3a_word_bits-1)) {
     return u3m_bail(c3__fail);
   }
 
-  c3_w bit_width  = u3r_met(0, atom);
   c3_w num_blocks = DIVCEIL(bit_width, bits);
 
   u3_noun res = u3_nul;
@@ -72,8 +79,8 @@ _bit_rip(u3_atom bits, u3_atom atom)
 
     c3_w bit_rems_in_ins_word = bits_rem % u3a_word_bits;
 
-    c3_w ins_word  = u3r_word(ins_idx, atom);
-    c3_w sig_word  = u3r_word(sig_idx, atom);
+    c3_w ins_word  = _rip_word(buf_w, len_w, ins_idx);
+    c3_w sig_word  = _rip_word(buf_w, len_w, sig_idx);
     c3_w nbits_ins = c3_min(bits, u3a_word_bits - bit_rems_in_ins_word);
     c3_w nbits_sig = bits - nbits_ins;
 
@@ -89,7 +96,7 @@ _bit_rip(u3_atom bits, u3_atom atom)
 }
 
 static u3_noun
-_block_rip(u3_atom bloq, u3_atom b)
+_block_rip(u3_atom bloq, const c3_w* buf_w, c3_w wor_w, c3_w bit_w)
 {
 
   c3_g bloq_g = bloq;
@@ -101,7 +108,7 @@ _block_rip(u3_atom bloq, u3_atom b)
   if ( bloq_g < u3a_word_bits_log ) {                                   //  produce direct atoms
     u3_noun acc     = u3_nul;
 
-    c3_w met_w   = u3r_met(bloq_g, b);                  //  num blocks in atom
+    c3_w met_w   = (bit_w + ((c3_w)1 << bloq_g) - 1) >> bloq_g;  //  num blocks in atom
     c3_w nbits_w = (c3_w)1 << bloq_g;                   //  block size in bits
     c3_w bmask_w = ((c3_w)1 << nbits_w) - 1;            //  result mask
 
@@ -109,9 +116,9 @@ _block_rip(u3_atom bloq, u3_atom b)
       c3_w nex_w = i_w + 1;                             //  next block
       c3_w pat_w = met_w - nex_w;                       //  blks left after this
       c3_w bit_w = pat_w << bloq_g;                     //  bits left after this
-      c3_w wor_w = bit_w >> u3a_word_bits_log;                          //  wrds left after this
+      c3_w idx_w = bit_w >> u3a_word_bits_log;                          //  wrds left after this
       c3_w sif_w = bit_w & (u3a_word_bits-1);                          //  bits left in word
-      c3_w src_w = u3r_word(wor_w, b);                  //  find word by index
+      c3_w src_w = _rip_word(buf_w, wor_w, idx_w);      //  find word by index
       c3_w rip_w = (src_w >> sif_w) & bmask_w;          //  get item from word
 
       acc = u3nc(rip_w, acc);
@@ -121,8 +128,8 @@ _block_rip(u3_atom bloq, u3_atom b)
   }
 
   u3_noun acc   = u3_nul;
-  c3_w    met_w = u3r_met(bloq_g, b);
-  c3_w    len_w = u3r_met(u3a_word_bits_log, b);
+  c3_w    met_w = (bit_w + ((c3_w)1 << bloq_g) - 1) >> bloq_g;
+  c3_w    len_w = wor_w;
   c3_g    san_g = (bloq_g - u3a_word_bits_log);
   c3_w    san_w = (c3_w)1 << san_g;
   c3_w    dif_w = (met_w << san_g) - len_w;
@@ -138,7 +145,7 @@ _block_rip(u3_atom bloq, u3_atom b)
     u3i_slab_bare(&sab_u, u3a_word_bits_log, sap_w);
 
     for ( j_w = 0; j_w < sap_w; j_w++ ) {
-      sab_u.buf_w[j_w] = u3r_word(wut_w + j_w, b);
+      sab_u.buf_w[j_w] = _rip_word(buf_w, wor_w, wut_w + j_w);
     }
 
     rip = u3i_slab_mint(&sab_u);
@@ -167,47 +174,39 @@ u3qc_rip(u3_atom a,
     return u3m_bail(c3__fail);
   }
 
-  //  correctness: the _bit_rip / _block_rip / u3r_chop paths all read
-  //  [c]'s buf_w directly (via u3r_word) or call u3r_blob_load per
-  //  chunk — the former returns seq_w (wrong) for bob atoms, the
-  //  latter allocates a full-size atom per iteration (O(n*blob)
-  //  memory churn).  Materialize the bob once up front: single full
-  //  loom allocation, correct reads thereafter.  A fully zero-copy
-  //  rip would view once and build chunks directly, but that needs a
-  //  deeper rewrite of _bit_rip and _block_rip.
+  //  every path reads [c] as a word buffer: a loom atom's own words, a
+  //  bob's mapping, or a direct atom's value in the view.  each is
+  //  zero-padded to a whole word, so a bob is never materialized and
+  //  the chunk loops see the same bytes for every kind.
   //
-  u3_atom mat = u3_none;
-  if ( c3y == u3a_is_bob(c) ) {
-    mat = u3r_blob_load(c);
-    if ( u3_none == mat ) {
-      return u3m_bail(c3__fail);
-    }
-    c = mat;
-  }
+  u3r_view vue_u;
+  u3r_view_init(&vue_u, c);
 
-  u3_noun pro;
+  const c3_w* buf_w = (const c3_w*)vue_u.byt_y;
+  c3_w        wor_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+  c3_w        bit_w = (c3_w)u3r_view_met(&vue_u);
+  u3_noun     pro;
 
   if ( 1 == b ) {
-    pro = _block_rip(a, c);
+    pro = _block_rip(a, buf_w, wor_w, bit_w);
   }
   else if ( 0 == a ) {
-    pro = _bit_rip(b, c);
+    pro = _bit_rip(b, buf_w, wor_w, bit_w);
   }
   else {
     u3i_slab sab_u;
+    c3_w     met_w = (bit_w + ((c3_w)1 << a) - 1) >> a;
+    c3_w     len_w = DIVCEIL(met_w, b);
     pro = u3_nul;
-    c3_w len_w = DIVCEIL(u3r_met(a, c), b);
 
     for (c3_w i_w = len_w; 0 < i_w; i_w--) {
       u3i_slab_init(&sab_u, a, b);
-      u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
+      u3r_chop_words(a, (i_w - 1) * b, b, 0, sab_u.buf_w, wor_w, (c3_w*)buf_w);
       pro = u3nc(u3i_slab_mint(&sab_u), pro);
     }
   }
 
-  if ( u3_none != mat ) {
-    u3z(mat);
-  }
+  u3r_view_done(&vue_u);
   return pro;
 }
 
