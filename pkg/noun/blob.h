@@ -134,6 +134,10 @@
 
     /* u3_blob_hand: an open blob file, owned by the road that opened it.
     **
+    **   Hands are the view layer's: only retrieve.c (behind u3r_view)
+    **   and the blob tests open, read, or close one.  Everything else
+    **   reads a bob through a u3r_view.
+    **
     **   An inner road keeps its hands on a list headed by its bob_p,
     **   allocated in its own heap and deduplicated by blob id; they are
     **   retained until the road falls (u3_blob_drain from u3m_fall), so

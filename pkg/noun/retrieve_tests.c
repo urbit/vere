@@ -1460,7 +1460,7 @@ _test_view(void)
     fwrite(bob_y, 1, bob_d, fil_f);
     fclose(fil_f);
 
-    //  set u3C.dir_c so u3r_blob_open finds the blob
+    //  set u3C.dir_c so the view finds the blob
     //
     u3C.dir_c = dir_c;
 

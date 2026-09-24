@@ -90,36 +90,39 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    //  a bob atom streams from its blob hand in windows; it is never
-    //  materialized or buffered whole.  bailing with the hand open is
-    //  safe: u3m_bail sweeps it with the road.
+    //  a bob atom streams through a windowed view; it is never
+    //  materialized or buffered whole.  bailing with the view open is
+    //  safe: the road closes what it borrowed.
     //
-    u3_blob_hand* han_u = 0;
-    c3_d          byt_d = 0;      //  bob: significant bytes
+    u3r_view vue_u;
+    c3_o     bob_o = c3n;
+    c3_d     byt_d = 0;      //  bob: significant bytes
 
     c3_w   a_w;
     if ( c3y == u3a_is_bob(a) ) {
-      han_u = u3r_blob_open(a);
-      if ( !han_u ) {
+      if ( c3n == u3r_view_open(&vue_u, a) ) {
         u3m_bail(c3__fail);
         return;
       }
+      bob_o = c3y;
+      byt_d = vue_u.len_w;
 
-      c3_d met_d = u3_blob_hand_met(han_u);
+      //  the bit-length is the byte count less the top byte's leading
+      //  zeros; the view's byte count never includes a zero top byte
+      //
+      {
+        c3_y top_y;
+        c3_d met_d;
 
-      if ( 0 == met_d ) {
-        //  blob is all zeros → atom value is 0; treat as zero atom
-        u3_blob_close(han_u);
-        _cs_jam_fib_chop(fib_u, 1, 1);
-        return;
+        u3r_view_read(&vue_u, byt_d - 1, &top_y, 1);
+        met_d = ((byt_d - 1) << 3) + c3_bits_word(top_y);
+
+        if ( met_d > (c3_w_max - 64) ) {
+          u3m_bail(c3__fail);
+          return;
+        }
+        a_w = (c3_w)met_d;
       }
-      if ( met_d > (c3_w_max - 64) ) {
-        u3m_bail(c3__fail);
-        return;
-      }
-
-      a_w   = (c3_w)met_d;
-      byt_d = (met_d + 7) >> 3;
     }
     else {
       a_w = u3r_met(0, a);
@@ -177,7 +180,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
       //  _cs_jam_fib_chop(fib_u, a_w, a);
       //
-      if ( han_u ) {
+      if ( c3y == bob_o ) {
         //  stream the bob's bytes through a word-aligned window.  each
         //  window starts at a whole number of words into the atom, so
         //  u3r_chop_words sees the same bit alignment it would for the
@@ -193,7 +196,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
           c3_z pad_z = (ask_z + sizeof(c3_w) - 1) & ~(sizeof(c3_w) - 1);
           c3_w wid_w = c3_min(a_w - (c3_w)(off_d * 8), (c3_w)(ask_z * 8));
 
-          if ( ask_z != u3_blob_read(han_u, off_d, (c3_y*)win_w, ask_z) ) {
+          if ( ask_z != u3r_view_read(&vue_u, off_d, (c3_y*)win_w, ask_z) ) {
             u3m_bail(c3__fail);
             return;
           }
@@ -204,7 +207,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
           off_d += ask_z;
         }
 
-        u3_blob_close(han_u);
+        u3r_view_done(&vue_u);
       }
       else {
         u3r_chop(0, 0, a_w, bit_w, buf_w, a);
@@ -323,11 +326,11 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   }
   else if ( c3y == u3a_is_bob(a) ) {
     //  bob atom: write the tag and length prefix, then stream the bytes
-    //  from the blob hand in windows.  the total must be exactly met_w
-    //  bits, which is what u3r_blob_met() gave the caller.
+    //  through a windowed view.  the total must be exactly met_w bits,
+    //  which is what u3r_blob_met() gave the caller.
     //
-    u3_blob_hand* han_u = u3r_blob_open(a);
-    if ( !han_u ) {
+    u3r_view vue_u;
+    if ( c3n == u3r_view_open(&vue_u, a) ) {
       u3m_bail(c3__fail);
     }
 
@@ -344,7 +347,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
                    : (c3_w)(sizeof(win_y) * 8);
         c3_z ask_z = (bit_w + 7) >> 3;
 
-        if ( ask_z != u3_blob_read(han_u, off_d, win_y, ask_z) ) {
+        if ( ask_z != u3r_view_read(&vue_u, off_d, win_y, ask_z) ) {
           u3m_bail(c3__fail);
         }
 
@@ -354,7 +357,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
       }
     }
 
-    u3_blob_close(han_u);
+    u3r_view_done(&vue_u);
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
