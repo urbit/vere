@@ -2614,6 +2614,13 @@ _hand_gone_xeno_cb(u3_noun arg)
 }
 
 static u3_noun
+_hand_gone_byte_cb(u3_noun arg)
+{
+  (void)arg;
+  return u3r_byte(0, _han_bob);
+}
+
+static u3_noun
 _hand_gone_fib_cb(u3_noun arg)
 {
   (void)arg;
@@ -2664,6 +2671,18 @@ _test_hand_gone(void)
   _hand_gone_expect("met",  _hand_gone_met_cb);
   _hand_gone_expect("xeno", _hand_gone_xeno_cb);
   _hand_gone_expect("fib",  _hand_gone_fib_cb);
+  _hand_gone_expect("byte", _hand_gone_byte_cb);
+
+  //  a windowed view reports the missing file without bailing
+  //
+  {
+    u3r_view vue_u;
+    if ( (c3n != u3r_view_open(&vue_u, _han_bob)) || u3_blob_hands() ) {
+      fprintf(stderr, "\033[31mblob hand gone: open did not decline"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+  }
 
   if (  (u3_none != u3_blob_load(_tmp_pier, _han_mug_h, _han_seq_h))
      || (0 != _blob_met(_tmp_pier, _han_mug_h, _han_seq_h))
@@ -2823,6 +2842,32 @@ _hand_share_cb(u3_noun arg)
     fprintf(stderr, "\033[31mblob hand share: second open under a view"
                     "\033[0m\r\n");
     exit(1);
+  }
+
+  //  with the view's mapping in place, the fixed-width readers copy
+  //  out of it: inside the file they agree with the mapping, across
+  //  the end they are zero-filled past the file's own length
+  //
+  {
+    c3_y win_y[16];
+    c3_y exp_y[16];
+    c3_w off_w = met_w - 5;
+
+    memset(exp_y, 0, sizeof(exp_y));
+    memcpy(exp_y, vue_u.byt_y + off_w, 5);
+
+    u3r_bytes(off_w, sizeof(win_y), win_y, _han_bob);
+
+    if (  han_u->map_y != vue_u.byt_y
+       || (0 != memcmp(win_y, exp_y, sizeof(win_y)))
+       || (u3r_chub(0, _han_bob) != *(c3_d*)vue_u.byt_y)
+       || (0 != u3r_chub(1 + (met_w >> 3), _han_bob))
+       || (0 != u3r_byte(met_w + 100000, _han_bob)) )
+    {
+      fprintf(stderr, "\033[31mblob hand share: readers under a mapping"
+                      "\033[0m\r\n");
+      exit(1);
+    }
   }
 
   u3r_view_done(&vue_u);
@@ -3276,6 +3321,49 @@ _test_hand_access(void)
       _ACC_CHECK( (u3r_view_loom == vue_u.kin_e) && (4 == vue_u.len_w),
                   "padd truncate", 4 );
       u3r_view_done(&vue_u);
+
+      //  windowed views: a bob opens without mapping and reads windows
+      //  straight from the file, zero past the end; a loom atom and a
+      //  direct atom read the same way from their own bytes
+      //
+      {
+        c3_y win_y[64];
+        c3_y exp_y[64];
+
+        _ACC_CHECK( c3y == u3r_view_open(&vue_u, bob), "open bob", 0 );
+        _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (0 == vue_u.byt_y)
+                 && (len_w == vue_u.len_w) && (0 == vue_u.u.han_u->map_y)
+                 && (1 == u3_blob_hands()),
+                    "open bob shape", len_w );
+
+        memset(exp_y, 0, sizeof(exp_y));
+        memcpy(exp_y, dat_y + len_w - 40, 40);
+        _ACC_CHECK( (40 == u3r_view_read(&vue_u, len_w - 40, win_y, sizeof(win_y)))
+                 && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
+                 && (0 == vue_u.u.han_u->map_y),
+                    "read bob tail", len_w - 40 );
+        _ACC_CHECK( (0 == u3r_view_read(&vue_u, (c3_d)len_w << 20, win_y, 8))
+                 && (0 == memcmp(win_y, exp_y + 40, 8)),
+                    "read bob past", 0 );
+        u3r_view_done(&vue_u);
+        _ACC_CHECK( 0 == u3_blob_hands(), "open bob done", 0 );
+
+        _ACC_CHECK( c3y == u3r_view_open(&vue_u, sma), "open loom", 0 );
+        _ACC_CHECK( (u3r_view_loom == vue_u.kin_e)
+                 && (3 == u3r_view_read(&vue_u, met_w - 3, win_y, 16))
+                 && (0 == memcmp(win_y, vue_u.byt_y + met_w - 3, 3))
+                 && (0 == memcmp(win_y + 3, exp_y + 40, 13)),
+                    "read loom", met_w );
+        u3r_view_done(&vue_u);
+
+        _ACC_CHECK( c3y == u3r_view_open(&vue_u, 0x44332211), "open cat", 0 );
+        _ACC_CHECK( (u3r_view_flat == vue_u.kin_e)
+                 && (2 == u3r_view_read(&vue_u, 2, win_y, 4))
+                 && (0x33 == win_y[0]) && (0x44 == win_y[1])
+                 && (0 == win_y[2]) && (0 == win_y[3]),
+                    "read cat", 2 );
+        u3r_view_done(&vue_u);
+      }
 
       u3z(sma);
     }
