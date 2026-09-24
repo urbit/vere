@@ -18,16 +18,23 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
 
     const dep_c = b.dependency("nettle", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
         .name = "nettle",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     lib.linkLibC();
 
