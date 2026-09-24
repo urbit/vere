@@ -13,7 +13,10 @@
   ** Each mug bucket has a lockfile ($pier/.urb/bob/<mug>/lock) holding
   ** the next available sequence number (ASCII decimal).
   **
-  ** Earth is the sole writer; Mars is read-only.
+  ** Mars is the sole writer.  A client such as the king never touches
+  ** bob/<mug>/<seq>: it writes bytes to a staging file (u3_blob_stage,
+  ** u3_blob_stage_fd) and sends the path in a %blob writ; mars installs
+  ** it (u3_blob_move_stg), leases it, and acks with the mug and seq.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -54,10 +57,31 @@
       void
       u3_blob_stg_dir(c3_c* out_c, const c3_c* pax_c);
 
-    /* u3_blob_save(): write bytes to blob store.
+    /* u3_blob_stage(): write [len_d] bytes to a new staging file.
     **
-    ** Deduplicates within the mug bucket (byte-for-byte comparison).
-    ** On success, returns c3y and sets *mug_h and *seq_h.
+    ** Sets [stg_c] (at least 8192 bytes) to the file's path, for a
+    ** %blob writ.  On failure the file is gone and c3n is returned.
+    */
+      c3_o
+      u3_blob_stage(const c3_c* pax_c,
+                    const c3_y* dat_y,
+                    c3_d        len_d,
+                    c3_c*       stg_c);
+
+    /* u3_blob_stage_fd(): copy [len_d] bytes from [fid_i] to a new
+    **   staging file, as u3_blob_stage.
+    */
+      c3_o
+      u3_blob_stage_fd(const c3_c* pax_c,
+                       c3_i        fid_i,
+                       c3_d        len_d,
+                       c3_c*       stg_c);
+
+    /* u3_blob_save(): stage bytes and install them: mars and tests only.
+    **
+    ** u3_blob_stage then u3_blob_move_stg, so it deduplicates within the
+    ** mug bucket exactly as an install does.  On success, returns c3y
+    ** and sets *mug_h and *seq_h.
     */
       c3_o
       u3_blob_save(const c3_c* pax_c,
@@ -66,11 +90,8 @@
                    c3_h*       mug_h,
                    c3_h*       seq_h);
 
-    /* u3_blob_save_fd(): streaming write from open file descriptor.
-    **
-    ** Reads [len_d] bytes from [fid_i], writes to blob store.
-    ** Avoids double-buffering for large file ingestion.
-    ** On success, returns c3y and sets *mug_h and *seq_h.
+    /* u3_blob_save_fd(): stage [len_d] bytes from [fid_i] and install
+    **   them: mars and tests only.
     */
       c3_o
       u3_blob_save_fd(const c3_c* pax_c,

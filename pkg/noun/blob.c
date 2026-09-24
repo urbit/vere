@@ -881,7 +881,137 @@ _blob_mug(const c3_y* dat_y, c3_d len_d)
   return u3r_mug_bytes(dat_y, _blob_sig(dat_y, len_d));
 }
 
-/* u3_blob_save(): write bytes to blob store.
+/* _blob_stage_open(): create a staging file, its path in [stg_c].
+*/
+static c3_i
+_blob_stage_open(const c3_c* pax_c, c3_c* stg_c)
+{
+  c3_i fid_i;
+
+  u3_blob_stg_dir(stg_c, pax_c);
+  strcat(stg_c, "/blob-XXXXXX");
+
+  if ( -1 == (fid_i = mkstemp(stg_c)) ) {
+    fprintf(stderr, "blob: stage: mkstemp %s: %s\r\n", stg_c, strerror(errno));
+  }
+  return fid_i;
+}
+
+/* _blob_stage_write(): write [len_z] bytes to staging fd [fid_i].
+*/
+static c3_o
+_blob_stage_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
+{
+  while ( len_z ) {
+    size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
+    ssize_t wrt_i = write(fid_i, dat_y, ask_i);
+
+    if ( wrt_i <= 0 ) {
+      if ( (wrt_i < 0) && (EINTR == errno) ) {
+        continue;
+      }
+      fprintf(stderr, "blob: stage: write: %s\r\n", strerror(errno));
+      return c3n;
+    }
+    dat_y += wrt_i;
+    len_z -= (c3_z)wrt_i;
+  }
+  return c3y;
+}
+
+/* _blob_stage_done(): sync and close a staging fd; unlink it on failure.
+*/
+static c3_o
+_blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
+{
+  if ( c3y == ok_o ) {
+    c3_sync(fid_i);
+  }
+  close(fid_i);
+
+  if ( c3n == ok_o ) {
+    c3_unlink(stg_c);
+  }
+  return ok_o;
+}
+
+/* u3_blob_stage(): write [len_d] bytes to a new staging file.
+*/
+c3_o
+u3_blob_stage(const c3_c* pax_c,
+              const c3_y* dat_y,
+              c3_d        len_d,
+              c3_c*       stg_c)
+{
+  c3_i fid_i = _blob_stage_open(pax_c, stg_c);
+
+  if ( -1 == fid_i ) {
+    return c3n;
+  }
+  return _blob_stage_done(fid_i, stg_c,
+                          _blob_stage_write(fid_i, dat_y, (c3_z)len_d));
+}
+
+/* u3_blob_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
+*/
+c3_o
+u3_blob_stage_fd(const c3_c* pax_c,
+                 c3_i        fid_i,
+                 c3_d        len_d,
+                 c3_c*       stg_c)
+{
+  c3_i stg_i = _blob_stage_open(pax_c, stg_c);
+  c3_o ok_o  = c3y;
+
+  if ( -1 == stg_i ) {
+    return c3n;
+  }
+
+  {
+    c3_y buf_y[65536];
+
+    while ( len_d ) {
+      size_t  ask_i = ( len_d < sizeof(buf_y) ) ? (size_t)len_d : sizeof(buf_y);
+      ssize_t got_i = read(fid_i, buf_y, ask_i);
+
+      if ( got_i <= 0 ) {
+        if ( (got_i < 0) && (EINTR == errno) ) {
+          continue;
+        }
+        fprintf(stderr, "blob: stage: read: %s\r\n",
+                got_i ? strerror(errno) : "short file");
+        ok_o = c3n;
+        break;
+      }
+      if ( c3n == (ok_o = _blob_stage_write(stg_i, buf_y, (c3_z)got_i)) ) {
+        break;
+      }
+      len_d -= (c3_d)got_i;
+    }
+  }
+
+  return _blob_stage_done(stg_i, stg_c, ok_o);
+}
+
+/* _blob_install(): install a staging file, removing it on failure.
+*/
+static c3_o
+_blob_install(const c3_c* pax_c, const c3_c* stg_c, c3_h* mug_h, c3_h* seq_h)
+{
+  if ( c3n == u3_blob_move_stg(pax_c, stg_c, mug_h, seq_h) ) {
+    c3_unlink(stg_c);
+    return c3n;
+  }
+  return c3y;
+}
+
+/* u3_blob_save(): stage [len_d] bytes and install them.
+**
+**   content whose atom the loom would keep direct has no bob
+**   representation (see U3_BLOB_MIN); the caller must use the loom.
+**   all-zero content lands here too, denoting the atom 0.  the
+**   install itself trims trailing zeros, mugs, deduplicates, and
+**   renames, so this and u3_blob_move_stg agree byte for byte.
 */
 c3_o
 u3_blob_save(const c3_c* pax_c,
@@ -890,78 +1020,18 @@ u3_blob_save(const c3_c* pax_c,
              c3_h*       mug_h,
              c3_h*       seq_h)
 {
-  //  store the atom's bytes, not the caller's buffer: a blob denotes an
-  //  atom, and an atom has no trailing zeros.  this is what u3i_bytes()
-  //  does for sub-threshold content, and keeping the two in agreement is
-  //  what makes dedup (and hence bob-vs-bob u3r_sing) see "abc" and
-  //  "abc\0" as the one atom they are.
-  //
-  len_d = _blob_sig(dat_y, len_d);
+  c3_c stg_c[8192];
 
-  //  content whose atom the loom would keep direct has no bob
-  //  representation (see U3_BLOB_MIN); the caller must use the loom.
-  //  all-zero content lands here too, denoting the atom 0.
-  //
-  if ( len_d < U3_BLOB_MIN ) {
+  if ( _blob_sig(dat_y, len_d) < U3_BLOB_MIN ) {
     return c3n;
   }
-
-  *mug_h = _blob_mug(dat_y, len_d);
-
-  //  acquire lock and get next sequence number
-  c3_h nex_h = _blob_lock_acquire(pax_c, *mug_h);
-  if ( 0 == nex_h ) {
+  if ( c3n == u3_blob_stage(pax_c, dat_y, len_d, stg_c) ) {
     return c3n;
   }
-
-  //  check for duplicate before writing
-  c3_h dup_h = _blob_dedup(pax_c, *mug_h, nex_h, dat_y, len_d);
-  if ( 0 != dup_h ) {
-    *seq_h = dup_h;
-    //  we already incremented the lock counter, but that's harmless —
-    //  nex_w slot will simply be skipped (sparse sequence numbers are fine)
-    return c3y;
-  }
-
-  //  write blob file
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, *mug_h, nex_h);
-
-  c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "blob: failed to create %s: %s\r\n",
-            fil_c, strerror(errno));
-    return c3n;
-  }
-
-  c3_d rem_d = len_d;
-  const c3_y* ptr_y = dat_y;
-  while ( rem_d > 0 ) {
-    size_t  ask_i = ( rem_d < BLOB_IO_MAX ) ? (size_t)rem_d : BLOB_IO_MAX;
-    ssize_t wrt_i = write(fid_i, ptr_y, ask_i);
-    if ( wrt_i <= 0 ) {
-      fprintf(stderr, "blob: write failed on %s: %s\r\n",
-              fil_c, strerror(errno));
-      close(fid_i);
-      unlink(fil_c);
-      return c3n;
-    }
-    ptr_y += wrt_i;
-    rem_d -= wrt_i;
-  }
-
-  c3_sync(fid_i);
-  close(fid_i);
-
-  *seq_h = nex_h;
-  return c3y;
+  return _blob_install(pax_c, stg_c, mug_h, seq_h);
 }
 
-/* u3_blob_save_fd(): write from open file descriptor into the blob store.
-**
-**   Uses mmap() to avoid a large malloc: the OS pages in only what
-**   _blob_mug and the dedup scan actually touch, and can evict cold pages
-**   immediately.  Works for files of any size that fit in the address space.
+/* u3_blob_save_fd(): stage [len_d] bytes from [fid_i] and install them.
 */
 c3_o
 u3_blob_save_fd(const c3_c* pax_c,
@@ -970,22 +1040,12 @@ u3_blob_save_fd(const c3_c* pax_c,
                 c3_h*       mug_h,
                 c3_h*       seq_h)
 {
-  if ( 0 == len_d ) {
-    fprintf(stderr, "blob: refusing to save empty file\r\n");
+  c3_c stg_c[8192];
+
+  if ( c3n == u3_blob_stage_fd(pax_c, fid_i, len_d, stg_c) ) {
     return c3n;
   }
-
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "blob: mmap failed (%" PRIc3_d " bytes): %s\r\n",
-            len_d, strerror(errno));
-    return c3n;
-  }
-  madvise(map_v, (size_t)len_d, MADV_SEQUENTIAL);
-
-  c3_o ret_o = u3_blob_save(pax_c, (const c3_y*)map_v, len_d, mug_h, seq_h);
-  munmap(map_v, (size_t)len_d);
-  return ret_o;
+  return _blob_install(pax_c, stg_c, mug_h, seq_h);
 }
 
 /* u3_blob_exists(): check whether a blob file exists.

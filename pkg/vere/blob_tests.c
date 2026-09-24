@@ -869,6 +869,96 @@ _test_blob_del_cb(c3_h mug_h, c3_h seq_h)
   _test_del_count_w += 1;
 }
 
+/* _test_stage(): the king's staging helpers feed u3_blob_move_stg, and
+**   the result is byte-identical to a direct save: same mug, same seq
+**   by dedup, staging file consumed.
+*/
+static void
+_test_stage(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  const c3_y dat_y[] = "staged by a client, installed by mars, one blob";
+  const c3_d dat_d   = sizeof(dat_y) - 1;
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  c3_c stg_c[8192];
+
+  if ( c3y != u3_blob_save(_tmp_pier, dat_y, dat_d, &mug_h, &seq_h) ) {
+    fprintf(stderr, "\033[31mblob stage: save failed\033[0m\r\n");
+    exit(1);
+  }
+
+  //  from a buffer
+  //
+  {
+    c3_h mug2_h = 0; c3_h seq2_h = 0;
+    c3_c dir_c[8192];
+
+    u3_blob_stg_dir(dir_c, _tmp_pier);
+
+    if (  (c3y != u3_blob_stage(_tmp_pier, dat_y, dat_d, stg_c))
+       || (0 != strncmp(stg_c, dir_c, strlen(dir_c)))
+       || (c3n == _path_exists(stg_c)) )
+    {
+      fprintf(stderr, "\033[31mblob stage: buffer stage failed\033[0m\r\n");
+      exit(1);
+    }
+    if (  (c3y != u3_blob_move_stg(_tmp_pier, stg_c, &mug2_h, &seq2_h))
+       || (mug2_h != mug_h) || (seq2_h != seq_h)
+       || (c3y == _path_exists(stg_c)) )
+    {
+      fprintf(stderr, "\033[31mblob stage: install of a staged buffer "
+                      "differs from save\033[0m\r\n");
+      exit(1);
+    }
+  }
+
+  //  from a descriptor
+  //
+  {
+    c3_h mug2_h = 0; c3_h seq2_h = 0;
+    c3_c src_c[8192];
+    c3_i fid_i;
+
+    snprintf(src_c, sizeof(src_c), "%s/source.bin", _tmp_pier);
+    fid_i = c3_open(src_c, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if ( (fid_i < 0) || ((ssize_t)dat_d != write(fid_i, dat_y, (size_t)dat_d)) ) {
+      fprintf(stderr, "\033[31mblob stage: source write failed\033[0m\r\n");
+      exit(1);
+    }
+    close(fid_i);
+    fid_i = c3_open(src_c, O_RDONLY, 0);
+
+    if (  (c3y != u3_blob_stage_fd(_tmp_pier, fid_i, dat_d, stg_c))
+       || (c3y != u3_blob_move_stg(_tmp_pier, stg_c, &mug2_h, &seq2_h))
+       || (mug2_h != mug_h) || (seq2_h != seq_h)
+       || (c3y == _path_exists(stg_c)) )
+    {
+      fprintf(stderr, "\033[31mblob stage: install of a staged descriptor "
+                      "differs from save\033[0m\r\n");
+      exit(1);
+    }
+    close(fid_i);
+
+    //  a short source fails and leaves nothing behind
+    //
+    fid_i = c3_open(src_c, O_RDONLY, 0);
+    if (  (c3n != u3_blob_stage_fd(_tmp_pier, fid_i, dat_d + 1, stg_c))
+       || (c3y == _path_exists(stg_c)) )
+    {
+      fprintf(stderr, "\033[31mblob stage: short source not refused"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    close(fid_i);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob stage: ok\r\n");
+}
+
 /* _test_sane(): u3a_blob_sane catches counter corruption.
 */
 static void
@@ -4215,6 +4305,7 @@ main(int argc, char* argv[])
   _test_install_stg();
   _test_install_stg_trim();
   _test_install_stg_dedup();
+  _test_stage();
   _test_sane();
   _test_meld();
   _test_cue_blob();
