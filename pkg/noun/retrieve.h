@@ -467,7 +467,8 @@
       **   the rest.  Bytes are read-only and, for a bob, may be evicted
       **   by the kernel and read back from the file.
       **
-      **   Memory.  A view's bytes are, in order of preference:
+      **   Memory.  A view is a look into an atom, wherever the atom
+      **   lives; it is not a place to build one.  Its bytes are:
       **
       **     loom  the indirect atom's own word buffer, borrowed.
       **     blob  the road's hand on the bob's file.  A flat view aliases
@@ -479,15 +480,15 @@
       **           the view, owns the fd and the mapping, and the hand
       **           dies with the road, so a bail or signal cannot leak
       **           them.  done drops the view's hold on the hand.
-      **     flat  bytes copied into the view itself: a direct atom, or a
-      **           pad of up to u3r_view_line bytes over a loom atom,
-      **           which covers every fixed key, nonce, and salt width.
-      **     heap  a u3a_malloc pad, only for a pad over a loom atom wider
-      **           than u3r_view_line, or a wide pad over a bob whose hand
-      **           another live view holds.  The loom reclaims it with the
-      **           road on a bail, so it is safe on inner roads; a padded
-      **           view on the home road would leak it on a bail, and no
-      **           home-road caller takes one.
+      **     flat  a direct atom.  It has no address of its own, so its
+      **           value sits in raw_d and byt_y points there: the one
+      **           word a view carries itself.
+      **     heap  a u3a_malloc pad: a pad over a loom atom wider than the
+      **           atom, or a wide pad over a bob whose hand another live
+      **           view holds.  The loom reclaims it with the road on a
+      **           bail, so it is safe on inner roads; a padded view on
+      **           the home road would leak it on a bail, and no home-road
+      **           caller takes one.
       **
       **   Every byte between a flat view's len_w and the next word
       **   boundary is readable and zero in every kind, which lets
@@ -496,24 +497,18 @@
         typedef enum {
           u3r_view_loom = 0,    //  borrows the loom word buffer;   done frees nothing
           u3r_view_blob,        //  aliases the hand's mapping;     done: u3_blob_close
-          u3r_view_flat,        //  bytes inline in u.buf_y;        done frees nothing
+          u3r_view_flat,        //  a direct atom's value in raw_d; done frees nothing
           u3r_view_heap         //  u3a_malloc pad;                 done: u3a_free
         } u3r_view_e;
-
-      /* u3r_view_line: bytes a view can hold inline.
-      */
-#       define u3r_view_line  64
 
         struct _u3_blob_hand;
 
         typedef struct {
-          const c3_y* byt_y;          //  the bytes
-          c3_w        len_w;          //  how many
-          u3r_view_e  kin_e;          //  what byt_y points at
-          union {
-            struct _u3_blob_hand* han_u;                //  blob: the road's hand
-            c3_y                  buf_y[u3r_view_line]; //  flat: the bytes
-          } u;
+          const c3_y*           byt_y;  //  the bytes
+          c3_w                  len_w;  //  how many
+          u3r_view_e            kin_e;  //  what byt_y points at
+          struct _u3_blob_hand* han_u;  //  blob: the road's hand, else 0
+          c3_d                  raw_d;  //  flat: the direct atom's value
         } u3r_view;
 
       /* u3r_view_open(): open a windowed view of [a], mapping nothing.
@@ -547,9 +542,8 @@
       **   [a], zero-filled past the atom's bytes.
       **
       **   Never allocates for a bob unless another live view holds its
-      **   hand; allocates in the loom for a loom atom only past
-      **   u3r_view_line.  Bails like u3r_view_init, or %meme from the
-      **   loom pad.
+      **   hand; allocates a loom pad for any other atom shorter than
+      **   [wid_w].  Bails like u3r_view_init, or %meme from the loom pad.
       */
         void
         u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w);

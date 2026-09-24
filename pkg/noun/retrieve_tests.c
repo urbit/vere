@@ -1373,7 +1373,7 @@ _test_view(void)
     u3z(a);
   }
 
-  //  cat atom: bytes are the atom value itself, copied inline into u.buf_y
+  //  cat atom: bytes are the atom value itself, held in raw_d
   //
   {
     const u3_atom a     = 0x44332211;
@@ -1393,8 +1393,8 @@ _test_view(void)
       fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
       exit(1);
     }
-    if ( vue_u.byt_y != vue_u.u.buf_y ) {
-      fprintf(stderr, "_test_view(): cat view should alias u.buf_y\r\n");
+    if ( vue_u.byt_y != (const c3_y*)&vue_u.raw_d ) {
+      fprintf(stderr, "_test_view(): cat view should alias raw_d\r\n");
       exit(1);
     }
     if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
@@ -1418,7 +1418,7 @@ _test_view(void)
     u3r_view_init(&vue_u, 0);
     if (  vue_u.len_w != 0
        || vue_u.kin_e != u3r_view_loom
-       || vue_u.u.han_u != 0 )
+       || vue_u.han_u != 0 )
     {
       fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
       exit(1);
@@ -1471,14 +1471,14 @@ _test_view(void)
 
     //  expect a hand-backed view: kin_e == u3r_view_blob, u.han_u set
     //
-    if ( vue_u.kin_e != u3r_view_blob || 0 == vue_u.u.han_u ) {
+    if ( vue_u.kin_e != u3r_view_blob || 0 == vue_u.han_u ) {
       fprintf(stderr, "_test_view(): bob atom should be hand-backed "
                       "(len=%" PRIc3_w ")\r\n", vue_u.len_w);
       exit(1);
     }
-    if ( vue_u.u.han_u->len_d != bob_d ) {
+    if ( vue_u.han_u->len_d != bob_d ) {
       fprintf(stderr, "_test_view(): hand len %" PRIc3_d " != %" PRIc3_d "\r\n",
-              vue_u.u.han_u->len_d, bob_d);
+              vue_u.han_u->len_d, bob_d);
       exit(1);
     }
     if ( vue_u.len_w == 0 || (c3_d)vue_u.len_w > bob_d ) {

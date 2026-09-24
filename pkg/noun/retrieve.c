@@ -1215,7 +1215,8 @@ _cr_view_blank(u3r_view* vue_u)
   vue_u->byt_y = 0;
   vue_u->len_w = 0;
   vue_u->kin_e = u3r_view_loom;
-  memset(vue_u->u.buf_y, 0, sizeof(vue_u->u.buf_y));
+  vue_u->han_u = 0;
+  vue_u->raw_d = 0;
 }
 
 /* u3r_view_open(): open a windowed view of [a], mapping nothing.
@@ -1242,9 +1243,9 @@ u3r_view_open(u3r_view* vue_u, u3_atom a)
       return c3n;
     }
 
-    vue_u->len_w   = (c3_w)((met_d + 7) >> 3);
-    vue_u->kin_e   = u3r_view_blob;
-    vue_u->u.han_u = han_u;
+    vue_u->len_w = (c3_w)((met_d + 7) >> 3);
+    vue_u->kin_e = u3r_view_blob;
+    vue_u->han_u = han_u;
     return c3y;
   }
 
@@ -1254,13 +1255,13 @@ u3r_view_open(u3r_view* vue_u, u3_atom a)
     return c3y;
   }
 
-  //  a direct atom's bytes are copied inline; an indirect atom's word
-  //  buffer is borrowed, zero-padded to its last word by the loom
+  //  a direct atom has no address: its value is kept in the view and
+  //  viewed there.  an indirect atom's word buffer is borrowed, zero-
+  //  padded to its last word by the loom
   //
   if ( _(u3a_is_cat(a)) ) {
-    c3_d raw_d = a;
-    memcpy(vue_u->u.buf_y, &raw_d, sizeof(raw_d));
-    vue_u->byt_y = vue_u->u.buf_y;
+    vue_u->raw_d = a;
+    vue_u->byt_y = (const c3_y*)&vue_u->raw_d;
     vue_u->len_w = met_w;
     vue_u->kin_e = u3r_view_flat;
   }
@@ -1285,7 +1286,7 @@ u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
     //  end is this function's whether the bytes come from the road's
     //  mapping or from a pread
     //
-    u3_blob_hand* han_u = vue_u->u.han_u;
+    u3_blob_hand* han_u = vue_u->han_u;
 
     if ( off_d < han_u->len_d ) {
       c3_d rem_d = han_u->len_d - off_d;
@@ -1310,25 +1311,18 @@ u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
   return got_z;
 }
 
-/* _cr_view_pad(): fill a pad of [wid_w] bytes with [len_w] bytes of
-**   source and zeros, inline when it fits and in the loom otherwise.
+/* _cr_view_pad(): fill a loom pad of [wid_w] bytes with [len_w] bytes
+**   of source and zeros.
 **
-**   [src_y] may be 0 for a zero source.  the loom allocation can bail
-**   %meme; the caller must hold nothing that a bail would not reclaim.
+**   [src_y] may be 0 for a zero source.  the allocation can bail %meme;
+**   the caller must hold nothing that a bail would not reclaim.
 */
 static void
 _cr_view_pad(u3r_view* vue_u, const c3_y* src_y, c3_w len_w, c3_w wid_w)
 {
-  c3_y* pad_y;
+  c3_y* pad_y = u3a_malloc(wid_w);
 
-  if ( wid_w <= u3r_view_line ) {
-    pad_y        = vue_u->u.buf_y;
-    vue_u->kin_e = u3r_view_flat;
-  }
-  else {
-    pad_y        = u3a_malloc(wid_w);
-    vue_u->kin_e = u3r_view_heap;
-  }
+  vue_u->kin_e = u3r_view_heap;
 
   if ( len_w && src_y ) {
     memcpy(pad_y, src_y, len_w);
@@ -1351,7 +1345,7 @@ u3r_view_init(u3r_view* vue_u, u3_atom a)
   //  bob: the bytes are the hand's mapping, so a view costs no copy
   //
   if ( u3r_view_blob == vue_u->kin_e ) {
-    const c3_y* byt_y = u3_blob_data(vue_u->u.han_u);
+    const c3_y* byt_y = u3_blob_data(vue_u->han_u);
 
     if ( !byt_y ) {
       u3r_view_done(vue_u);
@@ -1376,7 +1370,7 @@ u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w)
   //  the bytes into an ordinary pad instead.
   //
   if ( u3r_view_blob == vue_u->kin_e ) {
-    u3_blob_hand* han_u = vue_u->u.han_u;
+    u3_blob_hand* han_u = vue_u->han_u;
     c3_w          len_w = vue_u->len_w;
     const c3_y*   byt_y = u3_blob_data_wid(han_u, wid_w);
 
@@ -1411,23 +1405,11 @@ u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w)
     return;
   }
 
-  //  a loom atom shorter than the pad: copy it into an inline or loom
-  //  pad.  the source is borrowed or already inline, so it needs no
-  //  release; an inline source is copied through a local first since
-  //  the pad would overwrite it
+  //  a loom or direct atom shorter than the pad is copied into a loom
+  //  pad.  the source is borrowed, or is raw_d, so it needs no release
+  //  and survives until the copy is done
   //
-  {
-    c3_y        cat_y[sizeof(c3_d)];
-    const c3_y* src_y = vue_u->byt_y;
-    c3_w        len_w = vue_u->len_w;
-
-    if ( u3r_view_flat == vue_u->kin_e ) {
-      memcpy(cat_y, src_y, len_w);
-      src_y = cat_y;
-    }
-
-    _cr_view_pad(vue_u, src_y, len_w, wid_w);
-  }
+  _cr_view_pad(vue_u, vue_u->byt_y, vue_u->len_w, wid_w);
 }
 
 /* u3r_view_done(): release the view.
@@ -1436,7 +1418,7 @@ void
 u3r_view_done(u3r_view* vue_u)
 {
   switch ( vue_u->kin_e ) {
-    case u3r_view_blob: u3_blob_close(vue_u->u.han_u); break;
+    case u3r_view_blob: u3_blob_close(vue_u->han_u); break;
     case u3r_view_heap: u3a_free((void*)vue_u->byt_y); break;
     default: break;  //  loom and flat hold nothing
   }

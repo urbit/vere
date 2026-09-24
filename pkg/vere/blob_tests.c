@@ -1434,7 +1434,7 @@ _hand_open_inner(void)
 
   u3r_view vue_u;
   u3r_view_init(&vue_u, _han_bob);
-  u3_assert( vue_u.u.han_u == han_u );
+  u3_assert( vue_u.han_u == han_u );
 
   return han_u;
 }
@@ -1784,7 +1784,7 @@ _hand_alarm_cb(u3_noun arg)
   //
   u3r_view vue_u;
   u3r_view_init(&vue_u, _han_bob);
-  _han_fid_i = vue_u.u.han_u->fid_i;
+  _han_fid_i = vue_u.han_u->fid_i;
 
   volatile c3_d sum_d = 0;
 
@@ -2828,7 +2828,7 @@ _hand_share_cb(u3_noun arg)
   u3r_view vue_u;
   u3r_view_init(&vue_u, _han_bob);
 
-  u3_blob_hand* han_u = vue_u.u.han_u;
+  u3_blob_hand* han_u = vue_u.han_u;
   c3_i          fid_i = han_u->fid_i;
   _han_fid_i          = fid_i;
 
@@ -2982,7 +2982,7 @@ _hand_wide_cb(u3_noun arg)
   //
   u3r_view_init(&one_u, _han_bob);
   {
-    u3_blob_hand* han_u = one_u.u.han_u;
+    u3_blob_hand* han_u = one_u.han_u;
     c3_w          wid_w = (c3_w)u3_blob_hand_pad(han_u) + 4096;
     _han_fid_i = han_u->fid_i;
 
@@ -2990,7 +2990,7 @@ _hand_wide_cb(u3_noun arg)
     u3r_view_padd(&one_u, _han_bob, wid_w);
 
 #ifndef U3_OS_windows
-    if (  (u3r_view_blob != one_u.kin_e) || (one_u.u.han_u != han_u)
+    if (  (u3r_view_blob != one_u.kin_e) || (one_u.han_u != han_u)
        || (han_u->map_d < wid_w)
        || (0 != memcmp(one_u.byt_y + wid_w - 64, zer_y, 64)) )
     {
@@ -3270,7 +3270,7 @@ _test_hand_access(void)
       u3r_view_padd(&vue_u, bob, wid_w);
 #ifndef U3_OS_windows
       _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (1 == u3_blob_hands())
-               && (vue_u.u.han_u->map_d >= wid_w),
+               && (vue_u.han_u->map_d >= wid_w),
                   "padd wide kind", wid_w );
 #else
       _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (0 == u3_blob_hands()),
@@ -3284,34 +3284,33 @@ _test_hand_access(void)
       u3r_view_done(&vue_u);
     }
 
-    //  loom atoms: a pad up to u3r_view_line is inline, a wider one is
-    //  in the loom; a direct atom is inline from the start
+    //  loom atoms: a pad wider than the atom is a loom pad; a direct
+    //  atom is viewed in place and padded the same way
     //
     {
       u3_atom sma = u3i_string("small loom atom, wider than a word");
       c3_w    met_w = u3r_met(3, sma);
 
-      u3r_view_padd(&vue_u, sma, u3r_view_line);
-      _ACC_CHECK( (u3r_view_flat == vue_u.kin_e) && (vue_u.byt_y == vue_u.u.buf_y)
-               && (u3r_view_line == vue_u.len_w)
-               && (0 == memcmp(vue_u.byt_y + met_w, zer_y, u3r_view_line - met_w)),
-                  "padd inline", u3r_view_line );
+      u3r_view_padd(&vue_u, sma, 64);
+      _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (64 == vue_u.len_w)
+               && (0 == memcmp(vue_u.byt_y + met_w, zer_y, 64 - met_w)),
+                  "padd loom", 64 );
       {
         u3_atom cop = u3i_bytes(met_w, vue_u.byt_y);
-        _ACC_CHECK( c3y == u3r_sing(sma, cop), "padd inline bytes", met_w );
+        _ACC_CHECK( c3y == u3r_sing(sma, cop), "padd loom bytes", met_w );
         u3z(cop);
       }
       u3r_view_done(&vue_u);
 
-      u3r_view_padd(&vue_u, sma, u3r_view_line + 1);
-      _ACC_CHECK( (u3r_view_heap == vue_u.kin_e)
-               && (u3r_view_line + 1 == vue_u.len_w)
-               && (0 == memcmp(vue_u.byt_y + met_w, zer_y, u3r_view_line + 1 - met_w)),
-                  "padd loom", u3r_view_line + 1 );
+      u3r_view_init(&vue_u, 0x44332211);
+      _ACC_CHECK( (u3r_view_flat == vue_u.kin_e) && (4 == vue_u.len_w)
+               && (vue_u.byt_y == (const c3_y*)&vue_u.raw_d)
+               && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3]),
+                  "init cat", 4 );
       u3r_view_done(&vue_u);
 
       u3r_view_padd(&vue_u, 0x44332211, 16);
-      _ACC_CHECK( (u3r_view_flat == vue_u.kin_e) && (16 == vue_u.len_w)
+      _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (16 == vue_u.len_w)
                && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3])
                && (0 == memcmp(vue_u.byt_y + 4, zer_y, 12)),
                   "padd cat", 16 );
@@ -3332,7 +3331,7 @@ _test_hand_access(void)
 
         _ACC_CHECK( c3y == u3r_view_open(&vue_u, bob), "open bob", 0 );
         _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (0 == vue_u.byt_y)
-                 && (len_w == vue_u.len_w) && (0 == vue_u.u.han_u->map_y)
+                 && (len_w == vue_u.len_w) && (0 == vue_u.han_u->map_y)
                  && (1 == u3_blob_hands()),
                     "open bob shape", len_w );
 
@@ -3340,7 +3339,7 @@ _test_hand_access(void)
         memcpy(exp_y, dat_y + len_w - 40, 40);
         _ACC_CHECK( (40 == u3r_view_read(&vue_u, len_w - 40, win_y, sizeof(win_y)))
                  && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
-                 && (0 == vue_u.u.han_u->map_y),
+                 && (0 == vue_u.han_u->map_y),
                     "read bob tail", len_w - 40 );
         _ACC_CHECK( (0 == u3r_view_read(&vue_u, (c3_d)len_w << 20, win_y, 8))
                  && (0 == memcmp(win_y, exp_y + 40, 8)),
