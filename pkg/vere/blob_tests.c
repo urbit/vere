@@ -3192,7 +3192,7 @@ _test_hand_access(void)
       pad_w = (c3_w)u3_blob_hand_pad(han_u);
       u3_blob_close(han_u);
     }
-    _ACC_CHECK( (pad_w >= 6000) && (0 == u3_blob_hands()), "pad", pad_w );
+    _ACC_CHECK( (pad_w >= len_w) && (0 == u3_blob_hands()), "pad", pad_w );
 
     u3r_view_padd(&vue_u, bob, 100);
     _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (100 == vue_u.len_w)
@@ -3200,13 +3200,21 @@ _test_hand_access(void)
                 "padd short", 100 );
     u3r_view_done(&vue_u);
 
-    u3r_view_padd(&vue_u, bob, 6000);
-    _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (6000 == vue_u.len_w)
-             && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
-             && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
-             && (1 == u3_blob_hands()),
-                "padd mapped", 6000 );
-    u3r_view_done(&vue_u);
+    //  a pad inside the hand's own zero tail is the mapping; on a
+    //  platform whose pad is only the word tail it is a loom pad
+    //
+    {
+      c3_o map_o = ( pad_w >= 6000 ) ? c3y : c3n;
+
+      u3r_view_padd(&vue_u, bob, 6000);
+      _ACC_CHECK( (vue_u.kin_e == ((c3y == map_o) ? u3r_view_blob : u3r_view_heap))
+               && (6000 == vue_u.len_w)
+               && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
+               && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
+               && (u3_blob_hands() == ((c3y == map_o) ? 1 : 0)),
+                  "padd mapped", 6000 );
+      u3r_view_done(&vue_u);
+    }
 
     //  past the file's pages the hand widens its mapping with anonymous
     //  zero pages, so even a very wide pad allocates nothing; windows
