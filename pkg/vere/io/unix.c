@@ -1082,57 +1082,15 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
   //  large files: stage in .urb/bob/stg/, install via the %blob writ
   //
   if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
-    //  build staging path
-    //
     c3_c stg_c[8192];
-    snprintf(stg_c, sizeof(stg_c), "%s/.urb/bob/stg/unix-XXXXXX",
-             unx_u->pax_c);
-
-    c3_i stg_i = mkstemp(stg_c);
-    if ( stg_i < 0 ) {
-      u3l_log("unix: mkstemp failed for %s: %s",
-              fil_u->pax_c, strerror(errno));
-      close(fid_i);
-      return u3_nul;
-    }
-
-    //  stream file to staging area in 64K chunks
-    //
-    c3_y  buf_y[65536];
-    c3_o  ok_o = c3y;
-    ssize_t got_i;
-    while ( (got_i = read(fid_i, buf_y, sizeof(buf_y))) > 0 ) {
-      c3_y*   ptr_y = buf_y;
-      ssize_t rem_i = got_i;
-      while ( rem_i > 0 ) {
-        ssize_t wrt_i = write(stg_i, ptr_y, (size_t)rem_i);
-        if ( wrt_i <= 0 ) {
-          u3l_log("unix: write to staging file failed: %s", strerror(errno));
-          ok_o = c3n;
-          break;
-        }
-        ptr_y += wrt_i;
-        rem_i -= wrt_i;
-      }
-      if ( c3n == ok_o ) break;
-    }
+    c3_o ok_o = u3_blob_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
 
     close(fid_i);
 
-    if ( got_i < 0 ) {
-      u3l_log("unix: read from %s failed: %s",
-              fil_u->pax_c, strerror(errno));
-      ok_o = c3n;
-    }
-
     if ( c3n == ok_o ) {
-      close(stg_i);
-      c3_unlink(stg_c);
+      u3l_log("unix: could not stage %s", fil_u->pax_c);
       return u3_nul;
     }
-
-    c3_sync(stg_i);
-    close(stg_i);
 
     //  find the mount name for this file (walk parent dirs up to mon_u)
     //
@@ -1456,43 +1414,14 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
 
   len_ws = buf_u.st_size;
 
-  //  large files: stream into blob store
+  //  the initial scan runs at boot, before mars can install anything,
+  //  and mars alone writes the store: a large file goes in as a loom
+  //  atom here, and the watcher stages any later change
   //
   if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
-    c3_h  bob_mug_h;
-    c3_h  bob_seq_h;
-
-    if ( c3y == u3_blob_save_fd(u3C.dir_c, fid_i,
-                                (c3_d)len_ws, &bob_mug_h, &bob_seq_h) )
-    {
-      if ( close(fid_i) < 0 ) {
-        u3l_log("unix: error closing initial file %s: %s", pax_c, strerror(errno));
-      }
-
-      u3_noun rel_pax = _unix_string_to_path_helper(pax_c + strlen(bas_c) + 1);
-      u3_noun mim     = u3nt(c3__text, u3i_string("plain"), u3_nul);
-      u3_atom atm     = u3i_blob(bob_mug_h, bob_seq_h);
-      u3_noun dat     = u3nt(mim, (u3_atom)len_ws, atm);
-
-      return u3nc(u3nt(rel_pax, u3_nul, dat), u3_nul);
-    }
-
-    //  no blob: at this size the only content the store refuses is content
-    //  denoting an atom too small to blobify, i.e. all zeros (U3_BLOB_MIN).
-    //  the loom path below builds that atom correctly, and is also the right
-    //  recovery if the save simply failed — so rewind and fall through.
-    //
-    u3l_log("blob: no blob for large initial file %s, reading into loom", pax_c);
-
-    if ( -1 == lseek(fid_i, 0, SEEK_SET) ) {
-      u3l_log("error rewinding initial file %s: %s", pax_c, strerror(errno));
-      close(fid_i);
-      return u3_nul;
-    }
+    u3l_log("unix: large initial file %s read into the loom", pax_c);
   }
 
-  //  small files: existing path — read into buffer
-  //
   {
     c3_y* dat_y = c3_malloc(len_ws);
 

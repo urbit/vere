@@ -118,7 +118,7 @@ typedef struct _u3_httd {
   u3t_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
-static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
+static u3_weak _http_rec_to_httq(h2o_req_t* rec_u, u3_noun bod);
 static u3_hreq* _http_req_prepare(h2o_req_t* rec_u, u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
 static void _http_serv_free(u3_http* htp_u);
 static void _http_serv_start_all(u3_httd* htd_u);
@@ -171,14 +171,9 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
 **
-**   Bodies >= U3_BLOB_THRESH are persisted to the blob store and
-**   handed to arvo as a bob-atom reference instead of being copied
-**   into the loom.  h2o has already buffered the whole entity in
-**   memory (capped by fig_u.max_request_entity_size), so this
-**   inline save is fine — same model as mesa.c for large packets.
-**
-**   If the blob save fails (disk full, permissions, etc.) fall
-**   back to a regular indirect atom.
+**   A body at or past U3_BLOB_THRESH never comes through here: it is
+**   staged and installed by mars first (_http_rec_start), and the
+**   bob arrives in _http_bob_install_cb.
 */
 static u3_noun
 _http_vec_to_octs(h2o_iovec_t vec_u)
@@ -187,23 +182,9 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
     return u3_nul;
   }
 
-  u3_atom bod = u3_none;
-
-  if ( (c3_d)vec_u.len >= U3_BLOB_THRESH ) {
-    c3_h mug_h;
-    c3_h seq_h;
-    if ( c3y == u3_blob_save(u3C.dir_c, (const c3_y*)vec_u.base,
-                              (c3_d)vec_u.len, &mug_h, &seq_h) )
-    {
-      bod = u3i_blob(mug_h, seq_h);
-    }
-  }
-  if ( u3_none == bod ) {
-    bod = _http_vec_to_atom(vec_u);
-  }
-
   // XX correct size_t -> atom?
-  return u3nt(u3_nul, u3i_chubs(1, (const c3_d*)&vec_u.len), bod);
+  return u3nt(u3_nul, u3i_chubs(1, (const c3_d*)&vec_u.len),
+              _http_vec_to_atom(vec_u));
 }
 
 /* _cttp_bods_free(): free body structure.
@@ -1254,6 +1235,124 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   }
 }
 
+static u3_hcon*
+_http_conn_find(u3_http *htp_u, c3_w coq_l);
+static c3_o
+_http_req_cache(u3_hreq* req_u);
+static u3_hreq*
+_http_req_prepare(h2o_req_t* rec_u,
+                  u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
+
+/* _http_bob_ctx: a request whose body mars is installing.
+**
+**   the request is named by connection and sequence rather than held
+**   by pointer: the client may close it before mars answers.
+*/
+typedef struct _http_bob_ctx {
+  u3_http* htp_u;
+  c3_w     coq_l;
+  c3_w     seq_l;
+  c3_d     len_d;
+} _http_bob_ctx;
+
+/* _http_req_reject(): fail a request that never reached arvo.
+*/
+static void
+_http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c)
+{
+  req_u->sat_e = u3_rsat_ripe;
+  h2o_send_error_generic(req_u->rec_u, sas_i, msg_c, msg_c, 0);
+}
+
+/* _http_req_start(): send a request to arvo with body [bod].
+*/
+static void
+_http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o)
+{
+  u3_weak req = _http_rec_to_httq(req_u->rec_u, bod);
+
+  if ( u3_none == req ) {
+    if ( (u3C.wag_h & u3o_verbose) ) {
+      u3l_log("strange %.*s request", (c3_i)req_u->rec_u->method.len,
+              req_u->rec_u->method.base);
+    }
+    _http_req_reject(req_u, 400, "bad request");
+    return;
+  }
+
+  if ( (c3n == cache_o) || (c3n == _http_req_cache(req_u)) ) {
+    _http_req_dispatch(req_u, req);
+  }
+  u3z(req);
+}
+
+/* _http_bob_install_cb(): mars installed (or refused) a request body.
+*/
+static void
+_http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
+{
+  _http_bob_ctx* ctx_u = ptr_v;
+  u3_hcon*       hon_u = _http_conn_find(ctx_u->htp_u, ctx_u->coq_l);
+  u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
+  c3_d           len_d = ctx_u->len_d;
+
+  c3_free(ctx_u);
+
+  //  the client went away while mars worked; the file is leased to
+  //  us and released when its record dies
+  //
+  if ( !req_u ) {
+    return;
+  }
+
+  if ( c3n == ok_o ) {
+    _http_req_reject(req_u, 500, "blob install failed");
+    return;
+  }
+
+  _http_req_start(req_u,
+                  u3nt(u3_nul, u3i_chub(len_d), u3i_blob(mug_h, seq_h)),
+                  c3n);
+}
+
+/* _http_rec_start(): take an incoming request from h2o.
+**
+**   a body at or past U3_BLOB_THRESH is staged and sent to mars for
+**   installation; the request waits for the bob.  mars alone writes
+**   the store.  anything smaller, or a body that cannot be staged,
+**   goes to arvo as an inline atom.
+*/
+static void
+_http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
+{
+  u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+
+  if ( (c3_d)rec_u->entity.len >= U3_BLOB_THRESH ) {
+    u3_http* htp_u = req_u->hon_u->htp_u;
+    u3_lord* god_u = htp_u->htd_u->car_u.pir_u->god_u;
+    c3_c     stg_c[8192];
+
+    if (  god_u
+       && (c3y == u3_blob_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
+                                (c3_d)rec_u->entity.len, stg_c)) )
+    {
+      _http_bob_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
+      ctx_u->htp_u = htp_u;
+      ctx_u->coq_l = req_u->hon_u->coq_l;
+      ctx_u->seq_l = req_u->seq_l;
+      ctx_u->len_d = (c3_d)rec_u->entity.len;
+
+      u3_lord_blob_install(god_u, strdup(stg_c), ctx_u, _http_bob_install_cb);
+      return;
+    }
+
+    u3l_log("http: %" PRIu64 "-byte body not staged; sending inline",
+            (c3_d)rec_u->entity.len);
+  }
+
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), cache_o);
+}
+
 /* _http_cache_respond(): respond with a simple-payload:http
 */
 static void
@@ -1263,22 +1362,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   if ( u3_nul == nun ) {
-    u3_weak req = _http_rec_to_httq(rec_u);
-    if ( u3_none == req ) {
-      if ( (u3C.wag_h & u3o_verbose) ) {
-        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
-                rec_u->method.base);
-      }
-      c3_c* msg_c = "bad request";
-      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
-    }
-    else {
-      u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-      _http_req_dispatch(req_u, req);
-    }
-    //  can be u3_none
-    //
-    u3z(req);
+    _http_rec_start(rec_u, c3n);
   }
   else if ( u3_none == u3r_at(7, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
@@ -1312,7 +1396,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   if ( u3_nul == nun ) {
-    u3_weak req = _http_rec_to_httq(rec_u);
+    u3_weak req = _http_rec_to_httq(rec_u, _http_vec_to_octs(rec_u->entity));
     if ( u3_none == req ) {
       if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
@@ -1762,14 +1846,17 @@ _http_cancel_respond(u3_hreq* req_u)
   }
 }
 
-/* _http_rec_to_httq(): convert h2o_req_t to httq
+/* _http_rec_to_httq(): convert h2o_req_t to httq, with body [bod].
+**
+**   [bod] is transferred; u3_none for a request arvo cannot take.
 */
 static u3_weak
-_http_rec_to_httq(h2o_req_t* rec_u)
+_http_rec_to_httq(h2o_req_t* rec_u, u3_noun bod)
 {
   u3_noun med = _http_vec_to_meth(rec_u->method);
 
   if ( u3_none == med ) {
+    u3z(bod);
     return u3_none;
   }
 
@@ -1781,8 +1868,6 @@ _http_rec_to_httq(h2o_req_t* rec_u)
   hed = u3nc(u3nc(u3i_string("host"),
                   _http_vec_to_atom(rec_u->authority)),
              hed);
-
-  u3_noun bod = _http_vec_to_octs(rec_u->entity);
 
   return u3nq(med, url, hed, bod);
 }
@@ -1937,27 +2022,7 @@ _http_sat_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 static c3_i
 _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
-  u3_weak req = _http_rec_to_httq(rec_u);
-
-  if ( u3_none == req ) {
-    if ( (u3C.wag_h & u3o_verbose) ) {
-      u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
-              rec_u->method.base);
-    }
-    c3_c* msg_c = "bad request";
-    h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
-  }
-  else {
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    if ( c3n == _http_req_cache(req_u) ) {
-      _http_req_dispatch(req_u, req);
-    }
-  }
-
-  //  can be u3_none
-  //
-  u3z(req);
-
+  _http_rec_start(rec_u, c3y);
   return 0;
 }
 
