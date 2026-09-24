@@ -366,7 +366,7 @@ _test_ram_roundtrip(void)
 /* _ram_tmp_dir / _ram_setup_tmp() / _ram_cleanup_tmp() / _ram_make_blob():
 **
 **   Helpers for bob-atom round-trip tests.  The ram encoder calls
-**   u3r_blob_met() which reads the blob file at
+**   u3r_met_d() which reads the blob file at
 **   $u3C.dir_c/.urb/bob/<mug>/<seq>, so actual files must exist.
 */
 

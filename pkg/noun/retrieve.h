@@ -530,6 +530,14 @@
         c3_z
         u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
+      /* u3r_view_met(): bit-length of the viewed atom.
+      **
+      **   len_w and the top byte's width; one read of that byte for a
+      **   windowed bob view.  Full width, unlike u3r_met.
+      */
+        c3_d
+        u3r_view_met(u3r_view* vue_u);
+
       /* u3r_view_init(): open a flat view of the significant bytes of [a].
       **
       **   Bails %fail if [a] is a bob whose file is missing, empty, or
@@ -776,15 +784,13 @@
         u3_weak
         u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a);
 
-      /* u3r_blob_met(): bit-length of a bob atom, at full width.
+      /* u3r_met_d(): u3r_met at full width, for any atom.
       **
-      **   u3r_met(0, a) for a bob, but as a c3_d: a c3_w bit count
-      **   overflows past 512 MiB on a 32-bit build, which blobs exceed.
-      **   A windowed view supplies the byte count, cached on the road's
-      **   hand, and one read of the top byte completes it.  Returns 0 if
-      **   the file is missing, empty, or all zero.
+      **   A c3_w bit count overflows past 512 MiB on a 32-bit build,
+      **   which blobs exceed.  Bails %fail for a bob whose file is
+      **   missing or empty.
       */
       c3_d
-      u3r_blob_met(u3_atom a);
+      u3r_met_d(c3_g a_g, u3_atom b);
 
 #endif /* ifndef U3_RETRIEVE_H */

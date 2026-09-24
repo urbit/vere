@@ -972,20 +972,11 @@ u3r_met(c3_y  a_y,
     daz_w = b;
   }
   else {
-    //  bob atoms: use blob met (only reads last byte of file, no loom allocation)
-    //  then convert the bit-count to the requested bloq unit [a_y]
+    //  bob atoms: the full-width count, from the file's tail; callers
+    //  that need the width past c3_w use u3r_met_d directly
     //
     if ( c3y == u3a_is_bob(b) ) {
-      c3_d bit_d = u3r_blob_met(b);
-      if ( 0 == bit_d ) {
-        //  failed to read or empty blob: bail
-        return (c3_w)u3m_bail(c3__fail);
-      }
-      //  convert bit count to a_y-bloq count (rounding up), same as the
-      //  formula below: (bit_d + ((1<<a_y)-1)) >> a_y
-      //
-      c3_d rnd_d = (c3_d)((1 << a_y) - 1);
-      return (c3_w)((bit_d + rnd_d) >> a_y);
+      return (c3_w)u3r_met_d(a_y, b);
     }
 
     u3a_atom* b_u = u3a_to_ptr(b);
@@ -1326,6 +1317,27 @@ _cr_view_pad(u3r_view* vue_u, const c3_y* src_y, c3_w len_w, c3_w wid_w)
 
   vue_u->byt_y = pad_y;
   vue_u->len_w = wid_w;
+}
+
+/* u3r_view_met(): bit-length of the viewed atom.
+*/
+c3_d
+u3r_view_met(u3r_view* vue_u)
+{
+  c3_y top_y;
+
+  if ( 0 == vue_u->len_w ) {
+    return 0;
+  }
+
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    u3r_view_read(vue_u, vue_u->len_w - 1, &top_y, 1);
+  }
+  else {
+    top_y = vue_u->byt_y[vue_u->len_w - 1];
+  }
+
+  return (((c3_d)vue_u->len_w - 1) << 3) + c3_bits_word(top_y);
 }
 
 /* u3r_view_init(): open a flat view of the significant bytes of [a].
@@ -2717,25 +2729,27 @@ u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a)
   }
 }
 
-/* u3r_blob_met(): bit-length of a bob atom, at full width.
-**
-**   the view gives the significant byte count; the top byte's width
-**   completes it.  0 if the file is missing, empty, or all zero.
+/* u3r_met_d(): u3r_met at full width, for any atom.
 */
 c3_d
-u3r_blob_met(u3_atom a)
+u3r_met_d(c3_g a_g, u3_atom b)
 {
-  u3r_view vue_u;
-  c3_y     top_y;
-  c3_d     met_d;
+  c3_d bit_d;
 
-  if ( c3n == u3r_view_open(&vue_u, a) ) {
-    return 0;
+  u3_assert( a_g < 64 );
+
+  if ( _(u3a_is_cat(b)) ) {
+    bit_d = c3_bits_word(b);
+  }
+  else {
+    u3r_view vue_u;
+
+    if ( c3n == u3r_view_open(&vue_u, b) ) {
+      return u3m_bail(c3__fail);
+    }
+    bit_d = u3r_view_met(&vue_u);
+    u3r_view_done(&vue_u);
   }
 
-  u3r_view_read(&vue_u, vue_u.len_w - 1, &top_y, 1);
-  met_d = (((c3_d)vue_u.len_w - 1) << 3) + c3_bits_word(top_y);
-
-  u3r_view_done(&vue_u);
-  return met_d;
+  return a_g ? ((bit_d + (((c3_d)1 << a_g) - 1)) >> a_g) : bit_d;
 }

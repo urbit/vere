@@ -107,15 +107,8 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       bob_o = c3y;
       byt_d = vue_u.len_w;
 
-      //  the bit-length is the byte count less the top byte's leading
-      //  zeros; the view's byte count never includes a zero top byte
-      //
       {
-        c3_y top_y;
-        c3_d met_d;
-
-        u3r_view_read(&vue_u, byt_d - 1, &top_y, 1);
-        met_d = ((byt_d - 1) << 3) + c3_bits_word(top_y);
+        c3_d met_d = u3r_view_met(&vue_u);
 
         if ( met_d > (c3_w_max - 64) ) {
           u3m_bail(c3__fail);
@@ -327,7 +320,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   else if ( c3y == u3a_is_bob(a) ) {
     //  bob atom: write the tag and length prefix, then stream the bytes
     //  through a windowed view.  the total must be exactly met_w bits,
-    //  which is what u3r_blob_met() gave the caller.
+    //  which is what u3r_met_d() gave the caller.
     //
     u3r_view vue_u;
     if ( c3n == u3r_view_open(&vue_u, a) ) {
@@ -391,12 +384,9 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  //  for bob atoms, use the blob met to avoid materializing the large atom;
   //  met_w must fit in 32 bits here (jam uses c3_w for bit lengths)
   //
-  c3_w         met_w = ( c3y == u3a_is_bob(a) )
-                     ? (c3_w)u3r_blob_met(a)
-                     : u3r_met(0, a);
+  c3_w         met_w = (c3_w)u3r_met_d(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
@@ -1758,11 +1748,7 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
   ur_bsw_t*    rit_u = &(ram_u->rit_u);
   u3_weak        bak = u3h_git(ram_u->har_p, a);
   c3_o         bob_o = u3a_is_bob(a);
-  //  for bob atoms, use the blob's true bit-length for backref comparison.
-  //  for normal atoms, use u3r_met as before.
-  //
-  c3_w         met_w = (c3n == bob_o) ? u3r_met(0, a)
-                                       : (c3_w)u3r_blob_met(a);
+  c3_w         met_w = (c3_w)u3r_met_d(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));

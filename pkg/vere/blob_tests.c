@@ -839,7 +839,7 @@ _test_install_stg_dedup(void)
 /* _blob_met(): bit-length of a blob by id: open a hand, ask it, close.
 **
 **   the path form the tests used before hands; 0 if the file is
-**   missing or empty, as u3r_blob_met reports for a bob.
+**   missing or empty, as u3r_met_d reports for a bob.
 */
 static c3_d
 _blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
@@ -3490,7 +3490,7 @@ _test_lifecycle(void)
   u3_disk_blob_init(_tmp_pier);
   u3_disk_blob_stg_init(_tmp_pier);
 
-  //  u3s_ram_xeno calls u3r_blob_met on bob atoms during encoding, which
+  //  u3s_ram_xeno calls u3r_met_d on bob atoms during encoding, which
   //  reads the blob file at $u3C.dir_c/.urb/bob/<mug>/<seq>.  Set it now
   //  so encode, decode, and u3r_bytes all find the same store.
   //
@@ -3654,12 +3654,12 @@ _test_lifecycle(void)
     c3_free(buf_y);
   }
 
-  //  u3r_met (which materializes) should agree with u3r_blob_met
+  //  u3r_met (which materializes) should agree with u3r_met_d
   //  (which reads the file directly) — exercises the cross-module
   //  invariant between retrieve.c and blob.c.
   //
   {
-    c3_d    bit_d = u3r_blob_met(bob1_d);
+    c3_d    bit_d = u3r_met_d(0, bob1_d);
     u3_weak mat   = _blob_load(_tmp_pier, mug1_h, seq1_h);
     if ( u3_none == mat ) {
       fprintf(stderr, "\033[31mlifecycle: load failed\033[0m\r\n");
