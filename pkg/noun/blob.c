@@ -562,7 +562,10 @@ u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d)
     wid_d = pad_d;
   }
 
-  if ( han_u->map_y && (wid_d <= han_u->map_d) ) {
+  //  any mapping covers the pad: on windows the recorded length is the
+  //  file's own, and the rest of its last page still reads as zero
+  //
+  if ( han_u->map_y && (wid_d <= c3_max(han_u->map_d, pad_d)) ) {
     return han_u->map_y;
   }
 
