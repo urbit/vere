@@ -664,6 +664,7 @@ fn buildBinary(
             .optimize = optimize,
             .copt = copts,
             .vere64 = cfg.vere64,
+            .no_lto = cfg.no_lto,
         });
         urbit.linkLibrary(pkg_past.artifact("past"));
     }

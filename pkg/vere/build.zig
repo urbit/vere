@@ -180,6 +180,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
             .copt = copts,
             .vere64 = vere64,
+            .no_lto = no_lto,
         });
         pkg_vere.linkLibrary(pkg_past.artifact("past"));
     }
