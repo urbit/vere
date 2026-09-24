@@ -1228,7 +1228,7 @@ _test_met(void)
 **
 **   Neither is checkable through the CRT on Windows (probing a closed fd
 **   trips the invalid-parameter handler), so both answer yes there and
-**   the registry's own counts carry the assertion.
+**   the hand's own counts carry the assertion.
 */
 static c3_o
 _fd_dead(c3_i fid_i)
@@ -1271,10 +1271,9 @@ _test_hand(void)
     fprintf(stderr, "\033[31mblob hand: open returned NULL\033[0m\r\n");
     exit(1);
   }
-  if ( (han_u->len_d != dat_d) || (1 != han_u->ref_w) || (1 != u3_blob_hands()) ) {
-    fprintf(stderr, "\033[31mblob hand: len %" PRIc3_d " ref %" PRIc3_w
-                    " hands %zu\033[0m\r\n",
-            han_u->len_d, han_u->ref_w, u3_blob_hands());
+  if ( (han_u->len_d != dat_d) || (1 != u3_blob_hands()) ) {
+    fprintf(stderr, "\033[31mblob hand: len %" PRIc3_d " hands %zu\033[0m\r\n",
+            han_u->len_d, u3_blob_hands());
     exit(1);
   }
 
@@ -1292,7 +1291,7 @@ _test_hand(void)
     }
   }
 
-  //  whole-file buffer, then a window through pread
+  //  whole-file mapping, then a window through pread
   //
   {
     const c3_y* buf_y = u3_blob_data(han_u);
@@ -1340,7 +1339,8 @@ _test_hand(void)
   fprintf(stderr, "test blob hand: ok\r\n");
 }
 
-/* _test_hand_dedup(): two opens of one blob share one hand and one fd.
+/* _test_hand_dedup(): the home road never shares: two opens of one
+**   blob are two hands and two fds, each released by its own close.
 */
 static void
 _test_hand_dedup(void)
@@ -1349,29 +1349,41 @@ _test_hand_dedup(void)
   u3_disk_blob_init(_tmp_pier);
   u3_disk_blob_stg_init(_tmp_pier);
 
-  const c3_y dat_y[] = "one fd per blob per process";
+  const c3_y dat_y[] = "one fd per open on the home road";
   c3_h mug_h = 0; c3_h seq_h = 0;
   u3_blob_save(_tmp_pier, dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
   u3_blob_hand* one_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
   u3_blob_hand* two_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
 
-  if ( !one_u || (one_u != two_u) || (2 != one_u->ref_w) || (1 != u3_blob_hands()) ) {
-    fprintf(stderr, "\033[31mblob hand dedup: not shared\033[0m\r\n");
+  if (  !one_u || !two_u || (one_u == two_u)
+     || (one_u->fid_i == two_u->fid_i) || (2 != u3_blob_hands()) )
+  {
+    fprintf(stderr, "\033[31mblob hand dedup: home road shared\033[0m\r\n");
     exit(1);
   }
 
-  c3_i fid_i = one_u->fid_i;
+  c3_i one_i = one_u->fid_i;
+  c3_i two_i = two_u->fid_i;
   u3_blob_close(one_u);
 
-  if ( (1 != two_u->ref_w) || (c3n == _fd_live(fid_i)) ) {
-    fprintf(stderr, "\033[31mblob hand dedup: first close released fd\033[0m\r\n");
+  if ( (1 != u3_blob_hands()) || (c3n == _fd_dead(one_i)) || (c3n == _fd_live(two_i)) ) {
+    fprintf(stderr, "\033[31mblob hand dedup: first close disturbed the other"
+                    "\033[0m\r\n");
     exit(1);
+  }
+
+  {
+    c3_y byt_y;
+    if ( 1 != u3_blob_read(two_u, 0, &byt_y, 1) ) {
+      fprintf(stderr, "\033[31mblob hand dedup: survivor unreadable\033[0m\r\n");
+      exit(1);
+    }
   }
 
   u3_blob_close(two_u);
 
-  if ( u3_blob_hands() || (c3n == _fd_dead(fid_i)) ) {
+  if ( u3_blob_hands() || (c3n == _fd_dead(two_i)) ) {
     fprintf(stderr, "\033[31mblob hand dedup: last close leaked\033[0m\r\n");
     exit(1);
   }
@@ -1390,8 +1402,9 @@ static c3_i    _han_fid_i;
 
 /* _hand_open_inner(): open the blob twice from the inner road.
 **
-**   Once directly and once through a u3r_view over the bob atom, so
-**   both the raw hand and the view path are held when the road unwinds.
+**   Once directly and once through a u3r_view over the bob atom: the
+**   road deduplicates by blob id, so the view lands on the same hand,
+**   and both are held when the road unwinds.
 */
 static u3_blob_hand*
 _hand_open_inner(void)
@@ -1487,7 +1500,7 @@ _test_hand_signal(void)
   _hand_unwind_check("signal");
 }
 
-/* _test_hand_leak(): a normal return without a close is swept and logged.
+/* _test_hand_leak(): a normal return without a close is drained at fall.
 */
 static void
 _test_hand_leak(void)
@@ -1509,12 +1522,11 @@ _test_hand_outer(void)
 
   u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
 
-  //  the inner road shared this hand; only its references went
+  //  the inner road opened its own hand on the blob; only that went
   //
-  if ( (1 != u3_blob_hands()) || (1 != han_u->ref_w) || (c3n == _fd_live(han_u->fid_i)) ) {
-    fprintf(stderr, "\033[31mblob hand outer: home reference swept "
-                    "(hands %zu ref %" PRIc3_w ")\033[0m\r\n",
-            u3_blob_hands(), han_u->ref_w);
+  if ( (1 != u3_blob_hands()) || (c3n == _fd_live(han_u->fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand outer: home hand swept "
+                    "(hands %zu)\033[0m\r\n", u3_blob_hands());
     exit(1);
   }
 
@@ -1583,6 +1595,79 @@ _test_hand_many(void)
   c3_free(han_u);
   _tmp_clean();
   fprintf(stderr, "test blob hand many: ok\r\n");
+}
+
+static void _hand_write_raw(c3_h mug_h, c3_h seq_h, c3_w num_w);
+
+//  road entry and exit, internal to manage.c
+//
+void u3m_leap(c3_w pad_w);
+void u3m_fall(void);
+
+static u3_noun
+_hand_keep_cb(u3_noun arg)
+{
+  (void)arg;
+  const c3_h mug_h = 0x1234;
+  const c3_w num_w = 300;
+
+  //  each open is closed at once, so every hand is idle: the road keeps
+  //  at most its cap, evicting the oldest
+  //
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    if ( !han_u ) {
+      fprintf(stderr, "\033[31mblob hand keep: open %" PRIc3_w " failed"
+                      "\033[0m\r\n", i_w);
+      exit(1);
+    }
+    u3_blob_close(han_u);
+  }
+
+  c3_z kep_z = u3_blob_hands_road(u3R);
+  if ( (kep_z >= num_w) || (kep_z < 100) ) {
+    fprintf(stderr, "\033[31mblob hand keep: %zu retained\033[0m\r\n", kep_z);
+    exit(1);
+  }
+
+  //  the newest is still open; the oldest was evicted and reopens
+  //
+  {
+    u3_blob_hand* new_u = u3_blob_open(_tmp_pier, mug_h, num_w);
+    u3_blob_hand* old_u = u3_blob_open(_tmp_pier, mug_h, 1);
+    if ( !new_u || !old_u || (kep_z != u3_blob_hands_road(u3R)) ) {
+      fprintf(stderr, "\033[31mblob hand keep: reopen changed the count"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(new_u);
+    u3_blob_close(old_u);
+  }
+  return 0;
+}
+
+/* _test_hand_keep(): an inner road bounds how many idle hands it retains.
+*/
+static void
+_test_hand_keep(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  for ( c3_w i_w = 1; i_w <= 300; i_w++ ) {
+    _hand_write_raw(0x1234, i_w, i_w);
+  }
+
+  u3z(u3m_soft_top(0, 1 << 12, _hand_keep_cb, 0));
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand keep: residue\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand keep: ok\r\n");
 }
 
 /* _test_hand_comp(): windowed comparison of bobs against bobs and loom atoms.
@@ -1671,7 +1756,7 @@ _hand_alarm_cb(u3_noun arg)
 {
   (void)arg;
 
-  //  hold a view for the whole spin, and churn the registry so the
+  //  hold a view for the whole spin, and churn the road's list so the
   //  event timer's SIGVTALRM can land inside a critical section as
   //  easily as between two.  the timer counts user CPU time, which the
   //  open/close syscalls barely consume, so each round also burns some
@@ -1698,7 +1783,7 @@ _hand_alarm_cb(u3_noun arg)
 }
 
 /* _test_hand_alarm(): a real SIGVTALRM from the event timer, delivered
-**   through the production handler while hands are open and the registry
+**   through the production handler while hands are open and the road's list
 **   is being mutated, unwinds cleanly and leaves the table consistent.
 */
 static void
@@ -1723,7 +1808,7 @@ _test_hand_alarm(void)
   //
   {
     u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
-    if ( !han_u || (1 != han_u->ref_w) ) {
+    if ( !han_u ) {
       fprintf(stderr, "\033[31mblob hand alarm: reopen after unwind failed"
                       "\033[0m\r\n");
       exit(1);
@@ -2227,6 +2312,77 @@ _test_hand_emfile(void)
   fprintf(stderr, "test blob hand emfile: ok\r\n");
 }
 
+static u3_noun
+_hand_file_cb(u3_noun arg)
+{
+  (void)arg;
+  const c3_h mug_h = 0x2345;
+  const c3_w num_w = 32;
+
+  //  idle hands are evicted to make room, so every open succeeds
+  //
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    if ( !han_u ) {
+      fprintf(stderr, "\033[31mblob hand file: idle eviction did not free a"
+                      " descriptor\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(han_u);
+  }
+
+  //  held hands cannot be evicted: the road runs out and bails
+  //
+  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
+    (void)u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+  }
+
+  fprintf(stderr, "\033[31mblob hand file: no bail at the ceiling\033[0m\r\n");
+  exit(1);
+}
+
+/* _test_hand_file(): at the descriptor ceiling an inner road evicts its
+**   idle hands, and bails %file once none are idle.
+*/
+static void
+_test_hand_file(void)
+{
+  _tmp_make();
+  u3_disk_blob_init(_tmp_pier);
+  u3_disk_blob_stg_init(_tmp_pier);
+
+  for ( c3_w i_w = 1; i_w <= 32; i_w++ ) {
+    _hand_write_raw(0x2345, i_w, i_w);
+  }
+
+  struct rlimit old_u, new_u;
+  getrlimit(RLIMIT_NOFILE, &old_u);
+  new_u = old_u;
+  new_u.rlim_cur = 24;
+  if ( 0 != setrlimit(RLIMIT_NOFILE, &new_u) ) {
+    fprintf(stderr, "\033[31mblob hand file: setrlimit failed\033[0m\r\n");
+    exit(1);
+  }
+
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_file_cb, 0);
+
+  setrlimit(RLIMIT_NOFILE, &old_u);
+
+  if ( c3__file != _hand_mote(gon) ) {
+    fprintf(stderr, "\033[31mblob hand file: no %%file unwind\033[0m\r\n");
+    exit(1);
+  }
+  u3z(gon);
+
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "\033[31mblob hand file: residue\033[0m\r\n");
+    exit(1);
+  }
+
+  _tmp_clean();
+  fprintf(stderr, "test blob hand file: ok\r\n");
+}
+
 /* _test_hand_wipe(): wiping a blob under a live hand unlinks the file,
 **   warns, and leaves the reader on the surviving inode.
 */
@@ -2288,8 +2444,8 @@ _test_hand_wipe(void)
 }
 #endif
 
-/* _test_hand_stop(): u3_blob_stop releases every hand; the registry can
-**   be initialized again afterwards.
+/* _test_hand_stop(): u3_blob_stop releases every home-road hand; the
+**   list can be initialized again afterwards.
 */
 static void
 _test_hand_stop(void)
@@ -2387,7 +2543,7 @@ _test_hand_trunc(void)
     c3_free(buf_y);
   }
 
-  if ( u3_blob_data(han_u) || han_u->buf_y ) {
+  if ( u3_blob_data(han_u) || han_u->map_y ) {
     fprintf(stderr, "\033[31mblob hand trunc: data did not fail cleanly"
                     "\033[0m\r\n");
     exit(1);
@@ -2449,7 +2605,7 @@ _hand_gone_fib_cb(u3_noun arg)
 }
 
 /* _hand_gone_expect(): [fun_f] over a bob with no file must bail %fail
-**   and leave the registry empty.
+**   and leave no hand open.
 */
 static void
 _hand_gone_expect(const c3_c* nam_c, u3_funk fun_f)
@@ -2508,13 +2664,14 @@ _hand_nest_cb(u3_noun arg)
 {
   (void)arg;
   u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
-  u3_assert( han_u && (2 == han_u->ref_w) );
+  u3_assert( han_u && (1 == han_u->use_w) );
   u3_blob_close(han_u);
+  u3_assert( 0 == han_u->use_w );
   return 0;
 }
 
 /* _test_hand_nest(): a child road that opens and closes normally leaves
-**   the home reference exactly as it found it.
+**   the home hand exactly as it found it.
 */
 static void
 _test_hand_nest(void)
@@ -2527,10 +2684,10 @@ _test_hand_nest(void)
 
   u3z(u3m_soft_top(0, 1 << 12, _hand_nest_cb, 0));
 
-  if (  (1 != u3_blob_hands()) || (1 != han_u->ref_w)
+  if (  (1 != u3_blob_hands())
      || (fid_i != han_u->fid_i) || (c3n == _fd_live(fid_i)) )
   {
-    fprintf(stderr, "\033[31mblob hand nest: home reference disturbed"
+    fprintf(stderr, "\033[31mblob hand nest: home hand disturbed"
                     "\033[0m\r\n");
     exit(1);
   }
@@ -2625,24 +2782,22 @@ _test_hand_edge(void)
   fprintf(stderr, "test blob hand edge: ok\r\n");
 }
 
-/* _test_hand_share(): met and byte reads under a live view reuse its
-**   hand and fd instead of opening a second one.
-*/
-static void
-_test_hand_share(void)
+static u3_noun
+_hand_share_cb(u3_noun arg)
 {
-  _hand_unwind_setup("share");
+  (void)arg;
 
   u3r_view vue_u;
   u3r_view_init(&vue_u, _han_bob);
 
   u3_blob_hand* han_u = vue_u.u.han_u;
   c3_i          fid_i = han_u->fid_i;
+  _han_fid_i          = fid_i;
 
   c3_w met_w = u3r_met(3, _han_bob);
   c3_y byt_y = u3r_byte(3, _han_bob);
 
-  if (  (1 != u3_blob_hands()) || (1 != han_u->ref_w)
+  if (  (1 != u3_blob_hands_road(u3R)) || (1 != han_u->use_w)
      || (fid_i != han_u->fid_i)
      || (met_w != vue_u.len_w) || (byt_y != vue_u.byt_y[3]) )
   {
@@ -2652,8 +2807,178 @@ _test_hand_share(void)
   }
 
   u3r_view_done(&vue_u);
-  _han_fid_i = fid_i;
+  return 0;
+}
+
+/* _test_hand_share(): on an inner road, met and byte reads under a live
+**   view reuse its hand and fd instead of opening a second one.
+*/
+static void
+_test_hand_share(void)
+{
+  _hand_unwind_setup("share");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_share_cb, 0));
   _hand_unwind_check("share");
+}
+
+static u3_noun
+_hand_reuse_cb(u3_noun arg)
+{
+  (void)arg;
+
+  //  a trap's open, close, open lands on the one retained hand
+  //
+  u3_blob_hand* one_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  c3_i          fid_i = one_u->fid_i;
+  _han_fid_i          = fid_i;
+  u3_blob_close(one_u);
+
+  if ( (0 != one_u->use_w) || (c3n == _fd_live(fid_i)) ) {
+    fprintf(stderr, "\033[31mblob hand reuse: close released the hand"
+                    "\033[0m\r\n");
+    exit(1);
+  }
+
+  for ( c3_w i_w = 0; i_w < 1000; i_w++ ) {
+    u3_blob_hand* two_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    if ( (two_u != one_u) || (fid_i != two_u->fid_i) || (1 != two_u->use_w) ) {
+      fprintf(stderr, "\033[31mblob hand reuse: reopened\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(two_u);
+  }
+
+  if ( 1 != u3_blob_hands_road(u3R) ) {
+    fprintf(stderr, "\033[31mblob hand reuse: %zu hands on the road"
+                    "\033[0m\r\n", u3_blob_hands_road(u3R));
+    exit(1);
+  }
+  return 0;
+}
+
+/* _test_hand_reuse(): an inner road keeps a closed hand for its next
+**   open, and the fall releases it.
+*/
+static void
+_test_hand_reuse(void)
+{
+  _hand_unwind_setup("reuse");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_reuse_cb, 0));
+  _hand_unwind_check("reuse");
+}
+
+static u3_noun
+_hand_deep_cb(u3_noun arg)
+{
+  (void)arg;
+
+  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  c3_i          fid_i = han_u->fid_i;
+  _han_fid_i          = fid_i;
+  u3_blob_close(han_u);
+
+  //  a grandchild borrows the parent's hand without listing it, and
+  //  its fall leaves the parent's hand open
+  //
+  u3m_leap(512);
+  {
+    u3_blob_hand* kid_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+
+    if (  (kid_u != han_u) || (fid_i != kid_u->fid_i)
+       || (0 != u3_blob_hands_road(u3R)) || (0 != kid_u->use_w) )
+    {
+      fprintf(stderr, "\033[31mblob hand deep: child did not borrow"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+    u3_blob_close(kid_u);
+  }
+  u3m_fall();
+
+  if (  (c3n == _fd_live(fid_i)) || (1 != u3_blob_hands_road(u3R))
+     || (han_u != u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h)) )
+  {
+    fprintf(stderr, "\033[31mblob hand deep: child's fall took the parent's"
+                    " hand\033[0m\r\n");
+    exit(1);
+  }
+  return 0;
+}
+
+static u3_noun
+_hand_wide_cb(u3_noun arg)
+{
+  (void)arg;
+
+  u3r_view one_u, two_u;
+  c3_y     zer_y[64];
+  memset(zer_y, 0, sizeof(zer_y));
+
+  //  a lone view widens the hand's mapping in place
+  //
+  u3r_view_init(&one_u, _han_bob);
+  {
+    u3_blob_hand* han_u = one_u.u.han_u;
+    c3_w          wid_w = (c3_w)u3_blob_hand_pad(han_u) + 4096;
+    _han_fid_i = han_u->fid_i;
+
+    u3r_view_done(&one_u);
+    u3r_view_padd(&one_u, _han_bob, wid_w);
+
+#ifndef U3_OS_windows
+    if (  (u3r_view_blob != one_u.kin_e) || (one_u.u.han_u != han_u)
+       || (han_u->map_d < wid_w)
+       || (0 != memcmp(one_u.byt_y + wid_w - 64, zer_y, 64)) )
+    {
+      fprintf(stderr, "\033[31mblob hand wide: lone view did not widen"
+                      "\033[0m\r\n");
+      exit(1);
+    }
+
+    //  with that view live, a pad past the mapping cannot remap under
+    //  it and is filled into a loom pad instead; the first view and the
+    //  mapping are untouched
+    //
+    c3_d old_d = han_u->map_d;
+    c3_w big_w = (c3_w)old_d + 8;
+
+    u3r_view_padd(&two_u, _han_bob, big_w);
+    if (  (u3r_view_heap != two_u.kin_e) || (big_w != two_u.len_w)
+       || (han_u->map_d != old_d) || (han_u->map_y != one_u.byt_y)
+       || (0 != memcmp(two_u.byt_y, one_u.byt_y, wid_w))
+       || (0 != memcmp(two_u.byt_y + big_w - 8, zer_y, 8))
+       || (1 != han_u->use_w) )
+    {
+      fprintf(stderr, "\033[31mblob hand wide: held hand remapped or pad "
+                      "wrong\033[0m\r\n");
+      exit(1);
+    }
+    u3r_view_done(&two_u);
+#endif
+    u3r_view_done(&one_u);
+  }
+  return 0;
+}
+
+/* _test_hand_wide(): a pad past the file's pages widens the hand's
+**   mapping, unless another live view holds the hand.
+*/
+static void
+_test_hand_wide(void)
+{
+  _hand_unwind_setup("wide");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_wide_cb, 0));
+  _hand_unwind_check("wide");
+}
+
+/* _test_hand_deep(): a nested road borrows an inner ancestor's hand.
+*/
+static void
+_test_hand_deep(void)
+{
+  _hand_unwind_setup("deep");
+  u3z(u3m_soft_top(0, 1 << 12, _hand_deep_cb, 0));
+  _hand_unwind_check("deep");
 }
 
 /* _test_hand_empty(): a zero-byte blob file opens as nothing.
@@ -2832,11 +3157,23 @@ _test_hand_access(void)
     _ACC_CHECK( u3r_mug(bob) == u3r_mug(loa), "mug", 0 );
   }
 
-  //  padded views: a pad shorter than the bob truncates the flat view,
-  //  a longer one is heap-backed and zero-filled past the bytes
+  //  padded views: a pad shorter than the bob truncates the flat view;
+  //  one inside the mapping's last page is the mapping itself, whose
+  //  tail reads as zero; only one past that is heap-backed
   //
   {
     u3r_view vue_u;
+    c3_y     zer_y[1000];
+    c3_w     pad_w;
+
+    memset(zer_y, 0, sizeof(zer_y));
+
+    {
+      u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+      pad_w = (c3_w)u3_blob_hand_pad(han_u);
+      u3_blob_close(han_u);
+    }
+    _ACC_CHECK( (pad_w >= 6000) && (0 == u3_blob_hands()), "pad", pad_w );
 
     u3r_view_padd(&vue_u, bob, 100);
     _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (100 == vue_u.len_w)
@@ -2845,14 +3182,76 @@ _test_hand_access(void)
     u3r_view_done(&vue_u);
 
     u3r_view_padd(&vue_u, bob, 6000);
-    c3_y zer_y[1000];
-    memset(zer_y, 0, sizeof(zer_y));
-    _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (6000 == vue_u.len_w)
+    _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (6000 == vue_u.len_w)
              && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
              && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
-             && (0 == u3_blob_hands()),
-                "padd long", 6000 );
+             && (1 == u3_blob_hands()),
+                "padd mapped", 6000 );
     u3r_view_done(&vue_u);
+
+    //  past the file's pages the hand widens its mapping with anonymous
+    //  zero pages, so even a very wide pad allocates nothing; windows
+    //  cannot fix a mapping and falls back to a loom pad
+    //
+    {
+      c3_w wid_w = pad_w + 100000;
+      u3r_view_padd(&vue_u, bob, wid_w);
+#ifndef U3_OS_windows
+      _ACC_CHECK( (u3r_view_blob == vue_u.kin_e) && (1 == u3_blob_hands())
+               && (vue_u.u.han_u->map_d >= wid_w),
+                  "padd wide kind", wid_w );
+#else
+      _ACC_CHECK( (u3r_view_heap == vue_u.kin_e) && (0 == u3_blob_hands()),
+                  "padd wide kind", wid_w );
+#endif
+      _ACC_CHECK( (wid_w == vue_u.len_w)
+               && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
+               && (0 == memcmp(vue_u.byt_y + pad_w, zer_y, 1000))
+               && (0 == memcmp(vue_u.byt_y + wid_w - 1000, zer_y, 1000)),
+                  "padd wide bytes", wid_w );
+      u3r_view_done(&vue_u);
+    }
+
+    //  loom atoms: a pad up to u3r_view_line is inline, a wider one is
+    //  in the loom; a direct atom is inline from the start
+    //
+    {
+      u3_atom sma = u3i_string("small loom atom, wider than a word");
+      c3_w    met_w = u3r_met(3, sma);
+
+      u3r_view_padd(&vue_u, sma, u3r_view_line);
+      _ACC_CHECK( (u3r_view_flat == vue_u.kin_e) && (vue_u.byt_y == vue_u.u.buf_y)
+               && (u3r_view_line == vue_u.len_w)
+               && (0 == memcmp(vue_u.byt_y + met_w, zer_y, u3r_view_line - met_w)),
+                  "padd inline", u3r_view_line );
+      {
+        u3_atom cop = u3i_bytes(met_w, vue_u.byt_y);
+        _ACC_CHECK( c3y == u3r_sing(sma, cop), "padd inline bytes", met_w );
+        u3z(cop);
+      }
+      u3r_view_done(&vue_u);
+
+      u3r_view_padd(&vue_u, sma, u3r_view_line + 1);
+      _ACC_CHECK( (u3r_view_heap == vue_u.kin_e)
+               && (u3r_view_line + 1 == vue_u.len_w)
+               && (0 == memcmp(vue_u.byt_y + met_w, zer_y, u3r_view_line + 1 - met_w)),
+                  "padd loom", u3r_view_line + 1 );
+      u3r_view_done(&vue_u);
+
+      u3r_view_padd(&vue_u, 0x44332211, 16);
+      _ACC_CHECK( (u3r_view_flat == vue_u.kin_e) && (16 == vue_u.len_w)
+               && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3])
+               && (0 == memcmp(vue_u.byt_y + 4, zer_y, 12)),
+                  "padd cat", 16 );
+      u3r_view_done(&vue_u);
+
+      u3r_view_padd(&vue_u, sma, 4);
+      _ACC_CHECK( (u3r_view_loom == vue_u.kin_e) && (4 == vue_u.len_w),
+                  "padd truncate", 4 );
+      u3r_view_done(&vue_u);
+
+      u3z(sma);
+    }
   }
 
   #undef _ACC_CHECK
@@ -3685,6 +4084,7 @@ main(int argc, char* argv[])
   _test_hand_leak();
   _test_hand_outer();
   _test_hand_many();
+  _test_hand_keep();
   _test_hand_comp();
   _test_crit();
   _test_hand_alarm();
@@ -3698,6 +4098,7 @@ main(int argc, char* argv[])
   _test_hand_cue();
 #ifndef U3_OS_windows
   _test_hand_emfile();
+  _test_hand_file();
   _test_hand_wipe();
 #endif
   _test_hand_stop();
@@ -3708,6 +4109,9 @@ main(int argc, char* argv[])
   _test_hand_nest();
   _test_hand_edge();
   _test_hand_share();
+  _test_hand_reuse();
+  _test_hand_deep();
+  _test_hand_wide();
   _test_hand_empty();
   _test_hand_access();
   _test_lifecycle();
