@@ -79,13 +79,6 @@
                       c3_h*       mug_h,
                       c3_h*       seq_h);
 
-    /* u3_blob_load(): read blob into a loom atom.
-    **
-    ** Returns u3_none on failure.
-    */
-      u3_weak
-      u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
-
     /* u3_blob_live(): check whether a blob file exists.
     */
       c3_o

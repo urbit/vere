@@ -780,10 +780,9 @@
       **
       **   u3r_met(0, a) for a bob, but as a c3_d: a c3_w bit count
       **   overflows past 512 MiB on a 32-bit build, which blobs exceed.
-      **   Asks the road's hand (u3_blob_hand_met), which scans the file's
-      **   tail once and caches the answer, so a view or a second call on
-      **   the same road costs nothing more.  Returns 0 if the file is
-      **   missing, empty, or all zero.
+      **   A windowed view supplies the byte count, cached on the road's
+      **   hand, and one read of the top byte completes it.  Returns 0 if
+      **   the file is missing, empty, or all zero.
       */
       c3_d
       u3r_blob_met(u3_atom a);

@@ -29,7 +29,7 @@
 
 static c3_c _tmp_pier[1024];
 
-/* _setup(): init loom (for u3_blob_load), make fresh temp pier.
+/* _setup(): init loom (for loading blobs), make fresh temp pier.
 */
 static void
 _setup(void)
@@ -70,6 +70,36 @@ static void
 _tmp_clean(void)
 {
   c3_tmp_kill(_tmp_pier);
+}
+
+/* _blob_load(): materialize a blob by id: open a hand, read the file
+**   into a zeroed slab, close.
+**
+**   the path form the tests used before views; u3_none if the file is
+**   missing or empty, as u3r_blob_load reports for a bob.
+*/
+static u3_weak
+_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+{
+  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
+  u3i_slab      sab_u;
+  c3_d          len_d;
+
+  if ( !han_u ) {
+    return u3_none;
+  }
+
+  len_d = han_u->len_d;
+  u3i_slab_init(&sab_u, 3, len_d);
+
+  if ( len_d != u3_blob_read(han_u, 0, sab_u.buf_y, (c3_z)len_d) ) {
+    u3i_slab_free(&sab_u);
+    u3_blob_close(han_u);
+    return u3_none;
+  }
+
+  u3_blob_close(han_u);
+  return u3i_slab_mint_bytes(&sab_u);
 }
 
 /* _path_exists(): true if [pax_c] exists on the filesystem.
@@ -304,7 +334,7 @@ _test_save_load(void)
 
   //  load and verify bytes
   //
-  u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+  u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
   if ( u3_none == atm ) {
     fprintf(stderr, "\033[31mblob load: u3_none\033[0m\r\n");
     exit(1);
@@ -434,7 +464,7 @@ _test_save_fd(void)
 
   //  verify loaded content matches
   //
-  u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+  u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
   if ( u3_none == atm ) {
     fprintf(stderr, "\033[31mblob save_fd: load u3_none\033[0m\r\n");
     exit(1);
@@ -644,7 +674,7 @@ _test_install_stg(void)
 
   //  content preserved
   //
-  u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+  u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
   if ( u3_none == atm ) {
     fprintf(stderr, "\033[31mblob install_stg: load u3_none\033[0m\r\n");
     exit(1);
@@ -722,7 +752,7 @@ _test_install_stg_trim(void)
 
   //  and it still denotes the same atom the padded bytes did
   //
-  u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+  u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
   if ( u3_none == atm ) {
     fprintf(stderr, "\033[31mblob install_stg_trim: load u3_none\033[0m\r\n");
     exit(1);
@@ -1169,7 +1199,7 @@ _test_met(void)
   //  16 bytes, top byte = 0x01 (1 significant bit)
   //  expected met = (16-1)*8 + 1 = 121
   //
-  //  Also verifies u3_blob_load zero-initializes the loom atom's trailing
+  //  Also verifies the loaded atom's trailing
   //  word bytes: u3r_met on the loaded atom must agree with the hand.
   //
   {
@@ -1189,7 +1219,7 @@ _test_met(void)
       exit(1);
     }
 
-    u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+    u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
     if ( u3_none == atm ) {
       fprintf(stderr, "\033[31mblob met: load u3_none\033[0m\r\n");
       exit(1);
@@ -1198,7 +1228,7 @@ _test_met(void)
     u3z(atm);
     if ( bit_d != (c3_d)ref_w ) {
       fprintf(stderr, "\033[31mblob met: hand_met=%" PRIc3_d
-                      " != u3r_met=%" PRIc3_w " (u3_blob_load "
+                      " != u3r_met=%" PRIc3_w " (load "
                       "not zero-initializing trailing bytes?)\033[0m\r\n",
               bit_d, ref_w);
       exit(1);
@@ -2684,7 +2714,7 @@ _test_hand_gone(void)
     }
   }
 
-  if (  (u3_none != u3_blob_load(_tmp_pier, _han_mug_h, _han_seq_h))
+  if (  (u3_none != _blob_load(_tmp_pier, _han_mug_h, _han_seq_h))
      || (0 != _blob_met(_tmp_pier, _han_mug_h, _han_seq_h))
      || u3_blob_hands() )
   {
@@ -2758,7 +2788,7 @@ _test_hand_edge(void)
       c3_h mug_h = 0; c3_h seq_h = 0;
       u3_blob_save(_tmp_pier, dat_y, len_w[i_w], &mug_h, &seq_h);
 
-      u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
+      u3_weak atm = _blob_load(_tmp_pier, mug_h, seq_h);
       c3_d    met_d = _blob_met(_tmp_pier, mug_h, seq_h);
 
       if ( (u3_none == atm) || (met_d != (c3_d)u3r_met(0, atm)) ) {
@@ -3063,7 +3093,7 @@ _test_hand_empty(void)
   fclose(fopen(pax_c, "wb"));
 
   if (  u3_blob_open(_tmp_pier, mug_h, 1)
-     || (u3_none != u3_blob_load(_tmp_pier, mug_h, 1))
+     || (u3_none != _blob_load(_tmp_pier, mug_h, 1))
      || (0 != _blob_met(_tmp_pier, mug_h, 1))
      || u3_blob_hands() )
   {
@@ -3449,7 +3479,7 @@ _test_crit(void)
 **        (as happens when writing to the event log or sending over newt IPC).
 **     4. On replay (or IPC receive), u3s_tap_xeno reconstructs the bob atoms.
 **     5. Arvo reads the atoms' bytes via u3r_bytes, which re-materializes
-**        each bob atom through u3r_blob_load → u3_blob_load → pread.
+**        each bob atom through u3r_blob_load → u3r_view_read → pread.
 **
 **   Also exercises the ram encoder's backref path for bob atoms (same bob
 **   appearing multiple times in a noun) and the dedup path through
@@ -3557,7 +3587,7 @@ _test_lifecycle(void)
   }
 
   //  walk the decoded noun and pull bytes out of each bob atom.  this
-  //  exercises u3r_bytes → u3r_blob_load → u3_blob_load (pread from disk).
+  //  exercises u3r_bytes → u3r_blob_load → u3r_view_read (pread from disk).
   //
   u3_noun tag, cel, b2, rst;
   if ( c3n == u3r_cell(out, &tag, &cel) ) {
@@ -3605,7 +3635,7 @@ _test_lifecycle(void)
   }
 
   //  materialize each bob to bytes and compare to original input.
-  //  u3r_bytes → u3r_blob_load → u3_blob_load → pread.
+  //  u3r_bytes → u3r_blob_load → u3r_view_read → pread.
   //
   {
     c3_y* buf_y = c3_malloc(dat1_d);
@@ -3632,9 +3662,9 @@ _test_lifecycle(void)
   //
   {
     c3_d    bit_d = u3r_blob_met(bob1_d);
-    u3_weak mat   = u3_blob_load(_tmp_pier, mug1_h, seq1_h);
+    u3_weak mat   = _blob_load(_tmp_pier, mug1_h, seq1_h);
     if ( u3_none == mat ) {
-      fprintf(stderr, "\033[31mlifecycle: u3_blob_load failed\033[0m\r\n");
+      fprintf(stderr, "\033[31mlifecycle: load failed\033[0m\r\n");
       exit(1);
     }
     c3_w ref_w = u3r_met(0, mat);

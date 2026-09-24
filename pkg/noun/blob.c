@@ -1004,43 +1004,6 @@ u3_blob_save_fd(const c3_c* pax_c,
   return ret_o;
 }
 
-/* u3_blob_load(): read blob into a loom atom.
-**
-**   Reads straight from the fd into a u3i_slab, so blobs of any size
-**   (including >4 GiB) cost no heap.  The slab allocation can bail; the
-**   hand is then swept along with the road.
-*/
-u3_weak
-u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
-{
-  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
-  if ( !han_u ) {
-    return u3_none;
-  }
-
-  c3_d len_d = han_u->len_d;
-
-  //  NB: use u3i_slab_init (not u3i_slab_bare) so the trailing bytes of
-  //  the last loom word are zeroed when len_d isn't word-aligned.
-  //  Otherwise u3r_met/u3r_word/etc. would read garbage from those bytes.
-  //  Zeroing also touches every page, so they are mapped writable before
-  //  pread() lands in them (a syscall cannot take the loom's fault handler).
-  //
-  u3i_slab sab_u;
-  u3i_slab_init(&sab_u, 3, len_d);
-
-  if ( len_d != u3_blob_read(han_u, 0, sab_u.buf_y, (c3_z)len_d) ) {
-    fprintf(stderr, "blob: load: %08" PRIx32 "/%08" PRIx32 ": short read\r\n",
-            mug_h, seq_h);
-    u3_blob_close(han_u);
-    u3i_slab_free(&sab_u);
-    return u3_none;
-  }
-
-  u3_blob_close(han_u);
-  return u3i_slab_mint_bytes(&sab_u);
-}
-
 /* u3_blob_exists(): check whether a blob file exists.
 */
 c3_o
