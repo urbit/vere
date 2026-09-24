@@ -209,8 +209,8 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 /* _cttp_bods_free(): free body structure.
 **
 **   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
-**   shares one hand; the tail carries own_o and closes it.  Free walks
-**   head→tail, so the hand is released only after every window that
+**   shares one view; the tail carries own_o and closes it.  Free walks
+**   head→tail, so the view is released only after every window that
 **   read through it.
 */
 static void
@@ -219,11 +219,12 @@ _cttp_bods_free(u3_hbod* bod_u)
   while ( bod_u ) {
     u3_hbod* nex_u = bod_u->nex_u;
 
-    if ( bod_u->han_u ) {
+    if ( bod_u->vue_u ) {
       c3_free(bod_u->buf_y);
 
       if ( c3y == bod_u->own_o ) {
-        u3_blob_close(bod_u->han_u);
+        u3r_view_done(bod_u->vue_u);
+        c3_free(bod_u->vue_u);
       }
     }
     c3_free(bod_u);
@@ -241,10 +242,11 @@ _cttp_bods_free(u3_hbod* bod_u)
 /* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
 **   blob-backed hbods — no loom allocation, no mapping.
 **
-**   The blob is opened once on the king's home road; the chain is
-**   a list of U3_HTTP_BOB_CHUNK-sized windows that _http_hgen_send reads
-**   into heap buffers only as h2o asks for them.  The tail chunk owns
-**   the hand (own_o) and closes it when the chain is freed.
+**   The bob is opened once, as a windowed view on the king's home road;
+**   the chain is a list of U3_HTTP_BOB_CHUNK-sized windows that
+**   _http_hgen_send reads into heap buffers only as h2o asks for them.
+**   The tail chunk owns the view (own_o) and closes it when the chain
+**   is freed.
 **
 **   Returns 0 if the blob can't be opened (missing file, empty, too
 **   short); the caller fails the response.
@@ -252,35 +254,38 @@ _cttp_bods_free(u3_hbod* bod_u)
 static u3_hbod*
 _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 {
-  //  the hand outlives this event: it must belong to the home road,
-  //  the one road no bail or signal ever sweeps.
+  //  the view outlives this event: it must belong to the home road,
+  //  the one road no bail or signal ever unwinds.
   //
   u3_assert( &(u3H->rod_u) == u3R );
 
-  u3_blob_hand* han_u = u3r_blob_open(a);
+  u3r_view* vue_u = c3_malloc(sizeof(*vue_u));
 
-  if ( !han_u ) {
+  if ( c3n == u3r_view_open(vue_u, a) ) {
+    c3_free(vue_u);
     return 0;
   }
-  if ( (c3_d)len_w > han_u->len_d ) {
-    u3l_log("http: bob body %" PRIc3_w " bytes exceeds blob %" PRIc3_d,
-            len_w, han_u->len_d);
-    u3_blob_close(han_u);
+  if ( len_w > vue_u->len_w ) {
+    u3l_log("http: bob body %" PRIc3_w " bytes exceeds blob %" PRIc3_w,
+            len_w, vue_u->len_w);
+    u3r_view_done(vue_u);
+    c3_free(vue_u);
     return 0;
   }
 
-  //  a zero-length body needs no window, and no hand
+  //  a zero-length body needs no window, and no view
   //
   if ( 0 == len_w ) {
     u3_hbod* bod_u = c3_malloc(1 + sizeof(*bod_u));
     bod_u->nex_u    = 0;
     bod_u->len_w    = 0;
     bod_u->buf_y    = 0;
-    bod_u->han_u    = 0;
+    bod_u->vue_u    = 0;
     bod_u->off_d    = 0;
     bod_u->own_o    = c3n;
     bod_u->hun_y[0] = 0;
-    u3_blob_close(han_u);
+    u3r_view_done(vue_u);
+    c3_free(vue_u);
     return bod_u;
   }
 
@@ -296,7 +301,7 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
     bod_u->nex_u = 0;
     bod_u->len_w = cnk_w;
     bod_u->buf_y = 0;              //  read at send time
-    bod_u->han_u = han_u;
+    bod_u->vue_u = vue_u;
     bod_u->off_d = off_w;
     bod_u->own_o = c3n;
 
@@ -351,7 +356,7 @@ _cttp_bod_from_octs(u3_noun oct)
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
     bod_u->buf_y = 0;
-    bod_u->han_u = 0;
+    bod_u->vue_u = 0;
     bod_u->off_d = 0;
     bod_u->own_o = c3n;
     u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
@@ -1475,15 +1480,17 @@ _http_hgen_send(u3_hgen* gen_u)
   //  read this batch's blob windows into heap buffers
   //
   for ( u3_hbod* cur_u = send_u; cur_u; cur_u = cur_u->nex_u ) {
-    if ( cur_u->han_u && !cur_u->buf_y ) {
+    if ( cur_u->vue_u && !cur_u->buf_y ) {
       cur_u->buf_y = c3_malloc(cur_u->len_w);
 
-      c3_z got_z = u3_blob_read(cur_u->han_u, cur_u->off_d,
-                                cur_u->buf_y, cur_u->len_w);
+      //  the read zero-fills a short window itself; the count says
+      //  whether the file was shortened under the response
+      //
+      c3_z got_z = u3r_view_read(cur_u->vue_u, cur_u->off_d,
+                                 cur_u->buf_y, cur_u->len_w);
 
       if ( got_z != cur_u->len_w ) {
         u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
-        memset(cur_u->buf_y + got_z, 0, cur_u->len_w - got_z);
         gen_u->sat_e = u3_hgen_fail;
       }
     }
