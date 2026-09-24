@@ -2749,11 +2749,19 @@ u3r_blob_open(u3_atom a)
   return u3_blob_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
 }
 
-/* u3r_blob_met(): bit-length of a bob atom without materialization.
+/* u3r_blob_met(): bit-length of a bob atom, at full width.
 */
 c3_d
 u3r_blob_met(u3_atom a)
 {
-  u3_assert( c3y == u3a_is_bob(a) );
-  return u3_blob_met(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
+  u3_blob_hand* han_u = u3r_blob_open(a);
+  c3_d          met_d;
+
+  if ( !han_u ) {
+    return 0;
+  }
+
+  met_d = u3_blob_hand_met(han_u);
+  u3_blob_close(han_u);
+  return met_d;
 }

@@ -254,14 +254,6 @@
       c3_z
       u3_blob_hands_road(void* rod_v);
 
-    /* u3_blob_met(): compute the bit-length of a blob without full materialization.
-    **
-    **   Equivalent to u3r_met(0, materialized_atom) but avoids loading the whole
-    **   blob into the loom.  Returns 0 on error (blob missing or empty).
-    */
-      c3_d
-      u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
-
     /* u3_blob_bsink: streaming byte sink for blob-aware cue (u3s_bsink).
     **
     ** Streams a large cued atom's bytes to a staging file, installs it

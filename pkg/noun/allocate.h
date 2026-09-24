@@ -316,7 +316,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_W(S) lop_p;                                      \
   U3_N(S) tim;                                        \
                                                       \
-  U3_W(S) bob_p;  /* first blob hand (u3_blob_hand) */ \
+  U3_W(S) bob_p;  /* first blob hand */               \
   U3_W(S) fut_w[27];                                  \
                                                       \
   U3_PASTE(u3a_road_esc, S) esc;                      \

@@ -755,11 +755,14 @@
         struct _u3_blob_hand*
         u3r_blob_open(u3_atom a);
 
-      /* u3r_blob_met(): compute bit-length of a bob atom without materialization.
+      /* u3r_blob_met(): bit-length of a bob atom, at full width.
       **
-      **   Equivalent to u3r_met(0, materialized) but avoids loom allocation.
-      **   Scans the last byte to strip trailing zeroes.
-      **   Returns 0 on error.
+      **   u3r_met(0, a) for a bob, but as a c3_d: a c3_w bit count
+      **   overflows past 512 MiB on a 32-bit build, which blobs exceed.
+      **   Asks the road's hand (u3_blob_hand_met), which scans the file's
+      **   tail once and caches the answer, so a view or a second call on
+      **   the same road costs nothing more.  Returns 0 if the file is
+      **   missing, empty, or all zero.
       */
       c3_d
       u3r_blob_met(u3_atom a);

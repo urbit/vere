@@ -806,7 +806,26 @@ _test_install_stg_dedup(void)
   fprintf(stderr, "test blob install_stg dedup: ok\r\n");
 }
 
-/* _test_met(): u3_blob_met matches u3r_met on the materialized atom.
+/* _blob_met(): bit-length of a blob by id: open a hand, ask it, close.
+**
+**   the path form the tests used before hands; 0 if the file is
+**   missing or empty, as u3r_blob_met reports for a bob.
+*/
+static c3_d
+_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+{
+  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
+  c3_d          met_d;
+
+  if ( !han_u ) {
+    return 0;
+  }
+  met_d = u3_blob_hand_met(han_u);
+  u3_blob_close(han_u);
+  return met_d;
+}
+
+/* _test_met(): u3_blob_hand_met matches u3r_met on the materialized atom.
 */
 
 /* _test_blob_del_cb(): test blob_del_f — count deletion requests.
@@ -1151,7 +1170,7 @@ _test_met(void)
   //  expected met = (16-1)*8 + 1 = 121
   //
   //  Also verifies u3_blob_load zero-initializes the loom atom's trailing
-  //  word bytes: u3r_met on the loaded atom must agree with u3_blob_met.
+  //  word bytes: u3r_met on the loaded atom must agree with the hand.
   //
   {
     const c3_y dat_y[] = { 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x9a,
@@ -1163,7 +1182,7 @@ _test_met(void)
       exit(1);
     }
 
-    c3_d bit_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
+    c3_d bit_d = _blob_met(_tmp_pier, mug_h, seq_h);
     if ( 121 != bit_d ) {
       fprintf(stderr, "\033[31mblob met: dense got %" PRIc3_d ", expected 121"
                       "\033[0m\r\n", bit_d);
@@ -1178,7 +1197,7 @@ _test_met(void)
     c3_w ref_w = u3r_met(0, atm);
     u3z(atm);
     if ( bit_d != (c3_d)ref_w ) {
-      fprintf(stderr, "\033[31mblob met: blob_met=%" PRIc3_d
+      fprintf(stderr, "\033[31mblob met: hand_met=%" PRIc3_d
                       " != u3r_met=%" PRIc3_w " (u3_blob_load "
                       "not zero-initializing trailing bytes?)\033[0m\r\n",
               bit_d, ref_w);
@@ -1199,7 +1218,7 @@ _test_met(void)
       exit(1);
     }
 
-    c3_d bit_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
+    c3_d bit_d = _blob_met(_tmp_pier, mug_h, seq_h);
     //  16 significant bytes; high byte 0xff → 8 bits
     //  total = 15*8 + 8 = 128
     //
@@ -1213,7 +1232,7 @@ _test_met(void)
   //  case 3: nonexistent blob → 0
   //
   {
-    if ( 0 != u3_blob_met(_tmp_pier, 0xdeadbeef, 999) ) {
+    if ( 0 != _blob_met(_tmp_pier, 0xdeadbeef, 999) ) {
       fprintf(stderr, "\033[31mblob met: missing blob should return 0\033[0m\r\n");
       exit(1);
     }
@@ -2647,7 +2666,7 @@ _test_hand_gone(void)
   _hand_gone_expect("fib",  _hand_gone_fib_cb);
 
   if (  (u3_none != u3_blob_load(_tmp_pier, _han_mug_h, _han_seq_h))
-     || (0 != u3_blob_met(_tmp_pier, _han_mug_h, _han_seq_h))
+     || (0 != _blob_met(_tmp_pier, _han_mug_h, _han_seq_h))
      || u3_blob_hands() )
   {
     fprintf(stderr, "\033[31mblob hand gone: load/met contract\033[0m\r\n");
@@ -2721,7 +2740,7 @@ _test_hand_edge(void)
       u3_blob_save(_tmp_pier, dat_y, len_w[i_w], &mug_h, &seq_h);
 
       u3_weak atm = u3_blob_load(_tmp_pier, mug_h, seq_h);
-      c3_d    met_d = u3_blob_met(_tmp_pier, mug_h, seq_h);
+      c3_d    met_d = _blob_met(_tmp_pier, mug_h, seq_h);
 
       if ( (u3_none == atm) || (met_d != (c3_d)u3r_met(0, atm)) ) {
         fprintf(stderr, "\033[31mblob hand edge: met at %" PRIc3_w
@@ -3000,7 +3019,7 @@ _test_hand_empty(void)
 
   if (  u3_blob_open(_tmp_pier, mug_h, 1)
      || (u3_none != u3_blob_load(_tmp_pier, mug_h, 1))
-     || (0 != u3_blob_met(_tmp_pier, mug_h, 1))
+     || (0 != _blob_met(_tmp_pier, mug_h, 1))
      || u3_blob_hands() )
   {
     fprintf(stderr, "\033[31mblob hand empty: empty file not rejected"

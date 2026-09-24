@@ -1340,21 +1340,6 @@ u3_blob_move_stg(const c3_c* pax_c,
   return c3y;
 }
 
-/* u3_blob_met(): compute bit-length of blob content without full materialization.
-*/
-c3_d
-u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
-{
-  u3_blob_hand* han_u = u3_blob_open(pax_c, mug_h, seq_h);
-  if ( !han_u ) {
-    return 0;
-  }
-
-  c3_d met_d = u3_blob_hand_met(han_u);
-  u3_blob_close(han_u);
-  return met_d;
-}
-
 /* u3_blob_bsink: streaming byte sink for blob-aware cue.
 **
 **   receives a large atom's bytes in chunks, writes them to a staging
