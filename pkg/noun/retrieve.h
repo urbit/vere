@@ -434,45 +434,95 @@
         u3r_bytes_all(c3_w*   len_w,
                       u3_atom a);
 
-      /* u3r_view_e: backing kind
+      /* u3r_view: a flat, read-only, frame-scoped byte view of an atom.
+      **
+      **   Purpose.  Code that needs a contiguous pointer and a length,
+      **   above all the crypto and codec jets, gets one from u3r_view
+      **   without knowing how the atom is stored.  A view is valid from
+      **   u3r_view_init or u3r_view_padd until u3r_view_done, inside one
+      **   C frame; it is never stored, returned, or handed to another
+      **   road.  Code that can read in windows should use the windowed
+      **   accessors (u3r_bytes, u3r_chop, u3r_blob_cut) instead, which
+      **   never map or copy.
+      **
+      **   Semantics.  byt_y points at len_w bytes.  For u3r_view_init
+      **   they are the atom's significant bytes, u3r_met(3, a) of them,
+      **   least significant first.  For u3r_view_padd they are exactly
+      **   wid_w bytes: the atom's bytes, then zeros, or the atom
+      **   truncated to wid_w.  The bytes are read-only and, for a bob,
+      **   may be evicted by the kernel and read back from the file.
+      **
+      **   Memory.  A view owns no memory of its own.  Its bytes are, in
+      **   order of preference:
+      **
+      **     loom  the indirect atom's own word buffer, borrowed.
+      **     blob  the road's hand on the bob's file, mapped read-only by
+      **           the hand (see u3_blob_hand in blob.h); the mapping is
+      **           at least the file's last page and, for a wide pad, an
+      **           anonymous zero tail after it, so no pad of a bob ever
+      **           allocates.  The hand, not the view, owns the mapping,
+      **           and the hand dies with the road, so a bail or signal
+      **           cannot leak it.  done drops the view's hold on the hand.
+      **     flat  bytes copied into the view itself: a direct atom, or a
+      **           pad of up to u3r_view_line bytes over a loom atom,
+      **           which covers every fixed key, nonce, and salt width.
+      **     heap  a u3a_malloc pad, only for a pad over a loom atom wider
+      **           than u3r_view_line, or a wide pad over a bob whose hand
+      **           another live view holds.  The loom reclaims it with the
+      **           road on a bail, so it is safe on inner roads; a padded
+      **           view on the home road would leak it on a bail, and no
+      **           home-road caller takes one.
+      **
+      **   Every byte between len_w and the next word boundary is
+      **   readable and zero in every kind, which lets word-at-a-time
+      **   readers run off the end by up to seven bytes.
       */
         typedef enum {
-          u3r_view_loom = 0,    //  aliases a pug's loom word buffer; free: none
-          u3r_view_blob,        //  blob hand's whole-file buffer;    free: u3_blob_close
-          u3r_view_flat,        //  cat bytes inline                  free: none
-          u3r_view_heap         //  u3a_malloc'd pad buffer;          free: u3a_free
+          u3r_view_loom = 0,    //  borrows the loom word buffer;   done frees nothing
+          u3r_view_blob,        //  aliases the hand's mapping;     done: u3_blob_close
+          u3r_view_flat,        //  bytes inline in u.buf_y;        done frees nothing
+          u3r_view_heap         //  u3a_malloc pad;                 done: u3a_free
         } u3r_view_e;
 
-      /* u3r_view: zero-copy read-only view over an atom's significant bytes.
-      **
-      **   A bob view holds a reference to the blob's registry hand (see
-      **   u3_blob_hand in blob.h); the bytes are the hand's buffer, shared
-      **   with every other view of the same blob and released with the
-      **   last close, or by the sweep when a bail unwinds the road.
+      /* u3r_view_line: bytes a view can hold inline.
       */
+#       define u3r_view_line  64
+
         struct _u3_blob_hand;
 
         typedef struct {
-          const c3_y* byt_y;
-          c3_w        len_w;
-          u3r_view_e  kin_e;
+          const c3_y* byt_y;          //  the bytes
+          c3_w        len_w;          //  how many
+          u3r_view_e  kin_e;          //  what byt_y points at
           union {
-            struct _u3_blob_hand* han_u;    //  blob: registry hand
-            c3_d                  raw_d;    //  flat: inline cat bytes
+            struct _u3_blob_hand* han_u;                //  blob: the road's hand
+            c3_y                  buf_y[u3r_view_line]; //  flat: the bytes
           } u;
         } u3r_view;
 
-      /* u3r_view_init(): open a read-only byte view of [a].
+      /* u3r_view_init(): open a view of the significant bytes of [a].
+      **
+      **   Bails %fail if [a] is a bob whose file is missing, empty, or
+      **   cannot be mapped.
       */
         void
         u3r_view_init(u3r_view* vue_u, u3_atom a);
 
-      /* u3r_view_padded(): open a zero-padded view of [wid_w] bytes.
+      /* u3r_view_padd(): open a view of exactly [wid_w] bytes of [a],
+      **   zero-filled past the atom's bytes.
+      **
+      **   Never allocates for a bob unless another live view holds its
+      **   hand; allocates in the loom for a loom atom only past
+      **   u3r_view_line.  Bails like u3r_view_init, or %meme from the
+      **   loom pad.
       */
         void
         u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w);
 
-      /* u3r_view_done(): release the view's backing memory.
+      /* u3r_view_done(): release the view.
+      **
+      **   Drops a blob view's hold on its hand and frees a heap pad;
+      **   the other kinds hold nothing.  Leaves the view empty.
       */
         void
         u3r_view_done(u3r_view* vue_u);
@@ -697,7 +747,7 @@
         u3_weak
         u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a);
 
-      /* u3r_blob_open(): open a bob atom's blob through the handle registry.
+      /* u3r_blob_open(): open a bob atom's blob on the current road.
       **
       **   Uses u3C.dir_c as the pier path.  Returns 0 (without bailing) if
       **   the file is missing or empty; release with u3_blob_close().

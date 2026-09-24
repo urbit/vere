@@ -1373,7 +1373,7 @@ _test_view(void)
     u3z(a);
   }
 
-  //  cat atom: bytes are the atom value itself, stashed inline in u.raw_d
+  //  cat atom: bytes are the atom value itself, copied inline into u.buf_y
   //
   {
     const u3_atom a     = 0x44332211;
@@ -1393,8 +1393,8 @@ _test_view(void)
       fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
       exit(1);
     }
-    if ( vue_u.byt_y != (const c3_y*)&vue_u.u.raw_d ) {
-      fprintf(stderr, "_test_view(): cat view should alias u.raw_d\r\n");
+    if ( vue_u.byt_y != vue_u.u.buf_y ) {
+      fprintf(stderr, "_test_view(): cat view should alias u.buf_y\r\n");
       exit(1);
     }
     if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
@@ -1404,7 +1404,6 @@ _test_view(void)
 
     u3r_view_done(&vue_u);
     if (  vue_u.byt_y != 0
-       || vue_u.u.raw_d != 0
        || vue_u.kin_e != u3r_view_loom )
     {
       fprintf(stderr, "_test_view(): cat view not reset on done\r\n");
