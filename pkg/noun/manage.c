@@ -264,11 +264,12 @@ _cm_signal_reset(void)
   u3R = &u3H->rod_u;
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
-  u3R->kid_p = 0;
 
-  //  the discarded roads' blob handles go with them
+  //  the discarded roads' blob hands go with them; the kid chain is
+  //  the only path to their lists, so drain before cutting it
   //
-  u3_blob_sweep_kids();
+  u3_blob_drain_kids();
+  u3R->kid_p = 0;
 }
 
 #if 0
@@ -799,6 +800,11 @@ _find_home(void)
   //  so any les_h count from the previous boot is stale.
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
+
+  //  the home road never lists blob hands in the loom; anything a
+  //  snapshot carries there belongs to a dead process
+  //
+  u3H->rod_u.bob_p = 0;
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1138,10 +1144,6 @@ u3m_bail(u3_noun how)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
-  //  every blob handle this road's frames hold dies with them
-  //
-  u3_blob_sweep(u3R);
-
   u3m_escape(how);
 }
 
@@ -1295,6 +1297,12 @@ void
 u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
+
+  //  the road's blob hands, retained for reuse since it leapt, go with
+  //  its frames.  this is the one exit every road takes except a
+  //  signal unwind, which drains the kid chain itself.
+  //
+  u3_blob_drain(u3R);
 
 #if 0
   /*  If you're printing a lot of these you need to change
@@ -1699,17 +1707,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     /* Overload the error result.
     */
     pro = u3m_love(why);
-  }
-
-  /* No blob handle opened under the inner road may outlive it: a bail
-  ** already swept its own road, so anything left here was leaked by a
-  ** normal return without a close.
-  */
-  {
-    c3_w num_w = u3_blob_sweep_kids();
-    if ( num_w ) {
-      u3l_log("blob: %" PRIc3_w " handle reference(s) leaked by event", num_w);
-    }
   }
 
   /* Revert to external signal regime.

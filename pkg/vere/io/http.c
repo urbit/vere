@@ -239,9 +239,9 @@ _cttp_bods_free(u3_hbod* bod_u)
 #define U3_HTTP_BOB_CHUNK  (1U << 20)
 
 /* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
-**   blob-backed hbods — no loom allocation, no whole-file buffer.
+**   blob-backed hbods — no loom allocation, no mapping.
 **
-**   The blob is opened once through the handle registry; the chain is
+**   The blob is opened once on the king's home road; the chain is
 **   a list of U3_HTTP_BOB_CHUNK-sized windows that _http_hgen_send reads
 **   into heap buffers only as h2o asks for them.  The tail chunk owns
 **   the hand (own_o) and closes it when the chain is freed.

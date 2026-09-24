@@ -132,53 +132,55 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
-    /* u3_blob_hand: process-global handle on an open blob file.
+    /* u3_blob_hand: an open blob file, owned by the road that opened it.
     **
-    **   One hand per blob per process: every concurrent reader shares the
-    **   fd and, once a flat view asks for it, the whole-file buffer.  A
-    **   hand is referenced per road; it closes when its last reference
-    **   goes, or when a bail or signal unwinds a road that still holds
-    **   references (u3_blob_sweep, u3_blob_sweep_kids).  Every mutation of
-    **   the registry runs inside u3m_crit_enter()/u3m_crit_leave(), so a
-    **   signal can neither leak the fd nor interrupt the table.
+    **   An inner road keeps its hands on a list headed by its bob_p,
+    **   allocated in its own heap and deduplicated by blob id; they are
+    **   retained until the road falls (u3_blob_drain from u3m_fall), so
+    **   a trap that reads one blob many times opens it once.  The home
+    **   road never falls and every caller there is C with an explicit
+    **   close, so its hands live on the C heap, one per open, freed on
+    **   close.  Every mutation runs inside u3m_crit_enter()/
+    **   u3m_crit_leave(), so a signal can neither leak an fd nor
+    **   interrupt a list.
     */
-      typedef struct _u3_blob_ref {
-        void*                rod_v;    //  owning road (u3R at open)
-        c3_w                 ref_w;    //  references held by that road
-        struct _u3_blob_ref* nex_u;
-      } u3_blob_ref;
-
       typedef struct _u3_blob_hand {
-        c3_d         bid_d;   //  (mug_h << 32) | seq_h
-        c3_i         fid_i;   //  O_RDONLY fd, open for the hand's lifetime
-        c3_d         len_d;   //  file size
-        c3_d         met_d;   //  cached bit-length (0 until asked)
-        c3_y*        buf_y;   //  whole-file buffer (0 until u3_blob_data)
-        c3_w         ref_w;   //  total references
-        u3_blob_ref* ref_u;   //  per-road references
+        struct _u3_blob_hand* nex_u;  //  next on the owning road
+        struct _u3_blob_hand* pre_u;  //  previous: constant-time unlink
+        c3_d   bid_d;   //  (mug_h << 32) | seq_h: inner-road dedup key
+        c3_i   fid_i;   //  O_RDONLY fd, open for the hand's lifetime
+        c3_w   use_w;   //  live views (inner road: evictable at zero)
+        c3_d   len_d;   //  file size: bounds reads, sizes the mapping
+        c3_d   met_d;   //  cached bit-length (0 until asked)
+        c3_y*  map_y;   //  read-only mapping (0 until u3_blob_data)
+        c3_d   map_d;   //  mapping length: u3_blob_hand_pad, or wider
       } u3_blob_hand;
 
-    /* u3_blob_init(): initialize the handle registry (from u3m_init).
+    /* u3_blob_init(): reset the home road's list (from u3m_init).
     */
       void
       u3_blob_init(void);
 
-    /* u3_blob_stop(): release every handle and the registry (from u3m_stop).
+    /* u3_blob_stop(): close every home-road hand (from u3m_stop).
     */
       void
       u3_blob_stop(void);
 
-    /* u3_blob_open(): open a blob, or add a reference to its open hand.
+    /* u3_blob_open(): open a blob on the current road.
     **
-    **   The reference is owned by the current road.  Returns 0 (without
-    **   bailing) if the file is missing or empty.
+    **   An inner road returns its own hand for an already-open blob, or
+    **   one held by an inner ancestor.  Returns 0 (without bailing) if
+    **   the file is missing or empty.  Out of descriptors, an inner road
+    **   evicts its idle hands and, if none are, bails %file; the home
+    **   road returns 0.
     */
       u3_blob_hand*
       u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
 
-    /* u3_blob_close(): drop the current road's reference to [han_u].
+    /* u3_blob_close(): the current road is done with [han_u].
     **
-    **   The hand is closed and freed when its last reference goes.
+    **   On an inner road the hand stays open for reuse; only its live-view
+    **   count drops.  On the home road the fd, mapping, and node go.
     */
       void
       u3_blob_close(u3_blob_hand* han_u);
@@ -191,14 +193,32 @@
       c3_z
       u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
-    /* u3_blob_data(): the whole file, read into a heap buffer on first use.
+    /* u3_blob_data(): the whole file, mapped read-only on first use.
     **
-    **   The buffer lives as long as the hand and is zero-padded to a
-    **   multiple of 8 bytes, so word-at-a-time readers stay in bounds.
-    **   Returns 0 on a short read.
+    **   The mapping lives as long as the hand.  Bytes past the end of
+    **   the file up to u3_blob_hand_pad read as zero.  Returns 0 if the
+    **   mapping fails.
     */
       const c3_y*
       u3_blob_data(u3_blob_hand* han_u);
+
+    /* u3_blob_data_wid(): the file mapped read-only, zero out to [wid_d].
+    **
+    **   Like u3_blob_data, but the mapping is at least [wid_d] bytes: the
+    **   file's pages, then anonymous zero pages.  A wider request remaps
+    **   only while no other view holds the hand (use_w is 1), since a
+    **   live view aliases the old pages; otherwise, and on a platform
+    **   without fixed mappings, a request past u3_blob_hand_pad returns 0
+    **   and the caller pads another way.
+    */
+      const c3_y*
+      u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d);
+
+    /* u3_blob_hand_pad(): bytes readable through u3_blob_data: the file
+    **   length rounded up to the mapping's zero-tail granularity.
+    */
+      c3_d
+      u3_blob_hand_pad(u3_blob_hand* han_u);
 
     /* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
     **
@@ -208,26 +228,31 @@
       c3_d
       u3_blob_hand_met(u3_blob_hand* han_u);
 
-    /* u3_blob_sweep(): release every reference held by road [rod_v].
+    /* u3_blob_drain(): close every hand held by road [rod_v].
     **
-    **   Called from u3m_bail before the longjmp: the road's C frames, and
-    **   with them every view they held, are about to vanish.
-    */
-      void
-      u3_blob_sweep(void* rod_v);
-
-    /* u3_blob_sweep_kids(): release every reference not held by the home road.
-    **
-    **   Called after a signal unwinds to the top level, and at the end of
-    **   u3m_soft_top.  Returns the number of references released.
+    **   Called from u3m_fall: the road's C frames, and with them every
+    **   view they held, are gone.  Returns the number closed.
     */
       c3_w
-      u3_blob_sweep_kids(void);
+      u3_blob_drain(void* rod_v);
 
-    /* u3_blob_hands(): number of open hands.
+    /* u3_blob_drain_kids(): close every hand held below the home road.
+    **
+    **   Called after a signal unwinds to the top level, the one path
+    **   that skips u3m_fall.  Returns the number closed.
+    */
+      c3_w
+      u3_blob_drain_kids(void);
+
+    /* u3_blob_hands(): hands open on the home road.
     */
       c3_z
       u3_blob_hands(void);
+
+    /* u3_blob_hands_road(): hands open on road [rod_v].
+    */
+      c3_z
+      u3_blob_hands_road(void* rod_v);
 
     /* u3_blob_met(): compute the bit-length of a blob without full materialization.
     **

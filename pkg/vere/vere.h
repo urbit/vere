@@ -53,7 +53,7 @@
         struct _u3_hbod* nex_u;
         c3_w             len_w;
         c3_y*            buf_y;   //  blob: heap window (iovec base), or 0
-        u3_blob_hand*    han_u;   //  blob: registry hand, or 0 (inline)
+        u3_blob_hand*    han_u;   //  blob: home-road hand, or 0 (inline)
         c3_d             off_d;   //  blob: byte offset of this window
         c3_o             own_o;   //  blob: closes han_u when freed
         c3_y             hun_y[0];
