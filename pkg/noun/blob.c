@@ -495,15 +495,24 @@ u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 **   past them the bytes come from an anonymous reservation the file
 **   pages are then fixed over, so one pointer covers any width.
 **   returns 0 on failure, or past the file's pages on a platform
-**   without fixed mappings.
+**   without fixed mappings; *siz_d is the length mapped.
 */
 static c3_y*
-_blob_map(u3_blob_hand* han_u, c3_d wid_d)
+_blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
 {
   c3_d pad_d = u3_blob_hand_pad(han_u);
 
   if ( wid_d <= pad_d ) {
-    void* map_v = mmap(0, (size_t)pad_d, PROT_READ, MAP_PRIVATE,
+    //  windows refuses a read-only section longer than the file, so the
+    //  view is exactly the file; the remainder of its last page still
+    //  reads as zero, which is all the word pad needs
+    //
+#ifdef U3_OS_windows
+    *siz_d = han_u->len_d;
+#else
+    *siz_d = pad_d;
+#endif
+    void* map_v = mmap(0, (size_t)*siz_d, PROT_READ, MAP_PRIVATE,
                        han_u->fid_i, 0);
     return ( MAP_FAILED == map_v ) ? 0 : map_v;
   }
@@ -513,10 +522,12 @@ _blob_map(u3_blob_hand* han_u, c3_d wid_d)
 #else
   {
     c3_d  pag_d = (c3_d)_blob_page();
-    c3_d  siz_d = (wid_d + pag_d - 1) & ~(pag_d - 1);
-    void* res_v = mmap(0, (size_t)siz_d, PROT_READ,
-                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* res_v;
     void* map_v;
+
+    *siz_d = (wid_d + pag_d - 1) & ~(pag_d - 1);
+    res_v  = mmap(0, (size_t)*siz_d, PROT_READ,
+                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if ( MAP_FAILED == res_v ) {
       return 0;
@@ -526,7 +537,7 @@ _blob_map(u3_blob_hand* han_u, c3_d wid_d)
                  MAP_PRIVATE | MAP_FIXED, han_u->fid_i, 0);
 
     if ( MAP_FAILED == map_v ) {
-      munmap(res_v, (size_t)siz_d);
+      munmap(res_v, (size_t)*siz_d);
       return 0;
     }
 
@@ -576,12 +587,12 @@ u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d)
   }
 
   {
-    c3_d  siz_d = (wid_d + _blob_page() - 1) & ~((c3_d)_blob_page() - 1);
+    c3_d  siz_d = 0;
     c3_y* map_y;
 
     u3m_crit_enter();
 
-    if ( (map_y = _blob_map(han_u, wid_d)) ) {
+    if ( (map_y = _blob_map(han_u, wid_d, &siz_d)) ) {
       if ( han_u->map_y ) {
         munmap(han_u->map_y, (size_t)han_u->map_d);
       }
