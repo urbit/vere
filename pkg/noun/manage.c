@@ -2675,7 +2675,6 @@ u3m_init(size_t len_i)
   _cm_crypto();
 
   u3a_init_once();
-  u3_blob_init();
 
   //  make sure GMP uses our malloc.
   //

@@ -774,16 +774,6 @@ typedef struct {
       return u3a_bob_blob(som)->seq_h;
     }
 
-    /* u3a_bob_bid(): blob ID = (mug << 32) | seq.
-    **   On VERE64 this is a direct atom (63 bits).
-    **   On 32-bit this is a c3_d that must go through u3i_chub().
-    */
-    static inline c3_d
-    u3a_bob_bid(u3_atom som) {
-      u3a_blob* blb_u = u3a_bob_blob(som);
-      return ((c3_d)blb_u->mug_h << 32) | (c3_d)blb_u->seq_h;
-    }
-
   /**  Functions.
   **/
 

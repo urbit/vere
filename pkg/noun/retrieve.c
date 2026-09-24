@@ -1340,7 +1340,7 @@ u3r_view_init(u3r_view* vue_u, u3_atom a)
   //  bob: the bytes are the hand's mapping, so a view costs no copy
   //
   if ( u3r_view_blob == vue_u->kin_e ) {
-    const c3_y* byt_y = u3_blob_data(vue_u->han_u);
+    const c3_y* byt_y = u3_blob_data(vue_u->han_u, 0);
 
     if ( !byt_y ) {
       u3r_view_done(vue_u);
@@ -1367,7 +1367,7 @@ u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w)
   if ( u3r_view_blob == vue_u->kin_e ) {
     u3_blob_hand* han_u = vue_u->han_u;
     c3_w          len_w = vue_u->len_w;
-    const c3_y*   byt_y = u3_blob_data_wid(han_u, wid_w);
+    const c3_y*   byt_y = u3_blob_data(han_u, wid_w);
 
     if ( byt_y ) {
       vue_u->byt_y = byt_y;

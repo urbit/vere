@@ -1343,12 +1343,12 @@ _test_hand(void)
   //  whole-file mapping, then a window through pread
   //
   {
-    const c3_y* buf_y = u3_blob_data(han_u);
+    const c3_y* buf_y = u3_blob_data(han_u, 0);
     if ( !buf_y || (0 != memcmp(buf_y, dat_y, dat_d)) ) {
       fprintf(stderr, "\033[31mblob hand: data mismatch\033[0m\r\n");
       exit(1);
     }
-    if ( buf_y != u3_blob_data(han_u) ) {
+    if ( buf_y != u3_blob_data(han_u, 0) ) {
       fprintf(stderr, "\033[31mblob hand: data not memoized\033[0m\r\n");
       exit(1);
     }
@@ -2493,8 +2493,8 @@ _test_hand_wipe(void)
 }
 #endif
 
-/* _test_hand_stop(): u3_blob_stop releases every home-road hand; the
-**   list can be initialized again afterwards.
+/* _test_hand_stop(): u3_blob_stop releases every home-road hand and
+**   leaves the list usable.
 */
 static void
 _test_hand_stop(void)
@@ -2526,10 +2526,8 @@ _test_hand_stop(void)
     }
   }
 
-  u3_blob_init();
-
   if ( u3_blob_hands() ) {
-    fprintf(stderr, "\033[31mblob hand stop: residue after init\033[0m\r\n");
+    fprintf(stderr, "\033[31mblob hand stop: residue after stop\033[0m\r\n");
     exit(1);
   }
 
@@ -2592,7 +2590,7 @@ _test_hand_trunc(void)
     c3_free(buf_y);
   }
 
-  if ( u3_blob_data(han_u) || han_u->map_y ) {
+  if ( u3_blob_data(han_u, 0) || han_u->map_y ) {
     fprintf(stderr, "\033[31mblob hand trunc: data did not fail cleanly"
                     "\033[0m\r\n");
     exit(1);

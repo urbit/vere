@@ -99,14 +99,6 @@ _blob_head_set(u3a_road* rod_u, u3_blob_hand* han_u)
   }
 }
 
-/* u3_blob_init(): nothing to set up; the lists start empty.
-*/
-void
-u3_blob_init(void)
-{
-  _blob_hom_u = 0;
-}
-
 /* _blob_page(): granularity of the zero tail past a mapping's end.
 */
 static c3_z
@@ -546,7 +538,7 @@ _blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
 #endif
 }
 
-/* u3_blob_data_wid(): the file mapped read-only, zero out to [wid_d].
+/* u3_blob_data(): the file mapped read-only, zero out to [wid_d].
 **
 **   the mapping is recorded on the hand inside the critical section so
 **   a signal cannot leak it.  a file shortened under the hand would
@@ -554,7 +546,7 @@ _blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
 **   refused.
 */
 const c3_y*
-u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d)
+u3_blob_data(u3_blob_hand* han_u, c3_d wid_d)
 {
   c3_d pad_d = u3_blob_hand_pad(han_u);
 
@@ -612,14 +604,6 @@ u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d)
     }
     return map_y;
   }
-}
-
-/* u3_blob_data(): the whole file, mapped read-only on first use.
-*/
-const c3_y*
-u3_blob_data(u3_blob_hand* han_u)
-{
-  return u3_blob_data_wid(han_u, 0);
 }
 
 /* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.

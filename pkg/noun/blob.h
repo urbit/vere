@@ -153,11 +153,6 @@
         c3_d   map_d;   //  mapping length: u3_blob_hand_pad, or wider
       } u3_blob_hand;
 
-    /* u3_blob_init(): reset the home road's list (from u3m_init).
-    */
-      void
-      u3_blob_init(void);
-
     /* u3_blob_stop(): close every home-road hand (from u3m_stop).
     */
       void
@@ -190,26 +185,19 @@
       c3_z
       u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
-    /* u3_blob_data(): the whole file, mapped read-only on first use.
+    /* u3_blob_data(): the file mapped read-only, zero out to [wid_d].
     **
-    **   The mapping lives as long as the hand.  Bytes past the end of
-    **   the file up to u3_blob_hand_pad read as zero.  Returns 0 if the
-    **   mapping fails.
-    */
-      const c3_y*
-      u3_blob_data(u3_blob_hand* han_u);
-
-    /* u3_blob_data_wid(): the file mapped read-only, zero out to [wid_d].
-    **
-    **   Like u3_blob_data, but the mapping is at least [wid_d] bytes: the
-    **   file's pages, then anonymous zero pages.  A wider request remaps
+    **   The mapping lives as long as the hand and is at least the file's
+    **   pages (u3_blob_hand_pad); bytes past the end of the file read as
+    **   zero.  A [wid_d] beyond that adds anonymous zero pages after the
+    **   file's, so one pointer covers any width.  A wider request remaps
     **   only while no other view holds the hand (use_w is 1), since a
     **   live view aliases the old pages; otherwise, and on a platform
-    **   without fixed mappings, a request past u3_blob_hand_pad returns 0
-    **   and the caller pads another way.
+    **   without fixed mappings, a request past the pad returns 0 and the
+    **   caller pads another way.  Returns 0 if the mapping fails.
     */
       const c3_y*
-      u3_blob_data_wid(u3_blob_hand* han_u, c3_d wid_d);
+      u3_blob_data(u3_blob_hand* han_u, c3_d wid_d);
 
     /* u3_blob_hand_pad(): bytes readable through u3_blob_data: the file
     **   length rounded up to the mapping's zero-tail granularity.
@@ -246,7 +234,7 @@
       c3_z
       u3_blob_hands(void);
 
-    /* u3_blob_hands_road(): hands open on road [rod_v].
+    /* u3_blob_hands_road(): hands open on road [rod_v].  Test support.
     */
       c3_z
       u3_blob_hands_road(void* rod_v);
