@@ -52,7 +52,7 @@ u3qc_hew(u3_atom boq,
          u3_atom vat,
          u3_noun sam)
 {
-  if ( !_(u3a_is_cat(boq)) || (boq >= 32) ) {
+  if ( !_(u3a_is_cat(boq)) || (boq >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 

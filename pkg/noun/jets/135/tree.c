@@ -673,6 +673,7 @@ static u3j_harm _135_two_need_a[] = {{".2", u3wb_need, c3y}, {}};
 static u3j_harm _135_two_reap_a[] = {{".2", u3wb_reap, c3y}, {}};
 static u3j_harm _135_two_reel_a[] = {{".2", u3wb_reel, c3y}, {}};
 static u3j_harm _135_two_roll_a[] = {{".2", u3wb_roll, c3y}, {}};
+static u3j_harm _135_two_spin_a[] = {{".2", u3wb_spin, c3y}, {}};
 static u3j_harm _135_two_skid_a[] = {{".2", u3wb_skid, c3y}, {}};
 static u3j_harm _135_two_skim_a[] = {{".2", u3wb_skim, c3y}, {}};
 static u3j_harm _135_two_skip_a[] = {{".2", u3wb_skip, c3y}, {}};
@@ -1193,6 +1194,7 @@ static u3j_core _135_two_d[] =
     { "slag", 7, _135_two_slag_a, 0, no_hashes },
     { "snag", 7, _135_two_snag_a, 0, no_hashes },
     { "sort", 7, _135_two_sort_a, 0, no_hashes },
+    { "spin", 7, _135_two_spin_a, 0, no_hashes },
     { "turn", 7, _135_two_turn_a, 0, no_hashes },
     { "weld", 7, _135_two_weld_a, 0, no_hashes },
     { "welp", 7, _135_two_welp_a, 0, no_hashes },

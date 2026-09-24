@@ -28,7 +28,16 @@ const CdbGenStep = struct {
         var cwd = std.fs.cwd();
 
         // Open fragments directory (created by zig via -gen-cdb-fragment-path).
+        //
+        // Fragments are a side effect of compilation, so a fully cached build
+        // produces none and the directory may legitimately be absent. That is
+        // not an error, but it must not silently truncate an existing database
+        // to nothing either -- say so and leave the file alone.
         var dir = cwd.openDir(self.frags_dir, .{ .iterate = true }) catch {
+            std.log.warn(
+                "compile-commands: nothing compiled this run, leaving {s} unchanged",
+                .{self.out_path},
+            );
             return;
         };
         defer dir.close();
@@ -55,8 +64,11 @@ const CdbGenStep = struct {
             const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
             defer self.b.allocator.free(frag);
 
-            // skip empty/whitespace-only
-            const trimmed = std.mem.trim(u8, frag, " \t\r\n");
+            // zig terminates each fragment with a trailing comma; strip it so
+            // joining them doesn't emit "},,{" (and a trailing comma before
+            // the closing bracket), which makes the whole file invalid JSON
+            // and silently drops the database in clangd.
+            const trimmed = std.mem.trim(u8, frag, " \t\r\n,");
             if (trimmed.len == 0) continue;
 
             if (!first) try w.writeByte(',');
@@ -67,11 +79,54 @@ const CdbGenStep = struct {
         try w.writeAll("]\n");
         try w.flush();
 
-        cwd.deleteTree(self.frags_dir) catch {};
+        // The fragment directory is deliberately kept. Zig only emits a
+        // fragment for a translation unit it actually compiles, so deleting it
+        // here would mean an incremental build regenerates the database from
+        // just the handful of files that happened to rebuild. Accumulating
+        // instead makes the database the union of everything compiled so far,
+        // which is sound because the directory name pins the flags (see
+        // cdbFragDir). Stale entries for deleted sources are harmless to
+        // clangd; remove the directory to start over.
     }
 };
 
-const VERSION = "4.4";
+/// Fragment directory for this build's compile commands.
+///
+/// Fragments accumulate across builds, which is only sound if every fragment
+/// in a directory was produced with identical flags, otherwise clangd would
+/// silently pick whichever translation units it saw first. So the directory
+/// name carries a hash of everything feeding those flags: BuildCfg by
+/// reflection, so options added later are covered without touching this, plus
+/// the target and optimize mode.
+fn cdbFragDir(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    cfg: BuildCfg,
+) []const u8 {
+    var h = std.hash.Wyhash.init(0);
+
+    inline for (std.meta.fields(BuildCfg)) |f| {
+        h.update(f.name);
+        const val = @field(cfg, f.name);
+        switch (@TypeOf(val)) {
+            bool => h.update(&[_]u8{@intFromBool(val)}),
+            []const u8 => h.update(val),
+            []const []const u8 => for (val) |s| h.update(s),
+            else => @compileError("cdbFragDir: unhandled BuildCfg field '" ++ f.name ++ "'"),
+        }
+    }
+
+    const t = target.result;
+    h.update(@tagName(t.cpu.arch));
+    h.update(@tagName(t.os.tag));
+    h.update(@tagName(t.abi));
+    h.update(@tagName(optimize));
+
+    return b.fmt("cdb-{x}", .{h.final()});
+}
+
+const VERSION = "5.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -107,6 +162,7 @@ const BuildCfg = struct {
     urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
+    vere64: bool = false,
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
@@ -194,6 +250,12 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
+    const vere64 = b.option(
+        bool,
+        "vere64",
+        "Compile in 64-bit mode",
+    ) orelse false;
+
     const no_lto = 
         b.option(bool, "no-lto", "Supress link-time optimizations") orelse false
         or target.result.os.tag == .macos;
@@ -238,6 +300,7 @@ pub fn build(b: *std.Build) !void {
         .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
+        .vere64 = vere64,
         .tracy_enable = tracy_enable,
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
@@ -291,10 +354,14 @@ fn buildBinary(
         "-Werror",
     });
 
+    const cdb_dir = if (cfg.gen_cdb)
+        cdbFragDir(b, target, optimize, cfg)
+    else
+        "";
+
     if (cfg.gen_cdb) {
-        try global_flags.appendSlice(&.{
-            "-gen-cdb-fragment-path", "cdb",
-        });
+        try global_flags.append("-gen-cdb-fragment-path");
+        try global_flags.append(cdb_dir);
     }
 
     if (!cfg.asan and !cfg.ubsan) {
@@ -339,6 +406,7 @@ fn buildBinary(
 
     try urbit_flags.appendSlice(global_flags.items);
     try urbit_flags.appendSlice(&.{
+        "-Wimplicit-fallthrough",
         "-Wno-deprecated-non-prototype",
         "-Wno-gnu-binary-literal",
         "-Wno-gnu-empty-initializer",
@@ -364,6 +432,9 @@ fn buildBinary(
 
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
+
+    if (cfg.vere64)
+        try urbit_flags.appendSlice(&.{"-DVERE64"});
 
     if (cfg.urth_mass)
         try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
@@ -446,19 +517,13 @@ fn buildBinary(
         .no_lto = cfg.no_lto,
     });
 
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-        .no_lto = cfg.no_lto,
-    });
-
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        .vere64 = cfg.vere64,
         .no_lto = cfg.no_lto,
     });
 
@@ -558,6 +623,7 @@ fn buildBinary(
 
     if (t.os.tag == .windows) {
         urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.linkSystemLibrary("api-ms-win-core-memory-l1-1-6"); // VirtualAlloc2, MapViewOfFile3
     }
 
     const target_query: std.Target.Query = .{
@@ -592,7 +658,15 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
-    urbit.linkLibrary(pkg_past.artifact("past"));
+    if (!cfg.vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = cfg.vere64,
+        });
+        urbit.linkLibrary(pkg_past.artifact("past"));
+    }
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
@@ -655,7 +729,7 @@ fn buildBinary(
     b.getInstallStep().dependOn(&vere_install.step);
 
     if (cfg.gen_cdb) {
-        const cdb_gen = CdbGenStep.create(b, "cdb", "compile_commands.json");
+        const cdb_gen = CdbGenStep.create(b, cdb_dir, "compile_commands.json");
         const current_install = b.getInstallStep();
         cdb_gen.step.dependOn(current_install);
         b.default_step = &cdb_gen.step;
@@ -687,6 +761,10 @@ fn buildBinary(
             name: []const u8,
             file: []const u8,
             deps: []const *std.Build.Step.Compile,
+            //  windows-only tests: the behaviour under test is win32's
+            win: bool = false,
+            //  posix-only tests: mkdtemp/nftw and /tmp, which mingw lacks
+            nix: bool = false,
         }{
             // pkg_ur
             .{
@@ -712,6 +790,12 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "events-test",
+                .file = "pkg/noun/events_tests.c",
+                .deps = noun_test_deps,
+                .nix = true,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
@@ -732,6 +816,11 @@ fn buildBinary(
                 .deps = noun_test_deps,
             },
             .{
+                .name = "bytestream-test",
+                .file = "pkg/noun/bytestream_tests.c",
+                .deps = noun_test_deps,
+            },
+            .{
                 .name = "retrieve-test",
                 .file = "pkg/noun/retrieve_tests.c",
                 .deps = noun_test_deps,
@@ -745,6 +834,11 @@ fn buildBinary(
             .{
                 .name = "ames-test",
                 .file = "pkg/vere/ames_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "mesa-test",
+                .file = "pkg/vere/mesa_tests.c",
                 .deps = vere_test_deps,
             },
             .{
@@ -782,9 +876,18 @@ fn buildBinary(
                 .file = "pkg/vere/tracy_test.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "wloom-test",
+                .file = "pkg/noun/wloom_tests.c",
+                .deps = noun_test_deps,
+                .win = true,
+            },
         };
 
         for (tests) |tst| {
+            if (tst.win and t.os.tag != .windows) continue;
+            if (tst.nix and t.os.tag == .windows) continue;
+
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
             const test_exe = b.addExecutable(.{ .name = tst.name, .root_module = b.createModule(.{
@@ -822,6 +925,13 @@ fn buildBinary(
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
+            }
+            //  events-test #includes events.c, which #includes "murmur3.h".
+            //  the noun artifact already links murmur3, but the header isn't
+            //  on the test's compile include path — add it explicitly.
+            //
+            if (std.mem.eql(u8, tst.name, "events-test")) {
+                test_exe.addIncludePath(b.path("ext/murmur3/vendor"));
             }
             if (cfg.tracy_enable) {
                 test_exe.linkLibrary(tracy.?.artifact("tracy"));

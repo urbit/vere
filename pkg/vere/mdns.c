@@ -26,20 +26,53 @@ static void close_cb(uv_handle_t* poll) {
   c3_free(payload);
 }
 
-static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
-  mdns_payload* payload = (mdns_payload*)req->data;
+static void poll_cb(uv_poll_t* handle, int status, int events) {
+  mdns_payload* payload = (mdns_payload*) handle->data;
+  int err = DNSServiceProcessResult(payload->sref);
+}
 
-  if (status < 0) {
-    u3l_log("mdns: getaddrinfo error: %s", uv_strerror(status));
-  } else {
-    struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
-    payload->cb(payload->who, payload->fake, addr->sin_addr.s_addr, payload->port, payload->context);
+static void init_sref_poll(mdns_payload* payload) {
+  int fd = DNSServiceRefSockFD(payload->sref);
+  uv_loop_t* loop = uv_default_loop();
+  payload->poll.data = (void*)payload;
+  uv_poll_init(loop, &payload->poll, fd);
+  uv_poll_start(&payload->poll, UV_READABLE, poll_cb);
+}
+
+static void query_record_cb(DNSServiceRef sref,
+                            DNSServiceFlags f,
+                            uint32_t iface,
+                            DNSServiceErrorType err,
+                            const char *fullname,
+                            uint16_t rrtype,
+                            uint16_t rrclass,
+                            uint16_t rdlen,
+                            const void *rdata,
+                            uint32_t ttl,
+                            void *context)
+{
+  mdns_payload* payload = (mdns_payload*)context;
+
+  uv_poll_stop(&payload->poll);
+
+  if (err != kDNSServiceErr_NoError) {
+    u3l_log("mdns: dns query error %d", err);
+  }
+  else if ( (kDNSServiceType_A != rrtype) ||
+            (kDNSServiceClass_IN != rrclass) ||
+            (4 != rdlen) ||
+            (0 == (f & kDNSServiceFlagsAdd)) ) {
+    u3l_log("mdns: unexpected A record response for %s", payload->who);
+  }
+  else {
+    c3_w saddr_w;
+
+    memcpy(&saddr_w, rdata, sizeof(saddr_w));
+    payload->cb(payload->who, payload->fake, saddr_w, payload->port, payload->context);
   }
 
   payload->poll.data = payload;
   uv_close((uv_handle_t*)&payload->poll, close_cb);
-  c3_free(req);
-  uv_freeaddrinfo(res);
 }
 
 static void resolve_cb(DNSServiceRef sref,
@@ -81,37 +114,30 @@ static void resolve_cb(DNSServiceRef sref,
     payload->who[i+1] = start[i];
   }
 
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET; // Request only IPv4 addresses
-  hints.ai_socktype = SOCK_STREAM; // TCP socket
+  mdns_payload* query_payload = c3_calloc(sizeof *query_payload);
+  memcpy(query_payload, payload, sizeof(*query_payload));
 
-  uv_getaddrinfo_t* req = (uv_getaddrinfo_t*)c3_calloc(sizeof(uv_getaddrinfo_t));
-  req->data = (void*)payload;
+  DNSServiceErrorType query_err =
+    DNSServiceQueryRecord(&query_payload->sref,
+                          0,
+                          iface,
+                          host,
+                          kDNSServiceType_A,
+                          kDNSServiceClass_IN,
+                          query_record_cb,
+                          (void*)query_payload);
 
-  uv_loop_t* loop = uv_default_loop();
-
-  int error = uv_getaddrinfo(loop, req, getaddrinfo_cb, host, NULL, &hints);
-
-  if (error < 0) {
-    u3l_log("mdns: getaddrinfo error: %s\n", uv_strerror(error));
-    payload->poll.data = payload;
-    uv_close((uv_handle_t*)&payload->poll, close_cb);
-    c3_free(req);
+  if (query_err != kDNSServiceErr_NoError) {
+    u3l_log("mdns: dns A query error %d", query_err);
+    c3_free(query_payload);
   }
-}
 
-static void poll_cb(uv_poll_t* handle, int status, int events) {
-  mdns_payload* payload = (mdns_payload*) handle->data;
-  int err = DNSServiceProcessResult(payload->sref);
-}
+  payload->poll.data = payload;
+  uv_close((uv_handle_t*)&payload->poll, close_cb);
 
-static void init_sref_poll(mdns_payload* payload) {
-  int fd = DNSServiceRefSockFD(payload->sref);
-  uv_loop_t* loop = uv_default_loop();
-  payload->poll.data = (void*)payload;
-  uv_poll_init(loop, &payload->poll, fd);
-  uv_poll_start(&payload->poll, UV_READABLE, poll_cb);
+  if (query_err == kDNSServiceErr_NoError) {
+    init_sref_poll(query_payload);
+  }
 }
 
 static void browse_cb(DNSServiceRef s,

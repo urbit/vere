@@ -192,6 +192,7 @@ pub fn build(b: *std.Build) !void {
     try flags.appendSlice(&.{
         // "-pedantic",
         "-std=gnu23",
+        // "-Wconversion",         // ;;: todo: enable in a bit
     });
     try flags.appendSlice(copts);
 
@@ -204,12 +205,20 @@ pub fn build(b: *std.Build) !void {
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
-            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c" },
+            .files = &.{ "veh_handler.c", "rsignal.c", "setjmp.c", "wloom.c" },
             .flags = flags.items,
         });
+
+        // VirtualAlloc2/MapViewOfFile3, used by wloom.c, are exported from
+        // this api set rather than kernel32. sets vere's floor at windows
+        // 10 1803.
+        pkg_noun.linkSystemLibrary("api-ms-win-core-memory-l1-1-6");
     }
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
+
+    if (t.os.tag == .windows)
+        pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
@@ -259,6 +268,7 @@ const c_source_files = [_][]const u8{
     "jets/b/slag.c",
     "jets/b/snag.c",
     "jets/b/sort.c",
+    "jets/b/spin.c",
     "jets/b/turn.c",
     "jets/b/weld.c",
     "jets/b/zing.c",
@@ -418,6 +428,7 @@ const c_source_files = [_][]const u8{
     "jets/135/tree.c",
     "log.c",
     "manage.c",
+    "migrate.c",
     "palloc.c",
     "nock.c",
     "options.c",
@@ -433,6 +444,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "copy_migrate.h",
     "error.h",
     "events.h",
     "hashtable.h",

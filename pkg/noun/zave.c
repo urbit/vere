@@ -145,6 +145,21 @@ u3_noun
 u3z_save_m(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)
 {
   u3_noun key = u3nc(fun, u3k(one));
+  u3h_put(_har(u3R, cid), key, u3k(val));
+  u3z(key);
+  return val;
+}
+
+/* u3z_save_m_dedup(): save in memo cache, deduplicate. All but val is retained.
+*/
+u3_noun
+u3z_save_m_dedup(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)
+{
+  u3_noun key = u3nc(fun, u3k(one));
+  if ( u3z_memo_toss != cid ) {
+    key = u3m_dedup(key);
+    val = u3m_dedup(val);
+  }
 
   u3h_put(_har(u3R, cid), key, u3k(val));
   u3z(key);
@@ -158,14 +173,17 @@ u3z_uniq(u3z_cid cid, u3_noun som)
 {
   u3_noun key = u3nc(c3__uniq, u3k(som));
   u3_noun val = u3h_get(_har(u3R, cid), key);
-
+  u3_noun pro;
   if ( u3_none != val ) {
-    u3z(key); u3z(som); return val;
+    u3z(som);
+    pro = val;
   }
   else {
     u3h_put(_har(u3R, cid), key, u3k(som));
-    return som;
+    pro = som;
   }
+  u3z(key);
+  return pro;
 }
 
 /* u3z_reap(): promote memoization cache state.

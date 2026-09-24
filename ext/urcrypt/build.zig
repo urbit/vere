@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
         break :blk target.result.os.tag == .macos;
     };
 
-    const openssl = b.dependency("openssl", .{
+    const nettle = b.dependency("nettle", .{
         .target = target,
         .optimize = optimize,
         .no_lto = no_lto,
@@ -38,8 +38,8 @@ pub fn build(b: *std.Build) void {
     lib.linkLibrary(libscrypt(b, target, optimize, no_lto));
 
     lib.linkLibrary(libaes_siv(b, target, optimize, no_lto));
-    lib.linkLibrary(openssl.artifact("ssl"));
-    lib.linkLibrary(openssl.artifact("crypto"));
+    // SHA, RIPEMD160 and AES (ECB/CBC) now come from nettle instead of openssl
+    lib.linkLibrary(nettle.artifact("nettle"));
 
     lib.addIncludePath(dep_c.path("urcrypt"));
 
@@ -82,13 +82,14 @@ fn libaes_siv(
     optimize: std.builtin.OptimizeMode,
     no_lto: bool,
 ) *std.Build.Step.Compile {
-    const openssl = b.dependency("openssl", .{
+    const nettle = b.dependency("nettle", .{
         .target = target,
         .optimize = optimize,
         .no_lto = no_lto,
     });
 
-    const dep_c = b.dependency("aes_siv", .{
+    // vendored under urcrypt's aes_siv/, retargeted from openssl onto nettle
+    const dep_c = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
         .no_lto = no_lto,
@@ -100,17 +101,16 @@ fn libaes_siv(
     });
 
     lib.lto = if (optimize != .Debug and !no_lto) .full else null;
-    lib.linkLibrary(openssl.artifact("ssl"));
-    lib.linkLibrary(openssl.artifact("crypto"));
+    lib.linkLibrary(nettle.artifact("nettle"));
 
     const config_h = b.addConfigHeader(.{
         .style = .blank,
         .include_path = "config.h",
     }, .{});
     lib.addConfigHeader(config_h);
-    lib.addIncludePath(dep_c.path(""));
+    lib.addIncludePath(dep_c.path("aes_siv"));
     lib.addCSourceFiles(.{
-        .root = dep_c.path(""),
+        .root = dep_c.path("aes_siv"),
         .files = &.{
             "aes_siv.c",
         },
@@ -121,7 +121,7 @@ fn libaes_siv(
         },
     });
 
-    lib.installHeader(dep_c.path("aes_siv.h"), "aes_siv.h");
+    lib.installHeader(dep_c.path("aes_siv/aes_siv.h"), "aes_siv.h");
 
     lib.linkLibC();
 

@@ -19,7 +19,11 @@ _test_unify_home(void)
   u3_noun  b = u3nt(0, 0, 0);
   c3_w kep_w;
 
-  u3_assert( u3t(a) < u3t(b) );
+  if ( u3t(a) > u3t(b) ) {
+    u3_noun t = a;
+    a = b;
+    b = t;
+  }
   kep_w = u3t(a);
 
   (void)u3r_sing(a, b);
@@ -157,7 +161,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "test equality: ok\r\n");
   return 0;

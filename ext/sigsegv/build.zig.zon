@@ -9,7 +9,7 @@
             .lazy = true,
         },
         .sigsegv = .{
-            .url = "https://ftp.fr.openbsd.org/pub/OpenBSD/distfiles/libsigsegv-2.14.tar.gz",
+            .url = "https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.14.tar.gz",
             .hash = "N-V-__8AAHQhHwCCMyKUtQhO0AMsY182In-wQIwXVhenOql5",
         },
     },

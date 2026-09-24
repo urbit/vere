@@ -13,6 +13,12 @@
     c3_w* c;
   };
 
+#ifdef VERE64
+  static const c3_w n = 2;
+#else
+  static const c3_w n = 4;
+#endif
+
   static inline c3_t
   _nan_test(float128_t* a)
   {
@@ -30,7 +36,7 @@
   }
 
   static inline void
-  _set_rounding(c3_w a)
+  _set_rounding(u3_atom a)
   {
     switch ( a )
     {
@@ -65,12 +71,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_add(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -79,8 +85,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -103,12 +111,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_sub(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -117,8 +125,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -141,12 +151,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_mul(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -155,8 +165,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -179,12 +191,12 @@
     d.c = alloca(16);
     e.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     f128M_div(c.q, d.q, e.q);
     _nan_unify(e.q);
 
-    u3_atom f = u3i_words(4, e.c);
+    u3_atom f = u3i_words(n, e.c);
     return f;
   }
 
@@ -193,8 +205,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -215,20 +229,20 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
+    u3r_words(0, n, c.c, a);
     f128M_sqrt(c.q, d.q);
     _nan_unify(d.q);
 
-    u3_atom e = u3i_words(4, d.c);
+    u3_atom e = u3i_words(n, d.c);
     return e;
   }
 
   u3_noun
   u3weq_sqt(u3_noun cor)
   {
-    u3_noun a;
+    u3_weak a;
 
-    if ( c3n == (a = u3r_at(u3x_sam, cor)) ||
+    if ( u3_none == (a = u3r_at(u3x_sam, cor)) ||
          c3n == u3ud(a) )
     {
       return u3m_bail(c3__exit);
@@ -253,13 +267,13 @@
     f.c = alloca(16);
     g.c = alloca(16);
 
-    u3r_words(0, 4, d.c, a);
-    u3r_words(0, 4, e.c, b);
-    u3r_words(0, 4, f.c, c);
+    u3r_words(0, n, d.c, a);
+    u3r_words(0, n, e.c, b);
+    u3r_words(0, n, f.c, c);
     f128M_mulAdd(d.q, e.q, f.q, g.q);
     _nan_unify(g.q);
 
-    u3_atom h = u3i_words(4, g.c);
+    u3_atom h = u3i_words(n, g.c);
     return h;
   }
 
@@ -268,8 +282,11 @@
   {
     u3_noun a, b, c;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_6, &b, u3x_sam_7, &c, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3h(u3t(u3h(u3t(cor))));
+    c = u3t(u3t(u3h(u3t(cor))));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) ||
          c3n == u3ud(c) )
     {
@@ -290,8 +307,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_lt(c.q, d.q));
 
     return e;
@@ -302,8 +319,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -323,8 +342,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_le(c.q, d.q));
 
     return e;
@@ -335,8 +354,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -356,8 +377,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_eq(c.q, d.q));
 
     return e;
@@ -368,8 +389,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -389,8 +412,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_le(d.q, c.q));
 
     return e;
@@ -401,8 +424,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
@@ -422,8 +447,8 @@
     c.c = alloca(16);
     d.c = alloca(16);
 
-    u3r_words(0, 4, c.c, a);
-    u3r_words(0, 4, d.c, b);
+    u3r_words(0, n, c.c, a);
+    u3r_words(0, n, d.c, b);
     c3_o e = __(f128M_lt(d.q, c.q));
 
     return e;
@@ -434,8 +459,10 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ||
-         c3n == u3ud(a) ||
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+
+    if ( c3n == u3ud(a) ||
          c3n == u3ud(b) )
     {
       return u3m_bail(c3__exit);
