@@ -8,7 +8,7 @@
 
 #include <ctype.h>
 
-u3_atom
+u3_weak
 u3qe_scow(u3_atom a, u3_atom b)
 {
   u3_weak dat = u3qe_scot(a, b);
@@ -22,7 +22,7 @@ u3qe_scow(u3_atom a, u3_atom b)
   return pro;
 }
 
-u3_noun
+u3_weak
 u3we_scow(u3_noun cor)
 {
   u3_atom a, b;

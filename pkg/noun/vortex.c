@@ -65,7 +65,9 @@ u3v_boot(u3_noun eve)
     }
 
     u3z(u3A->roc);
-    u3A->roc   = u3k(u3t(pro));
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(u3t(pro));
+    }
     u3A->eve_d = len_d;
     u3z(pro);
   }
@@ -114,7 +116,9 @@ u3v_boot_lite(u3_noun pil)
       return c3n;
     }
 
-    u3A->roc = u3k(u3t(pro));
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(u3t(pro));
+    }
     u3z(pro);
   }
 
@@ -151,7 +155,9 @@ u3v_wish_w(u3_noun txt)
     //  outside the top level... (as the result is uncached)
     //
     if ( u3R == &u3H->rod_u ) {
-      u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      {  // @Refcount: assert transfer -- the wish cache owns [yot]
+        u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      }
     }
   }
 
@@ -177,7 +183,9 @@ u3v_wish(const c3_c* str_c)
     //  outside the top level... (as the result is uncached)
     //
     if ( u3R == &u3H->rod_u ) {
-      u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      {  // @Refcount: assert transfer -- the wish cache owns [yot]
+        u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      }
     }
   }
 
@@ -295,6 +303,7 @@ u3v_poke(u3_noun sam)
 }
 
 /* u3v_poke_sure(): inject an event, saving new state if successful.
+** @Refcount: fills transferred `pro`
 */
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
@@ -317,10 +326,14 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
     u3x_cell(dat, &vir, &cor);
 
     u3z(u3A->roc);
-    u3A->roc = u3k(cor);
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(cor);
+    }
     u3A->eve_d++;
 
-    *pro = u3k(vir);
+    {  // @Refcount: assert transfer `vir`
+      *pro = u3k(vir);
+    }
     u3z(gon);
     return c3y;
   }
@@ -329,42 +342,41 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 /* u3v_tank(): dump single tank.
 */
 void
-u3v_tank(u3_noun blu, c3_l tab_l, u3_noun tac)
+u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
-  u3v_punt(blu, tab_l, u3nc(tac, u3_nul));
+  u3v_punt(blu_u, tab_l, u3nc(tac, u3_nul));
 }
 
 /* u3v_punt(): dump tank list.
 */
 void
-u3v_punt(u3_noun blu, c3_l tab_l, u3_noun tac)
+u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
 #if 0
-  u3_noun blu   = u3_term_get_blew(0);
+  u3v_blew blu_u   = u3_term_get_blew(0);
 #endif
-  c3_l    col_l = u3h(blu);
+  c3_h    col_h = blu_u.col_h;
   u3_noun cat   = tac;
 
   //  We are calling nock here, but hopefully need no protection.
   //
   while ( c3y == u3du(cat) ) {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(u3h(cat)));
+    u3_noun wol = u3dc("wash", u3nc(tab_l, col_h), u3k(u3h(cat)));
 
     u3m_wall(wol);
     cat = u3t(cat);
   }
   u3z(tac);
-  u3z(blu);
 }
 
 /* u3v_sway(): print trace.
 */
 void
-u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax)
+u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 
-  u3v_punt(blu, tab_l, u3k(u3t(mok)));
+  u3v_punt(blu_u, tab_l, u3k(u3t(mok)));
   u3z(mok);
 }
 

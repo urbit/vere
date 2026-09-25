@@ -5,6 +5,7 @@
 
 #include "noun.h"
 
+//  @Refcount: fills transferred `out`
 static c3_w
 _hew_in(c3_g     a_g,
         c3_w   pos_w,

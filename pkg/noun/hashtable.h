@@ -166,6 +166,8 @@
       /* u3h_put(): insert in hashtable.
       **
       ** `key` is RETAINED; `val` is transferred.
+      ** @Refcount: retains `key`
+      ** @Refcount: transfers `val`
       */
         void
         u3h_put(u3p(u3h_root) har_p, u3_noun key, u3_noun val);
@@ -173,6 +175,8 @@
       /* u3h_put_get(): insert in caching hashtable, returning deleted entry
       **
       ** `key` is RETAINED; `val` is transferred.
+      ** @Refcount: retains `key`
+      ** @Refcount: transfers `val`
       */
       u3_weak
       u3h_put_get(u3p(u3h_root) har_p, u3_noun key, u3_noun val);
@@ -185,6 +189,8 @@
       /* u3h_get(): read from hashtable.
       **
       ** `key` is RETAINED; result is PRODUCED.
+      ** @Refcount: retains `key`
+      ** @Refcount: transfers product
       */
         u3_weak
         u3h_get(u3p(u3h_root) har_p, u3_noun key);
@@ -192,6 +198,8 @@
       /* u3h_git(): read from hashtable, retaining result.
       **
       ** `key` is RETAINED; result is RETAINED.
+      ** @Refcount: retains `key`
+      ** @Refcount: retains product
       */
         u3_weak
         u3h_git(u3p(u3h_root) har_p, u3_noun key);
@@ -199,6 +207,7 @@
       /* u3h_del(); delete from hashtable.
       **
       ** `key` is RETAINED
+      ** @Refcount: retains `key`
       */
         void
         u3h_del(u3p(u3h_root) har_p, u3_noun key);
@@ -253,6 +262,7 @@
 
       /* u3h_walk_with(): traverse hashtable with key, value fn and data
       **                  argument; RETAINS.  Aliases the matching bitness.
+      ** @Refcount: retains arguments
       */
         void
         u3h_walk_with_h(c3_h har_p,

@@ -73,6 +73,9 @@ _json_get_string_as_atom(json_stream *sam_u) {
           u3i_bytes(len_i - 1, (const c3_y *)str_c);
 }
 
+//  @Refcount: assert, retains `txt`, transfers product
+//  (a bit hard to analyze as u3i_defcons passes u3_noun* to a non-local
+//  varaible)
 static u3_noun
 _parse(u3_atom txt)
 {

@@ -35,7 +35,7 @@
   u3_noun
   u3wee_scalarmult_base(u3_noun cor)
   {
-    u3_noun a = u3r_at(u3x_sam, cor);
+    u3_weak a = u3r_at(u3x_sam, cor);
 
     if ( (u3_none == a) || (c3n == u3ud(a)) ) {
       return u3m_bail(c3__exit);

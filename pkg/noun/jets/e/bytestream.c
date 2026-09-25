@@ -8,6 +8,8 @@
 
 // XX do not crash on indirect atoms, but default to Hoon
 // XX use u3i_word to imprison all indirect atoms
+// @Refcount: retains `octs`
+// @Refcount: fills retained `p_octs`, `q_octs`
 //
 static void
 _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
@@ -20,6 +22,8 @@ _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
     u3m_bail(c3__exit);
   }
 }
+
+// @Refcount: reads `p_octs`, `q_octs`
 static c3_o
 _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,
@@ -51,7 +55,7 @@ _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
   return c3y;
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
 
   c3_w p_octs_w, len_w, lead_w;
@@ -82,7 +86,7 @@ _qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
   return rip;
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_rip_octs(u3_noun cor){
 
   u3_noun sam = u3x_at(u3x_sam, cor);
@@ -94,7 +98,7 @@ u3we_bytestream_rip_octs(u3_noun cor){
 
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
 
   u3_atom p_octs_a, p_octs_b;
@@ -155,7 +159,7 @@ _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
   return ret;
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_cat_octs(u3_noun cor) {
 
   u3_noun octs_a, octs_b;
@@ -286,7 +290,7 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
   return u3nc(u3i_chub(tot_d), u3i_slab_mint(&sab_u));
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_can_octs(u3_noun cor)
 {
   u3_noun octs_list;
@@ -295,7 +299,7 @@ u3we_bytestream_can_octs(u3_noun cor)
 
   return _qe_bytestream_can_octs(octs_list);
 }
-u3_noun
+u3_weak
 _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 {
   c3_w pos_w;
@@ -335,7 +339,7 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 
   return u3nc(u3i_word(pos_w), u3k(octs));
 }
-u3_noun
+u3_weak
 u3we_bytestream_skip_line(u3_noun cor)
 {
 
@@ -347,7 +351,7 @@ u3we_bytestream_skip_line(u3_noun cor)
   return _qe_bytestream_skip_line(pos, octs);
 
 }
-u3_noun
+u3_weak
 _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 {
   c3_w bat_w, pos_w;
@@ -396,7 +400,7 @@ _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   return u3_nul;
 }
-u3_noun
+u3_weak
 u3we_bytestream_find_byte(u3_noun cor)
 {
   u3_atom bat;
@@ -409,7 +413,7 @@ u3we_bytestream_find_byte(u3_noun cor)
 
   return _qe_bytestream_find_byte(bat, pos, octs);
 }
-u3_noun
+u3_weak
 _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 {
   c3_w bat_w, pos_w;
@@ -458,7 +462,7 @@ _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
   return u3nc(u3_nul, u3nc(u3k(pos), u3k(octs)));
 
 }
-u3_noun
+u3_weak
 u3we_bytestream_seek_byte(u3_noun cor)
 {
   u3_atom bat;
@@ -472,7 +476,7 @@ u3we_bytestream_seek_byte(u3_noun cor)
   return _qe_bytestream_seek_byte(bat, pos, octs);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
 {
   c3_w pos_w;
@@ -514,7 +518,7 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
   return u3nc(bat_y, new_bays);
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_read_byte(u3_noun cor)
 {
   u3_atom pos;
@@ -526,7 +530,7 @@ u3we_bytestream_read_byte(u3_noun cor)
   return _qe_bytestream_read_byte(pos, octs);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
 {
   c3_w n_w, pos_w;
@@ -601,7 +605,7 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
   return u3nc(read_octs, new_bays);
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_read_octs(u3_noun cor)
 {
   u3_atom n;
@@ -651,7 +655,7 @@ _qe_peek_octs(c3_w n_w, c3_w pos_w, c3_w p_octs_w, c3_y* sea_y,
 
   return u3nc(u3i_word(n_w), u3i_slab_moot(&sab_u));
 }
-u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
+u3_weak _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
 {
   c3_w size_w, pos_w;
 
@@ -670,6 +674,8 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
   u3_atom p_octs, q_octs;
 
   _x_octs(octs, &p_octs, &q_octs);
+
+  if ( c3n == u3a_is_cat(p_octs) ) u3m_bail(c3__fail);
 
   c3_w  p_octs_w;
   c3_w  len_w, lead_w;
@@ -706,7 +712,7 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
   return u3kb_flop(hun);
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_chunk(u3_noun cor)
 {
   u3_atom size;
@@ -720,7 +726,7 @@ u3we_bytestream_chunk(u3_noun cor)
   return _qe_bytestream_chunk(size, pos, octs);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 {
   u3_atom pos;
@@ -751,7 +757,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   u3_noun dal = u3_nul;
 
-  u3_noun new_sea = u3_none;
+  u3_weak new_sea = u3_none;
 
   while (pos_w < p_octs_w) {
     new_sea = u3nc(u3i_word(pos_w), u3k(octs));
@@ -805,7 +811,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   return u3nc(u3kb_flop(dal), new_sea);
 }
-u3_noun
+u3_weak
 u3we_bytestream_extract(u3_noun cor)
 {
   u3_noun sea;
@@ -817,7 +823,7 @@ u3we_bytestream_extract(u3_noun cor)
   return _qe_bytestream_extract(sea, rac);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 {
   u3_atom pos;
@@ -848,7 +854,7 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 
   u3_noun dal = u3_nul;
 
-  u3_noun new_sea = u3_none;
+  u3_weak new_sea = u3_none;
 
   while (pos_w < p_octs_w) {
     new_sea = u3nc(u3i_word(pos_w), u3k(octs));
@@ -909,7 +915,7 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   return u3nc(data, new_sea);
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_fuse_extract(u3_noun cor)
 {
   u3_noun sea;
@@ -923,7 +929,7 @@ u3we_bytestream_fuse_extract(u3_noun cor)
 
 #define BITS_D (sizeof(c3_d)*8)
 
-u3_noun
+u3_weak
 _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 {
   u3_atom num, bit;
@@ -1017,7 +1023,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 //               bit=@ub
 //               =bays
 //           ==
-u3_noun
+u3_weak
 u3we_bytestream_need_bits(u3_noun cor)
 {
   u3_atom n;
@@ -1029,7 +1035,7 @@ u3we_bytestream_need_bits(u3_noun cor)
   return _qe_bytestream_need_bits(n, bits);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
 {
 
@@ -1068,7 +1074,7 @@ _qe_bytestream_drop_bits(u3_atom n, u3_noun bits)
 
   return u3nt(u3i_word(num_w), u3i_chub(bit_d), u3k(bays));
 }
-u3_noun
+u3_weak
 u3we_bytestream_drop_bits(u3_noun cor)
 {
   u3_atom n;
@@ -1080,7 +1086,7 @@ u3we_bytestream_drop_bits(u3_noun cor)
   return _qe_bytestream_drop_bits(n, bits);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_peek_bits(u3_atom n, u3_noun bits)
 {
 
@@ -1125,7 +1131,7 @@ _qe_bytestream_peek_bits(u3_atom n, u3_noun bits)
     return u3i_chub(bit_d & mak_d);
   }
 }
-u3_noun
+u3_weak
 u3we_bytestream_peek_bits(u3_noun cor)
 {
   u3_atom n;
@@ -1137,7 +1143,7 @@ u3we_bytestream_peek_bits(u3_noun cor)
   return _qe_bytestream_peek_bits(n, bits);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_read_bits(u3_atom n, u3_noun bits)
 {
 
@@ -1187,7 +1193,7 @@ _qe_bytestream_read_bits(u3_atom n, u3_noun bits)
   return u3nc(u3i_chub(bet_d), new_bits);
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_read_bits(u3_noun cor)
 {
   u3_atom n;
@@ -1199,7 +1205,7 @@ u3we_bytestream_read_bits(u3_noun cor)
   return _qe_bytestream_read_bits(n, bits);
 }
 
-u3_noun
+u3_weak
 _qe_bytestream_byte_bits(u3_noun bits)
 {
 
@@ -1233,7 +1239,7 @@ _qe_bytestream_byte_bits(u3_noun bits)
   return new_bits;
 }
 
-u3_noun
+u3_weak
 u3we_bytestream_byte_bits(u3_noun cor)
 {
   u3_noun bits;

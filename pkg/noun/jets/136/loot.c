@@ -6,7 +6,8 @@
 #include "noun.h"
 
 
-/* internals
+/* _loot_in_136(): traverse the domain, reading only.
+** @Refcount: retains arguments
 */
   static u3_noun
   _loot_in_136(u3_noun cog,

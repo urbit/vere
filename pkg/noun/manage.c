@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "manage.h"
 
@@ -1290,6 +1292,7 @@ u3m_hate(c3_w pad_w)
 }
 
 //  RETAINS `now`.
+// @Refcount: retains `now`
 //
 static void
 _m_renew_timer(u3_atom now)
@@ -1409,6 +1412,7 @@ u3m_road_depth(void)
 }
 
 /* u3m_love(): return product from leap.
+** @Refcount: passthrough `pro`
 */
 u3_noun
 u3m_love(u3_noun pro)
@@ -2049,6 +2053,7 @@ u3m_soft(c3_w    mil_w,
 }
 
 /* _cm_is_tas(): yes iff som (RETAIN) is @tas.
+** @Refcount: retains `som`
 */
 static c3_o
 _cm_is_tas(u3_atom som, c3_w len_w)
@@ -2070,6 +2075,7 @@ _cm_is_tas(u3_atom som, c3_w len_w)
 }
 
 /* _cm_is_ta(): yes iff som (RETAIN) is @ta.
+** @Refcount: retains `som`
 */
 static c3_o
 _cm_is_ta(u3_noun som, c3_w len_w)
@@ -2185,6 +2191,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
 }
 
 /* u3m_pretty(): dumb prettyprint to string.
+** @Refcount: retains arguments
 */
 c3_c*
 u3m_pretty(u3_noun som)
@@ -2248,6 +2255,7 @@ _cm_in_pretty_path(u3_noun som, c3_c* str_c)
 }
 
 /* u3m_pretty_path(): prettyprint a path to string.
+** @Refcount: retains arguments
 */
 c3_c*
 u3m_pretty_path(u3_noun som)
@@ -2261,6 +2269,7 @@ u3m_pretty_path(u3_noun som)
 }
 
 /* u3m_p(): dumb print with caption.
+** @Refcount: retains arguments
 */
 void
 u3m_p(const c3_c* cap_c, u3_noun som)

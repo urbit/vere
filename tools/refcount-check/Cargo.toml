@@ -1,0 +1,12 @@
+[package]
+name = "refcount-check"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clang-sys = { version = "1.9.1", features = ["runtime", "clang_17_0"] }
+glob = "0.3.4"
+imbl = "7.0.1"
+indexmap = "2.14.0"
+regex = "1.13.1"
+serde_json = "1.0.151"

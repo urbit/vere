@@ -1,3 +1,7 @@
+//  @Refcount: all functions are custom unless asserted otherwise
+//  (loom-level noun deduplication: raw u3a_cell surgery, uncounted
+//  canonical tables, in-place reference exchange)
+
 #include "allocate.h"
 #include "hashtable.h"
 #include "jets.h"

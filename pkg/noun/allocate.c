@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "c3/defs.h"
 #include "allocate.h"
@@ -452,6 +454,7 @@ _me_wash_south(u3_noun dog)
 }
 
 /* u3a_wash(): wash all lazy mugs.  RETAIN.
+** @Refcount: retains arguments
 */
 void
 u3a_wash(u3_noun som)
@@ -1191,6 +1194,7 @@ u3a_mark_rptr(void* ptr_v)
 }
 
 /* u3a_mark_noun(): mark a noun for gc.  Produce size.
+** @Refcount: retains arguments
 */
 c3_w
 u3a_mark_noun(u3_noun som)
@@ -1551,6 +1555,7 @@ _ca_prof_mark(u3_noun som)
 }
 
 /* u3a_prof(): mark/measure/print memory profile. RETAIN.
+** @Refcount: retains arguments
 */
 u3m_quac*
 u3a_prof(FILE* fil_u, u3_noun mas)
@@ -2030,6 +2035,7 @@ _ca_detect(u3p(u3h_root) har_p, u3_noun fum, u3_noun som, c3_d axe_d)
 /* u3a_detect(): for debugging, check if (som) is referenced from (fum).
 **
 ** (som) and (fum) are both RETAINED.
+** @Refcount: retains arguments
 */
 c3_d
 u3a_detect(u3_noun fum, u3_noun som)
@@ -2125,6 +2131,7 @@ u3a_walk_fore(u3_noun    a,
 }
 
 /* u3a_string(): `a` as an on-loom c-string.
+ @Refcount: retains
 */
 c3_c*
 u3a_string(u3_atom a)

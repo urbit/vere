@@ -33,7 +33,6 @@ u3qb_zing(u3_noun a)
 
       u3x_cell(t, &i, &t);
     }
-
     *lit = u3k(i);
   }
 
