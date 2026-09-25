@@ -30,7 +30,7 @@
   {
     c3_y out_y[32];
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
     urcrypt_shay((c3_y*)vue_u.byt_y, vue_u.len_w, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
@@ -60,8 +60,8 @@
     c3_y out_y[32];
 
     u3r_view sa_u, ru_u;
-    u3r_view_init(&sa_u, sal);
-    u3r_view_init(&ru_u, ruz);
+    u3r_view_flat(&sa_u, sal);
+    u3r_view_flat(&ru_u, ruz);
 
     urcrypt_shas((c3_y*)sa_u.byt_y, sa_u.len_w,
                  (c3_y*)ru_u.byt_y, ru_u.len_w, out_y);

@@ -40,7 +40,7 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
     c3_y* msg_y = u3a_malloc(byt_w);
     {
       u3r_view vue_u;
-      u3r_view_init(&vue_u, msg);
+      u3r_view_flat(&vue_u, msg);
       if ( vue_u.len_w ) {
         memcpy(msg_y, vue_u.byt_y, vue_u.len_w);
       }

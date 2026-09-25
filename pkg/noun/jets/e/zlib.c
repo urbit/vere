@@ -45,7 +45,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   //  u3r_view_done(&vue_u).
   //
   u3r_view vue_u;
-  u3r_view_init(&vue_u, q_octs);
+  u3r_view_flat(&vue_u, q_octs);
   c3_w len_w = vue_u.len_w;
 
   int leading_zeros = 0;

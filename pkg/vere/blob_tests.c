@@ -1091,7 +1091,7 @@ _hand_open_inner(void)
   _han_fid_i = han_u->fid_i;
 
   u3r_view vue_u;
-  u3r_view_init(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u, _han_bob);
   _check( vue_u.han_u == han_u, "view did not land on the road's hand" );
 
   return han_u;
@@ -1353,7 +1353,7 @@ _hand_alarm_cb(u3_noun arg)
   //  test failure instead of a hang.
   //
   u3r_view vue_u;
-  u3r_view_init(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u, _han_bob);
   _han_fid_i = vue_u.han_u->fid_i;
 
   volatile c3_d sum_d = 0;
@@ -1931,7 +1931,7 @@ _hand_gone_view_cb(u3_noun arg)
 {
   (void)arg;
   u3r_view vue_u;
-  u3r_view_init(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u, _han_bob);
   u3r_view_done(&vue_u);
   return 0;
 }
@@ -2006,7 +2006,7 @@ _test_hand_gone(void)
   //
   {
     u3r_view vue_u;
-    _check( (c3n == u3r_view_open(&vue_u, _han_bob)) && !u3_blob_hands(),
+    _check( (c3n == u3r_view_wind(&vue_u, _han_bob)) && !u3_blob_hands(),
             "open did not decline" );
     _check( (u3_none == u3r_blob_load(_han_bob)) && !u3_blob_hands(),
             "load did not decline" );
@@ -2124,7 +2124,7 @@ _hand_share_cb(u3_noun arg)
   (void)arg;
 
   u3r_view vue_u;
-  u3r_view_init(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u, _han_bob);
 
   u3_blob_hand* han_u = vue_u.han_u;
   c3_i          fid_i = han_u->fid_i;
@@ -2264,7 +2264,7 @@ _hand_wide_cb(u3_noun arg)
 
   //  a lone view widens the hand's mapping in place
   //
-  u3r_view_init(&one_u, _han_bob);
+  u3r_view_flat(&one_u, _han_bob);
   {
     u3_blob_hand* han_u = one_u.han_u;
     c3_w          wid_w = (c3_w)u3_blob_hand_pad(han_u) + 4096;
@@ -2331,7 +2331,7 @@ _test_hand_empty(void)
 
   _check(  !u3_blob_open(_tmp_pier, mug_h, 1)
         && (u3_none == u3r_blob_load(bob))
-        && (c3n == u3r_view_open(&vue_u, bob))
+        && (c3n == u3r_view_wind(&vue_u, bob))
         && !u3_blob_hands(),
           "empty file not rejected" );
 
@@ -2553,8 +2553,8 @@ _test_hand_access(void)
       }
       u3r_view_done(&vue_u);
 
-      u3r_view_init(&vue_u, 0x44332211);
-      _check(  (u3r_view_flat == vue_u.kin_e) && (4 == vue_u.len_w)
+      u3r_view_flat(&vue_u, 0x44332211);
+      _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.len_w)
             && (vue_u.byt_y == (const c3_y*)&vue_u.raw_d)
             && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3]),
               "init cat" );
@@ -2580,7 +2580,7 @@ _test_hand_access(void)
         c3_y win_y[64];
         c3_y exp_y[64];
 
-        _check( c3y == u3r_view_open(&vue_u, bob), "open bob" );
+        _check( c3y == u3r_view_wind(&vue_u, bob), "open bob" );
         _check(  (u3r_view_blob == vue_u.kin_e) && (0 == vue_u.byt_y)
               && (len_w == vue_u.len_w) && (0 == vue_u.han_u->map_y)
               && (1 == u3_blob_hands()),
@@ -2598,7 +2598,7 @@ _test_hand_access(void)
         u3r_view_done(&vue_u);
         _check( 0 == u3_blob_hands(), "open bob done" );
 
-        _check( c3y == u3r_view_open(&vue_u, sma), "open loom" );
+        _check( c3y == u3r_view_wind(&vue_u, sma), "open loom" );
         _check(  (u3r_view_loom == vue_u.kin_e)
               && (3 == u3r_view_read(&vue_u, met_w - 3, win_y, 16))
               && (0 == memcmp(win_y, vue_u.byt_y + met_w - 3, 3))
@@ -2606,8 +2606,8 @@ _test_hand_access(void)
                 "read loom" );
         u3r_view_done(&vue_u);
 
-        _check( c3y == u3r_view_open(&vue_u, 0x44332211), "open cat" );
-        _check(  (u3r_view_flat == vue_u.kin_e)
+        _check( c3y == u3r_view_wind(&vue_u, 0x44332211), "open cat" );
+        _check(  (u3r_view_even == vue_u.kin_e)
               && (2 == u3r_view_read(&vue_u, 2, win_y, 4))
               && (0x33 == win_y[0]) && (0x44 == win_y[1])
               && (0 == win_y[2]) && (0 == win_y[3]),

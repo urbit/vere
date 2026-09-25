@@ -1416,7 +1416,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   //  that u3r_bytes → u3r_blob_load would have caused.
   //
   u3r_view vue_u;
-  u3r_view_init(&vue_u, pac);
+  u3r_view_flat(&vue_u, pac);
   c3_w len_w = vue_u.len_w;
   u3_assert( UINT32_MAX >= len_w );
   arena are_u = arena_create(len_w + 16384);
@@ -1841,7 +1841,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     //  expects a stable, mutable buffer that outlives the view.
     //
     u3r_view vue_u;
-    u3r_view_init(&vue_u, pac);
+    u3r_view_flat(&vue_u, pac);
     c3_w jumbo_w = vue_u.len_w;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     if ( jumbo_w ) {

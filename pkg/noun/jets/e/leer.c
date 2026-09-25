@@ -31,7 +31,7 @@ u3_noun
 u3qe_lore(u3_atom lub)
 {
   u3r_view vue_u;
-  u3r_view_init(&vue_u, lub);
+  u3r_view_flat(&vue_u, lub);
 
   const c3_y* src_y = vue_u.byt_y;
   c3_w        len_w = vue_u.len_w;
@@ -98,7 +98,7 @@ u3qe_leer(u3_atom txt)
   u3_noun* lit = &pro;
 
   u3r_view vue_u;
-  u3r_view_init(&vue_u, txt);
+  u3r_view_flat(&vue_u, txt);
   const c3_y* src_y = vue_u.byt_y;
   c3_w        len_w = vue_u.len_w;
 

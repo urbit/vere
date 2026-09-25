@@ -242,7 +242,7 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 
   u3r_view* vue_u = c3_malloc(sizeof(*vue_u));
 
-  if ( c3n == u3r_view_open(vue_u, a) ) {
+  if ( c3n == u3r_view_wind(vue_u, a) ) {
     c3_free(vue_u);
     return 0;
   }

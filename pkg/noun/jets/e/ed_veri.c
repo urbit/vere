@@ -60,7 +60,7 @@
     }
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, m);
+    u3r_view_flat(&vue_u, m);
     c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sig_y);
     u3r_view_done(&vue_u);
 

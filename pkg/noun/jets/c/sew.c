@@ -44,7 +44,7 @@ u3qc_sew(u3_atom a,
     //  zero-padded to a whole number of words (see u3_blob_hand_pad), so
     //  the word-at-a-time read by u3r_chop_words is safe.
     //
-    u3r_view_init(&vue_u, e);
+    u3r_view_flat(&vue_u, e);
     len_src_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
     src_w = (c3_w*)vue_u.byt_y;
   }

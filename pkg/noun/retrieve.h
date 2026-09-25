@@ -438,10 +438,10 @@
       **   code outside the blob layer reads a bob.
       **
       **   Purpose.  Two modes over one struct.  A windowed view
-      **   (u3r_view_open, then u3r_view_read) copies out any byte range
+      **   (u3r_view_wind, then u3r_view_read) copies out any byte range
       **   on demand and maps nothing; every reader that can work in
       **   windows uses it, including the fixed-width accessors, jam,
-      **   and the king's streaming.  A flat view (u3r_view_init,
+      **   and the king's streaming.  A flat view (u3r_view_flat,
       **   u3r_view_padd) gives a contiguous pointer and length for code
       **   that needs the whole thing at once, above all the crypto and
       **   codec jets.  The blob hand behind a bob view (u3_blob_hand in
@@ -449,7 +449,7 @@
       **   tests; no other code opens one.
       **
       **   Lifetime.  A view owns no memory of its own; it borrows.  It is
-      **   valid from open, init, or padd until u3r_view_done, on the
+      **   valid from wind, flat, or padd until u3r_view_done, on the
       **   road that opened it.  Inner-road code keeps a view inside one
       **   C frame; a bail or signal discards the frame and the road
       **   closes what the view borrowed.  The home road never unwinds,
@@ -462,7 +462,7 @@
       **   byt_y points at len_w bytes, least significant first: the
       **   atom's bytes, then zeros for a pad, or the atom truncated to
       **   wid_w.  A windowed view's byt_y is null for a bob and read
-      **   supplies the bytes; for any other atom open is init.  read at
+      **   supplies the bytes; for any other atom wind is flat.  read at
       **   any offset returns the bytes inside the atom and zero-fills
       **   the rest.  Bytes are read-only and, for a bob, may be evicted
       **   by the kernel and read back from the file.
@@ -480,7 +480,7 @@
       **           the view, owns the fd and the mapping, and the hand
       **           dies with the road, so a bail or signal cannot leak
       **           them.  done drops the view's hold on the hand.
-      **     flat  a direct atom.  It has no address of its own, so its
+      **     even  a direct atom.  It has no address of its own, so its
       **           value sits in raw_d and byt_y points there: the one
       **           word a view carries itself.
       **     heap  a u3a_malloc pad: a pad over a loom atom wider than the
@@ -497,7 +497,7 @@
         typedef enum {
           u3r_view_loom = 0,    //  borrows the loom word buffer;   done frees nothing
           u3r_view_blob,        //  aliases the hand's mapping;     done: u3_blob_close
-          u3r_view_flat,        //  a direct atom's value in raw_d; done frees nothing
+          u3r_view_even,        //  a direct atom's value in raw_d; done frees nothing
           u3r_view_heap         //  u3a_malloc pad;                 done: u3a_free
         } u3r_view_e;
 
@@ -508,17 +508,17 @@
           c3_w                  len_w;  //  how many
           u3r_view_e            kin_e;  //  what byt_y points at
           struct _u3_blob_hand* han_u;  //  blob: the road's hand, else 0
-          c3_d                  raw_d;  //  flat: the direct atom's value
+          c3_d                  raw_d;  //  even: the direct atom's value
         } u3r_view;
 
-      /* u3r_view_open(): open a windowed view of [a], mapping nothing.
+      /* u3r_view_wind(): open a windowed view of [a], mapping nothing.
       **
       **   Returns c3n, without bailing, if [a] is a bob whose file is
       **   missing, empty, or all zero.  For any other atom this is
-      **   u3r_view_init.
+      **   u3r_view_flat.
       */
         c3_o
-        u3r_view_open(u3r_view* vue_u, u3_atom a);
+        u3r_view_wind(u3r_view* vue_u, u3_atom a);
 
       /* u3r_view_read(): [len_z] bytes at byte offset [off_d] of the
       **   view's atom, zero-filled past its end.
@@ -538,20 +538,20 @@
         c3_d
         u3r_view_met(u3r_view* vue_u);
 
-      /* u3r_view_init(): open a flat view of the significant bytes of [a].
+      /* u3r_view_flat(): open a flat view of the significant bytes of [a].
       **
       **   Bails %fail if [a] is a bob whose file is missing, empty, or
       **   cannot be mapped.
       */
         void
-        u3r_view_init(u3r_view* vue_u, u3_atom a);
+        u3r_view_flat(u3r_view* vue_u, u3_atom a);
 
       /* u3r_view_padd(): open a flat view of exactly [wid_w] bytes of
       **   [a], zero-filled past the atom's bytes.
       **
       **   Never allocates for a bob unless another live view holds its
       **   hand; allocates a loom pad for any other atom shorter than
-      **   [wid_w].  Bails like u3r_view_init, or %meme from the loom pad.
+      **   [wid_w].  Bails like u3r_view_flat, or %meme from the loom pad.
       */
         void
         u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w);

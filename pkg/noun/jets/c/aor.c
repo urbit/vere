@@ -36,8 +36,8 @@
           //
           if ( (c3y == a_bob) || (c3y == b_bob) ) {
             u3r_view va_u, vb_u;
-            u3r_view_init(&va_u, a);
-            u3r_view_init(&vb_u, b);
+            u3r_view_flat(&va_u, a);
+            u3r_view_flat(&vb_u, b);
             u3_noun ret = u3_none;
             for ( c3_w i_w = 0; i_w < len_min_w; i_w++ ) {
               c3_y cut_a_y = va_u.byt_y[i_w];

@@ -107,7 +107,7 @@
 
     c3_y sig_y[64];
     u3r_view vue_u;
-    u3r_view_init(&vue_u, msg);
+    u3r_view_flat(&vue_u, msg);
     urcrypt_ed_sign((c3_y*)vue_u.byt_y, vue_u.len_w, sed_y, sig_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(64, sig_y);
@@ -146,7 +146,7 @@
 
     c3_y sig_y[64];
     u3r_view vue_u;
-    u3r_view_init(&vue_u, msg);
+    u3r_view_flat(&vue_u, msg);
     urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sek_y, sig_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(64, sig_y);

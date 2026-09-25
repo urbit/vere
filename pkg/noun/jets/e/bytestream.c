@@ -43,7 +43,7 @@ _x_octs_buffer(u3r_view* vue_u,
     return c3n;
   }
 
-  u3r_view_init(vue_u, *q_octs);
+  u3r_view_flat(vue_u, *q_octs);
   *len_w = vue_u->len_w;
 
   *lead_w = 0;

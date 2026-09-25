@@ -180,7 +180,7 @@ u3qc_rip(u3_atom a,
   //  the chunk loops see the same bytes for every kind.
   //
   u3r_view vue_u;
-  u3r_view_init(&vue_u, c);
+  u3r_view_flat(&vue_u, c);
 
   const c3_w* buf_w = (const c3_w*)vue_u.byt_y;
   c3_w        wor_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;

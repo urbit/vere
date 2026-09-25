@@ -1331,7 +1331,7 @@ _test_cell_trel_qual(void)
     exit(1);
 }
 
-/* _test_view(): u3r_view_init on both regular and bob atoms.
+/* _test_view(): u3r_view_flat on both regular and bob atoms.
 */
 static void
 _test_view(void)
@@ -1344,7 +1344,7 @@ _test_view(void)
     u3_atom a = u3i_bytes(src_w, src_y);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
 
     if ( vue_u.len_w != src_w ) {
       fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_w
@@ -1381,7 +1381,7 @@ _test_view(void)
     const c3_w    src_w   = sizeof(src_y);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
 
     if ( vue_u.len_w != src_w ) {
       fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_w
@@ -1389,7 +1389,7 @@ _test_view(void)
               vue_u.len_w, src_w);
       exit(1);
     }
-    if ( vue_u.kin_e != u3r_view_flat ) {
+    if ( vue_u.kin_e != u3r_view_even ) {
       fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
       exit(1);
     }
@@ -1415,7 +1415,7 @@ _test_view(void)
   //
   {
     u3r_view vue_u;
-    u3r_view_init(&vue_u, 0);
+    u3r_view_flat(&vue_u, 0);
     if (  vue_u.len_w != 0
        || vue_u.kin_e != u3r_view_loom
        || vue_u.han_u != 0 )
@@ -1467,7 +1467,7 @@ _test_view(void)
     u3_atom a = u3i_blob(mug_h, seq_h);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
 
     //  expect a hand-backed view: kin_e == u3r_view_blob, u.han_u set
     //

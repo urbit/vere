@@ -181,7 +181,7 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
     bit_w = (c3_g)c3_bits_word(a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
     bit_w = _js_bob_met(vue_u.byt_y, vue_u.len_w);
     if ( 0 == bit_w ) {
       u3r_view_done(&vue_u);
@@ -191,7 +191,7 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   }
   else {
     bit_w = u3r_met(0, a);
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
   }
 
   //  mat header: encodes the bit-length

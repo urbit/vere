@@ -69,7 +69,7 @@
             c3_w len_b = ((c3_w)pi_cab) << shf_g;
 
             u3r_view vue_u;
-            u3r_view_init(&vue_u, qi_cab);
+            u3r_view_flat(&vue_u, qi_cab);
             c3_w cpy_w = (vue_u.len_w < len_b) ? vue_u.len_w : len_b;
             if ( cpy_w ) {
               memcpy(sab_u.buf_y + pos_b, vue_u.byt_y, cpy_w);

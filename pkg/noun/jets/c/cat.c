@@ -39,8 +39,8 @@
       u3i_slab_init(&sab_u, a_g, all_w);
 
       u3r_view vb_u, vc_u;
-      u3r_view_init(&vb_u, b);
-      u3r_view_init(&vc_u, c);
+      u3r_view_flat(&vb_u, b);
+      u3r_view_flat(&vc_u, c);
 
       c3_w cpy_w;
       cpy_w = (vb_u.len_w < lew_b) ? vb_u.len_w : lew_b;

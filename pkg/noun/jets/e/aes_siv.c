@@ -118,7 +118,7 @@ _cqea_siv_en(c3_y*   key_y,
   //
   {
     u3r_view vue_u;
-    u3r_view_init(&vue_u, txt);
+    u3r_view_flat(&vue_u, txt);
     txt_w = vue_u.len_w;
     txt_y = u3a_malloc(txt_w ? txt_w : 1);
     if ( txt_w ) {

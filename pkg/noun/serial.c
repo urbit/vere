@@ -100,7 +100,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
     c3_w   a_w;
     if ( c3y == u3a_is_bob(a) ) {
-      if ( c3n == u3r_view_open(&vue_u, a) ) {
+      if ( c3n == u3r_view_wind(&vue_u, a) ) {
         u3m_bail(c3__fail);
         return;
       }
@@ -323,7 +323,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     //  which is what u3r_met_d() gave the caller.
     //
     u3r_view vue_u;
-    if ( c3n == u3r_view_open(&vue_u, a) ) {
+    if ( c3n == u3r_view_wind(&vue_u, a) ) {
       u3m_bail(c3__fail);
     }
 
@@ -1069,7 +1069,7 @@ u3s_cue_atom(u3_atom a)
   //
   if ( c3y == u3a_is_bob(a) ) {
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_flat(&vue_u, a);
     u3_noun res = u3s_cue_bytes((c3_d)vue_u.len_w, (c3_y*)vue_u.byt_y);
     u3r_view_done(&vue_u);
     return res;
