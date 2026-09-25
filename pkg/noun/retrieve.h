@@ -378,15 +378,6 @@
         u3r_met(c3_y    a_y,
                 u3_atom b);
 
-      /* u3r_met_w(): u3r_met(), as a word.
-      **
-      **   Bails %fail if the size does not fit in a c3_w, as u3r_met()
-      **   did before it returned c3_d.  A 64-bit word always fits.
-      */
-        c3_w
-        u3r_met_w(c3_y    a_y,
-                  u3_atom b);
-
       /* u3r_bit():
       **
       **   Return bit (a_w) of (b).

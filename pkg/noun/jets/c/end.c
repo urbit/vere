@@ -19,7 +19,11 @@ u3qc_end(u3_atom a,
   else {
     c3_g a_g   = a;
     c3_w b_w   = b;
-    c3_w len_w = u3r_met_w(a_g, c);
+    c3_d len_d = u3r_met(a_g, c);
+    if ( len_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w len_w = (c3_w)len_d;
 
     if ( 0 == b_w ) {
       return 0;

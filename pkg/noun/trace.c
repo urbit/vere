@@ -92,7 +92,11 @@ u3t_heck(u3_atom cog)
 #if 0
   u3R->pro.cel_d++;
 #else
-  c3_w len_w = u3r_met_w(3, cog);
+  c3_d len_d = u3r_met(3, cog);
+  if ( len_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
   c3_c* str_c = alloca(1 + len_w);
 
   u3r_bytes(0, len_w, (c3_y *)str_c, cog);
@@ -1337,7 +1341,11 @@ u3t_sstack_push(u3_noun nam)
     nam = c3__cell;
   }
 
-  c3_w met_w = u3r_met_w(3, nam);
+  c3_d met_d = u3r_met(3, nam);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   u3_assert( met_w < 0xfffffff );
   c3_h met_h = (c3_h)met_w;
   

@@ -22,10 +22,18 @@ u3qc_peg(u3_atom a, u3_atom b)
     b_d = b;
   }
   else {
-    c3_w d_w = u3r_met_w(0, a);
+    c3_d d_d = u3r_met(0, a);
+    if ( d_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w d_w = (c3_w)d_d;
     c3_d e_d;
 
-    c_w = u3r_met_w(0, b) - 1;
+    c3_d c_d = u3r_met(0, b);
+    if ( c_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c_w = (c3_w)c_d - 1;
     e_d = (c3_d)c_w + d_w;
 
     if ( 64 <= e_d ) {

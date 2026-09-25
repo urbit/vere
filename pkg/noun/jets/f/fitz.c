@@ -9,8 +9,16 @@ static u3_noun
 _fitz_fiz(u3_noun yaz,
           u3_noun wix)
 {
-  c3_w yaz_w = u3r_met_w(3, yaz);
-  c3_w wix_w = u3r_met_w(3, wix);
+  c3_d yaz_d = u3r_met(3, yaz);
+  if ( yaz_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w yaz_w = (c3_w)yaz_d;
+  c3_d wix_d = u3r_met(3, wix);
+  if ( wix_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w wix_w = (c3_w)wix_d;
   c3_y yaz_y, wix_y;
 
   yaz_y = (0 == yaz_w) ? 0 : u3r_byte((yaz_w - 1), yaz);
@@ -32,8 +40,16 @@ u3_noun
 u3qf_fitz(u3_noun yaz,
           u3_noun wix)
 {
-  c3_w yet_w = u3r_met_w(3, yaz);
-  c3_w wet_w = u3r_met_w(3, wix);
+  c3_d yet_d = u3r_met(3, yaz);
+  if ( yet_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w yet_w = (c3_w)yet_d;
+  c3_d wet_d = u3r_met(3, wix);
+  if ( wet_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w wet_w = (c3_w)wet_d;
 
   c3_w i_w, met_w = c3_min(yet_w, wet_w);
 

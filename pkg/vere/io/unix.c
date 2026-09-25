@@ -221,7 +221,11 @@ _unix_knot_to_string(u3_atom pon)
     ret_c = u3r_string(pon);
   }
   else {
-    c3_w  met_w = u3r_met_w(3, pon);
+    c3_d met_d = u3r_met(3, pon);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
 
     ret_c = c3_malloc(met_w + 2);
     *ret_c = '!';
@@ -332,6 +336,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
 {
   c3_i  fid_i;
   c3_w  lod_w, len_w, fln_w, rit_w;
+  c3_d fln_d;
   c3_y* pad_y;
   c3_c* ful_c;
 
@@ -356,7 +361,11 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
     u3z(pad); u3m_bail(c3__fail);
   }
 
-  fln_w = u3r_met_w(3, pad);
+  fln_d = u3r_met(3, pad);
+  if ( fln_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  fln_w = (c3_w)fln_d;
   pad_y = c3_malloc(fln_w);
   u3r_bytes(0, fln_w, pad_y, pad);
   u3z(pad);
@@ -446,6 +455,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
 {
   c3_i  fid_i = c3_open(pax_c, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   c3_w len_w, rit_w, siz_w;
+  c3_d len_d;
   c3_h  mug_h = 0;
   c3_y* dat_y;
 
@@ -459,7 +469,11 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
   }
 
   siz_w = u3r_cat(u3h(u3t(mim)));
-  len_w = u3r_met_w(3, dat);
+  len_d = u3r_met(3, dat);
+  if ( len_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  len_w = (c3_w)len_d;
   dat_y = c3_calloc(siz_w);
 
   u3r_bytes(0, len_w, dat_y, dat);

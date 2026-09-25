@@ -534,7 +534,11 @@ _term_it_path(u3_noun pax)
     u3_noun wiz = pax;
 
     while ( u3_nul != wiz ) {
-      c3_w met_w = u3r_met_w(3, u3h(wiz));
+      c3_d met_d = u3r_met(3, u3h(wiz));
+      if ( met_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       u3_assert( (UINT32_MAX - 1 - len_h) >= met_w );
       len_h += 1 + met_w;
       wiz = u3t(wiz);
@@ -551,7 +555,11 @@ _term_it_path(u3_noun pax)
 
     while ( u3_nul != wiz ) {
       //  XX truncation
-      c3_w met_w = u3r_met_w(3, u3h(wiz));
+      c3_d met_d = u3r_met(3, u3h(wiz));
+      if ( met_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       u3_assert( UINT32_MAX >= met_w );
       c3_h tis_h = met_w;
 

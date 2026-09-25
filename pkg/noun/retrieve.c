@@ -960,22 +960,6 @@ u3r_met(c3_y  a_y,
   return ((gal_d + 1) + ((1ULL << gow_y) - 1)) >> gow_y;
 }
 
-/* u3r_met_w():
-**
-**   u3r_met(), as a word.
-*/
-c3_w
-u3r_met_w(c3_y  a_y,
-          u3_atom b)
-{
-  c3_d met_d = u3r_met(a_y, b);
-
-  if ( met_d > c3_w_max ) {
-    return u3m_bail(c3__fail);
-  }
-  return (c3_w)met_d;
-}
-
 /* u3r_bit():
 **
 **   Return bit (a_w) of (b).
@@ -1090,7 +1074,11 @@ u3r_bytes(c3_w    a_w,
 c3_w
 u3r_bytes_fit(c3_w len_w, c3_y *buf_y, u3_atom a)
 {
-  c3_w met_w = u3r_met_w(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   if ( met_w <= len_w ) {
     u3r_bytes(0, len_w, buf_y, a);
     return 0;
@@ -1122,8 +1110,12 @@ u3r_bytes_alloc(c3_w    a_w,
 c3_y*
 u3r_bytes_all(c3_w* len_w, u3_atom a)
 {
-  c3_w met_w = *len_w = u3r_met_w(3, a);
-  return u3r_bytes_alloc(0, met_w, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  *len_w = (c3_w)met_d;
+  return u3r_bytes_alloc(0, *len_w, a);
 }
 
 /* _mpz_init_set_word():
@@ -1650,7 +1642,11 @@ u3r_chop(c3_g  met_g,
 c3_c*
 u3r_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met_w(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_c* str_c = c3_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);

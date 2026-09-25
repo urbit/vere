@@ -13,8 +13,13 @@
   {
     c3_y a_y[32], b_y[32], c_y[32], out_y[32];
     c3_w met_w;
+    c3_d met_d;
 
-    met_w = u3r_met_w(3, a);
+    met_d = u3r_met(3, a);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    met_w = (c3_w)met_d;
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
            (127 < u3r_byte(31, a)) )
@@ -26,7 +31,11 @@
       u3r_bytes(0, 32, a_y, a);
     }
 
-    met_w = u3r_met_w(3, b);
+    met_d = u3r_met(3, b);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    met_w = (c3_w)met_d;
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
            (127 < u3r_byte(31, b)) )
@@ -38,7 +47,11 @@
       u3r_bytes(0, 32, b_y, b);
     }
 
-    met_w = u3r_met_w(3, c);
+    met_d = u3r_met(3, c);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    met_w = (c3_w)met_d;
     if ( (32 < met_w) ||
          ( (32 == met_w) &&
            (127 < u3r_byte(31, c)) )

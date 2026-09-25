@@ -11,8 +11,16 @@
   u3qc_con(u3_atom a,
            u3_atom b)
   {
-    c3_w lna_w = u3r_met_w(u3a_word_bits_log, a);
-    c3_w lnb_w = u3r_met_w(u3a_word_bits_log, b);
+    c3_d lna_d = u3r_met(u3a_word_bits_log, a);
+    if ( lna_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w lna_w = (c3_w)lna_d;
+    c3_d lnb_d = u3r_met(u3a_word_bits_log, b);
+    if ( lnb_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w lnb_w = (c3_w)lnb_d;
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;

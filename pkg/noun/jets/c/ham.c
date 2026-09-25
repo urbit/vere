@@ -8,7 +8,11 @@
 u3_atom
 u3qc_ham(u3_atom a)
 {
-  c3_w len_w = u3r_met_w(u3a_word_bits_log, a);
+  c3_d len_d = u3r_met(u3a_word_bits_log, a);
+  if ( len_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
   c3_d pop_d = 0;
   c3_w wor_w;
 

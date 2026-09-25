@@ -58,7 +58,11 @@ _bit_rip(u3_atom bits, u3_atom atom)
     return u3m_bail(c3__fail);
   }
 
-  c3_w bit_width  = u3r_met_w(0, atom);
+  c3_d bit_width_d = u3r_met(0, atom);
+  if ( bit_width_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w bit_width = (c3_w)bit_width_d;
   c3_w num_blocks = DIVCEIL(bit_width, bits);
 
   u3_noun res = u3_nul;
@@ -101,7 +105,11 @@ _block_rip(u3_atom bloq, u3_atom b)
   if ( bloq_g < u3a_word_bits_log ) {                                   //  produce direct atoms
     u3_noun acc     = u3_nul;
 
-    c3_w met_w   = u3r_met_w(bloq_g, b);                  //  num blocks in atom
+    c3_d met_d = u3r_met(bloq_g, b);  //  num blocks in atom
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     c3_w nbits_w = (c3_w)1 << bloq_g;                   //  block size in bits
     c3_w bmask_w = ((c3_w)1 << nbits_w) - 1;            //  result mask
 
@@ -121,8 +129,16 @@ _block_rip(u3_atom bloq, u3_atom b)
   }
 
   u3_noun acc   = u3_nul;
-  c3_w    met_w = u3r_met_w(bloq_g, b);
-  c3_w    len_w = u3r_met_w(u3a_word_bits_log, b);
+  c3_d met_d = u3r_met(bloq_g, b);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
+  c3_d len_d = u3r_met(u3a_word_bits_log, b);
+  if ( len_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)len_d;
   c3_g    san_g = (bloq_g - u3a_word_bits_log);
   c3_w    san_w = (c3_w)1 << san_g;
   c3_w    dif_w = (met_w << san_g) - len_w;
@@ -180,7 +196,11 @@ u3qc_rip(u3_atom a,
   //u3_noun *lit = &pro;
   //u3_noun *hed;
   //u3_noun *tal;
-  c3_w len_w = DIVCEIL(u3r_met_w(a, c), b);
+  c3_d met_d = u3r_met(a, c);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_w = DIVCEIL((c3_w)met_d, b);
 
   //for (c3_w i_w = 0; i_w < len_w; i_w++) {
   for (c3_w i_w = len_w; 0 < i_w; i_w--) {

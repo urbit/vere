@@ -24,7 +24,11 @@ u3qc_sew(u3_atom a,
   }
 
   c3_g a_g = a;
-  c3_w len_e_w = u3r_met_w(a_g, e);
+  c3_d len_e_d = u3r_met(a_g, e);
+  if ( len_e_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w len_e_w = (c3_w)len_e_d;
   u3i_slab sab_u;
   c3_w* src_w;
   c3_w len_src_w;
