@@ -477,6 +477,11 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 
       if ( c3y == pri_o ) {
         _mars_print_quacs(fil_u, all_u);
+
+        //  blobs the serf holds open: zero between events, so anything
+        //  here is a reader that never closed
+        //
+        fprintf(fil_u, "blob handles: %zu\r\n", u3_blob_hands());
       }
       fflush(fil_u);
 
@@ -1515,6 +1520,7 @@ _mars_show_time(u3_noun wen)
 typedef enum {
   _play_yes_e,  //  success
   _play_mem_e,  //  %meme
+  _play_fil_e,  //  %file
   _play_int_e,  //  %intr
   _play_log_e,  //  event log fail
   _play_mug_e,  //  mug mismatch
@@ -1731,6 +1737,12 @@ _mars_play_batch(u3_mars* mar_u,
           fprintf(stderr, "play (%" PRIu64 "): %%meme\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_mem_e;
+        }
+
+        case c3__file: {
+          fprintf(stderr, "play (%" PRIu64 "): %%file\r\n", tac_u.eve_d);
+          u3z(dud); u3z(wen);
+          return _play_fil_e;
         }
 
         case c3__intr: {
@@ -2081,6 +2093,14 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
           }
+        } break;
+
+        case _play_fil_e: {
+          fprintf(stderr, "play (%" PRIu64 "): failed, out of file "
+                          "descriptors\r\n", mar_u->dun_d + 1);
+          u3m_save();
+          u3_disk_exit(log_u);
+          exit(1);
         } break;
 
         case _play_int_e: {

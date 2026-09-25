@@ -316,7 +316,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_W(S) lop_p;                                      \
   U3_N(S) tim;                                        \
                                                       \
-  U3_W(S) fut_w[28];                                  \
+  U3_W(S) bob_p;  /* first blob hand */               \
+  U3_W(S) fut_w[27];                                  \
                                                       \
   U3_PASTE(u3a_road_esc, S) esc;                      \
                                                       \
@@ -367,6 +368,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
+
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
 
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
@@ -766,16 +772,6 @@ typedef struct {
     static inline c3_h
     u3a_bob_seq(u3_atom som) {
       return u3a_bob_blob(som)->seq_h;
-    }
-
-    /* u3a_bob_bid(): blob ID = (mug << 32) | seq.
-    **   On VERE64 this is a direct atom (63 bits).
-    **   On 32-bit this is a c3_d that must go through u3i_chub().
-    */
-    static inline c3_d
-    u3a_bob_bid(u3_atom som) {
-      u3a_blob* blb_u = u3a_bob_blob(som);
-      return ((c3_d)blb_u->mug_h << 32) | (c3_d)blb_u->seq_h;
     }
 
   /**  Functions.

@@ -2,6 +2,7 @@
 
 #include "c3/defs.h"
 #include "allocate.h"
+#include "blob.h"
 
 #include "hashtable.h"
 #include "log.h"
@@ -1115,6 +1116,14 @@ u3a_blob_sane(c3_o dep_o)
     }
 
     vt_cleanup(&ctx_u.set_u);
+  }
+
+  //  the home road is quiescent between events, so mars should hold no
+  //  blob open here; the king may (http streams a body across events),
+  //  so this is reported, not counted as a violation.
+  //
+  if ( u3_blob_hands() ) {
+    fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3_blob_hands());
   }
 
   c3_free(ctx_u.car_u);

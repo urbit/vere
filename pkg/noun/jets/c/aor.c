@@ -32,7 +32,7 @@
           c3_w len_min_w = c3_min(len_a_w, len_b_w);
 
           //  bob atoms: buf_w holds a loom offset, not bytes, so read
-          //  through u3r_view (mmap for bobs, heap copy for normal atoms).
+          //  through u3r_view (blob hand for bobs, heap copy for normal atoms).
           //
           if ( (c3y == a_bob) || (c3y == b_bob) ) {
             u3r_view va_u, vb_u;

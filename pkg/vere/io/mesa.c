@@ -1409,7 +1409,7 @@ _mesa_hear(u3_mesa* sam_u,
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  //  zero-copy read from [pac] (mmap if it's a bob) into the arena
+  //  zero-copy read from [pac] (through its blob hand if it's a bob) into the arena
   //  buffer.  the arena is the long-lived owner — we still copy bytes
   //  into it because it gets stashed in u3_mesa_resend_data->buf_y for
   //  the resend timer.  using u3r_view skips the full-blob loom alloc
@@ -1836,7 +1836,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    //  zero-copy read of the jumbo frame bytes (mmap if [pac] is a bob).
+    //  zero-copy read of the jumbo frame bytes (through its blob hand if [pac] is a bob).
     //  we still copy into a c3_calloc'd buffer because mesa_sift_pact_from_buf
     //  expects a stable, mutable buffer that outlives the view.
     //
@@ -2266,6 +2266,38 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 }
 
+/* _mesa_bob_ctx: a reassembled packet mars is installing as a blob.
+*/
+typedef struct _mesa_bob_ctx {
+  u3_mesa* sam_u;
+  u3_noun  lan;     //  encoded lane (owned)
+} _mesa_bob_ctx;
+
+/* _mesa_bob_install_cb(): mars installed (or refused) a packet blob.
+**
+**   on refusal the packet is dropped: the sender retransmits, and the
+**   bytes are gone with the staging file.
+*/
+static void
+_mesa_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
+{
+  _mesa_bob_ctx* ctx_u = ptr_v;
+  u3_mesa*       sam_u = ctx_u->sam_u;
+  u3_noun        lan   = ctx_u->lan;
+
+  c3_free(ctx_u);
+
+  if ( c3n == ok_o ) {
+    u3l_log("mesa: blob install failed; packet dropped");
+    u3z(lan);
+    return;
+  }
+
+  u3_auto_plan(&sam_u->car_u,
+               u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul),
+                            u3nt(c3__heer, lan, u3i_blob(mug_h, seq_h))));
+}
+
 static void
 _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
@@ -2407,25 +2439,33 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
         c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
         c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
 
-        //  large reassembled packets: store as blob, return bob atom
+        //  a large reassembled packet is staged and installed by mars;
+        //  the %heer waits for the bob.  mars alone writes the store.
+        //  one that cannot be staged goes in as a loom atom.
         //
         if ( (c3_d)res_h > U3_BLOB_THRESH ) {
-          c3_h bob_mug_h;
-          c3_h bob_seq_h;
+          u3_lord* god_u = sam_u->pir_u->god_u;
+          c3_c     stg_c[8192];
 
-          if ( c3y == u3_blob_save(sam_u->pir_u->pax_c, buf_y,
-                                    (c3_d)res_h, &bob_mug_h, &bob_seq_h) )
+          if (  god_u
+             && (c3y == u3_blob_stage(sam_u->pir_u->pax_c, buf_y,
+                                      (c3_d)res_h, stg_c)) )
           {
-            pac = u3i_blob(bob_mug_h, bob_seq_h);
+            _mesa_bob_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
+            ctx_u->sam_u = sam_u;
+            ctx_u->lan   = lan;
+
+            c3_free(buf_y);
+            _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
+            u3_lord_blob_install(god_u, strdup(stg_c), ctx_u,
+                                 _mesa_bob_install_cb);
+            return;
           }
-          else {
-            pac = u3i_bytes(res_h, buf_y);
-          }
-        }
-        else {
-          pac = u3i_bytes(res_h, buf_y);
+
+          u3l_log("mesa: %u-byte packet not staged; sending inline", res_h);
         }
 
+        pac = u3i_bytes(res_h, buf_y);
         c3_free(buf_y);
       }
       cad = u3nt(c3__heer, lan, pac);

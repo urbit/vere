@@ -51,7 +51,7 @@
       }
 
       /* Chop the list atoms in.  For byte-aligned bloqs and bob
-         atoms, mmap the blob and memcpy directly — avoids a full
+         atoms, view the blob and memcpy directly — avoids a full
          u3r_blob_load per item.
       */
       {

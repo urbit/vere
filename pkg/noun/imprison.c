@@ -578,7 +578,7 @@ u3i_vint(u3_noun a)
     //  not atom data.
     //
     if ( c3y == u3a_is_bob(a) ) {
-      u3_atom mat = u3r_blob_load(a, u3C.dir_c);
+      u3_atom mat = u3r_blob_load(a);
       if ( u3_none == mat ) {
         return u3m_bail(c3__fail);
       }

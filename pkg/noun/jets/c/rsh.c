@@ -30,38 +30,15 @@ u3qc_rsh(u3_atom a,
 
   c3_w wid_w = len_w - b_w;
 
-  //  bob-aware fast path for byte-aligned suffixes: mmap the blob
-  //  and memcpy only the requested bytes starting at offset b_w.
-  //  equivalent to cut(a_g, b_w, wid_w, c).
+  //  bob: read only the requested bytes, straight from the blob into
+  //  the result.  equivalent to cut(a_g, b_w, wid_w, c).
   //
   if ( (a_g >= 3) && (c3y == u3a_is_bob(c)) ) {
-    c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_mmap(c, &map_d);
-
-    if ( map_y ) {
-      c3_g shf_g = a_g - 3;
-      c3_d off_d = (c3_d)b_w  << shf_g;
-      c3_d byt_d = (c3_d)wid_w << shf_g;
-
-      c3_d cpy_d = byt_d;
-      if ( off_d >= map_d ) {
-        cpy_d = 0;
-      }
-      else if ( off_d + cpy_d > map_d ) {
-        cpy_d = map_d - off_d;
-      }
-
-      u3i_slab sab_u;
-      u3i_slab_init(&sab_u, a_g, wid_w);
-
-      if ( cpy_d ) {
-        memcpy(sab_u.buf_y, map_y + off_d, (size_t)cpy_d);
-      }
-
-      u3r_blob_umap(map_y, map_d);
-      return u3i_slab_mint(&sab_u);
+    u3_weak pro = u3r_blob_cut(a_g, b_w, wid_w, c);
+    if ( u3_none != pro ) {
+      return pro;
     }
-    //  mmap failed — fall through
+    //  open failed — fall through
   }
 
   u3i_slab sab_u;

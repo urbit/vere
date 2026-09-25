@@ -37,26 +37,26 @@
 
     /* u3_hbod: http body block.  Also used for responses.
     **
-    **   Three shapes:
-    **     (a) inline    — payload in hun_y[0..len_w]; map_y == own_y == 0.
-    **     (b) mmap view — map_y points into a shared mmap at the chunk's
-    **                     offset; own_y == 0 (this chunk does not own the
-    **                     mapping).  hun_y is unused.
-    **     (c) mmap owner — same as (b) for the iovec (map_y = base + off),
-    **                      plus own_y = mmap base and map_d = mmap size
-    **                      so _cttp_bods_free can munmap.
+    **   Two shapes:
+    **     (a) inline  — payload in hun_y[0..len_w]; vue_u == 0.
+    **     (b) blob    — a window of len_w bytes at off_d into the bob
+    **                   behind vue_u, a windowed u3r_view on the king's
+    **                   home road.  buf_y is 0 until the chunk is about
+    **                   to be sent, then a heap copy of the window, freed
+    **                   with the chunk.  hun_y is unused.
     **
     **   Bob-streaming chains (see _cttp_bod_from_bob) are built as a
-    **   head→tail list of views with the owner as the tail chunk.
-    **   Head-first free then MADV_DONTNEED's every view before the
-    **   owner finally munmaps.
+    **   head→tail list of blob chunks sharing one view; the tail carries
+    **   own_o and closes and frees the view when freed.  Chunks are freed
+    **   head-first, so the view outlives every window read through it.
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
         c3_w             len_w;
-        c3_y*            map_y;   //  iovec base (mmap view) or NULL (inline)
-        c3_y*            own_y;   //  mmap base to munmap (NULL if not owner)
-        c3_d             map_d;   //  mmap size for munmap (0 if not owner)
+        c3_y*            buf_y;   //  blob: heap window (iovec base), or 0
+        u3r_view*        vue_u;   //  blob: shared home-road view, or 0
+        c3_d             off_d;   //  blob: byte offset of this window
+        c3_o             own_o;   //  blob: closes and frees vue_u
         c3_y             hun_y[0];
       } u3_hbod;
 

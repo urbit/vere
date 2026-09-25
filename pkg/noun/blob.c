@@ -2,7 +2,9 @@
 
 #include "blob.h"
 #include "imprison.h"
+#include "manage.h"
 #include "retrieve.h"
+#include "vortex.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -10,6 +12,7 @@
 #include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 //  mode for a finished blob file.
 //
@@ -31,6 +34,618 @@
 //  macOS returns EINVAL if count > INT_MAX.  cap conservatively at 1 GiB.
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
+
+//  window for backward scans (u3_blob_hand_met).
+//
+#define BLOB_WIN_MAX ((size_t)4096)
+
+/* blob hands: per-road lists of open blob files.
+**
+**   a hand belongs to the road that opened it.  an inner road keeps its
+**   hands on a list headed by u3R->bob_p, allocated in its own heap,
+**   deduplicated by blob id, and retained until the road falls
+**   (u3_blob_drain from u3m_fall), so a trap that reads one blob a
+**   thousand times opens it once.  the home road never falls and every
+**   caller there is C with an explicit close, so its hands live on the
+**   C heap under _blob_hom_u, one per open, freed on close.
+**
+**   nodes link by pointer in both cases.  every mutation runs inside
+**   u3m_crit_enter()/u3m_crit_leave(): an fd must be on a list before a
+**   signal can unwind the opener, and a drain must finish unlinking
+**   before recovery can drain again.
+*/
+
+//  home-road hands
+//
+static u3_blob_hand* _blob_hom_u;
+
+//  hands an inner road retains at most: past this, an open evicts the
+//  oldest hand with no live view before adding a new one.
+//
+#define BLOB_KEEP_MAX  256
+
+/* _blob_home(): true if the current road is the home road.
+*/
+static inline c3_o
+_blob_home(void)
+{
+  return ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
+}
+
+/* _blob_head(): the first hand on [rod_u]'s list, or 0.
+**
+**   an inner road's head is a post in the road itself; nodes link by
+**   pointer from there.
+*/
+static inline u3_blob_hand*
+_blob_head(u3a_road* rod_u)
+{
+  if ( &(u3H->rod_u) == rod_u ) {
+    return _blob_hom_u;
+  }
+  return rod_u->bob_p ? u3a_into(rod_u->bob_p) : 0;
+}
+
+/* _blob_head_set(): make [han_u] the first hand on [rod_u]'s list.
+*/
+static inline void
+_blob_head_set(u3a_road* rod_u, u3_blob_hand* han_u)
+{
+  if ( &(u3H->rod_u) == rod_u ) {
+    _blob_hom_u = han_u;
+  }
+  else {
+    rod_u->bob_p = han_u ? u3a_outa(han_u) : 0;
+  }
+}
+
+/* _blob_page(): granularity of the zero tail past a mapping's end.
+*/
+static c3_z
+_blob_page(void)
+{
+#ifdef U3_OS_windows
+  return 8;
+#else
+  static c3_z pag_z = 0;
+  if ( !pag_z ) {
+    long got_l = sysconf(_SC_PAGESIZE);
+    pag_z = ( got_l > 0 ) ? (c3_z)got_l : 4096;
+  }
+  return pag_z;
+#endif
+}
+
+/* u3_blob_hand_pad(): bytes readable through u3_blob_data.
+*/
+c3_d
+u3_blob_hand_pad(u3_blob_hand* han_u)
+{
+  c3_d pag_d = (c3_d)_blob_page();
+  return (han_u->len_d + pag_d - 1) & ~(pag_d - 1);
+}
+
+/* _blob_bid(): hand key for (mug_h, seq_h).
+*/
+static inline c3_d
+_blob_bid(c3_h mug_h, c3_h seq_h)
+{
+  return ((c3_d)mug_h << 32) | seq_h;
+}
+
+/* _blob_hand_shut(): release the fd and mapping of [han_u].
+**
+**   the caller holds the critical section.
+*/
+static void
+_blob_hand_shut(u3_blob_hand* han_u)
+{
+  if ( han_u->map_y ) {
+    munmap(han_u->map_y, (size_t)han_u->map_d);
+    han_u->map_y = 0;
+    han_u->map_d = 0;
+  }
+
+  if ( han_u->fid_i >= 0 ) {
+    c3_i fid_i   = han_u->fid_i;
+    han_u->fid_i = -1;
+    close(fid_i);
+  }
+}
+
+/* _blob_hand_link(): put [han_u] at the head of the current road's list.
+*/
+static void
+_blob_hand_link(u3_blob_hand* han_u)
+{
+  u3_blob_hand* hed_u = _blob_head(u3R);
+
+  han_u->pre_u = 0;
+  han_u->nex_u = hed_u;
+  if ( hed_u ) {
+    hed_u->pre_u = han_u;
+  }
+  _blob_head_set(u3R, han_u);
+}
+
+/* _blob_hand_unlink(): take [han_u] off the current road's list.
+*/
+static void
+_blob_hand_unlink(u3_blob_hand* han_u)
+{
+  if ( han_u->pre_u ) {
+    han_u->pre_u->nex_u = han_u->nex_u;
+  }
+  else {
+    _blob_head_set(u3R, han_u->nex_u);
+  }
+  if ( han_u->nex_u ) {
+    han_u->nex_u->pre_u = han_u->pre_u;
+  }
+  han_u->nex_u = han_u->pre_u = 0;
+}
+
+/* _blob_hand_find(): the hand for [bid_d] on [rod_u], or 0.
+*/
+static u3_blob_hand*
+_blob_hand_find(u3a_road* rod_u, c3_d bid_d)
+{
+  u3_blob_hand* han_u = _blob_head(rod_u);
+
+  while ( han_u && (han_u->bid_d != bid_d) ) {
+    han_u = han_u->nex_u;
+  }
+  return han_u;
+}
+
+/* _blob_hand_evict(): close the oldest retained hand with no live view
+**   on the current inner road.  returns c3n if none is idle.
+**
+**   the caller holds the critical section.
+*/
+static c3_o
+_blob_hand_evict(void)
+{
+  u3_blob_hand* han_u = _blob_head(u3R);
+
+  if ( !han_u ) {
+    return c3n;
+  }
+  while ( han_u->nex_u ) {
+    han_u = han_u->nex_u;
+  }
+  while ( han_u && han_u->use_w ) {
+    han_u = han_u->pre_u;
+  }
+  if ( !han_u ) {
+    return c3n;
+  }
+
+  _blob_hand_unlink(han_u);
+  _blob_hand_shut(han_u);
+  u3a_wfree(han_u);
+  return c3y;
+}
+
+/* _blob_hand_count(): hands on [rod_u]'s list.
+*/
+static c3_z
+_blob_hand_count(u3a_road* rod_u)
+{
+  c3_z          num_z = 0;
+  u3_blob_hand* han_u = _blob_head(rod_u);
+
+  while ( han_u ) {
+    num_z++;
+    han_u = han_u->nex_u;
+  }
+  return num_z;
+}
+
+/* u3_blob_hands(): hands open on the home road.
+*/
+c3_z
+u3_blob_hands(void)
+{
+  return _blob_hand_count(&u3H->rod_u);
+}
+
+/* u3_blob_hands_road(): hands open on road [rod_v].
+*/
+c3_z
+u3_blob_hands_road(void* rod_v)
+{
+  return _blob_hand_count(rod_v);
+}
+
+/* u3_blob_open(): open a blob on the current road.
+*/
+u3_blob_hand*
+u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+{
+  c3_d          bid_d = _blob_bid(mug_h, seq_h);
+  c3_o          hom_o = _blob_home();
+  u3_blob_hand* han_u = 0;
+
+  //  an inner road reuses its own hand, or one held by an inner
+  //  ancestor: the ancestor is suspended until this road falls, so its
+  //  hand outlives every view this road can take.  the home road's
+  //  hands belong to C callers that may close at any moment, so the
+  //  walk stops short of it.
+  //
+  if ( c3n == hom_o ) {
+    u3a_road* rod_u = u3R;
+
+    while ( rod_u != &(u3H->rod_u) ) {
+      if ( (han_u = _blob_hand_find(rod_u, bid_d)) ) {
+        if ( rod_u == u3R ) {
+          han_u->use_w += 1;
+        }
+        return han_u;
+      }
+      rod_u = u3to(u3a_road, rod_u->par_p);
+    }
+
+    //  bound retention: an event that touches more blobs than this
+    //  gives up its idle hands, oldest first
+    //
+    if ( _blob_hand_count(u3R) >= BLOB_KEEP_MAX ) {
+      u3m_crit_enter();
+      _blob_hand_evict();
+      u3m_crit_leave();
+    }
+  }
+
+  //  the node is allocated before the fd exists, so the allocation's own
+  //  bail leaks nothing
+  //
+  han_u = ( c3y == hom_o ) ? c3_calloc(sizeof(*han_u))
+                           : u3a_walloc(sizeof(*han_u) / sizeof(c3_w)
+                                        + !!(sizeof(*han_u) % sizeof(c3_w)));
+  memset(han_u, 0, sizeof(*han_u));
+  han_u->bid_d = bid_d;
+  han_u->fid_i = -1;
+  han_u->use_w = 1;
+
+  {
+    c3_c        fil_c[8192];
+    struct stat st_u;
+
+    u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+
+    u3m_crit_enter();
+
+    while ( -1 == (han_u->fid_i = open(fil_c, O_RDONLY)) ) {
+      //  out of descriptors: an inner road first gives up its idle
+      //  hands; if none are idle, or the ceiling is the process's, the
+      //  event cannot be computed and bails %file.  the home road
+      //  reports failure to its C caller.
+      //
+      if (  ((EMFILE == errno) || (ENFILE == errno))
+         && (c3n == hom_o) )
+      {
+        if ( c3y == _blob_hand_evict() ) {
+          continue;
+        }
+        u3m_crit_leave();
+        u3a_wfree(han_u);
+        fprintf(stderr, "blob: open %s: %s\r\n", fil_c, strerror(errno));
+        u3m_bail(c3__file);
+        return 0;
+      }
+      break;
+    }
+
+    if ( -1 == han_u->fid_i ) {
+      fprintf(stderr, "blob: open failed %s: %s\r\n",
+              fil_c, strerror(errno));
+    }
+    else if ( -1 == fstat(han_u->fid_i, &st_u) ) {
+      fprintf(stderr, "blob: fstat failed %s: %s\r\n",
+              fil_c, strerror(errno));
+    }
+    else {
+      han_u->len_d = (c3_d)st_u.st_size;
+    }
+
+    if ( 0 == han_u->len_d ) {
+      _blob_hand_shut(han_u);
+      u3m_crit_leave();
+
+      if ( c3y == hom_o ) {
+        c3_free(han_u);
+      }
+      else {
+        u3a_wfree(han_u);
+      }
+      return 0;
+    }
+
+    _blob_hand_link(han_u);
+    u3m_crit_leave();
+  }
+
+  return han_u;
+}
+
+/* u3_blob_close(): the current road is done with [han_u].
+*/
+void
+u3_blob_close(u3_blob_hand* han_u)
+{
+  //  an inner road keeps the hand for reuse; only its live-view count
+  //  drops, which makes it evictable.  a hand borrowed from an inner
+  //  ancestor was never counted here.
+  //
+  if ( c3n == _blob_home() ) {
+    if ( han_u->use_w && _blob_hand_find(u3R, han_u->bid_d) == han_u ) {
+      han_u->use_w -= 1;
+    }
+    return;
+  }
+
+  u3m_crit_enter();
+  _blob_hand_unlink(han_u);
+  _blob_hand_shut(han_u);
+  u3m_crit_leave();
+
+  c3_free(han_u);
+}
+
+/* u3_blob_drain(): close every hand held by road [rod_v].
+**
+**   an inner road's nodes go with its heap, so only the home road's
+**   are freed here.  returns the number of hands closed.
+*/
+c3_w
+u3_blob_drain(void* rod_v)
+{
+  u3a_road* rod_u = rod_v;
+  c3_o      hom_o = ( &(u3H->rod_u) == rod_u ) ? c3y : c3n;
+  c3_w      num_w = 0;
+
+  u3m_crit_enter();
+
+  for ( u3_blob_hand* han_u; (han_u = _blob_head(rod_u)); ) {
+    _blob_head_set(rod_u, han_u->nex_u);
+    _blob_hand_shut(han_u);
+
+    if ( c3y == hom_o ) {
+      c3_free(han_u);
+    }
+    num_w++;
+  }
+
+  u3m_crit_leave();
+  return num_w;
+}
+
+/* u3_blob_drain_kids(): close every hand held below the home road.
+**
+**   the only unwind that skips u3m_fall is a signal caught at the top;
+**   the kid chain is then the sole path to the abandoned roads' lists.
+*/
+c3_w
+u3_blob_drain_kids(void)
+{
+  u3a_road* rod_u = &(u3H->rod_u);
+  c3_w      num_w = 0;
+
+  while ( rod_u->kid_p ) {
+    rod_u  = u3to(u3a_road, rod_u->kid_p);
+    num_w += u3_blob_drain(rod_u);
+  }
+  return num_w;
+}
+
+/* u3_blob_stop(): close every home-road hand.
+*/
+void
+u3_blob_stop(void)
+{
+  u3_blob_drain(&u3H->rod_u);
+}
+
+/* u3_blob_read(): read [len_z] bytes at [off_d] into [dst_y].
+*/
+c3_z
+u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+{
+  c3_z tot_z = 0;
+
+  while ( len_z ) {
+    size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
+    ssize_t got_i = pread(han_u->fid_i, dst_y, ask_i, (off_t)off_d);
+
+    if ( got_i < 0 ) {
+      if ( EINTR == errno ) {
+        continue;
+      }
+      fprintf(stderr, "blob: read: %08" PRIx32 "/%08" PRIx32 " at %" PRIc3_d
+                      ": %s\r\n",
+              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
+              off_d, strerror(errno));
+      break;
+    }
+
+    if ( 0 == got_i ) {
+      break;
+    }
+
+    tot_z += (c3_z)got_i;
+    dst_y += got_i;
+    off_d += (c3_d)got_i;
+    len_z -= (c3_z)got_i;
+  }
+
+  return tot_z;
+}
+
+/* _blob_map(): map [wid_d] bytes of [han_u]'s file, zero past its end.
+**
+**   within the file's own pages the kernel supplies the zero tail.
+**   past them the bytes come from an anonymous reservation the file
+**   pages are then fixed over, so one pointer covers any width.
+**   returns 0 on failure, or past the file's pages on a platform
+**   without fixed mappings; *siz_d is the length mapped.
+*/
+static c3_y*
+_blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
+{
+  c3_d pad_d = u3_blob_hand_pad(han_u);
+
+  if ( wid_d <= pad_d ) {
+    //  windows refuses a read-only section longer than the file, so the
+    //  view is exactly the file; the remainder of its last page still
+    //  reads as zero, which is all the word pad needs
+    //
+#ifdef U3_OS_windows
+    *siz_d = han_u->len_d;
+#else
+    *siz_d = pad_d;
+#endif
+    void* map_v = mmap(0, (size_t)*siz_d, PROT_READ, MAP_PRIVATE,
+                       han_u->fid_i, 0);
+    return ( MAP_FAILED == map_v ) ? 0 : map_v;
+  }
+
+#ifdef U3_OS_windows
+  return 0;
+#else
+  {
+    c3_d  pag_d = (c3_d)_blob_page();
+    void* res_v;
+    void* map_v;
+
+    *siz_d = (wid_d + pag_d - 1) & ~(pag_d - 1);
+    res_v  = mmap(0, (size_t)*siz_d, PROT_READ,
+                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if ( MAP_FAILED == res_v ) {
+      return 0;
+    }
+
+    map_v = mmap(res_v, (size_t)pad_d, PROT_READ,
+                 MAP_PRIVATE | MAP_FIXED, han_u->fid_i, 0);
+
+    if ( MAP_FAILED == map_v ) {
+      munmap(res_v, (size_t)*siz_d);
+      return 0;
+    }
+
+    return res_v;
+  }
+#endif
+}
+
+/* u3_blob_data(): the file mapped read-only, zero out to [wid_d].
+**
+**   the mapping is recorded on the hand inside the critical section so
+**   a signal cannot leak it.  a file shortened under the hand would
+**   fault inside the mapping instead of failing a read, so one is
+**   refused.
+*/
+const c3_y*
+u3_blob_data(u3_blob_hand* han_u, c3_d wid_d)
+{
+  c3_d pad_d = u3_blob_hand_pad(han_u);
+
+  if ( wid_d < pad_d ) {
+    wid_d = pad_d;
+  }
+
+  //  any mapping covers the pad: on windows the recorded length is the
+  //  file's own, and the rest of its last page still reads as zero
+  //
+  if ( han_u->map_y && (wid_d <= c3_max(han_u->map_d, pad_d)) ) {
+    return han_u->map_y;
+  }
+
+  //  a wider mapping replaces the old one, which a live view may still
+  //  alias: only the requester may hold the hand
+  //
+  if ( han_u->map_y && (han_u->use_w > 1) ) {
+    return 0;
+  }
+
+  {
+    struct stat st_u;
+
+    if (  (-1 == fstat(han_u->fid_i, &st_u))
+       || ((c3_d)st_u.st_size < han_u->len_d) )
+    {
+      fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": file shrank"
+                      "\r\n",
+              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF));
+      return 0;
+    }
+  }
+
+  {
+    c3_d  siz_d = 0;
+    c3_y* map_y;
+
+    u3m_crit_enter();
+
+    if ( (map_y = _blob_map(han_u, wid_d, &siz_d)) ) {
+      if ( han_u->map_y ) {
+        munmap(han_u->map_y, (size_t)han_u->map_d);
+      }
+      han_u->map_y = map_y;
+      han_u->map_d = siz_d;
+    }
+
+    u3m_crit_leave();
+
+    if ( !map_y && (wid_d <= pad_d) ) {
+      fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": mmap: %s\r\n",
+              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
+              strerror(errno));
+    }
+    return map_y;
+  }
+}
+
+/* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
+**
+**   Scans backward from the end of the file for the last nonzero byte,
+**   then returns (pos * 8 + 8 - clz(byte)).  This matches u3r_met(0, atom).
+**   Returns 0 if the content is all zero or the read fails.
+*/
+c3_d
+u3_blob_hand_met(u3_blob_hand* han_u)
+{
+  if ( han_u->met_d ) {
+    return han_u->met_d;
+  }
+
+  c3_y win_y[BLOB_WIN_MAX];
+  c3_d pos_d = han_u->len_d;
+
+  while ( pos_d ) {
+    c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
+    c3_d beg_d = pos_d - ask_z;
+
+    if ( ask_z != u3_blob_read(han_u, beg_d, win_y, ask_z) ) {
+      return 0;
+    }
+
+    for ( c3_z i_z = ask_z; i_z--; ) {
+      if ( win_y[i_z] ) {
+        //  __builtin_clz operates on unsigned int (32 bits); subtract 24
+        //  to get the leading-zero count within just the low byte.
+        //
+        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)win_y[i_z]) - 24);
+        han_u->met_d = (beg_d + i_z) * 8 + (c3_d)(8 - clz_y);
+        return han_u->met_d;
+      }
+    }
+
+    pos_d = beg_d;
+  }
+
+  return 0;
+}
 
 /* u3_blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
 */
@@ -266,140 +881,116 @@ _blob_mug(const c3_y* dat_y, c3_d len_d)
   return u3r_mug_bytes(dat_y, _blob_sig(dat_y, len_d));
 }
 
-/* u3_blob_save(): write bytes to blob store.
+/* _blob_stage_open(): create a staging file, its path in [stg_c].
 */
-c3_o
-u3_blob_save(const c3_c* pax_c,
-             const c3_y* dat_y,
-             c3_d        len_d,
-             c3_h*       mug_h,
-             c3_h*       seq_h)
+static c3_i
+_blob_stage_open(const c3_c* pax_c, c3_c* stg_c)
 {
-  //  store the atom's bytes, not the caller's buffer: a blob denotes an
-  //  atom, and an atom has no trailing zeros.  this is what u3i_bytes()
-  //  does for sub-threshold content, and keeping the two in agreement is
-  //  what makes dedup (and hence bob-vs-bob u3r_sing) see "abc" and
-  //  "abc\0" as the one atom they are.
-  //
-  len_d = _blob_sig(dat_y, len_d);
+  c3_i fid_i;
 
-  //  content whose atom the loom would keep direct has no bob
-  //  representation (see U3_BLOB_MIN); the caller must use the loom.
-  //  all-zero content lands here too, denoting the atom 0.
-  //
-  if ( len_d < U3_BLOB_MIN ) {
-    return c3n;
+  u3_blob_stg_dir(stg_c, pax_c);
+  strcat(stg_c, "/blob-XXXXXX");
+
+  if ( -1 == (fid_i = mkstemp(stg_c)) ) {
+    fprintf(stderr, "blob: stage: mkstemp %s: %s\r\n", stg_c, strerror(errno));
   }
+  return fid_i;
+}
 
-  *mug_h = _blob_mug(dat_y, len_d);
+/* _blob_stage_write(): write [len_z] bytes to staging fd [fid_i].
+*/
+static c3_o
+_blob_stage_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
+{
+  while ( len_z ) {
+    size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
+    ssize_t wrt_i = write(fid_i, dat_y, ask_i);
 
-  //  acquire lock and get next sequence number
-  c3_h nex_h = _blob_lock_acquire(pax_c, *mug_h);
-  if ( 0 == nex_h ) {
-    return c3n;
-  }
-
-  //  check for duplicate before writing
-  c3_h dup_h = _blob_dedup(pax_c, *mug_h, nex_h, dat_y, len_d);
-  if ( 0 != dup_h ) {
-    *seq_h = dup_h;
-    //  we already incremented the lock counter, but that's harmless —
-    //  nex_w slot will simply be skipped (sparse sequence numbers are fine)
-    return c3y;
-  }
-
-  //  write blob file
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, *mug_h, nex_h);
-
-  c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "blob: failed to create %s: %s\r\n",
-            fil_c, strerror(errno));
-    return c3n;
-  }
-
-  c3_d rem_d = len_d;
-  const c3_y* ptr_y = dat_y;
-  while ( rem_d > 0 ) {
-    size_t  ask_i = ( rem_d < BLOB_IO_MAX ) ? (size_t)rem_d : BLOB_IO_MAX;
-    ssize_t wrt_i = write(fid_i, ptr_y, ask_i);
     if ( wrt_i <= 0 ) {
-      fprintf(stderr, "blob: write failed on %s: %s\r\n",
-              fil_c, strerror(errno));
-      close(fid_i);
-      unlink(fil_c);
+      if ( (wrt_i < 0) && (EINTR == errno) ) {
+        continue;
+      }
+      fprintf(stderr, "blob: stage: write: %s\r\n", strerror(errno));
       return c3n;
     }
-    ptr_y += wrt_i;
-    rem_d -= wrt_i;
+    dat_y += wrt_i;
+    len_z -= (c3_z)wrt_i;
   }
-
-  c3_sync(fid_i);
-  close(fid_i);
-
-  *seq_h = nex_h;
   return c3y;
 }
 
-/* u3_blob_save_fd(): write from open file descriptor into the blob store.
-**
-**   Uses mmap() to avoid a large malloc: the OS pages in only what
-**   _blob_mug and the dedup scan actually touch, and can evict cold pages
-**   immediately.  Works for files of any size that fit in the address space.
+/* _blob_stage_done(): sync and close a staging fd; unlink it on failure.
 */
-c3_o
-u3_blob_save_fd(const c3_c* pax_c,
-                c3_i        fid_i,
-                c3_d        len_d,
-                c3_h*       mug_h,
-                c3_h*       seq_h)
+static c3_o
+_blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
 {
-  if ( 0 == len_d ) {
-    fprintf(stderr, "blob: refusing to save empty file\r\n");
-    return c3n;
+  if ( c3y == ok_o ) {
+    c3_sync(fid_i);
   }
+  close(fid_i);
 
-  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "blob: mmap failed (%" PRIc3_d " bytes): %s\r\n",
-            len_d, strerror(errno));
-    return c3n;
+  if ( c3n == ok_o ) {
+    c3_unlink(stg_c);
   }
-  madvise(map_v, (size_t)len_d, MADV_SEQUENTIAL);
-
-  c3_o ret_o = u3_blob_save(pax_c, (const c3_y*)map_v, len_d, mug_h, seq_h);
-  munmap(map_v, (size_t)len_d);
-  return ret_o;
+  return ok_o;
 }
 
-/* u3_blob_load(): read blob into a loom atom.
-**
-**   Uses mmap() and u3i_slab to handle blobs of any size, including >4 GiB.
-**   The mapping is released immediately after the loom copy.
+/* u3_blob_stage(): write [len_d] bytes to a new staging file.
 */
-u3_weak
-u3_blob_load(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+c3_o
+u3_blob_stage(const c3_c* pax_c,
+              const c3_y* dat_y,
+              c3_d        len_d,
+              c3_c*       stg_c)
 {
-  c3_d        len_d = 0;
-  const c3_y* map_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
-  if ( !map_y ) {
-    return u3_none;
+  c3_i fid_i = _blob_stage_open(pax_c, stg_c);
+
+  if ( -1 == fid_i ) {
+    return c3n;
+  }
+  return _blob_stage_done(fid_i, stg_c,
+                          _blob_stage_write(fid_i, dat_y, (c3_z)len_d));
+}
+
+/* u3_blob_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
+*/
+c3_o
+u3_blob_stage_fd(const c3_c* pax_c,
+                 c3_i        fid_i,
+                 c3_d        len_d,
+                 c3_c*       stg_c)
+{
+  c3_i stg_i = _blob_stage_open(pax_c, stg_c);
+  c3_o ok_o  = c3y;
+
+  if ( -1 == stg_i ) {
+    return c3n;
   }
 
-  //  use u3i_slab (c3_d length) to correctly handle blobs >4 GiB.
-  //  bloq 3 = bytes; len_d = byte count.
-  //
-  //  NB: use u3i_slab_init (not u3i_slab_bare) so the trailing bytes of
-  //  the last loom word are zeroed when len_d isn't word-aligned.
-  //  Otherwise u3r_met/u3r_word/etc. would read garbage from those bytes.
-  //
-  u3i_slab sab_u;
-  u3i_slab_init(&sab_u, 3, len_d);
-  memcpy(sab_u.buf_y, map_y, (size_t)len_d);
-  u3_blob_umap(map_y, len_d);
+  {
+    c3_y buf_y[65536];
 
-  return u3i_slab_mint_bytes(&sab_u);
+    while ( len_d ) {
+      size_t  ask_i = ( len_d < sizeof(buf_y) ) ? (size_t)len_d : sizeof(buf_y);
+      ssize_t got_i = read(fid_i, buf_y, ask_i);
+
+      if ( got_i <= 0 ) {
+        if ( (got_i < 0) && (EINTR == errno) ) {
+          continue;
+        }
+        fprintf(stderr, "blob: stage: read: %s\r\n",
+                got_i ? strerror(errno) : "short file");
+        ok_o = c3n;
+        break;
+      }
+      if ( c3n == (ok_o = _blob_stage_write(stg_i, buf_y, (c3_z)got_i)) ) {
+        break;
+      }
+      len_d -= (c3_d)got_i;
+    }
+  }
+
+  return _blob_stage_done(stg_i, stg_c, ok_o);
 }
 
 /* u3_blob_exists(): check whether a blob file exists.
@@ -421,6 +1012,29 @@ u3_blob_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
   u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+
+  //  a wipe is driven by the blob's refcount reaching zero, so no reader
+  //  can still hold it open; an open hand here is an accounting bug.
+  //  posix keeps the inode alive for the reader regardless; windows
+  //  refuses the unlink, which the error below reports.
+  //
+  {
+    c3_d      bid_d = _blob_bid(mug_h, seq_h);
+    u3a_road* rod_u = &(u3H->rod_u);
+    c3_w      num_w = 0;
+
+    while ( rod_u ) {
+      if ( _blob_hand_find(rod_u, bid_d) ) {
+        num_w++;
+      }
+      rod_u = rod_u->kid_p ? u3to(u3a_road, rod_u->kid_p) : 0;
+    }
+
+    if ( num_w ) {
+      fprintf(stderr, "blob: wipe: %08" PRIx32 "/%08" PRIx32 ": open on %"
+                      PRIc3_w " road(s)\r\n", mug_h, seq_h, num_w);
+    }
+  }
 
   if ( 0 != unlink(fil_c) && ENOENT != errno ) {
     fprintf(stderr, "blob: failed to delete %s: %s\r\n",
@@ -587,8 +1201,10 @@ u3_blob_move_stg(const c3_c* pax_c,
   }
   madvise(map_v, (size_t)map_d, MADV_SEQUENTIAL);
 
-  //  the atom's byte length: what lands in the store must be canonical
-  //  (see u3_blob_save).  the file is trimmed to match further down.
+  //  the atom's byte length: what lands in the store must be canonical,
+  //  so the file is trimmed to match further down.  content whose atom
+  //  the loom would keep direct has no bob representation (see
+  //  U3_BLOB_MIN), and all-zero content lands there too, denoting 0.
   //
   len_d = _blob_sig((const c3_y*)map_v, map_d);
 
@@ -692,92 +1308,6 @@ u3_blob_move_stg(const c3_c* pax_c,
   return c3y;
 }
 
-/* u3_blob_mmap(): mmap blob file for direct byte access.
-*/
-const c3_y*
-u3_blob_mmap(const c3_c* pax_c, c3_h mug_h, c3_h seq_h, c3_d* len_d)
-{
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
-
-  struct stat st_u;
-  if ( -1 == stat(fil_c, &st_u) ) {
-    fprintf(stderr, "blob: map: stat failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  *len_d = (c3_d)st_u.st_size;
-  if ( 0 == *len_d ) {
-    return 0;
-  }
-
-  c3_i fid_i = open(fil_c, O_RDONLY);
-  if ( -1 == fid_i ) {
-    fprintf(stderr, "blob: map: open failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  void* map_v = mmap(0, (size_t)*len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
-
-  if ( MAP_FAILED == map_v ) {
-    fprintf(stderr, "blob: map: mmap failed %s: %s\r\n",
-            fil_c, strerror(errno));
-    return 0;
-  }
-
-  madvise(map_v, (size_t)*len_d, MADV_SEQUENTIAL);
-  return (const c3_y*)map_v;
-}
-
-/* u3_blob_umap(): release mapping returned by u3_blob_mmap().
-*/
-void
-u3_blob_umap(const c3_y* ptr_y, c3_d len_d)
-{
-  if ( ptr_y && len_d ) {
-    munmap((void*)ptr_y, (size_t)len_d);
-  }
-}
-
-/* u3_blob_met(): compute bit-length of blob content without full materialization.
-**
-**   Scans backward from end of file to find last non-zero byte, then
-**   returns (pos * 8 + 8 - clz(byte)).  This matches u3r_met(0, atom).
-**   Returns 0 if blob is missing, empty, or all-zero bytes.
-*/
-c3_d
-u3_blob_met(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
-{
-  c3_d        len_d = 0;
-  const c3_y* byt_y = u3_blob_mmap(pax_c, mug_h, seq_h, &len_d);
-  if ( !byt_y ) {
-    return 0;
-  }
-
-  //  scan backward for last non-zero byte (strips trailing zeroes)
-  //
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-
-  c3_d met_d = 0;
-  if ( pos_d > 0 ) {
-    c3_y top_y = byt_y[pos_d - 1];
-    //  bit count = (pos_d - 1) * 8 + (8 - count_of_leading_zeros_in_top_y)
-    //  __builtin_clz operates on unsigned int (32 bits); subtract 24 to get
-    //  the leading-zero count within just the low byte.
-    //
-    c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-    met_d = (pos_d - 1) * 8 + (c3_d)(8 - clz_y);
-  }
-
-  u3_blob_umap(byt_y, len_d);
-  return met_d;
-}
 /* u3_blob_bsink: streaming byte sink for blob-aware cue.
 **
 **   receives a large atom's bytes in chunks, writes them to a staging

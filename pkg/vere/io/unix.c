@@ -469,43 +469,59 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     return 0;
   }
 
-  //  bob atom: stream from blob store to file
+  //  bob atom: stream from the blob store to the file through a
+  //  windowed view
   //
   if ( c3y == u3a_is_bob(dat) ) {
-    c3_h bob_mug_h = u3a_bob_mug(dat);
-    c3_h bob_seq_h = u3a_bob_seq(dat);
-    c3_c src_c[8192];
-    u3_blob_path(src_c, u3C.dir_c, bob_mug_h, bob_seq_h);
+    u3r_view vue_u;
 
-    c3_i src_i = open(src_c, O_RDONLY);
-    if ( src_i < 0 ) {
-      u3l_log("error opening blob %s for reading: %s",
-              src_c, strerror(errno));
+    if ( c3n == u3r_view_open(&vue_u, dat) ) {
+      u3l_log("error opening blob %08" PRIx32 "/%08" PRIx32 " for reading",
+              u3a_bob_mug(dat), u3a_bob_seq(dat));
       close(fid_i);
       u3z(mim);
       return 0;
     }
 
     c3_y buf_y[65536];
-    ssize_t got_i;
-    while ( (got_i = read(src_i, buf_y, sizeof(buf_y))) > 0 ) {
+    c3_d off_d = 0;
+    c3_d len_d = vue_u.len_w;
+
+    while ( off_d < len_d ) {
+      c3_z ask_z = ( (len_d - off_d) < sizeof(buf_y) )
+                 ? (c3_z)(len_d - off_d)
+                 : sizeof(buf_y);
+      c3_z got_z = u3r_view_read(&vue_u, off_d, buf_y, ask_z);
+
+      if ( 0 == got_z ) {
+        u3l_log("error reading blob %08" PRIx32 "/%08" PRIx32,
+                u3a_bob_mug(dat), u3a_bob_seq(dat));
+        u3r_view_done(&vue_u);
+        close(fid_i);
+        u3z(mim);
+        return 0;
+      }
+
       c3_y* ptr_y = buf_y;
-      ssize_t rem_i = got_i;
-      while ( rem_i > 0 ) {
-        ssize_t wrt_i = write(fid_i, ptr_y, rem_i);
+      c3_z  rem_z = got_z;
+      while ( rem_z ) {
+        ssize_t wrt_i = write(fid_i, ptr_y, rem_z);
         if ( wrt_i <= 0 ) {
           u3l_log("error writing %s: %s", pax_c, strerror(errno));
-          close(src_i);
+          u3r_view_done(&vue_u);
           close(fid_i);
           u3z(mim);
           return 0;
         }
         ptr_y += wrt_i;
-        rem_i -= wrt_i;
+        rem_z -= (c3_z)wrt_i;
       }
+
+      off_d += got_z;
     }
-    close(src_i);
-    mug_h = bob_mug_h;
+
+    u3r_view_done(&vue_u);
+    mug_h = u3a_bob_mug(dat);
   }
   else {
     //  normal atom: materialize and write in chunks
@@ -1066,57 +1082,15 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
   //  large files: stage in .urb/bob/stg/, install via the %blob writ
   //
   if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
-    //  build staging path
-    //
     c3_c stg_c[8192];
-    snprintf(stg_c, sizeof(stg_c), "%s/.urb/bob/stg/unix-XXXXXX",
-             unx_u->pax_c);
-
-    c3_i stg_i = mkstemp(stg_c);
-    if ( stg_i < 0 ) {
-      u3l_log("unix: mkstemp failed for %s: %s",
-              fil_u->pax_c, strerror(errno));
-      close(fid_i);
-      return u3_nul;
-    }
-
-    //  stream file to staging area in 64K chunks
-    //
-    c3_y  buf_y[65536];
-    c3_o  ok_o = c3y;
-    ssize_t got_i;
-    while ( (got_i = read(fid_i, buf_y, sizeof(buf_y))) > 0 ) {
-      c3_y*   ptr_y = buf_y;
-      ssize_t rem_i = got_i;
-      while ( rem_i > 0 ) {
-        ssize_t wrt_i = write(stg_i, ptr_y, (size_t)rem_i);
-        if ( wrt_i <= 0 ) {
-          u3l_log("unix: write to staging file failed: %s", strerror(errno));
-          ok_o = c3n;
-          break;
-        }
-        ptr_y += wrt_i;
-        rem_i -= wrt_i;
-      }
-      if ( c3n == ok_o ) break;
-    }
+    c3_o ok_o = u3_blob_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
 
     close(fid_i);
 
-    if ( got_i < 0 ) {
-      u3l_log("unix: read from %s failed: %s",
-              fil_u->pax_c, strerror(errno));
-      ok_o = c3n;
-    }
-
     if ( c3n == ok_o ) {
-      close(stg_i);
-      c3_unlink(stg_c);
+      u3l_log("unix: could not stage %s", fil_u->pax_c);
       return u3_nul;
     }
-
-    c3_sync(stg_i);
-    close(stg_i);
 
     //  find the mount name for this file (walk parent dirs up to mon_u)
     //
@@ -1440,43 +1414,14 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
 
   len_ws = buf_u.st_size;
 
-  //  large files: stream into blob store
+  //  the initial scan runs at boot, before mars can install anything,
+  //  and mars alone writes the store: a large file goes in as a loom
+  //  atom here, and the watcher stages any later change
   //
   if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
-    c3_h  bob_mug_h;
-    c3_h  bob_seq_h;
-
-    if ( c3y == u3_blob_save_fd(u3C.dir_c, fid_i,
-                                (c3_d)len_ws, &bob_mug_h, &bob_seq_h) )
-    {
-      if ( close(fid_i) < 0 ) {
-        u3l_log("unix: error closing initial file %s: %s", pax_c, strerror(errno));
-      }
-
-      u3_noun rel_pax = _unix_string_to_path_helper(pax_c + strlen(bas_c) + 1);
-      u3_noun mim     = u3nt(c3__text, u3i_string("plain"), u3_nul);
-      u3_atom atm     = u3i_blob(bob_mug_h, bob_seq_h);
-      u3_noun dat     = u3nt(mim, (u3_atom)len_ws, atm);
-
-      return u3nc(u3nt(rel_pax, u3_nul, dat), u3_nul);
-    }
-
-    //  no blob: at this size the only content the store refuses is content
-    //  denoting an atom too small to blobify, i.e. all zeros (U3_BLOB_MIN).
-    //  the loom path below builds that atom correctly, and is also the right
-    //  recovery if the save simply failed — so rewind and fall through.
-    //
-    u3l_log("blob: no blob for large initial file %s, reading into loom", pax_c);
-
-    if ( -1 == lseek(fid_i, 0, SEEK_SET) ) {
-      u3l_log("error rewinding initial file %s: %s", pax_c, strerror(errno));
-      close(fid_i);
-      return u3_nul;
-    }
+    u3l_log("unix: large initial file %s read into the loom", pax_c);
   }
 
-  //  small files: existing path — read into buffer
-  //
   {
     c3_y* dat_y = c3_malloc(len_ws);
 

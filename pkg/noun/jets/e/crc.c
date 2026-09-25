@@ -23,7 +23,7 @@ u3qe_crc32(u3_noun input_octs)
     return u3m_error("subtract-underflow");
   }
 
-  //  zero-copy view of the atom's significant bytes (mmap for bob).
+  //  zero-copy view of the atom's significant bytes (blob hand for bob).
   //  NB: the legacy vat_u->buf_w path returned seq_w for bob atoms;
   //  u3r_view gives the actual file bytes.
   //

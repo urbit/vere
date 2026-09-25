@@ -292,19 +292,11 @@ _cr_sing_atom(u3_atom a, u3_noun b)
       return (  (a_u->mug_w   == b_u->mug_w)
              && (a_u->buf_w[0] == b_u->buf_w[0]) ) ? c3y : c3n;
     }
-    //  bob vs normal (or normal vs bob): materialize the bob
-    //  XX: read bytes from disk for streaming bytewise comparison
+    //  bob vs normal (or normal vs bob): compare bytes from disk in
+    //  windows, without materializing the bob
     //
     if ( (c3y == a_bob) || (c3y == b_bob) ) {
-      u3_atom bob = (c3y == a_bob) ? a : (u3_atom)b;
-      u3_atom nrm = (c3y == a_bob) ? (u3_atom)b : a;
-      u3_atom mat = u3r_blob_load(bob, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return c3n;
-      }
-      c3_o ret_o = _cr_sing_atom(mat, nrm);
-      u3z(mat);
-      return ret_o;
+      return ( 0 == u3r_comp(a, b) ) ? c3y : c3n;
     }
 
     u3a_atom* a_u = u3a_to_ptr(a);
@@ -744,25 +736,10 @@ u3r_nord(u3_noun a,
           return 2;
         }
         else {
-          //  materialize bob atoms before comparing word buffers
+          //  bob atoms compare from disk in windows, never materialized
           //
-          if ( c3y == u3a_is_bob(a) ) {
-            u3_atom mat = u3r_blob_load(a, u3C.dir_c);
-            if ( u3_none == mat ) {
-              return 0;
-            }
-            u3_atom ret = u3r_nord(mat, b);
-            u3z(mat);
-            return ret;
-          }
-          if ( c3y == u3a_is_bob(b) ) {
-            u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-            if ( u3_none == mat ) {
-              return 2;
-            }
-            u3_atom ret = u3r_nord(a, mat);
-            u3z(mat);
-            return ret;
+          if ( (c3y == u3a_is_bob(a)) || (c3y == u3a_is_bob(b)) ) {
+            return (c3_w)(1 + u3r_comp(a, b));
           }
 
           u3a_atom* a_u = u3a_to_ptr(a);
@@ -995,20 +972,11 @@ u3r_met(c3_y  a_y,
     daz_w = b;
   }
   else {
-    //  bob atoms: use blob met (only reads last byte of file, no loom allocation)
-    //  then convert the bit-count to the requested bloq unit [a_y]
+    //  bob atoms: the full-width count, from the file's tail; callers
+    //  that need the width past c3_w use u3r_met_d directly
     //
     if ( c3y == u3a_is_bob(b) ) {
-      c3_d bit_d = u3r_blob_met(b);
-      if ( 0 == bit_d ) {
-        //  failed to read or empty blob: bail
-        return (c3_w)u3m_bail(c3__fail);
-      }
-      //  convert bit count to a_y-bloq count (rounding up), same as the
-      //  formula below: (bit_d + ((1<<a_y)-1)) >> a_y
-      //
-      c3_d rnd_d = (c3_d)((1 << a_y) - 1);
-      return (c3_w)((bit_d + rnd_d) >> a_y);
+      return (c3_w)u3r_met_d(a_y, b);
     }
 
     u3a_atom* b_u = u3a_to_ptr(b);
@@ -1036,6 +1004,24 @@ u3r_met(c3_y  a_y,
   return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
 }
 
+/* _cr_bob_bytes(): [len_z] bytes at byte offset [off_d] of bob [a].
+**
+**   A windowed view: bytes past the end of the file are zero, and every
+**   fixed-width reader on a bob is a window read, never a
+**   materialization.  Bails %fail if the file is missing.
+*/
+static void
+_cr_bob_bytes(u3_atom a, c3_d off_d, c3_y* dst_y, c3_z len_z)
+{
+  u3r_view vue_u;
+
+  if ( c3n == u3r_view_open(&vue_u, a) ) {
+    u3m_bail(c3__fail);
+  }
+  u3r_view_read(&vue_u, off_d, dst_y, len_z);
+  u3r_view_done(&vue_u);
+}
+
 /* u3r_bit():
 **
 **   Return bit (a_w) of (b).
@@ -1054,16 +1040,10 @@ u3r_bit(c3_w    a_w,
     else return (1 & (b >> a_w));
   }
   else {
-    //  materialize bob atoms before extracting bit
-    //
     if ( c3y == u3a_is_bob(b) ) {
-      u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return 0;
-      }
-      c3_b ret_b = u3r_bit(a_w, mat);
-      u3z(mat);
-      return ret_b;
+      c3_y byt_y;
+      _cr_bob_bytes(b, (c3_d)a_w >> 3, &byt_y, 1);
+      return 1 & (byt_y >> (a_w & 7));
     }
 
     u3a_atom* b_u   = u3a_to_ptr(b);
@@ -1099,20 +1079,15 @@ u3r_byte(c3_w    a_w,
     else return (255 & (b >> (a_w << 3)));
   }
 
-  //  bob atom: mmap the backing file and read one byte.  mmap/munmap
-  //  is per-call overhead — callers that scan many bytes should open
-  //  a u3r_view themselves and index into vu.byt_y directly, rather
-  //  than calling u3r_byte in a loop.
+  //  bob atom: one byte through a windowed view.  on an inner road the
+  //  hand is retained, so a loop pays a list walk per call; callers
+  //  that scan many bytes should still hold one view and read windows.
   //
   if ( c3y == u3a_is_bob(b) ) {
-    c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_mmap(b, &map_d);
-    if ( !map_y ) {
-      return 0;
-    }
-    c3_y res = ((c3_d)a_w < map_d) ? map_y[a_w] : 0;
-    u3r_blob_umap(map_y, map_d);
-    return res;
+    c3_y res_y;
+
+    _cr_bob_bytes(b, a_w, &res_y, 1);
+    return res_y;
   }
 
   {
@@ -1153,16 +1128,8 @@ u3r_bytes(c3_w    a_w,
     }
   }
   else {
-    //  materialize bob atoms before extracting bytes
-    //
     if ( c3y == u3a_is_bob(d) ) {
-      u3_atom mat = u3r_blob_load(d, u3C.dir_c);
-      if ( u3_none == mat ) {
-        memset(c_y, 0, b_w);
-        return;
-      }
-      u3r_bytes(a_w, b_w, c_y, mat);
-      u3z(mat);
+      _cr_bob_bytes(d, a_w, c_y, b_w);
       return;
     }
 
@@ -1226,86 +1193,243 @@ u3r_bytes_all(c3_w* len_w, u3_atom a)
   return u3r_bytes_alloc(0, met_w, a);
 }
 
-/* u3r_view_init(): open a blob-aware read-only byte view of (a).
+/* _cr_view_blank(): reset [vue_u] to the empty loom view.
 */
-void
-u3r_view_init(u3r_view* vue_u, u3_atom a)
+static inline void
+_cr_view_blank(u3r_view* vue_u)
 {
+  vue_u->byt_y = 0;
+  vue_u->len_w = 0;
+  vue_u->kin_e = u3r_view_loom;
+  vue_u->han_u = 0;
+  vue_u->raw_d = 0;
+}
+
+/* u3r_view_open(): open a windowed view of [a], mapping nothing.
+*/
+c3_o
+u3r_view_open(u3r_view* vue_u, u3_atom a)
+{
+  _cr_view_blank(vue_u);
+
+  //  bob: the road's hand, with its cached bit-length for the byte
+  //  count.  the hand is on the road's list before anything else can
+  //  bail, so no unwind leaks it.  no bytes until read or a mapping.
+  //
+  if ( c3y == u3a_is_bob(a) ) {
+    u3_blob_hand* han_u = u3_blob_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
+    c3_d          met_d;
+
+    if ( !han_u ) {
+      return c3n;
+    }
+
+    if ( !(met_d = u3_blob_hand_met(han_u)) ) {
+      u3_blob_close(han_u);
+      return c3n;
+    }
+
+    vue_u->len_w = (c3_w)((met_d + 7) >> 3);
+    vue_u->kin_e = u3r_view_blob;
+    vue_u->han_u = han_u;
+    return c3y;
+  }
+
   c3_w met_w = u3r_met(3, a);
-  vue_u->len_w   = met_w;
-  vue_u->kin_e   = u3r_view_loom;
-  vue_u->u.map_d = 0;
-  vue_u->byt_y   = 0;
 
   if ( 0 == met_w ) {
-    return;
+    return c3y;
   }
 
-  if ( c3y == u3a_is_bob(a) ) {
-    c3_d        map_d = 0;
-    const c3_y* map_y = u3r_blob_mmap(a, &map_d);
-    if ( !map_y ) u3m_bail(c3__fail);
-    vue_u->byt_y   = map_y;
-    vue_u->u.map_d = map_d;
-    vue_u->kin_e   = u3r_view_blob;
-    return;
-  }
-
+  //  a direct atom has no address: its value is kept in the view and
+  //  viewed there.  an indirect atom's word buffer is borrowed, zero-
+  //  padded to its last word by the loom
+  //
   if ( _(u3a_is_cat(a)) ) {
-    vue_u->u.raw_d = a;
-    vue_u->byt_y   = (const c3_y*)&vue_u->u.raw_d;
-    vue_u->kin_e   = u3r_view_flat;
+    vue_u->raw_d = a;
+    vue_u->byt_y = (const c3_y*)&vue_u->raw_d;
+    vue_u->len_w = met_w;
+    vue_u->kin_e = u3r_view_flat;
   }
   else {
     c3_w len_w;
     vue_u->byt_y = (const c3_y*)u3r_word_buffer(&a, &len_w);
-    //  kin_e stays loom
+    vue_u->len_w = met_w;
+  }
+  return c3y;
+}
+
+/* u3r_view_read(): [len_z] bytes at [off_d] of the view's atom, zero
+**   past its end.
+*/
+c3_z
+u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+{
+  c3_z got_z = 0;
+
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    //  bounded by the file, not the mapping, so the zero fill past the
+    //  end is this function's whether the bytes come from the road's
+    //  mapping or from a pread
+    //
+    u3_blob_hand* han_u = vue_u->han_u;
+
+    if ( off_d < han_u->len_d ) {
+      c3_d rem_d = han_u->len_d - off_d;
+      c3_z ask_z = ( (c3_d)len_z < rem_d ) ? len_z : (c3_z)rem_d;
+
+      if ( han_u->map_y ) {
+        memcpy(dst_y, han_u->map_y + off_d, ask_z);
+        got_z = ask_z;
+      }
+      else {
+        got_z = u3_blob_read(han_u, off_d, dst_y, ask_z);
+      }
+    }
+  }
+  else if ( off_d < vue_u->len_w ) {
+    c3_z rem_z = vue_u->len_w - (c3_w)off_d;
+    got_z = ( len_z < rem_z ) ? len_z : rem_z;
+    memcpy(dst_y, vue_u->byt_y + off_d, got_z);
+  }
+
+  memset(dst_y + got_z, 0, len_z - got_z);
+  return got_z;
+}
+
+/* _cr_view_pad(): fill a loom pad of [wid_w] bytes with [len_w] bytes
+**   of source and zeros.
+**
+**   [src_y] may be 0 for a zero source.  the allocation can bail %meme;
+**   the caller must hold nothing that a bail would not reclaim.
+*/
+static void
+_cr_view_pad(u3r_view* vue_u, const c3_y* src_y, c3_w len_w, c3_w wid_w)
+{
+  c3_y* pad_y = u3a_malloc(wid_w);
+
+  vue_u->kin_e = u3r_view_heap;
+
+  if ( len_w && src_y ) {
+    memcpy(pad_y, src_y, len_w);
+  }
+  memset(pad_y + len_w, 0, wid_w - len_w);
+
+  vue_u->byt_y = pad_y;
+  vue_u->len_w = wid_w;
+}
+
+/* u3r_view_met(): bit-length of the viewed atom.
+*/
+c3_d
+u3r_view_met(u3r_view* vue_u)
+{
+  c3_y top_y;
+
+  if ( 0 == vue_u->len_w ) {
+    return 0;
+  }
+
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    u3r_view_read(vue_u, vue_u->len_w - 1, &top_y, 1);
+  }
+  else {
+    top_y = vue_u->byt_y[vue_u->len_w - 1];
+  }
+
+  return (((c3_d)vue_u->len_w - 1) << 3) + c3_bits_word(top_y);
+}
+
+/* u3r_view_init(): open a flat view of the significant bytes of [a].
+*/
+void
+u3r_view_init(u3r_view* vue_u, u3_atom a)
+{
+  if ( c3n == u3r_view_open(vue_u, a) ) {
+    u3m_bail(c3__fail);
+  }
+
+  //  bob: the bytes are the hand's mapping, so a view costs no copy
+  //
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    const c3_y* byt_y = u3_blob_data(vue_u->han_u, 0);
+
+    if ( !byt_y ) {
+      u3r_view_done(vue_u);
+      u3m_bail(c3__fail);
+    }
+    vue_u->byt_y = byt_y;
   }
 }
 
-/* u3r_view_padd(): open a zero-padded view of [wid_w] bytes.
+/* u3r_view_padd(): open a flat view of exactly [wid_w] bytes of [a].
 */
 void
 u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w)
 {
-  u3r_view_init(vue_u, a);
+  if ( c3n == u3r_view_open(vue_u, a) ) {
+    u3m_bail(c3__fail);
+  }
+
+  //  bob: the hand's mapping is widened to the pad, its zero tail
+  //  being the padding, so a bob pad never allocates.  the one case
+  //  the hand refuses, a wider pad while another view holds it, reads
+  //  the bytes into an ordinary pad instead.
+  //
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    u3_blob_hand* han_u = vue_u->han_u;
+    c3_w          len_w = vue_u->len_w;
+    const c3_y*   byt_y = u3_blob_data(han_u, wid_w);
+
+    if ( byt_y ) {
+      vue_u->byt_y = byt_y;
+      vue_u->len_w = wid_w;
+      return;
+    }
+
+    if ( (c3_d)wid_w <= u3_blob_hand_pad(han_u) ) {
+      u3r_view_done(vue_u);
+      u3m_bail(c3__fail);
+    }
+
+    //  the pad is filled through the hand and then the hand released:
+    //  the pad allocation, which can bail, comes first, while the hand
+    //  is still on the road's list
+    //
+    _cr_view_pad(vue_u, 0, 0, wid_w);
+
+    if ( len_w != u3_blob_read(han_u, 0, (c3_y*)vue_u->byt_y, len_w) ) {
+      u3r_view_done(vue_u);
+      u3_blob_close(han_u);
+      u3m_bail(c3__fail);
+    }
+    u3_blob_close(han_u);
+    return;
+  }
 
   if ( vue_u->len_w >= wid_w ) {
     vue_u->len_w = wid_w;
     return;
   }
 
-  c3_y* pad_y = u3a_malloc(wid_w);
-  if ( vue_u->len_w && vue_u->byt_y ) {
-    memcpy(pad_y, vue_u->byt_y, vue_u->len_w);
-  }
-  memset(pad_y + vue_u->len_w, 0, wid_w - vue_u->len_w);
-
-  u3r_view_done(vue_u);
-
-  vue_u->byt_y = pad_y;
-  vue_u->len_w = wid_w;
-  vue_u->kin_e = u3r_view_heap;
+  //  a loom or direct atom shorter than the pad is copied into a loom
+  //  pad.  the source is borrowed, or is raw_d, so it needs no release
+  //  and survives until the copy is done
+  //
+  _cr_view_pad(vue_u, vue_u->byt_y, vue_u->len_w, wid_w);
 }
 
-/* u3r_view_done(): release the view's backing memory.
+/* u3r_view_done(): release the view.
 */
 void
 u3r_view_done(u3r_view* vue_u)
 {
-  //  sat_e names what byt_y points at and thus how to release it: a bob
-  //  view owns an mmap, a padded view owns a heap buffer, and loom/flat
-  //  views borrow (loom word buffer / inline cat bytes) and free nothing.
-  //
   switch ( vue_u->kin_e ) {
-    case u3r_view_blob: u3r_blob_umap(vue_u->byt_y, vue_u->u.map_d); break;
-    case u3r_view_heap: u3a_free((void*)vue_u->byt_y);                break;
-    default: break;  //  u3r_view_loom / u3r_view_flat: nothing to release
+    case u3r_view_blob: u3_blob_close(vue_u->han_u); break;
+    case u3r_view_heap: u3a_free((void*)vue_u->byt_y); break;
+    default: break;  //  loom and flat hold nothing
   }
-  vue_u->byt_y   = 0;
-  vue_u->len_w   = 0;
-  vue_u->kin_e   = u3r_view_loom;
-  vue_u->u.map_d = 0;
+  _cr_view_blank(vue_u);
 }
 
 /* _mpz_init_set_word():
@@ -1340,16 +1464,14 @@ u3r_mp(mpz_t   a_mp,
     _mpz_init_set_word(a_mp, b);
   }
   else {
-    //  bob atoms must be materialized before import
+    //  a bob imports from its view: heap bytes, no loom atom
     //
     if ( c3y == u3a_is_bob(b) ) {
-      u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-      if ( u3_none == mat ) {
-        mpz_init(a_mp);
-        return;
-      }
-      u3r_mp(a_mp, mat);
-      u3z(mat);
+      u3r_view vue_u;
+      u3r_view_init(&vue_u, b);
+      mpz_init2(a_mp, (c3_d)vue_u.len_w << 3);
+      mpz_import(a_mp, vue_u.len_w, -1, 1, 0, 0, vue_u.byt_y);
+      u3r_view_done(&vue_u);
       return;
     }
 
@@ -1382,15 +1504,11 @@ u3r_short(c3_w  a_w,
 
   if ( c3y == u3a_is_cat(b) ) wor_w = b;
   else {
-    //  materialize bob atoms before extracting short
+    //  XX assumes little-endian, like the loom path below
     //
     if ( c3y == u3a_is_bob(b) ) {
-      u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return 0;
-      }
-      c3_s ret_s = u3r_short(a_w, mat);
-      u3z(mat);
+      c3_s ret_s;
+      _cr_bob_bytes(b, (c3_d)a_w << 1, (c3_y*)&ret_s, sizeof(ret_s));
       return ret_s;
     }
 
@@ -1445,15 +1563,9 @@ u3r_half(c3_w    a_w,
 #endif
   }
   else {
-    //  materialize bob atoms before extracting half-word
-    //
     if ( c3y == u3a_is_bob(b) ) {
-      u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return 0;
-      }
-      c3_h ret_h = u3r_half(a_w, mat);
-      u3z(mat);
+      c3_h ret_h;
+      _cr_bob_bytes(b, (c3_d)a_w << 2, (c3_y*)&ret_h, sizeof(ret_h));
       return ret_h;
     }
 
@@ -1493,15 +1605,9 @@ u3r_chub(c3_w  a_w,
     else return b;
   }
   else {
-    //  materialize bob atoms before extracting chub
-    //
     if ( c3y == u3a_is_bob(b) ) {
-      u3_atom mat = u3r_blob_load(b, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return 0;
-      }
-      c3_d ret_d = u3r_chub(a_w, mat);
-      u3z(mat);
+      c3_d ret_d;
+      _cr_bob_bytes(b, (c3_d)a_w << 3, (c3_y*)&ret_d, sizeof(ret_d));
       return ret_d;
     }
 
@@ -1603,16 +1709,9 @@ u3r_halfs(c3_w    a_w,
     }
   }
   else {
-    //  materialize bob atoms before extracting half-words
-    //
     if ( c3y == u3a_is_bob(d) ) {
-      u3_atom mat = u3r_blob_load(d, u3C.dir_c);
-      if ( u3_none == mat ) {
-        memset((c3_y*)c_h, 0, b_w << u3a_half_bytes_shift);
-        return;
-      }
-      u3r_halfs(a_w, b_w, c_h, mat);
-      u3z(mat);
+      _cr_bob_bytes(d, (c3_d)a_w << u3a_half_bytes_shift,
+                    (c3_y*)c_h, (c3_z)b_w << u3a_half_bytes_shift);
       return;
     }
 
@@ -1682,16 +1781,9 @@ u3r_chubs(c3_w    a_w,
     }
   }
   else {
-    //  materialize bob atoms before extracting chubs
-    //
     if ( c3y == u3a_is_bob(d) ) {
-      u3_atom mat = u3r_blob_load(d, u3C.dir_c);
-      if ( u3_none == mat ) {
-        memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
-        return;
-      }
-      u3r_chubs(a_w, b_w, c_d, mat);
-      u3z(mat);
+      _cr_bob_bytes(d, (c3_d)a_w << u3a_chub_bytes_shift,
+                    (c3_y*)c_d, (c3_z)b_w << u3a_chub_bytes_shift);
       return;
     }
 
@@ -1968,15 +2060,26 @@ u3r_chop(c3_g  met_g,
     src_w = &src;
   }
   else {
-    //  bob atoms must be materialized before chopping
+    //  a bob is chopped from a heap window holding just the words the
+    //  copy touches.  a word boundary is a bloq boundary for every bloq
+    //  size, so the window's first bloq is exact.
     //
     if ( c3y == u3a_is_bob(src) ) {
-      u3_atom mat = u3r_blob_load(src, u3C.dir_c);
-      if ( u3_none == mat ) {
+      if ( 0 == wid_w ) {
         return;
       }
-      u3r_chop(met_g, fum_w, wid_w, tou_w, dst_w, mat);
-      u3z(mat);
+
+      c3_d beg_d = ((c3_d)fum_w << met_g) >> u3a_word_bits_log;
+      c3_d end_d = ((((c3_d)fum_w + wid_w) << met_g) + u3a_word_bits - 1)
+                 >> u3a_word_bits_log;
+      c3_w win_w = (c3_w)(end_d - beg_d);
+      c3_w rel_w = fum_w - (c3_w)((beg_d << u3a_word_bits_log) >> met_g);
+      c3_w* buf_w = c3_malloc((size_t)win_w << u3a_word_bytes_shift);
+
+      _cr_bob_bytes(src, beg_d << u3a_word_bytes_shift,
+                    (c3_y*)buf_w, (c3_z)win_w << u3a_word_bytes_shift);
+      u3r_chop_words(met_g, rel_w, wid_w, tou_w, dst_w, win_w, buf_w);
+      c3_free(buf_w);
       return;
     }
 
@@ -2236,18 +2339,16 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
         u3a_atom* vat_u = (u3a_atom*)veb_u;
         c3_h      mug_h;
         //  bob atoms: mug was set from blob content hash on creation;
-        //  materialize only if somehow missing (should not occur)
+        //  recompute from a view only if somehow missing (should not occur)
         //
         if ( c3y == u3a_is_bob(veb) ) {
           if ( vat_u->mug_w ) {
             return (c3_h)vat_u->mug_w;
           }
-          u3_atom mat = u3r_blob_load(veb, u3C.dir_c);
-          if ( u3_none == mat ) {
-            return (c3_h)u3m_bail(c3__fail);
-          }
-          mug_h = u3r_mug(mat);
-          u3z(mat);
+          u3r_view vue_u;
+          u3r_view_init(&vue_u, veb);
+          mug_h = u3r_mug_bytes(vue_u.byt_y, vue_u.len_w);
+          u3r_view_done(&vue_u);
         }
         else {
           mug_h = u3r_mug_words(vat_u->buf_w, vat_u->len_w);
@@ -2451,6 +2552,20 @@ _comp_words(c3_w a_w, c3_w b_w)
   return (c3_ys)(a_w > b_w) - (c3_ys)(a_w < b_w);
 }
 
+/* _cr_comp_read(): [len_w] bytes at [off_w] of a compared atom.
+**
+**   reads stay inside the view's length, so a short count means the
+**   file was shortened under the comparison: bail rather than compare
+**   zeros.
+*/
+static void
+_cr_comp_read(u3r_view* vue_u, c3_w off_w, c3_y* dst_y, c3_w len_w)
+{
+  if ( len_w != u3r_view_read(vue_u, off_w, dst_y, len_w) ) {
+    u3m_bail(c3__fail);
+  }
+}
+
 /* u3r_comp(): compares two atoms:
 ** returns 1 if a > b, -1 if a < b, 0 if they are equal
 */
@@ -2473,28 +2588,47 @@ u3r_comp(u3_atom a, u3_atom b)
     }
   }
 
-  //  any comparison touching a bob goes through u3r_view (mmap for
-  //  bobs, heap-alloc fallback for normal atoms) and compares by
-  //  significant-byte length then MSB-first byte sequence.  The
-  //  non-bob paths below use the faster word-at-a-time compare.
+  //  any comparison touching a bob reads both sides through windowed
+  //  views from the top and compares by significant-byte length, then
+  //  MSB-first byte sequence.  neither side is ever materialized or
+  //  buffered whole.  the non-bob paths below use the faster
+  //  word-at-a-time compare.  a missing file bails %fail; the views
+  //  go with the road.
   //
   if ( (c3y == a_bob) || (c3y == b_bob) ) {
     u3r_view va_u, vb_u;
-    u3r_view_init(&va_u, a);
-    u3r_view_init(&vb_u, b);
+    c3_ys    res = 0;
 
-    c3_ys res;
+    if (  (c3n == u3r_view_open(&va_u, a))
+       || (c3n == u3r_view_open(&vb_u, b)) )
+    {
+      u3m_bail(c3__fail);
+    }
+
     if ( va_u.len_w != vb_u.len_w ) {
       res = _comp_words(va_u.len_w, vb_u.len_w);
     }
     else {
-      res = 0;
-      for ( c3_w i_w = va_u.len_w; i_w--; ) {
-        if ( va_u.byt_y[i_w] != vb_u.byt_y[i_w] ) {
-          res = (c3_ys)(va_u.byt_y[i_w] > vb_u.byt_y[i_w])
-              - (c3_ys)(va_u.byt_y[i_w] < vb_u.byt_y[i_w]);
-          break;
+      c3_y wa_y[4096];
+      c3_y wb_y[4096];
+      c3_w end_w = va_u.len_w;
+
+      while ( end_w && !res ) {
+        c3_w win_w = ( end_w < sizeof(wa_y) ) ? end_w : (c3_w)sizeof(wa_y);
+        c3_w beg_w = end_w - win_w;
+
+        _cr_comp_read(&va_u, beg_w, wa_y, win_w);
+        _cr_comp_read(&vb_u, beg_w, wb_y, win_w);
+
+        for ( c3_w i_w = win_w; i_w--; ) {
+          if ( wa_y[i_w] != wb_y[i_w] ) {
+            res = (c3_ys)(wa_y[i_w] > wb_y[i_w])
+                - (c3_ys)(wa_y[i_w] < wb_y[i_w]);
+            break;
+          }
         }
+
+        end_w = beg_w;
       }
     }
 
@@ -2526,40 +2660,96 @@ u3r_comp(u3_atom a, u3_atom b)
   return 0;
 }
 
-/* u3r_blob_load(): materialize a bob atom by loading from the blob store.
+/* u3r_blob_load(): materialize a bob atom as a loom atom.
+**
+**   u3_none if the file is missing or empty.  the slab is sized by the
+**   significant bytes and zeroed before the read, so the trailing bytes
+**   of its last word are clean and its pages are writable before
+**   pread() lands in them.  if the slab allocation bails, the view goes
+**   with the road.
 */
 u3_weak
-u3r_blob_load(u3_atom a, const c3_c* pax_c)
+u3r_blob_load(u3_atom a)
 {
+  u3r_view vue_u;
+
   u3_assert( c3y == u3a_is_bob(a) );
-  return u3_blob_load(pax_c, u3a_bob_mug(a), u3a_bob_seq(a));
+
+  if ( c3n == u3r_view_open(&vue_u, a) ) {
+    return u3_none;
+  }
+
+  {
+    c3_w     len_w = vue_u.len_w;
+    u3i_slab sab_u;
+
+    u3i_slab_init(&sab_u, 3, len_w);
+
+    if ( len_w != u3r_view_read(&vue_u, 0, sab_u.buf_y, len_w) ) {
+      fprintf(stderr, "blob: load: %08" PRIx32 "/%08" PRIx32 ": short read\r\n",
+              u3a_bob_mug(a), u3a_bob_seq(a));
+      u3i_slab_free(&sab_u);
+      u3r_view_done(&vue_u);
+      return u3_none;
+    }
+
+    u3r_view_done(&vue_u);
+    return u3i_slab_mint_bytes(&sab_u);
+  }
 }
 
-/* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
+/* u3r_blob_cut(): [wid_w] bloqs of size [met_g] from bloq [fum_d] of bob [a].
 **
-**   Returns [*len_d] bytes (NULL on failure); release with u3r_blob_umap.
-**   Uses u3C.dir_c as the pier path.  No loom allocation.
+**   u3_none if the file is missing or empty; zeros past the end, from
+**   the read's own fill.  if the slab allocation bails, the view goes
+**   with the road.
 */
-const c3_y*
-u3r_blob_mmap(u3_atom a, c3_d* len_d)
+u3_weak
+u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a)
 {
+  u3r_view vue_u;
+
+  u3_assert( met_g >= 3 );
   u3_assert( c3y == u3a_is_bob(a) );
-  return u3_blob_mmap(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a), len_d);
+
+  if ( c3n == u3r_view_open(&vue_u, a) ) {
+    return u3_none;
+  }
+
+  {
+    c3_g     shf_g = met_g - 3;
+    c3_d     off_d = fum_d << shf_g;
+    c3_d     byt_d = (c3_d)wid_w << shf_g;
+    u3i_slab sab_u;
+
+    u3i_slab_init(&sab_u, met_g, wid_w);
+    u3r_view_read(&vue_u, off_d, sab_u.buf_y, (c3_z)byt_d);
+    u3r_view_done(&vue_u);
+    return u3i_slab_mint(&sab_u);
+  }
 }
 
-/* u3r_blob_umap(): release a mapping from u3r_blob_mmap().
-*/
-void
-u3r_blob_umap(const c3_y* ptr_y, c3_d len_d)
-{
-  u3_blob_umap(ptr_y, len_d);
-}
-
-/* u3r_blob_met(): bit-length of a bob atom without materialization.
+/* u3r_met_d(): u3r_met at full width, for any atom.
 */
 c3_d
-u3r_blob_met(u3_atom a)
+u3r_met_d(c3_g a_g, u3_atom b)
 {
-  u3_assert( c3y == u3a_is_bob(a) );
-  return u3_blob_met(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
+  c3_d bit_d;
+
+  u3_assert( a_g < 64 );
+
+  if ( _(u3a_is_cat(b)) ) {
+    bit_d = c3_bits_word(b);
+  }
+  else {
+    u3r_view vue_u;
+
+    if ( c3n == u3r_view_open(&vue_u, b) ) {
+      return u3m_bail(c3__fail);
+    }
+    bit_d = u3r_view_met(&vue_u);
+    u3r_view_done(&vue_u);
+  }
+
+  return a_g ? ((bit_d + (((c3_d)1 << a_g) - 1)) >> a_g) : bit_d;
 }
