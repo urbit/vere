@@ -126,7 +126,7 @@ fn cdbFragDir(
     return b.fmt("cdb-{x}", .{h.final()});
 }
 
-const VERSION = "4.6";
+const VERSION = "5.0";
 
 const main_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .aarch64, .os_tag = .macos, .abi = null },
@@ -162,6 +162,7 @@ const BuildCfg = struct {
     urth_mass: bool = false,
     ubsan: bool = false,
     asan: bool = false,
+    vere64: bool = false,
     tracy_enable: bool = false,
     tracy_callstack: bool = false,
     tracy_no_exit: bool = false,
@@ -248,6 +249,12 @@ pub fn build(b: *std.Build) !void {
     else
         false;
 
+    const vere64 = b.option(
+        bool,
+        "vere64",
+        "Compile in 64-bit mode",
+    ) orelse false;
+
     const tracy_enable = b.option(bool, "tracy", "Enable Tracy profiler") orelse false;
     const tracy_callstack = b.option(bool, "tracy-callstack", "Enable Tracy callstack capture") orelse false;
     const tracy_no_exit = b.option(bool, "tracy-no-exit", "Wait for profiler connection before exiting") orelse false;
@@ -288,6 +295,7 @@ pub fn build(b: *std.Build) !void {
         .urth_mass = urth_mass,
         .asan = asan,
         .ubsan = ubsan,
+        .vere64 = vere64,
         .tracy_enable = tracy_enable,
         .tracy_callstack = tracy_callstack,
         .tracy_no_exit = tracy_no_exit,
@@ -390,6 +398,7 @@ fn buildBinary(
 
     try urbit_flags.appendSlice(global_flags.items);
     try urbit_flags.appendSlice(&.{
+        "-Wimplicit-fallthrough",
         "-Wno-deprecated-non-prototype",
         "-Wno-gnu-binary-literal",
         "-Wno-gnu-empty-initializer",
@@ -415,6 +424,9 @@ fn buildBinary(
 
     if (cfg.snapshot_validation)
         try urbit_flags.appendSlice(&.{"-DU3_SNAPSHOT_VALIDATION"});
+
+    if (cfg.vere64)
+        try urbit_flags.appendSlice(&.{"-DVERE64"});
 
     if (cfg.urth_mass)
         try urbit_flags.appendSlice(&.{"-DU3_URTH_MASS"});
@@ -493,18 +505,13 @@ fn buildBinary(
         .copt = copts,
     });
 
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
-    });
-
     const pkg_vere = b.dependency("pkg_vere", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
         .pace = cfg.pace,
         .version = cfg.version,
+        .vere64 = cfg.vere64,
     });
 
     const curl = b.dependency("curl", .{
@@ -589,6 +596,7 @@ fn buildBinary(
 
     if (t.os.tag == .windows) {
         urbit.linkSystemLibrary("ws2_32"); // WSA*, socket, htons, inet_*, gethostbyname, etc.
+        urbit.linkSystemLibrary("api-ms-win-core-memory-l1-1-6"); // VirtualAlloc2, MapViewOfFile3
     }
 
     const target_query: std.Target.Query = .{
@@ -623,7 +631,15 @@ fn buildBinary(
 
     urbit.linkLibrary(pkg_vere.artifact("vere"));
     urbit.linkLibrary(pkg_noun.artifact("noun"));
-    urbit.linkLibrary(pkg_past.artifact("past"));
+    if (!cfg.vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = cfg.vere64,
+        });
+        urbit.linkLibrary(pkg_past.artifact("past"));
+    }
     urbit.linkLibrary(pkg_c3.artifact("c3"));
     urbit.linkLibrary(pkg_ur.artifact("ur"));
 
@@ -718,6 +734,10 @@ fn buildBinary(
             name: []const u8,
             file: []const u8,
             deps: []const *std.Build.Step.Compile,
+            //  windows-only tests: the behaviour under test is win32's
+            win: bool = false,
+            //  posix-only tests: mkdtemp/nftw and /tmp, which mingw lacks
+            nix: bool = false,
         }{
             // pkg_ur
             .{
@@ -741,6 +761,12 @@ fn buildBinary(
                 .name = "equality-test",
                 .file = "pkg/noun/equality_tests.c",
                 .deps = noun_test_deps,
+            },
+            .{
+                .name = "events-test",
+                .file = "pkg/noun/events_tests.c",
+                .deps = noun_test_deps,
+                .nix = true,
             },
             .{
                 .name = "hashtable-test",
@@ -823,9 +849,18 @@ fn buildBinary(
                 .file = "pkg/vere/tracy_test.c",
                 .deps = vere_test_deps,
             },
+            .{
+                .name = "wloom-test",
+                .file = "pkg/noun/wloom_tests.c",
+                .deps = noun_test_deps,
+                .win = true,
+            },
         };
 
         for (tests) |tst| {
+            if (tst.win and t.os.tag != .windows) continue;
+            if (tst.nix and t.os.tag == .windows) continue;
+
             const test_step =
                 b.step(tst.name, b.fmt("Build & run: {s}", .{tst.file}));
             const test_exe = b.addExecutable(.{ .name = tst.name, .root_module = b.createModule(.{
@@ -863,6 +898,13 @@ fn buildBinary(
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
+            }
+            //  events-test #includes events.c, which #includes "murmur3.h".
+            //  the noun artifact already links murmur3, but the header isn't
+            //  on the test's compile include path — add it explicitly.
+            //
+            if (std.mem.eql(u8, tst.name, "events-test")) {
+                test_exe.addIncludePath(b.path("ext/murmur3/vendor"));
             }
             if (cfg.tracy_enable) {
                 test_exe.linkLibrary(tracy.?.artifact("tracy"));

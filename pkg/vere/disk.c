@@ -6,9 +6,15 @@
 #include "version.h"
 #include "db/lmdb.h"
 #include <types.h>
+#include "../noun/migrate.h"
 
-#include "migrate.h"
-#include "v4.h"
+#ifdef U3_OS_windows
+#include "wloom.h"
+#endif
+ #ifndef VERE64
+ #include "../past/migrate.h"
+ #include "../past/v4.h"
+ #endif
 
 struct _u3_disk_walk {
   u3_lmdb_walk  itr_u;
@@ -26,7 +32,7 @@ static void
 _disk_commit_done(u3_disk* log_u)
 {
   c3_d eve_d = log_u->sav_u.eve_d;
-  c3_w len_w = log_u->sav_u.len_w;
+  c3_d len_d = log_u->sav_u.len_d;
   c3_o ret_o = log_u->sav_u.ret_o;
 
 #ifdef VERBOSE_DISK
@@ -44,11 +50,11 @@ _disk_commit_done(u3_disk* log_u)
 #endif
 
   if ( c3y == ret_o ) {
-    log_u->dun_d += len_w;
+    log_u->dun_d += len_d;
   }
 
   if ( log_u->sav_u.don_f ) {
-    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_w - 1), ret_o);
+    log_u->sav_u.don_f(log_u->sav_u.ptr_v, eve_d + (len_d - 1), ret_o);
   }
  
   {
@@ -94,7 +100,7 @@ _disk_commit_cb(uv_work_t* ted_u)
 
   log_u->sav_u.ret_o = u3_lmdb_save(log_u->mdb_u,
                                     log_u->sav_u.eve_d,
-                                    log_u->sav_u.len_w,
+                                    log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
                                     log_u->sav_u.siz_i);
 }
@@ -119,7 +125,7 @@ _disk_commit_start(u3_disk* log_u)
 size_t
 u3_disk_etch(u3_disk* log_u,
              u3_noun    eve,
-             c3_l     mug_l,
+             c3_h     mug_h,
              c3_y**   out_y)
 {
   size_t len_i;
@@ -138,10 +144,10 @@ u3_disk_etch(u3_disk* log_u,
     len_i = 4 + len_w;
     dat_y = c3_malloc(len_i);
 
-    dat_y[0] = mug_l & 0xff;
-    dat_y[1] = (mug_l >> 8) & 0xff;
-    dat_y[2] = (mug_l >> 16) & 0xff;
-    dat_y[3] = (mug_l >> 24) & 0xff;
+    dat_y[0] = mug_h & 0xff;
+    dat_y[1] = (mug_h >> 8) & 0xff;
+    dat_y[2] = (mug_h >> 16) & 0xff;
+    dat_y[3] = (mug_h >> 24) & 0xff;
     u3r_bytes(0, len_w, dat_y + 4, mat);
 
     u3z(mat);
@@ -161,32 +167,32 @@ static c3_o
 _disk_batch(u3_disk* log_u)
 {
   u3_feat* fet_u = log_u->put_u.ext_u;
-  c3_w     len_w = log_u->sen_d - log_u->dun_d;
+  c3_d len_d = log_u->sen_d - log_u->dun_d;
 
-  if ( !len_w || (c3y == log_u->sav_u.ted_o) ) {
+  if ( !len_d || (c3y == log_u->sav_u.ted_o) ) {
     return c3n;
   }
 
-  len_w = c3_min(len_w, 100);
+  len_d = c3_min(len_d, 100);
 
   u3_assert( fet_u );
   u3_assert( (1ULL + log_u->dun_d ) == fet_u->eve_d );
 
   log_u->sav_u.ret_o = c3n;
   log_u->sav_u.eve_d = fet_u->eve_d;
-  log_u->sav_u.len_w = len_w;
+  log_u->sav_u.len_d = len_d;
 
-  for ( c3_w i_w = 0ULL; i_w < len_w; ++i_w) {
+  for ( c3_d i_d = 0ULL; i_d < len_d; ++i_d) {
     u3_assert( fet_u );
-    u3_assert( (log_u->sav_u.eve_d + i_w) == fet_u->eve_d );
+    u3_assert( (log_u->sav_u.eve_d + i_d) == fet_u->eve_d );
 
-    log_u->sav_u.byt_y[i_w] = fet_u->hun_y;
-    log_u->sav_u.siz_i[i_w] = fet_u->len_i;
+    log_u->sav_u.byt_y[i_d] = fet_u->hun_y;
+    log_u->sav_u.siz_i[i_d] = fet_u->len_i;
 
     fet_u  = fet_u->nex_u;
   }
 
-  log_u->hit_w[len_w]++;
+  log_u->hit_h[len_d]++;
 
   return c3y;
 }
@@ -218,12 +224,12 @@ _disk_commit(u3_disk* log_u)
 */
 static void
 _disk_plan(u3_disk* log_u,
-           c3_l     mug_l,
+           c3_h     mug_h,
            u3_noun    job)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
   fet_u->eve_d = ++log_u->sen_d;
-  fet_u->len_i = u3_disk_etch(log_u, job, mug_l, &fet_u->hun_y);
+  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -241,7 +247,7 @@ _disk_plan(u3_disk* log_u,
 void
 u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 {
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     log_u->sen_d++;
     log_u->dun_d++;
     // XX invoke don_f?
@@ -250,7 +256,7 @@ u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
 
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
-  _disk_plan(log_u, tac_u->mug_l, tac_u->job);
+  _disk_plan(log_u, tac_u->mug_h, tac_u->job);
   _disk_commit(log_u);
 }
 
@@ -283,7 +289,7 @@ u3_disk_sync(u3_disk* log_u)
   if ( c3y == _disk_batch(log_u) ) {
     ret_o = u3_lmdb_save(log_u->mdb_u,
                          log_u->sav_u.eve_d,
-                         log_u->sav_u.len_w,
+                         log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
                          log_u->sav_u.siz_i);
 
@@ -317,7 +323,7 @@ c3_o
 u3_disk_sift(u3_disk* log_u,
              size_t   len_i,
              c3_y*    dat_y,
-             c3_l*    mug_l,
+             c3_h*    mug_h,
              u3_noun*   job)
 {
   if ( 4 >= len_i ) {
@@ -330,7 +336,7 @@ u3_disk_sift(u3_disk* log_u,
 
   //  XX check version in log_u
   //
-  *mug_l = dat_y[0]
+  *mug_h = dat_y[0]
          ^ (dat_y[1] <<  8)
          ^ (dat_y[2] << 16)
          ^ (dat_y[3] << 24);
@@ -349,7 +355,7 @@ u3_disk_sift(u3_disk* log_u,
 struct _cd_list {
   u3_disk* log_u;
   u3_noun    eve;
-  c3_l     mug_l;
+  c3_h     mug_h;
 };
 
 /* _disk_read_list_cb(): lmdb read callback, invoked for each event in order
@@ -362,13 +368,13 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 
   {
     u3_noun job;
-    c3_l  mug_l;
+    c3_h  mug_h;
 
-    if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_l, &job) ) {
+    if ( c3n == u3_disk_sift(log_u, val_i, (c3_y*)val_p, &mug_h, &job) ) {
       return c3n;
     }
 
-    ven_u->mug_l = mug_l;
+    ven_u->mug_h = mug_h;
     {  // @Refcount: assert transfer
       ven_u->eve   = u3nc(job, ven_u->eve);
     }
@@ -380,7 +386,7 @@ _disk_read_list_cb(void* ptr_v, c3_d eve_d, size_t val_i, void* val_p)
 /* u3_disk_read_list(): synchronously read a cons list of events.
 */
 u3_weak
-u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
+u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_h* mug_h)
 {
   struct _cd_list ven_u = { log_u, u3_nul, 0 };
 
@@ -393,7 +399,7 @@ u3_disk_read_list(u3_disk* log_u, c3_d eve_d, c3_d len_d, c3_l* mug_l)
     return u3_none;
   }
 
-  *mug_l = ven_u.mug_l;
+  *mug_h = ven_u.mug_h;
   return u3kb_flop(ven_u.eve);
 }
 
@@ -451,7 +457,7 @@ u3_disk_walk_step(u3_disk_walk* wok_u, u3_fact* tac_u)
 
   if ( c3n == u3_disk_sift(log_u, len_i,
                            (c3_y*)buf_v,
-                           &tac_u->mug_l,
+                           &tac_u->mug_h,
                            &tac_u->job) )
   {
     fprintf(stderr, "disk: (%" PRIu64 "): sift fail\r\n", tac_u->eve_d);
@@ -473,15 +479,15 @@ u3_disk_walk_done(u3_disk_walk* wok_u)
 /* _disk_save_meta(): serialize atom, save as metadata at [key_c].
 */
 static c3_o
-_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
+_disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_h len_h, c3_y* byt_y)
 {
   //  strip trailing zeroes.
   //
-  while ( len_w && !byt_y[len_w - 1] ) {
-    len_w--;
+  while ( len_h && !byt_y[len_h - 1] ) {
+    len_h--;
   }
 
-  return u3_lmdb_save_meta(mdb_u, key_c, len_w, byt_y);
+  return u3_lmdb_save_meta(mdb_u, key_c, len_h, byt_y);
 }
 
 /* u3_disk_save_meta(): save metadata.
@@ -489,14 +495,14 @@ _disk_save_meta(MDB_env* mdb_u, const c3_c* key_c, c3_w len_w, c3_y* byt_y)
 c3_o
 u3_disk_save_meta(MDB_env* mdb_u, const u3_meta* met_u)
 {
-  u3_assert( c3y == u3a_is_cat(met_u->lif_w) );
+  u3_assert( c3y == u3a_is_cat((c3_w)met_u->lif_h) );
 
   u3_noun who = u3i_chubs(2, met_u->who_d);
 
-  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_w), (c3_y*)&met_u->ver_w))
+  if (  (c3n == _disk_save_meta(mdb_u, "version", sizeof(c3_h), (c3_y*)&met_u->ver_h))
      || (c3n == _disk_save_meta(mdb_u, "who", 2 * sizeof(c3_d), (c3_y*)met_u->who_d))
      || (c3n == _disk_save_meta(mdb_u, "fake", sizeof(c3_o), (c3_y*)&met_u->fak_o))
-     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_w), (c3_y*)&met_u->lif_w)) )
+     || (c3n == _disk_save_meta(mdb_u, "life", sizeof(c3_h), (c3_y*)&met_u->lif_h)) )
   {
     u3z(who);
     return c3n;
@@ -557,7 +563,7 @@ _disk_meta_read_cb(void* ptr_v, ssize_t val_i, void* val_v)
 c3_o
 u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 {
-  c3_w ver_w, lif_w;
+  c3_h ver_h, lif_h;
   c3_d who_d[2];
   c3_o fak_o;
 
@@ -567,7 +573,7 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //
   u3_lmdb_read_meta(mdb_u, &val_u, "version", _disk_meta_read_cb);
 
-  ver_w = val_u.buf_y[0];
+  ver_h = val_u.buf_y[0];
 
   //  identity
   //
@@ -639,23 +645,23 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   }
 
   byt_y = val_u.buf_y;
-  lif_w = (c3_w)byt_y[0]
-        | (c3_w)byt_y[1] << 8
-        | (c3_w)byt_y[2] << 16
-        | (c3_w)byt_y[3] << 24;
+  lif_h = (c3_h)byt_y[0]
+        | (c3_h)byt_y[1] << 8
+        | (c3_h)byt_y[2] << 16
+        | (c3_h)byt_y[3] << 24;
 
   {
     c3_o val_o = c3y;
 
-    if ( U3D_VERLAT < ver_w ) {
-      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_w);
+    if ( U3D_VERLAT < ver_h ) {
+      fprintf(stderr, "disk: read meta: unknown version %u\r\n", ver_h);
       val_o = c3n;
     }
     else if ( !((c3y == fak_o ) || (c3n == fak_o )) ) {
       fprintf(stderr, "disk: read meta: invalid fake bit\r\n");
       val_o = c3n;
     }
-    else if ( c3n == u3a_is_cat(lif_w) ) {
+    else if ( c3n == u3a_is_cat((c3_w)lif_h) ) {
       fprintf(stderr, "disk: read meta: invalid lifecycle length\r\n");
       val_o = c3n;
     }
@@ -668,10 +674,10 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
   //  NB: we read metadata from LMDB even when met_u is null because sometimes
   //      because sometimes we call this just to ensure metadata exists
   if ( met_u ) {
-    met_u->ver_w = ver_w;
+    met_u->ver_h = ver_h;
     memcpy(met_u->who_d, who_d, 2 * sizeof(c3_d));
     met_u->fak_o = fak_o;
-    met_u->lif_w = lif_w;
+    met_u->lif_h = lif_h;
   }
 
   return c3y;
@@ -682,12 +688,12 @@ u3_disk_read_meta(MDB_env* mdb_u, u3_meta* met_u)
 static c3_c*
 _disk_lock(c3_c* pax_c)
 {
-  c3_w  len_w = strlen(pax_c) + sizeof("/.vere.lock");
-  c3_c* paf_c = c3_malloc(len_w);
+  c3_h  len_h = strlen(pax_c) + sizeof("/.vere.lock");
+  c3_c* paf_c = c3_malloc(len_h);
   c3_i  wit_i;
 
-  wit_i = snprintf(paf_c, len_w, "%s/.vere.lock", pax_c);
-  u3_assert(wit_i + 1 == len_w);
+  wit_i = snprintf(paf_c, len_h, "%s/.vere.lock", pax_c);
+  u3_assert(wit_i + 1 == len_h);
   return paf_c;
 }
 
@@ -698,7 +704,7 @@ _disk_acquire(c3_c* pax_c)
 {
   c3_c* paf_c    = _disk_lock(pax_c);
   c3_y  dat_y[13] = {0};
-  c3_w  pid_w    = 0;
+  c3_h  pid_h    = 0;
   c3_i  fid_i, ret_i;
 
   if ( -1 == (fid_i = c3_open(paf_c, O_RDWR|O_CREAT, 0666)) ) {
@@ -734,7 +740,7 @@ _disk_acquire(c3_c* pax_c)
 
 
     if ( len_y ) {
-      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_w, &ret_i))
+      if (  (1 != sscanf((c3_c*)dat_y, "%" SCNu32 "%n", &pid_h, &ret_i))
          || (0 >= ret_i)
          || ('\n' != *(dat_y + ret_i)) )
       {
@@ -756,8 +762,8 @@ _disk_acquire(c3_c* pax_c)
           && (EINTR == (ret_i = errno)) );
 
     if ( ret_i ) {
-      if ( pid_w ) {
-        fprintf(stderr, "pier: locked by PID %u\r\n", pid_w);
+      if ( pid_h ) {
+        fprintf(stderr, "pier: locked by PID %u\r\n", pid_h);
       }
       else {
         fprintf(stderr, "pier: strange: locked by empty lockfile\r\n");
@@ -818,9 +824,24 @@ static void
 _disk_release(c3_c* pax_c, c3_i fid_i)
 {
   c3_c* paf_c = _disk_lock(pax_c);
-  c3_unlink(paf_c);
-  c3_free(paf_c);
+
+#ifdef U3_OS_windows
+  //  windows refuses to delete a file that is still open, so the
+  //  descriptor goes first or the lockfile outlives the pier.
+  //
+  //  NB: the reverse order is deliberate elsewhere. on POSIX, unlinking
+  //  while the descriptor is held means another process cannot acquire
+  //  the path in between, and so cannot have its lockfile unlinked by
+  //  this one.
+  //
   close(fid_i);
+  c3_unlink(paf_c);
+#else
+  c3_unlink(paf_c);
+  close(fid_i);
+#endif
+
+  c3_free(paf_c);
 }
 
 /* u3_disk_exit(): close the log.
@@ -875,8 +896,7 @@ u3_disk_info(u3_disk* log_u)
 {
   u3_noun lit = u3i_list(
     u3_pier_mase("live",        log_u->liv_o),
-    u3_pier_mase("event", u3i_chub(log_u->dun_d)),
-    u3_none);
+    u3_pier_mase("event", u3i_chub(log_u->dun_d)));
 
   //  XX revise, include batches
   //
@@ -886,8 +906,7 @@ u3_disk_info(u3_disk* log_u)
         c3__save,
         u3i_list(
           u3_pier_mase("save-start", u3i_chub(log_u->put_u.ext_u->eve_d)),
-          u3_pier_mase("save-final", u3i_chub(log_u->put_u.ent_u->eve_d)),
-          u3_none)),
+          u3_pier_mase("save-final", u3i_chub(log_u->put_u.ent_u->eve_d)))),
       lit);
   }
 
@@ -904,14 +923,14 @@ u3_disk_slog(u3_disk* log_u)
           log_u->dun_d);
 
   {
-    c3_w len_w, i_w;
+    c3_h len_h, i_h;
 
     u3l_log("    batch:");
 
-    for ( i_w = 0; i_w < 100; i_w++ ) {
-      len_w = log_u->hit_w[i_w];
-      if ( len_w ) {
-        u3l_log("      %u: %u", i_w, len_w);
+    for ( i_h = 0; i_h < 100; i_h++ ) {
+      len_h = log_u->hit_h[i_h];
+      if ( len_h ) {
+        u3l_log("      %u: %u", i_h, len_h);
       }
     }
   }
@@ -934,11 +953,11 @@ static c3_o
 _disk_epoc_meta(u3_disk*    log_u,
                 c3_d        epo_d,
                 const c3_c* met_c,
-                c3_w        max_w,
+                c3_h        max_h,
                 c3_c*       buf_c)
 {
   struct stat buf_u;
-  c3_w red_w, len_w;
+  c3_h red_h, len_h;
   c3_i ret_i, fid_i;
   c3_c*       pat_c;
 
@@ -954,18 +973,18 @@ _disk_epoc_meta(u3_disk*    log_u,
                     met_c, epo_d);
     return c3n;
   }
-  else if ( buf_u.st_size >= max_w ) {
+  else if ( buf_u.st_size >= max_h ) {
     fprintf(stderr, "disk: %s.txt in epoch 0i%" PRIc3_d " too large "
                     "(%" PRIc3_z ")\r\n",
                     met_c, epo_d, (c3_z)buf_u.st_size);
     return c3n;
   }
 
-  len_w = buf_u.st_size;
-  red_w = read(fid_i, buf_c, len_w);
+  len_h = buf_u.st_size;
+  red_h = read(fid_i, buf_c, len_h);
   close(fid_i);
 
-  if ( len_w != red_w ) {
+  if ( len_h != red_h ) {
     fprintf(stderr, "disk: failed to read %s.txt in epoch 0i%" PRIc3_d "\r\n",
                     met_c, epo_d);
     return c3n;
@@ -974,9 +993,9 @@ _disk_epoc_meta(u3_disk*    log_u,
   //  trim trailing whitespace
   //
   do {
-    buf_c[len_w] = 0;
+    buf_c[len_h] = 0;
   }
-  while ( len_w-- && isspace(buf_c[len_w]) );
+  while ( len_h-- && isspace(buf_c[len_h]) );
 
   return c3y;
 }
@@ -1175,7 +1194,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   }
 
   // write the metadata to the database
-  old_u.ver_w = U3D_VERLAT;
+  old_u.ver_h = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     goto fail3;
@@ -1195,7 +1214,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
-  log_u->ver_w = U3D_VERLAT;
+  log_u->ver_h = U3D_VERLAT;
 
   //  success
   return c3y;
@@ -1435,7 +1454,7 @@ _disk_migrate_epoc(u3_disk* log_u, c3_d eve_d)
     return c3n;
   }
 
-  olm_u.ver_w = U3D_VERLAT;
+  olm_u.ver_h = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &olm_u) ) {
     fprintf(stderr, "disk: failed to save metadata\r\n");
     return c3n;
@@ -1582,13 +1601,96 @@ _disk_unlink_stale_loom(c3_c* dir_c)
   }
 }
 
+/* _disk_migrate_size(): destination loom bex, and source reservation length.
+**
+**   shared by the migration and by u3_disk_stake(), which claims the
+**   source address up front -- if these two ever disagreed, the stake
+**   would silently stop matching and the protection would lapse.
+*/
+static void
+_disk_migrate_size(c3_y* des_y, c3_z* sou_z)
+{
+#ifdef VERE64
+  //  the destination (64-bit) loom is mapped at u3_Loom, and the stale 32-bit
+  //  loom at u3_Loom_h == u3_Loom + (8 << u3a_bits_max_h).  cap the destination
+  //  so that it cannot grow into the source, and reserve no more for the source
+  //  than a 32-bit loom can ever occupy.
+  //
+  //    the destination cap is never binding: a 32-bit loom is at most
+  //    2^u3a_bits_max_h, and 32->64 at most doubles it (a loom of nothing but
+  //    cells, 16 -> 32 bytes each), so 2^(u3a_bits_max_h + 3) is 4x what the
+  //    migration can need.  --loom applies in full to the boot that follows.
+  //
+  *des_y = (c3_y)c3_min(u3_Host.ops_u.lom_y, u3a_bits_max_h + 3);
+  *sou_z = (c3_z)1 << c3_min(*des_y, u3a_bits_max_h);
+#else
+  //  the v1-v4 loom keeps its south segment at the top and its version word at
+  //  the very end, so the source reservation must be the full loom size.
+  //
+  *des_y = u3_Host.ops_u.lom_y;
+  *sou_z = (c3_z)1 << *des_y;
+#endif
+}
+
+/* u3_disk_stake(): claim the fixed addresses this process will map at.
+**
+**   a no-op off windows, where mmap(MAP_FIXED) evicts whatever occupies
+**   a fixed address and a collision cannot arise. see wloom.h.
+**
+**   [lom_i] is the length this process will reserve at u3_Loom -- 1 <<
+**   lut_y for a lite boot, 1 << lom_y otherwise. it wants to be exact:
+**   _wnd_stake_claim() hands over a stake of the same length in place,
+**   and merely releases one of any other, which costs the protection.
+**
+**   call this before anything else in the process can allocate, and in
+**   particular before u3_disk_load(): that opens the event log first and
+**   maps the loom second, and lmdb's map is 60GB placed wherever windows
+**   likes -- large enough, and often near enough, to land on u3_Loom.
+*/
+void
+u3_disk_stake(size_t lom_i)
+{
+#ifdef U3_OS_windows
+  c3_y des_y;
+  c3_z sou_z;
+
+  _disk_migrate_size(&des_y, &sou_z);
+
+  //  the loom itself
+  //
+  u3_wnd_loom_stake((void*)u3_Loom, lom_i);
+
+# ifdef VERE64
+  //  a 32-bit v5 snapshot, read at u3_Loom_h
+  //
+  u3_wnd_loom_stake(u3_Loom_h, sou_z);
+# else
+  //  a 64-bit snapshot, read at u3_Loom_d; and a v1-v4 one, at u3_Loom_v4
+  //
+  u3_wnd_loom_stake((void*)u3_Loom_d, (c3_z)1 << u3_Host.ops_u.lom_y);
+  u3_wnd_loom_stake(u3_Loom_v4, sou_z);
+# endif
+#else
+  (void)lom_i;
+#endif
+}
+
 static c3_i
 _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 {
   // map at fixed address.
   //
+  //   NB: on windows the reservation and the image mapping are one
+  //   operation, done below -- an anonymous mapping cannot be replaced
+  //   in place, and a committed one of loom size may not fit at all.
+  //
+#ifndef U3_OS_windows
   {
+#ifdef VERE64
+    void* map_v = mmap((void *)u3_Loom_h,
+#else
     void* map_v = mmap((void *)u3_Loom_v4,
+#endif
                        len_z,
                        (PROT_READ | PROT_WRITE),
                        (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
@@ -1610,14 +1712,65 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       }
       exit(1);
     }
-
-    u3C.wor_i = len_z >> 2;
-    u3l_log("loom: mapped %zuMB", len_z >> 20);
   }
+#endif
+
+  u3C.wor_i = len_z >> 2;
 
   {
     c3_z lom_z;
-    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z);
+#ifdef VERE64
+    //  check for old v4 ship files before attempting v5 image load
+    {
+      c3_c north_c[8193], south_c[8193];
+      snprintf(north_c, 8193, "%s/.urb/chk/north.bin", dir_c);
+      snprintf(south_c, 8193, "%s/.urb/chk/south.bin", dir_c);
+
+      if ( (0 == access(north_c, F_OK)) || (0 == access(south_c, F_OK)) ) {
+        fprintf(stderr, "loom: migration error\r\n\r\n"); 
+        fprintf(stderr, "this is an old 32-bit ship that requires migration:\r\n");
+        fprintf(stderr, "  0. download 32-bit vere from https://github.com/urbit/vere/releases\r\n");
+        fprintf(stderr, "  1. boot with 32-bit vere\r\n");
+        fprintf(stderr, "  2. shut down cleanly (ctrl-d or |exit from the dojo)\r\n");
+        fprintf(stderr, "  3. use this (64-bit) version of vere to boot again\r\n");
+        fprintf(stderr, "  4. enjoy a huge loom\r\n");
+        fprintf(stderr, "\r\n");
+        // fprintf(stderr, "download 32-bit vere here: https://github.com/urbit/vere/releases\r\n");
+        exit(1);
+      }
+    }
+
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/image", dir_c, &lom_z, O_RDONLY);
+
+    u3_assert( -1 != nod_i );
+
+    fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", u3_Loom_h, nod_i, lom_z);
+
+    //  XX respect --no-demand flag
+    //
+#ifdef U3_OS_windows
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_h, len_z, nod_i, lom_z) ) {
+      fprintf(stderr, "loom: stale loom mapping failed\r\n");
+      u3_assert(0);
+    }
+#else
+    if ( MAP_FAILED == mmap(u3_Loom_h,
+                            lom_z,
+                            (PROT_READ | PROT_WRITE),
+                            (MAP_FIXED | MAP_PRIVATE),
+                            nod_i, 0) )
+    {
+      fprintf(stderr, "loom: file-backed mmap failed: %s\r\n",
+                      strerror(errno));
+      u3_assert(0);
+    }
+#endif
+
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
+
+    return nod_i;
+#else
+    c3_i nod_i = u3e_image_open_any("/.urb/chk/north", dir_c, &lom_z, O_RDONLY);
 
     u3_assert( -1 != nod_i );
 
@@ -1625,6 +1778,18 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 
     //  XX respect --no-demand flag
     //
+#ifdef U3_OS_windows
+    //  NB: a v1-v4 loom keeps its heap at the bottom and its stack at the
+    //  top, so the stale loom is committed at both ends and reserved in
+    //  between: north.bin below, the south page above, and a gap that
+    //  nothing should read. on windows a read into that gap is fatal
+    //  rather than a first touch; see u3m_fault().
+    //
+    if ( c3n == u3_wnd_loom_hold(u3_Loom_v4, len_z, nod_i, lom_z) ) {
+      fprintf(stderr, "loom: stale loom mapping failed\r\n");
+      u3_assert(0);
+    }
+#else
     if ( MAP_FAILED == mmap(u3_Loom_v4,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
@@ -1635,14 +1800,25 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
                       strerror(errno));
       u3_assert(0);
     }
+#endif
 
-    const c3_z pag_z = 1U << (u3a_page + 2);
+    u3l_log("loom: mapped %zuMB", len_z >> 20);
+
+    const c3_z pag_z = ((c3_w)1) << (u3a_page + 2);
     void*      ptr_v = (c3_y*)u3_Loom_v4 + (len_z - pag_z);
     c3_zs     ret_zs;
-    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z);
+    c3_i       sod_i = u3e_image_open_any("/.urb/chk/south", dir_c, &lom_z, O_RDONLY);
 
     u3_assert( -1 != nod_i );
     u3_assert( pag_z == lom_z );
+
+#ifdef U3_OS_windows
+    //  the south segment lands above the image, in reserved space
+    //
+    if ( c3n == u3_wnd_loom_commit(ptr_v, pag_z) ) {
+      u3_assert(0);
+    }
+#endif
 
     if ( pag_z != (ret_zs = pread(sod_i, ptr_v, pag_z, 0)) ) {
       if ( 0 < ret_zs ) {
@@ -1658,32 +1834,175 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
     close(sod_i);
 
     return nod_i;
+#endif
   }
+}
+
+#ifndef VERE64
+/* _disk_load_loom_d(): open 64-bit image.bin and map it at u3_Loom_d.
+*/
+static c3_i
+_disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
+{
+  c3_z img_z;
+  c3_i fid_i = u3e_image_open_any("/.urb/chk/image", dir_c, &img_z, O_RDWR);
+
+  u3_assert( -1 != fid_i );
+
+  //  the 32-bit loom is capped at 2^u3a_bits_max = 16GB by pointer compression
+  //  (u3a_vits=2 means only 30 bits of offset, shifted left 2, addressing 16GB).
+  //  a 64-bit snapshot larger than this cannot be migrated back.
+  //
+  if ( img_z > lom_z ) {
+    fprintf(stderr, "loom: migration error\r\n\r\n");
+    fprintf(stderr, "the 64-bit snapshot (%zuMB) is too large to fit in the "
+                    "32-bit loom (%zuMB)\r\n", img_z >> 20, lom_z >> 20);
+    fprintf(stderr, "this ship cannot be downgraded to 32-bit mode\r\n");
+    exit(1);
+  }
+
+  fprintf(stderr, "loom: %p fid_i %d len %zu\r\n", (void*)u3_Loom_d, fid_i, img_z);
+
+#ifdef U3_OS_windows
+  if ( c3n == u3_wnd_loom_hold((void*)u3_Loom_d, lom_z, fid_i, img_z) ) {
+    fprintf(stderr, "loom: 64 stale loom mapping failed\r\n");
+    u3_assert(0);
+  }
+#else
+  if ( MAP_FAILED == mmap((void*)u3_Loom_d,
+                          img_z,
+                          (PROT_READ | PROT_WRITE),
+                          (MAP_FIXED | MAP_PRIVATE),
+                          fid_i, 0) )
+  {
+    fprintf(stderr, "loom: 64 file-backed mmap failed: %s\r\n",
+                    strerror(errno));
+    u3_assert(0);
+  }
+#endif
+
+  return fid_i;
+}
+
+/* _disk_migrate_h(): migrate a 64-bit loom back to 32-bit.
+*/
+static void
+_disk_migrate_h(c3_c* dir_c, c3_d eve_d)
+{
+  c3_z lom_z = (size_t)1 << u3_Host.ops_u.lom_y;
+  c3_i fid_i = _disk_load_loom_d(dir_c, lom_z);
+
+  c3_d lom_d = *((c3_d *)u3_Loom_d);
+  c3_d pam_d = *((c3_d *)u3_Loom_d + 1);
+
+  if ( !(pam_d & 1) ) {
+    fprintf(stderr, "loom: expected 64-bit loom, got 32-bit "
+                    "(ver=%" PRIu64 ", pam=%" PRIu64 ")\r\n", lom_d, pam_d);
+    u3_assert(0);
+  }
+
+  {
+    u3m_init(lom_z);
+    u3e_live(c3y, strdup(dir_c));
+    u3m_pave(c3y);
+    u3_migrate_h(eve_d);
+#ifdef U3_OS_windows
+    u3_wnd_loom_drop((void*)u3_Loom_d);
+#else
+    munmap((void*)u3_Loom_d, lom_z);
+#endif
+    close(fid_i);
+    u3m_save();
+  }
+}
+#endif /* !VERE64 */
+
+/* _disk_drop_stale_loom(): release the stale loom and its image.
+**
+**   NB: must precede u3m_save(). the migrated snapshot is written back to
+**   the same image.bin the stale loom is mapped from, and windows refuses
+**   to truncate a file while any mapping of it remains open.
+*/
+static void
+_disk_drop_stale_loom(c3_i fid_i, c3_z sou_z)
+{
+#ifdef VERE64
+# ifdef U3_OS_windows
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_h) );
+# else
+  munmap(u3_Loom_h, sou_z);
+# endif
+#else
+# ifdef U3_OS_windows
+  u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_v4) );
+# else
+  munmap(u3_Loom_v4, sou_z);
+# endif
+#endif
+  close(fid_i);
 }
 
 static void
 _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
 {
-  c3_i fid_i = _disk_load_stale_loom(dir_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
-  c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+  c3_y des_y;
+  c3_z sou_z;
 
+  _disk_migrate_size(&des_y, &sou_z);
+
+#ifdef VERE64
+  if ( des_y != u3_Host.ops_u.lom_y ) {
+    u3l_log("loom: migrating with a %zuMB loom (--loom %u applies afterward)",
+            ((c3_z)1 << des_y) >> 20, (unsigned)u3_Host.ops_u.lom_y);
+  }
+#endif
+
+  c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
+
+#ifdef VERE64
+  //  v5 (32-bit) home is at loom position 0; version is the first c3_d
+  //
+  c3_d lom_d = *((c3_d *)u3_Loom_h);
+
+  if ( U3V_VER5 != lom_d ) {
+    fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
+    u3_assert(0);
+  }
+
+  {
+    u3m_init((c3_z)1 << des_y);
+    u3e_live(c3y, strdup(dir_c));
+    u3m_pave(c3y);
+    u3_migrate_d(eve_d);
+    _disk_drop_stale_loom(fid_i, sou_z);
+    u3m_save();
+  }
+#else
+  //  v1-v4 (32-bit) home is at the high end; version is the last word
   //  NB: all fallthru, all the time
   //
+  c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
+
   switch ( lom_w ) {
-    case U3V_VER1: u3_migrate_v2(eve_d);
-    case U3V_VER2: u3_migrate_v3(eve_d);
-    case U3V_VER3: u3_migrate_v4(eve_d);
+    case U3V_VER1: u3_migrate_v2(eve_d); [[fallthrough]];
+    case U3V_VER2: u3_migrate_v3(eve_d); [[fallthrough]];
+    case U3V_VER3: u3_migrate_v4(eve_d); [[fallthrough]];
     case U3V_VER4: {
-      u3m_init((size_t)1 << u3_Host.ops_u.lom_y);
-      u3e_live(c3n, strdup(dir_c));
+      u3m_init((c3_z)1 << des_y);
+      u3e_live(c3y, strdup(dir_c));
       u3m_pave(c3y);
       u3_migrate_v5(eve_d);
+      _disk_drop_stale_loom(fid_i, sou_z);
       u3m_save();
+      return;
     }
   }
 
-  munmap(u3_Loom_v4, (size_t)1 << u3_Host.ops_u.lom_y);
-  close(fid_i);
+  //  unrecognized version: nothing was migrated, but the stale loom is
+  //  still ours to release
+  //
+  _disk_drop_stale_loom(fid_i, sou_z);
+#endif
 }
 
 static void
@@ -1697,17 +2016,17 @@ _disk_migrate_old(u3_disk* log_u)
 
   log_u->sen_d = log_u->dun_d = las_d;
 
-  switch ( log_u->ver_w ) {
+  switch ( log_u->ver_h ) {
     case U3D_VER1: {
       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
 
       //  set version to 2 (migration in progress)
-      log_u->ver_w = U3D_VER2;
-      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_w) ) {
+      log_u->ver_h = U3D_VER2;
+      if ( c3n == _disk_save_meta(log_u->mdb_u, "version", 4, (c3_y*)&log_u->ver_h) ) {
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }
-    }  // fallthru
+    }  [[fallthrough]]; // fallthru
 
     case U3D_VER2: {
       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
@@ -1725,7 +2044,7 @@ _disk_migrate_old(u3_disk* log_u)
     } break;
 
     default: {
-      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_w);
+      fprintf(stderr, "disk: unknown old log version: %d\r\n", log_u->ver_h);
       u3_assert(0);
     }
   }
@@ -1746,7 +2065,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 {
   //  check latest epoc version
   //
-  c3_w ver_w;
+  c3_h ver_h;
   {
     c3_c ver_c[8];
     c3_i car_i;
@@ -1760,7 +2079,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       return _epoc_gone;
     }
 
-    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_w, &car_i))
+    if ( !(  (1 == sscanf(ver_c, "%" SCNu32 "%n", &ver_h, &car_i))
           && (0 < car_i)
           && ('\0' == *(ver_c + car_i)) ) )
     {
@@ -1768,7 +2087,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       return _epoc_fail;
     }
 
-    if ( (U3E_VER1 > ver_w) || (U3E_VERLAT < ver_w) ) {
+    if ( (U3E_VER1 > ver_h) || (U3E_VERLAT < ver_h) ) {
       fprintf(stderr, "disk: unknown epoch version: '%s', expected '%d' - '%d'\r\n",
                       ver_c, U3E_VER1, U3E_VERLAT);
       return _epoc_late;
@@ -1818,8 +2137,13 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   //  NB: by virtue of getting here, we know the *pier* version number is at least 3
   //  (ie, this is the epoch system)
   //
-  switch ( ver_w ) {
+  switch ( ver_h ) {
     case U3E_VER1: {
+      if ( u3C.wag_h & u3o_no_migrate ) {
+        //  --no-migrate: keep epoch at its existing version; no loom rewrite
+        u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
+        return _epoc_good;
+      }
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);
@@ -1860,6 +2184,48 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         }
       }
 
+#ifdef VERE64
+      //  detect a 32-bit loom in chk and migrate it to 64-bit
+      //  before loading into the main loom; pam_d word-size bit 0 means 32-bit
+      //
+      if ( !(u3C.wag_h & u3o_no_migrate) ) {
+        c3_c img_c[8193];
+        snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
+
+        c3_d pam_d = 0;
+        c3_i fid_i = open(img_c, O_RDONLY);
+        if ( -1 != fid_i ) {
+          pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
+          close(fid_i);
+
+          if ( !(pam_d & 1) ) {
+            _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
+            u3m_stop();
+          }
+        }
+      }
+#else
+      //  detect a 64-bit loom in chk and migrate it back to 32-bit
+      //  before loading into the main loom; pam_d word-size bit 1 means 64-bit
+      //
+      if ( !(u3C.wag_h & u3o_no_migrate) ) {
+        c3_c img_c[8193];
+        snprintf(img_c, 8193, "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
+
+        c3_d pam_d = 0;
+        c3_i fid_i = open(img_c, O_RDONLY);
+        if ( -1 != fid_i ) {
+          pread(fid_i, &pam_d, sizeof(pam_d), sizeof(pam_d));
+          close(fid_i);
+
+          if ( pam_d & 1 ) {
+            _disk_migrate_h(log_u->dir_u->pax_c, log_u->dun_d);
+            u3m_stop();
+          }
+        }
+      }
+#endif
+
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( log_u->dun_d < u3A->eve_d ) {
@@ -1877,7 +2243,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         exit(1);
       }
 
-      if (  (u3C.wag_w & u3o_yolo)  // XX better argument to disable autoroll
+      if (  (u3C.wag_h & u3o_yolo)  // XX better argument to disable autoroll
          || (!log_u->epo_d && log_u->dun_d && !u3A->eve_d)
          || (c3n == _disk_vere_diff(log_u)) )
       {
@@ -2061,15 +2427,30 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         c3_free(log_u); // XX leaks dire(s)
         return 0;
       }
-      log_u->ver_w = met_u.ver_w;
+      log_u->ver_h = met_u.ver_h;
     }
 
-    if ( U3D_VERLAT < log_u->ver_w ) {
-      fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_w);
+    if ( U3D_VERLAT < log_u->ver_h ) {
+      fprintf(stderr, "disk: unknown log version: %d\r\n", log_u->ver_h);
       c3_free(log_u); // XX leaks dire(s)
       return 0;
     }
-    else if ( U3D_VERLAT > log_u->ver_w ) {
+    else if ( U3D_VERLAT > log_u->ver_h ) {
+      if ( u3C.wag_h & u3o_no_migrate ) {
+        //  --no-migrate: use flat-layout events in place; no epoch rollover.
+        //  Same path for both replay (u3_dlod_epoc) and boot (u3_dlod_last);
+        //  caller is responsible for managing .urb/chk contents.
+        c3_d fir_d, las_d;
+        if ( c3n == u3_lmdb_gulf(log_u->mdb_u, &fir_d, &las_d) ) {
+          fprintf(stderr, "disk: failed to get first/last event numbers\r\n");
+          exit(1);
+        }
+        log_u->sen_d = log_u->dun_d = las_d;
+        log_u->epo_d = 0;
+        u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
+        log_u->liv_o = c3y;
+        return log_u;
+      }
       if ( u3_dlod_epoc == lod_e ) {
         fprintf(stderr, "migration required, replay disallowed\r\n");
         exit(1);

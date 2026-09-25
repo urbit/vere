@@ -74,22 +74,22 @@ _ttyf_set_raw(u3_utty* uty_u)
 /*  _ttyf_get_winsize(): gets the tty window size.
 */
 static c3_o
-_ttyf_get_winsize(u3_utty* uty_u, c3_l* col_l, c3_l* row_l)
+_ttyf_get_winsize(u3_utty* uty_u, c3_h* col_h, c3_h* row_h)
 {
   c3_i col_i, row_i;
   if ( 0 != uv_tty_get_winsize(&uty_u->pop_u.tty_u, &col_i, &row_i) ) {
     return c3n;
   }
 
-  *col_l = col_i;
-  *row_l = row_i;
+  *col_h = col_i;
+  *row_h = row_i;
   return c3y;
 }
 
 /*  _ttyf_get_winsize(): gets the tty window size.
 */
 static c3_o
-_ttyf_nop_winsize(u3_utty* uty_u, c3_l* col_l, c3_l* row_l)
+_ttyf_nop_winsize(u3_utty* uty_u, c3_h* col_h, c3_h* row_h)
 {
   return c3n;
 }

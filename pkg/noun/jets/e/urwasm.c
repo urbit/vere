@@ -98,7 +98,7 @@ uw_slam_nock(u3_noun gat, u3_noun sam)
 
 // memory arena with exponential growth
 typedef struct {
-  c3_w      siz_w;  // size in bytes
+  c3_h      siz_h;  // size in bytes
   c3_y      pad_y;  // alignment padding
   c3_t      ini_t;  // already initialized
   u3i_slab  sab_u;  // associated slab
@@ -277,12 +277,12 @@ typedef enum {
 } lia_suspend_tag;
 
 static void
-_uw_arena_init_size(uw_arena* ren_u, c3_w siz_w)
+_uw_arena_init_size(uw_arena* ren_u, c3_h siz_h)
 {
-  ren_u->siz_w = siz_w;
-  u3i_slab_init(&ren_u->sab_u, 3, siz_w + 12);  // size + max padding
+  ren_u->siz_h = siz_h;
+  u3i_slab_init(&ren_u->sab_u, 3, siz_h + 12);  // size + max padding
   ren_u->buf_y = ren_u->nex_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
-  ren_u->end_y = ren_u->buf_y + ren_u->siz_w;
+  ren_u->end_y = ren_u->buf_y + ren_u->siz_h;
   c3_y pad_y = ren_u->buf_y - ren_u->sab_u.buf_y;
   if (pad_y > 12)
   {
@@ -295,7 +295,7 @@ _uw_arena_init_size(uw_arena* ren_u, c3_w siz_w)
 static void
 _uw_arena_init(uw_arena* ren_u)
 {
-  _uw_arena_init_size(ren_u, (c3_w)1 << 23);
+  _uw_arena_init_size(ren_u, (c3_h)1 << 23);
 }
 
 static void
@@ -305,18 +305,18 @@ _uw_arena_grow(uw_arena* ren_u)
   {
     u3m_bail(c3__fail);
   }
-  c3_w new_w = ren_u->siz_w * 2;
-  if (new_w / 2 != ren_u->siz_w)
+  c3_h new_h = ren_u->siz_h * 2;
+  if (new_h / 2 != ren_u->siz_h)
   {
     u3m_bail(c3__fail);
   }
-  ren_u->siz_w = new_w;
+  ren_u->siz_h = new_h;
 
   u3i_slab_free(&ren_u->sab_u);
 
-  u3i_slab_init(&ren_u->sab_u, 3, new_w + 12);  // size + max padding
+  u3i_slab_init(&ren_u->sab_u, 3, new_h + 12);  // size + max padding
   ren_u->buf_y = ren_u->nex_y = c3_align(ren_u->sab_u.buf_y, 16, C3_ALGHI);
-  ren_u->end_y = ren_u->nex_y + new_w;
+  ren_u->end_y = ren_u->nex_y + new_h;
   c3_y pad_y = ren_u->nex_y - ren_u->sab_u.buf_y;
   if (pad_y > 12)
   {
@@ -333,7 +333,7 @@ _uw_arena_reset(uw_arena* ren_u)
     u3m_bail(c3__fail);
   }
   ren_u->nex_y = ren_u->buf_y;
-  memset(ren_u->buf_y, 0, (size_t)ren_u->siz_w);
+  memset(ren_u->buf_y, 0, (size_t)ren_u->siz_h);
 }
 
 static void
@@ -499,7 +499,7 @@ _realloc_box(void* lag_v, size_t old_i, size_t new_i)
   // {
   //   cap_d *= 2;
   // }
-  cap_d <<= c3_bits_dabl(len_d) - c3_bits_dabl(cap_d);
+  cap_d <<= c3_bits_chub(len_d) - c3_bits_chub(cap_d);
   cap_d <<= (cap_d <= len_d);
   
   //  overflow check
@@ -544,7 +544,7 @@ _free_bail(void* lag_v)
 
 
 static u3_noun
-_atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
+_atoms_from_stack(void** valptrs, c3_h n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -554,7 +554,7 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        out = u3nc(u3i_word(*(c3_w*)valptrs[n]), out);
+        out = u3nc(u3i_half(*(c3_h*)valptrs[n]), out);
         break;
       }
       case c_m3Type_i64:
@@ -575,9 +575,9 @@ _atoms_from_stack(void** valptrs, c3_w n, c3_y* types)
 //  RETAIN argument
 // @Refcount: retains arguments
 static c3_o
-_atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
+_atoms_to_stack(u3_noun atoms, void** valptrs, c3_h n, c3_y* types)
 {
-  for (c3_w i = 0; i < n; i++)
+  for (c3_h i = 0; i < n; i++)
   {
     if (c3y == u3ud(atoms))
     {
@@ -594,7 +594,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
       case c_m3Type_i32:
       case c_m3Type_f32:
       {
-        *(c3_w*)valptrs[i] = u3r_word(0, atom);
+        *(c3_h*)valptrs[i] = u3r_half(0, atom);
         break;
       }
       case c_m3Type_i64:
@@ -613,7 +613,7 @@ _atoms_to_stack(u3_noun atoms, void** valptrs, c3_w n, c3_y* types)
 }
 
 static u3_noun
-_coins_from_stack(void** valptrs, c3_w n, c3_y* types)
+_coins_from_stack(void** valptrs, c3_h n, c3_y* types)
 {
   u3_noun out = u3_nul;
   while (n--)
@@ -622,7 +622,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
     {  // TODO 64 bit vere
       case c_m3Type_i32:
       {
-        out = u3nc(u3nc(c3__i32, u3i_word(*(c3_w*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__i32, u3i_half(*(c3_h*)valptrs[n])), out);
         break;
       }
       case c_m3Type_i64:
@@ -632,7 +632,7 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
       }
       case c_m3Type_f32:
       {
-        out = u3nc(u3nc(c3__f32, u3i_word(*(c3_w*)valptrs[n])), out);
+        out = u3nc(u3nc(c3__f32, u3i_half(*(c3_h*)valptrs[n])), out);
         break;
       }
       case c_m3Type_f64:
@@ -652,9 +652,9 @@ _coins_from_stack(void** valptrs, c3_w n, c3_y* types)
 //  RETAIN argument
 // @Refcount: retains arguments
 static c3_o
-_coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
+_coins_to_stack(u3_noun coins, void** valptrs, c3_h n, c3_y* types)
 {
-  for (c3_w i = 0; i < n; i++)
+  for (c3_h i = 0; i < n; i++)
   {
     if (c3y == u3ud(coins))
     {
@@ -680,7 +680,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w*)valptrs[i] = u3r_word(0, value);
+        *(c3_h*)valptrs[i] = u3r_half(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -698,7 +698,7 @@ _coins_to_stack(u3_noun coins, void** valptrs, c3_w n, c3_y* types)
         {
           return c3n;
         }
-        *(c3_w*)valptrs[i] = u3r_word(0, value);
+        *(c3_h*)valptrs[i] = u3r_half(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -749,6 +749,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun args = u3at(arr_sam_3, monad);
 
     c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
+    {
+      return u3m_bail(c3__fail);
+    }
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -764,20 +768,20 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       return u3m_bail(c3__fail);
     }
 
-    c3_w n_in  = f->funcType->numArgs;
-    c3_w n_out = f->funcType->numRets;
+    c3_h n_in  = f->funcType->numArgs;
+    c3_h n_out = f->funcType->numRets;
     c3_y* types = f->funcType->types;
 
     c3_d *vals_in = u3a_calloc(n_in, sizeof(c3_d));
     void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-    for (c3_w i = 0; i < n_in; i++)
+    for (c3_h i = 0; i < n_in; i++)
     {
       valptrs_in[i] = &vals_in[i];
     }
 
     c3_d *vals_out = u3a_calloc(n_out, sizeof(c3_d));
     void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-    for (c3_w i = 0; i < n_out; i++)
+    for (c3_h i = 0; i < n_out; i++)
     {
       valptrs_out[i] = &vals_out[i];
     }
@@ -788,7 +792,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       return u3m_bail(c3__fail);
     }
 
-    c3_w edge_1 = sat_u->wasm_module->runtime->edge_suspend;
+    c3_h edge_1 = sat_u->wasm_module->runtime->edge_suspend;
 
     // printf("\r\n\r\n invoke %s\r\n\r\n", name_c);
 
@@ -862,10 +866,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       yil = u3nc(0, _atoms_from_stack(valptrs_out, n_out, types));
     }
 
-    c3_w edge_2 = sat_u->wasm_module->runtime->edge_suspend;
+    c3_h edge_2 = sat_u->wasm_module->runtime->edge_suspend;
     if (edge_1 != edge_2 && !result_call)
     {
-      fprintf(stderr, ERR("imbalanced suspension stack on succesfull return: %d vs %d"), edge_1, edge_2);
+      fprintf(stderr, ERR("imbalanced suspension stack on succesfull return: %u vs %u"), edge_1, edge_2);
       return u3m_bail(c3__fail);
     }
 
@@ -888,10 +892,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom ptr = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun len = u3at(arr_sam_3, monad);
 
-    c3_w ptr_w = u3r_word(0, ptr);
-    c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
-    c3_w len_buf_w;
-    c3_y* buf_y = m3_GetMemory(sat_u->wasm_module->runtime, &len_buf_w, 0);
+    c3_h ptr_h = u3r_half(0, ptr);
+    c3_h len_h = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
+    c3_h len_buf_h;
+    c3_y* buf_y = m3_GetMemory(sat_u->wasm_module->runtime, &len_buf_h, 0);
 
     if (buf_y == NULL)
     {
@@ -899,14 +903,14 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       return u3m_bail(c3__fail);
     }
 
-    if (ptr_w + len_l > len_buf_w)
+    if (ptr_h + len_h > len_buf_h)
     {
       fprintf(stderr, ERR("memread out of bounds"));
       return u3m_bail(c3__fail);
     }
 
     u3z(monad);
-    return u3nt(0, len_l, u3i_bytes(len_l, (buf_y + ptr_w)));
+    return u3nt(0, len_h, u3i_bytes(len_h, (buf_y + ptr_h)));
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->memwrite_bat))
   {
@@ -919,11 +923,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_noun len = u3at(arr_sam_6, monad);
     u3_noun src = u3at(arr_sam_7, monad);
 
-    c3_w ptr_w = u3r_word(0, ptr);
-    c3_l len_l = (c3y == u3a_is_cat(len)) ? len : u3m_bail(c3__fail);
+    c3_h ptr_h = u3r_half(0, ptr);
+    c3_h len_h = ( (1U << 31) > len ) ? len : u3m_bail(c3__fail);
 
-    c3_w len_buf_w;
-    c3_y* buf_y = m3_GetMemory(sat_u->wasm_module->runtime, &len_buf_w, 0);
+    c3_h len_buf_h;
+    c3_y* buf_y = m3_GetMemory(sat_u->wasm_module->runtime, &len_buf_h, 0);
 
     if (buf_y == NULL)
     {
@@ -931,13 +935,13 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       return u3m_bail(c3__fail);
     }
 
-    if (ptr_w + len_l > len_buf_w)
+    if (ptr_h + len_h > len_buf_h)
     {
       fprintf(stderr, ERR("memwrite out of bounds"));
       return u3m_bail(c3__fail);
     }
 
-    u3r_bytes(0, len_l, (buf_y + ptr_w), u3x_atom(src));
+    u3r_bytes(0, len_h, (buf_y + ptr_h), u3x_atom(src));
     
     u3z(monad);
     return u3nc(0, 0);
@@ -1152,6 +1156,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom value = u3x_atom(u3at(arr_sam_3, monad));
 
     c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
+    {
+      return u3m_bail(c3__fail);
+    }
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -1185,7 +1193,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       }
       case c_m3Type_i32:
       {
-        glob_value.value.i32 = u3r_word(0, value);
+        glob_value.value.i32 = u3r_half(0, value);
         break;
       }
       case c_m3Type_i64:
@@ -1195,7 +1203,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       }
       case c_m3Type_f32:
       {
-        glob_value.value.f32 = u3r_word(0, value);
+        glob_value.value.f32 = u3r_half(0, value);
         break;
       }
       case c_m3Type_f64:
@@ -1224,6 +1232,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom name = u3x_atom(u3at(arr_sam, monad));
 
     c3_w met_w = u3r_met(3, name);
+    if ( UINT32_MAX <= met_w )
+    {
+      return u3m_bail(c3__fail);
+    }
     c3_c* name_c = u3a_malloc(met_w + 1);
     u3r_bytes(0, met_w, (c3_y*)name_c, name);
     name_c[met_w] = 0;
@@ -1252,7 +1264,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       }
       case c_m3Type_i32:
       {
-        out = u3i_word(glob_value.value.i32);
+        out = u3i_half(glob_value.value.i32);
         break;
       }
       case c_m3Type_i64:
@@ -1262,7 +1274,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       }
       case c_m3Type_f32:
       {
-        out = u3i_word(glob_value.value.f32);
+        out = u3i_half(glob_value.value.f32);
         break;
       }
       case c_m3Type_f64:
@@ -1289,10 +1301,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       fprintf(stderr, ERR("memsize no memory"));
       return u3m_bail(c3__fail);
     }
-    c3_w num_pages = sat_u->wasm_module->runtime->memory.numPages;
+    c3_h num_pages = sat_u->wasm_module->runtime->memory.numPages;
 
     u3z(monad);
-    return u3nc(0, u3i_word(num_pages));
+    return u3nc(0, u3i_half(num_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->mem_grow_bat))
   {
@@ -1309,10 +1321,10 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
 
     u3_noun delta = u3at(arr_sam, monad);
 
-    c3_l delta_l = (c3y == u3a_is_cat(delta)) ? delta : u3m_bail(c3__fail);
+    c3_s delta_s = ( (1U << 16) > delta ) ? delta : u3m_bail(c3__fail);
 
-    c3_w n_pages = sat_u->wasm_module->runtime->memory.numPages;
-    c3_w required_pages = n_pages + delta_l;
+    c3_h n_pages = sat_u->wasm_module->runtime->memory.numPages;
+    c3_h required_pages = n_pages + delta_s;
 
     M3Result result = ResizeMemory(sat_u->wasm_module->runtime, required_pages);
 
@@ -1323,7 +1335,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     }
 
     u3z(monad);
-    return u3nc(0, u3i_word(n_pages));
+    return u3nc(0, u3i_half(n_pages));
   }
   else if (c3y == u3r_sing(monad_bat, sat_u->match->get_acc_bat))
   {
@@ -1348,8 +1360,8 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     }
     u3z(monad);
     u3_noun atoms = u3_nul;
-    c3_w n_globals = sat_u->wasm_module->numGlobals;
-    c3_w n_globals_import = sat_u->wasm_module->numGlobImports;
+    c3_h n_globals = sat_u->wasm_module->numGlobals;
+    c3_h n_globals_import = sat_u->wasm_module->numGlobImports;
     while (n_globals-- > n_globals_import)
     {
       M3Global glob = sat_u->wasm_module->globals[n_globals];
@@ -1361,7 +1373,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         }
         case c_m3Type_i32:
         {
-          atoms = u3nc(u3i_word(glob.intValue), atoms);
+          atoms = u3nc(u3i_half(glob.intValue), atoms);
           break;
         }
         case c_m3Type_i64:
@@ -1371,7 +1383,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         }
         case c_m3Type_f32:
         {
-          atoms = u3nc(u3i_word(glob.f32Value), atoms);
+          atoms = u3nc(u3i_half(glob.f32Value), atoms);
           break;
         }
         case c_m3Type_f64:
@@ -1390,9 +1402,9 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
       return u3m_bail(c3__fail);
     }
     u3_noun atoms = u3at(arr_sam, monad);
-    c3_w n_globals = sat_u->wasm_module->numGlobals;
-    c3_w n_globals_import = sat_u->wasm_module->numGlobImports;
-    for (c3_w i = n_globals_import; i < n_globals; i++)
+    c3_h n_globals = sat_u->wasm_module->numGlobals;
+    c3_h n_globals_import = sat_u->wasm_module->numGlobImports;
+    for (c3_h i = n_globals_import; i < n_globals; i++)
     {
       IM3Global glob = &sat_u->wasm_module->globals[i];
       u3_noun atom;
@@ -1406,7 +1418,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         }
         case c_m3Type_i32:
         {
-          glob->intValue = u3r_word(0, atom);
+          glob->intValue = u3r_half(0, atom);
           break;
         }
         case c_m3Type_i64:
@@ -1416,7 +1428,7 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
         }
         case c_m3Type_f32:
         {
-          glob->f32Value = u3r_word(0, atom);
+          glob->f32Value = u3r_half(0, atom);
           break;
         }
         case c_m3Type_f64:
@@ -1477,6 +1489,10 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
       }
       u3_noun name = u3t(frame);
       c3_w met_w = u3r_met(3, name);
+      if ( UINT32_MAX <= met_w )
+      {
+        u3m_bail(c3__fail);
+      }
       c3_c* name_c = u3a_malloc(met_w + 1);
       u3r_bytes(0, met_w, (c3_y*)name_c, name);
       u3z(frame);
@@ -1496,15 +1512,15 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
       else
       {
         IM3Function f = runtime->modules->functions + f_idx_d;
-        c3_w n_out_w = f->funcType->numRets;
-        c3_d *vals_out = u3a_calloc(n_out_w, sizeof(c3_d));
-        void **valptrs_out = u3a_calloc(n_out_w, sizeof(void*));
-        for (c3_w i = 0; i < n_out_w; i++)
+        c3_h n_out_h = f->funcType->numRets;
+        c3_d *vals_out = u3a_calloc(n_out_h, sizeof(c3_d));
+        void **valptrs_out = u3a_calloc(n_out_h, sizeof(void*));
+        for (c3_h i = 0; i < n_out_h; i++)
         {
           valptrs_out[i] = &vals_out[i];
         }
         M3Result result_tmp = m3_GetResults(f,
-          n_out_w,
+          n_out_h,
           (const void**)valptrs_out
         );
         if (result_tmp)
@@ -1515,7 +1531,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
           u3m_bail(c3__fail);
         }
         yil = u3nc(0,
-          _atoms_from_stack(valptrs_out, n_out_w, f->funcType->types)
+          _atoms_from_stack(valptrs_out, n_out_h, f->funcType->types)
         );
         u3a_free(valptrs_out);
         u3a_free(vals_out);
@@ -1738,12 +1754,12 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         {
           IM3Function f = runtime->modules->functions + func_idx_d;
           uint64_t * _sp = (uint64_t *)(runtime->base + _sp_offset_d);
-          c3_w n_out = f->funcType->numRets;
+          c3_h n_out = f->funcType->numRets;
           c3_y* types = f->funcType->types;
           void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
           const char *mod = f->import.moduleUtf8;
           const char *name = f->import.fieldUtf8;
-          for (c3_w i = 0; i < n_out; i++)
+          for (c3_h i = 0; i < n_out; i++)
           {
             valptrs_out[i] = &_sp[i];
           }
@@ -1778,7 +1794,7 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
   return result;
 }
 
-//  TRANSFERS sat->arrow_yil if m3Err_ComputationBlock is thrown
+//  TRANSFERS sat_u->arrow_yil if m3Err_ComputationBlock is thrown
 static const void *
 _link_wasm_with_arrow_map(
   IM3Runtime runtime,
@@ -1798,16 +1814,16 @@ _link_wasm_with_arrow_map(
     fprintf(stderr, ERR("import not found: %s/%s"), mod, name);
     return m3Err_functionImportMissing;
   }
-  c3_w n_in  = _ctx->function->funcType->numArgs;
-  c3_w n_out = _ctx->function->funcType->numRets;
+  c3_h n_in  = _ctx->function->funcType->numArgs;
+  c3_h n_out = _ctx->function->funcType->numRets;
   c3_y* types = _ctx->function->funcType->types;
   void **valptrs_in = u3a_calloc(n_in, sizeof(void*));
-  for (c3_w i = 0; i < n_in; i++)
+  for (c3_h i = 0; i < n_in; i++)
   {
     valptrs_in[i] = &_sp[i+n_out];
   }
   void **valptrs_out = u3a_calloc(n_out, sizeof(void*));
-  for (c3_w i = 0; i < n_out; i++)
+  for (c3_h i = 0; i < n_out; i++)
   {
     valptrs_out[i] = &_sp[i];
   }
@@ -1920,54 +1936,53 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
     u3_noun susp_list;
 
     if ( c3n == u3r_mean(get,
-        2,   &yil_previous,
-        6,   &queue,
-        56,  &p_box_buffer,
-        57,  &q_box_buffer,
-        29,  &pad_box,
-        120, &p_mem_buffer,
-        121, &q_mem_buffer,
-        61,  &stack_offset,
-        62,  &runtime_offset,
-        126, &lia_shop,
-        254, &acc,
-        255, &susp_list,
-        0) 
+        {2,   &yil_previous},
+        {6,   &queue},
+        {56,  &p_box_buffer},
+        {57,  &q_box_buffer},
+        {29,  &pad_box},
+        {120, &p_mem_buffer},
+        {121, &q_mem_buffer},
+        {61,  &stack_offset},
+        {62,  &runtime_offset},
+        {126, &lia_shop},
+        {254, &acc},
+        {255, &susp_list})
     )
     {
       return u3m_bail(c3__fail);
     }
-    c3_w box_len_w = (c3y == u3a_is_cat(p_box_buffer))
+    c3_h box_len_h = (u3a_direct_max_h > p_box_buffer)
       ? p_box_buffer
       : u3m_bail(c3__fail);
     
-    c3_w pad_w = (c3y == u3a_is_cat(pad_box))
+    c3_h pad_h = (u3a_direct_max_h > pad_box)
       ? pad_box
       : u3m_bail(c3__fail);
     
-    c3_w run_off_w = (c3y == u3a_is_cat(runtime_offset))
+    c3_h run_off_h = (u3a_direct_max_h > runtime_offset)
       ? runtime_offset
       : u3m_bail(c3__fail);
     
-    c3_w len_buf_w = (c3y == u3a_is_cat(p_mem_buffer))
+    c3_h len_buf_h = (u3a_direct_max_h > p_mem_buffer)
       ? p_mem_buffer
       : u3m_bail(c3__fail);
 
-    c3_w stk_off_w = (c3y == u3a_is_cat(stack_offset))
+    c3_h stk_off_h = (u3a_direct_max_h > stack_offset)
       ? stack_offset
       : u3m_bail(c3__fail);
     
-    _uw_arena_init_size(BoxArena, box_len_w);
-    u3r_bytes(pad_w, box_len_w, BoxArena->buf_y, q_box_buffer);
+    _uw_arena_init_size(BoxArena, box_len_h);
+    u3r_bytes(pad_h, box_len_h, BoxArena->buf_y, q_box_buffer);
     _uw_arena_init(CodeArena);
 
     M3Result result;
-    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena->buf_y + run_off_w);
+    IM3Runtime wasm3_runtime = (IM3Runtime)(BoxArena->buf_y + run_off_h);
     wasm3_runtime->base = BoxArena->buf_y;
     wasm3_runtime->base_transient = CodeArena->buf_y;
     m3_RewritePointersRuntime(wasm3_runtime, BoxArena->buf_y, 0 /*is_store*/);
     IM3Module wasm3_module = wasm3_runtime->modules;
-    c3_w n_imports = wasm3_module->numFuncImports;
+    c3_h n_imports = wasm3_module->numFuncImports;
 
     // make sure to not touch BoxArena
     m3_SetAllocators(_calloc_bail, _free_bail, _realloc_bail);
@@ -1984,7 +1999,7 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       
       if (0 == (jmp_i = setjmp(esc)))
       {
-        for (c3_w i = 0; i < n_imports; i++)
+        for (c3_h i = 0; i < n_imports; i++)
         {
           M3Function f = wasm3_module->functions[i];
           const char* mod  = f.import.moduleUtf8;
@@ -2039,11 +2054,12 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       // sat_u->match same
       // sat_u->resolution same
       sat_u->arrow_yil = u3_none;
-      M3MemoryHeader* mem = u3a_malloc(len_buf_w + sizeof(M3MemoryHeader));
+      sat_u->susp_list = u3k(susp_list);
+      M3MemoryHeader* mem = u3a_malloc(len_buf_h + sizeof(M3MemoryHeader));
       mem->runtime = wasm3_runtime;
-      mem->maxStack = BoxArena->buf_y + stk_off_w;
-      mem->length = len_buf_w;
-      u3r_bytes(0, len_buf_w, (u8*)(mem + 1), q_mem_buffer);
+      mem->maxStack = BoxArena->buf_y + stk_off_h;
+      mem->length = len_buf_h;
+      u3r_bytes(0, len_buf_h, (u8*)(mem + 1), q_mem_buffer);
       wasm3_runtime->memory.mallocated = mem;
     }
 
@@ -2200,14 +2216,14 @@ _move_state(
 
   IM3Runtime run_u = sat_u->wasm_module->runtime;
   M3MemoryHeader* mem_u = run_u->memory.mallocated;
-  c3_w stk_off_w = (u8*)mem_u->maxStack - BoxArena->buf_y;
-  if (c3n == u3a_is_cat(stk_off_w))
+  c3_h stk_off_h = (u8*)mem_u->maxStack - BoxArena->buf_y;
+  if (u3a_direct_max_h < stk_off_h)
   {
     u3m_bail(c3__fail);
   }
 
   c3_w len_buf_w = mem_u->length;
-  if (c3n == u3a_is_cat(len_buf_w))
+  if (u3a_direct_max_h < len_buf_w)
   {
     u3m_bail(c3__fail);
   }
@@ -2217,16 +2233,16 @@ _move_state(
   u3a_free(mem_u);
 
   m3_RewritePointersRuntime(run_u, BoxArena->buf_y, 1 /*is_store*/);
-  c3_w run_off_w = (c3_y*)run_u - BoxArena->buf_y;
-  if (c3n == u3a_is_cat(run_off_w))
+  c3_h run_off_h = (c3_y*)run_u - BoxArena->buf_y;
+  if (u3a_direct_max_h < run_off_h)
   {
     u3m_bail(c3__fail);
   }
   
   _uw_arena_free(CodeArena);
 
-  c3_w box_len_w = BoxArena->siz_w;
-  if (c3n == u3a_is_cat(box_len_w))
+  c3_h box_len_h = BoxArena->siz_h;
+  if (u3a_direct_max_h < box_len_h)
   {
     u3m_bail(c3__fail);
   }
@@ -2239,9 +2255,9 @@ _move_state(
   u3_noun stash = uw_octo(
     u3k(yil),
     sat_u->queue,
-    u3nc(u3nc(box_len_w, q_box), pad_y),
-    u3nc(u3nc(len_buf_w, q_buf), stk_off_w),
-    run_off_w,
+    u3nc(u3nc(box_len_h, q_box), pad_y),
+    u3nc(u3nc(len_buf_w, q_buf), stk_off_h),
+    run_off_h,
     sat_u->lia_shop,
     u3k(sat_u->acc), // accumulator will be returned
     sat_u->susp_list
@@ -2511,7 +2527,7 @@ u3we_lia_run_v1(u3_noun cor)
             return u3m_bail(c3__fail);
           }
 
-          c3_w n_imports = wasm3_module->numFuncImports;
+          c3_h n_imports = wasm3_module->numFuncImports;
           u3_noun lia_shop = u3at(seed_shop, seed_new);
           u3_noun import = u3at(seed_import, seed_new);
           
@@ -2530,7 +2546,7 @@ u3we_lia_run_v1(u3_noun cor)
             sat.resolution = u3_none;
           }
 
-          for (c3_w i = 0; i < n_imports; i++)
+          for (c3_h i = 0; i < n_imports; i++)
           {
             M3Function f = wasm3_module->functions[i];
             const char* mod  = f.import.moduleUtf8;
@@ -2688,7 +2704,7 @@ u3we_lia_run_v1(u3_noun cor)
       return u3m_bail(c3__fail);
     }
 
-    c3_w n_imports = wasm3_module->numFuncImports;
+    c3_h n_imports = wasm3_module->numFuncImports;
     u3_noun lia_shop = u3at(seed_shop, seed_new);
     u3_noun import = u3at(seed_import, seed_new);
 
@@ -2707,7 +2723,7 @@ u3we_lia_run_v1(u3_noun cor)
       sat.resolution = u3_none;
     }
 
-    for (c3_w i = 0; i < n_imports; i++)
+    for (c3_h i = 0; i < n_imports; i++)
     {
       M3Function f = wasm3_module->functions[i];
       const char* mod  = f.import.moduleUtf8;
@@ -2932,7 +2948,8 @@ u3we_lia_run_once(u3_noun cor)
   u3_noun p_octs, q_octs;
   u3x_cell(octs, &p_octs, &q_octs);
 
-  c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs : u3m_bail(c3__fail);
+  c3_w bin_len_w = (c3y == u3a_is_cat(p_octs)) ? p_octs
+                                               : u3m_bail(c3__fail);
   c3_y* bin_y = u3r_bytes_alloc(0, bin_len_w, u3x_atom(q_octs));
 
   M3Result result;
@@ -2985,7 +3002,7 @@ u3we_lia_run_once(u3_noun cor)
     return u3m_bail(c3__fail);
   }
 
-  c3_w n_imports = wasm3_module->numFuncImports;
+  c3_h n_imports = wasm3_module->numFuncImports;
   u3_noun monad = u3at(u3x_sam_7, cor);
   u3_noun import = u3at(u3x_sam_5, cor);
 
@@ -3005,7 +3022,7 @@ u3we_lia_run_once(u3_noun cor)
 
   sat.is_stateful = 0;
 
-  for (c3_w i = 0; i < n_imports; i++)
+  for (c3_h i = 0; i < n_imports; i++)
   {
     M3Function f = wasm3_module->functions[i];
     const char * mod  = f.import.moduleUtf8;

@@ -89,7 +89,7 @@ _n_hint(u3_noun zep,
     }
 
     case c3__slog: {
-      if ( !(u3C.wag_w & u3o_quiet) ) {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(hod);
         u3t_on(noc_o);
@@ -467,11 +467,11 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   /* related to nock 6: unconditional skips */                                 \
   X(SBIP, "sbip", &&do_sbip),  /* 47: c3_b */                                  \
   X(SIPS, "sips", &&do_sips),  /* 48: c3_s */                                  \
-  X(SWIP, "swip", &&do_swip),  /* 49: c3_l */                                  \
+  X(SWIP, "swip", &&do_swip),  /* 49: c3_h */                                  \
   /* related to nock 6: conditional skips */                                   \
   X(SBIN, "sbin", &&do_sbin),  /* 50: c3_b */                                  \
   X(SINS, "sins", &&do_sins),  /* 51: c3_s */                                  \
-  X(SWIN, "swin", &&do_swin),  /* 52: c3_l */                                  \
+  X(SWIN, "swin", &&do_swin),  /* 52: c3_h */                                  \
   /* nock 9 */                                                                 \
   X(KICB, "kicb", &&do_kicb),  /* 53: c3_b */                                  \
   X(KICS, "kics", &&do_kics),  /* 54: c3_s */                                  \
@@ -556,7 +556,7 @@ _n_arg(c3_y cod_y)
       return sizeof(c3_s);
 
     case SWIP: case SWIN:
-      return sizeof(c3_l);
+      return sizeof(c3_h);
 
     default:
       u3_assert( cod_y < LAST );
@@ -609,7 +609,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           break;
 
         case SBIP: case SBIN: {
-          c3_l tot_l = 0,
+          c3_h tot_l = 0,
                sip_l = u3t(op);
           c3_w j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
@@ -621,7 +621,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         }
 
         case SKIB: case SLIB: {
-          c3_l tot_l = 0,
+          c3_h tot_l = 0,
                sip_l = u3h(u3t(u3t(op)));
           c3_w j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
@@ -833,7 +833,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* memo index args */
         case SKIB: case SLIB: {
           u3n_memo* mem_u;
-          c3_l sip_l  = u3h(sip);
+          c3_h sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -848,7 +848,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
 
         /* skips */
         case SBIP: case SBIN: {
-          c3_l sip_l  = u3h(sip);
+          c3_h sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -1721,7 +1721,9 @@ _n_find(u3_noun pre, u3_noun fol)
     u3z(key);
     return _cn_to_prog(pog);
   }
-  else if ( u3R != &u3H->rod_u ) {
+  
+  key = u3m_dedup(key);
+  if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
       rod_u = u3to(u3a_road, rod_u->par_p);
@@ -1932,7 +1934,7 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
     } break;
 
     case c3__drop: {
-      u3m_Ford_fresh_road_depth_w = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_w);
+      u3m_Ford_fresh_road_depth_h = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_h);
       u3h_free(u3R->cax.for_p);
       u3R->cax.for_p = u3h_new_cache(u3C.per_w);
       *out = u3_nul;
@@ -2082,7 +2084,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__nara: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_nara(pri_l);
       }
@@ -2093,7 +2095,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__hela: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_hela(pri_l);
       }
@@ -2104,7 +2106,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__xray : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3k(tan), _cn_etch_bytecode(fol));
       }
       u3z(*clu);
@@ -2114,7 +2116,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__meme : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
         // replace with better str fmt
         u3t_slog_cap(1, u3k(tan), u3t_etch_meme(mod_l));
       }
@@ -2173,12 +2175,12 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // "q_q_tok: report"
     // prepend the priority to form a cell of the same shape q_tok
     // send this to ut3_slog so that it can be logged out
-    c3_l pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
+    c3_h pri_h = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
     if ( cap_t ) {
-      u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
+      u3t_slog_cap(pri_h, u3k(q_q_tok), u3i_string(str_c));
     }
     else {
-      u3t_slog(u3nc(pri_l, u3i_string(str_c)));
+      u3t_slog(u3nc(pri_h, u3i_string(str_c)));
     }
     u3z(delta);
   }
@@ -2724,7 +2726,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 
     do_slog:
       x = _n_pep(mov, off);
-      if ( !(u3C.wag_w & u3o_quiet) ) {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(x);
         u3t_on(noc_o);
@@ -2812,12 +2814,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       top = _n_peek(off);
       o   = *top;
       if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
-        u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
          : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
-        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+        x = u3z_save_m_dedup(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
       // else if ( u3z_memo_keep == u3h(o) ) {
@@ -3223,7 +3225,6 @@ _n_bam(u3_noun kev, void* dat)
 {
   u3n_prog* pog = _cn_to_prog(u3t(kev));
   c3_w*   bam_w = dat;
-
   *bam_w += _n_prog_mark(pog);
 }
 
@@ -3239,7 +3240,7 @@ u3n_mark()
 
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
+  qua_u[0]->siz_w = qua_u[0]->siz_w * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
@@ -3251,24 +3252,24 @@ u3n_mark()
 
     mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
     mua_u[0]->nam_c = strdup("keys");
-    mua_u[0]->siz_w = mas_u.key_w * 4;
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
 
     mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
     mua_u[1]->nam_c = strdup("vals");
-    mua_u[1]->siz_w = mas_u.val_w * 4;
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
 
     mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
     mua_u[2]->nam_c = strdup("pairs");
-    mua_u[2]->siz_w = mas_u.kev_w * 4;
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
 
     mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
     mua_u[3]->nam_c = strdup("nodes");
-    mua_u[3]->siz_w = mas_u.nod_w * 4;
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
 
     mua_u[4] = NULL;
 
     qua_u[1]->qua_u = mua_u;
-    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * 4;
+    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
   qua_u[2] = NULL;

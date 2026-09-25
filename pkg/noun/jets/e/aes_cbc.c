@@ -31,7 +31,10 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
 
     //  the only error is a non-block-aligned length, ruled out by construction
     //
-    u3_assert( 0 == (*low_f)(sab_u.buf_y, (c3_z)sab_u.len_w << 2, key_y, iv_y) );
+    u3_assert( 0 == (*low_f)(sab_u.buf_y,
+                             (c3_z)sab_u.len_w << u3a_word_bytes_shift,
+                             key_y,
+                             iv_y) );
 
     return u3i_slab_mint(&sab_u);
   }

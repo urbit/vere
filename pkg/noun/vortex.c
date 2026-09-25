@@ -35,7 +35,7 @@ u3v_life(u3_noun eve)
 
 /* u3v_boot(): evaluate boot sequence, making a kernel
 */
-c3_o
+u3_weak
 u3v_boot(u3_noun eve)
 {
   c3_d len_d;
@@ -61,8 +61,7 @@ u3v_boot(u3_noun eve)
       else {
         fprintf(stderr, "boot: bail\r\n");
       }
-      u3z(pro);
-      return c3n;
+      return pro;
     }
 
     u3z(u3A->roc);
@@ -73,7 +72,7 @@ u3v_boot(u3_noun eve)
     u3z(pro);
   }
 
-  return c3y;
+  return u3_none;
 }
 
 /* _cv_lite(): load lightweight, core-only pill.
@@ -141,10 +140,10 @@ _cv_nock_wish(u3_noun txt)
   return pro;
 }
 
-/* u3v_wish_n(): text expression with cache. with the input as a u3_noun.
+/* u3v_wish_w(): text expression with cache. with the input as a u3_noun.
 */
 u3_noun
-u3v_wish_n(u3_noun txt)
+u3v_wish_w(u3_noun txt)
 {
   u3t_event_trace("u3v_wish", 'b');
   u3_weak exp = u3kdb_get(u3k(u3A->yot), u3k(txt));
@@ -223,14 +222,14 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
 c3_o
 u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
 {
-  c3_w    wad_w;
+  c3_w wad_w;
   u3_noun uco = u3dc("slaw", fot, u3k(txt));
   u3_noun p_uco, q_uco;
 
   if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
        (u3_nul != p_uco) ||
        (c3n == u3r_safe_word(q_uco, &wad_w)) ||
-       (wad_w & 0x80000000) )
+       (wad_w & u3a_indirect_flag) )
   {
     c3_c* txt_c = u3r_string(txt);
     u3l_log("strange lily %s", txt_c);
@@ -356,13 +355,13 @@ u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 #if 0
   u3v_blew blu_u   = u3_term_get_blew(0);
 #endif
-  c3_l    col_l = blu_u.col_l;
+  c3_h    col_h = blu_u.col_h;
   u3_noun cat   = tac;
 
   //  We are calling nock here, but hopefully need no protection.
   //
   while ( c3y == u3du(cat) ) {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(u3h(cat)));
+    u3_noun wol = u3dc("wash", u3nc(tab_l, col_h), u3k(u3h(cat)));
 
     u3m_wall(wol);
     cat = u3t(cat);
@@ -392,11 +391,11 @@ u3v_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
-  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
+  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[1]->nam_c = strdup("wish cache");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
   qua_u[2] = NULL;
 

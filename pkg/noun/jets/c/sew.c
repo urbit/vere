@@ -19,7 +19,7 @@ u3qc_sew(u3_atom a,
        !_(u3r_safe_word(c, &c_w)) ) {
     return u3_none;
   }
-  if ( !_(u3a_is_cat(a)) || (a >= 32) ) {
+  if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 

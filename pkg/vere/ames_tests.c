@@ -17,16 +17,16 @@ static void
 _test_ames(void)
 {
   u3_lane lan_u;
-  lan_u.pip_w = 0x7f000001;
+  lan_u.pip_h = 0x7f000001;
   lan_u.por_s = 12345;
 
   u3_noun lan = u3_ames_encode_lane(lan_u);
   u3_lane nal_u = u3_ames_decode_lane(u3k(lan));
   u3_lane nal_u2 = u3_ames_decode_lane(lan);
 
-  if ( !(lan_u.pip_w == nal_u.pip_w && lan_u.por_s == nal_u.por_s) ) {
+  if ( !(lan_u.pip_h == nal_u.pip_h && lan_u.por_s == nal_u.por_s) ) {
     fprintf(stderr, "ames: lane fail (a)\r\n");
-    fprintf(stderr, "pip: %d, por: %d\r\n", nal_u.pip_w, nal_u.por_s);
+    fprintf(stderr, "pip: %d, por: %d\r\n", nal_u.pip_h, nal_u.por_s);
     exit(1);
   }
 }
@@ -48,8 +48,8 @@ _test_stun_addr_roundtrip(u3_lane* inn_u)
     ret_i = 1;
   }
   else {
-    if ( lan_u.pip_w != inn_u->pip_w ) {
-      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_w, inn_u->pip_w);
+    if ( lan_u.pip_h != inn_u->pip_h ) {
+      fprintf(stderr, "stun: addr mismatch %x %x\r\n", lan_u.pip_h, inn_u->pip_h);
       ret_i = 1;
     }
 
@@ -65,15 +65,15 @@ _test_stun_addr_roundtrip(u3_lane* inn_u)
 static c3_i
 _test_stun(void)
 {
-  u3_lane inn_u = { .pip_w = 0x7f000001, .por_s = 13337 };
-  c3_w    len_w = 256;
+  u3_lane inn_u = { .pip_h = 0x7f000001, .por_s = 13337 };
+  c3_h    len_w = 256;
 
   while ( len_w-- ) {
     if ( _test_stun_addr_roundtrip(&inn_u) ) {
       return 1;
     }
 
-    inn_u.pip_w++;
+    inn_u.pip_h++;
     inn_u.por_s++;
   }
 
@@ -93,17 +93,17 @@ _test_stun(void)
 static c3_i
 _test_mug_underflow(void)
 {
-  c3_w  len_w = HEAD_SIZE;             // 4: smallest packet that reaches the mug check
-  c3_y* hun_y = c3_malloc(len_w);      // exact-size: no slack for the OOB read
+  c3_h  len_h = HEAD_SIZE;             // 4: smallest packet that reaches the mug check
+  c3_y* hun_y = c3_malloc(len_h);      // exact-size: no slack for the OOB read
 
-  memset(hun_y, 0, len_w);
+  memset(hun_y, 0, len_h);
 
   u3_pact pac_u;
   memset(&pac_u, 0, sizeof(pac_u));
-  pac_u.len_w        = len_w;
+  pac_u.len_h        = len_h;
   pac_u.hun_y        = hun_y;
   pac_u.hed_u.rel_o  = c3y;            // relay bit set -> origin_size 6 -> rog_w 10
-  pac_u.hed_u.mug_l  = 0;
+  pac_u.hed_u.mug_h  = 0;
 
   c3_o ret_o = _ames_check_mug(&pac_u);
 
@@ -137,7 +137,7 @@ main(int argc, char* argv[])
 
   //  GC
   //
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "ames okeedokee\n");
   return 0;

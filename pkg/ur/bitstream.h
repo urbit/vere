@@ -236,4 +236,13 @@ ur_bsw_atom_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt);
 void
 ur_bsw_cell(ur_bsw_t *bsw);
 
+#ifndef VERE64
+#define ur_bsrn_any ur_bsr32_any
+#define ur_bswn     ur_bsw32
+#else
+
+#define ur_bsrn_any ur_bsr64_any
+#define ur_bswn     ur_bsw64
+#endif
+
 #endif
