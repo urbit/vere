@@ -77,29 +77,6 @@
                        c3_d        len_d,
                        c3_c*       stg_c);
 
-    /* u3_blob_save(): stage bytes and install them: mars and tests only.
-    **
-    ** u3_blob_stage then u3_blob_move_stg, so it deduplicates within the
-    ** mug bucket exactly as an install does.  On success, returns c3y
-    ** and sets *mug_h and *seq_h.
-    */
-      c3_o
-      u3_blob_save(const c3_c* pax_c,
-                   const c3_y* dat_y,
-                   c3_d        len_d,
-                   c3_h*       mug_h,
-                   c3_h*       seq_h);
-
-    /* u3_blob_save_fd(): stage [len_d] bytes from [fid_i] and install
-    **   them: mars and tests only.
-    */
-      c3_o
-      u3_blob_save_fd(const c3_c* pax_c,
-                      c3_i        fid_i,
-                      c3_d        len_d,
-                      c3_h*       mug_h,
-                      c3_h*       seq_h);
-
     /* u3_blob_live(): check whether a blob file exists.
     */
       c3_o

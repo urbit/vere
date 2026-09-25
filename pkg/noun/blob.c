@@ -993,61 +993,6 @@ u3_blob_stage_fd(const c3_c* pax_c,
   return _blob_stage_done(stg_i, stg_c, ok_o);
 }
 
-/* _blob_install(): install a staging file, removing it on failure.
-*/
-static c3_o
-_blob_install(const c3_c* pax_c, const c3_c* stg_c, c3_h* mug_h, c3_h* seq_h)
-{
-  if ( c3n == u3_blob_move_stg(pax_c, stg_c, mug_h, seq_h) ) {
-    c3_unlink(stg_c);
-    return c3n;
-  }
-  return c3y;
-}
-
-/* u3_blob_save(): stage [len_d] bytes and install them.
-**
-**   content whose atom the loom would keep direct has no bob
-**   representation (see U3_BLOB_MIN); the caller must use the loom.
-**   all-zero content lands here too, denoting the atom 0.  the
-**   install itself trims trailing zeros, mugs, deduplicates, and
-**   renames, so this and u3_blob_move_stg agree byte for byte.
-*/
-c3_o
-u3_blob_save(const c3_c* pax_c,
-             const c3_y* dat_y,
-             c3_d        len_d,
-             c3_h*       mug_h,
-             c3_h*       seq_h)
-{
-  c3_c stg_c[8192];
-
-  if ( _blob_sig(dat_y, len_d) < U3_BLOB_MIN ) {
-    return c3n;
-  }
-  if ( c3n == u3_blob_stage(pax_c, dat_y, len_d, stg_c) ) {
-    return c3n;
-  }
-  return _blob_install(pax_c, stg_c, mug_h, seq_h);
-}
-
-/* u3_blob_save_fd(): stage [len_d] bytes from [fid_i] and install them.
-*/
-c3_o
-u3_blob_save_fd(const c3_c* pax_c,
-                c3_i        fid_i,
-                c3_d        len_d,
-                c3_h*       mug_h,
-                c3_h*       seq_h)
-{
-  c3_c stg_c[8192];
-
-  if ( c3n == u3_blob_stage_fd(pax_c, fid_i, len_d, stg_c) ) {
-    return c3n;
-  }
-  return _blob_install(pax_c, stg_c, mug_h, seq_h);
-}
-
 /* u3_blob_exists(): check whether a blob file exists.
 */
 c3_o
@@ -1256,8 +1201,10 @@ u3_blob_move_stg(const c3_c* pax_c,
   }
   madvise(map_v, (size_t)map_d, MADV_SEQUENTIAL);
 
-  //  the atom's byte length: what lands in the store must be canonical
-  //  (see u3_blob_save).  the file is trimmed to match further down.
+  //  the atom's byte length: what lands in the store must be canonical,
+  //  so the file is trimmed to match further down.  content whose atom
+  //  the loom would keep direct has no bob representation (see
+  //  U3_BLOB_MIN), and all-zero content lands there too, denoting 0.
   //
   len_d = _blob_sig((const c3_y*)map_v, map_d);
 
