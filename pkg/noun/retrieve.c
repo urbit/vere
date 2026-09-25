@@ -948,10 +948,9 @@ u3r_pqrs(u3_noun  a,
 **   (1 << a_y).
 **
 **   For example, (a_y == 3) returns the size in bytes.
-**   NB: (a_y) must be < 37.
+**   NB: (a_y) must be < 64 + u3a_word_bits_log.
 */
-// XX: 64 make 64 in 32 bit case too, change all callsites to c3_d
-c3_w
+c3_d
 u3r_met(c3_y  a_y,
         u3_atom b)
 {
@@ -961,47 +960,59 @@ u3r_met(c3_y  a_y,
   if ( b == 0 ) {
     return 0;
   }
-  /* gal_w: number of words besides (daz_w) in (b).
+  /* gal_d: number of words besides (daz_w) in (b).
   ** daz_w: top word in (b).
   */
-  c3_w gal_w;
+  c3_d gal_d;
   c3_w daz_w;
 
   if ( _(u3a_is_cat(b)) ) {
-    gal_w = 0;
+    gal_d = 0;
     daz_w = b;
   }
   else {
-    //  bob atoms: the full-width count, from the file's tail; callers
-    //  that need the width past c3_w use u3r_met_d directly
+    //  bob atoms: the count comes from the file's tail, through the
+    //  road's hand; the file is never read whole
     //
     if ( c3y == u3a_is_bob(b) ) {
-      return (c3_w)u3r_met_d(a_y, b);
+      u3r_view vue_u;
+      c3_d     bit_d;
+
+      if ( c3n == u3r_view_wind(&vue_u, b) ) {
+        return u3m_bail(c3__fail);
+      }
+      bit_d = u3r_view_met(&vue_u);
+      u3r_view_done(&vue_u);
+
+      if ( a_y >= 64 ) {
+        return bit_d ? 1 : 0;
+      }
+      return a_y ? ((bit_d + (((c3_d)1 << a_y) - 1)) >> a_y) : bit_d;
     }
 
     u3a_atom* b_u = u3a_to_ptr(b);
 
-    gal_w = (b_u->len_w) - 1;
-    daz_w = b_u->buf_w[gal_w];
+    gal_d = (b_u->len_w) - 1;
+    daz_w = b_u->buf_w[gal_d];
   }
 
-  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
-     aka log2(CHAR_BIT * sizeof gal_w)
-     a_y < 5 informs whether we shift return left or right
+  /* u3a_word_bits_log is log2(CHAR_BIT * sizeof daz_w): 5 for a 32-bit
+     word, 6 for a 64-bit one.  a_y below it means the count is finer
+     than a word and the word count shifts left; at or above it, right.
      */
   if (a_y < u3a_word_bits_log) {
     c3_y max_y = (1 << a_y) - 1;
     c3_y gow_y = u3a_word_bits_log - a_y;
 
-    if (gal_w > ((c3_w_max - (u3a_word_bits + max_y)) >> gow_y))
+    if (gal_d > ((c3_d_max - (u3a_word_bits + max_y)) >> gow_y))
       return u3m_bail(c3__fail);
 
-    return (gal_w << gow_y)
+    return (gal_d << gow_y)
       + ((c3_bits_word(daz_w) + max_y)
          >> a_y);
   }
   c3_y gow_y = (a_y - u3a_word_bits_log);
-  return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
+  return ((gal_d + 1) + ((1ULL << gow_y) - 1)) >> gow_y;
 }
 
 /* _cr_bob_bytes(): [len_z] bytes at byte offset [off_d] of bob [a].
@@ -1112,20 +1123,20 @@ u3r_byte(c3_w    a_w,
 */
 void
 u3r_bytes(c3_w    a_w,
-            c3_w    b_w,
-            c3_y*   c_y,
-            u3_atom d)
+          c3_w    b_w,
+          c3_y*   c_y,
+          u3_atom d)
 {
   u3_assert(u3_none != d);
   u3_assert(_(u3a_is_atom(d)));
 
+  c3_y* buf_y;
+  c3_w  len_w;
+
+  STATIC_ASSERT(c3_endian == c3_endian_little, "");
   if ( _(u3a_is_cat(d)) ) {
-    c3_w e_w = d >> (c3_min(a_w, u3a_word_bytes) << 3);
-    c3_w m_w = c3_min(b_w, u3a_word_bytes);
-    memcpy(c_y, (c3_y*)&e_w, m_w);
-    if ( b_w > u3a_word_bytes ) {
-      memset(c_y + u3a_word_bytes, 0, b_w - u3a_word_bytes);
-    }
+    buf_y = (c3_y*)&d;
+    len_w = sizeof(c3_w);
   }
   else {
     if ( c3y == u3a_is_bob(d) ) {
@@ -1133,20 +1144,22 @@ u3r_bytes(c3_w    a_w,
       return;
     }
 
-    u3a_atom* d_u   = u3a_to_ptr(d);
-    c3_w n_w = d_u->len_w << u3a_word_bytes_shift;
-    c3_y* x_y = (c3_y*)d_u->buf_w + a_w;
+    u3a_atom* d_u = u3a_to_ptr(d);
 
-    if ( a_w >= n_w ) {
-      memset(c_y, 0, b_w);
+    buf_y = (c3_y*)d_u->buf_w;
+    len_w = d_u->len_w * sizeof(c3_w);
+  }
+
+  {
+    c3_w hav_w = ( a_w < len_w ) ? (len_w - a_w) : 0;
+    c3_w z_w   = c3_min(b_w, hav_w);
+
+    //  guarded so [buf_y + a_w] is only formed when in bounds
+    //
+    if ( z_w ) {
+      memcpy(c_y, buf_y + a_w, z_w);
     }
-    else {
-      c3_w z_w = c3_min(b_w, n_w - a_w);
-      memcpy(c_y, x_y, z_w);
-      if ( b_w > n_w - a_w ) {
-        memset(c_y + z_w, 0, b_w + a_w - n_w);
-      }
-    }
+    memset(c_y + z_w, 0, b_w - z_w);
   }
 }
 
@@ -1157,7 +1170,11 @@ u3r_bytes(c3_w    a_w,
 c3_w
 u3r_bytes_fit(c3_w len_w, c3_y *buf_y, u3_atom a)
 {
-  c3_w met_w = u3r_met(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   if ( met_w <= len_w ) {
     u3r_bytes(0, len_w, buf_y, a);
     return 0;
@@ -1177,7 +1194,7 @@ u3r_bytes_alloc(c3_w    a_w,
                 u3_atom b)
 {
   c3_y* b_y = u3a_malloc(len_w);
-  u3r_bytes(a_w, a_w + len_w, b_y, b);
+  u3r_bytes(a_w, len_w, b_y, b);
   return b_y;
 }
 
@@ -1189,8 +1206,12 @@ u3r_bytes_alloc(c3_w    a_w,
 c3_y*
 u3r_bytes_all(c3_w* len_w, u3_atom a)
 {
-  c3_w met_w = *len_w = u3r_met(3, a);
-  return u3r_bytes_alloc(0, met_w, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  *len_w = (c3_w)met_d;
+  return u3r_bytes_alloc(0, *len_w, a);
 }
 
 /* _cr_view_blank(): reset [vue_u] to the empty loom view.
@@ -1235,7 +1256,11 @@ u3r_view_wind(u3r_view* vue_u, u3_atom a)
     return c3y;
   }
 
-  c3_w met_w = u3r_met(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
 
   if ( 0 == met_w ) {
     return c3y;
@@ -1692,57 +1717,9 @@ u3r_halfs(c3_w    a_w,
           c3_h*   c_h,
           u3_atom d)
 {
-
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  if ( b_w == 0 ) {
-    return;
-  }
-  if ( d <= u3a_direct_max_h ) {
-    if ( a_w == 0 ) {
-      *c_h = (c3_h)d;
-      memset((c3_y*)(c_h + 1), 0, (b_w - 1) << u3a_half_bytes_shift);
-    }
-    else {
-      memset((c3_y*)c_h, 0, b_w << u3a_half_bytes_shift);
-    }
-  }
-  else {
-    if ( c3y == u3a_is_bob(d) ) {
-      _cr_bob_bytes(d, (c3_d)a_w << u3a_half_bytes_shift,
-                    (c3_y*)c_h, (c3_z)b_w << u3a_half_bytes_shift);
-      return;
-    }
-
-    c3_w len_w;
-    c3_h* buf_h;
-    // XX: 64 little endian. very ugly!
-#ifdef VERE64
-    if (c3y == u3a_is_cat(d)) {
-      len_w = d == c3_w_max ? 1 : 2;
-      buf_h = (c3_h*)&d;
-    }
-    else
-#endif
-    {
-      u3a_atom* d_u = u3a_to_ptr(d);
-      len_w = d_u->len_w * u3a_word_words;
-      buf_h = (c3_h*)d_u->buf_w;
-    }
-    if ( a_w >= len_w ) {
-      memset((c3_y*)c_h, 0, b_w << u3a_half_bytes_shift);
-    }
-    else {
-      c3_w z_w = c3_min(b_w, len_w - a_w);
-      // XX: 64 little endian
-      c3_h* x_h = buf_h + a_w;
-      memcpy((c3_y*)c_h, (c3_y*)x_h, z_w << u3a_half_bytes_shift);
-      if ( b_w > len_w - a_w ) {
-        memset((c3_y*)(c_h + z_w), 0, (b_w + a_w - len_w) << u3a_half_bytes_shift);
-      }
-    }
-  }
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << 2, b_w << 2, (c3_y*)c_h, d);
 }
 
 /* u3r_chubs():
@@ -1755,67 +1732,25 @@ u3r_chubs(c3_w    a_w,
           c3_d*   c_d,
           u3_atom d)
 {
-#ifndef VERE64
-  //  atom storage is 32-bit halfwords, two per chub. u3r_halfs() copies
-  //  the halfwords that exist and zero-fills the rest, which is what makes
-  //  a trailing odd halfword safe: reading it as a whole chub would run
-  //  four bytes past the atom.
-  //
   //  XX: assumes little-endian
   //
-  u3r_halfs(a_w * 2, b_w * 2, (c3_h*)c_d, d);
-#else
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  if ( b_w == 0 ) {
-    return;
-  }
-  if ( _(u3a_is_cat(d)) ) {
-    if ( a_w == 0 ) {
-      *c_d = d;
-      memset((c3_y*)(c_d + 1), 0, (b_w - 1) << u3a_chub_bytes_shift);
-    }
-    else {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
-    }
-  }
-  else {
-    if ( c3y == u3a_is_bob(d) ) {
-      _cr_bob_bytes(d, (c3_d)a_w << u3a_chub_bytes_shift,
-                    (c3_y*)c_d, (c3_z)b_w << u3a_chub_bytes_shift);
-      return;
-    }
-
-    u3a_atom* d_u = u3a_to_ptr(d);
-    c3_w len_w = d_u->len_w;
-
-    if ( a_w >= len_w ) {
-      memset((c3_y*)c_d, 0, b_w << u3a_chub_bytes_shift);
-    }
-    else {
-      c3_w z_w = c3_min(b_w, len_w - a_w);
-      c3_d* x_w = ((c3_d*)d_u->buf_w) + a_w;
-      memcpy((c3_y*)c_d, (c3_y*)x_w, z_w << u3a_chub_bytes_shift);
-      if ( b_w > len_w - a_w ) {
-        memset((c3_y*)(c_d + z_w), 0, (b_w + a_w - len_w) << u3a_chub_bytes_shift);
-      }
-    }
-  }
-#endif
+  u3r_bytes(a_w << 3, b_w << 3, (c3_y*)c_d, d);
 }
 
+/* u3r_words():
+**
+**  Copy words (a_w) through (a_w + b_w - 1) from (d) to (c).
+*/
 void
 u3r_words(c3_w    a_w,
           c3_w    b_w,
           c3_w*   c_w,
           u3_atom d)
 {
-#ifndef VERE64
-  u3r_halfs(a_w, b_w, c_w, d);
-#else
-  u3r_chubs(a_w, b_w, c_w, d);
-#endif
+  //  XX: assumes little-endian
+  //
+  u3r_bytes(a_w << u3a_word_bytes_shift,
+            b_w << u3a_word_bytes_shift, (c3_y*)c_w, d);
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
@@ -2100,7 +2035,11 @@ u3r_chop(c3_g  met_g,
 c3_c*
 u3r_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_c* str_c = c3_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);
@@ -2729,27 +2668,3 @@ u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a)
   }
 }
 
-/* u3r_met_d(): u3r_met at full width, for any atom.
-*/
-c3_d
-u3r_met_d(c3_g a_g, u3_atom b)
-{
-  c3_d bit_d;
-
-  u3_assert( a_g < 64 );
-
-  if ( _(u3a_is_cat(b)) ) {
-    bit_d = c3_bits_word(b);
-  }
-  else {
-    u3r_view vue_u;
-
-    if ( c3n == u3r_view_wind(&vue_u, b) ) {
-      return u3m_bail(c3__fail);
-    }
-    bit_d = u3r_view_met(&vue_u);
-    u3r_view_done(&vue_u);
-  }
-
-  return a_g ? ((bit_d + (((c3_d)1 << a_g) - 1)) >> a_g) : bit_d;
-}

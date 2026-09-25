@@ -924,7 +924,7 @@ _test_cue_blob(void)
   _pier_done();
 }
 
-/* _test_met(): u3r_met_d on a bob agrees with u3r_met on the loom atom,
+/* _test_met(): u3r_met on a bob agrees with u3r_met on the loom atom,
 **   at bloq 0 and 3, with and without trailing zeros in the file.
 */
 static void
@@ -944,10 +944,10 @@ _test_met(void)
     u3_atom bob = u3i_blob(mug_h, seq_h);
     u3_atom ref = u3i_bytes(sizeof(dat_y), dat_y);
 
-    _check( 121 == u3r_met_d(0, bob), "dense got %" PRIc3_d ", expected 121",
-            u3r_met_d(0, bob) );
-    _check(  (u3r_met_d(0, bob) == (c3_d)u3r_met(0, ref))
-          && (u3r_met_d(3, bob) == (c3_d)u3r_met(3, ref))
+    _check( 121 == u3r_met(0, bob), "dense got %" PRIc3_d ", expected 121",
+            u3r_met(0, bob) );
+    _check(  (u3r_met(0, bob) == (c3_d)u3r_met(0, ref))
+          && (u3r_met(3, bob) == (c3_d)u3r_met(3, ref))
           && (16 == u3r_met(3, bob)),
             "dense bob disagrees with loom atom" );
 
@@ -965,8 +965,8 @@ _test_met(void)
             "trailing-zero save failed" );
 
     u3_atom bob = u3i_blob(mug_h, seq_h);
-    _check( (128 == u3r_met_d(0, bob)) && (16 == u3r_met_d(3, bob)),
-            "trailing-zero got %" PRIc3_d ", expected 128", u3r_met_d(0, bob) );
+    _check( (128 == u3r_met(0, bob)) && (16 == u3r_met(3, bob)),
+            "trailing-zero got %" PRIc3_d ", expected 128", u3r_met(0, bob) );
     u3z(bob);
   }
 
@@ -2072,7 +2072,7 @@ _test_hand_edge(void)
 
       u3_atom bob = u3i_blob(mug_h, seq_h);
       u3_atom ref = u3i_bytes(len_w[i_w], dat_y);
-      _check( u3r_met_d(0, bob) == (c3_d)u3r_met(0, ref),
+      _check( u3r_met(0, bob) == (c3_d)u3r_met(0, ref),
               "met at %" PRIc3_w " bytes", len_w[i_w] );
       u3z(bob); u3z(ref);
       c3_free(dat_y);
@@ -2666,7 +2666,7 @@ _test_crit(void)
 **   crosses as its (mug, seq), not its bytes, and the same bob appears
 **   twice so the encoder's backref path runs for bobs too.  after the
 **   round trip the readers reach the files through views: u3r_bytes
-**   against the saved bytes, u3r_met_d against u3r_met on the loom atom.
+**   against the saved bytes, u3r_met against u3r_met on the loom atom.
 */
 static void
 _test_lifecycle(void)
@@ -2761,9 +2761,9 @@ _test_lifecycle(void)
   //
   {
     u3_atom lom = u3i_bytes((c3_w)dat1_d, dat1_y);
-    _check( u3r_met_d(0, bob1_d) == (c3_d)u3r_met(0, lom),
+    _check( u3r_met(0, bob1_d) == (c3_d)u3r_met(0, lom),
             "met_d=%" PRIc3_d " vs loom met=%" PRIc3_w,
-            u3r_met_d(0, bob1_d), u3r_met(0, lom) );
+            u3r_met(0, bob1_d), u3r_met(0, lom) );
     u3z(lom);
   }
 

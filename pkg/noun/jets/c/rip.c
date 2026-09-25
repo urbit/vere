@@ -184,7 +184,11 @@ u3qc_rip(u3_atom a,
 
   const c3_w* buf_w = (const c3_w*)vue_u.byt_y;
   c3_w        wor_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
-  c3_w        bit_w = (c3_w)u3r_view_met(&vue_u);
+  c3_d        bit_d = u3r_view_met(&vue_u);
+  if ( bit_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w        bit_w = (c3_w)bit_d;
   u3_noun     pro;
 
   if ( 1 == b ) {

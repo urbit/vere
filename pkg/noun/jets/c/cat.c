@@ -17,8 +17,13 @@
     }
 
     c3_g a_g   = a;
-    c3_w lew_w = u3r_met(a_g, b);
-    c3_w ler_w = u3r_met(a_g, c);
+    c3_d lew_d = u3r_met(a_g, b);
+    c3_d ler_d = u3r_met(a_g, c);
+    if ( (lew_d > c3_w_max) || (ler_d > c3_w_max) ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w lew_w = (c3_w)lew_d;
+    c3_w ler_w = (c3_w)ler_d;
     c3_w all_w = (lew_w + ler_w);
 
     if ( 0 == all_w ) {

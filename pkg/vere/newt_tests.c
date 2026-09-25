@@ -17,7 +17,11 @@ _setup(void)
 static c3_y*
 _newt_encode(u3_atom mat, c3_d* len_d)
 {
-  c3_w  met_w = u3r_met(3, mat);
+  c3_d met_d = u3r_met(3, mat);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_y* buf_y;
 
   //  validate that message size fits in 32-bit wire format

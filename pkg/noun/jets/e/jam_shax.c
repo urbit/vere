@@ -190,7 +190,11 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
     }
   }
   else {
-    bit_w = u3r_met(0, a);
+    c3_d bit_d = u3r_met(0, a);
+    if ( bit_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    bit_w = (c3_w)bit_d;
     u3r_view_flat(&vue_u, a);
   }
 

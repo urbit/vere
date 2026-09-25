@@ -147,6 +147,7 @@ u3a_mark_alloc(c3_w len_w) // words
 void
 u3a_pack_init(void)
 {
+  u3_assert( !u3a_Gack.siz_w );
   c3_w bit_w = (u3R->hep.len_w + (u3a_word_bits-1)) >> u3a_word_bits_log;
   u3a_Gack.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
   u3a_Gack.pap_w = c3_calloc(sizeof(c3_w) * bit_w);
@@ -179,6 +180,7 @@ u3a_pack_done(void)
   c3_free(u3a_Gack.pap_w);
   c3_free(u3a_Gack.pum_w);
   c3_free(u3a_Gack.buf_w);
+  memset(&u3a_Gack, 0, sizeof(u3a_Gack));
 }
 
 /* _ca_reclaim_half(): reclaim from memoization cache.
@@ -1995,7 +1997,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 16);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2174,7 +2176,37 @@ u3a_mark_road()
     qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
-  qua_u[15] = NULL;
+  qua_u[15] = c3_calloc(sizeof(*qua_u[15]));
+  qua_u[15]->nam_c = strdup("hashconsing table");
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->dup_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[15]->qua_u = mua_u;
+    qua_u[15]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
+
+  qua_u[16] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -2198,6 +2230,7 @@ u3a_reclaim(void)
   //
   u3h_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
+  u3m_dedup_prune();
 }
 
 /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.
@@ -2215,8 +2248,9 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
-  u3h_relocate(&(u3R->lop_p));
   u3h_relocate(&(u3R->cax.for_p));
+  u3h_relocate(&(u3R->lop_p));
+  u3h_relocate(&(u3R->dup_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]
@@ -2430,7 +2464,11 @@ u3a_walk_fore(u3_noun    a,
 c3_c*
 u3a_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_d met_d = u3r_met(3, a);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   c3_c* str_c = u3a_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);

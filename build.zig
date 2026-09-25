@@ -398,6 +398,7 @@ fn buildBinary(
 
     try urbit_flags.appendSlice(global_flags.items);
     try urbit_flags.appendSlice(&.{
+        "-Wimplicit-fallthrough",
         "-Wno-deprecated-non-prototype",
         "-Wno-gnu-binary-literal",
         "-Wno-gnu-empty-initializer",

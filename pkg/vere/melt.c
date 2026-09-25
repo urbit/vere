@@ -229,6 +229,11 @@ u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
     u3R->cax.for_p = u3h_new_cache(u3C.per_w);
   }
 
+  if ( _(c3a(for_o, per_o)) ) {
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+  }
+
   //  NB: u3m_pack runs the deep blob-bank invariant check
   //  (u3a_blob_sane) on its way out
   //

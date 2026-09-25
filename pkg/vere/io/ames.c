@@ -518,7 +518,11 @@ static c3_o
 _fine_sift_meow(u3_meow* mew_u, u3_noun mew)
 {
   c3_o ret_o;
-  c3_w tmp_w = u3r_met(3, mew);
+  c3_d tmp_d = u3r_met(3, mew);
+  if ( tmp_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w tmp_w = (c3_w)tmp_d;
   u3_assert( UINT32_MAX >= tmp_w );
   c3_h len_h = tmp_w;
   c3_h sig_h = sizeof(mew_u->sig_y);
@@ -1220,7 +1224,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
         //
         //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
-        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_min(nex_d, 31500);
 
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_h, 0);
         _stun_send_request(sam_u);
@@ -2648,7 +2652,7 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
     case c3__saxo: {
       _ames_ef_saxo(sam_u, u3k(dat));
       ret_o = c3y;
-    }
+    } break;
 
     case c3__nail: {
       u3_noun who = u3k(u3h(dat));

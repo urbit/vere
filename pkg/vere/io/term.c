@@ -534,7 +534,11 @@ _term_it_path(u3_noun pax)
     u3_noun wiz = pax;
 
     while ( u3_nul != wiz ) {
-      c3_w met_w = u3r_met(3, u3h(wiz));
+      c3_d met_d = u3r_met(3, u3h(wiz));
+      if ( met_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       u3_assert( (UINT32_MAX - 1 - len_h) >= met_w );
       len_h += 1 + met_w;
       wiz = u3t(wiz);
@@ -551,7 +555,11 @@ _term_it_path(u3_noun pax)
 
     while ( u3_nul != wiz ) {
       //  XX truncation
-      c3_w met_w = u3r_met(3, u3h(wiz));
+      c3_d met_d = u3r_met(3, u3h(wiz));
+      if ( met_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       u3_assert( UINT32_MAX >= met_w );
       c3_h tis_h = met_w;
 
@@ -1367,7 +1375,7 @@ _term_ef_blit(u3_utty* uty_u,
     case c3__lin: {  //new  backwards compatibility
       _term_it_move_cursor(uty_u, 0, uty_u->tat_u.siz.row_h - 1);
       _term_it_clear_line(uty_u);
-    }  //
+    }  [[fallthrough]];
     case c3__put: {
       _term_it_show_tour(uty_u, u3k(u3t(blt)));
     } break;
@@ -1382,7 +1390,7 @@ _term_ef_blit(u3_utty* uty_u,
         break;
       }
       //new  fall through to nel for backwards compatibility
-    }
+    } [[fallthrough]];
     case c3__nel: {
       _term_it_show_nel(uty_u);
     } break;

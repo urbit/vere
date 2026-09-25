@@ -27,8 +27,13 @@
         {
           c3_o a_bob = ( c3y == u3a_is_cat(a) ) ? c3n : u3a_is_bob(a);
           c3_o b_bob = ( c3y == u3a_is_cat(b) ) ? c3n : u3a_is_bob(b);
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);
+          c3_d len_a_d = u3r_met(3, a);
+          c3_d len_b_d = u3r_met(3, b);
+          if ( (len_a_d > c3_w_max) || (len_b_d > c3_w_max) ) {
+            u3m_bail(c3__fail);
+          }
+          c3_w len_a_w = (c3_w)len_a_d;
+          c3_w len_b_w = (c3_w)len_b_d;
           c3_w len_min_w = c3_min(len_a_w, len_b_w);
 
           //  bob atoms: buf_w holds a loom offset, not bytes, so read

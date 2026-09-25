@@ -375,9 +375,9 @@
       **   (1 << a_y).
       **
       **   For example, (a_y == 3) returns the size in bytes.
-      **   NB: (a_y) must be < 37.
+      **   NB: (a_y) must be < 64 + u3a_word_bits_log.
       */
-        c3_w
+        c3_d
         u3r_met(c3_y    a_y,
                 u3_atom b);
 
@@ -783,14 +783,5 @@
       */
         u3_weak
         u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a);
-
-      /* u3r_met_d(): u3r_met at full width, for any atom.
-      **
-      **   A c3_w bit count overflows past 512 MiB on a 32-bit build,
-      **   which blobs exceed.  Bails %fail for a bob whose file is
-      **   missing or empty.
-      */
-      c3_d
-      u3r_met_d(c3_g a_g, u3_atom b);
 
 #endif /* ifndef U3_RETRIEVE_H */

@@ -19,7 +19,7 @@
     //  full width: a c3_w bit count overflows on a large blob
     //
     else {
-      return u3i_chub(u3r_met_d(a, b));
+      return u3i_chub(u3r_met(a, b));
     }
   }
   u3_noun
