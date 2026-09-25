@@ -114,6 +114,7 @@ typedef struct _u3_h2o_serv {
   typedef struct _u3_hfig {
     u3_form*         for_u;             //  config from %eyre
     c3_c*            key_c;             //  auth token key
+    c3_w             key_w;             //  auth token key length
     u3_noun          ses;               //  local session tokens (map @t (unit desk))
     struct _u3_hreq* seq_u;             //  open slog requests
     struct _u3_hreq* siq_u;             //  open spin requests
@@ -442,44 +443,24 @@ _http_heds_get_auth(u3_http* htp_u, h2o_headers_t* hed_u)
 
     //  see if the cookie contains a valid auth token
     //
-    c3_c* key_c = htp_u->htd_u->fig_u.key_c;
-    c3_c  val_c[128];
-    c3_y  val_y = 0;
-    size_t  i_i = 0;
-    size_t  j_i = 0;
+    c3_c*       key_c = htp_u->htd_u->fig_u.key_c;
+    c3_w        key_w = htp_u->htd_u->fig_u.key_w;
+    h2o_iovec_t val_u;
+    const c3_c* nam_c;
+    size_t      nam_w;
 
     //  for secure connections, eyre sends __Host- prefixed cookie keys.
     //  for insecure connections, we must not include that in the search key.
     //
     if ( c3n == htp_u->sec ) {
       key_c = key_c + (sizeof("__Host-")-1);
+      key_w = key_w - (sizeof("__Host-")-1);
     }
 
-    //  step through the cookie string
-    //
-    while (i_i < coo_u.len) {
-      //  if we found our key, read the value
-      //
-      if (key_c[j_i] == '\0' && coo_u.base[i_i] == '=') {
-        i_i++;
-        while ( i_i < coo_u.len
-            && coo_u.base[i_i] != ';'
-            && val_y < sizeof(val_c) ) {
-          val_c[val_y] = coo_u.base[i_i];
-          val_y++;
-          i_i++;
-        }
-        return u3i_bytes(val_y, (c3_y*)val_c);
+    while ( NULL != (nam_c = h2o_next_token(&coo_u, ';', &nam_w, &val_u)) ) {
+      if ( (NULL != val_u.base) && h2o_memis(nam_c, nam_w, key_c, key_w) ) {
+        return u3i_bytes((c3_w)val_u.len, (c3_y*)val_u.base);
       }
-      //  keep reading the key as long as it matches
-      //
-      else if (coo_u.base[i_i] == key_c[j_i]) {
-        j_i++;
-      }
-      else {
-        j_i = 0;
-      }
-      i_i++;
     }
   }
   return u3_none;
@@ -3547,6 +3528,7 @@ u3_http_io_init(u3_pier* pir_u)
       u3dc("scot", 'p', u3i_chubs(2, pir_u->who_d)));
     htd_u->fig_u.ses = u3_nul;
     htd_u->fig_u.key_c = u3r_string(key);
+    htd_u->fig_u.key_w = strlen(htd_u->fig_u.key_c);
     u3z(key);
   }
 
