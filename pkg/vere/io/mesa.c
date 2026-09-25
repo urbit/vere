@@ -2431,6 +2431,14 @@ _mesa_hear_peek(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 
   if ( ( NULL != lin_u && (u3_mesa_line*)CTAG_BLOCK != lin_u)) {
+
+    c3_d i_d   = fra_d - (lin_u->nam_u.fra_d * (1 << u3_Host.ops_u.jum_y));
+    c3_d lev_d = mesa_num_leaves((c3_d)lin_u->dat_h);
+    if ( i_d >= lev_d ) {
+      MESA_LOG(sam_u, STRANGE);
+      return;
+    }
+
     _mesa_send_piece(sam_u, lin_u, &pac_u->pek_u.nam_u, fra_d, lan_u);
     return;
   }
