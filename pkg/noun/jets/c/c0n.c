@@ -11,8 +11,8 @@
   u3qc_con(u3_atom a,
            u3_atom b)
   {
-    c3_w lna_w = u3r_met(u3a_word_bits_log, a);
-    c3_w lnb_w = u3r_met(u3a_word_bits_log, b);
+    c3_w lna_w = u3r_met_w(u3a_word_bits_log, a);
+    c3_w lnb_w = u3r_met_w(u3a_word_bits_log, b);
 
     if ( (lna_w == 0) && (lnb_w == 0) ) {
       return 0;

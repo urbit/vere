@@ -221,7 +221,7 @@ _unix_knot_to_string(u3_atom pon)
     ret_c = u3r_string(pon);
   }
   else {
-    c3_w  met_w = u3r_met(3, pon);
+    c3_w  met_w = u3r_met_w(3, pon);
 
     ret_c = c3_malloc(met_w + 2);
     *ret_c = '!';
@@ -356,7 +356,7 @@ u3_unix_save(c3_c* pax_c, u3_atom pad)
     u3z(pad); u3m_bail(c3__fail);
   }
 
-  fln_w = u3r_met(3, pad);
+  fln_w = u3r_met_w(3, pad);
   pad_y = c3_malloc(fln_w);
   u3r_bytes(0, fln_w, pad_y, pad);
   u3z(pad);
@@ -459,7 +459,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
   }
 
   siz_w = u3r_cat(u3h(u3t(mim)));
-  len_w = u3r_met(3, dat);
+  len_w = u3r_met_w(3, dat);
   dat_y = c3_calloc(siz_w);
 
   u3r_bytes(0, len_w, dat_y, dat);

@@ -108,7 +108,7 @@ _met_list(c3_g    a_g,
 
       //  ?@  i.b.p
       if ( c3y == u3a_is_atom(i) ) {
-        met_w  = u3r_met(a_g, i);
+        met_w  = u3r_met_w(a_g, i);
         sep_w += met_w;  // XX overflow
       }
       else {
@@ -232,7 +232,7 @@ _fax_list(u3i_slab* sab_u,
 
       //  ?@  i.b.p
       if ( c3y == u3a_is_atom(i) ) {
-        met_w  = u3r_met(a_g, i);
+        met_w  = u3r_met_w(a_g, i);
 
         u3r_chop(a_g, 0, met_w, sep_w, sab_u->buf_w, i);
 

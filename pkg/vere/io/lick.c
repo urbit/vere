@@ -95,7 +95,7 @@ _lick_it_path(u3_noun pax)
     u3_noun wiz = pax;
 
     while ( u3_nul != wiz ) {
-      len_w += (1 + u3r_met(3, u3h(wiz)));
+      len_w += (1 + u3r_met_w(3, u3h(wiz)));
       wiz = u3t(wiz);
     }
   }
@@ -109,7 +109,7 @@ _lick_it_path(u3_noun pax)
     c3_c*   waq_c = pas_c;
 
     while ( u3_nul != wiz ) {
-      c3_w tis_w = u3r_met(3, u3h(wiz));
+      c3_w tis_w = u3r_met_w(3, u3h(wiz));
 
       if ( (u3_nul == u3t(wiz)) ) {
         *waq_c++ = '/';

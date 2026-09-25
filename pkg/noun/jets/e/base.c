@@ -110,7 +110,7 @@ _of_hex_even(u3_atom inp, c3_w len_w, c3_y* buf_y)
 u3_noun
 u3qe_de_base16(u3_atom inp)
 {
-  c3_w     len_w = u3r_met(4, inp);
+  c3_w     len_w = u3r_met_w(4, inp);
   u3i_slab sab_u;
 
   u3i_slab_bare(&sab_u, 3, len_w);
@@ -120,7 +120,7 @@ u3qe_de_base16(u3_atom inp)
   //  but odd byte-length input cannot, and is expressed more simply in bytes.
   //
   {
-    c3_w byt_w = u3r_met(3, inp);
+    c3_w byt_w = u3r_met_w(3, inp);
     c3_o ret_o = ( byt_w & 1 )
                ? _of_hex_odd(inp, len_w, byt_w, sab_u.buf_y)
                : _of_hex_even(inp, len_w, sab_u.buf_y);

@@ -25,7 +25,7 @@ static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
     return c3n;
   }
 
-  *len_w = u3r_met(3, *q_octs);
+  *len_w = u3r_met_w(3, *q_octs);
 
   if (c3y == u3a_is_cat(*q_octs)) {
     *buf_y = (c3_y*)q_octs;

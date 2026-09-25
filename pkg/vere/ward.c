@@ -181,7 +181,7 @@ u3_mcut_char(c3_c* buf_c, c3_h len_h, c3_c chr_c)
 c3_h
 u3_mcut_cord(c3_c* buf_c, c3_h len_h, u3_noun san)
 {
-  c3_w met_w = u3r_met(3, san);
+  c3_w met_w = u3r_met_w(3, san);
   u3_assert( UINT32_MAX >= met_w );
   c3_h ten_h = met_w;
 

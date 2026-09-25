@@ -115,8 +115,8 @@
             u3_atom z,
             u3_atom d)
   {
-     return _cqes_hs(p, u3r_met(3, p),
-                     s, u3r_met(3, s),
+     return _cqes_hs(p, u3r_met_w(3, p),
+                     s, u3r_met_w(3, s),
                      n, r, z, d);
   }
 
@@ -205,8 +205,8 @@
   static u3_atom
   _cqes_pbk(u3_atom p, u3_atom s, u3_atom c, u3_atom d)
   {
-    return _cqes_pb(p, u3r_met(3, p),
-                    s, u3r_met(3, s),
+    return _cqes_pb(p, u3r_met_w(3, p),
+                    s, u3r_met_w(3, s),
                     c, d);
   }
 

@@ -38,7 +38,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_w len_w = u3r_met(3, q_octs);
+  c3_w len_w = u3r_met_w(3, q_octs);
 
   int leading_zeros = 0;
 

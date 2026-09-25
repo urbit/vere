@@ -2129,7 +2129,7 @@ u3a_walk_fore(u3_noun    a,
 c3_c*
 u3a_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_w  met_w = u3r_met_w(3, a);
   c3_c* str_c = u3a_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);

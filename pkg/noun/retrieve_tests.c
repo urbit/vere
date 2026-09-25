@@ -120,8 +120,8 @@ _test_mug(void)
                            u3kc_mix(u3qc_bex(212),
                            u3i_string("abcdefjhijklmnopqrstuvwxyz")));
 
-    c3_w  byt_w = u3r_met(3, str);
-    c3_w  wor_w = u3r_met(5, str);
+    c3_w  byt_w = u3r_met_w(3, str);
+    c3_w  wor_w = u3r_met_w(5, str);
     c3_y* str_y = c3_malloc(byt_w);
     c3_h* str_h = c3_malloc(sizeof(c3_h) * wor_w);
     c3_d  str_d = c3y;

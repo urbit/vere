@@ -21,7 +21,7 @@ u3qc_mas(u3_atom a)
     }
   }
   else {
-    b_w = u3r_met(0, a);
+    b_w = u3r_met_w(0, a);
 
     if ( 64 > b_w ) {
       c3_d a_d = u3r_chub(0, a);

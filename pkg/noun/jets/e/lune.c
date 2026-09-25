@@ -14,7 +14,7 @@
     }
 
     {
-      c3_w end_w  = u3r_met(3, lub) - 1;
+      c3_w end_w  = u3r_met_w(3, lub) - 1;
       c3_w pos_w  = end_w;
       u3_noun lin = u3_nul;
 

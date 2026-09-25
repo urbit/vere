@@ -115,7 +115,7 @@ _measure_number(u3_noun a)
     u3m_bail(c3__exit);
   }
 
-  return u3r_met(3, a);
+  return u3r_met_w(3, a);
 }
 
 static void
@@ -133,7 +133,7 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
     byt_y = (c3_y*)vat_u->buf_w;
   }
 
-  _append_text(buf_u, byt_y, u3r_met(3, a));
+  _append_text(buf_u, byt_y, u3r_met_w(3, a));
 }
 
 static c3_w
@@ -143,7 +143,7 @@ _measure_string(u3_noun a)
     u3m_bail(c3__exit);
   }
 
-  c3_w len_w = u3r_met(3, a);
+  c3_w len_w = u3r_met_w(3, a);
   c3_w siz_w = 0;
 
   for (c3_w i = 0; i < len_w; ++i) {
@@ -184,7 +184,7 @@ _measure_string(u3_noun a)
 static void
 _serialize_string(json_buffer *buf_u, u3_noun a)
 {
-  c3_w len_w = u3r_met(3, a);
+  c3_w len_w = u3r_met_w(3, a);
 
   _append_char(buf_u, '"');
   for (c3_w i = 0; i < len_w; ++i) {

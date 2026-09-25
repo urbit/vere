@@ -25,7 +25,7 @@
 
     {
       c3_g a_g   = a;
-      c3_w len_w = u3r_met(a_g, d);
+      c3_w len_w = u3r_met_w(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {
         return 0;

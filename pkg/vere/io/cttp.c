@@ -245,8 +245,8 @@ _cttp_heds_free(u3_hhed* hed_u)
 static u3_hhed*
 _cttp_hed_new(u3_atom nam, u3_atom val)
 {
-  c3_w     nam_w = u3r_met(3, nam);  //
-  c3_w     val_w = u3r_met(3, val);  //  XX: potential truncations
+  c3_w     nam_w = u3r_met_w(3, nam);  //
+  c3_w     val_w = u3r_met_w(3, val);  //  XX: potential truncations
   u3_hhed* hed_u = c3_malloc(sizeof(*hed_u));
 
   hed_u->nam_c = c3_malloc(1 + nam_w);

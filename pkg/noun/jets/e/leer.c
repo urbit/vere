@@ -30,7 +30,7 @@ _leer_cut(c3_w pos_w, c3_w len_w, u3_atom src)
 u3_noun
 u3qe_lore(u3_atom lub)
 {
-  c3_w    len_w = u3r_met(3, lub);
+  c3_w    len_w = u3r_met_w(3, lub);
   c3_w    pos_w = 0;
   u3_noun tez = u3_nul;
 
@@ -91,7 +91,7 @@ u3qe_leer(u3_atom txt)
   u3_noun* lit = &pro;
 
   {
-    c3_w pos_w, i_w = 0, len_w = u3r_met(3, txt);
+    c3_w pos_w, i_w = 0, len_w = u3r_met_w(3, txt);
     u3_noun* hed;
     u3_noun* tel;
 

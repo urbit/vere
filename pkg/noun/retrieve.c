@@ -914,7 +914,7 @@ u3r_pqrs(u3_noun  a,
 **   NB: (a_y) must be < 37.
 */
 // XX: 64 make 64 in 32 bit case too, change all callsites to c3_d
-c3_w
+c3_d
 u3r_met(c3_y  a_y,
         u3_atom b)
 {
@@ -924,40 +924,56 @@ u3r_met(c3_y  a_y,
   if ( b == 0 ) {
     return 0;
   }
-  /* gal_w: number of words besides (daz_w) in (b).
+  /* gal_d: number of words besides (daz_w) in (b).
   ** daz_w: top word in (b).
   */
-  c3_w gal_w;
+  c3_d gal_d;
   c3_w daz_w;
 
   if ( _(u3a_is_cat(b)) ) {
-    gal_w = 0;
+    gal_d = 0;
     daz_w = b;
   }
   else {
     u3a_atom* b_u = u3a_to_ptr(b);
 
-    gal_w = (b_u->len_w) - 1;
-    daz_w = b_u->buf_w[gal_w];
+    gal_d = (b_u->len_w) - 1;
+    daz_w = b_u->buf_w[gal_d];
   }
 
-  /* 5 because 1<<2 bytes in c3_w, 1<<3 bits in byte.
-     aka log2(CHAR_BIT * sizeof gal_w)
-     a_y < 5 informs whether we shift return left or right
+  /* u3a_word_bits_log is log2(CHAR_BIT * sizeof daz_w): 5 for a 32-bit
+     word, 6 for a 64-bit one.  a_y below it means the count is finer
+     than a word and the word count shifts left; at or above it, right.
      */
   if (a_y < u3a_word_bits_log) {
     c3_y max_y = (1 << a_y) - 1;
     c3_y gow_y = u3a_word_bits_log - a_y;
 
-    if (gal_w > ((c3_w_max - (u3a_word_bits + max_y)) >> gow_y))
+    if (gal_d > ((c3_d_max - (u3a_word_bits + max_y)) >> gow_y))
       return u3m_bail(c3__fail);
 
-    return (gal_w << gow_y)
+    return (gal_d << gow_y)
       + ((c3_bits_word(daz_w) + max_y)
          >> a_y);
   }
   c3_y gow_y = (a_y - u3a_word_bits_log);
-  return ((gal_w + 1) + ((1 << gow_y) - 1)) >> gow_y;
+  return ((gal_d + 1) + ((1ULL << gow_y) - 1)) >> gow_y;
+}
+
+/* u3r_met_w():
+**
+**   u3r_met(), as a word.
+*/
+c3_w
+u3r_met_w(c3_y  a_y,
+          u3_atom b)
+{
+  c3_d met_d = u3r_met(a_y, b);
+
+  if ( met_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
+  }
+  return (c3_w)met_d;
 }
 
 /* u3r_bit():
@@ -1074,7 +1090,7 @@ u3r_bytes(c3_w    a_w,
 c3_w
 u3r_bytes_fit(c3_w len_w, c3_y *buf_y, u3_atom a)
 {
-  c3_w met_w = u3r_met(3, a);
+  c3_w met_w = u3r_met_w(3, a);
   if ( met_w <= len_w ) {
     u3r_bytes(0, len_w, buf_y, a);
     return 0;
@@ -1106,7 +1122,7 @@ u3r_bytes_alloc(c3_w    a_w,
 c3_y*
 u3r_bytes_all(c3_w* len_w, u3_atom a)
 {
-  c3_w met_w = *len_w = u3r_met(3, a);
+  c3_w met_w = *len_w = u3r_met_w(3, a);
   return u3r_bytes_alloc(0, met_w, a);
 }
 
@@ -1634,7 +1650,7 @@ u3r_chop(c3_g  met_g,
 c3_c*
 u3r_string(u3_atom a)
 {
-  c3_w  met_w = u3r_met(3, a);
+  c3_w  met_w = u3r_met_w(3, a);
   c3_c* str_c = c3_malloc(met_w + 1);
 
   u3r_bytes(0, met_w, (c3_y*)str_c, a);

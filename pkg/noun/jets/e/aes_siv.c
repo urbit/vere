@@ -29,7 +29,7 @@ _cqea_measure_ads(u3_noun ads, c3_w *soc_w, c3_w *mat_w, c3_w *dat_w)
     }
     else {
       tmp_w = b_w;
-      b_w += u3r_met(3, i);
+      b_w += u3r_met_w(3, i);
       if ( b_w < tmp_w ) {
         u3m_bail(c3__fail);
         return;
@@ -64,7 +64,7 @@ _cqea_encode_ads(u3_noun ads,
 
   for ( cur_u = dat_u, t = ads; u3_nul != t; t = u3t(t), ++cur_u ) {
     i = u3h(t);
-    met_w = u3r_met(3, i);
+    met_w = u3r_met_w(3, i);
     u3r_bytes(0, met_w, dat_y, i);
     cur_u->length = met_w;
     cur_u->bytes = dat_y;

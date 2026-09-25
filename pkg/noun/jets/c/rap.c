@@ -36,7 +36,7 @@
           else if ( c3n == u3ud(h_cab = u3h(cab)) ) {
             return u3m_bail(c3__exit);
           }
-          else if ( (tot_w + (len_w = u3r_met(a_g, h_cab))) < tot_w ) {
+          else if ( (tot_w + (len_w = u3r_met_w(a_g, h_cab))) < tot_w ) {
             return u3m_bail(c3__fail);
           }
           tot_w += len_w;
@@ -58,7 +58,7 @@
 
         while ( 0 != cab ) {
           u3_noun h_cab = u3h(cab);
-          c3_w    len_w = u3r_met(a_g, h_cab);
+          c3_w    len_w = u3r_met_w(a_g, h_cab);
 
           u3r_chop(a_g, 0, len_w, pos_w, sab_u.buf_w, h_cab);
           pos_w += len_w;

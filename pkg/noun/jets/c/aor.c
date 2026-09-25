@@ -25,8 +25,8 @@
       else {
         if ( c3n == u3ud(b) ) return c3y;
         {
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);;
+          c3_w len_a_w = u3r_met_w(3, a);
+          c3_w len_b_w = u3r_met_w(3, b);;
           c3_y *buf_a_y, *buf_b_y;
           c3_y cut_a_y, cut_b_y;
           if ( c3y == u3a_is_cat(a) ) {

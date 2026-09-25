@@ -372,11 +372,20 @@
       **   (1 << a_y).
       **
       **   For example, (a_y == 3) returns the size in bytes.
-      **   NB: (a_y) must be < 37.
+      **   NB: (a_y) must be < 64 + u3a_word_bits_log.
       */
-        c3_w
+        c3_d
         u3r_met(c3_y    a_y,
                 u3_atom b);
+
+      /* u3r_met_w(): u3r_met(), as a word.
+      **
+      **   Bails %fail if the size does not fit in a c3_w, as u3r_met()
+      **   did before it returned c3_d.  A 64-bit word always fits.
+      */
+        c3_w
+        u3r_met_w(c3_y    a_y,
+                  u3_atom b);
 
       /* u3r_bit():
       **

@@ -24,7 +24,7 @@ u3qc_sew(u3_atom a,
   }
 
   c3_g a_g = a;
-  c3_w len_e_w = u3r_met(a_g, e);
+  c3_w len_e_w = u3r_met_w(a_g, e);
   u3i_slab sab_u;
   c3_w* src_w;
   c3_w len_src_w;
