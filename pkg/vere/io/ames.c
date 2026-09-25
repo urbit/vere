@@ -1220,7 +1220,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
         //
         //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
-        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_min(nex_d, 31500);
 
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_h, 0);
         _stun_send_request(sam_u);
