@@ -7,6 +7,7 @@ u3_noun
 u3qc_mas(u3_atom a)
 {
   c3_w b_w;
+  c3_d b_d;
 
   if ( c3y == u3a_is_cat(a) ) {
     b_w = c3_bits_word(a);
@@ -21,7 +22,11 @@ u3qc_mas(u3_atom a)
     }
   }
   else {
-    b_w = u3r_met(0, a);
+    b_d = u3r_met(0, a);
+    if ( b_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    b_w = (c3_w)b_d;
 
     if ( 64 > b_w ) {
       c3_d a_d = u3r_chub(0, a);

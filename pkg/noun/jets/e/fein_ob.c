@@ -60,7 +60,11 @@ _feis_ob(c3_h m_h)
 u3_atom
 u3qe_fein_ob(u3_atom pyn)
 {
-  c3_w met_w = u3r_met(4, pyn);
+  c3_d met_d = u3r_met(4, pyn);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w met_w = (c3_w)met_d;
   if ( UINT32_MAX < met_w ) {
     u3m_bail(c3__fail);
   }

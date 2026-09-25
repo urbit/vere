@@ -18,7 +18,11 @@ u3qc_muk(u3_atom sed,
   }
   else {
     c3_h len_h = (c3_h)len;
-    c3_h key_h = u3r_met(3, key);
+    c3_d key_d = u3r_met(3, key);
+    if ( key_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_h key_h = (c3_h)key_d;
 
     //  NB: this condition is implicit in the pad subtraction
     //

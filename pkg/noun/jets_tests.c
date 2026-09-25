@@ -481,7 +481,7 @@ _test_en_base16(void)
 
   {
     u3_atom dat = 0xaa;
-    u3_atom pro = u3qe_en_base16(u3r_met(3, dat), dat);
+    u3_atom pro = u3qe_en_base16((c3_w)u3r_met(3, dat), dat);
 
     if ( c3n == u3r_sing_c("aa", pro) ) {
       fprintf(stderr, "en_base16: fail (a)\r\n");
@@ -493,7 +493,7 @@ _test_en_base16(void)
 
   {
     u3_atom dat = 0x1234;
-    u3_atom pro = u3qe_en_base16(u3r_met(3, dat), dat);
+    u3_atom pro = u3qe_en_base16((c3_w)u3r_met(3, dat), dat);
 
     if ( c3n == u3r_sing_c("1234", pro) ) {
       fprintf(stderr, "en_base16: fail (b)\r\n");
@@ -505,7 +505,7 @@ _test_en_base16(void)
 
   {
     u3_atom dat = 0xf012;
-    u3_atom pro = u3qe_en_base16(u3r_met(3, dat), dat);
+    u3_atom pro = u3qe_en_base16((c3_w)u3r_met(3, dat), dat);
 
     if ( c3n == u3r_sing_c("f012", pro) ) {
       fprintf(stderr, "en_base16: fail (c)\r\n");
@@ -517,7 +517,7 @@ _test_en_base16(void)
 
   {
     u3_atom dat = 0x10b;
-    u3_atom pro = u3qe_en_base16(u3r_met(3, dat), dat);
+    u3_atom pro = u3qe_en_base16((c3_w)u3r_met(3, dat), dat);
 
     if ( c3n == u3r_sing_c("010b", pro) ) {
       fprintf(stderr, "en_base16: fail (d)\r\n");

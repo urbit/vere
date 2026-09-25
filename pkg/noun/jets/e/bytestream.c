@@ -29,7 +29,11 @@ _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
     return c3n;
   }
 
-  *len_w = u3r_met(3, *q_octs);
+  c3_d met_d = u3r_met(3, *q_octs);
+  if ( met_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  *len_w = (c3_w)met_d;
 
   if (c3y == u3a_is_cat(*q_octs)) {
     *buf_y = (c3_y*)q_octs;
@@ -226,7 +230,11 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
   //  octs is non-zero: but at the return u3i_slab_mint
   //  takes care of trimming.
   //
-  c3_w last_lead_w = (u3r_word(0, u3h(octs)) - u3r_met(3, u3t(octs)));
+  c3_d oct_d = u3r_met(3, u3t(octs));
+  if ( oct_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w last_lead_w = (u3r_word(0, u3h(octs)) - (c3_w)oct_d);
   c3_d buf_len_w = tot_d - last_lead_w;
 
   if (buf_len_w == 0) {

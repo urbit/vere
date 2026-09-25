@@ -119,7 +119,7 @@
     u3_atom sin = _get_length(shp);     // calculated length of ray
 
     //  Calculate actual size.
-    u3_atom len = u3r_met(blq, u3t(ray));   // length of ray
+    u3_atom len = u3i_chub(u3r_met(blq, u3t(ray)));  // length of ray
     u3_atom dex = u3qa_dec(len);            // decrement length b/c of pinned 1
 
     return __(sin == dex);

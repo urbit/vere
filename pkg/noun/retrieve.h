@@ -372,9 +372,9 @@
       **   (1 << a_y).
       **
       **   For example, (a_y == 3) returns the size in bytes.
-      **   NB: (a_y) must be < 37.
+      **   NB: (a_y) must be < 64 + u3a_word_bits_log.
       */
-        c3_w
+        c3_d
         u3r_met(c3_y    a_y,
                 u3_atom b);
 
