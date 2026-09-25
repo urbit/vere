@@ -569,16 +569,17 @@ pub fn is_weak_type(t: &Ty) -> bool {
   s.trim() == "u3_weak"
 }
 
-/// A type too narrow to hold an indirect noun reference: a noun value
-/// bound to a variable of this type is necessarily a direct atom.
+/// A type too narrow to hold an indirect noun reference in the current
+/// loom mode: a noun value bound to a variable of this type is
+/// necessarily a direct atom.
 pub fn is_direct_type(t: &Ty) -> bool {
   let s = t.spelling().replace("const ", "");
   let s = s.trim();
-  config::DIRECT_TYPES.contains(&s)
+  config::is_direct_type_name(s)
 }
 
 /// Value of an integer-constant expression (sees through macros, casts,
-/// and enum constants), masked to 32 bits, or None.
+/// and enum constants), masked to the noun word width, or None.
 pub fn int_literal_value(cur: &Cursor) -> Option<u64> {
   let u = unwrap_expr(*cur);
   match u.kind() {
@@ -593,7 +594,7 @@ pub fn int_literal_value(cur: &Cursor) -> Option<u64> {
       }
     }
   }
-  cur.evaluate_int().map(|v| (v as u64) & 0xffff_ffff)
+  cur.evaluate_int().map(|v| (v as u64) & config::noun_mask())
 }
 
 /// Name of a simple lvalue: a variable, or a dot-member chain rooted at a

@@ -298,6 +298,32 @@ struct Gen<'a> {
   //  the fill on the branch whose product matches. Must be resolved by
   //  a direct c3y/c3n comparison in the same statement.
   pending_cond_fills: Option<Vec<PendCondFill>>,
+  //  local arrays declared by the noun core's array-building macros
+  //  (`u3r_mean_pair _pairs[] = {{axe, &out}, ..}` from u3r_mean/
+  //  u3x_mean, `u3_noun _args[] = {..}` from u3i_list/u3m_grab, the
+  //  u3i_molt pairs), keyed by the array variable and waiting for the
+  //  consumer call that ends the same statement expression. A stack
+  //  per name: nested macro calls shadow the macro-local `_pairs`
+  //  LIFO. Each entry carries its declaration site for the report
+  //  when no modeled consumer ever claims it.
+  macro_arrays: HashMap<Name, Vec<(String, MacroArray)>>,
+  //  value-id floors of the statement expressions being evaluated,
+  //  innermost last: values minted before a statement expression
+  //  belong to the enclosing expression (`u3nc(u3k(a), ({..}))`, the
+  //  elements of a u3i_list built before a nested one), so the
+  //  scope-end sweeps inside it leave them alone -- the enclosing
+  //  scope's sweep gets them if they are never consumed
+  expr_floors: Vec<ValId>,
+}
+
+/// A local array built by one of the noun core's array-building macros
+/// (see execute_decl), as recorded for its consumer call.
+enum MacroArray {
+  /// `u3r_mean_pair _pairs[] = {{axe, &out}, ..}`: the out-variables
+  Outs(Vec<Name>),
+  /// `u3_noun _args[] = {x, ..}` (u3i_list, u3m_grab) or the u3i_molt
+  /// `{axe, som}` pairs: the noun element values
+  Vals(Vec<Option<ValId>>),
 }
 
 /// One deferred conditional fill: the target variable (re-resolved at
@@ -432,6 +458,8 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
     owned_at: HashMap::new(),
     weak_why: HashMap::new(),
     pending_cond_fills: None,
+    macro_arrays: HashMap::new(),
+    expr_floors: Vec::new(),
   };
 
   for p in fun.arguments() {
@@ -511,6 +539,17 @@ pub fn check_function(host: &mut dyn Host, fun: &Cursor, sem: &Sem)
   match execute_statement(&body, flo, 0, &mut g) {
     Err(finding) => finding,
     Ok(flo) => {
+      //  a macro-built array whose consumer call never ran: its
+      //  elements were never accounted for
+      let mut stranded: Vec<&str> = g.macro_arrays.values().flatten()
+        .map(|(at, _)| at.as_str()).collect();
+      if !stranded.is_empty() {
+        stranded.sort();
+        return vec![report(None, "complicated",
+          format!("macro-built array declared at [{}] never reached its \
+                   consumer call, won't analyze", stranded.join(", ")),
+          &g)];
+      }
       if !flo.goto_envs.is_empty() {
         let mut labels: Vec<&str> =
           flo.goto_envs.keys().map(|k| k.as_ref()).collect();
@@ -924,7 +963,7 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
       {
         let labels = &kids[..kids.len() - 1];
         if labels.iter().all(|l| int_literal_value(l)
-          .is_some_and(|v| v <= config::DIRECT_MAX || v == config::U3_NONE))
+          .is_some_and(|v| v <= config::direct_max() || v == config::u3_none()))
         {
           refine_direct(local, vid);
         }
@@ -1027,6 +1066,16 @@ fn execute_statement(cur: &Cursor, flo: Flow, depth: u32, g: &mut Gen)
     }
   
     if k == CXCursor_NullStmt || k == CXCursor_AsmStmt {
+      return Ok(flo);
+    }
+
+    //  an attributed null statement (`[[fallthrough]];`): libclang
+    //  exposes AttributedStmt as an unexposed statement wrapping its
+    //  sub-statement, and with nothing but null statements inside it
+    //  has no effect
+    if k == CXCursor_UnexposedStmt
+      && cur.children().iter().all(|c| c.kind() == CXCursor_NullStmt)
+    {
       return Ok(flo);
     }
   
@@ -1177,6 +1226,30 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     //  evaluated for effect only
     //
     if is_array {
+      //  the noun core's array-building macros (u3r_mean/u3x_mean,
+      //  u3i_list, u3m_grab, u3i_molt) declare a local array and hand
+      //  it to a consumer call in the same statement expression; the
+      //  consumer's protocol governs the elements (config::
+      //  array_consumer), so record them for it. Only macro-origin
+      //  declarations qualify: a hand-written array of nouns stays
+      //  refused below
+      if d.is_macro_origin() {
+        if let Some(init) = init.filter(|i| i.kind() == CXCursor_InitListExpr)
+        {
+          let elem = array_elem_type(&ty);
+          let pairs = elem.spelling().trim_start_matches("const ")
+            .starts_with("u3r_mean_pair");
+          if pairs || type_has_nouns(&ty) {
+            let (rec, nxt) =
+              record_macro_array(&init, pairs, &elem, env, depth, g)?;
+            let Some(nxt) = nxt else { return Ok(None); };
+            env = nxt;
+            g.macro_arrays.entry(name.clone()).or_default()
+              .push((loc_str(&d), rec));
+            continue;
+          }
+        }
+      }
       let sizes = &kids[..kids.len() - (init.is_some() as usize)];
       for c in sizes {
         if !is_expr_kind(c.kind()) { continue; }
@@ -1259,6 +1332,16 @@ fn execute_decl(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   return Ok(Some(env));
 }
 
+/// Element type of an array type, read through the sugared type where
+/// possible so the noun typedef spelling survives (canonical u3_noun[2]
+/// is unsigned int[2]).
+fn array_elem_type(ty: &Ty) -> Ty
+{
+  let canon = ty.canonical();
+  let arr = if ty.kind() == canon.kind() { *ty } else { canon };
+  arr.elem_type()
+}
+
 fn type_has_nouns(ty: &Ty) -> bool
 {
   if is_noun_type(ty) {
@@ -1272,13 +1355,92 @@ fn type_has_nouns(ty: &Ty) -> bool
   if k == CXType_ConstantArray || k == CXType_IncompleteArray
     || k == CXType_VariableArray
   {
-    //  read the element type through the sugared type where possible, so
-    //  the noun typedef spelling survives (canonical u3_noun[2] is
-    //  unsigned int[2])
-    let arr = if ty.kind() == k { *ty } else { canon };
-    return type_has_nouns(&arr.elem_type());
+    return type_has_nouns(&array_elem_type(ty));
   }
   false
+}
+
+/// The elements of a macro-built local array (see execute_decl): for a
+/// `u3r_mean_pair` array the `&out` variable of each `{axe, &out}`
+/// pair, otherwise the values of the noun elements, read straight out
+/// of the initializer (a `{axe, som}` u3i_molt pair yields its noun
+/// member). The non-noun parts (axes) are evaluated for effect only.
+fn record_macro_array(init: &Cursor, pairs: bool, elem: &Ty, env: Env,
+  depth: u32, g: &mut Gen) -> R<(MacroArray, Option<Env>)>
+{
+  let mut env = env;
+  if pairs {
+    let mut outs: Vec<Name> = Vec::new();
+    for el in init.children() {
+      let kids = el.children();
+      let out = (el.kind() == CXCursor_InitListExpr && kids.len() == 2)
+        .then(|| unwrap_expr(kids[1]))
+        .filter(|o| o.kind() == CXCursor_UnaryOperator
+          && unary_op(o).as_deref() == Some("&"))
+        .and_then(|o| o.children().first().and_then(decl_ref_name));
+      let Some(out) = out else {
+        report!(g, &el, "complicated",
+          "u3r_mean pair is not `{{axis, &var}}`, won't analyze");
+      };
+      let Some(nxt) = eval_decl_init_effects(&kids[0], env, depth, g)? else {
+        return Ok((MacroArray::Outs(outs), None));
+      };
+      env = nxt;
+      outs.push(out);
+    }
+    return Ok((MacroArray::Outs(outs), Some(env)));
+  }
+  //  noun elements: a plain noun array, or a record with noun members
+  let fields: Vec<Cursor> = if elem.canonical().kind() == CXType_Record {
+    elem.canonical().fields()
+  } else {
+    vec![]
+  };
+  let mut vids: Vec<Option<ValId>> = Vec::new();
+  for el in init.children() {
+    //  (member expression, declared type) pairs of this element
+    let parts: Vec<(Cursor, Ty)> = if fields.is_empty() {
+      vec![(el, *elem)]
+    } else {
+      let kids = el.children();
+      if el.kind() != CXCursor_InitListExpr || kids.len() != fields.len() {
+        report!(g, &el, "complicated",
+          "macro-built array element is not a positional `{{..}}` list \
+           over every member, won't analyze");
+      }
+      kids.into_iter().zip(fields.iter().map(|f| f.ty())).collect()
+    };
+    for (c, ty) in parts {
+      if !is_noun_type(&ty) {
+        let Some(nxt) = eval_decl_init_effects(&c, env, depth, g)? else {
+          return Ok((MacroArray::Vals(vids), None));
+        };
+        env = nxt;
+        continue;
+      }
+      let (vid, nxt) = eval_expr(&c, env, depth, g)?;
+      let Some(nxt) = nxt else {
+        return Ok((MacroArray::Vals(vids), None));
+      };
+      env = nxt;
+      if vid.is_some_and(|v|
+        matches!(env.values.get(&v), Some(RefcountState::Slot)))
+      {
+        report!(g, &c, "complicated",
+          "slot pointer stored in a macro-built noun array, won't analyze");
+      }
+      //  the element type is the contract, as at any other binding
+      if !is_weak_type(&ty) {
+        if let Some(d) = weak_desc(&env, g, vid, &c) {
+          report!(g, &c, "u3_none",
+            "{} stored in a {} array element: compare against u3_none \
+             first", d, ty.spelling());
+        }
+      }
+      vids.push(vid);
+    }
+  }
+  Ok((MacroArray::Vals(vids), Some(env)))
 }
 
 /// Evaluate everything expression-like for refcount sideeffects in declarations
@@ -1875,7 +2037,7 @@ fn weak_desc(env: &Env, g: &Gen, vid: Option<ValId>, expr: &Cursor)
     Some(v) if env.weak.contains(&v) =>
       Some(format!("possibly-none value [{}]{}", env.names(v),
         g.why_weak(v))),
-    None if int_literal_value(expr) == Some(config::U3_NONE) =>
+    None if int_literal_value(expr) == Some(config::u3_none()) =>
       Some("a u3_none literal".to_string()),
     _ => None,
   }
@@ -2123,8 +2285,18 @@ fn eval_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     k);
 }
 
-/// GNU statement expression: `({ stmt; stmt; value; })`.
+/// GNU statement expression: `({ stmt; stmt; value; })`. Values minted
+/// before it are the enclosing expression's (see Gen.expr_floors).
 fn eval_stmt_expr(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
+  -> R<(Option<ValId>, Option<Env>)>
+{
+  g.expr_floors.push(g.id_gen);
+  let out = eval_stmt_expr_in(cur, env, depth, g);
+  g.expr_floors.pop();
+  out
+}
+
+fn eval_stmt_expr_in(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
 {
   let kids = cur.children();
@@ -2217,7 +2389,7 @@ fn eval_ternary(cur: &Cursor, cond: &Cursor, a: &Cursor, b: &Cursor,
   //  `(hav == u3_none) ? u3_nul : hav` produces a proven-valid noun
   //  even though [hav] itself is maybe-none after the join
   let none_lit =
-    |c: &Cursor| int_literal_value(c) == Some(config::U3_NONE);
+    |c: &Cursor| int_literal_value(c) == Some(config::u3_none());
   let (mut te, mut fe) = (te, fe);
   let (t_vid, f_vid) = match (t_vid, f_vid) {
     (Some(v), None) =>
@@ -2413,69 +2585,35 @@ fn apply_basic_arg_mode(env: &mut Env, mode: ArgumentMode, v: ValId,
   Ok(())
 }
 
-/// A call expression: hard-wired noun primitives first, then the
-/// callee's resolved protocol.
-/// A destructurer call (u3x_cell &co): the argument at `src_i` is the
-/// source noun; every other `&var` argument is an out-param whose
-/// variable is rebound to a borrowed sub-noun of the source.
-fn eval_destructurer(_cur: &Cursor, args: &[Cursor], src_i: usize,
+/// The consumer half of u3r_mean/u3x_mean: `u3r_vmean(a, _pairs, n)`
+/// over a recorded pair array rebinds every `&out` variable to a
+/// borrowed sub-noun of the source -- only on the c3y branch of the
+/// claiming comparison for u3r_vmean (`loob`), unconditionally for the
+/// bailing u3x_vmean. An out-pointer into untracked storage is opaque.
+/// The product is a loobean (or void), never a noun.
+fn eval_mean_fill(cur: &Cursor, args: &[Cursor], outs: Vec<Name>,
   loob: bool, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
 {
-  let mut env = env;
-  let mut src_vid: Option<ValId> = None;
-  for (i, a) in args.iter().enumerate() {
-    if i == src_i {
-      let (v, nxt) = eval_expr(a, env, depth, g)?;
-      let Some(nxt) = nxt else { return Ok((None, None)); };
-      env = nxt;
-      if let Some(d) = weak_desc(&env, g, v, a) {
-        report!(g, a, "u3_none",
-          "destructuring {}: compare against u3_none first", d);
-      }
-      src_vid = v;
-      continue;
+  let Some(a0) = args.first() else {
+    report!(g, cur, "strange expression", "vmean without a source noun");
+  };
+  let (src_vid, nxt) = eval_expr(a0, env, depth, g)?;
+  let Some(mut env) = nxt else { return Ok((None, None)); };
+  if let Some(d) = weak_desc(&env, g, src_vid, a0) {
+    report!(g, a0, "u3_none",
+      "destructuring {}: compare against u3_none first", d);
+  }
+  for nm in outs {
+    if let Some((var, prior)) = read_var(&env, &nm) {
+      env = fill_out_param(env, var, Some(prior), src_vid, loob, g);
     }
-    let au = unwrap_expr(*a);
-    if au.kind() == CXCursor_UnaryOperator
-      && unary_op(&au).as_deref() == Some("&")
-    {
-      if let Some(nm) = au.children().first().and_then(decl_ref_name) {
-        if let Some((var, prior)) = read_var(&env, &nm) {
-          env = fill_out_param(env, var, Some(prior), src_vid, loob, g);
-          continue;
-        }
-      }
-      //  &untracked storage: opaque out-param
-      continue;
-    }
-    let (v, nxt) = eval_expr(a, env, depth, g)?;
-    let Some(mut nxt) = nxt else { return Ok((None, None)); };
-    if let Some(v) = v.filter(|v|
-      matches!(nxt.values.get(v), Some(RefcountState::Slot)))
-    {
-      //  a slot-pointer value (an out-param handed through, e.g.
-      //  `u3r_qual(dat, &typ, bot, mod, use)` with u3_noun* params):
-      //  the pointed-at variable is rebound to a borrowed sub-noun,
-      //  same as a literal `&var`
-      match nxt.slots.get(&v).cloned().expect(LI) {
-        SlotTarget::Var(var) => {
-          let prior = nxt.vars_rev.get(&var).copied();
-          nxt = fill_out_param(nxt, var, prior, src_vid, loob, g);
-        }
-        SlotTarget::Hole {..} => {
-          report!(g, a, "refcount error",
-            "a destructurer would fill a deferred slot with an \
-             uncounted view; only a `fills transferred` callee may \
-             fill one");
-        }
-      }
-    }
-    env = nxt;
   }
   Ok((None, Some(env)))
 }
 
+/// A call expression: hard-wired noun primitives first, then the
+/// callee's resolved protocol.
 fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
   -> R<(Option<ValId>, Option<Env>)>
 {
@@ -2644,11 +2782,29 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     return Ok((None, Some(nxt)));
   }
 
-  //  u3x_cell &co: `&var` out-params become borrowed sub-nouns of the
-  //  source
-  if let Some(src_i) = config::destructurer_src(cn) {
-    return eval_destructurer(cur, &args, src_i,
-      config::destructurer_loobean(cn), env, depth, g);
+  //  the consumer call of an array-building macro (u3r_mean/u3x_mean,
+  //  u3i_list, u3m_grab, u3i_molt -- see execute_decl): the recorded
+  //  array elements follow its protocol. An array built elsewhere (a
+  //  parameter handed through, as inside u3x_vmean itself) is opaque,
+  //  and the call takes the declared protocol like any other
+  if let Some((proto, arr_i)) = config::array_consumer(cn) {
+    let rec = args.get(arr_i).and_then(decl_ref_name)
+      .and_then(|nm| g.macro_arrays.get_mut(&nm)).and_then(Vec::pop);
+    match (proto, rec.map(|(_, r)| r)) {
+      (config::ArrayProtocol::MeanFill {loob}, Some(MacroArray::Outs(outs)))
+        => return eval_mean_fill(cur, &args, outs, loob, env, depth, g),
+      (config::ArrayProtocol::Transfer, Some(MacroArray::Vals(vids))) => {
+        for v in vids.into_iter().flatten() {
+          env.lose(v, cur, g)?;
+        }
+      }
+      (config::ArrayProtocol::Retain, Some(MacroArray::Vals(_))) => {}
+      (_, Some(_)) => {
+        report!(g, cur, "strange expression",
+          "{}() over a macro-built array of the wrong element kind", cn);
+      }
+      (_, None) => {}
+    }
   }
 
   //  u3i_defcons: allocate a cell whose head and tail are filled later
@@ -2989,16 +3145,12 @@ fn eval_call(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
     let is_slot = v.is_some_and(|v|
       matches!(env.values.get(&v), Some(RefcountState::Slot)));
     let Some(p) = p else {
-      //  varargs: too ambiguous -- but a slot pointer must not slip in
+      //  varargs: too ambiguous (an owned temporary passed here stays
+      //  an unconsumed orphan for the scope-end sweep) -- but a slot
+      //  pointer must not slip in
       if is_slot {
         report!(g, a, "complicated",
           "slot pointer passed to variadic {}(), won't analyze", cn);
-      }
-      //  except u3i_list &co, whose varargs are all consumed
-      if config::VARARG_TRANSFER_FNS.contains(&cn) {
-        if let Some(v) = *v {
-          env.lose(v, a, g)?;
-        }
       }
       continue;
     };
@@ -3472,7 +3624,7 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       let lit_l = int_literal_value(&kids[0]);
       let lit_r = int_literal_value(&kids[1]);
       let direct_lit = |l: Option<u64>| l.is_some_and(|v|
-        v <= config::DIRECT_MAX || v == config::U3_NONE);
+        v <= config::direct_max() || v == config::u3_none());
       let mut eq_vid: Option<ValId> = None;
       for (v, other_lit) in [(lv, lit_r), (rv, lit_l)] {
         if v.is_some() && direct_lit(other_lit) {
@@ -3542,7 +3694,7 @@ fn eval_cond(cur: &Cursor, env: Env, depth: u32, g: &mut Gen)
       //  equal branch valid as well
       for (v, other_lit) in [(lv, lit_r), (rv, lit_l)] {
         let (Some(v), Some(l)) = (v, other_lit) else { continue; };
-        if l == config::U3_NONE {
+        if l == config::u3_none() {
           let ne_env = if op == binop::EQ { &mut fe } else { &mut te };
           refine_valid(ne_env, v);
         } else {
@@ -3665,7 +3817,7 @@ fn guard_fact(a: &Cursor, b: &Cursor, env: &Env)
       if let Some((_, vid)) = read_var(env, n) {
         //  equal to a direct literal (or the u3_none sentinel) means
         //  direct on the equal branch
-        if (l <= config::DIRECT_MAX || l == config::U3_NONE)
+        if (l <= config::direct_max() || l == config::u3_none())
           && refinable(env, vid)
         {
           return Some((vid, true, false));
@@ -3711,7 +3863,8 @@ fn guard_fact(a: &Cursor, b: &Cursor, env: &Env)
 }
 
 /// For a relational comparison, (value, branch) refinements: the value
-/// is provably a direct atom (bounded below 2^31) on that branch.
+/// is provably a direct atom (bounded below the direct-atom limit) on
+/// that branch.
 fn bound_fact(op: i32, a: &Cursor, b: &Cursor, env: &Env)
   -> Vec<(ValId, bool)>
 {
@@ -3731,8 +3884,8 @@ fn bound_fact(op: i32, a: &Cursor, b: &Cursor, env: &Env)
     //  var > lit (false), var >= lit (false)
     let on_true = matches!(op, binop::LT | binop::LE);
     let bound_incl = matches!(op, binop::LE | binop::GT);
-    let limit = if bound_incl { config::DIRECT_MAX }
-                else { config::DIRECT_MAX + 1 };
+    let limit = if bound_incl { config::direct_max() }
+                else { config::direct_max() + 1 };
     if lb <= limit && refinable(env, va) {
       return vec![(va, on_true)];
     }
@@ -3743,8 +3896,8 @@ fn bound_fact(op: i32, a: &Cursor, b: &Cursor, env: &Env)
     //  lit < var (false), lit <= var (false)
     let on_true = matches!(op, binop::GT | binop::GE);
     let bound_incl = matches!(op, binop::GE | binop::LT);
-    let limit = if bound_incl { config::DIRECT_MAX }
-                else { config::DIRECT_MAX + 1 };
+    let limit = if bound_incl { config::direct_max() }
+                else { config::direct_max() + 1 };
     if la <= limit && refinable(env, vb) {
       return vec![(vb, on_true)];
     }
@@ -3752,7 +3905,7 @@ fn bound_fact(op: i32, a: &Cursor, b: &Cursor, env: &Env)
   }
   if let (Some(va), Some(vb)) = (va, vb) {
     //  var-vs-var: on the branch where x <= y, a direct y bounds x
-    //  below 2^31 (this is what verifies the c3_min pattern)
+    //  below the direct limit (this is what verifies the c3_min pattern)
     let (small_t, big_t) = if matches!(op, binop::LT | binop::LE) {
       (va, vb)  //  true: a bounded by b
     } else {
@@ -4589,14 +4742,17 @@ fn end_scope(loc: Loc, env: Env, depth: u32, g: &mut Gen) -> R<Env>
   //  names dying at this depth, plus owned values that already lost
   //  their last name mid-scope (overwrites, discarded call products):
   //  the latter are swept as anonymous orphans, identified by their
-  //  creation site
+  //  creation site -- except the ones minted before the statement
+  //  expression this scope sits in, which its enclosing expression
+  //  still holds
+  let floor = g.expr_floors.last().copied().unwrap_or(0);
   let mut gone: Vec<(Option<VarName>, ValId)> = env.vars_rev.iter()
     .filter(|(k, _)| k.depth >= depth)
     .map(|(k, id)| (Some(k.clone()), *id))
     .chain(env.values.iter()
       .filter_map(|(k, v)| {
         (matches!(v, RefcountState::Owned {..})
-          && !env.vars.contains_key(k))
+          && !env.vars.contains_key(k) && *k >= floor)
           .then_some((None, *k))
       })
     )

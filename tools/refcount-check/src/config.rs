@@ -1,19 +1,46 @@
 //! Tables of functions and types with hard-wired meaning for the checker.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Loom mode: -DVERE64 in the compile commands makes the noun word
+/// 64-bit -- direct atoms are 63-bit and u3_none is 2^64-1. Set once at
+/// startup from the compile db (which must be uniform), read by the
+/// width-dependent accessors below.
+static VERE64: AtomicBool = AtomicBool::new(false);
+
+pub fn set_vere64(on: bool) {
+  VERE64.store(on, Ordering::Relaxed);
+}
+
+pub fn vere64() -> bool {
+  VERE64.load(Ordering::Relaxed)
+}
+
 /// Typedefs that denote reference-counted nouns.
 pub const NOUN_TYPES: &[&str] = &[
   "u3_noun", "u3_atom", "u3_cell", "u3_weak", "u3_term",
   "u3_trel", "u3_qual", "u3_quin",
 ];
 
-/// Typedefs too narrow to hold an indirect noun reference: a noun
-/// value bound to a variable of one of these is necessarily a direct
-/// atom. c3_l is 31-bit by convention (types.h), c3_m is "also c3_l";
-/// signed variants are excluded (sign extension of a negative value
-/// could produce an indirect bit pattern).
+/// Typedefs too narrow to hold an indirect noun reference in either
+/// loom mode: a noun value bound to a variable of one of these is
+/// necessarily a direct atom. Signed variants are excluded (sign
+/// extension of a negative value could produce an indirect bit
+/// pattern), and so is c3_l: it is the noun width by design (31/63-bit
+/// "little", types.h), its narrowness a convention the type does not
+/// enforce.
 pub const DIRECT_TYPES: &[&str] = &[
   "c3_b", "c3_y", "c3_s", "c3_t", "c3_o", "c3_g",
 ];
+
+/// 32-bit typedefs (c3_m is "also c3_l" only in 32-bit mode): narrower
+/// than the noun word under VERE64 alone, where truncation cannot
+/// preserve an indirect reference's high bit.
+pub const DIRECT_TYPES_64: &[&str] = &["c3_h", "c3_m"];
+
+pub fn is_direct_type_name(s: &str) -> bool {
+  DIRECT_TYPES.contains(&s) || (vere64() && DIRECT_TYPES_64.contains(&s))
+}
 
 /// Calls that never return; execution ends at the call site.
 pub const NORETURN_FNS: &[&str] = &[
@@ -34,20 +61,36 @@ pub fn guard_kind(name: &str) -> Option<&'static str> {
   })
 }
 
-/// Destructurers returning a loobean (u3r_*): the out-params are
-/// filled only when the product is c3y. The u3x_* variants bail
-/// instead of returning c3n, so their fills are unconditional.
-pub fn destructurer_loobean(name: &str) -> bool {
-  name.starts_with("u3r_")
+/// What the consumer half of an array-building macro does to the
+/// elements of the array. `u3r_mean(a, {axe, &out}, ..)`, `u3x_mean`,
+/// `u3i_list(x, ..)` (`u3nl`), `u3m_grab(x, ..)` and `u3i_molt(a,
+/// {axe, som}, ..)` expand to a statement expression that declares a
+/// local array and hands it to one of the functions below; the
+/// interpreter records the array at its declaration and applies the
+/// consumer's protocol at the call.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ArrayProtocol {
+  /// a `u3r_mean_pair` array: each `&out` is filled with an uncounted
+  /// view into the source noun -- only when the call returns c3y if
+  /// `loob` (u3r_vmean), unconditionally when it bails instead
+  /// (u3x_vmean)
+  MeanFill {loob: bool},
+  /// every noun element is consumed (u3i_vlist, the u3i_vmolt pairs)
+  Transfer,
+  /// every noun element stays with the caller (u3m_vgrab: GC roots)
+  Retain,
 }
 
-/// Hard-wired destructurers: varargs, so the input args cant be named. So these
-/// are special cased
-pub fn destructurer_src(name: &str) -> Option<usize> {
-  match name {
-    "u3x_mean" | "u3r_mean" => Some(0),
-    _ => None,
-  }
+/// The consumer's protocol and the position of its array argument.
+pub fn array_consumer(name: &str) -> Option<(ArrayProtocol, usize)> {
+  Some(match name {
+    "u3r_vmean" => (ArrayProtocol::MeanFill {loob: true}, 1),
+    "u3x_vmean" => (ArrayProtocol::MeanFill {loob: false}, 1),
+    "u3i_vlist" => (ArrayProtocol::Transfer, 0),
+    "u3i_vmolt" => (ArrayProtocol::Transfer, 1),
+    "u3m_vgrab" => (ArrayProtocol::Retain, 0),
+    _ => return None,
+  })
 }
 
 /// Retain-product functions whose product borrows from an UNTRACKED
@@ -56,11 +99,6 @@ pub fn destructurer_src(name: &str) -> Option<usize> {
 /// product is the stored value; freeing the lookup key does not
 /// invalidate it).
 pub const UNTIED_RETAIN_FNS: &[&str] = &["u3h_git"];
-
-/// Variadic noun-core functions that consume every noun vararg
-/// (`u3_none`-terminated lists). Varargs of any other function stay
-/// unaccounted ("too ambiguous").
-pub const VARARG_TRANSFER_FNS: &[&str] = &["u3i_list"];
 
 /// Functions that may run unifying equality (u3r_sing) over their noun
 /// arguments during execution: equal interior copies can be freed and
@@ -92,8 +130,23 @@ pub const UNIFYING_FNS: &[&str] = &[
 
 pub const C3Y: u64 = 0;
 pub const C3N: u64 = 1;
-pub const DIRECT_MAX: u64 = 0x7fff_ffff;
-pub const U3_NONE: u64 = 0xffff_ffff;
+
+/// Largest direct atom: 2^31-1 (32-bit loom) or 2^63-1 (VERE64).
+pub fn direct_max() -> u64 {
+  if vere64() { 0x7fff_ffff_ffff_ffff } else { 0x7fff_ffff }
+}
+
+/// The u3_none sentinel: (u3_noun)c3_w_max, all-ones at the noun word
+/// width.
+pub fn u3_none() -> u64 {
+  if vere64() { 0xffff_ffff_ffff_ffff } else { 0xffff_ffff }
+}
+
+/// Wraparound mask for integer-constant evaluation: integer literals
+/// in noun context truncate to the noun word width.
+pub fn noun_mask() -> u64 {
+  if vere64() { u64::MAX } else { 0xffff_ffff }
+}
 
 /// --strict-weak: also require a proven-valid noun for u3z/u3a_lose.
 /// Off by default: u3z of u3_none is a de-facto safe no-op

@@ -985,6 +985,30 @@ fn run() -> i32 {
     entries.push(e);
   }
 
+  //  loom mode: a -DVERE64 compile db means 64-bit nouns (63-bit
+  //  direct atoms, u3_none = 2^64-1). The constants are process-wide,
+  //  so a db mixing both modes is refused rather than half-checked
+  {
+    let has64 = |e: &&Entry| {
+      e.arguments.iter().any(|a| a == "-DVERE64")
+        //  zig splits the define into two tokens
+        || e.arguments.windows(2).any(|w| w[0] == "-D" && w[1] == "VERE64")
+    };
+    let n64 = entries.iter().filter(has64).count();
+    if n64 != 0 && n64 != entries.len() {
+      eprintln!(
+        "compile db mixes VERE64 and 32-bit entries ({} of {}): \
+         regenerate it in one mode (rm -rf ./cdb-* compile_commands.json; \
+         zig build -Dgenerate-commands [-Dvere64])",
+        n64, entries.len());
+      return 2;
+    }
+    config::set_vere64(n64 != 0);
+    if args.verbose {
+      eprintln!("loom mode: {}-bit", if n64 != 0 { 64 } else { 32 });
+    }
+  }
+
   if args.selftest {
     // borrow compile flags from any pkg/noun entry (the fixture
     // includes noun headers; vere flags would also work, but pin it)
@@ -1119,7 +1143,8 @@ fn run() -> i32 {
       f.msg
     );
   }
-  eprintln!("\n{} functions checked, {} findings", n_checked, findings.len());
+  eprintln!("\n{} functions checked, {} findings ({}-bit loom)",
+    n_checked, findings.len(), if config::vere64() { 64 } else { 32 });
 
   if args.selftest {
     let expected: HashSet<(&str, &str)> = HashSet::from([
@@ -1141,7 +1166,10 @@ fn run() -> i32 {
       ("bug_defcons_unfilled", "refcount error"),
       ("bug_defcons_double", "use-after-free"),
       ("bug_fnptr_borrowed", "refcount error"),
-      ("bug_vararg_borrowed", "refcount error"),
+      ("bug_list_borrowed", "refcount error"),
+      ("bug_mean_pair_borrowed", "refcount error"),
+      ("bug_grab_leak", "leak"),
+      ("bug_stmt_expr_leak", "leak"),
       ("warn_noreturn_return", "annotation"),
       ("bug_cond_fill_wrongpath", "leak"),
       ("bug_cond_view_wrongpath", "refcount error"),
@@ -1193,7 +1221,12 @@ fn run() -> i32 {
       "ok_cond_view_annot",
       "ok_assert_direct",
       "ok_fnptr_transfer",
-      "ok_vararg_list",
+      "ok_list_macro",
+      "ok_mean_pairs",
+      "ok_mean_cond",
+      "ok_grab_roots",
+      "ok_list_nested",
+      "ok_fallthrough",
       "ok_git_untied",
       "ok_fnptr_decl",
       "weak_find",

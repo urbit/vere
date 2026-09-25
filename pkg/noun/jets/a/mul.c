@@ -14,7 +14,10 @@ u3qa_mul(u3_atom a,
   if ( _(u3a_is_cat(a)) && _(u3a_is_cat(b)) ) {
 #else
   c3_g bit_g = c3_bits_chub(a) + c3_bits_chub(b);
-  if (bit_g <= 64) {
+  //  an indirect atom has bit 63 set in its representation, so
+  //  bit_g <= 64 admits it only when the other factor is 0 and the
+  //  raw product is still the correct answer
+  if (bit_g <= 64) {  //  @Refcount: assert direct a b
 #endif
     c3_d c = ((c3_d) a) * ((c3_d) b);
 #ifdef VERE64

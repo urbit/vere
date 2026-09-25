@@ -40,24 +40,44 @@ jobs:
 
       # independent tasks: cargo does not need the compile db, only the
       # lint run does. wait for both before failing so neither is orphaned
-      - name: Generate compile_commands.json, build refcount-check
+      - name: Generate compile_commands.json (32-bit), build refcount-check
         run: |
           zig build -Dgenerate-commands --summary all &
           zig_pid=$!
-          cargo build --manifest-path tools/refcount-check/Cargo.toml &
+          cargo build --release --manifest-path tools/refcount-check/Cargo.toml &
           cargo_pid=$!
           zig_rc=0; cargo_rc=0
           wait "$zig_pid"   || zig_rc=$?
           wait "$cargo_pid" || cargo_rc=$?
           [ "$zig_rc" -eq 0 ] && [ "$cargo_rc" -eq 0 ]
 
-      - name: Run selftest
+      - name: Run selftest (32-bit)
         run: |
-          ./tools/refcount-check/target/debug/refcount-check \
+          ./tools/refcount-check/target/release/refcount-check \
             --selftest \
             --libclang /usr/lib/llvm-19/lib/libclang.so
 
-      - name: Run refcount lint
+      - name: Run refcount lint (32-bit)
         run: |
-          ./tools/refcount-check/target/debug/refcount-check \
+          ./tools/refcount-check/target/release/refcount-check \
+            --libclang /usr/lib/llvm-19/lib/libclang.so
+
+      # the checker takes its loom mode (direct-atom width, u3_none) from
+      # the compile db, which must be uniform: the cdb fragment dirs are
+      # keyed by a hash of the compile flags, so leftovers from the
+      # 32-bit build would mix into the collected compile_commands.json
+      - name: Generate compile_commands.json (64-bit)
+        run: |
+          rm -rf ./cdb-* compile_commands.json
+          zig build -Dgenerate-commands -Dvere64 --summary all
+
+      - name: Run selftest (64-bit)
+        run: |
+          ./tools/refcount-check/target/release/refcount-check \
+            --selftest \
+            --libclang /usr/lib/llvm-19/lib/libclang.so
+
+      - name: Run refcount lint (64-bit)
+        run: |
+          ./tools/refcount-check/target/release/refcount-check \
             --libclang /usr/lib/llvm-19/lib/libclang.so

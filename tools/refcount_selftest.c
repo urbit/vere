@@ -463,22 +463,111 @@ bug_fnptr_borrowed(u3_noun a, void (*fun_f)(u3_noun))
   fun_f(u3h(a));                //  BUG: borrowed view transferred
 }
 
-/* u3i_list consumes every vararg (control)
+/* u3i_list consumes every element of its macro-built array (control)
 ** @Refcount: retains arguments
 */
 u3_noun
-ok_vararg_list(u3_noun a)
+ok_list_macro(u3_noun a)
 {
-  return u3i_list(u3k(a), u3qa_inc(a), u3_none);
+  return u3i_list(u3k(a), u3qa_inc(a));
 }
 
-/* u3i_list consumes every vararg: a borrowed view needs u3k
+/* u3i_list consumes every element: a borrowed view needs u3k
 ** @Refcount: retains arguments
 */
 u3_noun
-bug_vararg_borrowed(u3_noun a)
+bug_list_borrowed(u3_noun a)
 {
-  return u3i_list(u3h(a), u3_none);  //  BUG: borrowed view consumed
+  return u3i_list(u3h(a));  //  BUG: borrowed view consumed
+}
+
+/* u3x_mean fills retained views through the pair-array macro (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_mean_pairs(u3_noun a)
+{
+  u3_noun hed, tel;
+  u3x_mean(a, {2, &hed}, {3, &tel});
+  return u3nc(u3k(hed), u3k(tel));
+}
+
+/* the mean fills are retained views: consuming one needs u3k
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_mean_pair_borrowed(u3_noun a)
+{
+  u3_noun hed, tel;
+  u3x_mean(a, {2, &hed}, {3, &tel});
+  return u3nc(u3k(hed), tel);  //  BUG: borrowed view consumed
+}
+
+/* u3r_mean fills only on c3y; the claiming comparison undoes the
+** optimistic fill on the failing branch (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_mean_cond(u3_noun a)
+{
+  u3_noun hed = u3_nul;
+  if ( c3n == u3r_mean(a, {2, &hed}) ) {
+    return u3_nul;
+  }
+  return u3k(hed);
+}
+
+/* u3m_grab only marks its roots (control)
+** @Refcount: retains arguments
+*/
+void
+ok_grab_roots(u3_noun a)
+{
+  u3m_grab(a, u3h(a));
+}
+
+/* an owned temporary handed to u3m_grab is stranded
+** @Refcount: retains arguments
+*/
+void
+bug_grab_leak(u3_noun a)
+{
+  u3m_grab(u3k(a));  //  BUG: the gained reference is never consumed
+}
+
+/* temporaries built before a nested statement expression survive its
+** scope end (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_list_nested(u3_noun a)
+{
+  return u3i_list(u3nc(u3k(a), u3_nul), u3i_list(u3k(a), u3_nul));
+}
+
+/* a product dropped inside a statement expression still leaks there
+** @Refcount: retains arguments
+*/
+u3_noun
+bug_stmt_expr_leak(u3_noun a)
+{
+  return u3i_list(u3k(a), ({ u3qa_inc(a); u3_nul; }));  //  BUG: dropped
+}
+
+/* an attributed null statement is a no-op (control)
+** @Refcount: retains arguments
+*/
+u3_noun
+ok_fallthrough(u3_noun a)
+{
+  switch ( u3h(a) ) {
+    case 1: {
+      u3z(u3k(a));
+    }  [[fallthrough]];
+    case 2: break;
+    default: break;
+  }
+  return u3_nul;
 }
 
 /* u3h_git's product borrows from the table, not the key: freeing the

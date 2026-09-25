@@ -60,6 +60,16 @@ I aimed at ~0% false negative rate, given that the code being checked at least c
 
 Currently it checks refcounting correctness and reference liveness correctness, including modelling unifying equality effects. It also complains if a u3_noun is used in integer arithmetic without checking if it is a direct atom.
 
+The loom mode is taken from the compile db: entries carrying `-DVERE64`
+select the 64-bit constants (63-bit direct-atom limit, `u3_none` =
+2^64-1, and the 32-bit `c3_h`/`c3_m` count as direct-safe narrow types),
+otherwise the 32-bit ones (31-bit direct limit, `u3_none` = 2^32-1). A
+db mixing both modes is refused; regenerate it per mode (`zig build
+-Dgenerate-commands [-Dvere64]`, after `rm -rf ./cdb-* compile_commands.json`
+when switching -- the fragment dirs are keyed by compile flags and stale
+ones would mix in). The summary line names the mode; CI runs the lint in
+both.
+
 ### u3_weak / u3_none checking
 
 Declared types are contracts: `u3_weak` means "valid noun OR u3_none",
@@ -184,6 +194,8 @@ u3_noun bar(u3_noun u3_noun); // @Refcount: transfer (same line for declarations
 - Slot pointers. The interpreter tracks `u3_noun*` locals and pointee-annotated parameters as *slot pointers*: `&var` of a tracked noun, plain pointer assignment (aliasing), reads (`*p`) and stores (`*p = x`) through them all resolve to the pointed-at slot. A call site may hand a pointee-annotated parameter either `&var` or a tracked slot pointer (so an accumulator out-param can be passed along recursively). A slot pointer that escapes anywhere else -- an unannotated parameter, a store to memory, a return value, a struct initializer -- is reported.
 
 - `u3i_defcons` is modeled natively: the product is a fresh owned cell carrying two unfilled *holes*, and the `&ptr` arguments rebind those pointer variables to them.
+
+- The array-building macros of the noun core -- `u3r_mean`/`u3x_mean` over `{axis, &out}` pairs, `u3i_list` (`u3nl`), `u3m_grab` and `u3i_molt` -- expand to a statement expression that declares a local array and hands it to `u3r_vmean`/`u3x_vmean`/`u3i_vlist`/`u3m_vgrab`/`u3i_vmolt`. The interpreter records the macro-built array at its declaration and applies the consumer's protocol at the call: mean pairs fill their `&out` variables with uncounted views of the source (on `c3y` only for `u3r_mean`, like `u3r_cell`), list and molt elements are consumed, grab roots are borrowed. The element type is a contract like any binding (`u3_none` in a `u3_noun` array is a `[u3_none]` finding). Arrays of nouns written by hand are still refused, and a macro-built array that never reaches its consumer call is reported.
 
 - List of refcount directives for a code block:
 
