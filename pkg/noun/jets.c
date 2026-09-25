@@ -130,7 +130,9 @@ _cj_bash(u3_noun bat)
       urcrypt_shay(fat_y, met_w, dig_y);
 
       pro = u3i_bytes(32, dig_y);
-      u3h_put(u3R->jed.bas_p, bat, u3k(pro));
+      u3_noun bat_dedup = u3m_dedup(u3k(bat));
+      u3h_put(u3R->jed.bas_p, bat_dedup, u3m_dedup(u3k(pro)));
+      u3z(bat_dedup);
       u3i_slab_free(&sab_u);
       break;
     }
@@ -387,7 +389,7 @@ _cj_install(u3j_core* ray_u,
       if ( kid_u->bas_u ) {
         c3_w j_w;
         for ( j_w = 0; 0 != kid_u->bas_u[j_w]; j_w++ ) {
-          u3_noun key = _cj_hash(kid_u->bas_u[j_w]),
+          u3_noun key = u3m_dedup(_cj_hash(kid_u->bas_u[j_w])),
                   hot = u3h_git(u3R->jed.hot_p, key),
                   old = ( u3_none == hot ) ? u3_none : u3k(u3h(hot)),
                   reg = _cj_gust(old, kid_u->axe_l, u3k(pel), u3k(loc)),
@@ -395,7 +397,7 @@ _cj_install(u3j_core* ray_u,
                   hap = _cj_warm_hump(jax_l, huc),
                   toh = u3nq(reg, jax_l, hap, u3k(bal));
 
-          u3h_put(u3R->jed.hot_p, key, toh);
+          u3h_put(u3R->jed.hot_p, key, u3m_dedup(toh));
           u3z(key);
         }
       }
@@ -710,13 +712,17 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       u3_weak act = _cj_spot_hot(cor, *bas, &loc);
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
-        u3h_put(u3R->jed.cod_p, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
+        u3_noun bat_dedup = u3m_dedup(u3k(u3h(cor)));
+        u3_noun val = u3m_dedup(u3nc(u3k(*bas), u3k(reg)));
+        u3h_put(u3R->jed.cod_p, bat_dedup, val);
+        u3z(bat_dedup);
         /* caution: could overwrites old value, debug batteries etc.
         **          old value contains old _cj_jit (from different
         **          battery). if we change jit to (map battery *),
         **          will need to merge with that map here.
         */
-        u3h_put(u3R->jed.war_p, loc, act);
+        loc = u3m_dedup(loc);
+        u3h_put(u3R->jed.war_p, loc, u3m_dedup(act));
       }
     }
   }
@@ -1208,7 +1214,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
         u3j_site_take(&(new_u->sit_u), &(old_u->sit_u));
       }
     }
-
+    key = u3m_dedup(key);
     u3h_put(u3R->jed.han_p, key, _cj_of_hank(new_u));
     u3z(key);
     return new_u;
@@ -1915,6 +1921,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 {
   u3_weak loc = _cj_minx(cey, cor);
   if ( u3_none != loc ) {
+    loc = u3m_dedup(loc);
     c3_l par_l, jax_l;
     u3_noun pel = _cj_loc_pel(loc),
             axe = _cj_loc_axe(loc),
@@ -1967,10 +1974,11 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     }
 
     hap   = _cj_warm_hump(jax_l, u3t(u3t(loc)));
-    act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
-    u3h_put(u3R->jed.cod_p, bat, u3nc(u3k(bas), reg));
-    u3h_put(u3R->jed.war_p, loc, act); // see note in _cj_spot
-    u3z(pel); u3z(axe);
+    u3_noun bat_dedup = u3m_dedup(u3k(bat));
+    act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat_dedup));
+    u3h_put(u3R->jed.cod_p, bat_dedup, u3m_dedup(u3nc(u3k(bas), reg)));
+    u3h_put(u3R->jed.war_p, loc, u3m_dedup(act)); // see note in _cj_spot
+    u3z(pel); u3z(axe); u3z(bat_dedup);
   }
 
   return loc;
@@ -2165,8 +2173,9 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
       u3j_site_merge(&(han_u->sit_u), &(nah_u->sit_u));
       u3a_wfree(nah_u);
     }
-
-    u3h_put(han_p, key, _cj_of_hank(han_u));
+    u3_noun key_dedup = u3m_dedup(u3k(key));
+    u3h_put(han_p, key_dedup, _cj_of_hank(han_u));
+    u3z(key_dedup);
   }
 }
 
@@ -2217,7 +2226,9 @@ _cj_ream(u3_noun all)
       u3m_p("old jet", bal);
       u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
-      u3h_put(u3R->jed.war_p, loc, act);
+      u3_noun loc_dedup = u3m_dedup(u3k(loc));
+      u3h_put(u3R->jed.war_p, loc_dedup, u3m_dedup(act));
+      u3z(loc_dedup);
     }
     u3z(rul);
 
@@ -2256,7 +2267,9 @@ _cj_ream(u3_noun all)
         u3m_p("old jet", bal);
         u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
-        u3h_put(u3R->jed.war_p, loc, act);
+        u3_noun loc_dedup = u3m_dedup(u3k(loc));
+        u3h_put(u3R->jed.war_p, loc_dedup, u3m_dedup(act));
+        u3z(loc_dedup);
       }
     }
     u3z(lop);
@@ -2318,7 +2331,9 @@ u3j_load(u3_noun rel)
 
   while ( u3_nul != ler ) {
     u3x_cell(ler, &lor, &ler);
-    u3h_put(u3R->jed.cod_p, u3h(lor), u3k(u3t(lor)));
+    u3_noun key = u3m_dedup(u3k(u3h(lor)));
+    u3h_put(u3R->jed.cod_p, key, u3m_dedup(u3k(u3t(lor))));
+    u3z(key);
   }
 
   u3z(rel);
