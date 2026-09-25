@@ -2054,7 +2054,6 @@ _get_state(u3_noun hint, u3_noun seed, lia_state* sat_u)
       // sat_u->match same
       // sat_u->resolution same
       sat_u->arrow_yil = u3_none;
-      sat_u->susp_list = u3k(susp_list);
       M3MemoryHeader* mem = u3a_malloc(len_buf_h + sizeof(M3MemoryHeader));
       mem->runtime = wasm3_runtime;
       mem->maxStack = BoxArena->buf_y + stk_off_h;
