@@ -427,27 +427,33 @@ _http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
   return u3_husk_nope;
 }
 
-/* _http_req_get_auth(): get auth value (if present) for local cookie key
+/* _http_heds_get_auth(): get auth value (if present) for local cookie key
 */
 static u3_weak
-_http_req_get_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
+_http_heds_get_auth(u3_http* htp_u, h2o_headers_t* hed_u)
 {
-  //TODO  check Authentication header also
-
   //  try to find a cookie header
+  //TODO  check Authentication header also
   //
   ssize_t hin_i = -1;
-  while (-1 != (hin_i = h2o_find_header_by_str(&rec_u->headers, "cookie", 6, hin_i)))
+  while (-1 != (hin_i = h2o_find_header_by_str(hed_u, "cookie", 6, hin_i)))
   {
-    h2o_iovec_t coo_u = rec_u->headers.entries[hin_i].value;
+    h2o_iovec_t coo_u = hed_u->entries[hin_i].value;
 
     //  see if the cookie contains a valid auth token
     //
-    c3_c* key_c = fig_u->key_c;
+    c3_c* key_c = htp_u->htd_u->fig_u.key_c;
     c3_c  val_c[128];
     c3_y  val_y = 0;
     size_t  i_i = 0;
     size_t  j_i = 0;
+
+    //  for secure connections, eyre sends __Host- prefixed cookie keys.
+    //  for insecure connections, we must not include that in the search key.
+    //
+    if ( c3n == htp_u->sec ) {
+      key_c = key_c + (sizeof("__Host-")-1);
+    }
 
     //  step through the cookie string
     //
@@ -477,6 +483,14 @@ _http_req_get_auth(u3_hfig* fig_u, h2o_req_t* rec_u)
     }
   }
   return u3_none;
+}
+
+/* _http_req_get_auth(): get auth value (if present) for local cookie key
+*/
+static u3_weak
+_http_req_get_auth(u3_hreq* req_u)
+{
+  return _http_heds_get_auth(req_u->hon_u->htp_u, &req_u->rec_u->headers);
 }
 
 /* _http_req_is_auth(): returns c3y if tok (TRANSFER) is valid auth for desk or root
@@ -936,7 +950,7 @@ _http_scry_cb(void* vod_p, u3_noun nun)
   u3_hreq* req_u = peq_u->req_u;
   u3_hfig* fig_u = &req_u->hon_u->htp_u->htd_u->fig_u;
   c3_o auth = _http_req_is_auth( fig_u, u3_none,
-                                 _http_req_get_auth(fig_u, req_u->rec_u) );
+                                 _http_req_get_auth(req_u) );
 
   if ( req_u ) {
     u3_assert(u3_rsat_peek == req_u->sat_e);
@@ -1206,7 +1220,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       h2o_req_t* rec_u = req_u->rec_u;
 
       u3_noun gang = ( _(_http_req_is_auth( fig_u, u3_none,
-                                            _http_req_get_auth(fig_u, rec_u) )) )
+                                            _http_req_get_auth(req_u) )) )
                    ? u3nc(u3_nul, u3_nul)
                    : u3_nul;
 
@@ -1233,7 +1247,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       }
 
       //TODO  deduplicate with call for gang above
-      u3_weak tok = _http_req_get_auth(fig_u, rec_u);
+      u3_weak tok = _http_req_get_auth(req_u);
       if (u3_none == tok) {
         tok = u3_nul;
       }
@@ -1318,7 +1332,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
       _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
     }
     else {
-      u3_weak tok = _http_req_get_auth(&htd_u->fig_u, rec_u);
+      u3_weak tok = _http_req_get_auth(req_u);
 
       //  if no auth provided _at all_: redirect to auth negotation.
       //  else if the provided auth is no good: serve 403.
@@ -1375,7 +1389,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
     // check auth
     if ( (c3y == auth)
       && (c3n == _http_req_is_auth(&htd_u->fig_u, u3_none,
-                                   _http_req_get_auth(&htd_u->fig_u, rec_u))) )
+                                   _http_req_get_auth(req_u))) )
     {
       h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
     }
@@ -1788,7 +1802,7 @@ _http_spin_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
     return 0;
   }
 
-  u3_weak tok = _http_req_get_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+  u3_weak tok = _http_heds_get_auth(hon_u->htp_u, &rec_u->headers);
 
   //  if the request does not have authentication, start negotiation for it
   //
@@ -1833,7 +1847,7 @@ _http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   u3_hcon* hon_u = _http_rec_sock(rec_u);
   //REVIEWxx  would be fun to gate this behind a userspace perm...
 
-  u3_weak  tok   = _http_req_get_auth(&hon_u->htp_u->htd_u->fig_u, rec_u);
+  u3_weak  tok   = _http_heds_get_auth(hon_u->htp_u, &rec_u->headers);
 
   //  if the request has no authentication at all, start negotiation for it
   //
@@ -3527,8 +3541,9 @@ u3_http_io_init(u3_pier* pir_u)
   htd_u->nax_p = u3h_new_cache(512);
 
   {
+    //NOTE  __Host- prefix should be skipped on insecure connections
     u3_noun key = u3dt("cat", 3,
-      u3i_string("urbauth-"),
+      u3i_string("__Host-urbauth-"),
       u3dc("scot", 'p', u3i_chubs(2, pir_u->who_d)));
     htd_u->fig_u.ses = u3_nul;
     htd_u->fig_u.key_c = u3r_string(key);
