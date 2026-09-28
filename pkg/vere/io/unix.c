@@ -469,13 +469,12 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     return 0;
   }
 
-  //  bob atom: stream from the blob store to the file through a
-  //  windowed view
+  //  bob atom: stream from the blob store to the file through a window
   //
   if ( c3y == u3a_is_bob(dat) ) {
-    u3r_view vue_u;
+    u3r_view win_u;
 
-    if ( c3n == u3r_view_wind(&vue_u, dat) ) {
+    if ( c3n == u3r_view_open(&win_u, dat) ) {
       u3l_log("error opening blob %08" PRIx32 "/%08" PRIx32 " for reading",
               u3a_bob_mug(dat), u3a_bob_seq(dat));
       close(fid_i);
@@ -485,18 +484,18 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
 
     c3_y buf_y[65536];
     c3_d off_d = 0;
-    c3_d len_d = vue_u.len_w;
+    c3_d len_d = win_u.byt_d;
 
     while ( off_d < len_d ) {
       c3_z ask_z = ( (len_d - off_d) < sizeof(buf_y) )
                  ? (c3_z)(len_d - off_d)
                  : sizeof(buf_y);
-      c3_z got_z = u3r_view_read(&vue_u, off_d, buf_y, ask_z);
+      c3_z got_z = u3r_view_read(&win_u, off_d, buf_y, ask_z);
 
       if ( 0 == got_z ) {
         u3l_log("error reading blob %08" PRIx32 "/%08" PRIx32,
                 u3a_bob_mug(dat), u3a_bob_seq(dat));
-        u3r_view_done(&vue_u);
+        u3r_view_done(&win_u);
         close(fid_i);
         u3z(mim);
         return 0;
@@ -508,7 +507,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
         ssize_t wrt_i = write(fid_i, ptr_y, rem_z);
         if ( wrt_i <= 0 ) {
           u3l_log("error writing %s: %s", pax_c, strerror(errno));
-          u3r_view_done(&vue_u);
+          u3r_view_done(&win_u);
           close(fid_i);
           u3z(mim);
           return 0;
@@ -520,7 +519,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
       off_d += got_z;
     }
 
-    u3r_view_done(&vue_u);
+    u3r_view_done(&win_u);
     mug_h = u3a_bob_mug(dat);
   }
   else {

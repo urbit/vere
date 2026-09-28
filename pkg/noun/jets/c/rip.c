@@ -180,11 +180,16 @@ u3qc_rip(u3_atom a,
   //  the chunk loops see the same bytes for every kind.
   //
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, c);
+  u3x_view_open(&vue_u, c);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
 
-  const c3_w* buf_w = (const c3_w*)vue_u.byt_y;
-  c3_w        wor_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
-  c3_w        bit_w = (c3_w)u3r_view_met(&vue_u);
+  if ( vue_u.bit_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
+  }
+
+  const c3_w* buf_w = (const c3_w*)vue_y;
+  c3_w        wor_w = (c3_w)((vue_u.byt_d + u3a_word_bytes - 1) >> u3a_word_bytes_shift);
+  c3_w        bit_w = (c3_w)vue_u.bit_d;
   u3_noun     pro;
 
   if ( 1 == b ) {

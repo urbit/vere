@@ -35,7 +35,7 @@
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
 
-//  window for backward scans (u3_blob_hand_met).
+//  window for backward scans (_blob_hand_met).
 //
 #define BLOB_WIN_MAX ((size_t)4096)
 
@@ -99,32 +99,6 @@ _blob_head_set(u3a_road* rod_u, u3_blob_hand* han_u)
   }
 }
 
-/* _blob_page(): granularity of the zero tail past a mapping's end.
-*/
-static c3_z
-_blob_page(void)
-{
-#ifdef U3_OS_windows
-  return 8;
-#else
-  static c3_z pag_z = 0;
-  if ( !pag_z ) {
-    long got_l = sysconf(_SC_PAGESIZE);
-    pag_z = ( got_l > 0 ) ? (c3_z)got_l : 4096;
-  }
-  return pag_z;
-#endif
-}
-
-/* u3_blob_hand_pad(): bytes readable through u3_blob_data.
-*/
-c3_d
-u3_blob_hand_pad(u3_blob_hand* han_u)
-{
-  c3_d pag_d = (c3_d)_blob_page();
-  return (han_u->len_d + pag_d - 1) & ~(pag_d - 1);
-}
-
 /* _blob_bid(): hand key for (mug_h, seq_h).
 */
 static inline c3_d
@@ -141,9 +115,8 @@ static void
 _blob_hand_shut(u3_blob_hand* han_u)
 {
   if ( han_u->map_y ) {
-    munmap(han_u->map_y, (size_t)han_u->map_d);
+    munmap(han_u->map_y, (size_t)han_u->len_d);
     han_u->map_y = 0;
-    han_u->map_d = 0;
   }
 
   if ( han_u->fid_i >= 0 ) {
@@ -258,6 +231,41 @@ u3_blob_hands_road(void* rod_v)
   return _blob_hand_count(rod_v);
 }
 
+/* _blob_hand_met(): bit length of [han_u]'s content: u3r_met(0, atom).
+**
+**   scans backward from the end of the file for the last nonzero byte.
+**   returns 0 if the content is all zero or the read fails.
+*/
+static c3_d
+_blob_hand_met(u3_blob_hand* han_u)
+{
+  c3_y win_y[BLOB_WIN_MAX];
+  c3_d pos_d = han_u->len_d;
+
+  while ( pos_d ) {
+    c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
+    c3_d beg_d = pos_d - ask_z;
+
+    if ( ask_z != u3_blob_read(han_u, beg_d, win_y, ask_z) ) {
+      return 0;
+    }
+
+    for ( c3_z i_z = ask_z; i_z--; ) {
+      if ( win_y[i_z] ) {
+        //  __builtin_clz operates on unsigned int (32 bits); subtract 24
+        //  to get the leading-zero count within just the low byte.
+        //
+        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)win_y[i_z]) - 24);
+        return (beg_d + i_z) * 8 + (c3_d)(8 - clz_y);
+      }
+    }
+
+    pos_d = beg_d;
+  }
+
+  return 0;
+}
+
 /* u3_blob_open(): open a blob on the current road.
 */
 u3_blob_hand*
@@ -346,9 +354,12 @@ u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     }
     else {
       han_u->len_d = (c3_d)st_u.st_size;
+      han_u->bit_d = _blob_hand_met(han_u);
     }
 
-    if ( 0 == han_u->len_d ) {
+    //  empty, all zero, or unreadable: no blob denotes such an atom
+    //
+    if ( 0 == han_u->bit_d ) {
       _blob_hand_shut(han_u);
       u3m_crit_leave();
 
@@ -481,64 +492,20 @@ u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
   return tot_z;
 }
 
-/* _blob_map(): map [wid_d] bytes of [han_u]'s file, zero past its end.
+/* _blob_map(): map [han_u]'s file read-only.
 **
-**   within the file's own pages the kernel supplies the zero tail.
-**   past them the bytes come from an anonymous reservation the file
-**   pages are then fixed over, so one pointer covers any width.
-**   returns 0 on failure, or past the file's pages on a platform
-**   without fixed mappings; *siz_d is the length mapped.
+**   the mapping is the file's own length.  the rest of its last page
+**   reads as zero, which is all a word-at-a-time reader needs.
 */
 static c3_y*
-_blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
+_blob_map(u3_blob_hand* han_u)
 {
-  c3_d pad_d = u3_blob_hand_pad(han_u);
-
-  if ( wid_d <= pad_d ) {
-    //  windows refuses a read-only section longer than the file, so the
-    //  view is exactly the file; the remainder of its last page still
-    //  reads as zero, which is all the word pad needs
-    //
-#ifdef U3_OS_windows
-    *siz_d = han_u->len_d;
-#else
-    *siz_d = pad_d;
-#endif
-    void* map_v = mmap(0, (size_t)*siz_d, PROT_READ, MAP_PRIVATE,
-                       han_u->fid_i, 0);
-    return ( MAP_FAILED == map_v ) ? 0 : map_v;
-  }
-
-#ifdef U3_OS_windows
-  return 0;
-#else
-  {
-    c3_d  pag_d = (c3_d)_blob_page();
-    void* res_v;
-    void* map_v;
-
-    *siz_d = (wid_d + pag_d - 1) & ~(pag_d - 1);
-    res_v  = mmap(0, (size_t)*siz_d, PROT_READ,
-                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-    if ( MAP_FAILED == res_v ) {
-      return 0;
-    }
-
-    map_v = mmap(res_v, (size_t)pad_d, PROT_READ,
-                 MAP_PRIVATE | MAP_FIXED, han_u->fid_i, 0);
-
-    if ( MAP_FAILED == map_v ) {
-      munmap(res_v, (size_t)*siz_d);
-      return 0;
-    }
-
-    return res_v;
-  }
-#endif
+  void* map_v = mmap(0, (size_t)han_u->len_d, PROT_READ, MAP_PRIVATE,
+                     han_u->fid_i, 0);
+  return ( MAP_FAILED == map_v ) ? 0 : map_v;
 }
 
-/* u3_blob_data(): the file mapped read-only, zero out to [wid_d].
+/* u3_blob_mmap(): the file mapped read-only.
 **
 **   the mapping is recorded on the hand inside the critical section so
 **   a signal cannot leak it.  a file shortened under the hand would
@@ -546,26 +513,10 @@ _blob_map(u3_blob_hand* han_u, c3_d wid_d, c3_d* siz_d)
 **   refused.
 */
 const c3_y*
-u3_blob_data(u3_blob_hand* han_u, c3_d wid_d)
+u3_blob_mmap(u3_blob_hand* han_u)
 {
-  c3_d pad_d = u3_blob_hand_pad(han_u);
-
-  if ( wid_d < pad_d ) {
-    wid_d = pad_d;
-  }
-
-  //  any mapping covers the pad: on windows the recorded length is the
-  //  file's own, and the rest of its last page still reads as zero
-  //
-  if ( han_u->map_y && (wid_d <= c3_max(han_u->map_d, pad_d)) ) {
+  if ( han_u->map_y ) {
     return han_u->map_y;
-  }
-
-  //  a wider mapping replaces the old one, which a live view may still
-  //  alias: only the requester may hold the hand
-  //
-  if ( han_u->map_y && (han_u->use_w > 1) ) {
-    return 0;
   }
 
   {
@@ -582,69 +533,21 @@ u3_blob_data(u3_blob_hand* han_u, c3_d wid_d)
   }
 
   {
-    c3_d  siz_d = 0;
     c3_y* map_y;
 
     u3m_crit_enter();
-
-    if ( (map_y = _blob_map(han_u, wid_d, &siz_d)) ) {
-      if ( han_u->map_y ) {
-        munmap(han_u->map_y, (size_t)han_u->map_d);
-      }
+    if ( (map_y = _blob_map(han_u)) ) {
       han_u->map_y = map_y;
-      han_u->map_d = siz_d;
     }
-
     u3m_crit_leave();
 
-    if ( !map_y && (wid_d <= pad_d) ) {
+    if ( !map_y ) {
       fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": mmap: %s\r\n",
               (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
               strerror(errno));
     }
     return map_y;
   }
-}
-
-/* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
-**
-**   Scans backward from the end of the file for the last nonzero byte,
-**   then returns (pos * 8 + 8 - clz(byte)).  This matches u3r_met(0, atom).
-**   Returns 0 if the content is all zero or the read fails.
-*/
-c3_d
-u3_blob_hand_met(u3_blob_hand* han_u)
-{
-  if ( han_u->met_d ) {
-    return han_u->met_d;
-  }
-
-  c3_y win_y[BLOB_WIN_MAX];
-  c3_d pos_d = han_u->len_d;
-
-  while ( pos_d ) {
-    c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
-    c3_d beg_d = pos_d - ask_z;
-
-    if ( ask_z != u3_blob_read(han_u, beg_d, win_y, ask_z) ) {
-      return 0;
-    }
-
-    for ( c3_z i_z = ask_z; i_z--; ) {
-      if ( win_y[i_z] ) {
-        //  __builtin_clz operates on unsigned int (32 bits); subtract 24
-        //  to get the leading-zero count within just the low byte.
-        //
-        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)win_y[i_z]) - 24);
-        han_u->met_d = (beg_d + i_z) * 8 + (c3_d)(8 - clz_y);
-        return han_u->met_d;
-      }
-    }
-
-    pos_d = beg_d;
-  }
-
-  return 0;
 }
 
 /* u3_blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].

@@ -40,13 +40,20 @@ u3qc_sew(u3_atom a,
   }
   else if ( c3y == u3a_is_bob(e) ) {
     //  zero-copy view on the blob file.  the legacy src_u->buf_w
-    //  cast would have returned seq_w for bobs; the hand's buffer is
-    //  zero-padded to a whole number of words (see u3_blob_hand_pad), so
-    //  the word-at-a-time read by u3r_chop_words is safe.
+    //  cast would have returned seq_w for bobs; a view's bytes are
+    //  zero-padded to a whole number of words, so the word-at-a-time
+    //  read by u3r_chop_words is safe.
     //
-    u3r_view_flat(&vue_u, e);
-    len_src_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
-    src_w = (c3_w*)vue_u.byt_y;
+    u3x_view_open(&vue_u, e);
+    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    {
+      c3_d src_d = (vue_u.byt_d + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
+      if ( src_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      len_src_w = (c3_w)src_d;
+    }
+    src_w = (c3_w*)vue_y;
   }
   else {
     u3a_atom* src_u = u3a_to_ptr(e);

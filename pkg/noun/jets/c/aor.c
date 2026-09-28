@@ -36,12 +36,14 @@
           //
           if ( (c3y == a_bob) || (c3y == b_bob) ) {
             u3r_view va_u, vb_u;
-            u3r_view_flat(&va_u, a);
-            u3r_view_flat(&vb_u, b);
+            u3x_view_open(&va_u, a);
+            const c3_y* va_y = u3r_view_flat(&va_u);
+            u3x_view_open(&vb_u, b);
+            const c3_y* vb_y = u3r_view_flat(&vb_u);
             u3_noun ret = u3_none;
             for ( c3_w i_w = 0; i_w < len_min_w; i_w++ ) {
-              c3_y cut_a_y = va_u.byt_y[i_w];
-              c3_y cut_b_y = vb_u.byt_y[i_w];
+              c3_y cut_a_y = va_y[i_w];
+              c3_y cut_b_y = vb_y[i_w];
               if ( cut_a_y != cut_b_y ) {
                 ret = __(cut_a_y < cut_b_y);
                 break;
