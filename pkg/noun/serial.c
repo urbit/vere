@@ -90,25 +90,25 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    //  a bob atom streams through a windowed view; it is never
-    //  materialized or buffered whole.  bailing with the view open is
-    //  safe: the road closes what it borrowed.
+    //  a bob atom streams through a window; it is never materialized
+    //  or buffered whole.  bailing with the window open is safe: the
+    //  road closes what it borrowed.
     //
-    u3r_view vue_u;
+    u3r_view win_u;
     c3_o     bob_o = c3n;
     c3_d     byt_d = 0;      //  bob: significant bytes
 
     c3_w   a_w;
     if ( c3y == u3a_is_bob(a) ) {
-      if ( c3n == u3r_view_wind(&vue_u, a) ) {
+      if ( c3n == u3r_view_open(&win_u, a) ) {
         u3m_bail(c3__fail);
         return;
       }
       bob_o = c3y;
-      byt_d = vue_u.len_w;
+      byt_d = win_u.byt_d;
 
       {
-        c3_d met_d = u3r_view_met(&vue_u);
+        c3_d met_d = win_u.bit_d;
 
         if ( met_d > (c3_w_max - 64) ) {
           u3m_bail(c3__fail);
@@ -195,7 +195,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
           c3_z pad_z = (ask_z + sizeof(c3_w) - 1) & ~(sizeof(c3_w) - 1);
           c3_w wid_w = c3_min(a_w - (c3_w)(off_d * 8), (c3_w)(ask_z * 8));
 
-          if ( ask_z != u3r_view_read(&vue_u, off_d, (c3_y*)win_w, ask_z) ) {
+          if ( ask_z != u3r_view_read(&win_u, off_d, (c3_y*)win_w, ask_z) ) {
             u3m_bail(c3__fail);
             return;
           }
@@ -206,7 +206,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
           off_d += ask_z;
         }
 
-        u3r_view_done(&vue_u);
+        u3r_view_done(&win_u);
       }
       else {
         u3r_chop(0, 0, a_w, bit_w, buf_w, a);
@@ -333,11 +333,11 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   }
   else if ( c3y == u3a_is_bob(a) ) {
     //  bob atom: write the tag and length prefix, then stream the bytes
-    //  through a windowed view.  the total must be exactly met_w bits,
-    //  which is what u3r_met() gave the caller.
+    //  through a window.  the total must be exactly met_w bits, which
+    //  is what u3r_met() gave the caller.
     //
-    u3r_view vue_u;
-    if ( c3n == u3r_view_wind(&vue_u, a) ) {
+    u3r_view win_u;
+    if ( c3n == u3r_view_open(&win_u, a) ) {
       u3m_bail(c3__fail);
     }
 
@@ -354,7 +354,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
                    : (c3_w)(sizeof(win_y) * 8);
         c3_z ask_z = (bit_w + 7) >> 3;
 
-        if ( ask_z != u3r_view_read(&vue_u, off_d, win_y, ask_z) ) {
+        if ( ask_z != u3r_view_read(&win_u, off_d, win_y, ask_z) ) {
           u3m_bail(c3__fail);
         }
 
@@ -364,7 +364,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
       }
     }
 
-    u3r_view_done(&vue_u);
+    u3r_view_done(&win_u);
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
@@ -1092,8 +1092,9 @@ u3s_cue_atom(u3_atom a)
   //
   if ( c3y == u3a_is_bob(a) ) {
     u3r_view vue_u;
-    u3r_view_flat(&vue_u, a);
-    u3_noun res = u3s_cue_bytes((c3_d)vue_u.len_w, (c3_y*)vue_u.byt_y);
+    u3x_view_open(&vue_u, a);
+    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    u3_noun res = u3s_cue_bytes(vue_u.byt_d, (c3_y*)vue_y);
     u3r_view_done(&vue_u);
     return res;
   }

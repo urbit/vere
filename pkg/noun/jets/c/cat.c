@@ -44,17 +44,19 @@
       u3i_slab_init(&sab_u, a_g, all_w);
 
       u3r_view vb_u, vc_u;
-      u3r_view_flat(&vb_u, b);
-      u3r_view_flat(&vc_u, c);
+      u3x_view_open(&vb_u, b);
+      const c3_y* vb_y = u3r_view_flat(&vb_u);
+      u3x_view_open(&vc_u, c);
+      const c3_y* vc_y = u3r_view_flat(&vc_u);
 
       c3_w cpy_w;
-      cpy_w = (vb_u.len_w < lew_b) ? vb_u.len_w : lew_b;
+      cpy_w = (vb_u.byt_d < lew_b) ? (c3_w)vb_u.byt_d : lew_b;
       if ( cpy_w ) {
-        memcpy(sab_u.buf_y, vb_u.byt_y, cpy_w);
+        memcpy(sab_u.buf_y, vb_y, cpy_w);
       }
-      cpy_w = (vc_u.len_w < ler_b) ? vc_u.len_w : ler_b;
+      cpy_w = (vc_u.byt_d < ler_b) ? (c3_w)vc_u.byt_d : ler_b;
       if ( cpy_w ) {
-        memcpy(sab_u.buf_y + lew_b, vc_u.byt_y, cpy_w);
+        memcpy(sab_u.buf_y + lew_b, vc_y, cpy_w);
       }
 
       u3r_view_done(&vb_u);

@@ -32,10 +32,11 @@ u3qe_crc32(u3_noun input_octs)
   //  u3r_view gives the actual file bytes.
   //
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, tail);
+  u3x_view_open(&vue_u, tail);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
 
   c3_w led_w = hed_w - tel_w;
-  c3_w crc_w = crc32(0, vue_u.byt_y, tel_w);
+  c3_w crc_w = crc32(0, vue_y, tel_w);
 
   u3r_view_done(&vue_u);
 

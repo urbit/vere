@@ -973,7 +973,7 @@ _test_met(void)
   _pier_done();
 }
 
-/* _test_hand(): u3_blob_open/data/read/met/close round-trip.
+/* _test_hand(): u3_blob_open/mmap/read/close round-trip, with the bit length measured at open.
 */
 static void
 _test_hand(void)
@@ -996,16 +996,16 @@ _test_hand(void)
     c3_y top_y = dat_y[dat_d - 1];
     c3_d exp_d = (dat_d - 1) * 8
                + (c3_d)(8 - (__builtin_clz((unsigned int)top_y) - 24));
-    c3_d met_d = u3_blob_hand_met(han_u);
+    c3_d met_d = han_u->bit_d;
     _check( met_d == exp_d, "met %" PRIc3_d " != %" PRIc3_d, met_d, exp_d );
   }
 
   //  whole-file mapping, then a window through pread
   //
   {
-    const c3_y* buf_y = u3_blob_data(han_u, 0);
+    const c3_y* buf_y = u3_blob_mmap(han_u);
     _check( buf_y && (0 == memcmp(buf_y, dat_y, dat_d)), "data mismatch" );
-    _check( buf_y == u3_blob_data(han_u, 0), "data not memoized" );
+    _check( buf_y == u3_blob_mmap(han_u), "data not memoized" );
 
     c3_y win_y[8];
     _check(  (5 == u3_blob_read(han_u, 7, win_y, 5))
@@ -1091,7 +1091,8 @@ _hand_open_inner(void)
   _han_fid_i = han_u->fid_i;
 
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, _han_bob);
+  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u);
   _check( vue_u.han_u == han_u, "view did not land on the road's hand" );
 
   return han_u;
@@ -1353,7 +1354,8 @@ _hand_alarm_cb(u3_noun arg)
   //  test failure instead of a hang.
   //
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, _han_bob);
+  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u);
   _han_fid_i = vue_u.han_u->fid_i;
 
   volatile c3_d sum_d = 0;
@@ -1479,9 +1481,10 @@ _jet_same(const c3_c* nam_c, c3_w a_w, c3_w b_w, c3_w c_w, u3_noun rb, u3_noun r
   u3z(rl);
 }
 
-/* _test_jets_bob(): rsh, end, and cut read ranges from a bob the same
-**   way they do from the materialized atom, including ranges that touch,
-**   cross, and lie beyond the end of the file.
+/* _test_jets_bob(): rsh, end, cut, rip, and sew treat a bob the same
+**   way they do the materialized atom, including ranges that touch,
+**   cross, and lie beyond the end of the file, and a word read that
+**   runs past an odd-length file into its mapping's zero tail.
 */
 static void
 _test_jets_bob(void)
@@ -1553,6 +1556,66 @@ _test_jets_bob(void)
                 u3qc_cut(5, wut_w[i_w][0], wut_w[i_w][1], loa));
     }
     _jet_same("cut", 0, 3, 17, u3qc_cut(0, 3, 17, bob), u3qc_cut(0, 3, 17, loa));
+  }
+
+  //  rip and sew view their source as a word buffer and read it a whole
+  //  word at a time, so the last word of a bob runs past the file into
+  //  its mapping's zero tail.  an odd length, three bytes over a page,
+  //  pins that on every platform; the steps keep the lists small
+  //
+  {
+    const c3_w odd_w = 4099;
+    c3_y*      odd_y = c3_malloc(odd_w);
+
+    for ( c3_w i_w = 0; i_w < odd_w; i_w++ ) {
+      odd_y[i_w] = (c3_y)(1 + ((i_w * 13) % 251));
+    }
+
+    c3_h om_h = 0; c3_h os_h = 0;
+    _check( c3y == _blob_save(odd_y, odd_w, &om_h, &os_h), "odd save failed" );
+
+    u3_atom rob = u3i_blob(om_h, os_h);
+    u3_atom rol = u3i_bytes(odd_w, odd_y);
+
+    //  rip: bit, nibble, byte, and word bloqs; unit and odd steps
+    //
+    {
+      const c3_w rip_w[][2] = {
+        { 0, 29 }, { 0, 31 }, { 2, 5 }, { 3, 3 }, { 3, 7 }, { 4, 3 },
+        { 5, 1 }, { 5, 2 }, { 6, 1 }
+      };
+      for ( c3_w i_w = 0; i_w < sizeof(rip_w) / sizeof(*rip_w); i_w++ ) {
+        _jet_same("rip", rip_w[i_w][0], rip_w[i_w][1], 0,
+                  u3qc_rip(rip_w[i_w][0], rip_w[i_w][1], rob),
+                  u3qc_rip(rip_w[i_w][0], rip_w[i_w][1], rol));
+      }
+    }
+
+    //  sew: a patch inside, across, and past the end of the source,
+    //  with the source a bob, the patch a bob, and both
+    //
+    {
+      const c3_w sew_w[][3] = {   //  bloq, pos, wid
+        { 3, 10, 4 }, { 3, 0, 4099 }, { 3, 4090, 20 }, { 3, 4099, 8 },
+        { 0, 13, 100 }, { 0, 32790, 30 }, { 5, 100, 3 }, { 5, 1024, 2 }
+      };
+      for ( c3_w i_w = 0; i_w < sizeof(sew_w) / sizeof(*sew_w); i_w++ ) {
+        c3_w a_w = sew_w[i_w][0], b_w = sew_w[i_w][1], c_w = sew_w[i_w][2];
+
+        _jet_same("sew", a_w, b_w, c_w,
+                  u3qc_sew(a_w, b_w, c_w, 0x5a5a5a5a, rob),
+                  u3qc_sew(a_w, b_w, c_w, 0x5a5a5a5a, rol));
+        _jet_same("sew", a_w, b_w, c_w,
+                  u3qc_sew(a_w, b_w, c_w, bob, rob),
+                  u3qc_sew(a_w, b_w, c_w, loa, rol));
+      }
+      _jet_same("sew", 3, 100, 5000,
+                u3qc_sew(3, 100, 5000, rob, loa),
+                u3qc_sew(3, 100, 5000, rol, loa));
+    }
+
+    u3z(rob); u3z(rol);
+    c3_free(odd_y);
   }
 
   u3z(bob); u3z(loa);
@@ -1645,11 +1708,12 @@ _hand_meme_cb(u3_noun arg)
   (void)arg;
   _hand_open_inner();
 
-  //  a padded view opens the hand first and then u3a_malloc's the pad:
-  //  256 MiB on a 1 MiB loom bails %meme from that exact site
+  //  an allocation bail with a view open: 256 MiB on a 1 MiB loom
+  //  bails %meme while the road holds the hand
   //
   u3r_view vue_u;
-  u3r_view_padd(&vue_u, _han_bob, 1 << 28);
+  u3x_view_open(&vue_u, _han_bob);
+  u3a_malloc(1 << 28);
   u3r_view_done(&vue_u);
   return 0;
 }
@@ -1916,8 +1980,7 @@ _test_hand_trunc(void)
     c3_free(buf_y);
   }
 
-  _check( !u3_blob_data(han_u, 0) && !han_u->map_y, "data did not fail cleanly" );
-  _check( 0 == u3_blob_hand_met(han_u), "met not zero" );
+  _check( !u3_blob_mmap(han_u) && !han_u->map_y, "data did not fail cleanly" );
 
   u3_blob_close(han_u);
 
@@ -1931,7 +1994,8 @@ _hand_gone_view_cb(u3_noun arg)
 {
   (void)arg;
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, _han_bob);
+  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_flat(&vue_u);
   u3r_view_done(&vue_u);
   return 0;
 }
@@ -2002,11 +2066,11 @@ _test_hand_gone(void)
   _hand_gone_expect("fib",  _hand_gone_fib_cb);
   _hand_gone_expect("byte", _hand_gone_byte_cb);
 
-  //  a windowed view and a load report the missing file without bailing
+  //  a window and a load report the missing file without bailing
   //
   {
-    u3r_view vue_u;
-    _check( (c3n == u3r_view_wind(&vue_u, _han_bob)) && !u3_blob_hands(),
+    u3r_view win_u;
+    _check( (c3n == u3r_view_open(&win_u, _han_bob)) && !u3_blob_hands(),
             "open did not decline" );
     _check( (u3_none == u3r_blob_load(_han_bob)) && !u3_blob_hands(),
             "load did not decline" );
@@ -2124,7 +2188,8 @@ _hand_share_cb(u3_noun arg)
   (void)arg;
 
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, _han_bob);
+  u3x_view_open(&vue_u, _han_bob);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
 
   u3_blob_hand* han_u = vue_u.han_u;
   c3_i          fid_i = han_u->fid_i;
@@ -2135,7 +2200,7 @@ _hand_share_cb(u3_noun arg)
 
   _check(  (1 == u3_blob_hands_road(u3R)) && (1 == han_u->use_w)
         && (fid_i == han_u->fid_i)
-        && (met_w == vue_u.len_w) && (byt_y == vue_u.byt_y[3]),
+        && (met_w == vue_u.byt_d) && (byt_y == vue_y[3]),
           "second open under a view" );
 
   //  with the view's mapping in place, the fixed-width readers copy
@@ -2148,13 +2213,13 @@ _hand_share_cb(u3_noun arg)
     c3_w off_w = met_w - 5;
 
     memset(exp_y, 0, sizeof(exp_y));
-    memcpy(exp_y, vue_u.byt_y + off_w, 5);
+    memcpy(exp_y, vue_y + off_w, 5);
 
     u3r_bytes(off_w, sizeof(win_y), win_y, _han_bob);
 
-    _check(  (han_u->map_y == vue_u.byt_y)
+    _check(  (han_u->map_y == vue_y)
           && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
-          && (u3r_chub(0, _han_bob) == *(c3_d*)vue_u.byt_y)
+          && (u3r_chub(0, _han_bob) == *(c3_d*)vue_y)
           && (0 == u3r_chub(1 + (met_w >> 3), _han_bob))
           && (0 == u3r_byte(met_w + 100000, _han_bob)),
             "readers under a mapping" );
@@ -2253,64 +2318,6 @@ _test_hand_deep(void)
   _hand_unwind_check();
 }
 
-static u3_noun
-_hand_wide_cb(u3_noun arg)
-{
-  (void)arg;
-
-  u3r_view one_u, two_u;
-  c3_y     zer_y[64];
-  memset(zer_y, 0, sizeof(zer_y));
-
-  //  a lone view widens the hand's mapping in place
-  //
-  u3r_view_flat(&one_u, _han_bob);
-  {
-    u3_blob_hand* han_u = one_u.han_u;
-    c3_w          wid_w = (c3_w)u3_blob_hand_pad(han_u) + 4096;
-    _han_fid_i = han_u->fid_i;
-
-    u3r_view_done(&one_u);
-    u3r_view_padd(&one_u, _han_bob, wid_w);
-
-#ifndef U3_OS_windows
-    _check(  (u3r_view_blob == one_u.kin_e) && (one_u.han_u == han_u)
-          && (han_u->map_d >= wid_w)
-          && (0 == memcmp(one_u.byt_y + wid_w - 64, zer_y, 64)),
-            "lone view did not widen" );
-
-    //  with that view live, a pad past the mapping cannot remap under
-    //  it and is filled into a loom pad instead; the first view and the
-    //  mapping are untouched
-    //
-    c3_d old_d = han_u->map_d;
-    c3_w big_w = (c3_w)old_d + 8;
-
-    u3r_view_padd(&two_u, _han_bob, big_w);
-    _check(  (u3r_view_heap == two_u.kin_e) && (big_w == two_u.len_w)
-          && (han_u->map_d == old_d) && (han_u->map_y == one_u.byt_y)
-          && (0 == memcmp(two_u.byt_y, one_u.byt_y, wid_w))
-          && (0 == memcmp(two_u.byt_y + big_w - 8, zer_y, 8))
-          && (1 == han_u->use_w),
-            "held hand remapped or pad wrong" );
-    u3r_view_done(&two_u);
-#endif
-    u3r_view_done(&one_u);
-  }
-  return 0;
-}
-
-/* _test_hand_wide(): a pad past the file's pages widens the hand's
-**   mapping, unless another live view holds the hand.
-*/
-static void
-_test_hand_wide(void)
-{
-  _hand_unwind_setup("hand wide");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_wide_cb, 0));
-  _hand_unwind_check();
-}
-
 /* _test_hand_empty(): a zero-byte blob file opens as nothing.
 */
 static void
@@ -2327,11 +2334,11 @@ _test_hand_empty(void)
   fclose(fopen(pax_c, "wb"));
 
   u3_atom  bob = u3i_blob(mug_h, 1);
-  u3r_view vue_u;
+  u3r_view win_u;
 
   _check(  !u3_blob_open(_tmp_pier, mug_h, 1)
         && (u3_none == u3r_blob_load(bob))
-        && (c3n == u3r_view_wind(&vue_u, bob))
+        && (c3n == u3r_view_open(&win_u, bob))
         && !u3_blob_hands(),
           "empty file not rejected" );
 
@@ -2472,147 +2479,90 @@ _test_hand_access(void)
     _check( u3r_mug(bob) == u3r_mug(loa), "mug" );
   }
 
-  //  padded views: a pad shorter than the bob truncates the flat view;
-  //  one inside the mapping's last page is the mapping itself, whose
-  //  tail reads as zero; only one past that is heap-backed
+  //  flat views: a bob's bytes are the hand's mapping; a loom atom is
+  //  viewed in place; a direct atom's value is kept in the view
   //
   {
     u3r_view vue_u;
-    c3_y     zer_y[1000];
-    c3_w     pad_w;
 
-    memset(zer_y, 0, sizeof(zer_y));
-
-    {
-      u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
-      pad_w = (c3_w)u3_blob_hand_pad(han_u);
-      u3_blob_close(han_u);
-    }
-    _check( (pad_w >= len_w) && (0 == u3_blob_hands()), "pad %" PRIc3_w, pad_w );
-
-    u3r_view_padd(&vue_u, bob, 100);
-    _check(  (u3r_view_blob == vue_u.kin_e) && (100 == vue_u.len_w)
-          && (0 == memcmp(vue_u.byt_y, dat_y, 100)) && (1 == u3_blob_hands()),
-            "padd short" );
+    u3x_view_open(&vue_u, bob);
+    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    _check(  (u3r_view_blob == vue_u.kin_e) && (len_w == vue_u.byt_d)
+          && (vue_y == vue_u.han_u->map_y) && (0 == memcmp(vue_y, dat_y, len_w))
+          && (1 == u3_blob_hands()),
+            "flat bob" );
     u3r_view_done(&vue_u);
+    _check( 0 == u3_blob_hands(), "flat bob done" );
 
-    //  a pad inside the hand's own zero tail is the mapping; on a
-    //  platform whose pad is only the word tail it is a loom pad
-    //
-    {
-      c3_o map_o = ( pad_w >= 6000 ) ? c3y : c3n;
-
-      u3r_view_padd(&vue_u, bob, 6000);
-      _check(  (vue_u.kin_e == ((c3y == map_o) ? u3r_view_blob : u3r_view_heap))
-            && (6000 == vue_u.len_w)
-            && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
-            && (0 == memcmp(vue_u.byt_y + len_w, zer_y, 1000))
-            && (u3_blob_hands() == ((c3y == map_o) ? 1 : 0)),
-              "padd mapped" );
-      u3r_view_done(&vue_u);
-    }
-
-    //  past the file's pages the hand widens its mapping with anonymous
-    //  zero pages, so even a very wide pad allocates nothing; windows
-    //  cannot fix a mapping and falls back to a loom pad
-    //
-    {
-      c3_w wid_w = pad_w + 100000;
-      u3r_view_padd(&vue_u, bob, wid_w);
-#ifndef U3_OS_windows
-      _check(  (u3r_view_blob == vue_u.kin_e) && (1 == u3_blob_hands())
-            && (vue_u.han_u->map_d >= wid_w),
-              "padd wide kind at %" PRIc3_w, wid_w );
-#else
-      _check( (u3r_view_heap == vue_u.kin_e) && (0 == u3_blob_hands()),
-              "padd wide kind at %" PRIc3_w, wid_w );
-#endif
-      _check(  (wid_w == vue_u.len_w)
-            && (0 == memcmp(vue_u.byt_y, dat_y, len_w))
-            && (0 == memcmp(vue_u.byt_y + pad_w, zer_y, 1000))
-            && (0 == memcmp(vue_u.byt_y + wid_w - 1000, zer_y, 1000)),
-              "padd wide bytes at %" PRIc3_w, wid_w );
-      u3r_view_done(&vue_u);
-    }
-
-    //  loom atoms: a pad wider than the atom is a loom pad; a direct
-    //  atom is viewed in place and padded the same way
-    //
     {
       u3_atom sma = u3i_string("small loom atom, wider than a word");
       c3_w    met_w = u3r_met(3, sma);
 
-      u3r_view_padd(&vue_u, sma, 64);
-      _check(  (u3r_view_heap == vue_u.kin_e) && (64 == vue_u.len_w)
-            && (0 == memcmp(vue_u.byt_y + met_w, zer_y, 64 - met_w)),
-              "padd loom" );
+      u3x_view_open(&vue_u, sma);
+      vue_y = u3r_view_flat(&vue_u);
+      _check( (u3r_view_loom == vue_u.kin_e) && (met_w == vue_u.byt_d),
+              "flat loom" );
       {
-        u3_atom cop = u3i_bytes(met_w, vue_u.byt_y);
-        _check( c3y == u3r_sing(sma, cop), "padd loom bytes" );
+        u3_atom cop = u3i_bytes(met_w, vue_y);
+        _check( c3y == u3r_sing(sma, cop), "flat loom bytes" );
         u3z(cop);
       }
       u3r_view_done(&vue_u);
 
-      u3r_view_flat(&vue_u, 0x44332211);
-      _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.len_w)
-            && (vue_u.byt_y == (const c3_y*)&vue_u.raw_d)
-            && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3]),
+      u3x_view_open(&vue_u, 0x44332211);
+      vue_y = u3r_view_flat(&vue_u);
+      _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.byt_d)
+            && (vue_y == (const c3_y*)&vue_u.raw_d)
+            && (0x11 == vue_y[0]) && (0x44 == vue_y[3]),
               "init cat" );
       u3r_view_done(&vue_u);
 
-      u3r_view_padd(&vue_u, 0x44332211, 16);
-      _check(  (u3r_view_heap == vue_u.kin_e) && (16 == vue_u.len_w)
-            && (0x11 == vue_u.byt_y[0]) && (0x44 == vue_u.byt_y[3])
-            && (0 == memcmp(vue_u.byt_y + 4, zer_y, 12)),
-              "padd cat" );
-      u3r_view_done(&vue_u);
-
-      u3r_view_padd(&vue_u, sma, 4);
-      _check( (u3r_view_loom == vue_u.kin_e) && (4 == vue_u.len_w),
-              "padd truncate" );
-      u3r_view_done(&vue_u);
-
-      //  windowed views: a bob opens without mapping and reads windows
-      //  straight from the file, zero past the end; a loom atom and a
-      //  direct atom read the same way from their own bytes
+      //  windows: a bob opens without mapping and reads straight from
+      //  the file, zero past the end; a loom atom and a direct atom
+      //  read the same way from their own bytes.  met agrees with the
+      //  atom's at every bloq
       //
       {
-        c3_y win_y[64];
-        c3_y exp_y[64];
+        u3r_view win_u;
+        c3_y     win_y[64];
+        c3_y     exp_y[64];
 
-        _check( c3y == u3r_view_wind(&vue_u, bob), "open bob" );
-        _check(  (u3r_view_blob == vue_u.kin_e) && (0 == vue_u.byt_y)
-              && (len_w == vue_u.len_w) && (0 == vue_u.han_u->map_y)
+        _check( c3y == u3r_view_open(&win_u, bob), "open bob" );
+        _check(  win_u.han_u && (0 == win_u.han_u->map_y)
+              && (len_w == win_u.byt_d)
+              && (u3r_met(0, loa) == win_u.bit_d)
+              && (u3r_met(5, loa) == ((win_u.bit_d + 31) >> 5))
               && (1 == u3_blob_hands()),
                 "open bob shape" );
 
         memset(exp_y, 0, sizeof(exp_y));
         memcpy(exp_y, dat_y + len_w - 40, 40);
-        _check(  (40 == u3r_view_read(&vue_u, len_w - 40, win_y, sizeof(win_y)))
+        _check(  (40 == u3r_view_read(&win_u, len_w - 40, win_y, sizeof(win_y)))
               && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
-              && (0 == vue_u.han_u->map_y),
+              && (0 == win_u.han_u->map_y),
                 "read bob tail" );
-        _check(  (0 == u3r_view_read(&vue_u, (c3_d)len_w << 20, win_y, 8))
+        _check(  (0 == u3r_view_read(&win_u, (c3_d)len_w << 20, win_y, 8))
               && (0 == memcmp(win_y, exp_y + 40, 8)),
                 "read bob past" );
-        u3r_view_done(&vue_u);
+        u3r_view_done(&win_u);
         _check( 0 == u3_blob_hands(), "open bob done" );
 
-        _check( c3y == u3r_view_wind(&vue_u, sma), "open loom" );
-        _check(  (u3r_view_loom == vue_u.kin_e)
-              && (3 == u3r_view_read(&vue_u, met_w - 3, win_y, 16))
-              && (0 == memcmp(win_y, vue_u.byt_y + met_w - 3, 3))
+        _check( c3y == u3r_view_open(&win_u, sma), "open loom" );
+        _check(  !win_u.han_u && (met_w == win_u.byt_d)
+              && (3 == u3r_view_read(&win_u, met_w - 3, win_y, 16))
+              && (0 == memcmp(win_y, win_u.byt_y + met_w - 3, 3))
               && (0 == memcmp(win_y + 3, exp_y + 40, 13)),
                 "read loom" );
-        u3r_view_done(&vue_u);
+        u3r_view_done(&win_u);
 
-        _check( c3y == u3r_view_wind(&vue_u, 0x44332211), "open cat" );
-        _check(  (u3r_view_even == vue_u.kin_e)
-              && (2 == u3r_view_read(&vue_u, 2, win_y, 4))
+        _check( c3y == u3r_view_open(&win_u, 0x44332211), "open cat" );
+        _check(  (win_u.byt_y == (const c3_y*)&win_u.raw_d)
+              && (31 == win_u.bit_d)
+              && (2 == u3r_view_read(&win_u, 2, win_y, 4))
               && (0x33 == win_y[0]) && (0x44 == win_y[1])
               && (0 == win_y[2]) && (0 == win_y[3]),
                 "read cat" );
-        u3r_view_done(&vue_u);
+        u3r_view_done(&win_u);
       }
 
       u3z(sma);
@@ -3160,7 +3110,6 @@ main(int argc, char* argv[])
   _test_hand_share();
   _test_hand_reuse();
   _test_hand_deep();
-  _test_hand_wide();
   _test_hand_empty();
   _test_hand_access();
   _test_lifecycle();

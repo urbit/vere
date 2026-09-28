@@ -179,15 +179,17 @@ u3qc_rip(u3_atom a,
   //  zero-padded to a whole word, so a bob is never materialized and
   //  the chunk loops see the same bytes for every kind.
   //
-  u3r_view vue_u;
-  u3r_view_flat(&vue_u, c);
-
-  const c3_w* buf_w = (const c3_w*)vue_u.byt_y;
-  c3_w        wor_w = (vue_u.len_w + u3a_word_bytes - 1) >> u3a_word_bytes_shift;
-  c3_d        bit_d = u3r_view_met(&vue_u);
+  c3_d bit_d = u3r_met(0, c);
   if ( bit_d > c3_w_max ) {
     u3m_bail(c3__fail);
   }
+
+  u3r_view vue_u;
+  u3x_view_open(&vue_u, c);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
+
+  const c3_w* buf_w = (const c3_w*)vue_y;
+  c3_w        wor_w = (c3_w)((vue_u.byt_d + u3a_word_bytes - 1) >> u3a_word_bytes_shift);  //  fits: bit_w did
   c3_w        bit_w = (c3_w)bit_d;
   u3_noun     pro;
 

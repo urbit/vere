@@ -38,16 +38,14 @@ u3_noun _qe_adler32(u3_noun octs)
   //  full-blob materialization.
   //
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, q_octs);
-  const c3_y* buf_y = vue_u.byt_y;
-  c3_w        len_w = vue_u.len_w;
+  u3x_view_open(&vue_u, q_octs);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
+  const c3_y* buf_y = vue_y;
 
-  //  clamp the bytes we'll actually scan to the declared width; the
-  //  remainder is "leading zeros" and handled below.
+  //  the bytes we'll actually scan are clamped to the declared width;
+  //  the remainder is "leading zeros" and handled below
   //
-  if (p_octs_w < len_w) {
-    len_w = p_octs_w;
-  }
+  c3_w        len_w = ( vue_u.byt_d < p_octs_w ) ? (c3_w)vue_u.byt_d : p_octs_w;
 
   c3_w adler_w = 0x1;
   c3_w sum2_w  = 0x0;

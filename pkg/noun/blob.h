@@ -17,6 +17,15 @@
   ** bob/<mug>/<seq>: it writes bytes to a staging file (u3_blob_stage,
   ** u3_blob_stage_fd) and sends the path in a %blob writ; mars installs
   ** it (u3_blob_move_stg), leases it, and acks with the mug and seq.
+  **
+  ** Words used here and in retrieve.h:
+  **
+  **   blob  a file in the store, named by its (mug, seq).
+  **   bob   an atom that names a blob: u3a_is_bob, made by u3i_blob.
+  **   hand  a road's open descriptor on one blob.  The view layer's
+  **         own: nothing else opens one.
+  **   view  a look into an atom's bytes (u3r_view): read through it in
+  **         windows, or flatten it to a pointer.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -123,11 +132,15 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
+    /* Hands are the view layer's: retrieve.c and the blob tests open,
+    **   read, and close them, and nothing else does.  Every other reader
+    **   of a bob goes through u3r_view in retrieve.h.  Of the functions
+    **   below, only u3_blob_stop, u3_blob_drain, u3_blob_drain_kids, and
+    **   u3_blob_hands are called outside that layer, by road management
+    **   in manage.c and the memory reports.
+    */
+
     /* u3_blob_hand: an open blob file, owned by the road that opened it.
-    **
-    **   Hands are the view layer's: only retrieve.c (behind u3r_view)
-    **   and the blob tests open, read, or close one.  Everything else
-    **   reads a bob through a u3r_view.
     **
     **   An inner road keeps its hands on a list headed by its bob_p,
     **   allocated in its own heap and deduplicated by blob id; they are
@@ -146,21 +159,15 @@
         c3_i   fid_i;   //  O_RDONLY fd, open for the hand's lifetime
         c3_w   use_w;   //  live views (inner road: evictable at zero)
         c3_d   len_d;   //  file size: bounds reads, sizes the mapping
-        c3_d   met_d;   //  cached bit-length (0 until asked)
-        c3_y*  map_y;   //  read-only mapping (0 until u3_blob_data)
-        c3_d   map_d;   //  mapping length: u3_blob_hand_pad, or wider
+        c3_d   bit_d;   //  bit length of the content, from the file's tail at open
+        c3_y*  map_y;   //  read-only mapping of the file (0 until u3_blob_mmap)
       } u3_blob_hand;
-
-    /* u3_blob_stop(): close every home-road hand (from u3m_stop).
-    */
-      void
-      u3_blob_stop(void);
 
     /* u3_blob_open(): open a blob on the current road.
     **
     **   An inner road returns its own hand for an already-open blob, or
     **   one held by an inner ancestor.  Returns 0 (without bailing) if
-    **   the file is missing or empty.  Out of descriptors, an inner road
+    **   the file is missing, empty, or all zero.  Out of descriptors, an inner road
     **   evicts its idle hands and, if none are, bails %file; the home
     **   road returns 0.
     */
@@ -183,33 +190,20 @@
       c3_z
       u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
-    /* u3_blob_data(): the file mapped read-only, zero out to [wid_d].
+    /* u3_blob_mmap(): the file mapped read-only.
     **
-    **   The mapping lives as long as the hand and is at least the file's
-    **   pages (u3_blob_hand_pad); bytes past the end of the file read as
-    **   zero.  A [wid_d] beyond that adds anonymous zero pages after the
-    **   file's, so one pointer covers any width.  A wider request remaps
-    **   only while no other view holds the hand (use_w is 1), since a
-    **   live view aliases the old pages; otherwise, and on a platform
-    **   without fixed mappings, a request past the pad returns 0 and the
-    **   caller pads another way.  Returns 0 if the mapping fails.
+    **   The mapping lives as long as the hand.  The rest of its last
+    **   page reads as zero, so a reader may run past the file's end to
+    **   the next word boundary.  Returns 0 if the mapping fails or the
+    **   file was shortened under the hand.
     */
       const c3_y*
-      u3_blob_data(u3_blob_hand* han_u, c3_d wid_d);
+      u3_blob_mmap(u3_blob_hand* han_u);
 
-    /* u3_blob_hand_pad(): bytes readable through u3_blob_data: the file
-    **   length rounded up to the mapping's zero-tail granularity.
+    /* u3_blob_stop(): close every home-road hand (from u3m_stop).
     */
-      c3_d
-      u3_blob_hand_pad(u3_blob_hand* han_u);
-
-    /* u3_blob_hand_met(): bit-length of the blob's content, cached on the hand.
-    **
-    **   Equivalent to u3r_met(0, atom).  Scans backward from the end of the
-    **   file in small windows.  Returns 0 if the content is all zero.
-    */
-      c3_d
-      u3_blob_hand_met(u3_blob_hand* han_u);
+      void
+      u3_blob_stop(void);
 
     /* u3_blob_drain(): close every hand held by road [rod_v].
     **

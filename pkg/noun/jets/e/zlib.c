@@ -45,8 +45,9 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   //  u3r_view_done(&vue_u).
   //
   u3r_view vue_u;
-  u3r_view_flat(&vue_u, q_octs);
-  c3_w len_w = vue_u.len_w;
+  u3x_view_open(&vue_u, q_octs);
+  const c3_y* vue_y = u3r_view_flat(&vue_u);
+  c3_w len_w = ( vue_u.byt_d < p_octs_w ) ? (c3_w)vue_u.byt_d : p_octs_w;
 
   int leading_zeros = 0;
 
@@ -64,7 +65,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_y* input = (c3_y*)vue_u.byt_y + pos_w;
+  c3_y* input = (c3_y*)vue_y + pos_w;
 
   int ret;
   z_stream strm;
