@@ -474,7 +474,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
   if ( c3y == u3a_is_bob(dat) ) {
     u3r_view win_u;
 
-    if ( c3n == u3r_view_open(&win_u, dat) ) {
+    if ( c3n == u3r_view_open(&win_u, dat, c3n) ) {
       u3l_log("error opening blob %08" PRIx32 "/%08" PRIx32 " for reading",
               u3a_bob_mug(dat), u3a_bob_seq(dat));
       close(fid_i);

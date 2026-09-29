@@ -1015,7 +1015,7 @@ _cr_bob_bytes(u3_atom a, c3_d off_d, c3_y* dst_y, c3_z len_z)
 {
   u3r_view win_u;
 
-  if ( c3n == u3r_view_open(&win_u, a) ) {
+  if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
     u3m_bail(c3__fail);
   }
   u3r_view_read(&win_u, off_d, dst_y, len_z);
@@ -1206,10 +1206,11 @@ _cr_view_blank(u3r_view* vue_u)
   vue_u->raw_d = 0;
 }
 
-/* u3r_view_open(): open a view of [a].
+/* u3r_view_open(): open a view of [a]; [bal_o] bails %fail where it
+**   would otherwise decline.
 */
 c3_o
-u3r_view_open(u3r_view* vue_u, u3_atom a)
+u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
 {
   _cr_view_blank(vue_u);
 
@@ -1221,6 +1222,9 @@ u3r_view_open(u3r_view* vue_u, u3_atom a)
     u3b_hand* han_u = u3b_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
 
     if ( !han_u ) {
+      if ( c3y == bal_o ) {
+        u3m_bail(c3__fail);
+      }
       return c3n;
     }
 
@@ -1252,16 +1256,6 @@ u3r_view_open(u3r_view* vue_u, u3_atom a)
     vue_u->byt_y = (const c3_y*)u3r_word_buffer(&a, &len_w);
   }
   return c3y;
-}
-
-/* u3x_view_open(): u3r_view_open(), bailing %fail where it declines.
-*/
-void
-u3x_view_open(u3r_view* vue_u, u3_atom a)
-{
-  if ( c3n == u3r_view_open(vue_u, a) ) {
-    u3m_bail(c3__fail);
-  }
 }
 
 /* u3r_view_read(): [len_z] bytes at [off_d] of the atom, zero past its end.
@@ -1367,7 +1361,7 @@ u3r_mp(mpz_t   a_mp,
     //
     if ( c3y == u3a_is_bob(b) ) {
       u3r_view vue_u;
-      u3x_view_open(&vue_u, b);
+      u3r_view_open(&vue_u, b, c3y);
       const c3_y* vue_y = u3r_view_flat(&vue_u);
       mpz_init2(a_mp, vue_u.bit_d);
       mpz_import(a_mp, vue_u.byt_d, -1, 1, 0, 0, vue_y);
@@ -2246,7 +2240,7 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
             return (c3_h)vat_u->mug_w;
           }
           u3r_view vue_u;
-          u3x_view_open(&vue_u, veb);
+          u3r_view_open(&vue_u, veb, c3y);
           const c3_y* vue_y = u3r_view_flat(&vue_u);
           mug_h = u3r_mug_bytes(vue_y, vue_u.byt_d);
           u3r_view_done(&vue_u);
@@ -2500,8 +2494,8 @@ u3r_comp(u3_atom a, u3_atom b)
     u3r_view va_u, vb_u;
     c3_ys    res = 0;
 
-    if (  (c3n == u3r_view_open(&va_u, a))
-       || (c3n == u3r_view_open(&vb_u, b)) )
+    if (  (c3n == u3r_view_open(&va_u, a, c3n))
+       || (c3n == u3r_view_open(&vb_u, b, c3n)) )
     {
       u3m_bail(c3__fail);
     }
@@ -2576,7 +2570,7 @@ u3r_blob_load(u3_atom a)
 
   u3_assert( c3y == u3a_is_bob(a) );
 
-  if ( c3n == u3r_view_open(&win_u, a) ) {
+  if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
     return u3_none;
   }
 
@@ -2613,7 +2607,7 @@ u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a)
   u3_assert( met_g >= 3 );
   u3_assert( c3y == u3a_is_bob(a) );
 
-  if ( c3n == u3r_view_open(&win_u, a) ) {
+  if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
     return u3_none;
   }
 
@@ -2645,7 +2639,7 @@ u3r_met_d(c3_g a_g, u3_atom b)
   else if ( c3y == u3a_is_bob(b) ) {
     u3r_view vue_u;
 
-    if ( c3n == u3r_view_open(&vue_u, b) ) {
+    if ( c3n == u3r_view_open(&vue_u, b, c3n) ) {
       return u3m_bail(c3__fail);
     }
     bit_d = vue_u.bit_d;

@@ -242,7 +242,7 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 
   u3r_view* win_u = c3_malloc(sizeof(*win_u));
 
-  if ( c3n == u3r_view_open(win_u, a) ) {
+  if ( c3n == u3r_view_open(win_u, a, c3n) ) {
     c3_free(win_u);
     return 0;
   }

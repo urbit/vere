@@ -68,7 +68,7 @@
             c3_w len_b = len_w << shf_g;
 
             u3r_view vue_u;
-            u3x_view_open(&vue_u, h_cab);
+            u3r_view_open(&vue_u, h_cab, c3y);
             const c3_y* vue_y = u3r_view_flat(&vue_u);
             c3_w cpy_w = (vue_u.byt_d < len_b) ? (c3_w)vue_u.byt_d : len_b;
             if ( cpy_w ) {

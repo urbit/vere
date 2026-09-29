@@ -1362,7 +1362,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     //  u3r_blob_load would have caused.
     //
     u3r_view vue_u;
-    u3x_view_open(&vue_u, pac);
+    u3r_view_open(&vue_u, pac, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w len_w = (c3_w)vue_u.byt_d;

@@ -1416,7 +1416,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   //  that u3r_bytes → u3r_blob_load would have caused.
   //
   u3r_view vue_u;
-  u3x_view_open(&vue_u, pac);
+  u3r_view_open(&vue_u, pac, c3y);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
   u3_assert( UINT32_MAX >= vue_u.byt_d );
   c3_w len_w = (c3_w)vue_u.byt_d;
@@ -1842,7 +1842,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     //  expects a stable, mutable buffer that outlives the view.
     //
     u3r_view vue_u;
-    u3x_view_open(&vue_u, pac);
+    u3r_view_open(&vue_u, pac, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w jumbo_w = (c3_w)vue_u.byt_d;

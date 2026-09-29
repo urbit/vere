@@ -1344,7 +1344,7 @@ _test_view(void)
     u3_atom a = u3i_bytes(src_w, src_y);
 
     u3r_view vue_u;
-    u3x_view_open(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
 
     if ( vue_u.byt_d != src_w ) {
@@ -1382,7 +1382,7 @@ _test_view(void)
     const c3_w    src_w   = sizeof(src_y);
 
     u3r_view vue_u;
-    u3x_view_open(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
 
     if ( vue_u.byt_d != src_w ) {
@@ -1417,7 +1417,7 @@ _test_view(void)
   //
   {
     u3r_view vue_u;
-    u3x_view_open(&vue_u, 0);
+    u3r_view_open(&vue_u, 0, c3y);
     u3r_view_flat(&vue_u);
     if (  vue_u.byt_d != 0
        || vue_u.kin_e != u3r_view_loom
@@ -1470,7 +1470,7 @@ _test_view(void)
     u3_atom a = u3i_blob(mug_h, seq_h);
 
     u3r_view vue_u;
-    u3x_view_open(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
 
     //  expect a hand-backed view: kin_e == u3r_view_blob, u.han_u set

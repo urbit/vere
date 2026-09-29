@@ -39,9 +39,9 @@
       u3i_slab_init(&sab_u, a_g, all_w);
 
       u3r_view vb_u, vc_u;
-      u3x_view_open(&vb_u, b);
+      u3r_view_open(&vb_u, b, c3y);
       const c3_y* vb_y = u3r_view_flat(&vb_u);
-      u3x_view_open(&vc_u, c);
+      u3r_view_open(&vc_u, c, c3y);
       const c3_y* vc_y = u3r_view_flat(&vc_u);
 
       c3_w cpy_w;

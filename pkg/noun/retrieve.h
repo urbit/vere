@@ -466,16 +466,12 @@
 
       /* u3r_view_open(): open a view of [a].
       **
-      **   Returns c3n, without bailing, if [a] is a bob whose file is
-      **   missing, empty, or all zero.
+      **   A bob whose file is missing, empty, or all zero cannot be
+      **   viewed: with [bal_o] set that bails %fail, otherwise it
+      **   returns c3n.
       */
         c3_o
-        u3r_view_open(u3r_view* vue_u, u3_atom a);
-
-      /* u3x_view_open(): u3r_view_open(), bailing %fail where it declines.
-      */
-        void
-        u3x_view_open(u3r_view* vue_u, u3_atom a);
+        u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o);
 
       /* u3r_view_read(): [len_z] bytes at byte offset [off_d] of the
       **   atom, zero-filled past its end.

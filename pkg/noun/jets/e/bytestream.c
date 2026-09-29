@@ -43,7 +43,7 @@ _x_octs_buffer(u3r_view* vue_u, const c3_y** byt_y,
     return c3n;
   }
 
-  u3x_view_open(vue_u, *q_octs);
+  u3r_view_open(vue_u, *q_octs, c3y);
   *byt_y = u3r_view_flat(vue_u);
   *len_w = ( vue_u->byt_d < *p_octs_w ) ? (c3_w)vue_u->byt_d : *p_octs_w;
 

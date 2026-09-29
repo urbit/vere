@@ -182,7 +182,7 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
     bit_w = (c3_g)c3_bits_word(a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    u3x_view_open(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
     vue_y = u3r_view_flat(&vue_u);
     bit_w = _js_bob_met(vue_y, vue_u.byt_d);
     if ( 0 == bit_w ) {
@@ -193,7 +193,7 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   }
   else {
     bit_w = u3r_met(0, a);
-    u3x_view_open(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
     vue_y = u3r_view_flat(&vue_u);
   }
 

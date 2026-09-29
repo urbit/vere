@@ -45,7 +45,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   //  u3r_view_done(&vue_u).
   //
   u3r_view vue_u;
-  u3x_view_open(&vue_u, q_octs);
+  u3r_view_open(&vue_u, q_octs, c3y);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
   c3_w len_w = ( vue_u.byt_d < p_octs_w ) ? (c3_w)vue_u.byt_d : p_octs_w;
 

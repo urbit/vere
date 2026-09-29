@@ -44,7 +44,7 @@ u3qc_sew(u3_atom a,
     //  zero-padded to a whole number of words, so the word-at-a-time
     //  read by u3r_chop_words is safe.
     //
-    u3x_view_open(&vue_u, e);
+    u3r_view_open(&vue_u, e, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     {
       c3_d src_d = (vue_u.byt_d + u3a_word_bytes - 1) >> u3a_word_bytes_shift;

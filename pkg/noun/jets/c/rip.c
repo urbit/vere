@@ -180,7 +180,7 @@ u3qc_rip(u3_atom a,
   //  the chunk loops see the same bytes for every kind.
   //
   u3r_view vue_u;
-  u3x_view_open(&vue_u, c);
+  u3r_view_open(&vue_u, c, c3y);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
 
   if ( vue_u.bit_d > c3_w_max ) {

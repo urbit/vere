@@ -30,7 +30,7 @@ u3qc_swp(u3_atom a,
     c3_w blq_b = (c3_w)1 << shf_g;         //  bytes per bloq
 
     u3r_view vue_u;
-    u3x_view_open(&vue_u, b);
+    u3r_view_open(&vue_u, b, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
 
     for ( c3_w i = 0; i < len_w; i++ ) {

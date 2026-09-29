@@ -38,7 +38,7 @@ u3_noun _qe_adler32(u3_noun octs)
   //  full-blob materialization.
   //
   u3r_view vue_u;
-  u3x_view_open(&vue_u, q_octs);
+  u3r_view_open(&vue_u, q_octs, c3y);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
   const c3_y* buf_y = vue_y;
 

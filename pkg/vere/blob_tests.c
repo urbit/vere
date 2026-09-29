@@ -960,7 +960,7 @@ _hand_open_inner(void)
   _han_fid_i = han_u->fid_i;
 
   u3r_view vue_u;
-  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_open(&vue_u, _han_bob, c3y);
   u3r_view_flat(&vue_u);
   _check( vue_u.han_u == han_u, "view did not land on the road's hand" );
 
@@ -1191,7 +1191,7 @@ _hand_alarm_cb(u3_noun arg)
   //  test failure instead of a hang.
   //
   u3r_view vue_u;
-  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_open(&vue_u, _han_bob, c3y);
   u3r_view_flat(&vue_u);
   _han_fid_i = vue_u.han_u->fid_i;
 
@@ -1811,7 +1811,7 @@ _hand_gone_view_cb(u3_noun arg)
 {
   (void)arg;
   u3r_view vue_u;
-  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_open(&vue_u, _han_bob, c3y);
   u3r_view_flat(&vue_u);
   u3r_view_done(&vue_u);
   return 0;
@@ -1887,7 +1887,7 @@ _test_hand_gone(void)
   //
   {
     u3r_view win_u;
-    _check( (c3n == u3r_view_open(&win_u, _han_bob)) && !u3b_hands(),
+    _check( (c3n == u3r_view_open(&win_u, _han_bob, c3n)) && !u3b_hands(),
             "open did not decline" );
     _check( (u3_none == u3r_blob_load(_han_bob)) && !u3b_hands(),
             "load did not decline" );
@@ -1971,7 +1971,7 @@ _hand_share_cb(u3_noun arg)
   (void)arg;
 
   u3r_view vue_u;
-  u3x_view_open(&vue_u, _han_bob);
+  u3r_view_open(&vue_u, _han_bob, c3y);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
 
   u3b_hand* han_u = vue_u.han_u;
@@ -2121,7 +2121,7 @@ _test_hand_empty(void)
 
   _check(  !u3b_open(_tmp_pier, mug_h, 1)
         && (u3_none == u3r_blob_load(bob))
-        && (c3n == u3r_view_open(&win_u, bob))
+        && (c3n == u3r_view_open(&win_u, bob, c3n))
         && !u3b_hands(),
           "empty file not rejected" );
 
@@ -2268,7 +2268,7 @@ _test_hand_access(void)
   {
     u3r_view vue_u;
 
-    u3x_view_open(&vue_u, bob);
+    u3r_view_open(&vue_u, bob, c3y);
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     _check(  (u3r_view_blob == vue_u.kin_e) && (len_w == vue_u.byt_d)
           && (vue_y == vue_u.han_u->map_y) && (0 == memcmp(vue_y, dat_y, len_w))
@@ -2281,7 +2281,7 @@ _test_hand_access(void)
       u3_atom sma = u3i_string("small loom atom, wider than a word");
       c3_w    met_w = u3r_met(3, sma);
 
-      u3x_view_open(&vue_u, sma);
+      u3r_view_open(&vue_u, sma, c3y);
       vue_y = u3r_view_flat(&vue_u);
       _check( (u3r_view_loom == vue_u.kin_e) && (met_w == vue_u.byt_d),
               "flat loom" );
@@ -2292,7 +2292,7 @@ _test_hand_access(void)
       }
       u3r_view_done(&vue_u);
 
-      u3x_view_open(&vue_u, 0x44332211);
+      u3r_view_open(&vue_u, 0x44332211, c3y);
       vue_y = u3r_view_flat(&vue_u);
       _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.byt_d)
             && (vue_y == (const c3_y*)&vue_u.raw_d)
@@ -2310,7 +2310,7 @@ _test_hand_access(void)
         c3_y     win_y[64];
         c3_y     exp_y[64];
 
-        _check( c3y == u3r_view_open(&win_u, bob), "open bob" );
+        _check( c3y == u3r_view_open(&win_u, bob, c3n), "open bob" );
         _check(  win_u.han_u && (0 == win_u.han_u->map_y)
               && (len_w == win_u.byt_d)
               && (u3r_met(0, loa) == win_u.bit_d)
@@ -2330,7 +2330,7 @@ _test_hand_access(void)
         u3r_view_done(&win_u);
         _check( 0 == u3b_hands(), "open bob done" );
 
-        _check( c3y == u3r_view_open(&win_u, sma), "open loom" );
+        _check( c3y == u3r_view_open(&win_u, sma, c3n), "open loom" );
         _check(  !win_u.han_u && (met_w == win_u.byt_d)
               && (3 == u3r_view_read(&win_u, met_w - 3, win_y, 16))
               && (0 == memcmp(win_y, win_u.byt_y + met_w - 3, 3))
@@ -2338,7 +2338,7 @@ _test_hand_access(void)
                 "read loom" );
         u3r_view_done(&win_u);
 
-        _check( c3y == u3r_view_open(&win_u, 0x44332211), "open cat" );
+        _check( c3y == u3r_view_open(&win_u, 0x44332211, c3n), "open cat" );
         _check(  (win_u.byt_y == (const c3_y*)&win_u.raw_d)
               && (31 == win_u.bit_d)
               && (2 == u3r_view_read(&win_u, 2, win_y, 4))

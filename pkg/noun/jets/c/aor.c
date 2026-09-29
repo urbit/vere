@@ -36,9 +36,9 @@
           //
           if ( (c3y == a_bob) || (c3y == b_bob) ) {
             u3r_view va_u, vb_u;
-            u3x_view_open(&va_u, a);
+            u3r_view_open(&va_u, a, c3y);
             const c3_y* va_y = u3r_view_flat(&va_u);
-            u3x_view_open(&vb_u, b);
+            u3r_view_open(&vb_u, b, c3y);
             const c3_y* vb_y = u3r_view_flat(&vb_u);
             u3_noun ret = u3_none;
             for ( c3_w i_w = 0; i_w < len_min_w; i_w++ ) {
