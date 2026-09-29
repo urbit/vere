@@ -17,15 +17,6 @@
   ** bob/<mug>/<seq>: it writes bytes to a staging file (u3_blob_stage,
   ** u3_blob_stage_fd) and sends the path in a %blob writ; mars installs
   ** it (u3_blob_move_stg), leases it, and acks with the mug and seq.
-  **
-  ** Words used here and in retrieve.h:
-  **
-  **   blob  a file in the store, named by its (mug, seq).
-  **   bob   an atom that names a blob: u3a_is_bob, made by u3i_blob.
-  **   hand  a road's open descriptor on one blob.  The view layer's
-  **         own: nothing else opens one.
-  **   view  a look into an atom's bytes (u3r_view): read through it in
-  **         windows, or flatten it to a pointer.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -132,25 +123,8 @@
                    c3_h        mug_h,
                    c3_h        seq_h);
 
-    /* Hands are the view layer's: retrieve.c and the blob tests open,
-    **   read, and close them, and nothing else does.  Every other reader
-    **   of a bob goes through u3r_view in retrieve.h.  Of the functions
-    **   below, only u3_blob_stop, u3_blob_drain, u3_blob_drain_kids, and
-    **   u3_blob_hands are called outside that layer, by road management
-    **   in manage.c and the memory reports.
-    */
-
-    /* u3_blob_hand: an open blob file, owned by the road that opened it.
-    **
-    **   An inner road keeps its hands on a list headed by its bob_p,
-    **   allocated in its own heap and deduplicated by blob id; they are
-    **   retained until the road falls (u3_blob_drain from u3m_fall), so
-    **   a trap that reads one blob many times opens it once.  The home
-    **   road never falls and every caller there is C with an explicit
-    **   close, so its hands live on the C heap, one per open, freed on
-    **   close.  Every mutation runs inside u3m_crit_enter()/
-    **   u3m_crit_leave(), so a signal can neither leak an fd nor
-    **   interrupt a list.
+    /* u3_blob_hand: an open blob file, owned by the road that opened it
+    **   (see blob.c).  The view layer's own: nothing else opens one.
     */
       typedef struct _u3_blob_hand {
         struct _u3_blob_hand* nex_u;  //  next on the owning road

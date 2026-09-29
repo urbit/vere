@@ -42,17 +42,14 @@
 /* blob hands: per-road lists of open blob files.
 **
 **   a hand belongs to the road that opened it.  an inner road keeps its
-**   hands on a list headed by u3R->bob_p, allocated in its own heap,
-**   deduplicated by blob id, and retained until the road falls
-**   (u3_blob_drain from u3m_fall), so a trap that reads one blob a
-**   thousand times opens it once.  the home road never falls and every
-**   caller there is C with an explicit close, so its hands live on the
-**   C heap under _blob_hom_u, one per open, freed on close.
-**
-**   nodes link by pointer in both cases.  every mutation runs inside
-**   u3m_crit_enter()/u3m_crit_leave(): an fd must be on a list before a
-**   signal can unwind the opener, and a drain must finish unlinking
-**   before recovery can drain again.
+**   hands on a list headed by u3R->bob_p, in its own heap, deduplicated
+**   by blob id, and retained until the road falls (u3_blob_drain from
+**   u3m_fall), so a trap that reads one blob a thousand times opens it
+**   once; past BLOB_KEEP_MAX an open evicts the oldest idle hand, and
+**   out of descriptors it bails %file.  the home road never falls, so
+**   its hands live on the C heap under _blob_hom_u, one per open, freed
+**   on close.  every mutation runs inside u3m_crit_enter()/
+**   u3m_crit_leave(), so a signal can neither leak an fd nor cut a list.
 */
 
 //  home-road hands

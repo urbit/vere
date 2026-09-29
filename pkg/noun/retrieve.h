@@ -436,66 +436,21 @@
 
       /* u3r_view: a look into an atom's bytes, wherever the atom lives.
       **
-      **   The only way code outside the blob layer reads a bob, and it
-      **   reads every other atom the same way, so a reader never asks
-      **   what kind of atom it holds.  One lifecycle:
-      **
-      **     open  cheap: maps and copies nothing.  u3r_view_open
-      **           declines a bob whose file is missing, empty, or all
-      **           zero; u3x_view_open bails %fail there instead.
-      **     read  any byte range, copied out on demand, zero past the
-      **           end.  Never materializes a bob.
-      **     flat  a pointer to the atom's bytes, contiguous.  For a bob
-      **           this is the hand's mapping of the file; a loom atom is
-      **           viewed in place and a direct atom's value is in the view.
-      **     done  release.
-      **
-      **   Which to call: bytes on demand, open then read.  The length,
-      **   u3r_met, or byt_d and bit_d of a view already open.  A
-      **   pointer, open then flat.  A loom atom from a bob, u3r_blob_load.  A byte range of
-      **   a bob as an atom, u3r_blob_cut.  Bytes padded to a chosen
-      **   width, u3r_bytes into a buffer the caller owns.
-      **
-      **   Lifetime.  A view owns no memory of its own; it borrows.  It
-      **   is valid from open until done, on the road that opened it, and
-      **   is never handed to another road or copied by value: its bytes
-      **   may live inside it.  Inner-road code keeps a view inside one C
-      **   frame; a bail or signal discards the frame and the road closes
-      **   what the view borrowed.  The home road never unwinds, so a
-      **   home-road caller may keep a view across callbacks and must
-      **   call done itself.  done is always called on the success path;
-      **   the road excusing it after a bail is a guarantee, not a
-      **   license.
-      **
-      **   Fields.  byt_d and bit_d are public and valid from open: the
-      **   atom's significant bytes and bits, at full width, so a bob
-      **   past a word's count is measured right on either build.  The
-      **   rest are private.  The byte pointer exists only as flat's
-      **   result, which ties it to the mapping flat made for a bob.
-      **
-      **   Memory.  A view is a look into an atom, not a place to build
-      **   one: it allocates nothing.  After flat its bytes are:
-      **
-      **     loom  the indirect atom's own word buffer, borrowed.
-      **     blob  the road's hand on the bob's file: the view aliases the
-      **           hand's read-only mapping of the file.  The hand, not
-      **           the view, owns the fd and the mapping, and the hand
-      **           dies with the road, so a bail or signal cannot leak
-      **           them.  done drops the view's hold on it.
-      **     even  a direct atom.  It has no address of its own, so its
-      **           value sits in the view and the pointer points there.
-      **
-      **   Every byte from byt_d to the next word boundary is readable
-      **   and zero, so word-at-a-time readers may run off the end by up
-      **   to seven bytes.  Bytes are read-only and, for a bob, may be
-      **   evicted by the kernel and read back from the file.  The blob
-      **   hand behind a bob (u3_blob_hand in blob.h) is this layer's and the
-      **   tests'; no other code opens one.
+      **   The one way to read a bob, and the same for every other atom.
+      **   open borrows and copies nothing; read copies any byte range out,
+      **   zero past the end; flat gives a pointer to byt_d contiguous bytes
+      **   (a loom atom's own words, a bob's mapping, a direct atom's value
+      **   held in the view); done releases.  byt_d and bit_d are public
+      **   and valid from open; the other fields are private.  A view is
+      **   valid until done on the road that opened it and is never copied.
+      **   An inner road's bail or signal releases what a view borrowed;
+      **   the home road calls done itself.  Every byte from byt_d to the
+      **   next word boundary is readable and zero.
       */
         typedef enum {
-          u3r_view_loom = 0,    //  borrows the loom word buffer;   done frees nothing
-          u3r_view_blob,        //  the road's hand;                done: u3_blob_close
-          u3r_view_even         //  a direct atom's value in raw_d; done frees nothing
+          u3r_view_loom = 0,    //  the loom word buffer
+          u3r_view_blob,        //  the road's hand
+          u3r_view_even         //  a direct atom's value in raw_d
         } u3r_view_e;
 
         struct _u3_blob_hand;
@@ -503,10 +458,10 @@
         typedef struct {
           c3_d                  byt_d;  //  the atom's significant bytes
           c3_d                  bit_d;  //  the atom's significant bits
-          u3r_view_e            kin_e;  //  private: what the bytes are, what done releases
+          u3r_view_e            kin_e;  //  private
           struct _u3_blob_hand* han_u;  //  private: blob: the road's hand
-          const c3_y*           byt_y;  //  private: flat's pointer; a loom atom's bytes for read
-          c3_d                  raw_d;  //  private: even: the direct atom's value
+          const c3_y*           byt_y;  //  private: flat's pointer
+          c3_d                  raw_d;  //  private: even: the atom's value
         } u3r_view;
 
       /* u3r_view_open(): open a view of [a].
