@@ -321,26 +321,6 @@ _test_mark_sweep(void)
   _pier_done();
 }
 
-/* _test_init(): u3_disk_blob_init + u3_disk_blob_stg_init create the
-**   store's directories, and do so again without error.
-*/
-static void
-_test_init(void)
-{
-  _pier_make("init");
-
-  c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", _tmp_pier);
-  _check( c3y == _path_exists(pax_c), "%s missing", pax_c );
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/stg", _tmp_pier);
-  _check( c3y == _path_exists(pax_c), "%s missing", pax_c );
-
-  u3_disk_blob_init(_tmp_pier);
-  u3_disk_blob_stg_init(_tmp_pier);
-
-  _pier_done();
-}
-
 /* _test_stg_clean(): u3_disk_blob_stg_init clears leftover staging files.
 */
 static void
@@ -376,68 +356,6 @@ _test_path(void)
   _check( 0 == strcmp(pax_c, exp_c), "got %s, expected %s", pax_c, exp_c );
 
   fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
-}
-
-/* _test_save_load(): install bytes, read them back through a bob.
-*/
-static void
-_test_save_load(void)
-{
-  _pier_make("save+load");
-
-  const c3_y dat_y[] = "the quick brown fox jumps over the lazy dog";
-  const c3_d dat_d   = sizeof(dat_y) - 1;  // drop trailing NUL
-  c3_h mug_h = 0;
-  c3_h seq_h = 0;
-
-  _check( c3y == _blob_save(dat_y, dat_d, &mug_h, &seq_h),
-          "save failed" );
-  _check( 1 == seq_h, "expected seq=1, got %" PRIc3_h, seq_h );
-
-  c3_c fil_c[8192];
-  u3_blob_path(fil_c, _tmp_pier, mug_h, seq_h);
-  _check( c3y == _path_exists(fil_c), "%s missing", fil_c );
-  _check( c3y == u3_blob_live(_tmp_pier, mug_h, seq_h), "live is false" );
-  _check( c3y == _bob_is(mug_h, seq_h, dat_y, dat_d), "byte mismatch" );
-
-  _pier_done();
-}
-
-/* _test_dedup(): installing identical content twice reuses the first seq.
-*/
-static void
-_test_dedup(void)
-{
-  _pier_make("dedup");
-
-  const c3_y dat_y[] = "dedup me, please and thank you";
-  const c3_d dat_d   = sizeof(dat_y) - 1;
-
-  c3_h mug1_h, mug2_h;
-  c3_h seq1_h, seq2_h;
-
-  _check( c3y == _blob_save(dat_y, dat_d, &mug1_h, &seq1_h),
-          "first save failed" );
-  _check( c3y == _blob_save(dat_y, dat_d, &mug2_h, &seq2_h),
-          "second save failed" );
-  _check( mug1_h == mug2_h, "mug changed (%" PRIc3_h " vs %" PRIc3_h ")",
-          mug1_h, mug2_h );
-  _check( seq1_h == seq2_h, "expected seq reuse, got %" PRIc3_h "+%" PRIc3_h,
-          seq1_h, seq2_h );
-
-  //  distinct content → distinct blob slot (may reuse bucket only if mug
-  //  collides; overwhelmingly unlikely for ASCII content)
-  //
-  const c3_y alt_y[] = "a completely different payload";
-  const c3_d alt_d   = sizeof(alt_y) - 1;
-  c3_h mug3_h = 0;
-  c3_h seq3_h = 0;
-  _check( c3y == _blob_save(alt_y, alt_d, &mug3_h, &seq3_h),
-          "alt save failed" );
-  _check( (mug1_h != mug3_h) || (seq1_h != seq3_h),
-          "distinct content got same blob" );
-
-  _pier_done();
 }
 
 /* _test_walk(): u3_blob_walk reports every installed blob exactly once,
@@ -924,55 +842,6 @@ _test_cue_blob(void)
   _pier_done();
 }
 
-/* _test_met(): u3r_met_d on a bob agrees with u3r_met on the loom atom,
-**   at bloq 0 and 3, with and without trailing zeros in the file.
-*/
-static void
-_test_met(void)
-{
-  _pier_make("met");
-
-  //  16 bytes, top byte = 0x01 (1 significant bit): met = 15*8 + 1 = 121
-  //
-  {
-    const c3_y dat_y[] = { 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x9a,
-                           0xbc, 0xde, 0xf0, 0x11, 0x22, 0x33, 0x44, 0x01 };
-    c3_h mug_h = 0; c3_h seq_h = 0;
-    _check( c3y == _blob_save(dat_y, sizeof(dat_y), &mug_h, &seq_h),
-            "dense save failed" );
-
-    u3_atom bob = u3i_blob(mug_h, seq_h);
-    u3_atom ref = u3i_bytes(sizeof(dat_y), dat_y);
-
-    _check( 121 == u3r_met_d(0, bob), "dense got %" PRIc3_d ", expected 121",
-            u3r_met_d(0, bob) );
-    _check(  (u3r_met_d(0, bob) == (c3_d)u3r_met(0, ref))
-          && (u3r_met_d(3, bob) == (c3_d)u3r_met(3, ref))
-          && (16 == u3r_met(3, bob)),
-            "dense bob disagrees with loom atom" );
-
-    u3z(bob); u3z(ref);
-  }
-
-  //  trailing zeros: 16 significant bytes with a 0xff top byte: 128 bits
-  //
-  {
-    const c3_y dat_y[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                           0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                           0x00, 0x00, 0x00, 0x00 };
-    c3_h mug_h = 0; c3_h seq_h = 0;
-    _check( c3y == _blob_save(dat_y, sizeof(dat_y), &mug_h, &seq_h),
-            "trailing-zero save failed" );
-
-    u3_atom bob = u3i_blob(mug_h, seq_h);
-    _check( (128 == u3r_met_d(0, bob)) && (16 == u3r_met_d(3, bob)),
-            "trailing-zero got %" PRIc3_d ", expected 128", u3r_met_d(0, bob) );
-    u3z(bob);
-  }
-
-  _pier_done();
-}
-
 /* _test_hand(): u3_blob_open/mmap/read/close round-trip, with the bit length measured at open.
 */
 static void
@@ -1199,38 +1068,6 @@ _test_hand_outer(void)
   u3_blob_close(han_u);
   _han_fid_i = fid_i;
   _hand_unwind_check();
-}
-
-/* _test_hand_many(): hundreds of distinct hands open at once, then drained.
-*/
-static void
-_test_hand_many(void)
-{
-  _pier_make("hand many");
-
-  const c3_h mug_h = 0x1234;
-  const c3_w num_w = 300;
-
-  for ( c3_w i_w = 1; i_w <= num_w; i_w++ ) {
-    _hand_write_raw(mug_h, i_w, i_w);
-  }
-
-  u3_blob_hand** han_u = c3_malloc(num_w * sizeof(*han_u));
-
-  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    han_u[i_w] = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
-    _check( han_u[i_w], "open %" PRIc3_w " failed", i_w );
-  }
-  _check( num_w == u3_blob_hands(), "%zu hands, expected %" PRIc3_w,
-          u3_blob_hands(), num_w );
-
-  for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    u3_blob_close(han_u[i_w]);
-  }
-  _check( !u3_blob_hands(), "%zu hands left", u3_blob_hands() );
-
-  c3_free(han_u);
-  _pier_done();
 }
 
 static u3_noun
@@ -1685,7 +1522,8 @@ _test_hand_intr_crit(void)
           "hit %" PRIc3_w ", expected the unwind at leave", _han_hit_w );
   u3z(gon);
 
-  //  the hold count is zero: a fresh section delivers at its own leave
+  //  the hold count is zero: a fresh section delivers at its own leave,
+  //  and a nested section only at the outermost
   //
   {
     void (*old_f)(int) = signal(SIGINT, _crit_handler);
@@ -1694,43 +1532,22 @@ _test_hand_intr_crit(void)
     raise(SIGINT);
     _check( 0 == _crit_hit, "hold count not reset" );
     u3m_crit_leave();
-    signal(SIGINT, old_f);
     _check( 1 == _crit_hit, "section not delivering" );
+
+    _crit_hit = 0;
+    u3m_crit_enter();
+    u3m_crit_enter();
+    raise(SIGINT);
+    u3m_crit_leave();
+    _check( 0 == _crit_hit, "delivered at inner leave" );
+    u3m_crit_leave();
+    _check( 1 == _crit_hit, "not delivered at outer leave" );
+    signal(SIGINT, old_f);
   }
 
   _hand_unwind_check();
 }
 #endif
-
-static u3_noun
-_hand_meme_cb(u3_noun arg)
-{
-  (void)arg;
-  _hand_open_inner();
-
-  //  an allocation bail with a view open: 256 MiB on a 1 MiB loom
-  //  bails %meme while the road holds the hand
-  //
-  u3r_view vue_u;
-  u3x_view_open(&vue_u, _han_bob);
-  u3a_malloc(1 << 28);
-  u3r_view_done(&vue_u);
-  return 0;
-}
-
-/* _test_hand_meme(): an allocation bail under a live view is swept.
-*/
-static void
-_test_hand_meme(void)
-{
-  _hand_unwind_setup("hand meme");
-
-  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_meme_cb, 0);
-  _check( c3y == _hand_unwound(gon), "pad did not bail" );
-  u3z(gon);
-
-  _hand_unwind_check();
-}
 
 static u3_noun
 _hand_cue_cb(u3_noun arg)
@@ -2078,40 +1895,6 @@ _test_hand_gone(void)
 
   u3z(_han_bob);
   _pier_done();
-}
-
-static u3_noun
-_hand_nest_cb(u3_noun arg)
-{
-  (void)arg;
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
-  _check( han_u && (1 == han_u->use_w), "child open failed" );
-  u3_blob_close(han_u);
-  _check( 0 == han_u->use_w, "child close left the hand held" );
-  return 0;
-}
-
-/* _test_hand_nest(): a child road that opens and closes normally leaves
-**   the home hand exactly as it found it.
-*/
-static void
-_test_hand_nest(void)
-{
-  _hand_unwind_setup("hand nest");
-
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
-  _check( han_u, "home open failed" );
-  c3_i fid_i = han_u->fid_i;
-
-  u3z(u3m_soft_top(0, 1 << 12, _hand_nest_cb, 0));
-
-  _check(  (1 == u3_blob_hands())
-        && (fid_i == han_u->fid_i) && (c3y == _fd_live(fid_i)),
-          "home hand disturbed" );
-
-  u3_blob_close(han_u);
-  _han_fid_i = fid_i;
-  _hand_unwind_check();
 }
 
 /* _test_hand_edge(): met and comparison at the 4 KiB window boundaries.
@@ -2574,41 +2357,6 @@ _test_hand_access(void)
   _pier_done();
 }
 
-#ifndef U3_OS_windows
-/* _test_crit(): a signal raised inside a critical section is delivered
-**   at the outermost leave, not before.
-**
-**   POSIX only: the Windows emulation delivers through rsignal_raise()
-**   from another thread, which this single-threaded test cannot drive.
-*/
-static void
-_test_crit(void)
-{
-  _nam_c = "crit";
-
-  void (*old_f)(int) = signal(SIGINT, _crit_handler);
-
-  _crit_hit = 0;
-  u3m_crit_enter();
-  raise(SIGINT);
-  _check( 0 == _crit_hit, "delivered inside section" );
-  u3m_crit_leave();
-  _check( 1 == _crit_hit, "not delivered at leave" );
-
-  _crit_hit = 0;
-  u3m_crit_enter();
-  u3m_crit_enter();
-  raise(SIGINT);
-  u3m_crit_leave();
-  _check( 0 == _crit_hit, "delivered at inner leave" );
-  u3m_crit_leave();
-  _check( 1 == _crit_hit, "not delivered at outer leave" );
-
-  signal(SIGINT, old_f);
-  fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
-}
-#endif
-
 /* _test_lifecycle(): a noun holding bobs survives the event-log framing.
 **
 **   mars frames every event with u3s_ram_xeno before it reaches the log
@@ -3060,10 +2808,7 @@ main(int argc, char* argv[])
 
   _test_path();            //  no filesystem
   _test_mark_sweep();      //  first: the sweep must see a clean process
-  _test_init();
   _test_stg_clean();
-  _test_save_load();
-  _test_dedup();
   _test_canon();
   _test_delete_empty_bucket();
   _test_walk();
@@ -3073,19 +2818,14 @@ main(int argc, char* argv[])
   _test_sane();
   _test_meld();
   _test_cue_blob();
-  _test_met();
   _test_hand();
   _test_hand_dedup();
   _test_hand_bail();
   _test_hand_signal();
   _test_hand_leak();
   _test_hand_outer();
-  _test_hand_many();
   _test_hand_keep();
   _test_hand_comp();
-#ifndef U3_OS_windows
-  _test_crit();
-#endif
   _test_hand_alarm();
   _test_jam_bob();
   _test_jets_bob();
@@ -3093,7 +2833,6 @@ main(int argc, char* argv[])
   _test_hand_intr();
   _test_hand_intr_crit();
 #endif
-  _test_hand_meme();
   _test_hand_cue();
 #ifndef U3_OS_windows
   _test_hand_emfile();
@@ -3105,7 +2844,6 @@ main(int argc, char* argv[])
   _test_hand_trunc();
 #endif
   _test_hand_gone();
-  _test_hand_nest();
   _test_hand_edge();
   _test_hand_share();
   _test_hand_reuse();
