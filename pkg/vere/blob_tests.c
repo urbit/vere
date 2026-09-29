@@ -122,7 +122,7 @@ _pier_make(const c3_c* nam_c)
 static void
 _pier_done(void)
 {
-  _check( 0 == u3_blob_hands(), "%zu hand(s) left open", u3_blob_hands() );
+  _check( 0 == u3b_hands(), "%zu hand(s) left open", u3b_hands() );
   c3_tmp_kill(_tmp_pier);
   fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
 }
@@ -160,10 +160,10 @@ _blob_save(const c3_y* dat_y, c3_d len_d, c3_h* mug_h, c3_h* seq_h)
 {
   c3_c stg_c[8192];
 
-  if ( c3n == u3_blob_stage(_tmp_pier, dat_y, len_d, stg_c) ) {
+  if ( c3n == u3b_stage(_tmp_pier, dat_y, len_d, stg_c) ) {
     return c3n;
   }
-  if ( c3n == u3_blob_move_stg(_tmp_pier, stg_c, mug_h, seq_h) ) {
+  if ( c3n == u3b_move_stg(_tmp_pier, stg_c, mug_h, seq_h) ) {
     c3_unlink(stg_c);
     return c3n;
   }
@@ -184,7 +184,7 @@ _hand_write_raw(c3_h mug_h, c3_h seq_h, c3_w num_w)
     _fail("raw mkdir: %s", strerror(errno));
   }
 
-  u3_blob_path(pax_c, _tmp_pier, mug_h, seq_h);
+  u3b_path(pax_c, _tmp_pier, mug_h, seq_h);
   if ( !(fil_f = fopen(pax_c, "wb")) ) {
     _fail("raw fopen: %s", strerror(errno));
   }
@@ -342,7 +342,7 @@ _test_stg_clean(void)
   _pier_done();
 }
 
-/* _test_path(): u3_blob_path produces the expected string.
+/* _test_path(): u3b_path produces the expected string.
 */
 static void
 _test_path(void)
@@ -350,7 +350,7 @@ _test_path(void)
   _nam_c = "path";
 
   c3_c pax_c[8192];
-  u3_blob_path(pax_c, "/pier", 0x12345678, 42);
+  u3b_path(pax_c, "/pier", 0x12345678, 42);
 
   const c3_c* exp_c = "/pier/.urb/bob/305419896/42";
   _check( 0 == strcmp(pax_c, exp_c), "got %s, expected %s", pax_c, exp_c );
@@ -358,7 +358,7 @@ _test_path(void)
   fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
 }
 
-/* _test_walk(): u3_blob_walk reports every installed blob exactly once,
+/* _test_walk(): u3b_walk reports every installed blob exactly once,
 **   skipping the staging dir, lockfiles, and junk entries.
 */
 typedef struct {
@@ -416,7 +416,7 @@ _test_walk(void)
   }
 
   _walk_acc acc_u = {0};
-  u3_blob_walk(_tmp_pier, &acc_u, _test_walk_cb);
+  u3b_walk(_tmp_pier, &acc_u, _test_walk_cb);
   _check( 3 == acc_u.len_z, "expected 3 files, got %zu", acc_u.len_z );
 
   for ( c3_z i_z = 0; i_z < 3; i_z++ ) {
@@ -426,10 +426,10 @@ _test_walk(void)
 
   //  after wiping one blob, the walk reports exactly the other two
   //
-  u3_blob_wipe(_tmp_pier, mug_h[0], seq_h[0]);
+  u3b_wipe(_tmp_pier, mug_h[0], seq_h[0]);
 
   memset(&acc_u, 0, sizeof(acc_u));
-  u3_blob_walk(_tmp_pier, &acc_u, _test_walk_cb);
+  u3b_walk(_tmp_pier, &acc_u, _test_walk_cb);
   _check(  (2 == acc_u.len_z)
         && (c3n == _walk_acc_has(&acc_u, mug_h[0], seq_h[0])),
           "bad post-wipe result" );
@@ -450,19 +450,19 @@ _test_delete_empty_bucket(void)
   _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
   c3_c fil_c[8192], dir_c[8192];
-  u3_blob_path(fil_c, _tmp_pier, mug_h, seq_h);
+  u3b_path(fil_c, _tmp_pier, mug_h, seq_h);
   snprintf(dir_c, sizeof(dir_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, mug_h);
   _check( c3y == _path_exists(dir_c), "setup: bucket missing" );
 
-  u3_blob_wipe(_tmp_pier, mug_h, seq_h);
+  u3b_wipe(_tmp_pier, mug_h, seq_h);
 
   _check( c3n == _path_exists(fil_c), "file %s still exists", fil_c );
-  _check( c3n == u3_blob_live(_tmp_pier, mug_h, seq_h), "live still true" );
+  _check( c3n == u3b_live(_tmp_pier, mug_h, seq_h), "live still true" );
   _check( c3n == _path_exists(dir_c), "bucket %s not cleaned", dir_c );
 
   //  deleting a nonexistent blob is a no-op (no error)
   //
-  u3_blob_wipe(_tmp_pier, 0xdeadbeef, 999);
+  u3b_wipe(_tmp_pier, 0xdeadbeef, 999);
 
   _pier_done();
 }
@@ -481,24 +481,24 @@ _test_install_stg(void)
   c3_h mug_h = 0;
   c3_h seq_h = 0;
 
-  _check( c3y == u3_blob_stage(_tmp_pier, dat_y, dat_d, stg_c), "stage failed" );
+  _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "stage failed" );
   _check( c3y == _path_exists(stg_c), "staging file missing" );
 
-  _check( c3y == u3_blob_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
+  _check( c3y == u3b_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
           "install failed" );
   _check( 1 == seq_h, "expected seq=1, got %" PRIc3_h, seq_h );
   _check( c3n == _path_exists(stg_c), "staging file not consumed" );
-  _check( c3y == u3_blob_live(_tmp_pier, mug_h, seq_h),
+  _check( c3y == u3b_live(_tmp_pier, mug_h, seq_h),
           "blob not present after install" );
   _check( c3y == _bob_is(mug_h, seq_h, dat_y, dat_d), "byte mismatch" );
 
   //  a missing staging file and an empty one are refused
   //
-  _check( c3n == u3_blob_move_stg(_tmp_pier, "/no/such/path", &mug_h, &seq_h),
+  _check( c3n == u3b_move_stg(_tmp_pier, "/no/such/path", &mug_h, &seq_h),
           "installed a missing file" );
 
-  _check( c3y == u3_blob_stage(_tmp_pier, dat_y, 0, stg_c), "empty stage failed" );
-  _check( c3n == u3_blob_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
+  _check( c3y == u3b_stage(_tmp_pier, dat_y, 0, stg_c), "empty stage failed" );
+  _check( c3n == u3b_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
           "installed an empty file" );
   c3_unlink(stg_c);
 
@@ -508,7 +508,7 @@ _test_install_stg(void)
 /* _test_install_stg_trim(): a staging file carrying trailing zero bytes is
 **   trimmed to the atom's significant length before it is installed.
 **
-**   This is the only test that reaches u3_blob_move_stg's ftruncate: every
+**   This is the only test that reaches u3b_move_stg's ftruncate: every
 **   other staging payload is already canonical, so len_d == map_d and the
 **   trim is skipped.  It matters most on windows, which refuses to resize a
 **   file while a section is open on it -- so a trim attempted under the
@@ -531,15 +531,15 @@ _test_install_stg_trim(void)
   c3_c stg_c[8192];
   c3_h mug_h = 0;
   c3_h seq_h = 0;
-  _check( c3y == u3_blob_stage(_tmp_pier, dat_y, sizeof(dat_y), stg_c),
+  _check( c3y == u3b_stage(_tmp_pier, dat_y, sizeof(dat_y), stg_c),
           "stage failed" );
-  _check( c3y == u3_blob_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
+  _check( c3y == u3b_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h),
           "install failed" );
 
   //  the installed file is the trimmed length, not the staged one
   //
   c3_c fil_c[8192];
-  u3_blob_path(fil_c, _tmp_pier, mug_h, seq_h);
+  u3b_path(fil_c, _tmp_pier, mug_h, seq_h);
 
   struct stat st_u;
   _check( 0 == stat(fil_c, &st_u), "stat %s: %s", fil_c, strerror(errno) );
@@ -555,7 +555,7 @@ _test_install_stg_trim(void)
 }
 
 /* _test_stage(): both of the king's staging helpers feed
-**   u3_blob_move_stg, and the two land on one blob: same mug, same seq
+**   u3b_move_stg, and the two land on one blob: same mug, same seq
 **   by dedup, staging file consumed.
 */
 static void
@@ -573,13 +573,13 @@ _test_stage(void)
   {
     c3_c dir_c[8192];
 
-    u3_blob_stg_dir(dir_c, _tmp_pier);
+    u3b_stg_dir(dir_c, _tmp_pier);
 
-    _check(  (c3y == u3_blob_stage(_tmp_pier, dat_y, dat_d, stg_c))
+    _check(  (c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c))
           && (0 == strncmp(stg_c, dir_c, strlen(dir_c)))
           && (c3y == _path_exists(stg_c)),
             "buffer stage failed" );
-    _check(  (c3y == u3_blob_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h))
+    _check(  (c3y == u3b_move_stg(_tmp_pier, stg_c, &mug_h, &seq_h))
           && (1 == seq_h)
           && (c3n == _path_exists(stg_c)),
             "install of a staged buffer failed" );
@@ -599,8 +599,8 @@ _test_stage(void)
     close(fid_i);
     fid_i = c3_open(src_c, O_RDONLY, 0);
 
-    _check(  (c3y == u3_blob_stage_fd(_tmp_pier, fid_i, dat_d, stg_c))
-          && (c3y == u3_blob_move_stg(_tmp_pier, stg_c, &mug2_h, &seq2_h))
+    _check(  (c3y == u3b_stage_fd(_tmp_pier, fid_i, dat_d, stg_c))
+          && (c3y == u3b_move_stg(_tmp_pier, stg_c, &mug2_h, &seq2_h))
           && (mug2_h == mug_h) && (seq2_h == seq_h)
           && (c3n == _path_exists(stg_c)),
             "install of a staged descriptor differs from the buffer's" );
@@ -609,7 +609,7 @@ _test_stage(void)
     //  a short source fails and leaves nothing behind
     //
     fid_i = c3_open(src_c, O_RDONLY, 0);
-    _check(  (c3n == u3_blob_stage_fd(_tmp_pier, fid_i, dat_d + 1, stg_c))
+    _check(  (c3n == u3b_stage_fd(_tmp_pier, fid_i, dat_d + 1, stg_c))
           && (c3n == _path_exists(stg_c)),
             "short source not refused" );
     close(fid_i);
@@ -768,8 +768,8 @@ _test_cue_blob(void)
 
   u3_noun out;
   {
-    u3_blob_bsink bsk_u;
-    u3_blob_bsink_init(&bsk_u, _tmp_pier);
+    u3b_bsink bsk_u;
+    u3b_bsink_init(&bsk_u, _tmp_pier);
 
     u3_cue_xeno* sil_u = u3s_cue_xeno_init();
     u3s_cue_xeno_blob(sil_u, 1024, &bsk_u.snk_u);
@@ -813,8 +813,8 @@ _test_cue_blob(void)
     //  re-cue: the store must dedup to the same (mug, seq)
     //
     {
-      u3_blob_bsink bsk_u;
-      u3_blob_bsink_init(&bsk_u, _tmp_pier);
+      u3b_bsink bsk_u;
+      u3b_bsink_init(&bsk_u, _tmp_pier);
 
       u3_cue_xeno* sil_u = u3s_cue_xeno_init();
       u3s_cue_xeno_blob(sil_u, 1024, &bsk_u.snk_u);
@@ -842,7 +842,7 @@ _test_cue_blob(void)
   _pier_done();
 }
 
-/* _test_hand(): u3_blob_open/mmap/read/close round-trip, with the bit length measured at open.
+/* _test_hand(): u3b_open/mmap/read/close round-trip, with the bit length measured at open.
 */
 static void
 _test_hand(void)
@@ -854,10 +854,10 @@ _test_hand(void)
   c3_h mug_h = 0; c3_h seq_h = 0;
   _blob_save(dat_y, dat_d, &mug_h, &seq_h);
 
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, seq_h);
   _check( han_u, "open returned NULL" );
-  _check( (han_u->len_d == dat_d) && (1 == u3_blob_hands()),
-          "len %" PRIc3_d " hands %zu", han_u->len_d, u3_blob_hands() );
+  _check( (han_u->len_d == dat_d) && (1 == u3b_hands()),
+          "len %" PRIc3_d " hands %zu", han_u->len_d, u3b_hands() );
 
   //  bit-length: top byte is the last one, u3r_met(0) semantics
   //
@@ -872,29 +872,29 @@ _test_hand(void)
   //  whole-file mapping, then a window through pread
   //
   {
-    const c3_y* buf_y = u3_blob_mmap(han_u);
+    const c3_y* buf_y = u3b_mmap(han_u);
     _check( buf_y && (0 == memcmp(buf_y, dat_y, dat_d)), "data mismatch" );
-    _check( buf_y == u3_blob_mmap(han_u), "data not memoized" );
+    _check( buf_y == u3b_mmap(han_u), "data not memoized" );
 
     c3_y win_y[8];
-    _check(  (5 == u3_blob_read(han_u, 7, win_y, 5))
+    _check(  (5 == u3b_read(han_u, 7, win_y, 5))
           && (0 == memcmp(win_y, dat_y + 7, 5)),
             "read window mismatch" );
 
     //  a read past the end is short, not an error
     //
-    _check( 3 == u3_blob_read(han_u, dat_d - 3, win_y, 8),
+    _check( 3 == u3b_read(han_u, dat_d - 3, win_y, 8),
             "read past end not short" );
   }
 
   c3_i fid_i = han_u->fid_i;
-  u3_blob_close(han_u);
-  _check( (0 == u3_blob_hands()) && (c3y == _fd_dead(fid_i)),
-          "close left hands %zu, fd open", u3_blob_hands() );
+  u3b_close(han_u);
+  _check( (0 == u3b_hands()) && (c3y == _fd_dead(fid_i)),
+          "close left hands %zu, fd open", u3b_hands() );
 
   //  missing blob: NULL, no bail, nothing left in the table
   //
-  _check( !u3_blob_open(_tmp_pier, 0xdeadbeef, 999) && !u3_blob_hands(),
+  _check( !u3b_open(_tmp_pier, 0xdeadbeef, 999) && !u3b_hands(),
           "missing should be NULL" );
 
   _pier_done();
@@ -912,28 +912,28 @@ _test_hand_dedup(void)
   c3_h mug_h = 0; c3_h seq_h = 0;
   _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
-  u3_blob_hand* one_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
-  u3_blob_hand* two_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  u3b_hand* one_u = u3b_open(_tmp_pier, mug_h, seq_h);
+  u3b_hand* two_u = u3b_open(_tmp_pier, mug_h, seq_h);
 
   _check(  one_u && two_u && (one_u != two_u)
-        && (one_u->fid_i != two_u->fid_i) && (2 == u3_blob_hands()),
+        && (one_u->fid_i != two_u->fid_i) && (2 == u3b_hands()),
           "home road shared" );
 
   c3_i one_i = one_u->fid_i;
   c3_i two_i = two_u->fid_i;
-  u3_blob_close(one_u);
+  u3b_close(one_u);
 
-  _check(  (1 == u3_blob_hands())
+  _check(  (1 == u3b_hands())
         && (c3y == _fd_dead(one_i)) && (c3y == _fd_live(two_i)),
           "first close disturbed the other" );
 
   {
     c3_y byt_y;
-    _check( 1 == u3_blob_read(two_u, 0, &byt_y, 1), "survivor unreadable" );
+    _check( 1 == u3b_read(two_u, 0, &byt_y, 1), "survivor unreadable" );
   }
 
-  u3_blob_close(two_u);
-  _check( !u3_blob_hands() && (c3y == _fd_dead(two_i)), "last close leaked" );
+  u3b_close(two_u);
+  _check( !u3b_hands() && (c3y == _fd_dead(two_i)), "last close leaked" );
 
   _pier_done();
 }
@@ -952,10 +952,10 @@ static c3_i    _han_fid_i;
 **   road deduplicates by blob id, so the view lands on the same hand,
 **   and both are held when the road unwinds.
 */
-static u3_blob_hand*
+static u3b_hand*
 _hand_open_inner(void)
 {
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   _check( han_u, "inner open failed" );
   _han_fid_i = han_u->fid_i;
 
@@ -1011,8 +1011,8 @@ _hand_unwind_setup(const c3_c* nam_c)
 static void
 _hand_unwind_check(void)
 {
-  _check( !u3_blob_hands() && (c3y == _fd_dead(_han_fid_i)),
-          "%zu hand(s) survived the road", u3_blob_hands() );
+  _check( !u3b_hands() && (c3y == _fd_dead(_han_fid_i)),
+          "%zu hand(s) survived the road", u3b_hands() );
   u3z(_han_bob);
   _pier_done();
 }
@@ -1054,18 +1054,18 @@ _test_hand_outer(void)
 {
   _hand_unwind_setup("hand outer");
 
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   _check( han_u, "home open failed" );
 
   u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
 
   //  the inner road opened its own hand on the blob; only that went
   //
-  _check( (1 == u3_blob_hands()) && (c3y == _fd_live(han_u->fid_i)),
-          "home hand swept (hands %zu)", u3_blob_hands() );
+  _check( (1 == u3b_hands()) && (c3y == _fd_live(han_u->fid_i)),
+          "home hand swept (hands %zu)", u3b_hands() );
 
   c3_i fid_i = han_u->fid_i;
-  u3_blob_close(han_u);
+  u3b_close(han_u);
   _han_fid_i = fid_i;
   _hand_unwind_check();
 }
@@ -1081,23 +1081,23 @@ _hand_keep_cb(u3_noun arg)
   //  at most its cap, evicting the oldest
   //
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, i_w + 1);
     _check( han_u, "open %" PRIc3_w " failed", i_w );
-    u3_blob_close(han_u);
+    u3b_close(han_u);
   }
 
-  c3_z kep_z = u3_blob_hands_road(u3R);
+  c3_z kep_z = u3b_hands_road(u3R);
   _check( (kep_z < num_w) && (kep_z >= 100), "%zu retained", kep_z );
 
   //  the newest is still open; the oldest was evicted and reopens
   //
   {
-    u3_blob_hand* new_u = u3_blob_open(_tmp_pier, mug_h, num_w);
-    u3_blob_hand* old_u = u3_blob_open(_tmp_pier, mug_h, 1);
-    _check( new_u && old_u && (kep_z == u3_blob_hands_road(u3R)),
+    u3b_hand* new_u = u3b_open(_tmp_pier, mug_h, num_w);
+    u3b_hand* old_u = u3b_open(_tmp_pier, mug_h, 1);
+    _check( new_u && old_u && (kep_z == u3b_hands_road(u3R)),
             "reopen changed the count" );
-    u3_blob_close(new_u);
-    u3_blob_close(old_u);
+    u3b_close(new_u);
+    u3b_close(old_u);
   }
   return 0;
 }
@@ -1198,8 +1198,8 @@ _hand_alarm_cb(u3_noun arg)
   volatile c3_d sum_d = 0;
 
   for ( c3_w rou_w = 0; rou_w < 2000000; rou_w++ ) {
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
-    u3_blob_close(han_u);
+    u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    u3b_close(han_u);
 
     for ( c3_w i_w = 0; i_w < 20000; i_w++ ) {
       sum_d += i_w;
@@ -1226,9 +1226,9 @@ _test_hand_alarm(void)
   //  the table is usable after the unwind
   //
   {
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
     _check( han_u, "reopen after unwind failed" );
-    u3_blob_close(han_u);
+    u3b_close(han_u);
   }
 
   _hand_unwind_check();
@@ -1607,11 +1607,11 @@ _test_hand_emfile(void)
   new_u.rlim_cur = 24;
   _check( 0 == setrlimit(RLIMIT_NOFILE, &new_u), "setrlimit failed" );
 
-  u3_blob_hand** han_u = c3_malloc(num_w * sizeof(*han_u));
+  u3b_hand** han_u = c3_malloc(num_w * sizeof(*han_u));
   c3_w           got_w = 0;
 
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    han_u[i_w] = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    han_u[i_w] = u3b_open(_tmp_pier, mug_h, i_w + 1);
     if ( han_u[i_w] ) {
       got_w++;
     }
@@ -1619,15 +1619,15 @@ _test_hand_emfile(void)
 
   setrlimit(RLIMIT_NOFILE, &old_u);
 
-  _check( (got_w != num_w) && (got_w == u3_blob_hands()),
-          "%" PRIc3_w " opened, %zu in table", got_w, u3_blob_hands() );
+  _check( (got_w != num_w) && (got_w == u3b_hands()),
+          "%" PRIc3_w " opened, %zu in table", got_w, u3b_hands() );
 
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
     if ( han_u[i_w] ) {
       c3_y byt_y;
-      _check( 1 == u3_blob_read(han_u[i_w], 0, &byt_y, 1),
+      _check( 1 == u3b_read(han_u[i_w], 0, &byt_y, 1),
               "opened hand unreadable" );
-      u3_blob_close(han_u[i_w]);
+      u3b_close(han_u[i_w]);
     }
   }
 
@@ -1645,15 +1645,15 @@ _hand_file_cb(u3_noun arg)
   //  idle hands are evicted to make room, so every open succeeds
   //
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, i_w + 1);
     _check( han_u, "idle eviction did not free a descriptor" );
-    u3_blob_close(han_u);
+    u3b_close(han_u);
   }
 
   //  held hands cannot be evicted: the road runs out and bails
   //
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
-    (void)u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    (void)u3b_open(_tmp_pier, mug_h, i_w + 1);
   }
 
   _fail("no bail at the ceiling");
@@ -1701,34 +1701,34 @@ _test_hand_wipe(void)
   c3_h mug_h = 0; c3_h seq_h = 0;
   _blob_save(dat_y, dat_d, &mug_h, &seq_h);
 
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, seq_h);
   _check( han_u, "open failed" );
   c3_i fid_i = han_u->fid_i;
 
-  u3_blob_wipe(_tmp_pier, mug_h, seq_h);
-  _check( c3n == u3_blob_live(_tmp_pier, mug_h, seq_h), "file survived" );
+  u3b_wipe(_tmp_pier, mug_h, seq_h);
+  _check( c3n == u3b_live(_tmp_pier, mug_h, seq_h), "file survived" );
 
   //  posix keeps the inode for the open descriptor
   //
   {
     c3_y buf_y[64];
-    _check(  (dat_d == u3_blob_read(han_u, 0, buf_y, (c3_z)dat_d))
+    _check(  (dat_d == u3b_read(han_u, 0, buf_y, (c3_z)dat_d))
           && (0 == memcmp(buf_y, dat_y, (size_t)dat_d)),
             "read after wipe failed" );
   }
 
-  u3_blob_close(han_u);
-  _check( !u3_blob_hands() && (c3y == _fd_dead(fid_i)), "close leaked" );
+  u3b_close(han_u);
+  _check( !u3b_hands() && (c3y == _fd_dead(fid_i)), "close leaked" );
 
   //  a second open finds nothing
   //
-  _check( !u3_blob_open(_tmp_pier, mug_h, seq_h), "reopened a wiped blob" );
+  _check( !u3b_open(_tmp_pier, mug_h, seq_h), "reopened a wiped blob" );
 
   _pier_done();
 }
 #endif
 
-/* _test_hand_stop(): u3_blob_stop releases every home-road hand and
+/* _test_hand_stop(): u3b_stop releases every home-road hand and
 **   leaves the list usable.
 */
 static void
@@ -1741,22 +1741,22 @@ _test_hand_stop(void)
 
   for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
     _hand_write_raw(mug_h, i_w + 1, i_w);
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, i_w + 1);
+    u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, i_w + 1);
     _check( han_u, "open failed" );
     fid_i[i_w] = han_u->fid_i;
   }
 
-  u3_blob_stop();
+  u3b_stop();
 
   for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
     _check( c3y == _fd_dead(fid_i[i_w]), "fd %" PRIc3_w " survived", i_w );
   }
-  _check( !u3_blob_hands(), "residue after stop" );
+  _check( !u3b_hands(), "residue after stop" );
 
   {
-    u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, 1);
+    u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, 1);
     _check( han_u, "open after stop failed" );
-    u3_blob_close(han_u);
+    u3b_close(han_u);
   }
 
   _pier_done();
@@ -1779,27 +1779,27 @@ _test_hand_trunc(void)
   c3_h mug_h = 0; c3_h seq_h = 0;
   _blob_save(dat_y, len_w, &mug_h, &seq_h);
 
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, mug_h, seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, seq_h);
   _check( han_u, "open failed" );
 
   {
     //  blob files are created read-only; shortening one needs write bits
     //
     c3_c pax_c[8192];
-    u3_blob_path(pax_c, _tmp_pier, mug_h, seq_h);
+    u3b_path(pax_c, _tmp_pier, mug_h, seq_h);
     _check( (0 == chmod(pax_c, 0600)) && (0 == truncate(pax_c, 100)),
             "truncate failed" );
   }
 
   {
     c3_y* buf_y = c3_malloc(len_w);
-    _check( 100 == u3_blob_read(han_u, 0, buf_y, len_w), "read not short" );
+    _check( 100 == u3b_read(han_u, 0, buf_y, len_w), "read not short" );
     c3_free(buf_y);
   }
 
-  _check( !u3_blob_mmap(han_u) && !han_u->map_y, "data did not fail cleanly" );
+  _check( !u3b_mmap(han_u) && !han_u->map_y, "data did not fail cleanly" );
 
-  u3_blob_close(han_u);
+  u3b_close(han_u);
 
   c3_free(dat_y);
   _pier_done();
@@ -1861,7 +1861,7 @@ _hand_gone_expect(const c3_c* nam_c, u3_funk fun_f)
   u3_noun gon = u3m_soft_top(0, 1 << 12, fun_f, 0);
   _check( c3__fail == _hand_mote(gon), "%s did not bail %%fail", nam_c );
   u3z(gon);
-  _check( !u3_blob_hands(), "%s left residue", nam_c );
+  _check( !u3b_hands(), "%s left residue", nam_c );
 }
 
 /* _test_hand_gone(): a bob whose file is missing fails at every entry
@@ -1887,9 +1887,9 @@ _test_hand_gone(void)
   //
   {
     u3r_view win_u;
-    _check( (c3n == u3r_view_open(&win_u, _han_bob)) && !u3_blob_hands(),
+    _check( (c3n == u3r_view_open(&win_u, _han_bob)) && !u3b_hands(),
             "open did not decline" );
-    _check( (u3_none == u3r_blob_load(_han_bob)) && !u3_blob_hands(),
+    _check( (u3_none == u3r_blob_load(_han_bob)) && !u3b_hands(),
             "load did not decline" );
   }
 
@@ -1974,14 +1974,14 @@ _hand_share_cb(u3_noun arg)
   u3x_view_open(&vue_u, _han_bob);
   const c3_y* vue_y = u3r_view_flat(&vue_u);
 
-  u3_blob_hand* han_u = vue_u.han_u;
+  u3b_hand* han_u = vue_u.han_u;
   c3_i          fid_i = han_u->fid_i;
   _han_fid_i          = fid_i;
 
   c3_w met_w = u3r_met(3, _han_bob);
   c3_y byt_y = u3r_byte(3, _han_bob);
 
-  _check(  (1 == u3_blob_hands_road(u3R)) && (1 == han_u->use_w)
+  _check(  (1 == u3b_hands_road(u3R)) && (1 == han_u->use_w)
         && (fid_i == han_u->fid_i)
         && (met_w == vue_u.byt_d) && (byt_y == vue_y[3]),
           "second open under a view" );
@@ -2030,23 +2030,23 @@ _hand_reuse_cb(u3_noun arg)
 
   //  a trap's open, close, open lands on the one retained hand
   //
-  u3_blob_hand* one_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3b_hand* one_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   c3_i          fid_i = one_u->fid_i;
   _han_fid_i          = fid_i;
-  u3_blob_close(one_u);
+  u3b_close(one_u);
 
   _check( (0 == one_u->use_w) && (c3y == _fd_live(fid_i)),
           "close released the hand" );
 
   for ( c3_w i_w = 0; i_w < 1000; i_w++ ) {
-    u3_blob_hand* two_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    u3b_hand* two_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
     _check( (two_u == one_u) && (fid_i == two_u->fid_i) && (1 == two_u->use_w),
             "reopened" );
-    u3_blob_close(two_u);
+    u3b_close(two_u);
   }
 
-  _check( 1 == u3_blob_hands_road(u3R), "%zu hands on the road",
-          u3_blob_hands_road(u3R) );
+  _check( 1 == u3b_hands_road(u3R), "%zu hands on the road",
+          u3b_hands_road(u3R) );
   return 0;
 }
 
@@ -2066,27 +2066,27 @@ _hand_deep_cb(u3_noun arg)
 {
   (void)arg;
 
-  u3_blob_hand* han_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+  u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   c3_i          fid_i = han_u->fid_i;
   _han_fid_i          = fid_i;
-  u3_blob_close(han_u);
+  u3b_close(han_u);
 
   //  a grandchild borrows the parent's hand without listing it, and
   //  its fall leaves the parent's hand open
   //
   u3m_leap(512);
   {
-    u3_blob_hand* kid_u = u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h);
+    u3b_hand* kid_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
 
     _check(  (kid_u == han_u) && (fid_i == kid_u->fid_i)
-          && (0 == u3_blob_hands_road(u3R)) && (0 == kid_u->use_w),
+          && (0 == u3b_hands_road(u3R)) && (0 == kid_u->use_w),
             "child did not borrow" );
-    u3_blob_close(kid_u);
+    u3b_close(kid_u);
   }
   u3m_fall();
 
-  _check(  (c3y == _fd_live(fid_i)) && (1 == u3_blob_hands_road(u3R))
-        && (han_u == u3_blob_open(_tmp_pier, _han_mug_h, _han_seq_h)),
+  _check(  (c3y == _fd_live(fid_i)) && (1 == u3b_hands_road(u3R))
+        && (han_u == u3b_open(_tmp_pier, _han_mug_h, _han_seq_h)),
           "child's fall took the parent's hand" );
   return 0;
 }
@@ -2113,16 +2113,16 @@ _test_hand_empty(void)
 
   snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, mug_h);
   mkdir(pax_c, 0700);
-  u3_blob_path(pax_c, _tmp_pier, mug_h, 1);
+  u3b_path(pax_c, _tmp_pier, mug_h, 1);
   fclose(fopen(pax_c, "wb"));
 
   u3_atom  bob = u3i_blob(mug_h, 1);
   u3r_view win_u;
 
-  _check(  !u3_blob_open(_tmp_pier, mug_h, 1)
+  _check(  !u3b_open(_tmp_pier, mug_h, 1)
         && (u3_none == u3r_blob_load(bob))
         && (c3n == u3r_view_open(&win_u, bob))
-        && !u3_blob_hands(),
+        && !u3b_hands(),
           "empty file not rejected" );
 
   u3z(bob);
@@ -2272,10 +2272,10 @@ _test_hand_access(void)
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     _check(  (u3r_view_blob == vue_u.kin_e) && (len_w == vue_u.byt_d)
           && (vue_y == vue_u.han_u->map_y) && (0 == memcmp(vue_y, dat_y, len_w))
-          && (1 == u3_blob_hands()),
+          && (1 == u3b_hands()),
             "flat bob" );
     u3r_view_done(&vue_u);
-    _check( 0 == u3_blob_hands(), "flat bob done" );
+    _check( 0 == u3b_hands(), "flat bob done" );
 
     {
       u3_atom sma = u3i_string("small loom atom, wider than a word");
@@ -2315,7 +2315,7 @@ _test_hand_access(void)
               && (len_w == win_u.byt_d)
               && (u3r_met(0, loa) == win_u.bit_d)
               && (u3r_met(5, loa) == ((win_u.bit_d + 31) >> 5))
-              && (1 == u3_blob_hands()),
+              && (1 == u3b_hands()),
                 "open bob shape" );
 
         memset(exp_y, 0, sizeof(exp_y));
@@ -2328,7 +2328,7 @@ _test_hand_access(void)
               && (0 == memcmp(win_y, exp_y + 40, 8)),
                 "read bob past" );
         u3r_view_done(&win_u);
-        _check( 0 == u3_blob_hands(), "open bob done" );
+        _check( 0 == u3b_hands(), "open bob done" );
 
         _check( c3y == u3r_view_open(&win_u, sma), "open loom" );
         _check(  !win_u.han_u && (met_w == win_u.byt_d)
@@ -2470,10 +2470,10 @@ _test_lifecycle(void)
 
   //  tear down and confirm blob files are deleted cleanly
   //
-  u3_blob_wipe(_tmp_pier, mug1_h, seq1_h);
-  u3_blob_wipe(_tmp_pier, mug2_h, seq2_h);
-  _check(  (c3n == u3_blob_live(_tmp_pier, mug1_h, seq1_h))
-        && (c3n == u3_blob_live(_tmp_pier, mug2_h, seq2_h)),
+  u3b_wipe(_tmp_pier, mug1_h, seq1_h);
+  u3b_wipe(_tmp_pier, mug2_h, seq2_h);
+  _check(  (c3n == u3b_live(_tmp_pier, mug1_h, seq1_h))
+        && (c3n == u3b_live(_tmp_pier, mug2_h, seq2_h)),
           "blobs still present after delete" );
 
   _pier_done();
@@ -2734,7 +2734,7 @@ _test_canon(void)
   {
     c3_c fil_c[8192];
     struct stat st_u;
-    u3_blob_path(fil_c, _tmp_pier, bar_mug_h, bar_seq_h);
+    u3b_path(fil_c, _tmp_pier, bar_mug_h, bar_seq_h);
     _check( (0 == stat(fil_c, &st_u)) && (sig_d == (c3_d)st_u.st_size),
             "stored %lld bytes, wanted %" PRIc3_d,
             (long long)st_u.st_size, sig_d );
@@ -2841,12 +2841,12 @@ _test_boot_refs(void)
   u3_disk_blob_gc(&log_u);
 
   _check(  !u3a_blob_get(mug_h, seq_h)
-        && (c3n == u3_blob_live(_tmp_pier, mug_h, seq_h)),
+        && (c3n == u3b_live(_tmp_pier, mug_h, seq_h)),
           "stale record survived boot" );
   {
     u3a_blob* blb_u = u3a_blob_get(mag_h, saq_h);
     _check(  blb_u && (1 == blb_u->use_w) && (0 == blb_u->eve_w)
-          && (c3y == u3_blob_live(_tmp_pier, mag_h, saq_h)),
+          && (c3y == u3b_live(_tmp_pier, mag_h, saq_h)),
             "live bob's record disturbed" );
   }
 

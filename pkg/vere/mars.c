@@ -198,7 +198,7 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
     return;
   }
 
-  u3_blob_wipe(u3C.dir_c, mug_h, seq_h);
+  u3b_wipe(u3C.dir_c, mug_h, seq_h);
   u3a_blob_drop(mug_h, seq_h);
 }
 
@@ -483,7 +483,7 @@ _mars_grab(u3_noun sac, c3_o pri_o)
         //  blobs the serf holds open: zero between events, so anything
         //  here is a reader that never closed
         //
-        fprintf(fil_u, "blob handles: %zu\r\n", u3_blob_hands());
+        fprintf(fil_u, "blob handles: %zu\r\n", u3b_hands());
       }
       fflush(fil_u);
 
@@ -1144,7 +1144,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         c3_c stg_c[8192] = {0};
         u3r_bytes(0, (c3_w)len_d, (c3_y*)stg_c, dat);
 
-        ok_o = u3_blob_move_stg(u3C.dir_c, stg_c, &mug_h, &seq_h);
+        ok_o = u3b_move_stg(u3C.dir_c, stg_c, &mug_h, &seq_h);
 
         if ( c3y == ok_o ) {
           //  issue the king's install lease: protects the blob until
@@ -1545,7 +1545,7 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
     c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFFULL);
 
-    if ( c3n == u3_blob_live(u3C.dir_c, mug_h, seq_h) ) {
+    if ( c3n == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
       fprintf(stderr, "play (%" PRIu64 "): blob %08" PRIx32 "/%08" PRIx32
                       " missing from store: the log references data "
                       "that no longer exists\r\n",
@@ -1626,7 +1626,7 @@ _mars_play_leases_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
   //  and do not restore (a phantom entry would point at a missing file)
   //
   if (  (exp_d && (pla_u->now_d > exp_d))
-     || (c3n == u3_blob_live(u3C.dir_c, mug_h, seq_h)) )
+     || (c3n == u3b_live(u3C.dir_c, mug_h, seq_h)) )
   {
     if ( pla_u->len_z == pla_u->cap_z ) {
       pla_u->cap_z = pla_u->cap_z ? (pla_u->cap_z << 1) : 8;

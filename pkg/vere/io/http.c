@@ -1337,7 +1337,7 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
     c3_c     stg_c[8192];
 
     if (  god_u
-       && (c3y == u3_blob_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
+       && (c3y == u3b_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
                                 (c3_d)rec_u->entity.len, stg_c)) )
     {
       _http_bob_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));

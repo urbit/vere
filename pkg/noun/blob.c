@@ -19,7 +19,7 @@
 //    blobs are immutable once written, so posix creates them read-only.
 //    windows turns a mode without owner-write into
 //    FILE_ATTRIBUTE_READONLY and then refuses to delete the file, which
-//    would break u3_blob_wipe and with it blob gc and |chop.  give
+//    would break u3b_wipe and with it blob gc and |chop.  give
 //    windows an owner-writable mode instead; nothing ever opens a blob
 //    for writing on any platform.
 //
@@ -39,11 +39,11 @@
 //
 #define BLOB_WIN_MAX ((size_t)4096)
 
-/* blob hands: per-road lists of open blob files.
+/* blob hands: per-road lists of open blob file handles.
 **
 **   a hand belongs to the road that opened it.  an inner road keeps its
 **   hands on a list headed by u3R->bob_p, in its own heap, deduplicated
-**   by blob id, and retained until the road falls (u3_blob_drain from
+**   by blob id, and retained until the road falls (u3b_drain from
 **   u3m_fall), so a trap that reads one blob a thousand times opens it
 **   once; past BLOB_KEEP_MAX an open evicts the oldest idle hand, and
 **   out of descriptors it bails %file.  the home road never falls, so
@@ -54,7 +54,7 @@
 
 //  home-road hands
 //
-static u3_blob_hand* _blob_hom_u;
+static u3b_hand* _blob_hom_u;
 
 //  hands an inner road retains at most: past this, an open evicts the
 //  oldest hand with no live view before adding a new one.
@@ -74,7 +74,7 @@ _blob_home(void)
 **   an inner road's head is a post in the road itself; nodes link by
 **   pointer from there.
 */
-static inline u3_blob_hand*
+static inline u3b_hand*
 _blob_head(u3a_road* rod_u)
 {
   if ( &(u3H->rod_u) == rod_u ) {
@@ -86,7 +86,7 @@ _blob_head(u3a_road* rod_u)
 /* _blob_head_set(): make [han_u] the first hand on [rod_u]'s list.
 */
 static inline void
-_blob_head_set(u3a_road* rod_u, u3_blob_hand* han_u)
+_blob_head_set(u3a_road* rod_u, u3b_hand* han_u)
 {
   if ( &(u3H->rod_u) == rod_u ) {
     _blob_hom_u = han_u;
@@ -109,7 +109,7 @@ _blob_bid(c3_h mug_h, c3_h seq_h)
 **   the caller holds the critical section.
 */
 static void
-_blob_hand_shut(u3_blob_hand* han_u)
+_blob_hand_shut(u3b_hand* han_u)
 {
   if ( han_u->map_y ) {
     munmap(han_u->map_y, (size_t)han_u->len_d);
@@ -126,9 +126,9 @@ _blob_hand_shut(u3_blob_hand* han_u)
 /* _blob_hand_link(): put [han_u] at the head of the current road's list.
 */
 static void
-_blob_hand_link(u3_blob_hand* han_u)
+_blob_hand_link(u3b_hand* han_u)
 {
-  u3_blob_hand* hed_u = _blob_head(u3R);
+  u3b_hand* hed_u = _blob_head(u3R);
 
   han_u->pre_u = 0;
   han_u->nex_u = hed_u;
@@ -141,7 +141,7 @@ _blob_hand_link(u3_blob_hand* han_u)
 /* _blob_hand_unlink(): take [han_u] off the current road's list.
 */
 static void
-_blob_hand_unlink(u3_blob_hand* han_u)
+_blob_hand_unlink(u3b_hand* han_u)
 {
   if ( han_u->pre_u ) {
     han_u->pre_u->nex_u = han_u->nex_u;
@@ -157,10 +157,10 @@ _blob_hand_unlink(u3_blob_hand* han_u)
 
 /* _blob_hand_find(): the hand for [bid_d] on [rod_u], or 0.
 */
-static u3_blob_hand*
+static u3b_hand*
 _blob_hand_find(u3a_road* rod_u, c3_d bid_d)
 {
-  u3_blob_hand* han_u = _blob_head(rod_u);
+  u3b_hand* han_u = _blob_head(rod_u);
 
   while ( han_u && (han_u->bid_d != bid_d) ) {
     han_u = han_u->nex_u;
@@ -176,7 +176,7 @@ _blob_hand_find(u3a_road* rod_u, c3_d bid_d)
 static c3_o
 _blob_hand_evict(void)
 {
-  u3_blob_hand* han_u = _blob_head(u3R);
+  u3b_hand* han_u = _blob_head(u3R);
 
   if ( !han_u ) {
     return c3n;
@@ -203,7 +203,7 @@ static c3_z
 _blob_hand_count(u3a_road* rod_u)
 {
   c3_z          num_z = 0;
-  u3_blob_hand* han_u = _blob_head(rod_u);
+  u3b_hand* han_u = _blob_head(rod_u);
 
   while ( han_u ) {
     num_z++;
@@ -212,18 +212,18 @@ _blob_hand_count(u3a_road* rod_u)
   return num_z;
 }
 
-/* u3_blob_hands(): hands open on the home road.
+/* u3b_hands(): hands open on the home road.
 */
 c3_z
-u3_blob_hands(void)
+u3b_hands(void)
 {
   return _blob_hand_count(&u3H->rod_u);
 }
 
-/* u3_blob_hands_road(): hands open on road [rod_v].
+/* u3b_hands_road(): hands open on road [rod_v].
 */
 c3_z
-u3_blob_hands_road(void* rod_v)
+u3b_hands_road(void* rod_v)
 {
   return _blob_hand_count(rod_v);
 }
@@ -234,7 +234,7 @@ u3_blob_hands_road(void* rod_v)
 **   returns 0 if the content is all zero or the read fails.
 */
 static c3_d
-_blob_hand_met(u3_blob_hand* han_u)
+_blob_hand_met(u3b_hand* han_u)
 {
   c3_y win_y[BLOB_WIN_MAX];
   c3_d pos_d = han_u->len_d;
@@ -243,7 +243,7 @@ _blob_hand_met(u3_blob_hand* han_u)
     c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
     c3_d beg_d = pos_d - ask_z;
 
-    if ( ask_z != u3_blob_read(han_u, beg_d, win_y, ask_z) ) {
+    if ( ask_z != u3b_read(han_u, beg_d, win_y, ask_z) ) {
       return 0;
     }
 
@@ -263,14 +263,14 @@ _blob_hand_met(u3_blob_hand* han_u)
   return 0;
 }
 
-/* u3_blob_open(): open a blob on the current road.
+/* u3b_open(): open a blob on the current road.
 */
-u3_blob_hand*
-u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_hand*
+u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_d          bid_d = _blob_bid(mug_h, seq_h);
   c3_o          hom_o = _blob_home();
-  u3_blob_hand* han_u = 0;
+  u3b_hand*     han_u = 0;
 
   //  an inner road reuses its own hand, or one held by an inner
   //  ancestor: the ancestor is suspended until this road falls, so its
@@ -316,7 +316,7 @@ u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     c3_c        fil_c[8192];
     struct stat st_u;
 
-    u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+    u3b_path(fil_c, pax_c, mug_h, seq_h);
 
     u3m_crit_enter();
 
@@ -324,7 +324,7 @@ u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
       //  out of descriptors: an inner road first gives up its idle
       //  hands; if none are idle, or the ceiling is the process's, the
       //  event cannot be computed and bails %file.  the home road
-      //  reports failure to its C caller.
+      //  reports failure to its C caller and returns 0.
       //
       if (  ((EMFILE == errno) || (ENFILE == errno))
          && (c3n == hom_o) )
@@ -376,10 +376,10 @@ u3_blob_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   return han_u;
 }
 
-/* u3_blob_close(): the current road is done with [han_u].
+/* u3b_close(): the current road is done with [han_u].
 */
 void
-u3_blob_close(u3_blob_hand* han_u)
+u3b_close(u3b_hand* han_u)
 {
   //  an inner road keeps the hand for reuse; only its live-view count
   //  drops, which makes it evictable.  a hand borrowed from an inner
@@ -400,13 +400,13 @@ u3_blob_close(u3_blob_hand* han_u)
   c3_free(han_u);
 }
 
-/* u3_blob_drain(): close every hand held by road [rod_v].
+/* u3b_drain(): close every hand held by road [rod_v].
 **
 **   an inner road's nodes go with its heap, so only the home road's
 **   are freed here.  returns the number of hands closed.
 */
 c3_w
-u3_blob_drain(void* rod_v)
+u3b_drain(void* rod_v)
 {
   u3a_road* rod_u = rod_v;
   c3_o      hom_o = ( &(u3H->rod_u) == rod_u ) ? c3y : c3n;
@@ -414,7 +414,7 @@ u3_blob_drain(void* rod_v)
 
   u3m_crit_enter();
 
-  for ( u3_blob_hand* han_u; (han_u = _blob_head(rod_u)); ) {
+  for ( u3b_hand* han_u; (han_u = _blob_head(rod_u)); ) {
     _blob_head_set(rod_u, han_u->nex_u);
     _blob_hand_shut(han_u);
 
@@ -428,36 +428,36 @@ u3_blob_drain(void* rod_v)
   return num_w;
 }
 
-/* u3_blob_drain_kids(): close every hand held below the home road.
+/* u3b_drain_kids(): close every hand held below the home road.
 **
 **   the only unwind that skips u3m_fall is a signal caught at the top;
 **   the kid chain is then the sole path to the abandoned roads' lists.
 */
 c3_w
-u3_blob_drain_kids(void)
+u3b_drain_kids(void)
 {
   u3a_road* rod_u = &(u3H->rod_u);
   c3_w      num_w = 0;
 
   while ( rod_u->kid_p ) {
     rod_u  = u3to(u3a_road, rod_u->kid_p);
-    num_w += u3_blob_drain(rod_u);
+    num_w += u3b_drain(rod_u);
   }
   return num_w;
 }
 
-/* u3_blob_stop(): close every home-road hand.
+/* u3b_stop(): close every home-road hand.
 */
 void
-u3_blob_stop(void)
+u3b_stop(void)
 {
-  u3_blob_drain(&u3H->rod_u);
+  u3b_drain(&u3H->rod_u);
 }
 
-/* u3_blob_read(): read [len_z] bytes at [off_d] into [dst_y].
+/* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
 */
 c3_z
-u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 {
   c3_z tot_z = 0;
 
@@ -495,14 +495,14 @@ u3_blob_read(u3_blob_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 **   reads as zero, which is all a word-at-a-time reader needs.
 */
 static c3_y*
-_blob_map(u3_blob_hand* han_u)
+_blob_map(u3b_hand* han_u)
 {
   void* map_v = mmap(0, (size_t)han_u->len_d, PROT_READ, MAP_PRIVATE,
                      han_u->fid_i, 0);
   return ( MAP_FAILED == map_v ) ? 0 : map_v;
 }
 
-/* u3_blob_mmap(): the file mapped read-only.
+/* u3b_mmap(): the file mapped read-only.
 **
 **   the mapping is recorded on the hand inside the critical section so
 **   a signal cannot leak it.  a file shortened under the hand would
@@ -510,7 +510,7 @@ _blob_map(u3_blob_hand* han_u)
 **   refused.
 */
 const c3_y*
-u3_blob_mmap(u3_blob_hand* han_u)
+u3b_mmap(u3b_hand* han_u)
 {
   if ( han_u->map_y ) {
     return han_u->map_y;
@@ -547,10 +547,10 @@ u3_blob_mmap(u3_blob_hand* han_u)
   }
 }
 
-/* u3_blob_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
+/* u3b_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
 */
 void
-u3_blob_bob_dir(c3_c* out_c, const c3_c* pax_c)
+u3b_bob_dir(c3_c* out_c, const c3_c* pax_c)
 {
   snprintf(out_c, 8192, "%s/.urb/bob", pax_c);
 }
@@ -591,19 +591,19 @@ _blob_lock_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h)
   snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h "/lock", pax_c, mug_h);
 }
 
-/* u3_blob_path(): write filesystem path for a blob into [out_c].
+/* u3b_path(): write filesystem path for a blob into [out_c].
 */
 void
-u3_blob_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h "/%" PRIc3_h,
            pax_c, mug_h, seq_h);
 }
 
-/* u3_blob_stg_dir(): write path to $pier/.urb/bob/stg/ into [out_c].
+/* u3b_stg_dir(): write path to $pier/.urb/bob/stg/ into [out_c].
 */
 void
-u3_blob_stg_dir(c3_c* out_c, const c3_c* pax_c)
+u3b_stg_dir(c3_c* out_c, const c3_c* pax_c)
 {
   snprintf(out_c, 8192, "%s/.urb/bob/stg", pax_c);
 }
@@ -713,7 +713,7 @@ _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
 {
   for ( c3_h seq_h = 1; seq_h < max_h; seq_h++ ) {
     c3_c fil_c[8192];
-    u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+    u3b_path(fil_c, pax_c, mug_h, seq_h);
 
     struct stat st_u;
     if ( -1 == stat(fil_c, &st_u) ) {
@@ -788,7 +788,7 @@ _blob_stage_open(const c3_c* pax_c, c3_c* stg_c)
 {
   c3_i fid_i;
 
-  u3_blob_stg_dir(stg_c, pax_c);
+  u3b_stg_dir(stg_c, pax_c);
   strcat(stg_c, "/blob-XXXXXX");
 
   if ( -1 == (fid_i = mkstemp(stg_c)) ) {
@@ -835,10 +835,10 @@ _blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
   return ok_o;
 }
 
-/* u3_blob_stage(): write [len_d] bytes to a new staging file.
+/* u3b_stage(): write [len_d] bytes to a new staging file.
 */
 c3_o
-u3_blob_stage(const c3_c* pax_c,
+u3b_stage(const c3_c* pax_c,
               const c3_y* dat_y,
               c3_d        len_d,
               c3_c*       stg_c)
@@ -852,10 +852,10 @@ u3_blob_stage(const c3_c* pax_c,
                           _blob_stage_write(fid_i, dat_y, (c3_z)len_d));
 }
 
-/* u3_blob_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
+/* u3b_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
 */
 c3_o
-u3_blob_stage_fd(const c3_c* pax_c,
+u3b_stage_fd(const c3_c* pax_c,
                  c3_i        fid_i,
                  c3_d        len_d,
                  c3_c*       stg_c)
@@ -893,25 +893,25 @@ u3_blob_stage_fd(const c3_c* pax_c,
   return _blob_stage_done(stg_i, stg_c, ok_o);
 }
 
-/* u3_blob_exists(): check whether a blob file exists.
+/* u3b_exists(): check whether a blob file exists.
 */
 c3_o
-u3_blob_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+  u3b_path(fil_c, pax_c, mug_h, seq_h);
 
   struct stat st_u;
   return ( 0 == stat(fil_c, &st_u) ) ? c3y : c3n;
 }
 
-/* u3_blob_wipe(): delete a blob file.
+/* u3b_wipe(): delete a blob file.
 */
 void
-u3_blob_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
-  u3_blob_path(fil_c, pax_c, mug_h, seq_h);
+  u3b_path(fil_c, pax_c, mug_h, seq_h);
 
   //  a wipe is driven by the blob's refcount reaching zero, so no reader
   //  can still hold it open; an open hand here is an accounting bug.
@@ -1000,15 +1000,15 @@ _blob_name_num(const c3_c* nam_c, c3_h* out_h)
   return c3y;
 }
 
-/* u3_blob_walk(): enumerate every blob file in the store.
+/* u3b_walk(): enumerate every blob file in the store.
 */
 void
-u3_blob_walk(const c3_c* pax_c,
+u3b_walk(const c3_c* pax_c,
              void*       ptr_v,
              void      (*fun_f)(void*, c3_h, c3_h))
 {
   c3_c bob_c[8192];
-  u3_blob_bob_dir(bob_c, pax_c);
+  u3b_bob_dir(bob_c, pax_c);
 
   DIR* bob_u = opendir(bob_c);
   if ( !bob_u ) {
@@ -1047,7 +1047,7 @@ u3_blob_walk(const c3_c* pax_c,
   closedir(bob_u);
 }
 
-/* u3_blob_move_stg(): install a staging file into the blob store.
+/* u3b_move_stg(): install a staging file into the blob store.
 **
 **   [stg_c] is the path to a temp file under $pier/.urb/bob/stg/.
 **   Computes the mug of its content, checks for duplicates, then either
@@ -1058,7 +1058,7 @@ u3_blob_walk(const c3_c* pax_c,
 **   On failure the staging file is left in place.
 */
 c3_o
-u3_blob_move_stg(const c3_c* pax_c,
+u3b_move_stg(const c3_c* pax_c,
                     const c3_c* stg_c,
                     c3_h*       mug_h,
                     c3_h*       seq_h)
@@ -1163,7 +1163,7 @@ u3_blob_move_stg(const c3_c* pax_c,
   //  rename staging file into final location
   //
   c3_c dst_c[8192];
-  u3_blob_path(dst_c, pax_c, *mug_h, nex_h);
+  u3b_path(dst_c, pax_c, *mug_h, nex_h);
 
   if ( 0 != rename(stg_c, dst_c) ) {
     //  rename can fail cross-device; fall back to copy-and-unlink
@@ -1208,21 +1208,21 @@ u3_blob_move_stg(const c3_c* pax_c,
   return c3y;
 }
 
-/* u3_blob_bsink: streaming byte sink for blob-aware cue.
+/* u3b_bsink: streaming byte sink for blob-aware cue.
 **
 **   receives a large atom's bytes in chunks, writes them to a staging
 **   file, then installs the file into the blob store (mug, dedup,
-**   rename via u3_blob_move_stg) and returns a bob atom.  the atom's
+**   rename via u3b_move_stg) and returns a bob atom.  the atom's
 **   bytes never touch the loom.
 */
 
 static c3_o
 _blob_bsink_opn(void* ptr_v)
 {
-  u3_blob_bsink* bsk_u = ptr_v;
+  u3b_bsink* bsk_u = ptr_v;
 
   c3_c stg_c[8192];
-  u3_blob_stg_dir(stg_c, bsk_u->pax_c);
+  u3b_stg_dir(stg_c, bsk_u->pax_c);
   snprintf(bsk_u->stg_c, sizeof(bsk_u->stg_c), "%s/cue-XXXXXX", stg_c);
 
   bsk_u->fid_i = mkstemp(bsk_u->stg_c);
@@ -1239,7 +1239,7 @@ _blob_bsink_opn(void* ptr_v)
 static c3_o
 _blob_bsink_wri(void* ptr_v, const c3_y* byt_y, c3_z len_z)
 {
-  u3_blob_bsink* bsk_u = ptr_v;
+  u3b_bsink* bsk_u = ptr_v;
 
   while ( len_z ) {
     ssize_t ret_i = write(bsk_u->fid_i, byt_y, len_z);
@@ -1266,7 +1266,7 @@ _blob_bsink_wri(void* ptr_v, const c3_y* byt_y, c3_z len_z)
 static u3_weak
 _blob_bsink_don(void* ptr_v)
 {
-  u3_blob_bsink* bsk_u = ptr_v;
+  u3b_bsink* bsk_u = ptr_v;
   c3_h mug_h = 0;
   c3_h seq_h = 0;
 
@@ -1278,7 +1278,7 @@ _blob_bsink_don(void* ptr_v)
   close(bsk_u->fid_i);
   bsk_u->fid_i = -1;
 
-  if ( c3n == u3_blob_move_stg(bsk_u->pax_c, bsk_u->stg_c,
+  if ( c3n == u3b_move_stg(bsk_u->pax_c, bsk_u->stg_c,
                                &mug_h, &seq_h) )
   {
     fprintf(stderr, "blob: bsink: install failed (%s)\r\n", bsk_u->stg_c);
@@ -1291,10 +1291,10 @@ _blob_bsink_don(void* ptr_v)
   return u3i_blob(mug_h, seq_h);
 }
 
-/* u3_blob_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
+/* u3b_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
 */
 void
-u3_blob_bsink_init(u3_blob_bsink* bsk_u, const c3_c* pax_c)
+u3b_bsink_init(u3b_bsink* bsk_u, const c3_c* pax_c)
 {
   memset(bsk_u, 0, sizeof(*bsk_u));
 

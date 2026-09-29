@@ -1082,7 +1082,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
   //
   if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
     c3_c stg_c[8192];
-    c3_o ok_o = u3_blob_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
+    c3_o ok_o = u3b_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
 
     close(fid_i);
 

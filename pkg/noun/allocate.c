@@ -1122,8 +1122,8 @@ u3a_blob_sane(c3_o dep_o)
   //  blob open here; the king may (http streams a body across events),
   //  so this is reported, not counted as a violation.
   //
-  if ( u3_blob_hands() ) {
-    fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3_blob_hands());
+  if ( u3b_hands() ) {
+    fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3b_hands());
   }
 
   c3_free(ctx_u.car_u);

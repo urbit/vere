@@ -1580,7 +1580,7 @@ _disk_chop_delete_cb(u3_noun kev, void* ptr_v)
   if ( 0 == blb_u->use_w ) {
     fprintf(stderr, "blob: gc: delete %08" PRIx32 "/%" PRIc3_h "\r\n",
                     mug_h, seq_h);
-    u3_blob_wipe(del_u->pax_c, mug_h, seq_h);
+    u3b_wipe(del_u->pax_c, mug_h, seq_h);
 
     //  collect bid for post-walk blb_p cleanup
     //
@@ -1592,7 +1592,7 @@ _disk_chop_delete_cb(u3_noun kev, void* ptr_v)
   }
 }
 
-/* _disk_chop_orphan_cb(): u3_blob_walk callback — collect on-disk blob
+/* _disk_chop_orphan_cb(): u3b_walk callback — collect on-disk blob
 **   files that have no blb_p entry.
 **
 **   Orphans arise when accounting is lost while files survive: a crash
@@ -1703,12 +1703,12 @@ u3_disk_blob_gc(u3_disk* log_u)
   //
   {
     _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
-    u3_blob_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
+    u3b_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
 
     for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
       c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
       c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3_blob_wipe(orf_u.pax_c, mug_h, seq_h);
+      u3b_wipe(orf_u.pax_c, mug_h, seq_h);
     }
 
     if ( orf_u.len_z ) {
@@ -2583,7 +2583,7 @@ void
 u3_disk_blob_init(const c3_c* pax_c)
 {
   c3_c bob_c[8192];
-  u3_blob_bob_dir(bob_c, pax_c);
+  u3b_bob_dir(bob_c, pax_c);
 
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
@@ -2600,7 +2600,7 @@ void
 u3_disk_blob_stg_init(const c3_c* pax_c)
 {
   c3_c stg_c[8192];
-  u3_blob_stg_dir(stg_c, pax_c);
+  u3b_stg_dir(stg_c, pax_c);
 
   if ( 0 != c3_mkdir(stg_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "disk: failed to create blob staging dir %s: %s\r\n",

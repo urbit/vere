@@ -2451,7 +2451,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
           c3_c     stg_c[8192];
 
           if (  god_u
-             && (c3y == u3_blob_stage(sam_u->pir_u->pax_c, buf_y,
+             && (c3y == u3b_stage(sam_u->pir_u->pax_c, buf_y,
                                       (c3_d)res_h, stg_c)) )
           {
             _mesa_bob_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));

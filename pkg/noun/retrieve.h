@@ -453,13 +453,13 @@
           u3r_view_even         //  a direct atom's value in raw_d
         } u3r_view_e;
 
-        struct _u3_blob_hand;
+        struct _u3b_hand;
 
         typedef struct {
           c3_d                  byt_d;  //  the atom's significant bytes
           c3_d                  bit_d;  //  the atom's significant bits
           u3r_view_e            kin_e;  //  private
-          struct _u3_blob_hand* han_u;  //  private: blob: the road's hand
+          struct _u3b_hand*     han_u;  //  private: blob: the road's hand
           const c3_y*           byt_y;  //  private: flat's pointer
           c3_d                  raw_d;  //  private: even: the atom's value
         } u3r_view;

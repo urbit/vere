@@ -1684,7 +1684,7 @@ _term_io_kick(u3_auto* car_u, u3_noun wir, u3_noun cad)
 #endif
       //  blobs the king holds open, one per blob being streamed (http)
       //
-      u3l_log("king: blob handles: %zu", u3_blob_hands());
+      u3l_log("king: blob handles: %zu", u3b_hands());
       ret_o = c3y;
     }
     else {

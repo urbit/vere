@@ -1218,7 +1218,7 @@ u3r_view_open(u3r_view* vue_u, u3_atom a)
   //  leaks it.  no bytes until read or flat.
   //
   if ( c3y == u3a_is_bob(a) ) {
-    u3_blob_hand* han_u = u3_blob_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
+    u3b_hand* han_u = u3b_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
 
     if ( !han_u ) {
       return c3n;
@@ -1276,7 +1276,7 @@ u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
     //  end is this function's whether the bytes come from the road's
     //  mapping or from a pread
     //
-    u3_blob_hand* han_u = vue_u->han_u;
+    u3b_hand* han_u = vue_u->han_u;
 
     if ( off_d < han_u->len_d ) {
       c3_d rem_d = han_u->len_d - off_d;
@@ -1287,7 +1287,7 @@ u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
         got_z = ask_z;
       }
       else {
-        got_z = u3_blob_read(han_u, off_d, dst_y, ask_z);
+        got_z = u3b_read(han_u, off_d, dst_y, ask_z);
       }
     }
   }
@@ -1309,7 +1309,7 @@ u3r_view_flat(u3r_view* vue_u)
   //  bob: the bytes are the hand's mapping, so a view costs no copy
   //
   if ( u3r_view_blob == vue_u->kin_e ) {
-    const c3_y* byt_y = u3_blob_mmap(vue_u->han_u);
+    const c3_y* byt_y = u3b_mmap(vue_u->han_u);
 
     if ( !byt_y ) {
       u3r_view_done(vue_u);
@@ -1326,7 +1326,7 @@ void
 u3r_view_done(u3r_view* vue_u)
 {
   if ( u3r_view_blob == vue_u->kin_e ) {
-    u3_blob_close(vue_u->han_u);   //  loom and even hold nothing
+    u3b_close(vue_u->han_u);   //  loom and even hold nothing
   }
   _cr_view_blank(vue_u);
 }

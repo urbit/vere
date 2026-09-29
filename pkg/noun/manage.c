@@ -268,7 +268,7 @@ _cm_signal_reset(void)
   //  the discarded roads' blob hands go with them; the kid chain is
   //  the only path to their lists, so drain before cutting it
   //
-  u3_blob_drain_kids();
+  u3b_drain_kids();
   u3R->kid_p = 0;
 }
 
@@ -1302,7 +1302,7 @@ u3m_fall(void)
   //  its frames.  this is the one exit every road takes except a
   //  signal unwind, which drains the kid chain itself.
   //
-  u3_blob_drain(u3R);
+  u3b_drain(u3R);
 
 #if 0
   /*  If you're printing a lot of these you need to change
@@ -2761,7 +2761,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
-  u3_blob_stop();
+  u3b_stop();
   u3t_sstack_exit();
 
   u3e_stop();
