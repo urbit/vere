@@ -972,11 +972,16 @@ u3r_met(c3_y  a_y,
     daz_w = b;
   }
   else {
-    //  bob atoms: the full-width count, from the file's tail; callers
-    //  that need the width past c3_w use u3r_met_d directly
+    //  bob atoms: the full-width count, from the file's tail; past a
+    //  word it bails, as the loom path below does
     //
     if ( c3y == u3a_is_bob(b) ) {
-      return (c3_w)u3r_met_d(a_y, b);
+      c3_d met_d = u3r_met_d(a_y, b);
+
+      if ( met_d > c3_w_max ) {
+        return u3m_bail(c3__fail);
+      }
+      return (c3_w)met_d;
     }
 
     u3a_atom* b_u = u3a_to_ptr(b);
@@ -2590,37 +2595,6 @@ u3r_blob_load(u3_atom a)
 
     u3r_view_done(&win_u);
     return u3i_slab_mint_bytes(&sab_u);
-  }
-}
-
-/* u3r_blob_cut(): [wid_w] bloqs of size [met_g] from bloq [fum_d] of bob [a].
-**
-**   u3_none if the file is missing or empty; zeros past the end, from
-**   the read's own fill.  if the slab allocation bails, the window goes
-**   with the road.
-*/
-u3_weak
-u3r_blob_cut(c3_g met_g, c3_d fum_d, c3_w wid_w, u3_atom a)
-{
-  u3r_view win_u;
-
-  u3_assert( met_g >= 3 );
-  u3_assert( c3y == u3a_is_bob(a) );
-
-  if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
-    return u3_none;
-  }
-
-  {
-    c3_g     shf_g = met_g - 3;
-    c3_d     off_d = fum_d << shf_g;
-    c3_d     byt_d = (c3_d)wid_w << shf_g;
-    u3i_slab sab_u;
-
-    u3i_slab_init(&sab_u, met_g, wid_w);
-    u3r_view_read(&win_u, off_d, sab_u.buf_y, (c3_z)byt_d);
-    u3r_view_done(&win_u);
-    return u3i_slab_mint(&sab_u);
   }
 }
 

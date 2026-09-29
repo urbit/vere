@@ -18,23 +18,25 @@ u3qc_muk(u3_atom sed,
   }
   else {
     c3_h len_h = (c3_h)len;
-    c3_h key_h = u3r_met(3, key);
+    c3_d key_d = u3r_met_d(3, key);
 
     //  NB: this condition is implicit in the pad subtraction
     //
-    if ( key_h > len_h ) {
+    if ( key_d > len_h ) {
       return u3m_bail(c3__exit);
     }
     else {
+      c3_h  key_h = (c3_h)key_d;
       c3_h  sed_h = u3r_half(0, sed);
       c3_o  loc_o = c3n;
       c3_y* key_y = 0;
       c3_h  out_h;
 
       //  if we're hashing more bytes than we have, allocate and copy
-      //  to ensure trailing null bytes
+      //  to ensure trailing null bytes; a bob's bytes live in a file,
+      //  so copy those too
       //
-      if ( len_h > key_h ) {
+      if ( (len_h > key_h) || (c3y == u3a_is_bob(key)) ) {
         loc_o = c3y;
         key_y = u3a_calloc(sizeof(c3_y), len_h);
         u3r_bytes(0, len_h, key_y, key);

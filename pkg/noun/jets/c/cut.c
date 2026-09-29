@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-#include <string.h>
 
   u3_noun
   u3qc_cut(u3_atom a,
@@ -13,45 +12,19 @@
            u3_atom c,
            u3_atom d)
   {
+    c3_w b_w, c_w;
     if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
-
-    c3_g a_g = a;
-
-    //  blob fast path: uses c3_d offsets so files > 4GB work on 32-bit.
-    //  must come before u3r_safe_word which would bail on large offsets.
-    //
-    if ( (a_g >= 3) && (c3y == u3a_is_bob(d)) ) {
-      c3_d b_d, c_d;
-      if ( c3n == u3r_safe_chub(b, &b_d) ) return u3m_bail(c3__fail);
-      if ( c3n == u3r_safe_chub(c, &c_d) ) return u3m_bail(c3__fail);
-      if ( 0 == c_d ) return 0;
-
-      //  c_d must fit in c3_w for the slab (max 4GB per cut)
-      //
-      if ( c_d > (c3_d)c3_w_max ) {
-        return u3m_bail(c3__fail);
-      }
-
-      u3_weak pro = u3r_blob_cut(a_g, b_d, (c3_w)c_d, d);
-      if ( u3_none != pro ) {
-        return pro;
-      }
-      //  open failed — fall through to generic path
+    if ( !_(u3r_safe_word(b, &b_w)) ) {
+      return u3m_bail(c3__fail);
+    }
+    if ( !_(u3r_safe_word(c, &c_w)) ) {
+      return u3m_bail(c3__fail);
     }
 
-    //  non-blob path: uses c3_w (offsets must fit in 32 bits)
-    //
     {
-      c3_w b_w, c_w;
-      if ( !_(u3r_safe_word(b, &b_w)) ) {
-        return u3m_bail(c3__fail);
-      }
-      if ( !_(u3r_safe_word(c, &c_w)) ) {
-        return u3m_bail(c3__fail);
-      }
-
+      c3_g a_g   = a;
       c3_w len_w = u3r_met(a_g, d);
 
       if ( (0 == c_w) || (b_w >= len_w) ) {
@@ -63,13 +36,14 @@
       if ( (b_w == 0) && (c_w == len_w) ) {
         return u3k(d);
       }
+      else {
+        u3i_slab sab_u;
+        u3i_slab_init(&sab_u, a_g, c_w);
 
-      u3i_slab sab_u;
-      u3i_slab_init(&sab_u, a_g, c_w);
+        u3r_chop(a_g, b_w, c_w, 0, sab_u.buf_w, d);
 
-      u3r_chop(a_g, b_w, c_w, 0, sab_u.buf_w, d);
-
-      return u3i_slab_mint(&sab_u);
+        return u3i_slab_mint(&sab_u);
+      }
     }
   }
   u3_noun

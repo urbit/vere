@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-#include <string.h>
 
   u3_noun
   u3qc_cat(u3_atom a,
@@ -15,56 +14,24 @@
     if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
+    else {
+      c3_g   a_g = a;
+      c3_w   lew_w = u3r_met(a_g, b);
+      c3_w   ler_w = u3r_met(a_g, c);
+      c3_w   all_w = (lew_w + ler_w);
 
-    c3_g a_g   = a;
-    c3_w lew_w = u3r_met(a_g, b);
-    c3_w ler_w = u3r_met(a_g, c);
-    c3_w all_w = (lew_w + ler_w);
-
-    if ( 0 == all_w ) {
-      return 0;
-    }
-
-    //  byte-aligned fast path: view each bob input directly.  the
-    //  legacy u3i_slab_from + u3r_chop pair would otherwise materialize
-    //  either operand if it's a bob (via u3r_words → u3r_blob_load and
-    //  u3r_chop → u3r_blob_load respectively).
-    //
-    if ( a_g >= 3 ) {
-      c3_g shf_g = a_g - 3;
-      c3_w lew_b = lew_w << shf_g;
-      c3_w ler_b = ler_w << shf_g;
-
-      u3i_slab sab_u;
-      u3i_slab_init(&sab_u, a_g, all_w);
-
-      u3r_view vb_u, vc_u;
-      u3r_view_open(&vb_u, b, c3y);
-      const c3_y* vb_y = u3r_view_flat(&vb_u);
-      u3r_view_open(&vc_u, c, c3y);
-      const c3_y* vc_y = u3r_view_flat(&vc_u);
-
-      c3_w cpy_w;
-      cpy_w = (vb_u.byt_d < lew_b) ? (c3_w)vb_u.byt_d : lew_b;
-      if ( cpy_w ) {
-        memcpy(sab_u.buf_y, vb_y, cpy_w);
+      if ( 0 == all_w ) {
+        return 0;
       }
-      cpy_w = (vc_u.byt_d < ler_b) ? (c3_w)vc_u.byt_d : ler_b;
-      if ( cpy_w ) {
-        memcpy(sab_u.buf_y + lew_b, vc_y, cpy_w);
+      else {
+        u3i_slab sab_u;
+        u3i_slab_from(&sab_u, b, a_g, all_w);
+
+        u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_w, c);
+
+        return u3i_slab_mint(&sab_u);
       }
-
-      u3r_view_done(&vb_u);
-      u3r_view_done(&vc_u);
-      return u3i_slab_mint(&sab_u);
     }
-
-    //  bit-level fallback — existing path materializes for bobs
-    //
-    u3i_slab sab_u;
-    u3i_slab_from(&sab_u, b, a_g, all_w);
-    u3r_chop(a_g, 0, ler_w, lew_w, sab_u.buf_w, c);
-    return u3i_slab_mint(&sab_u);
   }
 
   u3_noun

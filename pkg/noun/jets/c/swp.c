@@ -6,8 +6,6 @@
 
 #include "noun.h"
 
-#include <string.h>
-
 u3_noun
 u3qc_swp(u3_atom a,
          u3_atom b)
@@ -15,50 +13,15 @@ u3qc_swp(u3_atom a,
   if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
-  c3_g a_g   = a;
+  c3_g a_g = a;
   c3_w len_w = u3r_met(a_g, b);
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, a_g, len_w);
 
-  //  byte-aligned fast path: view once, reverse bloqs via memcpy.
-  //  the generic path below would invoke u3r_chop per bloq, each of
-  //  which calls u3r_blob_load — an O(len_w * bob_size) disaster on
-  //  large bob atoms.
-  //
-  if ( a_g >= 3 ) {
-    c3_g shf_g = a_g - 3;
-    c3_w blq_b = (c3_w)1 << shf_g;         //  bytes per bloq
-
-    u3r_view vue_u;
-    u3r_view_open(&vue_u, b, c3y);
-    const c3_y* vue_y = u3r_view_flat(&vue_u);
-
-    for ( c3_w i = 0; i < len_w; i++ ) {
-      c3_w src_b = i * blq_b;
-      c3_w dst_b = (len_w - i - 1) * blq_b;
-      c3_w cpy_b = blq_b;
-
-      if ( src_b >= vue_u.byt_d ) {
-        //  past the view — dest bytes stay zero (slab_init)
-        continue;
-      }
-      if ( src_b + cpy_b > vue_u.byt_d ) {
-        cpy_b = (c3_w)(vue_u.byt_d - src_b);
-      }
-      memcpy(sab_u.buf_y + dst_b, vue_y + src_b, cpy_b);
-    }
-
-    u3r_view_done(&vue_u);
-    return u3i_slab_mint(&sab_u);
-  }
-
-  //  bit-level fallback — slow for bobs (u3r_chop materializes per
-  //  iteration) but correctness is preserved.
-  //
   for (c3_w i = 0; i < len_w; i++) {
     u3r_chop(a_g, i, 1, len_w - i - 1, sab_u.buf_w, b);
   }
-
+         
   return u3i_slab_mint(&sab_u);
 }
 

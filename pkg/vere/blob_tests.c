@@ -3,6 +3,7 @@
 #include "blob.h"
 #include "events.h"
 #include "jets/q.h"
+#include "jets/w.h"
 #include "noun.h"
 #include "vere.h"
 
@@ -1318,10 +1319,10 @@ _jet_same(const c3_c* nam_c, c3_w a_w, c3_w b_w, c3_w c_w, u3_noun rb, u3_noun r
   u3z(rl);
 }
 
-/* _test_jets_bob(): rsh, end, cut, rip, and sew treat a bob the same
-**   way they do the materialized atom, including ranges that touch,
-**   cross, and lie beyond the end of the file, and a word read that
-**   runs past an odd-length file into its mapping's zero tail.
+/* _test_jets_bob(): the atom jets treat a bob the same way they do the
+**   materialized atom: the slicers over ranges that touch, cross, and
+**   lie beyond the end of the file; the jets that load a bob onto the
+**   loom; jam-shax, which streams it; and lore over a page-long file.
 */
 static void
 _test_jets_bob(void)
@@ -1453,6 +1454,99 @@ _test_jets_bob(void)
 
     u3z(rob); u3z(rol);
     c3_free(odd_y);
+  }
+
+  //  jets that read an atom's words directly load a bob onto the loom
+  //  first: aor, sew (above), add, sub, muk, and the octs scanners
+  //
+  {
+    u3_atom lob = u3i_bytes(len_w, dat_y);
+    ((u3a_atom*)u3a_to_ptr(lob))->buf_w[0] ^= 0x80;   //  differs in byte 0
+
+    _jet_same("aor", 0, 0, 0, u3qc_aor(bob, loa), u3qc_aor(loa, loa));
+    _jet_same("aor", 0, 0, 1, u3qc_aor(bob, lob), u3qc_aor(loa, lob));
+    _jet_same("aor", 0, 0, 2, u3qc_aor(lob, bob), u3qc_aor(lob, loa));
+    _jet_same("aor", 0, 0, 3, u3qc_aor(bob, 0x616263), u3qc_aor(loa, 0x616263));
+    u3z(lob);
+
+    _jet_same("add", 0, 0, 0, u3qa_add(bob, 1), u3qa_add(loa, 1));
+    _jet_same("add", 0, 0, 1, u3qa_add(bob, bob), u3qa_add(loa, loa));
+    _jet_same("add", 0, 0, 2, u3qa_add(7, bob), u3qa_add(7, loa));
+    _jet_same("sub", 0, 0, 0, u3qa_sub(bob, 1), u3qa_sub(loa, 1));
+    _jet_same("sub", 0, 0, 1, u3qa_sub(bob, loa), u3qa_sub(loa, bob));
+
+    //  muk with the length equal to the key's, which hashes the words
+    //  in place for a loom atom, and with a longer length
+    //
+    _jet_same("muk", len_w, 0, 0,
+              u3qc_muk(0xcafe, len_w, bob), u3qc_muk(0xcafe, len_w, loa));
+    _jet_same("muk", len_w + 10, 0, 0,
+              u3qc_muk(0xcafe, len_w + 10, bob), u3qc_muk(0xcafe, len_w + 10, loa));
+
+    //  can, cat, rap, swp: byte and word bloqs, bob first and second
+    //
+    _jet_same("cat", 3, 0, 0, u3qc_cat(3, bob, loa), u3qc_cat(3, loa, loa));
+    _jet_same("cat", 3, 1, 0, u3qc_cat(3, 0x616263, bob), u3qc_cat(3, 0x616263, loa));
+    _jet_same("cat", 5, 0, 0, u3qc_cat(5, bob, 0x11), u3qc_cat(5, loa, 0x11));
+    _jet_same("swp", 3, 0, 0, u3qc_swp(3, bob), u3qc_swp(3, loa));
+    _jet_same("swp", 0, 0, 0, u3qc_swp(0, bob), u3qc_swp(0, loa));
+    {
+      u3_noun lib = u3nt(u3nc(len_w, u3k(bob)), u3nc(3, 0x616263), u3_nul);
+      u3_noun lil = u3nt(u3nc(len_w, u3k(loa)), u3nc(3, 0x616263), u3_nul);
+      _jet_same("can", 3, 0, 0, u3qc_can(3, lib), u3qc_can(3, lil));
+      _jet_same("can", 0, 0, 0, u3qc_can(0, lib), u3qc_can(0, lil));
+      u3z(lib); u3z(lil);
+
+      lib = u3nt(0x616263, u3k(bob), u3_nul);
+      lil = u3nt(0x616263, u3k(loa), u3_nul);
+      _jet_same("rap", 3, 0, 0, u3qc_rap(3, lib), u3qc_rap(3, lil));
+      _jet_same("rap", 5, 0, 0, u3qc_rap(5, lib), u3qc_rap(5, lil));
+      u3z(lib); u3z(lil);
+    }
+
+    //  octs scanners: crc32 and adler32 through their gate wrappers
+    //
+    {
+      u3_noun cob = u3nt(0, u3nc(len_w + 3, u3k(bob)), 0);
+      u3_noun col = u3nt(0, u3nc(len_w + 3, u3k(loa)), 0);
+      _jet_same("crc32", 0, 0, 0, u3we_crc32(cob), u3we_crc32(col));
+      _jet_same("adler32", 0, 0, 0, u3we_adler32(cob), u3we_adler32(col));
+      u3z(cob); u3z(col);
+    }
+
+    //  jam-shax streams a bob without loading it
+    //
+    _jet_same("jam-shax", 0, 0, 0, u3qe_jam_shax(bob), u3qe_jam_shax(loa));
+    {
+      u3_noun cel = u3nc(u3k(bob), u3k(bob));
+      u3_noun cll = u3nc(u3k(loa), u3k(loa));
+      _jet_same("jam-shax", 1, 0, 0, u3qe_jam_shax(cel), u3qe_jam_shax(cll));
+      u3z(cel); u3z(cll);
+    }
+  }
+
+  //  lore and leer over a bob exactly one page long whose last byte
+  //  is not a newline, the shape whose final read once left the mapping
+  //
+  {
+    const c3_w pag_w = 4096;
+    c3_y*      lin_y = c3_malloc(pag_w);
+
+    for ( c3_w i_w = 0; i_w < pag_w; i_w++ ) {
+      lin_y[i_w] = ( 99 == (i_w % 100) ) ? '\n' : (c3_y)('a' + (i_w % 26));
+    }
+
+    c3_h lm_h = 0; c3_h ls_h = 0;
+    _check( c3y == _blob_save(lin_y, pag_w, &lm_h, &ls_h), "lines save failed" );
+
+    u3_atom lin = u3i_blob(lm_h, ls_h);
+    u3_atom lil = u3i_bytes(pag_w, lin_y);
+
+    _jet_same("lore", 0, 0, 0, u3qe_lore(lin), u3qe_lore(lil));
+    _jet_same("leer", 0, 0, 0, u3qe_leer(lin), u3qe_leer(lil));
+
+    u3z(lin); u3z(lil);
+    c3_free(lin_y);
   }
 
   u3z(bob); u3z(loa);

@@ -5,8 +5,6 @@
 
 #include "noun.h"
 
-#include <string.h>
-
 u3_noun
 u3qc_end(u3_atom a,
          u3_atom b,
@@ -18,33 +16,26 @@ u3qc_end(u3_atom a,
   else if ( !_(u3a_is_cat(b)) ) {
     return u3k(c);
   }
+  else {
+    c3_g a_g   = a;
+    c3_w b_w   = b;
+    c3_w len_w = u3r_met(a_g, c);
 
-  c3_g a_g   = a;
-  c3_w b_w   = b;
-  c3_w len_w = u3r_met(a_g, c);
-
-  if ( 0 == b_w ) {
-    return 0;
-  }
-  if ( b_w >= len_w ) {
-    return u3k(c);
-  }
-
-  //  bob: read only the requested leading bytes, straight from the blob
-  //  into the result.  equivalent to cut(a_g, 0, b_w, c).
-  //
-  if ( (a_g >= 3) && (c3y == u3a_is_bob(c)) ) {
-    u3_weak pro = u3r_blob_cut(a_g, 0, b_w, c);
-    if ( u3_none != pro ) {
-      return pro;
+    if ( 0 == b_w ) {
+      return 0;
     }
-    //  open failed — fall through
-  }
+    else if ( b_w >= len_w ) {
+      return u3k(c);
+    }
+    else {
+      u3i_slab sab_u;
+      u3i_slab_init(&sab_u, a_g, b_w);
 
-  u3i_slab sab_u;
-  u3i_slab_init(&sab_u, a_g, b_w);
-  u3r_chop(a_g, 0, b_w, 0, sab_u.buf_w, c);
-  return u3i_slab_mint(&sab_u);
+      u3r_chop(a_g, 0, b_w, 0, sab_u.buf_w, c);
+
+      return u3i_slab_mint(&sab_u);
+    }
+  }
 }
 
 u3_noun

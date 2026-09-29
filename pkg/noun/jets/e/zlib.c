@@ -38,16 +38,17 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  //  zero-copy view on the compressed input (blob hand for bobs; the
-  //  legacy `vat_u->buf_w + pos_w` cast returned seq_w for bobs).
-  //  the view stays live for the whole inflate loop so the stream
-  //  reader can scan it freely; every return path must call
-  //  u3r_view_done(&vue_u).
+  //  a bob's bytes live in a file: load it onto the loom
   //
-  u3r_view vue_u;
-  u3r_view_open(&vue_u, q_octs, c3y);
-  const c3_y* vue_y = u3r_view_flat(&vue_u);
-  c3_w len_w = ( vue_u.byt_d < p_octs_w ) ? (c3_w)vue_u.byt_d : p_octs_w;
+  u3_atom lom = u3_none;
+  if ( c3y == u3a_is_bob(q_octs) ) {
+    if ( u3_none == (lom = u3r_blob_load(q_octs)) ) {
+      return u3m_bail(c3__fail);
+    }
+    q_octs = lom;
+  }
+
+  c3_w len_w = u3r_met(3, q_octs);
 
   int leading_zeros = 0;
 
@@ -61,11 +62,19 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   // Bytestream exhausted
   //
   if (pos_w >= len_w) {
-    u3r_view_done(&vue_u);
+    if ( u3_none != lom ) u3z(lom);
     return u3_none;
   }
 
-  c3_y* input = (c3_y*)vue_y + pos_w;
+  c3_y* input;
+
+  if (c3y == u3a_is_cat(q_octs)) {
+    input = (c3_y*)&q_octs + pos_w;
+  }
+  else {
+    u3a_atom* vat_u = u3a_to_ptr(q_octs);
+    input = (c3_y*)vat_u->buf_w + pos_w;
+  }
 
   int ret;
   z_stream strm;
@@ -87,7 +96,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   if (ret != Z_OK) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
 
@@ -145,7 +153,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
           u3l_log("%s", strm.msg);
           inflateEnd(&strm);
           u3i_slab_free(&sab_u);
-          u3r_view_done(&vue_u);
           return u3m_bail(c3__exit);
         }
       }
@@ -154,7 +161,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
         u3l_log("%s", strm.msg);
         inflateEnd(&strm);
         u3i_slab_free(&sab_u);
-        u3r_view_done(&vue_u);
         return u3m_bail(c3__exit);
       }
     }
@@ -164,7 +170,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     u3l_log("%s", strm.msg);
     inflateEnd(&strm);
     u3i_slab_free(&sab_u);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
   ret = inflateEnd(&strm);
@@ -173,7 +178,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
     u3i_slab_free(&sab_u);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
 
@@ -181,7 +185,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   u3_noun new_pos = pos_w + strm.total_in;
   u3_noun new_stream = u3nc(u3i_word(new_pos), u3k(octs));
 
-  u3r_view_done(&vue_u);
+  if ( u3_none != lom ) u3z(lom);
   return u3nc(decompressed_octs, new_stream);
 }
 

@@ -5,7 +5,6 @@
 
 #include "noun.h"
 
-#include <string.h>
 
   u3_noun
   u3qc_rap(u3_atom a,
@@ -51,35 +50,17 @@
         u3i_slab_init(&sab_u, a_g, tot_w);
       }
 
-      /* Chop the list atoms in.  Byte-aligned bloqs and bob atoms
-         take the view+memcpy fast path.
+      /* Chop the list atoms in.
       */
       {
         u3_noun cab = b;
-        c3_w    pos_w = 0;
-        c3_g    shf_g = (a_g >= 3) ? (a_g - 3) : 0;
+        c3_w  pos_w = 0;
 
         while ( 0 != cab ) {
           u3_noun h_cab = u3h(cab);
           c3_w    len_w = u3r_met(a_g, h_cab);
 
-          if ( a_g >= 3 ) {
-            c3_w pos_b = pos_w << shf_g;
-            c3_w len_b = len_w << shf_g;
-
-            u3r_view vue_u;
-            u3r_view_open(&vue_u, h_cab, c3y);
-            const c3_y* vue_y = u3r_view_flat(&vue_u);
-            c3_w cpy_w = (vue_u.byt_d < len_b) ? (c3_w)vue_u.byt_d : len_b;
-            if ( cpy_w ) {
-              memcpy(sab_u.buf_y + pos_b, vue_y, cpy_w);
-            }
-            u3r_view_done(&vue_u);
-          }
-          else {
-            u3r_chop(a_g, 0, len_w, pos_w, sab_u.buf_w, h_cab);
-          }
-
+          u3r_chop(a_g, 0, len_w, pos_w, sab_u.buf_w, h_cab);
           pos_w += len_w;
           cab = u3t(cab);
         }

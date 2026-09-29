@@ -92,6 +92,22 @@ u3qa_add(u3_atom a,
     c3_w *a_buf_w, *b_buf_w, *c_buf_w;
     c3_w  a_len_w, b_len_w;
 
+    //  a bob's words live in a file: load it onto the loom
+    //
+    u3_atom lom_a = u3_none, lom_b = u3_none;
+    if ( c3y == u3a_is_bob(a) ) {
+      if ( u3_none == (lom_a = u3r_blob_load(a)) ) {
+        return u3m_bail(c3__fail);
+      }
+      a = lom_a;
+    }
+    if ( c3y == u3a_is_bob(b) ) {
+      if ( u3_none == (lom_b = u3r_blob_load(b)) ) {
+        return u3m_bail(c3__fail);
+      }
+      b = lom_b;
+    }
+
     a_buf_w = u3r_word_buffer(&a, &a_len_w);
     b_buf_w = u3r_word_buffer(&b, &b_len_w);
     //  u3i_slab_init(&sab_u, 5, c3_max(a_len_w, b_len_w) + 1);
@@ -105,7 +121,12 @@ u3qa_add(u3_atom a,
     c_buf_w = sab_u.buf_w;
 
     _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
-    return u3i_slab_mint(&sab_u);
+    {
+      u3_noun pro = u3i_slab_mint(&sab_u);
+      if ( u3_none != lom_a ) u3z(lom_a);
+      if ( u3_none != lom_b ) u3z(lom_b);
+      return pro;
+    }
   }
 }
 
