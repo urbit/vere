@@ -1577,16 +1577,9 @@ _disk_chop_delete_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  c3_o ded_o = ( 0 == blb_u->use_w ) ? c3y : c3n;
-
-  fprintf(stderr,
-          "chop: %010" PRIc3_h "/%010" PRIc3_h
-          " use=%" PRIc3_w " eve=%" PRIc3_w " les=%" PRIc3_h "%s\r\n",
-          mug_h, seq_h,
-          blb_u->use_w, blb_u->eve_w, blb_u->les_h,
-          (c3y == ded_o) ? "  [DELETE]" : "");
-
-  if ( c3y == ded_o ) {
+  if ( 0 == blb_u->use_w ) {
+    fprintf(stderr, "blob: gc: delete %08" PRIx32 "/%" PRIc3_h "\r\n",
+                    mug_h, seq_h);
     u3_blob_wipe(del_u->pax_c, mug_h, seq_h);
 
     //  collect bid for post-walk blb_p cleanup
@@ -1647,12 +1640,12 @@ _disk_chop_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 }
 
 /* u3_disk_blob_refs(): rebuild blob event-log refcounts from the
-**   BLOBS table over the entire retained log.
+**   latest epoch's BLOBS table (replay never crosses epochs).
 **
 **   zeroes every entry's eve_w, then rescans, creating entries as
-**   needed.  used by queu: rock import repaves the home road, wiping
-**   the bank, so eve_w must be reconstructed or the deletion
-**   invariant cannot be enforced on the imported pier.
+**   needed.  run at every boot, since a snapshot's counts can name
+**   events chop has deleted, and by queu, whose rock import repaves
+**   the home road and wipes the bank.
 */
 void
 u3_disk_blob_refs(u3_disk* log_u)
@@ -1673,10 +1666,10 @@ u3_disk_blob_refs(u3_disk* log_u)
 **   1. delete blob files (and blb_p entries) whose use_w == 0
 **   2. delete on-disk files that have no blb_p entry (orphans)
 **
-**   safe to run whenever use_w is fully reconstructed: after a chop's
-**   eve_w rebuild, or at boot once replay has restored eve_w and the
-**   LEASES table has restored les_h.  collect-then-act so neither walk
-**   races its own deletions.
+**   safe to run whenever use_w is fully reconstructed: after chop's or
+**   boot's eve_w rebuild (u3_disk_blob_refs), with the LEASES table
+**   restored into les_h.  collect-then-act so neither walk races its
+**   own deletions.
 */
 void
 u3_disk_blob_gc(u3_disk* log_u)

@@ -979,8 +979,8 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
-      /* u3_disk_blob_refs(): rebuild blob eve_w from the BLOBS table
-      **   over the entire retained log, creating entries as needed.
+      /* u3_disk_blob_refs(): rebuild blob eve_w from the latest epoch's
+      **   BLOBS table, creating entries as needed.
       */
         void
         u3_disk_blob_refs(u3_disk* log_u);

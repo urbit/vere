@@ -45,9 +45,11 @@
 **        cardinality contribution from use_w
 **     7. chop rebuilds eve_w from the LMDB BLOBS table for retained
 **        epochs, then deletes files (and on-disk orphans) at use_w == 0
-**     *. boot: _find_home zeroes les_h, _mars_play_leases restores it
-**        from LEASES (pruning expired/dead rows), then u3_disk_blob_gc
-**        reclaims any blob now provably unreferenced
+**     *. boot: u3_disk_blob_refs rebuilds eve_w from the epoch's BLOBS
+**        table (a snapshot's count is never trusted), _find_home zeroed
+**        les_h and _mars_play_leases restores it from LEASES (pruning
+**        expired/dead rows), then u3_disk_blob_gc reclaims any blob now
+**        provably unreferenced
 */
 
 /* _mars_lease: PQ entry for lease TTL expiry.
@@ -2194,10 +2196,14 @@ u3_mars_work(u3_mars* mar_u)
     exit(0);
   }
 
-  //  restore durable king leases (replay has rebuilt eve_w; _find_home
-  //  zeroed les_h), then reclaim any blob now provably unreferenced.
-  //  ordering matters: les_h must be back before the gc reads use_w.
+  //  rebuild eve_w from the epoch's BLOBS table: a snapshot's counts
+  //  can name events chop has since deleted (play -f restores the
+  //  epoch's frozen snapshot, not the one chop saved).  then restore
+  //  durable king leases (_find_home zeroed les_h) and reclaim any blob
+  //  now provably unreferenced.  ordering matters: eve_w and les_h must
+  //  both be back before the gc reads use_w.
   //
+  u3_disk_blob_refs(mar_u->log_u);
   _mars_play_leases(mar_u);
   u3_disk_blob_gc(mar_u->log_u);
 

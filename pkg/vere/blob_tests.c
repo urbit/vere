@@ -2800,6 +2800,61 @@ _test_canon(void)
 
 /* main(): run all blob tests.
 */
+/* _test_boot_refs(): boot rebuilds eve_w from the epoch's BLOBS table
+**   before the gc reads use_w, so a snapshot's stale event count (its
+**   event chopped away) cannot keep a dead blob's record alive.
+*/
+static void
+_test_boot_refs(void)
+{
+  MDB_env* env_u = _lease_env("boot refs");
+
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_disk log_u = { .dir_u = &dir_u, .mdb_u = env_u };
+
+  const c3_y dat_y[] = "a record whose event chop already deleted";
+  const c3_y alt_y[] = "a record a live bob still holds";
+  c3_h mug_h = 0, seq_h = 0, mag_h = 0, saq_h = 0;
+  _check(  (c3y == _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h))
+        && (c3y == _blob_save(alt_y, sizeof(alt_y) - 1, &mag_h, &saq_h)),
+          "save failed" );
+
+  //  the stale shape: use=1 eve=1 les=0 with no event in the log
+  //
+  {
+    u3_atom bob = u3i_blob(mug_h, seq_h);
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    blb_u->eve_w += 1; blb_u->use_w += 1;
+    u3z(bob);
+    _check( (1 == blb_u->use_w) && (1 == blb_u->eve_w), "stale shape" );
+  }
+
+  //  the same stale count under a bob arvo still holds
+  //
+  u3_atom bab = u3i_blob(mag_h, saq_h);
+  {
+    u3a_blob* blb_u = u3a_blob_get(mag_h, saq_h);
+    blb_u->eve_w += 1; blb_u->use_w += 1;
+  }
+
+  u3_disk_blob_refs(&log_u);
+  u3_disk_blob_gc(&log_u);
+
+  _check(  !u3a_blob_get(mug_h, seq_h)
+        && (c3n == u3_blob_live(_tmp_pier, mug_h, seq_h)),
+          "stale record survived boot" );
+  {
+    u3a_blob* blb_u = u3a_blob_get(mag_h, saq_h);
+    _check(  blb_u && (1 == blb_u->use_w) && (0 == blb_u->eve_w)
+          && (c3y == u3_blob_live(_tmp_pier, mag_h, saq_h)),
+            "live bob's record disturbed" );
+  }
+
+  u3z(bab);
+  u3_lmdb_exit(env_u);
+  _pier_done();
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -2853,6 +2908,7 @@ main(int argc, char* argv[])
   _test_lifecycle();
   _test_lease();
   _test_lease_persist();
+  _test_boot_refs();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;
