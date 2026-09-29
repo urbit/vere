@@ -61,14 +61,6 @@ static u3b_hand* _blob_hom_u;
 //
 #define BLOB_KEEP_MAX  256
 
-/* _blob_home(): true if the current road is the home road.
-*/
-static inline c3_o
-_blob_home(void)
-{
-  return ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
-}
-
 /* _blob_head(): the first hand on [rod_u]'s list, or 0.
 **
 **   an inner road's head is a post in the road itself; nodes link by
@@ -269,7 +261,7 @@ u3b_hand*
 u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 {
   c3_d          bid_d = _blob_bid(mug_h, seq_h);
-  c3_o          hom_o = _blob_home();
+  c3_o          hom_o = ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
   u3b_hand*     han_u = 0;
 
   //  an inner road reuses its own hand, or one held by an inner
@@ -385,7 +377,7 @@ u3b_close(u3b_hand* han_u)
   //  drops, which makes it evictable.  a hand borrowed from an inner
   //  ancestor was never counted here.
   //
-  if ( c3n == _blob_home() ) {
+  if ( &(u3H->rod_u) != u3R ) {
     if ( han_u->use_w && _blob_hand_find(u3R, han_u->bid_d) == han_u ) {
       han_u->use_w -= 1;
     }
