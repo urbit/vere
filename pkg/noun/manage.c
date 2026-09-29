@@ -490,24 +490,24 @@ u3m_signal(c3_m sig_m)
   rsignal_longjmp(u3_Signal, sig_m);
 }
 
-//  critical-section nesting depth (see u3m_crit_enter).
+//  critical-section nesting depth (see u3m_crit_inn).
 //
 static c3_w _cm_crit_w = 0;
 
-/* u3m_crit_enter(): hold the signals whose handlers longjmp.
+/* u3m_crit_inn(): hold the signals whose handlers longjmp.
 */
 void
-u3m_crit_enter(void)
+u3m_crit_inn(void)
 {
   if ( 0 == _cm_crit_w++ ) {
     rsignal_block();
   }
 }
 
-/* u3m_crit_leave(): end a critical section begun by u3m_crit_enter().
+/* u3m_crit_out(): end a critical section begun by u3m_crit_inn().
 */
 void
-u3m_crit_leave(void)
+u3m_crit_out(void)
 {
   u3_assert( _cm_crit_w );
 
@@ -1645,7 +1645,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     //  one must not leave signals held forever
     //
     while ( _cm_crit_w ) {
-      u3m_crit_leave();
+      u3m_crit_out();
     }
 
     //  reinitialize trace state

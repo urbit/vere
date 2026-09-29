@@ -16,7 +16,7 @@
 ** longjmp (SIGINT, SIGTERM, SIGVTALRM) across a critical section.
 **
 **   the kernel queues a blocked signal and delivers it at unblock, so a
-**   handler never runs between the two calls.  see u3m_crit_enter().
+**   handler never runs between the two calls.  see u3m_crit_inn().
 */
 static inline void
 rsignal_block(void)

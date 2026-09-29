@@ -48,8 +48,8 @@
 **   once; past BLOB_KEEP_MAX an open evicts the oldest idle hand, and
 **   out of descriptors it bails %file.  the home road never falls, so
 **   its hands live on the C heap under _blob_hom_u, one per open, freed
-**   on close.  every mutation runs inside u3m_crit_enter()/
-**   u3m_crit_leave(), so a signal can neither leak an fd nor cut a list.
+**   on close.  every mutation runs inside u3m_crit_inn()/
+**   u3m_crit_out(), so a signal can neither leak an fd nor cut a list.
 */
 
 //  home-road hands
@@ -287,9 +287,9 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     //  gives up its idle hands, oldest first
     //
     if ( _blob_hand_count(u3R) >= BLOB_KEEP_MAX ) {
-      u3m_crit_enter();
+      u3m_crit_inn();
       _blob_hand_evict();
-      u3m_crit_leave();
+      u3m_crit_out();
     }
   }
 
@@ -310,7 +310,7 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
 
     u3b_path(fil_c, pax_c, mug_h, seq_h);
 
-    u3m_crit_enter();
+    u3m_crit_inn();
 
     while ( -1 == (han_u->fid_i = open(fil_c, O_RDONLY)) ) {
       //  out of descriptors: an inner road first gives up its idle
@@ -324,7 +324,7 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
         if ( c3y == _blob_hand_evict() ) {
           continue;
         }
-        u3m_crit_leave();
+        u3m_crit_out();
         u3a_wfree(han_u);
         fprintf(stderr, "blob: open %s: %s\r\n", fil_c, strerror(errno));
         u3m_bail(c3__file);
@@ -350,7 +350,7 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     //
     if ( 0 == han_u->bit_d ) {
       _blob_hand_shut(han_u);
-      u3m_crit_leave();
+      u3m_crit_out();
 
       if ( c3y == hom_o ) {
         c3_free(han_u);
@@ -362,7 +362,7 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     }
 
     _blob_hand_link(han_u);
-    u3m_crit_leave();
+    u3m_crit_out();
   }
 
   return han_u;
@@ -384,10 +384,10 @@ u3b_close(u3b_hand* han_u)
     return;
   }
 
-  u3m_crit_enter();
+  u3m_crit_inn();
   _blob_hand_unlink(han_u);
   _blob_hand_shut(han_u);
-  u3m_crit_leave();
+  u3m_crit_out();
 
   c3_free(han_u);
 }
@@ -404,7 +404,7 @@ u3b_drain(void* rod_v)
   c3_o      hom_o = ( &(u3H->rod_u) == rod_u ) ? c3y : c3n;
   c3_w      num_w = 0;
 
-  u3m_crit_enter();
+  u3m_crit_inn();
 
   for ( u3b_hand* han_u; (han_u = _blob_head(rod_u)); ) {
     _blob_head_set(rod_u, han_u->nex_u);
@@ -416,7 +416,7 @@ u3b_drain(void* rod_v)
     num_w++;
   }
 
-  u3m_crit_leave();
+  u3m_crit_out();
   return num_w;
 }
 
@@ -524,11 +524,11 @@ u3b_mmap(u3b_hand* han_u)
   {
     c3_y* map_y;
 
-    u3m_crit_enter();
+    u3m_crit_inn();
     if ( (map_y = _blob_map(han_u)) ) {
       han_u->map_y = map_y;
     }
-    u3m_crit_leave();
+    u3m_crit_out();
 
     if ( !map_y ) {
       fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": mmap: %s\r\n",

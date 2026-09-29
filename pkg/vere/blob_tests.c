@@ -1484,10 +1484,10 @@ _hand_intr_crit_cb(u3_noun arg)
   (void)arg;
   _hand_open_inner();
 
-  u3m_crit_enter();
+  u3m_crit_inn();
   kill(getpid(), SIGINT);
   _han_hit_w = 1;         //  still here: the signal is pending
-  u3m_crit_leave();       //  delivered here; never returns
+  u3m_crit_out();       //  delivered here; never returns
   _han_hit_w = 2;
   return 0;
 }
@@ -1528,19 +1528,19 @@ _test_hand_intr_crit(void)
   {
     void (*old_f)(int) = signal(SIGINT, _crit_handler);
     _crit_hit = 0;
-    u3m_crit_enter();
+    u3m_crit_inn();
     raise(SIGINT);
     _check( 0 == _crit_hit, "hold count not reset" );
-    u3m_crit_leave();
+    u3m_crit_out();
     _check( 1 == _crit_hit, "section not delivering" );
 
     _crit_hit = 0;
-    u3m_crit_enter();
-    u3m_crit_enter();
+    u3m_crit_inn();
+    u3m_crit_inn();
     raise(SIGINT);
-    u3m_crit_leave();
+    u3m_crit_out();
     _check( 0 == _crit_hit, "delivered at inner leave" );
-    u3m_crit_leave();
+    u3m_crit_out();
     _check( 1 == _crit_hit, "not delivered at outer leave" );
     signal(SIGINT, old_f);
   }
