@@ -2146,6 +2146,10 @@ _ames_hear(u3_ames* sam_u,
       if ( c3y == sam_u->sat_u.for_o ) {
         _ames_try_forward(pac_u);
       }
+      else {
+        _ames_pact_free(pac_u);
+        return;
+      }
     }
     else {
       //  enter protocol-specific packet handling
