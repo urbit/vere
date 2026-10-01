@@ -2771,12 +2771,18 @@ _test_lease_persist(void)
         && (c3y == u3_lmdb_save_lease(env_u, bid_b, 3000, 12)),
           "save failed" );
 
-  //  an unrelated BLOBS row, to prove the tables are independent and
-  //  maxdbs accommodates both
+  //  an event with its BLOBS row, written in one transaction, to prove
+  //  the tables are independent and maxdbs accommodates both
   //
   {
-    c3_d ids_d[2] = { bid_a, bid_b };
-    _check( c3y == u3_lmdb_save_blobs(env_u, 42, ids_d, 2), "blobs save failed" );
+    c3_d   ids_d[2] = { bid_a, bid_b };
+    c3_y   byt_y[4] = { 1, 2, 3, 4 };
+    void*  byt_p[1] = { byt_y };
+    size_t siz_i[1] = { sizeof(byt_y) };
+    c3_d*  bid_p[1] = { ids_d };
+    c3_z   bid_z[1] = { 2 };
+    _check( c3y == u3_lmdb_save(env_u, 42, 1, byt_p, siz_i, bid_p, bid_z),
+            "event + blobs save failed" );
   }
 
   //  "crash" and restart

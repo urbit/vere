@@ -48,14 +48,19 @@
                    c3_d     len_d,
                    c3_o  (*read_f)(void*, c3_d, size_t  , void*));
 
-    /* u3_lmdb_save(): save [len_d] events starting at [eve_d].
+    /* u3_lmdb_save(): save [len_d] events starting at [eve_d], each with
+    **   the blob ids it holds ([bid_p][i], [bid_z][i] of them; both arrays
+    **   may be 0), in one transaction: an event and its BLOBS row commit
+    **   together or not at all.
     */
       c3_o
       u3_lmdb_save(MDB_env* env_u,
                    c3_d     eve_d,
                    c3_d     len_d,
                    void**   byt_p,
-                   size_t*  siz_i);
+                   size_t*  siz_i,
+                   c3_d**   bid_p,
+                   c3_z*    bid_z);
 
     /* u3_lmdb_read_meta(): read by string from the META db.
     */
@@ -90,14 +95,6 @@
     */
       void
       u3_lmdb_walk_done(u3_lmdb_walk* itr_u);
-
-    /* u3_lmdb_save_blobs(): save blob IDs for an event into BLOBS table.
-    */
-      c3_o
-      u3_lmdb_save_blobs(MDB_env* env_u,
-                         c3_d     eve_d,
-                         c3_d*    ids_d,
-                         c3_z     len_z);
 
     /* u3_lmdb_read_blobs(): read blob IDs for an event from BLOBS table.
     */

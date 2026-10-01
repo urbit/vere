@@ -66,6 +66,7 @@ _disk_commit_done(u3_disk* log_u)
     while ( fet_u && (fet_u->eve_d <= log_u->dun_d) ) {
       log_u->put_u.ext_u = fet_u->nex_u;
       c3_free(fet_u->hun_y);
+      c3_free(fet_u->bid_d);
       c3_free(fet_u);
       fet_u = log_u->put_u.ext_u;
     }
@@ -105,7 +106,9 @@ _disk_commit_cb(uv_work_t* ted_u)
                                     log_u->sav_u.eve_d,
                                     log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
-                                    log_u->sav_u.siz_i);
+                                    log_u->sav_u.siz_i,
+                                    log_u->sav_u.bid_d,
+                                    log_u->sav_u.bid_z);
 }
 
 /* _disk_commit_start(): queue async event-batch write.
@@ -192,6 +195,8 @@ _disk_batch(u3_disk* log_u)
 
     log_u->sav_u.byt_y[i_d] = fet_u->hun_y;
     log_u->sav_u.siz_i[i_d] = fet_u->len_i;
+    log_u->sav_u.bid_d[i_d] = fet_u->bid_d;
+    log_u->sav_u.bid_z[i_d] = fet_u->bid_z;
 
     fet_u  = fet_u->nex_u;
   }
@@ -224,15 +229,23 @@ _disk_commit(u3_disk* log_u)
 }
 
 /* _disk_plan(): enqueue serialized fact (feat) for persistence.
+**
+**   takes ownership of [bid_d], the blob ids the event holds (0 if
+**   none); they are written in the event's transaction and freed with
+**   the feat.
 */
 static void
 _disk_plan(u3_disk* log_u,
            c3_h     mug_h,
-           u3_noun    job)
+           u3_noun    job,
+           c3_d*    bid_d,
+           c3_z     bid_z)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
   fet_u->eve_d = ++log_u->sen_d;
   fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
+  fet_u->bid_d = bid_d;
+  fet_u->bid_z = bid_z;
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -253,13 +266,14 @@ u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
   if ( u3C.wag_h & u3o_dryrun ) {
     log_u->sen_d++;
     log_u->dun_d++;
+    c3_free(tac_u->bid_d);
     // XX invoke don_f?
     return;
   }
 
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
-  _disk_plan(log_u, tac_u->mug_h, tac_u->job);
+  _disk_plan(log_u, tac_u->mug_h, tac_u->job, tac_u->bid_d, tac_u->bid_z);
   _disk_commit(log_u);
 }
 
@@ -274,7 +288,7 @@ u3_disk_plan_list(u3_disk* log_u, u3_noun lit)
     u3x_cell(t, &i, &t);
     //  NB, boot mugs are 0
     //
-    _disk_plan(log_u, 0, i);
+    _disk_plan(log_u, 0, i, 0, 0);
   }
 
   u3z(lit);
@@ -294,7 +308,9 @@ u3_disk_sync(u3_disk* log_u)
                          log_u->sav_u.eve_d,
                          log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
-                         log_u->sav_u.siz_i);
+                         log_u->sav_u.siz_i,
+                         log_u->sav_u.bid_d,
+                         log_u->sav_u.bid_z);
 
     log_u->sav_u.ret_o = ret_o;
 
@@ -882,6 +898,7 @@ u3_disk_exit(u3_disk* log_u)
     while ( fet_u && (fet_u->eve_d <= log_u->dun_d) ) {
       log_u->put_u.ext_u = fet_u->nex_u;
       c3_free(fet_u->hun_y);
+      c3_free(fet_u->bid_d);
       c3_free(fet_u);
       fet_u = log_u->put_u.ext_u;
     }

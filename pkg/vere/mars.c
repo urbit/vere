@@ -624,27 +624,26 @@ _mars_fact(u3_mars* mar_u,
       }
     }
 
-    //  persist blob refs to LMDB for this event
+    //  the blob ids ride with the event: the disk writes the BLOBS row
+    //  in the event's own transaction, and frees the array with it
     //
-    if ( acc.len ) {
-      u3_lmdb_save_blobs(mar_u->log_u->mdb_u,
-                         mar_u->dun_d,
-                         acc.ids,
-                         acc.len);
+    if ( !acc.len ) {
+      c3_free(acc.ids);
+      acc.ids = 0;
     }
 
-    c3_free(acc.ids);
-  }
+    {
+      u3_fact tac_u = {
+        .job   = job,
+        .mug_h = mar_u->mug_h,
+        .eve_d = mar_u->dun_d,
+        .bid_d = acc.ids,
+        .bid_z = acc.len
+      };
 
-  {
-    u3_fact tac_u = {
-      .job   = job,
-      .mug_h = mar_u->mug_h,
-      .eve_d = mar_u->dun_d
-    };
-
-    u3_disk_plan(mar_u->log_u, &tac_u);
-    u3z(job);
+      u3_disk_plan(mar_u->log_u, &tac_u);
+      u3z(job);
+    }
   }
 
   {
