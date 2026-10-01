@@ -494,6 +494,18 @@ _test_install_stg(void)
   _check( c3y == _bob_is(mug_h, seq_h, dat_y, dat_d), "byte mismatch" );
 
 #ifndef U3_OS_windows
+  //  the installed blob is read-only: nothing opens it for writing again
+  //
+  {
+    c3_c fil_c[8192];
+    struct stat st_u;
+    u3b_path(fil_c, _tmp_pier, mug_h, seq_h);
+    _check(  (0 == stat(fil_c, &st_u)) && (0400 == (st_u.st_mode & 0777)),
+            "installed mode %o, expected 0400", (unsigned)(st_u.st_mode & 0777) );
+  }
+#endif
+
+#ifndef U3_OS_windows
   //  a bucket that cannot be read refuses the install instead of
   //  minting a second seq for the same bytes (root reads anything)
   //
@@ -507,7 +519,7 @@ _test_install_stg(void)
     _check( c3n == u3b_move_stg(_tmp_pier, stg_c, &mag_h, &saq_h),
             "installed past an unreadable sibling" );
     _check( c3y == _path_exists(stg_c), "refusal consumed the staging file" );
-    _check( 0 == chmod(fil_c, 0600), "chmod back failed" );
+    _check( 0 == chmod(fil_c, 0400), "chmod back failed" );
 
     //  readable again, the same staging file dedups onto seq 1
     //

@@ -28,6 +28,8 @@
 #else
 #  define BLOB_FILE_MODE 0400
 #endif
+//  applied by u3b_move_stg before the rename (posix) and by its copy
+//  fallback; on windows the staging file's 0600 already is the mode.
 
 //  maximum bytes per single read()/write() call.
 //  POSIX allows read()/write() to return EINVAL if count > SSIZE_MAX;
@@ -1194,6 +1196,18 @@ u3b_move_stg(const c3_c* pax_c,
       return c3n;
     }
   }
+
+#ifndef U3_OS_windows
+  //  the staging file keeps mkstemp's 0600; the installed blob carries
+  //  BLOB_FILE_MODE, so nothing opens it for writing again
+  //
+  if ( 0 != fchmod(fid_i, BLOB_FILE_MODE) ) {
+    fprintf(stderr, "blob: install_stg: fchmod failed on %s: %s\r\n",
+            stg_c, strerror(errno));
+    close(fid_i);
+    return c3n;
+  }
+#endif
 
   close(fid_i);
 
