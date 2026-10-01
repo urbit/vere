@@ -697,19 +697,32 @@ _blob_lock_acquire(const c3_c* pax_c, c3_h mug_h)
 
 /* _blob_dedup(): scan bucket for byte-equal content.
 **
-** Returns the sequence number of an existing equal blob, or 0 if none.
+** Sets [dup_h] to the sequence number of an existing equal blob, or 0
+** if none.  Returns c3n if a blob in the bucket could not be read: an
+** install must not mint a second seq for content it could not compare,
+** since equality by seq (u3r_sing, meld) relies on one seq per content.
 */
-static c3_h
+static c3_o
 _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
-            const c3_y* dat_y, c3_d len_d)
+            const c3_y* dat_y, c3_d len_d, c3_h* dup_h)
 {
+  *dup_h = 0;
+
   for ( c3_h seq_h = 1; seq_h < max_h; seq_h++ ) {
     c3_c fil_c[8192];
     u3b_path(fil_c, pax_c, mug_h, seq_h);
 
+    //  a gap in the sequence is normal: dedup consumes a seq without
+    //  creating a file, and gc removes files
+    //
     struct stat st_u;
     if ( -1 == stat(fil_c, &st_u) ) {
-      continue;
+      if ( ENOENT == errno ) {
+        continue;
+      }
+      fprintf(stderr, "blob: dedup: stat failed on %s: %s\r\n",
+              fil_c, strerror(errno));
+      return c3n;
     }
     if ( (c3_d)st_u.st_size != len_d ) {
       continue;
@@ -717,7 +730,9 @@ _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
 
     c3_i fid_i = open(fil_c, O_RDONLY);
     if ( -1 == fid_i ) {
-      continue;
+      fprintf(stderr, "blob: dedup: open failed on %s: %s\r\n",
+              fil_c, strerror(errno));
+      return c3n;
     }
 
     c3_o eql_o = c3y;
@@ -728,9 +743,20 @@ _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
     while ( rem_d > 0 ) {
       c3_d ask_d = ( rem_d < sizeof(buf_y) ) ? rem_d : sizeof(buf_y);
       ssize_t got_i = read(fid_i, buf_y, ask_d);
-      if ( got_i <= 0 || (c3_d)got_i != ask_d ||
-           0 != memcmp(ptr_y, buf_y, ask_d) )
-      {
+
+      if ( got_i < 0 && EINTR == errno ) {
+        continue;
+      }
+      //  a short read is a file that changed under us: the sole-writer
+      //  rule says that cannot happen, so treat it as the error it is
+      //
+      if ( got_i <= 0 || (c3_d)got_i != ask_d ) {
+        fprintf(stderr, "blob: dedup: read failed on %s: %s\r\n",
+                fil_c, (got_i < 0) ? strerror(errno) : "short read");
+        close(fid_i);
+        return c3n;
+      }
+      if ( 0 != memcmp(ptr_y, buf_y, ask_d) ) {
         eql_o = c3n;
         break;
       }
@@ -740,10 +766,11 @@ _blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
 
     close(fid_i);
     if ( c3y == eql_o ) {
-      return seq_h;
+      *dup_h = seq_h;
+      return c3y;
     }
   }
-  return 0;
+  return c3y;
 }
 
 /* _blob_sig(): significant byte length of blob content, a la u3r_met(3, ...).
@@ -1119,10 +1146,17 @@ u3b_move_stg(const c3_c* pax_c,
     return c3n;
   }
 
-  //  check for duplicate content
+  //  check for duplicate content; a bucket that cannot be read refuses
+  //  the install rather than risk a second seq for the same bytes
   //
-  c3_h dup_h = _blob_dedup(pax_c, *mug_h, nex_h,
-                            (const c3_y*)map_v, len_d);
+  c3_h dup_h;
+  if ( c3n == _blob_dedup(pax_c, *mug_h, nex_h,
+                          (const c3_y*)map_v, len_d, &dup_h) )
+  {
+    munmap(map_v, (size_t)map_d);
+    close(fid_i);
+    return c3n;
+  }
 
   //  NB: the mapping goes before the truncate below.  windows refuses to
   //  resize a file while a section is open on it, so trimming under the
@@ -1143,11 +1177,22 @@ u3b_move_stg(const c3_c* pax_c,
   //  trim the trailing zeros off the file itself, now that the mapping
   //  is gone, so the installed blob is byte-exact with the atom
   //
-  if ( (len_d != map_d) && (0 != ftruncate(fid_i, (off_t)len_d)) ) {
-    fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
-            stg_c, strerror(errno));
-    close(fid_i);
-    return c3n;
+  if ( len_d != map_d ) {
+    if ( 0 != ftruncate(fid_i, (off_t)len_d) ) {
+      fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
+              stg_c, strerror(errno));
+      close(fid_i);
+      return c3n;
+    }
+    //  the staged bytes were synced before the trim; the new length
+    //  was not, and the directory sync below does not cover it
+    //
+    if ( 0 != c3_sync(fid_i) ) {
+      fprintf(stderr, "blob: install_stg: fsync failed on %s: %s\r\n",
+              stg_c, strerror(errno));
+      close(fid_i);
+      return c3n;
+    }
   }
 
   close(fid_i);

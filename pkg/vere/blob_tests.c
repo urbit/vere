@@ -493,6 +493,30 @@ _test_install_stg(void)
           "blob not present after install" );
   _check( c3y == _bob_is(mug_h, seq_h, dat_y, dat_d), "byte mismatch" );
 
+#ifndef U3_OS_windows
+  //  a bucket that cannot be read refuses the install instead of
+  //  minting a second seq for the same bytes (root reads anything)
+  //
+  if ( 0 != geteuid() ) {
+    c3_c fil_c[8192];
+    c3_h mag_h = 0, saq_h = 0;
+    u3b_path(fil_c, _tmp_pier, mug_h, seq_h);
+
+    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "restage failed" );
+    _check( 0 == chmod(fil_c, 0), "chmod failed" );
+    _check( c3n == u3b_move_stg(_tmp_pier, stg_c, &mag_h, &saq_h),
+            "installed past an unreadable sibling" );
+    _check( c3y == _path_exists(stg_c), "refusal consumed the staging file" );
+    _check( 0 == chmod(fil_c, 0600), "chmod back failed" );
+
+    //  readable again, the same staging file dedups onto seq 1
+    //
+    _check(  (c3y == u3b_move_stg(_tmp_pier, stg_c, &mag_h, &saq_h))
+          && (mug_h == mag_h) && (1 == saq_h),
+            "dedup after refusal got seq %" PRIc3_h, saq_h );
+  }
+#endif
+
   //  a missing staging file and an empty one are refused
   //
   _check( c3n == u3b_move_stg(_tmp_pier, "/no/such/path", &mug_h, &seq_h),
