@@ -530,6 +530,55 @@ _mars_blob_bobs_cell(u3_noun n, void* ptr_v)
   return c3y;
 }
 
+/* _mars_blob_sure(): refuse an event holding a bob the store cannot back.
+**
+**   tap mints a bank record for every blob id it decodes, so an event
+**   whose lease expired (file and record gone) arrives with a fresh
+**   record over a missing file.  committing it would log an event that
+**   can never replay.  a record with no lease and no committed event is
+**   backed only if its file exists; otherwise the poke is nacked with a
+**   %blob goof and the king may install again.  returns the goof list,
+**   or u3_none when every bob is backed.
+*/
+static u3_weak
+_mars_blob_sure(u3_noun job)
+{
+  struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
+  u3_noun tan = u3_nul;
+
+  u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
+
+  for ( c3_z i_z = 0; i_z < acc.len; i_z++ ) {
+    c3_h      mug_h = (c3_h)(acc.ids[i_z] >> 32);
+    c3_h      seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+    if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
+      continue;
+    }
+    if ( c3y == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
+      continue;
+    }
+
+    {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c),
+               "blob %08" PRIx32 "/%" PRIc3_h " is not in the store: "
+               "its lease expired before the event arrived",
+               mug_h, seq_h);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+    }
+  }
+
+  c3_free(acc.ids);
+
+  if ( u3_nul == tan ) {
+    return u3_none;
+  }
+  return u3nc(u3nc(c3__blob, tan), u3_nul);
+}
+
 /* _mars_fact(): commit a fact and enqueue its effects.
 */
 static void
@@ -998,6 +1047,19 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         job = u3nc(now, u3k(job));
       }
       u3z(jar);
+
+      //  an event holding a bob the store cannot back is refused before
+      //  it runs; freeing the job drops the record tap minted for it
+      //
+      {
+        u3_weak lud = _mars_blob_sure(job);
+
+        if ( u3_none != lud ) {
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, lud));
+          break;
+        }
+      }
 
       pre_w = u3a_open(u3R);
       mar_u->sen_d++;

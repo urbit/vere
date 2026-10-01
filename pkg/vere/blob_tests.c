@@ -2973,6 +2973,99 @@ _test_boot_refs(void)
   _pier_done();
 }
 
+/* _test_lease_roll(): an epoch roll carries every LEASES row into the
+**   new epoch's environment; an environment with no table copies nothing.
+*/
+static void
+_test_lease_roll(void)
+{
+  MDB_env* old_u = _lease_env("lease roll");
+
+  c3_c nex_c[2048];
+  snprintf(nex_c, sizeof(nex_c), "%s/.urb/log-next", _tmp_pier);
+  _check( 0 == mkdir(nex_c, 0700), "mkdir failed" );
+  MDB_env* new_u = u3_lmdb_init(nex_c, 1ULL << 30);
+  _check( new_u, "second env failed" );
+
+  const c3_d bid_a = ((c3_d)0x1111 << 32) | 1;
+  const c3_d bid_b = ((c3_d)0x2222 << 32) | 7;
+  _check(  (c3y == u3_lmdb_save_lease(old_u, bid_a, 100, 1))
+        && (c3y == u3_lmdb_save_lease(old_u, bid_a, 200, 2))
+        && (c3y == u3_lmdb_save_lease(old_u, bid_b, 300, 3)),
+          "save failed" );
+
+  _check( c3y == u3_lmdb_copy_leases(old_u, new_u), "copy failed" );
+  _check(  (3 == _lease_count(new_u))
+        && (c3y == _lease_has(bid_a, 100, 1))
+        && (c3y == _lease_has(bid_a, 200, 2))
+        && (c3y == _lease_has(bid_b, 300, 3)),
+          "rows did not cross" );
+
+  //  the old rows are untouched, and a source with no table is empty
+  //
+  _check( 3 == _lease_count(old_u), "source changed" );
+  {
+    c3_c non_c[2048];
+    snprintf(non_c, sizeof(non_c), "%s/.urb/log-none", _tmp_pier);
+    _check( 0 == mkdir(non_c, 0700), "mkdir failed" );
+    MDB_env* non_u = u3_lmdb_init(non_c, 1ULL << 30);
+    _check( non_u, "third env failed" );
+    _check( c3y == u3_lmdb_copy_leases(non_u, new_u), "empty copy failed" );
+    _check( 3 == _lease_count(new_u), "empty copy changed the target" );
+    u3_lmdb_exit(non_u);
+  }
+
+  u3_lmdb_exit(new_u);
+  u3_lmdb_exit(old_u);
+  _pier_done();
+}
+
+/* _test_chop_leases(): an offline gc restores les_h from the LEASES
+**   table first, so a blob installed but not yet committed survives;
+**   a row for a missing file resurrects nothing.
+*/
+static void
+_test_chop_leases(void)
+{
+  MDB_env* env_u = _lease_env("chop leases");
+
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_disk log_u = { .dir_u = &dir_u, .mdb_u = env_u };
+
+  const c3_y dat_y[] = "installed and leased, not yet committed";
+  c3_h mug_h = 0, seq_h = 0;
+  _check( c3y == _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h),
+          "save failed" );
+
+  //  the record as _find_home leaves it: no lease, no event, no atom
+  //
+  u3a_blob* blb_u = u3a_blob_new(mug_h, seq_h);
+  const c3_d bid_d = ((c3_d)mug_h << 32) | seq_h;
+  _check(  (c3y == u3_lmdb_save_lease(env_u, bid_d, 0, 1))
+        && (c3y == u3_lmdb_save_lease(env_u, ((c3_d)0x7777 << 32) | 9, 0, 2)),
+          "lease save failed" );
+
+  u3_disk_blob_leases(&log_u);
+  _check( (1 == blb_u->les_h) && (1 == blb_u->use_w), "lease not restored" );
+  _check( !u3a_blob_get(0x7777, 9), "a missing file got a record" );
+
+  u3_disk_blob_gc(&log_u);
+  _check(  u3a_blob_get(mug_h, seq_h)
+        && (c3y == u3b_live(_tmp_pier, mug_h, seq_h)),
+          "leased blob deleted by the gc" );
+
+  //  without the lease the same gc reclaims it
+  //
+  blb_u->les_h = 0; blb_u->use_w = 0;
+  u3_disk_blob_gc(&log_u);
+  _check(  !u3a_blob_get(mug_h, seq_h)
+        && (c3n == u3b_live(_tmp_pier, mug_h, seq_h)),
+          "unleased blob kept by the gc" );
+
+  u3_lmdb_exit(env_u);
+  _pier_done();
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -3027,6 +3120,8 @@ main(int argc, char* argv[])
   _test_lease();
   _test_lease_persist();
   _test_boot_refs();
+  _test_lease_roll();
+  _test_chop_leases();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

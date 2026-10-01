@@ -140,4 +140,12 @@
                           void*    ptr_v,
                           void  (*fun_f)(void*, c3_d, c3_d, c3_d));
 
+    /* u3_lmdb_copy_leases(): copy every lease row from [fro_u] to [to_u].
+    **
+    **   an epoch roll opens a fresh environment; a lease is not an event
+    **   and must cross with it.  c3n if any row could not be written.
+    */
+      c3_o
+      u3_lmdb_copy_leases(MDB_env* fro_u, MDB_env* to_u);
+
 #endif /* ifndef U3_VERE_DB_LMDB_H */

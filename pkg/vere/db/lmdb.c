@@ -951,6 +951,64 @@ u3_lmdb_walk_leases(MDB_env* env_u,
   mdb_txn_abort(txn_u);
 }
 
+/* _lmdb_lease_row: one LEASES row held between a walk and a write.
+*/
+typedef struct {
+  c3_d bid_d;
+  c3_d exp_d;
+  c3_d lea_d;
+} _lmdb_lease_row;
+
+typedef struct {
+  _lmdb_lease_row* row_u;
+  c3_z             len_z;
+  c3_z             cap_z;
+} _lmdb_lease_acc;
+
+static void
+_lmdb_copy_leases_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
+{
+  _lmdb_lease_acc* acc_u = ptr_v;
+
+  if ( acc_u->len_z == acc_u->cap_z ) {
+    acc_u->cap_z = acc_u->cap_z ? (acc_u->cap_z << 1) : 8;
+    acc_u->row_u = c3_realloc(acc_u->row_u,
+                              acc_u->cap_z * sizeof(*acc_u->row_u));
+  }
+  acc_u->row_u[acc_u->len_z].bid_d = bid_d;
+  acc_u->row_u[acc_u->len_z].exp_d = exp_d;
+  acc_u->row_u[acc_u->len_z].lea_d = lea_d;
+  acc_u->len_z += 1;
+}
+
+/* u3_lmdb_copy_leases(): copy every lease row from [fro_u] to [to_u].
+**
+**   collect, then write: the walk holds a read transaction on [fro_u]
+**   and each save opens a write transaction on [to_u].
+*/
+c3_o
+u3_lmdb_copy_leases(MDB_env* fro_u, MDB_env* to_u)
+{
+  _lmdb_lease_acc acc_u = { 0, 0, 0 };
+  c3_o            ret_o = c3y;
+
+  u3_lmdb_walk_leases(fro_u, &acc_u, _lmdb_copy_leases_cb);
+
+  for ( c3_z i_z = 0; i_z < acc_u.len_z; i_z++ ) {
+    _lmdb_lease_row* row_u = &acc_u.row_u[i_z];
+
+    if ( c3n == u3_lmdb_save_lease(to_u, row_u->bid_d,
+                                   row_u->exp_d, row_u->lea_d) )
+    {
+      ret_o = c3n;
+      break;
+    }
+  }
+
+  c3_free(acc_u.row_u);
+  return ret_o;
+}
+
 /* mdb_logerror(): writes an error message and lmdb error code to f.
 */
 void mdb_logerror(FILE* f, int err, const char* fmt, ...)

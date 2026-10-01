@@ -1701,6 +1701,11 @@ _cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     ur_bsw_mat64(rit_u, (c3_y)met_w, (c3_d)a);
   }
   else {
+    //  a bob has no bytes here: the callers send it to _cs_ram_bsw_bob,
+    //  and its buf_w is a bank post, not data
+    //
+    u3_assert( c3n == u3a_is_bob(a) );
+
     u3a_atom* vat_u = u3a_to_ptr(a);
     c3_y*     byt_y = (c3_y*)vat_u->buf_w;
     ur_bsw_mat_bytes(rit_u, (c3_d)met_w, byt_y);
@@ -1953,6 +1958,13 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
           return ur_cue_meme;
         }
         seq_d = ur_bsr64_any(red_u, len_d);
+
+        //  a blob id is two 32-bit halves; anything wider is not a
+        //  reference this runtime wrote
+        //
+        if ( (mug_d > 0xFFFFFFFFULL) || (seq_d > 0xFFFFFFFFULL) ) {
+          return ur_cue_meme;
+        }
 
         *out = u3i_blob((c3_h)mug_d, (c3_h)seq_d);
 
