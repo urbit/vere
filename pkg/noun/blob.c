@@ -1278,23 +1278,15 @@ _blob_bsink_wri(void* ptr_v, const c3_y* byt_y, c3_z len_z)
 {
   u3b_bsink* bsk_u = ptr_v;
 
-  while ( len_z ) {
-    ssize_t ret_i = write(bsk_u->fid_i, byt_y, len_z);
-
-    if ( ret_i < 0 ) {
-      if ( (EINTR == errno) || (EAGAIN == errno) ) {
-        continue;
-      }
-      fprintf(stderr, "blob: bsink: write failed (%s): %s\r\n",
-              bsk_u->stg_c, strerror(errno));
-      close(bsk_u->fid_i);
-      c3_unlink(bsk_u->stg_c);
-      bsk_u->fid_i = -1;
-      return c3n;
-    }
-
-    byt_y += ret_i;
-    len_z -= (c3_z)ret_i;
+  //  the same chunked writer the drivers stage through: capped at
+  //  BLOB_IO_MAX per call, EINTR retried
+  //
+  if ( c3n == _blob_stage_write(bsk_u->fid_i, byt_y, len_z) ) {
+    fprintf(stderr, "blob: bsink: write failed (%s)\r\n", bsk_u->stg_c);
+    close(bsk_u->fid_i);
+    c3_unlink(bsk_u->stg_c);
+    bsk_u->fid_i = -1;
+    return c3n;
   }
 
   return c3y;

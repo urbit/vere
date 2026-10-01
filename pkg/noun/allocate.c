@@ -1153,11 +1153,18 @@ static void
 _me_bob_dead(u3a_atom* atm_u)
 {
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
-  if ( !blb_u ) return;
 
-  if ( blb_u->use_w > 0 ) {
-    blb_u->use_w -= 1;
+  //  a bob dying over a record already at zero means a bob was freed
+  //  twice or a record was recreated under a live bob: say so, and do
+  //  not ask for a deletion that should already have happened
+  //
+  if ( 0 == blb_u->use_w ) {
+    u3l_log("blob: %08x/%u: cardinality underflow (record already at zero)",
+            blb_u->mug_h, blb_u->seq_h);
+    return;
   }
+
+  blb_u->use_w -= 1;
 
   if ( (0 == blb_u->use_w) && u3C.blob_del_f ) {
     u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);
