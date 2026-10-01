@@ -502,9 +502,15 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  //  use masked length; bob atoms carry u3a_blob_flag in len_w
+  //  a bob's len_w is the flag alone and its one word is the bank
+  //  record's post, which is valid from every road.  copying that word
+  //  moves the atom's cardinality with it: the junior copy is dropped
+  //  with its road, never freed through _me_bob_dead, so the record's
+  //  use_w is neither bumped here nor lost there.  no bob is junior
+  //  today (u3i_blob asserts the home road), so this branch is not
+  //  reached; it keeps a take from minting a bob with no record.
   //
-  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
+  c3_w      dat_w = ( old_u->len_w & u3a_blob_flag ) ? 1 : old_u->len_w;
   c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
