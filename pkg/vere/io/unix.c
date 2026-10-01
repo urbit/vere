@@ -1080,7 +1080,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   //  large files: stage in .urb/bob/stg/, install via the %blob writ
   //
-  if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
+  if ( c3y == u3b_over(len_ws) ) {
     c3_c stg_c[8192];
     c3_o ok_o = u3b_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
 
@@ -1419,7 +1419,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
   //  and mars alone writes the store: a large file goes in as a loom
   //  atom here, and the watcher stages any later change
   //
-  if ( (c3_d)len_ws > U3_BLOB_THRESH ) {
+  if ( c3y == u3b_over(len_ws) ) {
     u3l_log("unix: large initial file %s read into the loom", pax_c);
   }
 

@@ -23,6 +23,17 @@
   */
 #   define U3_BLOB_THRESH  (32ULL * 1024ULL * 1024ULL)
 
+  /* u3b_over(): true if an atom of [len_d] bytes is blobified at ingress.
+  **
+  ** The one comparison every ingress point uses: strictly over the
+  ** threshold, matching the streaming cue.
+  */
+    static inline c3_o
+    u3b_over(c3_d len_d)
+    {
+      return ( len_d > U3_BLOB_THRESH ) ? c3y : c3n;
+    }
+
   /* U3_BLOB_MIN: least significant byte length a blob may hold.
   **
   ** The loom normalizes atoms: _ci_atom_mint() returns a cat whenever the

@@ -1415,7 +1415,16 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   //  bob's hand once where u3r_bytes would open and close it per call.
   //
   u3r_view vue_u;
-  u3r_view_open(&vue_u, pac, c3y);
+  if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+    //  a bob whose file is gone is a store problem, not a reason to
+    //  unwind the king: drop this send
+    //
+    u3l_log("mesa: ef_send: blob %08x/%u is not in the store; dropped",
+            u3a_bob_mug(pac), u3a_bob_seq(pac));
+    u3z(pac);
+    u3z(las);
+    return;
+  }
   const c3_y* vue_y = u3r_view_flat(&vue_u);
   u3_assert( UINT32_MAX >= vue_u.byt_d );
   c3_w len_w = (c3_w)vue_u.byt_d;
@@ -1841,7 +1850,13 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     //  expects a stable, mutable buffer that outlives the view.
     //
     u3r_view vue_u;
-    u3r_view_open(&vue_u, pac, c3y);
+    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+      u3l_log("mesa: jumbo blob %08x/%u is not in the store; dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      arena_free(&han_u->are_u);
+      u3z(res);
+      return;
+    }
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w jumbo_w = (c3_w)vue_u.byt_d;
@@ -2445,7 +2460,7 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
         //  the %heer waits for the bob.  mars alone writes the store.
         //  one that cannot be staged goes in as a loom atom.
         //
-        if ( (c3_d)res_h > U3_BLOB_THRESH ) {
+        if ( c3y == u3b_over(res_h) ) {
           u3_lord* god_u = sam_u->pir_u->god_u;
           c3_c     stg_c[8192];
 

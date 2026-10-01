@@ -1361,7 +1361,16 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     //  once where u3r_bytes would open and close it per call.
     //
     u3r_view vue_u;
-    u3r_view_open(&vue_u, pac, c3y);
+    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+      //  a bob whose file is gone is a store problem, not a reason to
+      //  unwind the king: drop this packet
+      //
+      u3l_log("ames: blob %08x/%u is not in the store; packet dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      c3_free(pac_u);
+      u3z(lan); u3z(pac);
+      return;
+    }
     const c3_y* vue_y = u3r_view_flat(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w len_w = (c3_w)vue_u.byt_d;

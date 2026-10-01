@@ -171,7 +171,7 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
 **
-**   A body at or past U3_BLOB_THRESH normally does not come through
+**   A body over U3_BLOB_THRESH normally does not come through
 **   here: _http_rec_start stages it for mars and the bob arrives in
 **   _http_bob_install_cb.  It does when staging fails or no serf is
 **   attached, and on the scry fallback, which then build it inline.
@@ -1321,7 +1321,7 @@ _http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
 
 /* _http_rec_start(): take an incoming request from h2o.
 **
-**   a body at or past U3_BLOB_THRESH is staged and sent to mars for
+**   a body over U3_BLOB_THRESH is staged and sent to mars for
 **   installation; the request waits for the bob.  mars alone writes
 **   the store.  anything smaller, or a body that cannot be staged,
 **   goes to arvo as an inline atom.
@@ -1331,7 +1331,7 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
 {
   u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
 
-  if ( (c3_d)rec_u->entity.len >= U3_BLOB_THRESH ) {
+  if ( c3y == u3b_over(rec_u->entity.len) ) {
     u3_http* htp_u = req_u->hon_u->htp_u;
     u3_lord* god_u = htp_u->htd_u->car_u.pir_u->god_u;
     c3_c     stg_c[8192];
