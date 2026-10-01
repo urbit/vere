@@ -180,17 +180,27 @@ _mars_pq_pop(_mars_lease_pq* pq_u)
 static _mars_lease*
 _mars_pq_kill_one(_mars_lease_pq* pq_u, c3_h mug_h, c3_h seq_h)
 {
+  _mars_lease* out_u = 0;
+
+  //  one lease per install, so a bid normally has one live entry; if
+  //  the same blob was installed again before release, retire the one
+  //  that would expire first, not the first in heap-array order
+  //
   for ( c3_z i_z = 0; i_z < pq_u->len_z; i_z++ ) {
     _mars_lease* lea_u = pq_u->arr_u[i_z];
     if (  (c3n == lea_u->ded_o)
        && (mug_h == lea_u->mug_h)
-       && (seq_h == lea_u->seq_h) )
+       && (seq_h == lea_u->seq_h)
+       && (!out_u || (lea_u->exp_d < out_u->exp_d)) )
     {
-      lea_u->ded_o = c3y;
-      return lea_u;
+      out_u = lea_u;
     }
   }
-  return 0;
+
+  if ( out_u ) {
+    out_u->ded_o = c3y;
+  }
+  return out_u;
 }
 
 /* _mars_blob_del(): delete blob file and clean up blb_p entry.

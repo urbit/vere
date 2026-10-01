@@ -604,7 +604,12 @@ u3b_stg_dir(c3_c* out_c, const c3_c* pax_c)
 
 /* _blob_lock_acquire(): acquire mug bucket lock, return next seq number.
 **
-** Creates the mug directory and lockfile if needed.
+** Creates the mug directory and lockfile if needed.  The lock covers
+** only the allocation of the next seq and is released on return: the
+** dedup scan and the rename that follow are serialized by the single
+** writer rule (only mars installs), not by this lock.  A seq handed
+** out here is consumed even when dedup then finds a match, so a bucket
+** may have gaps; readers and dedup skip a missing seq.
 ** Returns 0 on failure.
 */
 static c3_h
