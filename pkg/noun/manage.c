@@ -795,9 +795,11 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset all les_h to 0: leases are transient IPC state backed by a
-  //  C-heap PQ that is not persisted.  after restart the PQ is empty,
-  //  so any les_h count from the previous boot is stale.
+  //  reset all les_h to 0: the snapshot's count belongs to a dead
+  //  process.  leases are durable rows in the LMDB LEASES table, and
+  //  mars rebuilds les_h from them (_mars_play_leases) once replay has
+  //  settled dun_d; an offline command that runs the gc does the same
+  //  through u3_disk_blob_leases.
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
 

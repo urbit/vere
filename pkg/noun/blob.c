@@ -912,7 +912,7 @@ u3b_stage_fd(const c3_c* pax_c,
   return _blob_stage_done(stg_i, stg_c, ok_o);
 }
 
-/* u3b_exists(): check whether a blob file exists.
+/* u3b_live(): check whether a blob file exists.
 */
 c3_o
 u3b_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)

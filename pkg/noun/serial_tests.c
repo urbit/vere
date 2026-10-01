@@ -418,10 +418,9 @@ _ram_make_blob(c3_h mug_h, c3_h seq_h, const c3_y* dat_y, c3_d len_d)
 
 /* _test_ram_bob_spec(): round-trip a bob-containing noun via ram/tap.
 **
-**   Cannot use u3r_sing for bob-containing refs unless the blob file
-**   exists and is decodable — and u3r_sing materializes bob vs normal.
-**   Since our reference IS the bob atom, u3r_sing_atom's bob-vs-bob
-**   fast path handles it by mug+seq.
+**   u3r_sing needs the blob file to compare a bob against a loom atom
+**   (it windows through the file).  Since our reference IS the bob atom,
+**   u3r_sing's bob-vs-bob path compares by record and never reads it.
 */
 static c3_i
 _test_ram_bob_spec(const c3_c* cap_c, u3_noun ref)

@@ -437,7 +437,8 @@
       /* u3r_view: a look into an atom's bytes, wherever the atom lives.
       **
       **   The one way to read a bob, and the same for every other atom.
-      **   open borrows and copies nothing; read copies any byte range out,
+      **   open copies no atom bytes (a bob's open may allocate its hand);
+      **   read copies any byte range out,
       **   zero past the end; flat gives a pointer to byt_d contiguous bytes
       **   (a loom atom's own words, a bob's mapping, a direct atom's value
       **   held in the view); done releases.  byt_d and bit_d are public
@@ -701,9 +702,10 @@
 
       /* u3r_blob_load(): materialize a bob atom as a loom atom.
       **
-      **   Reads the whole blob into a fresh atom.  Returns u3_none if the
-      **   file is missing.  Only for callers that need the atom itself;
-      **   readers of a range go through the hand (u3r_bytes and friends).
+      **   Reads the whole blob into a fresh atom the caller owns.  Returns
+      **   u3_none if the file is missing, empty, or short.  Only for
+      **   callers that need a loom atom as such; readers of a range go
+      **   through a view (u3r_bytes and friends).
       */
         u3_weak
         u3r_blob_load(u3_atom a);

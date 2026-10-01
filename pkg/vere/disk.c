@@ -1553,8 +1553,8 @@ typedef struct {
 } _disk_chop_collect;
 
 /* _disk_chop_zero_cb(): u3h_walk_with callback — subtract eve_w from
-**   use_w and zero eve_w.  Preserves atom cardinality + lease counts.
-**   The walk over LMDB blob refs (step 2) re-increments both.
+**   use_w and zero eve_w, leaving atom cardinality and les_h alone.
+**   The walk over the BLOBS table re-increments eve_w and use_w.
 */
 static void
 _disk_chop_zero_cb(u3_noun kev, void* ptr_v)
@@ -1838,11 +1838,8 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
 
   c3_free(sot_d);
 
-  //  rebuild blob log after chop.
-  //
-  //  step 1: zero all log and les via collect-then-modify on blb_p
-  //  step 2: scan remaining LMDB events for bob atoms, rebuild log
-  //  step 3: delete blobs with all-zero refcounts
+  //  rebuild blob accounting against the surviving epoch, then collect
+  //  (see _disk_chop_rebuild_blobs)
   //
   _disk_chop_rebuild_blobs(log_u);
 
@@ -2373,12 +2370,6 @@ typedef enum {
   _epoc_late = 4   // format from the future
 } _epoc_kind;
 
-/* NOTE: _disk_blb_rebuild_from_epochs removed.
-**   Blob log-refs are now tracked via LMDB blob-ref events (tag 0x02),
-**   not via blobs.txt files.  u3a_blob structs in blb_p persist in the
-**   loom snapshot; on replay, blob-ref events reconstruct the counters.
-*/
-
 /* _disk_epoc_load(): load existing epoch, enumerating failures
 */
 static _epoc_kind
@@ -2556,8 +2547,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
-      //  u3a_blob structs in blb_p persist in the loom snapshot.
-      //  on replay, LMDB blob-ref events will reconstruct eve_w.
+      //  u3a_blob structs in blb_p persist in the loom snapshot; boot
+      //  rebuilds eve_w from the epoch's BLOBS table (u3_disk_blob_refs).
       //
 
       if ( log_u->dun_d < u3A->eve_d ) {

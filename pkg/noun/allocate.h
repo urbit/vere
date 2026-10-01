@@ -220,8 +220,10 @@
     **
     **   les_h is durable: each lease is a row in the LMDB LEASES table.
     **   On boot we zero the snapshot's les_h (and subtract from use_w),
-    **   then rebuild it from that table (_mars_play_leases); eve_w and
-    **   atom cardinality survive the snapshot.
+    **   then rebuild it from that table (_mars_play_leases).  eve_w is
+    **   rebuilt too, from the epoch's BLOBS table (u3_disk_blob_refs): a
+    **   snapshot's count can name events chop has since deleted.  Only
+    **   atom cardinality is taken from the snapshot.
     **
     **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
     **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
@@ -425,7 +427,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
     /* u3a_blob_flag: MSB of u3a_atom.len_w marks an indirect atom as a bob
     **   (blob reference backed by an on-disk file rather than loom data).
-    **   The remaining bits hold the actual data word count.
+    **   A bob's len_w is the flag alone: the low bits are zero, and its one
+    **   word, buf_w[0], is the post of its u3a_blob record, not data.
     **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
     */
 #     define u3a_blob_flag_h  ((c3_h)0x80000000U)

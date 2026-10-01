@@ -171,9 +171,10 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
 **
-**   A body at or past U3_BLOB_THRESH never comes through here: it is
-**   staged and installed by mars first (_http_rec_start), and the
-**   bob arrives in _http_bob_install_cb.
+**   A body at or past U3_BLOB_THRESH normally does not come through
+**   here: _http_rec_start stages it for mars and the bob arrives in
+**   _http_bob_install_cb.  It does when staging fails or no serf is
+**   attached, and on the scry fallback, which then build it inline.
 */
 static u3_noun
 _http_vec_to_octs(h2o_iovec_t vec_u)
@@ -304,10 +305,9 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
 **
 **   Bob atoms take the streaming path: the blob is read window by
-**   window on the king's side as h2o drains the response.  Without
-**   this, u3r_bytes would call u3r_blob_load, which allocates a
-**   full-blob-sized atom in king's loom — that's where you'd see
-**   the RSS of the king process spike to match file size.
+**   window on the king's side as h2o drains the response.  The inline
+**   path would copy the whole body into the hbod's hun_y, a heap
+**   allocation the size of the file.
 **
 **   Returns 0 for a bob whose blob cannot be opened; the caller fails
 **   the response.  Falling back to the inline path would open the

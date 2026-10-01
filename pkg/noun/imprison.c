@@ -574,8 +574,8 @@ u3i_vint(u3_noun a)
   }
   else {
     //  bob atoms must be materialized before incrementing:
-    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is a seq number,
-    //  not atom data.
+    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is the post of
+    //  the bank record, not atom data.
     //
     if ( c3y == u3a_is_bob(a) ) {
       u3_atom mat = u3r_blob_load(a);

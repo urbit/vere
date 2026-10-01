@@ -1409,11 +1409,10 @@ _mesa_hear(u3_mesa* sam_u,
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  //  zero-copy read from [pac] (a bob through its hand) into the arena
-  //  buffer.  the arena is the long-lived owner — we still copy bytes
-  //  into it because it gets stashed in u3_mesa_resend_data->buf_y for
-  //  the resend timer.  using u3r_view skips the full-blob loom alloc
-  //  that u3r_bytes → u3r_blob_load would have caused.
+  //  read [pac] through one view into the arena buffer.  the arena is
+  //  the long-lived owner: it is stashed in u3_mesa_resend_data->buf_y
+  //  for the resend timer, so we still copy into it; one view opens the
+  //  bob's hand once where u3r_bytes would open and close it per call.
   //
   u3r_view vue_u;
   u3r_view_open(&vue_u, pac, c3y);

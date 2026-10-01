@@ -49,8 +49,9 @@
 **        les_h unit and its LEASES row)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_w
-**     7. chop rebuilds eve_w from the LMDB BLOBS table for retained
-**        epochs, then deletes files (and on-disk orphans) at use_w == 0
+**     7. chop rebuilds eve_w from the latest epoch's LMDB BLOBS table
+**        (replay never crosses epochs), restores les_h from LEASES, then
+**        deletes files (and on-disk orphans) at use_w == 0
 **     *. boot: u3_disk_blob_refs rebuilds eve_w from the epoch's BLOBS
 **        table (a snapshot's count is never trusted), _find_home zeroed
 **        les_h and _mars_play_leases restores it from LEASES (pruning
@@ -1596,9 +1597,10 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
   }
 }
 
-/* _mars_play_blobs(): rebuild blob event-log refcounts for replayed
-** events in [fir_d, las_d].  snapshot has counts correct up to snapshot
-** time; replay covers the gap from snapshot to head.
+/* _mars_play_blobs(): check that every blob a replayed event in
+** [fir_d, las_d] references is still in the store.  the counts it
+** bumps are provisional: u3_disk_blob_refs rebuilds eve_w for the whole
+** epoch once replay is done, so the lasting effect here is the check.
 **
 **   returns c3n if any referenced blob file is missing — replay of
 **   those events cannot reproduce their state, so the caller must

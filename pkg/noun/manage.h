@@ -99,9 +99,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
 
       /* u3m_crit_inn(): hold the signals whose handlers longjmp.
       **
-      **   Brackets a short critical section (no loom access, no recursion)
-      **   that must not be unwound half-done: a pending SIGINT, SIGTERM, or
-      **   SIGVTALRM is delivered at the matching u3m_crit_out().  Nests.
+      **   Brackets a short critical section that must not be unwound
+      **   half-done: a pending SIGINT, SIGTERM, or SIGVTALRM is delivered
+      **   at the matching u3m_crit_out().  Nests.  Nothing inside may bail
+      **   (no loom allocation; frees and pointer writes are fine) and
+      **   nothing inside may re-enter nock: a bail out of a section would
+      **   leave the signals held until u3m_soft_top unwinds the count.
       */
         void
         u3m_crit_inn(void);

@@ -409,7 +409,8 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 
 /* _lord_plea_blob(): handle blob-ack / blob-nack from serf.
 **
-** Expected dat: [c3y mug seq] on success, [c3n reason] on failure.
+** Expected dat: [c3y mug seq] on success, c3n on failure (mars sends
+** [%blob %.n]; a cell with c3n at its head is taken the same way).
 */
 static void
 _lord_plea_blob(u3_lord* god_u, u3_noun dat)
@@ -448,7 +449,7 @@ _lord_plea_blob(u3_lord* god_u, u3_noun dat)
     if ( fun_f ) fun_f(ptr_v, mug_h, seq_h, c3y);
   }
   else {
-    //  [c3n reason]
+    //  c3n: the install was refused
     //
     if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
   }

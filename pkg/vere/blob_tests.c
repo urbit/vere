@@ -1420,10 +1420,9 @@ _test_jets_bob(void)
     _jet_same("cut", 0, 3, 17, u3qc_cut(0, 3, 17, bob), u3qc_cut(0, 3, 17, loa));
   }
 
-  //  rip and sew view their source as a word buffer and read it a whole
-  //  word at a time, so the last word of a bob runs past the file into
-  //  its mapping's zero tail.  an odd length, three bytes over a page,
-  //  pins that on every platform; the steps keep the lists small
+  //  rip reads its source a word at a time through u3r_word and sew
+  //  loads it, so a bob three bytes over a page exercises a partial
+  //  last word on both paths; the steps keep the lists small
   //
   {
     const c3_w odd_w = 4099;
@@ -1481,7 +1480,8 @@ _test_jets_bob(void)
   }
 
   //  jets that read an atom's words directly load a bob onto the loom
-  //  first: aor, sew (above), add, sub, muk, and the octs scanners
+  //  first: aor, sew (above), add, sub, and the octs scanners; muk
+  //  copies its key instead
   //
   {
     u3_atom lob = u3i_bytes(len_w, dat_y);

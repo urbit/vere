@@ -1391,7 +1391,9 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
 /* _unix_initial_update_file(): read file, but don't watch
 **  XX deduplicate with _unix_update_file()
 **
-**  Files larger than U3_BLOB_THRESH are stored in the blob store.
+**  The boot scan runs before mars can install anything, and mars alone
+**  writes the store, so a large file goes in as a loom atom here; the
+**  watcher (_unix_update_file) stages any later change.
 */
 static u3_noun
 _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
