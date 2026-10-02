@@ -2,6 +2,7 @@
 
 #include "c3/defs.h"
 #include "allocate.h"
+#include "blob.h"
 
 #include "hashtable.h"
 #include "log.h"
@@ -501,9 +502,15 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  //  use masked length; bob atoms carry u3a_blob_flag in len_w
+  //  a bob's len_w is the flag alone and its one word is the bank
+  //  record's post, which is valid from every road.  copying that word
+  //  moves the atom's cardinality with it: the junior copy is dropped
+  //  with its road, never freed through _me_bob_dead, so the record's
+  //  use_w is neither bumped here nor lost there.  no bob is junior
+  //  today (u3i_blob asserts the home road), so this branch is not
+  //  reached; it keeps a take from minting a bob with no record.
   //
-  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
+  c3_w      dat_w = ( old_u->len_w & u3a_blob_flag ) ? 1 : old_u->len_w;
   c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
@@ -1117,6 +1124,14 @@ u3a_blob_sane(c3_o dep_o)
     vt_cleanup(&ctx_u.set_u);
   }
 
+  //  the home road is quiescent between events, so mars should hold no
+  //  blob open here; the king may (http streams a body across events),
+  //  so this is reported, not counted as a violation.
+  //
+  if ( u3b_hands() ) {
+    fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3b_hands());
+  }
+
   c3_free(ctx_u.car_u);
   return ctx_u.ok_o;
 }
@@ -1138,11 +1153,18 @@ static void
 _me_bob_dead(u3a_atom* atm_u)
 {
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
-  if ( !blb_u ) return;
 
-  if ( blb_u->use_w > 0 ) {
-    blb_u->use_w -= 1;
+  //  a bob dying over a record already at zero means a bob was freed
+  //  twice or a record was recreated under a live bob: say so, and do
+  //  not ask for a deletion that should already have happened
+  //
+  if ( 0 == blb_u->use_w ) {
+    u3l_log("blob: %08x/%u: cardinality underflow (record already at zero)",
+            blb_u->mug_h, blb_u->seq_h);
+    return;
   }
+
+  blb_u->use_w -= 1;
 
   if ( (0 == blb_u->use_w) && u3C.blob_del_f ) {
     u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);

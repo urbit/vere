@@ -574,11 +574,11 @@ u3i_vint(u3_noun a)
   }
   else {
     //  bob atoms must be materialized before incrementing:
-    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is a seq number,
-    //  not atom data.
+    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is the post of
+    //  the bank record, not atom data.
     //
     if ( c3y == u3a_is_bob(a) ) {
-      u3_atom mat = u3r_blob_load(a, u3C.dir_c);
+      u3_atom mat = u3r_blob_load(a);
       if ( u3_none == mat ) {
         return u3m_bail(c3__fail);
       }
@@ -731,7 +731,14 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      //  a bob has no word buffer to read address bits from; u3r_at
+      //  refuses one as an axis, and so does this
+      //
+      if ( c3y == u3a_is_bob(u3x_atom(axe)) ) {
+        return u3m_bail(c3__exit);
+      }
+
+      c3_w        dep_w = u3r_met(0, axe) - 2;
       const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
                         : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;

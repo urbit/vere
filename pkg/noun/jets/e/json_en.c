@@ -123,6 +123,16 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
 {
   const c3_y *byt_y;
 
+  //  a bob's bytes live in a file: load it onto the loom
+  //
+  u3_atom lom = u3_none;
+  if ( c3y == u3a_is_bob(a) ) {
+    if ( u3_none == (lom = u3r_blob_load(a)) ) {
+      u3m_bail(c3__fail);
+    }
+    a = lom;
+  }
+
   // XX assumes little-endian
   //
   if ( c3y == u3a_is_cat(a) ) {
@@ -134,6 +144,7 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
   }
 
   _append_text(buf_u, byt_y, u3r_met(3, a));
+  if ( u3_none != lom ) u3z(lom);
 }
 
 static c3_w

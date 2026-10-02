@@ -48,14 +48,19 @@
                    c3_d     len_d,
                    c3_o  (*read_f)(void*, c3_d, size_t  , void*));
 
-    /* u3_lmdb_save(): save [len_d] events starting at [eve_d].
+    /* u3_lmdb_save(): save [len_d] events starting at [eve_d], each with
+    **   the blob ids it holds ([bid_p][i], [bid_z][i] of them; both arrays
+    **   may be 0), in one transaction: an event and its BLOBS row commit
+    **   together or not at all.
     */
       c3_o
       u3_lmdb_save(MDB_env* env_u,
                    c3_d     eve_d,
                    c3_d     len_d,
                    void**   byt_p,
-                   size_t*  siz_i);
+                   size_t*  siz_i,
+                   c3_d**   bid_p,
+                   c3_z*    bid_z);
 
     /* u3_lmdb_read_meta(): read by string from the META db.
     */
@@ -91,14 +96,6 @@
       void
       u3_lmdb_walk_done(u3_lmdb_walk* itr_u);
 
-    /* u3_lmdb_save_blobs(): save blob IDs for an event into BLOBS table.
-    */
-      c3_o
-      u3_lmdb_save_blobs(MDB_env* env_u,
-                         c3_d     eve_d,
-                         c3_d*    ids_d,
-                         c3_z     len_z);
-
     /* u3_lmdb_read_blobs(): read blob IDs for an event from BLOBS table.
     */
       c3_o
@@ -119,7 +116,8 @@
     /* u3_lmdb_save_lease(): durably record a king lease (MDB_DUPSORT).
     **
     **   keyed by blob id [bid_d]; value is the pair [exp_d, lea_d] where
-    **   [lea_d] is a unique id disambiguating duplicate-key rows.
+    **   [exp_d] is the event number at which the lease expires (0: never)
+    **   and [lea_d] is a unique id disambiguating duplicate-key rows.
     */
       c3_o
       u3_lmdb_save_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d);
@@ -139,5 +137,13 @@
       u3_lmdb_walk_leases(MDB_env* env_u,
                           void*    ptr_v,
                           void  (*fun_f)(void*, c3_d, c3_d, c3_d));
+
+    /* u3_lmdb_copy_leases(): copy every lease row from [fro_u] to [to_u].
+    **
+    **   an epoch roll opens a fresh environment; a lease is not an event
+    **   and must cross with it.  c3n if any row could not be written.
+    */
+      c3_o
+      u3_lmdb_copy_leases(MDB_env* fro_u, MDB_env* to_u);
 
 #endif /* ifndef U3_VERE_DB_LMDB_H */

@@ -97,6 +97,23 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_signal(c3_m sig_m);
 
+      /* u3m_crit_inn(): hold the signals whose handlers longjmp.
+      **
+      **   Brackets a short critical section that must not be unwound
+      **   half-done: a pending SIGINT, SIGTERM, or SIGVTALRM is delivered
+      **   at the matching u3m_crit_out().  Nests.  Nothing inside may bail
+      **   (no loom allocation; frees and pointer writes are fine) and
+      **   nothing inside may re-enter nock: a bail out of a section would
+      **   leave the signals held until u3m_soft_top unwinds the count.
+      */
+        void
+        u3m_crit_inn(void);
+
+      /* u3m_crit_out(): end a critical section begun by u3m_crit_inn().
+      */
+        void
+        u3m_crit_out(void);
+
       /* u3m_file(): load file, as atom, or bail.
       */
         u3_noun
@@ -119,6 +136,18 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
 
         c3_w
         u3m_road_depth(void);
+
+      /* u3m_soft_top(): top-level safety wrapper.
+      **
+      **   Runs [fun_f] on a fresh road under the internal signal regime.
+      **   Produces [0 pro] on success, the bail's error ball, or
+      **   [3 sig tax] for a signal-driven unwind.  Home road only.
+      */
+        u3_noun
+        u3m_soft_top(c3_w    mil_w,
+                     c3_w    pad_w,
+                     u3_funk fun_f,
+                     u3_noun   arg);
 
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **

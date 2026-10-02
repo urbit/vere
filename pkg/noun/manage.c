@@ -20,6 +20,7 @@
 
 #include "allocate.h"
 #include "backtrace.h"
+#include "blob.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -263,6 +264,11 @@ _cm_signal_reset(void)
   u3R = &u3H->rod_u;
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
+
+  //  the discarded roads' blob hands go with them; the kid chain is
+  //  the only path to their lists, so drain before cutting it
+  //
+  u3b_drain_kids();
   u3R->kid_p = 0;
 }
 
@@ -482,6 +488,32 @@ void
 u3m_signal(c3_m sig_m)
 {
   rsignal_longjmp(u3_Signal, sig_m);
+}
+
+//  critical-section nesting depth (see u3m_crit_inn).
+//
+static c3_w _cm_crit_w = 0;
+
+/* u3m_crit_inn(): hold the signals whose handlers longjmp.
+*/
+void
+u3m_crit_inn(void)
+{
+  if ( 0 == _cm_crit_w++ ) {
+    rsignal_block();
+  }
+}
+
+/* u3m_crit_out(): end a critical section begun by u3m_crit_inn().
+*/
+void
+u3m_crit_out(void)
+{
+  u3_assert( _cm_crit_w );
+
+  if ( 0 == --_cm_crit_w ) {
+    rsignal_unblock();
+  }
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -763,11 +795,18 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset all les_h to 0: leases are transient IPC state backed by a
-  //  C-heap PQ that is not persisted.  after restart the PQ is empty,
-  //  so any les_h count from the previous boot is stale.
+  //  reset all les_h to 0: the snapshot's count belongs to a dead
+  //  process.  leases are durable rows in the LMDB LEASES table, and
+  //  mars rebuilds les_h from them (_mars_play_leases) once replay has
+  //  settled dun_d; an offline command that runs the gc does the same
+  //  through u3_disk_blob_leases.
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
+
+  //  the home road never lists blob hands in the loom; anything a
+  //  snapshot carries there belongs to a dead process
+  //
+  u3H->rod_u.bob_p = 0;
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1261,6 +1300,12 @@ u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
+  //  the road's blob hands, retained for reuse since it leapt, go with
+  //  its frames.  this is the one exit every road takes except a
+  //  signal unwind, which drains the kid chain itself.
+  //
+  u3b_drain(u3R);
+
 #if 0
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
@@ -1598,6 +1643,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_Ford_fresh_road_depth_h = 0;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
+    //  a critical section never longjmps on its own, but a fault inside
+    //  one must not leave signals held forever
+    //
+    while ( _cm_crit_w ) {
+      u3m_crit_out();
+    }
+
     //  reinitialize trace state
     //
     u3t_init();
@@ -2711,6 +2763,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  u3b_stop();
   u3t_sstack_exit();
 
   u3e_stop();

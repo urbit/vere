@@ -35,28 +35,17 @@
         c3_c*            val_c;
       } u3_hhed;
 
-    /* u3_hbod: http body block.  Also used for responses.
-    **
-    **   Three shapes:
-    **     (a) inline    — payload in hun_y[0..len_w]; map_y == own_y == 0.
-    **     (b) mmap view — map_y points into a shared mmap at the chunk's
-    **                     offset; own_y == 0 (this chunk does not own the
-    **                     mapping).  hun_y is unused.
-    **     (c) mmap owner — same as (b) for the iovec (map_y = base + off),
-    **                      plus own_y = mmap base and map_d = mmap size
-    **                      so _cttp_bods_free can munmap.
-    **
-    **   Bob-streaming chains (see _cttp_bod_from_bob) are built as a
-    **   head→tail list of views with the owner as the tail chunk.
-    **   Head-first free then MADV_DONTNEED's every view before the
-    **   owner finally munmaps.
+    /* u3_hbod: http body block, inline (payload in hun_y) or a chunk of
+    **   a bob read through win_u, a u3r_view on the king's home road.  A
+    **   bob's chunks share one view; the last chunk owns it.
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
         c3_w             len_w;
-        c3_y*            map_y;   //  iovec base (mmap view) or NULL (inline)
-        c3_y*            own_y;   //  mmap base to munmap (NULL if not owner)
-        c3_d             map_d;   //  mmap size for munmap (0 if not owner)
+        c3_y*            buf_y;   //  blob: heap copy of the chunk, or 0
+        u3r_view*        win_u;   //  blob: the shared view, or 0
+        c3_d             off_d;   //  blob: byte offset of this chunk
+        c3_o             own_o;   //  blob: frees win_u
         c3_y             hun_y[0];
       } u3_hbod;
 
@@ -428,6 +417,8 @@
           c3_d             eve_d;               //  event number
           c3_h             mug_h;               //  kernel mug after
           u3_noun            job;               //  (pair date ovum)
+          c3_d*            bid_d;               //  blob ids the event holds, or 0
+          c3_z             bid_z;               //  their count
           struct _u3_fact* nex_u;               //  next in queue
         } u3_fact;
 
@@ -437,6 +428,8 @@
           c3_d             eve_d;
           size_t           len_i;
           c3_y*            hun_y;
+          c3_d*            bid_d;               //  blob ids, written with the event
+          c3_z             bid_z;
           struct _u3_feat* nex_u;
         } u3_feat;
 
@@ -596,6 +589,8 @@
             c3_d           len_d;               //  number of events XX len_d
             c3_y*          byt_y[100];          //  array of bytes
             size_t         siz_i[100];          //  array of lengths
+            c3_d*          bid_d[100];          //  blob ids per event, or 0
+            c3_z           bid_z[100];          //  their counts
           } sav_u;
         } u3_disk;
 
@@ -990,11 +985,18 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
-      /* u3_disk_blob_refs(): rebuild blob eve_w from the BLOBS table
-      **   over the entire retained log, creating entries as needed.
+      /* u3_disk_blob_refs(): rebuild blob eve_w from the latest epoch's
+      **   BLOBS table, creating entries as needed.
       */
         void
         u3_disk_blob_refs(u3_disk* log_u);
+
+      /* u3_disk_blob_leases(): restore les_h from the LEASES table for an
+      **   offline command that runs the gc; every row whose file exists
+      **   counts.
+      */
+        void
+        u3_disk_blob_leases(u3_disk* log_u);
 
       /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
       **   orphans with no bank entry.  run at boot (after replay and
@@ -1128,11 +1130,6 @@
                              c3_c*    pax_c,
                              void*    ptr_v,
                              void   (*fun_f)(void*, c3_h, c3_h, c3_o));
-
-      /* u3_lord_blob_lease(): tell Mars king is acquiring a blob lease.
-      */
-        void
-        u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h);
 
       /* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
       */

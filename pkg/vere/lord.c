@@ -409,7 +409,8 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 
 /* _lord_plea_blob(): handle blob-ack / blob-nack from serf.
 **
-** Expected dat: [c3y mug seq] on success, [c3n reason] on failure.
+** Expected dat: [c3y mug seq] on success, c3n on failure (mars sends
+** [%blob %.n]; a cell with c3n at its head is taken the same way).
 */
 static void
 _lord_plea_blob(u3_lord* god_u, u3_noun dat)
@@ -448,7 +449,7 @@ _lord_plea_blob(u3_lord* god_u, u3_noun dat)
     if ( fun_f ) fun_f(ptr_v, mug_h, seq_h, c3y);
   }
   else {
-    //  [c3n reason]
+    //  c3n: the install was refused
     //
     if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
   }
@@ -841,20 +842,6 @@ u3_lord_blob_install(u3_lord* god_u,
   wit_u->blb_u.fun_f = fun_f;
 
   _lord_writ_send(god_u, wit_u);
-}
-
-/* u3_lord_blob_lease(): acquire/renew a king lease on a blob (%blas).
-**
-**   sent by the king's renewal timer (king.c) for every blob it still
-**   references, so a blob-bearing event pending in mars can't outlive
-**   the 15-min lease TTL and lose its file before commit.
-*/
-void
-u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h)
-{
-  _lord_send(god_u, u3nt(c3_s4('b','l','a','s'),
-                         u3i_word(mug_h),
-                         u3i_word(seq_h)));
 }
 
 /* u3_lord_blob_release(): tell Mars king is releasing a blob lease.

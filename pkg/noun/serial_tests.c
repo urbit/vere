@@ -366,7 +366,7 @@ _test_ram_roundtrip(void)
 /* _ram_tmp_dir / _ram_setup_tmp() / _ram_cleanup_tmp() / _ram_make_blob():
 **
 **   Helpers for bob-atom round-trip tests.  The ram encoder calls
-**   u3r_blob_met() which reads the blob file at
+**   u3r_met_d() which reads the blob file at
 **   $u3C.dir_c/.urb/bob/<mug>/<seq>, so actual files must exist.
 */
 
@@ -418,10 +418,9 @@ _ram_make_blob(c3_h mug_h, c3_h seq_h, const c3_y* dat_y, c3_d len_d)
 
 /* _test_ram_bob_spec(): round-trip a bob-containing noun via ram/tap.
 **
-**   Cannot use u3r_sing for bob-containing refs unless the blob file
-**   exists and is decodable — and u3r_sing materializes bob vs normal.
-**   Since our reference IS the bob atom, u3r_sing_atom's bob-vs-bob
-**   fast path handles it by mug+seq.
+**   u3r_sing needs the blob file to compare a bob against a loom atom
+**   (it windows through the file).  Since our reference IS the bob atom,
+**   u3r_sing's bob-vs-bob path compares by record and never reads it.
 */
 static c3_i
 _test_ram_bob_spec(const c3_c* cap_c, u3_noun ref)

@@ -350,10 +350,14 @@ u3_lmdb_save(MDB_env* env_u,
              c3_d     eve_d,               //  first event
              c3_d     len_d,               //  number of events
              void**   byt_p,               //  array of bytes
-             size_t*  siz_i)               //  array of lengths
+             size_t*  siz_i,               //  array of lengths
+             c3_d**   bid_p,               //  array of blob id arrays, or 0
+             c3_z*    bid_z)               //  array of their counts, or 0
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
+  MDB_dbi  blb_u;
+  c3_o     blb_o = c3n;
   c3_h     ret_h;
 
   //  create a write transaction
@@ -393,6 +397,36 @@ u3_lmdb_save(MDB_env* env_u,
           fprintf(stderr, "lmdb: write failed on event %" PRIu64 "\r\n", key_d);
           mdb_txn_abort(txn_u);
           return c3n;
+        }
+      }
+
+      //  the event's blob ids go in the same transaction, so the BLOBS
+      //  row can neither outlive a lost event nor go missing under a
+      //  committed one
+      //
+      if ( bid_p && bid_z && bid_z[i_d] ) {
+        if ( c3n == blb_o ) {
+          c3_h bop_h = MDB_CREATE | MDB_INTEGERKEY;
+
+          if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", bop_h, &blb_u)) ) {
+            mdb_logerror(stderr, ret_h, "lmdb: write: blobs dbi_open fail");
+            mdb_txn_abort(txn_u);
+            return c3n;
+          }
+          blb_o = c3y;
+        }
+
+        {
+          MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &key_d };
+          MDB_val val_u = { .mv_size = bid_z[i_d] * sizeof(c3_d),
+                            .mv_data = bid_p[i_d] };
+
+          if ( (ret_h = mdb_put(txn_u, blb_u, &key_u, &val_u, 0)) ) {
+            fprintf(stderr, "lmdb: blobs write failed on event %" PRIu64
+                            "\r\n", key_d);
+            mdb_txn_abort(txn_u);
+            return c3n;
+          }
         }
       }
     }
@@ -614,64 +648,6 @@ u3_lmdb_walk_done(u3_lmdb_walk* itr_u)
   mdb_txn_abort(itr_u->txn_u);
 }
 
-/* u3_lmdb_save_blobs(): save blob IDs for event [eve_d] into BLOBS table.
-*/
-c3_o
-u3_lmdb_save_blobs(MDB_env* env_u,
-                   c3_d     eve_d,
-                   c3_d*    ids_d,
-                   c3_z     len_z)
-{
-  MDB_txn* txn_u;
-  MDB_dbi  mdb_u;
-  c3_h     ret_h;
-
-  if ( !len_z ) {
-    return c3y;
-  }
-
-  //  create a write transaction
-  //
-  if ( (ret_h = mdb_txn_begin(env_u, 0, 0, &txn_u)) ) {
-    mdb_logerror(stderr, ret_h, "lmdb: blobs write: txn_begin fail");
-    return c3n;
-  }
-
-  //  open the BLOBS database
-  //
-  {
-    c3_h ops_h = MDB_CREATE | MDB_INTEGERKEY;
-
-    if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", ops_h, &mdb_u)) ) {
-      mdb_logerror(stderr, ret_h, "lmdb: blobs write: dbi_open fail");
-      mdb_txn_abort(txn_u);
-      return c3n;
-    }
-  }
-
-  //  write packed array of blob IDs keyed by event number
-  //
-  {
-    MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &eve_d };
-    MDB_val val_u = { .mv_size = len_z * sizeof(c3_d), .mv_data = ids_d };
-
-    if ( (ret_h = mdb_put(txn_u, mdb_u, &key_u, &val_u, 0)) ) {
-      mdb_logerror(stderr, ret_h, "lmdb: blobs write: put fail");
-      mdb_txn_abort(txn_u);
-      return c3n;
-    }
-  }
-
-  //  commit transaction
-  //
-  if ( (ret_h = mdb_txn_commit(txn_u)) ) {
-    mdb_logerror(stderr, ret_h, "lmdb: blobs write: commit fail");
-    return c3n;
-  }
-
-  return c3y;
-}
-
 /* u3_lmdb_read_blobs(): read blob IDs for event [eve_d] from BLOBS table.
 **
 **   on success, sets [out_d] to a malloc'd array and [out_z] to its length.
@@ -799,9 +775,10 @@ u3_lmdb_walk_blobs(MDB_env* env_u,
 **   The LEASES table is keyed by blob id [bid_d] = (mug<<32)|seq with
 **   MDB_DUPSORT, so multiple live leases on one blob coexist as
 **   duplicate-key rows.  The value is a 16-byte pair [exp_d, lea_d]:
-**   the wall-clock expiry and a unique lease id that disambiguates the
-**   duplicates (so two leases sharing an expiry millisecond do not
-**   collapse).  Committed before the king is told it holds the lease.
+**   the event number at which the lease expires (0: never) and a
+**   unique lease id that disambiguates the duplicates (leases issued
+**   between two commits share an expiry).  Committed before the king
+**   is told it holds the lease.
 */
 c3_o
 u3_lmdb_save_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d)
@@ -949,6 +926,64 @@ u3_lmdb_walk_leases(MDB_env* env_u,
   }
 
   mdb_txn_abort(txn_u);
+}
+
+/* _lmdb_lease_row: one LEASES row held between a walk and a write.
+*/
+typedef struct {
+  c3_d bid_d;
+  c3_d exp_d;
+  c3_d lea_d;
+} _lmdb_lease_row;
+
+typedef struct {
+  _lmdb_lease_row* row_u;
+  c3_z             len_z;
+  c3_z             cap_z;
+} _lmdb_lease_acc;
+
+static void
+_lmdb_copy_leases_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
+{
+  _lmdb_lease_acc* acc_u = ptr_v;
+
+  if ( acc_u->len_z == acc_u->cap_z ) {
+    acc_u->cap_z = acc_u->cap_z ? (acc_u->cap_z << 1) : 8;
+    acc_u->row_u = c3_realloc(acc_u->row_u,
+                              acc_u->cap_z * sizeof(*acc_u->row_u));
+  }
+  acc_u->row_u[acc_u->len_z].bid_d = bid_d;
+  acc_u->row_u[acc_u->len_z].exp_d = exp_d;
+  acc_u->row_u[acc_u->len_z].lea_d = lea_d;
+  acc_u->len_z += 1;
+}
+
+/* u3_lmdb_copy_leases(): copy every lease row from [fro_u] to [to_u].
+**
+**   collect, then write: the walk holds a read transaction on [fro_u]
+**   and each save opens a write transaction on [to_u].
+*/
+c3_o
+u3_lmdb_copy_leases(MDB_env* fro_u, MDB_env* to_u)
+{
+  _lmdb_lease_acc acc_u = { 0, 0, 0 };
+  c3_o            ret_o = c3y;
+
+  u3_lmdb_walk_leases(fro_u, &acc_u, _lmdb_copy_leases_cb);
+
+  for ( c3_z i_z = 0; i_z < acc_u.len_z; i_z++ ) {
+    _lmdb_lease_row* row_u = &acc_u.row_u[i_z];
+
+    if ( c3n == u3_lmdb_save_lease(to_u, row_u->bid_d,
+                                   row_u->exp_d, row_u->lea_d) )
+    {
+      ret_o = c3n;
+      break;
+    }
+  }
+
+  c3_free(acc_u.row_u);
+  return ret_o;
 }
 
 /* mdb_logerror(): writes an error message and lmdb error code to f.

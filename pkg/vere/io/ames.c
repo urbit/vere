@@ -1355,20 +1355,29 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    //  zero-copy read from [pac] (mmap if it's a bob) into the owned
-    //  packet buffer.  hun_y is long-lived (mutated in place for origin
-    //  forwarding, freed on send), so we still copy into it — but using
-    //  u3r_view skips the full-blob loom alloc that u3r_bytes →
-    //  u3r_blob_load would have caused.
+    //  read [pac] through one view into the owned packet buffer.  hun_y
+    //  is long-lived (mutated in place for origin forwarding, freed on
+    //  send), so we still copy into it; one view opens the bob's hand
+    //  once where u3r_bytes would open and close it per call.
     //
     u3r_view vue_u;
-    u3r_view_init(&vue_u, pac);
-    c3_w len_w = vue_u.len_w;
-    u3_assert( UINT32_MAX >= len_w );
+    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+      //  a bob whose file is gone is a store problem, not a reason to
+      //  unwind the king: drop this packet
+      //
+      u3l_log("ames: blob %08x/%u is not in the store; packet dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      c3_free(pac_u);
+      u3z(lan); u3z(pac);
+      return;
+    }
+    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    u3_assert( UINT32_MAX >= vue_u.byt_d );
+    c3_w len_w = (c3_w)vue_u.byt_d;
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
     if ( len_w ) {
-      memcpy(pac_u->hun_y, vue_u.byt_y, len_w);
+      memcpy(pac_u->hun_y, vue_y, len_w);
     }
     u3r_view_done(&vue_u);
 

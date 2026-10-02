@@ -94,7 +94,18 @@ _parse(u3_atom txt)
 
   const c3_y *byt_y;
   c3_z        cnt_z;
-  c3_w        len_w = u3r_met(3, txt);
+  c3_w        len_w;
+
+  //  a bob's bytes live in a file: load it onto the loom
+  //
+  u3_atom lom = u3_none;
+  if ( c3y == u3a_is_bob(txt) ) {
+    if ( u3_none == (lom = u3r_blob_load(txt)) ) {
+      return u3m_bail(c3__fail);
+    }
+    txt = lom;
+  }
+  len_w = u3r_met(3, txt);
 
   //
   // initialization
@@ -168,6 +179,7 @@ _parse(u3_atom txt)
 
       case JSON_ERROR: {
         _close_on_error(sam_u, pil_u);
+        if ( u3_none != lom ) u3z(lom);
         return u3_nul;
       } break;
     }
@@ -221,6 +233,8 @@ _parse(u3_atom txt)
   }
 
   json_close(sam_u);
+
+  if ( u3_none != lom ) u3z(lom);
 
   // return null if trailing trash/multiple JSON objects
   if ( json_get_position(sam_u) != len_w ) {

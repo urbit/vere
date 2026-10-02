@@ -378,6 +378,13 @@ U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
   U3C_OLD_BLOB_T *obl_u = (U3C_OLD_BLOB_T *)U3C_OLD_INTO(val);
   u3a_blob       *nbl_u = u3a_blob_new(obl_u->mug_h, obl_u->seq_h);
 
+  //  the counters cross verbatim.  that is right only because the copy
+  //  is box for box (every bob atom in the source becomes exactly one
+  //  in the target) and every root holding bobs is migrated, so the
+  //  cardinality term of use_w is unchanged.  the target loom belongs
+  //  to the other bitness, so this process cannot run u3a_blob_sane on
+  //  it; the first |pack or |meld in the migrated pier does.
+  //
   nbl_u->use_w = obl_u->use_w;
   nbl_u->eve_w = obl_u->eve_w;
   nbl_u->les_h = obl_u->les_h;

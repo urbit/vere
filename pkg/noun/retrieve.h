@@ -434,38 +434,67 @@
         u3r_bytes_all(c3_w*   len_w,
                       u3_atom a);
 
-      /* u3r_view_e: backing kind
+      /* u3r_view: a look into an atom's bytes, wherever the atom lives.
+      **
+      **   The one way to read a bob, and the same for every other atom.
+      **   open copies no atom bytes (a bob's open may allocate its hand);
+      **   read copies any byte range out,
+      **   zero past the end; flat gives a pointer to byt_d contiguous bytes
+      **   (a loom atom's own words, a bob's mapping, a direct atom's value
+      **   held in the view); done releases.  byt_d and bit_d are public
+      **   and valid from open; the other fields are private.  A view is
+      **   valid until done on the road that opened it and is never copied.
+      **   An inner road's bail or signal releases what a view borrowed;
+      **   the home road calls done itself.  Every byte from byt_d to the
+      **   next word boundary is readable and zero.
       */
         typedef enum {
-          u3r_view_loom = 0,    //  aliases a pug's loom word buffer; free: none
-          u3r_view_blob,        //  mmap of a bob blob file;          free: munmap
-          u3r_view_flat,        //  cat bytes inline                  free: none
-          u3r_view_heap         //  u3a_malloc'd pad buffer;          free: u3a_free
+          u3r_view_loom = 0,    //  the loom word buffer
+          u3r_view_blob,        //  the road's hand
+          u3r_view_even         //  a direct atom's value in raw_d
         } u3r_view_e;
 
-      /* u3r_view: zero-copy read-only view over an atom's significant bytes.
-      */
+        struct _u3b_hand;
+
         typedef struct {
-          const c3_y* byt_y;
-          c3_w        len_w;
-          u3r_view_e  kin_e;
-          union {
-            c3_d      map_d;    //  blob: mmap length for munmap
-            c3_d      raw_d;    //  flat: inline cat bytes
-          } u;
+          c3_d                  byt_d;  //  the atom's significant bytes
+          c3_d                  bit_d;  //  the atom's significant bits
+          u3r_view_e            kin_e;  //  private
+          struct _u3b_hand*     han_u;  //  private: blob: the road's hand
+          const c3_y*           byt_y;  //  private: flat's pointer
+          c3_d                  raw_d;  //  private: even: the atom's value
         } u3r_view;
 
-      /* u3r_view_init(): open a read-only byte view of [a].
+      /* u3r_view_open(): open a view of [a].
+      **
+      **   A bob whose file is missing, empty, or all zero cannot be
+      **   viewed: with [bal_o] set that bails %fail, otherwise it
+      **   returns c3n.
       */
-        void
-        u3r_view_init(u3r_view* vue_u, u3_atom a);
+        c3_o
+        u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o);
 
-      /* u3r_view_padded(): open a zero-padded view of [wid_w] bytes.
+      /* u3r_view_read(): [len_z] bytes at byte offset [off_d] of the
+      **   atom, zero-filled past its end.
+      **
+      **   Returns the number of bytes that came from the atom, before
+      **   the zero fill; short of the atom's extent only if the file
+      **   was shortened under the view.
       */
-        void
-        u3r_view_padd(u3r_view* vue_u, u3_atom a, c3_w wid_w);
+        c3_z
+        u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
-      /* u3r_view_done(): release the view's backing memory.
+      /* u3r_view_flat(): the atom's bytes, contiguous: byt_d of them.
+      **
+      **   Bails %fail if a bob cannot be mapped.
+      */
+        const c3_y*
+        u3r_view_flat(u3r_view* vue_u);
+
+      /* u3r_view_done(): release the view.
+      **
+      **   Drops a blob view's hold on its hand; the other kinds hold
+      **   nothing.  Leaves the view empty.
       */
         void
         u3r_view_done(u3r_view* vue_u);
@@ -671,37 +700,23 @@
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
 
-      /* u3r_blob_load(): materialize a bob atom by loading from the blob store.
+      /* u3r_blob_load(): materialize a bob atom as a loom atom.
       **
-      **   Returns a normal indirect atom with the blob's bytes, or u3_none on
-      **   failure. [pax_c] is the pier path ($pier/).
-      **   Does NOT consume [a]; caller must manage refcounts as usual.
+      **   Reads the whole blob into a fresh atom the caller owns.  Returns
+      **   u3_none if the file is missing, empty, or short.  Only for
+      **   callers that need a loom atom as such; readers of a range go
+      **   through a view (u3r_bytes and friends).
       */
-      u3_weak
-      u3r_blob_load(u3_atom a, const c3_c* pax_c);
+        u3_weak
+        u3r_blob_load(u3_atom a);
 
-      /* u3r_blob_mmap(): mmap a bob atom's blob file for direct byte access.
+      /* u3r_met_d(): u3r_met at full width, for any atom.
       **
-      **   Returns a read-only pointer to [*len_d] bytes, or NULL on failure.
-      **   Release with u3r_blob_umap(ptr, *len_d) when done.
-      **   Uses u3C.dir_c as the pier path.
-      **   No loom allocation is performed.
-      */
-      const c3_y*
-      u3r_blob_mmap(u3_atom a, c3_d* len_d);
-
-      /* u3r_blob_umap(): release a mapping from u3r_blob_mmap().
-      */
-      void
-      u3r_blob_umap(const c3_y* ptr_y, c3_d len_d);
-
-      /* u3r_blob_met(): compute bit-length of a bob atom without materialization.
-      **
-      **   Equivalent to u3r_met(0, materialized) but avoids loom allocation.
-      **   Scans the last byte to strip trailing zeroes.
-      **   Returns 0 on error.
+      **   A c3_w bit count overflows past 512 MiB on a 32-bit build,
+      **   which blobs exceed.  Bails %fail for a bob whose file is
+      **   missing or empty.
       */
       c3_d
-      u3r_blob_met(u3_atom a);
+      u3r_met_d(c3_g a_g, u3_atom b);
 
 #endif /* ifndef U3_RETRIEVE_H */
