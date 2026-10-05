@@ -180,9 +180,9 @@ pub fn build(b: *std.Build) !void {
         .flags = flags.items,
     });
 
-    //  the u3nc interpreter loop in nock-compile.c is one register short
-    //  with the frame pointer reserved, so it's built without.  frame
-    //  pointer unwinding stops at _nc_burn; dwarf unwinding still works.
+    //  the opcode functions are tiny, and removing the frame-pointer removes
+    //  the frame-pointer prologue and epilogue, which for many opcode functions
+    //  is a measurable size of their bodies
     var burn_flags = std.array_list.Managed([]const u8).init(b.allocator);
     defer burn_flags.deinit();
     try burn_flags.appendSlice(flags.items);
