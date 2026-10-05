@@ -574,8 +574,8 @@ u3i_vint(u3_noun a)
   }
   else {
     //  bob atoms must be materialized before incrementing:
-    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is the post of
-    //  the bank record, not atom data.
+    //  pug_u->len_w carries u3a_blob_flag and the body is the blob id,
+    //  not the atom's value.
     //
     if ( c3y == u3a_is_bob(a) ) {
       u3_atom mat = u3r_blob_load(a);
@@ -842,10 +842,10 @@ u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z)
 
 /* u3i_blob(): construct a bob atom (blob reference).
 **
-**   Allocates a fresh u3a_atom whose buf_w[0] points at the u3a_blob
-**   for (mug_h, seq_h).  Looks up or creates the u3a_blob and bumps
-**   its use_w (atom cardinality).  No interning: each call yields a
-**   new atom.
+**   Allocates a fresh u3a_atom whose body is the blob id
+**   (mug_h << 32 | seq_h).  Looks up or creates the u3a_blob record
+**   and bumps its use_w (atom cardinality).  No interning: each call
+**   yields a new atom.
 */
 u3_atom
 u3i_blob(c3_h mug_h, c3_h seq_h)
@@ -856,13 +856,14 @@ u3i_blob(c3_h mug_h, c3_h seq_h)
   if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
   blb_u->use_w += 1;
 
-  c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+  c3_w*     nov_w = u3a_walloc(c3_wiseof(c3_d) + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
+  c3_d      bid_d = ((c3_d)mug_h << 32) | (c3_d)seq_h;
 
-  vat_u->use_w    = 1;
-  vat_u->mug_w    = mug_h;
-  vat_u->len_w    = 0 | u3a_blob_flag;
-  vat_u->buf_w[0] = (c3_w)u3a_outa(blb_u);
+  vat_u->use_w = 1;
+  vat_u->mug_w = mug_h;
+  vat_u->len_w = u3a_blob_flag | c3_wiseof(c3_d);
+  memcpy(vat_u->buf_w, &bid_d, sizeof(bid_d));
 
   return u3a_to_pug(u3a_outa(nov_w));
 }

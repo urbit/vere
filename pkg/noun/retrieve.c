@@ -2481,9 +2481,7 @@ u3r_comp(u3_atom a, u3_atom b)
   //  and deduplicates within a bucket, so same id means byte-equal content.
   //
   if ( (c3y == a_bob) && (c3y == b_bob) ) {
-    if ( (u3a_bob_mug(a) == u3a_bob_mug(b)) &&
-         (u3a_bob_seq(a) == u3a_bob_seq(b)) )
-    {
+    if ( u3a_bob_bid(a) == u3a_bob_bid(b) ) {
       return 0;
     }
   }

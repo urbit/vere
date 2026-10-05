@@ -733,7 +733,7 @@ _test_meld(void)
 
   //  the duplicates must be unified (one atom box), the freed copy's
   //  cardinality decremented, the bank entry and log ref intact, and
-  //  the surviving atom's blob pointer valid post-pack
+  //  the surviving atom's body still naming the blob post-pack
   //
   {
     u3a_cell* cel_u = u3a_to_ptr(u3A->roc);

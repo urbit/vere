@@ -176,27 +176,19 @@ U3C_SYM(_atom)(U3C_OLD_NOUN old)
   U3C_OLD_ATOM_T *old_u = (U3C_OLD_ATOM_T *)U3C_OLD_TO_PTR(old);
 
 #ifdef U3C_OLD_BLOB_FLAG
-  //  bob atom: an indirect atom flagged as a blob reference.  Its len_w
-  //  carries u3a_blob_flag and buf_w[0] is the off-loom offset of a
-  //  u3a_blob (NOT inline data).  Reproduce the bob atom in the target
-  //  loom, pointing at the u3a_blob already migrated by U3C_SYM(_blob).
+  //  bob atom: the body is the 64-bit blob id on either width.  Rebuild
+  //  it with the target width's flag and word count (the generic paths
+  //  below would drop the flag, and 32->64 would fold it into a cat).
   //
   if ( old_u->len_w & U3C_OLD_BLOB_FLAG ) {
-    U3C_OLD_BLOB_T *obl_u =
-      (U3C_OLD_BLOB_T *)U3C_OLD_INTO((U3C_OLD_NOUN)old_u->buf_w[0]);
-    u3a_blob *nbl_u = u3a_blob_get(obl_u->mug_h, obl_u->seq_h);
-
-    //  the bank is migrated before the noun graph, so the entry must exist
-    //
-    u3_assert( nbl_u );
-
-    c3_w           *nov_w = U3C_NEW_A_WALLOC(1 + c3_wiseof(U3C_NEW_ATOM_T));
+    const c3_w      wid_w = sizeof(c3_d) / sizeof(((U3C_NEW_ATOM_T*)0)->buf_w[0]);
+    c3_w           *nov_w = U3C_NEW_A_WALLOC(wid_w + c3_wiseof(U3C_NEW_ATOM_T));
     U3C_NEW_ATOM_T *vat_u = (void *)nov_w;
 
-    vat_u->use_w    = 1;
-    vat_u->mug_w    = obl_u->mug_h;
-    vat_u->len_w    = U3C_NEW_BLOB_FLAG;
-    vat_u->buf_w[0] = (c3_w)u3a_outa(nbl_u);
+    vat_u->use_w = 1;
+    vat_u->mug_w = old_u->mug_w;
+    vat_u->len_w = U3C_NEW_BLOB_FLAG | wid_w;
+    memcpy(vat_u->buf_w, old_u->buf_w, sizeof(c3_d));
 
     return U3C_NEW_A_TO_PUG(U3C_NEW_A_OUTA(nov_w));
   }

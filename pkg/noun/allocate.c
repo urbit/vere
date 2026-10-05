@@ -502,15 +502,10 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  //  a bob's len_w is the flag alone and its one word is the bank
-  //  record's post, which is valid from every road.  copying that word
-  //  moves the atom's cardinality with it: the junior copy is dropped
-  //  with its road, never freed through _me_bob_dead, so the record's
-  //  use_w is neither bumped here nor lost there.  no bob is junior
-  //  today (u3i_blob asserts the home road), so this branch is not
-  //  reached; it keeps a take from minting a bob with no record.
+  //  a bob's body is its blob id and copies like any atom; the mask
+  //  drops the flag from len_w.  no bob is junior today.
   //
-  c3_w      dat_w = ( old_u->len_w & u3a_blob_flag ) ? 1 : old_u->len_w;
+  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
   c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
@@ -1152,22 +1147,28 @@ u3a_blob_sane(c3_o dep_o)
 static void
 _me_bob_dead(u3a_atom* atm_u)
 {
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+  u3_atom   bob   = u3a_to_pug(u3a_outa(atm_u));
+  c3_h      mug_h = u3a_bob_mug(bob);
+  c3_h      seq_h = u3a_bob_seq(bob);
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-  //  a bob dying over a record already at zero means a bob was freed
-  //  twice or a record was recreated under a live bob: say so, and do
-  //  not ask for a deletion that should already have happened
+  //  no record, or one already at zero: a record was dropped under a
+  //  live bob or a bob was freed twice.  say so; ask for no deletion
   //
+  if ( !blb_u ) {
+    u3l_log("blob: %08x/%u: bob died with no bank record", mug_h, seq_h);
+    return;
+  }
   if ( 0 == blb_u->use_w ) {
     u3l_log("blob: %08x/%u: cardinality underflow (record already at zero)",
-            blb_u->mug_h, blb_u->seq_h);
+            mug_h, seq_h);
     return;
   }
 
   blb_u->use_w -= 1;
 
   if ( (0 == blb_u->use_w) && u3C.blob_del_f ) {
-    u3C.blob_del_f(blb_u->mug_h, blb_u->seq_h);
+    u3C.blob_del_f(mug_h, seq_h);
   }
 }
 
@@ -1489,18 +1490,8 @@ u3a_relocate_noun(u3_noun *som)
     old_p = u3a_to_off(old);
 
     if ( c3n == u3a_is_cell(old) ) {
-      //  indirect atom: mark-tracked relocate so bob atoms can rewrite
-      //  their u3a_blob pointer at old_p exactly once.
-      //
-      new_p = _pack_relocate_mark(old_p, &fir_t);
-      *som  = u3a_to_pug(new_p);
-
-      if ( fir_t ) {
-        u3a_atom* atm_u = u3to(u3a_atom, old_p);
-        if ( atm_u->len_w & u3a_blob_flag ) {
-          u3a_relocate_post((u3_post*)&atm_u->buf_w[0]);
-        }
-      }
+      new_p = _pack_relocate(old_p);
+      *som = u3a_to_pug(new_p);
       return;
     }
 

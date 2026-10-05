@@ -194,17 +194,17 @@
     /* u3a_blob: loom-resident metadata for a blob file.
     **
     **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, with one
-    **   entry per (mug_h, seq_h).  Each bob atom's buf_w[0] is the loom
-    **   offset of its u3a_blob.
+    **   entry per (mug_h, seq_h).  A bob atom carries the bid in its body
+    **   and nothing points at the record: it is found by u3a_blob_get.
     **
     **   Single-counter design: the blob file is deleted iff use_w == 0.
     **   use_w is the sum of three component sources:
     **     - eve_w: event-log refcount (rebuilt on chop)
     **     - les_h: active king-held lease count (durable in LMDB LEASES;
     **              the loom copy is zeroed on boot and rebuilt from it)
-    **     - implicit atom cardinality: number of live bob atoms whose
-    **       buf_w[0] points here.  Updated only on atom alloc/free; not
-    **       affected by normal noun-refcount transitions.
+    **     - implicit atom cardinality: number of live bob atoms over
+    **       this id.  Updated only on atom alloc/free; not affected by
+    **       normal noun-refcount transitions.
     **
     **   Leases are king-acquired and mars-issued: they exist only to keep
     **   a blob alive while the king holds a reference that mars has not
@@ -427,8 +427,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
     /* u3a_blob_flag: MSB of u3a_atom.len_w marks an indirect atom as a bob
     **   (blob reference backed by an on-disk file rather than loom data).
-    **   A bob's len_w is the flag alone: the low bits are zero, and its one
-    **   word, buf_w[0], is the post of its u3a_blob record, not data.
+    **   A bob's len_w is the flag plus its body word count; the body is
+    **   the blob id (mug << 32 | seq) as an atom value, plain data.
     **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
     */
 #     define u3a_blob_flag_h  ((c3_h)0x80000000U)
@@ -756,12 +756,13 @@ typedef struct {
       return (atm_u->len_w & u3a_blob_flag) ? c3y : c3n;
     }
 
-    /* u3a_bob_blob(): u3a_blob* referenced by a bob atom (via buf_w[0]).
+    /* u3a_bob_bid(): blob id (mug << 32 | seq) of a bob atom, from its body.
     */
-    static inline u3a_blob*
-    u3a_bob_blob(u3_atom som) {
-      u3a_atom* atm_u = u3a_to_ptr(som);
-      return (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+    static inline c3_d
+    u3a_bob_bid(u3_atom som) {
+      c3_d bid_d;
+      memcpy(&bid_d, ((u3a_atom*)u3a_to_ptr(som))->buf_w, sizeof(bid_d));
+      return bid_d;
     }
 
     /* u3a_bob_mug(): content mug of a bob atom (= blob directory name).
@@ -776,7 +777,7 @@ typedef struct {
     */
     static inline c3_h
     u3a_bob_seq(u3_atom som) {
-      return u3a_bob_blob(som)->seq_h;
+      return (c3_h)u3a_bob_bid(som);
     }
 
   /**  Functions.
