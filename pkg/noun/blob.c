@@ -37,10 +37,6 @@
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
 
-//  window for backward scans (_blob_hand_met).
-//
-#define BLOB_WIN_MAX ((size_t)4096)
-
 /* blob hands: per-road lists of open blob file handles.
 **
 **   a hand belongs to the road that opened it.  an inner road keeps its
@@ -224,37 +220,23 @@ u3b_hands_road(void* rod_v)
 
 /* _blob_hand_met(): bit length of [han_u]'s content: u3r_met(0, atom).
 **
-**   scans backward from the end of the file for the last nonzero byte.
-**   returns 0 if the content is all zero or the read fails.
+**   a blob is canonical, so its last byte is nonzero and the length
+**   follows from that byte alone.  returns 0 if it is zero or cannot
+**   be read: no blob denotes such an atom.
 */
 static c3_d
 _blob_hand_met(u3b_hand* han_u)
 {
-  c3_y win_y[BLOB_WIN_MAX];
-  c3_d pos_d = han_u->len_d;
+  c3_y las_y;
 
-  while ( pos_d ) {
-    c3_z ask_z = ( pos_d < BLOB_WIN_MAX ) ? (c3_z)pos_d : BLOB_WIN_MAX;
-    c3_d beg_d = pos_d - ask_z;
-
-    if ( ask_z != u3b_read(han_u, beg_d, win_y, ask_z) ) {
-      return 0;
-    }
-
-    for ( c3_z i_z = ask_z; i_z--; ) {
-      if ( win_y[i_z] ) {
-        //  __builtin_clz operates on unsigned int (32 bits); subtract 24
-        //  to get the leading-zero count within just the low byte.
-        //
-        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)win_y[i_z]) - 24);
-        return (beg_d + i_z) * 8 + (c3_d)(8 - clz_y);
-      }
-    }
-
-    pos_d = beg_d;
+  if (  !han_u->len_d
+     || (1 != u3b_read(han_u, han_u->len_d - 1, &las_y, 1))
+     || !las_y )
+  {
+    return 0;
   }
 
-  return 0;
+  return ((han_u->len_d - 1) * 8) + (32 - __builtin_clz((unsigned int)las_y));
 }
 
 /* u3b_open(): open a blob on the current road.
