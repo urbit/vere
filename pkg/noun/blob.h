@@ -156,13 +156,13 @@
       u3b_hand*
       u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
 
-    /* u3b_close(): the current road is done with [han_u].
+    /* u3b_shut(): the current road is done with [han_u].
     **
     **   On an inner road the hand stays open for reuse; only its live-view
     **   count drops.  On the home road the fd, mapping, and node go.
     */
       void
-      u3b_close(u3b_hand* han_u);
+      u3b_shut(u3b_hand* han_u);
 
     /* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
     **

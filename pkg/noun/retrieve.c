@@ -1325,7 +1325,7 @@ void
 u3r_view_done(u3r_view* vue_u)
 {
   if ( u3r_view_blob == vue_u->kin_e ) {
-    u3b_close(vue_u->han_u);   //  loom and even hold nothing
+    u3b_shut(vue_u->han_u);   //  loom and even hold nothing
   }
   _cr_view_blank(vue_u);
 }

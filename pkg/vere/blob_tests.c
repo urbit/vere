@@ -925,7 +925,7 @@ _test_hand(void)
   }
 
   c3_i fid_i = han_u->fid_i;
-  u3b_close(han_u);
+  u3b_shut(han_u);
   _check( (0 == u3b_hands()) && (c3y == _fd_dead(fid_i)),
           "close left hands %zu, fd open", u3b_hands() );
 
@@ -958,7 +958,7 @@ _test_hand_dedup(void)
 
   c3_i one_i = one_u->fid_i;
   c3_i two_i = two_u->fid_i;
-  u3b_close(one_u);
+  u3b_shut(one_u);
 
   _check(  (1 == u3b_hands())
         && (c3y == _fd_dead(one_i)) && (c3y == _fd_live(two_i)),
@@ -969,7 +969,7 @@ _test_hand_dedup(void)
     _check( 1 == u3b_read(two_u, 0, &byt_y, 1), "survivor unreadable" );
   }
 
-  u3b_close(two_u);
+  u3b_shut(two_u);
   _check( !u3b_hands() && (c3y == _fd_dead(two_i)), "last close leaked" );
 
   _pier_done();
@@ -1102,7 +1102,7 @@ _test_hand_outer(void)
           "home hand swept (hands %zu)", u3b_hands() );
 
   c3_i fid_i = han_u->fid_i;
-  u3b_close(han_u);
+  u3b_shut(han_u);
   _han_fid_i = fid_i;
   _hand_unwind_check();
 }
@@ -1120,7 +1120,7 @@ _hand_keep_cb(u3_noun arg)
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
     u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, i_w + 1);
     _check( han_u, "open %" PRIc3_w " failed", i_w );
-    u3b_close(han_u);
+    u3b_shut(han_u);
   }
 
   c3_z kep_z = u3b_hands_road(u3R);
@@ -1133,8 +1133,8 @@ _hand_keep_cb(u3_noun arg)
     u3b_hand* old_u = u3b_open(_tmp_pier, mug_h, 1);
     _check( new_u && old_u && (kep_z == u3b_hands_road(u3R)),
             "reopen changed the count" );
-    u3b_close(new_u);
-    u3b_close(old_u);
+    u3b_shut(new_u);
+    u3b_shut(old_u);
   }
   return 0;
 }
@@ -1236,7 +1236,7 @@ _hand_alarm_cb(u3_noun arg)
 
   for ( c3_w rou_w = 0; rou_w < 2000000; rou_w++ ) {
     u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
-    u3b_close(han_u);
+    u3b_shut(han_u);
 
     for ( c3_w i_w = 0; i_w < 20000; i_w++ ) {
       sum_d += i_w;
@@ -1265,7 +1265,7 @@ _test_hand_alarm(void)
   {
     u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
     _check( han_u, "reopen after unwind failed" );
-    u3b_close(han_u);
+    u3b_shut(han_u);
   }
 
   _hand_unwind_check();
@@ -1757,7 +1757,7 @@ _test_hand_emfile(void)
       c3_y byt_y;
       _check( 1 == u3b_read(han_u[i_w], 0, &byt_y, 1),
               "opened hand unreadable" );
-      u3b_close(han_u[i_w]);
+      u3b_shut(han_u[i_w]);
     }
   }
 
@@ -1777,7 +1777,7 @@ _hand_file_cb(u3_noun arg)
   for ( c3_w i_w = 0; i_w < num_w; i_w++ ) {
     u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, i_w + 1);
     _check( han_u, "idle eviction did not free a descriptor" );
-    u3b_close(han_u);
+    u3b_shut(han_u);
   }
 
   //  held hands cannot be evicted: the road runs out and bails
@@ -1847,7 +1847,7 @@ _test_hand_wipe(void)
             "read after wipe failed" );
   }
 
-  u3b_close(han_u);
+  u3b_shut(han_u);
   _check( !u3b_hands() && (c3y == _fd_dead(fid_i)), "close leaked" );
 
   //  a second open finds nothing
@@ -1886,7 +1886,7 @@ _test_hand_stop(void)
   {
     u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, 1);
     _check( han_u, "open after stop failed" );
-    u3b_close(han_u);
+    u3b_shut(han_u);
   }
 
   _pier_done();
@@ -1929,7 +1929,7 @@ _test_hand_trunc(void)
 
   _check( !u3b_mmap(han_u) && !han_u->map_y, "data did not fail cleanly" );
 
-  u3b_close(han_u);
+  u3b_shut(han_u);
 
   c3_free(dat_y);
   _pier_done();
@@ -2163,7 +2163,7 @@ _hand_reuse_cb(u3_noun arg)
   u3b_hand* one_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   c3_i          fid_i = one_u->fid_i;
   _han_fid_i          = fid_i;
-  u3b_close(one_u);
+  u3b_shut(one_u);
 
   _check( (0 == one_u->use_w) && (c3y == _fd_live(fid_i)),
           "close released the hand" );
@@ -2172,7 +2172,7 @@ _hand_reuse_cb(u3_noun arg)
     u3b_hand* two_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
     _check( (two_u == one_u) && (fid_i == two_u->fid_i) && (1 == two_u->use_w),
             "reopened" );
-    u3b_close(two_u);
+    u3b_shut(two_u);
   }
 
   _check( 1 == u3b_hands_road(u3R), "%zu hands on the road",
@@ -2199,7 +2199,7 @@ _hand_deep_cb(u3_noun arg)
   u3b_hand* han_u = u3b_open(_tmp_pier, _han_mug_h, _han_seq_h);
   c3_i          fid_i = han_u->fid_i;
   _han_fid_i          = fid_i;
-  u3b_close(han_u);
+  u3b_shut(han_u);
 
   //  a grandchild borrows the parent's hand without listing it, and
   //  its fall leaves the parent's hand open
@@ -2211,7 +2211,7 @@ _hand_deep_cb(u3_noun arg)
     _check(  (kid_u == han_u) && (fid_i == kid_u->fid_i)
           && (0 == u3b_hands_road(u3R)) && (0 == kid_u->use_w),
             "child did not borrow" );
-    u3b_close(kid_u);
+    u3b_shut(kid_u);
   }
   u3m_fall();
 

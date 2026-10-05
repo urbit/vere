@@ -370,10 +370,10 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   return han_u;
 }
 
-/* u3b_close(): the current road is done with [han_u].
+/* u3b_shut(): the current road is done with [han_u].
 */
 void
-u3b_close(u3b_hand* han_u)
+u3b_shut(u3b_hand* han_u)
 {
   //  an inner road keeps the hand for reuse; only its live-view count
   //  drops, which makes it evictable.  a hand borrowed from an inner
