@@ -145,21 +145,6 @@ _js_mat_w(_jam_shax* ctx, c3_w val_w)
 
 //  ---- atom encoding --------------------------------------------------
 
-//  compute bit-length of an atom from viewed bytes (for bob atoms).
-//
-static c3_d
-_js_bob_met(const c3_y* byt_y, c3_d len_d)
-{
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-  if ( 0 == pos_d ) return 0;
-  c3_y top_y = byt_y[pos_d - 1];
-  c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-  return ((pos_d - 1) * 8) + (8 - clz_y);
-}
-
 //  encode a single atom: tag 0 + mat(bit_len) + data bits.
 //
 static void
@@ -184,13 +169,10 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   else if ( c3y == u3a_is_bob(a) ) {
     u3r_view_open(&vue_u, a, c3y);
     vue_y = u3r_view_flat(&vue_u);
-    {
-      c3_d bit_d = _js_bob_met(vue_y, vue_u.byt_d);
-      if ( bit_d > c3_w_max ) {
-        u3m_bail(c3__fail);
-      }
-      bit_w = (c3_w)bit_d;
+    if ( vue_u.bit_d > c3_w_max ) {
+      u3m_bail(c3__fail);
     }
+    bit_w = (c3_w)vue_u.bit_d;
     if ( 0 == bit_w ) {
       u3r_view_done(&vue_u);
       _js_mat_w(ctx, 0);
