@@ -143,6 +143,10 @@
         c3_d   len_d;   //  file size: bounds reads, sizes the mapping
         c3_d   bit_d;   //  bit length of the content, from the file's tail at open
         c3_y*  map_y;   //  read-only mapping of the file (0 until u3b_mmap)
+        c3_y*  cax_y;   //  window cache, C heap (0 until a small read)
+        c3_d   cax_d;   //  file offset of the cached window
+        c3_z   cax_z;   //  bytes valid in it
+        c3_z   win_z;   //  next fill size: grows while reads stay adjacent
       } u3b_hand;
 
     /* u3b_open(): open a blob on the current road.
@@ -167,7 +171,10 @@
     /* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
     **
     **   Returns the number of bytes read; short only at end of file or
-    **   on error.  Never allocates.
+    **   on error.  A read of at most BLOB_CAX_MAX bytes is served from
+    **   the hand's window cache, filled by one pread per window, so a
+    **   word-at-a-time walk costs one syscall per window rather than
+    **   per word.  Never allocates on the loom.
     */
       c3_z
       u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);

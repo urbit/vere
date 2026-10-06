@@ -1155,6 +1155,68 @@ _test_hand_keep(void)
   _pier_done();
 }
 
+/* _test_hand_cax(): the window cache serves a walk from one pread per
+**   window, a hop resets its fill, a straddling read is served whole,
+**   and a large read bypasses it.
+*/
+static void
+_test_hand_cax(void)
+{
+  _pier_make("hand cax");
+
+  const c3_z len_z = 300000;
+  c3_y* dat_y = c3_malloc(len_z);
+  c3_h  mug_h = 0, seq_h = 0;
+  c3_y  s_y[8];
+
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    dat_y[i_z] = (c3_y)(1 + (i_z * 31) % 251);
+  }
+  _check( c3y == _blob_save(dat_y, len_z, &mug_h, &seq_h), "save failed" );
+
+  u3b_hand* han_u = u3b_open(_tmp_pier, mug_h, seq_h);
+  _check( han_u && !han_u->cax_y, "cache allocated at open" );
+
+  {
+    c3_o ok_o = c3y;
+    for ( c3_z i_z = 0; i_z + 4 <= len_z; i_z += 4 ) {
+      if ( (4 != u3b_read(han_u, i_z, s_y, 4)) || memcmp(s_y, dat_y + i_z, 4) ) {
+        ok_o = c3n;
+        break;
+      }
+    }
+    _check( (c3y == ok_o) && (65536 == han_u->win_z), "forward walk" );
+
+    for ( c3_z i_z = len_z - 4; ; i_z -= 4 ) {
+      if ( (4 != u3b_read(han_u, i_z, s_y, 4)) || memcmp(s_y, dat_y + i_z, 4) ) {
+        ok_o = c3n;
+        break;
+      }
+      if ( i_z < 4 ) break;
+    }
+    _check( (c3y == ok_o) && (65536 == han_u->win_z), "backward walk" );
+  }
+
+  _check(  (4 == u3b_read(han_u, 200000, s_y, 4))
+        && !memcmp(s_y, dat_y + 200000, 4) && (4096 == han_u->win_z),
+          "hop did not reset the fill" );
+  _check(  (8 == u3b_read(han_u, 4094, s_y, 8)) && !memcmp(s_y, dat_y + 4094, 8),
+          "straddling read" );
+  _check( 0 == u3b_read(han_u, len_z + 5, s_y, 4), "read past the end" );
+
+  {
+    c3_y* big_y = c3_malloc(len_z);
+    _check(  (len_z - 10 == u3b_read(han_u, 10, big_y, len_z))
+          && !memcmp(big_y, dat_y + 10, len_z - 10),
+            "large read" );
+    c3_free(big_y);
+  }
+
+  c3_free(dat_y);
+  u3b_shut(han_u);
+  _pier_done();
+}
+
 /* _test_hand_comp(): windowed comparison of bobs against bobs and loom atoms.
 */
 static void
@@ -3109,6 +3171,7 @@ main(int argc, char* argv[])
   _test_hand_leak();
   _test_hand_outer();
   _test_hand_keep();
+  _test_hand_cax();
   _test_hand_comp();
   _test_hand_alarm();
   _test_jam_bob();
