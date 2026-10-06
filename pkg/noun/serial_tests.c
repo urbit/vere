@@ -454,13 +454,13 @@ _test_ram_bob_roundtrip(void)
     return 0;
   }
 
-  //  create two distinct blob files for testing
+  //  two distinct blob files, canonical (no trailing zero byte)
   //
   const c3_y dat1_y[] = "blob contents one";
   const c3_y dat2_y[] = "a different blob payload";
-  if (  (c3n == _ram_make_blob(0x12345678, 1, dat1_y, sizeof(dat1_y)))
-     || (c3n == _ram_make_blob(0x12345678, 2, dat2_y, sizeof(dat2_y)))
-     || (c3n == _ram_make_blob(0x7a0b0000, 7, dat1_y, sizeof(dat1_y))) )
+  if (  (c3n == _ram_make_blob(0x12345678, 1, dat1_y, sizeof(dat1_y) - 1))
+     || (c3n == _ram_make_blob(0x12345678, 2, dat2_y, sizeof(dat2_y) - 1))
+     || (c3n == _ram_make_blob(0x7a0b0000, 7, dat1_y, sizeof(dat1_y) - 1)) )
   {
     _ram_cleanup_tmp();
     return 0;
