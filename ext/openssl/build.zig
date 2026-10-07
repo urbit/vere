@@ -20,11 +20,18 @@ pub fn build(b: *std.Build) !void {
 
     const linux_cflags = .{};
 
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+
     const crypto = try libcrypto(
         b,
         target,
         optimize,
         if (target.result.os.tag.isDarwin()) &macos_cflags else &linux_cflags,
+        no_lto,
     );
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -44,6 +51,7 @@ pub fn build(b: *std.Build) !void {
         target,
         optimize,
         if (target.result.os.tag.isDarwin()) &macos_cflags else &linux_cflags,
+        no_lto,
     ));
 }
 
@@ -52,12 +60,14 @@ fn libcrypto(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cflags: []const []const u8,
+    no_lto: bool,
 ) !*std.Build.Step.Compile {
     const t = target.result;
 
     const dep = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
@@ -65,6 +75,7 @@ fn libcrypto(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.pie = true;
 
     switch (optimize) {
@@ -133,6 +144,7 @@ fn libcrypto(
 
         const nasm_dep = b.dependency("nasm", .{
             .optimize = .ReleaseFast,
+            .no_lto = no_lto,
         });
 
         // const nasm_dep = nasm_dep2 orelse unreachable;
@@ -392,11 +404,13 @@ fn libssl(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cflags: []const []const u8,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const t = target.result;
     const dep = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
@@ -404,6 +418,7 @@ fn libssl(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.pie = true;
 
     switch (optimize) {
