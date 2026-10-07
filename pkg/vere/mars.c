@@ -57,36 +57,22 @@
 **        then reclaims any blob now provably unreferenced
 */
 
-/* _mars_lease: PQ entry for lease expiry.
+/* _mars_lease: a king lease awaiting expiry.
 **
 **   tracks a single les_h increment for a blob.  if the king releases
-**   the lease (%blrl) before expiry, ded_o is set to c3y and the PQ
+**   the lease (%blrl) before expiry, ded_o is set to c3y and the
 **   sweeper skips the decrement.  if the king crashes or leaks, the
 **   lease expires once dun_d reaches exp_d and les_h is decremented.
 */
 typedef struct __mars_lease {
-  c3_d  exp_d;        //  expiry event number (0: never)
+  struct __mars_lease* nex_u;  //  next to expire
+  c3_d  exp_d;        //  expiry event number
   c3_h  mug_h;        //  blob mug
   c3_h  seq_h;        //  blob seq within mug bucket
   c3_o  ded_o;        //  c3y if lease already released
 } _mars_lease;
 
 c3_c tac_c[256];  //  tracing label
-
-/* _mars_lease_pq: min-heap of _mars_lease*, keyed by lea_u->exp_d.
-**
-**   C-heap structure (not in loom). Leases are owned by the PQ —
-**   it is the sole place that c3_free()s them. Released leases (%blrl)
-**   are marked ded_o=c3y in place; the sweeper pops and frees them
-**   when they bubble to the top.
-*/
-typedef struct _mars_lease_pq {
-  _mars_lease** arr_u;
-  c3_z        len_z;
-  c3_z        cap_z;
-} _mars_lease_pq;
-
-static _mars_lease_pq _mars_pq = { 0, 0, 0 };
 
 //  lease width: a lease issued at dun_d expires once dun_d + width
 //  commits.  the poke that carries the blob is queued behind at most
@@ -96,99 +82,60 @@ static _mars_lease_pq _mars_pq = { 0, 0, 0 };
 //
 static const c3_d _mars_lease_wid_d = 1ULL << 16;
 
-static inline void
-_mars_pq_swap(_mars_lease_pq* pq_u, c3_z i_z, c3_z j_z)
-{
-  _mars_lease* t_u = pq_u->arr_u[i_z];
-  pq_u->arr_u[i_z] = pq_u->arr_u[j_z];
-  pq_u->arr_u[j_z] = t_u;
-}
+//  the lease queue, oldest first.  every lease expires the same number
+//  of events after its install, so install order is expiry order and a
+//  FIFO is the whole structure: push at the tail, expire from the head.
+//  C heap, owned here; a released lease is marked ded_o in place and
+//  freed when it reaches the head.
+//
+static _mars_lease* _mars_lea_hed_u;
+static _mars_lease* _mars_lea_tel_u;
 
 static void
-_mars_pq_up(_mars_lease_pq* pq_u, c3_z i_z)
+_mars_lease_push(_mars_lease* lea_u)
 {
-  while ( i_z > 0 ) {
-    c3_z p_z = (i_z - 1) >> 1;
-    if ( pq_u->arr_u[p_z]->exp_d <= pq_u->arr_u[i_z]->exp_d ) break;
-    _mars_pq_swap(pq_u, p_z, i_z);
-    i_z = p_z;
+  lea_u->nex_u = 0;
+  if ( _mars_lea_tel_u ) {
+    _mars_lea_tel_u->nex_u = lea_u;
   }
-}
-
-static void
-_mars_pq_down(_mars_lease_pq* pq_u, c3_z i_z)
-{
-  c3_z n_z = pq_u->len_z;
-  while ( 1 ) {
-    c3_z l_z = (i_z << 1) + 1;
-    c3_z r_z = l_z + 1;
-    c3_z s_z = i_z;
-    if ( l_z < n_z && pq_u->arr_u[l_z]->exp_d < pq_u->arr_u[s_z]->exp_d ) s_z = l_z;
-    if ( r_z < n_z && pq_u->arr_u[r_z]->exp_d < pq_u->arr_u[s_z]->exp_d ) s_z = r_z;
-    if ( s_z == i_z ) break;
-    _mars_pq_swap(pq_u, i_z, s_z);
-    i_z = s_z;
+  else {
+    _mars_lea_hed_u = lea_u;
   }
-}
-
-static void
-_mars_pq_push(_mars_lease_pq* pq_u, _mars_lease* lea_u)
-{
-  if ( pq_u->len_z == pq_u->cap_z ) {
-    pq_u->cap_z = pq_u->cap_z ? (pq_u->cap_z << 1) : 16;
-    pq_u->arr_u = c3_realloc(pq_u->arr_u, pq_u->cap_z * sizeof(*pq_u->arr_u));
-  }
-  pq_u->arr_u[pq_u->len_z++] = lea_u;
-  _mars_pq_up(pq_u, pq_u->len_z - 1);
+  _mars_lea_tel_u = lea_u;
 }
 
 static _mars_lease*
-_mars_pq_peek(_mars_lease_pq* pq_u)
+_mars_lease_pop(void)
 {
-  return pq_u->len_z ? pq_u->arr_u[0] : 0;
-}
+  _mars_lease* lea_u = _mars_lea_hed_u;
 
-static _mars_lease*
-_mars_pq_pop(_mars_lease_pq* pq_u)
-{
-  if ( !pq_u->len_z ) return 0;
-  _mars_lease* r_u = pq_u->arr_u[0];
-  pq_u->arr_u[0] = pq_u->arr_u[--pq_u->len_z];
-  if ( pq_u->len_z ) _mars_pq_down(pq_u, 0);
-  return r_u;
-}
-
-/* _mars_pq_kill_one(): mark the first live lease for (mug_h, seq_h) as
-**   released, returning its entry or 0 if none is live.  The sweeper frees the entry when it surfaces.
-**
-**   linear scan: the PQ is small (a handful of in-flight leases) and
-**   release is rare.  ded_o entries are skipped so each %blrl retires
-**   exactly one lease unit.
-*/
-static _mars_lease*
-_mars_pq_kill_one(_mars_lease_pq* pq_u, c3_h mug_h, c3_h seq_h)
-{
-  _mars_lease* out_u = 0;
-
-  //  one lease per install, so a bid normally has one live entry; if
-  //  the same blob was installed again before release, retire the one
-  //  that would expire first, not the first in heap-array order
-  //
-  for ( c3_z i_z = 0; i_z < pq_u->len_z; i_z++ ) {
-    _mars_lease* lea_u = pq_u->arr_u[i_z];
-    if (  (c3n == lea_u->ded_o)
-       && (mug_h == lea_u->mug_h)
-       && (seq_h == lea_u->seq_h)
-       && (!out_u || (lea_u->exp_d < out_u->exp_d)) )
-    {
-      out_u = lea_u;
+  if ( lea_u ) {
+    _mars_lea_hed_u = lea_u->nex_u;
+    if ( !_mars_lea_hed_u ) {
+      _mars_lea_tel_u = 0;
     }
   }
+  return lea_u;
+}
 
-  if ( out_u ) {
-    out_u->ded_o = c3y;
+/* _mars_lease_kill_one(): mark the first live lease for (mug_h, seq_h)
+**   released, returning it or 0 if none is live.  the queue is in
+**   expiry order, so the first match is the earliest to expire; the
+**   sweeper frees it when it reaches the head.
+*/
+static _mars_lease*
+_mars_lease_kill_one(c3_h mug_h, c3_h seq_h)
+{
+  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
+    if (  (c3n == lea_u->ded_o)
+       && (mug_h == lea_u->mug_h)
+       && (seq_h == lea_u->seq_h) )
+    {
+      lea_u->ded_o = c3y;
+      return lea_u;
+    }
   }
-  return out_u;
+  return 0;
 }
 
 /* _mars_blob_del(): delete blob file and clean up blb_p entry.
@@ -231,7 +178,7 @@ _blob_maybe_delete(c3_h mug_h, c3_h seq_h)
 
 /* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
 **
-**   bumps les_h + use_w and pushes a PQ entry expiring at
+**   bumps les_h + use_w and queues a lease expiring at
 **   dun_d + _mars_lease_wid_d.  the les_h > 0 guard in the sweeper
 **   prevents underflow.  the lease is memory only: a restart ends both
 **   processes, and no event can arrive for a lease taken before it.
@@ -252,7 +199,7 @@ _mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
     lea_u->seq_h = seq_h;
     lea_u->exp_d = mar_u->dun_d + _mars_lease_wid_d;
     lea_u->ded_o = c3n;
-    _mars_pq_push(&_mars_pq, lea_u);
+    _mars_lease_push(lea_u);
   }
 }
 
@@ -931,37 +878,36 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
   u3_noun tag, dat, pro;
 
   //  lease expiry sweeper: decay leases the king never released
-  //  (crashed or leaking king).  Uses a min-heap PQ keyed by exp_d,
-  //  an event number: peek at the root, stop once the earliest-
-  //  expiring lease is still past dun_d.  runs before every writ,
-  //  which is at least once per commit, so nothing expires late by
-  //  more than one writ.
+  //  (crashed or leaking king).  the queue is in expiry order, so
+  //  this pops from the head until the head's exp_d, an event number,
+  //  is still past dun_d.  runs before every writ, which is at least
+  //  once per commit, so nothing expires late by more than one writ.
   //
-  //  Released leases are marked ded_o=c3y by %blrl and left in the
-  //  PQ; they are freed here when they bubble to the top.
+  //  released leases are marked ded_o=c3y by %blrl and left in the
+  //  queue; they are freed here when they reach the head.
   //
   {
     while ( 1 ) {
-      _mars_lease* top_u = _mars_pq_peek(&_mars_pq);
+      _mars_lease* top_u = _mars_lea_hed_u;
       if ( !top_u ) break;
 
       //  dead lease (already released) — free and continue scanning
       //
       if ( c3y == top_u->ded_o ) {
-        _mars_pq_pop(&_mars_pq);
+        _mars_lease_pop();
         c3_free(top_u);
         continue;
       }
 
       //  earliest expiry is still ahead of the log — stop
       //
-      if ( !top_u->exp_d || mar_u->dun_d < top_u->exp_d ) {
+      if ( mar_u->dun_d < top_u->exp_d ) {
         break;
       }
 
       //  expired lease — decrement les_h and use_w, check deletion
       //
-      _mars_pq_pop(&_mars_pq);
+      _mars_lease_pop();
 
       {
         u3a_blob* blb_u = u3a_blob_get(top_u->mug_h, top_u->seq_h);
@@ -1214,13 +1160,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3r_safe_half(mug_n, &mug_h);
       u3r_safe_half(seq_n, &seq_h);
 
-      //  retire one live lease unit: mark its PQ entry dead (the
-      //  sweeper frees it when it surfaces) and decrement.  no live
+      //  retire one live lease unit: mark its entry dead (the sweeper
+      //  frees it when it reaches the head) and decrement.  no live
       //  entry means the unit already expired — a no-op, never a
       //  double decrement.
       //
       {
-        _mars_lease* lea_u = _mars_pq_kill_one(&_mars_pq, mug_h, seq_h);
+        _mars_lease* lea_u = _mars_lease_kill_one(mug_h, seq_h);
         if ( lea_u ) {
           u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
           if ( blb_u && blb_u->les_h > 0 ) {
