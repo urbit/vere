@@ -843,20 +843,6 @@ u3_lord_blob_install(u3_lord* god_u,
   _lord_writ_send(god_u, wit_u);
 }
 
-/* u3_lord_blob_lease(): acquire/renew a king lease on a blob (%blas).
-**
-**   sent by the king's renewal timer (king.c) for every blob it still
-**   references, so a blob-bearing event pending in mars can't outlive
-**   the 15-min lease TTL and lose its file before commit.
-*/
-void
-u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h)
-{
-  _lord_send(god_u, u3nt(c3_s4('b','l','a','s'),
-                         u3i_word(mug_h),
-                         u3i_word(seq_h)));
-}
-
 /* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
 */
 void

@@ -799,9 +799,10 @@ u3_lmdb_walk_blobs(MDB_env* env_u,
 **   The LEASES table is keyed by blob id [bid_d] = (mug<<32)|seq with
 **   MDB_DUPSORT, so multiple live leases on one blob coexist as
 **   duplicate-key rows.  The value is a 16-byte pair [exp_d, lea_d]:
-**   the wall-clock expiry and a unique lease id that disambiguates the
-**   duplicates (so two leases sharing an expiry millisecond do not
-**   collapse).  Committed before the king is told it holds the lease.
+**   the event number at which the lease expires (0: never) and a
+**   unique lease id that disambiguates the duplicates (leases issued
+**   between two commits share an expiry).  Committed before the king
+**   is told it holds the lease.
 */
 c3_o
 u3_lmdb_save_lease(MDB_env* env_u, c3_d bid_d, c3_d exp_d, c3_d lea_d)
