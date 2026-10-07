@@ -26,7 +26,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_chacha_crypt(u3_noun cor)
   {
     u3_noun sam = u3x_at(u3x_sam, cor);
@@ -63,7 +63,7 @@
     return u3i_cell(u3i_bytes(32, xkey_y), u3i_bytes(8, xnonce_y));
   }
 
-  u3_noun
+  u3_weak
   u3we_chacha_xchacha(u3_noun cor)
   {
     u3_noun sam = u3x_at(u3x_sam, cor);

@@ -6,7 +6,7 @@
 #include "noun.h"
 #include "urcrypt.h"
 
-  static u3_atom
+  static u3_weak
   _cqe_blake2b(u3_atom wid, u3_atom dat,
              u3_atom wik, u3_atom dak,
              u3_atom out)
@@ -37,7 +37,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_blake2b(u3_noun cor)
   {
     u3_noun msg, key, out, wid, dat, wik, dak;
@@ -80,7 +80,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_blake3_hash(u3_noun cor)
   {
     u3_noun out, msg, wid, dat, sam, key, flags;
@@ -119,7 +119,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_blake3_chunk_output(u3_noun cor)
   {
     u3_noun counter, msg, wid, dat, key, flags;
@@ -150,7 +150,7 @@
     return u3i_bytes(64, out_y);
   }
 
-  u3_noun
+  u3_weak
   u3we_blake3_compress(u3_noun cor)
   {
     u3_noun output = u3x_at(u3x_sam, cor);

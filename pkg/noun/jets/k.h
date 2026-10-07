@@ -15,8 +15,8 @@
     u3_noun u3ka_min(u3_noun a, u3_noun b);
     u3_noun u3ka_mod(u3_noun a, u3_noun b);
     u3_noun u3ka_mul(u3_noun a, u3_noun b);
-    u3_noun u3ka_gth(u3_noun a, u3_noun b);
-    u3_noun u3ka_lte(u3_noun a, u3_noun b);
+    u3_noun u3ka_gth(u3_noun a, u3_noun b);  // @Refcount: direct product
+    u3_noun u3ka_lte(u3_noun a, u3_noun b);  // @Refcount: direct product
 
   /** Tier 2.
   **/
@@ -55,14 +55,14 @@
 
   /* u3kc_rep(): assemble single.
   */
-    u3_noun
+    u3_weak
     u3kc_rep(u3_atom a,
              u3_atom b,
              u3_noun c);
 
   /* u3kc_rip(): disassemble.
   */
-    u3_noun
+    u3_weak
     u3kc_rip(u3_atom a,
              u3_atom b,
              u3_atom c);
@@ -91,7 +91,7 @@
 
   /* u3kdb_put(): map put for key `b`, value `c` in map `a`.
   */
-    u3_weak
+    u3_noun
     u3kdb_put(u3_noun a, u3_noun b, u3_noun c);
 
   /* u3kdb_del(): map del for key `b`
@@ -131,7 +131,7 @@
 
   /* u3kdi_put(): put in set.
   */
-    u3_weak
+    u3_noun
     u3kdi_put(u3_noun a, u3_noun b);
 
   /* u3kdi_uni(): set union.
@@ -155,7 +155,7 @@
 
   /* u3ke_trip(): atom to tape.
   */
-    u3_noun
+    u3_weak
     u3ke_trip(u3_noun a);
 
   /* u3ke_json_de(): parse JSON from cord.

@@ -8,7 +8,7 @@
 
 #include <ctype.h>
 
-u3_atom
+u3_weak
 u3qe_scot(u3_atom a, u3_atom b)
 {
   switch (a) {
@@ -21,7 +21,7 @@ u3qe_scot(u3_atom a, u3_atom b)
   }
 }
 
-u3_noun
+u3_weak
 u3we_scot(u3_noun cor)
 {
   u3_atom a, b;

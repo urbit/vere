@@ -6,6 +6,8 @@
 #include "noun.h"
 
 //  [a] and [out] are TRANSFERRED
+//  @Refcount: transfers `a`
+//  @Refcount: consumes `out`, fills transferred `out`
 //
 static void
 _in_rep(u3_noun a, u3j_site* sit_u, u3_noun* out)

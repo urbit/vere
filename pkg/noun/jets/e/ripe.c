@@ -6,7 +6,7 @@
 #include "noun.h"
 #include "urcrypt.h"
 
-  static u3_atom
+  static u3_weak
   _cqe_ripe(u3_atom wid, u3_atom dat)
   {
     c3_w len_w;
@@ -14,7 +14,7 @@
       return u3m_bail(c3__fail);
     }
     else {
-      u3_atom ret;
+      u3_weak ret;
       c3_y out_y[20];
       c3_y *dat_y = u3r_bytes_alloc(0, len_w, dat);
 
@@ -27,7 +27,7 @@
     }
   }
 
-  u3_noun
+  u3_weak
   u3we_ripe(u3_noun cor)
   {
     u3_noun wid, dat;

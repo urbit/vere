@@ -29,7 +29,7 @@
   u3_noun
   u3wf_flip_139(u3_noun cor)
   {
-    u3_noun hel;
+    u3_weak hel;
 
     if ( u3_none == (hel = u3r_at(u3x_sam, cor)) ) {
       return u3m_bail(c3__fail);

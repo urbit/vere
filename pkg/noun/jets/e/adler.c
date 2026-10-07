@@ -6,6 +6,8 @@
 #include <types.h>
 #include <xtract.h>
 
+// @Refcount: retains `octs`
+// @Refcount: fills retained `p_octs`, `q_octs`
 static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
 
   *p_octs = u3h(octs);
@@ -17,6 +19,7 @@ static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
   }
 }
 
+// @Refcount: reads `p_octs` `q_octs`
 static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,
                            c3_w* len_w, c3_w* lead_w)
@@ -50,7 +53,7 @@ static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
 #define BASE 65521
 #define NMAX 5552
 
-u3_noun _qe_adler32(u3_noun octs)
+u3_weak _qe_adler32(u3_noun octs)
 {
   u3_atom p_octs, q_octs;
 
@@ -113,7 +116,7 @@ u3_noun _qe_adler32(u3_noun octs)
 }
 
 
-u3_noun 
+u3_weak 
 u3we_adler32(u3_noun cor)
 {
   u3_noun octs;

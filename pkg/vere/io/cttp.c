@@ -241,6 +241,7 @@ _cttp_heds_free(u3_hhed* hed_u)
 
 // XX deduplicate with _http_hed_new
 /* _cttp_hed_new(): create u3_hhed from nam/val cords
+**  @Refcount: retains arguments
 */
 static u3_hhed*
 _cttp_hed_new(u3_atom nam, u3_atom val)

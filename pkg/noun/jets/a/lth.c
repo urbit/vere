@@ -5,6 +5,7 @@
 
 #include "noun.h"
 
+// @Refcount: direct product
 u3_noun
 u3qa_lth(u3_atom a, u3_atom b)
 {
