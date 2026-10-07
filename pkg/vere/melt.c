@@ -31,7 +31,7 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
   //
   c3_w len_w = a_u->len_w & u3a_blob_mask;
 
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, len_w << (u3a_word_bits_log-3));
+  return 0 == memcmp(a_u->buf_w, b_u->buf_w, len_w << u3a_word_bytes_shift);
 }
 
 #define NAME    _coins

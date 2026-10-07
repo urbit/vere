@@ -2671,52 +2671,10 @@ _test_lifecycle(void)
   _pier_done();
 }
 
-/* _lease_seen / _lease_collect_cb: accumulator for u3_lmdb_walk_leases.
-*/
-typedef struct { c3_d bid_d; c3_d exp_d; c3_d lea_d; } _lease_seen;
-static _lease_seen _lease_arr[64];
-static c3_z        _lease_num;
-
-static void
-_lease_collect_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
-{
-  (void)ptr_v;
-  if ( _lease_num < 64 ) {
-    _lease_arr[_lease_num].bid_d = bid_d;
-    _lease_arr[_lease_num].exp_d = exp_d;
-    _lease_arr[_lease_num].lea_d = lea_d;
-  }
-  _lease_num += 1;
-}
-
-static c3_z
-_lease_count(MDB_env* env_u)
-{
-  _lease_num = 0;
-  u3_lmdb_walk_leases(env_u, 0, _lease_collect_cb);
-  return _lease_num;
-}
-
-/* _lease_has(): does the accumulator hold a row matching (bid, exp, lea)?
-*/
-static c3_o
-_lease_has(c3_d bid_d, c3_d exp_d, c3_d lea_d)
-{
-  for ( c3_z i_z = 0; i_z < _lease_num && i_z < 64; i_z++ ) {
-    if (  (_lease_arr[i_z].bid_d == bid_d)
-       && (_lease_arr[i_z].exp_d == exp_d)
-       && (_lease_arr[i_z].lea_d == lea_d) )
-    {
-      return c3y;
-    }
-  }
-  return c3n;
-}
-
-/* _lease_open(): open an LMDB env in the pier's log directory.
+/* _log_open(): open an LMDB env in the pier's log directory.
 */
 static MDB_env*
-_lease_open(void)
+_log_open(void)
 {
   c3_c log_c[2048];
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
@@ -2726,10 +2684,10 @@ _lease_open(void)
   return env_u;
 }
 
-/* _lease_env(): a fresh pier with an LMDB env for a lease test.
+/* _log_env(): a fresh pier with an LMDB env for a log test.
 */
 static MDB_env*
-_lease_env(const c3_c* nam_c)
+_log_env(const c3_c* nam_c)
 {
   _pier_make(nam_c);
 
@@ -2737,105 +2695,30 @@ _lease_env(const c3_c* nam_c)
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
   _check( 0 == mkdir(log_c, 0700), "mkdir %s: %s", log_c, strerror(errno) );
 
-  return _lease_open();
+  return _log_open();
 }
 
-/* _lease_reopen(): close and reopen the env — stands in for a crash +
+/* _log_reopen(): close and reopen the env — stands in for a crash +
 **   restart, exercising on-disk durability.
 */
 static MDB_env*
-_lease_reopen(MDB_env* env_u)
+_log_reopen(MDB_env* env_u)
 {
   u3_lmdb_exit(env_u);
-  return _lease_open();
+  return _log_open();
 }
 
-/* _test_lease(): the durable LEASES table: several leases per bid
-**   (MDB_DUPSORT), exact-row deletes that leave the siblings untouched,
-**   idempotent delete, and a walk over a table not yet created.
+/* _test_blobs_persist(): an event and its BLOBS row, written in one
+**   transaction, survive a close + reopen together.
 */
 static void
-_test_lease(void)
+_test_blobs_persist(void)
 {
-  MDB_env* env_u = _lease_env("lease");
-
-  //  walking a not-yet-created table yields nothing
-  //
-  _check( 0 == _lease_count(env_u), "empty table not empty" );
-
-  c3_d bid1 = ((c3_d)0xdeadbeef << 32) | 1;
-  c3_d bid2 = ((c3_d)0xdeadbeef << 32) | 2;
-
-  //  five leases on one blob (duplicate key) + one on another
-  //
-  for ( c3_d i_d = 0; i_d < 5; i_d++ ) {
-    _check( c3y == u3_lmdb_save_lease(env_u, bid1, 100 + i_d, 1 + i_d),
-            "save %" PRIc3_d " failed", i_d );
-  }
-  _check( c3y == u3_lmdb_save_lease(env_u, bid2, 300, 3), "save failed" );
-
-  _check( 6 == _lease_count(env_u), "expected 6 rows, got %zu", _lease_num );
-  for ( c3_d i_d = 0; i_d < 5; i_d++ ) {
-    _check( c3y == _lease_has(bid1, 100 + i_d, 1 + i_d),
-            "row %" PRIc3_d " missing after save", i_d );
-  }
-  _check( c3y == _lease_has(bid2, 300, 3), "second blob's row missing" );
-
-  //  delete the first and last duplicates; the middle three and the
-  //  other blob's row survive
-  //
-  _check(  (c3y == u3_lmdb_delete_lease(env_u, bid1, 100, 1))
-        && (c3y == u3_lmdb_delete_lease(env_u, bid1, 104, 5)),
-          "delete failed" );
-  _check( 4 == _lease_count(env_u), "expected 4 rows after delete, got %zu",
-          _lease_num );
-  _check(  (c3n == _lease_has(bid1, 100, 1))
-        && (c3y == _lease_has(bid1, 101, 2))
-        && (c3y == _lease_has(bid1, 102, 3))
-        && (c3y == _lease_has(bid1, 103, 4))
-        && (c3n == _lease_has(bid1, 104, 5))
-        && (c3y == _lease_has(bid2, 300, 3)),
-          "wrong rows survived" );
-
-  //  deleting a now-absent row is idempotent success
-  //
-  _check( c3y == u3_lmdb_delete_lease(env_u, bid1, 100, 1),
-          "idempotent delete reported failure" );
-  _check( 4 == _lease_count(env_u), "idempotent delete changed table" );
-
-  //  drain
-  //
-  u3_lmdb_delete_lease(env_u, bid1, 101, 2);
-  u3_lmdb_delete_lease(env_u, bid1, 102, 3);
-  u3_lmdb_delete_lease(env_u, bid1, 103, 4);
-  u3_lmdb_delete_lease(env_u, bid2, 300, 3);
-  _check( 0 == _lease_count(env_u), "table not drained" );
-
-  u3_lmdb_exit(env_u);
-  _pier_done();
-}
-
-/* _test_lease_persist(): leases (and their deletions) survive a close +
-**   reopen, and coexist with the BLOBS table in the same env.
-*/
-static void
-_test_lease_persist(void)
-{
-  MDB_env* env_u = _lease_env("lease persist");
+  MDB_env* env_u = _log_env("blobs persist");
 
   c3_d bid_a = ((c3_d)0x0a11ce << 32) | 7;
   c3_d bid_b = ((c3_d)0x000b0b << 32) | 9;
 
-  //  two leases on bid_a (duplicate key) + one on bid_b
-  //
-  _check(  (c3y == u3_lmdb_save_lease(env_u, bid_a, 1000, 10))
-        && (c3y == u3_lmdb_save_lease(env_u, bid_a, 2000, 11))
-        && (c3y == u3_lmdb_save_lease(env_u, bid_b, 3000, 12)),
-          "save failed" );
-
-  //  an event with its BLOBS row, written in one transaction, to prove
-  //  the tables are independent and maxdbs accommodates both
-  //
   {
     c3_d   ids_d[2] = { bid_a, bid_b };
     c3_y   byt_y[4] = { 1, 2, 3, 4 };
@@ -2849,19 +2732,8 @@ _test_lease_persist(void)
 
   //  "crash" and restart
   //
-  env_u = _lease_reopen(env_u);
+  env_u = _log_reopen(env_u);
 
-  //  every lease survived, values intact
-  //
-  _check( 3 == _lease_count(env_u), "expected 3 rows after reopen, got %zu",
-          _lease_num );
-  _check(  (c3y == _lease_has(bid_a, 1000, 10))
-        && (c3y == _lease_has(bid_a, 2000, 11))
-        && (c3y == _lease_has(bid_b, 3000, 12)),
-          "a lease did not survive reopen" );
-
-  //  the BLOBS row survived independently
-  //
   {
     c3_d* out_d = 0;
     c3_z  out_z = 0;
@@ -2872,15 +2744,6 @@ _test_lease_persist(void)
             "blobs row corrupt after reopen" );
     c3_free(out_d);
   }
-
-  //  a deletion is durable too
-  //
-  _check( c3y == u3_lmdb_delete_lease(env_u, bid_a, 1000, 10), "delete failed" );
-  env_u = _lease_reopen(env_u);
-
-  _check( 2 == _lease_count(env_u), "deletion did not persist (%zu rows)",
-          _lease_num );
-  _check( c3n == _lease_has(bid_a, 1000, 10), "deleted row reappeared" );
 
   u3_lmdb_exit(env_u);
   _pier_done();
@@ -3005,7 +2868,7 @@ _test_canon(void)
 static void
 _test_boot_refs(void)
 {
-  MDB_env* env_u = _lease_env("boot refs");
+  MDB_env* env_u = _log_env("boot refs");
 
   u3_dire dir_u = { .pax_c = _tmp_pier };
   u3_disk log_u = { .dir_u = &dir_u, .mdb_u = env_u };
@@ -3049,99 +2912,6 @@ _test_boot_refs(void)
   }
 
   u3z(bab);
-  u3_lmdb_exit(env_u);
-  _pier_done();
-}
-
-/* _test_lease_roll(): an epoch roll carries every LEASES row into the
-**   new epoch's environment; an environment with no table copies nothing.
-*/
-static void
-_test_lease_roll(void)
-{
-  MDB_env* old_u = _lease_env("lease roll");
-
-  c3_c nex_c[2048];
-  snprintf(nex_c, sizeof(nex_c), "%s/.urb/log-next", _tmp_pier);
-  _check( 0 == mkdir(nex_c, 0700), "mkdir failed" );
-  MDB_env* new_u = u3_lmdb_init(nex_c, 1ULL << 30);
-  _check( new_u, "second env failed" );
-
-  const c3_d bid_a = ((c3_d)0x1111 << 32) | 1;
-  const c3_d bid_b = ((c3_d)0x2222 << 32) | 7;
-  _check(  (c3y == u3_lmdb_save_lease(old_u, bid_a, 100, 1))
-        && (c3y == u3_lmdb_save_lease(old_u, bid_a, 200, 2))
-        && (c3y == u3_lmdb_save_lease(old_u, bid_b, 300, 3)),
-          "save failed" );
-
-  _check( c3y == u3_lmdb_copy_leases(old_u, new_u), "copy failed" );
-  _check(  (3 == _lease_count(new_u))
-        && (c3y == _lease_has(bid_a, 100, 1))
-        && (c3y == _lease_has(bid_a, 200, 2))
-        && (c3y == _lease_has(bid_b, 300, 3)),
-          "rows did not cross" );
-
-  //  the old rows are untouched, and a source with no table is empty
-  //
-  _check( 3 == _lease_count(old_u), "source changed" );
-  {
-    c3_c non_c[2048];
-    snprintf(non_c, sizeof(non_c), "%s/.urb/log-none", _tmp_pier);
-    _check( 0 == mkdir(non_c, 0700), "mkdir failed" );
-    MDB_env* non_u = u3_lmdb_init(non_c, 1ULL << 30);
-    _check( non_u, "third env failed" );
-    _check( c3y == u3_lmdb_copy_leases(non_u, new_u), "empty copy failed" );
-    _check( 3 == _lease_count(new_u), "empty copy changed the target" );
-    u3_lmdb_exit(non_u);
-  }
-
-  u3_lmdb_exit(new_u);
-  u3_lmdb_exit(old_u);
-  _pier_done();
-}
-
-/* _test_chop_leases(): an offline gc restores les_h from the LEASES
-**   table first, so a blob installed but not yet committed survives;
-**   a row for a missing file resurrects nothing.
-*/
-static void
-_test_chop_leases(void)
-{
-  MDB_env* env_u = _lease_env("chop leases");
-
-  u3_dire dir_u = { .pax_c = _tmp_pier };
-  u3_disk log_u = { .dir_u = &dir_u, .mdb_u = env_u };
-
-  const c3_y dat_y[] = "installed and leased, not yet committed";
-  c3_h mug_h = 0, seq_h = 0;
-  _check( c3y == _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h),
-          "save failed" );
-
-  //  the record as _find_home leaves it: no lease, no event, no atom
-  //
-  u3a_blob* blb_u = u3a_blob_new(mug_h, seq_h);
-  const c3_d bid_d = ((c3_d)mug_h << 32) | seq_h;
-  _check(  (c3y == u3_lmdb_save_lease(env_u, bid_d, 0, 1))
-        && (c3y == u3_lmdb_save_lease(env_u, ((c3_d)0x7777 << 32) | 9, 0, 2)),
-          "lease save failed" );
-
-  u3_disk_blob_leases(&log_u);
-  _check( (1 == blb_u->les_h) && (1 == blb_u->use_w), "lease not restored" );
-  _check( !u3a_blob_get(0x7777, 9), "a missing file got a record" );
-
-  u3_disk_blob_gc(&log_u);
-  _check(  u3a_blob_get(mug_h, seq_h)
-        && (c3y == u3b_live(_tmp_pier, mug_h, seq_h)),
-          "leased blob deleted by the gc" );
-
-  //  without the lease the same gc reclaims it
-  //
-  blb_u->les_h = 0; blb_u->use_w = 0;
-  u3_disk_blob_gc(&log_u);
-  _check(  !u3a_blob_get(mug_h, seq_h)
-        && (c3n == u3b_live(_tmp_pier, mug_h, seq_h)),
-          "unleased blob kept by the gc" );
-
   u3_lmdb_exit(env_u);
   _pier_done();
 }
@@ -3198,11 +2968,8 @@ main(int argc, char* argv[])
   _test_hand_empty();
   _test_hand_access();
   _test_lifecycle();
-  _test_lease();
-  _test_lease_persist();
+  _test_blobs_persist();
   _test_boot_refs();
-  _test_lease_roll();
-  _test_chop_leases();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

@@ -637,8 +637,8 @@ STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
 /* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
 **   use_w and zero les_h on each u3a_blob.  The snapshot's les_h is
-**   stale after a restart; pkg/vere rebuilds the live count from the
-**   durable LMDB LEASES table (_mars_play_leases) once the disk is open.
+**   stale after a restart: no lease outlives one, since a restart ends
+**   both processes and nothing resends the event a lease waited for.
 */
 static void
 _find_home_zero_les_cb(u3_noun kev, void* ptr_v)
@@ -796,10 +796,7 @@ _find_home(void)
   }
 
   //  reset all les_h to 0: the snapshot's count belongs to a dead
-  //  process.  leases are durable rows in the LMDB LEASES table, and
-  //  mars rebuilds les_h from them (_mars_play_leases) once replay has
-  //  settled dun_d; an offline command that runs the gc does the same
-  //  through u3_disk_blob_leases.
+  //  process, and no lease outlives one.
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
 

@@ -200,8 +200,8 @@
     **   Single-counter design: the blob file is deleted iff use_w == 0.
     **   use_w is the sum of three component sources:
     **     - eve_w: event-log refcount (rebuilt on chop)
-    **     - les_h: active king-held lease count (durable in LMDB LEASES;
-    **              the loom copy is zeroed on boot and rebuilt from it)
+    **     - les_h: active king-held lease count (memory only: zeroed at
+    **              every boot, since no lease outlives a restart)
     **     - implicit atom cardinality: number of live bob atoms over
     **       this id.  Updated only on atom alloc/free; not affected by
     **       normal noun-refcount transitions.
@@ -218,12 +218,12 @@
     **   Blobs in mars->king gifts come from committed state and need no
     **   lease.
     **
-    **   les_h is durable: each lease is a row in the LMDB LEASES table.
-    **   On boot we zero the snapshot's les_h (and subtract from use_w),
-    **   then rebuild it from that table (_mars_play_leases).  eve_w is
-    **   rebuilt too, from the epoch's BLOBS table (u3_disk_blob_refs): a
-    **   snapshot's count can name events chop has since deleted.  Only
-    **   atom cardinality is taken from the snapshot.
+    **   On boot we zero the snapshot's les_h (and subtract from use_w):
+    **   a restart ends king and mars together, so no event can arrive
+    **   for a lease taken before it.  eve_w is rebuilt from the epoch's
+    **   BLOBS table (u3_disk_blob_refs): a snapshot's count can name
+    **   events chop has since deleted.  Only atom cardinality is taken
+    **   from the snapshot.
     **
     **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
     **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
@@ -231,7 +231,7 @@
     **   off-bitness struct):
     **     use_w  total refs: eve_w + les_h + atom cardinality
     **     eve_w  event-log refcount (rebuildable from LMDB)
-    **     les_h  active king-held leases (rebuilt from LMDB LEASES)
+    **     les_h  active king-held leases (zeroed at boot)
     **     mug_h  blob mug — identifies file in .urb/bob
     **     seq_h  blob seq — identifies file in .urb/bob
     */

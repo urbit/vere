@@ -991,16 +991,9 @@
         void
         u3_disk_blob_refs(u3_disk* log_u);
 
-      /* u3_disk_blob_leases(): restore les_h from the LEASES table for an
-      **   offline command that runs the gc; every row whose file exists
-      **   counts.
-      */
-        void
-        u3_disk_blob_leases(u3_disk* log_u);
-
       /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
-      **   orphans with no bank entry.  run at boot (after replay and
-      **   lease restore) or as part of chop, once use_w is reconstructed.
+      **   orphans with no bank entry.  run at boot (after replay and the
+      **   eve_w rebuild) or as part of chop, once use_w is reconstructed.
       */
         void
         u3_disk_blob_gc(u3_disk* log_u);

@@ -1212,22 +1212,15 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     goto fail3;
   }
 
-  //  open the new epoch's db while the old one is still open, so the
-  //  LEASES rows can cross: a lease is not an event and does not end
-  //  with the epoch.  BLOBS stays behind, since replay never crosses
-  //  epochs and only the new epoch's events can protect a blob.
+  //  open the new epoch's db, then close the old.  BLOBS stays behind:
+  //  replay never crosses epochs, so only the new epoch's events can
+  //  protect a blob.
   //
   {
     MDB_env* new_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i);
 
     if ( 0 == new_u ) {
       fprintf(stderr, "disk: failed to initialize database\r\n");
-      goto fail3;
-    }
-    if ( c3n == u3_lmdb_copy_leases(log_u->mdb_u, new_u) ) {
-      fprintf(stderr, "disk: failed to carry blob leases into epoch %"
-                      PRIc3_d "\r\n", epo_d);
-      u3_lmdb_exit(new_u);
       goto fail3;
     }
 
@@ -1692,53 +1685,14 @@ u3_disk_blob_refs(u3_disk* log_u)
   }
 }
 
-/* _disk_blob_leases_cb(): u3_lmdb_walk_leases callback — restore one
-**   les_h unit for a row whose file exists.
-*/
-static void
-_disk_blob_leases_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
-{
-  u3_disk* log_u = ptr_v;
-  c3_h     mug_h = (c3_h)(bid_d >> 32);
-  c3_h     seq_h = (c3_h)(bid_d & 0xFFFFFFFF);
-  (void)exp_d; (void)lea_d;
-
-  //  a row for a missing file protects nothing; mars prunes it at boot
-  //
-  if ( c3n == u3b_live(log_u->dir_u->pax_c, mug_h, seq_h) ) {
-    return;
-  }
-
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-
-  blb_u->les_h += 1;
-  blb_u->use_w += 1;
-}
-
-/* u3_disk_blob_leases(): restore les_h from the LEASES table, offline.
-**
-**   _find_home zeroes les_h at every load.  mars restores it with its
-**   expiry queue (_mars_play_leases); an offline command that runs the
-**   gc must restore it too, or a blob installed but not yet committed
-**   is deleted under the king's lease.  every row whose file exists
-**   counts, expired or not: expiry is mars's call, at the next boot.
-*/
-void
-u3_disk_blob_leases(u3_disk* log_u)
-{
-  u3_lmdb_walk_leases(log_u->mdb_u, log_u, _disk_blob_leases_cb);
-}
-
 /* u3_disk_blob_gc(): reclaim unreferenced blobs against the bank.
 **
 **   1. delete blob files (and blb_p entries) whose use_w == 0
 **   2. delete on-disk files that have no blb_p entry (orphans)
 **
 **   safe to run whenever use_w is fully reconstructed: after chop's or
-**   boot's eve_w rebuild (u3_disk_blob_refs), with the LEASES table
-**   restored into les_h.  collect-then-act so neither walk races its
-**   own deletions.
+**   boot's eve_w rebuild (u3_disk_blob_refs).  collect-then-act so
+**   neither walk races its own deletions.
 */
 void
 u3_disk_blob_gc(u3_disk* log_u)
@@ -1792,11 +1746,11 @@ u3_disk_blob_gc(u3_disk* log_u)
 
 /* _disk_chop_rebuild_blobs(): rebuild blob accounting after epoch deletion.
 **
-**   1. zero all eve_w in place (les_h was already zeroed at load)
+**   1. zero all eve_w in place (les_h was already zeroed at load: no
+**      lease outlives a restart)
 **   2. scan BLOBS table for remaining events, increment eve_w for each ref
-**   3. restore les_h from the LEASES table, so a leased blob survives
-**   4. delete blob files whose total refcount is now zero
-**   5. delete orphaned files on disk that have no blb_p entry
+**   3. delete blob files whose total refcount is now zero
+**   4. delete orphaned files on disk that have no blb_p entry
 */
 static void
 _disk_chop_rebuild_blobs(u3_disk* log_u)
@@ -1815,12 +1769,7 @@ _disk_chop_rebuild_blobs(u3_disk* log_u)
                        _disk_chop_blobs_cb);
   }
 
-  //  step 3: a blob installed but not yet committed is held only by
-  //  its lease, which _find_home zeroed at load
-  //
-  u3_disk_blob_leases(log_u);
-
-  //  steps 4-5: delete unreferenced blobs and reconcile orphans
+  //  steps 3-4: delete unreferenced blobs and reconcile orphans
   //
   u3_disk_blob_gc(log_u);
 }
