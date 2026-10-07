@@ -163,24 +163,29 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
   u3a_blob_drop(mug_h, seq_h);
 }
 
-/* _blob_maybe_delete(): delete blob iff use_w == 0.
+/* _mars_lease_drop(): retire one lease unit: take it off les_h and
+**   use_w, and delete the blob if nothing else holds it.  the les_h
+**   guard keeps a stray release from underflowing.
 */
 static void
-_blob_maybe_delete(c3_h mug_h, c3_h seq_h)
+_mars_lease_drop(_mars_lease* lea_u)
 {
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) return;
+  u3a_blob* blb_u = u3a_blob_get(lea_u->mug_h, lea_u->seq_h);
 
-  if ( 0 == blb_u->use_w ) {
-    _mars_blob_del(mug_h, seq_h);
+  if ( blb_u && blb_u->les_h ) {
+    blb_u->les_h -= 1;
+    blb_u->use_w -= 1;
+
+    if ( 0 == blb_u->use_w ) {
+      _mars_blob_del(lea_u->mug_h, lea_u->seq_h);
+    }
   }
 }
 
 /* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
 **
 **   bumps les_h + use_w and queues a lease expiring at
-**   dun_d + _mars_lease_wid_d.  the les_h > 0 guard in the sweeper
-**   prevents underflow.  the lease is memory only: a restart ends both
+**   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
 **   processes, and no event can arrive for a lease taken before it.
 */
 static void
@@ -905,20 +910,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         break;
       }
 
-      //  expired lease — decrement les_h and use_w, check deletion
+      //  expired lease
       //
       _mars_lease_pop();
-
-      {
-        u3a_blob* blb_u = u3a_blob_get(top_u->mug_h, top_u->seq_h);
-        if ( blb_u && blb_u->les_h > 0 ) {
-          blb_u->les_h -= 1;
-          blb_u->use_w -= 1;
-        }
-      }
-
-      _blob_maybe_delete(top_u->mug_h, top_u->seq_h);
-
+      _mars_lease_drop(top_u);
       c3_free(top_u);
     }
   }
@@ -1168,13 +1163,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       {
         _mars_lease* lea_u = _mars_lease_kill_one(mug_h, seq_h);
         if ( lea_u ) {
-          u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-          if ( blb_u && blb_u->les_h > 0 ) {
-            blb_u->les_h -= 1;
-            blb_u->use_w -= 1;
-          }
-
-          _blob_maybe_delete(mug_h, seq_h);
+          _mars_lease_drop(lea_u);
         }
       }
 
