@@ -10,8 +10,9 @@
 static const c3_l _u_sam[]   = { u3x_sam };
 static const c3_l _u_sam_2[] = { u3x_sam_2, u3x_sam_3 };
 
-#define U3U_UNARY(fun)  { u3w##fun, u3u##fun, 1, _u_sam   }
-#define U3U_BINARY(fun) { u3w##fun, u3u##fun, 2, _u_sam_2 }
+#define U3U_UNARY(fun)  { u3w##fun, u3u##fun, 1, _u_sam,      false   }
+#define U3U_BINARY(fun) { u3w##fun, u3u##fun, 2, _u_sam_2,    false }
+#define U3U_PUNT(fun)   { u3w##fun, 0,        1, (c3_l[]){1}, true }
 
 /* u3u_Harm: array drivers, keyed by their u3w counterparts.
 */
@@ -30,5 +31,6 @@ const u3u_harm u3u_Harm[] = {
   U3U_BINARY(a_sub),
   U3U_UNARY(c_bex),
   U3U_BINARY(c_dvr),
+  U3U_PUNT(e_scot),
   {}
 };

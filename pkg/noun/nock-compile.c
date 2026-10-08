@@ -30,7 +30,8 @@
 **  Slots, literal and call site indices, and jump targets (absolute byte
 **  offsets) are immediates.  The IMM opcodes are the exception: IMM_B
 **  and IMM_S carry the atom itself, and all of them write to a one-byte
-**  slot.
+**  slot.  A call site holds its argument slots and its destination slot
+**  d, so the call opcodes carry only the site index.
 **
 **    IMM_0 d        0 -> d
 **    IMM_1 d        1 -> d
@@ -53,10 +54,13 @@
 **    HDE   i p      dynamic hint epilogue
 **    SPY   e p d    .^(e p) -> d
 **    NOK   u f d    .*(u f) -> d, through the SKA core
-**    CAL   i d      call site i with its arguments -> d
-**    CAM   i d      CAL, memoized
-**    CSL   i s d    call site i with the whole subject in s -> d
-**    CSM   i s d    CSL, memoized
+**    CAL   i        call site i with its arguments -> d
+**    CAF   i        CAL, by the total array jet of the site
+**    CAP   i        call site i with the whole subject, its one argument,
+**                   -> d: by the u3w jet of the site if it has one and
+**                   doesn't punt, else by the unary program of the callee
+**    CAM   i        CAL, memoized
+**    CSM   i        CAP, memoized, without a jet
 **    CLQ   s t      goto t unless s is a cell
 **    EQQ   l r t    goto t unless =(l r)
 **    EQI   n s t    goto t unless =(n s), n a direct atom
@@ -65,7 +69,8 @@
 **    BRZ   s t      goto t unless s is 0
 **    HOP   t        goto t
 **    JMP   i        CAL in tail position
-**    JSP   i s      CSL in tail position
+**    JMF   i        CAF in tail position
+**    JSP   i        CAP in tail position
 **    DON   s        return s
 **    BOM            crash
 */
@@ -75,8 +80,9 @@
   X3(IML) X3(MOV) X3(INC) X3(DEC) X3(ADD) X3(CON) X3(HED) X3(TAL)         \
   X3(CEL) X3(LOB)                                                        \
   X3(EQU) X3(HSP) X3(HSE) X3(HDP) X3(HDE) X3(SPY) X3(NOK)                 \
-  X3(CAL) X3(CAM) X3(CSL) X3(CSM)                                        \
-  X3(CLQ) X3(EQQ) X3(EQI) X3(EQL) X3(BRN) X3(BRZ) X3(HOP) X3(JMP) X3(JSP) \
+  X3(CAL) X3(CAF) X3(CAP) X3(CAM) X3(CSM)                                \
+  X3(CLQ) X3(EQQ) X3(EQI) X3(EQL) X3(BRN) X3(BRZ) X3(HOP)                 \
+  X3(JMP) X3(JMF) X3(JSP)                                                \
   X3(DON)                                                                \
   X(BOM)
 
@@ -97,9 +103,9 @@ enum {
   _nc_iml, _nc_mov, _nc_inc, _nc_dec, _nc_add, _nc_con, _nc_hed, _nc_tal,
   _nc_cel, _nc_lob,
   _nc_equ, _nc_hsp, _nc_hse, _nc_hdp, _nc_hde, _nc_spy, _nc_nok,
-  _nc_cal, _nc_cam, _nc_csl, _nc_csm,
-  _nc_clq, _nc_eqq, _nc_eqi, _nc_eql, _nc_brn, _nc_brz, _nc_hop, _nc_jmp,
-  _nc_jsp, _nc_don,
+  _nc_cal, _nc_caf, _nc_cap, _nc_cam, _nc_csm,
+  _nc_clq, _nc_eqq, _nc_eqi, _nc_eql, _nc_brn, _nc_brz, _nc_hop,
+  _nc_jmp, _nc_jmf, _nc_jsp, _nc_don,
   _nc_bom, _nc_imm, _nc_nop
 };
 
@@ -113,10 +119,12 @@ enum {
 //  [OP][source_registers?][destination_register?][index?][jump_target?]
 
 /* _nc_fam: operands of a family: number of source registers, whether
-**          there is a destination register, an index immediate (literal
-**          or call site), and a jump target.
+**          there is a destination register in the op, an index immediate
+**          (literal or call site), a jump target, and whether the op has a
+**          call site, whose argument slots are sources and which holds the
+**          destination register, if any.
 */
-static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
+static const struct { c3_y src_y, dst_y, imm_y, tar_y, sot_y; } _nc_fam[] = {
   [_nc_iml] = { 0, 1, 1, 0 },
   [_nc_mov] = { 1, 1, 0, 0 },
   [_nc_inc] = { 1, 1, 0, 0 },
@@ -134,10 +142,11 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
   [_nc_hde] = { 1, 0, 1, 0 },
   [_nc_spy] = { 2, 1, 0, 0 },
   [_nc_nok] = { 2, 1, 0, 0 },
-  [_nc_cal] = { 0, 1, 1, 0 },
-  [_nc_cam] = { 0, 1, 1, 0 },
-  [_nc_csl] = { 1, 1, 1, 0 },
-  [_nc_csm] = { 1, 1, 1, 0 },
+  [_nc_cal] = { 0, 0, 1, 0, 1 },
+  [_nc_caf] = { 0, 0, 1, 0, 1 },
+  [_nc_cap] = { 0, 0, 1, 0, 1 },
+  [_nc_cam] = { 0, 0, 1, 0, 1 },
+  [_nc_csm] = { 0, 0, 1, 0, 1 },
   [_nc_clq] = { 1, 0, 0, 1 },
   [_nc_eqq] = { 2, 0, 0, 1 },
   [_nc_eqi] = { 1, 0, 1, 1 },
@@ -145,8 +154,9 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
   [_nc_brn] = { 1, 0, 0, 1 },
   [_nc_brz] = { 1, 0, 0, 1 },
   [_nc_hop] = { 0, 0, 0, 1 },
-  [_nc_jmp] = { 0, 0, 1, 0 },
-  [_nc_jsp] = { 1, 0, 1, 0 },
+  [_nc_jmp] = { 0, 0, 1, 0, 1 },
+  [_nc_jmf] = { 0, 0, 1, 0, 1 },
+  [_nc_jsp] = { 0, 0, 1, 0, 1 },
   [_nc_don] = { 1, 0, 0, 0 },
   [_nc_bom] = { 0, 0, 0, 0 },
   [_nc_imm] = { 0, 1, 0, 0 },
@@ -158,7 +168,7 @@ static const struct { c3_y src_y, dst_y, imm_y, tar_y; } _nc_fam[] = {
 typedef struct {
   c3_y  fam_y;    //  family of the op
   c3_h  src_h[2]; //  source registers
-  c3_h  dst_h;    //  destination register
+  c3_h  dst_h;    //  destination register (a call's moves to its site)
   c3_h  imm_h;    //  index immediate, or the atom of an inline immediate
   c3_h  tar_h;    //  target block, or the literal of an inline immediate
 } nc_op;
@@ -173,13 +183,22 @@ typedef struct {
   c3_h    lay_h;    //  position in the layout, or _nc_none if unreachable
 } nc_blk;
 
+/* nc_jet: a ring [path axis], resolved to its drivers.
+*/
+typedef struct {
+  u3_noun         ring;   //  [path axis] of the jet, or ~
+  u3j_harm*       ham_u;  //  u3w driver, taking the core, nullable
+  const u3u_harm* arm_u;  //  array driver, taking the arguments, nullable
+} nc_jet;
+
 /* nc_dir: a call site, with registers until slots are assigned.
 */
 typedef struct {
   u3_noun bell;
-  u3_noun ring;
+  nc_jet  jet_u;
   c3_h    cid_h;
-  c3_o    dir_o;  //  call with args or with the whole subject
+  c3_h    des_h;  //  destination slot, set by _nc_emit() from the op
+  c3_o    mon_o;  //  call by subject: the one argument is the whole subject
   c3_h    sot_h;
   c3_h    len_h;
 } nc_dir;
@@ -324,35 +343,83 @@ _nc_cid(u3_noun clu)
   }
 }
 
-/* _nc_jet_op(): an op standing in for a jetted call with arguments,
-**               for the jets the interpreter knows as ops: +dec and +add.
-**               ring: [path axis] of the jet; arg: (list register).
-**               RETAINS.  Produces NULL if there is no such op.
+/* _nc_lent(): length of a (list register).  RETAINS.
 */
-static nc_op*
-_nc_jet_op(nc_gen* gen_u, u3_noun ring, u3_noun arg)
+static c3_h
+_nc_lent(u3_noun lis)
 {
-  u3j_harm*       ham_u;
-  const u3u_harm* arm_u;
-  nc_op*          op_u;
-  c3_h            len_h = 0;
+  c3_h len_h = 0;
 
-  for ( u3_noun l = arg; u3_nul != l; l = u3t(l) ) {
+  for ( ; u3_nul != lis; lis = u3t(lis) ) {
     len_h++;
   }
 
-  if (  (c3n == u3j_ring(ring, &ham_u, &arm_u))
-     || !arm_u
-     || (len_h != arm_u->len_w) )
-  {
-    return NULL;
+  return len_h;
+}
+
+/* _nc_ring(): resolve a ring [path axis], or ~, to its drivers.  RETAINS.
+*/
+static nc_jet
+_nc_ring(u3_noun ring)
+{
+  nc_jet jet_u = { ring, NULL, NULL };
+
+  if ( u3_nul == ring ) {
+    return jet_u;
   }
 
-  if ( (u3ua_dec == arm_u->arg_f) && (1 == len_h) ) {
+  if ( c3n == u3j_ring(ring, &(jet_u.ham_u), &(jet_u.arm_u)) ) {
+    _nc_stat(rin_d);
+    if ( _nc_verb_t ) {
+      u3l_log("u3nc: no driver for ring %s", u3m_pretty_path(u3h(ring)));
+    }
+  }
+  else {
+    _nc_stat(arm_d);
+  }
+
+  return jet_u;
+}
+
+/* _nc_kind(): the kind of a call with len_h arguments through a resolved
+**             ring: plain, with no array driver (the arguments are the
+**             analysis's); of a total array driver on the arguments; or
+**             by subject, of a u3w driver that may punt, whose one argument
+**             is the whole subject.  Bails if the arguments don't fit the
+**             driver: the %jets table of the SKA core and u3u_Harm then
+**             disagree.
+*/
+enum { _nc_kind_plain, _nc_kind_total, _nc_kind_punt };
+
+static c3_y
+_nc_kind(const nc_jet* jet_u, c3_h len_h)
+{
+  if ( !jet_u->arm_u ) {
+    return _nc_kind_plain;
+  }
+
+  if ( len_h != jet_u->arm_u->len_w ) {
+    u3m_bail(c3__fail);
+  }
+
+  return ( jet_u->arm_u->pun_t ) ? _nc_kind_punt : _nc_kind_total;
+}
+
+/* _nc_jet_op(): an op standing in for a call of a total array jet, for
+**               the jets the interpreter knows as ops: +dec and +add.
+**               arg: (list register), fitting the jet.  RETAINS.
+**               Produces NULL if there is no such op.
+*/
+static nc_op*
+_nc_jet_op(nc_gen* gen_u, const u3u_harm* arm_u, u3_noun arg)
+{
+  nc_op* op_u;
+
+  if ( u3ua_dec == arm_u->arg_f ) {
     op_u = _nc_op(gen_u, _nc_dec);
     op_u->src_h[0] = _nc_reg(gen_u, u3h(arg));
   }
-  else if ( (u3ua_add == arm_u->arg_f) && (2 == len_h) ) {
+  else if ( u3ua_add == arm_u->arg_f ) {
     op_u = _nc_op(gen_u, _nc_add);
     op_u->src_h[0] = _nc_reg(gen_u, u3h(arg));
     op_u->src_h[1] = _nc_reg(gen_u, u3h(u3t(arg)));
@@ -361,16 +428,18 @@ _nc_jet_op(nc_gen* gen_u, u3_noun ring, u3_noun arg)
     return NULL;
   }
 
-  _nc_stat(arm_d);
   return op_u;
 }
 
 /* _nc_dir(): append a call site.  RETAINS.
-**            bell: callee; ring: jet, or ~; clu: memo clue, or u3_none;
-**            arg: (list register) or, for a call by subject, u3_none.
+**            bell: callee; jet_u: its ring, resolved; clu: memo clue, or
+**            u3_none; arg: (list register); mon_o: a call by subject, its
+**            one argument the whole subject, of the unary program of the
+**            bell.
 */
 static c3_h
-_nc_dir(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_weak clu, u3_weak arg)
+_nc_dir(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun arg,
+        c3_o mon_o)
 {
   nc_dir* dir_u;
 
@@ -378,13 +447,15 @@ _nc_dir(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_weak clu, u3_weak arg)
   dir_u = &(gen_u->dir_u[gen_u->din_h]);
 
   dir_u->bell  = u3k(bell);
-  dir_u->ring  = u3k(ring);
+  dir_u->jet_u = jet_u;
   dir_u->cid_h = ( u3_none == clu ) ? 0 : _nc_cid(clu);
-  dir_u->dir_o = __(u3_none != arg);
+  dir_u->des_h = _nc_none;
+  dir_u->mon_o = mon_o;
   dir_u->sot_h = gen_u->pon_h;
   dir_u->len_h = 0;
+  u3k(jet_u.ring);
 
-  while ( (u3_none != arg) && (u3_nul != arg) ) {
+  while ( u3_nul != arg ) {
     u3_noun i;
     u3x_cell(arg, &i, &arg);
     _nc_grow(gen_u->pol_h, gen_u->pon_h, gen_u->poc_h, c3_h);
@@ -392,7 +463,57 @@ _nc_dir(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_weak clu, u3_weak arg)
     dir_u->len_h++;
   }
 
+  u3_assert( (c3n == mon_o) || (1 == dir_u->len_h) );
+
   return gen_u->din_h++;
+}
+
+/* _nc_dir_sub(): append a call site by subject, in register sub.  RETAINS.
+*/
+static c3_h
+_nc_dir_sub(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun sub)
+{
+  u3_noun arg   = u3nc(sub, u3_nul);
+  c3_h    dir_h = _nc_dir(gen_u, bell, jet_u, clu, arg, c3y);
+
+  u3z(arg);
+  return dir_h;
+}
+
+/* _nc_call(): translate a call with arguments through a ring, in tail
+**             position if tal_t, as an op for its kind (_nc_kind()): a
+**             plain call; a call of the total array jet, or the op standing
+**             in for it; or a call by subject, of its one argument.
+**             RETAINS.
+*/
+static nc_op*
+_nc_call(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_noun arg, c3_t tal_t)
+{
+  nc_jet jet_u = _nc_ring(ring);
+  nc_op* op_u;
+
+  switch ( _nc_kind(&jet_u, _nc_lent(arg)) ) {
+    default:
+    case _nc_kind_plain: {
+      op_u = _nc_op(gen_u, tal_t ? _nc_jmp : _nc_cal);
+      op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);
+    } break;
+
+    case _nc_kind_total: {
+      if ( !tal_t && (op_u = _nc_jet_op(gen_u, jet_u.arm_u, arg)) ) {
+        break;
+      }
+      op_u = _nc_op(gen_u, tal_t ? _nc_jmf : _nc_caf);
+      op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);
+    } break;
+
+    case _nc_kind_punt: {
+      op_u = _nc_op(gen_u, tal_t ? _nc_jsp : _nc_cap);
+      op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3y);
+    } break;
+  }
+
+  return op_u;
 }
 
 /* _nc_kids(): successor blocks of a block, in the order to visit them
@@ -620,48 +741,44 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
     case c3__cal: {
       u3x_trel(arg, &a, &b, &c);
       op_u = _nc_op(gen_u, _nc_cal);
-      op_u->imm_h = _nc_dir(gen_u, a, u3_nul, u3_none, b);
+      op_u->imm_h = _nc_dir(gen_u, a, _nc_ring(u3_nul), u3_none, b, c3n);
       op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
     case c3__caf: {
       u3x_qual(arg, &a, &b, &c, &d);
-      if ( !(op_u = _nc_jet_op(gen_u, d, b)) ) {
-        op_u = _nc_op(gen_u, _nc_cal);
-        op_u->imm_h = _nc_dir(gen_u, a, d, u3_none, b);
-      }
+      op_u = _nc_call(gen_u, a, d, b, 0);
       op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
     case c3__cam: {
       u3x_qual(arg, &a, &b, &c, &d);
       op_u = _nc_op(gen_u, _nc_cam);
-      op_u->imm_h = _nc_dir(gen_u, a, u3_nul, d, b);
+      op_u->imm_h = _nc_dir(gen_u, a, _nc_ring(u3_nul), d, b, c3n);
       op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
-    case c3__csl: {
-      u3x_trel(arg, &a, &b, &c);
-      op_u = _nc_op(gen_u, _nc_csl);
-      op_u->imm_h    = _nc_dir(gen_u, a, u3_nul, u3_none, u3_none);
-      op_u->src_h[0] = _nc_reg(gen_u, b);
-      op_u->dst_h    = _nc_reg(gen_u, c);
-    } break;
-
+    //  calls by subject: the u3w driver of the ring, if any, tries first
+    //
+    case c3__csl:
     case c3__csf: {
-      u3x_qual(arg, &a, &b, &c, &d);
-      op_u = _nc_op(gen_u, _nc_csl);
-      op_u->imm_h    = _nc_dir(gen_u, a, d, u3_none, u3_none);
-      op_u->src_h[0] = _nc_reg(gen_u, b);
-      op_u->dst_h    = _nc_reg(gen_u, c);
+      d = u3_nul;
+      if ( c3__csf == tag ) {
+        u3x_qual(arg, &a, &b, &c, &d);
+      }
+      else {
+        u3x_trel(arg, &a, &b, &c);
+      }
+      op_u = _nc_op(gen_u, _nc_cap);
+      op_u->imm_h = _nc_dir_sub(gen_u, a, _nc_ring(d), u3_none, b);
+      op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
     case c3__csm: {
       u3x_qual(arg, &a, &b, &c, &d);
       op_u = _nc_op(gen_u, _nc_csm);
-      op_u->imm_h    = _nc_dir(gen_u, a, u3_nul, d, u3_none);
-      op_u->src_h[0] = _nc_reg(gen_u, b);
-      op_u->dst_h    = _nc_reg(gen_u, c);
+      op_u->imm_h = _nc_dir_sub(gen_u, a, _nc_ring(u3_nul), d, b);
+      op_u->dst_h = _nc_reg(gen_u, c);
     } break;
   }
 }
@@ -756,30 +873,27 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
     case c3__jmp: {
       u3x_cell(arg, &a, &b);
       op_u = _nc_op(gen_u, _nc_jmp);
-      op_u->imm_h = _nc_dir(gen_u, a, u3_nul, u3_none, b);
+      op_u->imm_h = _nc_dir(gen_u, a, _nc_ring(u3_nul), u3_none, b, c3n);
       return;
     }
 
     case c3__jmf: {
       u3x_trel(arg, &a, &b, &c);
-      op_u = _nc_op(gen_u, _nc_jmp);
-      op_u->imm_h = _nc_dir(gen_u, a, c, u3_none, b);
+      _nc_call(gen_u, a, c, b, 1);
       return;
     }
 
-    case c3__jsp: {
-      u3x_cell(arg, &a, &b);
-      op_u = _nc_op(gen_u, _nc_jsp);
-      op_u->imm_h    = _nc_dir(gen_u, a, u3_nul, u3_none, u3_none);
-      op_u->src_h[0] = _nc_reg(gen_u, b);
-      return;
-    }
-
+    case c3__jsp:
     case c3__jsf: {
-      u3x_trel(arg, &a, &b, &c);
+      c = u3_nul;
+      if ( c3__jsf == tag ) {
+        u3x_trel(arg, &a, &b, &c);
+      }
+      else {
+        u3x_cell(arg, &a, &b);
+      }
       op_u = _nc_op(gen_u, _nc_jsp);
-      op_u->imm_h    = _nc_dir(gen_u, a, c, u3_none, u3_none);
-      op_u->src_h[0] = _nc_reg(gen_u, b);
+      op_u->imm_h = _nc_dir_sub(gen_u, a, _nc_ring(c), u3_none, b);
       return;
     }
 
@@ -903,7 +1017,7 @@ _nc_translate(nc_gen* gen_u)
       c3_h* reg_h = &((op_u)->src_h[_i]);                                \
       body;                                                              \
     }                                                                    \
-    if (  (_nc_cal == _nfam) || (_nc_cam == _nfam) || (_nc_jmp == _nfam) ) { \
+    if ( _nc_fam[_nfam].sot_y ) {                                        \
       nc_dir* _dir = &((gen_u)->dir_u[(op_u)->imm_h]);                   \
       for ( _i = 0; _i < _dir->len_h; _i++ ) {                           \
         c3_h* reg_h = &((gen_u)->pol_h[_dir->sot_h + _i]);               \
@@ -1244,13 +1358,17 @@ _nc_print(u3nc_prog* pog_u)
 
     fprintf(stderr, "  site %u: bell %08x %s%s%s cid %u args",
             i_h, u3r_mug(dir_u->bell),
-            ( c3y == dir_u->dir_o ) ? "direct" : "subject",
+            ( c3y == dir_u->mon_o ) ? "subject" : "direct",
             dir_u->ham_u ? " jet" : "",
-            dir_u->arm_u ? " array-jet" : "",
+            !dir_u->arm_u ? "" : dir_u->arm_u->pun_t ? " punt-jet" : " array-jet",
             dir_u->cid_h);
 
     for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
       fprintf(stderr, " %u", pog_u->sot_u.sot_h[dir_u->sot_h + j_h]);
+    }
+
+    if ( _nc_none != dir_u->des_h ) {
+      fprintf(stderr, " -> %u", dir_u->des_h);
     }
 
     if ( u3_nul != dir_u->ring ) {
@@ -1379,27 +1497,15 @@ _nc_lit_cb(u3_noun kev, void* ptr_v)
   non[u3t(kev)] = u3k(u3h(kev));
 }
 
-/* _nc_dire_jet(): find the jet arms of a call site.
+/* _nc_dire_jet(): resolve the jet of a restored call site.
 */
 static void
 _nc_dire_jet(u3nc_dire* dir_u)
 {
-  dir_u->ham_u = NULL;
-  dir_u->arm_u = NULL;
+  nc_jet jet_u = _nc_ring(dir_u->ring);
 
-  if ( u3_nul == dir_u->ring ) {
-    return;
-  }
-
-  if ( c3n == u3j_ring(dir_u->ring, &(dir_u->ham_u), &(dir_u->arm_u)) ) {
-    _nc_stat(rin_d);
-    if ( _nc_verb_t ) {
-      u3l_log("u3nc: no driver for ring %s", u3m_pretty_path(u3h(dir_u->ring)));
-    }
-  }
-  else {
-    _nc_stat(arm_d);
-  }
+  dir_u->ham_u = jet_u.ham_u;
+  dir_u->arm_u = jet_u.arm_u;
 }
 
 /* _nc_emit(): lay the ops out and assemble the program.  RETAINS ned.
@@ -1464,18 +1570,30 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
 
   u3h_walk_with(gen_u->lit_p, _nc_lit_cb, pog_u->lit_u.non);
 
+  //  the destination slot of a call is in its site
+  //
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_h]);
+
+    if ( _nc_fam[op_u->fam_y].sot_y ) {
+      gen_u->dir_u[op_u->imm_h].des_h = op_u->dst_h;
+    }
+  }
+
   for ( i_h = 0; i_h < gen_u->din_h; i_h++ ) {
     nc_dir*    dir_u = &(gen_u->dir_u[i_h]);
     u3nc_dire* dat_u = &(pog_u->dir_u.dat_u[i_h]);
 
     dat_u->bell  = dir_u->bell;
-    dat_u->ring  = dir_u->ring;
+    dat_u->ring  = dir_u->jet_u.ring;
     dat_u->pog_p = 0;
     dat_u->sot_h = dir_u->sot_h;
     dat_u->len_h = dir_u->len_h;
     dat_u->cid_h = dir_u->cid_h;
-    dat_u->dir_o = dir_u->dir_o;
-    _nc_dire_jet(dat_u);
+    dat_u->des_h = dir_u->des_h;
+    dat_u->mon_o = dir_u->mon_o;
+    dat_u->ham_u = dir_u->jet_u.ham_u;
+    dat_u->arm_u = dir_u->jet_u.arm_u;
   }
 
   memcpy(pog_u->sot_u.sot_h, gen_u->pol_h, gen_u->pon_h * sizeof(c3_h));
@@ -1538,19 +1656,49 @@ _nc_to(c3_w pog_w)
   return u3to(u3nc_prog, pog_w << u3a_vits);
 }
 
-/* _nc_dir_get(): direct program of a bell, from any road.  RETAINS.
+/* _nc_dir_key(): key of a program in ska.dir_p: its bell, or, for the
+**                unary program of the bell's whole subject, [%mono bell].
+**                RETAINS bell; TRANSFERS the key.
+*/
+static u3_noun
+_nc_dir_key(u3_noun bell, c3_o mon_o)
+{
+  return ( c3y == mon_o ) ? u3nc(c3__mono, u3k(bell)) : u3k(bell);
+}
+
+/* _nc_dir_get(): program under a key of ska.dir_p, from any road.  RETAINS.
 */
 static u3nc_prog*
-_nc_dir_get(u3_noun bell)
+_nc_dir_get(u3_noun key)
 {
   u3_weak pog;
   for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
-    if ( u3_none != (pog = u3h_git(rod_u->ska.dir_p, bell)) ) {
+    if ( u3_none != (pog = u3h_git(rod_u->ska.dir_p, key)) ) {
       return _nc_to(pog);
     }
   }
 
   return NULL;
+}
+
+/* _nc_dire_get(): program of a call site, if it has been compiled.
+*/
+static u3nc_prog*
+_nc_dire_get(u3nc_dire* dir_u)
+{
+  u3_noun    key   = _nc_dir_key(dir_u->bell, dir_u->mon_o);
+  u3nc_prog* gop_u = _nc_dir_get(key);
+
+  u3z(key);
+  return gop_u;
+}
+
+/* _nc_dire_fit(): assert that a program takes the arguments of a call site.
+*/
+static void
+_nc_dire_fit(const u3nc_dire* dir_u, const u3nc_prog* gop_u)
+{
+  u3_assert( gop_u->arg_h == dir_u->len_h );
 }
 
 /* _nc_ent_get(): entry program for [sub fol], from any road.  RETAINS.
@@ -1570,8 +1718,9 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
   return NULL;
 }
 
-/* _nc_link(): set the callee programs of the direct call sites that
-**             have been compiled; the rest are linked when first called.
+/* _nc_link(): set the callee programs of the call sites that have been
+**             compiled; the rest are linked when first called.  A call
+**             with arguments of a total array jet never calls a program.
 */
 static void
 _nc_link(u3nc_prog* pog_u)
@@ -1582,7 +1731,12 @@ _nc_link(u3nc_prog* pog_u)
     u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
     u3nc_prog* gop_u;
 
-    if ( (c3y == dir_u->dir_o) && (gop_u = _nc_dir_get(dir_u->bell)) ) {
+    if ( (c3n == dir_u->mon_o) && dir_u->arm_u && !dir_u->arm_u->pun_t ) {
+      continue;
+    }
+
+    if ( (gop_u = _nc_dire_get(dir_u)) ) {
+      _nc_dire_fit(dir_u, gop_u);
       dir_u->pog_p = u3of(u3nc_prog, gop_u);
     }
   }
@@ -1633,25 +1787,33 @@ _nc_lose_slow(u3_noun som)
   u3a_lose(som);
 }
 
-/* _nc_callee(): the program of a direct call site, compiling it on the
-**               first call.  The site remembers it if the site is on the
-**               current road; a senior site can't point at junior memory.
-**               The interpreter checks the linked case inline; this is
-**               the slow path, and doesn't clobber the caller's registers.
+/* _nc_callee(): the program of a call site, compiling it on the first
+**               call: the program of its bell or, for a call by subject,
+**               the unary program of the bell's whole subject.  The site
+**               remembers it if the site is on the current road; a senior
+**               site can't point at junior memory.  The interpreter checks
+**               the linked case inline; this is the slow path, and doesn't
+**               clobber the caller's registers.
 */
 static _nc_cold u3nc_prog*
 _nc_callee(u3nc_dire* dir_u)
 {
   u3nc_prog* gop_u;
+  u3_noun    key;
 
   if ( dir_u->pog_p ) {
     return u3to(u3nc_prog, dir_u->pog_p);
   }
 
-  if ( !(gop_u = _nc_dir_get(dir_u->bell)) ) {
-    gop_u = _nc_compile(u3d_dire(dir_u->bell));
-    u3h_put(u3R->ska.dir_p, dir_u->bell, _nc_of(gop_u));
+  key = _nc_dir_key(dir_u->bell, dir_u->mon_o);
+
+  if ( !(gop_u = _nc_dir_get(key)) ) {
+    gop_u = _nc_compile(u3d_dire(dir_u->bell, dir_u->mon_o));
+    u3h_put(u3R->ska.dir_p, key, _nc_of(gop_u));
   }
+
+  u3z(key);
+  _nc_dire_fit(dir_u, gop_u);
 
   if ( _nc_here(dir_u) ) {
     dir_u->pog_p = u3of(u3nc_prog, gop_u);

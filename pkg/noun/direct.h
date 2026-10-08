@@ -26,10 +26,11 @@
       u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell);
 
     /* u3d_dire(): compile a bell [sock formula] as a function of the
-    **             parts of its subject that it uses.  RETAINS.
+    **             parts of its subject that it uses or, if mon_o, as a
+    **             unary function of its whole subject.  RETAINS.
     */
       u3_noun
-      u3d_dire(u3_noun bell);
+      u3d_dire(u3_noun bell, c3_o mon_o);
 
     /* u3d_match(): find the most specific [sock *] in `lis` whose sock
     **              matches sub.  RETAINS.  Produces u3_none if none do.

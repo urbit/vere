@@ -175,11 +175,23 @@ static const OP_F TAB[] = { OPCODES };
     _f;                                                                         \
   })
 
-//  SITE(): the call site a_h, its callee gop_u, its argument slots
-//          sot_h and their number len_h
+//  SITE(): the call site a_h, its argument slots sot_h and their number
+//          len_h
 //
 #define SITE()  do {                                                            \
     dir_u = &(pog_u->dir_u.dat_u[a_h]);                                         \
+    sot_h = pog_u->sot_u.sot_h + dir_u->sot_h;                                  \
+    len_h = dir_u->len_h;                                                       \
+  } while ( 0 )
+
+//  SUB(): the slot of the one argument of the site dir_u, the subject of
+//         a call by subject
+//
+#define SUB()  (reg[pog_u->sot_u.sot_h[dir_u->sot_h]])
+
+//  CALLEE(): the program gop_u of the site dir_u, linked on the first call
+//
+#define CALLEE()  do {                                                          \
     if ( dir_u->pog_p ) {                                                       \
       gop_u = u3to(u3nc_prog, dir_u->pog_p);                                    \
     }                                                                           \
@@ -188,11 +200,10 @@ static const OP_F TAB[] = { OPCODES };
       gop_u = _nc_callee(dir_u);                                                \
       u3t_on(noc_o);                                                            \
     }                                                                           \
-    sot_h = pog_u->sot_u.sot_h + dir_u->sot_h;                                  \
-    len_h = dir_u->len_h;                                                       \
   } while ( 0 )
 
-//  GATHER(): push num words and copy the site's arguments into them
+//  GATHER(num): push num words and copy the site's arguments into them,
+//               uncounted
 //
 #define GATHER(num)  do {                                                       \
     nex = PUSH(num);                                                            \
@@ -247,13 +258,13 @@ static const OP_F TAB[] = { OPCODES };
 /* _nc_burn(): run a program on its arguments.  TRANSFERS the arguments.
 **
 **   An activation is the callee's slots, then a frame holding the
-**   caller's state, pushed only once the call is known to run: a call
-**   site copies its arguments straight into the slots of the callee's
-**   new activation, retained, and tries the array jet on them there;
-**   a hit pops the slots and leaves no other trace.  A tail call copies
-**   its arguments to a temporary above its own activation, moves the
-**   caller's references into it, drops what the caller had left, and
-**   moves the temporary down in its place, under the same frame.
+**   caller's state: a call site copies its arguments straight into the
+**   slots of the callee's new activation, retained.  A total array jet
+**   gets its arguments copied above the activation instead, uncounted,
+**   and leaves no other trace.  A tail call copies its arguments to a
+**   temporary above its own activation, moves the caller's references
+**   into it, drops what the caller had left, and moves the temporary
+**   down in its place, under the same frame.
 */
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
@@ -469,35 +480,73 @@ OP3(NOK, a_h, b_h, d_h)
   CALL(gop_u, x, d_h);
 OP_END
 
-OP2(CAL, a_h, d_h)
+//  the call opcodes: the site a_h holds the argument slots and the
+//  destination slot of the product
+//
+OP1(CAL, a_h)
   u3nc_dire* dir_u;
   u3nc_prog* gop_u;
   c3_h*      sot_h;
   c3_h       len_h;
   u3_noun*   nex;
-  u3_noun    pro;
 
   SITE();
+  CALLEE();
   GATHER(gop_u->tot_h);
-
-  if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
-    _nc_stat(jet_d);
-    POP(gop_u->tot_h);
-    PUT(d_h, pro);
-    BURN();
-  }
 
   for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
     GAIN(nex[i_h]);
   }
-  (void)FRAME(d_h);
+  (void)FRAME(dir_u->des_h);
   _nc_stat(dir_d);
   pog_u = gop_u;
   reg   = nex;
   ENTER(len_h);
 OP_END
 
-OP2(CAM, a_h, d_h)
+//  the total array jet of the site, on its arguments: retained, so the
+//  slots keep their references
+//
+OP1(CAF, a_h)
+  u3nc_dire* dir_u;
+  c3_h*      sot_h;
+  c3_h       len_h;
+  u3_noun*   nex;
+  u3_noun    pro;
+
+  SITE();
+  GATHER(len_h);
+  _nc_stat(jet_d);
+  pro = dir_u->arm_u->arg_f(nex);
+  POP(len_h);
+  PUT(dir_u->des_h, pro);
+  BURN();
+OP_END
+
+//  a call by subject: the u3w jet of the site, if it has one, on the
+//  subject; the unary program of the bell if it punts.  The jet takes
+//  the subject's reference only if it doesn't punt.
+//
+OP1(CAP, a_h)
+  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);
+  u3nc_prog* gop_u;
+  u3_noun    x = GAIN(SUB());
+  u3_noun    pro;
+
+  if (  dir_u->ham_u
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u, u3t(dir_u->ring)))) )
+  {
+    _nc_stat(jet_d);
+    PUT(dir_u->des_h, pro);
+    BURN();
+  }
+
+  _nc_stat(sub_d);
+  CALLEE();
+  CALL(gop_u, x, dir_u->des_h);
+OP_END
+
+OP1(CAM, a_h)
   u3nc_dire* dir_u;
   u3nc_prog* gop_u;
   nc_frame*  fam_u;
@@ -508,6 +557,7 @@ OP2(CAM, a_h, d_h)
   u3_noun    x, o;
 
   SITE();
+  CALLEE();
   GATHER(gop_u->tot_h);
 
   kni_h = 0;
@@ -517,14 +567,14 @@ OP2(CAM, a_h, d_h)
   if ( u3_none != o ) {
     POP(gop_u->tot_h);
     LOSE(x);
-    PUT(d_h, o);
+    PUT(dir_u->des_h, o);
     BURN();
   }
 
   for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {
     GAIN(nex[i_h]);
   }
-  fam_u = FRAME(d_h);
+  fam_u = FRAME(dir_u->des_h);
   fam_u->key   = x;
   fam_u->cid_h = dir_u->cid_h;
   _nc_stat(dir_d);
@@ -533,53 +583,26 @@ OP2(CAM, a_h, d_h)
   ENTER(len_h);
 OP_END
 
-OP3(CSL, a_h, b_h, d_h)
-  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);
-  u3nc_prog* gop_u;
-  u3_noun    x = reg[b_h];
-  u3_noun    pro;
-
-  if ( dir_u->ham_u ) {
-    pro = u3j_kick_arm(GAIN(x), dir_u->ham_u, u3t(dir_u->ring));
-
-    if ( u3_none != pro ) {
-      _nc_stat(jet_d);
-      PUT(d_h, pro);
-      BURN();
-    }
-    LOSE(x);
-  }
-
-  _nc_stat(sub_d);
-  u3t_off(noc_o);
-  gop_u = _nc_entry(x, u3t(dir_u->bell));
-  u3t_on(noc_o);
-  GAIN(x);
-  CALL(gop_u, x, d_h);
-OP_END
-
-OP3(CSM, a_h, b_h, d_h)
+OP1(CSM, a_h)
   u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);
   u3nc_prog* gop_u;
   nc_frame*  fam_u;
   u3_noun*   nex;
-  u3_noun    x = reg[b_h];
+  u3_noun    x = SUB();
   u3_noun    o = u3nc(GAIN(x), GAIN(u3t(dir_u->bell)));
   u3_noun    pro = u3z_find_m(dir_u->cid_h, 144 + c3__nock, o);
 
   if ( u3_none != pro ) {
     LOSE(o);
-    PUT(d_h, pro);
+    PUT(dir_u->des_h, pro);
     BURN();
   }
 
   _nc_stat(sub_d);
-  u3t_off(noc_o);
-  gop_u = _nc_entry(x, u3t(dir_u->bell));
-  u3t_on(noc_o);
+  CALLEE();
   nex    = PUSH(gop_u->tot_h);
   nex[0] = GAIN(x);
-  fam_u  = FRAME(d_h);
+  fam_u  = FRAME(dir_u->des_h);
   fam_u->key   = o;
   fam_u->cid_h = dir_u->cid_h;
   pog_u = gop_u;
@@ -645,16 +668,10 @@ OP1(JMP, a_h)
   c3_h*      sot_h;
   c3_h       len_h;
   u3_noun*   nex;
-  u3_noun    pro;
 
   SITE();
+  CALLEE();
   GATHER(len_h);
-
-  if ( dir_u->arm_u && (u3_none != (pro = dir_u->arm_u->arg_f(nex))) ) {
-    _nc_stat(jet_d);
-    POP(len_h);
-    DONE(pro);
-  }
 
   //  the caller's references move to the callee: the first argument
   //  from a slot takes its reference, any other from the same slot
@@ -686,27 +703,41 @@ OP1(JMP, a_h)
   ENTER(len_h);
 OP_END
 
-OP2(JSP, a_h, b_h)
-  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);
-  u3nc_prog* gop_u;
-  u3_noun    x = reg[b_h];
+OP1(JMF, a_h)
+  u3nc_dire* dir_u;
+  c3_h*      sot_h;
+  c3_h       len_h;
+  u3_noun*   nex;
   u3_noun    pro;
 
-  if ( dir_u->ham_u ) {
-    pro = u3j_kick_arm(GAIN(x), dir_u->ham_u, u3t(dir_u->ring));
+  SITE();
+  GATHER(len_h);
+  _nc_stat(jet_d);
+  pro = dir_u->arm_u->arg_f(nex);
+  POP(len_h);
+  DONE(pro);
+OP_END
 
-    if ( u3_none != pro ) {
-      _nc_stat(jet_d);
-      DONE(pro);
-    }
-    LOSE(x);
+//  the subject's slot gives up its reference, to the jet or the callee
+//
+OP1(JSP, a_h)
+  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);
+  u3nc_prog* gop_u;
+  u3_noun*   sot = &SUB();
+  u3_noun    x   = *sot;
+  u3_noun    pro;
+
+  *sot = 0;
+
+  if (  dir_u->ham_u
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u, u3t(dir_u->ring)))) )
+  {
+    _nc_stat(jet_d);
+    DONE(pro);
   }
 
   _nc_stat(sub_d);
-  u3t_off(noc_o);
-  gop_u = _nc_entry(x, u3t(dir_u->bell));
-  u3t_on(noc_o);
-  reg[b_h] = 0;
+  CALLEE();
   TAIL(gop_u, x);
 OP_END
 
@@ -747,6 +778,8 @@ OP_END
 #undef OP_END
 #undef FRAME
 #undef SITE
+#undef SUB
+#undef CALLEE
 #undef GATHER
 #undef ENTER
 #undef CALL

@@ -9,18 +9,22 @@
   ***
   *** An array driver takes the arguments of an arm as an array of
   *** nouns, in depth-first order (see +flatten-need in nock-compilation.hoon)
-  *** Arguments are RETAINED, the product is transferred.  A driver returning
-  *** u3_none punts to Nock, same as u3w* drivers.
+  *** Arguments are RETAINED, the product is transferred.  Array drivers
+  *** are total: they produce or bail, and never punt.  An arm with no
+  *** array driver may be listed as punting instead: compiled nock then
+  *** calls its u3w driver on the whole core, and the nock of the arm if
+  *** the driver punts.
   **/
-    typedef u3_weak (*u3u_fun)(u3_noun*);
+    typedef u3_noun (*u3u_fun)(u3_noun*);
 
   /* u3u_harm: array-driver arm.
   */
     typedef struct _u3u_harm {
       u3_noun     (*fun_f)(u3_noun);     //  u3w driver of the same arm
-      u3u_fun       arg_f;               //  array driver
-      c3_w          len_w;               //  number of arguments
-      const c3_l*   axe_l;               //  argument axes in the core
+      u3u_fun       arg_f;               //  array driver, NULL if punting
+      c3_w          len_w;               //  number of arguments, 1 if punting
+      const c3_l*   axe_l;               //  argument axes in the core, {1} if punting
+      c3_t          pun_t;               //  punting: the u3w driver on the core
     } u3u_harm;
 
   /* u3u_Harm: blank-terminated table of array drivers.

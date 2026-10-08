@@ -296,7 +296,7 @@ u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 **             would we get the bell?)
 */
 u3_noun
-u3d_dire(u3_noun bell)
+u3d_dire(u3_noun bell, c3_o mon_o)
 {
-  return _d_ir(_d_poke(u3nc(c3__dire, u3k(bell))), 0);
+  return _d_ir(_d_poke(u3nt(c3__dire, u3k(bell), mon_o)), 0);
 }
