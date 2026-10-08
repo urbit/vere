@@ -194,32 +194,36 @@
     /* u3a_blob: loom-resident metadata for a blob file.
     **
     **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, with one
-    **   entry per (mug_h, seq_h).  Each bob atom's buf_w[0] is the loom
-    **   offset of its u3a_blob.
+    **   entry per (mug_h, seq_h).  A bob atom carries the bid in its body
+    **   and nothing points at the record: it is found by u3a_blob_get.
     **
     **   Single-counter design: the blob file is deleted iff use_w == 0.
     **   use_w is the sum of three component sources:
     **     - eve_w: event-log refcount (rebuilt on chop)
-    **     - les_h: active king-held lease count (durable in LMDB LEASES;
-    **              the loom copy is zeroed on boot and rebuilt from it)
-    **     - implicit atom cardinality: number of live bob atoms whose
-    **       buf_w[0] points here.  Updated only on atom alloc/free; not
-    **       affected by normal noun-refcount transitions.
+    **     - les_h: active king-held lease count (memory only: zeroed at
+    **              every boot, since no lease outlives a restart)
+    **     - implicit atom cardinality: number of live bob atoms over
+    **       this id.  Updated only on atom alloc/free; not affected by
+    **       normal noun-refcount transitions.
     **
     **   Leases are king-acquired and mars-issued: they exist only to keep
     **   a blob alive while the king holds a reference that mars has not
     **   yet durably recorded (no eve_w, no snapshot cardinality) — i.e.
     **   the window between %blob install and the commit of the event that
-    **   references it.  The king renews via %blas while it still holds the
-    **   blob, and releases via %blrl when its last reference dies.  Each
-    **   lease carries a 15-min TTL as a failsafe against a crashed or
-    **   leaking king; blobs in mars->king gifts come from committed state
-    **   and need no lease.
+    **   references it.  The king releases via %blrl when its last
+    **   reference dies.  Each lease expires after a fixed number of
+    **   committed events as a failsafe against a crashed or leaking king:
+    **   the referencing event is queued behind at most the writs already
+    **   sent, so expiry is counted in commits, and a stall burns nothing.
+    **   Blobs in mars->king gifts come from committed state and need no
+    **   lease.
     **
-    **   les_h is durable: each lease is a row in the LMDB LEASES table.
-    **   On boot we zero the snapshot's les_h (and subtract from use_w),
-    **   then rebuild it from that table (_mars_play_leases); eve_w and
-    **   atom cardinality survive the snapshot.
+    **   On boot we zero the snapshot's les_h (and subtract from use_w):
+    **   a restart ends king and mars together, so no event can arrive
+    **   for a lease taken before it.  eve_w is rebuilt from the epoch's
+    **   BLOBS table (u3_disk_blob_refs): a snapshot's count can name
+    **   events chop has since deleted.  Only atom cardinality is taken
+    **   from the snapshot.
     **
     **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
     **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
@@ -227,7 +231,7 @@
     **   off-bitness struct):
     **     use_w  total refs: eve_w + les_h + atom cardinality
     **     eve_w  event-log refcount (rebuildable from LMDB)
-    **     les_h  active king-held leases (rebuilt from LMDB LEASES)
+    **     les_h  active king-held leases (zeroed at boot)
     **     mug_h  blob mug — identifies file in .urb/bob
     **     seq_h  blob seq — identifies file in .urb/bob
     */
@@ -316,7 +320,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_W(S) lop_p;                                      \
   U3_N(S) tim;                                        \
                                                       \
-  U3_W(S) fut_w[28];                                  \
+  U3_W(S) bob_p;  /* first blob hand */               \
+  U3_W(S) fut_w[27];                                  \
                                                       \
   U3_PASTE(u3a_road_esc, S) esc;                      \
                                                       \
@@ -368,6 +373,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
+
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
       enum u3a_flag {
@@ -417,7 +427,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 
     /* u3a_blob_flag: MSB of u3a_atom.len_w marks an indirect atom as a bob
     **   (blob reference backed by an on-disk file rather than loom data).
-    **   The remaining bits hold the actual data word count.
+    **   A bob's len_w is the flag plus its body word count; the body is
+    **   the blob id (mug << 32 | seq) as an atom value, plain data.
     **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
     */
 #     define u3a_blob_flag_h  ((c3_h)0x80000000U)
@@ -745,12 +756,13 @@ typedef struct {
       return (atm_u->len_w & u3a_blob_flag) ? c3y : c3n;
     }
 
-    /* u3a_bob_blob(): u3a_blob* referenced by a bob atom (via buf_w[0]).
+    /* u3a_bob_bid(): blob id (mug << 32 | seq) of a bob atom, from its body.
     */
-    static inline u3a_blob*
-    u3a_bob_blob(u3_atom som) {
-      u3a_atom* atm_u = u3a_to_ptr(som);
-      return (u3a_blob*)u3a_into((u3_post)atm_u->buf_w[0]);
+    static inline c3_d
+    u3a_bob_bid(u3_atom som) {
+      c3_d bid_d;
+      memcpy(&bid_d, ((u3a_atom*)u3a_to_ptr(som))->buf_w, sizeof(bid_d));
+      return bid_d;
     }
 
     /* u3a_bob_mug(): content mug of a bob atom (= blob directory name).
@@ -765,17 +777,7 @@ typedef struct {
     */
     static inline c3_h
     u3a_bob_seq(u3_atom som) {
-      return u3a_bob_blob(som)->seq_h;
-    }
-
-    /* u3a_bob_bid(): blob ID = (mug << 32) | seq.
-    **   On VERE64 this is a direct atom (63 bits).
-    **   On 32-bit this is a c3_d that must go through u3i_chub().
-    */
-    static inline c3_d
-    u3a_bob_bid(u3_atom som) {
-      u3a_blob* blb_u = u3a_bob_blob(som);
-      return ((c3_d)blb_u->mug_h << 32) | (c3_d)blb_u->seq_h;
+      return (c3_h)u3a_bob_bid(som);
     }
 
   /**  Functions.

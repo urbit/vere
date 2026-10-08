@@ -16,30 +16,48 @@ u3qc_muk(u3_atom sed,
   if ( len > u3a_direct_max_h ) {
     return u3m_bail(c3__fail);
   }
+  else {
+    c3_h len_h = (c3_h)len;
+    c3_d key_d = u3r_met_d(3, key);
 
-  c3_h len_h = (c3_h)len;
-  c3_h key_h = u3r_met(3, key);
+    //  NB: this condition is implicit in the pad subtraction
+    //
+    if ( key_d > len_h ) {
+      return u3m_bail(c3__exit);
+    }
+    else {
+      c3_h        key_h = (c3_h)key_d;
+      c3_h        sed_h = u3r_half(0, sed);
+      c3_o        loc_o = c3n;
+      const c3_y* key_y = 0;
+      u3r_view    vue_u = {0};
+      c3_h        out_h;
 
-  //  NB: this condition is implicit in the pad subtraction
-  //
-  if ( key_h > len_h ) {
-    return u3m_bail(c3__exit);
+      //  if we're hashing more bytes than we have, allocate and copy
+      //  to ensure trailing null bytes; otherwise a view borrows the
+      //  bytes wherever the atom lives (XX assumes little-endian)
+      //
+      if ( len_h > key_h ) {
+        c3_y* buf_y = u3a_calloc(sizeof(c3_y), len_h);
+        u3r_bytes(0, len_h, buf_y, key);
+        key_y = buf_y;
+        loc_o = c3y;
+      }
+      else if ( len_h > 0 ) {
+        u3r_view_open(&vue_u, key, c3y);
+        key_y = u3r_view_bytes(&vue_u);
+      }
+
+      MurmurHash3_x86_32(key_y, len_h, sed_h, &out_h);
+
+      if ( c3y == loc_o ) {
+        u3a_free((void*)key_y);
+      }
+      u3r_view_done(&vue_u);
+
+      return u3i_halfs(1, &out_h);
+    }
   }
-
-  c3_h sed_h = u3r_half(0, sed);
-  c3_h out_h;
-
-  //  u3r_view_padd gives us len_h bytes — mmap-backed for bobs
-  //  (previously would have returned seq_w bytes via the direct
-  //  buf_w pointer and produced wrong hashes), heap-backed with
-  //  zero-padding for atoms shorter than len_h.
-  //
-  u3r_view vue_u;
-  u3r_view_padd(&vue_u, key, len_h);
-  MurmurHash3_x86_32((c3_y*)vue_u.byt_y, len_h, sed_h, &out_h);
-  u3r_view_done(&vue_u);
-
-  return u3i_halfs(1, &out_h);
 }
 
 u3_noun

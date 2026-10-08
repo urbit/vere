@@ -25,20 +25,13 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
 
   if ( a_u->len_w != b_u->len_w ) return 0;
 
-  //  bob atoms: len_w carries u3a_blob_flag, so the raw memcmp below
-  //  would read ~2^31 words.  equal iff both reference the same
-  //  u3a_blob (same buf_w[0] => same bid).  len_w equality above
-  //  already rules out bob-vs-plain pairs.
+  //  a bob's body is its blob id, so the same compare serves both
+  //  kinds; the mask drops the flag from len_w.  unifying duplicate
+  //  bobs frees them via u3z -> _me_bob_dead, the right bookkeeping.
   //
-  //  NB: unifying duplicates frees them via u3z -> _me_bob_dead, which
-  //  is the correct cardinality bookkeeping (each duplicate was
-  //  counted at its own u3i_blob birth).
-  //
-  if ( a_u->len_w & u3a_blob_flag ) {
-    return a_u->buf_w[0] == b_u->buf_w[0];
-  }
+  c3_w len_w = a_u->len_w & u3a_blob_mask;
 
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
+  return 0 == memcmp(a_u->buf_w, b_u->buf_w, len_w << u3a_word_bytes_shift);
 }
 
 #define NAME    _coins

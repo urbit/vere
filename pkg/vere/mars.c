@@ -28,40 +28,45 @@
 **   Blob files live at $pier/.urb/bob/<mug>/<seq>.
 **   Deletion condition: use_w == 0.
 **
+**   Lease expiry is measured in committed events, never in wall-clock
+**   time.  a lease only has to outlive the events queued ahead of the
+**   poke that carries the blob, and that queue is counted in events.
+**   a stall (a long event, |pack, |meld, a sleeping laptop) commits
+**   nothing, so it burns no lease budget, and no renewal is needed.
+**
 **   Lifecycle:
 **     1. king stages a large file to .urb/bob/stg/, sends a %blob writ
-**     2. mars installs it (rename into bob/<mug>/<seq>), commits a LEASES
-**        row, and issues the king's lease (les_h += 1, 15-min TTL) — the
-**        row is durable before the install is acked, so a mars crash in
-**        the install->commit window cannot lose it
+**     2. mars installs it (rename into bob/<mug>/<seq>) and issues the
+**        king's lease (les_h += 1, expiring once _mars_lease_wid_d
+**        further events commit).  the lease lives in mars's memory: a
+**        restart ends both processes and nothing resends the event
 **     3. king injects the event holding the bob atom (RAM-serialized as
-**        a blob ref); while it still references the blob, the king's
-**        renewal timer sends %blas every 5 min so the lease can't
-**        expire before commit
+**        a blob ref); it sits in the FIFO behind at most the writs the
+**        king had already sent, far fewer than the lease width
 **     4. mars commits: _mars_fact bumps eve_w, writes blob-refs to LMDB
 **     5. king's last reference dies: %blrl releases the lease (drops one
-**        les_h unit and its LEASES row)
+**        les_h unit)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_w
-**     7. chop rebuilds eve_w from the LMDB BLOBS table for retained
-**        epochs, then deletes files (and on-disk orphans) at use_w == 0
-**     *. boot: _find_home zeroes les_h, _mars_play_leases restores it
-**        from LEASES (pruning expired/dead rows), then u3_disk_blob_gc
-**        reclaims any blob now provably unreferenced
+**     7. chop rebuilds eve_w from the latest epoch's LMDB BLOBS table
+**        (replay never crosses epochs), then deletes files (and on-disk
+**        orphans) at use_w == 0
+**     *. boot: u3_disk_blob_refs rebuilds eve_w from the epoch's BLOBS
+**        table (a snapshot's count is never trusted) and _find_home
+**        zeroed les_h (no lease outlives a restart); u3_disk_blob_gc
+**        then reclaims any blob now provably unreferenced
 */
 
-/* _mars_lease: PQ entry for lease TTL expiry.
+/* _mars_lease: a king lease awaiting expiry.
 **
-**   tracks a single les_h increment for a blob, mirrored by exactly one
-**   row in the LMDB LEASES table (identified by [lea_d]).  if the king
-**   releases the lease (%blrl) before expiry, ded_o is set to c3y and
-**   the PQ sweeper skips the decrement; the row is deleted at release.
-**   if the king crashes or leaks, the TTL fires, les_h is decremented,
-**   and the row is deleted by the sweeper.
+**   tracks a single les_h increment for a blob.  if the king releases
+**   the lease (%blrl) before expiry, ded_o is set to c3y and the
+**   sweeper skips the decrement.  if the king crashes or leaks, the
+**   lease expires once dun_d reaches exp_d and les_h is decremented.
 */
 typedef struct __mars_lease {
-  c3_d  exp_d;        //  expiry time (Unix ms)
-  c3_d  lea_d;        //  unique lease id (LEASES row discriminator)
+  struct __mars_lease* nex_u;  //  next to expire
+  c3_d  exp_d;        //  expiry event number
   c3_h  mug_h;        //  blob mug
   c3_h  seq_h;        //  blob seq within mug bucket
   c3_o  ded_o;        //  c3y if lease already released
@@ -69,101 +74,59 @@ typedef struct __mars_lease {
 
 c3_c tac_c[256];  //  tracing label
 
-/* _mars_lease_pq: min-heap of _mars_lease*, keyed by lea_u->exp_d.
-**
-**   C-heap structure (not in loom). Leases are owned by the PQ —
-**   it is the sole place that c3_free()s them. Released leases (%blrl)
-**   are marked ded_o=c3y in place; the sweeper pops and frees them
-**   when they bubble to the top.
-*/
-typedef struct _mars_lease_pq {
-  _mars_lease** arr_u;
-  c3_z        len_z;
-  c3_z        cap_z;
-} _mars_lease_pq;
-
-static _mars_lease_pq _mars_pq = { 0, 0, 0 };
-
-//  monotonic lease-id source.  Seeded above any id restored from the
-//  LEASES table at boot so fresh leases never collide with durable rows.
+//  lease width: a lease issued at dun_d expires once dun_d + width
+//  commits.  the poke that carries the blob is queued behind at most
+//  the writs the king had already sent, so this only has to exceed a
+//  plausible king queue depth; a leaked lease costs disk for this many
+//  events and nothing else.
 //
-static c3_d _mars_lea_d = 0;
+static const c3_d _mars_lease_wid_d = 1ULL << 16;
 
-static inline void
-_mars_pq_swap(_mars_lease_pq* pq_u, c3_z i_z, c3_z j_z)
-{
-  _mars_lease* t_u = pq_u->arr_u[i_z];
-  pq_u->arr_u[i_z] = pq_u->arr_u[j_z];
-  pq_u->arr_u[j_z] = t_u;
-}
-
-static void
-_mars_pq_up(_mars_lease_pq* pq_u, c3_z i_z)
-{
-  while ( i_z > 0 ) {
-    c3_z p_z = (i_z - 1) >> 1;
-    if ( pq_u->arr_u[p_z]->exp_d <= pq_u->arr_u[i_z]->exp_d ) break;
-    _mars_pq_swap(pq_u, p_z, i_z);
-    i_z = p_z;
-  }
-}
+//  the lease queue, oldest first.  every lease expires the same number
+//  of events after its install, so install order is expiry order and a
+//  FIFO is the whole structure: push at the tail, expire from the head.
+//  C heap, owned here; a released lease is marked ded_o in place and
+//  freed when it reaches the head.
+//
+static _mars_lease* _mars_lea_hed_u;
+static _mars_lease* _mars_lea_tel_u;
 
 static void
-_mars_pq_down(_mars_lease_pq* pq_u, c3_z i_z)
+_mars_lease_push(_mars_lease* lea_u)
 {
-  c3_z n_z = pq_u->len_z;
-  while ( 1 ) {
-    c3_z l_z = (i_z << 1) + 1;
-    c3_z r_z = l_z + 1;
-    c3_z s_z = i_z;
-    if ( l_z < n_z && pq_u->arr_u[l_z]->exp_d < pq_u->arr_u[s_z]->exp_d ) s_z = l_z;
-    if ( r_z < n_z && pq_u->arr_u[r_z]->exp_d < pq_u->arr_u[s_z]->exp_d ) s_z = r_z;
-    if ( s_z == i_z ) break;
-    _mars_pq_swap(pq_u, i_z, s_z);
-    i_z = s_z;
+  lea_u->nex_u = 0;
+  if ( _mars_lea_tel_u ) {
+    _mars_lea_tel_u->nex_u = lea_u;
   }
-}
-
-static void
-_mars_pq_push(_mars_lease_pq* pq_u, _mars_lease* lea_u)
-{
-  if ( pq_u->len_z == pq_u->cap_z ) {
-    pq_u->cap_z = pq_u->cap_z ? (pq_u->cap_z << 1) : 16;
-    pq_u->arr_u = c3_realloc(pq_u->arr_u, pq_u->cap_z * sizeof(*pq_u->arr_u));
+  else {
+    _mars_lea_hed_u = lea_u;
   }
-  pq_u->arr_u[pq_u->len_z++] = lea_u;
-  _mars_pq_up(pq_u, pq_u->len_z - 1);
+  _mars_lea_tel_u = lea_u;
 }
 
 static _mars_lease*
-_mars_pq_peek(_mars_lease_pq* pq_u)
+_mars_lease_pop(void)
 {
-  return pq_u->len_z ? pq_u->arr_u[0] : 0;
+  _mars_lease* lea_u = _mars_lea_hed_u;
+
+  if ( lea_u ) {
+    _mars_lea_hed_u = lea_u->nex_u;
+    if ( !_mars_lea_hed_u ) {
+      _mars_lea_tel_u = 0;
+    }
+  }
+  return lea_u;
 }
 
-static _mars_lease*
-_mars_pq_pop(_mars_lease_pq* pq_u)
-{
-  if ( !pq_u->len_z ) return 0;
-  _mars_lease* r_u = pq_u->arr_u[0];
-  pq_u->arr_u[0] = pq_u->arr_u[--pq_u->len_z];
-  if ( pq_u->len_z ) _mars_pq_down(pq_u, 0);
-  return r_u;
-}
-
-/* _mars_pq_kill_one(): mark the first live lease for (mug_h, seq_h) as
-**   released, returning its entry (so its LMDB row can be deleted) or 0
-**   if none is live.  The sweeper frees the entry when it surfaces.
-**
-**   linear scan: the PQ is small (a handful of in-flight leases) and
-**   release is rare.  ded_o entries are skipped so each %blrl retires
-**   exactly one lease unit.
+/* _mars_lease_kill_one(): mark the first live lease for (mug_h, seq_h)
+**   released, returning it or 0 if none is live.  the queue is in
+**   expiry order, so the first match is the earliest to expire; the
+**   sweeper frees it when it reaches the head.
 */
 static _mars_lease*
-_mars_pq_kill_one(_mars_lease_pq* pq_u, c3_h mug_h, c3_h seq_h)
+_mars_lease_kill_one(c3_h mug_h, c3_h seq_h)
 {
-  for ( c3_z i_z = 0; i_z < pq_u->len_z; i_z++ ) {
-    _mars_lease* lea_u = pq_u->arr_u[i_z];
+  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
     if (  (c3n == lea_u->ded_o)
        && (mug_h == lea_u->mug_h)
        && (seq_h == lea_u->seq_h) )
@@ -196,85 +159,65 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
     return;
   }
 
-  u3_blob_wipe(u3C.dir_c, mug_h, seq_h);
+  u3b_wipe(u3C.dir_c, mug_h, seq_h);
   u3a_blob_drop(mug_h, seq_h);
 }
 
-/* _blob_maybe_delete(): delete blob iff use_w == 0.
+/* _mars_lease_drop(): retire one lease unit: take it off les_h and
+**   use_w, and delete the blob if nothing else holds it.  the les_h
+**   guard keeps a stray release from underflowing.
 */
 static void
-_blob_maybe_delete(c3_h mug_h, c3_h seq_h)
+_mars_lease_drop(_mars_lease* lea_u)
 {
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) return;
+  u3a_blob* blb_u = u3a_blob_get(lea_u->mug_h, lea_u->seq_h);
 
-  if ( 0 == blb_u->use_w ) {
-    _mars_blob_del(mug_h, seq_h);
+  if ( blb_u && blb_u->les_h ) {
+    blb_u->les_h -= 1;
+    blb_u->use_w -= 1;
+
+    if ( 0 == blb_u->use_w ) {
+      _mars_blob_del(lea_u->mug_h, lea_u->seq_h);
+    }
   }
 }
 
-/* _mars_lease_take(): issue a king lease on (mug_h, seq_h).
+/* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
 **
-**   bumps les_h + use_w, durably records the lease in the LEASES table,
-**   then pushes a 15-min TTL PQ entry.  renewal (%blas) is just another
-**   take: each adds one durable row + PQ entry; old ones decay at expiry
-**   (the les_h > 0 guard in the sweeper prevents underflow).
-**
-**   the row is committed BEFORE the caller acks the king, so a lease the
-**   king believes it holds always survives a mars crash.  on commit
-**   failure the in-memory bump is rolled back and c3n is returned; the
-**   blob is then protected only by whatever other refs exist (the king
-**   retries, or the file is reclaimed as an orphan).
-**
-**   [new_o]: create the blb_p entry if absent (install only).  renewals
-**   must not create: a %blas in flight when the blob is deleted would
-**   otherwise resurrect a phantom entry for a file that no longer
-**   exists.  a renewal for an absent entry is a no-op success.
+**   bumps les_h + use_w and queues a lease expiring at
+**   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
+**   processes, and no event can arrive for a lease taken before it.
+**   one lease per id: the king keeps one record per id and sends one
+**   %blrl when it dies, so a second install of the same content (a
+**   dedup hit) adds nothing.
 */
-static c3_o
-_mars_lease_take(MDB_env* env_u, c3_h mug_h, c3_h seq_h, c3_o new_o)
+static void
+_mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
 {
+  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
+    if (  (c3n == lea_u->ded_o)
+       && (mug_h == lea_u->mug_h)
+       && (seq_h == lea_u->seq_h) )
+    {
+      return;
+    }
+  }
+
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   if ( !blb_u ) {
-    if ( c3n == new_o ) {
-      return c3y;
-    }
     blb_u = u3a_blob_new(mug_h, seq_h);
   }
   blb_u->les_h += 1;
   blb_u->use_w += 1;
 
-  c3_d exp_d;
-  {
-    struct timeval tv_u;
-    gettimeofday(&tv_u, 0);
-    exp_d = (c3_d)tv_u.tv_sec * 1000ULL
-          + (c3_d)tv_u.tv_usec / 1000ULL
-          + 900000ULL;  //  15 min TTL
-  }
-
-  c3_d bid_d = ((c3_d)mug_h << 32) | (c3_d)seq_h;
-  c3_d lea_d = ++_mars_lea_d;
-
-  //  durably record the lease before it is observable to the king
-  //
-  if ( c3n == u3_lmdb_save_lease(env_u, bid_d, exp_d, lea_d) ) {
-    blb_u->les_h -= 1;
-    blb_u->use_w -= 1;
-    return c3n;
-  }
-
   {
     _mars_lease* lea_u = c3_malloc(sizeof(*lea_u));
     lea_u->mug_h = mug_h;
     lea_u->seq_h = seq_h;
-    lea_u->exp_d = exp_d;
-    lea_u->lea_d = lea_d;
+    lea_u->exp_d = mar_u->dun_d + _mars_lease_wid_d;
     lea_u->ded_o = c3n;
-    _mars_pq_push(&_mars_pq, lea_u);
+    _mars_lease_push(lea_u);
   }
-
-  return c3y;
 }
 
 /*
@@ -477,6 +420,12 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 
       if ( c3y == pri_o ) {
         _mars_print_quacs(fil_u, all_u);
+
+        //  blobs the serf holds open: zero between events, so anything
+        //  here is a reader that never closed
+        //
+        fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+                u3b_hands(), u3b_mapped());
       }
       fflush(fil_u);
 
@@ -523,6 +472,55 @@ _mars_blob_bobs_cell(u3_noun n, void* ptr_v)
   return c3y;
 }
 
+/* _mars_blob_sure(): refuse an event holding a bob the store cannot back.
+**
+**   tap mints a bank record for every blob id it decodes, so an event
+**   whose lease expired (file and record gone) arrives with a fresh
+**   record over a missing file.  committing it would log an event that
+**   can never replay.  a record with no lease and no committed event is
+**   backed only if its file exists; otherwise the poke is nacked with a
+**   %blob goof and the king may install again.  returns the goof list,
+**   or u3_none when every bob is backed.
+*/
+static u3_weak
+_mars_blob_sure(u3_noun job)
+{
+  struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
+  u3_noun tan = u3_nul;
+
+  u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
+
+  for ( c3_z i_z = 0; i_z < acc.len; i_z++ ) {
+    c3_h      mug_h = (c3_h)(acc.ids[i_z] >> 32);
+    c3_h      seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+    if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
+      continue;
+    }
+    if ( c3y == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
+      continue;
+    }
+
+    {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c),
+               "blob %08" PRIx32 "/%" PRIc3_h " is not in the store: "
+               "its lease expired before the event arrived",
+               mug_h, seq_h);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+    }
+  }
+
+  c3_free(acc.ids);
+
+  if ( u3_nul == tan ) {
+    return u3_none;
+  }
+  return u3nc(u3nc(c3__blob, tan), u3_nul);
+}
+
 /* _mars_fact(): commit a fact and enqueue its effects.
 */
 static void
@@ -559,27 +557,26 @@ _mars_fact(u3_mars* mar_u,
       }
     }
 
-    //  persist blob refs to LMDB for this event
+    //  the blob ids ride with the event: the disk writes the BLOBS row
+    //  in the event's own transaction, and frees the array with it
     //
-    if ( acc.len ) {
-      u3_lmdb_save_blobs(mar_u->log_u->mdb_u,
-                         mar_u->dun_d,
-                         acc.ids,
-                         acc.len);
+    if ( !acc.len ) {
+      c3_free(acc.ids);
+      acc.ids = 0;
     }
 
-    c3_free(acc.ids);
-  }
+    {
+      u3_fact tac_u = {
+        .job   = job,
+        .mug_h = mar_u->mug_h,
+        .eve_d = mar_u->dun_d,
+        .bid_d = acc.ids,
+        .bid_z = acc.len
+      };
 
-  {
-    u3_fact tac_u = {
-      .job   = job,
-      .mug_h = mar_u->mug_h,
-      .eve_d = mar_u->dun_d
-    };
-
-    u3_disk_plan(mar_u->log_u, &tac_u);
-    u3z(job);
+      u3_disk_plan(mar_u->log_u, &tac_u);
+      u3z(job);
+    }
   }
 
   {
@@ -899,57 +896,37 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
   u3_noun tag, dat, pro;
 
   //  lease expiry sweeper: decay leases the king never released
-  //  (crashed or leaking king, or counts left over from renewal).
-  //  Uses a min-heap PQ keyed by exp_d: peek at the root, stop once
-  //  the earliest-expiring lease is still in the future.
+  //  (crashed or leaking king).  the queue is in expiry order, so
+  //  this pops from the head until the head's exp_d, an event number,
+  //  is still past dun_d.  runs before every writ, which is at least
+  //  once per commit, so nothing expires late by more than one writ.
   //
-  //  Released leases are marked ded_o=c3y by %blrl and left in the
-  //  PQ; they are freed here when they bubble to the top.
+  //  released leases are marked ded_o=c3y by %blrl and left in the
+  //  queue; they are freed here when they reach the head.
   //
   {
-    struct timeval tv_u;
-    gettimeofday(&tv_u, 0);
-    c3_d now_d = (c3_d)tv_u.tv_sec * 1000ULL + (c3_d)tv_u.tv_usec / 1000ULL;
-
     while ( 1 ) {
-      _mars_lease* top_u = _mars_pq_peek(&_mars_pq);
+      _mars_lease* top_u = _mars_lea_hed_u;
       if ( !top_u ) break;
 
       //  dead lease (already released) — free and continue scanning
       //
       if ( c3y == top_u->ded_o ) {
-        _mars_pq_pop(&_mars_pq);
+        _mars_lease_pop();
         c3_free(top_u);
         continue;
       }
 
-      //  earliest expiry is still in the future — stop
+      //  earliest expiry is still ahead of the log — stop
       //
-      if ( !top_u->exp_d || now_d <= top_u->exp_d ) {
+      if ( mar_u->dun_d < top_u->exp_d ) {
         break;
       }
 
-      //  expired lease — decrement les_h and use_w, drop the durable
-      //  row, check deletion
+      //  expired lease
       //
-      _mars_pq_pop(&_mars_pq);
-
-      {
-        u3a_blob* blb_u = u3a_blob_get(top_u->mug_h, top_u->seq_h);
-        if ( blb_u && blb_u->les_h > 0 ) {
-          blb_u->les_h -= 1;
-          blb_u->use_w -= 1;
-        }
-      }
-
-      {
-        c3_d bid_d = ((c3_d)top_u->mug_h << 32) | (c3_d)top_u->seq_h;
-        u3_lmdb_delete_lease(mar_u->log_u->mdb_u,
-                             bid_d, top_u->exp_d, top_u->lea_d);
-      }
-
-      _blob_maybe_delete(top_u->mug_h, top_u->seq_h);
-
+      _mars_lease_pop();
+      _mars_lease_drop(top_u);
       c3_free(top_u);
     }
   }
@@ -991,6 +968,19 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         job = u3nc(now, u3k(job));
       }
       u3z(jar);
+
+      //  an event holding a bob the store cannot back is refused before
+      //  it runs; freeing the job drops the record tap minted for it
+      //
+      {
+        u3_weak lud = _mars_blob_sure(job);
+
+        if ( u3_none != lud ) {
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, lud));
+          break;
+        }
+      }
 
       pre_w = u3a_open(u3R);
       mar_u->sen_d++;
@@ -1137,21 +1127,17 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         c3_c stg_c[8192] = {0};
         u3r_bytes(0, (c3_w)len_d, (c3_y*)stg_c, dat);
 
-        ok_o = u3_blob_move_stg(u3C.dir_c, stg_c, &mug_h, &seq_h);
+        ok_o = u3b_move_stg(u3C.dir_c, stg_c, &mug_h, &seq_h);
 
         if ( c3y == ok_o ) {
           //  issue the king's install lease: protects the blob until
-          //  the event referencing it commits (eve_w takes over).  the
-          //  lease is committed to LMDB here, before the ack below, so
-          //  the king never believes it holds a lease mars can lose.
+          //  the event referencing it commits (eve_w takes over)
           //
-          ok_o = _mars_lease_take(mar_u->log_u->mdb_u, mug_h, seq_h, c3y);
+          _mars_lease_take(mar_u, mug_h, seq_h);
 
-          if ( c3y == ok_o ) {
-            //  save blob bank to snapshot so entries survive crash
-            //
-            mar_u->fag_w |= _mars_fag_mute;
-          }
+          //  save blob bank to snapshot so entries survive crash
+          //
+          mar_u->fag_w |= _mars_fag_mute;
         }
       }
       else {
@@ -1169,29 +1155,6 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
     } break;
 
-    //  %blas: king acquires/renews a lease on a blob.  sent by the
-    //  king's renewal timer for every blob it still references, so a
-    //  pending event can't outlive the 15-min TTL.
-    //
-    case c3_s4('b','l','a','s'): {
-      u3_noun mug_n, seq_n;
-      if ( c3n == u3r_cell(dat, &mug_n, &seq_n) ) {
-        u3z(jar);
-        return c3n;
-      }
-      c3_h mug_h = 0;
-      c3_h seq_h = 0;
-      u3r_safe_half(mug_n, &mug_h);
-      u3r_safe_half(seq_n, &seq_h);
-
-      //  renewal: another durable lease unit, ignoring commit failure
-      //  (the king will renew again before the prior lease's TTL)
-      //
-      _mars_lease_take(mar_u->log_u->mdb_u, mug_h, seq_h, c3n);
-
-      u3z(jar);
-    } break;
-
     //  %blrl: king releases a lease on a blob
     //
     case c3_s4('b','l','r','l'): {
@@ -1205,25 +1168,15 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3r_safe_half(mug_n, &mug_h);
       u3r_safe_half(seq_n, &seq_h);
 
-      //  retire one live lease unit: mark its PQ entry dead (the
-      //  sweeper frees it when it surfaces), decrement, and drop its
-      //  durable row.  no live entry means the unit already expired —
-      //  a no-op, never a double decrement.
+      //  retire one live lease unit: mark its entry dead (the sweeper
+      //  frees it when it reaches the head) and decrement.  no live
+      //  entry means the unit already expired — a no-op, never a
+      //  double decrement.
       //
       {
-        _mars_lease* lea_u = _mars_pq_kill_one(&_mars_pq, mug_h, seq_h);
+        _mars_lease* lea_u = _mars_lease_kill_one(mug_h, seq_h);
         if ( lea_u ) {
-          u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-          if ( blb_u && blb_u->les_h > 0 ) {
-            blb_u->les_h -= 1;
-            blb_u->use_w -= 1;
-          }
-
-          c3_d bid_d = ((c3_d)mug_h << 32) | (c3_d)seq_h;
-          u3_lmdb_delete_lease(mar_u->log_u->mdb_u,
-                               bid_d, lea_u->exp_d, lea_u->lea_d);
-
-          _blob_maybe_delete(mug_h, seq_h);
+          _mars_lease_drop(lea_u);
         }
       }
 
@@ -1515,6 +1468,7 @@ _mars_show_time(u3_noun wen)
 typedef enum {
   _play_yes_e,  //  success
   _play_mem_e,  //  %meme
+  _play_fil_e,  //  %file
   _play_int_e,  //  %intr
   _play_log_e,  //  event log fail
   _play_mug_e,  //  mug mismatch
@@ -1537,7 +1491,7 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
     c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFFULL);
 
-    if ( c3n == u3_blob_live(u3C.dir_c, mug_h, seq_h) ) {
+    if ( c3n == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
       fprintf(stderr, "play (%" PRIu64 "): blob %08" PRIx32 "/%08" PRIx32
                       " missing from store: the log references data "
                       "that no longer exists\r\n",
@@ -1553,9 +1507,10 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
   }
 }
 
-/* _mars_play_blobs(): rebuild blob event-log refcounts for replayed
-** events in [fir_d, las_d].  snapshot has counts correct up to snapshot
-** time; replay covers the gap from snapshot to head.
+/* _mars_play_blobs(): check that every blob a replayed event in
+** [fir_d, las_d] references is still in the store.  the counts it
+** bumps are provisional: u3_disk_blob_refs rebuilds eve_w for the whole
+** epoch once replay is done, so the lasting effect here is the check.
 **
 **   returns c3n if any referenced blob file is missing — replay of
 **   those events cannot reproduce their state, so the caller must
@@ -1575,113 +1530,6 @@ _mars_play_blobs(u3_mars* mar_u, c3_d fir_d, c3_d las_d)
   u3_lmdb_walk_blobs(mar_u->log_u->mdb_u, fir_d, las_d,
                      &oky_o, _mars_play_blobs_cb);
   return oky_o;
-}
-
-/* _mars_lease_row: one LEASES row staged for post-walk deletion.
-*/
-typedef struct {
-  c3_d  bid_d;
-  c3_d  exp_d;
-  c3_d  lea_d;
-} _mars_lease_row;
-
-/* _mars_lease_play: accumulator for _mars_play_leases.
-*/
-typedef struct {
-  c3_d             now_d;   //  wall-clock now (ms)
-  c3_d             max_d;   //  highest lea id seen (any row)
-  _mars_lease_row* row_u;   //  rows to delete after the walk closes
-  c3_z             len_z;
-  c3_z             cap_z;
-} _mars_lease_play;
-
-/* _mars_play_leases_cb(): u3_lmdb_walk_leases callback — restore one
-**   durable lease into les_h + the PQ, or stage it for deletion if it
-**   has expired or its file is gone.
-**
-**   the read txn is open during the walk, so deletions are deferred
-**   (collected here, applied after the walk) to avoid MDB_BAD_RSLOT.
-*/
-static void
-_mars_play_leases_cb(void* ptr_v, c3_d bid_d, c3_d exp_d, c3_d lea_d)
-{
-  _mars_lease_play* pla_u = ptr_v;
-  c3_h mug_h = (c3_h)(bid_d >> 32);
-  c3_h seq_h = (c3_h)(bid_d & 0xFFFFFFFF);
-
-  //  seed the id source above every row that ever existed, so a fresh
-  //  lease never collides with one still pending deletion
-  //
-  if ( lea_d > pla_u->max_d ) pla_u->max_d = lea_d;
-
-  //  expired, or the file no longer exists — stage the row for deletion
-  //  and do not restore (a phantom entry would point at a missing file)
-  //
-  if (  (exp_d && (pla_u->now_d > exp_d))
-     || (c3n == u3_blob_live(u3C.dir_c, mug_h, seq_h)) )
-  {
-    if ( pla_u->len_z == pla_u->cap_z ) {
-      pla_u->cap_z = pla_u->cap_z ? (pla_u->cap_z << 1) : 8;
-      pla_u->row_u = c3_realloc(pla_u->row_u,
-                                pla_u->cap_z * sizeof(*pla_u->row_u));
-    }
-    pla_u->row_u[pla_u->len_z].bid_d = bid_d;
-    pla_u->row_u[pla_u->len_z].exp_d = exp_d;
-    pla_u->row_u[pla_u->len_z].lea_d = lea_d;
-    pla_u->len_z += 1;
-    return;
-  }
-
-  //  live lease — restore one les_h unit and re-arm the TTL with the
-  //  persisted deadline
-  //
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-  blb_u->les_h += 1;
-  blb_u->use_w += 1;
-
-  {
-    _mars_lease* lea_u = c3_malloc(sizeof(*lea_u));
-    lea_u->mug_h = mug_h;
-    lea_u->seq_h = seq_h;
-    lea_u->exp_d = exp_d;
-    lea_u->lea_d = lea_d;
-    lea_u->ded_o = c3n;
-    _mars_pq_push(&_mars_pq, lea_u);
-  }
-}
-
-/* _mars_play_leases(): rebuild les_h from the LEASES table at boot.
-**
-**   _find_home already zeroed les_h; this restores it durably so a
-**   blob the king still holds (but mars has not yet committed an event
-**   for) survives a mars restart with its remaining TTL intact.  must
-**   run after the disk is open and after eve_w is rebuilt by replay.
-*/
-static void
-_mars_play_leases(u3_mars* mar_u)
-{
-  _mars_lease_play pla_u = { 0, 0, 0, 0, 0 };
-  {
-    struct timeval tv_u;
-    gettimeofday(&tv_u, 0);
-    pla_u.now_d = (c3_d)tv_u.tv_sec * 1000ULL + (c3_d)tv_u.tv_usec / 1000ULL;
-  }
-
-  u3_lmdb_walk_leases(mar_u->log_u->mdb_u, &pla_u, _mars_play_leases_cb);
-
-  //  apply deferred deletions now that the read txn has closed
-  //
-  for ( c3_z i_z = 0; i_z < pla_u.len_z; i_z++ ) {
-    u3_lmdb_delete_lease(mar_u->log_u->mdb_u,
-                         pla_u.row_u[i_z].bid_d,
-                         pla_u.row_u[i_z].exp_d,
-                         pla_u.row_u[i_z].lea_d);
-  }
-
-  if ( _mars_lea_d < pla_u.max_d ) _mars_lea_d = pla_u.max_d;
-
-  c3_free(pla_u.row_u);
 }
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
@@ -1731,6 +1579,12 @@ _mars_play_batch(u3_mars* mar_u,
           fprintf(stderr, "play (%" PRIu64 "): %%meme\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_mem_e;
+        }
+
+        case c3__file: {
+          fprintf(stderr, "play (%" PRIu64 "): %%file\r\n", tac_u.eve_d);
+          u3z(dud); u3z(wen);
+          return _play_fil_e;
         }
 
         case c3__intr: {
@@ -2083,6 +1937,14 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           }
         } break;
 
+        case _play_fil_e: {
+          fprintf(stderr, "play (%" PRIu64 "): failed, out of file "
+                          "descriptors\r\n", mar_u->dun_d + 1);
+          u3m_save();
+          u3_disk_exit(log_u);
+          exit(1);
+        } break;
+
         case _play_int_e: {
           fprintf(stderr, "play (%" PRIu64 "): interrupted\r\n", mar_u->dun_d + 1);
           u3m_save();
@@ -2174,11 +2036,13 @@ u3_mars_work(u3_mars* mar_u)
     exit(0);
   }
 
-  //  restore durable king leases (replay has rebuilt eve_w; _find_home
-  //  zeroed les_h), then reclaim any blob now provably unreferenced.
-  //  ordering matters: les_h must be back before the gc reads use_w.
+  //  rebuild eve_w from the epoch's BLOBS table: a snapshot's counts
+  //  can name events chop has since deleted (play -f restores the
+  //  epoch's frozen snapshot, not the one chop saved).  _find_home
+  //  zeroed les_h, and no lease outlives a restart, so the gc may then
+  //  reclaim any blob provably unreferenced.
   //
-  _mars_play_leases(mar_u);
+  u3_disk_blob_refs(mar_u->log_u);
   u3_disk_blob_gc(mar_u->log_u);
 
   //  send ready status message

@@ -11,16 +11,16 @@
   _kecc_##bits(c3_w len_w, u3_atom a) \
   { \
     c3_y  out[byts]; \
-    u3r_view vue_u; \
-    u3r_view_padd(&vue_u, a, len_w); \
-    if ( 0 != urcrypt_keccak_##bits((c3_y*)vue_u.byt_y, len_w, out) ) { \
-      /* urcrypt_keccak_##bits always succeeds when called correctly */ \
-      u3r_view_done(&vue_u); \
+    c3_y* buf_y = u3r_bytes_alloc(0, len_w, a); \
+    if ( 0 != urcrypt_keccak_##bits(buf_y, len_w, out) ) { \
+      /* urcrypt_keccac_##bits always succeeds when called correctly */ \
       return u3m_bail(c3__oops); \
     } \
-    u3_atom pro = u3i_bytes(byts, out); \
-    u3r_view_done(&vue_u); \
-    return pro; \
+    else { \
+      u3_atom pro = u3i_bytes(byts, out); \
+      u3a_free(buf_y); \
+      return pro; \
+    } \
   } \
   \
   u3_weak \
