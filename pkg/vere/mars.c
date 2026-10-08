@@ -412,7 +412,8 @@ _mars_grab(u3_noun sac, c3_o pri_o)
         //  blobs the serf holds open: zero between events, so anything
         //  here is a reader that never closed
         //
-        fprintf(fil_u, "blob handles: %zu\r\n", u3b_hands());
+        fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+                u3b_hands(), u3b_mapped());
       }
       fflush(fil_u);
 

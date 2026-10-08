@@ -59,13 +59,6 @@ static u3b_hand* _blob_hom_u;
 //
 #define BLOB_KEEP_MAX  256
 
-//  window cache: a read of at most BLOB_CAX_MAX bytes fills a window
-//  around it, BLOB_CAX_MIN at first and doubling while reads stay
-//  adjacent, so a sequential walk costs one pread per window and a
-//  random hop costs one small pread.
-//
-#define BLOB_CAX_MIN  ((c3_z)4096)
-#define BLOB_CAX_MAX  ((c3_z)65536)
 
 /* _blob_head(): the first hand on [rod_u]'s list, or 0.
 **
@@ -110,13 +103,8 @@ static void
 _blob_hand_shut(u3b_hand* han_u)
 {
   if ( han_u->map_y ) {
-    munmap(han_u->map_y, (size_t)han_u->len_d);
+    munmap(han_u->map_y, (size_t)han_u->map_d);
     han_u->map_y = 0;
-  }
-
-  if ( han_u->cax_y ) {
-    c3_free(han_u->cax_y);
-    han_u->cax_y = 0;
   }
 
   if ( han_u->fid_i >= 0 ) {
@@ -223,6 +211,21 @@ u3b_hands(void)
   return _blob_hand_count(&u3H->rod_u);
 }
 
+/* u3b_mapped(): bytes mapped by home-road hands.
+*/
+c3_d
+u3b_mapped(void)
+{
+  c3_d tot_d = 0;
+
+  for ( u3b_hand* han_u = _blob_hom_u; han_u; han_u = han_u->nex_u ) {
+    if ( han_u->map_y ) {
+      tot_d += han_u->map_d;
+    }
+  }
+  return tot_d;
+}
+
 /* u3b_hands_road(): hands open on road [rod_v].
 */
 c3_z
@@ -230,9 +233,6 @@ u3b_hands_road(void* rod_v)
 {
   return _blob_hand_count(rod_v);
 }
-
-static c3_z
-_blob_pread(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
 /* _blob_hand_met(): bit length of [han_u]'s content: u3r_met(0, atom).
 **
@@ -246,7 +246,7 @@ _blob_hand_met(u3b_hand* han_u)
   c3_y las_y;
 
   if (  !han_u->len_d
-     || (1 != _blob_pread(han_u, han_u->len_d - 1, &las_y, 1))
+     || (1 != u3b_read(han_u, han_u->len_d - 1, &las_y, 1))
      || !las_y )
   {
     return 0;
@@ -446,10 +446,10 @@ u3b_stop(void)
   u3b_drain(&u3H->rod_u);
 }
 
-/* _blob_pread(): read [len_z] bytes at [off_d] into [dst_y] from the file.
+/* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
 */
-static c3_z
-_blob_pread(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+c3_z
+u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 {
   c3_z tot_z = 0;
 
@@ -481,76 +481,46 @@ _blob_pread(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
   return tot_z;
 }
 
-/* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
-*/
-c3_z
-u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
-{
-  if ( len_z > BLOB_CAX_MAX ) {
-    return _blob_pread(han_u, off_d, dst_y, len_z);
-  }
-
-  if (  han_u->cax_y
-     && (off_d >= han_u->cax_d)
-     && (off_d + len_z <= han_u->cax_d + han_u->cax_z) )
-  {
-    memcpy(dst_y, han_u->cax_y + (off_d - han_u->cax_d), len_z);
-    return len_z;
-  }
-
-  //  miss: a read within one window of the cached one doubles the next
-  //  fill, any other resets it.  the fill is aligned to its own size
-  //  unless the read would straddle its end.
-  //
-  if ( !han_u->cax_y ) {
-    han_u->cax_y = c3_malloc(BLOB_CAX_MAX);
-    han_u->win_z = BLOB_CAX_MIN;
-  }
-  else if (  (off_d + len_z + han_u->win_z > han_u->cax_d)
-          && (off_d < han_u->cax_d + han_u->cax_z + han_u->win_z) )
-  {
-    han_u->win_z = c3_min(han_u->win_z << 1, BLOB_CAX_MAX);
-  }
-  else {
-    han_u->win_z = BLOB_CAX_MIN;
-  }
-
-  {
-    c3_z fil_z = ( len_z > han_u->win_z ) ? BLOB_CAX_MAX : han_u->win_z;
-    c3_d beg_d = off_d - (off_d % fil_z);
-
-    if ( off_d + len_z > beg_d + fil_z ) {
-      beg_d = off_d;
-    }
-
-    han_u->cax_d = beg_d;
-    han_u->cax_z = _blob_pread(han_u, beg_d, han_u->cax_y, fil_z);
-  }
-
-  {
-    c3_d end_d = han_u->cax_d + han_u->cax_z;
-    c3_z got_z = ( off_d >= end_d ) ? 0
-               : ( off_d + len_z <= end_d ) ? len_z
-               : (c3_z)(end_d - off_d);
-
-    if ( got_z ) {
-      memcpy(dst_y, han_u->cax_y + (off_d - han_u->cax_d), got_z);
-    }
-    return got_z;
-  }
-}
-
-/* _blob_map(): map [han_u]'s file read-only.
+/* _blob_map(): map [han_u]'s file read-only, zero to one page past it.
 **
-**   the mapping is the file's own length.  the rest of its last page
-**   reads as zero, which is all a word-at-a-time reader needs.
+**   within the file's own pages the kernel zero-fills the tail of the
+**   last.  past them, on posix, the bytes come from an anonymous zero
+**   page the file's pages are fixed over, so a reader may run one page
+**   past the end.  windows refuses a section longer than the file, so
+**   there the mapping is the file's pages and a reader stays within
+**   the last word, as every accessor does.  records map_d, the extent
+**   munmap is given.
 */
 static c3_y*
 _blob_map(u3b_hand* han_u)
 {
+#ifdef U3_OS_windows
   void* map_v = mmap(0, (size_t)han_u->len_d, PROT_READ, MAP_PRIVATE,
                      han_u->fid_i, 0);
-  return ( MAP_FAILED == map_v ) ? 0 : map_v;
+
+  if ( MAP_FAILED == map_v ) {
+    return 0;
+  }
+  han_u->map_d = han_u->len_d;
+  return map_v;
+#else
+  c3_d  pag_d = (c3_d)sysconf(_SC_PAGESIZE);
+  c3_d  siz_d = ((han_u->len_d + pag_d - 1) & ~(pag_d - 1)) + pag_d;
+  void* res_v = mmap(0, (size_t)siz_d, PROT_READ,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  if ( MAP_FAILED == res_v ) {
+    return 0;
+  }
+  if ( MAP_FAILED == mmap(res_v, (size_t)han_u->len_d, PROT_READ,
+                          MAP_PRIVATE | MAP_FIXED, han_u->fid_i, 0) )
+  {
+    munmap(res_v, (size_t)siz_d);
+    return 0;
+  }
+  han_u->map_d = siz_d;
+  return res_v;
+#endif
 }
 
 /* u3b_mmap(): the file mapped read-only.

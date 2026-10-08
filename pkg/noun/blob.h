@@ -143,10 +143,7 @@
         c3_d   len_d;   //  file size: bounds reads, sizes the mapping
         c3_d   bit_d;   //  bit length of the content, from the file's tail at open
         c3_y*  map_y;   //  read-only mapping of the file (0 until u3b_mmap)
-        c3_y*  cax_y;   //  window cache, C heap (0 until a small read)
-        c3_d   cax_d;   //  file offset of the cached window
-        c3_z   cax_z;   //  bytes valid in it
-        c3_z   win_z;   //  next fill size: grows while reads stay adjacent
+        c3_d   map_d;   //  mapped extent: the file's pages, plus one zero page on posix
       } u3b_hand;
 
     /* u3b_open(): open a blob on the current road.
@@ -171,19 +168,21 @@
     /* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
     **
     **   Returns the number of bytes read; short only at end of file or
-    **   on error.  A read of at most BLOB_CAX_MAX bytes is served from
-    **   the hand's window cache, filled by one pread per window, so a
-    **   word-at-a-time walk costs one syscall per window rather than
-    **   per word.  Never allocates on the loom.
+    **   on error.  A pread in BLOB_IO_MAX chunks; never allocates.  A
+    **   caller that reads a range more than once wants the mapping
+    **   (u3b_mmap) instead.
     */
       c3_z
       u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
     /* u3b_mmap(): the file mapped read-only.
     **
-    **   The mapping lives as long as the hand.  The rest of its last
-    **   page reads as zero, so a reader may run past the file's end to
-    **   the next word boundary.  Returns 0 if the mapping fails or the
+    **   The mapping lives as long as the hand.  On posix it is the
+    **   file's pages followed by one anonymous zero page, so a reader
+    **   may run one page past the file's end; on Windows it is the
+    **   file's own pages, and the rest of the last one reads as zero,
+    **   which covers any reader bound by the atom's word count.  The
+    **   memory is read-only.  Returns 0 if the mapping fails or the
     **   file was shortened under the hand.
     */
       const c3_y*
@@ -214,6 +213,11 @@
     */
       c3_z
       u3b_hands(void);
+
+    /* u3b_mapped(): bytes mapped by home-road hands.
+    */
+      c3_d
+      u3b_mapped(void);
 
     /* u3b_hands_road(): hands open on road [rod_v].  Test support.
     */

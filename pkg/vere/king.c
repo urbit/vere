@@ -1909,7 +1909,8 @@ u3_king_grab(void* vod_p)
 
   //  blobs open on the king's side, one per blob being streamed
   //
-  fprintf(fil_u, "blob handles: %zu\r\n", u3b_hands());
+  fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+          u3b_hands(), u3b_mapped());
 
 #ifdef U3_MEMORY_LOG
   {
