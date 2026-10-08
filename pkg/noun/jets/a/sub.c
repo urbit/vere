@@ -40,9 +40,9 @@
 #endif
 
 static void
-_sub_words(c3_w* a_buf_w,
+_sub_words(const c3_w* a_buf_w,
            c3_w  a_len_w,
-           c3_w* b_buf_w,
+           const c3_w* b_buf_w,
            c3_w  b_len_w,
            c3_w* restrict c_buf_w)
 {
@@ -86,38 +86,25 @@ u3qa_sub(u3_atom a,
     if ( -1 == cmp_ys ) {
       return u3m_error("subtract-underflow");
     }
-    u3i_slab sab_u;
-    c3_w *a_buf_w, *b_buf_w, *c_buf_w;
-    c3_w  a_len_w, b_len_w;
-    
-    //  a bob's words live in a file: load it onto the loom
+    u3i_slab    sab_u;
+    u3r_view    a_vue, b_vue;
+    const c3_w *a_buf_w, *b_buf_w;
+    c3_w        a_len_w, b_len_w;
+
+    //  a view borrows the words wherever the atom lives; the views go
+    //  with the road if the slab bails
     //
-    u3_atom lom_a = u3_none, lom_b = u3_none;
-    if ( c3y == u3a_is_bob(a) ) {
-      if ( u3_none == (lom_a = u3r_blob_load(a)) ) {
-        return u3m_bail(c3__fail);
-      }
-      a = lom_a;
-    }
-    if ( c3y == u3a_is_bob(b) ) {
-      if ( u3_none == (lom_b = u3r_blob_load(b)) ) {
-        return u3m_bail(c3__fail);
-      }
-      b = lom_b;
-    }
-
-    a_buf_w = u3r_word_buffer(&a, &a_len_w);
-    b_buf_w = u3r_word_buffer(&b, &b_len_w);
+    u3r_view_open(&a_vue, a, c3y);
+    u3r_view_open(&b_vue, b, c3y);
+    a_buf_w = u3r_view_words(&a_vue, &a_len_w);
+    b_buf_w = u3r_view_words(&b_vue, &b_len_w);
     u3i_slab_init(&sab_u, u3a_word_bits_log, a_len_w);
-    c_buf_w = sab_u.buf_w;
 
-    _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
-    {
-      u3_noun pro = u3i_slab_mint(&sab_u);
-      if ( u3_none != lom_a ) u3z(lom_a);
-      if ( u3_none != lom_b ) u3z(lom_b);
-      return pro;
-    }
+    _sub_words(a_buf_w, a_len_w, b_buf_w, b_len_w, sab_u.buf_w);
+
+    u3r_view_done(&a_vue);
+    u3r_view_done(&b_vue);
+    return u3i_slab_mint(&sab_u);
   }
 }
 

@@ -1011,6 +1011,10 @@ u3r_met(c3_y  a_y,
 
 /* _cr_bob_bytes(): [len_z] bytes at byte offset [off_d] of bob [a].
 **
+**   borrows the hand's mapping: on an inner road the hand keeps it
+**   until the road falls, so an accessor walk maps once and then costs
+**   a memcpy per call.  zero past the end, like u3r_view_copy.
+**
 **   A window: bytes past the end of the file are zero, and every
 **   fixed-width reader on a bob is a window read, never a
 **   materialization.  Bails %fail if the file is missing.
@@ -1023,7 +1027,18 @@ _cr_bob_bytes(u3_atom a, c3_d off_d, c3_y* dst_y, c3_z len_z)
   if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
     u3m_bail(c3__fail);
   }
-  u3r_view_read(&win_u, off_d, dst_y, len_z);
+
+  {
+    const c3_y* byt_y = u3r_view_bytes(&win_u);
+    c3_z        got_z = ( off_d >= win_u.byt_d )          ? 0
+                      : ( off_d + len_z <= win_u.byt_d )  ? len_z
+                      : (c3_z)(win_u.byt_d - off_d);
+
+    if ( got_z ) {
+      memcpy(dst_y, byt_y + off_d, got_z);
+    }
+    memset(dst_y + got_z, 0, len_z - got_z);
+  }
   u3r_view_done(&win_u);
 }
 
@@ -1257,16 +1272,15 @@ u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
     vue_u->kin_e = u3r_view_even;
   }
   else {
-    c3_w len_w;
-    vue_u->byt_y = (const c3_y*)u3r_word_buffer(&a, &len_w);
+    vue_u->byt_y = (const c3_y*)((u3a_atom*)u3a_to_ptr(a))->buf_w;
   }
   return c3y;
 }
 
-/* u3r_view_read(): [len_z] bytes at [off_d] of the atom, zero past its end.
+/* u3r_view_copy(): [len_z] bytes at [off_d] of the atom, zero past its end.
 */
 c3_z
-u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+u3r_view_copy(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 {
   c3_z got_z = 0;
 
@@ -1300,10 +1314,10 @@ u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
   return got_z;
 }
 
-/* u3r_view_flat(): the atom's bytes, contiguous: byt_d of them.
+/* u3r_view_bytes(): the atom's bytes, contiguous: byt_d of them.
 */
 const c3_y*
-u3r_view_flat(u3r_view* vue_u)
+u3r_view_bytes(u3r_view* vue_u)
 {
   //  bob: the bytes are the hand's mapping, so a view costs no copy
   //
@@ -1317,6 +1331,21 @@ u3r_view_flat(u3r_view* vue_u)
     vue_u->byt_y = byt_y;
   }
   return vue_u->byt_y;
+}
+
+/* u3r_view_words(): the atom's words, contiguous: [len_w] of them.
+*/
+const c3_w*
+u3r_view_words(u3r_view* vue_u, c3_w* len_w)
+{
+  c3_d wor_d = (vue_u->bit_d + u3a_word_bits - 1) >> u3a_word_bits_log;
+
+  if ( wor_d > c3_w_max ) {
+    u3r_view_done(vue_u);
+    u3m_bail(c3__fail);
+  }
+  *len_w = (c3_w)wor_d;
+  return (const c3_w*)u3r_view_bytes(vue_u);
 }
 
 /* u3r_view_done(): release the view.
@@ -1367,7 +1396,7 @@ u3r_mp(mpz_t   a_mp,
     if ( c3y == u3a_is_bob(b) ) {
       u3r_view vue_u;
       u3r_view_open(&vue_u, b, c3y);
-      const c3_y* vue_y = u3r_view_flat(&vue_u);
+      const c3_y* vue_y = u3r_view_bytes(&vue_u);
       mpz_init2(a_mp, vue_u.bit_d);
       mpz_import(a_mp, vue_u.byt_d, -1, 1, 0, 0, vue_y);
       u3r_view_done(&vue_u);
@@ -1959,26 +1988,19 @@ u3r_chop(c3_g  met_g,
     src_w = &src;
   }
   else {
-    //  a bob is chopped from a heap window holding just the words the
-    //  copy touches.  a word boundary is a bloq boundary for every bloq
-    //  size, so the window's first bloq is exact.
+    //  a bob is chopped straight from its mapping, like a loom atom
+    //  from its buffer
     //
     if ( c3y == u3a_is_bob(src) ) {
-      if ( 0 == wid_w ) {
-        return;
+      u3r_view     vue_u;
+      const c3_w*  bob_w;
+
+      if ( c3n == u3r_view_open(&vue_u, src, c3n) ) {
+        u3m_bail(c3__fail);
       }
-
-      c3_d beg_d = ((c3_d)fum_w << met_g) >> u3a_word_bits_log;
-      c3_d end_d = ((((c3_d)fum_w + wid_w) << met_g) + u3a_word_bits - 1)
-                 >> u3a_word_bits_log;
-      c3_w win_w = (c3_w)(end_d - beg_d);
-      c3_w rel_w = fum_w - (c3_w)((beg_d << u3a_word_bits_log) >> met_g);
-      c3_w* buf_w = c3_malloc((size_t)win_w << u3a_word_bytes_shift);
-
-      _cr_bob_bytes(src, beg_d << u3a_word_bytes_shift,
-                    (c3_y*)buf_w, (c3_z)win_w << u3a_word_bytes_shift);
-      u3r_chop_words(met_g, rel_w, wid_w, tou_w, dst_w, win_w, buf_w);
-      c3_free(buf_w);
+      bob_w = u3r_view_words(&vue_u, &len_w);
+      u3r_chop_words(met_g, fum_w, wid_w, tou_w, dst_w, len_w, bob_w);
+      u3r_view_done(&vue_u);
       return;
     }
 
@@ -2246,7 +2268,7 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
           }
           u3r_view vue_u;
           u3r_view_open(&vue_u, veb, c3y);
-          const c3_y* vue_y = u3r_view_flat(&vue_u);
+          const c3_y* vue_y = u3r_view_bytes(&vue_u);
           mug_h = u3r_mug_bytes(vue_y, vue_u.byt_d);
           u3r_view_done(&vue_u);
         }
@@ -2425,45 +2447,10 @@ u3r_safe(u3_noun fol, u3_weak* out)
   }
 }
 
-/* u3r_word_buffer(): returns word buffer pointer of atom `*a`
-** and the length of the buffer
-*/
-c3_w*
-u3r_word_buffer(u3_atom* a, c3_w* len_w)
-{
-  if ( _(u3a_is_cat(*a)) ) {
-    *len_w = 1;
-    return a;
-  }
-  //  bob atoms have no in-loom word buffer; caller must materialize first
-  //
-  if ( c3y == u3a_is_bob(*a) ) {
-    u3m_bail(c3__fail);
-    return 0; // unreachable
-  }
-  u3a_atom* pug_u = u3a_to_ptr(*a);
-  *len_w = pug_u->len_w;
-  return pug_u->buf_w;
-}
-
 static inline c3_ys
 _comp_words(c3_w a_w, c3_w b_w)
 {
   return (c3_ys)(a_w > b_w) - (c3_ys)(a_w < b_w);
-}
-
-/* _cr_comp_read(): [len_w] bytes at [off_d] of a compared atom.
-**
-**   reads stay inside the window's length, so a short count means the
-**   file was shortened under the comparison: bail rather than compare
-**   zeros.
-*/
-static void
-_cr_comp_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_w len_w)
-{
-  if ( len_w != u3r_view_read(vue_u, off_d, dst_y, len_w) ) {
-    u3m_bail(c3__fail);
-  }
 }
 
 /* u3r_comp(): compares two atoms:
@@ -2486,12 +2473,10 @@ u3r_comp(u3_atom a, u3_atom b)
     }
   }
 
-  //  any comparison touching a bob reads both sides through windows
-  //  from the top and compares by significant-byte length, then
-  //  MSB-first byte sequence.  neither side is ever materialized or
-  //  buffered whole.  the non-bob paths below use the faster
-  //  word-at-a-time compare.  a missing file bails %fail; the views
-  //  go with the road.
+  //  any comparison touching a bob borrows both sides' bytes and
+  //  compares by significant-byte length, then MSB-first.  nothing is
+  //  copied.  the non-bob paths below use the faster word-at-a-time
+  //  compare.  a missing file bails %fail; the views go with the road.
   //
   if ( (c3y == a_bob) || (c3y == b_bob) ) {
     u3r_view va_u, vb_u;
@@ -2507,26 +2492,14 @@ u3r_comp(u3_atom a, u3_atom b)
       res = (c3_ys)(va_u.byt_d > vb_u.byt_d) - (c3_ys)(va_u.byt_d < vb_u.byt_d);
     }
     else {
-      c3_y wa_y[4096];
-      c3_y wb_y[4096];
-      c3_d end_d = va_u.byt_d;
+      const c3_y* a_y = u3r_view_bytes(&va_u);
+      const c3_y* b_y = u3r_view_bytes(&vb_u);
 
-      while ( end_d && !res ) {
-        c3_w win_w = ( end_d < sizeof(wa_y) ) ? (c3_w)end_d : (c3_w)sizeof(wa_y);
-        c3_d beg_d = end_d - win_w;
-
-        _cr_comp_read(&va_u, beg_d, wa_y, win_w);
-        _cr_comp_read(&vb_u, beg_d, wb_y, win_w);
-
-        for ( c3_w i_w = win_w; i_w--; ) {
-          if ( wa_y[i_w] != wb_y[i_w] ) {
-            res = (c3_ys)(wa_y[i_w] > wb_y[i_w])
-                - (c3_ys)(wa_y[i_w] < wb_y[i_w]);
-            break;
-          }
+      for ( c3_d i_d = va_u.byt_d; i_d--; ) {
+        if ( a_y[i_d] != b_y[i_d] ) {
+          res = (c3_ys)(a_y[i_d] > b_y[i_d]) - (c3_ys)(a_y[i_d] < b_y[i_d]);
+          break;
         }
-
-        end_d = beg_d;
       }
     }
 
@@ -2583,7 +2556,7 @@ u3r_blob_load(u3_atom a)
 
     u3i_slab_init(&sab_u, 3, byt_d);
 
-    if ( byt_d != u3r_view_read(&win_u, 0, sab_u.buf_y, (c3_z)byt_d) ) {
+    if ( byt_d != u3r_view_copy(&win_u, 0, sab_u.buf_y, (c3_z)byt_d) ) {
       fprintf(stderr, "blob: load: %08" PRIx32 "/%08" PRIx32 ": short read\r\n",
               u3a_bob_mug(a), u3a_bob_seq(a));
       u3i_slab_free(&sab_u);

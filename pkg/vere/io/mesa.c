@@ -1425,7 +1425,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3z(las);
     return;
   }
-  const c3_y* vue_y = u3r_view_flat(&vue_u);
+  const c3_y* vue_y = u3r_view_bytes(&vue_u);
   u3_assert( UINT32_MAX >= vue_u.byt_d );
   c3_w len_w = (c3_w)vue_u.byt_d;
   arena are_u = arena_create(len_w + 16384);
@@ -1857,7 +1857,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       u3z(res);
       return;
     }
-    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w jumbo_w = (c3_w)vue_u.byt_d;
     c3_y* jumbo_y = c3_calloc(jumbo_w);

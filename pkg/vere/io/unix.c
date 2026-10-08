@@ -490,7 +490,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
       c3_z ask_z = ( (len_d - off_d) < sizeof(buf_y) )
                  ? (c3_z)(len_d - off_d)
                  : sizeof(buf_y);
-      c3_z got_z = u3r_view_read(&win_u, off_d, buf_y, ask_z);
+      c3_z got_z = u3r_view_copy(&win_u, off_d, buf_y, ask_z);
 
       if ( 0 == got_z ) {
         u3l_log("error reading blob %08" PRIx32 "/%08" PRIx32,

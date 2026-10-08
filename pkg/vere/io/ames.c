@@ -1371,7 +1371,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
       u3z(lan); u3z(pac);
       return;
     }
-    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w len_w = (c3_w)vue_u.byt_d;
     pac_u->len_h = len_w;

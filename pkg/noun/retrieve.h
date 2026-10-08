@@ -438,15 +438,19 @@
       **
       **   The one way to read a bob, and the same for every other atom.
       **   open copies no atom bytes (a bob's open may allocate its hand);
-      **   read copies any byte range out,
-      **   zero past the end; flat gives a pointer to byt_d contiguous bytes
-      **   (a loom atom's own words, a bob's mapping, a direct atom's value
-      **   held in the view); done releases.  byt_d and bit_d are public
-      **   and valid from open; the other fields are private.  A view is
-      **   valid until done on the road that opened it and is never copied.
-      **   An inner road's bail or signal releases what a view borrowed;
-      **   the home road calls done itself.  Every byte from byt_d to the
-      **   next word boundary is readable and zero.
+      **   copy copies any byte range into the caller's memory, zero past
+      **   the end; bytes and words borrow a pointer to the atom's
+      **   contiguous bytes or words (a loom atom's own buffer, a bob's
+      **   mapping, a direct atom's value held in the view) for as long as
+      **   the view is open; done releases.  Borrowed memory is read-only.
+      **   byt_d and bit_d are public and valid from open; the other
+      **   fields are private.  A view is valid until done on the road
+      **   that opened it and is never copied.  An inner road's bail or
+      **   signal releases what a view borrowed; the home road calls done
+      **   itself.  Every byte from byt_d to the next word boundary is
+      **   readable and zero; a bob's mapping on posix is readable and
+      **   zero to one page past the file.  The legacy u3r_bytes and
+      **   u3r_words copy; these borrow.
       */
         typedef enum {
           u3r_view_loom = 0,    //  the loom word buffer
@@ -461,7 +465,7 @@
           c3_d                  bit_d;  //  the atom's significant bits
           u3r_view_e            kin_e;  //  private
           struct _u3b_hand*     han_u;  //  private: blob: the road's hand
-          const c3_y*           byt_y;  //  private: flat's pointer
+          const c3_y*           byt_y;  //  private: the borrowed pointer
           c3_d                  raw_d;  //  private: even: the atom's value
         } u3r_view;
 
@@ -474,22 +478,33 @@
         c3_o
         u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o);
 
-      /* u3r_view_read(): [len_z] bytes at byte offset [off_d] of the
-      **   atom, zero-filled past its end.
+      /* u3r_view_copy(): [len_z] bytes at byte offset [off_d] of the
+      **   atom into [dst_y], zero-filled past its end.
       **
-      **   Returns the number of bytes that came from the atom, before
-      **   the zero fill; short of the atom's extent only if the file
-      **   was shortened under the view.
+      **   Never faults: a bob is read with pread, or from its mapping
+      **   if the hand has one.  Returns the number of bytes that came
+      **   from the atom, before the zero fill; short of the atom's
+      **   extent only if the file was shortened under the view.
       */
         c3_z
-        u3r_view_read(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
+        u3r_view_copy(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
 
-      /* u3r_view_flat(): the atom's bytes, contiguous: byt_d of them.
+      /* u3r_view_bytes(): the atom's bytes, contiguous: byt_d of them.
       **
-      **   Bails %fail if a bob cannot be mapped.
+      **   Borrowed for the view's lifetime.  A bob is mapped here, once
+      **   per hand.  Bails %fail if a bob cannot be mapped.
       */
         const c3_y*
-        u3r_view_flat(u3r_view* vue_u);
+        u3r_view_bytes(u3r_view* vue_u);
+
+      /* u3r_view_words(): the atom's words, contiguous: [len_w] of them.
+      **
+      **   The same pointer as u3r_view_bytes, word-aligned, with the
+      **   word count from bit_d.  Bails %fail if the count does not fit
+      **   a word, as u3r_met would.
+      */
+        const c3_w*
+        u3r_view_words(u3r_view* vue_u, c3_w* len_w);
 
       /* u3r_view_done(): release the view.
       **
@@ -687,12 +702,6 @@
       */
       c3_o
       u3r_safe(u3_noun fol, u3_weak* out);
-
-      /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
-      ** and the length of the buffer
-      */
-      c3_w*
-      u3r_word_buffer(u3_atom* a, c3_w* len_w);
 
       /* u3r_comp(): compares two atoms:
       ** returns 1 if a > b, -1 if a < b, 0 if they are equal

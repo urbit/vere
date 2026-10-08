@@ -998,7 +998,7 @@ _hand_open_inner(void)
 
   u3r_view vue_u;
   u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_flat(&vue_u);
+  u3r_view_bytes(&vue_u);
   _check( vue_u.han_u == han_u, "view did not land on the road's hand" );
 
   return han_u;
@@ -1229,7 +1229,7 @@ _hand_alarm_cb(u3_noun arg)
   //
   u3r_view vue_u;
   u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_flat(&vue_u);
+  u3r_view_bytes(&vue_u);
   _han_fid_i = vue_u.han_u->fid_i;
 
   volatile c3_d sum_d = 0;
@@ -1942,7 +1942,7 @@ _hand_gone_view_cb(u3_noun arg)
   (void)arg;
   u3r_view vue_u;
   u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_flat(&vue_u);
+  u3r_view_bytes(&vue_u);
   u3r_view_done(&vue_u);
   return 0;
 }
@@ -2102,7 +2102,7 @@ _hand_share_cb(u3_noun arg)
 
   u3r_view vue_u;
   u3r_view_open(&vue_u, _han_bob, c3y);
-  const c3_y* vue_y = u3r_view_flat(&vue_u);
+  const c3_y* vue_y = u3r_view_bytes(&vue_u);
 
   u3b_hand* han_u = vue_u.han_u;
   c3_i          fid_i = han_u->fid_i;
@@ -2399,7 +2399,7 @@ _test_hand_access(void)
     u3r_view vue_u;
 
     u3r_view_open(&vue_u, bob, c3y);
-    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     _check(  (u3r_view_blob == vue_u.kin_e) && (len_w == vue_u.byt_d)
           && (vue_y == vue_u.han_u->map_y) && (0 == memcmp(vue_y, dat_y, len_w))
           && (1 == u3b_hands()),
@@ -2412,7 +2412,7 @@ _test_hand_access(void)
       c3_w    met_w = u3r_met(3, sma);
 
       u3r_view_open(&vue_u, sma, c3y);
-      vue_y = u3r_view_flat(&vue_u);
+      vue_y = u3r_view_bytes(&vue_u);
       _check( (u3r_view_loom == vue_u.kin_e) && (met_w == vue_u.byt_d),
               "flat loom" );
       {
@@ -2423,7 +2423,7 @@ _test_hand_access(void)
       u3r_view_done(&vue_u);
 
       u3r_view_open(&vue_u, 0x44332211, c3y);
-      vue_y = u3r_view_flat(&vue_u);
+      vue_y = u3r_view_bytes(&vue_u);
       _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.byt_d)
             && (vue_y == (const c3_y*)&vue_u.raw_d)
             && (0x11 == vue_y[0]) && (0x44 == vue_y[3]),
@@ -2450,11 +2450,11 @@ _test_hand_access(void)
 
         memset(exp_y, 0, sizeof(exp_y));
         memcpy(exp_y, dat_y + len_w - 40, 40);
-        _check(  (40 == u3r_view_read(&win_u, len_w - 40, win_y, sizeof(win_y)))
+        _check(  (40 == u3r_view_copy(&win_u, len_w - 40, win_y, sizeof(win_y)))
               && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
               && (0 == win_u.han_u->map_y),
                 "read bob tail" );
-        _check(  (0 == u3r_view_read(&win_u, (c3_d)len_w << 20, win_y, 8))
+        _check(  (0 == u3r_view_copy(&win_u, (c3_d)len_w << 20, win_y, 8))
               && (0 == memcmp(win_y, exp_y + 40, 8)),
                 "read bob past" );
         u3r_view_done(&win_u);
@@ -2462,7 +2462,7 @@ _test_hand_access(void)
 
         _check( c3y == u3r_view_open(&win_u, sma, c3n), "open loom" );
         _check(  !win_u.han_u && (met_w == win_u.byt_d)
-              && (3 == u3r_view_read(&win_u, met_w - 3, win_y, 16))
+              && (3 == u3r_view_copy(&win_u, met_w - 3, win_y, 16))
               && (0 == memcmp(win_y, win_u.byt_y + met_w - 3, 3))
               && (0 == memcmp(win_y + 3, exp_y + 40, 13)),
                 "read loom" );
@@ -2471,7 +2471,7 @@ _test_hand_access(void)
         _check( c3y == u3r_view_open(&win_u, 0x44332211, c3n), "open cat" );
         _check(  (win_u.byt_y == (const c3_y*)&win_u.raw_d)
               && (31 == win_u.bit_d)
-              && (2 == u3r_view_read(&win_u, 2, win_y, 4))
+              && (2 == u3r_view_copy(&win_u, 2, win_y, 4))
               && (0x33 == win_y[0]) && (0x44 == win_y[1])
               && (0 == win_y[2]) && (0 == win_y[3]),
                 "read cat" );

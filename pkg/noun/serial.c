@@ -189,7 +189,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
           c3_z pad_z = (ask_z + sizeof(c3_w) - 1) & ~(sizeof(c3_w) - 1);
           c3_w wid_w = c3_min(a_w - (c3_w)(off_d * 8), (c3_w)(ask_z * 8));
 
-          if ( ask_z != u3r_view_read(&win_u, off_d, (c3_y*)win_w, ask_z) ) {
+          if ( ask_z != u3r_view_copy(&win_u, off_d, (c3_y*)win_w, ask_z) ) {
             u3m_bail(c3__fail);
             return;
           }
@@ -340,7 +340,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
                    : (c3_w)(sizeof(win_y) * 8);
         c3_z ask_z = (bit_w + 7) >> 3;
 
-        if ( ask_z != u3r_view_read(&win_u, off_d, win_y, ask_z) ) {
+        if ( ask_z != u3r_view_copy(&win_u, off_d, win_y, ask_z) ) {
           u3m_bail(c3__fail);
         }
 
@@ -1070,7 +1070,7 @@ u3s_cue_atom(u3_atom a)
   if ( c3y == u3a_is_bob(a) ) {
     u3r_view vue_u;
     u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_flat(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     u3_noun res = u3s_cue_bytes(vue_u.byt_d, (c3_y*)vue_y);
     u3r_view_done(&vue_u);
     return res;

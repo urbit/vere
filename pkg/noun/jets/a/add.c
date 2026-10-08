@@ -40,9 +40,9 @@
 #endif
 
 static void
-_add_words(c3_w* a_buf_w,
+_add_words(const c3_w* a_buf_w,
            c3_w  a_len_w,
-           c3_w* b_buf_w,
+           const c3_w* b_buf_w,
            c3_w  b_len_w,
            c3_w* restrict c_buf_w)
 {
@@ -57,7 +57,7 @@ _add_words(c3_w* a_buf_w,
                         _addcarry_w_ptr(&c_buf_w[i_w]));
   }
 
-  c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
+  const c3_w* rest_w = ( a_len_w < b_len_w ) ? b_buf_w : a_buf_w;
 
   c3_w i_w = min_w;
   for (; i_w < max_w && car_b; i_w++) {
@@ -88,45 +88,29 @@ u3qa_add(u3_atom a,
     return u3k(a);
   }
   else {
-    u3i_slab sab_u;
-    c3_w *a_buf_w, *b_buf_w, *c_buf_w;
-    c3_w  a_len_w, b_len_w;
+    u3i_slab    sab_u;
+    u3r_view    a_vue, b_vue;
+    const c3_w *a_buf_w, *b_buf_w;
+    c3_w        a_len_w, b_len_w;
 
-    //  a bob's words live in a file: load it onto the loom
+    //  a view borrows the words wherever the atom lives; the views go
+    //  with the road if the slab bails
     //
-    u3_atom lom_a = u3_none, lom_b = u3_none;
-    if ( c3y == u3a_is_bob(a) ) {
-      if ( u3_none == (lom_a = u3r_blob_load(a)) ) {
-        return u3m_bail(c3__fail);
-      }
-      a = lom_a;
-    }
-    if ( c3y == u3a_is_bob(b) ) {
-      if ( u3_none == (lom_b = u3r_blob_load(b)) ) {
-        return u3m_bail(c3__fail);
-      }
-      b = lom_b;
-    }
+    u3r_view_open(&a_vue, a, c3y);
+    u3r_view_open(&b_vue, b, c3y);
+    a_buf_w = u3r_view_words(&a_vue, &a_len_w);
+    b_buf_w = u3r_view_words(&b_vue, &b_len_w);
 
-    a_buf_w = u3r_word_buffer(&a, &a_len_w);
-    b_buf_w = u3r_word_buffer(&b, &b_len_w);
-    //  u3i_slab_init(&sab_u, 5, c3_max(a_len_w, b_len_w) + 1);
-    //  we have to do more measuring to avoid growing atom buffers on each
-    //  addition as u3a_wtrim noops as of 3e8473d
+    //  sized in bits to avoid growing atom buffers on each addition,
+    //  as u3a_wtrim noops as of 3e8473d
     //
-    c3_w a_met0_w = u3r_met(0, a),
-         b_met0_w = u3r_met(0, b);
-    u3i_slab_init(&sab_u, 0, c3_max(a_met0_w, b_met0_w) + 1);
-    
-    c_buf_w = sab_u.buf_w;
+    u3i_slab_init(&sab_u, 0, c3_max(a_vue.bit_d, b_vue.bit_d) + 1);
 
-    _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, c_buf_w);
-    {
-      u3_noun pro = u3i_slab_mint(&sab_u);
-      if ( u3_none != lom_a ) u3z(lom_a);
-      if ( u3_none != lom_b ) u3z(lom_b);
-      return pro;
-    }
+    _add_words(a_buf_w, a_len_w, b_buf_w, b_len_w, sab_u.buf_w);
+
+    u3r_view_done(&a_vue);
+    u3r_view_done(&b_vue);
+    return u3i_slab_mint(&sab_u);
   }
 }
 

@@ -1574,7 +1574,7 @@ _http_hgen_send(u3_hgen* gen_u)
       //  the read zero-fills a short window itself; the count says
       //  whether the file was shortened under the response
       //
-      c3_z got_z = u3r_view_read(cur_u->win_u, cur_u->off_d,
+      c3_z got_z = u3r_view_copy(cur_u->win_u, cur_u->off_d,
                                  cur_u->buf_y, cur_u->len_w);
 
       if ( got_z != cur_u->len_w ) {
