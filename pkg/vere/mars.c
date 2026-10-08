@@ -187,10 +187,22 @@ _mars_lease_drop(_mars_lease* lea_u)
 **   bumps les_h + use_w and queues a lease expiring at
 **   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
 **   processes, and no event can arrive for a lease taken before it.
+**   one lease per id: the king keeps one record per id and sends one
+**   %blrl when it dies, so a second install of the same content (a
+**   dedup hit) adds nothing.
 */
 static void
 _mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
 {
+  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
+    if (  (c3n == lea_u->ded_o)
+       && (mug_h == lea_u->mug_h)
+       && (seq_h == lea_u->seq_h) )
+    {
+      return;
+    }
+  }
+
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   if ( !blb_u ) {
     blb_u = u3a_blob_new(mug_h, seq_h);

@@ -26,6 +26,14 @@ static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 static void
 _king_blob_del(c3_h mug_h, c3_h seq_h)
 {
+  //  the king's record carries one leg, its live bobs; the event and
+  //  lease legs are mars's and must never appear here
+  //
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    u3_assert( blb_u && !blb_u->eve_w && !blb_u->les_h );
+  }
+
   if ( u3K.pir_u && u3K.pir_u->god_u ) {
     u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h);
   }
