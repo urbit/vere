@@ -17,45 +17,36 @@ static void _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
   }
 }
 
-//  _x_octs_done(): free the loom copy a bob's octs were loaded into,
-//  then return [x], which may have been built from that copy
+//  _x_octs_done(): release the view the octs were borrowed through,
+//  then return [x], which may have been built from them
 //
-#define _x_octs_done(lom, x)              \
+#define _x_octs_done(vue, x)              \
   do {                                    \
     u3_noun _pro = (x);                   \
-    if ( u3_none != (lom) ) u3z(lom);     \
+    u3r_view_done(&(vue));                \
     return _pro;                          \
   } while ( 0 )
 
 static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,
                            c3_w* len_w, c3_w* lead_w,
-                           u3_atom* lom)
+                           u3r_view* vue_u)
 {
   if (c3n == u3r_safe_word(*p_octs, p_octs_w)) {
     return c3n;
   }
 
-  //  a bob's bytes live in a file: load them onto the loom for the
-  //  byte pointer, and hand the copy back in [lom] for the caller to free
+  //  a view borrows the bytes wherever the atom lives; the caller
+  //  releases it through _x_octs_done.  read-only.
   //
-  *lom = u3_none;
-  if ( c3y == u3a_is_bob(*q_octs) ) {
-    if ( u3_none == (*lom = u3r_blob_load(*q_octs)) ) {
-      return c3n;
-    }
-    q_octs = lom;
+  if ( c3n == u3r_view_open(vue_u, *q_octs, c3n) ) {
+    return c3n;
   }
-
-  *len_w = u3r_met(3, *q_octs);
-
-  if (c3y == u3a_is_cat(*q_octs)) {
-    *buf_y = (c3_y*)q_octs;
+  if ( vue_u->byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
   }
-  else {
-    u3a_atom* ptr_a = u3a_to_ptr(*q_octs);
-    *buf_y = (c3_y*)ptr_a->buf_w;
-  }
+  *len_w = (c3_w)vue_u->byt_d;
+  *buf_y = (c3_y*)u3r_view_bytes(vue_u);
 
   *lead_w = 0;
 
@@ -81,11 +72,11 @@ u3_noun _qe_adler32(u3_noun octs)
   c3_w p_octs_w, len_w, lead_w;
   c3_y *buf_y;
 
-  u3_atom lom = u3_none;
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &buf_y,
-                            &len_w, &lead_w, &lom)) {
-    _x_octs_done(lom, u3_none);
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   c3_w adler_w, sum2_w;
@@ -132,7 +123,7 @@ u3_noun _qe_adler32(u3_noun octs)
     sum2_w %= BASE;
   }
 
-  _x_octs_done(lom, u3i_word(sum2_w << 16 | adler_w));
+  _x_octs_done(vue, u3i_word(sum2_w << 16 | adler_w));
 }
 
 

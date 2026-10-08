@@ -573,40 +573,34 @@ u3i_vint(u3_noun a)
     return u3m_bail(c3__exit);
   }
   else {
-    //  bob atoms must be materialized before incrementing:
-    //  pug_u->len_w carries u3a_blob_flag and the body is the blob id,
-    //  not the atom's value.
+    //  a view borrows the words wherever the atom lives, a bob's from
+    //  its mapping; the view dies with the road if the slab bails
     //
-    if ( c3y == u3a_is_bob(a) ) {
-      u3_atom mat = u3r_blob_load(a);
-      if ( u3_none == mat ) {
-        return u3m_bail(c3__fail);
-      }
-      u3z(a);
-      return u3i_vint(mat);
-    }
+    u3r_view    vue_u;
+    const c3_w* a_buf_w;
+    c3_w        len_w;
+    u3i_slab    sab_u;
 
-    u3i_slab sab_u;
-    u3i_slab_init(&sab_u, 0, u3r_met(0, a) + 1);
+    u3r_view_open(&vue_u, a, c3y);
+    a_buf_w = u3r_view_words(&vue_u, &len_w);
+    u3i_slab_init(&sab_u, 0, vue_u.bit_d + 1);
 
-    u3a_atom* pug_u = u3a_to_ptr(a);
+    c3_w  i_w = 0;
+    c3_b  car_b = 1;
+    c3_w* b_buf_w = sab_u.buf_w;
 
-    c3_w i_w = 0;
-    c3_b car_b = 1;
-    c3_w *a_buf_w = pug_u->buf_w;
-    c3_w *b_buf_w = sab_u.buf_w;
-
-    for (; i_w < pug_u->len_w && car_b; i_w++) {
+    for (; i_w < len_w && car_b; i_w++) {
       car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, _addcarry_w_ptr(&b_buf_w[i_w]));
     }
 
     if (car_b) {
-      b_buf_w[pug_u->len_w] = 1;
+      b_buf_w[len_w] = 1;
     }
     else {
-      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (pug_u->len_w - i_w) * sizeof(c3_w));
+      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (len_w - i_w) * sizeof(c3_w));
     }
 
+    u3r_view_done(&vue_u);
     u3z(a);
     return u3i_slab_mint(&sab_u);
   }

@@ -26,34 +26,34 @@ u3qc_muk(u3_atom sed,
       return u3m_bail(c3__exit);
     }
     else {
-      c3_h  key_h = (c3_h)key_d;
-      c3_h  sed_h = u3r_half(0, sed);
-      c3_o  loc_o = c3n;
-      c3_y* key_y = 0;
-      c3_h  out_h;
+      c3_h        key_h = (c3_h)key_d;
+      c3_h        sed_h = u3r_half(0, sed);
+      c3_o        loc_o = c3n;
+      const c3_y* key_y = 0;
+      u3r_view    vue_u = {0};
+      c3_h        out_h;
 
       //  if we're hashing more bytes than we have, allocate and copy
-      //  to ensure trailing null bytes; a bob's bytes live in a file,
-      //  so copy those too
+      //  to ensure trailing null bytes; otherwise a view borrows the
+      //  bytes wherever the atom lives (XX assumes little-endian)
       //
-      if ( (len_h > key_h) || (c3y == u3a_is_bob(key)) ) {
+      if ( len_h > key_h ) {
+        c3_y* buf_y = u3a_calloc(sizeof(c3_y), len_h);
+        u3r_bytes(0, len_h, buf_y, key);
+        key_y = buf_y;
         loc_o = c3y;
-        key_y = u3a_calloc(sizeof(c3_y), len_h);
-        u3r_bytes(0, len_h, key_y, key);
       }
       else if ( len_h > 0 ) {
-        //  XX assumes little-endian
-        //
-        key_y = ( c3y == u3a_is_cat(key) )
-                ? (c3_y*)&key
-                : (c3_y*)((u3a_atom*)u3a_to_ptr(key))->buf_w;
+        u3r_view_open(&vue_u, key, c3y);
+        key_y = u3r_view_bytes(&vue_u);
       }
 
       MurmurHash3_x86_32(key_y, len_h, sed_h, &out_h);
 
       if ( c3y == loc_o ) {
-        u3a_free(key_y);
+        u3a_free((void*)key_y);
       }
+      u3r_view_done(&vue_u);
 
       return u3i_halfs(1, &out_h);
     }

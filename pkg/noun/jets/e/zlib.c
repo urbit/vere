@@ -38,17 +38,14 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  //  a bob's bytes live in a file: load it onto the loom
+  //  a view borrows the bytes wherever the atom lives; read-only
   //
-  u3_atom lom = u3_none;
-  if ( c3y == u3a_is_bob(q_octs) ) {
-    if ( u3_none == (lom = u3r_blob_load(q_octs)) ) {
-      return u3m_bail(c3__fail);
-    }
-    q_octs = lom;
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, q_octs, c3y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
   }
-
-  c3_w len_w = u3r_met(3, q_octs);
+  c3_w len_w = (c3_w)vue_u.byt_d;
 
   int leading_zeros = 0;
 
@@ -62,19 +59,11 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   // Bytestream exhausted
   //
   if (pos_w >= len_w) {
-    if ( u3_none != lom ) u3z(lom);
+    u3r_view_done(&vue_u);
     return u3_none;
   }
 
-  c3_y* input;
-
-  if (c3y == u3a_is_cat(q_octs)) {
-    input = (c3_y*)&q_octs + pos_w;
-  }
-  else {
-    u3a_atom* vat_u = u3a_to_ptr(q_octs);
-    input = (c3_y*)vat_u->buf_w + pos_w;
-  }
+  c3_y* input = (c3_y*)u3r_view_bytes(&vue_u) + pos_w;
 
   int ret;
   z_stream strm;
@@ -185,7 +174,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   u3_noun new_pos = pos_w + strm.total_in;
   u3_noun new_stream = u3nc(u3i_word(new_pos), u3k(octs));
 
-  if ( u3_none != lom ) u3z(lom);
+  u3r_view_done(&vue_u);
   return u3nc(decompressed_octs, new_stream);
 }
 

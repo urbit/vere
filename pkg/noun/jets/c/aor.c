@@ -25,41 +25,21 @@
       else {
         if ( c3n == u3ud(b) ) return c3y;
         {
-          //  a bob's bytes live in a file: load it onto the loom
+          //  views borrow the bytes wherever the atoms live
           //
-          u3_atom lom_a = u3_none, lom_b = u3_none;
-          if ( c3y == u3a_is_bob(a) ) {
-            if ( u3_none == (lom_a = u3r_blob_load(a)) ) {
-              return u3m_bail(c3__fail);
-            }
-            a = lom_a;
-          }
-          if ( c3y == u3a_is_bob(b) ) {
-            if ( u3_none == (lom_b = u3r_blob_load(b)) ) {
-              return u3m_bail(c3__fail);
-            }
-            b = lom_b;
+          u3r_view a_vue, b_vue;
+          u3r_view_open(&a_vue, a, c3y);
+          u3r_view_open(&b_vue, b, c3y);
+          if ( (a_vue.byt_d > c3_w_max) || (b_vue.byt_d > c3_w_max) ) {
+            return u3m_bail(c3__fail);
           }
 
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);;
-          c3_y *buf_a_y, *buf_b_y;
+          c3_w len_a_w = (c3_w)a_vue.byt_d;
+          c3_w len_b_w = (c3_w)b_vue.byt_d;
+          const c3_y *buf_a_y = u3r_view_bytes(&a_vue);
+          const c3_y *buf_b_y = u3r_view_bytes(&b_vue);
           c3_y cut_a_y = 0, cut_b_y = 0;
           c3_o ret_o;
-          if ( c3y == u3a_is_cat(a) ) {
-            buf_a_y = (c3_y*)&a;
-          }
-          else {
-            u3a_atom* a_u = u3a_to_ptr(a);
-            buf_a_y = (c3_y*)(a_u->buf_w);
-          }
-          if ( c3y == u3a_is_cat(b) ) {
-            buf_b_y = (c3_y*)&b;
-          }
-          else {
-            u3a_atom* b_u = u3a_to_ptr(b);
-            buf_b_y = (c3_y*)(b_u->buf_w);
-          }
           c3_w len_min_w = c3_min(len_a_w, len_b_w);
           c3_w i_w;
           for (i_w = 0; i_w < len_min_w; i_w++) {
@@ -69,8 +49,8 @@
           }
           ret_o = ( i_w < len_min_w ) ? __(cut_a_y < cut_b_y)
                                       : __(len_a_w < len_b_w);
-          if ( u3_none != lom_a ) u3z(lom_a);
-          if ( u3_none != lom_b ) u3z(lom_b);
+          u3r_view_done(&a_vue);
+          u3r_view_done(&b_vue);
           return ret_o;
         }
       }
