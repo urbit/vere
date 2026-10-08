@@ -1839,6 +1839,13 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
     fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }
+
+  //  the new epoch's BLOBS table is empty and replay never crosses
+  //  epochs, so recount eve_w against it now rather than at the next
+  //  boot, and reclaim whatever nothing in this epoch references
+  //
+  u3_disk_blob_refs(log_u);
+  u3_disk_blob_gc(log_u);
 }
 
 static void
