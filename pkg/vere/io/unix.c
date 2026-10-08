@@ -999,9 +999,11 @@ _unix_blob_install_cb(void*  ptr_v,
   u3_unix_bob_ctx* ctx = ptr_v;
 
   if ( c3y == ok_o ) {
-    //  skip if content unchanged since last %into
+    //  skip if content unchanged since last %into; no bob will be
+    //  minted to hold the lease, so release it now
     //
     if ( mug_h == ctx->old_w ) {
+      u3_lord_blob_release(ctx->unx_u->car_u.pir_u->god_u, mug_h, seq_h);
       u3z(ctx->pax);
       u3z(ctx->mim);
     }

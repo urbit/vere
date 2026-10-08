@@ -1296,16 +1296,20 @@ static void
 _http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
 {
   _http_bob_ctx* ctx_u = ptr_v;
-  u3_hcon*       hon_u = _http_conn_find(ctx_u->htp_u, ctx_u->coq_l);
+  u3_http*       htp_u = ctx_u->htp_u;
+  u3_hcon*       hon_u = _http_conn_find(htp_u, ctx_u->coq_l);
   u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
   c3_d           len_d = ctx_u->len_d;
 
   c3_free(ctx_u);
 
-  //  the client went away while mars worked; the file is leased to
-  //  us and released when its record dies
+  //  the client went away while mars worked; no bob will be minted to
+  //  hold the lease, so release it now
   //
   if ( !req_u ) {
+    if ( c3y == ok_o ) {
+      u3_lord_blob_release(htp_u->htd_u->car_u.pir_u->god_u, mug_h, seq_h);
+    }
     return;
   }
 
