@@ -386,7 +386,8 @@ static const OP_F TAB[] = { OPCODES };
 **   arguments to a temporary above its own activation, which is empty by
 **   then (every other slot was consumed or dropped, or the call sweeps
 **   them), and moves the temporary down in its place, under the same
-**   frame.
+**   frame; a tail call of the running program moves them back into its
+**   parameter slots and keeps the activation.
 */
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
@@ -822,7 +823,10 @@ OP1(HOP, a_h, BODY_HOP)
 
 //  a tail call: the arguments are the last registers alive, so the
 //  caller's slots are all empty once they have moved, unless the block
-//  left its drops to the call: S
+//  left its drops to the call: S.  A call of the running program (a
+//  loop) then needs no new activation: the arguments go back into the
+//  parameter slots, the other slots are empty already, and the frame is
+//  the caller's and stays.
 //
 #define BODY_JMP(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -839,6 +843,14 @@ OP1(HOP, a_h, BODY_HOP)
   MOVE();                                                                       \
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
+  if ( gop_u == pog_u ) {                                                       \
+    for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
+      reg[_i] = nex[_i];                                                        \
+    }                                                                           \
+    POP(len_h);                                                                 \
+    ip = pog_u->byc_u.ops_y;                                                    \
+    BURN();                                                                     \
+  }                                                                             \
   POP(len_h);                                                                   \
   fam = *(nc_frame*)TOP(_nc_frame_w);                                           \
   POP(_nc_frame_w + pog_u->tot_h);                                              \
