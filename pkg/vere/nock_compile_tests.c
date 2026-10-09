@@ -230,6 +230,77 @@ _test_iter_add(void)
   return _test("iterate add", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_scot_tail(): a jet that punts (+scot on %p), in tail position: JSP,
+**                    then the unary program of the callee.
+*/
+static c3_i
+_test_scot_tail(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  @t\n"
+                      "(scot %p n)\n",
+                      123456789);
+
+  return _test("scot tail", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_scot(): a jet that hits (+scot on %ud) and one that punts (%p),
+**               not in tail position: CAP.
+*/
+static c3_i
+_test_scot(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  [@t @t]\n"
+                      "[(scot %ud n) (scot %p n)]\n",
+                      123456789);
+
+  return _test("scot", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_memo_toss(): transient memoization (~+), keyed by the parts of
+**                    the subject the callee uses: CAM.
+*/
+static c3_i
+_test_memo_toss(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  @\n"
+                      "~+\n"
+                      "?:  =(0 n)  0\n"
+                      "+($(n (dec n)))\n",
+                      1000);
+
+  return _test("memo toss", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_memo_keep(): persistent memoization (%memo./path), keyed by the
+**                    whole subject: CSM.  The cache is shared with u3n, so
+**                    u3nc runs first on a fresh sample to miss it, and
+**                    then u3n is checked against what u3nc saved.
+*/
+static c3_i
+_test_memo_keep(void)
+{
+  const c3_c* src_c = "|=  n=@\n"
+                      "^-  @\n"
+                      "~>  %memo./ska\n"
+                      "?:  =(0 n)  0\n"
+                      "+($(n (dec n)))\n";
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun cor = _gate(src_c, 1000);
+  u3_weak pro = _run("u3nc fresh ", _nock_nc, cor, fol);
+
+  if ( u3_none == pro ) {
+    u3z(cor); u3z(fol);
+    return 0;
+  }
+
+  u3z(pro);
+  u3z(fol);
+  return _test("memo keep", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* main(): run all test cases.
 */
 int
@@ -260,6 +331,22 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_iter_add() ) {
+    exit(1);
+  }
+
+  if ( !_test_scot_tail() ) {
+    exit(1);
+  }
+
+  if ( !_test_scot() ) {
+    exit(1);
+  }
+
+  if ( !_test_memo_toss() ) {
+    exit(1);
+  }
+
+  if ( !_test_memo_keep() ) {
     exit(1);
   }
 
