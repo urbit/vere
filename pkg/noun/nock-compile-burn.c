@@ -301,7 +301,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 static u3_noun
 OP(done) ARGS CONV
 {
-  const u3_noun pro = arg_a_w;
+  u3_noun pro = arg_a_w;
   nc_frame*     fam_u;
   c3_h          d_h;
 
@@ -317,7 +317,7 @@ OP(done) ARGS CONV
   }
 
   if ( u3_none != fam_u->key ) {
-    _nc_save(fam_u->cid_h, fam_u->key, pro);
+    pro = _nc_save(fam_u->cid_h, fam_u->key, pro, fam_u->all_o);
     LOSE(fam_u->key);
   }
 
@@ -562,7 +562,7 @@ OP1(CAM, a_h)
 
   kni_h = 0;
   x     = u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(u3t(dir_u->bell)));
-  o     = u3z_find_m(dir_u->cid_h, 144 + c3__nock, x);
+  o     = _nc_find(dir_u->cid_h, x, c3n);
 
   if ( u3_none != o ) {
     POP(gop_u->tot_h);
@@ -577,6 +577,7 @@ OP1(CAM, a_h)
   fam_u = FRAME(dir_u->des_h);
   fam_u->key   = x;
   fam_u->cid_h = dir_u->cid_h;
+  fam_u->all_o = c3n;
   _nc_stat(dir_d);
   pog_u = gop_u;
   reg   = nex;
@@ -588,9 +589,9 @@ OP1(CSM, a_h)
   u3nc_prog* gop_u;
   nc_frame*  fam_u;
   u3_noun*   nex;
-  u3_noun    x = SUB();
-  u3_noun    o = u3nc(GAIN(x), GAIN(u3t(dir_u->bell)));
-  u3_noun    pro = u3z_find_m(dir_u->cid_h, 144 + c3__nock, o);
+  u3_noun    x   = SUB();
+  u3_noun    o   = u3nc(GAIN(x), GAIN(u3t(dir_u->bell)));
+  u3_weak    pro = _nc_find(dir_u->cid_h, o, c3y);
 
   if ( u3_none != pro ) {
     LOSE(o);
@@ -605,6 +606,7 @@ OP1(CSM, a_h)
   fam_u  = FRAME(dir_u->des_h);
   fam_u->key   = o;
   fam_u->cid_h = dir_u->cid_h;
+  fam_u->all_o = c3y;
   pog_u = gop_u;
   reg   = nex;
   ENTER(1);

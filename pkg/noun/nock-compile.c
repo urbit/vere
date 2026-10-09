@@ -493,7 +493,7 @@ _nc_call(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_noun arg, c3_t tal_t)
 
   switch ( _nc_kind(&jet_u, _nc_lent(arg)) ) {
     default:  u3_assert(0);
-    
+
     case _nc_kind_plain: {
       op_u = _nc_op(gen_u, tal_t ? _nc_jmp : _nc_cal);
       op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);
@@ -1890,21 +1890,41 @@ _nc_knit(u3_noun ned, u3_noun* arg, c3_h* i_h)
   }
 }
 
-/* _nc_save(): save the product of a memoized call, as nock.c does.
-**             RETAINS.
-*/
-static void
-_nc_save(c3_h cid_h, u3_noun key, u3_noun pro)
+static c3_m
+_nc_memo_seed(c3_h cid_h, c3_o all_o)
 {
-  if ( (u3z_memo_ford == cid_h) && (0 == u3R->ski.gul) ) {
-    u3z_save_m(cid_h, 136 + c3__ford, key, pro);
-  }
-  else if ( (u3z_memo_toss == cid_h)
-            ? (&(u3H->rod_u) != u3R)
-            : (0 == u3R->ski.gul) )
+  c3_m fun_m = ( c3n == all_o ) ? c3__ska
+             : ( u3z_memo_ford == cid_h ) ? 136 + c3__ford
+             : 144 + c3__nock;
+  //  currently calls to persistently memoized functions are pessimized so their
+  //  entire subjects are captured. That way only transient memoization is
+  //  partial, so it does not require migration or clearing on upgrade
+  u3_assert(u3z_memo_toss == cid_h || c3__ska != fun_m);
+  return fun_m;
+}
+
+/* _nc_save(): save the product of a memoized call, as nock.c does, but use our
+**             key partition if the subject is partial (all_o is c3n)
+**             RETAINS key, TRANSFERS pro
+*/
+static u3_noun
+_nc_save(c3_h cid_h, u3_noun key, u3_noun pro, c3_o all_o)
+{
+  if ( (u3z_memo_toss == cid_h)
+       ? (&(u3H->rod_u) != u3R)
+       : (0 == u3R->ski.gul) )
   {
-    u3z_save_m(cid_h, 144 + c3__nock, key, pro);
+    pro = u3z_save_m_dedup(cid_h, _nc_memo_seed(cid_h, all_o), key, pro);
   }
+  return pro;
+}
+
+/* _nc_find(): look for a memoization entry. RETAINS key
+*/
+static u3_weak
+_nc_find(c3_h cid_h, u3_noun key, c3_o all_o)
+{
+  return u3z_find_m(cid_h, _nc_memo_seed(cid_h, all_o), key);
 }
 
 /* _nc_normal(), _nc_senior(): where an indirect noun lives relative to
@@ -1975,6 +1995,7 @@ typedef struct __attribute__((__packed__)) {
   c3_h       des_h;   //  caller slot for the product
   u3_weak    key;     //  memo key to save the product under
   c3_h       cid_h;   //  memo cache
+  c3_o       all_o;   //  does memo cache capture the entire subject?
 } nc_frame;
 
 #define _nc_frame_w  c3_wiseof(nc_frame)
@@ -2174,18 +2195,18 @@ _nc_hint_hind(u3_atom tag, u3_noun tok)
 }
 
 /* _nc_burn_north(), _nc_burn_south(): run a program on its arguments.
-**   TRANSFERS the arguments.  Body in nock-compile-burn.h, instantiated
+**   TRANSFERS the arguments.  Body in nock-compile-burn.c, instantiated
 **   once per road direction.
 */
 #define _nc_mov_ws   (-1)
 #define _nc_burn  _nc_burn_north
-#include "nock-compile-burn.h"
+#include "nock-compile-burn.c"
 #undef _nc_mov_ws
 #undef _nc_burn
 
 #define _nc_mov_ws   1
 #define _nc_burn  _nc_burn_south
-#include "nock-compile-burn.h"
+#include "nock-compile-burn.c"
 #undef _nc_mov_ws
 #undef _nc_burn
 
