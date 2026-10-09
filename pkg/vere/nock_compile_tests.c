@@ -56,6 +56,14 @@ _setup(void)
     exit(1);
   }
   u3z(pil);
+
+  //  check reference counts after every run: u3m_soft_top() marks and
+  //  sweeps the inner road, recounting references, and a leak or a short
+  //  count aborts.  Off for benchmarking: the sweep is timed with the run.
+  //
+  if ( !getenv("U3NC_BENCH") ) {
+    u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
+  }
 }
 
 /* _scan_nc(): analyze and compile [bus fol] with the SKA core.
@@ -301,6 +309,119 @@ _test_memo_keep(void)
   return _test("memo keep", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_dies(): a value live into one arm of a branch only: dropped at
+**               the start of the other arm.  m is an indirect atom, so
+**               the drop (and every consume of x) moves a real reference.
+*/
+static c3_i
+_test_dies(void)
+{
+  u3_noun cor = _gate("|=  [n=@ m=@]\n"
+                      "^-  @\n"
+                      "=/  x  (add n m)\n"
+                      "?:  =(0 (mod n 2))  x\n"
+                      "$(n (dec n))\n",
+                      u3nc(7, u3i_string("an atom long enough to be indirect")));
+
+  return _test("dies", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_twice(): a register read twice by one op, consumed by one read:
+**                [t t] in CON, (add b b) in ADD, and c twice among the
+**                arguments of a tail call.
+*/
+static c3_i
+_test_twice(void)
+{
+  u3_noun cor = _gate("|=  [a=@ b=@ c=@]\n"
+                      "^-  *\n"
+                      "=/  t=*  0\n"
+                      "|-  ^-  *\n"
+                      "?:  =(0 a)  [t (add b b) c]\n"
+                      "$(a (dec a), b c, c c, t [t t])\n",
+                      u3nt(10, 3, 5));
+
+  return _test("twice", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_unused(): the product of a call that is never used (but may
+**                 crash, so the call stays): dropped right after it.
+*/
+static c3_i
+_test_unused(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  @\n"
+                      "=/  x  (dec n)\n"
+                      "=/  y  (scot %ud n)\n"
+                      "+(n)\n",
+                      5);
+
+  return _test("unused", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_bignum(): an indirect atom accumulated in a loop, consumed at
+**                 each step by the jet call that replaces it.
+*/
+static c3_i
+_test_bignum(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  @\n"
+                      "=/  acc=@  1\n"
+                      "|-  ^-  @\n"
+                      "?:  =(0 n)  acc\n"
+                      "$(n (dec n), acc (mul acc 3))\n",
+                      200);
+
+  return _test("bignum", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_rebuild(): a core edited and rebuilt each iteration, with its
+**                  parts deconstructed and consed back.
+*/
+static c3_i
+_test_rebuild(void)
+{
+  u3_noun cor = _gate("|=  [n=@ acc=[p=@ q=@ r=(list @)]]\n"
+                      "^-  [p=@ q=@ r=(list @)]\n"
+                      "?:  =(0 n)  acc\n"
+                      "$(n (dec n), acc acc(q +(q.acc), r [p.acc r.acc]))\n",
+                      u3nc(50, u3nt(1, 2, u3_nul)));
+
+  return _test("rebuild", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_owned(): a list built and transformed within one computation, so
+**                 that its cells are uniquely owned when deconstructed:
+**                 a tail-recursive map that conses as it takes apart, and
+**                 a non-tail one that conses after the recursive call.
+*/
+static c3_i
+_test_owned(void)
+{
+  u3_noun cor = _gate("|=  n=@\n"
+                      "^-  [(list @) (list @)]\n"
+                      "=/  l=(list @)  ~\n"
+                      "=.  l  |-  ^-  (list @)\n"
+                      "       ?:  =(0 n)  l\n"
+                      "       $(n (dec n), l [n l])\n"
+                      "=/  m=(list @)  ~\n"
+                      "=.  m  |-  ^-  (list @)\n"
+                      "       ?:  =(0 n)  m\n"
+                      "       $(n (dec n), m [n m])\n"
+                      ":-  =/  acc=(list @)  ~\n"
+                      "    |-  ^-  (list @)\n"
+                      "    ?~  l  acc\n"
+                      "    $(l t.l, acc [+(i.l) acc])\n"
+                      "|-  ^-  (list @)\n"
+                      "?~  m  ~\n"
+                      "[+(i.m) $(m t.m)]\n",
+                      10000);
+
+  return _test("owned", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* main(): run all test cases.
 */
 int
@@ -347,6 +468,30 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_memo_keep() ) {
+    exit(1);
+  }
+
+  if ( !_test_dies() ) {
+    exit(1);
+  }
+
+  if ( !_test_twice() ) {
+    exit(1);
+  }
+
+  if ( !_test_unused() ) {
+    exit(1);
+  }
+
+  if ( !_test_bignum() ) {
+    exit(1);
+  }
+
+  if ( !_test_rebuild() ) {
+    exit(1);
+  }
+
+  if ( !_test_owned() ) {
     exit(1);
   }
 

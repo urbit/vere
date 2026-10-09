@@ -28,7 +28,8 @@
   */
     struct _u3nc_prog;
     typedef struct {
-      u3_noun          bell;          //  [sock formula] of the callee
+      u3_noun          bell;          //  [sock formula] of the callee, or 0:
+                                      //  the keep set of a sweep (SWK)
       u3_noun          ring;          //  ~ or [path axis] of its jet
       u3p(struct _u3nc_prog) pog_p;   //  callee program, or 0 until linked
       c3_h             sot_h;         //  first argument slot (offset in sot_u)
@@ -62,6 +63,7 @@
       struct {
         c3_h       len_h;             //  number of argument slots
         c3_h*      sot_h;             //  argument slots of all call sites
+        c3_y*      kon_y;             //  whether each is consumed by its call
       } sot_u;
     } u3nc_prog;
 
@@ -75,6 +77,10 @@
       c3_d dir_d;   //  direct calls
       c3_d sub_d;   //  calls by subject
       c3_d jet_d;   //  jet hits
+      c3_d con_d;   //  cells made by CON
+      c3_d uni_d;   //  cells freed by a consuming HED or TAL: the only
+                    //  reference to the cell was the slot's
+      c3_d dro_d;   //  indirect nouns dropped by DRO
     } u3nc_stat;
 
     extern u3nc_stat u3nc_Stat;
