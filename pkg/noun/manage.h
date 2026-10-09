@@ -203,6 +203,11 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
         c3_c*
         u3m_pretty_path(u3_noun som);
+      
+      /* u3m_pretty_path(): prettyprint a path to string, road-allocated
+      */
+        c3_c*
+        u3m_pretty_path_road(u3_noun som);
 
       /* u3m_p(): dumb print with caption.  RETAIN.
       */

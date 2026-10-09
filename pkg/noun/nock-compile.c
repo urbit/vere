@@ -371,7 +371,9 @@ _nc_ring(u3_noun ring)
   if ( c3n == u3j_ring(ring, &(jet_u.ham_u), &(jet_u.arm_u)) ) {
     _nc_stat(rin_d);
     if ( _nc_verb_t ) {
-      u3l_log("u3nc: no driver for ring %s", u3m_pretty_path(u3h(ring)));
+      c3_c* pax_c = u3m_pretty_path_road(u3h(ring));
+      u3l_log("u3nc: no driver for ring %s", pax_c);
+      u3a_free(pax_c);
     }
   }
   else {
@@ -413,7 +415,7 @@ _nc_kind(const nc_jet* jet_u, c3_h len_h)
 static nc_op*
 _nc_jet_op(nc_gen* gen_u, const u3u_harm* arm_u, u3_noun arg)
 {
-  nc_op* op_u;
+  nc_op* op_u = NULL;
 
   if ( u3ua_dec == arm_u->arg_f ) {
     op_u = _nc_op(gen_u, _nc_dec);
@@ -423,9 +425,6 @@ _nc_jet_op(nc_gen* gen_u, const u3u_harm* arm_u, u3_noun arg)
     op_u = _nc_op(gen_u, _nc_add);
     op_u->src_h[0] = _nc_reg(gen_u, u3h(arg));
     op_u->src_h[1] = _nc_reg(gen_u, u3h(u3t(arg)));
-  }
-  else {
-    return NULL;
   }
 
   return op_u;
@@ -493,7 +492,8 @@ _nc_call(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_noun arg, c3_t tal_t)
   nc_op* op_u;
 
   switch ( _nc_kind(&jet_u, _nc_lent(arg)) ) {
-    default:
+    default:  u3_assert(0);
+    
     case _nc_kind_plain: {
       op_u = _nc_op(gen_u, tal_t ? _nc_jmp : _nc_cal);
       op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);

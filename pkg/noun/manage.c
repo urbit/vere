@@ -2283,6 +2283,19 @@ u3m_pretty_path(u3_noun som)
   return pre_c;
 }
 
+/* u3m_pretty_path(): prettyprint a path to string, road-allocated
+*/
+c3_c*
+u3m_pretty_path_road(u3_noun som)
+{
+  c3_w len_w = _cm_in_pretty_path(som, NULL);
+  c3_c* pre_c = u3a_malloc(len_w + 1);
+
+  _cm_in_pretty_path(som, pre_c);
+  pre_c[len_w] = 0;
+  return pre_c;
+}
+
 /* u3m_p(): dumb print with caption.
 */
 void
