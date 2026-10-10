@@ -39,8 +39,9 @@
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
+        u3_atom          atom;  // set if hun_y is owned by that atom, else 0
         c3_w             len_w;
-        c3_y             hun_y[0];
+        c3_y*            hun_y;
       } u3_hbod;
 
     /* u3_lane: ames lane (IP address and port)
