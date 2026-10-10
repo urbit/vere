@@ -81,6 +81,8 @@
 **    BRZ   s t      goto t unless s is 0
 **    HOP   t        goto t
 **    JMP   i        CAL in tail position
+**    JMS   i        JMP of the running program: its arguments move into
+**                   the parameter slots and it starts over (a loop)
 **    JMF   i        CAF in tail position
 **    JSP   i        CAP in tail position
 **    DON   s        return s, consumed
@@ -89,7 +91,7 @@
 **                   site i, the registers live into the block
 **    BOM            crash
 **
-**  DON, JMP, JMF and JSP end the activation, and come in a sweeping
+**  DON, JMP, JMS, JMF and JSP end the activation, and come in a sweeping
 **  variant (_1) that first drops every slot it doesn't take: it stands
 **  for the drops at the start of a block that does nothing else.
 */
@@ -139,6 +141,7 @@
   X(brz, BRZ, 1, 0, 0, 1, 0, 1, 0)                                       \
   X(hop, HOP, 0, 0, 0, 1, 0, 0, 0)                                       \
   X(jmp, JMP, 0, 0, 1, 0, 1, 1, 1)                                       \
+  X(jms, JMS, 0, 0, 1, 0, 1, 1, 1)                                       \
   X(jmf, JMF, 0, 0, 1, 0, 1, 1, 1)                                       \
   X(jsp, JSP, 0, 0, 1, 0, 1, 1, 1)                                       \
   X(don, DON, 1, 0, 0, 0, 0, 1, 1)                                       \
@@ -281,6 +284,8 @@ typedef struct {
   c3_h          lit_h;
   c3_h          reg_h;    //  registers
   c3_h          tot_h;    //  slots
+  u3_weak       bell;     //  bell of the program, if a tail call to it can
+                          //  be a self call (a direct program), else none
 } nc_gen;
 
 #define _nc_grow(arr, len, cap, typ)                                     \
@@ -976,8 +981,13 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
     }
 
     case c3__jmp: {
+      c3_y fam_y;
+
       u3x_cell(arg, &a, &b);
-      op_u = _nc_op(gen_u, _nc_jmp);
+      fam_y = ( (u3_none != gen_u->bell) && (c3y == u3r_sing(a, gen_u->bell)) )
+            ? _nc_jms
+            : _nc_jmp;
+      op_u = _nc_op(gen_u, fam_y);
       op_u->imm_h = _nc_dir(gen_u, a, _nc_ring(u3_nul), u3_none, b, c3n);
       return;
     }
@@ -1148,11 +1158,12 @@ _nc_key_cmp(const void* a_v, const void* b_v)
 
 /* _nc_live_in(): the registers of a chunk [lo, hi) live into each
 **                laid-out block, as bitsets of chu_h words in inn_d; liv_d
-**                is scratch.  If mar_t, mark the last use of each register
-**                on its paths as consumed (in the op's consume bits, or in
-**                the flags of its call site; a register read twice by an
-**                op is consumed by one read only), and the ops whose
-**                product is never used.
+**                is scratch.  If lvo_d, also the registers live before
+**                each op, a bitset per op index.  If mar_t, mark the last
+**                use of each register on its paths as consumed (in the
+**                op's consume bits, or in the flags of its call site; a
+**                register read twice by an op is consumed by one read
+**                only), and the ops whose product is never used.
 **
 **   The CFG is a DAG and the IR is in SSA form (a parameter of a merging
 **   block is defined by a move in each predecessor, or left undefined by
@@ -1162,7 +1173,7 @@ _nc_key_cmp(const void* a_v, const void* b_v)
 */
 static void
 _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
-            c3_d* inn_d, c3_d* liv_d, c3_t mar_t)
+            c3_d* inn_d, c3_d* liv_d, c3_d* lvo_d, c3_t mar_t)
 {
   c3_h i_h, j_h, k_h, r_h, kin_h, kid_h[2];
 
@@ -1228,6 +1239,11 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
             }
           }
         }
+      }
+
+      if ( lvo_d ) {
+        memcpy(lvo_d + ((c3_z)(blk_u->fir_h + j_h) * chu_h), liv_d,
+               chu_h * sizeof(c3_d));
       }
     }
 
@@ -1402,7 +1418,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
     c3_h lo_h = lo_d;
     c3_h hi_h = c3_min(reg_h, lo_d + ((c3_d)chu_h << 6));
 
-    _nc_live_in(gen_u, lo_h, hi_h, chu_h, inn_d, liv_d, 1);
+    _nc_live_in(gen_u, lo_h, hi_h, chu_h, inn_d, liv_d, NULL, 1);
 
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
@@ -1465,7 +1481,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       c3_h lo_h = lo_d;
       c3_h hi_h = c3_min(reg_h, lo_d + ((c3_d)chu_h << 6));
 
-      _nc_live_in(gen_u, lo_h, hi_h, chu_h, inn_d, liv_d, 0);
+      _nc_live_in(gen_u, lo_h, hi_h, chu_h, inn_d, liv_d, NULL, 0);
 
       for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
         c3_d* bin_d = _nc_in(gen_u->lay_h[i_h]);
@@ -1593,6 +1609,35 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   u3a_free(liv_h);
 }
 
+/* _nc_consumes(): whether the op consumes register r: as one of its own
+**                 sources, or as an argument of its call site.
+*/
+static c3_t
+_nc_consumes(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
+{
+  c3_h k_h;
+
+  for ( k_h = 0; k_h < _nc_fam[op_u->fam_y].src_y; k_h++ ) {
+    if ( (op_u->src_h[k_h] == r_h) && ((op_u->kon_y >> k_h) & 1) ) {
+      return 1;
+    }
+  }
+
+  if ( _nc_fam[op_u->fam_y].sot_y ) {
+    nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+
+    for ( k_h = 0; k_h < dir_u->len_h; k_h++ ) {
+      if (  (gen_u->pol_h[dir_u->sot_h + k_h] == r_h)
+         && gen_u->pok_y[dir_u->sot_h + k_h] )
+      {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+
 /* _nc_slots(): assign the registers to slots, rewriting the ops.
 **
 **   The CFG is a DAG, so the live range of a register lies within its
@@ -1602,9 +1647,21 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 **   move into a parameter aliases a register read by a later one.
 **   Intervals are assigned slots by linear scan; two intervals share a
 **   slot only if one ends strictly before the other starts, so an op
-**   never writes the slot it reads.  A drop (DRO) is a use at the
+**   never writes the slot it reads, except that the product of an op may
+**   take the slot of a source the op consumes: every op releases its
+**   consumed sources before it writes.  A drop (DRO) is a use at the
 **   position _nc_lives() gives it, so the interval covers every point
 **   where the slot may still hold the register.
+**
+**   The arguments of a self call (JMS) want the parameter slots they go
+**   to: a register feeding parameter i takes slot i when it is free, or
+**   when parameter i is dead before every op of its interval (or consumed
+**   by the op defining it) and any other register in the slot is consumed
+**   by that op too; the parameter's liveness is per op, so its uses in
+**   other branches don't stand in the way, and its drops do (a drop reads
+**   the slot where it is).  A parameter slot freed early is handed out
+**   last otherwise.  A self call whose arguments are all in place has
+**   nothing to move (_nc_emit()).
 */
 static void
 _nc_slots(nc_gen* gen_u, c3_h arg_h)
@@ -1612,16 +1669,63 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   c3_h  reg_h = c3_max(gen_u->reg_h, arg_h);
   c3_h* sta_h = u3a_malloc(reg_h * sizeof(c3_h));
   c3_h* end_h = u3a_calloc(reg_h, sizeof(c3_h));
+  c3_h* def_h = u3a_malloc(reg_h * sizeof(c3_h));  //  op at the start
+  c3_h* wan_h = u3a_malloc(reg_h * sizeof(c3_h));  //  wanted slot
+  c3_y* won_y = u3a_calloc(reg_h, sizeof(c3_y));   //  0 none, 1 one, 2 many
   c3_h* sot_h = u3a_malloc(reg_h * sizeof(c3_h));
   c3_d* key_d = u3a_malloc(reg_h * sizeof(c3_d));
   c3_h* act_h = u3a_malloc(reg_h * sizeof(c3_h));
   c3_h* fre_h = u3a_malloc(reg_h * sizeof(c3_h));
   c3_h  key_n_h = 0, act_n_h = 0, fre_n_h = 0, tot_h = 0;
+  c3_h  pch_h = (arg_h + 63) >> 6;                 //  words of parameters
+  c3_d* plv_d = NULL;                              //  parameters live before each op
+  c3_t  wan_t = 0;
   c3_h  i_h, r_h;
 
   for ( r_h = 0; r_h < reg_h; r_h++ ) {
     sta_h[r_h] = ( r_h < arg_h ) ? 0 : _nc_none;
     sot_h[r_h] = _nc_none;
+    def_h[r_h] = _nc_none;
+    wan_h[r_h] = _nc_none;
+  }
+
+  //  the wants of the arguments of self calls; a parameter is in its
+  //  own slot, and a register wanted in two places wants neither
+  //
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_h]);
+
+    if ( _nc_jms == op_u->fam_y ) {
+      nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+      c3_h    k_h;
+
+      for ( k_h = 0; k_h < dir_u->len_h; k_h++ ) {
+        r_h = gen_u->pol_h[dir_u->sot_h + k_h];
+
+        if ( r_h < arg_h ) {
+          continue;
+        }
+        else if ( !won_y[r_h] ) {
+          won_y[r_h] = 1;
+          wan_h[r_h] = k_h;
+          wan_t = 1;
+        }
+        else if ( wan_h[r_h] != k_h ) {
+          won_y[r_h] = 2;
+          wan_h[r_h] = _nc_none;
+        }
+      }
+    }
+  }
+
+  if ( wan_t ) {
+    c3_d* pin_d = u3a_malloc((c3_z)gen_u->blk_h * pch_h * sizeof(c3_d));
+    c3_d* pli_d = u3a_malloc(pch_h * sizeof(c3_d));
+
+    plv_d = u3a_calloc((c3_z)gen_u->opn_h * pch_h, sizeof(c3_d));
+    _nc_live_in(gen_u, 0, arg_h, pch_h, pin_d, pli_d, plv_d, 0);
+    u3a_free(pin_d);
+    u3a_free(pli_d);
   }
 
   //  intervals; a drop reads its register at the position _nc_lives()
@@ -1646,6 +1750,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
     if ( _nc_none != op_u->dst_h ) {
       if ( _nc_none == sta_h[op_u->dst_h] ) {
         sta_h[op_u->dst_h] = pos_h;
+        def_h[op_u->dst_h] = i_h;
       }
       end_h[op_u->dst_h] = c3_max(end_h[op_u->dst_h], pos_h);
     }
@@ -1668,25 +1773,100 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   qsort(key_d, key_n_h, sizeof(c3_d), _nc_key_cmp);
 
   for ( i_h = 0; i_h < key_n_h; i_h++ ) {
-    c3_h j_h;
+    c3_h j_h, wan = _nc_none;
 
     r_h = (c3_h)key_d[i_h];
 
     //  iterate over all active slots, freeing the stale ones by
     //  putting them in the free list and rewriting the slot in act_h
     //  with the item from the end. The replacing item is not yet examined
-    //  so we advance j_h in the else branch only
+    //  so we advance j_h in the else branch only.  A slot still held by
+    //  another active register (a parameter's, taken by an argument of a
+    //  self call) stays out of the free list; a parameter slot goes to
+    //  the bottom of it, to be handed out last.
     for ( j_h = 0; j_h < act_n_h; ) {
       if ( end_h[act_h[j_h]] < sta_h[r_h] ) {
-        fre_h[fre_n_h++] = sot_h[act_h[j_h]];
-        act_h[j_h]     = act_h[--act_n_h];
+        c3_h sot = sot_h[act_h[j_h]];
+        c3_h k_h;
+
+        act_h[j_h] = act_h[--act_n_h];
+
+        for ( k_h = 0; k_h < act_n_h; k_h++ ) {
+          if ( sot_h[act_h[k_h]] == sot ) {
+            break;
+          }
+        }
+
+        if ( k_h < act_n_h ) {
+          continue;
+        }
+        else if ( sot < arg_h ) {
+          memmove(fre_h + 1, fre_h, fre_n_h * sizeof(c3_h));
+          fre_h[0] = sot;
+          fre_n_h++;
+        }
+        else {
+          fre_h[fre_n_h++] = sot;
+        }
       }
       else {
         j_h++;
       }
     }
 
-    sot_h[r_h]     = fre_n_h ? fre_h[--fre_n_h] : tot_h++;
+    //  the wanted slot, if it is free; or if its parameter is dead before
+    //  every op of this register's interval, except consumed by the op
+    //  defining it, and so is any other register holding the slot
+    //
+    if ( _nc_none != wan_h[r_h] ) {
+      for ( j_h = 0; j_h < fre_n_h; j_h++ ) {
+        if ( fre_h[j_h] == wan_h[r_h] ) {
+          wan = fre_h[j_h];
+          fre_h[j_h] = fre_h[--fre_n_h];
+          break;
+        }
+      }
+
+      if ( (_nc_none == wan) && (_nc_none != def_h[r_h]) && plv_d ) {
+        nc_op* def_u = &(gen_u->ops_u[def_h[r_h]]);
+        c3_h   par_h = wan_h[r_h];
+        c3_t   fit_t = 1;
+        c3_h   k_h;
+
+        for ( k_h = sta_h[r_h]; fit_t && (k_h <= end_h[r_h]); k_h++ ) {
+          if ( _nc_bit_get(plv_d + ((c3_z)(k_h - 1) * pch_h), par_h) ) {
+            fit_t = (k_h == sta_h[r_h]) && _nc_consumes(gen_u, def_u, par_h);
+          }
+        }
+
+        for ( j_h = 0; fit_t && (j_h < act_n_h); j_h++ ) {
+          c3_h act = act_h[j_h];
+
+          if ( (sot_h[act] == par_h) && (act != par_h) ) {
+            fit_t = (end_h[act] == sta_h[r_h])
+                 && _nc_consumes(gen_u, def_u, act);
+          }
+        }
+
+        if ( fit_t ) {
+          for ( j_h = 0; j_h < act_n_h; ) {
+            c3_h act = act_h[j_h];
+
+            if ( (sot_h[act] == par_h) && (act != par_h) ) {
+              act_h[j_h] = act_h[--act_n_h];
+            }
+            else {
+              j_h++;
+            }
+          }
+          wan = par_h;
+        }
+      }
+    }
+
+    sot_h[r_h] = ( _nc_none != wan ) ? wan
+               : fre_n_h ? fre_h[--fre_n_h]
+               : tot_h++;
     act_h[act_n_h++] = r_h;
   }
 
@@ -1715,6 +1895,10 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
 
   u3a_free(sta_h);
   u3a_free(end_h);
+  u3a_free(def_h);
+  u3a_free(wan_h);
+  u3a_free(won_y);
+  u3a_free(plv_d);
   u3a_free(sot_h);
   u3a_free(key_d);
   u3a_free(act_h);
@@ -2138,6 +2322,31 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   u3nc_prog* pog_u;
   c3_h       byc_h, i_h, j_h;
 
+  //  a self call that doesn't sweep and finds every argument in its
+  //  parameter slot has nothing to do but start over: a jump to the entry
+  //
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_h]);
+
+    if ( (_nc_jms == op_u->fam_y) && !op_u->kon_y ) {
+      nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+
+      for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
+        if (  (gen_u->pol_h[dir_u->sot_h + j_h] != j_h)
+           || !gen_u->pok_y[dir_u->sot_h + j_h] )
+        {
+          break;
+        }
+      }
+
+      if ( j_h == dir_u->len_h ) {
+        op_u->fam_y = _nc_hop;
+        op_u->imm_h = 0;
+        op_u->tar_h = _nc_blk(gen_u, 0);
+      }
+    }
+  }
+
   //  Fixed-point loop on the block offsets. Immediate arguments only widen
   //  and their size is capped, so this converges. 
   //
@@ -2224,10 +2433,12 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   return pog_u;
 }
 
-/* _nc_build(): compile a straight [need n-args blocks].
+/* _nc_build(): compile a straight [need n-args blocks]; bell: the bell of
+**              the program if a tail call to it is a self call (a direct
+**              program), else u3_none.  RETAINS bell.
 */
 static u3nc_prog*
-_nc_build(u3_noun straight)
+_nc_build(u3_noun straight, u3_weak bell)
 {
   nc_gen     gen_u = {0};
   u3nc_prog* pog_u;
@@ -2239,6 +2450,7 @@ _nc_build(u3_noun straight)
 
   gen_u.idx_p = u3h_new();
   gen_u.lit_p = u3h_new();
+  gen_u.bell  = bell;
 
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
@@ -2369,12 +2581,14 @@ _nc_link(u3nc_prog* pog_u)
   }
 }
 
-/* _nc_compile(): compile a straight and link it.  TRANSFERS.
+/* _nc_compile(): compile a straight and link it.  TRANSFERS straight;
+**                RETAINS bell, the program's own if it is direct (see
+**                _nc_build()), else u3_none.
 */
 static u3nc_prog*
-_nc_compile(u3_noun straight)
+_nc_compile(u3_noun straight, u3_weak bell)
 {
-  u3nc_prog* pog_u = _nc_build(straight);
+  u3nc_prog* pog_u = _nc_build(straight, bell);
   _nc_link(pog_u);
   return pog_u;
 }
@@ -2435,7 +2649,8 @@ _nc_callee(u3nc_dire* dir_u)
   key = _nc_dir_key(dir_u->bell, dir_u->mon_o);
 
   if ( !(gop_u = _nc_dir_get(key)) ) {
-    gop_u = _nc_compile(u3d_dire(dir_u->bell, dir_u->mon_o));
+    gop_u = _nc_compile(u3d_dire(dir_u->bell, dir_u->mon_o),
+                        ( c3n == dir_u->mon_o ) ? dir_u->bell : u3_none);
     u3h_put(u3R->ska.dir_p, key, _nc_of(gop_u));
   }
 
@@ -2462,7 +2677,7 @@ _nc_entry(u3_noun sub, u3_noun fol)
   if ( !pog_u ) {
     u3_noun bell, old, lis;
 
-    pog_u = _nc_compile(u3d_full(sub, fol, &bell));
+    pog_u = _nc_compile(u3d_full(sub, fol, &bell), u3_none);
 
     old = u3h_get(u3R->ska.ent_p, fol);
     lis = u3nc(u3nc(u3k(u3h(bell)), _nc_of(pog_u)),

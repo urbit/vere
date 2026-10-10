@@ -100,7 +100,9 @@ static const OP_F TAB[] = { OPCODES };
 //  live (_nc_lives()):
 //
 //  PUT(d, v): the reference v into slot d, which is empty: the register
-//             that held it was consumed or dropped
+//             that held it was consumed or dropped.  An op's product may
+//             share the slot of a source it consumes, so an op releases
+//             its consumed sources before it writes
 //  TAKE(s, K): the noun in slot s, with a reference: the slot's own if K,
 //              consuming it (the slot is zeroed), else a new one
 //  TAKEN(v, s, K): the same for v, already read from slot s: an op reading
@@ -112,8 +114,14 @@ static const OP_F TAB[] = { OPCODES };
 //
 #if defined(U3NC_CHECK) || defined(C3DBG)
 #  define PUT(d, v)  do {                                                       \
-    u3_assert( 0 == reg[d] );                                                   \
-    reg[d] = (v);                                                               \
+    u3_noun _val = (v);    /*  first: it may consume the slot it goes to  */   \
+    if ( reg[d] ) {                                                             \
+      fprintf(stderr, "u3nc: slot %u not empty before op at %u of program %p\r\n", \
+              (c3_w)(d), (c3_w)(ip - pog_u->byc_u.ops_y), (void*)pog_u);        \
+      _nc_print(pog_u);                                                         \
+      u3_assert( 0 == reg[d] );                                                 \
+    }                                                                           \
+    reg[d] = _val;                                                              \
   } while ( 0 )
 #  define EMPTY()  do {                                                         \
     for ( c3_h _i = 0; _i < pog_u->tot_h; _i++ ) {                              \
@@ -386,8 +394,9 @@ static const OP_F TAB[] = { OPCODES };
 **   arguments to a temporary above its own activation, which is empty by
 **   then (every other slot was consumed or dropped, or the call sweeps
 **   them), and moves the temporary down in its place, under the same
-**   frame; a tail call of the running program moves them back into its
-**   parameter slots and keeps the activation.
+**   frame.  A tail call of the running program (JMS, a loop) moves them
+**   back into its parameter slots and keeps the activation; if they are
+**   all in place already, the compiler made it a jump to the entry.
 */
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
@@ -503,23 +512,27 @@ OP2K(INC, a_h, d_h, BODY_INC)
 //  jetted calls the interpreter knows: the jets retain their arguments
 //
 #define BODY_DEC(K)                                                             \
+  u3_noun x = reg[a_h], pro;                                                    \
   _nc_stat(jet_d);                                                              \
-  if ( c3n == u3ud(reg[a_h]) ) {                                                \
+  if ( c3n == u3ud(x) ) {                                                       \
     u3m_bail(c3__fail);                                                         \
   }                                                                             \
-  PUT(d_h, u3qa_dec(reg[a_h]));                                                 \
+  pro = u3qa_dec(x);                                                            \
   DROP(a_h, K);                                                                 \
+  PUT(d_h, pro);                                                                \
   BURN();
 OP2K(DEC, a_h, d_h, BODY_DEC)
 
 #define BODY_ADD(KA, KB)                                                        \
+  u3_noun x = reg[a_h], y = reg[b_h], pro;                                      \
   _nc_stat(jet_d);                                                              \
-  if ( (c3n == u3ud(reg[a_h])) || (c3n == u3ud(reg[b_h])) ) {                   \
+  if ( (c3n == u3ud(x)) || (c3n == u3ud(y)) ) {                                 \
     u3m_bail(c3__fail);                                                         \
   }                                                                             \
-  PUT(d_h, u3qa_add(reg[a_h], reg[b_h]));                                       \
+  pro = u3qa_add(x, y);                                                         \
   DROP(a_h, KA);                                                                \
   DROP(b_h, KB);                                                                \
+  PUT(d_h, pro);                                                                \
   BURN();
 OP3KK(ADD, a_h, b_h, d_h, BODY_ADD)
 
@@ -540,17 +553,19 @@ OP3KK(CON, a_h, b_h, d_h, BODY_CON)
 
 #define BODY_HED(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
+  u3_noun h = ( c3y == u3du(x) ) ? GAIN(u3h(x)) : 0;                            \
   _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
-  PUT(d_h, ( c3y == u3du(x) ) ? GAIN(u3h(x)) : 0);                              \
   DROP(a_h, K);                                                                 \
+  PUT(d_h, h);                                                                  \
   BURN();
 OP2K(HED, a_h, d_h, BODY_HED)
 
 #define BODY_TAL(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
+  u3_noun t = ( c3y == u3du(x) ) ? GAIN(u3t(x)) : 0;                            \
   _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
-  PUT(d_h, ( c3y == u3du(x) ) ? GAIN(u3t(x)) : 0);                              \
   DROP(a_h, K);                                                                 \
+  PUT(d_h, t);                                                                  \
   BURN();
 OP2K(TAL, a_h, d_h, BODY_TAL)
 
@@ -605,7 +620,7 @@ OP2K(HDP, a_h, b_h, BODY_HDP)
 OP2K(HDE, a_h, b_h, BODY_HDE)
 
 #define BODY_SPY(KA, KB)                                                        \
-  u3_noun x = u3m_soft_esc(GAIN(reg[a_h]), GAIN(reg[b_h]));                     \
+  u3_noun x = u3m_soft_esc(GAIN(reg[a_h]), GAIN(reg[b_h])), pro;                \
   if ( c3n == u3du(x) ) {                                                       \
     u3m_bail(u3nc(1, GAIN(reg[b_h])));                                          \
   }                                                                             \
@@ -613,10 +628,11 @@ OP2K(HDE, a_h, b_h, BODY_HDE)
     u3t_push(u3nt(c3__hunk, GAIN(reg[a_h]), GAIN(reg[b_h])));                   \
     u3m_bail(c3__exit);                                                         \
   }                                                                             \
-  PUT(d_h, GAIN(u3t(u3t(x))));                                                  \
+  pro = GAIN(u3t(u3t(x)));                                                      \
   LOSE(x);                                                                      \
   DROP(a_h, KA);                                                                \
   DROP(b_h, KB);                                                                \
+  PUT(d_h, pro);                                                                \
   BURN();
 OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
 
@@ -823,10 +839,7 @@ OP1(HOP, a_h, BODY_HOP)
 
 //  a tail call: the arguments are the last registers alive, so the
 //  caller's slots are all empty once they have moved, unless the block
-//  left its drops to the call: S.  A call of the running program (a
-//  loop) then needs no new activation: the arguments go back into the
-//  parameter slots, the other slots are empty already, and the frame is
-//  the caller's and stays.
+//  left its drops to the call: S
 //
 #define BODY_JMP(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -843,14 +856,6 @@ OP1(HOP, a_h, BODY_HOP)
   MOVE();                                                                       \
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
-  if ( gop_u == pog_u ) {                                                       \
-    for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
-      reg[_i] = nex[_i];                                                        \
-    }                                                                           \
-    POP(len_h);                                                                 \
-    ip = pog_u->byc_u.ops_y;                                                    \
-    BURN();                                                                     \
-  }                                                                             \
   POP(len_h);                                                                   \
   fam = *(nc_frame*)TOP(_nc_frame_w);                                           \
   POP(_nc_frame_w + pog_u->tot_h);                                              \
@@ -860,6 +865,31 @@ OP1(HOP, a_h, BODY_HOP)
   *(nc_frame*)PUSH(_nc_frame_w) = fam;                                          \
   ENTER(len_h);
 OP1K(JMP, a_h, BODY_JMP)
+
+//  a tail call of the running program: no new activation, the arguments
+//  go back into the parameter slots (through the temporary: they may
+//  come from each other's slots), the other slots are empty already, and
+//  the frame is the caller's and stays
+//
+#define BODY_JMS(S)                                                             \
+  u3nc_dire* dir_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun*   nex;                                                               \
+  SITE();                                                                       \
+  GATHER(len_h);                                                                \
+  _nc_stat(dir_d);                                                              \
+  MOVE();                                                                       \
+  SWEEP(S);                                                                     \
+  EMPTY();                                                                      \
+  for ( c3_h _i = 0; _i < len_h; _i++ ) {                                       \
+    reg[_i] = nex[_i];                                                          \
+  }                                                                             \
+  POP(len_h);                                                                   \
+  ip = pog_u->byc_u.ops_y;                                                      \
+  BURN();
+OP1K(JMS, a_h, BODY_JMS)
 
 #define BODY_JMF(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -1025,6 +1055,7 @@ OP(BOM) ARGS CONV
 #undef BODY_BRZ
 #undef BODY_HOP
 #undef BODY_JMP
+#undef BODY_JMS
 #undef BODY_JMF
 #undef BODY_JSP
 #undef BODY_DON
