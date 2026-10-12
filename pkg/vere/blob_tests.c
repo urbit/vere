@@ -2797,63 +2797,186 @@ _test_canon(void)
   _pier_done();
 }
 
-/* main(): run all blob tests.
+/* _epoc_env(): an LMDB env for epoch [epo_d] under the pier's log dir.
 */
-/* _test_boot_refs(): boot rebuilds eve_w from the epoch's BLOBS table
-**   before the gc reads use_w, so a snapshot's stale event count (its
-**   event chopped away) cannot keep a dead blob's record alive.
+static MDB_env*
+_epoc_env(c3_d epo_d)
+{
+  c3_c epo_c[2048];
+  snprintf(epo_c, sizeof(epo_c), "%s/.urb/log/0i%" PRIu64, _tmp_pier, epo_d);
+  _check( 0 == mkdir(epo_c, 0700), "mkdir %s: %s", epo_c, strerror(errno) );
+
+  MDB_env* env_u = u3_lmdb_init(epo_c, 1ULL << 30);
+  _check( env_u, "lmdb init %s failed", epo_c );
+  return env_u;
+}
+
+/* _epoc_event(): write event [eve_d] into [env_u] with a BLOBS row
+**   naming [len_z] blob ids.
 */
 static void
-_test_boot_refs(void)
+_epoc_event(MDB_env* env_u, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 {
-  MDB_env* env_u = _log_env("boot refs");
+  c3_y   byt_y[4] = { 1, 2, 3, 4 };
+  void*  byt_p[1] = { byt_y };
+  size_t siz_i[1] = { sizeof(byt_y) };
+  c3_d*  bid_p[1] = { ids_d };
+  c3_z   bid_z[1] = { len_z };
+  _check( c3y == u3_lmdb_save(env_u, eve_d, 1, byt_p, siz_i, bid_p, bid_z),
+          "event %" PRIu64 " save failed", eve_d );
+}
 
-  u3_dire dir_u = { .pax_c = _tmp_pier };
-  u3_disk log_u = { .dir_u = &dir_u, .mdb_u = env_u };
-
-  const c3_y dat_y[] = "a record whose event chop already deleted";
-  const c3_y alt_y[] = "a record a live bob still holds";
-  c3_h mug_h = 0, seq_h = 0, mag_h = 0, saq_h = 0;
-  _check(  (c3y == _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h))
-        && (c3y == _blob_save(alt_y, sizeof(alt_y) - 1, &mag_h, &saq_h)),
+/* _blob_ref(): a blob with [eve_w] event references and no live bob.
+*/
+static c3_d
+_blob_ref(const c3_c* dat_c, c3_w eve_w)
+{
+  c3_h mug_h = 0, seq_h = 0;
+  _check( c3y == _blob_save((const c3_y*)dat_c, strlen(dat_c), &mug_h, &seq_h),
           "save failed" );
 
-  //  the stale shape: use=1 eve=1 les=0 with no event in the log
+  u3_atom   bob   = u3i_blob(mug_h, seq_h);
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  blb_u->eve_w += eve_w;
+  blb_u->use_w += eve_w;
+  u3z(bob);
+
+  return ((c3_d)mug_h << 32) | seq_h;
+}
+
+static u3a_blob*
+_blob_rec(c3_d bid_d)
+{
+  return u3a_blob_get((c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF));
+}
+
+/* _test_chop_refs(): chop retires the references of the epochs it
+**   deletes and leaves the retained epochs' references alone, so a
+**   blob held only by a dying epoch goes and one held by a surviving
+**   epoch stays, whatever the snapshot said.
+*/
+static void
+_test_chop_refs(void)
+{
+  _pier_make("chop refs");
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  _check( 0 == mkdir(log_c, 0700), "mkdir %s: %s", log_c, strerror(errno) );
+
+  //  a: epoch 0 only.  b: epoch 1 only.  c: epochs 0 and 2.
   //
+  c3_d a_d = _blob_ref("held by the epoch chop deletes", 1);
+  c3_d b_d = _blob_ref("held by the epoch chop keeps", 1);
+  c3_d c_d = _blob_ref("held by a dying and a surviving epoch", 2);
+
   {
-    u3_atom bob = u3i_blob(mug_h, seq_h);
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    blb_u->eve_w += 1; blb_u->use_w += 1;
-    u3z(bob);
-    _check( (1 == blb_u->use_w) && (1 == blb_u->eve_w), "stale shape" );
+    MDB_env* env_u = _epoc_env(0);
+    c3_d     ids_d[2] = { a_d, c_d };
+    _epoc_event(env_u, 1, ids_d, 2);
+    u3_lmdb_exit(env_u);
+
+    env_u = _epoc_env(1);
+    _epoc_event(env_u, 2, &b_d, 1);
+    u3_lmdb_exit(env_u);
   }
 
-  //  the same stale count under a bob arvo still holds
-  //
-  u3_atom bab = u3i_blob(mag_h, saq_h);
+  MDB_env* env_u = _epoc_env(2);
+  _epoc_event(env_u, 3, &c_d, 1);
+
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_dire com_u = { .pax_c = log_c };
+  u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
+                    .mdb_u = env_u, .epo_d = 2 };
+
+  u3_disk_chop(&log_u, 0);
+
+  _check( !_blob_rec(a_d) && (c3n == u3b_live(_tmp_pier, (c3_h)(a_d >> 32), (c3_h)a_d)),
+          "blob of the deleted epoch survived" );
+  _check( _blob_rec(b_d) && (1 == _blob_rec(b_d)->eve_w) && (1 == _blob_rec(b_d)->use_w),
+          "blob of the kept epoch disturbed" );
+  _check( _blob_rec(c_d) && (1 == _blob_rec(c_d)->eve_w) && (1 == _blob_rec(c_d)->use_w),
+          "shared blob not retired once" );
+
   {
-    u3a_blob* blb_u = u3a_blob_get(mag_h, saq_h);
-    blb_u->eve_w += 1; blb_u->use_w += 1;
+    c3_c epo_c[2048];
+    snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_c);
+    _check( c3n == _path_exists(epo_c), "epoch 0 not deleted" );
   }
 
-  u3_disk_blob_refs(&log_u);
-  u3_disk_blob_gc(&log_u);
-
-  _check(  !u3a_blob_get(mug_h, seq_h)
-        && (c3n == u3b_live(_tmp_pier, mug_h, seq_h)),
-          "stale record survived boot" );
-  {
-    u3a_blob* blb_u = u3a_blob_get(mag_h, saq_h);
-    _check(  blb_u && (1 == blb_u->use_w) && (0 == blb_u->eve_w)
-          && (c3y == u3b_live(_tmp_pier, mag_h, saq_h)),
-            "live bob's record disturbed" );
-  }
-
-  u3z(bab);
   u3_lmdb_exit(env_u);
+  _blob_rec(b_d)->eve_w = 0; _blob_rec(b_d)->use_w = 0;
+  _blob_rec(c_d)->eve_w = 0; _blob_rec(c_d)->use_w = 0;
+  u3a_blob_drop((c3_h)(b_d >> 32), (c3_h)b_d);
+  u3a_blob_drop((c3_h)(c_d >> 32), (c3_h)c_d);
   _pier_done();
 }
 
+/* _test_image_refs(): a loom whose counts are not current (an epoch's
+**   frozen image) has eve_w rebuilt from every retained epoch, counting
+**   only events up to the loom's own, so replay can count the rest; a
+**   record the retained log never names ends at zero.
+*/
+static void
+_test_image_refs(void)
+{
+  _pier_make("image refs");
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  _check( 0 == mkdir(log_c, 0700), "mkdir %s: %s", log_c, strerror(errno) );
+
+  //  stale image: d counted 5, e counted 1; the log names d at events
+  //  2 and 5 (two epochs) and e nowhere
+  //
+  c3_d d_d = _blob_ref("named by both retained epochs", 5);
+  c3_d e_d = _blob_ref("named by an epoch chop deleted", 1);
+
+  {
+    MDB_env* env_u = _epoc_env(1);
+    _epoc_event(env_u, 1, 0, 0);
+    _epoc_event(env_u, 2, &d_d, 1);
+    _epoc_event(env_u, 3, 0, 0);
+    u3_lmdb_exit(env_u);
+  }
+
+  MDB_env* env_u = _epoc_env(2);
+  _epoc_event(env_u, 4, 0, 0);
+  _epoc_event(env_u, 5, &d_d, 1);
+
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_dire com_u = { .pax_c = log_c };
+  u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
+                    .mdb_u = env_u, .epo_d = 2 };
+
+  //  the image is at event 4: event 2 counts, event 5 is replay's
+  //
+  u3_disk_blob_refs(&log_u, 4);
+  _check( (1 == _blob_rec(d_d)->eve_w) && (1 == _blob_rec(d_d)->use_w),
+          "rebuild counted %" PRIc3_w ", want 1", _blob_rec(d_d)->eve_w );
+  _check( _blob_rec(e_d) && (0 == _blob_rec(e_d)->eve_w) && (0 == _blob_rec(e_d)->use_w),
+          "stale record not zeroed" );
+
+  //  through the whole log, both events count
+  //
+  u3_disk_blob_refs(&log_u, 5);
+  _check( 2 == _blob_rec(d_d)->eve_w, "rebuild to the end counted %" PRIc3_w,
+          _blob_rec(d_d)->eve_w );
+
+  u3_disk_blob_gc(&log_u);
+  _check( !_blob_rec(e_d) && (c3n == u3b_live(_tmp_pier, (c3_h)(e_d >> 32), (c3_h)e_d)),
+          "stale blob survived the gc" );
+  _check( c3y == u3b_live(_tmp_pier, (c3_h)(d_d >> 32), (c3_h)d_d),
+          "referenced blob deleted" );
+
+  u3_lmdb_exit(env_u);
+  _blob_rec(d_d)->eve_w = 0; _blob_rec(d_d)->use_w = 0;
+  u3a_blob_drop((c3_h)(d_d >> 32), (c3_h)d_d);
+  _pier_done();
+}
+
+/* main(): run all blob tests.
+*/
 int
 main(int argc, char* argv[])
 {
@@ -2906,7 +3029,8 @@ main(int argc, char* argv[])
   _test_hand_access();
   _test_lifecycle();
   _test_blobs_persist();
-  _test_boot_refs();
+  _test_chop_refs();
+  _test_image_refs();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

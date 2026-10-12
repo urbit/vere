@@ -48,13 +48,13 @@
 **        les_h unit)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_w
-**     7. chop rebuilds eve_w from the latest epoch's LMDB BLOBS table
-**        (replay never crosses epochs), then deletes files (and on-disk
-**        orphans) at use_w == 0
-**     *. boot: u3_disk_blob_refs rebuilds eve_w from the epoch's BLOBS
-**        table (a snapshot's count is never trusted) and _find_home
-**        zeroed les_h (no lease outlives a restart); u3_disk_blob_gc
-**        then reclaims any blob now provably unreferenced
+**     7. chop retires the references of every epoch it deletes (a
+**        retained epoch is a replay source until chop removes it),
+**        then deletes files (and on-disk orphans) at use_w == 0
+**     *. boot: eve_w comes with the snapshot; _find_home zeroed les_h
+**        (no lease outlives a restart); u3_disk_blob_gc reclaims any
+**        blob nothing holds.  a full replay from an epoch's frozen
+**        image rebuilds eve_w first (u3_disk_blob_refs)
 */
 
 /* _mars_lease: a king lease awaiting expiry.
@@ -1508,9 +1508,9 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 }
 
 /* _mars_play_blobs(): check that every blob a replayed event in
-** [fir_d, las_d] references is still in the store.  the counts it
-** bumps are provisional: u3_disk_blob_refs rebuilds eve_w for the whole
-** epoch once replay is done, so the lasting effect here is the check.
+** [fir_d, las_d] references is still in the store, and count the
+** references: the loaded snapshot's eve_w stops at its own event, and
+** replayed events are the ones after it.
 **
 **   returns c3n if any referenced blob file is missing — replay of
 **   those events cannot reproduce their state, so the caller must
@@ -1998,6 +1998,15 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_h = u3r_mug(u3A->roc);
 
+  //  eve_w travels with the snapshot, kept current by commit and chop.
+  //  a full replay loads the epoch's frozen image instead, whose counts
+  //  predate every chop since the roll: rebuild them from the retained
+  //  epochs up to the image's own event, and let replay count the rest
+  //
+  if ( u3_dlod_epoc == lod_e ) {
+    u3_disk_blob_refs(mar_u->log_u, mar_u->dun_d);
+  }
+
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
     u3_disk_exit(mar_u->log_u);
@@ -2036,13 +2045,10 @@ u3_mars_work(u3_mars* mar_u)
     exit(0);
   }
 
-  //  rebuild eve_w from the epoch's BLOBS table: a snapshot's counts
-  //  can name events chop has since deleted (play -f restores the
-  //  epoch's frozen snapshot, not the one chop saved).  _find_home
-  //  zeroed les_h, and no lease outlives a restart, so the gc may then
-  //  reclaim any blob provably unreferenced.
+  //  eve_w came with the snapshot and replay counted the events after
+  //  it; _find_home zeroed les_h, and no lease outlives a restart.  so
+  //  the gc may reclaim any blob nothing holds.
   //
-  u3_disk_blob_refs(mar_u->log_u);
   u3_disk_blob_gc(mar_u->log_u);
 
   //  send ready status message

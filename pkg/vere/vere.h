@@ -985,15 +985,16 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
-      /* u3_disk_blob_refs(): rebuild blob eve_w from the latest epoch's
-      **   BLOBS table, creating entries as needed.
+      /* u3_disk_blob_refs(): rebuild blob eve_w from every retained
+      **   epoch's BLOBS table for events up to [eve_d], creating entries
+      **   as needed.  only for a loom whose counts are not current: a
+      **   full replay from an epoch's frozen image, or queu.
       */
         void
-        u3_disk_blob_refs(u3_disk* log_u);
+        u3_disk_blob_refs(u3_disk* log_u, c3_d eve_d);
 
       /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
-      **   orphans with no bank entry.  run at boot (after replay and the
-      **   eve_w rebuild) or as part of chop, once use_w is reconstructed.
+      **   orphans with no bank entry.  run at boot and after chop.
       */
         void
         u3_disk_blob_gc(u3_disk* log_u);
