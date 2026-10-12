@@ -28,8 +28,7 @@
   */
     struct _u3nc_prog;
     typedef struct {
-      u3_noun          bell;          //  [sock formula] of the callee, or 0:
-                                      //  the keep set of a sweep (SWK)
+      u3_noun          bell;          //  [sock formula] of the callee
       u3_noun          ring;          //  ~ or [path axis] of its jet
       u3p(struct _u3nc_prog) pog_p;   //  callee program, or 0 until linked
       c3_h             sot_h;         //  first argument slot (offset in sot_u)

@@ -944,28 +944,6 @@ OP1K(DON, a_h, BODY_DON)
   BURN();
 OP1(DRO, a_h, BODY_DRO)
 
-//  a sweep that keeps the registers live into the block: they are set
-//  aside above the activation while the slots are swept
-//
-#define BODY_SWK()                                                              \
-  u3nc_dire* dir_u;                                                             \
-  c3_h*      sot_h;                                                             \
-  c3_y*      kon_y;                                                             \
-  c3_h       len_h;                                                             \
-  u3_noun*   nex;                                                               \
-  SITE();                                                                       \
-  GATHER(len_h);                                                                \
-  for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {                                    \
-    reg[sot_h[i_h]] = 0;                                                        \
-  }                                                                             \
-  SWEEP(1);                                                                     \
-  for ( c3_h i_h = 0; i_h < len_h; i_h++ ) {                                    \
-    reg[sot_h[i_h]] = nex[i_h];                                                 \
-  }                                                                             \
-  POP(len_h);                                                                   \
-  (void)kon_y;                                                                  \
-  BURN();
-OP1(SWK, a_h, BODY_SWK)
 
 static u3_noun
 OP(BOM) ARGS CONV
@@ -1060,4 +1038,3 @@ OP(BOM) ARGS CONV
 #undef BODY_JSP
 #undef BODY_DON
 #undef BODY_DRO
-#undef BODY_SWK
