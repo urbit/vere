@@ -116,7 +116,8 @@ static const OP_F TAB[] = { OPCODES };
 #  define PUT(d, v)  do {                                                       \
     u3_noun _val = (v);    /*  first: it may consume the slot it goes to  */   \
     if ( reg[d] ) {                                                             \
-      fprintf(stderr, "u3nc: slot %u not empty before op at %u of program %p\r\n", \
+      fprintf(stderr, "u3nc: slot %"PRIc3_w" not empty before op at %"PRIc3_w" "\
+        "of program %p\r\n",                                                    \
               (c3_w)(d), (c3_w)(ip - pog_u->byc_u.ops_y), (void*)pog_u);        \
       _nc_print(pog_u);                                                         \
       u3_assert( 0 == reg[d] );                                                 \
