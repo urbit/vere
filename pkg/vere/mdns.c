@@ -179,14 +179,6 @@ static void browse_cb(DNSServiceRef s,
   }
 }
 
-static void register_close_cb(uv_handle_t* poll) {
-  // not freeing sref with DNSServiceRefDeallocate since that
-  // deregisters us from mdns
-  mdns_payload* payload = (mdns_payload*)poll->data;
-  c3_free(payload);
-}
-
-
 static void register_cb(DNSServiceRef sref,
                         DNSServiceFlags f,
                         DNSServiceErrorType err,
@@ -199,11 +191,14 @@ static void register_cb(DNSServiceRef sref,
 
   if (err != kDNSServiceErr_NoError) {
     u3l_log("mdns: service register error %i", err);
+    uv_poll_stop(&payload->poll);
+    uv_close((uv_handle_t*)&payload->poll, close_cb);
   } else {
+    // keep polling for as long as we stay registered: avahi's dns_sd
+    // compat layer only reads its D-Bus connection when we call
+    // DNSServiceProcessResult, so an unpolled sref fills the bus queue
     u3l_log("mdns: %s registered on all interfaces", name);
   }
-  uv_poll_stop(&payload->poll);
-  uv_close((uv_handle_t*)&payload->poll, register_close_cb);
 }
 
 void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
