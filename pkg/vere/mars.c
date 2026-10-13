@@ -203,7 +203,7 @@ _mars_lease_done(c3_h mug_h, c3_h seq_h)
   }
 }
 
-/* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
+/* _mars_lease_issue(): issue a king lease on (mug_h, seq_h) at install.
 **
 **   bumps les_h + use_w and queues a lease expiring at
 **   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
@@ -213,7 +213,7 @@ _mars_lease_done(c3_h mug_h, c3_h seq_h)
 **   must not strip the others.
 */
 static void
-_mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
+_mars_lease_issue(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   if ( !blb_u ) {
@@ -1152,7 +1152,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
           //  issue the king's install lease: protects the blob until
           //  the event referencing it commits (eve_w takes over)
           //
-          _mars_lease_take(mar_u, mug_h, seq_h);
+          _mars_lease_issue(mar_u, mug_h, seq_h);
 
           //  save blob bank to snapshot so entries survive crash
           //
