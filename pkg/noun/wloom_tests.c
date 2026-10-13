@@ -2,9 +2,7 @@
 ///
 /// tests for windows loom address staking, in platform/windows/wloom.c.
 ///
-/// windows only. on POSIX mmap(MAP_FIXED) evicts whatever occupies a fixed
-/// address, so a collision at a stale loom base cannot arise and there is
-/// nothing here to test.
+/// windows only. POSIX reservation and collision tests are in loom_tests.c.
 ///
 /// exercised through the public interface, against real address space --
 /// the property under test is what the operating system does, and a mock
