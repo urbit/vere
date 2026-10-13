@@ -43,9 +43,10 @@
 **     3. king injects the event holding the bob atom (RAM-serialized as
 **        a blob ref); it sits in the FIFO behind at most the writs the
 **        king had already sent, far fewer than the lease width
-**     4. mars commits: _mars_fact bumps eve_w, writes blob-refs to LMDB
-**     5. king's last reference dies: %blrl releases the lease (drops one
-**        les_h unit)
+**     4. mars commits: _mars_fact bumps eve_w, writes blob-refs to LMDB,
+**        and retires the blob's leases, since the log holds it now
+**     5. a lease still live when the king's last reference dies, or when
+**        a driver discards an ack: %blrl releases it (one les_h unit)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_w
 **     7. chop retires the references of every epoch it deletes (a
@@ -57,12 +58,15 @@
 **        image rebuilds eve_w first (u3_disk_blob_refs)
 */
 
-/* _mars_lease: a king lease awaiting expiry.
+/* _mars_lease: a king lease awaiting its event.
 **
-**   tracks a single les_h increment for a blob.  if the king releases
-**   the lease (%blrl) before expiry, ded_o is set to c3y and the
-**   sweeper skips the decrement.  if the king crashes or leaks, the
-**   lease expires once dun_d reaches exp_d and les_h is decremented.
+**   tracks a single les_h increment for a blob, one per install.  it
+**   ends when the first event naming the blob commits (eve_w holds the
+**   file from then on), or when the king releases it (%blrl: its last
+**   bob died, or a driver discarded the ack); either way ded_o is set
+**   and the sweeper frees the node when it reaches the head.  if the
+**   king never plans the event, the lease expires once dun_d reaches
+**   exp_d and les_h is decremented then.
 */
 typedef struct __mars_lease {
   struct __mars_lease* nex_u;  //  next to expire
@@ -182,27 +186,35 @@ _mars_lease_drop(_mars_lease* lea_u)
   }
 }
 
-/* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
-**
-**   bumps les_h + use_w and queues a lease expiring at
-**   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
-**   processes, and no event can arrive for a lease taken before it.
-**   one lease per id: the king keeps one record per id and sends one
-**   %blrl when it dies, so a second install of the same content (a
-**   dedup hit) adds nothing.
+/* _mars_lease_done(): the first event naming (mug_h, seq_h) has
+**   committed, so eve_w holds the file and every lease on it is done.
 */
 static void
-_mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
+_mars_lease_done(c3_h mug_h, c3_h seq_h)
 {
   for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
     if (  (c3n == lea_u->ded_o)
        && (mug_h == lea_u->mug_h)
        && (seq_h == lea_u->seq_h) )
     {
-      return;
+      lea_u->ded_o = c3y;
+      _mars_lease_drop(lea_u);
     }
   }
+}
 
+/* _mars_lease_take(): issue a king lease on (mug_h, seq_h) at install.
+**
+**   bumps les_h + use_w and queues a lease expiring at
+**   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
+**   processes, and no event can arrive for a lease taken before it.
+**   one lease per install, dedup hits included: each client's event
+**   is still coming, and a release from one client (a discarded ack)
+**   must not strip the others.
+*/
+static void
+_mars_lease_take(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
+{
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   if ( !blb_u ) {
     blb_u = u3a_blob_new(mug_h, seq_h);
@@ -544,6 +556,13 @@ _mars_fact(u3_mars* mar_u,
       if ( blb_u ) {
         blb_u->eve_w += 1;
         blb_u->use_w += 1;
+
+        //  the log holds the file now; the leases that held it until
+        //  this commit are done
+        //
+        if ( blb_u->les_h ) {
+          _mars_lease_done(mug_h, seq_h);
+        }
       }
       else {
         //  the blob's lease expired and the file was deleted before
@@ -895,14 +914,14 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 {
   u3_noun tag, dat, pro;
 
-  //  lease expiry sweeper: decay leases the king never released
-  //  (crashed or leaking king).  the queue is in expiry order, so
+  //  lease expiry sweeper: decay leases whose event never came and
+  //  that the king never released (a bob minted and never planned).  the queue is in expiry order, so
   //  this pops from the head until the head's exp_d, an event number,
   //  is still past dun_d.  runs before every writ, which is at least
   //  once per commit, so nothing expires late by more than one writ.
   //
-  //  released leases are marked ded_o=c3y by %blrl and left in the
-  //  queue; they are freed here when they reach the head.
+  //  retired leases (commit, %blrl) are marked ded_o=c3y and left in
+  //  the queue; they are freed here when they reach the head.
   //
   {
     while ( 1 ) {
