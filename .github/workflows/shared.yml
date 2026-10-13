@@ -128,6 +128,7 @@ jobs:
             boot-test newt-test        \
             vere-noun-test unix-test   \
             palloc-test events-test    \
+            loom-test                  \
             bytestream-test mesa-test  \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
