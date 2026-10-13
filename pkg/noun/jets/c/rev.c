@@ -18,7 +18,11 @@
     }
 
     dat = u3qc_end(boz, len, dat);
-    c3_w met = u3r_met(boz, dat);
+    c3_d met_d = u3r_met(boz, dat);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met = (c3_w)met_d;
     return u3kc_lsh(boz, (len - met), u3kc_swp(boz, dat));
   }
 

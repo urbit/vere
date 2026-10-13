@@ -1727,31 +1727,31 @@ _test_fing()
 static void
 _test_met()
 {
-  c3_w ret_w;
+  c3_d ret_d;
   u3_atom atom;
 
   // 1
    {
     atom = 1;
 
-    ret_w = u3r_met(0, atom);
-    if (1 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (1 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (1 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (1 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(4, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(4, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1759,24 +1759,24 @@ _test_met()
    {
     atom = 2;
 
-    ret_w = u3r_met(0, atom);
-    if (2 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (2 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (1 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (1 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1784,24 +1784,24 @@ _test_met()
    {
     atom = 8;
 
-    ret_w = u3r_met(0, atom);
-    if (4 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (4 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (1 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (1 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1809,24 +1809,24 @@ _test_met()
    {
     atom = 0xff;
 
-    ret_w = u3r_met(0, atom);
-    if (8 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (8 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (1 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (1 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1834,24 +1834,24 @@ _test_met()
    {
     atom = 0x100;
 
-    ret_w = u3r_met(0, atom);
-    if (9 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (9 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (2 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (2 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1861,24 +1861,24 @@ _test_met()
   {
     atom = 0xffffffffULL;
 
-    ret_w = u3r_met(0, atom);
-    if (32 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (32 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (4 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (4 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (1 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (1 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 #endif
@@ -1889,24 +1889,24 @@ _test_met()
     c3_h data_h[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff };
     atom = u3i_halfs(4, data_h);
 
-    ret_w = u3r_met(0, atom);
-    if (128 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (128 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (16 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (16 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (4 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (4 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (2 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (2 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 
@@ -1916,24 +1916,24 @@ _test_met()
     c3_h data_h[4] = { 0xffffffff, 0xffffffff, 0xffffffff, 1 };
     atom = u3i_halfs(4, data_h);
 
-    ret_w = u3r_met(0, atom);
-    if (97 != ret_w){
-      printf("*** _test_met bit of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(0, atom);
+    if (97 != ret_d){
+      printf("*** _test_met bit of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(3, atom);
-    if (13 != ret_w){
-      printf("*** _test_met byte of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(3, atom);
+    if (13 != ret_d){
+      printf("*** _test_met byte of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(5, atom);
-    if (4 != ret_w){
-      printf("*** _test_met _w of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(5, atom);
+    if (4 != ret_d){
+      printf("*** _test_met _w of 1 = %" PRIc3_d " \n", ret_d);
     }
 
-    ret_w = u3r_met(6, atom);
-    if (2 != ret_w){
-      printf("*** _test_met _d of 1 = %" PRIc3_w " \n", ret_w);
+    ret_d = u3r_met(6, atom);
+    if (2 != ret_d){
+      printf("*** _test_met _d of 1 = %" PRIc3_d " \n", ret_d);
     }
   }
 }

@@ -291,8 +291,16 @@ _http_heds_free(u3_hhed* hed_u)
 static u3_hhed*
 _http_hed_new(u3_atom nam, u3_atom val)
 {
-  c3_w     nam_w = u3r_met(3, nam);
-  c3_w     val_w = u3r_met(3, val);
+  c3_d nam_d = u3r_met(3, nam);
+  if ( nam_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w nam_w = (c3_w)nam_d;
+  c3_d val_d = u3r_met(3, val);
+  if ( val_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+  c3_w val_w = (c3_w)val_d;
   u3_hhed* hed_u = c3_malloc(sizeof(*hed_u));
 
   hed_u->nam_c = c3_malloc(1 + nam_w);
@@ -2849,7 +2857,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
                              u3k(tan),
                              c3_s2('\n', '\n'));
       u3_atom txt = u3qc_rap(3, lin);
-      data = u3nt(u3_nul, u3r_met(3, txt), txt);
+      data = u3nt(u3_nul, u3i_chub(u3r_met(3, txt)), txt);
       u3z(lin);
     }
     else {
@@ -2881,7 +2889,7 @@ _http_stream_slog(void* vop_p, c3_w pri_w, u3_noun tan)
           low = u3t(low);
         }
         u3_atom txt = u3qc_rap(3, paz);
-        data = u3nt(u3_nul, u3r_met(3, txt), txt);
+        data = u3nt(u3_nul, u3i_chub(u3r_met(3, txt)), txt);
         u3z(paz);
       }
 
@@ -2979,7 +2987,7 @@ _http_spin_timer_cb(uv_timer_t* tim_u)
 
         {
           u3_atom txt = u3i_bytes(out_w, buf_y);
-          u3_noun dat = u3nt(u3_nul, u3r_met(3, txt), txt);
+          u3_noun dat = u3nt(u3_nul, u3i_chub(u3r_met(3, txt)), txt);
 
           while ( 0 != siq_u ) {
             _http_continue_respond(siq_u, u3k(dat), c3n);
@@ -3148,7 +3156,7 @@ _http_io_exit(u3_auto* car_u)
 
   {
     u3_atom lin = u3i_string("data:urbit shutting down\n\n");
-    u3_noun dat = u3nt(u3_nul, u3r_met(3, lin), lin);
+    u3_noun dat = u3nt(u3_nul, u3i_chub(u3r_met(3, lin)), lin);
     u3_hreq* seq_u = htd_u->fig_u.seq_u;
     while ( 0 != seq_u ) {
       _http_continue_respond(seq_u, u3k(dat), c3y);

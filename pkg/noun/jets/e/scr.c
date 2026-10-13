@@ -115,9 +115,12 @@
             u3_atom z,
             u3_atom d)
   {
-     return _cqes_hs(p, u3r_met(3, p),
-                     s, u3r_met(3, s),
-                     n, r, z, d);
+     c3_d pwd_d = u3r_met(3, p);
+     c3_d sal_d = u3r_met(3, s);
+     if ( (pwd_d > c3_w_max) || (sal_d > c3_w_max) ) {
+       u3m_bail(c3__fail);
+     }
+     return _cqes_hs(p, (c3_w)pwd_d, s, (c3_w)sal_d, n, r, z, d);
   }
 
   u3_noun
@@ -205,9 +208,12 @@
   static u3_atom
   _cqes_pbk(u3_atom p, u3_atom s, u3_atom c, u3_atom d)
   {
-    return _cqes_pb(p, u3r_met(3, p),
-                    s, u3r_met(3, s),
-                    c, d);
+    c3_d pwd_d = u3r_met(3, p);
+    c3_d sal_d = u3r_met(3, s);
+    if ( (pwd_d > c3_w_max) || (sal_d > c3_w_max) ) {
+      u3m_bail(c3__fail);
+    }
+    return _cqes_pb(p, (c3_w)pwd_d, s, (c3_w)sal_d, c, d);
   }
 
   u3_noun

@@ -732,7 +732,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_noun args = u3at(arr_sam_3, monad);
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
@@ -1137,7 +1141,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     u3_atom name = u3x_atom(u3at(arr_sam_2, monad));
     u3_atom value = u3x_atom(u3at(arr_sam_3, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
@@ -1213,7 +1221,11 @@ _reduce_monad(u3_noun monad, lia_state* sat_u)
     //  global-get
     u3_atom name = u3x_atom(u3at(arr_sam, monad));
 
-    c3_w met_w = u3r_met(3, name);
+    c3_d met_d = u3r_met(3, name);
+    if ( met_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    c3_w met_w = (c3_w)met_d;
     if ( UINT32_MAX <= met_w )
     {
       return u3m_bail(c3__fail);
@@ -1468,7 +1480,11 @@ _resume_callback(M3Result result_m3, IM3Runtime runtime)
         u3m_bail(c3__fail);
       }
       u3_noun name = u3t(frame);
-      c3_w met_w = u3r_met(3, name);
+      c3_d met_d = u3r_met(3, name);
+      if ( met_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
+      c3_w met_w = (c3_w)met_d;
       if ( UINT32_MAX <= met_w )
       {
         u3m_bail(c3__fail);
