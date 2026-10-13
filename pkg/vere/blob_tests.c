@@ -549,6 +549,32 @@ _test_install_stg(void)
   }
 #endif
 
+  //  the bucket, not the lockfile, says which seqs are taken: with the
+  //  lockfile gone and seq 1 holding other bytes, a reinstall lands on
+  //  seq 2 and seq 1 is untouched
+  //
+  {
+    c3_c fil_c[8192], lck_c[8192];
+    c3_h mag_h = 0, saq_h = 0;
+    struct stat st_u;
+
+    u3b_wipe(_tmp_pier, mug_h, seq_h);
+    _hand_write_raw(mug_h, 1, 0xabc);
+    snprintf(lck_c, sizeof(lck_c), "%s/.urb/bob/%" PRIc3_h "/lock", _tmp_pier, mug_h);
+    _check( (0 != unlink(lck_c)) ? (ENOENT == errno) : 1, "unlink lock: %s", strerror(errno) );
+
+    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "restage failed" );
+    _check(  (c3y == u3b_move_stg(_tmp_pier, stg_c, &mag_h, &saq_h))
+          && (mug_h == mag_h) && (2 == saq_h),
+            "reinstall beside a planted seq 1 got seq %" PRIc3_h, saq_h );
+    u3b_path(fil_c, _tmp_pier, mug_h, 1);
+    _check( (0 == stat(fil_c, &st_u)) && (dat_d != (c3_d)st_u.st_size),
+            "planted seq 1 was replaced" );
+    _check( c3y == _bob_is(mug_h, 2, dat_y, dat_d), "seq 2 byte mismatch" );
+    u3b_wipe(_tmp_pier, mug_h, 1);
+    u3b_wipe(_tmp_pier, mug_h, 2);
+  }
+
   //  a missing staging file and an empty one are refused
   //
   _check( c3n == u3b_move_stg(_tmp_pier, "/no/such/path", &mug_h, &seq_h),

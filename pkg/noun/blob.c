@@ -629,15 +629,47 @@ u3b_stg_dir(c3_c* out_c, const c3_c* pax_c)
   snprintf(out_c, 8192, "%s/.urb/bob/stg", pax_c);
 }
 
+static c3_o
+_blob_name_num(const c3_c* nam_c, c3_h* out_h);
+
+/* _blob_bucket_next(): one past the highest seq in bucket [dir_c].
+**
+**   the bucket itself is the record of which seqs are taken: a counter
+**   kept in the lockfile could be lost, emptied by a crash, or rolled
+**   back by a restore, and any of those would hand out a seq already
+**   in use.  Returns 0 if the bucket cannot be read.
+*/
+static c3_h
+_blob_bucket_next(const c3_c* dir_c)
+{
+  DIR* dir_u = opendir(dir_c);
+  c3_h max_h = 0;
+
+  if ( !dir_u ) {
+    fprintf(stderr, "blob: failed to read bucket %s: %s\r\n",
+            dir_c, strerror(errno));
+    return 0;
+  }
+
+  struct dirent* ent_e;
+  while ( (ent_e = readdir(dir_u)) ) {
+    c3_h seq_h;
+    if ( (c3y == _blob_name_num(ent_e->d_name, &seq_h)) && (seq_h > max_h) ) {
+      max_h = seq_h;
+    }
+  }
+  closedir(dir_u);
+  return max_h + 1;
+}
+
 /* _blob_lock_acquire(): acquire mug bucket lock, return next seq number.
 **
-** Creates the mug directory and lockfile if needed.  The lock covers
-** only the allocation of the next seq and is released on return: the
-** dedup scan and the rename that follow are serialized by the single
-** writer rule (only mars installs), not by this lock.  A seq handed
-** out here is consumed even when dedup then finds a match, so a bucket
-** may have gaps; readers and dedup skip a missing seq.
-** Returns 0 on failure.
+** Creates the mug directory and lockfile if needed.  The lockfile is
+** only a lock: the next seq is one past the highest in the bucket,
+** read while the lock is held.  The lock covers only that allocation
+** and is released on return: the dedup scan and the rename that follow
+** are serialized by the single writer rule (only mars installs), not
+** by this lock.  Returns 0 on failure.
 */
 static c3_h
 _blob_lock_acquire(const c3_c* pax_c, c3_h mug_h)
@@ -691,39 +723,10 @@ _blob_lock_acquire(const c3_c* pax_c, c3_h mug_h)
   }
 #endif
 
-  //  read current next-seq (0 means empty/new file)
-  c3_c buf_c[32] = {0};
-  ssize_t red_i = read(lok_i, buf_c, sizeof(buf_c) - 1);
-  c3_h nex_h = ( red_i > 0 ) ? (c3_h)strtoul(buf_c, 0, 10) : 1;
-  if ( 0 == nex_h ) {
-    nex_h = 1;
-  }
+  c3_h nex_h = _blob_bucket_next(dir_c);
 
-  //  write incremented value back
-  if ( -1 == lseek(lok_i, 0, SEEK_SET) ) {
-    fprintf(stderr, "blob: lseek failed on %s: %s\r\n",
-            lck_c, strerror(errno));
-    close(lok_i);
-    return 0;
-  }
-  if ( -1 == ftruncate(lok_i, 0) ) {
-    fprintf(stderr, "blob: ftruncate failed on %s: %s\r\n",
-            lck_c, strerror(errno));
-    close(lok_i);
-    return 0;
-  }
-
-  c3_c wri_c[32];
-  snprintf(wri_c, sizeof(wri_c), "%" PRIc3_h, nex_h + 1);
-  if ( -1 == write(lok_i, wri_c, strlen(wri_c)) ) {
-    fprintf(stderr, "blob: failed to write lock %s: %s\r\n",
-            lck_c, strerror(errno));
-    close(lok_i);
-    return 0;
-  }
-
-  //  fsync and close (releases lock)
-  c3_sync(lok_i);
+  //  close releases the lock
+  //
   close(lok_i);
 
   return nex_h;
@@ -1264,10 +1267,22 @@ u3b_move_stg(const c3_c* pax_c,
 
   close(fid_i);
 
-  //  rename staging file into final location
+  //  rename staging file into final location.  an install never
+  //  replaces a file: a seq the bucket already holds is an accounting
+  //  bug, and overwriting would silently change what every bob naming
+  //  it denotes
   //
   c3_c dst_c[8192];
   u3b_path(dst_c, pax_c, *mug_h, nex_h);
+
+  {
+    struct stat st_u;
+    if ( 0 == stat(dst_c, &st_u) ) {
+      fprintf(stderr, "blob: install_stg: %s exists; refusing to replace it\r\n",
+              dst_c);
+      return c3n;
+    }
+  }
 
   if ( 0 != rename(stg_c, dst_c) ) {
     //  rename can fail cross-device; fall back to copy-and-unlink
