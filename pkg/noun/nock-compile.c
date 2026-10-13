@@ -21,6 +21,7 @@
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
+#include <limits.h>
 
 /*  Bytecode.
 **
@@ -221,7 +222,7 @@ typedef struct {
                   //  or a sweep (_nc_lives())
   c3_y  ded_y;    //  the product is never used: drop it (_nc_lives())
   c3_h  src_h[2]; //  source registers
-  c3_h  dst_h;    //  destination register (a call's moves to its site)
+  c3_h  dst_h;    //  destination register for non-call ops
   c3_h  imm_h;    //  index immediate, or the atom of an inline immediate
   c3_h  tar_h;    //  target block, or the literal of an inline immediate
 } nc_op;
@@ -271,8 +272,8 @@ typedef struct {
   c3_h          dir_h;    //    and its capacity
   c3_h          din_h;    //    and its length
   c3_h*         pol_h;    //  argument registers of call sites
-  c3_h          pon_h;    //    and its length
   c3_h          poc_h;    //    and its capacity
+  c3_h          pon_h;    //    and its length
   c3_y*         pok_y;    //  consume flags of the argument registers
   c3_h          pkc_h;    //    and its capacity (grows with pol_h)
   u3p(u3h_root) lit_p;    //  literal -> index
@@ -550,7 +551,7 @@ _nc_dir(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun arg,
 static c3_h
 _nc_dir_sub(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun sub)
 {
-  u3_noun arg   = u3nc(sub, u3_nul);
+  u3_noun arg   = u3nc(u3k(sub), u3_nul);
   c3_h    dir_h = _nc_dir(gen_u, bell, jet_u, clu, arg, c3y);
 
   u3z(arg);
@@ -639,8 +640,9 @@ _nc_kids(nc_gen* gen_u, u3_noun blob, c3_h* kid_h)
 static void
 _nc_blocks(nc_gen* gen_u, u3_noun map)
 {
-  //  the treap of the map, in preorder
-  //
+  //  flatten the map into an array of values gen_u->blk_u, construct a hamt
+  //  gen_u->idx_p: @uwoo -> array
+  //  sak: stack of nlr nodes
   {
     u3_noun* sak = NULL;
     //  size, capacity of sac array, capacity of blk_u array
@@ -660,8 +662,8 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
 
       _nc_grow(gen_u->blk_u, gen_u->blk_h, blk_m, nc_blk);
       //  blk_u[i].blob holds an uncounted reference, but it's fine as long
-      //  as we don't run u3r_sing during compilation and `straight` noun
-      //  outlives this reference
+      //  as we don't run u3r_sing on nouns that contain blob during compilation
+      //  and `straight` noun outlives this reference
       gen_u->blk_u[gen_u->blk_h].blob  = u3t(n);
       gen_u->blk_u[gen_u->blk_h].lay_h = _nc_none;
       u3h_put(gen_u->idx_p, u3h(n), _nc_cat(gen_u->blk_h));
@@ -675,7 +677,9 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
     u3a_free(sak);
   }
 
-  //  reverse postorder of a depth-first search from the entry block
+  //  reverse postorder (i.e. topological order) of a depth-first search from
+  //  the entry block
+  //  first get a postorder, then reverse it
   //
   {
     c3_h  blk_h = gen_u->blk_h;
@@ -836,8 +840,6 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
       op_u->dst_h = _nc_reg(gen_u, c);
     } break;
 
-    //  calls by subject: the u3w driver of the ring, if any, tries first
-    //
     case c3__csl:
     case c3__csf: {
       d = u3_nul;
@@ -1135,22 +1137,23 @@ _nc_key_cmp(const void* a_v, const void* b_v)
 #define _nc_bit_set(set, r)  ((set)[(r) >> 6] |= (1ULL << ((r) & 63)))
 #define _nc_bit_clr(set, r)  ((set)[(r) >> 6] &= ~(1ULL << ((r) & 63)))
 
-/* _nc_live_in(): the registers of a chunk [lo, hi) live into each
-**                laid-out block, as bitsets of chu_h words in inn_d; liv_d
-**                is scratch.  If lvo_d and lva_d, also the registers live
-**                before and after each op, a bitset per op index.  If
-**                mar_t, mark the last use of each register on its paths
-**                as consumed (in the op's consume bits, or in the flags of
-**                its call site; a register read twice by an op is consumed
-**                by one read only), and the ops whose product is never
-**                used.  A drop (DRO) does not count as a use: it releases
-**                a register that is dead.
+/*  _nc_live_in(): lifetime analysis.
+**  Since CFG is DAG one pass over the blocks in reversed topological order with
+**  a backward iteration over the ops in each block is enough. 
+**  This function is called in two modes:
+**    - with mar_t set to true and lvo_d/lva_d set to NULL, to set dead flags
+**      and consumption bits,
+**    - and with mar_t set to false and lvo_d/lva_d allocated to record which
+**      registers were live before and after an op.
 **
-**   The CFG is a DAG and the IR is in SSA form (a parameter of a merging
-**   block is defined by a move in each predecessor, or left undefined by
-**   a kil where the jump passes ~), so one backward pass over the blocks
-**   in reverse layout order suffices, with a backward walk of the ops of
-**   each block.
+**  In both passes inn_d is set to record which regs were live on entry into a
+**  given block.
+**
+**  The bit array inn_d has size (number of blocks * regs) and the before/after
+**  arrays are (number of ops * regs). To limit the amount of used memory the
+**  registers are analyzed in chunks [lo, hi) which is fine since the liveness
+**  of regs is independent. liv_d is scratch memory reused on each iteration
+**  over a block
 */
 static void
 _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
@@ -1201,6 +1204,7 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
 
       for ( k_h = 0; k_h < _nc_fam[op_u->fam_y].src_y; k_h++ ) {
         if ( _nc_dro == op_u->fam_y ) {
+          //  the register is already dead at this point, nothing to do
           break;
         }
         r_h = op_u->src_h[k_h];
@@ -1241,35 +1245,30 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
   }
 }
 
-/* _nc_lives(): respect the lifetimes of the registers: consume a register
-**              at its last use, and drop it where it dies otherwise.
+/* _nc_lives(): code transformations to respect the lifetimes of the registers.
 **
-**   The last uses are found by _nc_live_in().  A register live out of a
-**   predecessor of a block but not live into the block died on the edge,
-**   and is dropped at the start of the block.  That is sound at a block
-**   with several predecessors too: by construction a slot is zero
-**   wherever the register in it is dead, and dropping zero does nothing.
-**   An argument never used is dropped at the entry; the product of an op
-**   never used, right after the op, unless the op has no effect and is
-**   removed instead.  Nothing is dropped at a block that only crashes.
+**  First pass is dead code elimination: non-crashing ops whose products are not
+**  used can be dropped, and their sources won't used by them anymore.
 **
-**   Then a slot holds a reference exactly while the register in it is
-**   live or being dropped, so a destination slot is zero when written,
-**   and an activation returns with every slot zero but the returned one.
-**   The slot assignment (_nc_slots()) keeps a dropped register's slot
-**   from any register live where the drop runs.
+**  Next the reversed CFG is constructed with `pro_h` and `pre_h`. Predecessors
+**  of a block `b` are in [ pre_h[pro_h[b]], pre_h[pro_h[b + 1]] ).
 **
-**   A drop costs a dispatch, so a block that ends the activation (DON or
-**   a tail call) after ops that write no slot leaves its drops to its
-**   terminator, whose sweeping variant drops whatever the slots hold.
+**  Then for each block we record whether it can drop the dead registers with
+**  its terminating op (no writes in between in the body of the block)
 **
-**   Live sets are bitsets over a chunk of the registers, the chunk sized
-**   to bound the memory for all the blocks; the ops are walked once per
-**   chunk.
+**  Then we run liveness analysis, assembling a set of registers that died when
+**  we entered a given block (it was live in one of the predecessors but dead
+**  here because one of the cousin blocks still needs it) and collect an array
+**  of future DRO ops to be emitted in the beginning of the block.
+**
+**  Then the DROs are emitted and old ops are copied with DROs interleaved if a
+**  product of an op is dead on arrival
 */
 static void
 _nc_lives(nc_gen* gen_u, c3_h arg_h)
 {
+  static_assert(64 == CHAR_BIT * sizeof(c3_d));
+  
   c3_h  reg_h = c3_max(gen_u->reg_h, arg_h);
   c3_h  blk_h = gen_u->blk_h;
   c3_h  wor_h = (reg_h + 63) >> 6;               //  words of a full bitset
@@ -1282,41 +1281,33 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   c3_d* dro_d = NULL;                            //  drops: layout << 32 | reg
   c3_h  dro_h = 0, drc_h = 0;
   c3_y* kin_y = u3a_calloc(gen_u->lan_h, sizeof(c3_y));  //  kind, by layout
-  c3_h* cnt_h = u3a_calloc(gen_u->lan_h, sizeof(c3_h));  //  drops, by layout
+  c3_y* cnt_y = u3a_calloc(gen_u->lan_h, sizeof(c3_y));  //  drops, by layout
   c3_h  i_h, j_h, k_h, r_h, b_h, kin_h, kid_h[2];
 
+  //  kind of block: whether the registers will be freed with DROs vs by the
+  //  terminator
   enum { _nc_kin_dro, _nc_kin_ter };
 
-  //  products never used: an op without effect is removed, which may
-  //  leave its sources unused in turn
+  //  Dead code elimination
   //
   for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
     _nc_srcs(gen_u, &(gen_u->ops_u[i_h]), reg_h, { use_h[*reg_h]++; });
   }
 
-  {
-    c3_t chg_t;
+  for ( i_h = gen_u->opn_h; i_h-- > 0; ) {
+    nc_op* op_u = &(gen_u->ops_u[i_h]);
 
-    do {
-      chg_t = 0;
+    switch ( op_u->fam_y ) {
+      default: break;
 
-      for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
-        nc_op* op_u = &(gen_u->ops_u[i_h]);
-
-        switch ( op_u->fam_y ) {
-          default: break;
-
-          case _nc_imm: case _nc_iml: case _nc_mov: case _nc_kil:
-          case _nc_con: case _nc_hed: case _nc_tal: {
-            if ( !use_h[op_u->dst_h] ) {
-              _nc_srcs(gen_u, op_u, reg_h, { use_h[*reg_h]--; });
-              op_u->fam_y = _nc_nop;
-              chg_t = 1;
-            }
-          } break;
+      case _nc_imm: case _nc_iml: case _nc_mov: case _nc_kil:
+      case _nc_con: case _nc_hed: case _nc_tal: {
+        if ( !use_h[op_u->dst_h] ) {
+          _nc_srcs(gen_u, op_u, reg_h, { use_h[*reg_h]--; });
+          op_u->fam_y = _nc_nop;
         }
-      }
-    } while ( chg_t );
+      } break;
+    }
   }
 
   //  predecessors of the laid-out blocks
@@ -1367,7 +1358,9 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       }
     }
 
-    kin_y[i_h] = ( (j_h == blk_u->len_h) && las_u && _nc_fam[las_u->fam_y].swe_y )
+    kin_y[i_h] = ( (j_h == blk_u->len_h)
+                 && las_u
+                 && _nc_fam[las_u->fam_y].swe_y )
                ? _nc_kin_ter
                : _nc_kin_dro;
   }
@@ -1375,6 +1368,12 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  liveness, a chunk of the registers at a time: deaths on the edges
   //  into each block, and of the unused arguments at the entry, are live
   //  out of a predecessor and not live into the block
+  //
+  //  live-in array is bounded to be about (1 << 17) words == a megabyte
+  //
+  //  If there are more than (1 << 17) blocks (~130K) the chunk is set to 1, so
+  //  the live-in array is number of blocks * sizeof(c3_d), which can be bigger
+  //  than a megabyte.
   //
   chu_h = c3_max(1, c3_min(wor_h, (1 << 17) / c3_max(blk_h, 1)));
   inn_d = u3a_malloc((c3_z)blk_h * chu_h * sizeof(c3_d));
@@ -1392,6 +1391,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
       c3_d*   bin_d = _nc_in(b_h);
 
+      //  may cause a leak. see _nc_doomed()
+      //
       if (  blk_u->len_h
          && (_nc_bom == gen_u->ops_u[blk_u->fir_h + blk_u->len_h - 1].fam_y) )
       {
@@ -1401,12 +1402,15 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       memset(liv_d, 0, chu_h * sizeof(c3_d));
 
       if ( !i_h ) {
+        //  entry block: args are live
         for ( r_h = lo_h; (r_h < hi_h) && (r_h < arg_h); r_h++ ) {
           _nc_bit_set(liv_d, r_h - lo_h);
         }
       }
 
       for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
+        //  union of the live-out sets of predecessors
+        //
         kin_h = _nc_kids(gen_u, gen_u->blk_u[pre_h[j_h]].blob, kid_h);
         for ( k_h = 0; k_h < kin_h; k_h++ ) {
           c3_d* kin_d = _nc_in(kid_h[k_h]);
@@ -1417,14 +1421,16 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       }
 
       for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+        //  for each chunk: drop each dead register
+        //
         c3_d ded_d = liv_d[w_h] & ~bin_d[w_h];
 
         while ( ded_d ) {
-          c3_h bit_h = __builtin_ctzll(ded_d);
+          c3_h bit_h = c3_tz_d(ded_d);
           ded_d &= ded_d - 1;
           _nc_grow(dro_d, dro_h, drc_h, c3_d);
           dro_d[dro_h++] = ((c3_d)i_h << 32) | (lo_h + (w_h << 6) + bit_h);
-          cnt_h[i_h]++;
+          cnt_y[i_h] |= 1;
         }
       }
     }
@@ -1435,6 +1441,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  rebuild the ops in layout order with the drops: those of the edges
   //  into a block at its start, as drops or left to the terminator; that
   //  of a product never used right after its op; the removed ops go
+  //
+  //  there are no ties so the sort is deterministic
   //
   qsort(dro_d, dro_h, sizeof(c3_d), _nc_key_cmp);
 
@@ -1471,7 +1479,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
         new_u[new_h++] = *op_u;
 
-        if ( (_nc_kin_ter == kin_y[i_h]) && cnt_h[i_h]
+        if ( (_nc_kin_ter == kin_y[i_h]) && cnt_y[i_h]
            && _nc_fam[op_u->fam_y].swe_y )
         {
           new_u[new_h - 1].kon_y = 1;
@@ -1502,7 +1510,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   u3a_free(liv_d);
   u3a_free(dro_d);
   u3a_free(kin_y);
-  u3a_free(cnt_h);
+  u3a_free(cnt_y);
 }
 
 /* _nc_range(): append an occupancy range [sta, end] of a register.
@@ -2285,7 +2293,9 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   c3_h       byc_h, i_h, j_h;
 
   //  a self call that doesn't sweep and finds every argument in its
-  //  parameter slot has nothing to do but start over: a jump to the entry
+  //  parameter slot has nothing to do but start over: a jump to the entry.
+  //  NB: this adds a backedge into an otherwise DAG. It's OK because the passes
+  //  that depended on acyclity of the CFG happened before that point.
   //
   for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_h]);
@@ -2995,6 +3005,55 @@ _nc_hint_hind(u3_atom tag, u3_noun tok)
 
   u3z(tok);
 }
+
+#if defined(U3NC_CHECK) || defined(C3DBG)
+/* _nc_doomed(): whether the code from ip runs into BOM before any other
+**               end of a block: a branch, a hop, or the end of the
+**               activation.  A block that only crashes gets no drops for
+**               the registers that died on the edge into it (_nc_lives()),
+**               so its slots may still hold references when its ops write
+**               them; the checking interpreter allows that there, since
+**               the bail abandons the road.  Only the ops of the crash
+**               block itself, and of blocks that fall through into it,
+**               are doomed this way: a block that reaches it by a jump
+**               has had its drops.
+*/
+static c3_t
+_nc_doomed(const u3nc_prog* pog_u, const c3_y* ip)
+{
+  const c3_y* pog  = pog_u->byc_u.ops_y;
+  c3_h        ip_h = ip - pog;
+
+  while ( ip_h < pog_u->byc_u.len_h ) {
+    c3_y cod_y = pog[ip_h++];
+
+    if ( BOM == cod_y ) {
+      return 1;
+    }
+    else if ( cod_y < IML_B ) {   //  IMM_0, IMM_1, IMM_B, IMM_S
+      ip_h += ( IMM_S == cod_y ) ? 3 : ( IMM_B == cod_y ) ? 2 : 1;
+    }
+    else {
+      c3_y fam_y = 0, wid_y, n_y;
+
+      while ( ((fam_y + 1) < _nc_bom) && (_nc_bas_y[fam_y + 1] <= cod_y) ) {
+        fam_y++;
+      }
+      if ( _nc_fam[fam_y].tar_y || _nc_fam[fam_y].swe_y ) {
+        return 0;
+      }
+      wid_y = (cod_y - _nc_bas_y[fam_y]) % 3;
+      n_y   = _nc_fam[fam_y].imm_y + _nc_fam[fam_y].src_y
+            + _nc_fam[fam_y].dst_y;
+      while ( n_y-- ) {
+        _nc_read(pog, &ip_h, wid_y);
+      }
+    }
+  }
+
+  return 0;
+}
+#endif
 
 /* _nc_burn_north(), _nc_burn_south(): run a program on its arguments.
 **   TRANSFERS the arguments.  Body in nock-compile-burn.c, instantiated

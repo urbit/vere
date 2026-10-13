@@ -102,7 +102,11 @@ static const OP_F TAB[] = { OPCODES };
 //  PUT(d, v): the reference v into slot d, which is empty: the register
 //             that held it was consumed or dropped.  An op's product may
 //             share the slot of a source it consumes, so an op releases
-//             its consumed sources before it writes
+//             its consumed sources before it writes.  The exception is a
+//             block that only crashes, where the registers that died on
+//             the edge in were not dropped (_nc_lives()): what they left
+//             in the slots leaks into the bail, and the check lets it
+//             (_nc_doomed())
 //  TAKE(s, K): the noun in slot s, with a reference: the slot's own if K,
 //              consuming it (the slot is zeroed), else a new one
 //  TAKEN(v, s, K): the same for v, already read from slot s: an op reading
@@ -114,11 +118,11 @@ static const OP_F TAB[] = { OPCODES };
 //
 #if defined(U3NC_CHECK) || defined(C3DBG)
 #  define PUT(d, v)  do {                                                       \
-    u3_noun _val = (v);    /*  first: it may consume the slot it goes to  */   \
-    if ( reg[d] ) {                                                             \
-      fprintf(stderr, "u3nc: slot %"PRIc3_w" not empty before op at %"PRIc3_w" "\
-        "of program %p\r\n",                                                    \
-              (c3_w)(d), (c3_w)(ip - pog_u->byc_u.ops_y), (void*)pog_u);        \
+    u3_noun _val = (v);    /*  first: it may consume the slot it goes to  */    \
+    if ( reg[d] && !_nc_doomed(pog_u, ip) ) {                                   \
+      fprintf(stderr, "u3nc: slot %"PRIc3_w" not empty, written by the op "     \
+        "before %"PRIc3_w" of program %p\r\n", (c3_w)(d),                       \
+          (c3_w)(ip - pog_u->byc_u.ops_y), (void*)pog_u);                       \
       _nc_print(pog_u);                                                         \
       u3_assert( 0 == reg[d] );                                                 \
     }                                                                           \
