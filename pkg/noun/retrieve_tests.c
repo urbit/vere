@@ -1413,15 +1413,17 @@ _test_view(void)
     }
   }
 
-  //  zero atom: view should be empty, no allocation, no blob hand
+  //  zero atom: an empty view of a cat, its one readable word zero
   //
   {
     u3r_view vue_u;
     u3r_view_open(&vue_u, 0, c3y);
-    u3r_view_bytes(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     if (  vue_u.byt_d != 0
-       || vue_u.kin_e != u3r_view_loom
-       || vue_u.han_u != 0 )
+       || vue_u.kin_e != u3r_view_even
+       || vue_u.han_u != 0
+       || vue_y != (const c3_y*)&vue_u.raw_d
+       || 0 != vue_y[0] )
     {
       fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
       exit(1);

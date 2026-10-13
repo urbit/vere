@@ -21,9 +21,10 @@
 **   blb_p HAMT: bid -> u3a_blob* (loom offset), bid = (mug_h << 32) | seq_h.
 **   See the u3a_blob block in allocate.h for the counter design:
 **     use_w = total refs: eve_w + les_h + live bob-atom cardinality
-**     eve_w = event-log refcount (bumped on commit, rebuilt on chop)
-**     les_h = king-held leases (durable in the LMDB LEASES table; the
-**             loom les_h is zeroed on boot and rebuilt from that table)
+**     eve_w = event-log refcount (bumped on commit and replay, retired
+**             per reference when chop deletes an epoch)
+**     les_h = king-held leases (mars memory only; zeroed at boot and
+**             never rebuilt, since no lease outlives a restart)
 **
 **   Blob files live at $pier/.urb/bob/<mug>/<seq>.
 **   Deletion condition: use_w == 0.
@@ -1154,7 +1155,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
           //
           _mars_lease_issue(mar_u, mug_h, seq_h);
 
-          //  save blob bank to snapshot so entries survive crash
+          //  the bank changed: run the post-task memory check
           //
           mar_u->fag_w |= _mars_fag_mute;
         }

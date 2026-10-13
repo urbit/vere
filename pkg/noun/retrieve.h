@@ -450,7 +450,9 @@
       **   itself.  Every byte from byt_d to the next word boundary is
       **   readable and zero; a bob's mapping on posix is readable and
       **   zero to one page past the file.  The legacy u3r_bytes and
-      **   u3r_words copy; these borrow.
+      **   u3r_words copy; these borrow.  On the home road a legacy
+      **   accessor on a bob opens, maps, and closes per call: hold a
+      **   view across a loop there.
       */
         typedef enum {
           u3r_view_loom = 0,    //  the loom word buffer

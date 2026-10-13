@@ -465,6 +465,26 @@ _test_delete_empty_bucket(void)
   //
   u3b_wipe(_tmp_pier, 0xdeadbeef, 999);
 
+  //  a bucket's lockfile is its sequence counter: wiping one blob of
+  //  two leaves it, wiping the last takes it with the bucket
+  //
+  {
+    c3_c lck_c[8192];
+    _hand_write_raw(0x7777, 1, 1);
+    _hand_write_raw(0x7777, 2, 2);
+    snprintf(dir_c, sizeof(dir_c), "%s/.urb/bob/%" PRIc3_h, _tmp_pier, (c3_h)0x7777);
+    snprintf(lck_c, sizeof(lck_c), "%s/lock", dir_c);
+    FILE* fil_f = fopen(lck_c, "wb");
+    _check( fil_f, "lock setup: %s", strerror(errno) );
+    fputs("3", fil_f);
+    fclose(fil_f);
+
+    u3b_wipe(_tmp_pier, 0x7777, 1);
+    _check( c3y == _path_exists(lck_c), "lock removed with a blob remaining" );
+    u3b_wipe(_tmp_pier, 0x7777, 2);
+    _check( c3n == _path_exists(dir_c), "bucket not removed with its last blob" );
+  }
+
   _pier_done();
 }
 

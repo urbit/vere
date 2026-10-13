@@ -199,7 +199,8 @@
     **
     **   Single-counter design: the blob file is deleted iff use_w == 0.
     **   use_w is the sum of three component sources:
-    **     - eve_w: event-log refcount (rebuilt on chop)
+    **     - eve_w: event-log refcount: +1 per occurrence in a committed
+    **              event, -1 per reference when chop deletes an epoch
     **     - les_h: active king-held lease count (memory only: zeroed at
     **              every boot, since no lease outlives a restart)
     **     - implicit atom cardinality: number of live bob atoms over
@@ -220,10 +221,10 @@
     **
     **   On boot we zero the snapshot's les_h (and subtract from use_w):
     **   a restart ends king and mars together, so no event can arrive
-    **   for a lease taken before it.  eve_w is rebuilt from the epoch's
-    **   BLOBS table (u3_disk_blob_refs): a snapshot's count can name
-    **   events chop has since deleted.  Only atom cardinality is taken
-    **   from the snapshot.
+    **   for a lease taken before it.  eve_w and atom cardinality come
+    **   from the snapshot; eve_w is rebuilt from the retained epochs'
+    **   BLOBS tables (u3_disk_blob_refs) only when the loaded loom is
+    **   stale: a full replay from an epoch's frozen image, or queu.
     **
     **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
     **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A

@@ -1562,12 +1562,12 @@ typedef struct {
   c3_z        cap_z;
 } _disk_chop_collect;
 
-/* _disk_chop_zero_cb(): u3h_walk_with callback — subtract eve_w from
+/* _disk_refs_zero_cb(): u3h_walk_with callback — subtract eve_w from
 **   use_w and zero eve_w, leaving atom cardinality and les_h alone.
 **   The rebuild's walk over the BLOBS tables re-increments both.
 */
 static void
-_disk_chop_zero_cb(u3_noun kev, void* ptr_v)
+_disk_refs_zero_cb(u3_noun kev, void* ptr_v)
 {
   (void)ptr_v;
   u3_noun val = u3t(kev);
@@ -1681,7 +1681,7 @@ u3_disk_blob_refs(u3_disk* log_u, c3_d eve_d)
   c3_d* sot_d = c3_malloc(len_z * sizeof(c3_d));
   u3_disk_epoc_list(log_u, sot_d);
 
-  u3h_walk_with(u3H->blb_p, _disk_chop_zero_cb, 0);
+  u3h_walk_with(u3H->blb_p, _disk_refs_zero_cb, 0);
 
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
     MDB_env* env_u;

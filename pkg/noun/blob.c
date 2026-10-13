@@ -958,6 +958,32 @@ u3b_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   return ( 0 == stat(fil_c, &st_u) ) ? c3y : c3n;
 }
 
+/* _blob_dir_lone_lock(): true if [dir_c] holds nothing but a lockfile.
+*/
+static c3_o
+_blob_dir_lone_lock(const c3_c* dir_c)
+{
+  DIR* dir_u = opendir(dir_c);
+  c3_o lon_o = c3y;
+
+  if ( !dir_u ) {
+    return c3n;
+  }
+
+  struct dirent* ent_e;
+  while ( (ent_e = readdir(dir_u)) ) {
+    if (  strcmp(ent_e->d_name, ".")
+       && strcmp(ent_e->d_name, "..")
+       && strcmp(ent_e->d_name, "lock") )
+    {
+      lon_o = c3n;
+      break;
+    }
+  }
+  closedir(dir_u);
+  return lon_o;
+}
+
 /* u3b_wipe(): delete a blob file.
 */
 void
@@ -994,29 +1020,24 @@ u3b_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
             fil_c, strerror(errno));
   }
 
-  //  attempt to clean up the mug bucket directory if it is now empty.
-  //
-  //    the lockfile is the only non-blob resident; we must remove it before
-  //    rmdir can succeed.  the two-step unlink+rmdir is safe because vere is
-  //    single-threaded and blob installs never interleave with GC:
-  //
-  //    - if another blob exists in the bucket, rmdir fails ENOTEMPTY — fine.
-  //    - if a concurrent install races the window between unlink(lock) and
-  //      rmdir, it recreates the lockfile, rmdir fails ENOTEMPTY — fine.
+  //  remove the bucket once it holds nothing but its lockfile.  the
+  //  lockfile is the bucket's sequence counter: while any blob remains
+  //  it must stay, or the next install would start again at seq 1 and
+  //  rename over that blob.
   //
   c3_c dir_c[8192];
   c3_c lck_c[8192];
   _blob_mug_dir(dir_c, pax_c, mug_h);
   _blob_lock_path(lck_c, pax_c, mug_h);
 
-  //  first attempt: rmdir without touching lock (fast path for non-empty dirs)
-  //
   if ( 0 == rmdir(dir_c) || ENOENT == errno ) {
     return;
   }
 
-  //  dir is non-empty: remove lock file and retry rmdir
-  //
+  if ( c3n == _blob_dir_lone_lock(dir_c) ) {
+    return;
+  }
+
   if ( 0 != unlink(lck_c) && ENOENT != errno ) {
     fprintf(stderr, "blob: failed to remove lock %s: %s\r\n",
             lck_c, strerror(errno));

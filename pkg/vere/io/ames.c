@@ -1371,14 +1371,11 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
       u3z(lan); u3z(pac);
       return;
     }
-    const c3_y* vue_y = u3r_view_bytes(&vue_u);
     u3_assert( UINT32_MAX >= vue_u.byt_d );
     c3_w len_w = (c3_w)vue_u.byt_d;
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
-    if ( len_w ) {
-      memcpy(pac_u->hun_y, vue_y, len_w);
-    }
+    u3r_view_copy(&vue_u, 0, pac_u->hun_y, len_w);
     u3r_view_done(&vue_u);
 
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);

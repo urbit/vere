@@ -356,8 +356,9 @@ U3C_SYM(_hamt)(U3C_OLD_NOUN kev, void *ptr_v)
 **   The bank maps bid -> chub(off_p), where off_p is the off-loom offset
 **   of a u3a_blob.  off_p fits a direct cat in either bitness, so the
 **   value of the (cat) tail IS the offset.  Rebuild the entry in the
-**   target bank, copying the durable counters verbatim.  Run over the
-**   whole bank before the noun graph so bob atoms can resolve their blob.
+**   target bank, copying the counters verbatim.  The bank migrates
+**   before the noun graph by convention; a bob's body is its bid, so
+**   the order does not matter.
 */
 static void
 U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
