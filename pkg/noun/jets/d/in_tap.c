@@ -6,6 +6,9 @@
 
 #include "noun.h"
 
+// @Refcount: retain `a`
+// @Refcount: transfer `b`
+// @Refcount: transfer product
 static u3_noun
 _tap_in(u3_noun a,
         u3_noun b)

@@ -15,6 +15,7 @@ u3_ship_of_bytes(u3_ship who_u, c3_y len_y, c3_y* buf_y);
 u3_atom
 u3_ship_to_noun(u3_ship who_u);
 
+// @Refcount: retains arguments
 void
 u3_ship_of_noun(u3_ship who_u, u3_noun who);
 

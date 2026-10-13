@@ -6,6 +6,8 @@
 #include "noun.h"
 
 //  [a] is RETAINED, [set] is TRANSFERRED
+// @Refcount: retains `a`
+// @Refcount: transfers `set`
 //
 static u3_noun
 _by_key(u3_noun a, u3_noun set)

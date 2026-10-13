@@ -6,7 +6,6 @@
 
 #include "noun.h"
 
-//  RETAINS lit
 //
 static u3_noun
 _malt_fast(u3_noun lit)

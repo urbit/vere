@@ -9,6 +9,7 @@
 */
 
 /* RETAIN
+** @Refcount: retains arguments
 */
 static u3_noun
 _b_dif_join(u3_noun d,
