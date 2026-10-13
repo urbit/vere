@@ -573,40 +573,34 @@ u3i_vint(u3_noun a)
     return u3m_bail(c3__exit);
   }
   else {
-    //  bob atoms must be materialized before incrementing:
-    //  pug_u->len_w carries u3a_blob_flag and buf_w[0] is a seq number,
-    //  not atom data.
+    //  a view borrows the words wherever the atom lives, a bob's from
+    //  its mapping; the view dies with the road if the slab bails
     //
-    if ( c3y == u3a_is_bob(a) ) {
-      u3_atom mat = u3r_blob_load(a, u3C.dir_c);
-      if ( u3_none == mat ) {
-        return u3m_bail(c3__fail);
-      }
-      u3z(a);
-      return u3i_vint(mat);
-    }
+    u3r_view    vue_u;
+    const c3_w* a_buf_w;
+    c3_w        len_w;
+    u3i_slab    sab_u;
 
-    u3i_slab sab_u;
-    u3i_slab_init(&sab_u, 0, u3r_met(0, a) + 1);
+    u3r_view_open(&vue_u, a, c3y);
+    a_buf_w = u3r_view_words(&vue_u, &len_w);
+    u3i_slab_init(&sab_u, 0, vue_u.bit_d + 1);
 
-    u3a_atom* pug_u = u3a_to_ptr(a);
+    c3_w  i_w = 0;
+    c3_b  car_b = 1;
+    c3_w* b_buf_w = sab_u.buf_w;
 
-    c3_w i_w = 0;
-    c3_b car_b = 1;
-    c3_w *a_buf_w = pug_u->buf_w;
-    c3_w *b_buf_w = sab_u.buf_w;
-
-    for (; i_w < pug_u->len_w && car_b; i_w++) {
+    for (; i_w < len_w && car_b; i_w++) {
       car_b = _addcarry_w(car_b, a_buf_w[i_w], 0, _addcarry_w_ptr(&b_buf_w[i_w]));
     }
 
     if (car_b) {
-      b_buf_w[pug_u->len_w] = 1;
+      b_buf_w[len_w] = 1;
     }
     else {
-      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (pug_u->len_w - i_w) * sizeof(c3_w));
+      memcpy(&b_buf_w[i_w], &a_buf_w[i_w], (len_w - i_w) * sizeof(c3_w));
     }
 
+    u3r_view_done(&vue_u);
     u3z(a);
     return u3i_slab_mint(&sab_u);
   }
@@ -731,7 +725,14 @@ u3i_edit(u3_noun big, u3_noun axe, u3_noun som)
     case 1: break;
 
     default: {
-      c3_w        dep_w = u3r_met(0, u3x_atom(axe)) - 2;
+      //  a bob has no word buffer to read address bits from; u3r_at
+      //  refuses one as an axis, and so does this
+      //
+      if ( c3y == u3a_is_bob(u3x_atom(axe)) ) {
+        return u3m_bail(c3__exit);
+      }
+
+      c3_w        dep_w = u3r_met(0, axe) - 2;
       const c3_w* axe_w = ( c3y == u3a_is_cat(axe) )
                         ? &axe
                         : ((u3a_atom*)u3a_to_ptr(axe))->buf_w;
@@ -835,10 +836,10 @@ u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z)
 
 /* u3i_blob(): construct a bob atom (blob reference).
 **
-**   Allocates a fresh u3a_atom whose buf_w[0] points at the u3a_blob
-**   for (mug_h, seq_h).  Looks up or creates the u3a_blob and bumps
-**   its use_w (atom cardinality).  No interning: each call yields a
-**   new atom.
+**   Allocates a fresh u3a_atom whose body is the blob id
+**   (mug_h << 32 | seq_h).  Looks up or creates the u3a_blob record
+**   and bumps its use_w (atom cardinality).  No interning: each call
+**   yields a new atom.
 */
 u3_atom
 u3i_blob(c3_h mug_h, c3_h seq_h)
@@ -849,13 +850,14 @@ u3i_blob(c3_h mug_h, c3_h seq_h)
   if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
   blb_u->use_w += 1;
 
-  c3_w*     nov_w = u3a_walloc(1 + c3_wiseof(u3a_atom));
+  c3_w*     nov_w = u3a_walloc(c3_wiseof(c3_d) + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
+  c3_d      bid_d = ((c3_d)mug_h << 32) | (c3_d)seq_h;
 
-  vat_u->use_w    = 1;
-  vat_u->mug_w    = mug_h;
-  vat_u->len_w    = 0 | u3a_blob_flag;
-  vat_u->buf_w[0] = (c3_w)u3a_outa(blb_u);
+  vat_u->use_w = 1;
+  vat_u->mug_w = mug_h;
+  vat_u->len_w = u3a_blob_flag | c3_wiseof(c3_d);
+  memcpy(vat_u->buf_w, &bid_d, sizeof(bid_d));
 
   return u3a_to_pug(u3a_outa(nov_w));
 }

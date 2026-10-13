@@ -145,21 +145,6 @@ _js_mat_w(_jam_shax* ctx, c3_w val_w)
 
 //  ---- atom encoding --------------------------------------------------
 
-//  compute bit-length of an atom from mmap'd bytes (for bob atoms).
-//
-static c3_w
-_js_bob_met(const c3_y* byt_y, c3_d len_d)
-{
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-  if ( 0 == pos_d ) return 0;
-  c3_y top_y = byt_y[pos_d - 1];
-  c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-  return (c3_w)((pos_d - 1) * 8 + (8 - clz_y));
-}
-
 //  encode a single atom: tag 0 + mat(bit_len) + data bits.
 //
 static void
@@ -174,15 +159,20 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
     return;
   }
 
-  u3r_view vue_u = {0};
-  c3_w     bit_w;
+  u3r_view    vue_u = {0};
+  const c3_y* vue_y = 0;
+  c3_w        bit_w;
 
   if ( _(u3a_is_cat(a)) ) {
     bit_w = (c3_g)c3_bits_word(a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    u3r_view_init(&vue_u, a);
-    bit_w = _js_bob_met(vue_u.byt_y, vue_u.len_w);
+    u3r_view_open(&vue_u, a, c3y);
+    vue_y = u3r_view_bytes(&vue_u);
+    if ( vue_u.bit_d > c3_w_max ) {
+      u3m_bail(c3__fail);
+    }
+    bit_w = (c3_w)vue_u.bit_d;
     if ( 0 == bit_w ) {
       u3r_view_done(&vue_u);
       _js_mat_w(ctx, 0);
@@ -191,7 +181,8 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   }
   else {
     bit_w = u3r_met(0, a);
-    u3r_view_init(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
+    vue_y = u3r_view_bytes(&vue_u);
   }
 
   //  mat header: encodes the bit-length
@@ -206,9 +197,9 @@ _js_encode_atom(_jam_shax* ctx, u3_atom a)
   else {
     c3_w full_w = bit_w >> 3;
     c3_g rem_g  = bit_w & 7;
-    _js_bytes(ctx, vue_u.byt_y, full_w);
+    _js_bytes(ctx, vue_y, full_w);
     if ( rem_g > 0 ) {
-      _js_bits(ctx, vue_u.byt_y[full_w], rem_g);
+      _js_bits(ctx, vue_y[full_w], rem_g);
     }
     u3r_view_done(&vue_u);
   }
@@ -238,6 +229,9 @@ _js_encode(_jam_shax* ctx, u3_noun a)
 
       c3_d  pos_d = 0;
       u3r_safe_chub(got, &pos_d);
+      if ( pos_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
       c3_w  p_w = (0 == pos_d) ? 0 : c3_bits_word((c3_w)pos_d);
       c3_w  b_cost = 2 + (0 == pos_d ? 1 : 2 * p_w);
 
@@ -256,6 +250,9 @@ _js_encode(_jam_shax* ctx, u3_noun a)
       //
       c3_d pos_d = 0;
       u3r_safe_chub(got, &pos_d);
+      if ( pos_d > c3_w_max ) {
+        u3m_bail(c3__fail);
+      }
       _js_bits(ctx, 3, 2);
       _js_mat_w(ctx, (c3_w)pos_d);
     }

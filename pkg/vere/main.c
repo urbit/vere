@@ -1875,11 +1875,11 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //  surviving from before the import) and decode as bob atoms,
     //  never touching the loom
     //
-    u3_blob_bsink bsk_u;
+    u3b_bsink bsk_u;
 
     u3_disk_blob_init(u3_Host.dir_c);
     u3_disk_blob_stg_init(u3_Host.dir_c);
-    u3_blob_bsink_init(&bsk_u, u3_Host.dir_c);
+    u3b_bsink_init(&bsk_u, u3_Host.dir_c);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
@@ -1898,9 +1898,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
     }
 
     //  uncram repaved the home road, wiping the blob bank: rebuild
-    //  eve_w from the log's BLOBS table, then check the invariant
+    //  eve_w from the retained epochs' BLOBS tables up to the rock's
+    //  event, then check the invariant
     //
-    u3_disk_blob_refs(log_u);
+    u3_disk_blob_refs(log_u, u3A->eve_d);
 
     if ( c3n == u3a_blob_sane(c3y) ) {
       fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");
