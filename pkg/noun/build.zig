@@ -202,6 +202,19 @@ pub fn build(b: *std.Build) !void {
         .flags = flags.items,
     });
 
+    //  the opcode functions are tiny, and removing the frame-pointer removes
+    //  the frame-pointer prologue and epilogue, which for many opcode functions
+    //  is a measurable size of their bodies
+    var burn_flags = std.array_list.Managed([]const u8).init(b.allocator);
+    defer burn_flags.deinit();
+    try burn_flags.appendSlice(flags.items);
+    try burn_flags.append("-fomit-frame-pointer");
+    pkg_noun.addCSourceFiles(.{
+        .root = b.path(""),
+        .files = &.{"nock-compile.c"},
+        .flags = burn_flags.items,
+    });
+
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
@@ -232,10 +245,12 @@ pub fn build(b: *std.Build) !void {
 
 const c_source_files = [_][]const u8{
     "allocate.c",
+    "direct.c",
     "events.c",
     "hashtable.c",
     "imprison.c",
     "jets.c",
+    "jets/u.c",
     "jets/a/add.c",
     "jets/a/dec.c",
     "jets/a/div.c",
@@ -444,6 +459,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "direct.h",
     "copy_migrate.h",
     "error.h",
     "events.h",
@@ -452,10 +468,12 @@ const install_headers = [_][]const u8{
     "jets.h",
     "jets/k.h",
     "jets/q.h",
+    "jets/u.h",
     "jets/w.h",
     "jets/136/w.h",
     "log.h",
     "manage.h",
+    "nock-compile.h",
     "nock.h",
     "noun.h",
     "options.h",

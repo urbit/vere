@@ -104,7 +104,7 @@
     /* u3n_slam_et(): produce (gat sam), as ++toon, in namespace.
     */
       u3_noun
-      u3n_slam_it(u3_noun gul, u3_noun gat, u3_noun sam);
+      u3n_slam_et(u3_noun gul, u3_noun gat, u3_noun sam);
 
     /* u3n_nock_an(): as slam_in(), but with empty fly.
     */
