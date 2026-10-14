@@ -381,6 +381,9 @@
     u3_noun u3wfp_open(u3_noun);
     u3_noun u3wfp_rake(u3_noun);
 
+    u3_noun u3wf_vest(u3_noun);
+    u3_noun u3wf_parse_pile(u3_noun);
+
     u3_noun u3wfu_busk(u3_noun);
     u3_noun u3wfu_crop(u3_noun);
     u3_noun u3wfu_find(u3_noun);

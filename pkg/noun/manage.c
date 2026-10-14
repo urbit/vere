@@ -133,6 +133,8 @@
 //
 static rsignal_jmpbuf u3_Signal;
 
+void (*u3m_Flee_f)(c3_o sig_o) = 0;
+
 #ifdef VERE64
 #include <stdatomic.h>
 static _Atomic c3_w u3_Sighow;
@@ -481,6 +483,9 @@ _cm_signal_done(void)
 void
 u3m_signal(c3_m sig_m)
 {
+  if ( u3m_Flee_f ) {
+    u3m_Flee_f(c3y);
+  }
   rsignal_longjmp(u3_Signal, sig_m);
 }
 
@@ -1066,6 +1071,10 @@ u3m_bail(u3_noun how)
   if ( NULL != u3t_Spin ) {
     u3t_Spin->off_h = u3R->off_h;
     u3t_Spin->fow_h = u3R->fow_h;
+  }
+
+  if ( u3m_Flee_f ) {
+    u3m_Flee_f(c3n);
   }
 
   u3m_escape(how);

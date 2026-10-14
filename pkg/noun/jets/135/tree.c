@@ -301,6 +301,7 @@ static u3j_harm _135_pen_fork_a[] = {{".2", u3wf_fork}, {}};
 
 static u3j_harm _135_pen_look_a[] = {{".2", u3wf_look}, {}};
 static u3j_harm _135_pen_loot_a[] = {{".2", u3wf_loot}, {}};
+static u3j_harm _135_pen_vest_a[] = {{".2", u3wf_vest}, {}};
 
 static u3j_harm _135_pen__ut_crop_a[] = {{".2", u3wfu_crop}, {}};
 static u3j_harm _135_pen__ut_fish_a[] = {{".2", u3wfu_fish}, {}};
@@ -1002,6 +1003,12 @@ static u3j_core _135_hex_wasm_sur_d[] = {
   {}
 };
 
+static u3j_harm _135_hex_clay_parse_pile_a[] = {{".2", u3wf_parse_pile}, {}};
+static u3j_core _135_hex_clay_utilities_d[] =
+  { { "parse-pile", 7, _135_hex_clay_parse_pile_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _135_hex_d[] =
   { { "non", 7, 0, _135_non_d, no_hashes },
 
@@ -1032,6 +1039,7 @@ static u3j_core _135_hex_d[] =
     { "wasm-sur-v0", 3, 0, _135_hex_wasm_sur_d, no_hashes },
     { "bytestream-v0", 31, 0, _135_hex_bytestream_d, no_hashes},
     { "zlib-v0", 31, 0, _135_hex__zlib_d, no_hashes },
+    { "clay-utilities", 127, 0, _135_hex_clay_utilities_d, no_hashes },
     {}
   };
 
@@ -1047,6 +1055,7 @@ static u3j_core _135_pen_d[] =
     { "fork", 7, _135_pen_fork_a, 0, no_hashes },
     { "look", 7, _135_pen_look_a, 0, no_hashes },
     { "loot", 7, _135_pen_loot_a, 0, no_hashes },
+    { "vest", 7, _135_pen_vest_a, 0, no_hashes },
     { "ut", 15, 0, _135_pen__ut_d, no_hashes, _135_pen__ut_ho },
     {}
   };

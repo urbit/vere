@@ -97,6 +97,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_signal(c3_m sig_m);
 
+      /* u3m_Flee_f: if set, called just before control leaves where it
+      ** is without returning: with c3n as a bail leaves [u3R] for the
+      ** trap of that road, and with c3y as a signal leaves every road.
+      ** It may be in a signal handler, and must do no more than one may.
+      */
+        extern void (*u3m_Flee_f)(c3_o sig_o);
+
       /* u3m_file(): load file, as atom, or bail.
       */
         u3_noun

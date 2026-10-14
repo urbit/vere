@@ -294,6 +294,10 @@
 #   define u3qfu_van_rib  58
 #   define u3qfu_van_vet  59
 
+    u3_weak u3qfu_hc_mint(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
+    u3_weak u3qf_hc_vest(u3_noun, u3_noun);
+    u3_weak u3qf_hc_pile(u3_noun, u3_noun, u3_noun);
+
     void u3qf_test(const c3_c*, u3_noun);
 
 

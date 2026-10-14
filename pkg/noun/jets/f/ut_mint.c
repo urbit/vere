@@ -30,7 +30,13 @@ u3wfu_mint(u3_noun cor)
       return pro;
     }
     else {
-      pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
+      //  by the compiler in hc/, or failing that the kernel's own
+      //
+      pro = u3qfu_hc_mint(cor, van, sut, gol, gen);
+
+      if ( u3_none == pro ) {
+        pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
+      }
       return u3z_save(u3z_memo_toss, key, pro);
     }
   }
