@@ -1122,13 +1122,46 @@ _nc_translate(nc_gen* gen_u)
     }                                                                    \
   } while ( 0 )
 
-/* _nc_key_cmp(): sort registers by their first point, then by number.
+/* _nc_key_sort(): sort registers by their first point, then by number.
 */
-static int
-_nc_key_cmp(const void* a_v, const void* b_v)
+static void
+_nc_key_sort(c3_d* key_d, c3_h len_h)
 {
-  c3_d a_d = *(const c3_d*)a_v, b_d = *(const c3_d*)b_v;
-  return ( a_d < b_d ) ? -1 : ( a_d > b_d ) ? 1 : 0;
+  while ( len_h > 16 ) {
+    c3_d piv_d = key_d[len_h / 2];
+    c3_h i_h = 0, j_h = len_h - 1;
+
+    for (;;) {
+      while ( key_d[i_h] < piv_d ) i_h++;
+      while ( key_d[j_h] > piv_d ) j_h--;
+      if ( i_h >= j_h ) break;
+      c3_d tmp_d = key_d[i_h];
+      key_d[i_h++] = key_d[j_h];
+      key_d[j_h--] = tmp_d;
+    }
+
+    j_h++;
+
+    if ( j_h < len_h - j_h ) {
+      _nc_key_sort(key_d, j_h);
+      key_d += j_h;
+      len_h -= j_h;
+    }
+    else {
+      _nc_key_sort(key_d + j_h, len_h - j_h);
+      len_h = j_h;
+    }
+  }
+
+  for ( c3_h i_h = 1; i_h < len_h; i_h++ ) {
+    c3_d tmp_d = key_d[i_h];
+    c3_h j_h   = i_h;
+    while ( j_h > 0 && key_d[j_h - 1] > tmp_d ) {
+      key_d[j_h] = key_d[j_h - 1];
+      j_h--;
+    }
+    key_d[j_h] = tmp_d;
+  }
 }
 
 /* _nc_bit_get(), _nc_bit_set(), _nc_bit_clr(): bitsets of registers.
@@ -1442,11 +1475,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  into a block at its start, as drops or left to the terminator; that
   //  of a product never used right after its op; the removed ops go
   //
-  //  there are no ties so the sort is deterministic
-  //
-  qsort(dro_d, dro_h, sizeof(c3_d), _nc_key_cmp);
+  _nc_key_sort(dro_d, dro_h);
 
   {
+    if ( 2 * gen_u->opn_h > c3_h_max - dro_h ) u3m_bail(c3__meme);
     c3_h   cap_h = (2 * gen_u->opn_h) + dro_h;
     nc_op* new_u = u3a_malloc(c3_max(cap_h, 1) * sizeof(nc_op));
     c3_h   new_h = 0, dri_h = 0;
@@ -1456,6 +1488,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       c3_h    fir_h = new_h;
 
       switch ( kin_y[i_h] ) {
+        default: u3_assert(0);
+
         case _nc_kin_dro: {
           while ( (dri_h < dro_h) && ((c3_h)(dro_d[dri_h] >> 32) == i_h) ) {
             nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_dro);
@@ -1748,7 +1782,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
           c3_d dif_d = cur_d[w_h] ^ now_d[w_h];
 
           while ( dif_d ) {
-            c3_h bit_h = (w_h << 6) + __builtin_ctzll(dif_d);
+            c3_h bit_h = (w_h << 6) + c3_tz_d(dif_d);
             dif_d &= dif_d - 1;
 
             if ( (now_d[w_h] >> (bit_h & 63)) & 1 ) {
@@ -1805,7 +1839,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
     }
   }
 
-  qsort(key_d, key_n_h, sizeof(c3_d), _nc_key_cmp);
+  _nc_key_sort(key_d, key_n_h);
 
   for ( i_h = 0; i_h < key_n_h; i_h++ ) {
     c3_h sot = _nc_none, s_h;
@@ -2295,7 +2329,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   //  a self call that doesn't sweep and finds every argument in its
   //  parameter slot has nothing to do but start over: a jump to the entry.
   //  NB: this adds a backedge into an otherwise DAG. It's OK because the passes
-  //  that depended on acyclity of the CFG happened before that point.
+  //  that depended on acyclity of the CFG happened before this point.
   //
   for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_h]);
