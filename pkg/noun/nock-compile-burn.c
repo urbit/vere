@@ -138,6 +138,11 @@ static const OP_F TAB[] = { OPCODES };
 #  define EMPTY()    ((void)0)
 #endif
 
+//  ZERO(s): empty slot s, zeroing it if the build reads empty slots
+//  (_nc_zer_t): for a sweep, or for the checks
+//
+#define ZERO(s)  do { if ( _nc_zer_t ) { reg[s] = 0; } } while ( 0 )
+
 //  SWEEP(S): if S, drop whatever every slot of the activation still holds:
 //  the registers that died on the edge into this block, at an op that
 //  ends the activation
@@ -153,13 +158,13 @@ static const OP_F TAB[] = { OPCODES };
   } while ( 0 )
 
 #define TAKEN(v, s, K)  do {                                                    \
-    if ( K ) { reg[s] = 0; } else { GAIN(v); }                                  \
+    if ( K ) { ZERO(s); } else { GAIN(v); }                                    \
   } while ( 0 )
 #define TAKE(s, K)  ({ u3_noun _v = reg[s]; TAKEN(_v, s, K); _v; })
 #define DROP(s, K)  do {                                                        \
     if ( K ) {                                                                  \
       u3_noun _v = reg[s];                                                      \
-      reg[s] = 0;                                                               \
+      ZERO(s);                                                                  \
       LOSE(_v);                                                                 \
     }                                                                           \
   } while ( 0 )
@@ -331,7 +336,7 @@ static const OP_F TAB[] = { OPCODES };
 //
 #define MOVE()  do {                                                            \
     for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
-      if ( kon_y[_i] ) { reg[sot_h[_i]] = 0; } else { GAIN(nex[_i]); }          \
+      if ( kon_y[_i] ) { ZERO(sot_h[_i]); } else { GAIN(nex[_i]); }            \
     }                                                                           \
   } while ( 0 )
 
@@ -342,7 +347,7 @@ static const OP_F TAB[] = { OPCODES };
     for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
       if ( kon_y[_i] ) {                                                        \
         u3_noun _v = reg[sot_h[_i]];                                            \
-        reg[sot_h[_i]] = 0;                                                     \
+        ZERO(sot_h[_i]);                                                        \
         LOSE(_v);                                                               \
       }                                                                         \
     }                                                                           \
@@ -351,8 +356,10 @@ static const OP_F TAB[] = { OPCODES };
 //  ENTER(len): run pog_u, its len arguments in its slots at reg
 //
 #define ENTER(len)  do {                                                        \
-    for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                          \
-      reg[_i] = 0;                                                              \
+    if ( _nc_zer_t ) {                                                          \
+      for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                        \
+        reg[_i] = 0;                                                            \
+      }                                                                         \
     }                                                                           \
     ip = pog_u->byc_u.ops_y;                                                    \
     BURN();                                                                     \
@@ -419,8 +426,10 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   for ( i_h = 0; i_h < len_h; i_h++ ) {
     reg[i_h] = arg[i_h];
   }
-  for ( i_h = len_h; i_h < pog_u->tot_h; i_h++ ) {
-    reg[i_h] = 0;
+  if ( _nc_zer_t ) {
+    for ( i_h = len_h; i_h < pog_u->tot_h; i_h++ ) {
+      reg[i_h] = 0;
+    }
   }
 
   fam_u = PUSH(_nc_frame_w);
@@ -778,16 +787,19 @@ OP1(CAM, a_h, BODY_CAM)
   ENTER(1);
 OP1(CSM, a_h, BODY_CSM)
 
-//  branches release a consumed source before they jump
+//  branches release their source on the edge that consumes it, before
+//  they go: KY on the fall-through to the yes block, KT on the jump
 //
-#define BODY_CLQ(K)                                                             \
-  c3_t c = (c3y == u3du(reg[a_h]));                                             \
-  DROP(a_h, K);                                                                 \
-  if ( !c ) {                                                                   \
+#define BODY_CLQ(KY, KT)                                                        \
+  if ( c3y == u3du(reg[a_h]) ) {                                                \
+    DROP(a_h, KY);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    DROP(a_h, KT);                                                              \
     JUMP(b_h);                                                                  \
   }                                                                             \
   BURN();
-OP2K(CLQ, a_h, b_h, BODY_CLQ)
+OP2KK(CLQ, a_h, b_h, BODY_CLQ)
 
 #define BODY_EQQ(KA, KB)                                                        \
   c3_o e = u3r_sing(reg[a_h], reg[b_h]);                                        \
@@ -799,44 +811,53 @@ OP2K(CLQ, a_h, b_h, BODY_CLQ)
   BURN();
 OP3KK(EQQ, a_h, b_h, c_h, BODY_EQQ)
 
-#define BODY_EQI(K)                                                             \
-  c3_t e = (reg[b_h] == a_h);                                                   \
-  DROP(b_h, K);                                                                 \
-  if ( !e ) {                                                                   \
+#define BODY_EQI(KY, KT)                                                        \
+  if ( reg[b_h] == a_h ) {                                                      \
+    DROP(b_h, KY);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    DROP(b_h, KT);                                                              \
     JUMP(c_h);                                                                  \
   }                                                                             \
   BURN();
-OP3K(EQI, a_h, b_h, c_h, BODY_EQI)
+OP3KK(EQI, a_h, b_h, c_h, BODY_EQI)
 
-#define BODY_EQL(K)                                                             \
-  c3_o e = u3r_sing(pog_u->lit_u.non[a_h], reg[b_h]);                           \
-  DROP(b_h, K);                                                                 \
-  if ( c3n == e ) {                                                             \
+#define BODY_EQL(KY, KT)                                                        \
+  if ( c3y == u3r_sing(pog_u->lit_u.non[a_h], reg[b_h]) ) {                     \
+    DROP(b_h, KY);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    DROP(b_h, KT);                                                              \
     JUMP(c_h);                                                                  \
   }                                                                             \
   BURN();
-OP3K(EQL, a_h, b_h, c_h, BODY_EQL)
+OP3KK(EQL, a_h, b_h, c_h, BODY_EQL)
 
-#define BODY_BRN(K)                                                             \
+#define BODY_BRN(KY, KT)                                                        \
   u3_noun x = reg[a_h];                                                         \
   if ( x > 1 ) {                                                                \
     u3m_bail(c3__exit);                                                         \
   }                                                                             \
-  DROP(a_h, K);                                                                 \
   if ( 1 == x ) {                                                               \
+    DROP(a_h, KT);                                                              \
     JUMP(b_h);                                                                  \
   }                                                                             \
+  else {                                                                        \
+    DROP(a_h, KY);                                                              \
+  }                                                                             \
   BURN();
-OP2K(BRN, a_h, b_h, BODY_BRN)
+OP2KK(BRN, a_h, b_h, BODY_BRN)
 
-#define BODY_BRZ(K)                                                             \
-  u3_noun x = reg[a_h];                                                         \
-  DROP(a_h, K);                                                                 \
-  if ( 0 != x ) {                                                               \
+#define BODY_BRZ(KY, KT)                                                        \
+  if ( 0 == reg[a_h] ) {                                                        \
+    DROP(a_h, KY);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    DROP(a_h, KT);                                                              \
     JUMP(b_h);                                                                  \
   }                                                                             \
   BURN();
-OP2K(BRZ, a_h, b_h, BODY_BRZ)
+OP2KK(BRZ, a_h, b_h, BODY_BRZ)
 
 #define BODY_HOP()                                                              \
   JUMP(a_h);                                                                    \
@@ -923,7 +944,9 @@ OP1K(JMF, a_h, BODY_JMF)
   u3_noun*   sot = &(reg[SUB()]);                                               \
   u3_noun    x   = *sot;                                                        \
   u3_noun    pro;                                                               \
-  *sot = 0;                                                                     \
+  if ( _nc_zer_t ) {                                                            \
+    *sot = 0;                                                                   \
+  }                                                                             \
   SWEEP(S);                                                                     \
   if (  dir_u->ham_u                                                            \
      && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u, u3t(dir_u->ring)))) )  \
@@ -938,7 +961,7 @@ OP1K(JSP, a_h, BODY_JSP)
 
 #define BODY_DON(S)                                                             \
   u3_noun pro = reg[a_h];                                                       \
-  reg[a_h] = 0;                                                                 \
+  ZERO(a_h);                                                                    \
   SWEEP(S);                                                                     \
   DONE(pro);
 OP1K(DON, a_h, BODY_DON)
@@ -946,7 +969,7 @@ OP1K(DON, a_h, BODY_DON)
 #define BODY_DRO()                                                              \
   u3_noun x = reg[a_h];                                                         \
   _nc_stat_if(c3n == u3a_is_cat(x), dro_d);                                     \
-  reg[a_h] = 0;                                                                 \
+  ZERO(a_h);                                                                    \
   LOSE(x);                                                                      \
   BURN();
 OP1(DRO, a_h, BODY_DRO)

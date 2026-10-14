@@ -37,14 +37,17 @@
 **  Slots hold counted references.  An op reads a source slot either
 **  borrowed, gaining a reference for its product and leaving the slot as
 **  it was, or consumed: the slot gives up its reference to the op and is
-**  zeroed.  An op with sources comes in a variant per subset of its
+**  empty.  An op with sources comes in a variant per subset of its
 **  sources consumed, _0 (none) to _3 (both), bit i for source i; a call
-**  site holds a consume flag per argument instead.  The compiler consumes
-**  a register at its last use and drops (DRO) the registers that die
-**  anywhere else (see _nc_lives()), so a slot holds a reference exactly
-**  while the register in it is live, a destination slot is always zero
-**  when written, and an activation ends with every slot zero but the one
-**  it returns.
+**  site holds a consume flag per argument instead; a branch on one
+**  source (CLQ, EQI, EQL, BRN, BRZ) consumes it per edge, bit 0 on the
+**  fall-through and bit 1 on the jump.  The compiler consumes a register
+**  at its last use and drops (DRO) the registers that die anywhere else
+**  (see _nc_lives()), so a slot holds a reference exactly while the
+**  register in it is live, a destination slot holds none when written,
+**  and an activation ends with every slot empty but the one it returns.
+**  An empty slot is zeroed only in a build that reads empty slots: for
+**  sweeps, or for the checks (_nc_zer_t).
 **
 **    IMM_0 d        0 -> d
 **    IMM_1 d        1 -> d
@@ -104,8 +107,10 @@
 **  sources and which holds the destination slot, if any), the number of
 **  variant bits in the opcode, and whether the variant bit means a sweep
 **  rather than a consumed source.  A consume bit per source, except for
-**  a call (the flags are in the site) and for DON and DRO, which always
-**  consume.  The special families bom, imm, nop and kil have no opcodes
+**  a call (the flags are in the site), for DON and DRO, which always
+**  consume, and for a branch on one source, whose two bits consume it
+**  on the fall-through (bit 0) and on the jump (bit 1) (_nc_edgy()).
+**  The special families bom, imm, nop and kil have no opcodes
 **  of their own: imm encodes as an IMM opcode or as IML, nop and kil as
 **  nothing.  kil defines a register without code: a parameter of a block
 **  that a jump to it leaves undefined, so that the register is not live
@@ -134,12 +139,12 @@
   X(cap, CAP, 0, 0, 1, 0, 1, 0, 0)                                       \
   X(cam, CAM, 0, 0, 1, 0, 1, 0, 0)                                       \
   X(csm, CSM, 0, 0, 1, 0, 1, 0, 0)                                       \
-  X(clq, CLQ, 1, 0, 0, 1, 0, 1, 0)                                       \
+  X(clq, CLQ, 1, 0, 0, 1, 0, 2, 0)                                       \
   X(eqq, EQQ, 2, 0, 0, 1, 0, 2, 0)                                       \
-  X(eqi, EQI, 1, 0, 1, 1, 0, 1, 0)                                       \
-  X(eql, EQL, 1, 0, 1, 1, 0, 1, 0)                                       \
-  X(brn, BRN, 1, 0, 0, 1, 0, 1, 0)                                       \
-  X(brz, BRZ, 1, 0, 0, 1, 0, 1, 0)                                       \
+  X(eqi, EQI, 1, 0, 1, 1, 0, 2, 0)                                       \
+  X(eql, EQL, 1, 0, 1, 1, 0, 2, 0)                                       \
+  X(brn, BRN, 1, 0, 0, 1, 0, 2, 0)                                       \
+  X(brz, BRZ, 1, 0, 0, 1, 0, 2, 0)                                       \
   X(hop, HOP, 0, 0, 0, 1, 0, 0, 0)                                       \
   X(jmp, JMP, 0, 0, 1, 0, 1, 1, 1)                                       \
   X(jms, JMS, 0, 0, 1, 0, 1, 1, 1)                                       \
@@ -168,6 +173,7 @@ enum { FAMILIES(_nc_fam_enum) _nc_bom, _nc_imm, _nc_nop, _nc_kil };
 
 #define Y(op) op,
 enum { OPCODES LAST };
+static_assert(LAST <= 256);
 #undef Y
 
 #define Y(op) #op,
@@ -193,6 +199,12 @@ static const struct {
   [_nc_kil] = { 0, 1, 0, 0, 0, 0, 0 },
 };
 #undef _nc_fam_row
+
+/* _nc_edgy(): whether a family is a branch on one source, whose variant
+**             bits consume it per edge: bit 0 on the fall-through (the
+**             yes block), bit 1 on the jump.
+*/
+#define _nc_edgy(fam)  (_nc_fam[fam].tar_y && (1 == _nc_fam[fam].src_y))
 
 /* _nc_bas_y: first opcode of a family; the opcode of an op is
 **            _nc_bas_y[fam] + 3 * variant bits + width.
@@ -232,11 +244,15 @@ typedef struct {
 /* nc_blk: a basic block.
 */
 typedef struct {
-  u3_noun blob;
+  u3_noun blob;     //  [params body fin] of the block, or none if made
+                    //  by _nc_lives()
   c3_h    fir_h;    //  first op in the nc_op array
   c3_h    len_h;    //  number of ops in the nc_op array
   c3_h    off_h;    //  byte offset
   c3_h    lay_h;    //  position in the layout, or _nc_none if unreachable
+  c3_h    kid_h[2]; //  successors: the jump target first, then the yes
+                    //  block of a branch (_nc_kids())
+  c3_y    kin_y;    //    and their number
 } nc_blk;
 
 /* nc_jet: a ring [path axis], resolved to its drivers.
@@ -314,6 +330,32 @@ u3nc_stat u3nc_Stat;
 static const c3_t _nc_verb_t = 1;
 #else
 static const c3_t _nc_verb_t = 0;
+#endif
+
+/* _nc_swe_t: whether a block of only drops and a terminator leaves the
+**            drops to the terminator's sweeping variant, which drops
+**            whatever every slot of the activation holds (U3NC_SWEEP).
+**            Off by default: a sweep needs every empty slot zeroed, a
+**            store at every consume and at every call, for a dispatch it
+**            saves a few times per run in the tests (Oct 2026), and a
+**            sweeping self call can't be lowered to moves and a jump
+**            (_nc_shuffle()).
+*/
+#ifdef U3NC_SWEEP
+static const c3_t _nc_swe_t = 1;
+#else
+static const c3_t _nc_swe_t = 0;
+#endif
+
+/* _nc_zer_t: whether the interpreter zeroes a slot it empties.  A slot
+**            holds a reference iff its register is live, and a drop
+**            never meets an empty slot (_nc_lives()), so only a sweep,
+**            and the checks of U3NC_CHECK and C3DBG, read empty slots.
+*/
+#if defined(U3NC_SWEEP) || defined(U3NC_CHECK) || defined(C3DBG)
+static const c3_t _nc_zer_t = 1;
+#else
+static const c3_t _nc_zer_t = 0;
 #endif
 
 /* _nc_cat(): direct atom below _nc_none, or fail.
@@ -679,6 +721,13 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
     u3a_free(sak);
   }
 
+  //  successors of each block
+  //
+  for ( c3_h i_h = 0; i_h < gen_u->blk_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[i_h]);
+    blk_u->kin_y = _nc_kids(gen_u, blk_u->blob, blk_u->kid_h);
+  }
+
   //  reverse postorder (i.e. topological order) of a depth-first search from
   //  the entry block
   //  first get a postorder, then reverse it
@@ -689,7 +738,6 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
     c3_y* nex_y = u3a_calloc(blk_h, sizeof(c3_y));
     c3_y* saw_y = u3a_calloc(blk_h, sizeof(c3_y));
     c3_h  dep_h = 0;  // stack depth
-    c3_h  kid_h[2];
 
     gen_u->lay_h = u3a_malloc(blk_h * sizeof(c3_h));
     gen_u->lan_h = 0;
@@ -699,10 +747,10 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
 
     while ( dep_h ) {
       c3_h top_h = sak_h[dep_h - 1];
-      c3_h kin_h = _nc_kids(gen_u, gen_u->blk_u[top_h].blob, kid_h);
+      c3_h kin_h = gen_u->blk_u[top_h].kin_y;
 
       if ( nex_y[top_h] < kin_h ) {
-        c3_h kid = kid_h[nex_y[top_h]++];
+        c3_h kid = gen_u->blk_u[top_h].kid_h[nex_y[top_h]++];
 
         if ( !saw_y[kid] ) {
           saw_y[kid] = 1;
@@ -1194,7 +1242,7 @@ static void
 _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
             c3_d* inn_d, c3_d* liv_d, c3_d* lvo_d, c3_d* lva_d, c3_t mar_t)
 {
-  c3_h i_h, j_h, k_h, r_h, kin_h, kid_h[2];
+  c3_h i_h, j_h, k_h, r_h;
 
   memset(inn_d, 0, (c3_z)gen_u->blk_h * chu_h * sizeof(c3_d));
 
@@ -1204,9 +1252,8 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
     //  live out of the block: live into its successors
     //
     memset(liv_d, 0, chu_h * sizeof(c3_d));
-    kin_h = _nc_kids(gen_u, blk_u->blob, kid_h);
-    for ( j_h = 0; j_h < kin_h; j_h++ ) {
-      c3_d* kin_d = inn_d + ((c3_z)kid_h[j_h] * chu_h);
+    for ( j_h = 0; j_h < blk_u->kin_y; j_h++ ) {
+      c3_d* kin_d = inn_d + ((c3_z)blk_u->kid_h[j_h] * chu_h);
       for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
         liv_d[w_h] |= kin_d[w_h];
       }
@@ -1246,7 +1293,7 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
         if ( (r_h >= lo_h) && (r_h < hi_h) ) {
           if ( !_nc_bit_get(liv_d, r_h - lo_h) ) {
             if ( mar_t && !_nc_fam[op_u->fam_y].swe_y ) {
-              op_u->kon_y |= 1 << k_h;
+              op_u->kon_y |= _nc_edgy(op_u->fam_y) ? 3 : (1 << k_h);
             }
             _nc_bit_set(liv_d, r_h - lo_h);
           }
@@ -1280,6 +1327,159 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
   }
 }
 
+/* _nc_sink(): move an immediate (IMM, IML) read in one block only, other
+**             than its own, to that block, right before its first read
+**             there.  It is then live in no other block, where it would
+**             be dropped on every path that doesn't read it: SKA defines
+**             the ~ of a ?~ before the test, say, and the cons arm would
+**             drop it each time around.  The ops are rebuilt in layout
+**             order; nothing else changes.
+*/
+static void
+_nc_sink(nc_gen* gen_u)
+{
+  static const c3_h _nc_many = (c3_h)-2;
+  c3_h   reg_h = gen_u->reg_h;
+  c3_h   opn_h = gen_u->opn_h;
+  c3_h*  use_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));  //  block reading the register, none, or many
+  c3_h*  pos_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));  //    and the first op reading it there
+  c3_h*  nex_h = u3a_malloc(c3_max(opn_h, 1) * sizeof(c3_h));  //  the ops sunk into a block, chained
+  c3_y*  sun_y = u3a_calloc(c3_max(opn_h, 1), sizeof(c3_y));   //  whether an op sinks
+  c3_h*  fir_h = u3a_malloc(c3_max(gen_u->blk_h, 1) * sizeof(c3_h));  //  the chain of a block
+  c3_h*  las_h = u3a_malloc(c3_max(gen_u->blk_h, 1) * sizeof(c3_h));
+  c3_h   i_h, j_h, r_h, b_h, sun_h = 0;
+
+  for ( r_h = 0; r_h < reg_h; r_h++ ) {
+    use_h[r_h] = _nc_none;
+  }
+  for ( b_h = 0; b_h < gen_u->blk_h; b_h++ ) {
+    fir_h[b_h] = las_h[b_h] = _nc_none;
+  }
+
+  //  where each register is read
+  //
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      _nc_srcs(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]), src_h, {
+        if ( _nc_none == use_h[*src_h] ) {
+          use_h[*src_h] = b_h;
+          pos_h[*src_h] = j_h;
+        }
+        else if ( b_h != use_h[*src_h] ) {
+          use_h[*src_h] = _nc_many;
+        }
+      });
+    }
+  }
+
+  //  the immediates read in one other block, chained to it
+  //
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      c3_h   o_h  = blk_u->fir_h + j_h;
+      nc_op* op_u = &(gen_u->ops_u[o_h]);
+      c3_h   t_h;
+
+      if ( (_nc_imm != op_u->fam_y) && (_nc_iml != op_u->fam_y) ) {
+        continue;
+      }
+      t_h = use_h[op_u->dst_h];
+      if ( (_nc_none == t_h) || (_nc_many == t_h) || (b_h == t_h) ) {
+        continue;
+      }
+
+      sun_y[o_h] = 1;
+      nex_h[o_h] = _nc_none;
+      if ( _nc_none == fir_h[t_h] ) {
+        fir_h[t_h] = o_h;
+      }
+      else {
+        nex_h[las_h[t_h]] = o_h;
+      }
+      las_h[t_h] = o_h;
+      sun_h++;
+    }
+  }
+
+  if ( sun_h ) {
+    nc_op* new_u = u3a_malloc(c3_max(opn_h, 1) * sizeof(nc_op));
+    c3_h   new_h = 0;
+
+    for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+      nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
+      c3_h    beg_h = new_h;
+
+      for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+        c3_h o_h = blk_u->fir_h + j_h;
+        c3_h s_h;
+
+        for ( s_h = fir_h[b_h]; _nc_none != s_h; s_h = nex_h[s_h] ) {
+          if ( pos_h[gen_u->ops_u[s_h].dst_h] == j_h ) {
+            new_u[new_h++] = gen_u->ops_u[s_h];
+          }
+        }
+        if ( !sun_y[o_h] ) {
+          new_u[new_h++] = gen_u->ops_u[o_h];
+        }
+      }
+
+      blk_u->fir_h = beg_h;
+      blk_u->len_h = new_h - beg_h;
+    }
+
+    u3_assert( new_h == opn_h );
+
+    u3a_free(gen_u->ops_u);
+    gen_u->ops_u = new_u;
+    gen_u->opc_h = opn_h;
+  }
+
+  u3a_free(use_h);
+  u3a_free(pos_h);
+  u3a_free(nex_h);
+  u3a_free(sun_y);
+  u3a_free(fir_h);
+  u3a_free(las_h);
+}
+
+/* _nc_branch(): the branch that ends a block, past a jump to its yes
+**               block, or NULL.
+*/
+static nc_op*
+_nc_branch(nc_gen* gen_u, c3_h b_h)
+{
+  nc_blk* blk_u = &(gen_u->blk_u[b_h]);
+  c3_h    j_h;
+
+  for ( j_h = blk_u->len_h; j_h-- > 0; ) {
+    nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+
+    if ( (_nc_nop == op_u->fam_y) || (_nc_hop == op_u->fam_y) ) {
+      continue;
+    }
+    return ( _nc_fam[op_u->fam_y].tar_y && _nc_fam[op_u->fam_y].src_y )
+         ? op_u
+         : NULL;
+  }
+
+  return NULL;
+}
+
+/* _nc_edge_y(): the edge from block p to its kid b, as the variant bit of
+**               a branch consuming its source there: 1 for the
+**               fall-through to the yes block, 2 for the jump.
+*/
+static c3_y
+_nc_edge_y(nc_gen* gen_u, c3_h p_h, c3_h b_h)
+{
+  nc_blk* blk_u = &(gen_u->blk_u[p_h]);
+  return ( (blk_u->kin_y > 1) && (blk_u->kid_h[1] == b_h) ) ? 1 : 2;
+}
+
 /* _nc_lives(): code transformations to respect the lifetimes of the registers.
 **
 **  First pass is dead code elimination: non-crashing ops whose products are not
@@ -1291,13 +1491,23 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
 **  Then for each block we record whether it can drop the dead registers with
 **  its terminating op (no writes in between in the body of the block)
 **
-**  Then we run liveness analysis, assembling a set of registers that died when
-**  we entered a given block (it was live in one of the predecessors but dead
-**  here because one of the cousin blocks still needs it) and collect an array
-**  of future DRO ops to be emitted in the beginning of the block.
+**  Then we run liveness analysis.  A register dies on an edge into a block
+**  when it is live out of the predecessor (a cousin block still needs it)
+**  and not live into the block; an unused argument dies at the entry.
+**  The drops common to every edge into a block are collected for its
+**  start.  A drop on one edge but not all goes into the branch that ends
+**  the predecessor, if that is its source (the edge variants of CLQ, EQI,
+**  EQL, BRN and BRZ), else into a block of drops made for the edge; a
+**  block with a lone predecessor lets its branch take its own source the
+**  same way, over a drop at the start.  So no drop ever meets an empty
+**  slot, which _nc_zer_t does not allow.
 **
-**  Then the DROs are emitted and old ops are copied with DROs interleaved if a
-**  product of an op is dead on arrival
+**  Then the ops are rebuilt in layout order: a block's drops first (or
+**  left to its terminator's sweep, _nc_swe_t), then its ops, with a DRO
+**  after an op whose product is dead on arrival; a block of drops for a
+**  fall-through edge follows the predecessor, taking over its jump to
+**  the yes block if it had one; those for jump edges go at the end,
+**  jumping on to their targets, and the branches are retargeted to them.
 */
 static void
 _nc_lives(nc_gen* gen_u, c3_h arg_h)
@@ -1313,11 +1523,15 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   c3_h* pre_h;                                        //  predecessors
   c3_d* inn_d;                                   //  live into each block
   c3_d* liv_d;                                   //  scratch
+  c3_d* out_d;                                   //  scratch: live out of a block
   c3_d* dro_d = NULL;                            //  drops: layout << 32 | reg
   c3_h  dro_h = 0, drc_h = 0;
+  c3_d* edr_d = NULL;                            //  edge drops: edge << 32 | reg
+  c3_h  edr_h = 0, erc_h = 0;
+  c3_h* edc_h;                                   //  drops of each edge: 2 * layout + k
   c3_y* kin_y = u3a_calloc(gen_u->lan_h, sizeof(c3_y));  //  kind, by layout
   c3_y* cnt_y = u3a_calloc(gen_u->lan_h, sizeof(c3_y));  //  drops, by layout
-  c3_h  i_h, j_h, k_h, r_h, b_h, kin_h, kid_h[2];
+  c3_h  i_h, j_h, k_h, r_h, b_h;
 
   //  kind of block: whether the registers will be freed with DROs vs by the
   //  terminator
@@ -1348,9 +1562,9 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  predecessors of the laid-out blocks
   //
   for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
-    kin_h = _nc_kids(gen_u, gen_u->blk_u[gen_u->lay_h[i_h]].blob, kid_h);
-    for ( j_h = 0; j_h < kin_h; j_h++ ) {
-      pro_h[kid_h[j_h] + 1]++;
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+    for ( j_h = 0; j_h < blk_u->kin_y; j_h++ ) {
+      pro_h[blk_u->kid_h[j_h] + 1]++;
     }
   }
 
@@ -1364,10 +1578,9 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
     c3_h* fil_h = u3a_calloc(blk_h, sizeof(c3_h));
 
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
-      b_h   = gen_u->lay_h[i_h];
-      kin_h = _nc_kids(gen_u, gen_u->blk_u[b_h].blob, kid_h);
-      for ( j_h = 0; j_h < kin_h; j_h++ ) {
-        c3_h kid = kid_h[j_h];
+      nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
+      for ( j_h = 0; j_h < blk_u->kin_y; j_h++ ) {
+        c3_h kid = blk_u->kid_h[j_h];
         pre_h[pro_h[kid] + fil_h[kid]++] = b_h;
       }
     }
@@ -1393,16 +1606,19 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       }
     }
 
-    kin_y[i_h] = ( (j_h == blk_u->len_h)
+    kin_y[i_h] = ( _nc_swe_t
+                 && (j_h == blk_u->len_h)
                  && las_u
                  && _nc_fam[las_u->fam_y].swe_y )
                ? _nc_kin_ter
                : _nc_kin_dro;
   }
 
-  //  liveness, a chunk of the registers at a time: deaths on the edges
-  //  into each block, and of the unused arguments at the entry, are live
-  //  out of a predecessor and not live into the block
+  //  liveness, a chunk of the registers at a time: the drops common to
+  //  the edges into each block, and of the unused arguments at the
+  //  entry; the drops of one edge in but not all, into the branch that
+  //  ends the predecessor when it reads the register, else for a block
+  //  on the edge
   //
   //  live-in array is bounded to be about (1 << 17) words == a megabyte
   //
@@ -1413,8 +1629,23 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   chu_h = c3_max(1, c3_min(wor_h, (1 << 17) / c3_max(blk_h, 1)));
   inn_d = u3a_malloc((c3_z)blk_h * chu_h * sizeof(c3_d));
   liv_d = u3a_malloc(chu_h * sizeof(c3_d));
+  out_d = u3a_malloc(chu_h * sizeof(c3_d));
+  edc_h = u3a_calloc((2 * (c3_z)gen_u->lan_h) + 1, sizeof(c3_h));
 
 #define _nc_in(b)  (inn_d + ((c3_z)(b) * chu_h))
+
+  //  _nc_out(): live out of block b, into out_d
+  //
+#define _nc_out(b)  do {                                                 \
+    nc_blk* _blk = &(gen_u->blk_u[b]);                                   \
+    memset(out_d, 0, chu_h * sizeof(c3_d));                              \
+    for ( k_h = 0; k_h < _blk->kin_y; k_h++ ) {                          \
+      c3_d* _kin = _nc_in(_blk->kid_h[k_h]);                             \
+      for ( c3_h _w = 0; _w < chu_h; _w++ ) {                            \
+        out_d[_w] |= _kin[_w];                                           \
+      }                                                                  \
+    }                                                                    \
+  } while ( 0 )
 
   for ( c3_d lo_d = 0; lo_d < reg_h; lo_d += (c3_d)chu_h << 6 ) {
     c3_h lo_h = lo_d;
@@ -1425,6 +1656,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[b_h = gen_u->lay_h[i_h]]);
       c3_d*   bin_d = _nc_in(b_h);
+      c3_h    pre_n = pro_h[b_h + 1] - pro_h[b_h];
 
       //  may cause a leak. see _nc_doomed()
       //
@@ -1434,31 +1666,45 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         continue;
       }
 
-      memset(liv_d, 0, chu_h * sizeof(c3_d));
-
+      //  dead on every edge in: live out of every predecessor (the
+      //  arguments, before the entry) and not live into the block
+      //
       if ( !i_h ) {
-        //  entry block: args are live
+        memset(liv_d, 0, chu_h * sizeof(c3_d));
         for ( r_h = lo_h; (r_h < hi_h) && (r_h < arg_h); r_h++ ) {
           _nc_bit_set(liv_d, r_h - lo_h);
         }
       }
-
-      for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
-        //  union of the live-out sets of predecessors
-        //
-        kin_h = _nc_kids(gen_u, gen_u->blk_u[pre_h[j_h]].blob, kid_h);
-        for ( k_h = 0; k_h < kin_h; k_h++ ) {
-          c3_d* kin_d = _nc_in(kid_h[k_h]);
+      else {
+        memset(liv_d, pre_n ? 0xff : 0, chu_h * sizeof(c3_d));
+        for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
+          _nc_out(pre_h[j_h]);
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
-            liv_d[w_h] |= kin_d[w_h];
+            liv_d[w_h] &= out_d[w_h];
           }
+        }
+      }
+      for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+        liv_d[w_h] &= ~bin_d[w_h];
+      }
+
+      //  a lone predecessor's branch takes its own source instead
+      //
+      if ( 1 == pre_n ) {
+        c3_h   p_h   = pre_h[pro_h[b_h]];
+        nc_op* bra_u = _nc_branch(gen_u, p_h);
+
+        if (  bra_u && _nc_edgy(bra_u->fam_y)
+           && ((r_h = bra_u->src_h[0]) >= lo_h) && (r_h < hi_h)
+           && _nc_bit_get(liv_d, r_h - lo_h) )
+        {
+          _nc_bit_clr(liv_d, r_h - lo_h);
+          bra_u->kon_y |= _nc_edge_y(gen_u, p_h, b_h);
         }
       }
 
       for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
-        //  for each chunk: drop each dead register
-        //
-        c3_d ded_d = liv_d[w_h] & ~bin_d[w_h];
+        c3_d ded_d = liv_d[w_h];
 
         while ( ded_d ) {
           c3_h bit_h = c3_tz_d(ded_d);
@@ -1468,26 +1714,106 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           cnt_y[i_h] |= 1;
         }
       }
+
+      //  dead on this edge in but not all: into the branch, or for a
+      //  block on the edge
+      //
+      if ( pre_n > 1 ) {
+        for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
+          c3_h   p_h   = pre_h[j_h];
+          nc_op* bra_u = _nc_branch(gen_u, p_h);
+          c3_y   edg_y = _nc_edge_y(gen_u, p_h, b_h);
+          c3_h   edg_h = (2 * gen_u->blk_u[p_h].lay_h) + (edg_y & 1);
+
+          _nc_out(p_h);
+
+          for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+            c3_d ded_d = out_d[w_h] & ~bin_d[w_h] & ~liv_d[w_h];
+
+            while ( ded_d ) {
+              c3_h bit_h = c3_tz_d(ded_d);
+              ded_d &= ded_d - 1;
+              r_h = lo_h + (w_h << 6) + bit_h;
+
+              if ( bra_u && _nc_edgy(bra_u->fam_y) && (bra_u->src_h[0] == r_h) ) {
+                bra_u->kon_y |= edg_y;
+              }
+              else {
+                _nc_grow(edr_d, edr_h, erc_h, c3_d);
+                edr_d[edr_h++] = ((c3_d)edg_h << 32) | r_h;
+                edc_h[edg_h]++;
+              }
+            }
+          }
+        }
+      }
     }
   }
 
+#undef _nc_out
 #undef _nc_in
 
-  //  rebuild the ops in layout order with the drops: those of the edges
-  //  into a block at its start, as drops or left to the terminator; that
-  //  of a product never used right after its op; the removed ops go
+  //  rebuild the ops in layout order with the drops: those common to the
+  //  edges into a block at its start, as drops or left to the terminator;
+  //  that of a product never used right after its op; those of one edge
+  //  in a block on the edge: after the predecessor for its fall-through,
+  //  taking over its jump to the yes block if it had one, else at the
+  //  end, jumping on, with the branch retargeted to it.  The removed
+  //  ops go.
   //
   _nc_key_sort(dro_d, dro_h);
+  _nc_key_sort(edr_d, edr_h);
 
   {
-    if ( 2 * gen_u->opn_h > c3_h_max - dro_h ) u3m_bail(c3__meme);
-    c3_h   cap_h = (2 * gen_u->opn_h) + dro_h;
-    nc_op* new_u = u3a_malloc(c3_max(cap_h, 1) * sizeof(nc_op));
+    c3_h*  edo_h = u3a_malloc(((2 * (c3_z)gen_u->lan_h) + 1) * sizeof(c3_h));
+    c3_h   edn_h = 0, e_h;                     //  edge blocks
+    c3_h*  lay_h;                              //  the new layout
+    c3_h   lan_h = 0;
+    c3_h*  def_h;                              //  edge blocks for the end
+    c3_h*  dfe_h;                              //    and their edges
+    c3_h   dfn_h = 0;
+    c3_d   cap_d;
+    c3_h   cap_h;
+    nc_op* new_u;
     c3_h   new_h = 0, dri_h = 0;
+
+    for ( e_h = 0, edo_h[0] = 0; e_h < 2 * gen_u->lan_h; e_h++ ) {
+      edo_h[e_h + 1] = edo_h[e_h] + edc_h[e_h];
+      edn_h += !!edc_h[e_h];
+    }
+
+    cap_d = (2 * (c3_d)gen_u->opn_h) + dro_h + edr_h + edn_h;
+    if ( cap_d > c3_h_max ) {
+      u3m_bail(c3__meme);
+    }
+    cap_h = cap_d;
+    new_u = u3a_malloc(c3_max(cap_h, 1) * sizeof(nc_op));
+    lay_h = u3a_malloc(((c3_z)gen_u->lan_h + edn_h) * sizeof(c3_h));
+    def_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    dfe_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+
+    if ( edn_h ) {
+      gen_u->blk_u = u3a_realloc(gen_u->blk_u, blk_h * sizeof(nc_blk),
+                                 ((c3_z)blk_h + edn_h) * sizeof(nc_blk));
+    }
+
+    //  _nc_edrops(): the drops of edge e
+    //
+#define _nc_edrops(e)  do {                                              \
+    for ( c3_h _i = edo_h[e]; _i < edo_h[(e) + 1]; _i++ ) {              \
+      nc_op* _op = _nc_op_init(&(new_u[new_h++]), _nc_dro);              \
+      _op->src_h[0] = (c3_h)edr_d[_i];                                   \
+    }                                                                    \
+  } while ( 0 )
 
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
       c3_h    fir_h = new_h;
+      nc_op*  bra_u = NULL;                    //  its branch, copied
+      nc_op*  hop_u = NULL;                    //  its jump to the yes block, copied
+      c3_y    k_y;
+
+      lay_h[lan_h++] = gen_u->lay_h[i_h];
 
       switch ( kin_y[i_h] ) {
         default: u3_assert(0);
@@ -1513,7 +1839,17 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           continue;
         }
 
-        new_u[new_h++] = *op_u;
+        new_u[new_h] = *op_u;
+
+        if ( _nc_fam[op_u->fam_y].tar_y ) {
+          if ( _nc_fam[op_u->fam_y].src_y ) {
+            bra_u = &(new_u[new_h]);
+          }
+          else {
+            hop_u = &(new_u[new_h]);
+          }
+        }
+        new_h++;
 
         if ( (_nc_kin_ter == kin_y[i_h]) && cnt_y[i_h]
            && _nc_fam[op_u->fam_y].swe_y )
@@ -1529,14 +1865,92 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
       blk_u->fir_h = fir_h;
       blk_u->len_h = new_h - fir_h;
+
+      //  the blocks of drops on the edges out of this one
+      //
+      for ( k_y = 0; k_y < 2; k_y++ ) {
+        c3_h    kid_h, edg_h;
+        nc_blk* edg_u;
+
+        e_h = (2 * i_h) + k_y;
+
+        if ( edo_h[e_h] == edo_h[e_h + 1] ) {
+          continue;
+        }
+
+        u3_assert( bra_u && (blk_u->kin_y > 1) );
+
+        kid_h = blk_u->kid_h[k_y];
+        edg_h = gen_u->blk_h++;
+        edg_u = &(gen_u->blk_u[edg_h]);
+        edg_u->blob     = u3_none;
+        edg_u->off_h    = 0;
+        edg_u->lay_h    = _nc_none;
+        edg_u->kin_y    = 1;
+        edg_u->kid_h[0] = kid_h;
+        edg_u->kid_h[1] = _nc_none;
+
+        if ( k_y ) {
+          //  the fall-through: the block follows, and either falls
+          //  through to the yes block in turn or takes over the jump
+          //
+          if ( hop_u ) {
+            u3_assert( (hop_u->tar_h == kid_h) && (hop_u == &(new_u[new_h - 1])) );
+            new_h--;
+            blk_u->len_h--;
+          }
+          edg_u->fir_h = new_h;
+          _nc_edrops(e_h);
+          if ( hop_u ) {
+            nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
+            op_u->tar_h = kid_h;
+          }
+          edg_u->len_h = new_h - edg_u->fir_h;
+          lay_h[lan_h++] = edg_h;
+        }
+        else {
+          //  the jump: retargeted to the block, which goes at the end
+          //
+          u3_assert( bra_u->tar_h == kid_h );
+          bra_u->tar_h = edg_h;
+          def_h[dfn_h] = edg_h;
+          dfe_h[dfn_h] = e_h;
+          dfn_h++;
+        }
+      }
     }
 
-    u3_assert( (dri_h == dro_h) && (new_h <= cap_h) );
+    for ( i_h = 0; i_h < dfn_h; i_h++ ) {
+      nc_blk* edg_u = &(gen_u->blk_u[def_h[i_h]]);
+      nc_op*  op_u;
+
+      edg_u->fir_h = new_h;
+      _nc_edrops(dfe_h[i_h]);
+      op_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
+      op_u->tar_h = edg_u->kid_h[0];
+      edg_u->len_h = new_h - edg_u->fir_h;
+      lay_h[lan_h++] = def_h[i_h];
+    }
+
+#undef _nc_edrops
+
+    u3_assert( (dri_h == dro_h) && (new_h <= cap_h)
+            && (lan_h == gen_u->lan_h + edn_h) && (gen_u->blk_h == blk_h + edn_h) );
+
+    for ( i_h = 0; i_h < lan_h; i_h++ ) {
+      gen_u->blk_u[lay_h[i_h]].lay_h = i_h;
+    }
 
     u3a_free(gen_u->ops_u);
     gen_u->ops_u = new_u;
     gen_u->opn_h = new_h;
     gen_u->opc_h = cap_h;
+    u3a_free(gen_u->lay_h);
+    gen_u->lay_h = lay_h;
+    gen_u->lan_h = lan_h;
+    u3a_free(edo_h);
+    u3a_free(def_h);
+    u3a_free(dfe_h);
   }
 
   u3a_free(use_h);
@@ -1544,7 +1958,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   u3a_free(pre_h);
   u3a_free(inn_d);
   u3a_free(liv_d);
+  u3a_free(out_d);
   u3a_free(dro_d);
+  u3a_free(edr_d);
+  u3a_free(edc_h);
   u3a_free(kin_y);
   u3a_free(cnt_y);
 }
@@ -2214,8 +2631,11 @@ _nc_print(u3nc_prog* pog_u)
         }
       }
       for ( i_h = 0; i_h < _nc_fam[fam_y].src_y; i_h++ ) {
-        fprintf(stderr, " %u%s", _nc_read(pog, &ip_h, wid_y),
-                ( (kon_y >> i_h) & 1 ) ? "!" : "");
+        const c3_c* kon_c = _nc_edgy(fam_y)
+                          ? ( (3 == kon_y) ? "!" : (1 == kon_y) ? "!f"
+                            : (2 == kon_y) ? "!j" : "" )
+                          : ( ((kon_y >> i_h) & 1) ? "!" : "" );
+        fprintf(stderr, " %u%s", _nc_read(pog, &ip_h, wid_y), kon_c);
       }
       if ( _nc_fam[fam_y].dst_y ) {
         fprintf(stderr, " -> %u", _nc_read(pog, &ip_h, wid_y));
@@ -2585,6 +3005,7 @@ _nc_build(u3_noun straight, u3_weak bell)
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
   _nc_fold(&gen_u);
+  _nc_sink(&gen_u);
   _nc_lives(&gen_u, arg_h);
   _nc_slots(&gen_u, arg_h);
   pog_u = _nc_emit(&gen_u, ned, arg_h);

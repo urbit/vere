@@ -386,6 +386,32 @@ _test_swap(void)
   return _test("swap", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_partial(): a register that dies on one edge into a block that
+**                   another edge reaches with it consumed already: y is
+**                   indirect and read only by the second test of the ?&,
+**                   so where the first test fails it dies on the edge to
+**                   the no arm, and where the second test runs it is
+**                   consumed before the same arm.  Both happen in the loop.
+*/
+static c3_i
+_test_partial(void)
+{
+  u3_noun cor = _gate("|=  [b=@ n=@]\n"
+                      "^-  @\n"
+                      "=/  acc  0\n"
+                      "|-  ^-  @\n"
+                      "?:  =(0 n)  acc\n"
+                      "=/  y  (add b n)\n"
+                      "=.  acc\n"
+                      "  ?:  ?&(=(0 (mod n 2)) =(0 (mod y 3)))\n"
+                      "    (add acc 1)\n"
+                      "  (add acc 2)\n"
+                      "$(n (dec n))\n",
+                      u3nc(u3i_string("an atom long enough to be indirect, yes"), 9));
+
+  return _test("partial", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* _test_unused(): the product of a call that is never used (but may
 **                 crash, so the call stays): dropped right after it.
 */
@@ -526,6 +552,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_swap() ) {
+    exit(1);
+  }
+
+  if ( !_test_partial() ) {
     exit(1);
   }
 
