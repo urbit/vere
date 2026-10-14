@@ -400,8 +400,9 @@ static const OP_F TAB[] = { OPCODES };
 **   then (every other slot was consumed or dropped, or the call sweeps
 **   them), and moves the temporary down in its place, under the same
 **   frame.  A tail call of the running program (JMS, a loop) moves them
-**   back into its parameter slots and keeps the activation; if they are
-**   all in place already, the compiler made it a jump to the entry.
+**   back into its parameter slots and keeps the activation; the compiler
+**   emits it sweeping only, lowering the others to moves and a jump to
+**   the entry.
 */
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
@@ -874,7 +875,8 @@ OP1K(JMP, a_h, BODY_JMP)
 //  a tail call of the running program: no new activation, the arguments
 //  go back into the parameter slots (through the temporary: they may
 //  come from each other's slots), the other slots are empty already, and
-//  the frame is the caller's and stays
+//  the frame is the caller's and stays.  Only the sweeping variant is
+//  emitted: the compiler lowers the others to moves and a HOP
 //
 #define BODY_JMS(S)                                                             \
   u3nc_dire* dir_u;                                                             \

@@ -46,9 +46,36 @@
     u3_noun u3ua_mul(u3_noun*);
     u3_noun u3ua_sub(u3_noun*);
 
+  /** Tier 2.
+  **/
+    u3_noun u3ub_reap(u3_noun*);
+    u3_noun u3ub_snag(u3_noun*);
+    u3_noun u3ub_weld(u3_noun*);
+
   /** Tier 3.
   **/
     u3_noun u3uc_bex(u3_noun*);
+    u3_noun u3uc_cat(u3_noun*);
+    u3_noun u3uc_con(u3_noun*);
+    u3_noun u3uc_cut(u3_noun*);
+    u3_noun u3uc_dis(u3_noun*);
     u3_noun u3uc_dvr(u3_noun*);
+    u3_noun u3uc_end(u3_noun*);
+    u3_noun u3uc_lsh(u3_noun*);
+    u3_noun u3uc_met(u3_noun*);
+    u3_noun u3uc_mix(u3_noun*);
+    u3_noun u3uc_muk(u3_noun*);
+    u3_noun u3uc_rap(u3_noun*);
+    u3_noun u3uc_rip(u3_noun*);
+    u3_noun u3uc_rsh(u3_noun*);
+    u3_noun u3ucp_tod(u3_noun*);
+    u3_noun u3ucp_tos(u3_noun*);
+
+  /** Tier 5.
+  **/
+    u3_noun u3ue_fein_ob(u3_noun*);
+    u3_noun u3ue_fynd_ob(u3_noun*);
+    u3_noun u3ue_jam(u3_noun*);
+    u3_noun u3ue_trip(u3_noun*);
 
 #endif /* ifndef U3_JETS_U_H */

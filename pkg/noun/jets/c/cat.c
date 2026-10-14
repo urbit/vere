@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -53,3 +54,17 @@
     }
   }
 
+
+/* u3uc_cat(): array driver of u3wc_cat.
+*/
+u3_noun
+u3uc_cat(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_cat(arg[0], arg[1], arg[2]);
+}

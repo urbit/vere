@@ -344,6 +344,48 @@ _test_twice(void)
   return _test("twice", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_cycle(): the arguments of a self call in each other's parameter
+**                slots, a rotation of three: the moves that put them in
+**                place need a slot to step aside into, and the program
+**                has none to spare, so it gets one more.  Indirect atoms,
+**                so that every move carries a real reference.
+*/
+static c3_i
+_test_cycle(void)
+{
+  u3_noun cor = _gate("|=  [a=@ b=@ c=@ n=@]\n"
+                      "^-  [@ @ @]\n"
+                      "?:  =(0 n)  [a b c]\n"
+                      "$(a b, b c, c a, n (dec n))\n",
+                      u3nq(u3i_string("the first of three indirect atoms"),
+                           u3i_string("the second of three indirect atoms"),
+                           u3i_string("the third of three indirect atoms"),
+                           7));
+
+  return _test("cycle", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_swap(): two arguments of a self call in each other's slots, and
+**               a temporary above the parameters that is dead by the
+**               call: the one that steps aside takes its slot.  The other
+**               arm of the branch passes every argument in place.
+*/
+static c3_i
+_test_swap(void)
+{
+  u3_noun cor = _gate("|=  [a=@ b=@ n=@]\n"
+                      "^-  [@ @]\n"
+                      "?:  =(0 n)  [a b]\n"
+                      "=/  m  (dec n)\n"
+                      "?:  =(0 (mod m 2))  $(a a, b b, n m)\n"
+                      "$(a b, b a, n m)\n",
+                      u3nt(u3i_string("the first of two indirect atoms"),
+                           u3i_string("the second of two indirect atoms"),
+                           7));
+
+  return _test("swap", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* _test_unused(): the product of a call that is never used (but may
 **                 crash, so the call stays): dropped right after it.
 */
@@ -476,6 +518,14 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_twice() ) {
+    exit(1);
+  }
+
+  if ( !_test_cycle() ) {
+    exit(1);
+  }
+
+  if ( !_test_swap() ) {
     exit(1);
   }
 

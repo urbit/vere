@@ -83,7 +83,9 @@
 **    HOP   t        goto t
 **    JMP   i        CAL in tail position
 **    JMS   i        JMP of the running program: its arguments move into
-**                   the parameter slots and it starts over (a loop)
+**                   the parameter slots and it starts over (a loop);
+**                   emitted sweeping only, the others being moves and a
+**                   HOP to the entry (_nc_shuffle())
 **    JMF   i        CAF in tail position
 **    JSP   i        CAP in tail position
 **    DON   s        return s, consumed
@@ -1662,8 +1664,8 @@ _nc_take(const nc_ran* ran_u, c3_h fir_h, c3_d* occ_d)
 **   other register, in order of its first point, takes the first slot
 **   free over all its ranges: the parameter slot it wants as an argument
 **   of a self call (JMS), then the slots above the parameters, then the
-**   parameters' slots, then a new one.  A self call whose arguments are
-**   all in place has nothing to move (_nc_emit()).
+**   parameters' slots, then a new one.  A self call then moves only the
+**   arguments not in place (_nc_shuffle()).
 */
 static void
 _nc_slots(nc_gen* gen_u, c3_h arg_h)
@@ -2318,6 +2320,108 @@ _nc_dire_jet(u3nc_dire* dir_u)
   dir_u->arm_u = jet_u.arm_u;
 }
 
+/* _nc_shuffle(): lower a self call to a jump to the entry: the moves that
+**                put its arguments into the parameter slots, then the HOP.
+**                The arguments are the only registers alive, so every
+**                other slot is empty.  An argument already in its
+**                parameter's slot stays; the others move, each once its
+**                parameter's slot is empty: not an argument's, or moved
+**                out of already.  A slot read by several arguments (one
+**                register passed twice) is borrowed by all reads but the
+**                last, which takes its reference; a slot whose argument
+**                stays is borrowed by every other read.  When every
+**                argument left is in another's slot (a cycle), the one in
+**                the first's slot steps aside into an empty slot above the
+**                parameters, a new one if there is none: the cycle unwinds
+**                from the emptied slot, and the scratch slot is drained
+**                before another cycle can be stuck, so one suffices.
+**                Appends to ops_u.
+*/
+static void
+_nc_shuffle(nc_gen* gen_u, nc_dir* dir_u, c3_h ent_h,
+            nc_op** ops_u, c3_h* opn_h, c3_h* opc_h)
+{
+  c3_h   len_h = dir_u->len_h;
+  c3_h   tot_h = gen_u->tot_h;
+  c3_h*  arg_h = u3a_malloc(c3_max(len_h, 1) * sizeof(c3_h));  //  slot of each
+  c3_h*  red_h = u3a_calloc(tot_h + 1, sizeof(c3_h));  //  reads left of a slot
+  c3_y*  sta_y = u3a_calloc(tot_h + 1, sizeof(c3_y));  //  its argument stays
+  c3_h   pen_h = 0, k_h;
+  nc_op* op_u;
+
+  for ( k_h = 0; k_h < len_h; k_h++ ) {
+    arg_h[k_h] = gen_u->pol_h[dir_u->sot_h + k_h];
+
+    if ( arg_h[k_h] == k_h ) {
+      sta_y[k_h] = 1;
+    }
+    else {
+      red_h[arg_h[k_h]]++;
+      pen_h++;
+    }
+  }
+
+  while ( pen_h ) {
+    c3_t did_t = 0;
+
+    for ( k_h = 0; k_h < len_h; k_h++ ) {
+      c3_h s_h = arg_h[k_h];
+
+      if ( (s_h == k_h) || red_h[k_h] ) {
+        continue;
+      }
+
+      _nc_grow(*ops_u, *opn_h, *opc_h, nc_op);
+      op_u = _nc_op_init(&((*ops_u)[(*opn_h)++]), _nc_mov);
+      op_u->src_h[0] = s_h;
+      op_u->dst_h    = k_h;
+      op_u->kon_y    = ( (1 == red_h[s_h]) && !sta_y[s_h] );
+      red_h[s_h]--;
+      arg_h[k_h] = k_h;
+      pen_h--;
+      did_t = 1;
+    }
+
+    if ( !did_t ) {
+      c3_h t_h, j_h;
+
+      for ( k_h = 0; arg_h[k_h] == k_h; k_h++ );
+      for ( t_h = len_h; (t_h < tot_h) && red_h[t_h]; t_h++ );
+
+      u3_assert( red_h[k_h] );
+
+      if ( t_h == tot_h ) {
+        u3_assert( tot_h == gen_u->tot_h );
+        tot_h++;
+      }
+
+      _nc_grow(*ops_u, *opn_h, *opc_h, nc_op);
+      op_u = _nc_op_init(&((*ops_u)[(*opn_h)++]), _nc_mov);
+      op_u->src_h[0] = k_h;
+      op_u->dst_h    = t_h;
+      op_u->kon_y    = 1;
+
+      for ( j_h = 0; j_h < len_h; j_h++ ) {
+        if ( arg_h[j_h] == k_h ) {
+          arg_h[j_h] = t_h;
+        }
+      }
+      red_h[t_h] = red_h[k_h];
+      red_h[k_h] = 0;
+    }
+  }
+
+  _nc_grow(*ops_u, *opn_h, *opc_h, nc_op);
+  op_u = _nc_op_init(&((*ops_u)[(*opn_h)++]), _nc_hop);
+  op_u->tar_h = ent_h;
+
+  gen_u->tot_h = tot_h;
+
+  u3a_free(arg_h);
+  u3a_free(red_h);
+  u3a_free(sta_y);
+}
+
 /* _nc_emit(): lay the ops out and assemble the program.  RETAINS ned.
 */
 static u3nc_prog*
@@ -2326,31 +2430,51 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   u3nc_prog* pog_u;
   c3_h       byc_h, i_h, j_h;
 
-  //  a self call that doesn't sweep and finds every argument in its
-  //  parameter slot has nothing to do but start over: a jump to the entry.
+  //  a self call that doesn't sweep starts over: a jump to the entry,
+  //  after the moves that put its arguments in their parameter slots
+  //  (_nc_shuffle()).  A move of a slot onto itself (an argument
+  //  coalesced with the block parameter it is passed to) does nothing,
+  //  and goes.
   //  NB: this adds a backedge into an otherwise DAG. It's OK because the passes
   //  that depended on acyclity of the CFG happened before this point.
   //
-  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
-    nc_op* op_u = &(gen_u->ops_u[i_h]);
+  {
+    c3_h   ent_h = _nc_blk(gen_u, 0);
+    c3_h   cap_h = gen_u->opn_h, new_h = 0;
+    nc_op* new_u = u3a_malloc(c3_max(cap_h, 1) * sizeof(nc_op));
 
-    if ( (_nc_jms == op_u->fam_y) && !op_u->kon_y ) {
-      nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+    for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+      nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+      c3_h    fir_h = new_h;
 
-      for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
-        if (  (gen_u->pol_h[dir_u->sot_h + j_h] != j_h)
-           || !gen_u->pok_y[dir_u->sot_h + j_h] )
+      for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+        nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+
+        if ( (_nc_jms == op_u->fam_y) && !op_u->kon_y ) {
+          nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+
+          u3_assert( dir_u->len_h == arg_h );
+          _nc_shuffle(gen_u, dir_u, ent_h, &new_u, &new_h, &cap_h);
+        }
+        else if (  (_nc_mov == op_u->fam_y)
+                && (op_u->src_h[0] == op_u->dst_h) )
         {
-          break;
+          u3_assert( op_u->kon_y );
+        }
+        else {
+          _nc_grow(new_u, new_h, cap_h, nc_op);
+          new_u[new_h++] = *op_u;
         }
       }
 
-      if ( j_h == dir_u->len_h ) {
-        op_u->fam_y = _nc_hop;
-        op_u->imm_h = 0;
-        op_u->tar_h = _nc_blk(gen_u, 0);
-      }
+      blk_u->fir_h = fir_h;
+      blk_u->len_h = new_h - fir_h;
     }
+
+    u3a_free(gen_u->ops_u);
+    gen_u->ops_u = new_u;
+    gen_u->opc_h = cap_h;
+    gen_u->opn_h = new_h;
   }
 
   //  Fixed-point loop on the block offsets. Immediate arguments only widen

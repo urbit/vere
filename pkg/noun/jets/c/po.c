@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -1391,13 +1392,9 @@ u3wcp_ind(u3_noun cor)
   return u3qc_po_ind(a);
 }
 
-u3_noun
-u3wcp_tos(u3_noun cor)
+static u3_noun
+_cp_tos(u3_noun a)
 {
-  u3_noun a;
-
-  a = u3h(u3t(cor));
-
   if ( (c3n == u3ud(a)) ||
        (a >= 256) )
   {
@@ -1411,19 +1408,44 @@ u3wcp_tos(u3_noun cor)
 }
 
 u3_noun
-u3wcp_tod(u3_noun cor)
+u3wcp_tos(u3_noun cor)
 {
-  u3_noun a;
+  return _cp_tos(u3h(u3t(cor)));
+}
 
-  a = u3h(u3t(cor));
+/* u3ucp_tos(): array driver of u3wcp_tos.
+*/
+u3_noun
+u3ucp_tos(u3_noun* arg)
+{
+  return _cp_tos(arg[0]);
+}
 
+static u3_noun
+_cp_tod(u3_noun a)
+{
   if ( (c3n == u3ud(a)) ||
        (a >= 256) )
   {
     return u3m_bail(c3__exit);
-  } else {
+  }
+  else {
     c3_y byt_y[3];
     u3_po_to_suffix(a, &byt_y[0], &byt_y[1], &byt_y[2]);
     return (byt_y[0] | (byt_y[1] << 8) | (byt_y[2] << 16));
   }
+}
+
+u3_noun
+u3wcp_tod(u3_noun cor)
+{
+  return _cp_tod(u3h(u3t(cor)));
+}
+
+/* u3ucp_tod(): array driver of u3wcp_tod.
+*/
+u3_noun
+u3ucp_tod(u3_noun* arg)
+{
+  return _cp_tod(arg[0]);
 }

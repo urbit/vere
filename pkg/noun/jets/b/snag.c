@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -44,3 +45,14 @@
       return u3qb_snag(a, b);
     }
   }
+
+/* u3ub_snag(): array driver of u3wb_snag.
+*/
+u3_noun
+u3ub_snag(u3_noun* arg)
+{
+  if ( (c3n == u3ud(arg[0])) ) {
+    return u3m_bail(c3__exit);
+  }
+  return u3qb_snag(arg[0], arg[1]);
+}
