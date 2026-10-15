@@ -94,10 +94,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stddef.h>
+#include <sys/time.h>
 
 #include "log.h"
 #include "murmur3.h"
 #include "options.h"
+#include "trace.h"
+#include "vortex.h"
 
 #ifdef U3_OS_windows
 #include "wloom.h"
@@ -128,6 +131,16 @@ static c3_h
 _ce_muk_page(void* ptr_v)
 {
   return _ce_muk_buf(_ce_page, ptr_v);
+}
+
+/* _ce_time_us(): wall-clock time in microseconds.
+*/
+static c3_d
+_ce_time_us(void)
+{
+  struct timeval tim_u;
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000ULL) + (c3_d)tim_u.tv_usec;
 }
 
 #ifndef U3_OS_windows
@@ -1414,10 +1427,14 @@ u3e_save(u3_post low_p, u3_post hig_p)
 {
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
+  u3t_patch rec_u;
+  c3_d beg_d, wit_d, app_d;
 
   if ( u3C.wag_h & u3o_dryrun ) {
     return;
   }
+
+  beg_d = _ce_time_us();
 
   //  XX discard hig_p and friends
   {
@@ -1451,6 +1468,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
     u3_assert(!"loom: save failed");
   }
 
+  wit_d = _ce_time_us();
+
 #ifdef U3_SNAPSHOT_VALIDATION
   //  check that clean pages are correct
   //
@@ -1465,8 +1484,31 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
 
+  app_d = _ce_time_us();
+
+  rec_u.eve_d = u3A->eve_d;
+  rec_u.tim_d = app_d / 1000;
+  rec_u.pgs_d = pat_u->con_u->pgs_w;
+  rec_u.byt_d = _ce_len(pat_u->con_u->pgs_w);
+  rec_u.sip_d = pat_u->sip_w;
+  rec_u.img_d = u3P.img_u.pgs_w;
+  rec_u.wit_d = wit_d - beg_d;
+  rec_u.app_d = app_d - wit_d;
+
   _ce_patch_free(pat_u);
   _ce_patch_delete();
+
+  u3t_stat_patch(&rec_u);
+
+  if ( u3C.wag_h & u3o_log_patch ) {
+    fprintf(stderr, "loom: patch: event %" PRIu64 ", %" PRIu64 " pages"
+                    " (%" PRIu64 " KB), skipped %" PRIu64 " free,"
+                    " image %" PRIu64 " pages, write %" PRIu64 " ms,"
+                    " apply %" PRIu64 " ms\r\n",
+                    rec_u.eve_d, rec_u.pgs_d, rec_u.byt_d >> 10,
+                    rec_u.sip_d, rec_u.img_d,
+                    rec_u.wit_d / 1000, rec_u.app_d / 1000);
+  }
 
 #ifdef U3_SNAPSHOT_VALIDATION
   {

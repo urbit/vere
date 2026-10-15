@@ -6,6 +6,7 @@
 #include "noun.h"
 #include "openssl/err.h"
 #include "openssl/ssl.h"
+#include <stdarg.h>
 #include "version.h"
 
 /** Global variables.
@@ -115,6 +116,7 @@ typedef struct _u3_httd {
   u3p(u3h_root)      sax_p;             //  url->scry cache
   u3p(u3h_root)      nax_p;             //  scry->noun cache
   u3t_spin*          stk_u;             //  spin stack 
+  u3t_stat*          sat_u;             //  stats page
 } u3_httd;
 
 static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
@@ -133,6 +135,7 @@ static const c3_i TCP_BACKLOG = 16;
 static const c3_w HEARTBEAT_TIMEOUT = 20 * 1000;
 static const c3_w SPIN_TIMER = 100; // XX make this a command line arguement
 static const c3_w SPIN_READ_TRIES = 16; // seqlock snapshot attempts per tick
+static const c3_w STAT_JSON_SIZE = 16384; // stats response buffer
 
 /* _http_close_cb(): uv_close_cb that just free's handle
 */
@@ -1664,6 +1667,171 @@ _http_seq_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
   return 0;
 }
 
+/* _http_stat_buf: bounded string builder for stats json.
+*/
+typedef struct {
+  c3_c* buf_c;
+  c3_w  len_w;
+  c3_w  max_w;
+} _http_stat_buf;
+
+static void
+_http_stat_put(_http_stat_buf* sib_u, const c3_c* fmt_c, ...)
+{
+  va_list ap;
+  c3_i    ret_i;
+
+  if ( sib_u->len_w >= sib_u->max_w ) return;
+
+  va_start(ap, fmt_c);
+  ret_i = vsnprintf(sib_u->buf_c + sib_u->len_w,
+                    sib_u->max_w - sib_u->len_w, fmt_c, ap);
+  va_end(ap);
+
+  if ( ret_i > 0 ) {
+    sib_u->len_w = c3_min(sib_u->len_w + (c3_w)ret_i, sib_u->max_w);
+  }
+}
+
+/* _http_stat_json(): render stats as json into [buf_c]; produce length,
+**                    or 0 if the buffer was too small.
+*/
+static c3_w
+_http_stat_json(const u3t_stat* sat_u, c3_c* buf_c, c3_w max_w)
+{
+  _http_stat_buf sib_u = { buf_c, 0, max_w };
+  c3_w i_w;
+
+  _http_stat_put(&sib_u, "{\"version\":%u,\"updated\":%" PRIu64,
+                 sat_u->ver_h, sat_u->tim_d);
+
+  _http_stat_put(&sib_u,
+    ",\"events\":{\"requested\":%" PRIu64 ",\"processed\":%" PRIu64
+    ",\"snapshot\":%" PRIu64 ",\"mug\":\"0x%x\"}",
+    sat_u->eve_u.sen_d, sat_u->eve_u.dun_d,
+    sat_u->eve_u.sav_d, sat_u->eve_u.mug_h);
+
+  _http_stat_put(&sib_u,
+    ",\"disk\":{\"live\":%s,\"commit_requested\":%" PRIu64
+    ",\"committed\":%" PRIu64 ",\"epoch\":%" PRIu64,
+    ( c3y == sat_u->dis_u.liv_o ) ? "true" : "false",
+    sat_u->dis_u.sen_d, sat_u->dis_u.dun_d, sat_u->dis_u.epo_d);
+
+  if ( sat_u->dis_u.put_d[0] ) {
+    _http_stat_put(&sib_u, ",\"pending\":[%" PRIu64 ",%" PRIu64 "]",
+                   sat_u->dis_u.put_d[0], sat_u->dis_u.put_d[1]);
+  }
+  else {
+    _http_stat_put(&sib_u, ",\"pending\":null");
+  }
+
+  //  batch histogram: {"<batch size>": <count>, ...}, nonzero only
+  //
+  {
+    c3_o fir_o = c3y;
+    _http_stat_put(&sib_u, ",\"batch\":{");
+    for ( i_w = 0; i_w < U3T_STAT_HITS; i_w++ ) {
+      if ( sat_u->dis_u.hit_h[i_w] ) {
+        _http_stat_put(&sib_u, "%s\"%" PRIc3_w "\":%u",
+                       ( c3y == fir_o ) ? "" : ",",
+                       i_w, sat_u->dis_u.hit_h[i_w]);
+        fir_o = c3n;
+      }
+    }
+    _http_stat_put(&sib_u, "}}");
+  }
+
+  _http_stat_put(&sib_u,
+    ",\"memory\":{\"page\":%" PRIu64 ",\"loom\":%" PRIu64
+    ",\"road\":%" PRIu64 ",\"heap\":%" PRIu64 ",\"stack\":%" PRIu64
+    ",\"open\":%" PRIu64 ",\"image\":%" PRIu64
+    ",\"persistent_cache\":{\"entries\":%" PRIu64 ",\"max\":%" PRIu64 "}"
+    ",\"formula_cache\":{\"entries\":%" PRIu64 "}}",
+    sat_u->mem_u.pag_d, sat_u->mem_u.lom_d, sat_u->mem_u.ful_d,
+    sat_u->mem_u.hep_d, sat_u->mem_u.tmp_d, sat_u->mem_u.opn_d,
+    sat_u->mem_u.img_d, sat_u->mem_u.per_d, sat_u->mem_u.pem_d,
+    sat_u->mem_u.for_d);
+
+  //  patch history, newest first
+  //
+  _http_stat_put(&sib_u,
+    ",\"patches\":{\"count\":%" PRIu64 ",\"bytes\":%" PRIu64
+    ",\"max_bytes\":%" PRIu64 ",\"recent\":[",
+    sat_u->pat_u.num_d, sat_u->pat_u.byt_d, sat_u->pat_u.max_d);
+  {
+    c3_w num_w = (c3_w)c3_min(sat_u->pat_u.num_d, (c3_d)U3T_STAT_PATS);
+    c3_w nex_w = sat_u->pat_u.nex_h % U3T_STAT_PATS;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      const u3t_patch* pat_u =
+        &sat_u->pat_u.pat_u[(nex_w + U3T_STAT_PATS - 1 - i_w) % U3T_STAT_PATS];
+
+      _http_stat_put(&sib_u,
+        "%s{\"event\":%" PRIu64 ",\"time\":%" PRIu64
+        ",\"pages\":%" PRIu64 ",\"bytes\":%" PRIu64
+        ",\"skipped_pages\":%" PRIu64 ",\"image_pages\":%" PRIu64
+        ",\"write_us\":%" PRIu64 ",\"apply_us\":%" PRIu64 "}",
+        ( 0 == i_w ) ? "" : ",",
+        pat_u->eve_d, pat_u->tim_d, pat_u->pgs_d, pat_u->byt_d,
+        pat_u->sip_d, pat_u->img_d, pat_u->wit_d, pat_u->app_d);
+    }
+  }
+  _http_stat_put(&sib_u, "]}}\n");
+
+  return ( sib_u.len_w < sib_u.max_w ) ? sib_u.len_w : 0;
+}
+
+/* _http_stat_accept(): handle incoming http request on stats endpoint
+*/
+static c3_i
+_http_stat_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
+{
+  u3_hcon*  hon_u = _http_rec_sock(rec_u);
+  u3_httd*  htd_u = hon_u->htp_u->htd_u;
+  u3_hreq*  req_u = _http_req_prepare(rec_u, _http_req_new);
+
+  req_u->sat_e = u3_rsat_plan;
+
+  if ( c3n == _http_req_is_auth(&htd_u->fig_u, rec_u) ) {
+    _http_start_respond(req_u, 403, u3_nul, u3_nul, c3y);
+  }
+  else if ( NULL == htd_u->sat_u ) {
+    _http_start_respond(req_u, 404, u3_nul, u3_nul, c3y);
+  }
+  else {
+    u3t_stat loc_u;
+    c3_c*    buf_c;
+    c3_w     len_w;
+
+    //  copy out of shared memory first; the serf may be mid-update
+    //
+    if ( c3n == u3t_stat_read(htd_u->sat_u, &loc_u) ) {
+      _http_start_respond(req_u, 503, u3_nul, u3_nul, c3y);
+      return 0;
+    }
+
+    buf_c = c3_malloc(STAT_JSON_SIZE);
+    len_w = _http_stat_json(&loc_u, buf_c, STAT_JSON_SIZE);
+
+    if ( !len_w ) {
+      c3_free(buf_c);
+      _http_start_respond(req_u, 500, u3_nul, u3_nul, c3y);
+    }
+    else {
+      u3_noun hed = u3nl(u3nc(u3i_string("Content-Type"),
+                              u3i_string("application/json")),
+                         u3nc(u3i_string("Cache-Control"),
+                              u3i_string("no-cache")));
+      u3_noun dat = u3nt(u3_nul, len_w, u3i_bytes(len_w, (c3_y*)buf_c));
+
+      c3_free(buf_c);
+      _http_start_respond(req_u, 200, hed, dat, c3y);
+    }
+  }
+
+  return 0;
+}
+
 /* _http_sat_accept(): handle incoming http request on status endpoint
 */
 static c3_i
@@ -2223,6 +2391,11 @@ _http_serv_init_h2o(SSL_CTX* tls_u, c3_o log, c3_o red)
     pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/spin", 0);
     han_u = h2o_create_handler(pac_u, sizeof(*han_u));
     han_u->on_req = _http_spin_accept;
+    //  runtime stats
+    //
+    pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/stat", 0);
+    han_u = h2o_create_handler(pac_u, sizeof(*han_u));
+    han_u->on_req = _http_stat_accept;
     //  slog stream
     //
     pac_u = h2o_config_register_path(h2o_u->hos_u, "/~_~/slog", 0);
@@ -2758,6 +2931,12 @@ _http_io_talk(u3_auto* car_u)
     u3l_log("http.c: failed to open spin stack");
   }
 
+  htd_u->sat_u = u3t_stat_open(htd_u->car_u.pir_u->who_d);
+
+  if ( NULL == htd_u->sat_u ) {
+    u3l_log("http.c: failed to open stats page");
+  }
+
   //  XX set liv_o on done/swap?
   //
 }
@@ -3132,6 +3311,9 @@ _http_io_exit(u3_auto* car_u)
 
   u3t_sstack_close(htd_u->stk_u);
   htd_u->stk_u = NULL;
+
+  u3t_stat_close(htd_u->sat_u);
+  htd_u->sat_u = NULL;
 
   //  dispose of configuration to avoid restarts
   //

@@ -7,6 +7,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <signal.h>
+#ifdef U3_OS_linux
+#include <dirent.h>
+#endif
 
 #include "allocate.h"
 #include "imprison.h"
@@ -14,18 +17,23 @@
 #include "log.h"
 #include "manage.h"
 #include "options.h"
+#include "events.h"
 #include "retrieve.h"
 #include "vortex.h"
 
 /** Global variables.
 **/
 u3t_spin *u3t_Spin;
+u3t_stat *u3t_Stat;
 u3t_trace u3t_Trace;
 
 /// %spin stack shared-memory object name, saved for shm_unlink at teardown.
 /// stored because the serf keys the name on getppid(), which is unreliable
 /// at exit (the king may have died and reparented us to init).
 static c3_c _spin_nam_c[256] = {0};
+
+/// stats page shared-memory object name, saved for shm_unlink (as above).
+static c3_c _stat_nam_c[256] = {0};
 
 static c3_o _ct_lop_o;
 
@@ -1134,6 +1142,62 @@ u3t_etch_meme(c3_w mod_w)
   }
 }
 
+/* _ct_shm_sweep: unlink stale shm objects named like [nam_c].
+**
+**   our shared-memory names are "/<prefix>_<king pid>". the serf
+**   unlinks its names on clean exit, and the king unlinks them once
+**   mapped, but a crash before that point (ie during replay) leaves the
+**   object behind in /dev/shm forever. on startup, remove any object
+**   with our name prefix whose king is dead. a live (or unprobeable)
+**   pid is left alone; pid reuse can only cause us to skip a stale name.
+**
+**   linux-only: other platforms provide no way to enumerate names.
+*/
+static void
+_ct_shm_sweep(const c3_c* nam_c)
+{
+#ifdef U3_OS_linux
+  const c3_c* sep_c = strrchr(nam_c, '_');
+  c3_z        pre_z;
+  DIR*        dir_u;
+  struct dirent* ent_u;
+
+  //  names are "/<prefix>_<pid>"; dirents lack the leading slash
+  //
+  if ( !sep_c || ('/' != nam_c[0]) ) return;
+  pre_z = (c3_z)(sep_c - (nam_c + 1)) + 1;
+
+  if ( !(dir_u = opendir("/dev/shm")) ) return;
+
+  while ( (ent_u = readdir(dir_u)) ) {
+    c3_c* end_c;
+    long  pid_l;
+
+    if ( strncmp(ent_u->d_name, nam_c + 1, pre_z) ) continue;
+
+    errno = 0;
+    pid_l = strtol(ent_u->d_name + pre_z, &end_c, 10);
+
+    if (  errno || (end_c == ent_u->d_name + pre_z) || *end_c
+       || (pid_l <= 0) || (pid_l == (long)getppid()) )
+    {
+      continue;
+    }
+
+    if ( (-1 == kill((pid_t)pid_l, 0)) && (ESRCH == errno) ) {
+      c3_c pax_c[sizeof(ent_u->d_name) + 1];
+
+      snprintf(pax_c, sizeof(pax_c), "/%s", ent_u->d_name);
+      if ( 0 == shm_unlink(pax_c) ) {
+        u3l_log("shm: removed stale %s", pax_c);
+      }
+    }
+  }
+
+  closedir(dir_u);
+#endif
+}
+
 /* u3t_sstack_init: initalize a root node on the spin stack 
 */
 void
@@ -1149,6 +1213,8 @@ u3t_sstack_init(c3_d* who_d)
   c3_free(nam_c);
   u3z(who);
 #endif
+
+  _ct_shm_sweep(_spin_nam_c);
 
 #ifndef U3_OS_windows
   c3_h shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0666);
@@ -1247,6 +1313,10 @@ u3t_sstack_open(c3_d* who_d)
     perror("mmap failed");
     return NULL;
   }
+
+  //  both sides are now mapped; drop the name so a crash can't leak it
+  //
+  shm_unlink(_spin_nam_c);
 #else
   HANDLE hstk_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _spin_nam_c);
   if ( !hstk_u ) {
@@ -1388,3 +1458,246 @@ u3t_sstack_pop()
   _sstack_writ_end();
 }
 
+/* _stat_name: format the stats page name for [who_d] and the king's [pid_i].
+*/
+static void
+_stat_name(c3_d* who_d, c3_i pid_i)
+{
+#ifdef U3_OS_osx
+  snprintf(_stat_nam_c, sizeof(_stat_nam_c), STAT_PAGE_NAME, pid_i);
+#else
+  u3_atom who = u3dc("scot", c3__p, u3i_chubs(2, who_d));
+  c3_c*   nam_c = u3r_string(who);
+
+  snprintf(_stat_nam_c, sizeof(_stat_nam_c), STAT_PAGE_NAME, nam_c, pid_i);
+  c3_free(nam_c);
+  u3z(who);
+#endif
+}
+
+/* _stat_unlink: remove the stats page name (best-effort, as for the spin
+**               stack: the peer process may have unlinked it already).
+*/
+static void
+_stat_unlink(void)
+{
+#ifndef U3_OS_windows
+  if ( _stat_nam_c[0] ) {
+    shm_unlink(_stat_nam_c);
+  }
+#endif
+}
+
+/* u3t_stat_init: create the stats page (serf side).
+*/
+void
+u3t_stat_init(c3_d* who_d)
+{
+  _stat_name(who_d, getppid());
+  _ct_shm_sweep(_stat_nam_c);
+
+#ifndef U3_OS_windows
+  c3_i shm_fd = shm_open(_stat_nam_c, O_CREAT | O_RDWR, 0600);
+  if ( -1 == shm_fd ) {
+    perror("stat: shm_open failed");
+    return;
+  }
+
+  if ( -1 == ftruncate(shm_fd, sizeof(u3t_stat)) ) {
+    perror("stat: truncate failed");
+    close(shm_fd);
+    return;
+  }
+
+  u3t_Stat = mmap(NULL, sizeof(u3t_stat), PROT_READ | PROT_WRITE,
+                  MAP_SHARED, shm_fd, 0);
+  close(shm_fd);
+
+  if ( MAP_FAILED == u3t_Stat ) {
+    perror("stat: mmap failed");
+    u3t_Stat = NULL;
+    return;
+  }
+#else
+  HANDLE hsat_u = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL,
+                                     PAGE_READWRITE, 0,
+                                     (DWORD)sizeof(u3t_stat), _stat_nam_c);
+  if ( !hsat_u ) {
+    u3l_log("stat: CreateFileMapping error");
+    return;
+  }
+
+  u3t_Stat = MapViewOfFile(hsat_u, FILE_MAP_ALL_ACCESS,
+                           0, 0, sizeof(u3t_stat));
+  if ( !u3t_Stat ) {
+    u3l_log("stat: MapViewOfFile error in u3t_stat_init");
+    return;
+  }
+#endif
+
+  memset(u3t_Stat, 0, sizeof(u3t_stat));
+  u3t_Stat->ver_h = U3T_STAT_VERSION;
+  u3t_Stat->mem_u.pag_d = (c3_d)1 << (u3a_page + u3a_word_bytes_shift);
+  u3t_Stat->mem_u.lom_d = (c3_d)u3C.wor_i << u3a_word_bytes_shift;
+  u3t_Stat->mem_u.pem_d = u3C.per_w;
+  u3t_Stat->mem_u.img_d = (c3_d)u3P.img_u.pgs_w * u3t_Stat->mem_u.pag_d;
+}
+
+/* u3t_stat_open: map the stats page read-only (king side).
+*/
+u3t_stat*
+u3t_stat_open(c3_d* who_d)
+{
+  u3t_stat* sat_u;
+
+  _stat_name(who_d, getpid());
+
+#ifndef U3_OS_windows
+  //  read-only, no O_CREAT: see u3t_sstack_open()
+  //
+  c3_i shm_fd = shm_open(_stat_nam_c, O_RDONLY, 0);
+  if ( -1 == shm_fd ) {
+    perror("stat: shm_open failed");
+    return NULL;
+  }
+
+  sat_u = mmap(NULL, sizeof(u3t_stat), PROT_READ, MAP_SHARED, shm_fd, 0);
+  close(shm_fd);
+
+  if ( MAP_FAILED == sat_u ) {
+    perror("stat: mmap failed");
+    return NULL;
+  }
+
+  //  both sides are now mapped; drop the name (see u3t_sstack_open())
+  //
+  shm_unlink(_stat_nam_c);
+#else
+  HANDLE hsat_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _stat_nam_c);
+  if ( !hsat_u ) {
+    u3l_log("stat: OpenFileMapping error");
+    return NULL;
+  }
+
+  sat_u = MapViewOfFile(hsat_u, FILE_MAP_READ, 0, 0, 0);
+  CloseHandle(hsat_u);
+  if ( !sat_u ) {
+    u3l_log("stat: MapViewOfFile error in u3t_stat_open");
+    return NULL;
+  }
+#endif
+
+  return sat_u;
+}
+
+/* u3t_stat_exit: tear down the stats page (serf side).
+*/
+void
+u3t_stat_exit(void)
+{
+  if ( NULL != u3t_Stat ) {
+    munmap(u3t_Stat, sizeof(u3t_stat));
+    u3t_Stat = NULL;
+  }
+  _stat_unlink();
+}
+
+/* u3t_stat_close: tear down a stats page mapping (king side).
+*/
+void
+u3t_stat_close(u3t_stat* sat_u)
+{
+  if ( NULL != sat_u ) {
+    munmap(sat_u, sizeof(u3t_stat));
+  }
+  _stat_unlink();
+}
+
+/* the stats page uses the same single-writer seqlock as the spin stack:
+** seq_h is odd while an update is in flight. see _sstack_writ_beg().
+*/
+
+/* u3t_stat_writ_beg: begin a stats update; NULL if no page.
+*/
+u3t_stat*
+u3t_stat_writ_beg(void)
+{
+  if ( !u3t_Stat ) return NULL;
+
+  __atomic_store_n(&u3t_Stat->seq_h, u3t_Stat->seq_h + 1, __ATOMIC_RELAXED);
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+
+  return u3t_Stat;
+}
+
+/* u3t_stat_writ_end: finish a stats update.
+*/
+void
+u3t_stat_writ_end(void)
+{
+  if ( !u3t_Stat ) return;
+
+  {
+    struct timeval tim_u;
+    gettimeofday(&tim_u, 0);
+    u3t_Stat->tim_d = ((c3_d)tim_u.tv_sec * 1000ULL)
+                    + ((c3_d)tim_u.tv_usec / 1000ULL);
+  }
+
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  __atomic_store_n(&u3t_Stat->seq_h, u3t_Stat->seq_h + 1, __ATOMIC_RELAXED);
+}
+
+/* u3t_stat_read: consistent copy of [sat_u] into [out_u].
+**
+**   retries a bounded number of times if the serf is mid-write;
+**   produces c3n if no consistent copy could be made.
+*/
+c3_o
+u3t_stat_read(const u3t_stat* sat_u, u3t_stat* out_u)
+{
+  c3_h s1_h, s2_h;
+  c3_w try_w;
+
+  for ( try_w = 0; try_w < 64; try_w++ ) {
+    s1_h = __atomic_load_n(&sat_u->seq_h, __ATOMIC_ACQUIRE);
+
+    if ( s1_h & 1 ) {
+      continue;
+    }
+
+    memcpy(out_u, (const void*)sat_u, sizeof(*out_u));
+
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    s2_h = __atomic_load_n(&sat_u->seq_h, __ATOMIC_RELAXED);
+
+    if ( s1_h == s2_h ) {
+      return ( U3T_STAT_VERSION == out_u->ver_h ) ? c3y : c3n;
+    }
+  }
+
+  return c3n;
+}
+
+/* u3t_stat_patch: record a snapshot patch.
+*/
+void
+u3t_stat_patch(const u3t_patch* pat_u)
+{
+  u3t_stat* sat_u = u3t_stat_writ_beg();
+
+  if ( !sat_u ) return;
+
+  sat_u->pat_u.num_d++;
+  sat_u->pat_u.byt_d += pat_u->byt_d;
+  if ( pat_u->byt_d > sat_u->pat_u.max_d ) {
+    sat_u->pat_u.max_d = pat_u->byt_d;
+  }
+
+  sat_u->pat_u.pat_u[sat_u->pat_u.nex_h] = *pat_u;
+  sat_u->pat_u.nex_h = (sat_u->pat_u.nex_h + 1) % U3T_STAT_PATS;
+
+  sat_u->mem_u.img_d = pat_u->img_d * sat_u->mem_u.pag_d;
+
+  u3t_stat_writ_end();
+}

@@ -48,6 +48,7 @@
         u3o_leak_crash    = 1 << 14,          //  crash if leak when gc
         u3o_yolo          = 1 << 15,          //  no brakes!
         u3o_no_migrate    = 1 << 16,          //  replay without disk migration
+        u3o_log_patch     = 1 << 17,          //  log snapshot patch sizes
       };
 
   /** Globals.
