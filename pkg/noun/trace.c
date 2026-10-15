@@ -7,6 +7,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <signal.h>
+#ifdef U3_OS_linux
+#include <dirent.h>
+#endif
 
 #include "allocate.h"
 #include "imprison.h"
@@ -1139,6 +1142,62 @@ u3t_etch_meme(c3_w mod_w)
   }
 }
 
+/* _ct_shm_sweep: unlink stale shm objects named like [nam_c].
+**
+**   our shared-memory names are "/<prefix>_<king pid>". the serf
+**   unlinks its names on clean exit, and the king unlinks them once
+**   mapped, but a crash before that point (ie during replay) leaves the
+**   object behind in /dev/shm forever. on startup, remove any object
+**   with our name prefix whose king is dead. a live (or unprobeable)
+**   pid is left alone; pid reuse can only cause us to skip a stale name.
+**
+**   linux-only: other platforms provide no way to enumerate names.
+*/
+static void
+_ct_shm_sweep(const c3_c* nam_c)
+{
+#ifdef U3_OS_linux
+  const c3_c* sep_c = strrchr(nam_c, '_');
+  c3_z        pre_z;
+  DIR*        dir_u;
+  struct dirent* ent_u;
+
+  //  names are "/<prefix>_<pid>"; dirents lack the leading slash
+  //
+  if ( !sep_c || ('/' != nam_c[0]) ) return;
+  pre_z = (c3_z)(sep_c - (nam_c + 1)) + 1;
+
+  if ( !(dir_u = opendir("/dev/shm")) ) return;
+
+  while ( (ent_u = readdir(dir_u)) ) {
+    c3_c* end_c;
+    long  pid_l;
+
+    if ( strncmp(ent_u->d_name, nam_c + 1, pre_z) ) continue;
+
+    errno = 0;
+    pid_l = strtol(ent_u->d_name + pre_z, &end_c, 10);
+
+    if (  errno || (end_c == ent_u->d_name + pre_z) || *end_c
+       || (pid_l <= 0) || (pid_l == (long)getppid()) )
+    {
+      continue;
+    }
+
+    if ( (-1 == kill((pid_t)pid_l, 0)) && (ESRCH == errno) ) {
+      c3_c pax_c[sizeof(ent_u->d_name) + 1];
+
+      snprintf(pax_c, sizeof(pax_c), "/%s", ent_u->d_name);
+      if ( 0 == shm_unlink(pax_c) ) {
+        u3l_log("shm: removed stale %s", pax_c);
+      }
+    }
+  }
+
+  closedir(dir_u);
+#endif
+}
+
 /* u3t_sstack_init: initalize a root node on the spin stack 
 */
 void
@@ -1154,6 +1213,8 @@ u3t_sstack_init(c3_d* who_d)
   c3_free(nam_c);
   u3z(who);
 #endif
+
+  _ct_shm_sweep(_spin_nam_c);
 
 #ifndef U3_OS_windows
   c3_h shm_fd = shm_open(_spin_nam_c, O_CREAT | O_RDWR, 0666);
@@ -1252,6 +1313,10 @@ u3t_sstack_open(c3_d* who_d)
     perror("mmap failed");
     return NULL;
   }
+
+  //  both sides are now mapped; drop the name so a crash can't leak it
+  //
+  shm_unlink(_spin_nam_c);
 #else
   HANDLE hstk_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _spin_nam_c);
   if ( !hstk_u ) {
@@ -1429,6 +1494,7 @@ void
 u3t_stat_init(c3_d* who_d)
 {
   _stat_name(who_d, getppid());
+  _ct_shm_sweep(_stat_nam_c);
 
 #ifndef U3_OS_windows
   c3_i shm_fd = shm_open(_stat_nam_c, O_CREAT | O_RDWR, 0600);
@@ -1502,6 +1568,10 @@ u3t_stat_open(c3_d* who_d)
     perror("stat: mmap failed");
     return NULL;
   }
+
+  //  both sides are now mapped; drop the name (see u3t_sstack_open())
+  //
+  shm_unlink(_stat_nam_c);
 #else
   HANDLE hsat_u = OpenFileMappingA(FILE_MAP_READ, FALSE, _stat_nam_c);
   if ( !hsat_u ) {
