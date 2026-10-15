@@ -2677,6 +2677,7 @@ void
 u3m_stop(void)
 {
   u3t_sstack_exit();
+  u3t_stat_exit();
 
   u3e_stop();
   u3je_secp_stop();

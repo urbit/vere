@@ -835,6 +835,55 @@ _mars_damp_file(void)
   }
 }
 
+/* _mars_stat(): publish runtime stats to the shared stats page.
+**
+**   NB: everything here must be cheap; it runs after every task.
+*/
+static void
+_mars_stat(u3_mars* mar_u)
+{
+  u3t_stat* sat_u = u3t_stat_writ_beg();
+  u3_disk*  log_u = mar_u->log_u;
+  c3_d      wor_d = (c3_d)1 << u3a_word_bytes_shift;
+
+  if ( !sat_u ) return;
+
+  sat_u->eve_u.sen_d = mar_u->sen_d;
+  sat_u->eve_u.dun_d = mar_u->dun_d;
+  sat_u->eve_u.sav_d = mar_u->sav_u.eve_d;
+  sat_u->eve_u.mug_h = mar_u->mug_h;
+
+  sat_u->dis_u.liv_o = log_u->liv_o;
+  sat_u->dis_u.sen_d = log_u->sen_d;
+  sat_u->dis_u.dun_d = log_u->dun_d;
+  sat_u->dis_u.epo_d = log_u->epo_d;
+
+  //  NB: the commit callback runs before committed facts are dequeued,
+  //  so the queue may still hold events at or below dun_d
+  //
+  if (  log_u->put_u.ent_u
+     && (log_u->put_u.ent_u->eve_d > log_u->dun_d) )
+  {
+    sat_u->dis_u.put_d[0] = c3_max(log_u->put_u.ext_u->eve_d,
+                                   log_u->dun_d + 1);
+    sat_u->dis_u.put_d[1] = log_u->put_u.ent_u->eve_d;
+  }
+  else {
+    sat_u->dis_u.put_d[0] = sat_u->dis_u.put_d[1] = 0;
+  }
+
+  memcpy(sat_u->dis_u.hit_h, log_u->hit_h, sizeof(sat_u->dis_u.hit_h));
+
+  sat_u->mem_u.ful_d = wor_d * u3a_full(u3R);
+  sat_u->mem_u.hep_d = wor_d * u3a_heap(u3R);
+  sat_u->mem_u.tmp_d = wor_d * u3a_temp(u3R);
+  sat_u->mem_u.opn_d = wor_d * u3a_open(u3R);
+  sat_u->mem_u.per_d = u3h_wyt(u3R->cax.per_p);
+  sat_u->mem_u.for_d = u3h_wyt(u3R->cax.for_p);
+
+  u3t_stat_writ_end();
+}
+
 /* _mars_flush(): send pending gifts.
 */
 static void
@@ -886,6 +935,8 @@ top:
       exit(0);
     }
   }
+
+  _mars_stat(mar_u);
 }
 
 /* _mars_step_trace(): initialize or rotate trace file.
@@ -1528,7 +1579,10 @@ u3_mars_work(u3_mars* mar_u)
                  u3_Host.ops_u.sap_h * 1000);
 
   mar_u->sav_u.eve_d = mar_u->dun_d;
+
   mar_u->sav_u.tim_u.data = mar_u;
+
+  _mars_stat(mar_u);
 }
 
 #define VERE_NAME  "vere"

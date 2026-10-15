@@ -22,6 +22,15 @@
 #endif
 #define TRACE_PSIZE (((c3_w)1) << (u3a_page +2))
 
+#ifdef U3_OS_osx
+  #define STAT_PAGE_NAME  "/stat_page_%d"
+#else
+  #define STAT_PAGE_NAME  "/stat_page_%s_%d"
+#endif
+#define U3T_STAT_VERSION  1     //  u3t_stat layout version
+#define U3T_STAT_PATS     16    //  snapshot patch history length
+#define U3T_STAT_HITS     100   //  disk batch histogram length
+
   /** Data structures.
   **/
     /* u3t_trace: fast execution flags.
@@ -43,6 +52,60 @@
       c3_h fow_h;
       c3_y dat_y[TRACE_PSIZE - 3*sizeof(c3_h)];
     } u3t_spin;
+
+   /* u3t_patch: snapshot patch record.
+    */
+    typedef struct {
+      c3_d eve_d;  //  event number at snapshot
+      c3_d tim_d;  //  wall-clock time, unix ms
+      c3_d pgs_d;  //  dirty pages written
+      c3_d byt_d;  //  bytes written
+      c3_d sip_d;  //  free pages skipped
+      c3_d img_d;  //  image length after apply, pages
+      c3_d wit_d;  //  write and sync patch, us
+      c3_d app_d;  //  apply patch and sync image, us
+    } u3t_patch;
+
+   /* u3t_stat: runtime stats, written by the serf, read by the king.
+    */
+    typedef struct {
+      c3_h seq_h;                       //  seqlock: odd while mid-write
+      c3_h ver_h;                       //  U3T_STAT_VERSION
+      c3_d tim_d;                       //  last update, unix ms
+      struct {                          //  events
+        c3_d sen_d;                     //    last requested
+        c3_d dun_d;                     //    last processed
+        c3_d sav_d;                     //    last snapshot
+        c3_h mug_h;                     //    state hash
+      } eve_u;
+      struct {                          //  event log
+        c3_o liv_o;                     //    live
+        c3_d sen_d;                     //    commit requested
+        c3_d dun_d;                     //    committed
+        c3_d epo_d;                     //    current epoch
+        c3_d put_d[2];                  //    pending save range, 0 if none
+        c3_h hit_h[U3T_STAT_HITS];      //    batch histogram
+      } dis_u;
+      struct {                          //  memory, bytes unless noted
+        c3_d pag_d;                     //    page size
+        c3_d lom_d;                     //    loom size
+        c3_d ful_d;                     //    home road
+        c3_d hep_d;                     //    heap
+        c3_d tmp_d;                     //    stack
+        c3_d opn_d;                     //    open (free between heap/stack)
+        c3_d img_d;                     //    snapshot image
+        c3_d per_d;                     //    persistent cache, entries
+        c3_d pem_d;                     //    persistent cache, max entries
+        c3_d for_d;                     //    formula cache, entries
+      } mem_u;
+      struct {                          //  snapshot patches
+        c3_d num_d;                     //    total patches written
+        c3_d byt_d;                     //    total bytes written
+        c3_d max_d;                     //    largest patch, bytes
+        c3_h nex_h;                     //    next ring slot
+        u3t_patch pat_u[U3T_STAT_PATS]; //    recent patches (ring)
+      } pat_u;
+    } u3t_stat;
 
   /**  Macros.
   **/
@@ -227,12 +290,54 @@
       void
       u3t_sstack_pop(void);
 
+    /* u3t_stat_init: create the stats page (serf side).
+     */
+      void
+      u3t_stat_init(c3_d* who_d);
+
+    /* u3t_stat_open: map the stats page read-only (king side).
+     */
+      u3t_stat*
+      u3t_stat_open(c3_d* who_d);
+
+    /* u3t_stat_exit: tear down the stats page (serf side).
+     */
+      void
+      u3t_stat_exit(void);
+
+    /* u3t_stat_close: tear down a stats page mapping (king side).
+     */
+      void
+      u3t_stat_close(u3t_stat* sat_u);
+
+    /* u3t_stat_writ_beg: begin a stats update; NULL if no page.
+    **                    must be paired with u3t_stat_writ_end().
+     */
+      u3t_stat*
+      u3t_stat_writ_beg(void);
+
+    /* u3t_stat_writ_end: finish a stats update.
+     */
+      void
+      u3t_stat_writ_end(void);
+
+    /* u3t_stat_read: consistent copy of [sat_u] into [out_u].
+     */
+      c3_o
+      u3t_stat_read(const u3t_stat* sat_u, u3t_stat* out_u);
+
+    /* u3t_stat_patch: record a snapshot patch.
+     */
+      void
+      u3t_stat_patch(const u3t_patch* pat_u);
+
 
   /** Globals.
   **/
       /// Tracing profiler.
       extern u3t_trace u3t_Trace;
       extern u3t_spin* u3t_Spin;
+      extern u3t_stat* u3t_Stat;
 
 #     define u3T u3t_Trace
 

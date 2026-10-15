@@ -340,6 +340,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "gc-abort",            no_argument,       NULL, 13 },
     { "no-migrate",          no_argument,       NULL, 14 },
+    { "log-patch",           no_argument,       NULL, 15 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -401,6 +402,10 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 14: {  //  no-migrate
         u3C.wag_h |= u3o_no_migrate;
+        break;
+      }
+      case 15: {  //  log-patch
+        u3C.wag_h |= u3o_log_patch;
         break;
       }
       //  special args
@@ -929,6 +934,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "    --prop-url URL            Download a prop into the boot sequence\n",
     "    --prop-name NAME          Download a prop from bootstrap.urbit.org\n",
     "    --gc-abort                Abort the process on leaks, implies -g\n",
+    "    --log-patch               Log snapshot patch sizes\n",
     "\n",
     "Development Usage:\n",
     "   To create a development ship, use a fakezod:\n",
@@ -3155,6 +3161,11 @@ _cw_work(c3_i argc, c3_c* argv[])
     //
     u3C.stderr_log_f = _cw_io_send_stdr;
     u3C.slog_f = _cw_io_send_slog;
+
+    //  initialize the stats page before replay, so replay snapshots
+    //  are recorded
+    //
+    u3t_stat_init(mar_u.met_u.who_d);
 
     //  replay if necessary
     //

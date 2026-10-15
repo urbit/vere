@@ -4,6 +4,7 @@
 
 #include "events.h"
 #include "manage.h"
+#include "trace.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -590,6 +591,88 @@ _test_save_dryrun(void)
   fprintf(stderr, "test_save_dryrun: ok\r\n");
 }
 
+/* _test_stat_patch_ring(): u3t_stat_patch keeps totals and a wrapping ring.
+*/
+static void
+_test_stat_patch_ring(void)
+{
+  u3t_stat* sav_u = u3t_Stat;
+  u3t_stat* sat_u = c3_calloc(sizeof(*sat_u));
+  u3t_patch pat_u = {0};
+  c3_w      num_w = U3T_STAT_PATS + 3;
+  c3_w      i_w;
+
+  //  no page: recording is a no-op
+  //
+  u3t_Stat = NULL;
+  pat_u.byt_d = 1;
+  u3t_stat_patch(&pat_u);
+  u3_assert( NULL == u3t_stat_writ_beg() );
+
+  u3t_Stat = sat_u;
+  sat_u->ver_h = U3T_STAT_VERSION;
+  sat_u->mem_u.pag_d = 16384;
+
+  for ( i_w = 1; i_w <= num_w; i_w++ ) {
+    pat_u.eve_d = i_w;
+    pat_u.pgs_d = i_w;
+    pat_u.byt_d = (c3_d)i_w * 16384;
+    pat_u.img_d = 100 + i_w;
+    u3t_stat_patch(&pat_u);
+  }
+
+  u3_assert( 0 == (sat_u->seq_h & 1) );
+  u3_assert( (2 * num_w) == sat_u->seq_h );
+  u3_assert( num_w == sat_u->pat_u.num_d );
+  u3_assert( ((c3_d)num_w * (num_w + 1) / 2) * 16384 == sat_u->pat_u.byt_d );
+  u3_assert( (c3_d)num_w * 16384 == sat_u->pat_u.max_d );
+  u3_assert( (100 + num_w) * 16384ULL == sat_u->mem_u.img_d );
+
+  //  newest is just behind nex_h; oldest retained is num_w - PATS + 1
+  //
+  {
+    c3_h nex_h = sat_u->pat_u.nex_h;
+    u3_assert( num_w == sat_u->pat_u.pat_u[(nex_h + U3T_STAT_PATS - 1)
+                                           % U3T_STAT_PATS].eve_d );
+    u3_assert( (num_w - U3T_STAT_PATS + 1)
+               == sat_u->pat_u.pat_u[nex_h].eve_d );
+  }
+
+  u3t_Stat = sav_u;
+  c3_free(sat_u);
+  fprintf(stderr, "test_stat_patch_ring: ok\r\n");
+}
+
+/* _test_stat_read(): u3t_stat_read rejects in-flight writes and bad versions.
+*/
+static void
+_test_stat_read(void)
+{
+  u3t_stat* sat_u = c3_calloc(sizeof(*sat_u));
+  u3t_stat* out_u = c3_calloc(sizeof(*out_u));
+
+  sat_u->ver_h       = U3T_STAT_VERSION;
+  sat_u->eve_u.dun_d = 42;
+
+  u3_assert( c3y == u3t_stat_read(sat_u, out_u) );
+  u3_assert( 42 == out_u->eve_u.dun_d );
+
+  //  writer mid-update
+  //
+  sat_u->seq_h = 1;
+  u3_assert( c3n == u3t_stat_read(sat_u, out_u) );
+
+  //  layout mismatch
+  //
+  sat_u->seq_h = 2;
+  sat_u->ver_h = U3T_STAT_VERSION + 1;
+  u3_assert( c3n == u3t_stat_read(sat_u, out_u) );
+
+  c3_free(sat_u);
+  c3_free(out_u);
+  fprintf(stderr, "test_stat_read: ok\r\n");
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -613,6 +696,8 @@ main(int argc, char* argv[])
   _test_patch_verify_truncated_control();
   _test_patch_apply_roundtrip();
   _test_save_dryrun();
+  _test_stat_patch_ring();
+  _test_stat_read();
 
   fprintf(stderr, "events okeedokee\r\n");
   return 0;
