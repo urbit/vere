@@ -1047,7 +1047,7 @@ _unix_blob_install_cb(void*  ptr_v,
 **  gum_w, move on. otherwise, overwrite add path plus data to
 **  %into event.
 **
-**  Files larger than U3_BLOB_THRESH are staged to .urb/bob/stg/ and
+**  Files larger than U3_BLOB_THRESH are staged to .urb/stg/ and
 **  installed into the blob store via the Mars IPC path (%blob writ).
 **  The %into event for the large file is injected asynchronously from
 **  the blob-install callback; this function returns u3_nul for large files.
@@ -1080,7 +1080,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   len_ws = buf_u.st_size;
 
-  //  large files: stage in .urb/bob/stg/, install via the %blob writ
+  //  large files: stage in .urb/stg/, install via the %blob writ
   //
   if ( c3y == u3b_over(len_ws) ) {
     c3_c stg_c[8192];

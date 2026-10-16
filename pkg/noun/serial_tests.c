@@ -367,7 +367,7 @@ _test_ram_roundtrip(void)
 **
 **   Helpers for bob-atom round-trip tests.  The ram encoder calls
 **   u3r_met_d() which reads the blob file at
-**   $u3C.dir_c/.urb/bob/<mug>/<seq>, so actual files must exist.
+**   $u3C.bob_c/<mug>/<seq>, so actual files must exist.
 */
 
 static c3_c _ram_tmp_dir[1024];
@@ -379,13 +379,8 @@ _ram_setup_tmp(void)
     fprintf(stderr, "serial_tests: c3_tmp_make failed: %s\r\n", strerror(errno));
     return c3n;
   }
-  u3C.dir_c = _ram_tmp_dir;
+  u3C.bob_c = _ram_tmp_dir;
 
-  c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb", _ram_tmp_dir);
-  mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", _ram_tmp_dir);
-  mkdir(pax_c, 0755);
   return c3y;
 }
 
@@ -399,9 +394,9 @@ static c3_o
 _ram_make_blob(c3_h mug_h, c3_h seq_h, const c3_y* dat_y, c3_d len_d)
 {
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h, _ram_tmp_dir, mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h, _ram_tmp_dir, mug_h);
   mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%" PRIc3_h "/%" PRIc3_h,
+  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h "/%" PRIc3_h,
            _ram_tmp_dir, mug_h, seq_h);
   FILE* fil_f = fopen(pax_c, "wb");
   if ( !fil_f ) {

@@ -1434,7 +1434,7 @@ _test_view(void)
   //  bob atom: view opens the underlying blob through its hand
   //
   {
-    //  set up a temp pier dir with a blob at .urb/bob/<mug>/<seq>
+    //  set up a temp store root with a blob at <mug>/<seq>
     //
     c3_c dir_c[1024];
     if ( !c3_tmp_make(dir_c, sizeof(dir_c), "vere-view-test") ) {
@@ -1443,19 +1443,17 @@ _test_view(void)
     }
 
     c3_c pax_c[2048];
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);         mkdir(pax_c, 0755);
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c);     mkdir(pax_c, 0755);
 
     const c3_h mug_h = 0xabcd1234;
     const c3_h seq_h = 7;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+    snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
     mkdir(pax_c, 0755);
 
     const c3_y bob_y[] = "bob atom backed by a real file";
     const c3_d bob_d   = sizeof(bob_y) - 1;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+    snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
              dir_c, (unsigned)mug_h, (unsigned)seq_h);
     FILE* fil_f = fopen(pax_c, "wb");
     if ( !fil_f ) {
@@ -1465,9 +1463,9 @@ _test_view(void)
     fwrite(bob_y, 1, bob_d, fil_f);
     fclose(fil_f);
 
-    //  set u3C.dir_c so the view finds the blob
+    //  set u3C.bob_c so the view finds the blob
     //
-    u3C.dir_c = dir_c;
+    u3C.bob_c = dir_c;
 
     u3_atom a = u3i_blob(mug_h, seq_h);
 
@@ -1507,20 +1505,20 @@ _test_view(void)
     //  clean up temp pier
     //
     c3_tmp_kill(dir_c);
-    u3C.dir_c = 0;
+    u3C.bob_c = 0;
   }
 }
 
-/* _aor_write_blob(): write [byt_y/len_w] to .urb/bob/<mug>/<seq> under [dir_c].
+/* _aor_write_blob(): write [byt_y/len_w] to <mug>/<seq> under the store root [dir_c].
 */
 static void
 _aor_write_blob(const c3_c* dir_c, c3_h mug_h, c3_h seq_h,
                 const c3_y* byt_y, c3_w len_w)
 {
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
   mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+  snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
            dir_c, (unsigned)mug_h, (unsigned)seq_h);
   FILE* fil_f = fopen(pax_c, "wb");
   if ( !fil_f ) {
@@ -1545,8 +1543,6 @@ _test_aor(void)
   }
 
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);     mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c); mkdir(pax_c, 0755);
 
   //  two blobs with distinct, equal-length byte content
   //
@@ -1561,7 +1557,7 @@ _test_aor(void)
   _aor_write_blob(dir_c, mga_h, sqa_h, a_y, a_w);
   _aor_write_blob(dir_c, mgb_h, sqb_h, b_y, b_w);
 
-  u3C.dir_c = dir_c;
+  u3C.bob_c = dir_c;
 
   //  normal (in-loom) atoms serve as the trusted oracle
   //
@@ -1599,7 +1595,7 @@ _test_aor(void)
   u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
 
   c3_tmp_kill(dir_c);
-  u3C.dir_c = 0;
+  u3C.bob_c = 0;
 }
 
 /* main(): run all test cases.

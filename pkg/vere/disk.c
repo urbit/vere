@@ -29,6 +29,9 @@ struct _u3_disk_walk {
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
 
+static void
+_disk_blob_root(const c3_c* pax_c, c3_d epo_d);
+
 /* _disk_commit_done(): commit complete.
  */
 static void
@@ -1250,6 +1253,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
   log_u->ver_h = U3D_VERLAT;
+  _disk_blob_root(log_u->dir_u->pax_c, epo_d);
 
   //  success
   return c3y;
@@ -1275,8 +1279,13 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
 
-  //  the epoch's blob references were retired by _disk_chop_drop_refs
+  //  the epoch's blob files die with it
   //
+  {
+    c3_c bob_c[8192];
+    u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
+    u3b_kill(bob_c);
+  }
 
   //  delete files in epoch directory
   u3_dire* dir_u = u3_foil_folder(epo_c);
@@ -1286,10 +1295,12 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
     snprintf(fil_c, sizeof(fil_c), "%s/%s", epo_c, den_u->nam_c);
     if ( 0 != c3_unlink(fil_c) ) {
       fprintf(stderr, "disk: failed to delete file in epoch directory\r\n");
+      u3_dire_free(dir_u);
       return c3n;
     }
     den_u = den_u->nex_u;
   }
+  u3_dire_free(dir_u);
 
   //  delete epoch directory
   if ( 0 != c3_rmdir(epo_c) ) {
@@ -1297,19 +1308,16 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
     return c3n;
   }
 
-  //  cleanup
-  u3_dire_free(dir_u);
-
   //  success
   return c3y;
 }
 
-/* u3_disk_epoc_last: get latest epoch number.
+/* _disk_epoc_last_in: get latest epoch number under log dir [log_c].
 */
-c3_o
-u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
+static c3_o
+_disk_epoc_last_in(const c3_c* log_c, c3_d* lat_d)
 {
-  u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dire* die_u = u3_foil_folder(log_c);
   u3_dent* den_u = die_u->dil_u;
   c3_o     ret_o = c3n;
   c3_d     epo_d = 0;
@@ -1333,6 +1341,50 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   *lat_d = epo_d;
 
   return ret_o;
+}
+
+/* u3_disk_epoc_last: get latest epoch number.
+*/
+c3_o
+u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
+{
+  return _disk_epoc_last_in(log_u->com_u->pax_c, lat_d);
+}
+
+/* _disk_blob_root(): point u3C.bob_c at epoch [epo_d]'s store, creating
+**   the directory if needed.  The one place a process learns its root
+**   from disk; the king learns it from %ripe.
+*/
+static void
+_disk_blob_root(const c3_c* pax_c, c3_d epo_d)
+{
+  static c3_c bob_c[8192];
+
+  u3b_root(bob_c, pax_c, epo_d);
+
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
+            bob_c, strerror(errno));
+  }
+
+  u3C.bob_c = bob_c;
+}
+
+/* u3_disk_blob_root(): point u3C.bob_c at the newest epoch's store.
+**
+**   For entry points that boot a loom without loading the log.
+*/
+void
+u3_disk_blob_root(const c3_c* pax_c)
+{
+  c3_c log_c[8192];
+  c3_d epo_d;
+
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
+
+  if ( c3y == _disk_epoc_last_in(log_c, &epo_d) ) {
+    _disk_blob_root(pax_c, epo_d);
+  }
 }
 
 /* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
@@ -1741,7 +1793,7 @@ u3_disk_blob_gc(u3_disk* log_u)
   {
     c3_w tot_w = u3h_wyt(u3H->blb_p);
 
-    _disk_chop_collect del_u = { .pax_c = log_u->dir_u->pax_c };
+    _disk_chop_collect del_u = { .pax_c = u3C.bob_c };
     u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
 
     for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
@@ -1764,8 +1816,8 @@ u3_disk_blob_gc(u3_disk* log_u)
   //  its own deletions)
   //
   {
-    _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
-    u3b_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
+    _disk_chop_collect orf_u = { .pax_c = u3C.bob_c };
+    u3b_walk(u3C.bob_c, &orf_u, _disk_chop_orphan_cb);
 
     for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
       c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
@@ -2475,6 +2527,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
   log_u->sen_d = log_u->dun_d;
   log_u->epo_d = lat_d;
+  _disk_blob_root(log_u->dir_u->pax_c, lat_d);
 
   //  NB: by virtue of getting here, we know the *pier* version number is at least 3
   //  (ie, this is the epoch system)
@@ -2657,27 +2710,15 @@ _disk_blob_stg_clean(const c3_c* stg_c)
   closedir(dir_u);
 }
 
-/* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+/* u3_disk_blob_init(): create + empty the blob staging dir.
+**
+**   The staging dir ($pier/.urb/stg) holds mkstemp(3) temp files written
+**   before rename(2) into the epoch's store.  Emptied every time mars
+**   starts, which is before the king's drivers can stage anything.  The
+**   store itself is made with its epoch (_disk_blob_root).
 */
 void
 u3_disk_blob_init(const c3_c* pax_c)
-{
-  c3_c bob_c[8192];
-  u3b_bob_dir(bob_c, pax_c);
-
-  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
-            bob_c, strerror(errno));
-  }
-}
-
-/* u3_disk_blob_stg_init(): create + empty the blob staging dir.
-**
-**   The staging dir ($pier/.urb/bob/stg) holds mkstemp(3) temp files written
-**   before rename(2) into bob/<mug>/<seq>.  Emptied on every boot.
-*/
-void
-u3_disk_blob_stg_init(const c3_c* pax_c)
 {
   c3_c stg_c[8192];
   u3b_stg_dir(stg_c, pax_c);
@@ -2759,10 +2800,9 @@ u3_disk_make(c3_c* pax_c)
     }
   }
 
-  //  make $pier/.urb/bob (blob store) and .urb/bob/stg/ (staging area)
+  //  make $pier/.urb/stg (blob staging area)
   //
   u3_disk_blob_init(pax_c);
-  u3_disk_blob_stg_init(pax_c);
 
   return c3y;
 }
@@ -2832,10 +2872,9 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return 0;
     }
 
-  //  initialize blob store (creates .urb/bob/ if needed) and staging area
+  //  create and empty the blob staging area
   //
   u3_disk_blob_init(pax_c);
-  u3_disk_blob_stg_init(pax_c);
 
 
     //  XX move this into u3_disk_make
@@ -2882,6 +2921,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         }
         log_u->sen_d = log_u->dun_d = las_d;
         log_u->epo_d = 0;
+        _disk_blob_root(log_u->dir_u->pax_c, 0);
         u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
         log_u->liv_o = c3y;
         return log_u;

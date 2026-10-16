@@ -248,28 +248,43 @@ _lord_plea_ripe(u3_lord* god_u, u3_noun dat)
   }
 
   {
-    u3_noun a, b, c, pro, wyn, who, fak, eve, mug;
+    u3_noun a, b, c, pro, wyn, who, fak, eve, mug, epo;
     c3_y pro_y;
-    c3_d eve_d;
+    c3_d eve_d, epo_d;
     c3_h mug_h;
 
-    //  XX parse out version values
+    //  the version first, so a serf from another build is reported as
+    //  such rather than as a malformed plea
     //
     if (  (c3n == u3r_trel(dat, &a, &b, &c))
        || (c3n == u3r_cell(a, &pro, &wyn))
-       || (c3n == u3r_safe_byte(pro, &pro_y))
-       || (c3n == u3r_cell(b, &who, &fak))
-       || (c3n == u3r_cell(c, &eve, &mug))
-       || (c3n == u3r_safe_chub(eve, &eve_d))
-       || (c3n == u3r_safe_half(mug, &mug_h)) )
+       || (c3n == u3r_safe_byte(pro, &pro_y)) )
     {
       return _lord_plea_foul(god_u, c3__ripe, dat);
     }
 
-    if ( 2 != pro_y ) {
+    if ( 3 != pro_y ) {
       fprintf(stderr, "pier: unsupported ipc protocol version %u\r\n", pro_y);
       _lord_bail(god_u);
       return;
+    }
+
+    if (  (c3n == u3r_cell(b, &who, &fak))
+       || (c3n == u3r_trel(c, &eve, &mug, &epo))
+       || (c3n == u3r_safe_chub(eve, &eve_d))
+       || (c3n == u3r_safe_half(mug, &mug_h))
+       || (c3n == u3r_safe_chub(epo, &epo_d)) )
+    {
+      return _lord_plea_foul(god_u, c3__ripe, dat);
+    }
+
+    //  the epoch names the blob store this process reads from; no
+    //  roll happens while the king is attached, so it is set once
+    //
+    {
+      static c3_c bob_c[8192];
+      u3b_root(bob_c, u3C.dir_c, epo_d);
+      u3C.bob_c = bob_c;
     }
 
     //  XX save mug_l

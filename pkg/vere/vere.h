@@ -875,16 +875,17 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
-      /* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+      /* u3_disk_blob_init(): create + empty the blob staging dir
+      **   ($pier/.urb/stg).  Cleaned every time mars starts.
       */
         void
         u3_disk_blob_init(const c3_c* pax_c);
 
-      /* u3_disk_blob_stg_init(): create + empty the blob staging dir
-      **   ($pier/.urb/bob/stg).  Cleaned on every boot.
+      /* u3_disk_blob_root(): point u3C.bob_c at the newest epoch's store,
+      **   for entry points that boot a loom without loading the log.
       */
         void
-        u3_disk_blob_stg_init(const c3_c* pax_c);
+        u3_disk_blob_root(const c3_c* pax_c);
 
       /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **
@@ -1115,7 +1116,7 @@
 
       /* u3_lord_blob_install(): request Mars install a staged blob file.
       **
-      ** [pax_c] is the path to a temp file in $pier/.urb/bob/stg/.
+      ** [pax_c] is the path to a temp file in $pier/.urb/stg/.
       ** When Mars finishes (mug+dedup+rename), it calls fun_f(ptr_v, mug, seq, ok).
       ** Ownership of [pax_c] passes to the writ; do not free it.
       */

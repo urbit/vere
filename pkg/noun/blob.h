@@ -9,14 +9,17 @@
 
   /* Blob store: content-addressed storage for large atoms.
   **
-  ** Files live in $pier/.urb/bob/<mug>/<seq>.
-  ** Each mug bucket has a lockfile ($pier/.urb/bob/<mug>/lock) holding
-  ** the next available sequence number (ASCII decimal).
+  ** An epoch owns its blob files: they live in
+  ** $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>, the store root of that
+  ** epoch (u3b_root).  Every store function takes a root; a process
+  ** keeps the current one in u3C.bob_c.  Each mug bucket has an empty
+  ** lockfile, <root>/<mug>/lock, held only while a seq is allocated.
   **
   ** Mars is the sole writer.  A client such as the king never touches
-  ** bob/<mug>/<seq>: it writes bytes to a staging file (u3b_stage,
-  ** u3b_stage_fd) and sends the path in a %blob writ; mars installs
-  ** it (u3b_move_stg), leases it, and acks with the mug and seq.
+  ** <root>/<mug>/<seq>: it writes bytes to a staging file under
+  ** $pier/.urb/stg (u3b_stage, u3b_stage_fd) and sends the path in a
+  ** %blob writ; mars installs it (u3b_move_stg) and acks with the mug
+  ** and seq.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -53,15 +56,16 @@
   _Static_assert(U3_BLOB_THRESH > U3_BLOB_MIN,
                  "blobified atoms must be indirect in the loom");
 
-    /* u3b_bob_dir(): write the $pier/.urb/bob path into [out_c].
+    /* u3b_root(): write the store root of epoch [epo_d] in pier [pax_c]
+    **   into [out_c]: $pier/.urb/log/0i<epo>/bob.
     **
-    ** [out_c] must be at least 8192 bytes.  Pier setup (disk.c) creates this
-    ** directory; the blob store only reads/writes files beneath it.
+    ** [out_c] must be at least 8192 bytes.  The epoch code (disk.c)
+    ** creates the directory and points u3C.bob_c at it.
     */
       void
-      u3b_bob_dir(c3_c* out_c, const c3_c* pax_c);
+      u3b_root(c3_c* out_c, const c3_c* pax_c, c3_d epo_d);
 
-    /* u3b_stg_dir(): write the $pier/.urb/bob/stg staging path into [out_c].
+    /* u3b_stg_dir(): write the $pier/.urb/stg staging path into [out_c].
     **
     ** [out_c] must be at least 8192 bytes.
     */
@@ -91,14 +95,14 @@
     /* u3b_live(): check whether a blob file exists.
     */
       c3_o
-      u3b_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
+      u3b_live(const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
     /* u3b_wipe(): delete a blob file.
     **
     ** Called when a bob atom's total refcount reaches zero.
     */
       void
-      u3b_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
+      u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
     /* u3b_walk(): enumerate every blob file in the store.
     **
@@ -107,9 +111,15 @@
     ** callback must not create or delete blob files (collect, then act).
     */
       void
-      u3b_walk(const c3_c* pax_c,
+      u3b_walk(const c3_c* bob_c,
                      void* ptr_v,
                      void  (*fun_f)(void*, c3_h, c3_h));
+
+    /* u3b_kill(): remove the store root [bob_c] and everything in it,
+    **   for an epoch that is being deleted.  A missing root is fine.
+    */
+      void
+      u3b_kill(const c3_c* bob_c);
 
     /* u3b_move_stg(): install a staging file into the blob store.
     **
@@ -119,7 +129,7 @@
     ** On success, returns c3y and sets *mug_h and *seq_h.
     */
       c3_o
-      u3b_move_stg(const c3_c* pax_c,
+      u3b_move_stg(const c3_c* bob_c,
                    const c3_c* stg_c,
                          c3_h* mug_h,
                          c3_h* seq_h);
@@ -129,7 +139,7 @@
     ** [out_c] must be at least 8192 bytes.
     */
       void
-      u3b_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
+      u3b_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
     /* u3b_hand: an open blob file handle, owned by the road that
     **           opened it; exclusively accessed publicly via views.
@@ -155,7 +165,7 @@
     **   road returns 0.
     */
       u3b_hand*
-      u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h);
+      u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
     /* u3b_shut(): the current road is done with [han_u].
     **
@@ -233,15 +243,17 @@
     */
       typedef struct _u3b_bsink {
         u3s_bsink   snk_u;          //  callback table (pass to cue)
-        const c3_c* pax_c;          //  pier path
+        const c3_c* pax_c;          //  pier path (staging)
+        const c3_c* bob_c;          //  store root (install)
         c3_i        fid_i;          //  staging fd (-1 = closed)
         c3_w        num_w;          //  blobs installed
         c3_c        stg_c[8192];    //  staging file path
       } u3b_bsink;
 
-    /* u3b_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
+    /* u3b_bsink_init(): prepare a sink staging in pier [pax_c] and
+    **   installing into the store root [bob_c].
     */
       void
-      u3b_bsink_init(u3b_bsink* bsk_u, const c3_c* pax_c);
+      u3b_bsink_init(u3b_bsink* bsk_u, const c3_c* pax_c, const c3_c* bob_c);
 
 #endif /* ifndef U3_VERE_BLOB_H */

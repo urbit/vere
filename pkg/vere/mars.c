@@ -26,7 +26,8 @@
 **     les_h = king-held leases (mars memory only; zeroed at boot and
 **             never rebuilt, since no lease outlives a restart)
 **
-**   Blob files live at $pier/.urb/bob/<mug>/<seq>.
+**   Blob files live at $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>: an
+**   epoch owns the files its events and its image name.
 **   Deletion condition: use_w == 0.
 **
 **   Lease expiry is measured in committed events, never in wall-clock
@@ -36,7 +37,7 @@
 **   nothing, so it burns no lease budget, and no renewal is needed.
 **
 **   Lifecycle:
-**     1. king stages a large file to .urb/bob/stg/, sends a %blob writ
+**     1. king stages a large file to .urb/stg/, sends a %blob writ
 **     2. mars installs it (rename into bob/<mug>/<seq>) and issues the
 **        king's lease (les_h += 1, expiring once _mars_lease_wid_d
 **        further events commit).  the lease lives in mars's memory: a
@@ -164,7 +165,7 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
     return;
   }
 
-  u3b_wipe(u3C.dir_c, mug_h, seq_h);
+  u3b_wipe(u3C.bob_c, mug_h, seq_h);
   u3a_blob_drop(mug_h, seq_h);
 }
 
@@ -511,7 +512,7 @@ _mars_blob_sure(u3_noun job)
     if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
       continue;
     }
-    if ( c3y == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
+    if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
       continue;
     }
 
@@ -1147,7 +1148,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         c3_c stg_c[8192] = {0};
         u3r_bytes(0, (c3_w)len_d, (c3_y*)stg_c, dat);
 
-        ok_o = u3b_move_stg(u3C.dir_c, stg_c, &mug_h, &seq_h);
+        ok_o = u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h);
 
         if ( c3y == ok_o ) {
           //  issue the king's install lease: protects the blob until
@@ -1511,7 +1512,7 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
     c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFFULL);
 
-    if ( c3n == u3b_live(u3C.dir_c, mug_h, seq_h) ) {
+    if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
       fprintf(stderr, "play (%" PRIu64 "): blob %08" PRIx32 "/%08" PRIx32
                       " missing from store: the log references data "
                       "that no longer exists\r\n",
@@ -2080,11 +2081,12 @@ u3_mars_work(u3_mars* mar_u)
     c3_y* hun_y;
     u3_noun wyn = u3_nul;
     u3_noun msg = u3nq(c3__ripe,
-                       u3nc(2, wyn),
+                       u3nc(3, wyn),
                        u3nc(u3i_chubs(2, mar_u->met_u.who_d),
                             mar_u->met_u.fak_o),
-                       u3nc(u3i_chub(mar_u->dun_d),
-                            mar_u->mug_h));
+                       u3nt(u3i_chub(mar_u->dun_d),
+                            mar_u->mug_h,
+                            u3i_chub(mar_u->log_u->epo_d)));
 
     u3s_ram_xeno(msg, &len_d, &hun_y);
     u3_newt_send_vers(mar_u->out_u, 0x01, len_d, hun_y);

@@ -233,8 +233,8 @@
     **     use_w  total refs: eve_w + les_h + atom cardinality
     **     eve_w  event-log refcount (rebuildable from LMDB)
     **     les_h  active king-held leases (zeroed at boot)
-    **     mug_h  blob mug — identifies file in .urb/bob
-    **     seq_h  blob seq — identifies file in .urb/bob
+    **     mug_h  blob mug — names the file in the epoch's store
+    **     seq_h  blob seq — names the file in the epoch's store
     */
 #define U3A_BLOB_BODY(S) \
   U3_W(S) use_w;         \

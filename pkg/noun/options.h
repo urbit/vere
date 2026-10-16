@@ -13,6 +13,7 @@
       typedef struct _u3o_config {
         u3_noun who;                          //  single identity
         c3_c*   dir_c;                        //  execution directory (pier)
+        c3_c*   bob_c;                        //  blob store root: $pier/.urb/log/0i<epoch>/bob
         c3_c*   eph_c;                        //  ephemeral file
         c3_h    wag_h;                        //  flags (both ways)
         size_t  wor_i;                        //  loom word-length (<= u3a_words)

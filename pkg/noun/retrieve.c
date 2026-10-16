@@ -1239,7 +1239,7 @@ u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
   //  leaks it.  no bytes until read or flat.
   //
   if ( c3y == u3a_is_bob(a) ) {
-    u3b_hand* han_u = u3b_open(u3C.dir_c, u3a_bob_mug(a), u3a_bob_seq(a));
+    u3b_hand* han_u = u3b_open(u3C.bob_c, u3a_bob_mug(a), u3a_bob_seq(a));
 
     if ( !han_u ) {
       if ( c3y == bal_o ) {

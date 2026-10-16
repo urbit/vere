@@ -258,11 +258,17 @@ _blob_hand_met(u3b_hand* han_u)
 /* u3b_open(): open a blob on the current road.
 */
 u3b_hand*
-u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
   c3_d          bid_d = _blob_bid(mug_h, seq_h);
   c3_o          hom_o = ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
   u3b_hand*     han_u = 0;
+
+  //  a process that never learned its epoch has no store
+  //
+  if ( !bob_c ) {
+    return 0;
+  }
 
   //  an inner road reuses its own hand, or one held by an inner
   //  ancestor: the ancestor is suspended until this road falls, so its
@@ -308,7 +314,7 @@ u3b_open(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
     c3_c        fil_c[8192];
     struct stat st_u;
 
-    u3b_path(fil_c, pax_c, mug_h, seq_h);
+    u3b_path(fil_c, bob_c, mug_h, seq_h);
 
     u3m_crit_inn();
 
@@ -568,20 +574,23 @@ u3b_mmap(u3b_hand* han_u)
   }
 }
 
-/* u3b_bob_dir(): write path to $pier/.urb/bob/ into [out_c].
+/* u3b_root(): write the store root of epoch [epo_d] into [out_c].
+**
+**   $pier/.urb/log/0i<epo>/bob: an epoch owns its blob files, and every
+**   other path here is relative to a root.
 */
 void
-u3b_bob_dir(c3_c* out_c, const c3_c* pax_c)
+u3b_root(c3_c* out_c, const c3_c* pax_c, c3_d epo_d)
 {
-  snprintf(out_c, 8192, "%s/.urb/bob", pax_c);
+  snprintf(out_c, 8192, "%s/.urb/log/0i%" PRIc3_d "/bob", pax_c, epo_d);
 }
 
-/* _blob_mug_dir(): write path to $pier/.urb/bob/<mug>/ into [out_c].
+/* _blob_mug_dir(): write path to <root>/<mug>/ into [out_c].
 */
 static void
-_blob_mug_dir(c3_c* out_c, const c3_c* pax_c, c3_h mug_h)
+_blob_mug_dir(c3_c* out_c, const c3_c* bob_c, c3_h mug_h)
 {
-  snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h, pax_c, mug_h);
+  snprintf(out_c, 8192, "%s/%" PRIc3_h, bob_c, mug_h);
 }
 
 /* _blob_sync_dir(): fsync a mug bucket directory so a freshly-created
@@ -589,11 +598,11 @@ _blob_mug_dir(c3_c* out_c, const c3_c* pax_c, c3_h mug_h)
 **   Windows, which cannot open a directory as a file descriptor.
 */
 static void
-_blob_sync_dir(const c3_c* pax_c, c3_h mug_h)
+_blob_sync_dir(const c3_c* bob_c, c3_h mug_h)
 {
 #ifndef U3_OS_windows
   c3_c dir_c[8192];
-  _blob_mug_dir(dir_c, pax_c, mug_h);
+  _blob_mug_dir(dir_c, bob_c, mug_h);
 
   c3_i dir_i = open(dir_c, O_RDONLY);
   if ( -1 == dir_i ) {
@@ -604,29 +613,28 @@ _blob_sync_dir(const c3_c* pax_c, c3_h mug_h)
 #endif
 }
 
-/* _blob_lock_path(): write path to $pier/.urb/bob/<mug>/lock into [out_c].
+/* _blob_lock_path(): write path to <root>/<mug>/lock into [out_c].
 */
 static void
-_blob_lock_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h)
+_blob_lock_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h)
 {
-  snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h "/lock", pax_c, mug_h);
+  snprintf(out_c, 8192, "%s/%" PRIc3_h "/lock", bob_c, mug_h);
 }
 
 /* u3b_path(): write filesystem path for a blob into [out_c].
 */
 void
-u3b_path(c3_c* out_c, const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
-  snprintf(out_c, 8192, "%s/.urb/bob/%" PRIc3_h "/%" PRIc3_h,
-           pax_c, mug_h, seq_h);
+  snprintf(out_c, 8192, "%s/%" PRIc3_h "/%" PRIc3_h, bob_c, mug_h, seq_h);
 }
 
-/* u3b_stg_dir(): write path to $pier/.urb/bob/stg/ into [out_c].
+/* u3b_stg_dir(): write path to $pier/.urb/stg/ into [out_c].
 */
 void
 u3b_stg_dir(c3_c* out_c, const c3_c* pax_c)
 {
-  snprintf(out_c, 8192, "%s/.urb/bob/stg", pax_c);
+  snprintf(out_c, 8192, "%s/.urb/stg", pax_c);
 }
 
 static c3_o
@@ -672,14 +680,20 @@ _blob_bucket_next(const c3_c* dir_c)
 ** by this lock.  Returns 0 on failure.
 */
 static c3_h
-_blob_lock_acquire(const c3_c* pax_c, c3_h mug_h)
+_blob_lock_acquire(const c3_c* bob_c, c3_h mug_h)
 {
   c3_c dir_c[8192];
   c3_c lck_c[8192];
-  _blob_mug_dir(dir_c, pax_c, mug_h);
-  _blob_lock_path(lck_c, pax_c, mug_h);
+  _blob_mug_dir(dir_c, bob_c, mug_h);
+  _blob_lock_path(lck_c, bob_c, mug_h);
 
-  //  create mug bucket directory if needed
+  //  create the store root and the mug bucket if needed
+  //
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "blob: failed to create store %s: %s\r\n",
+            bob_c, strerror(errno));
+    return 0;
+  }
   if ( 0 != c3_mkdir(dir_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "blob: failed to create bucket %s: %s\r\n",
             dir_c, strerror(errno));
@@ -740,14 +754,14 @@ _blob_lock_acquire(const c3_c* pax_c, c3_h mug_h)
 ** since equality by seq (u3r_sing, meld) relies on one seq per content.
 */
 static c3_o
-_blob_dedup(const c3_c* pax_c, c3_h mug_h, c3_h max_h,
+_blob_dedup(const c3_c* bob_c, c3_h mug_h, c3_h max_h,
             const c3_y* dat_y, c3_d len_d, c3_h* dup_h)
 {
   *dup_h = 0;
 
   for ( c3_h seq_h = 1; seq_h < max_h; seq_h++ ) {
     c3_c fil_c[8192];
-    u3b_path(fil_c, pax_c, mug_h, seq_h);
+    u3b_path(fil_c, bob_c, mug_h, seq_h);
 
     //  a gap in the sequence is normal: dedup consumes a seq without
     //  creating a file, and gc removes files
@@ -952,10 +966,10 @@ u3b_stage_fd(const c3_c* pax_c,
 /* u3b_live(): check whether a blob file exists.
 */
 c3_o
-u3b_live(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_live(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
-  u3b_path(fil_c, pax_c, mug_h, seq_h);
+  u3b_path(fil_c, bob_c, mug_h, seq_h);
 
   struct stat st_u;
   return ( 0 == stat(fil_c, &st_u) ) ? c3y : c3n;
@@ -990,10 +1004,10 @@ _blob_dir_lone_lock(const c3_c* dir_c)
 /* u3b_wipe(): delete a blob file.
 */
 void
-u3b_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
+u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c fil_c[8192];
-  u3b_path(fil_c, pax_c, mug_h, seq_h);
+  u3b_path(fil_c, bob_c, mug_h, seq_h);
 
   //  a wipe is driven by the blob's refcount reaching zero, so no reader
   //  can still hold it open; an open hand here is an accounting bug.
@@ -1030,8 +1044,8 @@ u3b_wipe(const c3_c* pax_c, c3_h mug_h, c3_h seq_h)
   //
   c3_c dir_c[8192];
   c3_c lck_c[8192];
-  _blob_mug_dir(dir_c, pax_c, mug_h);
-  _blob_lock_path(lck_c, pax_c, mug_h);
+  _blob_mug_dir(dir_c, bob_c, mug_h);
+  _blob_lock_path(lck_c, bob_c, mug_h);
 
   if ( 0 == rmdir(dir_c) || ENOENT == errno ) {
     return;
@@ -1080,13 +1094,10 @@ _blob_name_num(const c3_c* nam_c, c3_h* out_h)
 /* u3b_walk(): enumerate every blob file in the store.
 */
 void
-u3b_walk(const c3_c* pax_c,
+u3b_walk(const c3_c* bob_c,
              void*       ptr_v,
              void      (*fun_f)(void*, c3_h, c3_h))
 {
-  c3_c bob_c[8192];
-  u3b_bob_dir(bob_c, pax_c);
-
   DIR* bob_u = opendir(bob_c);
   if ( !bob_u ) {
     return;
@@ -1102,7 +1113,7 @@ u3b_walk(const c3_c* pax_c,
     }
 
     c3_c dir_c[8192];
-    _blob_mug_dir(dir_c, pax_c, mug_h);
+    _blob_mug_dir(dir_c, bob_c, mug_h);
 
     DIR* dir_u = opendir(dir_c);
     if ( !dir_u ) {
@@ -1124,18 +1135,105 @@ u3b_walk(const c3_c* pax_c,
   closedir(bob_u);
 }
 
+/* _blob_dir_names(): the non-dot entry names of [dir_c], or 0 if it
+**   cannot be read.  Read in full before anything is removed, so the
+**   removal never races the enumeration.
+*/
+static c3_c**
+_blob_dir_names(const c3_c* dir_c, c3_w* len_w)
+{
+  DIR*   dir_u = opendir(dir_c);
+  c3_c** nam_c = 0;
+  c3_w   cap_w = 0;
+
+  *len_w = 0;
+
+  if ( !dir_u ) {
+    return 0;
+  }
+
+  struct dirent* ent_e;
+  while ( (ent_e = readdir(dir_u)) ) {
+    if ( '.' == ent_e->d_name[0] ) {
+      continue;
+    }
+    if ( *len_w == cap_w ) {
+      cap_w = cap_w ? (2 * cap_w) : 16;
+      nam_c = c3_realloc(nam_c, cap_w * sizeof(*nam_c));
+    }
+    nam_c[(*len_w)++] = strdup(ent_e->d_name);
+  }
+  closedir(dir_u);
+
+  return nam_c;
+}
+
+/* u3b_kill(): remove a store root and everything in it.
+**
+**   An epoch's files die with the epoch.  Two levels, no recursion:
+**   a bucket holds blob files and a lock, nothing else.  A root that
+**   does not exist is not an error.
+*/
+void
+u3b_kill(const c3_c* bob_c)
+{
+  c3_w   mug_w;
+  c3_c** mug_c = _blob_dir_names(bob_c, &mug_w);
+
+  if ( !mug_c ) {
+    return;
+  }
+
+  for ( c3_w i_w = 0; i_w < mug_w; i_w++ ) {
+    c3_c   dir_c[8192];
+    c3_w   seq_w;
+    c3_c** seq_c;
+
+    snprintf(dir_c, sizeof(dir_c), "%s/%s", bob_c, mug_c[i_w]);
+    c3_free(mug_c[i_w]);
+
+    if ( !(seq_c = _blob_dir_names(dir_c, &seq_w)) ) {
+      //  a stray file in the root
+      //
+      c3_unlink(dir_c);
+      continue;
+    }
+
+    for ( c3_w j_w = 0; j_w < seq_w; j_w++ ) {
+      c3_c fil_c[8192];
+      snprintf(fil_c, sizeof(fil_c), "%s/%s", dir_c, seq_c[j_w]);
+      c3_free(seq_c[j_w]);
+
+      if ( 0 != c3_unlink(fil_c) ) {
+        fprintf(stderr, "blob: kill: unlink %s: %s\r\n",
+                fil_c, strerror(errno));
+      }
+    }
+    c3_free(seq_c);
+
+    if ( 0 != c3_rmdir(dir_c) ) {
+      fprintf(stderr, "blob: kill: rmdir %s: %s\r\n", dir_c, strerror(errno));
+    }
+  }
+  c3_free(mug_c);
+
+  if ( 0 != c3_rmdir(bob_c) ) {
+    fprintf(stderr, "blob: kill: rmdir %s: %s\r\n", bob_c, strerror(errno));
+  }
+}
+
 /* u3b_move_stg(): install a staging file into the blob store.
 **
-**   [stg_c] is the path to a temp file under $pier/.urb/bob/stg/.
+**   [stg_c] is the path to a temp file under $pier/.urb/stg/.
 **   Computes the mug of its content, checks for duplicates, then either
-**   renames the staging file into bob/<mug>/<seq> (no dup) or unlinks it
+**   renames the staging file into <root>/<mug>/<seq> (no dup) or unlinks it
 **   (dup found).  On success sets *mug_h and *seq_h.
 **
 **   The staging file is always consumed (renamed or unlinked) on success.
 **   On failure the staging file is left in place.
 */
 c3_o
-u3b_move_stg(const c3_c* pax_c,
+u3b_move_stg(const c3_c* bob_c,
                     const c3_c* stg_c,
                     c3_h*       mug_h,
                     c3_h*       seq_h)
@@ -1197,7 +1295,7 @@ u3b_move_stg(const c3_c* pax_c,
 
   //  acquire mug-bucket lock and get next sequence number
   //
-  c3_h nex_h = _blob_lock_acquire(pax_c, *mug_h);
+  c3_h nex_h = _blob_lock_acquire(bob_c, *mug_h);
   if ( 0 == nex_h ) {
     munmap(map_v, (size_t)map_d);
     close(fid_i);
@@ -1208,7 +1306,7 @@ u3b_move_stg(const c3_c* pax_c,
   //  the install rather than risk a second seq for the same bytes
   //
   c3_h dup_h;
-  if ( c3n == _blob_dedup(pax_c, *mug_h, nex_h,
+  if ( c3n == _blob_dedup(bob_c, *mug_h, nex_h,
                           (const c3_y*)map_v, len_d, &dup_h) )
   {
     munmap(map_v, (size_t)map_d);
@@ -1273,7 +1371,7 @@ u3b_move_stg(const c3_c* pax_c,
   //  it denotes
   //
   c3_c dst_c[8192];
-  u3b_path(dst_c, pax_c, *mug_h, nex_h);
+  u3b_path(dst_c, bob_c, *mug_h, nex_h);
 
   {
     struct stat st_u;
@@ -1321,7 +1419,7 @@ u3b_move_stg(const c3_c* pax_c,
   //  before the next global sync — a committed lease row must never
   //  reference a blob whose directory entry was lost
   //
-  _blob_sync_dir(pax_c, *mug_h);
+  _blob_sync_dir(bob_c, *mug_h);
 
   *seq_h = nex_h;
   return c3y;
@@ -1389,7 +1487,7 @@ _blob_bsink_don(void* ptr_v)
   close(bsk_u->fid_i);
   bsk_u->fid_i = -1;
 
-  if ( c3n == u3b_move_stg(bsk_u->pax_c, bsk_u->stg_c,
+  if ( c3n == u3b_move_stg(bsk_u->bob_c, bsk_u->stg_c,
                                &mug_h, &seq_h) )
   {
     fprintf(stderr, "blob: bsink: install failed (%s)\r\n", bsk_u->stg_c);
@@ -1402,14 +1500,16 @@ _blob_bsink_don(void* ptr_v)
   return u3i_blob(mug_h, seq_h);
 }
 
-/* u3b_bsink_init(): prepare a sink targeting [pax_c]'s blob store.
+/* u3b_bsink_init(): prepare a sink staging in pier [pax_c] and
+**   installing into the store root [bob_c].
 */
 void
-u3b_bsink_init(u3b_bsink* bsk_u, const c3_c* pax_c)
+u3b_bsink_init(u3b_bsink* bsk_u, const c3_c* pax_c, const c3_c* bob_c)
 {
   memset(bsk_u, 0, sizeof(*bsk_u));
 
   bsk_u->pax_c       = pax_c;
+  bsk_u->bob_c       = bob_c;
   bsk_u->fid_i       = -1;
   bsk_u->snk_u.ptr_v = bsk_u;
   bsk_u->snk_u.opn_f = _blob_bsink_opn;

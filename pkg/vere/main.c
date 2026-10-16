@@ -1653,6 +1653,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3C.wag_h |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
   u3m_stop();
@@ -1877,9 +1878,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //
     u3b_bsink bsk_u;
 
-    u3_disk_blob_init(u3_Host.dir_c);
-    u3_disk_blob_stg_init(u3_Host.dir_c);
-    u3b_bsink_init(&bsk_u, u3_Host.dir_c);
+    u3b_bsink_init(&bsk_u, u3_Host.dir_c, u3C.bob_c);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
@@ -2908,6 +2907,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   //  XX load log and check if snapshot is stale?
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
                      u3nc(c3n, u3nq(c3__once, 'j', c3__vile, u3_nul)));
   u3_noun res = u3v_soft_peek(0, sam);
