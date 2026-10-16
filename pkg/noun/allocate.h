@@ -1001,6 +1001,13 @@ u3a_post_info(u3_post);
           void
           u3a_blob_drop(c3_h mug_h, c3_h seq_h);
 
+        /* u3a_blob_hold(): one hold per id on each blob in [bid_d]:
+        **   les_h and use_h go up together.  Mars calls it for the ids
+        **   it grants in a message, the king for the ids it receives.
+        */
+          void
+          u3a_blob_hold(const c3_d* bid_d, c3_w len_w);
+
         /* u3a_blob_sane(): blob-bank invariant check; home road only.
         **   Verifies use_h == les_h + atom cardinality per entry.
         **   [dep_o] adds a noun-graph walk counting live bob atoms;

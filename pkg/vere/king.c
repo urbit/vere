@@ -19,34 +19,31 @@ u3_king u3_King;
 
 static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 
-/* _king_blob_del(): king-side del_f — release a blob lease via IPC and
-**   drop the king's transient u3a_blob registry entry.  King never wipes
-**   files; only serf owns filesystem-side blob persistence.
+/* _king_blob_del(): king-side del_f: the king's last bob over a blob
+**   died, so return every hold it received on the id to mars and drop
+**   the record.  the king never wipes files; mars owns the store.
 */
 static void
 _king_blob_del(c3_h mug_h, c3_h seq_h)
 {
-  //  the king's record carries one leg, its live bobs; ownership and
-  //  holds are mars's and must never appear here
-  //
-  {
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    u3_assert( blb_u && (c3n == blb_u->own_o) && !blb_u->les_h );
-  }
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-  if ( u3K.pir_u && u3K.pir_u->god_u ) {
-    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h);
+  //  the king's record has two legs, its live bobs and the holds it
+  //  received; ownership is mars's and must never appear here
+  //
+  u3_assert( blb_u && (c3n == blb_u->own_o) );
+
+  if ( blb_u->les_h && u3K.pir_u && u3K.pir_u->god_u ) {
+    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->les_h);
   }
   u3a_blob_drop(mug_h, seq_h);
 }
 
 /* _king_blob_init(): register blob hooks.
 **
-**   mars leases expire after a fixed number of committed events, as a
-**   failsafe against a crashed or leaking king; a blob-bearing event
-**   waiting in mars's queue commits long before that, so the king
-**   never renews.  it only releases (%blrl) when its last reference
-**   to a blob dies.
+**   every message mars sends grants the king one hold per blob id it
+**   names; the king counts them per id and returns the lot when its
+**   last bob over the id dies.
 */
 static void
 _king_blob_init(void)

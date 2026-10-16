@@ -2290,7 +2290,7 @@ typedef struct _mesa_bob_ctx {
 **   bytes are gone with the staging file.
 */
 static void
-_mesa_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
+_mesa_bob_install_cb(void* ptr_v, u3_noun bob, c3_o ok_o)
 {
   _mesa_bob_ctx* ctx_u = ptr_v;
   u3_mesa*       sam_u = ctx_u->sam_u;
@@ -2306,7 +2306,7 @@ _mesa_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
 
   u3_auto_plan(&sam_u->car_u,
                u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul),
-                            u3nt(c3__heer, lan, u3i_blob(mug_h, seq_h))));
+                            u3nt(c3__heer, lan, bob)));
 }
 
 static void

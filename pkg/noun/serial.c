@@ -1678,7 +1678,50 @@ u3s_sift_ud(u3_atom a)
 typedef struct _ram_xeno_s {
   u3p(u3h_root) har_p;
   ur_bsw_t      rit_u;
+  u3s_bids*     bid_u;   //  blob ids met, or 0
 } _ram_xeno_t;
+
+/* _cs_bids_push(): record a blob id in a collector, if there is one.
+*/
+static void
+_cs_bids_push(u3s_bids* bid_u, c3_h mug_h, c3_h seq_h)
+{
+  if ( !bid_u ) {
+    return;
+  }
+  if ( bid_u->len_w == bid_u->cap_w ) {
+    bid_u->cap_w = bid_u->cap_w ? (2 * bid_u->cap_w) : 8;
+    bid_u->bid_d = c3_realloc(bid_u->bid_d, bid_u->cap_w * sizeof(c3_d));
+  }
+  bid_u->bid_d[bid_u->len_w++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+}
+
+static int
+_cs_bids_cmp(const void* a_v, const void* b_v)
+{
+  c3_d a_d = *(const c3_d*)a_v;
+  c3_d b_d = *(const c3_d*)b_v;
+  return ( a_d < b_d ) ? -1 : ( a_d > b_d ) ? 1 : 0;
+}
+
+/* _cs_bids_uniq(): sort a collector and drop repeats: the distinct set.
+*/
+static void
+_cs_bids_uniq(u3s_bids* bid_u)
+{
+  if ( !bid_u || (bid_u->len_w < 2) ) {
+    return;
+  }
+  qsort(bid_u->bid_d, bid_u->len_w, sizeof(c3_d), _cs_bids_cmp);
+
+  c3_w out_w = 1;
+  for ( c3_w i_w = 1; i_w < bid_u->len_w; i_w++ ) {
+    if ( bid_u->bid_d[i_w] != bid_u->bid_d[out_w - 1] ) {
+      bid_u->bid_d[out_w++] = bid_u->bid_d[i_w];
+    }
+  }
+  bid_u->len_w = out_w;
+}
 
 /* _cs_ram_bsw_2tag(): write a 2-bit ram tag to the bitstream.
 */
@@ -1715,10 +1758,13 @@ _cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
 /* _cs_ram_bsw_bob(): encode a bob atom as tag 01 + mat(mug) + mat(seq).
 */
 static inline void
-_cs_ram_bsw_bob(ur_bsw_t* rit_u, u3_atom a)
+_cs_ram_bsw_bob(_ram_xeno_t* ram_u, u3_atom a)
 {
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
+  ur_bsw_t* rit_u = &(ram_u->rit_u);
+  c3_h      mug_h = u3a_bob_mug(a);
+  c3_h      seq_h = u3a_bob_seq(a);
+
+  _cs_bids_push(ram_u->bid_u, mug_h, seq_h);
 
   //  write 2-bit tag 01
   //
@@ -1759,7 +1805,7 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
   if ( u3_none == bak ) {
     u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));
     if ( c3y == bob_o ) {
-      _cs_ram_bsw_bob(rit_u, a);
+      _cs_ram_bsw_bob(ram_u, a);
     }
     else {
       _cs_ram_bsw_normal_atom(rit_u, met_w, a);
@@ -1770,7 +1816,7 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
 
     if ( met_w <= bak_w ) {
       if ( c3y == bob_o ) {
-        _cs_ram_bsw_bob(rit_u, a);
+        _cs_ram_bsw_bob(ram_u, a);
       }
       else {
         _cs_ram_bsw_normal_atom(rit_u, met_w, a);
@@ -1809,13 +1855,23 @@ _cs_ram_xeno_cell(u3_noun a, void* ptr_v)
 c3_d
 u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
+  return u3s_ram_xeno_bids(a, len_d, byt_y, 0);
+}
+
+/* u3s_ram_xeno_bids(): u3s_ram_xeno, collecting the blob ids.
+*/
+c3_d
+u3s_ram_xeno_bids(u3_noun a, c3_d* len_d, c3_y** byt_y, u3s_bids* bid_u)
+{
   _ram_xeno_t ram_u = {0};
   ur_bsw_init(&ram_u.rit_u, ur_fib11, ur_fib12);
   ram_u.har_p = u3h_new();
+  ram_u.bid_u = bid_u;
 
   u3a_walk_fore(a, &ram_u, _cs_ram_xeno_atom, _cs_ram_xeno_cell);
 
   u3h_free(ram_u.har_p);
+  _cs_bids_uniq(bid_u);
 
   {
     c3_d   raw_bytes_d;  //  byte count of raw ram bits
@@ -1865,6 +1921,7 @@ static inline ur_cue_res_e
 _cs_tap_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
                   ur_dictn_t*  dic_u,
+                  u3s_bids*    bid_u,
                   u3_noun*     out)
 {
   ur_root_t* rot_u = 0;
@@ -1966,6 +2023,7 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
           return ur_cue_meme;
         }
 
+        _cs_bids_push(bid_u, (c3_h)mug_d, (c3_h)seq_d);
         *out = u3i_blob((c3_h)mug_d, (c3_h)seq_d);
 
         ur_dictn_put(rot_u, dic_u, bit_d, *out);
@@ -1980,7 +2038,8 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
 static u3_weak
 _cs_tap_xeno(u3_cue_xeno*  sil_u,
              c3_d          len_d,
-             const c3_y*   byt_y)
+             const c3_y*   byt_y,
+             u3s_bids*     bid_u)
 {
   ur_bsr_t      red_u = {0};
   ur_dictn_t*   dic_u = &sil_u->dic_u;
@@ -1998,7 +2057,7 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
     return u3_none;
   }
 
-  res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+  res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, bid_u, &ref);
 
   if (  (c3n == u3a_pile_done(&pil_u))
      && (ur_cue_good == res_e) )
@@ -2010,7 +2069,7 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
       //
       if ( u3_none == fam_u->ref ) {
         fam_u->ref = ref;
-        res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+        res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, bid_u, &ref);
         fam_u = u3a_peek(&pil_u);
       }
       //  tail-frame: build cell and pop stack
@@ -2050,6 +2109,14 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
 u3_weak
 u3s_tap_xeno(c3_d len_d, const c3_y* byt_y)
 {
+  return u3s_tap_xeno_bids(len_d, byt_y, 0);
+}
+
+/* u3s_tap_xeno_bids(): u3s_tap_xeno, collecting the blob ids.
+*/
+u3_weak
+u3s_tap_xeno_bids(c3_d len_d, const c3_y* byt_y, u3s_bids* bid_u)
+{
   //  validate header
   //
   if (  (len_d < 5)
@@ -2065,9 +2132,10 @@ u3s_tap_xeno(c3_d len_d, const c3_y* byt_y)
 
     //  decode after the 5-byte header
     //
-    som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5);
+    som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5, bid_u);
     ur_dictn_wipe(&sil_u->dic_u);
     u3s_cue_xeno_done(sil_u);
+    _cs_bids_uniq(bid_u);
     return som;
   }
 }

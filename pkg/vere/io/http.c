@@ -1293,7 +1293,7 @@ _http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o)
 /* _http_bob_install_cb(): mars installed (or refused) a request body.
 */
 static void
-_http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
+_http_bob_install_cb(void* ptr_v, u3_noun bob, c3_o ok_o)
 {
   _http_bob_ctx* ctx_u = ptr_v;
   u3_http*       htp_u = ctx_u->htp_u;
@@ -1303,13 +1303,11 @@ _http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
 
   c3_free(ctx_u);
 
-  //  the client went away while mars worked; no bob will be minted to
-  //  hold the lease, so release it now
+  //  the client went away while mars worked: dropping the bob returns
+  //  mars's hold on the file
   //
   if ( !req_u ) {
-    if ( c3y == ok_o ) {
-      u3_lord_blob_release(htp_u->htd_u->car_u.pir_u->god_u, mug_h, seq_h);
-    }
+    u3z(bob);
     return;
   }
 
@@ -1318,9 +1316,7 @@ _http_bob_install_cb(void* ptr_v, c3_h mug_h, c3_h seq_h, c3_o ok_o)
     return;
   }
 
-  _http_req_start(req_u,
-                  u3nt(u3_nul, u3i_chub(len_d), u3i_blob(mug_h, seq_h)),
-                  c3n);
+  _http_req_start(req_u, u3nt(u3_nul, u3i_chub(len_d), bob), c3n);
 }
 
 /* _http_rec_start(): take an incoming request from h2o.

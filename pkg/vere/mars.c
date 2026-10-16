@@ -30,25 +30,25 @@
 **   with the epoch at chop.  Deletion by refcount: use_h == 0 and not
 **   owned.
 **
-**   Lease expiry is measured in committed events, never in wall-clock
-**   time.  a lease only has to outlive the events queued ahead of the
-**   poke that carries the blob, and that queue is counted in events.
-**   a stall (a long event, |pack, |meld, a sleeping laptop) commits
-**   nothing, so it burns no lease budget, and no renewal is needed.
+**   Holds are counted grants.  every message mars hands the king (a
+**   poke's effects, a peek's result, an install ack) grants one hold
+**   per distinct blob id it names, issued as the message is encoded
+**   (u3s_ram_xeno_bids) so the file outlives mars's own atoms.  the
+**   king counts what it received per id and returns the lot with
+**   [%blrl mug seq n] when its last bob over the id dies.  no expiry:
+**   king and mars die together, holds are memory only, and the boot gc
+**   reclaims whatever a dead king held.
 **
 **   Lifecycle:
 **     1. king stages a large file to .urb/stg/, sends a %blob writ
-**     2. mars installs it (rename into the epoch's store) and issues the
-**        king's lease (les_h += 1, expiring once _mars_lease_wid_d
-**        further events commit).  the lease lives in mars's memory: a
-**        restart ends both processes and nothing resends the event
+**     2. mars installs it (rename into the epoch's store) and acks with
+**        a bob, [%blob %.y bob]; the ack grants the king a hold
 **     3. king injects the event holding the bob atom (RAM-serialized as
-**        a blob ref); it sits in the FIFO behind at most the writs the
-**        king had already sent, far fewer than the lease width
-**     4. mars commits: _mars_fact marks the blob owned by the epoch,
-**        writes blob-refs to LMDB, and retires the blob's leases
-**     5. a lease still live when the king's last reference dies, or when
-**        a driver discards an ack: %blrl releases it (one les_h unit)
+**        a blob ref)
+**     4. mars commits: _mars_fact marks the blob owned by the epoch and
+**        writes blob-refs to LMDB
+**     5. the king's last bob over the id dies: %blrl returns its holds
+**        (one per message that named the id)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_h; an owned record stays as
 **        a ghost until the next roll
@@ -56,98 +56,17 @@
 **        owns what the image holds; chop deletes old epochs whole, files
 **        included, and touches no count
 **     *. boot: ownership comes with the snapshot and replay marks the
-**        events after it; _find_home zeroed les_h (no lease outlives a
+**        events after it; _find_home zeroed les_h (no hold outlives a
 **        restart); u3_disk_blob_gc reclaims any unowned blob nothing
 **        holds
 */
 
-/* _mars_lease: a king lease awaiting its event.
-**
-**   tracks a single les_h increment for a blob, one per install.  it
-**   ends when the first event naming the blob commits (the epoch owns
-**   the file from then on), or when the king releases it (%blrl: its last
-**   bob died, or a driver discarded the ack); either way ded_o is set
-**   and the sweeper frees the node when it reaches the head.  if the
-**   king never plans the event, the lease expires once dun_d reaches
-**   exp_d and les_h is decremented then.
-*/
-typedef struct __mars_lease {
-  struct __mars_lease* nex_u;  //  next to expire
-  c3_d  exp_d;        //  expiry event number
-  c3_h  mug_h;        //  blob mug
-  c3_h  seq_h;        //  blob seq within mug bucket
-  c3_o  ded_o;        //  c3y if lease already released
-} _mars_lease;
-
 c3_c tac_c[256];  //  tracing label
-
-//  lease width: a lease issued at dun_d expires once dun_d + width
-//  commits.  the poke that carries the blob is queued behind at most
-//  the writs the king had already sent, so this only has to exceed a
-//  plausible king queue depth; a leaked lease costs disk for this many
-//  events and nothing else.
-//
-static const c3_d _mars_lease_wid_d = 1ULL << 16;
-
-//  the lease queue, oldest first.  every lease expires the same number
-//  of events after its install, so install order is expiry order and a
-//  FIFO is the whole structure: push at the tail, expire from the head.
-//  C heap, owned here; a released lease is marked ded_o in place and
-//  freed when it reaches the head.
-//
-static _mars_lease* _mars_lea_hed_u;
-static _mars_lease* _mars_lea_tel_u;
-
-static void
-_mars_lease_push(_mars_lease* lea_u)
-{
-  lea_u->nex_u = 0;
-  if ( _mars_lea_tel_u ) {
-    _mars_lea_tel_u->nex_u = lea_u;
-  }
-  else {
-    _mars_lea_hed_u = lea_u;
-  }
-  _mars_lea_tel_u = lea_u;
-}
-
-static _mars_lease*
-_mars_lease_pop(void)
-{
-  _mars_lease* lea_u = _mars_lea_hed_u;
-
-  if ( lea_u ) {
-    _mars_lea_hed_u = lea_u->nex_u;
-    if ( !_mars_lea_hed_u ) {
-      _mars_lea_tel_u = 0;
-    }
-  }
-  return lea_u;
-}
-
-/* _mars_lease_kill_one(): mark the first live lease for (mug_h, seq_h)
-**   released, returning it or 0 if none is live.  the queue is in
-**   expiry order, so the first match is the earliest to expire; the
-**   sweeper frees it when it reaches the head.
-*/
-static _mars_lease*
-_mars_lease_kill_one(c3_h mug_h, c3_h seq_h)
-{
-  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
-    if (  (c3n == lea_u->ded_o)
-       && (mug_h == lea_u->mug_h)
-       && (seq_h == lea_u->seq_h) )
-    {
-      lea_u->ded_o = c3y;
-      return lea_u;
-    }
-  }
-  return 0;
-}
 
 /* _mars_blob_del(): mars-side del_f: delete the blob file unless the
 **   king (les_h) or the epoch (own_o) still holds it.  an owned record
-**   with no other holder stays as a ghost until the next roll.
+**   with no other holder stays as a ghost until the next roll.  called
+**   when the last live atom goes, and when the king's last hold does.
 */
 static void
 _mars_blob_del(c3_h mug_h, c3_h seq_h)
@@ -160,71 +79,6 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
 
   u3b_wipe(u3C.bob_c, mug_h, seq_h);
   u3a_blob_drop(mug_h, seq_h);
-}
-
-/* _mars_lease_drop(): retire one lease unit: take it off les_h and
-**   use_w, and delete the blob if nothing else holds it.  the les_h
-**   guard keeps a stray release from underflowing.
-*/
-static void
-_mars_lease_drop(_mars_lease* lea_u)
-{
-  u3a_blob* blb_u = u3a_blob_get(lea_u->mug_h, lea_u->seq_h);
-
-  if ( blb_u && blb_u->les_h ) {
-    blb_u->les_h -= 1;
-    blb_u->use_h -= 1;
-
-    if ( 0 == blb_u->use_h ) {
-      _mars_blob_del(lea_u->mug_h, lea_u->seq_h);
-    }
-  }
-}
-
-/* _mars_lease_done(): the first event naming (mug_h, seq_h) has
-**   committed, so the epoch owns the file and every lease on it is done.
-*/
-static void
-_mars_lease_done(c3_h mug_h, c3_h seq_h)
-{
-  for ( _mars_lease* lea_u = _mars_lea_hed_u; lea_u; lea_u = lea_u->nex_u ) {
-    if (  (c3n == lea_u->ded_o)
-       && (mug_h == lea_u->mug_h)
-       && (seq_h == lea_u->seq_h) )
-    {
-      lea_u->ded_o = c3y;
-      _mars_lease_drop(lea_u);
-    }
-  }
-}
-
-/* _mars_lease_issue(): issue a king lease on (mug_h, seq_h) at install.
-**
-**   bumps les_h + use_w and queues a lease expiring at
-**   dun_d + _mars_lease_wid_d.  the lease is memory only: a restart ends both
-**   processes, and no event can arrive for a lease taken before it.
-**   one lease per install, dedup hits included: each client's event
-**   is still coming, and a release from one client (a discarded ack)
-**   must not strip the others.
-*/
-static void
-_mars_lease_issue(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
-{
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) {
-    blb_u = u3a_blob_new(mug_h, seq_h);
-  }
-  blb_u->les_h += 1;
-  blb_u->use_h += 1;
-
-  {
-    _mars_lease* lea_u = c3_malloc(sizeof(*lea_u));
-    lea_u->mug_h = mug_h;
-    lea_u->seq_h = seq_h;
-    lea_u->exp_d = mar_u->dun_d + _mars_lease_wid_d;
-    lea_u->ded_o = c3n;
-    _mars_lease_push(lea_u);
-  }
 }
 
 /*
@@ -527,6 +381,23 @@ _mars_blob_sure(u3_noun job)
   return u3nc(u3nc(c3__blob, tan), u3_nul);
 }
 
+/* _mars_ram(): encode a message for the king into [gif_u], grant the
+**   king a hold on every blob id it names, and free the noun.
+**
+**   the grant comes before the free: the noun may be the last atom
+**   over an id mars holds, and the file must outlive it for the king.
+*/
+static void
+_mars_ram(u3_noun pro, u3_gift* gif_u)
+{
+  u3s_bids bid_u = {0};
+
+  u3s_ram_xeno_bids(pro, &gif_u->len_d, &gif_u->hun_y, &bid_u);
+  u3a_blob_hold(bid_u.bid_d, bid_u.len_w);
+  c3_free(bid_u.bid_d);
+  u3z(pro);
+}
+
 /* _mars_fact(): commit a fact and enqueue its effects.
 */
 static void
@@ -552,13 +423,6 @@ _mars_fact(u3_mars* mar_u,
         blb_u = u3a_blob_new(mug_h, seq_h);
       }
       blb_u->own_o = c3y;
-
-      //  the epoch holds the file now; the leases that held it until
-      //  this commit are done
-      //
-      if ( blb_u->les_h ) {
-        _mars_lease_done(mug_h, seq_h);
-      }
     }
 
     //  the blob ids ride with the event: the disk writes the BLOBS row
@@ -589,8 +453,7 @@ _mars_fact(u3_mars* mar_u,
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
 
-    u3s_ram_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-    u3z(pro);
+    _mars_ram(pro, gif_u);
 
     if ( !mar_u->gif_u.ent_u ) {
       u3_assert( !mar_u->gif_u.ext_u );
@@ -613,8 +476,7 @@ _mars_gift(u3_mars* mar_u, u3_noun pro)
   gif_u->sat_e = u3_gift_rest_e;
   gif_u->ptr_v = 0;
 
-  u3s_ram_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-  u3z(pro);
+  _mars_ram(pro, gif_u);
 
   if ( !mar_u->gif_u.ent_u ) {
     u3_assert( !mar_u->gif_u.ext_u );
@@ -899,42 +761,6 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 {
   u3_noun tag, dat, pro;
 
-  //  lease expiry sweeper: decay leases whose event never came and
-  //  that the king never released (a bob minted and never planned).  the queue is in expiry order, so
-  //  this pops from the head until the head's exp_d, an event number,
-  //  is still past dun_d.  runs before every writ, which is at least
-  //  once per commit, so nothing expires late by more than one writ.
-  //
-  //  retired leases (commit, %blrl) are marked ded_o=c3y and left in
-  //  the queue; they are freed here when they reach the head.
-  //
-  {
-    while ( 1 ) {
-      _mars_lease* top_u = _mars_lea_hed_u;
-      if ( !top_u ) break;
-
-      //  dead lease (already released) — free and continue scanning
-      //
-      if ( c3y == top_u->ded_o ) {
-        _mars_lease_pop();
-        c3_free(top_u);
-        continue;
-      }
-
-      //  earliest expiry is still ahead of the log — stop
-      //
-      if ( mar_u->dun_d < top_u->exp_d ) {
-        break;
-      }
-
-      //  expired lease
-      //
-      _mars_lease_pop();
-      _mars_lease_drop(top_u);
-      c3_free(top_u);
-    }
-  }
-
   if ( c3n == u3r_cell(jar, &tag, &dat) ) {
     fprintf(stderr, "mars: fail a\r\n");
     u3z(jar);
@@ -1134,11 +960,6 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         ok_o = u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h);
 
         if ( c3y == ok_o ) {
-          //  issue the king's install lease: protects the blob until
-          //  the event referencing it commits (the epoch takes over)
-          //
-          _mars_lease_issue(mar_u, mug_h, seq_h);
-
           //  the bank changed: run the post-task memory check
           //
           mar_u->fag_w |= _mars_fag_mute;
@@ -1150,37 +971,46 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
       u3z(jar);
 
+      //  the ack carries a bob, so it grants the king a hold like any
+      //  other message naming the blob; mars's own atom dies with the
+      //  encoding and the hold keeps the file
+      //
       if ( c3y == ok_o ) {
-        _mars_gift(mar_u, u3nt(c3__blob, c3y,
-                               u3nc(u3i_word(mug_h), u3i_word(seq_h))));
+        _mars_gift(mar_u, u3nt(c3__blob, c3y, u3i_blob(mug_h, seq_h)));
       }
       else {
         _mars_gift(mar_u, u3nc(c3__blob, c3n));
       }
     } break;
 
-    //  %blrl: king releases a lease on a blob
+    //  %blrl: the king returns [n] holds on a blob: its last bob over
+    //  the id died.  a count, not a flag: a hold granted after the king
+    //  sent this must survive it.  clamped, never below zero.
     //
     case c3_s4('b','l','r','l'): {
-      u3_noun mug_n, seq_n;
-      if ( c3n == u3r_cell(dat, &mug_n, &seq_n) ) {
+      u3_noun mug_n, seq_n, num_n;
+      if ( c3n == u3r_trel(dat, &mug_n, &seq_n, &num_n) ) {
         u3z(jar);
         return c3n;
       }
       c3_h mug_h = 0;
       c3_h seq_h = 0;
+      c3_h num_h = 0;
       u3r_safe_half(mug_n, &mug_h);
       u3r_safe_half(seq_n, &seq_h);
+      u3r_safe_half(num_n, &num_h);
 
-      //  retire one live lease unit: mark its entry dead (the sweeper
-      //  frees it when it reaches the head) and decrement.  no live
-      //  entry means the unit already expired — a no-op, never a
-      //  double decrement.
-      //
       {
-        _mars_lease* lea_u = _mars_lease_kill_one(mug_h, seq_h);
-        if ( lea_u ) {
-          _mars_lease_drop(lea_u);
+        u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+        if ( blb_u ) {
+          num_h = c3_min(num_h, blb_u->les_h);
+          blb_u->les_h -= num_h;
+          blb_u->use_h -= num_h;
+
+          if ( 0 == blb_u->use_h ) {
+            _mars_blob_del(mug_h, seq_h);
+          }
         }
       }
 

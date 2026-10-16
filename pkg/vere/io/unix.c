@@ -991,19 +991,20 @@ static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 **  Skips injection if the installed mug matches the prior gum_w (no change).
 */
 static void
-_unix_blob_install_cb(void*  ptr_v,
-                      c3_h   mug_h,
-                      c3_h   seq_h,
-                      c3_o   ok_o)
+_unix_blob_install_cb(void*   ptr_v,
+                      u3_noun bob,
+                      c3_o    ok_o)
 {
   u3_unix_bob_ctx* ctx = ptr_v;
 
   if ( c3y == ok_o ) {
-    //  skip if content unchanged since last %into; no bob will be
-    //  minted to hold the lease, so release it now
+    c3_h mug_h = u3a_bob_mug(bob);
+
+    //  skip if content unchanged since last %into: dropping the bob
+    //  returns mars's hold on the file
     //
     if ( mug_h == ctx->old_w ) {
-      u3_lord_blob_release(ctx->unx_u->car_u.pir_u->god_u, mug_h, seq_h);
+      u3z(bob);
       u3z(ctx->pax);
       u3z(ctx->mim);
     }
@@ -1014,8 +1015,7 @@ _unix_blob_install_cb(void*  ptr_v,
         ctx->fil_u->gum_w = mug_h;
       }
 
-      u3_atom  atm = u3i_blob(mug_h, seq_h);
-      u3_noun  dat = u3nt(ctx->mim, (u3_atom)ctx->len_ws, atm);
+      u3_noun  dat = u3nt(ctx->mim, (u3_atom)ctx->len_ws, bob);
       u3_noun  can = u3nc(u3nt(ctx->pax, u3_nul, dat), u3_nul);
       u3_noun  wir = u3nt(c3__sync,
                           u3dc("scot", c3__uv, ctx->unx_u->sev_h),

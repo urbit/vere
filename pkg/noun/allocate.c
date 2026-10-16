@@ -884,6 +884,24 @@ u3a_blob_new(c3_h mug_h, c3_h seq_h)
   return blb_u;
 }
 
+/* u3a_blob_hold(): one hold per id on each blob in [bid_d].
+*/
+void
+u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
+{
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    c3_h      mug_h = (c3_h)(bid_d[i_w] >> 32);
+    c3_h      seq_h = (c3_h)bid_d[i_w];
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+    if ( !blb_u ) {
+      blb_u = u3a_blob_new(mug_h, seq_h);
+    }
+    blb_u->les_h += 1;
+    blb_u->use_h += 1;
+  }
+}
+
 /* u3a_blob_drop(): remove blb_p entry and free underlying u3a_blob.
 */
 void
@@ -1164,7 +1182,10 @@ _me_bob_dead(u3a_atom* atm_u)
 
   blb_u->use_h -= 1;
 
-  if ( (0 == blb_u->use_h) && u3C.blob_del_f ) {
+  //  the hook fires when the last live atom goes, whatever holds remain:
+  //  mars keeps a file the king holds, the king returns its holds
+  //
+  if ( (blb_u->use_h == blb_u->les_h) && u3C.blob_del_f ) {
     u3C.blob_del_f(mug_h, seq_h);
   }
 }

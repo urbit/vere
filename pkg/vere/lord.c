@@ -424,8 +424,8 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
 
 /* _lord_plea_blob(): handle blob-ack / blob-nack from serf.
 **
-** Expected dat: [c3y mug seq] on success, c3n on failure (mars sends
-** [%blob %.n]; a cell with c3n at its head is taken the same way).
+** [%blob %.y bob] on success: the bob arrived with mars's hold on the
+** file, and the callback owns it.  [%blob %.n] on failure.
 */
 static void
 _lord_plea_blob(u3_lord* god_u, u3_noun dat)
@@ -438,35 +438,18 @@ _lord_plea_blob(u3_lord* god_u, u3_noun dat)
   }
 
   void*   ptr_v = wit_u->blb_u.ptr_v;
-  void  (*fun_f)(void*, c3_h, c3_h, c3_o) = wit_u->blb_u.fun_f;
+  void  (*fun_f)(void*, u3_noun, c3_o) = wit_u->blb_u.fun_f;
   c3_free(wit_u->blb_u.pax_c);
   c3_free(wit_u);
 
-  if ( c3n == u3a_is_cell(dat) ) {
-    //  malformed response — treat as nack
-    //
-    if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
-    u3z(dat);
-    return;
-  }
-
-  if ( c3y == u3h(dat) ) {
-    //  [c3y mug seq]
-    //
-    u3_noun mug_a, seq_a;
-    c3_h mug_h = 0;
-    c3_h seq_h = 0;
-
-    if ( (c3y == u3r_cell(u3t(dat), &mug_a, &seq_a)) ) {
-      u3r_safe_half(mug_a, &mug_h);
-      u3r_safe_half(seq_a, &seq_h);
-    }
-    if ( fun_f ) fun_f(ptr_v, mug_h, seq_h, c3y);
+  if (  (c3y == u3a_is_cell(dat))
+     && (c3y == u3h(dat))
+     && (c3y == u3a_is_bob(u3t(dat))) )
+  {
+    fun_f(ptr_v, u3k(u3t(dat)), c3y);
   }
   else {
-    //  c3n: the install was refused
-    //
-    if ( fun_f ) fun_f(ptr_v, 0, 0, c3n);
+    fun_f(ptr_v, u3_nul, c3n);
   }
 
   u3z(dat);
@@ -587,15 +570,24 @@ _lord_on_plea(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
   u3t_event_trace("king ipc cue", 'B');
 #endif
 
-  //  pick decoder by protocol version (0x01 = ram, 0x00 = jam)
+  //  pick decoder by protocol version (0x01 = ram, 0x00 = jam).  a ram
+  //  message names its blobs by id and each id arrives with a hold mars
+  //  granted; a jam message carries their bytes and grants nothing
   //
+  u3s_bids bid_u = {0};
+
   jar = ( 0x01 == ver_y )
-      ? u3s_tap_xeno(len_d, byt_y)
+      ? u3s_tap_xeno_bids(len_d, byt_y, &bid_u)
       : u3s_cue_xeno_with(god_u->sil_u, len_d, byt_y);
 
 #ifdef LORD_TRACE_CUE
   u3t_event_trace("king ipc cue", 'E');
 #endif
+
+  //  count the holds before anything can free the bobs that carry them
+  //
+  u3a_blob_hold(bid_u.bid_d, bid_u.len_w);
+  c3_free(bid_u.bid_d);
 
   if ( u3_none == jar ) {
     _lord_plea_foul(god_u, 0, u3_blip);
@@ -848,7 +840,7 @@ void
 u3_lord_blob_install(u3_lord* god_u,
                      c3_c*    pax_c,
                      void*    ptr_v,
-                     void   (*fun_f)(void*, c3_h, c3_h, c3_o))
+                     void   (*fun_f)(void*, u3_noun, c3_o))
 {
   u3_writ* wit_u = _lord_writ_new(god_u);
   wit_u->typ_e       = u3_writ_blob;
@@ -859,14 +851,16 @@ u3_lord_blob_install(u3_lord* god_u,
   _lord_writ_send(god_u, wit_u);
 }
 
-/* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
+/* u3_lord_blob_release(): return [num_h] holds on a blob to mars: the
+**   king's last bob over the id died.
 */
 void
-u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h)
+u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h, c3_h num_h)
 {
-  _lord_send(god_u, u3nt(c3_s4('b','l','r','l'),
+  _lord_send(god_u, u3nq(c3_s4('b','l','r','l'),
                          u3i_word(mug_h),
-                         u3i_word(seq_h)));
+                         u3i_word(seq_h),
+                         u3i_word(num_h)));
 }
 
 /* u3_lord_save(): save a snapshot.

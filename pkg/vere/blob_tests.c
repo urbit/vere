@@ -37,6 +37,7 @@ static c3_c        _tmp_pier[1024];
 static c3_c _tmp_bob[8192];   //  epoch 0's store root
 static const c3_c* _nam_c;   //  the running test, for messages
 static c3_w        _del_w;   //  deletions requested since _pier_make
+static c3_w        _hok_w;   //  hook calls
 
 /* _fail(): report a failed check in red, naming the running test, and exit.
 */
@@ -71,6 +72,8 @@ static void
 _blob_del_cb(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  _hok_w += 1;
 
   if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
     return;
@@ -111,6 +114,7 @@ _pier_make(const c3_c* nam_c)
 
   _nam_c = nam_c;
   _del_w = 0;
+  _hok_w = 0;
 
   if ( !c3_tmp_make(_tmp_pier, sizeof(_tmp_pier), "vere-blob-test") ) {
     _fail("c3_tmp_make: %s", strerror(errno));
@@ -3008,6 +3012,88 @@ _test_roll_link(void)
   _pier_done();
 }
 
+/* _test_grants(): the encoder and the decoder of its output collect
+**   the same distinct blob ids, one per id however many atoms or
+**   repeats name it; a hold keeps the record past its last atom, the
+**   hook fires then, and returning the holds frees it.
+*/
+static void
+_test_grants(void)
+{
+  _pier_make("grants");
+
+  c3_h mug_h[2], seq_h[2];
+  _check( c3y == _blob_save((const c3_y*)"named by two atoms and a repeat", 31,
+                            &mug_h[0], &seq_h[0]),
+          "save 0 failed" );
+  _check( c3y == _blob_save((const c3_y*)"named once", 10, &mug_h[1], &seq_h[1]),
+          "save 1 failed" );
+
+  //  x and y are two atoms over one id; x appears twice
+  //
+  u3_atom x = u3i_blob(mug_h[0], seq_h[0]);
+  u3_atom y = u3i_blob(mug_h[0], seq_h[0]);
+  u3_atom z = u3i_blob(mug_h[1], seq_h[1]);
+  u3_noun non = u3nq(x, y, u3k(x), z);
+
+  c3_d     len_d;
+  c3_y*    byt_y;
+  u3s_bids out_u = {0};
+  u3s_bids inn_u = {0};
+
+  u3s_ram_xeno_bids(non, &len_d, &byt_y, &out_u);
+  u3_weak tap = u3s_tap_xeno_bids(len_d, byt_y, &inn_u);
+  free(byt_y);
+
+  _check( u3_none != tap, "tap failed" );
+  _check( (2 == out_u.len_w) && (2 == inn_u.len_w)
+          && (out_u.bid_d[0] == inn_u.bid_d[0])
+          && (out_u.bid_d[1] == inn_u.bid_d[1])
+          && (out_u.bid_d[0] < out_u.bid_d[1]),
+          "sets differ: %u out, %u in", out_u.len_w, inn_u.len_w );
+  c3_free(out_u.bid_d);
+
+  //  the receiving side counts one hold per id; the tapped noun's
+  //  atoms are alive, so the hook cannot have fired
+  //
+  u3a_blob_hold(inn_u.bid_d, inn_u.len_w);
+  c3_free(inn_u.bid_d);
+  u3z(tap);
+
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
+    _check( (1 == blb_u->les_h) && (3 == blb_u->use_h),
+            "id 0: les=%u use=%u", blb_u->les_h, blb_u->use_h );
+  }
+
+  //  the last atoms go: the hook fires once per id, and the holds keep
+  //  the records
+  //
+  _hok_w = 0;
+  u3z(non);
+  _check( 2 == _hok_w, "hook fired %u time(s) for two ids", _hok_w );
+  {
+    u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
+    _check( blb_u && (1 == blb_u->les_h) && (1 == blb_u->use_h) && (0 == _del_w),
+            "held record not kept" );
+  }
+
+  //  the holds come back: the %blrl arithmetic, clamped
+  //
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    u3a_blob* blb_u = u3a_blob_get(mug_h[i_w], seq_h[i_w]);
+    c3_h      num_h = c3_min(5, blb_u->les_h);
+    blb_u->les_h -= num_h;
+    blb_u->use_h -= num_h;
+    _check( 0 == blb_u->use_h, "id %u not released", i_w );
+    _blob_del_cb(mug_h[i_w], seq_h[i_w]);
+  }
+  _check( (2 == _del_w) && !u3a_blob_get(mug_h[0], seq_h[0]),
+          "released records not deleted" );
+
+  _pier_done();
+}
+
 /* _test_chop_kill(): chop deletes an epoch's store with the epoch and
 **   leaves the retained epochs, their stores, and the bank alone.
 */
@@ -3209,6 +3295,7 @@ main(int argc, char* argv[])
   _test_chop_kill();
   _test_gc_own();
   _test_blob_own();
+  _test_grants();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;
