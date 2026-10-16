@@ -1896,11 +1896,11 @@ _cw_queu(c3_i argc, c3_c* argv[])
                       bsk_u.num_w);
     }
 
-    //  uncram repaved the home road, wiping the blob bank: rebuild
-    //  eve_w from the retained epochs' BLOBS tables up to the rock's
-    //  event, then check the invariant
+    //  uncram repaved the home road, wiping the blob bank: own what
+    //  the rock holds and what this epoch's events name, then check
+    //  the invariant
     //
-    u3_disk_blob_refs(log_u, u3A->eve_d);
+    u3_disk_blob_own(log_u);
 
     if ( c3n == u3a_blob_sane(c3y) ) {
       fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");

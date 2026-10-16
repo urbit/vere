@@ -19,16 +19,16 @@
 /* Blob storage lifecycle
 **
 **   blb_p HAMT: bid -> u3a_blob* (loom offset), bid = (mug_h << 32) | seq_h.
-**   See the u3a_blob block in allocate.h for the counter design:
-**     use_w = total refs: eve_w + les_h + live bob-atom cardinality
-**     eve_w = event-log refcount (bumped on commit and replay, retired
-**             per reference when chop deletes an epoch)
-**     les_h = king-held leases (mars memory only; zeroed at boot and
-**             never rebuilt, since no lease outlives a restart)
+**   See the u3a_blob block in allocate.h for the record:
+**     use_h = les_h + live bob-atom cardinality
+**     les_h = holds the king has (mars memory only; zeroed at boot)
+**     own_o = a durable holder in the current epoch names the file: an
+**             input committed in this epoch, or the epoch's image
 **
 **   Blob files live at $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>: an
-**   epoch owns the files its events and its image name.
-**   Deletion condition: use_w == 0.
+**   epoch owns the files its events and its image name, and they die
+**   with the epoch at chop.  Deletion by refcount: use_h == 0 and not
+**   owned.
 **
 **   Lease expiry is measured in committed events, never in wall-clock
 **   time.  a lease only has to outlive the events queued ahead of the
@@ -38,33 +38,34 @@
 **
 **   Lifecycle:
 **     1. king stages a large file to .urb/stg/, sends a %blob writ
-**     2. mars installs it (rename into bob/<mug>/<seq>) and issues the
+**     2. mars installs it (rename into the epoch's store) and issues the
 **        king's lease (les_h += 1, expiring once _mars_lease_wid_d
 **        further events commit).  the lease lives in mars's memory: a
 **        restart ends both processes and nothing resends the event
 **     3. king injects the event holding the bob atom (RAM-serialized as
 **        a blob ref); it sits in the FIFO behind at most the writs the
 **        king had already sent, far fewer than the lease width
-**     4. mars commits: _mars_fact bumps eve_w, writes blob-refs to LMDB,
-**        and retires the blob's leases, since the log holds it now
+**     4. mars commits: _mars_fact marks the blob owned by the epoch,
+**        writes blob-refs to LMDB, and retires the blob's leases
 **     5. a lease still live when the king's last reference dies, or when
 **        a driver discards an ack: %blrl releases it (one les_h unit)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
-**        cardinality contribution from use_w
-**     7. chop retires the references of every epoch it deletes (a
-**        retained epoch is a replay source until chop removes it),
-**        then deletes files (and on-disk orphans) at use_w == 0
-**     *. boot: eve_w comes with the snapshot; _find_home zeroed les_h
-**        (no lease outlives a restart); u3_disk_blob_gc reclaims any
-**        blob nothing holds.  a full replay from an epoch's frozen
-**        image rebuilds eve_w first (u3_disk_blob_refs)
+**        cardinality contribution from use_h; an owned record stays as
+**        a ghost until the next roll
+**     7. roll carries every held blob into the new epoch's store and
+**        owns what the image holds; chop deletes old epochs whole, files
+**        included, and touches no count
+**     *. boot: ownership comes with the snapshot and replay marks the
+**        events after it; _find_home zeroed les_h (no lease outlives a
+**        restart); u3_disk_blob_gc reclaims any unowned blob nothing
+**        holds
 */
 
 /* _mars_lease: a king lease awaiting its event.
 **
 **   tracks a single les_h increment for a blob, one per install.  it
-**   ends when the first event naming the blob commits (eve_w holds the
-**   file from then on), or when the king releases it (%blrl: its last
+**   ends when the first event naming the blob commits (the epoch owns
+**   the file from then on), or when the king releases it (%blrl: its last
 **   bob died, or a driver discarded the ack); either way ded_o is set
 **   and the sweeper frees the node when it reaches the head.  if the
 **   king never plans the event, the lease expires once dun_d reaches
@@ -144,24 +145,16 @@ _mars_lease_kill_one(c3_h mug_h, c3_h seq_h)
   return 0;
 }
 
-/* _mars_blob_del(): delete blob file and clean up blb_p entry.
-**
-**   invariant guard: a blob file must survive until NO event-log ref,
-**   lease, or loom atom references it.  use_w == 0 with eve_w or les_h
-**   nonzero means the counters are corrupt — never destroy data on an
-**   accounting bug; report loudly and keep the file.
+/* _mars_blob_del(): mars-side del_f: delete the blob file unless the
+**   king (les_h) or the epoch (own_o) still holds it.  an owned record
+**   with no other holder stays as a ghost until the next roll.
 */
 static void
 _mars_blob_del(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-  if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
-    fprintf(stderr, "mars: blob %08" PRIx32 "/%08" PRIx32 ": refusing "
-                    "delete: use=%" PRIc3_w " eve=%" PRIc3_w
-                    " les=%" PRIc3_h " (counter corruption)\r\n",
-                    mug_h, seq_h,
-                    blb_u->use_w, blb_u->eve_w, blb_u->les_h);
+  if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
     return;
   }
 
@@ -180,16 +173,16 @@ _mars_lease_drop(_mars_lease* lea_u)
 
   if ( blb_u && blb_u->les_h ) {
     blb_u->les_h -= 1;
-    blb_u->use_w -= 1;
+    blb_u->use_h -= 1;
 
-    if ( 0 == blb_u->use_w ) {
+    if ( 0 == blb_u->use_h ) {
       _mars_blob_del(lea_u->mug_h, lea_u->seq_h);
     }
   }
 }
 
 /* _mars_lease_done(): the first event naming (mug_h, seq_h) has
-**   committed, so eve_w holds the file and every lease on it is done.
+**   committed, so the epoch owns the file and every lease on it is done.
 */
 static void
 _mars_lease_done(c3_h mug_h, c3_h seq_h)
@@ -222,7 +215,7 @@ _mars_lease_issue(u3_mars* mar_u, c3_h mug_h, c3_h seq_h)
     blb_u = u3a_blob_new(mug_h, seq_h);
   }
   blb_u->les_h += 1;
-  blb_u->use_w += 1;
+  blb_u->use_h += 1;
 
   {
     _mars_lease* lea_u = c3_malloc(sizeof(*lea_u));
@@ -491,7 +484,7 @@ _mars_blob_bobs_cell(u3_noun n, void* ptr_v)
 **   tap mints a bank record for every blob id it decodes, so an event
 **   whose lease expired (file and record gone) arrives with a fresh
 **   record over a missing file.  committing it would log an event that
-**   can never replay.  a record with no lease and no committed event is
+**   can never replay.  a record nothing holds and no epoch owns is
 **   backed only if its file exists; otherwise the poke is nacked with a
 **   %blob goof and the king may install again.  returns the goof list,
 **   or u3_none when every bob is backed.
@@ -509,7 +502,7 @@ _mars_blob_sure(u3_noun job)
     c3_h      seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-    if ( blb_u && (blb_u->eve_w || blb_u->les_h) ) {
+    if ( blb_u && (blb_u->use_h || (c3y == blb_u->own_o)) ) {
       continue;
     }
     if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
@@ -519,8 +512,7 @@ _mars_blob_sure(u3_noun job)
     {
       c3_c msg_c[128];
       snprintf(msg_c, sizeof(msg_c),
-               "blob %08" PRIx32 "/%" PRIc3_h " is not in the store: "
-               "its lease expired before the event arrived",
+               "blob %08" PRIx32 "/%" PRIc3_h " is not in the store",
                mug_h, seq_h);
       fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
       tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
@@ -542,9 +534,10 @@ _mars_fact(u3_mars* mar_u,
            u3_noun    job,
            u3_noun    pro)
 {
-  //  find all bob atoms in the committed event and increment their
-  //  event-log refcount (eve_w on the u3a_blob).  Also bumps use_w
-  //  so the blob survives the lifetime of the log entry.
+  //  every blob the committed event names is now owned by this epoch:
+  //  the file lives until chop deletes the epoch, whatever the counts
+  //  do.  the record is made if it is missing (an id the gate let
+  //  through on the strength of its file alone)
   //
   {
     struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
@@ -555,26 +548,16 @@ _mars_fact(u3_mars* mar_u,
       c3_h seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
 
       u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-      if ( blb_u ) {
-        blb_u->eve_w += 1;
-        blb_u->use_w += 1;
-
-        //  the log holds the file now; the leases that held it until
-        //  this commit are done
-        //
-        if ( blb_u->les_h ) {
-          _mars_lease_done(mug_h, seq_h);
-        }
+      if ( !blb_u ) {
+        blb_u = u3a_blob_new(mug_h, seq_h);
       }
-      else {
-        //  the blob's lease expired and the file was deleted before
-        //  this event committed: the log now references a blob we
-        //  cannot produce, and replay of this event will fail.
-        //
-        fprintf(stderr, "mars: commit (%" PRIu64 "): blob %08" PRIx32
-                        "/%08" PRIx32 " missing from bank: lease expired "
-                        "before commit; this event will not replay\r\n",
-                        mar_u->dun_d, mug_h, seq_h);
+      blb_u->own_o = c3y;
+
+      //  the epoch holds the file now; the leases that held it until
+      //  this commit are done
+      //
+      if ( blb_u->les_h ) {
+        _mars_lease_done(mug_h, seq_h);
       }
     }
 
@@ -1152,7 +1135,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
         if ( c3y == ok_o ) {
           //  issue the king's install lease: protects the blob until
-          //  the event referencing it commits (eve_w takes over)
+          //  the event referencing it commits (the epoch takes over)
           //
           _mars_lease_issue(mar_u, mug_h, seq_h);
 
@@ -1496,8 +1479,8 @@ typedef enum {
   _play_bad_e   //  total failure
 } _mars_play_e;
 
-/* _mars_play_blobs_cb(): u3_lmdb_walk_blobs callback — increment eve_w
-** (and use_w) for each blob ref in a replayed event.
+/* _mars_play_blobs_cb(): u3_lmdb_walk_blobs callback — mark every blob
+**   owned by the epoch, as the commit did.
 **
 **   a blob whose file is missing from the store is unreproducible
 **   data the log still depends on: report it (all of them — keep
@@ -1523,15 +1506,14 @@ _mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-    blb_u->eve_w += 1;
-    blb_u->use_w += 1;
+    blb_u->own_o = c3y;
   }
 }
 
 /* _mars_play_blobs(): check that every blob a replayed event in
-** [fir_d, las_d] references is still in the store, and count the
-** references: the loaded snapshot's eve_w stops at its own event, and
-** replayed events are the ones after it.
+** [fir_d, las_d] references is still in the store, and mark it owned:
+** the loaded snapshot's ownership stops at its own event, and replayed
+** events are the ones after it.
 **
 **   returns c3n if any referenced blob file is missing — replay of
 **   those events cannot reproduce their state, so the caller must
@@ -2019,15 +2001,6 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_h = u3r_mug(u3A->roc);
 
-  //  eve_w travels with the snapshot, kept current by commit and chop.
-  //  a full replay loads the epoch's frozen image instead, whose counts
-  //  predate every chop since the roll: rebuild them from the retained
-  //  epochs up to the image's own event, and let replay count the rest
-  //
-  if ( u3_dlod_epoc == lod_e ) {
-    u3_disk_blob_refs(mar_u->log_u, mar_u->dun_d);
-  }
-
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
     u3_disk_exit(mar_u->log_u);
@@ -2066,11 +2039,15 @@ u3_mars_work(u3_mars* mar_u)
     exit(0);
   }
 
-  //  eve_w came with the snapshot and replay counted the events after
-  //  it; _find_home zeroed les_h, and no lease outlives a restart.  so
-  //  the gc may reclaim any blob nothing holds.
+  //  ownership came with the snapshot and replay marked the events
+  //  after it; _find_home zeroed les_h, and no lease outlives a
+  //  restart.  so the gc may reclaim any unowned blob nothing holds,
+  //  once the log is caught up: short of that (a dry run skips replay)
+  //  an input with no record yet would read as an orphan
   //
-  u3_disk_blob_gc(mar_u->log_u);
+  if ( mar_u->dun_d == mar_u->log_u->dun_d ) {
+    u3_disk_blob_gc(mar_u->log_u);
+  }
 
   //  send ready status message
   //

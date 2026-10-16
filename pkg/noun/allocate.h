@@ -191,59 +191,43 @@
 #     define  u3a_head_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->hed)
 #     define  u3a_tail_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->tel)
 
-    /* u3a_blob: loom-resident metadata for a blob file.
+    /* u3a_blob: loom-resident record for a blob file.
     **
-    **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, with one
-    **   entry per (mug_h, seq_h).  A bob atom carries the bid in its body
-    **   and nothing points at the record: it is found by u3a_blob_get.
+    **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, one
+    **   per (mug_h, seq_h).  A bob atom carries the bid in its body and
+    **   nothing points at the record: it is found by u3a_blob_get.
     **
-    **   Single-counter design: the blob file is deleted iff use_w == 0.
-    **   use_w is the sum of three component sources:
-    **     - eve_w: event-log refcount: +1 per occurrence in a committed
-    **              event, -1 per reference when chop deletes an epoch
-    **     - les_h: active king-held lease count (memory only: zeroed at
-    **              every boot, since no lease outlives a restart)
-    **     - implicit atom cardinality: number of live bob atoms over
-    **       this id.  Updated only on atom alloc/free; not affected by
-    **       normal noun-refcount transitions.
+    **   Two holders are counted and one is flagged:
+    **     use_h  les_h + live bob atoms over this id.  The atom term is
+    **            implicit: u3i_blob adds one, _me_bob_dead takes one;
+    **            ordinary noun refcount traffic never touches it.
+    **     les_h  holds the king has on the file: mars issues them, the
+    **            king releases them (%blrl).  Memory only, zeroed at
+    **            every boot: king and mars die together.
+    **     own_o  a durable holder in the current epoch names the file:
+    **            an input committed in this epoch (_mars_fact, replay)
+    **            or the epoch's image (set at roll).  An owned file is
+    **            never deleted by refcount; it dies with the epoch's
+    **            directory at chop.  A record with own_o set and
+    **            use_h == 0 is a ghost, dropped at the next roll.
     **
-    **   Leases are king-acquired and mars-issued: they exist only to keep
-    **   a blob alive while the king holds a reference that mars has not
-    **   yet durably recorded (no eve_w, no snapshot cardinality) — i.e.
-    **   the window between %blob install and the commit of the event that
-    **   references it.  The king releases via %blrl when its last
-    **   reference dies.  Each lease expires after a fixed number of
-    **   committed events as a failsafe against a crashed or leaking king:
-    **   the referencing event is queued behind at most the writs already
-    **   sent, so expiry is counted in commits, and a stall burns nothing.
-    **   Blobs in mars->king gifts come from committed state and need no
-    **   lease.
+    **   The file is deleted iff use_h == 0 and own_o is not set.
+    **   u3a_blob_sane checks use_h == les_h + live atoms.
     **
-    **   On boot we zero the snapshot's les_h (and subtract from use_w):
-    **   a restart ends king and mars together, so no event can arrive
-    **   for a lease taken before it.  eve_w and atom cardinality come
-    **   from the snapshot; eve_w is rebuilt from the retained epochs'
-    **   BLOBS tables (u3_disk_blob_refs) only when the loaded loom is
-    **   stale: a full replay from an epoch's frozen image, or queu.
-    **
-    **   Fields (u3a_blob / u3a_blob_h / u3a_blob_d via U3_DEFINE_PAIR; only
-    **   use_w/eve_w are bitness-varying c3_w, the rest are always c3_h.  A
-    **   bitness migration reads the off-loom blob through the matching
-    **   off-bitness struct):
-    **     use_w  total refs: eve_w + les_h + atom cardinality
-    **     eve_w  event-log refcount (rebuildable from LMDB)
-    **     les_h  active king-held leases (zeroed at boot)
-    **     mug_h  blob mug — names the file in the epoch's store
-    **     seq_h  blob seq — names the file in the epoch's store
+    **   Fixed widths: one layout in both builds, so a bitness migration
+    **   copies the fields.  u3a_blob_h and u3a_blob_d name the same
+    **   struct for the migration template.
     */
-#define U3A_BLOB_BODY(S) \
-  U3_W(S) use_w;         \
-  U3_W(S) eve_w;         \
-  c3_h    les_h;         \
-  c3_h    mug_h;         \
-  c3_h    seq_h;
+      typedef struct _u3a_blob {
+        c3_h use_h;   //  les_h + live bob atoms
+        c3_h les_h;   //  king holds
+        c3_o own_o;   //  owned by the current epoch
+        c3_h mug_h;   //  blob mug: names the file in the epoch's store
+        c3_h seq_h;   //  blob seq
+      } u3a_blob;
 
-      U3_DEFINE_PAIR(u3a_blob, U3A_BLOB_BODY);
+      typedef u3a_blob u3a_blob_h;
+      typedef u3a_blob u3a_blob_d;
 
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
@@ -1018,9 +1002,9 @@ u3a_post_info(u3_post);
           u3a_blob_drop(c3_h mug_h, c3_h seq_h);
 
         /* u3a_blob_sane(): blob-bank invariant check; home road only.
-        **   Verifies use_w == eve_w + les_h + atom cardinality per
-        **   entry.  [dep_o] adds a noun-graph walk counting live bob
-        **   atoms; without it only use_w >= eve_w + les_h is checked.
+        **   Verifies use_h == les_h + atom cardinality per entry.
+        **   [dep_o] adds a noun-graph walk counting live bob atoms;
+        **   without it only use_h >= les_h is checked.
         **   Loud per-entry reports; returns c3n on any violation.
         */
           c3_o

@@ -870,9 +870,9 @@ u3a_blob*
 u3a_blob_new(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
-  blb_u->use_w = 0;
-  blb_u->eve_w = 0;
+  blb_u->use_h = 0;
   blb_u->les_h = 0;
+  blb_u->own_o = c3n;
   blb_u->mug_h = mug_h;
   blb_u->seq_h = seq_h;
 
@@ -1026,15 +1026,13 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  c3_w sum_w = blb_u->eve_w + (c3_w)blb_u->les_h;
-
   //  cheap tier: implied cardinality must be non-negative
   //
-  if ( blb_u->use_w < sum_w ) {
-    fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_w " < eve=%"
-                    PRIc3_w " + les=%" PRIc3_h " (counters corrupt)\r\n",
+  if ( blb_u->use_h < blb_u->les_h ) {
+    fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_h
+                    " < les=%" PRIc3_h " (counters corrupt)\r\n",
                     (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
-                    blb_u->use_w, blb_u->eve_w, blb_u->les_h);
+                    blb_u->use_h, blb_u->les_h);
     ctx_u->ok_o = c3n;
   }
   //  deep tier: implied cardinality must match counted live atoms
@@ -1042,13 +1040,12 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
   else if ( c3y == ctx_u->dep_o ) {
     c3_w qty_w = _blob_sane_card(ctx_u, bid_d);
 
-    if ( blb_u->use_w != (sum_w + qty_w) ) {
-      fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_w " != eve=%"
-                      PRIc3_w " + les=%" PRIc3_h " + atoms=%" PRIc3_w
-                      "%s\r\n",
+    if ( blb_u->use_h != (blb_u->les_h + qty_w) ) {
+      fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_h
+                      " != les=%" PRIc3_h " + atoms=%" PRIc3_w "%s\r\n",
                       (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
-                      blb_u->use_w, blb_u->eve_w, blb_u->les_h, qty_w,
-                      ( blb_u->use_w < (sum_w + qty_w) )
+                      blb_u->use_h, blb_u->les_h, qty_w,
+                      ( blb_u->use_h < (blb_u->les_h + qty_w) )
                         ? " (counters corrupt)"
                         : " (leak, or root unscanned)");
       ctx_u->ok_o = c3n;
@@ -1059,11 +1056,11 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
 /* u3a_blob_sane(): blob-bank invariant check.
 **
 **   Verifies, for every blb_p entry,
-**     use_w == eve_w + les_h + live bob-atom cardinality.
+**     use_h == les_h + live bob-atom cardinality.
 **
-**   Cheap tier (always): use_w >= eve_w + les_h — a violation means
-**   refcounts were lost below the durable floor, the precondition for
-**   deleting a blob the event log still references.
+**   Cheap tier (always): use_h >= les_h — a violation means the atom
+**   term went negative, so a count was lost.  own_o is a flag, not a
+**   count, and has no identity to check.
 **
 **   Deep tier ([dep_o]): counts live bob atoms by walking the noun
 **   graph from the home-road roots (arvo state, wish cache, cold jets,
@@ -1159,15 +1156,15 @@ _me_bob_dead(u3a_atom* atm_u)
     u3l_log("blob: %08x/%u: bob died with no bank record", mug_h, seq_h);
     return;
   }
-  if ( 0 == blb_u->use_w ) {
+  if ( 0 == blb_u->use_h ) {
     u3l_log("blob: %08x/%u: cardinality underflow (record already at zero)",
             mug_h, seq_h);
     return;
   }
 
-  blb_u->use_w -= 1;
+  blb_u->use_h -= 1;
 
-  if ( (0 == blb_u->use_w) && u3C.blob_del_f ) {
+  if ( (0 == blb_u->use_h) && u3C.blob_del_f ) {
     u3C.blob_del_f(mug_h, seq_h);
   }
 }

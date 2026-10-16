@@ -378,9 +378,9 @@ U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
   //  to the other bitness, so this process cannot run u3a_blob_sane on
   //  it; the first |pack or |meld in the migrated pier does.
   //
-  nbl_u->use_w = obl_u->use_w;
-  nbl_u->eve_w = obl_u->eve_w;
+  nbl_u->use_h = obl_u->use_h;
   nbl_u->les_h = obl_u->les_h;
+  nbl_u->own_o = obl_u->own_o;
 }
 #endif
 

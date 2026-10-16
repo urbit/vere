@@ -62,12 +62,19 @@ _fail(const c3_c* fmt_c, ...)
     }                                                                       \
   } while ( 0 )
 
-/* _blob_del_cb(): the mars end of a bob's death: count the request and
-**   drop the bank record.  the file is left to the pier's removal.
+/* _blob_del_cb(): the mars end of a bob's death, by mars's rule: a
+**   record the king or the epoch still holds stays; otherwise count
+**   the request and drop the record.  the file is left to the pier's
+**   removal.
 */
 static void
 _blob_del_cb(c3_h mug_h, c3_h seq_h)
 {
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
+    return;
+  }
   _del_w += 1;
   u3a_blob_drop(mug_h, seq_h);
 }
@@ -730,38 +737,38 @@ _test_sane(void)
   c3_h mug_h = 0, seq_h = 0;
   _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
-  //  one live atom in the kernel root, plus a synthetic log ref
+  //  one live atom in the kernel root, owned by the epoch
   //
   u3_noun bob = u3i_blob(mug_h, seq_h);
   u3_noun old = u3A->roc;
   u3A->roc    = u3nc(bob, u3_nul);
 
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  blb_u->eve_w += 1;
-  blb_u->use_w += 1;
+  blb_u->own_o = c3y;
 
   _check( c3y == u3a_blob_sane(c3y), "balanced bank reported corrupt" );
 
-  //  cheap tier: use_w below the durable floor
+  //  cheap tier: more holds than uses
   //
-  blb_u->use_w -= 2;
-  _check( c3n == u3a_blob_sane(c3n), "use < eve+les not caught" );
+  blb_u->les_h += 2;
+  _check( c3n == u3a_blob_sane(c3n), "use < les not caught" );
+  blb_u->les_h -= 2;
 
   //  deep tier: counters look plausible but cardinality is wrong
   //
-  blb_u->use_w += 3;   //  use = eve + les + 2, only 1 live atom
+  blb_u->use_h += 1;   //  use = les + 2, only 1 live atom
   _check( c3n == u3a_blob_sane(c3y), "cardinality mismatch not caught" );
-  blb_u->use_w -= 1;
+  blb_u->use_h -= 1;
 
-  //  drop the atom: the log ref keeps the record, and no deletion is asked
+  //  drop the atom: the epoch keeps the record as a ghost, and no
+  //  deletion is asked
   //
   u3z(u3A->roc);
   u3A->roc = old;
-  _check( 0 == _del_w, "blob deleted with eve_w held" );
+  _check( 0 == _del_w, "blob deleted while owned" );
 
   blb_u = u3a_blob_get(mug_h, seq_h);
-  blb_u->eve_w = 0;
-  blb_u->use_w = 0;
+  _check( blb_u && (0 == blb_u->use_h), "ghost not kept" );
   u3a_blob_drop(mug_h, seq_h);
 
   _pier_done();
@@ -779,7 +786,7 @@ _test_meld(void)
   _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
   //  two distinct bob atoms for the same bid, both in the kernel root,
-  //  plus a synthetic log ref: use = eve(1) + cardinality(2) = 3
+  //  owned by the epoch: use = cardinality(2)
   //
   u3_noun bo1 = u3i_blob(mug_h, seq_h);
   u3_noun bo2 = u3i_blob(mug_h, seq_h);
@@ -788,9 +795,8 @@ _test_meld(void)
 
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    blb_u->eve_w += 1;
-    blb_u->use_w += 1;
-    _check( 3 == blb_u->use_w, "setup use_w %" PRIc3_w " != 3", blb_u->use_w );
+    blb_u->own_o = c3y;
+    _check( 2 == blb_u->use_h, "setup use_h %" PRIc3_h " != 2", blb_u->use_h );
   }
 
   (void)u3_meld_all(0, c3n, c3n);
@@ -807,9 +813,9 @@ _test_meld(void)
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     _check( blb_u, "bank entry lost" );
-    _check( (2 == blb_u->use_w) && (1 == blb_u->eve_w),
-            "counts use=%" PRIc3_w " eve=%" PRIc3_w " want use=2 eve=1",
-            blb_u->use_w, blb_u->eve_w );
+    _check( (1 == blb_u->use_h) && (c3y == blb_u->own_o),
+            "counts use=%" PRIc3_h " own=%u want use=1 own=1",
+            blb_u->use_h, blb_u->own_o );
     _check(  (mug_h == u3a_bob_mug(u3h(u3A->roc)))
           && (seq_h == u3a_bob_seq(u3h(u3A->roc))),
             "bob blob pointer stale" );
@@ -817,21 +823,16 @@ _test_meld(void)
 
   _check( 0 == _del_w, "blob deleted with refs held" );
 
-  //  drop the last atom: cardinality reaches 0, but eve_w must keep
-  //  the file alive (no deletion request)
+  //  drop the last atom: cardinality reaches 0, but the epoch keeps
+  //  the file (no deletion request)
   //
   u3z(u3A->roc);
   u3A->roc = old;
 
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    _check( (1 == blb_u->use_w) && (0 == _del_w),
-            "post-drop use=%" PRIc3_w " del=%" PRIc3_w, blb_u->use_w, _del_w );
-
-    //  release the log ref: now deletion is legitimate
-    //
-    blb_u->eve_w = 0;
-    blb_u->use_w = 0;
+    _check( blb_u && (0 == blb_u->use_h) && (0 == _del_w),
+            "post-drop del=%" PRIc3_w, _del_w );
     u3a_blob_drop(mug_h, seq_h);
   }
 
@@ -909,7 +910,7 @@ _test_cue_blob(void)
     c3_h seq_h = u3a_bob_seq(hed);
 
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    _check( blb_u && (1 == blb_u->use_w), "bad bank entry" );
+    _check( blb_u && (1 == blb_u->use_h), "bad bank entry" );
 
     //  re-cue: the store must dedup to the same (mug, seq)
     //
@@ -925,8 +926,8 @@ _test_cue_blob(void)
       u3_noun bob = u3h(two);
       _check( (mug_h == u3a_bob_mug(bob)) && (seq_h == u3a_bob_seq(bob)),
               "re-cue did not dedup" );
-      _check( 2 == blb_u->use_w, "use_w %" PRIc3_w " after re-cue, want 2",
-              blb_u->use_w );
+      _check( 2 == blb_u->use_h, "use_w %" PRIc3_w " after re-cue, want 2",
+              blb_u->use_h );
       u3z(two);
     }
   }
@@ -2887,93 +2888,6 @@ _epoc_event(MDB_env* env_u, c3_d eve_d, c3_d* ids_d, c3_z len_z)
           "event %" PRIu64 " save failed", eve_d );
 }
 
-/* _blob_ref(): a blob with [eve_w] event references and no live bob.
-*/
-static c3_d
-_blob_ref(const c3_c* dat_c, c3_w eve_w)
-{
-  c3_h mug_h = 0, seq_h = 0;
-  _check( c3y == _blob_save((const c3_y*)dat_c, strlen(dat_c), &mug_h, &seq_h),
-          "save failed" );
-
-  u3_atom   bob   = u3i_blob(mug_h, seq_h);
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  blb_u->eve_w += eve_w;
-  blb_u->use_w += eve_w;
-  u3z(bob);
-
-  return ((c3_d)mug_h << 32) | seq_h;
-}
-
-static u3a_blob*
-_blob_rec(c3_d bid_d)
-{
-  return u3a_blob_get((c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF));
-}
-
-/* _test_chop_refs(): chop retires the references of the epochs it
-**   deletes and leaves the retained epochs' references alone, so a
-**   blob held only by a dying epoch goes and one held by a surviving
-**   epoch stays, whatever the snapshot said.
-*/
-static void
-_test_chop_refs(void)
-{
-  _pier_make("chop refs");
-
-  c3_c log_c[2048];
-  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
-  _check( (0 == mkdir(log_c, 0700)) || (EEXIST == errno),
-          "mkdir %s: %s", log_c, strerror(errno) );
-
-  //  a: epoch 0 only.  b: epoch 1 only.  c: epochs 0 and 2.
-  //
-  c3_d a_d = _blob_ref("held by the epoch chop deletes", 1);
-  c3_d b_d = _blob_ref("held by the epoch chop keeps", 1);
-  c3_d c_d = _blob_ref("held by a dying and a surviving epoch", 2);
-
-  {
-    MDB_env* env_u = _epoc_env(0);
-    c3_d     ids_d[2] = { a_d, c_d };
-    _epoc_event(env_u, 1, ids_d, 2);
-    u3_lmdb_exit(env_u);
-
-    env_u = _epoc_env(1);
-    _epoc_event(env_u, 2, &b_d, 1);
-    u3_lmdb_exit(env_u);
-  }
-
-  MDB_env* env_u = _epoc_env(2);
-  _epoc_event(env_u, 3, &c_d, 1);
-
-  u3_dire dir_u = { .pax_c = _tmp_pier };
-  u3_dire com_u = { .pax_c = log_c };
-  u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
-                    .mdb_u = env_u, .epo_d = 2 };
-
-  u3_disk_chop(&log_u, 0);
-
-  _check( !_blob_rec(a_d) && (c3n == u3b_live(_tmp_bob, (c3_h)(a_d >> 32), (c3_h)a_d)),
-          "blob of the deleted epoch survived" );
-  _check( _blob_rec(b_d) && (1 == _blob_rec(b_d)->eve_w) && (1 == _blob_rec(b_d)->use_w),
-          "blob of the kept epoch disturbed" );
-  _check( _blob_rec(c_d) && (1 == _blob_rec(c_d)->eve_w) && (1 == _blob_rec(c_d)->use_w),
-          "shared blob not retired once" );
-
-  {
-    c3_c epo_c[2048];
-    snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_c);
-    _check( c3n == _path_exists(epo_c), "epoch 0 not deleted" );
-  }
-
-  u3_lmdb_exit(env_u);
-  _blob_rec(b_d)->eve_w = 0; _blob_rec(b_d)->use_w = 0;
-  _blob_rec(c_d)->eve_w = 0; _blob_rec(c_d)->use_w = 0;
-  u3a_blob_drop((c3_h)(b_d >> 32), (c3_h)b_d);
-  u3a_blob_drop((c3_h)(c_d >> 32), (c3_h)c_d);
-  _pier_done();
-}
-
 /* _test_roll_link(): roll carries every blob the bank holds into the
 **   new epoch's store and leaves the rest behind: a live atom and a
 **   leased record are linked (one inode, two names), a record nothing
@@ -3011,9 +2925,9 @@ _test_roll_link(void)
   u3_atom   bob_a = u3i_blob(mug_h[0], seq_h[0]);
   u3a_blob* blb_b = u3a_blob_new(mug_h[1], seq_h[1]);
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
+  blb_b->own_o  = c3y;   //  a ghost: the old epoch's input, nothing holds it
   blb_c->les_h += 1;
-  blb_c->use_w += 1;
-  (void)blb_b;
+  blb_c->use_h += 1;
 
   //  epoch 0 with two events and its meta, as roll requires
   //
@@ -3033,13 +2947,25 @@ _test_roll_link(void)
   u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
                     .mdb_u = env_u, .epo_d = 0, .dun_d = 2 };
 
+  //  the roll saves the loom after its bank pass; this pier has no
+  //  checkpoint to save into, and a dry run's save is a no-op
+  //
+  u3C.wag_h |= u3o_dryrun;
   u3_disk_roll(&log_u, 2);
+  u3C.wag_h &= ~u3o_dryrun;
   _check( 2 == log_u.epo_d, "epoch not rolled" );
 
   c3_c new_c[8192];
   u3b_root(new_c, _tmp_pier, 2);
   _check( u3C.bob_c && (0 == strcmp(u3C.bob_c, new_c)),
           "store root not moved: %s", u3C.bob_c ? u3C.bob_c : "(null)" );
+
+  //  the bank is the new epoch's: what an atom holds is owned, what
+  //  only a hold keeps is not, and the ghost is gone
+  //
+  _check( c3y == u3a_blob_get(mug_h[0], seq_h[0])->own_o, "atom-held not owned" );
+  _check( c3n == u3a_blob_get(mug_h[2], seq_h[2])->own_o, "hold-only owned" );
+  _check( !u3a_blob_get(mug_h[1], seq_h[1]), "ghost survived the roll" );
 
   //  a and c carried as links, b left behind; the old store untouched
   //
@@ -3075,74 +3001,153 @@ _test_roll_link(void)
 
   u3_lmdb_exit(log_u.mdb_u);
   u3C.bob_c = _tmp_bob;
+  u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
   u3z(bob_a);
-  blb_c->les_h = 0; blb_c->use_w = 0;
-  u3a_blob_drop(mug_h[1], seq_h[1]);
+  blb_c->les_h = 0; blb_c->use_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _pier_done();
 }
 
-/* _test_image_refs(): a loom whose counts are not current (an epoch's
-**   frozen image) has eve_w rebuilt from every retained epoch, counting
-**   only events up to the loom's own, so replay can count the rest; a
-**   record the retained log never names ends at zero.
+/* _test_chop_kill(): chop deletes an epoch's store with the epoch and
+**   leaves the retained epochs, their stores, and the bank alone.
 */
 static void
-_test_image_refs(void)
+_test_chop_kill(void)
 {
-  _pier_make("image refs");
+  _pier_make("chop kill");
 
   c3_c log_c[2048];
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
-  _check( (0 == mkdir(log_c, 0700)) || (EEXIST == errno),
-          "mkdir %s: %s", log_c, strerror(errno) );
 
-  //  stale image: d counted 5, e counted 1; the log names d at events
-  //  2 and 5 (two epochs) and e nowhere
+  //  epochs 0, 1, 2; a blob in epoch 0's store and one in epoch 2's,
+  //  the latter held by an atom.  the process runs in epoch 2.
   //
-  c3_d d_d = _blob_ref("named by both retained epochs", 5);
-  c3_d e_d = _blob_ref("named by an epoch chop deleted", 1);
+  c3_h mug_h = 0, seq_h = 0;
+  _check( c3y == _blob_save((const c3_y*)"dies with epoch 0", 17, &mug_h, &seq_h),
+          "save failed" );
 
-  {
-    MDB_env* env_u = _epoc_env(1);
-    _epoc_event(env_u, 1, 0, 0);
-    _epoc_event(env_u, 2, &d_d, 1);
-    _epoc_event(env_u, 3, 0, 0);
-    u3_lmdb_exit(env_u);
-  }
+  MDB_env* env_u;
+  env_u = _epoc_env(0); u3_lmdb_exit(env_u);
+  env_u = _epoc_env(1); u3_lmdb_exit(env_u);
+  env_u = _epoc_env(2);
 
-  MDB_env* env_u = _epoc_env(2);
-  _epoc_event(env_u, 4, 0, 0);
-  _epoc_event(env_u, 5, &d_d, 1);
+  c3_c new_c[8192];
+  u3b_root(new_c, _tmp_pier, 2);
+  _check( 0 == mkdir(new_c, 0700), "mkdir %s: %s", new_c, strerror(errno) );
+  u3C.bob_c = new_c;
+
+  c3_c stg_c[8192];
+  c3_h mag_h = 0, saq_h = 0;
+  _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)"lives on in epoch 2", 19, stg_c)
+          && (c3y == u3b_move_stg(new_c, stg_c, &mag_h, &saq_h)),
+          "save in epoch 2 failed" );
+  u3_atom bob = u3i_blob(mag_h, saq_h);
 
   u3_dire dir_u = { .pax_c = _tmp_pier };
   u3_dire com_u = { .pax_c = log_c };
   u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
                     .mdb_u = env_u, .epo_d = 2 };
 
-  //  the image is at event 4: event 2 counts, event 5 is replay's
-  //
-  u3_disk_blob_refs(&log_u, 4);
-  _check( (1 == _blob_rec(d_d)->eve_w) && (1 == _blob_rec(d_d)->use_w),
-          "rebuild counted %" PRIc3_w ", want 1", _blob_rec(d_d)->eve_w );
-  _check( _blob_rec(e_d) && (0 == _blob_rec(e_d)->eve_w) && (0 == _blob_rec(e_d)->use_w),
-          "stale record not zeroed" );
+  u3_disk_chop(&log_u, 0);
 
-  //  through the whole log, both events count
-  //
-  u3_disk_blob_refs(&log_u, 5);
-  _check( 2 == _blob_rec(d_d)->eve_w, "rebuild to the end counted %" PRIc3_w,
-          _blob_rec(d_d)->eve_w );
-
-  u3_disk_blob_gc(&log_u);
-  _check( !_blob_rec(e_d) && (c3n == u3b_live(_tmp_bob, (c3_h)(e_d >> 32), (c3_h)e_d)),
-          "stale blob survived the gc" );
-  _check( c3y == u3b_live(_tmp_bob, (c3_h)(d_d >> 32), (c3_h)d_d),
-          "referenced blob deleted" );
+  {
+    c3_c epo_c[2048];
+    snprintf(epo_c, sizeof(epo_c), "%s/0i0", log_c);
+    _check( c3n == _path_exists(epo_c), "epoch 0 not deleted" );
+    _check( c3n == _path_exists(_tmp_bob), "epoch 0's store not deleted" );
+    snprintf(epo_c, sizeof(epo_c), "%s/0i1", log_c);
+    _check( c3y == _path_exists(epo_c), "epoch 1 deleted" );
+  }
+  _check( c3y == u3b_live(new_c, mag_h, saq_h), "epoch 2's blob gone" );
+  _check( 1 == u3a_blob_get(mag_h, saq_h)->use_h, "bank disturbed" );
 
   u3_lmdb_exit(env_u);
-  _blob_rec(d_d)->eve_w = 0; _blob_rec(d_d)->use_w = 0;
-  u3a_blob_drop((c3_h)(d_d >> 32), (c3_h)d_d);
+  u3C.bob_c = _tmp_bob;
+  u3z(bob);
+  _pier_done();
+}
+
+/* _test_gc_own(): the boot gc wipes what nothing holds and no epoch
+**   owns, keeps an owned ghost (record and file), and wipes a file the
+**   bank never heard of.
+*/
+static void
+_test_gc_own(void)
+{
+  _pier_make("gc own");
+
+  const c3_c* dat_c[] = { "unowned and unheld: garbage",
+                          "owned by the epoch, held by nothing: a ghost",
+                          "no record at all: an orphan" };
+  c3_h mug_h[3], seq_h[3];
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),
+                              &mug_h[i_w], &seq_h[i_w]),
+            "save %" PRIc3_w " failed", i_w );
+  }
+  u3a_blob_new(mug_h[0], seq_h[0]);
+  u3a_blob_new(mug_h[1], seq_h[1])->own_o = c3y;
+
+  u3_disk log_u = {0};
+  u3_disk_blob_gc(&log_u);
+
+  _check( !u3a_blob_get(mug_h[0], seq_h[0])
+          && (c3n == u3b_live(_tmp_bob, mug_h[0], seq_h[0])),
+          "garbage survived" );
+  _check( u3a_blob_get(mug_h[1], seq_h[1])
+          && (c3y == u3b_live(_tmp_bob, mug_h[1], seq_h[1])),
+          "ghost wiped" );
+  _check( c3n == u3b_live(_tmp_bob, mug_h[2], seq_h[2]), "orphan survived" );
+
+  u3a_blob_drop(mug_h[1], seq_h[1]);
+  _pier_done();
+}
+
+/* _test_blob_own(): u3_disk_blob_own owns what a live atom holds and
+**   what the epoch's events name, making a ghost for a named blob the
+**   bank lost; a hold alone owns nothing.
+*/
+static void
+_test_blob_own(void)
+{
+  _pier_make("blob own");
+
+  const c3_c* dat_c[] = { "held by an atom",
+                          "named by an event, no record",
+                          "held by the king only" };
+  c3_h mug_h[3], seq_h[3];
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),
+                              &mug_h[i_w], &seq_h[i_w]),
+            "save %" PRIc3_w " failed", i_w );
+  }
+  u3_atom   bob   = u3i_blob(mug_h[0], seq_h[0]);
+  u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
+  blb_c->les_h += 1;
+  blb_c->use_h += 1;
+
+  MDB_env* env_u = _epoc_env(0);
+  {
+    c3_d bid_d = ((c3_d)mug_h[1] << 32) | seq_h[1];
+    _epoc_event(env_u, 1, &bid_d, 1);
+  }
+
+  u3_disk log_u = { .mdb_u = env_u, .epo_d = 0 };
+  u3_disk_blob_own(&log_u);
+
+  _check( c3y == u3a_blob_get(mug_h[0], seq_h[0])->own_o, "atom-held not owned" );
+  _check( u3a_blob_get(mug_h[1], seq_h[1])
+          && (c3y == u3a_blob_get(mug_h[1], seq_h[1])->own_o)
+          && (0 == u3a_blob_get(mug_h[1], seq_h[1])->use_h),
+          "named blob not a ghost" );
+  _check( c3n == blb_c->own_o, "hold-only owned" );
+
+  u3_lmdb_exit(env_u);
+  u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
+  u3z(bob);
+  u3a_blob_drop(mug_h[1], seq_h[1]);
+  blb_c->les_h = 0; blb_c->use_h = 0;
+  u3a_blob_drop(mug_h[2], seq_h[2]);
   _pier_done();
 }
 
@@ -3200,9 +3205,10 @@ main(int argc, char* argv[])
   _test_hand_access();
   _test_lifecycle();
   _test_blobs_persist();
-  _test_chop_refs();
-  _test_image_refs();
   _test_roll_link();
+  _test_chop_kill();
+  _test_gc_own();
+  _test_blob_own();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

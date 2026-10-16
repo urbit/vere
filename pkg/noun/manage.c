@@ -650,7 +650,7 @@ _find_home_zero_les_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  blb_u->use_w -= blb_u->les_h;
+  blb_u->use_h -= blb_u->les_h;
   blb_u->les_h  = 0;
 }
 
