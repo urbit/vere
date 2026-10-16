@@ -17,9 +17,11 @@
   **
   ** Mars is the sole writer.  A client such as the king never touches
   ** <root>/<mug>/<seq>: it writes bytes to a staging file under
-  ** $pier/.urb/stg (u3b_stage, u3b_stage_fd) and sends the path in a
-  ** %blob writ; mars installs it (u3b_move_stg) and acks with the mug
-  ** and seq.
+  ** $pier/.urb/stg (u3b_stage, u3b_stage_fd), which tells it the
+  ** content mug, puts a stub (u3i_blob of that mug with seq 0) where
+  ** the bob belongs in its event, and sends the staging path with the
+  ** event; mars installs the file (u3b_move_stg) and puts the real bob
+  ** in the stub's place before it computes the event.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -74,14 +76,18 @@
 
     /* u3b_stage(): write [len_d] bytes to a new staging file.
     **
-    ** Sets [stg_c] (at least 8192 bytes) to the file's path, for a
-    ** %blob writ.  On failure the file is gone and c3n is returned.
+    ** Sets [stg_c] (at least 8192 bytes) to the file's path, which
+    ** rides with the event that installs it, and [mug_h] to the content
+    ** mug, which the event's stub carries.  Content with no bob
+    ** representation (under U3_BLOB_MIN significant bytes) is refused.
+    ** On failure the file is gone and c3n is returned.
     */
       c3_o
       u3b_stage(const c3_c* pax_c,
                     const c3_y* dat_y,
                     c3_d        len_d,
-                    c3_c*       stg_c);
+                    c3_c*       stg_c,
+                c3_h*       mug_h);
 
     /* u3b_stage_fd(): copy [len_d] bytes from [fid_i] to a new
     **   staging file, as u3b_stage.
@@ -90,7 +96,8 @@
       u3b_stage_fd(const c3_c* pax_c,
                        c3_i        fid_i,
                        c3_d        len_d,
-                       c3_c*       stg_c);
+                       c3_c*       stg_c,
+                   c3_h*       mug_h);
 
     /* u3b_live(): check whether a blob file exists.
     */

@@ -979,6 +979,7 @@ _blob_sane_atom_cb(u3_atom a, void* ptr_v)
   _blob_sane_ctx* ctx_u = ptr_v;
 
   if (  (c3n == u3a_is_bob(a))
+     || (0 == u3a_bob_seq(a))
      || (c3y == _blob_sane_seen(ctx_u, a)) )
   {
     return;
@@ -1165,6 +1166,13 @@ _me_bob_dead(u3a_atom* atm_u)
   u3_atom   bob   = u3a_to_pug(u3a_outa(atm_u));
   c3_h      mug_h = u3a_bob_mug(bob);
   c3_h      seq_h = u3a_bob_seq(bob);
+
+  //  a stub has no record to count
+  //
+  if ( 0 == seq_h ) {
+    return;
+  }
+
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
   //  no record, or one already at zero: a record was dropped under a

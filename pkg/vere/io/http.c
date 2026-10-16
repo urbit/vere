@@ -172,9 +172,9 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
 **
 **   A body over U3_BLOB_THRESH normally does not come through
-**   here: _http_rec_start stages it for mars and the bob arrives in
-**   _http_bob_install_cb.  It does when staging fails or no serf is
-**   attached, and on the scry fallback, which then build it inline.
+**   here: _http_rec_start stages it and the event carries a stub mars
+**   fills.  It does when staging fails, and on the scry fallback,
+**   which then build it inline.
 */
 static u3_noun
 _http_vec_to_octs(h2o_iovec_t vec_u)
@@ -1138,10 +1138,63 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
   }
 }
 
-/* _http_req_dispatch(): dispatch http request. RETAINS `req`
+/* _http_stg_drop(): remove the staged files of a request that will not
+**   reach arvo.  transfers [pax].
 */
 static void
-_http_req_dispatch(u3_hreq* req_u, u3_noun req)
+_http_stg_drop(u3_noun pax)
+{
+  u3_noun pak = pax;
+
+  while ( u3_nul != pak ) {
+    c3_c* stg_c = u3r_string(u3h(pak));
+    c3_unlink(stg_c);
+    c3_free(stg_c);
+    pak = u3t(pak);
+  }
+  u3z(pax);
+}
+
+/* _http_stg_ctx: a request whose body mars installs inside the event.
+**
+**   the request is named by connection and sequence rather than held
+**   by pointer: the client may close it before mars answers.
+*/
+typedef struct _http_stg_ctx {
+  u3_http* htp_u;
+  c3_w     coq_l;
+  c3_w     seq_l;
+} _http_stg_ctx;
+
+static void
+_http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c);
+static u3_hcon*
+_http_conn_find(u3_http *htp_u, c3_w coq_l);
+
+/* _http_req_bail(): the event carrying a staged body was refused:
+**   answer the client, which no other bail does.
+*/
+static void
+_http_req_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  _http_stg_ctx* ctx_u = egg_u->ptr_v;
+  u3_hcon*       hon_u = _http_conn_find(ctx_u->htp_u, ctx_u->coq_l);
+  u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
+
+  if ( req_u ) {
+    _http_req_reject(req_u, 500, "blob install failed");
+  }
+
+  u3_auto_bail_slog(egg_u, lud);
+  u3_ovum_free(egg_u);
+  c3_free(ctx_u);
+}
+
+/* _http_req_dispatch(): dispatch http request. RETAINS `req`,
+**   transfers [pax], the staged files the event installs.
+*/
+static void
+_http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
 {
   u3_assert(u3_rsat_init == req_u->sat_e);
   req_u->sat_e = u3_rsat_plan;
@@ -1168,10 +1221,23 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
             : u3nc(u3i_string("request"), dat);
-      u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+
+      u3_ovum* egg_u = u3_ovum_init(0, c3__e, wir, cad);
+
+      if ( u3_nul != pax ) {
+        _http_stg_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
+        ctx_u->htp_u = htp_u;
+        ctx_u->coq_l = req_u->hon_u->coq_l;
+        ctx_u->seq_l = req_u->seq_l;
+
+        egg_u->pax = pax;
+        u3_auto_peer(egg_u, ctx_u, 0, _http_req_bail);
+      }
+      u3_auto_plan(&htd_u->car_u, egg_u);
     }
     else {
       // '/_~_/' found
+      _http_stg_drop(pax);
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -1247,18 +1313,6 @@ static u3_hreq*
 _http_req_prepare(h2o_req_t* rec_u,
                   u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
 
-/* _http_bob_ctx: a request whose body mars is installing.
-**
-**   the request is named by connection and sequence rather than held
-**   by pointer: the client may close it before mars answers.
-*/
-typedef struct _http_bob_ctx {
-  u3_http* htp_u;
-  c3_w     coq_l;
-  c3_w     seq_l;
-  c3_d     len_d;
-} _http_bob_ctx;
-
 /* _http_req_reject(): fail a request that never reached arvo.
 */
 static void
@@ -1269,9 +1323,10 @@ _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c)
 }
 
 /* _http_req_start(): send a request to arvo with body [bod].
+**   transfers [pax], the staged files the event installs.
 */
 static void
-_http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o)
+_http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o, u3_noun pax)
 {
   u3_weak req = _http_rec_to_httq(req_u->rec_u, bod);
 
@@ -1281,50 +1336,26 @@ _http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o)
               req_u->rec_u->method.base);
     }
     _http_req_reject(req_u, 400, "bad request");
+    _http_stg_drop(pax);
     return;
   }
 
   if ( (c3n == cache_o) || (c3n == _http_req_cache(req_u)) ) {
-    _http_req_dispatch(req_u, req);
+    _http_req_dispatch(req_u, req, pax);
+  }
+  else {
+    _http_stg_drop(pax);
   }
   u3z(req);
 }
 
-/* _http_bob_install_cb(): mars installed (or refused) a request body.
-*/
-static void
-_http_bob_install_cb(void* ptr_v, u3_noun bob, c3_o ok_o)
-{
-  _http_bob_ctx* ctx_u = ptr_v;
-  u3_http*       htp_u = ctx_u->htp_u;
-  u3_hcon*       hon_u = _http_conn_find(htp_u, ctx_u->coq_l);
-  u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
-  c3_d           len_d = ctx_u->len_d;
-
-  c3_free(ctx_u);
-
-  //  the client went away while mars worked: dropping the bob returns
-  //  mars's hold on the file
-  //
-  if ( !req_u ) {
-    u3z(bob);
-    return;
-  }
-
-  if ( c3n == ok_o ) {
-    _http_req_reject(req_u, 500, "blob install failed");
-    return;
-  }
-
-  _http_req_start(req_u, u3nt(u3_nul, u3i_chub(len_d), bob), c3n);
-}
-
 /* _http_rec_start(): take an incoming request from h2o.
 **
-**   a body over U3_BLOB_THRESH is staged and sent to mars for
-**   installation; the request waits for the bob.  mars alone writes
-**   the store.  anything smaller, or a body that cannot be staged,
-**   goes to arvo as an inline atom.
+**   a body over U3_BLOB_THRESH is staged; the event goes to arvo with
+**   a stub where the body belongs and the staging path riding along,
+**   and mars installs the file and fills the stub before it computes.
+**   mars alone writes the store.  anything smaller, or a body that
+**   cannot be staged, goes to arvo as an inline atom.
 */
 static void
 _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
@@ -1332,21 +1363,17 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
   u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
 
   if ( c3y == u3b_over(rec_u->entity.len) ) {
-    u3_http* htp_u = req_u->hon_u->htp_u;
-    u3_lord* god_u = htp_u->htd_u->car_u.pir_u->god_u;
-    c3_c     stg_c[8192];
+    c3_c stg_c[8192];
+    c3_h mug_h = 0;
 
-    if (  god_u
-       && (c3y == u3b_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
-                                (c3_d)rec_u->entity.len, stg_c)) )
+    if ( c3y == u3b_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
+                          (c3_d)rec_u->entity.len, stg_c, &mug_h) )
     {
-      _http_bob_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
-      ctx_u->htp_u = htp_u;
-      ctx_u->coq_l = req_u->hon_u->coq_l;
-      ctx_u->seq_l = req_u->seq_l;
-      ctx_u->len_d = (c3_d)rec_u->entity.len;
+      u3_noun bod = u3nt(u3_nul,
+                         u3i_chub((c3_d)rec_u->entity.len),
+                         u3i_blob(mug_h, 0));
 
-      u3_lord_blob_install(god_u, strdup(stg_c), ctx_u, _http_bob_install_cb);
+      _http_req_start(req_u, bod, cache_o, u3nc(u3i_string(stg_c), u3_nul));
       return;
     }
 
@@ -1354,7 +1381,7 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
             (c3_d)rec_u->entity.len);
   }
 
-  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), cache_o);
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), cache_o, u3_nul);
 }
 
 /* _http_cache_respond(): respond with a simple-payload:http

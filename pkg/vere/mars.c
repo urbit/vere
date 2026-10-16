@@ -40,11 +40,13 @@
 **   reclaims whatever a dead king held.
 **
 **   Lifecycle:
-**     1. king stages a large file to .urb/stg/, sends a %blob writ
-**     2. mars installs it (rename into the epoch's store) and acks with
-**        a bob, [%blob %.y bob]; the ack grants the king a hold
-**     3. king injects the event holding the bob atom (RAM-serialized as
-**        a blob ref)
+**     1. king stages a large file to .urb/stg/, learns its content mug,
+**        and plans the event with a stub (a bob of that mug, seq 0)
+**        where the bob belongs and the staging path riding along
+**     2. mars installs the file (rename into the epoch's store) and
+**        puts the real bob in the stub's place, then computes the event
+**     3. the event's effects grant the king a hold on every blob they
+**        name, this one included if it comes back out
 **     4. mars commits: _mars_fact marks the blob owned by the epoch and
 **        writes blob-refs to LMDB
 **     5. the king's last bob over the id dies: %blrl returns its holds
@@ -396,6 +398,146 @@ _mars_ram(u3_noun pro, u3_gift* gif_u)
   u3a_blob_hold(bid_u.bid_d, bid_u.len_w);
   c3_free(bid_u.bid_d);
   u3z(pro);
+}
+
+/* _mars_fill(): rebuild [non] with every stub replaced by the bob of
+**   the installed id with its mug.  recursive on heads, a loop along
+**   tails, so a long list costs no stack.  u3_none if a stub matches
+**   no id.  retains [non].
+*/
+static u3_weak
+_mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
+{
+  if ( c3n == u3a_is_cell(non) ) {
+    if ( (c3y == u3a_is_bob(non)) && (0 == u3a_bob_seq(non)) ) {
+      c3_h mug_h = u3a_bob_mug(non);
+
+      for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+        if ( (c3_h)(bid_d[i_w] >> 32) == mug_h ) {
+          return u3i_blob(mug_h, (c3_h)bid_d[i_w]);
+        }
+      }
+      return u3_none;
+    }
+    return u3k(non);
+  }
+
+  {
+    u3_noun* hed = 0;
+    c3_w     cap_w = 0, num_w = 0;
+    u3_noun  tal = non;
+    u3_weak  out;
+
+    while ( c3y == u3a_is_cell(tal) ) {
+      u3_weak one = _mars_fill(u3h(tal), bid_d, len_w);
+
+      if ( u3_none == one ) {
+        goto fail;
+      }
+      if ( num_w == cap_w ) {
+        cap_w = cap_w ? (2 * cap_w) : 16;
+        hed   = c3_realloc(hed, cap_w * sizeof(*hed));
+      }
+      hed[num_w++] = one;
+      tal = u3t(tal);
+    }
+
+    if ( u3_none == (out = _mars_fill(tal, bid_d, len_w)) ) {
+      goto fail;
+    }
+
+    while ( num_w-- ) {
+      out = u3nc(hed[num_w], out);
+    }
+    c3_free(hed);
+    return out;
+
+  fail:
+    while ( num_w-- ) {
+      u3z(hed[num_w]);
+    }
+    c3_free(hed);
+    return u3_none;
+  }
+}
+
+/* u3_mars_blob_fill(): put installed bobs in a noun's stubs.
+*/
+u3_weak
+u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
+{
+  return _mars_fill(non, bid_d, len_w);
+}
+
+/* _mars_blob_install(): install the staged files an event brings and
+**   put their bobs where the king left stubs.
+**
+**   every path in [pax] is installed, or the event is refused with a
+**   %blob goof: the staged files are consumed either way (nothing
+**   retries them), and a file installed for a refused event is wiped
+**   again by minting and dropping its bob, since nothing holds it.
+**   on success [*job] is the filled event.  returns the goof list, or
+**   u3_none.  transfers [pax].
+*/
+static u3_weak
+_mars_blob_install(u3_mars* mar_u, u3_noun* job, u3_noun pax)
+{
+  c3_d*   bid_d = 0;
+  c3_w    len_w = 0, cap_w = 0;
+  u3_noun tan   = u3_nul;
+  u3_noun pak   = pax;
+
+  while ( u3_nul != pak ) {
+    c3_c* stg_c = u3r_string(u3h(pak));
+    c3_h  mug_h = 0;
+    c3_h  seq_h = 0;
+
+    if ( c3y == u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h) ) {
+      if ( len_w == cap_w ) {
+        cap_w = cap_w ? (2 * cap_w) : 4;
+        bid_d = c3_realloc(bid_d, cap_w * sizeof(c3_d));
+      }
+      bid_d[len_w++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+    }
+    else {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c), "blob install failed: %s", stg_c);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+      c3_unlink(stg_c);
+    }
+    c3_free(stg_c);
+    pak = u3t(pak);
+  }
+  u3z(pax);
+
+  if ( u3_nul == tan ) {
+    u3_weak new = _mars_fill(*job, bid_d, len_w);
+
+    if ( u3_none == new ) {
+      fprintf(stderr, "mars: poke refused: a stub names no staged file\r\n");
+      tan = u3nc(u3nc(c3__leaf, u3i_string("blob stub names no staged file")),
+                 u3_nul);
+    }
+    else {
+      u3z(*job);
+      *job = new;
+    }
+  }
+
+  if ( u3_nul != tan ) {
+    //  nothing holds what was installed for a refused event
+    //
+    for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+      u3z(u3i_blob((c3_h)(bid_d[i_w] >> 32), (c3_h)bid_d[i_w]));
+    }
+  }
+  c3_free(bid_d);
+
+  if ( u3_nul == tan ) {
+    return u3_none;
+  }
+  return u3nc(u3nc(c3__blob, tan), u3_nul);
 }
 
 /* _mars_fact(): commit a fact and enqueue its effects.
@@ -775,11 +917,11 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
     }
 
     case c3__poke: {
-      u3_noun tim, job;
+      u3_noun tim, pax, job;
       c3_h  mil_h;
       c3_w  pre_w;
 
-      if ( (c3n == u3r_cell(dat, &tim, &job)) ||
+      if ( (c3n == u3r_trel(dat, &tim, &pax, &job)) ||
            (c3n == u3r_safe_half(tim, &mil_h)) )
       {
         fprintf(stderr, "mars: poke fail\r\n");
@@ -797,7 +939,25 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         now   = u3m_time_in_tv(&tim_u);
         job = u3nc(now, u3k(job));
       }
+      u3k(pax);
       u3z(jar);
+
+      //  the files the event brings are installed first and their bobs
+      //  put where the king left stubs; a failure refuses the event
+      //
+      if ( u3_nul != pax ) {
+        u3_weak lud = _mars_blob_install(mar_u, &job, pax);
+
+        if ( u3_none != lud ) {
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, lud));
+          break;
+        }
+        mar_u->fag_w |= _mars_fag_mute;
+      }
+      else {
+        u3z(pax);
+      }
 
       //  an event holding a bob the store cannot back is refused before
       //  it runs; freeing the job drops the record tap minted for it
@@ -941,46 +1101,6 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
     case c3__exit: {
       u3z(jar);
       mar_u->sat_e = u3_mars_exit_e;
-    } break;
-
-    case c3__blob: {
-      //  [%blob path-atom]  — install staging file from king
-      //
-      c3_h mug_h = 0;
-      c3_h seq_h = 0;
-      c3_o ok_o  = c3n;
-
-      //  extract path string from atom
-      //
-      c3_d len_d = u3r_met(3, dat);
-      if ( len_d > 0 && len_d < 8192 ) {
-        c3_c stg_c[8192] = {0};
-        u3r_bytes(0, (c3_w)len_d, (c3_y*)stg_c, dat);
-
-        ok_o = u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h);
-
-        if ( c3y == ok_o ) {
-          //  the bank changed: run the post-task memory check
-          //
-          mar_u->fag_w |= _mars_fag_mute;
-        }
-      }
-      else {
-        fprintf(stderr, "mars: blob: bad path atom len %" PRIu64 "\r\n", len_d);
-      }
-
-      u3z(jar);
-
-      //  the ack carries a bob, so it grants the king a hold like any
-      //  other message naming the blob; mars's own atom dies with the
-      //  encoding and the hold keeps the file
-      //
-      if ( c3y == ok_o ) {
-        _mars_gift(mar_u, u3nt(c3__blob, c3y, u3i_blob(mug_h, seq_h)));
-      }
-      else {
-        _mars_gift(mar_u, u3nc(c3__blob, c3n));
-      }
     } break;
 
     //  %blrl: the king returns [n] holds on a blob: its last bob over

@@ -106,18 +106,6 @@ struct _u3_ufil;
 #endif
   } u3_unix;
 
-/* u3_unix_bob_ctx: callback context for async large-file blob install.
-*/
-  typedef struct _u3_unix_bob_ctx {
-    u3_unix* unx_u;   //  driver (for u3_auto_plan and sev_h)
-    u3_ufil* fil_u;   //  file node (for gum_w update)
-    c3_h     old_w;   //  old gum_w (for change detection)
-    c3_c*    mnt_c;   //  mount point name (strdup'd, freed on callback)
-    u3_noun  pax;     //  file path noun (owned)
-    u3_noun  mim;     //  mime type noun (owned)
-    c3_ws    len_ws;  //  file byte length
-  } u3_unix_bob_ctx;
-
 void
 u3_unix_ef_look(u3_unix* unx_u, u3_noun mon, c3_o all_o);
 
@@ -985,59 +973,6 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 
-/* _unix_blob_install_cb(): callback fired when Mars installs a large file blob.
-**
-**  Injects a separate %into event for the single large file.
-**  Skips injection if the installed mug matches the prior gum_w (no change).
-*/
-static void
-_unix_blob_install_cb(void*   ptr_v,
-                      u3_noun bob,
-                      c3_o    ok_o)
-{
-  u3_unix_bob_ctx* ctx = ptr_v;
-
-  if ( c3y == ok_o ) {
-    c3_h mug_h = u3a_bob_mug(bob);
-
-    //  skip if content unchanged since last %into: dropping the bob
-    //  returns mars's hold on the file
-    //
-    if ( mug_h == ctx->old_w ) {
-      u3z(bob);
-      u3z(ctx->pax);
-      u3z(ctx->mim);
-    }
-    else {
-      //  update the file node's checksum
-      //
-      if ( ctx->fil_u ) {
-        ctx->fil_u->gum_w = mug_h;
-      }
-
-      u3_noun  dat = u3nt(ctx->mim, (u3_atom)ctx->len_ws, bob);
-      u3_noun  can = u3nc(u3nt(ctx->pax, u3_nul, dat), u3_nul);
-      u3_noun  wir = u3nt(c3__sync,
-                          u3dc("scot", c3__uv, ctx->unx_u->sev_h),
-                          u3_nul);
-      u3_noun  cad = u3nq(c3__into,
-                          u3i_string(ctx->mnt_c),
-                          c3n,
-                          can);
-
-      u3_auto_plan(&ctx->unx_u->car_u, u3_ovum_init(0, c3__c, wir, cad));
-    }
-  }
-  else {
-    u3l_log("unix: blob install failed for large file in %s", ctx->mnt_c);
-    u3z(ctx->pax);
-    u3z(ctx->mim);
-  }
-
-  c3_free(ctx->mnt_c);
-  c3_free(ctx);
-}
-
 /* _unix_update_file(): update file, producing list of changes
 **
 **  when scanning through files, if dry, do nothing. otherwise,
@@ -1047,10 +982,11 @@ _unix_blob_install_cb(void*   ptr_v,
 **  gum_w, move on. otherwise, overwrite add path plus data to
 **  %into event.
 **
-**  Files larger than U3_BLOB_THRESH are staged to .urb/stg/ and
-**  installed into the blob store via the Mars IPC path (%blob writ).
-**  The %into event for the large file is injected asynchronously from
-**  the blob-install callback; this function returns u3_nul for large files.
+**  Files larger than U3_BLOB_THRESH are staged to .urb/stg/, and their
+**  %into event goes out on its own with a stub where the bob belongs and
+**  the staging path riding along; mars installs the file and fills the
+**  stub before it computes the event.  This function returns u3_nul for
+**  large files.
 */
 static u3_noun
 _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
@@ -1080,16 +1016,25 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   len_ws = buf_u.st_size;
 
-  //  large files: stage in .urb/stg/, install via the %blob writ
+  //  large files: stage in .urb/stg/; mars installs inside the event
   //
   if ( c3y == u3b_over(len_ws) ) {
     c3_c stg_c[8192];
-    c3_o ok_o = u3b_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c);
+    c3_h mug_h = 0;
+    c3_o ok_o  = u3b_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c, &mug_h);
 
     close(fid_i);
 
     if ( c3n == ok_o ) {
       u3l_log("unix: could not stage %s", fil_u->pax_c);
+      return u3_nul;
+    }
+
+    //  staging measured the content: unchanged since the last %into
+    //  means nothing to send
+    //
+    if ( mug_h == fil_u->gum_w ) {
+      c3_unlink(stg_c);
       return u3_nul;
     }
 
@@ -1112,34 +1057,24 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
       return u3_nul;
     }
 
-    //  allocate callback context
+    //  the %into for this one file, with a stub for the bob mars puts
+    //  in its place and the staging path riding on the ovum
     //
-    u3_unix_bob_ctx* ctx = c3_malloc(sizeof(*ctx));
-    ctx->unx_u  = unx_u;
-    ctx->fil_u  = fil_u;
-    ctx->old_w  = fil_u->gum_w;
-    ctx->mnt_c  = strdup(mnt_c);
-    ctx->pax    = _unix_string_to_path(unx_u, fil_u->pax_c);
-    ctx->mim    = u3nt(c3__text, u3i_string("plain"), u3_nul);
-    ctx->len_ws = len_ws;
+    fil_u->gum_w = mug_h;
+    {
+      u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
+      u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
+      u3_noun dat = u3nt(mim, (u3_atom)len_ws, u3i_blob(mug_h, 0));
+      u3_noun can = u3nc(u3nt(pax, u3_nul, dat), u3_nul);
+      u3_noun wir = u3nt(c3__sync,
+                         u3dc("scot", c3__uv, unx_u->sev_h),
+                         u3_nul);
+      u3_noun cad = u3nq(c3__into, u3i_string(mnt_c), c3n, can);
 
-    //  send to Mars for installation; stg_c ownership passes to lord
-    //
-    u3_lord* god_u = unx_u->car_u.pir_u->god_u;
-    if ( !god_u ) {
-      u3l_log("unix: no lord for blob install of %s", fil_u->pax_c);
-      c3_unlink(stg_c);
-      u3z(ctx->pax);
-      u3z(ctx->mim);
-      c3_free(ctx->mnt_c);
-      c3_free(ctx);
-      return u3_nul;
+      u3_ovum* egg_u = u3_ovum_init(0, c3__c, wir, cad);
+      egg_u->pax = u3nc(u3i_string(stg_c), u3_nul);
+      u3_auto_plan(&unx_u->car_u, egg_u);
     }
-
-    u3_lord_blob_install(god_u, strdup(stg_c), ctx, _unix_blob_install_cb);
-
-    //  return u3_nul here; the %into event is fired from the callback
-    //
     return u3_nul;
   }
 
@@ -1393,9 +1328,9 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
 /* _unix_initial_update_file(): read file, but don't watch
 **  XX deduplicate with _unix_update_file()
 **
-**  The boot scan runs before mars can install anything, and mars alone
-**  writes the store, so a large file goes in as a loom atom here; the
-**  watcher (_unix_update_file) stages any later change.
+**  The boot scan's %into rides the %boot writ, which carries no staging
+**  paths, so a large file goes in as a loom atom here; the watcher
+**  (_unix_update_file) stages any later change.
 */
 static u3_noun
 _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
@@ -1417,9 +1352,9 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
 
   len_ws = buf_u.st_size;
 
-  //  the initial scan runs at boot, before mars can install anything,
-  //  and mars alone writes the store: a large file goes in as a loom
-  //  atom here, and the watcher stages any later change
+  //  the boot scan's card rides the %boot writ, which carries no
+  //  staging paths: a large file goes in as a loom atom here, and the
+  //  watcher stages any later change
   //
   if ( c3y == u3b_over(len_ws) ) {
     u3l_log("unix: large initial file %s read into the loom", pax_c);

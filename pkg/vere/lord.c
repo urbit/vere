@@ -86,9 +86,6 @@ _lord_writ_free(u3_writ* wit_u)
       u3z(wit_u->pek_u->sam);
     } break;
 
-    case u3_writ_blob: {
-      c3_free(wit_u->blb_u.pax_c);
-    } break;
   }
 
   c3_free(wit_u);
@@ -160,7 +157,6 @@ _lord_writ_str(u3_writ_type typ_e)
     case u3_writ_live: return "live";
     case u3_writ_exit: return "exit";
     case u3_writ_quiz: return "quiz";
-    case u3_writ_blob: return "blob";
   }
 }
 
@@ -422,38 +418,6 @@ _lord_plea_quiz(u3_lord* god_u, u3_noun dat)
   wit_u->qiz_u.qiz_f(wit_u->qiz_u.qiz_m, wit_u->qiz_u.ptr_v, dat);
 }
 
-/* _lord_plea_blob(): handle blob-ack / blob-nack from serf.
-**
-** [%blob %.y bob] on success: the bob arrived with mars's hold on the
-** file, and the callback owns it.  [%blob %.n] on failure.
-*/
-static void
-_lord_plea_blob(u3_lord* god_u, u3_noun dat)
-{
-  u3_writ* wit_u = _lord_writ_need(god_u, u3_writ_blob);
-
-  if ( !wit_u ) {
-    u3z(dat);
-    return;
-  }
-
-  void*   ptr_v = wit_u->blb_u.ptr_v;
-  void  (*fun_f)(void*, u3_noun, c3_o) = wit_u->blb_u.fun_f;
-  c3_free(wit_u->blb_u.pax_c);
-  c3_free(wit_u);
-
-  if (  (c3y == u3a_is_cell(dat))
-     && (c3y == u3h(dat))
-     && (c3y == u3a_is_bob(u3t(dat))) )
-  {
-    fun_f(ptr_v, u3k(u3t(dat)), c3y);
-  }
-  else {
-    fun_f(ptr_v, u3_nul, c3n);
-  }
-
-  u3z(dat);
-}
 
 /* _lord_work_spin(): update spinner if more work is in progress.
  */
@@ -638,9 +602,6 @@ _lord_on_plea(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
       _lord_plea_quiz(god_u, u3k(dat));
     } break;
 
-    case c3__blob: {
-      _lord_plea_blob(god_u, u3k(dat));
-    } break;
   }
 
   u3z(jar);
@@ -683,8 +644,12 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
     default: u3_assert(0);
 
     case u3_writ_poke: {
-      u3_noun mil = u3i_halfs(1, &wit_u->wok_u.egg_u->mil_h);
-      msg = u3nt(c3__poke, mil, u3k(wit_u->wok_u.job));
+      //  [%poke mil pax job]: the staging paths of the files the event
+      //  installs ride with it, so mars can put the bobs in place
+      //
+      u3_ovum* egg_u = wit_u->wok_u.egg_u;
+      u3_noun    mil = u3i_halfs(1, &egg_u->mil_h);
+      msg = u3nq(c3__poke, mil, u3k(egg_u->pax), u3k(wit_u->wok_u.job));
     } break;
 
     case u3_writ_peek: {
@@ -707,13 +672,6 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
       msg = u3nc(c3__exit, u3_nul);
     } break;
 
-    case u3_writ_blob: {
-      //  [%blob path-atom]  — path is a null-terminated C string
-      //
-      msg = u3nc(c3__blob,
-                 u3i_bytes(strlen(wit_u->blb_u.pax_c),
-                           (const c3_y*)wit_u->blb_u.pax_c));
-    } break;
   }
 
   return msg;
@@ -832,23 +790,6 @@ u3_lord_work(u3_lord* god_u, u3_ovum* egg_u, u3_noun job)
   }
 
   _lord_send(god_u, _lord_writ_make(god_u, wit_u));
-}
-
-/* u3_lord_blob_install(): request Mars install a staged blob file.
-*/
-void
-u3_lord_blob_install(u3_lord* god_u,
-                     c3_c*    pax_c,
-                     void*    ptr_v,
-                     void   (*fun_f)(void*, u3_noun, c3_o))
-{
-  u3_writ* wit_u = _lord_writ_new(god_u);
-  wit_u->typ_e       = u3_writ_blob;
-  wit_u->blb_u.pax_c = pax_c;
-  wit_u->blb_u.ptr_v = ptr_v;
-  wit_u->blb_u.fun_f = fun_f;
-
-  _lord_writ_send(god_u, wit_u);
 }
 
 /* u3_lord_blob_release(): return [num_h] holds on a blob to mars: the

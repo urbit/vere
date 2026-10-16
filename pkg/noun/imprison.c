@@ -838,17 +838,19 @@ u3i_vmolt(u3_noun som, u3i_molt_pair pairs[], c3_z len_z)
 **
 **   Allocates a fresh u3a_atom whose body is the blob id
 **   (mug_h << 32 | seq_h).  Looks up or creates the u3a_blob record
-**   and bumps its use_w (atom cardinality).  No interning: each call
-**   yields a new atom.
+**   and bumps its use_h (atom cardinality).  No interning: each call
+**   yields a new atom.  A stub (seq 0) is minted with no record.
 */
 u3_atom
 u3i_blob(c3_h mug_h, c3_h seq_h)
 {
   u3_assert( &(u3H->rod_u) == u3R );
 
-  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-  if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-  blb_u->use_h += 1;
+  if ( seq_h ) {
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
+    blb_u->use_h += 1;
+  }
 
   c3_w*     nov_w = u3a_walloc(c3_wiseof(c3_d) + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;

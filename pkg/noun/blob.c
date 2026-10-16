@@ -905,14 +905,62 @@ _blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
   return ok_o;
 }
 
+/* _blob_measure(): the content mug of staged file [stg_c], or c3n if
+**   its significant length is below U3_BLOB_MIN or it cannot be read.
+**   The same trim and hash u3b_move_stg applies, so the mug a stub
+**   carries is the mug the installed blob gets.
+*/
+static c3_o
+_blob_measure(const c3_c* stg_c, c3_h* mug_h)
+{
+  struct stat st_u;
+  c3_i        fid_i = open(stg_c, O_RDONLY);
+
+  if ( (-1 == fid_i) || (-1 == fstat(fid_i, &st_u)) || !st_u.st_size ) {
+    if ( -1 != fid_i ) close(fid_i);
+    return c3n;
+  }
+
+  c3_d  map_d = (c3_d)st_u.st_size;
+  void* map_v = mmap(0, (size_t)map_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
+  close(fid_i);
+
+  if ( MAP_FAILED == map_v ) {
+    return c3n;
+  }
+
+  c3_d len_d = _blob_sig((const c3_y*)map_v, map_d);
+  c3_o ok_o  = ( len_d < U3_BLOB_MIN ) ? c3n : c3y;
+
+  if ( c3y == ok_o ) {
+    *mug_h = _blob_mug((const c3_y*)map_v, len_d);
+  }
+  munmap(map_v, (size_t)map_d);
+  return ok_o;
+}
+
 /* u3b_stage(): write [len_d] bytes to a new staging file.
+**
+**   Refuses content with no bob representation (under U3_BLOB_MIN
+**   significant bytes) before writing anything, so the caller goes
+**   inline at once; otherwise sets [mug_h] to the content mug.
 */
 c3_o
 u3b_stage(const c3_c* pax_c,
               const c3_y* dat_y,
               c3_d        len_d,
-              c3_c*       stg_c)
+              c3_c*       stg_c,
+              c3_h*       mug_h)
 {
+  c3_d sig_d = _blob_sig(dat_y, len_d);
+
+  if ( sig_d < U3_BLOB_MIN ) {
+    fprintf(stderr, "blob: stage: %" PRIc3_d " significant byte(s) denote "
+                    "a direct atom\r\n", sig_d);
+    return c3n;
+  }
+  *mug_h = u3r_mug_bytes(dat_y, sig_d);
+
   c3_i fid_i = _blob_stage_open(pax_c, stg_c);
 
   if ( -1 == fid_i ) {
@@ -923,12 +971,16 @@ u3b_stage(const c3_c* pax_c,
 }
 
 /* u3b_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
+**
+**   As u3b_stage: the staged file is measured once written, and one
+**   with no bob representation is removed again.
 */
 c3_o
 u3b_stage_fd(const c3_c* pax_c,
                  c3_i        fid_i,
                  c3_d        len_d,
-                 c3_c*       stg_c)
+                 c3_c*       stg_c,
+                 c3_h*       mug_h)
 {
   c3_i stg_i = _blob_stage_open(pax_c, stg_c);
   c3_o ok_o  = c3y;
@@ -960,7 +1012,16 @@ u3b_stage_fd(const c3_c* pax_c,
     }
   }
 
-  return _blob_stage_done(stg_i, stg_c, ok_o);
+  if ( c3n == _blob_stage_done(stg_i, stg_c, ok_o) ) {
+    return c3n;
+  }
+
+  if ( c3n == _blob_measure(stg_c, mug_h) ) {
+    fprintf(stderr, "blob: stage: %s denotes a direct atom\r\n", stg_c);
+    c3_unlink(stg_c);
+    return c3n;
+  }
+  return c3y;
 }
 
 /* u3b_live(): check whether a blob file exists.

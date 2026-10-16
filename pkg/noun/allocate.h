@@ -214,6 +214,13 @@
     **   The file is deleted iff use_h == 0 and own_o is not set.
     **   u3a_blob_sane checks use_h == les_h + live atoms.
     **
+    **   A stub is a bob with seq 0: the king mints one for a file it
+    **   has staged but mars has not installed, carrying the content mug
+    **   so equality and u3r_mug work.  Mars replaces it inside the
+    **   event.  No real blob has seq 0, and a stub touches no bank:
+    **   u3i_blob, _me_bob_dead, the sanity walk, and the ram and tap
+    **   collectors all pass it by.
+    **
     **   Fixed widths: one layout in both builds, so a bitness migration
     **   copies the fields.  u3a_blob_h and u3a_blob_d name the same
     **   struct for the migration template.

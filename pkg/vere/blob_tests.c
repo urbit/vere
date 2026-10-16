@@ -6,6 +6,7 @@
 #include "jets/w.h"
 #include "noun.h"
 #include "vere.h"
+#include "mars.h"
 
 #include "c3/tmpdir.h"
 
@@ -38,6 +39,7 @@ static c3_c _tmp_bob[8192];   //  epoch 0's store root
 static const c3_c* _nam_c;   //  the running test, for messages
 static c3_w        _del_w;   //  deletions requested since _pier_make
 static c3_w        _hok_w;   //  hook calls
+static c3_h        _stg_mug; //  the mug staging reported
 
 /* _fail(): report a failed check in red, naming the running test, and exit.
 */
@@ -185,13 +187,18 @@ _blob_save(const c3_y* dat_y, c3_d len_d, c3_h* mug_h, c3_h* seq_h)
 {
   c3_c stg_c[8192];
 
-  if ( c3n == u3b_stage(_tmp_pier, dat_y, len_d, stg_c) ) {
+  if ( c3n == u3b_stage(_tmp_pier, dat_y, len_d, stg_c, &_stg_mug) ) {
     return c3n;
   }
   if ( c3n == u3b_move_stg(_tmp_bob, stg_c, mug_h, seq_h) ) {
     c3_unlink(stg_c);
     return c3n;
   }
+  //  staging reports the mug the install will give the blob: that is
+  //  what a stub carries
+  //
+  _check( _stg_mug == *mug_h, "staging mug %08x, installed %08x",
+          _stg_mug, *mug_h );
   return c3y;
 }
 
@@ -531,7 +538,7 @@ _test_install_stg(void)
   c3_h mug_h = 0;
   c3_h seq_h = 0;
 
-  _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "stage failed" );
+  _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c, &_stg_mug), "stage failed" );
   _check( c3y == _path_exists(stg_c), "staging file missing" );
 
   _check( c3y == u3b_move_stg(_tmp_bob, stg_c, &mug_h, &seq_h),
@@ -563,7 +570,7 @@ _test_install_stg(void)
     c3_h mag_h = 0, saq_h = 0;
     u3b_path(fil_c, _tmp_bob, mug_h, seq_h);
 
-    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "restage failed" );
+    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c, &_stg_mug), "restage failed" );
     _check( 0 == chmod(fil_c, 0), "chmod failed" );
     _check( c3n == u3b_move_stg(_tmp_bob, stg_c, &mag_h, &saq_h),
             "installed past an unreadable sibling" );
@@ -592,7 +599,7 @@ _test_install_stg(void)
     snprintf(lck_c, sizeof(lck_c), "%s/%" PRIc3_h "/lock", _tmp_bob, mug_h);
     _check( (0 != unlink(lck_c)) ? (ENOENT == errno) : 1, "unlink lock: %s", strerror(errno) );
 
-    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c), "restage failed" );
+    _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c, &_stg_mug), "restage failed" );
     _check(  (c3y == u3b_move_stg(_tmp_bob, stg_c, &mag_h, &saq_h))
           && (mug_h == mag_h) && (2 == saq_h),
             "reinstall beside a planted seq 1 got seq %" PRIc3_h, saq_h );
@@ -604,12 +611,18 @@ _test_install_stg(void)
     u3b_wipe(_tmp_bob, mug_h, 2);
   }
 
-  //  a missing staging file and an empty one are refused
+  //  a missing staging file and an empty one are refused; staging
+  //  refuses the empty one itself, so the install's check needs a file
+  //  made by hand
   //
   _check( c3n == u3b_move_stg(_tmp_bob, "/no/such/path", &mug_h, &seq_h),
           "installed a missing file" );
 
-  _check( c3y == u3b_stage(_tmp_pier, dat_y, 0, stg_c), "empty stage failed" );
+  _check( c3n == u3b_stage(_tmp_pier, dat_y, 0, stg_c, &_stg_mug),
+          "staged an empty buffer" );
+  u3b_stg_dir(stg_c, _tmp_pier);
+  strcat(stg_c, "/empty");
+  fclose(fopen(stg_c, "wb"));
   _check( c3n == u3b_move_stg(_tmp_bob, stg_c, &mug_h, &seq_h),
           "installed an empty file" );
   c3_unlink(stg_c);
@@ -643,7 +656,7 @@ _test_install_stg_trim(void)
   c3_c stg_c[8192];
   c3_h mug_h = 0;
   c3_h seq_h = 0;
-  _check( c3y == u3b_stage(_tmp_pier, dat_y, sizeof(dat_y), stg_c),
+  _check( c3y == u3b_stage(_tmp_pier, dat_y, sizeof(dat_y), stg_c, &_stg_mug),
           "stage failed" );
   _check( c3y == u3b_move_stg(_tmp_bob, stg_c, &mug_h, &seq_h),
           "install failed" );
@@ -687,7 +700,7 @@ _test_stage(void)
 
     u3b_stg_dir(dir_c, _tmp_pier);
 
-    _check(  (c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c))
+    _check(  (c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c, &_stg_mug))
           && (0 == strncmp(stg_c, dir_c, strlen(dir_c)))
           && (c3y == _path_exists(stg_c)),
             "buffer stage failed" );
@@ -711,7 +724,7 @@ _test_stage(void)
     close(fid_i);
     fid_i = c3_open(src_c, O_RDONLY, 0);
 
-    _check(  (c3y == u3b_stage_fd(_tmp_pier, fid_i, dat_d, stg_c))
+    _check(  (c3y == u3b_stage_fd(_tmp_pier, fid_i, dat_d, stg_c, &_stg_mug))
           && (c3y == u3b_move_stg(_tmp_bob, stg_c, &mug2_h, &seq2_h))
           && (mug2_h == mug_h) && (seq2_h == seq_h)
           && (c3n == _path_exists(stg_c)),
@@ -721,7 +734,7 @@ _test_stage(void)
     //  a short source fails and leaves nothing behind
     //
     fid_i = c3_open(src_c, O_RDONLY, 0);
-    _check(  (c3n == u3b_stage_fd(_tmp_pier, fid_i, dat_d + 1, stg_c))
+    _check(  (c3n == u3b_stage_fd(_tmp_pier, fid_i, dat_d + 1, stg_c, &_stg_mug))
           && (c3n == _path_exists(stg_c)),
             "short source not refused" );
     close(fid_i);
@@ -2996,7 +3009,7 @@ _test_roll_link(void)
     c3_c stg_c[8192];
     c3_h mag_h = 0, saq_h = 0;
     _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)dat_c[0],
-                             strlen(dat_c[0]), stg_c),
+                             strlen(dat_c[0]), stg_c, &_stg_mug),
             "restage failed" );
     _check(  (c3y == u3b_move_stg(new_c, stg_c, &mag_h, &saq_h))
           && (mag_h == mug_h[0]) && (saq_h == seq_h[0]),
@@ -3094,6 +3107,77 @@ _test_grants(void)
   _pier_done();
 }
 
+/* _test_stub_fill(): a stub touches no bank; u3_mars_blob_fill puts
+**   the installed bob in every stub's place, by mug, sharing none and
+**   losing nothing, and refuses a stub with no installed match.
+*/
+static void
+_test_stub_fill(void)
+{
+  _pier_make("stub fill");
+
+  c3_h mug_h[2], seq_h[2];
+  _check( c3y == _blob_save((const c3_y*)"installed for the first stub", 28,
+                            &mug_h[0], &seq_h[0]),
+          "save 0 failed" );
+  _check( c3y == _blob_save((const c3_y*)"installed for the second stub", 29,
+                            &mug_h[1], &seq_h[1]),
+          "save 1 failed" );
+
+  u3_atom stb_a = u3i_blob(mug_h[0], 0);
+  u3_atom stb_b = u3i_blob(mug_h[1], 0);
+  _check( !u3a_blob_get(mug_h[0], 0) && !u3a_blob_get(mug_h[1], 0),
+          "a stub made a record" );
+  _check( (mug_h[0] == u3r_mug(stb_a)) && (0 == u3a_bob_seq(stb_a)),
+          "stub mug or seq wrong" );
+
+  //  [now [[tar wir] [%into stub-a 42 stub-b stub-a]]]: two stubs of
+  //  one mug and one of another, in a list spine
+  //
+  u3_noun job = u3nc(0xbeef,
+                     u3nc(u3nc(c3__c, u3nc(c3__sync, u3_nul)),
+                          u3nq(c3__into, stb_a, 42, u3nc(stb_b, u3nc(u3k(stb_a), u3_nul)))));
+
+  c3_d bid_d[2] = { ((c3_d)mug_h[0] << 32) | seq_h[0],
+                    ((c3_d)mug_h[1] << 32) | seq_h[1] };
+
+  u3_weak new = u3_mars_blob_fill(job, bid_d, 2);
+  _check( u3_none != new, "fill refused" );
+
+  {
+    u3_noun cad = u3t(u3t(new));
+    u3_noun one = u3h(u3t(cad));
+    u3_noun two = u3h(u3t(u3t(u3t(cad))));
+    u3_noun tre = u3h(u3t(u3t(u3t(u3t(cad)))));
+
+    _check( (c3__into == u3h(cad)) && (42 == u3h(u3t(u3t(cad)))),
+            "shape changed" );
+    _check( (c3y == u3a_is_bob(one)) && (seq_h[0] == u3a_bob_seq(one))
+            && (mug_h[0] == u3a_bob_mug(one)),
+            "first stub not filled" );
+    _check( (c3y == u3a_is_bob(two)) && (seq_h[1] == u3a_bob_seq(two)),
+            "second stub not filled" );
+    _check( (c3y == u3a_is_bob(tre)) && (seq_h[0] == u3a_bob_seq(tre)),
+            "repeated stub not filled" );
+    _check( u3_nul == u3t(u3t(u3t(u3t(u3t(cad))))), "list end lost" );
+    _check( 0xbeef == u3h(new), "head lost" );
+  }
+
+  //  three bobs over two records
+  //
+  _check( (2 == u3a_blob_get(mug_h[0], seq_h[0])->use_h)
+          && (1 == u3a_blob_get(mug_h[1], seq_h[1])->use_h),
+          "fill miscounted" );
+
+  //  a stub with no installed match refuses the whole fill
+  //
+  _check( u3_none == u3_mars_blob_fill(job, bid_d, 1), "unmatched stub filled" );
+
+  u3z(new);
+  u3z(job);
+  _pier_done();
+}
+
 /* _test_chop_kill(): chop deletes an epoch's store with the epoch and
 **   leaves the retained epochs, their stores, and the bank alone.
 */
@@ -3124,7 +3208,7 @@ _test_chop_kill(void)
 
   c3_c stg_c[8192];
   c3_h mag_h = 0, saq_h = 0;
-  _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)"lives on in epoch 2", 19, stg_c)
+  _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)"lives on in epoch 2", 19, stg_c, &_stg_mug)
           && (c3y == u3b_move_stg(new_c, stg_c, &mag_h, &saq_h)),
           "save in epoch 2 failed" );
   u3_atom bob = u3i_blob(mag_h, saq_h);
@@ -3296,6 +3380,7 @@ main(int argc, char* argv[])
   _test_gc_own();
   _test_blob_own();
   _test_grants();
+  _test_stub_fill();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;
