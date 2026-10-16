@@ -2974,6 +2974,114 @@ _test_chop_refs(void)
   _pier_done();
 }
 
+/* _test_roll_link(): roll carries every blob the bank holds into the
+**   new epoch's store and leaves the rest behind: a live atom and a
+**   leased record are linked (one inode, two names), a record nothing
+**   holds is not; the old files stay for the old epoch; the new store
+**   dedups against what it was handed; the process now installs there.
+*/
+static void
+_test_roll_link(void)
+{
+  _pier_make("roll link");
+
+  //  roll copies the checkpoint image; an empty one is a valid image
+  //
+  {
+    c3_c chk_c[2048];
+    snprintf(chk_c, sizeof(chk_c), "%s/.urb/chk", _tmp_pier);
+    _check( 0 == mkdir(chk_c, 0700), "mkdir %s: %s", chk_c, strerror(errno) );
+    snprintf(chk_c, sizeof(chk_c), "%s/.urb/chk/image.bin", _tmp_pier);
+    FILE* fil_f = fopen(chk_c, "wb");
+    _check( fil_f, "image: %s", strerror(errno) );
+    fclose(fil_f);
+  }
+
+  //  a: held by a live atom.  b: held by nothing.  c: held by a lease.
+  //
+  const c3_c* dat_c[] = { "carried by a live atom",
+                          "left behind, held by nothing",
+                          "carried by a lease the king holds" };
+  c3_h mug_h[3], seq_h[3];
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),
+                              &mug_h[i_w], &seq_h[i_w]),
+            "save %" PRIc3_w " failed", i_w );
+  }
+  u3_atom   bob_a = u3i_blob(mug_h[0], seq_h[0]);
+  u3a_blob* blb_b = u3a_blob_new(mug_h[1], seq_h[1]);
+  u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
+  blb_c->les_h += 1;
+  blb_c->use_w += 1;
+  (void)blb_b;
+
+  //  epoch 0 with two events and its meta, as roll requires
+  //
+  MDB_env* env_u = _epoc_env(0);
+  {
+    u3_meta met_u = { .ver_h = 1, .who_d = { 0, 0 }, .fak_o = c3y, .lif_h = 1 };
+    c3_d    non_d = 0;
+    _epoc_event(env_u, 1, &non_d, 0);
+    _epoc_event(env_u, 2, &non_d, 0);
+    _check( c3y == u3_disk_save_meta(env_u, &met_u), "meta save failed" );
+  }
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_dire com_u = { .pax_c = log_c };
+  u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
+                    .mdb_u = env_u, .epo_d = 0, .dun_d = 2 };
+
+  u3_disk_roll(&log_u, 2);
+  _check( 2 == log_u.epo_d, "epoch not rolled" );
+
+  c3_c new_c[8192];
+  u3b_root(new_c, _tmp_pier, 2);
+  _check( u3C.bob_c && (0 == strcmp(u3C.bob_c, new_c)),
+          "store root not moved: %s", u3C.bob_c ? u3C.bob_c : "(null)" );
+
+  //  a and c carried as links, b left behind; the old store untouched
+  //
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    c3_c old_f[8192], new_f[8192];
+    struct stat old_u, new_u;
+    u3b_path(old_f, _tmp_bob, mug_h[i_w], seq_h[i_w]);
+    u3b_path(new_f, new_c, mug_h[i_w], seq_h[i_w]);
+    _check( 0 == stat(old_f, &old_u), "old %" PRIc3_w " gone", i_w );
+
+    if ( 1 == i_w ) {
+      _check( 0 != stat(new_f, &new_u), "unheld blob carried" );
+    }
+    else {
+      _check( (0 == stat(new_f, &new_u)) && (old_u.st_ino == new_u.st_ino),
+              "blob %" PRIc3_w " not linked", i_w );
+    }
+  }
+
+  //  the new store knows what it was handed: the same content dedups
+  //  to the carried seq instead of taking a new one
+  //
+  {
+    c3_c stg_c[8192];
+    c3_h mag_h = 0, saq_h = 0;
+    _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)dat_c[0],
+                             strlen(dat_c[0]), stg_c),
+            "restage failed" );
+    _check(  (c3y == u3b_move_stg(new_c, stg_c, &mag_h, &saq_h))
+          && (mag_h == mug_h[0]) && (saq_h == seq_h[0]),
+            "carried blob not deduped: got seq %" PRIc3_h, saq_h );
+  }
+
+  u3_lmdb_exit(log_u.mdb_u);
+  u3C.bob_c = _tmp_bob;
+  u3z(bob_a);
+  blb_c->les_h = 0; blb_c->use_w = 0;
+  u3a_blob_drop(mug_h[1], seq_h[1]);
+  u3a_blob_drop(mug_h[2], seq_h[2]);
+  _pier_done();
+}
+
 /* _test_image_refs(): a loom whose counts are not current (an epoch's
 **   frozen image) has eve_w rebuilt from every retained epoch, counting
 **   only events up to the loom's own, so replay can count the rest; a
@@ -3094,6 +3202,7 @@ main(int argc, char* argv[])
   _test_blobs_persist();
   _test_chop_refs();
   _test_image_refs();
+  _test_roll_link();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

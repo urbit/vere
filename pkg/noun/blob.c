@@ -1135,6 +1135,77 @@ u3b_walk(const c3_c* bob_c,
   closedir(bob_u);
 }
 
+/* _blob_copy(): copy [src_c] to a new file [dst_c] with BLOB_FILE_MODE,
+**   synced.  Refuses to replace; removes a partial copy on failure.
+*/
+static c3_o
+_blob_copy(const c3_c* src_c, const c3_c* dst_c)
+{
+  c3_i src_i = open(src_c, O_RDONLY);
+  c3_i dst_i = open(dst_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
+
+  if ( -1 == src_i || -1 == dst_i ) {
+    fprintf(stderr, "blob: copy %s to %s: %s\r\n",
+            src_c, dst_c, strerror(errno));
+    if ( -1 != src_i ) close(src_i);
+    if ( -1 != dst_i ) { close(dst_i); unlink(dst_c); }
+    return c3n;
+  }
+
+  c3_y    buf_y[65536];
+  ssize_t red_i;
+
+  while ( (red_i = read(src_i, buf_y, sizeof(buf_y))) > 0 ) {
+    if ( write(dst_i, buf_y, (size_t)red_i) != red_i ) {
+      fprintf(stderr, "blob: copy write %s: %s\r\n", dst_c, strerror(errno));
+      close(src_i);
+      close(dst_i);
+      unlink(dst_c);
+      return c3n;
+    }
+  }
+  c3_sync(dst_i);
+  close(src_i);
+  close(dst_i);
+  return c3y;
+}
+
+/* u3b_link(): carry a blob from store [old_c] into store [new_c].
+**
+**   A hard link, so the file is one inode owned by both epochs until
+**   the older is chopped; a copy where the filesystem has no links.
+**   The new bucket's directory is synced so the entry survives a crash.
+*/
+c3_o
+u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
+{
+  c3_c src_c[8192];
+  c3_c dst_c[8192];
+  c3_c dir_c[8192];
+
+  u3b_path(src_c, old_c, mug_h, seq_h);
+  u3b_path(dst_c, new_c, mug_h, seq_h);
+  _blob_mug_dir(dir_c, new_c, mug_h);
+
+  if ( 0 != c3_mkdir(dir_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "blob: link: mkdir %s: %s\r\n", dir_c, strerror(errno));
+    return c3n;
+  }
+
+  if ( 0 != c3_link(src_c, dst_c) ) {
+    if ( EEXIST == errno ) {
+      return c3y;
+    }
+    if ( c3n == _blob_copy(src_c, dst_c) ) {
+      fprintf(stderr, "blob: link %s into %s failed\r\n", src_c, new_c);
+      return c3n;
+    }
+  }
+
+  _blob_sync_dir(new_c, mug_h);
+  return c3y;
+}
+
 /* _blob_dir_names(): the non-dot entry names of [dir_c], or 0 if it
 **   cannot be read.  Read in full before anything is removed, so the
 **   removal never races the enumeration.
@@ -1385,33 +1456,11 @@ u3b_move_stg(const c3_c* bob_c,
   if ( 0 != rename(stg_c, dst_c) ) {
     //  rename can fail cross-device; fall back to copy-and-unlink
     //
-    c3_i src_i = open(stg_c, O_RDONLY);
-    c3_i dst_i = open(dst_c, O_WRONLY | O_CREAT | O_EXCL, BLOB_FILE_MODE);
-    if ( -1 == src_i || -1 == dst_i ) {
-      fprintf(stderr, "blob: install_stg: rename+fallback failed on %s: %s\r\n",
-              stg_c, strerror(errno));
-      if ( -1 != src_i ) close(src_i);
-      if ( -1 != dst_i ) { close(dst_i); unlink(dst_c); }
+    if ( c3n == _blob_copy(stg_c, dst_c) ) {
+      fprintf(stderr, "blob: install_stg: rename+fallback failed on %s\r\n",
+              stg_c);
       return c3n;
     }
-
-    //  copy in chunks
-    //
-    c3_y buf_y[65536];
-    ssize_t red_i;
-    while ( (red_i = read(src_i, buf_y, sizeof(buf_y))) > 0 ) {
-      if ( write(dst_i, buf_y, (size_t)red_i) != red_i ) {
-        fprintf(stderr, "blob: install_stg: copy write failed: %s\r\n",
-                strerror(errno));
-        close(src_i);
-        close(dst_i);
-        unlink(dst_c);
-        return c3n;
-      }
-    }
-    c3_sync(dst_i);
-    close(src_i);
-    close(dst_i);
     c3_unlink(stg_c);
   }
 

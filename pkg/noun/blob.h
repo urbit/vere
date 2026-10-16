@@ -115,6 +115,12 @@
                      void* ptr_v,
                      void  (*fun_f)(void*, c3_h, c3_h));
 
+    /* u3b_link(): carry blob (mug, seq) from store [old_c] into store
+    **   [new_c]: a hard link, or a copy where links are unavailable.
+    */
+      c3_o
+      u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h);
+
     /* u3b_kill(): remove the store root [bob_c] and everything in it,
     **   for an epoch that is being deleted.  A missing root is fine.
     */

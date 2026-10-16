@@ -1118,10 +1118,53 @@ _disk_epoc_zero(c3_c* pax_c)
   return c3n;
 }
 
+/* _disk_roll_link_cb(): u3h_walk_with callback: carry one held blob
+**   into the new epoch's store.
+*/
+typedef struct {
+  const c3_c* old_c;
+  const c3_c* new_c;
+  c3_w        num_w;   //  carried
+  c3_w        bad_w;   //  not carried
+} _disk_roll_link;
+
+static void
+_disk_roll_link_cb(u3_noun kev, void* ptr_v)
+{
+  _disk_roll_link* lin_u = ptr_v;
+  c3_d bid_d = 0;
+  c3_d off_d = 0;
+
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  c3_h      mug_h = (c3_h)(bid_d >> 32);
+  c3_h      seq_h = (c3_h)bid_d;
+
+  //  a record nothing holds names a file the new epoch never needs
+  //
+  if ( !blb_u->use_w ) {
+    return;
+  }
+
+  if ( c3y == u3b_link(lin_u->old_c, lin_u->new_c, mug_h, seq_h) ) {
+    lin_u->num_w++;
+  }
+  else {
+    lin_u->bad_w++;
+  }
+}
+
 /* _disk_epoc_roll: epoch rollover.
+**
+**   [old_c] is the store root of the epoch being left, or 0 when there
+**   is none to leave (the pre-boot migrations of pre-blob formats).
+**   Every blob the bank still holds is carried into the new epoch's
+**   store: the image names those, and so does anything the king holds.
 */
 static c3_o
-_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
+_disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 {
   u3_assert(epo_d);
 
@@ -1144,19 +1187,45 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     return c3n;
   }
 
+  //  the epoch owns its blob files: make its store, then carry in
+  //  every blob the bank holds
+  //
+  c3_c bob_c[8192];
+  u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: create blob store %s failed: %s\r\n",
+                    bob_c, strerror(errno));
+    goto fail1;
+  }
+
+  if ( old_c ) {
+    _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c };
+    u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
+
+    if ( lin_u.bad_w ) {
+      fprintf(stderr, "disk: %" PRIc3_w " blob(s) not carried into epoch %"
+                      PRIc3_d "\r\n", lin_u.bad_w, epo_d);
+      goto fail0;
+    }
+    if ( lin_u.num_w ) {
+      fprintf(stderr, "disk: carried %" PRIc3_w " blob(s) into epoch %"
+                      PRIc3_d "\r\n", lin_u.num_w, epo_d);
+    }
+  }
+
   //  copy snapshot files (skip if first epoch)
   c3_c chk_c[8193];
   snprintf(chk_c, 8192, "%s/.urb/chk", log_u->dir_u->pax_c);
   if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
     fprintf(stderr, "disk: copy epoch snapshot failed\r\n");
-    goto fail1;
+    goto fail0;
   }
 
 #ifndef U3_OS_windows
   if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
     fprintf(stderr, "disk: open epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
-    goto fail1;
+    goto fail0;
   }
 
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
@@ -1265,6 +1334,8 @@ fail3:
 fail2:
   close(epo_i);
 #endif
+fail0:
+  u3b_kill(bob_c);
 fail1:
   c3_rmdir(epo_c);
   return c3n;
@@ -1951,7 +2022,7 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
     exit(1);
   }
 
-  else if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
+  else if ( c3n == _disk_epoc_roll(log_u, eve_d, u3C.bob_c) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }
@@ -2431,7 +2502,7 @@ _disk_migrate_old(u3_disk* log_u)
         exit(1);
       }
 
-      if ( c3n == _disk_epoc_roll(log_u, las_d) ) {
+      if ( c3n == _disk_epoc_roll(log_u, las_d, 0) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         exit(1);
       }
@@ -2548,7 +2619,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       u3m_stop();
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
-      if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+      if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, 0) ) {
         fprintf(stderr, "disk: failed to initialize epoch during loom migration\r\n");
         exit(1);
       }
@@ -2659,7 +2730,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         if (  (U3E_VER2 == ver_h)
            && (log_u->dun_d == u3A->eve_d) )
         {
-          if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+          if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, u3C.bob_c) ) {
             fprintf(stderr, "disk: failed to roll VER2 epoch to VER3\r\n");
             exit(1);
           }
@@ -2672,7 +2743,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
         exit(1);
       }
-      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, u3C.bob_c) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         exit(1);
       }
