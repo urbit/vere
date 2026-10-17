@@ -1171,8 +1171,22 @@ _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c);
 static u3_hcon*
 _http_conn_find(u3_http *htp_u, c3_w coq_l);
 
+/* _http_req_news(): the event carrying a staged body ended without a
+**   bail (done, or dropped at shutdown): the context is no longer
+**   needed.  u3_ovum_free knows nothing of ptr_v.
+*/
+static void
+_http_req_news(u3_ovum* egg_u, u3_ovum_news new_e)
+{
+  if ( u3_ovum_work != new_e ) {
+    c3_free(egg_u->ptr_v);
+    egg_u->ptr_v = 0;
+  }
+}
+
 /* _http_req_bail(): the event carrying a staged body was refused:
-**   answer the client, which no other bail does.
+**   answer the client, which no other bail does.  a %blob goof is an
+**   install that failed; anything else is arvo's.
 */
 static void
 _http_req_bail(u3_ovum* egg_u, u3_noun lud)
@@ -1182,7 +1196,11 @@ _http_req_bail(u3_ovum* egg_u, u3_noun lud)
   u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
 
   if ( req_u ) {
-    _http_req_reject(req_u, 500, "blob install failed");
+    c3_o blb_o = (  (c3y == u3du(lud))
+                 && (c3y == u3du(u3h(lud)))
+                 && (c3__blob == u3h(u3h(lud))) );
+    _http_req_reject(req_u, 500, blb_o ? "blob install failed"
+                                       : "event failed");
   }
 
   u3_auto_bail_slog(egg_u, lud);
@@ -1231,7 +1249,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
         ctx_u->seq_l = req_u->seq_l;
 
         egg_u->pax = pax;
-        u3_auto_peer(egg_u, ctx_u, 0, _http_req_bail);
+        u3_auto_peer(egg_u, ctx_u, _http_req_news, _http_req_bail);
       }
       u3_auto_plan(&htd_u->car_u, egg_u);
     }

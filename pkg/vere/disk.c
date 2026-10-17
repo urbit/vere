@@ -1166,7 +1166,8 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
 }
 
 /* _disk_roll_bank_cb(): u3h_walk_with callback for the roll's bank
-**   pass: own what a live atom holds, collect what nothing holds.
+**   pass: own what a live atom holds, collect what nothing holds (the
+**   ghosts, dropped once the roll has succeeded).
 */
 static void
 _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
@@ -1227,6 +1228,8 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   //  every blob the bank holds
   //
   c3_c bob_c[8192];
+  _disk_chop_collect gho_u = {0};
+
   u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "disk: create blob store %s failed: %s\r\n",
@@ -1235,28 +1238,9 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   }
 
   if ( old_c ) {
-    //  the bank is the image's: own every record a live atom holds and
-    //  drop the ghosts, the old epoch's inputs nothing holds.  a record
-    //  only a king hold keeps is carried but not owned, so it goes by
-    //  refcount when the king lets go.  the save puts the flags into
-    //  the image the new epoch copies.
+    //  carry every held blob into the new store first: the links can
+    //  fail, and nothing in the bank has changed yet if they do
     //
-    {
-      _disk_chop_collect gho_u = {0};
-      u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &gho_u);
-
-      for ( c3_z i_z = 0; i_z < gho_u.len_z; i_z++ ) {
-        u3a_blob_drop((c3_h)(gho_u.bid_d[i_z] >> 32), (c3_h)gho_u.bid_d[i_z]);
-      }
-      if ( gho_u.len_z ) {
-        fprintf(stderr, "disk: dropped %" PRIc3_z " ghost record(s) at roll\r\n",
-                        gho_u.len_z);
-      }
-      c3_free(gho_u.bid_d);
-
-      u3m_save();
-    }
-
     _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c };
     u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
 
@@ -1269,6 +1253,16 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
       fprintf(stderr, "disk: carried %" PRIc3_w " blob(s) into epoch %"
                       PRIc3_d "\r\n", lin_u.num_w, epo_d);
     }
+
+    //  the bank is the image's: own every record a live atom holds.  a
+    //  record only a king hold keeps is carried but not owned, so it
+    //  goes by refcount when the king lets go.  the save puts the flags
+    //  into the image the new epoch copies.  the ghosts, the old
+    //  epoch's inputs nothing holds, are only collected here: a failed
+    //  roll leaves the old epoch's bank whole, and they go at the end
+    //
+    u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &gho_u);
+    u3m_save();
   }
 
   //  copy snapshot files (skip if first epoch)
@@ -1382,6 +1376,17 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   log_u->ver_h = U3D_VERLAT;
   _disk_blob_root(log_u->dir_u->pax_c, epo_d);
 
+  //  the roll stands: the old epoch's ghosts are no one's now
+  //
+  for ( c3_z i_z = 0; i_z < gho_u.len_z; i_z++ ) {
+    u3a_blob_drop((c3_h)(gho_u.bid_d[i_z] >> 32), (c3_h)gho_u.bid_d[i_z]);
+  }
+  if ( gho_u.len_z ) {
+    fprintf(stderr, "disk: dropped %" PRIc3_z " ghost record(s) at roll\r\n",
+                    gho_u.len_z);
+  }
+  c3_free(gho_u.bid_d);
+
   //  success
   return c3y;
 
@@ -1395,6 +1400,7 @@ fail2:
 fail0:
   u3b_kill(bob_c);
 fail1:
+  c3_free(gho_u.bid_d);
   c3_rmdir(epo_c);
   return c3n;
 }

@@ -311,7 +311,9 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 static void
 _mars_blob_bobs_atom(u3_atom a, void* ptr_v)
 {
-  if ( c3y != u3a_is_bob(a) ) {
+  //  a stub (seq 0) names no file and never reaches a row
+  //
+  if ( (c3y != u3a_is_bob(a)) || (0 == u3a_bob_seq(a)) ) {
     return;
   }
   //  grow the C-heap array
@@ -338,12 +340,13 @@ _mars_blob_bobs_cell(u3_noun n, void* ptr_v)
 /* _mars_blob_sure(): refuse an event holding a bob the store cannot back.
 **
 **   tap mints a bank record for every blob id it decodes, so an event
-**   whose lease expired (file and record gone) arrives with a fresh
-**   record over a missing file.  committing it would log an event that
-**   can never replay.  a record nothing holds and no epoch owns is
-**   backed only if its file exists; otherwise the poke is nacked with a
-**   %blob goof and the king may install again.  returns the goof list,
-**   or u3_none when every bob is backed.
+**   naming a file that is gone arrives with a fresh record over a
+**   missing file.  committing it would log an event that can never
+**   replay.  a record the king does not hold and no epoch owns is
+**   backed only if its file exists (the event's own atoms count for
+**   nothing here: tap minted them); otherwise the poke is nacked with
+**   a %blob goof.  returns the goof list, or u3_none when every bob is
+**   backed.
 */
 static u3_weak
 _mars_blob_sure(u3_noun job)
@@ -358,7 +361,7 @@ _mars_blob_sure(u3_noun job)
     c3_h      seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-    if ( blb_u && (blb_u->use_h || (c3y == blb_u->own_o)) ) {
+    if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
       continue;
     }
     if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
@@ -401,12 +404,13 @@ _mars_ram(u3_noun pro, u3_gift* gif_u)
 }
 
 /* _mars_fill(): rebuild [non] with every stub replaced by the bob of
-**   the installed id with its mug.  recursive on heads, a loop along
-**   tails, so a long list costs no stack.  u3_none if a stub matches
-**   no id.  retains [non].
+**   the installed id with its mug, marking each id used in [hit_y]
+**   (when given).  recursive on heads, a loop along tails, so a long
+**   list costs no stack.  u3_none if a stub matches no id.  retains
+**   [non].
 */
 static u3_weak
-_mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
+_mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w, c3_y* hit_y)
 {
   if ( c3n == u3a_is_cell(non) ) {
     if ( (c3y == u3a_is_bob(non)) && (0 == u3a_bob_seq(non)) ) {
@@ -414,6 +418,9 @@ _mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 
       for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
         if ( (c3_h)(bid_d[i_w] >> 32) == mug_h ) {
+          if ( hit_y ) {
+            hit_y[i_w] = 1;
+          }
           return u3i_blob(mug_h, (c3_h)bid_d[i_w]);
         }
       }
@@ -429,7 +436,7 @@ _mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
     u3_weak  out;
 
     while ( c3y == u3a_is_cell(tal) ) {
-      u3_weak one = _mars_fill(u3h(tal), bid_d, len_w);
+      u3_weak one = _mars_fill(u3h(tal), bid_d, len_w, hit_y);
 
       if ( u3_none == one ) {
         goto fail;
@@ -442,7 +449,7 @@ _mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
       tal = u3t(tal);
     }
 
-    if ( u3_none == (out = _mars_fill(tal, bid_d, len_w)) ) {
+    if ( u3_none == (out = _mars_fill(tal, bid_d, len_w, hit_y)) ) {
       goto fail;
     }
 
@@ -466,7 +473,7 @@ _mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 u3_weak
 u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 {
-  return _mars_fill(non, bid_d, len_w);
+  return _mars_fill(non, bid_d, len_w, 0);
 }
 
 /* _mars_blob_install(): install the staged files an event brings and
@@ -474,10 +481,10 @@ u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 **
 **   every path in [pax] is installed, or the event is refused with a
 **   %blob goof: the staged files are consumed either way (nothing
-**   retries them), and a file installed for a refused event is wiped
-**   again by minting and dropping its bob, since nothing holds it.
-**   on success [*job] is the filled event.  returns the goof list, or
-**   u3_none.  transfers [pax].
+**   retries them), and a file installed for a refused event, or one no
+**   stub asked for, is wiped again by minting and dropping its bob,
+**   since nothing holds it.  on success [*job] is the filled event.
+**   returns the goof list, or u3_none.  transfers [pax].
 */
 static u3_weak
 _mars_blob_install(u3_mars* mar_u, u3_noun* job, u3_noun pax)
@@ -511,8 +518,10 @@ _mars_blob_install(u3_mars* mar_u, u3_noun* job, u3_noun pax)
   }
   u3z(pax);
 
+  c3_y* hit_y = len_w ? c3_calloc(len_w) : 0;
+
   if ( u3_nul == tan ) {
-    u3_weak new = _mars_fill(*job, bid_d, len_w);
+    u3_weak new = _mars_fill(*job, bid_d, len_w, hit_y);
 
     if ( u3_none == new ) {
       fprintf(stderr, "mars: poke refused: a stub names no staged file\r\n");
@@ -525,13 +534,15 @@ _mars_blob_install(u3_mars* mar_u, u3_noun* job, u3_noun pax)
     }
   }
 
-  if ( u3_nul != tan ) {
-    //  nothing holds what was installed for a refused event
-    //
-    for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+  //  nothing holds what was installed for a refused event, or what no
+  //  stub asked for: mint and drop, and the file goes
+  //
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    if ( (u3_nul != tan) || !hit_y[i_w] ) {
       u3z(u3i_blob((c3_h)(bid_d[i_w] >> 32), (c3_h)bid_d[i_w]));
     }
   }
+  c3_free(hit_y);
   c3_free(bid_d);
 
   if ( u3_nul == tan ) {
@@ -1990,7 +2001,7 @@ u3_mars_work(u3_mars* mar_u)
   }
 
   //  ownership came with the snapshot and replay marked the events
-  //  after it; _find_home zeroed les_h, and no lease outlives a
+  //  after it; _find_home zeroed les_h, and no hold outlives a
   //  restart.  so the gc may reclaim any unowned blob nothing holds,
   //  once the log is caught up: short of that (a dry run skips replay)
   //  an input with no record yet would read as an orphan

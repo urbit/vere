@@ -3173,6 +3173,33 @@ _test_stub_fill(void)
   //
   _check( u3_none == u3_mars_blob_fill(job, bid_d, 1), "unmatched stub filled" );
 
+  //  the king rams the event with its stubs in it: a stub is written
+  //  as its id without being measured (it has no file to measure),
+  //  comes back a stub, makes no record, and grants nothing
+  //
+  {
+    c3_d     len_d;
+    c3_y*    byt_y;
+    u3s_bids out_u = {0};
+    u3s_bids inn_u = {0};
+
+    u3s_ram_xeno_bids(job, &len_d, &byt_y, &out_u);
+    u3_weak tap = u3s_tap_xeno_bids(len_d, byt_y, &inn_u);
+    free(byt_y);
+
+    _check( u3_none != tap, "stubbed event did not tap" );
+    _check( (0 == out_u.len_w) && (0 == inn_u.len_w), "a stub granted a hold" );
+    {
+      u3_noun cad = u3t(u3t(tap));
+      u3_noun one = u3h(u3t(cad));
+      _check( (c3y == u3a_is_bob(one)) && (0 == u3a_bob_seq(one))
+              && (mug_h[0] == u3a_bob_mug(one)),
+              "stub did not survive ram and tap" );
+    }
+    _check( !u3a_blob_get(mug_h[0], 0), "a tapped stub made a record" );
+    u3z(tap);
+  }
+
   u3z(new);
   u3z(job);
   _pier_done();
@@ -3189,20 +3216,25 @@ _test_chop_kill(void)
   c3_c log_c[2048];
   snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
 
-  //  epochs 0, 1, 2; a blob in epoch 0's store and one in epoch 2's,
-  //  the latter held by an atom.  the process runs in epoch 2.
+  //  epochs 0 to 3; a blob in epoch 0's store, an empty store in epoch
+  //  1's, and a blob in epoch 3's held by an atom.  the process runs
+  //  in epoch 3; chop deletes epochs 0 and 1.
   //
   c3_h mug_h = 0, seq_h = 0;
   _check( c3y == _blob_save((const c3_y*)"dies with epoch 0", 17, &mug_h, &seq_h),
           "save failed" );
 
   MDB_env* env_u;
+  c3_c     emp_c[8192];
   env_u = _epoc_env(0); u3_lmdb_exit(env_u);
   env_u = _epoc_env(1); u3_lmdb_exit(env_u);
-  env_u = _epoc_env(2);
+  u3b_root(emp_c, _tmp_pier, 1);
+  _check( 0 == mkdir(emp_c, 0700), "mkdir %s: %s", emp_c, strerror(errno) );
+  env_u = _epoc_env(2); u3_lmdb_exit(env_u);
+  env_u = _epoc_env(3);
 
   c3_c new_c[8192];
-  u3b_root(new_c, _tmp_pier, 2);
+  u3b_root(new_c, _tmp_pier, 3);
   _check( 0 == mkdir(new_c, 0700), "mkdir %s: %s", new_c, strerror(errno) );
   u3C.bob_c = new_c;
 
@@ -3216,7 +3248,7 @@ _test_chop_kill(void)
   u3_dire dir_u = { .pax_c = _tmp_pier };
   u3_dire com_u = { .pax_c = log_c };
   u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
-                    .mdb_u = env_u, .epo_d = 2 };
+                    .mdb_u = env_u, .epo_d = 3 };
 
   u3_disk_chop(&log_u, 0);
 
@@ -3226,9 +3258,11 @@ _test_chop_kill(void)
     _check( c3n == _path_exists(epo_c), "epoch 0 not deleted" );
     _check( c3n == _path_exists(_tmp_bob), "epoch 0's store not deleted" );
     snprintf(epo_c, sizeof(epo_c), "%s/0i1", log_c);
-    _check( c3y == _path_exists(epo_c), "epoch 1 deleted" );
+    _check( c3n == _path_exists(epo_c), "epoch 1, with an empty store, not deleted" );
+    snprintf(epo_c, sizeof(epo_c), "%s/0i2", log_c);
+    _check( c3y == _path_exists(epo_c), "epoch 2 deleted" );
   }
-  _check( c3y == u3b_live(new_c, mag_h, saq_h), "epoch 2's blob gone" );
+  _check( c3y == u3b_live(new_c, mag_h, saq_h), "epoch 3's blob gone" );
   _check( 1 == u3a_blob_get(mag_h, saq_h)->use_h, "bank disturbed" );
 
   u3_lmdb_exit(env_u);

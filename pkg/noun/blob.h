@@ -113,8 +113,8 @@
 
     /* u3b_walk(): enumerate every blob file in the store.
     **
-    ** Calls [fun_f] with (mug_h, seq_h) for each $pier/.urb/bob/<mug>/<seq>
-    ** file on disk.  Skips the staging dir and bucket lockfiles.  The
+    ** Calls [fun_f] with (mug_h, seq_h) for each <root>/<mug>/<seq>
+    ** file on disk.  Skips bucket lockfiles and dotfiles.  The
     ** callback must not create or delete blob files (collect, then act).
     */
       void
@@ -136,8 +136,8 @@
 
     /* u3b_move_stg(): install a staging file into the blob store.
     **
-    ** [stg_c] is the path of a temp file in $pier/.urb/bob/stg/.
-    ** Computes mug, deduplicates, then rename(2)s into bob/<mug>/<seq>.
+    ** [stg_c] is the path of a temp file in $pier/.urb/stg/.
+    ** Computes mug, deduplicates, then rename(2)s into <root>/<mug>/<seq>.
     ** The staging file is always consumed on success.
     ** On success, returns c3y and sets *mug_h and *seq_h.
     */

@@ -1802,7 +1802,12 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
   ur_bsw_t*    rit_u = &(ram_u->rit_u);
   u3_weak        bak = u3h_git(ram_u->har_p, a);
   c3_o         bob_o = u3a_is_bob(a);
-  c3_w         met_w = (c3_w)u3r_met_d(0, a);
+
+  //  a bob is written as its id and never measured: measuring opens
+  //  the file, which a stub has none of.  a repeated bob is written
+  //  again rather than compared against a backref's width.
+  //
+  c3_w         met_w = ( c3y == bob_o ) ? 0 : (c3_w)u3r_met_d(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));

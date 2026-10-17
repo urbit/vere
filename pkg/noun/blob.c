@@ -1255,7 +1255,21 @@ u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
 
   if ( 0 != c3_link(src_c, dst_c) ) {
     if ( EEXIST == errno ) {
-      return c3y;
+      //  a retried roll finds its own link; anything else under that
+      //  name is a different file and must not pass for this one
+      //
+      struct stat src_u, dst_u;
+
+      if (  (0 == stat(src_c, &src_u))
+         && (0 == stat(dst_c, &dst_u))
+         && (src_u.st_size == dst_u.st_size)
+         && (  !src_u.st_ino
+            || ((src_u.st_dev == dst_u.st_dev) && (src_u.st_ino == dst_u.st_ino)) ) )
+      {
+        return c3y;
+      }
+      fprintf(stderr, "blob: link: %s exists and is not %s\r\n", dst_c, src_c);
+      return c3n;
     }
     if ( c3n == _blob_copy(src_c, dst_c) ) {
       fprintf(stderr, "blob: link %s into %s failed\r\n", src_c, new_c);
@@ -1268,21 +1282,23 @@ u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
 }
 
 /* _blob_dir_names(): the non-dot entry names of [dir_c], or 0 if it
-**   cannot be read.  Read in full before anything is removed, so the
-**   removal never races the enumeration.
+**   cannot be opened (errno says why).  An empty directory is a
+**   non-null, empty list.  Read in full before anything is removed,
+**   so the removal never races the enumeration.
 */
 static c3_c**
 _blob_dir_names(const c3_c* dir_c, c3_w* len_w)
 {
   DIR*   dir_u = opendir(dir_c);
-  c3_c** nam_c = 0;
-  c3_w   cap_w = 0;
+  c3_w   cap_w = 16;
+  c3_c** nam_c;
 
   *len_w = 0;
 
   if ( !dir_u ) {
     return 0;
   }
+  nam_c = c3_malloc(cap_w * sizeof(*nam_c));
 
   struct dirent* ent_e;
   while ( (ent_e = readdir(dir_u)) ) {
@@ -1290,7 +1306,7 @@ _blob_dir_names(const c3_c* dir_c, c3_w* len_w)
       continue;
     }
     if ( *len_w == cap_w ) {
-      cap_w = cap_w ? (2 * cap_w) : 16;
+      cap_w *= 2;
       nam_c = c3_realloc(nam_c, cap_w * sizeof(*nam_c));
     }
     nam_c[(*len_w)++] = strdup(ent_e->d_name);
@@ -1313,6 +1329,9 @@ u3b_kill(const c3_c* bob_c)
   c3_c** mug_c = _blob_dir_names(bob_c, &mug_w);
 
   if ( !mug_c ) {
+    if ( ENOENT != errno ) {
+      fprintf(stderr, "blob: kill: open %s: %s\r\n", bob_c, strerror(errno));
+    }
     return;
   }
 
@@ -1325,9 +1344,14 @@ u3b_kill(const c3_c* bob_c)
     c3_free(mug_c[i_w]);
 
     if ( !(seq_c = _blob_dir_names(dir_c, &seq_w)) ) {
-      //  a stray file in the root
+      //  a stray file in the root; anything else is reported
       //
-      c3_unlink(dir_c);
+      if ( ENOTDIR == errno ) {
+        c3_unlink(dir_c);
+      }
+      else {
+        fprintf(stderr, "blob: kill: open %s: %s\r\n", dir_c, strerror(errno));
+      }
       continue;
     }
 
@@ -1526,8 +1550,8 @@ u3b_move_stg(const c3_c* bob_c,
   }
 
   //  fsync the bucket directory so the new entry survives a crash
-  //  before the next global sync — a committed lease row must never
-  //  reference a blob whose directory entry was lost
+  //  before the next global sync — a committed event must never name
+  //  a blob whose directory entry was lost
   //
   _blob_sync_dir(bob_c, *mug_h);
 
