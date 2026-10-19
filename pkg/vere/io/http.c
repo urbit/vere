@@ -352,9 +352,12 @@ _http_heds_from_noun(u3_noun hed)
 /* _http_req_get_scope(): attempt to read request hostname for target scope
 */
 static u3_husk
-_http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
+_http_req_get_scope(u3_hfig*      fig_u,
+                    h2o_req_t*    rec_u,
+                    h2o_iovec_t*  root,
+                    u3_weak*      desk)
 {
-  h2o_iovec_t aut_u = rec_u->authority;
+  h2o_iovec_t aut_u;
   h2o_iovec_t hos_u;
   uint16_t    por_s;
   const c3_c* end_c;
@@ -363,31 +366,43 @@ _http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
   u3_noun dom;
 
   *desk = u3_none;
+  *root = h2o_iovec_init(NULL, 0);
+
+  //  copy, normalize, and null-terminate the complete authority.
+  //  this retains the port, if present.
+  //
+  aut_u = h2o_strdup(&rec_u->pool,
+                     rec_u->authority.base,
+                     rec_u->authority.len);
+  h2o_strtolower(aut_u.base, aut_u.len);
 
   end_c = h2o_url_parse_hostport(aut_u.base, aut_u.len, &hos_u, &por_s);
   if ( end_c != (aut_u.base + aut_u.len) ) {
     return u3_husk_nope;
   }
 
-  //  normalize & null-terminate (for inet_pton below) hostname
+  //  null-terminate the hostname separately for inet_pton below.
   //
   hos_u = h2o_strdup(&rec_u->pool, hos_u.base, hos_u.len);
-  h2o_strtolower(hos_u.base, hos_u.len);
 
   //  detect ip address cases
   //
   if ( 0 == h2o_hostinfo_aton(hos_u, &ip4_u) ) {
+    *root = aut_u;
     return u3_husk_ripe;
   }
   if ( 0 != memchr(hos_u.base, ':', hos_u.len) ) {
-    return ( 1 == inet_pton(AF_INET6, hos_u.base, &ip6_u) )
-           ? u3_husk_ripe
-           : u3_husk_nope;
+    if ( 1 == inet_pton(AF_INET6, hos_u.base, &ip6_u) ) {
+      *root = aut_u;
+      return u3_husk_ripe;
+    }
+    return u3_husk_nope;
   }
 
   //  find root domain match among known domains.
   //  for_u->dom is longest-first, so we find the longest matching root.
-  //  if it is a direct subdomain, update desk.
+  //  if it is a direct subdomain, update desk and remove that segment
+  //  from the returned hostname.
   //
   for ( dom = fig_u->for_u->dom; u3_nul != dom; dom = u3t(dom) ) {
     u3_atom rot   = u3h(dom);
@@ -411,6 +426,7 @@ _http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
     }
 
     if ( 0 == off_z ) {
+      *root = aut_u;
       return u3_husk_root;
     }
 
@@ -421,6 +437,11 @@ _http_req_get_scope(u3_hfig* fig_u, h2o_req_t* rec_u, u3_weak* desk)
        && (0 == memchr(hos_u.base, '.', off_z - 1)) )
     {
       *desk = u3i_bytes(off_z - 1, (const c3_y*)hos_u.base);
+
+      //  off_z is also the offset into aut_u for ordinary domain names.
+      //  slicing aut_u here retains any trailing ":port"
+      //
+      *root = h2o_iovec_init(aut_u.base + off_z, aut_u.len - off_z);
       return u3_husk_desk;
     }
   }
@@ -1066,6 +1087,50 @@ _get_beam(u3_hreq* req_u, c3_c* txt_c, c3_w len_w, c3_o* las_o)
   return bem;
 }
 
+/* _http_redirect_domain(): 303 to //(desk.)host(/url)
+*/
+static void
+_http_redirect_domain(h2o_req_t* rec_u, h2o_iovec_t host, u3_weak desk)
+{
+  u3_hreq*    req_u;
+  h2o_iovec_t loc_u;
+  u3_noun     hed;
+
+  req_u = _http_req_prepare(rec_u, _http_req_new);
+  req_u->sat_e = u3_rsat_plan;
+
+  if ( u3_none == desk ) {
+    loc_u = h2o_concat(&rec_u->pool,
+                       h2o_iovec_init(H2O_STRLIT("//")),
+                       host,
+                       rec_u->input.path);
+  }
+  else {
+    c3_w        des_w = u3r_met(3, desk);
+    h2o_iovec_t des_u;
+
+    des_u.base = h2o_mem_alloc_pool(&rec_u->pool, des_w);
+    des_u.len  = des_w;
+    u3r_bytes(0, des_w, (c3_y*)des_u.base, desk);
+
+    loc_u = h2o_concat(&rec_u->pool,
+                       h2o_iovec_init(H2O_STRLIT("//")),
+                       des_u,
+                       h2o_iovec_init(H2O_STRLIT(".")),
+                       host,
+                       rec_u->input.path);
+  }
+
+  hed = u3nl(
+    u3nc(u3i_string("Location"),
+         u3i_bytes(loc_u.len, (const c3_y*)loc_u.base)),
+    u3_none);
+
+  _http_start_respond(req_u, 303, hed, u3_nul, c3y);
+}
+
+//TODO  can imagine implementing this in terms of _http_redirect_domain
+//      at most call-sites...
 static void
 _http_jump_respond(h2o_req_t* rec_u)
 {
@@ -1285,25 +1350,34 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
   }
   else {
+    h2o_iovec_t root;
     u3_weak target;
-    u3_husk huk_u = _http_req_get_scope(&htd_u->fig_u, rec_u, &target);
+    u3_husk huk_u = _http_req_get_scope(&htd_u->fig_u, rec_u, &root, &target);
 
-    //TODO  isn't this broken now for old eyres?
+    //TODO  isn't this broken now for old eyres? yes it is
+    //TODO  check first: is the 3rd noun a cell? then it's old, `[auth=? %payload ^]`
+    //      if it's atom, then it's new, `[=desk auth=? %payload ^]`
     u3_noun desk, auth, response_header, data;
     u3x_quil(u3t(u3t(nun)), &desk, &auth, 0, &response_header, &data);
     u3_noun status, headers;
     u3x_cell(response_header, &status, &headers);
 
+    //  if the request is to a different desk's subdomain,
+    //  or the request is to root but cache entry isn't base's,
+    //  try to redirect to the appropriate (sub)domain
+    //
+    if ( ( u3_husk_desk == huk_u && c3n == u3r_sing(target, desk) )
+      || ( u3_husk_root == huk_u && c3n == u3r_sing_c("base", desk) ) ) {
+      if ( c3y == u3r_sing_c("base", desk) ) {
+        _http_redirect_domain(rec_u, root, u3_none);
+      } else {
+        _http_redirect_domain(rec_u, root, desk);
+      }
+    }
     //  if the request is to an ip address but that's not enabled,
-    //  or the request is to a different desk's subdomain,
-    //  or the request it to root but cache entry isn't base's
     //  reject it
     //
-    if ( !( u3_husk_ripe == huk_u && c3y == htd_u->fig_u.for_u->rip )
-      && !( u3_husk_desk == huk_u && c3y == u3r_sing(target, desk) )
-      && !( u3_husk_root == huk_u && c3y == u3r_sing_c("base", desk) ) ) {
-      //TODO  not exactly. true 421 should've been caught earlier,
-      //      this is more like 404. maximally, you could redirect here.
+    else if ( u3_husk_ripe == huk_u && c3n == htd_u->fig_u.for_u->rip ) {
       h2o_send_error_generic(rec_u, 421, "Bad host", "bad host", 0);
     }
     else if ( c3n == auth ) {
