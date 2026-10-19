@@ -236,6 +236,16 @@
       typedef u3a_blob u3a_blob_h;
       typedef u3a_blob u3a_blob_d;
 
+    /* u3a_blob_dead(): nothing holds the file: no atom, no king hold,
+    **   and not the current epoch.  The one deletion predicate; every
+    **   site that wipes a file asks this.
+    */
+      static inline c3_o
+      u3a_blob_dead(const u3a_blob* blb_u)
+      {
+        return __( !blb_u->use_h && (c3n == blb_u->own_o) );
+      }
+
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
 STATIC_ASSERT( u3a_vits <= u3a_min_log,

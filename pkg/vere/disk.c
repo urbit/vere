@@ -1765,7 +1765,7 @@ _disk_chop_delete_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  if ( (0 == blb_u->use_h) && (c3n == blb_u->own_o) ) {
+  if ( c3y == u3a_blob_dead(blb_u) ) {
     fprintf(stderr, "blob: gc: delete %08" PRIx32 "/%" PRIc3_h "\r\n",
                     mug_h, seq_h);
     u3b_wipe(del_u->pax_c, mug_h, seq_h);

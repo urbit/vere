@@ -65,17 +65,17 @@
 
 c3_c tac_c[256];  //  tracing label
 
-/* _mars_blob_del(): mars-side del_f: delete the blob file unless the
-**   king (les_h) or the epoch (own_o) still holds it.  an owned record
-**   with no other holder stays as a ghost until the next roll.  called
-**   when the last live atom goes, and when the king's last hold does.
+/* _mars_blob_del(): mars-side del_f: delete the blob file once nothing
+**   holds it (u3a_blob_dead).  an owned record with no other holder
+**   stays as a ghost until the next roll.  called when the last live
+**   atom goes, and when the king's last hold does.
 */
 static void
 _mars_blob_del(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-  if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
+  if ( !blb_u || (c3n == u3a_blob_dead(blb_u)) ) {
     return;
   }
 
@@ -1139,7 +1139,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
           blb_u->les_h -= num_h;
           blb_u->use_h -= num_h;
 
-          if ( 0 == blb_u->use_h ) {
+          if ( c3y == u3a_blob_dead(blb_u) ) {
             _mars_blob_del(mug_h, seq_h);
           }
         }
