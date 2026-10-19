@@ -27,7 +27,10 @@
 **
 **  Every opcode with immediate arguments comes in three widths, for all
 **  of its immediates at once: _B, one byte each; _S, two bytes each,
-**  little-endian; _V, a length byte followed by that many bytes.
+**  little-endian; _V, a length byte followed by that many bytes.  The
+**  _B and _S widths are opcodes; the _V widths, which only a program
+**  with over 65535 slots, literals, sites or bytes of code needs, are a
+**  second table of them behind the prefix WIDE, for a dispatch more.
 **  Slots, literal and call site indices, and jump targets (absolute byte
 **  offsets) are immediates.  The IMM opcodes are the exception: IMM_B
 **  and IMM_S carry the atom itself, and all of them write to a one-byte
@@ -39,13 +42,14 @@
 **  it was, or consumed: the slot gives up its reference to the op and is
 **  empty.  An op with sources comes in a variant per subset of its
 **  sources consumed, _0 (none) to _3 (both), bit i for source i; a call
-**  site holds a consume flag per argument instead; a branch on one
-**  source (CLQ, EQI, EQL, BRN, BRZ) consumes it per edge, bit 0 on the
-**  fall-through and bit 1 on the jump.  The compiler consumes a register
-**  at its last use and drops (DRO) the registers that die anywhere else
-**  (see _nc_lives()), so a slot holds a reference exactly while the
-**  register in it is live, a destination slot holds none when written,
-**  and an activation ends with every slot empty but the one it returns.
+**  site holds a consume flag per argument instead; a branch (CLQ, EQQ,
+**  EQI, EQL, BRN, BRZ) consumes a source per edge, bit 2i for source i
+**  on the fall-through and bit 2i+1 on the jump.  The compiler consumes
+**  a register at its last use and drops (DRO) the registers that die
+**  anywhere else (see _nc_lives()), so a slot holds a reference exactly
+**  while the register in it is live, a destination slot holds none when
+**  written, and an activation ends with every slot empty but the one it
+**  returns.
 **  An empty slot is zeroed only in a build that reads empty slots: for
 **  sweeps, or for the checks (_nc_zer_t).
 **
@@ -59,8 +63,9 @@
 **    DEC   s d      (dec s) -> d, by the jet
 **    ADD   a b d    (add a b) -> d, by the jet
 **    CON   h t d    [h t] -> d
-**    HED   s d      -.s -> d, 0 if s is an atom
-**    TAL   s d      +.s -> d, 0 if s is an atom
+**    HED   s d      -.s -> d, s a cell: the IR deconses a noun only past
+**                   a CEL on it or on the yes edge of a CLQ
+**    TAL   s d      +.s -> d, s a cell
 **    CEL   p        crash unless p is a cell
 **    LOB   p        crash unless p is a loobean
 **    EQU   l r      =(l r), for the side effect
@@ -94,6 +99,7 @@
 **    DON   s        return s, consumed
 **    DRO   s        drop s: lose its reference, 0 -> s
 **    BOM            crash
+**    WIDE  o        the _V width of an op, o its index in their table
 **
 **  DON, JMP, JMS, JMF and JSP end the activation, and come in a sweeping
 **  variant (_1) that first drops every slot it doesn't take: it stands
@@ -108,13 +114,14 @@
 **  variant bits in the opcode, and whether the variant bit means a sweep
 **  rather than a consumed source.  A consume bit per source, except for
 **  a call (the flags are in the site), for DON and DRO, which always
-**  consume, and for a branch on one source, whose two bits consume it
-**  on the fall-through (bit 0) and on the jump (bit 1) (_nc_edgy()).
+**  consume, and for a branch, whose two bits per source consume it on
+**  the fall-through (bit 2i) and on the jump (bit 2i+1) (_nc_edgy()).
 **  The special families bom, imm, nop and kil have no opcodes
-**  of their own: imm encodes as an IMM opcode or as IML, nop and kil as
-**  nothing.  kil defines a register without code: a parameter of a block
-**  that a jump to it leaves undefined, so that the register is not live
-**  on the way to that jump.
+**  of their own: imm encodes as an IMM opcode or as IML, nop as nothing,
+**  and kil as an imm of 0.  kil defines a register as 0: a parameter of
+**  a block that a jump to it leaves undefined, so that the register is
+**  not live on the way to that jump; and 0 drops as nothing where the
+**  register dies on a path that never defined it (_nc_jump()).
 */
 #define FAMILIES(X)                                                      \
   X(iml, IML, 0, 1, 1, 0, 0, 0, 0)                                       \
@@ -140,7 +147,7 @@
   X(cam, CAM, 0, 0, 1, 0, 1, 0, 0)                                       \
   X(csm, CSM, 0, 0, 1, 0, 1, 0, 0)                                       \
   X(clq, CLQ, 1, 0, 0, 1, 0, 2, 0)                                       \
-  X(eqq, EQQ, 2, 0, 0, 1, 0, 2, 0)                                       \
+  X(eqq, EQQ, 2, 0, 0, 1, 0, 4, 0)                                       \
   X(eqi, EQI, 1, 0, 1, 1, 0, 2, 0)                                       \
   X(eql, EQL, 1, 0, 1, 1, 0, 2, 0)                                       \
   X(brn, BRN, 1, 0, 0, 1, 0, 2, 0)                                       \
@@ -158,22 +165,32 @@ enum { FAMILIES(_nc_fam_enum) _nc_bom, _nc_imm, _nc_nop, _nc_kil };
 #undef _nc_fam_enum
 
 /*  The opcodes of a family, in the order of the consume variants and,
-**  within a variant, of the widths; OPCODES lists them all, through Y.
+**  within a variant, of the widths: OPCODES lists the _B and _S widths
+**  of them all, through Y, and WIDES the _V widths, behind WIDE.
 */
-#define _nc_wid(op)        Y(op##_B) Y(op##_S) Y(op##_V)
-#define _nc_kon_0(op)      _nc_wid(op)
-#define _nc_kon_1(op)      _nc_wid(op##_0) _nc_wid(op##_1)
-#define _nc_kon_2(op)      _nc_wid(op##_0) _nc_wid(op##_1)                 \
-                           _nc_wid(op##_2) _nc_wid(op##_3)
-#define _nc_fam_ops(fam, OP, src, dst, imm, tar, sot, kon, swe)  _nc_kon_##kon(OP)
+#define _nc_wid(op)        Y(op##_B) Y(op##_S)
+#define _nc_vid(op)        Y(op##_V)
+#define _nc_kon_0(W, op)   W(op)
+#define _nc_kon_1(W, op)   W(op##_0) W(op##_1)
+#define _nc_kon_2(W, op)   W(op##_0) W(op##_1) W(op##_2) W(op##_3)
+#define _nc_kon_4(W, op)   W(op##_0)  W(op##_1)  W(op##_2)  W(op##_3)      \
+                           W(op##_4)  W(op##_5)  W(op##_6)  W(op##_7)      \
+                           W(op##_8)  W(op##_9)  W(op##_10) W(op##_11)     \
+                           W(op##_12) W(op##_13) W(op##_14) W(op##_15)
+#define _nc_fam_ops(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+  _nc_kon_##kon(_nc_wid, OP)
+#define _nc_fam_wides(fam, OP, src, dst, imm, tar, sot, kon, swe)        \
+  _nc_kon_##kon(_nc_vid, OP)
 
 #define OPCODES  Y(IMM_0) Y(IMM_1) Y(IMM_B) Y(IMM_S)                     \
                  FAMILIES(_nc_fam_ops)                                   \
-                 Y(BOM)
+                 Y(BOM) Y(WIDE)
+#define WIDES    FAMILIES(_nc_fam_wides)
 
 #define Y(op) op,
 enum { OPCODES LAST };
-static_assert(LAST <= 256);
+enum { WIDES LAST_V };
+static_assert((LAST <= 256) && (LAST_V <= 256));
 #undef Y
 
 #define Y(op) #op,
@@ -200,22 +217,29 @@ static const struct {
 };
 #undef _nc_fam_row
 
-/* _nc_edgy(): whether a family is a branch on one source, whose variant
-**             bits consume it per edge: bit 0 on the fall-through (the
-**             yes block), bit 1 on the jump.
+/* _nc_edgy(): whether a family is a branch on sources, whose variant
+**             bits consume them per edge: for source i, bit 2i on the
+**             fall-through (the yes block), bit 2i+1 on the jump.
 */
-#define _nc_edgy(fam)  (_nc_fam[fam].tar_y && (1 == _nc_fam[fam].src_y))
+#define _nc_edgy(fam)  (_nc_fam[fam].tar_y && _nc_fam[fam].src_y)
 
-/* _nc_bas_y: first opcode of a family; the opcode of an op is
-**            _nc_bas_y[fam] + 3 * variant bits + width.
+/* _nc_bas_y: first opcode of a family in OPCODES: the opcode of an op is
+**            _nc_bas_y[fam] + 2 * variant bits + width, for the widths
+**            _B (0) and _S (1).  _nc_vas_y: the first in WIDES: the _V
+**            width is WIDE, then _nc_vas_y[fam] + variant bits.
 */
-#define _nc_first_0(op)  op##_B
-#define _nc_first_1(op)  op##_0_B
-#define _nc_first_2(op)  op##_0_B
+#define _nc_first_0(op, W)  op##_##W
+#define _nc_first_1(op, W)  op##_0_##W
+#define _nc_first_2(op, W)  op##_0_##W
+#define _nc_first_4(op, W)  op##_0_##W
 #define _nc_fam_bas(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
-  [_nc_##fam] = _nc_first_##kon(OP),
+  [_nc_##fam] = _nc_first_##kon(OP, B),
+#define _nc_fam_vas(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+  [_nc_##fam] = _nc_first_##kon(OP, V),
 static const c3_y _nc_bas_y[] = { FAMILIES(_nc_fam_bas) };
+static const c3_y _nc_vas_y[] = { FAMILIES(_nc_fam_vas) };
 #undef _nc_fam_bas
+#undef _nc_fam_vas
 
 /* _nc_fam_c: names of the families, for _nc_print().
 */
@@ -916,7 +940,9 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
 /* _nc_jump(): translate a jump [args there] to a block, with its
 **             arguments moved into the parameters of the target; a ~
 **             argument leaves its parameter undefined, which a kil op
-**             records for the liveness analysis (_nc_lives()).
+**             records for the liveness analysis (_nc_lives()).  The kil
+**             puts 0 in the slot: the parameter is live from there, and
+**             the drop where it dies would meet whatever the slot held.
 **             nex_h: the block laid out next, or _nc_none.
 */
 static void
@@ -941,6 +967,7 @@ _nc_jump(nc_gen* gen_u, u3_noun jmp, c3_h nex_h)
     else {
       nc_op* op_u = _nc_op(gen_u, _nc_kil);
       op_u->dst_h = _nc_reg(gen_u, p);
+      op_u->tar_h = _nc_lit(gen_u, 0);
     }
   }
 
@@ -1293,7 +1320,9 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
         if ( (r_h >= lo_h) && (r_h < hi_h) ) {
           if ( !_nc_bit_get(liv_d, r_h - lo_h) ) {
             if ( mar_t && !_nc_fam[op_u->fam_y].swe_y ) {
-              op_u->kon_y |= _nc_edgy(op_u->fam_y) ? 3 : (1 << k_h);
+              op_u->kon_y |= _nc_edgy(op_u->fam_y)
+                           ? (3 << (2 * k_h))
+                           : (1 << k_h);
             }
             _nc_bit_set(liv_d, r_h - lo_h);
           }
@@ -1469,15 +1498,35 @@ _nc_branch(nc_gen* gen_u, c3_h b_h)
   return NULL;
 }
 
-/* _nc_edge_y(): the edge from block p to its kid b, as the variant bit of
-**               a branch consuming its source there: 1 for the
-**               fall-through to the yes block, 2 for the jump.
+/* _nc_edge_y(): the edge from block p to its kid b, as the variant bits
+**               of a branch consuming its first source there: 1 for the
+**               fall-through to the yes block, 2 for the jump; those for
+**               source i are shifted by 2i (_nc_consume()).
 */
 static c3_y
 _nc_edge_y(nc_gen* gen_u, c3_h p_h, c3_h b_h)
 {
   nc_blk* blk_u = &(gen_u->blk_u[p_h]);
   return ( (blk_u->kin_y > 1) && (blk_u->kid_h[1] == b_h) ) ? 1 : 2;
+}
+
+/* _nc_consume(): the branch bra, if any, consumes on edge e
+**                (_nc_edge_y()) each of its sources among the registers
+**                in ded, a chunk from lo to hi of those that die on the
+**                edge, and takes them out of it.
+*/
+static void
+_nc_consume(nc_op* bra_u, c3_y edg_y, c3_d* ded_d, c3_h lo_h, c3_h hi_h)
+{
+  c3_h k_h, r_h;
+
+  for ( k_h = 0; bra_u && (k_h < _nc_fam[bra_u->fam_y].src_y); k_h++ ) {
+    r_h = bra_u->src_h[k_h];
+    if ( (r_h >= lo_h) && (r_h < hi_h) && _nc_bit_get(ded_d, r_h - lo_h) ) {
+      _nc_bit_clr(ded_d, r_h - lo_h);
+      bra_u->kon_y |= edg_y << (2 * k_h);
+    }
+  }
 }
 
 /* _nc_lives(): code transformations to respect the lifetimes of the registers.
@@ -1496,11 +1545,11 @@ _nc_edge_y(nc_gen* gen_u, c3_h p_h, c3_h b_h)
 **  and not live into the block; an unused argument dies at the entry.
 **  The drops common to every edge into a block are collected for its
 **  start.  A drop on one edge but not all goes into the branch that ends
-**  the predecessor, if that is its source (the edge variants of CLQ, EQI,
-**  EQL, BRN and BRZ), else into a block of drops made for the edge; a
-**  block with a lone predecessor lets its branch take its own source the
-**  same way, over a drop at the start.  So no drop ever meets an empty
-**  slot, which _nc_zer_t does not allow.
+**  the predecessor, if that is one of its sources (the edge variants of
+**  the branches, _nc_edgy()), else into a block of drops made for the
+**  edge; a block with a lone predecessor lets its branch take its own
+**  sources the same way, over a drop at the start.  So no drop ever
+**  meets an empty slot, which _nc_zer_t does not allow.
 **
 **  Then the ops are rebuilt in layout order: a block's drops first (or
 **  left to its terminator's sweep, _nc_swe_t), then its ops, with a DRO
@@ -1688,19 +1737,13 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         liv_d[w_h] &= ~bin_d[w_h];
       }
 
-      //  a lone predecessor's branch takes its own source instead
+      //  a lone predecessor's branch takes its own sources instead
       //
       if ( 1 == pre_n ) {
-        c3_h   p_h   = pre_h[pro_h[b_h]];
-        nc_op* bra_u = _nc_branch(gen_u, p_h);
+        c3_h p_h = pre_h[pro_h[b_h]];
 
-        if (  bra_u && _nc_edgy(bra_u->fam_y)
-           && ((r_h = bra_u->src_h[0]) >= lo_h) && (r_h < hi_h)
-           && _nc_bit_get(liv_d, r_h - lo_h) )
-        {
-          _nc_bit_clr(liv_d, r_h - lo_h);
-          bra_u->kon_y |= _nc_edge_y(gen_u, p_h, b_h);
-        }
+        _nc_consume(_nc_branch(gen_u, p_h), _nc_edge_y(gen_u, p_h, b_h),
+                    liv_d, lo_h, hi_h);
       }
 
       for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
@@ -1720,29 +1763,27 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       //
       if ( pre_n > 1 ) {
         for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
-          c3_h   p_h   = pre_h[j_h];
-          nc_op* bra_u = _nc_branch(gen_u, p_h);
-          c3_y   edg_y = _nc_edge_y(gen_u, p_h, b_h);
-          c3_h   edg_h = (2 * gen_u->blk_u[p_h].lay_h) + (edg_y & 1);
+          c3_h p_h   = pre_h[j_h];
+          c3_y edg_y = _nc_edge_y(gen_u, p_h, b_h);
+          c3_h edg_h = (2 * gen_u->blk_u[p_h].lay_h) + (edg_y & 1);
 
           _nc_out(p_h);
+          for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+            out_d[w_h] &= ~bin_d[w_h] & ~liv_d[w_h];
+          }
+          _nc_consume(_nc_branch(gen_u, p_h), edg_y, out_d, lo_h, hi_h);
 
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
-            c3_d ded_d = out_d[w_h] & ~bin_d[w_h] & ~liv_d[w_h];
+            c3_d ded_d = out_d[w_h];
 
             while ( ded_d ) {
               c3_h bit_h = c3_tz_d(ded_d);
               ded_d &= ded_d - 1;
               r_h = lo_h + (w_h << 6) + bit_h;
 
-              if ( bra_u && _nc_edgy(bra_u->fam_y) && (bra_u->src_h[0] == r_h) ) {
-                bra_u->kon_y |= edg_y;
-              }
-              else {
-                _nc_grow(edr_d, edr_h, erc_h, c3_d);
-                edr_d[edr_h++] = ((c3_d)edg_h << 32) | r_h;
-                edc_h[edg_h]++;
-              }
+              _nc_grow(edr_d, edr_h, erc_h, c3_d);
+              edr_d[edr_h++] = ((c3_d)edg_h << 32) | r_h;
+              edc_h[edg_h]++;
             }
           }
         }
@@ -2383,8 +2424,7 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   c3_y  wid_y, fam_y = op_u->fam_y;
 
   switch ( fam_y ) {
-    case _nc_nop:
-    case _nc_kil: {
+    case _nc_nop: {
       return 0;
     }
 
@@ -2395,6 +2435,7 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
       return 1;
     }
 
+    case _nc_kil:     //  an imm of 0 (_nc_jump())
     case _nc_imm: {
       if ( op_u->dst_h < 0x100 ) {
         c3_h n_h = op_u->imm_h;
@@ -2454,12 +2495,19 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   }
 
   wid_y = ( max_h < 0x100 ) ? 0 : ( max_h < 0x10000 ) ? 1 : 2;
+  siz_h = 1 + (2 == wid_y);
 
   if ( buf_y ) {
     c3_y kon_y = _nc_fam[fam_y].kon_y ? op_u->kon_y : 0;
 
     u3_assert( kon_y < (1 << _nc_fam[fam_y].kon_y) );
-    buf_y[0] = _nc_bas_y[fam_y] + (3 * kon_y) + wid_y;
+    if ( 2 == wid_y ) {
+      buf_y[0] = WIDE;
+      buf_y[1] = _nc_vas_y[fam_y] + kon_y;
+    }
+    else {
+      buf_y[0] = _nc_bas_y[fam_y] + (2 * kon_y) + wid_y;
+    }
   }
 
   for ( i_h = 0; i_h < len_h; i_h++ ) {
@@ -2495,6 +2543,30 @@ _nc_read(const c3_y* pog, c3_h* ip_h, c3_y wid_y)
   }
 
   return val_h;
+}
+
+/* _nc_decode(): the family of the op at ip, past its opcode (a byte, or
+**               two behind WIDE), with its variant bits and its width.
+**               Not for IMM_* or BOM, which are no family's.
+*/
+static c3_y
+_nc_decode(const c3_y* pog, c3_h* ip_h, c3_y* kon_y, c3_y* wid_y)
+{
+  c3_y        cod_y = pog[(*ip_h)++];
+  c3_t        wid_t = (WIDE == cod_y);
+  const c3_y* bas_y = wid_t ? _nc_vas_y : _nc_bas_y;
+  c3_y        fam_y = 0;
+
+  if ( wid_t ) {
+    cod_y = pog[(*ip_h)++];
+  }
+  while ( ((fam_y + 1) < _nc_bom) && (bas_y[fam_y + 1] <= cod_y) ) {
+    fam_y++;
+  }
+  cod_y -= bas_y[fam_y];
+  *wid_y = wid_t ? 2 : (cod_y & 1);
+  *kon_y = wid_t ? cod_y : (cod_y >> 1);
+  return fam_y;
 }
 
 /* _nc_print_hint(): print the tag of a hint literal [tag formula].
@@ -2589,9 +2661,10 @@ _nc_print(u3nc_prog* pog_u)
 
   while ( ip_h < pog_u->byc_u.len_h ) {
     c3_y cod_y = pog[ip_h];
-    c3_h off_h = ip_h++;
+    c3_h off_h = ip_h;
 
     if ( (cod_y < IML_B) || (BOM == cod_y) ) {
+      ip_h++;
       fprintf(stderr, "  %4u: %-6s", off_h, _nc_name_c[cod_y]);
 
       if ( IMM_B == cod_y ) {
@@ -2605,13 +2678,7 @@ _nc_print(u3nc_prog* pog_u)
       }
     }
     else {
-      c3_y fam_y = 0, wid_y, kon_y;
-
-      while ( ((fam_y + 1) < _nc_bom) && (_nc_bas_y[fam_y + 1] <= cod_y) ) {
-        fam_y++;
-      }
-      wid_y = (cod_y - _nc_bas_y[fam_y]) % 3;
-      kon_y = (cod_y - _nc_bas_y[fam_y]) / 3;
+      c3_y kon_y, wid_y, fam_y = _nc_decode(pog, &ip_h, &kon_y, &wid_y);
 
       fprintf(stderr, "  %4u: %s_%c%s", off_h, _nc_fam_c[fam_y], "BSV"[wid_y],
               ( _nc_fam[fam_y].swe_y && kon_y ) ? " sweep" : " ");
@@ -2631,10 +2698,10 @@ _nc_print(u3nc_prog* pog_u)
         }
       }
       for ( i_h = 0; i_h < _nc_fam[fam_y].src_y; i_h++ ) {
-        const c3_c* kon_c = _nc_edgy(fam_y)
-                          ? ( (3 == kon_y) ? "!" : (1 == kon_y) ? "!f"
-                            : (2 == kon_y) ? "!j" : "" )
-                          : ( ((kon_y >> i_h) & 1) ? "!" : "" );
+        static const c3_c* edg_c[] = { "", "!f", "!j", "!" };
+        const c3_c*        kon_c   = _nc_edgy(fam_y)
+                                   ? edg_c[(kon_y >> (2 * i_h)) & 3]
+                                   : ( ((kon_y >> i_h) & 1) ? "!" : "" );
         fprintf(stderr, " %u%s", _nc_read(pog, &ip_h, wid_y), kon_c);
       }
       if ( _nc_fam[fam_y].dst_y ) {
@@ -3604,26 +3671,22 @@ _nc_doomed(const u3nc_prog* pog_u, const c3_y* ip)
   c3_h        ip_h = ip - pog;
 
   while ( ip_h < pog_u->byc_u.len_h ) {
-    c3_y cod_y = pog[ip_h++];
+    c3_y cod_y = pog[ip_h];
 
     if ( BOM == cod_y ) {
       return 1;
     }
     else if ( cod_y < IML_B ) {   //  IMM_0, IMM_1, IMM_B, IMM_S
-      ip_h += ( IMM_S == cod_y ) ? 3 : ( IMM_B == cod_y ) ? 2 : 1;
+      ip_h += ( IMM_S == cod_y ) ? 4 : ( IMM_B == cod_y ) ? 3 : 2;
     }
     else {
-      c3_y fam_y = 0, wid_y, n_y;
+      c3_y kon_y, wid_y, n_y, fam_y = _nc_decode(pog, &ip_h, &kon_y, &wid_y);
 
-      while ( ((fam_y + 1) < _nc_bom) && (_nc_bas_y[fam_y + 1] <= cod_y) ) {
-        fam_y++;
-      }
       if ( _nc_fam[fam_y].tar_y || _nc_fam[fam_y].swe_y ) {
         return 0;
       }
-      wid_y = (cod_y - _nc_bas_y[fam_y]) % 3;
-      n_y   = _nc_fam[fam_y].imm_y + _nc_fam[fam_y].src_y
-            + _nc_fam[fam_y].dst_y;
+      n_y = _nc_fam[fam_y].imm_y + _nc_fam[fam_y].src_y
+          + _nc_fam[fam_y].dst_y;
       while ( n_y-- ) {
         _nc_read(pog, &ip_h, wid_y);
       }

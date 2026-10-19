@@ -36,10 +36,12 @@ _Static_assert(1, "");
 #define _nc_cat(a, b)   _nc_cat_(a, b)
 
 //  OP(op): the function of an opcode, or of an internal entry point;
-//  TAB: the dispatch table; OP_F: the type of its entries
+//  TAB: the dispatch table; WTAB: that of the _V widths, behind WIDE;
+//  OP_F: the type of their entries
 //
 #define OP(op)  _nc_cat(_nc_burn, _##op)
 #define TAB     _nc_cat(_nc_burn, _tab)
+#define WTAB    _nc_cat(_nc_burn, _wtab)
 #define OP_F    _nc_cat(_nc_burn, _f)
 
 #define CONV      __attribute__((preserve_none))
@@ -64,12 +66,14 @@ typedef u3_noun (*OP_F)ARGS CONV;
 
 #define Y(op)  static u3_noun OP(op) ARGS CONV;
 OPCODES
+WIDES
 #undef Y
 
 static u3_noun OP(done) ARGS CONV;
 
 #define Y(op)  OP(op),
-static const OP_F TAB[] = { OPCODES };
+static const OP_F TAB[]  = { OPCODES };
+static const OP_F WTAB[] = { WIDES };
 #undef Y
 
 #define RB()  (*ip++)
@@ -248,7 +252,9 @@ static const OP_F TAB[] = { OPCODES };
 //  no consume variants.  OP1K/2K/3K: with one consumable source, op_0
 //  borrowing it and op_1 consuming it, the body taking K.  OP2KK/3KK:
 //  with two, bit 0 of the variant for the first and bit 1 for the second,
-//  the body taking KA and KB.
+//  the body taking KA and KB.  OP3K4: a branch on two sources, with two
+//  bits per source for the edge it is consumed on, 0 and 1 for the first
+//  and 2 and 3 for the second, the body taking KAY, KAT, KBY and KBT.
 //
 #define OP1(op, A, body)        DECODE1(op) BODY1(op, A, body)
 #define OP2(op, A, B, body)     DECODE2(op) BODY2(op, A, B, body)
@@ -277,6 +283,24 @@ static const OP_F TAB[] = { OPCODES };
   DECODE3(op##_1) BODY3(op##_1, A, B, C, body, 1, 0)                            \
   DECODE3(op##_2) BODY3(op##_2, A, B, C, body, 0, 1)                            \
   DECODE3(op##_3) BODY3(op##_3, A, B, C, body, 1, 1)
+
+#define OP3K4(op, A, B, C, body)                                                \
+  DECODE3(op##_0)  BODY3(op##_0,  A, B, C, body, 0, 0, 0, 0)                    \
+  DECODE3(op##_1)  BODY3(op##_1,  A, B, C, body, 1, 0, 0, 0)                    \
+  DECODE3(op##_2)  BODY3(op##_2,  A, B, C, body, 0, 1, 0, 0)                    \
+  DECODE3(op##_3)  BODY3(op##_3,  A, B, C, body, 1, 1, 0, 0)                    \
+  DECODE3(op##_4)  BODY3(op##_4,  A, B, C, body, 0, 0, 1, 0)                    \
+  DECODE3(op##_5)  BODY3(op##_5,  A, B, C, body, 1, 0, 1, 0)                    \
+  DECODE3(op##_6)  BODY3(op##_6,  A, B, C, body, 0, 1, 1, 0)                    \
+  DECODE3(op##_7)  BODY3(op##_7,  A, B, C, body, 1, 1, 1, 0)                    \
+  DECODE3(op##_8)  BODY3(op##_8,  A, B, C, body, 0, 0, 0, 1)                    \
+  DECODE3(op##_9)  BODY3(op##_9,  A, B, C, body, 1, 0, 0, 1)                    \
+  DECODE3(op##_10) BODY3(op##_10, A, B, C, body, 0, 1, 0, 1)                    \
+  DECODE3(op##_11) BODY3(op##_11, A, B, C, body, 1, 1, 0, 1)                    \
+  DECODE3(op##_12) BODY3(op##_12, A, B, C, body, 0, 0, 1, 1)                    \
+  DECODE3(op##_13) BODY3(op##_13, A, B, C, body, 1, 0, 1, 1)                    \
+  DECODE3(op##_14) BODY3(op##_14, A, B, C, body, 0, 1, 1, 1)                    \
+  DECODE3(op##_15) BODY3(op##_15, A, B, C, body, 1, 1, 1, 1)
 
 //  FRAME(des): push a frame recording this activation, its product to
 //              slot des; produces the frame
@@ -560,15 +584,30 @@ OP3KK(ADD, a_h, b_h, d_h, BODY_ADD)
   BURN();
 OP3KK(CON, a_h, b_h, d_h, BODY_CON)
 
-//  UNIQUE(x, K): for the statistics, whether consuming x frees a cell
+//  CELL(x): x as the cell it is.  HED and TAL don't check: the IR
+//  deconses a noun only past a CEL on it or on the yes edge of a CLQ
+//  (+kern-need and +mono-try-call in nock-compilation.hoon), and no pass
+//  of either compiler unguards them.  The checking build asserts it.
+//
+#if defined(U3NC_CHECK) || defined(C3DBG)
+#  define CELL(x)  ({                                                           \
+    u3_noun _x = (x);                                                           \
+    u3_assert( c3y == u3du(_x) );                                               \
+    (u3a_cell*)u3a_to_ptr(_x);                                                  \
+  })
+#else
+#  define CELL(x)  ((u3a_cell*)u3a_to_ptr(x))
+#endif
+
+//  UNIQUE(x, K): for the statistics, whether consuming the cell x frees it
 //
 #define UNIQUE(x, K)                                                            \
-  (  (K) && (c3y == u3a_is_pom(x)) && (c3y == _nc_normal(rod_u, x))             \
+  (  (K) && (c3y == _nc_normal(rod_u, x))                                       \
   && (1 == ((u3a_noun*)u3a_to_ptr(x))->use_w) )
 
 #define BODY_HED(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
-  u3_noun h = ( c3y == u3du(x) ) ? GAIN(u3h(x)) : 0;                            \
+  u3_noun h = GAIN(CELL(x)->hed);                                               \
   _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
   DROP(a_h, K);                                                                 \
   PUT(d_h, h);                                                                  \
@@ -577,7 +616,7 @@ OP2K(HED, a_h, d_h, BODY_HED)
 
 #define BODY_TAL(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
-  u3_noun t = ( c3y == u3du(x) ) ? GAIN(u3t(x)) : 0;                            \
+  u3_noun t = GAIN(CELL(x)->tel);                                               \
   _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
   DROP(a_h, K);                                                                 \
   PUT(d_h, t);                                                                  \
@@ -787,8 +826,9 @@ OP1(CAM, a_h, BODY_CAM)
   ENTER(1);
 OP1(CSM, a_h, BODY_CSM)
 
-//  branches release their source on the edge that consumes it, before
-//  they go: KY on the fall-through to the yes block, KT on the jump
+//  branches release a source on the edge that consumes it, before they
+//  go: KY (KAY, KBY) on the fall-through to the yes block, KT (KAT, KBT)
+//  on the jump
 //
 #define BODY_CLQ(KY, KT)                                                        \
   if ( c3y == u3du(reg[a_h]) ) {                                                \
@@ -801,15 +841,18 @@ OP1(CSM, a_h, BODY_CSM)
   BURN();
 OP2KK(CLQ, a_h, b_h, BODY_CLQ)
 
-#define BODY_EQQ(KA, KB)                                                        \
-  c3_o e = u3r_sing(reg[a_h], reg[b_h]);                                        \
-  DROP(a_h, KA);                                                                \
-  DROP(b_h, KB);                                                                \
-  if ( c3n == e ) {                                                             \
+#define BODY_EQQ(KAY, KAT, KBY, KBT)                                            \
+  if ( c3y == u3r_sing(reg[a_h], reg[b_h]) ) {                                  \
+    DROP(a_h, KAY);                                                             \
+    DROP(b_h, KBY);                                                             \
+  }                                                                             \
+  else {                                                                        \
+    DROP(a_h, KAT);                                                             \
+    DROP(b_h, KBT);                                                             \
     JUMP(c_h);                                                                  \
   }                                                                             \
   BURN();
-OP3KK(EQQ, a_h, b_h, c_h, BODY_EQQ)
+OP3K4(EQQ, a_h, b_h, c_h, BODY_EQQ)
 
 #define BODY_EQI(KY, KT)                                                        \
   if ( reg[b_h] == a_h ) {                                                      \
@@ -981,10 +1024,20 @@ OP(BOM) ARGS CONV
   u3m_bail(c3__exit);
 }
 
+//  WIDE: the _V width of the opcode in the next byte, from its own table
+//
+static u3_noun
+OP(WIDE) ARGS CONV
+{
+  c3_y op_y = RB();
+  MUSTTAIL return WTAB[op_y](NEXT);
+}
+
 #undef _nc_cat_
 #undef _nc_cat
 #undef OP
 #undef TAB
+#undef WTAB
 #undef OP_F
 #undef CONV
 #undef MUSTTAIL
@@ -1007,6 +1060,7 @@ OP(BOM) ARGS CONV
 #undef TAKE
 #undef DROP
 #undef UNIQUE
+#undef CELL
 #undef DECODE1
 #undef DECODE2
 #undef DECODE3
@@ -1021,6 +1075,7 @@ OP(BOM) ARGS CONV
 #undef OP3K
 #undef OP2KK
 #undef OP3KK
+#undef OP3K4
 #undef FRAME
 #undef SITE
 #undef SUB

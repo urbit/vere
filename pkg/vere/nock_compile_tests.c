@@ -412,6 +412,64 @@ _test_partial(void)
   return _test("partial", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_equal(): branches on the equality of two registers, indirect
+**                atoms in a loop.  The first, a test of a ?| whose other
+**                test the yes block shares, has one source read past it
+**                only by that other test, on the no side: the EQQ
+**                consumes it on the fall-through.  The last, in tail
+**                position, has each source read past it in one arm only:
+**                the EQQ consumes one on each edge.
+*/
+static c3_i
+_test_equal(void)
+{
+  u3_noun cor = _gate("|=  [a=@ n=@]\n"
+                      "^-  @\n"
+                      "=/  acc  0\n"
+                      "|-  ^-  @\n"
+                      "?:  =(0 n)  acc\n"
+                      "=/  v  (add n a)\n"
+                      "=/  w  (add a 2)\n"
+                      "=.  acc\n"
+                      "  ?:  ?|(=(v w) =(0 (mod v 2)))\n"
+                      "    (add acc 1)\n"
+                      "  (add acc w)\n"
+                      "=/  y  (add a n)\n"
+                      "=/  z  (add a 3)\n"
+                      "?:  =(y z)\n"
+                      "  $(n (dec n), acc (add acc y))\n"
+                      "$(n (dec n), acc (add acc z))\n",
+                      u3nc(u3i_string("an atom long enough to be indirect, yes"), 5));
+
+  return _test("equal", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_fork(): a ?: in value position whose arms produce indirect atoms.
+**               The IR keeps both products, each in a register of its
+**               own, with the loobean, and tests that again where the
+**               value is read; so each path leaves the register of the
+**               other arm undefined (kil), and its drop there must find
+**               nothing to release.
+*/
+static c3_i
+_test_fork(void)
+{
+  u3_noun cor = _gate("|=  [a=@ n=@]\n"
+                      "^-  @\n"
+                      "=/  acc  0\n"
+                      "|-  ^-  @\n"
+                      "?:  =(0 n)  acc\n"
+                      "=/  y  (add a n)\n"
+                      "=/  z  (add a 3)\n"
+                      "=.  acc  ?:(=(y z) (add acc y) (add acc z))\n"
+                      "?:  =(0 (mod n 2))\n"
+                      "  $(n (dec n), acc (add acc 1))\n"
+                      "$(n (dec n), acc (add acc 2))\n",
+                      u3nc(u3i_string("an atom long enough to be indirect, yes"), 5));
+
+  return _test("fork", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* _test_unused(): the product of a call that is never used (but may
 **                 crash, so the call stays): dropped right after it.
 */
@@ -556,6 +614,14 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_partial() ) {
+    exit(1);
+  }
+
+  if ( !_test_equal() ) {
+    exit(1);
+  }
+
+  if ( !_test_fork() ) {
     exit(1);
   }
 
