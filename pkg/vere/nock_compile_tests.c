@@ -444,12 +444,13 @@ _test_equal(void)
   return _test("equal", cor, u3nq(9, 2, 0, 1), 1);
 }
 
-/* _test_fork(): a ?: in value position whose arms produce indirect atoms.
-**               The IR keeps both products, each in a register of its
-**               own, with the loobean, and tests that again where the
-**               value is read; so each path leaves the register of the
-**               other arm undefined (kil), and its drop there must find
-**               nothing to release.
+/* _test_fork(): a ?: in value position whose arms are autoconses of
+**               indirect atoms, taken apart past it.  The IR materializes
+**               the loobean and tests it again in every block that reads
+**               the product, each arm fulfilling the reads its own way;
+**               a register defined in one arm and read past the join is
+**               left undefined (kil) on the other path, and its drop
+**               there must find nothing to release.
 */
 static c3_i
 _test_fork(void)
@@ -460,11 +461,10 @@ _test_fork(void)
                       "|-  ^-  @\n"
                       "?:  =(0 n)  acc\n"
                       "=/  y  (add a n)\n"
-                      "=/  z  (add a 3)\n"
-                      "=.  acc  ?:(=(y z) (add acc y) (add acc z))\n"
+                      "=/  p  ?:(=(y (add a 3)) [(add y 1) 1] [2 (add y 2)])\n"
                       "?:  =(0 (mod n 2))\n"
-                      "  $(n (dec n), acc (add acc 1))\n"
-                      "$(n (dec n), acc (add acc 2))\n",
+                      "  $(n (dec n), acc (add acc -.p))\n"
+                      "$(n (dec n), acc (add acc +.p))\n",
                       u3nc(u3i_string("an atom long enough to be indirect, yes"), 5));
 
   return _test("fork", cor, u3nq(9, 2, 0, 1), 1);
