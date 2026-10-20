@@ -306,7 +306,7 @@ def main():
         print(f"  frees that dirtied a clean page via its page record: {x[5]} "
               f"({pct(x[5], pat).strip()} of patch pages)")
         print(f"    of those pages, later allocated into: {x[8]} ({pct(x[8], x[5]).strip()})")
-        print(f"  chunk allocations that dirtied a clean page: {x[6]}")
+        print(f"  clean pages first written by a chunk allocation: {x[6]}")
         print(f"    while a dirty page in the same class had room: {x[7]} ({pct(x[7], x[6]).strip()})")
 
     # ---- formula / battery identity ----------------------------------------

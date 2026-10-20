@@ -434,7 +434,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   _ce_meas.tak_d = 0;
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
-    _ce_meas.fla_y[i_w] &= ~(c3_y)(1|2|8|16);
+    _ce_meas.fla_y[i_w] &= ~(c3_y)(1|2|8|16|32);
   }
 }
 
@@ -571,9 +571,15 @@ u3e_measure_alloc(c3_w pag_w, c3_t alt_t)
   if ( pag_w >= _ce_meas.pag_w ) {
     return;
   }
+  //  count each clean page once per interval: allocations (e.g. for
+  //  the cell pool) can be made before any of them is written
+  //
   else if ( !u3e_measure_dirty(pag_w) ) {
-    u3e_Meter.alc_cln_d++;
-    if ( alt_t ) u3e_Meter.alc_alt_d++;
+    if ( !(_ce_meas.fla_y[pag_w] & 32) ) {
+      _ce_meas.fla_y[pag_w] |= 32;
+      u3e_Meter.alc_cln_d++;
+      if ( alt_t ) u3e_Meter.alc_alt_d++;
+    }
   }
   else if ( 8 == (_ce_meas.fla_y[pag_w] & (8|16)) ) {
     u3e_Meter.alc_reu_d++;
