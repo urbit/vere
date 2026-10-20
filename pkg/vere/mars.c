@@ -2005,10 +2005,12 @@ u3_mars_work(u3_mars* mar_u)
   //  boot marked ownership from the epoch's rows through the snapshot,
   //  replay marked the events after it, and no hold outlives a restart.
   //  so the gc may reclaim any unowned blob nothing holds, once the log
-  //  is caught up: short of that (a dry run skips replay) an input with
-  //  no record yet would read as an orphan
+  //  is caught up: short of that an input with no record yet would read
+  //  as an orphan.  a dry run deletes nothing
   //
-  if ( mar_u->dun_d == mar_u->log_u->dun_d ) {
+  if (  (mar_u->dun_d == mar_u->log_u->dun_d)
+     && !(u3C.wag_h & u3o_dryrun) )
+  {
     u3_disk_blob_gc();
   }
 

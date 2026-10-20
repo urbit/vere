@@ -2736,7 +2736,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         //  VER2 epoch: always roll to VER3 if snapshot is up-to-date
         //
         if (  (U3E_VER2 == ver_h)
-           && (log_u->dun_d == u3A->eve_d) )
+           && (log_u->dun_d == u3A->eve_d)
+           && !(u3C.wag_h & u3o_dryrun) )
         {
           if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, u3C.bob_c) ) {
             fprintf(stderr, "disk: failed to roll VER2 epoch to VER3\r\n");
