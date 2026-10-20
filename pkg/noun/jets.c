@@ -8,6 +8,7 @@
 #include "jets/k.h"
 #include "jets/q.h"
 #include "log.h"
+#include "events.h"
 #include "manage.h"
 #include "nock.h"
 #include "options.h"
@@ -1501,10 +1502,26 @@ u3j_site_ream(u3j_site* sit_u)
 static void
 _cj_site_lock(u3_noun loc, u3_noun cor, u3j_site* sit_u)
 {
-  if ( (u3_none != sit_u->bat) &&
-       (c3y == u3r_sing(sit_u->bat, u3h(cor))) ) {
+  //  measurement: battery pointer vs value equality (jb/measure)
+  //
+  c3_y rod_y = ( &u3H->rod_u == u3R ) ? 0 : 1;
+
+  if ( u3_none == sit_u->bat ) {
+    u3e_Meter.lok_d[rod_y][u3e_lok_none]++;
+  }
+  else if ( sit_u->bat == u3h(cor) ) {
+    u3e_Meter.lok_d[rod_y][u3e_lok_ptr]++;
     return;
   }
+  else if ( c3y == u3r_sing(sit_u->bat, u3h(cor)) ) {
+    u3e_Meter.lok_d[rod_y][ ( c3y == u3a_is_senior(u3R, u3h(cor)) )
+                            ? u3e_lok_sen : u3e_lok_cur ]++;
+    return;
+  }
+  else {
+    u3e_Meter.lok_d[rod_y][u3e_lok_diff]++;
+  }
+
   sit_u->pog_p = _cj_prog(loc, u3x_at(sit_u->axe, cor));
   if ( u3_none != sit_u->bat ) {
     u3z(sit_u->bat);
@@ -1625,6 +1642,13 @@ _cj_site_kick(u3_noun cor, u3j_site* sit_u)
       }
     }
   }
+
+  //  measurement: classify the kick (jb/measure)
+  //
+  if ( u3_none == loc )            u3e_Meter.unr_d++;
+  else if ( c3n == sit_u->jet_o )  u3e_Meter.noj_d++;
+  else if ( u3_none == pro )       u3e_Meter.dec_d++;
+  else                             u3e_Meter.jet_d++;
 
   if ( u3_none == pro ) {
     _cj_site_lock(loc, cor, sit_u);

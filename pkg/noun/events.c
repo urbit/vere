@@ -353,6 +353,28 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.tab_u[i_w].ent_d[0]);
   }
 
+  //  hot-path counters (jb/measure)
+  //
+  fprintf(fil_u, "K %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.jet_d, u3e_Meter.dec_d,
+                 u3e_Meter.noj_d, u3e_Meter.unr_d);
+
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    for ( j_w = 0; j_w < 2; j_w++ ) {
+      fprintf(fil_u, "B %s %s", i_w ? "inner" : "home",
+                                j_w ? "site" : "nock2");
+      for ( k_w = 0; k_w < 7; k_w++ ) {
+        fprintf(fil_u, " %" PRIu64, u3e_Meter.fnd_d[i_w][j_w][k_w]);
+      }
+      fprintf(fil_u, "\n");
+    }
+    fprintf(fil_u, "L %s", i_w ? "inner" : "home");
+    for ( k_w = 0; k_w < 5; k_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.lok_d[i_w][k_w]);
+    }
+    fprintf(fil_u, "\n");
+  }
+
   //  home-road table sizes at this snapshot, and reclaims since the last
   //
   {
