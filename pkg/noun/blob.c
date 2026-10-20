@@ -14,6 +14,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef U3_OS_windows
+#  include <io.h>
+#  include <windows.h>
+#endif
+
 //  mode for a finished blob file.
 //
 //    blobs are immutable once written, so posix creates them read-only.
@@ -30,6 +35,33 @@
 #endif
 //  applied by u3b_move_stg before the rename (posix) and by its copy
 //  fallback; on windows the staging file's 0600 already is the mode.
+
+/* _blob_pread(): pread at a 64-bit offset.  the windows shim's off_t
+**   is 32 bits, so there the read goes straight to ReadFile.
+*/
+static ssize_t
+_blob_pread(c3_i fid_i, void* buf_v, size_t len_i, c3_d off_d)
+{
+#ifdef U3_OS_windows
+  HANDLE     fil_h = (HANDLE)_get_osfhandle(fid_i);
+  OVERLAPPED ovl_u = {0};
+  DWORD      got_u = 0;
+
+  ovl_u.Offset     = (DWORD)(off_d & 0xffffffffULL);
+  ovl_u.OffsetHigh = (DWORD)(off_d >> 32);
+
+  if ( !ReadFile(fil_h, buf_v, (DWORD)len_i, &got_u, &ovl_u) ) {
+    if ( ERROR_HANDLE_EOF == GetLastError() ) {
+      return 0;
+    }
+    errno = EIO;
+    return -1;
+  }
+  return (ssize_t)got_u;
+#else
+  return pread(fid_i, buf_v, len_i, (off_t)off_d);
+#endif
+}
 
 //  maximum bytes per single read()/write() call.
 //  POSIX allows read()/write() to return EINVAL if count > SSIZE_MAX;
@@ -480,7 +512,7 @@ u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 
   while ( len_z ) {
     size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
-    ssize_t got_i = pread(han_u->fid_i, dst_y, ask_i, (off_t)off_d);
+    ssize_t got_i = _blob_pread(han_u->fid_i, dst_y, ask_i, off_d);
 
     if ( got_i < 0 ) {
       if ( EINTR == errno ) {
@@ -1088,20 +1120,24 @@ u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 static c3_o
 _blob_name_num(const c3_c* nam_c, c3_h* out_h)
 {
-  c3_c* end_c;
+  //  digits only, no sign, space, or leading zero: the spelling
+  //  u3b_path writes, and so one name per number
+  //
+  c3_d val_d = 0;
+  c3_w len_w = 0;
 
-  if ( !nam_c[0] ) {
+  for ( ; nam_c[len_w]; len_w++ ) {
+    if ( (nam_c[len_w] < '0') || (nam_c[len_w] > '9') || (len_w >= 10) ) {
+      return c3n;
+    }
+    val_d = (10 * val_d) + (c3_d)(nam_c[len_w] - '0');
+  }
+
+  if ( !len_w || (('0' == nam_c[0]) && (len_w > 1)) || (val_d > 0xFFFFFFFFULL) ) {
     return c3n;
   }
 
-  errno = 0;
-  unsigned long val = strtoul(nam_c, &end_c, 10);
-
-  if ( errno || *end_c || (val > 0xFFFFFFFFUL) ) {
-    return c3n;
-  }
-
-  *out_h = (c3_h)val;
+  *out_h = (c3_h)val_d;
   return c3y;
 }
 
@@ -1206,6 +1242,41 @@ _blob_copy(const c3_c* src_c, const c3_c* dst_c)
   return ok_o;
 }
 
+/* _blob_same_file(): [a_c] and [b_c] name one file.  windows has no
+**   inode in stat; its volume serial and file index are the same thing.
+*/
+static c3_o
+_blob_same_file(const c3_c* a_c, const c3_c* b_c)
+{
+#ifdef U3_OS_windows
+  c3_i a_i = open(a_c, O_RDONLY);
+  c3_i b_i = open(b_c, O_RDONLY);
+  c3_o sam_o = c3n;
+
+  if ( (-1 != a_i) && (-1 != b_i) ) {
+    BY_HANDLE_FILE_INFORMATION a_u, b_u;
+
+    if (  GetFileInformationByHandle((HANDLE)_get_osfhandle(a_i), &a_u)
+       && GetFileInformationByHandle((HANDLE)_get_osfhandle(b_i), &b_u) )
+    {
+      sam_o = __(  (a_u.dwVolumeSerialNumber == b_u.dwVolumeSerialNumber)
+                && (a_u.nFileIndexHigh == b_u.nFileIndexHigh)
+                && (a_u.nFileIndexLow == b_u.nFileIndexLow) );
+    }
+  }
+  if ( -1 != a_i ) close(a_i);
+  if ( -1 != b_i ) close(b_i);
+  return sam_o;
+#else
+  struct stat a_u, b_u;
+
+  return __(  (0 == stat(a_c, &a_u))
+           && (0 == stat(b_c, &b_u))
+           && (a_u.st_dev == b_u.st_dev)
+           && (a_u.st_ino == b_u.st_ino) );
+#endif
+}
+
 /* u3b_link(): carry a blob from store [old_c] into store [new_c].
 **
 **   A hard link, so the file is one inode owned by both epochs until
@@ -1230,14 +1301,7 @@ u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
       //  a retried roll finds its own link; anything else under that
       //  name is a different file and must not pass for this one
       //
-      struct stat src_u, dst_u;
-
-      if (  (0 == stat(src_c, &src_u))
-         && (0 == stat(dst_c, &dst_u))
-         && (src_u.st_size == dst_u.st_size)
-         && (  !src_u.st_ino
-            || ((src_u.st_dev == dst_u.st_dev) && (src_u.st_ino == dst_u.st_ino)) ) )
-      {
+      if ( c3y == _blob_same_file(src_c, dst_c) ) {
         return c3y;
       }
       fprintf(stderr, "blob: link: %s exists and is not %s\r\n", dst_c, src_c);

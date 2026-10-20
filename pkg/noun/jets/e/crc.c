@@ -37,7 +37,13 @@ u3qe_crc32(u3_noun input_octs)
   c3_w led_w = hed_w - tel_w;
   c3_w crc_w = 0;
 
-  crc_w = crc32(crc_w, input, tel_w);
+  //  zlib takes a uInt length: feed the bytes in pieces it can count
+  //
+  for ( c3_w off_w = 0; off_w < tel_w; ) {
+    c3_w cnk_w = c3_min(tel_w - off_w, (c3_w)1 << 30);
+    crc_w  = crc32(crc_w, input + off_w, (uInt)cnk_w);
+    off_w += cnk_w;
+  }
 
   while ( led_w > 0 ) {
     c3_y byt_y = 0;

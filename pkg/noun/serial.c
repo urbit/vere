@@ -1636,21 +1636,20 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 u3_weak
 u3s_sift_ud(u3_atom a)
 {
-  c3_w  len_w = u3r_met(3, a);
-  c3_y* byt_y;
+  u3r_view vue_u;
+  u3_weak  pro;
 
-  // XX assumes little-endian
+  //  a view, so a bob is read where it lives
   //
-  if ( c3y == u3a_is_cat(a) ) {
-     byt_y = (c3_y*)&a;
-   }
-   else {
-     u3_assert(c3n == u3a_is_bob(a));
-     u3a_atom* vat_u = u3a_to_ptr(a);
-     byt_y = (c3_y*)vat_u->buf_w;
-   }
+  u3r_view_open(&vue_u, a, c3y);
 
-   return u3s_sift_ud_bytes(len_w, byt_y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+
+  pro = u3s_sift_ud_bytes((c3_w)vue_u.byt_d, (c3_y*)u3r_view_bytes(&vue_u));
+  u3r_view_done(&vue_u);
+  return pro;
 }
 
 /*

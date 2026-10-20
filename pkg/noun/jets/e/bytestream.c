@@ -353,7 +353,7 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
   }
   // Newline not found, position at the end (guard deref: pos_w may be >= len_w)
   if (pos_w >= len_w || *(sea_y + pos_w) != '\n') {
-    pos_w = p_octs;
+    pos_w = p_octs_w;
   }
   else {
     pos_w++;
@@ -417,7 +417,7 @@ _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
   //  in the stream, it means pos_w points at
   //  the first leading zero.
   //
-  if (pos_w < p_octs && bat_w == 0) {
+  if (pos_w < p_octs_w && bat_w == 0) {
     _x_octs_done(vue, u3nc(u3_nul, u3i_word(pos_w)));
   }
 
@@ -477,7 +477,7 @@ _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   // find leading zero: see comment in *_find_byte
   //
-  if (pos_w < p_octs && bat_w == 0) {
+  if (pos_w < p_octs_w && bat_w == 0) {
       u3_noun idx = u3nc(u3_nul, u3i_word(pos_w));
       u3_noun new_bays = u3nc(u3i_word(pos_w), u3k(octs));
       _x_octs_done(vue, u3nc(idx, new_bays));
@@ -715,10 +715,10 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
 
   u3_noun hun = u3_nul;
 
-  while (pos_w < p_octs) {
+  while (pos_w < p_octs_w) {
     // Remaining bytes
     //
-    c3_w rem = (p_octs - pos_w);
+    c3_w rem = (p_octs_w - pos_w);
 
     if (rem < size) {
       u3_noun octs = _qe_peek_octs(rem, pos_w, p_octs_w, sea_y,
@@ -1034,7 +1034,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   while (need_bytes_w--) {
 
     if (pos_w < len_w) {
-      bit_d += *(sea_y + pos_w) << num_w;
+      bit_d += (c3_d)*(sea_y + pos_w) << num_w;
     }
     num_w += 8;
     pos_w++;

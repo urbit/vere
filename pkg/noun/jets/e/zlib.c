@@ -1,6 +1,7 @@
 /// @file
 
 #include <allocate.h>
+#include <limits.h>
 #include <stdio.h>
 #include "zlib.h"
 
@@ -68,12 +69,14 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   int ret;
   z_stream strm;
 
-  if (pos_w < len_w) {
-    strm.avail_in = (len_w - pos_w);
+  //  zlib takes a uInt length; more input than that cannot be inflated
+  //  in one call
+  //
+  if ( (c3_d)(len_w - pos_w) > (c3_d)UINT_MAX ) {
+    u3r_view_done(&vue_u);
+    return u3m_bail(c3__fail);
   }
-  else {
-    strm.avail_in = 0;
-  }
+  strm.avail_in = (uInt)(len_w - pos_w);
 
   strm.zalloc = zlib_malloc;
   strm.zfree = zlib_free;
@@ -170,7 +173,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3m_bail(c3__exit);
   }
 
-  u3_noun decompressed_octs = u3nc(strm.total_out, u3i_slab_mint(&sab_u));
+  u3_noun decompressed_octs = u3nc(u3i_chub(strm.total_out), u3i_slab_mint(&sab_u));
   u3_noun new_pos = pos_w + strm.total_in;
   u3_noun new_stream = u3nc(u3i_word(new_pos), u3k(octs));
 

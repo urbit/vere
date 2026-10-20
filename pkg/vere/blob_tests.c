@@ -453,6 +453,17 @@ _test_walk(void)
     snprintf(pax_c, sizeof(pax_c), "%s/notanumber", _tmp_bob);
     fil_u = fopen(pax_c, "w");
     if ( fil_u ) { fputs("junk", fil_u); fclose(fil_u); }
+
+    //  and names that parse as numbers but are not how a seq is
+    //  spelled: a leading zero and a sign
+    //
+    const c3_c* odd_c[] = { "07", "+7" };
+    for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+      snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h "/%s",
+               _tmp_bob, mug_h[0], odd_c[i_w]);
+      fil_u = fopen(pax_c, "w");
+      if ( fil_u ) { fputs("junk", fil_u); fclose(fil_u); }
+    }
   }
 
   _walk_acc acc_u = {0};
@@ -2195,6 +2206,30 @@ _test_hand_grab(void)
 }
 #endif
 
+/* _test_sift_bob(): the %ud parser behind slaw reads a bob through a
+**   view and agrees with the loom atom.
+*/
+static void
+_test_sift_bob(void)
+{
+  _pier_make("sift bob");
+
+  const c3_y dat_y[] = "1.234.567";
+  c3_h mug_h, seq_h;
+  _check( c3y == _blob_save(dat_y, 9, &mug_h, &seq_h), "save failed" );
+
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+  u3_atom loa = u3i_bytes(9, dat_y);
+  u3_weak pob = u3s_sift_ud(bob);
+  u3_weak pol = u3s_sift_ud(loa);
+
+  _check( (1234567 == pol) && (c3y == u3r_sing(pob, pol)),
+          "sift_ud on a bob differs from the loom atom" );
+
+  u3z(pob); u3z(pol); u3z(bob); u3z(loa);
+  _pier_done();
+}
+
 /* _test_hand_edge(): met and comparison at the 4 KiB window boundaries.
 */
 static void
@@ -3723,6 +3758,7 @@ main(int argc, char* argv[])
   _test_hand_grab();
 #endif
   _test_hand_edge();
+  _test_sift_bob();
   _test_hand_share();
   _test_hand_reuse();
   _test_hand_deep();

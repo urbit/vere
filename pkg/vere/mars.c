@@ -518,6 +518,24 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
   }
   u3z(pax);
 
+  //  a stub names its file by mug alone: two installs of one mug and
+  //  different content cannot be told apart, so the event is refused
+  //  rather than given the wrong file.  one content twice is one id
+  //
+  for ( c3_w i_w = 0; (u3_nul == tan) && (i_w < bid_u.len_w); i_w++ ) {
+    for ( c3_w j_w = i_w + 1; j_w < bid_u.len_w; j_w++ ) {
+      if (  (u3a_bid_mug(bid_u.bid_d[i_w]) == u3a_bid_mug(bid_u.bid_d[j_w]))
+         && (bid_u.bid_d[i_w] != bid_u.bid_d[j_w]) )
+      {
+        fprintf(stderr, "mars: poke refused: two staged files share a mug\r\n");
+        tan = u3nc(u3nc(c3__leaf,
+                        u3i_string("two staged files share a mug")),
+                   u3_nul);
+        break;
+      }
+    }
+  }
+
   c3_y* hit_y = bid_u.len_w ? c3_calloc(bid_u.len_w) : 0;
 
   if ( u3_nul == tan ) {
