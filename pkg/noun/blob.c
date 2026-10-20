@@ -873,9 +873,9 @@ _blob_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
 static c3_o
 _blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
 {
-  if ( c3y == ok_o ) {
-    c3_sync(fid_i);
-  }
+  //  no sync: a staged file is purged at the next start whatever
+  //  happens to it, and the install syncs what it keeps
+  //
   close(fid_i);
 
   if ( c3n == ok_o ) {
@@ -1458,22 +1458,21 @@ u3b_move_stg(const c3_c* bob_c,
   //  trim the trailing zeros off the file itself, now that the mapping
   //  is gone, so the installed blob is byte-exact with the atom
   //
-  if ( len_d != map_d ) {
-    if ( 0 != ftruncate(fid_i, (off_t)len_d) ) {
-      fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
-              stg_c, strerror(errno));
-      close(fid_i);
-      return c3n;
-    }
-    //  the staged bytes were synced before the trim; the new length
-    //  was not, and the directory sync below does not cover it
-    //
-    if ( 0 != c3_sync(fid_i) ) {
-      fprintf(stderr, "blob: install_stg: fsync failed on %s: %s\r\n",
-              stg_c, strerror(errno));
-      close(fid_i);
-      return c3n;
-    }
+  if ( (len_d != map_d) && (0 != ftruncate(fid_i, (off_t)len_d)) ) {
+    fprintf(stderr, "blob: install_stg: ftruncate failed on %s: %s\r\n",
+            stg_c, strerror(errno));
+    close(fid_i);
+    return c3n;
+  }
+
+  //  the one sync of the blob's bytes and length: staging leaves it to
+  //  this, so content dedup discards is never synced at all
+  //
+  if ( 0 != c3_sync(fid_i) ) {
+    fprintf(stderr, "blob: install_stg: fsync failed on %s: %s\r\n",
+            stg_c, strerror(errno));
+    close(fid_i);
+    return c3n;
   }
 
 #ifndef U3_OS_windows
@@ -1586,7 +1585,6 @@ _blob_bsink_don(void* ptr_v)
     return u3_none;
   }
 
-  c3_sync(bsk_u->fid_i);
   close(bsk_u->fid_i);
   bsk_u->fid_i = -1;
 

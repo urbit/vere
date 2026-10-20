@@ -1249,8 +1249,8 @@ u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
     return c3y;
   }
 
-  vue_u->byt_d = u3r_met_d(3, a);
   vue_u->bit_d = u3r_met_d(0, a);
+  vue_u->byt_d = (vue_u->bit_d + 7) >> 3;
 
   //  a direct atom has no address: its value is kept in the view and
   //  read there.  an indirect atom's word buffer is borrowed, zero-
