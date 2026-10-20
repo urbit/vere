@@ -87,14 +87,6 @@ _blob_head_set(u3a_road* rod_u, u3b_hand* han_u)
   }
 }
 
-/* _blob_bid(): hand key for (mug_h, seq_h).
-*/
-static inline c3_d
-_blob_bid(c3_h mug_h, c3_h seq_h)
-{
-  return ((c3_d)mug_h << 32) | seq_h;
-}
-
 /* _blob_hand_shut(): release the fd and mapping of [han_u].
 **
 **   the caller holds the critical section.
@@ -279,7 +271,7 @@ _blob_hand_met(u3b_hand* han_u)
 u3b_hand*
 u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
-  c3_d          bid_d = _blob_bid(mug_h, seq_h);
+  c3_d          bid_d = u3a_bid(mug_h, seq_h);
   c3_o          hom_o = ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
   u3b_hand*     han_u = 0;
 
@@ -494,9 +486,9 @@ u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
       if ( EINTR == errno ) {
         continue;
       }
-      fprintf(stderr, "blob: read: %08" PRIx32 "/%08" PRIx32 " at %" PRIc3_d
+      fprintf(stderr, "blob: read: " U3A_BID_FMT " at %" PRIc3_d
                       ": %s\r\n",
-              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
+              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d),
               off_d, strerror(errno));
       break;
     }
@@ -576,9 +568,9 @@ u3b_mmap(u3b_hand* han_u)
     if (  (-1 == fstat(han_u->fid_i, &st_u))
        || ((c3_d)st_u.st_size < han_u->len_d) )
     {
-      fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": file shrank"
+      fprintf(stderr, "blob: data: " U3A_BID_FMT ": file shrank"
                       "\r\n",
-              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF));
+              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d));
       return 0;
     }
   }
@@ -593,8 +585,8 @@ u3b_mmap(u3b_hand* han_u)
     u3m_crit_out();
 
     if ( !map_y ) {
-      fprintf(stderr, "blob: data: %08" PRIx32 "/%08" PRIx32 ": mmap: %s\r\n",
-              (c3_h)(han_u->bid_d >> 32), (c3_h)(han_u->bid_d & 0xFFFFFFFF),
+      fprintf(stderr, "blob: data: " U3A_BID_FMT ": mmap: %s\r\n",
+              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d),
               strerror(errno));
     }
     return map_y;
@@ -815,16 +807,26 @@ _blob_sig(const c3_y* dat_y, c3_d len_d)
   return len_d;
 }
 
-/* _blob_mug(): compute the 31-bit mug of blob content.
+/* _blob_meas(): measure content as an install does: [sig_d] its
+**   significant length, [mug_h] the mug of those bytes.  c3n if it has
+**   no bob representation (fewer than U3_BLOB_MIN significant bytes,
+**   all-zero content included).
 **
-**   This is not merely a bucketing hash: u3i_blob() memoizes it as the
-**   bob atom's mug_w, so it must equal the mug the same atom would get
-**   in the loom (u3r_mug_words -> strip trailing zeros -> u3r_mug_bytes).
+**   the one measure: staging reports this mug for a stub to carry, and
+**   install recomputes it to file the blob, so the two must agree.  the
+**   mug is the one the same atom gets in the loom, since u3i_blob puts
+**   it in the bob's header.
 */
-static c3_h
-_blob_mug(const c3_y* dat_y, c3_d len_d)
+static c3_o
+_blob_meas(const c3_y* dat_y, c3_d len_d, c3_d* sig_d, c3_h* mug_h)
 {
-  return u3r_mug_bytes(dat_y, _blob_sig(dat_y, len_d));
+  *sig_d = _blob_sig(dat_y, len_d);
+
+  if ( *sig_d < U3_BLOB_MIN ) {
+    return c3n;
+  }
+  *mug_h = u3r_mug_bytes(dat_y, *sig_d);
+  return c3y;
 }
 
 /* _blob_stage_open(): create a staging file, its path in [stg_c].
@@ -906,12 +908,9 @@ _blob_measure(const c3_c* stg_c, c3_h* mug_h)
     return c3n;
   }
 
-  c3_d len_d = _blob_sig((const c3_y*)map_v, map_d);
-  c3_o ok_o  = ( len_d < U3_BLOB_MIN ) ? c3n : c3y;
+  c3_d sig_d;
+  c3_o ok_o = _blob_meas((const c3_y*)map_v, map_d, &sig_d, mug_h);
 
-  if ( c3y == ok_o ) {
-    *mug_h = _blob_mug((const c3_y*)map_v, len_d);
-  }
   munmap(map_v, (size_t)map_d);
   return ok_o;
 }
@@ -929,14 +928,13 @@ u3b_stage(const c3_c* pax_c,
               c3_c*       stg_c,
               c3_h*       mug_h)
 {
-  c3_d sig_d = _blob_sig(dat_y, len_d);
+  c3_d sig_d;
 
-  if ( sig_d < U3_BLOB_MIN ) {
+  if ( c3n == _blob_meas(dat_y, len_d, &sig_d, mug_h) ) {
     fprintf(stderr, "blob: stage: %" PRIc3_d " significant byte(s) denote "
                     "a direct atom\r\n", sig_d);
     return c3n;
   }
-  *mug_h = u3r_mug_bytes(dat_y, sig_d);
 
   c3_i fid_i = _blob_stage_open(pax_c, stg_c);
 
@@ -1035,7 +1033,7 @@ u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
   //  refuses the unlink, which the error below reports.
   //
   {
-    c3_d      bid_d = _blob_bid(mug_h, seq_h);
+    c3_d      bid_d = u3a_bid(mug_h, seq_h);
     u3a_road* rod_u = &(u3H->rod_u);
     c3_w      num_w = 0;
 
@@ -1047,7 +1045,7 @@ u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
     }
 
     if ( num_w ) {
-      fprintf(stderr, "blob: wipe: %08" PRIx32 "/%08" PRIx32 ": open on %"
+      fprintf(stderr, "blob: wipe: " U3A_BID_FMT ": open on %"
                       PRIc3_w " road(s)\r\n", mug_h, seq_h, num_w);
     }
   }
@@ -1404,17 +1402,13 @@ u3b_move_stg(const c3_c* bob_c,
   //  the loom would keep direct has no bob representation (see
   //  U3_BLOB_MIN), and all-zero content lands there too, denoting 0.
   //
-  len_d = _blob_sig((const c3_y*)map_v, map_d);
-
-  if ( len_d < U3_BLOB_MIN ) {
+  if ( c3n == _blob_meas((const c3_y*)map_v, map_d, &len_d, mug_h) ) {
     fprintf(stderr, "blob: install_stg: %s denotes a direct atom "
                     "(%" PRIc3_d " significant bytes)\r\n", stg_c, len_d);
     munmap(map_v, (size_t)map_d);
     close(fid_i);
     return c3n;
   }
-
-  *mug_h = _blob_mug((const c3_y*)map_v, len_d);
 
   //  the next seq: one past the highest in the bucket
   //

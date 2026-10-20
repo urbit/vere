@@ -32,15 +32,6 @@ struct _u3_disk_walk {
 static void
 _disk_blob_root(const c3_c* pax_c, c3_d epo_d);
 
-/* _disk_chop_collect: bids gathered by a walk, acted on after it.
-*/
-typedef struct {
-  const c3_c* pax_c;
-  c3_d*       bid_d;   //  array of bid keys
-  c3_z        len_z;
-  c3_z        cap_z;
-} _disk_chop_collect;
-
 /* _disk_commit_done(): commit complete.
  */
 static void
@@ -1152,7 +1143,7 @@ _disk_epoc_zero(c3_c* pax_c)
 typedef struct {
   const c3_d*        liv_d;
   c3_z               len_z;
-  _disk_chop_collect gho_u;
+  u3s_bids           gho_u;
   c3_w               mis_w;
 } _disk_roll_bank;
 
@@ -1196,8 +1187,8 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(u3t(kev), &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  c3_h      mug_h = (c3_h)(bid_d >> 32);
-  c3_h      seq_h = (c3_h)bid_d;
+  c3_h      mug_h = u3a_bid_mug(bid_d);
+  c3_h      seq_h = u3a_bid_seq(bid_d);
 
   //  a record nothing holds names a file the new epoch never needs
   //
@@ -1212,7 +1203,7 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
     lin_u->bad_w++;
   }
   else {
-    fprintf(stderr, "disk: roll: %08" PRIx32 "/%" PRIc3_h " not carried; "
+    fprintf(stderr, "disk: roll: " U3A_BID_FMT " not carried; "
                     "no root reaches it\r\n", mug_h, seq_h);
   }
 }
@@ -1226,7 +1217,7 @@ static void
 _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
 {
   _disk_roll_bank*    ban_u = ptr_v;
-  _disk_chop_collect* gho_u = &ban_u->gho_u;
+  u3s_bids*          gho_u = &ban_u->gho_u;
   c3_d bid_d = 0;
   c3_d off_d = 0;
 
@@ -1236,20 +1227,16 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
   if ( !blb_u->use_h ) {
-    if ( gho_u->len_z == gho_u->cap_z ) {
-      gho_u->cap_z = gho_u->cap_z ? gho_u->cap_z * 2 : 8;
-      gho_u->bid_d = c3_realloc(gho_u->bid_d, gho_u->cap_z * sizeof(c3_d));
-    }
-    gho_u->bid_d[gho_u->len_z++] = bid_d;
+    u3s_bids_push(gho_u, bid_d);
     return;
   }
 
   blb_u->own_o = _disk_roll_live(ban_u, bid_d);
 
   if ( (c3n == blb_u->own_o) && (blb_u->use_h > blb_u->les_h) ) {
-    fprintf(stderr, "disk: roll: %08" PRIx32 "/%" PRIc3_h ": %" PRIc3_h
+    fprintf(stderr, "disk: roll: " U3A_BID_FMT ": %" PRIc3_h
                     " live atom(s) counted, none reached: unscanned root?\r\n",
-                    (c3_h)(bid_d >> 32), (c3_h)bid_d,
+                    u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
                     blb_u->use_h - blb_u->les_h);
     ban_u->mis_w++;
   }
@@ -1477,12 +1464,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   //  the roll stands: the old epoch's ghosts are no one's now
   //
-  for ( c3_z i_z = 0; i_z < ban_u.gho_u.len_z; i_z++ ) {
-    u3a_blob_drop((c3_h)(ban_u.gho_u.bid_d[i_z] >> 32), (c3_h)ban_u.gho_u.bid_d[i_z]);
+  for ( c3_w i_w = 0; i_w < ban_u.gho_u.len_w; i_w++ ) {
+    c3_d bid_d = ban_u.gho_u.bid_d[i_w];
+    u3a_blob_drop(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
   }
-  if ( ban_u.gho_u.len_z ) {
-    fprintf(stderr, "disk: dropped %" PRIc3_z " ghost record(s) at roll\r\n",
-                    ban_u.gho_u.len_z);
+  if ( ban_u.gho_u.len_w ) {
+    fprintf(stderr, "disk: dropped %" PRIc3_w " ghost record(s) at roll\r\n",
+                    ban_u.gho_u.len_w);
   }
   c3_free(ban_u.gho_u.bid_d);
   c3_free(liv_d);
@@ -1853,69 +1841,34 @@ _disk_vere_diff(u3_disk* log_u)
   return c3n;
 }
 
-/* _disk_chop_collect: accumulator for collecting blb_p keys to delete.
-*/
-
-/* _disk_chop_delete_cb(): u3h_walk_with callback — collect dead blobs.
-**
-**   A record nothing holds and no epoch owns: wipe the file and collect
-**   the bid for post-walk HAMT/struct cleanup.  An owned record with
-**   no holder is a ghost and stays until the next roll.
+/* _disk_gc_dead_cb(): u3h_walk_with callback: collect each record
+**   u3a_blob_dead says nothing holds, to wipe and drop after the walk.
+**   an owned record with no holder is a ghost and stays.
 */
 static void
-_disk_chop_delete_cb(u3_noun kev, void* ptr_v)
+_disk_gc_dead_cb(u3_noun kev, void* ptr_v)
 {
-  _disk_chop_collect* del_u = ptr_v;
-  u3_noun key = u3h(kev);
-  u3_noun val = u3t(kev);
-
   c3_d bid_d = 0;
-  u3r_safe_chub(key, &bid_d);
-  c3_h mug_h = (c3_h)(bid_d >> 32);
-  c3_h seq_h = (c3_h)(bid_d & 0xFFFFFFFF);
-
   c3_d off_d = 0;
-  u3r_safe_chub(val, &off_d);
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  if ( c3y == u3a_blob_dead(blb_u) ) {
-    fprintf(stderr, "blob: gc: delete %08" PRIx32 "/%" PRIc3_h "\r\n",
-                    mug_h, seq_h);
-    u3b_wipe(del_u->pax_c, mug_h, seq_h);
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
 
-    //  collect bid for post-walk blb_p cleanup
-    //
-    if ( del_u->len_z == del_u->cap_z ) {
-      del_u->cap_z = del_u->cap_z ? del_u->cap_z * 2 : 8;
-      del_u->bid_d = c3_realloc(del_u->bid_d, del_u->cap_z * sizeof(c3_d));
-    }
-    del_u->bid_d[del_u->len_z++] = bid_d;
+  if ( c3y == u3a_blob_dead((u3a_blob*)u3a_into((u3_post)off_d)) ) {
+    u3s_bids_push(ptr_v, bid_d);
   }
 }
 
-/* _disk_chop_orphan_cb(): u3b_walk callback — collect on-disk blob
-**   files that have no blb_p entry.
-**
-**   Orphans arise when accounting is lost while files survive: a crash
-**   between staging-move and entry creation, or a bitness migration
-**   (which paves a fresh home, dropping blb_p wholesale).  No runtime
-**   path can ever delete them, so chop reconciles the store against
-**   the bank.
+/* _disk_gc_orphan_cb(): u3b_walk callback: collect each file in the
+**   store with no record, a crash's leftover between install and the
+**   commit that would have named it.
 */
 static void
-_disk_chop_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
+_disk_gc_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
 {
-  _disk_chop_collect* orf_u = ptr_v;
-
-  if ( u3a_blob_get(mug_h, seq_h) ) {
-    return;
+  if ( !u3a_blob_get(mug_h, seq_h) ) {
+    u3s_bids_push(ptr_v, u3a_bid(mug_h, seq_h));
   }
-
-  if ( orf_u->len_z == orf_u->cap_z ) {
-    orf_u->cap_z = orf_u->cap_z ? orf_u->cap_z * 2 : 8;
-    orf_u->bid_d = c3_realloc(orf_u->bid_d, orf_u->cap_z * sizeof(c3_d));
-  }
-  orf_u->bid_d[orf_u->len_z++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
 }
 
 /* _disk_blob_own_cb(): u3_lmdb_walk_blobs callback: mark every blob a
@@ -1930,11 +1883,11 @@ _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
   c3_o* oky_o = ptr_v;
 
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
-    c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFF);
+    c3_h mug_h = u3a_bid_mug(ids_d[i_z]);
+    c3_h seq_h = u3a_bid_seq(ids_d[i_z]);
 
     if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
-      fprintf(stderr, "disk: blob %08" PRIx32 "/%" PRIc3_h " named at event %"
+      fprintf(stderr, "disk: blob " U3A_BID_FMT " named at event %"
                       PRIu64 " is missing from the store: the epoch depends "
                       "on data that no longer exists\r\n",
                       mug_h, seq_h, eve_d);
@@ -1942,9 +1895,7 @@ _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
       continue;
     }
 
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-    blb_u->own_o = c3y;
+    u3a_blob_got(mug_h, seq_h)->own_o = c3y;
   }
 }
 
@@ -1973,65 +1924,44 @@ u3_disk_blob_own(u3_disk* log_u, c3_d fir_d, c3_d las_d)
   return oky_o;
 }
 
-/* u3_disk_blob_gc(): reclaim unreferenced blobs against the bank.
+/* u3_disk_blob_gc(): reclaim the current store against the bank.
 **
-**   1. delete blob files (and blb_p entries) nothing holds and no
-**      epoch owns
-**   2. delete files in the current store with no blb_p entry (orphans:
-**      a crash between install and commit)
+**   1. wipe the file of, and drop, every record nothing holds or owns
+**   2. wipe every file in the store with no record (orphans)
 **
 **   safe once the log is caught up, so every input of the epoch has a
-**   record: the snapshot's, or one replay made.  collect-then-act so
-**   neither walk races its own deletions.
+**   record: the boot marking's, or one replay made.  collect, then act:
+**   neither walk may see its own deletions.
 */
 void
-u3_disk_blob_gc(u3_disk* log_u)
+u3_disk_blob_gc(void)
 {
-  //  step 1: delete unreferenced blobs and clean up blb_p
-  //
-  {
-    c3_w tot_w = u3h_wyt(u3H->blb_p);
+  u3s_bids bid_u = {0};
 
-    _disk_chop_collect del_u = { .pax_c = u3C.bob_c };
-    u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
+  u3h_walk_with(u3H->blb_p, _disk_gc_dead_cb, &bid_u);
 
-    for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(del_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(del_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3a_blob_drop(mug_h, seq_h);
-    }
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
+    c3_h mug_h = u3a_bid_mug(bid_u.bid_d[i_w]);
+    c3_h seq_h = u3a_bid_seq(bid_u.bid_d[i_w]);
 
-    if ( del_u.len_z ) {
-      fprintf(stderr,
-              "blob: gc: deleted %" PRIc3_z " blob(s), kept %" PRIc3_w "\r\n",
-              del_u.len_z, tot_w - (c3_w)del_u.len_z);
-    }
-
-    c3_free(del_u.bid_d);
+    fprintf(stderr, "blob: gc: delete " U3A_BID_FMT "\r\n", mug_h, seq_h);
+    u3b_wipe(u3C.bob_c, mug_h, seq_h);
+    u3a_blob_drop(mug_h, seq_h);
   }
 
-  //  step 2: reconcile the on-disk store against the bank — delete
-  //  files with no blb_p entry (collect first; the walk must not race
-  //  its own deletions)
-  //
-  {
-    _disk_chop_collect orf_u = { .pax_c = u3C.bob_c };
-    u3b_walk(u3C.bob_c, &orf_u, _disk_chop_orphan_cb);
+  bid_u.len_w = 0;
+  u3b_walk(u3C.bob_c, &bid_u, _disk_gc_orphan_cb);
 
-    for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3b_wipe(orf_u.pax_c, mug_h, seq_h);
-    }
-
-    if ( orf_u.len_z ) {
-      fprintf(stderr,
-              "blob: gc: deleted %" PRIc3_z " orphaned blob file(s)\r\n",
-              orf_u.len_z);
-    }
-
-    c3_free(orf_u.bid_d);
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
+    u3b_wipe(u3C.bob_c, u3a_bid_mug(bid_u.bid_d[i_w]),
+                        u3a_bid_seq(bid_u.bid_d[i_w]));
   }
+  if ( bid_u.len_w ) {
+    fprintf(stderr, "blob: gc: deleted %" PRIc3_w " orphaned file(s)\r\n",
+                    bid_u.len_w);
+  }
+
+  c3_free(bid_u.bid_d);
 }
 
 /* u3_disk_chop(): delete all but the latest 2 epocs.

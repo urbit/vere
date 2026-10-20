@@ -332,7 +332,7 @@ _mars_blob_bobs_atom(u3_atom a, void* ptr_v)
   }
   c3_h mug_h = u3a_bob_mug(a);
   c3_h seq_h = u3a_bob_seq(a);
-  acc->ids[acc->len++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+  acc->ids[acc->len++] = u3a_bid(mug_h, seq_h);
 }
 
 /* _mars_blob_bobs_cell(): u3a_walk_fore cell callback — always descend.
@@ -364,8 +364,8 @@ _mars_blob_sure(u3_noun job)
   u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
 
   for ( c3_z i_z = 0; i_z < acc.len; i_z++ ) {
-    c3_h      mug_h = (c3_h)(acc.ids[i_z] >> 32);
-    c3_h      seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
+    c3_h      mug_h = u3a_bid_mug(acc.ids[i_z]);
+    c3_h      seq_h = u3a_bid_seq(acc.ids[i_z]);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
     if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
@@ -378,7 +378,7 @@ _mars_blob_sure(u3_noun job)
     {
       c3_c msg_c[128];
       snprintf(msg_c, sizeof(msg_c),
-               "blob %08" PRIx32 "/%" PRIc3_h " is not in the store",
+               "blob " U3A_BID_FMT " is not in the store",
                mug_h, seq_h);
       fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
       tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
@@ -424,11 +424,11 @@ _mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w, c3_y* hit_y)
       c3_h mug_h = u3a_bob_mug(non);
 
       for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-        if ( (c3_h)(bid_d[i_w] >> 32) == mug_h ) {
+        if ( u3a_bid_mug(bid_d[i_w]) == mug_h ) {
           if ( hit_y ) {
             hit_y[i_w] = 1;
           }
-          return u3i_blob(mug_h, (c3_h)bid_d[i_w]);
+          return u3i_blob(mug_h, u3a_bid_seq(bid_d[i_w]));
         }
       }
       return u3_none;
@@ -511,7 +511,7 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
         cap_w = cap_w ? (2 * cap_w) : 4;
         bid_d = c3_realloc(bid_d, cap_w * sizeof(c3_d));
       }
-      bid_d[len_w++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+      bid_d[len_w++] = u3a_bid(mug_h, seq_h);
     }
     else {
       c3_c msg_c[128];
@@ -546,7 +546,7 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
   //
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
     if ( (u3_nul != tan) || !hit_y[i_w] ) {
-      u3z(u3i_blob((c3_h)(bid_d[i_w] >> 32), (c3_h)bid_d[i_w]));
+      u3z(u3i_blob(u3a_bid_mug(bid_d[i_w]), u3a_bid_seq(bid_d[i_w])));
     }
   }
   c3_free(hit_y);
@@ -574,16 +574,7 @@ _mars_fact(u3_mars* mar_u,
     struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
     u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
 
-    for ( c3_z i_z = 0; i_z < acc.len; i_z++ ) {
-      c3_h mug_h = (c3_h)(acc.ids[i_z] >> 32);
-      c3_h seq_h = (c3_h)(acc.ids[i_z] & 0xFFFFFFFF);
-
-      u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-      if ( !blb_u ) {
-        blb_u = u3a_blob_new(mug_h, seq_h);
-      }
-      blb_u->own_o = c3y;
-    }
+    u3a_blob_own(acc.ids, acc.len);
 
     //  the blob ids ride with the event: the disk writes the BLOBS row
     //  in the event's own transaction, and frees the array with it
@@ -1993,7 +1984,7 @@ u3_mars_work(u3_mars* mar_u)
   //  an input with no record yet would read as an orphan
   //
   if ( mar_u->dun_d == mar_u->log_u->dun_d ) {
-    u3_disk_blob_gc(mar_u->log_u);
+    u3_disk_blob_gc();
   }
 
   //  send ready status message

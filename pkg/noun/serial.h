@@ -185,6 +185,16 @@
           c3_w  cap_w;
         } u3s_bids;
 
+      /* u3s_bids_push(): add [bid_d] to [bid_u] (a stub's is skipped).
+      */
+        void
+        u3s_bids_push(u3s_bids* bid_u, c3_d bid_d);
+
+      /* u3s_bids_uniq(): sort [bid_u] and drop repeats: the distinct set.
+      */
+        void
+        u3s_bids_uniq(u3s_bids* bid_u);
+
       /* u3s_ram_xeno(): ram with off-loom buffer (re-)allocation.
       **
       **   Encodes bob atoms as 01-tagged blob refs.

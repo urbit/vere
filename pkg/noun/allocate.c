@@ -851,7 +851,7 @@ _me_gain_south(u3_noun dog)
 u3a_blob*
 u3a_blob_get(c3_h mug_h, c3_h seq_h)
 {
-  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3_noun bid = u3i_chub(u3a_bid(mug_h, seq_h));
   u3_weak bv  = u3h_get(u3H->blb_p, bid);
   u3z(bid);
 
@@ -877,11 +877,20 @@ u3a_blob_new(c3_h mug_h, c3_h seq_h)
   blb_u->seq_h = seq_h;
 
   u3_post off_p = u3a_outa(blb_u);
-  u3_noun bid   = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3_noun bid   = u3i_chub(u3a_bid(mug_h, seq_h));
   u3h_put(u3H->blb_p, bid, u3i_chub((c3_d)off_p));
   u3z(bid);
 
   return blb_u;
+}
+
+/* u3a_blob_got(): the record for (mug_h, seq_h), made if missing.
+*/
+u3a_blob*
+u3a_blob_got(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  return blb_u ? blb_u : u3a_blob_new(mug_h, seq_h);
 }
 
 /* u3a_blob_hold(): one hold per id on each blob in [bid_d].
@@ -890,15 +899,20 @@ void
 u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
 {
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-    c3_h      mug_h = (c3_h)(bid_d[i_w] >> 32);
-    c3_h      seq_h = (c3_h)bid_d[i_w];
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-
-    if ( !blb_u ) {
-      blb_u = u3a_blob_new(mug_h, seq_h);
-    }
+    u3a_blob* blb_u = u3a_blob_got(u3a_bid_mug(bid_d[i_w]),
+                                   u3a_bid_seq(bid_d[i_w]));
     blb_u->les_h += 1;
     blb_u->use_h += 1;
+  }
+}
+
+/* u3a_blob_own(): mark owned the record of each id in [bid_d].
+*/
+void
+u3a_blob_own(const c3_d* bid_d, c3_z len_z)
+{
+  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
+    u3a_blob_got(u3a_bid_mug(bid_d[i_z]), u3a_bid_seq(bid_d[i_z]))->own_o = c3y;
   }
 }
 
@@ -912,7 +926,7 @@ u3a_blob_drop(c3_h mug_h, c3_h seq_h)
 
   u3a_wfree(blb_u);
 
-  u3_noun bid = u3i_chub(((c3_d)mug_h << 32) | (c3_d)seq_h);
+  u3_noun bid = u3i_chub(u3a_bid(mug_h, seq_h));
   u3h_del(u3H->blb_p, bid);
   u3z(bid);
 }
@@ -985,7 +999,7 @@ _blob_sane_atom_cb(u3_atom a, void* ptr_v)
     return;
   }
 
-  c3_d bid_d = ((c3_d)u3a_bob_mug(a) << 32) | (c3_d)u3a_bob_seq(a);
+  c3_d bid_d = u3a_bob_bid(a);
 
   for ( c3_z i_z = 0; i_z < ctx_u->len_z; i_z++ ) {
     if ( ctx_u->car_u[i_z].bid_d == bid_d ) {
@@ -1101,9 +1115,9 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
   //  cheap tier: implied cardinality must be non-negative
   //
   if ( blb_u->use_h < blb_u->les_h ) {
-    fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_h
+    fprintf(stderr, "blob: sane: " U3A_BID_FMT ": use=%" PRIc3_h
                     " < les=%" PRIc3_h " (counters corrupt)\r\n",
-                    (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                    u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
                     blb_u->use_h, blb_u->les_h);
     ctx_u->ok_o = c3n;
   }
@@ -1113,9 +1127,9 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
     c3_w qty_w = _blob_sane_card(ctx_u, bid_d);
 
     if ( blb_u->use_h != (blb_u->les_h + qty_w) ) {
-      fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": use=%" PRIc3_h
+      fprintf(stderr, "blob: sane: " U3A_BID_FMT ": use=%" PRIc3_h
                       " != les=%" PRIc3_h " + atoms=%" PRIc3_w "%s\r\n",
-                      (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                      u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
                       blb_u->use_h, blb_u->les_h, qty_w,
                       ( blb_u->use_h < (blb_u->les_h + qty_w) )
                         ? " (counters corrupt)"
@@ -1169,10 +1183,10 @@ u3a_blob_sane(c3_o dep_o)
   if ( c3y == dep_o ) {
     for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
       c3_d bid_d = ctx_u.car_u[i_z].bid_d;
-      if ( !u3a_blob_get((c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF)) ) {
-        fprintf(stderr, "blob: sane: %08" PRIx32 "/%08" PRIx32 ": %" PRIc3_w " live atom(s) "
+      if ( !u3a_blob_get(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)) ) {
+        fprintf(stderr, "blob: sane: " U3A_BID_FMT ": %" PRIc3_w " live atom(s) "
                         "with no bank entry\r\n",
-                        (c3_h)(bid_d >> 32), (c3_h)(bid_d & 0xFFFFFFFF),
+                        u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
                         ctx_u.car_u[i_z].qty_w);
         ctx_u.ok_o = c3n;
       }
@@ -1223,11 +1237,11 @@ _me_bob_dead(u3a_atom* atm_u)
   //  live bob or a bob was freed twice.  say so; ask for no deletion
   //
   if ( !blb_u ) {
-    u3l_log("blob: %08x/%u: bob died with no bank record", mug_h, seq_h);
+    u3l_log("blob: " U3A_BID_FMT ": bob died with no bank record", mug_h, seq_h);
     return;
   }
   if ( 0 == blb_u->use_h ) {
-    u3l_log("blob: %08x/%u: cardinality underflow (record already at zero)",
+    u3l_log("blob: " U3A_BID_FMT ": cardinality underflow (record already at zero)",
             mug_h, seq_h);
     return;
   }

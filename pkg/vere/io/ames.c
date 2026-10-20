@@ -1365,7 +1365,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
       //  a bob whose file is gone is a store problem, not a reason to
       //  unwind the king: drop this packet
       //
-      u3l_log("ames: blob %08x/%u is not in the store; packet dropped",
+      u3l_log("ames: blob " U3A_BID_FMT " is not in the store; packet dropped",
               u3a_bob_mug(pac), u3a_bob_seq(pac));
       c3_free(pac_u);
       u3z(lan); u3z(pac);

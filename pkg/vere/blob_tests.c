@@ -3588,7 +3588,7 @@ _test_gc_own(void)
   u3a_blob_new(mug_h[1], seq_h[1])->own_o = c3y;
 
   u3_disk log_u = {0};
-  u3_disk_blob_gc(&log_u);
+  u3_disk_blob_gc();
 
   _check( !u3a_blob_get(mug_h[0], seq_h[0])
           && (c3n == u3b_live(_tmp_bob, mug_h[0], seq_h[0])),

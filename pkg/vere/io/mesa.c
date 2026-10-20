@@ -1419,7 +1419,7 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     //  a bob whose file is gone is a store problem, not a reason to
     //  unwind the king: drop this send
     //
-    u3l_log("mesa: ef_send: blob %08x/%u is not in the store; dropped",
+    u3l_log("mesa: ef_send: blob " U3A_BID_FMT " is not in the store; dropped",
             u3a_bob_mug(pac), u3a_bob_seq(pac));
     u3z(pac);
     u3z(las);
@@ -1848,7 +1848,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     //
     u3r_view vue_u;
     if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
-      u3l_log("mesa: jumbo blob %08x/%u is not in the store; dropped",
+      u3l_log("mesa: jumbo blob " U3A_BID_FMT " is not in the store; dropped",
               u3a_bob_mug(pac), u3a_bob_seq(pac));
       arena_free(&han_u->are_u);
       u3z(res);

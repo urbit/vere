@@ -1687,21 +1687,21 @@ typedef struct _ram_xeno_s {
   u3s_bids*     bid_u;   //  blob ids met, or 0
 } _ram_xeno_t;
 
-/* _cs_bids_push(): record a blob id in a collector, if there is one.
+/* u3s_bids_push(): record a blob id in a collector, if there is one.
 */
-static void
-_cs_bids_push(u3s_bids* bid_u, c3_h mug_h, c3_h seq_h)
+void
+u3s_bids_push(u3s_bids* bid_u, c3_d bid_d)
 {
   //  a stub (seq 0) names no file and carries no hold
   //
-  if ( !bid_u || !seq_h ) {
+  if ( !bid_u || !u3a_bid_seq(bid_d) ) {
     return;
   }
   if ( bid_u->len_w == bid_u->cap_w ) {
     bid_u->cap_w = bid_u->cap_w ? (2 * bid_u->cap_w) : 8;
     bid_u->bid_d = c3_realloc(bid_u->bid_d, bid_u->cap_w * sizeof(c3_d));
   }
-  bid_u->bid_d[bid_u->len_w++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+  bid_u->bid_d[bid_u->len_w++] = bid_d;
 }
 
 static int
@@ -1712,10 +1712,10 @@ _cs_bids_cmp(const void* a_v, const void* b_v)
   return ( a_d < b_d ) ? -1 : ( a_d > b_d ) ? 1 : 0;
 }
 
-/* _cs_bids_uniq(): sort a collector and drop repeats: the distinct set.
+/* u3s_bids_uniq(): sort a collector and drop repeats: the distinct set.
 */
-static void
-_cs_bids_uniq(u3s_bids* bid_u)
+void
+u3s_bids_uniq(u3s_bids* bid_u)
 {
   if ( !bid_u || (bid_u->len_w < 2) ) {
     return;
@@ -1772,7 +1772,7 @@ _cs_ram_bsw_bob(_ram_xeno_t* ram_u, u3_atom a)
   c3_h      mug_h = u3a_bob_mug(a);
   c3_h      seq_h = u3a_bob_seq(a);
 
-  _cs_bids_push(ram_u->bid_u, mug_h, seq_h);
+  u3s_bids_push(ram_u->bid_u, u3a_bob_bid(a));
 
   //  write 2-bit tag 01
   //
@@ -1884,7 +1884,7 @@ u3s_ram_xeno_bids(u3_noun a, c3_d* len_d, c3_y** byt_y, u3s_bids* bid_u)
   u3a_walk_fore(a, &ram_u, _cs_ram_xeno_atom, _cs_ram_xeno_cell);
 
   u3h_free(ram_u.har_p);
-  _cs_bids_uniq(bid_u);
+  u3s_bids_uniq(bid_u);
 
   {
     c3_d   raw_bytes_d;  //  byte count of raw ram bits
@@ -2036,7 +2036,7 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
           return ur_cue_meme;
         }
 
-        _cs_bids_push(bid_u, (c3_h)mug_d, (c3_h)seq_d);
+        u3s_bids_push(bid_u, u3a_bid((c3_h)mug_d, (c3_h)seq_d));
         *out = u3i_blob((c3_h)mug_d, (c3_h)seq_d);
 
         ur_dictn_put(rot_u, dic_u, bit_d, *out);
@@ -2148,7 +2148,7 @@ u3s_tap_xeno_bids(c3_d len_d, const c3_y* byt_y, u3s_bids* bid_u)
     som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5, bid_u);
     ur_dictn_wipe(&sil_u->dic_u);
     u3s_cue_xeno_done(sil_u);
-    _cs_bids_uniq(bid_u);
+    u3s_bids_uniq(bid_u);
     return som;
   }
 }

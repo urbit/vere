@@ -847,14 +847,12 @@ u3i_blob(c3_h mug_h, c3_h seq_h)
   u3_assert( &(u3H->rod_u) == u3R );
 
   if ( seq_h ) {
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-    blb_u->use_h += 1;
+    u3a_blob_got(mug_h, seq_h)->use_h += 1;
   }
 
   c3_w*     nov_w = u3a_walloc(c3_wiseof(c3_d) + c3_wiseof(u3a_atom));
   u3a_atom* vat_u = (void *)nov_w;
-  c3_d      bid_d = ((c3_d)mug_h << 32) | (c3_d)seq_h;
+  c3_d      bid_d = u3a_bid(mug_h, seq_h);
 
   vat_u->use_w = 1;
   vat_u->mug_w = mug_h;

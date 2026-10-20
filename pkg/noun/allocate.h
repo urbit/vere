@@ -246,6 +246,31 @@
         return __( !blb_u->use_h && (c3n == blb_u->own_o) );
       }
 
+    /* u3a_bid(): the blob id of (mug_h, seq_h): (mug << 32) | seq, the
+    **   key everywhere; u3a_bid_mug() and u3a_bid_seq() take it apart.
+    **   U3A_BID_FMT prints (mug, seq) as one id: mug in hex, seq in
+    **   decimal.
+    */
+      static inline c3_d
+      u3a_bid(c3_h mug_h, c3_h seq_h)
+      {
+        return ((c3_d)mug_h << 32) | (c3_d)seq_h;
+      }
+
+      static inline c3_h
+      u3a_bid_mug(c3_d bid_d)
+      {
+        return (c3_h)(bid_d >> 32);
+      }
+
+      static inline c3_h
+      u3a_bid_seq(c3_d bid_d)
+      {
+        return (c3_h)bid_d;
+      }
+
+#     define U3A_BID_FMT  "%08" PRIx32 "/%" PRIc3_h
+
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
 STATIC_ASSERT( u3a_vits <= u3a_min_log,
@@ -1017,6 +1042,17 @@ u3a_post_info(u3_post);
         */
           void
           u3a_blob_drop(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_got(): the record for (mug_h, seq_h), made if missing.
+        */
+          u3a_blob*
+          u3a_blob_got(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_own(): mark owned the record of each id in [bid_d],
+        **   making a ghost for one the bank lacks.
+        */
+          void
+          u3a_blob_own(const c3_d* bid_d, c3_z len_z);
 
         /* u3a_blob_hold(): one hold per id on each blob in [bid_d]:
         **   les_h and use_h go up together.  Mars calls it for the ids

@@ -993,7 +993,7 @@
       **   log is caught up.
       */
         void
-        u3_disk_blob_gc(u3_disk* log_u);
+        u3_disk_blob_gc(void);
 
       /* u3_disk_roll(): rollover to a new epoc.
        */

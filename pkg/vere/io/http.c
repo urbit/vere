@@ -318,7 +318,7 @@ _cttp_bod_from_octs(u3_noun oct)
     u3_hbod* bod_u = _cttp_bod_from_bob(u3t(oct), len_w);
 
     if ( !bod_u ) {
-      u3l_log("http: blob %08" PRIx32 "/%08" PRIx32 " unavailable",
+      u3l_log("http: blob " U3A_BID_FMT " unavailable",
               u3a_bob_mug(u3t(oct)), u3a_bob_seq(u3t(oct)));
     }
     u3z(oct);
