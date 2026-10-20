@@ -1551,8 +1551,10 @@ _test_aor(void)
   const c3_w a_w   = sizeof(a_y) - 1;
   const c3_w b_w   = sizeof(b_y) - 1;
 
-  const c3_h mga_h = 0x11112222, sqa_h = 1;
-  const c3_h mgb_h = 0x33334444, sqb_h = 2;
+  //  a bob carries its content's mug, as an install gives it
+  //
+  const c3_h mga_h = u3r_mug_bytes(a_y, a_w), sqa_h = 1;
+  const c3_h mgb_h = u3r_mug_bytes(b_y, b_w), sqb_h = 2;
 
   _aor_write_blob(dir_c, mga_h, sqa_h, a_y, a_w);
   _aor_write_blob(dir_c, mgb_h, sqb_h, b_y, b_w);

@@ -292,10 +292,19 @@ _cr_sing_atom(u3_atom a, u3_noun b)
       return (  (a_u->mug_w   == b_u->mug_w)
              && (a_u->buf_w[0] == b_u->buf_w[0]) ) ? c3y : c3n;
     }
-    //  bob vs normal (or normal vs bob): compare bytes from disk in
-    //  windows, without materializing the bob
+    //  bob vs normal: a stub names no file and equals nothing on the
+    //  loom; otherwise the mugs decide without a read (a bob's is its
+    //  header), and only a match compares bytes
     //
     if ( (c3y == a_bob) || (c3y == b_bob) ) {
+      if (  ((c3y == a_bob) && (0 == u3a_bob_seq(a)))
+         || ((c3y == b_bob) && (0 == u3a_bob_seq(b))) )
+      {
+        return c3n;
+      }
+      if ( u3r_mug(a) != u3r_mug(b) ) {
+        return c3n;
+      }
       return ( 0 == u3r_comp(a, b) ) ? c3y : c3n;
     }
 

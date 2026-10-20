@@ -2112,6 +2112,41 @@ _test_hand_gone(void)
   _pier_done();
 }
 
+#if !defined(VERE64) && !defined(U3_OS_windows)
+/* _test_jam_wide(): a bob of 2^32 bits or more cannot jam with a word
+**   of length: xeno bails %fail, as fib does, instead of writing a
+**   short jam.  the file is sparse: 512 MiB of hole and a last byte.
+*/
+static void
+_test_jam_wide(void)
+{
+  _pier_make("jam wide");
+
+  _han_mug_h = 0x7777;
+  _han_seq_h = 1;
+  {
+    c3_c dir_c[8192], fil_c[8192];
+    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, _han_mug_h);
+    _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
+    u3b_path(fil_c, _tmp_bob, _han_mug_h, _han_seq_h);
+
+    c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    c3_y one_y = 1;
+    _check( -1 != fid_i, "open %s: %s", fil_c, strerror(errno) );
+    _check( 1 == pwrite(fid_i, &one_y, 1, (off_t)1 << 29), "pwrite: %s",
+            strerror(errno) );
+    close(fid_i);
+  }
+  _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
+
+  _check( u3r_met_d(0, _han_bob) > c3_w_max, "not wider than a word" );
+  _hand_gone_expect("xeno", _hand_gone_xeno_cb);
+
+  u3z(_han_bob);
+  _pier_done();
+}
+#endif
+
 /* _test_hand_edge(): met and comparison at the 4 KiB window boundaries.
 */
 static void
@@ -3092,6 +3127,44 @@ _test_roll_link(void)
   _pier_done();
 }
 
+/* _test_link_copy(): when the link is refused and the copy cannot
+**   read its source, the link fails and leaves no file at the target:
+**   a directory where the blob should be is refused by link(2) and
+**   fails read(2) with EISDIR.
+*/
+static void
+_test_link_copy(void)
+{
+  _pier_make("link copy");
+
+  c3_c new_c[8192], src_c[8192], dst_c[8192];
+  {
+    c3_c epo_c[2048];
+    snprintf(epo_c, sizeof(epo_c), "%s/.urb/log/0i5", _tmp_pier);
+    _check( 0 == mkdir(epo_c, 0700), "mkdir %s: %s", epo_c, strerror(errno) );
+  }
+  u3b_root(new_c, _tmp_pier, 5);
+  _check( 0 == mkdir(new_c, 0700), "mkdir %s: %s", new_c, strerror(errno) );
+
+  u3b_path(src_c, _tmp_bob, 0x1234, 1);
+  {
+    c3_c dir_c[8192];
+    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, 0x1234);
+    _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
+  }
+  _check( 0 == mkdir(src_c, 0700), "mkdir %s: %s", src_c, strerror(errno) );
+
+  _check( c3n == u3b_link(_tmp_bob, new_c, 0x1234, 1),
+          "a failed copy read as a link" );
+
+  struct stat sat_u;
+  u3b_path(dst_c, new_c, 0x1234, 1);
+  _check( 0 != stat(dst_c, &sat_u), "a failed copy left %s", dst_c );
+
+  rmdir(src_c);
+  _pier_done();
+}
+
 #ifndef U3_OS_windows
 /* _test_roll_same(): a roll into the current epoch (an empty epoch
 **   meeting a new binary) that fails late removes nothing: the store,
@@ -3278,6 +3351,22 @@ _test_stub_fill(void)
           "a stub made a record" );
   _check( (mug_h[0] == u3r_mug(stb_a)) && (0 == u3a_bob_seq(stb_a)),
           "stub mug or seq wrong" );
+
+  //  a stub equals no loom atom, even one with its content, and the
+  //  compare opens nothing: ram meets this whenever a stub and an
+  //  indirect atom share a backref slot
+  //
+  {
+    const c3_c* dat_c = "installed for the first stub";
+    u3_atom     loa   = u3i_bytes(28, (const c3_y*)dat_c);
+    u3_atom     cor   = u3i_string("an indirect cord beside the stub");
+    _check( c3n == u3r_sing(stb_a, loa), "stub equal to its content" );
+    _check( c3n == u3r_sing(loa, stb_a), "content equal to its stub" );
+    _check( c3n == u3r_sing(stb_a, cor), "stub equal to a cord" );
+    _check( 0 == u3b_hands(), "a stub compare opened a hand" );
+    u3z(loa);
+    u3z(cor);
+  }
 
   //  [now [[tar wir] [%into stub-a 42 stub-b stub-a]]]: two stubs of
   //  one mug and one of another, in a list spine
@@ -3566,6 +3655,9 @@ main(int argc, char* argv[])
   _test_hand_trunc();
 #endif
   _test_hand_gone();
+#if !defined(VERE64) && !defined(U3_OS_windows)
+  _test_jam_wide();
+#endif
   _test_hand_edge();
   _test_hand_share();
   _test_hand_reuse();
@@ -3576,6 +3668,7 @@ main(int argc, char* argv[])
   _test_blobs_persist();
   _test_live();
   _test_roll_link();
+  _test_link_copy();
 #ifndef U3_OS_windows
   _test_roll_same();
 #endif

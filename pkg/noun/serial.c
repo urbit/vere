@@ -307,6 +307,20 @@ _cs_coin_chub(c3_d a_d)
   return ( ((c3_d)u3a_direct_max) >= a_d ) ? a_d : u3i_chubs(1, &a_d);
 }
 
+/* _cs_met_w(): the bit length of [a] as the word the encoders carry;
+**   bails %fail past a word, as u3r_met does, rather than truncate.
+*/
+static c3_w
+_cs_met_w(u3_atom a)
+{
+  c3_d met_d = u3r_met_d(0, a);
+
+  if ( met_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
+  }
+  return (c3_w)met_d;
+}
+
 /* _cs_jam_xeno_atom(): encode in/direct atom in bitstream.
 */
 static inline void
@@ -384,9 +398,7 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  //  met_w must fit in 32 bits here (jam uses c3_w for bit lengths)
-  //
-  c3_w         met_w = (c3_w)u3r_met_d(0, a);
+  c3_w         met_w = _cs_met_w(a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
@@ -1807,7 +1819,7 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
   //  the file, which a stub has none of.  a repeated bob is written
   //  again rather than compared against a backref's width.
   //
-  c3_w         met_w = ( c3y == bob_o ) ? 0 : (c3_w)u3r_met_d(0, a);
+  c3_w         met_w = ( c3y == bob_o ) ? 0 : _cs_met_w(a);
 
   if ( u3_none == bak ) {
     u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));

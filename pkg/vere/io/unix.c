@@ -457,87 +457,57 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     return 0;
   }
 
-  //  bob atom: stream from the blob store to the file through a window
+  //  octs [p q]: p bytes of q, zero past q's end (the store trims a
+  //  blob's trailing zeros, so a bob is often shorter than its p),
+  //  read through a view so a bob streams from its file
   //
-  if ( c3y == u3a_is_bob(dat) ) {
-    u3r_view win_u;
+  {
+    c3_d     siz_d = 0;
+    u3r_view vue_u;
+    c3_y     buf_y[65536];
+    c3_o     ok_o  = c3y;
 
-    if ( c3n == u3r_view_open(&win_u, dat, c3n) ) {
-      u3l_log("error opening blob %08" PRIx32 "/%08" PRIx32 " for reading",
-              u3a_bob_mug(dat), u3a_bob_seq(dat));
+    if (  (c3n == u3r_safe_chub(u3h(u3t(mim)), &siz_d))
+       || (c3n == u3r_view_open(&vue_u, dat, c3n)) )
+    {
+      u3l_log("error reading the content for %s", pax_c);
       close(fid_i);
       u3z(mim);
       return 0;
     }
 
-    c3_y buf_y[65536];
-    c3_d off_d = 0;
-    c3_d len_d = win_u.byt_d;
-
-    while ( off_d < len_d ) {
-      c3_z ask_z = ( (len_d - off_d) < sizeof(buf_y) )
-                 ? (c3_z)(len_d - off_d)
+    for ( c3_d off_d = 0; (c3y == ok_o) && (off_d < siz_d); ) {
+      c3_z ask_z = ( (siz_d - off_d) < sizeof(buf_y) )
+                 ? (c3_z)(siz_d - off_d)
                  : sizeof(buf_y);
-      c3_z got_z = u3r_view_copy(&win_u, off_d, buf_y, ask_z);
+      c3_z exp_z = ( off_d >= vue_u.byt_d ) ? 0
+                 : ( (vue_u.byt_d - off_d) < ask_z ) ? (c3_z)(vue_u.byt_d - off_d)
+                 : ask_z;
 
-      if ( 0 == got_z ) {
-        u3l_log("error reading blob %08" PRIx32 "/%08" PRIx32,
-                u3a_bob_mug(dat), u3a_bob_seq(dat));
-        u3r_view_done(&win_u);
-        close(fid_i);
-        u3z(mim);
-        return 0;
-      }
-
-      c3_y* ptr_y = buf_y;
-      c3_z  rem_z = got_z;
-      while ( rem_z ) {
-        ssize_t wrt_i = write(fid_i, ptr_y, rem_z);
-        if ( wrt_i <= 0 ) {
-          u3l_log("error writing %s: %s", pax_c, strerror(errno));
-          u3r_view_done(&win_u);
-          close(fid_i);
-          u3z(mim);
-          return 0;
-        }
-        ptr_y += wrt_i;
-        rem_z -= (c3_z)wrt_i;
-      }
-
-      off_d += got_z;
-    }
-
-    u3r_view_done(&win_u);
-    mug_h = u3a_bob_mug(dat);
-  }
-  else {
-    //  normal atom: materialize and write in chunks
-    //
-    c3_w siz_w = u3r_cat(u3h(u3t(mim)));
-    c3_w len_w = u3r_met(3, dat);
-    c3_y* dat_y = c3_calloc(siz_w);
-
-    u3r_bytes(0, len_w, dat_y, dat);
-
-    c3_d  rem_d = (c3_d)siz_w;
-    c3_y* ptr_y = dat_y;
-    c3_o  ok_o  = c3y;
-    while ( rem_d > 0 ) {
-      size_t  ask_i = ( rem_d > 0x40000000UL ) ? 0x40000000UL : (size_t)rem_d;
-      ssize_t wrt_i = write(fid_i, ptr_y, ask_i);
-      if ( wrt_i <= 0 ) {
-        u3l_log("error writing %s: %s", pax_c, strerror(errno));
+      if ( exp_z != u3r_view_copy(&vue_u, off_d, buf_y, ask_z) ) {
+        u3l_log("error reading the content for %s: short read", pax_c);
         ok_o = c3n;
         break;
       }
-      ptr_y += wrt_i;
-      rem_d -= wrt_i;
+
+      for ( c3_y* ptr_y = buf_y; ptr_y < buf_y + ask_z; ) {
+        ssize_t wrt_i = write(fid_i, ptr_y, (buf_y + ask_z) - ptr_y);
+
+        if ( wrt_i <= 0 ) {
+          if ( (wrt_i < 0) && (EINTR == errno) ) {
+            continue;
+          }
+          u3l_log("error writing %s: %s", pax_c, strerror(errno));
+          ok_o = c3n;
+          break;
+        }
+        ptr_y += wrt_i;
+      }
+      off_d += ask_z;
     }
 
-    if ( c3y == ok_o ) {
-      mug_h = u3r_mug_bytes(dat_y, len_w);
-    }
-    c3_free(dat_y);
+    u3r_view_done(&vue_u);
+    mug_h = ( c3y == ok_o ) ? u3r_mug(dat) : 0;
   }
 
   u3z(mim);

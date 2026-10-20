@@ -867,10 +867,11 @@ _blob_stage_open(const c3_c* pax_c, c3_c* stg_c)
   return fid_i;
 }
 
-/* _blob_stage_write(): write [len_z] bytes to staging fd [fid_i].
+/* _blob_write(): write all [len_z] bytes to [fid_i], in BLOB_IO_MAX
+**   chunks, retrying EINTR and short writes.
 */
 static c3_o
-_blob_stage_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
+_blob_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
 {
   while ( len_z ) {
     size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
@@ -880,7 +881,7 @@ _blob_stage_write(c3_i fid_i, const c3_y* dat_y, c3_z len_z)
       if ( (wrt_i < 0) && (EINTR == errno) ) {
         continue;
       }
-      fprintf(stderr, "blob: stage: write: %s\r\n", strerror(errno));
+      fprintf(stderr, "blob: write: %s\r\n", strerror(errno));
       return c3n;
     }
     dat_y += wrt_i;
@@ -967,7 +968,7 @@ u3b_stage(const c3_c* pax_c,
     return c3n;
   }
   return _blob_stage_done(fid_i, stg_c,
-                          _blob_stage_write(fid_i, dat_y, (c3_z)len_d));
+                          _blob_write(fid_i, dat_y, (c3_z)len_d));
 }
 
 /* u3b_stage_fd(): copy [len_d] bytes from [fid_i] to a new staging file.
@@ -1005,7 +1006,7 @@ u3b_stage_fd(const c3_c* pax_c,
         ok_o = c3n;
         break;
       }
-      if ( c3n == (ok_o = _blob_stage_write(stg_i, buf_y, (c3_z)got_i)) ) {
+      if ( c3n == (ok_o = _blob_write(stg_i, buf_y, (c3_z)got_i)) ) {
         break;
       }
       len_d -= (c3_d)got_i;
@@ -1213,22 +1214,40 @@ _blob_copy(const c3_c* src_c, const c3_c* dst_c)
     return c3n;
   }
 
-  c3_y    buf_y[65536];
-  ssize_t red_i;
+  c3_y buf_y[65536];
+  c3_o ok_o = c3y;
 
-  while ( (red_i = read(src_i, buf_y, sizeof(buf_y))) > 0 ) {
-    if ( write(dst_i, buf_y, (size_t)red_i) != red_i ) {
-      fprintf(stderr, "blob: copy write %s: %s\r\n", dst_c, strerror(errno));
-      close(src_i);
-      close(dst_i);
-      unlink(dst_c);
-      return c3n;
+  while ( c3y == ok_o ) {
+    ssize_t red_i = read(src_i, buf_y, sizeof(buf_y));
+
+    if ( 0 == red_i ) {
+      break;
+    }
+    if ( red_i < 0 ) {
+      if ( EINTR == errno ) {
+        continue;
+      }
+      fprintf(stderr, "blob: copy: read %s: %s\r\n", src_c, strerror(errno));
+      ok_o = c3n;
+    }
+    else {
+      ok_o = _blob_write(dst_i, buf_y, (c3_z)red_i);
     }
   }
-  c3_sync(dst_i);
+
+  if ( (c3y == ok_o) && (0 != c3_sync(dst_i)) ) {
+    fprintf(stderr, "blob: copy: sync %s: %s\r\n", dst_c, strerror(errno));
+    ok_o = c3n;
+  }
   close(src_i);
-  close(dst_i);
-  return c3y;
+  if ( (0 != close(dst_i)) && (c3y == ok_o) ) {
+    fprintf(stderr, "blob: copy: close %s: %s\r\n", dst_c, strerror(errno));
+    ok_o = c3n;
+  }
+  if ( c3n == ok_o ) {
+    unlink(dst_c);
+  }
+  return ok_o;
 }
 
 /* u3b_link(): carry a blob from store [old_c] into store [new_c].
@@ -1595,7 +1614,7 @@ _blob_bsink_wri(void* ptr_v, const c3_y* byt_y, c3_z len_z)
   //  the same chunked writer the drivers stage through: capped at
   //  BLOB_IO_MAX per call, EINTR retried
   //
-  if ( c3n == _blob_stage_write(bsk_u->fid_i, byt_y, len_z) ) {
+  if ( c3n == _blob_write(bsk_u->fid_i, byt_y, len_z) ) {
     fprintf(stderr, "blob: bsink: write failed (%s)\r\n", bsk_u->stg_c);
     close(bsk_u->fid_i);
     c3_unlink(bsk_u->stg_c);

@@ -247,17 +247,6 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
     c3_free(win_u);
     return 0;
   }
-  {
-    c3_d bob_d = win_u->byt_d;
-
-    if ( len_w > bob_d ) {
-      u3l_log("http: bob body %" PRIc3_w " bytes exceeds blob %" PRIc3_d,
-              len_w, bob_d);
-      u3r_view_done(win_u);
-      c3_free(win_u);
-      return 0;
-    }
-  }
 
   //  a zero-length body needs no chunk, and no window
   //
@@ -1616,13 +1605,19 @@ _http_hgen_send(u3_hgen* gen_u)
     if ( cur_u->win_u && !cur_u->buf_y ) {
       cur_u->buf_y = c3_malloc(cur_u->len_w);
 
-      //  the read zero-fills a short window itself; the count says
-      //  whether the file was shortened under the response
+      //  the read zero-fills past the atom, which is how octs longer
+      //  than their atom end (the store trims trailing zeros); the
+      //  count says whether the file was shortened under the response
       //
-      c3_z got_z = u3r_view_copy(cur_u->win_u, cur_u->off_d,
+      c3_d byt_d = cur_u->win_u->byt_d;
+      c3_d off_d = cur_u->off_d;
+      c3_z exp_z = ( off_d >= byt_d ) ? 0
+                 : ( (byt_d - off_d) < cur_u->len_w ) ? (c3_z)(byt_d - off_d)
+                 : cur_u->len_w;
+      c3_z got_z = u3r_view_copy(cur_u->win_u, off_d,
                                  cur_u->buf_y, cur_u->len_w);
 
-      if ( got_z != cur_u->len_w ) {
+      if ( got_z != exp_z ) {
         u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
         gen_u->sat_e = u3_hgen_fail;
       }
