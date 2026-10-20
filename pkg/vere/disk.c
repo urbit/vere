@@ -1250,12 +1250,17 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
     return c3n;
   }
 
+  //  a roll into the current epoch (an empty epoch meeting a new
+  //  binary) rewrites the epoch in place: its store, markers, and
+  //  database are live, so a failure must remove none of them
+  //
+  c3_o cur_o = ( epo_d == log_u->epo_d ) ? c3y : c3n;
+
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
   c3_i epo_i;
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
-  c3_d ret_d = c3_mkdir(epo_c, 0700);
-  if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
+  if ( (0 != c3_mkdir(epo_c, 0700)) && (EEXIST != errno) ) {
     fprintf(stderr, "disk: create epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
     return c3n;
@@ -1268,6 +1273,11 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   _disk_roll_bank ban_u = {0};
   c3_d*           liv_d = 0;
 
+  //  the markers a failure unlinks; empty until written
+  //
+  c3_c epv_c[8193] = "";
+  c3_c biv_c[8193] = "";
+
   u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "disk: create blob store %s failed: %s\r\n",
@@ -1277,10 +1287,14 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   if ( old_c ) {
     //  carry every held blob into the new store first: the links can
-    //  fail, and nothing in the bank has changed yet if they do
+    //  fail, and nothing in the bank has changed yet if they do.  the
+    //  current epoch's store already holds them
     //
     _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c };
-    u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
+
+    if ( c3n == cur_o ) {
+      u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
+    }
 
     if ( lin_u.bad_w ) {
       fprintf(stderr, "disk: %" PRIc3_w " blob(s) not carried into epoch %"
@@ -1334,7 +1348,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   //  create epoch version file, overwriting any existing file
   c3_c epi_c[8193];
-  c3_c epv_c[8193];
   snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   FILE* epv_f = fopen(epi_c, "w");
@@ -1352,7 +1365,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   //  create binary version file, overwriting any existing file
   c3_c bii_c[8193];
-  c3_c biv_c[8193];
   snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
   snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
   FILE* biv_f = fopen(bii_c, "w");
@@ -1381,11 +1393,12 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
     goto fail3;
   }
 
-  //  open the new epoch's db, then close the old.  BLOBS stays behind:
-  //  replay never crosses epochs, so only the new epoch's events can
-  //  protect a blob.
+  //  open the new epoch's db, then close the old: a failed open leaves
+  //  the old one in place.  BLOBS stays behind: replay never crosses
+  //  epochs.  the current epoch's db is already open, and opening it
+  //  twice in one process is the one thing lmdb forbids
   //
-  {
+  if ( c3n == cur_o ) {
     MDB_env* new_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i);
 
     if ( 0 == new_u ) {
@@ -1451,18 +1464,24 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   return c3y;
 
 fail3:
-  c3_unlink(epv_c);
-  c3_unlink(biv_c);
+  if ( c3n == cur_o ) {
+    c3_unlink(epv_c);
+    c3_unlink(biv_c);
+  }
 #ifndef U3_OS_windows
 fail2:
   close(epo_i);
 #endif
 fail0:
-  u3b_kill(bob_c);
+  if ( c3n == cur_o ) {
+    u3b_kill(bob_c);
+  }
 fail1:
   c3_free(ban_u.gho_u.bid_d);
   c3_free(liv_d);
-  c3_rmdir(epo_c);
+  if ( c3n == cur_o ) {
+    c3_rmdir(epo_c);
+  }
   return c3n;
 }
 

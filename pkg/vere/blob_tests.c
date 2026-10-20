@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifndef U3_OS_windows
+#include <sys/wait.h>
+#endif
 
 /* Tests for pkg/noun/blob.c — the content-addressed blob store.
 **
@@ -3089,6 +3092,87 @@ _test_roll_link(void)
   _pier_done();
 }
 
+#ifndef U3_OS_windows
+/* _test_roll_same(): a roll into the current epoch (an empty epoch
+**   meeting a new binary) that fails late removes nothing: the store,
+**   its blob, and the epoch's markers are the live epoch's.  the roll
+**   exits on failure, so it runs in a child.
+*/
+static void
+_test_roll_same(void)
+{
+  _pier_make("roll same");
+
+  //  the current epoch is 2: its store holds a blob, its marker is
+  //  written.  no checkpoint, so the roll fails at the image copy
+  //
+  c3_c cur_c[8192], epv_c[2048];
+  u3b_root(cur_c, _tmp_pier, 2);
+  snprintf(epv_c, sizeof(epv_c), "%s/.urb/log/0i2/epoc.txt", _tmp_pier);
+
+  MDB_env* env_u = _epoc_env(0);
+  {
+    c3_c epo_c[2048];
+    snprintf(epo_c, sizeof(epo_c), "%s/.urb/log/0i2", _tmp_pier);
+    _check( 0 == mkdir(epo_c, 0700), "mkdir %s: %s", epo_c, strerror(errno) );
+    _check( 0 == mkdir(cur_c, 0700), "mkdir %s: %s", cur_c, strerror(errno) );
+
+    FILE* fil_f = fopen(epv_c, "w");
+    _check( fil_f, "epoc.txt: %s", strerror(errno) );
+    fprintf(fil_f, "3");
+    fclose(fil_f);
+
+    c3_d non_d = 0;
+    _epoc_event(env_u, 1, &non_d, 0);
+    _epoc_event(env_u, 2, &non_d, 0);
+  }
+
+  u3C.bob_c = cur_c;
+  c3_h mug_h, seq_h;
+  {
+    c3_c stg_c[8192];
+    _check( c3y == u3b_stage(_tmp_pier, (const c3_y*)"owned by the live epoch",
+                             23, stg_c, &_stg_mug),
+            "stage failed" );
+    _check( c3y == u3b_move_stg(cur_c, stg_c, &mug_h, &seq_h),
+            "install failed" );
+  }
+  u3_atom bob = u3i_blob(mug_h, seq_h);
+
+  c3_c log_c[2048];
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", _tmp_pier);
+  u3_dire dir_u = { .pax_c = _tmp_pier };
+  u3_dire com_u = { .pax_c = log_c };
+  u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
+                    .mdb_u = env_u, .epo_d = 2, .dun_d = 2 };
+
+  pid_t pid_i = fork();
+  _check( -1 != pid_i, "fork: %s", strerror(errno) );
+  if ( 0 == pid_i ) {
+    u3_disk_roll(&log_u, 2);
+    _exit(0);
+  }
+
+  c3_i sat_i = 0;
+  _check( pid_i == waitpid(pid_i, &sat_i, 0), "waitpid: %s", strerror(errno) );
+  _check( WIFEXITED(sat_i) && (1 == WEXITSTATUS(sat_i)),
+          "the roll did not fail (status %d)", sat_i );
+
+  {
+    c3_c fil_c[8192];
+    struct stat sat_u;
+    u3b_path(fil_c, cur_c, mug_h, seq_h);
+    _check( 0 == stat(fil_c, &sat_u), "the live epoch's blob was deleted" );
+    _check( 0 == stat(epv_c, &sat_u), "the live epoch's marker was deleted" );
+  }
+
+  u3z(bob);
+  u3_lmdb_exit(env_u);
+  u3C.bob_c = _tmp_bob;
+  _pier_done();
+}
+#endif
+
 /* _test_grants(): the encoder and the decoder of its output collect
 **   the same distinct blob ids, one per id however many atoms or
 **   repeats name it; a hold keeps the record past its last atom, the
@@ -3492,6 +3576,9 @@ main(int argc, char* argv[])
   _test_blobs_persist();
   _test_live();
   _test_roll_link();
+#ifndef U3_OS_windows
+  _test_roll_same();
+#endif
   _test_chop_kill();
   _test_gc_own();
   _test_blob_own();
