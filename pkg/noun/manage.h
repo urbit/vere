@@ -252,6 +252,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_ream(void);
 
+      /* u3m_dedup_hint(): record the home-road hashcons set's size,
+      **                   to size its next rebuild.
+      */
+        void
+        u3m_dedup_hint(void);
+
       /* u3m_dedup_lose(): remove [som], about to be freed, from the
       **                   home-road hashcons set (see u3a_hcon_has()).
       */

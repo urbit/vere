@@ -268,7 +268,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+  U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
+  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \

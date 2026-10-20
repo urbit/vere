@@ -2525,6 +2525,10 @@ u3m_save(void)
 
   u3_assert(u3R == &u3H->rod_u);
 
+  //  remember the hashcons set's size, to size its rebuild
+  //
+  u3m_dedup_hint();
+
   {
     c3_y pha_y = u3e_Phase;
     u3e_Phase = u3e_pha_save;
@@ -3316,6 +3320,17 @@ u3m_dedup_lose(u3_noun som)
   }
 }
 
+/* u3m_dedup_hint(): record the home-road set's size in the home road,
+**                   to size its next rebuild.
+*/
+void
+u3m_dedup_hint(void)
+{
+  if ( _cm_dup_u.ini_t ) {
+    u3H->rod_u.hcz_w = (c3_w)_canon_cells_size(&_cm_dup_u.cel_u);
+  }
+}
+
 /* _cm_canonical(): [som] is a cat or a member of the home-road set.
 */
 static inline c3_t
@@ -3402,19 +3417,14 @@ _cm_dup_canon(_cm_walk* wak_u, u3_noun som)
         pro = _cm_dup_put(som);
         break;
       }
+      //  NB: no lookup on the way down: the children aren't members
+      //  yet, and a duplicate is found by _cm_dup_put() on the way up
+      //
       else {
-        u3_weak can = _cm_dup_get(som);
-
-        if ( u3_none != can ) {
-          pro = can;
-          break;
-        }
-        else {
-          _cm_frame* fam_u = _cm_walk_push(wak_u);
-          fam_u->som   = som;
-          fam_u->tel_t = 0;
-          som = u3h(som);
-        }
+        _cm_frame* fam_u = _cm_walk_push(wak_u);
+        fam_u->som   = som;
+        fam_u->tel_t = 0;
+        som = u3h(som);
       }
     }
 
@@ -3489,6 +3499,13 @@ u3m_dedup_ream(void)
 
   _cm_dup_init();
   _cm_dup_clear();
+
+  //  size the table for the set's last saved size, to avoid rehashing
+  //  as it regrows (a cleared table keeps its capacity)
+  //
+  if ( u3R->hcz_w ) {
+    u3_assert( _canon_cells_reserve(&_cm_dup_u.cel_u, u3R->hcz_w) ); //  oom
+  }
 
   //  the home-road set used to be on the loom: release it
   //
