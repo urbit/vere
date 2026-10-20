@@ -1,4 +1,5 @@
 #include "allocate.h"
+#include "canon.h"
 #include "events.h"
 #include "hashtable.h"
 #include "jets.h"
@@ -6,61 +7,9 @@
 #include "retrieve.h"
 #include "vortex.h"
 
-static c3_d
-_melt_hash(u3_noun foo)
-{
-  return u3r_mug(foo) * 11400714819323198485ULL;
-}
-
-static c3_i
-_melt_cmp_atoms(u3_atom a, u3_atom b)
-{
-  if ( a == b ) return 1;
-
-  //  XX assume(c3y == u3a_is_pug(a) && c3y == u3a_is_pug(b))
-  u3a_atom *a_u = u3a_to_ptr(a);
-  u3a_atom *b_u = u3a_to_ptr(b);
-
-  //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_w != b_u->mug_w ) return 0;
-
-  if ( a_u->len_w != b_u->len_w ) return 0;
-
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
-}
-
-#define NAME    _coins
-#define KEY_TY  u3_atom
-#define HASH_FN _melt_hash
-#define CMPR_FN _melt_cmp_atoms
-#include "verstable.h"
-
-static c3_i
-_melt_cmp_cells(u3_cell a, u3_cell b)
-{
-  if ( a == b ) return 1;
-
-  u3a_cell *a_u = u3a_to_ptr(a);
-  u3a_cell *b_u = u3a_to_ptr(b);
-
-  //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_w != b_u->mug_w ) return 0;
-
-  c3_d *a_d = (c3_d*)&(a_u->hed);
-  c3_d *b_d = (c3_d*)&(b_u->hed);
-
-  return a_u->hed == b_u->hed && a_u->tel == b_u->tel;
-}
-
-#define NAME    _cells
-#define KEY_TY  u3_cell
-#define HASH_FN _melt_hash
-#define CMPR_FN _melt_cmp_cells
-#include "verstable.h"
-
 typedef struct {
-  _coins  vat_u;
-  _cells  cel_u;
+  _canon_atoms vat_u;
+  _canon_cells cel_u;
   c3_w    len_w;
   c3_w    siz_w;
   u3_noun *tac;
@@ -69,8 +18,8 @@ typedef struct {
 static u3_noun
 _melt_canon_next(_melt_ctx *can_u, u3_noun som)
 {
-  _coins_itr vit_u;
-  _cells_itr cit_u;
+  _canon_atoms_itr vit_u;
+  _canon_cells_itr cit_u;
 
   while ( 1 ) {
     if ( c3y == u3a_is_cat(som) ) return som;
@@ -109,7 +58,7 @@ _melt_xchange(u3_noun new, u3_noun *som)
 static u3_noun
 _melt_canon(_melt_ctx *can_u, u3_noun can)
 {
-  _cells_itr cit_u;
+  _canon_cells_itr cit_u;
   u3a_cell  *cel_u;
   u3_noun     *top;
 
