@@ -3169,6 +3169,11 @@ u3m_time_gap_in_mil(c3_w mil_w)
 */
 #include "canon.h"
 
+//  set while reading the home-road set: the profiling signal handler
+//  (u3t_samp()) runs on the home road, and must not change it then
+//
+volatile c3_w u3m_Dup_busy_w;
+
 static struct {
   c3_t         ini_t;  //  initialized
   c3_w         len_w;  //  bitmap length, in words
@@ -3251,7 +3256,7 @@ _cm_dup_clear(void)
 **   canonical. computes (and caches) the mug of [som].
 */
 static u3_weak
-_cm_dup_get(u3_noun som)
+_cm_dup_get_in(u3_noun som)
 {
   if ( !_cm_dup_u.ini_t ) {
     return u3_none;
@@ -3264,6 +3269,18 @@ _cm_dup_get(u3_noun som)
     _canon_cells_itr cit_u = _canon_cells_get(&_cm_dup_u.cel_u, som);
     return _canon_cells_is_end(cit_u) ? u3_none : cit_u.data->key;
   }
+}
+
+static u3_weak
+_cm_dup_get(u3_noun som)
+{
+  u3_weak pro;
+
+  u3m_Dup_busy_w++;
+  pro = _cm_dup_get_in(som);
+  u3m_Dup_busy_w--;
+
+  return pro;
 }
 
 /* _cm_dup_put(): insert home-road [som] into the home-road set,
@@ -3507,9 +3524,12 @@ u3m_dedup_ream(void)
     u3_assert( _canon_cells_reserve(&_cm_dup_u.cel_u, u3R->hcz_w) ); //  oom
   }
 
-  //  the home-road set used to be on the loom: release it
+  //  the home-road set used to be on the loom: release it, and say why
+  //  this start is slow (the persistent tables are canonicalized once)
   //
   if ( u3h_wyt(u3R->dup_p) ) {
+    u3l_log("hashcons: moving the dedup set off the loom; "
+            "canonicalizing persistent state, this may take a minute");
     u3h_free(u3R->dup_p);
     u3R->dup_p = u3h_new();
   }

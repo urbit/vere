@@ -252,6 +252,10 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_ream(void);
 
+      /* u3m_Dup_busy_w: reading the home-road hashcons set (see u3t_samp()).
+      */
+        extern volatile c3_w u3m_Dup_busy_w;
+
       /* u3m_dedup_hint(): record the home-road hashcons set's size,
       **                   to size its next rebuild.
       */
