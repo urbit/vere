@@ -137,6 +137,31 @@ u3e_pool u3e_Pool;
 ///
 volatile c3_y u3e_Phase;
 u3e_meter     u3e_Meter;
+c3_t          u3e_Measuring;
+
+//  gains by the product's take, until the state swap is done
+//
+typedef struct {
+  c3_ws del_ws;  //  net count change
+  c3_t  cln_t;   //  page was clean before the first gain
+} _ce_gav;
+
+#define NAME    _ce_gan
+#define KEY_TY  u3_noun
+#define VAL_TY  _ce_gav
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+#define NAME    _ce_pgs
+#define KEY_TY  c3_w
+#define VAL_TY  c3_t
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+static c3_t   _ce_gan_ini_t;
+static _ce_gan _ce_gan_u;
 
 static c3_h _ce_muk_page(void* ptr_v);
 
@@ -375,6 +400,15 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     fprintf(fil_u, "\n");
   }
 
+  //  state swap, page records and allocation (jb/measure)
+  //
+  fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.tak_cop_d, u3e_Meter.tak_gan_d, u3e_Meter.tak_cln_d,
+                 u3e_Meter.tak_net_d, u3e_Meter.tak_npg_d,
+                 u3e_Meter.fre_cln_d, u3e_Meter.alc_cln_d,
+                 u3e_Meter.alc_alt_d, u3e_Meter.alc_reu_d);
+
   //  home-road table sizes at this snapshot, and reclaims since the last
   //
   {
@@ -400,7 +434,144 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   _ce_meas.tak_d = 0;
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
-    _ce_meas.fla_y[i_w] &= ~(c3_y)3;
+    _ce_meas.fla_y[i_w] &= ~(c3_y)(1|2|8|16);
+  }
+}
+
+/* u3e_measure_dirty(): page [pag_w] is dirty since the last save.
+*/
+c3_t
+u3e_measure_dirty(c3_w pag_w)
+{
+  return 0 != (u3P.dit_d[pag_w >> 6] & ((c3_d)1 << (pag_w & 63)));
+}
+
+/* u3e_measure_gain(): the product's take gains home-road [som].
+*/
+void
+u3e_measure_gain(u3_noun som)
+{
+  _ce_gan_itr itr_u;
+  c3_w        pag_w = u3a_to_off(som) >> u3a_page;
+
+  if ( !_ce_gan_ini_t ) {
+    _ce_gan_init(&_ce_gan_u);
+    _ce_gan_ini_t = 1;
+  }
+
+  itr_u = _ce_gan_get(&_ce_gan_u, som);
+
+  if ( _ce_gan_is_end(itr_u) ) {
+    _ce_gav gav_u = { 0, !u3e_measure_dirty(pag_w) };
+    itr_u = _ce_gan_insert(&_ce_gan_u, som, gav_u);
+    u3_assert( !_ce_gan_is_end(itr_u) );
+  }
+
+  itr_u.data->val.del_ws++;
+}
+
+/* u3e_measure_lose(): releasing the old state decrements [som].
+*/
+void
+u3e_measure_lose(u3_noun som)
+{
+  if ( _ce_gan_ini_t ) {
+    _ce_gan_itr itr_u = _ce_gan_get(&_ce_gan_u, som);
+
+    if ( !_ce_gan_is_end(itr_u) ) {
+      itr_u.data->val.del_ws--;
+    }
+  }
+}
+
+/* u3e_measure_swap(): the state swap is done: tally gains that netted
+**                     to zero, and the clean pages they alone dirtied.
+*/
+void
+u3e_measure_swap(void)
+{
+  if ( _ce_gan_ini_t && _ce_gan_size(&_ce_gan_u) ) {
+    _ce_gan_itr itr_u;
+    _ce_pgs     pgs_u;
+    _ce_pgs_itr pit_u;
+
+    _ce_pgs_init(&pgs_u);
+
+    for ( itr_u = _ce_gan_first(&_ce_gan_u);
+          !_ce_gan_is_end(itr_u);
+          itr_u = _ce_gan_next(itr_u) )
+    {
+      _ce_gav* gav_u = &itr_u.data->val;
+      c3_w     pag_w = u3a_to_off(itr_u.data->key) >> u3a_page;
+      c3_t     zer_t = ( 0 == gav_u->del_ws );
+
+      u3e_Meter.tak_gan_d++;
+      if ( gav_u->cln_t ) u3e_Meter.tak_cln_d++;
+      if ( zer_t )        u3e_Meter.tak_net_d++;
+
+      //  a page counts if it was clean and every gain on it netted out
+      //
+      if ( gav_u->cln_t ) {
+        pit_u = _ce_pgs_get(&pgs_u, pag_w);
+        if ( _ce_pgs_is_end(pit_u) ) {
+          pit_u = _ce_pgs_insert(&pgs_u, pag_w, zer_t);
+          u3_assert( !_ce_pgs_is_end(pit_u) );
+        }
+        else {
+          pit_u.data->val = pit_u.data->val && zer_t;
+        }
+      }
+    }
+
+    for ( pit_u = _ce_pgs_first(&pgs_u);
+          !_ce_pgs_is_end(pit_u);
+          pit_u = _ce_pgs_next(pit_u) )
+    {
+      if ( pit_u.data->val ) u3e_Meter.tak_npg_d++;
+    }
+
+    _ce_pgs_cleanup(&pgs_u);
+    _ce_gan_clear(&_ce_gan_u);
+  }
+}
+
+/* u3e_measure_drop(): forget gains not followed by a state swap.
+*/
+void
+u3e_measure_drop(void)
+{
+  if ( _ce_gan_ini_t ) {
+    _ce_gan_clear(&_ce_gan_u);
+  }
+}
+
+/* u3e_measure_free(): a free will write the page record on [pag_w].
+*/
+void
+u3e_measure_free(c3_w pag_w)
+{
+  if ( (pag_w < _ce_meas.pag_w) && !u3e_measure_dirty(pag_w) ) {
+    u3e_Meter.fre_cln_d++;
+    _ce_meas.fla_y[pag_w] |= 8;
+  }
+}
+
+/* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+**                      [alt_t] if a dirty page in its class has room.
+*/
+void
+u3e_measure_alloc(c3_w pag_w, c3_t alt_t)
+{
+  if ( pag_w >= _ce_meas.pag_w ) {
+    return;
+  }
+  else if ( !u3e_measure_dirty(pag_w) ) {
+    u3e_Meter.alc_cln_d++;
+    if ( alt_t ) u3e_Meter.alc_alt_d++;
+  }
+  else if ( 8 == (_ce_meas.fla_y[pag_w] & (8|16)) ) {
+    u3e_Meter.alc_reu_d++;
+    _ce_meas.fla_y[pag_w] |= 16;
   }
 }
 
@@ -452,6 +623,7 @@ u3e_measure_init(const c3_c* dir_c)
 
     memset(&u3e_Meter, 0, sizeof(u3e_Meter));
     _ce_meas.on_t = 1;
+    u3e_Measuring = 1;
 
     fprintf(stderr, "measure: logging to %s\r\n", pax_c);
   }
