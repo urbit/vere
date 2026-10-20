@@ -131,10 +131,28 @@ _disk_commit_start(u3_disk* log_u)
   u3_assert( c3n == log_u->sav_u.ted_o );
   log_u->sav_u.ted_o = c3y;
 
-  //  queue asynchronous work to happen on another thread
+  //  queue asynchronous work to happen on another thread.  the pool's
+  //  threads take the signal mask of the thread that starts them, at
+  //  the first submission: keep the longjmp-ing signals out of it, or
+  //  one that arrives during a critical section (which blocks them on
+  //  this thread only) runs its handler on a worker and unwinds this
+  //  thread's stack from there
   //
+#ifndef U3_OS_windows
+  sigset_t sig_u, old_u;
+  sigemptyset(&sig_u);
+  sigaddset(&sig_u, SIGINT);
+  sigaddset(&sig_u, SIGTERM);
+  sigaddset(&sig_u, SIGVTALRM);
+  pthread_sigmask(SIG_BLOCK, &sig_u, &old_u);
+#endif
+
   uv_queue_work(u3L, &log_u->sav_u.ted_u, _disk_commit_cb,
                                           _disk_commit_after_cb);
+
+#ifndef U3_OS_windows
+  pthread_sigmask(SIG_SETMASK, &old_u, 0);
+#endif
 }
 
 /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
