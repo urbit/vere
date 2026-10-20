@@ -1399,7 +1399,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
             u3z(now);
           }
 
-          u3m_reclaim();
+          u3m_reclaim_due();
 
           if ( sap_d && ((mar_u->dun_d - pas_d) >= sap_d) ) {
             u3m_save();
