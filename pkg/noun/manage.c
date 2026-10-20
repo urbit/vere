@@ -499,9 +499,14 @@ static c3_w _cm_crit_w = 0;
 void
 u3m_crit_inn(void)
 {
-  if ( 0 == _cm_crit_w++ ) {
+  //  block before counting: a signal between the two would otherwise
+  //  unwind with the depth raised and nothing held, and the unwind's
+  //  u3m_crit_out would release a hold never taken
+  //
+  if ( 0 == _cm_crit_w ) {
     rsignal_block();
   }
+  _cm_crit_w++;
 }
 
 /* u3m_crit_out(): end a critical section begun by u3m_crit_inn().

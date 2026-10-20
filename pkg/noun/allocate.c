@@ -2071,7 +2071,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 16);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2250,7 +2250,11 @@ u3a_mark_road()
     qua_u[14]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
-  qua_u[15] = NULL;
+  qua_u[15] = c3_calloc(sizeof(*qua_u[15]));
+  qua_u[15]->nam_c = strdup("blob hands");
+  qua_u[15]->siz_w = u3b_mark() * sizeof(c3_w);
+
+  qua_u[16] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {

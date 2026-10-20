@@ -226,6 +226,25 @@ u3b_mapped(void)
   return tot_d;
 }
 
+/* u3b_mark(): mark the current road's hand nodes for gc; words marked.
+**
+**   an inner road keeps its hands on its own heap, reachable only from
+**   bob_p, so a sweep would free them as leaks.  the home road's are on
+**   the C heap.
+*/
+c3_w
+u3b_mark(void)
+{
+  c3_w siz_w = 0;
+
+  if ( &(u3H->rod_u) != u3R ) {
+    for ( u3b_hand* han_u = _blob_head(u3R); han_u; han_u = han_u->nex_u ) {
+      siz_w += u3a_mark_ptr(han_u);
+    }
+  }
+  return siz_w;
+}
+
 /* u3b_hands_road(): hands open on road [rod_v].
 */
 c3_z

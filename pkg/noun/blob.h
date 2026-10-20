@@ -242,6 +242,12 @@
       c3_d
       u3b_mapped(void);
 
+    /* u3b_mark(): mark the current road's hand nodes for gc; words
+    **   marked.  Called from u3a_mark_road.
+    */
+      c3_w
+      u3b_mark(void);
+
     /* u3b_hands_road(): hands open on road [rod_v].  Test support.
     */
       c3_z

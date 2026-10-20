@@ -2147,6 +2147,65 @@ _test_jam_wide(void)
 }
 #endif
 
+#ifndef U3_OS_windows
+/* _hand_grab_cb(): on an inner road, keep an idle hand, then mark and
+**   sweep the road with leaks fatal.
+*/
+static u3_noun
+_hand_grab_cb(u3_noun arg)
+{
+  (void)arg;
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, _han_bob, c3y);
+  u3r_view_done(&vue_u);
+  _check( 1 == u3b_hands_road(u3R), "no idle hand kept" );
+
+  u3C.wag_h |= u3o_leak_crash;
+  u3a_mark_init();
+  {
+    u3m_quac** qua_u = u3m_mark();
+    for ( c3_w i_w = 0; qua_u[i_w]; i_w++ ) {
+      u3a_quac_free(qua_u[i_w]);
+    }
+    c3_free(qua_u);
+  }
+  u3a_sweep();
+  return 0;
+}
+
+/* _test_hand_grab(): a sweep on an inner road keeps the road's idle
+**   hands, as -g's u3m_grab does at every event: they are on the
+**   road's heap and only bob_p reaches them.  a leak aborts, so the
+**   sweep runs in a child.
+*/
+static void
+_test_hand_grab(void)
+{
+  _pier_make("hand grab");
+
+  c3_h mug_h, seq_h;
+  _check( c3y == _blob_save((const c3_y*)"kept idle across a sweep", 24,
+                            &mug_h, &seq_h),
+          "save failed" );
+  _han_bob = u3i_blob(mug_h, seq_h);
+
+  pid_t pid_i = fork();
+  _check( -1 != pid_i, "fork: %s", strerror(errno) );
+  if ( 0 == pid_i ) {
+    u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_grab_cb, 0);
+    _exit( (c3y == _hand_unwound(gon)) ? 2 : 0 );
+  }
+
+  c3_i sat_i = 0;
+  _check( pid_i == waitpid(pid_i, &sat_i, 0), "waitpid: %s", strerror(errno) );
+  _check( WIFEXITED(sat_i) && (0 == WEXITSTATUS(sat_i)),
+          "the sweep freed a kept hand (status %d)", sat_i );
+
+  u3z(_han_bob);
+  _pier_done();
+}
+#endif
+
 /* _test_hand_edge(): met and comparison at the 4 KiB window boundaries.
 */
 static void
@@ -3657,6 +3716,9 @@ main(int argc, char* argv[])
   _test_hand_gone();
 #if !defined(VERE64) && !defined(U3_OS_windows)
   _test_jam_wide();
+#endif
+#ifndef U3_OS_windows
+  _test_hand_grab();
 #endif
   _test_hand_edge();
   _test_hand_share();

@@ -27,8 +27,16 @@ void rsignal_block(void)
 void rsignal_unblock(void)
 {
   if ( 0 == InterlockedDecrement(&_held) ) {
+    //  take every pending flag before raising any: a handler longjmps,
+    //  and a flag left set would fire in a later, unrelated section
+    //
+    LONG got[SIG_COUNT];
+
     for ( int sig = 0; sig < SIG_COUNT; sig++ ) {
-      if ( InterlockedExchange(&_pending[sig], 0) ) {
+      got[sig] = InterlockedExchange(&_pending[sig], 0);
+    }
+    for ( int sig = 0; sig < SIG_COUNT; sig++ ) {
+      if ( got[sig] ) {
         rsignal_raise(sig);
       }
     }
@@ -75,8 +83,11 @@ void rsignal_raise(int sig)
   if (oldfn == 0)
     return;
 
+  //  a stack overflow cannot wait: the thread has no stack to finish
+  //  its section on
+  //
   if (_tid == GetCurrentThreadId()) {
-    if (_held) {
+    if (_held && (SIGSTK != sig)) {
       _rsignal_defer(sig, oldfn);
       return;
     }
@@ -93,6 +104,14 @@ void rsignal_raise(int sig)
   if (SuspendThread(hthread) < 0) {
     fprintf(stderr, "\r\nrsignal_raise: SuspendThread(%lu): %lu\r\n", _tid, GetLastError());
     goto cleanup;
+  }
+
+  //  SuspendThread returns before the thread stops; reading its context
+  //  waits until it has, so _held below is the stopped thread's
+  //
+  {
+    CONTEXT ctx_u = { .ContextFlags = CONTEXT_CONTROL };
+    GetThreadContext(hthread, &ctx_u);
   }
 
   //  the handler thread is inside a critical section: leave the signal
