@@ -1146,11 +1146,12 @@ _http_stg_drop(u3_noun pax)
 
 /* _http_stg_ctx: a request whose body mars installs inside the event.
 **
-**   the request is named by connection and sequence rather than held
-**   by pointer: the client may close it before mars answers.
+**   the request is named by server, connection, and sequence rather
+**   than held by pointer: the client may close it, and a config change
+**   may free its server, before mars answers.
 */
 typedef struct _http_stg_ctx {
-  u3_http* htp_u;
+  c3_w     sev_l;
   c3_w     coq_l;
   c3_w     seq_l;
 } _http_stg_ctx;
@@ -1159,6 +1160,8 @@ static void
 _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c);
 static u3_hcon*
 _http_conn_find(u3_http *htp_u, c3_w coq_l);
+static u3_http*
+_http_serv_find(u3_httd* htd_u, c3_w sev_l);
 static c3_o
 _http_rec_scry(h2o_req_t* rec_u);
 
@@ -1183,10 +1186,14 @@ static void
 _http_req_bail(u3_ovum* egg_u, u3_noun lud)
 {
   _http_stg_ctx* ctx_u = egg_u->ptr_v;
-  u3_hcon*       hon_u = _http_conn_find(ctx_u->htp_u, ctx_u->coq_l);
+  u3_http*       htp_u = _http_serv_find((u3_httd*)egg_u->car_u, ctx_u->sev_l);
+  u3_hcon*       hon_u = htp_u ? _http_conn_find(htp_u, ctx_u->coq_l) : 0;
   u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
 
-  if ( req_u ) {
+  //  only a request still waiting on arvo is answered: one the timer
+  //  has already answered is left alone
+  //
+  if ( req_u && (u3_rsat_plan == req_u->sat_e) ) {
     c3_o blb_o = (  (c3y == u3du(lud))
                  && (c3y == u3du(u3h(lud)))
                  && (c3__blob == u3h(u3h(lud))) );
@@ -1232,7 +1239,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
 
       if ( u3_nul != pax ) {
         _http_stg_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
-        ctx_u->htp_u = htp_u;
+        ctx_u->sev_l = htp_u->sev_l;
         ctx_u->coq_l = req_u->hon_u->coq_l;
         ctx_u->seq_l = req_u->seq_l;
 
@@ -1319,6 +1326,9 @@ _http_req_cache(u3_hreq* req_u);
 static void
 _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c)
 {
+  //  ripe with no generator: the request timer must not fire into it
+  //
+  uv_timer_stop(req_u->tim_u);
   req_u->sat_e = u3_rsat_ripe;
   h2o_send_error_generic(req_u->rec_u, sas_i, msg_c, msg_c, 0);
 }
