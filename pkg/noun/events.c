@@ -438,11 +438,17 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   }
 }
 
-/* u3e_measure_dirty(): page [pag_w] is dirty since the last save.
+/* u3e_measure_dirty(): page [pag_w] is dirty since the last save, or new.
 */
 c3_t
 u3e_measure_dirty(c3_w pag_w)
 {
+  //  pages past the image are new: unprotected, and saved regardless
+  //
+  if ( pag_w >= u3P.img_u.pgs_w ) {
+    return 1;
+  }
+
   return 0 != (u3P.dit_d[pag_w >> 6] & ((c3_d)1 << (pag_w & 63)));
 }
 

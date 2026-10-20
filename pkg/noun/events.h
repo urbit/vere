@@ -191,7 +191,8 @@
 
     /* hot-path hooks (jb/measure); call only if u3e_Measuring.
     */
-      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save.
+      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save,
+      **                      or new (past the image).
       */
         c3_t
         u3e_measure_dirty(c3_w pag_w);
