@@ -224,6 +224,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_reclaim(void);
 
+      /* u3m_reclaim_due(): clear home-road caches that have outgrown
+      **                    their bounds.
+      */
+        void
+        u3m_reclaim_due(void);
+
       /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
         c3_w

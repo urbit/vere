@@ -3247,8 +3247,53 @@ _cb_dedup_prune(u3_noun kev, void* ptr_v)
   return __( (1 == kev_u->use_w) && (2 == val_u->use_w) );
 }
 
+//  home-road dedup set size after the last prune (0: not yet known)
+//
+static c3_w _cm_dup_wyt_w;
+
 void
 u3m_dedup_prune(void)
 {
   u3h_prune_with(u3R->dup_p, _cb_dedup_prune, 0);
+
+  if ( &(u3H->rod_u) == u3R ) {
+    _cm_dup_wyt_w = u3h_wyt(u3R->dup_p);
+  }
+}
+
+/* bounds for u3m_reclaim_due()
+*/
+#define _CM_BYC_MAX  (1U << 14)  //  bytecode programs
+#define _CM_DUP_MIN  (1U << 16)  //  dedup entries before growth counts
+
+/* u3m_reclaim_due(): clear home-road caches that have outgrown their
+**                    bounds. cheap enough to call after every event.
+*/
+void
+u3m_reclaim_due(void)
+{
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  //  bytecode programs can't be freed individually (call sites point
+  //  between them), so the table is cleared whole once it reaches its
+  //  cap. hanks hold call sites, and must go with it.
+  //
+  if ( _CM_BYC_MAX <= u3h_wyt(u3R->byc.har_p) ) {
+    u3j_reclaim();
+    u3n_reclaim();
+  }
+
+  //  the dedup set holds references, so entries nothing else refers to
+  //  stay until pruned. prune once it has doubled since the last prune.
+  //
+  {
+    c3_w wyt_w = u3h_wyt(u3R->dup_p);
+
+    if ( !_cm_dup_wyt_w ) {
+      _cm_dup_wyt_w = wyt_w;
+    }
+    else if ( wyt_w > 2 * c3_max(_cm_dup_wyt_w, _CM_DUP_MIN) ) {
+      u3m_dedup_prune();
+    }
+  }
 }

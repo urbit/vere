@@ -57,7 +57,7 @@ enum {
   _mars_fag_hit1 = 1 << 0,  //  hit low threshold
   _mars_fag_hit0 = 1 << 1,  //  hit high threshold
   _mars_fag_mute = 1 << 2,  //  mutated kernel
-  _mars_fag_much = 1 << 3,  //  bytecode hack
+  _mars_fag_much = 1 << 3,  //  check cache bounds
   _mars_fag_vega = 1 << 4,  //  kernel reset
 };
 
@@ -418,15 +418,9 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       }
     }
 
-    //  reclaim memory from persistent caches periodically
+    //  clear persistent caches that have outgrown their bounds
     //
-    //    XX this is a hack to work two things
-    //    - bytecode caches grow rapidly and can't be simply capped
-    //    - we don't make very effective use of our free lists
-    //
-    if ( !(mar_u->dun_d % 1024ULL) ) {
-      mar_u->fag_w |= _mars_fag_much;
-    }
+    mar_u->fag_w |= _mars_fag_much;
 
     //  notify daemon of memory pressure via "fake" effect
     //
@@ -770,7 +764,7 @@ _mars_post(u3_mars* mar_u)
   }
 
   if ( mar_u->fag_w & _mars_fag_much ) {
-    u3m_reclaim();
+    u3m_reclaim_due();
   }
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
