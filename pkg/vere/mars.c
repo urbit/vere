@@ -450,20 +450,33 @@ u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 }
 
 /* _mars_stg_ours(): [stg_c] names a file directly in the pier's staging
-**   directory, as u3b_stage makes them.
+**   directory, as u3b_stage makes them.  the directories are compared
+**   resolved, so the king's spelling of the pier need not match ours.
 */
 static c3_o
 _mars_stg_ours(const c3_c* stg_c)
 {
-  c3_c dir_c[8192];
+  const c3_c* nam_c = strrchr(stg_c, '/');
+  c3_c        dir_c[8192];
+  c3_c*       our_c;
+  c3_c*       its_c;
+  c3_o        ret_o;
+
+  if ( !nam_c || !nam_c[1] || ((nam_c - stg_c) >= (c3_ws)sizeof(dir_c)) ) {
+    return c3n;
+  }
+
+  memcpy(dir_c, stg_c, nam_c - stg_c);
+  dir_c[nam_c - stg_c] = 0;
+  its_c = realpath(dir_c, 0);
+
   u3b_stg_dir(dir_c, u3C.dir_c);
+  our_c = realpath(dir_c, 0);
 
-  c3_z len_z = strlen(dir_c);
-
-  return __(  (0 == strncmp(stg_c, dir_c, len_z))
-           && ('/' == stg_c[len_z])
-           && stg_c[len_z + 1]
-           && !strchr(stg_c + len_z + 1, '/') );
+  ret_o = __( our_c && its_c && (0 == strcmp(our_c, its_c)) );
+  free(our_c);
+  free(its_c);
+  return ret_o;
 }
 
 /* _mars_blob_install(): install the staged files an event brings and
@@ -1989,11 +2002,11 @@ u3_mars_work(u3_mars* mar_u)
     exit(0);
   }
 
-  //  ownership came with the snapshot and replay marked the events
-  //  after it; _find_home zeroed les_h, and no hold outlives a
-  //  restart.  so the gc may reclaim any unowned blob nothing holds,
-  //  once the log is caught up: short of that (a dry run skips replay)
-  //  an input with no record yet would read as an orphan
+  //  boot marked ownership from the epoch's rows through the snapshot,
+  //  replay marked the events after it, and no hold outlives a restart.
+  //  so the gc may reclaim any unowned blob nothing holds, once the log
+  //  is caught up: short of that (a dry run skips replay) an input with
+  //  no record yet would read as an orphan
   //
   if ( mar_u->dun_d == mar_u->log_u->dun_d ) {
     u3_disk_blob_gc();
