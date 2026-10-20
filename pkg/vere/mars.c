@@ -76,7 +76,13 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-  if ( !blb_u || (c3n == u3a_blob_dead(blb_u)) ) {
+  //  a dry run deletes nothing: it skips replay, so a record can read
+  //  unowned while an input after the snapshot still names its file
+  //
+  if (  (u3C.wag_h & u3o_dryrun)
+     || !blb_u
+     || (c3n == u3a_blob_dead(blb_u)) )
+  {
     return;
   }
 
@@ -1139,10 +1145,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
           num_h = c3_min(num_h, blb_u->les_h);
           blb_u->les_h -= num_h;
           blb_u->use_h -= num_h;
-
-          if ( c3y == u3a_blob_dead(blb_u) ) {
-            _mars_blob_del(mug_h, seq_h);
-          }
+          _mars_blob_del(mug_h, seq_h);
         }
       }
 
@@ -1438,27 +1441,9 @@ typedef enum {
   _play_int_e,  //  %intr
   _play_log_e,  //  event log fail
   _play_mug_e,  //  mug mismatch
+  _play_blo_e,  //  a blob the log names is missing from the store
   _play_bad_e   //  total failure
 } _mars_play_e;
-
-/* _mars_play_blobs(): mark owned every blob a replayed event in
-**   [fir_d, las_d] names, failing on a missing file: the marker is
-**   u3_disk_blob_own.  the loaded snapshot's marks stop at its own
-**   event, and replayed events are the ones after it.
-**
-**   returns c3n if any referenced blob file is missing: replay of those
-**   events cannot reproduce their state, so the caller must fail hard
-**   rather than continue with silent corruption.
-**
-**   NB: opens its own read txn, so it must run after the batch's disk
-**   walk is done: a nested read txn on the same thread fails with
-**   MDB_BAD_RSLOT.
-*/
-static c3_o
-_mars_play_blobs(u3_mars* mar_u, c3_d fir_d, c3_d las_d)
-{
-  return u3_disk_blob_own(mar_u->log_u, fir_d, las_d);
-}
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
 */
@@ -1483,7 +1468,9 @@ _mars_play_batch(u3_mars* mar_u,
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);
-      (void)_mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
+      if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
+        return _play_blo_e;
+      }
       return _play_log_e;
     }
 
@@ -1498,7 +1485,15 @@ _mars_play_batch(u3_mars* mar_u,
 
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
-      (void)_mars_play_blobs(mar_u, fir_d, mar_u->dun_d);
+
+      //  mark what the batch replayed before the failure, after the
+      //  disk walk (one read txn per thread); a missing file outranks
+      //  the failure, since a retry would resume past the check
+      //
+      if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
+        u3z(dud); u3z(wen);
+        return _play_blo_e;
+      }
 
       u3_assert( c3y == u3r_safe_half(u3h(dud), &mot_m) );
 
@@ -1543,12 +1538,13 @@ _mars_play_batch(u3_mars* mar_u,
 
   u3_disk_walk_done(wok_u);
 
-  //  missing blob files make the replayed range unreproducible:
+  //  mark what the batch's events own, after the disk walk (one read
+  //  txn per thread).  a missing file makes the range unreproducible:
   //  fail hard rather than continue with silent corruption
   //
-  if ( c3n == _mars_play_blobs(mar_u, fir_d, mar_u->dun_d) ) {
+  if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
     u3z(wen);
-    return _play_bad_e;
+    return _play_blo_e;
   }
 
   *wen_c = u3r_string(wen);
@@ -1878,6 +1874,16 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           u3m_save();
           //  XX exit code, cb
           //
+          u3_disk_exit(log_u);
+          exit(1);
+        } break;
+
+        //  the snapshot must not move past an event whose blob is
+        //  gone: exit unsaved, and the next boot fails the same way
+        //
+        case _play_blo_e: {
+          fprintf(stderr, "play: failed: the log references blob data "
+                          "that no longer exists\r\n");
           u3_disk_exit(log_u);
           exit(1);
         } break;

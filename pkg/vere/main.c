@@ -1900,9 +1900,14 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //  this epoch's rows name, the image's and the events' through the
     //  rock's, then check the invariant
     //
+    //  a missing file fails the load, as it fails a boot: the rock
+    //  would name data the store no longer has
+    //
     if ( c3n == u3_disk_blob_own(log_u, log_u->epo_d, eve_d) ) {
       fprintf(stderr, "urbit: queu: the epoch depends on blob data that no "
                       "longer exists\r\n");
+      u3_disk_exit(log_u);
+      exit(1);
     }
 
     if ( c3n == u3a_blob_sane(c3y) ) {
