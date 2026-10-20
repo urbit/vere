@@ -149,10 +149,11 @@ _disk_commit_start(u3_disk* log_u)
 /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
 */
 size_t
-u3_disk_etch(u3_disk* log_u,
-             u3_noun    eve,
-             c3_h     mug_h,
-             c3_y**   out_y)
+u3_disk_etch(u3_disk*  log_u,
+             u3_noun   eve,
+             c3_h      mug_h,
+             c3_y**    out_y,
+             u3s_bids* bid_u)
 {
   size_t len_i;
   c3_y*  dat_y;
@@ -167,7 +168,7 @@ u3_disk_etch(u3_disk* log_u,
     c3_d  ram_d;
     c3_y* ram_y;
 
-    u3s_ram_xeno(eve, &ram_d, &ram_y);
+    u3s_ram_xeno_bids(eve, &ram_d, &ram_y, bid_u);
 
     len_i = 4 + ram_d;
     dat_y = c3_malloc(len_i);
@@ -251,22 +252,30 @@ _disk_commit(u3_disk* log_u)
 
 /* _disk_plan(): enqueue serialized fact (feat) for persistence.
 **
-**   takes ownership of [bid_d], the blob ids the event holds (0 if
-**   none); they are written in the event's transaction and freed with
-**   the feat.
+**   the encoder collects the distinct blob ids the event names.  they
+**   are this epoch's from here (owned now, ahead of the durable row, so
+**   no deletion runs between), and they become the event's BLOBS row,
+**   written in the event's transaction and freed with the feat.
 */
 static void
 _disk_plan(u3_disk* log_u,
            c3_h     mug_h,
-           u3_noun    job,
-           c3_d*    bid_d,
-           c3_z     bid_z)
+           u3_noun    job)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
+  u3s_bids bid_u = {0};
+
   fet_u->eve_d = ++log_u->sen_d;
-  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
-  fet_u->bid_d = bid_d;
-  fet_u->bid_z = bid_z;
+  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y, &bid_u);
+
+  u3a_blob_own(bid_u.bid_d, bid_u.len_w);
+
+  if ( !bid_u.len_w ) {
+    c3_free(bid_u.bid_d);
+    bid_u.bid_d = 0;
+  }
+  fet_u->bid_d = bid_u.bid_d;
+  fet_u->bid_z = bid_u.len_w;
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -287,14 +296,13 @@ u3_disk_plan(u3_disk* log_u, u3_fact* tac_u)
   if ( u3C.wag_h & u3o_dryrun ) {
     log_u->sen_d++;
     log_u->dun_d++;
-    c3_free(tac_u->bid_d);
     // XX invoke don_f?
     return;
   }
 
   u3_assert( (1ULL + log_u->sen_d) == tac_u->eve_d );
 
-  _disk_plan(log_u, tac_u->mug_h, tac_u->job, tac_u->bid_d, tac_u->bid_z);
+  _disk_plan(log_u, tac_u->mug_h, tac_u->job);
   _disk_commit(log_u);
 }
 
@@ -309,7 +317,7 @@ u3_disk_plan_list(u3_disk* log_u, u3_noun lit)
     u3x_cell(t, &i, &t);
     //  NB, boot mugs are 0
     //
-    _disk_plan(log_u, 0, i, 0, 0);
+    _disk_plan(log_u, 0, i);
   }
 
   u3z(lit);

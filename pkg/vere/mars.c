@@ -313,40 +313,11 @@ _mars_grab(u3_noun sac, c3_o pri_o)
   }
 }
 
-/* _mars_blob_bobs_atom(): u3a_walk_fore atom callback — collect bob atoms.
-*/
-static void
-_mars_blob_bobs_atom(u3_atom a, void* ptr_v)
-{
-  //  a stub (seq 0) names no file and never reaches a row
-  //
-  if ( (c3y != u3a_is_bob(a)) || (0 == u3a_bob_seq(a)) ) {
-    return;
-  }
-  //  grow the C-heap array
-  //
-  struct { c3_d* ids; c3_z len; c3_z cap; } *acc = ptr_v;
-  if ( acc->len == acc->cap ) {
-    acc->cap = acc->cap ? acc->cap * 2 : 8;
-    acc->ids  = c3_realloc(acc->ids, acc->cap * sizeof(c3_d));
-  }
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
-  acc->ids[acc->len++] = u3a_bid(mug_h, seq_h);
-}
-
-/* _mars_blob_bobs_cell(): u3a_walk_fore cell callback — always descend.
-*/
-static c3_o
-_mars_blob_bobs_cell(u3_noun n, void* ptr_v)
-{
-  (void)n; (void)ptr_v;
-  return c3y;
-}
-
 /* _mars_blob_sure(): refuse an event holding a bob the store cannot back.
 **
-**   tap mints a bank record for every blob id it decodes, so an event
+**   [bid_u] is the distinct ids the writ's tap decoded, stubs excluded;
+**   the bobs the install puts in the stubs' places name files it just
+**   wrote.  tap mints a bank record for every blob id it decodes, so an event
 **   naming a file that is gone arrives with a fresh record over a
 **   missing file.  committing it would log an event that can never
 **   replay.  a record the king does not hold and no epoch owns is
@@ -356,16 +327,13 @@ _mars_blob_bobs_cell(u3_noun n, void* ptr_v)
 **   backed.
 */
 static u3_weak
-_mars_blob_sure(u3_noun job)
+_mars_blob_sure(const u3s_bids* bid_u)
 {
-  struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
   u3_noun tan = u3_nul;
 
-  u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
-
-  for ( c3_z i_z = 0; i_z < acc.len; i_z++ ) {
-    c3_h      mug_h = u3a_bid_mug(acc.ids[i_z]);
-    c3_h      seq_h = u3a_bid_seq(acc.ids[i_z]);
+  for ( c3_w i_w = 0; i_w < bid_u->len_w; i_w++ ) {
+    c3_h      mug_h = u3a_bid_mug(bid_u->bid_d[i_w]);
+    c3_h      seq_h = u3a_bid_seq(bid_u->bid_d[i_w]);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
     if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
@@ -384,8 +352,6 @@ _mars_blob_sure(u3_noun job)
       tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
     }
   }
-
-  c3_free(acc.ids);
 
   if ( u3_nul == tan ) {
     return u3_none;
@@ -496,10 +462,9 @@ u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 static u3_weak
 _mars_blob_install(u3_noun* job, u3_noun pax)
 {
-  c3_d*   bid_d = 0;
-  c3_w    len_w = 0, cap_w = 0;
-  u3_noun tan   = u3_nul;
-  u3_noun pak   = pax;
+  u3s_bids bid_u = {0};
+  u3_noun  tan   = u3_nul;
+  u3_noun  pak   = pax;
 
   while ( u3_nul != pak ) {
     c3_c* stg_c = u3r_string(u3h(pak));
@@ -507,11 +472,7 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
     c3_h  seq_h = 0;
 
     if ( c3y == u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h) ) {
-      if ( len_w == cap_w ) {
-        cap_w = cap_w ? (2 * cap_w) : 4;
-        bid_d = c3_realloc(bid_d, cap_w * sizeof(c3_d));
-      }
-      bid_d[len_w++] = u3a_bid(mug_h, seq_h);
+      u3s_bids_push(&bid_u, u3a_bid(mug_h, seq_h));
     }
     else {
       c3_c msg_c[128];
@@ -525,10 +486,10 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
   }
   u3z(pax);
 
-  c3_y* hit_y = len_w ? c3_calloc(len_w) : 0;
+  c3_y* hit_y = bid_u.len_w ? c3_calloc(bid_u.len_w) : 0;
 
   if ( u3_nul == tan ) {
-    u3_weak new = _mars_fill(*job, bid_d, len_w, hit_y);
+    u3_weak new = _mars_fill(*job, bid_u.bid_d, bid_u.len_w, hit_y);
 
     if ( u3_none == new ) {
       fprintf(stderr, "mars: poke refused: a stub names no staged file\r\n");
@@ -544,13 +505,14 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
   //  nothing holds what was installed for a refused event, or what no
   //  stub asked for: mint and drop, and the file goes
   //
-  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
     if ( (u3_nul != tan) || !hit_y[i_w] ) {
-      u3z(u3i_blob(u3a_bid_mug(bid_d[i_w]), u3a_bid_seq(bid_d[i_w])));
+      c3_d bid_d = bid_u.bid_d[i_w];
+      u3z(u3i_blob(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)));
     }
   }
   c3_free(hit_y);
-  c3_free(bid_d);
+  c3_free(bid_u.bid_d);
 
   if ( u3_nul == tan ) {
     return u3_none;
@@ -565,37 +527,18 @@ _mars_fact(u3_mars* mar_u,
            u3_noun    job,
            u3_noun    pro)
 {
-  //  every blob the committed event names is now owned by this epoch:
-  //  the file lives until chop deletes the epoch, whatever the counts
-  //  do.  the record is made if it is missing (an id the gate let
-  //  through on the strength of its file alone)
+  //  the disk owns, for this epoch, every blob the event names as it
+  //  encodes it, and writes them as the event's BLOBS row
   //
   {
-    struct { c3_d* ids; c3_z len; c3_z cap; } acc = {0, 0, 0};
-    u3a_walk_fore(job, &acc, _mars_blob_bobs_atom, _mars_blob_bobs_cell);
+    u3_fact tac_u = {
+      .job   = job,
+      .mug_h = mar_u->mug_h,
+      .eve_d = mar_u->dun_d
+    };
 
-    u3a_blob_own(acc.ids, acc.len);
-
-    //  the blob ids ride with the event: the disk writes the BLOBS row
-    //  in the event's own transaction, and frees the array with it
-    //
-    if ( !acc.len ) {
-      c3_free(acc.ids);
-      acc.ids = 0;
-    }
-
-    {
-      u3_fact tac_u = {
-        .job   = job,
-        .mug_h = mar_u->mug_h,
-        .eve_d = mar_u->dun_d,
-        .bid_d = acc.ids,
-        .bid_z = acc.len
-      };
-
-      u3_disk_plan(mar_u->log_u, &tac_u);
-      u3z(job);
-    }
+    u3_disk_plan(mar_u->log_u, &tac_u);
+    u3z(job);
   }
 
   {
@@ -905,10 +848,11 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
   return ret_o;
 }
 
-/* _mars_work(): perform a task.
+/* _mars_work(): perform a task.  [bid_u] is the distinct blob ids the
+**   writ named, as its tap collected them.
 */
 static c3_o
-_mars_work(u3_mars* mar_u, u3_noun jar)
+_mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
 {
   u3_noun tag, dat, pro;
 
@@ -972,7 +916,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       //  it runs; freeing the job drops the record tap minted for it
       //
       {
-        u3_weak lud = _mars_blob_sure(job);
+        u3_weak lud = _mars_blob_sure(bid_u);
 
         if ( u3_none != lud ) {
           u3z(job);
@@ -1325,16 +1269,18 @@ u3_mars_kick(void* ram_u, c3_y ver_y, c3_d len_d, c3_y* hun_y)
   //  XX optimize for stateless tasks w/ peek-next
   //
   if ( u3_mars_work_e == mar_u->sat_e ) {
-    u3_weak jar = ( 0x01 == ver_y )
-                ? u3s_tap_xeno(len_d, hun_y)
-                : u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
+    u3s_bids bid_u = {0};
+    u3_weak  jar   = ( 0x01 == ver_y )
+                   ? u3s_tap_xeno_bids(len_d, hun_y, &bid_u)
+                   : u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
 
     if (  (u3_none == jar)
-       || (c3n == _mars_work(mar_u, jar)) )
+       || (c3n == _mars_work(mar_u, jar, &bid_u)) )
     {
       fprintf(stderr, "mars: bad\r\n");
       exit(1);
     }
+    c3_free(bid_u.bid_d);
 
     _mars_post(mar_u);
     ret_o = c3y;

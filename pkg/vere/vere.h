@@ -418,8 +418,6 @@
           c3_d             eve_d;               //  event number
           c3_h             mug_h;               //  kernel mug after
           u3_noun            job;               //  (pair date ovum)
-          c3_d*            bid_d;               //  blob ids the event holds, or 0
-          c3_z             bid_z;               //  their count
           struct _u3_fact* nex_u;               //  next in queue
         } u3_fact;
 
@@ -898,12 +896,14 @@
         u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+      **   [bid_u], if given, collects the distinct blob ids it writes.
       */
         size_t
-        u3_disk_etch(u3_disk* log_u,
-                     u3_noun    eve,
-                     c3_h     mug_h,
-                     c3_y**   out_y);
+        u3_disk_etch(u3_disk*  log_u,
+                     u3_noun   eve,
+                     c3_h      mug_h,
+                     c3_y**    out_y,
+                     u3s_bids* bid_u);
 
       /* u3_disk_sift(): parse a persisted event buffer.
       */
