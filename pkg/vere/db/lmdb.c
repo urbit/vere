@@ -442,6 +442,58 @@ u3_lmdb_save(MDB_env* env_u,
   return c3y;
 }
 
+/* u3_lmdb_save_blobs(): write one BLOBS row, in its own transaction.
+**
+**   For the row no event writes: the image's live set at the epoch's
+**   first key, put by the roll.  An event's row goes with the event in
+**   u3_lmdb_save.
+*/
+c3_o
+u3_lmdb_save_blobs(MDB_env*    env_u,
+                   c3_d        eve_d,
+                   const c3_d* bid_d,
+                   c3_z        len_z)
+{
+  MDB_txn* txn_u;
+  MDB_dbi  blb_u;
+  c3_h     ret_h;
+
+  if ( (ret_h = mdb_txn_begin(env_u, 0, 0, &txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs write: txn_begin fail");
+    return c3n;
+  }
+
+  {
+    c3_h ops_h = MDB_CREATE | MDB_INTEGERKEY;
+
+    if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", ops_h, &blb_u)) ) {
+      mdb_logerror(stderr, ret_h, "lmdb: blobs write: dbi_open fail");
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  {
+    c3_d    key_d = eve_d;
+    MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &key_d };
+    MDB_val val_u = { .mv_size = len_z * sizeof(c3_d),
+                      .mv_data = (void*)bid_d };
+
+    if ( (ret_h = mdb_put(txn_u, blb_u, &key_u, &val_u, 0)) ) {
+      fprintf(stderr, "lmdb: blobs write failed at %" PRIu64 "\r\n", eve_d);
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  if ( (ret_h = mdb_txn_commit(txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs write: commit fail");
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* u3_lmdb_read_meta(): read by string from the META db.
 */
 void

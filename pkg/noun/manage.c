@@ -635,13 +635,15 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
-/* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
-**   use_h and zero les_h on each u3a_blob.  The snapshot's les_h is
-**   stale after a restart: no hold outlives one, since a restart ends
-**   both processes and the king that owed the holds is gone.
+/* _find_home_zero_cb(): u3h_walk_with callback — drop les_h from use_h
+**   and zero les_h and own_o on each u3a_blob.  Both belong to the
+**   process that wrote the snapshot: no hold outlives a restart, since
+**   it ends both processes and the king that owed the holds is gone;
+**   and ownership is marked again from the epoch's BLOBS rows
+**   (u3_disk_blob_own), never read back from the snapshot.
 */
 static void
-_find_home_zero_les_cb(u3_noun kev, void* ptr_v)
+_find_home_zero_cb(u3_noun kev, void* ptr_v)
 {
   (void)ptr_v;
   u3_noun val = u3t(kev);
@@ -652,6 +654,7 @@ _find_home_zero_les_cb(u3_noun kev, void* ptr_v)
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
   blb_u->use_h -= blb_u->les_h;
   blb_u->les_h  = 0;
+  blb_u->own_o  = c3n;
 }
 
 /* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
@@ -795,10 +798,11 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset all les_h to 0: the snapshot's count belongs to a dead
-  //  process, and no hold outlives one.
+  //  reset les_h and own_o: the snapshot's count and flag belong to a
+  //  dead process; no hold outlives one, and ownership is marked again
+  //  from the epoch's manifest
   //
-  u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
+  u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);
 
   //  the home road never lists blob hands in the loom; anything a
   //  snapshot carries there belongs to a dead process

@@ -1896,11 +1896,14 @@ _cw_queu(c3_i argc, c3_c* argv[])
                       bsk_u.num_w);
     }
 
-    //  uncram repaved the home road, wiping the blob bank: own what
-    //  the rock holds and what this epoch's events name, then check
-    //  the invariant
+    //  uncram repaved the home road, wiping the blob bank: mark what
+    //  this epoch's rows name, the image's and the events' through the
+    //  rock's, then check the invariant
     //
-    u3_disk_blob_own(log_u);
+    if ( c3n == u3_disk_blob_own(log_u, log_u->epo_d, eve_d) ) {
+      fprintf(stderr, "urbit: queu: the epoch depends on blob data that no "
+                      "longer exists\r\n");
+    }
 
     if ( c3n == u3a_blob_sane(c3y) ) {
       fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");

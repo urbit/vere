@@ -2953,10 +2953,12 @@ _test_live(void)
 }
 
 /* _test_roll_link(): roll carries every blob the bank holds into the
-**   new epoch's store and leaves the rest behind: a live atom and a
-**   leased record are linked (one inode, two names), a record nothing
-**   holds is not; the old files stay for the old epoch; the new store
-**   dedups against what it was handed; the process now installs there.
+**   new epoch's store and leaves the rest behind: an atom under the
+**   state and a held record are linked (one inode, two names), a
+**   record nothing holds is not; the state's id alone is owned and is
+**   the new epoch's first BLOBS row; the old files stay for the old
+**   epoch; the new store dedups against what it was handed; the
+**   process now installs there.
 */
 static void
 _test_roll_link(void)
@@ -2993,6 +2995,11 @@ _test_roll_link(void)
   blb_c->les_h += 1;
   blb_c->use_h += 1;
 
+  //  the image holds a: the roll owns what a root reaches
+  //
+  u3_noun old = u3A->roc;
+  u3A->roc    = u3nc(bob_a, u3k(old));
+
   //  epoch 0 with two events and its meta, as roll requires
   //
   MDB_env* env_u = _epoc_env(0);
@@ -3011,12 +3018,7 @@ _test_roll_link(void)
   u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
                     .mdb_u = env_u, .epo_d = 0, .dun_d = 2 };
 
-  //  the roll saves the loom after its bank pass; this pier has no
-  //  checkpoint to save into, and a dry run's save is a no-op
-  //
-  u3C.wag_h |= u3o_dryrun;
   u3_disk_roll(&log_u, 2);
-  u3C.wag_h &= ~u3o_dryrun;
   _check( 2 == log_u.epo_d, "epoch not rolled" );
 
   c3_c new_c[8192];
@@ -3030,6 +3032,20 @@ _test_roll_link(void)
   _check( c3y == u3a_blob_get(mug_h[0], seq_h[0])->own_o, "atom-held not owned" );
   _check( c3n == u3a_blob_get(mug_h[2], seq_h[2])->own_o, "hold-only owned" );
   _check( !u3a_blob_get(mug_h[1], seq_h[1]), "ghost survived the roll" );
+
+  //  the live set is the new epoch's first BLOBS row, at the event the
+  //  image is the state of: a alone, not the hold-only c, not the ghost
+  //
+  {
+    c3_d* row_d = 0;
+    c3_z  row_z = 0;
+    _check( c3y == u3_lmdb_read_blobs(log_u.mdb_u, 2, &row_d, &row_z),
+            "no image row at the epoch's first key" );
+    _check( (1 == row_z) && row_d
+            && (row_d[0] == (((c3_d)mug_h[0] << 32) | seq_h[0])),
+            "image row is not the one state-held id" );
+    c3_free(row_d);
+  }
 
   //  a and c carried as links, b left behind; the old store untouched
   //
@@ -3066,7 +3082,8 @@ _test_roll_link(void)
   u3_lmdb_exit(log_u.mdb_u);
   u3C.bob_c = _tmp_bob;
   u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
-  u3z(bob_a);
+  u3z(u3A->roc);
+  u3A->roc = old;
   blb_c->les_h = 0; blb_c->use_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _pier_done();
@@ -3354,48 +3371,65 @@ _test_gc_own(void)
   _pier_done();
 }
 
-/* _test_blob_own(): u3_disk_blob_own owns what a live atom holds and
-**   what the epoch's events name, making a ghost for a named blob the
-**   bank lost; a hold alone owns nothing.
+/* _test_blob_own(): u3_disk_blob_own marks what the epoch's rows name,
+**   the image's row at the epoch's first key and an event's row alike,
+**   making a ghost for a named blob the bank lost; an atom no row
+**   names is not owned, nor is a hold; a named blob whose file is gone
+**   fails the mark.
 */
 static void
 _test_blob_own(void)
 {
   _pier_make("blob own");
 
-  const c3_c* dat_c[] = { "held by an atom",
+  const c3_c* dat_c[] = { "in the image's row, held by an atom",
                           "named by an event, no record",
-                          "held by the king only" };
-  c3_h mug_h[3], seq_h[3];
-  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+                          "held by the king only",
+                          "held by an atom, named by no row" };
+  c3_h mug_h[4], seq_h[4];
+  for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
     _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),
                               &mug_h[i_w], &seq_h[i_w]),
             "save %" PRIc3_w " failed", i_w );
   }
-  u3_atom   bob   = u3i_blob(mug_h[0], seq_h[0]);
+  u3_atom   bob_a = u3i_blob(mug_h[0], seq_h[0]);
+  u3_atom   bob_d = u3i_blob(mug_h[3], seq_h[3]);
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
   blb_c->les_h += 1;
   blb_c->use_h += 1;
 
-  MDB_env* env_u = _epoc_env(0);
+  //  epoch 5: the image's row at 5, one event at 6
+  //
+  MDB_env* env_u = _epoc_env(5);
   {
+    c3_d img_d = ((c3_d)mug_h[0] << 32) | seq_h[0];
     c3_d bid_d = ((c3_d)mug_h[1] << 32) | seq_h[1];
-    _epoc_event(env_u, 1, &bid_d, 1);
+    _check( c3y == u3_lmdb_save_blobs(env_u, 5, &img_d, 1),
+            "image row save failed" );
+    _epoc_event(env_u, 6, &bid_d, 1);
   }
 
-  u3_disk log_u = { .mdb_u = env_u, .epo_d = 0 };
-  u3_disk_blob_own(&log_u);
+  u3_disk log_u = { .mdb_u = env_u, .epo_d = 5 };
+  _check( c3y == u3_disk_blob_own(&log_u, 5, 6), "mark failed" );
 
-  _check( c3y == u3a_blob_get(mug_h[0], seq_h[0])->own_o, "atom-held not owned" );
+  _check( c3y == u3a_blob_get(mug_h[0], seq_h[0])->own_o,
+          "image-row blob not owned" );
   _check( u3a_blob_get(mug_h[1], seq_h[1])
           && (c3y == u3a_blob_get(mug_h[1], seq_h[1])->own_o)
           && (0 == u3a_blob_get(mug_h[1], seq_h[1])->use_h),
-          "named blob not a ghost" );
+          "event-named blob not a ghost" );
   _check( c3n == blb_c->own_o, "hold-only owned" );
+  _check( c3n == u3a_blob_get(mug_h[3], seq_h[3])->own_o, "unnamed atom owned" );
+
+  //  a named file gone: the mark fails and says so
+  //
+  u3b_wipe(_tmp_bob, mug_h[1], seq_h[1]);
+  _check( c3n == u3_disk_blob_own(&log_u, 5, 6), "mark passed a missing file" );
 
   u3_lmdb_exit(env_u);
   u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
-  u3z(bob);
+  u3z(bob_a);
+  u3z(bob_d);
   u3a_blob_drop(mug_h[1], seq_h[1]);
   blb_c->les_h = 0; blb_c->use_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);

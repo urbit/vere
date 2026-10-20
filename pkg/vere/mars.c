@@ -54,13 +54,14 @@
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
 **        cardinality contribution from use_h; an owned record stays as
 **        a ghost until the next roll
-**     7. roll carries every held blob into the new epoch's store and
-**        owns what the image holds; chop deletes old epochs whole, files
-**        included, and touches no count
-**     *. boot: ownership comes with the snapshot and replay marks the
-**        events after it; _find_home zeroed les_h (no hold outlives a
-**        restart); u3_disk_blob_gc reclaims any unowned blob nothing
-**        holds
+**     7. roll carries every held blob into the new epoch's store, owns
+**        what a root reaches, and writes that live set as the epoch's
+**        first BLOBS row; chop deletes old epochs whole, files included,
+**        and touches no count
+**     *. boot: _find_home zeroed les_h and own_o (neither outlives a
+**        process); u3_disk_blob_own marks the epoch's rows through the
+**        snapshot's event and replay marks the rest; u3_disk_blob_gc
+**        reclaims any unowned blob nothing holds
 */
 
 c3_c tac_c[256];  //  tracing label
@@ -1440,60 +1441,23 @@ typedef enum {
   _play_bad_e   //  total failure
 } _mars_play_e;
 
-/* _mars_play_blobs_cb(): u3_lmdb_walk_blobs callback — mark every blob
-**   owned by the epoch, as the commit did.
+/* _mars_play_blobs(): mark owned every blob a replayed event in
+**   [fir_d, las_d] names, failing on a missing file: the marker is
+**   u3_disk_blob_own.  the loaded snapshot's marks stop at its own
+**   event, and replayed events are the ones after it.
 **
-**   a blob whose file is missing from the store is unreproducible
-**   data the log still depends on: report it (all of them — keep
-**   scanning) and flag the replay as failed via [ptr_v].
-*/
-static void
-_mars_play_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
-{
-  c3_o* oky_o = ptr_v;
-
-  for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
-    c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFFULL);
-
-    if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
-      fprintf(stderr, "play (%" PRIu64 "): blob %08" PRIx32 "/%08" PRIx32
-                      " missing from store: the log references data "
-                      "that no longer exists\r\n",
-                      eve_d, mug_h, seq_h);
-      *oky_o = c3n;
-      continue;
-    }
-
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
-    blb_u->own_o = c3y;
-  }
-}
-
-/* _mars_play_blobs(): check that every blob a replayed event in
-** [fir_d, las_d] references is still in the store, and mark it owned:
-** the loaded snapshot's ownership stops at its own event, and replayed
-** events are the ones after it.
-**
-**   returns c3n if any referenced blob file is missing — replay of
-**   those events cannot reproduce their state, so the caller must
-**   fail hard rather than continue with silent corruption.
+**   returns c3n if any referenced blob file is missing: replay of those
+**   events cannot reproduce their state, so the caller must fail hard
+**   rather than continue with silent corruption.
 **
 **   NB: opens its own read txn, so it must run after the batch's disk
-**   walk is done — a nested read txn on the same thread fails with
+**   walk is done: a nested read txn on the same thread fails with
 **   MDB_BAD_RSLOT.
 */
 static c3_o
 _mars_play_blobs(u3_mars* mar_u, c3_d fir_d, c3_d las_d)
 {
-  c3_o oky_o = c3y;
-
-  if ( las_d < fir_d ) return c3y;
-
-  u3_lmdb_walk_blobs(mar_u->log_u->mdb_u, fir_d, las_d,
-                     &oky_o, _mars_play_blobs_cb);
-  return oky_o;
+  return u3_disk_blob_own(mar_u->log_u, fir_d, las_d);
 }
 
 /* _mars_play_batch(): replay a batch of events, return status and batch date.
@@ -1961,6 +1925,22 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
 
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_h = u3r_mug(u3A->roc);
+
+  //  ownership is rebuilt from the manifest: _find_home zeroed the
+  //  snapshot's flags; mark every blob the epoch's rows name, from the
+  //  image's row at the epoch's first key through the snapshot's event.
+  //  replay marks the rest.  a missing file is fatal here as in replay:
+  //  the image depends on it
+  //
+  if ( c3n == u3_disk_blob_own(mar_u->log_u,
+                               mar_u->log_u->epo_d,
+                               mar_u->dun_d) )
+  {
+    fprintf(stderr, "mars: the image depends on blob data that no longer "
+                    "exists\r\n");
+    u3_disk_exit(mar_u->log_u);
+    exit(1);
+  }
 
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");

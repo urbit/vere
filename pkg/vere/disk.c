@@ -1165,14 +1165,43 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
   }
 }
 
+/* _disk_roll_bank: the roll's bank pass: the live set (what a root
+**   reaches, ascending), the ghosts to drop once the roll stands, and
+**   how many records the counts call live that no root reaches.
+*/
+typedef struct {
+  const c3_d*        liv_d;
+  c3_z               len_z;
+  _disk_chop_collect gho_u;
+  c3_w               mis_w;
+} _disk_roll_bank;
+
+static c3_o
+_disk_roll_live(const _disk_roll_bank* ban_u, c3_d bid_d)
+{
+  c3_z lo_z = 0;
+  c3_z hi_z = ban_u->len_z;
+
+  while ( lo_z < hi_z ) {
+    c3_z mid_z = lo_z + (hi_z - lo_z) / 2;
+
+    if ( ban_u->liv_d[mid_z] < bid_d )      lo_z = mid_z + 1;
+    else if ( ban_u->liv_d[mid_z] > bid_d ) hi_z = mid_z;
+    else                                    return c3y;
+  }
+  return c3n;
+}
+
 /* _disk_roll_bank_cb(): u3h_walk_with callback for the roll's bank
-**   pass: own what a live atom holds, collect what nothing holds (the
-**   ghosts, dropped once the roll has succeeded).
+**   pass: own what a root reaches, collect what nothing holds (the
+**   ghosts, dropped once the roll has succeeded), report a record the
+**   counts call live that the walk did not reach.
 */
 static void
 _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
 {
-  _disk_chop_collect* gho_u = ptr_v;
+  _disk_roll_bank*    ban_u = ptr_v;
+  _disk_chop_collect* gho_u = &ban_u->gho_u;
   c3_d bid_d = 0;
   c3_d off_d = 0;
 
@@ -1187,9 +1216,17 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
       gho_u->bid_d = c3_realloc(gho_u->bid_d, gho_u->cap_z * sizeof(c3_d));
     }
     gho_u->bid_d[gho_u->len_z++] = bid_d;
+    return;
   }
-  else {
-    blb_u->own_o = ( blb_u->use_h > blb_u->les_h ) ? c3y : c3n;
+
+  blb_u->own_o = _disk_roll_live(ban_u, bid_d);
+
+  if ( (c3n == blb_u->own_o) && (blb_u->use_h > blb_u->les_h) ) {
+    fprintf(stderr, "disk: roll: %08" PRIx32 "/%" PRIc3_h ": %" PRIc3_h
+                    " live atom(s) counted, none reached: unscanned root?\r\n",
+                    (c3_h)(bid_d >> 32), (c3_h)bid_d,
+                    blb_u->use_h - blb_u->les_h);
+    ban_u->mis_w++;
   }
 }
 
@@ -1228,7 +1265,8 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   //  every blob the bank holds
   //
   c3_c bob_c[8192];
-  _disk_chop_collect gho_u = {0};
+  _disk_roll_bank ban_u = {0};
+  c3_d*           liv_d = 0;
 
   u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
@@ -1254,15 +1292,22 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
                       PRIc3_d "\r\n", lin_u.num_w, epo_d);
     }
 
-    //  the bank is the image's: own every record a live atom holds.  a
-    //  record only a king hold keeps is carried but not owned, so it
-    //  goes by refcount when the king lets go.  the save puts the flags
-    //  into the image the new epoch copies.  the ghosts, the old
-    //  epoch's inputs nothing holds, are only collected here: a failed
-    //  roll leaves the old epoch's bank whole, and they go at the end
+    //  the bank is the image's: own every record a root reaches, and
+    //  only those.  a record only a king hold keeps is carried but not
+    //  owned, so it goes by refcount when the king lets go.  the flags
+    //  are this process's; a boot marks them again from the row the
+    //  live set becomes below.  the ghosts, the old epoch's inputs
+    //  nothing holds, are only collected here: a failed roll leaves the
+    //  old epoch's bank whole, and they go at the end
     //
-    u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &gho_u);
-    u3m_save();
+    liv_d       = u3a_blob_live(&ban_u.len_z);
+    ban_u.liv_d = liv_d;
+    u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &ban_u);
+
+    if ( ban_u.mis_w ) {
+      fprintf(stderr, "disk: roll: %" PRIc3_w " record(s) counted live but "
+                      "unreached, not owned\r\n", ban_u.mis_w);
+    }
   }
 
   //  copy snapshot files (skip if first epoch)
@@ -1352,6 +1397,18 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
     log_u->mdb_u = new_u;
   }
 
+  //  the image's live set is the epoch's first manifest row, keyed by
+  //  the event the image is the state of: what this epoch's replay
+  //  starts from and cannot recompute.  before META, so a crash here
+  //  leaves an epoch the next boot deletes, row and links included
+  //
+  if (  ban_u.len_z
+     && (c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z)) )
+  {
+    fprintf(stderr, "disk: failed to write the image's blob row\r\n");
+    goto fail3;
+  }
+
   // write the metadata to the database
   old_u.ver_h = U3D_VERLAT;
   if ( c3n == u3_disk_save_meta(log_u->mdb_u, &old_u) ) {
@@ -1378,14 +1435,15 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   //  the roll stands: the old epoch's ghosts are no one's now
   //
-  for ( c3_z i_z = 0; i_z < gho_u.len_z; i_z++ ) {
-    u3a_blob_drop((c3_h)(gho_u.bid_d[i_z] >> 32), (c3_h)gho_u.bid_d[i_z]);
+  for ( c3_z i_z = 0; i_z < ban_u.gho_u.len_z; i_z++ ) {
+    u3a_blob_drop((c3_h)(ban_u.gho_u.bid_d[i_z] >> 32), (c3_h)ban_u.gho_u.bid_d[i_z]);
   }
-  if ( gho_u.len_z ) {
+  if ( ban_u.gho_u.len_z ) {
     fprintf(stderr, "disk: dropped %" PRIc3_z " ghost record(s) at roll\r\n",
-                    gho_u.len_z);
+                    ban_u.gho_u.len_z);
   }
-  c3_free(gho_u.bid_d);
+  c3_free(ban_u.gho_u.bid_d);
+  c3_free(liv_d);
 
   //  success
   return c3y;
@@ -1400,7 +1458,8 @@ fail2:
 fail0:
   u3b_kill(bob_c);
 fail1:
-  c3_free(gho_u.bid_d);
+  c3_free(ban_u.gho_u.bid_d);
+  c3_free(liv_d);
   c3_rmdir(epo_c);
   return c3n;
 }
@@ -1805,61 +1864,59 @@ _disk_chop_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
   orf_u->bid_d[orf_u->len_z++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
 }
 
-/* _disk_blob_own_cb(): u3_lmdb_walk_blobs callback — mark every blob an
-**   event of this epoch names as owned, making a ghost if the bank has
-**   no record for it.
+/* _disk_blob_own_cb(): u3_lmdb_walk_blobs callback: mark every blob a
+**   row names as owned, making a ghost if the bank has no record for
+**   it.  a row id whose file is missing from the store is data the
+**   epoch depends on and cannot recompute: report it (all of them;
+**   keep scanning) and fail the mark through [ptr_v].
 */
 static void
 _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 {
-  (void)ptr_v;
-  (void)eve_d;
+  c3_o* oky_o = ptr_v;
 
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
     c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
     c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFF);
+
+    if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
+      fprintf(stderr, "disk: blob %08" PRIx32 "/%" PRIc3_h " named at event %"
+                      PRIu64 " is missing from the store: the epoch depends "
+                      "on data that no longer exists\r\n",
+                      mug_h, seq_h, eve_d);
+      *oky_o = c3n;
+      continue;
+    }
+
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
     blb_u->own_o = c3y;
   }
 }
 
-/* _disk_blob_own_live_cb(): u3h_walk_with callback — own every record
-**   a live atom holds.
-*/
-static void
-_disk_blob_own_live_cb(u3_noun kev, void* ptr_v)
-{
-  (void)ptr_v;
-  c3_d off_d = 0;
-  u3r_safe_chub(u3t(kev), &off_d);
-
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  if ( blb_u->use_h > blb_u->les_h ) {
-    blb_u->own_o = c3y;
-  }
-}
-
-/* u3_disk_blob_own(): mark owned everything the current epoch holds.
+/* u3_disk_blob_own(): mark owned every blob the rows in [fir_d, las_d]
+**   name: the one marker.
 **
-**   Ownership travels with the snapshot and replay marks the inputs
-**   after it, so this is for a loom that lost its bank: queu's rock
-**   import repaves the home road.  Every record a live atom holds is
-**   owned (the rock stands in for the image; over-marking clears at
-**   the next roll) and so is every blob an event of this epoch names.
+**   The BLOBS rows are the epoch's manifest: the image's live set at
+**   the epoch's first key (written by the roll) and each event's ids
+**   at its own.  Ownership is process state rebuilt from them: boot
+**   marks from the epoch's first key through the snapshot's event,
+**   replay marks each batch, queu marks through the rock's event, and
+**   _find_home zeroed whatever flags the snapshot carried.  c3n if any
+**   named file is missing (all of them reported).
+**
+**   NB: opens its own read txn, so it must not run inside another on
+**   this thread (MDB_BAD_RSLOT).
 */
-void
-u3_disk_blob_own(u3_disk* log_u)
+c3_o
+u3_disk_blob_own(u3_disk* log_u, c3_d fir_d, c3_d las_d)
 {
-  c3_d lo_d = 0, hi_d = 0;
+  c3_o oky_o = c3y;
 
-  u3h_walk_with(u3H->blb_p, _disk_blob_own_live_cb, 0);
+  if ( las_d < fir_d ) return c3y;
 
-  if (  (c3y == u3_lmdb_gulf(log_u->mdb_u, &lo_d, &hi_d))
-     && lo_d && (hi_d >= lo_d) )
-  {
-    u3_lmdb_walk_blobs(log_u->mdb_u, lo_d, hi_d, 0, _disk_blob_own_cb);
-  }
+  u3_lmdb_walk_blobs(log_u->mdb_u, fir_d, las_d, &oky_o, _disk_blob_own_cb);
+  return oky_o;
 }
 
 /* u3_disk_blob_gc(): reclaim unreferenced blobs against the bank.

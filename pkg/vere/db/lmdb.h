@@ -62,6 +62,16 @@
                    c3_d**   bid_p,
                    c3_z*    bid_z);
 
+    /* u3_lmdb_save_blobs(): write one BLOBS row, in its own transaction:
+    **   the row no event writes, the image's live set at the epoch's
+    **   first key, put by the roll.
+    */
+      c3_o
+      u3_lmdb_save_blobs(MDB_env*    env_u,
+                         c3_d        eve_d,
+                         const c3_d* bid_d,
+                         c3_z        len_z);
+
     /* u3_lmdb_read_meta(): read by string from the META db.
     */
       void

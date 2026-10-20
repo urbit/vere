@@ -981,12 +981,12 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
-      /* u3_disk_blob_own(): mark owned every blob a live atom holds and
-      **   every blob an event of the current epoch names.  only for a
-      **   loom that lost its bank: queu.
+      /* u3_disk_blob_own(): mark owned every blob the BLOBS rows in
+      **   [fir_d, las_d] name, the epoch's manifest; c3n if a named
+      **   file is missing from the store.  boot, replay, and queu.
       */
-        void
-        u3_disk_blob_own(u3_disk* log_u);
+        c3_o
+        u3_disk_blob_own(u3_disk* log_u, c3_d fir_d, c3_d las_d);
 
       /* u3_disk_blob_gc(): delete blobs nothing holds and no epoch owns,
       **   and orphan files in the current store.  run at boot once the
