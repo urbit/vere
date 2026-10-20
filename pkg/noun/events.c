@@ -95,9 +95,15 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
+#include "hashtable.h"
 #include "log.h"
+#include "manage.h"
 #include "murmur3.h"
 #include "options.h"
+#include "vortex.h"
+
+#include <sys/time.h>
+#include <time.h>
 
 #ifdef U3_OS_windows
 #include "wloom.h"
@@ -115,6 +121,387 @@
 
 /// Snapshotting system.
 u3e_pool u3e_Pool;
+
+/// Measurement (jb/measure-base). See events.h.
+///
+///   every first write to a clean page faults (one fault per page per
+///   snapshot interval). the fault handler records the current phase
+///   and, from palloc's page directory, which part of an allocation the
+///   faulting store hit. at each snapshot, the patch pages are tallied
+///   by those attributes. separately, after each task, dirty pages are
+///   hashed to find every page the task changed (not just first writes),
+///   for the per-event overlap measurement.
+///
+///   all state is off-loom; the fault-handler path only does stores into
+///   preallocated arrays.
+///
+volatile c3_y u3e_Phase;
+u3e_meter     u3e_Meter;
+
+static c3_h _ce_muk_page(void* ptr_v);
+
+/* page kinds, by where the first store landed
+*/
+enum {
+  _ce_kin_other = 0,  //  outside the home heap directory's range
+  _ce_kin_dir   = 1,  //  the home heap's page directory
+  _ce_kin_crag  = 2,  //  in-page chunk metadata (u3a_crag)
+  _ce_kin_w0    = 3,  //  word 0 of a chunk (refcount, for nouns)
+  _ce_kin_w1    = 4,  //  word 1 of a chunk (mug, for nouns)
+  _ce_kin_body  = 5,  //  any later word of a chunk
+  _ce_kin_large = 6,  //  page of a multi-page allocation
+  _ce_kin_free  = 7,  //  free page
+  _ce_kin_max   = 8
+};
+
+static const c3_c* _ce_pha_names[u3e_pha_max] = {
+  "none", "cue", "poke", "peek", "road",
+  "take-pro", "take-jet", "take-byc", "take-per", "take-for", "take-dup",
+  "ford-drop",
+  "reap-jet", "reap-byc", "reap-per", "reap-for", "reap-dup",
+  "roc-lose", "roc-misc", "mug-roc", "feck", "etch", "jam", "io-free",
+  "post", "save", "task", "pack",
+  "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
+  "trim-per", "trim-for"
+};
+
+static const c3_c* _ce_kin_names[_ce_kin_max] = {
+  "other", "dir", "crag", "w0", "w1", "body", "large", "free"
+};
+
+static const c3_c* _ce_tab_names[8] = {
+  "war", "cod", "han", "bas", "byc", "per", "for", "dup"
+};
+
+#define _CE_MEAS_LOGS 16
+
+static struct {
+  c3_t   on_t;                  //  measuring (NB: not c3_o; c3y is 0)
+  c3_t   has_t;                 //  per-event hashing enabled
+  FILE*  fil_u;                 //  log file
+  c3_w   pag_w;                 //  pages tracked (u3P.pag_w at init)
+  c3_y*  pha_y;                 //  [pag] phase at first fault
+  c3_y*  kin_y;                 //  [pag] kind at first fault
+  c3_y*  log_y;                 //  [pag] chunk size log2 at first fault
+  c3_y*  fla_y;                 //  [pag] 1: faulted this interval
+                                //        2: faulted this task
+                                //        4: hash valid
+  c3_h*  has_h;                 //  [pag] page hash at last task end
+  c3_w*  tem_w;                 //  [pag] scratch: pages changed by a task
+  c3_d   tal_d[u3e_pha_max][_ce_kin_max][_CE_MEAS_LOGS];
+  c3_d   uns_d;                 //  patch pages with no fault this interval
+  c3_d   tak_d;                 //  tasks this interval
+} _ce_meas;
+
+/* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
+*/
+static inline c3_t
+_ce_meas_readable(u3_post som_p)
+{
+  c3_w pag_w = som_p >> u3a_page;
+  return (som_p < u3C.wor_i) && (pag_w < u3P.pag_w) && (pag_w != u3P.gar_w);
+}
+
+/* _ce_meas_kind(): classify a store into home-road page [pag_w].
+**                  reads only; called from the fault handler.
+*/
+static c3_y
+_ce_meas_kind(c3_w pag_w, u3_post off_p, c3_y* log_y)
+{
+  u3a_road* rod_u = &(u3H->rod_u);
+  c3_w      off_w = rod_u->rut_p >> u3a_page;
+  u3_post   dir_p = rod_u->hep.pag_p;
+
+  *log_y = 0;
+
+  if ( dir_p && (off_p >= dir_p) && (off_p < (dir_p + rod_u->hep.siz_w)) ) {
+    return _ce_kin_dir;
+  }
+
+  if ( !dir_p || (pag_w < off_w) || ((pag_w - off_w) >= rod_u->hep.len_w) ) {
+    return _ce_kin_other;
+  }
+
+  //  NB: we are in the fault handler. never read the guard page or
+  //  outside the loom, or we fault again and die.
+  //
+  if ( !_ce_meas_readable(dir_p + (pag_w - off_w)) ) {
+    return _ce_kin_other;
+  }
+
+  {
+    u3_post cag_p = (u3to(u3_post, dir_p))[pag_w - off_w];
+
+    if ( u3a_free_pg == cag_p ) return _ce_kin_free;
+    if ( (u3a_head_pg == cag_p) || (u3a_rest_pg == cag_p) ) {
+      return _ce_kin_large;
+    }
+
+    if (  !_ce_meas_readable(cag_p)
+       || !_ce_meas_readable(cag_p + c3_wiseof(u3a_crag) - 1) )
+    {
+      return _ce_kin_other;
+    }
+
+    {
+      u3a_crag* pag_u = u3to(u3a_crag, cag_p);
+      c3_s      log_s = pag_u->log_s;
+      c3_w      wof_w = off_p & ((((c3_w)1) << u3a_page) - 1);
+      c3_w      chu_w = wof_w >> log_s;
+      c3_w      wic_w = wof_w & ((((c3_w)1) << log_s) - 1);
+
+      if ( (log_s < u3a_min_log) || (log_s >= u3a_page) ) {
+        return _ce_kin_other;  //  not a chunk page after all
+      }
+
+      *log_y = (c3_y)log_s;
+
+      if ( chu_w < u3a_Hunk[log_s - u3a_min_log].hun_s ) {
+        return _ce_kin_crag;
+      }
+
+      return ( 0 == wic_w ) ? _ce_kin_w0
+           : ( 1 == wic_w ) ? _ce_kin_w1
+           : _ce_kin_body;
+    }
+  }
+}
+
+/* _ce_meas_fault(): record a first write to [pag_w]. fault-handler safe.
+*/
+static inline void
+_ce_meas_fault(c3_w pag_w, u3_post off_p)
+{
+  if ( !_ce_meas.on_t || (pag_w >= _ce_meas.pag_w) ) {
+    return;
+  }
+
+  c3_y log_y = 0;
+  c3_y kin_y = ( u3e_pha_pack == u3e_Phase )
+             ? _ce_kin_other  //  page metadata is in flux
+             : _ce_meas_kind(pag_w, off_p, &log_y);
+
+  _ce_meas.pha_y[pag_w] = u3e_Phase;
+  _ce_meas.kin_y[pag_w] = kin_y;
+  _ce_meas.log_y[pag_w] = log_y;
+  _ce_meas.fla_y[pag_w] |= 3;
+}
+
+/* _ce_meas_page(): tally a page going into a patch.
+*/
+static inline void
+_ce_meas_page(c3_w pag_w)
+{
+  if ( !_ce_meas.on_t || (pag_w >= _ce_meas.pag_w) ) {
+    return;
+  }
+
+  if ( _ce_meas.fla_y[pag_w] & 1 ) {
+    c3_y pha_y = _ce_meas.pha_y[pag_w];
+    c3_y kin_y = _ce_meas.kin_y[pag_w];
+    c3_y log_y = _ce_meas.log_y[pag_w];
+
+    if ( pha_y >= u3e_pha_max )     pha_y = u3e_pha_none;
+    if ( log_y >= _CE_MEAS_LOGS )   log_y = 0;
+
+    _ce_meas.tal_d[pha_y][kin_y][log_y]++;
+  }
+  else {
+    _ce_meas.uns_d++;
+  }
+}
+
+/* _ce_meas_save(): report and reset per-interval measurements.
+*/
+static void
+_ce_meas_save(c3_w pgs_w, c3_w sip_w)
+{
+  FILE* fil_u = _ce_meas.fil_u;
+  c3_w  i_w, j_w, k_w;
+
+  if ( !_ce_meas.on_t ) {
+    return;
+  }
+
+  fprintf(fil_u, "S %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 (c3_d)u3A->eve_d, (c3_d)time(0),
+                 (c3_d)pgs_w, (c3_d)sip_w, _ce_meas.tak_d);
+
+  for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
+    for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
+      for ( k_w = 0; k_w < _CE_MEAS_LOGS; k_w++ ) {
+        c3_d num_d = _ce_meas.tal_d[i_w][j_w][k_w];
+        if ( num_d ) {
+          fprintf(fil_u, "F %s %s %" PRIu64 " %" PRIu64 "\n",
+                         _ce_pha_names[i_w], _ce_kin_names[j_w],
+                         (c3_d)k_w, num_d);
+        }
+      }
+    }
+  }
+  fprintf(fil_u, "U %" PRIu64 "\n", _ce_meas.uns_d);
+
+  for ( i_w = 0; i_w < 8; i_w++ ) {
+    fprintf(fil_u, "R %s %" PRIu64 " %" PRIu64 " %" PRIu64
+                      " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   _ce_tab_names[i_w],
+                   u3e_Meter.tab_u[i_w].exi_d[1],
+                   u3e_Meter.tab_u[i_w].nul_d[1],
+                   u3e_Meter.tab_u[i_w].ent_d[1],
+                   u3e_Meter.tab_u[i_w].exi_d[0],
+                   u3e_Meter.tab_u[i_w].nul_d[0],
+                   u3e_Meter.tab_u[i_w].ent_d[0]);
+  }
+
+  //  home-road table sizes at this snapshot, and reclaims since the last
+  //
+  {
+    u3a_road* rod_u = &u3H->rod_u;
+    fprintf(fil_u, "T %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
+                   " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
+                   " %" PRIc3_w "\n",
+                   u3h_wyt(rod_u->jed.war_p), u3h_wyt(rod_u->jed.cod_p),
+                   u3h_wyt(rod_u->jed.han_p), u3h_wyt(rod_u->jed.bas_p),
+                   u3h_wyt(rod_u->byc.har_p), u3h_wyt(rod_u->cax.per_p),
+                   u3h_wyt(rod_u->cax.for_p), u3h_wyt(rod_u->dup_p),
+                   u3h_wyt(rod_u->cax.har_p));
+    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,
+                   u3e_Meter.pru_d[0], u3e_Meter.pru_d[1]);
+  }
+  fflush(fil_u);
+
+  memset(_ce_meas.tal_d, 0, sizeof(_ce_meas.tal_d));
+  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+  _ce_meas.uns_d = 0;
+  _ce_meas.tak_d = 0;
+
+  for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
+    _ce_meas.fla_y[i_w] &= ~(c3_y)3;
+  }
+}
+
+/* u3e_measure_init(): start measuring if U3_MEASURE is set.
+*/
+void
+u3e_measure_init(const c3_c* dir_c)
+{
+  c3_c* env_c = getenv("U3_MEASURE");
+
+  if ( !env_c || !*env_c || ('0' == *env_c) || _ce_meas.on_t ) {
+    return;
+  }
+
+  {
+    c3_w pag_w = u3P.pag_w;
+    c3_c pax_c[2048];
+
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure-%" PRIu64 ".log",
+                    dir_c, (c3_d)time(0));
+
+    if ( !(_ce_meas.fil_u = fopen(pax_c, "w")) ) {
+      fprintf(stderr, "measure: open %s: %s\r\n", pax_c, strerror(errno));
+      return;
+    }
+
+    _ce_meas.pag_w = pag_w;
+    _ce_meas.pha_y = c3_calloc(pag_w);
+    _ce_meas.kin_y = c3_calloc(pag_w);
+    _ce_meas.log_y = c3_calloc(pag_w);
+    _ce_meas.fla_y = c3_calloc(pag_w);
+    _ce_meas.has_h = c3_calloc(sizeof(c3_h) * pag_w);
+    _ce_meas.tem_w = c3_calloc(sizeof(c3_w) * pag_w);
+
+    //  per-task page hashing is costly (~100ms/task); opt in with
+    //  U3_MEASURE_HASH=1
+    //
+    {
+      c3_c* has_c = getenv("U3_MEASURE_HASH");
+      _ce_meas.has_t = ( has_c && *has_c && ('0' != *has_c) );
+    }
+
+    fprintf(_ce_meas.fil_u, "# measure v1 time=%" PRIu64
+                            " word_bits=%u page_bytes=%" PRIu64
+                            " pages=%" PRIu64 " event=%" PRIu64 "\n",
+                            (c3_d)time(0), (unsigned)u3a_word_bits,
+                            (c3_d)_ce_page, (c3_d)pag_w, (c3_d)u3A->eve_d);
+    fflush(_ce_meas.fil_u);
+
+    memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+    _ce_meas.on_t = 1;
+
+    fprintf(stderr, "measure: logging to %s\r\n", pax_c);
+  }
+}
+
+/* u3e_measure_event(): record pages changed by the task just completed.
+*/
+void
+u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
+{
+  if ( !_ce_meas.on_t ) {
+    return;
+  }
+
+  _ce_meas.tak_d++;
+
+  if ( !_ce_meas.has_t ) {
+    return;
+  }
+
+  {
+    struct timeval b4_u, af_u, dif_u;
+    u3_post low_p, hig_p;
+    c3_w    nor_w, i_w, len_w = 0, fal_w = 0, dit_w = 0;
+
+    gettimeofday(&b4_u, 0);
+
+    u3m_water(&low_p, &hig_p);
+    nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+    if ( nor_w > _ce_meas.pag_w ) nor_w = _ce_meas.pag_w;
+
+    for ( i_w = 0; i_w < nor_w; i_w++ ) {
+      c3_w blk_w = i_w >> u3a_chub_bits_log;
+      c3_w bit_w = i_w & (u3a_chub_bits - 1);
+      c3_y fla_y = _ce_meas.fla_y[i_w];
+
+      if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+        continue;
+      }
+
+      dit_w++;
+
+      {
+        c3_h has_h = _ce_muk_page(_ce_ptr(i_w));
+        c3_t new_t = (fla_y & 2)                     //  first write this task
+                  || !(fla_y & 4)                    //  never hashed
+                  || (has_h != _ce_meas.has_h[i_w]); //  contents changed
+
+        if ( fla_y & 2 ) fal_w++;
+
+        _ce_meas.has_h[i_w] = has_h;
+        _ce_meas.fla_y[i_w] = (fla_y & ~(c3_y)2) | 4;
+
+        if ( new_t ) {
+          _ce_meas.tem_w[len_w++] = i_w;
+        }
+      }
+    }
+
+    gettimeofday(&af_u, 0);
+    timersub(&af_u, &b4_u, &dif_u);
+
+    fprintf(_ce_meas.fil_u, "E %" PRIu64 " %s %" PRIu64 " %" PRIu64
+                            " %" PRIu64 " %" PRIu64 ":",
+                            eve_d, tag_c, (c3_d)len_w, (c3_d)fal_w, (c3_d)dit_w,
+                            (c3_d)(dif_u.tv_sec * 1000000 + dif_u.tv_usec));
+    for ( i_w = 0; i_w < len_w; i_w++ ) {
+      fprintf(_ce_meas.fil_u, " %" PRIu64, (c3_d)_ce_meas.tem_w[i_w]);
+    }
+    fputc('\n', _ce_meas.fil_u);
+  }
+}
 
 static c3_h
 _ce_muk_buf(c3_z len_z, void* ptr_v)
@@ -286,6 +673,8 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 
   u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
+
+  _ce_meas_fault(pag_w, off_p);
 
 #ifndef U3_OS_windows
   if ( u3P.eph_i ) {
@@ -710,6 +1099,8 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
     }
 
     c3_w* mem_w = _ce_ptr(pag_w);
+
+    _ce_meas_page(pag_w);
 
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
     pat_u->con_u->mem_u[pgc_w].has_h = _ce_muk_page(mem_w);
@@ -1464,6 +1855,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
   _ce_patch_apply(pat_u);
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
+
+  _ce_meas_save(pat_u->con_u->pgs_w, pat_u->sip_w);
 
   _ce_patch_free(pat_u);
   _ce_patch_delete();

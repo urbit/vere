@@ -1,4 +1,5 @@
 #include "allocate.h"
+#include "events.h"
 #include "hashtable.h"
 #include "jets.h"
 #include "options.h"
@@ -205,6 +206,9 @@ c3_w
 u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
 {
   c3_w pre_w = u3a_open(u3R);
+  c3_y pha_y = u3e_Phase;
+
+  u3e_Phase = u3e_pha_pack;
 
   if ( _(per_o) ) {
     u3h_free(u3R->cax.per_p);
@@ -224,5 +228,6 @@ u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
   (void)u3_melt_all(fil_u);
   (void)u3m_pack();
 
+  u3e_Phase = pha_y;
   return u3a_open(u3R) - pre_w;
 }
