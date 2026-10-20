@@ -1159,6 +1159,8 @@ static void
 _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c);
 static u3_hcon*
 _http_conn_find(u3_http *htp_u, c3_w coq_l);
+static c3_o
+_http_rec_scry(h2o_req_t* rec_u);
 
 /* _http_req_news(): the event carrying a staged body ended without a
 **   bail (done, or dropped at shutdown): the context is no longer
@@ -1213,10 +1215,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
     c3_c* bas_c = req_u->rec_u->input.path.base;
     c3_w len_w = req_u->rec_u->input.path.len;
 
-    // check if base url starts with '/_~_/'
-    if (  (len_w < 6)
-       || (0 != memcmp("/_~_/", bas_c, 5)) )
-    {
+    if ( c3n == _http_rec_scry(req_u->rec_u) ) {
       // no: inject to arvo
       u3_noun wir = _http_req_to_duct(req_u);
       u3_noun cad;
@@ -1324,31 +1323,28 @@ _http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c)
   h2o_send_error_generic(req_u->rec_u, sas_i, msg_c, msg_c, 0);
 }
 
-/* _http_req_start(): send a request to arvo with body [bod].
-**   transfers [pax], the staged files the event installs.
+/* _http_req_start(): send a request to arvo with body [bod]; its method
+**   is known good.  transfers [pax], the staged files the event installs.
 */
 static void
-_http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o, u3_noun pax)
+_http_req_start(u3_hreq* req_u, u3_noun bod, u3_noun pax)
 {
-  u3_weak req = _http_rec_to_httq(req_u->rec_u, bod);
+  u3_noun req = _http_rec_to_httq(req_u->rec_u, bod);
 
-  if ( u3_none == req ) {
-    if ( (u3C.wag_h & u3o_verbose) ) {
-      u3l_log("strange %.*s request", (c3_i)req_u->rec_u->method.len,
-              req_u->rec_u->method.base);
-    }
-    _http_req_reject(req_u, 400, "bad request");
-    _http_stg_drop(pax);
-    return;
-  }
-
-  if ( (c3n == cache_o) || (c3n == _http_req_cache(req_u)) ) {
-    _http_req_dispatch(req_u, req, pax);
-  }
-  else {
-    _http_stg_drop(pax);
-  }
+  _http_req_dispatch(req_u, req, pax);
   u3z(req);
+}
+
+/* _http_rec_scry(): the request is for the scry path, /_~_/..., which
+**   answers from a scry and reads no body.
+*/
+static c3_o
+_http_rec_scry(h2o_req_t* rec_u)
+{
+  c3_c* bas_c = rec_u->input.path.base;
+  c3_w  len_w = rec_u->input.path.len;
+
+  return __( (len_w >= 6) && (0 == memcmp("/_~_/", bas_c, 5)) );
 }
 
 /* _http_rec_start(): take an incoming request from h2o.
@@ -1356,15 +1352,38 @@ _http_req_start(u3_hreq* req_u, u3_noun bod, c3_o cache_o, u3_noun pax)
 **   a body over U3_BLOB_THRESH is staged; the event goes to arvo with
 **   a stub where the body belongs and the staging path riding along,
 **   and mars installs the file and fills the stub before it computes.
-**   mars alone writes the store.  anything smaller, or a body that
-**   cannot be staged, goes to arvo as an inline atom.
+**   only a request bound for arvo stages: a bad method is refused
+**   first, a cache hit is answered (a miss comes back with cache_o
+**   clear), and the scry path reads no body.  anything smaller, or a
+**   body that cannot be staged, goes to arvo as an inline atom.
 */
 static void
 _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
 {
+  {
+    u3_weak med = _http_vec_to_meth(rec_u->method);
+
+    if ( u3_none == med ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
+        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
+                rec_u->method.base);
+      }
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
+      return;
+    }
+    u3z(med);
+  }
+
   u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
 
-  if ( c3y == u3b_over(rec_u->entity.len) ) {
+  if ( (c3y == cache_o) && (c3y == _http_req_cache(req_u)) ) {
+    return;
+  }
+
+  if (  (c3y == u3b_over(rec_u->entity.len))
+     && (c3n == _http_rec_scry(rec_u)) )
+  {
     c3_c stg_c[8192];
     c3_h mug_h = 0;
 
@@ -1375,7 +1394,7 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
                          u3i_chub((c3_d)rec_u->entity.len),
                          u3i_blob(mug_h, 0));
 
-      _http_req_start(req_u, bod, cache_o, u3nc(u3i_string(stg_c), u3_nul));
+      _http_req_start(req_u, bod, u3nc(u3i_string(stg_c), u3_nul));
       return;
     }
 
@@ -1383,7 +1402,7 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
             (c3_d)rec_u->entity.len);
   }
 
-  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), cache_o, u3_nul);
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), u3_nul);
 }
 
 /* _http_cache_respond(): respond with a simple-payload:http
