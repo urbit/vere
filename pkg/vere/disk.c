@@ -1402,11 +1402,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   //  starts from and cannot recompute.  before META, so a crash here
   //  leaves an epoch the next boot deletes, row and links included
   //
-  if (  ban_u.len_z
-     && (c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z)) )
-  {
-    fprintf(stderr, "disk: failed to write the image's blob row\r\n");
-    goto fail3;
+  if ( ban_u.len_z ) {
+    if ( c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z) ) {
+      fprintf(stderr, "disk: failed to write the image's blob row\r\n");
+      goto fail3;
+    }
+    fprintf(stderr, "disk: wrote the image's blob row at %" PRIc3_d " with %"
+                    PRIc3_z " id(s)\r\n", epo_d, ban_u.len_z);
   }
 
   // write the metadata to the database
