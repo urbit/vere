@@ -1177,6 +1177,20 @@ u3a_mark_mptr(void* ptr_v)
   return u3a_mark_ptr(ptr_v);
 }
 
+/* u3a_marked(): [som] was marked (by u3a_mark_noun() since
+**               u3a_mark_init()), without marking it.
+*/
+c3_t
+u3a_marked(u3_noun som)
+{
+  if ( c3y == u3a_is_cat(som) ) {
+    return 1;
+  }
+  else {
+    return _mark_test(u3a_outa(u3a_to_ptr(som)));
+  }
+}
+
 /* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
 */
 c3_w

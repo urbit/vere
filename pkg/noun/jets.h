@@ -197,6 +197,12 @@
         u3j_mine(u3_noun clu,
                    u3_noun cor);
 
+      /* u3j_prune(): drop cold-state registrations of unreachable
+      **              batteries, producing how many were dropped.
+      */
+        c3_w
+        u3j_prune(void);
+
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
         void

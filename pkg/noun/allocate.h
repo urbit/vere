@@ -849,6 +849,11 @@ u3a_post_info(u3_post);
           c3_w
           u3a_mark_rptr(void* ptr_v);
 
+        /* u3a_marked(): [som] was marked, without marking it.
+        */
+          c3_t
+          u3a_marked(u3_noun som);
+
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
           c3_w
