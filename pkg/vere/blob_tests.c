@@ -3484,6 +3484,9 @@ _test_stub_fill(void)
 
     _check( u3_none != tap, "stubbed event did not tap" );
     _check( (0 == out_u.len_w) && (0 == inn_u.len_w), "a stub granted a hold" );
+    _check( (3 == out_u.nub_w) && (3 == inn_u.nub_w),
+            "stubs met %" PRIc3_w " and %" PRIc3_w ", not 3",
+            out_u.nub_w, inn_u.nub_w );
     {
       u3_noun cad = u3t(u3t(tap));
       u3_noun one = u3h(u3t(cad));

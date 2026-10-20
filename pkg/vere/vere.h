@@ -825,6 +825,12 @@
         void
         u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u);
 
+      /* u3_auto_lose(): dispose an ovum already off its queue (in
+      **   flight), telling its driver it was dropped.
+      */
+        void
+        u3_auto_lose(u3_ovum* egg_u);
+
       /* u3_auto_work(): notify driver of [egg_u] commencement.
       */
         void

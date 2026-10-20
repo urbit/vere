@@ -1692,9 +1692,14 @@ typedef struct _ram_xeno_s {
 void
 u3s_bids_push(u3s_bids* bid_u, c3_d bid_d)
 {
+  if ( !bid_u ) {
+    return;
+  }
+
   //  a stub (seq 0) names no file and carries no hold
   //
-  if ( !bid_u || !u3a_bid_seq(bid_d) ) {
+  if ( !u3a_bid_seq(bid_d) ) {
+    bid_u->nub_w++;
     return;
   }
   if ( bid_u->len_w == bid_u->cap_w ) {

@@ -449,6 +449,23 @@ u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
   return _mars_fill(non, bid_d, len_w, 0);
 }
 
+/* _mars_stg_ours(): [stg_c] names a file directly in the pier's staging
+**   directory, as u3b_stage makes them.
+*/
+static c3_o
+_mars_stg_ours(const c3_c* stg_c)
+{
+  c3_c dir_c[8192];
+  u3b_stg_dir(dir_c, u3C.dir_c);
+
+  c3_z len_z = strlen(dir_c);
+
+  return __(  (0 == strncmp(stg_c, dir_c, len_z))
+           && ('/' == stg_c[len_z])
+           && stg_c[len_z + 1]
+           && !strchr(stg_c + len_z + 1, '/') );
+}
+
 /* _mars_blob_install(): install the staged files an event brings and
 **   put their bobs where the king left stubs.
 **
@@ -467,11 +484,26 @@ _mars_blob_install(u3_noun* job, u3_noun pax)
   u3_noun  pak   = pax;
 
   while ( u3_nul != pak ) {
+    if ( (c3n == u3du(pak)) || (c3n == u3a_is_atom(u3h(pak))) ) {
+      fprintf(stderr, "mars: poke refused: malformed staging list\r\n");
+      tan = u3nc(u3nc(c3__leaf, u3i_string("malformed staging list")), tan);
+      break;
+    }
+
     c3_c* stg_c = u3r_string(u3h(pak));
     c3_h  mug_h = 0;
     c3_h  seq_h = 0;
 
-    if ( c3y == u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h) ) {
+    //  a path outside the staging directory is not ours to install or
+    //  remove
+    //
+    if ( c3n == _mars_stg_ours(stg_c) ) {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c), "not a staging file: %.96s", stg_c);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+    }
+    else if ( c3y == u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h) ) {
       u3s_bids_push(&bid_u, u3a_bid(mug_h, seq_h));
     }
     else {
@@ -805,7 +837,10 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
     if ( c3y == (ret_o = u3v_poke_sure(mil_w, u3k(*eve), &pro)) ) {
       *out = pro;
     }
-    else if ( c3__evil == u3h(pro) ) {
+    //  %evil, and %file (out of descriptors, transient), refuse the
+    //  event rather than commit a %crud: replay saves and exits on %file
+    //
+    else if ( (c3__evil == u3h(pro)) || (c3__file == u3h(pro)) ) {
       *out = u3nc(pro, u3_nul);
     }
     else {
@@ -910,6 +945,19 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
       }
       else {
         u3z(pax);
+
+        //  a stub with no staged file would reach the computation and
+        //  the log naming nothing
+        //
+        if ( bid_u->nub_w ) {
+          u3_noun tan = u3nc(u3nc(c3__leaf,
+                                  u3i_string("blob stub with no staged file")),
+                             u3_nul);
+          fprintf(stderr, "mars: poke refused: a stub with no staged file\r\n");
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, u3nc(u3nc(c3__blob, tan), u3_nul)));
+          break;
+        }
       }
 
       //  an event holding a bob the store cannot back is refused before

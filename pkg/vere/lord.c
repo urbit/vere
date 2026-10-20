@@ -76,10 +76,9 @@ _lord_writ_free(u3_writ* wit_u)
     default: break;
 
     case u3_writ_poke: {
-      //  XX confirm
+      //  u3_auto_next took the ovum off its queue: drop it, not dequeue
       //
-      u3_ovum* egg_u = wit_u->wok_u.egg_u;
-      u3_auto_drop(egg_u->car_u, egg_u);
+      u3_auto_lose(wit_u->wok_u.egg_u);
       u3z(wit_u->wok_u.job);
     } break;
 

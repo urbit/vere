@@ -183,6 +183,7 @@
           c3_d* bid_d;
           c3_w  len_w;
           c3_w  cap_w;
+          c3_w  nub_w;   //  stubs met, which carry no id
         } u3s_bids;
 
       /* u3s_bids_push(): add [bid_d] to [bid_u] (a stub's is skipped).
