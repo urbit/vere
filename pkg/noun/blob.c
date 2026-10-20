@@ -884,25 +884,21 @@ _blob_stage_done(c3_i fid_i, const c3_c* stg_c, c3_o ok_o)
   return ok_o;
 }
 
-/* _blob_measure(): the content mug of staged file [stg_c], or c3n if
-**   its significant length is below U3_BLOB_MIN or it cannot be read.
-**   The same trim and hash u3b_move_stg applies, so the mug a stub
-**   carries is the mug the installed blob gets.
+/* u3b_mug_fd(): the content mug of the file open on [fid_i], measured
+**   as an install measures it (_blob_meas), without copying it; c3n if
+**   it has no bob representation or cannot be read.
 */
-static c3_o
-_blob_measure(const c3_c* stg_c, c3_h* mug_h)
+c3_o
+u3b_mug_fd(c3_i fid_i, c3_h* mug_h)
 {
   struct stat st_u;
-  c3_i        fid_i = open(stg_c, O_RDONLY);
 
-  if ( (-1 == fid_i) || (-1 == fstat(fid_i, &st_u)) || !st_u.st_size ) {
-    if ( -1 != fid_i ) close(fid_i);
+  if ( (-1 == fstat(fid_i, &st_u)) || !st_u.st_size ) {
     return c3n;
   }
 
   c3_d  map_d = (c3_d)st_u.st_size;
   void* map_v = mmap(0, (size_t)map_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
-  close(fid_i);
 
   if ( MAP_FAILED == map_v ) {
     return c3n;
@@ -912,6 +908,21 @@ _blob_measure(const c3_c* stg_c, c3_h* mug_h)
   c3_o ok_o = _blob_meas((const c3_y*)map_v, map_d, &sig_d, mug_h);
 
   munmap(map_v, (size_t)map_d);
+  return ok_o;
+}
+
+/* _blob_measure(): the content mug of staged file [stg_c], or c3n.
+*/
+static c3_o
+_blob_measure(const c3_c* stg_c, c3_h* mug_h)
+{
+  c3_i fid_i = open(stg_c, O_RDONLY);
+
+  if ( -1 == fid_i ) {
+    return c3n;
+  }
+  c3_o ok_o = u3b_mug_fd(fid_i, mug_h);
+  close(fid_i);
   return ok_o;
 }
 

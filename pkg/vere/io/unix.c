@@ -943,6 +943,138 @@ _unix_create_dir(u3_udir* dir_u, u3_udir* par_u, u3_noun nam)
 
 static u3_noun _unix_update_node(u3_unix* unx_u, u3_unod* nod_u);
 
+/* _unix_read_all(): [len_d] bytes of [fid_i] into a heap buffer, or 0
+**   (logged) if the read comes up short or the length cannot be an atom.
+*/
+static c3_y*
+_unix_read_all(c3_i fid_i, c3_d len_d, const c3_c* pax_c)
+{
+  if ( len_d > c3_w_max ) {
+    u3l_log("unix: %s is too large to read into the loom", pax_c);
+    return 0;
+  }
+
+  c3_y* dat_y = c3_malloc(len_d ? len_d : 1);
+  c3_d  red_d = 0;
+
+  while ( red_d < len_d ) {
+    c3_d    ask_d = c3_min(len_d - red_d, (c3_d)1 << 30);
+    ssize_t red_i = read(fid_i, dat_y + red_d, (size_t)ask_d);
+
+    if ( red_i <= 0 ) {
+      if ( (red_i < 0) && (EINTR == errno) ) {
+        continue;
+      }
+      u3l_log("error reading file %s: %s", pax_c,
+              red_i ? strerror(errno) : "short file");
+      c3_free(dat_y);
+      return 0;
+    }
+    red_d += (c3_d)red_i;
+  }
+  return dat_y;
+}
+
+/* _unix_into: a large file's %into in flight.  the file is named by
+**   path, since the node can go before mars answers.
+*/
+typedef struct {
+  c3_c* pax_c;   //  the file
+  c3_h  mug_h;   //  the content the event carries
+} _unix_into;
+
+/* _unix_find_file(): the file node at [pax_c] under [dir_u], or 0.
+*/
+static u3_ufil*
+_unix_find_file(u3_udir* dir_u, const c3_c* pax_c)
+{
+  for ( u3_unod* nod_u = dir_u->kid_u; nod_u; nod_u = nod_u->nex_u ) {
+    if ( c3y == nod_u->dir ) {
+      u3_ufil* fil_u = _unix_find_file((u3_udir*)nod_u, pax_c);
+      if ( fil_u ) {
+        return fil_u;
+      }
+    }
+    else if ( 0 == strcmp(nod_u->pax_c, pax_c) ) {
+      return (u3_ufil*)nod_u;
+    }
+  }
+  return 0;
+}
+
+/* _unix_into_news(): the %into is done or dropped: free its context.
+*/
+static void
+_unix_into_news(u3_ovum* egg_u, u3_ovum_news new_e)
+{
+  if ( u3_ovum_work != new_e ) {
+    _unix_into* int_u = egg_u->ptr_v;
+    c3_free(int_u->pax_c);
+    c3_free(int_u);
+    egg_u->ptr_v = 0;
+  }
+}
+
+/* _unix_into_bail(): the %into was refused: forget that the file was
+**   sent, so the next commit stages it again.
+*/
+static void
+_unix_into_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  u3_unix*    unx_u = (u3_unix*)egg_u->car_u;
+  _unix_into* int_u = egg_u->ptr_v;
+
+  for ( u3_umon* mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
+    u3_ufil* fil_u = _unix_find_file(&mon_u->dir_u, int_u->pax_c);
+
+    if ( fil_u && (fil_u->gum_w == int_u->mug_h) ) {
+      fil_u->gum_w = 0;
+    }
+  }
+
+  u3_auto_bail_slog(egg_u, lud);
+  u3_ovum_free(egg_u);
+  c3_free(int_u->pax_c);
+  c3_free(int_u);
+}
+
+/* _unix_plan_into(): plan the %into of one staged file: a stub where the
+**   bob belongs, the staging path on the ovum.  the mount is the file's
+**   topmost directory, the first member of its u3_umon.
+*/
+static void
+_unix_plan_into(u3_unix* unx_u, u3_ufil* fil_u, c3_d len_d,
+                c3_h mug_h, const c3_c* stg_c)
+{
+  u3_udir* top_u = fil_u->par_u;
+
+  while ( top_u->par_u ) {
+    top_u = top_u->par_u;
+  }
+
+  fil_u->gum_w = mug_h;
+  {
+    u3_umon*    mon_u = (u3_umon*)top_u;
+    u3_noun     pax   = _unix_string_to_path(unx_u, fil_u->pax_c);
+    u3_noun     mim   = u3nt(c3__text, u3i_string("plain"), u3_nul);
+    u3_noun     dat   = u3nt(mim, u3i_chub(len_d), u3i_blob(mug_h, 0));
+    u3_noun     can   = u3nc(u3nt(pax, u3_nul, dat), u3_nul);
+    u3_noun     wir   = u3nt(c3__sync,
+                             u3dc("scot", c3__uv, unx_u->sev_h),
+                             u3_nul);
+    u3_noun     cad   = u3nq(c3__into, u3i_string(mon_u->nam_c), c3n, can);
+    u3_ovum*    egg_u = u3_ovum_init(0, c3__c, wir, cad);
+    _unix_into* int_u = c3_malloc(sizeof(*int_u));
+
+    int_u->pax_c = strdup(fil_u->pax_c);
+    int_u->mug_h = mug_h;
+
+    egg_u->pax = u3nc(u3i_string(stg_c), u3_nul);
+    u3_auto_peer(egg_u, int_u, _unix_into_news, _unix_into_bail);
+    u3_auto_plan(&unx_u->car_u, egg_u);
+  }
+}
+
 /* _unix_update_file(): update file, producing list of changes
 **
 **  when scanning through files, if dry, do nothing. otherwise,
@@ -971,7 +1103,6 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   struct stat buf_u;
   c3_i  fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
-  c3_ws len_ws, red_ws;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
     if ( ENOENT == errno ) {
@@ -984,96 +1115,51 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
     }
   }
 
-  len_ws = buf_u.st_size;
+  c3_d len_d = (c3_d)buf_u.st_size;
 
-  //  large files: stage in .urb/stg/; mars installs inside the event
+  //  large files: stage in .urb/stg/; mars installs inside the event.
+  //  the mug is measured in place first, so an unchanged file costs no
+  //  copy.  content staging refuses (all zeros, say) goes inline
   //
-  if ( c3y == u3b_over(len_ws) ) {
-    c3_c stg_c[8192];
+  if ( c3y == u3b_over(len_d) ) {
     c3_h mug_h = 0;
-    c3_o ok_o  = u3b_stage_fd(unx_u->pax_c, fid_i, (c3_d)len_ws, stg_c, &mug_h);
 
-    close(fid_i);
-
-    if ( c3n == ok_o ) {
-      u3l_log("unix: could not stage %s", fil_u->pax_c);
+    if ( (c3y == u3b_mug_fd(fid_i, &mug_h)) && (mug_h == fil_u->gum_w) ) {
+      close(fid_i);
       return u3_nul;
     }
 
-    //  staging measured the content: unchanged since the last %into
-    //  means nothing to send
-    //
-    if ( mug_h == fil_u->gum_w ) {
-      c3_unlink(stg_c);
+    c3_c stg_c[8192];
+
+    if ( c3y == u3b_stage_fd(unx_u->pax_c, fid_i, len_d, stg_c, &mug_h) ) {
+      close(fid_i);
+      _unix_plan_into(unx_u, fil_u, len_d, mug_h, stg_c);
       return u3_nul;
     }
 
-    //  find the mount name for this file (walk parent dirs up to mon_u)
-    //
-    c3_c* mnt_c = 0;
-    {
-      u3_umon* mon_u;
-      for ( mon_u = unx_u->mon_u; mon_u; mon_u = mon_u->nex_u ) {
-        if ( 0 == strncmp(fil_u->pax_c, mon_u->dir_u.pax_c,
-                          strlen(mon_u->dir_u.pax_c)) ) {
-          mnt_c = mon_u->nam_c;
-          break;
-        }
-      }
-    }
-    if ( !mnt_c ) {
-      u3l_log("unix: no mount found for large file %s", fil_u->pax_c);
-      c3_unlink(stg_c);
+    u3l_log("unix: %s not staged; sending inline", fil_u->pax_c);
+
+    if ( -1 == lseek(fid_i, 0, SEEK_SET) ) {
+      u3l_log("error rewinding %s: %s", fil_u->pax_c, strerror(errno));
+      close(fid_i);
       return u3_nul;
     }
-
-    //  the %into for this one file, with a stub for the bob mars puts
-    //  in its place and the staging path riding on the ovum
-    //
-    fil_u->gum_w = mug_h;
-    {
-      u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
-      u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
-      u3_noun dat = u3nt(mim, (u3_atom)len_ws, u3i_blob(mug_h, 0));
-      u3_noun can = u3nc(u3nt(pax, u3_nul, dat), u3_nul);
-      u3_noun wir = u3nt(c3__sync,
-                         u3dc("scot", c3__uv, unx_u->sev_h),
-                         u3_nul);
-      u3_noun cad = u3nq(c3__into, u3i_string(mnt_c), c3n, can);
-
-      u3_ovum* egg_u = u3_ovum_init(0, c3__c, wir, cad);
-      egg_u->pax = u3nc(u3i_string(stg_c), u3_nul);
-      u3_auto_plan(&unx_u->car_u, egg_u);
-    }
-    return u3_nul;
   }
 
-  //  small files: existing path — read into buffer
-  //
   {
-    c3_y* dat_y = c3_malloc(len_ws);
-
-    red_ws = read(fid_i, dat_y, len_ws);
+    c3_y* dat_y = _unix_read_all(fid_i, len_d, fil_u->pax_c);
 
     if ( close(fid_i) < 0 ) {
       u3l_log("error closing file %s: %s",
               fil_u->pax_c, strerror(errno));
     }
 
-    if ( len_ws != red_ws ) {
-      if ( red_ws < 0 ) {
-        u3l_log("error reading file %s: %s",
-                fil_u->pax_c, strerror(errno));
-      }
-      else {
-        u3l_log("wrong # of bytes read in file %s: %" PRIc3_ws " %" PRIc3_ws,
-                fil_u->pax_c, len_ws, red_ws);
-      }
-      c3_free(dat_y);
+    if ( !dat_y ) {
       return u3_nul;
     }
     else {
-      c3_h mug_h = u3r_mug_bytes(dat_y, len_ws);
+      c3_h mug_h = u3r_mug_bytes(dat_y, len_d);
+
       if ( mug_h == fil_u->gum_w ) {
         c3_free(dat_y);
         return u3_nul;
@@ -1081,7 +1167,7 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
       else {
         u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
         u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
-        u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
+        u3_noun dat = u3nt(mim, u3i_chub(len_d), u3i_bytes(len_d, dat_y));
 
         c3_free(dat_y);
         return u3nc(u3nt(pax, u3_nul, dat), u3_nul);

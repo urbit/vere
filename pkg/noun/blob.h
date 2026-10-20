@@ -99,6 +99,13 @@
                        c3_c*       stg_c,
                    c3_h*       mug_h);
 
+    /* u3b_mug_fd(): the content mug of the file open on [fid_i], as an
+    **   install would measure it, without copying it; c3n if it has no
+    **   bob representation or cannot be read.
+    */
+      c3_o
+      u3b_mug_fd(c3_i fid_i, c3_h* mug_h);
+
     /* u3b_live(): check whether a blob file exists.
     */
       c3_o
