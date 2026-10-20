@@ -88,7 +88,7 @@ u3_migrate_d(c3_d eve_d)
 
   _copy_32_init(&cop_u);
 
-  //  migrate the blob bank first, so bob atoms can resolve their u3a_blob
+  //  migrate the blob bank; bobs carry their id and do not depend on it
   //
   u3h_walk_with_h(u3H_h->blb_p, _copy_32_blob, &cop_u);
 
@@ -195,7 +195,7 @@ u3_migrate_h(c3_d eve_d)
 
   _copy_64_init(&cop_u);
 
-  //  migrate the blob bank first, so bob atoms can resolve their u3a_blob
+  //  migrate the blob bank; bobs carry their id and do not depend on it
   //
   u3h_walk_with_d(u3H_d->blb_p, _copy_64_blob, &cop_u);
 

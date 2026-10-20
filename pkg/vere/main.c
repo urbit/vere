@@ -1653,6 +1653,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3C.wag_h |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
   u3m_stop();
@@ -1875,11 +1876,9 @@ _cw_queu(c3_i argc, c3_c* argv[])
     //  surviving from before the import) and decode as bob atoms,
     //  never touching the loom
     //
-    u3_blob_bsink bsk_u;
+    u3b_bsink bsk_u;
 
-    u3_disk_blob_init(u3_Host.dir_c);
-    u3_disk_blob_stg_init(u3_Host.dir_c);
-    u3_blob_bsink_init(&bsk_u, u3_Host.dir_c);
+    u3b_bsink_init(&bsk_u, u3_Host.dir_c, u3C.bob_c);
 
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
@@ -1897,10 +1896,19 @@ _cw_queu(c3_i argc, c3_c* argv[])
                       bsk_u.num_w);
     }
 
-    //  uncram repaved the home road, wiping the blob bank: rebuild
-    //  eve_w from the log's BLOBS table, then check the invariant
+    //  uncram repaved the home road, wiping the blob bank: mark what
+    //  this epoch's rows name, the image's and the events' through the
+    //  rock's, then check the invariant
     //
-    u3_disk_blob_refs(log_u);
+    //  a missing file fails the load, as it fails a boot: the rock
+    //  would name data the store no longer has
+    //
+    if ( c3n == u3_disk_blob_own(log_u, log_u->epo_d, eve_d) ) {
+      fprintf(stderr, "urbit: queu: the epoch depends on blob data that no "
+                      "longer exists\r\n");
+      u3_disk_exit(log_u);
+      exit(1);
+    }
 
     if ( c3n == u3a_blob_sane(c3y) ) {
       fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");
@@ -2907,6 +2915,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   //  XX load log and check if snapshot is stale?
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
                      u3nc(c3n, u3nq(c3__once, 'j', c3__vile, u3_nul)));
   u3_noun res = u3v_soft_peek(0, sam);

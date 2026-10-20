@@ -1,6 +1,11 @@
 /// @file
 
 #include "noun.h"
+#include "jets/w.h"
+
+//  linked through libnoun; the test target has no urcrypt include path
+//
+void urcrypt_shay(const uint8_t* message, size_t length, uint8_t out[32]);
 
 /* _setup(): prepare for tests.
 */
@@ -925,6 +930,66 @@ _test_mas(void)
   return ret_i;
 }
 
+/* _jam_shax_is(): (jam-shax a) is (shax (jam a)), bytewise.
+*/
+static c3_i
+_jam_shax_is(const c3_c* nam_c, u3_noun a)
+{
+  c3_d  len_d;
+  c3_y* jam_y;
+  c3_y  sha_y[32];
+  c3_y  out_y[32];
+
+  u3s_jam_xeno(a, &len_d, &jam_y);
+  urcrypt_shay(jam_y, (size_t)len_d, sha_y);
+  c3_free(jam_y);
+
+  u3_atom out = u3qe_jam_shax(a);
+  u3r_bytes(0, 32, out_y, out);
+  u3z(out);
+  u3z(a);
+
+  if ( memcmp(sha_y, out_y, 32) ) {
+    fprintf(stderr, "test jam-shax fail: %s\r\n", nam_c);
+    return 0;
+  }
+  return 1;
+}
+
+/* _test_jam_shax(): the jet agrees with shax of jam wherever jam
+**   writes a backref: a repeated cell, a repeated atom wider than its
+**   position, one no wider (written again), and a long list.
+*/
+static c3_i
+_test_jam_shax(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _jam_shax_is("atom", 0x1234);
+  ret_i &= _jam_shax_is("zero", 0);
+  ret_i &= _jam_shax_is("[2 2]", u3nc(2, 2));
+  ret_i &= _jam_shax_is("[[0 0] [0 0]]", u3nc(u3nc(0, 0), u3nc(0, 0)));
+
+  {
+    u3_atom big = u3i_string("an atom much wider than its first position");
+    ret_i &= _jam_shax_is("[big big]", u3nc(big, u3k(big)));
+  }
+  {
+    u3_noun cel = u3nt(1, 2, 3);
+    ret_i &= _jam_shax_is("shared cells",
+                          u3nq(u3k(cel), 7, u3k(cel), cel));
+  }
+  {
+    u3_noun lis = u3_nul;
+    for ( c3_w i_w = 0; i_w < 4000; i_w++ ) {
+      lis = u3nc(i_w & 0xff, lis);
+    }
+    ret_i &= _jam_shax_is("long list", lis);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_jets(void)
 {
@@ -967,6 +1032,11 @@ _test_jets(void)
 
   if ( !_test_mas() ) {
     fprintf(stderr, "test jets: mas: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_jam_shax() ) {
+    fprintf(stderr, "test jets: jam-shax: failed\r\n");
     ret_i = 0;
   }
 

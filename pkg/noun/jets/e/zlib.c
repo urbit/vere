@@ -1,6 +1,7 @@
 /// @file
 
 #include <allocate.h>
+#include <limits.h>
 #include <stdio.h>
 #include "zlib.h"
 
@@ -38,15 +39,14 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  //  zero-copy view on the compressed input (mmap for bobs; the
-  //  legacy `vat_u->buf_w + pos_w` cast returned seq_w for bobs).
-  //  the view stays live for the whole inflate loop so the stream
-  //  reader can scan it freely; every return path must call
-  //  u3r_view_done(&vue_u).
+  //  a view borrows the bytes wherever the atom lives; read-only
   //
   u3r_view vue_u;
-  u3r_view_init(&vue_u, q_octs);
-  c3_w len_w = vue_u.len_w;
+  u3r_view_open(&vue_u, q_octs, c3y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
+  }
+  c3_w len_w = (c3_w)vue_u.byt_d;
 
   int leading_zeros = 0;
 
@@ -64,17 +64,19 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_y* input = (c3_y*)vue_u.byt_y + pos_w;
+  c3_y* input = (c3_y*)u3r_view_bytes(&vue_u) + pos_w;
 
   int ret;
   z_stream strm;
 
-  if (pos_w < len_w) {
-    strm.avail_in = (len_w - pos_w);
+  //  zlib takes a uInt length; more input than that cannot be inflated
+  //  in one call
+  //
+  if ( (c3_d)(len_w - pos_w) > (c3_d)UINT_MAX ) {
+    u3r_view_done(&vue_u);
+    return u3m_bail(c3__fail);
   }
-  else {
-    strm.avail_in = 0;
-  }
+  strm.avail_in = (uInt)(len_w - pos_w);
 
   strm.zalloc = zlib_malloc;
   strm.zfree = zlib_free;
@@ -86,7 +88,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   if (ret != Z_OK) {
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
 
@@ -144,7 +145,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
           u3l_log("%s", strm.msg);
           inflateEnd(&strm);
           u3i_slab_free(&sab_u);
-          u3r_view_done(&vue_u);
           return u3m_bail(c3__exit);
         }
       }
@@ -153,7 +153,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
         u3l_log("%s", strm.msg);
         inflateEnd(&strm);
         u3i_slab_free(&sab_u);
-        u3r_view_done(&vue_u);
         return u3m_bail(c3__exit);
       }
     }
@@ -163,7 +162,6 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     u3l_log("%s", strm.msg);
     inflateEnd(&strm);
     u3i_slab_free(&sab_u);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
   ret = inflateEnd(&strm);
@@ -172,11 +170,10 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     u3l_log("%i", ret);
     u3l_log("%s", strm.msg);
     u3i_slab_free(&sab_u);
-    u3r_view_done(&vue_u);
     return u3m_bail(c3__exit);
   }
 
-  u3_noun decompressed_octs = u3nc(strm.total_out, u3i_slab_mint(&sab_u));
+  u3_noun decompressed_octs = u3nc(u3i_chub(strm.total_out), u3i_slab_mint(&sab_u));
   u3_noun new_pos = pos_w + strm.total_in;
   u3_noun new_stream = u3nc(u3i_word(new_pos), u3k(octs));
 

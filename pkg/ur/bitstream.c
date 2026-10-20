@@ -1273,6 +1273,29 @@ ur_bsw_atom_bytes(ur_bsw_t *bsw, uint64_t len, uint8_t *byt)
 }
 
 void
+ur_bsw_atom_head(ur_bsw_t *bsw, uint64_t len)
+{
+  //  the tag bit plus the run-length prefix, without the [len] payload bits
+  //
+  uint64_t need = ur_bloq_up3( 1 + bsw->off + (MAT_LEN(len) - len) );
+
+  if ( bsw->fill + need >= bsw->size ) {
+    ur_bsw_grow(bsw, ur_max(need, bsw->prev));
+  }
+
+  _bsw_bit_unsafe(bsw, 0);
+
+  if ( 0 == len ) {
+    _bsw_bit_unsafe(bsw, 1);
+  }
+  else {
+    uint8_t nel = ur_met0_64(len);
+    _bsw_bex_unsafe(bsw, nel);
+    _bsw64_unsafe(bsw, nel - 1, len);
+  }
+}
+
+void
 ur_bsw_cell(ur_bsw_t *bsw)
 {
   uint8_t need = ur_bloq_up3( 2 + bsw->off );

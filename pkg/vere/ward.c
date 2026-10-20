@@ -93,6 +93,7 @@ u3_ovum_init(c3_h     mil_h,
   egg_u->tar   = tar;
   egg_u->wir   = wir;
   egg_u->cad   = cad;
+  egg_u->pax   = u3_nul;
 
   egg_u->pre_u = egg_u->nex_u = 0;
 
@@ -116,6 +117,7 @@ u3_ovum_free(u3_ovum *egg_u)
   u3z(egg_u->tar);
   u3z(egg_u->wir);
   u3z(egg_u->cad);
+  u3z(egg_u->pax);
 
   c3_free(egg_u);
 }
@@ -129,6 +131,7 @@ u3_ovum_mark(u3_ovum *egg_u)
   siz_w += u3a_mark_noun(egg_u->tar);
   siz_w += u3a_mark_noun(egg_u->wir);
   siz_w += u3a_mark_noun(egg_u->cad);
+  siz_w += u3a_mark_noun(egg_u->pax);
 
   return siz_w;
 }

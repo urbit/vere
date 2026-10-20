@@ -20,6 +20,7 @@
 
 #include "allocate.h"
 #include "backtrace.h"
+#include "blob.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -263,6 +264,11 @@ _cm_signal_reset(void)
   u3R = &u3H->rod_u;
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
+
+  //  the discarded roads' blob hands go with them; the kid chain is
+  //  the only path to their lists, so drain before cutting it
+  //
+  u3b_drain_kids();
   u3R->kid_p = 0;
 }
 
@@ -484,6 +490,37 @@ u3m_signal(c3_m sig_m)
   rsignal_longjmp(u3_Signal, sig_m);
 }
 
+//  critical-section nesting depth (see u3m_crit_inn).
+//
+static c3_w _cm_crit_w = 0;
+
+/* u3m_crit_inn(): hold the signals whose handlers longjmp.
+*/
+void
+u3m_crit_inn(void)
+{
+  //  block before counting: a signal between the two would otherwise
+  //  unwind with the depth raised and nothing held, and the unwind's
+  //  u3m_crit_out would release a hold never taken
+  //
+  if ( 0 == _cm_crit_w ) {
+    rsignal_block();
+  }
+  _cm_crit_w++;
+}
+
+/* u3m_crit_out(): end a critical section begun by u3m_crit_inn().
+*/
+void
+u3m_crit_out(void)
+{
+  u3_assert( _cm_crit_w );
+
+  if ( 0 == --_cm_crit_w ) {
+    rsignal_unblock();
+  }
+}
+
 /* u3m_file(): load file, as atom, or bail.
 */
 u3_noun
@@ -603,13 +640,15 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
-/* _find_home_zero_les_cb(): u3h_walk_with callback — drop les_h from
-**   use_w and zero les_h on each u3a_blob.  The snapshot's les_h is
-**   stale after a restart; pkg/vere rebuilds the live count from the
-**   durable LMDB LEASES table (_mars_play_leases) once the disk is open.
+/* _find_home_zero_cb(): u3h_walk_with callback — drop les_h from use_h
+**   and zero les_h and own_o on each u3a_blob.  Both belong to the
+**   process that wrote the snapshot: no hold outlives a restart, since
+**   it ends both processes and the king that owed the holds is gone;
+**   and ownership is marked again from the epoch's BLOBS rows
+**   (u3_disk_blob_own), never read back from the snapshot.
 */
 static void
-_find_home_zero_les_cb(u3_noun kev, void* ptr_v)
+_find_home_zero_cb(u3_noun kev, void* ptr_v)
 {
   (void)ptr_v;
   u3_noun val = u3t(kev);
@@ -618,8 +657,9 @@ _find_home_zero_les_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  blb_u->use_w -= blb_u->les_h;
+  blb_u->use_h -= blb_u->les_h;
   blb_u->les_h  = 0;
+  blb_u->own_o  = c3n;
 }
 
 /* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
@@ -763,11 +803,16 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset all les_h to 0: leases are transient IPC state backed by a
-  //  C-heap PQ that is not persisted.  after restart the PQ is empty,
-  //  so any les_h count from the previous boot is stale.
+  //  reset les_h and own_o: the snapshot's count and flag belong to a
+  //  dead process; no hold outlives one, and ownership is marked again
+  //  from the epoch's manifest
   //
-  u3h_walk_with(u3H->blb_p, _find_home_zero_les_cb, 0);
+  u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);
+
+  //  the home road never lists blob hands in the loom; anything a
+  //  snapshot carries there belongs to a dead process
+  //
+  u3H->rod_u.bob_p = 0;
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1261,6 +1306,12 @@ u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
+  //  the road's blob hands, retained for reuse since it leapt, go with
+  //  its frames.  this is the one exit every road takes except a
+  //  signal unwind, which drains the kid chain itself.
+  //
+  u3b_drain(u3R);
+
 #if 0
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
@@ -1598,6 +1649,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_Ford_fresh_road_depth_h = 0;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
+    //  a critical section never longjmps on its own, but a fault inside
+    //  one must not leave signals held forever
+    //
+    while ( _cm_crit_w ) {
+      u3m_crit_out();
+    }
+
     //  reinitialize trace state
     //
     u3t_init();
@@ -2711,6 +2769,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  u3b_stop();
   u3t_sstack_exit();
 
   u3e_stop();

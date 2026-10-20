@@ -123,151 +123,129 @@ _js_done(_jam_shax* ctx, c3_y out_y[32])
 
 //  ---- mat encoding ---------------------------------------------------
 
-//  write mat-encoded value [val_w] (the bit-length of an atom).
+//  write mat's length prefix for an atom of [len_w] bits: zero bits as
+//  many as len_w has, a one, then all but the top bit of len_w.
+//  [len_w] zero is the single bit 1, which is all of (mat 0).
 //
 static void
-_js_mat_w(_jam_shax* ctx, c3_w val_w)
+_js_len(_jam_shax* ctx, c3_w len_w)
 {
-  if ( 0 == val_w ) {
+  if ( 0 == len_w ) {
     _js_bits(ctx, 1, 1);
     return;
   }
-  c3_g b_g = (c3_g)c3_bits_word(val_w);
-  //  b_g zero bits + one 1 bit
-  //
+  c3_g b_g = (c3_g)c3_bits_word(len_w);
+
   _js_bits(ctx, (c3_d)1 << b_g, b_g + 1);
-  //  low (b_g - 1) bits of val_w
-  //
+
   if ( b_g > 1 ) {
-    _js_bits(ctx, (c3_d)val_w, b_g - 1);
+    _js_bits(ctx, (c3_d)len_w, b_g - 1);
   }
+}
+
+//  write (mat pos), a backref's position: prefix, then the bits.
+//
+static void
+_js_mat_d(_jam_shax* ctx, c3_d pos_d)
+{
+  c3_g bit_g = (c3_g)c3_bits_chub(pos_d);
+
+  _js_len(ctx, bit_g);
+  _js_bits(ctx, pos_d, bit_g);
 }
 
 //  ---- atom encoding --------------------------------------------------
 
-//  compute bit-length of an atom from mmap'd bytes (for bob atoms).
-//
-static c3_w
-_js_bob_met(const c3_y* byt_y, c3_d len_d)
-{
-  c3_d pos_d = len_d;
-  while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-    pos_d--;
-  }
-  if ( 0 == pos_d ) return 0;
-  c3_y top_y = byt_y[pos_d - 1];
-  c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-  return (c3_w)((pos_d - 1) * 8 + (8 - clz_y));
-}
-
-//  encode a single atom: tag 0 + mat(bit_len) + data bits.
+//  write (mat a): the length prefix, then the atom's bits, streamed
+//  from a view so a bob is never loaded.
 //
 static void
-_js_encode_atom(_jam_shax* ctx, u3_atom a)
+_js_mat_atom(_jam_shax* ctx, u3_atom a)
 {
-  //  atom tag
-  //
-  _js_bits(ctx, 0, 1);
-
-  if ( 0 == a ) {
-    _js_mat_w(ctx, 0);
+  if ( _(u3a_is_cat(a)) ) {
+    c3_g bit_g = (c3_g)c3_bits_word(a);
+    _js_len(ctx, bit_g);
+    _js_bits(ctx, (c3_d)a, bit_g);
     return;
   }
 
-  u3r_view vue_u = {0};
-  c3_w     bit_w;
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, a, c3y);
 
-  if ( _(u3a_is_cat(a)) ) {
-    bit_w = (c3_g)c3_bits_word(a);
+  if ( vue_u.bit_d > c3_w_max ) {
+    u3m_bail(c3__fail);
   }
-  else if ( c3y == u3a_is_bob(a) ) {
-    u3r_view_init(&vue_u, a);
-    bit_w = _js_bob_met(vue_u.byt_y, vue_u.len_w);
-    if ( 0 == bit_w ) {
-      u3r_view_done(&vue_u);
-      _js_mat_w(ctx, 0);
-      return;
+
+  {
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    c3_w        bit_w = (c3_w)vue_u.bit_d;
+    c3_w        ful_w = bit_w >> 3;
+    c3_g        rem_g = bit_w & 7;
+
+    _js_len(ctx, bit_w);
+    _js_bytes(ctx, vue_y, ful_w);
+    if ( rem_g ) {
+      _js_bits(ctx, vue_y[ful_w], rem_g);
     }
   }
-  else {
-    bit_w = u3r_met(0, a);
-    u3r_view_init(&vue_u, a);
+  u3r_view_done(&vue_u);
+}
+
+//  ---- noun encoding: u3s_jam_fib's rules, bit for bit ---------------
+
+//  an atom: itself if new, or if it is no wider than the position of
+//  its first occurrence; otherwise a backref (tag 11).
+//
+static void
+_js_atom_cb(u3_atom a, void* ptr_v)
+{
+  _jam_shax* ctx = ptr_v;
+  u3_weak    got = u3h_git(ctx->har_p, a);
+
+  if ( u3_none == got ) {
+    u3h_put(ctx->har_p, a, u3i_chub(ctx->bit_d));
+    _js_bits(ctx, 0, 1);
+    _js_mat_atom(ctx, a);
+    return;
   }
 
-  //  mat header: encodes the bit-length
-  //
-  _js_mat_w(ctx, bit_w);
+  {
+    c3_d pos_d = 0;
+    u3r_safe_chub(got, &pos_d);
 
-  //  atom data bits
-  //
-  if ( _(u3a_is_cat(a)) ) {
-    _js_bits(ctx, (c3_d)a, (c3_g)bit_w);
-  }
-  else {
-    c3_w full_w = bit_w >> 3;
-    c3_g rem_g  = bit_w & 7;
-    _js_bytes(ctx, vue_u.byt_y, full_w);
-    if ( rem_g > 0 ) {
-      _js_bits(ctx, vue_u.byt_y[full_w], rem_g);
+    if ( u3r_met_d(0, a) <= c3_bits_chub(pos_d) ) {
+      _js_bits(ctx, 0, 1);
+      _js_mat_atom(ctx, a);
     }
-    u3r_view_done(&vue_u);
+    else {
+      _js_bits(ctx, 3, 2);
+      _js_mat_d(ctx, pos_d);
+    }
   }
 }
 
-//  ---- noun encoding (with dedup) ------------------------------------
-
-static void _js_encode(_jam_shax* ctx, u3_noun a);
-
-static void
-_js_encode(_jam_shax* ctx, u3_noun a)
+//  a cell: a backref if seen (and its children are skipped), else tag
+//  01 and the walk descends.
+//
+static c3_o
+_js_cell_cb(u3_noun a, void* ptr_v)
 {
-  u3_weak got = u3h_git(ctx->har_p, a);
+  _jam_shax* ctx = ptr_v;
+  u3_weak    got = u3h_git(ctx->har_p, a);
 
-  if ( _(u3a_is_atom(a)) ) {
-    if ( u3_none == got ) {
-      //  first occurrence: record position, encode atom
-      //
-      u3h_put(ctx->har_p, a, u3i_chub(ctx->bit_d));
-      _js_encode_atom(ctx, a);
-    }
-    else {
-      //  seen before: compare atom encoding cost vs backref cost
-      //
-      c3_w a_w = _(u3a_is_cat(a)) ? c3_bits_word(a) : u3r_met(0, a);
-      c3_w a_cost = 1 + (0 == a ? 1 : 2 * c3_bits_word(a_w) + a_w);
-
-      c3_d  pos_d = 0;
-      u3r_safe_chub(got, &pos_d);
-      c3_w  p_w = (0 == pos_d) ? 0 : c3_bits_word((c3_w)pos_d);
-      c3_w  b_cost = 2 + (0 == pos_d ? 1 : 2 * p_w);
-
-      if ( a_cost <= b_cost ) {
-        _js_encode_atom(ctx, a);
-      }
-      else {
-        _js_bits(ctx, 3, 2);  //  backref tag 11
-        _js_mat_w(ctx, (c3_w)pos_d);
-      }
-    }
+  if ( u3_none == got ) {
+    u3h_put(ctx->har_p, a, u3i_chub(ctx->bit_d));
+    _js_bits(ctx, 1, 2);
+    return c3y;
   }
-  else {
-    if ( u3_none != got ) {
-      //  cell seen before: always use backref
-      //
-      c3_d pos_d = 0;
-      u3r_safe_chub(got, &pos_d);
-      _js_bits(ctx, 3, 2);
-      _js_mat_w(ctx, (c3_w)pos_d);
-    }
-    else {
-      //  first occurrence: record position, encode cell + recurse
-      //
-      u3h_put(ctx->har_p, a, u3i_chub(ctx->bit_d));
-      _js_bits(ctx, 1, 2);  //  cell tag 01
-      _js_encode(ctx, u3h(a));
-      _js_encode(ctx, u3t(a));
-    }
+
+  {
+    c3_d pos_d = 0;
+    u3r_safe_chub(got, &pos_d);
+    _js_bits(ctx, 3, 2);
+    _js_mat_d(ctx, pos_d);
   }
+  return c3n;
 }
 
 //  ---- public API ----------------------------------------------------
@@ -277,7 +255,7 @@ u3qe_jam_shax(u3_noun a)
 {
   _jam_shax ctx;
   _js_init(&ctx);
-  _js_encode(&ctx, a);
+  u3a_walk_fore(a, &ctx, _js_atom_cb, _js_cell_cb);
 
   c3_y hash_y[32];
   _js_done(&ctx, hash_y);

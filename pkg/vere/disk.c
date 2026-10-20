@@ -29,6 +29,9 @@ struct _u3_disk_walk {
 #undef DISK_TRACE_JAM
 #undef DISK_TRACE_CUE
 
+static void
+_disk_blob_root(const c3_c* pax_c, c3_d epo_d);
+
 /* _disk_commit_done(): commit complete.
  */
 static void
@@ -66,6 +69,7 @@ _disk_commit_done(u3_disk* log_u)
     while ( fet_u && (fet_u->eve_d <= log_u->dun_d) ) {
       log_u->put_u.ext_u = fet_u->nex_u;
       c3_free(fet_u->hun_y);
+      c3_free(fet_u->bid_d);
       c3_free(fet_u);
       fet_u = log_u->put_u.ext_u;
     }
@@ -105,7 +109,9 @@ _disk_commit_cb(uv_work_t* ted_u)
                                     log_u->sav_u.eve_d,
                                     log_u->sav_u.len_d,
                             (void**)log_u->sav_u.byt_y,
-                                    log_u->sav_u.siz_i);
+                                    log_u->sav_u.siz_i,
+                                    log_u->sav_u.bid_d,
+                                    log_u->sav_u.bid_z);
 }
 
 /* _disk_commit_start(): queue async event-batch write.
@@ -116,19 +122,38 @@ _disk_commit_start(u3_disk* log_u)
   u3_assert( c3n == log_u->sav_u.ted_o );
   log_u->sav_u.ted_o = c3y;
 
-  //  queue asynchronous work to happen on another thread
+  //  queue asynchronous work to happen on another thread.  the pool's
+  //  threads take the signal mask of the thread that starts them, at
+  //  the first submission: keep the longjmp-ing signals out of it, or
+  //  one that arrives during a critical section (which blocks them on
+  //  this thread only) runs its handler on a worker and unwinds this
+  //  thread's stack from there
   //
+#ifndef U3_OS_windows
+  sigset_t sig_u, old_u;
+  sigemptyset(&sig_u);
+  sigaddset(&sig_u, SIGINT);
+  sigaddset(&sig_u, SIGTERM);
+  sigaddset(&sig_u, SIGVTALRM);
+  pthread_sigmask(SIG_BLOCK, &sig_u, &old_u);
+#endif
+
   uv_queue_work(u3L, &log_u->sav_u.ted_u, _disk_commit_cb,
                                           _disk_commit_after_cb);
+
+#ifndef U3_OS_windows
+  pthread_sigmask(SIG_SETMASK, &old_u, 0);
+#endif
 }
 
 /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
 */
 size_t
-u3_disk_etch(u3_disk* log_u,
-             u3_noun    eve,
-             c3_h     mug_h,
-             c3_y**   out_y)
+u3_disk_etch(u3_disk*  log_u,
+             u3_noun   eve,
+             c3_h      mug_h,
+             c3_y**    out_y,
+             u3s_bids* bid_u)
 {
   size_t len_i;
   c3_y*  dat_y;
@@ -143,7 +168,7 @@ u3_disk_etch(u3_disk* log_u,
     c3_d  ram_d;
     c3_y* ram_y;
 
-    u3s_ram_xeno(eve, &ram_d, &ram_y);
+    u3s_ram_xeno_bids(eve, &ram_d, &ram_y, bid_u);
 
     len_i = 4 + ram_d;
     dat_y = c3_malloc(len_i);
@@ -192,6 +217,8 @@ _disk_batch(u3_disk* log_u)
 
     log_u->sav_u.byt_y[i_d] = fet_u->hun_y;
     log_u->sav_u.siz_i[i_d] = fet_u->len_i;
+    log_u->sav_u.bid_d[i_d] = fet_u->bid_d;
+    log_u->sav_u.bid_z[i_d] = fet_u->bid_z;
 
     fet_u  = fet_u->nex_u;
   }
@@ -224,6 +251,11 @@ _disk_commit(u3_disk* log_u)
 }
 
 /* _disk_plan(): enqueue serialized fact (feat) for persistence.
+**
+**   the encoder collects the distinct blob ids the event names.  they
+**   are this epoch's from here (owned now, ahead of the durable row, so
+**   no deletion runs between), and they become the event's BLOBS row,
+**   written in the event's transaction and freed with the feat.
 */
 static void
 _disk_plan(u3_disk* log_u,
@@ -231,8 +263,19 @@ _disk_plan(u3_disk* log_u,
            u3_noun    job)
 {
   u3_feat* fet_u = c3_malloc(sizeof(*fet_u));
+  u3s_bids bid_u = {0};
+
   fet_u->eve_d = ++log_u->sen_d;
-  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y);
+  fet_u->len_i = u3_disk_etch(log_u, job, mug_h, &fet_u->hun_y, &bid_u);
+
+  u3a_blob_own(bid_u.bid_d, bid_u.len_w);
+
+  if ( !bid_u.len_w ) {
+    c3_free(bid_u.bid_d);
+    bid_u.bid_d = 0;
+  }
+  fet_u->bid_d = bid_u.bid_d;
+  fet_u->bid_z = bid_u.len_w;
   fet_u->nex_u = 0;
 
   if ( !log_u->put_u.ent_u ) {
@@ -294,7 +337,9 @@ u3_disk_sync(u3_disk* log_u)
                          log_u->sav_u.eve_d,
                          log_u->sav_u.len_d,
                  (void**)log_u->sav_u.byt_y,
-                         log_u->sav_u.siz_i);
+                         log_u->sav_u.siz_i,
+                         log_u->sav_u.bid_d,
+                         log_u->sav_u.bid_z);
 
     log_u->sav_u.ret_o = ret_o;
 
@@ -882,6 +927,7 @@ u3_disk_exit(u3_disk* log_u)
     while ( fet_u && (fet_u->eve_d <= log_u->dun_d) ) {
       log_u->put_u.ext_u = fet_u->nex_u;
       c3_free(fet_u->hun_y);
+      c3_free(fet_u->bid_d);
       c3_free(fet_u);
       fet_u = log_u->put_u.ext_u;
     }
@@ -1098,10 +1144,121 @@ _disk_epoc_zero(c3_c* pax_c)
   return c3n;
 }
 
+/* _disk_roll_bank: the roll's bank pass: the live set (what a root
+**   reaches, ascending), the ghosts to drop once the roll stands, and
+**   how many records the counts call live that no root reaches.
+*/
+typedef struct {
+  const c3_d*        liv_d;
+  c3_z               len_z;
+  u3s_bids           gho_u;
+  c3_w               mis_w;
+} _disk_roll_bank;
+
+static c3_o
+_disk_roll_live(const _disk_roll_bank* ban_u, c3_d bid_d)
+{
+  c3_z lo_z = 0;
+  c3_z hi_z = ban_u->len_z;
+
+  while ( lo_z < hi_z ) {
+    c3_z mid_z = lo_z + (hi_z - lo_z) / 2;
+
+    if ( ban_u->liv_d[mid_z] < bid_d )      lo_z = mid_z + 1;
+    else if ( ban_u->liv_d[mid_z] > bid_d ) hi_z = mid_z;
+    else                                    return c3y;
+  }
+  return c3n;
+}
+
+/* _disk_roll_link_cb(): u3h_walk_with callback: carry one held blob
+**   into the new epoch's store.  a file the image needs (a live-set
+**   id) refuses the roll if it cannot be carried; any other is reported
+**   and left behind, since the new epoch can recompute it.
+*/
+typedef struct {
+  const c3_c*            old_c;
+  const c3_c*            new_c;
+  const _disk_roll_bank* ban_u;   //  the live set
+  c3_w                   num_w;   //  carried
+  c3_w                   bad_w;   //  not carried, and the image needs it
+} _disk_roll_link;
+
+static void
+_disk_roll_link_cb(u3_noun kev, void* ptr_v)
+{
+  _disk_roll_link* lin_u = ptr_v;
+  c3_d bid_d = 0;
+  c3_d off_d = 0;
+
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  c3_h      mug_h = u3a_bid_mug(bid_d);
+  c3_h      seq_h = u3a_bid_seq(bid_d);
+
+  //  a record nothing holds names a file the new epoch never needs
+  //
+  if ( !blb_u->use_h ) {
+    return;
+  }
+
+  if ( c3y == u3b_link(lin_u->old_c, lin_u->new_c, mug_h, seq_h) ) {
+    lin_u->num_w++;
+  }
+  else if ( c3y == _disk_roll_live(lin_u->ban_u, bid_d) ) {
+    lin_u->bad_w++;
+  }
+  else {
+    fprintf(stderr, "disk: roll: " U3A_BID_FMT " not carried; "
+                    "no root reaches it\r\n", mug_h, seq_h);
+  }
+}
+
+/* _disk_roll_bank_cb(): u3h_walk_with callback for the roll's bank
+**   pass: own what a root reaches, collect what nothing holds (the
+**   ghosts, dropped once the roll has succeeded), report a record the
+**   counts call live that the walk did not reach.
+*/
+static void
+_disk_roll_bank_cb(u3_noun kev, void* ptr_v)
+{
+  _disk_roll_bank*    ban_u = ptr_v;
+  u3s_bids*          gho_u = &ban_u->gho_u;
+  c3_d bid_d = 0;
+  c3_d off_d = 0;
+
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+
+  if ( !blb_u->use_h ) {
+    u3s_bids_push(gho_u, bid_d);
+    return;
+  }
+
+  blb_u->own_o = _disk_roll_live(ban_u, bid_d);
+
+  if ( (c3n == blb_u->own_o) && (blb_u->use_h > blb_u->les_h) ) {
+    fprintf(stderr, "disk: roll: " U3A_BID_FMT ": %" PRIc3_h
+                    " live atom(s) counted, none reached: unscanned root?\r\n",
+                    u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
+                    blb_u->use_h - blb_u->les_h);
+    ban_u->mis_w++;
+  }
+}
+
 /* _disk_epoc_roll: epoch rollover.
+**
+**   [old_c] is the store root of the epoch being left, or 0 when there
+**   is none to leave (the pre-boot migrations of pre-blob formats).
+**   Every blob the bank still holds is carried into the new epoch's
+**   store: the image names those, and so does anything the king holds.
 */
 static c3_o
-_disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
+_disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 {
   u3_assert(epo_d);
 
@@ -1113,15 +1270,80 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     return c3n;
   }
 
+  //  a roll into the current epoch (an empty epoch meeting a new
+  //  binary) rewrites the epoch in place: its store, markers, and
+  //  database are live, so a failure must remove none of them
+  //
+  c3_o cur_o = ( epo_d == log_u->epo_d ) ? c3y : c3n;
+
   //  create new epoch directory if it doesn't exist
   c3_c epo_c[8193];
   c3_i epo_i;
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
-  c3_d ret_d = c3_mkdir(epo_c, 0700);
-  if ( ( ret_d < 0 ) && ( errno != EEXIST ) ) {
+  if ( (0 != c3_mkdir(epo_c, 0700)) && (EEXIST != errno) ) {
     fprintf(stderr, "disk: create epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
     return c3n;
+  }
+
+  //  the epoch owns its blob files: make its store, then carry in
+  //  every blob the bank holds
+  //
+  c3_c bob_c[8192];
+  _disk_roll_bank ban_u = {0};
+  c3_d*           liv_d = 0;
+
+  //  the markers a failure unlinks; empty until written
+  //
+  c3_c epv_c[8193] = "";
+  c3_c biv_c[8193] = "";
+
+  u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: create blob store %s failed: %s\r\n",
+                    bob_c, strerror(errno));
+    goto fail1;
+  }
+
+  if ( old_c ) {
+    //  carry every held blob into the new store first: the links can
+    //  fail, and nothing in the bank has changed yet if they do.  the
+    //  live set, what a root reaches, says which failures the image
+    //  cannot survive.  the current epoch's store already holds them
+    //
+    liv_d       = u3a_blob_live(&ban_u.len_z);
+    ban_u.liv_d = liv_d;
+
+    _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c, .ban_u = &ban_u };
+
+    if ( c3n == cur_o ) {
+      u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
+    }
+
+    if ( lin_u.bad_w ) {
+      fprintf(stderr, "disk: %" PRIc3_w " blob(s) not carried into epoch %"
+                      PRIc3_d "\r\n", lin_u.bad_w, epo_d);
+      goto fail0;
+    }
+    if ( lin_u.num_w ) {
+      fprintf(stderr, "disk: carried %" PRIc3_w " blob(s) into epoch %"
+                      PRIc3_d "\r\n", lin_u.num_w, epo_d);
+    }
+
+    //  the bank is the image's: own every record a root reaches, and
+    //  only those.  a record only a king hold keeps is carried but not
+    //  owned, so it goes by refcount when the king lets go.  the flags
+    //  are this process's; a boot marks them again from the row the
+    //  live set becomes below.  the ghosts, the old epoch's inputs
+    //  nothing holds, are only collected here: a failed roll leaves the
+    //  old epoch's bank whole, and they go at the end
+    //
+    u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &ban_u);
+
+    if ( ban_u.mis_w ) {
+      fprintf(stderr, "disk: roll: %" PRIc3_w " record(s) counted live but "
+                      "unreached, not owned\r\n", ban_u.mis_w);
+    }
   }
 
   //  copy snapshot files (skip if first epoch)
@@ -1129,14 +1351,14 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   snprintf(chk_c, 8192, "%s/.urb/chk", log_u->dir_u->pax_c);
   if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
     fprintf(stderr, "disk: copy epoch snapshot failed\r\n");
-    goto fail1;
+    goto fail0;
   }
 
 #ifndef U3_OS_windows
   if ( -1 == (epo_i = c3_open(epo_c, O_RDONLY)) ) {
     fprintf(stderr, "disk: open epoch dir %" PRIc3_d " failed: %s\r\n",
                     epo_d, strerror(errno));
-    goto fail1;
+    goto fail0;
   }
 
   if ( -1 == c3_sync(epo_i) ) {  //  XX fdatasync on linux?
@@ -1148,7 +1370,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  create epoch version file, overwriting any existing file
   c3_c epi_c[8193];
-  c3_c epv_c[8193];
   snprintf(epi_c, sizeof(epv_c), "%s/epoc.tmp", epo_c);
   snprintf(epv_c, sizeof(epv_c), "%s/epoc.txt", epo_c);
   FILE* epv_f = fopen(epi_c, "w");
@@ -1166,7 +1387,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
 
   //  create binary version file, overwriting any existing file
   c3_c bii_c[8193];
-  c3_c biv_c[8193];
   snprintf(bii_c, sizeof(biv_c), "%s/vere.tmp", epo_c);
   snprintf(biv_c, sizeof(epv_c), "%s/vere.txt", epo_c);
   FILE* biv_f = fopen(bii_c, "w");
@@ -1194,14 +1414,36 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
     fprintf(stderr, "disk: failed to read metadata\r\n");
     goto fail3;
   }
-  u3_lmdb_exit(log_u->mdb_u);
-  log_u->mdb_u = 0;
 
-  //  initialize db of new epoch
-  if ( 0 == (log_u->mdb_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i)) ) {
-    fprintf(stderr, "disk: failed to initialize database\r\n");
-    c3_free(log_u);
-    goto fail3;
+  //  open the new epoch's db, then close the old: a failed open leaves
+  //  the old one in place.  BLOBS stays behind: replay never crosses
+  //  epochs.  the current epoch's db is already open, and opening it
+  //  twice in one process is the one thing lmdb forbids
+  //
+  if ( c3n == cur_o ) {
+    MDB_env* new_u = u3_lmdb_init(epo_c, u3_Host.ops_u.siz_i);
+
+    if ( 0 == new_u ) {
+      fprintf(stderr, "disk: failed to initialize database\r\n");
+      goto fail3;
+    }
+
+    u3_lmdb_exit(log_u->mdb_u);
+    log_u->mdb_u = new_u;
+  }
+
+  //  the image's live set is the epoch's first manifest row, keyed by
+  //  the event the image is the state of: what this epoch's replay
+  //  starts from and cannot recompute.  before META, so a crash here
+  //  leaves an epoch the next boot deletes, row and links included
+  //
+  if ( ban_u.len_z ) {
+    if ( c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z) ) {
+      fprintf(stderr, "disk: failed to write the image's blob row\r\n");
+      goto fail3;
+    }
+    fprintf(stderr, "disk: wrote the image's blob row at %" PRIc3_d " with %"
+                    PRIc3_z " id(s)\r\n", epo_d, ban_u.len_z);
   }
 
   // write the metadata to the database
@@ -1226,19 +1468,43 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d)
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
   log_u->ver_h = U3D_VERLAT;
+  _disk_blob_root(log_u->dir_u->pax_c, epo_d);
+
+  //  the roll stands: the old epoch's ghosts are no one's now
+  //
+  for ( c3_w i_w = 0; i_w < ban_u.gho_u.len_w; i_w++ ) {
+    c3_d bid_d = ban_u.gho_u.bid_d[i_w];
+    u3a_blob_drop(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
+  }
+  if ( ban_u.gho_u.len_w ) {
+    fprintf(stderr, "disk: dropped %" PRIc3_w " ghost record(s) at roll\r\n",
+                    ban_u.gho_u.len_w);
+  }
+  c3_free(ban_u.gho_u.bid_d);
+  c3_free(liv_d);
 
   //  success
   return c3y;
 
 fail3:
-  c3_unlink(epv_c);
-  c3_unlink(biv_c);
+  if ( c3n == cur_o ) {
+    c3_unlink(epv_c);
+    c3_unlink(biv_c);
+  }
 #ifndef U3_OS_windows
 fail2:
   close(epo_i);
 #endif
+fail0:
+  if ( c3n == cur_o ) {
+    u3b_kill(bob_c);
+  }
 fail1:
-  c3_rmdir(epo_c);
+  c3_free(ban_u.gho_u.bid_d);
+  c3_free(liv_d);
+  if ( c3n == cur_o ) {
+    c3_rmdir(epo_c);
+  }
   return c3n;
 }
 
@@ -1251,8 +1517,13 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
   c3_c epo_c[8193];
   snprintf(epo_c, sizeof(epo_c), "%s/0i%" PRIc3_d, log_u->com_u->pax_c, epo_d);
 
-  //  blob log is rebuilt post-chop by u3_disk_chop, not per-epoch.
+  //  the epoch's blob files die with it
   //
+  {
+    c3_c bob_c[8192];
+    u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
+    u3b_kill(bob_c);
+  }
 
   //  delete files in epoch directory
   u3_dire* dir_u = u3_foil_folder(epo_c);
@@ -1262,10 +1533,12 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
     snprintf(fil_c, sizeof(fil_c), "%s/%s", epo_c, den_u->nam_c);
     if ( 0 != c3_unlink(fil_c) ) {
       fprintf(stderr, "disk: failed to delete file in epoch directory\r\n");
+      u3_dire_free(dir_u);
       return c3n;
     }
     den_u = den_u->nex_u;
   }
+  u3_dire_free(dir_u);
 
   //  delete epoch directory
   if ( 0 != c3_rmdir(epo_c) ) {
@@ -1273,19 +1546,16 @@ _disk_epoc_kill(u3_disk* log_u, c3_d epo_d)
     return c3n;
   }
 
-  //  cleanup
-  u3_dire_free(dir_u);
-
   //  success
   return c3y;
 }
 
-/* u3_disk_epoc_last: get latest epoch number.
+/* _disk_epoc_last_in: get latest epoch number under log dir [log_c].
 */
-c3_o
-u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
+static c3_o
+_disk_epoc_last_in(const c3_c* log_c, c3_d* lat_d)
 {
-  u3_dire* die_u = u3_foil_folder(log_u->com_u->pax_c);
+  u3_dire* die_u = u3_foil_folder(log_c);
   u3_dent* den_u = die_u->dil_u;
   c3_o     ret_o = c3n;
   c3_d     epo_d = 0;
@@ -1309,6 +1579,56 @@ u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
   *lat_d = epo_d;
 
   return ret_o;
+}
+
+/* u3_disk_epoc_last: get latest epoch number.
+*/
+c3_o
+u3_disk_epoc_last(u3_disk* log_u, c3_d* lat_d)
+{
+  return _disk_epoc_last_in(log_u->com_u->pax_c, lat_d);
+}
+
+/* _disk_blob_root(): point u3C.bob_c at epoch [epo_d]'s store, creating
+**   the directory if needed.  The one place a process learns its root
+**   from disk; the king learns it from %ripe.
+*/
+static void
+_disk_blob_root(const c3_c* pax_c, c3_d epo_d)
+{
+  static c3_c bob_c[8192];
+
+  u3b_root(bob_c, pax_c, epo_d);
+
+  //  a store that cannot be made (a flat log under --no-migrate has no
+  //  epoch directory to hold one) leaves the root unset: every store
+  //  function declines, and an event that brings a file is refused
+  //
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "disk: no blob store at %s: %s\r\n",
+            bob_c, strerror(errno));
+    u3C.bob_c = 0;
+    return;
+  }
+
+  u3C.bob_c = bob_c;
+}
+
+/* u3_disk_blob_root(): point u3C.bob_c at the newest epoch's store.
+**
+**   For entry points that boot a loom without loading the log.
+*/
+void
+u3_disk_blob_root(const c3_c* pax_c)
+{
+  c3_c log_c[8192];
+  c3_d epo_d;
+
+  snprintf(log_c, sizeof(log_c), "%s/.urb/log", pax_c);
+
+  if ( c3y == _disk_epoc_last_in(log_c, &epo_d) ) {
+    _disk_blob_root(pax_c, epo_d);
+  }
 }
 
 /* u3_disk_epoc_list: get descending epoch numbers, "mcut" pattern.
@@ -1529,232 +1849,127 @@ _disk_vere_diff(u3_disk* log_u)
   return c3n;
 }
 
-/* _disk_chop_collect: accumulator for collecting blb_p keys to delete.
-*/
-typedef struct {
-  const c3_c* pax_c;
-  c3_d*       bid_d;   //  array of bid keys
-  c3_z        len_z;
-  c3_z        cap_z;
-} _disk_chop_collect;
-
-/* _disk_chop_zero_cb(): u3h_walk_with callback — subtract eve_w from
-**   use_w and zero eve_w.  Preserves atom cardinality + lease counts.
-**   The walk over LMDB blob refs (step 2) re-increments both.
+/* _disk_gc_dead_cb(): u3h_walk_with callback: collect each record
+**   u3a_blob_dead says nothing holds, to wipe and drop after the walk.
+**   an owned record with no holder is a ghost and stays.
 */
 static void
-_disk_chop_zero_cb(u3_noun kev, void* ptr_v)
+_disk_gc_dead_cb(u3_noun kev, void* ptr_v)
 {
-  (void)ptr_v;
-  u3_noun val = u3t(kev);
-
-  c3_d off_d = 0;
-  u3r_safe_chub(val, &off_d);
-
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  blb_u->use_w -= blb_u->eve_w;
-  blb_u->eve_w  = 0;
-}
-
-/* _disk_chop_delete_cb(): u3h_walk_with callback — collect dead blobs.
-**
-**   Checks if u3a_blob is fully unreferenced; if so, wipes the blob
-**   file and collects the bid for post-walk HAMT/struct cleanup.
-*/
-static void
-_disk_chop_delete_cb(u3_noun kev, void* ptr_v)
-{
-  _disk_chop_collect* del_u = ptr_v;
-  u3_noun key = u3h(kev);
-  u3_noun val = u3t(kev);
-
   c3_d bid_d = 0;
-  u3r_safe_chub(key, &bid_d);
-  c3_h mug_h = (c3_h)(bid_d >> 32);
-  c3_h seq_h = (c3_h)(bid_d & 0xFFFFFFFF);
-
   c3_d off_d = 0;
-  u3r_safe_chub(val, &off_d);
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  c3_o ded_o = ( 0 == blb_u->use_w ) ? c3y : c3n;
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
 
-  fprintf(stderr,
-          "chop: %010" PRIc3_h "/%010" PRIc3_h
-          " use=%" PRIc3_w " eve=%" PRIc3_w " les=%" PRIc3_h "%s\r\n",
-          mug_h, seq_h,
-          blb_u->use_w, blb_u->eve_w, blb_u->les_h,
-          (c3y == ded_o) ? "  [DELETE]" : "");
-
-  if ( c3y == ded_o ) {
-    u3_blob_wipe(del_u->pax_c, mug_h, seq_h);
-
-    //  collect bid for post-walk blb_p cleanup
-    //
-    if ( del_u->len_z == del_u->cap_z ) {
-      del_u->cap_z = del_u->cap_z ? del_u->cap_z * 2 : 8;
-      del_u->bid_d = c3_realloc(del_u->bid_d, del_u->cap_z * sizeof(c3_d));
-    }
-    del_u->bid_d[del_u->len_z++] = bid_d;
+  if ( c3y == u3a_blob_dead((u3a_blob*)u3a_into((u3_post)off_d)) ) {
+    u3s_bids_push(ptr_v, bid_d);
   }
 }
 
-/* _disk_chop_orphan_cb(): u3_blob_walk callback — collect on-disk blob
-**   files that have no blb_p entry.
-**
-**   Orphans arise when accounting is lost while files survive: a crash
-**   between staging-move and entry creation, or a bitness migration
-**   (which paves a fresh home, dropping blb_p wholesale).  No runtime
-**   path can ever delete them, so chop reconciles the store against
-**   the bank.
+/* _disk_gc_orphan_cb(): u3b_walk callback: collect each file in the
+**   store with no record, a crash's leftover between install and the
+**   commit that would have named it.
 */
 static void
-_disk_chop_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
+_disk_gc_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
 {
-  _disk_chop_collect* orf_u = ptr_v;
-
-  if ( u3a_blob_get(mug_h, seq_h) ) {
-    return;
+  if ( !u3a_blob_get(mug_h, seq_h) ) {
+    u3s_bids_push(ptr_v, u3a_bid(mug_h, seq_h));
   }
-
-  if ( orf_u->len_z == orf_u->cap_z ) {
-    orf_u->cap_z = orf_u->cap_z ? orf_u->cap_z * 2 : 8;
-    orf_u->bid_d = c3_realloc(orf_u->bid_d, orf_u->cap_z * sizeof(c3_d));
-  }
-  orf_u->bid_d[orf_u->len_z++] = ((c3_d)mug_h << 32) | (c3_d)seq_h;
 }
 
-/* _disk_chop_blobs_cb(): u3_lmdb_walk_blobs callback — increment eve_w
-**   and use_w for each blob ID referenced by an event, creating the
-**   bank entry if absent (e.g. after queu repaved the home road).
+/* _disk_blob_own_cb(): u3_lmdb_walk_blobs callback: mark every blob a
+**   row names as owned, making a ghost if the bank has no record for
+**   it.  a row id whose file is missing from the store is data the
+**   epoch depends on and cannot recompute: report it (all of them;
+**   keep scanning) and fail the mark through [ptr_v].
 */
 static void
-_disk_chop_blobs_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
+_disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 {
-  (void)ptr_v;
-  (void)eve_d;
+  c3_o* oky_o = ptr_v;
 
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    c3_h mug_h = (c3_h)(ids_d[i_z] >> 32);
-    c3_h seq_h = (c3_h)(ids_d[i_z] & 0xFFFFFFFF);
+    c3_h mug_h = u3a_bid_mug(ids_d[i_z]);
+    c3_h seq_h = u3a_bid_seq(ids_d[i_z]);
 
-    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    if ( !blb_u ) blb_u = u3a_blob_new(mug_h, seq_h);
+    if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
+      fprintf(stderr, "disk: blob " U3A_BID_FMT " named at event %"
+                      PRIu64 " is missing from the store: the epoch depends "
+                      "on data that no longer exists\r\n",
+                      mug_h, seq_h, eve_d);
+      *oky_o = c3n;
+      continue;
+    }
 
-    blb_u->eve_w += 1;
-    blb_u->use_w += 1;
+    u3a_blob_got(mug_h, seq_h)->own_o = c3y;
   }
 }
 
-/* u3_disk_blob_refs(): rebuild blob event-log refcounts from the
-**   BLOBS table over the entire retained log.
+/* u3_disk_blob_own(): mark owned every blob the rows in [fir_d, las_d]
+**   name: the one marker.
 **
-**   zeroes every entry's eve_w, then rescans, creating entries as
-**   needed.  used by queu: rock import repaves the home road, wiping
-**   the bank, so eve_w must be reconstructed or the deletion
-**   invariant cannot be enforced on the imported pier.
+**   The BLOBS rows are the epoch's manifest: the image's live set at
+**   the epoch's first key (written by the roll) and each event's ids
+**   at its own.  Ownership is process state rebuilt from them: boot
+**   marks from the epoch's first key through the snapshot's event,
+**   replay marks each batch, queu marks through the rock's event, and
+**   _find_home zeroed whatever flags the snapshot carried.  c3n if any
+**   named file is missing (all of them reported).
+**
+**   NB: opens its own read txn, so it must not run inside another on
+**   this thread (MDB_BAD_RSLOT).
+*/
+c3_o
+u3_disk_blob_own(u3_disk* log_u, c3_d fir_d, c3_d las_d)
+{
+  c3_o oky_o = c3y;
+
+  if ( las_d < fir_d ) return c3y;
+
+  u3_lmdb_walk_blobs(log_u->mdb_u, fir_d, las_d, &oky_o, _disk_blob_own_cb);
+  return oky_o;
+}
+
+/* u3_disk_blob_gc(): reclaim the current store against the bank.
+**
+**   1. wipe the file of, and drop, every record nothing holds or owns
+**   2. wipe every file in the store with no record (orphans)
+**
+**   safe once the log is caught up, so every input of the epoch has a
+**   record: the boot marking's, or one replay made.  collect, then act:
+**   neither walk may see its own deletions.
 */
 void
-u3_disk_blob_refs(u3_disk* log_u)
+u3_disk_blob_gc(void)
 {
-  u3h_walk_with(u3H->blb_p, _disk_chop_zero_cb, 0);
+  u3s_bids bid_u = {0};
 
-  c3_d lo_d = 0, hi_d = 0;
-  u3_lmdb_gulf(log_u->mdb_u, &lo_d, &hi_d);
+  u3h_walk_with(u3H->blb_p, _disk_gc_dead_cb, &bid_u);
 
-  if ( lo_d && hi_d >= lo_d ) {
-    u3_lmdb_walk_blobs(log_u->mdb_u, lo_d, hi_d, 0,
-                       _disk_chop_blobs_cb);
-  }
-}
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
+    c3_h mug_h = u3a_bid_mug(bid_u.bid_d[i_w]);
+    c3_h seq_h = u3a_bid_seq(bid_u.bid_d[i_w]);
 
-/* u3_disk_blob_gc(): reclaim unreferenced blobs against the bank.
-**
-**   1. delete blob files (and blb_p entries) whose use_w == 0
-**   2. delete on-disk files that have no blb_p entry (orphans)
-**
-**   safe to run whenever use_w is fully reconstructed: after a chop's
-**   eve_w rebuild, or at boot once replay has restored eve_w and the
-**   LEASES table has restored les_h.  collect-then-act so neither walk
-**   races its own deletions.
-*/
-void
-u3_disk_blob_gc(u3_disk* log_u)
-{
-  //  step 1: delete unreferenced blobs and clean up blb_p
-  //
-  {
-    c3_w tot_w = u3h_wyt(u3H->blb_p);
-
-    _disk_chop_collect del_u = { .pax_c = log_u->dir_u->pax_c };
-    u3h_walk_with(u3H->blb_p, _disk_chop_delete_cb, &del_u);
-
-    for ( c3_z i_z = 0; i_z < del_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(del_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(del_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3a_blob_drop(mug_h, seq_h);
-    }
-
-    if ( del_u.len_z ) {
-      fprintf(stderr,
-              "blob: gc: deleted %" PRIc3_z " blob(s), kept %" PRIc3_w "\r\n",
-              del_u.len_z, tot_w - (c3_w)del_u.len_z);
-    }
-
-    c3_free(del_u.bid_d);
+    fprintf(stderr, "blob: gc: delete " U3A_BID_FMT "\r\n", mug_h, seq_h);
+    u3b_wipe(u3C.bob_c, mug_h, seq_h);
+    u3a_blob_drop(mug_h, seq_h);
   }
 
-  //  step 2: reconcile the on-disk store against the bank — delete
-  //  files with no blb_p entry (collect first; the walk must not race
-  //  its own deletions)
-  //
-  {
-    _disk_chop_collect orf_u = { .pax_c = log_u->dir_u->pax_c };
-    u3_blob_walk(log_u->dir_u->pax_c, &orf_u, _disk_chop_orphan_cb);
+  bid_u.len_w = 0;
+  u3b_walk(u3C.bob_c, &bid_u, _disk_gc_orphan_cb);
 
-    for ( c3_z i_z = 0; i_z < orf_u.len_z; i_z++ ) {
-      c3_h mug_h = (c3_h)(orf_u.bid_d[i_z] >> 32);
-      c3_h seq_h = (c3_h)(orf_u.bid_d[i_z] & 0xFFFFFFFF);
-      u3_blob_wipe(orf_u.pax_c, mug_h, seq_h);
-    }
-
-    if ( orf_u.len_z ) {
-      fprintf(stderr,
-              "blob: gc: deleted %" PRIc3_z " orphaned blob file(s)\r\n",
-              orf_u.len_z);
-    }
-
-    c3_free(orf_u.bid_d);
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
+    u3b_wipe(u3C.bob_c, u3a_bid_mug(bid_u.bid_d[i_w]),
+                        u3a_bid_seq(bid_u.bid_d[i_w]));
   }
-}
-
-/* _disk_chop_rebuild_blobs(): rebuild blob accounting after epoch deletion.
-**
-**   1. zero all eve_w in place (les_h was already zeroed at boot)
-**   2. scan BLOBS table for remaining events, increment eve_w for each ref
-**   3. delete blob files whose total refcount is now zero
-**   4. delete orphaned files on disk that have no blb_p entry
-*/
-static void
-_disk_chop_rebuild_blobs(u3_disk* log_u)
-{
-  //  step 1: zero all eve_w in place
-  //
-  u3h_walk_with(u3H->blb_p, _disk_chop_zero_cb, 0);
-
-  //  step 2: scan BLOBS table for remaining events, rebuild eve_w
-  //
-  c3_d lo_d = 0, hi_d = 0;
-  u3_lmdb_gulf(log_u->mdb_u, &lo_d, &hi_d);
-
-  if ( lo_d && hi_d >= lo_d ) {
-    u3_lmdb_walk_blobs(log_u->mdb_u, lo_d, hi_d, 0,
-                       _disk_chop_blobs_cb);
+  if ( bid_u.len_w ) {
+    fprintf(stderr, "blob: gc: deleted %" PRIc3_w " orphaned file(s)\r\n",
+                    bid_u.len_w);
   }
 
-  //  steps 3-4: delete unreferenced blobs and reconcile orphans
-  //
-  u3_disk_blob_gc(log_u);
+  c3_free(bid_u.bid_d);
 }
 
 /* u3_disk_chop(): delete all but the latest 2 epocs.
@@ -1777,6 +1992,9 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   //
   //    XX parameterize the number of epochs to chop
   //
+  //  an epoch owns its blob files: they go with the directory, and no
+  //  count anywhere changes
+  //
   for ( c3_z i_z = 2; i_z < len_z; i_z++ ) {
     fprintf(stderr, "chop: deleting epoch 0i%" PRIu64 "\r\n", sot_d[i_z]);
     if ( c3y != _disk_epoc_kill(log_u, sot_d[i_z]) ) {
@@ -1786,14 +2004,6 @@ u3_disk_chop(u3_disk* log_u, c3_d eve_d)
   }
 
   c3_free(sot_d);
-
-  //  rebuild blob log after chop.
-  //
-  //  step 1: zero all log and les via collect-then-modify on blb_p
-  //  step 2: scan remaining LMDB events for bob atoms, rebuild log
-  //  step 3: delete blobs with all-zero refcounts
-  //
-  _disk_chop_rebuild_blobs(log_u);
 
   fprintf(stderr, "chop: event log truncation complete\r\n");
 }
@@ -1821,7 +2031,7 @@ u3_disk_roll(u3_disk* log_u, c3_d eve_d)
     exit(1);
   }
 
-  else if ( c3n == _disk_epoc_roll(log_u, eve_d) ) {
+  else if ( c3n == _disk_epoc_roll(log_u, eve_d, u3C.bob_c) ) {
     fprintf(stderr, "roll: failed to create new epoch\r\n");
     exit(1);
   }
@@ -2301,7 +2511,7 @@ _disk_migrate_old(u3_disk* log_u)
         exit(1);
       }
 
-      if ( c3n == _disk_epoc_roll(log_u, las_d) ) {
+      if ( c3n == _disk_epoc_roll(log_u, las_d, 0) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         exit(1);
       }
@@ -2321,12 +2531,6 @@ typedef enum {
   _epoc_void = 3,  // empty event log (cheaper to recover?)
   _epoc_late = 4   // format from the future
 } _epoc_kind;
-
-/* NOTE: _disk_blb_rebuild_from_epochs removed.
-**   Blob log-refs are now tracked via LMDB blob-ref events (tag 0x02),
-**   not via blobs.txt files.  u3a_blob structs in blb_p persist in the
-**   loom snapshot; on replay, blob-ref events reconstruct the counters.
-*/
 
 /* _disk_epoc_load(): load existing epoch, enumerating failures
 */
@@ -2403,6 +2607,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
   log_u->dun_d = ( 0 != las_d ) ? las_d : lat_d;
   log_u->sen_d = log_u->dun_d;
   log_u->epo_d = lat_d;
+  _disk_blob_root(log_u->dir_u->pax_c, lat_d);
 
   //  NB: by virtue of getting here, we know the *pier* version number is at least 3
   //  (ie, this is the epoch system)
@@ -2423,7 +2628,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
       u3m_stop();
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
-      if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+      if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, 0) ) {
         fprintf(stderr, "disk: failed to initialize epoch during loom migration\r\n");
         exit(1);
       }
@@ -2505,8 +2710,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
-      //  u3a_blob structs in blb_p persist in the loom snapshot.
-      //  on replay, LMDB blob-ref events will reconstruct eve_w.
+      //  the bank travels with the snapshot: the live counts, and the
+      //  ownership the roll and every commit since set
       //
 
       if ( log_u->dun_d < u3A->eve_d ) {
@@ -2531,9 +2736,10 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         //  VER2 epoch: always roll to VER3 if snapshot is up-to-date
         //
         if (  (U3E_VER2 == ver_h)
-           && (log_u->dun_d == u3A->eve_d) )
+           && (log_u->dun_d == u3A->eve_d)
+           && !(u3C.wag_h & u3o_dryrun) )
         {
-          if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+          if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, u3C.bob_c) ) {
             fprintf(stderr, "disk: failed to roll VER2 epoch to VER3\r\n");
             exit(1);
           }
@@ -2546,7 +2752,14 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         fprintf(stderr, "stale snapshot, downgrade runtime to replay\r\n");
         exit(1);
       }
-      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
+      else if ( u3C.wag_h & u3o_dryrun ) {
+        //  a roll owns the image's blobs in the bank and saves; a dry
+        //  run saves nothing, so it rolls nothing
+        //
+        fprintf(stderr, "disk: dry run: not rolling to epoch %" PRIc3_d "\r\n",
+                        log_u->dun_d);
+      }
+      else if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d, u3C.bob_c) ) {
         fprintf(stderr, "disk: failed to initialize epoch\r\n");
         exit(1);
       }
@@ -2584,30 +2797,18 @@ _disk_blob_stg_clean(const c3_c* stg_c)
   closedir(dir_u);
 }
 
-/* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+/* u3_disk_blob_init(): create + empty the blob staging dir.
+**
+**   The staging dir ($pier/.urb/stg) holds mkstemp(3) temp files written
+**   before rename(2) into the epoch's store.  Emptied every time mars
+**   starts, which is before the king's drivers can stage anything.  The
+**   store itself is made with its epoch (_disk_blob_root).
 */
 void
 u3_disk_blob_init(const c3_c* pax_c)
 {
-  c3_c bob_c[8192];
-  u3_blob_bob_dir(bob_c, pax_c);
-
-  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
-            bob_c, strerror(errno));
-  }
-}
-
-/* u3_disk_blob_stg_init(): create + empty the blob staging dir.
-**
-**   The staging dir ($pier/.urb/bob/stg) holds mkstemp(3) temp files written
-**   before rename(2) into bob/<mug>/<seq>.  Emptied on every boot.
-*/
-void
-u3_disk_blob_stg_init(const c3_c* pax_c)
-{
   c3_c stg_c[8192];
-  u3_blob_stg_dir(stg_c, pax_c);
+  u3b_stg_dir(stg_c, pax_c);
 
   if ( 0 != c3_mkdir(stg_c, 0700) && EEXIST != errno ) {
     fprintf(stderr, "disk: failed to create blob staging dir %s: %s\r\n",
@@ -2686,10 +2887,9 @@ u3_disk_make(c3_c* pax_c)
     }
   }
 
-  //  make $pier/.urb/bob (blob store) and .urb/bob/stg/ (staging area)
+  //  make $pier/.urb/stg (blob staging area)
   //
   u3_disk_blob_init(pax_c);
-  u3_disk_blob_stg_init(pax_c);
 
   return c3y;
 }
@@ -2759,10 +2959,9 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
       return 0;
     }
 
-  //  initialize blob store (creates .urb/bob/ if needed) and staging area
+  //  create and empty the blob staging area
   //
   u3_disk_blob_init(pax_c);
-  u3_disk_blob_stg_init(pax_c);
 
 
     //  XX move this into u3_disk_make
@@ -2809,6 +3008,7 @@ u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e)
         }
         log_u->sen_d = log_u->dun_d = las_d;
         log_u->epo_d = 0;
+        _disk_blob_root(log_u->dir_u->pax_c, 0);
         u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y);
         log_u->liv_o = c3y;
         return log_u;

@@ -13,6 +13,7 @@
       typedef struct _u3o_config {
         u3_noun who;                          //  single identity
         c3_c*   dir_c;                        //  execution directory (pier)
+        c3_c*   bob_c;                        //  blob store root: $pier/.urb/log/0i<epoch>/bob
         c3_c*   eph_c;                        //  ephemeral file
         c3_h    wag_h;                        //  flags (both ways)
         size_t  wor_i;                        //  loom word-length (<= u3a_words)
@@ -23,7 +24,7 @@
         void (*slog_f)(u3_noun);              //  function pointer for slog
         void (*sign_hold_f)(void);            //  suspend system signal regime
         void (*sign_move_f)(void);            //  restore system signal regime
-        void (*blob_del_f)(c3_h, c3_h);       //  blob uninstall: king=release lease, mars=delete file
+        void (*blob_del_f)(c3_h, c3_h);       //  last live bob gone: king returns holds, mars deletes if dead
       } u3o_config;
 
     /* u3o_flag: process/system flags.
