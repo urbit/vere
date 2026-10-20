@@ -28,10 +28,10 @@
 **   Blob files live at $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>: an
 **   epoch owns the files its events and its image name, and they die
 **   with the epoch at chop.  Deletion by refcount: use_h == 0 and not
-**   owned.
+**   owned (u3a_blob_dead).
 **
 **   Holds are counted grants.  every message mars hands the king (a
-**   poke's effects, a peek's result, an install ack) grants one hold
+**   poke's effects, a nack's goofs, a peek's result) grants one hold
 **   per distinct blob id it names, issued as the message is encoded
 **   (u3s_ram_xeno_bids) so the file outlives mars's own atoms.  the
 **   king counts what it received per id and returns the lot with
@@ -48,17 +48,16 @@
 **     3. the event's effects grant the king a hold on every blob they
 **        name, this one included if it comes back out
 **     4. mars commits: _mars_fact marks the blob owned by the epoch and
-**        writes blob-refs to LMDB
+**        writes the event's BLOBS row in the event's transaction
 **     5. the king's last bob over the id dies: %blrl returns its holds
 **        (one per message that named the id)
-**     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead drops the
-**        cardinality contribution from use_h; an owned record stays as
-**        a ghost until the next roll
+**     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead takes it
+**        off use_h; an owned record stays as a ghost until the next roll
 **     7. roll carries every held blob into the new epoch's store, owns
 **        what a root reaches, and writes that live set as the epoch's
 **        first BLOBS row; chop deletes old epochs whole, files included,
 **        and touches no count
-**     *. boot: _find_home zeroed les_h and own_o (neither outlives a
+**     *. boot: _find_home zeroes les_h and own_o (neither outlives a
 **        process); u3_disk_blob_own marks the epoch's rows through the
 **        snapshot's event and replay marks the rest; u3_disk_blob_gc
 **        reclaims any unowned blob nothing holds
@@ -100,7 +99,8 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
   $%  [%live ?(%meld %pack) ~] :: XX rename
       [%exit ~]
       [%peek mil=@ peek]
-      [%poke mil=@ ovum]
+      [%poke mil=@ pax=(list @t) ovum]  ::  pax: files staged for it
+      [%blrl mug=@ seq=@ n=@]           ::  the king returns n holds
       [%sync %save ~]
   ==
 +$  gift                                                ::  mars -> urth
@@ -109,7 +109,7 @@ _mars_blob_del(c3_h mug_h, c3_h seq_h)
       [%slog pri=@ tank]
       [%peek p=(each (unit (cask)) goof)]
       [%poke p=(each (list ovum) (list goof))]
-      [%ripe [pro=%2 kel=wynn] [who=@p fake=?] eve=@ mug=@]
+      [%ripe [pro=%3 kel=wynn] [who=@p fake=?] eve=@ mug=@ epo=@]
       [%sync eve=@ mug=@]
   ==
 --
@@ -494,7 +494,7 @@ u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
 **   returns the goof list, or u3_none.  transfers [pax].
 */
 static u3_weak
-_mars_blob_install(u3_mars* mar_u, u3_noun* job, u3_noun pax)
+_mars_blob_install(u3_noun* job, u3_noun pax)
 {
   c3_d*   bid_d = 0;
   c3_w    len_w = 0, cap_w = 0;
@@ -964,7 +964,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       //  put where the king left stubs; a failure refuses the event
       //
       if ( u3_nul != pax ) {
-        u3_weak lud = _mars_blob_install(mar_u, &job, pax);
+        u3_weak lud = _mars_blob_install(&job, pax);
 
         if ( u3_none != lud ) {
           u3z(job);

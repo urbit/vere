@@ -1,7 +1,6 @@
 /// @file
 
 #include "serial.h"
-#include "blob.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -100,10 +99,7 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
     c3_w   a_w;
     if ( c3y == u3a_is_bob(a) ) {
-      if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
-        u3m_bail(c3__fail);
-        return;
-      }
+      u3r_view_open(&win_u, a, c3y);
       bob_o = c3y;
       byt_d = win_u.byt_d;
 
@@ -333,13 +329,11 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   }
   else if ( c3y == u3a_is_bob(a) ) {
     //  bob atom: write the tag and length prefix, then stream the bytes
-    //  through a windowed view.  the total must be exactly met_w bits,
-    //  which is what u3r_met_d() gave the caller.
+    //  from a view in 8 KiB copies.  the total must be exactly met_w
+    //  bits, which is what u3r_met_d() gave the caller.
     //
     u3r_view win_u;
-    if ( c3n == u3r_view_open(&win_u, a, c3n) ) {
-      u3m_bail(c3__fail);
-    }
+    u3r_view_open(&win_u, a, c3y);
 
     ur_bsw_atom_head(rit_u, (c3_d)met_w);
 
@@ -1759,7 +1753,7 @@ _cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   }
   else {
     //  a bob has no bytes here: the callers send it to _cs_ram_bsw_bob,
-    //  and its buf_w is a bank post, not data
+    //  and its buf_w is its blob id, not data
     //
     u3_assert( c3n == u3a_is_bob(a) );
 

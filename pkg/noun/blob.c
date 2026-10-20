@@ -296,22 +296,30 @@ u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
   //  walk stops short of it.
   //
   if ( c3n == hom_o ) {
-    u3a_road* rod_u = u3R;
+    c3_z num_z = 0;
 
-    while ( rod_u != &(u3H->rod_u) ) {
-      if ( (han_u = _blob_hand_find(rod_u, bid_d)) ) {
-        if ( rod_u == u3R ) {
-          han_u->use_w += 1;
-        }
+    //  this road's list, counted on the way
+    //
+    for ( han_u = _blob_head(u3R); han_u; han_u = han_u->nex_u, num_z++ ) {
+      if ( bid_d == han_u->bid_d ) {
+        han_u->use_w += 1;
         return han_u;
       }
-      rod_u = u3to(u3a_road, rod_u->par_p);
+    }
+
+    for ( u3a_road* rod_u = u3to(u3a_road, u3R->par_p);
+          rod_u != &(u3H->rod_u);
+          rod_u = u3to(u3a_road, rod_u->par_p) )
+    {
+      if ( (han_u = _blob_hand_find(rod_u, bid_d)) ) {
+        return han_u;
+      }
     }
 
     //  bound retention: an event that touches more blobs than this
     //  gives up its idle hands, oldest first
     //
-    if ( _blob_hand_count(u3R) >= BLOB_KEEP_MAX ) {
+    if ( num_z >= BLOB_KEEP_MAX ) {
       u3m_crit_inn();
       _blob_hand_evict();
       u3m_crit_out();
@@ -420,14 +428,18 @@ u3b_shut(u3b_hand* han_u)
 /* u3b_drain(): close every hand held by road [rod_v].
 **
 **   an inner road's nodes go with its heap, so only the home road's
-**   are freed here.  returns the number of hands closed.
+**   are freed here.  every road falls through here, and most hold no
+**   hand: those skip the critical section and its two syscalls.
 */
-c3_w
+void
 u3b_drain(void* rod_v)
 {
   u3a_road* rod_u = rod_v;
   c3_o      hom_o = ( &(u3H->rod_u) == rod_u ) ? c3y : c3n;
-  c3_w      num_w = 0;
+
+  if ( !_blob_head(rod_u) ) {
+    return;
+  }
 
   u3m_crit_inn();
 
@@ -438,11 +450,9 @@ u3b_drain(void* rod_v)
     if ( c3y == hom_o ) {
       c3_free(han_u);
     }
-    num_w++;
   }
 
   u3m_crit_out();
-  return num_w;
 }
 
 /* u3b_drain_kids(): close every hand held below the home road.
@@ -450,17 +460,15 @@ u3b_drain(void* rod_v)
 **   the only unwind that skips u3m_fall is a signal caught at the top;
 **   the kid chain is then the sole path to the abandoned roads' lists.
 */
-c3_w
+void
 u3b_drain_kids(void)
 {
   u3a_road* rod_u = &(u3H->rod_u);
-  c3_w      num_w = 0;
 
   while ( rod_u->kid_p ) {
-    rod_u  = u3to(u3a_road, rod_u->kid_p);
-    num_w += u3b_drain(rod_u);
+    rod_u = u3to(u3a_road, rod_u->kid_p);
+    u3b_drain(rod_u);
   }
-  return num_w;
 }
 
 /* u3b_stop(): close every home-road hand.
@@ -665,14 +673,6 @@ _blob_bucket_make(const c3_c* bob_c, c3_h mug_h)
   return c3y;
 }
 
-/* _blob_lock_path(): write path to <root>/<mug>/lock into [out_c].
-*/
-static void
-_blob_lock_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h)
-{
-  snprintf(out_c, 8192, "%s/%" PRIc3_h "/lock", bob_c, mug_h);
-}
-
 /* u3b_path(): write filesystem path for a blob into [out_c].
 */
 void
@@ -694,10 +694,10 @@ _blob_name_num(const c3_c* nam_c, c3_h* out_h);
 
 /* _blob_bucket_next(): one past the highest seq in bucket [dir_c].
 **
-**   the bucket itself is the record of which seqs are taken: a counter
-**   kept in the lockfile could be lost, emptied by a crash, or rolled
-**   back by a restore, and any of those would hand out a seq already
-**   in use.  Returns 0 if the bucket cannot be read.
+**   the bucket is the record of which seqs are taken, so reading it
+**   cannot disagree with it.  mars is the one writer: nothing else
+**   allocates between this read and the install's rename.  Returns 0
+**   if the bucket cannot be read.
 */
 static c3_h
 _blob_bucket_next(const c3_c* dir_c)
@@ -722,73 +722,6 @@ _blob_bucket_next(const c3_c* dir_c)
   return max_h + 1;
 }
 
-/* _blob_lock_acquire(): acquire mug bucket lock, return next seq number.
-**
-** Creates the mug directory and lockfile if needed.  The lockfile is
-** only a lock: the next seq is one past the highest in the bucket,
-** read while the lock is held.  The lock covers only that allocation
-** and is released on return: the dedup scan and the rename that follow
-** are serialized by the single writer rule (only mars installs), not
-** by this lock.  Returns 0 on failure.
-*/
-static c3_h
-_blob_lock_acquire(const c3_c* bob_c, c3_h mug_h)
-{
-  c3_c dir_c[8192];
-  c3_c lck_c[8192];
-  _blob_mug_dir(dir_c, bob_c, mug_h);
-  _blob_lock_path(lck_c, bob_c, mug_h);
-
-  if ( c3n == _blob_bucket_make(bob_c, mug_h) ) {
-    return 0;
-  }
-
-  //  open lockfile, creating if needed
-  c3_i lok_i = c3_open(lck_c, O_RDWR | O_CREAT, 0600);
-  if ( -1 == lok_i ) {
-    fprintf(stderr, "blob: failed to open lock %s: %s\r\n",
-            lck_c, strerror(errno));
-    return 0;
-  }
-
-  //  exclusive advisory lock (blocking)
-  //
-#ifdef U3_OS_windows
-  {
-    HANDLE han_u = (HANDLE)_get_osfhandle(lok_i);
-    OVERLAPPED olp_u = {0};
-    if ( !LockFileEx(han_u, LOCKFILE_EXCLUSIVE_LOCK, 0, MAXDWORD, MAXDWORD, &olp_u) ) {
-      fprintf(stderr, "blob: failed to lock %s\r\n", lck_c);
-      close(lok_i);
-      return 0;
-    }
-  }
-#else
-  {
-    struct flock flk_u = {
-      .l_type   = F_WRLCK,
-      .l_whence = SEEK_SET,
-      .l_start  = 0,
-      .l_len    = 0,
-    };
-    if ( -1 == fcntl(lok_i, F_SETLKW, &flk_u) ) {
-      fprintf(stderr, "blob: failed to lock %s: %s\r\n",
-              lck_c, strerror(errno));
-      close(lok_i);
-      return 0;
-    }
-  }
-#endif
-
-  c3_h nex_h = _blob_bucket_next(dir_c);
-
-  //  close releases the lock
-  //
-  close(lok_i);
-
-  return nex_h;
-}
-
 /* _blob_dedup(): scan bucket for byte-equal content.
 **
 ** Sets [dup_h] to the sequence number of an existing equal blob, or 0
@@ -806,8 +739,8 @@ _blob_dedup(const c3_c* bob_c, c3_h mug_h, c3_h max_h,
     c3_c fil_c[8192];
     u3b_path(fil_c, bob_c, mug_h, seq_h);
 
-    //  a gap in the sequence is normal: dedup consumes a seq without
-    //  creating a file, and gc removes files
+    //  a gap in the sequence is normal: the gc and refcount deletion
+    //  remove files
     //
     struct stat st_u;
     if ( -1 == stat(fil_c, &st_u) ) {
@@ -1084,32 +1017,6 @@ u3b_live(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
   return ( 0 == stat(fil_c, &st_u) ) ? c3y : c3n;
 }
 
-/* _blob_dir_lone_lock(): true if [dir_c] holds nothing but a lockfile.
-*/
-static c3_o
-_blob_dir_lone_lock(const c3_c* dir_c)
-{
-  DIR* dir_u = opendir(dir_c);
-  c3_o lon_o = c3y;
-
-  if ( !dir_u ) {
-    return c3n;
-  }
-
-  struct dirent* ent_e;
-  while ( (ent_e = readdir(dir_u)) ) {
-    if (  strcmp(ent_e->d_name, ".")
-       && strcmp(ent_e->d_name, "..")
-       && strcmp(ent_e->d_name, "lock") )
-    {
-      lon_o = c3n;
-      break;
-    }
-  }
-  closedir(dir_u);
-  return lon_o;
-}
-
 /* u3b_wipe(): delete a blob file.
 */
 void
@@ -1150,39 +1057,24 @@ u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
             fil_c, strerror(errno));
   }
 
-  //  remove the bucket once it holds nothing but its lockfile.  the
-  //  lockfile is the bucket's sequence counter: while any blob remains
-  //  it must stay, or the next install would start again at seq 1 and
-  //  rename over that blob.
+  //  the last blob takes its bucket with it
   //
-  c3_c dir_c[8192];
-  c3_c lck_c[8192];
-  _blob_mug_dir(dir_c, bob_c, mug_h);
-  _blob_lock_path(lck_c, bob_c, mug_h);
+  {
+    c3_c dir_c[8192];
+    _blob_mug_dir(dir_c, bob_c, mug_h);
 
-  if ( 0 == rmdir(dir_c) || ENOENT == errno ) {
-    return;
-  }
-
-  if ( c3n == _blob_dir_lone_lock(dir_c) ) {
-    return;
-  }
-
-  if ( 0 != unlink(lck_c) && ENOENT != errno ) {
-    fprintf(stderr, "blob: failed to remove lock %s: %s\r\n",
-            lck_c, strerror(errno));
-    return;
-  }
-
-  if ( 0 != rmdir(dir_c) && ENOTEMPTY != errno && ENOENT != errno ) {
-    fprintf(stderr, "blob: failed to remove bucket %s: %s\r\n",
-            dir_c, strerror(errno));
+    if (  (0 != rmdir(dir_c))
+       && (ENOTEMPTY != errno) && (EEXIST != errno) && (ENOENT != errno) )
+    {
+      fprintf(stderr, "blob: failed to remove bucket %s: %s\r\n",
+              dir_c, strerror(errno));
+    }
   }
 }
 
 /* _blob_name_num(): parse a strictly-decimal dirent name into [out_h].
 **
-**   Rejects anything else: "stg", "lock", dotfiles, junk.
+**   Rejects anything else: dotfiles, junk.
 */
 static c3_o
 _blob_name_num(const c3_c* nam_c, c3_h* out_h)
@@ -1390,8 +1282,8 @@ _blob_dir_names(const c3_c* dir_c, c3_w* len_w)
 /* u3b_kill(): remove a store root and everything in it.
 **
 **   An epoch's files die with the epoch.  Two levels, no recursion:
-**   a bucket holds blob files and a lock, nothing else.  A root that
-**   does not exist is not an error.
+**   a bucket holds blob files, nothing else.  A root that does not
+**   exist is not an error.
 */
 void
 u3b_kill(const c3_c* bob_c)
@@ -1524,9 +1416,17 @@ u3b_move_stg(const c3_c* bob_c,
 
   *mug_h = _blob_mug((const c3_y*)map_v, len_d);
 
-  //  acquire mug-bucket lock and get next sequence number
+  //  the next seq: one past the highest in the bucket
   //
-  c3_h nex_h = _blob_lock_acquire(bob_c, *mug_h);
+  c3_h nex_h = 0;
+  {
+    c3_c dir_c[8192];
+    _blob_mug_dir(dir_c, bob_c, *mug_h);
+
+    if ( c3y == _blob_bucket_make(bob_c, *mug_h) ) {
+      nex_h = _blob_bucket_next(dir_c);
+    }
+  }
   if ( 0 == nex_h ) {
     munmap(map_v, (size_t)map_d);
     close(fid_i);

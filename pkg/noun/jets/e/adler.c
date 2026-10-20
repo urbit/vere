@@ -37,11 +37,10 @@ static c3_o _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
   }
 
   //  a view borrows the bytes wherever the atom lives; the caller
-  //  releases it through _x_octs_done.  read-only.
+  //  releases it through _x_octs_done.  read-only.  a bob whose file
+  //  is gone bails %fail, as every other reader does
   //
-  if ( c3n == u3r_view_open(vue_u, *q_octs, c3n) ) {
-    return c3n;
-  }
+  u3r_view_open(vue_u, *q_octs, c3y);
   if ( vue_u->byt_d > c3_w_max ) {
     u3m_bail(c3__fail);
   }

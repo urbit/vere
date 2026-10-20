@@ -27,7 +27,8 @@ _melt_cmp_atoms(u3_atom a, u3_atom b)
 
   //  a bob's body is its blob id, so the same compare serves both
   //  kinds; the mask drops the flag from len_w.  unifying duplicate
-  //  bobs frees them via u3z -> _me_bob_dead, the right bookkeeping.
+  //  bobs frees them via u3z, and _me_bob_dead takes each off its
+  //  record, as each was counted at its own u3i_blob.
   //
   c3_w len_w = a_u->len_w & u3a_blob_mask;
 

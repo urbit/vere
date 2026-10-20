@@ -12,16 +12,16 @@
   ** An epoch owns its blob files: they live in
   ** $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>, the store root of that
   ** epoch (u3b_root).  Every store function takes a root; a process
-  ** keeps the current one in u3C.bob_c.  Each mug bucket has an empty
-  ** lockfile, <root>/<mug>/lock, held only while a seq is allocated.
+  ** keeps the current one in u3C.bob_c, and an unset root declines.
   **
-  ** Mars is the sole writer.  A client such as the king never touches
-  ** <root>/<mug>/<seq>: it writes bytes to a staging file under
-  ** $pier/.urb/stg (u3b_stage, u3b_stage_fd), which tells it the
-  ** content mug, puts a stub (u3i_blob of that mug with seq 0) where
-  ** the bob belongs in its event, and sends the staging path with the
-  ** event; mars installs the file (u3b_move_stg) and puts the real bob
-  ** in the stub's place before it computes the event.
+  ** Mars is the sole writer, so the next seq in a bucket is one past
+  ** the highest there.  A client such as the king never touches
+  ** <root>/<mug>/<seq>.  It stages bytes under $pier/.urb/stg
+  ** (u3b_stage, u3b_stage_fd), which report the content mug; puts a
+  ** stub, u3i_blob of that mug with seq 0, where the bob belongs in
+  ** its event; and sends the staging path with the event.  Mars
+  ** installs the file (u3b_move_stg) and puts the real bob in the
+  ** stub's place before it computes the event.
   */
 
   /* U3_BLOB_THRESH: atoms larger than this (in bytes) are blobified.
@@ -114,7 +114,7 @@
     /* u3b_walk(): enumerate every blob file in the store.
     **
     ** Calls [fun_f] with (mug_h, seq_h) for each <root>/<mug>/<seq>
-    ** file on disk.  Skips bucket lockfiles and dotfiles.  The
+    ** file on disk.  Skips any name not strictly decimal.  The
     ** callback must not create or delete blob files (collect, then act).
     */
       void
@@ -204,9 +204,9 @@
     **   file's pages followed by one anonymous zero page, so a reader
     **   may run one page past the file's end; on Windows it is the
     **   file's own pages, and the rest of the last one reads as zero,
-    **   which covers any reader bound by the atom's word count.  The
-    **   memory is read-only.  Returns 0 if the mapping fails or the
-    **   file was shortened under the hand.
+    **   which covers any reader bound by the atom's word count.
+    **   Returns 0 if the mapping fails or the file was shortened under
+    **   the hand.
     */
       const c3_y*
       u3b_mmap(u3b_hand* han_u);
@@ -219,17 +219,17 @@
     /* u3b_drain(): close every hand held by road [rod_v].
     **
     **   Called from u3m_fall: the road's C frames, and with them every
-    **   view they held, are gone.  Returns the number closed.
+    **   view they held, are gone.
     */
-      c3_w
+      void
       u3b_drain(void* rod_v);
 
     /* u3b_drain_kids(): close every hand held below the home road.
     **
     **   Called after a signal unwinds to the top level, the one path
-    **   that skips u3m_fall.  Returns the number closed.
+    **   that skips u3m_fall.
     */
-      c3_w
+      void
       u3b_drain_kids(void);
 
     /* u3b_hands(): hands open on the home road.

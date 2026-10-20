@@ -206,7 +206,7 @@ _blob_save(const c3_y* dat_y, c3_d len_d, c3_h* mug_h, c3_h* seq_h)
 }
 
 /* _hand_write_raw(): write a blob file directly into one bucket, no
-**   locking or fsync.  [num_w] distinguishes the content.
+**   fsync.  [num_w] distinguishes the content.
 */
 static void
 _hand_write_raw(c3_h mug_h, c3_h seq_h, c3_w num_w)
@@ -399,7 +399,7 @@ _test_path(void)
 }
 
 /* _test_walk(): u3b_walk reports every installed blob exactly once,
-**   skipping the staging dir, lockfiles, and junk entries.
+**   skipping the staging dir and any name not strictly decimal.
 */
 typedef struct {
   c3_d bid_d[8];
@@ -504,22 +504,16 @@ _test_delete_empty_bucket(void)
   //
   u3b_wipe(_tmp_bob, 0xdeadbeef, 999);
 
-  //  a bucket's lockfile is its sequence counter: wiping one blob of
-  //  two leaves it, wiping the last takes it with the bucket
+  //  wiping one blob of two leaves the bucket; wiping the last takes
+  //  the bucket with it
   //
   {
-    c3_c lck_c[8192];
     _hand_write_raw(0x7777, 1, 1);
     _hand_write_raw(0x7777, 2, 2);
     snprintf(dir_c, sizeof(dir_c), "%s/%" PRIc3_h, _tmp_bob, (c3_h)0x7777);
-    snprintf(lck_c, sizeof(lck_c), "%s/lock", dir_c);
-    FILE* fil_f = fopen(lck_c, "wb");
-    _check( fil_f, "lock setup: %s", strerror(errno) );
-    fputs("3", fil_f);
-    fclose(fil_f);
 
     u3b_wipe(_tmp_bob, 0x7777, 1);
-    _check( c3y == _path_exists(lck_c), "lock removed with a blob remaining" );
+    _check( c3y == _path_exists(dir_c), "bucket removed with a blob remaining" );
     u3b_wipe(_tmp_bob, 0x7777, 2);
     _check( c3n == _path_exists(dir_c), "bucket not removed with its last blob" );
   }
@@ -588,19 +582,16 @@ _test_install_stg(void)
   }
 #endif
 
-  //  the bucket, not the lockfile, says which seqs are taken: with the
-  //  lockfile gone and seq 1 holding other bytes, a reinstall lands on
-  //  seq 2 and seq 1 is untouched
+  //  the bucket says which seqs are taken: with seq 1 holding other
+  //  bytes, a reinstall lands on seq 2 and seq 1 is untouched
   //
   {
-    c3_c fil_c[8192], lck_c[8192];
+    c3_c fil_c[8192];
     c3_h mag_h = 0, saq_h = 0;
     struct stat st_u;
 
     u3b_wipe(_tmp_bob, mug_h, seq_h);
     _hand_write_raw(mug_h, 1, 0xabc);
-    snprintf(lck_c, sizeof(lck_c), "%s/%" PRIc3_h "/lock", _tmp_bob, mug_h);
-    _check( (0 != unlink(lck_c)) ? (ENOENT == errno) : 1, "unlink lock: %s", strerror(errno) );
 
     _check( c3y == u3b_stage(_tmp_pier, dat_y, dat_d, stg_c, &_stg_mug), "restage failed" );
     _check(  (c3y == u3b_move_stg(_tmp_bob, stg_c, &mag_h, &saq_h))
@@ -2080,8 +2071,8 @@ _hand_gone_expect(const c3_c* nam_c, u3_funk fun_f)
 }
 
 /* _test_hand_gone(): a bob whose file is missing fails at every entry
-**   point the way its contract says: bail %fail for readers, u3_none
-**   for load, a declined open for a windowed view.
+**   point the way its contract says: bail %fail for readers, a declined
+**   open for a view opened without bal_o.
 */
 static void
 _test_hand_gone(void)
@@ -2098,14 +2089,12 @@ _test_hand_gone(void)
   _hand_gone_expect("fib",  _hand_gone_fib_cb);
   _hand_gone_expect("byte", _hand_gone_byte_cb);
 
-  //  a window and a load report the missing file without bailing
+  //  an open without bal_o reports the missing file without bailing
   //
   {
     u3r_view win_u;
     _check( (c3n == u3r_view_open(&win_u, _han_bob, c3n)) && !u3b_hands(),
             "open did not decline" );
-    _check( (u3_none == u3r_blob_load(_han_bob)) && !u3b_hands(),
-            "load did not decline" );
   }
 
   u3z(_han_bob);
@@ -2429,7 +2418,6 @@ _test_hand_empty(void)
   u3r_view win_u;
 
   _check(  !u3b_open(_tmp_bob, mug_h, 1)
-        && (u3_none == u3r_blob_load(bob))
         && (c3n == u3r_view_open(&win_u, bob, c3n))
         && !u3b_hands(),
           "empty file not rejected" );
@@ -3074,11 +3062,11 @@ _test_roll_link(void)
     fclose(fil_f);
   }
 
-  //  a: held by a live atom.  b: held by nothing.  c: held by a lease.
+  //  a: held by a live atom.  b: held by nothing.  c: held by the king.
   //
   const c3_c* dat_c[] = { "carried by a live atom",
                           "left behind, held by nothing",
-                          "carried by a lease the king holds" };
+                          "carried by a hold the king has" };
   c3_h mug_h[3], seq_h[3];
   for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
     _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),

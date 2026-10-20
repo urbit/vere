@@ -21,7 +21,8 @@
   $%  [%live ?(%meld %pack) ~] :: XX rename
       [%exit ~]
       [%peek mil=@ peek]
-      [%poke mil=@ ovum]
+      [%poke mil=@ pax=(list @t) ovum]  ::  pax: files staged for it
+      [%blrl mug=@ seq=@ n=@]           ::  the king returns n holds
       $:  %quiz
           $%  [%quac ~]
               [%quic ~]
@@ -40,7 +41,7 @@
           $%  [%quac p=*]
               [%quic p=*]
       ==  ==
-      [%ripe [pro=%2 kel=wynn] [who=@p fake=?] eve=@ mug=@]
+      [%ripe [pro=%3 kel=wynn] [who=@p fake=?] eve=@ mug=@ epo=@]
       [%sync eve=@ mug=@]
   ==
 --
@@ -675,38 +676,6 @@ _lord_writ_make(u3_lord* god_u, u3_writ* wit_u)
   }
 
   return msg;
-}
-
-/* _lord_writ_send(): send writ to serf.
-*/
-static void
-_lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
-{
-  //  exit expected
-  //
-  if ( u3_writ_exit == wit_u->typ_e ) {
-    god_u->out_u.bal_f = _lord_bail_noop;
-    god_u->inn_u.bal_f = _lord_bail_noop;
-  }
-
-  {
-    u3_noun jar = _lord_writ_make(god_u, wit_u);
-    c3_d  len_d;
-    c3_y* byt_y;
-
-#ifdef LORD_TRACE_JAM
-    u3t_event_trace("king ipc jam", 'B');
-#endif
-
-    u3s_ram_xeno(jar, &len_d, &byt_y);
-
-#ifdef LORD_TRACE_JAM
-    u3t_event_trace("king ipc jam", 'E');
-#endif
-
-    u3_newt_send_vers(&god_u->inn_u, 0x01, len_d, byt_y);
-    u3z(jar);
-  }
 }
 
 /* _lord_send(): send writ to serf.

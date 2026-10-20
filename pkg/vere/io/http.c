@@ -191,8 +191,8 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 /* _cttp_bods_free(): free body structure.
 **
 **   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
-**   shares one window; the tail carries own_o and closes it.  Free walks
-**   head→tail, so the window is released only after every chunk that
+**   shares one view; the tail carries own_o and closes it.  Free walks
+**   head→tail, so the view is released only after every chunk that
 **   read through it.
 */
 static void
@@ -222,13 +222,13 @@ _cttp_bods_free(u3_hbod* bod_u)
 #define U3_HTTP_BOB_CHUNK  (1U << 20)
 
 /* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
-**   blob-backed hbods — no loom allocation, no mapping.
+**   blob-backed hbods: no loom allocation, no mapping.
 **
-**   The bob is opened once, as a window on the king's home road;
-**   the chain is a list of U3_HTTP_BOB_CHUNK-sized windows that
-**   _http_hgen_send reads into heap buffers only as h2o asks for them.
-**   The tail chunk owns the window (own_o) and closes it when the chain
-**   is freed.
+**   The bob is opened once, as a view on the king's home road.  The
+**   chain is a list of U3_HTTP_BOB_CHUNK-sized chunks that share it;
+**   _http_hgen_send copies each into a heap buffer only as h2o asks
+**   for it.  The tail chunk owns the view (own_o) and closes it when
+**   the chain is freed.
 **
 **   Returns 0 if the blob can't be opened (missing file, empty, too
 **   short); the caller fails the response.
@@ -236,7 +236,7 @@ _cttp_bods_free(u3_hbod* bod_u)
 static u3_hbod*
 _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 {
-  //  the window outlives this event: it must belong to the home road,
+  //  the view outlives this event: it must belong to the home road,
   //  the one road no bail or signal ever unwinds.
   //
   u3_assert( &(u3H->rod_u) == u3R );
@@ -248,7 +248,7 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
     return 0;
   }
 
-  //  a zero-length body needs no chunk, and no window
+  //  a zero-length body needs no chunk, and no view
   //
   if ( 0 == len_w ) {
     u3_hbod* bod_u = c3_malloc(1 + sizeof(*bod_u));
@@ -293,8 +293,8 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
 **
-**   Bob atoms take the streaming path: the blob is read window by
-**   window on the king's side as h2o drains the response.  The inline
+**   Bob atoms take the streaming path: the blob is read chunk by chunk
+**   on the king's side as h2o drains the response.  The inline
 **   path would copy the whole body into the hbod's hun_y, a heap
 **   allocation the size of the file.
 **
@@ -1312,13 +1312,8 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
   }
 }
 
-static u3_hcon*
-_http_conn_find(u3_http *htp_u, c3_w coq_l);
 static c3_o
 _http_req_cache(u3_hreq* req_u);
-static u3_hreq*
-_http_req_prepare(h2o_req_t* rec_u,
-                  u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
 
 /* _http_req_reject(): fail a request that never reached arvo.
 */
@@ -1558,9 +1553,9 @@ _http_hgen_dispose(void* ptr_v)
 **
 **   Inline (small) bodies fit in a single chunk so this is a no-op
 **   change for them.  Large bob-atom bodies chunk naturally because
-**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized windows, and a
-**   window is read from the blob only here, as it is about to be sent.
-**   At most two batches of windows are ever resident (this one and the
+**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized chunks, and a
+**   chunk is read from the blob only here, as it is about to be sent.
+**   At most two batches of chunks are ever resident (this one and the
 **   one h2o is still draining), which is what keeps king's memory and
 **   h2o's internal buffers bounded while streaming multi-GiB files.
 */
@@ -1599,7 +1594,7 @@ _http_hgen_send(u3_hgen* gen_u)
   _cttp_bods_free(gen_u->nud_u);
   gen_u->nud_u = send_u;
 
-  //  read this batch's blob windows into heap buffers
+  //  read this batch's blob chunks into heap buffers
   //
   for ( u3_hbod* cur_u = send_u; cur_u; cur_u = cur_u->nex_u ) {
     if ( cur_u->win_u && !cur_u->buf_y ) {

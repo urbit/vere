@@ -437,22 +437,24 @@
       /* u3r_view: a look into an atom's bytes, wherever the atom lives.
       **
       **   The one way to read a bob, and the same for every other atom.
-      **   open copies no atom bytes (a bob's open may allocate its hand);
-      **   copy copies any byte range into the caller's memory, zero past
-      **   the end; bytes and words borrow a pointer to the atom's
-      **   contiguous bytes or words (a loom atom's own buffer, a bob's
-      **   mapping, a direct atom's value held in the view) for as long as
-      **   the view is open; done releases.  Borrowed memory is read-only.
-      **   byt_d and bit_d are public and valid from open; the other
-      **   fields are private.  A view is valid until done on the road
-      **   that opened it and is never copied.  An inner road's bail or
-      **   signal releases what a view borrowed; the home road calls done
-      **   itself.  Every byte from byt_d to the next word boundary is
-      **   readable and zero; a bob's mapping on posix is readable and
-      **   zero to one page past the file.  The legacy u3r_bytes and
-      **   u3r_words copy; these borrow.  On the home road a legacy
-      **   accessor on a bob opens, maps, and closes per call: hold a
-      **   view across a loop there.
+      **   open copies no atom bytes (a bob's open may allocate its hand).
+      **   copy copies a byte range into the caller's memory, zero past
+      **   the end.  bytes and words borrow a read-only pointer to the
+      **   atom's bytes or words (a loom atom's buffer, a bob's mapping,
+      **   a direct atom's value held in the view).  done releases.
+      **
+      **   byt_d and bit_d are public and valid from open; the rest is
+      **   private.  A view is valid until done, on the road that opened
+      **   it, and is never copied.  An inner road's bail or signal
+      **   releases what its views borrowed; the home road calls done.
+      **
+      **   Every byte from byt_d to the next word boundary reads as zero;
+      **   a bob's mapping on posix reads as zero to one page past the
+      **   file.
+      **
+      **   The legacy u3r_bytes and u3r_words copy.  On the home road a
+      **   legacy accessor on a bob opens, maps, and closes per call, so
+      **   home-road code holds a view across a loop.
       */
         typedef enum {
           u3r_view_loom = 0,    //  the loom word buffer
@@ -710,16 +712,6 @@
       */
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
-
-      /* u3r_blob_load(): materialize a bob atom as a loom atom.
-      **
-      **   Reads the whole blob into a fresh atom the caller owns.  Returns
-      **   u3_none if the file is missing, empty, or short.  Only for
-      **   callers that need a loom atom as such; readers of a range go
-      **   through a view (u3r_bytes and friends).
-      */
-        u3_weak
-        u3r_blob_load(u3_atom a);
 
       /* u3r_met_d(): u3r_met at full width, for any atom.
       **

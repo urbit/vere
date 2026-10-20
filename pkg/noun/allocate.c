@@ -1193,18 +1193,16 @@ u3a_blob_sane(c3_o dep_o)
   return ctx_u.ok_o;
 }
 
-/* _me_bob_dead(): bob atom's loom refcount just hit zero.
+/* _me_bob_dead(): a bob atom's loom refcount just hit zero.
 **
-**   Decrements u3a_blob.use_w (atom cardinality contribution).  If
-**   use_w hits zero, calls blob_del_f — mars wipes the file and drops
-**   the blb_p entry; king releases its lease (%blrl) and drops its
-**   local entry, never touching files.
+**   Takes the atom's one off its record's use_h.  When the last live
+**   atom is gone (use_h == les_h) it calls blob_del_f, whatever holds
+**   remain: mars deletes the file if nothing holds or owns it, and the
+**   king returns its holds with %blrl and drops its record.
 **
-**   The refcount is intrinsic bookkeeping and is always maintained; only
-**   the notification depends on a hook being installed. The offline
-**   subcommands (queu, meld, pack) free bob atoms with no blob_del_f —
-**   _king_blob_init() runs on the daemon paths only — so gating the
-**   decrement on the hook would let use_w drift there.
+**   The decrement is unconditional; only the call depends on a hook.
+**   The offline subcommands (queu, meld, pack) free bobs with no hook,
+**   and skipping the decrement there would let use_h drift.
 */
 static void
 _me_bob_dead(u3a_atom* atm_u)
