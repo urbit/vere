@@ -1025,6 +1025,13 @@ u3a_post_info(u3_post);
           void
           u3a_blob_hold(const c3_d* bid_d, c3_w len_w);
 
+        /* u3a_blob_live(): the live set: every blob id reachable from a
+        **   home road root, distinct, ascending, on the C heap.  Home
+        **   road only.
+        */
+          c3_d*
+          u3a_blob_live(c3_z* len_z);
+
         /* u3a_blob_sane(): blob-bank invariant check; home road only.
         **   Verifies use_h == les_h + atom cardinality per entry.
         **   [dep_o] adds a noun-graph walk counting live bob atoms;

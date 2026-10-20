@@ -1020,6 +1020,59 @@ _blob_sane_hamt_cb(u3_noun kev, void* ptr_v)
   u3a_walk_fore(kev, ptr_v, _blob_sane_atom_cb, _blob_sane_cell_cb);
 }
 
+/* _blob_roots_walk(): count live bobs per id under every home road
+**   root.  The one list of roots: the sanity check and the roll both
+**   use it, so a root added later is added once.
+*/
+static void
+_blob_roots_walk(_blob_sane_ctx* ctx_u)
+{
+  u3a_walk_fore(u3A->roc, ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+  u3a_walk_fore(u3A->yot, ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+  u3a_walk_fore(u3R->bug.tax, ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+  u3a_walk_fore(u3R->bug.mer, ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
+  u3h_walk_with(u3R->jed.cod_p, _blob_sane_hamt_cb, ctx_u);
+  u3h_walk_with(u3R->cax.per_p, _blob_sane_hamt_cb, ctx_u);
+  u3h_walk_with(u3R->cax.for_p, _blob_sane_hamt_cb, ctx_u);
+}
+
+static int
+_blob_live_cmp(const void* a_v, const void* b_v)
+{
+  c3_d a_d = *(const c3_d*)a_v;
+  c3_d b_d = *(const c3_d*)b_v;
+  return ( a_d < b_d ) ? -1 : ( a_d > b_d ) ? 1 : 0;
+}
+
+/* u3a_blob_live(): the live set: every blob id reachable from a home
+**   road root, distinct, ascending, on the C heap (c3_free it).
+**   Home road only; 0 with *len_z == 0 when nothing is reachable.
+*/
+c3_d*
+u3a_blob_live(c3_z* len_z)
+{
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  _blob_sane_ctx ctx_u = {0};
+  vt_init(&ctx_u.set_u);
+  _blob_roots_walk(&ctx_u);
+  vt_cleanup(&ctx_u.set_u);
+
+  c3_d* bid_d = 0;
+
+  if ( ctx_u.len_z ) {
+    bid_d = c3_malloc(ctx_u.len_z * sizeof(c3_d));
+    for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
+      bid_d[i_z] = ctx_u.car_u[i_z].bid_d;
+    }
+    qsort(bid_d, ctx_u.len_z, sizeof(c3_d), _blob_live_cmp);
+  }
+
+  *len_z = ctx_u.len_z;
+  c3_free(ctx_u.car_u);
+  return bid_d;
+}
+
 static c3_w
 _blob_sane_card(_blob_sane_ctx* ctx_u, c3_d bid_d)
 {
@@ -1106,14 +1159,7 @@ u3a_blob_sane(c3_o dep_o)
 
   if ( c3y == dep_o ) {
     vt_init(&ctx_u.set_u);
-
-    u3a_walk_fore(u3A->roc, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
-    u3a_walk_fore(u3A->yot, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
-    u3a_walk_fore(u3R->bug.tax, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
-    u3a_walk_fore(u3R->bug.mer, &ctx_u, _blob_sane_atom_cb, _blob_sane_cell_cb);
-    u3h_walk_with(u3R->jed.cod_p, _blob_sane_hamt_cb, &ctx_u);
-    u3h_walk_with(u3R->cax.per_p, _blob_sane_hamt_cb, &ctx_u);
-    u3h_walk_with(u3R->cax.for_p, _blob_sane_hamt_cb, &ctx_u);
+    _blob_roots_walk(&ctx_u);
   }
 
   u3h_walk_with(u3H->blb_p, _blob_sane_bank_cb, &ctx_u);

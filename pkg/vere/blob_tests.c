@@ -2905,6 +2905,53 @@ _epoc_event(MDB_env* env_u, c3_d eve_d, c3_d* ids_d, c3_z len_z)
           "event %" PRIu64 " save failed", eve_d );
 }
 
+/* _test_live(): u3a_blob_live is the distinct ids reachable from the
+**   home road's roots, ascending: two atoms over one id under the state,
+**   shared structure walked once, one atom under a memo cache; a stub
+**   and an atom no root reaches are absent.
+*/
+static void
+_test_live(void)
+{
+  _pier_make("live");
+
+  const c3_c* dat_c[] = { "under the state, twice",
+                          "under a memo cache",
+                          "reachable from no root" };
+  c3_h mug_h[3], seq_h[3];
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    _check( c3y == _blob_save((const c3_y*)dat_c[i_w], strlen(dat_c[i_w]),
+                              &mug_h[i_w], &seq_h[i_w]),
+            "save %" PRIc3_w " failed", i_w );
+  }
+
+  u3_noun par = u3nc(u3i_blob(mug_h[0], seq_h[0]), u3i_blob(mug_h[0], seq_h[0]));
+  u3_noun old = u3A->roc;
+  u3A->roc    = u3nt(par, u3k(par), u3i_blob(mug_h[1], 0));
+
+  u3_noun key = u3i_string("live");
+  u3h_put(u3R->cax.per_p, key, u3i_blob(mug_h[1], seq_h[1]));
+
+  u3_noun los = u3i_blob(mug_h[2], seq_h[2]);
+
+  c3_z  len_z = 0;
+  c3_d* bid_d = u3a_blob_live(&len_z);
+  c3_d  a_d   = ((c3_d)mug_h[0] << 32) | seq_h[0];
+  c3_d  b_d   = ((c3_d)mug_h[1] << 32) | seq_h[1];
+
+  _check( 2 == len_z, "live set has %" PRIc3_z " ids, want 2", len_z );
+  _check( bid_d && (bid_d[0] == c3_min(a_d, b_d)) && (bid_d[1] == c3_max(a_d, b_d)),
+          "live set not the two reachable ids, ascending" );
+  c3_free(bid_d);
+
+  u3z(los);
+  u3h_del(u3R->cax.per_p, key);
+  u3z(key);
+  u3z(u3A->roc);
+  u3A->roc = old;
+  _pier_done();
+}
+
 /* _test_roll_link(): roll carries every blob the bank holds into the
 **   new epoch's store and leaves the rest behind: a live atom and a
 **   leased record are linked (one inode, two names), a record nothing
@@ -3409,6 +3456,7 @@ main(int argc, char* argv[])
   _test_hand_access();
   _test_lifecycle();
   _test_blobs_persist();
+  _test_live();
   _test_roll_link();
   _test_chop_kill();
   _test_gc_own();
