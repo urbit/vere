@@ -612,17 +612,14 @@ _blob_mug_dir(c3_c* out_c, const c3_c* bob_c, c3_h mug_h)
   snprintf(out_c, 8192, "%s/%" PRIc3_h, bob_c, mug_h);
 }
 
-/* _blob_sync_dir(): fsync a mug bucket directory so a freshly-created
+/* _blob_sync_path(): fsync directory [dir_c] so a freshly-created
 **   entry survives a crash before the next global sync.  No-op on
 **   Windows, which cannot open a directory as a file descriptor.
 */
 static void
-_blob_sync_dir(const c3_c* bob_c, c3_h mug_h)
+_blob_sync_path(const c3_c* dir_c)
 {
 #ifndef U3_OS_windows
-  c3_c dir_c[8192];
-  _blob_mug_dir(dir_c, bob_c, mug_h);
-
   c3_i dir_i = open(dir_c, O_RDONLY);
   if ( -1 == dir_i ) {
     return;
@@ -630,6 +627,42 @@ _blob_sync_dir(const c3_c* bob_c, c3_h mug_h)
   c3_sync(dir_i);
   close(dir_i);
 #endif
+}
+
+/* _blob_sync_dir(): fsync the mug bucket of (bob_c, mug_h).
+*/
+static void
+_blob_sync_dir(const c3_c* bob_c, c3_h mug_h)
+{
+  c3_c dir_c[8192];
+  _blob_mug_dir(dir_c, bob_c, mug_h);
+  _blob_sync_path(dir_c);
+}
+
+/* _blob_bucket_make(): make the store root and the mug bucket if
+**   missing.  a new bucket is an entry in the root, synced like a new
+**   blob is in its bucket.
+*/
+static c3_o
+_blob_bucket_make(const c3_c* bob_c, c3_h mug_h)
+{
+  c3_c dir_c[8192];
+  _blob_mug_dir(dir_c, bob_c, mug_h);
+
+  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
+    fprintf(stderr, "blob: failed to create store %s: %s\r\n",
+            bob_c, strerror(errno));
+    return c3n;
+  }
+  if ( 0 == c3_mkdir(dir_c, 0700) ) {
+    _blob_sync_path(bob_c);
+  }
+  else if ( EEXIST != errno ) {
+    fprintf(stderr, "blob: failed to create bucket %s: %s\r\n",
+            dir_c, strerror(errno));
+    return c3n;
+  }
+  return c3y;
 }
 
 /* _blob_lock_path(): write path to <root>/<mug>/lock into [out_c].
@@ -706,16 +739,7 @@ _blob_lock_acquire(const c3_c* bob_c, c3_h mug_h)
   _blob_mug_dir(dir_c, bob_c, mug_h);
   _blob_lock_path(lck_c, bob_c, mug_h);
 
-  //  create the store root and the mug bucket if needed
-  //
-  if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "blob: failed to create store %s: %s\r\n",
-            bob_c, strerror(errno));
-    return 0;
-  }
-  if ( 0 != c3_mkdir(dir_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "blob: failed to create bucket %s: %s\r\n",
-            dir_c, strerror(errno));
+  if ( c3n == _blob_bucket_make(bob_c, mug_h) ) {
     return 0;
   }
 
@@ -1049,6 +1073,10 @@ u3b_stage_fd(const c3_c* pax_c,
 c3_o
 u3b_live(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
+  if ( !bob_c ) {
+    return c3n;
+  }
+
   c3_c fil_c[8192];
   u3b_path(fil_c, bob_c, mug_h, seq_h);
 
@@ -1087,6 +1115,10 @@ _blob_dir_lone_lock(const c3_c* dir_c)
 void
 u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
+  if ( !bob_c ) {
+    return;
+  }
+
   c3_c fil_c[8192];
   u3b_path(fil_c, bob_c, mug_h, seq_h);
 
@@ -1179,6 +1211,10 @@ u3b_walk(const c3_c* bob_c,
              void*       ptr_v,
              void      (*fun_f)(void*, c3_h, c3_h))
 {
+  if ( !bob_c ) {
+    return;
+  }
+
   DIR* bob_u = opendir(bob_c);
   if ( !bob_u ) {
     return;
@@ -1280,14 +1316,11 @@ u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
 {
   c3_c src_c[8192];
   c3_c dst_c[8192];
-  c3_c dir_c[8192];
 
   u3b_path(src_c, old_c, mug_h, seq_h);
   u3b_path(dst_c, new_c, mug_h, seq_h);
-  _blob_mug_dir(dir_c, new_c, mug_h);
 
-  if ( 0 != c3_mkdir(dir_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "blob: link: mkdir %s: %s\r\n", dir_c, strerror(errno));
+  if ( c3n == _blob_bucket_make(new_c, mug_h) ) {
     return c3n;
   }
 
@@ -1432,6 +1465,10 @@ u3b_move_stg(const c3_c* bob_c,
                     c3_h*       mug_h,
                     c3_h*       seq_h)
 {
+  if ( !bob_c ) {
+    return c3n;
+  }
+
   struct stat st_u;
   if ( -1 == stat(stg_c, &st_u) ) {
     fprintf(stderr, "blob: install_stg: stat failed on %s: %s\r\n",

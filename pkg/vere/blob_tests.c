@@ -3092,6 +3092,13 @@ _test_roll_link(void)
   blb_c->les_h += 1;
   blb_c->use_h += 1;
 
+  //  d: held, no root reaches it, and its file is gone.  the new epoch
+  //  can do without it, so the roll reports it and goes on
+  //
+  u3a_blob* blb_d = u3a_blob_new(0x5eed, 1);
+  blb_d->les_h += 1;
+  blb_d->use_h += 1;
+
   //  the image holds a: the roll owns what a root reaches
   //
   u3_noun old = u3A->roc;
@@ -3183,6 +3190,10 @@ _test_roll_link(void)
   u3A->roc = old;
   blb_c->les_h = 0; blb_c->use_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
+  _check( u3a_blob_get(0x5eed, 1), "the fileless hold-only record went" );
+  u3a_blob_get(0x5eed, 1)->les_h = 0;
+  u3a_blob_get(0x5eed, 1)->use_h = 0;
+  u3a_blob_drop(0x5eed, 1);
   _pier_done();
 }
 

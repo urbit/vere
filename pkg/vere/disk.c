@@ -1145,44 +1145,6 @@ _disk_epoc_zero(c3_c* pax_c)
   return c3n;
 }
 
-/* _disk_roll_link_cb(): u3h_walk_with callback: carry one held blob
-**   into the new epoch's store.
-*/
-typedef struct {
-  const c3_c* old_c;
-  const c3_c* new_c;
-  c3_w        num_w;   //  carried
-  c3_w        bad_w;   //  not carried
-} _disk_roll_link;
-
-static void
-_disk_roll_link_cb(u3_noun kev, void* ptr_v)
-{
-  _disk_roll_link* lin_u = ptr_v;
-  c3_d bid_d = 0;
-  c3_d off_d = 0;
-
-  u3r_safe_chub(u3h(kev), &bid_d);
-  u3r_safe_chub(u3t(kev), &off_d);
-
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  c3_h      mug_h = (c3_h)(bid_d >> 32);
-  c3_h      seq_h = (c3_h)bid_d;
-
-  //  a record nothing holds names a file the new epoch never needs
-  //
-  if ( !blb_u->use_h ) {
-    return;
-  }
-
-  if ( c3y == u3b_link(lin_u->old_c, lin_u->new_c, mug_h, seq_h) ) {
-    lin_u->num_w++;
-  }
-  else {
-    lin_u->bad_w++;
-  }
-}
-
 /* _disk_roll_bank: the roll's bank pass: the live set (what a root
 **   reaches, ascending), the ghosts to drop once the roll stands, and
 **   how many records the counts call live that no root reaches.
@@ -1208,6 +1170,51 @@ _disk_roll_live(const _disk_roll_bank* ban_u, c3_d bid_d)
     else                                    return c3y;
   }
   return c3n;
+}
+
+/* _disk_roll_link_cb(): u3h_walk_with callback: carry one held blob
+**   into the new epoch's store.  a file the image needs (a live-set
+**   id) refuses the roll if it cannot be carried; any other is reported
+**   and left behind, since the new epoch can recompute it.
+*/
+typedef struct {
+  const c3_c*            old_c;
+  const c3_c*            new_c;
+  const _disk_roll_bank* ban_u;   //  the live set
+  c3_w                   num_w;   //  carried
+  c3_w                   bad_w;   //  not carried, and the image needs it
+} _disk_roll_link;
+
+static void
+_disk_roll_link_cb(u3_noun kev, void* ptr_v)
+{
+  _disk_roll_link* lin_u = ptr_v;
+  c3_d bid_d = 0;
+  c3_d off_d = 0;
+
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  c3_h      mug_h = (c3_h)(bid_d >> 32);
+  c3_h      seq_h = (c3_h)bid_d;
+
+  //  a record nothing holds names a file the new epoch never needs
+  //
+  if ( !blb_u->use_h ) {
+    return;
+  }
+
+  if ( c3y == u3b_link(lin_u->old_c, lin_u->new_c, mug_h, seq_h) ) {
+    lin_u->num_w++;
+  }
+  else if ( c3y == _disk_roll_live(lin_u->ban_u, bid_d) ) {
+    lin_u->bad_w++;
+  }
+  else {
+    fprintf(stderr, "disk: roll: %08" PRIx32 "/%" PRIc3_h " not carried; "
+                    "no root reaches it\r\n", mug_h, seq_h);
+  }
 }
 
 /* _disk_roll_bank_cb(): u3h_walk_with callback for the roll's bank
@@ -1306,9 +1313,13 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   if ( old_c ) {
     //  carry every held blob into the new store first: the links can
     //  fail, and nothing in the bank has changed yet if they do.  the
-    //  current epoch's store already holds them
+    //  live set, what a root reaches, says which failures the image
+    //  cannot survive.  the current epoch's store already holds them
     //
-    _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c };
+    liv_d       = u3a_blob_live(&ban_u.len_z);
+    ban_u.liv_d = liv_d;
+
+    _disk_roll_link lin_u = { .old_c = old_c, .new_c = bob_c, .ban_u = &ban_u };
 
     if ( c3n == cur_o ) {
       u3h_walk_with(u3H->blb_p, _disk_roll_link_cb, &lin_u);
@@ -1332,8 +1343,6 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
     //  nothing holds, are only collected here: a failed roll leaves the
     //  old epoch's bank whole, and they go at the end
     //
-    liv_d       = u3a_blob_live(&ban_u.len_z);
-    ban_u.liv_d = liv_d;
     u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &ban_u);
 
     if ( ban_u.mis_w ) {
@@ -1595,9 +1604,15 @@ _disk_blob_root(const c3_c* pax_c, c3_d epo_d)
 
   u3b_root(bob_c, pax_c, epo_d);
 
+  //  a store that cannot be made (a flat log under --no-migrate has no
+  //  epoch directory to hold one) leaves the root unset: every store
+  //  function declines, and an event that brings a file is refused
+  //
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
-    fprintf(stderr, "disk: failed to create blob store %s: %s\r\n",
+    fprintf(stderr, "disk: no blob store at %s: %s\r\n",
             bob_c, strerror(errno));
+    u3C.bob_c = 0;
+    return;
   }
 
   u3C.bob_c = bob_c;
