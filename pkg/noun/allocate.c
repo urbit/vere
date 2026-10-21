@@ -483,6 +483,11 @@ u3a_wash(u3_noun som)
 **   and a home-road lose of a noun with a pending gain cancels one. a
 **   noun's true count is its box's count plus its pending count, so a
 **   box is freed only when both run out. closing writes what's left.
+**
+**   the table holds at most u3a_Defer_max_w nouns. past that, gains on
+**   nouns not already in it are written as usual: a product that shares
+**   little with the old state saves little, and shouldn't cost much.
+**   each noun stays in one mode for the whole window, so mixing is safe.
 */
 #define NAME    _ca_pend
 #define KEY_TY  u3_noun
@@ -490,6 +495,8 @@ u3a_wash(u3_noun som)
 #define HASH_FN vt_hash_integer
 #define CMPR_FN vt_cmpr_integer
 #include "verstable.h"
+
+c3_w u3a_Defer_max_w = 1U << 20;
 
 static struct {
   c3_t     arm_t;  //  armed: open at the next road exit into home
@@ -506,23 +513,29 @@ _ca_defer_on(void)
   return _ca_defer_u.ope_t && (&(u3H->rod_u) == u3R);
 }
 
-/* _ca_defer_gain(): count a gain on [dog].
+/* _ca_defer_gain(): count a gain on [dog], if there's room.
 */
-static void
+static c3_t
 _ca_defer_gain(u3_noun dog)
 {
   _ca_pend_itr itr_u = _ca_pend_get(&_ca_defer_u.pen_u, dog);
 
-  if ( _ca_pend_is_end(itr_u) ) {
-    itr_u = _ca_pend_insert(&_ca_defer_u.pen_u, dog, 1);
-
-    if ( _ca_pend_is_end(itr_u) ) {
-      u3m_bail(c3__meme);
-    }
-  }
-  else {
+  if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
+    return 1;
   }
+
+  if ( _ca_pend_size(&_ca_defer_u.pen_u) >= u3a_Defer_max_w ) {
+    return 0;
+  }
+
+  itr_u = _ca_pend_insert(&_ca_defer_u.pen_u, dog, 1);
+
+  if ( _ca_pend_is_end(itr_u) ) {
+    u3m_bail(c3__meme);
+  }
+
+  return 1;
 }
 
 /* _ca_defer_lose(): cancel a pending gain on [dog], if any.
@@ -606,7 +619,14 @@ u3a_defer_close(void)
     box_u->use_w += val_w;
   }
 
+  //  clearing keeps capacity, and iterating and clearing cost the whole
+  //  bucket array, so give back what a large window grew
+  //
   _ca_pend_clear(&_ca_defer_u.pen_u);
+
+  if ( _ca_pend_bucket_count(&_ca_defer_u.pen_u) > 4096 ) {
+    (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
+  }
 }
 
 /* _me_gain_use(): increment use count.
@@ -620,8 +640,9 @@ _me_gain_use(u3_noun dog)
     if ( box_u->use_w == 0 ) {
       u3m_bail(c3__foul);
     }
-    _ca_defer_gain(dog);
-    return;
+    if ( _ca_defer_gain(dog) ) {
+      return;
+    }
   }
 
   if ( u3a_direct_max == box_u->use_w ) {

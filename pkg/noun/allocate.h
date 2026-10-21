@@ -829,6 +829,10 @@ u3a_post_info(u3_post);
           void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
+        /* u3a_Defer_max_w: most nouns with deferred gains at once.
+        */
+          extern c3_w u3a_Defer_max_w;
+
         /* u3a_defer_arm(): defer home-road refcount gains, cancelling
         **                  them against loses, from the next road exit
         **                  into the home road until u3a_defer_close().

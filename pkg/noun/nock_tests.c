@@ -185,6 +185,45 @@ _test_defer(void)
     ret_i = 0;
   }
 
+  //  past the cap, gains on new nouns are written as usual, and the
+  //  result is the same: [hom] fills the table, so the product's other
+  //  noun (a fresh atom, not in it) spills
+  //
+  {
+    c3_w    max_w = u3a_Defer_max_w;
+    u3_noun gun;
+
+    arg = u3k(hom);
+    u3a_Defer_max_w = 1;
+    u3a_defer_arm();
+    gon = u3m_soft(0, _defer_pair, arg);
+
+    if ( bas_w != u3a_use(hom) ) {
+      fprintf(stderr, "defer: cap: hom written while open\r\n");
+      ret_i = 0;
+    }
+
+    gun = u3m_soft(0, _defer_pair, u3i_string("spill"));
+
+    if ( 2 != u3a_use(u3h(u3t(gun))) ) {
+      fprintf(stderr, "defer: cap: spill not written: %u\r\n",
+                      u3a_use(u3h(u3t(gun))));
+      ret_i = 0;
+    }
+
+    u3a_defer_close();
+    u3a_Defer_max_w = max_w;
+
+    if ( tak_w != u3a_use(hom) ) {
+      fprintf(stderr, "defer: cap: have %u, need %u\r\n",
+                      u3a_use(hom), tak_w);
+      ret_i = 0;
+    }
+
+    u3z(gun);
+    u3z(gon);
+  }
+
   //  a cancelled lose doesn't free: with our own reference released
   //  while the product's gains are pending, [hom] lives on in it
   //
