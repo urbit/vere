@@ -16,6 +16,10 @@
 
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
+
+//  home-road hashcons membership (see u3m_dedup())
+//
+c3_w* u3a_Hcon_w;
 u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
@@ -861,6 +865,10 @@ top:
         u3m_bail(c3__foul);
       }
       else {
+        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
+          u3m_dedup_lose(dog);
+        }
+
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
@@ -900,6 +908,10 @@ top:
         u3m_bail(c3__foul);
       }
       else {
+        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
+          u3m_dedup_lose(dog);
+        }
+
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
@@ -987,13 +999,25 @@ _ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
     //
     if ( asr_t ) return c3n;
 
-    //  both are on u3R; keep the deeper address
-    //  (and gain a reference)
+    //  both are on u3R. on the home road, keep a hashcons member;
+    //  otherwise keep the deeper address (and gain a reference)
     //
     //    (N && <) || (S && >)
     //    XX consider keeping higher refcount instead
     //
-    if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+    {
+      c3_t ahc_t = 0, bhc_t = 0;
+
+      if ( &(u3H->rod_u) == u3R ) {
+        ahc_t = u3a_hcon_has(*a);
+        bhc_t = u3a_hcon_has(*b);
+      }
+
+      if ( ahc_t != bhc_t ) {
+        if ( bhc_t ) SWAP(a, b);
+      }
+      else if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+    }
 
     _me_gain_use(*a);
   }
@@ -1969,6 +1993,13 @@ u3a_sweep(void)
   c3_w siz_w = !(u3C.wag_h & u3o_debug_ram)
                ? _sweep_directory()
                : _sweep_counts();
+
+  //  leaked nouns are freed without u3a_lose(), so the home-road
+  //  hashcons set may refer to them
+  //
+  if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
+    u3m_dedup_ream();
+  }
 
   return siz_w;
 }

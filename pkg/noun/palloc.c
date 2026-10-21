@@ -1420,6 +1420,10 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
   fprintf(fil_u, "}\r\n");
 }
 
+//  words freed as leaks by the last sweep
+//
+static c3_w _sweep_leq_w;
+
 static c3_w
 _sweep_directory(void)
 {
@@ -1539,6 +1543,8 @@ _sweep_directory(void)
       }
     }
   }
+
+  _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
@@ -1874,6 +1880,8 @@ _sweep_counts(void)
       }
     }
   }
+
+  _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
