@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Summarize a jb/measure log (<pier>/.urb/measure-<time>.log).
+"""Summarize a jb/measure log (<pier>/.urb/measure/measure-<time>.log).
 
 Usage: measure-report.py [--intervals] [--keep-first] LOG|DIR ...
 
-Accepts any number of logs, or directories (a pier, its .urb, or any
-directory holding measure-*.log files). Logs are aggregated. Each log
+Accepts any number of logs, or directories (a pier, its .urb, its
+.urb/measure, or any directory holding measure-*.log files). Logs are aggregated. Each log
 starts at a restart, so by default the first snapshot interval of each
 log is dropped (it includes startup); --keep-first keeps it. Tasks
 recorded after a log's last snapshot are ignored.
@@ -24,6 +24,13 @@ Log lines (one snapshot interval ends at each S line):
                                             home-road table entries at the snapshot
   C <reclaims> <byc-cleared> <han-cleared> <dup-before-prune> <dup-pruned>
                                             u3m_reclaim() calls since the last snapshot
+  A <record-frees> <clean-allocs> <with-dirty-room> <frees-then-allocated>
+                                            home-road page records and allocation
+  M <resident> <anonymous> <file-backed> <swapped>
+                                            process memory in bytes at the snapshot
+
+Lines after an S line report on that interval. The header gives the
+ship, the runtime version, OS and architecture. To integrate logs across ships, see measure-aggregate.py.
 """
 
 import glob
@@ -43,6 +50,7 @@ def new_interval():
         "F": defaultdict(int),
         "U": 0,
         "A": None,
+        "M": None,
         "R": {},
         "K": None,
         "B": {},
@@ -96,6 +104,8 @@ def parse(path):
                 cur["U"] = int(line.split()[1])
             elif t == "A" and cur is not None:
                 cur["A"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "M" and cur is not None:
+                cur["M"] = tuple(int(x) for x in line.split()[1:])
             elif t == "R" and cur is not None:
                 p = line.split()
                 cur["R"][p[1]] = tuple(int(x) for x in p[2:])
@@ -119,6 +129,8 @@ def find_logs(args):
     for a in args:
         if os.path.isdir(a):
             found = (glob.glob(os.path.join(a, "measure-*.log")) or
+                     glob.glob(os.path.join(a, "measure", "measure-*.log")) or
+                     glob.glob(os.path.join(a, ".urb", "measure", "measure-*.log")) or
                      glob.glob(os.path.join(a, ".urb", "measure-*.log")))
             if not found:
                 print(f"no measure-*.log in {a}", file=sys.stderr)
@@ -262,6 +274,19 @@ def main():
                             "unregistered core"], k):
             print(f"    {name:<34}{n:>12}  {pct(n, tk)}")
 
+
+    mis = [i for i in intervals if i["M"]]
+    if mis:
+        mib = lambda b: f"{b / (1 << 20):.0f} MB"
+        print("\n== process memory at each snapshot ==")
+        print("  (anonymous memory can only be swapped; file-backed loom pages")
+        print("  can be dropped and read back. on macOS, swap is compressed memory)")
+        print("                  min      median         max        last")
+        for j, name in enumerate(["resident", "anonymous", "file-backed", "swapped"]):
+            v = [i["M"][j] for i in mis]
+            sv = sorted(v)
+            print(f"  {name:<12}{mib(sv[0]):>9}{mib(sv[len(sv) // 2]):>12}"
+                  f"{mib(sv[-1]):>12}{mib(v[-1]):>12}")
 
     ais = [i for i in intervals if i["A"]]
     if ais:

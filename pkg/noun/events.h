@@ -149,7 +149,7 @@
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */
       void
-      u3e_measure_init(const c3_c* dir_c);
+      u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c);
 
     /* u3e_measure_event(): record pages changed by the task just
     **                      completed. call on the home road.

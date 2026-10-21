@@ -7,6 +7,7 @@
 #include "noun.h"
 #include "events.h"
 #include "pace.h"
+#include "ship.h"
 #include "types.h"
 #include "vere.h"
 #include "ivory.h"
@@ -1310,6 +1311,42 @@ _mars_sign_close(void)
   }
 }
 
+/* _mars_measure_init(): start measuring if U3_MEASURE is set, naming
+**                       the ship in the log.
+*/
+static void
+_mars_measure_init(u3_mars* mar_u)
+{
+  c3_c*   env_c = getenv("U3_MEASURE");
+  c3_c*   who_c = 0;
+  u3_meta met_u;
+
+  //  (as u3e_measure_init(), which checks again): don't render the
+  //  ship name unless measuring
+  //
+  if ( !env_c || !*env_c || ('0' == *env_c) ) {
+    return;
+  }
+
+  if ( c3y == u3_disk_read_meta(mar_u->log_u->mdb_u, &met_u) ) {
+    //  @p needs the kernel; replaying from the start has none yet
+    //
+    if ( u3A->eve_d ) {
+      who_c = u3_ship_to_string(met_u.who_d);
+    }
+    else {
+      u3_atom who = u3i_chubs(2, met_u.who_d);
+      u3_atom hex = u3s_etch_ux(who);
+      who_c = u3r_string(hex);
+      u3z(hex);
+      u3z(who);
+    }
+  }
+
+  u3e_measure_init(mar_u->dir_c, URBIT_VERSION, who_c);
+  c3_free(who_c);
+}
+
 /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
 */
 c3_d
@@ -1318,7 +1355,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3_disk* log_u = mar_u->log_u;
   c3_d     pay_d = 0;
 
-  u3e_measure_init(mar_u->dir_c);
+  _mars_measure_init(mar_u);
 
   if ( !eve_d ) {
     eve_d = log_u->dun_d;
@@ -1515,7 +1552,7 @@ u3_mars_work(u3_mars* mar_u)
 {
   mar_u->sil_u = u3s_cue_xeno_init();
 
-  u3e_measure_init(mar_u->dir_c);
+  _mars_measure_init(mar_u);
 
   //  start signal handlers
   //
