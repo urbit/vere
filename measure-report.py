@@ -48,6 +48,7 @@ def new_interval():
         "L": {},
         "T": None,
         "C": None,
+        "G": None,
     }
 
 
@@ -105,6 +106,8 @@ def parse(path):
                 cur["T"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
                 cur["C"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "G" and cur is not None:
+                cur["G"] = tuple(int(x) for x in line.split()[1:])
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -285,6 +288,19 @@ def main():
                   f"hank entries cleared {han / rec:.0f}")
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
+
+    gis = [i for i in intervals if i["G"]]
+    if gis and any(i["G"][0] for i in gis):
+        win, gan, nou, _, can, spl, rit, ent, shr = (
+            sum(i["G"][j] for i in gis) for j in range(9))
+        mx = max(i["G"][3] for i in gis)
+        print("\n== deferred gains across the state swap ==")
+        print(f"  windows: {win}   gains deferred: {gan} "
+              f"({gan / win if win else 0:.0f} per window, on {nou / win if win else 0:.0f} nouns)")
+        print(f"  cancelled by a lose: {can}  {pct(can, gan)}")
+        print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
+        print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
+        print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)

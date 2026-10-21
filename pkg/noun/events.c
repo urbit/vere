@@ -369,6 +369,15 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,
                    u3e_Meter.pru_d[0], u3e_Meter.pru_d[1]);
+
+    //  deferred gains across the state swap
+    //
+    fprintf(fil_u, "G %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.dfw_d, u3e_Meter.dfg_d, u3e_Meter.dfn_d,
+                   u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
+                   u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
   }
   fflush(fil_u);
 

@@ -133,6 +133,18 @@
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+
+          //  deferred gains across the state swap (u3a_defer_open())
+          //
+          c3_d dfw_d;        //  windows
+          c3_d dfg_d;        //  gains deferred
+          c3_d dfn_d;        //    on distinct nouns (summed over windows)
+          c3_d dfx_d;        //  most nouns pending in one window
+          c3_d dfc_d;        //  gains cancelled by a lose
+          c3_d dfs_d;        //  gains written directly: table at its cap
+          c3_d dfr_d;        //  gains written at close
+          c3_d dfe_d;        //    on distinct nouns
+          c3_d dfk_d;        //  table shrinks after a large window
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

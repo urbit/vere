@@ -568,10 +568,12 @@ _ca_defer_gain(u3_noun dog)
 
   if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
+    u3e_Meter.dfg_d++;
     return 1;
   }
 
   if ( _ca_pend_size(&_ca_defer_u.pen_u) >= u3a_Defer_max_w ) {
+    u3e_Meter.dfs_d++;
     return 0;
   }
 
@@ -582,6 +584,15 @@ _ca_defer_gain(u3_noun dog)
   }
 
   _ca_defer_mark(dog);
+
+  u3e_Meter.dfg_d++;
+  u3e_Meter.dfn_d++;
+  {
+    c3_d siz_d = _ca_pend_size(&_ca_defer_u.pen_u);
+    if ( siz_d > u3e_Meter.dfx_d ) {
+      u3e_Meter.dfx_d = siz_d;
+    }
+  }
   return 1;
 }
 
@@ -600,6 +611,7 @@ _ca_defer_lose(u3_noun dog)
     _ca_pend_erase_itr(&_ca_defer_u.pen_u, itr_u);
   }
 
+  u3e_Meter.dfc_d++;
   return 1;
 }
 
@@ -651,6 +663,7 @@ u3a_defer_open(void)
   }
 
   _ca_defer_u.ope_t = 1;
+  u3e_Meter.dfw_d++;
 }
 
 /* u3a_defer_close(): write the gains still pending, stop deferring.
@@ -679,6 +692,8 @@ u3a_defer_close(void)
     }
 
     box_u->use_w += val_w;
+    u3e_Meter.dfr_d += val_w;
+    u3e_Meter.dfe_d++;
   }
 
   //  clearing keeps capacity, and iterating and clearing cost the whole
@@ -693,6 +708,7 @@ u3a_defer_close(void)
 
   if ( _ca_pend_bucket_count(&_ca_defer_u.pen_u) > 4096 ) {
     (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
+    u3e_Meter.dfk_d++;
   }
 }
 
