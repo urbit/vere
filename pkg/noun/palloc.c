@@ -1297,6 +1297,37 @@ _unpoison_words(void)
   }
 }
 
+/* _mark_test(): [som_p] (an allocation) is marked, without marking it.
+*/
+static c3_t
+_mark_test(u3_post som_p)
+{
+  c3_w pag_w = post_to_page(som_p);
+  c3_w blk_w = pag_w >> u3a_word_bits_log;
+  c3_w bit_w = pag_w & (u3a_word_bits-1);
+
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3_post dir_p = dir_u[pag_w];
+
+  if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+    return 0;
+  }
+  //  page allocation, marked
+  //
+  else if ( dir_p <= u3a_rest_pg ) {
+    return 1;
+  }
+  //  chunk allocation: marking clears its bit
+  //
+  else {
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_h     *mar_h = (c3_h*)(u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w]);
+
+    return !(mar_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)));
+  }
+}
+
 static c3_w
 _mark_post(u3_post som_p)
 {

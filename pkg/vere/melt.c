@@ -4,6 +4,7 @@
 #include "options.h"
 #include "retrieve.h"
 #include "vortex.h"
+#include "vere.h"
 
 static c3_d
 _melt_hash(u3_noun foo)
@@ -156,7 +157,7 @@ _melt_walk_hamt(u3_noun kev, void* ptr_v)
 }
 
 c3_w
-u3_melt_all(FILE *fil_u)
+u3_melt_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w     pre_w = u3a_idle(u3R);
   _melt_ctx can_u = {0};
@@ -181,6 +182,25 @@ u3_melt_all(FILE *fil_u)
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
 
+  //  drop registrations of unreachable batteries, once everything is
+  //  canonical. the home-road hashcons set holds references to them,
+  //  and this melt has canonicalized anyway.
+  //
+  if ( opt_w & u3_melt_cold ) {
+    c3_w tot_w, dea_w;
+    c3_w num_w = u3j_prune(&tot_w, &dea_w);
+
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+
+    if ( fil_u ) {
+      fprintf(fil_u, "melt: dropped %" PRIc3_w " of %" PRIc3_w
+                     " batteries (%" PRIc3_w " unreachable, %" PRIc3_w
+                     " kept as parents)\r\n",
+                     num_w, tot_w, dea_w, dea_w - num_w);
+    }
+  }
+
   u3j_boot(c3n);
   u3j_ream();
 
@@ -202,26 +222,26 @@ u3_melt_all(FILE *fil_u)
 }
 
 c3_w
-u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
+u3_meld_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w pre_w = u3a_open(u3R);
 
-  if ( _(per_o) ) {
+  if ( opt_w & u3_melt_memo ) {
     u3h_free(u3R->cax.per_p);
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
   }
 
-  if ( _(for_o) ) {
+  if ( opt_w & u3_melt_ford ) {
     u3h_free(u3R->cax.for_p);
     u3R->cax.for_p = u3h_new_cache(u3C.per_w);
   }
 
-  if ( _(c3a(for_o, per_o)) ) {
+  if ( (opt_w & u3_melt_memo) && (opt_w & u3_melt_ford) ) {
     u3h_free(u3R->dup_p);
     u3R->dup_p = u3h_new();
   }
 
-  (void)u3_melt_all(fil_u);
+  (void)u3_melt_all(fil_u, opt_w);
   (void)u3m_pack();
 
   return u3a_open(u3R) - pre_w;
