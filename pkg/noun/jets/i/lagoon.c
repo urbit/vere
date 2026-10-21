@@ -25,6 +25,11 @@
 #define f32_nonfin(a)   ( 0x7f800000 == (0x7f800000 & (a).v) )
 #define f64_nonfin(a)   ( 0x7ff0000000000000ULL == (0x7ff0000000000000ULL & (a).v) )
 #define f128M_nonfin(a) ( 0x7fff000000000000ULL == (0x7fff000000000000ULL & (a).v[1]) )
+//  quiet or signaling NaN: exponent all ones with a nonzero significand
+#define f16_isnan(a)    ( f16_nonfin(a) && (0 != (0x03ff & (a).v)) )
+#define f32_isnan(a)    ( f32_nonfin(a) && (0 != (0x007fffff & (a).v)) )
+#define f64_isnan(a)    ( f64_nonfin(a) && (0 != (0x000fffffffffffffULL & (a).v)) )
+#define f128M_isnan(a)  ( f128M_nonfin(a) && ((0 != (a).v[0]) || (0 != (0x0000ffffffffffffULL & (a).v[1]))) )
 
   union half {
     float16_t h;
@@ -278,35 +283,39 @@
     // syz_x is length in bytes
     c3_d syz_x = len_x * pow(2, bloq-3);
 
-    // x_bytes is the data array (w/o leading 0x1)
-    c3_y* x_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
-    u3r_bytes(0, syz_x, x_bytes, x_data);
+    // x_bytes holds x_data (w/ leading 0x1, skipped by ?axpy); it is the result
+    c3_y* x_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
+    u3r_bytes(0, syz_x+1, x_bytes, x_data);
 
-    // y_bytes is the data array (w/ leading 0x1, skipped by ?axpy)
-    c3_y* y_bytes = (c3_y*)u3a_malloc((syz_x+1)*sizeof(c3_y));
-    u3r_bytes(0, syz_x+1, y_bytes, y_data);
-    
-    //  Switch on the block size.
+    // y_bytes holds y_data (w/o leading 0x1), the subtrahend
+    c3_y* y_bytes = (c3_y*)u3a_malloc(syz_x*sizeof(c3_y));
+    u3r_bytes(0, syz_x, y_bytes, y_data);
+
+    //  Switch on the block size.  SoftBLAS ?axpy is y := a*x + y, so
+    //  (sub a b) = a - b is ?axpy(-1, b_data, a_data) with a_data as the
+    //  accumulator.  The operands were reversed here, computing b - a
+    //  (correct only when a == b, e.g. the 1-1=0 test); +sub of distinct
+    //  operands, like 5-3, returned the negated difference.
     switch (u3x_atom(bloq)) {
       case 4:
-        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)x_bytes, 1, (float16_t*)y_bytes, 1);
+        haxpy(len_x, (float16_t){SB_REAL16_NEGONE}, (float16_t*)y_bytes, 1, (float16_t*)x_bytes, 1);
         break;
 
       case 5:
-        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)x_bytes, 1, (float32_t*)y_bytes, 1);
+        saxpy(len_x, (float32_t){SB_REAL32_NEGONE}, (float32_t*)y_bytes, 1, (float32_t*)x_bytes, 1);
         break;
 
       case 6:
-        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)x_bytes, 1, (float64_t*)y_bytes, 1);
+        daxpy(len_x, (float64_t){SB_REAL64_NEGONE}, (float64_t*)y_bytes, 1, (float64_t*)x_bytes, 1);
         break;
 
       case 7:
-        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)x_bytes, 1, (float128_t*)y_bytes, 1);
+        qaxpy(len_x, (float128_t){SB_REAL128L_NEGONE,SB_REAL128U_NEGONE}, (float128_t*)y_bytes, 1, (float128_t*)x_bytes, 1);
         break;
     }
 
     // r_data is the result noun of [data]
-    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), y_bytes);
+    u3_noun r_data = u3i_bytes((syz_x+1)*sizeof(c3_y), x_bytes);
 
     //  Clean up and return.
     u3a_free(x_bytes);
@@ -2065,9 +2074,12 @@
     //  per (lth (sub b a) 0).  A one-shot ceil((b-a)/d) count can
     //  disagree with the accumulated stop test (e.g. d = .0.1), so
     //  replicate the iteration: one pass to count, one to fill.
-    //  Punt on a non-finite endpoint or step, a zero step, or a
-    //  stalled accumulator (x + d == x short of b): the Nock loops
-    //  forever there, and that is its call to make.
+    //  Where the Hoon never terminates -- a NaN upper bound (the stop
+    //  test can never hold) or a stalled accumulator (x + d == x short
+    //  of b: a zero or underflowing step, a NaN, or an infinite start)
+    //  -- bail %fail: an infinite loop is a non-deterministic failure,
+    //  not a deterministic crash (%exit) and not something to punt to
+    //  the Nock.  A finite but absurd count (the cap) is still punted.
     u3_noun r_data;
 
 #define _LA_RANGE_MAX  ( (c3_d)1 << 28 )
@@ -2079,10 +2091,8 @@
         u3r_bytes(0, wyd_y, (c3_y*)&a_v, a);                           \
         u3r_bytes(0, wyd_y, (c3_y*)&b_v, b);                           \
         u3r_bytes(0, wyd_y, (c3_y*)&d_v, d);                           \
-        if ( fw##_nonfin(a_v) || fw##_nonfin(b_v) ||                   \
-             fw##_nonfin(d_v) || fw##_iszero(d_v) )                    \
-        {                                                              \
-          return u3_none;                                              \
+        if ( fw##_isnan(b_v) ) {                                       \
+          return u3m_bail(c3__fail);                                   \
         }                                                              \
         ba_v = fw##_sub(b_v, a_v);                                     \
         c3_o des_o = __(fw##_lt(ba_v, fw##_zero));                     \
@@ -2095,7 +2105,10 @@
           {                                                            \
             break;                                                     \
           }                                                            \
-          if ( fw##_same(nx_v, x_v) || (cnt_d >= _LA_RANGE_MAX) ) {    \
+          if ( fw##_same(nx_v, x_v) ) {                                \
+            return u3m_bail(c3__fail);                                 \
+          }                                                            \
+          if ( cnt_d >= _LA_RANGE_MAX ) {                              \
             return u3_none;                                            \
           }                                                            \
           cnt_d++;                                                     \
@@ -2118,9 +2131,6 @@
 #define f32_zero        ((float32_t){0})
 #define f64_zero        ((float64_t){0})
 #define f16_same(x, y)  ( (x).v == (y).v )
-#define f16_iszero(x)   ( 0 == ((x).v & 0x7fff) )
-#define f32_iszero(x)   ( 0 == ((x).v & 0x7fffffff) )
-#define f64_iszero(x)   ( 0 == ((x).v & 0x7fffffffffffffffULL) )
 #define f32_same(x, y)  ( (x).v == (y).v )
 #define f64_same(x, y)  ( (x).v == (y).v )
 
@@ -2135,11 +2145,8 @@
         u3r_bytes(0, 16, (c3_y*)&(a_v.v[0]), a);
         u3r_bytes(0, 16, (c3_y*)&(b_v.v[0]), b);
         u3r_bytes(0, 16, (c3_y*)&(d_v.v[0]), d);
-        if ( f128M_nonfin(a_v) || f128M_nonfin(b_v) ||
-             f128M_nonfin(d_v) ||
-             ((0 == d_v.v[0]) && (0 == (d_v.v[1] << 1))) )
-        {
-          return u3_none;
+        if ( f128M_isnan(b_v) ) {
+          return u3m_bail(c3__fail);
         }
         f128M_sub(&b_v, &a_v, &ba_v);
         c3_o des_o = __(f128M_lt(&ba_v, &zer_v));
@@ -2152,9 +2159,10 @@
           {
             break;
           }
-          if ( ((nx_v.v[0] == x_v.v[0]) && (nx_v.v[1] == x_v.v[1])) ||
-               (cnt_d >= _LA_RANGE_MAX) )
-          {
+          if ( (nx_v.v[0] == x_v.v[0]) && (nx_v.v[1] == x_v.v[1]) ) {
+            return u3m_bail(c3__fail);
+          }
+          if ( cnt_d >= _LA_RANGE_MAX ) {
             return u3_none;
           }
           cnt_d++;
@@ -2225,7 +2233,7 @@
         (Na != Nb)) {
       return u3m_bail(c3__exit);
     }
-    c3_d N = Na;  
+    c3_d N = Na;
 
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     // len_x is length in base units
