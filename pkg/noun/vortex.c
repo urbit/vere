@@ -292,6 +292,12 @@ u3v_poke(u3_noun sam)
 # endif
   }
 
+  //  measurement: the new state's alignment with the old
+  //
+  if ( c3y == u3a_is_cell(pro) ) {
+    u3e_measure_align(u3t(pro), u3A->roc);
+  }
+
   return pro;
 }
 

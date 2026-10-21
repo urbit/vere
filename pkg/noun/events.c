@@ -378,6 +378,12 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.dfw_d, u3e_Meter.dfg_d, u3e_Meter.dfn_d,
                    u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
                    u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
+
+    //  alignment of the new arvo states with the old
+    //
+    fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
+                   u3e_Meter.aln_exc_d);
   }
   fflush(fil_u);
 
@@ -389,6 +395,86 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
   }
+}
+
+#define NAME    _ce_vis
+#define KEY_TY  u3_noun
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+typedef struct { u3_noun new, old; c3_t exc_t; } _ce_aln;
+
+/* u3e_measure_align(): at the end of a poke, on the event's road (just
+**                      below home), compare the new arvo state [new]
+**                      with the old [old] by position.
+**
+**   for each reference from a cell on this road (which the take will
+**   copy) to a home noun (which it will gain), count whether the old
+**   state has the same noun at the same position, and whether every old
+**   cell on the way there has a refcount of 1 (releasing the old state
+**   frees them, so the gain would cancel by position alone). as states
+**   diverge, deferring gains pays off less; alignment, observable
+**   during the take, is a candidate predictor for bounding it.
+*/
+void
+u3e_measure_align(u3_noun new, u3_noun old)
+{
+  _ce_vis  vis_u;
+  _ce_aln* sac_u;
+  c3_w     len_w = 0, cap_w = 1024;
+
+  if ( !_ce_meas.on_t ) return;
+
+  _ce_vis_init(&vis_u);
+  sac_u = c3_malloc(cap_w * sizeof(*sac_u));
+  sac_u[len_w++] = (_ce_aln){ new, old, 1 };
+
+  while ( len_w ) {
+    _ce_aln aln_u = sac_u[--len_w];
+    u3_noun n = aln_u.new, o = aln_u.old;
+
+    if ( c3y == u3a_is_cat(n) ) continue;
+
+    if ( c3y == u3a_is_senior(u3R, n) ) {
+      u3e_Meter.aln_all_d++;
+      if ( n == o ) {
+        u3e_Meter.aln_pos_d++;
+        if ( aln_u.exc_t ) u3e_Meter.aln_exc_d++;
+      }
+      continue;
+    }
+
+    if ( c3n == u3a_is_cell(n) ) continue;
+
+    {
+      _ce_vis_itr itr_u = _ce_vis_get(&vis_u, n);
+      if ( !_ce_vis_is_end(itr_u) ) continue;
+      _ce_vis_insert(&vis_u, n);
+    }
+
+    {
+      u3_noun oh = u3_none, ot = u3_none;
+      c3_t    exc_t = 0;
+
+      if ( (u3_none != o) && (c3y == u3a_is_cell(o)) ) {
+        oh = u3h(o); ot = u3t(o);
+        exc_t = aln_u.exc_t
+             && (c3y == u3a_is_senior(u3R, o))
+             && (1 == u3a_use(o));
+      }
+
+      if ( (len_w + 2) > cap_w ) {
+        cap_w *= 2;
+        sac_u = c3_realloc(sac_u, cap_w * sizeof(*sac_u));
+      }
+      sac_u[len_w++] = (_ce_aln){ u3h(n), oh, exc_t };
+      sac_u[len_w++] = (_ce_aln){ u3t(n), ot, exc_t };
+    }
+  }
+
+  c3_free(sac_u);
+  _ce_vis_cleanup(&vis_u);
 }
 
 /* u3e_measure_init(): start measuring if U3_MEASURE is set.
