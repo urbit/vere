@@ -603,6 +603,33 @@ _ca_defer_lose(u3_noun dog)
   return 1;
 }
 
+/* _ca_defer_gain_cold(): while open, defer a gain on [dog] if we can.
+**
+**   gains and loses are the hottest paths in the runtime; keep the
+**   deferral checks out of line, behind a single flag test.
+*/
+static __attribute__((noinline, cold)) c3_t
+_ca_defer_gain_cold(u3_noun dog)
+{
+  if ( !_ca_defer_on() ) {
+    return 0;
+  }
+
+  if ( 0 == ((u3a_noun*)u3a_to_ptr(dog))->use_w ) {
+    u3m_bail(c3__foul);
+  }
+
+  return _ca_defer_gain(dog);
+}
+
+/* _ca_defer_lose_cold(): while open, cancel a pending gain on [dog].
+*/
+static __attribute__((noinline, cold)) c3_t
+_ca_defer_lose_cold(u3_noun dog)
+{
+  return _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog);
+}
+
 /* u3a_defer_open(): defer home-road refcount gains (see above).
 **
 **   pass to u3m_soft_with(), which runs it only on success, back on the
@@ -676,13 +703,8 @@ _me_gain_use(u3_noun dog)
 {
   u3a_noun* box_u = u3a_to_ptr(dog);
 
-  if ( _ca_defer_on() ) {
-    if ( box_u->use_w == 0 ) {
-      u3m_bail(c3__foul);
-    }
-    if ( _ca_defer_gain(dog) ) {
-      return;
-    }
+  if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_gain_cold(dog) ) {
+    return;
   }
 
   if ( u3a_direct_max == box_u->use_w ) {
@@ -1059,7 +1081,7 @@ top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
-    if ( _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog) ) {
+    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
       return;
     }
 
@@ -1102,7 +1124,7 @@ top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
-    if ( _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog) ) {
+    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
       return;
     }
 
