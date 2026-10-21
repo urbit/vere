@@ -2321,12 +2321,15 @@ _cj_prune_drop(u3_noun kev, void* ptr_v)
 **   state (u3j_ream()).
 */
 c3_w
-u3j_prune(void)
+u3j_prune(c3_w* tot_w, c3_w* dea_w)
 {
   _cj_prune_ctx ctx_u;
   c3_w          num_w = 0;
 
   u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( tot_w ) *tot_w = 0;
+  if ( dea_w ) *dea_w = 0;
 
   //  NB: -g marks by reference counting, without a mark bitmap
   //
@@ -2348,6 +2351,9 @@ u3j_prune(void)
   u3h_walk_with(u3R->cax.for_p, _cj_prune_mark, 0);
   u3h_walk_with(u3R->jed.cod_p, _cj_prune_find, &ctx_u.dea_p);
   u3a_mark_done();
+
+  if ( tot_w ) *tot_w = u3h_wyt(u3R->jed.cod_p);
+  if ( dea_w ) *dea_w = u3h_wyt(ctx_u.dea_p);
 
   //  keep the registrations that kept ones need as parents
   //

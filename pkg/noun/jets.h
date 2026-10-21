@@ -198,10 +198,13 @@
                    u3_noun cor);
 
       /* u3j_prune(): drop cold-state registrations of unreachable
-      **              batteries, producing how many were dropped.
+      **              batteries, producing how many were dropped. if
+      **              non-null, [tot_w] gets how many were registered
+      **              and [dea_w] how many were unreachable (the rest
+      **              of those were kept as parents of kept ones).
       */
         c3_w
-        u3j_prune(void);
+        u3j_prune(c3_w* tot_w, c3_w* dea_w);
 
       /* u3j_ream(): refresh after restoring from checkpoint.
       */

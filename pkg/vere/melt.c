@@ -187,13 +187,17 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
   //  and this melt has canonicalized anyway.
   //
   if ( opt_w & u3_melt_cold ) {
-    c3_w num_w = u3j_prune();
+    c3_w tot_w, dea_w;
+    c3_w num_w = u3j_prune(&tot_w, &dea_w);
 
     u3h_free(u3R->dup_p);
     u3R->dup_p = u3h_new();
 
     if ( fil_u ) {
-      fprintf(fil_u, "melt: dropped %" PRIc3_w " unreachable batteries\r\n", num_w);
+      fprintf(fil_u, "melt: dropped %" PRIc3_w " of %" PRIc3_w
+                     " batteries (%" PRIc3_w " unreachable, %" PRIc3_w
+                     " kept as parents)\r\n",
+                     num_w, tot_w, dea_w, dea_w - num_w);
     }
   }
 
