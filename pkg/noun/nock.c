@@ -3068,79 +3068,89 @@ _cn_take_prog_cb(c3_w pog_w)
   return _cn_of_prog(gop_u);
 }
 
-/* u3n_take(): copy junior bytecode state.
-*/
-u3p(u3h_root)
-u3n_take(u3p(u3h_root) har_p)
-{
-  return u3h_take_with(har_p, _cn_take_prog_cb);
-}
-
-/* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
+/* _cn_reap_prog_dat(): merge junior [src_u] into [dst_u], reading
+**                      junior memory, writing only what changed.
+**
+**   a junior copy of a parent's program borrows its literals and
+**   call-site nouns, so most fields are the same pointers; taking them
+**   would gain references only to lose them again in the merge, and
+**   storing an equal value still dirties a clean page.
 */
 static void
-_cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
+_cn_reap_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 {
   c3_w i_w;
 
   for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
-    u3z(dst_u->lit_u.non[i_w]);
-    dst_u->lit_u.non[i_w] = src_u->lit_u.non[i_w];
+    if ( dst_u->lit_u.non[i_w] != src_u->lit_u.non[i_w] ) {
+      u3_noun lit = u3a_take(src_u->lit_u.non[i_w]);
+      u3z(dst_u->lit_u.non[i_w]);
+      dst_u->lit_u.non[i_w] = lit;
+    }
   }
 
   for ( i_w = 0; i_w < src_u->mem_u.len_w; ++i_w ) {
     u3n_memo* emo_u = &(dst_u->mem_u.sot_u[i_w]);
     u3n_memo* ome_u = &(src_u->mem_u.sot_u[i_w]);
-    u3z(emo_u->key);
-    emo_u->sip_l    = ome_u->sip_l;
-    emo_u->key      = ome_u->key;
-    emo_u->cid      = ome_u->cid;
+
+    if ( emo_u->key != ome_u->key ) {
+      u3_noun key = u3a_take(ome_u->key);
+      u3z(emo_u->key);
+      emo_u->key = key;
+    }
+
+    if ( emo_u->sip_l != ome_u->sip_l ) emo_u->sip_l = ome_u->sip_l;
+    if ( emo_u->cid   != ome_u->cid   ) emo_u->cid   = ome_u->cid;
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_merge(&(dst_u->cal_u.sit_u[i_w]),
-                   &(src_u->cal_u.sit_u[i_w]));
+    u3j_site_reap(&(dst_u->cal_u.sit_u[i_w]),
+                  &(src_u->cal_u.sit_u[i_w]));
   }
 
   for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
-    u3j_rite_merge(&(dst_u->reg_u.rit_u[i_w]),
-                   &(src_u->reg_u.rit_u[i_w]));
+    u3j_rite_reap(&(dst_u->reg_u.rit_u[i_w]),
+                  &(src_u->reg_u.rit_u[i_w]));
   }
 }
 
-/*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
+/*  _cn_reap_prog_cb(): u3h_walk_with cb for integrating junior u3n_prog's.
 */
 static void
-_cn_merge_prog_cb(u3_noun kev, void* wit)
+_cn_reap_prog_cb(u3_noun kev, void* wit)
 {
   u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
-  u3n_prog*     pog_u;
-  u3_weak         got;
   u3_noun         key;
   c3_w          pog_w;
+  u3_weak         got;
   u3x_cell(kev, &key, &pog_w);
 
-  pog_u = _cn_to_prog(pog_w);
-  got   = u3h_git(har_p, key);
+  got = u3h_git(har_p, key);
 
   if ( u3_none != got ) {
-    u3n_prog* sep_u = _cn_to_prog(got);
-    _cn_merge_prog_dat(sep_u, pog_u);
-    u3a_free(pog_u);
-    pog_u = sep_u;
+    _cn_reap_prog_dat(_cn_to_prog(got), _cn_to_prog(pog_w));
   }
+  else {
+    u3_noun     yek = u3a_take(key);
+    u3p(u3n_prog) gop_p = _cn_take_prog_cb(pog_w);
 
-  u3h_put(har_p, key, _cn_of_prog(pog_u));
+    u3h_put(har_p, yek, gop_p);
+    u3z(yek);
+  }
 }
 
-/* u3n_reap(): promote bytecode state.
+/* u3n_reap(): promote junior bytecode state [har_p], in place.
+**
+**   call after u3m_fall(), while the junior heap is still intact, with
+**   the parent's [kid_p] still set (see u3m_love()): keys are compared
+**   against the parent's, and unifying equality must not repoint a
+**   parent noun into junior memory. the junior table is discarded with
+**   the junior heap.
 */
 void
 u3n_reap(u3p(u3h_root) har_p)
 {
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
-  // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
+  u3h_walk_with(har_p, _cn_reap_prog_cb, &u3R->byc.har_p);
 }
 
 /* _n_ream(): ream program call sites
