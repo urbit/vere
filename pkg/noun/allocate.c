@@ -472,7 +472,7 @@ u3a_wash(u3_noun som)
   }
 }
 
-/* deferred gains (u3a_defer_arm(), u3a_defer_take(), u3a_defer_close()).
+/* deferred gains (u3a_defer_open(), u3a_defer_close()).
 **
 **   between taking an event's product onto the home road and releasing
 **   the old arvo state, most references gained on home nouns are lost
@@ -499,7 +499,6 @@ u3a_wash(u3_noun som)
 c3_w u3a_Defer_max_w = 1U << 20;
 
 static struct {
-  c3_t     arm_t;  //  armed: open at the next road exit into home
   c3_t     ope_t;  //  open
   c3_t     ini_t;  //  table initialized
   _ca_pend pen_u;  //  noun -> pending gains
@@ -556,30 +555,17 @@ _ca_defer_lose(u3_noun dog)
   return 1;
 }
 
-/* u3a_defer_arm(): defer home-road refcount gains from the next road
-**                  exit into the home road (see above).
+/* u3a_defer_open(): defer home-road refcount gains (see above).
 **
-**   arming, rather than opening, keeps the window shut while a failed
-**   event's trace is rendered: u3m_soft() runs +mook on the home road.
+**   pass to u3m_soft_with(), which runs it only on success, back on the
+**   home road before anything is taken; a failed event's trace is then
+**   rendered with the window shut.
 */
 void
-u3a_defer_arm(void)
+u3a_defer_open(void)
 {
   u3_assert( !_ca_defer_u.ope_t );
-  _ca_defer_u.arm_t = 1;
-}
-
-/* u3a_defer_take(): open the window if armed. called by u3m_love()
-**                   on exit into the home road, before the take.
-*/
-void
-u3a_defer_take(void)
-{
-  if ( !_ca_defer_u.arm_t ) {
-    return;
-  }
-
-  _ca_defer_u.arm_t = 0;
+  u3_assert( &(u3H->rod_u) == u3R );
 
   if ( !_ca_defer_u.ini_t ) {
     _ca_pend_init(&_ca_defer_u.pen_u);
@@ -589,14 +575,12 @@ u3a_defer_take(void)
   _ca_defer_u.ope_t = 1;
 }
 
-/* u3a_defer_close(): disarm, write the gains still pending, stop deferring.
+/* u3a_defer_close(): write the gains still pending, stop deferring.
 */
 void
 u3a_defer_close(void)
 {
   _ca_pend_itr itr_u;
-
-  _ca_defer_u.arm_t = 0;
 
   if ( !_ca_defer_u.ope_t ) {
     return;

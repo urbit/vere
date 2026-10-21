@@ -303,16 +303,13 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
   //  defer home-road gains from the product's take to the old state's
   //  release, so that the many that cancel are never written
   //
-  u3a_defer_arm();
-
-  u3_noun gon = u3m_soft(mil_w, u3v_poke, eve);
+  u3_noun gon = u3m_soft_with(mil_w, u3v_poke, eve, u3a_defer_open);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
 
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
-    u3a_defer_close();
     *pro = gon;
     return c3n;
   }

@@ -1001,18 +1001,15 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   c3_y    pha_y = u3e_Phase;
   u3_noun gon, tag, dat;
 
-  u3a_defer_arm();  //  as in u3v_poke_sure()
-
   //  measurement: tagged as in u3v_poke_sure()
   //
   u3e_Phase = u3e_pha_poke;
-  gon = u3m_soft(0, u3v_poke, tac_u->job);
+  gon = u3m_soft_with(0, u3v_poke, tac_u->job, u3a_defer_open);  //  see u3v_poke_sure()
   u3x_cell(gon, &tag, &dat);
 
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
-    u3a_defer_close();
     u3e_Phase = pha_y;
     return gon;
   }

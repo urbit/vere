@@ -115,13 +115,16 @@
         void
         u3m_flog(c3_w gof_w);
 
-      /* u3m_soft_top(): top-level safety wrapper.
+      /* u3m_soft_top(): top-level safety wrapper; on success, [hom_f]
+      **                 (if any) runs on return to the home road, before
+      **                 the product is taken (see u3m_soft_with()).
       */
         u3_noun
         u3m_soft_top(c3_w    mil_w,                     //  timer ms
                      c3_w    pad_w,                     //  base memory pad
                      u3_funk fun_f,
-                     u3_noun   arg);
+                     u3_noun   arg,
+                     void    (*hom_f)(void));
 
 
 //  u3m_signal uses restricted functionality signals for compatibility reasons:
@@ -1408,10 +1411,11 @@ u3m_road_depth(void)
   return dep_w;
 }
 
-/* u3m_love(): return product from leap.
+/* _cm_love(): return product from leap, running [hom_f] (if any) once
+**             back on the parent road, before anything is taken.
 */
-u3_noun
-u3m_love(u3_noun pro)
+static u3_noun
+_cm_love(u3_noun pro, void (*hom_f)(void))
 {
   //  save cache pointers from current road
   //
@@ -1464,10 +1468,8 @@ u3m_love(u3_noun pro)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
-  //  on exit into the home road, maybe defer gains (see u3a_defer_arm())
-  //
-  if ( &(u3H->rod_u) == u3R ) {
-    u3a_defer_take();
+  if ( hom_f ) {
+    hom_f();
   }
 
   //  copy product and caches off our stack
@@ -1522,6 +1524,14 @@ u3m_love(u3_noun pro)
 
   u3e_Phase = pha_y;
   return pro;
+}
+
+/* u3m_love(): return product from leap.
+*/
+u3_noun
+u3m_love(u3_noun pro)
+{
+  return _cm_love(pro, 0);
 }
 
 /* u3m_golf(): record cap_p length for u3m_flog().
@@ -1596,7 +1606,8 @@ u3_noun
 u3m_soft_top(c3_w    mil_w,                     //  timer ms
              c3_w    pad_w,                     //  base memory pad
              u3_funk fun_f,
-             u3_noun   arg)
+             u3_noun   arg,
+             void    (*hom_f)(void))
 {
   u3_noun pro;
   c3_m    sig_m = 0;
@@ -1663,15 +1674,11 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     /* Produce success, on the old road.
     */
-    pro = u3nc(0, u3m_love(pro));
+    pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
     /* Overload the error result.
-    **
-    **   never defer gains for a failed event: u3m_soft() renders its
-    **   trace with nock on the home road (see u3a_defer_arm()).
     */
-    u3a_defer_close();
     pro = u3m_love(why);
   }
 
@@ -1693,9 +1700,9 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 u3_noun
 u3m_soft_sure(u3_funk fun_f, u3_noun arg)
 {
-  u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg);
+  u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg, 0);
 
-  u3_assert(_(u3du(pru)));
+  u3_assert( 0 == u3h(pru) );
   pro = u3k(u3t(pru));
   u3z(pru);
 
@@ -2028,17 +2035,28 @@ u3m_soft(c3_w    mil_w,
          u3_funk fun_f,
          u3_noun   arg)
 {
+  return u3m_soft_with(mil_w, fun_f, arg, 0);
+}
+
+/* u3m_soft_with(): u3m_soft(), running [hom_f] (if any) on success, back
+**                  on the home road, after the event's road falls and
+**                  before its product and caches are taken.
+*/
+u3_noun
+u3m_soft_with(c3_w    mil_w,
+              u3_funk fun_f,
+              u3_noun   arg,
+              void    (*hom_f)(void))
+{
   u3_noun why;
 
-  why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg);   // 4M pad
+  why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
   if ( 0 == u3h(why) ) {
     return why;
   }
   else {
     u3_noun tax, cod, pro;
-
-    u3a_defer_close();  //  (also after a signal) see u3a_defer_arm()
 
     switch ( u3h(why) ) {
       case 2: {
@@ -2090,8 +2108,10 @@ u3m_soft(c3_w    mil_w,
     else if ( c3__evil == cod ) {
       pro = u3nc(u3k(cod), u3_nul);
     }
+    //  render the trace in an inner road: +mook is assumed correct
+    //
     else {
-      u3_noun mok = u3dc("mook", 2, u3k(tax));
+      u3_noun mok = u3m_soft_slam(u3v_wish("mook"), u3nc(2, u3k(tax)));
       pro = u3nc(u3k(cod), u3k(u3t(mok)));
       u3z(mok);
     }

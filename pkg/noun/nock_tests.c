@@ -152,8 +152,7 @@ _test_defer(void)
   //  armed, product kept: nothing written until close, then the same
   //
   arg = u3k(hom);
-  u3a_defer_arm();
-  gon = u3m_soft(0, _defer_pair, arg);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
 
   if ( bas_w != u3a_use(hom) ) {
     fprintf(stderr, "defer: written while open: have %u, need %u\r\n",
@@ -174,8 +173,7 @@ _test_defer(void)
   //  armed, product released before close: the gains cancel
   //
   arg = u3k(hom);
-  u3a_defer_arm();
-  gon = u3m_soft(0, _defer_pair, arg);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
   u3z(gon);
   u3a_defer_close();
 
@@ -195,8 +193,7 @@ _test_defer(void)
 
     arg = u3k(hom);
     u3a_Defer_max_w = 1;
-    u3a_defer_arm();
-    gon = u3m_soft(0, _defer_pair, arg);
+    gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
 
     if ( bas_w != u3a_use(hom) ) {
       fprintf(stderr, "defer: cap: hom written while open\r\n");
@@ -228,8 +225,7 @@ _test_defer(void)
   //  while the product's gains are pending, [hom] lives on in it
   //
   arg = u3k(hom);
-  u3a_defer_arm();
-  gon = u3m_soft(0, _defer_pair, arg);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
   u3z(hom);
   u3a_defer_close();
 
@@ -241,12 +237,11 @@ _test_defer(void)
   hom = u3k(u3h(u3t(gon)));
   u3z(gon);
 
-  //  a failed event never opens the window: u3m_soft() renders its
-  //  trace on the home road
+  //  a failed event never opens the window: the hook runs only on
+  //  success, and the trace is rendered with the window shut
   //
   bas_w = u3a_use(hom);
-  u3a_defer_arm();
-  gon = u3m_soft(0, _defer_fail, u3k(hom));
+  gon = u3m_soft_with(0, _defer_fail, u3k(hom), u3a_defer_open);
   u3z(gon);
 
   if ( bas_w != u3a_use(hom) ) {
