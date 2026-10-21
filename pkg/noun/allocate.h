@@ -829,6 +829,23 @@ u3a_post_info(u3_post);
           void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
+        /* u3a_defer_arm(): defer home-road refcount gains, cancelling
+        **                  them against loses, from the next road exit
+        **                  into the home road until u3a_defer_close().
+        */
+          void
+          u3a_defer_arm(void);
+
+        /* u3a_defer_take(): open the window if armed (from u3m_love()).
+        */
+          void
+          u3a_defer_take(void);
+
+        /* u3a_defer_close(): write the gains still pending, stop deferring.
+        */
+          void
+          u3a_defer_close(void);
+
         /* u3a_luse(): check refcount sanity.
         */
           void

@@ -1464,6 +1464,12 @@ u3m_love(u3_noun pro)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
+  //  on exit into the home road, maybe defer gains (see u3a_defer_arm())
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    u3a_defer_take();
+  }
+
   //  copy product and caches off our stack
   //
   u3e_Phase = u3e_pha_take_pro;
@@ -1661,7 +1667,11 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   }
   else {
     /* Overload the error result.
+    **
+    **   never defer gains for a failed event: u3m_soft() renders its
+    **   trace with nock on the home road (see u3a_defer_arm()).
     */
+    u3a_defer_close();
     pro = u3m_love(why);
   }
 
@@ -2027,6 +2037,8 @@ u3m_soft(c3_w    mil_w,
   }
   else {
     u3_noun tax, cod, pro;
+
+    u3a_defer_close();  //  (also after a signal) see u3a_defer_arm()
 
     switch ( u3h(why) ) {
       case 2: {

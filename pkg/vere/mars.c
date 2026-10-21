@@ -1001,6 +1001,8 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   c3_y    pha_y = u3e_Phase;
   u3_noun gon, tag, dat;
 
+  u3a_defer_arm();  //  as in u3v_poke_sure()
+
   //  measurement: tagged as in u3v_poke_sure()
   //
   u3e_Phase = u3e_pha_poke;
@@ -1010,6 +1012,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
+    u3a_defer_close();
     u3e_Phase = pha_y;
     return gon;
   }
@@ -1029,6 +1032,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
       if ( !(u3C.wag_h & u3o_soft_mugs) ) {
         u3z(gon);
+        u3a_defer_close();
         u3e_Phase = pha_y;
         return u3nc(c3__awry, u3_nul);
       }
@@ -1042,6 +1046,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   }
 
   u3z(gon);
+  u3a_defer_close();
   u3e_Phase = pha_y;
   u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;

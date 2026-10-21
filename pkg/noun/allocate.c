@@ -472,12 +472,157 @@ u3a_wash(u3_noun som)
   }
 }
 
+/* deferred gains (u3a_defer_arm(), u3a_defer_take(), u3a_defer_close()).
+**
+**   between taking an event's product onto the home road and releasing
+**   the old arvo state, most references gained on home nouns are lost
+**   again: the new state shares most of its structure with the old. the
+**   counts net to zero, but each write dirties a snapshot page.
+**
+**   while open, home-road gains are counted off-loom instead of written,
+**   and a home-road lose of a noun with a pending gain cancels one. a
+**   noun's true count is its box's count plus its pending count, so a
+**   box is freed only when both run out. closing writes what's left.
+*/
+#define NAME    _ca_pend
+#define KEY_TY  u3_noun
+#define VAL_TY  c3_w
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+static struct {
+  c3_t     arm_t;  //  armed: open at the next road exit into home
+  c3_t     ope_t;  //  open
+  c3_t     ini_t;  //  table initialized
+  _ca_pend pen_u;  //  noun -> pending gains
+} _ca_defer_u;
+
+/* _ca_defer_on(): yes if gains and loses on [u3R] are deferred.
+*/
+static inline c3_t
+_ca_defer_on(void)
+{
+  return _ca_defer_u.ope_t && (&(u3H->rod_u) == u3R);
+}
+
+/* _ca_defer_gain(): count a gain on [dog].
+*/
+static void
+_ca_defer_gain(u3_noun dog)
+{
+  _ca_pend_itr itr_u = _ca_pend_get(&_ca_defer_u.pen_u, dog);
+
+  if ( _ca_pend_is_end(itr_u) ) {
+    itr_u = _ca_pend_insert(&_ca_defer_u.pen_u, dog, 1);
+
+    if ( _ca_pend_is_end(itr_u) ) {
+      u3m_bail(c3__meme);
+    }
+  }
+  else {
+    itr_u.data->val++;
+  }
+}
+
+/* _ca_defer_lose(): cancel a pending gain on [dog], if any.
+*/
+static c3_t
+_ca_defer_lose(u3_noun dog)
+{
+  _ca_pend_itr itr_u = _ca_pend_get(&_ca_defer_u.pen_u, dog);
+
+  if ( _ca_pend_is_end(itr_u) ) {
+    return 0;
+  }
+
+  if ( !--itr_u.data->val ) {
+    _ca_pend_erase_itr(&_ca_defer_u.pen_u, itr_u);
+  }
+
+  return 1;
+}
+
+/* u3a_defer_arm(): defer home-road refcount gains from the next road
+**                  exit into the home road (see above).
+**
+**   arming, rather than opening, keeps the window shut while a failed
+**   event's trace is rendered: u3m_soft() runs +mook on the home road.
+*/
+void
+u3a_defer_arm(void)
+{
+  u3_assert( !_ca_defer_u.ope_t );
+  _ca_defer_u.arm_t = 1;
+}
+
+/* u3a_defer_take(): open the window if armed. called by u3m_love()
+**                   on exit into the home road, before the take.
+*/
+void
+u3a_defer_take(void)
+{
+  if ( !_ca_defer_u.arm_t ) {
+    return;
+  }
+
+  _ca_defer_u.arm_t = 0;
+
+  if ( !_ca_defer_u.ini_t ) {
+    _ca_pend_init(&_ca_defer_u.pen_u);
+    _ca_defer_u.ini_t = 1;
+  }
+
+  _ca_defer_u.ope_t = 1;
+}
+
+/* u3a_defer_close(): disarm, write the gains still pending, stop deferring.
+*/
+void
+u3a_defer_close(void)
+{
+  _ca_pend_itr itr_u;
+
+  _ca_defer_u.arm_t = 0;
+
+  if ( !_ca_defer_u.ope_t ) {
+    return;
+  }
+
+  _ca_defer_u.ope_t = 0;
+
+  for ( itr_u = _ca_pend_first(&_ca_defer_u.pen_u);
+        !_ca_pend_is_end(itr_u);
+        itr_u = _ca_pend_next(itr_u) )
+  {
+    u3a_noun* box_u = u3a_to_ptr(itr_u.data->key);
+    c3_w      val_w = itr_u.data->val;
+
+    if ( (u3a_direct_max - box_u->use_w) < val_w ) {
+      u3l_log("fail in u3a_defer_close");
+      u3m_bail(c3__fail);
+    }
+
+    box_u->use_w += val_w;
+  }
+
+  _ca_pend_clear(&_ca_defer_u.pen_u);
+}
+
 /* _me_gain_use(): increment use count.
 */
 static void
 _me_gain_use(u3_noun dog)
 {
   u3a_noun* box_u = u3a_to_ptr(dog);
+
+  if ( _ca_defer_on() ) {
+    if ( box_u->use_w == 0 ) {
+      u3m_bail(c3__foul);
+    }
+    _ca_defer_gain(dog);
+    return;
+  }
 
   if ( u3a_direct_max == box_u->use_w ) {
     u3l_log("fail in _me_gain_use");
@@ -853,6 +998,10 @@ top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
+    if ( _ca_defer_on() && _ca_defer_lose(dog) ) {
+      return;
+    }
+
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;
     }
@@ -891,6 +1040,10 @@ _me_lose_south(u3_noun dog)
 top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
+
+    if ( _ca_defer_on() && _ca_defer_lose(dog) ) {
+      return;
+    }
 
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;

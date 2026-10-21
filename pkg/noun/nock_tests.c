@@ -106,6 +106,129 @@ _test_soft_cax(void)
 
 /* main(): run all test cases.
 */
+/* _defer_pair(): u3m_soft() test fn, produces [arg arg].
+*/
+static u3_noun
+_defer_pair(u3_noun arg)
+{
+  return u3nc(u3k(arg), u3k(arg));
+}
+
+/* _defer_fail(): u3m_soft() test fn, fails.
+*/
+static u3_noun
+_defer_fail(u3_noun arg)
+{
+  return u3m_bail(c3__exit);
+}
+
+/* _test_defer(): deferred gains across a successful exit into home.
+**
+**   each armed step must leave [hom]'s count where an unarmed control
+**   leaves it, without writing it while the window is open.
+*/
+static c3_i
+_test_defer(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun hom   = u3nc(u3i_string("deferred"), u3i_string("gains"));
+  u3_noun arg, gon;
+  c3_w    bas_w, tak_w, rel_w;
+
+  //  control: take product [hom hom], release arg; then release product
+  //
+  arg   = u3k(hom);
+  bas_w = u3a_use(hom);
+  gon   = u3m_soft(0, _defer_pair, arg);
+  tak_w = u3a_use(hom);
+  u3z(gon);
+  rel_w = u3a_use(hom);
+
+  if ( tak_w <= bas_w ) {
+    fprintf(stderr, "defer: control gained nothing\r\n");
+    ret_i = 0;
+  }
+
+  //  armed, product kept: nothing written until close, then the same
+  //
+  arg = u3k(hom);
+  u3a_defer_arm();
+  gon = u3m_soft(0, _defer_pair, arg);
+
+  if ( bas_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: written while open: have %u, need %u\r\n",
+                    u3a_use(hom), bas_w);
+    ret_i = 0;
+  }
+
+  u3a_defer_close();
+
+  if ( tak_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: close: have %u, need %u\r\n",
+                    u3a_use(hom), tak_w);
+    ret_i = 0;
+  }
+
+  u3z(gon);
+
+  //  armed, product released before close: the gains cancel
+  //
+  arg = u3k(hom);
+  u3a_defer_arm();
+  gon = u3m_soft(0, _defer_pair, arg);
+  u3z(gon);
+  u3a_defer_close();
+
+  if ( rel_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: cancel: have %u, need %u\r\n",
+                    u3a_use(hom), rel_w);
+    ret_i = 0;
+  }
+
+  //  a cancelled lose doesn't free: with our own reference released
+  //  while the product's gains are pending, [hom] lives on in it
+  //
+  arg = u3k(hom);
+  u3a_defer_arm();
+  gon = u3m_soft(0, _defer_pair, arg);
+  u3z(hom);
+  u3a_defer_close();
+
+  if ( c3n == u3r_sing_c("deferred", u3h(u3h(u3t(gon)))) ) {
+    fprintf(stderr, "defer: product damaged\r\n");
+    ret_i = 0;
+  }
+
+  hom = u3k(u3h(u3t(gon)));
+  u3z(gon);
+
+  //  a failed event never opens the window: u3m_soft() renders its
+  //  trace on the home road
+  //
+  bas_w = u3a_use(hom);
+  u3a_defer_arm();
+  gon = u3m_soft(0, _defer_fail, u3k(hom));
+  u3z(gon);
+
+  if ( bas_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: failure: have %u, need %u\r\n",
+                    u3a_use(hom), bas_w);
+    ret_i = 0;
+  }
+
+  arg = u3k(hom);
+
+  if ( (bas_w + 1) != u3a_use(hom) ) {
+    fprintf(stderr, "defer: window open after failure\r\n");
+    ret_i = 0;
+  }
+
+  u3z(arg);
+  u3a_defer_close();
+  u3z(hom);
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -121,6 +244,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test soft_cax: ok\r\n");
+
+  if ( !_test_defer() ) {
+    fprintf(stderr, "test defer: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test defer: ok\r\n");
 
   //  GC
   //
