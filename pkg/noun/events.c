@@ -389,6 +389,23 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
       }
       fputc('\n', fil_u);
     }
+
+    //  home-road hashcons traffic: probes by path and hits by the
+    //  member's origin this interval; cell buckets now, and pages an
+    //  on-loom table would have written; faults in the last rebuild
+    //
+    {
+      c3_d buc_d, pag_d;
+
+      u3m_dedup_meas(&buc_d, &pag_d);
+      fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     u3e_Meter.hcp_d[0], u3e_Meter.hcp_d[1], u3e_Meter.hcp_d[2],
+                     u3e_Meter.hch_d[0], u3e_Meter.hch_d[1],
+                     u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
+                     buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
+    }
   }
   fflush(fil_u);
 
@@ -449,7 +466,8 @@ u3e_measure_init(const c3_c* dir_c)
     fflush(_ce_meas.fil_u);
 
     //  keep the startup rebuild of the hashcons set, which ran before
-    //  measurement began, for the first interval
+    //  measurement began, and the members jet registration added after
+    //  it, for the first interval
     //
     {
       u3e_meter met_u = u3e_Meter;
@@ -458,6 +476,8 @@ u3e_measure_init(const c3_c* dir_c)
       u3e_Meter.hcr_d = met_u.hcr_d;
       u3e_Meter.hcm_d = met_u.hcm_d;
       memcpy(u3e_Meter.hcc_d, met_u.hcc_d, sizeof(met_u.hcc_d));
+      memcpy(u3e_Meter.hcf_d, met_u.hcf_d, sizeof(met_u.hcf_d));
+      u3e_Meter.hca_d = met_u.hca_d;
     }
     _ce_meas.on_t = 1;
 

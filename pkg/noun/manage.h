@@ -274,6 +274,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
 
+      /* u3m_dedup_meas(): the home-road cell table's buckets, and the
+      **                   pages an on-loom copy would have written since
+      **                   the last call (0 unless measuring).
+      */
+        void
+        u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d);
+
     /*  Urbit time: 128 bits, leap-free.
     **
     **  High 64 bits: 0x8000.000c.cea3.5380 + Unix time at leap 25 (Jul 2012)

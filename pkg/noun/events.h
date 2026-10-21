@@ -141,7 +141,14 @@
           c3_d hcr_d;        //  rebuilds
           c3_d hcm_d;        //  rebuild time, ms
           c3_d hcc_d[7];     //  last rebuild: cells added per root,
-                             //  cod war bas hot byc per for
+                             //  per for byc war bas hot cod
+          c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
+          c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
+                             //  older home nouns met in it, u3m_dedup()
+          c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
+                             //  member's origin: added since the last
+                             //  rebuild, caches (per for byc), warm jet
+                             //  state (war bas hot), cold state alone
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

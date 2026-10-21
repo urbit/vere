@@ -3179,7 +3179,19 @@ static struct {
   c3_w         len_w;  //  bitmap length, in words
   _canon_atoms vat_u;  //  member atoms
   _canon_cells cel_u;  //  member cells
+  //  measurement (U3_MEASURE) only
+  //
+  c3_t         reb_t;     //  rebuilding
+  c3_y         pat_y;     //  probing path: 0 none, then as hcp_d[]
+  c3_y         cls_y;     //  origin of members added now, as hch_d[]
+  c3_w*        cls_w[2];  //  origin of each member, two bits, or 0
+  c3_w*        pag_w;     //  table pages written this interval, or 0
 } _cm_dup_u;
+
+//  table pages tracked: an on-loom copy of the cell table, at
+//  sizeof(u3_noun) + 2 bytes a bucket, in 16KB pages
+//
+#define _CM_DUP_PAGES  (1 << 20)
 
 /* _cm_dup_idx(): bitmap index of indirect [som].
 */
@@ -3203,6 +3215,75 @@ _cm_dup_clr(u3_noun som)
   u3a_Hcon_w[idx_w / u3a_word_bits] &= ~((c3_w)1 << (idx_w % u3a_word_bits));
 }
 
+/* _cm_dup_meas_on(): measuring (U3_MEASURE, as u3e_measure_init()).
+*/
+static c3_t
+_cm_dup_meas_on(void)
+{
+  c3_c* env_c = getenv("U3_MEASURE");
+  return env_c && *env_c && ('0' != *env_c);
+}
+
+/* _cm_dup_meas_cls(): record the origin of new member [som].
+*/
+static inline void
+_cm_dup_meas_cls(u3_noun som)
+{
+  if ( _cm_dup_u.cls_w[0] ) {
+    c3_w idx_w = _cm_dup_idx(som);
+    c3_w wor_w = idx_w / u3a_word_bits;
+    c3_w bit_w = (c3_w)1 << (idx_w % u3a_word_bits);
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 2; i_w++ ) {
+      if ( (_cm_dup_u.cls_y >> i_w) & 1 ) {
+        _cm_dup_u.cls_w[i_w][wor_w] |= bit_w;
+      }
+      else {
+        _cm_dup_u.cls_w[i_w][wor_w] &= ~bit_w;
+      }
+    }
+  }
+}
+
+/* _cm_dup_meas_hit(): count a probe for [som] that found [can].
+*/
+static inline void
+_cm_dup_meas_hit(u3_noun som, u3_noun can)
+{
+  if ( _cm_dup_u.pat_y ) {
+    u3e_Meter.hcp_d[_cm_dup_u.pat_y - 1]++;
+
+    if ( (u3_none != can) && (can != som) ) {
+      c3_y cls_y = 0;
+
+      if ( _cm_dup_u.cls_w[0] ) {
+        c3_w idx_w = _cm_dup_idx(can);
+        c3_w wor_w = idx_w / u3a_word_bits;
+        c3_w sif_w = idx_w % u3a_word_bits;
+
+        cls_y = (1 & (_cm_dup_u.cls_w[0][wor_w] >> sif_w))
+              | ((1 & (_cm_dup_u.cls_w[1][wor_w] >> sif_w)) << 1);
+      }
+      u3e_Meter.hch_d[cls_y]++;
+    }
+  }
+}
+
+/* _cm_dup_meas_page(): note a write to cell bucket [buc_d].
+*/
+static inline void
+_cm_dup_meas_page(c3_d buc_d)
+{
+  if ( _cm_dup_u.pag_w && !_cm_dup_u.reb_t ) {
+    c3_d pag_d = (buc_d * (sizeof(u3_noun) + 2)) >> 14;
+
+    if ( pag_d < _CM_DUP_PAGES ) {
+      _cm_dup_u.pag_w[pag_d >> 5] |= (c3_w)1 << (pag_d & 31);
+    }
+  }
+}
+
 /* _cm_dup_init(): allocate the home-road set.
 */
 static void
@@ -3215,6 +3296,13 @@ _cm_dup_init(void)
     u3a_Hcon_w      = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
     _canon_atoms_init(&_cm_dup_u.vat_u);
     _canon_cells_init(&_cm_dup_u.cel_u);
+
+    if ( _cm_dup_meas_on() ) {
+      _cm_dup_u.cls_w[0] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
+      _cm_dup_u.cls_w[1] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
+      _cm_dup_u.pag_w    = c3_calloc(_CM_DUP_PAGES / 8);
+    }
+
     _cm_dup_u.ini_t = 1;
   }
 }
@@ -3280,6 +3368,8 @@ _cm_dup_get(u3_noun som)
   pro = _cm_dup_get_in(som);
   u3m_Dup_busy_w--;
 
+  _cm_dup_meas_hit(som, pro);
+
   return pro;
 }
 
@@ -3304,10 +3394,17 @@ _cm_dup_put(u3_noun som)
     _canon_cells_itr cit_u = _canon_cells_get_or_insert(&_cm_dup_u.cel_u, som);
     u3_assert( !_canon_cells_is_end(cit_u) ); //  oom
     can = cit_u.data->key;
+
+    if ( can == som ) {
+      _cm_dup_meas_page(cit_u.metadatum - _cm_dup_u.cel_u.metadata);
+    }
   }
+
+  _cm_dup_meas_hit(som, can);
 
   if ( can == som ) {
     _cm_dup_set(som);
+    _cm_dup_meas_cls(som);
     u3e_Meter.hca_d++;
   }
 
@@ -3334,6 +3431,7 @@ u3m_dedup_lose(u3_noun som)
     _canon_cells_itr cit_u = _canon_cells_get(&_cm_dup_u.cel_u, som);
 
     if ( !_canon_cells_is_end(cit_u) && (som == cit_u.data->key) ) {
+      _cm_dup_meas_page(cit_u.metadatum - _cm_dup_u.cel_u.metadata);
       _canon_cells_erase_itr(&_cm_dup_u.cel_u, cit_u);
       u3e_Meter.hcd_d++;
     }
@@ -3358,6 +3456,30 @@ u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d)
            + (c3_d)_canon_cells_bucket_count(&_cm_dup_u.cel_u) )
            * (sizeof(u3_noun) + sizeof(uint16_t))
          + (c3_d)_cm_dup_u.len_w * sizeof(c3_w);
+}
+
+/* u3m_dedup_meas(): the home-road cell table's buckets, and the pages
+**                   an on-loom copy of it would have written since the
+**                   last call (by home bucket; 0 unless measuring).
+*/
+void
+u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d)
+{
+  *buc_d = 0;
+  *pag_d = 0;
+
+  if ( _cm_dup_u.ini_t ) {
+    *buc_d = _canon_cells_bucket_count(&_cm_dup_u.cel_u);
+
+    if ( _cm_dup_u.pag_w ) {
+      c3_w i_w;
+
+      for ( i_w = 0; i_w < (_CM_DUP_PAGES >> 5); i_w++ ) {
+        *pag_d += (c3_d)__builtin_popcount(_cm_dup_u.pag_w[i_w]);
+      }
+      memset(_cm_dup_u.pag_w, 0, _CM_DUP_PAGES / 8);
+    }
+  }
 }
 
 /* u3m_dedup_hint(): record the home-road set's size in the home road,
@@ -3532,10 +3654,16 @@ u3m_dedup_ream(void)
 {
   _cm_walk       wak_u;
   struct timeval bef_u, aft_u;
+#ifndef U3_OS_windows
+  struct rusage  ruf_u, rug_u;
+#endif
 
   u3_assert( &(u3H->rod_u) == u3R );
 
   gettimeofday(&bef_u, 0);
+#ifndef U3_OS_windows
+  getrusage(RUSAGE_SELF, &ruf_u);
+#endif
 
   _cm_dup_init();
   _cm_dup_clear();
@@ -3566,31 +3694,49 @@ u3m_dedup_ream(void)
   _cm_walk_init(&wak_u);
 
   //  measurement: cells contributed by each root, in walk order; the
-  //  rebuild's inserts don't count as additions
+  //  rebuild's inserts don't count as additions. cold state is walked
+  //  last, so that its count, and the origin recorded for hits, cover
+  //  the members only it reaches
   //
   {
     u3p(u3h_root) roo_p[7] = {
-      u3R->jed.cod_p, u3R->jed.war_p, u3R->jed.bas_p, u3R->jed.hot_p,
-      u3R->byc.har_p, u3R->cax.per_p, u3R->cax.for_p
+      u3R->cax.per_p, u3R->cax.for_p, u3R->byc.har_p,
+      u3R->jed.war_p, u3R->jed.bas_p, u3R->jed.hot_p, u3R->jed.cod_p
     };
+    c3_y cls_y[7] = { 1, 1, 1, 2, 2, 2, 3 };
     c3_d add_d = u3e_Meter.hca_d;
     c3_d pre_d = 0;
     c3_w i_w;
 
+    c3_y pat_y = _cm_dup_u.pat_y;
+
+    _cm_dup_u.reb_t = 1;
+    _cm_dup_u.pat_y = 0;
+
     for ( i_w = 0; i_w < 7; i_w++ ) {
+      _cm_dup_u.cls_y = cls_y[i_w];
       u3h_walk_with(roo_p[i_w],
-                    ( 4 == i_w ) ? _cm_dup_ream_key : _cm_dup_ream_kev,
+                    ( 2 == i_w ) ? _cm_dup_ream_key : _cm_dup_ream_kev,
                     &wak_u);
       u3e_Meter.hcc_d[i_w] = _canon_cells_size(&_cm_dup_u.cel_u) - pre_d;
       pre_d = _canon_cells_size(&_cm_dup_u.cel_u);
     }
 
+    _cm_dup_u.cls_y = 0;
+    _cm_dup_u.reb_t = 0;
+    _cm_dup_u.pat_y = pat_y;
     u3e_Meter.hca_d = add_d;
   }
 
   _cm_walk_done(&wak_u);
 
   gettimeofday(&aft_u, 0);
+#ifndef U3_OS_windows
+  getrusage(RUSAGE_SELF, &rug_u);
+
+  u3e_Meter.hcf_d[0] = (c3_d)(rug_u.ru_majflt - ruf_u.ru_majflt);
+  u3e_Meter.hcf_d[1] = (c3_d)(rug_u.ru_minflt - ruf_u.ru_minflt);
+#endif
 
   {
     c3_d mil_d = (c3_d)(((aft_u.tv_sec - bef_u.tv_sec) * 1000000
@@ -3633,7 +3779,11 @@ _cm_dup_take_noun(_cm_walk* wak_u, u3_noun jun)
         break;
       }
       else if ( c3n == u3a_is_junior(u3R, jun) ) {
+        c3_y pat_y = _cm_dup_u.pat_y;
+
+        _cm_dup_u.pat_y = 2;
         pro = _cm_dup_canon(wak_u, jun);
+        _cm_dup_u.pat_y = pat_y;
         break;
       }
       else {
@@ -3732,9 +3882,13 @@ _cm_dup_take(u3p(u3h_root) dup_p)
 {
   if ( u3h_wyt(dup_p) ) {
     _cm_walk wak_u;
+    c3_y     pat_y = _cm_dup_u.pat_y;
+
+    _cm_dup_u.pat_y = 1;
     _cm_walk_init(&wak_u);
     u3h_walk_with(dup_p, _cm_dup_take_kev, &wak_u);
     _cm_walk_done(&wak_u);
+    _cm_dup_u.pat_y = pat_y;
   }
 }
 
@@ -3849,6 +4003,9 @@ u3m_dedup(u3_noun som)
 {
   u3a_pile pil_u;
   _frame_dedup* fam_u;
+  c3_y pat_y = _cm_dup_u.pat_y;
+
+  _cm_dup_u.pat_y = 3;
   u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
   u3_noun new = _dedup_next(&pil_u, som);
   if ( c3n == u3a_pile_done(&pil_u) ) {
@@ -3909,6 +4066,7 @@ u3m_dedup(u3_noun som)
       }
     } while ( c3n == u3a_pile_done(&pil_u) );
   }
+  _cm_dup_u.pat_y = pat_y;
   return new;
 }
 
