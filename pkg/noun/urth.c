@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "urth.h"
 

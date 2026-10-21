@@ -461,7 +461,7 @@ main(int argc, char* argv[])
     exit(1);
   }
 
-  u3m_grab(u3_none);
+  u3m_grab();
 
   fprintf(stderr, "test mesa: ok\r\n");
   return 0;

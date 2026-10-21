@@ -1,4 +1,6 @@
 /// @file
+/// @Refcount: all functions are custom unless asserted otherwise
+/// -- implements or sits below the refcount machinery.
 
 #include "trace.h"
 
@@ -271,6 +273,7 @@ u3t_samp(void)
 }
 
 /* u3t_come(): push on profile stack; return yes if active push.  RETAIN.
+** @Refcount: retains arguments
 */
 c3_o
 u3t_come(u3_noun lab)

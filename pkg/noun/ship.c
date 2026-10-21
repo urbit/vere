@@ -67,6 +67,7 @@ u3_ship_to_string(u3_ship who_u)
   return who_c;
 }
 
+// @Refcount: retains arguments
 void
 u3_ship_of_noun(u3_ship who_u, u3_noun who)
 {
