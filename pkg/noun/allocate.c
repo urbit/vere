@@ -488,6 +488,10 @@ u3a_wash(u3_noun som)
 **   nouns not already in it are written as usual: a product that shares
 **   little with the old state saves little, and shouldn't cost much.
 **   each noun stays in one mode for the whole window, so mixing is safe.
+**
+**   a lose only consults the table if its noun's page has a pending
+**   gain (one off-loom bit per loom page): releasing a state that shares
+**   little with the new one frees mostly on other pages.
 */
 #define NAME    _ca_pend
 #define KEY_TY  u3_noun
@@ -502,7 +506,50 @@ static struct {
   c3_t     ope_t;  //  open
   c3_t     ini_t;  //  table initialized
   _ca_pend pen_u;  //  noun -> pending gains
+  c3_w*    bit_w;  //  pages with a pending gain (bitmap)
+  c3_w*    pag_w;  //  those pages, to clear at close
+  c3_w     num_w;  //    count
+  c3_w     cap_w;  //    capacity
 } _ca_defer_u;
+
+/* _ca_defer_page(): [dog]'s loom page.
+*/
+static inline c3_w
+_ca_defer_page(u3_noun dog)
+{
+  return u3a_to_off(dog) >> u3a_page;
+}
+
+/* _ca_defer_seen(): yes if [dog]'s page may have a pending gain.
+*/
+static inline c3_t
+_ca_defer_seen(u3_noun dog)
+{
+  c3_w pag_w = _ca_defer_page(dog);
+  return !!(_ca_defer_u.bit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)));
+}
+
+/* _ca_defer_mark(): note a pending gain on [dog]'s page.
+*/
+static void
+_ca_defer_mark(u3_noun dog)
+{
+  c3_w  pag_w = _ca_defer_page(dog);
+  c3_w* bit_w = &(_ca_defer_u.bit_w[pag_w >> 5]);
+  c3_w  msk_w = (c3_w)1 << (pag_w & 31);
+
+  if ( !(*bit_w & msk_w) ) {
+    *bit_w |= msk_w;
+
+    if ( _ca_defer_u.num_w == _ca_defer_u.cap_w ) {
+      _ca_defer_u.cap_w = c3_max(1024, 2 * _ca_defer_u.cap_w);
+      _ca_defer_u.pag_w = c3_realloc(_ca_defer_u.pag_w,
+                                     sizeof(c3_w) * _ca_defer_u.cap_w);
+    }
+
+    _ca_defer_u.pag_w[_ca_defer_u.num_w++] = pag_w;
+  }
+}
 
 /* _ca_defer_on(): yes if gains and loses on [u3R] are deferred.
 */
@@ -534,6 +581,7 @@ _ca_defer_gain(u3_noun dog)
     u3m_bail(c3__meme);
   }
 
+  _ca_defer_mark(dog);
   return 1;
 }
 
@@ -568,7 +616,10 @@ u3a_defer_open(void)
   u3_assert( &(u3H->rod_u) == u3R );
 
   if ( !_ca_defer_u.ini_t ) {
+    c3_w pag_w = (c3_w)(u3C.wor_i >> u3a_page);
+
     _ca_pend_init(&_ca_defer_u.pen_u);
+    _ca_defer_u.bit_w = c3_calloc(sizeof(c3_w) * ((pag_w + 31) >> 5));
     _ca_defer_u.ini_t = 1;
   }
 
@@ -607,6 +658,11 @@ u3a_defer_close(void)
   //  bucket array, so give back what a large window grew
   //
   _ca_pend_clear(&_ca_defer_u.pen_u);
+
+  while ( _ca_defer_u.num_w ) {
+    c3_w pag_w = _ca_defer_u.pag_w[--_ca_defer_u.num_w];
+    _ca_defer_u.bit_w[pag_w >> 5] &= ~((c3_w)1 << (pag_w & 31));
+  }
 
   if ( _ca_pend_bucket_count(&_ca_defer_u.pen_u) > 4096 ) {
     (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
@@ -1003,7 +1059,7 @@ top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
-    if ( _ca_defer_on() && _ca_defer_lose(dog) ) {
+    if ( _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog) ) {
       return;
     }
 
@@ -1046,7 +1102,7 @@ top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
-    if ( _ca_defer_on() && _ca_defer_lose(dog) ) {
+    if ( _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog) ) {
       return;
     }
 
