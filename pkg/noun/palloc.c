@@ -846,6 +846,128 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   return siz_w;
 }
 
+/* jump hints: where to start walking the home road's chunk-page lists.
+**
+**   on the home road, each size class's list of pages with free chunks
+**   (HEAP.wee_p) is kept in address order, so linking a page and
+**   unlinking an emptied one walk the list, a cache miss per step. for
+**   each class, we remember the lowest listed page seen in each bucket
+**   of (1 << _JUMP_LOG) pages, and start from the nearest one below.
+**
+**   hints are off-loom and never persisted, rebuilt as walks happen.
+**   a hint is a page index, checked through the page directory before
+**   use: listed pages are exactly the class's chunk pages with a free
+**   chunk, so a stale hint is never dereferenced, only dropped.
+*/
+#define _JUMP_LOG  6
+
+static struct {
+  c3_w* buc_w[u3a_crag_no];  //  per bucket: page index + 1, or 0
+  c3_w  len_w[u3a_crag_no];  //  buckets
+} _jump_u;
+
+/* _jump_reset(): drop all hints.
+*/
+static void
+_jump_reset(void)
+{
+  for ( c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
+    if ( _jump_u.len_w[bit_g] ) {
+      memset(_jump_u.buc_w[bit_g], 0, sizeof(c3_w) * _jump_u.len_w[bit_g]);
+    }
+  }
+}
+
+/* _jump_page(): page [pag_w]'s record, if it's listed in class [bit_g].
+*/
+static u3a_crag*
+_jump_page(c3_g bit_g, c3_w pag_w)
+{
+  u3_post   dir_p;
+  u3a_crag* pag_u;
+
+  if ( pag_w >= HEAP.len_w ) {
+    return 0;
+  }
+
+  dir_p = (u3to(u3p(u3a_crag), HEAP.pag_p))[pag_w];
+
+  if ( dir_p <= u3a_rest_pg ) {
+    return 0;
+  }
+
+  pag_u = u3to(u3a_crag, dir_p);
+
+  return (  ((bit_g + u3a_min_log) == pag_u->log_s)
+         && pag_u->fre_s )
+         ? pag_u : 0;
+}
+
+/* _jump_note(): page [pag_w] is listed in class [bit_g];
+**               if [sur_t], replace a stale or higher hint.
+*/
+static void
+_jump_note(c3_g bit_g, c3_w pag_w, c3_t sur_t)
+{
+  c3_w  buc_w = pag_w >> _JUMP_LOG;
+  c3_w* hin_w;
+
+  if ( buc_w >= _jump_u.len_w[bit_g] ) {
+    c3_w len_w = c3_max(buc_w, HEAP.len_w >> _JUMP_LOG) + 1;
+    c3_w old_w = _jump_u.len_w[bit_g];
+
+    _jump_u.buc_w[bit_g] = c3_realloc(_jump_u.buc_w[bit_g],
+                                      sizeof(c3_w) * len_w);
+    memset(_jump_u.buc_w[bit_g] + old_w, 0, sizeof(c3_w) * (len_w - old_w));
+    _jump_u.len_w[bit_g] = len_w;
+  }
+
+  hin_w = &(_jump_u.buc_w[bit_g][buc_w]);
+
+  if (  !*hin_w
+     || (  sur_t
+        && ( (pag_w < (*hin_w - 1)) || !_jump_page(bit_g, *hin_w - 1) ) ) )
+  {
+    *hin_w = pag_w + 1;
+  }
+}
+
+/* _jump_find(): a listed page of class [bit_g] below page [pag_w], or 0.
+*/
+static u3a_crag*
+_jump_find(c3_g bit_g, c3_w pag_w)
+{
+  c3_w  buc_w = pag_w >> _JUMP_LOG;
+  c3_w* hin_w;
+
+  if ( !_jump_u.len_w[bit_g] ) {
+    return 0;
+  }
+
+  buc_w = c3_min(buc_w, _jump_u.len_w[bit_g] - 1);
+
+  while ( 1 ) {
+    hin_w = &(_jump_u.buc_w[bit_g][buc_w]);
+
+    if ( *hin_w ) {
+      u3a_crag* hin_u = _jump_page(bit_g, *hin_w - 1);
+
+      if ( !hin_u ) {
+        *hin_w = 0;
+      }
+      else if ( hin_u->pag_w < pag_w ) {
+        return hin_u;
+      }
+    }
+
+    if ( !buc_w ) {
+      return 0;
+    }
+
+    buc_w--;
+  }
+}
+
 static void
 _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
@@ -893,9 +1015,17 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
       //
 
       if ( &(u3H->rod_u) == u3R ) {
+        u3a_crag* hin_u = _jump_find(bit_g, pag_u->pag_w);
+
+        if ( hin_u ) {
+          bit_p = &(hin_u->nex_p);
+        }
+
         while ( *bit_p ) {
           bit_u = u3to(u3a_crag, *bit_p);
           nex_u = u3tn(u3a_crag, bit_u->nex_p);
+
+          _jump_note(bit_g, bit_u->pag_w, 0);
 
           if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
             bit_p = &(bit_u->nex_p);
@@ -904,6 +1034,8 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
           break;
         }
+
+        _jump_note(bit_g, pag_u->pag_w, 1);
       }
 
       pag_u->nex_p = *bit_p;
@@ -912,6 +1044,25 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( pag_u->fre_s == hun_u->ful_s ) {
       //  page now free
       //
+      //    the list is in address order (mostly: new pages are pushed),
+      //    so look from the nearest hint below, then from the head
+      //
+      if ( &(u3H->rod_u) == u3R ) {
+        u3a_crag* hin_u = _jump_find(bit_g, pag_u->pag_w);
+
+        if ( hin_u ) {
+          u3_post* hit_p = &(hin_u->nex_p);
+
+          while ( *hit_p && (*hit_p != dir_p) ) {
+            hit_p = &(u3to(u3a_crag, *hit_p)->nex_p);
+          }
+
+          if ( *hit_p ) {
+            bit_p = hit_p;
+          }
+        }
+      }
+
       while ( *bit_p != dir_p ) {
         bit_u = u3to(u3a_crag, *bit_p);
         bit_p = &(bit_u->nex_p);
@@ -1427,6 +1578,8 @@ _sweep_directory(void)
   c3_w pag_w, blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
   u3_post     dir_p;
 
+  _jump_reset();  //  pages are about to move or be unlinked
+
   //  unlink leaked whole chunk-pages
   //  (we do this first so we won't need to dereference the metadata)
   //
@@ -1716,6 +1869,8 @@ _sweep_counts(void)
   c3_w pag_w, blk_w, bit_w, siz_w, weq_w = 0, leq_w = 0, tot_w = 0;
   u3_post     dir_p, som_p;
   c3_w       *use_w;
+
+  _jump_reset();  //  pages are about to move or be unlinked
 
   //  unlink leaked whole chunk-pages
   //  (we do this first so we won't need to dereference the metadata)
@@ -2597,6 +2752,8 @@ _pack_move(void)
   c3_ws off_ws = HEAP.dir_ws * (((c3_w)1) << u3a_page);
   c3_w   dir_w,  new_w, pag_w = 0;
   c3_w  *src_w, *dst_w;
+
+  _jump_reset();  //  pages are about to move or be unlinked
 
   //  NB: these loops iterate over the temp page dir instead of
   //  the bitmap, as partial chunk pages can be marked free
