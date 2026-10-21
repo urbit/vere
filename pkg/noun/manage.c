@@ -3547,12 +3547,18 @@ u3m_dedup_ream(void)
     u3_assert( _canon_cells_reserve(&_cm_dup_u.cel_u, u3R->hcz_w) ); //  oom
   }
 
-  //  the home-road set used to be on the loom: release it, and say why
-  //  this start is slow (the persistent tables are canonicalized once)
+  //  tables never canonicalized off the loom have no saved size (it was
+  //  futureproof padding, which must be zero), whether or not the old
+  //  on-loom set is empty: say that the persistent tables are being
+  //  canonicalized (once)
+  //
+  if ( !u3R->hcz_w && u3h_wyt(u3R->jed.cod_p) ) {
+    u3l_log("hashcons: canonicalizing persistent tables");
+  }
+
+  //  the home-road set used to be on the loom: release it
   //
   if ( u3h_wyt(u3R->dup_p) ) {
-    u3l_log("hashcons: moving the dedup set off the loom; "
-            "canonicalizing persistent state, this may take a minute");
     u3h_free(u3R->dup_p);
     u3R->dup_p = u3h_new();
   }
