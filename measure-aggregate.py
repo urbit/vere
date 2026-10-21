@@ -151,6 +151,12 @@ def sums(ivs):
                 s["F_roclose"] += n
             if pha.startswith("take-byc") or pha.startswith("reap-byc"):
                 s["F_byc"] += n
+            if pha.startswith("rec-"):
+                s["F_rec"] += n
+            if pha.endswith("-dup"):
+                s["F_dup"] += n
+            if pha == "take-pro":
+                s["F_pro"] += n
         if "A" in i:
             a = i["A"]
             s["A_fre"] += a[0]; s["A_cln"] += a[1]; s["A_alt"] += a[2]; s["A_reu"] += a[3]
@@ -195,6 +201,9 @@ METRICS = [
     ("first writes: refcounts (w0)", "C3", lambda s, v: ratio(s["F_w0"], s["F"])),
     ("first writes: roc-lose", "C1 tier 2 / C3", lambda s, v: ratio(s["F_roclose"], s["F"])),
     ("first writes: bytecode take/reap", "(h)", lambda s, v: ratio(s["F_byc"], s["F"])),
+    ("first writes: reclaims (rec-*)", "(b)", lambda s, v: ratio(s["F_rec"], s["F"])),
+    ("first writes: dedup set (*-dup)", "(b), (c)", lambda s, v: ratio(s["F_dup"], s["F"])),
+    ("first writes: product take (take-pro)", "(i)", lambda s, v: ratio(s["F_pro"], s["F"])),
     ("A: alloc onto clean page, dirty had room / patch", "C1 tier 1",
      lambda s, v: ratio(s["A_alt"], s["A_patch"])),
     ("A: page-record frees / patch", "C1 tier 2",
@@ -260,6 +269,16 @@ def kb(b):
 
 
 # ---- report ------------------------------------------------------------------
+
+def label(key):
+    """A ship's name, or for logs without one, its pier's directory."""
+    if key.startswith("~"):
+        return key
+    parts = [p for p in os.path.normpath(key).split(os.sep) if p]
+    while parts and parts[-1] in (".urb", "measure"):
+        parts.pop()
+    return parts[-1] if parts else key
+
 
 def quantile(v, q):
     v = sorted(v)
@@ -327,7 +346,7 @@ def main():
     print(f"# {len(rows)} ship(s), {sum(r['logs'] for r in rows)} log(s), "
           f"{len(pooled)} interval(s)")
     for r in rows:
-        print(f"  {os.path.basename(r['ship'].rstrip('/')):<20} {r['vere']:<16} {r['os']:<8} {r['word_bits']}-bit  "
+        print(f"  {label(r['ship']):<20} {r['vere']:<16} {r['os']:<8} {r['word_bits']}-bit  "
               f"{r['logs']} log(s), {r['intervals']} interval(s), "
               f"{fmt(r['hours'])} h")
 
