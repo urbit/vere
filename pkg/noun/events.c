@@ -311,6 +311,20 @@ _ce_meas_page(c3_w pag_w)
   }
 }
 
+/* _ce_meas_map_wyt(): entries in a hoon map, read-only.
+*/
+static c3_d
+_ce_meas_map_wyt(u3_noun a)
+{
+  if ( u3_nul == a ) {
+    return 0;
+  }
+  else {
+    u3_noun l = u3h(u3t(a)), r = u3t(u3t(a));
+    return 1 + _ce_meas_map_wyt(l) + _ce_meas_map_wyt(r);
+  }
+}
+
 /* _ce_meas_save(): report and reset per-interval measurements.
 */
 static void
@@ -359,12 +373,12 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     u3a_road* rod_u = &u3H->rod_u;
     fprintf(fil_u, "T %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
                    " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
-                   " %" PRIc3_w "\n",
+                   " %" PRIc3_w " %" PRIu64 "\n",
                    u3h_wyt(rod_u->jed.war_p), u3h_wyt(rod_u->jed.cod_p),
                    u3h_wyt(rod_u->jed.han_p), u3h_wyt(rod_u->jed.bas_p),
                    u3h_wyt(rod_u->byc.har_p), u3h_wyt(rod_u->cax.per_p),
                    u3h_wyt(rod_u->cax.for_p), u3h_wyt(rod_u->dup_p),
-                   u3h_wyt(rod_u->cax.har_p));
+                   u3h_wyt(rod_u->cax.har_p), _ce_meas_map_wyt(u3A->yot));
     fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,

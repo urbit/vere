@@ -265,8 +265,10 @@ def main():
     if tis:
         print("\n== home-road table entries at each snapshot ==")
         print(f"  {'table':<6} {'min':>9} {'median':>9} {'max':>9} {'first':>9} {'last':>9}")
-        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo"]
+        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo", "wish"]
         for j, name in enumerate(names):
+            if any(len(i["T"]) <= j for i in tis):
+                continue  # older logs lack later columns
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
