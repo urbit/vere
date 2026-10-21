@@ -510,6 +510,8 @@ static struct {
   c3_w*    pag_w;  //  those pages, to clear at close
   c3_w     num_w;  //    count
   c3_w     cap_w;  //    capacity
+  c3_w     pek_w;  //  most nouns pending in this window
+  c3_w     ned_w;  //  recent windows' need, decaying
 } _ca_defer_u;
 
 /* _ca_defer_page(): [dog]'s loom page.
@@ -588,9 +590,13 @@ _ca_defer_gain(u3_noun dog)
   u3e_Meter.dfg_d++;
   u3e_Meter.dfn_d++;
   {
-    c3_d siz_d = _ca_pend_size(&_ca_defer_u.pen_u);
-    if ( siz_d > u3e_Meter.dfx_d ) {
-      u3e_Meter.dfx_d = siz_d;
+    c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
+
+    if ( siz_w > _ca_defer_u.pek_w ) {
+      _ca_defer_u.pek_w = siz_w;
+    }
+    if ( siz_w > u3e_Meter.dfx_d ) {
+      u3e_Meter.dfx_d = siz_w;
     }
   }
   return 1;
@@ -696,9 +702,6 @@ u3a_defer_close(void)
     u3e_Meter.dfe_d++;
   }
 
-  //  clearing keeps capacity, and iterating and clearing cost the whole
-  //  bucket array, so give back what a large window grew
-  //
   _ca_pend_clear(&_ca_defer_u.pen_u);
 
   while ( _ca_defer_u.num_w ) {
@@ -706,9 +709,27 @@ u3a_defer_close(void)
     _ca_defer_u.bit_w[pag_w >> 5] &= ~((c3_w)1 << (pag_w & 31));
   }
 
-  if ( _ca_pend_bucket_count(&_ca_defer_u.pen_u) > 4096 ) {
-    (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
-    u3e_Meter.dfk_d++;
+  //  clearing keeps capacity, and iterating and clearing cost the whole
+  //  bucket array, so give back what a large window grew. but keep
+  //  room for recent windows' need, which decays slowly after a large
+  //  one: shrinking to fit after every window regrows the table in the
+  //  next
+  //
+  {
+    c3_w ned_w = _ca_defer_u.ned_w - (_ca_defer_u.ned_w >> 3);
+    c3_d buc_d = _ca_pend_bucket_count(&_ca_defer_u.pen_u);
+
+    ned_w = c3_max(ned_w, _ca_defer_u.pek_w);
+    _ca_defer_u.ned_w = ned_w;
+    _ca_defer_u.pek_w = 0;
+
+    //  a table of [ned_w] keys needs about 2 * ned_w buckets
+    //
+    if ( (buc_d > 4096) && (buc_d > ((c3_d)ned_w << 3)) ) {
+      (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
+      (void)_ca_pend_reserve(&_ca_defer_u.pen_u, ned_w);
+      u3e_Meter.dfk_d++;
+    }
   }
 }
 
