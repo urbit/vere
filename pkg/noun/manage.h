@@ -268,6 +268,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_lose(u3_noun som);
 
+      /* u3m_dedup_stat(): the home-road hashcons set's atoms, cells,
+      **                   and estimated process memory in bytes.
+      */
+        void
+        u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
+
     /*  Urbit time: 128 bits, leap-free.
     **
     **  High 64 bits: 0x8000.000c.cea3.5380 + Unix time at leap 25 (Jul 2012)

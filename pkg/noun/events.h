@@ -133,6 +133,15 @@
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+
+          //  home-road hashcons set (off-loom)
+          //
+          c3_d hca_d;        //  members added, outside rebuilds
+          c3_d hcd_d;        //  members removed as they were freed
+          c3_d hcr_d;        //  rebuilds
+          c3_d hcm_d;        //  rebuild time, ms
+          c3_d hcc_d[7];     //  last rebuild: cells added per root,
+                             //  cod war bas hot byc per for
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

@@ -3308,6 +3308,7 @@ _cm_dup_put(u3_noun som)
 
   if ( can == som ) {
     _cm_dup_set(som);
+    u3e_Meter.hca_d++;
   }
 
   return can;
@@ -3326,6 +3327,7 @@ u3m_dedup_lose(u3_noun som)
 
     if ( !_canon_atoms_is_end(vit_u) && (som == vit_u.data->key) ) {
       _canon_atoms_erase_itr(&_cm_dup_u.vat_u, vit_u);
+      u3e_Meter.hcd_d++;
     }
   }
   else {
@@ -3333,8 +3335,29 @@ u3m_dedup_lose(u3_noun som)
 
     if ( !_canon_cells_is_end(cit_u) && (som == cit_u.data->key) ) {
       _canon_cells_erase_itr(&_cm_dup_u.cel_u, cit_u);
+      u3e_Meter.hcd_d++;
     }
   }
+}
+
+/* u3m_dedup_stat(): the home-road set's atoms, cells, and estimated
+**                   process memory in bytes (buckets, their metadata,
+**                   and the membership bitmap).
+*/
+void
+u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d)
+{
+  if ( !_cm_dup_u.ini_t ) {
+    *vat_d = *cel_d = *byt_d = 0;
+    return;
+  }
+
+  *vat_d = _canon_atoms_size(&_cm_dup_u.vat_u);
+  *cel_d = _canon_cells_size(&_cm_dup_u.cel_u);
+  *byt_d = ( (c3_d)_canon_atoms_bucket_count(&_cm_dup_u.vat_u)
+           + (c3_d)_canon_cells_bucket_count(&_cm_dup_u.cel_u) )
+           * (sizeof(u3_noun) + sizeof(uint16_t))
+         + (c3_d)_cm_dup_u.len_w * sizeof(c3_w);
 }
 
 /* u3m_dedup_hint(): record the home-road set's size in the home road,
@@ -3536,23 +3559,46 @@ u3m_dedup_ream(void)
 
   _cm_walk_init(&wak_u);
 
-  u3h_walk_with(u3R->jed.cod_p, _cm_dup_ream_kev, &wak_u);
-  u3h_walk_with(u3R->jed.war_p, _cm_dup_ream_kev, &wak_u);
-  u3h_walk_with(u3R->jed.bas_p, _cm_dup_ream_kev, &wak_u);
-  u3h_walk_with(u3R->jed.hot_p, _cm_dup_ream_kev, &wak_u);
-  u3h_walk_with(u3R->byc.har_p, _cm_dup_ream_key, &wak_u);
-  u3h_walk_with(u3R->cax.per_p, _cm_dup_ream_kev, &wak_u);
-  u3h_walk_with(u3R->cax.for_p, _cm_dup_ream_kev, &wak_u);
+  //  measurement: cells contributed by each root, in walk order; the
+  //  rebuild's inserts don't count as additions
+  //
+  {
+    u3p(u3h_root) roo_p[7] = {
+      u3R->jed.cod_p, u3R->jed.war_p, u3R->jed.bas_p, u3R->jed.hot_p,
+      u3R->byc.har_p, u3R->cax.per_p, u3R->cax.for_p
+    };
+    c3_d add_d = u3e_Meter.hca_d;
+    c3_d pre_d = 0;
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 7; i_w++ ) {
+      u3h_walk_with(roo_p[i_w],
+                    ( 4 == i_w ) ? _cm_dup_ream_key : _cm_dup_ream_kev,
+                    &wak_u);
+      u3e_Meter.hcc_d[i_w] = _canon_cells_size(&_cm_dup_u.cel_u) - pre_d;
+      pre_d = _canon_cells_size(&_cm_dup_u.cel_u);
+    }
+
+    u3e_Meter.hca_d = add_d;
+  }
 
   _cm_walk_done(&wak_u);
 
-  if ( u3C.wag_h & u3o_verbose ) {
-    gettimeofday(&aft_u, 0);
-    u3l_log("hashcons: %zu atoms, %zu cells in %" PRIu64 "ms",
-            _canon_atoms_size(&_cm_dup_u.vat_u),
-            _canon_cells_size(&_cm_dup_u.cel_u),
-            (c3_d)(((aft_u.tv_sec - bef_u.tv_sec) * 1000000
-                    + (aft_u.tv_usec - bef_u.tv_usec)) / 1000));
+  gettimeofday(&aft_u, 0);
+
+  {
+    c3_d mil_d = (c3_d)(((aft_u.tv_sec - bef_u.tv_sec) * 1000000
+                         + (aft_u.tv_usec - bef_u.tv_usec)) / 1000);
+
+    u3e_Meter.hcr_d++;
+    u3e_Meter.hcm_d += mil_d;
+
+    if ( u3C.wag_h & u3o_verbose ) {
+      u3l_log("hashcons: %zu atoms, %zu cells in %" PRIu64 "ms",
+              _canon_atoms_size(&_cm_dup_u.vat_u),
+              _canon_cells_size(&_cm_dup_u.cel_u),
+              mil_d);
+    }
   }
 }
 
