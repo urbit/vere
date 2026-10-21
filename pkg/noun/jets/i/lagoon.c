@@ -442,7 +442,7 @@
 
       case 7:
         for (c3_d i = 0; i < len_x; i++) {
-          f128M_div(&(((float128_t*)y_bytes)[i]), &(((float128_t*)x_bytes)[i]), &(((float128_t*)y_bytes)[i]));
+          f128M_div(&(((float128_t*)x_bytes)[i]), &(((float128_t*)y_bytes)[i]), &(((float128_t*)y_bytes)[i]));
         }
         break;
     }
