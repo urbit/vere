@@ -1040,9 +1040,9 @@ _term_ef_get(c3_h tid_h)
   return _term_main();
 }
 
-/* u3_term_get_blew(): return window size {columns, rows}.
+/* u3_term_get_blew(): return window size [columns rows].
 */
-u3v_blew
+u3_noun
 u3_term_get_blew(c3_h tid_h)
 {
   u3_utty*       uty_u = _term_ef_get(tid_h);
@@ -1060,7 +1060,7 @@ u3_term_get_blew(c3_h tid_h)
     uty_u->tat_u.siz.row_h = row_h;
   }
 
-  return (u3v_blew){ .col_h = col_h, .row_h = row_h };
+  return u3nc(col_h, row_h);
 }
 
 /* u3_term_ef_winc(): window change.  Just console right now.
@@ -1071,9 +1071,8 @@ u3_term_ef_winc(void)
   //  XX groace, this should be a global handler sent to each pier
   //
   if ( u3_Host.uty_u->car_u ) {
-    u3v_blew blew_u = u3_term_get_blew(1);
     u3_noun wir = u3nt(c3__term, '1', u3_nul);
-    u3_noun cad = u3nc(c3__blew, u3nc(blew_u.col_h, blew_u.row_h));
+    u3_noun cad = u3nc(c3__blew, u3_term_get_blew(1));
 
     u3_assert( 1 == u3_Host.uty_u->tid_h );
 
@@ -1634,8 +1633,7 @@ _term_io_talk(u3_auto* car_u)
   //  send terminal dimensions
   //
   {
-    u3v_blew blew_u = u3_term_get_blew(1);
-    cad = u3nc(c3__blew, u3nc(blew_u.col_h, blew_u.row_h));
+    cad = u3nc(c3__blew, u3_term_get_blew(1));
     _term_ovum_plan(car_u, u3k(wir), cad);
   }
 

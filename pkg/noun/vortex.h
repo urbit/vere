@@ -28,14 +28,6 @@
       U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
       U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);
 
-    /* u3v_blew: terminal window size.
-    */
-      typedef struct {
-        c3_h  col_h;                        //  columns
-        c3_h  row_h;                        //  rows
-      } u3v_blew;
-
-
   /**  Globals.
   **/
       /// Arvo internal state.
@@ -119,17 +111,17 @@
     /* u3v_tank(): dump single tank.
     */
       void
-      u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
+      u3v_tank(u3_noun blu, c3_l tab_l, u3_noun tac);
 
     /* u3v_punt(): dump tank list.
     */
       void
-      u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
+      u3v_punt(u3_noun blu, c3_l tab_l, u3_noun tac);
 
     /* u3v_sway(): print trace.
     */
       void
-      u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax);
+      u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax);
 
     /* u3v_plan(): queue ovum (external).
     */

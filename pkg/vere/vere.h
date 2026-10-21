@@ -153,7 +153,10 @@
     /* u3_utat: unix terminal state.
     */
       typedef struct {
-        u3v_blew siz;                       //  window size
+        struct {
+          c3_h  col_h;                      //  columns
+          c3_h  row_h;                      //  rows
+        } siz;
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
@@ -1086,9 +1089,9 @@
         void
         u3_term_stop_spinner(void);
 
-      /* u3_term_get_blew(): return window size {columns, rows}.
+      /* u3_term_get_blew(): return window size [columns rows].
       */
-        u3v_blew
+        u3_noun
         u3_term_get_blew(c3_h tid_h);
 
       /* u3_term_ef_winc(): window change.
