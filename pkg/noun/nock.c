@@ -15,6 +15,20 @@
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
+#include "events.h"
+
+//  measurement: home-road programs looked up this interval
+//
+#define NAME    _cn_used
+#define KEY_TY  u3_post
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+static struct {
+  c3_t     ini_t;
+  _cn_used use_u;
+} _cn_meas_u;
 
 
 // define to have each opcode printed as it executes,
@@ -1702,6 +1716,20 @@ _cn_to_prog(c3_w pog_w)
   return u3to(u3n_prog, pog_p);
 }
 
+/* _cn_meas_use(): note a lookup of home-road program [pog_u].
+*/
+static void
+_cn_meas_use(u3n_prog* pog_u)
+{
+  if ( u3e_measuring() ) {
+    if ( !_cn_meas_u.ini_t ) {
+      _cn_used_init(&_cn_meas_u.use_u);
+      _cn_meas_u.ini_t = 1;
+    }
+    (void)_cn_used_insert(&_cn_meas_u.use_u, u3of(u3n_prog, pog_u));
+  }
+}
+
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
@@ -1712,6 +1740,9 @@ _n_find(u3_noun pre, u3_noun fol)
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
     u3z(key);
+    if ( &u3H->rod_u == u3R ) {
+      _cn_meas_use(_cn_to_prog(pog));
+    }
     return _cn_to_prog(pog);
   }
   
@@ -1723,7 +1754,13 @@ _n_find(u3_noun pre, u3_noun fol)
       pog   = u3h_git(rod_u->byc.har_p, key);
       if ( u3_none != pog ) {
         c3_w i_w;
-        u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
+        u3n_prog* old;
+
+        if ( !rod_u->par_p ) {
+          _cn_meas_use(_cn_to_prog(pog));
+        }
+
+        old = _n_prog_old(_cn_to_prog(pog));
         for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
           u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
           rit_u->own_o = c3n;
@@ -1743,6 +1780,10 @@ _n_find(u3_noun pre, u3_noun fol)
 
   {
     u3n_prog* gop = _n_bite(fol);
+    u3e_Meter.bcc_d++;
+    if ( &u3H->rod_u == u3R ) {
+      u3e_Meter.bca_d++;
+    }
     u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
     return gop;
@@ -3129,8 +3170,68 @@ _cn_merge_prog_cb(u3_noun kev, void* wit)
     u3a_free(pog_u);
     pog_u = sep_u;
   }
+  else if ( har_p == u3H->rod_u.byc.har_p ) {
+    u3e_Meter.bca_d++;
+  }
 
   u3h_put(har_p, key, _cn_of_prog(pog_u));
+}
+
+/* _cn_meas_size(): bytes allocated for [pog_u], excluding padding.
+*/
+static c3_d
+_cn_meas_size(u3n_prog* pog_u)
+{
+  return sizeof(u3n_prog)
+       + pog_u->byc_u.len_w
+       + (c3_d)sizeof(u3_noun)  * pog_u->lit_u.len_w
+       + (c3_d)sizeof(u3n_memo) * pog_u->mem_u.len_w
+       + (c3_d)sizeof(u3j_site) * pog_u->cal_u.len_w
+       + (c3_d)sizeof(u3j_rite) * pog_u->reg_u.len_w;
+}
+
+typedef struct {
+  c3_d num_d;
+  c3_d byt_d;
+  c3_d ded_d;
+} _cn_meas_tab;
+
+static void
+_cn_meas_cb(u3_noun kev, void* ptr_v)
+{
+  _cn_meas_tab* tab_u = ptr_v;
+  u3_noun       fol   = u3t(u3h(kev));
+
+  tab_u->num_d++;
+  tab_u->byt_d += _cn_meas_size(_cn_to_prog(u3t(kev)));
+
+  //  the key's formula is held by nothing but the key
+  //
+  if ( (c3n == u3a_is_cat(fol)) && (1 == u3a_use(fol)) ) {
+    tab_u->ded_d++;
+  }
+}
+
+/* u3n_meas(): the home road's programs: count, bytes, those whose
+**             formula only their key holds, and those looked up since
+**             the last call.
+*/
+void
+u3n_meas(c3_d* num_d, c3_d* byt_d, c3_d* ded_d, c3_d* use_d)
+{
+  _cn_meas_tab tab_u = {0};
+
+  u3h_walk_with(u3H->rod_u.byc.har_p, _cn_meas_cb, &tab_u);
+
+  *num_d = tab_u.num_d;
+  *byt_d = tab_u.byt_d;
+  *ded_d = tab_u.ded_d;
+  *use_d = 0;
+
+  if ( _cn_meas_u.ini_t ) {
+    *use_d = _cn_used_size(&_cn_meas_u.use_u);
+    _cn_used_clear(&_cn_meas_u.use_u);
+  }
 }
 
 /* u3n_reap(): promote bytecode state.
