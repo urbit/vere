@@ -44,6 +44,7 @@ def new_interval():
         "patch": 0, "skip": 0, "tasks": 0, "eve": 0,
         "F": defaultdict(int),
         "U": 0,
+        "A": None,
         "R": {},
         "K": None,
         "B": {},
@@ -96,6 +97,8 @@ def parse(path):
                 cur["F"][(pha, kin, int(log2))] += int(n)
             elif t == "U" and cur is not None:
                 cur["U"] = int(line.split()[1])
+            elif t == "A" and cur is not None:
+                cur["A"] = tuple(int(x) for x in line.split()[1:])
             elif t == "R" and cur is not None:
                 p = line.split()
                 cur["R"][p[1]] = tuple(int(x) for x in p[2:])
@@ -265,13 +268,28 @@ def main():
             print(f"    {name:<34}{n:>12}  {pct(n, tk)}")
 
 
+    ais = [i for i in intervals if i["A"]]
+    if ais:
+        a = [sum(i["A"][j] for i in ais) for j in range(4)]
+        pat = sum(i["patch"] for i in ais)
+        print("\n== page records and allocation (home road) ==")
+        print(f"  frees that dirtied a clean page via its page record: {a[0]} "
+              f"({pct(a[0], pat).strip()} of patch pages)")
+        print(f"    of those pages, later allocated into: {a[3]} ({pct(a[3], a[0]).strip()})")
+        print(f"  clean pages first written by a chunk allocation: {a[1]} "
+              f"({pct(a[1], pat).strip()} of patch pages)")
+        print(f"    while a dirty page in the same class had room: {a[2]} "
+              f"({pct(a[2], a[1]).strip()}; {pct(a[2], pat).strip()} of patch pages)")
+
     # ---- home tables and reclaims ------------------------------------------
     tis = [i for i in intervals if i["T"]]
     if tis:
         print("\n== home-road table entries at each snapshot ==")
         print(f"  {'table':<6} {'min':>9} {'median':>9} {'max':>9} {'first':>9} {'last':>9}")
-        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo"]
+        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo", "wish"]
         for j, name in enumerate(names):
+            if any(len(i["T"]) <= j for i in tis):
+                continue  # older logs lack later columns
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
@@ -294,7 +312,7 @@ def main():
     # ---- state swap and allocation (jb/measure only) ------------------------
     xis = [i for i in intervals if i["X"]]
     if xis:
-        x = [sum(i["X"][j] for i in xis) for j in range(9)]
+        x = [sum(i["X"][j] for i in xis) for j in range(5)]
         pat = sum(i["patch"] for i in xis)
         print("\n== state swap (fused take/lose) ==")
         print(f"  product take: {x[0]} nouns copied, {x[1]} home nouns gained "
@@ -302,12 +320,6 @@ def main():
         print(f"  gains that netted to zero after roc-lose: {x[3]} ({pct(x[3], x[1]).strip()})")
         print(f"  clean pages whose gains all netted to zero: {x[4]} "
               f"({pct(x[4], pat).strip()} of patch pages; upper bound on A5's saving)")
-        print("\n== page records and allocation (home road) ==")
-        print(f"  frees that dirtied a clean page via its page record: {x[5]} "
-              f"({pct(x[5], pat).strip()} of patch pages)")
-        print(f"    of those pages, later allocated into: {x[8]} ({pct(x[8], x[5]).strip()})")
-        print(f"  clean pages first written by a chunk allocation: {x[6]}")
-        print(f"    while a dirty page in the same class had room: {x[7]} ({pct(x[7], x[6]).strip()})")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)

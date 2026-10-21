@@ -142,6 +142,14 @@
           //  outcomes: u3e_lok_* (jb/measure)
           //
           c3_d lok_d[2][5];
+          //  home-road page records and allocation
+          //
+          c3_d fre_cln_d;    //  frees that dirtied a clean page via its
+                             //  page record
+          c3_d alc_cln_d;    //  clean pages first written by a chunk
+                             //  allocation
+          c3_d alc_alt_d;    //    while a dirty page in the class had room
+          c3_d alc_reu_d;    //  pages dirtied by a free, then allocated into
           //  u3m_reclaim() calls, and what they clear
           //
           c3_d rec_d;        //  reclaims
@@ -156,12 +164,6 @@
           c3_d tak_cln_d;    //    of which on a page clean before the gain
           c3_d tak_net_d;    //    of which netted to zero after roc-lose
           c3_d tak_npg_d;    //  clean pages whose gains all netted to zero
-          //  page records and allocation (home road, jb/measure)
-          //
-          c3_d fre_cln_d;    //  frees that dirtied a clean page record page
-          c3_d alc_cln_d;    //  chunk allocations that dirtied a clean page
-          c3_d alc_alt_d;    //    while a dirty page in the class had room
-          c3_d alc_reu_d;    //  pages dirtied by a free, then allocated into
         } u3e_meter;
 
       /* formula lookup outcomes. "copy" means the table holds an
@@ -187,16 +189,9 @@
 
       extern volatile c3_y u3e_Phase;
       extern u3e_meter    u3e_Meter;
-      extern c3_t         u3e_Measuring;  //  U3_MEASURE is on
 
     /* hot-path hooks (jb/measure); call only if u3e_Measuring.
     */
-      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save,
-      **                      or new (past the image).
-      */
-        c3_t
-        u3e_measure_dirty(c3_w pag_w);
-
       /* u3e_measure_gain(): the product's take gains home-road [som].
       */
         void
@@ -216,17 +211,6 @@
       */
         void
         u3e_measure_drop(void);
-
-      /* u3e_measure_free(): a free will write the page record on [pag_w].
-      */
-        void
-        u3e_measure_free(c3_w pag_w);
-
-      /* u3e_measure_alloc(): a chunk allocation will write [pag_w];
-      **                      [alt_t] if a dirty page in its class has room.
-      */
-        void
-        u3e_measure_alloc(c3_w pag_w, c3_t alt_t);
 
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */
@@ -260,6 +244,27 @@
     */
       u3e_flaw
       u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p);
+
+    /* allocator hooks: call only if u3e_Measuring, on the home road.
+    */
+      extern c3_t u3e_Measuring;  //  U3_MEASURE is on
+
+      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save,
+      **                      or past the image (new).
+      */
+        c3_t
+        u3e_measure_dirty(c3_w pag_w);
+
+      /* u3e_measure_free(): a free will write the page record on [pag_w].
+      */
+        void
+        u3e_measure_free(c3_w pag_w);
+
+      /* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+      **                      [alt_t] if a dirty page in its class has room.
+      */
+        void
+        u3e_measure_alloc(c3_w pag_w, c3_t alt_t);
 
     /* u3e_save(): update the checkpoint.
     */

@@ -560,8 +560,8 @@ _alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
     pag_u = u3to(u3a_crag, HEAP.wee_p[bit_g]);
     //  XX sanity
 
-    //  measurement: would a dirty page in this class have done?
-    //  (jb/measure)
+    //  measurement: if this page is clean, would a dirty page in this
+    //  class have done? (looks at the next 64 listed pages)
     //
     if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
       c3_t alt_t = 0;
@@ -881,7 +881,7 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
 
   if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
-    u3e_measure_free(dir_p >> u3a_page);  //  page record (jb/measure)
+    u3e_measure_free(dir_p >> u3a_page);  //  page record
   }
 
 #ifdef SANITY
