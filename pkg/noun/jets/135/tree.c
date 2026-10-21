@@ -945,9 +945,16 @@ static u3j_core _135_non__la_core_d[] =
     {}
   };
 
+static u3j_harm _135_non__sip_grab_a[] = {{".2", u3wi_sip_grab}, {}};
+static u3j_core _135_non__sip_d[] =
+  { { "grab", 7, _135_non__sip_grab_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _135_non_d[] =
   { { "lagoon", 7, 0, _135_non__la_core_d, no_hashes },
     { "mice", 7, _135_non__mice_a, 0, no_hashes },
+    { "sip", 7, 0, _135_non__sip_d, no_hashes },
     {}
   };
 
