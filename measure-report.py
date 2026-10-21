@@ -50,6 +50,7 @@ def new_interval():
         "C": None,
         "H": None,
         "D": None,
+        "P": None,
     }
 
 
@@ -105,6 +106,8 @@ def parse(path):
                 cur["B"][(p[1], p[2])] = tuple(int(x) for x in p[3:])
             elif t == "T" and cur is not None:
                 cur["T"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "P" and cur is not None:
+                cur["P"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
                 cur["C"] = tuple(int(x) for x in line.split()[1:])
             elif t == "H" and cur is not None:
@@ -274,8 +277,10 @@ def main():
     if tis:
         print("\n== home-road table entries at each snapshot ==")
         print(f"  {'table':<6} {'min':>9} {'median':>9} {'max':>9} {'first':>9} {'last':>9}")
-        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo"]
+        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo", "wish"]
         for j, name in enumerate(names):
+            if any(len(i["T"]) <= j for i in tis):
+                continue  # older logs lack later columns
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
@@ -295,6 +300,23 @@ def main():
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
 
+    pis = [i for i in intervals if i["P"]]
+    if pis:
+        tasks = sum(i["tasks"] for i in pis)
+        cmp = sum(i["P"][4] for i in pis)
+        add = sum(i["P"][5] for i in pis)
+        print("\n== bytecode programs (home road) ==")
+        print("  per snapshot:     programs       bytes   dead keys   looked up")
+        for lab, f in (("first", lambda v: v[0]), ("median", lambda v: sorted(v)[len(v) // 2]),
+                       ("max", max), ("last", lambda v: v[-1])):
+            row = [f([i["P"][k] for i in pis]) for k in range(4)]
+            print(f"  {lab:<14}{row[0]:>12}{row[1]:>12}{row[2]:>12}{row[3]:>12}")
+        last = pis[-1]["P"]
+        print(f"  last: {last[1] / last[0] if last[0] else 0:.0f} bytes per program, "
+              f"{pct(last[2], last[0]).strip()} with a dead key, "
+              f"{pct(last[3], last[0]).strip()} looked up in the last interval")
+        print(f"  compiled: {cmp} ({cmp / tasks if tasks else 0:.2f} per task); "
+              f"added to the home table: {add} ({add / tasks if tasks else 0:.2f} per task)")
     his = [i for i in intervals if i["H"]]
     if his:
         cel = [i["H"][1] for i in his]

@@ -149,10 +149,20 @@
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
                              //  state (war bas hot), cold state alone
+
+          //  bytecode programs
+          //
+          c3_d bcc_d;        //  compiled, on any road
+          c3_d bca_d;        //  added to the home road's table
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
       extern u3e_meter    u3e_Meter;
+
+    /* u3e_measuring(): measurement is on.
+    */
+      c3_t
+      u3e_measuring(void);
 
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */
