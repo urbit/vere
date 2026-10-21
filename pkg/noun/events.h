@@ -133,6 +133,28 @@
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+
+          //  deferred gains across the state swap (u3a_defer_open())
+          //
+          c3_d dfw_d;        //  windows
+          c3_d dfg_d;        //  gains deferred
+          c3_d dfn_d;        //    on distinct nouns (summed over windows)
+          c3_d dfx_d;        //  most nouns pending in one window
+          c3_d dfc_d;        //  gains cancelled by a lose
+          c3_d dfs_d;        //  gains written directly: table at its cap
+          c3_d dfr_d;        //  gains written at close
+          c3_d dfe_d;        //    on distinct nouns
+          c3_d dfk_d;        //  table shrinks after a large window
+
+          //  alignment of each new arvo state with the old, per
+          //  u3e_measure_align(): home nouns referenced from the new
+          //  state's cells on the event's road (which the take gains)
+          //
+          c3_d aln_all_d;    //  references
+          c3_d aln_pos_d;    //    the same noun at the same position in
+                             //    the old state
+          c3_d aln_exc_d;    //    of which every old cell on the way has
+                             //    a refcount of 1
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
@@ -148,6 +170,13 @@
     */
       void
       u3e_measure_event(c3_d eve_d, const c3_c* tag_c);
+
+    /* u3e_measure_align(): at the end of a poke, on the event's road,
+    **                      compare the new arvo state [new] with the
+    **                      old [old] by position. read-only.
+    */
+      void
+      u3e_measure_align(u3_noun new, u3_noun old);
 
   /** Globals.
   **/
