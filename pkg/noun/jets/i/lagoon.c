@@ -2235,6 +2235,14 @@
     }
     c3_d N = Na;
 
+    if ( (M > c3_h_max) || (P > c3_h_max) ) {
+      return u3_none;
+    }
+    c3_d len_r = M*P;                     // M*P
+    if ( len_r > (c3_d_max >> (bloq - 3)) ) {
+      return u3_none;
+    }
+
     //  Unpack the data as a byte array.  We assume total length < 2**64.
     // len_x is length in base units
     c3_d len_x = _get_length(x_shape);    // M*N
@@ -2255,12 +2263,9 @@
     // y_bytes is the data array (w/o leading 0x1)
     c3_y* y_bytes = (c3_y*)u3a_malloc(syz_y*sizeof(c3_y));
     u3r_bytes(0, syz_y, y_bytes, y_data);
-    
-    // len_r is length in base units
-    c3_d len_r = M*P;                     // M*P
 
     // syz_r is length in bytes
-    c3_d syz_r = len_r * pow(2, bloq-3);  // M*P
+    c3_d syz_r = len_r << (bloq - 3);     // M*P
 
     // r_bytes is the result array
     c3_y* r_bytes = (c3_y*)u3a_malloc((syz_r+1)*sizeof(c3_y));
