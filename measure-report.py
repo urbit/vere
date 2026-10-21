@@ -42,6 +42,7 @@ def new_interval():
         "patch": 0, "skip": 0, "tasks": 0, "eve": 0,
         "F": defaultdict(int),
         "U": 0,
+        "A": None,
         "R": {},
         "K": None,
         "B": {},
@@ -93,6 +94,8 @@ def parse(path):
                 cur["F"][(pha, kin, int(log2))] += int(n)
             elif t == "U" and cur is not None:
                 cur["U"] = int(line.split()[1])
+            elif t == "A" and cur is not None:
+                cur["A"] = tuple(int(x) for x in line.split()[1:])
             elif t == "R" and cur is not None:
                 p = line.split()
                 cur["R"][p[1]] = tuple(int(x) for x in p[2:])
@@ -259,6 +262,19 @@ def main():
                             "unregistered core"], k):
             print(f"    {name:<34}{n:>12}  {pct(n, tk)}")
 
+
+    ais = [i for i in intervals if i["A"]]
+    if ais:
+        a = [sum(i["A"][j] for i in ais) for j in range(4)]
+        pat = sum(i["patch"] for i in ais)
+        print("\n== page records and allocation (home road) ==")
+        print(f"  frees that dirtied a clean page via its page record: {a[0]} "
+              f"({pct(a[0], pat).strip()} of patch pages)")
+        print(f"    of those pages, later allocated into: {a[3]} ({pct(a[3], a[0]).strip()})")
+        print(f"  clean pages first written by a chunk allocation: {a[1]} "
+              f"({pct(a[1], pat).strip()} of patch pages)")
+        print(f"    while a dirty page in the same class had room: {a[2]} "
+              f"({pct(a[2], a[1]).strip()}; {pct(a[2], pat).strip()} of patch pages)")
 
     # ---- home tables and reclaims ------------------------------------------
     tis = [i for i in intervals if i["T"]]

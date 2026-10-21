@@ -191,6 +191,12 @@ static struct {
   c3_d   tal_d[u3e_pha_max][_ce_kin_max][_CE_MEAS_LOGS];
   c3_d   uns_d;                 //  patch pages with no fault this interval
   c3_d   tak_d;                 //  tasks this interval
+  c3_y*  alf_y;                 //  [pag] page records and allocation:
+                                //        1: dirtied by a free's page
+                                //           record this interval
+                                //        2: then allocated into
+                                //        4: first written by a chunk
+                                //           allocation this interval
 } _ce_meas;
 
 /* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
@@ -367,6 +373,14 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.tab_u[i_w].ent_d[0]);
   }
 
+  //  home-road page records and allocation: what dirty-first allocation
+  //  and page records off data pages would save
+  //
+  fprintf(fil_u, "A %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.fre_cln_d, u3e_Meter.alc_cln_d,
+                 u3e_Meter.alc_alt_d, u3e_Meter.alc_reu_d);
+  memset(_ce_meas.alf_y, 0, _ce_meas.pag_w);
+
   //  home-road table sizes at this snapshot, and reclaims since the last
   //
   {
@@ -424,6 +438,7 @@ u3e_measure_init(const c3_c* dir_c)
     _ce_meas.kin_y = c3_calloc(pag_w);
     _ce_meas.log_y = c3_calloc(pag_w);
     _ce_meas.fla_y = c3_calloc(pag_w);
+    _ce_meas.alf_y = c3_calloc(pag_w);
     _ce_meas.has_h = c3_calloc(sizeof(c3_h) * pag_w);
     _ce_meas.tem_w = c3_calloc(sizeof(c3_w) * pag_w);
 
@@ -444,6 +459,7 @@ u3e_measure_init(const c3_c* dir_c)
 
     memset(&u3e_Meter, 0, sizeof(u3e_Meter));
     _ce_meas.on_t = 1;
+    u3e_Measuring = 1;
 
     fprintf(stderr, "measure: logging to %s\r\n", pax_c);
   }
@@ -514,6 +530,59 @@ u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
       fprintf(_ce_meas.fil_u, " %" PRIu64, (c3_d)_ce_meas.tem_w[i_w]);
     }
     fputc('\n', _ce_meas.fil_u);
+  }
+}
+
+c3_t u3e_Measuring;
+
+/* u3e_measure_dirty(): page [pag_w] is dirty since the last save, or new.
+*/
+c3_t
+u3e_measure_dirty(c3_w pag_w)
+{
+  //  pages past the image are new: unprotected, and saved regardless
+  //
+  if ( pag_w >= u3P.img_u.pgs_w ) {
+    return 1;
+  }
+
+  return 0 != (u3P.dit_d[pag_w >> u3a_chub_bits_log]
+               & ((c3_d)1 << (pag_w & (u3a_chub_bits - 1))));
+}
+
+/* u3e_measure_free(): a free will write the page record on [pag_w].
+*/
+void
+u3e_measure_free(c3_w pag_w)
+{
+  if ( (pag_w < _ce_meas.pag_w) && !u3e_measure_dirty(pag_w) ) {
+    u3e_Meter.fre_cln_d++;
+    _ce_meas.alf_y[pag_w] |= 1;
+  }
+}
+
+/* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+**                      [alt_t] if a dirty page in its class has room.
+*/
+void
+u3e_measure_alloc(c3_w pag_w, c3_t alt_t)
+{
+  if ( pag_w >= _ce_meas.pag_w ) {
+    return;
+  }
+  //  count each clean page once per interval: allocations (e.g. for
+  //  the cell pool) can be made before any of them is written
+  //
+  else if ( !u3e_measure_dirty(pag_w) ) {
+    if ( !(_ce_meas.alf_y[pag_w] & 4) ) {
+      _ce_meas.alf_y[pag_w] |= 4;
+      u3e_Meter.alc_cln_d++;
+      if ( alt_t ) u3e_Meter.alc_alt_d++;
+    }
+  }
+  else if ( 1 == (_ce_meas.alf_y[pag_w] & (1|2)) ) {
+    u3e_Meter.alc_reu_d++;
+    _ce_meas.alf_y[pag_w] |= 2;
   }
 }
 

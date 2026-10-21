@@ -1,6 +1,7 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
+#include "events.h"
 #include "options.h"
 #include "vortex.h"
 
@@ -550,10 +551,37 @@ _alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
 
   if ( !HEAP.wee_p[bit_g] ) {
     pag_u = u3to(u3a_crag, _make_chunks(bit_g));
+
+    if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+      u3e_measure_alloc(pag_u->pag_w, 0);
+    }
   }
   else {
     pag_u = u3to(u3a_crag, HEAP.wee_p[bit_g]);
     //  XX sanity
+
+    //  measurement: if this page is clean, would a dirty page in this
+    //  class have done? (looks at the next 64 listed pages)
+    //
+    if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+      c3_t alt_t = 0;
+
+      if ( !u3e_measure_dirty(pag_u->pag_w) ) {
+        u3_post nex_p = pag_u->nex_p;
+        c3_w    i_w;
+
+        for ( i_w = 0; nex_p && (i_w < 64); i_w++ ) {
+          u3a_crag* nex_u = u3to(u3a_crag, nex_p);
+          if ( u3e_measure_dirty(nex_u->pag_w) ) {
+            alt_t = 1;
+            break;
+          }
+          nex_p = nex_u->nex_p;
+        }
+      }
+
+      u3e_measure_alloc(pag_u->pag_w, alt_t);
+    }
 
     if ( 1 == pag_u->fre_s ) {
       HEAP.wee_p[bit_g] = pag_u->nex_p;
@@ -851,6 +879,10 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
   u3a_crag *pag_u = u3to(u3a_crag, dir_p);
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+  if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+    u3e_measure_free(dir_p >> u3a_page);  //  page record
+  }
 
 #ifdef SANITY
   assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_w)1) << u3a_page) - 1)) );
