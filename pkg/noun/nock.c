@@ -8,6 +8,7 @@
 #include "jets.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "events.h"
 #include "manage.h"
 #include "options.h"
 #include "retrieve.h"
@@ -1705,12 +1706,31 @@ _cn_to_prog(c3_w pog_w)
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
+//  measurement: lookup source (0 nock 2, 1 call site), and outcome
+//  of a hit, judged by the formula pointer (jb/measure)
+//
+static c3_y _n_find_src_y;
+
+static inline void
+_n_find_meas(u3_noun fol, c3_y out_y)
+{
+  c3_y rod_y = ( &u3H->rod_u == u3R ) ? 0 : 1;
+
+  if ( u3e_fnd_miss != out_y ) {
+    if ( fol != u3t(u3h(u3h_Kev)) ) {
+      out_y += ( c3y == u3a_is_senior(u3R, fol) ) ? 2 : 1;
+    }
+  }
+  u3e_Meter.fnd_d[rod_y][_n_find_src_y][out_y]++;
+}
+
 static u3n_prog*
 _n_find(u3_noun pre, u3_noun fol)
 {
   u3_noun key = u3nc(u3k(pre), u3k(fol));
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
+    _n_find_meas(fol, u3e_fnd_cur_ptr);
     u3z(key);
     return _cn_to_prog(pog);
   }
@@ -1722,6 +1742,7 @@ _n_find(u3_noun pre, u3_noun fol)
       rod_u = u3to(u3a_road, rod_u->par_p);
       pog   = u3h_git(rod_u->byc.har_p, key);
       if ( u3_none != pog ) {
+        _n_find_meas(fol, u3e_fnd_anc_ptr);
         c3_w i_w;
         u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
         for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
@@ -1742,6 +1763,7 @@ _n_find(u3_noun pre, u3_noun fol)
   }
 
   {
+    _n_find_meas(fol, u3e_fnd_miss);
     u3n_prog* gop = _n_bite(fol);
     u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
@@ -1757,7 +1779,9 @@ u3n_find(u3_noun key, u3_noun fol)
 {
   u3p(u3n_prog) pog_p;
   u3t_on(noc_o);
+  _n_find_src_y = 1;
   pog_p = u3of(u3n_prog, _n_find(key, fol));
+  _n_find_src_y = 0;
   u3t_off(noc_o);
   return pog_p;
 }

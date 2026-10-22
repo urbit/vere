@@ -510,6 +510,8 @@ _ca_take_atom(u3a_atom* old_u)
 
   new_u->use_w = 1;
 
+  if ( u3e_pha_take_pro == u3e_Phase ) u3e_Meter.tak_cop_d++;
+
 #ifdef VERBOSE_TAKE
   u3l_log("%s: atom %p to %p", ( c3y == u3a_is_north(u3R) )
                                    ? "north"
@@ -554,6 +556,8 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
                                    new_u);
 #endif
 
+  if ( u3e_pha_take_pro == u3e_Phase ) u3e_Meter.tak_cop_d++;
+
   new_u->use_w = 1;
   new_u->mug_w = old_u->mug_w;
   new_u->hed   = hed;
@@ -590,6 +594,9 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
     //  not junior; normal (heap) refs on our road are counted.
     //
     else if ( c3n == u3a_north_is_junior(u3R, veb) ) {
+      if ( u3e_Measuring && (u3e_pha_take_pro == u3e_Phase) ) {
+        u3e_measure_gain(veb);
+      }
       _me_gain_use(veb); // bypass branches in u3k()
       return veb;
     }
@@ -645,6 +652,9 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
     //  not junior; a normal pointer in our road -- refcounted
     //
     else if ( c3n == u3a_south_is_junior(u3R, veb) ) {
+      if ( u3e_Measuring && (u3e_pha_take_pro == u3e_Phase) ) {
+        u3e_measure_gain(veb);
+      }
       _me_gain_use(veb); // bypass branches in u3k()
       return veb;
     }
@@ -854,6 +864,9 @@ top:
     u3a_noun* box_u = u3a_to_ptr(dog);
 
     if ( box_u->use_w > 1 ) {
+      if ( u3e_Measuring && (u3e_pha_roc_lose == u3e_Phase) ) {
+        u3e_measure_lose(dog);
+      }
       box_u->use_w -= 1;
     }
     else {
@@ -893,6 +906,9 @@ top:
     u3a_noun* box_u = u3a_to_ptr(dog);
 
     if ( box_u->use_w > 1 ) {
+      if ( u3e_Measuring && (u3e_pha_roc_lose == u3e_Phase) ) {
+        u3e_measure_lose(dog);
+      }
       box_u->use_w -= 1;
     }
     else {

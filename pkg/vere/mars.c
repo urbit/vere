@@ -1004,6 +1004,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
   //  measurement: tagged as in u3v_poke_sure()
   //
+  if ( u3e_Measuring ) u3e_measure_drop();  //  (jb/measure)
   u3e_Phase = u3e_pha_poke;
   gon = u3m_soft(0, u3v_poke, tac_u->job);
   u3x_cell(gon, &tag, &dat);
@@ -1043,6 +1044,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   }
 
   u3z(gon);
+  if ( u3e_Measuring ) u3e_measure_swap();  //  (jb/measure)
   u3e_Phase = pha_y;
   u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;

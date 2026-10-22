@@ -127,6 +127,21 @@
             c3_d nul_d[2];   //  exits with an empty junior table
             c3_d ent_d[2];   //  junior entries at exit
           } tab_u[8];        //  war cod han bas byc per for dup
+          //  nock 9 kicks through call sites (jb/measure)
+          //
+          c3_d jet_d;        //  jet fired
+          c3_d dec_d;        //  jet declined (punted)
+          c3_d noj_d;        //  registered core, no jet at this axis
+          c3_d unr_d;        //  unregistered core
+          //  formula lookups (_n_find): [road][src][outcome]
+          //  road: 0 home, 1 inner; src: 0 nock 2, 1 call site;
+          //  outcomes: u3e_fnd_* (jb/measure)
+          //
+          c3_d fnd_d[2][2][7];
+          //  call-site battery checks (_cj_site_lock): [road][outcome]
+          //  outcomes: u3e_lok_* (jb/measure)
+          //
+          c3_d lok_d[2][5];
           //  home-road page records and allocation
           //
           c3_d fre_cln_d;    //  frees that dirtied a clean page via its
@@ -141,10 +156,61 @@
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+          //  state swap (fused take/lose), per u3e_measure_swap()
+          //  (jb/measure)
+          //
+          c3_d tak_cop_d;    //  nouns copied by the product's take
+          c3_d tak_gan_d;    //  home nouns gained by the product's take
+          c3_d tak_cln_d;    //    of which on a page clean before the gain
+          c3_d tak_net_d;    //    of which netted to zero after roc-lose
+          c3_d tak_npg_d;    //  clean pages whose gains all netted to zero
         } u3e_meter;
+
+      /* formula lookup outcomes. "copy" means the table holds an
+      ** equal formula at a different address; "cur"/"sen" say whether
+      ** the formula we looked up lives on the current road or is
+      ** senior to it.
+      */
+#       define u3e_fnd_cur_ptr   0  //  hit, current road, same pointer
+#       define u3e_fnd_cur_cur   1  //  hit, current road, copy (formula on road)
+#       define u3e_fnd_cur_sen   2  //  hit, current road, copy (formula senior)
+#       define u3e_fnd_anc_ptr   3  //  hit, ancestor road, same pointer
+#       define u3e_fnd_anc_cur   4  //  hit, ancestor road, copy (formula on road)
+#       define u3e_fnd_anc_sen   5  //  hit, ancestor road, copy (formula senior)
+#       define u3e_fnd_miss      6  //  compiled anew
+
+      /* call-site battery check outcomes.
+      */
+#       define u3e_lok_ptr       0  //  cached battery, same pointer
+#       define u3e_lok_cur       1  //  equal battery, copy on current road
+#       define u3e_lok_sen       2  //  equal battery, copy senior
+#       define u3e_lok_diff      3  //  different battery, relocked
+#       define u3e_lok_none      4  //  empty site, locked
 
       extern volatile c3_y u3e_Phase;
       extern u3e_meter    u3e_Meter;
+
+    /* hot-path hooks (jb/measure); call only if u3e_Measuring.
+    */
+      /* u3e_measure_gain(): the product's take gains home-road [som].
+      */
+        void
+        u3e_measure_gain(u3_noun som);
+
+      /* u3e_measure_lose(): releasing the old state decrements [som].
+      */
+        void
+        u3e_measure_lose(u3_noun som);
+
+      /* u3e_measure_swap(): the state swap is done.
+      */
+        void
+        u3e_measure_swap(void);
+
+      /* u3e_measure_drop(): forget gains not followed by a state swap.
+      */
+        void
+        u3e_measure_drop(void);
 
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */

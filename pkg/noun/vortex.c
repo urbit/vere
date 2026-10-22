@@ -300,6 +300,8 @@ u3v_poke(u3_noun sam)
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 {
+  if ( u3e_Measuring ) u3e_measure_drop();
+
   u3_noun gon = u3m_soft(mil_w, u3v_poke, eve);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
@@ -327,6 +329,7 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 
     *pro = u3k(vir);
     u3z(gon);
+    if ( u3e_Measuring ) u3e_measure_swap();
     u3e_Phase = pha_y;
     return c3y;
   }

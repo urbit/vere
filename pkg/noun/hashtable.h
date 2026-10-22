@@ -189,6 +189,11 @@
         u3_weak
         u3h_get(u3p(u3h_root) har_p, u3_noun key);
 
+      /* u3h_Kev: key-value pair matched by the last successful
+      **         u3h_git() (measurement, jb/measure).
+      */
+        extern u3_noun u3h_Kev;
+
       /* u3h_git(): read from hashtable, retaining result.
       **
       ** `key` is RETAINED; result is RETAINED.

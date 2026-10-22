@@ -143,6 +143,30 @@ u3e_pool u3e_Pool;
 volatile c3_y u3e_Phase;
 u3e_meter     u3e_Meter;
 
+//  gains by the product's take, until the state swap is done
+//
+typedef struct {
+  c3_ws del_ws;  //  net count change
+  c3_t  cln_t;   //  page was clean before the first gain
+} _ce_gav;
+
+#define NAME    _ce_gan
+#define KEY_TY  u3_noun
+#define VAL_TY  _ce_gav
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+#define NAME    _ce_pgs
+#define KEY_TY  c3_w
+#define VAL_TY  c3_t
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+static c3_t   _ce_gan_ini_t;
+static _ce_gan _ce_gan_u;
+
 static c3_h _ce_muk_page(void* ptr_v);
 
 /* page kinds, by where the first store landed
@@ -443,6 +467,35 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.tab_u[i_w].ent_d[0]);
   }
 
+  //  hot-path counters (jb/measure)
+  //
+  fprintf(fil_u, "K %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.jet_d, u3e_Meter.dec_d,
+                 u3e_Meter.noj_d, u3e_Meter.unr_d);
+
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    for ( j_w = 0; j_w < 2; j_w++ ) {
+      fprintf(fil_u, "B %s %s", i_w ? "inner" : "home",
+                                j_w ? "site" : "nock2");
+      for ( k_w = 0; k_w < 7; k_w++ ) {
+        fprintf(fil_u, " %" PRIu64, u3e_Meter.fnd_d[i_w][j_w][k_w]);
+      }
+      fprintf(fil_u, "\n");
+    }
+    fprintf(fil_u, "L %s", i_w ? "inner" : "home");
+    for ( k_w = 0; k_w < 5; k_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.lok_d[i_w][k_w]);
+    }
+    fprintf(fil_u, "\n");
+  }
+
+  //  state swap (jb/measure)
+  //
+  fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 "\n",
+                 u3e_Meter.tak_cop_d, u3e_Meter.tak_gan_d, u3e_Meter.tak_cln_d,
+                 u3e_Meter.tak_net_d, u3e_Meter.tak_npg_d);
+
   //  home-road page records and allocation: what dirty-first allocation
   //  and page records off data pages would save
   //
@@ -487,6 +540,105 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
+  }
+}
+
+/* u3e_measure_gain(): the product's take gains home-road [som].
+*/
+void
+u3e_measure_gain(u3_noun som)
+{
+  _ce_gan_itr itr_u;
+  c3_w        pag_w = u3a_to_off(som) >> u3a_page;
+
+  if ( !_ce_gan_ini_t ) {
+    _ce_gan_init(&_ce_gan_u);
+    _ce_gan_ini_t = 1;
+  }
+
+  itr_u = _ce_gan_get(&_ce_gan_u, som);
+
+  if ( _ce_gan_is_end(itr_u) ) {
+    _ce_gav gav_u = { 0, !u3e_measure_dirty(pag_w) };
+    itr_u = _ce_gan_insert(&_ce_gan_u, som, gav_u);
+    u3_assert( !_ce_gan_is_end(itr_u) );
+  }
+
+  itr_u.data->val.del_ws++;
+}
+
+/* u3e_measure_lose(): releasing the old state decrements [som].
+*/
+void
+u3e_measure_lose(u3_noun som)
+{
+  if ( _ce_gan_ini_t ) {
+    _ce_gan_itr itr_u = _ce_gan_get(&_ce_gan_u, som);
+
+    if ( !_ce_gan_is_end(itr_u) ) {
+      itr_u.data->val.del_ws--;
+    }
+  }
+}
+
+/* u3e_measure_swap(): the state swap is done: tally gains that netted
+**                     to zero, and the clean pages they alone dirtied.
+*/
+void
+u3e_measure_swap(void)
+{
+  if ( _ce_gan_ini_t && _ce_gan_size(&_ce_gan_u) ) {
+    _ce_gan_itr itr_u;
+    _ce_pgs     pgs_u;
+    _ce_pgs_itr pit_u;
+
+    _ce_pgs_init(&pgs_u);
+
+    for ( itr_u = _ce_gan_first(&_ce_gan_u);
+          !_ce_gan_is_end(itr_u);
+          itr_u = _ce_gan_next(itr_u) )
+    {
+      _ce_gav* gav_u = &itr_u.data->val;
+      c3_w     pag_w = u3a_to_off(itr_u.data->key) >> u3a_page;
+      c3_t     zer_t = ( 0 == gav_u->del_ws );
+
+      u3e_Meter.tak_gan_d++;
+      if ( gav_u->cln_t ) u3e_Meter.tak_cln_d++;
+      if ( zer_t )        u3e_Meter.tak_net_d++;
+
+      //  a page counts if it was clean and every gain on it netted out
+      //
+      if ( gav_u->cln_t ) {
+        pit_u = _ce_pgs_get(&pgs_u, pag_w);
+        if ( _ce_pgs_is_end(pit_u) ) {
+          pit_u = _ce_pgs_insert(&pgs_u, pag_w, zer_t);
+          u3_assert( !_ce_pgs_is_end(pit_u) );
+        }
+        else {
+          pit_u.data->val = pit_u.data->val && zer_t;
+        }
+      }
+    }
+
+    for ( pit_u = _ce_pgs_first(&pgs_u);
+          !_ce_pgs_is_end(pit_u);
+          pit_u = _ce_pgs_next(pit_u) )
+    {
+      if ( pit_u.data->val ) u3e_Meter.tak_npg_d++;
+    }
+
+    _ce_pgs_cleanup(&pgs_u);
+    _ce_gan_clear(&_ce_gan_u);
+  }
+}
+
+/* u3e_measure_drop(): forget gains not followed by a state swap.
+*/
+void
+u3e_measure_drop(void)
+{
+  if ( _ce_gan_ini_t ) {
+    _ce_gan_clear(&_ce_gan_u);
   }
 }
 
