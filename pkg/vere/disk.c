@@ -1883,7 +1883,9 @@ _disk_gc_orphan_cb(void* ptr_v, c3_h mug_h, c3_h seq_h)
 **   row names as owned, making a ghost if the bank has no record for
 **   it.  a row id whose file is missing from the store is data the
 **   epoch depends on and cannot recompute: report it (all of them;
-**   keep scanning) and fail the mark through [ptr_v].
+**   keep scanning) and fail the mark through [ptr_v].  an id already
+**   owned was checked when it was first owned in this process, so it
+**   is not stat'd again.
 */
 static void
 _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
@@ -1891,8 +1893,13 @@ _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
   c3_o* oky_o = ptr_v;
 
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
-    c3_h mug_h = u3a_bid_mug(ids_d[i_z]);
-    c3_h seq_h = u3a_bid_seq(ids_d[i_z]);
+    c3_h      mug_h = u3a_bid_mug(ids_d[i_z]);
+    c3_h      seq_h = u3a_bid_seq(ids_d[i_z]);
+    u3a_blob* blo_u = u3a_blob_get(mug_h, seq_h);
+
+    if ( blo_u && (c3y == blo_u->own_o) ) {
+      continue;
+    }
 
     if ( c3n == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
       fprintf(stderr, "disk: blob " U3A_BID_FMT " named at event %"
@@ -3076,7 +3083,13 @@ try_init:
                           "falling back to previous at 0i%" PRIc3_d "\r\n",
                           lat_d, sot_d[1]);
 
-          _disk_epoc_kill(log_u, lat_d);
+          if ( c3n == _disk_epoc_kill(log_u, lat_d) ) {
+            fprintf(stderr, "disk: could not delete bogus epoch 0i%" PRIc3_d
+                            "; remove it by hand, then restart\r\n", lat_d);
+            c3_free(sot_d);
+            c3_free(log_u); // XX leaks dire(s)
+            return 0;
+          }
 
           lat_d = sot_d[1];
           try_o = c3y;

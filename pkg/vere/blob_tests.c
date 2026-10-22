@@ -166,6 +166,22 @@ _path_exists(const c3_c* pax_c)
   return ( 0 == stat(pax_c, &st_u) ) ? c3y : c3n;
 }
 
+/* _file_put(): write [len_z] bytes of [dat_c] to a new file [pax_c].
+*/
+static c3_o
+_file_put(const c3_c* pax_c, const c3_c* dat_c, c3_z len_z)
+{
+  c3_i fid_i = c3_open(pax_c, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+
+  if ( 0 > fid_i ) {
+    return c3n;
+  }
+
+  c3_o ret_o = __( (ssize_t)len_z == write(fid_i, dat_c, len_z) );
+  close(fid_i);
+  return ret_o;
+}
+
 /* _bob_is(): the blob at (mug_h, seq_h) denotes the atom that [len_d]
 **   bytes of [dat_y] denote, read back through a view.
 */
@@ -3538,7 +3554,8 @@ _test_stub_fill(void)
   _pier_done();
 }
 
-/* _test_chop_kill(): chop deletes an epoch's store with the epoch and
+/* _test_chop_kill(): chop deletes an epoch's store with the epoch,
+**   dotfiles included, removes a link without following it, and
 **   leaves the retained epochs, their stores, and the bank alone.
 */
 static void
@@ -3583,7 +3600,36 @@ _test_chop_kill(void)
   u3_disk log_u = { .dir_u = &dir_u, .com_u = &com_u,
                     .mdb_u = env_u, .epo_d = 3 };
 
+  //  dotfiles in epoch 0's root and bucket must not block the rmdirs
+  //
+  {
+    c3_c dot_c[8192];
+    snprintf(dot_c, sizeof(dot_c), "%s/.DS_Store", _tmp_bob);
+    _check( c3y == _file_put(dot_c, "x", 1), "plant %s", dot_c );
+    snprintf(dot_c, sizeof(dot_c), "%s/%" PRIc3_h "/.DS_Store", _tmp_bob, mug_h);
+    _check( c3y == _file_put(dot_c, "x", 1), "plant %s", dot_c );
+  }
+
+#ifndef U3_OS_windows
+  //  a link in epoch 1's store is removed, not followed
+  //
+  c3_c out_c[8192], kep_c[8192];
+  {
+    c3_c lin_c[8192];
+    snprintf(out_c, sizeof(out_c), "%s/outside", _tmp_pier);
+    _check( 0 == mkdir(out_c, 0700), "mkdir %s: %s", out_c, strerror(errno) );
+    snprintf(kep_c, sizeof(kep_c), "%s/1", out_c);
+    _check( c3y == _file_put(kep_c, "keep", 4), "plant %s", kep_c );
+    snprintf(lin_c, sizeof(lin_c), "%s/7", emp_c);
+    _check( 0 == symlink(out_c, lin_c), "symlink: %s", strerror(errno) );
+  }
+#endif
+
   u3_disk_chop(&log_u, 0);
+
+#ifndef U3_OS_windows
+  _check( c3y == _path_exists(kep_c), "kill followed a link out of the store" );
+#endif
 
   {
     c3_c epo_c[2048];
@@ -3690,9 +3736,14 @@ _test_blob_own(void)
   _check( c3n == blb_c->own_o, "hold-only owned" );
   _check( c3n == u3a_blob_get(mug_h[3], seq_h[3])->own_o, "unnamed atom owned" );
 
-  //  a named file gone: the mark fails and says so
+  //  a named file gone: an id owned in this process is not stat'd
+  //  again, but the next boot's mark, with the flags zeroed as
+  //  _find_home zeroes them, fails and says so
   //
   u3b_wipe(_tmp_bob, mug_h[1], seq_h[1]);
+  _check( c3y == u3_disk_blob_own(&log_u, 5, 6), "owned id stat'd again" );
+  u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
+  u3a_blob_get(mug_h[1], seq_h[1])->own_o = c3n;
   _check( c3n == u3_disk_blob_own(&log_u, 5, 6), "mark passed a missing file" );
 
   u3_lmdb_exit(env_u);

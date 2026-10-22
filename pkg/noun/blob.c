@@ -1317,8 +1317,8 @@ u3b_link(const c3_c* old_c, const c3_c* new_c, c3_h mug_h, c3_h seq_h)
   return c3y;
 }
 
-/* _blob_dir_names(): the non-dot entry names of [dir_c], or 0 if it
-**   cannot be opened (errno says why).  An empty directory is a
+/* _blob_dir_names(): the entry names of [dir_c] but . and .., or 0 if
+**   it cannot be opened (errno says why).  An empty directory is a
 **   non-null, empty list.  Read in full before anything is removed,
 **   so the removal never races the enumeration.
 */
@@ -1338,7 +1338,9 @@ _blob_dir_names(const c3_c* dir_c, c3_w* len_w)
 
   struct dirent* ent_e;
   while ( (ent_e = readdir(dir_u)) ) {
-    if ( '.' == ent_e->d_name[0] ) {
+    if (  !strcmp(".", ent_e->d_name)
+       || !strcmp("..", ent_e->d_name) )
+    {
       continue;
     }
     if ( *len_w == cap_w ) {
@@ -1355,8 +1357,11 @@ _blob_dir_names(const c3_c* dir_c, c3_w* len_w)
 /* u3b_kill(): remove a store root and everything in it.
 **
 **   An epoch's files die with the epoch.  Two levels, no recursion:
-**   a bucket holds blob files, nothing else.  A root that does not
-**   exist is not an error.
+**   a bucket holds blob files, nothing else.  Every entry goes,
+**   dotfiles included, or the rmdirs fail.  An entry is unlinked
+**   before it is opened as a bucket, so a stray file or a link is
+**   removed itself and never followed.  A root that does not exist
+**   is not an error.
 */
 void
 u3b_kill(const c3_c* bob_c)
@@ -1379,15 +1384,14 @@ u3b_kill(const c3_c* bob_c)
     snprintf(dir_c, sizeof(dir_c), "%s/%s", bob_c, mug_c[i_w]);
     c3_free(mug_c[i_w]);
 
+    //  a stray file or a link in the root goes; unlink refuses a bucket
+    //
+    if ( 0 == c3_unlink(dir_c) ) {
+      continue;
+    }
+
     if ( !(seq_c = _blob_dir_names(dir_c, &seq_w)) ) {
-      //  a stray file in the root; anything else is reported
-      //
-      if ( ENOTDIR == errno ) {
-        c3_unlink(dir_c);
-      }
-      else {
-        fprintf(stderr, "blob: kill: open %s: %s\r\n", dir_c, strerror(errno));
-      }
+      fprintf(stderr, "blob: kill: open %s: %s\r\n", dir_c, strerror(errno));
       continue;
     }
 
