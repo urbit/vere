@@ -463,6 +463,7 @@ fn buildBinary(
     if (t.os.tag == .windows) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_windows=1",
+            "-D_FILE_OFFSET_BITS=64", // 64-bit off_t, stat, ftruncate
             "-DWIN32_LEAN_AND_MEAN",
             "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
             "-DO_CLOEXEC=0",

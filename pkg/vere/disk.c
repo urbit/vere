@@ -828,6 +828,30 @@ _disk_acquire(c3_c* pax_c)
       goto fail;
     }
   }
+#else
+  {
+    //  one byte at 4 GiB, past the pid, so another process can still
+    //  read who holds the pier; windows drops the lock when the process
+    //  exits, as posix drops F_SETLK's
+    //
+    HANDLE     han_u = (HANDLE)_get_osfhandle(fid_i);
+    OVERLAPPED ove_u = { .Offset = 0, .OffsetHigh = 1 };
+
+    if (  (INVALID_HANDLE_VALUE == han_u)
+       || !LockFileEx(han_u,
+                      LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                      0, 1, 0, &ove_u) )
+    {
+      if ( pid_h ) {
+        fprintf(stderr, "pier: locked by PID %u\r\n", pid_h);
+      }
+      else {
+        fprintf(stderr, "pier: strange: locked by empty lockfile\r\n");
+      }
+
+      goto fail;
+    }
+  }
 #endif
 
   ret_i = snprintf((c3_c*)dat_y, sizeof(dat_y), "%u\n", getpid());
