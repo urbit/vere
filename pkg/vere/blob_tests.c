@@ -3843,6 +3843,125 @@ _test_blob_own(void)
   _pier_done();
 }
 
+/* _stag_ran: what each staging job reported.
+*/
+static c3_w     _stag_num_w;
+static u3_stag  _stag_got_u[4];
+
+static void
+_stag_don_cb(u3_stag* tag_u)
+{
+  _check( _stag_num_w < 4, "too many reports" );
+  _stag_got_u[_stag_num_w++] = *tag_u;
+}
+
+/* _stg_count(): the files in .urb/stg.
+*/
+static c3_w
+_stg_count(void)
+{
+  c3_c           stg_c[8192];
+  DIR*           dir_u;
+  struct dirent* ent_u;
+  c3_w           num_w = 0;
+
+  u3b_stg_dir(stg_c, _tmp_pier);
+  _check( 0 != (dir_u = opendir(stg_c)), "opendir %s", stg_c );
+  while ( (ent_u = readdir(dir_u)) ) {
+    if ( '.' != ent_u->d_name[0] ) num_w++;
+  }
+  closedir(dir_u);
+  return num_w;
+}
+
+/* _test_stag(): the staging queue runs one job at a time, in order:
+**   a buffer stages and reports its mug; a file whose mug is the one
+**   given is skipped; a queued job dropped never runs; a running job
+**   dropped is not reported and its staged file is removed.
+*/
+static void
+_test_stag(void)
+{
+  _pier_make("stag");
+
+  if ( !u3_Host.lup_u ) {
+    u3_Host.lup_u = uv_default_loop();
+  }
+
+  const c3_w len_w = 5000;
+  c3_y*      dat_y = c3_malloc(len_w);
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    dat_y[i_w] = (c3_y)(1 + (i_w % 253));
+  }
+  c3_h mug_h = u3r_mug_bytes(dat_y, len_w);
+
+  c3_c fil_c[8192];
+  snprintf(fil_c, sizeof(fil_c), "%s/source", _tmp_pier);
+  _check( c3y == _file_put(fil_c, (const c3_c*)dat_y, len_w), "plant source" );
+
+  c3_w a_w, b_w, c_w, d_w;
+  u3_stag* tag_u[4];
+  void*    own_v[4] = { &a_w, &b_w, &c_w, &d_w };
+
+  for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
+    tag_u[i_w] = u3_stag_new(own_v[i_w], _stag_don_cb);
+    tag_u[i_w]->pax_c = _tmp_pier;
+  }
+  tag_u[0]->buf_y = c3_malloc(len_w);
+  memcpy(tag_u[0]->buf_y, dat_y, len_w);
+  tag_u[0]->len_d = len_w;
+  tag_u[1]->buf_y = c3_malloc(len_w);
+  memcpy(tag_u[1]->buf_y, dat_y, len_w);
+  tag_u[1]->len_d = len_w;
+  tag_u[2]->nam_c = strdup(fil_c);
+  tag_u[2]->gum_h = mug_h;
+  tag_u[3]->nam_c = strdup(fil_c);
+
+  _stag_num_w = 0;
+  for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
+    u3_stag_plan(tag_u[i_w]);
+  }
+
+  //  a is on the pool, the rest wait.  drop a (running) and c (queued)
+  //
+  u3_stag_drop(&a_w);
+  u3_stag_drop(&c_w);
+
+  uv_run(u3L, UV_RUN_DEFAULT);
+
+  _check( 2 == _stag_num_w, "%u report(s), want 2", _stag_num_w );
+  _check(  (&b_w == _stag_got_u[0].ptr_v)
+        && (c3y == _stag_got_u[0].ok_o)
+        && (mug_h == _stag_got_u[0].mug_h),
+          "the buffer job" );
+  _check(  (&d_w == _stag_got_u[1].ptr_v)
+        && (c3y == _stag_got_u[1].ok_o)
+        && (c3n == _stag_got_u[1].sam_o)
+        && (len_w == _stag_got_u[1].len_d)
+        && (mug_h == _stag_got_u[1].mug_h),
+          "the file job" );
+  _check( 2 == _stg_count(), "%u staged file(s), want 2", _stg_count() );
+
+  //  the same file with its mug known stages nothing
+  //
+  {
+    u3_stag* sam_u = u3_stag_new(&c_w, _stag_don_cb);
+    sam_u->pax_c = _tmp_pier;
+    sam_u->nam_c = strdup(fil_c);
+    sam_u->gum_h = mug_h;
+    u3_stag_plan(sam_u);
+    uv_run(u3L, UV_RUN_DEFAULT);
+  }
+  _check(  (3 == _stag_num_w)
+        && (c3y == _stag_got_u[2].sam_o)
+        && (c3n == _stag_got_u[2].ok_o),
+          "an unchanged file was staged" );
+  _check( 2 == _stg_count(), "%u staged file(s), want 2", _stg_count() );
+
+  c3_free(dat_y);
+  _pier_done();
+}
+
 /* main(): run all blob tests.
 */
 int
@@ -3915,6 +4034,7 @@ main(int argc, char* argv[])
   _test_blob_own();
   _test_grants();
   _test_stub_fill();
+  _test_stag();
 
   fprintf(stderr, "test blob: ok\r\n");
   return 0;

@@ -1620,6 +1620,7 @@ static void
 _mesa_io_exit(u3_auto* car_u)
 {
   u3_mesa* sam_u = (u3_mesa*)car_u;
+  u3_stag_drop(sam_u);
   uv_timer_stop(&sam_u->tim_u);
   sam_u->tim_u.data = sam_u;
   uv_udp_recv_stop(&u3_Host.wax_u);
@@ -2322,6 +2323,41 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 }
 
+/* _mesa_plan_heer(): plan a %heer of [pac] from [lan], with [stg] the
+**   staged files the event installs.
+*/
+static void
+_mesa_plan_heer(u3_mesa* sam_u, u3_noun lan, u3_noun pac, u3_noun stg)
+{
+  u3_noun  cad   = u3nt(c3__heer, lan, pac);
+  u3_ovum* egg_u = u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad);
+
+  egg_u->pax = stg;
+  u3_auto_plan(&sam_u->car_u, egg_u);
+}
+
+/* _mesa_heer_staged(): a large packet is staged: the %heer carries a
+**   stub mars fills when it installs the file inside the event.  a
+**   refused install drops the packet and the sender retransmits.  one
+**   that cannot be staged goes in as a loom atom.
+*/
+static void
+_mesa_heer_staged(u3_stag* tag_u)
+{
+  u3_mesa* sam_u = tag_u->ptr_v;
+  u3_noun  lan   = u3k(tag_u->som);
+
+  if ( c3y == tag_u->ok_o ) {
+    _mesa_plan_heer(sam_u, lan, u3i_blob(tag_u->mug_h, 0),
+                    u3nc(u3i_string(tag_u->stg_c), u3_nul));
+  }
+  else {
+    u3l_log("mesa: %" PRIu64 "-byte packet not staged; sending inline",
+            tag_u->len_d);
+    _mesa_plan_heer(sam_u, lan, u3i_bytes(tag_u->len_d, tag_u->buf_y), u3_nul);
+  }
+}
+
 static void
 _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
@@ -2446,58 +2482,36 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
   c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
   if ( c3y == done_with_jumbo_frame ) {
-    u3_noun cad;
-    u3_noun stg = u3_nul;   //  the staged file of a large packet
+    // construct jumbo frame
+    u3_noun lan = u3_mesa_encode_lane(lan_u);
 
-    {
-      // construct jumbo frame
-      u3_noun lan = u3_mesa_encode_lane(lan_u);
-      u3_noun pac;
-      {
-        pac_u->pag_u.nam_u.boq_y = boq_y;
-        pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
-        pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
-        pac_u->pag_u.dat_u.len_h = req_u->tob_d;
-        pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
-        pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
+    pac_u->pag_u.nam_u.boq_y = boq_y;
+    pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
+    pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
+    pac_u->pag_u.dat_u.len_h = req_u->tob_d;
+    pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
+    pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
-        c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
-        c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
-
-        //  a large reassembled packet is staged; the %heer carries a
-        //  stub mars fills when it installs the file inside the event.
-        //  a refused install drops the packet and the sender retransmits.
-        //  mars alone writes the store.  one that cannot be staged goes
-        //  in as a loom atom.
-        //
-        c3_c stg_c[8192];
-        c3_h mug_h = 0;
-
-        if (  (c3y == u3b_over(res_h))
-           && (c3y == u3b_stage(sam_u->pir_u->pax_c, buf_y,
-                                (c3_d)res_h, stg_c, &mug_h)) )
-        {
-          pac = u3i_blob(mug_h, 0);
-          stg = u3nc(u3i_string(stg_c), u3_nul);
-        }
-        else {
-          if ( c3y == u3b_over(res_h) ) {
-            u3l_log("mesa: %u-byte packet not staged; sending inline", res_h);
-          }
-          pac = u3i_bytes(res_h, buf_y);
-        }
-        c3_free(buf_y);
-      }
-      cad = u3nt(c3__heer, lan, pac);
-    }
-
+    c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
+    c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
 
     _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
-    {
-      u3_ovum* egg_u = u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad);
-      egg_u->pax = stg;
-      u3_auto_plan(&sam_u->car_u, egg_u);
+    //  a large reassembled packet is staged on the thread pool, and its
+    //  %heer planned when it is (_mesa_heer_staged)
+    //
+    if ( c3y == u3b_over(res_h) ) {
+      u3_stag* tag_u = u3_stag_new(sam_u, _mesa_heer_staged);
+
+      tag_u->pax_c = sam_u->pir_u->pax_c;
+      tag_u->buf_y = buf_y;
+      tag_u->len_d = res_h;
+      tag_u->som   = lan;
+      u3_stag_plan(tag_u);
+    }
+    else {
+      _mesa_plan_heer(sam_u, lan, u3i_bytes(res_h, buf_y), u3_nul);
+      c3_free(buf_y);
     }
   } else if ( req_u->hav_d < lev_d ) {
     _mesa_request_next_fragments(sam_u, req_u, lan_u);

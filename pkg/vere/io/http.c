@@ -26,6 +26,7 @@ typedef struct _u3_h2o_serv {
     u3_rsat_plan = 1,                   //  planned
     u3_rsat_peek = 2,                   //  peek planned
     u3_rsat_ripe = 3,                   //  responding
+    u3_rsat_stag = 4,                   //  staging its body (u3_stag)
   } u3_rsat;
 
 /* u3_hreq: incoming http request.
@@ -715,6 +716,12 @@ _http_req_close(u3_hreq* req_u)
     req_u->peq_u->req_u = 0;
   }
 
+  //  a body still staging is not wanted
+  //
+  if ( u3_rsat_stag == req_u->sat_e ) {
+    u3_stag_drop(req_u);
+  }
+
 
   if ( 0 != req_u->tim_u ) {
     uv_close((uv_handle_t*)req_u->tim_u, _http_close_cb);
@@ -775,6 +782,12 @@ _http_req_timer_cb(uv_timer_t* tim_u)
 
     case u3_rsat_peek: {
       req_u->peq_u->req_u = 0;
+      c3_c* msg_c = "gateway timeout";
+      h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_stag: {
+      u3_stag_drop(req_u);
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
@@ -1364,15 +1377,43 @@ _http_rec_scry(h2o_req_t* rec_u)
   return __( (len_w >= 6) && (0 == memcmp("/_~_/", bas_c, 5)) );
 }
 
+/* _http_rec_staged(): the request's body is staged, or could not be:
+**   send it to arvo with a stub, or inline.
+*/
+static void
+_http_rec_staged(u3_stag* tag_u)
+{
+  u3_hreq*   req_u = tag_u->ptr_v;
+  h2o_req_t* rec_u = req_u->rec_u;
+
+  u3_assert( u3_rsat_stag == req_u->sat_e );
+  req_u->sat_e = u3_rsat_init;
+
+  if ( c3y == tag_u->ok_o ) {
+    u3_noun bod = u3nt(u3_nul,
+                       u3i_chub(tag_u->len_d),
+                       u3i_blob(tag_u->mug_h, 0));
+
+    _http_req_start(req_u, bod, u3nc(u3i_string(tag_u->stg_c), u3_nul));
+    return;
+  }
+
+  u3l_log("http: %" PRIu64 "-byte body not staged; sending inline",
+          tag_u->len_d);
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), u3_nul);
+}
+
 /* _http_rec_start(): take an incoming request from h2o.
 **
-**   a body over U3_BLOB_THRESH is staged; the event goes to arvo with
-**   a stub where the body belongs and the staging path riding along,
-**   and mars installs the file and fills the stub before it computes.
-**   only a request bound for arvo stages: a bad method is refused
-**   first, a cache hit is answered (a miss comes back with cache_o
-**   clear), and the scry path reads no body.  anything smaller, or a
-**   body that cannot be staged, goes to arvo as an inline atom.
+**   a body over U3_BLOB_THRESH is staged on the thread pool from a
+**   copy (h2o frees the original with the request); once it is, the
+**   event goes to arvo with a stub where the body belongs and the
+**   staging path riding along, and mars installs the file and fills
+**   the stub before it computes.  only a request bound for arvo
+**   stages: a bad method is refused first, a cache hit is answered (a
+**   miss comes back with cache_o clear), and the scry path reads no
+**   body.  anything smaller, or a body that cannot be staged, goes to
+**   arvo as an inline atom.
 */
 static void
 _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
@@ -1401,22 +1442,15 @@ _http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
   if (  (c3y == u3b_over(rec_u->entity.len))
      && (c3n == _http_rec_scry(rec_u)) )
   {
-    c3_c stg_c[8192];
-    c3_h mug_h = 0;
+    u3_stag* tag_u = u3_stag_new(req_u, _http_rec_staged);
 
-    if ( c3y == u3b_stage(u3C.dir_c, (const c3_y*)rec_u->entity.base,
-                          (c3_d)rec_u->entity.len, stg_c, &mug_h) )
-    {
-      u3_noun bod = u3nt(u3_nul,
-                         u3i_chub((c3_d)rec_u->entity.len),
-                         u3i_blob(mug_h, 0));
+    tag_u->len_d = (c3_d)rec_u->entity.len;
+    tag_u->buf_y = c3_malloc(tag_u->len_d);
+    memcpy(tag_u->buf_y, rec_u->entity.base, tag_u->len_d);
 
-      _http_req_start(req_u, bod, u3nc(u3i_string(stg_c), u3_nul));
-      return;
-    }
-
-    u3l_log("http: %" PRIu64 "-byte body not staged; sending inline",
-            (c3_d)rec_u->entity.len);
+    req_u->sat_e = u3_rsat_stag;
+    u3_stag_plan(tag_u);
+    return;
   }
 
   _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), u3_nul);
@@ -1900,6 +1934,7 @@ _http_cancel_respond(u3_hreq* req_u)
   switch ( req_u->sat_e ) {
     case u3_rsat_init: u3_assert(0);
     case u3_rsat_peek: u3_assert(0);
+    case u3_rsat_stag: u3_assert(0);   //  arvo has not seen it
 
     case u3_rsat_plan: {
       req_u->sat_e = u3_rsat_ripe; // XX confirm

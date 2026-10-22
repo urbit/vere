@@ -1075,6 +1075,102 @@ _unix_plan_into(u3_unix* unx_u, u3_ufil* fil_u, c3_d len_d,
   }
 }
 
+/* _unix_read_change(): read the [len_d] bytes open on [fid_i], closing
+**   it: the file's change as a list, or ~ if it is unchanged or cannot
+**   be read.
+*/
+static u3_noun
+_unix_read_change(u3_unix* unx_u, u3_ufil* fil_u, c3_i fid_i, c3_d len_d)
+{
+  c3_y* dat_y = _unix_read_all(fid_i, len_d, fil_u->pax_c);
+
+  if ( close(fid_i) < 0 ) {
+    u3l_log("error closing file %s: %s",
+            fil_u->pax_c, strerror(errno));
+  }
+
+  if ( !dat_y ) {
+    return u3_nul;
+  }
+  else {
+    c3_h mug_h = u3r_mug_bytes(dat_y, len_d);
+
+    if ( mug_h == fil_u->gum_w ) {
+      c3_free(dat_y);
+      return u3_nul;
+    }
+    else {
+      u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
+      u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
+      u3_noun dat = u3nt(mim, u3i_chub(len_d), u3i_bytes(len_d, dat_y));
+
+      c3_free(dat_y);
+      return u3nc(u3nt(pax, u3_nul, dat), u3_nul);
+    }
+  }
+}
+
+/* _unix_file_staged(): a large file's staging job is done.  the node is
+**   found again by path, since it can go while the file stages; a file
+**   that could not be staged goes inline in an %into of its own.
+*/
+static void
+_unix_file_staged(u3_stag* tag_u)
+{
+  u3_unix* unx_u = tag_u->ptr_v;
+  u3_ufil* fil_u = 0;
+
+  for ( u3_umon* mon_u = unx_u->mon_u; !fil_u && mon_u; mon_u = mon_u->nex_u ) {
+    fil_u = _unix_find_file(&mon_u->dir_u, tag_u->nam_c);
+  }
+
+  if ( c3y == tag_u->sam_o ) {
+    return;
+  }
+
+  if ( !fil_u ) {
+    if ( c3y == tag_u->ok_o ) {
+      c3_unlink(tag_u->stg_c);
+    }
+    return;
+  }
+
+  if ( c3y == tag_u->ok_o ) {
+    _unix_plan_into(unx_u, fil_u, tag_u->len_d, tag_u->mug_h, tag_u->stg_c);
+    return;
+  }
+
+  u3l_log("unix: %s not staged; sending inline", fil_u->pax_c);
+
+  {
+    struct stat buf_u;
+    c3_i        fid_i = c3_open(fil_u->pax_c, O_RDONLY, 0644);
+
+    if ( (0 > fid_i) || (0 > fstat(fid_i, &buf_u)) ) {
+      u3l_log("error opening file %s: %s", fil_u->pax_c, strerror(errno));
+      if ( 0 <= fid_i ) {
+        close(fid_i);
+      }
+      return;
+    }
+
+    u3_noun can = _unix_read_change(unx_u, fil_u, fid_i, (c3_d)buf_u.st_size);
+
+    if ( u3_nul != can ) {
+      u3_udir* top_u = fil_u->par_u;
+
+      while ( top_u->par_u ) {
+        top_u = top_u->par_u;
+      }
+
+      u3_noun wir = u3nt(c3__sync, u3dc("scot", c3__uv, unx_u->sev_h), u3_nul);
+      u3_noun cad = u3nq(c3__into, u3i_string(((u3_umon*)top_u)->nam_c),
+                         c3n, can);
+      u3_auto_plan(&unx_u->car_u, u3_ovum_init(0, c3__c, wir, cad));
+    }
+  }
+}
+
 /* _unix_update_file(): update file, producing list of changes
 **
 **  when scanning through files, if dry, do nothing. otherwise,
@@ -1084,11 +1180,11 @@ _unix_plan_into(u3_unix* unx_u, u3_ufil* fil_u, c3_d len_d,
 **  gum_w, move on. otherwise, overwrite add path plus data to
 **  %into event.
 **
-**  Files larger than U3_BLOB_THRESH are staged to .urb/stg/, and their
-**  %into event goes out on its own with a stub where the bob belongs and
-**  the staging path riding along; mars installs the file and fills the
-**  stub before it computes the event.  This function returns u3_nul for
-**  large files.
+**  Files larger than U3_BLOB_THRESH are staged to .urb/stg/ on the
+**  thread pool, and their %into event goes out on its own with a stub
+**  where the bob belongs and the staging path riding along; mars
+**  installs the file and fills the stub before it computes the event.
+**  This function returns u3_nul for large files.
 */
 static u3_noun
 _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
@@ -1117,63 +1213,22 @@ _unix_update_file(u3_unix* unx_u, u3_ufil* fil_u)
 
   c3_d len_d = (c3_d)buf_u.st_size;
 
-  //  large files: stage in .urb/stg/; mars installs inside the event.
-  //  the mug is measured in place first, so an unchanged file costs no
-  //  copy.  content staging refuses (all zeros, say) goes inline
+  //  large files: stage in .urb/stg/ on the pool, which measures the
+  //  mug first, so an unchanged file costs no copy; mars installs
+  //  inside the event
   //
   if ( c3y == u3b_over(len_d) ) {
-    c3_h mug_h = 0;
+    u3_stag* tag_u = u3_stag_new(unx_u, _unix_file_staged);
 
-    if ( (c3y == u3b_mug_fd(fid_i, &mug_h)) && (mug_h == fil_u->gum_w) ) {
-      close(fid_i);
-      return u3_nul;
-    }
-
-    c3_c stg_c[8192];
-
-    if ( c3y == u3b_stage_fd(unx_u->pax_c, fid_i, len_d, stg_c, &mug_h) ) {
-      close(fid_i);
-      _unix_plan_into(unx_u, fil_u, len_d, mug_h, stg_c);
-      return u3_nul;
-    }
-
-    u3l_log("unix: %s not staged; sending inline", fil_u->pax_c);
-
-    if ( -1 == lseek(fid_i, 0, SEEK_SET) ) {
-      u3l_log("error rewinding %s: %s", fil_u->pax_c, strerror(errno));
-      close(fid_i);
-      return u3_nul;
-    }
+    close(fid_i);
+    tag_u->pax_c = unx_u->pax_c;
+    tag_u->nam_c = strdup(fil_u->pax_c);
+    tag_u->gum_h = fil_u->gum_w;
+    u3_stag_plan(tag_u);
+    return u3_nul;
   }
 
-  {
-    c3_y* dat_y = _unix_read_all(fid_i, len_d, fil_u->pax_c);
-
-    if ( close(fid_i) < 0 ) {
-      u3l_log("error closing file %s: %s",
-              fil_u->pax_c, strerror(errno));
-    }
-
-    if ( !dat_y ) {
-      return u3_nul;
-    }
-    else {
-      c3_h mug_h = u3r_mug_bytes(dat_y, len_d);
-
-      if ( mug_h == fil_u->gum_w ) {
-        c3_free(dat_y);
-        return u3_nul;
-      }
-      else {
-        u3_noun pax = _unix_string_to_path(unx_u, fil_u->pax_c);
-        u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
-        u3_noun dat = u3nt(mim, u3i_chub(len_d), u3i_bytes(len_d, dat_y));
-
-        c3_free(dat_y);
-        return u3nc(u3nt(pax, u3_nul, dat), u3_nul);
-      }
-    }
-  }
+  return _unix_read_change(unx_u, fil_u, fid_i, len_d);
 }
 
 /* _unix_update_dir(): update directory, producing list of changes
@@ -1818,6 +1873,8 @@ static void
 _unix_io_exit(u3_auto* car_u)
 {
   u3_unix* unx_u = (u3_unix*)car_u;
+
+  u3_stag_drop(unx_u);
 
   u3_umon* mon_u = unx_u->mon_u;
   u3_umon* nex_u;

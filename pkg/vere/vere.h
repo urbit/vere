@@ -591,6 +591,30 @@
       */
         typedef struct _u3_disk_walk u3_disk_walk;
 
+      /* u3_stag: a large body staged to .urb/stg on the thread pool.
+      **
+      **   The source is [buf_y] or, when that is 0, the file at [nam_c],
+      **   read on the worker.  [don_f] runs on the loop once the job is
+      **   done; a job whose caller went (ptr_v cleared) is not reported,
+      **   and its staged file is removed.
+      */
+        typedef struct _u3_stag {
+          uv_work_t         wor_u;          //  the pool's job
+          const c3_c*       pax_c;          //  pier directory
+          c3_y*             buf_y;          //  bytes to stage, owned, or 0
+          c3_c*             nam_c;          //  else a file to copy, owned
+          c3_d              len_d;          //  bytes (a file: measured)
+          c3_h              gum_h;          //  a file: skip if this is its mug
+          u3_noun           som;            //  the caller's noun, owned
+          void*             ptr_v;          //  the caller; 0 when it is gone
+          void            (*don_f)(struct _u3_stag*);  //  on the loop
+          c3_o              ok_o;           //  out: staged
+          c3_o              sam_o;          //  out: the file's mug is gum_h
+          c3_h              mug_h;          //  out: the staged content mug
+          c3_c              stg_c[8192];    //  out: the staged file
+          struct _u3_stag*  nex_u;          //  next in the queue
+        } u3_stag;
+
       /* u3_psat: pier state.
       */
         typedef enum {
@@ -1119,6 +1143,30 @@
       */
         void
         u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h, c3_h num_h);
+
+    /**  Thread pool.
+    **/
+      /* u3_pool_work(): queue [wor_u] on the thread pool, with the signals
+      **   that unwind the loop thread kept out of the pool's threads.
+      */
+        void
+        u3_pool_work(uv_work_t* wor_u, uv_work_cb wok_f, uv_after_work_cb aft_f);
+
+      /* u3_stag_new(): a staging job for [ptr_v], reported to [don_f].
+      */
+        u3_stag*
+        u3_stag_new(void* ptr_v, void (*don_f)(u3_stag*));
+
+      /* u3_stag_plan(): queue a staging job; one runs at a time.
+      */
+        void
+        u3_stag_plan(u3_stag* tag_u);
+
+      /* u3_stag_drop(): forget every job for [ptr_v]: a queued one is
+      **   freed, a running one's result is discarded.
+      */
+        void
+        u3_stag_drop(void* ptr_v);
 
     /**  Filesystem (async).
     **/
