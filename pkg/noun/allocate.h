@@ -268,7 +268,14 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+  struct {                                      /*  SKA state                                 */ \
+    U3_N(S) cor;                                /*  SKA core                                  */ \
+    U3_W(S) pax_p;                              /*  [path axis] -> jet drivers                */ \
+    U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
+    U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
+  } ska;                                                                                         \
+                                                                                                 \
+  U3_W(S) fut_w[23];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
