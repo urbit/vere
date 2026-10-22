@@ -1461,7 +1461,8 @@ _jet_same(const c3_c* nam_c, c3_w a_w, c3_w b_w, c3_w c_w, u3_noun rb, u3_noun r
 /* _test_jets_bob(): the atom jets treat a bob the same way they do the
 **   materialized atom: the slicers over ranges that touch, cross, and
 **   lie beyond the end of the file; the jets that load a bob onto the
-**   loom; jam-shax, which streams it; and lore over a page-long file.
+**   loom; jam-shax, which streams it; the hashes and ed25519, which
+**   borrow it; and lore over a page-long file.
 */
 static void
 _test_jets_bob(void)
@@ -1661,6 +1662,57 @@ _test_jets_bob(void)
       u3_noun cll = u3nc(u3k(loa), u3k(loa));
       _jet_same("jam-shax", 1, 0, 0, u3qe_jam_shax(cel), u3qe_jam_shax(cll));
       u3z(cel); u3z(cll);
+    }
+  }
+
+  //  the hashes and ed25519 borrow a bob's bytes through a view: widths
+  //  inside the atom (borrowed), at its end, and past it (padded)
+  //
+  {
+    const c3_w wid_w[] = { 0, 100, len_w, len_w + 10 };
+    for ( c3_w i_w = 0; i_w < sizeof(wid_w) / sizeof(*wid_w); i_w++ ) {
+      u3_noun cob = u3nt(0, u3nc(wid_w[i_w], u3k(bob)), 0);
+      u3_noun col = u3nt(0, u3nc(wid_w[i_w], u3k(loa)), 0);
+      _jet_same("shay", wid_w[i_w], 0, 0, u3we_shay(cob), u3we_shay(col));
+      _jet_same("shal", wid_w[i_w], 0, 0, u3we_shal(cob), u3we_shal(col));
+      _jet_same("keccak-256", wid_w[i_w], 0, 0,
+                u3we_kecc256(cob), u3we_kecc256(col));
+      u3z(cob); u3z(col);
+    }
+
+    {
+      u3_noun cob = u3nt(0, u3k(bob), 0);
+      u3_noun col = u3nt(0, u3k(loa), 0);
+      _jet_same("shax", 0, 0, 0, u3we_shax(cob), u3we_shax(col));
+      u3z(cob); u3z(col);
+    }
+
+    //  a signature over the bob is the one over the loom atom, and
+    //  verifies over both
+    //
+    {
+      u3_atom sed = 0x1234567;
+      u3_noun cop = u3nt(0, sed, 0);
+      u3_atom pub = u3wee_puck(cop);
+      u3_noun cob = u3nt(0, u3nc(u3k(bob), sed), 0);
+      u3_noun col = u3nt(0, u3nc(u3k(loa), sed), 0);
+      u3_atom sig = u3wee_sign(cob);
+
+      _jet_same("ed-sign", 0, 0, 0, u3k(sig), u3wee_sign(col));
+      {
+        u3_noun vob = u3nt(0, u3nt(u3k(sig), u3k(bob), u3k(pub)), 0);
+        u3_noun vol = u3nt(0, u3nt(u3k(sig), u3k(loa), u3k(pub)), 0);
+        _check( c3y == u3wee_veri(vob), "ed-veri rejects the bob" );
+        _check( c3y == u3wee_veri(vol), "ed-veri rejects the loom atom" );
+        u3z(vob); u3z(vol);
+      }
+      {
+        u3_noun vob = u3nt(0, u3nt(u3k(sig), u3nc(len_w, u3k(bob)), u3k(pub)), 0);
+        _check( c3y == u3wee_veri_octs(vob), "ed-veri-octs rejects the bob" );
+        u3z(vob);
+      }
+      u3z(sig); u3z(pub);
+      u3z(cop); u3z(cob); u3z(col);
     }
   }
 
