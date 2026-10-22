@@ -204,6 +204,23 @@
     return __( sin_d == (met_d - 1) );
   }
 
+/* no elements: a zero dimension.  After _check() that is the same
+**   as the data being a single block (the pin alone), which is where
+**   +bin-op, +min/+max and +diag crash; +check only counts blocks, so
+**   the data may carry junk below the pin and still be consistent.
+**   @Refcount: retains arguments
+*/
+  static inline c3_o _empty(u3_noun shape)
+  {
+    while ( u3_nul != shape ) {
+      if ( 0 == u3h(shape) ) {
+        return c3y;
+      }
+      shape = u3t(shape);
+    }
+    return c3n;
+  }
+
 /* add - axpy = 1*x+y
 */
   u3_noun
@@ -2339,6 +2356,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754:
@@ -2387,6 +2406,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754:
@@ -2435,6 +2456,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754:
@@ -2483,6 +2506,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754:
@@ -2531,6 +2556,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754:
@@ -2611,6 +2638,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +min/+max crash on -:(ravel a)
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2689,6 +2718,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +min/+max crash on -:(ravel a)
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2727,6 +2758,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: -:(ravel a) crashes
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2766,6 +2799,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: -:(ravel a) crashes
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2848,6 +2883,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2891,6 +2928,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2934,6 +2973,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -2977,6 +3018,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       } else {
         switch (x_kind) {
           case c3__i754: {
@@ -3016,6 +3059,9 @@
       if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);
       }
+      if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
+      }
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
@@ -3053,6 +3099,9 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);
+      }
+      if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       }
       switch (x_kind) {
         case c3__i754:
@@ -3092,6 +3141,9 @@
       if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);
       }
+      if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
+      }
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
@@ -3130,6 +3182,9 @@
       if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);
       }
+      if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
+      }
       switch (x_kind) {
         case c3__i754:
           if ( c3n == _set_rounding(rnd) ) { return u3_none; }
@@ -3167,6 +3222,9 @@
       rnd = u3h(u3t(u3t(u3t(cor))));  // 30
       if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);
+      }
+      if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +bin-op takes (dec (lent ali))
       }
       switch (x_kind) {
         case c3__i754:
@@ -3227,6 +3285,9 @@
                )
             {
               return u3m_bail(c3__exit);
+            }
+            if ( c3y == _empty(x_shape) ) {
+              return u3m_bail(c3__exit);    //  empty ray: (mul a b) takes (dec (lent ali))
             }
             if ( c3n == _set_rounding(rnd) ) {
               pro = u3_none;
@@ -3391,6 +3452,8 @@
          )
       {
         return u3m_bail(c3__exit);
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: (gulf 0 (dec -.shape)) crashes
       } else {
         u3_noun r_data = u3qi_la_diag(x_data, x_shape, x_bloq);
         if (r_data == u3_none) { return u3_none; }
@@ -3426,6 +3489,8 @@
         return u3m_bail(c3__exit);
       } else if ( c3n == _check(x_meta, x_data) ) {
         return u3m_bail(c3__exit);      //  +diag asserts (check a)
+      } else if ( c3y == _empty(x_shape) ) {
+        return u3m_bail(c3__exit);      //  empty ray: +diag takes (dec -.shape)
       } else {
         switch (x_kind) {
           case c3__i754: {
