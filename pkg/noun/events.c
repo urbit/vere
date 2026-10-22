@@ -99,6 +99,7 @@
 #include "log.h"
 #include "manage.h"
 #include "murmur3.h"
+#include "nock.h"
 #include "options.h"
 #include "vortex.h"
 
@@ -477,6 +478,20 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,
                    u3e_Meter.pru_d[0], u3e_Meter.pru_d[1]);
+
+    //  bytecode programs: the home table now (count, bytes, formulas only
+    //  their key holds), programs looked up from it, and compiles and
+    //  additions to it this interval
+    //
+    {
+      c3_d num_d, byt_d, ded_d, use_d;
+
+      u3n_meas(&num_d, &byt_d, &ded_d, &use_d);
+      fprintf(fil_u, "P %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 "\n",
+                     num_d, byt_d, ded_d, use_d,
+                     u3e_Meter.bcc_d, u3e_Meter.bca_d);
+    }
   }
   fflush(fil_u);
 
@@ -488,6 +503,14 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
   }
+}
+
+/* u3e_measuring(): measurement is on.
+*/
+c3_t
+u3e_measuring(void)
+{
+  return _ce_meas.on_t;
 }
 
 /* u3e_measure_init(): start measuring if U3_MEASURE is set.

@@ -57,6 +57,7 @@ def new_interval():
         "L": {},
         "T": None,
         "C": None,
+        "P": None,
     }
 
 
@@ -116,6 +117,8 @@ def parse(path):
                 cur["B"][(p[1], p[2])] = tuple(int(x) for x in p[3:])
             elif t == "T" and cur is not None:
                 cur["T"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "P" and cur is not None:
+                cur["P"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
                 cur["C"] = tuple(int(x) for x in line.split()[1:])
             elif t == "L" and cur is not None:
@@ -328,6 +331,24 @@ def main():
                   f"hank entries cleared {han / rec:.0f}")
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
+
+    pis = [i for i in intervals if i["P"]]
+    if pis:
+        tasks = sum(i["tasks"] for i in pis)
+        cmp = sum(i["P"][4] for i in pis)
+        add = sum(i["P"][5] for i in pis)
+        print("\n== bytecode programs (home road) ==")
+        print("  per snapshot:     programs       bytes   dead keys   looked up")
+        for lab, f in (("first", lambda v: v[0]), ("median", lambda v: sorted(v)[len(v) // 2]),
+                       ("max", max), ("last", lambda v: v[-1])):
+            row = [f([i["P"][k] for i in pis]) for k in range(4)]
+            print(f"  {lab:<14}{row[0]:>12}{row[1]:>12}{row[2]:>12}{row[3]:>12}")
+        last = pis[-1]["P"]
+        print(f"  last: {last[1] / last[0] if last[0] else 0:.0f} bytes per program, "
+              f"{pct(last[2], last[0]).strip()} with a dead key, "
+              f"{pct(last[3], last[0]).strip()} looked up in the last interval")
+        print(f"  compiled: {cmp} ({cmp / tasks if tasks else 0:.2f} per task); "
+              f"added to the home table: {add} ({add / tasks if tasks else 0:.2f} per task)")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)
