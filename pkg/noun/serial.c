@@ -317,44 +317,45 @@ _cs_met_w(u3_atom a)
   return (c3_w)met_d;
 }
 
-/* _cs_jam_xeno_atom(): encode in/direct atom in bitstream.
+/* _cs_jam_bsw_atom(): encode in/direct atom of [met_d] bits in bitstream.
 */
 static inline void
-_cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
+_cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_d met_d, u3_atom a)
 {
   if ( c3y == u3a_is_cat(a) ) {
     //  XX need a ur_bsw_atom32()
     //
-    ur_bsw_atom64(rit_u, (c3_y)met_w, (c3_d)a);
+    ur_bsw_atom64(rit_u, (c3_y)met_d, (c3_d)a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
     //  bob atom: write the tag and length prefix, then stream the bytes
-    //  from a view in 8 KiB copies.  the total must be exactly met_w
-    //  bits, which is what u3r_met_d() gave the caller.
+    //  from a view in 8 KiB copies.  the total must be exactly met_d
+    //  bits, which is what u3r_met_d() gave the caller: past 2^32 bits
+    //  on a 32-bit build, since the stream counts in chubs.
     //
     u3r_view win_u;
     u3r_view_open(&win_u, a, c3y);
 
-    ur_bsw_atom_head(rit_u, (c3_d)met_w);
+    ur_bsw_atom_head(rit_u, met_d);
 
     {
       c3_y win_y[8192];
       c3_d off_d = 0;
-      c3_w rem_w = met_w;
+      c3_d rem_d = met_d;
 
-      while ( rem_w ) {
-        c3_w bit_w = ( rem_w < (sizeof(win_y) * 8) )
-                   ? rem_w
-                   : (c3_w)(sizeof(win_y) * 8);
-        c3_z ask_z = (bit_w + 7) >> 3;
+      while ( rem_d ) {
+        c3_d bit_d = ( rem_d < (sizeof(win_y) * 8) )
+                   ? rem_d
+                   : (c3_d)(sizeof(win_y) * 8);
+        c3_z ask_z = (c3_z)((bit_d + 7) >> 3);
 
         if ( ask_z != u3r_view_copy(&win_u, off_d, win_y, ask_z) ) {
           u3m_bail(c3__fail);
         }
 
-        ur_bsw_bytes(rit_u, bit_w, win_y);
+        ur_bsw_bytes(rit_u, bit_d, win_y);
         off_d += ask_z;
-        rem_w -= bit_w;
+        rem_d -= bit_d;
       }
     }
 
@@ -366,7 +367,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     //  XX need a ur_bsw_atom_words()
     //
     c3_y*     byt_y = (c3_y*)vat_u->buf_w;
-    ur_bsw_atom_bytes(rit_u, (c3_d)met_w, byt_y);
+    ur_bsw_atom_bytes(rit_u, met_d, byt_y);
   }
 }
 
@@ -392,17 +393,17 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  c3_w         met_w = _cs_met_w(a);
+  c3_d         met_d = u3r_met_d(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
-    _cs_jam_bsw_atom(rit_u, met_w, a);
+    _cs_jam_bsw_atom(rit_u, met_d, a);
   }
   else {
     c3_w bak_w = u3r_met(0, bak);
 
-    if ( met_w <= bak_w ) {
-      _cs_jam_bsw_atom(rit_u, met_w, a);
+    if ( met_d <= bak_w ) {
+      _cs_jam_bsw_atom(rit_u, met_d, a);
     }
     else {
       _cs_jam_bsw_back(rit_u, bak_w, bak);

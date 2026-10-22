@@ -7,6 +7,7 @@
 #include "noun.h"
 #include "vere.h"
 #include "mars.h"
+#include "ur/ur.h"
 
 #include "c3/tmpdir.h"
 
@@ -2181,9 +2182,10 @@ _test_hand_gone(void)
 }
 
 #if !defined(VERE64) && !defined(U3_OS_windows)
-/* _test_jam_wide(): a bob of 2^32 bits or more cannot jam with a word
-**   of length: xeno bails %fail, as fib does, instead of writing a
-**   short jam.  the file is sparse: 512 MiB of hole and a last byte.
+/* _test_jam_wide(): a bob of 2^32 bits or more jams through xeno,
+**   whose stream counts in chubs: the jam is an atom tag, the length,
+**   and the bits, all zero but the last.  the file is sparse: 512 MiB
+**   of hole and a last byte.
 */
 static void
 _test_jam_wide(void)
@@ -2207,8 +2209,46 @@ _test_jam_wide(void)
   }
   _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
 
-  _check( u3r_met_d(0, _han_bob) > c3_w_max, "not wider than a word" );
-  _hand_gone_expect("xeno", _hand_gone_xeno_cb);
+  c3_d met_d = u3r_met_d(0, _han_bob);
+  _check( met_d > c3_w_max, "not wider than a word" );
+
+  c3_d  len_d = 0;
+  c3_y* byt_y = 0;
+  u3s_jam_xeno(_han_bob, &len_d, &byt_y);
+
+  {
+    ur_bsr_t     red_u = {0};
+    ur_cue_tag_e tag_e;
+    uint64_t     hed_d = 0;
+
+    _check( ur_cue_good == ur_bsr_init(&red_u, len_d, byt_y), "bsr init" );
+    _check(  (ur_cue_good == ur_bsr_tag(&red_u, &tag_e))
+          && (ur_jam_atom == tag_e),
+            "jam is not an atom" );
+    _check(  (ur_cue_good == ur_bsr_rub_len(&red_u, &hed_d))
+          && (met_d == hed_d),
+            "length %" PRIu64 " != %" PRIu64, hed_d, met_d );
+
+    c3_d pos_d = red_u.bits;
+    c3_d end_d = pos_d + met_d - 1;   //  the atom's top bit
+    c3_o zer_o = c3y;
+
+    _check( len_d == ((end_d >> 3) + 1), "jam is %" PRIu64 " bytes", len_d );
+    _check( (byt_y[end_d >> 3] >> (end_d & 7)) == 1, "top bit lost" );
+
+    for ( c3_d i_d = pos_d; i_d < end_d; ) {
+      if ( (i_d & 7) || ((end_d - i_d) < 8) ) {
+        if ( (byt_y[i_d >> 3] >> (i_d & 7)) & 1 ) { zer_o = c3n; break; }
+        i_d++;
+      }
+      else {
+        if ( byt_y[i_d >> 3] ) { zer_o = c3n; break; }
+        i_d += 8;
+      }
+    }
+    _check( c3y == zer_o, "a hole bit is set" );
+  }
+  c3_free(byt_y);
 
   u3z(_han_bob);
   _pier_done();

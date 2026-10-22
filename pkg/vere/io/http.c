@@ -234,7 +234,7 @@ _cttp_bods_free(u3_hbod* bod_u)
 **   short); the caller fails the response.
 */
 static u3_hbod*
-_cttp_bod_from_bob(u3_atom a, c3_w len_w)
+_cttp_bod_from_bob(u3_atom a, c3_d len_d)
 {
   //  the view outlives this event: it must belong to the home road,
   //  the one road no bail or signal ever unwinds.
@@ -250,7 +250,7 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 
   //  a zero-length body needs no chunk, and no view
   //
-  if ( 0 == len_w ) {
+  if ( 0 == len_d ) {
     u3_hbod* bod_u = c3_malloc(1 + sizeof(*bod_u));
     bod_u->nex_u    = 0;
     bod_u->len_w    = 0;
@@ -266,25 +266,25 @@ _cttp_bod_from_bob(u3_atom a, c3_w len_w)
 
   u3_hbod* hed_u = 0;
   u3_hbod* tal_u = 0;
-  c3_w     off_w = 0;
+  c3_d     off_d = 0;
 
-  while ( off_w < len_w ) {
-    c3_w rem_w = len_w - off_w;
-    c3_w cnk_w = (rem_w > U3_HTTP_BOB_CHUNK) ? U3_HTTP_BOB_CHUNK : rem_w;
+  while ( off_d < len_d ) {
+    c3_d rem_d = len_d - off_d;
+    c3_w cnk_w = (rem_d > U3_HTTP_BOB_CHUNK) ? U3_HTTP_BOB_CHUNK : (c3_w)rem_d;
 
     u3_hbod* bod_u = c3_malloc(sizeof(*bod_u));
     bod_u->nex_u = 0;
     bod_u->len_w = cnk_w;
     bod_u->buf_y = 0;              //  read at send time
     bod_u->win_u = win_u;
-    bod_u->off_d = off_w;
+    bod_u->off_d = off_d;
     bod_u->own_o = c3n;
 
     if ( !hed_u ) hed_u = bod_u;
     else          tal_u->nex_u = bod_u;
     tal_u = bod_u;
 
-    off_w += cnk_w;
+    off_d += cnk_w;
   }
 
   tal_u->own_o = c3y;
@@ -307,15 +307,17 @@ _cttp_bod_from_octs(u3_noun oct)
 {
   c3_w len_w;
 
-  if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
-    u3m_bail(c3__fail); return 0;
-  }
-  len_w = u3h(oct);
-
-  //  streaming path for bob atoms
+  //  streaming path for bob atoms: any length a chub holds
   //
   if ( c3y == u3a_is_bob(u3t(oct)) ) {
-    u3_hbod* bod_u = _cttp_bod_from_bob(u3t(oct), len_w);
+    c3_d     len_d;
+    u3_hbod* bod_u;
+
+    if ( c3n == u3r_safe_chub(u3h(oct), &len_d) ) {
+      u3m_bail(c3__fail); return 0;
+    }
+
+    bod_u = _cttp_bod_from_bob(u3t(oct), len_d);
 
     if ( !bod_u ) {
       u3l_log("http: blob " U3A_BID_FMT " unavailable",
@@ -324,6 +326,11 @@ _cttp_bod_from_octs(u3_noun oct)
     u3z(oct);
     return bod_u;
   }
+
+  if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max inline
+    u3m_bail(c3__fail); return 0;
+  }
+  len_w = u3h(oct);
 
   {
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
