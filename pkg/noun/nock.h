@@ -111,15 +111,11 @@
       u3_noun
       u3n_nock_an(u3_noun bus, u3_noun fol);
 
-    /* u3n_reap(): promote bytecode state.
+    /* u3n_reap(): promote junior bytecode state [har_p], in place.
+    **             call after u3m_fall(), before the junior heap is dropped.
      */
       void
       u3n_reap(u3p(u3h_root) har_p);
-
-    /* u3n_take(): copy junior bytecode state.
-     */
-      u3p(u3h_root)
-      u3n_take(u3p(u3h_root) har_p);
 
     /* u3n_mark(): mark bytecode cache.
      */

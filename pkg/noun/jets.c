@@ -1394,30 +1394,6 @@ u3j_rite_take(u3j_rite* dst_u, u3j_rite* src_u)
   }
 }
 
-/* u3j_rite_merge(): copy rite references from src_u to dst_u,
-**                  losing old references
-*/
-void
-u3j_rite_merge(u3j_rite* dst_u, u3j_rite* src_u)
-{
-  if ( u3_none != src_u->clu ) {
-    if ( u3_none != dst_u->clu ) {
-      u3z(dst_u->clu);
-    }
-
-    dst_u->clu = src_u->clu;
-
-    if ( dst_u->fin_p != src_u->fin_p ) {
-      if ( c3y == dst_u->own_o ) {
-        _cj_fink_free(dst_u->fin_p);
-      }
-
-      dst_u->fin_p = src_u->fin_p;
-      dst_u->own_o = src_u->own_o;
-    }
-  }
-}
-
 /* u3j_site_take(): copy junior site references. [dst_u] is uninitialized
 */
 void
@@ -1481,6 +1457,94 @@ u3j_site_merge(u3j_site* dst_u, u3j_site* src_u)
       dst_u->fin_p = src_u->fin_p;
       dst_u->fon_o = src_u->fon_o;
     }
+  }
+}
+
+/* u3j_rite_reap(): merge junior rite [src_u] into [dst_u], reading
+**                  junior memory, writing only what changed.
+*/
+void
+u3j_rite_reap(u3j_rite* dst_u, u3j_rite* src_u)
+{
+  if ( u3_none == src_u->clu ) {
+    return;
+  }
+
+  if ( dst_u->clu != src_u->clu ) {
+    u3_noun clu = u3a_take(src_u->clu);
+
+    if ( u3_none != dst_u->clu ) {
+      u3z(dst_u->clu);
+    }
+
+    dst_u->clu = clu;
+  }
+
+  if ( dst_u->fin_p != src_u->fin_p ) {
+    u3p(u3j_fink) fin_p = ( c3y == src_u->own_o )
+      ? u3of(u3j_fink, _cj_fink_take(u3to(u3j_fink, src_u->fin_p)))
+      : src_u->fin_p;
+
+    if ( c3y == dst_u->own_o ) {
+      _cj_fink_free(dst_u->fin_p);
+    }
+
+    dst_u->fin_p = fin_p;
+    dst_u->own_o = src_u->own_o;
+  }
+}
+
+/* u3j_site_reap(): merge junior site [src_u] into [dst_u], reading
+**                  junior memory, writing only what changed.
+*/
+void
+u3j_site_reap(u3j_site* dst_u, u3j_site* src_u)
+{
+  if ( dst_u->axe != src_u->axe ) {
+    u3_noun axe = u3a_take(src_u->axe);
+    u3z(dst_u->axe);
+    dst_u->axe = axe;
+  }
+
+  if ( u3_none == src_u->loc ) {
+    return;
+  }
+
+  if ( dst_u->loc != src_u->loc ) {
+    u3_noun loc = u3a_take(src_u->loc);
+
+    if ( u3_none != dst_u->loc ) {
+      u3z(dst_u->loc);
+    }
+
+    dst_u->loc = loc;
+  }
+
+  if ( dst_u->lab != src_u->lab ) {
+    u3_noun lab = u3a_take(src_u->lab);
+
+    if ( u3_none != dst_u->lab ) {
+      u3z(dst_u->lab);
+    }
+
+    dst_u->lab = lab;
+  }
+
+  if ( dst_u->cop_u != src_u->cop_u ) dst_u->cop_u = src_u->cop_u;
+  if ( dst_u->ham_u != src_u->ham_u ) dst_u->ham_u = src_u->ham_u;
+  if ( dst_u->jet_o != src_u->jet_o ) dst_u->jet_o = src_u->jet_o;
+
+  if ( dst_u->fin_p != src_u->fin_p ) {
+    u3p(u3j_fink) fin_p = ( c3y == src_u->fon_o )
+      ? u3of(u3j_fink, _cj_fink_take(u3to(u3j_fink, src_u->fin_p)))
+      : src_u->fin_p;
+
+    if ( c3y == dst_u->fon_o ) {
+      _cj_fink_free(dst_u->fin_p);
+    }
+
+    dst_u->fin_p = fin_p;
+    dst_u->fon_o = src_u->fon_o;
   }
 }
 
