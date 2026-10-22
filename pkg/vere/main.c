@@ -1910,7 +1910,7 @@ _cw_queu(c3_i argc, c3_c* argv[])
       exit(1);
     }
 
-    if ( c3n == u3a_blob_sane(c3y) ) {
+    if ( c3n == u3a_blob_sane() ) {
       fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");
     }
 

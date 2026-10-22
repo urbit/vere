@@ -640,8 +640,8 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
-/* _find_home_zero_cb(): u3h_walk_with callback — drop les_h from use_h
-**   and zero les_h and own_o on each u3a_blob.  Both belong to the
+/* _find_home_zero_cb(): u3h_walk_with callback — zero les_h and own_o
+**   on each u3a_blob.  Both belong to the
 **   process that wrote the snapshot: no hold outlives a restart, since
 **   it ends both processes and the king that owed the holds is gone;
 **   and ownership is marked again from the epoch's BLOBS rows
@@ -657,9 +657,8 @@ _find_home_zero_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  blb_u->use_h -= blb_u->les_h;
-  blb_u->les_h  = 0;
-  blb_u->own_o  = c3n;
+  blb_u->les_h = 0;
+  blb_u->own_o = c3n;
 }
 
 /* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
@@ -2958,7 +2957,7 @@ u3m_pack(void)
   u3a_pack_move(u3R);
 
   if (  (&(u3H->rod_u) == u3R)
-     && (c3n == u3a_blob_sane(c3y)) )
+     && (c3n == u3a_blob_sane()) )
   {
     fprintf(stderr, "pack: blob accounting violated (see above)\r\n");
   }

@@ -1224,7 +1224,7 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
 
   //  a record nothing holds names a file the new epoch never needs
   //
-  if ( !blb_u->use_h ) {
+  if ( !blb_u->atm_h && !blb_u->les_h ) {
     return;
   }
 
@@ -1258,18 +1258,18 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  if ( !blb_u->use_h ) {
+  if ( !blb_u->atm_h && !blb_u->les_h ) {
     u3s_bids_push(gho_u, bid_d);
     return;
   }
 
   blb_u->own_o = _disk_roll_live(ban_u, bid_d);
 
-  if ( (c3n == blb_u->own_o) && (blb_u->use_h > blb_u->les_h) ) {
+  if ( (c3n == blb_u->own_o) && blb_u->atm_h ) {
     fprintf(stderr, "disk: roll: " U3A_BID_FMT ": %" PRIc3_h
                     " live atom(s) counted, none reached: unscanned root?\r\n",
                     u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
-                    blb_u->use_h - blb_u->les_h);
+                    blb_u->atm_h);
     ban_u->mis_w++;
   }
 }

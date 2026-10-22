@@ -870,7 +870,7 @@ u3a_blob*
 u3a_blob_new(c3_h mug_h, c3_h seq_h)
 {
   u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
-  blb_u->use_h = 0;
+  blb_u->atm_h = 0;
   blb_u->les_h = 0;
   blb_u->own_o = c3n;
   blb_u->mug_h = mug_h;
@@ -902,7 +902,6 @@ u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
     u3a_blob* blb_u = u3a_blob_got(u3a_bid_mug(bid_d[i_w]),
                                    u3a_bid_seq(bid_d[i_w]));
     blb_u->les_h += 1;
-    blb_u->use_h += 1;
   }
 }
 
@@ -972,7 +971,6 @@ typedef struct {
   c3_z len_z;
   c3_z cap_z;
   c3_o ok_o;
-  c3_o dep_o;
 } _blob_sane_ctx;
 
 static c3_o
@@ -1112,54 +1110,35 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
 
-  //  cheap tier: implied cardinality must be non-negative
-  //
-  if ( blb_u->use_h < blb_u->les_h ) {
-    fprintf(stderr, "blob: sane: " U3A_BID_FMT ": use=%" PRIc3_h
-                    " < les=%" PRIc3_h " (counters corrupt)\r\n",
-                    u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
-                    blb_u->use_h, blb_u->les_h);
-    ctx_u->ok_o = c3n;
-  }
-  //  deep tier: implied cardinality must match counted live atoms
-  //
-  else if ( c3y == ctx_u->dep_o ) {
-    c3_w qty_w = _blob_sane_card(ctx_u, bid_d);
+  c3_w qty_w = _blob_sane_card(ctx_u, bid_d);
 
-    if ( blb_u->use_h != (blb_u->les_h + qty_w) ) {
-      fprintf(stderr, "blob: sane: " U3A_BID_FMT ": use=%" PRIc3_h
-                      " != les=%" PRIc3_h " + atoms=%" PRIc3_w "%s\r\n",
-                      u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
-                      blb_u->use_h, blb_u->les_h, qty_w,
-                      ( blb_u->use_h < (blb_u->les_h + qty_w) )
-                        ? " (counters corrupt)"
-                        : " (leak, or root unscanned)");
-      ctx_u->ok_o = c3n;
-    }
+  if ( blb_u->atm_h != qty_w ) {
+    fprintf(stderr, "blob: sane: " U3A_BID_FMT ": atm=%" PRIc3_h
+                    " != atoms=%" PRIc3_w "%s\r\n",
+                    u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
+                    blb_u->atm_h, qty_w,
+                    ( blb_u->atm_h < qty_w )
+                      ? " (counters corrupt)"
+                      : " (leak, or root unscanned)");
+    ctx_u->ok_o = c3n;
   }
 }
 
 /* u3a_blob_sane(): blob-bank invariant check.
 **
-**   Verifies, for every blb_p entry,
-**     use_h == les_h + live bob-atom cardinality.
-**
-**   Cheap tier (always): use_h >= les_h — a violation means the atom
-**   term went negative, so a count was lost.  own_o is a flag, not a
-**   count, and has no identity to check.
-**
-**   Deep tier ([dep_o]): counts live bob atoms by walking the noun
-**   graph from the home-road roots (arvo state, wish cache, cold jets,
-**   memo/ford caches, trace) with a visited set, and checks the full
-**   equation; also flags counted bids missing from the bank.  An
-**   unscanned root reads as a leak-direction mismatch, so the message
-**   distinguishes the two directions.
+**   Verifies, for every blb_p entry, atm_h == live bob atoms, counted
+**   by walking the noun graph from the home-road roots (arvo state,
+**   wish cache, cold jets, memo/ford caches, trace) with a visited
+**   set; also flags counted bids missing from the bank.  An unscanned
+**   root reads as a leak-direction mismatch, so the message
+**   distinguishes the two directions.  les_h and own_o have no
+**   identity to check.
 **
 **   Home road only.  Returns c3n (after loud per-entry reports) on any
 **   violation.
 */
 c3_o
-u3a_blob_sane(c3_o dep_o)
+u3a_blob_sane(void)
 {
   //  bank and roots are home-road state; nothing to check elsewhere
   //
@@ -1168,32 +1147,27 @@ u3a_blob_sane(c3_o dep_o)
   if ( !u3H->blb_p ) return c3y;
 
   _blob_sane_ctx ctx_u = {0};
-  ctx_u.ok_o  = c3y;
-  ctx_u.dep_o = dep_o;
+  ctx_u.ok_o = c3y;
 
-  if ( c3y == dep_o ) {
-    vt_init(&ctx_u.set_u);
-    _blob_roots_walk(&ctx_u);
-  }
+  vt_init(&ctx_u.set_u);
+  _blob_roots_walk(&ctx_u);
 
   u3h_walk_with(u3H->blb_p, _blob_sane_bank_cb, &ctx_u);
 
-  //  deep tier: every counted bid must exist in the bank
+  //  every counted bid must exist in the bank
   //
-  if ( c3y == dep_o ) {
-    for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
-      c3_d bid_d = ctx_u.car_u[i_z].bid_d;
-      if ( !u3a_blob_get(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)) ) {
-        fprintf(stderr, "blob: sane: " U3A_BID_FMT ": %" PRIc3_w " live atom(s) "
-                        "with no bank entry\r\n",
-                        u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
-                        ctx_u.car_u[i_z].qty_w);
-        ctx_u.ok_o = c3n;
-      }
+  for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
+    c3_d bid_d = ctx_u.car_u[i_z].bid_d;
+    if ( !u3a_blob_get(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)) ) {
+      fprintf(stderr, "blob: sane: " U3A_BID_FMT ": %" PRIc3_w " live atom(s) "
+                      "with no bank entry\r\n",
+                      u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
+                      ctx_u.car_u[i_z].qty_w);
+      ctx_u.ok_o = c3n;
     }
-
-    vt_cleanup(&ctx_u.set_u);
   }
+
+  vt_cleanup(&ctx_u.set_u);
 
   //  the home road is quiescent between events, so mars should hold no
   //  blob open here; the king may (http streams a body across events),
@@ -1209,14 +1183,14 @@ u3a_blob_sane(c3_o dep_o)
 
 /* _me_bob_dead(): a bob atom's loom refcount just hit zero.
 **
-**   Takes the atom's one off its record's use_h.  When the last live
-**   atom is gone (use_h == les_h) it calls blob_del_f, whatever holds
+**   Takes the atom's one off its record's atm_h.  When the last live
+**   atom is gone (atm_h == 0) it calls blob_del_f, whatever holds
 **   remain: mars deletes the file if nothing holds or owns it, and the
 **   king returns its holds with %blrl and drops its record.
 **
 **   The decrement is unconditional; only the call depends on a hook.
 **   The offline subcommands (queu, meld, pack) free bobs with no hook,
-**   and skipping the decrement there would let use_h drift.
+**   and skipping the decrement there would let atm_h drift.
 */
 static void
 _me_bob_dead(u3a_atom* atm_u)
@@ -1240,18 +1214,18 @@ _me_bob_dead(u3a_atom* atm_u)
     u3l_log("blob: " U3A_BID_FMT ": bob died with no bank record", mug_h, seq_h);
     return;
   }
-  if ( 0 == blb_u->use_h ) {
+  if ( 0 == blb_u->atm_h ) {
     u3l_log("blob: " U3A_BID_FMT ": cardinality underflow (record already at zero)",
             mug_h, seq_h);
     return;
   }
 
-  blb_u->use_h -= 1;
+  blb_u->atm_h -= 1;
 
   //  the hook fires when the last live atom goes, whatever holds remain:
   //  mars keeps a file the king holds, the king returns its holds
   //
-  if ( (blb_u->use_h == blb_u->les_h) && u3C.blob_del_f ) {
+  if ( (0 == blb_u->atm_h) && u3C.blob_del_f ) {
     u3C.blob_del_f(mug_h, seq_h);
   }
 }

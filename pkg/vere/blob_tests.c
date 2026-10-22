@@ -784,19 +784,19 @@ _test_sane(void)
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   blb_u->own_o = c3y;
 
-  _check( c3y == u3a_blob_sane(c3y), "balanced bank reported corrupt" );
+  _check( c3y == u3a_blob_sane(), "balanced bank reported corrupt" );
 
-  //  cheap tier: more holds than uses
+  //  holds are not atoms: the check ignores them
   //
   blb_u->les_h += 2;
-  _check( c3n == u3a_blob_sane(c3n), "use < les not caught" );
+  _check( c3y == u3a_blob_sane(), "holds read as atoms" );
   blb_u->les_h -= 2;
 
-  //  deep tier: counters look plausible but cardinality is wrong
+  //  an atom count with no atom behind it
   //
-  blb_u->use_h += 1;   //  use = les + 2, only 1 live atom
-  _check( c3n == u3a_blob_sane(c3y), "cardinality mismatch not caught" );
-  blb_u->use_h -= 1;
+  blb_u->atm_h += 1;
+  _check( c3n == u3a_blob_sane(), "cardinality mismatch not caught" );
+  blb_u->atm_h -= 1;
 
   //  drop the atom: the epoch keeps the record as a ghost, and no
   //  deletion is asked
@@ -806,7 +806,7 @@ _test_sane(void)
   _check( 0 == _del_w, "blob deleted while owned" );
 
   blb_u = u3a_blob_get(mug_h, seq_h);
-  _check( blb_u && (0 == blb_u->use_h), "ghost not kept" );
+  _check( blb_u && (0 == blb_u->atm_h), "ghost not kept" );
   u3a_blob_drop(mug_h, seq_h);
 
   _pier_done();
@@ -824,7 +824,7 @@ _test_meld(void)
   _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h);
 
   //  two distinct bob atoms for the same bid, both in the kernel root,
-  //  owned by the epoch: use = cardinality(2)
+  //  owned by the epoch: atm = 2
   //
   u3_noun bo1 = u3i_blob(mug_h, seq_h);
   u3_noun bo2 = u3i_blob(mug_h, seq_h);
@@ -834,7 +834,7 @@ _test_meld(void)
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     blb_u->own_o = c3y;
-    _check( 2 == blb_u->use_h, "setup use_h %" PRIc3_h " != 2", blb_u->use_h );
+    _check( 2 == blb_u->atm_h, "setup atm_h %" PRIc3_h " != 2", blb_u->atm_h );
   }
 
   (void)u3_meld_all(0, c3n, c3n);
@@ -851,9 +851,9 @@ _test_meld(void)
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
     _check( blb_u, "bank entry lost" );
-    _check( (1 == blb_u->use_h) && (c3y == blb_u->own_o),
-            "counts use=%" PRIc3_h " own=%u want use=1 own=1",
-            blb_u->use_h, blb_u->own_o );
+    _check( (1 == blb_u->atm_h) && (c3y == blb_u->own_o),
+            "counts atm=%" PRIc3_h " own=%u want atm=1 own=1",
+            blb_u->atm_h, blb_u->own_o );
     _check(  (mug_h == u3a_bob_mug(u3h(u3A->roc)))
           && (seq_h == u3a_bob_seq(u3h(u3A->roc))),
             "bob blob pointer stale" );
@@ -869,7 +869,7 @@ _test_meld(void)
 
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    _check( blb_u && (0 == blb_u->use_h) && (0 == _del_w),
+    _check( blb_u && (0 == blb_u->atm_h) && (0 == _del_w),
             "post-drop del=%" PRIc3_w, _del_w );
     u3a_blob_drop(mug_h, seq_h);
   }
@@ -948,7 +948,7 @@ _test_cue_blob(void)
     c3_h seq_h = u3a_bob_seq(hed);
 
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
-    _check( blb_u && (1 == blb_u->use_h), "bad bank entry" );
+    _check( blb_u && (1 == blb_u->atm_h), "bad bank entry" );
 
     //  re-cue: the store must dedup to the same (mug, seq)
     //
@@ -964,8 +964,8 @@ _test_cue_blob(void)
       u3_noun bob = u3h(two);
       _check( (mug_h == u3a_bob_mug(bob)) && (seq_h == u3a_bob_seq(bob)),
               "re-cue did not dedup" );
-      _check( 2 == blb_u->use_h, "use_w %" PRIc3_w " after re-cue, want 2",
-              blb_u->use_h );
+      _check( 2 == blb_u->atm_h, "atm_h %" PRIc3_h " after re-cue, want 2",
+              blb_u->atm_h );
       u3z(two);
     }
   }
@@ -3181,14 +3181,12 @@ _test_roll_link(void)
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
   blb_b->own_o  = c3y;   //  a ghost: the old epoch's input, nothing holds it
   blb_c->les_h += 1;
-  blb_c->use_h += 1;
 
   //  d: held, no root reaches it, and its file is gone.  the new epoch
   //  can do without it, so the roll reports it and goes on
   //
   u3a_blob* blb_d = u3a_blob_new(0x5eed, 1);
   blb_d->les_h += 1;
-  blb_d->use_h += 1;
 
   //  the image holds a: the roll owns what a root reaches
   //
@@ -3279,11 +3277,10 @@ _test_roll_link(void)
   u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
   u3z(u3A->roc);
   u3A->roc = old;
-  blb_c->les_h = 0; blb_c->use_h = 0;
+  blb_c->les_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _check( u3a_blob_get(0x5eed, 1), "the fileless hold-only record went" );
   u3a_blob_get(0x5eed, 1)->les_h = 0;
-  u3a_blob_get(0x5eed, 1)->use_h = 0;
   u3a_blob_drop(0x5eed, 1);
   _pier_done();
 }
@@ -3457,8 +3454,8 @@ _test_grants(void)
 
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
-    _check( (1 == blb_u->les_h) && (3 == blb_u->use_h),
-            "id 0: les=%u use=%u", blb_u->les_h, blb_u->use_h );
+    _check( (1 == blb_u->les_h) && (2 == blb_u->atm_h),
+            "id 0: les=%u atm=%u", blb_u->les_h, blb_u->atm_h );
   }
 
   //  the last atoms go: the hook fires once per id, and the holds keep
@@ -3469,7 +3466,7 @@ _test_grants(void)
   _check( 2 == _hok_w, "hook fired %u time(s) for two ids", _hok_w );
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
-    _check( blb_u && (1 == blb_u->les_h) && (1 == blb_u->use_h) && (0 == _del_w),
+    _check( blb_u && (1 == blb_u->les_h) && (0 == blb_u->atm_h) && (0 == _del_w),
             "held record not kept" );
   }
 
@@ -3479,8 +3476,7 @@ _test_grants(void)
     u3a_blob* blb_u = u3a_blob_get(mug_h[i_w], seq_h[i_w]);
     c3_h      num_h = c3_min(5, blb_u->les_h);
     blb_u->les_h -= num_h;
-    blb_u->use_h -= num_h;
-    _check( 0 == blb_u->use_h, "id %u not released", i_w );
+    _check( 0 == blb_u->les_h, "id %u not released", i_w );
     _blob_del_cb(mug_h[i_w], seq_h[i_w]);
   }
   _check( (2 == _del_w) && !u3a_blob_get(mug_h[0], seq_h[0]),
@@ -3563,8 +3559,8 @@ _test_stub_fill(void)
 
   //  three bobs over two records
   //
-  _check( (2 == u3a_blob_get(mug_h[0], seq_h[0])->use_h)
-          && (1 == u3a_blob_get(mug_h[1], seq_h[1])->use_h),
+  _check( (2 == u3a_blob_get(mug_h[0], seq_h[0])->atm_h)
+          && (1 == u3a_blob_get(mug_h[1], seq_h[1])->atm_h),
           "fill miscounted" );
 
   //  a stub with no installed match refuses the whole fill
@@ -3694,7 +3690,7 @@ _test_chop_kill(void)
     _check( c3y == _path_exists(epo_c), "epoch 2 deleted" );
   }
   _check( c3y == u3b_live(new_c, mag_h, saq_h), "epoch 3's blob gone" );
-  _check( 1 == u3a_blob_get(mag_h, saq_h)->use_h, "bank disturbed" );
+  _check( 1 == u3a_blob_get(mag_h, saq_h)->atm_h, "bank disturbed" );
 
   u3_lmdb_exit(env_u);
   u3C.bob_c = _tmp_bob;
@@ -3763,7 +3759,6 @@ _test_blob_own(void)
   u3_atom   bob_d = u3i_blob(mug_h[3], seq_h[3]);
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
   blb_c->les_h += 1;
-  blb_c->use_h += 1;
 
   //  epoch 5: the image's row at 5, one event at 6
   //
@@ -3783,7 +3778,7 @@ _test_blob_own(void)
           "image-row blob not owned" );
   _check( u3a_blob_get(mug_h[1], seq_h[1])
           && (c3y == u3a_blob_get(mug_h[1], seq_h[1])->own_o)
-          && (0 == u3a_blob_get(mug_h[1], seq_h[1])->use_h),
+          && (0 == u3a_blob_get(mug_h[1], seq_h[1])->atm_h),
           "event-named blob not a ghost" );
   _check( c3n == blb_c->own_o, "hold-only owned" );
   _check( c3n == u3a_blob_get(mug_h[3], seq_h[3])->own_o, "unnamed atom owned" );
@@ -3803,7 +3798,7 @@ _test_blob_own(void)
   u3z(bob_a);
   u3z(bob_d);
   u3a_blob_drop(mug_h[1], seq_h[1]);
-  blb_c->les_h = 0; blb_c->use_h = 0;
+  blb_c->les_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _pier_done();
 }

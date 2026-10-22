@@ -20,15 +20,15 @@
 **
 **   blb_p HAMT: bid -> u3a_blob* (loom offset), bid = (mug_h << 32) | seq_h.
 **   See the u3a_blob block in allocate.h for the record:
-**     use_h = les_h + live bob-atom cardinality
+**     atm_h = live bob atoms
 **     les_h = holds the king has (mars memory only; zeroed at boot)
 **     own_o = a durable holder in the current epoch names the file: an
 **             input committed in this epoch, or the epoch's image
 **
 **   Blob files live at $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>: an
 **   epoch owns the files its events and its image name, and they die
-**   with the epoch at chop.  Deletion by refcount: use_h == 0 and not
-**   owned (u3a_blob_dead).
+**   with the epoch at chop.  Deletion by refcount: no atom, no hold,
+**   and not owned (u3a_blob_dead).
 **
 **   Holds are counted grants.  every message mars hands the king (a
 **   poke's effects, a nack's goofs, a peek's result) grants one hold
@@ -52,7 +52,7 @@
 **     5. the king's last bob over the id dies: %blrl returns its holds
 **        (one per message that named the id)
 **     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead takes it
-**        off use_h; an owned record stays as a ghost until the next roll
+**        off atm_h; an owned record stays as a ghost until the next roll
 **     7. roll carries every held blob into the new epoch's store, owns
 **        what a root reaches, and writes that live set as the epoch's
 **        first BLOBS row; chop deletes old epochs whole, files included,
@@ -1158,7 +1158,6 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
         if ( blb_u ) {
           num_h = c3_min(num_h, blb_u->les_h);
           blb_u->les_h -= num_h;
-          blb_u->use_h -= num_h;
           _mars_blob_del(mug_h, seq_h);
         }
       }

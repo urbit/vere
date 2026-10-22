@@ -374,11 +374,11 @@ U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
   //  the counters cross verbatim.  that is right only because the copy
   //  is box for box (every bob atom in the source becomes exactly one
   //  in the target) and every root holding bobs is migrated, so the
-  //  live-atom term of use_h is unchanged.  the target loom belongs
+  //  atom count is unchanged.  the target loom belongs
   //  to the other bitness, so this process cannot run u3a_blob_sane on
   //  it; the first |pack or |meld in the migrated pier does.
   //
-  nbl_u->use_h = obl_u->use_h;
+  nbl_u->atm_h = obl_u->atm_h;
   nbl_u->les_h = obl_u->les_h;
   nbl_u->own_o = obl_u->own_o;
 }
