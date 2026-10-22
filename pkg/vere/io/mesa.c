@@ -40,6 +40,7 @@ static c3_y are_y[524288];
 #define PIT_EXPIRE_MICROS           20000000
 
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
+#define UDP_MAX              65507     //  largest udp payload
 
 #define PEEK_QUEUE_MAX       40
 #define POKE_QUEUE_MAX       30
@@ -1425,7 +1426,14 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
     u3z(las);
     return;
   }
-  u3_assert( UINT32_MAX >= vue_u.byt_d );
+  if ( UDP_MAX < vue_u.byt_d ) {
+    u3l_log("mesa: ef_send: %" PRIc3_d "-byte packet exceeds a datagram; dropped",
+            vue_u.byt_d);
+    u3r_view_done(&vue_u);
+    u3z(pac);
+    u3z(las);
+    return;
+  }
   c3_w len_w = (c3_w)vue_u.byt_d;
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
@@ -1808,6 +1816,21 @@ _mesa_send_piece(u3_mesa* sam_u, u3_mesa_line* lin_u, u3_mesa_name* nam_u, c3_d 
   }
 }
 
+/* _mesa_tob_fits(): a [tob_d]-byte message fits the driver: its whole
+**   jumbo frame (the spine, the data, and a hash pair per leaf) is
+**   counted in 32 bits on both ends.  the frame is about 17/16 of the
+**   message, so the bound is near 4.04 GB, below UINT32_MAX.
+*/
+static c3_o
+_mesa_tob_fits(c3_d tob_d)
+{
+  c3_d mev_d = mesa_num_leaves(tob_d);
+  c3_d tip_d = ( mev_d > 1 ) ? lss_proof_size(mev_d) * sizeof(lss_hash) : 0;
+  c3_d len_d = tip_d + tob_d + (mev_d * sizeof(lss_pair));
+
+  return __( UINT32_MAX >= len_d );
+}
+
 static void
 _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 {
@@ -1854,7 +1877,14 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
       u3z(res);
       return;
     }
-    u3_assert( UINT32_MAX >= vue_u.byt_d );
+    if ( UINT32_MAX < vue_u.byt_d ) {
+      u3l_log("mesa: %" PRIc3_d "-byte jumbo frame too large; dropped",
+              vue_u.byt_d);
+      u3r_view_done(&vue_u);
+      arena_free(&han_u->are_u);
+      u3z(res);
+      return;
+    }
     c3_w jumbo_w = (c3_w)vue_u.byt_d;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
     u3r_view_copy(&vue_u, 0, jumbo_y, jumbo_w);
@@ -1872,9 +1902,16 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
     //  every 32-bit frame size below (tip/dat/haz/len, tob) is bounded by
-    //  the whole-message byte count; enforce it fits to rule out truncation
+    //  the whole message's frame; refuse a message whose frame overflows
     //
-    u3_assert( UINT32_MAX >= dat_u->tob_d );
+    if ( c3n == _mesa_tob_fits(dat_u->tob_d) ) {
+      u3l_log("mesa: %" PRIu64 "-byte message too large; dropped",
+              dat_u->tob_d);
+      arena_free(&han_u->are_u);
+      u3z(res);
+      c3_free(jumbo_y);
+      return;
+    }
 
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_h tip_h = // bytes in Merkle spine
@@ -1884,7 +1921,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     c3_h dat_h = dat_u->len_h; // bytes in fragment data in this jumbo frame
     c3_h lev_h = mesa_num_leaves(dat_h); // number of leaves in this frame
     c3_h haz_h = lev_h * sizeof(lss_pair); // bytes in hash pairs
-    c3_h len_h = tip_h + dat_h + haz_h;  //  bounded by tob_d (asserted above)
+    c3_h len_h = tip_h + dat_h + haz_h;  //  bounded by _mesa_tob_fits
 
     arena are_u = arena_create(sizeof(u3_mesa_line) + len_h + 2048);
 
@@ -2128,6 +2165,14 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
 
   if ( dat_u->len_h != pof_d*sizeof(lss_hash) ) {
     return; // TODO: handle like other auth failures
+  }
+
+  //  the peer names the size; refuse one we cannot count or reassemble
+  //
+  if ( c3n == _mesa_tob_fits(dat_u->tob_d) ) {
+    u3l_log("mesa: %" PRIu64 "-byte message too large; refused",
+            dat_u->tob_d);
+    return;
   }
 
   arena are_u = arena_create(5*dat_u->tob_d);

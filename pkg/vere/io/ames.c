@@ -27,6 +27,7 @@
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
 #define QUEUE_MAX        30             //  max number of packets in queue
+#define UDP_MAX       65507             //  largest udp payload
 
 #define _CZAR_GONE  UINT32_MAX
 
@@ -1371,7 +1372,14 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
       u3z(lan); u3z(pac);
       return;
     }
-    u3_assert( UINT32_MAX >= vue_u.byt_d );
+    if ( UDP_MAX < vue_u.byt_d ) {
+      u3l_log("ames: %" PRIc3_d "-byte packet exceeds a datagram; dropped",
+              vue_u.byt_d);
+      u3r_view_done(&vue_u);
+      c3_free(pac_u);
+      u3z(lan); u3z(pac);
+      return;
+    }
     c3_w len_w = (c3_w)vue_u.byt_d;
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
