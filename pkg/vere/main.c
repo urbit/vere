@@ -224,11 +224,10 @@ _main_init(void)
   u3_Host.ops_u.siz_i =
 #if defined(U3_OS_windows)
     0xf00000000;
-#elif (defined(U3_CPU_aarch64) && defined(U3_OS_linux))
-  // 500 GiB is as large as musl on aarch64 wants to allow
-  0x7d00000000;
 #else
-  0x10000000000;
+    //  Epochs bound log growth; leave room for looms on 39-bit hosts.
+    //  Larger logs can use --lmdb-map-size explicitly.
+    (size_t)64 << 30;
 #endif
 
   u3C.eph_c = 0;
@@ -1149,6 +1148,9 @@ _cw_intr_win(c3_c* han_c)
 static u3_disk*
 _cw_load_pier(c3_c* dir_c)
 {
+#ifndef U3_OS_windows
+  u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
+#endif
   u3_disk* log_u = u3_disk_load(dir_c, u3_dlod_last);
 
   if ( !log_u ) {
@@ -1338,9 +1340,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
 
     u3C.wag_h |= u3o_hashless;
 
-    //  claim the loom and stale loom addresses before the ivory pill, the
-    //  CRT or anything else can land on one. windows only; see
-    //  u3_disk_stake().
+    //  Claim the native loom before loading the ivory pill.
     //
     u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 
@@ -2430,9 +2430,7 @@ _cw_play(c3_i argc, c3_c* argv[])
   signal(SIGTSTP, _cw_play_exit);
 #endif
 
-  //  claim the loom and stale loom addresses before u3_disk_load() opens
-  //  the 60GB lmdb map, which windows is free to place on top of them.
-  //  windows only; see u3_disk_stake().
+  //  Claim the native loom before u3_disk_load() maps LMDB.
   //
   u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 
@@ -2998,9 +2996,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
 
   _cw_init_io(lup_u);
 
-  //  claim the loom and stale loom addresses before u3_disk_load() opens
-  //  the 60GB lmdb map, which windows is free to place on top of them.
-  //  windows only; see u3_disk_stake().
+  //  Claim the native loom before u3_disk_load() maps LMDB.
   //
   u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 
@@ -3139,9 +3135,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     }
   }
   
-  //  claim the loom and stale loom addresses before u3_disk_load() opens
-  //  the 60GB lmdb map, which windows is free to place on top of them.
-  //  windows only; see u3_disk_stake().
+  //  Claim the native loom before u3_disk_load() maps LMDB.
   //
   u3_disk_stake((size_t)1 << u3_Host.ops_u.lom_y);
 

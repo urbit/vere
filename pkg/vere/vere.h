@@ -854,10 +854,9 @@
 
       /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **
-      **   windows only; a no-op elsewhere. must run before anything else can
-      **   take them -- in particular before u3_disk_load(), which opens the
-      **   60GB lmdb map before it maps the loom. [lom_i] is the length this
-      **   process will reserve at u3_Loom. see wloom.h.
+      **   reserve [lom_i] bytes at u3_Loom before u3_disk_load() opens LMDB.
+      **   POSIX fails on a collision and claims migration sources on demand.
+      **   Windows additionally stakes migration sources; see wloom.h.
       */
         void
         u3_disk_stake(size_t lom_i);
