@@ -112,6 +112,15 @@ u3qe_leer(u3_atom txt)
 
       i_w++;
     }
+
+    //  a cord ending in a newline begins one more, empty line; the loop
+    //  skips it (i_w has advanced past len_w), but +to-wain emits it
+    //
+    if ( len_w && (10 == u3r_byte(len_w - 1, txt)) ) {
+      *lit = u3i_defcons(&hed, &tel);
+      *hed = _leer_cut(0, 0, txt);
+      lit  = tel;
+    }
   }
 
   *lit = u3_nul;
