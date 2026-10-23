@@ -254,6 +254,7 @@ const c_source_files = [_][]const u8{
     "io/mesa.c",
     "io/mesa/bitset.c",
     "io/mesa/pact.c",
+    "io/mach.c",
     "io/term.c",
     "io/unix.c",
     "ivory/ivory.c",
