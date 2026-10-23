@@ -925,10 +925,51 @@ _test_mas(void)
   return ret_i;
 }
 
+/* _test_json_de_array(): a parse error inside an array returns ~, and the
+** happy path still parses. The fix guards the error-path free of the
+** array frame's borrowed tail pointer (#1142); this is a smoke test of
+** the error path (the loom corruption it guards against is
+** layout-dependent and only reliably bails on a large, populated loom).
+*/
+static c3_i
+_test_json_de_array(void)
+{
+  c3_i ret_i = 1;
+
+  {
+    u3_noun inp = u3i_string("[1,2");
+    u3_noun pro = u3qe_json_de(inp);
+
+    if ( u3_nul != pro ) {
+      fprintf(stderr, "json_de: unterminated array should be ~\r\n");
+      ret_i = 0;
+    }
+    u3z(inp); u3z(pro);
+  }
+
+  {
+    u3_noun inp = u3i_string("[1,2]");
+    u3_noun pro = u3qe_json_de(inp);
+
+    if ( (c3n == u3du(pro)) || (u3_nul != u3h(pro)) ) {
+      fprintf(stderr, "json_de: happy path should parse to [~ json]\r\n");
+      ret_i = 0;
+    }
+    u3z(inp); u3z(pro);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_json_de_array() ) {
+    fprintf(stderr, "test jets: json_de_array: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");
