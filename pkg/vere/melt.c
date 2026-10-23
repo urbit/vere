@@ -166,6 +166,21 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
   //
   u3_assert( &(u3H->rod_u) == u3R );
 
+  if ( opt_w & u3_melt_memo ) {
+    u3h_free(u3R->cax.per_p);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  }
+
+  if ( opt_w & u3_melt_ford ) {
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  }
+
+  if ( (opt_w & u3_melt_memo) && (opt_w & u3_melt_ford) ) {
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+  }
+
   u3z(u3H->rod_u.bug.mer);
 
   can_u.siz_w = 32;
@@ -225,21 +240,6 @@ c3_w
 u3_meld_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w pre_w = u3a_open(u3R);
-
-  if ( opt_w & u3_melt_memo ) {
-    u3h_free(u3R->cax.per_p);
-    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-  }
-
-  if ( opt_w & u3_melt_ford ) {
-    u3h_free(u3R->cax.for_p);
-    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  }
-
-  if ( (opt_w & u3_melt_memo) && (opt_w & u3_melt_ford) ) {
-    u3h_free(u3R->dup_p);
-    u3R->dup_p = u3h_new();
-  }
 
   (void)u3_melt_all(fil_u, opt_w);
   (void)u3m_pack();

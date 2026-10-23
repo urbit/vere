@@ -2016,6 +2016,8 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "gc-early",  no_argument,       NULL, 9 },
     { "yolo",      no_argument,       NULL, 'y' },
     { "prune-cold", no_argument,      NULL, 10 },
+    { "memo-drop", no_argument,       NULL, 11 },
+    { "ford-drop", no_argument,       NULL, 12 },
     { NULL, 0, NULL, 0 }
   };
 
@@ -2059,6 +2061,14 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
       case 10: {  //  prune-cold
         opt_w |= u3_melt_cold;
+      } break;
+
+      case 11: {  //  memo-drop
+        opt_w |= u3_melt_memo;
+      } break;
+
+      case 12: {  //  ford-drop
+        opt_w |= u3_melt_ford;
       } break;
 
       case '?': {
