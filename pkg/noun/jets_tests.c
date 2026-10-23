@@ -925,10 +925,39 @@ _test_mas(void)
   return ret_i;
 }
 
+/* _test_leer_trailing(): a cord ending in a newline begins one more,
+** empty line, as +to-wain emits (#1144). "a\n" -> ~['a' ''].
+*/
+static c3_i
+_test_leer_trailing(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun txt   = u3i_string("a\n");
+  u3_noun pro   = u3qe_leer(txt);
+
+  if (  (c3n == u3du(pro))
+     || ('a' != u3h(pro))
+     || (c3n == u3du(u3t(pro)))
+     || (0 != u3h(u3t(pro)))
+     || (u3_nul != u3t(u3t(pro))) )
+  {
+    fprintf(stderr, "leer: 'a\\n' should be ~['a' '']\r\n");
+    ret_i = 0;
+  }
+
+  u3z(txt); u3z(pro);
+  return ret_i;
+}
+
 static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_leer_trailing() ) {
+    fprintf(stderr, "test jets: leer_trailing: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");
