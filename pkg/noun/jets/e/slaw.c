@@ -599,6 +599,22 @@ u3we_slaw(u3_noun cor)
   mod = u3h(u3h(u3t(cor)));
   txt = u3t(u3h(u3t(cor)));
 
+  //  the C parsers below read [txt] as a NUL-terminated string, so they
+  //  would accept a prefix of a cord that holds an interior 0 byte, where
+  //  the Hoon +slaw (whole-cord +rush) returns ~. Reject such a cord and
+  //  fall back to the unjetted +slaw.
+  {
+    u3_atom tau   = u3x_atom(txt);
+    c3_w    met_w = u3r_met(3, tau);
+    c3_w    i_w;
+
+    for ( i_w = 0; i_w < met_w; i_w++ ) {
+      if ( 0 == u3r_byte(i_w, tau) ) {
+        return u3_none;
+      }
+    }
+  }
+
   switch (mod) {
     case c3__da:
       return _parse_da(cor, txt);
