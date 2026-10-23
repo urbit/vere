@@ -2,6 +2,8 @@
 
 #include "noun.h"
 
+#include "jets/w.h"
+
 /* _setup(): prepare for tests.
 */
 static void
@@ -925,10 +927,37 @@ _test_mas(void)
   return ret_i;
 }
 
+/* _test_slaw_nul(): %p text with an embedded NUL is rejected (u3_none,
+** a fall back to the Hoon), not accepted as the prefix (#1143).
+*/
+static c3_i
+_test_slaw_nul(void)
+{
+  c3_i    ret_i = 1;
+  c3_y    byt[9] = { '~', 'z', 'o', 'd', 0, 'j', 'u', 'n', 'k' };
+  u3_noun txt = u3i_bytes(9, byt);
+  u3_noun cor = u3nc(0, u3nc(u3nc('p', txt), 0));   //  sample [mod txt]
+  u3_noun pro = u3we_slaw(cor);
+
+  if ( u3_none != pro ) {
+    fprintf(stderr, "slaw: %%p with an embedded NUL should be u3_none\r\n");
+    ret_i = 0;
+    u3z(pro);
+  }
+
+  u3z(cor);
+  return ret_i;
+}
+
 static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_slaw_nul() ) {
+    fprintf(stderr, "test jets: slaw_nul: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");
