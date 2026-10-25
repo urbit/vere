@@ -14,6 +14,12 @@ Main (`-Dall`) targets:
 Additional targets:
 - `aarch64-linux-gnu`
 - `x86_64-linux-gnu`
+- `aarch64-freebsd`
+- `x86_64-freebsd`
+
+FreeBSD binaries are cross-compiled against zig's bundled FreeBSD libc and
+require FreeBSD 14.0 or later. mDNS needs `net/avahi-app` (and D-Bus) running
+on the host. Crash stack traces are not yet supported on FreeBSD.
 
 ## Prerequisites
 
