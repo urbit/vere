@@ -23,9 +23,16 @@
 
 /*  The SKA core is an arvo-shaped core whose +poke is the arm at axis 23:
 **
-**    [%full sub=* fol=^]                 ->  [%ir bell straight]
-**    [%dire bell]                        ->  [%ir bell straight]
+**    [%full sub=* fol=^]                 ->  [%ir bell straight regs]
+**    [%dire bell mono=?]                 ->  [%ir bell straight ~]
 **    [%jets (list [ring need-ordered])]  ->  ~
+**    [%fast reset=? regs]                ->  ~
+**
+**  regs: (list [path sock]), cores registered with %fast hints as the
+**  analysis sees them, a label path and the template of the core's
+**  shape.  jets.c builds the same for the cores u3n registers, and keeps
+**  them all in u3R->ska.tem_p; those the core hasn't seen wait in
+**  u3R->ska.new and are fed to it before it analyzes.
 */
 
 /* _d_loob(): assert loobean.
@@ -174,14 +181,36 @@ _d_poke(u3_noun ovo)
   return res;
 }
 
-/* _d_ir(): unpack [%ir bell straight].
+/* _d_fast(): feed registrations to the core, in place of what it has if
+**            res_o.  TRANSFERS lis.
+*/
+static void
+_d_fast(c3_o res_o, u3_noun lis)
+{
+  u3z(_d_poke(u3nt(c3__fast, res_o, lis)));
+}
+
+/* _d_flush(): feed the core the registrations it hasn't seen.
+*/
+static void
+_d_flush(void)
+{
+  u3_noun lis = u3R->ska.new;
+
+  if ( u3_nul != lis ) {
+    u3R->ska.new = u3_nul;
+    _d_fast(c3n, lis);
+  }
+}
+
+/* _d_ir(): unpack [%ir bell straight regs], keeping the registrations.
 */
 static u3_noun
 _d_ir(u3_noun pro, u3_noun* bell)
 {
-  u3_noun tag, bel, ir;
+  u3_noun tag, bel, ir, reg;
 
-  u3x_trel(pro, &tag, &bel, &ir);
+  u3x_qual(pro, &tag, &bel, &ir, &reg);
 
   if ( c3__ir != tag ) {
     u3m_bail(c3__fail);
@@ -189,6 +218,10 @@ _d_ir(u3_noun pro, u3_noun* bell)
 
   if ( bell ) {
     *bell = u3k(bel);
+  }
+
+  for ( ; u3_nul != reg; reg = u3t(reg) ) {
+    u3j_ska_put(u3k(u3h(reg)), c3n);
   }
 
   u3k(ir);
@@ -278,6 +311,40 @@ u3d_boot(u3_noun steel)
     u3l_log("ska: %" PRIc3_w " jetted arms", u3qb_lent(lis));
     u3z(_d_poke(u3nc(c3__jets, lis)));
   }
+
+  u3d_cold();
+}
+
+/* _d_tem_cb(): collect the registrations of a battery.
+*/
+static void
+_d_tem_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun* lis = ptr_v;
+  u3_noun  i;
+
+  for ( i = u3t(kev); u3_nul != i; i = u3t(i) ) {
+    *lis = u3nc(u3k(u3h(i)), *lis);
+  }
+}
+
+/* u3d_cold(): feed the core every registration there is, in place of
+**             those it has: after installing a core.
+*/
+void
+u3d_cold(void)
+{
+  u3a_road* rod_u;
+  u3_noun   lis = u3_nul;
+
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3h_walk_with(rod_u->ska.tem_p, _d_tem_cb, &lis);
+  }
+
+  u3l_log("ska: %" PRIc3_w " registered cores", u3qb_lent(lis));
+  u3z(u3R->ska.new);
+  u3R->ska.new = u3_nul;
+  _d_fast(c3y, lis);
 }
 
 /* u3d_full(): compile [sub fol] as a unary function of its whole
@@ -287,6 +354,7 @@ u3d_boot(u3_noun steel)
 u3_noun
 u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 {
+  _d_flush();
   return _d_ir(_d_poke(u3nt(c3__full, u3k(sub), u3k(fol))), bell);
 }
 
@@ -298,5 +366,6 @@ u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 u3_noun
 u3d_dire(u3_noun bell, c3_o mon_o)
 {
+  _d_flush();
   return _d_ir(_d_poke(u3nt(c3__dire, u3k(bell), mon_o)), 0);
 }

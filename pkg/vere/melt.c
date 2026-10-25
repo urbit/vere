@@ -177,8 +177,10 @@ u3_melt_all(FILE *fil_u)
 
   _melt_canon_ptr(&can_u, &(u3A->roc));
   _melt_canon_ptr(&can_u, &(u3R->ska.cor));
+  _melt_canon_ptr(&can_u, &(u3R->ska.new));
 
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
+  u3h_walk_with(u3R->ska.tem_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
 

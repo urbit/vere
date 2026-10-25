@@ -214,6 +214,12 @@
         u3j_mine(u3_noun clu,
                    u3_noun cor);
 
+      /* u3j_ska_put(): keep a registration [path sock] for SKA, and for
+      **                the SKA core to be fed if new_o.  TRANSFERS.
+      */
+        void
+        u3j_ska_put(u3_weak rec, c3_o new_o);
+
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
         void

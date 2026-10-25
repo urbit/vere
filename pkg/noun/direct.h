@@ -18,6 +18,12 @@
       void
       u3d_boot(u3_noun steel);
 
+    /* u3d_cold(): feed the core every registration there is, in place of
+    **             those it has: after installing a core.
+    */
+      void
+      u3d_cold(void);
+
     /* u3d_full(): compile [sub fol] as a unary function of its whole
     **             subject.  RETAINS sub and fol.  Produces the IR and,
     **             in *bell, the [sock formula] identity of the function.

@@ -569,6 +569,115 @@ _cj_find_warm(u3_noun loc)
   }
 }
 
+/* _cj_ska(): registration of cor at loc for SKA: [path sock], the label
+**            path (leaf first) and the template of the core's shape
+**            that +register-fast in nock-compilation.hoon would build:
+**            a root core whole; else its battery, with the parent's
+**            template at the parent axis and nothing else known.
+**            RETAINS.  Produces u3_none for a parent axis in the battery,
+**            which SKA refuses.
+*/
+static u3_weak
+_cj_ska(u3_noun cor, u3_noun loc)
+{
+  u3_noun pat, nam, huc, pel, cap, dat, rec, pax;
+  u3_weak par;
+  c3_l    axe_l, a_l;
+
+  u3x_trel(loc, &pat, &nam, &huc);
+
+  //  root: [%& %& payload]
+  //
+  if ( (c3y == u3h(pat)) && (c3y == u3h(u3t(pat))) ) {
+    return u3nc(u3nc(u3k(nam), u3_nul),
+                u3nc(u3nc(c3y, c3y), u3k(cor)));
+  }
+
+  //  static child: [%& %| parent], the parent being the payload;
+  //  dynamic: [%| axis parent]
+  //
+  pel   = u3t(u3t(pat));
+  axe_l = ( c3y == u3h(pat) ) ? 3 : u3h(u3t(pat));
+
+  if ( 3 != u3x_cap(axe_l) ) {
+    return u3_none;
+  }
+
+  par = u3r_at(axe_l, cor);
+  u3_assert( u3_none != par );
+
+  if ( u3_none == (rec = _cj_ska(par, pel)) ) {
+    return u3_none;
+  }
+
+  pax = u3nc(u3k(nam), u3k(u3h(rec)));
+  cap = u3k(u3h(u3t(rec)));
+  dat = u3k(u3t(u3t(rec)));
+  u3z(rec);
+
+  //  from the parent's template up to the battery: each step knits it
+  //  with an unknown sibling, as the +darn:so of +register-fast does
+  //
+  for ( a_l = axe_l; a_l > 3; a_l >>= 1 ) {
+    if ( a_l & 1 ) {
+      cap = u3nc(c3n, cap);
+      dat = u3nc(0, dat);
+    }
+    else {
+      cap = u3nc(cap, c3n);
+      dat = u3nc(dat, 0);
+    }
+  }
+
+  return u3nc(pax, u3nc(u3nc(c3y, cap), u3nc(u3k(u3h(cor)), dat)));
+}
+
+/* u3j_ska_put(): keep a registration [path sock] for SKA under the
+**                battery of its template, and, if new_o, on the list
+**                of those the SKA core has not been fed, if there is a
+**                core.  TRANSFERS rec, u3_none for none.
+*/
+void
+u3j_ska_put(u3_weak rec, c3_o new_o)
+{
+  u3a_road* rod_u;
+  u3_noun   bat, lis, i;
+
+  if ( u3_none == rec ) {
+    return;
+  }
+
+  rec = u3m_dedup(rec);
+  bat = u3h(u3t(u3t(rec)));
+  lis = u3_nul;
+
+  //  the registrations of the battery, in this road or a senior one
+  //
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3_weak got = u3h_git(rod_u->ska.tem_p, bat);
+
+    if ( u3_none != got ) {
+      lis = got;
+      break;
+    }
+  }
+
+  for ( i = lis; u3_nul != i; i = u3t(i) ) {
+    if ( c3y == u3r_sing(u3h(i), rec) ) {
+      u3z(rec);
+      return;
+    }
+  }
+
+  u3h_put(u3R->ska.tem_p, bat, u3nc(u3k(rec), u3k(lis)));
+
+  if ( (c3y == new_o) && (u3_nul != u3R->ska.cor) ) {
+    u3R->ska.new = u3nc(u3k(rec), u3R->ska.new);
+  }
+
+  u3z(rec);
+}
+
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);
 
 /* _cj_reg_find(): locate core within registry. RETAIN.
@@ -723,6 +832,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
         */
         loc = u3m_dedup(loc);
         u3h_put(u3R->jed.war_p, loc, u3m_dedup(act));
+        u3j_ska_put(_cj_ska(cor, loc), c3y);
       }
     }
   }
@@ -1978,6 +2088,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat_dedup));
     u3h_put(u3R->jed.cod_p, bat_dedup, u3m_dedup(u3nc(u3k(bas), reg)));
     u3h_put(u3R->jed.war_p, loc, u3m_dedup(act)); // see note in _cj_spot
+    u3j_ska_put(_cj_ska(cor, loc), c3y);
     u3z(pel); u3z(axe); u3z(bat_dedup);
   }
 
@@ -2440,7 +2551,7 @@ _cj_mark_hank(u3_noun kev, void* dat)
 u3m_quac*
 u3j_mark()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 7);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 8);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
@@ -2515,8 +2626,13 @@ u3j_mark()
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w *= sizeof(c3_w);
 
+  qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+  qua_u[5]->nam_c = strdup("SKA registrations");
+  qua_u[5]->siz_w = (  u3h_mark_tot(u3R->ska.tem_p)
+                     + u3a_mark_noun(u3R->ska.new) ) * sizeof(c3_w);
+
   c3_w sum_w = 0;
-  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
@@ -2524,21 +2640,21 @@ u3j_mark()
   tot_u->nam_c = strdup("total jet stuff");
 
   if ( u3R == &(u3H->rod_u) ) {
-    qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
-    qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = (  u3h_mark_tot(u3R->jed.hot_p)
+    qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
+    qua_u[6]->nam_c = strdup("hot jet state");
+    qua_u[6]->siz_w = (  u3h_mark_tot(u3R->jed.hot_p)
                        + u3h_mark_tot(u3R->ska.pax_p) ) * sizeof(c3_w);
 
-    sum_w += qua_u[5]->siz_w;
+    sum_w += qua_u[6]->siz_w;
 
-    qua_u[6] = NULL;
+    qua_u[7] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
 
     return tot_u;
   } else {
-    qua_u[5] = NULL;
+    qua_u[6] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
@@ -2570,6 +2686,8 @@ u3j_free(void)
   u3h_free(u3R->jed.cod_p);
   u3h_free(u3R->jed.han_p);
   u3h_free(u3R->jed.bas_p);
+  u3h_free(u3R->ska.tem_p);
+  u3z(u3R->ska.new);
   if ( u3R == &(u3H->rod_u) ) {
     u3h_free(u3R->jed.hot_p);
     u3h_free(u3R->ska.pax_p);
@@ -2610,6 +2728,8 @@ u3j_rewrite_compact(void)
   u3h_relocate(&(u3R->jed.cod_p));
   u3h_relocate(&(u3R->jed.han_p));
   u3h_relocate(&(u3R->jed.bas_p));
+  u3h_relocate(&(u3R->ska.tem_p));
+  u3a_relocate_noun(&(u3R->ska.new));
 
   if ( u3R == &(u3H->rod_u) ) {
     u3h_relocate(&(u3R->jed.hot_p));

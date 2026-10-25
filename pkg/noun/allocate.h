@@ -274,9 +274,11 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
     U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
     U3_W(S) def_p;                              /*  Linking worklist                          */ \
+    U3_W(S) tem_p;                              /*  battery -> (list [path sock]) registered  */ \
+    U3_N(S) new;                                /*  registrations the SKA core hasn't seen    */ \
   } ska;                                                                                         \
                                                                                                  \
-  U3_W(S) fut_w[22];                            /*  futureproof buffer                        */ \
+  U3_W(S) fut_w[20];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \

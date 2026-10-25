@@ -12,18 +12,17 @@
 #include <sys/time.h>
 
 static c3_d    _time(void);
-static u3_noun _scan_nc(u3_noun bus_fol);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
 
-/* _setup(): boot the kernel from the ivory pill in u3n interpreter, analyze the
-**           pill in u3nc, and boot SKA core from steel pill.
+/* _setup(): boot the kernel from the ivory pill in the u3n interpreter,
+**           which registers its cores, and boot the SKA core from the
+**           steel pill, which gets the registrations.
 */
 static void
 _setup(void)
 {
   u3_cue_xeno* sil_u;
   u3_weak      pil, ska;
-  u3_noun      eve;
 
   u3C.wag_h |= u3o_hashless;
   u3C.hap_w  = 50000;   //  memo cache sizes, as in the runtime
@@ -49,12 +48,6 @@ _setup(void)
   }
 
   u3d_boot(ska);
-
-  eve = u3t(pil);
-  if ( u3_none == _run("u3nc scan", _scan_nc, u3t(eve), u3h(eve)) ) {
-    printf("*** fail _setup 4\n");
-    exit(1);
-  }
   u3z(pil);
 
   //  check reference counts after every run: u3m_soft_top() marks and
@@ -64,18 +57,6 @@ _setup(void)
   if ( !getenv("U3NC_BENCH") ) {
     u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
   }
-}
-
-/* _scan_nc(): analyze and compile [bus fol] with the SKA core.
-*/
-static u3_noun
-_scan_nc(u3_noun bus_fol)
-{
-  u3_noun bus, fol;
-  u3x_cell(bus_fol, &bus, &fol);
-  u3k(bus); u3k(fol); u3z(bus_fol);
-  u3nc_scan(bus, fol);
-  return u3_nul;
 }
 
 /* _time(): wall clock, in microseconds.
