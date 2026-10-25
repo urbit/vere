@@ -132,4 +132,9 @@
       void
       u3nc_ream(void);
 
+    /* u3nc_link_deferred(): relink programs from the deferred worklist
+    */
+      void
+      u3nc_link_deferred(u3p(u3h_root) def_p);
+
 #endif /* ifndef U3_NOCK_COMPILE_H */

@@ -6,6 +6,7 @@
 #include "c3/defs.h"
 #include "c3/motes.h"
 #include "direct.h"
+#include "error.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
@@ -182,17 +183,17 @@ enum { FAMILIES(_nc_fam_enum) _nc_bom, _nc_imm, _nc_nop, _nc_kil };
 #define _nc_kon_0(W, op)   W(op)
 #define _nc_kon_1(W, op)   W(op##_0) W(op##_1)
 #define _nc_kon_2(W, op)   W(op##_0) W(op##_1) W(op##_2) W(op##_3)
-#define _nc_kon_4(W, op)   W(op##_0)  W(op##_1)  W(op##_2)  W(op##_3)      \
-                           W(op##_4)  W(op##_5)  W(op##_6)  W(op##_7)      \
-                           W(op##_8)  W(op##_9)  W(op##_10) W(op##_11)     \
+#define _nc_kon_4(W, op)   W(op##_0)  W(op##_1)  W(op##_2)  W(op##_3)           \
+                           W(op##_4)  W(op##_5)  W(op##_6)  W(op##_7)           \
+                           W(op##_8)  W(op##_9)  W(op##_10) W(op##_11)          \
                            W(op##_12) W(op##_13) W(op##_14) W(op##_15)
-#define _nc_fam_ops(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+#define _nc_fam_ops(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   _nc_kon_##kon(_nc_wid, OP)
-#define _nc_fam_wides(fam, OP, src, dst, imm, tar, sot, kon, swe)        \
+#define _nc_fam_wides(fam, OP, src, dst, imm, tar, sot, kon, swe)               \
   _nc_kon_##kon(_nc_vid, OP)
 
-#define OPCODES  Y(IMM_0) Y(IMM_1) Y(IMM_B) Y(IMM_S)                     \
-                 FAMILIES(_nc_fam_ops)                                   \
+#define OPCODES  Y(IMM_0) Y(IMM_1) Y(IMM_B) Y(IMM_S)                            \
+                 FAMILIES(_nc_fam_ops)                                          \
                  Y(BOM) Y(WIDE)
 #define WIDES    FAMILIES(_nc_fam_wides)
 
@@ -209,7 +210,7 @@ static const c3_c* _nc_name_c[] = { OPCODES };
 /* _nc_fam: operands of a family, materializes X table and adds special-cased
 **          ops.
 */
-#define _nc_fam_row(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+#define _nc_fam_row(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = { src, dst, imm, tar, sot, kon, swe },
 static const struct {
   c3_y src_y, dst_y, imm_y, tar_y, sot_y, kon_y, swe_y;
@@ -237,9 +238,9 @@ static const struct {
 #define _nc_first_1(op, W)  op##_0_##W
 #define _nc_first_2(op, W)  op##_0_##W
 #define _nc_first_4(op, W)  op##_0_##W
-#define _nc_fam_bas(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+#define _nc_fam_bas(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = _nc_first_##kon(OP, B),
-#define _nc_fam_vas(fam, OP, src, dst, imm, tar, sot, kon, swe)          \
+#define _nc_fam_vas(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = _nc_first_##kon(OP, V),
 static const c3_y _nc_bas_y[] = { FAMILIES(_nc_fam_bas) };
 static const c3_y _nc_vas_y[] = { FAMILIES(_nc_fam_vas) };
@@ -248,7 +249,7 @@ static const c3_y _nc_vas_y[] = { FAMILIES(_nc_fam_vas) };
 
 /* _nc_fam_c: names of the families, for _nc_print().
 */
-#define _nc_fam_nam(fam, OP, src, dst, imm, tar, sot, kon, swe)  \
+#define _nc_fam_nam(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = #OP,
 
 static const c3_c* _nc_fam_c[] = { FAMILIES(_nc_fam_nam) };
@@ -333,14 +334,14 @@ typedef struct {
                           //  be a self call (a direct program), else none
 } nc_gen;
 
-#define _nc_grow(arr, len, cap, typ)                                     \
-  if ( (len) >= (cap) ) {                                                \
-    c3_h _old = (cap);                                                   \
-    if ( _old >= 0x80000000 ) {                                          \
-      u3m_bail(c3__meme);                                                \
-    }                                                                    \
-    (cap) = (cap) ? (2 * (cap)) : 64;                                     \
-    (arr) = u3a_realloc((arr), _old * sizeof(typ), (cap) * sizeof(typ)); \
+#define _nc_grow(arr, len, cap, typ)                                            \
+  if ( (len) >= (cap) ) {                                                       \
+    c3_h _old = (cap);                                                          \
+    if ( _old >= 0x80000000 ) {                                                 \
+      u3m_bail(c3__meme);                                                       \
+    }                                                                           \
+    (cap) = (cap) ? (2 * (cap)) : 64;                                           \
+    (arr) = u3a_realloc((arr), _old * sizeof(typ), (cap) * sizeof(typ));        \
   }
 
 /* u3nc_Stat: cumulative counters, printed after each u3nc_nock_on()
@@ -351,7 +352,7 @@ u3nc_stat u3nc_Stat;
 
 #ifdef U3NC_STAT
 #  define _nc_stat(fel)  (u3nc_Stat.fel++)
-#  define _nc_stat_if(con, fel)  do { if ( con ) { u3nc_Stat.fel++; } } while ( 0 )
+#  define _nc_stat_if(con, fel)  do { if ( con ) { u3nc_Stat.fel++; } } while(0)
 #else
 #  define _nc_stat(fel)  ((void)0)
 #  define _nc_stat_if(con, fel)  ((void)0)
@@ -973,7 +974,10 @@ _nc_jump(nc_gen* gen_u, u3_noun jmp, c3_h nex_h)
     else {
       nc_op* op_u = _nc_op(gen_u, _nc_kil);
       op_u->dst_h = _nc_reg(gen_u, p);
-      op_u->tar_h = _nc_lit(gen_u, 0);
+      if ( !_nc_zer_t ) {
+        //  KIL can become IML[0] when encoding
+        op_u->tar_h = _nc_lit(gen_u, 0);
+      }
     }
   }
 
@@ -1188,24 +1192,25 @@ _nc_translate(nc_gen* gen_u)
 **             pointing at each in turn: its own, then those of its call
 **             site, if any.
 */
-#define _nc_srcs(gen_u, op_u, reg_h, body)                               \
-  do {                                                                   \
-    const c3_y _nfam = (op_u)->fam_y;                                    \
-    c3_h _i;                                                             \
-    for ( _i = 0; _i < _nc_fam[_nfam].src_y; _i++ ) {                    \
-      c3_h* reg_h = &((op_u)->src_h[_i]);                                \
-      body;                                                              \
-    }                                                                    \
-    if ( _nc_fam[_nfam].sot_y ) {                                        \
-      nc_dir* _dir = &((gen_u)->dir_u[(op_u)->imm_h]);                   \
-      for ( _i = 0; _i < _dir->len_h; _i++ ) {                           \
-        c3_h* reg_h = &((gen_u)->pol_h[_dir->sot_h + _i]);               \
-        body;                                                            \
-      }                                                                  \
-    }                                                                    \
+#define _nc_srcs(gen_u, op_u, reg_h, body)                                      \
+  do {                                                                          \
+    const c3_y _nfam = (op_u)->fam_y;                                           \
+    c3_h _i;                                                                    \
+    for ( _i = 0; _i < _nc_fam[_nfam].src_y; _i++ ) {                           \
+      c3_h* reg_h = &((op_u)->src_h[_i]);                                       \
+      body;                                                                     \
+    }                                                                           \
+    if ( _nc_fam[_nfam].sot_y ) {                                               \
+      nc_dir* _dir = &((gen_u)->dir_u[(op_u)->imm_h]);                          \
+      for ( _i = 0; _i < _dir->len_h; _i++ ) {                                  \
+        c3_h* reg_h = &((gen_u)->pol_h[_dir->sot_h + _i]);                      \
+        body;                                                                   \
+      }                                                                         \
+    }                                                                           \
   } while ( 0 )
 
-/* _nc_key_sort(): sort registers by their first point, then by number.
+/* _nc_key_sort(): quicksort key_d. The inputs are typically almost-sorted so
+**  middle element is used as a pivot. Small arrays are insertion-sorted.
 */
 static void
 _nc_key_sort(c3_d* key_d, c3_h len_h)
@@ -1524,7 +1529,11 @@ _nc_edge_y(nc_gen* gen_u, c3_h p_h, c3_h b_h)
 {
   nc_blk* blk_u = &(gen_u->blk_u[p_h]);
   u3_assert(blk_u->kin_y > 1);
-  return ( (blk_u->kid_h[1] == b_h) ) ? 1 : 2;
+  if ( blk_u->kid_h[1] == b_h ) {
+    return 1;
+  }
+  u3_assert(blk_u->kid_h[0] == b_h);
+  return 2;
 }
 
 /* _nc_consume(): the branch bra consumes on edge e
@@ -1582,19 +1591,19 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   
   c3_h  reg_h = c3_max(gen_u->reg_h, arg_h);
   c3_h  blk_h = gen_u->blk_h;
-  c3_h  wor_h = (reg_h + 63) >> 6;               //  doubles of a full bitset
-  c3_h  chu_h;                                   //  doubles of a chunk
+  c3_h  wor_h = (reg_h + 63) >> 6;       //  doubles of a full bitset
+  c3_h  chu_h;                           //  doubles of a chunk
   c3_h* use_h = u3a_calloc(reg_h, sizeof(c3_h));
   c3_h* pro_h = u3a_calloc(blk_h + 1, sizeof(c3_h));  //  predecessor offsets
-  c3_h* pre_h;                                        //  predecessors
-  c3_d* inn_d;                                   //  live into each block
-  c3_d* liv_d;                                   //  scratch
-  c3_d* out_d;                                   //  scratch: live out of a block
-  c3_d* dro_d = NULL;                            //  drops: layout << 32 | reg
+  c3_h* pre_h;                           //  predecessors
+  c3_d* inn_d;                           //  live into each block
+  c3_d* liv_d;                           //  scratch
+  c3_d* out_d;                           //  scratch: live out of a block
+  c3_d* dro_d = NULL;                    //  drops: layout << 32 | reg
   c3_h  dro_h = 0, drc_h = 0;
-  c3_d* edr_d = NULL;                            //  edge drops: edge << 32 | reg
+  c3_d* edr_d = NULL;                    //  edge drops: edge << 32 | reg
   c3_h  edr_h = 0, erc_h = 0;
-  c3_h* edc_h;                                   //  drops of each edge: 2 * layout + k
+  c3_h* edc_h;                           //  drops of each edge: 2 * layout + k
 
   //  kind, by layout; always dro when not sweeping
   c3_y* kin_y = ( _nc_swe_t ) ? u3a_calloc(gen_u->lan_h, sizeof(c3_y)) : NULL;
@@ -1735,6 +1744,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       c3_d*   bin_d = _nc_in(b_h);
       c3_h    pre_n = pro_h[b_h + 1] - pro_h[b_h];
 
+      //  a layed out block is either the entry block or has some predecessors
+      u3_assert(0 == i_h || pre_n > 0);
+
+      //  crashing blocks don't need DROps
       //  may cause a leak. see _nc_doomed()
       //
       if (  blk_u->len_h
@@ -1745,15 +1758,17 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
       //  dead on every edge in: live out of every predecessor (the
       //  arguments, before the entry) and not live into the block
+      //  the name is a bit misleading: liv_d will become a set of regs that die
+      //  in b_h on all incoming edges
       //
-      if ( !i_h ) {
+      if ( 0 == i_h ) {
         memset(liv_d, 0, chu_h * sizeof(c3_d));
         for ( r_h = lo_h; (r_h < hi_h) && (r_h < arg_h); r_h++ ) {
           _nc_bit_set(liv_d, r_h - lo_h);
         }
       }
       else {
-        memset(liv_d, pre_n ? 0xff : 0, chu_h * sizeof(c3_d));
+        memset(liv_d, 0xff, chu_h * sizeof(c3_d));
         for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
           _nc_out(pre_h[j_h]);
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
@@ -1775,6 +1790,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         }
       }
 
+      //  emit DROs
       for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
         c3_d ded_d = liv_d[w_h];
 
@@ -1800,14 +1816,21 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
             continue;
           }
           c3_y edg_y = _nc_edge_y(gen_u, p_h, b_h);
+
+          // edge identifier
           c3_h edg_h = (2 * gen_u->blk_u[p_h].lay_h) + (edg_y & 1);
 
           _nc_out(p_h);
+          //  out_d: live out of p_h but dead in b_h and not in liv_d: set of
+          //  registers that die on this edge
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
             out_d[w_h] &= ~bin_d[w_h] & ~liv_d[w_h];
           }
+          //  branching op can consume its sources itself
           _nc_consume(bra_u, edg_y, out_d, lo_h, hi_h);
 
+          //  and the remainder will get emitted into a block that will get
+          //  spliced into the edge
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
             c3_d ded_d = out_d[w_h];
 
@@ -1875,22 +1898,24 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
     //  _nc_edrops(): the drops of edge e
     //
-#define _nc_edrops(e)  do {                                              \
-    for ( c3_h _i = edo_h[e]; _i < edo_h[(e) + 1]; _i++ ) {              \
-      nc_op* _op = _nc_op_init(&(new_u[new_h++]), _nc_dro);              \
-      _op->src_h[0] = (c3_h)edr_d[_i];                                   \
-    }                                                                    \
+#define _nc_edrops(e)  do {                                                     \
+    for ( c3_h _i = edo_h[e]; _i < edo_h[(e) + 1]; _i++ ) {                     \
+      nc_op* _op = _nc_op_init(&(new_u[new_h++]), _nc_dro);                     \
+      _op->src_h[0] = (c3_h)edr_d[_i];                                          \
+    }                                                                           \
   } while ( 0 )
 
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
       c3_h    fir_h = new_h;
-      nc_op*  bra_u = NULL;                    //  its branch, copied
-      nc_op*  hop_u = NULL;                    //  its jump to the yes block, copied
+      nc_op*  bra_u = NULL;               //  its branch, copied
+      nc_op*  hop_u = NULL;               //  its jump to the yes block, copied
       c3_y    k_y;
 
       lay_h[lan_h++] = gen_u->lay_h[i_h];
 
+      //  emit DROs in the beginning of the block, or skip them if the control
+      //  flow op will sweep
       switch ( ( kin_y ) ? kin_y[i_h] : _nc_kin_dro ) {
         default: u3_assert(0);
 
@@ -1907,7 +1932,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           }
         } break;
       }
-
+      //  copy ops
       for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
         nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
 
@@ -1927,7 +1952,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         }
         new_h++;
 
-        if ( kin_y && (_nc_kin_ter == kin_y[i_h]) && cnt_y[i_h]
+        if ( kin_y && _nc_kin_ter == kin_y[i_h] && cnt_y[i_h]
            && _nc_fam[op_u->fam_y].swe_y )
         {
           new_u[new_h - 1].kon_y = 1;
@@ -1954,8 +1979,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           continue;
         }
 
+        //  if a block's edge has drops then it gotta be branchy
         u3_assert( bra_u && (blk_u->kin_y > 1) );
 
+        //  insert a block with drops
         kid_h = blk_u->kid_h[k_y];
         edg_h = gen_u->blk_h++;
         edg_u = &(gen_u->blk_u[edg_h]);
@@ -1971,7 +1998,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           //  through to the yes block in turn or takes over the jump
           //
           if ( hop_u ) {
-            u3_assert( (hop_u->tar_h == kid_h) && (hop_u == &(new_u[new_h - 1])) );
+            u3_assert( (hop_u->tar_h == kid_h)
+                    && (hop_u == &(new_u[new_h - 1])) );
             new_h--;
             blk_u->len_h--;
           }
@@ -2010,8 +2038,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
 #undef _nc_edrops
 
-    u3_assert( (dri_h == dro_h) && (new_h <= cap_h)
-            && (lan_h == gen_u->lan_h + edn_h) && (gen_u->blk_h == blk_h + edn_h) );
+    u3_assert( (dri_h == dro_h)
+            && (new_h <= cap_h)
+            && (lan_h == gen_u->lan_h + edn_h)
+            && (gen_u->blk_h == blk_h + edn_h) );
 
     for ( i_h = 0; i_h < lan_h; i_h++ ) {
       gen_u->blk_u[lay_h[i_h]].lay_h = i_h;
@@ -2089,6 +2119,8 @@ _nc_range(nc_ran* ran_u, c3_h* fir_h, c3_h* las_h, c3_h r_h,
 /* _nc_fits(): whether the ranges of a register, from fir_h, are free in
 **             the occupancy bitmap of a slot; _nc_take(): mark them.
 */
+static_assert(64 == sizeof(c3_d) * CHAR_BIT);
+
 static c3_t
 _nc_fits(const nc_ran* ran_u, c3_h fir_h, const c3_d* occ_d)
 {
@@ -2099,9 +2131,11 @@ _nc_fits(const nc_ran* ran_u, c3_h fir_h, const c3_d* occ_d)
     for ( w_h = a_h >> 6; w_h <= (b_h >> 6); w_h++ ) {
       c3_d msk_d = ~(c3_d)0;
 
+      //  first double: remove preceding, least significant bits
       if ( w_h == (a_h >> 6) ) {
         msk_d &= ~(c3_d)0 << (a_h & 63);
       }
+      //  last double: remove following, most significant bits
       if ( w_h == (b_h >> 6) ) {
         msk_d &= ~(c3_d)0 >> (63 - (b_h & 63));
       }
@@ -2159,6 +2193,19 @@ _nc_take(const nc_ran* ran_u, c3_h fir_h, c3_d* occ_d)
 **   of a self call (JMS), then the slots above the parameters, then the
 **   parameters' slots, then a new one.  A self call then moves only the
 **   arguments not in place (_nc_shuffle()).
+********************
+**  A register occupies its slot wherever it holds a reference: from its
+**  definition to its last use site, which consumes it, and, if _nc_zer_t == 1,
+**  zeroes it. If _nc_zer_t == 1 KIL zeroes out the slot, otherwise a slot with
+**  a potentially poisoned register (control flow join where only one side sets
+**  a register) could contain either a live value or an already freed garbage.
+**  Occupancy of slots and liveness of registers is expressed in terms of half-
+**  positions: before and after a given op.
+**  Input registers get first N slots. Then the registers get slots in this
+**  order of preference: first a parameter slot it wants for an argument of a
+**  self tail-call JMS, then slots above the input, then the input slots, then
+**  a new one. Later the self-calls will be lowered into moves of the misplaced
+**  arguments plus a HOP to the entry point.
 */
 static void
 _nc_slots(nc_gen* gen_u, c3_h arg_h)
@@ -2227,7 +2274,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
     c3_d* lva_d = u3a_calloc((c3_z)opn_h * chu_h, sizeof(c3_d));
     c3_d* cur_d = u3a_malloc(chu_h * sizeof(c3_d));
     c3_d* now_d = u3a_malloc(chu_h * sizeof(c3_d));
-    c3_h* ope_h = u3a_malloc((chu_h << 6) * sizeof(c3_h));  //  open range start
+    c3_h* ope_h = u3a_malloc((chu_h << 6) * sizeof(c3_h));
 
     for ( c3_d lo_d = 0; lo_d < reg_h; lo_d += (c3_d)chu_h << 6 ) {
       c3_h lo_h = lo_d;
@@ -2236,6 +2283,9 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
 
       _nc_live_in(gen_u, lo_h, hi_h, chu_h, inn_d, liv_d, lvo_d, lva_d, 0);
 
+      //  cur_d: occupancy bitmap at the previous half-position
+      //  ope_h: beginning of the open range for a given register, or _nc_none
+      //         if the range is closed
       memset(cur_d, 0, chu_h * sizeof(c3_d));
       for ( i_h = 0; i_h < (chu_h << 6); i_h++ ) {
         ope_h[i_h] = _nc_none;
@@ -2245,8 +2295,11 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
         nc_op* op_u = &(gen_u->ops_u[h_h >> 1]);
         c3_h   w_h;
 
-        //  occupied at this half-position
-        //
+        //  _nc_live_in gave us liveness but not the occupancy:
+        //    - dead products occupy their slot
+        //    - DROpped registers occupy their slot when they get dropped
+        //    - input parameters may be dead (no one reads them) but they occupy
+        //      slots
         if ( h_h & 1 ) {
           memcpy(now_d, lva_d + ((c3_z)(h_h >> 1) * chu_h),
                  chu_h * sizeof(c3_d));
@@ -2284,7 +2337,9 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
               ope_h[bit_h] = h_h;
             }
             else {
-              _nc_range(&ran_u, fir_h, las_h, lo_h + bit_h, ope_h[bit_h], h_h - 1);
+              _nc_range(&ran_u, fir_h, las_h,
+                lo_h + bit_h, ope_h[bit_h], h_h - 1);
+
               ope_h[bit_h] = _nc_none;
             }
           }
@@ -2311,15 +2366,15 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   //  the parameters, then the other registers by their first point
   //
 #define _nc_occ(sot)  (occ_d + ((c3_z)(sot) * hwo_h))
-#define _nc_slot_new()  do {                                             \
-    if ( tot_h >= occ_h ) {                                              \
-      c3_h _new = c3_max(2 * occ_h, c3_max(arg_h, 8));                   \
-      occ_d = u3a_realloc(occ_d, (c3_z)occ_h * hwo_h * sizeof(c3_d),     \
-                                 (c3_z)_new * hwo_h * sizeof(c3_d));     \
-      memset(_nc_occ(occ_h), 0, (c3_z)(_new - occ_h) * hwo_h * sizeof(c3_d)); \
-      occ_h = _new;                                                      \
-    }                                                                    \
-    tot_h++;                                                             \
+#define _nc_slot_new()  do {                                                    \
+    if ( tot_h >= occ_h ) {                                                     \
+      c3_h _new = c3_max(2 * occ_h, c3_max(arg_h, 8));                          \
+      occ_d = u3a_realloc(occ_d, (c3_z)occ_h * hwo_h * sizeof(c3_d),            \
+                                 (c3_z)_new * hwo_h * sizeof(c3_d));            \
+      memset(_nc_occ(occ_h), 0, (c3_z)(_new - occ_h) * hwo_h * sizeof(c3_d));   \
+      occ_h = _new;                                                             \
+    }                                                                           \
+    tot_h++;                                                                    \
   } while ( 0 )
 
   for ( r_h = 0; r_h < arg_h; r_h++ ) {
@@ -2371,14 +2426,6 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
 #undef _nc_occ
 #undef _nc_slot_new
 
-  //  a register that never holds a reference, read as 0 if at all
-  //
-  for ( r_h = 0; r_h < reg_h; r_h++ ) {
-    if ( _nc_none == sot_h[r_h] ) {
-      sot_h[r_h] = 0;
-    }
-  }
-
   //  rewrite
   //
   for ( i_h = 0; i_h < opn_h; i_h++ ) {
@@ -2388,10 +2435,17 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
       continue;
     }
 
-    _nc_srcs(gen_u, op_u, reg_h, { *reg_h = sot_h[*reg_h]; });
+    _nc_srcs(gen_u, op_u, reg_h, {
+      c3_h s_h = sot_h[*reg_h];
+      //  live ops' registers should've gotten their slots
+      u3_assert(_nc_none != s_h);
+      *reg_h = s_h;
+    });
 
     if ( _nc_none != op_u->dst_h ) {
-      op_u->dst_h = sot_h[op_u->dst_h];
+      c3_h s_h = sot_h[op_u->dst_h];
+      u3_assert(_nc_none != s_h);
+      op_u->dst_h = s_h;
     }
   }
 
@@ -2470,7 +2524,12 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
       return 1;
     }
 
-    case _nc_kil:     //  an imm of 0 (_nc_jump())
+    case _nc_kil: {
+      if ( _nc_zer_t ) {
+        return 0;       //  noop when consuming ops zero out the consumed slot
+      }
+      [[fallthrough]];  //  becomes IMM_0 or IML[0] when consuming does not zero
+    }
     case _nc_imm: {
       if ( op_u->dst_h < 0x100 ) {
         c3_h n_h = op_u->imm_h;
@@ -2530,7 +2589,7 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   }
 
   wid_y = ( max_h < 0x100 ) ? 0 : ( max_h < 0x10000 ) ? 1 : 2;
-  siz_h = 1 + (2 == wid_y);
+  siz_h = 1 + (2 == wid_y);  //  op byte + WIDE extension
 
   if ( buf_y ) {
     c3_y kon_y = _nc_fam[fam_y].kon_y ? op_u->kon_y : 0;
@@ -2871,6 +2930,10 @@ _nc_shuffle(nc_gen* gen_u, nc_dir* dir_u, c3_h ent_h,
   c3_h   pen_h = 0, k_h;
   nc_op* op_u;
 
+  //  arg_h[k_h]: slot that holds a value that needs to be in k_h
+  //  sta_y[k_h]: k_h is already in place, it needs to stay
+  //  red_h[k_h]: k_h has a pending move from it, can't overwrite if nonzero
+  //
   for ( k_h = 0; k_h < len_h; k_h++ ) {
     arg_h[k_h] = gen_u->pol_h[dir_u->sot_h + k_h];
 
@@ -2887,6 +2950,8 @@ _nc_shuffle(nc_gen* gen_u, nc_dir* dir_u, c3_h ent_h,
     c3_t did_t = 0;
 
     for ( k_h = 0; k_h < len_h; k_h++ ) {
+      //  first try to move a value whose target slot is free to write
+      //
       c3_h s_h = arg_h[k_h];
 
       if ( (s_h == k_h) || red_h[k_h] ) {
@@ -2905,11 +2970,14 @@ _nc_shuffle(nc_gen* gen_u, nc_dir* dir_u, c3_h ent_h,
     }
 
     if ( !did_t ) {
+      //  couldn't move anything: a cycle
+      //  get a scratch slot for a swap, allocating if needed
       c3_h t_h, j_h;
 
       for ( k_h = 0; arg_h[k_h] == k_h; k_h++ );
       for ( t_h = len_h; (t_h < tot_h) && red_h[t_h]; t_h++ );
 
+      //  a slot out of place has a pending read due to a cycle
       u3_assert( red_h[k_h] );
 
       if ( t_h == tot_h ) {
@@ -3288,7 +3356,7 @@ _nc_lose_slow(u3_noun som)
 **               clobber the caller's registers.
 */
 static _nc_cold u3nc_prog*
-_nc_callee(u3nc_dire* dir_u)
+_nc_callee(u3nc_prog* pog_u, u3nc_dire* dir_u)
 {
   u3nc_prog* gop_u;
   u3_noun    key;
@@ -3310,6 +3378,9 @@ _nc_callee(u3nc_dire* dir_u)
 
   if ( _nc_here(dir_u) ) {
     dir_u->pog_p = u3of(u3nc_prog, gop_u);
+  }
+  else {
+    u3h_put(u3R->ska.def_p, _nc_of(pog_u), u3_nul);
   }
 
   return gop_u;
@@ -4012,7 +4083,7 @@ _nc_mark_ent_cb(u3_noun kev, void* ptr_v)
 u3m_quac*
 u3nc_mark(void)
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 6);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 7);
   u3m_quac*  tot_u = c3_calloc(sizeof(*tot_u));
   c3_h       i_h;
 
@@ -4037,8 +4108,12 @@ u3nc_mark(void)
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("entry table");
   qua_u[4]->siz_w = u3h_mark_tot(u3R->ska.ent_p) * sizeof(c3_w);
+  
+  qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+  qua_u[5]->nam_c = strdup("deffered linking table");
+  qua_u[5]->siz_w = u3h_mark_tot(u3R->ska.def_p) * sizeof(c3_w);
 
-  qua_u[5] = NULL;
+  qua_u[6] = NULL;
 
   tot_u->nam_c = strdup("total compiled nock");
   tot_u->qua_u = qua_u;
@@ -4079,6 +4154,7 @@ u3nc_free(void)
   u3h_walk(u3R->ska.ent_p, _nc_free_ent_cb);
   u3h_free(u3R->ska.dir_p);
   u3h_free(u3R->ska.ent_p);
+  u3h_free(u3R->ska.def_p);
 }
 
 /* u3nc_reclaim(): free the programs to reclaim memory.
@@ -4089,6 +4165,7 @@ u3nc_reclaim(void)
   u3nc_free();
   u3R->ska.dir_p = u3h_new();
   u3R->ska.ent_p = u3h_new();
+  u3R->ska.def_p = u3h_new();
 }
 
 /* u3nc_rewrite_compact(): rewrite the SKA state for compaction.
@@ -4102,6 +4179,7 @@ u3nc_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->ska.cor));
   u3h_relocate(&(u3R->ska.dir_p));
   u3h_relocate(&(u3R->ska.ent_p));
+  u3h_relocate(&(u3R->ska.def_p));
 }
 
 /* _nc_prog_ream(): fix the pointers of a restored program.
@@ -4147,4 +4225,21 @@ u3nc_ream(void)
   u3_assert( u3R == &(u3H->rod_u) );
   u3h_walk(u3R->ska.dir_p, _nc_ream_dir_cb);
   u3h_walk(u3R->ska.ent_p, _nc_ream_ent_cb);
+}
+
+static c3_o
+_nc_link_deferred_cb(u3_noun kev, void* tox_v)
+{
+  u3nc_prog* pog_u = _nc_to(u3h(kev));
+  if ( !_nc_here(pog_u) ) return c3n;
+  _nc_link(pog_u);
+  return c3y;
+}
+
+/* u3nc_link_deferred(): relink programs from the deferred worklist
+*/
+void
+u3nc_link_deferred(u3p(u3h_root) def_p)
+{
+  u3h_prune_with(def_p, _nc_link_deferred_cb, NULL);
 }

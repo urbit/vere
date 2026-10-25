@@ -273,9 +273,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) pax_p;                              /*  [path axis] -> jet drivers                */ \
     U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
     U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
+    U3_W(S) def_p;                              /*  Linking worklist                          */ \
   } ska;                                                                                         \
                                                                                                  \
-  U3_W(S) fut_w[23];                            /*  futureproof buffer                        */ \
+  U3_W(S) fut_w[22];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \

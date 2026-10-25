@@ -340,7 +340,7 @@ static const OP_F WTAB[] = { WIDES };
     }                                                                           \
     else {                                                                      \
       u3t_off(noc_o);                                                           \
-      gop_u = _nc_callee(dir_u);                                                \
+      gop_u = _nc_callee(pog_u, dir_u);                                         \
       u3t_on(noc_o);                                                            \
     }                                                                           \
   } while ( 0 )

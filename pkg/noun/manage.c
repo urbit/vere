@@ -557,6 +557,7 @@ _pave_parts(void)
   u3R->how.fag_w = 0;
   u3R->ska.dir_p = u3h_new();
   u3R->ska.ent_p = u3h_new();
+  u3R->ska.def_p = u3h_new();
 }
 
 static c3_d
@@ -710,6 +711,7 @@ _find_home(void)
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
   if ( !u3R->ska.dir_p ) u3R->ska.dir_p = u3h_new();
   if ( !u3R->ska.ent_p ) u3R->ska.ent_p = u3h_new();
+  if ( !u3R->ska.def_p ) u3R->ska.def_p = u3h_new();
 
   if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
     fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
@@ -1437,6 +1439,7 @@ u3m_love(u3_noun pro)
   u3p(u3h_root) dup_p = u3R->dup_p;
   u3p(u3h_root) dir_p = u3R->ska.dir_p;
   u3p(u3h_root) ent_p = u3R->ska.ent_p;
+  u3p(u3h_root) def_p = u3R->ska.def_p;
   u3_noun       cor   = u3R->ska.cor;
 
   //  are there any timers on the road?
@@ -1465,6 +1468,7 @@ u3m_love(u3_noun pro)
   per_p = u3h_take(per_p);
   for_p = u3h_take(for_p);
   dup_p = u3h_take(dup_p);
+  def_p = u3h_take(def_p);
 
   //  pop the stack
   //
@@ -1496,6 +1500,9 @@ u3m_love(u3_noun pro)
   u3h_free(dup_p);
   u3z(u3R->ska.cor);
   u3R->ska.cor = cor;
+  u3nc_link_deferred(def_p);
+  u3h_uni(u3R->ska.def_p, def_p);
+  u3h_free(def_p);
 
   return pro;
 }

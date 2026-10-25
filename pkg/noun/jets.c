@@ -347,8 +347,8 @@ _cj_ring_put(u3j_core* cop_u, c3_l jax_l, u3_noun pax)
       continue;
     }
     //  XX linear search
-    for ( j_l = 0; u3u_Harm[j_l].fun_f; j_l++ ) {
-      if ( u3u_Harm[j_l].fun_f == ham_u->fun_f ) {
+    for ( j_l = 0; u3u_Harm[j_l].key_f; j_l++ ) {
+      if ( u3u_Harm[j_l].key_f == ham_u->fun_f ) {
         arg_l = j_l + 1;
         break;
       }

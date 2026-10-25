@@ -18,13 +18,18 @@
     typedef u3_noun (*u3u_fun)(u3_noun*);
 
   /* u3u_harm: array-driver arm.
+  **    key_f: a key to map this entry to the hot state, u3w* driver in practice
+  **    arg_f: array driver, NULL if punting
+  **    len_w: number of arguments, 1 if punting
+  **    axe_l: argument axes in the core, {1} if punting
+  **    pun_t: punting driver, u3w* driver from the hot state will apply
   */
     typedef struct _u3u_harm {
-      u3_noun     (*fun_f)(u3_noun);     //  u3w driver of the same arm
-      u3u_fun       arg_f;               //  array driver, NULL if punting
-      c3_w          len_w;               //  number of arguments, 1 if punting
-      const c3_l*   axe_l;               //  argument axes in the core, {1} if punting
-      c3_t          pun_t;               //  punting: the u3w driver on the core
+      u3_noun     (*key_f)(u3_noun);
+      u3u_fun       arg_f;
+      c3_w          len_w;
+      const c3_l*   axe_l;
+      c3_t          pun_t;
     } u3u_harm;
 
   /* u3u_Harm: blank-terminated table of array drivers.
