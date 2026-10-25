@@ -302,6 +302,15 @@
     mpz_set(g, d.minExp);
     mpz_add(g, g, d.expWidth);
     if ( (d.eMode != c3__i) && (mpz_cmp(g, c.e) < 0) ) {
+      //  rounding toward zero saturates to the largest finite value
+      if ( (i == c3__fl) || (i == c3__sm) ) {
+        mpz_set(c.e, g);
+        mpz_set_ui(c.a, 1);
+        mpz_mul_2exp(c.a, c.a, d.precision);
+        mpz_sub_ui(c.a, c.a, 1);
+        mpz_clear(v); mpz_clear(h); mpz_clear(g);
+        goto end;
+      }
       mpz_clear(v); mpz_clear(h); mpz_clear(g);
       mpz_clear(d.minExp); mpz_clear(d.expWidth);
       mpz_clear(c.a); mpz_clear(c.e);
