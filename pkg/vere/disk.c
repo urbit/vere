@@ -1955,11 +1955,12 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
 
 #ifdef VERE64
-  //  v5 (32-bit) home is at loom position 0; version is the first c3_d
+  //  v5 or v6 (32-bit) home is at loom position 0; version is the first
+  //  c3_d
   //
   c3_d lom_d = *((c3_d *)u3_Loom_h);
 
-  if ( U3V_VER5 != lom_d ) {
+  if ( (U3V_VER5 != lom_d) && (U3V_VER6 != lom_d) ) {
     fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
     u3_assert(0);
   }
@@ -1998,6 +1999,48 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   //
   _disk_drop_stale_loom(fid_i, sou_z);
 #endif
+}
+
+/* u3_disk_migrate_home(): migrate a checkpoint whose home is at loom
+**                         position 0 (version 5 onward) in place: the
+**                         image is loaded live, and each step from the
+**                         image's version on brings it one version up.
+*/
+c3_o
+u3_disk_migrate_home(c3_c* dir_c, c3_z lom_z, c3_d eve_d)
+{
+  c3_c img_c[8193];
+  c3_d ver_d = 0;
+  c3_i fid_i;
+
+  snprintf(img_c, 8193, "%s/.urb/chk/image.bin", dir_c);
+
+  if ( -1 == (fid_i = open(img_c, O_RDONLY)) ) {
+    return c3n;
+  }
+
+  pread(fid_i, &ver_d, sizeof(ver_d), 0);
+  close(fid_i);
+
+  //  the latest already, or unknown (boot refuses those)
+  //
+  if ( (ver_d < U3V_VER5) || (ver_d >= U3V_VERLAT) ) {
+    return c3n;
+  }
+
+  fprintf(stderr, "loom: migrating the checkpoint from version %" PRIu64
+                  " to %" PRIu64 "\r\n", ver_d, U3V_VERLAT);
+
+  u3m_init(lom_z);
+  u3e_live(c3n, u3m_pier(dir_c));
+
+  switch ( ver_d ) {
+    case U3V_VER5: u3_migrate_v6(eve_d); [[fallthrough]];
+    case U3V_VER6: break;
+  }
+
+  u3m_save();
+  return c3y;
 }
 
 static void
@@ -2220,6 +2263,17 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         }
       }
 #endif
+
+      //  migrate an older loom (version 5 onward) in chk in place
+      //  before booting
+      //
+      if (  !(u3C.wag_h & u3o_no_migrate)
+         && (c3y == u3_disk_migrate_home(log_u->dir_u->pax_c,
+                                         (size_t)1 << u3_Host.ops_u.lom_y,
+                                         log_u->dun_d)) )
+      {
+        u3m_stop();
+      }
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 

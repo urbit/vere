@@ -853,6 +853,12 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "migrate-test",
+                .file = "pkg/vere/migrate_tests.c",
+                .deps = vere_test_deps,
+                .nix = true,
+            },
+            .{
                 .name = "newt-test",
                 .file = "pkg/vere/newt_tests.c",
                 .deps = vere_test_deps,

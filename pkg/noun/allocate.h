@@ -268,17 +268,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  struct {                                      /*  SKA state                                 */ \
-    U3_N(S) cor;                                /*  SKA core                                  */ \
-    U3_W(S) pax_p;                              /*  [path axis] -> jet drivers                */ \
-    U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
-    U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
-    U3_W(S) def_p;                              /*  Linking worklist                          */ \
-    U3_W(S) tem_p;                              /*  battery -> (list [path sock]) registered  */ \
-    U3_N(S) new;                                /*  registrations the SKA core hasn't seen    */ \
-  } ska;                                                                                         \
-                                                                                                 \
-  U3_W(S) fut_w[20];                            /*  futureproof buffer                        */ \
+  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -337,10 +327,20 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) har_p;                              /*  transient                                 */ \
     U3_W(S) per_p;                              /*  persistent                                */ \
     U3_W(S) for_p;                              /*  ford                                      */ \
+  } cax;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  SKA state (version 6)                     */ \
+    U3_N(S) cor;                                /*  SKA core                                  */ \
+    U3_W(S) pax_p;                              /*  [path axis] -> jet drivers                */ \
+    U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
+    U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
+    U3_W(S) def_p;                              /*  Linking worklist                          */ \
+    U3_W(S) tem_p;                              /*  battery -> (list [path sock]) registered  */ \
+    U3_N(S) new;                                /*  registrations the SKA core hasn't seen    */ \
     /* road struct terminator: no data after it, no */\
     /* padding between the last real field and it   */\
     c3_y end_y[0];                                    \
-  } cax;
+  } ska;
 
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
@@ -560,8 +560,8 @@ typedef struct {
 #       define u3R  u3a_Road
 
       static_assert(
-        offsetof(u3a_road, cax.end_y) == offsetof(u3a_road, cax.for_p)
-                                       + sizeof(u3R->cax.for_p),
+        offsetof(u3a_road, ska.end_y) == offsetof(u3a_road, ska.new)
+                                       + sizeof(u3R->ska.new),
       "no padding between the last real field of u3_road and end marker");
 
     /* u3_Code: memory code.

@@ -569,54 +569,73 @@ _cj_find_warm(u3_noun loc)
   }
 }
 
-/* _cj_ska(): registration of cor at loc for SKA: [path sock], the label
-**            path (leaf first) and the template of the core's shape
-**            that +register-fast in nock-compilation.hoon would build:
-**            a root core whole; else its battery, with the parent's
-**            template at the parent axis and nothing else known.
-**            RETAINS.  Produces u3_none for a parent axis in the battery,
-**            which SKA refuses.
+/* _cj_ska_path(): label path of a location, leaf first.  RETAINS.
 */
-static u3_weak
-_cj_ska(u3_noun cor, u3_noun loc)
+static u3_noun
+_cj_ska_path(u3_noun loc)
 {
-  u3_noun pat, nam, huc, pel, cap, dat, rec, pax;
-  u3_weak par;
-  c3_l    axe_l, a_l;
+  u3_noun pat = u3h(loc);
+  u3_noun nam = u3h(u3t(loc));
 
-  u3x_trel(loc, &pat, &nam, &huc);
-
-  //  root: [%& %& payload]
-  //
   if ( (c3y == u3h(pat)) && (c3y == u3h(u3t(pat))) ) {
-    return u3nc(u3nc(u3k(nam), u3_nul),
-                u3nc(u3nc(c3y, c3y), u3k(cor)));
+    return u3nc(u3k(nam), u3_nul);
   }
 
-  //  static child: [%& %| parent], the parent being the payload;
-  //  dynamic: [%| axis parent]
-  //
-  pel   = u3t(u3t(pat));
-  axe_l = ( c3y == u3h(pat) ) ? 3 : u3h(u3t(pat));
+  return u3nc(u3k(nam), _cj_ska_path(u3t(u3t(pat))));
+}
 
-  if ( 3 != u3x_cap(axe_l) ) {
-    return u3_none;
+/* _cj_ska_axe(): parent axis of a location: 0 for a root (its pattern is
+**                [%& %& payload]), 3 for a static child ([%& %| parent],
+**                the parent being the payload), else the axis of its
+**                dynamic pattern [%| axis parent].  RETAINS.
+*/
+static c3_l
+_cj_ska_axe(u3_noun loc)
+{
+  u3_noun pat = u3h(loc);
+
+  if ( c3n == u3h(pat) ) {
+    return u3h(u3t(pat));
   }
 
-  par = u3r_at(axe_l, cor);
-  u3_assert( u3_none != par );
+  return ( c3y == u3h(u3t(pat)) ) ? 0 : 3;
+}
 
-  if ( u3_none == (rec = _cj_ska(par, pel)) ) {
-    return u3_none;
-  }
+/* _cj_ska_pel(): parent location of a child location, or the payload of
+**                a root.  RETAINS.
+*/
+static u3_noun
+_cj_ska_pel(u3_noun loc)
+{
+  return u3t(u3t(u3h(loc)));
+}
 
-  pax = u3nc(u3k(nam), u3k(u3h(rec)));
-  cap = u3k(u3h(u3t(rec)));
-  dat = u3k(u3t(u3t(rec)));
-  u3z(rec);
+/* _cj_ska_root(): template of a root core: the whole core known.
+**                 TRANSFERS cor.
+*/
+static u3_noun
+_cj_ska_root(u3_noun cor)
+{
+  return u3nc(u3nc(c3y, c3y), cor);
+}
+
+/* _cj_ska_tem(): template of a core with battery bat whose parent, at
+**                axe_l (cap 3), has the template par: the battery known,
+**                the parent's template at its axis, nothing else, as the
+**                +darn:so of +register-fast in nock-compilation.hoon
+**                knits it.  RETAINS bat; TRANSFERS par.
+*/
+static u3_noun
+_cj_ska_tem(u3_noun bat, c3_l axe_l, u3_noun par)
+{
+  u3_noun cap = u3k(u3h(par));
+  u3_noun dat = u3k(u3t(par));
+  c3_l    a_l;
+
+  u3z(par);
 
   //  from the parent's template up to the battery: each step knits it
-  //  with an unknown sibling, as the +darn:so of +register-fast does
+  //  with an unknown sibling
   //
   for ( a_l = axe_l; a_l > 3; a_l >>= 1 ) {
     if ( a_l & 1 ) {
@@ -629,7 +648,51 @@ _cj_ska(u3_noun cor, u3_noun loc)
     }
   }
 
-  return u3nc(pax, u3nc(u3nc(c3y, cap), u3nc(u3k(u3h(cor)), dat)));
+  return u3nc(u3nc(c3y, cap), u3nc(u3k(bat), dat));
+}
+
+/* _cj_ska_sock(): template of cor at loc, through its parents.  RETAINS.
+**                 Produces u3_none for a parent axis in the battery,
+**                 which SKA refuses.
+*/
+static u3_weak
+_cj_ska_sock(u3_noun cor, u3_noun loc)
+{
+  c3_l    axe_l = _cj_ska_axe(loc);
+  u3_weak par, tem;
+
+  if ( !axe_l ) {
+    return _cj_ska_root(u3k(cor));
+  }
+
+  if ( 3 != u3x_cap(axe_l) ) {
+    return u3_none;
+  }
+
+  par = u3r_at(axe_l, cor);
+  u3_assert( u3_none != par );
+
+  if ( u3_none == (tem = _cj_ska_sock(par, _cj_ska_pel(loc))) ) {
+    return u3_none;
+  }
+
+  return _cj_ska_tem(u3h(cor), axe_l, tem);
+}
+
+/* _cj_ska(): registration of cor at loc for SKA: [path sock], the label
+**            path and the template that +register-fast would build for
+**            the core.  RETAINS.  Produces u3_none if there is none.
+*/
+static u3_weak
+_cj_ska(u3_noun cor, u3_noun loc)
+{
+  u3_weak tem = _cj_ska_sock(cor, loc);
+
+  if ( u3_none == tem ) {
+    return u3_none;
+  }
+
+  return u3nc(_cj_ska_path(loc), tem);
 }
 
 /* u3j_ska_put(): keep a registration [path sock] for SKA under the
@@ -676,6 +739,144 @@ u3j_ska_put(u3_weak rec, c3_o new_o)
   }
 
   u3z(rec);
+}
+
+/* _cj_ska_index(): add [bat axe] to the batteries registered at loc.
+**                  RETAINS.
+*/
+static void
+_cj_ska_index(u3p(u3h_root) lox_p, u3_noun loc, u3_noun bat, u3_noun axe)
+{
+  u3_weak old = u3h_git(lox_p, loc);
+
+  u3h_put(lox_p, loc, u3nc(u3nc(u3k(bat), u3k(axe)),
+                           ( u3_none == old ) ? u3_nul : u3k(old)));
+}
+
+/* _cj_ska_index_cb(): u3h_walk callback over the cold state: index the
+**                     locations of a battery (decoded as in _cj_ream()).
+*/
+static void
+_cj_ska_index_cb(u3_noun kev, void* ptr_v)
+{
+  u3p(u3h_root) lox_p = *(u3p(u3h_root)*)ptr_v;
+  u3_noun       bat   = u3h(kev);
+  u3_noun       reg   = u3t(u3t(kev));
+  u3_noun       j, k, lis;
+
+  //  roots: payload -> location
+  //
+  lis = u3qdb_tap(u3h(reg));
+  for ( j = lis; u3_nul != j; j = u3t(j) ) {
+    _cj_ska_index(lox_p, u3t(u3h(j)), bat, 0);
+  }
+  u3z(lis);
+
+  //  ancestors: [axis (map parent location)]
+  //
+  for ( j = u3t(reg); u3_nul != j; j = u3t(j) ) {
+    lis = u3qdb_tap(u3t(u3h(j)));
+    for ( k = lis; u3_nul != k; k = u3t(k) ) {
+      _cj_ska_index(lox_p, u3t(u3h(k)), bat, u3h(u3h(j)));
+    }
+    u3z(lis);
+  }
+}
+
+/* _cj_ska_tems(): templates of the cores registered at loc: for a root,
+**                 its batteries over the payload; else each battery over
+**                 every template of the parent location, which is the
+**                 precision u3n locates with.  lox_p: location ->
+**                 (list [bat axe]); mem_p: memo.  RETAINS loc; produces
+**                 the list retained by mem_p.
+*/
+static u3_noun
+_cj_ska_tems(u3_noun loc, u3p(u3h_root) lox_p, u3p(u3h_root) mem_p)
+{
+  u3_weak got = u3h_git(mem_p, loc);
+  u3_weak reg;
+  u3_noun out = u3_nul, i, j;
+  c3_l    axe_l;
+
+  if ( u3_none != got ) {
+    return got;
+  }
+
+  reg   = u3h_git(lox_p, loc);
+  axe_l = _cj_ska_axe(loc);
+
+  if ( u3_none == reg ) {
+    //  nothing registered here: its children get no template
+  }
+  else if ( !axe_l ) {
+    u3_noun pay = _cj_ska_pel(loc);
+
+    for ( i = reg; u3_nul != i; i = u3t(i) ) {
+      out = u3nc(_cj_ska_root(u3nc(u3k(u3h(u3h(i))), u3k(pay))), out);
+    }
+  }
+  else if ( 3 == u3x_cap(axe_l) ) {
+    u3_noun par = _cj_ska_tems(_cj_ska_pel(loc), lox_p, mem_p);
+
+    for ( i = reg; u3_nul != i; i = u3t(i) ) {
+      for ( j = par; u3_nul != j; j = u3t(j) ) {
+        out = u3nc(_cj_ska_tem(u3h(u3h(i)), axe_l, u3k(u3h(j))), out);
+      }
+    }
+  }
+
+  u3h_put(mem_p, loc, out);
+  return out;
+}
+
+typedef struct {
+  u3p(u3h_root) lox_p;  //  location -> (list [bat axe])
+  u3p(u3h_root) mem_p;  //  location -> (list sock)
+  c3_w          num_w;  //  registrations made
+} _cj_ska_ctx;
+
+/* _cj_ska_ream_cb(): u3h_walk callback over the index: register the
+**                    templates of a location.
+*/
+static void
+_cj_ska_ream_cb(u3_noun kev, void* ptr_v)
+{
+  _cj_ska_ctx* ctx_u = ptr_v;
+  u3_noun      loc   = u3h(kev);
+  u3_noun      pax   = _cj_ska_path(loc);
+  u3_noun      i;
+
+  for ( i = _cj_ska_tems(loc, ctx_u->lox_p, ctx_u->mem_p);
+        u3_nul != i;
+        i = u3t(i) )
+  {
+    u3j_ska_put(u3nc(u3k(pax), u3k(u3h(i))), c3n);
+    ctx_u->num_w++;
+  }
+
+  u3z(pax);
+}
+
+/* u3j_ska_ream(): rebuild the registrations for SKA from the cold state,
+**                 for one that predates them or came through uncram:
+**                 every battery over every template of its parent
+**                 location, the precision u3n locates with.  Produces
+**                 how many were made.
+*/
+c3_w
+u3j_ska_ream(void)
+{
+  _cj_ska_ctx ctx_u = { u3h_new(), u3h_new(), 0 };
+
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  u3h_walk_with(u3R->jed.cod_p, _cj_ska_index_cb, &ctx_u.lox_p);
+  u3h_walk_with(ctx_u.lox_p, _cj_ska_ream_cb, &ctx_u);
+
+  u3h_free(ctx_u.lox_p);
+  u3h_free(ctx_u.mem_p);
+
+  return ctx_u.num_w;
 }
 
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);

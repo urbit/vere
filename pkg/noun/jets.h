@@ -220,6 +220,12 @@
         void
         u3j_ska_put(u3_weak rec, c3_o new_o);
 
+      /* u3j_ska_ream(): rebuild the registrations for SKA from the cold
+      **                 state, producing how many were made.
+      */
+        c3_w
+        u3j_ska_ream(void);
+
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
         void

@@ -55,6 +55,10 @@ u3_migrate_v5(c3_d eve_d)
   u3j_v5_boot(c3y);
   u3j_v5_ream();
 
+  //  the registrations for SKA, from the cold state (version 6)
+  //
+  u3j_ska_ream();
+
   _copy_v4_done(&cop_u);
 
   fprintf(stderr, "loom: allocator migration done\r\n");

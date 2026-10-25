@@ -565,7 +565,8 @@ static c3_d
 _pave_params(void)
 {
   //  pam_d bits:
-  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
+  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5],
+  //    compiled-nock[5], ... }
   //
   //    word-size: 0==32, 1==64
   //    page-size: relative binary-log in bytes
@@ -575,7 +576,8 @@ _pave_params(void)
          ^ ((8 == sizeof(c3_w)) ? 1 : 0)
          ^ (u3a_vits << 1)
          ^ ((u3a_page + 2 - 12) << 3)
-         ^ (U3N_VERLAT << 6);
+         ^ (U3N_VERLAT << 6)
+         ^ (U3NC_VERLAT << 11);
 }
 
 /* _pave_home(): initialize pristine home road.
@@ -605,6 +607,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
+STATIC_ASSERT( U3NC_VERLAT < (1U << 5), "5-bit compiled nock version" );
 
 /* _find_home(): in restored image, point to home road.
 */
@@ -663,7 +666,7 @@ _find_home(void)
     //  bytes between the end of the u3v_home struct and the bottom of the heap
     //  should normally be set to 0.
     c3_y* byt_y = (c3_y*)u3_Loom;
-    c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
+    c3_w off_w = offsetof(u3v_home, rod_u.ska.end_y);
     c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
     c3_t acc_y = 0;
     for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
@@ -705,16 +708,6 @@ _find_home(void)
 
   _rod_vaal(u3R);
 
-  //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
-  //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  if ( !u3R->ska.dir_p ) u3R->ska.dir_p = u3h_new();
-  if ( !u3R->ska.ent_p ) u3R->ska.ent_p = u3h_new();
-  if ( !u3R->ska.def_p ) u3R->ska.def_p = u3h_new();
-  if ( !u3R->ska.tem_p ) u3R->ska.tem_p = u3h_new();
-
   if ( ((pam_d >> 6) & 31) != U3N_VERLAT ) {
     fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
     u3j_ream();
@@ -726,27 +719,11 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  properly initialize things from zero-initialize future proof buffer
-  //
-  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
-  //  proof buffer but instead it was added as a last element of the `cax` sub-
-  //  struct of the road struct. Since
-  //    1) the loom is zero-initialized,
-  //    2) the road is the final member of the u3v_home struct,
-  //    3) `cax` is the last element of the road struct,
-  //    4) `for_p` is the last element of `cax`,
-  //    5) and adding `for_p` did not change the alignment of either the road
-  //       struct or the `cax` struct,
-  //  the layout and the position of the road struct did not change, and a
-  //  simple null check was sufficient for the migration.
-  //  
-  //  The reasoning above is sound as long as we assume no downgrades, which
-  //  would not be detected by any methods present at the moment of cax.for_p
-  //  addition.
-  //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
+  if ( ((u3H->pam_d >> 11) & 31) != U3NC_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale compiled nock programs\r\n");
+    u3nc_reclaim();
+    u3H->pam_d = _pave_params();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.

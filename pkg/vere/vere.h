@@ -852,6 +852,17 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
+      /* u3_disk_migrate_home(): migrate a checkpoint whose home is at loom
+      **                         position 0 (version 5 onward) in place to
+      **                         the latest version, with a loom of [lom_z]
+      **                         bytes, at event [eve_d].  Produces c3y if
+      **                         it did (the loom is left running:
+      **                         u3m_stop() before booting), c3n if there
+      **                         was nothing to do.
+      */
+        c3_o
+        u3_disk_migrate_home(c3_c* dir_c, c3_z lom_z, c3_d eve_d);
+
       /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **
       **   windows only; a no-op elsewhere. must run before anything else can
