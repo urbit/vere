@@ -169,7 +169,7 @@
 #       define U3_OS_LoomBase 0x4000000
 #     endif
 #   elif defined(U3_OS_windows)
-#       define U3_OS_LoomBase 0x28000000000
+#       define U3_OS_LoomBase 0x40000000000
 #   else
 #     error "port: LoomBase"
 #   endif
