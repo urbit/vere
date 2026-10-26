@@ -7,6 +7,7 @@
 #include "imprison.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "log.h"
 #include "manage.h"
 #include "nock.h"
@@ -306,10 +307,70 @@ _cj_warm_hump(c3_l jax_l, u3_noun huc)
   return hap;
 }
 
+/* _cj_fcs_axis(): arm axis from a `.axe` control string, or 0.
+*/
+static c3_l
+_cj_fcs_axis(const c3_c* fcs_c)
+{
+  c3_d axe_d = 0;
+  c3_l axe_l = 0;
+
+  if (  ('.' != fcs_c[0])
+     || (1 != sscanf(fcs_c + 1, "%" SCNu64, &axe_d))
+     || (axe_d >> 32ULL)
+     || (((c3_w)1 << 31) & (axe_l = (c3_w)axe_d))
+     || (axe_l < 2) )
+  {
+    return 0;
+  }
+
+  return axe_l;
+}
+
+/* _cj_ring_put(): register the arms of a core by ring [path axis].
+**                 pax is RETAINED: the label path, leaf first.
+*/
+static void
+_cj_ring_put(u3j_core* cop_u, c3_l jax_l, u3_noun pax)
+{
+  c3_l i_l;
+
+  for ( i_l = 0; cop_u->arm_u && cop_u->arm_u[i_l].fcs_c; i_l++ ) {
+    u3j_harm* ham_u = &(cop_u->arm_u[i_l]);
+    c3_l      axe_l = _cj_fcs_axis(ham_u->fcs_c);
+    c3_l      arg_l = 0;  // u3u_Harm index + 1 or 0
+    c3_l      j_l;
+
+    ham_u->cop_u = cop_u;
+
+    if ( !axe_l ) {
+      continue;
+    }
+    //  XX linear search
+    for ( j_l = 0; u3u_Harm[j_l].key_f; j_l++ ) {
+      if ( u3u_Harm[j_l].key_f == ham_u->fun_f ) {
+        arg_l = j_l + 1;
+        break;
+      }
+    }
+
+    {
+      u3_noun key = u3nc(u3k(pax), axe_l);
+      u3h_put(u3R->ska.pax_p, key, u3nt(jax_l, i_l, arg_l));
+      u3z(key);
+    }
+  }
+}
+
 /* _cj_install(): install dashboard entries.
 */
 static c3_w
-_cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev_u)
+_cj_install(u3j_core* ray_u,
+            c3_w      jax_l,
+            u3_noun   pel,
+            u3_noun   lab,
+            u3_noun   pax,
+            u3j_core* dev_u)
 {
   c3_w i_w;
   u3_assert(u3R == &(u3H->rod_u));
@@ -318,10 +379,12 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
     for ( i_w = 0; 0 != dev_u[i_w].cos_c; i_w++ ) {
       u3j_core* kid_u = &dev_u[i_w];
       u3_noun   loc   = _cj_core_loc(u3k(pel), kid_u),
-                bal   = u3nc(u3k(u3h(u3t(loc))), u3k(lab));
+                bal   = u3nc(u3k(u3h(u3t(loc))), u3k(lab)),
+                xap   = u3nc(u3i_string(kid_u->cos_c), u3k(pax));
 
       kid_u->jax_l   = jax_l;
       ray_u[jax_l] = *kid_u;
+      _cj_ring_put(&ray_u[jax_l], jax_l, xap);
 
       if ( kid_u->bas_u ) {
         c3_w j_w;
@@ -339,11 +402,12 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
         }
       }
 
-      jax_l = _cj_install(ray_u, ++jax_l, loc, bal, kid_u->dev_u);
+      jax_l = _cj_install(ray_u, ++jax_l, loc, bal, xap, kid_u->dev_u);
     }
   }
   u3z(pel);
   u3z(lab);
+  u3z(pax);
   return jax_l;
 }
 
@@ -505,6 +569,316 @@ _cj_find_warm(u3_noun loc)
   }
 }
 
+/* _cj_ska_path(): label path of a location, leaf first.  RETAINS.
+*/
+static u3_noun
+_cj_ska_path(u3_noun loc)
+{
+  u3_noun pat = u3h(loc);
+  u3_noun nam = u3h(u3t(loc));
+
+  if ( (c3y == u3h(pat)) && (c3y == u3h(u3t(pat))) ) {
+    return u3nc(u3k(nam), u3_nul);
+  }
+
+  return u3nc(u3k(nam), _cj_ska_path(u3t(u3t(pat))));
+}
+
+/* _cj_ska_axe(): parent axis of a location: 0 for a root (its pattern is
+**                [%& %& payload]), 3 for a static child ([%& %| parent],
+**                the parent being the payload), else the axis of its
+**                dynamic pattern [%| axis parent].  RETAINS.
+*/
+static c3_l
+_cj_ska_axe(u3_noun loc)
+{
+  u3_noun pat = u3h(loc);
+
+  if ( c3n == u3h(pat) ) {
+    return u3h(u3t(pat));
+  }
+
+  return ( c3y == u3h(u3t(pat)) ) ? 0 : 3;
+}
+
+/* _cj_ska_pel(): parent location of a child location, or the payload of
+**                a root.  RETAINS.
+*/
+static u3_noun
+_cj_ska_pel(u3_noun loc)
+{
+  return u3t(u3t(u3h(loc)));
+}
+
+/* _cj_ska_root(): template of a root core: the whole core known.
+**                 TRANSFERS cor.
+*/
+static u3_noun
+_cj_ska_root(u3_noun cor)
+{
+  return u3nc(u3nc(c3y, c3y), cor);
+}
+
+/* _cj_ska_tem(): template of a core with battery bat whose parent, at
+**                axe_l (cap 3), has the template par: the battery known,
+**                the parent's template at its axis, nothing else, as the
+**                +darn:so of +register-fast in nock-compilation.hoon
+**                knits it.  RETAINS bat; TRANSFERS par.
+*/
+static u3_noun
+_cj_ska_tem(u3_noun bat, c3_l axe_l, u3_noun par)
+{
+  u3_noun cap = u3k(u3h(par));
+  u3_noun dat = u3k(u3t(par));
+  c3_l    a_l;
+
+  u3z(par);
+
+  //  from the parent's template up to the battery: each step knits it
+  //  with an unknown sibling
+  //
+  for ( a_l = axe_l; a_l > 3; a_l >>= 1 ) {
+    if ( a_l & 1 ) {
+      cap = u3nc(c3n, cap);
+      dat = u3nc(0, dat);
+    }
+    else {
+      cap = u3nc(cap, c3n);
+      dat = u3nc(dat, 0);
+    }
+  }
+
+  return u3nc(u3nc(c3y, cap), u3nc(u3k(bat), dat));
+}
+
+/* _cj_ska_sock(): template of cor at loc, through its parents.  RETAINS.
+**                 Produces u3_none for a parent axis in the battery,
+**                 which SKA refuses.
+*/
+static u3_weak
+_cj_ska_sock(u3_noun cor, u3_noun loc)
+{
+  c3_l    axe_l = _cj_ska_axe(loc);
+  u3_weak par, tem;
+
+  if ( !axe_l ) {
+    return _cj_ska_root(u3k(cor));
+  }
+
+  if ( 3 != u3x_cap(axe_l) ) {
+    return u3_none;
+  }
+
+  par = u3r_at(axe_l, cor);
+  u3_assert( u3_none != par );
+
+  if ( u3_none == (tem = _cj_ska_sock(par, _cj_ska_pel(loc))) ) {
+    return u3_none;
+  }
+
+  return _cj_ska_tem(u3h(cor), axe_l, tem);
+}
+
+/* _cj_ska(): registration of cor at loc for SKA: [path sock], the label
+**            path and the template that +register-fast would build for
+**            the core.  RETAINS.  Produces u3_none if there is none.
+*/
+static u3_weak
+_cj_ska(u3_noun cor, u3_noun loc)
+{
+  u3_weak tem = _cj_ska_sock(cor, loc);
+
+  if ( u3_none == tem ) {
+    return u3_none;
+  }
+
+  return u3nc(_cj_ska_path(loc), tem);
+}
+
+/* u3j_ska_put(): keep a registration [path sock] for SKA under the
+**                battery of its template, and, if new_o, on the list
+**                of those the SKA core has not been fed, if there is a
+**                core.  TRANSFERS rec, u3_none for none.
+*/
+void
+u3j_ska_put(u3_weak rec, c3_o new_o)
+{
+  u3a_road* rod_u;
+  u3_noun   bat, lis, i;
+
+  if ( u3_none == rec ) {
+    return;
+  }
+
+  rec = u3m_dedup(rec);
+  bat = u3h(u3t(u3t(rec)));
+  lis = u3_nul;
+
+  //  the registrations of the battery, in this road or a senior one
+  //
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3_weak got = u3h_git(rod_u->ska.tem_p, bat);
+
+    if ( u3_none != got ) {
+      lis = got;
+      break;
+    }
+  }
+
+  for ( i = lis; u3_nul != i; i = u3t(i) ) {
+    if ( c3y == u3r_sing(u3h(i), rec) ) {
+      u3z(rec);
+      return;
+    }
+  }
+
+  u3h_put(u3R->ska.tem_p, bat, u3nc(u3k(rec), u3k(lis)));
+
+  if ( (c3y == new_o) && (u3_nul != u3R->ska.cor) ) {
+    u3R->ska.new = u3nc(u3k(rec), u3R->ska.new);
+  }
+
+  u3z(rec);
+}
+
+/* _cj_ska_index(): add [bat axe] to the batteries registered at loc.
+**                  RETAINS.
+*/
+static void
+_cj_ska_index(u3p(u3h_root) lox_p, u3_noun loc, u3_noun bat, u3_noun axe)
+{
+  u3_weak old = u3h_git(lox_p, loc);
+
+  u3h_put(lox_p, loc, u3nc(u3nc(u3k(bat), u3k(axe)),
+                           ( u3_none == old ) ? u3_nul : u3k(old)));
+}
+
+/* _cj_ska_index_cb(): u3h_walk callback over the cold state: index the
+**                     locations of a battery (decoded as in _cj_ream()).
+*/
+static void
+_cj_ska_index_cb(u3_noun kev, void* ptr_v)
+{
+  u3p(u3h_root) lox_p = *(u3p(u3h_root)*)ptr_v;
+  u3_noun       bat   = u3h(kev);
+  u3_noun       reg   = u3t(u3t(kev));
+  u3_noun       j, k, lis;
+
+  //  roots: payload -> location
+  //
+  lis = u3qdb_tap(u3h(reg));
+  for ( j = lis; u3_nul != j; j = u3t(j) ) {
+    _cj_ska_index(lox_p, u3t(u3h(j)), bat, 0);
+  }
+  u3z(lis);
+
+  //  ancestors: [axis (map parent location)]
+  //
+  for ( j = u3t(reg); u3_nul != j; j = u3t(j) ) {
+    lis = u3qdb_tap(u3t(u3h(j)));
+    for ( k = lis; u3_nul != k; k = u3t(k) ) {
+      _cj_ska_index(lox_p, u3t(u3h(k)), bat, u3h(u3h(j)));
+    }
+    u3z(lis);
+  }
+}
+
+/* _cj_ska_tems(): templates of the cores registered at loc: for a root,
+**                 its batteries over the payload; else each battery over
+**                 every template of the parent location, which is the
+**                 precision u3n locates with.  lox_p: location ->
+**                 (list [bat axe]); mem_p: memo.  RETAINS loc; produces
+**                 the list retained by mem_p.
+*/
+static u3_noun
+_cj_ska_tems(u3_noun loc, u3p(u3h_root) lox_p, u3p(u3h_root) mem_p)
+{
+  u3_weak got = u3h_git(mem_p, loc);
+  u3_weak reg;
+  u3_noun out = u3_nul, i, j;
+  c3_l    axe_l;
+
+  if ( u3_none != got ) {
+    return got;
+  }
+
+  reg   = u3h_git(lox_p, loc);
+  axe_l = _cj_ska_axe(loc);
+
+  if ( u3_none == reg ) {
+    //  nothing registered here: its children get no template
+  }
+  else if ( !axe_l ) {
+    u3_noun pay = _cj_ska_pel(loc);
+
+    for ( i = reg; u3_nul != i; i = u3t(i) ) {
+      out = u3nc(_cj_ska_root(u3nc(u3k(u3h(u3h(i))), u3k(pay))), out);
+    }
+  }
+  else if ( 3 == u3x_cap(axe_l) ) {
+    u3_noun par = _cj_ska_tems(_cj_ska_pel(loc), lox_p, mem_p);
+
+    for ( i = reg; u3_nul != i; i = u3t(i) ) {
+      for ( j = par; u3_nul != j; j = u3t(j) ) {
+        out = u3nc(_cj_ska_tem(u3h(u3h(i)), axe_l, u3k(u3h(j))), out);
+      }
+    }
+  }
+
+  u3h_put(mem_p, loc, out);
+  return out;
+}
+
+typedef struct {
+  u3p(u3h_root) lox_p;  //  location -> (list [bat axe])
+  u3p(u3h_root) mem_p;  //  location -> (list sock)
+  c3_w          num_w;  //  registrations made
+} _cj_ska_ctx;
+
+/* _cj_ska_ream_cb(): u3h_walk callback over the index: register the
+**                    templates of a location.
+*/
+static void
+_cj_ska_ream_cb(u3_noun kev, void* ptr_v)
+{
+  _cj_ska_ctx* ctx_u = ptr_v;
+  u3_noun      loc   = u3h(kev);
+  u3_noun      pax   = _cj_ska_path(loc);
+  u3_noun      i;
+
+  for ( i = _cj_ska_tems(loc, ctx_u->lox_p, ctx_u->mem_p);
+        u3_nul != i;
+        i = u3t(i) )
+  {
+    u3j_ska_put(u3nc(u3k(pax), u3k(u3h(i))), c3n);
+    ctx_u->num_w++;
+  }
+
+  u3z(pax);
+}
+
+/* u3j_ska_ream(): rebuild the registrations for SKA from the cold state,
+**                 for one that predates them or came through uncram:
+**                 every battery over every template of its parent
+**                 location, the precision u3n locates with.  Produces
+**                 how many were made.
+*/
+c3_w
+u3j_ska_ream(void)
+{
+  _cj_ska_ctx ctx_u = { u3h_new(), u3h_new(), 0 };
+
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  u3h_walk_with(u3R->jed.cod_p, _cj_ska_index_cb, &ctx_u.lox_p);
+  u3h_walk_with(ctx_u.lox_p, _cj_ska_ream_cb, &ctx_u);
+
+  u3h_free(ctx_u.lox_p);
+  u3h_free(ctx_u.mem_p);
+
+  return ctx_u.num_w;
+}
+
 static u3_weak _cj_spot(u3_noun cor, u3_weak* bas);
 
 /* _cj_reg_find(): locate core within registry. RETAIN.
@@ -659,6 +1033,7 @@ _cj_spot(u3_noun cor, u3_weak* bas)
         */
         loc = u3m_dedup(loc);
         u3h_put(u3R->jed.war_p, loc, u3m_dedup(act));
+        u3j_ska_put(_cj_ska(cor, loc), c3y);
       }
     }
   }
@@ -820,13 +1195,42 @@ u3j_boot(c3_o nuu_o)
 
   if ( c3n == nuu_o ) {
     u3h_free(u3R->jed.hot_p);
+    if ( u3R->ska.pax_p ) {
+      u3h_free(u3R->ska.pax_p);
+    }
   }
   u3R->jed.hot_p = u3h_new();
+  u3R->ska.pax_p = u3h_new();
 
   return _cj_install(u3D.ray_u, 1,
                      (c3_l) (long long) u3D.dev_u[0].par_u,
                      u3_nul,
+                     u3_nul,
                      u3D.dev_u);
+}
+
+/* u3j_ring(): find the drivers of an arm by ring [path axis]. RETAINS.
+**             sets *ham_u to the u3w arm and *arm_u to the array arm,
+**             either nullable; produces c3n if there is no such arm.
+*/
+c3_o
+u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
+{
+  u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
+  u3_noun jax, inx, arg;
+
+  *ham_u = NULL;
+  *arm_u = NULL;
+
+  if ( u3_none == val ) {
+    return c3n;
+  }
+
+  u3x_trel(val, &jax, &inx, &arg);
+  *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
+  *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
+
+  return c3y;
 }
 
 /* _cj_soft(): kick softly by arm axis.
@@ -926,6 +1330,16 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
     }
     return u3_none;
   }
+}
+
+/* u3j_kick_arm(): try to kick by driver arm, without a dashboard search.
+**
+** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+*/
+u3_weak
+u3j_kick_arm(u3_noun cor, u3j_harm* ham_u, c3_l axe_l)
+{
+  return _cj_kick_z(cor, ham_u->cop_u, ham_u, axe_l);
 }
 
 /* _cj_hook_in(): execute hook from core, or fail.
@@ -1875,6 +2289,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat_dedup));
     u3h_put(u3R->jed.cod_p, bat_dedup, u3m_dedup(u3nc(u3k(bas), reg)));
     u3h_put(u3R->jed.war_p, loc, u3m_dedup(act)); // see note in _cj_spot
+    u3j_ska_put(_cj_ska(cor, loc), c3y);
     u3z(pel); u3z(axe); u3z(bat_dedup);
   }
 
@@ -2337,7 +2752,7 @@ _cj_mark_hank(u3_noun kev, void* dat)
 u3m_quac*
 u3j_mark()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 7);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 8);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
@@ -2412,8 +2827,13 @@ u3j_mark()
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
   qua_u[4]->siz_w *= sizeof(c3_w);
 
+  qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
+  qua_u[5]->nam_c = strdup("SKA registrations");
+  qua_u[5]->siz_w = (  u3h_mark_tot(u3R->ska.tem_p)
+                     + u3a_mark_noun(u3R->ska.new) ) * sizeof(c3_w);
+
   c3_w sum_w = 0;
-  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
     sum_w += qua_u[i_w]->siz_w;
   }
 
@@ -2421,20 +2841,21 @@ u3j_mark()
   tot_u->nam_c = strdup("total jet stuff");
 
   if ( u3R == &(u3H->rod_u) ) {
-    qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
-    qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark_tot(u3R->jed.hot_p) * sizeof(c3_w);
+    qua_u[6] = c3_calloc(sizeof(*qua_u[6]));
+    qua_u[6]->nam_c = strdup("hot jet state");
+    qua_u[6]->siz_w = (  u3h_mark_tot(u3R->jed.hot_p)
+                       + u3h_mark_tot(u3R->ska.pax_p) ) * sizeof(c3_w);
 
-    sum_w += qua_u[5]->siz_w;
+    sum_w += qua_u[6]->siz_w;
 
-    qua_u[6] = NULL;
+    qua_u[7] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
 
     return tot_u;
   } else {
-    qua_u[5] = NULL;
+    qua_u[6] = NULL;
 
     tot_u->siz_w = sum_w;
     tot_u->qua_u = qua_u;
@@ -2466,8 +2887,11 @@ u3j_free(void)
   u3h_free(u3R->jed.cod_p);
   u3h_free(u3R->jed.han_p);
   u3h_free(u3R->jed.bas_p);
+  u3h_free(u3R->ska.tem_p);
+  u3z(u3R->ska.new);
   if ( u3R == &(u3H->rod_u) ) {
     u3h_free(u3R->jed.hot_p);
+    u3h_free(u3R->ska.pax_p);
   }
 }
 
@@ -2505,8 +2929,11 @@ u3j_rewrite_compact(void)
   u3h_relocate(&(u3R->jed.cod_p));
   u3h_relocate(&(u3R->jed.han_p));
   u3h_relocate(&(u3R->jed.bas_p));
+  u3h_relocate(&(u3R->ska.tem_p));
+  u3a_relocate_noun(&(u3R->ska.new));
 
   if ( u3R == &(u3H->rod_u) ) {
     u3h_relocate(&(u3R->jed.hot_p));
+    u3h_relocate(&(u3R->ska.pax_p));
   }
 }

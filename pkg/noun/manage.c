@@ -27,6 +27,7 @@
 #include "jets/k.h"
 #include "jets/q.h"
 #include "log.h"
+#include "nock-compile.h"
 #include "nock.h"
 #include "options.h"
 #include "retrieve.h"
@@ -521,12 +522,13 @@ u3m_file(c3_c* pas_c)
 u3m_quac**
 u3m_mark(void)
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 5);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 6);
   qua_u[0] = u3v_mark();
   qua_u[1] = u3j_mark();
   qua_u[2] = u3n_mark();
-  qua_u[3] = u3a_mark_road();  // NB: must be the last thing marked
-  qua_u[4] = NULL;
+  qua_u[3] = u3nc_mark();
+  qua_u[4] = u3a_mark_road();  // NB: must be the last thing marked
+  qua_u[5] = NULL;
 
   return qua_u;
 }
@@ -553,13 +555,18 @@ _pave_parts(void)
   u3R->tim       = u3_nul;
   u3R->dup_p     = u3h_new();
   u3R->how.fag_w = 0;
+  u3R->ska.dir_p = u3h_new();
+  u3R->ska.ent_p = u3h_new();
+  u3R->ska.def_p = u3h_new();
+  u3R->ska.tem_p = u3h_new();
 }
 
 static c3_d
 _pave_params(void)
 {
   //  pam_d bits:
-  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5], ... }
+  //  { word-size[1], virtual-bits[2], page-size[3], bytecode[5],
+  //    compiled-nock[5], ... }
   //
   //    word-size: 0==32, 1==64
   //    page-size: relative binary-log in bytes
@@ -569,7 +576,8 @@ _pave_params(void)
          ^ ((8 == sizeof(c3_w)) ? 1 : 0)
          ^ (u3a_vits << 1)
          ^ ((u3a_page + 2 - 12) << 3)
-         ^ (U3N_VERLAT << 6);
+         ^ (U3N_VERLAT << 6)
+         ^ (U3NC_VERLAT << 11);
 }
 
 /* _pave_home(): initialize pristine home road.
@@ -599,6 +607,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
+STATIC_ASSERT( U3NC_VERLAT < (1U << 5), "5-bit compiled nock version" );
 
 /* _find_home(): in restored image, point to home road.
 */
@@ -657,7 +666,7 @@ _find_home(void)
     //  bytes between the end of the u3v_home struct and the bottom of the heap
     //  should normally be set to 0.
     c3_y* byt_y = (c3_y*)u3_Loom;
-    c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
+    c3_w off_w = offsetof(u3v_home, rod_u.ska.end_y);
     c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
     c3_t acc_y = 0;
     for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
@@ -703,32 +712,18 @@ _find_home(void)
     fprintf(stderr, "loom: discarding stale bytecode programs\r\n");
     u3j_ream();
     u3n_ream();
+    u3nc_ream();
     u3n_reclaim();
+    u3nc_reclaim();
     u3j_reclaim();
     u3H->pam_d = _pave_params();
   }
 
-  //  properly initialize things from zero-initialize future proof buffer
-  //
-  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
-  //  proof buffer but instead it was added as a last element of the `cax` sub-
-  //  struct of the road struct. Since
-  //    1) the loom is zero-initialized,
-  //    2) the road is the final member of the u3v_home struct,
-  //    3) `cax` is the last element of the road struct,
-  //    4) `for_p` is the last element of `cax`,
-  //    5) and adding `for_p` did not change the alignment of either the road
-  //       struct or the `cax` struct,
-  //  the layout and the position of the road struct did not change, and a
-  //  simple null check was sufficient for the migration.
-  //  
-  //  The reasoning above is sound as long as we assume no downgrades, which
-  //  would not be detected by any methods present at the moment of cax.for_p
-  //  addition.
-  //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
+  if ( ((u3H->pam_d >> 11) & 31) != U3NC_VERLAT ) {
+    fprintf(stderr, "loom: discarding stale compiled nock programs\r\n");
+    u3nc_reclaim();
+    u3H->pam_d = _pave_params();
+  }
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1200,6 +1195,8 @@ u3m_leap(c3_w pad_w)
   {
     u3R = rod_u;
     _pave_parts();
+    u3R->ska.cor = u3k(u3to(u3_road, u3R->par_p)->ska.cor);
+    u3R->ska.new = u3k(u3to(u3_road, u3R->par_p)->ska.new);
   }
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
@@ -1420,6 +1417,12 @@ u3m_love(u3_noun pro)
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
   u3p(u3h_root) dup_p = u3R->dup_p;
+  u3p(u3h_root) dir_p = u3R->ska.dir_p;
+  u3p(u3h_root) ent_p = u3R->ska.ent_p;
+  u3p(u3h_root) def_p = u3R->ska.def_p;
+  u3p(u3h_root) tem_p = u3R->ska.tem_p;
+  u3_noun       cor   = u3R->ska.cor;
+  u3_noun       new   = u3R->ska.new;
 
   //  are there any timers on the road?
   //
@@ -1440,11 +1443,16 @@ u3m_love(u3_noun pro)
   //  copy product and caches off our stack
   //
   pro   = u3a_take(pro);
+  cor   = u3a_take(cor);
   jed_u = u3j_take(jed_u);
   byc_p = u3n_take(byc_p);
+  u3nc_take(&dir_p, &ent_p);
   per_p = u3h_take(per_p);
   for_p = u3h_take(for_p);
   dup_p = u3h_take(dup_p);
+  def_p = u3h_take(def_p);
+  tem_p = u3h_take(tem_p);
+  new   = u3a_take(new);
 
   //  pop the stack
   //
@@ -1469,10 +1477,20 @@ u3m_love(u3_noun pro)
   //
   u3j_reap(jed_u);
   u3n_reap(byc_p);
+  u3nc_reap(dir_p, ent_p);
   u3z_reap(u3z_memo_keep, per_p);
   u3z_reap(u3z_memo_ford, for_p);
   u3h_uni(u3R->dup_p, dup_p);
   u3h_free(dup_p);
+  u3z(u3R->ska.cor);
+  u3R->ska.cor = cor;
+  u3h_uni(u3R->ska.tem_p, tem_p);
+  u3h_free(tem_p);
+  u3z(u3R->ska.new);
+  u3R->ska.new = new;
+  u3nc_link_deferred(def_p);
+  u3h_uni(u3R->ska.def_p, def_p);
+  u3h_free(def_p);
 
   return pro;
 }
@@ -2260,6 +2278,19 @@ u3m_pretty_path(u3_noun som)
   return pre_c;
 }
 
+/* u3m_pretty_path(): prettyprint a path to string, road-allocated
+*/
+c3_c*
+u3m_pretty_path_road(u3_noun som)
+{
+  c3_w len_w = _cm_in_pretty_path(som, NULL);
+  c3_c* pre_c = u3a_malloc(len_w + 1);
+
+  _cm_in_pretty_path(som, pre_c);
+  pre_c[len_w] = 0;
+  return pre_c;
+}
+
 /* u3m_p(): dumb print with caption.
 */
 void
@@ -2767,6 +2798,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   if ( c3n == nuu_o ) {
     u3j_ream();
     u3n_ream();
+    u3nc_ream();
     return u3A->eve_d;
   }
   else {
@@ -2819,6 +2851,7 @@ u3m_reclaim(void)
   u3v_reclaim();
   u3j_reclaim();
   u3n_reclaim();
+  u3nc_reclaim();
   u3a_reclaim();
 }
 
@@ -2837,6 +2870,7 @@ _cm_pack_rewrite(void)
   u3v_rewrite_compact();
   u3j_rewrite_compact();
   u3n_rewrite_compact();
+  u3nc_rewrite_compact();
   u3a_rewrite_compact();
 }
 

@@ -20,6 +20,64 @@ u3v_home_d* u3v_Home_d;
 u3a_road_h* u3a_Road_h;
 u3a_road_d* u3a_Road_d;
 
+/* _migrate_load(): point at the home road of the image in the loom and
+**                  ready its allocator, as _find_home() does before its
+**                  checks, which the steps from version 5 on can't pass
+**                  yet: they work on the native layout, an older image
+**                  being a prefix of it.
+*/
+static void
+_migrate_load(void)
+{
+  u3H = u3to(u3v_home, 0);
+  u3R = &u3H->rod_u;
+  u3R->mat_p = u3R->cap_p = u3C.wor_i - u3a_walign;
+  u3a_ream();
+}
+
+/* u3_migrate_v6(): version 5 to 6: the SKA state at the end of the road.
+*/
+void
+u3_migrate_v6(c3_d eve_d)
+{
+  static_assert( offsetof(u3a_road, ska) + sizeof(u3R->ska)
+              == sizeof(u3a_road),
+                 "SKA state last in the road" );
+
+  _migrate_load();
+
+  u3_assert( U3V_VER5 == u3H->ver_d );
+
+  if ( eve_d != u3A->eve_d ) {
+    fprintf(stderr, "loom: migrate (v6) stale snapshot: have %"
+                    PRIu64 ", need %" PRIu64 "\r\n",
+                    u3A->eve_d, eve_d);
+    abort();
+  }
+
+  fprintf(stderr, "loom: SKA state migration running...\r\n");
+
+  //  version 5 fields an older image left zero
+  //
+  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
+
+  //  the SKA tables; no core, nothing pending: zero, as the image has it
+  //
+  u3R->ska.dir_p = u3h_new();
+  u3R->ska.ent_p = u3h_new();
+  u3R->ska.def_p = u3h_new();
+  u3R->ska.tem_p = u3h_new();
+
+  fprintf(stderr, "loom: %" PRIc3_w " cores registered for SKA\r\n",
+                  u3j_ska_ream());
+
+  u3H->ver_d = U3V_VER6;
+
+  fprintf(stderr, "loom: SKA state migration done\r\n");
+}
+
 /* u3_load_h(): locate u3v_home_h in the mapped 32-bit image.
 */
 void
@@ -103,6 +161,7 @@ u3_migrate_d(c3_d eve_d)
   //
   u3j_boot(c3y);
   u3j_ream();
+  u3j_ska_ream();
 
   _copy_32_done(&cop_u);
 
@@ -199,6 +258,7 @@ u3_migrate_h(c3_d eve_d)
   //
   u3j_boot(c3y);
   u3j_ream();
+  u3j_ska_ream();
 
   _copy_64_done(&cop_u);
 

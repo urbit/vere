@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -44,4 +45,15 @@ u3ka_dec(u3_atom a)
   u3_noun b = u3qa_dec(a);
   u3z(a);
   return b;
+}
+
+u3_noun
+u3ua_dec(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__fail);
+  }
+  else {
+    return u3qa_dec(arg[0]);
+  }
 }

@@ -1023,6 +1023,11 @@ u3u_uncram(c3_c* dir_c, c3_d eve_d)
     u3A->roc = u3k(roc);
     u3j_load(u3k(cod));
 
+    //  the rock has the cold state but no registrations for SKA
+    //
+    fprintf(stderr, "uncram: %" PRIc3_w " cores registered for SKA\r\n",
+                    u3j_ska_ream());
+
     u3z(ref);
   }
 

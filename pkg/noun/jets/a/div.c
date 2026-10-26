@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -56,4 +57,17 @@ u3ka_div(u3_noun a,
   u3_noun c = u3qa_div(a, b);
   u3z(a); u3z(b);
   return c;
+}
+
+u3_noun
+u3ua_div(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[0])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  else {
+    return u3qa_div(arg[0], arg[1]);
+  }
 }

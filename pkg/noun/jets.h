@@ -4,6 +4,7 @@
 #define U3_JETS_H
 
 #include "allocate.h"
+#include "jets/u.h"
 #include "c3/c3.h"
 #include "types.h"
 
@@ -185,6 +186,22 @@
         u3_weak
         u3j_kick(u3_noun cor, u3_noun axe);
 
+      /* u3j_kick_arm(): try to kick by driver arm, without a dashboard
+      **                 search.  If no kick, produce u3_none.
+      **
+      ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+      */
+        u3_weak
+        u3j_kick_arm(u3_noun cor, u3j_harm* ham_u, c3_l axe_l);
+
+      /* u3j_ring(): find the drivers of an arm by ring [path axis].
+      **             RETAINS.  Sets *ham_u to the u3w arm and *arm_u to
+      **             the array arm, either nullable; produces c3n if
+      **             there is no such arm.
+      */
+        c3_o
+        u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u);
+
       /* u3j_kink(): kick either by jet or by nock.
       */
         u3_noun
@@ -196,6 +213,18 @@
         void
         u3j_mine(u3_noun clu,
                    u3_noun cor);
+
+      /* u3j_ska_put(): keep a registration [path sock] for SKA, and for
+      **                the SKA core to be fed if new_o.  TRANSFERS.
+      */
+        void
+        u3j_ska_put(u3_weak rec, c3_o new_o);
+
+      /* u3j_ska_ream(): rebuild the registrations for SKA from the cold
+      **                 state, producing how many were made.
+      */
+        c3_w
+        u3j_ska_ream(void);
 
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
