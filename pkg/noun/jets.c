@@ -2327,6 +2327,7 @@ u3j_prune(c3_w* tot_w, c3_w* dea_w)
   c3_w          num_w = 0;
 
   u3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( u3_nul == u3R->bug.tax );  // %mean traps include batteries
 
   if ( tot_w ) *tot_w = 0;
   if ( dea_w ) *dea_w = 0;
