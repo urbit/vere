@@ -3263,6 +3263,8 @@ _nc_link(u3nc_prog* pog_u)
     u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
     u3nc_prog* gop_u;
 
+    if ( dir_u->pog_p ) continue;
+
     if ( (c3n == dir_u->mon_o) && dir_u->arm_u && !dir_u->arm_u->pun_t ) {
       continue;
     }
