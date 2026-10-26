@@ -474,10 +474,8 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3h_wyt(rod_u->byc.har_p), u3h_wyt(rod_u->cax.per_p),
                    u3h_wyt(rod_u->cax.for_p), u3h_wyt(rod_u->dup_p),
                    u3h_wyt(rod_u->cax.har_p), _ce_meas_map_wyt(u3A->yot));
-    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,
-                   u3e_Meter.pru_d[0], u3e_Meter.pru_d[1]);
+    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d);
 
     //  bytecode programs: the home table now (count, bytes, formulas only
     //  their key holds), programs looked up from it, and compiles and

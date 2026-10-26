@@ -140,7 +140,6 @@
           c3_d rec_d;        //  reclaims
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
-          c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
 
           //  deferred gains across the state swap (u3a_defer_open())
           //
