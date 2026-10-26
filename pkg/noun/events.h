@@ -63,6 +63,100 @@
         u3e_flaw_good = 3                   //  handled
       } u3e_flaw;
 
+  /** Measurement (jb/measure-base).
+  **
+  **  Hot-path counters (kicks, formula and battery identity) are
+  **  added on top of this in jb/measure.
+  **
+  **  Enabled at runtime with U3_MEASURE=1 in the environment of the
+  **  serf process; see u3e_measure_init(). Per-task page hashing
+  **  (E lines) is off unless U3_MEASURE_HASH=1. When disabled, the only
+  **  cost is the phase-tag stores and a few counter increments.
+  **/
+      /* u3e_phase: what the runtime is doing, for attributing
+      ** first writes to snapshot pages. keep in sync with
+      ** _ce_pha_names[] in events.c.
+      */
+        typedef enum {
+          u3e_pha_none      =  0,  //  unattributed
+          u3e_pha_cue       =  1,  //  decoding an ipc message
+          u3e_pha_poke      =  2,  //  computing an event (senior writes)
+          u3e_pha_peek      =  3,  //  computing a scry
+          u3e_pha_road      =  4,  //  road entry/exit bookkeeping
+          u3e_pha_take_pro  =  5,  //  u3m_love: product
+          u3e_pha_take_jet  =  6,  //  u3m_love: jet state
+          u3e_pha_take_byc  =  7,  //  u3m_love: bytecode
+          u3e_pha_take_per  =  8,  //  u3m_love: persistent memo
+          u3e_pha_take_for  =  9,  //  u3m_love: ford memo
+          u3e_pha_take_dup  = 10,  //  u3m_love: hash-consing table
+          u3e_pha_ford_drop = 11,  //  u3m_love: stale ford cache freed
+          u3e_pha_reap_jet  = 12,  //  u3m_love: merge jet state
+          u3e_pha_reap_byc  = 13,  //  u3m_love: merge bytecode
+          u3e_pha_reap_per  = 14,  //  u3m_love: merge persistent memo
+          u3e_pha_reap_for  = 15,  //  u3m_love: merge ford memo
+          u3e_pha_reap_dup  = 16,  //  u3m_love: merge hash-consing table
+          u3e_pha_roc_lose  = 17,  //  releasing the old arvo state
+          u3e_pha_roc_misc  = 18,  //  rest of the state swap
+          u3e_pha_mug_roc   = 19,  //  mugging the new arvo state
+          u3e_pha_feck      = 20,  //  _mars_sure_feck
+          u3e_pha_etch      = 21,  //  event log entry (u3_disk_plan)
+          u3e_pha_jam       = 22,  //  encoding effects/responses
+          u3e_pha_io_free   = 23,  //  freeing job/effects after encoding
+          u3e_pha_post      = 24,  //  _mars_post (trims, reclaim, gc)
+          u3e_pha_save      = 25,  //  snapshot save
+          u3e_pha_task      = 26,  //  other mars tasks
+          u3e_pha_pack      = 27,  //  compaction (u3m_pack, meld)
+          u3e_pha_rec_wish  = 28,  //  u3m_reclaim: wish cache (u3v)
+          u3e_pha_rec_han   = 29,  //  u3m_reclaim: hank table (u3j)
+          u3e_pha_rec_byc   = 30,  //  u3m_reclaim: bytecode (u3n)
+          u3e_pha_rec_memo  = 31,  //  u3m_reclaim: transient memo cache
+          u3e_pha_rec_dup   = 32,  //  u3m_reclaim: hash-consing prune
+          u3e_pha_trim_per  = 33,  //  _mars_post: persistent memo trim
+          u3e_pha_trim_for  = 34,  //  _mars_post: ford memo trim
+          u3e_pha_max       = 35
+        } u3e_phase;
+
+      /* u3e_meter: counters reported at each snapshot.
+      */
+        typedef struct {
+          //  road exits, per promoted table:
+          //  [0] all exits, [1] exits into the home road
+          //
+          struct {
+            c3_d exi_d[2];   //  exits
+            c3_d nul_d[2];   //  exits with an empty junior table
+            c3_d ent_d[2];   //  junior entries at exit
+          } tab_u[8];        //  war cod han bas byc per for dup
+          //  home-road page records and allocation
+          //
+          c3_d fre_cln_d;    //  frees that dirtied a clean page via its
+                             //  page record
+          c3_d alc_cln_d;    //  clean pages first written by a chunk
+                             //  allocation
+          c3_d alc_alt_d;    //    while a dirty page in the class had room
+          c3_d alc_reu_d;    //  pages dirtied by a free, then allocated into
+          //  u3m_reclaim() calls, and what they clear
+          //
+          c3_d rec_d;        //  reclaims
+          c3_d rcb_d;        //  bytecode entries cleared
+          c3_d rch_d;        //  hank entries cleared
+          c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+        } u3e_meter;
+
+      extern volatile c3_y u3e_Phase;
+      extern u3e_meter    u3e_Meter;
+
+    /* u3e_measure_init(): start measuring if U3_MEASURE is set.
+    */
+      void
+      u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c);
+
+    /* u3e_measure_event(): record pages changed by the task just
+    **                      completed. call on the home road.
+    */
+      void
+      u3e_measure_event(c3_d eve_d, const c3_c* tag_c);
+
   /** Globals.
   **/
       /// Snapshotting system.
@@ -84,6 +178,27 @@
     */
       u3e_flaw
       u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p);
+
+    /* allocator hooks: call only if u3e_Measuring, on the home road.
+    */
+      extern c3_t u3e_Measuring;  //  U3_MEASURE is on
+
+      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save,
+      **                      or past the image (new).
+      */
+        c3_t
+        u3e_measure_dirty(c3_w pag_w);
+
+      /* u3e_measure_free(): a free will write the page record on [pag_w].
+      */
+        void
+        u3e_measure_free(c3_w pag_w);
+
+      /* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+      **                      [alt_t] if a dirty page in its class has room.
+      */
+        void
+        u3e_measure_alloc(c3_w pag_w, c3_t alt_t);
 
     /* u3e_save(): update the checkpoint.
     */

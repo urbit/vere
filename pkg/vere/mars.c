@@ -5,7 +5,9 @@
 #include "c3/c3.h"
 #include "version.h"
 #include "noun.h"
+#include "events.h"
 #include "pace.h"
+#include "ship.h"
 #include "types.h"
 #include "vere.h"
 #include "ivory.h"
@@ -247,7 +249,9 @@ _mars_fact(u3_mars* mar_u,
       .eve_d = mar_u->dun_d
     };
 
+    u3e_Phase = u3e_pha_etch;
     u3_disk_plan(mar_u->log_u, &tac_u);
+    u3e_Phase = u3e_pha_io_free;
     u3z(job);
   }
 
@@ -257,7 +261,9 @@ _mars_fact(u3_mars* mar_u,
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
 
+    u3e_Phase = u3e_pha_jam;
     u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
+    u3e_Phase = u3e_pha_io_free;
     u3z(pro);
 
     if ( !mar_u->gif_u.ent_u ) {
@@ -281,7 +287,9 @@ _mars_gift(u3_mars* mar_u, u3_noun pro)
   gif_u->sat_e = u3_gift_rest_e;
   gif_u->ptr_v = 0;
 
+  u3e_Phase = u3e_pha_jam;
   u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
+  u3e_Phase = u3e_pha_io_free;
   u3z(pro);
 
   if ( !mar_u->gif_u.ent_u ) {
@@ -608,11 +616,14 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       pre_w = u3a_open(u3R);
       mar_u->sen_d++;
 
+      u3e_Phase = u3e_pha_poke;
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
         mar_u->dun_d = mar_u->sen_d;
+        u3e_Phase = u3e_pha_mug_roc;
         mar_u->mug_h = u3r_mug(u3A->roc);
         mar_u->fag_w |= _mars_fag_mute;
 
+        u3e_Phase = u3e_pha_feck;
         pro = _mars_sure_feck(mar_u, pre_w, pro);
 
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
@@ -638,6 +649,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       }
 
       u3k(sam); u3z(jar);
+      u3e_Phase = u3e_pha_peek;
       _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_h, sam)));
     } break;
 
@@ -750,8 +762,11 @@ _mars_post(u3_mars* mar_u)
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.for_p));
     }
+    u3e_Phase = u3e_pha_trim_per;
     u3h_trim_to(u3R->cax.per_p, u3h_wyt(u3R->cax.per_p) / 2);
+    u3e_Phase = u3e_pha_trim_for;
     u3h_trim_to(u3R->cax.for_p, u3h_wyt(u3R->cax.for_p) / 2);
+    u3e_Phase = u3e_pha_post;
     u3m_reclaim();
   }
 
@@ -918,10 +933,13 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
   //  XX optimize for stateless tasks w/ peek-next
   //
   if ( u3_mars_work_e == mar_u->sat_e ) {
-    u3_weak jar = u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
+    c3_d    eve_d = u3A->eve_d;
+    u3e_Phase     = u3e_pha_cue;
+    u3_weak jar   = u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
 
     //  parse errors are fatal
     //
+    u3e_Phase = u3e_pha_task;
     if (  (u3_none == jar)
        || (c3n == _mars_work(mar_u, jar)) )
     {
@@ -931,7 +949,11 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
       exit(1);
     }
 
+    u3e_Phase = u3e_pha_post;
     _mars_post(mar_u);
+    u3e_Phase = u3e_pha_none;
+
+    u3e_measure_event(u3A->eve_d, ( eve_d != u3A->eve_d ) ? "poke" : "task");
 
     ret_o = c3y;
   }
@@ -977,13 +999,19 @@ _mars_disk_cb(void* ptr_v, c3_d eve_d, c3_o ret_o)
 static u3_weak
 _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 {
-  u3_noun gon = u3m_soft(0, u3v_poke, tac_u->job);
-  u3_noun tag, dat;
+  c3_y    pha_y = u3e_Phase;
+  u3_noun gon, tag, dat;
+
+  //  measurement: tagged as in u3v_poke_sure()
+  //
+  u3e_Phase = u3e_pha_poke;
+  gon = u3m_soft(0, u3v_poke, tac_u->job);
   u3x_cell(gon, &tag, &dat);
 
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
+    u3e_Phase = pha_y;
     return gon;
   }
 
@@ -993,6 +1021,8 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
     u3_noun cor = u3t(dat);
     c3_h  mug_h;
 
+    u3e_Phase = u3e_pha_mug_roc;
+
     if ( tac_u->mug_h && (tac_u->mug_h != (mug_h = u3r_mug(cor))) ) {
       fprintf(stderr, "play (%" PRIc3_d "): mug mismatch "
                       "expected %08u, actual %08u\r\n",
@@ -1000,16 +1030,21 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
       if ( !(u3C.wag_h & u3o_soft_mugs) ) {
         u3z(gon);
+        u3e_Phase = pha_y;
         return u3nc(c3__awry, u3_nul);
       }
     }
 
+    u3e_Phase = u3e_pha_roc_lose;
     u3z(u3A->roc);
+    u3e_Phase = u3e_pha_roc_misc;
     u3A->roc = u3k(cor);
     u3A->eve_d++;
   }
 
   u3z(gon);
+  u3e_Phase = pha_y;
+  u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;
 }
 
@@ -1276,6 +1311,42 @@ _mars_sign_close(void)
   }
 }
 
+/* _mars_measure_init(): start measuring if U3_MEASURE is set, naming
+**                       the ship in the log.
+*/
+static void
+_mars_measure_init(u3_mars* mar_u)
+{
+  c3_c*   env_c = getenv("U3_MEASURE");
+  c3_c*   who_c = 0;
+  u3_meta met_u;
+
+  //  (as u3e_measure_init(), which checks again): don't render the
+  //  ship name unless measuring
+  //
+  if ( !env_c || !*env_c || ('0' == *env_c) ) {
+    return;
+  }
+
+  if ( c3y == u3_disk_read_meta(mar_u->log_u->mdb_u, &met_u) ) {
+    //  @p needs the kernel; replaying from the start has none yet
+    //
+    if ( u3A->eve_d ) {
+      who_c = u3_ship_to_string(met_u.who_d);
+    }
+    else {
+      u3_atom who = u3i_chubs(2, met_u.who_d);
+      u3_atom hex = u3s_etch_ux(who);
+      who_c = u3r_string(hex);
+      u3z(hex);
+      u3z(who);
+    }
+  }
+
+  u3e_measure_init(mar_u->dir_c, URBIT_VERSION, who_c);
+  c3_free(who_c);
+}
+
 /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
 */
 c3_d
@@ -1283,6 +1354,8 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 {
   u3_disk* log_u = mar_u->log_u;
   c3_d     pay_d = 0;
+
+  _mars_measure_init(mar_u);
 
   if ( !eve_d ) {
     eve_d = log_u->dun_d;
@@ -1478,6 +1551,8 @@ void
 u3_mars_work(u3_mars* mar_u)
 {
   mar_u->sil_u = u3s_cue_xeno_init();
+
+  _mars_measure_init(mar_u);
 
   //  start signal handlers
   //

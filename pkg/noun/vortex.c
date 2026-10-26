@@ -7,6 +7,7 @@
 #include "jets/k.h"
 #include "jets/q.h"
 #include "log.h"
+#include "events.h"
 #include "manage.h"
 #include "nock.h"
 #include "retrieve.h"
@@ -316,12 +317,17 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
     u3_noun vir, cor;
     u3x_cell(dat, &vir, &cor);
 
+    c3_y pha_y = u3e_Phase;
+
+    u3e_Phase = u3e_pha_roc_lose;
     u3z(u3A->roc);
+    u3e_Phase = u3e_pha_roc_misc;
     u3A->roc = u3k(cor);
     u3A->eve_d++;
 
     *pro = u3k(vir);
     u3z(gon);
+    u3e_Phase = pha_y;
     return c3y;
   }
 }

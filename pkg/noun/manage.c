@@ -1420,6 +1420,15 @@ u3m_love(u3_noun pro)
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
   u3p(u3h_root) dup_p = u3R->dup_p;
+  c3_y          pha_y = u3e_Phase;
+
+  //  measurement: junior table sizes at exit (jb/measure-base)
+  //
+  c3_w          wyt_w[8] = {
+    u3h_wyt(jed_u.war_p), u3h_wyt(jed_u.cod_p),
+    u3h_wyt(jed_u.han_p), u3h_wyt(jed_u.bas_p),
+    u3h_wyt(byc_p), u3h_wyt(per_p), u3h_wyt(for_p), u3h_wyt(dup_p)
+  };
 
   //  are there any timers on the road?
   //
@@ -1427,7 +1436,25 @@ u3m_love(u3_noun pro)
 
   //  fallback to parent road (child heap on parent's stack)
   //
+  u3e_Phase = u3e_pha_road;
   u3m_fall();
+
+  {
+    c3_w hom_w = ( &(u3H->rod_u) == u3R ) ? 1 : 0;
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 8; i_w++ ) {
+      u3e_Meter.tab_u[i_w].exi_d[0]++;
+      u3e_Meter.tab_u[i_w].ent_d[0] += wyt_w[i_w];
+      if ( !wyt_w[i_w] ) u3e_Meter.tab_u[i_w].nul_d[0]++;
+
+      if ( hom_w ) {
+        u3e_Meter.tab_u[i_w].exi_d[1]++;
+        u3e_Meter.tab_u[i_w].ent_d[1] += wyt_w[i_w];
+        if ( !wyt_w[i_w] ) u3e_Meter.tab_u[i_w].nul_d[1]++;
+      }
+    }
+  }
 
   if ( _(tim_o) ) _m_renew_now();
 
@@ -1439,15 +1466,22 @@ u3m_love(u3_noun pro)
 
   //  copy product and caches off our stack
   //
+  u3e_Phase = u3e_pha_take_pro;
   pro   = u3a_take(pro);
+  u3e_Phase = u3e_pha_take_jet;
   jed_u = u3j_take(jed_u);
+  u3e_Phase = u3e_pha_take_byc;
   byc_p = u3n_take(byc_p);
+  u3e_Phase = u3e_pha_take_per;
   per_p = u3h_take(per_p);
+  u3e_Phase = u3e_pha_take_for;
   for_p = u3h_take(for_p);
+  u3e_Phase = u3e_pha_take_dup;
   dup_p = u3h_take(dup_p);
 
   //  pop the stack
   //
+  u3e_Phase = u3e_pha_road;
   u3a_drop_heap(u3R->cap_p, u3R->ear_p);
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
@@ -1459,6 +1493,7 @@ u3m_love(u3_noun pro)
   {
     c3_w dep_w = u3m_road_depth();
     if ( dep_w < u3m_Ford_fresh_road_depth_h ) {
+      u3e_Phase = u3e_pha_ford_drop;
       u3h_free(u3R->cax.for_p);
       u3R->cax.for_p = u3h_new_cache(u3C.per_w);
       u3m_Ford_fresh_road_depth_h = dep_w;
@@ -1467,13 +1502,19 @@ u3m_love(u3_noun pro)
 
   //  integrate junior caches
   //
+  u3e_Phase = u3e_pha_reap_jet;
   u3j_reap(jed_u);
+  u3e_Phase = u3e_pha_reap_byc;
   u3n_reap(byc_p);
+  u3e_Phase = u3e_pha_reap_per;
   u3z_reap(u3z_memo_keep, per_p);
+  u3e_Phase = u3e_pha_reap_for;
   u3z_reap(u3z_memo_ford, for_p);
+  u3e_Phase = u3e_pha_reap_dup;
   u3h_uni(u3R->dup_p, dup_p);
   u3h_free(dup_p);
 
+  u3e_Phase = pha_y;
   return pro;
 }
 
@@ -2469,9 +2510,13 @@ u3m_save(void)
 
   u3_assert(u3R == &u3H->rod_u);
 
-  u3e_save(low_p, hig_p);
-
-  u3a_dash();
+  {
+    c3_y pha_y = u3e_Phase;
+    u3e_Phase = u3e_pha_save;
+    u3e_save(low_p, hig_p);
+    u3a_dash();
+    u3e_Phase = pha_y;
+  }
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2816,10 +2861,20 @@ u3m_boot_lite(size_t len_i)
 void
 u3m_reclaim(void)
 {
+  c3_y pha_y = u3e_Phase;
+
+  u3e_Meter.rec_d++;
+  u3e_Meter.rcb_d += u3h_wyt(u3R->byc.har_p);
+  u3e_Meter.rch_d += u3h_wyt(u3R->jed.han_p);
+
+  u3e_Phase = u3e_pha_rec_wish;
   u3v_reclaim();
+  u3e_Phase = u3e_pha_rec_han;
   u3j_reclaim();
+  u3e_Phase = u3e_pha_rec_byc;
   u3n_reclaim();
-  u3a_reclaim();
+  u3a_reclaim();   //  tags its own phases
+  u3e_Phase = pha_y;
 }
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
@@ -2846,6 +2901,9 @@ c3_w
 u3m_pack(void)
 {
   c3_w pre_w = u3a_open(u3R);
+  c3_y pha_y = u3e_Phase;
+
+  u3e_Phase = u3e_pha_pack;
 
   //  reclaim first, to free space, and discard anything we can't/don't rewrite
   //
@@ -2863,6 +2921,7 @@ u3m_pack(void)
   //
   u3a_pack_move(u3R);
 
+  u3e_Phase = pha_y;
   return (u3a_open(u3R) - pre_w);
 }
 
