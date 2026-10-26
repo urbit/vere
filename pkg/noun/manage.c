@@ -1417,6 +1417,7 @@ u3m_love(u3_noun pro)
 {
   //  save cache pointers from current road
   //
+  u3p(u3a_road) kid_p = u3of(u3a_road, u3R);
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
@@ -1472,8 +1473,17 @@ u3m_love(u3_noun pro)
   pro   = u3a_take(pro);
   u3e_Phase = u3e_pha_take_jet;
   jed_u = u3j_take(jed_u);
+
+  //  merge bytecode straight from junior memory, writing only changes
+  //
+  //    [kid_p] marks the junior road live again meanwhile, so that
+  //    unifying equality (in key lookups) leaves parent nouns alone.
+  //
   u3e_Phase = u3e_pha_take_byc;
-  byc_p = u3n_take(byc_p);
+  u3R->kid_p = kid_p;
+  u3n_reap(byc_p);
+  u3R->kid_p = 0;
+
   u3e_Phase = u3e_pha_take_per;
   per_p = u3h_take(per_p);
   u3e_Phase = u3e_pha_take_for;
@@ -1517,8 +1527,6 @@ u3m_love(u3_noun pro)
   //
   u3e_Phase = u3e_pha_reap_jet;
   u3j_reap(jed_u);
-  u3e_Phase = u3e_pha_reap_byc;
-  u3n_reap(byc_p);
   u3e_Phase = u3e_pha_reap_per;
   u3z_reap(u3z_memo_keep, per_p);
   u3e_Phase = u3e_pha_reap_for;
