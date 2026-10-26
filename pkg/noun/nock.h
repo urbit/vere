@@ -50,6 +50,13 @@
 
   /**  Functions.
   **/
+    /* u3n_meas(): the home road's programs: count, bytes, those whose
+    **             formula only their key holds, and those looked up since
+    **             the last call (measurement).
+    */
+      void
+      u3n_meas(c3_d* num_d, c3_d* byt_d, c3_d* ded_d, c3_d* use_d);
+
     /* u3n_nock_on(): produce .*(bus fol).
     */
       u3_noun

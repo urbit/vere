@@ -58,7 +58,7 @@ enum {
   _mars_fag_hit1 = 1 << 0,  //  hit low threshold
   _mars_fag_hit0 = 1 << 1,  //  hit high threshold
   _mars_fag_mute = 1 << 2,  //  mutated kernel
-  _mars_fag_much = 1 << 3,  //  bytecode hack
+  _mars_fag_much = 1 << 3,  //  check cache bounds
   _mars_fag_vega = 1 << 4,  //  kernel reset
 };
 
@@ -419,15 +419,9 @@ _mars_sure_feck(u3_mars* mar_u, c3_w pre_w, u3_noun vir)
       }
     }
 
-    //  reclaim memory from persistent caches periodically
+    //  clear persistent caches that have outgrown their bounds
     //
-    //    XX this is a hack to work two things
-    //    - bytecode caches grow rapidly and can't be simply capped
-    //    - we don't make very effective use of our free lists
-    //
-    if ( !(mar_u->dun_d % 1024ULL) ) {
-      mar_u->fag_w |= _mars_fag_much;
-    }
+    mar_u->fag_w |= _mars_fag_much;
 
     //  notify daemon of memory pressure via "fake" effect
     //
@@ -689,18 +683,31 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
           u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
         } break;
 
+        //  [pers=? ford=?] or [pers=? ford=? cold=?]
+        //
         case c3__meld: {
-          c3_o per_o = c3n, for_o = c3n;
-          u3_noun pers, ford;
-          if ( c3y == u3r_cell(arg, &pers, &ford)
+          c3_w    opt_w = 0;
+          u3_noun pers, ford, cold;
+
+          if ( c3y == u3r_trel(arg, &pers, &ford, &cold)
             && pers < 2
-            && ford < 2) {
-            per_o = pers;
-            for_o = ford;
+            && ford < 2
+            && cold < 2 )
+          {
+            if ( c3y == pers ) opt_w |= u3_melt_memo;
+            if ( c3y == ford ) opt_w |= u3_melt_ford;
+            if ( c3y == cold ) opt_w |= u3_melt_cold;
+          }
+          else if ( c3y == u3r_cell(arg, &pers, &ford)
+            && pers < 2
+            && ford < 2)
+          {
+            if ( c3y == pers ) opt_w |= u3_melt_memo;
+            if ( c3y == ford ) opt_w |= u3_melt_ford;
           }
           u3z(jar);
           u3a_print_memory(stderr, "mars: meld: gained",
-            u3_meld_all(stderr, per_o, for_o));
+            u3_meld_all(stderr, opt_w));
         } break;
       }
 
@@ -771,7 +778,7 @@ _mars_post(u3_mars* mar_u)
   }
 
   if ( mar_u->fag_w & _mars_fag_much ) {
-    u3m_reclaim();
+    u3m_reclaim_due();
   }
 
   if ( mar_u->fag_w & _mars_fag_vega ) {
@@ -1442,7 +1449,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
             u3z(now);
           }
 
-          u3m_reclaim();
+          u3m_reclaim_due();
 
           if ( sap_d && ((mar_u->dun_d - pas_d) >= sap_d) ) {
             u3m_save();
@@ -1478,7 +1485,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           //  XX pack before meld?
           //
           if ( u3C.wag_h & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr, c3y, c3n));
+            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr, u3_melt_memo));
           }
           else {
             u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());

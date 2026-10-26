@@ -3132,9 +3132,25 @@ u3m_time_gap_in_mil(c3_w mil_w)
 }
 
 typedef struct {
-  c3_t new_t;
-  u3_noun som;
+  c3_t    new_t;
+  u3_noun cel;    //  original cell (retained)
+  u3_noun som;    //  tail to visit, then deduplicated head
 } _frame_dedup;
+
+/* _dedup_swap(): point [*som] at its canonical equal [can] (transferred).
+*/
+static inline void
+_dedup_swap(u3_noun* som, u3_noun can)
+{
+  if ( *som == can ) {
+    u3z(can);
+  }
+  else {
+    u3_noun old = *som;
+    *som = can;
+    u3z(old);
+  }
+}
 
 static u3_noun
 _dedup_next(u3a_pile* pil_u, u3_noun som)
@@ -3153,12 +3169,11 @@ _dedup_next(u3a_pile* pil_u, u3_noun som)
       u3h_put(u3R->dup_p, som, u3k(som));
       return som;
     }
-    u3_noun hed = u3k(u3h(som)), tel = u3k(u3t(som));
     _frame_dedup* fam_u = u3a_push(pil_u);
     fam_u->new_t = false;
-    fam_u->som = tel;
-    u3z(som);
-    som = hed;
+    fam_u->cel = som;
+    fam_u->som = u3k(u3t(som));
+    som = u3k(u3h(som));
   }
 }
 
@@ -3189,7 +3204,33 @@ u3m_dedup(u3_noun som)
         fam_u = u3a_peek(&pil_u);
       }
       else {
-        new = u3nc(fam_u->som, new);
+        u3_noun hed = fam_u->som;
+        u3_noun cel = fam_u->cel;
+
+        //  senior cells can't be written: keep the original if both
+        //  children were already canonical, and copy it otherwise
+        //
+        if ( c3y == u3a_is_senior(u3R, cel) ) {
+          if ( (hed == u3h(cel)) && (new == u3t(cel)) ) {
+            u3z(hed);
+            u3z(new);
+            new = cel;
+          }
+          else {
+            new = u3nc(hed, new);
+            u3z(cel);
+          }
+        }
+        //  otherwise, point the children at their canonical equals,
+        //  as unifying equality does
+        //
+        else {
+          u3a_cell* cel_u = u3a_to_ptr(cel);
+          _dedup_swap(&cel_u->hed, hed);
+          _dedup_swap(&cel_u->tel, new);
+          new = cel;
+        }
+
         u3h_put(u3R->dup_p, new, u3k(new));
         fam_u = u3a_pop(&pil_u);
       }
@@ -3214,8 +3255,53 @@ _cb_dedup_prune(u3_noun kev, void* ptr_v)
   return __( (1 == kev_u->use_w) && (2 == val_u->use_w) );
 }
 
+//  home-road dedup set size after the last prune (0: not yet known)
+//
+static c3_w _cm_dup_wyt_w;
+
 void
 u3m_dedup_prune(void)
 {
   u3h_prune_with(u3R->dup_p, _cb_dedup_prune, 0);
+
+  if ( &(u3H->rod_u) == u3R ) {
+    _cm_dup_wyt_w = u3h_wyt(u3R->dup_p);
+  }
+}
+
+/* bounds for u3m_reclaim_due()
+*/
+#define _CM_BYC_MAX  (1U << 14)  //  bytecode programs
+#define _CM_DUP_MIN  (1U << 16)  //  dedup entries before growth counts
+
+/* u3m_reclaim_due(): clear home-road caches that have outgrown their
+**                    bounds. cheap enough to call after every event.
+*/
+void
+u3m_reclaim_due(void)
+{
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  //  bytecode programs can't be freed individually (call sites point
+  //  between them), so the table is cleared whole once it reaches its
+  //  cap. hanks hold call sites, and must go with it.
+  //
+  if ( _CM_BYC_MAX <= u3h_wyt(u3R->byc.har_p) ) {
+    u3j_reclaim();
+    u3n_reclaim();
+  }
+
+  //  the dedup set holds references, so entries nothing else refers to
+  //  stay until pruned. prune once it has doubled since the last prune.
+  //
+  {
+    c3_w wyt_w = u3h_wyt(u3R->dup_p);
+
+    if ( !_cm_dup_wyt_w ) {
+      _cm_dup_wyt_w = wyt_w;
+    }
+    else if ( wyt_w > 2 * c3_max(_cm_dup_wyt_w, _CM_DUP_MIN) ) {
+      u3m_dedup_prune();
+    }
+  }
 }

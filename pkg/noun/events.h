@@ -141,10 +141,20 @@
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
+
+          //  bytecode programs
+          //
+          c3_d bcc_d;        //  compiled, on any road
+          c3_d bca_d;        //  added to the home road's table
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
       extern u3e_meter    u3e_Meter;
+
+    /* u3e_measuring(): measurement is on.
+    */
+      c3_t
+      u3e_measuring(void);
 
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */

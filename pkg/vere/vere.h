@@ -153,10 +153,7 @@
     /* u3_utat: unix terminal state.
     */
       typedef struct {
-        struct {
-          c3_h  col_h;                      //  columns
-          c3_h  row_h;                      //  rows
-        } siz;
+        u3v_blew siz;                       //  window size
 
         struct {
           u3_noun lin;                      //  bottom line (stub)
@@ -1084,9 +1081,9 @@
         void
         u3_term_stop_spinner(void);
 
-      /* u3_term_get_blew(): return window size [columns rows].
+      /* u3_term_get_blew(): return window size {columns, rows}.
       */
-        u3_noun
+        u3v_blew
         u3_term_get_blew(c3_h tid_h);
 
       /* u3_term_ef_winc(): window change.
@@ -1482,14 +1479,23 @@
         c3_h
         u3_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
-      /* u3_melt_all(): canonicalize persistent state
+      /* u3_melt_opt: melt and meld options, as a bitmap.
       */
-        c3_w
-        u3_melt_all(FILE*);
+        enum {
+          u3_melt_memo = 1 << 0,  //  drop the persistent memo cache
+          u3_melt_ford = 1 << 1,  //  drop the ford memo cache
+          u3_melt_cold = 1 << 2,  //  prune cold state of unreachable batteries
+        };
 
-      /* u3_meld_all(): canonicalize persistent nouns and compact state.
+      /* u3_melt_all(): canonicalize persistent state, per options [opt_w].
       */
         c3_w
-        u3_meld_all(FILE*, c3_o, c3_o);
+        u3_melt_all(FILE*, c3_w opt_w);
+
+      /* u3_meld_all(): canonicalize persistent nouns and compact state,
+      **                per options [opt_w].
+      */
+        c3_w
+        u3_meld_all(FILE*, c3_w opt_w);
 
 #endif /* ifndef U3_VERE_H */
