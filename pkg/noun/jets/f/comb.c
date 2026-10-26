@@ -6,7 +6,7 @@
 #include "noun.h"
 
 
-  u3_noun
+  u3_weak
   u3qf_comb(u3_noun mal,
             u3_noun buz)
   {
@@ -57,7 +57,7 @@
                        u3k(buz));
     }
   }
-  u3_noun
+  u3_weak
   u3wf_comb(u3_noun cor)
   {
     u3_noun mal, buz;

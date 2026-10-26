@@ -65,7 +65,9 @@ u3v_boot(u3_noun eve)
     }
 
     u3z(u3A->roc);
-    u3A->roc   = u3k(u3t(pro));
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(u3t(pro));
+    }
     u3A->eve_d = len_d;
     u3z(pro);
   }
@@ -114,7 +116,9 @@ u3v_boot_lite(u3_noun pil)
       return c3n;
     }
 
-    u3A->roc = u3k(u3t(pro));
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(u3t(pro));
+    }
     u3z(pro);
   }
 
@@ -151,7 +155,9 @@ u3v_wish_w(u3_noun txt)
     //  outside the top level... (as the result is uncached)
     //
     if ( u3R == &u3H->rod_u ) {
-      u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      {  // @Refcount: assert transfer -- the wish cache owns [yot]
+        u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      }
     }
   }
 
@@ -177,7 +183,9 @@ u3v_wish(const c3_c* str_c)
     //  outside the top level... (as the result is uncached)
     //
     if ( u3R == &u3H->rod_u ) {
-      u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      {  // @Refcount: assert transfer -- the wish cache owns [yot]
+        u3A->yot = u3kdb_put(u3A->yot, u3k(txt), u3k(exp));
+      }
     }
   }
 
@@ -295,6 +303,7 @@ u3v_poke(u3_noun sam)
 }
 
 /* u3v_poke_sure(): inject an event, saving new state if successful.
+** @Refcount: fills transferred `pro`
 */
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
@@ -317,10 +326,14 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
     u3x_cell(dat, &vir, &cor);
 
     u3z(u3A->roc);
-    u3A->roc = u3k(cor);
+    {  // @Refcount: assert transfer -- the kernel takes ownership of [roc]
+      u3A->roc = u3k(cor);
+    }
     u3A->eve_d++;
 
-    *pro = u3k(vir);
+    {  // @Refcount: assert transfer `vir`
+      *pro = u3k(vir);
+    }
     u3z(gon);
     return c3y;
   }
