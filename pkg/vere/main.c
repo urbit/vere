@@ -7,6 +7,7 @@
 #include "ivory.h"
 #include "ur/ur.h"
 #include "rsignal.h"
+#include "ship.h"
 #include "vere.h"
 
 #ifndef U3_OS_windows
@@ -1161,6 +1162,34 @@ _cw_load_pier(c3_c* dir_c)
   return log_u;
 }
 
+/* _cw_measure_note(): record an offline pack, meld or melt [op_c] in
+**                     the pier's measurement logs, if it keeps any.
+*/
+static void
+_cw_measure_note(u3_disk*    log_u,
+                 const c3_c* op_c,
+                 c3_w        opt_w,
+                 c3_d        bef_d,
+                 c3_w        gan_w)
+{
+  c3_c*   who_c = 0;
+  u3_meta met_u;
+
+  if ( !u3e_measure_dir(u3_Host.dir_c) ) {
+    return;
+  }
+
+  //  @p needs the kernel, which a loaded snapshot has
+  //
+  if ( u3A->eve_d && (c3y == u3_disk_read_meta(log_u->mdb_u, &met_u)) ) {
+    who_c = u3_ship_to_string(met_u.who_d);
+  }
+
+  u3e_measure_note(u3_Host.dir_c, URBIT_VERSION, who_c,
+                   op_c, opt_w, bef_d, gan_w);
+  c3_free(who_c);
+}
+
 /* _cw_dock(): copy binary into pier
 */
 static void
@@ -1993,7 +2022,13 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr, opt_w));
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3_meld_all(stderr, opt_w);
+
+    _cw_measure_note(log_u, "meld", opt_w, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: meld: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -2102,7 +2137,13 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: melt: gained", u3_melt_all(stderr, opt_w));
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3_melt_all(stderr, opt_w);
+
+    _cw_measure_note(log_u, "melt", opt_w, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: melt: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -2295,7 +2336,13 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3m_pack();
+
+    _cw_measure_note(log_u, "pack", 0, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: pack: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);

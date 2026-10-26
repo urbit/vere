@@ -679,8 +679,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         }
 
         case c3__pack: {
+          c3_d bef_d = u3e_measure_ms();
+          c3_w gan_w;
+
           u3z(jar);
-          u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
+          gan_w = u3m_pack();
+          u3e_measure_op("pack", "live", 0, bef_d, gan_w);
+          u3a_print_memory(stderr, "mars: pack: gained", gan_w);
         } break;
 
         //  [pers=? ford=?] or [pers=? ford=? cold=?]
@@ -706,8 +711,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
             if ( c3y == ford ) opt_w |= u3_melt_ford;
           }
           u3z(jar);
-          u3a_print_memory(stderr, "mars: meld: gained",
-            u3_meld_all(stderr, opt_w));
+          {
+            c3_d bef_d = u3e_measure_ms();
+            c3_w gan_w = u3_meld_all(stderr, opt_w);
+
+            u3e_measure_op("meld", "live", opt_w, bef_d, gan_w);
+            u3a_print_memory(stderr, "mars: meld: gained", gan_w);
+          }
         } break;
       }
 
@@ -794,6 +804,9 @@ _mars_post(u3_mars* mar_u)
   }
 
   if ( mar_u->fag_w & _mars_fag_hit0 ) {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w;
+
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 0: per_p %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
       u3l_log("mars: threshold 0: for_p %"PRIc3_w, u3h_wyt(u3R->cax.for_p));
@@ -802,7 +815,9 @@ _mars_post(u3_mars* mar_u)
     u3R->cax.per_p = u3h_new_cache(u3C.per_w);
     u3h_free(u3R->cax.for_p);
     u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-    u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
+    gan_w = u3m_pack();
+    u3e_measure_op("pack", "memory", u3_melt_memo | u3_melt_ford, bef_d, gan_w);
+    u3a_print_memory(stderr, "mars: pack: gained", gan_w);
     u3l_log("");
   }
 
@@ -1321,10 +1336,11 @@ _mars_sign_close(void)
 }
 
 /* _mars_measure_init(): start measuring if U3_MEASURE is set, naming
-**                       the ship in the log.
+**                       the ship in the log. a live serf snapshots on
+**                       a timer; a replay every [sap_d] events, if any.
 */
 static void
-_mars_measure_init(u3_mars* mar_u)
+_mars_measure_init(u3_mars* mar_u, c3_d sap_d)
 {
   c3_c*   env_c = getenv("U3_MEASURE");
   c3_c*   who_c = 0;
@@ -1352,7 +1368,14 @@ _mars_measure_init(u3_mars* mar_u)
     }
   }
 
-  u3e_measure_init(mar_u->dir_c, URBIT_VERSION, who_c);
+  {
+    c3_t liv_t = ( 0 != mar_u->out_u );
+
+    u3e_measure_init(mar_u->dir_c, URBIT_VERSION, who_c,
+                     liv_t ? "live" : "replay",
+                     liv_t ? (c3_d)u3_Host.ops_u.sap_h : 0,
+                     liv_t ? 0 : sap_d);
+  }
   c3_free(who_c);
 }
 
@@ -1364,7 +1387,7 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3_disk* log_u = mar_u->log_u;
   c3_d     pay_d = 0;
 
-  _mars_measure_init(mar_u);
+  _mars_measure_init(mar_u, sap_d);
 
   if ( !eve_d ) {
     eve_d = log_u->dun_d;
@@ -1486,11 +1509,20 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
 
           //  XX pack before meld?
           //
-          if ( u3C.wag_h & u3o_auto_meld ) {
-            u3a_print_memory(stderr, "mars: meld: gained", u3_meld_all(stderr, u3_melt_memo));
-          }
-          else {
-            u3a_print_memory(stderr, "mars: pack: gained", u3m_pack());
+          {
+            c3_d bef_d = u3e_measure_ms();
+            c3_w gan_w;
+
+            if ( u3C.wag_h & u3o_auto_meld ) {
+              gan_w = u3_meld_all(stderr, u3_melt_memo);
+              u3e_measure_op("meld", "loom", u3_melt_memo, bef_d, gan_w);
+              u3a_print_memory(stderr, "mars: meld: gained", gan_w);
+            }
+            else {
+              gan_w = u3m_pack();
+              u3e_measure_op("pack", "loom", 0, bef_d, gan_w);
+              u3a_print_memory(stderr, "mars: pack: gained", gan_w);
+            }
           }
         } break;
 
@@ -1561,7 +1593,7 @@ u3_mars_work(u3_mars* mar_u)
 {
   mar_u->sil_u = u3s_cue_xeno_init();
 
-  _mars_measure_init(mar_u);
+  _mars_measure_init(mar_u, 0);
 
   //  start signal handlers
   //

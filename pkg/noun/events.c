@@ -645,10 +645,57 @@ u3e_measure_align(u3_noun new, u3_noun old)
   _ce_vis_cleanup(&vis_u);
 }
 
+/* _ce_meas_head(): write a log's header line.
+*/
+static void
+_ce_meas_head(FILE*       fil_u,
+              c3_w        pag_w,
+              const c3_c* ver_c,
+              const c3_c* who_c,
+              const c3_c* mod_c,
+              c3_d        sas_d,
+              c3_d        sae_d)
+{
+  fprintf(fil_u, "# measure v1 time=%" PRIu64
+                 " word_bits=%u page_bytes=%" PRIu64
+                 " pages=%" PRIu64 " event=%" PRIu64
+                 " mode=%s snap_secs=%" PRIu64 " snap_events=%" PRIu64
+                 " ship=%s vere=%s os=%s arch=%s\n",
+                 (c3_d)time(0), (unsigned)u3a_word_bits,
+                 (c3_d)_ce_page, (c3_d)pag_w, (c3_d)u3A->eve_d,
+                 mod_c, sas_d, sae_d,
+                 who_c ? who_c : "unknown",
+                 ver_c ? ver_c : "unknown",
+#if   defined(U3_OS_linux)
+                 "linux",
+#elif defined(U3_OS_osx)
+                 "macos",
+#elif defined(U3_OS_windows)
+                 "windows",
+#elif defined(U3_OS_bsd)
+                 "bsd",
+#else
+                 "unknown",
+#endif
+#if   defined(__aarch64__)
+                 "aarch64"
+#elif defined(__x86_64__)
+                 "x86_64"
+#else
+                 "unknown"
+#endif
+                 );
+}
+
 /* u3e_measure_init(): start measuring if U3_MEASURE is set.
 */
 void
-u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c)
+u3e_measure_init(const c3_c* dir_c,
+                 const c3_c* ver_c,
+                 const c3_c* who_c,
+                 const c3_c* mod_c,
+                 c3_d        sas_d,
+                 c3_d        sae_d)
 {
   c3_c* env_c = getenv("U3_MEASURE");
 
@@ -693,33 +740,7 @@ u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c)
       _ce_meas.has_t = ( has_c && *has_c && ('0' != *has_c) );
     }
 
-    fprintf(_ce_meas.fil_u, "# measure v1 time=%" PRIu64
-                            " word_bits=%u page_bytes=%" PRIu64
-                            " pages=%" PRIu64 " event=%" PRIu64
-                            " ship=%s vere=%s os=%s arch=%s\n",
-                            (c3_d)time(0), (unsigned)u3a_word_bits,
-                            (c3_d)_ce_page, (c3_d)pag_w, (c3_d)u3A->eve_d,
-                            who_c ? who_c : "unknown",
-                            ver_c ? ver_c : "unknown",
-#if   defined(U3_OS_linux)
-                            "linux",
-#elif defined(U3_OS_osx)
-                            "macos",
-#elif defined(U3_OS_windows)
-                            "windows",
-#elif defined(U3_OS_bsd)
-                            "bsd",
-#else
-                            "unknown",
-#endif
-#if   defined(__aarch64__)
-                            "aarch64"
-#elif defined(__x86_64__)
-                            "x86_64"
-#else
-                            "unknown"
-#endif
-                            );
+    _ce_meas_head(_ce_meas.fil_u, pag_w, ver_c, who_c, mod_c, sas_d, sae_d);
     fflush(_ce_meas.fil_u);
 
     //  keep the startup rebuild of the hashcons set, which ran before
@@ -741,6 +762,98 @@ u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c)
 
     fprintf(stderr, "measure: logging to %s\r\n", pax_c);
   }
+}
+
+/* u3e_measure_ms(): wall-clock milliseconds.
+*/
+c3_d
+u3e_measure_ms(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
+}
+
+/* _ce_meas_op(): write an O line: time, event, operation, why, melt
+**                options, milliseconds taken, words freed (negative
+**                if the operation shrank free space, as a melt can).
+*/
+static void
+_ce_meas_op(FILE*       fil_u,
+            const c3_c* op_c,
+            const c3_c* why_c,
+            c3_w        opt_w,
+            c3_d        bef_d,
+            c3_w        gan_w)
+{
+  c3_d now_d = u3e_measure_ms();
+
+  fprintf(fil_u, "O %" PRIu64 " %" PRIu64 " %s %s %" PRIu64
+                 " %" PRIu64 " %" PRIi64 "\n",
+                 now_d / 1000, (c3_d)u3A->eve_d, op_c, why_c,
+                 (c3_d)opt_w, now_d - bef_d, (c3_ds)(c3_ws)gan_w);
+  fflush(fil_u);
+}
+
+/* u3e_measure_op(): if measuring, log a pack, meld or melt.
+*/
+void
+u3e_measure_op(const c3_c* op_c,
+               const c3_c* why_c,
+               c3_w        opt_w,
+               c3_d        bef_d,
+               c3_w        gan_w)
+{
+  if ( _ce_meas.on_t ) {
+    _ce_meas_op(_ce_meas.fil_u, op_c, why_c, opt_w, bef_d, gan_w);
+  }
+}
+
+/* u3e_measure_dir(): the pier at [dir_c] keeps measurement logs.
+*/
+c3_t
+u3e_measure_dir(const c3_c* dir_c)
+{
+  c3_c        pax_c[2048];
+  struct stat buf_u;
+
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure", dir_c);
+  return ( !stat(pax_c, &buf_u) && S_ISDIR(buf_u.st_mode) );
+}
+
+/* u3e_measure_note(): log an offline operation in a log of its own.
+*/
+void
+u3e_measure_note(const c3_c* dir_c,
+                 const c3_c* ver_c,
+                 const c3_c* who_c,
+                 const c3_c* op_c,
+                 c3_w        opt_w,
+                 c3_d        bef_d,
+                 c3_w        gan_w)
+{
+  c3_c  pax_c[2048];
+  FILE* fil_u;
+
+  if ( !u3e_measure_dir(dir_c) ) {
+    return;
+  }
+
+  //  named for the operation, so as not to collide with a serf's log
+  //  started in the same second
+  //
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure/measure-%" PRIu64 "-%s.log",
+                  dir_c, (c3_d)time(0), op_c);
+
+  if ( !(fil_u = fopen(pax_c, "w")) ) {
+    fprintf(stderr, "measure: open %s: %s\r\n", pax_c, strerror(errno));
+    return;
+  }
+
+  _ce_meas_head(fil_u, u3P.pag_w, ver_c, who_c, "offline", 0, 0);
+  _ce_meas_op(fil_u, op_c, "offline", opt_w, bef_d, gan_w);
+  fclose(fil_u);
 }
 
 /* u3e_measure_event(): record pages changed by the task just completed.
