@@ -267,17 +267,18 @@ pub fn build(b: *std.Build) !void {
     // Parse short git rev (best-effort: in a git submodule `.git` is a gitlink
     // file and a tarball build has no `.git` at all, so this read can fail; fall
     // back to a placeholder rev. A release build does not embed the rev anyway.)
-    var buf: [4096]u8 = [_]u8{'0'} ** 4096;
+    var git_rev: [7]u8 = [_]u8{'0'} ** 7;
     if (std.fs.cwd().openFile(".git/logs/HEAD", .{})) |file| {
         defer file.close();
+        var buf: [4096]u8 = undefined;
         var reader = file.reader(&buf);
-        var last_line: [4096]u8 = undefined;
+        // Each reflog line starts "<old sha> <new sha> "; the last line's
+        // new sha is the current HEAD.
         while (reader.interface.takeDelimiterInclusive('\n')) |line| {
-            if (line.len > 0)
-                last_line = buf;
+            if (line.len >= 48)
+                @memcpy(&git_rev, line[41..48]);
         } else |err| if (err != error.EndOfStream) return err;
     } else |_| {}
-    const git_rev = buf[41..48];
 
     // Binary version
     const version = if (!release)
