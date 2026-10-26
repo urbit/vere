@@ -1438,10 +1438,6 @@ _unix_update_mount(u3_unix* unx_u, u3_umon* mon_u, c3_o all_o)
 
 /* _unix_initial_update_file(): read file, but don't watch
 **  XX deduplicate with _unix_update_file()
-**
-**  The boot scan's %into rides the %boot writ, which carries no staging
-**  paths, so a large file goes in as a loom atom here; the watcher
-**  (_unix_update_file) stages any later change.
 */
 static u3_noun
 _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
@@ -1449,6 +1445,7 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
   struct stat buf_u;
   c3_i  fid_i = c3_open(pax_c, O_RDONLY, 0644);
   c3_ws len_ws, red_ws;
+  c3_y* dat_y;
 
   if ( fid_i < 0 || fstat(fid_i, &buf_u) < 0 ) {
     if ( ENOENT == errno ) {
@@ -1462,47 +1459,36 @@ _unix_initial_update_file(c3_c* pax_c, c3_c* bas_c)
   }
 
   len_ws = buf_u.st_size;
+  dat_y = c3_malloc(len_ws);
 
-  //  the boot scan's card rides the %boot writ, which carries no
-  //  staging paths: a large file goes in as a loom atom here, and the
-  //  watcher stages any later change
-  //
-  if ( c3y == u3b_over(len_ws) ) {
-    u3l_log("unix: large initial file %s read into the loom", pax_c);
+  red_ws = read(fid_i, dat_y, len_ws);
+
+  if ( close(fid_i) < 0 ) {
+    u3l_log("error closing initial file %s: %s",
+            pax_c, strerror(errno));
   }
 
-  {
-    c3_y* dat_y = c3_malloc(len_ws);
-
-    red_ws = read(fid_i, dat_y, len_ws);
-
-    if ( close(fid_i) < 0 ) {
-      u3l_log("error closing initial file %s: %s",
+  if ( len_ws != red_ws ) {
+    if ( red_ws < 0 ) {
+      u3l_log("error reading initial file %s: %s",
               pax_c, strerror(errno));
     }
-
-    if ( len_ws != red_ws ) {
-      if ( red_ws < 0 ) {
-        u3l_log("error reading initial file %s: %s",
-                pax_c, strerror(errno));
-      }
-      else {
-        u3l_log("wrong # of bytes read in initial file %s: %" PRIc3_ws " %" PRIc3_ws,
-                pax_c, len_ws, red_ws);
-      }
-      c3_free(dat_y);
-      return u3_nul;
-    }
     else {
-      u3_noun rel_pax = _unix_string_to_path_helper(pax_c
-                         + strlen(bas_c)
-                         + 1); /* XX slightly less VERY BAD than before*/
-      u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
-      u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
-
-      c3_free(dat_y);
-      return u3nc(u3nt(rel_pax, u3_nul, dat), u3_nul);
+      u3l_log("wrong # of bytes read in initial file %s: %" PRIc3_ws " %" PRIc3_ws,
+              pax_c, len_ws, red_ws);
     }
+    c3_free(dat_y);
+    return u3_nul;
+  }
+  else {
+    u3_noun pax = _unix_string_to_path_helper(pax_c
+                   + strlen(bas_c)
+                   + 1); /* XX slightly less VERY BAD than before*/
+    u3_noun mim = u3nt(c3__text, u3i_string("plain"), u3_nul);
+    u3_noun dat = u3nt(mim, len_ws, u3i_bytes(len_ws, dat_y));
+
+    c3_free(dat_y);
+    return u3nc(u3nt(pax, u3_nul, dat), u3_nul);
   }
 }
 
