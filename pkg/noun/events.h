@@ -127,6 +127,14 @@
             c3_d nul_d[2];   //  exits with an empty junior table
             c3_d ent_d[2];   //  junior entries at exit
           } tab_u[8];        //  war cod han bas byc per for dup
+          //  home-road page records and allocation
+          //
+          c3_d fre_cln_d;    //  frees that dirtied a clean page via its
+                             //  page record
+          c3_d alc_cln_d;    //  clean pages first written by a chunk
+                             //  allocation
+          c3_d alc_alt_d;    //    while a dirty page in the class had room
+          c3_d alc_reu_d;    //  pages dirtied by a free, then allocated into
           //  u3m_reclaim() calls, and what they clear
           //
           c3_d rec_d;        //  reclaims
@@ -155,15 +163,41 @@
                              //    the old state
           c3_d aln_exc_d;    //    of which every old cell on the way has
                              //    a refcount of 1
+
+          //  home-road hashcons set (off-loom)
+          //
+          c3_d hca_d;        //  members added, outside rebuilds
+          c3_d hcd_d;        //  members removed as they were freed
+          c3_d hcr_d;        //  rebuilds
+          c3_d hcm_d;        //  rebuild time, ms
+          c3_d hcc_d[7];     //  last rebuild: cells added per root,
+                             //  per for byc war bas hot cod
+          c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
+          c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
+                             //  older home nouns met in it, u3m_dedup()
+          c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
+                             //  member's origin: added since the last
+                             //  rebuild, caches (per for byc), warm jet
+                             //  state (war bas hot), cold state alone
+
+          //  bytecode programs
+          //
+          c3_d bcc_d;        //  compiled, on any road
+          c3_d bca_d;        //  added to the home road's table
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
       extern u3e_meter    u3e_Meter;
 
+    /* u3e_measuring(): measurement is on.
+    */
+      c3_t
+      u3e_measuring(void);
+
     /* u3e_measure_init(): start measuring if U3_MEASURE is set.
     */
       void
-      u3e_measure_init(const c3_c* dir_c);
+      u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c);
 
     /* u3e_measure_event(): record pages changed by the task just
     **                      completed. call on the home road.
@@ -199,6 +233,27 @@
     */
       u3e_flaw
       u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p);
+
+    /* allocator hooks: call only if u3e_Measuring, on the home road.
+    */
+      extern c3_t u3e_Measuring;  //  U3_MEASURE is on
+
+      /* u3e_measure_dirty(): page [pag_w] is dirty since the last save,
+      **                      or past the image (new).
+      */
+        c3_t
+        u3e_measure_dirty(c3_w pag_w);
+
+      /* u3e_measure_free(): a free will write the page record on [pag_w].
+      */
+        void
+        u3e_measure_free(c3_w pag_w);
+
+      /* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+      **                      [alt_t] if a dirty page in its class has room.
+      */
+        void
+        u3e_measure_alloc(c3_w pag_w, c3_t alt_t);
 
     /* u3e_save(): update the checkpoint.
     */

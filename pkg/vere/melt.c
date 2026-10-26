@@ -1,66 +1,16 @@
 #include "allocate.h"
+#include "canon.h"
 #include "events.h"
 #include "hashtable.h"
 #include "jets.h"
 #include "options.h"
 #include "retrieve.h"
 #include "vortex.h"
-
-static c3_d
-_melt_hash(u3_noun foo)
-{
-  return u3r_mug(foo) * 11400714819323198485ULL;
-}
-
-static c3_i
-_melt_cmp_atoms(u3_atom a, u3_atom b)
-{
-  if ( a == b ) return 1;
-
-  //  XX assume(c3y == u3a_is_pug(a) && c3y == u3a_is_pug(b))
-  u3a_atom *a_u = u3a_to_ptr(a);
-  u3a_atom *b_u = u3a_to_ptr(b);
-
-  //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_w != b_u->mug_w ) return 0;
-
-  if ( a_u->len_w != b_u->len_w ) return 0;
-
-  return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
-}
-
-#define NAME    _coins
-#define KEY_TY  u3_atom
-#define HASH_FN _melt_hash
-#define CMPR_FN _melt_cmp_atoms
-#include "verstable.h"
-
-static c3_i
-_melt_cmp_cells(u3_cell a, u3_cell b)
-{
-  if ( a == b ) return 1;
-
-  u3a_cell *a_u = u3a_to_ptr(a);
-  u3a_cell *b_u = u3a_to_ptr(b);
-
-  //  XX assume( a_u->mug_h && b_u->mug_h )
-  if ( a_u->mug_w != b_u->mug_w ) return 0;
-
-  c3_d *a_d = (c3_d*)&(a_u->hed);
-  c3_d *b_d = (c3_d*)&(b_u->hed);
-
-  return a_u->hed == b_u->hed && a_u->tel == b_u->tel;
-}
-
-#define NAME    _cells
-#define KEY_TY  u3_cell
-#define HASH_FN _melt_hash
-#define CMPR_FN _melt_cmp_cells
-#include "verstable.h"
+#include "vere.h"
 
 typedef struct {
-  _coins  vat_u;
-  _cells  cel_u;
+  _canon_atoms vat_u;
+  _canon_cells cel_u;
   c3_w    len_w;
   c3_w    siz_w;
   u3_noun *tac;
@@ -69,8 +19,8 @@ typedef struct {
 static u3_noun
 _melt_canon_next(_melt_ctx *can_u, u3_noun som)
 {
-  _coins_itr vit_u;
-  _cells_itr cit_u;
+  _canon_atoms_itr vit_u;
+  _canon_cells_itr cit_u;
 
   while ( 1 ) {
     if ( c3y == u3a_is_cat(som) ) return som;
@@ -109,7 +59,7 @@ _melt_xchange(u3_noun new, u3_noun *som)
 static u3_noun
 _melt_canon(_melt_ctx *can_u, u3_noun can)
 {
-  _cells_itr cit_u;
+  _canon_cells_itr cit_u;
   u3a_cell  *cel_u;
   u3_noun     *top;
 
@@ -157,7 +107,7 @@ _melt_walk_hamt(u3_noun kev, void* ptr_v)
 }
 
 c3_w
-u3_melt_all(FILE *fil_u)
+u3_melt_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w     pre_w = u3a_idle(u3R);
   _melt_ctx can_u = {0};
@@ -165,6 +115,21 @@ u3_melt_all(FILE *fil_u)
   // Verify that we're on the main road.
   //
   u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( opt_w & u3_melt_memo ) {
+    u3h_free(u3R->cax.per_p);
+    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  }
+
+  if ( opt_w & u3_melt_ford ) {
+    u3h_free(u3R->cax.for_p);
+    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  }
+
+  if ( (opt_w & u3_melt_memo) && (opt_w & u3_melt_ford) ) {
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+  }
 
   u3z(u3H->rod_u.bug.mer);
 
@@ -181,6 +146,25 @@ u3_melt_all(FILE *fil_u)
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
+
+  //  drop registrations of unreachable batteries, once everything is
+  //  canonical. the home-road hashcons set holds references to them,
+  //  and this melt has canonicalized anyway.
+  //
+  if ( opt_w & u3_melt_cold ) {
+    c3_w tot_w, dea_w;
+    c3_w num_w = u3j_prune(&tot_w, &dea_w);
+
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+
+    if ( fil_u ) {
+      fprintf(fil_u, "melt: dropped %" PRIc3_w " of %" PRIc3_w
+                     " batteries (%" PRIc3_w " unreachable, %" PRIc3_w
+                     " kept as parents)\r\n",
+                     num_w, tot_w, dea_w, dea_w - num_w);
+    }
+  }
 
   u3j_boot(c3n);
   u3j_ream();
@@ -203,29 +187,14 @@ u3_melt_all(FILE *fil_u)
 }
 
 c3_w
-u3_meld_all(FILE *fil_u, c3_o per_o, c3_o for_o)
+u3_meld_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w pre_w = u3a_open(u3R);
   c3_y pha_y = u3e_Phase;
 
   u3e_Phase = u3e_pha_pack;
 
-  if ( _(per_o) ) {
-    u3h_free(u3R->cax.per_p);
-    u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-  }
-
-  if ( _(for_o) ) {
-    u3h_free(u3R->cax.for_p);
-    u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  }
-
-  if ( _(c3a(for_o, per_o)) ) {
-    u3h_free(u3R->dup_p);
-    u3R->dup_p = u3h_new();
-  }
-
-  (void)u3_melt_all(fil_u);
+  (void)u3_melt_all(fil_u, opt_w);
   (void)u3m_pack();
 
   u3e_Phase = pha_y;

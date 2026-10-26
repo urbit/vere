@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Summarize a jb/measure log (<pier>/.urb/measure-<time>.log).
+"""Summarize a jb/measure log (<pier>/.urb/measure/measure-<time>.log).
 
 Usage: measure-report.py [--intervals] [--keep-first] LOG|DIR ...
 
-Accepts any number of logs, or directories (a pier, its .urb, or any
-directory holding measure-*.log files). Logs are aggregated. Each log
+Accepts any number of logs, or directories (a pier, its .urb, its
+.urb/measure, or any directory holding measure-*.log files). Logs are aggregated. Each log
 starts at a restart, so by default the first snapshot interval of each
 log is dropped (it includes startup); --keep-first keeps it. Tasks
 recorded after a log's last snapshot are ignored.
@@ -24,6 +24,13 @@ Log lines (one snapshot interval ends at each S line):
                                             home-road table entries at the snapshot
   C <reclaims> <byc-cleared> <han-cleared> <dup-before-prune> <dup-pruned>
                                             u3m_reclaim() calls since the last snapshot
+  A <record-frees> <clean-allocs> <with-dirty-room> <frees-then-allocated>
+                                            home-road page records and allocation
+  M <resident> <anonymous> <file-backed> <swapped>
+                                            process memory in bytes at the snapshot
+
+Lines after an S line report on that interval. The header gives the
+ship, the runtime version, OS and architecture. To integrate logs across ships, see measure-aggregate.py.
 """
 
 import glob
@@ -42,12 +49,17 @@ def new_interval():
         "patch": 0, "skip": 0, "tasks": 0, "eve": 0,
         "F": defaultdict(int),
         "U": 0,
+        "A": None,
+        "M": None,
         "R": {},
         "K": None,
         "B": {},
         "L": {},
         "T": None,
         "C": None,
+        "H": None,
+        "D": None,
+        "P": None,
         "G": None,
         "Y": None,
     }
@@ -95,6 +107,10 @@ def parse(path):
                 cur["F"][(pha, kin, int(log2))] += int(n)
             elif t == "U" and cur is not None:
                 cur["U"] = int(line.split()[1])
+            elif t == "A" and cur is not None:
+                cur["A"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "M" and cur is not None:
+                cur["M"] = tuple(int(x) for x in line.split()[1:])
             elif t == "R" and cur is not None:
                 p = line.split()
                 cur["R"][p[1]] = tuple(int(x) for x in p[2:])
@@ -105,8 +121,14 @@ def parse(path):
                 cur["B"][(p[1], p[2])] = tuple(int(x) for x in p[3:])
             elif t == "T" and cur is not None:
                 cur["T"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "P" and cur is not None:
+                cur["P"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
                 cur["C"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "H" and cur is not None:
+                cur["H"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "D" and cur is not None:
+                cur["D"] = tuple(int(x) for x in line.split()[1:])
             elif t == "G" and cur is not None:
                 cur["G"] = tuple(int(x) for x in line.split()[1:])
             elif t == "Y" and cur is not None:
@@ -122,6 +144,8 @@ def find_logs(args):
     for a in args:
         if os.path.isdir(a):
             found = (glob.glob(os.path.join(a, "measure-*.log")) or
+                     glob.glob(os.path.join(a, "measure", "measure-*.log")) or
+                     glob.glob(os.path.join(a, ".urb", "measure", "measure-*.log")) or
                      glob.glob(os.path.join(a, ".urb", "measure-*.log")))
             if not found:
                 print(f"no measure-*.log in {a}", file=sys.stderr)
@@ -144,9 +168,12 @@ def main():
     headers = set()
     dropped = trailing = 0
     elapsed = 0
+    rebuilds = []
     logs = find_logs(args)
     for path in logs:
         hed, ivs, tail = parse(path)
+        #  hashcons rebuilds, including at startup
+        rebuilds.extend((i["H"], i["D"]) for i in ivs if i["H"] and i["H"][5])
         if hed:
             headers.add(" ".join(w for w in hed.split()
                                  if w.split("=")[0] in ("word_bits", "page_bytes")))
@@ -266,13 +293,41 @@ def main():
             print(f"    {name:<34}{n:>12}  {pct(n, tk)}")
 
 
+    mis = [i for i in intervals if i["M"]]
+    if mis:
+        mib = lambda b: f"{b / (1 << 20):.0f} MB"
+        print("\n== process memory at each snapshot ==")
+        print("  (anonymous memory can only be swapped; file-backed loom pages")
+        print("  can be dropped and read back. on macOS, swap is compressed memory)")
+        print("                  min      median         max        last")
+        for j, name in enumerate(["resident", "anonymous", "file-backed", "swapped"]):
+            v = [i["M"][j] for i in mis]
+            sv = sorted(v)
+            print(f"  {name:<12}{mib(sv[0]):>9}{mib(sv[len(sv) // 2]):>12}"
+                  f"{mib(sv[-1]):>12}{mib(v[-1]):>12}")
+
+    ais = [i for i in intervals if i["A"]]
+    if ais:
+        a = [sum(i["A"][j] for i in ais) for j in range(4)]
+        pat = sum(i["patch"] for i in ais)
+        print("\n== page records and allocation (home road) ==")
+        print(f"  frees that dirtied a clean page via its page record: {a[0]} "
+              f"({pct(a[0], pat).strip()} of patch pages)")
+        print(f"    of those pages, later allocated into: {a[3]} ({pct(a[3], a[0]).strip()})")
+        print(f"  clean pages first written by a chunk allocation: {a[1]} "
+              f"({pct(a[1], pat).strip()} of patch pages)")
+        print(f"    while a dirty page in the same class had room: {a[2]} "
+              f"({pct(a[2], a[1]).strip()}; {pct(a[2], pat).strip()} of patch pages)")
+
     # ---- home tables and reclaims ------------------------------------------
     tis = [i for i in intervals if i["T"]]
     if tis:
         print("\n== home-road table entries at each snapshot ==")
         print(f"  {'table':<6} {'min':>9} {'median':>9} {'max':>9} {'first':>9} {'last':>9}")
-        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo"]
+        names = ["war", "cod", "han", "bas", "byc", "per", "for", "dup", "memo", "wish"]
         for j, name in enumerate(names):
+            if any(len(i["T"]) <= j for i in tis):
+                continue  # older logs lack later columns
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
@@ -292,6 +347,75 @@ def main():
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
 
+    pis = [i for i in intervals if i["P"]]
+    if pis:
+        tasks = sum(i["tasks"] for i in pis)
+        cmp = sum(i["P"][4] for i in pis)
+        add = sum(i["P"][5] for i in pis)
+        print("\n== bytecode programs (home road) ==")
+        print("  per snapshot:     programs       bytes   dead keys   looked up")
+        for lab, f in (("first", lambda v: v[0]), ("median", lambda v: sorted(v)[len(v) // 2]),
+                       ("max", max), ("last", lambda v: v[-1])):
+            row = [f([i["P"][k] for i in pis]) for k in range(4)]
+            print(f"  {lab:<14}{row[0]:>12}{row[1]:>12}{row[2]:>12}{row[3]:>12}")
+        last = pis[-1]["P"]
+        print(f"  last: {last[1] / last[0] if last[0] else 0:.0f} bytes per program, "
+              f"{pct(last[2], last[0]).strip()} with a dead key, "
+              f"{pct(last[3], last[0]).strip()} looked up in the last interval")
+        print(f"  compiled: {cmp} ({cmp / tasks if tasks else 0:.2f} per task); "
+              f"added to the home table: {add} ({add / tasks if tasks else 0:.2f} per task)")
+    his = [i for i in intervals if i["H"]]
+    if his:
+        cel = [i["H"][1] for i in his]
+        scel = sorted(cel)
+        mib = lambda b: f"{b / (1 << 20):.0f} MB"
+        add = sum(i["H"][3] for i in his)
+        dele = sum(i["H"][4] for i in his)
+        tasks = sum(i["tasks"] for i in his)
+        print("\n== home-road hashcons set ==")
+        print(f"  cells: min {scel[0]}, median {scel[len(scel) // 2]}, max {scel[-1]}, "
+              f"first {cel[0]}, last {cel[-1]}")
+        print(f"  atoms: last {his[-1]['H'][0]}   "
+              f"memory: first {mib(his[0]['H'][2])}, last {mib(his[-1]['H'][2])}")
+        print(f"  added {add}, removed {dele} "
+              f"({add / tasks if tasks else 0:.1f} and {dele / tasks if tasks else 0:.1f} per task)")
+    dis = [i for i in intervals if i["D"]]
+    if dis:
+        D = [sum(i["D"][k] for i in dis) for k in range(7)]
+        last = dis[-1]["D"]
+        tasks = sum(i["tasks"] for i in dis)
+        pro = sum(D[0:3])
+        hit = sum(D[3:7])
+        per = lambda x: f"{x / tasks if tasks else 0:.1f}"
+        print(f"  probes: {pro} ({per(pro)} per task): road-exit take {D[0]}, "
+              f"older home nouns in it {D[1]}, u3m_dedup {D[2]}")
+        print(f"  hits: {hit} ({pct(hit, pro).strip()} of probes), by the member's origin:")
+        for name, c in zip(["added since the last rebuild", "caches (per for byc)",
+                            "warm jet state (war bas hot)", "cold state alone (cod)"],
+                           D[3:7]):
+            print(f"    {name:<30}{c:>12}  {pct(c, hit)}")
+        cel = dis[-1]["H"][1] if dis[-1]["H"] else 0
+        if last[7]:
+            print(f"  cell buckets: {last[7]} ({pct(cel, last[7]).strip()} full)")
+        pgs = [i["D"][8] for i in dis]
+        if any(pgs):
+            sp = sorted(pgs)
+            print(f"  pages an on-loom cell table would write per interval "
+                  f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
+    if rebuilds:
+        n = sum(h[5] for h, _ in rebuilds)
+        ms = sum(h[6] for h, _ in rebuilds)
+        print(f"  rebuilds: {n}, mean {ms / n:.0f} ms")
+        h, d = rebuilds[-1]
+        if d:
+            print(f"  last rebuild, page faults: {d[9]} major, {d[10]} minor")
+        last = h[7:]
+        tot = sum(last)
+        names = ["per", "for", "byc", "war", "bas", "hot", "cod"]
+        print("  last rebuild, cells added by root (in walk order; shared cells"
+              " count once, so cod counts only what it alone reaches):")
+        for name, c in zip(names, last):
+            print(f"    {name:<6}{c:>12}  {pct(c, tot)}")
     gis = [i for i in intervals if i["G"]]
     if gis and any(i["G"][0] for i in gis):
         win, gan, nou, _, can, spl, rit, ent, shr = (
