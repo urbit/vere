@@ -1921,13 +1921,6 @@ u3a_reclaim(void)
   u3e_Phase = u3e_pha_rec_memo;
   u3h_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
-  u3e_Phase = u3e_pha_rec_dup;
-  {
-    c3_w pre_w = u3h_wyt(u3R->dup_p);
-    u3m_dedup_prune();
-    u3e_Meter.pru_d[0] += pre_w;
-    u3e_Meter.pru_d[1] += pre_w - u3h_wyt(u3R->dup_p);
-  }
 }
 
 /* u3a_rewrite_compact(): rewrite pointers in ad-hoc persistent road structures.

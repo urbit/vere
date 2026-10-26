@@ -4070,31 +4070,6 @@ u3m_dedup(u3_noun som)
   return new;
 }
 
-static c3_o
-_cb_dedup_prune(u3_noun kev, void* ptr_v)
-{
-  u3_assert(c3y == u3a_is_cell(kev));
-
-  u3a_cell* kev_u = u3a_to_ptr(kev);
-  u3_assert(kev_u->hed == kev_u->tel);
-
-  u3_noun som = kev_u->hed;
-  u3a_noun* val_u = u3a_to_ptr(som);
-
-  u3_assert(c3n == u3a_is_cat(som));
-
-  return __( (1 == kev_u->use_w) && (2 == val_u->use_w) );
-}
-
-/* u3m_dedup_prune(): remove entries of the current road's on-loom set
-**                    that nothing else refers to.
-*/
-void
-u3m_dedup_prune(void)
-{
-  u3h_prune_with(u3R->dup_p, _cb_dedup_prune, 0);
-}
-
 /* bounds for u3m_reclaim_due()
 */
 #define _CM_BYC_MAX  (1U << 14)  //  bytecode programs

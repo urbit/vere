@@ -240,12 +240,6 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_dedup(u3_noun som);
       
-      /* u3m_dedup_prune(): remove entries of the current road's on-loom
-      **                    hashcons set that nothing else refers to.
-      */
-        void
-        u3m_dedup_prune(void);
-
       /* u3m_dedup_ream(): rebuild the home-road hashcons set from
       **                   persistent tables.
       */

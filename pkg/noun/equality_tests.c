@@ -200,7 +200,6 @@ _test_dedup(void)
   u3m_love(0);
 
   u3z(t); u3z(b); u3z(c); u3z(d); u3z(s); u3z(e);
-  u3m_dedup_prune();
 
   return ret_i;
 }
