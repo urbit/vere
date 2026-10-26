@@ -142,6 +142,22 @@
           c3_d rch_d;        //  hank entries cleared
           c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
 
+          //  home-road hashcons set (off-loom)
+          //
+          c3_d hca_d;        //  members added, outside rebuilds
+          c3_d hcd_d;        //  members removed as they were freed
+          c3_d hcr_d;        //  rebuilds
+          c3_d hcm_d;        //  rebuild time, ms
+          c3_d hcc_d[7];     //  last rebuild: cells added per root,
+                             //  per for byc war bas hot cod
+          c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
+          c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
+                             //  older home nouns met in it, u3m_dedup()
+          c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
+                             //  member's origin: added since the last
+                             //  rebuild, caches (per for byc), warm jet
+                             //  state (war bas hot), cold state alone
+
           //  bytecode programs
           //
           c3_d bcc_d;        //  compiled, on any road

@@ -268,7 +268,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+  U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
+  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -617,6 +618,27 @@ typedef struct {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | u3a_cell_flag;
   }
+
+  /* u3a_Hcon_w: home-road hashcons membership (off-loom), one bit per
+  **             u3a_minimum words of loom, or 0. see u3m_dedup().
+  */
+    extern c3_w* u3a_Hcon_w;
+
+  /* u3a_hcon_has(): indirect [som] is a member of the home-road
+  **                 hashcons set.
+  */
+    static inline c3_t
+    u3a_hcon_has(u3_noun som)
+    {
+      if ( !u3a_Hcon_w ) {
+        return 0;
+      }
+      else {
+        c3_w idx_w = u3a_to_off(som) >> u3a_min_log;
+        return 1 & (u3a_Hcon_w[idx_w / u3a_word_bits]
+                    >> (idx_w % u3a_word_bits));
+      }
+    }
 
     /**  road stack.
     **/

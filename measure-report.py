@@ -57,6 +57,8 @@ def new_interval():
         "L": {},
         "T": None,
         "C": None,
+        "H": None,
+        "D": None,
         "P": None,
     }
 
@@ -121,6 +123,10 @@ def parse(path):
                 cur["P"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
                 cur["C"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "H" and cur is not None:
+                cur["H"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "D" and cur is not None:
+                cur["D"] = tuple(int(x) for x in line.split()[1:])
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -156,9 +162,12 @@ def main():
     headers = set()
     dropped = trailing = 0
     elapsed = 0
+    rebuilds = []
     logs = find_logs(args)
     for path in logs:
         hed, ivs, tail = parse(path)
+        #  hashcons rebuilds, including at startup
+        rebuilds.extend((i["H"], i["D"]) for i in ivs if i["H"] and i["H"][5])
         if hed:
             headers.add(" ".join(w for w in hed.split()
                                  if w.split("=")[0] in ("word_bits", "page_bytes")))
@@ -349,6 +358,58 @@ def main():
               f"{pct(last[3], last[0]).strip()} looked up in the last interval")
         print(f"  compiled: {cmp} ({cmp / tasks if tasks else 0:.2f} per task); "
               f"added to the home table: {add} ({add / tasks if tasks else 0:.2f} per task)")
+    his = [i for i in intervals if i["H"]]
+    if his:
+        cel = [i["H"][1] for i in his]
+        scel = sorted(cel)
+        mib = lambda b: f"{b / (1 << 20):.0f} MB"
+        add = sum(i["H"][3] for i in his)
+        dele = sum(i["H"][4] for i in his)
+        tasks = sum(i["tasks"] for i in his)
+        print("\n== home-road hashcons set ==")
+        print(f"  cells: min {scel[0]}, median {scel[len(scel) // 2]}, max {scel[-1]}, "
+              f"first {cel[0]}, last {cel[-1]}")
+        print(f"  atoms: last {his[-1]['H'][0]}   "
+              f"memory: first {mib(his[0]['H'][2])}, last {mib(his[-1]['H'][2])}")
+        print(f"  added {add}, removed {dele} "
+              f"({add / tasks if tasks else 0:.1f} and {dele / tasks if tasks else 0:.1f} per task)")
+    dis = [i for i in intervals if i["D"]]
+    if dis:
+        D = [sum(i["D"][k] for i in dis) for k in range(7)]
+        last = dis[-1]["D"]
+        tasks = sum(i["tasks"] for i in dis)
+        pro = sum(D[0:3])
+        hit = sum(D[3:7])
+        per = lambda x: f"{x / tasks if tasks else 0:.1f}"
+        print(f"  probes: {pro} ({per(pro)} per task): road-exit take {D[0]}, "
+              f"older home nouns in it {D[1]}, u3m_dedup {D[2]}")
+        print(f"  hits: {hit} ({pct(hit, pro).strip()} of probes), by the member's origin:")
+        for name, c in zip(["added since the last rebuild", "caches (per for byc)",
+                            "warm jet state (war bas hot)", "cold state alone (cod)"],
+                           D[3:7]):
+            print(f"    {name:<30}{c:>12}  {pct(c, hit)}")
+        cel = dis[-1]["H"][1] if dis[-1]["H"] else 0
+        if last[7]:
+            print(f"  cell buckets: {last[7]} ({pct(cel, last[7]).strip()} full)")
+        pgs = [i["D"][8] for i in dis]
+        if any(pgs):
+            sp = sorted(pgs)
+            print(f"  pages an on-loom cell table would write per interval "
+                  f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
+    if rebuilds:
+        n = sum(h[5] for h, _ in rebuilds)
+        ms = sum(h[6] for h, _ in rebuilds)
+        print(f"  rebuilds: {n}, mean {ms / n:.0f} ms")
+        h, d = rebuilds[-1]
+        if d:
+            print(f"  last rebuild, page faults: {d[9]} major, {d[10]} minor")
+        last = h[7:]
+        tot = sum(last)
+        names = ["per", "for", "byc", "war", "bas", "hot", "cod"]
+        print("  last rebuild, cells added by root (in walk order; shared cells"
+              " count once, so cod counts only what it alone reaches):")
+        for name, c in zip(names, last):
+            print(f"    {name:<6}{c:>12}  {pct(c, tot)}")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)
