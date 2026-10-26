@@ -155,7 +155,7 @@ _test_defer(void)
   gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
 
   if ( bas_w != u3a_use(hom) ) {
-    fprintf(stderr, "defer: written while open: have %u, need %u\r\n",
+    fprintf(stderr, "defer: written while open: have %"PRIc3_w", need %"PRIc3_w"\r\n",
                     u3a_use(hom), bas_w);
     ret_i = 0;
   }
@@ -163,7 +163,7 @@ _test_defer(void)
   u3a_defer_close();
 
   if ( tak_w != u3a_use(hom) ) {
-    fprintf(stderr, "defer: close: have %u, need %u\r\n",
+    fprintf(stderr, "defer: close: have %"PRIc3_w", need %"PRIc3_w"\r\n",
                     u3a_use(hom), tak_w);
     ret_i = 0;
   }
@@ -178,14 +178,15 @@ _test_defer(void)
   u3a_defer_close();
 
   if ( rel_w != u3a_use(hom) ) {
-    fprintf(stderr, "defer: cancel: have %u, need %u\r\n",
+    fprintf(stderr, "defer: cancel: have %"PRIc3_w", need %"PRIc3_w"\r\n",
                     u3a_use(hom), rel_w);
     ret_i = 0;
   }
 
   //  past the cap, gains on new nouns are written as usual, and the
   //  result is the same: [hom] fills the table, so the product's other
-  //  noun (a fresh atom, not in it) spills
+  //  noun (a fresh indirect atom, not in it) spills. NB: it must be
+  //  longer than a direct atom on either word size, or it has no count
   //
   {
     c3_w    max_w = u3a_Defer_max_w;
@@ -200,10 +201,10 @@ _test_defer(void)
       ret_i = 0;
     }
 
-    gun = u3m_soft(0, _defer_pair, u3i_string("spill"));
+    gun = u3m_soft(0, _defer_pair, u3i_string("spilled past the cap"));
 
     if ( 2 != u3a_use(u3h(u3t(gun))) ) {
-      fprintf(stderr, "defer: cap: spill not written: %u\r\n",
+      fprintf(stderr, "defer: cap: spill not written: %"PRIc3_w"\r\n",
                       u3a_use(u3h(u3t(gun))));
       ret_i = 0;
     }
@@ -212,7 +213,7 @@ _test_defer(void)
     u3a_Defer_max_w = max_w;
 
     if ( tak_w != u3a_use(hom) ) {
-      fprintf(stderr, "defer: cap: have %u, need %u\r\n",
+      fprintf(stderr, "defer: cap: have %"PRIc3_w", need %"PRIc3_w"\r\n",
                       u3a_use(hom), tak_w);
       ret_i = 0;
     }
@@ -245,7 +246,7 @@ _test_defer(void)
   u3z(gon);
 
   if ( bas_w != u3a_use(hom) ) {
-    fprintf(stderr, "defer: failure: have %u, need %u\r\n",
+    fprintf(stderr, "defer: failure: have %"PRIc3_w", need %"PRIc3_w"\r\n",
                     u3a_use(hom), bas_w);
     ret_i = 0;
   }
