@@ -60,6 +60,8 @@ def new_interval():
         "H": None,
         "D": None,
         "P": None,
+        "G": None,
+        "Y": None,
     }
 
 
@@ -127,6 +129,10 @@ def parse(path):
                 cur["H"] = tuple(int(x) for x in line.split()[1:])
             elif t == "D" and cur is not None:
                 cur["D"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "G" and cur is not None:
+                cur["G"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "Y" and cur is not None:
+                cur["Y"] = tuple(int(x) for x in line.split()[1:])
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -410,6 +416,25 @@ def main():
               " count once, so cod counts only what it alone reaches):")
         for name, c in zip(names, last):
             print(f"    {name:<6}{c:>12}  {pct(c, tot)}")
+    gis = [i for i in intervals if i["G"]]
+    if gis and any(i["G"][0] for i in gis):
+        win, gan, nou, _, can, spl, rit, ent, shr = (
+            sum(i["G"][j] for i in gis) for j in range(9))
+        mx = max(i["G"][3] for i in gis)
+        print("\n== deferred gains across the state swap ==")
+        print(f"  windows: {win}   gains deferred: {gan} "
+              f"({gan / win if win else 0:.0f} per window, on {nou / win if win else 0:.0f} nouns)")
+        print(f"  cancelled by a lose: {can}  {pct(can, gan)}")
+        print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
+        print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
+        print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
+    yis = [i for i in intervals if i["Y"]]
+    if yis and any(i["Y"][0] for i in yis):
+        y = [sum(i["Y"][j] for i in yis) for j in range(3)]
+        print("\n== new arvo state's alignment with the old ==")
+        print(f"  home nouns referenced from the new state's new cells: {y[0]}")
+        print(f"    same noun at the same position in the old state: {y[1]}  {pct(y[1], y[0])}")
+        print(f"      and below old cells with a refcount of 1: {y[2]}  {pct(y[2], y[0])}")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)

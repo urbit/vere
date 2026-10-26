@@ -127,6 +127,15 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_soft(c3_w mil_w, u3_funk fun_f, u3_noun arg);
 
+      /* u3m_soft_with(): u3m_soft(), running [hom_f] (if any) on success,
+      **                  back on the home road before anything is taken.
+      */
+        u3_noun
+        u3m_soft_with(c3_w      mil_w,
+                      u3_funk   fun_f,
+                      u3_noun   arg,
+                      void    (*hom_f)(void));
+
       /* u3m_soft_cax(): descend into virtualization context, with cache.
       */
         u3_noun
