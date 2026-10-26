@@ -876,6 +876,8 @@ u3h_hum(u3p(u3h_root) har_p, c3_h mug_h)
   }
 }
 
+u3_noun u3h_Kev;
+
 /* _ch_buck_git(): read in bucket.
 */
 static u3_weak
@@ -886,6 +888,7 @@ _ch_buck_git(u3h_buck* hab_u, u3_noun key)
   for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
     u3_noun kev = u3h_slot_to_noun(hab_u->sot_w[i_h]);
     if ( _(u3r_sing(key, u3h(kev))) ) {
+      u3h_Kev = kev;
       return u3t(kev);
     }
   }
@@ -915,6 +918,7 @@ _ch_node_git(u3h_node* han_u, c3_h lef_h, c3_h rem_h, u3_noun key)
       u3_noun kev = u3h_slot_to_noun(sot_w);
 
       if ( _(u3r_sing(key, u3h(kev))) ) {
+        u3h_Kev = kev;
         return u3t(kev);
       }
       else {
@@ -953,6 +957,7 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
 
     if ( _(u3r_sing(key, u3h(kev))) ) {
       har_u->sot_w[inx_h] = u3h_noun_be_warm(sot_w);
+      u3h_Kev = kev;
       return u3t(kev);
     }
     else {

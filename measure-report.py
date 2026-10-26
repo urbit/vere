@@ -20,6 +20,8 @@ Log lines (one snapshot interval ends at each S line):
                                             bytecode lookups by formula pointer (jb/measure only)
   L <home|inner> <ptr> <copy-cur> <copy-sen> <diff> <none>
                                             call-site battery checks (jb/measure only)
+  X <copied> <gained> <gained-clean> <net-zero> <net-zero-pages> <free-clean> <alloc-clean> <alloc-alt> <alloc-reuse>
+                                            state swap and allocation (jb/measure only)
   T <war> <cod> <han> <bas> <byc> <per> <for> <dup> <memo>
                                             home-road table entries at the snapshot
   C <reclaims> <byc-cleared> <han-cleared> <dup-before-prune> <dup-pruned>
@@ -56,6 +58,7 @@ def new_interval():
         "B": {},
         "L": {},
         "T": None,
+        "X": None,
         "C": None,
     }
 
@@ -114,6 +117,8 @@ def parse(path):
             elif t == "B" and cur is not None:
                 p = line.split()
                 cur["B"][(p[1], p[2])] = tuple(int(x) for x in p[3:])
+            elif t == "X" and cur is not None:
+                cur["X"] = tuple(int(x) for x in line.split()[1:])
             elif t == "T" and cur is not None:
                 cur["T"] = tuple(int(x) for x in line.split()[1:])
             elif t == "C" and cur is not None:
@@ -328,6 +333,18 @@ def main():
                   f"hank entries cleared {han / rec:.0f}")
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
+
+    # ---- state swap and allocation (jb/measure only) ------------------------
+    xis = [i for i in intervals if i["X"]]
+    if xis:
+        x = [sum(i["X"][j] for i in xis) for j in range(5)]
+        pat = sum(i["patch"] for i in xis)
+        print("\n== state swap (fused take/lose) ==")
+        print(f"  product take: {x[0]} nouns copied, {x[1]} home nouns gained "
+              f"({pct(x[2], x[1]).strip()} on pages clean before the gain)")
+        print(f"  gains that netted to zero after roc-lose: {x[3]} ({pct(x[3], x[1]).strip()})")
+        print(f"  clean pages whose gains all netted to zero: {x[4]} "
+              f"({pct(x[4], pat).strip()} of patch pages; upper bound on A5's saving)")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)
