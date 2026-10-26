@@ -1342,8 +1342,7 @@ _pier_dump_wall(FILE* fil_u, u3_noun wol)
 void
 u3_pier_tank(c3_h tab_h, c3_h pri_h, u3_noun tac)
 {
-  u3_noun blu = u3_term_get_blew(0);
-  c3_h  col_h = u3h(blu);
+  c3_h  col_h = u3_term_get_blew(0).col_h;
   FILE* fil_u = u3_term_io_hija();
 
   //  XX temporary, for urb.py test runner
@@ -1411,7 +1410,6 @@ u3_pier_tank(c3_h tab_h, c3_h pri_h, u3_noun tac)
   fflush(fil_u);
 
   u3_term_io_loja(0, fil_u);
-  u3z(blu);
   u3z(tac);
   
   if ( bad_t ) {

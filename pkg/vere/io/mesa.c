@@ -2592,6 +2592,10 @@ _mesa_hear(u3_mesa* sam_u,
 
   switch ( pic_u->pac_u.hed_u.typ_y ) {
     case PACT_PEEK: {
+      if ( MESA_NAME_MAX < mesa_size_name(&pic_u->pac_u.pek_u.nam_u) ) {
+        u3l_log("mesa: hear peek with oversized name");
+        return;
+      }
       _mesa_hear_peek(pic_u, sdr_u);
     } break;
     case PACT_PAGE: {
