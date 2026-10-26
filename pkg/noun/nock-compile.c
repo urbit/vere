@@ -216,10 +216,11 @@ static const struct {
   c3_y src_y, dst_y, imm_y, tar_y, sot_y, kon_y, swe_y;
 } _nc_fam[] = {
   FAMILIES(_nc_fam_row)
-  [_nc_bom] = { 0, 0, 0, 0, 0, 0, 0 },
-  [_nc_imm] = { 0, 1, 0, 0, 0, 0, 0 },
-  [_nc_nop] = { 0, 0, 0, 0, 0, 0, 0 },
-  [_nc_kil] = { 0, 1, 0, 0, 0, 0, 0 },
+  /*fam,        src, dst, imm, tar, sot, kon, swe*/
+  [_nc_bom] = { 0,   0,    0,  0,   0,   0,   0 },
+  [_nc_imm] = { 0,   1,    0,  0,   0,   0,   0 },
+  [_nc_nop] = { 0,   0,    0,  0,   0,   0,   0 },
+  [_nc_kil] = { 0,   1,    0,  0,   0,   0,   0 },
 };
 #undef _nc_fam_row
 
@@ -2171,32 +2172,9 @@ _nc_take(const nc_ran* ran_u, c3_h fir_h, c3_d* occ_d)
 
 /* _nc_slots(): assign the registers to slots, rewriting the ops.
 **
-**   A register occupies its slot wherever it holds a reference: from each
-**   definition to the last use on that path, which consumes it and zeroes
-**   the slot, and at a drop of it, which zeroes the slot wherever the
-**   register was still held.  Two registers may share a slot iff they
-**   never occupy it at the same point.  The points are the two halves of
-**   each op in layout order: before the op, occupied by its sources and
-**   by the registers live across it, and after the op, occupied by its
-**   product and by the registers live across it.  So the product of an op
-**   may take the slot of a source the op consumes, every op releasing its
-**   consumed sources before it writes.  The registers live before and
-**   after each op come from _nc_live_in(), a chunk of registers at a
-**   time, with drops not counted as uses: a drop occupies the slot at its
-**   own point only.  A parameter occupies its slot at the entry whether
-**   or not it is used, so that no register takes a slot the arguments are
-**   still in.
-**
-**   The parameters get slots 0..arg_h-1, the calling convention.  Every
-**   other register, in order of its first point, takes the first slot
-**   free over all its ranges: the parameter slot it wants as an argument
-**   of a self call (JMS), then the slots above the parameters, then the
-**   parameters' slots, then a new one.  A self call then moves only the
-**   arguments not in place (_nc_shuffle()).
-********************
 **  A register occupies its slot wherever it holds a reference: from its
 **  definition to its last use site, which consumes it, and, if _nc_zer_t == 1,
-**  zeroes it. If _nc_zer_t == 1 KIL zeroes out the slot, otherwise a slot with
+**  zeroes it. If _nc_zer_t == 0 KIL zeroes out the slot, otherwise a slot with
 **  a potentially poisoned register (control flow join where only one side sets
 **  a register) could contain either a live value or an already freed garbage.
 **  Occupancy of slots and liveness of registers is expressed in terms of half-
@@ -2205,7 +2183,7 @@ _nc_take(const nc_ran* ran_u, c3_h fir_h, c3_d* occ_d)
 **  order of preference: first a parameter slot it wants for an argument of a
 **  self tail-call JMS, then slots above the input, then the input slots, then
 **  a new one. Later the self-calls will be lowered into moves of the misplaced
-**  arguments plus a HOP to the entry point.
+**  arguments plus a HOP to the entry point (_nc_shuffle).
 */
 static void
 _nc_slots(nc_gen* gen_u, c3_h arg_h)
@@ -2430,10 +2408,6 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
   //
   for ( i_h = 0; i_h < opn_h; i_h++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_h]);
-
-    if ( _nc_nop == op_u->fam_y ) {
-      continue;
-    }
 
     _nc_srcs(gen_u, op_u, reg_h, {
       c3_h s_h = sot_h[*reg_h];
