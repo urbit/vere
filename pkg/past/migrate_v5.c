@@ -1,4 +1,6 @@
 #include "v4.h"
+#include "events.h"
+#include "manage.h"
 #include "options.h"
 
 #define U3C_PREFIX        v4
@@ -20,12 +22,19 @@
 #define U3C_NEW_ATOM_T    u3a_v5_atom
 #include "copy_migrate.h"
 
+/* u3_migrate_v5(): version 4 to 5: the home road from the high end of
+**                  the loom to position 0, under palloc.  With the
+**                  version 4 loom mapped at u3_Loom_v4, maps a loom of
+**                  [len_i] bytes for the pier [dir_c], paves a version 5
+**                  home in it, and copies the state over: the arvo
+**                  kernel, the cold jet state and the persistent memo
+**                  cache.  The hot and warm jet state is the boot's to
+**                  make.  Leaves the loom live, for the caller to save.
+*/
 void
-u3_migrate_v5(c3_d eve_d)
+u3_migrate_v5(c3_c* dir_c, c3_z len_i, c3_d eve_d)
 {
   _copy_v4_ctx cop_u = {0};
-
-  //  XX assumes u3m_init() and u3m_pave(c3y) have already been called
 
   u3_v4_load(u3C.wor_i);
 
@@ -38,6 +47,10 @@ u3_migrate_v5(c3_d eve_d)
 
   fprintf(stderr, "loom: allocator migration running...\r\n");
 
+  u3m_init(len_i);
+  u3e_live(c3y, strdup(dir_c));
+  u3m_v5_pave();
+
   _copy_v4_init(&cop_u);
 
   //  XX install cel_p temporarily?
@@ -49,15 +62,6 @@ u3_migrate_v5(c3_d eve_d)
   u3h_v4_walk_with(u3R_v4->jed.cod_p, _copy_v4_hamt, &cop_u);
   cop_u.ham_p = u3R_v5->cax.per_p;
   u3h_v4_walk_with(u3R_v4->cax.per_p, _copy_v4_hamt, &cop_u);
-
-  //  NB: pave does *not* allocate hot_p
-  //
-  u3j_v5_boot(c3y);
-  u3j_v5_ream();
-
-  //  the registrations for SKA, from the cold state (version 6)
-  //
-  u3j_ska_ream();
 
   _copy_v4_done(&cop_u);
 

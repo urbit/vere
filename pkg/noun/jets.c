@@ -1194,7 +1194,9 @@ u3j_boot(c3_o nuu_o)
   memset(u3D.ray_u, 0, (u3D.all_l * sizeof(u3j_core)));
 
   if ( c3n == nuu_o ) {
-    u3h_free(u3R->jed.hot_p);
+    if ( u3R->jed.hot_p ) {
+      u3h_free(u3R->jed.hot_p);
+    }
     if ( u3R->ska.pax_p ) {
       u3h_free(u3R->ska.pax_p);
     }

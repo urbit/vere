@@ -228,6 +228,11 @@ _test_pier(void)
   _boot();
   bef_u = _tem();
   _CHECK( bef_u.num_w > 0, "cores registered at boot" );
+
+  //  and without hot jet state, as the v4 chain leaves it
+  //
+  u3h_free(u3R->jed.hot_p);
+  u3R->jed.hot_p = 0;
   u3m_save();
   u3m_stop();
 
@@ -253,7 +258,7 @@ _test_pier(void)
   aft_u = _tem();
   _CHECK( bef_u.num_w == aft_u.num_w, "as many registrations as before" );
   _CHECK( bef_u.mug_w == aft_u.mug_w, "the same registrations as before" );
-  fprintf(stderr, "test migrate: %u registrations rebuilt\r\n", aft_u.num_w);
+  fprintf(stderr, "test migrate: %" PRIc3_w " registrations rebuilt\r\n", aft_u.num_w);
 
   if ( !_test_ska() ) {
     ret_i = 0;
