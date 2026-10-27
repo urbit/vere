@@ -26,6 +26,8 @@
       p = u3qa_add(v, b);
       q = u3qc_cat(0, w, z);
 
+      u3z(b);
+      u3z(c);
       u3z(u);
       u3z(v);
       u3z(w);

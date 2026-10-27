@@ -79,7 +79,7 @@ _migv2h_rewrite_buck(u3h_v2_buck* hab_u)
   if ( c3n == u3a_v2_rewrite_ptr(hab_u) ) return;
   c3_w i_w;
 
-  for ( i_w = 0; i_w < hab_u->len_w; i_w++ ) {
+  for ( i_w = 0; i_w < hab_u->len_h; i_w++ ) {
     u3_noun som = u3h_v2_slot_to_noun(hab_u->sot_w[i_w]);
     hab_u->sot_w[i_w] = u3h_v2_noun_to_slot(_migv2_rewritten_noun(som));
     _migv2_rewrite_noun(som);
@@ -93,7 +93,7 @@ _migv2h_rewrite_node(u3h_v2_node* han_u, c3_w lef_w)
 {
   if ( c3n == u3a_v2_rewrite_ptr(han_u) ) return;
 
-  c3_w len_w = c3_pc_w(han_u->map_w);
+  c3_w len_w = c3_pc_w(han_u->map_h);
   c3_w i_w;
 
   lef_w -= 5;

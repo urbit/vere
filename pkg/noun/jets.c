@@ -18,6 +18,7 @@
 #include "vortex.h"
 #include "xtract.h"
 
+//static c3_d _calls_d = 0;
 
 /**  Functions.
 **/
@@ -96,15 +97,12 @@ _cj_hash(c3_c* has_c)
   return pro;
 }
 
-// in the jam jet file
-c3_w* u3qe_jam_buf(u3_noun, c3_w* bit_w);
-
 /* _cj_bash(): battery hash. RETAIN.
  */
 static u3_noun
 _cj_bash(u3_noun bat)
 {
-  if ( u3C.wag_w & u3o_hashless ) {
+  if ( u3C.wag_h & u3o_hashless ) {
     return u3_nul;
   }
 
@@ -131,7 +129,9 @@ _cj_bash(u3_noun bat)
       urcrypt_shay(fat_y, met_w, dig_y);
 
       pro = u3i_bytes(32, dig_y);
-      u3h_put(u3R->jed.bas_p, bat, u3k(pro));
+      u3_noun bat_dedup = u3m_dedup(u3k(bat));
+      u3h_put(u3R->jed.bas_p, bat_dedup, u3m_dedup(u3k(pro)));
+      u3z(bat_dedup);
       u3i_slab_free(&sab_u);
       break;
     }
@@ -326,7 +326,7 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
       if ( kid_u->bas_u ) {
         c3_w j_w;
         for ( j_w = 0; 0 != kid_u->bas_u[j_w]; j_w++ ) {
-          u3_noun key = _cj_hash(kid_u->bas_u[j_w]),
+          u3_noun key = u3m_dedup(_cj_hash(kid_u->bas_u[j_w])),
                   hot = u3h_git(u3R->jed.hot_p, key),
                   old = ( u3_none == hot ) ? u3_none : u3k(u3h(hot)),
                   reg = _cj_gust(old, kid_u->axe_l, u3k(pel), u3k(loc)),
@@ -334,7 +334,7 @@ _cj_install(u3j_core* ray_u, c3_w jax_l, u3_noun pel, u3_noun lab, u3j_core* dev
                   hap = _cj_warm_hump(jax_l, huc),
                   toh = u3nq(reg, jax_l, hap, u3k(bal));
 
-          u3h_put(u3R->jed.hot_p, key, toh);
+          u3h_put(u3R->jed.hot_p, key, u3m_dedup(toh));
           u3z(key);
         }
       }
@@ -396,7 +396,7 @@ _cj_chum(u3_noun chu)
       c3_c  buf[33];
 
       memset(buf, 0, 33);
-      snprintf(buf, 32, "%s%d", h_chu_c, t_chu);
+      snprintf(buf, 32, "%s%"PRIc3_w, h_chu_c, t_chu);
 
       c3_free(h_chu_c);
       return strdup(buf);
@@ -644,17 +644,21 @@ _cj_spot(u3_noun cor, u3_weak* bas)
       *bas = _cj_bash(u3h(cor));
     }
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       u3_weak act = _cj_spot_hot(cor, *bas, &loc);
       if ( u3_none != act ) {
         reg = _cj_gust(reg, _cj_loc_axe(loc), _cj_loc_pel(loc), u3k(loc));
-        u3h_put(u3R->jed.cod_p, u3h(cor), u3nc(u3k(*bas), u3k(reg)));
+        u3_noun bat_dedup = u3m_dedup(u3k(u3h(cor)));
+        u3_noun val = u3m_dedup(u3nc(u3k(*bas), u3k(reg)));
+        u3h_put(u3R->jed.cod_p, bat_dedup, val);
+        u3z(bat_dedup);
         /* caution: could overwrites old value, debug batteries etc.
         **          old value contains old _cj_jit (from different
         **          battery). if we change jit to (map battery *),
         **          will need to merge with that map here.
         */
-        u3h_put(u3R->jed.war_p, loc, act);
+        loc = u3m_dedup(loc);
+        u3h_put(u3R->jed.war_p, loc, u3m_dedup(act));
       }
     }
   }
@@ -776,7 +780,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
     par_u = &u3D.ray_u[par_l];
     dev_u = par_u->dev_u;
   }
-    else {
+  else {
     par_u = 0;
     dev_u = u3D.dev_u;
   }
@@ -788,7 +792,7 @@ _cj_hot_mean(c3_l par_l, u3_noun nam)
     while ( (cop_u = &dev_u[i_l])->cos_c ) {
       if ( _(u3r_sing_c(cop_u->cos_c, nam)) ) {
 #if 0
-        u3l_log("hot: bound jet %d/%s/%s/",
+        u3l_log("hot: bound jet %"PRIc3_w"/%s/%s/",
                         cop_u->jax_l,
                         cop_u->cos_c,
                         par_u ? par_u->cos_c : "~");
@@ -1107,7 +1111,7 @@ _cj_hank_find(u3_noun pre, u3_noun tam)
         u3j_site_take(&(new_u->sit_u), &(old_u->sit_u));
       }
     }
-
+    key = u3m_dedup(key);
     u3h_put(u3R->jed.han_p, key, _cj_of_hank(new_u));
     u3z(key);
     return new_u;
@@ -1264,8 +1268,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
       if ( u3_none == (inx = u3kdb_get(u3k(hap), u3k(axe))) ) {
         u3t_off(glu_o);
         {
-          c3_o pof_o = __(u3C.wag_w & u3o_debug_cpu);
-          c3_o trc_o = __(u3C.wag_w & u3o_trace);
+          c3_o pof_o = __(u3C.wag_h & u3o_debug_cpu);
+          c3_o trc_o = __(u3C.wag_h & u3o_trace);
 
           if ( _(pof_o) ) {
             pof_o = u3t_come(bal);
@@ -1294,8 +1298,8 @@ u3j_kick(u3_noun cor, u3_noun axe)
         u3j_core* cop_u = &u3D.ray_u[jax_l];
         c3_l      inx_l = inx;
         u3j_harm* ham_u = &cop_u->arm_u[inx_l];
-        c3_o      pof_o = __(u3C.wag_w & u3o_debug_cpu);
-        c3_o      trc_o = __(u3C.wag_w & u3o_trace);
+        c3_o      pof_o = __(u3C.wag_h & u3o_debug_cpu);
+        c3_o      trc_o = __(u3C.wag_h & u3o_trace);
         u3_noun   pro;
 
         if ( _(pof_o) ) {
@@ -1390,30 +1394,6 @@ u3j_rite_take(u3j_rite* dst_u, u3j_rite* src_u)
   }
 }
 
-/* u3j_rite_merge(): copy rite references from src_u to dst_u,
-**                  losing old references
-*/
-void
-u3j_rite_merge(u3j_rite* dst_u, u3j_rite* src_u)
-{
-  if ( u3_none != src_u->clu ) {
-    if ( u3_none != dst_u->clu ) {
-      u3z(dst_u->clu);
-    }
-
-    dst_u->clu = src_u->clu;
-
-    if ( dst_u->fin_p != src_u->fin_p ) {
-      if ( c3y == dst_u->own_o ) {
-        _cj_fink_free(dst_u->fin_p);
-      }
-
-      dst_u->fin_p = src_u->fin_p;
-      dst_u->own_o = src_u->own_o;
-    }
-  }
-}
-
 /* u3j_site_take(): copy junior site references. [dst_u] is uninitialized
 */
 void
@@ -1480,6 +1460,94 @@ u3j_site_merge(u3j_site* dst_u, u3j_site* src_u)
   }
 }
 
+/* u3j_rite_reap(): merge junior rite [src_u] into [dst_u], reading
+**                  junior memory, writing only what changed.
+*/
+void
+u3j_rite_reap(u3j_rite* dst_u, u3j_rite* src_u)
+{
+  if ( u3_none == src_u->clu ) {
+    return;
+  }
+
+  if ( dst_u->clu != src_u->clu ) {
+    u3_noun clu = u3a_take(src_u->clu);
+
+    if ( u3_none != dst_u->clu ) {
+      u3z(dst_u->clu);
+    }
+
+    dst_u->clu = clu;
+  }
+
+  if ( dst_u->fin_p != src_u->fin_p ) {
+    u3p(u3j_fink) fin_p = ( c3y == src_u->own_o )
+      ? u3of(u3j_fink, _cj_fink_take(u3to(u3j_fink, src_u->fin_p)))
+      : src_u->fin_p;
+
+    if ( c3y == dst_u->own_o ) {
+      _cj_fink_free(dst_u->fin_p);
+    }
+
+    dst_u->fin_p = fin_p;
+    dst_u->own_o = src_u->own_o;
+  }
+}
+
+/* u3j_site_reap(): merge junior site [src_u] into [dst_u], reading
+**                  junior memory, writing only what changed.
+*/
+void
+u3j_site_reap(u3j_site* dst_u, u3j_site* src_u)
+{
+  if ( dst_u->axe != src_u->axe ) {
+    u3_noun axe = u3a_take(src_u->axe);
+    u3z(dst_u->axe);
+    dst_u->axe = axe;
+  }
+
+  if ( u3_none == src_u->loc ) {
+    return;
+  }
+
+  if ( dst_u->loc != src_u->loc ) {
+    u3_noun loc = u3a_take(src_u->loc);
+
+    if ( u3_none != dst_u->loc ) {
+      u3z(dst_u->loc);
+    }
+
+    dst_u->loc = loc;
+  }
+
+  if ( dst_u->lab != src_u->lab ) {
+    u3_noun lab = u3a_take(src_u->lab);
+
+    if ( u3_none != dst_u->lab ) {
+      u3z(dst_u->lab);
+    }
+
+    dst_u->lab = lab;
+  }
+
+  if ( dst_u->cop_u != src_u->cop_u ) dst_u->cop_u = src_u->cop_u;
+  if ( dst_u->ham_u != src_u->ham_u ) dst_u->ham_u = src_u->ham_u;
+  if ( dst_u->jet_o != src_u->jet_o ) dst_u->jet_o = src_u->jet_o;
+
+  if ( dst_u->fin_p != src_u->fin_p ) {
+    u3p(u3j_fink) fin_p = ( c3y == src_u->fon_o )
+      ? u3of(u3j_fink, _cj_fink_take(u3to(u3j_fink, src_u->fin_p)))
+      : src_u->fin_p;
+
+    if ( c3y == dst_u->fon_o ) {
+      _cj_fink_free(dst_u->fin_p);
+    }
+
+    dst_u->fin_p = fin_p;
+    dst_u->fon_o = src_u->fon_o;
+  }
+}
+
 /* u3j_site_ream(): refresh u3j_site after restoring from checkpoint
 */
 void
@@ -1528,8 +1596,8 @@ _cj_site_kick_hot(u3_noun loc, u3_noun cor, u3j_site* sit_u, c3_o lok_o)
 {
   u3_weak pro = u3_none;
   c3_o jet_o  = sit_u->jet_o;
-  c3_o pof_o  =  __(u3C.wag_w & u3o_debug_cpu);
-  c3_o trc_o  =  __(u3C.wag_w & u3o_trace);
+  c3_o pof_o  =  __(u3C.wag_h & u3o_debug_cpu);
+  c3_o trc_o  =  __(u3C.wag_h & u3o_trace);
 
   if ( c3n == pof_o && c3n == trc_o ) {
     if ( c3y == jet_o ) {
@@ -1784,7 +1852,7 @@ _cj_minx(u3_noun cey, u3_noun cor)
     }
     pel = _cj_spot(par, NULL);
     if ( u3_none == pel ) {
-      u3l_log("fund: in %s, parent %x not found at %d",
+      u3l_log("fund: in %s, parent %x not found at %"PRIc3_w,
                       u3r_string(nam),
                       u3r_mug(u3h(par)),
                       axe);
@@ -1814,6 +1882,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 {
   u3_weak loc = _cj_minx(cey, cor);
   if ( u3_none != loc ) {
+    loc = u3m_dedup(loc);
     c3_l par_l, jax_l;
     u3_noun pel = _cj_loc_pel(loc),
             axe = _cj_loc_axe(loc),
@@ -1843,10 +1912,10 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     jax_l = _cj_hot_mean(par_l, nam);
 #if 0
     u3m_p("new jet", bal);
-    u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+    u3l_log("  bat %x, jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
 
-    if ( !(u3C.wag_w & u3o_hashless) ) {
+    if ( !(u3C.wag_h & u3o_hashless) ) {
       if ( jax_l ) {
         c3_y dig_y[32];
         c3_w i_w;
@@ -1856,7 +1925,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
           _cj_print_tas(u3h(i));
           i = u3t(i);
         }
-        u3l_log("\r\n  axe %d, jax %d,\r\n  bash ", axe, jax_l);
+        u3l_log("\r\n  axe %"PRIc3_w", jax %"PRIc3_w",\r\n  bash ", axe, jax_l);
         u3r_bytes(0, 32, dig_y, bas);
         for ( i_w = 32; i_w > 0; ) {
           u3l_log("%02x", dig_y[--i_w]);
@@ -1866,10 +1935,11 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
     }
 
     hap   = _cj_warm_hump(jax_l, u3t(u3t(loc)));
-    act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
-    u3h_put(u3R->jed.cod_p, bat, u3nc(u3k(bas), reg));
-    u3h_put(u3R->jed.war_p, loc, act); // see note in _cj_spot
-    u3z(pel); u3z(axe);
+    u3_noun bat_dedup = u3m_dedup(u3k(bat));
+    act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat_dedup));
+    u3h_put(u3R->jed.cod_p, bat_dedup, u3m_dedup(u3nc(u3k(bas), reg)));
+    u3h_put(u3R->jed.war_p, loc, u3m_dedup(act)); // see note in _cj_spot
+    u3z(pel); u3z(axe); u3z(bat_dedup);
   }
 
   return loc;
@@ -1891,7 +1961,7 @@ _cj_mine(u3_noun cey, u3_noun cor, u3_noun bas)
 
     if ( c3n == hav_o ) {
       u3m_p("unregistered battery", bal);
-      u3l_log("hash: %x", bas);
+      u3l_log("hash: %"PRIxc3_w, bas);
     }
     u3z(bas);
   }
@@ -2064,8 +2134,9 @@ _cj_merge_hank_cb(u3_noun kev, void* wit)
       u3j_site_merge(&(han_u->sit_u), &(nah_u->sit_u));
       u3a_wfree(nah_u);
     }
-
-    u3h_put(han_p, key, _cj_of_hank(han_u));
+    u3_noun key_dedup = u3m_dedup(u3k(key));
+    u3h_put(han_p, key_dedup, _cj_of_hank(han_u));
+    u3z(key_dedup);
   }
 }
 
@@ -2114,9 +2185,11 @@ _cj_ream(u3_noun all)
       act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
       u3m_p("old jet", bal);
-      u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+      u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
-      u3h_put(u3R->jed.war_p, loc, act);
+      u3_noun loc_dedup = u3m_dedup(u3k(loc));
+      u3h_put(u3R->jed.war_p, loc_dedup, u3m_dedup(act));
+      u3z(loc_dedup);
     }
     u3z(rul);
 
@@ -2153,11 +2226,22 @@ _cj_ream(u3_noun all)
         act   = u3nq(jax_l, hap, bal, _cj_jit(jax_l, bat));
 #if 0
         u3m_p("old jet", bal);
-        u3l_log("  bat %x, jax %d", u3r_mug(bat), jax_l);
+        u3l_log("  bat %"PRIxc3_w", jax %"PRIc3_w, u3r_mug(bat), jax_l);
 #endif
-        u3h_put(u3R->jed.war_p, loc, act);
+        u3_noun loc_dedup = u3m_dedup(u3k(loc));
+        u3h_put(u3R->jed.war_p, loc_dedup, u3m_dedup(act));
+        u3z(loc_dedup);
       }
     }
+    //  no progress: these parents are gone, so no core can match
+    //
+    if ( u3qb_lent(rem) == u3qb_lent(lop) ) {
+      u3l_log("jets: ream: dropping %" PRIc3_w " registrations without parents",
+              (c3_w)u3qb_lent(rem));
+      u3z(rem);
+      rem = u3_nul;
+    }
+
     u3z(lop);
     lop = rem;
   }
@@ -2196,6 +2280,182 @@ u3j_ream(void)
   u3h_walk(u3R->jed.han_p, _cj_ream_hank);
 }
 
+/* _cj_prune_mark(): u3h_walk callback, marking a key-value pair.
+*/
+static void
+_cj_prune_mark(u3_noun kev, void* ptr_v)
+{
+  u3a_mark_noun(kev);
+}
+
+/* _cj_prune_find(): u3h_walk callback, collecting unmarked batteries.
+*/
+static void
+_cj_prune_find(u3_noun kev, void* ptr_v)
+{
+  u3p(u3h_root) dea_p = *(u3p(u3h_root)*)ptr_v;
+  u3_noun       bat   = u3h(kev);
+
+  if ( !u3a_marked(bat) ) {
+    u3h_put(dea_p, bat, 0);
+  }
+}
+
+/* _cj_prune_regs(): index the locations registration [reg] of [bat]
+**                   provides in [loc_p] (location -> battery), and if
+**                   [ned] is given, push the parent locations it needs.
+**
+**   (decoded as in _cj_ream())
+*/
+static void
+_cj_prune_regs(u3_noun bat, u3_noun reg, u3p(u3h_root) loc_p, u3_noun* ned)
+{
+  u3_noun j, k, rul, lop;
+
+  //  roots: [? location]
+  //
+  rul = u3qdb_tap(u3h(reg));
+  for ( j = rul; u3_nul != j; j = u3t(j) ) {
+    u3h_put(loc_p, u3t(u3h(j)), u3k(bat));
+  }
+  u3z(rul);
+
+  //  ancestors: [parent=location this=location]
+  //
+  for ( j = u3t(reg); u3_nul != j; j = u3t(j) ) {
+    lop = u3qdb_tap(u3t(u3h(j)));
+    for ( k = lop; u3_nul != k; k = u3t(k) ) {
+      u3h_put(loc_p, u3t(u3h(k)), u3k(bat));
+      if ( ned ) {
+        *ned = u3nc(u3k(u3h(u3h(k))), *ned);
+      }
+    }
+    u3z(lop);
+  }
+}
+
+typedef struct {
+  u3p(u3h_root) dea_p;  //  unreachable batteries
+  u3p(u3h_root) kep_p;  //  locations provided by kept registrations
+  u3p(u3h_root) dar_p;  //  locations provided by dropped registrations
+  u3_noun       ned;    //  parent locations kept registrations need
+} _cj_prune_ctx;
+
+/* _cj_prune_index(): u3h_walk callback over the cold state.
+*/
+static void
+_cj_prune_index(u3_noun kev, void* ptr_v)
+{
+  _cj_prune_ctx* ctx_u = ptr_v;
+  u3_noun        bat   = u3h(kev);
+  u3_noun        reg   = u3t(u3t(kev));
+
+  if ( u3_none != u3h_git(ctx_u->dea_p, bat) ) {
+    _cj_prune_regs(bat, reg, ctx_u->dar_p, 0);
+  }
+  else {
+    _cj_prune_regs(bat, reg, ctx_u->kep_p, &ctx_u->ned);
+  }
+}
+
+/* _cj_prune_drop(): u3h_walk callback, deleting an unreachable battery.
+*/
+static void
+_cj_prune_drop(u3_noun kev, void* ptr_v)
+{
+  c3_w* num_w = ptr_v;
+
+  u3h_del(u3R->jed.cod_p, u3h(kev));
+  u3h_del(u3R->jed.bas_p, u3h(kev));
+  (*num_w)++;
+}
+
+/* u3j_prune(): drop cold-state registrations of batteries that nothing
+**              live refers to, producing how many were dropped.
+**
+**   live: reachable from the arvo state, the wish cache, or the memo
+**   caches; the jet tables don't count. liveness is judged by pointer,
+**   so these must already be canonical (as after melt), or an equal
+**   live battery would not save the table's copy. a registration that
+**   provides the parent location of a kept one is kept too (a battery
+**   can be reachable without its parent core, as a constant in other
+**   code). the bytecode and hank caches must be clear (their call sites
+**   refer to batteries). a dropped battery that is created again is
+**   registered again by its hint. the caller must rebuild the warm
+**   state (u3j_ream()).
+*/
+c3_w
+u3j_prune(c3_w* tot_w, c3_w* dea_w)
+{
+  _cj_prune_ctx ctx_u;
+  c3_w          num_w = 0;
+
+  u3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( u3_nul == u3R->bug.tax );  // %mean traps include batteries
+
+  if ( tot_w ) *tot_w = 0;
+  if ( dea_w ) *dea_w = 0;
+
+  //  NB: -g marks by reference counting, without a mark bitmap
+  //
+  if ( u3C.wag_h & u3o_debug_ram ) {
+    u3l_log("jets: prune: skipped (gc debug mode)");
+    return 0;
+  }
+
+  ctx_u.dea_p = u3h_new();
+  ctx_u.kep_p = u3h_new();
+  ctx_u.dar_p = u3h_new();
+  ctx_u.ned   = u3_nul;
+
+  u3a_mark_init();
+  u3a_mark_noun(u3A->roc);
+  u3a_mark_noun(u3A->yot);
+  u3h_walk_with(u3R->cax.har_p, _cj_prune_mark, 0);
+  u3h_walk_with(u3R->cax.per_p, _cj_prune_mark, 0);
+  u3h_walk_with(u3R->cax.for_p, _cj_prune_mark, 0);
+  u3h_walk_with(u3R->jed.cod_p, _cj_prune_find, &ctx_u.dea_p);
+  u3a_mark_done();
+
+  if ( tot_w ) *tot_w = u3h_wyt(u3R->jed.cod_p);
+  if ( dea_w ) *dea_w = u3h_wyt(ctx_u.dea_p);
+
+  //  keep the registrations that kept ones need as parents
+  //
+  u3h_walk_with(u3R->jed.cod_p, _cj_prune_index, &ctx_u);
+
+  while ( u3_nul != ctx_u.ned ) {
+    u3_noun pel = u3k(u3h(ctx_u.ned));
+    u3_noun nex = u3k(u3t(ctx_u.ned));
+    u3_weak bat;
+
+    u3z(ctx_u.ned);
+    ctx_u.ned = nex;
+
+    if (  (u3_none == u3h_git(ctx_u.kep_p, pel))
+       && (u3_none != (bat = u3h_git(ctx_u.dar_p, pel)))
+       && (u3_none != u3h_git(ctx_u.dea_p, bat)) )
+    {
+      u3_weak val = u3h_get(u3R->jed.cod_p, bat);  //  [bas reg]
+
+      u3_assert( u3_none != val );
+      u3h_del(ctx_u.dea_p, bat);
+      _cj_prune_regs(bat, u3t(val), ctx_u.kep_p, &ctx_u.ned);
+      u3z(val);
+    }
+
+    u3z(pel);
+  }
+
+  u3h_walk_with(ctx_u.dea_p, _cj_prune_drop, &num_w);
+
+  u3h_free(ctx_u.dea_p);
+  u3h_free(ctx_u.kep_p);
+  u3h_free(ctx_u.dar_p);
+
+  return num_w;
+}
+
 /* u3j_stay(): extract cold state
 */
 u3_noun
@@ -2217,7 +2477,9 @@ u3j_load(u3_noun rel)
 
   while ( u3_nul != ler ) {
     u3x_cell(ler, &lor, &ler);
-    u3h_put(u3R->jed.cod_p, u3h(lor), u3k(u3t(lor)));
+    u3_noun key = u3m_dedup(u3k(u3h(lor)));
+    u3h_put(u3R->jed.cod_p, key, u3m_dedup(u3k(u3t(lor))));
+    u3z(key);
   }
 
   u3z(rel);
@@ -2328,24 +2590,76 @@ u3j_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("warm jet state");
-  qua_u[0]->siz_w = u3h_mark(u3R->jed.war_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->jed.war_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[0]->qua_u = mua_u;
+    qua_u[0]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("cold jet state");
-  qua_u[1]->siz_w = u3h_mark(u3R->jed.cod_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->jed.cod_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[1]->qua_u = mua_u;
+    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
 
   qua_u[2] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[2]->nam_c = strdup("hank cache");
-  qua_u[2]->siz_w = u3h_mark(u3R->jed.han_p) * 4;
+  qua_u[2]->siz_w = u3h_mark_tot(u3R->jed.han_p) * sizeof(c3_w);
 
   qua_u[3] = c3_calloc(sizeof(*qua_u[3]));
   qua_u[3]->nam_c = strdup("battery hash cache");
-  qua_u[3]->siz_w = u3h_mark(u3R->jed.bas_p) * 4;
+  qua_u[3]->siz_w = u3h_mark_tot(u3R->jed.bas_p) * sizeof(c3_w);
 
   qua_u[4] = c3_calloc(sizeof(*qua_u[4]));
   qua_u[4]->nam_c = strdup("call site cache");
   u3h_walk_with(u3R->jed.han_p, _cj_mark_hank, &qua_u[4]->siz_w);
-  qua_u[4]->siz_w *= 4;
+  qua_u[4]->siz_w *= sizeof(c3_w);
 
   c3_w sum_w = 0;
   for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
@@ -2358,7 +2672,7 @@ u3j_mark()
   if ( u3R == &(u3H->rod_u) ) {
     qua_u[5] = c3_calloc(sizeof(*qua_u[5]));
     qua_u[5]->nam_c = strdup("hot jet state");
-    qua_u[5]->siz_w = u3h_mark(u3R->jed.hot_p) * 4;
+    qua_u[5]->siz_w = u3h_mark_tot(u3R->jed.hot_p) * sizeof(c3_w);
 
     sum_w += qua_u[5]->siz_w;
 

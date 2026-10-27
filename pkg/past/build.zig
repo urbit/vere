@@ -6,11 +6,20 @@ pub fn build(b: *std.Build) !void {
 
     const copts: []const []const u8 =
         b.option([]const []const u8, "copt", "") orelse &.{};
+    const vere64: bool = b.option(bool, "vere64", "") orelse false;
+
+    if (vere64) return;
 
     const pkg_past = b.addLibrary(.{
         .name = "past",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    pkg_past.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -28,17 +37,20 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto
     });
 
     pkg_past.linkLibC();
@@ -55,9 +67,29 @@ pub fn build(b: *std.Build) !void {
     });
     try flags.appendSlice(copts);
 
+    const c_source_files: []const []const u8 = &.{
+        "v1.c",
+        "v2.c",
+        "v3.c",
+        "v4.c",
+        "migrate_v2.c",
+        "migrate_v3.c",
+        "migrate_v4.c",
+        "migrate_v5.c",
+    };
+
+    const install_headers: []const []const u8 = &.{
+        "v1.h",
+        "v2.h",
+        "v3.h",
+        "v4.h",
+        "v5.h",
+        "migrate.h",
+    };
+
     pkg_past.addCSourceFiles(.{
         .root = b.path(""),
-        .files = &c_source_files,
+        .files = c_source_files,
         .flags = flags.items,
     });
 
@@ -65,23 +97,3 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(pkg_past);
 }
-
-const c_source_files = [_][]const u8{
-    "v1.c",
-    "v2.c",
-    "v3.c",
-    "v4.c",
-    "migrate_v2.c",
-    "migrate_v3.c",
-    "migrate_v4.c",
-    "migrate_v5.c",
-};
-
-const install_headers = [_][]const u8{
-    "v1.h",
-    "v2.h",
-    "v3.h",
-    "v4.h",
-    "v5.h",
-    "migrate.h",
-};

@@ -12,7 +12,7 @@
            u3_atom len,
            u3_atom dat)
   {
-    if ( !_(u3a_is_cat(boz)) || (boz >= 32) ||
+    if ( !_(u3a_is_cat(boz)) || (boz >= u3a_word_bits) ||
          !_(u3a_is_cat(len)) ) {
       return u3m_bail(c3__fail);
     }
@@ -27,10 +27,11 @@
   {
     u3_noun boz, len, dat;
 
-    if ( (c3n == u3r_mean(cor, u3x_sam_2, &boz,
-                               u3x_sam_6, &len,
-                               u3x_sam_7, &dat, 0)) ||
-         (c3n == u3ud(boz)) ||
+    boz = u3h(u3h(u3t(cor)));
+    len = u3h(u3t(u3h(u3t(cor))));
+    dat = u3t(u3t(u3h(u3t(cor))));
+
+    if ( (c3n == u3ud(boz)) ||
          (c3n == u3ud(len)) ||
          (c3n == u3ud(dat)) )
     {

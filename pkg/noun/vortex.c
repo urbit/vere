@@ -7,6 +7,7 @@
 #include "jets/k.h"
 #include "jets/q.h"
 #include "log.h"
+#include "events.h"
 #include "manage.h"
 #include "nock.h"
 #include "retrieve.h"
@@ -35,7 +36,7 @@ u3v_life(u3_noun eve)
 
 /* u3v_boot(): evaluate boot sequence, making a kernel
 */
-c3_o
+u3_weak
 u3v_boot(u3_noun eve)
 {
   c3_d len_d;
@@ -49,8 +50,19 @@ u3v_boot(u3_noun eve)
     u3_noun pro = u3m_soft(0, u3v_life, eve);
 
     if ( u3_blip != u3h(pro) ) {
-      u3z(pro);
-      return c3n;
+      u3_noun mot = u3h(pro);
+      if ( _(u3a_is_cat(mot)) ) {
+        c3_c mot_c[5] = {0};
+        mot_c[0] = (mot >>  0) & 0xff;
+        mot_c[1] = (mot >>  8) & 0xff;
+        mot_c[2] = (mot >> 16) & 0xff;
+        mot_c[3] = (mot >> 24) & 0xff;
+        fprintf(stderr, "boot: bail: %%%s\r\n", mot_c);
+      }
+      else {
+        fprintf(stderr, "boot: bail\r\n");
+      }
+      return pro;
     }
 
     u3z(u3A->roc);
@@ -59,7 +71,7 @@ u3v_boot(u3_noun eve)
     u3z(pro);
   }
 
-  return c3y;
+  return u3_none;
 }
 
 /* _cv_lite(): load lightweight, core-only pill.
@@ -125,10 +137,10 @@ _cv_nock_wish(u3_noun txt)
   return pro;
 }
 
-/* u3v_wish_n(): text expression with cache. with the input as a u3_noun.
+/* u3v_wish_w(): text expression with cache. with the input as a u3_noun.
 */
 u3_noun
-u3v_wish_n(u3_noun txt)
+u3v_wish_w(u3_noun txt)
 {
   u3t_event_trace("u3v_wish", 'b');
   u3_weak exp = u3kdb_get(u3k(u3A->yot), u3k(txt));
@@ -203,14 +215,14 @@ u3v_do(const c3_c* txt_c, u3_noun sam)
 c3_o
 u3v_lily(u3_noun fot, u3_noun txt, c3_l* tid_l)
 {
-  c3_w    wad_w;
+  c3_w wad_w;
   u3_noun uco = u3dc("slaw", fot, u3k(txt));
   u3_noun p_uco, q_uco;
 
   if ( (c3n == u3r_cell(uco, &p_uco, &q_uco)) ||
        (u3_nul != p_uco) ||
        (c3n == u3r_safe_word(q_uco, &wad_w)) ||
-       (wad_w & 0x80000000) )
+       (wad_w & u3a_indirect_flag) )
   {
     c3_c* txt_c = u3r_string(txt);
     u3l_log("strange lily %s", txt_c);
@@ -280,6 +292,12 @@ u3v_poke(u3_noun sam)
 # endif
   }
 
+  //  measurement: the new state's alignment with the old
+  //
+  if ( c3y == u3a_is_cell(pro) ) {
+    u3e_measure_align(u3t(pro), u3A->roc);
+  }
+
   return pro;
 }
 
@@ -288,7 +306,10 @@ u3v_poke(u3_noun sam)
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 {
-  u3_noun gon = u3m_soft(mil_w, u3v_poke, eve);
+  //  defer home-road gains from the product's take to the old state's
+  //  release, so that the many that cancel are never written
+  //
+  u3_noun gon = u3m_soft_with(mil_w, u3v_poke, eve, u3a_defer_open);
   u3_noun tag, dat;
   u3x_cell(gon, &tag, &dat);
 
@@ -305,12 +326,18 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
     u3_noun vir, cor;
     u3x_cell(dat, &vir, &cor);
 
+    c3_y pha_y = u3e_Phase;
+
+    u3e_Phase = u3e_pha_roc_lose;
     u3z(u3A->roc);
+    u3e_Phase = u3e_pha_roc_misc;
     u3A->roc = u3k(cor);
     u3A->eve_d++;
 
     *pro = u3k(vir);
     u3z(gon);
+    u3a_defer_close();
+    u3e_Phase = pha_y;
     return c3y;
   }
 }
@@ -318,42 +345,41 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 /* u3v_tank(): dump single tank.
 */
 void
-u3v_tank(u3_noun blu, c3_l tab_l, u3_noun tac)
+u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
-  u3v_punt(blu, tab_l, u3nc(tac, u3_nul));
+  u3v_punt(blu_u, tab_l, u3nc(tac, u3_nul));
 }
 
 /* u3v_punt(): dump tank list.
 */
 void
-u3v_punt(u3_noun blu, c3_l tab_l, u3_noun tac)
+u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac)
 {
 #if 0
-  u3_noun blu   = u3_term_get_blew(0);
+  u3v_blew blu_u   = u3_term_get_blew(0);
 #endif
-  c3_l    col_l = u3h(blu);
+  c3_h    col_h = blu_u.col_h;
   u3_noun cat   = tac;
 
   //  We are calling nock here, but hopefully need no protection.
   //
   while ( c3y == u3du(cat) ) {
-    u3_noun wol = u3dc("wash", u3nc(tab_l, col_l), u3k(u3h(cat)));
+    u3_noun wol = u3dc("wash", u3nc(tab_l, col_h), u3k(u3h(cat)));
 
     u3m_wall(wol);
     cat = u3t(cat);
   }
   u3z(tac);
-  u3z(blu);
 }
 
 /* u3v_sway(): print trace.
 */
 void
-u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax)
+u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax)
 {
   u3_noun mok = u3dc("mook", 2, tax);
 
-  u3v_punt(blu, tab_l, u3k(u3t(mok)));
+  u3v_punt(blu_u, tab_l, u3k(u3t(mok)));
   u3z(mok);
 }
 
@@ -368,11 +394,11 @@ u3v_mark()
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("kernel");
-  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * 4;
+  qua_u[0]->siz_w = u3a_mark_noun(arv_u->roc) * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[2]));
   qua_u[1]->nam_c = strdup("wish cache");
-  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * 4;
+  qua_u[1]->siz_w = u3a_mark_noun(arv_u->yot) * sizeof(c3_w);
 
   qua_u[2] = NULL;
 

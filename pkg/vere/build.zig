@@ -11,8 +11,15 @@ pub fn build(b: *std.Build) !void {
     // @panic("Missing required option: pace");
     const version = b.option([]const u8, "version", "") orelse "3.5";
     // @panic("Missing required option: version");
+    const vere64 = b.option(bool, "vere64", "") orelse false;
 
     const pkg_vere = b.addLibrary(.{ .name = "vere", .root_module = b.createModule(.{ .target = target, .optimize = optimize }) });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    pkg_vere.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -30,75 +37,82 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ent = b.dependency("pkg_ent", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ur = b.dependency("pkg_ur", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_noun = b.dependency("pkg_noun", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
-    });
-
-    const pkg_past = b.dependency("pkg_past", .{
-        .target = target,
-        .optimize = optimize,
-        .copt = copts,
+        .no_lto = no_lto,
     });
 
     const avahi = b.dependency("avahi", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const curl = b.dependency("curl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const h2o = b.dependency("h2o", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const libuv = b.dependency("libuv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lmdb = b.dependency("lmdb", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const natpmp = b.dependency("natpmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const urcrypt = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const zlib = b.dependency("zlib", .{
@@ -160,7 +174,16 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.linkLibrary(pkg_ent.artifact("ent"));
     pkg_vere.linkLibrary(pkg_ur.artifact("ur"));
     pkg_vere.linkLibrary(pkg_noun.artifact("noun"));
-    pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    if (!vere64) {
+        const pkg_past = b.dependency("pkg_past", .{
+            .target = target,
+            .optimize = optimize,
+            .copt = copts,
+            .vere64 = vere64,
+            .no_lto = no_lto,
+        });
+        pkg_vere.linkLibrary(pkg_past.artifact("past"));
+    }
     pkg_vere.linkLibC();
 
     var files = std.array_list.Managed([]const u8).init(b.allocator);

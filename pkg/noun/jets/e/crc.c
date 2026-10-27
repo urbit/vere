@@ -25,6 +25,7 @@ u3qe_crc32(u3_noun input_octs)
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(tail);
+    // XX: little endian
     input = (c3_y*)vat_u->buf_w;
   }
 
@@ -51,7 +52,10 @@ u3we_crc32(u3_noun cor)
 {
   u3_noun a = u3r_at(u3x_sam, cor);
 
-  if ( (u3du(a) == c3y) && (u3ud(u3h(a)) == c3y) && (u3ud(u3t(a)) == c3y) ) {
+  if ( (u3_none != a)
+  && (u3du(a) == c3y)
+  && (u3ud(u3h(a)) == c3y)
+  && (u3ud(u3t(a)) == c3y) ) {
     return u3qe_crc32(a);
   } else {
     return u3m_bail(c3__exit);

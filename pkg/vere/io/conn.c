@@ -117,7 +117,7 @@
 */
   typedef struct _u3_chan {
     struct _u3_moor   mor_u;            //  message handler
-    c3_l              coq_l;            //  connection number
+    c3_h              coq_h;            //  connection number
     c3_o              liv_o;            //  connection live
     struct _u3_shan*  san_u;            //  server backpointer
     struct _u3_cran*  ran_u;            //  request list
@@ -127,7 +127,7 @@
 */
   typedef struct _u3_shan {
     uv_pipe_t         pyp_u;            //  server stream handler
-    c3_l              nex_l;            //  next connection number
+    c3_h              nex_l;            //  next connection number
     struct _u3_conn*  con_u;            //  device backpointer
     struct _u3_chan*  can_u;            //  connection list
   } u3_shan;
@@ -136,7 +136,7 @@
 */
   typedef struct _u3_conn {
     u3_auto           car_u;            //  driver
-    c3_l              sev_l;            //  instance number
+    c3_h              sev_l;            //  instance number
     struct _u3_shan*  san_u;            //  server reference
     u3_cue_xeno*      sil_u;            //  cue handle
     c3_o              kan_o;            //  %khan present?
@@ -176,14 +176,14 @@ _conn_send_noun(u3_chan* can_u, u3_noun nun)
 /* _conn_find_chan(): lookup channel by connection number.
 */
 static u3_chan*
-_conn_find_chan(u3_conn* con_u, c3_l sev_l, c3_l coq_l)
+_conn_find_chan(u3_conn* con_u, c3_h sev_l, c3_h coq_l)
 {
   u3_chan* ret_u;
 
   for ( ret_u = con_u->san_u->can_u;
         ret_u;
         ret_u = (u3_chan*)ret_u->mor_u.nex_u ) {
-    if ( coq_l == ret_u->coq_l ) {
+    if ( coq_l == ret_u->coq_h ) {
       return ret_u;
     }
   }
@@ -288,6 +288,12 @@ _conn_close_chan(u3_shan* san_u, u3_chan* can_u)
   u3_chan*  inn_u;
   u3_cran*  ran_u;
 
+  //  already closing; teardown is idempotent.
+  //
+  if ( uv_is_closing((uv_handle_t*)&can_u->mor_u.pyp_u) ) {
+    return;
+  }
+
   //  unset chan on all pending requests.
   //
   for ( ran_u = can_u->ran_u; ran_u; ran_u = ran_u->nex_u ) {
@@ -316,7 +322,7 @@ _conn_close_chan(u3_shan* san_u, u3_chan* can_u)
 
     wir = u3nq(c3__khan,
                u3dc("scot", c3__uv, con_u->sev_l),
-               u3dc("scot", c3__ud, can_u->coq_l),
+               u3dc("scot", c3__ud, can_u->coq_h),
                u3_nul);
     cad = u3nc(c3__done, u3_nul);
     u3_auto_peer(
@@ -335,12 +341,24 @@ _conn_moor_bail(void* ptr_v, ssize_t err_i, const c3_c* err_c)
   u3_chan*  can_u = (u3_chan*)ptr_v;
   u3_shan*  san_u = can_u->san_u;
 
+  //  already closing; freed from the close callback.
+  //
+  if ( uv_is_closing((uv_handle_t*)&can_u->mor_u.pyp_u) ) {
+    return;
+  }
+
   if ( err_i != UV_EOF ) {
     u3l_log("conn: moor bail %zd %s", err_i, err_c);
+
+    //  notify the client, unless it's already gone: writing to a dead
+    //  pipe fails again and re-enters here.
+    //
     if ( _(can_u->liv_o) ) {
-      _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_word(err_i),
-                      u3i_string(err_c)));
       can_u->liv_o = c3n;
+      if ( (UV_EPIPE != err_i) && (UV_ECONNRESET != err_i) ) {
+        _conn_send_noun(can_u, u3nq(0, c3__bail, u3i_half(err_i),
+                        u3i_string(err_c)));
+      }
     }
   }
 
@@ -516,9 +534,8 @@ _conn_read_peel(u3_conn* con_u, u3_noun dat)
                    u3nc(c3__mass, u3_nul),
                    u3nc(c3__quic, u3_nul),
                    u3nc(c3__port,
-                        u3i_list(c3__ames, c3__htls, c3__http, u3_none)),
-                   u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul),
-                   u3_none));
+                        u3i_list(c3__ames, c3__htls, c3__http)),
+                   u3nc(c3__v, u3_nul), u3nc(c3__who, u3_nul)));
       } break;
       //  simple health check.
       //
@@ -627,7 +644,7 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
       }
       wir = u3nc(c3__khan,
                  u3nq(u3dc("scot", c3__uv, con_u->sev_l),
-                      u3dc("scot", c3__ud, can_u->coq_l), u3k(rud), u3_nul));
+                      u3dc("scot", c3__ud, can_u->coq_h), u3k(rud), u3_nul));
       u3_auto_peer(
         u3_auto_plan(&con_u->car_u,
                      u3_ovum_init(0, c3__k, wir, u3k(can))),
@@ -664,12 +681,18 @@ _conn_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
     case c3__urth: {
       switch (dat) {
         default: {
+          u3_noun p;
+          if ( c3y == u3r_p(dat, c3__meld, &p) ) {
+            _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
+            u3_pier_meld(con_u->car_u.pir_u, u3k(p));
+            break;
+          }
           err_i = -7; err_c = "urth-bad";
           goto _moor_poke_out;
         } break;
         case c3__meld: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
-          u3_pier_meld(con_u->car_u.pir_u);
+          u3_pier_meld(con_u->car_u.pir_u, u3_nul);
         } break;
         case c3__pack: {
           _conn_send_noun(can_u, u3nc(u3k(rid), c3y));
@@ -704,8 +727,7 @@ _conn_sock_cb(uv_stream_t* sem_u, c3_i tas_i)
   can_u->mor_u.ptr_v = can_u;
   can_u->mor_u.pok_f = _conn_moor_poke;
   can_u->mor_u.bal_f = _conn_moor_bail;
-  can_u->mor_u.fag_w = 1; // XX cleanup, nonzero means ignore EOF
-  can_u->coq_l = san_u->nex_l++;
+  can_u->coq_h = san_u->nex_l++;
   can_u->san_u = san_u;
   err_i = uv_timer_init(u3L, &can_u->mor_u.tim_u);
   u3_assert(!err_i);
@@ -852,8 +874,8 @@ _conn_io_talk(u3_auto* car_u)
 */
 static void
 _conn_ef_handle(u3_conn*  con_u,
-                c3_l      sev_l,
-                c3_l      coq_l,
+                c3_h      sev_l,
+                c3_h      coq_l,
                 u3_atom   rid,
                 u3_noun   tag,
                 u3_noun   dat)
@@ -874,7 +896,7 @@ _conn_ef_handle(u3_conn*  con_u,
     }
   }
   else {
-    u3l_log("conn: handle-no-coq %" PRIx32 " %" PRIu32,
+    u3l_log("conn: handle-no-coq %" PRIxc3_h " %" PRIc3_h,
             sev_l, coq_l);
   }
   u3z(rid); u3z(tag); u3z(dat);
@@ -910,13 +932,13 @@ _conn_io_exit(u3_auto* car_u)
 {
   u3_conn*          con_u = (u3_conn*)car_u;
   c3_c*             pax_c = u3_Host.dir_c;
-  c3_w              len_w = strlen(pax_c) + 1 + sizeof(URB_SOCK_PATH);
+  c3_h              len_w = strlen(pax_c) + 1 + sizeof(URB_SOCK_PATH);
   c3_c*             paf_c = c3_malloc(len_w);
   c3_i              wit_i;
 
   wit_i = snprintf(paf_c, len_w, "%s/%s", pax_c, URB_SOCK_PATH);
   u3_assert(wit_i > 0);
-  u3_assert(len_w == (c3_w)wit_i + 1);
+  u3_assert(len_w == (c3_h)wit_i + 1);
 
   if ( 0 != unlink(paf_c) ) {
     if ( ENOENT != errno ) {

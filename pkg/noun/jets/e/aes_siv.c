@@ -15,10 +15,11 @@ typedef int (*urcrypt_siv)(c3_y*, size_t,
 // mat_w = size in bytes of assoc array
 // dat_w = size of allocation (array + atom storage)
 static void
-_cqea_measure_ads(u3_noun ads, c3_w* soc_w, c3_w *mat_w, c3_w *dat_w)
+_cqea_measure_ads(u3_noun ads, c3_w *soc_w, c3_w *mat_w, c3_w *dat_w)
 {
   u3_noun i, t;
-  c3_w a_w, b_w, tmp_w;
+  c3_w a_w;
+  c3_w b_w, tmp_w;
 
   for ( a_w = b_w = 0, t = ads; u3_nul != t; ++a_w ) {
     u3x_cell(t, &i, &t);
@@ -105,7 +106,8 @@ _cqea_siv_en(c3_y*   key_y,
              urcrypt_siv low_f)
 {
   u3_noun ret;
-  c3_w txt_w, soc_w;
+  c3_w txt_w;
+  c3_w soc_w;
   c3_y *txt_y, *out_y, iv_y[16];
   urcrypt_aes_siv_data *dat_u;
 
@@ -116,7 +118,7 @@ _cqea_siv_en(c3_y*   key_y,
   ret = ( 0 != (*low_f)(txt_y, txt_w, dat_u, soc_w, key_y, iv_y, out_y) )
       ? u3_none
       : u3nt(u3i_bytes(16, iv_y),
-             u3i_words(1, &txt_w),
+             u3i_word(txt_w),
              u3i_bytes(txt_w, out_y));
 
   u3a_free(txt_y);
@@ -187,10 +189,11 @@ u3wea_siva_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  txt = u3h(u3t(cor));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {
@@ -220,13 +223,13 @@ u3wea_siva_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;
 
-  if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  iv = u3h(u3h(u3t(cor)));
+  len = u3h(u3t(u3h(u3t(cor))));
+  txt = u3t(u3t(u3h(u3t(cor))));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {
@@ -255,10 +258,11 @@ u3wea_sivb_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  txt = u3h(u3t(cor));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {
@@ -288,13 +292,13 @@ u3wea_sivb_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;
 
-  if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  iv = u3h(u3h(u3t(cor)));
+  len = u3h(u3t(u3h(u3t(cor))));
+  txt = u3t(u3t(u3h(u3t(cor))));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {
@@ -322,10 +326,11 @@ u3wea_sivc_en(u3_noun cor)
 {
   u3_noun key, ads, txt;
 
-  if ( c3n == u3r_mean(cor, u3x_sam, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  txt = u3h(u3t(cor));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {
@@ -355,13 +360,13 @@ u3wea_sivc_de(u3_noun cor)
 {
   u3_noun key, ads, iv, len, txt;
 
-  if ( c3n == u3r_mean(cor,
-                       u3x_sam_2, &iv,
-                       u3x_sam_6, &len,
-                       u3x_sam_7, &txt,
-                       u3x_con_sam_2, &key,
-                       u3x_con_sam_3, &ads, 0) ||
-       c3n == u3ud(key) ||
+  iv = u3h(u3h(u3t(cor)));
+  len = u3h(u3t(u3h(u3t(cor))));
+  txt = u3t(u3t(u3h(u3t(cor))));
+  key = u3h(u3h(u3t(u3t(u3t(cor)))));
+  ads = u3t(u3h(u3t(u3t(u3t(cor)))));
+
+  if ( c3n == u3ud(key) ||
        c3n == u3ud(txt) ) {
     return u3m_bail(c3__exit);
   } else {

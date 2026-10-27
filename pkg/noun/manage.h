@@ -11,6 +11,8 @@
 #include "version.h"
 #include "rsignal.h"
 
+extern c3_h u3m_Ford_fresh_road_depth_h;
+
     /** System management.
     **/
       /* u3m_boot(): start the u3 system. return next event, starting from 1.
@@ -47,7 +49,8 @@
       **    %oops               ::  assertion failure
       */
         c3_i
-        u3m_bail(c3_m how_m) __attribute__((noreturn));
+        //u3m_bail(c3_m how_m) __attribute__((noreturn));
+        u3m_bail(u3_noun how_m) __attribute__((noreturn));
 
       /* u3m_fault(): handle a memory event with libsigsegv protocol.
       */
@@ -92,7 +95,7 @@
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
-        u3m_signal(u3_noun sig_l);
+        u3m_signal(c3_m sig_m);
 
       /* u3m_file(): load file, as atom, or bail.
       */
@@ -114,12 +117,24 @@
         u3_noun
         u3m_love(u3_noun pro);
 
+        c3_w
+        u3m_road_depth(void);
+
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **
       **  Produces [%$ result] or [%error (list tank)].
       */
         u3_noun
         u3m_soft(c3_w mil_w, u3_funk fun_f, u3_noun arg);
+
+      /* u3m_soft_with(): u3m_soft(), running [hom_f] (if any) on success,
+      **                  back on the home road before anything is taken.
+      */
+        u3_noun
+        u3m_soft_with(c3_w      mil_w,
+                      u3_funk   fun_f,
+                      u3_noun   arg,
+                      void    (*hom_f)(void));
 
       /* u3m_soft_cax(): descend into virtualization context, with cache.
       */
@@ -171,7 +186,12 @@
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */
         void
-        u3m_grab(u3_noun som, ...);   // terminate with u3_none
+        u3m_vgrab(u3_noun* som, c3_z len_z);
+
+#       define u3m_grab(...) ({                               \
+          u3_noun _args[] = {__VA_ARGS__};                    \
+          u3m_vgrab(_args, sizeof(_args) / sizeof(u3_noun));  \
+          })
 
       /* u3m_water(): produce high and low watermarks.  Asserts u3R == u3H.
       */
@@ -213,10 +233,56 @@
         void
         u3m_reclaim(void);
 
+      /* u3m_reclaim_due(): clear home-road caches that have outgrown
+      **                    their bounds.
+      */
+        void
+        u3m_reclaim_due(void);
+
       /* u3m_pack: compact (defragment) memory, returns u3a_open delta.
       */
         c3_w
         u3m_pack(void);
+        
+      /* u3m_dedup: deduplicate the noun across the hashcons sets
+      */
+        u3_noun
+        u3m_dedup(u3_noun som);
+      
+      /* u3m_dedup_ream(): rebuild the home-road hashcons set from
+      **                   persistent tables.
+      */
+        void
+        u3m_dedup_ream(void);
+
+      /* u3m_Dup_busy_w: reading the home-road hashcons set (see u3t_samp()).
+      */
+        extern volatile c3_w u3m_Dup_busy_w;
+
+      /* u3m_dedup_hint(): record the home-road hashcons set's size,
+      **                   to size its next rebuild.
+      */
+        void
+        u3m_dedup_hint(void);
+
+      /* u3m_dedup_lose(): remove [som], about to be freed, from the
+      **                   home-road hashcons set (see u3a_hcon_has()).
+      */
+        void
+        u3m_dedup_lose(u3_noun som);
+
+      /* u3m_dedup_stat(): the home-road hashcons set's atoms, cells,
+      **                   and estimated process memory in bytes.
+      */
+        void
+        u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
+
+      /* u3m_dedup_meas(): the home-road cell table's buckets, and the
+      **                   pages an on-loom copy would have written since
+      **                   the last call (0 unless measuring).
+      */
+        void
+        u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d);
 
     /*  Urbit time: 128 bits, leap-free.
     **

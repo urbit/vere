@@ -42,6 +42,7 @@
     u3_noun u3wb_scag(u3_noun);
     u3_noun u3wb_slag(u3_noun);
     u3_noun u3wb_snag(u3_noun);
+    u3_noun u3wb_spin(u3_noun);
     u3_noun u3wb_sort(u3_noun);
     u3_noun u3wb_turn(u3_noun);
     u3_noun u3wb_weld(u3_noun);
@@ -319,8 +320,8 @@
     u3_noun u3wes_gth(u3_noun);
 
     u3_noun u3we_crc32(u3_noun);
-    u3_noun u3we_decompress_zlib(u3_noun);
-    u3_noun u3we_decompress_gzip(u3_noun);
+    u3_weak u3we_decompress_zlib(u3_noun);
+    u3_weak u3we_decompress_gzip(u3_noun);
 
     u3_noun u3we_lia_run_v1(u3_noun);
     u3_noun u3we_lia_run_once(u3_noun);

@@ -38,6 +38,7 @@ static u3_noun
 combine(u3_noun p, u3_noun q)
 {
   if ( (c3y == u3a_is_atom(p)) || (c3y == u3a_is_atom(q)) ) {
+    u3z(p), u3z(q);
     return 0;
   }
 
@@ -121,7 +122,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
     u3_noun m = combine(d_part, combine(c_part, combine(b_part, a_part)));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -155,7 +156,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
                 combine(c_part, combine(b_part, a_part)))));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -191,7 +192,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
                 combine(b_part, a_part)))))));
     u3a_free(c);
 
-    if (_(u3a_is_atom(m))) {
+    if ( 0 == m ) {
       return 0;
     }
 
@@ -259,7 +260,7 @@ _parse_p(u3_noun cor, u3_noun txt) {
 }
 
 #define PARSE_NONZERO_NUMBER(numname)               \
-  c3_w numname = 0;                                 \
+  u3_noun numname = 0;                                 \
   do {                                              \
     if (cur[0] > '9' || cur[0] < '1') {             \
       u3a_free(c);                                  \
@@ -298,6 +299,12 @@ _parse_p(u3_noun cor, u3_noun txt) {
       out = 10 + cur[0] - 'a';                      \
     } else {                                        \
       u3a_free(c);                                  \
+      u3z(list);                                    \
+      u3z(year);                                    \
+      u3z(day);                                     \
+      u3z(hour);                                    \
+      u3z(minute);                                  \
+      u3z(second);                                  \
       return u3_none;                               \
     }                                               \
     cur++;                                          \
@@ -314,7 +321,9 @@ _parse_da(u3_noun cor, u3_noun txt) {
   // Parse out an arbitrary year number. Starts with a nonzero digit followed
   // by a series of any digits.
   PARSE_NONZERO_NUMBER(year);
-
+  //  Beyond that point we hold refcounted references to more and more nouns,
+  //  so we can't use helper macros
+  //
   // Parse the optional negative sign for BC dates.
   u3_noun bc = c3y;
   if (cur[0] == '-') {
@@ -322,7 +331,13 @@ _parse_da(u3_noun cor, u3_noun txt) {
     cur++;
   }
 
-  CONSUME('.');
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    return u3_none;
+  }
+  cur++;
 
   // Parse out a two digit month (mot:ag). Either a single digit 1-9 or 1[012].
   c3_y month;
@@ -341,14 +356,34 @@ _parse_da(u3_noun cor, u3_noun txt) {
     cur++;
   } else {
     u3a_free(c);
+    u3z(year);
     return u3_none;
   }
 
-  CONSUME('.');
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    return u3_none;
+  }
+  cur++;
 
   // Parse out a two digit day (dip:ag). This number can be really big, so we
   // can track number of days since September 1993.
-  PARSE_NONZERO_NUMBER(day);
+  // PARSE_NONZERO_NUMBER(day);
+  u3_noun day = 0;
+  if (cur[0] > '9' || cur[0] < '1') {
+    u3a_free(c);
+    u3z(year);
+    return u3_none;
+  }
+  day = cur[0] - '0';
+  cur++;
+  while (isdigit(cur[0])) {
+    day = u3ka_mul(day, 10);
+    day = u3ka_add(day, cur[0] - '0');
+    cur++;
+  }
 
   if (cur[0] == 0) {
     u3a_free(c);
@@ -359,14 +394,94 @@ _parse_da(u3_noun cor, u3_noun txt) {
     return u3nc(0, res);
   }
 
-  CONSUME('.');
-  CONSUME('.');
+  // CONSUME('.');
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    u3z(day);
+    return u3_none;
+  }
+  cur++;
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(day);
+    u3z(year);
+    return u3_none;
+  }
+  cur++;
 
-  PARSE_INCLUDING_ZERO_NUMBER(hour);
-  CONSUME('.');
-  PARSE_INCLUDING_ZERO_NUMBER(minute);
-  CONSUME('.');
-  PARSE_INCLUDING_ZERO_NUMBER(second);
+  // PARSE_INCLUDING_ZERO_NUMBER(hour);
+  u3_noun hour = 0;
+  if (cur[0] > '9' || cur[0] < '0') {
+    u3z(year);
+    u3z(day);
+    u3a_free(c);
+    return u3_none;
+  }
+  hour = cur[0] - '0';
+  cur++;
+  while (isdigit(cur[0])) {
+    hour = u3ka_mul(hour, 10);
+    hour = u3ka_add(hour, cur[0] - '0');
+    cur++;
+  }
+
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    return u3_none;
+  }
+  cur++;
+
+  // PARSE_INCLUDING_ZERO_NUMBER(minute);
+  u3_noun minute = 0;
+  if (cur[0] > '9' || cur[0] < '0') {
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    u3a_free(c);
+    return u3_none;
+  }
+  minute = cur[0] - '0';
+  cur++;
+  while (isdigit(cur[0])) {
+    minute = u3ka_mul(minute, 10);
+    minute = u3ka_add(minute, cur[0] - '0');
+    cur++;
+  }
+
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    u3z(minute);
+    return u3_none;
+  }
+  cur++;
+
+  // PARSE_INCLUDING_ZERO_NUMBER(second);
+  u3_noun second = 0;
+  if (cur[0] > '9' || cur[0] < '0') {
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    u3z(minute);
+    u3a_free(c);
+    return u3_none;
+  }
+  second = cur[0] - '0';
+  cur++;
+  while (isdigit(cur[0])) {
+    second = u3ka_mul(second, 10);
+    second = u3ka_add(second, cur[0] - '0');
+    cur++;
+  }
 
   if (cur[0] == 0) {
     u3a_free(c);
@@ -377,8 +492,28 @@ _parse_da(u3_noun cor, u3_noun txt) {
     return u3nc(0, res);
   }
 
-  CONSUME('.');
-  CONSUME('.');
+  // CONSUME('.');
+  // CONSUME('.');
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    u3z(minute);
+    u3z(second);
+    return u3_none;
+  }
+  cur++;
+  if (*cur != '.') {
+    u3a_free(c);
+    u3z(year);
+    u3z(day);
+    u3z(hour);
+    u3z(minute);
+    u3z(second);
+    return u3_none;
+  }
+  cur++;
 
   // Now we have to parse a list of hexidecimal numbers 0-f of length 4 only
   // (zero padded otherwise) separated by dots.
@@ -397,8 +532,7 @@ _parse_da(u3_noun cor, u3_noun txt) {
     if (cur[0] == 0) {
       u3a_free(c);
 
-      u3_noun flopped = u3qb_flop(list);
-      u3z(list);
+      u3_noun flopped = u3kb_flop(list);
 
       u3_noun hok = u3j_cook("u3we_slaw_parse_da", u3k(cor), "year");
       u3_noun res = u3n_slam_on(hok,
@@ -408,7 +542,18 @@ _parse_da(u3_noun cor, u3_noun txt) {
       return u3nc(0, res);
     }
 
-    CONSUME('.');
+    // CONSUME('.');
+    if (*cur != '.') {
+      u3a_free(c);
+      u3z(year);
+      u3z(day);
+      u3z(hour);
+      u3z(minute);
+      u3z(second);
+      u3z(list);
+      return u3_none;
+    }
+    cur++;
   }
 }
 
@@ -451,10 +596,8 @@ u3we_slaw(u3_noun cor)
   u3_noun mod;
   u3_noun txt;
 
-  if (c3n == u3r_mean(cor, u3x_sam_2, &mod,
-                      u3x_sam_3, &txt, 0)) {
-    return u3m_bail(c3__exit);
-  }
+  mod = u3h(u3h(u3t(cor)));
+  txt = u3t(u3h(u3t(cor)));
 
   switch (mod) {
     case c3__da:

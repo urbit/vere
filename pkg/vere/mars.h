@@ -29,9 +29,9 @@
         c3_c*   dir_c;                    //  execution directory (pier)
         c3_d    sen_d;                    //  last event requested
         c3_d    dun_d;                    //  last event processed
-        c3_l    mug_l;                    //  hash of state
-        c3_w    mas_w;                    //  memory threshold state
-        c3_w    fag_w;                    //  flags
+        c3_h    mug_h;                    //  hash of state
+        c3_h    mas_w;                    //  memory threshold state
+        c3_h    fag_w;                    //  flags
         u3_noun sac;                      //  space measurement
         u3_disk* log_u;                   //  event log
         u3_meta met_u;                    //  metadata
@@ -64,7 +64,7 @@
     /* u3_mars_boot(): boot a new ship.
     */
       c3_o
-      u3_mars_boot(u3_mars* mar_u, c3_d len_d, c3_y* hun_y);
+      u3_mars_boot(void* ram_u, c3_d len_d, c3_y* hun_y);
 
     /* u3_mars_load(): load pier.
     */

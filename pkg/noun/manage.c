@@ -28,7 +28,6 @@
 #include "jets/q.h"
 #include "log.h"
 #include "nock.h"
-#include "openssl/crypto.h"
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
@@ -41,19 +40,44 @@
 //
 #undef NO_OVERFLOW
 
-      /* (u3_noun)setjmp(u3R->esc.buf): setjmp within road.
-      */
-#if 0
-        c3_o
-        u3m_trap(void);
+    /* u3m_trap(): trap nock exceptions within the road; produces yes on
+    ** entry, no on escape, setting (why) to the bail ball.
+    **
+    **   MUST be used as the entire controlling expression of an `if`, and
+    **   (why) must be an automatic of the enclosing frame. setjmp cannot
+    **   be wrapped in a function: the jmp_buf dies with the frame that
+    **   filled it.
+    **
+    **   Under VERE64 a 64-bit ball does not fit in longjmp's int return,
+    **   so u3m_escape() stashes it in u3R->esc.why_w and longjmps with a
+    **   literal 1. The ball is latched here, in the controlling expression,
+    **   since esc.why_w lives on the road and is clobbered by the next bail.
+    */
+#ifndef VERE64
+#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
 #else
-#       define u3m_trap() (u3_noun)(_setjmp(u3R->esc.buf))
+#     define u3m_trap(why) \
+        ( _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
+#endif
+
+    /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
+    ** return.
+    **
+    **   A statement, not an expression: on windows _longjmp expands to a
+    **   brace-enclosed block, so it cannot be an operand of a comma.
+    */
+#ifndef VERE64
+#     define u3m_escape(how) \
+        do { _longjmp(u3R->esc.buf, (how)); } while ( 0 )
+#else
+#     define u3m_escape(how) \
+        do { u3R->esc.why_w = (how); _longjmp(u3R->esc.buf, 1); } while ( 0 )
 #endif
 
       /* u3m_signal(): treat a nock-level exception as a signal interrupt.
       */
         void
-        u3m_signal(u3_noun sig_l);
+        u3m_signal(c3_m sig_m);
 
       /* u3m_dump(): dump the current road to stderr.
       */
@@ -91,13 +115,16 @@
         void
         u3m_flog(c3_w gof_w);
 
-      /* u3m_soft_top(): top-level safety wrapper.
+      /* u3m_soft_top(): top-level safety wrapper; on success, [hom_f]
+      **                 (if any) runs on return to the home road, before
+      **                 the product is taken (see u3m_soft_with()).
       */
         u3_noun
         u3m_soft_top(c3_w    mil_w,                     //  timer ms
                      c3_w    pad_w,                     //  base memory pad
                      u3_funk fun_f,
-                     u3_noun   arg);
+                     u3_noun   arg,
+                     void    (*hom_f)(void));
 
 
 //  u3m_signal uses restricted functionality signals for compatibility reasons:
@@ -108,6 +135,11 @@
 //  return or longjmp.
 //
 static rsignal_jmpbuf u3_Signal;
+
+#ifdef VERE64
+#include <stdatomic.h>
+static _Atomic c3_w u3_Sighow;
+#endif
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
@@ -122,7 +154,10 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 #ifdef U3_OS_windows
 #include "veh_handler.h"
+#include "wloom.h"
 #endif
+
+static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
 #if 0
 /* _cm_punt(): crudely print trace.
@@ -141,14 +176,14 @@ _cm_punt(u3_noun tax)
 /* _cm_emergency(): write emergency text to stderr, never failing.
 */
 static void
-_cm_emergency(c3_c* cap_c, c3_l sig_l)
+_cm_emergency(c3_c* cap_c, c3_m sig_m)
 {
   write(2, "\r\n", 2);
   write(2, cap_c, strlen(cap_c));
 
-  if ( sig_l ) {
+  if ( sig_m ) {
     write(2, ": ", 2);
-    write(2, &sig_l, 4);
+    write(2, &sig_m, 4);
   }
 
   write(2, "\r\n", 2);
@@ -165,17 +200,17 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 /* _cm_signal_handle(): handle a signal in general.
 */
 static void
-_cm_signal_handle(c3_l sig_l)
+_cm_signal_handle(c3_m sig_m)
 {
 #ifndef U3_OS_windows
-  if ( c3__over == sig_l ) {
+  if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
     sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
 #endif
   } else
 #endif
   {
-    u3m_signal(sig_l);
+    u3m_signal(sig_m);
   }
 }
 
@@ -298,7 +333,7 @@ _cm_stack_unwind(void)
 /* _cm_signal_recover(): recover from a deep signal, after longjmp.  Free arg.
 */
 static u3_noun
-_cm_signal_recover(c3_l sig_l, u3_noun arg)
+_cm_signal_recover(c3_m sig_m, u3_noun arg)
 {
   u3_noun tax;
 
@@ -308,37 +343,37 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
   u3H->rod_u.bug.tax = 0;
 
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3H->rod_u.off_w;
-    u3t_Spin->fow_w = u3H->rod_u.fow_w;
+    u3t_Spin->off_h = u3H->rod_u.off_h;
+    u3t_Spin->fow_h = u3H->rod_u.fow_h;
   }
 
   if ( &(u3H->rod_u) == u3R ) {
     //  A top-level crash - rather odd.  We should GC.
     //
-    _cm_emergency("recover: top", sig_l);
-    u3C.wag_w |= u3o_check_corrupt;
+    _cm_emergency("recover: top", sig_m);
+    u3C.wag_h |= u3o_check_corrupt;
 
     //  Reset the top road - the problem could be a fat cap.
     //
     _cm_signal_reset();
 
-    if ( (c3__meme == sig_l) && (u3a_open(u3R) <= 256) ) {
+    if ( (c3__meme == sig_m) && (u3a_open(u3R) <= 256) ) {
       // Out of memory at the top level.  Error becomes c3__full,
       // and we release the emergency buffer.  To continue work,
       // we need to readjust the image, eg, migrate to 64 bit.
       //
       u3z(u3R->bug.mer);
       u3R->bug.mer = 0;
-      sig_l = c3__full;
+      sig_m = c3__full;
     }
-    return u3nt(3, sig_l, tax);
+    return u3nt(3, sig_m, tax);
   }
   else {
     u3_noun pro;
 
     //  A signal was generated while we were within Nock.
     //
-    _cm_emergency("recover: dig", sig_l);
+    _cm_emergency("recover: dig", sig_m);
 
 #if 0
     //  Descend to the innermost trace, collecting stack.
@@ -351,7 +386,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 
       while ( rod_u->kid_p ) {
 #if 0
-        u3l_log("collecting %d frames",
+        u3l_log("collecting %"PRIc3_w" frames",
               u3kb_lent((u3to(u3_road, rod_u->kid_p)->bug.tax));
 #endif
         tax = u3kb_weld(_cm_stack_recover(u3to(u3_road, rod_u->kid_p)), tax);
@@ -361,7 +396,7 @@ _cm_signal_recover(c3_l sig_l, u3_noun arg)
 #else
     tax = _cm_stack_unwind();
 #endif
-    pro = u3nt(3, sig_l, tax);
+    pro = u3nt(3, sig_m, tax);
     _cm_signal_reset();
 
     u3z(arg);
@@ -387,6 +422,10 @@ _cm_signal_deep(void)
     abort();
   }
 #else
+  //  windows has no alternate signal stack, so the handler needs room
+  //  reserved on the stack it will be called on. see veh_handler.c.
+  //
+  u3_windows_stack_guard();
   rsignal_install_handler(SIGSTK, _cm_signal_handle_over);
 #endif
 #endif
@@ -398,9 +437,7 @@ _cm_signal_deep(void)
   // go utterly haywire.
   //
   if ( 0 == u3H->rod_u.bug.mer ) {
-    u3H->rod_u.bug.mer = u3i_string(
-      "emergency buffer with sufficient space to cons the trace and bail"
-    );
+    u3H->rod_u.bug.mer = u3i_tape("emergency buffer");
   }
 
   u3t_boot();
@@ -445,9 +482,9 @@ _cm_signal_done(void)
 /* u3m_signal(): treat a nock-level exception as a signal interrupt.
 */
 void
-u3m_signal(u3_noun sig_l)
+u3m_signal(c3_m sig_m)
 {
-  rsignal_longjmp(u3_Signal, sig_l);
+  rsignal_longjmp(u3_Signal, sig_m);
 }
 
 /* u3m_file(): load file, as atom, or bail.
@@ -505,9 +542,8 @@ _pave_parts(void)
   u3a_init_heap();
 
   if ( &(u3H->rod_u) != u3R ) {
-    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(1U << u3a_page));
+    u3R->cel.cel_p = u3of(u3_post, u3a_walloc(((c3_w)1) << u3a_page));
   }
-
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);  //  persistent
   u3R->cax.for_p = u3h_new_cache(u3C.per_w);  //  ford
@@ -518,6 +554,7 @@ _pave_parts(void)
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
+  u3R->dup_p     = u3h_new();
   u3R->how.fag_w = 0;
 }
 
@@ -532,6 +569,7 @@ _pave_params(void)
   //
   //
   return 0
+         ^ ((8 == sizeof(c3_w)) ? 1 : 0)
          ^ (u3a_vits << 1)
          ^ ((u3a_page + 2 - 12) << 3)
          ^ (U3N_VERLAT << 6);
@@ -543,10 +581,10 @@ static void
 _pave_home(void)
 {
   u3_post top_p = u3C.wor_i - u3a_walign;
-  u3_post bot_p = 1U << u3a_page;
+  u3_post bot_p = ((c3_w)1) << u3a_page;
 
   u3H = u3to(u3v_home, 0);
-  memset(u3H, 0, sizeof(u3v_home));
+  memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
   u3H->ver_d = U3V_VERLAT;
   u3H->pam_d = _pave_params();
 
@@ -558,10 +596,9 @@ _pave_home(void)
   _pave_parts();
 }
 
-STATIC_ASSERT( (c3_wiseof(u3v_home) <= (1U << u3a_page)),
+STATIC_ASSERT( (c3_wiseof(u3v_home) <= (((c3_w)1) << u3a_page)),
                "home road size" );
-
-STATIC_ASSERT( ((c3_wiseof(u3v_home) * 4) == sizeof(u3v_home)),
+STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
                "home road alignment" );
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
@@ -582,18 +619,21 @@ _find_home(void)
 
   c3_d pam_d = *((c3_d*)u3_Loom + 1);
 
-  if ( pam_d & 1 ) {
-    fprintf(stderr, "word-size mismatch: 64-bit snapshot in 32-bit binary\r\n");
+  c3_d wit_d = (sizeof(c3_w) == 8) ? 1 : 0;
+  if ( (pam_d & 1) != wit_d ) {
+    fprintf(stderr, "word-size mismatch: %s snapshot in %s binary\r\n",
+                    (pam_d & 1) ? "64-bit" : "32-bit",
+                    wit_d       ? "64-bit" : "32-bit");
     abort();
   }
   if ( ((pam_d >> 1) & 3) != u3a_vits ) {
-    fprintf(stderr, "virtual-bits mismatch: %u in snapshot; %u in binary\r\n",
+    fprintf(stderr, "virtual-bits mismatch: %" PRIc3_w " in snapshot; %u in binary\r\n",
                     (c3_w)((pam_d >> 1) & 3), u3a_vits);
     abort();
   }
   if ( (12 + ((pam_d >> 3) & 7)) != (u3a_page + 2) ) {
-    fprintf(stderr, "page-size mismatch: %u  in snapshot; %u in binary\r\n",
-                    1U << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
+    fprintf(stderr, "page-size mismatch: %" PRIc3_w " in snapshot; %" PRIc3_w " in binary\r\n",
+                    ((c3_w)1) << (12 + ((pam_d >> 3) & 7)), (c3_w)u3a_page + 2);
     abort();
   }
 
@@ -615,6 +655,20 @@ _find_home(void)
     u3_assert(!u3R->fut_w[i_w] && "loom: downgrade detected");
   }
 
+  {
+    //  Check if we downgraded to a version before e.g. cax.for_p was added:
+    //  bytes between the end of the u3v_home struct and the bottom of the heap
+    //  should normally be set to 0.
+    c3_y* byt_y = (c3_y*)u3_Loom;
+    c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
+    c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
+    c3_t acc_y = 0;
+    for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
+      acc_y |= byt_y[i_w];
+    }
+    u3_assert(!acc_y && "loom: downgrade detected");
+  }
+
   //  check for obvious corruption
   //
   {
@@ -625,7 +679,7 @@ _find_home(void)
     nor_w = (low_p + ((1 << u3a_page) - 1)) >> u3a_page;
 
     if ( nor_w > u3P.img_u.pgs_w ) {
-      fprintf(stderr, "loom: corrupt size (%u, %u)\r\n",
+      fprintf(stderr, "loom: corrupt size (%"PRIc3_w", %"PRIc3_w")\r\n",
                       nor_w, u3P.img_u.pgs_w);
       u3_assert(!"loom: corrupt size");
     }
@@ -634,7 +688,7 @@ _find_home(void)
     //  doesn't necessarily indicate corruption.
     //
     if ( nor_w < u3P.img_u.pgs_w ) {
-      fprintf(stderr, "loom: strange size north (%u, %u)\r\n",
+      fprintf(stderr, "loom: strange size north (%"PRIc3_w", %"PRIc3_w")\r\n",
                       nor_w, u3P.img_u.pgs_w);
     }
 
@@ -658,10 +712,26 @@ _find_home(void)
   }
 
   //  properly initialize things from zero-initialize future proof buffer
-  //  XX cax.for_p
+  //
+  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
+  //  proof buffer but instead it was added as a last element of the `cax` sub-
+  //  struct of the road struct. Since
+  //    1) the loom is zero-initialized,
+  //    2) the road is the final member of the u3v_home struct,
+  //    3) `cax` is the last element of the road struct,
+  //    4) `for_p` is the last element of `cax`,
+  //    5) and adding `for_p` did not change the alignment of either the road
+  //       struct or the `cax` struct,
+  //  the layout and the position of the road struct did not change, and a
+  //  simple null check was sufficient for the migration.
+  //  
+  //  The reasoning above is sound as long as we assume no downgrades, which
+  //  would not be detected by any methods present at the moment of cax.for_p
+  //  addition.
   //
   if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
   if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -706,7 +776,7 @@ u3m_dump(void)
       fre_u = fre_u->nex_u;
     }
   }
-  u3l_log("dump: hat_w %x, fre_w %x, allocated %x",
+  u3l_log("dump: hat_w %"PRIxc3_w", fre_w %"PRIxc3_w", allocated %"PRIxc3_w,
           hat_w, fre_w, (hat_w - fre_w));
 
   if ( 0 != (hat_w - fre_w) ) {
@@ -718,14 +788,14 @@ u3m_dump(void)
 
       if ( 0 != box_u->use_w ) {
 #ifdef U3_MEMORY_DEBUG
-        // u3l_log("live %d words, code %x", box_u->siz_w, box_u->cod_w);
+        // u3l_log("live %"PRIc3_w" words, code %"PRIxc3_w, box_u->siz_w, box_u->cod_w);
 #endif
         mem_w += box_u->siz_w;
       }
       box_w += box_u->siz_w;
     }
 
-    u3l_log("second count: %x", mem_w);
+    u3l_log("second count: %"PRIxc3_w, mem_w);
   }
 }
 #endif
@@ -743,7 +813,7 @@ err_cb(void* data, const char* msg, int errnum)
   bdata->count++;
 
   if ( bdata->count <= 1 ) {
-    /* u3l_log("Backtrace error %d: %s", errnum, msg); */
+    /* u3l_log("Backtrace error %"PRIc3_w": %s", errnum, msg); */
     bdata->fail = 1;
   }
 }
@@ -938,7 +1008,7 @@ u3m_bail(u3_noun how)
       }
       else if ( 1 != u3h(how) ) {
         u3_assert(_(u3ud(u3h(how))));
-        fprintf(stderr, "\r\nbail: %d\r\n", u3h(how));
+        fprintf(stderr, "\r\nbail: %"PRIc3_w"\r\n", u3h(how));
       }
     }
   }
@@ -997,11 +1067,11 @@ u3m_bail(u3_noun how)
 
   // Reset the spin stack pointer
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
+    u3t_Spin->off_h = u3R->off_h;
+    u3t_Spin->fow_h = u3R->fow_h;
   }
 
-  _longjmp(u3R->esc.buf, how);
+  u3m_escape(how);
 }
 
 int c3_cooked(void) { return u3m_bail(c3__oops); }
@@ -1029,17 +1099,8 @@ u3m_leap(c3_w pad_w)
   {
     u3a_pile pil_u;
     c3_p     ptr_p;
-    u3a_pile_prep(&pil_u, sizeof(u3a_road) + 15); // XX refactor to wiseof
+    u3a_pile_prep(&pil_u, sizeof(u3a_road), 16);
     ptr_p = (c3_p)u3a_push(&pil_u);
-
-    //  XX add push_once, push_once_aligned
-    //
-    if ( ptr_p & 15 ) {
-      ptr_p &= ~15;
-      if ( c3n == u3a_is_north(u3R) ) {
-        ptr_p += 16;
-      }
-    }
 
     rod_u = (void*)ptr_p;
     memset(rod_u, 0, sizeof(u3a_road));
@@ -1054,10 +1115,10 @@ u3m_leap(c3_w pad_w)
       //  pad and page-align the hat
       //
       bot_p  = u3R->hat_p + pad_w;
-      bot_p +=   (1U << u3a_page) - 1;
-      bot_p &= ~((1U << u3a_page) - 1);
+      bot_p +=   ((c3_w)1 << u3a_page) - 1;
+      bot_p &= ~(((c3_w)1 << u3a_page) - 1);
       top_p  = u3R->cap_p;
-      top_p &= ~((1U << u3a_page) - 1);
+      top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
       if ( bot_p >= top_p ) {
         u3m_bail(c3__meme);
@@ -1080,17 +1141,17 @@ u3m_leap(c3_w pad_w)
 
       _rod_vaal(rod_u);
 #if 0
-      fprintf(stderr, "NPAR.hat_p: 0x%x %p, SKID.hat_p: 0x%x %p\r\n",
+      fprintf(stderr, "NPAR.hat_p: 0x%"PRIxc3_w" %p, SKID.hat_p: 0x%"PRIxc3_w" %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
               rod_u->hat_p, u3a_into(rod_u->hat_p));
 #endif
     }
     else {
       bot_p  = u3R->cap_p;
-      bot_p +=   (1U << u3a_page) - 1;
-      bot_p &= ~((1U << u3a_page) - 1);
+      bot_p +=   ((c3_w)1 << u3a_page) - 1;
+      bot_p &= ~(((c3_w)1 << u3a_page) - 1);
       top_p  = u3R->hat_p - pad_w;
-      top_p &= ~((1U << u3a_page) - 1);
+      top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
       //  XX moar
       if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
@@ -1115,7 +1176,7 @@ u3m_leap(c3_w pad_w)
       _rod_vaal(rod_u);
 
 #if 0
-      fprintf(stderr, "SPAR.hat_p: 0x%x %p, NKID.hat_p: 0x%x %p\r\n",
+      fprintf(stderr, "SPAR.hat_p: 0x%"PRIxc3_w" %p, NKID.hat_p: 0x%"PRIxc3_w" %p\r\n",
               u3R->hat_p, u3a_into(u3R->hat_p),
               rod_u->hat_p, u3a_into(rod_u->hat_p));
 
@@ -1133,9 +1194,9 @@ u3m_leap(c3_w pad_w)
 
   // Stash slow stack pointer
   if ( NULL != u3t_Spin ) {
-    u3R->off_w = u3t_Spin->off_w;
-    u3R->fow_w = u3t_Spin->fow_w;
-  } 
+    u3R->off_h = u3t_Spin->off_h;
+    u3R->fow_h = u3t_Spin->fow_h;
+  }
 
   /* Set up the new road.
   */
@@ -1168,7 +1229,7 @@ u3m_fall(void)
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
   */
-  fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%x, was 0x%x)\r\n",
+  fprintf(stderr, "fall: from %s %p, to %s %p (cap 0x%"PRIxc3_w", was 0x%"PRIxc3_w")\r\n",
           _(u3a_is_north(u3R)) ? "north" : "south",
           (void*)u3R,
           _(u3a_is_north(u3to(u3_road, u3R->par_p))) ? "north" : "south",
@@ -1203,6 +1264,12 @@ u3m_fall(void)
   */
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
+
+  // restore slow stack pointer
+  if ( NULL != u3t_Spin ) {
+    u3t_Spin->off_h = u3R->off_h;
+    u3t_Spin->fow_h = u3R->fow_h;
+  }
 }
 
 /* u3m_hate(): new, integrated leap mechanism (enter).
@@ -1217,13 +1284,12 @@ u3m_hate(c3_w pad_w)
   c3_w fag_w = u3R->how.fag_w;
   u3m_leap(pad_w);
 
+  u3R->bug.mer = u3i_tape("emergency buffer");
+
   //  inherit forward-flowing flags
   //
   u3R->how.fag_w |= (fag_w & u3a_flag_cash);
 
-  u3R->bug.mer = u3i_string(
-    "emergency buffer with sufficient space to cons the trace and bail"
-  );
 }
 
 //  RETAINS `now`.
@@ -1335,17 +1401,41 @@ u3m_timer_pop(void)
   _m_renew_now();
 }
 
-/* u3m_love(): return product from leap.
+c3_w
+u3m_road_depth(void)
+{
+  c3_w dep_w = 0;
+  for (u3a_road* r_u = u3R; r_u->par_p; r_u = u3to(u3a_road, r_u->par_p)) {
+    dep_w++;
+  }
+  return dep_w;
+}
+
+static void _cm_dup_take(u3p(u3h_root) dup_p);
+
+/* _cm_love(): return product from leap, running [hom_f] (if any) once
+**             back on the parent road, before anything is taken.
 */
-u3_noun
-u3m_love(u3_noun pro)
+static u3_noun
+_cm_love(u3_noun pro, void (*hom_f)(void))
 {
   //  save cache pointers from current road
   //
+  u3p(u3a_road) kid_p = u3of(u3a_road, u3R);
   u3p(u3h_root) byc_p = u3R->byc.har_p;
   u3a_jets      jed_u = u3R->jed;
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
+  u3p(u3h_root) dup_p = u3R->dup_p;
+  c3_y          pha_y = u3e_Phase;
+
+  //  measurement: junior table sizes at exit (jb/measure-base)
+  //
+  c3_w          wyt_w[8] = {
+    u3h_wyt(jed_u.war_p), u3h_wyt(jed_u.cod_p),
+    u3h_wyt(jed_u.han_p), u3h_wyt(jed_u.bas_p),
+    u3h_wyt(byc_p), u3h_wyt(per_p), u3h_wyt(for_p), u3h_wyt(dup_p)
+  };
 
   //  are there any timers on the road?
   //
@@ -1353,38 +1443,118 @@ u3m_love(u3_noun pro)
 
   //  fallback to parent road (child heap on parent's stack)
   //
+  u3e_Phase = u3e_pha_road;
   u3m_fall();
+
+  {
+    c3_w hom_w = ( &(u3H->rod_u) == u3R ) ? 1 : 0;
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 8; i_w++ ) {
+      u3e_Meter.tab_u[i_w].exi_d[0]++;
+      u3e_Meter.tab_u[i_w].ent_d[0] += wyt_w[i_w];
+      if ( !wyt_w[i_w] ) u3e_Meter.tab_u[i_w].nul_d[0]++;
+
+      if ( hom_w ) {
+        u3e_Meter.tab_u[i_w].exi_d[1]++;
+        u3e_Meter.tab_u[i_w].ent_d[1] += wyt_w[i_w];
+        if ( !wyt_w[i_w] ) u3e_Meter.tab_u[i_w].nul_d[1]++;
+      }
+    }
+  }
 
   if ( _(tim_o) ) _m_renew_now();
 
   // restore slow stack pointer
   if ( NULL != u3t_Spin ) {
-    u3t_Spin->off_w = u3R->off_w;
-    u3t_Spin->fow_w = u3R->fow_w;
+    u3t_Spin->off_h = u3R->off_h;
+    u3t_Spin->fow_h = u3R->fow_h;
+  }
+
+  if ( hom_f ) {
+    hom_f();
   }
 
   //  copy product and caches off our stack
   //
+  u3e_Phase = u3e_pha_take_pro;
   pro   = u3a_take(pro);
+  u3e_Phase = u3e_pha_take_jet;
   jed_u = u3j_take(jed_u);
-  byc_p = u3n_take(byc_p);
+
+  //  merge bytecode straight from junior memory, writing only changes
+  //
+  //    [kid_p] marks the junior road live again meanwhile, so that
+  //    unifying equality (in key lookups) leaves parent nouns alone.
+  //
+  u3e_Phase = u3e_pha_take_byc;
+  u3R->kid_p = kid_p;
+  u3n_reap(byc_p);
+  u3R->kid_p = 0;
+
+  u3e_Phase = u3e_pha_take_per;
   per_p = u3h_take(per_p);
+  u3e_Phase = u3e_pha_take_for;
   for_p = u3h_take(for_p);
+  u3e_Phase = u3e_pha_take_dup;
+
+  //  into the home road, junior hashcons entries that were taken join
+  //  the off-loom set, and the rest die with the road; otherwise, the
+  //  junior set is merged into ours
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    _cm_dup_take(dup_p);
+    dup_p = 0;
+  }
+  else {
+    dup_p = u3h_take(dup_p);
+  }
 
   //  pop the stack
   //
+  u3e_Phase = u3e_pha_road;
   u3a_drop_heap(u3R->cap_p, u3R->ear_p);
   u3R->cap_p = u3R->ear_p;
   u3R->ear_p = 0;
 
+  //  free stale ford caches
+  //  NB: apparently this needs to be done after u3h_take, otherwise double
+  //  frees are possible, resulting in bail: foul
+  //
+  {
+    c3_w dep_w = u3m_road_depth();
+    if ( dep_w < u3m_Ford_fresh_road_depth_h ) {
+      u3e_Phase = u3e_pha_ford_drop;
+      u3h_free(u3R->cax.for_p);
+      u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+      u3m_Ford_fresh_road_depth_h = dep_w;
+    }
+  }
+
   //  integrate junior caches
   //
+  u3e_Phase = u3e_pha_reap_jet;
   u3j_reap(jed_u);
-  u3n_reap(byc_p);
+  u3e_Phase = u3e_pha_reap_per;
   u3z_reap(u3z_memo_keep, per_p);
+  u3e_Phase = u3e_pha_reap_for;
   u3z_reap(u3z_memo_ford, for_p);
+  u3e_Phase = u3e_pha_reap_dup;
+  if ( dup_p ) {
+    u3h_uni(u3R->dup_p, dup_p);
+    u3h_free(dup_p);
+  }
 
+  u3e_Phase = pha_y;
   return pro;
+}
+
+/* u3m_love(): return product from leap.
+*/
+u3_noun
+u3m_love(u3_noun pro)
+{
+  return _cm_love(pro, 0);
 }
 
 /* u3m_golf(): record cap_p length for u3m_flog().
@@ -1459,19 +1629,34 @@ u3_noun
 u3m_soft_top(c3_w    mil_w,                     //  timer ms
              c3_w    pad_w,                     //  base memory pad
              u3_funk fun_f,
-             u3_noun   arg)
+             u3_noun   arg,
+             void    (*hom_f)(void))
 {
-  u3_noun why, pro;
-  volatile c3_l sig_l = 0;
+  u3_noun pro;
+  c3_m    sig_m = 0;
+  u3_noun why = 0;
 
   /* Enter internal signal regime.
    */
   _cm_signal_deep();
 
-  if ( 0 != (sig_l = rsignal_setjmp(u3_Signal)) ) {
+  u3_assert(u3R == &u3H->rod_u);
+  u3m_Ford_fresh_road_depth_h = 0;
+
+  if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
     //
     u3t_init();
+
+#ifdef U3_OS_windows
+    //  a caught stack overflow consumed the thread's guard page. restore
+    //  it now that the longjmp has unwound the stack, or the next
+    //  overflow has nothing to trip and kills the process outright.
+    //
+    if ( c3__over == sig_m ) {
+      u3_windows_stack_recover();
+    }
+#endif
 
     //  return to blank state
     //
@@ -1479,7 +1664,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     //  recover memory state from the top down
     //
-    return _cm_signal_recover(sig_l, arg);
+    return _cm_signal_recover(sig_m, arg);
   }
 
   /* Record the cap, and leap.
@@ -1492,18 +1677,18 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   /* Trap for ordinary nock exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( u3m_trap(why) ) {
     pro = fun_f(arg);
 
     /* Make sure the inner routine did not create garbage.
     */
-    if ( u3C.wag_w & u3o_debug_ram ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
 #ifdef U3_CPU_DEBUG
       if ( u3R->all.max_w > 1000000 ) {
         u3a_print_memory(stderr, "execute: top", u3R->all.max_w);
       }
 #endif
-      u3m_grab(pro, u3_none);
+      u3m_grab(pro);
     }
 
     /* Revert to external signal regime.
@@ -1512,7 +1697,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     /* Produce success, on the old road.
     */
-    pro = u3nc(0, u3m_love(pro));
+    pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
     /* Overload the error result.
@@ -1538,9 +1723,9 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 u3_noun
 u3m_soft_sure(u3_funk fun_f, u3_noun arg)
 {
-  u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg);
+  u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg, 0);
 
-  u3_assert(_(u3du(pru)));
+  u3_assert( 0 == u3h(pru) );
   pro = u3k(u3t(pru));
   u3z(pru);
 
@@ -1583,8 +1768,9 @@ u3m_soft_cax(u3_funq fun_f,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun why = 0, pro;
+  u3_noun pro;
   u3_noun cax = u3_nul;
+  u3_noun why = 0;
 
   /* Record the cap, and leap.
   */
@@ -1604,7 +1790,7 @@ u3m_soft_cax(u3_funq fun_f,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1618,8 +1804,8 @@ u3m_soft_cax(u3_funq fun_f,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
-      u3m_grab(pro, u3_none);
+    if ( u3C.wag_h & u3o_debug_ram ) {
+      u3m_grab(pro);
     }
 #endif
 
@@ -1678,7 +1864,8 @@ u3m_soft_run(u3_noun gul,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun why = 0, pro;
+  u3_noun pro;
+  u3_noun why = 0;
 
   c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
 
@@ -1705,7 +1892,7 @@ u3m_soft_run(u3_noun gul,
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( u3m_trap(why) ) {
     u3t_off(coy_o);
     pro = fun_f(aga, agb);
 
@@ -1719,8 +1906,8 @@ u3m_soft_run(u3_noun gul,
      * able to.
     */
 #ifdef U3_MEMORY_DEBUG
-    if ( u3C.wag_w & u3o_debug_ram ) {
-      u3m_grab(pro, u3_none);
+    if ( u3C.wag_h & u3o_debug_ram ) {
+      u3m_grab(pro);
     }
 #endif
 
@@ -1784,7 +1971,8 @@ u3m_soft_run(u3_noun gul,
 u3_noun
 u3m_soft_esc(u3_noun ref, u3_noun sam)
 {
-  u3_noun why, gul, pro;
+  u3_noun gul, pro;
+  u3_noun why = 0;
 
   /* Assert preconditions.
   */
@@ -1807,7 +1995,7 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
 
   /* Trap for exceptions.
   */
-  if ( 0 == (why = (u3_noun)_setjmp(u3R->esc.buf)) ) {
+  if ( u3m_trap(why) ) {
     pro = u3n_slam_on(gul, u3nc(ref, sam));
 
     /* Fall back to the old road, leaving temporary memory intact.
@@ -1844,30 +2032,19 @@ u3m_mark_mute(void)
   c3_free(arr_u);
 }
 
-/* u3m_grab(): garbage-collect the world, plus extra roots.
+/* u3m_vgrab(): garbage-collect the world, plus extra roots.
 */
 void
-u3m_grab(u3_noun som, ...)   // terminate with u3_none
+u3m_vgrab(u3_noun* som, c3_z len_z)
 {
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
 
   u3a_mark_init();
-  {
-    va_list vap;
-    u3_noun tur;
-
-    va_start(vap, som);
-
-    if ( som != u3_none ) {
-      u3a_mark_noun(som);
-
-      while ( u3_none != (tur = va_arg(vap, u3_noun)) ) {
-        u3a_mark_noun(tur);
-      }
-    }
-    va_end(vap);
+  for (c3_z i_z = 0; i_z < len_z; i_z++) {
+    u3a_mark_noun(som[i_z]);
   }
+
   u3m_mark_mute();
   u3a_sweep();
 }
@@ -1881,9 +2058,22 @@ u3m_soft(c3_w    mil_w,
          u3_funk fun_f,
          u3_noun   arg)
 {
+  return u3m_soft_with(mil_w, fun_f, arg, 0);
+}
+
+/* u3m_soft_with(): u3m_soft(), running [hom_f] (if any) on success, back
+**                  on the home road, after the event's road falls and
+**                  before its product and caches are taken.
+*/
+u3_noun
+u3m_soft_with(c3_w    mil_w,
+              u3_funk fun_f,
+              u3_noun   arg,
+              void    (*hom_f)(void))
+{
   u3_noun why;
 
-  why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg);   // 4M pad
+  why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
   if ( 0 == u3h(why) ) {
     return why;
@@ -1941,8 +2131,10 @@ u3m_soft(c3_w    mil_w,
     else if ( c3__evil == cod ) {
       pro = u3nc(u3k(cod), u3_nul);
     }
+    //  render the trace in an inner road: +mook is assumed correct
+    //
     else {
-      u3_noun mok = u3dc("mook", 2, u3k(tax));
+      u3_noun mok = u3m_soft_slam(u3v_wish("mook"), u3nc(2, u3k(tax)));
       pro = u3nc(u3k(cod), u3k(u3t(mok)));
       u3z(mok);
     }
@@ -2032,7 +2224,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       c3_c buf_c[6];
       c3_w len_w;
 
-      snprintf(buf_c, 6, "%d", som);
+      snprintf(buf_c, 6, "%"PRIc3_w"", som);
       len_w = strlen(buf_c);
 
       if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
@@ -2284,13 +2476,38 @@ u3m_fault(void* adr_v, c3_i ser_i)
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //
-  else if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
+  if ( (adr_w < u3_Loom) || (adr_w >= (u3_Loom + u3C.wor_i)) ) {
     fprintf(stderr, "loom: external fault: %p (%p : %p)\r\n\r\n",
             (void *)adr_w, (void *)u3_Loom, (void *)(u3_Loom + u3C.wor_i));
     u3m_stacktrace();
     u3_assert(0);
     return 0;
   }
+
+#ifdef U3_OS_windows
+  //  a sparse loom faults on the first touch of a page. resolve that
+  //  before u3m_water(), which reads the road -- the road lives in the
+  //  loom and may itself be untouched -- and before u3e_fault(), which
+  //  cannot tell a first touch of page 0 from a guard page that has yet
+  //  to be posted.
+  //
+  //  NB: the bounds check above comes first, so a fault outside the live
+  //  loom is fatal (including one in a stale loom held for a migration),
+  //  which sits at its own base. this is safe only because
+  //  u3_wnd_loom_hold() commits the whole image extent up front; what
+  //  stays reserved is the gap above it, which nothing reads. a read into
+  //  that gap aborts rather than committing. moving this block ahead of
+  //  the bounds check would make it self-healing again.
+  //
+  {
+    size_t pag_i = (size_t)1 << (u3a_page + u3a_word_bytes_shift);
+    void*  pag_v = (void *)((uintptr_t)adr_w & ~(uintptr_t)(pag_i - 1));
+
+    if ( c3y == u3_wnd_loom_fault(pag_v, pag_i) ) {
+      return 1;
+    }
+  }
+#endif
 
   u3m_water(&low_p, &hig_p);
 
@@ -2348,9 +2565,17 @@ u3m_save(void)
 
   u3_assert(u3R == &u3H->rod_u);
 
-  u3e_save(low_p, hig_p);
+  //  remember the hashcons set's size, to size its rebuild
+  //
+  u3m_dedup_hint();
 
-  u3a_dash();
+  {
+    c3_y pha_y = u3e_Phase;
+    u3e_Phase = u3e_pha_save;
+    u3e_save(low_p, hig_p);
+    u3a_dash();
+    u3e_Phase = pha_y;
+  }
 }
 
 /* u3m_toss(): discard ephemeral memory.
@@ -2421,7 +2646,7 @@ _cm_signals(void)
   //  Block SIGPROF, so that if/when we reactivate it on the
   //  main thread for profiling, we won't get hits in parallel
   //  on other threads.
-  if ( u3C.wag_w & u3o_debug_cpu ) {
+  if ( u3C.wag_h & u3o_debug_cpu ) {
     sigset_t set;
 
     sigemptyset(&set);
@@ -2441,42 +2666,6 @@ _cm_signals(void)
 #endif
 }
 
-/* _cm_malloc_ssl(): openssl-shaped malloc
-*/
-static void*
-_cm_malloc_ssl(size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-               , const char* file, int line
-#endif
-               )
-{
-  return u3a_malloc(len_i);
-}
-
-/* _cm_realloc_ssl(): openssl-shaped realloc.
-*/
-static void*
-_cm_realloc_ssl(void* lag_v, size_t len_i
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-                , const char* file, int line
-#endif
-                )
-{
-  return u3a_realloc(lag_v, len_i);
-}
-
-/* _cm_free_ssl(): openssl-shaped free.
-*/
-static void
-_cm_free_ssl(void* tox_v
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-             , const char* file, int line
-#endif
-             )
-{
-  u3a_free(tox_v);
-}
-
 extern void u3je_secp_init(void);
 
 /* _cm_crypto(): initialize openssl and crypto jets.
@@ -2484,25 +2673,7 @@ extern void u3je_secp_init(void);
 static void
 _cm_crypto(void)
 {
-  /* Initialize OpenSSL with loom allocation functions. */
-#ifndef U3_URTH_MASS
-  if ( 0 == CRYPTO_set_mem_functions(&_cm_malloc_ssl,
-                                     &_cm_realloc_ssl,
-                                     &_cm_free_ssl) ) {
-    u3l_log("%s", "openssl initialization failed");
-    abort();
-  }
-#endif
-
   u3je_secp_init();
-}
-
-/* _cm_realloc2(): gmp-shaped realloc.
-*/
-static void*
-_cm_realloc2(void* lag_v, size_t old_i, size_t new_i)
-{
-  return u3a_realloc(lag_v, new_i);
 }
 
 /* _cm_free2(): gmp-shaped free.
@@ -2526,13 +2697,13 @@ u3m_init(size_t len_i)
 
   //  make sure GMP uses our malloc.
   //
-  mp_set_memory_functions(u3a_malloc, _cm_realloc2, _cm_free2);
+  mp_set_memory_functions(u3a_malloc, u3a_realloc, _cm_free2);
 
   //  make sure that [len_i] is a fully-addressible non-zero power of two.
   //
   if (  !len_i
      || (len_i & (len_i - 1))
-     || (len_i < (1 << (u3a_page + 2)))
+     || (len_i < (1 << (u3a_page + u3a_word_bytes_shift)))
      || (len_i > u3a_bytes) )
   {
     u3l_log("loom: bad size: %zu", len_i);
@@ -2542,11 +2713,36 @@ u3m_init(size_t len_i)
   // map at fixed address.
   //
   {
-    void* map_v = mmap((void *)u3_Loom,
-                       len_i,
-                       (PROT_READ | PROT_WRITE),
-                       (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
-                       -1, 0);
+    void* map_v;
+
+#ifdef U3_OS_windows
+    //  the loom is reserved as a placeholder, which makes it sparse (pages
+    //  cost commit charge only once touched) and lets the image be mapped
+    //  over its bottom for demand paging. if --no-demand is on, degrade to
+    //  blitting and charging the whole loom to commit up front
+    //
+    if ( c3n == u3_wnd_loom_init((void *)u3_Loom, len_i) ) {
+      if ( !(u3C.wag_h & u3o_no_demand) ) {
+        u3l_log("loom: demand paging disabled");
+        u3C.wag_h |= u3o_no_demand;
+      }
+
+      map_v = mmap((void *)u3_Loom,
+                   len_i,
+                   (PROT_READ | PROT_WRITE),
+                   (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                   -1, 0);
+    }
+    else {
+      map_v = (void *)u3_Loom;
+    }
+#else
+    map_v = mmap((void *)u3_Loom,
+                 len_i,
+                 (PROT_READ | PROT_WRITE),
+                 (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
+                 -1, 0);
+#endif
 
     if ( -1 == (c3_ps)map_v ) {
       map_v = mmap((void *)0,
@@ -2556,8 +2752,15 @@ u3m_init(size_t len_i)
                    -1, 0);
 
       u3l_log("boot: mapping %zuMB failed", len_i >> 20);
+#ifdef U3_OS_windows
+      //  windows does not overcommit; the loom is charged in full up front
+      //
+      u3l_log("the whole loom must fit in RAM plus the paging file:"
+              " boot with a smaller --loom, or grow the paging file");
+#else
       u3l_log("see https://docs.urbit.org/user-manual/running/cloud-hosting"
               " for adding swap space");
+#endif
       if ( -1 != (c3_ps)map_v ) {
         u3l_log("if porting to a new platform, try U3_OS_LoomBase %p",
                 map_v);
@@ -2565,7 +2768,7 @@ u3m_init(size_t len_i)
       exit(1);
     }
 
-    u3C.wor_i = len_i >> 2;
+    u3C.wor_i = len_i >> u3a_word_bytes_shift;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
 }
@@ -2649,18 +2852,24 @@ u3m_boot(c3_c* dir_c, size_t len_i)
 
   /* GC immediately if requested
   */
-  if ( (c3n == nuu_o) && (u3C.wag_w & u3o_check_corrupt) ) {
+  if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
-    u3m_grab(u3_none);
-    u3C.wag_w &= ~u3o_check_corrupt;
+    u3m_grab();
+    u3C.wag_h &= ~u3o_check_corrupt;
     u3l_log("boot: gc complete");
+  }
+
+  /* Rebuild the home-road hashcons set.
+  */
+  if ( c3n == nuu_o ) {
+    u3m_dedup_ream();
   }
 
   /* Initialize the jet system.
   */
   {
     c3_w len_w = u3j_boot(nuu_o);
-    u3l_log("boot: installed %d jets", len_w);
+    u3l_log("boot: installed %"PRIc3_w" jets", len_w);
   }
 
   /* Reactivate jets on old kernel.
@@ -2717,10 +2926,20 @@ u3m_boot_lite(size_t len_i)
 void
 u3m_reclaim(void)
 {
+  c3_y pha_y = u3e_Phase;
+
+  u3e_Meter.rec_d++;
+  u3e_Meter.rcb_d += u3h_wyt(u3R->byc.har_p);
+  u3e_Meter.rch_d += u3h_wyt(u3R->jed.han_p);
+
+  u3e_Phase = u3e_pha_rec_wish;
   u3v_reclaim();
+  u3e_Phase = u3e_pha_rec_han;
   u3j_reclaim();
+  u3e_Phase = u3e_pha_rec_byc;
   u3n_reclaim();
-  u3a_reclaim();
+  u3a_reclaim();   //  tags its own phases
+  u3e_Phase = pha_y;
 }
 
 /* _cm_pack_rewrite(): trace through arena, rewriting pointers.
@@ -2747,6 +2966,9 @@ c3_w
 u3m_pack(void)
 {
   c3_w pre_w = u3a_open(u3R);
+  c3_y pha_y = u3e_Phase;
+
+  u3e_Phase = u3e_pha_pack;
 
   //  reclaim first, to free space, and discard anything we can't/don't rewrite
   //
@@ -2764,6 +2986,11 @@ u3m_pack(void)
   //
   u3a_pack_move(u3R);
 
+  //  the home-road hashcons set refers to old locations
+  //
+  u3m_dedup_ream();
+
+  u3e_Phase = pha_y;
   return (u3a_open(u3R) - pre_w);
 }
 
@@ -2788,10 +3015,12 @@ u3m_time_sec_out(c3_d urs_d)
 {
   c3_d adj_d = (urs_d - 0x8000000cce9e0d80ULL);
 
-  if ( adj_d > 0xffffffffULL ) {
-    fprintf(stderr, "Agh! It's 2106! And no one's fixed this shite!\n");
+#ifndef VERE64
+  if ( adj_d > c3_h_max ) {
+    fprintf(stderr, "agh! it's 2106! and no one's fixed this shite!\r\n");
     exit(1);
   }
+#endif
   return (c3_w)adj_d;
 }
 
@@ -2826,7 +3055,7 @@ u3m_time_msc_out(c3_d ufc_d)
 u3_atom
 u3m_time_in_tv(struct timeval* tim_tv)
 {
-  c3_w unx_w = tim_tv->tv_sec;
+  c3_w unx_w = tim_tv->tv_sec;   //  XX truncation in 2106 A.D.
   c3_w usc_w = tim_tv->tv_usec;
   c3_d cub_d[2];
 
@@ -2961,4 +3190,956 @@ u3m_time_gap_in_mil(c3_w mil_w)
   cub_d[0] = u3m_time_fsc_in(usc_d);
   cub_d[1] = sec_d;
   return u3i_chubs(2, cub_d);
+}
+
+/*  Hash-consing.
+**
+**    Each inner road keeps an on-loom set (u3R->dup_p, a u3h table that
+**    holds references), discarded with the road. The home road keeps
+**    an off-loom set that holds no references: membership is marked in
+**    an off-loom bitmap (u3a_Hcon_w), and a member is removed when it
+**    is freed (u3m_dedup_lose(), from u3a_lose()). It is rebuilt from
+**    persistent tables at startup, after compaction, and after a sweep
+**    that freed leaks.
+**
+**    Members are canonical, and the children of a member cell are
+**    members, so a cell is looked up by its mug and child pointers once
+**    its children are canonical (see canon.h). u3m_dedup() therefore
+**    works bottom-up.
+*/
+#include "canon.h"
+
+//  set while reading the home-road set: the profiling signal handler
+//  (u3t_samp()) runs on the home road, and must not change it then
+//
+volatile c3_w u3m_Dup_busy_w;
+
+static struct {
+  c3_t         ini_t;  //  initialized
+  c3_w         len_w;  //  bitmap length, in words
+  _canon_atoms vat_u;  //  member atoms
+  _canon_cells cel_u;  //  member cells
+  //  measurement (U3_MEASURE) only
+  //
+  c3_t         reb_t;     //  rebuilding
+  c3_y         pat_y;     //  probing path: 0 none, then as hcp_d[]
+  c3_y         cls_y;     //  origin of members added now, as hch_d[]
+  c3_w*        cls_w[2];  //  origin of each member, two bits, or 0
+  c3_w*        pag_w;     //  table pages written this interval, or 0
+} _cm_dup_u;
+
+//  table pages tracked: an on-loom copy of the cell table, at
+//  sizeof(u3_noun) + 2 bytes a bucket, in 16KB pages
+//
+#define _CM_DUP_PAGES  (1 << 20)
+
+/* _cm_dup_idx(): bitmap index of indirect [som].
+*/
+static inline c3_w
+_cm_dup_idx(u3_noun som)
+{
+  return u3a_to_off(som) >> u3a_min_log;
+}
+
+static inline void
+_cm_dup_set(u3_noun som)
+{
+  c3_w idx_w = _cm_dup_idx(som);
+  u3a_Hcon_w[idx_w / u3a_word_bits] |= ((c3_w)1 << (idx_w % u3a_word_bits));
+}
+
+static inline void
+_cm_dup_clr(u3_noun som)
+{
+  c3_w idx_w = _cm_dup_idx(som);
+  u3a_Hcon_w[idx_w / u3a_word_bits] &= ~((c3_w)1 << (idx_w % u3a_word_bits));
+}
+
+/* _cm_dup_meas_on(): measuring (U3_MEASURE, as u3e_measure_init()).
+*/
+static c3_t
+_cm_dup_meas_on(void)
+{
+  c3_c* env_c = getenv("U3_MEASURE");
+  return env_c && *env_c && ('0' != *env_c);
+}
+
+/* _cm_dup_meas_cls(): record the origin of new member [som].
+*/
+static inline void
+_cm_dup_meas_cls(u3_noun som)
+{
+  if ( _cm_dup_u.cls_w[0] ) {
+    c3_w idx_w = _cm_dup_idx(som);
+    c3_w wor_w = idx_w / u3a_word_bits;
+    c3_w bit_w = (c3_w)1 << (idx_w % u3a_word_bits);
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 2; i_w++ ) {
+      if ( (_cm_dup_u.cls_y >> i_w) & 1 ) {
+        _cm_dup_u.cls_w[i_w][wor_w] |= bit_w;
+      }
+      else {
+        _cm_dup_u.cls_w[i_w][wor_w] &= ~bit_w;
+      }
+    }
+  }
+}
+
+/* _cm_dup_meas_hit(): count a probe for [som] that found [can].
+*/
+static inline void
+_cm_dup_meas_hit(u3_noun som, u3_noun can)
+{
+  if ( _cm_dup_u.pat_y ) {
+    u3e_Meter.hcp_d[_cm_dup_u.pat_y - 1]++;
+
+    if ( (u3_none != can) && (can != som) ) {
+      c3_y cls_y = 0;
+
+      if ( _cm_dup_u.cls_w[0] ) {
+        c3_w idx_w = _cm_dup_idx(can);
+        c3_w wor_w = idx_w / u3a_word_bits;
+        c3_w sif_w = idx_w % u3a_word_bits;
+
+        cls_y = (1 & (_cm_dup_u.cls_w[0][wor_w] >> sif_w))
+              | ((1 & (_cm_dup_u.cls_w[1][wor_w] >> sif_w)) << 1);
+      }
+      u3e_Meter.hch_d[cls_y]++;
+    }
+  }
+}
+
+/* _cm_dup_meas_page(): note a write to cell bucket [buc_d].
+*/
+static inline void
+_cm_dup_meas_page(c3_d buc_d)
+{
+  if ( _cm_dup_u.pag_w && !_cm_dup_u.reb_t ) {
+    c3_d pag_d = (buc_d * (sizeof(u3_noun) + 2)) >> 14;
+
+    if ( pag_d < _CM_DUP_PAGES ) {
+      _cm_dup_u.pag_w[pag_d >> 5] |= (c3_w)1 << (pag_d & 31);
+    }
+  }
+}
+
+/* _cm_dup_init(): allocate the home-road set.
+*/
+static void
+_cm_dup_init(void)
+{
+  if ( !_cm_dup_u.ini_t ) {
+    c3_w bit_w = (c3_w)(u3C.wor_i >> u3a_min_log);
+
+    _cm_dup_u.len_w = (bit_w + u3a_word_bits - 1) / u3a_word_bits;
+    u3a_Hcon_w      = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
+    _canon_atoms_init(&_cm_dup_u.vat_u);
+    _canon_cells_init(&_cm_dup_u.cel_u);
+
+    if ( _cm_dup_meas_on() ) {
+      _cm_dup_u.cls_w[0] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
+      _cm_dup_u.cls_w[1] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
+      _cm_dup_u.pag_w    = c3_calloc(_CM_DUP_PAGES / 8);
+    }
+
+    _cm_dup_u.ini_t = 1;
+  }
+}
+
+/* _cm_dup_clear(): empty the home-road set.
+**
+**   NB: members may be stale (moved or freed); their bits are cleared
+**   by address, without dereferencing them.
+*/
+static void
+_cm_dup_clear(void)
+{
+  if ( _cm_dup_u.ini_t ) {
+    _canon_atoms_itr vit_u;
+    _canon_cells_itr cit_u;
+
+    for ( vit_u = _canon_atoms_first(&_cm_dup_u.vat_u);
+          !_canon_atoms_is_end(vit_u);
+          vit_u = _canon_atoms_next(vit_u) )
+    {
+      _cm_dup_clr(vit_u.data->key);
+    }
+
+    for ( cit_u = _canon_cells_first(&_cm_dup_u.cel_u);
+          !_canon_cells_is_end(cit_u);
+          cit_u = _canon_cells_next(cit_u) )
+    {
+      _cm_dup_clr(cit_u.data->key);
+    }
+
+    _canon_atoms_clear(&_cm_dup_u.vat_u);
+    _canon_cells_clear(&_cm_dup_u.cel_u);
+  }
+}
+
+/* _cm_dup_get(): member of the home-road set equal to [som], or none.
+**
+**   [som] is indirect. a cell matches only if its children are
+**   canonical. computes (and caches) the mug of [som].
+*/
+static u3_weak
+_cm_dup_get_in(u3_noun som)
+{
+  if ( !_cm_dup_u.ini_t ) {
+    return u3_none;
+  }
+  else if ( c3y == u3a_is_atom(som) ) {
+    _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_dup_u.vat_u, som);
+    return _canon_atoms_is_end(vit_u) ? u3_none : vit_u.data->key;
+  }
+  else {
+    _canon_cells_itr cit_u = _canon_cells_get(&_cm_dup_u.cel_u, som);
+    return _canon_cells_is_end(cit_u) ? u3_none : cit_u.data->key;
+  }
+}
+
+static u3_weak
+_cm_dup_get(u3_noun som)
+{
+  u3_weak pro;
+
+  u3m_Dup_busy_w++;
+  pro = _cm_dup_get_in(som);
+  u3m_Dup_busy_w--;
+
+  _cm_dup_meas_hit(som, pro);
+
+  return pro;
+}
+
+/* _cm_dup_put(): insert home-road [som] into the home-road set,
+**                producing the member equal to it (not retained).
+**
+**   [som] is indirect, and if a cell, its children are canonical.
+*/
+static u3_noun
+_cm_dup_put(u3_noun som)
+{
+  u3_noun can;
+
+  _cm_dup_init();
+
+  if ( c3y == u3a_is_atom(som) ) {
+    _canon_atoms_itr vit_u = _canon_atoms_get_or_insert(&_cm_dup_u.vat_u, som);
+    u3_assert( !_canon_atoms_is_end(vit_u) ); //  oom
+    can = vit_u.data->key;
+  }
+  else {
+    _canon_cells_itr cit_u = _canon_cells_get_or_insert(&_cm_dup_u.cel_u, som);
+    u3_assert( !_canon_cells_is_end(cit_u) ); //  oom
+    can = cit_u.data->key;
+
+    if ( can == som ) {
+      _cm_dup_meas_page(cit_u.metadatum - _cm_dup_u.cel_u.metadata);
+    }
+  }
+
+  _cm_dup_meas_hit(som, can);
+
+  if ( can == som ) {
+    _cm_dup_set(som);
+    _cm_dup_meas_cls(som);
+    u3e_Meter.hca_d++;
+  }
+
+  return can;
+}
+
+/* u3m_dedup_lose(): remove [som], about to be freed, from the home-road
+**                   set. [som] has its membership bit set.
+*/
+void
+u3m_dedup_lose(u3_noun som)
+{
+  _cm_dup_clr(som);
+
+  if ( c3y == u3a_is_atom(som) ) {
+    _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_dup_u.vat_u, som);
+
+    if ( !_canon_atoms_is_end(vit_u) && (som == vit_u.data->key) ) {
+      _canon_atoms_erase_itr(&_cm_dup_u.vat_u, vit_u);
+      u3e_Meter.hcd_d++;
+    }
+  }
+  else {
+    _canon_cells_itr cit_u = _canon_cells_get(&_cm_dup_u.cel_u, som);
+
+    if ( !_canon_cells_is_end(cit_u) && (som == cit_u.data->key) ) {
+      _cm_dup_meas_page(cit_u.metadatum - _cm_dup_u.cel_u.metadata);
+      _canon_cells_erase_itr(&_cm_dup_u.cel_u, cit_u);
+      u3e_Meter.hcd_d++;
+    }
+  }
+}
+
+/* u3m_dedup_stat(): the home-road set's atoms, cells, and estimated
+**                   process memory in bytes (buckets, their metadata,
+**                   and the membership bitmap).
+*/
+void
+u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d)
+{
+  if ( !_cm_dup_u.ini_t ) {
+    *vat_d = *cel_d = *byt_d = 0;
+    return;
+  }
+
+  *vat_d = _canon_atoms_size(&_cm_dup_u.vat_u);
+  *cel_d = _canon_cells_size(&_cm_dup_u.cel_u);
+  *byt_d = ( (c3_d)_canon_atoms_bucket_count(&_cm_dup_u.vat_u)
+           + (c3_d)_canon_cells_bucket_count(&_cm_dup_u.cel_u) )
+           * (sizeof(u3_noun) + sizeof(uint16_t))
+         + (c3_d)_cm_dup_u.len_w * sizeof(c3_w);
+}
+
+/* u3m_dedup_meas(): the home-road cell table's buckets, and the pages
+**                   an on-loom copy of it would have written since the
+**                   last call (by home bucket; 0 unless measuring).
+*/
+void
+u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d)
+{
+  *buc_d = 0;
+  *pag_d = 0;
+
+  if ( _cm_dup_u.ini_t ) {
+    *buc_d = _canon_cells_bucket_count(&_cm_dup_u.cel_u);
+
+    if ( _cm_dup_u.pag_w ) {
+      c3_w i_w;
+
+      for ( i_w = 0; i_w < (_CM_DUP_PAGES >> 5); i_w++ ) {
+        *pag_d += (c3_d)__builtin_popcount(_cm_dup_u.pag_w[i_w]);
+      }
+      memset(_cm_dup_u.pag_w, 0, _CM_DUP_PAGES / 8);
+    }
+  }
+}
+
+/* u3m_dedup_hint(): record the home-road set's size in the home road,
+**                   to size its next rebuild.
+*/
+void
+u3m_dedup_hint(void)
+{
+  if ( _cm_dup_u.ini_t ) {
+    u3H->rod_u.hcz_w = (c3_w)_canon_cells_size(&_cm_dup_u.cel_u);
+  }
+}
+
+/* _cm_canonical(): [som] is a cat or a member of the home-road set.
+*/
+static inline c3_t
+_cm_canonical(u3_noun som)
+{
+  return ( c3y == u3a_is_cat(som) ) || u3a_hcon_has(som);
+}
+
+/* _cm_stack: growable stack of cell frames for the walks below.
+*/
+typedef struct {
+  u3_noun som;  //  cell
+  u3_noun nov;  //  its home-road copy (u3m_love() only)
+  u3_weak hed;  //  canonical head, once done
+  c3_t    tel_t;  //  head done, tail pending
+} _cm_frame;
+
+typedef struct {
+  c3_w       len_w;
+  c3_w       siz_w;
+  _cm_frame* fam_u;
+} _cm_walk;
+
+static void
+_cm_walk_init(_cm_walk* wak_u)
+{
+  wak_u->len_w = 0;
+  wak_u->siz_w = 64;
+  wak_u->fam_u = c3_malloc(sizeof(*wak_u->fam_u) * wak_u->siz_w);
+}
+
+static void
+_cm_walk_done(_cm_walk* wak_u)
+{
+  c3_free(wak_u->fam_u);
+}
+
+static inline _cm_frame*
+_cm_walk_push(_cm_walk* wak_u)
+{
+  if ( wak_u->len_w == wak_u->siz_w ) {
+    wak_u->siz_w += c3_min(wak_u->siz_w, 4096);
+    wak_u->fam_u  = c3_realloc(wak_u->fam_u,
+                               sizeof(*wak_u->fam_u) * wak_u->siz_w);
+  }
+  return &wak_u->fam_u[wak_u->len_w++];
+}
+
+/* _cm_dup_xchange(): point [*som] at [can], if it doesn't already.
+*/
+static inline void
+_cm_dup_xchange(u3_noun can, u3_noun* som)
+{
+  u3_noun old = *som;
+
+  if ( old != can ) {
+    *som = u3k(can);
+    u3z(old);
+  }
+}
+
+/* _cm_dup_canon(): canonicalize home-road [som] into the home-road set,
+**                  rewriting cells in place, producing the canonical
+**                  [som] (not retained).
+**
+**   as in melt, nothing is written (not even reference counts) unless
+**   a child is replaced, so canonical nouns are walked without writes.
+*/
+static u3_noun
+_cm_dup_canon(_cm_walk* wak_u, u3_noun som)
+{
+  c3_w    bot_w = wak_u->len_w;
+  u3_noun pro;
+
+  while ( 1 ) {
+    //  descend
+    //
+    while ( 1 ) {
+      if ( _cm_canonical(som) ) {
+        pro = som;
+        break;
+      }
+      else if ( c3y == u3a_is_atom(som) ) {
+        pro = _cm_dup_put(som);
+        break;
+      }
+      //  NB: no lookup on the way down: the children aren't members
+      //  yet, and a duplicate is found by _cm_dup_put() on the way up
+      //
+      else {
+        _cm_frame* fam_u = _cm_walk_push(wak_u);
+        fam_u->som   = som;
+        fam_u->tel_t = 0;
+        som = u3h(som);
+      }
+    }
+
+    //  ascend
+    //
+    while ( wak_u->len_w > bot_w ) {
+      _cm_frame* fam_u = &wak_u->fam_u[wak_u->len_w - 1];
+      u3a_cell*  cel_u = u3a_to_ptr(fam_u->som);
+
+      if ( !fam_u->tel_t ) {
+        _cm_dup_xchange(pro, &cel_u->hed);
+        fam_u->tel_t = 1;
+        som = cel_u->tel;
+        break;
+      }
+      else {
+        _cm_dup_xchange(pro, &cel_u->tel);
+        pro = _cm_dup_put(fam_u->som);
+        wak_u->len_w--;
+      }
+    }
+
+    if ( wak_u->len_w == bot_w ) {
+      return pro;
+    }
+  }
+}
+
+/* _cm_dup_canon_ptr(): canonicalize [*som] in place, on the home road.
+*/
+static void
+_cm_dup_canon_ptr(_cm_walk* wak_u, u3_noun* som)
+{
+  _cm_dup_xchange(_cm_dup_canon(wak_u, *som), som);
+}
+
+/* _cm_dup_ream_kev(): u3h_walk callback, canonicalizing key and value.
+*/
+static void
+_cm_dup_ream_kev(u3_noun kev, void* ptr_v)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+
+  _cm_dup_canon_ptr(ptr_v, &kev_u->hed);
+  _cm_dup_canon_ptr(ptr_v, &kev_u->tel);
+}
+
+/* _cm_dup_ream_key(): u3h_walk callback, canonicalizing the key alone.
+*/
+static void
+_cm_dup_ream_key(u3_noun kev, void* ptr_v)
+{
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+
+  _cm_dup_canon_ptr(ptr_v, &kev_u->hed);
+}
+
+/* u3m_dedup_ream(): rebuild the home-road set from persistent tables,
+**                   canonicalizing them in place.
+**
+**   on a ship whose tables are already canonical, this writes nothing.
+*/
+void
+u3m_dedup_ream(void)
+{
+  _cm_walk       wak_u;
+  struct timeval bef_u, aft_u;
+#ifndef U3_OS_windows
+  struct rusage  ruf_u, rug_u;
+#endif
+
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  gettimeofday(&bef_u, 0);
+#ifndef U3_OS_windows
+  getrusage(RUSAGE_SELF, &ruf_u);
+#endif
+
+  _cm_dup_init();
+  _cm_dup_clear();
+
+  //  size the table for the set's last saved size, to avoid rehashing
+  //  as it regrows (a cleared table keeps its capacity)
+  //
+  if ( u3R->hcz_w ) {
+    u3_assert( _canon_cells_reserve(&_cm_dup_u.cel_u, u3R->hcz_w) ); //  oom
+  }
+
+  //  tables never canonicalized off the loom have no saved size (it was
+  //  futureproof padding, which must be zero), whether or not the old
+  //  on-loom set is empty: say that the persistent tables are being
+  //  canonicalized (once)
+  //
+  if ( !u3R->hcz_w && u3h_wyt(u3R->jed.cod_p) ) {
+    u3l_log("hashcons: canonicalizing persistent tables");
+  }
+
+  //  the home-road set used to be on the loom: release it
+  //
+  if ( u3h_wyt(u3R->dup_p) ) {
+    u3h_free(u3R->dup_p);
+    u3R->dup_p = u3h_new();
+  }
+
+  _cm_walk_init(&wak_u);
+
+  //  measurement: cells contributed by each root, in walk order; the
+  //  rebuild's inserts don't count as additions. cold state is walked
+  //  last, so that its count, and the origin recorded for hits, cover
+  //  the members only it reaches
+  //
+  {
+    u3p(u3h_root) roo_p[7] = {
+      u3R->cax.per_p, u3R->cax.for_p, u3R->byc.har_p,
+      u3R->jed.war_p, u3R->jed.bas_p, u3R->jed.hot_p, u3R->jed.cod_p
+    };
+    c3_y cls_y[7] = { 1, 1, 1, 2, 2, 2, 3 };
+    c3_d add_d = u3e_Meter.hca_d;
+    c3_d pre_d = 0;
+    c3_w i_w;
+
+    c3_y pat_y = _cm_dup_u.pat_y;
+
+    _cm_dup_u.reb_t = 1;
+    _cm_dup_u.pat_y = 0;
+
+    for ( i_w = 0; i_w < 7; i_w++ ) {
+      _cm_dup_u.cls_y = cls_y[i_w];
+      u3h_walk_with(roo_p[i_w],
+                    ( 2 == i_w ) ? _cm_dup_ream_key : _cm_dup_ream_kev,
+                    &wak_u);
+      u3e_Meter.hcc_d[i_w] = _canon_cells_size(&_cm_dup_u.cel_u) - pre_d;
+      pre_d = _canon_cells_size(&_cm_dup_u.cel_u);
+    }
+
+    _cm_dup_u.cls_y = 0;
+    _cm_dup_u.reb_t = 0;
+    _cm_dup_u.pat_y = pat_y;
+    u3e_Meter.hca_d = add_d;
+  }
+
+  _cm_walk_done(&wak_u);
+
+  gettimeofday(&aft_u, 0);
+#ifndef U3_OS_windows
+  getrusage(RUSAGE_SELF, &rug_u);
+
+  u3e_Meter.hcf_d[0] = (c3_d)(rug_u.ru_majflt - ruf_u.ru_majflt);
+  u3e_Meter.hcf_d[1] = (c3_d)(rug_u.ru_minflt - ruf_u.ru_minflt);
+#endif
+
+  {
+    c3_d mil_d = (c3_d)(((aft_u.tv_sec - bef_u.tv_sec) * 1000000
+                         + (aft_u.tv_usec - bef_u.tv_usec)) / 1000);
+
+    u3e_Meter.hcr_d++;
+    u3e_Meter.hcm_d += mil_d;
+
+    if ( u3C.wag_h & u3o_verbose ) {
+      u3l_log("hashcons: %zu atoms, %zu cells in %" PRIu64 "ms",
+              _canon_atoms_size(&_cm_dup_u.vat_u),
+              _canon_cells_size(&_cm_dup_u.cel_u),
+              mil_d);
+    }
+  }
+}
+
+/* _cm_dup_take_noun(): from u3m_love(), after every take and before the
+**                      junior heap is dropped: canonicalize the home-road
+**                      copy of junior [jun] into the home-road set,
+**                      producing it (not retained), or none.
+**
+**   taken copies are rewritten to point at canonical children, and
+**   older home-road nouns are canonicalized in place. the junior
+**   original's forwarding pointer is redirected to the result, so that
+**   shared subtrees are visited once.
+*/
+static u3_weak
+_cm_dup_take_noun(_cm_walk* wak_u, u3_noun jun)
+{
+  c3_w    bot_w = wak_u->len_w;
+  u3_weak pro;
+
+  while ( 1 ) {
+    //  descend
+    //
+    while ( 1 ) {
+      if ( c3y == u3a_is_cat(jun) ) {
+        pro = jun;
+        break;
+      }
+      else if ( c3n == u3a_is_junior(u3R, jun) ) {
+        c3_y pat_y = _cm_dup_u.pat_y;
+
+        _cm_dup_u.pat_y = 2;
+        pro = _cm_dup_canon(wak_u, jun);
+        _cm_dup_u.pat_y = pat_y;
+        break;
+      }
+      else {
+        u3a_noun* jun_u = u3a_to_ptr(jun);
+        u3_noun   nov;
+
+        //  not taken
+        //
+        if ( !(jun_u->mug_w >> 31) ) {
+          pro = u3_none;
+          break;
+        }
+
+        nov = (u3_noun)jun_u->mug_w;
+
+        if ( u3a_hcon_has(nov) ) {
+          pro = nov;
+          break;
+        }
+        else if ( c3y == u3a_is_atom(nov) ) {
+          pro = _cm_dup_put(nov);
+          jun_u->mug_w = pro;
+          break;
+        }
+        else {
+          _cm_frame* fam_u = _cm_walk_push(wak_u);
+          fam_u->som   = jun;
+          fam_u->nov   = nov;
+          fam_u->tel_t = 0;
+          jun = u3h(jun);
+        }
+      }
+    }
+
+    //  ascend
+    //
+    while ( wak_u->len_w > bot_w ) {
+      _cm_frame* fam_u = &wak_u->fam_u[wak_u->len_w - 1];
+
+      if ( !fam_u->tel_t ) {
+        fam_u->hed   = pro;
+        fam_u->tel_t = 1;
+        jun = u3t(fam_u->som);
+        break;
+      }
+      else {
+        u3a_noun* jun_u = u3a_to_ptr(fam_u->som);
+        u3_noun   nov   = fam_u->nov;
+        u3a_cell* nov_u = u3a_to_ptr(nov);
+        u3_weak   hed   = fam_u->hed;
+        u3_weak   tel   = pro;
+
+        wak_u->len_w--;
+
+        //  point the fresh copy at canonical children
+        //
+        if ( (u3_none != hed) && (hed != nov_u->hed) ) {
+          u3_noun old = nov_u->hed;
+          nov_u->hed  = u3k(hed);
+          u3z(old);
+        }
+        if ( (u3_none != tel) && (tel != nov_u->tel) ) {
+          u3_noun old = nov_u->tel;
+          nov_u->tel  = u3k(tel);
+          u3z(old);
+        }
+
+        if ( _cm_canonical(nov_u->hed) && _cm_canonical(nov_u->tel) ) {
+          pro = _cm_dup_put(nov);
+        }
+        else {
+          pro = nov;
+        }
+        jun_u->mug_w = pro;
+      }
+    }
+
+    if ( wak_u->len_w == bot_w ) {
+      return pro;
+    }
+  }
+}
+
+/* _cm_dup_take_kev(): u3h_walk callback over a junior set.
+**
+**   a junior set can list home nouns, but it can't hold references to
+**   them, and rewriting one in place can free another that it lists
+**   before the walk reaches it. so they're skipped: those held by a
+**   taken copy are canonicalized through it, and the rest wait for a
+**   later dedup on the home road, or the next ream.
+*/
+static void
+_cm_dup_take_kev(u3_noun kev, void* ptr_v)
+{
+  u3_noun som = u3h(kev);
+
+  if ( (c3n == u3a_is_cat(som)) && (c3n == u3a_is_junior(u3R, som)) ) {
+    return;
+  }
+
+  (void)_cm_dup_take_noun(ptr_v, som);
+}
+
+/* _cm_dup_take(): integrate junior set [dup_p] into the home-road set.
+*/
+static void
+_cm_dup_take(u3p(u3h_root) dup_p)
+{
+  if ( u3h_wyt(dup_p) ) {
+    _cm_walk wak_u;
+    c3_y     pat_y = _cm_dup_u.pat_y;
+
+    _cm_dup_u.pat_y = 1;
+    _cm_walk_init(&wak_u);
+    u3h_walk_with(dup_p, _cm_dup_take_kev, &wak_u);
+    _cm_walk_done(&wak_u);
+    _cm_dup_u.pat_y = pat_y;
+  }
+}
+
+/* _dedup_swap(): point [*som] at its canonical equal [can] (transferred).
+*/
+static inline void
+_dedup_swap(u3_noun* som, u3_noun can)
+{
+  if ( *som == can ) {
+    u3z(can);
+  }
+  else {
+    u3_noun old = *som;
+    *som = can;
+    u3z(old);
+  }
+}
+
+/* _dedup_find(): canonical equal of [som] in any road's set, or none.
+**                a cell is found in the home-road set only once its
+**                children are canonical. RETAIN, result PRODUCED.
+*/
+static u3_weak
+_dedup_find(u3_noun som)
+{
+  if ( u3a_hcon_has(som) ) {
+    return u3k(som);
+  }
+
+  {
+    u3_weak can = _cm_dup_get(som);
+
+    if ( u3_none != can ) {
+      return u3k(can);
+    }
+  }
+
+  {
+    u3a_road* rod_u = &u3H->rod_u;
+
+    while ( rod_u->kid_p ) {
+      rod_u = u3to(u3a_road, rod_u->kid_p);
+
+      u3_weak got = u3h_get(rod_u->dup_p, som);
+      if ( u3_none != got ) {
+        return got;
+      }
+    }
+  }
+
+  return u3_none;
+}
+
+/* _dedup_put(): insert canonical [som] into the current road's set.
+**               TRANSFER, result PRODUCED.
+*/
+static u3_noun
+_dedup_put(u3_noun som)
+{
+  if ( &(u3H->rod_u) == u3R ) {
+    u3_noun can = _cm_dup_put(som);
+
+    if ( can != som ) {
+      u3k(can);
+      u3z(som);
+    }
+    return can;
+  }
+  else {
+    u3h_put(u3R->dup_p, som, u3k(som));
+    return som;
+  }
+}
+
+typedef struct {
+  c3_t    new_t;
+  u3_noun cel;    //  original cell (retained)
+  u3_noun som;    //  tail to visit, then deduplicated head
+} _frame_dedup;
+
+static u3_noun
+_dedup_next(u3a_pile* pil_u, u3_noun som)
+{
+  while (1) {
+    if ( c3y == u3a_is_cat(som) ) return som;
+
+    {
+      u3_weak got = _dedup_find(som);
+      if ( u3_none != got ) {
+        u3z(som);
+        return got;
+      }
+    }
+
+    if ( c3y == u3a_is_atom(som) ) {
+      return _dedup_put(som);
+    }
+
+    _frame_dedup* fam_u = u3a_push(pil_u);
+    fam_u->new_t = false;
+    fam_u->cel = som;
+    fam_u->som = u3k(u3t(som));
+    som = u3k(u3h(som));
+  }
+}
+
+/* u3m_dedup(): deduplicate [som] against every road's set, inserting it
+**              into the current road's. TRANSFER, result PRODUCED.
+*/
+u3_noun
+u3m_dedup(u3_noun som)
+{
+  u3a_pile pil_u;
+  _frame_dedup* fam_u;
+  c3_y pat_y = _cm_dup_u.pat_y;
+
+  _cm_dup_u.pat_y = 3;
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
+  u3_noun new = _dedup_next(&pil_u, som);
+  if ( c3n == u3a_pile_done(&pil_u) ) {
+    fam_u = u3a_peek(&pil_u);
+    do {
+      if ( !fam_u->new_t ) {
+        som = fam_u->som;
+        fam_u->som = new;
+        fam_u->new_t = true;
+        new = _dedup_next(&pil_u, som);
+        fam_u = u3a_peek(&pil_u);
+      }
+      else {
+        u3_noun hed = fam_u->som;
+        u3_noun cel = fam_u->cel;
+
+        //  senior cells can't be written: keep the original if both
+        //  children were already canonical, and copy it otherwise
+        //
+        if ( c3y == u3a_is_senior(u3R, cel) ) {
+          if ( (hed == u3h(cel)) && (new == u3t(cel)) ) {
+            u3z(hed);
+            u3z(new);
+            new = cel;
+          }
+          else {
+            new = u3nc(hed, new);
+            u3z(cel);
+          }
+        }
+        //  otherwise, point the children at their canonical equals,
+        //  as unifying equality does
+        //
+        else {
+          u3a_cell* cel_u = u3a_to_ptr(cel);
+          _dedup_swap(&cel_u->hed, hed);
+          _dedup_swap(&cel_u->tel, new);
+          new = cel;
+        }
+
+        //  with canonical children, an equal member of the home-road
+        //  set (if any) can now be found
+        //
+        {
+          u3_weak can = _cm_dup_get(new);
+
+          if ( (u3_none != can) && (can != new) ) {
+            u3k(can);
+            u3z(new);
+            new = can;
+          }
+          else {
+            new = _dedup_put(new);
+          }
+        }
+
+        fam_u = u3a_pop(&pil_u);
+      }
+    } while ( c3n == u3a_pile_done(&pil_u) );
+  }
+  _cm_dup_u.pat_y = pat_y;
+  return new;
+}
+
+/* bounds for u3m_reclaim_due()
+*/
+#define _CM_BYC_MAX  (1U << 14)  //  bytecode programs
+
+/* u3m_reclaim_due(): clear home-road caches that have outgrown their
+**                    bounds. cheap enough to call after every event.
+*/
+void
+u3m_reclaim_due(void)
+{
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  //  bytecode programs can't be freed individually (call sites point
+  //  between them), so the table is cleared whole once it reaches its
+  //  cap. hanks hold call sites, and must go with it.
+  //
+  if ( _CM_BYC_MAX <= u3h_wyt(u3R->byc.har_p) ) {
+    u3j_reclaim();
+    u3n_reclaim();
+  }
 }

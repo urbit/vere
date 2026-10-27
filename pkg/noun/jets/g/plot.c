@@ -80,7 +80,7 @@ _met_pair(c3_g* las_g,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= 32) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -203,7 +203,7 @@ _fax_pair(u3i_slab* sab_u,
     b_p   = u3t(b_p);
   }
 
-  if ( !_(u3a_is_cat(a_p)) || (a_p >= 32) ) {
+  if ( !_(u3a_is_cat(a_p)) || (a_p >= u3a_word_bits) ) {
     return u3m_bail(c3__fail);
   }
 
@@ -322,7 +322,7 @@ u3qg_plot_met(u3_noun a_p, u3_noun b_p)
   c3_g out_g;
   c3_w sep_w = _met_pair(NULL, 0, a_p, b_p, &out_g);
 
-  return u3nc(out_g, u3i_word(sep_w));
+  return u3nc(out_g, u3i_half(sep_w));
 }
 
 u3_noun

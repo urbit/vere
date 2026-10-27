@@ -95,16 +95,32 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
+#include "hashtable.h"
 #include "log.h"
+#include "manage.h"
 #include "murmur3.h"
+#include "nock.h"
 #include "options.h"
+#include "vortex.h"
+
+#include <sys/time.h>
+#include <time.h>
+
+#ifdef U3_OS_windows
+#include "wloom.h"
+#include <psapi.h>
+#endif
+
+#ifdef U3_OS_osx
+#include <mach/mach.h>
+#endif
 
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
 ** _ce_page:      byte length of a single page
 ** _ce_ptr:       void pointer to a page
 */
-#define _ce_len(i)        ((size_t)(i) << (u3a_page + 2))
+#define _ce_len(i)        ((size_t)(i) << (u3a_page + u3a_word_bytes_shift))
 #define _ce_len_words(i)  ((size_t)(i) << u3a_page)
 #define _ce_page          _ce_len(1)
 #define _ce_ptr(i)        ((void *)((c3_c*)u3_Loom + _ce_len(i)))
@@ -112,20 +128,868 @@
 /// Snapshotting system.
 u3e_pool u3e_Pool;
 
-static c3_w
-_ce_muk_buf(c3_w len_w, void* ptr_v)
+/// Measurement (jb/measure-base). See events.h.
+///
+///   every first write to a clean page faults (one fault per page per
+///   snapshot interval). the fault handler records the current phase
+///   and, from palloc's page directory, which part of an allocation the
+///   faulting store hit. at each snapshot, the patch pages are tallied
+///   by those attributes. separately, after each task, dirty pages are
+///   hashed to find every page the task changed (not just first writes),
+///   for the per-event overlap measurement.
+///
+///   all state is off-loom; the fault-handler path only does stores into
+///   preallocated arrays.
+///
+volatile c3_y u3e_Phase;
+u3e_meter     u3e_Meter;
+
+static c3_h _ce_muk_page(void* ptr_v);
+
+/* page kinds, by where the first store landed
+*/
+enum {
+  _ce_kin_other = 0,  //  outside the home heap directory's range
+  _ce_kin_dir   = 1,  //  the home heap's page directory
+  _ce_kin_crag  = 2,  //  in-page chunk metadata (u3a_crag)
+  _ce_kin_w0    = 3,  //  word 0 of a chunk (refcount, for nouns)
+  _ce_kin_w1    = 4,  //  word 1 of a chunk (mug, for nouns)
+  _ce_kin_body  = 5,  //  any later word of a chunk
+  _ce_kin_large = 6,  //  page of a multi-page allocation
+  _ce_kin_free  = 7,  //  free page
+  _ce_kin_max   = 8
+};
+
+static const c3_c* _ce_pha_names[u3e_pha_max] = {
+  "none", "cue", "poke", "peek", "road",
+  "take-pro", "take-jet", "take-byc", "take-per", "take-for", "take-dup",
+  "ford-drop",
+  "reap-jet", "reap-byc", "reap-per", "reap-for", "reap-dup",
+  "roc-lose", "roc-misc", "mug-roc", "feck", "etch", "jam", "io-free",
+  "post", "save", "task", "pack",
+  "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
+  "trim-per", "trim-for"
+};
+
+static const c3_c* _ce_kin_names[_ce_kin_max] = {
+  "other", "dir", "crag", "w0", "w1", "body", "large", "free"
+};
+
+static const c3_c* _ce_tab_names[8] = {
+  "war", "cod", "han", "bas", "byc", "per", "for", "dup"
+};
+
+#define _CE_MEAS_LOGS 16
+
+static struct {
+  c3_t   on_t;                  //  measuring (NB: not c3_o; c3y is 0)
+  c3_t   has_t;                 //  per-event hashing enabled
+  FILE*  fil_u;                 //  log file
+  c3_w   pag_w;                 //  pages tracked (u3P.pag_w at init)
+  c3_y*  pha_y;                 //  [pag] phase at first fault
+  c3_y*  kin_y;                 //  [pag] kind at first fault
+  c3_y*  log_y;                 //  [pag] chunk size log2 at first fault
+  c3_y*  fla_y;                 //  [pag] 1: faulted this interval
+                                //        2: faulted this task
+                                //        4: hash valid
+  c3_h*  has_h;                 //  [pag] page hash at last task end
+  c3_w*  tem_w;                 //  [pag] scratch: pages changed by a task
+  c3_d   tal_d[u3e_pha_max][_ce_kin_max][_CE_MEAS_LOGS];
+  c3_d   uns_d;                 //  patch pages with no fault this interval
+  c3_d   tak_d;                 //  tasks this interval
+  c3_y*  alf_y;                 //  [pag] page records and allocation:
+                                //        1: dirtied by a free's page
+                                //           record this interval
+                                //        2: then allocated into
+                                //        4: first written by a chunk
+                                //           allocation this interval
+} _ce_meas;
+
+/* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
+*/
+static inline c3_t
+_ce_meas_readable(u3_post som_p)
 {
-  c3_w haz_w;
-  MurmurHash3_x86_32(ptr_v, len_w, 0xcafebabeU, &haz_w);
-  return haz_w;
+  c3_w pag_w = som_p >> u3a_page;
+  return (som_p < u3C.wor_i) && (pag_w < u3P.pag_w) && (pag_w != u3P.gar_w);
 }
 
-static c3_w
+/* _ce_meas_kind(): classify a store into home-road page [pag_w].
+**                  reads only; called from the fault handler.
+*/
+static c3_y
+_ce_meas_kind(c3_w pag_w, u3_post off_p, c3_y* log_y)
+{
+  u3a_road* rod_u = &(u3H->rod_u);
+  c3_w      off_w = rod_u->rut_p >> u3a_page;
+  u3_post   dir_p = rod_u->hep.pag_p;
+
+  *log_y = 0;
+
+  if ( dir_p && (off_p >= dir_p) && (off_p < (dir_p + rod_u->hep.siz_w)) ) {
+    return _ce_kin_dir;
+  }
+
+  if ( !dir_p || (pag_w < off_w) || ((pag_w - off_w) >= rod_u->hep.len_w) ) {
+    return _ce_kin_other;
+  }
+
+  //  NB: we are in the fault handler. never read the guard page or
+  //  outside the loom, or we fault again and die.
+  //
+  if ( !_ce_meas_readable(dir_p + (pag_w - off_w)) ) {
+    return _ce_kin_other;
+  }
+
+  {
+    u3_post cag_p = (u3to(u3_post, dir_p))[pag_w - off_w];
+
+    if ( u3a_free_pg == cag_p ) return _ce_kin_free;
+    if ( (u3a_head_pg == cag_p) || (u3a_rest_pg == cag_p) ) {
+      return _ce_kin_large;
+    }
+
+    if (  !_ce_meas_readable(cag_p)
+       || !_ce_meas_readable(cag_p + c3_wiseof(u3a_crag) - 1) )
+    {
+      return _ce_kin_other;
+    }
+
+    {
+      u3a_crag* pag_u = u3to(u3a_crag, cag_p);
+      c3_s      log_s = pag_u->log_s;
+      c3_w      wof_w = off_p & ((((c3_w)1) << u3a_page) - 1);
+      c3_w      chu_w = wof_w >> log_s;
+      c3_w      wic_w = wof_w & ((((c3_w)1) << log_s) - 1);
+
+      if ( (log_s < u3a_min_log) || (log_s >= u3a_page) ) {
+        return _ce_kin_other;  //  not a chunk page after all
+      }
+
+      *log_y = (c3_y)log_s;
+
+      if ( chu_w < u3a_Hunk[log_s - u3a_min_log].hun_s ) {
+        return _ce_kin_crag;
+      }
+
+      return ( 0 == wic_w ) ? _ce_kin_w0
+           : ( 1 == wic_w ) ? _ce_kin_w1
+           : _ce_kin_body;
+    }
+  }
+}
+
+/* _ce_meas_fault(): record a first write to [pag_w]. fault-handler safe.
+*/
+static inline void
+_ce_meas_fault(c3_w pag_w, u3_post off_p)
+{
+  if ( !_ce_meas.on_t || (pag_w >= _ce_meas.pag_w) ) {
+    return;
+  }
+
+  c3_y log_y = 0;
+  c3_y kin_y = ( u3e_pha_pack == u3e_Phase )
+             ? _ce_kin_other  //  page metadata is in flux
+             : _ce_meas_kind(pag_w, off_p, &log_y);
+
+  _ce_meas.pha_y[pag_w] = u3e_Phase;
+  _ce_meas.kin_y[pag_w] = kin_y;
+  _ce_meas.log_y[pag_w] = log_y;
+  _ce_meas.fla_y[pag_w] |= 3;
+}
+
+/* _ce_meas_page(): tally a page going into a patch.
+*/
+static inline void
+_ce_meas_page(c3_w pag_w)
+{
+  if ( !_ce_meas.on_t || (pag_w >= _ce_meas.pag_w) ) {
+    return;
+  }
+
+  if ( _ce_meas.fla_y[pag_w] & 1 ) {
+    c3_y pha_y = _ce_meas.pha_y[pag_w];
+    c3_y kin_y = _ce_meas.kin_y[pag_w];
+    c3_y log_y = _ce_meas.log_y[pag_w];
+
+    if ( pha_y >= u3e_pha_max )     pha_y = u3e_pha_none;
+    if ( log_y >= _CE_MEAS_LOGS )   log_y = 0;
+
+    _ce_meas.tal_d[pha_y][kin_y][log_y]++;
+  }
+  else {
+    _ce_meas.uns_d++;
+  }
+}
+
+/* _ce_meas_map_wyt(): entries in a hoon map, read-only.
+*/
+static c3_d
+_ce_meas_map_wyt(u3_noun a)
+{
+  if ( u3_nul == a ) {
+    return 0;
+  }
+  else {
+    u3_noun l = u3h(u3t(a)), r = u3t(u3t(a));
+    return 1 + _ce_meas_map_wyt(l) + _ce_meas_map_wyt(r);
+  }
+}
+
+/* _ce_meas_mem(): this process's memory, in bytes: resident, resident
+**                 and anonymous, resident and file-backed, and swapped
+**                 (compressed, on macOS); 0 where the system doesn't say.
+*/
+static void
+_ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
+{
+  *res_d = *ano_d = *fil_d = *swp_d = 0;
+
+#if defined(U3_OS_linux)
+  {
+    FILE* fil_u = fopen("/proc/self/status", "r");
+    c3_c  lin_c[256];
+    unsigned long long kib;
+
+    if ( !fil_u ) {
+      return;
+    }
+
+    while ( fgets(lin_c, sizeof(lin_c), fil_u) ) {
+      if ( 1 == sscanf(lin_c, "VmRSS: %llu", &kib) ) {
+        *res_d = (c3_d)kib << 10;
+      }
+      else if ( 1 == sscanf(lin_c, "RssAnon: %llu", &kib) ) {
+        *ano_d = (c3_d)kib << 10;
+      }
+      else if ( 1 == sscanf(lin_c, "RssFile: %llu", &kib) ) {
+        *fil_d = (c3_d)kib << 10;
+      }
+      else if ( 1 == sscanf(lin_c, "VmSwap: %llu", &kib) ) {
+        *swp_d = (c3_d)kib << 10;
+      }
+    }
+
+    fclose(fil_u);
+  }
+#elif defined(U3_OS_osx)
+  {
+    task_vm_info_data_t    inf_u;
+    mach_msg_type_number_t cot_u = TASK_VM_INFO_COUNT;
+
+    if ( KERN_SUCCESS == task_info(mach_task_self(), TASK_VM_INFO,
+                                   (task_info_t)&inf_u, &cot_u) )
+    {
+      *res_d = (c3_d)inf_u.resident_size;
+      *ano_d = (c3_d)inf_u.internal;
+      *fil_d = (c3_d)inf_u.external;
+      *swp_d = (c3_d)inf_u.compressed;
+    }
+  }
+#elif defined(U3_OS_windows)
+  {
+    PROCESS_MEMORY_COUNTERS_EX mem_u;
+
+    if ( K32GetProcessMemoryInfo(GetCurrentProcess(),
+                                 (PROCESS_MEMORY_COUNTERS*)&mem_u,
+                                 sizeof(mem_u)) )
+    {
+      *res_d = (c3_d)mem_u.WorkingSetSize;
+      *ano_d = (c3_d)mem_u.PrivateUsage;
+    }
+  }
+#endif
+}
+
+/* _ce_meas_save(): report and reset per-interval measurements.
+*/
+static void
+_ce_meas_save(c3_w pgs_w, c3_w sip_w)
+{
+  FILE* fil_u = _ce_meas.fil_u;
+  c3_w  i_w, j_w, k_w;
+
+  if ( !_ce_meas.on_t ) {
+    return;
+  }
+
+  fprintf(fil_u, "S %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 (c3_d)u3A->eve_d, (c3_d)time(0),
+                 (c3_d)pgs_w, (c3_d)sip_w, _ce_meas.tak_d);
+
+  for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
+    for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
+      for ( k_w = 0; k_w < _CE_MEAS_LOGS; k_w++ ) {
+        c3_d num_d = _ce_meas.tal_d[i_w][j_w][k_w];
+        if ( num_d ) {
+          fprintf(fil_u, "F %s %s %" PRIu64 " %" PRIu64 "\n",
+                         _ce_pha_names[i_w], _ce_kin_names[j_w],
+                         (c3_d)k_w, num_d);
+        }
+      }
+    }
+  }
+  fprintf(fil_u, "U %" PRIu64 "\n", _ce_meas.uns_d);
+
+  for ( i_w = 0; i_w < 8; i_w++ ) {
+    fprintf(fil_u, "R %s %" PRIu64 " %" PRIu64 " %" PRIu64
+                      " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   _ce_tab_names[i_w],
+                   u3e_Meter.tab_u[i_w].exi_d[1],
+                   u3e_Meter.tab_u[i_w].nul_d[1],
+                   u3e_Meter.tab_u[i_w].ent_d[1],
+                   u3e_Meter.tab_u[i_w].exi_d[0],
+                   u3e_Meter.tab_u[i_w].nul_d[0],
+                   u3e_Meter.tab_u[i_w].ent_d[0]);
+  }
+
+  //  home-road page records and allocation: what dirty-first allocation
+  //  and page records off data pages would save
+  //
+  fprintf(fil_u, "A %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.fre_cln_d, u3e_Meter.alc_cln_d,
+                 u3e_Meter.alc_alt_d, u3e_Meter.alc_reu_d);
+  memset(_ce_meas.alf_y, 0, _ce_meas.pag_w);
+
+  //  this process's memory now: resident, anonymous, file-backed, swapped
+  //
+  {
+    c3_d res_d, ano_d, fil_d, swp_d;
+
+    _ce_meas_mem(&res_d, &ano_d, &fil_d, &swp_d);
+    fprintf(fil_u, "M %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   res_d, ano_d, fil_d, swp_d);
+  }
+
+  //  home-road table sizes at this snapshot, and reclaims since the last
+  //
+  {
+    u3a_road* rod_u = &u3H->rod_u;
+    fprintf(fil_u, "T %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
+                   " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w " %" PRIc3_w
+                   " %" PRIc3_w " %" PRIu64 "\n",
+                   u3h_wyt(rod_u->jed.war_p), u3h_wyt(rod_u->jed.cod_p),
+                   u3h_wyt(rod_u->jed.han_p), u3h_wyt(rod_u->jed.bas_p),
+                   u3h_wyt(rod_u->byc.har_p), u3h_wyt(rod_u->cax.per_p),
+                   u3h_wyt(rod_u->cax.for_p), u3h_wyt(rod_u->dup_p),
+                   u3h_wyt(rod_u->cax.har_p), _ce_meas_map_wyt(u3A->yot));
+    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d);
+
+    //  bytecode programs: the home table now (count, bytes, formulas only
+    //  their key holds), programs looked up from it, and compiles and
+    //  additions to it this interval
+    //
+    {
+      c3_d num_d, byt_d, ded_d, use_d;
+
+      u3n_meas(&num_d, &byt_d, &ded_d, &use_d);
+      fprintf(fil_u, "P %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 "\n",
+                     num_d, byt_d, ded_d, use_d,
+                     u3e_Meter.bcc_d, u3e_Meter.bca_d);
+    }
+
+    //  home-road hashcons set: size and memory now; additions,
+    //  removals and rebuilds this interval; cells per root at the
+    //  last rebuild
+    //
+    {
+      c3_d vat_d, cel_d, byt_d;
+      c3_w i_w;
+
+      u3m_dedup_stat(&vat_d, &cel_d, &byt_d);
+      fprintf(fil_u, "H %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
+                     vat_d, cel_d, byt_d,
+                     u3e_Meter.hca_d, u3e_Meter.hcd_d,
+                     u3e_Meter.hcr_d, u3e_Meter.hcm_d);
+      for ( i_w = 0; i_w < 7; i_w++ ) {
+        fprintf(fil_u, " %" PRIu64, u3e_Meter.hcc_d[i_w]);
+      }
+      fputc('\n', fil_u);
+    }
+
+    //  home-road hashcons traffic: probes by path and hits by the
+    //  member's origin this interval; cell buckets now, and pages an
+    //  on-loom table would have written; faults in the last rebuild
+    //
+    {
+      c3_d buc_d, pag_d;
+
+      u3m_dedup_meas(&buc_d, &pag_d);
+      fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     u3e_Meter.hcp_d[0], u3e_Meter.hcp_d[1], u3e_Meter.hcp_d[2],
+                     u3e_Meter.hch_d[0], u3e_Meter.hch_d[1],
+                     u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
+                     buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
+    }
+
+    //  deferred gains across the state swap
+    //
+    fprintf(fil_u, "G %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.dfw_d, u3e_Meter.dfg_d, u3e_Meter.dfn_d,
+                   u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
+                   u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
+
+    //  alignment of the new arvo states with the old
+    //
+    fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
+                   u3e_Meter.aln_exc_d);
+  }
+  fflush(fil_u);
+
+  memset(_ce_meas.tal_d, 0, sizeof(_ce_meas.tal_d));
+  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+  _ce_meas.uns_d = 0;
+  _ce_meas.tak_d = 0;
+
+  for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
+    _ce_meas.fla_y[i_w] &= ~(c3_y)3;
+  }
+}
+
+/* u3e_measuring(): measurement is on.
+*/
+c3_t
+u3e_measuring(void)
+{
+  return _ce_meas.on_t;
+}
+
+#define NAME    _ce_vis
+#define KEY_TY  u3_noun
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+typedef struct { u3_noun new, old; c3_t exc_t; } _ce_aln;
+
+/* u3e_measure_align(): at the end of a poke, on the event's road (just
+**                      below home), compare the new arvo state [new]
+**                      with the old [old] by position.
+**
+**   for each reference from a cell on this road (which the take will
+**   copy) to a home noun (which it will gain), count whether the old
+**   state has the same noun at the same position, and whether every old
+**   cell on the way there has a refcount of 1 (releasing the old state
+**   frees them, so the gain would cancel by position alone). as states
+**   diverge, deferring gains pays off less; alignment, observable
+**   during the take, is a candidate predictor for bounding it.
+*/
+void
+u3e_measure_align(u3_noun new, u3_noun old)
+{
+  _ce_vis  vis_u;
+  _ce_aln* sac_u;
+  c3_w     len_w = 0, cap_w = 1024;
+
+  if ( !_ce_meas.on_t ) return;
+
+  _ce_vis_init(&vis_u);
+  sac_u = c3_malloc(cap_w * sizeof(*sac_u));
+  sac_u[len_w++] = (_ce_aln){ new, old, 1 };
+
+  while ( len_w ) {
+    _ce_aln aln_u = sac_u[--len_w];
+    u3_noun n = aln_u.new, o = aln_u.old;
+
+    if ( c3y == u3a_is_cat(n) ) continue;
+
+    if ( c3y == u3a_is_senior(u3R, n) ) {
+      u3e_Meter.aln_all_d++;
+      if ( n == o ) {
+        u3e_Meter.aln_pos_d++;
+        if ( aln_u.exc_t ) u3e_Meter.aln_exc_d++;
+      }
+      continue;
+    }
+
+    if ( c3n == u3a_is_cell(n) ) continue;
+
+    {
+      _ce_vis_itr itr_u = _ce_vis_get(&vis_u, n);
+      if ( !_ce_vis_is_end(itr_u) ) continue;
+      _ce_vis_insert(&vis_u, n);
+    }
+
+    {
+      u3_noun oh = u3_none, ot = u3_none;
+      c3_t    exc_t = 0;
+
+      if ( (u3_none != o) && (c3y == u3a_is_cell(o)) ) {
+        oh = u3h(o); ot = u3t(o);
+        exc_t = aln_u.exc_t
+             && (c3y == u3a_is_senior(u3R, o))
+             && (1 == u3a_use(o));
+      }
+
+      if ( (len_w + 2) > cap_w ) {
+        cap_w *= 2;
+        sac_u = c3_realloc(sac_u, cap_w * sizeof(*sac_u));
+      }
+      sac_u[len_w++] = (_ce_aln){ u3h(n), oh, exc_t };
+      sac_u[len_w++] = (_ce_aln){ u3t(n), ot, exc_t };
+    }
+  }
+
+  c3_free(sac_u);
+  _ce_vis_cleanup(&vis_u);
+}
+
+/* _ce_meas_head(): write a log's header line.
+*/
+static void
+_ce_meas_head(FILE*       fil_u,
+              c3_w        pag_w,
+              const c3_c* ver_c,
+              const c3_c* who_c,
+              const c3_c* mod_c,
+              c3_d        sas_d,
+              c3_d        sae_d)
+{
+  fprintf(fil_u, "# measure v1 time=%" PRIu64
+                 " word_bits=%u page_bytes=%" PRIu64
+                 " pages=%" PRIu64 " event=%" PRIu64
+                 " mode=%s snap_secs=%" PRIu64 " snap_events=%" PRIu64
+                 " ship=%s vere=%s os=%s arch=%s\n",
+                 (c3_d)time(0), (unsigned)u3a_word_bits,
+                 (c3_d)_ce_page, (c3_d)pag_w, (c3_d)u3A->eve_d,
+                 mod_c, sas_d, sae_d,
+                 who_c ? who_c : "unknown",
+                 ver_c ? ver_c : "unknown",
+#if   defined(U3_OS_linux)
+                 "linux",
+#elif defined(U3_OS_osx)
+                 "macos",
+#elif defined(U3_OS_windows)
+                 "windows",
+#elif defined(U3_OS_bsd)
+                 "bsd",
+#else
+                 "unknown",
+#endif
+#if   defined(__aarch64__)
+                 "aarch64"
+#elif defined(__x86_64__)
+                 "x86_64"
+#else
+                 "unknown"
+#endif
+                 );
+}
+
+/* u3e_measure_init(): start measuring if U3_MEASURE is set.
+*/
+void
+u3e_measure_init(const c3_c* dir_c,
+                 const c3_c* ver_c,
+                 const c3_c* who_c,
+                 const c3_c* mod_c,
+                 c3_d        sas_d,
+                 c3_d        sae_d)
+{
+  c3_c* env_c = getenv("U3_MEASURE");
+
+  if ( !env_c || !*env_c || ('0' == *env_c) || _ce_meas.on_t ) {
+    return;
+  }
+
+  {
+    c3_w pag_w = u3P.pag_w;
+    c3_c pax_c[2048];
+
+    //  logs go in their own directory, to be easy to collect and remove
+    //
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure", dir_c);
+    if ( c3_mkdir(pax_c, 0700) && (EEXIST != errno) ) {
+      fprintf(stderr, "measure: mkdir %s: %s\r\n", pax_c, strerror(errno));
+      return;
+    }
+
+    snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure/measure-%" PRIu64 ".log",
+                    dir_c, (c3_d)time(0));
+
+    if ( !(_ce_meas.fil_u = fopen(pax_c, "w")) ) {
+      fprintf(stderr, "measure: open %s: %s\r\n", pax_c, strerror(errno));
+      return;
+    }
+
+    _ce_meas.pag_w = pag_w;
+    _ce_meas.pha_y = c3_calloc(pag_w);
+    _ce_meas.kin_y = c3_calloc(pag_w);
+    _ce_meas.log_y = c3_calloc(pag_w);
+    _ce_meas.fla_y = c3_calloc(pag_w);
+    _ce_meas.alf_y = c3_calloc(pag_w);
+    _ce_meas.has_h = c3_calloc(sizeof(c3_h) * pag_w);
+    _ce_meas.tem_w = c3_calloc(sizeof(c3_w) * pag_w);
+
+    //  per-task page hashing is costly (~100ms/task); opt in with
+    //  U3_MEASURE_HASH=1
+    //
+    {
+      c3_c* has_c = getenv("U3_MEASURE_HASH");
+      _ce_meas.has_t = ( has_c && *has_c && ('0' != *has_c) );
+    }
+
+    _ce_meas_head(_ce_meas.fil_u, pag_w, ver_c, who_c, mod_c, sas_d, sae_d);
+    fflush(_ce_meas.fil_u);
+
+    //  keep the startup rebuild of the hashcons set, which ran before
+    //  measurement began, and the members jet registration added after
+    //  it, for the first interval
+    //
+    {
+      u3e_meter met_u = u3e_Meter;
+
+      memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+      u3e_Meter.hcr_d = met_u.hcr_d;
+      u3e_Meter.hcm_d = met_u.hcm_d;
+      memcpy(u3e_Meter.hcc_d, met_u.hcc_d, sizeof(met_u.hcc_d));
+      memcpy(u3e_Meter.hcf_d, met_u.hcf_d, sizeof(met_u.hcf_d));
+      u3e_Meter.hca_d = met_u.hca_d;
+    }
+    _ce_meas.on_t = 1;
+    u3e_Measuring = 1;
+
+    fprintf(stderr, "measure: logging to %s\r\n", pax_c);
+  }
+}
+
+/* u3e_measure_ms(): wall-clock milliseconds.
+*/
+c3_d
+u3e_measure_ms(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
+}
+
+/* _ce_meas_op(): write an O line: time, event, operation, why, melt
+**                options, milliseconds taken, words freed (negative
+**                if the operation shrank free space, as a melt can).
+*/
+static void
+_ce_meas_op(FILE*       fil_u,
+            const c3_c* op_c,
+            const c3_c* why_c,
+            c3_w        opt_w,
+            c3_d        bef_d,
+            c3_w        gan_w)
+{
+  c3_d now_d = u3e_measure_ms();
+
+  fprintf(fil_u, "O %" PRIu64 " %" PRIu64 " %s %s %" PRIu64
+                 " %" PRIu64 " %" PRIi64 "\n",
+                 now_d / 1000, (c3_d)u3A->eve_d, op_c, why_c,
+                 (c3_d)opt_w, now_d - bef_d, (c3_ds)(c3_ws)gan_w);
+  fflush(fil_u);
+}
+
+/* u3e_measure_op(): if measuring, log a pack, meld or melt.
+*/
+void
+u3e_measure_op(const c3_c* op_c,
+               const c3_c* why_c,
+               c3_w        opt_w,
+               c3_d        bef_d,
+               c3_w        gan_w)
+{
+  if ( _ce_meas.on_t ) {
+    _ce_meas_op(_ce_meas.fil_u, op_c, why_c, opt_w, bef_d, gan_w);
+  }
+}
+
+/* u3e_measure_dir(): the pier at [dir_c] keeps measurement logs.
+*/
+c3_t
+u3e_measure_dir(const c3_c* dir_c)
+{
+  c3_c        pax_c[2048];
+  struct stat buf_u;
+
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure", dir_c);
+  return ( !stat(pax_c, &buf_u) && S_ISDIR(buf_u.st_mode) );
+}
+
+/* u3e_measure_note(): log an offline operation in a log of its own.
+*/
+void
+u3e_measure_note(const c3_c* dir_c,
+                 const c3_c* ver_c,
+                 const c3_c* who_c,
+                 const c3_c* op_c,
+                 c3_w        opt_w,
+                 c3_d        bef_d,
+                 c3_w        gan_w)
+{
+  c3_c  pax_c[2048];
+  FILE* fil_u;
+
+  if ( !u3e_measure_dir(dir_c) ) {
+    return;
+  }
+
+  //  named for the operation, so as not to collide with a serf's log
+  //  started in the same second
+  //
+  snprintf(pax_c, sizeof(pax_c), "%s/.urb/measure/measure-%" PRIu64 "-%s.log",
+                  dir_c, (c3_d)time(0), op_c);
+
+  if ( !(fil_u = fopen(pax_c, "w")) ) {
+    fprintf(stderr, "measure: open %s: %s\r\n", pax_c, strerror(errno));
+    return;
+  }
+
+  _ce_meas_head(fil_u, u3P.pag_w, ver_c, who_c, "offline", 0, 0);
+  _ce_meas_op(fil_u, op_c, "offline", opt_w, bef_d, gan_w);
+  fclose(fil_u);
+}
+
+/* u3e_measure_event(): record pages changed by the task just completed.
+*/
+void
+u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
+{
+  if ( !_ce_meas.on_t ) {
+    return;
+  }
+
+  _ce_meas.tak_d++;
+
+  if ( !_ce_meas.has_t ) {
+    return;
+  }
+
+  {
+    struct timeval b4_u, af_u, dif_u;
+    u3_post low_p, hig_p;
+    c3_w    nor_w, i_w, len_w = 0, fal_w = 0, dit_w = 0;
+
+    gettimeofday(&b4_u, 0);
+
+    u3m_water(&low_p, &hig_p);
+    nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+    if ( nor_w > _ce_meas.pag_w ) nor_w = _ce_meas.pag_w;
+
+    for ( i_w = 0; i_w < nor_w; i_w++ ) {
+      c3_w blk_w = i_w >> u3a_chub_bits_log;
+      c3_w bit_w = i_w & (u3a_chub_bits - 1);
+      c3_y fla_y = _ce_meas.fla_y[i_w];
+
+      if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+        continue;
+      }
+
+      dit_w++;
+
+      {
+        c3_h has_h = _ce_muk_page(_ce_ptr(i_w));
+        c3_t new_t = (fla_y & 2)                     //  first write this task
+                  || !(fla_y & 4)                    //  never hashed
+                  || (has_h != _ce_meas.has_h[i_w]); //  contents changed
+
+        if ( fla_y & 2 ) fal_w++;
+
+        _ce_meas.has_h[i_w] = has_h;
+        _ce_meas.fla_y[i_w] = (fla_y & ~(c3_y)2) | 4;
+
+        if ( new_t ) {
+          _ce_meas.tem_w[len_w++] = i_w;
+        }
+      }
+    }
+
+    gettimeofday(&af_u, 0);
+    timersub(&af_u, &b4_u, &dif_u);
+
+    fprintf(_ce_meas.fil_u, "E %" PRIu64 " %s %" PRIu64 " %" PRIu64
+                            " %" PRIu64 " %" PRIu64 ":",
+                            eve_d, tag_c, (c3_d)len_w, (c3_d)fal_w, (c3_d)dit_w,
+                            (c3_d)(dif_u.tv_sec * 1000000 + dif_u.tv_usec));
+    for ( i_w = 0; i_w < len_w; i_w++ ) {
+      fprintf(_ce_meas.fil_u, " %" PRIu64, (c3_d)_ce_meas.tem_w[i_w]);
+    }
+    fputc('\n', _ce_meas.fil_u);
+  }
+}
+
+c3_t u3e_Measuring;
+
+/* u3e_measure_dirty(): page [pag_w] is dirty since the last save, or new.
+*/
+c3_t
+u3e_measure_dirty(c3_w pag_w)
+{
+  //  pages past the image are new: unprotected, and saved regardless
+  //
+  if ( pag_w >= u3P.img_u.pgs_w ) {
+    return 1;
+  }
+
+  return 0 != (u3P.dit_d[pag_w >> u3a_chub_bits_log]
+               & ((c3_d)1 << (pag_w & (u3a_chub_bits - 1))));
+}
+
+/* u3e_measure_free(): a free will write the page record on [pag_w].
+*/
+void
+u3e_measure_free(c3_w pag_w)
+{
+  if ( (pag_w < _ce_meas.pag_w) && !u3e_measure_dirty(pag_w) ) {
+    u3e_Meter.fre_cln_d++;
+    _ce_meas.alf_y[pag_w] |= 1;
+  }
+}
+
+/* u3e_measure_alloc(): a chunk allocation will write [pag_w];
+**                      [alt_t] if a dirty page in its class has room.
+*/
+void
+u3e_measure_alloc(c3_w pag_w, c3_t alt_t)
+{
+  if ( pag_w >= _ce_meas.pag_w ) {
+    return;
+  }
+  //  count each clean page once per interval: allocations (e.g. for
+  //  the cell pool) can be made before any of them is written
+  //
+  else if ( !u3e_measure_dirty(pag_w) ) {
+    if ( !(_ce_meas.alf_y[pag_w] & 4) ) {
+      _ce_meas.alf_y[pag_w] |= 4;
+      u3e_Meter.alc_cln_d++;
+      if ( alt_t ) u3e_Meter.alc_alt_d++;
+    }
+  }
+  else if ( 1 == (_ce_meas.alf_y[pag_w] & (1|2)) ) {
+    u3e_Meter.alc_reu_d++;
+    _ce_meas.alf_y[pag_w] |= 2;
+  }
+}
+
+static c3_h
+_ce_muk_buf(c3_z len_z, void* ptr_v)
+{
+  c3_h haz_h;
+  MurmurHash3_x86_32(ptr_v, len_z, 0xcafebabeU, &haz_h);
+  return haz_h;
+}
+
+static c3_h
 _ce_muk_page(void* ptr_v)
 {
   return _ce_muk_buf(_ce_page, ptr_v);
 }
 
+#ifndef U3_OS_windows
 /* _ce_flaw_mmap(): remap non-guard page after fault.
 */
 static inline c3_i
@@ -148,7 +1012,7 @@ _ce_flaw_mmap(c3_w pag_w)
                           (MAP_FIXED | MAP_SHARED),
                           u3P.eph_i, _ce_len(pag_w)) )
   {
-    fprintf(stderr, "loom: fault mmap failed (%u): %s\r\n",
+    fprintf(stderr, "loom: fault mmap failed (%"PRIc3_w"): %s\r\n",
                      pag_w, strerror(errno));
     return 1;
   }
@@ -159,6 +1023,7 @@ _ce_flaw_mmap(c3_w pag_w)
 
   return 0;
 }
+#endif /* ifndef U3_OS_windows */
 
 /* _ce_flaw_mprotect(): protect page after fault.
 */
@@ -166,7 +1031,7 @@ static inline c3_i
 _ce_flaw_mprotect(c3_w pag_w)
 {
   if ( 0 != mprotect(_ce_ptr(pag_w), _ce_page, (PROT_READ | PROT_WRITE)) ) {
-    fprintf(stderr, "loom: fault mprotect (%u): %s\r\n",
+    fprintf(stderr, "loom: fault mprotect (%"PRIc3_w"): %s\r\n",
                      pag_w, strerror(errno));
     return 1;
   }
@@ -180,8 +1045,19 @@ _ce_flaw_mprotect(c3_w pag_w)
 static inline c3_i
 _ce_ward_protect(void)
 {
+#ifdef U3_OS_windows
+  //  the guard page must be committed to be protected, and to stay
+  //  distinguishable from an ordinary first touch.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(u3P.gar_w), _ce_page) ) {
+    fprintf(stderr, "loom: failed to commit guard page (%"PRIc3_w")\r\n",
+                    u3P.gar_w);
+    return 1;
+  }
+#endif
+
   if ( 0 != mprotect(_ce_ptr(u3P.gar_w), _ce_page, PROT_NONE) ) {
-    fprintf(stderr, "loom: failed to protect guard page (%u): %s\r\n",
+    fprintf(stderr, "loom: failed to protect guard page (%"PRIc3_w"): %s\r\n",
                     u3P.gar_w, strerror(errno));
     return 1;
   }
@@ -206,7 +1082,7 @@ _ce_ward_clip(c3_w nop_w, c3_w sop_w)
   c3_w old_w = u3P.gar_w;
 
   if ( !u3P.gar_w || ((nop_w < u3P.gar_w) && (sop_w > u3P.gar_w)) ) {
-    fprintf(stderr, "loom: ward bogus (>%u %u %u<)\r\n",
+    fprintf(stderr, "loom: ward bogus (>%"PRIc3_w" %"PRIc3_w" %"PRIc3_w"<)\r\n",
                     nop_w, u3P.gar_w, sop_w);
     return u3e_flaw_sham;
   }
@@ -231,21 +1107,24 @@ u3e_flaw
 u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
 {
   c3_w pag_w = off_p >> u3a_page;
-  c3_w blk_w = pag_w >> 5;
-  c3_w bit_w = pag_w & 31;
+  c3_w blk_w = pag_w >> u3a_chub_bits_log;
+  c3_w bit_w = pag_w & (u3a_chub_bits-1);
 
 #ifdef U3_GUARD_PAGE
   c3_w gar_w = u3P.gar_w;
 
-  if ( pag_w == gar_w ) {
+  //  NB: a zero [gar_w] means unposted, not page zero. u3m_boot_lite()
+  //  paves the loom before u3e_init(), so page zero can fault first.
+  //
+  if ( gar_w && (pag_w == gar_w) ) {
     u3e_flaw fal_e = _ce_ward_clip(low_p >> u3a_page, hig_p >> u3a_page);
 
     if ( u3e_flaw_good != fal_e ) {
       return fal_e;
     }
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
-      fprintf(stderr, "loom: strange guard (%d)\r\n", pag_w);
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+      fprintf(stderr, "loom: strange guard (%"PRIc3_w")\r\n", pag_w);
       return u3e_flaw_sham;
     }
 
@@ -257,19 +1136,27 @@ u3e_fault(u3_post low_p, u3_post hig_p, u3_post off_p)
   }
 #endif
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-    fprintf(stderr, "loom: strange page (%d): %x\r\n", pag_w, off_p);
+  //  NB: on windows, a first touch of a reserved page has already been
+  //  resolved by u3m_fault(), which must do it before reading the road.
+  //
+  if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
+    fprintf(stderr, "loom: strange page (%"PRIc3_w"): %"PRIxc3_w"\r\n", pag_w, off_p);
     return u3e_flaw_sham;
   }
 
-  u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+  u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
 
+  _ce_meas_fault(pag_w, off_p);
+
+#ifndef U3_OS_windows
   if ( u3P.eph_i ) {
     if ( _ce_flaw_mmap(pag_w) ) {
       return u3e_flaw_base;
     }
   }
-  else if ( _ce_flaw_mprotect(pag_w) ) {
+  else
+#endif
+  if ( _ce_flaw_mprotect(pag_w) ) {
     return u3e_flaw_base;
   }
 
@@ -296,7 +1183,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
   else {
     c3_z siz_z = buf_u.st_size;
-    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + 2);
+    c3_z pgs_z = (siz_z + (_ce_page - 1)) >> (u3a_page + u3a_word_bytes_shift);
 
     if ( !siz_z ) {
       *pgs_w = 0;
@@ -306,7 +1193,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
       fprintf(stderr, "loom: image corrupt size %zu\r\n", siz_z);
       return _ce_img_size;
     }
-    else if ( pgs_z > UINT32_MAX ) {
+    else if ( pgs_z > c3_w_max ) {
       fprintf(stderr, "loom: image overflow %zu\r\n", siz_z);
       return _ce_img_fail;
     }
@@ -317,6 +1204,7 @@ _ce_image_stat(u3e_image* img_u, c3_w* pgs_w)
   }
 }
 
+#ifndef U3_OS_windows
 /* _ce_ephemeral_open(): open or create ephemeral file
 */
 static c3_o
@@ -352,14 +1240,13 @@ _ce_ephemeral_open(c3_i* eph_i)
   }
   return c3y;
 }
+#endif /* ifndef U3_OS_windows */
 
-/* _ce_image_open(): open or create image.
+/* _ce_image_open(): open image with the given open(2) mode.
 */
 static _ce_img_stat
-_ce_image_open(u3e_image* img_u, c3_c* ful_c)
+_ce_image_open(u3e_image* img_u, c3_c* ful_c, c3_i mod_i)
 {
-  c3_i mod_i = O_RDWR | O_CREAT;
-
   c3_c pax_c[8192];
   snprintf(pax_c, 8192, "%s/%s.bin", ful_c, img_u->nam_c);
   if ( -1 == (img_u->fid_i = c3_open(pax_c, mod_i, 0666)) ) {
@@ -371,11 +1258,11 @@ _ce_image_open(u3e_image* img_u, c3_c* ful_c)
 }
 
 c3_i
-u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
+u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z, c3_i mod_i)
 {
   u3e_image img_u = { .nam_c = nam_c };
 
-  switch ( _ce_image_open(&img_u, dir_c) ) {
+  switch ( _ce_image_open(&img_u, dir_c, mod_i) ) {
     case _ce_img_good: {
       *len_z = _ce_len(img_u.pgs_w);
       return img_u.fid_i;
@@ -394,13 +1281,13 @@ u3e_image_open_any(c3_c* nam_c, c3_c* dir_c, c3_z* len_z)
 static void
 _ce_patch_write_control(u3_ce_patch* pat_u)
 {
-  ssize_t ret_i;
-  c3_w    len_w = sizeof(u3e_control) +
-                  (pat_u->con_u->pgs_w * sizeof(u3e_line));
+  c3_zs ret_zs;
+  c3_z  len_z = sizeof(u3e_control) +
+                (pat_u->con_u->pgs_w * sizeof(u3e_line));
 
-  if ( len_w != (ret_i = write(pat_u->ctl_i, pat_u->con_u, len_w)) ) {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: patch ctl partial write: %zu\r\n", (size_t)ret_i);
+  if ( len_z != (ret_zs = write(pat_u->ctl_i, pat_u->con_u, len_z)) ) {
+    if ( 0 < ret_zs ) {
+      fprintf(stderr, "loom: patch ctl partial write: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
       fprintf(stderr, "loom: patch ctl write: %s\r\n", strerror(errno));
@@ -414,7 +1301,7 @@ _ce_patch_write_control(u3_ce_patch* pat_u)
 static c3_o
 _ce_patch_read_control(u3_ce_patch* pat_u)
 {
-  c3_w len_w;
+  c3_z len_z;
 
   u3_assert(0 == pat_u->con_u);
   {
@@ -424,16 +1311,16 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
       u3_assert(0);
       return c3n;
     }
-    len_w = (c3_w) buf_u.st_size;
+    len_z = (c3_z) buf_u.st_size;
   }
 
-  if (0 == len_w) {
+  if (0 == len_z) {
     return c3n;
   }
-  
-  pat_u->con_u = c3_malloc(len_w);
-  if ( (len_w != read(pat_u->ctl_i, pat_u->con_u, len_w)) ||
-        (len_w != sizeof(u3e_control) +
+
+  pat_u->con_u = c3_malloc(len_z);
+  if ( (len_z != read(pat_u->ctl_i, pat_u->con_u, len_z)) ||
+        (len_z != sizeof(u3e_control) +
                   (pat_u->con_u->pgs_w * sizeof(u3e_line))) )
   {
     c3_free(pat_u->con_u);
@@ -494,27 +1381,29 @@ _ce_patch_delete(void)
 static c3_o
 _ce_patch_verify(u3_ce_patch* pat_u)
 {
-  c3_w  pag_w, has_w;
+  c3_w  pag_w;
+  c3_h  has_h;
   c3_y  buf_y[_ce_page];
   c3_zs ret_zs;
 
-  if ( U3P_VERLAT != pat_u->con_u->ver_w ) {
-    fprintf(stderr, "loom: patch version mismatch: have %"PRIc3_w", need %u\r\n",
-                    pat_u->con_u->ver_w,
+  if ( U3P_VERLAT != pat_u->con_u->ver_h ) {
+    fprintf(stderr, "loom: patch version mismatch: "
+                    "have %"PRIc3_h", need %"PRIc3_h"\r\n",
+                    pat_u->con_u->ver_h,
                     U3P_VERLAT);
     return c3n;
   }
 
   {
-    c3_w  len_w = sizeof(u3e_control) + (pat_u->con_u->pgs_w * sizeof(u3e_line));
-    c3_w  off_w = offsetof(u3e_control, tot_w);
-    c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
-    c3_w  has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+    c3_z  len_z = sizeof(u3e_control) + (pat_u->con_u->pgs_w * sizeof(u3e_line));
+    c3_z  off_z = offsetof(u3e_control, tot_w);
+    c3_y *ptr_y = (c3_y*)pat_u->con_u + off_z;
+    c3_h  has_h = _ce_muk_buf(len_z - off_z, ptr_y);
 
-    if ( has_w != pat_u->con_u->has_w ) {
+    if ( has_h != pat_u->con_u->has_h ) {
       fprintf(stderr, "loom: patch meta checksum fail: "
-                      "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
-                      has_w, pat_u->con_u->has_w);
+                      "have=0x%"PRIxc3_h", need=0x%"PRIxc3_h"\r\n",
+                      has_h, pat_u->con_u->has_h);
       return c3n;
     }
   }
@@ -523,7 +1412,7 @@ _ce_patch_verify(u3_ce_patch* pat_u)
   //
   for ( c3_z i_z = 0; i_z < pat_u->con_u->pgs_w; i_z++ ) {
     pag_w = pat_u->con_u->mem_u[i_z].pag_w;
-    has_w = pat_u->con_u->mem_u[i_z].has_w;
+    has_h = pat_u->con_u->mem_u[i_z].has_h;
 
     if ( _ce_page !=
          (ret_zs = pread(pat_u->mem_i, buf_y, _ce_page, _ce_len(i_z))) )
@@ -538,17 +1427,17 @@ _ce_patch_verify(u3_ce_patch* pat_u)
     }
 
     {
-      c3_w nas_w = _ce_muk_page(buf_y);
+      c3_h nas_h = _ce_muk_page(buf_y);
 
-      if ( has_w != nas_w ) {
+      if ( has_h != nas_h ) {
         fprintf(stderr, "loom: patch page (%"PRIc3_w") checksum fail: "
-                        "have=0x%"PRIxc3_w", need=0x%"PRIxc3_w"\r\n",
-                        pag_w, nas_w, has_w);
+                        "have=0x%"PRIxc3_h", need=0x%"PRIxc3_h"\r\n",
+                        pag_w, nas_h, has_h);
         return c3n;
       }
 #if 0
       else {
-        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_w"\r\n", pag_w, i_z, has_w);
+        u3l_log("verify: patch %"PRIc3_w"/%"PRIc3_z", %"PRIxc3_h"\r\n", pag_w, i_z, has_h);
       }
 #endif
     }
@@ -646,10 +1535,10 @@ _ce_patch_count_page(c3_w pag_w,
                      c3_w off_w,
                      c3_w pgc_w)
 {
-  c3_w blk_w = (pag_w >> 5);
-  c3_w bit_w = (pag_w & 31);
+  c3_w blk_w = (pag_w >> u3a_chub_bits_log);
+  c3_w bit_w = (pag_w & (u3a_chub_bits-1));
 
-  if (  (u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+  if (  (u3P.dit_d[blk_w] & ((c3_d)1 << bit_w))
      && (  (pag_w < off_w)
      || (u3R->hep.len_w <= (pag_w - off_w))
      || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
@@ -668,27 +1557,29 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
                     c3_w         off_w,
                     c3_w         pgc_w)
 {
-  c3_w  blk_w = (pag_w >> 5);
-  c3_w  bit_w = (pag_w & 31);
+  c3_w  blk_w = (pag_w >> u3a_chub_bits_log);
+  c3_w  bit_w = (pag_w & (u3a_chub_bits-1));
 
-  if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
+  if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
     if (  (pag_w >= off_w)
        && (u3R->hep.len_w > (pag_w - off_w))
        && (u3a_free_pg == (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) )
     {
-      // fprintf(stderr, "save: skip %u\r\n", pag_w);
+      // fprintf(stderr, "save: skip %"PRIc3_w"\r\n", pag_w);
       pat_u->sip_w++;
       return pgc_w;
     }
 
     c3_w* mem_w = _ce_ptr(pag_w);
 
+    _ce_meas_page(pag_w);
+
     pat_u->con_u->mem_u[pgc_w].pag_w = pag_w;
-    pat_u->con_u->mem_u[pgc_w].has_w = _ce_muk_page(mem_w);
+    pat_u->con_u->mem_u[pgc_w].has_h = _ce_muk_page(mem_w);
 
 #if 0
-    fprintf(stderr, "loom: save page %d %x\r\n",
-                    pag_w, pat_u->con_u->mem_u[pgc_w].has_w);
+    fprintf(stderr, "loom: save page %"PRIc3_w" %"PRIxc3_h"\r\n",
+                    pag_w, pat_u->con_u->mem_u[pgc_w].has_h);
 #endif
     _ce_patch_write_page(pat_u, pgc_w, mem_w);
 
@@ -720,14 +1611,15 @@ _ce_patch_compose(c3_w max_w)
   }
   else {
     u3_ce_patch* pat_u = c3_malloc(sizeof(u3_ce_patch));
-    c3_w i_w, len_w, pgc_w;
+    c3_w i_w, pgc_w;
+    c3_z len_z;
 
     pat_u->sip_w = 0;
 
     _ce_patch_create(pat_u);
-    len_w = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
-    pat_u->con_u = c3_malloc(len_w);
-    pat_u->con_u->ver_w = U3P_VERLAT;
+    len_z = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
+    pat_u->con_u = c3_malloc(len_z);
+    pat_u->con_u->ver_h = U3P_VERLAT;
     pgc_w = 0;
 
     for ( i_w = 0; i_w < max_w; i_w++ ) {
@@ -740,10 +1632,10 @@ _ce_patch_compose(c3_w max_w)
     pat_u->con_u->pgs_w = pgc_w;
 
     {
-      c3_w  off_w = offsetof(u3e_control, tot_w);
-      c3_y *ptr_y = (c3_y*)pat_u->con_u + off_w;
+      c3_z  off_z = offsetof(u3e_control, tot_w);
+      c3_y *ptr_y = (c3_y*)pat_u->con_u + off_z;
 
-      pat_u->con_u->has_w = _ce_muk_buf(len_w - off_w, ptr_y);
+      pat_u->con_u->has_h = _ce_muk_buf(len_z - off_z, ptr_y);
     }
 
     _ce_patch_write_control(pat_u);
@@ -793,15 +1685,22 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
   if ( img_u->pgs_w > pgs_w ) {
     if ( off_z != (size_t)off_i ) {
       fprintf(stderr, "loom: image truncate: "
-                      "offset overflow (%" PRId64 ") for page %u\r\n",
+                      "offset overflow (%" PRIc3_ds ") for page %"PRIc3_w"\r\n",
                       (c3_ds)off_i, pgs_w);
       u3_assert(0);
     }
 
+#ifdef U3_OS_windows
+    if ( u3_wnd_truncate(img_u->fid_i, (c3_d)off_z) ) {
+      fprintf(stderr, "loom: image truncate to %zu failed\r\n", off_z);
+      u3_assert(0);
+    }
+#else
     if ( ftruncate(img_u->fid_i, off_i) ) {
       fprintf(stderr, "loom: image truncate: %s\r\n", strerror(errno));
       u3_assert(0);
     }
+#endif
   }
 
   img_u->pgs_w = pgs_w;
@@ -861,7 +1760,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
       }
     }
 #if 0
-    u3l_log("apply: %d, %x", pag_w, _ce_muk_page(buf_y));
+    u3l_log("apply: %"PRIc3_w", %"PRIxc3_w"", pag_w, _ce_muk_page(buf_y));
 #endif
   }
 }
@@ -877,11 +1776,11 @@ _ce_loom_track_sane(void)
   max_w = u3P.img_u.pgs_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
 
-    if ( u3P.dit_w[blk_w] & ((c3_w)1 << bit_w) ) {
-      fprintf(stderr, "loom: insane image %u\r\n", i_w);
+    if ( u3P.dit_d[blk_w] & ((c3_d)1 << bit_w) ) {
+      fprintf(stderr, "loom: insane image %"PRIc3_w"\r\n", i_w);
       san_o = c3n;
     }
   }
@@ -889,11 +1788,11 @@ _ce_loom_track_sane(void)
   max_w = u3P.pag_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w)) ) {
-      fprintf(stderr, "loom: insane open %u\r\n", i_w);
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w)) ) {
+      fprintf(stderr, "loom: insane open %"PRIc3_w"\r\n", i_w);
       san_o = c3n;
     }
   }
@@ -903,23 +1802,23 @@ _ce_loom_track_sane(void)
 
 /* _ce_loom_track(): [pgs_w] clean, followed by [dif_w] dirty.
 */
-void
+static void
 _ce_loom_track(c3_w pgs_w, c3_w dif_w)
 {
   c3_w blk_w, bit_w, i_w = 0, max_w = pgs_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
-    u3P.dit_w[blk_w] &= ~((c3_w)1 << bit_w);
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
+    u3P.dit_d[blk_w] &= ~((c3_d)1 << bit_w);
   }
 
   max_w += dif_w;
 
   for ( ; i_w < max_w; i_w++ ) {
-    blk_w = i_w >> 5;
-    bit_w = i_w & 31;
-    u3P.dit_w[blk_w] |= ((c3_w)1 << bit_w);
+    blk_w = i_w >> u3a_chub_bits_log;
+    bit_w = i_w & (u3a_chub_bits-1);
+    u3P.dit_d[blk_w] |= ((c3_d)1 << bit_w);
   }
 }
 
@@ -932,7 +1831,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
 
   if ( pgs_w ) {
     if ( 0 != mprotect(_ce_ptr(0), _ce_len(pgs_w), PROT_READ) ) {
-      fprintf(stderr, "loom: pure (%u pages): %s\r\n",
+      fprintf(stderr, "loom: pure (%"PRIc3_w" pages): %s\r\n",
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
@@ -945,7 +1844,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
                        _ce_len(dif_w),
                        (PROT_READ | PROT_WRITE)) )
     {
-      fprintf(stderr, "loom: foul (%u pages, %u old): %s\r\n",
+      fprintf(stderr, "loom: foul (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                       pgs_w, old_w, strerror(errno));
       u3_assert(0);
     }
@@ -965,6 +1864,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
   _ce_loom_track(pgs_w, dif_w);
 }
 
+#ifndef U3_OS_windows
 /* _ce_loom_mapf_ephemeral(): map entire loom into ephemeral file
 */
 static void
@@ -976,12 +1876,126 @@ _ce_loom_mapf_ephemeral(void)
                           (MAP_FIXED | MAP_SHARED),
                           u3P.eph_i, 0) )
   {
-    fprintf(stderr, "loom: initial ephemeral mmap failed (%u pages): %s\r\n",
+    fprintf(stderr, "loom: initial ephemeral mmap failed (%"PRIc3_w" pages): %s\r\n",
                     u3P.pag_w, strerror(errno));
     u3_assert(0);
   }
 }
+#endif /* ifndef U3_OS_windows */
 
+/* _ce_loom_blit_pages(): read [pgs_w] pages of [fid_i] from [off_w].
+*/
+static void
+_ce_loom_blit_pages(c3_i fid_i, c3_w off_w, c3_w pgs_w)
+{
+  c3_zs ret_zs;
+  c3_w  i_w;
+
+  if ( !pgs_w ) {
+    return;
+  }
+
+#ifdef U3_OS_windows
+  //  pread(2) writes these pages from kernel mode, which the fault handler
+  //  cannot rescue, so they must be committed up front.
+  //
+  if ( c3n == u3_wnd_loom_commit(_ce_ptr(off_w), _ce_len(pgs_w)) ) {
+    fprintf(stderr, "loom: blit commit (%"PRIc3_w" pages at %"PRIc3_w")\r\n",
+                    pgs_w, off_w);
+    u3_assert(0);
+  }
+#endif
+
+  for ( i_w = off_w; i_w < (off_w + pgs_w); i_w++ ) {
+    if ( _ce_page != (ret_zs = pread(fid_i, _ce_ptr(i_w),
+                                     _ce_page, _ce_len(i_w))) )
+    {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: blit partial read: %"PRIc3_zs"\r\n", ret_zs);
+      }
+      else {
+        fprintf(stderr, "loom: blit read %s\r\n", strerror(errno));
+      }
+      u3_assert(0);
+    }
+  }
+}
+
+/* _ce_loom_unmapf(): drop the file-backed image mapping, if any.
+**
+**   NB: windows refuses to truncate a mapped file, and does not guarantee
+**   coherence between a mapped view and writes through the file handle.
+**   the image mapping must therefore be dropped before a patch is applied.
+**   a no-op everywhere else, where mmap(MAP_FIXED) simply replaces it.
+*/
+static void
+_ce_loom_unmapf(void)
+{
+#ifdef U3_OS_windows
+  if ( !(u3C.wag_h & u3o_no_demand) ) {
+    c3_c pax_c[8192];
+
+    u3_assert( c3y == u3_wnd_loom_unmapf() );
+
+    //  windows keeps a file's section attached to the handle that created
+    //  it, so dropping the view is not enough to allow a truncate: the
+    //  descriptor has to be cycled as well.
+    //
+    snprintf(pax_c, 8192, "%s/.urb/chk/%s.bin", u3P.dir_c, u3P.img_u.nam_c);
+
+    if ( -1 != u3P.img_u.fid_i ) {
+      close(u3P.img_u.fid_i);
+    }
+
+    if ( -1 == (u3P.img_u.fid_i = c3_open(pax_c, O_RDWR, 0666)) ) {
+      fprintf(stderr, "loom: image reopen %s: %s\r\n", pax_c, strerror(errno));
+      u3_assert(0);
+    }
+  }
+#endif
+}
+
+#ifdef U3_OS_windows
+/* _ce_loom_mapf(): map [pgs_w] of [fid_i] into the bottom of memory.
+**
+**   windows can only map at the allocation granularity (64KB), which is
+**   coarser than a loom page (16KB), so the granularity-floored prefix of
+**   the image is mapped and the ragged tail (at most 3 pages) is blitted.
+**
+**   NB: remapping resets all protections above the image, so the whole
+**   volatile region is re-dirtied and the guard page re-posted. this is
+**   the quiescent invariant anyway: image clean, everything else dirty.
+*/
+static void
+_ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
+{
+  c3_w gan_w = (c3_w)(u3_wnd_loom_gran() >> (u3a_page + u3a_word_bytes_shift));
+  c3_w map_w = pgs_w & ~(gan_w - 1);
+  c3_w tal_w = pgs_w - map_w;
+
+  u3_assert( c3y == u3_wnd_loom_mapf(fid_i, _ce_len(map_w)) );
+
+  if ( tal_w ) {
+    _ce_loom_blit_pages(fid_i, map_w, tal_w);
+
+    if ( 0 != mprotect(_ce_ptr(map_w), _ce_len(tal_w), PROT_READ) ) {
+      fprintf(stderr, "loom: tail pure (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
+                      tal_w, map_w, strerror(errno));
+      u3_assert(0);
+    }
+  }
+
+#ifdef U3_GUARD_PAGE
+  //  NB: not yet posted on the first mapping, from u3e_live()
+  //
+  if ( u3P.gar_w ) {
+    u3_assert( !_ce_ward_protect() );
+  }
+#endif
+
+  _ce_loom_track(pgs_w, u3P.pag_w - pgs_w);
+}
+#else
 /* _ce_loom_mapf(): map [pgs_w] of [fid_i] into the bottom of memory
 **                        (and ephemeralize [old_w - pgs_w] after if needed).
 */
@@ -997,7 +2011,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                             (MAP_FIXED | MAP_PRIVATE),
                             fid_i, 0) )
     {
-      fprintf(stderr, "loom: file-backed mmap failed (%u pages): %s\r\n",
+      fprintf(stderr, "loom: file-backed mmap failed (%"PRIc3_w" pages): %s\r\n",
                       pgs_w, strerror(errno));
       u3_assert(0);
     }
@@ -1006,14 +2020,14 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   if ( old_w > pgs_w ) {
     dif_w = old_w - pgs_w;
 
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
       if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
                               _ce_len(dif_w),
                               (PROT_READ | PROT_WRITE),
                               (MAP_FIXED | MAP_SHARED),
                               u3P.eph_i, _ce_len(pgs_w)) )
       {
-        fprintf(stderr, "loom: ephemeral mmap failed (%u pages, %u old): %s\r\n",
+        fprintf(stderr, "loom: ephemeral mmap failed (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                         pgs_w, old_w, strerror(errno));
         u3_assert(0);
       }
@@ -1025,7 +2039,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
                               (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
                               -1, 0) )
       {
-        fprintf(stderr, "loom: anonymous mmap failed (%u pages, %u old): %s\r\n",
+        fprintf(stderr, "loom: anonymous mmap failed (%"PRIc3_w" pages, %"PRIc3_w" old): %s\r\n",
                         pgs_w, old_w, strerror(errno));
         u3_assert(0);
       }
@@ -1045,31 +2059,14 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
 
   _ce_loom_track(pgs_w, dif_w);
 }
+#endif /* ifdef U3_OS_windows */
 
 /* _ce_loom_blit(): apply pages, in order, from the bottom of memory.
 */
 static void
 _ce_loom_blit(c3_i fid_i, c3_w pgs_w)
 {
-  c3_w    i_w;
-  void* ptr_v;
-  c3_zs ret_zs;
-
-  for ( i_w = 0; i_w < pgs_w; i_w++ ) {
-    ptr_v = _ce_ptr(i_w);
-
-    if ( _ce_page != (ret_zs = pread(fid_i, ptr_v, _ce_page, _ce_len(i_w))) ) {
-      if ( 0 < ret_zs ) {
-        fprintf(stderr, "loom: blit partial read: %"PRIc3_zs"\r\n",
-                        ret_zs);
-      }
-      else {
-        fprintf(stderr, "loom: blit read %s\r\n", strerror(errno));
-      }
-      u3_assert(0);
-    }
-  }
-
+  _ce_loom_blit_pages(fid_i, 0, pgs_w);
   _ce_loom_protect(pgs_w, 0);
 }
 
@@ -1079,14 +2076,14 @@ _ce_loom_blit(c3_i fid_i, c3_w pgs_w)
 static c3_o
 _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
 {
-  ssize_t ret_i;
-  c3_y    buf_y[_ce_page];
+  c3_zs ret_zs;
+  c3_y  buf_y[_ce_page];
 
   if ( _ce_page !=
-       (ret_i = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
+       (ret_zs = pread(img_u->fid_i, buf_y, _ce_page, off_z)) )
   {
-    if ( 0 < ret_i ) {
-      fprintf(stderr, "loom: image fine partial read: %zu\r\n", (size_t)ret_i);
+    if ( 0 < ret_zs ) {
+      fprintf(stderr, "loom: image fine partial read: %"PRIc3_zs"\r\n", ret_zs);
     }
     else {
       fprintf(stderr, "loom: image fine read: %s\r\n", strerror(errno));
@@ -1095,13 +2092,13 @@ _ce_page_fine(u3e_image* img_u, c3_w pag_w, c3_z off_z)
   }
 
   {
-    c3_w mas_w = _ce_muk_page(_ce_ptr(pag_w));
-    c3_w fas_w = _ce_muk_page(buf_y);
+    c3_h mas_h = _ce_muk_page(_ce_ptr(pag_w));
+    c3_h fas_h = _ce_muk_page(buf_y);
 
-    if ( mas_w != fas_w ) {
+    if ( mas_h != fas_h ) {
       fprintf(stderr, "loom: image checksum mismatch: "
-                      "page %d, mem_w %x, fil_w %x\r\n",
-                      pag_w, mas_w, fas_w);
+                      "page %" PRIc3_w ", mem_h %" PRIxc3_h ", fil_h %" PRIxc3_h "\r\n",
+                      pag_w, mas_h, fas_h);
       return c3n;
     }
   }
@@ -1120,10 +2117,10 @@ _ce_loom_fine(void)
 
   for ( i_w = 0; i_w < u3P.img_u.pgs_w; i_w++ ) {
     pag_w = i_w;
-    blk_w = pag_w >> 5;
-    bit_w = pag_w & 31;
+    blk_w = pag_w >> u3a_chub_bits_log;
+    bit_w = pag_w & (u3a_chub_bits-1);
 
-    if ( !(u3P.dit_w[blk_w] & ((c3_w)1 << bit_w))
+    if ( !(u3P.dit_d[blk_w] & ((c3_d)1 << bit_w))
        && (  (pag_w < off_w)
           || (u3R->hep.len_w <= (pag_w - off_w))
           || (u3a_free_pg != (u3to(u3_post, u3R->hep.pag_p))[pag_w - off_w]) ) )
@@ -1141,8 +2138,8 @@ _ce_loom_fine(void)
 static c3_o
 _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
 {
-  ssize_t ret_i;
-  c3_w      i_w;
+  c3_zs ret_zs;
+  c3_w  i_w;
 
   //  resize images
   //
@@ -1163,10 +2160,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
     c3_y buf_y[_ce_page];
     c3_w off_w = i_w;
 
-    if ( _ce_page != (ret_i = read(fom_u->fid_i, buf_y, _ce_page)) ) {
-      if ( 0 < ret_i ) {
-        fprintf(stderr, "loom: image copy partial read: %zu\r\n",
-                        (size_t)ret_i);
+    if ( _ce_page != (ret_zs = read(fom_u->fid_i, buf_y, _ce_page)) ) {
+      if ( 0 < ret_zs ) {
+        fprintf(stderr, "loom: image copy partial read: %"PRIc3_zs"\r\n",
+                        ret_zs);
       }
       else {
         fprintf(stderr, "loom: image copy read: %s\r\n",
@@ -1179,10 +2176,10 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
         fprintf(stderr, "loom: image copy seek: %s\r\n", strerror(errno));
         return c3n;
       }
-      if ( _ce_page != (ret_i = write(tou_u->fid_i, buf_y, _ce_page)) ) {
-        if ( 0 < ret_i ) {
-          fprintf(stderr, "loom: image copy partial write: %zu\r\n",
-                          (size_t)ret_i);
+      if ( _ce_page != (ret_zs = write(tou_u->fid_i, buf_y, _ce_page)) ) {
+        if ( 0 < ret_zs ) {
+          fprintf(stderr, "loom: image copy partial write: %"PRIc3_zs"\r\n",
+                          ret_zs);
         }
         else {
           fprintf(stderr, "loom: image copy write: %s\r\n", strerror(errno));
@@ -1228,7 +2225,7 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
   c3_c nux_c[8193];
   snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
   if (  (0 != access(nux_c, F_OK))
-     || (_ce_img_good != _ce_image_open(&nux_u, pux_c)) )
+     || (_ce_img_good != _ce_image_open(&nux_u, pux_c, O_RDWR | O_CREAT)) )
   {
     fprintf(stderr, "loom: couldn't open image at %s\r\n", pux_c);
     return c3n;
@@ -1281,7 +2278,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
 
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return;
   }
 
@@ -1298,8 +2295,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
     }
   }
 
-  if ( u3C.wag_w & u3o_verbose ) {
-    fprintf(stderr, "sync: skipped %u free", pat_u->sip_w);
+  if ( u3C.wag_h & u3o_verbose ) {
+    fprintf(stderr, "sync: skipped %" PRIc3_w " free", pat_u->sip_w);
     u3a_print_memory(stderr, " pages", pat_u->sip_w << u3a_page);
   }
 
@@ -1307,7 +2304,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   //
   u3a_loom_sane();
 
-  if ( u3C.wag_w & u3o_verbose ) {
+  if ( u3C.wag_h & u3o_verbose ) {
     u3a_print_memory(stderr, "sync: save", pat_u->con_u->pgs_w << u3a_page);
   }
 
@@ -1323,9 +2320,15 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_assert( c3y == _ce_loom_fine() );
 #endif
 
+  //  the image cannot be resized or rewritten while mapped
+  //
+  _ce_loom_unmapf();
+
   _ce_patch_apply(pat_u);
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
+
+  _ce_meas_save(pat_u->con_u->pgs_w, pat_u->sip_w);
 
   _ce_patch_free(pat_u);
   _ce_patch_delete();
@@ -1349,7 +2352,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_assert( c3y == _ce_loom_fine() );
 #endif
 
-  if ( u3C.wag_w & u3o_no_demand ) {
+  if ( u3C.wag_h & u3o_no_demand ) {
 #ifndef U3_SNAPSHOT_VALIDATION
     _ce_loom_protect(u3P.img_u.pgs_w, old_w);
 #endif
@@ -1369,9 +2372,13 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   c3_w  pgs_w = u3P.pag_w - (nor_w + sou_w);
   void* ptr_v = _ce_ptr(nor_w);
 
-  #ifndef U3_OS_windows
+  #ifdef U3_OS_windows
+  //  NB: returns resident pages, but not commit charge; see wloom.h.
+  //
+  u3_wnd_loom_toss(ptr_v, _ce_len(pgs_w));
+  #else
   if ( -1 == madvise(ptr_v, _ce_len(pgs_w), MADV_DONTNEED) ) {
-      fprintf(stderr, "loom: madv_dontneed failed (%u pages at %u): %s\r\n",
+      fprintf(stderr, "loom: madv_dontneed failed (%"PRIc3_w" pages at %"PRIc3_w"): %s\r\n",
                       pgs_w, nor_w, strerror(errno));
   }
   #endif
@@ -1405,26 +2412,53 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     }
   }
 
+#ifdef U3_OS_windows
+  //  mappings are placed at the allocation granularity, not the page size,
+  //  and the image mapping is floored to it. that floor is only expressible
+  //  if the granularity is a whole number of loom pages. in practice this
+  //  is always 64KB against a 16KB page.
+  //
+  if ( !(u3C.wag_h & u3o_no_demand) ) {
+    size_t gan_i = u3_wnd_loom_gran();
+
+    if ( gan_i % _ce_page ) {
+      fprintf(stderr, "loom: incompatible allocation granularity (%zuKB), "
+                      "use --no-demand\r\n", gan_i >> 10);
+      exit(1);
+    }
+  }
+#endif
+
   u3P.dir_c = dir_c;
   u3P.eph_i = 0;
   u3P.img_u.nam_c = "image";
   u3P.pag_w = u3C.wor_i >> u3a_page;
+  u3P.dit_d = calloc(u3P.pag_w / u3a_chub_bits, sizeof(c3_d));
 
   //  XX review dryrun requirements, enable or remove
   //
 #if 0
-  if ( u3C.wag_w & u3o_dryrun ) {
+  if ( u3C.wag_h & u3o_dryrun ) {
     return c3y;
   } else
 #endif
   {
     //  Open the ephemeral space file.
     //
-    if ( u3C.wag_w & u3o_swap ) {
+    if ( u3C.wag_h & u3o_swap ) {
+#ifdef U3_OS_windows
+      //  the ephemeral file is remapped a page at a time, which windows
+      //  cannot do: mappings are placed at the 64KB allocation granularity,
+      //  and a loom page is 16KB.
+      //
+      fprintf(stderr, "boot: --swap is not supported on windows\r\n");
+      exit(1);
+#else
       if ( c3n == _ce_ephemeral_open(&u3P.eph_i) ) {
         fprintf(stderr, "boot: failed to load ephemeral file\r\n");
         exit(1);
       }
+#endif
     }
 
     //  Open image files.
@@ -1432,7 +2466,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
     c3_c chk_c[8193];
     snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
 
-    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c);
+    _ce_img_stat sat_e = _ce_image_open(&u3P.img_u, chk_c, O_RDWR | O_CREAT);
 
     if ( _ce_img_fail == sat_e ) {
       fprintf(stderr, "boot: image failed\r\n");
@@ -1468,18 +2502,38 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
       /* Write image files to memory; reinstate protection.
       */
       {
-        if ( u3C.wag_w & u3o_swap ) {
+#ifndef U3_OS_windows
+        if ( u3C.wag_h & u3o_swap ) {
           _ce_loom_mapf_ephemeral();
         }
+#endif
 
-        if ( u3C.wag_w & u3o_no_demand ) {
+        //  NB: an incoming [nuu_o] means the caller is about to pave a
+        //  fresh road, so whatever the image holds is about to be
+        //  discarded. loading it is wasted work -- and under demand
+        //  paging, expensively so: every page the caller then writes
+        //  takes a copy-on-write fault and a page-in, against a snapshot
+        //  nobody will read.
+        //
+        //    the descriptor and [pgs_w] are still wanted. u3e_save()
+        //    resizes the image from there, and any pending patch has
+        //    already been applied above, for crash recovery.
+        //
+        //    every page stays dirty from u3e_foul(), which is correct:
+        //    nothing in the loom matches the image.
+        //
+        if ( c3y == nuu_o ) {
+          u3a_print_memory(stderr, "live: discarded",
+                           _ce_len_words(u3P.img_u.pgs_w));
+        }
+        else if ( u3C.wag_h & u3o_no_demand ) {
           _ce_loom_blit(u3P.img_u.fid_i, u3P.img_u.pgs_w);
+          u3l_log("boot: protected loom");
         }
         else {
           _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, 0);
+          u3l_log("boot: protected loom");
         }
-
-        u3l_log("boot: protected loom");
       }
 
       /* If the images were empty, we are logically booting.
@@ -1488,7 +2542,7 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
         u3l_log("live: logical boot");
         nuu_o = c3y;
       }
-      else if ( u3C.wag_w & u3o_no_demand ) {
+      else if ( u3C.wag_h & u3o_no_demand ) {
         u3a_print_memory(stderr, "live: loaded", _ce_len_words(u3P.img_u.pgs_w));
       }
       else {
@@ -1516,6 +2570,7 @@ u3e_stop(void)
   }
 
   close(u3P.img_u.fid_i);
+  c3_free(u3P.dit_d);
 }
 
 /* u3e_yolo(): disable dirty page tracking, read/write whole loom.
@@ -1525,6 +2580,18 @@ u3e_yolo(void)
 {
   //  NB: u3e_save() will reinstate protection flags
   //
+#ifdef U3_OS_windows
+  //  a placeholder loom is more than one mapping, and may hold reserved
+  //  pages; VirtualProtect can neither span mappings nor touch reserved
+  //  pages.
+  //
+  if ( c3y == u3_wnd_loom_live() ) {
+    if ( c3n == u3_wnd_loom_yolo() ) {
+      return c3n;
+    }
+  }
+  else
+#endif
   if ( 0 != mprotect(_ce_ptr(0),
                      _ce_len(u3P.pag_w),
                      (PROT_READ | PROT_WRITE)) )
@@ -1535,7 +2602,9 @@ u3e_yolo(void)
     return c3n;
   }
 
+#ifdef U3_GUARD_PAGE
   u3_assert( !_ce_ward_protect() );
+#endif
 
   return c3y;
 }
@@ -1545,7 +2614,7 @@ u3e_yolo(void)
 void
 u3e_foul(void)
 {
-  memset((void*)u3P.dit_w, 0xff, sizeof(u3P.dit_w));
+  memset((void*)u3P.dit_d, 0xff, sizeof(c3_d) * u3P.pag_w / u3a_chub_bits);
 }
 
 /* u3e_init(): initialize guard page tracking, dirty loom
@@ -1554,6 +2623,7 @@ void
 u3e_init(void)
 {
   u3P.pag_w = u3C.wor_i >> u3a_page;
+  u3P.dit_d = calloc(u3P.pag_w / u3a_chub_bits, sizeof(c3_d));
 
   u3P.img_u.fid_i = -1;
 
@@ -1577,7 +2647,7 @@ u3e_ward(u3_post low_p, u3_post hig_p)
   if ( !((pag_w > nop_w) && (pag_w < sop_w)) ) {
     u3_assert( !_ce_ward_post(nop_w, sop_w) );
     u3_assert( !_ce_flaw_mprotect(pag_w) );
-    u3_assert( u3P.dit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)) );
+    u3_assert( u3P.dit_d[pag_w >> u3a_chub_bits_log] & ((c3_d)1 << (pag_w & (u3a_chub_bits-1))) );
   }
 #endif
 }

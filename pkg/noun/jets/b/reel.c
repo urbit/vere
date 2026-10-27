@@ -17,7 +17,7 @@
       u3_noun*   top;
       u3_noun   i, t = a;
 
-      u3a_pile_prep(&pil_u, sizeof(u3_noun));
+      u3a_pile_prep(&pil_u, sizeof(u3_noun), alignof(u3_noun));
 
       //  push list onto road stack
       //
@@ -44,9 +44,7 @@
   {
     u3_noun a, b;
 
-    if ( c3n == u3r_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0) ) {
-      return u3m_bail(c3__exit);
-    } else {
-      return u3qb_reel(a, b);
-    }
+    a = u3h(u3h(u3t(cor)));
+    b = u3t(u3h(u3t(cor)));
+    return u3qb_reel(a, b);
   }

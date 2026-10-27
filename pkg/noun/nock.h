@@ -17,7 +17,7 @@
   /* u3n_memo: %memo hint space
    */
   typedef struct {
-    c3_l    sip_l;
+    c3_h    sip_l;
     u3_noun key;
     u3z_cid cid;
   } u3n_memo;
@@ -27,29 +27,36 @@
   typedef struct _u3n_prog {
     struct {
       c3_o      own_o;                // program owns ops_y?
-      c3_w      len_w;                // length of bytecode (bytes)
+      c3_h      len_w;                // length of bytecode (bytes)
       c3_y*     ops_y;                // actual array of bytes
     } byc_u;                          // bytecode
     struct {
-      c3_w      len_w;                // number of literals
+      c3_h      len_w;                // number of literals
       u3_noun*  non;                  // array of literals
     } lit_u;                          // literals
     struct {
-      c3_w      len_w;                // number of memo slots
+      c3_h      len_w;                // number of memo slots
       u3n_memo* sot_u;                // array of memo slots
     } mem_u;                          // memo slot data
     struct {
-      c3_w      len_w;                // number of calls sites
+      c3_h      len_w;                // number of calls sites
       u3j_site* sit_u;                // array of sites
     } cal_u;                          // call site data
     struct {
-      c3_w      len_w;                // number of registration sites
+      c3_h      len_w;                // number of registration sites
       u3j_rite* rit_u;                // array of sites
     } reg_u;                          // registration site data
   } u3n_prog;
 
   /**  Functions.
   **/
+    /* u3n_meas(): the home road's programs: count, bytes, those whose
+    **             formula only their key holds, and those looked up since
+    **             the last call (measurement).
+    */
+      void
+      u3n_meas(c3_d* num_d, c3_d* byt_d, c3_d* ded_d, c3_d* use_d);
+
     /* u3n_nock_on(): produce .*(bus fol).
     */
       u3_noun
@@ -111,15 +118,11 @@
       u3_noun
       u3n_nock_an(u3_noun bus, u3_noun fol);
 
-    /* u3n_reap(): promote bytecode state.
+    /* u3n_reap(): promote junior bytecode state [har_p], in place.
+    **             call after u3m_fall(), before the junior heap is dropped.
      */
       void
       u3n_reap(u3p(u3h_root) har_p);
-
-    /* u3n_take(): copy junior bytecode state.
-     */
-      u3p(u3h_root)
-      u3n_take(u3p(u3h_root) har_p);
 
     /* u3n_mark(): mark bytecode cache.
      */

@@ -6,52 +6,59 @@
 
 #include "curl/curl.h"
 #include "noun.h"
-#include "uv.h"
 
-/* _dawn_oct_to_buf(): +octs to uv_buf_t
+/* _dawn_oct_to_buf(): +octs to u3_array
 */
-static uv_buf_t
+static u3_array
 _dawn_oct_to_buf(u3_noun oct)
 {
   if ( c3n == u3a_is_cat(u3h(oct)) ) {
+    u3l_log("dawn: received malformed octs");
     exit(1);
   }
 
-  c3_w len_w  = u3h(oct);
-  c3_y* buf_y = c3_malloc(1 + len_w);
-  buf_y[len_w] = 0;
+  u3_array buf_u = {0};
+  buf_u.len_d = 0;
+  buf_u.cap_d = (c3_d)(u3h(oct) + 1);
+  buf_u.buf_y = c3_malloc(buf_u.cap_d);
+  buf_u.buf_y[buf_u.cap_d-1] = 0;
 
-  u3r_bytes(0, len_w, buf_y, u3t(oct));
+  u3r_bytes(0, buf_u.cap_d-1, buf_u.buf_y, u3t(oct));
 
   u3z(oct);
-  return uv_buf_init((void*)buf_y, len_w);
+  return buf_u;
 }
 
-/* _dawn_buf_to_oct(): uv_buf_t to +octs
+/* _dawn_buf_to_oct(): u3_array to +octs
 */
 static u3_noun
-_dawn_buf_to_oct(uv_buf_t buf_u)
+_dawn_buf_to_oct(u3_array buf_u)
 {
-  u3_noun len = u3i_words(1, (c3_w*)&buf_u.len);
+  if ( buf_u.len_d > 0xffffffff ) {
+    u3l_log("dawn: buffer too big");
+    exit(1);
+  }
+
+  u3_noun len = u3i_words(1, (c3_w*)&buf_u.len_d);
 
   if ( c3n == u3a_is_cat(len) ) {
     exit(1);
   }
 
-  return u3nc(len, u3i_bytes(buf_u.len, (const c3_y*)buf_u.base));
+  return u3nc(len, u3i_bytes(buf_u.len_d, (const c3_y*)buf_u.buf_y));
 }
 
 /* _dawn_post_json(): POST JSON to url_c
 */
-static uv_buf_t
-_dawn_post_json(c3_c* url_c, uv_buf_t lod_u)
+static u3_array
+_dawn_post_json(c3_c* url_c, u3_array lod_u)
 {
   CURL *curl;
   CURLcode result;
   long cod_l;
   struct curl_slist* hed_u = 0;
 
-  uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
+  u3_array buf_u = {.len_d = 0, .cap_d = 300, .buf_y = c3_malloc(300)};
 
   if ( !(curl = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
@@ -71,7 +78,7 @@ _dawn_post_json(c3_c* url_c, uv_buf_t lod_u)
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hed_u);
 
   // note: must be terminated!
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, lod_u.base);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, lod_u.buf_y);
 
   result = curl_easy_perform(curl);
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &cod_l);
@@ -102,7 +109,7 @@ _dawn_get_jam(c3_c* url_c)
   CURLcode result;
   long cod_l;
 
-  uv_buf_t buf_u = uv_buf_init(c3_malloc(1), 0);
+  u3_array buf_u = {.len_d = 0, .cap_d = 15, .buf_y = c3_malloc(15)};
 
   if ( !(curl = curl_easy_init()) ) {
     u3l_log("failed to initialize libcurl");
@@ -138,7 +145,7 @@ _dawn_get_jam(c3_c* url_c)
   u3_noun jammed = u3k(u3t(octs));
   u3z(octs);
 
-  c3_free(buf_u.base);
+  c3_free(buf_u.buf_y);
 
   return u3ke_cue(jammed);
 }
@@ -148,10 +155,10 @@ _dawn_get_jam(c3_c* url_c)
 static u3_noun
 _dawn_eth_rpc(c3_c* url_c, u3_noun oct)
 {
-  uv_buf_t buf_u = _dawn_post_json(url_c, _dawn_oct_to_buf(oct));
+  u3_array buf_u = _dawn_post_json(url_c, _dawn_oct_to_buf(oct));
   u3_noun    pro = _dawn_buf_to_oct(buf_u);
 
-  c3_free(buf_u.base);
+  c3_free(buf_u.buf_y);
 
   return pro;
 }
@@ -162,7 +169,7 @@ static void
 _dawn_fail(u3_noun who, u3_noun rac, u3_noun sas)
 {
   u3_noun how = u3dc("scot", 'p', u3k(who));
-  c3_c* how_c = u3r_string(u3k(how));
+  c3_c* how_c = u3r_string(how);
 
   c3_c* rac_c;
 
@@ -253,7 +260,7 @@ _dawn_sponsor(u3_noun who, u3_noun rac, u3_noun pot)
   u3_noun uni = u3dc("sponsor:dawn", u3k(who), u3k(pot));
 
   if ( c3n == u3h(uni) ) {
-    _dawn_fail(who, rac, u3nc(u3t(uni), u3_nul));
+    _dawn_fail(who, rac, u3nc(u3k(u3t(uni)), u3_nul));
     return u3_none;
   }
 
@@ -425,11 +432,11 @@ _dawn_come(u3_noun stars)
 {
   u3_noun seed;
   {
-    c3_w    eny_w[16];
+    c3_h    eny_w[16];
     u3_noun eny;
 
     c3_rand(eny_w);
-    eny = u3i_words(16, eny_w);
+    eny = u3i_halfs(16, eny_w);
 
     u3l_log("boot: mining a comet. May take up to an hour.");
     u3l_log("If you want to boot faster, get an Urbit identity.");

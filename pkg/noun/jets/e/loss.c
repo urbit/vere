@@ -72,7 +72,9 @@
     {
       c3_w i_w;
 
-      loc_u->hev = u3a_malloc(u3kb_lent(u3k(hev)) * sizeof(u3_noun));
+      u3_noun len = u3qb_lent(hev);
+      if ( c3n == u3a_is_cat(len) ) u3m_bail(c3__fail);
+      loc_u->hev = u3a_malloc(len * sizeof(u3_noun));
 
       for ( i_w = 0; u3_nul != hev; i_w++ ) {
         loc_u->hev[i_w] = u3h(hev);
@@ -96,7 +98,7 @@
         u3_noun teg;
 
         hav = u3kdb_get(u3k(loc_u->sev), u3k(how));
-        teg = u3nc(u3i_words(1, &i_w),
+        teg = u3nc(u3i_word(i_w),
                    (hav == u3_none) ? u3_nul : hav);
         loc_u->sev = u3kdb_put(loc_u->sev, u3k(how), teg);
       }
@@ -112,11 +114,11 @@
   {
     u3_noun kad;
 
-    kad = u3nc(u3i_words(1, &goy_w),
+    kad = u3nc(u3i_word(goy_w),
                (inx_w == 0) ? u3_nul
                             : u3k(loc_u->kad[inx_w - 1]));
     if ( loc_u->kct_w == inx_w ) {
-      u3_assert(loc_u->kct_w < (1 << 31));
+      u3_assert(loc_u->kct_w < ((c3_w)1 << 31));
       loc_u->kct_w++;
     } else {
       u3z(loc_u->kad[inx_w]);
@@ -242,7 +244,7 @@
   {
     while ( u3_nul != loc_u->hel ) {
       u3_noun i_hel = u3h(loc_u->hel);
-      u3_noun guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
+      u3_weak guy   = u3kdb_get(u3k(loc_u->sev), u3k(i_hel));
 
       if ( u3_none != guy ) {
         u3_noun gay = u3kb_flop(guy);

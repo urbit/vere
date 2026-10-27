@@ -65,6 +65,12 @@ typedef struct ur_dict64_s {
   ur_pail64_t *buckets;
 } ur_dict64_t;
 
+#ifndef VERE64
+typedef ur_dict32_t ur_dictn_t;
+#else
+typedef ur_dict64_t ur_dictn_t;
+#endif
+
 typedef struct ur_pail_s {
   ur_nref  refs[ur_pail_max];
 } ur_pail_t;
@@ -149,6 +155,18 @@ ur_dict64_put(ur_root_t *r, ur_dict64_t *dict, ur_nref ref, uint64_t val);
 
 void
 ur_dict64_wipe(ur_dict64_t *dict);
+
+#ifndef VERE64
+#define ur_dictn_grow ur_dict32_grow
+#define ur_dictn_get  ur_dict32_get
+#define ur_dictn_put  ur_dict32_put
+#define ur_dictn_wipe ur_dict32_wipe
+#else
+#define ur_dictn_grow ur_dict64_grow
+#define ur_dictn_get  ur_dict64_get
+#define ur_dictn_put  ur_dict64_put
+#define ur_dictn_wipe ur_dict64_wipe
+#endif
 
 void
 ur_dict_grow(ur_root_t *r, ur_dict_t *dict, uint64_t prev, uint64_t size);

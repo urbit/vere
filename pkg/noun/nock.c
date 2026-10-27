@@ -15,6 +15,20 @@
 #include "vortex.h"
 #include "xtract.h"
 #include "zave.h"
+#include "events.h"
+
+//  measurement: home-road programs looked up this interval
+//
+#define NAME    _cn_used
+#define KEY_TY  u3_post
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+static struct {
+  c3_t     ini_t;
+  _cn_used use_u;
+} _cn_meas_u;
 
 
 // define to have each opcode printed as it executes,
@@ -87,7 +101,7 @@ _n_hint(u3_noun zep,
     }
 
     case c3__slog: {
-      if ( !(u3C.wag_w & u3o_quiet) ) {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(hod);
         u3t_on(noc_o);
@@ -465,11 +479,11 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   /* related to nock 6: unconditional skips */                                 \
   X(SBIP, "sbip", &&do_sbip),  /* 47: c3_b */                                  \
   X(SIPS, "sips", &&do_sips),  /* 48: c3_s */                                  \
-  X(SWIP, "swip", &&do_swip),  /* 49: c3_l */                                  \
+  X(SWIP, "swip", &&do_swip),  /* 49: c3_h */                                  \
   /* related to nock 6: conditional skips */                                   \
   X(SBIN, "sbin", &&do_sbin),  /* 50: c3_b */                                  \
   X(SINS, "sins", &&do_sins),  /* 51: c3_s */                                  \
-  X(SWIN, "swin", &&do_swin),  /* 52: c3_l */                                  \
+  X(SWIN, "swin", &&do_swin),  /* 52: c3_h */                                  \
   /* nock 9 */                                                                 \
   X(KICB, "kicb", &&do_kicb),  /* 53: c3_b */                                  \
   X(KICS, "kics", &&do_kics),  /* 54: c3_s */                                  \
@@ -554,7 +568,7 @@ _n_arg(c3_y cod_y)
       return sizeof(c3_s);
 
     case SWIP: case SWIN:
-      return sizeof(c3_l);
+      return sizeof(c3_h);
 
     default:
       u3_assert( cod_y < LAST );
@@ -607,7 +621,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
           break;
 
         case SBIP: case SBIN: {
-          c3_l tot_l = 0,
+          c3_h tot_l = 0,
                sip_l = u3t(op);
           c3_w j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
@@ -619,7 +633,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         }
 
         case SKIB: case SLIB: {
-          c3_l tot_l = 0,
+          c3_h tot_l = 0,
                sip_l = u3h(u3t(u3t(op)));
           c3_w j_w, k_w = i_w;
           for ( j_w = 0; j_w < sip_l; ++j_w ) {
@@ -831,7 +845,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         /* memo index args */
         case SKIB: case SLIB: {
           u3n_memo* mem_u;
-          c3_l sip_l  = u3h(sip);
+          c3_h sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -846,7 +860,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
 
         /* skips */
         case SBIP: case SBIN: {
-          c3_l sip_l  = u3h(sip);
+          c3_h sip_l  = u3h(sip);
           u3_noun tmp = sip;
           sip = u3k(u3t(sip));
           u3z(tmp);
@@ -1032,6 +1046,7 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
       case c3__nara:
       case c3__hela:
       case c3__loop:
+      case c3__drop:
       case c3__bout: {
         u3_noun fen = u3_nul;
         c3_w  nef_w = _n_comp(&fen, nef, los_o, c3n);
@@ -1701,6 +1716,20 @@ _cn_to_prog(c3_w pog_w)
   return u3to(u3n_prog, pog_p);
 }
 
+/* _cn_meas_use(): note a lookup of home-road program [pog_u].
+*/
+static void
+_cn_meas_use(u3n_prog* pog_u)
+{
+  if ( u3e_measuring() ) {
+    if ( !_cn_meas_u.ini_t ) {
+      _cn_used_init(&_cn_meas_u.use_u);
+      _cn_meas_u.ini_t = 1;
+    }
+    (void)_cn_used_insert(&_cn_meas_u.use_u, u3of(u3n_prog, pog_u));
+  }
+}
+
 /* _n_find(): return prog for given formula with prefix (u3_nul for none).
  *            RETAIN.
  */
@@ -1711,16 +1740,29 @@ _n_find(u3_noun pre, u3_noun fol)
   u3_weak pog = u3h_git(u3R->byc.har_p, key);
   if ( u3_none != pog ) {
     u3z(key);
+    if ( &u3H->rod_u == u3R ) {
+      _cn_meas_use(_cn_to_prog(pog));
+    }
     return _cn_to_prog(pog);
   }
-  else if ( u3R != &u3H->rod_u ) {
+
+  //  a senior road's key is already canonical, and ours is dropped when
+  //  the program merges back at road exit, so dedup only a new key
+  //
+  if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
       rod_u = u3to(u3a_road, rod_u->par_p);
       pog   = u3h_git(rod_u->byc.har_p, key);
       if ( u3_none != pog ) {
         c3_w i_w;
-        u3n_prog* old = _n_prog_old(_cn_to_prog(pog));
+        u3n_prog* old;
+
+        if ( !rod_u->par_p ) {
+          _cn_meas_use(_cn_to_prog(pog));
+        }
+
+        old = _n_prog_old(_cn_to_prog(pog));
         for ( i_w = 0; i_w < old->reg_u.len_w; ++i_w ) {
           u3j_rite* rit_u = &(old->reg_u.rit_u[i_w]);
           rit_u->own_o = c3n;
@@ -1738,8 +1780,14 @@ _n_find(u3_noun pre, u3_noun fol)
     }
   }
 
+  key = u3m_dedup(key);
+
   {
     u3n_prog* gop = _n_bite(fol);
+    u3e_Meter.bcc_d++;
+    if ( &u3H->rod_u == u3R ) {
+      u3e_Meter.bca_d++;
+    }
     u3h_put(u3R->byc.har_p, key, _cn_of_prog(gop));
     u3z(key);
     return gop;
@@ -1920,6 +1968,13 @@ _n_hilt_fore(u3_noun hin, u3_noun bus, u3_noun* out)
       *out = u3i_cell(tag, u3i_cell(har, per));
     } break;
 
+    case c3__drop: {
+      u3m_Ford_fresh_road_depth_h = c3_max(u3m_road_depth(), u3m_Ford_fresh_road_depth_h);
+      u3h_free(u3R->cax.for_p);
+      u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+      *out = u3_nul;
+    } break;
+
     case c3__loop: {
       u3_noun key = u3nc(u3k(bus), u3k(fol));
       if ( u3_none != u3h_git(u3R->lop_p, key) ) {
@@ -2059,7 +2114,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__nara: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_nara(pri_l);
       }
@@ -2070,7 +2125,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__hela: {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3i_string("trace of"), u3k(tan));
         u3t_slog_hela(pri_l);
       }
@@ -2081,7 +2136,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__xray : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h pri_l = c3y == u3a_is_cat(pri) ? pri : 0;
         u3t_slog_cap(pri_l, u3k(tan), _cn_etch_bytecode(fol));
       }
       u3z(*clu);
@@ -2091,7 +2146,7 @@ _n_hint_fore(u3_cell hin, u3_noun bus, u3_noun* clu)
     case c3__meme : {
       u3_noun pri, tan;
       if ( c3y == u3r_cell(*clu, &pri, &tan) ) {
-        c3_l mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
+        c3_h mod_l = c3y == u3a_is_cat(pri) ? pri : 0;
         // replace with better str fmt
         u3t_slog_cap(1, u3k(tan), u3t_etch_meme(mod_l));
       }
@@ -2148,12 +2203,12 @@ _n_hint_hind(u3_noun tok, u3_noun pro)
     // "q_q_tok: report"
     // prepend the priority to form a cell of the same shape q_tok
     // send this to ut3_slog so that it can be logged out
-    c3_l pri_l = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
+    c3_h pri_h = c3y == u3a_is_cat(p_q_tok) ? p_q_tok : 0;
     if ( cap_t ) {
-      u3t_slog_cap(pri_l, u3k(q_q_tok), u3i_string(str_c));
+      u3t_slog_cap(pri_h, u3k(q_q_tok), u3i_string(str_c));
     }
     else {
-      u3t_slog(u3nc(pri_l, u3i_string(str_c)));
+      u3t_slog(u3nc(pri_h, u3i_string(str_c)));
     }
     u3z(delta);
   }
@@ -2698,7 +2753,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
 
     do_slog:
       x = _n_pep(mov, off);
-      if ( !(u3C.wag_w & u3o_quiet) ) {
+      if ( !(u3C.wag_h & u3o_quiet) ) {
         u3t_off(noc_o);
         u3t_slog(x);
         u3t_on(noc_o);
@@ -2785,13 +2840,13 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       x   = _n_pep(mov, off);  // product
       top = _n_peek(off);
       o   = *top;
-      if ( u3z_memo_ford == u3h(o) ) {
-        u3z_save_m(u3h(o), 136 + c3__ford, u3t(o), x);
+      if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
+        x = u3z_save_m_dedup(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
-         : ( 0 == u3R->ski.gul ) ) {  //  prevents userspace from persistence
-        u3z_save_m(u3h(o), 144 + c3__nock, u3t(o), x);
+         : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
+        x = u3z_save_m_dedup(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
       // else if ( u3z_memo_keep == u3h(o) ) {
@@ -3058,79 +3113,150 @@ _cn_take_prog_cb(c3_w pog_w)
   return _cn_of_prog(gop_u);
 }
 
-/* u3n_take(): copy junior bytecode state.
-*/
-u3p(u3h_root)
-u3n_take(u3p(u3h_root) har_p)
-{
-  return u3h_take_with(har_p, _cn_take_prog_cb);
-}
-
-/* _cn_merge_prog_dat(): copy references from src_u u3n_prog to dst_u.
+/* _cn_reap_prog_dat(): merge junior [src_u] into [dst_u], reading
+**                      junior memory, writing only what changed.
+**
+**   a junior copy of a parent's program borrows its literals and
+**   call-site nouns, so most fields are the same pointers; taking them
+**   would gain references only to lose them again in the merge, and
+**   storing an equal value still dirties a clean page.
 */
 static void
-_cn_merge_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
+_cn_reap_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 {
   c3_w i_w;
 
   for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
-    u3z(dst_u->lit_u.non[i_w]);
-    dst_u->lit_u.non[i_w] = src_u->lit_u.non[i_w];
+    if ( dst_u->lit_u.non[i_w] != src_u->lit_u.non[i_w] ) {
+      u3_noun lit = u3a_take(src_u->lit_u.non[i_w]);
+      u3z(dst_u->lit_u.non[i_w]);
+      dst_u->lit_u.non[i_w] = lit;
+    }
   }
 
   for ( i_w = 0; i_w < src_u->mem_u.len_w; ++i_w ) {
     u3n_memo* emo_u = &(dst_u->mem_u.sot_u[i_w]);
     u3n_memo* ome_u = &(src_u->mem_u.sot_u[i_w]);
-    u3z(emo_u->key);
-    emo_u->sip_l    = ome_u->sip_l;
-    emo_u->key      = ome_u->key;
-    emo_u->cid      = ome_u->cid;
+
+    if ( emo_u->key != ome_u->key ) {
+      u3_noun key = u3a_take(ome_u->key);
+      u3z(emo_u->key);
+      emo_u->key = key;
+    }
+
+    if ( emo_u->sip_l != ome_u->sip_l ) emo_u->sip_l = ome_u->sip_l;
+    if ( emo_u->cid   != ome_u->cid   ) emo_u->cid   = ome_u->cid;
   }
 
   for ( i_w = 0; i_w < src_u->cal_u.len_w; ++i_w ) {
-    u3j_site_merge(&(dst_u->cal_u.sit_u[i_w]),
-                   &(src_u->cal_u.sit_u[i_w]));
+    u3j_site_reap(&(dst_u->cal_u.sit_u[i_w]),
+                  &(src_u->cal_u.sit_u[i_w]));
   }
 
   for ( i_w = 0; i_w < src_u->reg_u.len_w; ++i_w ) {
-    u3j_rite_merge(&(dst_u->reg_u.rit_u[i_w]),
-                   &(src_u->reg_u.rit_u[i_w]));
+    u3j_rite_reap(&(dst_u->reg_u.rit_u[i_w]),
+                  &(src_u->reg_u.rit_u[i_w]));
   }
 }
 
-/*  _cn_merge_prog_cb(): u3h_walk_with cb for integrating taken u3n_prog's.
+/*  _cn_reap_prog_cb(): u3h_walk_with cb for integrating junior u3n_prog's.
 */
 static void
-_cn_merge_prog_cb(u3_noun kev, void* wit)
+_cn_reap_prog_cb(u3_noun kev, void* wit)
 {
   u3p(u3h_root) har_p = *(u3p(u3h_root)*)wit;
-  u3n_prog*     pog_u;
-  u3_weak         got;
   u3_noun         key;
   c3_w          pog_w;
+  u3_weak         got;
   u3x_cell(kev, &key, &pog_w);
 
-  pog_u = _cn_to_prog(pog_w);
-  got   = u3h_git(har_p, key);
+  got = u3h_git(har_p, key);
 
   if ( u3_none != got ) {
-    u3n_prog* sep_u = _cn_to_prog(got);
-    _cn_merge_prog_dat(sep_u, pog_u);
-    u3a_free(pog_u);
-    pog_u = sep_u;
+    _cn_reap_prog_dat(_cn_to_prog(got), _cn_to_prog(pog_w));
   }
+  else {
+    u3_noun     yek = u3a_take(key);
+    u3p(u3n_prog) gop_p = _cn_take_prog_cb(pog_w);
 
-  u3h_put(har_p, key, _cn_of_prog(pog_u));
+    if ( har_p == u3H->rod_u.byc.har_p ) {
+      u3e_Meter.bca_d++;
+    }
+
+    u3h_put(har_p, yek, gop_p);
+    u3z(yek);
+  }
 }
 
-/* u3n_reap(): promote bytecode state.
+/* _cn_meas_size(): bytes allocated for [pog_u], excluding padding.
+*/
+static c3_d
+_cn_meas_size(u3n_prog* pog_u)
+{
+  return sizeof(u3n_prog)
+       + pog_u->byc_u.len_w
+       + (c3_d)sizeof(u3_noun)  * pog_u->lit_u.len_w
+       + (c3_d)sizeof(u3n_memo) * pog_u->mem_u.len_w
+       + (c3_d)sizeof(u3j_site) * pog_u->cal_u.len_w
+       + (c3_d)sizeof(u3j_rite) * pog_u->reg_u.len_w;
+}
+
+typedef struct {
+  c3_d num_d;
+  c3_d byt_d;
+  c3_d ded_d;
+} _cn_meas_tab;
+
+static void
+_cn_meas_cb(u3_noun kev, void* ptr_v)
+{
+  _cn_meas_tab* tab_u = ptr_v;
+  u3_noun       fol   = u3t(u3h(kev));
+
+  tab_u->num_d++;
+  tab_u->byt_d += _cn_meas_size(_cn_to_prog(u3t(kev)));
+
+  //  the key's formula is held by nothing but the key
+  //
+  if ( (c3n == u3a_is_cat(fol)) && (1 == u3a_use(fol)) ) {
+    tab_u->ded_d++;
+  }
+}
+
+/* u3n_meas(): the home road's programs: count, bytes, those whose
+**             formula only their key holds, and those looked up since
+**             the last call.
+*/
+void
+u3n_meas(c3_d* num_d, c3_d* byt_d, c3_d* ded_d, c3_d* use_d)
+{
+  _cn_meas_tab tab_u = {0};
+
+  u3h_walk_with(u3H->rod_u.byc.har_p, _cn_meas_cb, &tab_u);
+
+  *num_d = tab_u.num_d;
+  *byt_d = tab_u.byt_d;
+  *ded_d = tab_u.ded_d;
+  *use_d = 0;
+
+  if ( _cn_meas_u.ini_t ) {
+    *use_d = _cn_used_size(&_cn_meas_u.use_u);
+    _cn_used_clear(&_cn_meas_u.use_u);
+  }
+}
+
+/* u3n_reap(): promote junior bytecode state [har_p], in place.
+**
+**   call after u3m_fall(), while the junior heap is still intact, with
+**   the parent's [kid_p] still set (see u3m_love()): keys are compared
+**   against the parent's, and unifying equality must not repoint a
+**   parent noun into junior memory. the junior table is discarded with
+**   the junior heap.
 */
 void
 u3n_reap(u3p(u3h_root) har_p)
 {
-  u3h_walk_with(har_p, _cn_merge_prog_cb, &u3R->byc.har_p);
-  // NB *not* u3n_free, _cn_merge_prog_cb() transfers u3n_prog's
-  u3h_free(har_p);
+  u3h_walk_with(har_p, _cn_reap_prog_cb, &u3R->byc.har_p);
 }
 
 /* _n_ream(): ream program call sites
@@ -3197,7 +3323,6 @@ _n_bam(u3_noun kev, void* dat)
 {
   u3n_prog* pog = _cn_to_prog(u3t(kev));
   c3_w*   bam_w = dat;
-
   *bam_w += _n_prog_mark(pog);
 }
 
@@ -3213,11 +3338,37 @@ u3n_mark()
 
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk_with(har_p, _n_bam, &qua_u[0]->siz_w);
-  qua_u[0]->siz_w = qua_u[0]->siz_w * 4;
+  qua_u[0]->siz_w = qua_u[0]->siz_w * sizeof(c3_w);
 
   qua_u[1] = c3_calloc(sizeof(*qua_u[1]));
   qua_u[1]->nam_c = strdup("bytecode cache");
-  qua_u[1]->siz_w = u3h_mark(har_p) * 4;
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(har_p, &mas_u);
+
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[1]->qua_u = mua_u;
+    qua_u[1]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
 
   qua_u[2] = NULL;
 
