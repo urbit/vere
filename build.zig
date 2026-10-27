@@ -872,6 +872,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "soft-test",
+                .file = "pkg/vere/soft_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "pact-test",
                 .file = "pkg/vere/io/mesa/pact_test.c",
                 .deps = vere_test_deps,
