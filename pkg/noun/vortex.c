@@ -107,6 +107,11 @@ u3v_boot_lite(u3_noun pil)
   //
   u3A->roc = 0;
 
+  //  canonicalize the pill here, on the home road, so that the boot's
+  //  inner road finds its nouns as members, by pointer
+  //
+  pil = u3m_dedup(pil);
+
   {
     u3_noun pro = u3m_soft(0, _cv_lite, pil);
 
