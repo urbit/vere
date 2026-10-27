@@ -264,6 +264,51 @@ _test_defer(void)
   return ret_i;
 }
 
+/* _test_edit_road(): u3i_edit() copies on the home road, and edits a
+**                    uniquely held cell in place on a junior road.
+*/
+static c3_i
+_test_edit_road(void)
+{
+  c3_i ret_i = 1;
+
+  //  home road: copied, so a hashcons member can't change under the set
+  //
+  {
+    u3_noun q   = u3nt(1, 2, 3);
+    u3_noun pro = u3i_edit(q, 2, 99);
+
+    if ( (pro == q) || (99 != u3h(pro)) || (2 != u3h(u3t(pro))) ) {
+      fprintf(stderr, "edit: home road edited in place\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+
+  //  junior road: edited in place
+  //
+  {
+    u3_noun q, pro;
+    c3_t    our_t;
+
+    u3m_hate(0);
+
+    q     = u3nt(1, 2, 3);
+    pro   = u3i_edit(q, 2, 99);
+    our_t = (pro == q) && (99 == u3h(pro)) && (2 == u3h(u3t(pro)));
+    u3z(pro);
+
+    u3m_love(0);
+
+    if ( !our_t ) {
+      fprintf(stderr, "edit: junior road not edited in place\r\n");
+      ret_i = 0;
+    }
+  }
+
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -285,6 +330,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test defer: ok\r\n");
+
+  if ( !_test_edit_road() ) {
+    fprintf(stderr, "test edit road: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test edit road: ok\r\n");
 
   //  GC
   //
