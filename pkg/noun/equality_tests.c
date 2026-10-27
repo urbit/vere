@@ -262,6 +262,30 @@ _test_hcons(void)
   }
   u3z(r); u3z(q); u3z(p);
 
+  //  home nouns listed in a junior set are left alone at exit: the set
+  //  holds no references to them, so canonicalizing [x] in place would
+  //  free [c], which it still lists (#1133). they're put directly,
+  //  standing for a set that lists a home noun whose canonical equal
+  //  [m] is a member by the time the road exits
+  //
+  m = u3m_dedup(u3nc(23, 24));
+  {
+    u3_noun c = u3nc(23, 24);
+    u3_noun x = u3nc(c, 25);
+
+    u3m_hate(0);
+    u3h_put(u3R->dup_p, x, x);
+    u3h_put(u3R->dup_p, c, c);
+    u3m_love(0);
+
+    if ( (u3h(x) != c) || u3a_hcon_has(x) ) {
+      fprintf(stderr, "test: hcons: listed home noun rewritten\r\n");
+      ret_i = 0;
+    }
+    u3z(x);
+  }
+  u3z(m);
+
   //  rebuilding keeps members reachable from persistent tables only
   //
   p = u3m_dedup(u3nc(40, 41));
