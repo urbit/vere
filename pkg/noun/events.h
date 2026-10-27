@@ -140,7 +140,6 @@
           c3_d rec_d;        //  reclaims
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
-          c3_d pru_d[2];     //  dedup prune: [0] entries before, [1] removed
 
           //  deferred gains across the state swap (u3a_defer_open())
           //
@@ -194,10 +193,55 @@
       c3_t
       u3e_measuring(void);
 
-    /* u3e_measure_init(): start measuring if U3_MEASURE is set.
+    /* u3e_measure_init(): start measuring if U3_MEASURE is set. the
+    **                     header records [mod_c] ("live" or "replay")
+    **                     and the snapshot interval: [sas_d] seconds
+    **                     (live) or [sae_d] events (replay), 0 if none.
     */
       void
-      u3e_measure_init(const c3_c* dir_c, const c3_c* ver_c, const c3_c* who_c);
+      u3e_measure_init(const c3_c* dir_c,
+                       const c3_c* ver_c,
+                       const c3_c* who_c,
+                       const c3_c* mod_c,
+                       c3_d        sas_d,
+                       c3_d        sae_d);
+
+    /* u3e_measure_ms(): wall-clock milliseconds, to time an operation
+    **                   for u3e_measure_op() or u3e_measure_note().
+    */
+      c3_d
+      u3e_measure_ms(void);
+
+    /* u3e_measure_op(): if measuring, log a pack, meld or melt [op_c],
+    **                   run because of [why_c], with melt options
+    **                   [opt_w], begun at [bef_d] (u3e_measure_ms())
+    **                   and freeing [gan_w] words.
+    */
+      void
+      u3e_measure_op(const c3_c* op_c,
+                     const c3_c* why_c,
+                     c3_w        opt_w,
+                     c3_d        bef_d,
+                     c3_w        gan_w);
+
+    /* u3e_measure_dir(): the pier at [dir_c] keeps measurement logs.
+    */
+      c3_t
+      u3e_measure_dir(const c3_c* dir_c);
+
+    /* u3e_measure_note(): log an offline [op_c] (as u3e_measure_op())
+    **                     in a log of its own, if the pier at [dir_c]
+    **                     keeps measurement logs, whether or not
+    **                     U3_MEASURE is set.
+    */
+      void
+      u3e_measure_note(const c3_c* dir_c,
+                       const c3_c* ver_c,
+                       const c3_c* who_c,
+                       const c3_c* op_c,
+                       c3_w        opt_w,
+                       c3_d        bef_d,
+                       c3_w        gan_w);
 
     /* u3e_measure_event(): record pages changed by the task just
     **                      completed. call on the home road.

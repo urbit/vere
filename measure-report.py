@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Summarize a jb/measure log (<pier>/.urb/measure/measure-<time>.log).
 
-Usage: measure-report.py [--intervals] [--keep-first] LOG|DIR ...
+Usage: measure-report.py [--intervals] [--keep-first] [--keep-ops] [--keep-long] LOG|DIR ...
 
 Accepts any number of logs, or directories (a pier, its .urb, its
 .urb/measure, or any directory holding measure-*.log files). Logs are aggregated. Each log
 starts at a restart, so by default the first snapshot interval of each
-log is dropped (it includes startup); --keep-first keeps it. Tasks
-recorded after a log's last snapshot are ignored.
+log is dropped (it includes startup); --keep-first keeps it. Intervals
+in which a pack, meld or melt ran are dropped too (--keep-ops keeps
+them), as are a live ship's intervals more than 2.5 times its snapshot
+interval, from host sleep or an idle ship (--keep-long keeps them).
+Elapsed time counts only the intervals kept. Tasks recorded after a
+log's last snapshot are ignored.
 
 Log lines (one snapshot interval ends at each S line):
   E <eve> <poke|task> <changed> <first-faults> <dirty> <hash-us>: <pages...>
@@ -22,15 +26,25 @@ Log lines (one snapshot interval ends at each S line):
                                             call-site battery checks (jb/measure only)
   T <war> <cod> <han> <bas> <byc> <per> <for> <dup> <memo>
                                             home-road table entries at the snapshot
-  C <reclaims> <byc-cleared> <han-cleared> <dup-before-prune> <dup-pruned>
+  C <reclaims> <byc-cleared> <han-cleared> [<dup-before-prune> <dup-pruned>]
                                             u3m_reclaim() calls since the last snapshot
+                                            (the dedup-prune fields: older logs only)
   A <record-frees> <clean-allocs> <with-dirty-room> <frees-then-allocated>
                                             home-road page records and allocation
   M <resident> <anonymous> <file-backed> <swapped>
                                             process memory in bytes at the snapshot
+  O <time> <eve> <pack|meld|melt> <why> <options> <ms> <freed-words>
+                                            a pack, meld or melt, logged when it ran.
+                                            why: live (|pack, |meld, conn), memory
+                                            (memory threshold), loom (replay out of
+                                            loom), offline (urbit pack/meld/melt).
+                                            options: 1 memo, 2 ford, 4 cold
 
-Lines after an S line report on that interval. The header gives the
-ship, the runtime version, OS and architecture. To integrate logs across ships, see measure-aggregate.py.
+Lines after an S line report on that interval, except O lines, which
+carry their own time. The header gives the ship, the runtime version,
+OS and architecture, the mode (live, replay, or offline for a log
+holding only an offline operation) and the snapshot interval
+(snap_secs for live, snap_events for replay). To integrate logs across ships, see measure-aggregate.py.
 """
 
 import glob
@@ -41,6 +55,19 @@ from collections import defaultdict
 
 def pct(a, b):
     return f"{100.0 * a / b:5.1f}%" if b else "    -"
+
+
+def parse_header(line):
+    """Header fields, e.g. {"ship": "~zod", "mode": "live"}."""
+    out = {}
+    for w in line[1:].split():
+        k, sep, v = w.partition("=")
+        if sep:
+            out[k] = v
+    return out
+
+
+OPTS = ((1, "memo"), (2, "ford"), (4, "cold"))
 
 
 def new_interval():
@@ -62,12 +89,18 @@ def new_interval():
         "P": None,
         "G": None,
         "Y": None,
+        "ops": [],
     }
 
 
 def parse(path):
-    """Return (header, intervals, trailing-task-count) for one log."""
+    """Return (header, intervals, trailing-task-count, ops) for one log.
+
+    Each interval gets "secs", its length (from the header's time for
+    the first), and "ops", the operations that ran in it.
+    """
     intervals = []
+    ops = []
     cur_events = []
     cur = None
     header = ""
@@ -93,6 +126,14 @@ def parse(path):
                         "pages": set(int(x) for x in pages.split()),
                     })
                 except ValueError:
+                    continue
+            elif t == "O":
+                p = line.split()
+                try:
+                    ops.append({"time": int(p[1]), "eve": int(p[2]), "op": p[3],
+                                "why": p[4], "opt": int(p[5]), "ms": int(p[6]),
+                                "words": int(p[7])})
+                except (IndexError, ValueError):
                     continue
             elif t == "S":
                 p = line.split()
@@ -136,7 +177,35 @@ def parse(path):
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
-    return header, intervals, len(cur_events)
+    hdr = parse_header(header) if header else {}
+    prev = int(hdr.get("time", 0)) or None
+    for i in intervals:
+        i["secs"] = (i["time"] - prev) if prev else 0
+        prev = i["time"]
+    #  an operation belongs to the interval whose snapshot came next
+    for o in ops:
+        for i in intervals:
+            if i["time"] >= o["time"]:
+                i["ops"].append(o)
+                break
+    return header, intervals, len(cur_events), ops
+
+
+def long_limit(hdr, ivs):
+    """Seconds past which a live interval counts as long, or None.
+
+    Uses the header's snap_secs; for older logs without it, the log's
+    median interval, if it looks live (a replay's intervals are short).
+    """
+    if hdr.get("mode") in ("replay", "offline"):
+        return None
+    sap = int(hdr.get("snap_secs", 0) or 0)
+    if not sap:
+        secs = sorted(i["secs"] for i in ivs if i["secs"] > 0)
+        if not secs or secs[len(secs) // 2] < 60:
+            return None
+        sap = secs[len(secs) // 2]
+    return 2.5 * sap
 
 
 def find_logs(args):
@@ -163,32 +232,54 @@ def main():
         sys.exit(1)
     show_intervals = "--intervals" in flags
     keep_first = "--keep-first" in flags
+    keep_ops = "--keep-ops" in flags
+    keep_long = "--keep-long" in flags
 
     intervals = []
     headers = set()
     dropped = trailing = 0
-    elapsed = 0
+    op_dropped = long_dropped = 0
+    all_ops = []
     rebuilds = []
     logs = find_logs(args)
     for path in logs:
-        hed, ivs, tail = parse(path)
+        hed, ivs, tail, ops = parse(path)
+        hdr = parse_header(hed) if hed else {}
+        all_ops.extend(dict(o, ship=hdr.get("ship", "?")) for o in ops)
         #  hashcons rebuilds, including at startup
         rebuilds.extend((i["H"], i["D"]) for i in ivs if i["H"] and i["H"][5])
-        if hed:
+        if hed and ivs:
             headers.add(" ".join(w for w in hed.split()
                                  if w.split("=")[0] in ("word_bits", "page_bytes")))
         trailing += tail
+        lim = long_limit(hdr, ivs)
         if ivs and not keep_first:
-            #  measure elapsed time from the dropped startup snapshot
-            elapsed += ivs[-1]["time"] - ivs[0]["time"]
             ivs = ivs[1:]
             dropped += 1
+        if not keep_ops:
+            op_dropped += sum(1 for i in ivs if i["ops"])
+            ivs = [i for i in ivs if not i["ops"]]
+        if lim and not keep_long:
+            long_dropped += sum(1 for i in ivs if i["secs"] > lim)
+            ivs = [i for i in ivs if i["secs"] <= lim]
         intervals.extend(ivs)
+    elapsed = sum(i["secs"] for i in intervals)
 
     header = (f"# {len(logs)} log(s); {' / '.join(sorted(headers))}; "
-              f"dropped {dropped} startup interval(s); "
+              f"dropped {dropped} startup, {op_dropped} pack/meld/melt and "
+              f"{long_dropped} long interval(s); "
               f"{trailing} task(s) after a log's last snapshot ignored")
     print(header)
+    if all_ops:
+        import datetime
+        print("\n== packs, melds and melts ==")
+        for o in sorted(all_ops, key=lambda o: o["time"]):
+            when = datetime.datetime.fromtimestamp(o["time"]).strftime("%Y-%m-%d %H:%M")
+            opts = ",".join(n for b, n in OPTS if o["opt"] & b) or "-"
+            print(f"  {when}  {o['ship']:<16} event {o['eve']:<12} {o['op']:<5} "
+                  f"{o['why']:<8} options {opts:<15} {o['ms'] / 1000:7.1f} s   "
+                  f"freed {o['words']} words")
+        print()
     if not intervals:
         print("no complete snapshot intervals yet (or only startup ones; "
               "try --keep-first)")
@@ -337,13 +428,15 @@ def main():
         tasks = sum(i["tasks"] for i in cis)
         byc = sum(i["C"][1] for i in cis)
         han = sum(i["C"][2] for i in cis)
-        pre = sum(i["C"][3] for i in cis)
-        pru = sum(i["C"][4] for i in cis)
+        #  older logs, from the on-loom set's periodic prune
+        pre = sum(i["C"][3] for i in cis if len(i["C"]) > 4)
+        pru = sum(i["C"][4] for i in cis if len(i["C"]) > 4)
         print("\n== u3m_reclaim() ==")
         print(f"  reclaims: {rec}   tasks per reclaim: {tasks / rec if rec else 0:.0f}")
         if rec:
             print(f"  per reclaim: bytecode entries cleared {byc / rec:.0f}, "
                   f"hank entries cleared {han / rec:.0f}")
+        if rec and pre:
             print(f"  dedup prune: {pre / rec:.0f} entries before, "
                   f"{pru / rec:.0f} removed ({pct(pru, pre).strip()})")
 
