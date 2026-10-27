@@ -1214,12 +1214,11 @@ u3j_boot(c3_o nuu_o)
 **             either nullable; produces c3n if there is no such arm.
 */
 c3_o
-u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
+u3j_ring(u3_noun ring, const u3u_harm** arm_u)
 {
   u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
   u3_noun jax, inx, arg;
 
-  *ham_u = NULL;
   *arm_u = NULL;
 
   if ( u3_none == val ) {
@@ -1227,7 +1226,6 @@ u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
   }
 
   u3x_trel(val, &jax, &inx, &arg);
-  *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
   *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
 
   return c3y;
@@ -1335,11 +1333,15 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
 /* u3j_kick_arm(): try to kick by driver arm, without a dashboard search.
 **
 ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
+**  XX respect flags
 */
 u3_weak
-u3j_kick_arm(u3_noun cor, u3j_harm* ham_u, c3_l axe_l)
+u3j_kick_arm(u3_noun cor, u3_noun(*fun_f)(u3_noun))
 {
-  return _cj_kick_z(cor, ham_u->cop_u, ham_u, axe_l);
+  u3_weak pro = fun_f(cor);
+  if ( u3_none == pro ) return u3_none;
+  u3z(cor);
+  return pro;
 }
 
 /* _cj_hook_in(): execute hook from core, or fail.

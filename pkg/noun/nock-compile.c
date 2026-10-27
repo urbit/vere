@@ -292,7 +292,6 @@ typedef struct {
 */
 typedef struct {
   u3_noun         ring;   //  [path axis] of the jet, or ~
-  u3j_harm*       ham_u;  //  u3w driver, taking the core, nullable
   const u3u_harm* arm_u;  //  array driver, taking the arguments, nullable
 } nc_jet;
 
@@ -511,13 +510,13 @@ _nc_lent(u3_noun lis)
 static nc_jet
 _nc_ring(u3_noun ring)
 {
-  nc_jet jet_u = { ring, NULL, NULL };
+  nc_jet jet_u = { ring, NULL};
 
   if ( u3_nul == ring ) {
     return jet_u;
   }
 
-  if ( c3n == u3j_ring(ring, &(jet_u.ham_u), &(jet_u.arm_u)) ) {
+  if ( c3n == u3j_ring(ring, &(jet_u.arm_u)) ) {
     _nc_stat(rin_d);
     if ( _nc_verb_t ) {
       c3_c* pax_c = u3m_pretty_path_road(u3h(ring));
@@ -2697,10 +2696,9 @@ _nc_print(u3nc_prog* pog_u)
     u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
     c3_h       j_h;
 
-    fprintf(stderr, "  site %u: bell %08x %s%s%s cid %u args",
+    fprintf(stderr, "  site %u: bell %08x %s%s cid %u args",
             i_h, u3r_mug(dir_u->bell),
             ( c3y == dir_u->mon_o ) ? "subject" : "direct",
-            dir_u->ham_u ? " jet" : "",
             !dir_u->arm_u ? "" : dir_u->arm_u->pun_t ? " punt-jet" : " array-jet",
             dir_u->cid_h);
 
@@ -2871,7 +2869,6 @@ _nc_dire_jet(u3nc_dire* dir_u)
 {
   nc_jet jet_u = _nc_ring(dir_u->ring);
 
-  dir_u->ham_u = jet_u.ham_u;
   dir_u->arm_u = jet_u.arm_u;
 }
 
@@ -3117,7 +3114,6 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
     dat_u->cid_h = dir_u->cid_h;
     dat_u->des_h = dir_u->des_h;
     dat_u->mon_o = dir_u->mon_o;
-    dat_u->ham_u = dir_u->jet_u.ham_u;
     dat_u->arm_u = dir_u->jet_u.arm_u;
   }
 

@@ -19,6 +19,7 @@
 
   /* u3u_harm: array-driver arm.
   **    key_f: a key to map this entry to the hot state, u3w* driver in practice
+  **    mon_f: a retaining driver that takes the entire core, can punt
   **    arg_f: array driver, NULL if punting
   **    len_w: number of arguments, 1 if punting
   **    axe_l: argument axes in the core, {1} if punting
@@ -26,6 +27,7 @@
   */
     typedef struct _u3u_harm {
       u3_noun     (*key_f)(u3_noun);
+      u3_noun     (*mon_f)(u3_noun);
       u3u_fun       arg_f;
       c3_w          len_w;
       const c3_l*   axe_l;

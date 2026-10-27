@@ -21,7 +21,7 @@
 
 // IDE support
 #include "allocate.h"
-_Static_assert(1, "");
+static_assert(1, "Hack to end the preamble");
 #ifndef _nc_burn
 #  include "nock-compile.c"
 #  define _nc_mov_ws  (-999)
@@ -389,10 +389,10 @@ static const OP_F WTAB[] = { WIDES };
     BURN();                                                                     \
   } while ( 0 )
 
-//  CALL(gop, arg, des): call gop on its one argument arg, transferred,
+//  CALL_MONO(gop, arg, des): call gop on its one argument arg, transferred,
 //                       its product to slot des
 //
-#define CALL(gop, arg, des)  do {                                               \
+#define CALL_MONO(gop, arg, des)  do {                                          \
     u3_noun* _nex = PUSH((gop)->tot_h);                                         \
     _nex[0] = (arg);                                                            \
     (void)FRAME(des);                                                           \
@@ -401,10 +401,10 @@ static const OP_F WTAB[] = { WIDES };
     ENTER(1);                                                                   \
   } while ( 0 )
 
-//  TAIL(gop, arg): call gop on its one argument arg, transferred, in
+//  TAIL_MONO(gop, arg): call gop on its one argument arg, transferred, in
 //                  place of this activation, whose slots are all empty
 //
-#define TAIL(gop, arg)  do {                                                    \
+#define TAIL_MONO(gop, arg)  do {                                               \
     nc_frame _fam;                                                              \
     EMPTY();                                                                    \
     _fam = *(nc_frame*)TOP(_nc_frame_w);                                        \
@@ -698,7 +698,7 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
   u3t_on(noc_o);                                                                \
   TAKEN(x, a_h, KA);                                                            \
   DROP(b_h, KB);                                                                \
-  CALL(gop_u, x, d_h);
+  CALL_MONO(gop_u, x, d_h);
 OP3KK(NOK, a_h, b_h, d_h, BODY_NOK)
 
 //  the call opcodes: the site a_h holds the argument slots, their consume
@@ -751,8 +751,8 @@ OP1(CAF, a_h, BODY_CAF)
   u3nc_prog* gop_u;                                                             \
   u3_noun    x = TAKE(SUB(), KON());                                            \
   u3_noun    pro;                                                               \
-  if (  dir_u->ham_u                                                            \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u, u3t(dir_u->ring)))) )  \
+  if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->arm_u->mon_f))) )             \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     PUT(dir_u->des_h, pro);                                                     \
@@ -760,7 +760,7 @@ OP1(CAF, a_h, BODY_CAF)
   }                                                                             \
   _nc_stat(sub_d);                                                              \
   CALLEE();                                                                     \
-  CALL(gop_u, x, dir_u->des_h);
+  CALL_MONO(gop_u, x, dir_u->des_h);
 OP1(CAP, a_h, BODY_CAP)
 
 #define BODY_CAM()                                                              \
@@ -936,11 +936,8 @@ OP1(HOP, a_h, BODY_HOP)
   ENTER(len_h);
 OP1K(JMP, a_h, BODY_JMP)
 
-//  a tail call of the running program: no new activation, the arguments
-//  go back into the parameter slots (through the temporary: they may
-//  come from each other's slots), the other slots are empty already, and
-//  the frame is the caller's and stays.  Only the sweeping variant is
-//  emitted: the compiler lowers the others to moves and a HOP
+//  a tail call to itself. Only the sweeping variant S == 1 is called, the other
+//  gets lowered to a bunch of MOVs + HOP to entry point
 //
 #define BODY_JMS(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -991,15 +988,15 @@ OP1K(JMF, a_h, BODY_JMF)
     *sot = 0;                                                                   \
   }                                                                             \
   SWEEP(S);                                                                     \
-  if (  dir_u->ham_u                                                            \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u, u3t(dir_u->ring)))) )  \
+  if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->arm_u->mon_f))) )             \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     DONE(pro);                                                                  \
   }                                                                             \
   _nc_stat(sub_d);                                                              \
   CALLEE();                                                                     \
-  TAIL(gop_u, x);
+  TAIL_MONO(gop_u, x);
 OP1K(JSP, a_h, BODY_JSP)
 
 #define BODY_DON(S)                                                             \

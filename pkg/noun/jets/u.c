@@ -12,11 +12,11 @@ static const c3_l _u_sam_2[] = { u3x_sam_2, u3x_sam_3 };
 static const c3_l _u_sam_3[] = { u3x_sam_2, u3x_sam_6, u3x_sam_7 };
 static const c3_l _u_cut[]   = { u3x_sam_2, u3x_sam_12, u3x_sam_13, u3x_sam_7 };
 
-#define U3U_UNARY(fun)   { u3w##fun, u3u##fun, 1, _u_sam,      false }
-#define U3U_BINARY(fun)  { u3w##fun, u3u##fun, 2, _u_sam_2,    false }
-#define U3U_TERNARY(fun) { u3w##fun, u3u##fun, 3, _u_sam_3,    false }
-#define U3U_ARM(fun, len, axe) { u3w##fun, u3u##fun, len, axe, false }
-#define U3U_PUNT(fun)    { u3w##fun, 0,        1, (c3_l[]){1}, true  }
+#define U3U_UNARY(fun)   { u3w##fun, u3w##fun, u3u##fun, 1, _u_sam,      false }
+#define U3U_BINARY(fun)  { u3w##fun, u3w##fun, u3u##fun, 2, _u_sam_2,    false }
+#define U3U_TERNARY(fun) { u3w##fun, u3w##fun, u3u##fun, 3, _u_sam_3,    false }
+#define U3U_ARM(fun, len, axe) { u3w##fun, u3w##fun, u3u##fun, len, axe, false }
+#define U3U_PUNT(fun)    { u3w##fun, u3w##fun, 0, 1, (c3_l[]){1}, true  }
 
 /* u3u_Harm: array drivers, keyed by their u3w counterparts.
 */
