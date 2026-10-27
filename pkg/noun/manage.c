@@ -3908,11 +3908,23 @@ _cm_dup_take_noun(_cm_walk* wak_u, u3_noun jun)
 }
 
 /* _cm_dup_take_kev(): u3h_walk callback over a junior set.
+**
+**   a junior set can list home nouns, but it can't hold references to
+**   them, and rewriting one in place can free another that it lists
+**   before the walk reaches it. so they're skipped: those held by a
+**   taken copy are canonicalized through it, and the rest wait for a
+**   later dedup on the home road, or the next ream.
 */
 static void
 _cm_dup_take_kev(u3_noun kev, void* ptr_v)
 {
-  (void)_cm_dup_take_noun(ptr_v, u3h(kev));
+  u3_noun som = u3h(kev);
+
+  if ( (c3n == u3a_is_cat(som)) && (c3n == u3a_is_junior(u3R, som)) ) {
+    return;
+  }
+
+  (void)_cm_dup_take_noun(ptr_v, som);
 }
 
 /* _cm_dup_take(): integrate junior set [dup_p] into the home-road set.
