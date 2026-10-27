@@ -4021,11 +4021,160 @@ typedef struct {
   u3_noun som;    //  tail to visit, then deduplicated head
 } _frame_dedup;
 
+/* _dedup_memo: one u3m_dedup() call's map from the senior cells it copied
+**              to senior results: inline, then on the current road's heap.
+**
+**   a senior cell that can't be rewritten to point at its children's
+**   canonical equals (see _dedup_wed()) is copied, and if the copy is a
+**   member of the home-road set, it's dropped for the member, and nothing
+**   else finds the cell again: each later visit would walk its whole
+**   subtree, exponential in the noun's sharing. only an inner road has
+**   senior cells; a bail leaves the memo to its road.
+*/
+typedef struct {
+  u3_noun key;    //  senior cell
+  u3_noun val;    //  its senior result
+} _dedup_slot;
+
+#define _DEDUP_MEMO_LOG  5     //  inline slots, log2
+
+typedef struct {
+  c3_w         log_w;   //  log2 slots
+  c3_w         len_w;   //  entries
+  _dedup_slot* slo_u;   //  [inl_u], or on the road's heap
+  _dedup_slot  inl_u[1U << _DEDUP_MEMO_LOG];
+} _dedup_memo;
+
+/* _dedup_memo_init(): an empty memo, using its inline slots.
+*/
+static inline void
+_dedup_memo_init(_dedup_memo* mem_u)
+{
+  mem_u->log_w = _DEDUP_MEMO_LOG;
+  mem_u->len_w = 0;
+  mem_u->slo_u = mem_u->inl_u;
+}
+
+/* _dedup_memo_idx(): [mem_u]'s slot for [key]: its own, or an empty one.
+*/
+static inline c3_w
+_dedup_memo_idx(_dedup_memo* mem_u, u3_noun key)
+{
+  c3_w msk_w = (1U << mem_u->log_w) - 1;
+  c3_w i_w   = (c3_w)(((c3_d)key * 0x9e3779b97f4a7c15ULL) >> 32) & msk_w;
+
+  while ( mem_u->slo_u[i_w].key && (mem_u->slo_u[i_w].key != key) ) {
+    i_w = (i_w + 1) & msk_w;
+  }
+  return i_w;
+}
+
+/* _dedup_memo_get(): the result for senior cell [cel], or none.
+*/
+static inline u3_weak
+_dedup_memo_get(_dedup_memo* mem_u, u3_noun cel)
+{
+  if ( !mem_u->len_w ) {
+    return u3_none;
+  }
+  else {
+    _dedup_slot* sot_u = &(mem_u->slo_u[_dedup_memo_idx(mem_u, cel)]);
+    return sot_u->key ? sot_u->val : u3_none;
+  }
+}
+
+/* _dedup_memo_put(): note senior [val] as the result for [cel]. neither
+**                    is counted: senior nouns outlive the call.
+*/
+static void
+_dedup_memo_put(_dedup_memo* mem_u, u3_noun cel, u3_noun val)
+{
+  //  the inline slots are zeroed only once used
+  //
+  if ( !mem_u->len_w && (mem_u->slo_u == mem_u->inl_u) ) {
+    memset(mem_u->inl_u, 0, sizeof(mem_u->inl_u));
+  }
+
+  if ( (2 * (mem_u->len_w + 1)) > (1U << mem_u->log_w) ) {
+    _dedup_slot* old_u = mem_u->slo_u;
+    c3_w         old_w = 1U << mem_u->log_w;
+
+    mem_u->log_w++;
+    mem_u->slo_u = u3a_calloc(1U << mem_u->log_w, sizeof(_dedup_slot));
+    for ( c3_w i_w = 0; i_w < old_w; i_w++ ) {
+      if ( old_u[i_w].key ) {
+        mem_u->slo_u[_dedup_memo_idx(mem_u, old_u[i_w].key)] = old_u[i_w];
+      }
+    }
+    if ( old_u != mem_u->inl_u ) {
+      u3a_free(old_u);
+    }
+  }
+
+  {
+    _dedup_slot* sot_u = &(mem_u->slo_u[_dedup_memo_idx(mem_u, cel)]);
+    sot_u->key = cel;
+    sot_u->val = val;
+    mem_u->len_w++;
+  }
+}
+
+/* _dedup_memo_free(): release [mem_u].
+*/
+static void
+_dedup_memo_free(_dedup_memo* mem_u)
+{
+  if ( mem_u->slo_u != mem_u->inl_u ) {
+    u3a_free(mem_u->slo_u);
+  }
+}
+
+/* _dedup_wed(): point senior [cel]'s children at [hed] and [tel], their
+**               canonical equals, in place, as u3a_wed() unifies on a
+**               senior road. produces 1 if done.
+**
+**   not on the home road, where only the home road writes. and only if
+**   [hed] and [tel] are senior to [cel]'s road, so that they outlive it
+**   and need no counts there; the old children leak on that road, as
+**   u3a_wed()'s do.
+*/
+static c3_t
+_dedup_wed(u3_noun cel, u3_noun hed, u3_noun tel)
+{
+  u3a_road* rod_u = u3R;
+
+  while ( c3y == u3a_is_senior(rod_u, cel) ) {
+    rod_u = u3to(u3a_road, rod_u->par_p);
+  }
+
+  if (  (&(u3H->rod_u) == rod_u)
+     || (c3n == u3a_is_senior(rod_u, hed))
+     || (c3n == u3a_is_senior(rod_u, tel)) )
+  {
+    return 0;
+  }
+
+  {
+    u3a_cell* cel_u = u3a_to_ptr(cel);
+    cel_u->hed = hed;
+    cel_u->tel = tel;
+  }
+  return 1;
+}
+
 static u3_noun
-_dedup_next(u3a_pile* pil_u, u3_noun som)
+_dedup_next(u3a_pile* pil_u, _dedup_memo* mem_u, u3_noun som)
 {
   while (1) {
     if ( c3y == u3a_is_cat(som) ) return som;
+
+    if ( (c3y == u3a_is_cell(som)) && (c3y == u3a_is_senior(u3R, som)) ) {
+      u3_weak got = _dedup_memo_get(mem_u, som);
+      if ( u3_none != got ) {
+        u3z(som);
+        return u3k(got);
+      }
+    }
 
     {
       u3_weak got = _dedup_find(som);
@@ -4053,13 +4202,16 @@ _dedup_next(u3a_pile* pil_u, u3_noun som)
 u3_noun
 u3m_dedup(u3_noun som)
 {
-  u3a_pile pil_u;
+  u3a_pile     pil_u;
   _frame_dedup* fam_u;
-  c3_y pat_y = _cm_dup_u.pat_y;
+  _dedup_memo  mem_u;
+  c3_y         pat_y = _cm_dup_u.pat_y;
+
+  _dedup_memo_init(&mem_u);
 
   _cm_dup_u.pat_y = 3;
   u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
-  u3_noun new = _dedup_next(&pil_u, som);
+  u3_noun new = _dedup_next(&pil_u, &mem_u, som);
   if ( c3n == u3a_pile_done(&pil_u) ) {
     fam_u = u3a_peek(&pil_u);
     do {
@@ -4067,25 +4219,29 @@ u3m_dedup(u3_noun som)
         som = fam_u->som;
         fam_u->som = new;
         fam_u->new_t = true;
-        new = _dedup_next(&pil_u, som);
+        new = _dedup_next(&pil_u, &mem_u, som);
         fam_u = u3a_peek(&pil_u);
       }
       else {
         u3_noun hed = fam_u->som;
         u3_noun cel = fam_u->cel;
+        c3_t    cop_t = 0;
 
-        //  senior cells can't be written: keep the original if both
-        //  children were already canonical, and copy it otherwise
+        //  a senior cell is kept if both children were already
+        //  canonical, rewritten in place if its road allows, and
+        //  copied otherwise
         //
         if ( c3y == u3a_is_senior(u3R, cel) ) {
-          if ( (hed == u3h(cel)) && (new == u3t(cel)) ) {
+          if (  ((hed == u3h(cel)) && (new == u3t(cel)))
+             || _dedup_wed(cel, hed, new) )
+          {
             u3z(hed);
             u3z(new);
             new = cel;
           }
           else {
             new = u3nc(hed, new);
-            u3z(cel);
+            cop_t = 1;
           }
         }
         //  otherwise, point the children at their canonical equals,
@@ -4114,10 +4270,22 @@ u3m_dedup(u3_noun som)
           }
         }
 
+        if ( cop_t ) {
+          //  only a senior result needs remembering: a junior copy is in
+          //  this road's set, where the cell is found again by value
+          //  (and remembering those cost 5% of a replay's instructions)
+          //
+          if ( c3y == u3a_is_senior(u3R, new) ) {
+            _dedup_memo_put(&mem_u, cel, new);
+          }
+          u3z(cel);
+        }
+
         fam_u = u3a_pop(&pil_u);
       }
     } while ( c3n == u3a_pile_done(&pil_u) );
   }
+  _dedup_memo_free(&mem_u);
   _cm_dup_u.pat_y = pat_y;
   return new;
 }

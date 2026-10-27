@@ -2,6 +2,8 @@
 
 #include "noun.h"
 
+#include <time.h>
+
 /* _setup(): prepare for tests.
 */
 static void
@@ -330,6 +332,105 @@ _test_hcons(void)
   return ret_i;
 }
 
+/* _dag(): [x_n x_n] for x_0 = [1 2], n deep: 2^n leaves, n+1 cells.
+*/
+static u3_noun
+_dag(c3_w dep_w)
+{
+  u3_noun x = u3nc(1, 2);
+  for ( c3_w i_w = 0; i_w < dep_w; i_w++ ) {
+    x = u3nc(u3k(x), x);
+  }
+  return x;
+}
+
+/* _test_dedup_dag(): deduping a shared noun on an inner road takes time
+**                    in its distinct cells, not its leaves, even when the
+**                    home road already holds an equal noun (whose senior
+**                    copy can't be rewritten).
+*/
+static c3_i
+_test_dedup_dag(void)
+{
+  c3_i ret_i = 1;
+
+  //  an equal member exists for the whole noun, or for a part of it
+  //
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    struct timespec bef_u, aft_u;
+    u3_noun can, fre, r;
+    c3_d    mic_d;
+
+    can = u3m_dedup(_dag(i_w ? 13 : 26));
+    fre = _dag(26);
+
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    r = u3m_dedup(u3k(fre));
+    if ( !i_w && (r != can) ) {
+      fprintf(stderr, "test: dedup dag: member not found\r\n");
+      ret_i = 0;
+    }
+    if ( c3n == u3r_sing(r, fre) ) {
+      fprintf(stderr, "test: dedup dag: changed the value\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    clock_gettime(CLOCK_MONOTONIC, &aft_u);
+
+    //  2^26 leaves: a walk of them takes seconds
+    //
+    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
+          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
+    if ( mic_d > 1000000 ) {
+      fprintf(stderr, "test: dedup dag: %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+
+    u3z(can); u3z(fre);
+  }
+
+  //  a shared noun on an intermediate road is unified in place
+  //
+  {
+    struct timespec bef_u, aft_u;
+    u3_noun can, fre, r;
+    c3_d    mic_d;
+
+    can = u3m_dedup(_dag(26));
+    u3m_hate(0);
+    fre = _dag(26);
+
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    r = u3m_dedup(u3k(fre));
+    if ( r != can ) {
+      fprintf(stderr, "test: dedup dag: middle member not found\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    clock_gettime(CLOCK_MONOTONIC, &aft_u);
+
+    if ( u3h(fre) != u3h(can) ) {
+      fprintf(stderr, "test: dedup dag: middle not unified\r\n");
+      ret_i = 0;
+    }
+    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
+          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
+    if ( mic_d > 1000000 ) {
+      fprintf(stderr, "test: dedup dag: middle %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+    u3z(fre);
+    u3m_love(0);
+    u3z(can);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -337,6 +438,11 @@ _test_equality(void)
 
   if ( !_test_hcons() ) {
     fprintf(stderr, "test: equality: hcons: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_dedup_dag() ) {
+    fprintf(stderr, "test: equality: dedup dag: failed\r\n");
     ret_i = 0;
   }
 
