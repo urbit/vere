@@ -1745,8 +1745,10 @@ _n_find(u3_noun pre, u3_noun fol)
     }
     return _cn_to_prog(pog);
   }
-  
-  key = u3m_dedup(key);
+
+  //  a senior road's key is already canonical, and ours is dropped when
+  //  the program merges back at road exit, so dedup only a new key
+  //
   if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
     while ( rod_u->par_p ) {
@@ -1777,6 +1779,8 @@ _n_find(u3_noun pre, u3_noun fol)
       }
     }
   }
+
+  key = u3m_dedup(key);
 
   {
     u3n_prog* gop = _n_bite(fol);
