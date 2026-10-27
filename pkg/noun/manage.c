@@ -716,14 +716,13 @@ _find_home(void)
     u3n_reclaim();
     u3nc_reclaim();
     u3j_reclaim();
-    u3H->pam_d = _pave_params();
   }
 
   if ( ((u3H->pam_d >> 11) & 31) != U3NC_VERLAT ) {
     fprintf(stderr, "loom: discarding stale compiled nock programs\r\n");
     u3nc_reclaim();
-    u3H->pam_d = _pave_params();
   }
+  u3H->pam_d = _pave_params();
 }
 
 /* u3m_pave(): instantiate or activate image.
