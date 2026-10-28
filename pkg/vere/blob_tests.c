@@ -3254,6 +3254,19 @@ _test_roll_link(void)
   u3_disk_roll(&log_u, 2);
   _check( 2 == log_u.epo_d, "epoch not rolled" );
 
+  //  the epoch has its image, and no patch once the roll stands
+  //
+  {
+    c3_c fil_c[2048];
+    struct stat buf_u;
+    snprintf(fil_c, sizeof(fil_c), "%s/0i2/image.bin", log_c);
+    _check( 0 == stat(fil_c, &buf_u), "no epoch image" );
+    snprintf(fil_c, sizeof(fil_c), "%s/0i2/image.tmp", log_c);
+    _check( 0 != stat(fil_c, &buf_u), "epoch image left under its temporary name" );
+    snprintf(fil_c, sizeof(fil_c), "%s/0i2/control.bin", log_c);
+    _check( 0 != stat(fil_c, &buf_u), "roll left its patch" );
+  }
+
   c3_c new_c[8192];
   u3b_root(new_c, _tmp_pier, 2);
   _check( u3C.bob_c && (0 == strcmp(u3C.bob_c, new_c)),

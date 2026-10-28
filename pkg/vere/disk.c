@@ -1203,9 +1203,13 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
   c3_h      mug_h = u3a_bid_mug(bid_d);
   c3_h      seq_h = u3a_bid_seq(bid_d);
 
-  //  a record nothing holds names a file the new epoch never needs
+  //  a record nothing holds names a file the new epoch never needs,
+  //  unless a root reaches it
   //
-  if ( !blb_u->atm_h && !blb_u->les_h ) {
+  if (  !blb_u->atm_h
+     && !blb_u->les_h
+     && (c3n == _disk_roll_live(lin_u->ban_u, bid_d)) )
+  {
     return;
   }
 
@@ -1222,15 +1226,15 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
 }
 
 /* _disk_roll_bank_cb(): u3h_walk_with callback for the roll's bank
-**   pass: own what a root reaches, collect what nothing holds (the
-**   ghosts, dropped once the roll has succeeded), report a record the
-**   counts call live that the walk did not reach.
+**   pass: own what a root reaches, collect what nothing else holds (the
+**   ghosts), report a record the counts call live that the walk did not
+**   reach.
 */
 static void
 _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
 {
   _disk_roll_bank*    ban_u = ptr_v;
-  u3s_bids*          gho_u = &ban_u->gho_u;
+  u3s_bids*           gho_u = &ban_u->gho_u;
   c3_d bid_d = 0;
   c3_d off_d = 0;
 
@@ -1238,13 +1242,19 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(u3t(kev), &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  c3_o      liv_o = _disk_roll_live(ban_u, bid_d);
 
-  if ( !blb_u->atm_h && !blb_u->les_h ) {
+  if ( (c3n == liv_o) && !blb_u->atm_h && !blb_u->les_h ) {
     u3s_bids_push(gho_u, bid_d);
     return;
   }
 
-  blb_u->own_o = _disk_roll_live(ban_u, bid_d);
+  //  written only on a change, so an unchanged record's page stays
+  //  clean and out of the epoch's patch
+  //
+  if ( liv_o != blb_u->own_o ) {
+    blb_u->own_o = liv_o;
+  }
 
   if ( (c3n == blb_u->own_o) && blb_u->atm_h ) {
     fprintf(stderr, "disk: roll: " U3A_BID_FMT ": %" PRIc3_h
@@ -1255,12 +1265,53 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
   }
 }
 
+/* _disk_roll_stray(): carry and own each live id the bank has no
+**   record for.  a root reaches its atom, so the image needs its file,
+**   though no count says so.  [new_c] is 0 when the store is the old
+**   one.  yes unless a file the image needs cannot be carried.
+*/
+static c3_o
+_disk_roll_stray(const _disk_roll_bank* ban_u,
+                 const c3_c*            old_c,
+                 const c3_c*            new_c)
+{
+  c3_o ret_o = c3y;
+
+  for ( c3_z i_z = 0; i_z < ban_u->len_z; i_z++ ) {
+    c3_h mug_h = u3a_bid_mug(ban_u->liv_d[i_z]);
+    c3_h seq_h = u3a_bid_seq(ban_u->liv_d[i_z]);
+
+    if ( u3a_blob_get(mug_h, seq_h) ) {
+      continue;
+    }
+
+    fprintf(stderr, "disk: roll: " U3A_BID_FMT " reached but has no "
+                    "record\r\n", mug_h, seq_h);
+
+    if ( new_c && (c3n == u3b_link(old_c, new_c, mug_h, seq_h)) ) {
+      ret_o = c3n;
+      continue;
+    }
+
+    u3a_blob_got(mug_h, seq_h)->own_o = c3y;
+  }
+
+  return ret_o;
+}
+
 /* _disk_epoc_roll: epoch rollover.
 **
 **   [old_c] is the store root of the epoch being left, or 0 when there
 **   is none to leave (the pre-boot migrations of pre-blob formats).
 **   Every blob the bank still holds is carried into the new epoch's
 **   store: the image names those, and so does anything the king holds.
+**
+**   The roll prunes the bank in memory, writes those pages into the
+**   epoch's copy of the image before META commits the epoch, and saves
+**   them to the checkpoint after.  So the epoch's copy and, once the roll
+**   stands, the checkpoint carry the epoch's own_o flags; before META
+**   the checkpoint keeps the old epoch's, which a fallback boot needs.
+**   A failed roll must never save: every caller exits on failure.
 */
 static c3_o
 _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
@@ -1298,10 +1349,12 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   _disk_roll_bank ban_u = {0};
   c3_d*           liv_d = 0;
 
-  //  the markers a failure unlinks; empty until written
+  //  the markers and image files a failure unlinks; empty until named
   //
   c3_c epv_c[8193] = "";
   c3_c biv_c[8193] = "";
+  c3_c img_c[8193] = "";
+  c3_c tmp_c[8193] = "";
 
   u3b_root(bob_c, log_u->dir_u->pax_c, epo_d);
   if ( 0 != c3_mkdir(bob_c, 0700) && EEXIST != errno ) {
@@ -1335,13 +1388,22 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
                       PRIc3_d "\r\n", lin_u.num_w, epo_d);
     }
 
+    //  a live id with no record still needs its file
+    //
+    if ( c3n == _disk_roll_stray(&ban_u, old_c,
+                                 ( c3y == cur_o ) ? 0 : bob_c) )
+    {
+      fprintf(stderr, "disk: roll: a file the image needs was not carried "
+                      "into epoch %" PRIc3_d "\r\n", epo_d);
+      goto fail0;
+    }
+
     //  the bank is the image's: own every record a root reaches, and
     //  only those.  a record only a king hold keeps is carried but not
-    //  owned, so it goes by refcount when the king lets go.  the flags
-    //  are this process's; a boot marks them again from the row the
-    //  live set becomes below.  the ghosts, the old epoch's inputs
-    //  nothing holds, are only collected here: a failed roll leaves the
-    //  old epoch's bank whole, and they go at the end
+    //  owned, so it goes by refcount when the king lets go.  the ghosts,
+    //  the old epoch's inputs nothing holds, go now, so the epoch's image
+    //  never carries them.  this rewrites the old epoch's bank in memory
+    //  only: a failed roll exits without saving it
     //
     u3h_walk_with(u3H->blb_p, _disk_roll_bank_cb, &ban_u);
 
@@ -1349,13 +1411,47 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
       fprintf(stderr, "disk: roll: %" PRIc3_w " record(s) counted live but "
                       "unreached, not owned\r\n", ban_u.mis_w);
     }
+
+    for ( c3_w i_w = 0; i_w < ban_u.gho_u.len_w; i_w++ ) {
+      c3_d bid_d = ban_u.gho_u.bid_d[i_w];
+      u3a_blob_drop(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
+    }
+    if ( ban_u.gho_u.len_w ) {
+      fprintf(stderr, "disk: dropped %" PRIc3_w " ghost record(s) at roll\r\n",
+                      ban_u.gho_u.len_w);
+    }
   }
 
-  //  copy snapshot files (skip if first epoch)
+  //  a roll in place rewrites a committed epoch: its row must name the
+  //  live set before its image does
+  //
+  if ( (c3y == cur_o) && ban_u.len_z ) {
+    if ( c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z) ) {
+      fprintf(stderr, "disk: failed to write the image's blob row\r\n");
+      goto fail0;
+    }
+  }
+
+  //  the epoch's image: the checkpoint's, cloned where the filesystem
+  //  can, with the pages the roll changed patched in.  built under a
+  //  temporary name, so a roll in place never tears a committed copy.
+  //  the patch stays in the epoch until the checkpoint has the pages
+  //
   c3_c chk_c[8193];
-  snprintf(chk_c, 8192, "%s/.urb/chk", log_u->dir_u->pax_c);
-  if ( c3n == u3e_backup(chk_c, epo_c, c3y) ) {
+  snprintf(chk_c, sizeof(chk_c), "%s/.urb/chk/image.bin", log_u->dir_u->pax_c);
+  snprintf(img_c, sizeof(img_c), "%s/image.bin", epo_c);
+  snprintf(tmp_c, sizeof(tmp_c), "%s/image.tmp", epo_c);
+
+  if (  (c3n == u3e_copy(chk_c, tmp_c))
+     || (c3n == u3m_fork(epo_c, tmp_c)) )
+  {
     fprintf(stderr, "disk: copy epoch snapshot failed\r\n");
+    goto fail0;
+  }
+
+  if ( c3_rename(tmp_c, img_c) ) {
+    fprintf(stderr, "disk: rename epoch snapshot failed: %s\r\n",
+                    strerror(errno));
     goto fail0;
   }
 
@@ -1442,7 +1538,7 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
   //  starts from and cannot recompute.  before META, so a crash here
   //  leaves an epoch the next boot deletes, row and links included
   //
-  if ( ban_u.len_z ) {
+  if ( (c3n == cur_o) && ban_u.len_z ) {
     if ( c3n == u3_lmdb_save_blobs(log_u->mdb_u, epo_d, liv_d, ban_u.len_z) ) {
       fprintf(stderr, "disk: failed to write the image's blob row\r\n");
       goto fail3;
@@ -1470,21 +1566,25 @@ _disk_epoc_roll(u3_disk* log_u, c3_d epo_d, const c3_c* old_c)
 
   fprintf(stderr, "disk: created epoch %" PRIc3_d "\r\n", epo_d);
 
+  //  the roll stands: the checkpoint takes the same pages, then the
+  //  epoch's patch goes.  until it is durably gone it says the
+  //  checkpoint missed the roll, and a boot lands it (u3e_land); so a
+  //  failure to drop it fails the roll before anything saves again
+  //
+  u3m_save();
+
+  if ( c3n == u3e_patch_drop(epo_c) ) {
+    fprintf(stderr, "disk: roll: failed to drop the epoch's patch\r\n");
+    c3_free(ban_u.gho_u.bid_d);
+    c3_free(liv_d);
+    return c3n;
+  }
+
   //  load new epoch directory and set it in log_u
   log_u->epo_d = epo_d;
   log_u->ver_h = U3D_VERLAT;
   _disk_blob_root(log_u->dir_u->pax_c, epo_d);
 
-  //  the roll stands: the old epoch's ghosts are no one's now
-  //
-  for ( c3_w i_w = 0; i_w < ban_u.gho_u.len_w; i_w++ ) {
-    c3_d bid_d = ban_u.gho_u.bid_d[i_w];
-    u3a_blob_drop(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
-  }
-  if ( ban_u.gho_u.len_w ) {
-    fprintf(stderr, "disk: dropped %" PRIc3_w " ghost record(s) at roll\r\n",
-                    ban_u.gho_u.len_w);
-  }
   c3_free(ban_u.gho_u.bid_d);
   c3_free(liv_d);
 
@@ -1501,7 +1601,14 @@ fail2:
   close(epo_i);
 #endif
 fail0:
+  if ( *tmp_c ) {
+    c3_unlink(tmp_c);
+    u3e_patch_drop(epo_c);
+  }
   if ( c3n == cur_o ) {
+    if ( *img_c ) {
+      c3_unlink(img_c);
+    }
     u3b_kill(bob_c);
   }
 fail1:
@@ -2657,9 +2764,32 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
     } // fallthrough
 
     case U3E_VER2: {
+      //  a roll that stopped after META left its patch in the epoch: the
+      //  checkpoint still has the old epoch's bank.  land it before the
+      //  checkpoint is restored, migrated, or loaded
+      //
+      if ( lat_d ) {
+        c3_c chk_c[8193];
+        snprintf(chk_c, 8193, "%s/.urb/chk", log_u->dir_u->pax_c);
+
+        if ( c3n == u3e_land(epo_c, chk_c, lat_d) ) {
+          fprintf(stderr, "disk: the checkpoint missed the roll to epoch 0i%"
+                          PRIc3_d " and its patch could not land\r\n", lat_d);
+          exit(1);
+        }
+      }
+
       if ( u3_dlod_epoc == lod_e ) {
         c3_c chk_c[8193];
         snprintf(chk_c, 8193, "%s/.urb/chk", log_u->dir_u->pax_c);
+
+        //  a patch left by a save that crashed belongs to the image
+        //  being replaced: it must not land on the restored one
+        //
+        if ( c3n == u3e_patch_drop(chk_c) ) {
+          fprintf(stderr, "mars: failed to drop the checkpoint's patch\r\n");
+          exit(1);
+        }
 
         if ( 0 == log_u->epo_d ) {
           //  if epoch 0 is the latest, delete the snapshot files in chk/

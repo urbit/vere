@@ -72,6 +72,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_save(void);
 
+      /* u3m_fork(): write the changes since the last save into the image
+      **             at [img_c], a copy of the checkpoint's, through a patch
+      **             left in [pat_c]; the checkpoint and dirty pages stay.
+      */
+        c3_o
+        u3m_fork(const c3_c* pat_c, const c3_c* img_c);
+
       /* u3m_toss(): discard ephemeral memory.
       */
         void

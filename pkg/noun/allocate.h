@@ -210,6 +210,9 @@
     **            never deleted by refcount; it dies with the epoch's
     **            directory at chop.  A record with own_o set and no
     **            atom or hold is a ghost, dropped at the next roll.
+    **            Rides the snapshot: every commit before a save marks
+    **            it, and the roll writes the epoch's flags into the
+    **            epoch's image and the checkpoint.
     **
     **   The file is deleted iff nothing is counted and own_o is not
     **   set.  u3a_blob_sane checks atm_h against the live atoms.

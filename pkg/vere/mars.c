@@ -57,10 +57,10 @@
 **        what a root reaches, and writes that live set as the epoch's
 **        first BLOBS row; chop deletes old epochs whole, files included,
 **        and touches no count
-**     *. boot: _find_home zeroes les_h and own_o (neither outlives a
-**        process); u3_disk_blob_own marks the epoch's rows through the
-**        snapshot's event and replay marks the rest; u3_disk_blob_gc
-**        reclaims any unowned blob nothing holds
+**     *. boot: _find_home zeroes les_h (no hold outlives a process);
+**        own_o is the snapshot's, marked by the roll and by every commit
+**        before the save, and replay marks the events after it;
+**        u3_disk_blob_gc reclaims any unowned blob nothing holds
 */
 
 c3_c tac_c[256];  //  tracing label
@@ -320,9 +320,11 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 **   wrote.  tap mints a bank record for every blob id it decodes, so an event
 **   naming a file that is gone arrives with a fresh record over a
 **   missing file.  committing it would log an event that can never
-**   replay.  a record the king does not hold and no epoch owns is
-**   backed only if its file exists (the event's own atoms count for
-**   nothing here: tap minted them); otherwise the poke is nacked with
+**   replay.  a record the king holds is backed: the king's hold keeps
+**   the file.  any other is backed only if its file exists, owned or
+**   not: ownership comes from the snapshot, and no boot checks that the
+**   files it names are still there (the event's own atoms count for
+**   nothing here: tap minted them).  otherwise the poke is nacked with
 **   a %blob goof.  returns the goof list, or u3_none when every bob is
 **   backed.
 */
@@ -336,7 +338,7 @@ _mars_blob_sure(const u3s_bids* bid_u)
     c3_h      seq_h = u3a_bid_seq(bid_u->bid_d[i_w]);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-    if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
+    if ( blb_u && blb_u->les_h ) {
       continue;
     }
     if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
@@ -1785,6 +1787,15 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     }
 
     mar_u->sen_d = mar_u->dun_d = met_u.lif_h;
+
+    //  the save below keeps own_o: mark what the boot events' rows name
+    //
+    if ( c3n == u3_disk_blob_own(log_u, 1, met_u.lif_h) ) {
+      fprintf(stderr, "mars: the boot events depend on blob data that no "
+                      "longer exists\r\n");
+      exit(1);
+    }
+
     u3m_save();
   }
 
@@ -1922,9 +1933,12 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
 
+  //  a roll saves the image it makes; a dry run saves nothing, so it
+  //  rolls nothing
+  //
   if (  (mar_u->dun_d == log_u->dun_d)
      && !log_u->epo_d
-     && !(u3C.wag_h & u3o_yolo) )
+     && !(u3C.wag_h & (u3o_yolo | u3o_dryrun)) )
   {
     u3_disk_roll(mar_u->log_u, mar_u->dun_d);
   }
@@ -1947,21 +1961,10 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_h = u3r_mug(u3A->roc);
 
-  //  ownership is rebuilt from the manifest: _find_home zeroed the
-  //  snapshot's flags; mark every blob the epoch's rows name, from the
-  //  image's row at the epoch's first key through the snapshot's event.
-  //  replay marks the rest.  a missing file is fatal here as in replay:
-  //  the image depends on it
+  //  ownership travels with the snapshot: the roll marked the image's
+  //  live set and wrote the same flags into the epoch's copy, and every
+  //  commit before a save marked its rows.  replay marks the rest
   //
-  if ( c3n == u3_disk_blob_own(mar_u->log_u,
-                               mar_u->log_u->epo_d,
-                               mar_u->dun_d) )
-  {
-    fprintf(stderr, "mars: the image depends on blob data that no longer "
-                    "exists\r\n");
-    u3_disk_exit(mar_u->log_u);
-    exit(1);
-  }
 
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");

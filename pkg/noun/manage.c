@@ -640,12 +640,13 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
-/* _find_home_zero_cb(): u3h_walk_with callback — zero les_h and own_o
-**   on each u3a_blob.  Both belong to the
-**   process that wrote the snapshot: no hold outlives a restart, since
-**   it ends both processes and the king that owed the holds is gone;
-**   and ownership is marked again from the epoch's BLOBS rows
-**   (u3_disk_blob_own), never read back from the snapshot.
+/* _find_home_zero_cb(): u3h_walk_with callback — zero les_h on each
+**   u3a_blob.  The count belongs to the process that wrote the snapshot:
+**   no hold outlives a restart, since it ends both processes and the
+**   king that owed the holds is gone.  own_o stays: the snapshot is
+**   the state at its event, and the roll and every commit before the
+**   save marked it from the epoch's rows.  A record already at zero is
+**   not written, so its page stays clean.
 */
 static void
 _find_home_zero_cb(u3_noun kev, void* ptr_v)
@@ -657,8 +658,9 @@ _find_home_zero_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  blb_u->les_h = 0;
-  blb_u->own_o = c3n;
+  if ( blb_u->les_h ) {
+    blb_u->les_h = 0;
+  }
 }
 
 /* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
@@ -802,9 +804,8 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset les_h and own_o: the snapshot's count and flag belong to a
-  //  dead process; no hold outlives one, and ownership is marked again
-  //  from the epoch's manifest
+  //  reset les_h: the snapshot's count belongs to a dead process, and
+  //  no hold outlives one.  ownership is the snapshot's, kept
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);
 
@@ -2564,6 +2565,27 @@ u3m_save(void)
   u3e_save(low_p, hig_p);
 
   u3a_dash();
+}
+
+/* u3m_fork(): write the changes since the last save into the image at
+**             [img_c], a copy of the checkpoint's, through a patch left
+**             in [pat_c]; the checkpoint and dirty pages stay.
+*/
+c3_o
+u3m_fork(const c3_c* pat_c, const c3_c* img_c)
+{
+  u3_post low_p, hig_p;
+  c3_o    ret_o;
+  u3m_water(&low_p, &hig_p);
+
+  u3a_wait();
+
+  u3_assert(u3R == &u3H->rod_u);
+
+  ret_o = u3e_fork(pat_c, img_c, low_p);
+
+  u3a_dash();
+  return ret_o;
 }
 
 /* u3m_toss(): discard ephemeral memory.
