@@ -428,6 +428,52 @@ _test_dedup_dag(void)
     u3z(can);
   }
 
+  //  but not while debugging memory (as u3a_wed()), where the old
+  //  children would be reported as leaks when the road is swept
+  //
+  {
+    c3_h    wag_h = u3C.wag_h;
+    struct timespec bef_u, aft_u;
+    u3_noun can, fre, r;
+    c3_d    mic_d;
+
+    can = u3m_dedup(_dag(26));
+    u3m_hate(0);
+    fre = _dag(26);
+
+    u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    r = u3m_dedup(u3k(fre));
+    if ( r != can ) {
+      fprintf(stderr, "test: dedup dag: debug member not found\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    clock_gettime(CLOCK_MONOTONIC, &aft_u);
+
+    if ( u3h(fre) == u3h(can) ) {
+      fprintf(stderr, "test: dedup dag: debug unified in place\r\n");
+      ret_i = 0;
+    }
+    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
+          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
+    if ( mic_d > 1000000 ) {
+      fprintf(stderr, "test: dedup dag: debug %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+
+    //  the road's sweep finds no leaks (and would abort if it did)
+    //
+    u3m_grab(fre);
+    u3C.wag_h = wag_h;
+
+    u3z(fre);
+    u3m_love(0);
+    u3z(can);
+  }
+
   return ret_i;
 }
 

@@ -4136,12 +4136,19 @@ _dedup_memo_free(_dedup_memo* mem_u)
 **   not on the home road, where only the home road writes. and only if
 **   [hed] and [tel] are senior to [cel]'s road, so that they outlive it
 **   and need no counts there; the old children leak on that road, as
-**   u3a_wed()'s do.
+**   u3a_wed()'s do. so, as there, not while debugging memory, where a
+**   sweep of that road would report them.
 */
 static c3_t
 _dedup_wed(u3_noun cel, u3_noun hed, u3_noun tel)
 {
   u3a_road* rod_u = u3R;
+
+#ifdef U3_MEMORY_DEBUG
+  return 0;
+#else
+  if ( u3C.wag_h & u3o_debug_ram ) return 0;
+#endif
 
   while ( c3y == u3a_is_senior(rod_u, cel) ) {
     rod_u = u3to(u3a_road, rod_u->par_p);
