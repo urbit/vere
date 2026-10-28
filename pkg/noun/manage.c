@@ -3225,7 +3225,7 @@ static struct {
   c3_y         pat_y;     //  probing path: 0 none, then as hcp_d[]
   c3_y         cls_y;     //  origin of members added now, as hch_d[]
   c3_w*        cls_w[2];  //  origin of each member, two bits, or 0
-  c3_w*        pag_w;     //  table pages written this interval, or 0
+  c3_h*        pag_h;     //  table pages written this interval, or 0
 } _cm_dup_u;
 
 //  table pages tracked: an on-loom copy of the cell table, at
@@ -3315,11 +3315,11 @@ _cm_dup_meas_hit(u3_noun som, u3_noun can)
 static inline void
 _cm_dup_meas_page(c3_d buc_d)
 {
-  if ( _cm_dup_u.pag_w && !_cm_dup_u.reb_t ) {
+  if ( _cm_dup_u.pag_h && !_cm_dup_u.reb_t ) {
     c3_d pag_d = (buc_d * (sizeof(u3_noun) + 2)) >> 14;
 
     if ( pag_d < _CM_DUP_PAGES ) {
-      _cm_dup_u.pag_w[pag_d >> 5] |= (c3_w)1 << (pag_d & 31);
+      _cm_dup_u.pag_h[pag_d >> 5] |= (c3_h)1 << (pag_d & 31);
     }
   }
 }
@@ -3340,7 +3340,7 @@ _cm_dup_init(void)
     if ( _cm_dup_meas_on() ) {
       _cm_dup_u.cls_w[0] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
       _cm_dup_u.cls_w[1] = c3_calloc(sizeof(c3_w) * _cm_dup_u.len_w);
-      _cm_dup_u.pag_w    = c3_calloc(_CM_DUP_PAGES / 8);
+      _cm_dup_u.pag_h    = c3_calloc(_CM_DUP_PAGES / 8);
     }
 
     _cm_dup_u.ini_t = 1;
@@ -3511,13 +3511,13 @@ u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d)
   if ( _cm_dup_u.ini_t ) {
     *buc_d = _canon_cells_bucket_count(&_cm_dup_u.cel_u);
 
-    if ( _cm_dup_u.pag_w ) {
+    if ( _cm_dup_u.pag_h ) {
       c3_w i_w;
 
       for ( i_w = 0; i_w < (_CM_DUP_PAGES >> 5); i_w++ ) {
-        *pag_d += (c3_d)__builtin_popcount(_cm_dup_u.pag_w[i_w]);
+        *pag_d += (c3_d)__builtin_popcount(_cm_dup_u.pag_h[i_w]);
       }
-      memset(_cm_dup_u.pag_w, 0, _CM_DUP_PAGES / 8);
+      memset(_cm_dup_u.pag_h, 0, _CM_DUP_PAGES / 8);
     }
   }
 }
