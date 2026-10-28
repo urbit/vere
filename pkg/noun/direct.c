@@ -158,8 +158,6 @@ _d_poke(u3_noun ovo)
     u3l_log("ska: poke %%%s: start, ovum mug %08x", tag_c, u3r_mug(u3t(ovo)));
   }
 
-  //  SKA core uses persistent memoization at least for now
-  //
   gat = u3n_nock_on(u3k(cor), u3nt(9, _CVX_POKE, u3nc(0, 1)));
   pro = u3n_slam_et(u3_nul, gat, ovo);
 
