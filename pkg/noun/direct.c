@@ -23,16 +23,18 @@
 
 /*  The SKA core is an arvo-shaped core whose +poke is the arm at axis 23:
 **
-**    [%full sub=* fol=^]                 ->  [%ir bell straight regs]
+**    [%full sub=* fol=^]                 ->  [%ir bell straight new]
 **    [%dire bell mono=?]                 ->  [%ir bell straight ~]
 **    [%jets (list [ring need-ordered])]  ->  ~
 **    [%fast reset=? regs]                ->  ~
 **
-**  regs: (list [path sock]), cores registered with %fast hints as the
-**  analysis sees them, a label path and the template of the core's
-**  shape.  jets.c builds the same for the cores u3n registers, and keeps
-**  them all in u3R->ska.tem_p; those the core hasn't seen wait in
-**  u3R->ska.new and are fed to it before it analyzes.
+**  regs: (list [path sock]), cores registered with %fast hints, a label
+**  path and the template of the core's shape.  jets.c builds the same for
+**  the cores u3n registers, and keeps them all in u3R->ska.tem_p; those
+**  the core hasn't seen wait in u3R->ska.new and are fed to it before it
+**  analyzes.  new: (list [path sock clue]), the registrations the analysis
+**  made, parents first, with the clues of their hints: u3n registers the
+**  cores from those, as compiled nock runs no %fast hint.
 */
 
 /* _d_loob(): assert loobean.
@@ -203,14 +205,17 @@ _d_flush(void)
   }
 }
 
-/* _d_ir(): unpack [%ir bell straight regs], keeping the registrations.
+/* _d_ir(): unpack [%ir bell straight new], registering the cores the
+**          analysis registered: for SKA, by their [path sock]; for u3n,
+**          by their clues through u3j_mine(), which locates the data of
+**          a template as it would the core.
 */
 static u3_noun
 _d_ir(u3_noun pro, u3_noun* bell)
 {
-  u3_noun tag, bel, ir, reg;
+  u3_noun tag, bel, ir, new, pax, tem, clu;
 
-  u3x_qual(pro, &tag, &bel, &ir, &reg);
+  u3x_qual(pro, &tag, &bel, &ir, &new);
 
   if ( c3__ir != tag ) {
     u3m_bail(c3__fail);
@@ -220,8 +225,10 @@ _d_ir(u3_noun pro, u3_noun* bell)
     *bell = u3k(bel);
   }
 
-  for ( ; u3_nul != reg; reg = u3t(reg) ) {
-    u3j_ska_put(u3k(u3h(reg)), c3n);
+  for ( ; u3_nul != new; new = u3t(new) ) {
+    u3x_trel(u3h(new), &pax, &tem, &clu);
+    u3j_ska_put(u3nc(u3k(pax), u3k(tem)), c3n);
+    u3j_mine(u3k(clu), u3k(u3t(tem)));
   }
 
   u3k(ir);

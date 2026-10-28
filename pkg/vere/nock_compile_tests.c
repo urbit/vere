@@ -529,6 +529,88 @@ _test_owned(void)
   return _test("owned", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _fast_n(): the gate cor kicked through u3n's jet dashboard: ~ if
+**            u3j_kick() finds no jet, else its product and that of the
+**            %fun hook on the gate.  For u3m_soft().
+*/
+static u3_noun
+_fast_n(u3_noun cor_fol)
+{
+  u3_noun cor, fol, kic;
+
+  u3x_cell(cor_fol, &cor, &fol);
+  u3k(cor); u3z(cor_fol);
+
+  if ( u3_none == (kic = u3j_kick(u3k(cor), 2)) ) {
+    u3z(cor);
+    return u3_nul;
+  }
+
+  return u3nc(kic, u3j_hook(cor, "fun"));
+}
+
+/* _test_fast(): a %fast hint run only by u3nc: a gate labeled as the
+**               kernel's dec, built over its layer, with a hook on its
+**               arm.  The analysis registers it, and u3n jets and hooks
+**               it through the registration %ir carries back.
+*/
+static c3_i
+_test_fast(void)
+{
+  u3_noun cor = _gate("|=  *\n"
+                      "=>  ..add\n"
+                      "~%  %dec  +>\n"
+                      "  ==\n"
+                      "    %fun  $\n"
+                      "  ==\n"
+                      "|=  a=@\n"
+                      "(sub a 1)\n",
+                      0);
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_weak gat = _run("u3nc fast  ", _nock_nc, cor, fol);
+  u3_noun dec, pro;
+  c3_i    ret_i = 1;
+
+  u3z(cor); u3z(fol);
+
+  if ( u3_none == gat ) {
+    fprintf(stderr, "test fast: crashed\r\n");
+    return 0;
+  }
+
+  //  with a sample, as u3n meets it
+  //
+  dec = u3nt(u3k(u3h(gat)), 42, u3k(u3t(u3t(gat))));
+  u3z(gat);
+  pro = _run("u3n  fast  ", _fast_n, dec, u3_nul);
+
+  if ( u3_none == pro ) {
+    fprintf(stderr, "test fast: crashed\r\n");
+    ret_i = 0;
+  }
+  else if ( u3_nul == pro ) {
+    fprintf(stderr, "test fast: not jetted by u3n\r\n");
+    ret_i = 0;
+  }
+  else {
+    u3_noun exp = u3nc(41, 41);
+
+    if ( c3n == u3r_sing(pro, exp) ) {
+      fprintf(stderr, "test fast: mismatch\r\n");
+      u3m_p("u3n ", pro);
+      ret_i = 0;
+    }
+    else {
+      fprintf(stderr, "test fast: ok\r\n");
+    }
+    u3z(exp);
+    u3z(pro);
+  }
+
+  u3z(dec);
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -619,6 +701,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_owned() ) {
+    exit(1);
+  }
+
+  if ( !_test_fast() ) {
     exit(1);
   }
 
