@@ -743,8 +743,9 @@ OP1(CAL, a_h, BODY_CAL)
 OP1(CAF, a_h, BODY_CAF)
 
 //  a call by subject: the u3w jet of the site, if it has one, on the
-//  subject; the unary program of the bell if it punts.  The jet takes
-//  the subject's reference only if it doesn't punt.
+//  subject, under the flags of its arm; the unary program of the bell if
+//  it punts.  The jet takes the subject's reference only if it doesn't
+//  punt.
 //
 #define BODY_CAP()                                                              \
   u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);                                \
@@ -752,7 +753,9 @@ OP1(CAF, a_h, BODY_CAF)
   u3_noun    x = TAKE(SUB(), KON());                                            \
   u3_noun    pro;                                                               \
   if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->arm_u->mon_f))) )             \
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u,                        \
+                                        dir_u->arm_u->mon_f,                    \
+                                        u3t(dir_u->ring)))) )                   \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     PUT(dir_u->des_h, pro);                                                     \
@@ -989,7 +992,9 @@ OP1K(JMF, a_h, BODY_JMF)
   }                                                                             \
   SWEEP(S);                                                                     \
   if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->arm_u->mon_f))) )             \
+     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u,                        \
+                                        dir_u->arm_u->mon_f,                    \
+                                        u3t(dir_u->ring)))) )                   \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     DONE(pro);                                                                  \

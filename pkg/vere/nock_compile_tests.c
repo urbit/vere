@@ -611,6 +611,49 @@ _test_fast(void)
   return ret_i;
 }
 
+/* _scot_cb(): u3h_walk callback over the rings: set the flags in ptr_v
+**             on every arm of a core named scot.
+*/
+static void
+_scot_cb(u3_noun kev, void* ptr_v)
+{
+  const c3_o*     fla_o = ptr_v;
+  u3j_harm*       ham_u;
+  const u3u_harm* arm_u;
+
+  if (  (c3y == u3r_sing_c("scot", u3h(u3h(u3h(kev)))))
+     && (c3y == u3j_ring(u3h(kev), &ham_u, &arm_u)) )
+  {
+    ham_u->liv = fla_o[0];
+    ham_u->ice = fla_o[1];
+  }
+}
+
+/* _test_flags(): the flags of a jet arm hold for the compiled calls
+**                through its ring: +scot off, its calls run its program;
+**                +scot not perfect, its driver is tested against nock,
+**                and its punt (on %p) leaves the subject to the caller.
+*/
+static c3_i
+_test_flags(void)
+{
+  c3_o off_o[2] = { c3n, c3y };
+  c3_o tes_o[2] = { c3y, c3n };
+  c3_o def_o[2] = { c3y, c3y };
+  c3_i ret_i = 1;
+
+  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, off_o);
+  ret_i = _test_scot() && ret_i;
+
+  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, tes_o);
+  ret_i = _test_scot() && ret_i;
+
+  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, def_o);
+
+  fprintf(stderr, "test flags: %s\r\n", ret_i ? "ok" : "failed");
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -705,6 +748,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_fast() ) {
+    exit(1);
+  }
+
+  if ( !_test_flags() ) {
     exit(1);
   }
 

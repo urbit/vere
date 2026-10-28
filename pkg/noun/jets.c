@@ -1213,22 +1213,25 @@ u3j_boot(c3_o nuu_o)
                      u3D.dev_u);
 }
 
-/* u3j_ring(): find the drivers of an arm by ring [path axis]. RETAINS.
-**             sets *arm_u to the SKA jet driver, nullable; produces c3n if
-**             there is no such arm.
+/* u3j_ring(): find the drivers of an arm by ring [path axis]: the arm in
+**             the hot state in *ham_u, its array driver in *arm_u, NULL
+**             if none.  RETAINS.  Produces c3n if there is no driver.
 */
 c3_o
-u3j_ring(u3_noun ring, const u3u_harm** arm_u)
+u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
 {
   u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
+  u3_noun jax, inx, arg;
 
+  *ham_u = NULL;
   *arm_u = NULL;
 
   if ( u3_none == val ) {
     return c3n;
   }
 
-  u3_noun arg = u3t(u3t(val));
+  u3x_trel(val, &jax, &inx, &arg);
+  *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
   *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
 
   return c3y;
@@ -1249,15 +1252,24 @@ _cj_soft(u3_noun cor, u3_noun axe)
              u3_noun old,
              u3_noun new);
 
-/* _cj_kick_z(): try to kick by jet.  If no kick, produce u3_none.
+/* _cj_kick_f(): kick by the driver fun_f under the flags of the arm ham_u
+**               of the core cop_u: not if the arm is off; by the driver
+**               alone if it is perfect; else tested against nock, with
+**               the arm perfect while the driver runs, lest it test
+**               itself, and off while nock runs, lest nock use it.  axe:
+**               the arm's axis, for nock.
 **
 ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
 ** `axe` is RETAINED.
 */
 static u3_weak
-_cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
+_cj_kick_f(u3_noun     cor,
+           u3j_core*   cop_u,
+           u3j_harm*   ham_u,
+           u3_noun   (*fun_f)(u3_noun),
+           u3_atom     axe)
 {
-  if ( 0 == ham_u->fun_f ) {
+  if ( 0 == fun_f ) {
     return u3_none;
   }
 
@@ -1280,7 +1292,7 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
 #endif
 
     if ( _(ham_u->ice) ) {
-      u3_weak pro = ham_u->fun_f(cor);
+      u3_weak pro = fun_f(cor);
 
 #ifdef U3_MEMORY_DEBUG
       u3a_lop(cod_w);
@@ -1294,14 +1306,13 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
       u3_weak pro, ame;
 
       ham_u->ice = c3y;
-      pro = ham_u->fun_f(cor);
+      pro = fun_f(cor);
       ham_u->ice = c3n;
 
 #ifdef U3_MEMORY_DEBUG
       u3a_lop(cod_w);
 #endif
       if ( u3_none == pro ) {
-        u3z(cor);
         return pro;
       }
       ham_u->liv = c3n;
@@ -1333,18 +1344,30 @@ _cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
   }
 }
 
-/* u3j_kick_arm(): try to kick by driver arm, without a dashboard search.
+/* _cj_kick_z(): kick by the driver of the arm ham_u of cop_u, under its
+**               flags.
 **
 ** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
-**  XX respect flags
+*/
+static u3_weak
+_cj_kick_z(u3_noun cor, u3j_core* cop_u, u3j_harm* ham_u, u3_atom axe)
+{
+  return _cj_kick_f(cor, cop_u, ham_u, ham_u->fun_f, axe);
+}
+
+/* u3j_kick_arm(): try to kick by the driver fun_f under the flags of the
+**                 arm ham_u, without a dashboard search; axe is the arm's
+**                 axis.
+**
+** `cor` is RETAINED iff there is no kick, TRANSFERRED if one.
 */
 u3_weak
-u3j_kick_arm(u3_noun cor, u3_noun(*fun_f)(u3_noun))
+u3j_kick_arm(u3_noun     cor,
+             u3j_harm*   ham_u,
+             u3_noun   (*fun_f)(u3_noun),
+             u3_atom     axe)
 {
-  u3_weak pro = fun_f(cor);
-  if ( u3_none == pro ) return u3_none;
-  u3z(cor);
-  return pro;
+  return _cj_kick_f(cor, ham_u->cop_u, ham_u, fun_f, axe);
 }
 
 /* _cj_hook_in(): execute hook from core, or fail.

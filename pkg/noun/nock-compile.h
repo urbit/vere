@@ -37,7 +37,8 @@
       c3_h             des_h;         //  slot for the product; none in tail position
       c3_o             mon_o;         //  call by subject: the one argument is
                                       //  the whole subject, pog_p its unary program
-      const u3u_harm*  arm_u;         //  jet info
+      u3j_harm*        ham_u;         //  jet arm in the hot state: its flags
+      const u3u_harm*  arm_u;         //  its array driver, or NULL
     } u3nc_dire;
 
   /* u3nc_prog: program compiled from the IR of one function.
