@@ -616,7 +616,7 @@ _cj_ska_pel(u3_noun loc)
 static u3_noun
 _cj_ska_root(u3_noun cor)
 {
-  return u3nc(u3nc(c3y, c3y), cor);
+  return u3nc(c3y, cor);
 }
 
 /* _cj_ska_tem(): template of a core with battery bat whose parent, at
@@ -639,6 +639,7 @@ _cj_ska_tem(u3_noun bat, c3_l axe_l, u3_noun par)
   //
   for ( a_l = axe_l; a_l > 3; a_l >>= 1 ) {
     if ( a_l & 1 ) {
+      //  no need to normalize: the parent is known, so cap is never c3n
       cap = u3nc(c3n, cap);
       dat = u3nc(0, dat);
     }
@@ -648,7 +649,8 @@ _cj_ska_tem(u3_noun bat, c3_l axe_l, u3_noun par)
     }
   }
 
-  return u3nc(u3nc(c3y, cap), u3nc(u3k(bat), dat));
+  cap = ( c3y == cap ) ? c3y : u3nc(c3y, cap);
+  return u3nc(cap, u3nc(u3k(bat), dat));
 }
 
 /* _cj_ska_sock(): template of cor at loc, through its parents.  RETAINS.
@@ -1212,14 +1214,13 @@ u3j_boot(c3_o nuu_o)
 }
 
 /* u3j_ring(): find the drivers of an arm by ring [path axis]. RETAINS.
-**             sets *ham_u to the u3w arm and *arm_u to the array arm,
-**             either nullable; produces c3n if there is no such arm.
+**             sets *arm_u to the SKA jet driver, nullable; produces c3n if
+**             there is no such arm.
 */
 c3_o
 u3j_ring(u3_noun ring, const u3u_harm** arm_u)
 {
   u3_weak val = u3h_git(u3H->rod_u.ska.pax_p, ring);
-  u3_noun jax, inx, arg;
 
   *arm_u = NULL;
 
@@ -1227,7 +1228,7 @@ u3j_ring(u3_noun ring, const u3u_harm** arm_u)
     return c3n;
   }
 
-  u3x_trel(val, &jax, &inx, &arg);
+  u3_noun arg = u3t(u3t(val));
   *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
 
   return c3y;
