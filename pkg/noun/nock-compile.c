@@ -1259,6 +1259,13 @@ _nc_key_sort(c3_d* key_d, c3_h len_h)
 #define _nc_bit_set(set, r)  ((set)[(r) >> 6] |= (1ULL << ((r) & 63)))
 #define _nc_bit_clr(set, r)  ((set)[(r) >> 6] &= ~(1ULL << ((r) & 63)))
 
+#define _nc_fam_sot(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
+  ((sot) && (src)) |
+//  XX check _nc_fam appending too
+static_assert(!(FAMILIES(_nc_fam_sot) 0),
+  "sot families have no own sources, see _nc_live_in()");
+#undef _nc_fam_sot
+
 /*  _nc_live_in(): lifetime analysis.
 **  Since CFG is DAG one pass over the blocks in reversed topological order with
 **  a backward iteration over the ops in each block is enough. 
@@ -1323,38 +1330,26 @@ _nc_live_in(nc_gen* gen_u, c3_h lo_h, c3_h hi_h, c3_h chu_h,
         _nc_bit_clr(liv_d, r_h - lo_h);
       }
 
-      for ( k_h = 0; k_h < _nc_fam[op_u->fam_y].src_y; k_h++ ) {
-        if ( _nc_dro == op_u->fam_y ) {
-          //  the register is already dead at this point, nothing to do
-          break;
-        }
-        r_h = op_u->src_h[k_h];
-        if ( (r_h >= lo_h) && (r_h < hi_h) ) {
-          if ( !_nc_bit_get(liv_d, r_h - lo_h) ) {
-            if ( mar_t && !_nc_fam[op_u->fam_y].swe_y ) {
-              op_u->kon_y |= _nc_edgy(op_u->fam_y)
-                           ? (3 << (2 * k_h))
-                           : (1 << k_h);
+      if ( _nc_dro != op_u->fam_y ) {
+        _nc_srcs(gen_u, op_u, reg_h, {
+          r_h = *reg_h;
+          if (  (r_h >= lo_h) && (r_h < hi_h)
+             && !_nc_bit_get(liv_d, r_h - lo_h) )
+          {
+            if ( mar_t ) {
+              if ( _nc_fam[op_u->fam_y].sot_y ) {
+                gen_u->pok_y[reg_h - gen_u->pol_h] = 1;
+              }
+              else if ( !_nc_fam[op_u->fam_y].swe_y ) {
+                k_h = reg_h - op_u->src_h;
+                op_u->kon_y |= _nc_edgy(op_u->fam_y)
+                             ? (3 << (2 * k_h))
+                             : (1 << k_h);
+              }
             }
             _nc_bit_set(liv_d, r_h - lo_h);
           }
-        }
-      }
-
-      if ( _nc_fam[op_u->fam_y].sot_y ) {
-        nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
-
-        for ( k_h = 0; k_h < dir_u->len_h; k_h++ ) {
-          r_h = gen_u->pol_h[dir_u->sot_h + k_h];
-          if ( (r_h >= lo_h) && (r_h < hi_h) ) {
-            if ( !_nc_bit_get(liv_d, r_h - lo_h) ) {
-              if ( mar_t ) {
-                gen_u->pok_y[dir_u->sot_h + k_h] = 1;
-              }
-              _nc_bit_set(liv_d, r_h - lo_h);
-            }
-          }
-        }
+        });
       }
 
       if ( lvo_d ) {
@@ -1759,6 +1754,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
 
       //  dead on every edge in: live out of every predecessor (the
       //  arguments, before the entry) and not live into the block
+      //
       //  the name is a bit misleading: liv_d will become a set of regs that die
       //  in b_h on all incoming edges
       //
@@ -3095,6 +3091,8 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   u3h_walk_with(gen_u->lit_p, _nc_lit_cb, pog_u->lit_u.non);
 
   //  the destination slot of a call is in its site
+  //  not done in _nc_encode to avoid the destination slot's value affecting
+  //  encoding size
   //
   for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
     nc_op* op_u = &(gen_u->ops_u[i_h]);
