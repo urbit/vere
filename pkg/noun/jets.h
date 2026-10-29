@@ -197,6 +197,15 @@
         u3j_mine(u3_noun clu,
                    u3_noun cor);
 
+      /* u3j_prune(): drop cold-state registrations of unreachable
+      **              batteries, producing how many were dropped. if
+      **              non-null, [tot_w] gets how many were registered
+      **              and [dea_w] how many were unreachable (the rest
+      **              of those were kept as parents of kept ones).
+      */
+        c3_w
+        u3j_prune(c3_w* tot_w, c3_w* dea_w);
+
       /* u3j_ream(): refresh after restoring from checkpoint.
       */
         void
@@ -232,12 +241,6 @@
         void
         u3j_rite_take(u3j_rite* dst_u, u3j_rite* src_u);
 
-      /* u3j_rite_merge(): copy rite references from src_u to dst_u,
-      **                   losing old references
-      */
-        void
-        u3j_rite_merge(u3j_rite* dst_u, u3j_rite* src_u);
-
       /* u3j_site_take(): copy junior site references.
       */
         void
@@ -248,6 +251,18 @@
       */
         void
         u3j_site_merge(u3j_site* dst_u, u3j_site* src_u);
+
+      /* u3j_rite_reap(): merge junior rite [src_u] into [dst_u],
+      **                  reading junior memory, writing only what changed.
+      */
+        void
+        u3j_rite_reap(u3j_rite* dst_u, u3j_rite* src_u);
+
+      /* u3j_site_reap(): merge junior site [src_u] into [dst_u],
+      **                  reading junior memory, writing only what changed.
+      */
+        void
+        u3j_site_reap(u3j_site* dst_u, u3j_site* src_u);
 
       /* u3j_site_ream(): refresh u3j_site after restoring from checkpoint
       */

@@ -1221,7 +1221,7 @@ _stun_timer_cb(uv_timer_t* tim_u)
         //
         //    https://datatracker.ietf.org/doc/html/rfc5389#section-7.2.1
         //
-        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_max(nex_d, 31500);
+        c3_h tim_h = (gap_d >= 31500) ? 8000 : c3_min(nex_d, 31500);
 
         uv_timer_start(&sam_u->sun_u.tim_u, _stun_timer_cb, tim_h, 0);
         _stun_send_request(sam_u);
@@ -2170,6 +2170,10 @@ _ames_hear(u3_ames* sam_u,
       if ( c3y == sam_u->sat_u.for_o ) {
         _ames_try_forward(pac_u);
       }
+      else {
+        _ames_pact_free(pac_u);
+        return;
+      }
     }
     else {
       //  enter protocol-specific packet handling
@@ -2662,7 +2666,7 @@ _ames_kick_newt(u3_ames* sam_u, u3_noun tag, u3_noun dat)
     case c3__saxo: {
       _ames_ef_saxo(sam_u, u3k(dat));
       ret_o = c3y;
-    }
+    } break;
 
     case c3__nail: {
       u3_noun who = u3k(u3h(dat));

@@ -958,8 +958,8 @@ mesa_sift_pact_from_buf(u3_mesa_pact *pac_u, c3_y* buf_y, c3_h len_h) {
 
 /* sizing
 */
-static c3_h
-_mesa_size_name(u3_mesa_name* nam_u)
+c3_h
+mesa_size_name(u3_mesa_name* nam_u)
 {
   c3_h siz_h = 1;
   u3_mesa_name_meta met_u;
@@ -1050,18 +1050,18 @@ mesa_size_pact(u3_mesa_pact* pac_u)
 
   switch ( pac_u->hed_u.typ_y ) {
     case PACT_PEEK: {
-      siz_h += _mesa_size_name(&pac_u->pek_u.nam_u);
+      siz_h += mesa_size_name(&pac_u->pek_u.nam_u);
     } break;
 
     case PACT_PAGE: {
-      siz_h += _mesa_size_name(&pac_u->pag_u.nam_u);
+      siz_h += mesa_size_name(&pac_u->pag_u.nam_u);
       siz_h += _mesa_size_data(&pac_u->pag_u.dat_u);
       siz_h += _mesa_size_hops(pac_u);
     } break;
 
     case PACT_POKE: {
-      siz_h += _mesa_size_name(&pac_u->pok_u.nam_u);
-      siz_h += _mesa_size_name(&pac_u->pok_u.pay_u);
+      siz_h += mesa_size_name(&pac_u->pok_u.nam_u);
+      siz_h += mesa_size_name(&pac_u->pok_u.pay_u);
       siz_h += _mesa_size_data(&pac_u->pok_u.dat_u);
     } break;
 
@@ -1585,7 +1585,7 @@ _setup()
   u3_weak       pil;
 
   u3C.wag_h |= u3o_hashless;
-  u3m_boot_lite(1 << 26);
+  u3m_boot_lite(1 << 27);
   sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
   if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, len_d, byt_y)) ) {
     printf("*** fail _setup 1\n");
