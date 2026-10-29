@@ -35,28 +35,17 @@
         c3_c*            val_c;
       } u3_hhed;
 
-    /* u3_hbod: http body block.  Also used for responses.
-    **
-    **   Three shapes:
-    **     (a) inline    — payload in hun_y[0..len_w]; map_y == own_y == 0.
-    **     (b) mmap view — map_y points into a shared mmap at the chunk's
-    **                     offset; own_y == 0 (this chunk does not own the
-    **                     mapping).  hun_y is unused.
-    **     (c) mmap owner — same as (b) for the iovec (map_y = base + off),
-    **                      plus own_y = mmap base and map_d = mmap size
-    **                      so _cttp_bods_free can munmap.
-    **
-    **   Bob-streaming chains (see _cttp_bod_from_bob) are built as a
-    **   head→tail list of views with the owner as the tail chunk.
-    **   Head-first free then MADV_DONTNEED's every view before the
-    **   owner finally munmaps.
+    /* u3_hbod: http body block, inline (payload in hun_y) or a chunk of
+    **   a bob read through win_u, a u3r_view on the king's home road.  A
+    **   bob's chunks share one view; the last chunk owns it.
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
         c3_w             len_w;
-        c3_y*            map_y;   //  iovec base (mmap view) or NULL (inline)
-        c3_y*            own_y;   //  mmap base to munmap (NULL if not owner)
-        c3_d             map_d;   //  mmap size for munmap (0 if not owner)
+        c3_y*            buf_y;   //  blob: heap copy of the chunk, or 0
+        u3r_view*        win_u;   //  blob: the shared view, or 0
+        c3_d             off_d;   //  blob: byte offset of this chunk
+        c3_o             own_o;   //  blob: frees win_u
         c3_y             hun_y[0];
       } u3_hbod;
 
@@ -409,6 +398,7 @@
           u3_noun            tar;               //  target (in arvo)
           u3_noun            wir;               //  wire
           u3_noun            cad;               //  card
+          u3_noun            pax;               //  staged files (list of cords)
           struct {                              //  spinner:
             u3_atom          lab;               //    label
             c3_o           del_o;               //    delay (c3y)
@@ -437,6 +427,8 @@
           c3_d             eve_d;
           size_t           len_i;
           c3_y*            hun_y;
+          c3_d*            bid_d;               //  blob ids, written with the event
+          c3_z             bid_z;
           struct _u3_feat* nex_u;
         } u3_feat;
 
@@ -485,8 +477,7 @@
           u3_writ_peek = 1,
           u3_writ_live = 2,
           u3_writ_exit = 3,
-          u3_writ_quiz = 4,
-          u3_writ_blob = 5    //  blob-install request
+          u3_writ_quiz = 4
         } u3_writ_type;
 
       /* u3_writ: ipc message from urth to mars
@@ -505,11 +496,6 @@
               void*        ptr_v;               //    driver
               void (*qiz_f)(c3_m, void*, u3_noun);  //  callback
             } qiz_u;                                //
-            struct {                            //  blob-install:
-              c3_c*        pax_c;               //    staging path (heap-alloc'd)
-              void*        ptr_v;               //    callback context
-              void (*fun_f)(void*, c3_h, c3_h, c3_o);  //  ack cb(ctx, mug, seq, ok)
-            } blb_u;                            //
           };
         } u3_writ;
 
@@ -596,12 +582,38 @@
             c3_d           len_d;               //  number of events XX len_d
             c3_y*          byt_y[100];          //  array of bytes
             size_t         siz_i[100];          //  array of lengths
+            c3_d*          bid_d[100];          //  blob ids per event, or 0
+            c3_z           bid_z[100];          //  their counts
           } sav_u;
         } u3_disk;
 
       /* u3_disk_walk: opaque event log iterator.
       */
         typedef struct _u3_disk_walk u3_disk_walk;
+
+      /* u3_stag: a large body staged to .urb/stg on the thread pool.
+      **
+      **   The source is [buf_y] or, when that is 0, the file at [nam_c],
+      **   read on the worker.  [don_f] runs on the loop once the job is
+      **   done; a job whose caller went (ptr_v cleared) is not reported,
+      **   and its staged file is removed.
+      */
+        typedef struct _u3_stag {
+          uv_work_t         wor_u;          //  the pool's job
+          const c3_c*       pax_c;          //  pier directory
+          c3_y*             buf_y;          //  bytes to stage, owned, or 0
+          c3_c*             nam_c;          //  else a file to copy, owned
+          c3_d              len_d;          //  bytes (a file: measured)
+          c3_h              gum_h;          //  a file: skip if this is its mug
+          u3_noun           som;            //  the caller's noun, owned
+          void*             ptr_v;          //  the caller; 0 when it is gone
+          void            (*don_f)(struct _u3_stag*);  //  on the loop
+          c3_o              ok_o;           //  out: staged
+          c3_o              sam_o;          //  out: the file's mug is gum_h
+          c3_h              mug_h;          //  out: the staged content mug
+          c3_c              stg_c[8192];    //  out: the staged file
+          struct _u3_stag*  nex_u;          //  next in the queue
+        } u3_stag;
 
       /* u3_psat: pier state.
       */
@@ -837,6 +849,12 @@
         void
         u3_auto_drop(u3_auto* car_u, u3_ovum* egg_u);
 
+      /* u3_auto_lose(): dispose an ovum already off its queue (in
+      **   flight), telling its driver it was dropped.
+      */
+        void
+        u3_auto_lose(u3_ovum* egg_u);
+
       /* u3_auto_work(): notify driver of [egg_u] commencement.
       */
         void
@@ -880,16 +898,17 @@
         c3_o
         u3_disk_make(c3_c* pax_c);
 
-      /* u3_disk_blob_init(): create the blob store dir ($pier/.urb/bob).
+      /* u3_disk_blob_init(): create + empty the blob staging dir
+      **   ($pier/.urb/stg).  Cleaned every time mars starts.
       */
         void
         u3_disk_blob_init(const c3_c* pax_c);
 
-      /* u3_disk_blob_stg_init(): create + empty the blob staging dir
-      **   ($pier/.urb/bob/stg).  Cleaned on every boot.
+      /* u3_disk_blob_root(): point u3C.bob_c at the newest epoch's store,
+      **   for entry points that boot a loom without loading the log.
       */
         void
-        u3_disk_blob_stg_init(const c3_c* pax_c);
+        u3_disk_blob_root(const c3_c* pax_c);
 
       /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **
@@ -907,12 +926,14 @@
         u3_disk_load(c3_c* pax_c, u3_disk_load_e lod_e);
 
       /* u3_disk_etch(): serialize an event for persistence. RETAIN [eve]
+      **   [bid_u], if given, collects the distinct blob ids it writes.
       */
         size_t
-        u3_disk_etch(u3_disk* log_u,
-                     u3_noun    eve,
-                     c3_h     mug_h,
-                     c3_y**   out_y);
+        u3_disk_etch(u3_disk*  log_u,
+                     u3_noun   eve,
+                     c3_h      mug_h,
+                     c3_y**    out_y,
+                     u3s_bids* bid_u);
 
       /* u3_disk_sift(): parse a persisted event buffer.
       */
@@ -990,18 +1011,19 @@
         void
         u3_disk_chop(u3_disk* log_u, c3_d epo_d);
 
-      /* u3_disk_blob_refs(): rebuild blob eve_w from the BLOBS table
-      **   over the entire retained log, creating entries as needed.
+      /* u3_disk_blob_own(): mark owned every blob the BLOBS rows in
+      **   [fir_d, las_d] name, the epoch's manifest; c3n if a named
+      **   file is missing from the store.  boot, replay, and queu.
       */
-        void
-        u3_disk_blob_refs(u3_disk* log_u);
+        c3_o
+        u3_disk_blob_own(u3_disk* log_u, c3_d fir_d, c3_d las_d);
 
-      /* u3_disk_blob_gc(): delete blobs with use_w == 0 and on-disk
-      **   orphans with no bank entry.  run at boot (after replay and
-      **   lease restore) or as part of chop, once use_w is reconstructed.
+      /* u3_disk_blob_gc(): delete blobs nothing holds and no epoch owns,
+      **   and orphan files in the current store.  run at boot once the
+      **   log is caught up.
       */
         void
-        u3_disk_blob_gc(u3_disk* log_u);
+        u3_disk_blob_gc(void);
 
       /* u3_disk_roll(): rollover to a new epoc.
        */
@@ -1117,27 +1139,34 @@
         void
         u3_lord_peek(u3_lord* god_u, u3_pico* pic_u);
 
-      /* u3_lord_blob_install(): request Mars install a staged blob file.
-      **
-      ** [pax_c] is the path to a temp file in $pier/.urb/bob/stg/.
-      ** When Mars finishes (mug+dedup+rename), it calls fun_f(ptr_v, mug, seq, ok).
-      ** Ownership of [pax_c] passes to the writ; do not free it.
+      /* u3_lord_blob_release(): return [num_h] holds on a blob to mars.
       */
         void
-        u3_lord_blob_install(u3_lord* god_u,
-                             c3_c*    pax_c,
-                             void*    ptr_v,
-                             void   (*fun_f)(void*, c3_h, c3_h, c3_o));
+        u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h, c3_h num_h);
 
-      /* u3_lord_blob_lease(): tell Mars king is acquiring a blob lease.
+    /**  Thread pool.
+    **/
+      /* u3_pool_work(): queue [wor_u] on the thread pool, with the signals
+      **   that unwind the loop thread kept out of the pool's threads.
       */
         void
-        u3_lord_blob_lease(u3_lord* god_u, c3_h mug_h, c3_h seq_h);
+        u3_pool_work(uv_work_t* wor_u, uv_work_cb wok_f, uv_after_work_cb aft_f);
 
-      /* u3_lord_blob_release(): tell Mars king is releasing a blob lease.
+      /* u3_stag_new(): a staging job for [ptr_v], reported to [don_f].
+      */
+        u3_stag*
+        u3_stag_new(void* ptr_v, void (*don_f)(u3_stag*));
+
+      /* u3_stag_plan(): queue a staging job; one runs at a time.
       */
         void
-        u3_lord_blob_release(u3_lord* god_u, c3_h mug_h, c3_h seq_h);
+        u3_stag_plan(u3_stag* tag_u);
+
+      /* u3_stag_drop(): forget every job for [ptr_v]: a queued one is
+      **   freed, a running one's result is discarded.
+      */
+        void
+        u3_stag_drop(void* ptr_v);
 
     /**  Filesystem (async).
     **/

@@ -8,30 +8,52 @@
 #include "urcrypt.h"
 
 
+  //  the hashes read the atom through a view: a bob's bytes are borrowed
+  //  from its mapping, a loom atom's from the loom.  only a width past
+  //  the atom is copied, zero-padded, as before.
+  //
   static u3_atom
   _cqe_shay(u3_atom wid,
             u3_atom dat)
   {
-    c3_w len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_d len_d;
+    if ( c3n == u3r_safe_chub(wid, &len_d) ) {
       return u3m_bail(c3__fail);
     }
+    else {
+      c3_y        out_y[32];
+      c3_y*       cop_y = 0;
+      const c3_y* dat_y;
+      u3r_view    vue_u;
 
-    c3_y out_y[32];
-    u3r_view vue_u;
-    u3r_view_padd(&vue_u, dat, len_w);
-    urcrypt_shay((c3_y*)vue_u.byt_y, len_w, out_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(32, out_y);
+      u3r_view_open(&vue_u, dat, c3y);
+      if ( len_d <= vue_u.byt_d ) {
+        dat_y = u3r_view_bytes(&vue_u);
+      }
+      else if ( len_d <= c3_w_max ) {
+        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
+      }
+      else {
+        u3r_view_done(&vue_u);
+        return u3m_bail(c3__fail);
+      }
+
+      urcrypt_shay(dat_y, len_d, out_y);
+      if ( cop_y ) {
+        u3a_free(cop_y);
+      }
+      u3r_view_done(&vue_u);
+      return u3i_bytes(32, out_y);
+    }
   }
 
   static u3_atom
   _cqe_shax(u3_atom a)
   {
-    c3_y out_y[32];
+    c3_y     out_y[32];
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
-    urcrypt_shay((c3_y*)vue_u.byt_y, vue_u.len_w, out_y);
+    u3r_view_open(&vue_u, a, c3y);
+    urcrypt_shay(u3r_view_bytes(&vue_u), vue_u.byt_d, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
   }
@@ -40,34 +62,49 @@
   _cqe_shal(u3_atom wid,
             u3_atom dat)
   {
-    c3_w len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_d len_d;
+    if ( c3n == u3r_safe_chub(wid, &len_d) ) {
       return u3m_bail(c3__fail);
     }
+    else {
+      c3_y        out_y[64];
+      c3_y*       cop_y = 0;
+      const c3_y* dat_y;
+      u3r_view    vue_u;
 
-    c3_y out_y[64];
-    u3r_view vue_u;
-    u3r_view_padd(&vue_u, dat, len_w);
-    urcrypt_shal((c3_y*)vue_u.byt_y, len_w, out_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(64, out_y);
+      u3r_view_open(&vue_u, dat, c3y);
+      if ( len_d <= vue_u.byt_d ) {
+        dat_y = u3r_view_bytes(&vue_u);
+      }
+      else if ( len_d <= c3_w_max ) {
+        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
+      }
+      else {
+        u3r_view_done(&vue_u);
+        return u3m_bail(c3__fail);
+      }
+
+      urcrypt_shal(dat_y, len_d, out_y);
+      if ( cop_y ) {
+        u3a_free(cop_y);
+      }
+      u3r_view_done(&vue_u);
+      return u3i_bytes(64, out_y);
+    }
   }
 
   static u3_atom
   _cqe_shas(u3_atom sal,
             u3_atom ruz)
   {
-    c3_y out_y[32];
+    c3_w sal_w, ruz_w;
+    c3_y *sal_y, *ruz_y, out_y[32];
 
-    u3r_view sa_u, ru_u;
-    u3r_view_init(&sa_u, sal);
-    u3r_view_init(&ru_u, ruz);
-
-    urcrypt_shas((c3_y*)sa_u.byt_y, sa_u.len_w,
-                 (c3_y*)ru_u.byt_y, ru_u.len_w, out_y);
-
-    u3r_view_done(&sa_u);
-    u3r_view_done(&ru_u);
+    sal_y = u3r_bytes_all(&sal_w, sal);
+    ruz_y = u3r_bytes_all(&ruz_w, ruz);
+    urcrypt_shas(sal_y, sal_w, ruz_y, ruz_w, out_y);
+    u3a_free(sal_y);
+    u3a_free(ruz_y);
     return u3i_bytes(32, out_y);
   }
 

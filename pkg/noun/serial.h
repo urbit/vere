@@ -171,6 +171,31 @@
     **  Wire format: [magic "RAM\0" 4B][version 0x01 1B][ram_bits...]
     */
 
+      /* u3s_bids: the distinct blob ids a ram or tap pass met.
+      **
+      **   Filled by the _bids variants below from every 01 tag written
+      **   or read, then sorted and deduplicated, so an encoder and the
+      **   decoder of its output compute the same set by construction:
+      **   that is how mars's grants and the king's holds agree.  The
+      **   caller frees [bid_d].
+      */
+        typedef struct _u3s_bids {
+          c3_d* bid_d;
+          c3_w  len_w;
+          c3_w  cap_w;
+          c3_w  nub_w;   //  stubs met, which carry no id
+        } u3s_bids;
+
+      /* u3s_bids_push(): add [bid_d] to [bid_u] (a stub's is skipped).
+      */
+        void
+        u3s_bids_push(u3s_bids* bid_u, c3_d bid_d);
+
+      /* u3s_bids_uniq(): sort [bid_u] and drop repeats: the distinct set.
+      */
+        void
+        u3s_bids_uniq(u3s_bids* bid_u);
+
       /* u3s_ram_xeno(): ram with off-loom buffer (re-)allocation.
       **
       **   Encodes bob atoms as 01-tagged blob refs.
@@ -183,6 +208,11 @@
         c3_d
         u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
 
+      /* u3s_ram_xeno_bids(): u3s_ram_xeno, collecting the blob ids.
+      */
+        c3_d
+        u3s_ram_xeno_bids(u3_noun a, c3_d* len_d, c3_y** byt_y, u3s_bids* bid_u);
+
       /* u3s_tap_xeno(): tap on-loom, with off-loom dictionary.
       **
       **   Decodes ram bytes. 01-tagged blob refs become bob atoms.
@@ -190,5 +220,11 @@
       */
         u3_weak
         u3s_tap_xeno(c3_d len_d, const c3_y* byt_y);
+
+      /* u3s_tap_xeno_bids(): u3s_tap_xeno, collecting the blob ids.
+      **   On error the collector is still the caller's to free.
+      */
+        u3_weak
+        u3s_tap_xeno_bids(c3_d len_d, const c3_y* byt_y, u3s_bids* bid_u);
 
 #endif /* ifndef U3_SERIAL_H */

@@ -89,37 +89,28 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
     _cs_jam_fib_chop(fib_u, 1, 1);
   }
   else {
-    //  for bob atoms, mmap the blob file directly to avoid loom allocation.
-    //  for normal atoms, use u3r_met as before.
+    //  a bob atom streams through a window; it is never materialized
+    //  or buffered whole.  bailing with the window open is safe: the
+    //  road closes what it borrowed.
     //
-    c3_o         bob_o = u3a_is_bob(a);
-    c3_d         byt_d = 0;
-    const c3_y*  byt_y = 0;
+    u3r_view win_u;
+    c3_o     bob_o = c3n;
+    c3_d     byt_d = 0;      //  bob: significant bytes
 
     c3_w   a_w;
-    if ( c3y == bob_o ) {
-      byt_y = u3r_blob_mmap(a, &byt_d);
-      if ( !byt_y ) {
-        u3m_bail(c3__fail);
-        return;
-      }
-      //  compute bit-length (met) from mmap'd bytes; strip trailing zero bytes
-      //  and find the MSB position of the last non-zero byte.
-      //
+    if ( c3y == u3a_is_bob(a) ) {
+      u3r_view_open(&win_u, a, c3y);
+      bob_o = c3y;
+      byt_d = win_u.byt_d;
+
       {
-        c3_d pos_d = byt_d;
-        while ( pos_d > 0 && 0 == byt_y[pos_d - 1] ) {
-          pos_d--;
-        }
-        if ( 0 == pos_d ) {
-          //  blob is all zeros → atom value is 0; treat as zero atom
-          u3r_blob_umap(byt_y, byt_d);
-          _cs_jam_fib_chop(fib_u, 1, 1);
+        c3_d met_d = win_u.bit_d;
+
+        if ( met_d > (c3_w_max - 64) ) {
+          u3m_bail(c3__fail);
           return;
         }
-        c3_y top_y = byt_y[pos_d - 1];
-        c3_y clz_y = (c3_y)(__builtin_clz((unsigned int)top_y) - 24);
-        a_w = (c3_w)((pos_d - 1) * 8 + (c3_d)(8 - clz_y));
+        a_w = (c3_w)met_d;
       }
     }
     else {
@@ -135,7 +126,6 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
       c3_w met_w = a_w + (2 * b_w);
 
       if ( a_w > (c3_w_max - 64) ) {
-        if ( byt_y ) u3r_blob_umap(byt_y, byt_d);
         u3m_bail(c3__fail);
         return;
       }
@@ -179,12 +169,34 @@ _cs_jam_fib_mat(struct _cs_jam_fib* fib_u, u3_noun a)
 
       //  _cs_jam_fib_chop(fib_u, a_w, a);
       //
-      if ( byt_y ) {
-        //  write bob atom bytes directly from mmap, no loom allocation
+      if ( c3y == bob_o ) {
+        //  stream the bob's bytes through a word-aligned window.  each
+        //  window starts at a whole number of words into the atom, so
+        //  u3r_chop_words sees the same bit alignment it would for the
+        //  whole buffer.
         //
-        c3_w len_w = (c3_w)((byt_d + sizeof(c3_w) - 1) / sizeof(c3_w));
-        u3r_chop_words(0, 0, a_w, bit_w, buf_w, len_w, (const c3_w*)byt_y);
-        u3r_blob_umap(byt_y, byt_d);
+        c3_w win_w[2048];
+        c3_d off_d = 0;
+
+        while ( off_d < byt_d ) {
+          c3_z ask_z = ( (byt_d - off_d) < sizeof(win_w) )
+                     ? (c3_z)(byt_d - off_d)
+                     : sizeof(win_w);
+          c3_z pad_z = (ask_z + sizeof(c3_w) - 1) & ~(sizeof(c3_w) - 1);
+          c3_w wid_w = c3_min(a_w - (c3_w)(off_d * 8), (c3_w)(ask_z * 8));
+
+          if ( ask_z != u3r_view_copy(&win_u, off_d, (c3_y*)win_w, ask_z) ) {
+            u3m_bail(c3__fail);
+            return;
+          }
+          memset((c3_y*)win_w + ask_z, 0, pad_z - ask_z);
+
+          u3r_chop_words(0, 0, wid_w, bit_w + (c3_w)(off_d * 8), buf_w,
+                         (c3_w)(pad_z / sizeof(c3_w)), win_w);
+          off_d += ask_z;
+        }
+
+        u3r_view_done(&win_u);
       }
       else {
         u3r_chop(0, 0, a_w, bit_w, buf_w, a);
@@ -291,25 +303,63 @@ _cs_coin_chub(c3_d a_d)
   return ( ((c3_d)u3a_direct_max) >= a_d ) ? a_d : u3i_chubs(1, &a_d);
 }
 
-/* _cs_jam_xeno_atom(): encode in/direct atom in bitstream.
+/* _cs_met_w(): the bit length of [a] as the word the encoders carry;
+**   bails %fail past a word, as u3r_met does, rather than truncate.
+*/
+static c3_w
+_cs_met_w(u3_atom a)
+{
+  c3_d met_d = u3r_met_d(0, a);
+
+  if ( met_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
+  }
+  return (c3_w)met_d;
+}
+
+/* _cs_jam_bsw_atom(): encode in/direct atom of [met_d] bits in bitstream.
 */
 static inline void
-_cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
+_cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_d met_d, u3_atom a)
 {
   if ( c3y == u3a_is_cat(a) ) {
     //  XX need a ur_bsw_atom32()
     //
-    ur_bsw_atom64(rit_u, (c3_y)met_w, (c3_d)a);
+    ur_bsw_atom64(rit_u, (c3_y)met_d, (c3_d)a);
   }
   else if ( c3y == u3a_is_bob(a) ) {
-    //  bob atom: mmap the blob file and write bytes directly into the bitstream
+    //  bob atom: write the tag and length prefix, then stream the bytes
+    //  from a view in 8 KiB copies.  the total must be exactly met_d
+    //  bits, which is what u3r_met_d() gave the caller: past 2^32 bits
+    //  on a 32-bit build, since the stream counts in chubs.
     //
-    c3_d        len_d;
-    const c3_y* byt_y = u3r_blob_mmap(a, &len_d);
-    if ( byt_y ) {
-      ur_bsw_atom_bytes(rit_u, (c3_d)met_w, (c3_y*)byt_y);
-      u3r_blob_umap(byt_y, len_d);
+    u3r_view win_u;
+    u3r_view_open(&win_u, a, c3y);
+
+    ur_bsw_atom_head(rit_u, met_d);
+
+    {
+      c3_y win_y[8192];
+      c3_d off_d = 0;
+      c3_d rem_d = met_d;
+
+      while ( rem_d ) {
+        c3_d bit_d = ( rem_d < (sizeof(win_y) * 8) )
+                   ? rem_d
+                   : (c3_d)(sizeof(win_y) * 8);
+        c3_z ask_z = (c3_z)((bit_d + 7) >> 3);
+
+        if ( ask_z != u3r_view_copy(&win_u, off_d, win_y, ask_z) ) {
+          u3m_bail(c3__fail);
+        }
+
+        ur_bsw_bytes(rit_u, bit_d, win_y);
+        off_d += ask_z;
+        rem_d -= bit_d;
+      }
     }
+
+    u3r_view_done(&win_u);
   }
   else {
     u3a_atom* vat_u = u3a_to_ptr(a);
@@ -317,7 +367,7 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     //  XX need a ur_bsw_atom_words()
     //
     c3_y*     byt_y = (c3_y*)vat_u->buf_w;
-    ur_bsw_atom_bytes(rit_u, (c3_d)met_w, byt_y);
+    ur_bsw_atom_bytes(rit_u, met_d, byt_y);
   }
 }
 
@@ -343,22 +393,17 @@ _cs_jam_xeno_atom(u3_atom a, void* ptr_v)
   _jam_xeno_t* jam_u = ptr_v;
   ur_bsw_t*    rit_u = &(jam_u->rit_u);
   u3_weak        bak = u3h_git(jam_u->har_p, a);
-  //  for bob atoms, use the blob met to avoid materializing the large atom;
-  //  met_w must fit in 32 bits here (jam uses c3_w for bit lengths)
-  //
-  c3_w         met_w = ( c3y == u3a_is_bob(a) )
-                     ? (c3_w)u3r_blob_met(a)
-                     : u3r_met(0, a);
+  c3_d         met_d = u3r_met_d(0, a);
 
   if ( u3_none == bak ) {
     u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
-    _cs_jam_bsw_atom(rit_u, met_w, a);
+    _cs_jam_bsw_atom(rit_u, met_d, a);
   }
   else {
     c3_w bak_w = u3r_met(0, bak);
 
-    if ( met_w <= bak_w ) {
-      _cs_jam_bsw_atom(rit_u, met_w, a);
+    if ( met_d <= bak_w ) {
+      _cs_jam_bsw_atom(rit_u, met_d, a);
     }
     else {
       _cs_jam_bsw_back(rit_u, bak_w, bak);
@@ -1024,14 +1069,16 @@ u3s_cue_atom(u3_atom a)
     return u3s_cue_bytes((c3_d)len_w, (c3_y*)&a);
   }
 
-  //  bob atom: mmap the backing file instead of dereferencing buf_w
+  //  bob atom: read through a blob view instead of dereferencing buf_w
   //  (which for a bob would yield seq_h).  The view stays live for
-  //  the whole cue so the bitstream reader can scan freely.
+  //  the whole cue so the bitstream reader can scan freely; if cue
+  //  bails, u3m_bail sweeps the view's hand with the road.
   //
   if ( c3y == u3a_is_bob(a) ) {
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
-    u3_noun res = u3s_cue_bytes((c3_d)vue_u.len_w, (c3_y*)vue_u.byt_y);
+    u3r_view_open(&vue_u, a, c3y);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    u3_noun res = u3s_cue_bytes(vue_u.byt_d, (c3_y*)vue_y);
     u3r_view_done(&vue_u);
     return res;
   }
@@ -1590,21 +1637,20 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 u3_weak
 u3s_sift_ud(u3_atom a)
 {
-  c3_w  len_w = u3r_met(3, a);
-  c3_y* byt_y;
+  u3r_view vue_u;
+  u3_weak  pro;
 
-  // XX assumes little-endian
+  //  a view, so a bob is read where it lives
   //
-  if ( c3y == u3a_is_cat(a) ) {
-     byt_y = (c3_y*)&a;
-   }
-   else {
-     u3_assert(c3n == u3a_is_bob(a));
-     u3a_atom* vat_u = u3a_to_ptr(a);
-     byt_y = (c3_y*)vat_u->buf_w;
-   }
+  u3r_view_open(&vue_u, a, c3y);
 
-   return u3s_sift_ud_bytes(len_w, byt_y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
+  }
+
+  pro = u3s_sift_ud_bytes((c3_w)vue_u.byt_d, (c3_y*)u3r_view_bytes(&vue_u));
+  u3r_view_done(&vue_u);
+  return pro;
 }
 
 /*
@@ -1638,7 +1684,57 @@ u3s_sift_ud(u3_atom a)
 typedef struct _ram_xeno_s {
   u3p(u3h_root) har_p;
   ur_bsw_t      rit_u;
+  u3s_bids*     bid_u;   //  blob ids met, or 0
 } _ram_xeno_t;
+
+/* u3s_bids_push(): record a blob id in a collector, if there is one.
+*/
+void
+u3s_bids_push(u3s_bids* bid_u, c3_d bid_d)
+{
+  if ( !bid_u ) {
+    return;
+  }
+
+  //  a stub (seq 0) names no file and carries no hold
+  //
+  if ( !u3a_bid_seq(bid_d) ) {
+    bid_u->nub_w++;
+    return;
+  }
+  if ( bid_u->len_w == bid_u->cap_w ) {
+    bid_u->cap_w = bid_u->cap_w ? (2 * bid_u->cap_w) : 8;
+    bid_u->bid_d = c3_realloc(bid_u->bid_d, bid_u->cap_w * sizeof(c3_d));
+  }
+  bid_u->bid_d[bid_u->len_w++] = bid_d;
+}
+
+static int
+_cs_bids_cmp(const void* a_v, const void* b_v)
+{
+  c3_d a_d = *(const c3_d*)a_v;
+  c3_d b_d = *(const c3_d*)b_v;
+  return ( a_d < b_d ) ? -1 : ( a_d > b_d ) ? 1 : 0;
+}
+
+/* u3s_bids_uniq(): sort a collector and drop repeats: the distinct set.
+*/
+void
+u3s_bids_uniq(u3s_bids* bid_u)
+{
+  if ( !bid_u || (bid_u->len_w < 2) ) {
+    return;
+  }
+  qsort(bid_u->bid_d, bid_u->len_w, sizeof(c3_d), _cs_bids_cmp);
+
+  c3_w out_w = 1;
+  for ( c3_w i_w = 1; i_w < bid_u->len_w; i_w++ ) {
+    if ( bid_u->bid_d[i_w] != bid_u->bid_d[out_w - 1] ) {
+      bid_u->bid_d[out_w++] = bid_u->bid_d[i_w];
+    }
+  }
+  bid_u->len_w = out_w;
+}
 
 /* _cs_ram_bsw_2tag(): write a 2-bit ram tag to the bitstream.
 */
@@ -1661,6 +1757,11 @@ _cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
     ur_bsw_mat64(rit_u, (c3_y)met_w, (c3_d)a);
   }
   else {
+    //  a bob has no bytes here: the callers send it to _cs_ram_bsw_bob,
+    //  and its buf_w is its blob id, not data
+    //
+    u3_assert( c3n == u3a_is_bob(a) );
+
     u3a_atom* vat_u = u3a_to_ptr(a);
     c3_y*     byt_y = (c3_y*)vat_u->buf_w;
     ur_bsw_mat_bytes(rit_u, (c3_d)met_w, byt_y);
@@ -1670,10 +1771,13 @@ _cs_ram_bsw_normal_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
 /* _cs_ram_bsw_bob(): encode a bob atom as tag 01 + mat(mug) + mat(seq).
 */
 static inline void
-_cs_ram_bsw_bob(ur_bsw_t* rit_u, u3_atom a)
+_cs_ram_bsw_bob(_ram_xeno_t* ram_u, u3_atom a)
 {
-  c3_h mug_h = u3a_bob_mug(a);
-  c3_h seq_h = u3a_bob_seq(a);
+  ur_bsw_t* rit_u = &(ram_u->rit_u);
+  c3_h      mug_h = u3a_bob_mug(a);
+  c3_h      seq_h = u3a_bob_seq(a);
+
+  u3s_bids_push(ram_u->bid_u, u3a_bob_bid(a));
 
   //  write 2-bit tag 01
   //
@@ -1709,16 +1813,17 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
   ur_bsw_t*    rit_u = &(ram_u->rit_u);
   u3_weak        bak = u3h_git(ram_u->har_p, a);
   c3_o         bob_o = u3a_is_bob(a);
-  //  for bob atoms, use the blob's true bit-length for backref comparison.
-  //  for normal atoms, use u3r_met as before.
+
+  //  a bob is written as its id and never measured: measuring opens
+  //  the file, which a stub has none of.  a repeated bob is written
+  //  again rather than compared against a backref's width.
   //
-  c3_w         met_w = (c3n == bob_o) ? u3r_met(0, a)
-                                       : (c3_w)u3r_blob_met(a);
+  c3_w         met_w = ( c3y == bob_o ) ? 0 : _cs_met_w(a);
 
   if ( u3_none == bak ) {
     u3h_put(ram_u->har_p, a, _cs_coin_chub(rit_u->bits));
     if ( c3y == bob_o ) {
-      _cs_ram_bsw_bob(rit_u, a);
+      _cs_ram_bsw_bob(ram_u, a);
     }
     else {
       _cs_ram_bsw_normal_atom(rit_u, met_w, a);
@@ -1729,7 +1834,7 @@ _cs_ram_xeno_atom(u3_atom a, void* ptr_v)
 
     if ( met_w <= bak_w ) {
       if ( c3y == bob_o ) {
-        _cs_ram_bsw_bob(rit_u, a);
+        _cs_ram_bsw_bob(ram_u, a);
       }
       else {
         _cs_ram_bsw_normal_atom(rit_u, met_w, a);
@@ -1768,13 +1873,23 @@ _cs_ram_xeno_cell(u3_noun a, void* ptr_v)
 c3_d
 u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
+  return u3s_ram_xeno_bids(a, len_d, byt_y, 0);
+}
+
+/* u3s_ram_xeno_bids(): u3s_ram_xeno, collecting the blob ids.
+*/
+c3_d
+u3s_ram_xeno_bids(u3_noun a, c3_d* len_d, c3_y** byt_y, u3s_bids* bid_u)
+{
   _ram_xeno_t ram_u = {0};
   ur_bsw_init(&ram_u.rit_u, ur_fib11, ur_fib12);
   ram_u.har_p = u3h_new();
+  ram_u.bid_u = bid_u;
 
   u3a_walk_fore(a, &ram_u, _cs_ram_xeno_atom, _cs_ram_xeno_cell);
 
   u3h_free(ram_u.har_p);
+  u3s_bids_uniq(bid_u);
 
   {
     c3_d   raw_bytes_d;  //  byte count of raw ram bits
@@ -1824,6 +1939,7 @@ static inline ur_cue_res_e
 _cs_tap_xeno_next(u3a_pile*    pil_u,
                   ur_bsr_t*    red_u,
                   ur_dictn_t*  dic_u,
+                  u3s_bids*    bid_u,
                   u3_noun*     out)
 {
   ur_root_t* rot_u = 0;
@@ -1918,6 +2034,14 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
         }
         seq_d = ur_bsr64_any(red_u, len_d);
 
+        //  a blob id is two 32-bit halves; anything wider is not a
+        //  reference this runtime wrote
+        //
+        if ( (mug_d > 0xFFFFFFFFULL) || (seq_d > 0xFFFFFFFFULL) ) {
+          return ur_cue_meme;
+        }
+
+        u3s_bids_push(bid_u, u3a_bid((c3_h)mug_d, (c3_h)seq_d));
         *out = u3i_blob((c3_h)mug_d, (c3_h)seq_d);
 
         ur_dictn_put(rot_u, dic_u, bit_d, *out);
@@ -1932,7 +2056,8 @@ _cs_tap_xeno_next(u3a_pile*    pil_u,
 static u3_weak
 _cs_tap_xeno(u3_cue_xeno*  sil_u,
              c3_d          len_d,
-             const c3_y*   byt_y)
+             const c3_y*   byt_y,
+             u3s_bids*     bid_u)
 {
   ur_bsr_t      red_u = {0};
   ur_dictn_t*   dic_u = &sil_u->dic_u;
@@ -1950,7 +2075,7 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
     return u3_none;
   }
 
-  res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+  res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, bid_u, &ref);
 
   if (  (c3n == u3a_pile_done(&pil_u))
      && (ur_cue_good == res_e) )
@@ -1962,7 +2087,7 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
       //
       if ( u3_none == fam_u->ref ) {
         fam_u->ref = ref;
-        res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, &ref);
+        res_e = _cs_tap_xeno_next(&pil_u, &red_u, dic_u, bid_u, &ref);
         fam_u = u3a_peek(&pil_u);
       }
       //  tail-frame: build cell and pop stack
@@ -2002,6 +2127,14 @@ _cs_tap_xeno(u3_cue_xeno*  sil_u,
 u3_weak
 u3s_tap_xeno(c3_d len_d, const c3_y* byt_y)
 {
+  return u3s_tap_xeno_bids(len_d, byt_y, 0);
+}
+
+/* u3s_tap_xeno_bids(): u3s_tap_xeno, collecting the blob ids.
+*/
+u3_weak
+u3s_tap_xeno_bids(c3_d len_d, const c3_y* byt_y, u3s_bids* bid_u)
+{
   //  validate header
   //
   if (  (len_d < 5)
@@ -2017,9 +2150,10 @@ u3s_tap_xeno(c3_d len_d, const c3_y* byt_y)
 
     //  decode after the 5-byte header
     //
-    som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5);
+    som = _cs_tap_xeno(sil_u, len_d - 5, byt_y + 5, bid_u);
     ur_dictn_wipe(&sil_u->dic_u);
     u3s_cue_xeno_done(sil_u);
+    u3s_bids_uniq(bid_u);
     return som;
   }
 }

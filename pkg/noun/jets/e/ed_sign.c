@@ -12,21 +12,39 @@
   _cqee_sign_octs(u3_noun len, u3_noun dat, u3_noun sed)
   {
     c3_y sed_y[32];
-    c3_w len_w;
+    c3_d len_d;
     if ( 0 != u3r_bytes_fit(32, sed_y, sed) ) {
       // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
-    else if ( !u3r_word_fit(&len_w, len) ) {
+    else if ( c3n == u3r_safe_chub(len, &len_d) ) {
       return u3m_bail(c3__fail);
     }
+    else {
+      c3_y        sig_y[64];
+      c3_y*       cop_y = 0;
+      const c3_y* dat_y;
+      u3r_view    vue_u;
 
-    c3_y sig_y[64];
-    u3r_view vue_u;
-    u3r_view_padd(&vue_u, dat, len_w);
-    urcrypt_ed_sign((c3_y*)vue_u.byt_y, len_w, sed_y, sig_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(64, sig_y);
+      u3r_view_open(&vue_u, dat, c3y);
+      if ( len_d <= vue_u.byt_d ) {
+        dat_y = u3r_view_bytes(&vue_u);
+      }
+      else if ( len_d <= c3_w_max ) {
+        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
+      }
+      else {
+        u3r_view_done(&vue_u);
+        return u3m_bail(c3__fail);
+      }
+
+      urcrypt_ed_sign(dat_y, len_d, sed_y, sig_y);
+      if ( cop_y ) {
+        u3a_free(cop_y);
+      }
+      u3r_view_done(&vue_u);
+      return u3i_bytes(64, sig_y);
+    }
   }
 
   u3_noun
@@ -52,7 +70,7 @@
   _cqee_sign_octs_raw(u3_noun len, u3_noun dat, u3_noun pub, u3_noun sek)
   {
     c3_y pub_y[32], sek_y[64];
-    c3_w len_w;
+    c3_d len_d;
     if ( 0 != u3r_bytes_fit(32, pub_y, pub) ) {
       // hoon asserts size
       return u3m_bail(c3__exit);
@@ -61,16 +79,34 @@
       // hoon asserts size
       return u3m_bail(c3__exit);
     }
-    else if ( !u3r_word_fit(&len_w, len) ) {
+    else if ( c3n == u3r_safe_chub(len, &len_d) ) {
       return u3m_bail(c3__fail);
     }
+    else {
+      c3_y        sig_y[64];
+      c3_y*       cop_y = 0;
+      const c3_y* dat_y;
+      u3r_view    vue_u;
 
-    c3_y sig_y[64];
-    u3r_view vue_u;
-    u3r_view_padd(&vue_u, dat, len_w);
-    urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, len_w, pub_y, sek_y, sig_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(64, sig_y);
+      u3r_view_open(&vue_u, dat, c3y);
+      if ( len_d <= vue_u.byt_d ) {
+        dat_y = u3r_view_bytes(&vue_u);
+      }
+      else if ( len_d <= c3_w_max ) {
+        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
+      }
+      else {
+        u3r_view_done(&vue_u);
+        return u3m_bail(c3__fail);
+      }
+
+      urcrypt_ed_sign_raw(dat_y, len_d, pub_y, sek_y, sig_y);
+      if ( cop_y ) {
+        u3a_free(cop_y);
+      }
+      u3r_view_done(&vue_u);
+      return u3i_bytes(64, sig_y);
+    }
   }
 
   u3_noun
@@ -104,13 +140,15 @@
       // hoon calls luck, which crashes
       return u3m_bail(c3__exit);
     }
+    else {
+      c3_y     sig_y[64];
+      u3r_view vue_u;
+      u3r_view_open(&vue_u, msg, c3y);
+      urcrypt_ed_sign(u3r_view_bytes(&vue_u), vue_u.byt_d, sed_y, sig_y);
+      u3r_view_done(&vue_u);
 
-    c3_y sig_y[64];
-    u3r_view vue_u;
-    u3r_view_init(&vue_u, msg);
-    urcrypt_ed_sign((c3_y*)vue_u.byt_y, vue_u.len_w, sed_y, sig_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(64, sig_y);
+      return u3i_bytes(64, sig_y);
+    }
   }
 
   u3_noun
@@ -143,13 +181,16 @@
       // hoon asserts size
       return u3m_bail(c3__exit);
     }
+    else {
+      c3_y     sig_y[64];
+      u3r_view vue_u;
+      u3r_view_open(&vue_u, msg, c3y);
+      urcrypt_ed_sign_raw(u3r_view_bytes(&vue_u), vue_u.byt_d,
+                          pub_y, sek_y, sig_y);
+      u3r_view_done(&vue_u);
 
-    c3_y sig_y[64];
-    u3r_view vue_u;
-    u3r_view_init(&vue_u, msg);
-    urcrypt_ed_sign_raw((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sek_y, sig_y);
-    u3r_view_done(&vue_u);
-    return u3i_bytes(64, sig_y);
+      return u3i_bytes(64, sig_y);
+    }
   }
 
   u3_noun

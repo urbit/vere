@@ -90,6 +90,13 @@
       u3_noun
       u3_mars_grab(c3_o pri_o);
 
+    /* u3_mars_blob_fill(): rebuild [non] with every stub (a bob of seq
+    **   0) replaced by the bob of the id in [bid_d] with its mug.
+    **   u3_none if a stub matches no id.  retains [non].
+    */
+      u3_weak
+      u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w);
+
     /* u3_mars_play(): replay up to [eve_d], snapshot every [sap_d].
     */
       c3_d

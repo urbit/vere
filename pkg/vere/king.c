@@ -19,66 +19,36 @@ u3_king u3_King;
 
 static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 
-/* _king_blob_del(): king-side del_f — release a blob lease via IPC and
-**   drop the king's transient u3a_blob registry entry.  King never wipes
-**   files; only serf owns filesystem-side blob persistence.
+/* _king_blob_del(): king-side del_f: the king's last bob over a blob
+**   died, so return every hold it received on the id to mars and drop
+**   the record.  the king never wipes files; mars owns the store.
 */
 static void
 _king_blob_del(c3_h mug_h, c3_h seq_h)
 {
-  if ( u3K.pir_u && u3K.pir_u->god_u ) {
-    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h);
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  //  the king's record has two legs, its live bobs and the holds it
+  //  received; ownership is mars's and must never appear here
+  //
+  u3_assert( blb_u && (c3n == blb_u->own_o) );
+
+  if ( blb_u->les_h && u3K.pir_u && u3K.pir_u->god_u ) {
+    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->les_h);
   }
   u3a_blob_drop(mug_h, seq_h);
 }
 
-/* _king_blob_renew_lease_cb(): u3h_walk_with callback — renew one lease.
-*/
-static void
-_king_blob_renew_lease_cb(u3_noun kev, void* ptr_v)
-{
-  (void)ptr_v;
-  u3_noun val = u3t(kev);
-
-  c3_d off_d = 0;
-  u3r_safe_chub(val, &off_d);
-
-  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  u3_lord_blob_lease(u3K.pir_u->god_u, blb_u->mug_h, blb_u->seq_h);
-}
-
-/* _king_blob_renew_cb(): lease-renewal timer.
+/* _king_blob_init(): register blob hooks.
 **
-**   mars leases carry a 15-min TTL as a failsafe against a crashed or
-**   leaking king.  while we still hold a reference to a blob (an entry
-**   in our local blb_p bank), renew its lease so a blob-bearing event
-**   that waits in mars's queue can't outlive the TTL and lose its file
-**   before commit.
-*/
-static uv_timer_t _king_blob_tim_u;
-
-static void
-_king_blob_renew_cb(uv_timer_t* tim_u)
-{
-  (void)tim_u;
-  if ( !u3K.pir_u || !u3K.pir_u->god_u || !u3H->blb_p ) {
-    return;
-  }
-  u3h_walk_with(u3H->blb_p, _king_blob_renew_lease_cb, 0);
-}
-
-/* _king_blob_init(): register blob hooks and start lease renewal.
+**   every message mars sends grants the king one hold per blob id it
+**   names; the king counts them per id and returns the lot when its
+**   last bob over the id dies.
 */
 static void
 _king_blob_init(void)
 {
   u3C.blob_del_f = _king_blob_del;
-
-  //  renew every 5 min; mars's lease TTL is 15 min
-  //
-  uv_timer_init(u3L, &_king_blob_tim_u);
-  uv_timer_start(&_king_blob_tim_u, _king_blob_renew_cb,
-                 300000UL, 300000UL);
 }
 
 //  stash config flags for worker
@@ -1941,6 +1911,11 @@ u3_king_grab(void* vod_p)
   }
 
   c3_free(all_u);
+
+  //  blobs open on the king's side, one per blob being streamed
+  //
+  fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+          u3b_hands(), u3b_mapped());
 
 #ifdef U3_MEMORY_LOG
   {

@@ -428,8 +428,6 @@ u3u_mmap(c3_c* cap_c, c3_c* pat_c, c3_d len_d, c3_y** out_y)
 
   //  grow [fid_i] to [len_w]
   //
-  //    XX build with _FILE_OFFSET_BITS == 64 ?
-  //
   if ( 0 != ftruncate(fid_i, len_d) ) {
     fprintf(stderr, "%s: ftruncate grow %s: %s\r\n",
                     cap_c, pat_c, strerror(errno));

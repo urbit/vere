@@ -54,32 +54,40 @@ _cqes_in_order(u3_atom a)
     return 1;
   }
   else {
-    u3a_atom* a_u = u3a_to_ptr(a);
-    c3_w len_w = a_u->len_w * sizeof(c3_w);
+    //  a view, so a bob's words are read where they live
+    //
+    u3r_view vue_u;
+    c3_w     len_w;
+    c3_t     ord_t = 1;
 
-    if ( len_w < 32 ) {
-      return 1;
+    u3r_view_open(&vue_u, a, c3y);
+
+    if ( vue_u.byt_d < 32 ) {
+      ord_t = 1;
     }
-    else if ( len_w > 32 ) {
-      return 0;
+    else if ( vue_u.byt_d > 32 ) {
+      ord_t = 0;
     }
     else {
       c3_y i_y;
       // assumes little endian in 64 bit
-      c3_w *buf_w = a_u->buf_w;
+      const c3_w* buf_w = u3r_view_words(&vue_u, &len_w);
       // loop from most to least significant words
       for ( i_y = now_z; i_y--; ) {
         c3_w b_w = buf_w[i_y],
              o_w = now_w[i_y];
         if ( b_w < o_w ) {
-          return 1;
+          break;
         }
         else if ( b_w > o_w ) {
-          return 0;
+          ord_t = 0;
+          break;
         }
       }
-      return 1;
     }
+
+    u3r_view_done(&vue_u);
+    return ord_t;
   }
 }
 

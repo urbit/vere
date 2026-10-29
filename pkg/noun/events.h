@@ -80,6 +80,31 @@
       c3_o
       u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o);
 
+    /* u3e_copy(): copy the image file [src_c] to [dst_c], replacing and
+    **             syncing it; a clone where the filesystem allows.
+    */
+      c3_o
+      u3e_copy(const c3_c* src_c, const c3_c* dst_c);
+
+    /* u3e_fork(): write the pages changed since the last save as a patch
+    **             in [pat_c] and apply it to the image at [img_c], a copy
+    **             of the checkpoint's.  the checkpoint and dirty bits stay.
+    */
+      c3_o
+      u3e_fork(const c3_c* pat_c, const c3_c* img_c, u3_post low_p);
+
+    /* u3e_patch_drop(): durably delete the patch in [pat_c].
+    */
+      c3_o
+      u3e_patch_drop(const c3_c* pat_c);
+
+    /* u3e_land(): land the patch a roll left in [pat_c] on the checkpoint
+    **             in [chk_c], if it is still at the roll's event [eve_d].
+    **             no if the patch can't be landed; it is kept.
+    */
+      c3_o
+      u3e_land(const c3_c* pat_c, const c3_c* chk_c, c3_d eve_d);
+
     /* u3e_fault(): handle a memory fault.
     */
       u3e_flaw

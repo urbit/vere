@@ -1331,7 +1331,7 @@ _test_cell_trel_qual(void)
     exit(1);
 }
 
-/* _test_view(): u3r_view_init on both regular and bob atoms.
+/* _test_view(): u3r_view_bytes on both regular and bob atoms.
 */
 static void
 _test_view(void)
@@ -1344,27 +1344,28 @@ _test_view(void)
     u3_atom a = u3i_bytes(src_w, src_y);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
 
-    if ( vue_u.len_w != src_w ) {
-      fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_w
+    if ( vue_u.byt_d != src_w ) {
+      fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_d
                       " vs %" PRIc3_w "\r\n",
-              vue_u.len_w, src_w);
+              vue_u.byt_d, src_w);
       exit(1);
     }
     if ( vue_u.kin_e != u3r_view_loom ) {
       fprintf(stderr, "_test_view(): normal atom should alias the loom "
-                      "(zero-copy, no mmap or heap)\r\n");
+                      "(zero-copy, no blob hand or heap)\r\n");
       exit(1);
     }
-    if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
+    if ( 0 != memcmp(vue_y, src_y, src_w) ) {
       fprintf(stderr, "_test_view(): normal bytes mismatch\r\n");
       exit(1);
     }
 
     u3r_view_done(&vue_u);
     if (  vue_u.byt_y != 0
-       || vue_u.len_w != 0
+       || vue_u.byt_d != 0
        || vue_u.kin_e != u3r_view_loom )
     {
       fprintf(stderr, "_test_view(): normal view not reset on done\r\n");
@@ -1373,7 +1374,7 @@ _test_view(void)
     u3z(a);
   }
 
-  //  cat atom: bytes are the atom value itself, stashed inline in u.raw_d
+  //  cat atom: bytes are the atom value itself, held in raw_d
   //
   {
     const u3_atom a     = 0x44332211;
@@ -1381,30 +1382,30 @@ _test_view(void)
     const c3_w    src_w   = sizeof(src_y);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
 
-    if ( vue_u.len_w != src_w ) {
-      fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_w
+    if ( vue_u.byt_d != src_w ) {
+      fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_d
                       " vs %" PRIc3_w "\r\n",
-              vue_u.len_w, src_w);
+              vue_u.byt_d, src_w);
       exit(1);
     }
-    if ( vue_u.kin_e != u3r_view_flat ) {
+    if ( vue_u.kin_e != u3r_view_even ) {
       fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
       exit(1);
     }
-    if ( vue_u.byt_y != (const c3_y*)&vue_u.u.raw_d ) {
-      fprintf(stderr, "_test_view(): cat view should alias u.raw_d\r\n");
+    if ( vue_y != (const c3_y*)&vue_u.raw_d ) {
+      fprintf(stderr, "_test_view(): cat view should alias raw_d\r\n");
       exit(1);
     }
-    if ( 0 != memcmp(vue_u.byt_y, src_y, src_w) ) {
+    if ( 0 != memcmp(vue_y, src_y, src_w) ) {
       fprintf(stderr, "_test_view(): cat bytes mismatch\r\n");
       exit(1);
     }
 
     u3r_view_done(&vue_u);
     if (  vue_u.byt_y != 0
-       || vue_u.u.raw_d != 0
        || vue_u.kin_e != u3r_view_loom )
     {
       fprintf(stderr, "_test_view(): cat view not reset on done\r\n");
@@ -1412,14 +1413,17 @@ _test_view(void)
     }
   }
 
-  //  zero atom: view should be empty, no allocation, no mmap
+  //  zero atom: an empty view of a cat, its one readable word zero
   //
   {
     u3r_view vue_u;
-    u3r_view_init(&vue_u, 0);
-    if (  vue_u.len_w != 0
-       || vue_u.kin_e != u3r_view_loom
-       || vue_u.u.map_d != 0 )
+    u3r_view_open(&vue_u, 0, c3y);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    if (  vue_u.byt_d != 0
+       || vue_u.kin_e != u3r_view_even
+       || vue_u.han_u != 0
+       || vue_y != (const c3_y*)&vue_u.raw_d
+       || 0 != vue_y[0] )
     {
       fprintf(stderr, "_test_view(): zero atom view should be empty\r\n");
       exit(1);
@@ -1427,10 +1431,10 @@ _test_view(void)
     u3r_view_done(&vue_u);
   }
 
-  //  bob atom: view mmaps the underlying blob file
+  //  bob atom: view opens the underlying blob through its hand
   //
   {
-    //  set up a temp pier dir with a blob at .urb/bob/<mug>/<seq>
+    //  set up a temp store root with a blob at <mug>/<seq>
     //
     c3_c dir_c[1024];
     if ( !c3_tmp_make(dir_c, sizeof(dir_c), "vere-view-test") ) {
@@ -1439,19 +1443,17 @@ _test_view(void)
     }
 
     c3_c pax_c[2048];
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);         mkdir(pax_c, 0755);
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c);     mkdir(pax_c, 0755);
 
     const c3_h mug_h = 0xabcd1234;
     const c3_h seq_h = 7;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+    snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
     mkdir(pax_c, 0755);
 
     const c3_y bob_y[] = "bob atom backed by a real file";
     const c3_d bob_d   = sizeof(bob_y) - 1;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+    snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
              dir_c, (unsigned)mug_h, (unsigned)seq_h);
     FILE* fil_f = fopen(pax_c, "wb");
     if ( !fil_f ) {
@@ -1461,33 +1463,38 @@ _test_view(void)
     fwrite(bob_y, 1, bob_d, fil_f);
     fclose(fil_f);
 
-    //  set u3C.dir_c so u3r_blob_mmap finds the blob
+    //  set u3C.bob_c so the view finds the blob
     //
-    u3C.dir_c = dir_c;
+    u3C.bob_c = dir_c;
 
     u3_atom a = u3i_blob(mug_h, seq_h);
 
     u3r_view vue_u;
-    u3r_view_init(&vue_u, a);
+    u3r_view_open(&vue_u, a, c3y);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u);
 
-    //  expect mmap-backed view: sat_e == u3r_view_blob, u.map_d > 0
+    //  expect a hand-backed view: kin_e == u3r_view_blob, u.han_u set
     //
-    if ( vue_u.kin_e != u3r_view_blob || vue_u.u.map_d == 0 ) {
-      fprintf(stderr, "_test_view(): bob atom should be mmap-backed "
-                      "(len=%" PRIc3_w " map_d=%" PRIc3_d ")\r\n",
-              vue_u.len_w, vue_u.u.map_d);
+    if ( vue_u.kin_e != u3r_view_blob || 0 == vue_u.han_u ) {
+      fprintf(stderr, "_test_view(): bob atom should be hand-backed "
+                      "(len=%" PRIc3_d ")\r\n", vue_u.byt_d);
       exit(1);
     }
-    if ( vue_u.len_w == 0 || (c3_d)vue_u.len_w > bob_d ) {
-      fprintf(stderr, "_test_view(): bob len_w=%" PRIc3_w
+    if ( vue_u.han_u->len_d != bob_d ) {
+      fprintf(stderr, "_test_view(): hand len %" PRIc3_d " != %" PRIc3_d "\r\n",
+              vue_u.han_u->len_d, bob_d);
+      exit(1);
+    }
+    if ( vue_u.byt_d == 0 || vue_u.byt_d > bob_d ) {
+      fprintf(stderr, "_test_view(): bob byt_d=%" PRIc3_d
                       " out of range [1..%" PRIc3_d "]\r\n",
-              vue_u.len_w, bob_d);
+              vue_u.byt_d, bob_d);
       exit(1);
     }
     //  first bytes must match the source; trailing bytes past len_w are
-    //  still in the mapping (full file size) but out of logical scope
+    //  still in the hand's buffer (full file size) but out of logical scope
     //
-    if ( 0 != memcmp(vue_u.byt_y, bob_y, vue_u.len_w) ) {
+    if ( 0 != memcmp(vue_y, bob_y, vue_u.byt_d) ) {
       fprintf(stderr, "_test_view(): bob bytes mismatch\r\n");
       exit(1);
     }
@@ -1498,20 +1505,20 @@ _test_view(void)
     //  clean up temp pier
     //
     c3_tmp_kill(dir_c);
-    u3C.dir_c = 0;
+    u3C.bob_c = 0;
   }
 }
 
-/* _aor_write_blob(): write [byt_y/len_w] to .urb/bob/<mug>/<seq> under [dir_c].
+/* _aor_write_blob(): write [byt_y/len_w] to <mug>/<seq> under the store root [dir_c].
 */
 static void
 _aor_write_blob(const c3_c* dir_c, c3_h mug_h, c3_h seq_h,
                 const c3_y* byt_y, c3_w len_w)
 {
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u", dir_c, (unsigned)mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
   mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob/%u/%u",
+  snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
            dir_c, (unsigned)mug_h, (unsigned)seq_h);
   FILE* fil_f = fopen(pax_c, "wb");
   if ( !fil_f ) {
@@ -1536,8 +1543,6 @@ _test_aor(void)
   }
 
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb", dir_c);     mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/.urb/bob", dir_c); mkdir(pax_c, 0755);
 
   //  two blobs with distinct, equal-length byte content
   //
@@ -1546,13 +1551,15 @@ _test_aor(void)
   const c3_w a_w   = sizeof(a_y) - 1;
   const c3_w b_w   = sizeof(b_y) - 1;
 
-  const c3_h mga_h = 0x11112222, sqa_h = 1;
-  const c3_h mgb_h = 0x33334444, sqb_h = 2;
+  //  a bob carries its content's mug, as an install gives it
+  //
+  const c3_h mga_h = u3r_mug_bytes(a_y, a_w), sqa_h = 1;
+  const c3_h mgb_h = u3r_mug_bytes(b_y, b_w), sqb_h = 2;
 
   _aor_write_blob(dir_c, mga_h, sqa_h, a_y, a_w);
   _aor_write_blob(dir_c, mgb_h, sqb_h, b_y, b_w);
 
-  u3C.dir_c = dir_c;
+  u3C.bob_c = dir_c;
 
   //  normal (in-loom) atoms serve as the trusted oracle
   //
@@ -1590,7 +1597,7 @@ _test_aor(void)
   u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
 
   c3_tmp_kill(dir_c);
-  u3C.dir_c = 0;
+  u3C.bob_c = 0;
 }
 
 /* main(): run all test cases.

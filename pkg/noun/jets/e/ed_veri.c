@@ -13,19 +13,41 @@
              u3_noun pub)
   {
     c3_y sig_y[64], pub_y[32];
-    c3_w len_w;
+    c3_d len_d;
     if ( (0 != u3r_bytes_fit(64, sig_y, sig)) ||
          (0 != u3r_bytes_fit(32, pub_y, pub)) ||
-         !u3r_word_fit(&len_w, len) ) {
+         (c3n == u3r_safe_chub(len, &len_d)) ) {
       return c3n;
     }
+    else {
+      c3_y*       cop_y = 0;
+      const c3_y* dat_y;
+      u3r_view    vue_u;
 
-    u3r_view vue_u;
-    u3r_view_padd(&vue_u, dat, len_w);
-    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, len_w, pub_y, sig_y);
-    u3r_view_done(&vue_u);
+      u3r_view_open(&vue_u, dat, c3y);
+      if ( len_d <= vue_u.byt_d ) {
+        dat_y = u3r_view_bytes(&vue_u);
+      }
+      else if ( len_d <= c3_w_max ) {
+        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
+      }
+      else {
+        //  a width past the atom that no word holds: c3n, as develop's
+        //  word check gives
+        //
+        u3r_view_done(&vue_u);
+        return c3n;
+      }
 
-    return val_t ? c3y : c3n;
+      c3_t val_t = urcrypt_ed_veri(dat_y, len_d, pub_y, sig_y);
+
+      if ( cop_y ) {
+        u3a_free(cop_y);
+      }
+      u3r_view_done(&vue_u);
+
+      return val_t ? c3y : c3n;
+    }
   }
 
   u3_noun
@@ -58,13 +80,15 @@
          (0 != u3r_bytes_fit(32, pub_y, pk)) ) {
       return c3n;
     }
+    else {
+      u3r_view vue_u;
+      u3r_view_open(&vue_u, m, c3y);
+      c3_t     val_t = urcrypt_ed_veri(u3r_view_bytes(&vue_u), vue_u.byt_d,
+                                       pub_y, sig_y);
+      u3r_view_done(&vue_u);
 
-    u3r_view vue_u;
-    u3r_view_init(&vue_u, m);
-    c3_t val_t = urcrypt_ed_veri((c3_y*)vue_u.byt_y, vue_u.len_w, pub_y, sig_y);
-    u3r_view_done(&vue_u);
-
-    return val_t ? c3y : c3n;
+      return val_t ? c3y : c3n;
+    }
   }
 
   u3_noun

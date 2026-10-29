@@ -93,9 +93,10 @@ _cttp_bod_new(c3_w len_w, c3_c* hun_c)
   u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
   bod_u->hun_y[len_w] = 0;
   bod_u->len_w = len_w;
-  bod_u->map_y = 0;
-  bod_u->own_y = 0;
-  bod_u->map_d = 0;
+  bod_u->buf_y = 0;
+  bod_u->win_u = 0;
+  bod_u->off_d = 0;
+  bod_u->own_o = c3n;
   memcpy(bod_u->hun_y, (const c3_y*)hun_c, len_w);
 
   bod_u->nex_u = 0;
@@ -117,9 +118,10 @@ _cttp_bod_from_hed(u3_hhed* hed_u)
   memcpy(bod_u->hun_y + hed_u->nam_w + 2 + hed_u->val_w, "\r\n", 2);
 
   bod_u->len_w = len_w;
-  bod_u->map_y = 0;
-  bod_u->own_y = 0;
-  bod_u->map_d = 0;
+  bod_u->buf_y = 0;
+  bod_u->win_u = 0;
+  bod_u->off_d = 0;
+  bod_u->own_o = c3n;
   bod_u->nex_u = 0;
 
   return bod_u;
@@ -168,26 +170,41 @@ _cttp_bods_to_octs(u3_hbod* bod_u)
 }
 
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
+**
+**   The bytes are read through one view, zero-filled past the atom.
+**   Returns 0 for a bob whose blob cannot be opened; the caller drops
+**   the request.
 */
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
 {
-  c3_w len_w;
+  c3_w     len_w;
+  u3r_view vue_u;
 
   if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
     u3m_bail(c3__fail); return 0;
   }
   len_w = u3h(oct);
 
+  if ( c3n == u3r_view_open(&vue_u, u3t(oct), c3n) ) {
+    u3l_log("cttp: blob " U3A_BID_FMT " unavailable",
+            u3a_bob_mug(u3t(oct)), u3a_bob_seq(u3t(oct)));
+    u3z(oct);
+    return 0;
+  }
+
   {
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
+
+    u3r_view_copy(&vue_u, 0, bod_u->hun_y, len_w);
+    u3r_view_done(&vue_u);
+
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
-    bod_u->map_y = 0;
-    bod_u->own_y = 0;
-    bod_u->map_d = 0;
-    u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
-
+    bod_u->buf_y = 0;
+    bod_u->win_u = 0;
+    bod_u->off_d = 0;
+    bod_u->own_o = c3n;
     bod_u->nex_u = 0;
 
     u3z(oct);
@@ -581,6 +598,17 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_w num_l, u3_noun hes)
     return 0;
   }
 
+  u3_hbod* bod_u = 0;
+
+  if (  (u3_nul != body)
+     && !(bod_u = _cttp_bod_from_octs(u3k(u3t(body)))) )
+  {
+    u3z(unit_pul);
+    u3z(hes);
+    c3_free(ceq_u);
+    return 0;
+  }
+
   u3_noun pul = u3t(unit_pul);
 
   u3_noun hat = u3h(pul);      // +hart
@@ -612,9 +640,7 @@ _cttp_creq_new(u3_cttp* ctp_u, c3_w num_l, u3_noun hes)
 
   ceq_u->hed_u = _cttp_heds_from_noun(u3k(headers));
 
-  if ( u3_nul != body ) {
-    ceq_u->bod_u = _cttp_bod_from_octs(u3k(u3t(body)));
-  }
+  ceq_u->bod_u = bod_u;
 
   _cttp_creq_link(ctp_u, ceq_u);
 
