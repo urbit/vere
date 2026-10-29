@@ -4,6 +4,7 @@
 #include "allocate.h"
 #include "blob.h"
 
+#include "events.h"
 #include "hashtable.h"
 #include "log.h"
 #include "manage.h"
@@ -16,6 +17,10 @@
 
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
+
+//  home-road hashcons membership (see u3m_dedup())
+//
+c3_w* u3a_Hcon_w;
 u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
@@ -147,6 +152,7 @@ u3a_mark_alloc(c3_w len_w) // words
 void
 u3a_pack_init(void)
 {
+  u3_assert( !u3a_Gack.siz_w );
   c3_w bit_w = (u3R->hep.len_w + (u3a_word_bits-1)) >> u3a_word_bits_log;
   u3a_Gack.bit_w = c3_calloc(sizeof(c3_w) * bit_w);
   u3a_Gack.pap_w = c3_calloc(sizeof(c3_w) * bit_w);
@@ -179,6 +185,7 @@ u3a_pack_done(void)
   c3_free(u3a_Gack.pap_w);
   c3_free(u3a_Gack.pum_w);
   c3_free(u3a_Gack.buf_w);
+  memset(&u3a_Gack, 0, sizeof(u3a_Gack));
 }
 
 /* _ca_reclaim_half(): reclaim from memoization cache.
@@ -470,12 +477,277 @@ u3a_wash(u3_noun som)
   }
 }
 
+/* deferred gains (u3a_defer_open(), u3a_defer_close()).
+**
+**   between taking an event's product onto the home road and releasing
+**   the old arvo state, most references gained on home nouns are lost
+**   again: the new state shares most of its structure with the old. the
+**   counts net to zero, but each write dirties a snapshot page.
+**
+**   while open, home-road gains are counted off-loom instead of written,
+**   and a home-road lose of a noun with a pending gain cancels one. a
+**   noun's true count is its box's count plus its pending count, so a
+**   box is freed only when both run out. closing writes what's left.
+**
+**   the table holds at most u3a_Defer_max_w nouns. past that, gains on
+**   nouns not already in it are written as usual: a product that shares
+**   little with the old state saves little, and shouldn't cost much.
+**   each noun stays in one mode for the whole window, so mixing is safe.
+**
+**   a lose only consults the table if its noun's page has a pending
+**   gain (one off-loom bit per loom page): releasing a state that shares
+**   little with the new one frees mostly on other pages.
+*/
+#define NAME    _ca_pend
+#define KEY_TY  u3_noun
+#define VAL_TY  c3_w
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+c3_w u3a_Defer_max_w = 1U << 20;
+
+static struct {
+  c3_t     ope_t;  //  open
+  c3_t     ini_t;  //  table initialized
+  _ca_pend pen_u;  //  noun -> pending gains
+  c3_w*    bit_w;  //  pages with a pending gain (bitmap)
+  c3_w*    pag_w;  //  those pages, to clear at close
+  c3_w     num_w;  //    count
+  c3_w     cap_w;  //    capacity
+  c3_w     pek_w;  //  most nouns pending in this window
+  c3_w     ned_w;  //  recent windows' need, decaying
+} _ca_defer_u;
+
+/* _ca_defer_page(): [dog]'s loom page.
+*/
+static inline c3_w
+_ca_defer_page(u3_noun dog)
+{
+  return u3a_to_off(dog) >> u3a_page;
+}
+
+/* _ca_defer_seen(): yes if [dog]'s page may have a pending gain.
+*/
+static inline c3_t
+_ca_defer_seen(u3_noun dog)
+{
+  c3_w pag_w = _ca_defer_page(dog);
+  return !!(_ca_defer_u.bit_w[pag_w >> 5] & ((c3_w)1 << (pag_w & 31)));
+}
+
+/* _ca_defer_mark(): note a pending gain on [dog]'s page.
+*/
+static void
+_ca_defer_mark(u3_noun dog)
+{
+  c3_w  pag_w = _ca_defer_page(dog);
+  c3_w* bit_w = &(_ca_defer_u.bit_w[pag_w >> 5]);
+  c3_w  msk_w = (c3_w)1 << (pag_w & 31);
+
+  if ( !(*bit_w & msk_w) ) {
+    *bit_w |= msk_w;
+
+    if ( _ca_defer_u.num_w == _ca_defer_u.cap_w ) {
+      _ca_defer_u.cap_w = c3_max(1024, 2 * _ca_defer_u.cap_w);
+      _ca_defer_u.pag_w = c3_realloc(_ca_defer_u.pag_w,
+                                     sizeof(c3_w) * _ca_defer_u.cap_w);
+    }
+
+    _ca_defer_u.pag_w[_ca_defer_u.num_w++] = pag_w;
+  }
+}
+
+/* _ca_defer_on(): yes if gains and loses on [u3R] are deferred.
+*/
+static inline c3_t
+_ca_defer_on(void)
+{
+  return _ca_defer_u.ope_t && (&(u3H->rod_u) == u3R);
+}
+
+/* _ca_defer_gain(): count a gain on [dog], if there's room.
+*/
+static c3_t
+_ca_defer_gain(u3_noun dog)
+{
+  _ca_pend_itr itr_u = _ca_pend_get(&_ca_defer_u.pen_u, dog);
+
+  if ( !_ca_pend_is_end(itr_u) ) {
+    itr_u.data->val++;
+    u3e_Meter.dfg_d++;
+    return 1;
+  }
+
+  if ( _ca_pend_size(&_ca_defer_u.pen_u) >= u3a_Defer_max_w ) {
+    u3e_Meter.dfs_d++;
+    return 0;
+  }
+
+  itr_u = _ca_pend_insert(&_ca_defer_u.pen_u, dog, 1);
+
+  if ( _ca_pend_is_end(itr_u) ) {
+    u3m_bail(c3__meme);
+  }
+
+  _ca_defer_mark(dog);
+
+  u3e_Meter.dfg_d++;
+  u3e_Meter.dfn_d++;
+  {
+    c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
+
+    if ( siz_w > _ca_defer_u.pek_w ) {
+      _ca_defer_u.pek_w = siz_w;
+    }
+    if ( siz_w > u3e_Meter.dfx_d ) {
+      u3e_Meter.dfx_d = siz_w;
+    }
+  }
+  return 1;
+}
+
+/* _ca_defer_lose(): cancel a pending gain on [dog], if any.
+*/
+static c3_t
+_ca_defer_lose(u3_noun dog)
+{
+  _ca_pend_itr itr_u = _ca_pend_get(&_ca_defer_u.pen_u, dog);
+
+  if ( _ca_pend_is_end(itr_u) ) {
+    return 0;
+  }
+
+  if ( !--itr_u.data->val ) {
+    _ca_pend_erase_itr(&_ca_defer_u.pen_u, itr_u);
+  }
+
+  u3e_Meter.dfc_d++;
+  return 1;
+}
+
+/* _ca_defer_gain_cold(): while open, defer a gain on [dog] if we can.
+**
+**   gains and loses are the hottest paths in the runtime; keep the
+**   deferral checks out of line, behind a single flag test.
+*/
+static __attribute__((noinline, cold)) c3_t
+_ca_defer_gain_cold(u3_noun dog)
+{
+  if ( !_ca_defer_on() ) {
+    return 0;
+  }
+
+  if ( 0 == ((u3a_noun*)u3a_to_ptr(dog))->use_w ) {
+    u3m_bail(c3__foul);
+  }
+
+  return _ca_defer_gain(dog);
+}
+
+/* _ca_defer_lose_cold(): while open, cancel a pending gain on [dog].
+*/
+static __attribute__((noinline, cold)) c3_t
+_ca_defer_lose_cold(u3_noun dog)
+{
+  return _ca_defer_on() && _ca_defer_seen(dog) && _ca_defer_lose(dog);
+}
+
+/* u3a_defer_open(): defer home-road refcount gains (see above).
+**
+**   pass to u3m_soft_with(), which runs it only on success, back on the
+**   home road before anything is taken; a failed event's trace is then
+**   rendered with the window shut.
+*/
+void
+u3a_defer_open(void)
+{
+  u3_assert( !_ca_defer_u.ope_t );
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( !_ca_defer_u.ini_t ) {
+    c3_w pag_w = (c3_w)(u3C.wor_i >> u3a_page);
+
+    _ca_pend_init(&_ca_defer_u.pen_u);
+    _ca_defer_u.bit_w = c3_calloc(sizeof(c3_w) * ((pag_w + 31) >> 5));
+    _ca_defer_u.ini_t = 1;
+  }
+
+  _ca_defer_u.ope_t = 1;
+  u3e_Meter.dfw_d++;
+}
+
+/* u3a_defer_close(): write the gains still pending, stop deferring.
+*/
+void
+u3a_defer_close(void)
+{
+  _ca_pend_itr itr_u;
+
+  if ( !_ca_defer_u.ope_t ) {
+    return;
+  }
+
+  _ca_defer_u.ope_t = 0;
+
+  for ( itr_u = _ca_pend_first(&_ca_defer_u.pen_u);
+        !_ca_pend_is_end(itr_u);
+        itr_u = _ca_pend_next(itr_u) )
+  {
+    u3a_noun* box_u = u3a_to_ptr(itr_u.data->key);
+    c3_w      val_w = itr_u.data->val;
+
+    if ( (u3a_direct_max - box_u->use_w) < val_w ) {
+      u3l_log("fail in u3a_defer_close");
+      u3m_bail(c3__fail);
+    }
+
+    box_u->use_w += val_w;
+    u3e_Meter.dfr_d += val_w;
+    u3e_Meter.dfe_d++;
+  }
+
+  _ca_pend_clear(&_ca_defer_u.pen_u);
+
+  while ( _ca_defer_u.num_w ) {
+    c3_w pag_w = _ca_defer_u.pag_w[--_ca_defer_u.num_w];
+    _ca_defer_u.bit_w[pag_w >> 5] &= ~((c3_w)1 << (pag_w & 31));
+  }
+
+  //  clearing keeps capacity, and iterating and clearing cost the whole
+  //  bucket array, so give back what a large window grew. but keep
+  //  room for recent windows' need, which decays slowly after a large
+  //  one: shrinking to fit after every window regrows the table in the
+  //  next
+  //
+  {
+    c3_w ned_w = _ca_defer_u.ned_w - (_ca_defer_u.ned_w >> 3);
+    c3_d buc_d = _ca_pend_bucket_count(&_ca_defer_u.pen_u);
+
+    ned_w = c3_max(ned_w, _ca_defer_u.pek_w);
+    _ca_defer_u.ned_w = ned_w;
+    _ca_defer_u.pek_w = 0;
+
+    //  a table of [ned_w] keys needs about 2 * ned_w buckets
+    //
+    if ( (buc_d > 4096) && (buc_d > ((c3_d)ned_w << 3)) ) {
+      (void)_ca_pend_shrink(&_ca_defer_u.pen_u);
+      (void)_ca_pend_reserve(&_ca_defer_u.pen_u, ned_w);
+      u3e_Meter.dfk_d++;
+    }
+  }
+}
+
 /* _me_gain_use(): increment use count.
 */
 static void
 _me_gain_use(u3_noun dog)
 {
   u3a_noun* box_u = u3a_to_ptr(dog);
+
+  if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_gain_cold(dog) ) {
+    return;
+  }
 
   if ( u3a_direct_max == box_u->use_w ) {
     u3l_log("fail in _me_gain_use");
@@ -1239,6 +1511,10 @@ top:
   if ( c3y == u3a_north_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
+    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
+      return;
+    }
+
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;
     }
@@ -1247,6 +1523,10 @@ top:
         u3m_bail(c3__foul);
       }
       else {
+        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
+          u3m_dedup_lose(dog);
+        }
+
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
@@ -1282,6 +1562,10 @@ top:
   if ( c3y == u3a_south_is_normal(u3R, dog) ) {
     u3a_noun* box_u = u3a_to_ptr(dog);
 
+    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
+      return;
+    }
+
     if ( box_u->use_w > 1 ) {
       box_u->use_w -= 1;
     }
@@ -1290,6 +1574,10 @@ top:
         u3m_bail(c3__foul);
       }
       else {
+        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
+          u3m_dedup_lose(dog);
+        }
+
         if ( _(u3a_is_pom(dog)) ) {
           u3a_cell* dog_u = (void*)box_u;
           u3_noun   h_dog = dog_u->hed;
@@ -1381,13 +1669,25 @@ _ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
     //
     if ( asr_t ) return c3n;
 
-    //  both are on u3R; keep the deeper address
-    //  (and gain a reference)
+    //  both are on u3R. on the home road, keep a hashcons member;
+    //  otherwise keep the deeper address (and gain a reference)
     //
     //    (N && <) || (S && >)
     //    XX consider keeping higher refcount instead
     //
-    if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+    {
+      c3_t ahc_t = 0, bhc_t = 0;
+
+      if ( &(u3H->rod_u) == u3R ) {
+        ahc_t = u3a_hcon_has(*a);
+        bhc_t = u3a_hcon_has(*b);
+      }
+
+      if ( ahc_t != bhc_t ) {
+        if ( bhc_t ) SWAP(a, b);
+      }
+      else if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
+    }
 
     _me_gain_use(*a);
   }
@@ -1570,6 +1870,20 @@ c3_w
 u3a_mark_mptr(void* ptr_v)
 {
   return u3a_mark_ptr(ptr_v);
+}
+
+/* u3a_marked(): [som] was marked (by u3a_mark_noun() since
+**               u3a_mark_init()), without marking it.
+*/
+c3_t
+u3a_marked(u3_noun som)
+{
+  if ( c3y == u3a_is_cat(som) ) {
+    return 1;
+  }
+  else {
+    return _mark_test(u3a_outa(u3a_to_ptr(som)));
+  }
 }
 
 /* u3a_mark_rptr(): mark a refcounted, word-aligned ptr for gc.
@@ -2057,7 +2371,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 18);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2237,10 +2551,40 @@ u3a_mark_road()
   }
 
   qua_u[15] = c3_calloc(sizeof(*qua_u[15]));
-  qua_u[15]->nam_c = strdup("blob hands");
-  qua_u[15]->siz_w = u3b_mark() * sizeof(c3_w);
+  qua_u[15]->nam_c = strdup("hashconsing table");
+  {
+    u3h_mass mas_u = {0};
+    u3h_mark(u3R->dup_p, &mas_u);
 
-  qua_u[16] = NULL;
+    u3m_quac** mua_u = c3_malloc(sizeof(*mua_u) * 5);
+
+    mua_u[0] = c3_calloc(sizeof(*mua_u[0]));
+    mua_u[0]->nam_c = strdup("keys");
+    mua_u[0]->siz_w = mas_u.key_w * sizeof(c3_w);
+
+    mua_u[1] = c3_calloc(sizeof(*mua_u[1]));
+    mua_u[1]->nam_c = strdup("vals");
+    mua_u[1]->siz_w = mas_u.val_w * sizeof(c3_w);
+
+    mua_u[2] = c3_calloc(sizeof(*mua_u[2]));
+    mua_u[2]->nam_c = strdup("pairs");
+    mua_u[2]->siz_w = mas_u.kev_w * sizeof(c3_w);
+
+    mua_u[3] = c3_calloc(sizeof(*mua_u[3]));
+    mua_u[3]->nam_c = strdup("nodes");
+    mua_u[3]->siz_w = mas_u.nod_w * sizeof(c3_w);
+
+    mua_u[4] = NULL;
+
+    qua_u[15]->qua_u = mua_u;
+    qua_u[15]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
+  }
+
+  qua_u[16] = c3_calloc(sizeof(*qua_u[16]));
+  qua_u[16]->nam_c = strdup("blob hands");
+  qua_u[16]->siz_w = u3b_mark() * sizeof(c3_w);
+
+  qua_u[17] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
@@ -2262,6 +2606,7 @@ u3a_reclaim(void)
 {
   //  clear the memoization cache
   //
+  u3e_Phase = u3e_pha_rec_memo;
   u3h_free(u3R->cax.har_p);
   u3R->cax.har_p = u3h_new();
 }
@@ -2281,8 +2626,9 @@ u3a_rewrite_compact(void)
   u3a_relocate_noun(&(u3R->tim));
   u3h_relocate(&(u3R->cax.har_p));
   u3h_relocate(&(u3R->cax.per_p));
-  u3h_relocate(&(u3R->lop_p));
   u3h_relocate(&(u3R->cax.for_p));
+  u3h_relocate(&(u3R->lop_p));
+  u3h_relocate(&(u3R->dup_p));
 }
 
 /* u3a_idle(): measure free-lists in [rod_u]
@@ -2328,6 +2674,13 @@ u3a_sweep(void)
   c3_w siz_w = !(u3C.wag_h & u3o_debug_ram)
                ? _sweep_directory()
                : _sweep_counts();
+
+  //  leaked nouns are freed without u3a_lose(), so the home-road
+  //  hashcons set may refer to them
+  //
+  if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
+    u3m_dedup_ream();
+  }
 
   return siz_w;
 }

@@ -106,6 +106,209 @@ _test_soft_cax(void)
 
 /* main(): run all test cases.
 */
+/* _defer_pair(): u3m_soft() test fn, produces [arg arg].
+*/
+static u3_noun
+_defer_pair(u3_noun arg)
+{
+  return u3nc(u3k(arg), u3k(arg));
+}
+
+/* _defer_fail(): u3m_soft() test fn, fails.
+*/
+static u3_noun
+_defer_fail(u3_noun arg)
+{
+  return u3m_bail(c3__exit);
+}
+
+/* _test_defer(): deferred gains across a successful exit into home.
+**
+**   each armed step must leave [hom]'s count where an unarmed control
+**   leaves it, without writing it while the window is open.
+*/
+static c3_i
+_test_defer(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun hom   = u3nc(u3i_string("deferred"), u3i_string("gains"));
+  u3_noun arg, gon;
+  c3_w    bas_w, tak_w, rel_w;
+
+  //  control: take product [hom hom], release arg; then release product
+  //
+  arg   = u3k(hom);
+  bas_w = u3a_use(hom);
+  gon   = u3m_soft(0, _defer_pair, arg);
+  tak_w = u3a_use(hom);
+  u3z(gon);
+  rel_w = u3a_use(hom);
+
+  if ( tak_w <= bas_w ) {
+    fprintf(stderr, "defer: control gained nothing\r\n");
+    ret_i = 0;
+  }
+
+  //  armed, product kept: nothing written until close, then the same
+  //
+  arg = u3k(hom);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
+
+  if ( bas_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: written while open: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                    u3a_use(hom), bas_w);
+    ret_i = 0;
+  }
+
+  u3a_defer_close();
+
+  if ( tak_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: close: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                    u3a_use(hom), tak_w);
+    ret_i = 0;
+  }
+
+  u3z(gon);
+
+  //  armed, product released before close: the gains cancel
+  //
+  arg = u3k(hom);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
+  u3z(gon);
+  u3a_defer_close();
+
+  if ( rel_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: cancel: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                    u3a_use(hom), rel_w);
+    ret_i = 0;
+  }
+
+  //  past the cap, gains on new nouns are written as usual, and the
+  //  result is the same: [hom] fills the table, so the product's other
+  //  noun (a fresh indirect atom, not in it) spills. NB: it must be
+  //  longer than a direct atom on either word size, or it has no count
+  //
+  {
+    c3_w    max_w = u3a_Defer_max_w;
+    u3_noun gun;
+
+    arg = u3k(hom);
+    u3a_Defer_max_w = 1;
+    gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
+
+    if ( bas_w != u3a_use(hom) ) {
+      fprintf(stderr, "defer: cap: hom written while open\r\n");
+      ret_i = 0;
+    }
+
+    gun = u3m_soft(0, _defer_pair, u3i_string("spilled past the cap"));
+
+    if ( 2 != u3a_use(u3h(u3t(gun))) ) {
+      fprintf(stderr, "defer: cap: spill not written: %"PRIc3_w"\r\n",
+                      u3a_use(u3h(u3t(gun))));
+      ret_i = 0;
+    }
+
+    u3a_defer_close();
+    u3a_Defer_max_w = max_w;
+
+    if ( tak_w != u3a_use(hom) ) {
+      fprintf(stderr, "defer: cap: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                      u3a_use(hom), tak_w);
+      ret_i = 0;
+    }
+
+    u3z(gun);
+    u3z(gon);
+  }
+
+  //  a cancelled lose doesn't free: with our own reference released
+  //  while the product's gains are pending, [hom] lives on in it
+  //
+  arg = u3k(hom);
+  gon = u3m_soft_with(0, _defer_pair, arg, u3a_defer_open);
+  u3z(hom);
+  u3a_defer_close();
+
+  if ( c3n == u3r_sing_c("deferred", u3h(u3h(u3t(gon)))) ) {
+    fprintf(stderr, "defer: product damaged\r\n");
+    ret_i = 0;
+  }
+
+  hom = u3k(u3h(u3t(gon)));
+  u3z(gon);
+
+  //  a failed event never opens the window: the hook runs only on
+  //  success, and the trace is rendered with the window shut
+  //
+  bas_w = u3a_use(hom);
+  gon = u3m_soft_with(0, _defer_fail, u3k(hom), u3a_defer_open);
+  u3z(gon);
+
+  if ( bas_w != u3a_use(hom) ) {
+    fprintf(stderr, "defer: failure: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                    u3a_use(hom), bas_w);
+    ret_i = 0;
+  }
+
+  arg = u3k(hom);
+
+  if ( (bas_w + 1) != u3a_use(hom) ) {
+    fprintf(stderr, "defer: window open after failure\r\n");
+    ret_i = 0;
+  }
+
+  u3z(arg);
+  u3a_defer_close();
+  u3z(hom);
+  return ret_i;
+}
+
+/* _test_edit_road(): u3i_edit() copies on the home road, and edits a
+**                    uniquely held cell in place on a junior road.
+*/
+static c3_i
+_test_edit_road(void)
+{
+  c3_i ret_i = 1;
+
+  //  home road: copied, so a hashcons member can't change under the set
+  //
+  {
+    u3_noun q   = u3nt(1, 2, 3);
+    u3_noun pro = u3i_edit(q, 2, 99);
+
+    if ( (pro == q) || (99 != u3h(pro)) || (2 != u3h(u3t(pro))) ) {
+      fprintf(stderr, "edit: home road edited in place\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+
+  //  junior road: edited in place
+  //
+  {
+    u3_noun q, pro;
+    c3_t    our_t;
+
+    u3m_hate(0);
+
+    q     = u3nt(1, 2, 3);
+    pro   = u3i_edit(q, 2, 99);
+    our_t = (pro == q) && (99 == u3h(pro)) && (2 == u3h(u3t(pro)));
+    u3z(pro);
+
+    u3m_love(0);
+
+    if ( !our_t ) {
+      fprintf(stderr, "edit: junior road not edited in place\r\n");
+      ret_i = 0;
+    }
+  }
+
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -121,6 +324,18 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test soft_cax: ok\r\n");
+
+  if ( !_test_defer() ) {
+    fprintf(stderr, "test defer: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test defer: ok\r\n");
+
+  if ( !_test_edit_road() ) {
+    fprintf(stderr, "test edit road: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test edit road: ok\r\n");
 
   //  GC
   //

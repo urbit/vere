@@ -7,6 +7,7 @@
 #include "ivory.h"
 #include "ur/ur.h"
 #include "rsignal.h"
+#include "ship.h"
 #include "vere.h"
 
 #ifndef U3_OS_windows
@@ -214,12 +215,12 @@ _main_init(void)
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
-#ifndef VERE64
+#ifdef VERE64
   u3_Host.ops_u.lut_y = 34;     /* aka 16G */
 #else
   u3_Host.ops_u.lut_y = 31;     /* aka  2G */
 #endif
-  u3_Host.ops_u.lom_y = 32;
+  u3_Host.ops_u.lom_y = 31;
   u3_Host.ops_u.jum_y = 23;     /* aka 1MB */
 
   u3_Host.ops_u.siz_i =
@@ -1162,6 +1163,34 @@ _cw_load_pier(c3_c* dir_c)
   return log_u;
 }
 
+/* _cw_measure_note(): record an offline pack, meld or melt [op_c] in
+**                     the pier's measurement logs, if it keeps any.
+*/
+static void
+_cw_measure_note(u3_disk*    log_u,
+                 const c3_c* op_c,
+                 c3_w        opt_w,
+                 c3_d        bef_d,
+                 c3_w        gan_w)
+{
+  c3_c*   who_c = 0;
+  u3_meta met_u;
+
+  if ( !u3e_measure_dir(u3_Host.dir_c) ) {
+    return;
+  }
+
+  //  @p needs the kernel, which a loaded snapshot has
+  //
+  if ( u3A->eve_d && (c3y == u3_disk_read_meta(log_u->mdb_u, &met_u)) ) {
+    who_c = u3_ship_to_string(met_u.who_d);
+  }
+
+  u3e_measure_note(u3_Host.dir_c, URBIT_VERSION, who_c,
+                   op_c, opt_w, bef_d, gan_w);
+  c3_free(who_c);
+}
+
 /* _cw_dock(): copy binary into pier
 */
 static void
@@ -1939,10 +1968,11 @@ _cw_meld(c3_i argc, c3_c* argv[])
     { "lmdb-map-size", required_argument, NULL, 10 },
     { "memo-drop",     no_argument,       NULL, 11 },
     { "ford-drop",     no_argument,       NULL, 12 },
+    { "prune-cold",    no_argument,       NULL, 13 },
     { NULL, 0, NULL, 0 }
   };
 
-  c3_o per_o = c3n, for_o = c3n;
+  c3_w opt_w = 0;
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
@@ -1984,12 +2014,17 @@ _cw_meld(c3_i argc, c3_c* argv[])
       }
 
       case 11: {  //  memo-drop
-        per_o = c3y;
+        opt_w |= u3_melt_memo;
         break;
-      }  
+      }
 
       case 12: {  //  ford-drop
-        for_o = c3y;
+        opt_w |= u3_melt_ford;
+        break;
+      }
+
+      case 13: {  //  prune-cold
+        opt_w |= u3_melt_cold;
         break;
       }
 
@@ -2024,7 +2059,13 @@ _cw_meld(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: meld: gained", u3_meld_all(stderr, per_o, for_o));
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3_meld_all(stderr, opt_w);
+
+    _cw_measure_note(log_u, "meld", opt_w, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: meld: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -2046,8 +2087,13 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "swap-to",   required_argument, NULL, 8 },
     { "gc-early",  no_argument,       NULL, 9 },
     { "yolo",      no_argument,       NULL, 'y' },
+    { "prune-cold", no_argument,      NULL, 10 },
+    { "memo-drop", no_argument,       NULL, 11 },
+    { "ford-drop", no_argument,       NULL, 12 },
     { NULL, 0, NULL, 0 }
   };
+
+  c3_w opt_w = 0;
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
@@ -2085,6 +2131,18 @@ _cw_melt(c3_i argc, c3_c* argv[])
         u3C.wag_h |= u3o_yolo;
       } break;
 
+      case 10: {  //  prune-cold
+        opt_w |= u3_melt_cold;
+      } break;
+
+      case 11: {  //  memo-drop
+        opt_w |= u3_melt_memo;
+      } break;
+
+      case 12: {  //  ford-drop
+        opt_w |= u3_melt_ford;
+      } break;
+
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
@@ -2116,7 +2174,13 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: melt: gained", u3_melt_all(stderr));
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3_melt_all(stderr, opt_w);
+
+    _cw_measure_note(log_u, "melt", opt_w, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: melt: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -2309,7 +2373,13 @@ _cw_pack(c3_i argc, c3_c* argv[])
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
-  u3a_print_memory(stderr, "urbit: pack: gained", u3m_pack());
+  {
+    c3_d bef_d = u3e_measure_ms();
+    c3_w gan_w = u3m_pack();
+
+    _cw_measure_note(log_u, "pack", 0, bef_d, gan_w);
+    u3a_print_memory(stderr, "urbit: pack: gained", gan_w);
+  }
 
   u3m_save();
   u3_disk_exit(log_u);
@@ -2927,7 +2997,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
     case c3n: {
       fprintf(stderr, "vile: unable to retrieve key file\r\n");
       u3_pier_punt_goof("foo", u3k(u3t(res)));
-    }
+    } break;
     case c3y: {
       u3_noun dat, vil, out;
       c3_c* out_c;

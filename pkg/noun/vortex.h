@@ -15,20 +15,28 @@
     ** u3v_home: NB version must be first for ease of migration.
     */
 #define U3V_ARVO_BODY(S)                                                       \
-  c3_d    eve_d;                                                               \
-  U3_N(S) roc;                                                                 \
-  U3_N(S) yot;
+  c3_d    eve_d;                /*  event number  */                           \
+  U3_N(S) roc;                  /*  kernel core   */                           \
+  U3_N(S) yot;                  /*  cached gates  */
 
 #define U3V_HOME_BODY(S)                                                       \
-  u3v_version           ver_d;                                                 \
-  c3_d                  pam_d;                                                 \
-  U3_PASTE(u3v_arvo, S) arv_u;                                                 \
-  U3_PASTE(u3a_road, S) rod_u;                                                 \
-  U3_W(S)               blb_p; /* u3p(u3h_root) - bid -> u3a_blob* */          \
+  u3v_version           ver_d;  /*  version number  */                         \
+  c3_d                  pam_d;  /*  parameters      */                         \
+  U3_PASTE(u3v_arvo, S) arv_u;  /*  arvo state      */                         \
+  U3_PASTE(u3a_road, S) rod_u;  /*  storage state   */                         \
+  U3_W(S)               blb_p;  /*  u3p(u3h_root) - bid -> u3a_blob*  */       \
   c3_y                  end_y[0];
 
       U3_DEFINE_PAIR(u3v_arvo, U3V_ARVO_BODY);
       U3_DEFINE_PAIR(u3v_home, U3V_HOME_BODY);
+
+    /* u3v_blew: terminal window size.
+    */
+      typedef struct {
+        c3_h  col_h;                        //  columns
+        c3_h  row_h;                        //  rows
+      } u3v_blew;
+
 
   /**  Globals.
   **/
@@ -62,7 +70,7 @@
 
     /* u3v_boot(): evaluate boot sequence, making a kernel
     */
-      c3_o
+      u3_weak
       u3v_boot(u3_noun eve);
 
     /* u3v_boot_lite(): light bootstrap sequence, just making a kernel.
@@ -117,17 +125,17 @@
     /* u3v_tank(): dump single tank.
     */
       void
-      u3v_tank(u3_noun blu, c3_l tab_l, u3_noun tac);
+      u3v_tank(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
 
     /* u3v_punt(): dump tank list.
     */
       void
-      u3v_punt(u3_noun blu, c3_l tab_l, u3_noun tac);
+      u3v_punt(u3v_blew blu_u, c3_l tab_l, u3_noun tac);
 
     /* u3v_sway(): print trace.
     */
       void
-      u3v_sway(u3_noun blu, c3_l tab_l, u3_noun tax);
+      u3v_sway(u3v_blew blu_u, c3_l tab_l, u3_noun tax);
 
     /* u3v_plan(): queue ovum (external).
     */

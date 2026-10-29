@@ -50,6 +50,13 @@
 
   /**  Functions.
   **/
+    /* u3n_meas(): the home road's programs: count, bytes, those whose
+    **             formula only their key holds, and those looked up since
+    **             the last call (measurement).
+    */
+      void
+      u3n_meas(c3_d* num_d, c3_d* byt_d, c3_d* ded_d, c3_d* use_d);
+
     /* u3n_nock_on(): produce .*(bus fol).
     */
       u3_noun
@@ -111,15 +118,11 @@
       u3_noun
       u3n_nock_an(u3_noun bus, u3_noun fol);
 
-    /* u3n_reap(): promote bytecode state.
+    /* u3n_reap(): promote junior bytecode state [har_p], in place.
+    **             call after u3m_fall(), before the junior heap is dropped.
      */
       void
       u3n_reap(u3p(u3h_root) har_p);
-
-    /* u3n_take(): copy junior bytecode state.
-     */
-      u3p(u3h_root)
-      u3n_take(u3p(u3h_root) har_p);
 
     /* u3n_mark(): mark bytecode cache.
      */

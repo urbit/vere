@@ -123,23 +123,30 @@ _js_done(_jam_shax* ctx, c3_y out_y[32])
 
 //  ---- mat encoding ---------------------------------------------------
 
-//  write mat's length prefix for an atom of [len_w] bits: zero bits as
-//  many as len_w has, a one, then all but the top bit of len_w.
-//  [len_w] zero is the single bit 1, which is all of (mat 0).
+//  write mat's length prefix for an atom of [len_d] bits: zero bits as
+//  many as len_d has, a one, then all but the top bit of len_d.
+//  [len_d] zero is the single bit 1, which is all of (mat 0).  a chub,
+//  so a bob of 2^32 bits or more encodes with 32-bit words too.
 //
 static void
-_js_len(_jam_shax* ctx, c3_w len_w)
+_js_len(_jam_shax* ctx, c3_d len_d)
 {
-  if ( 0 == len_w ) {
+  if ( 0 == len_d ) {
     _js_bits(ctx, 1, 1);
     return;
   }
-  c3_g b_g = (c3_g)c3_bits_word(len_w);
+  c3_g b_g = (c3_g)c3_bits_chub(len_d);
+
+  //  the prefix is b_g + 1 bits, which _js_bits caps at 64
+  //
+  if ( b_g > 63 ) {
+    u3m_bail(c3__fail);
+  }
 
   _js_bits(ctx, (c3_d)1 << b_g, b_g + 1);
 
   if ( b_g > 1 ) {
-    _js_bits(ctx, (c3_d)len_w, b_g - 1);
+    _js_bits(ctx, len_d, b_g - 1);
   }
 }
 
@@ -172,20 +179,16 @@ _js_mat_atom(_jam_shax* ctx, u3_atom a)
   u3r_view vue_u;
   u3r_view_open(&vue_u, a, c3y);
 
-  if ( vue_u.bit_d > c3_w_max ) {
-    u3m_bail(c3__fail);
-  }
-
   {
     const c3_y* vue_y = u3r_view_bytes(&vue_u);
-    c3_w        bit_w = (c3_w)vue_u.bit_d;
-    c3_w        ful_w = bit_w >> 3;
-    c3_g        rem_g = bit_w & 7;
+    c3_d        bit_d = vue_u.bit_d;
+    c3_d        ful_d = bit_d >> 3;
+    c3_g        rem_g = bit_d & 7;
 
-    _js_len(ctx, bit_w);
-    _js_bytes(ctx, vue_y, ful_w);
+    _js_len(ctx, bit_d);
+    _js_bytes(ctx, vue_y, ful_d);
     if ( rem_g ) {
-      _js_bits(ctx, vue_y[ful_w], rem_g);
+      _js_bits(ctx, vue_y[ful_d], rem_g);
     }
   }
   u3r_view_done(&vue_u);

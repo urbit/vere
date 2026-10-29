@@ -21,7 +21,7 @@ static inline void
 _bsw_atom(ur_root_t *r, ur_nref ref, ur_bsw_t *bsw, uint64_t len)
 {
   switch ( ur_nref_tag(ref) ) {
-    default: assert(0);
+    default: assert(0); [[fallthrough]];
 
     case ur_direct: return ur_bsw_atom64(bsw, len, ref);
 
@@ -190,7 +190,7 @@ _cue_next(ur_root_t      *r,
     }
 
     switch ( tag ) {
-      default: assert(0);
+      default: assert(0); [[fallthrough]];
 
       case ur_jam_cell: {
         //  reallocate the stack if full
@@ -423,7 +423,7 @@ _cue_test_next(_cue_test_stack_t *s,
     }
 
     switch ( tag ) {
-      default: assert(0);
+      default: assert(0); [[fallthrough]];
 
       case ur_jam_cell: {
         //  reallocate the stack if full

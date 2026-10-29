@@ -1,6 +1,7 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
+#include "events.h"
 #include "options.h"
 #include "vortex.h"
 
@@ -550,10 +551,37 @@ _alloc_words(c3_w len_w)  //  u3a_minimum .. (1 << (u3a_page - 1)), inclusive
 
   if ( !HEAP.wee_p[bit_g] ) {
     pag_u = u3to(u3a_crag, _make_chunks(bit_g));
+
+    if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+      u3e_measure_alloc(pag_u->pag_w, 0);
+    }
   }
   else {
     pag_u = u3to(u3a_crag, HEAP.wee_p[bit_g]);
     //  XX sanity
+
+    //  measurement: if this page is clean, would a dirty page in this
+    //  class have done? (looks at the next 64 listed pages)
+    //
+    if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+      c3_t alt_t = 0;
+
+      if ( !u3e_measure_dirty(pag_u->pag_w) ) {
+        u3_post nex_p = pag_u->nex_p;
+        c3_w    i_w;
+
+        for ( i_w = 0; nex_p && (i_w < 64); i_w++ ) {
+          u3a_crag* nex_u = u3to(u3a_crag, nex_p);
+          if ( u3e_measure_dirty(nex_u->pag_w) ) {
+            alt_t = 1;
+            break;
+          }
+          nex_p = nex_u->nex_p;
+        }
+      }
+
+      u3e_measure_alloc(pag_u->pag_w, alt_t);
+    }
 
     if ( 1 == pag_u->fre_s ) {
       HEAP.wee_p[bit_g] = pag_u->nex_p;
@@ -659,6 +687,12 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
     }
   }
 
+  //  we're in the middle of |pack, no need to maintain free lists
+  //
+  if ( u3a_Gack.siz_w ) {
+    return siz_w;
+  }
+
   //  XX groace
   //
   if ( HEAP.off_ws ) {
@@ -684,7 +718,6 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
       assert( HEAP.erf_p );
       fre_u = u3to(u3a_dell, HEAP.erf_p);
       assert( (fre_u->pag_w + fre_u->siz_w) == pag_w );
-
       if ( fre_u->pre_p ) {
         HEAP.erf_p = fre_u->pre_p;
         u3to(u3a_dell, fre_u->pre_p)->nex_p = 0;
@@ -841,11 +874,137 @@ _free_pages(u3_post som_p, c3_w pag_w, u3_post dir_p)
   return siz_w;
 }
 
+/* jump hints: where to start walking the home road's chunk-page lists.
+**
+**   on the home road, each size class's list of pages with free chunks
+**   (HEAP.wee_p) is kept in address order, so linking a page and
+**   unlinking an emptied one walk the list, a cache miss per step. for
+**   each class, we remember the lowest listed page seen in each bucket
+**   of (1 << _JUMP_LOG) pages, and start from the nearest one below.
+**
+**   hints are off-loom and never persisted, rebuilt as walks happen.
+**   a hint is a page index, checked through the page directory before
+**   use: listed pages are exactly the class's chunk pages with a free
+**   chunk, so a stale hint is never dereferenced, only dropped.
+*/
+#define _JUMP_LOG  6
+
+static struct {
+  c3_w* buc_w[u3a_crag_no];  //  per bucket: page index + 1, or 0
+  c3_w  len_w[u3a_crag_no];  //  buckets
+} _jump_u;
+
+/* _jump_reset(): drop all hints.
+*/
+static void
+_jump_reset(void)
+{
+  for ( c3_g bit_g = 0; bit_g < u3a_crag_no; bit_g++ ) {
+    if ( _jump_u.len_w[bit_g] ) {
+      memset(_jump_u.buc_w[bit_g], 0, sizeof(c3_w) * _jump_u.len_w[bit_g]);
+    }
+  }
+}
+
+/* _jump_page(): page [pag_w]'s record, if it's listed in class [bit_g].
+*/
+static u3a_crag*
+_jump_page(c3_g bit_g, c3_w pag_w)
+{
+  u3_post   dir_p;
+  u3a_crag* pag_u;
+
+  if ( pag_w >= HEAP.len_w ) {
+    return 0;
+  }
+
+  dir_p = (u3to(u3p(u3a_crag), HEAP.pag_p))[pag_w];
+
+  if ( dir_p <= u3a_rest_pg ) {
+    return 0;
+  }
+
+  pag_u = u3to(u3a_crag, dir_p);
+
+  return (  ((bit_g + u3a_min_log) == pag_u->log_s)
+         && pag_u->fre_s )
+         ? pag_u : 0;
+}
+
+/* _jump_note(): page [pag_w] is listed in class [bit_g];
+**               if [sur_t], replace a stale or higher hint.
+*/
+static void
+_jump_note(c3_g bit_g, c3_w pag_w, c3_t sur_t)
+{
+  c3_w  buc_w = pag_w >> _JUMP_LOG;
+  c3_w* hin_w;
+
+  if ( buc_w >= _jump_u.len_w[bit_g] ) {
+    c3_w len_w = c3_max(buc_w, HEAP.len_w >> _JUMP_LOG) + 1;
+    c3_w old_w = _jump_u.len_w[bit_g];
+
+    _jump_u.buc_w[bit_g] = c3_realloc(_jump_u.buc_w[bit_g],
+                                      sizeof(c3_w) * len_w);
+    memset(_jump_u.buc_w[bit_g] + old_w, 0, sizeof(c3_w) * (len_w - old_w));
+    _jump_u.len_w[bit_g] = len_w;
+  }
+
+  hin_w = &(_jump_u.buc_w[bit_g][buc_w]);
+
+  if (  !*hin_w
+     || (  sur_t
+        && ( (pag_w < (*hin_w - 1)) || !_jump_page(bit_g, *hin_w - 1) ) ) )
+  {
+    *hin_w = pag_w + 1;
+  }
+}
+
+/* _jump_find(): a listed page of class [bit_g] below page [pag_w], or 0.
+*/
+static u3a_crag*
+_jump_find(c3_g bit_g, c3_w pag_w)
+{
+  c3_w  buc_w = pag_w >> _JUMP_LOG;
+  c3_w* hin_w;
+
+  if ( !_jump_u.len_w[bit_g] ) {
+    return 0;
+  }
+
+  buc_w = c3_min(buc_w, _jump_u.len_w[bit_g] - 1);
+
+  while ( 1 ) {
+    hin_w = &(_jump_u.buc_w[bit_g][buc_w]);
+
+    if ( *hin_w ) {
+      u3a_crag* hin_u = _jump_page(bit_g, *hin_w - 1);
+
+      if ( !hin_u ) {
+        *hin_w = 0;
+      }
+      else if ( hin_u->pag_w < pag_w ) {
+        return hin_u;
+      }
+    }
+
+    if ( !buc_w ) {
+      return 0;
+    }
+
+    buc_w--;
+  }
+}
+
 static void
 _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 {
   u3a_crag *pag_u = u3to(u3a_crag, dir_p);
   u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+
+  if ( u3e_Measuring && (&(u3H->rod_u) == u3R) ) {
+    u3e_measure_free(dir_p >> u3a_page);  //  page record
+  }
 
 #ifdef SANITY
   assert( page_to_post(pag_u->pag_w) == (som_p & ~((((c3_w)1) << u3a_page) - 1)) );
@@ -888,9 +1047,17 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
       //
 
       if ( &(u3H->rod_u) == u3R ) {
+        u3a_crag* hin_u = _jump_find(bit_g, pag_u->pag_w);
+
+        if ( hin_u ) {
+          bit_p = &(hin_u->nex_p);
+        }
+
         while ( *bit_p ) {
           bit_u = u3to(u3a_crag, *bit_p);
           nex_u = u3tn(u3a_crag, bit_u->nex_p);
+
+          _jump_note(bit_g, bit_u->pag_w, 0);
 
           if ( nex_u && (nex_u->pag_w < pag_u->pag_w) ) {
             bit_p = &(bit_u->nex_p);
@@ -899,6 +1066,8 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
 
           break;
         }
+
+        _jump_note(bit_g, pag_u->pag_w, 1);
       }
 
       pag_u->nex_p = *bit_p;
@@ -907,6 +1076,25 @@ _free_words(u3_post som_p, c3_w pag_w, u3_post dir_p)
     else if ( pag_u->fre_s == hun_u->ful_s ) {
       //  page now free
       //
+      //    the list is in address order (mostly: new pages are pushed),
+      //    so look from the nearest hint below, then from the head
+      //
+      if ( &(u3H->rod_u) == u3R ) {
+        u3a_crag* hin_u = _jump_find(bit_g, pag_u->pag_w);
+
+        if ( hin_u ) {
+          u3_post* hit_p = &(hin_u->nex_p);
+
+          while ( *hit_p && (*hit_p != dir_p) ) {
+            hit_p = &(u3to(u3a_crag, *hit_p)->nex_p);
+          }
+
+          if ( *hit_p ) {
+            bit_p = hit_p;
+          }
+        }
+      }
+
       while ( *bit_p != dir_p ) {
         bit_u = u3to(u3a_crag, *bit_p);
         bit_p = &(bit_u->nex_p);
@@ -1292,6 +1480,37 @@ _unpoison_words(void)
   }
 }
 
+/* _mark_test(): [som_p] (an allocation) is marked, without marking it.
+*/
+static c3_t
+_mark_test(u3_post som_p)
+{
+  c3_w pag_w = post_to_page(som_p);
+  c3_w blk_w = pag_w >> u3a_word_bits_log;
+  c3_w bit_w = pag_w & (u3a_word_bits-1);
+
+  u3p(u3a_crag) *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
+  u3_post dir_p = dir_u[pag_w];
+
+  if ( !(u3a_Mark.bit_w[blk_w] & (((c3_w)1) << bit_w)) ) {
+    return 0;
+  }
+  //  page allocation, marked
+  //
+  else if ( dir_p <= u3a_rest_pg ) {
+    return 1;
+  }
+  //  chunk allocation: marking clears its bit
+  //
+  else {
+    u3a_crag *pag_u = u3to(u3a_crag, dir_p);
+    c3_w      pos_w = (som_p & ((((c3_w)1) << u3a_page) - 1)) >> pag_u->log_s;
+    c3_h     *mar_h = (c3_h*)(u3a_Mark.buf_w + u3a_Mark.buf_w[pag_w]);
+
+    return !(mar_h[pos_w >> 5] & (((c3_h)1) << (pos_w & 31)));
+  }
+}
+
 static c3_w
 _mark_post(u3_post som_p)
 {
@@ -1415,12 +1634,18 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
   fprintf(fil_u, "}\r\n");
 }
 
+//  words freed as leaks by the last sweep
+//
+static c3_w _sweep_leq_w;
+
 static c3_w
 _sweep_directory(void)
 {
   u3p(u3a_crag)     *dir_u = u3to(u3p(u3a_crag), HEAP.pag_p);
   c3_w pag_w, blk_w, bit_w, siz_w, leq_w = 0, tot_w = 0;
   u3_post     dir_p;
+
+  _jump_reset();  //  pages are about to move or be unlinked
 
   //  unlink leaked whole chunk-pages
   //  (we do this first so we won't need to dereference the metadata)
@@ -1534,6 +1759,8 @@ _sweep_directory(void)
       }
     }
   }
+
+  _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
@@ -1712,6 +1939,8 @@ _sweep_counts(void)
   u3_post     dir_p, som_p;
   c3_w       *use_w;
 
+  _jump_reset();  //  pages are about to move or be unlinked
+
   //  unlink leaked whole chunk-pages
   //  (we do this first so we won't need to dereference the metadata)
   //
@@ -1869,6 +2098,8 @@ _sweep_counts(void)
       }
     }
   }
+
+  _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
     u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
@@ -2171,16 +2402,17 @@ _pack_seek(void)
   vt_init(&pos_u);
 #endif
 
+  //  NB: the pages remain free in the directory, untracked
+  //
   {
-    u3_post   fre_p;
     u3a_dell *fre_u;
+    u3_post fre_p, nex_p = HEAP.fre_p;
 
-    while ( (fre_p = HEAP.fre_p) ) {
+    HEAP.fre_p = HEAP.erf_p = 0;
+
+    while ( (fre_p = nex_p) ) {
       fre_u = u3to(u3a_dell, fre_p);
-      HEAP.fre_p = fre_u->nex_p;
-      if ( HEAP.fre_p ) {
-        u3to(u3a_dell, HEAP.fre_p)->pre_p = 0;
-      }
+      nex_p = fre_u->nex_p;
       _ifree(fre_p);
     }
   }
@@ -2592,6 +2824,8 @@ _pack_move(void)
   c3_w   dir_w,  new_w, pag_w = 0;
   c3_w  *src_w, *dst_w;
 
+  _jump_reset();  //  pages are about to move or be unlinked
+
   //  NB: these loops iterate over the temp page dir instead of
   //  the bitmap, as partial chunk pages can be marked free
   //
@@ -2664,19 +2898,6 @@ _pack_move(void)
 
   u3a_print_memory(stderr, "palloc: off-heap: used", u3a_Gack.len_w);
   u3a_print_memory(stderr, "palloc: off-heap: total", u3a_Gack.siz_w);
-
-  {
-    u3a_dell *fre_u;
-    u3_post   fre_p;
-
-    while ( (fre_p = HEAP.fre_p) ) {
-      fre_u = u3to(u3a_dell, fre_p);
-      HEAP.fre_p = fre_u->nex_p;
-      _ifree(fre_p);
-    }
-  }
-
-  HEAP.erf_p = 0;
 
 #ifdef U3_CPU_DEBUG
   //  free space was rearranged wholesale; recount
