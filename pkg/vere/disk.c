@@ -2759,9 +2759,8 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
     case U3E_VER3: {
       //  VER3 is the current epoch format (image.bin + ram events).
       //  Load path is identical to VER2; no migration needed.
-      //  Fall through to VER2 handling.
       //
-    } // fallthrough
+    } [[fallthrough]];
 
     case U3E_VER2: {
       //  a roll that stopped after META left its patch in the epoch: the
