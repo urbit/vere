@@ -25,31 +25,33 @@
       else {
         if ( c3n == u3ud(b) ) return c3y;
         {
-          c3_w len_a_w = u3r_met(3, a);
-          c3_w len_b_w = u3r_met(3, b);;
-          c3_y *buf_a_y, *buf_b_y;
-          c3_y cut_a_y, cut_b_y;
-          if ( c3y == u3a_is_cat(a) ) {
-            buf_a_y = (c3_y*)&a;
+          //  views borrow the bytes wherever the atoms live
+          //
+          u3r_view a_vue, b_vue;
+          u3r_view_open(&a_vue, a, c3y);
+          u3r_view_open(&b_vue, b, c3y);
+          if ( (a_vue.byt_d > c3_w_max) || (b_vue.byt_d > c3_w_max) ) {
+            return u3m_bail(c3__fail);
           }
-          else {
-            u3a_atom* a_u = u3a_to_ptr(a);
-            buf_a_y = (c3_y*)(a_u->buf_w);
-          }
-          if ( c3y == u3a_is_cat(b) ) {
-            buf_b_y = (c3_y*)&b;
-          }
-          else {
-            u3a_atom* b_u = u3a_to_ptr(b);
-            buf_b_y = (c3_y*)(b_u->buf_w);
-          }
+
+          c3_w len_a_w = (c3_w)a_vue.byt_d;
+          c3_w len_b_w = (c3_w)b_vue.byt_d;
+          const c3_y *buf_a_y = u3r_view_bytes(&a_vue);
+          const c3_y *buf_b_y = u3r_view_bytes(&b_vue);
+          c3_y cut_a_y = 0, cut_b_y = 0;
+          c3_o ret_o;
           c3_w len_min_w = c3_min(len_a_w, len_b_w);
-          for (c3_w i_w = 0; i_w < len_min_w; i_w++) {
+          c3_w i_w;
+          for (i_w = 0; i_w < len_min_w; i_w++) {
             cut_a_y = buf_a_y[i_w];
             cut_b_y = buf_b_y[i_w];
-            if ( cut_a_y != cut_b_y ) return __(cut_a_y < cut_b_y);
+            if ( cut_a_y != cut_b_y ) break;
           }
-          return __(len_a_w < len_b_w);
+          ret_o = ( i_w < len_min_w ) ? __(cut_a_y < cut_b_y)
+                                      : __(len_a_w < len_b_w);
+          u3r_view_done(&a_vue);
+          u3r_view_done(&b_vue);
+          return ret_o;
         }
       }
     }

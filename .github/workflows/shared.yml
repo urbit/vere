@@ -129,6 +129,7 @@ jobs:
             vere-noun-test unix-test   \
             palloc-test events-test    \
             bytestream-test mesa-test  \
+            blob-test                  \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
@@ -327,14 +328,17 @@ jobs:
 
       #  the linux job's tests, less events-test and plus wloom-test.
       #  each was run by hand on windows in both bitnesses before
-      #  landing here. (hamt-test and tracy-test build for windows but
-      #  are run on no platform, so they are no more excluded here than
-      #  there.)
+      #  landing here, except blob-test, whose first windows run is this
+      #  job. (hamt-test and tracy-test build for windows but are run on
+      #  no platform, so they are no more excluded here than there.)
       #
-      #  events-test does not build at all: it is posix-only (mkdtemp,
-      #  nftw, /tmp), so build.zig skips it for windows targets and
-      #  naming it here would fail to resolve a step. porting it means
-      #  porting those three, not fixing a bug.
+      #  events-test is excluded. it compiles for windows now that
+      #  compat.c supplies mkdtemp, but it still hardcodes a /tmp
+      #  template, which windows has no such directory for, so it would
+      #  fail at runtime. build.zig skips it for windows targets, so
+      #  naming it here would fail to resolve a step. porting it is
+      #  mechanical -- its _tmpdir() becomes c3_tmp_make() from
+      #  c3/tmpdir.h -- but it is not done.
       #
       - name: Build unit tests
         shell: bash
@@ -354,6 +358,7 @@ jobs:
             pact-test newt-test              \
             unix-test boot-test              \
             vere-noun-test wloom-test        \
+            blob-test                        \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \

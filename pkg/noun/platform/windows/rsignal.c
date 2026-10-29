@@ -12,6 +12,45 @@ static __p_sig_fn_t   _fns[SIG_COUNT];
 static volatile DWORD _tid;
 static HANDLE _hvt;
 
+//  critical-section hold count and the signals that arrived during a hold.
+//  _held is only read while the handler thread is suspended (or from the
+//  handler thread itself), so a raise never races a block/unblock.
+//
+static volatile LONG _held;
+static volatile LONG _pending[SIG_COUNT];
+
+void rsignal_block(void)
+{
+  InterlockedIncrement(&_held);
+}
+
+void rsignal_unblock(void)
+{
+  if ( 0 == InterlockedDecrement(&_held) ) {
+    //  take every pending flag before raising any: a handler longjmps,
+    //  and a flag left set would fire in a later, unrelated section
+    //
+    LONG got[SIG_COUNT];
+
+    for ( int sig = 0; sig < SIG_COUNT; sig++ ) {
+      got[sig] = InterlockedExchange(&_pending[sig], 0);
+    }
+    for ( int sig = 0; sig < SIG_COUNT; sig++ ) {
+      if ( got[sig] ) {
+        rsignal_raise(sig);
+      }
+    }
+  }
+}
+
+//  _rsignal_defer(): record [sig] as pending and put its handler back.
+//
+static void _rsignal_defer(int sig, __p_sig_fn_t fn)
+{
+  InterlockedExchange(&_pending[sig], 1);
+  InterlockedCompareExchangePointer((PVOID*)&_fns[sig], fn, 0);
+}
+
 void rsignal_install_handler(int sig, __p_sig_fn_t fn)
 {
   if (sig < 0 || sig >= SIG_COUNT)
@@ -44,7 +83,14 @@ void rsignal_raise(int sig)
   if (oldfn == 0)
     return;
 
+  //  a stack overflow cannot wait: the thread has no stack to finish
+  //  its section on
+  //
   if (_tid == GetCurrentThreadId()) {
+    if (_held && (SIGSTK != sig)) {
+      _rsignal_defer(sig, oldfn);
+      return;
+    }
     oldfn(sig);
     return;
   }
@@ -57,6 +103,26 @@ void rsignal_raise(int sig)
 
   if (SuspendThread(hthread) < 0) {
     fprintf(stderr, "\r\nrsignal_raise: SuspendThread(%lu): %lu\r\n", _tid, GetLastError());
+    goto cleanup;
+  }
+
+  //  SuspendThread returns before the thread stops; reading its context
+  //  waits until it has, so _held below is the stopped thread's
+  //
+  {
+    CONTEXT ctx_u = { .ContextFlags = CONTEXT_CONTROL };
+    GetThreadContext(hthread, &ctx_u);
+  }
+
+  //  the handler thread is inside a critical section: leave the signal
+  //  pending for rsignal_unblock() to deliver, and let the thread go.
+  //
+  if (_held) {
+    _rsignal_defer(sig, oldfn);
+    if (!ResumeThread(hthread)) {
+      fprintf(stderr, "\r\nrsignal_raise: ResumeThread(%lu): %lu\r\n", _tid, GetLastError());
+      abort();
+    }
     goto cleanup;
   }
 

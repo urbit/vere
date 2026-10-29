@@ -25,6 +25,7 @@
 #include "libgen.h"
 #include "pthread.h"
 
+#include "blob.h"
 #include "ca_bundle.h"
 #include "pace.h"
 #include "version.h"
@@ -1681,6 +1682,7 @@ _cw_grab(c3_i argc, c3_c* argv[])
   }
 
   u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3C.wag_h |= u3o_hashless;
   u3z(u3_mars_grab(c3y));
   u3m_stop();
@@ -1781,7 +1783,8 @@ _cw_cram(c3_i argc, c3_c* argv[])
     fprintf(stderr, "urbit: cram: rock saved at event %" PRIu64 "\r\n", u3_Host.eve_d);
   }
 
-  //  save even on failure, as we just did all the work of deduplication
+  //  NB: cram no longer dedups the loom as a side effect; this save
+  //  just persists whatever state boot/replay left behind
   //
   u3m_save();
   u3_disk_exit(log_u);
@@ -1897,13 +1900,47 @@ _cw_queu(c3_i argc, c3_c* argv[])
 
     fprintf(stderr, "urbit: queu: preparing\r\n");
 
+    //  blob-aware import: atoms over U3_BLOB_THRESH stream from the
+    //  rock straight into the blob store (content-dedup re-links files
+    //  surviving from before the import) and decode as bob atoms,
+    //  never touching the loom
+    //
+    u3b_bsink bsk_u;
+
+    u3b_bsink_init(&bsk_u, u3_Host.dir_c, u3C.bob_c);
+
     //  XX can spuriously fail do to corrupt memory-image checkpoint,
     //  need a u3m_half_boot equivalent
     //  workaround is to delete/move the checkpoint in case of corruption
     //
-    if ( c3n == u3u_uncram(u3_Host.dir_c, eve_d) ) {
+    if ( c3n == u3u_uncram(u3_Host.dir_c, eve_d,
+                           U3_BLOB_THRESH, &bsk_u.snk_u) )
+    {
       fprintf(stderr, "urbit: queu: failed\r\n");
       exit(1);
+    }
+
+    if ( bsk_u.num_w ) {
+      fprintf(stderr, "urbit: queu: blobified %" PRIc3_w " atom(s)\r\n",
+                      bsk_u.num_w);
+    }
+
+    //  uncram repaved the home road, wiping the blob bank: mark what
+    //  this epoch's rows name, the image's and the events' through the
+    //  rock's, then check the invariant
+    //
+    //  a missing file fails the load, as it fails a boot: the rock
+    //  would name data the store no longer has
+    //
+    if ( c3n == u3_disk_blob_own(log_u, log_u->epo_d, eve_d) ) {
+      fprintf(stderr, "urbit: queu: the epoch depends on blob data that no "
+                      "longer exists\r\n");
+      u3_disk_exit(log_u);
+      exit(1);
+    }
+
+    if ( c3n == u3a_blob_sane() ) {
+      fprintf(stderr, "urbit: queu: blob accounting violated (see above)\r\n");
     }
 
     u3m_save();
@@ -2680,6 +2717,7 @@ _cw_chop(c3_i argc, c3_c* argv[])
 
   u3_disk_chop(log_u, u3_Host.eve_d);
 
+  u3m_save();
   u3_disk_exit(log_u);
   u3m_stop();
 }
@@ -2947,6 +2985,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
   //  XX load log and check if snapshot is stale?
   //
   c3_d  eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
+  u3_disk_blob_root(u3_Host.dir_c);
   u3_noun sam = u3nc(u3nc(u3_nul, u3_nul),
                      u3nc(c3n, u3nq(c3__once, 'j', c3__vile, u3_nul)));
   u3_noun res = u3v_soft_peek(0, sam);

@@ -20,6 +20,7 @@
 
 #include "allocate.h"
 #include "backtrace.h"
+#include "blob.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -266,6 +267,11 @@ _cm_signal_reset(void)
   u3R = &u3H->rod_u;
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
+
+  //  the discarded roads' blob hands go with them; the kid chain is
+  //  the only path to their lists, so drain before cutting it
+  //
+  u3b_drain_kids();
   u3R->kid_p = 0;
 }
 
@@ -487,6 +493,37 @@ u3m_signal(c3_m sig_m)
   rsignal_longjmp(u3_Signal, sig_m);
 }
 
+//  critical-section nesting depth (see u3m_crit_inn).
+//
+static c3_w _cm_crit_w = 0;
+
+/* u3m_crit_inn(): hold the signals whose handlers longjmp.
+*/
+void
+u3m_crit_inn(void)
+{
+  //  block before counting: a signal between the two would otherwise
+  //  unwind with the depth raised and nothing held, and the unwind's
+  //  u3m_crit_out would release a hold never taken
+  //
+  if ( 0 == _cm_crit_w ) {
+    rsignal_block();
+  }
+  _cm_crit_w++;
+}
+
+/* u3m_crit_out(): end a critical section begun by u3m_crit_inn().
+*/
+void
+u3m_crit_out(void)
+{
+  u3_assert( _cm_crit_w );
+
+  if ( 0 == --_cm_crit_w ) {
+    rsignal_unblock();
+  }
+}
+
 /* u3m_file(): load file, as atom, or bail.
 */
 u3_noun
@@ -594,6 +631,10 @@ _pave_home(void)
   u3R->mat_p = u3R->cap_p = top_p;
 
   _pave_parts();
+
+  //  initialize blob bank HAMTs (home road only)
+  //
+  u3H->blb_p = u3h_new();
 }
 
 STATIC_ASSERT( (c3_wiseof(u3v_home) <= (((c3_w)1) << u3a_page)),
@@ -603,18 +644,70 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
+/* _find_home_zero_cb(): u3h_walk_with callback — zero les_h on each
+**   u3a_blob.  The count belongs to the process that wrote the snapshot:
+**   no hold outlives a restart, since it ends both processes and the
+**   king that owed the holds is gone.  own_o stays: the snapshot is
+**   the state at its event, and the roll and every commit before the
+**   save marked it from the epoch's rows.  A record already at zero is
+**   not written, so its page stays clean.
+*/
+static void
+_find_home_zero_cb(u3_noun kev, void* ptr_v)
+{
+  (void)ptr_v;
+  u3_noun val = u3t(kev);
+
+  c3_d off_d = 0;
+  u3r_safe_chub(val, &off_d);
+
+  u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
+  if ( blb_u->les_h ) {
+    blb_u->les_h = 0;
+  }
+}
+
+/* _migrate_v6(): in-place v5 -> v6 migration of a loaded snapshot.
+**
+**   v6 appends blb_p (blob bank) to u3v_home, within the first page,
+**   which is zero beyond the v5 struct end in every snapshot
+**   (allocation starts at page 1).  lop_p, cax.for_p, and dup_p were
+**   appended to u3a_road mid-v5 without a version bump; fold them in here.
+**
+**   Idempotent: a crash before the next checkpoint leaves the on-disk
+**   snapshot at v5, and we simply re-migrate on the next boot.
+*/
+static void
+_migrate_v6(void)
+{
+  fprintf(stderr, "loom: migrating snapshot to v6\r\n");
+
+  u3H->blb_p = u3h_new();
+
+  if ( !u3R->lop_p )     u3R->lop_p     = u3h_new();
+  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
+  if ( !u3R->dup_p )     u3R->dup_p     = u3h_new();
+
+  u3H->ver_d = U3V_VER6;
+}
+
 /* _find_home(): in restored image, point to home road.
 */
 static void
 _find_home(void)
 {
   c3_d ver_d = *((c3_d*)u3_Loom);
+  c3_o mig_o = c3n;
 
-  if ( ver_d != U3V_VERLAT ) {
-    fprintf(stderr, "loom: checkpoint version mismatch: "
-                    "have %" PRIu64 ", need %" PRIu64 "\r\n",
-                    ver_d, U3V_VERLAT);
-    abort();
+  switch ( ver_d ) {
+    case U3V_VER5: mig_o = c3y; break;
+    case U3V_VER6: break;
+    default: {
+      fprintf(stderr, "loom: checkpoint version mismatch: "
+                      "have %" PRIu64 ", need %" PRIu64 "\r\n",
+                      ver_d, U3V_VERLAT);
+      abort();
+    }
   }
 
   c3_d pam_d = *((c3_d*)u3_Loom + 1);
@@ -659,8 +752,9 @@ _find_home(void)
     //  Check if we downgraded to a version before e.g. cax.for_p was added:
     //  bytes between the end of the u3v_home struct and the bottom of the heap
     //  should normally be set to 0.
+    //
     c3_y* byt_y = (c3_y*)u3_Loom;
-    c3_w off_w = offsetof(u3v_home, rod_u.cax.end_y);
+    c3_w off_w = offsetof(u3v_home, end_y);
     c3_w byte_bot_w = (((c3_w)1) << u3a_page) * sizeof(c3_w);
     c3_t acc_y = 0;
     for (c3_w i_w = off_w; i_w < byte_bot_w; i_w++) {
@@ -711,27 +805,19 @@ _find_home(void)
     u3H->pam_d = _pave_params();
   }
 
-  //  properly initialize things from zero-initialize future proof buffer
+  if ( c3y == mig_o ) {
+    _migrate_v6();
+  }
+
+  //  reset les_h: the snapshot's count belongs to a dead process, and
+  //  no hold outlives one.  ownership is the snapshot's, kept
   //
-  //  cax.for_p is an odd-one-out here: it was not carved out from the future-
-  //  proof buffer but instead it was added as a last element of the `cax` sub-
-  //  struct of the road struct. Since
-  //    1) the loom is zero-initialized,
-  //    2) the road is the final member of the u3v_home struct,
-  //    3) `cax` is the last element of the road struct,
-  //    4) `for_p` is the last element of `cax`,
-  //    5) and adding `for_p` did not change the alignment of either the road
-  //       struct or the `cax` struct,
-  //  the layout and the position of the road struct did not change, and a
-  //  simple null check was sufficient for the migration.
-  //  
-  //  The reasoning above is sound as long as we assume no downgrades, which
-  //  would not be detected by any methods present at the moment of cax.for_p
-  //  addition.
+  u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);
+
+  //  the home road never lists blob hands in the loom; anything a
+  //  snapshot carries there belongs to a dead process
   //
-  if ( !u3R->lop_p )     u3R->lop_p = u3h_new();
-  if ( !u3R->cax.for_p ) u3R->cax.for_p = u3h_new_cache(u3C.per_w);
-  if ( !u3R->dup_p )     u3R->dup_p = u3h_new();
+  u3H->rod_u.bob_p = 0;
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1225,6 +1311,12 @@ u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
+  //  the road's blob hands, retained for reuse since it leapt, go with
+  //  its frames.  this is the one exit every road takes except a
+  //  signal unwind, which drains the kid chain itself.
+  //
+  u3b_drain(u3R);
+
 #if 0
   /*  If you're printing a lot of these you need to change
    *  u3a_print_memory from fprintf to u3l_log
@@ -1644,6 +1736,13 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   u3m_Ford_fresh_road_depth_h = 0;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
+    //  a critical section never longjmps on its own, but a fault inside
+    //  one must not leave signals held forever
+    //
+    while ( _cm_crit_w ) {
+      u3m_crit_out();
+    }
+
     //  reinitialize trace state
     //
     u3t_init();
@@ -2578,6 +2677,31 @@ u3m_save(void)
   }
 }
 
+/* u3m_fork(): write the changes since the last save into the image at
+**             [img_c], a copy of the checkpoint's, through a patch left
+**             in [pat_c]; the checkpoint and dirty pages stay.
+*/
+c3_o
+u3m_fork(const c3_c* pat_c, const c3_c* img_c)
+{
+  u3_post low_p, hig_p;
+  c3_o    ret_o;
+  u3m_water(&low_p, &hig_p);
+
+  u3a_wait();
+
+  u3_assert(u3R == &u3H->rod_u);
+
+  //  as u3m_save() does, so the epoch's image and the checkpoint agree
+  //
+  u3m_dedup_hint();
+
+  ret_o = u3e_fork(pat_c, img_c, low_p);
+
+  u3a_dash();
+  return ret_o;
+}
+
 /* u3m_toss(): discard ephemeral memory.
 */
 void
@@ -2780,6 +2904,7 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
+  u3b_stop();
   u3t_sstack_exit();
 
   u3e_stop();
@@ -2989,6 +3114,12 @@ u3m_pack(void)
   //  the home-road hashcons set refers to old locations
   //
   u3m_dedup_ream();
+
+  if (  (&(u3H->rod_u) == u3R)
+     && (c3n == u3a_blob_sane()) )
+  {
+    fprintf(stderr, "pack: blob accounting violated (see above)\r\n");
+  }
 
   u3e_Phase = pha_y;
   return (u3a_open(u3R) - pre_w);

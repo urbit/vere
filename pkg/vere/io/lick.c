@@ -156,10 +156,14 @@ _lick_close_cb(uv_handle_t* had_u)
 }
 
 /* _lick_moor_poke(): called on message read from u3_moor.
+**
+**   lick only speaks the legacy jam (0x00) wire format; the version byte
+**   is ignored here.
 */
 static c3_o
-_lick_moor_poke(void* ptr_v, c3_d len_d, c3_y* byt_y)
+_lick_moor_poke(void* ptr_v, c3_y ver_y, c3_d len_d, c3_y* byt_y)
 {
+  (void)ver_y;
   u3_weak   put;
   u3_noun   dev, nam, dat, wir, cad;
 

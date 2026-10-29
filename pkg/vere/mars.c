@@ -13,10 +13,83 @@
 #include "ivory.h"
 #include "ur/ur.h"
 #include "db/lmdb.h"
+#include "blob.h"
 #include <mars.h>
 #include <stdio.h>
+#include <sys/time.h>
+
+/* Blob storage lifecycle
+**
+**   blb_p HAMT: bid -> u3a_blob* (loom offset), bid = (mug_h << 32) | seq_h.
+**   See the u3a_blob block in allocate.h for the record:
+**     atm_h = live bob atoms
+**     les_h = holds the king has (mars memory only; zeroed at boot)
+**     own_o = a durable holder in the current epoch names the file: an
+**             input committed in this epoch, or the epoch's image
+**
+**   Blob files live at $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>: an
+**   epoch owns the files its events and its image name, and they die
+**   with the epoch at chop.  Deletion by refcount: no atom, no hold,
+**   and not owned (u3a_blob_dead).
+**
+**   Holds are counted grants.  every message mars hands the king (a
+**   poke's effects, a nack's goofs, a peek's result) grants one hold
+**   per distinct blob id it names, issued as the message is encoded
+**   (u3s_ram_xeno_bids) so the file outlives mars's own atoms.  the
+**   king counts what it received per id and returns the lot with
+**   [%blrl mug seq n] when its last bob over the id dies.  no expiry:
+**   king and mars die together, holds are memory only, and the boot gc
+**   reclaims whatever a dead king held.
+**
+**   Lifecycle:
+**     1. king stages a large file to .urb/stg/, learns its content mug,
+**        and plans the event with a stub (a bob of that mug, seq 0)
+**        where the bob belongs and the staging path riding along
+**     2. mars installs the file (rename into the epoch's store) and
+**        puts the real bob in the stub's place, then computes the event
+**     3. the event's effects grant the king a hold on every blob they
+**        name, this one included if it comes back out
+**     4. mars commits: _mars_fact marks the blob owned by the epoch and
+**        writes the event's BLOBS row in the event's transaction
+**     5. the king's last bob over the id dies: %blrl returns its holds
+**        (one per message that named the id)
+**     6. arvo drops the atom (e.g. |rm + |tomb): _me_bob_dead takes it
+**        off atm_h; an owned record stays as a ghost until the next roll
+**     7. roll carries every held blob into the new epoch's store, owns
+**        what a root reaches, and writes that live set as the epoch's
+**        first BLOBS row; chop deletes old epochs whole, files included,
+**        and touches no count
+**     *. boot: _find_home zeroes les_h (no hold outlives a process);
+**        own_o is the snapshot's, marked by the roll and by every commit
+**        before the save, and replay marks the events after it;
+**        u3_disk_blob_gc reclaims any unowned blob nothing holds
+*/
 
 c3_c tac_c[256];  //  tracing label
+
+/* _mars_blob_del(): mars-side del_f: delete the blob file once nothing
+**   holds it (u3a_blob_dead).  an owned record with no other holder
+**   stays as a ghost until the next roll.  called when the last live
+**   atom goes, and when the king's last hold does.
+*/
+static void
+_mars_blob_del(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  //  a dry run deletes nothing: it skips replay, so a record can read
+  //  unowned while an input after the snapshot still names its file
+  //
+  if (  (u3C.wag_h & u3o_dryrun)
+     || !blb_u
+     || (c3n == u3a_blob_dead(blb_u)) )
+  {
+    return;
+  }
+
+  u3b_wipe(u3C.bob_c, mug_h, seq_h);
+  u3a_blob_drop(mug_h, seq_h);
+}
 
 /*
 ::  peek=[gang (each path $%([%once @tas @tas path] [%beam @tas beam]))]
@@ -28,7 +101,8 @@ c3_c tac_c[256];  //  tracing label
   $%  [%live ?(%meld %pack) ~] :: XX rename
       [%exit ~]
       [%peek mil=@ peek]
-      [%poke mil=@ ovum]
+      [%poke mil=@ pax=(list @t) ovum]  ::  pax: files staged for it
+      [%blrl mug=@ seq=@ n=@]           ::  the king returns n holds
       [%sync %save ~]
   ==
 +$  gift                                                ::  mars -> urth
@@ -37,7 +111,7 @@ c3_c tac_c[256];  //  tracing label
       [%slog pri=@ tank]
       [%peek p=(each (unit (cask)) goof)]
       [%poke p=(each (list ovum) (list goof))]
-      [%ripe [pro=%2 kel=wynn] [who=@p fake=?] eve=@ mug=@]
+      [%ripe [pro=%3 kel=wynn] [who=@p fake=?] eve=@ mug=@ epo=@]
       [%sync eve=@ mug=@]
   ==
 --
@@ -218,6 +292,12 @@ _mars_grab(u3_noun sac, c3_o pri_o)
 
       if ( c3y == pri_o ) {
         _mars_print_quacs(fil_u, all_u);
+
+        //  blobs the serf holds open: zero between events, so anything
+        //  here is a reader that never closed
+        //
+        fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+                u3b_hands(), u3b_mapped());
       }
       fflush(fil_u);
 
@@ -235,6 +315,280 @@ _mars_grab(u3_noun sac, c3_o pri_o)
   }
 }
 
+/* _mars_blob_sure(): refuse an event holding a bob the store cannot back.
+**
+**   [bid_u] is the distinct ids the writ's tap decoded, stubs excluded;
+**   the bobs the install puts in the stubs' places name files it just
+**   wrote.  tap mints a bank record for every blob id it decodes, so an event
+**   naming a file that is gone arrives with a fresh record over a
+**   missing file.  committing it would log an event that can never
+**   replay.  a record the king holds is backed: the king's hold keeps
+**   the file.  any other is backed only if its file exists, owned or
+**   not: ownership comes from the snapshot, and no boot checks that the
+**   files it names are still there (the event's own atoms count for
+**   nothing here: tap minted them).  otherwise the poke is nacked with
+**   a %blob goof.  returns the goof list, or u3_none when every bob is
+**   backed.
+*/
+static u3_weak
+_mars_blob_sure(const u3s_bids* bid_u)
+{
+  u3_noun tan = u3_nul;
+
+  for ( c3_w i_w = 0; i_w < bid_u->len_w; i_w++ ) {
+    c3_h      mug_h = u3a_bid_mug(bid_u->bid_d[i_w]);
+    c3_h      seq_h = u3a_bid_seq(bid_u->bid_d[i_w]);
+    u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+    if ( blb_u && blb_u->les_h ) {
+      continue;
+    }
+    if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
+      continue;
+    }
+
+    {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c),
+               "blob " U3A_BID_FMT " is not in the store",
+               mug_h, seq_h);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+    }
+  }
+
+  if ( u3_nul == tan ) {
+    return u3_none;
+  }
+  return u3nc(u3nc(c3__blob, tan), u3_nul);
+}
+
+/* _mars_ram(): encode a message for the king into [gif_u], grant the
+**   king a hold on every blob id it names, and free the noun.
+**
+**   the grant comes before the free: the noun may be the last atom
+**   over an id mars holds, and the file must outlive it for the king.
+*/
+static void
+_mars_ram(u3_noun pro, u3_gift* gif_u)
+{
+  u3s_bids bid_u = {0};
+
+  u3e_Phase = u3e_pha_jam;
+  u3s_ram_xeno_bids(pro, &gif_u->len_d, &gif_u->hun_y, &bid_u);
+  u3a_blob_hold(bid_u.bid_d, bid_u.len_w);
+  c3_free(bid_u.bid_d);
+  u3e_Phase = u3e_pha_io_free;
+  u3z(pro);
+}
+
+/* _mars_fill(): rebuild [non] with every stub replaced by the bob of
+**   the installed id with its mug, marking each id used in [hit_y]
+**   (when given).  recursive on heads, a loop along tails, so a long
+**   list costs no stack.  u3_none if a stub matches no id.  retains
+**   [non].
+*/
+static u3_weak
+_mars_fill(u3_noun non, const c3_d* bid_d, c3_w len_w, c3_y* hit_y)
+{
+  if ( c3n == u3a_is_cell(non) ) {
+    if ( (c3y == u3a_is_bob(non)) && (0 == u3a_bob_seq(non)) ) {
+      c3_h mug_h = u3a_bob_mug(non);
+
+      for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+        if ( u3a_bid_mug(bid_d[i_w]) == mug_h ) {
+          if ( hit_y ) {
+            hit_y[i_w] = 1;
+          }
+          return u3i_blob(mug_h, u3a_bid_seq(bid_d[i_w]));
+        }
+      }
+      return u3_none;
+    }
+    return u3k(non);
+  }
+
+  {
+    u3_noun* hed = 0;
+    c3_w     cap_w = 0, num_w = 0;
+    u3_noun  tal = non;
+    u3_weak  out;
+
+    while ( c3y == u3a_is_cell(tal) ) {
+      u3_weak one = _mars_fill(u3h(tal), bid_d, len_w, hit_y);
+
+      if ( u3_none == one ) {
+        goto fail;
+      }
+      if ( num_w == cap_w ) {
+        cap_w = cap_w ? (2 * cap_w) : 16;
+        hed   = c3_realloc(hed, cap_w * sizeof(*hed));
+      }
+      hed[num_w++] = one;
+      tal = u3t(tal);
+    }
+
+    if ( u3_none == (out = _mars_fill(tal, bid_d, len_w, hit_y)) ) {
+      goto fail;
+    }
+
+    while ( num_w-- ) {
+      out = u3nc(hed[num_w], out);
+    }
+    c3_free(hed);
+    return out;
+
+  fail:
+    while ( num_w-- ) {
+      u3z(hed[num_w]);
+    }
+    c3_free(hed);
+    return u3_none;
+  }
+}
+
+/* u3_mars_blob_fill(): put installed bobs in a noun's stubs.
+*/
+u3_weak
+u3_mars_blob_fill(u3_noun non, const c3_d* bid_d, c3_w len_w)
+{
+  return _mars_fill(non, bid_d, len_w, 0);
+}
+
+/* _mars_stg_ours(): [stg_c] names a file directly in the pier's staging
+**   directory, as u3b_stage makes them.  the directories are compared
+**   resolved, so the king's spelling of the pier need not match ours.
+*/
+static c3_o
+_mars_stg_ours(const c3_c* stg_c)
+{
+  const c3_c* nam_c = strrchr(stg_c, '/');
+  c3_c        dir_c[8192];
+  c3_c*       our_c;
+  c3_c*       its_c;
+  c3_o        ret_o;
+
+  if ( !nam_c || !nam_c[1] || ((nam_c - stg_c) >= (c3_ws)sizeof(dir_c)) ) {
+    return c3n;
+  }
+
+  memcpy(dir_c, stg_c, nam_c - stg_c);
+  dir_c[nam_c - stg_c] = 0;
+  its_c = realpath(dir_c, 0);
+
+  u3b_stg_dir(dir_c, u3C.dir_c);
+  our_c = realpath(dir_c, 0);
+
+  ret_o = __( our_c && its_c && (0 == strcmp(our_c, its_c)) );
+  free(our_c);
+  free(its_c);
+  return ret_o;
+}
+
+/* _mars_blob_install(): install the staged files an event brings and
+**   put their bobs where the king left stubs.
+**
+**   every path in [pax] is installed, or the event is refused with a
+**   %blob goof: the staged files are consumed either way (nothing
+**   retries them), and a file installed for a refused event, or one no
+**   stub asked for, is wiped again by minting and dropping its bob,
+**   since nothing holds it.  on success [*job] is the filled event.
+**   returns the goof list, or u3_none.  transfers [pax].
+*/
+static u3_weak
+_mars_blob_install(u3_noun* job, u3_noun pax)
+{
+  u3s_bids bid_u = {0};
+  u3_noun  tan   = u3_nul;
+  u3_noun  pak   = pax;
+
+  while ( u3_nul != pak ) {
+    if ( (c3n == u3du(pak)) || (c3n == u3a_is_atom(u3h(pak))) ) {
+      fprintf(stderr, "mars: poke refused: malformed staging list\r\n");
+      tan = u3nc(u3nc(c3__leaf, u3i_string("malformed staging list")), tan);
+      break;
+    }
+
+    c3_c* stg_c = u3r_string(u3h(pak));
+    c3_h  mug_h = 0;
+    c3_h  seq_h = 0;
+
+    //  a path outside the staging directory is not ours to install or
+    //  remove
+    //
+    if ( c3n == _mars_stg_ours(stg_c) ) {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c), "not a staging file: %.96s", stg_c);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+    }
+    else if ( c3y == u3b_move_stg(u3C.bob_c, stg_c, &mug_h, &seq_h) ) {
+      u3s_bids_push(&bid_u, u3a_bid(mug_h, seq_h));
+    }
+    else {
+      c3_c msg_c[128];
+      snprintf(msg_c, sizeof(msg_c), "blob install failed: %s", stg_c);
+      fprintf(stderr, "mars: poke refused: %s\r\n", msg_c);
+      tan = u3nc(u3nc(c3__leaf, u3i_tape(msg_c)), tan);
+      c3_unlink(stg_c);
+    }
+    c3_free(stg_c);
+    pak = u3t(pak);
+  }
+  u3z(pax);
+
+  //  a stub names its file by mug alone: two installs of one mug and
+  //  different content cannot be told apart, so the event is refused
+  //  rather than given the wrong file.  one content twice is one id
+  //
+  for ( c3_w i_w = 0; (u3_nul == tan) && (i_w < bid_u.len_w); i_w++ ) {
+    for ( c3_w j_w = i_w + 1; j_w < bid_u.len_w; j_w++ ) {
+      if (  (u3a_bid_mug(bid_u.bid_d[i_w]) == u3a_bid_mug(bid_u.bid_d[j_w]))
+         && (bid_u.bid_d[i_w] != bid_u.bid_d[j_w]) )
+      {
+        fprintf(stderr, "mars: poke refused: two staged files share a mug\r\n");
+        tan = u3nc(u3nc(c3__leaf,
+                        u3i_string("two staged files share a mug")),
+                   u3_nul);
+        break;
+      }
+    }
+  }
+
+  c3_y* hit_y = bid_u.len_w ? c3_calloc(bid_u.len_w) : 0;
+
+  if ( u3_nul == tan ) {
+    u3_weak new = _mars_fill(*job, bid_u.bid_d, bid_u.len_w, hit_y);
+
+    if ( u3_none == new ) {
+      fprintf(stderr, "mars: poke refused: a stub names no staged file\r\n");
+      tan = u3nc(u3nc(c3__leaf, u3i_string("blob stub names no staged file")),
+                 u3_nul);
+    }
+    else {
+      u3z(*job);
+      *job = new;
+    }
+  }
+
+  //  nothing holds what was installed for a refused event, or what no
+  //  stub asked for: mint and drop, and the file goes
+  //
+  for ( c3_w i_w = 0; i_w < bid_u.len_w; i_w++ ) {
+    if ( (u3_nul != tan) || !hit_y[i_w] ) {
+      c3_d bid_d = bid_u.bid_d[i_w];
+      u3z(u3i_blob(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)));
+    }
+  }
+  c3_free(hit_y);
+  c3_free(bid_u.bid_d);
+
+  if ( u3_nul == tan ) {
+    return u3_none;
+  }
+  return u3nc(u3nc(c3__blob, tan), u3_nul);
+}
+
 /* _mars_fact(): commit a fact and enqueue its effects.
 */
 static void
@@ -242,6 +596,9 @@ _mars_fact(u3_mars* mar_u,
            u3_noun    job,
            u3_noun    pro)
 {
+  //  the disk owns, for this epoch, every blob the event names as it
+  //  encodes it, and writes them as the event's BLOBS row
+  //
   {
     u3_fact tac_u = {
       .job   = job,
@@ -261,10 +618,7 @@ _mars_fact(u3_mars* mar_u,
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
 
-    u3e_Phase = u3e_pha_jam;
-    u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-    u3e_Phase = u3e_pha_io_free;
-    u3z(pro);
+    _mars_ram(pro, gif_u);
 
     if ( !mar_u->gif_u.ent_u ) {
       u3_assert( !mar_u->gif_u.ext_u );
@@ -287,10 +641,7 @@ _mars_gift(u3_mars* mar_u, u3_noun pro)
   gif_u->sat_e = u3_gift_rest_e;
   gif_u->ptr_v = 0;
 
-  u3e_Phase = u3e_pha_jam;
-  u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-  u3e_Phase = u3e_pha_io_free;
-  u3z(pro);
+  _mars_ram(pro, gif_u);
 
   if ( !mar_u->gif_u.ent_u ) {
     u3_assert( !mar_u->gif_u.ext_u );
@@ -519,7 +870,10 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
     if ( c3y == (ret_o = u3v_poke_sure(mil_w, u3k(*eve), &pro)) ) {
       *out = pro;
     }
-    else if ( c3__evil == u3h(pro) ) {
+    //  %evil, and %file (out of descriptors, transient), refuse the
+    //  event rather than commit a %crud: replay saves and exits on %file
+    //
+    else if ( (c3__evil == u3h(pro)) || (c3__file == u3h(pro)) ) {
       *out = u3nc(pro, u3_nul);
     }
     else {
@@ -562,10 +916,11 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
   return ret_o;
 }
 
-/* _mars_work(): perform a task.
+/* _mars_work(): perform a task.  [bid_u] is the distinct blob ids the
+**   writ named, as its tap collected them.
 */
 static c3_o
-_mars_work(u3_mars* mar_u, u3_noun jar)
+_mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
 {
   u3_noun tag, dat, pro;
 
@@ -583,11 +938,11 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
     }
 
     case c3__poke: {
-      u3_noun tim, job;
+      u3_noun tim, pax, job;
       c3_h  mil_h;
       c3_w  pre_w;
 
-      if ( (c3n == u3r_cell(dat, &tim, &job)) ||
+      if ( (c3n == u3r_trel(dat, &tim, &pax, &job)) ||
            (c3n == u3r_safe_half(tim, &mil_h)) )
       {
         fprintf(stderr, "mars: poke fail\r\n");
@@ -605,7 +960,51 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         now   = u3m_time_in_tv(&tim_u);
         job = u3nc(now, u3k(job));
       }
+      u3k(pax);
       u3z(jar);
+
+      //  the files the event brings are installed first and their bobs
+      //  put where the king left stubs; a failure refuses the event
+      //
+      if ( u3_nul != pax ) {
+        u3_weak lud = _mars_blob_install(&job, pax);
+
+        if ( u3_none != lud ) {
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, lud));
+          break;
+        }
+        mar_u->fag_w |= _mars_fag_mute;
+      }
+      else {
+        u3z(pax);
+
+        //  a stub with no staged file would reach the computation and
+        //  the log naming nothing
+        //
+        if ( bid_u->nub_w ) {
+          u3_noun tan = u3nc(u3nc(c3__leaf,
+                                  u3i_string("blob stub with no staged file")),
+                             u3_nul);
+          fprintf(stderr, "mars: poke refused: a stub with no staged file\r\n");
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, u3nc(u3nc(c3__blob, tan), u3_nul)));
+          break;
+        }
+      }
+
+      //  an event holding a bob the store cannot back is refused before
+      //  it runs; freeing the job drops the record tap minted for it
+      //
+      {
+        u3_weak lud = _mars_blob_sure(bid_u);
+
+        if ( u3_none != lud ) {
+          u3z(job);
+          _mars_gift(mar_u, u3nt(c3__poke, c3n, lud));
+          break;
+        }
+      }
 
       pre_w = u3a_open(u3R);
       mar_u->sen_d++;
@@ -764,6 +1163,36 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3z(jar);
       mar_u->sat_e = u3_mars_exit_e;
     } break;
+
+    //  %blrl: the king returns [n] holds on a blob: its last bob over
+    //  the id died.  a count, not a flag: a hold granted after the king
+    //  sent this must survive it.  clamped, never below zero.
+    //
+    case c3_s4('b','l','r','l'): {
+      u3_noun mug_n, seq_n, num_n;
+      if ( c3n == u3r_trel(dat, &mug_n, &seq_n, &num_n) ) {
+        u3z(jar);
+        return c3n;
+      }
+      c3_h mug_h = 0;
+      c3_h seq_h = 0;
+      c3_h num_h = 0;
+      u3r_safe_half(mug_n, &mug_h);
+      u3r_safe_half(seq_n, &seq_h);
+      u3r_safe_half(num_n, &num_h);
+
+      {
+        u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+        if ( blb_u ) {
+          num_h = c3_min(num_h, blb_u->les_h);
+          blb_u->les_h -= num_h;
+          _mars_blob_del(mug_h, seq_h);
+        }
+      }
+
+      u3z(jar);
+    } break;
   }
 
   return c3y;
@@ -887,7 +1316,7 @@ top:
           && (  (u3_gift_rest_e == gif_u->sat_e)
              || (gif_u->eve_d <= mar_u->log_u->dun_d)) )
     {
-      u3_newt_send(mar_u->out_u, gif_u->len_d, gif_u->hun_y);
+      u3_newt_send_vers(mar_u->out_u, 0x01, gif_u->len_d, gif_u->hun_y);
 
       mar_u->gif_u.ext_u = gif_u->nex_u;
       c3_free(gif_u);
@@ -945,7 +1374,7 @@ _mars_step_trace(const c3_c* dir_c)
 /* u3_mars_kick(): maybe perform a task.
 */
 c3_o
-u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
+u3_mars_kick(void* ram_u, c3_y ver_y, c3_d len_d, c3_y* hun_y)
 {
   u3_mars* mar_u = ram_u;
   c3_o ret_o = c3n;
@@ -955,21 +1384,23 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
   //  XX optimize for stateless tasks w/ peek-next
   //
   if ( u3_mars_work_e == mar_u->sat_e ) {
-    c3_d    eve_d = u3A->eve_d;
-    u3e_Phase     = u3e_pha_cue;
-    u3_weak jar   = u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
+    c3_d     eve_d = u3A->eve_d;
+    u3s_bids bid_u = {0};
+    u3e_Phase      = u3e_pha_cue;
+    u3_weak  jar   = ( 0x01 == ver_y )
+                   ? u3s_tap_xeno_bids(len_d, hun_y, &bid_u)
+                   : u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
 
     //  parse errors are fatal
     //
     u3e_Phase = u3e_pha_task;
     if (  (u3_none == jar)
-       || (c3n == _mars_work(mar_u, jar)) )
+       || (c3n == _mars_work(mar_u, jar, &bid_u)) )
     {
       fprintf(stderr, "mars: bad\r\n");
-      //  XX error cb?
-      //
       exit(1);
     }
+    c3_free(bid_u.bid_d);
 
     u3e_Phase = u3e_pha_post;
     _mars_post(mar_u);
@@ -1083,9 +1514,11 @@ _mars_show_time(u3_noun wen)
 typedef enum {
   _play_yes_e,  //  success
   _play_mem_e,  //  %meme
+  _play_fil_e,  //  %file
   _play_int_e,  //  %intr
   _play_log_e,  //  event log fail
   _play_mug_e,  //  mug mismatch
+  _play_blo_e,  //  a blob the log names is missing from the store
   _play_bad_e   //  total failure
 } _mars_play_e;
 
@@ -1098,7 +1531,8 @@ _mars_play_batch(u3_mars* mar_u,
                  c3_c**   wen_c)
 {
   u3_disk*      log_u = mar_u->log_u;
-  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, mar_u->dun_d + 1, bat_h);
+  c3_d          fir_d = mar_u->dun_d + 1;
+  u3_disk_walk* wok_u = u3_disk_walk_init(log_u, fir_d, bat_h);
   u3_fact       tac_u;
   u3_noun         dud;
   u3_weak         wen = u3_none;
@@ -1111,6 +1545,9 @@ _mars_play_batch(u3_mars* mar_u,
   while ( c3y == u3_disk_walk_live(wok_u) ) {
     if ( c3n == u3_disk_walk_step(wok_u, &tac_u) ) {
       u3_disk_walk_done(wok_u);
+      if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
+        return _play_blo_e;
+      }
       return _play_log_e;
     }
 
@@ -1126,6 +1563,15 @@ _mars_play_batch(u3_mars* mar_u,
       mar_u->sen_d = mar_u->dun_d;
       u3_disk_walk_done(wok_u);
 
+      //  mark what the batch replayed before the failure, after the
+      //  disk walk (one read txn per thread); a missing file outranks
+      //  the failure, since a retry would resume past the check
+      //
+      if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
+        u3z(dud); u3z(wen);
+        return _play_blo_e;
+      }
+
       u3_assert( c3y == u3r_safe_half(u3h(dud), &mot_m) );
 
       switch ( mot_m ) {
@@ -1133,6 +1579,12 @@ _mars_play_batch(u3_mars* mar_u,
           fprintf(stderr, "play (%" PRIu64 "): %%meme\r\n", tac_u.eve_d);
           u3z(dud); u3z(wen);
           return _play_mem_e;
+        }
+
+        case c3__file: {
+          fprintf(stderr, "play (%" PRIu64 "): %%file\r\n", tac_u.eve_d);
+          u3z(dud); u3z(wen);
+          return _play_fil_e;
         }
 
         case c3__intr: {
@@ -1162,6 +1614,15 @@ _mars_play_batch(u3_mars* mar_u,
   }
 
   u3_disk_walk_done(wok_u);
+
+  //  mark what the batch's events own, after the disk walk (one read
+  //  txn per thread).  a missing file makes the range unreproducible:
+  //  fail hard rather than continue with silent corruption
+  //
+  if ( c3n == u3_disk_blob_own(log_u, fir_d, mar_u->dun_d) ) {
+    u3z(wen);
+    return _play_blo_e;
+  }
 
   *wen_c = u3r_string(wen);
   u3z(wen);
@@ -1426,6 +1887,15 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
     }
 
     mar_u->sen_d = mar_u->dun_d = met_u.lif_h;
+
+    //  the save below keeps own_o: mark what the boot events' rows name
+    //
+    if ( c3n == u3_disk_blob_own(log_u, 1, met_u.lif_h) ) {
+      fprintf(stderr, "mars: the boot events depend on blob data that no "
+                      "longer exists\r\n");
+      exit(1);
+    }
+
     u3m_save();
   }
 
@@ -1526,11 +1996,29 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
           }
         } break;
 
+        case _play_fil_e: {
+          fprintf(stderr, "play (%" PRIu64 "): failed, out of file "
+                          "descriptors\r\n", mar_u->dun_d + 1);
+          u3m_save();
+          u3_disk_exit(log_u);
+          exit(1);
+        } break;
+
         case _play_int_e: {
           fprintf(stderr, "play (%" PRIu64 "): interrupted\r\n", mar_u->dun_d + 1);
           u3m_save();
           //  XX exit code, cb
           //
+          u3_disk_exit(log_u);
+          exit(1);
+        } break;
+
+        //  the snapshot must not move past an event whose blob is
+        //  gone: exit unsaved, and the next boot fails the same way
+        //
+        case _play_blo_e: {
+          fprintf(stderr, "play: failed: the log references blob data "
+                          "that no longer exists\r\n");
           u3_disk_exit(log_u);
           exit(1);
         } break;
@@ -1554,9 +2042,12 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   u3l_log("---------------- playback complete ----------------");
   u3m_save();
 
+  //  a roll saves the image it makes; a dry run saves nothing, so it
+  //  rolls nothing
+  //
   if (  (mar_u->dun_d == log_u->dun_d)
      && !log_u->epo_d
-     && !(u3C.wag_h & u3o_yolo) )
+     && !(u3C.wag_h & (u3o_yolo | u3o_dryrun)) )
   {
     u3_disk_roll(mar_u->log_u, mar_u->dun_d);
   }
@@ -1578,6 +2069,11 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
 
   mar_u->sen_d = mar_u->dun_d = u3A->eve_d;
   mar_u->mug_h = u3r_mug(u3A->roc);
+
+  //  ownership travels with the snapshot: the roll marked the image's
+  //  live set and wrote the same flags into the epoch's copy, and every
+  //  commit before a save marked its rows.  replay marks the rest
+  //
 
   if ( c3n == u3_disk_read_meta(mar_u->log_u->mdb_u, &(mar_u->met_u)) ) {
     fprintf(stderr, "mars: disk meta fail\r\n");
@@ -1608,11 +2104,27 @@ u3_mars_work(u3_mars* mar_u)
   u3C.sign_hold_f = _mars_sign_hold;
   u3C.sign_move_f = _mars_sign_move;
 
+  //  wire up blob delete callback (pkg/noun can't link pkg/vere)
+  //
+  u3C.blob_del_f = _mars_blob_del;
+
   //  XX do something better
   //
   if ( mar_u->log_u->dun_d > mar_u->dun_d && !(u3C.wag_h & u3o_dryrun) ) {
     u3_disk_exit(mar_u->log_u);
     exit(0);
+  }
+
+  //  boot marked ownership from the epoch's rows through the snapshot,
+  //  replay marked the events after it, and no hold outlives a restart.
+  //  so the gc may reclaim any unowned blob nothing holds, once the log
+  //  is caught up: short of that an input with no record yet would read
+  //  as an orphan.  a dry run deletes nothing
+  //
+  if (  (mar_u->dun_d == mar_u->log_u->dun_d)
+     && !(u3C.wag_h & u3o_dryrun) )
+  {
+    u3_disk_blob_gc();
   }
 
   //  send ready status message
@@ -1624,14 +2136,15 @@ u3_mars_work(u3_mars* mar_u)
     c3_y* hun_y;
     u3_noun wyn = u3_nul;
     u3_noun msg = u3nq(c3__ripe,
-                       u3nc(2, wyn),
+                       u3nc(3, wyn),
                        u3nc(u3i_chubs(2, mar_u->met_u.who_d),
                             mar_u->met_u.fak_o),
-                       u3nc(u3i_chub(mar_u->dun_d),
-                            mar_u->mug_h));
+                       u3nt(u3i_chub(mar_u->dun_d),
+                            mar_u->mug_h,
+                            u3i_chub(mar_u->log_u->epo_d)));
 
-    u3s_jam_xeno(msg, &len_d, &hun_y);
-    u3_newt_send(mar_u->out_u, len_d, hun_y);
+    u3s_ram_xeno(msg, &len_d, &hun_y);
+    u3_newt_send_vers(mar_u->out_u, 0x01, len_d, hun_y);
     u3z(msg);
   }
 
@@ -2029,7 +2542,7 @@ u3_mars_make(u3_mars* mar_u)
 *
 */
 c3_o
-u3_mars_boot(void* ram_u, c3_d len_d, c3_y* hun_y)
+u3_mars_boot(void* ram_u, c3_y ver_y, c3_d len_d, c3_y* hun_y)
 {
   u3_mars*     mar_u = ram_u;
   u3_disk*     log_u = mar_u->log_u;
@@ -2055,7 +2568,11 @@ u3_mars_boot(void* ram_u, c3_d len_d, c3_y* hun_y)
   }
 
   {
-    u3_weak jar = u3s_cue_xeno(len_d, hun_y);
+    //  pick decoder by protocol version (0x01 = ram, 0x00 = jam)
+    //
+    u3_weak jar = ( 0x01 == ver_y )
+                ? u3s_tap_xeno(len_d, hun_y)
+                : u3s_cue_xeno(len_d, hun_y);
     if (  (u3_none == jar)
        || (c3n == u3r_p(jar, c3__boot, &com)) )
     {

@@ -115,6 +115,13 @@
 #include <mach/mach.h>
 #endif
 
+#ifdef U3_OS_linux
+#include <sys/ioctl.h>
+#ifndef FICLONE
+#define FICLONE _IOW(0x94, 9, int)
+#endif
+#endif
+
 /* _ce_len:       byte length of pages
 ** _ce_len_words: word length of pages
 ** _ce_page:      byte length of a single page
@@ -1330,50 +1337,50 @@ _ce_patch_read_control(u3_ce_patch* pat_u)
   return c3y;
 }
 
-/* _ce_patch_create(): create patch files.
+/* _ce_patch_create(): create patch files in [pat_c].
 */
 static void
-_ce_patch_create(u3_ce_patch* pat_u)
+_ce_patch_create(u3_ce_patch* pat_u, const c3_c* pat_c)
 {
   c3_c ful_c[8193];
 
-  snprintf(ful_c, 8192, "%s", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
-
-  snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
-
-  snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
+  snprintf(ful_c, 8192, "%s/control.bin", pat_c);
   if ( -1 == (pat_u->ctl_i = c3_open(ful_c, O_RDWR | O_CREAT | O_EXCL, 0600)) ) {
     fprintf(stderr, "loom: patch c3_open control.bin: %s\r\n", strerror(errno));
     u3_assert(0);
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/chk/memory.bin", u3P.dir_c);
+  snprintf(ful_c, 8192, "%s/memory.bin", pat_c);
   if ( -1 == (pat_u->mem_i = c3_open(ful_c, O_RDWR | O_CREAT | O_EXCL, 0600)) ) {
     fprintf(stderr, "loom: patch c3_open memory.bin: %s\r\n", strerror(errno));
     u3_assert(0);
   }
 }
 
-/* _ce_patch_delete(): delete a patch.
+/* _ce_patch_delete(): delete the patch in [pat_c], yes if both files
+**                     are gone.
 */
-static void
-_ce_patch_delete(void)
+static c3_o
+_ce_patch_delete(const c3_c* pat_c)
 {
   c3_c ful_c[8193];
+  c3_o ret_o = c3y;
 
-  snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
-  if ( unlink(ful_c) ) {
+  snprintf(ful_c, 8192, "%s/control.bin", pat_c);
+  if ( unlink(ful_c) && (ENOENT != errno) ) {
     fprintf(stderr, "loom: failed to delete control.bin: %s\r\n",
                     strerror(errno));
+    ret_o = c3n;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/chk/memory.bin", u3P.dir_c);
-  if ( unlink(ful_c) ) {
+  snprintf(ful_c, 8192, "%s/memory.bin", pat_c);
+  if ( unlink(ful_c) && (ENOENT != errno) ) {
     fprintf(stderr, "loom: failed to remove memory.bin: %s\r\n",
                     strerror(errno));
+    ret_o = c3n;
   }
+
+  return ret_o;
 }
 
 /* _ce_patch_verify(): check patch data checksum.
@@ -1457,31 +1464,25 @@ _ce_patch_free(u3_ce_patch* pat_u)
   c3_free(pat_u);
 }
 
-/* _ce_patch_open(): open patch, if any.
+/* _ce_patch_open(): open the patch in [pat_c], if any.
 */
 static u3_ce_patch*
-_ce_patch_open(void)
+_ce_patch_open(const c3_c* pat_c)
 {
   u3_ce_patch* pat_u;
   c3_c ful_c[8193];
   c3_i ctl_i, mem_i;
 
-  snprintf(ful_c, 8192, "%s", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
-
-  snprintf(ful_c, 8192, "%s/.urb", u3P.dir_c);
-  c3_mkdir(ful_c, 0700);
-
-  snprintf(ful_c, 8192, "%s/.urb/chk/control.bin", u3P.dir_c);
+  snprintf(ful_c, 8192, "%s/control.bin", pat_c);
   if ( -1 == (ctl_i = c3_open(ful_c, O_RDWR)) ) {
     return 0;
   }
 
-  snprintf(ful_c, 8192, "%s/.urb/chk/memory.bin", u3P.dir_c);
+  snprintf(ful_c, 8192, "%s/memory.bin", pat_c);
   if ( -1 == (mem_i = c3_open(ful_c, O_RDWR)) ) {
     close(ctl_i);
 
-    _ce_patch_delete();
+    _ce_patch_delete(pat_c);
     return 0;
   }
   pat_u = c3_malloc(sizeof(u3_ce_patch));
@@ -1494,12 +1495,12 @@ _ce_patch_open(void)
     close(pat_u->mem_i);
     c3_free(pat_u);
 
-    _ce_patch_delete();
+    _ce_patch_delete(pat_c);
     return 0;
   }
   if ( c3n == _ce_patch_verify(pat_u) ) {
     _ce_patch_free(pat_u);
-    _ce_patch_delete();
+    _ce_patch_delete(pat_c);
     return 0;
   }
   return pat_u;
@@ -1588,10 +1589,10 @@ _ce_patch_save_page(u3_ce_patch* pat_u,
   return pgc_w;
 }
 
-/* _ce_patch_compose(): make and write current patch.
+/* _ce_patch_compose(): make and write current patch into [pat_c].
 */
 static u3_ce_patch*
-_ce_patch_compose(c3_w max_w)
+_ce_patch_compose(const c3_c* pat_c, c3_w max_w)
 {
   c3_w pgs_w = 0;
   c3_w off_w = u3R->rut_p >> u3a_page;
@@ -1616,7 +1617,7 @@ _ce_patch_compose(c3_w max_w)
 
     pat_u->sip_w = 0;
 
-    _ce_patch_create(pat_u);
+    _ce_patch_create(pat_u, pat_c);
     len_z = sizeof(u3e_control) + (pgs_w * sizeof(u3e_line));
     pat_u->con_u = c3_malloc(len_z);
     pat_u->con_u->ver_h = U3P_VERLAT;
@@ -1706,17 +1707,17 @@ _ce_image_resize(u3e_image* img_u, c3_w pgs_w)
   img_u->pgs_w = pgs_w;
 }
 
-/* _ce_patch_apply(): apply patch to images.
+/* _ce_patch_apply(): apply patch to [img_u].
 */
 static void
-_ce_patch_apply(u3_ce_patch* pat_u)
+_ce_patch_apply(u3_ce_patch* pat_u, u3e_image* img_u)
 {
   c3_zs ret_zs;
   c3_w     i_w;
 
   //  resize images
   //
-  _ce_image_resize(&u3P.img_u, pat_u->con_u->tot_w);
+  _ce_image_resize(img_u, pat_u->con_u->tot_w);
 
   //  seek to begining of patch
   //
@@ -1725,7 +1726,7 @@ _ce_patch_apply(u3_ce_patch* pat_u)
     u3_assert(0);
   }
 
-  c3_i fid_i = u3P.img_u.fid_i;
+  c3_i fid_i = img_u->fid_i;
 
   //  write patch pages into the appropriate image
   //
@@ -2193,20 +2194,101 @@ _ce_image_copy(u3e_image* fom_u, u3e_image* tou_u)
   return c3y;
 }
 
+/* _ce_dir_sync(): sync the directory [dir_c], so names made or
+**                 removed in it last.
+*/
+static c3_o
+_ce_dir_sync(const c3_c* dir_c)
+{
+#ifdef U3_OS_windows
+  return c3y;
+#else
+  c3_i dir_i;
+  c3_o ret_o = c3y;
+
+  if ( -1 == (dir_i = c3_open(dir_c, O_RDONLY, 0)) ) {
+    fprintf(stderr, "loom: open %s: %s\r\n", dir_c, strerror(errno));
+    return c3n;
+  }
+
+  if ( -1 == c3_sync(dir_i) ) {
+    fprintf(stderr, "loom: sync %s: %s\r\n", dir_c, strerror(errno));
+    ret_o = c3n;
+  }
+
+  close(dir_i);
+  return ret_o;
+#endif
+}
+
+/* u3e_copy(): copy the image file [src_c] to [dst_c], replacing it and
+**             syncing it.  the copy shares the source's blocks where the
+**             filesystem can clone them, and copies pages where it can't.
+*/
+c3_o
+u3e_copy(const c3_c* src_c, const c3_c* dst_c)
+{
+  u3e_image fom_u = { .nam_c = "image", .pgs_w = 0 };
+  u3e_image tou_u = { .nam_c = "image", .pgs_w = 0 };
+  c3_o      clo_o = c3n;
+  c3_o      ret_o = c3n;
+
+  if ( -1 == (fom_u.fid_i = c3_open(src_c, O_RDONLY, 0)) ) {
+    fprintf(stderr, "loom: copy: open %s: %s\r\n", src_c, strerror(errno));
+    return c3n;
+  }
+
+  if ( _ce_img_good != _ce_image_stat(&fom_u, &fom_u.pgs_w) ) {
+    fprintf(stderr, "loom: copy: bad image at %s\r\n", src_c);
+    goto done1;
+  }
+
+  if ( c3_unlink(dst_c) && (ENOENT != errno) ) {
+    fprintf(stderr, "loom: copy: unlink %s: %s\r\n", dst_c, strerror(errno));
+    goto done1;
+  }
+
+#ifdef U3_OS_osx
+  clo_o = ( 0 == clonefile(src_c, dst_c, 0) ) ? c3y : c3n;
+#endif
+
+  if ( -1 == (tou_u.fid_i = c3_open(dst_c, O_RDWR | O_CREAT, 0666)) ) {
+    fprintf(stderr, "loom: copy: open %s: %s\r\n", dst_c, strerror(errno));
+    goto done1;
+  }
+
+#ifdef U3_OS_linux
+  clo_o = ( 0 == ioctl(tou_u.fid_i, FICLONE, fom_u.fid_i) ) ? c3y : c3n;
+#endif
+
+  if (  ((c3n == clo_o) && (c3n == _ce_image_copy(&fom_u, &tou_u)))
+     || (c3n == _ce_image_sync(&tou_u)) )
+  {
+    c3_unlink(dst_c);
+    goto done2;
+  }
+
+  ret_o = c3y;
+
+done2:
+  close(tou_u.fid_i);
+done1:
+  close(fom_u.fid_i);
+  return ret_o;
+}
+
 /* u3e_backup(): copy snapshot from [pux_c] to [pax_c],
  * overwriting optionally. note that image files must
- * be named "image".
+ * be named "image".  the copy lands under a temporary
+ * name and is renamed into place, so a crash leaves
+ * either image whole.
 */
 c3_o
 u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
 {
-  //  source image file from [pux_c]
-  u3e_image nux_u = { .nam_c = "image", .pgs_w = 0 };
-
-  //  destination image file to [pax_c]
-  u3e_image nax_u = { .nam_c = "image", .pgs_w = 0 };
-
-  c3_i mod_i = O_RDWR | O_CREAT;
+  c3_c nux_c[8193];
+  c3_c nax_c[8193];
+  c3_c tmp_c[8193];
 
   if ( !pux_c || !pax_c ) {
     fprintf(stderr, "loom: image backup: bad path\r\n");
@@ -2220,36 +2302,232 @@ u3e_backup(c3_c* pux_c, c3_c* pax_c, c3_o ovw_o)
     return c3n;
   }
 
-  //  open source image files if they exist
-  //
-  c3_c nux_c[8193];
-  snprintf(nux_c, 8192, "%s/%s.bin", pux_c, nux_u.nam_c);
-  if (  (0 != access(nux_c, F_OK))
-     || (_ce_img_good != _ce_image_open(&nux_u, pux_c, O_RDWR | O_CREAT)) )
-  {
-    fprintf(stderr, "loom: couldn't open image at %s\r\n", pux_c);
-    return c3n;
-  }
+  snprintf(nux_c, sizeof(nux_c), "%s/image.bin", pux_c);
+  snprintf(nax_c, sizeof(nax_c), "%s/image.bin", pax_c);
+  snprintf(tmp_c, sizeof(tmp_c), "%s/image.tmp", pax_c);
 
-  //  open destination image files
-  c3_c nax_c[8193];
-  snprintf(nax_c, 8192, "%s/%s.bin", pax_c, nax_u.nam_c);
-  if ( -1 == (nax_u.fid_i = c3_open(nax_c, mod_i, 0666)) ) {
-    fprintf(stderr, "loom: c3_open %s: %s\r\n", nax_c, strerror(errno));
-    return c3n;
-  }
-
-  if (  (c3n == _ce_image_copy(&nux_u, &nax_u))
-     || (c3n == _ce_image_sync(&nax_u)) )
-  {
-    c3_unlink(nax_c);
+  if ( c3n == u3e_copy(nux_c, tmp_c) ) {
     fprintf(stderr, "loom: image backup failed\r\n");
     return c3n;
   }
 
-  close(nax_u.fid_i);
+  if ( c3_rename(tmp_c, nax_c) ) {
+    fprintf(stderr, "loom: image backup: rename %s: %s\r\n",
+                    nax_c, strerror(errno));
+    c3_unlink(tmp_c);
+    return c3n;
+  }
+
+  if ( c3n == _ce_dir_sync(pax_c) ) {
+    fprintf(stderr, "loom: image backup failed\r\n");
+    return c3n;
+  }
+
   fprintf(stderr, "loom: image backup complete\r\n");
   return c3y;
+}
+
+/* u3e_patch_drop(): delete the patch in [pat_c] and sync the directory,
+**                   yes if it is durably gone (or was never there).
+*/
+c3_o
+u3e_patch_drop(const c3_c* pat_c)
+{
+  if ( c3n == _ce_patch_delete(pat_c) ) {
+    return c3n;
+  }
+  return _ce_dir_sync(pat_c);
+}
+
+/* u3e_land(): land the patch a roll left in [pat_c] on the checkpoint
+**             in [chk_c], whose image the roll made as of event [eve_d].
+**
+**   the patch's presence says the checkpoint missed the roll: the roll
+**   drops it only once the checkpoint has the pages.  the checkpoint's
+**   own patch, from a save that crashed, applies first, since the roll's
+**   pages are newer.  a checkpoint past [eve_d] took the pages already:
+**   nothing saves past the roll while the patch is there.
+**
+**   no on a patch that can't be read, a checkpoint of the other word
+**   size, or one before [eve_d].  the patch is kept: it is the only
+**   record that the checkpoint is stale.
+*/
+c3_o
+u3e_land(const c3_c* pat_c, const c3_c* chk_c, c3_d eve_d)
+{
+  u3e_image    img_u = { .nam_c = "image", .pgs_w = 0 };
+  u3_ce_patch* pat_u;
+  c3_c         ful_c[8193];
+  c3_d         pam_d, hav_d;
+  c3_o         ret_o = c3n;
+
+  snprintf(ful_c, sizeof(ful_c), "%s/control.bin", pat_c);
+  if ( -1 == access(ful_c, F_OK) ) {
+    if ( ENOENT == errno ) {
+      return c3y;
+    }
+    fprintf(stderr, "loom: land: %s: %s\r\n", ful_c, strerror(errno));
+    return c3n;
+  }
+
+  fprintf(stderr, "loom: land: the checkpoint missed the roll to %" PRIc3_d
+                  "; landing its patch\r\n", eve_d);
+
+  snprintf(ful_c, sizeof(ful_c), "%s/image.bin", chk_c);
+  if ( -1 == (img_u.fid_i = c3_open(ful_c, O_RDWR, 0)) ) {
+    fprintf(stderr, "loom: land: open %s: %s\r\n", ful_c, strerror(errno));
+    return c3n;
+  }
+
+  //  the word size sits at a fixed offset; a checkpoint of the other
+  //  size can't take a patch this build reads
+  //
+  if ( sizeof(pam_d) != pread(img_u.fid_i, &pam_d, sizeof(pam_d),
+                              offsetof(u3v_home, pam_d)) )
+  {
+    fprintf(stderr, "loom: land: can't read the checkpoint's header\r\n");
+    goto done;
+  }
+  if ( (pam_d & 1) != ((8 == sizeof(c3_w)) ? 1 : 0) ) {
+    fprintf(stderr, "loom: land: the checkpoint has the other word size; "
+                    "boot it with that binary first\r\n");
+    goto done;
+  }
+
+  //  the checkpoint's own patch first
+  //
+  _ce_image_stat(&img_u, &img_u.pgs_w);
+
+  if ( 0 != (pat_u = _ce_patch_open((c3_c*)chk_c)) ) {
+    _ce_patch_apply(pat_u, &img_u);
+    _ce_patch_free(pat_u);
+
+    if (  (c3n == _ce_image_sync(&img_u))
+       || (c3n == u3e_patch_drop(chk_c)) )
+    {
+      goto done;
+    }
+  }
+
+  if ( sizeof(hav_d) != pread(img_u.fid_i, &hav_d, sizeof(hav_d),
+                              offsetof(u3v_home, arv_u)
+                              + offsetof(u3v_arvo, eve_d)) )
+  {
+    fprintf(stderr, "loom: land: can't read the checkpoint's event\r\n");
+    goto done;
+  }
+
+  if ( hav_d > eve_d ) {
+    fprintf(stderr, "loom: land: the checkpoint is at %" PRIc3_d
+                    ", past the roll; dropping the patch\r\n", hav_d);
+    ret_o = u3e_patch_drop(pat_c);
+    goto done;
+  }
+  if ( hav_d < eve_d ) {
+    fprintf(stderr, "loom: land: the checkpoint is at %" PRIc3_d
+                    ", before the roll to %" PRIc3_d "\r\n", hav_d, eve_d);
+    goto done;
+  }
+
+  //  the roll's patch, read without deleting anything
+  //
+  {
+    c3_i ctl_i, mem_i;
+
+    snprintf(ful_c, sizeof(ful_c), "%s/control.bin", pat_c);
+    if ( -1 == (ctl_i = c3_open(ful_c, O_RDONLY, 0)) ) {
+      fprintf(stderr, "loom: land: open %s: %s\r\n", ful_c, strerror(errno));
+      goto done;
+    }
+
+    snprintf(ful_c, sizeof(ful_c), "%s/memory.bin", pat_c);
+    if ( -1 == (mem_i = c3_open(ful_c, O_RDONLY, 0)) ) {
+      fprintf(stderr, "loom: land: open %s: %s\r\n", ful_c, strerror(errno));
+      close(ctl_i);
+      goto done;
+    }
+
+    pat_u = c3_malloc(sizeof(*pat_u));
+    pat_u->ctl_i = ctl_i;
+    pat_u->mem_i = mem_i;
+    pat_u->sip_w = 0;
+    pat_u->con_u = 0;
+
+    if (  (c3n == _ce_patch_read_control(pat_u))
+       || (c3n == _ce_patch_verify(pat_u)) )
+    {
+      fprintf(stderr, "loom: land: the roll's patch is unreadable\r\n");
+      _ce_patch_free(pat_u);
+      goto done;
+    }
+  }
+
+  _ce_patch_apply(pat_u, &img_u);
+  _ce_patch_free(pat_u);
+
+  if ( c3n == _ce_image_sync(&img_u) ) {
+    goto done;
+  }
+
+  ret_o = u3e_patch_drop(pat_c);
+
+done:
+  close(img_u.fid_i);
+  return ret_o;
+}
+
+/* u3e_fork(): write the pages changed since the last save, below [low_p],
+**             as a patch in [pat_c], and apply it to the image at
+**             [img_c], a copy of the checkpoint's image.
+**
+**   the loom, the checkpoint, and the dirty bits are untouched, so the
+**   next u3e_save() writes the same pages to the checkpoint.  the patch
+**   stays in [pat_c] for the caller to keep or drop.
+*/
+c3_o
+u3e_fork(const c3_c* pat_c, const c3_c* img_c, u3_post low_p)
+{
+  u3e_image    img_u = { .nam_c = "image", .pgs_w = 0 };
+  u3_ce_patch* pat_u;
+  c3_w         nor_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+  c3_o         ret_o = c3n;
+
+  //  a killed attempt may have left a patch behind
+  //
+  if ( c3n == _ce_patch_delete(pat_c) ) {
+    return c3n;
+  }
+
+  if ( -1 == (img_u.fid_i = c3_open(img_c, O_RDWR, 0)) ) {
+    fprintf(stderr, "loom: fork: open %s: %s\r\n", img_c, strerror(errno));
+    return c3n;
+  }
+
+  if ( _ce_img_good != _ce_image_stat(&img_u, &img_u.pgs_w) ) {
+    fprintf(stderr, "loom: fork: bad image at %s\r\n", img_c);
+    goto done;
+  }
+
+  if ( !(pat_u = _ce_patch_compose(pat_c, nor_w)) ) {
+    ret_o = c3y;
+    goto done;
+  }
+
+  _ce_patch_sync(pat_u);
+
+  if ( c3n == _ce_patch_verify(pat_u) ) {
+    fprintf(stderr, "loom: fork: patch failed to verify\r\n");
+    _ce_patch_free(pat_u);
+    goto done;
+  }
+
+  _ce_patch_apply(pat_u, &img_u);
+  ret_o = _ce_image_sync(&img_u);
+  _ce_patch_free(pat_u);
+
+done:
+  close(img_u.fid_i);
+  return ret_o;
 }
 
 /*
@@ -2277,10 +2555,15 @@ u3e_save(u3_post low_p, u3_post hig_p)
 {
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
+  c3_c chk_c[8193];
 
-  if ( u3C.wag_h & u3o_dryrun ) {
+  //  a loom with no image (u3e_init) has no checkpoint to update
+  //
+  if ( (u3C.wag_h & u3o_dryrun) || (-1 == u3P.img_u.fid_i) ) {
     return;
   }
+
+  snprintf(chk_c, 8193, "%s/.urb/chk", u3P.dir_c);
 
   //  XX discard hig_p and friends
   {
@@ -2290,7 +2573,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
     u3_assert( (u3P.gar_w > nop_w) && (u3P.gar_w < sop_w) );
 
-    if ( !(pat_u = _ce_patch_compose(nor_w)) ) {
+    if ( !(pat_u = _ce_patch_compose(chk_c, nor_w)) ) {
       return;
     }
   }
@@ -2324,14 +2607,14 @@ u3e_save(u3_post low_p, u3_post hig_p)
   //
   _ce_loom_unmapf();
 
-  _ce_patch_apply(pat_u);
+  _ce_patch_apply(pat_u, &u3P.img_u);
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
 
   _ce_meas_save(pat_u->con_u->pgs_w, pat_u->sip_w);
 
   _ce_patch_free(pat_u);
-  _ce_patch_delete();
+  _ce_patch_delete(chk_c);
 
 #ifdef U3_SNAPSHOT_VALIDATION
   {
@@ -2477,11 +2760,11 @@ u3e_live(c3_o nuu_o, c3_c* dir_c)
 
       /* Load any patch files; apply them to images.
       */
-      if ( 0 != (pat_u = _ce_patch_open()) ) {
-        _ce_patch_apply(pat_u);
+      if ( 0 != (pat_u = _ce_patch_open(chk_c)) ) {
+        _ce_patch_apply(pat_u, &u3P.img_u);
         u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
         _ce_patch_free(pat_u);
-        _ce_patch_delete();
+        _ce_patch_delete(chk_c);
       }
       else if ( _ce_img_size == sat_e ) {
         fprintf(stderr, "boot: image failed (size)\r\n");

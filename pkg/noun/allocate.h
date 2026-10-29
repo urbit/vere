@@ -191,6 +191,89 @@
 #     define  u3a_head_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->hed)
 #     define  u3a_tail_d(som)  (((u3a_cell_d *)u3a_to_ptr_d(som))->tel)
 
+    /* u3a_blob: loom-resident record for a blob file.
+    **
+    **   Stored in u3H->blb_p keyed by bid = (mug_h << 32) | seq_h, one
+    **   per (mug_h, seq_h).  A bob atom carries the bid in its body and
+    **   nothing points at the record: it is found by u3a_blob_get.
+    **
+    **   Two holders are counted and one is flagged:
+    **     atm_h  live bob atoms over this id: u3i_blob adds one,
+    **            _me_bob_dead takes one; ordinary noun refcount
+    **            traffic never touches it.
+    **     les_h  holds the king has on the file: mars issues them, the
+    **            king releases them (%blrl).  Memory only, zeroed at
+    **            every boot: king and mars die together.
+    **     own_o  a durable holder in the current epoch names the file:
+    **            an input committed in this epoch (_mars_fact, replay)
+    **            or the epoch's image (set at roll).  An owned file is
+    **            never deleted by refcount; it dies with the epoch's
+    **            directory at chop.  A record with own_o set and no
+    **            atom or hold is a ghost, dropped at the next roll.
+    **            Rides the snapshot: every commit before a save marks
+    **            it, and the roll writes the epoch's flags into the
+    **            epoch's image and the checkpoint.
+    **
+    **   The file is deleted iff nothing is counted and own_o is not
+    **   set.  u3a_blob_sane checks atm_h against the live atoms.
+    **
+    **   A stub is a bob with seq 0: the king mints one for a file it
+    **   has staged but mars has not installed, carrying the content mug
+    **   so equality and u3r_mug work.  Mars replaces it inside the
+    **   event.  No real blob has seq 0, and a stub touches no bank:
+    **   u3i_blob, _me_bob_dead, the sanity walk, and the ram and tap
+    **   collectors all pass it by.
+    **
+    **   Fixed widths: one layout in both builds, so a bitness migration
+    **   copies the fields.  u3a_blob_h and u3a_blob_d name the same
+    **   struct for the migration template.
+    */
+      typedef struct _u3a_blob {
+        c3_h atm_h;   //  live bob atoms
+        c3_h les_h;   //  king holds
+        c3_o own_o;   //  owned by the current epoch
+        c3_h mug_h;   //  blob mug: names the file in the epoch's store
+        c3_h seq_h;   //  blob seq
+      } u3a_blob;
+
+      typedef u3a_blob u3a_blob_h;
+      typedef u3a_blob u3a_blob_d;
+
+    /* u3a_blob_dead(): nothing holds the file: no atom, no king hold,
+    **   and not the current epoch.  The one deletion predicate; every
+    **   site that wipes a file asks this.
+    */
+      static inline c3_o
+      u3a_blob_dead(const u3a_blob* blb_u)
+      {
+        return __( !blb_u->atm_h && !blb_u->les_h && (c3n == blb_u->own_o) );
+      }
+
+    /* u3a_bid(): the blob id of (mug_h, seq_h): (mug << 32) | seq, the
+    **   key everywhere; u3a_bid_mug() and u3a_bid_seq() take it apart.
+    **   U3A_BID_FMT prints (mug, seq) as one id: mug in hex, seq in
+    **   decimal.
+    */
+      static inline c3_d
+      u3a_bid(c3_h mug_h, c3_h seq_h)
+      {
+        return ((c3_d)mug_h << 32) | (c3_d)seq_h;
+      }
+
+      static inline c3_h
+      u3a_bid_mug(c3_d bid_d)
+      {
+        return (c3_h)(bid_d >> 32);
+      }
+
+      static inline c3_h
+      u3a_bid_seq(c3_d bid_d)
+      {
+        return (c3_h)bid_d;
+      }
+
+#     define U3A_BID_FMT  "%08" PRIx32 "/%" PRIc3_h
+
 STATIC_ASSERT( (((c3_w)1) << u3a_min_log) == u3a_minimum,
                "log2 minimum allocation" );
 STATIC_ASSERT( u3a_vits <= u3a_min_log,
@@ -269,7 +352,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
+  U3_W(S) bob_p;                                /*  first blob hand                           */ \
+  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -328,13 +412,15 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) har_p;                              /*  transient                                 */ \
     U3_W(S) per_p;                              /*  persistent                                */ \
     U3_W(S) for_p;                              /*  ford                                      */ \
-    /* road struct terminator: no data after it, no */\
-    /* padding between the last real field and it   */\
-    c3_y end_y[0];                                    \
   } cax;
 
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
+
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
 
     /* u3a_flag: flags for how.fag_w.  All arena related.
     */
@@ -382,6 +468,24 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_is_cell: yes if noun [som] is cell.
     */
 #     define u3a_is_cell(som)    u3a_is_pom(som)
+
+    /* u3a_blob_flag: MSB of u3a_atom.len_w marks an indirect atom as a bob
+    **   (blob reference backed by an on-disk file rather than loom data).
+    **   A bob's len_w is the flag plus its body word count; the body is
+    **   the blob id (mug << 32 | seq) as an atom value, plain data.
+    **   In VERE64, len_w is uint64_t so we use bit 63; in 32-bit we use bit 31.
+    */
+#     define u3a_blob_flag_h  ((c3_h)0x80000000U)
+#     define u3a_blob_mask_h  ((c3_h)0x7FFFFFFFU)
+#     define u3a_blob_flag_d  ((c3_d)0x8000000000000000ULL)
+#     define u3a_blob_mask_d  ((c3_d)0x7FFFFFFFFFFFFFFFULL)
+#     ifdef VERE64
+#       define u3a_blob_flag  u3a_blob_flag_d
+#       define u3a_blob_mask  u3a_blob_mask_d
+#     else
+#       define u3a_blob_flag  u3a_blob_flag_h
+#       define u3a_blob_mask  u3a_blob_mask_h
+#     endif
 #     define u3du(som)           u3a_is_cell(som)
 
     /* u3a_h(): get head of cell [som]. Bail if [som] is not cell.
@@ -560,11 +664,6 @@ typedef struct {
       extern u3_road* u3a_Road;
 #       define u3R  u3a_Road
 
-      static_assert(
-        offsetof(u3a_road, cax.end_y) == offsetof(u3a_road, cax.for_p)
-                                       + sizeof(u3R->cax.for_p),
-      "no padding between the last real field of u3_road and end marker");
-
     /* u3_Code: memory code.
     */
 #ifdef U3_MEMORY_DEBUG
@@ -721,6 +820,40 @@ typedef struct {
             u3R->cap_p = pil_u->beg_p;
             return c3y;
           }
+
+    /* u3a_is_bob(): yes if [som] is an indirect atom flagged as a bob (blob ref).
+    **   Follows naming convention: u3a_is_cat, u3a_is_pug, u3a_is_pom, u3a_is_bob.
+    */
+    static inline c3_o
+    u3a_is_bob(u3_atom som) {
+      if ( c3n == u3a_is_pug(som) ) return c3n;
+      u3a_atom* atm_u = u3a_to_ptr(som);
+      return (atm_u->len_w & u3a_blob_flag) ? c3y : c3n;
+    }
+
+    /* u3a_bob_bid(): blob id (mug << 32 | seq) of a bob atom, from its body.
+    */
+    static inline c3_d
+    u3a_bob_bid(u3_atom som) {
+      c3_d bid_d;
+      memcpy(&bid_d, ((u3a_atom*)u3a_to_ptr(som))->buf_w, sizeof(bid_d));
+      return bid_d;
+    }
+
+    /* u3a_bob_mug(): content mug of a bob atom (= blob directory name).
+    **   Stored redundantly on the atom (mug_w) for fast u3r_mug.
+    */
+    static inline c3_h
+    u3a_bob_mug(u3_atom som) {
+      return (c3_h)((u3a_atom*)u3a_to_ptr(som))->mug_w;
+    }
+
+    /* u3a_bob_seq(): sequence number within mug bucket.
+    */
+    static inline c3_h
+    u3a_bob_seq(u3_atom som) {
+      return (c3_h)u3a_bob_bid(som);
+    }
 
   /**  Functions.
   **/
@@ -959,6 +1092,58 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_idle(u3a_road* rod_u);
+
+        /* u3a_blob_get(): look up blb_p entry by (mug_h, seq_h).
+        **   Returns NULL if no entry exists.  RETAINS.
+        */
+          u3a_blob*
+          u3a_blob_get(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_new(): allocate a fresh u3a_blob and install it in
+        **   blb_p under (mug_h, seq_h).  Caller is responsible for
+        **   ensuring no entry exists; struct is zero-initialized.
+        */
+          u3a_blob*
+          u3a_blob_new(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_drop(): remove blb_p entry for (mug_h, seq_h) and
+        **   free the underlying u3a_blob.  No-op if no entry.
+        */
+          void
+          u3a_blob_drop(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_got(): the record for (mug_h, seq_h), made if missing.
+        */
+          u3a_blob*
+          u3a_blob_got(c3_h mug_h, c3_h seq_h);
+
+        /* u3a_blob_own(): mark owned the record of each id in [bid_d],
+        **   making a ghost for one the bank lacks.
+        */
+          void
+          u3a_blob_own(const c3_d* bid_d, c3_z len_z);
+
+        /* u3a_blob_hold(): one hold per id on each blob in [bid_d].
+        **   Mars calls it for the ids it grants in a message, the king
+        **   for the ids it receives.
+        */
+          void
+          u3a_blob_hold(const c3_d* bid_d, c3_w len_w);
+
+        /* u3a_blob_live(): the live set: every blob id reachable from a
+        **   home road root, distinct, ascending, on the C heap.  Home
+        **   road only.
+        */
+          c3_d*
+          u3a_blob_live(c3_z* len_z);
+
+        /* u3a_blob_sane(): blob-bank invariant check; home road only.
+        **   Walks the noun graph from the home-road roots and verifies
+        **   atm_h == live bob atoms per entry.  Loud per-entry reports;
+        **   returns c3n on any violation.
+        */
+          c3_o
+          u3a_blob_sane(void);
 
         /* u3a_ream(): ream free-lists.
         */

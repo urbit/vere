@@ -232,17 +232,23 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     // which is always false -- it has been dead since it was written.
     //
     // reviving it as written would have been worse than leaving it dead.
-    // every private mapping in the tree is also MAP_ANON, and a
-    // pagefile-backed section cannot be copy-on-write: CreateFileMapping
-    // does not define what it does with INVALID_HANDLE_VALUE and
-    // PAGE_WRITECOPY together, so that combination must not be built.
+    // an anonymous private mapping is pagefile-backed and cannot be
+    // copy-on-write: CreateFileMapping does not define what it does with
+    // INVALID_HANDLE_VALUE and PAGE_WRITECOPY together, so that
+    // combination must not be built.
     //
-    // private *file* mappings are refused outright. the loom is the only
+    // a *writable* private file mapping is refused. the loom is the only
     // thing that wants one, and it maps its own in
     // pkg/noun/platform/windows/wloom.c, where the view is created
     // write-copy and then protected down to PAGE_READONLY so that stores
     // fault -- which this interface has no way to express.
-    if (!(flags & (MAP_SHARED | MAP_ANON)))
+    //
+    // a read-only private file mapping is served, because there is
+    // nothing to keep private: with no store possible, it is
+    // observationally identical to a read-only shared mapping. the blob
+    // store maps every blob exactly that way (pkg/noun/blob.c), and
+    // refusing it left the whole subsystem dead on windows.
+    if (!(flags & (MAP_SHARED | MAP_ANON)) && (prot != PROT_READ))
     {
         errno = ENOTSUP;
         return MAP_FAILED;
@@ -647,4 +653,65 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
   }
 
   return (ssize_t)len;
+}
+
+//  mkdtemp(): create a uniquely-named directory from a template.
+//
+//    [tpl_c] must end in exactly six 'X' characters, which are replaced
+//    in place.  returns [tpl_c] on success, 0 on failure with errno set.
+//
+//    NB: posix creates the directory 0700.  windows has no such mode
+//    argument, so the directory inherits the parent's acl.  callers that
+//    need privacy must not rely on this, but tests do not.
+//
+char *mkdtemp(char *tpl_c)
+{
+  static const char cha_c[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+  static unsigned   cou_u   = 0;
+
+  size_t len_i = strlen(tpl_c);
+
+  if ( (6 > len_i) || (0 != strcmp(tpl_c + (len_i - 6), "XXXXXX")) ) {
+    errno = EINVAL;
+    return 0;
+  }
+
+  char *suf_c = tpl_c + (len_i - 6);
+
+  //  seed from pid, clock, address and a per-call counter, so that
+  //  separate processes and repeated calls in one process diverge.
+  //
+  unsigned long long sed_d = ((unsigned long long)GetCurrentProcessId() << 32)
+                           ^  (unsigned long long)GetTickCount64()
+                           ^  (unsigned long long)(uintptr_t)tpl_c
+                           ^  (unsigned long long)(cou_u++)
+                              * 0x9e3779b97f4a7c15ULL;
+
+  //  36^6 (2176782336) fits in 32 bits, so one mixed word names a candidate.
+  //
+  for ( int try_i = 0; try_i < 256; try_i++ ) {
+    unsigned long long mix_d = (sed_d += 0x9e3779b97f4a7c15ULL);
+
+    mix_d = (mix_d ^ (mix_d >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    mix_d = (mix_d ^ (mix_d >> 27)) * 0x94d049bb133111ebULL;
+    mix_d =  mix_d ^ (mix_d >> 31);
+
+    for ( int i_i = 0; i_i < 6; i_i++ ) {
+      suf_c[i_i] = cha_c[mix_d % 36];
+      mix_d /= 36;
+    }
+
+    //  NB: compat.h rewrites mkdir(a, b) to mkdir(a); the mode is
+    //  dropped, so pass the posix one and let the macro discard it.
+    //
+    if ( 0 == mkdir(tpl_c, 0700) ) {
+      return tpl_c;
+    }
+    else if ( EEXIST != errno ) {
+      return 0;
+    }
+  }
+
+  errno = EEXIST;
+  return 0;
 }

@@ -22,5 +22,6 @@
 #include "trace.h"
 #include "urth.h"
 #include "xtract.h"
+#include "blob.h"
 
 #endif /* ifndef U3_NOUN_H */

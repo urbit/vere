@@ -476,6 +476,7 @@ fn buildBinary(
     if (t.os.tag == .windows) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_windows=1",
+            "-D_FILE_OFFSET_BITS=64", // 64-bit off_t, stat, ftruncate
             "-DWIN32_LEAN_AND_MEAN",
             "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
             "-DO_CLOEXEC=0",
@@ -760,6 +761,7 @@ fn buildBinary(
             libuv.artifact("libuv"),
             lmdb.artifact("lmdb"),
             natpmp.artifact("natpmp"),
+            urcrypt.artifact("urcrypt"),
             zlib.artifact("z"),
         };
         const tests = [_]struct {
@@ -857,6 +859,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "blob-test",
+                .file = "pkg/vere/blob_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "vere-noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
@@ -926,7 +933,14 @@ fn buildBinary(
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
-            test_exe.stack_size = 0;
+            //  as the binary: a zero reserve leaves windows a minimal
+            //  stack, which the roll's frames outgrow
+            //
+            if (t.os.tag == .windows) {
+                test_exe.stack_size = 67108864;
+            } else {
+                test_exe.stack_size = 0;
+            }
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);

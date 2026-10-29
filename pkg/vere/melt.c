@@ -194,6 +194,9 @@ u3_meld_all(FILE *fil_u, c3_w opt_w)
 
   u3e_Phase = u3e_pha_pack;
 
+  //  NB: u3m_pack runs the deep blob-bank invariant check
+  //  (u3a_blob_sane) on its way out
+  //
   (void)u3_melt_all(fil_u, opt_w);
   (void)u3m_pack();
 

@@ -217,8 +217,10 @@ pub fn build(b: *std.Build) !void {
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
-    if (t.os.tag == .windows)
+    if (t.os.tag == .windows) {
         pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
+        pkg_noun.installHeader(b.path("platform/windows/setjmp.h"), "setjmp.h");
+    }
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
@@ -367,6 +369,7 @@ const c_source_files = [_][]const u8{
     "jets/e/fynd_ob.c",
     "jets/e/hmac.c",
     "jets/e/jam.c",
+    "jets/e/jam_shax.c",
     "jets/e/json_de.c",
     "jets/e/json_en.c",
     "jets/e/keccak.c",
@@ -430,6 +433,7 @@ const c_source_files = [_][]const u8{
     "manage.c",
     "migrate.c",
     "palloc.c",
+    "blob.c",
     "nock.c",
     "options.c",
     "retrieve.c",
@@ -458,6 +462,7 @@ const install_headers = [_][]const u8{
     "log.h",
     "manage.h",
     "nock.h",
+    "blob.h",
     "noun.h",
     "options.h",
     "retrieve.h",
