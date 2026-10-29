@@ -148,13 +148,16 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       **
       **   Runs [fun_f] on a fresh road under the internal signal regime.
       **   Produces [0 pro] on success, the bail's error ball, or
-      **   [3 sig tax] for a signal-driven unwind.  Home road only.
+      **   [3 sig tax] for a signal-driven unwind.  On success, [hom_f]
+      **   (if any) runs on return to the home road, before the product
+      **   is taken (see u3m_soft_with()).  Home road only.
       */
         u3_noun
         u3m_soft_top(c3_w    mil_w,
                      c3_w    pad_w,
                      u3_funk fun_f,
-                     u3_noun   arg);
+                     u3_noun   arg,
+                     void    (*hom_f)(void));
 
       /* u3m_soft(): system soft wrapper.  unifies unix and nock errors.
       **

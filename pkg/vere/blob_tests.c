@@ -838,7 +838,7 @@ _test_meld(void)
     _check( 2 == blb_u->atm_h, "setup atm_h %" PRIc3_h " != 2", blb_u->atm_h );
   }
 
-  (void)u3_meld_all(0, c3n, c3n);
+  (void)u3_meld_all(0, 0);
 
   //  the duplicates must be unified (one atom box), the freed copy's
   //  cardinality decremented, the bank entry and log ref intact, and
@@ -1164,7 +1164,7 @@ static void
 _test_hand_bail(void)
 {
   _hand_unwind_setup("hand bail");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0, 0));
   _hand_unwind_check();
 }
 
@@ -1174,7 +1174,7 @@ static void
 _test_hand_signal(void)
 {
   _hand_unwind_setup("hand signal");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_signal_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_signal_cb, 0, 0));
   _hand_unwind_check();
 }
 
@@ -1184,7 +1184,7 @@ static void
 _test_hand_leak(void)
 {
   _hand_unwind_setup("hand leak");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_leak_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_leak_cb, 0, 0));
   _hand_unwind_check();
 }
 
@@ -1198,7 +1198,7 @@ _test_hand_outer(void)
   u3b_hand* han_u = u3b_open(_tmp_bob, _han_mug_h, _han_seq_h);
   _check( han_u, "home open failed" );
 
-  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0, 0));
 
   //  the inner road opened its own hand on the blob; only that went
   //
@@ -1254,7 +1254,7 @@ _test_hand_keep(void)
     _hand_write_raw(0x1234, i_w, i_w);
   }
 
-  u3z(u3m_soft_top(0, 1 << 12, _hand_keep_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_keep_cb, 0, 0));
 
   _pier_done();
 }
@@ -1360,7 +1360,7 @@ _test_hand_alarm(void)
 {
   _hand_unwind_setup("hand alarm");
 
-  u3_noun gon = u3m_soft_top(20, 1 << 12, _hand_alarm_cb, 0);
+  u3_noun gon = u3m_soft_top(20, 1 << 12, _hand_alarm_cb, 0, 0);
   _check( c3__alrm == _hand_mote(gon), "no %%alrm unwind" );
   u3z(gon);
 
@@ -1786,7 +1786,7 @@ _test_hand_intr(void)
 {
   _hand_unwind_setup("hand intr");
 
-  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_cb, 0);
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_cb, 0, 0);
   _check( c3__intr == _hand_mote(gon), "no %%intr unwind" );
   u3z(gon);
 
@@ -1803,7 +1803,7 @@ _test_hand_intr_crit(void)
   _hand_unwind_setup("hand intr crit");
   _han_hit_w = 0;
 
-  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_crit_cb, 0);
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_intr_crit_cb, 0, 0);
   _check( (c3__intr == _hand_mote(gon)) && (1 == _han_hit_w),
           "hit %" PRIc3_w ", expected the unwind at leave", _han_hit_w );
   u3z(gon);
@@ -1865,7 +1865,7 @@ _test_hand_cue(void)
           "save failed" );
   _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
 
-  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_cue_cb, 0);
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_cue_cb, 0, 0);
   _check( c3y == _hand_unwound(gon), "garbage cued" );
   u3z(gon);
 
@@ -1964,7 +1964,7 @@ _test_hand_file(void)
   new_u.rlim_cur = 24;
   _check( 0 == setrlimit(RLIMIT_NOFILE, &new_u), "setrlimit failed" );
 
-  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_file_cb, 0);
+  u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_file_cb, 0, 0);
 
   setrlimit(RLIMIT_NOFILE, &old_u);
 
@@ -2144,7 +2144,7 @@ _hand_gone_fib_cb(u3_noun arg)
 static void
 _hand_gone_expect(const c3_c* nam_c, u3_funk fun_f)
 {
-  u3_noun gon = u3m_soft_top(0, 1 << 12, fun_f, 0);
+  u3_noun gon = u3m_soft_top(0, 1 << 12, fun_f, 0, 0);
   _check( c3__fail == _hand_mote(gon), "%s did not bail %%fail", nam_c );
   u3z(gon);
   _check( !u3b_hands(), "%s left residue", nam_c );
@@ -2300,7 +2300,7 @@ _test_hand_grab(void)
   pid_t pid_i = fork();
   _check( -1 != pid_i, "fork: %s", strerror(errno) );
   if ( 0 == pid_i ) {
-    u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_grab_cb, 0);
+    u3_noun gon = u3m_soft_top(0, 1 << 12, _hand_grab_cb, 0, 0);
     _exit( (c3y == _hand_unwound(gon)) ? 2 : 0 );
   }
 
@@ -2460,7 +2460,7 @@ static void
 _test_hand_share(void)
 {
   _hand_unwind_setup("hand share");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_share_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_share_cb, 0, 0));
   _hand_unwind_check();
 }
 
@@ -2498,7 +2498,7 @@ static void
 _test_hand_reuse(void)
 {
   _hand_unwind_setup("hand reuse");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_reuse_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_reuse_cb, 0, 0));
   _hand_unwind_check();
 }
 
@@ -2538,7 +2538,7 @@ static void
 _test_hand_deep(void)
 {
   _hand_unwind_setup("hand deep");
-  u3z(u3m_soft_top(0, 1 << 12, _hand_deep_cb, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_deep_cb, 0, 0));
   _hand_unwind_check();
 }
 
