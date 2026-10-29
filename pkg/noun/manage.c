@@ -2692,6 +2692,10 @@ u3m_fork(const c3_c* pat_c, const c3_c* img_c)
 
   u3_assert(u3R == &u3H->rod_u);
 
+  //  as u3m_save() does, so the epoch's image and the checkpoint agree
+  //
+  u3m_dedup_hint();
+
   ret_o = u3e_fork(pat_c, img_c, low_p);
 
   u3a_dash();
