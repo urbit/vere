@@ -8,6 +8,7 @@
 #include "vere.h"
 #include "mars.h"
 #include "ur/ur.h"
+#include "urcrypt.h"
 
 #include "c3/tmpdir.h"
 
@@ -2184,8 +2185,8 @@ _test_hand_gone(void)
 #if !defined(VERE64) && !defined(U3_OS_windows)
 /* _test_jam_wide(): a bob of 2^32 bits or more jams through xeno,
 **   whose stream counts in chubs: the jam is an atom tag, the length,
-**   and the bits, all zero but the last.  the file is sparse: 512 MiB
-**   of hole and a last byte.
+**   and the bits, all zero but the last; jam-shax hashes those bytes.
+**   the file is sparse: 512 MiB of hole and a last byte.
 */
 static void
 _test_jam_wide(void)
@@ -2247,6 +2248,18 @@ _test_jam_wide(void)
       }
     }
     _check( c3y == zer_o, "a hole bit is set" );
+  }
+
+  //  jam-shax hashes the same encoding, a chub-long mat prefix included
+  //
+  {
+    c3_y    wan_y[32], hav_y[32];
+    u3_atom has = u3qe_jam_shax(_han_bob);
+
+    urcrypt_shay(byt_y, (size_t)len_d, wan_y);
+    u3r_bytes(0, 32, hav_y, has);
+    _check( 0 == memcmp(wan_y, hav_y, 32), "jam-shax is not shax of the jam" );
+    u3z(has);
   }
   c3_free(byt_y);
 

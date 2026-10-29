@@ -761,6 +761,7 @@ fn buildBinary(
             libuv.artifact("libuv"),
             lmdb.artifact("lmdb"),
             natpmp.artifact("natpmp"),
+            urcrypt.artifact("urcrypt"),
             zlib.artifact("z"),
         };
         const tests = [_]struct {
