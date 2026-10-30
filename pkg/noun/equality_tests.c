@@ -189,17 +189,31 @@ _test_dedup(void)
   u3z(r);
   u3m_love(0);
 
-  //  an inner road copies a senior cell with a non-canonical child
+  //  an inner road leaves a senior cell with a non-canonical child as
+  //  it is, rather than copying it
   //
   e = u3nc(u3nc(2, 3), 8);
   u3m_hate(0);
   r = u3m_dedup_eager(u3k(e));
-  if ( (r == e) || (u3h(r) != t) || (u3h(e) == t) ) {
-    fprintf(stderr, "test: dedup: senior cell not copied\r\n");
+  if ( (r != e) || (u3h(e) == t) ) {
+    fprintf(stderr, "test: dedup: senior cell copied or rewritten\r\n");
     ret_i = 0;
   }
   u3z(r);
   u3m_love(0);
+
+  //  but canonicalizes a junior cell's children, as on the home road
+  //
+  u3m_hate(0);
+  e = u3nc(u3nc(2, 3), 8);
+  r = u3m_dedup_eager(u3k(e));
+  if ( (r != e) || (u3h(e) != t) ) {
+    fprintf(stderr, "test: dedup: junior child not repointed\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(e);
+  u3m_love(0);
+  e = 0;
 
   u3z(t); u3z(b); u3z(c); u3z(d); u3z(s); u3z(e);
 
@@ -344,28 +358,52 @@ _dag(c3_w dep_w)
   return x;
 }
 
+/* _dag_on(): [x_n x_n] for x_0 = [p q], n deep: 2^n leaves, n+1 cells.
+*/
+static u3_noun
+_dag_on(c3_w dep_w, u3_noun p, u3_noun q)
+{
+  u3_noun x = u3nc(p, q);
+  for ( c3_w i_w = 0; i_w < dep_w; i_w++ ) {
+    x = u3nc(u3k(x), x);
+  }
+  return x;
+}
+
+/* _us_since(): microseconds since [bef_u].
+*/
+static c3_d
+_us_since(struct timespec* bef_u)
+{
+  struct timespec aft_u;
+  clock_gettime(CLOCK_MONOTONIC, &aft_u);
+  return (c3_d)(aft_u.tv_sec - bef_u->tv_sec) * 1000000
+       + (aft_u.tv_nsec - bef_u->tv_nsec) / 1000;
+}
+
 /* _test_dedup_dag(): deduping a shared noun on an inner road takes time
-**                    in its distinct cells, not its leaves, even when the
-**                    home road already holds an equal noun (whose senior
-**                    copy can't be rewritten).
+**                    in its distinct cells, not its leaves (2^26 of them:
+**                    a walk of them takes seconds). junior cells are
+**                    canonicalized, each once; senior cells that aren't
+**                    members are left as they are.
 */
 static c3_i
 _test_dedup_dag(void)
 {
   c3_i ret_i = 1;
 
-  //  an equal member exists for the whole noun, or for a part of it
+  //  a junior noun, with an equal member for the whole of it, or a part
   //
   for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
-    struct timespec bef_u, aft_u;
+    struct timespec bef_u;
     u3_noun can, fre, r;
     c3_d    mic_d;
 
     can = u3m_dedup_eager(_dag(i_w ? 13 : 26));
-    fre = _dag(26);
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
+    fre = _dag(26);
     r = u3m_dedup_eager(u3k(fre));
     if ( !i_w && (r != can) ) {
       fprintf(stderr, "test: dedup dag: member not found\r\n");
@@ -375,102 +413,81 @@ _test_dedup_dag(void)
       fprintf(stderr, "test: dedup dag: changed the value\r\n");
       ret_i = 0;
     }
-    u3z(r);
+    u3z(r); u3z(fre);
     u3m_love(0);
-    clock_gettime(CLOCK_MONOTONIC, &aft_u);
 
-    //  2^26 leaves: a walk of them takes seconds
-    //
-    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
-          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
-    if ( mic_d > 1000000 ) {
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
       fprintf(stderr, "test: dedup dag: %" PRIu64 " us\r\n", mic_d);
       ret_i = 0;
     }
-
-    u3z(can); u3z(fre);
-  }
-
-  //  a shared noun on an intermediate road is unified in place
-  //
-  {
-    struct timespec bef_u, aft_u;
-    u3_noun can, fre, r;
-    c3_d    mic_d;
-
-    can = u3m_dedup_eager(_dag(26));
-    u3m_hate(0);
-    fre = _dag(26);
-
-    clock_gettime(CLOCK_MONOTONIC, &bef_u);
-    u3m_hate(0);
-    r = u3m_dedup_eager(u3k(fre));
-    if ( r != can ) {
-      fprintf(stderr, "test: dedup dag: middle member not found\r\n");
-      ret_i = 0;
-    }
-    u3z(r);
-    u3m_love(0);
-    clock_gettime(CLOCK_MONOTONIC, &aft_u);
-
-    if ( u3h(fre) != u3h(can) ) {
-      fprintf(stderr, "test: dedup dag: middle not unified\r\n");
-      ret_i = 0;
-    }
-    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
-          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
-    if ( mic_d > 1000000 ) {
-      fprintf(stderr, "test: dedup dag: middle %" PRIu64 " us\r\n", mic_d);
-      ret_i = 0;
-    }
-    u3z(fre);
-    u3m_love(0);
     u3z(can);
   }
 
-  //  but not while debugging memory (as u3a_wed()), where the old
-  //  children would be reported as leaks when the road is swept
+  //  a junior noun with no equal member: the visited set keeps it
+  //  linear, at full size and when it must evict
   //
-  {
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    struct timespec bef_u;
+    u3_noun fre, r;
+    c3_d    mic_d;
+
+    if ( i_w ) u3m_dedup_visit_size(4);
+
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    fre = _dag_on(26, 9, 10);
+    r = u3m_dedup_eager(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: dedup dag: fresh junior noun replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: dedup dag: unvisited %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+  }
+  u3m_dedup_visit_size(22);
+
+  //  a home noun that isn't a member, or an intermediate road's, is left
+  //  as it is, though an equal member exists: the exit to home
+  //  canonicalizes what's promoted. likewise while debugging memory,
+  //  where a sweep of the intermediate road finds no leaks
+  //
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
     c3_h    wag_h = u3C.wag_h;
-    struct timespec bef_u, aft_u;
+    struct timespec bef_u;
     u3_noun can, fre, r;
     c3_d    mic_d;
 
     can = u3m_dedup_eager(_dag(26));
-    u3m_hate(0);
+    if ( i_w ) u3m_hate(0);
     fre = _dag(26);
 
-    u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
+    if ( 2 == i_w ) u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
     r = u3m_dedup_eager(u3k(fre));
-    if ( r != can ) {
-      fprintf(stderr, "test: dedup dag: debug member not found\r\n");
+    if ( (r != fre) || (u3h(fre) == u3h(can)) ) {
+      fprintf(stderr, "test: dedup dag: senior noun %u rewritten\r\n", (unsigned)i_w);
       ret_i = 0;
     }
     u3z(r);
     u3m_love(0);
-    clock_gettime(CLOCK_MONOTONIC, &aft_u);
 
-    if ( u3h(fre) == u3h(can) ) {
-      fprintf(stderr, "test: dedup dag: debug unified in place\r\n");
-      ret_i = 0;
-    }
-    mic_d = (c3_d)(aft_u.tv_sec - bef_u.tv_sec) * 1000000
-          + (aft_u.tv_nsec - bef_u.tv_nsec) / 1000;
-    if ( mic_d > 1000000 ) {
-      fprintf(stderr, "test: dedup dag: debug %" PRIu64 " us\r\n", mic_d);
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: dedup dag: senior %u %" PRIu64 " us\r\n", (unsigned)i_w, mic_d);
       ret_i = 0;
     }
 
-    //  the road's sweep finds no leaks (and would abort if it did)
-    //
-    u3m_grab(fre);
-    u3C.wag_h = wag_h;
-
+    if ( 2 == i_w ) {
+      u3m_grab(fre);
+      u3C.wag_h = wag_h;
+    }
     u3z(fre);
-    u3m_love(0);
+    if ( i_w ) u3m_love(0);
     u3z(can);
   }
 

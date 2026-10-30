@@ -249,6 +249,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_dedup_eager(u3_noun som);
 
+      /* u3m_dedup_visit_size(): resize u3m_dedup_eager()'s visited set to
+      **                         2^log_y entries (tests). home road only.
+      */
+        void
+        u3m_dedup_visit_size(c3_y log_y);
+
       /* u3m_dedup(): u3m_dedup_eager() on the home road; inner roads
       **              leave the noun to the exit home.
       */

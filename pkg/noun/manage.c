@@ -159,6 +159,8 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
+static void _cm_vis_leap(void);
+
 /* deferred home-road unification: phase A's released values.
 */
 static struct {
@@ -1228,6 +1230,7 @@ u3m_leap(c3_w pad_w)
 
   if ( &(u3H->rod_u) == u3R ) {
     u3r_sing_leap();
+    _cm_vis_leap();
   }
 
   //  push a new road struct onto the stack
@@ -4164,6 +4167,96 @@ _dedup_swap(u3_noun* som, u3_noun can)
   }
 }
 
+/* the visited set: junior cells that u3m_dedup_eager() has already
+**   canonicalized during this excursion from the home road, so that a
+**   shared junior cell is walked once, not once per path.
+**
+**   weak, off the loom, keyed by pointer, and cleared by a new epoch at
+**   each excursion. a hit returns the cell itself, so an entry for a
+**   freed and reused address can only miss sharing, never change a
+**   value: no counts, and no cleanup at exits or bails. a full probe
+**   window evicts an entry. allocated on the home road.
+*/
+#define _CM_VIS_LOG  22
+
+static struct {
+  struct { u3_noun som; c3_w epo_w; }* tab_u;
+  c3_w msk_w;
+  c3_w epo_w;
+  c3_w evk_w;   //  evictions, to rotate through the probe window
+} _cm_vis;
+
+/* u3m_dedup_visit_size(): (re)allocate the visited set at 2^[log_y]
+**                         entries (at least 16). home road only.
+*/
+void
+u3m_dedup_visit_size(c3_y log_y)
+{
+  c3_w len_w = 1U << c3_max(log_y, 4);
+
+  if ( _cm_vis.tab_u && ((_cm_vis.msk_w + 1) == len_w) ) return;
+
+  c3_free(_cm_vis.tab_u);
+  _cm_vis.tab_u = c3_calloc(sizeof(*_cm_vis.tab_u) * len_w);
+  _cm_vis.msk_w = len_w - 1;
+  _cm_vis.epo_w = 1;
+}
+
+/* _cm_vis_leap(): a new excursion from the home road. home road only.
+*/
+static void
+_cm_vis_leap(void)
+{
+  if ( !_cm_vis.tab_u ) {
+    u3m_dedup_visit_size(_CM_VIS_LOG);
+  }
+  if ( 0 == ++_cm_vis.epo_w ) {
+    memset(_cm_vis.tab_u, 0, sizeof(*_cm_vis.tab_u) * (_cm_vis.msk_w + 1));
+    _cm_vis.epo_w = 1;
+  }
+}
+
+static inline c3_w
+_cm_vis_idx(u3_noun som)
+{
+  return (c3_w)(((c3_d)som * 0x9e3779b97f4a7c15ULL) >> 40) & _cm_vis.msk_w;
+}
+
+/* _cm_vis_has(): junior cell [som] was canonicalized this excursion.
+*/
+static c3_t
+_cm_vis_has(u3_noun som)
+{
+  c3_w i_w = _cm_vis_idx(som), j_w;
+
+  for ( j_w = 0; j_w < 16; j_w++ ) {
+    typeof(_cm_vis.tab_u) sot_u = &_cm_vis.tab_u[(i_w + j_w) & _cm_vis.msk_w];
+
+    if ( sot_u->epo_w != _cm_vis.epo_w ) return 0;
+    if ( sot_u->som == som ) return 1;
+  }
+  return 0;
+}
+
+/* _cm_vis_put(): note junior cell [som] as canonicalized.
+*/
+static void
+_cm_vis_put(u3_noun som)
+{
+  c3_w i_w = _cm_vis_idx(som), j_w;
+
+  for ( j_w = 0; j_w < 16; j_w++ ) {
+    typeof(_cm_vis.tab_u) sot_u = &_cm_vis.tab_u[(i_w + j_w) & _cm_vis.msk_w];
+
+    if ( sot_u->epo_w != _cm_vis.epo_w ) {
+      sot_u->som = som; sot_u->epo_w = _cm_vis.epo_w;
+      return;
+    }
+    if ( sot_u->som == som ) return;
+  }
+  _cm_vis.tab_u[(i_w + (_cm_vis.evk_w++ & 15)) & _cm_vis.msk_w].som = som;
+}
+
 /* _dedup_find(): canonical equal of [som] in any road's set, or none.
 **                a cell is found in the home-road set only once its
 **                children are canonical. RETAIN, result PRODUCED.
@@ -4199,7 +4292,8 @@ _dedup_find(u3_noun som)
   return u3_none;
 }
 
-/* _dedup_put(): insert canonical [som] into the current road's set.
+/* _dedup_put(): [som] is canonical: on the home road, insert it into the
+**               set; on an inner road, note a cell as visited.
 **               TRANSFER, result PRODUCED.
 */
 static u3_noun
@@ -4215,7 +4309,9 @@ _dedup_put(u3_noun som)
     return can;
   }
   else {
-    u3h_put(u3R->dup_p, som, u3k(som));
+    if ( c3y == u3a_is_cell(som) ) {
+      _cm_vis_put(som);
+    }
     return som;
   }
 }
@@ -4388,6 +4484,14 @@ _dedup_next(u3a_pile* pil_u, _dedup_memo* mem_u, u3_noun som)
       }
     }
 
+    //  a junior cell already canonicalized
+    //
+    if (  (&(u3H->rod_u) != u3R) && (c3y == u3a_is_cell(som))
+       && (c3n == u3a_is_senior(u3R, som)) && _cm_vis_has(som) )
+    {
+      return som;
+    }
+
     {
       u3_weak got = _dedup_find(som);
       if ( u3_none != got ) {
@@ -4400,6 +4504,13 @@ _dedup_next(u3a_pile* pil_u, _dedup_memo* mem_u, u3_noun som)
       return _dedup_put(som);
     }
 
+    //  a senior cell that isn't a member is left as it is: the exit to
+    //  home canonicalizes it in place, if a promoted entry holds it
+    //
+    if ( c3y == u3a_is_senior(u3R, som) ) {
+      return som;
+    }
+
     _frame_dedup* fam_u = u3a_push(pil_u);
     fam_u->new_t = false;
     fam_u->cel = som;
@@ -4408,8 +4519,11 @@ _dedup_next(u3a_pile* pil_u, _dedup_memo* mem_u, u3_noun som)
   }
 }
 
-/* u3m_dedup_eager(): deduplicate [som] against every road's set,
-**                    inserting it into the current road's. TRANSFER,
+/* u3m_dedup_eager(): deduplicate [som] against every road's set. on the
+**                    home road, canonicalize it into the home set. on
+**                    an inner road, canonicalize its junior cells, leave
+**                    senior cells that aren't members as they are, and
+**                    insert the result into the road's set. TRANSFER,
 **                    result PRODUCED.
 */
 u3_noun
@@ -4500,6 +4614,16 @@ u3m_dedup_eager(u3_noun som)
   }
   _dedup_memo_free(&mem_u);
   _cm_dup_u.pat_y = pat_y;
+
+  //  on an inner road, the result goes into the road's set: found by
+  //  value from this road and those below, and taken at exit
+  //
+  if (  (&(u3H->rod_u) != u3R)
+     && (c3n == u3a_is_cat(new)) && !u3a_hcon_has(new)
+     && (c3n == u3a_is_senior(u3R, new)) )
+  {
+    u3h_put(u3R->dup_p, new, u3k(new));
+  }
   return new;
 }
 
