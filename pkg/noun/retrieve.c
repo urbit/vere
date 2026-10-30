@@ -303,6 +303,127 @@ _cr_sing_atom(u3_atom a, u3_noun b)
   return c3y;
 }
 
+/* deferred home-road unification: equal home values that unification
+**   on an inner road couldn't merge, held by two slots in home memory.
+**   recorded once per slot pair per excursion, and applied at the exit
+**   to home (see _cm_dh_apply()). off the loom, allocated on the home
+**   road; an entry is written, then published by bumping the length.
+*/
+#define _CR_DH_MAX  (1U << 19)
+#define _CR_DH_LOG  20
+
+static struct {
+  u3r_dh_entry* ent_u;   //  entries
+  c3_w          len_w;   //  published
+  struct { u3_noun* sa; u3_noun* sb; c3_w epo_w; }* tab_u;
+  c3_w          epo_w;
+} _cr_dh;
+
+/* _cr_dh_leap(): a new excursion: allocate, and drop any entries a
+**   bailed excursion left. home road only.
+*/
+static void
+_cr_dh_leap(void)
+{
+  if ( !_cr_dh.ent_u ) {
+    _cr_dh.ent_u = c3_malloc(sizeof(u3r_dh_entry) * _CR_DH_MAX);
+    _cr_dh.tab_u = c3_calloc(sizeof(*_cr_dh.tab_u) << _CR_DH_LOG);
+  }
+  _cr_dh.len_w = 0;
+  if ( 0 == ++_cr_dh.epo_w ) {
+    memset(_cr_dh.tab_u, 0, sizeof(*_cr_dh.tab_u) << _CR_DH_LOG);
+    _cr_dh.epo_w = 1;
+  }
+}
+
+/* u3r_dh_take(): this excursion's entries; resets. home road only.
+*/
+u3r_dh_entry*
+u3r_dh_take(c3_w* len_w)
+{
+  *len_w = _cr_dh.len_w;
+  _cr_dh.len_w = 0;
+  return _cr_dh.ent_u;
+}
+
+/* _cr_home_slot(): [sot] is in the home road's heap. during an excursion
+**   the inner roads are carved from the home road's free space, between
+**   its hat and cap, so the heap is bounded by the hat, not the cap.
+*/
+static inline c3_t
+_cr_home_slot(u3_noun* sot)
+{
+  u3a_road* hom_u = &(u3H->rod_u);
+  c3_d      off_d = (c3_d)u3a_outa(sot);
+
+  return ( c3y == u3a_is_north(hom_u) )
+         ? ((off_d >= hom_u->rut_p) && (off_d < hom_u->hat_p))
+         : ((off_d >= hom_u->hat_p) && (off_d < hom_u->rut_p));
+}
+
+/* _cr_dh_push(): defer pointing home slots [sa] and [sb], held by [pa]
+**   and [pb], at each other's values [va] and [vb]. [sa] 0: one-sided,
+**   point [sb] at [va].
+*/
+static void
+_cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
+            u3_noun* sb, u3_noun pb, u3_noun vb)
+{
+  if ( _cr_dh.len_w >= _CR_DH_MAX ) return;
+  {
+    u3r_dh_entry* ent_u = &_cr_dh.ent_u[_cr_dh.len_w];
+    ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
+    ent_u->sb = sb; ent_u->pb = pb; ent_u->vb = vb;
+    _cr_dh.len_w++;
+  }
+}
+
+/* _cr_dh_seen(): slot pair [sa sb] was noted this excursion (or the
+**   table is full); notes it.
+*/
+static c3_t
+_cr_dh_seen(u3_noun* sa, u3_noun* sb)
+{
+  c3_w msk_w = (1U << _CR_DH_LOG) - 1;
+  c3_w i_w   = (c3_w)((((c3_d)(c3_p)sa * 0x9e3779b97f4a7c15ULL)
+                     ^ ((c3_d)(c3_p)sb * 0xc2b2ae3d27d4eb4fULL)) >> 40) & msk_w;
+  c3_w j_w;
+
+  for ( j_w = 0; j_w < 16; j_w++ ) {
+    typeof(_cr_dh.tab_u) sot_u = &_cr_dh.tab_u[(i_w + j_w) & msk_w];
+
+    if ( sot_u->epo_w != _cr_dh.epo_w ) {
+      sot_u->sa = sa; sot_u->sb = sb; sot_u->epo_w = _cr_dh.epo_w;
+      return 0;
+    }
+    if ( (sot_u->sa == sa) && (sot_u->sb == sb) ) return 1;
+  }
+  return 1;
+}
+
+/* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb], held
+**   by [pa] and [pb] (nouns, or u3_none for a slot outside any noun).
+**   note them if both slots are in home memory and both values are
+**   home nouns, on an inner road with no road below it.
+*/
+static void
+_cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
+{
+  u3a_road* one_u;
+
+  if ( (&(u3H->rod_u) == u3R) || u3R->kid_p ) return;
+  if ( !_cr_home_slot(sa) || !_cr_home_slot(sb) ) return;
+
+  one_u = u3to(u3a_road, u3H->rod_u.kid_p);
+  if (  (c3n == u3a_is_senior(one_u, *sa))
+     || (c3n == u3a_is_senior(one_u, *sb)) ) return;
+
+  //  once per slot pair per excursion
+  //
+  if ( _cr_dh_seen(sa, sb) ) return;
+  _cr_dh_push(sa, pa, *sa, sb, pb, *sb);
+}
+
 /* the pair table: pairs of cells found equal at different addresses,
 **   which unification couldn't merge. it bounds long comparisons where
 **   unification can't; on the home road, unification does.
@@ -376,6 +497,7 @@ u3r_sing_leap(void)
     u3r_pair_size(_CR_PM_LOG);
   }
   _cr_pm_fresh();
+  _cr_dh_leap();
 }
 
 static inline c3_w
@@ -487,11 +609,18 @@ _cr_pm_ok(_cr_sing_ctx* ctx_u, u3_noun a, u3_noun b)
   }
 }
 
+/* _cr_sing_wed(): unify the children [*a] and [*b] of equal cells
+**   [par_a] and [par_b]; if that fails, note them for the exit home.
+*/
 static inline __attribute__((always_inline)) void
-_cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
+_cr_sing_wed(u3_noun par_a, u3_noun par_b,
+             u3_noun *restrict a, u3_noun *restrict b)
 {
   if ( *a != *b ) {
     u3a_wed(a, b);
+    if ( *a != *b ) {
+      _cr_dh_note(a, par_a, b, par_b);
+    }
   }
 }
 
@@ -578,7 +707,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(a, b, &(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -592,7 +721,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(a, b, &(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -699,7 +828,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(a, b, &(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -713,7 +842,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(a, b, &(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -781,6 +910,50 @@ u3r_sing_imp(u3_noun a, u3_noun b)
   ret_o = _cr_sing(a, b);
   u3t_off(euq_o);
   return ret_o;
+}
+
+/* u3r_sing_wed(): u3r_sing() on two slots that own their references,
+**   unifying the slots themselves when equal, as unification does for
+**   the children it compares.
+*/
+c3_o
+u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
+{
+  if ( *a == *b ) {
+    return c3y;
+  }
+  else if ( c3n == u3r_sing(*a, *b) ) {
+    return c3n;
+  }
+  else if ( *a != *b ) {
+    //  [a] is a cache field, [b] the core's battery slot: if the core
+    //  is home and its battery isn't a member, don't point a junior
+    //  cache at it; defer pointing the core at the cache's battery
+    //  instead, so cores sharing a call site converge
+    //
+    if (  u3H->rod_u.kid_p && (&(u3H->rod_u) != u3R) && !u3R->kid_p
+       && _cr_home_slot(b) && !_cr_home_slot(a)
+       && !u3a_hcon_has(*b)
+       && (u3_none == pb || !u3a_hcon_has(pb)) )
+    {
+      u3a_road* one_u = u3to(u3a_road, u3H->rod_u.kid_p);
+
+      if (  (c3y == u3a_is_senior(one_u, *a))
+         && (c3y == u3a_is_senior(one_u, *b)) )
+      {
+        if ( !_cr_dh_seen(0, b) ) {
+          _cr_dh_push(0, u3_none, *a, b, pb, *b);
+        }
+        return c3y;
+      }
+    }
+
+    u3a_wed(a, b);
+    if ( *a != *b ) {
+      _cr_dh_note(a, pa, b, pb);
+    }
+  }
+  return c3y;
 }
 
 c3_o

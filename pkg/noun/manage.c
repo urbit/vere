@@ -159,6 +159,96 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
+/* deferred home-road unification: phase A's released values.
+*/
+static struct {
+  u3_noun* rel_u;
+  c3_w     rel_w;
+} _cm_dh;
+
+/* _cm_dh_write(): point home slot [sot] at [val], keeping the old value
+**   for release after the takes.
+*/
+static inline void
+_cm_dh_write(u3_noun* sot, u3_noun val)
+{
+  _cm_dh.rel_u[_cm_dh.rel_w++] = *sot;
+  *sot = u3k(val);
+}
+
+/* _cm_dh_apply(): phase A, on the home road right after u3m_fall(), before
+**   anything runs or is taken: unify the home slots inner roads noted.
+**   nothing on the home road has run since the excursion began, so every
+**   noted slot and value is live; nothing is freed here.
+*/
+static void
+_cm_dh_apply(void)
+{
+  c3_w          len_w, i_w;
+  u3r_dh_entry* ent_u = u3r_dh_take(&len_w);
+
+  _cm_dh.rel_w = 0;
+  if ( !len_w ) return;
+
+  _cm_dh.rel_u = c3_malloc(sizeof(u3_noun) * len_w);
+
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    u3r_dh_entry* e_u = &ent_u[i_w];
+
+    //  one-sided: point home slot [sb] at [va]
+    //
+    if ( !e_u->sa ) {
+      u3_noun vb = *e_u->sb;
+      if ( (vb != e_u->vb) || (vb == e_u->va) ) continue;
+      if (  u3a_hcon_has(vb)
+         || ((u3_none != e_u->pb) && u3a_hcon_has(e_u->pb)) ) continue;
+      _cm_dh_write(e_u->sb, e_u->va);
+      continue;
+    }
+
+    u3_noun va = *e_u->sa, vb = *e_u->sb;
+
+    //  a slot that changed since it was noted (by an earlier entry here)
+    //
+    if ( (va != e_u->va) || (vb != e_u->vb) || (va == vb) ) continue;
+
+    {
+      c3_t amb_t = u3a_hcon_has(va), bmb_t = u3a_hcon_has(vb);
+      c3_t aok_t = (u3_none == e_u->pa) || !u3a_hcon_has(e_u->pa);
+      c3_t bok_t = (u3_none == e_u->pb) || !u3a_hcon_has(e_u->pb);
+
+      //  never edit a member; keep a member; else keep a cache field's
+      //  value (no holder), so cores sharing a call site converge on its
+      //  battery
+      //
+      if      ( amb_t && bmb_t )                      {}
+      else if ( amb_t && bok_t )                      _cm_dh_write(e_u->sb, va);
+      else if ( bmb_t && aok_t )                      _cm_dh_write(e_u->sa, vb);
+      else if ( amb_t || bmb_t )                      {}
+      else if ( (u3_none == e_u->pa) && bok_t )       _cm_dh_write(e_u->sb, va);
+      else if ( (u3_none == e_u->pb) && aok_t )       _cm_dh_write(e_u->sa, vb);
+      else if ( bok_t )                               _cm_dh_write(e_u->sb, va);
+      else if ( aok_t )                               _cm_dh_write(e_u->sa, vb);
+    }
+  }
+}
+
+/* _cm_dh_release(): phase B, after every take: release the old values.
+*/
+static void
+_cm_dh_release(void)
+{
+  c3_w i_w;
+
+  if ( !_cm_dh.rel_w ) return;
+  for ( i_w = 0; i_w < _cm_dh.rel_w; i_w++ ) {
+    u3z(_cm_dh.rel_u[i_w]);
+  }
+  c3_free(_cm_dh.rel_u);
+  _cm_dh.rel_u = 0;
+  _cm_dh.rel_w = 0;
+}
+
 /* _cm_canon_ok(): [som] is canonical: direct, or a member.
 */
 static inline c3_t
@@ -1492,6 +1582,12 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   u3e_Phase = u3e_pha_road;
   u3m_fall();
 
+  //  deferred home-road unification, phase A: before anything runs here
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    _cm_dh_apply();
+  }
+
   {
     c3_w hom_w = ( &(u3H->rod_u) == u3R ) ? 1 : 0;
     c3_w i_w;
@@ -1570,6 +1666,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   if ( hom_t ) {
     _cm_dup_take(dup_p);
     dup_p = 0;
+
+    //  deferred home-road unification, phase B: every take is done
+    //
+    _cm_dh_release();
 
     //  what was promoted into the caches but didn't end up canonical,
     //  such as entries whose children were already home nouns: now

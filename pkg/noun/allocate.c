@@ -1361,6 +1361,47 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 
 #undef SWAP
 
+/* _ca_slot_ours(): [sot] is a slot in the current road's heap (rut to hat).
+*/
+static inline c3_t
+_ca_slot_ours(u3_noun* sot)
+{
+  c3_d off_d = (c3_d)u3a_outa(sot);
+
+  if ( c3y == u3a_is_north(u3R) ) {
+    return (off_d >= u3R->rut_p) && (off_d < u3R->hat_p);
+  }
+  else {
+    return (off_d >= u3R->hat_p) && (off_d < u3R->rut_p);
+  }
+}
+
+/* _ca_wed_slot(): unify equal [*a] and [*b], both senior to every road
+**   that could hold them, by pointing a slot in this road's heap at the
+**   other value. references into senior memory aren't counted, so no
+**   count changes, and both values outlive the slot. toward a member,
+**   then toward the value a slot we can't write holds.
+*/
+static void
+_ca_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
+{
+  c3_t aon_t = _ca_slot_ours(a);
+  c3_t bon_t = _ca_slot_ours(b);
+
+  if ( !aon_t && !bon_t ) return;
+
+  {
+    c3_t amb_t = u3a_hcon_has(*a);
+    c3_t bmb_t = u3a_hcon_has(*b);
+
+    if      ( amb_t && bon_t )   { *b = *a; }
+    else if ( bmb_t && aon_t )   { *a = *b; }
+    else if ( aon_t && !bon_t )  { *a = *b; }
+    else if ( bon_t && !aon_t )  { *b = *a; }
+    else                         { *a = *b; }
+  }
+}
+
 /* u3a_wed(): unify noun references.
 */
 void
@@ -1375,9 +1416,13 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
   wed_o = _ca_wed_our(a, b);
 
 #ifdef U3_MEMORY_DEBUG
+  if ( (c3n == wed_o) && rod_u->par_p ) _ca_wed_slot(a, b);
   return;
 #else
-  if ( u3C.wag_h & u3o_debug_ram ) return;
+  if ( u3C.wag_h & u3o_debug_ram ) {
+    if ( (c3n == wed_o) && rod_u->par_p ) _ca_wed_slot(a, b);
+    return;
+  }
 #endif
 
   //  while not at home, attempt to unify
@@ -1409,6 +1454,13 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
         && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
   {
     wed_o = _ca_wed_you(rod_u, a, b);
+  }
+
+  //  both values are home nouns (or senior to every road that could hold
+  //  them): unify through a slot on this road, if there is one
+  //
+  if ( (c3n == wed_o) && u3R->par_p ) {
+    _ca_wed_slot(a, b);
   }
 }
 
