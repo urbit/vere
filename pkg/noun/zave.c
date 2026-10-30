@@ -157,7 +157,7 @@ u3z_save_m_dedup(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val)
 {
   u3_noun key = u3nc(fun, u3k(one));
   if ( u3z_memo_toss != cid ) {
-    key = u3m_dedup(key);
+    key = u3m_dedup_eager(key);
     val = u3m_dedup(val);
   }
 

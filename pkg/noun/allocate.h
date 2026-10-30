@@ -827,6 +827,11 @@ u3a_post_info(u3_post);
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
 
+        /* u3a_Take_canon_t: takes canonicalize into the home-road
+        **                   hashcons set (see u3m_canon_take()).
+        */
+          extern c3_t u3a_Take_canon_t;
+
         /* u3a_take(): gain, copying juniors.
         */
           u3_noun

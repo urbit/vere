@@ -244,10 +244,23 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_w
         u3m_pack(void);
         
-      /* u3m_dedup: deduplicate the noun across the hashcons sets
+      /* u3m_dedup_eager(): deduplicate the noun across the hashcons sets.
+      */
+        u3_noun
+        u3m_dedup_eager(u3_noun som);
+
+      /* u3m_dedup(): u3m_dedup_eager() on the home road; inner roads
+      **              leave the noun to the exit home.
       */
         u3_noun
         u3m_dedup(u3_noun som);
+
+      /* u3m_canon_take(): [new], a fresh home-road copy whose children
+      **                   are taken: an equal member (retained), or none,
+      **                   having made [new] a member if it can be one.
+      */
+        u3_weak
+        u3m_canon_take(u3_noun new);
       
       /* u3m_dedup_ream(): rebuild the home-road hashcons set from
       **                   persistent tables.

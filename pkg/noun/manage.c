@@ -159,6 +159,48 @@ static uint8_t Sigstk[SIGSTKSZ];
 
 static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
+/* _cm_canon_ok(): [som] is canonical: direct, or a member.
+*/
+static inline c3_t
+_cm_canon_ok(u3_noun som)
+{
+  return (c3y == u3a_is_cat(som)) || u3a_hcon_has(som);
+}
+
+/* _cm_canon_fix_kev(): on the home road, after every take of an exit to
+**   home: canonicalize a promoted entry's key, and value if [*val_t],
+**   in place, if they aren't members. [kev] is a home cell held by its
+**   table and not a member, so its children may be repointed; every
+**   reference into home memory is counted by now.
+*/
+static void
+_cm_canon_fix_kev(u3_noun kev, void* ptr_v)
+{
+  c3_t      val_t = *(c3_t*)ptr_v;
+  u3a_cell* kev_u = u3a_to_ptr(kev);
+
+  if ( u3a_hcon_has(kev) ) return;   //  never edit a member
+
+  if ( !_cm_canon_ok(kev_u->hed) ) {
+    u3_noun can = u3m_dedup(u3k(kev_u->hed));
+    if ( can != kev_u->hed ) { u3_noun old = kev_u->hed; kev_u->hed = can; u3z(old); }
+    else                     { u3z(can); }
+  }
+  if ( val_t && !_cm_canon_ok(kev_u->tel) ) {
+    u3_noun can = u3m_dedup(u3k(kev_u->tel));
+    if ( can != kev_u->tel ) { u3_noun old = kev_u->tel; kev_u->tel = can; u3z(old); }
+    else                     { u3z(can); }
+  }
+}
+
+/* _cm_canon_fix(): canonicalize table [har_p]'s entries in place.
+*/
+static void
+_cm_canon_fix(u3p(u3h_root) har_p, c3_t val_t)
+{
+  if ( har_p ) u3h_walk_with(har_p, _cm_canon_fix_kev, &val_t);
+}
+
 #if 0
 /* _cm_punt(): crudely print trace.
 */
@@ -1479,10 +1521,23 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     hom_f();
   }
 
+  c3_t hom_t = ( &(u3H->rod_u) == u3R );
+
   //  copy product and caches off our stack
   //
-  u3e_Phase = u3e_pha_take_pro;
-  pro   = u3a_take(pro);
+  //    at an exit to home, the caches are taken first, canonicalizing
+  //    into the home set, since inner roads leave them as they are.
+  //    the product is taken after, plainly, and finds the members the
+  //    caches made through forwarding pointers.
+  //
+  if ( !hom_t ) {
+    u3e_Phase = u3e_pha_take_pro;
+    pro   = u3a_take(pro);
+  }
+  else {
+    u3a_Take_canon_t = 1;
+  }
+
   u3e_Phase = u3e_pha_take_jet;
   jed_u = u3j_take(jed_u);
 
@@ -1500,15 +1555,33 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   per_p = u3h_take(per_p);
   u3e_Phase = u3e_pha_take_for;
   for_p = u3h_take(for_p);
+
+  if ( hom_t ) {
+    u3a_Take_canon_t = 0;
+    u3e_Phase = u3e_pha_take_pro;
+    pro   = u3a_take(pro);
+  }
   u3e_Phase = u3e_pha_take_dup;
 
   //  into the home road, junior hashcons entries that were taken join
   //  the off-loom set, and the rest die with the road; otherwise, the
   //  junior set is merged into ours
   //
-  if ( &(u3H->rod_u) == u3R ) {
+  if ( hom_t ) {
     _cm_dup_take(dup_p);
     dup_p = 0;
+
+    //  what was promoted into the caches but didn't end up canonical,
+    //  such as entries whose children were already home nouns: now
+    //  that every take is done, canonicalize it in place
+    //
+    _cm_canon_fix(per_p, 1);
+    _cm_canon_fix(for_p, 1);
+    _cm_canon_fix(jed_u.war_p, 1);
+    _cm_canon_fix(jed_u.cod_p, 1);
+    _cm_canon_fix(jed_u.han_p, 0);
+    _cm_canon_fix(jed_u.bas_p, 1);
+    u3n_reap_fix();
   }
   else {
     dup_p = u3h_take(dup_p);
@@ -3455,6 +3528,34 @@ _cm_dup_put(u3_noun som)
   return can;
 }
 
+/* u3m_canon_take(): [new], a fresh home-road copy whose children are
+**                   taken: an equal member (retained), or none, having
+**                   made [new] a member if it can be one.
+*/
+u3_weak
+u3m_canon_take(u3_noun new)
+{
+  u3_noun can;
+
+  //  a cell can be a member only if its children are
+  //
+  if ( c3y == u3a_is_cell(new) ) {
+    u3_noun hed = u3h(new), tel = u3t(new);
+
+    if (  ((c3n == u3a_is_cat(hed)) && !u3a_hcon_has(hed))
+       || ((c3n == u3a_is_cat(tel)) && !u3a_hcon_has(tel)) )
+    {
+      return u3_none;
+    }
+  }
+
+  u3m_Dup_busy_w++;
+  can = _cm_dup_put(new);
+  u3m_Dup_busy_w--;
+
+  return ( can == new ) ? u3_none : u3k(can);
+}
+
 /* u3m_dedup_lose(): remove [som], about to be freed, from the home-road
 **                   set. [som] has its membership bit set.
 */
@@ -4207,11 +4308,12 @@ _dedup_next(u3a_pile* pil_u, _dedup_memo* mem_u, u3_noun som)
   }
 }
 
-/* u3m_dedup(): deduplicate [som] against every road's set, inserting it
-**              into the current road's. TRANSFER, result PRODUCED.
+/* u3m_dedup_eager(): deduplicate [som] against every road's set,
+**                    inserting it into the current road's. TRANSFER,
+**                    result PRODUCED.
 */
 u3_noun
-u3m_dedup(u3_noun som)
+u3m_dedup_eager(u3_noun som)
 {
   u3a_pile     pil_u;
   _frame_dedup* fam_u;
@@ -4299,6 +4401,20 @@ u3m_dedup(u3_noun som)
   _dedup_memo_free(&mem_u);
   _cm_dup_u.pat_y = pat_y;
   return new;
+}
+
+/* u3m_dedup(): u3m_dedup_eager() on the home road. inner roads leave
+**              the noun as it is: if it's promoted into a persistent
+**              cache, the exit to home canonicalizes it as it's taken.
+**              TRANSFER, result PRODUCED.
+*/
+u3_noun
+u3m_dedup(u3_noun som)
+{
+  if ( &(u3H->rod_u) != u3R ) {
+    return som;
+  }
+  return u3m_dedup_eager(som);
 }
 
 /* bounds for u3m_reclaim_due()

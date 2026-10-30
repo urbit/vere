@@ -768,6 +768,30 @@ _me_gain_use(u3_noun dog)
 
 #undef VERBOSE_TAKE
 
+/* u3a_Take_canon_t: takes canonicalize into the home-road hashcons set
+**   (see u3m_canon_take()). set only on the home road, while the caches
+**   are taken at an exit to home.
+*/
+c3_t u3a_Take_canon_t;
+
+/* _ca_take_canon(): [new] was just taken from junior [old_u]; produce
+**                   an equal member instead, if there is one.
+*/
+static inline u3_noun
+_ca_take_canon(u3a_noun* old_u, u3_noun new)
+{
+  if ( u3a_Take_canon_t ) {
+    u3_weak can = u3m_canon_take(new);
+
+    if ( u3_none != can ) {
+      u3z(new);
+      old_u->mug_w = can;
+      return can;
+    }
+  }
+  return new;
+}
+
 /* _ca_take_atom(): reallocate an indirect atom off the stack.
 */
 static inline u3_atom
@@ -803,7 +827,7 @@ _ca_take_atom(u3a_atom* old_u)
   //
   old_u->mug_w = new;
 
-  return new;
+  return _ca_take_canon((u3a_noun*)old_u, new);
 }
 
 /* _ca_take_cell(): reallocate a cell off the stack.
@@ -831,7 +855,7 @@ _ca_take_cell(u3a_cell* old_u, u3_noun hed, u3_noun tel)
   //
   old_u->mug_w = new;
 
-  return new;
+  return _ca_take_canon((u3a_noun*)old_u, new);
 }
 
 /* _ca_take: stack frame for recording cell travesal

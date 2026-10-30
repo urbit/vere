@@ -140,7 +140,7 @@ _test_dedup(void)
   //  a fresh noun is canonical as it stands
   //
   t = u3nc(2, 3);
-  r = u3m_dedup(u3k(t));
+  r = u3m_dedup_eager(u3k(t));
   if ( r != t ) {
     fprintf(stderr, "test: dedup: fresh noun copied\r\n");
     ret_i = 0;
@@ -150,7 +150,7 @@ _test_dedup(void)
   //  an equal noun dedups to it
   //
   b = u3nc(2, 3);
-  r = u3m_dedup(u3k(b));
+  r = u3m_dedup_eager(u3k(b));
   if ( r != t ) {
     fprintf(stderr, "test: dedup: equal noun not shared\r\n");
     ret_i = 0;
@@ -160,7 +160,7 @@ _test_dedup(void)
   //  a cell with a non-canonical child is repointed in place
   //
   c = u3nc(u3nc(2, 3), 4);
-  r = u3m_dedup(u3k(c));
+  r = u3m_dedup_eager(u3k(c));
   if ( (r != c) || (u3h(c) != t) ) {
     fprintf(stderr, "test: dedup: non-canonical child not repointed\r\n");
     ret_i = 0;
@@ -170,7 +170,7 @@ _test_dedup(void)
   //  a cell whose children are canonical is kept
   //
   d = u3nc(u3k(t), 5);
-  r = u3m_dedup(u3k(d));
+  r = u3m_dedup_eager(u3k(d));
   if ( r != d ) {
     fprintf(stderr, "test: dedup: canonical children copied\r\n");
     ret_i = 0;
@@ -181,7 +181,7 @@ _test_dedup(void)
   //
   s = u3nc(6, 7);
   u3m_hate(0);
-  r = u3m_dedup(u3k(s));
+  r = u3m_dedup_eager(u3k(s));
   if ( r != s ) {
     fprintf(stderr, "test: dedup: senior noun copied\r\n");
     ret_i = 0;
@@ -193,7 +193,7 @@ _test_dedup(void)
   //
   e = u3nc(u3nc(2, 3), 8);
   u3m_hate(0);
-  r = u3m_dedup(u3k(e));
+  r = u3m_dedup_eager(u3k(e));
   if ( (r == e) || (u3h(r) != t) || (u3h(e) == t) ) {
     fprintf(stderr, "test: dedup: senior cell not copied\r\n");
     ret_i = 0;
@@ -216,10 +216,10 @@ _test_hcons(void)
 
   //  a freed member leaves the set
   //
-  x = u3m_dedup(u3nc(10, 11));
+  x = u3m_dedup_eager(u3nc(10, 11));
   y = u3nc(10, 11);
   u3z(x);
-  r = u3m_dedup(u3k(y));
+  r = u3m_dedup_eager(u3k(y));
   if ( r != y ) {
     fprintf(stderr, "test: hcons: freed member still found\r\n");
     ret_i = 0;
@@ -228,10 +228,10 @@ _test_hcons(void)
 
   //  so do members freed in a cascade
   //
-  x = u3m_dedup(u3nc(u3nc(12, 13), 14));
+  x = u3m_dedup_eager(u3nc(u3nc(12, 13), 14));
   y = u3nc(u3nc(12, 13), 14);
   u3z(x);
-  r = u3m_dedup(u3k(y));
+  r = u3m_dedup_eager(u3k(y));
   if ( (r != y) || !u3a_hcon_has(u3h(y)) ) {
     fprintf(stderr, "test: hcons: cascade-freed member still found\r\n");
     ret_i = 0;
@@ -241,8 +241,8 @@ _test_hcons(void)
   //  junior entries that are taken join the home set
   //
   u3m_hate(0);
-  p = u3m_dedup(u3nc(u3nc(20, 21), 22));
-  r = u3m_dedup(u3nc(30, 31));     //  not taken
+  p = u3m_dedup_eager(u3nc(u3nc(20, 21), 22));
+  r = u3m_dedup_eager(u3nc(30, 31));     //  not taken
   u3z(r);
   p = u3m_love(p);
   if ( !u3a_hcon_has(p) || !u3a_hcon_has(u3h(p)) ) {
@@ -250,14 +250,14 @@ _test_hcons(void)
     ret_i = 0;
   }
   q = u3nc(u3nc(20, 21), 22);
-  r = u3m_dedup(u3k(q));
+  r = u3m_dedup_eager(u3k(q));
   if ( r != p ) {
     fprintf(stderr, "test: hcons: taken entry not shared\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(q);
   q = u3nc(30, 31);
-  r = u3m_dedup(u3k(q));
+  r = u3m_dedup_eager(u3k(q));
   if ( r != q ) {
     fprintf(stderr, "test: hcons: untaken entry kept\r\n");
     ret_i = 0;
@@ -270,7 +270,7 @@ _test_hcons(void)
   //  standing for a set that lists a home noun whose canonical equal
   //  [m] is a member by the time the road exits
   //
-  m = u3m_dedup(u3nc(23, 24));
+  m = u3m_dedup_eager(u3nc(23, 24));
   {
     u3_noun c = u3nc(23, 24);
     u3_noun x = u3nc(c, 25);
@@ -290,8 +290,8 @@ _test_hcons(void)
 
   //  rebuilding keeps members reachable from persistent tables only
   //
-  p = u3m_dedup(u3nc(40, 41));
-  m = u3m_dedup(u3nc(42, 43));
+  p = u3m_dedup_eager(u3nc(40, 41));
+  m = u3m_dedup_eager(u3nc(42, 43));
   u3h_put(u3R->cax.per_p, 44, u3k(p));
   u3m_dedup_ream();
   if ( !u3a_hcon_has(p) || u3a_hcon_has(m) ) {
@@ -311,10 +311,10 @@ _test_hcons(void)
     for ( i_w = 0; i_w < 2; i_w++ ) {
       if ( i_w ) {
         n = u3nc(45, 46);
-        m = u3m_dedup(u3nc(45, 46));
+        m = u3m_dedup_eager(u3nc(45, 46));
       }
       else {
-        m = u3m_dedup(u3nc(45, 46));
+        m = u3m_dedup_eager(u3nc(45, 46));
         n = u3nc(45, 46);
       }
 
@@ -361,12 +361,12 @@ _test_dedup_dag(void)
     u3_noun can, fre, r;
     c3_d    mic_d;
 
-    can = u3m_dedup(_dag(i_w ? 13 : 26));
+    can = u3m_dedup_eager(_dag(i_w ? 13 : 26));
     fre = _dag(26);
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
-    r = u3m_dedup(u3k(fre));
+    r = u3m_dedup_eager(u3k(fre));
     if ( !i_w && (r != can) ) {
       fprintf(stderr, "test: dedup dag: member not found\r\n");
       ret_i = 0;
@@ -398,13 +398,13 @@ _test_dedup_dag(void)
     u3_noun can, fre, r;
     c3_d    mic_d;
 
-    can = u3m_dedup(_dag(26));
+    can = u3m_dedup_eager(_dag(26));
     u3m_hate(0);
     fre = _dag(26);
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
-    r = u3m_dedup(u3k(fre));
+    r = u3m_dedup_eager(u3k(fre));
     if ( r != can ) {
       fprintf(stderr, "test: dedup dag: middle member not found\r\n");
       ret_i = 0;
@@ -437,14 +437,14 @@ _test_dedup_dag(void)
     u3_noun can, fre, r;
     c3_d    mic_d;
 
-    can = u3m_dedup(_dag(26));
+    can = u3m_dedup_eager(_dag(26));
     u3m_hate(0);
     fre = _dag(26);
 
     u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
-    r = u3m_dedup(u3k(fre));
+    r = u3m_dedup_eager(u3k(fre));
     if ( r != can ) {
       fprintf(stderr, "test: dedup dag: debug member not found\r\n");
       ret_i = 0;
@@ -585,6 +585,48 @@ _test_sing_dag(void)
   return ret_i;
 }
 
+/* _test_dedup_lazy(): u3m_dedup() canonicalizes on the home road, and
+**                    leaves inner roads' nouns to the exit home.
+*/
+static c3_i
+_test_dedup_lazy(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun can = u3m_dedup(u3nt(7, 8, 9));
+  u3_noun som;
+
+  if ( !u3a_hcon_has(can) ) {
+    fprintf(stderr, "test: dedup lazy: home not canonical\r\n");
+    ret_i = 0;
+  }
+
+  u3m_hate(0);
+  som = u3nt(7, 8, 9);
+  {
+    u3_noun pro = u3m_dedup(u3k(som));
+
+    if ( pro != som ) {
+      fprintf(stderr, "test: dedup lazy: inner road deduplicated\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+  {
+    u3_noun pro = u3m_dedup_eager(u3k(som));
+
+    if ( pro != can ) {
+      fprintf(stderr, "test: dedup lazy: eager missed the member\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+  u3z(som);
+  u3m_love(0);
+
+  u3z(can);
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -592,6 +634,11 @@ _test_equality(void)
 
   if ( !_test_hcons() ) {
     fprintf(stderr, "test: equality: hcons: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_dedup_lazy() ) {
+    fprintf(stderr, "test: equality: dedup lazy: failed\r\n");
     ret_i = 0;
   }
 
