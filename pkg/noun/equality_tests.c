@@ -522,6 +522,22 @@ _test_sing_dag_all(void)
   u3m_love(0);
   u3z(a);
 
+  //  inner road, a junior DAG over a home one, against an equal home
+  //  copy: unification gives up at each junior-home boundary
+  //
+  a = _dag(200); b = _dag(220);
+  u3m_hate(0);
+  {
+    u3_noun j = u3k(a);
+    for ( c3_w i_w = 0; i_w < 20; i_w++ ) {
+      j = u3nc(u3k(j), j);
+    }
+    ret_i &= _sing_dag("inner, junior over home", j, b);
+    u3z(j);
+  }
+  u3m_love(0);
+  u3z(a); u3z(b);
+
   //  a nested road, both on the road above: unification there
   //
   u3m_hate(0);
