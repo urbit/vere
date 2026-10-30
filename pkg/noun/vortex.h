@@ -66,6 +66,10 @@
       u3_weak
       u3v_boot(u3_noun eve);
 
+    /* u3v_Ivory_canon_t: canonicalize the ivory pill before a lite boot.
+    */
+      extern c3_t u3v_Ivory_canon_t;
+
     /* u3v_boot_lite(): light bootstrap sequence, just making a kernel.
     */
       c3_o

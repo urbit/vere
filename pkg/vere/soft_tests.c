@@ -11,6 +11,13 @@
 ///
 /// SOFT_TEST_N sets the number of interrupted runs (default 120), and
 /// SOFT_TEST_SEED the random seed (default: the time).
+///
+/// The canonical ivory pill leaves no equal nouns at different addresses
+/// on the home road. SOFT_TEST_DUP=1 adds some: copies of the slam
+/// workloads, made with jam and cue (and made again every 20 interrupted
+/// runs), and two deep nouns with 2^200 paths. SOFT_TEST_RAW=1 boots
+/// from the pill without canonicalizing it first. SOFT_TEST_LOOM sets
+/// the loom size in bits of bytes (default 27).
 
 #include "noun.h"
 #include "ivory.h"
@@ -54,7 +61,13 @@ _cue_pill(void)
 static void
 _setup(void)
 {
-  u3m_boot_lite(1 << 27);
+  c3_c* lom_c = getenv("SOFT_TEST_LOOM");
+  c3_w  lom_w = lom_c ? (c3_w)atoi(lom_c) : 27;
+
+  u3m_boot_lite((size_t)1 << lom_w);
+  if ( getenv("SOFT_TEST_RAW") ) {
+    u3v_Ivory_canon_t = 0;
+  }
   _pil = _cue_pill();
   if ( c3n == u3v_boot_lite(u3k(_pil)) ) {
     fprintf(stderr, "soft: boot failed\r\n");
@@ -167,9 +180,56 @@ _grab(_work* wok_u, c3_w len_w)
   c3_free(rot);
 }
 
-/* _WORK: the number of workloads.
+/* _WORK: the most workloads; _len_w: how many there are.
 */
-#define _WORK  5
+#define _WORK  10
+static c3_w _len_w = 5;
+
+/* _deep(): [n_w] levels of [d d]: 2^n_w paths, n_w cells.
+*/
+static u3_noun
+_deep(c3_w n_w)
+{
+  u3_noun dep = 1;
+
+  for ( c3_w i_w = 0; i_w < n_w; i_w++ ) {
+    dep = u3nc(u3k(dep), dep);
+  }
+  return dep;
+}
+
+/* _w_deep_home(): compare two deep nouns, both home, sharing no cells.
+*/
+static u3_noun
+_w_deep_home(u3_noun arg)
+{
+  c3_o equ_o = u3r_sing(u3h(arg), u3t(arg));
+  u3z(arg);
+  return equ_o;
+}
+
+/* _w_deep_junior(): compare a deep home noun with one made here.
+*/
+static u3_noun
+_w_deep_junior(u3_noun arg)
+{
+  u3_noun dep   = _deep((c3_w)u3t(arg));
+  c3_o    equ_o = u3r_sing(u3h(arg), dep);
+  u3z(dep);
+  u3z(arg);
+  return equ_o;
+}
+
+/* _copy(): a copy of [som] with no cells in common with it.
+*/
+static u3_noun
+_copy(u3_noun som)
+{
+  u3_atom jam = u3qe_jam(som);
+  u3_noun cop = u3s_cue_atom(jam);
+  u3z(jam);
+  return cop;
+}
 
 /* _build(): (re)make the workloads' arguments, keeping their names,
 **           products and counts.
@@ -192,10 +252,45 @@ _build(_work* wok_u)
       u3i_string("(lent (turn (gulf 1 3.000) |=(a=@ (cat 3 a a))))") },
   };
 
-  for ( c3_w i_w = 0; i_w < _WORK; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < 5; i_w++ ) {
     wok_u[i_w].nam_c = new_u[i_w].nam_c;
     wok_u[i_w].fun_f = new_u[i_w].fun_f;
     wok_u[i_w].arg   = new_u[i_w].arg;
+  }
+
+  //  copies of the slam workloads, equal to them but not shared
+  //
+  if ( 10 == _len_w ) {
+    static const c3_c* nam_c[3] = { "jets/copy", "mule/copy", "mint/copy" };
+
+    for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+      wok_u[5 + i_w].nam_c = nam_c[i_w];
+      wok_u[5 + i_w].fun_f = _w_slam;
+      wok_u[5 + i_w].arg   = _copy(wok_u[1 + i_w].arg);
+    }
+
+    //  2^200 paths: linear only if repeated pairs are recognized
+    //
+    wok_u[8].nam_c = "deep/home";
+    wok_u[8].fun_f = _w_deep_home;
+    wok_u[8].arg   = u3nc(_deep(200), _deep(200));
+    wok_u[9].nam_c = "deep/junior";
+    wok_u[9].fun_f = _w_deep_junior;
+    wok_u[9].arg   = u3nc(_deep(200), 200);
+  }
+}
+
+/* _recopy(): make the copies again, so that later runs find home nouns
+**             that no exit has unified yet.
+*/
+static void
+_recopy(_work* wok_u)
+{
+  if ( 10 == _len_w ) {
+    for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+      u3z(wok_u[5 + i_w].arg);
+      wok_u[5 + i_w].arg = _copy(wok_u[1 + i_w].arg);
+    }
   }
 }
 
@@ -204,7 +299,7 @@ _build(_work* wok_u)
 static void
 _drop(_work* wok_u)
 {
-  for ( c3_w i_w = 0; i_w < _WORK; i_w++ ) {
+  for ( c3_w i_w = 0; i_w < _len_w; i_w++ ) {
     u3z(wok_u[i_w].arg);
     wok_u[i_w].arg = 0;
   }
@@ -221,6 +316,7 @@ main(int argc, char* argv[])
 
   if ( (env_c = getenv("SOFT_TEST_N")) )    num_w = (c3_w)atoi(env_c);
   if ( (env_c = getenv("SOFT_TEST_SEED")) ) sed_w = (c3_w)atoi(env_c);
+  if ( getenv("SOFT_TEST_DUP") )            _len_w = 10;
 
   _setup();
   srand(sed_w);
@@ -228,7 +324,7 @@ main(int argc, char* argv[])
           sed_w, num_w);
 
   _work wok_u[_WORK];
-  c3_w  len_w = _WORK;
+  c3_w  len_w = _len_w;
 
   memset(wok_u, 0, sizeof(wok_u));
   _build(wok_u);
@@ -255,6 +351,7 @@ main(int argc, char* argv[])
 
     _run(w_u, mil_w, 0);
     if ( 0 == ((i_w + 1) % 20) ) {
+      _recopy(wok_u);
       _grab(wok_u, len_w);
     }
   }
