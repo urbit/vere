@@ -801,6 +801,12 @@ fn buildBinary(
                 .nix = true,
             },
             .{
+                .name = "loom-test",
+                .file = "pkg/noun/loom_tests.c",
+                .deps = noun_test_deps,
+                .nix = true,
+            },
+            .{
                 .name = "hashtable-test",
                 .file = "pkg/noun/hashtable_tests.c",
                 .deps = noun_test_deps,
