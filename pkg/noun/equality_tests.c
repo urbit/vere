@@ -477,6 +477,114 @@ _test_dedup_dag(void)
   return ret_i;
 }
 
+/* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
+**   in the current setting. with 2^dep_w paths, a comparison that
+**   re-compared every path would never finish.
+*/
+static c3_i
+_sing_dag(const c3_c* cas_c, u3_noun a, u3_noun b)
+{
+  if ( c3y != u3r_sing(a, b) ) {
+    fprintf(stderr, "test: sing dag: %s: not equal\r\n", cas_c);
+    return 0;
+  }
+  return 1;
+}
+
+/* _test_sing_dag_all(): every setting, at the current table size.
+*/
+static c3_i
+_test_sing_dag_all(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun a, b;
+
+  //  home road: unification merges what it compares
+  //
+  a = _dag(200); b = _dag(200);
+  ret_i &= _sing_dag("home", a, b);
+  u3z(a); u3z(b);
+
+  //  inner road, two home nouns: the pair table
+  //
+  a = _dag(200); b = _dag(200);
+  u3m_hate(0);
+  ret_i &= _sing_dag("inner, home", a, b);
+  u3m_love(0);
+  u3z(a); u3z(b);
+
+  //  inner road, one junior: unification
+  //
+  a = _dag(200);
+  u3m_hate(0);
+  b = _dag(200);
+  ret_i &= _sing_dag("inner, junior", a, b);
+  u3m_love(0);
+  u3z(a);
+
+  //  a nested road, both on the road above: unification there
+  //
+  u3m_hate(0);
+  a = _dag(200); b = _dag(200);
+  u3m_hate(0);
+  ret_i &= _sing_dag("nested", a, b);
+  u3m_love(0);
+  u3m_love(0);
+
+  //  the same while debugging memory, which unifies on this road only:
+  //  the pair table, for the one comparison
+  //
+  {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_hate(0);
+    a = _dag(200); b = _dag(200);
+    u3m_hate(0);
+    ret_i &= _sing_dag("nested, debug", a, b);
+    u3m_love(0);
+    u3m_love(0);
+    u3C.wag_h = wag_h;
+  }
+
+  //  as while promoting a junior road ([kid_p] set), when nothing is
+  //  unified: the pair table, for the one comparison
+  //
+  a = _dag(200); b = _dag(200);
+  u3R->kid_p = u3of(u3a_road, u3R);
+  ret_i &= _sing_dag("promotion", a, b);
+  u3R->kid_p = 0;
+  if ( u3h(a) == u3h(b) ) {
+    fprintf(stderr, "test: sing dag: promotion: unified\r\n");
+    ret_i = 0;
+  }
+  u3z(a); u3z(b);
+
+  return ret_i;
+}
+
+/* _test_sing_dag(): long comparisons are bounded everywhere, and with a
+**   table small enough to evict.
+*/
+static c3_i
+_test_sing_dag(void)
+{
+  c3_i ret_i = 1;
+
+  if ( !_test_sing_dag_all() ) {
+    ret_i = 0;
+  }
+
+  u3r_pair_size(4);
+  if ( !_test_sing_dag_all() ) {
+    fprintf(stderr, "test: sing dag: small table: failed\r\n");
+    ret_i = 0;
+  }
+
+  u3r_pair_size(20);
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -484,6 +592,11 @@ _test_equality(void)
 
   if ( !_test_hcons() ) {
     fprintf(stderr, "test: equality: hcons: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sing_dag() ) {
+    fprintf(stderr, "test: equality: sing dag: failed\r\n");
     ret_i = 0;
   }
 

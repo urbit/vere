@@ -7,6 +7,7 @@
 #include "imprison.h"
 #include "murmur3.h"
 #include "trace.h"
+#include "vortex.h"
 #include "xtract.h"
 
 
@@ -302,41 +303,187 @@ _cr_sing_atom(u3_atom a, u3_noun b)
   return c3y;
 }
 
-/* _cr_sing_cape_test(): check for previous comparison of [a] and [b].
+/* the pair table: pairs of cells found equal at different addresses,
+**   which unification couldn't merge. it bounds long comparisons where
+**   unification can't; on the home road, unification does.
+**
+**   on an inner road, its entries are pairs of home cells. home nouns
+**   are neither freed nor changed during an excursion from the home
+**   road, so an entry stays true until the excursion ends; the next one
+**   starts a new epoch, which drops them all. while a junior road is
+**   promoted ([kid_p] set), or on an inner road while debugging memory,
+**   unification doesn't reach the pairs a comparison meets, so a long
+**   comparison records any it can, for itself only: it starts and ends
+**   a new epoch. entries are hints, so a full probe window evicts one.
+**
+**   off the loom, allocated on the home road.
 */
-static inline c3_o
-_cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
+#define _CR_PM_TOP   64      //  on an inner road, probe the root after this many steps
+#define _CR_PM_DEEP  65535   //  then probe inner pairs after this many
+#define _CR_PM_LOG   20      //  entries, log2
+
+static struct {
+  struct { u3_noun a; u3_noun b; c3_w epo_w; }* tab_u;
+  c3_w msk_w;
+  c3_w epo_w;
+  c3_w evk_w;   //  evictions, to rotate through the probe window
+} _cr_pm;
+
+/* _cr_sing_ctx: where a long comparison runs, found when it gets long.
+*/
+typedef struct {
+  c3_y      scp_y;   //  0: home road, 1: inner road, 2: promoting a junior road
+  c3_y      pmo_y;   //  pairs recorded: 1 home, 2 senior, 3 any
+  u3a_road* one_u;   //  the outermost inner road
+  c3_t      prt_t;   //  record the root pair if equal
+  u3_noun   ra, rb;  //  the root pair
+} _cr_sing_ctx;
+
+/* u3r_pair_size(): (re)allocate the pair table at 2^[log_y] entries
+**                  (at least 16). home road only.
+*/
+void
+u3r_pair_size(c3_y log_y)
 {
-  u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
-                     u3a_to_off(b) >> u3a_vits);
-  u3_noun val;
+  c3_w len_w = 1U << c3_max(log_y, 4);
 
-  u3t_off(euq_o);
-  val = u3h_git(har_p, key);
-  u3t_on(euq_o);
+  if ( _cr_pm.tab_u && ((_cr_pm.msk_w + 1) == len_w) ) return;
 
-  u3z(key);
-  return ( u3_none != val ) ? c3y : c3n;
+  c3_free(_cr_pm.tab_u);
+  _cr_pm.tab_u = c3_calloc(sizeof(*_cr_pm.tab_u) * len_w);
+  _cr_pm.msk_w = len_w - 1;
+  _cr_pm.epo_w = 1;
 }
 
-/* _cr_sing_cape_keep(): store [a] and [b] to short-circuit subsequent tests.
-**                   NB: [a] and [b] (which MUST be equal nouns)
-**                       are cons'd as offsets (direct atoms) to avoid refcount churn.
+/* _cr_pm_fresh(): drop every entry. clears the table when the epoch
+**   wraps, so that no stale entry comes back to life.
 */
-static inline void
-_cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
+static void
+_cr_pm_fresh(void)
 {
-  //  only store if [a] and [b] are copies of each other
-  //
-  if ( a != b ) {
-    c3_dessert( (c3n == u3a_is_cat(a)) && (c3n == u3a_is_cat(b)) );
+  if ( 0 == ++_cr_pm.epo_w ) {
+    memset(_cr_pm.tab_u, 0, sizeof(*_cr_pm.tab_u) * (_cr_pm.msk_w + 1));
+    _cr_pm.epo_w = 1;
+  }
+}
 
-    u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
-                       u3a_to_off(b) >> u3a_vits);
-    u3t_off(euq_o);
-    u3h_put(har_p, key, c3y);
-    u3t_on(euq_o);
-    u3z(key);
+/* u3r_sing_leap(): a new excursion from the home road. home road only.
+*/
+void
+u3r_sing_leap(void)
+{
+  if ( !_cr_pm.tab_u ) {
+    u3r_pair_size(_CR_PM_LOG);
+  }
+  _cr_pm_fresh();
+}
+
+static inline c3_w
+_cr_pm_idx(u3_noun x, u3_noun y)
+{
+  return (c3_w)((((c3_d)x * 0x9e3779b97f4a7c15ULL)
+               ^ ((c3_d)y * 0xc2b2ae3d27d4eb4fULL)) >> 40) & _cr_pm.msk_w;
+}
+
+/* _cr_pm_has(): [a] and [b] are known to be equal.
+*/
+static c3_t
+_cr_pm_has(u3_noun a, u3_noun b)
+{
+  c3_w i_w, j_w;
+
+  if ( a > b ) { u3_noun t = a; a = b; b = t; }
+  i_w = _cr_pm_idx(a, b);
+
+  for ( j_w = 0; j_w < 16; j_w++ ) {
+    typeof(_cr_pm.tab_u) sot_u = &_cr_pm.tab_u[(i_w + j_w) & _cr_pm.msk_w];
+
+    if ( sot_u->epo_w != _cr_pm.epo_w ) return 0;
+    if ( (sot_u->a == a) && (sot_u->b == b) ) return 1;
+  }
+  return 0;
+}
+
+/* _cr_pm_put(): record that [a] and [b] are equal. a full probe window
+**   evicts one of its entries, in turn; replacing a live entry with
+**   another leaves no gap in the window.
+*/
+static void
+_cr_pm_put(u3_noun a, u3_noun b)
+{
+  c3_w i_w, j_w;
+
+  if ( a > b ) { u3_noun t = a; a = b; b = t; }
+  i_w = _cr_pm_idx(a, b);
+
+  for ( j_w = 0; j_w < 16; j_w++ ) {
+    typeof(_cr_pm.tab_u) sot_u = &_cr_pm.tab_u[(i_w + j_w) & _cr_pm.msk_w];
+
+    if ( sot_u->epo_w != _cr_pm.epo_w ) {
+      sot_u->a = a; sot_u->b = b; sot_u->epo_w = _cr_pm.epo_w;
+      return;
+    }
+    if ( (sot_u->a == a) && (sot_u->b == b) ) return;
+  }
+
+  {
+    typeof(_cr_pm.tab_u) sot_u =
+      &_cr_pm.tab_u[(i_w + (_cr_pm.evk_w++ & 15)) & _cr_pm.msk_w];
+    sot_u->a = a; sot_u->b = b;
+  }
+}
+
+/* _cr_sing_scope(): where this comparison runs.
+*/
+static void
+_cr_sing_scope(_cr_sing_ctx* ctx_u)
+{
+  if ( u3R->kid_p ) {
+    ctx_u->scp_y = 2;
+  }
+  else if ( &(u3H->rod_u) != u3R ) {
+    ctx_u->scp_y = 1;
+    ctx_u->one_u = u3to(u3a_road, u3H->rod_u.kid_p);
+  }
+  else {
+    ctx_u->scp_y = 0;
+  }
+}
+
+/* _cr_home(): [som] is a home noun, on an inner road.
+*/
+static inline c3_t
+_cr_home(_cr_sing_ctx* ctx_u, u3_noun som)
+{
+  return c3y == u3a_is_senior(ctx_u->one_u, som);
+}
+
+/* _cr_dbg_ram(): debugging memory, unification stays on the current road.
+*/
+static inline c3_t
+_cr_dbg_ram(void)
+{
+#ifdef U3_MEMORY_DEBUG
+  return 1;
+#else
+  return !!(u3C.wag_h & u3o_debug_ram);
+#endif
+}
+
+/* _cr_pm_ok(): equal cells [a] and [b] can go in the pair table, by
+**   [pmo_y]. on an inner road, pairs of home cells, which nothing frees
+**   during the excursion. debugging memory, pairs senior to this road,
+**   which unification here doesn't free. while a junior road is
+**   promoted, nothing is unified or freed during a comparison.
+*/
+static inline __attribute__((always_inline)) c3_t
+_cr_pm_ok(_cr_sing_ctx* ctx_u, u3_noun a, u3_noun b)
+{
+  switch ( ctx_u->pmo_y ) {
+    case 1:  return _cr_home(ctx_u, a) && _cr_home(ctx_u, b);
+    case 2:  return (c3y == u3a_is_senior(u3R, a))
+                 && (c3y == u3a_is_senior(u3R, b));
+    default: return 1;
   }
 }
 
@@ -348,16 +495,28 @@ _cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
   }
 }
 
-/* _cr_sing_cape(): unifying equality with comparison deduplication
- *                  (tightly coupled to _cr_sing)
+/* _cr_sing_deep(): unifying equality, continued with the pair table
+ *                  (tightly coupled to _cr_sing). not on the home road,
+ *                  which unifies instead.
  */
 static c3_o
-_cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
+_cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
 {
-  eqframe* fam_u = u3a_peek(pil_u);
+  eqframe*  fam_u = u3a_peek(pil_u);
+  c3_o      ret_o = c3y;
   u3_noun   a, b;
   u3a_cell* a_u;
   u3a_cell* b_u;
+
+  u3_assert( _cr_pm.tab_u );
+
+  //  which pairs to record. where unification merges none, record any,
+  //  for this comparison only
+  //
+  ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : _cr_dbg_ram() ? 2 : 1;
+  if ( 1 < ctx_u->pmo_y ) {
+    _cr_pm_fresh();
+  }
 
   //  loop while arguments remain on the stack
   //
@@ -375,14 +534,16 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
         }
         else if ( c3y == u3a_is_atom(a) ) {
           if ( c3n == _cr_sing_atom(a, b) ) {
-            return c3n;
+            ret_o = c3n;
+            goto done;
           }
           else {
             break;
           }
         }
         else if ( c3y == u3a_is_atom(b) ) {
-          return c3n;
+          ret_o = c3n;
+          goto done;
         }
         //  [a] and [b] are cells
         //
@@ -393,11 +554,12 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
           //  short-circuiting mug check
           //
           if ( c3n == _cr_sing_mug((u3a_noun*)a_u, (u3a_noun*)b_u) ) {
-            return c3n;
+            ret_o = c3n;
+            goto done;
           }
-          //  short-circuiting re-comparison check
+          //  a pair known to be equal
           //
-          else if ( c3y == _cr_sing_cape_test(har_p, a, b) ) {
+          else if ( _cr_pm_ok(ctx_u, a, b) && _cr_pm_has(a, b) ) {
             fam_u = u3a_pop(pil_u);
             continue;
           }
@@ -438,27 +600,45 @@ _cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
       } break;
     }
 
-    //  track equal pairs to short-circuit possible (re-)comparison
+    //  record equal cells, to short-circuit their re-comparison
     //
-    _cr_sing_cape_keep(har_p, a, b);
+    if ( (SING_TAIL == fam_u->sat_y) && (a != b) && _cr_pm_ok(ctx_u, a, b) ) {
+      _cr_pm_put(a, b);
+    }
 
     fam_u = u3a_pop(pil_u);
   }
   while ( c3n == u3a_pile_done(pil_u) );
 
-  return c3y;
+done:
+  if ( 1 < ctx_u->pmo_y ) {
+    _cr_pm_fresh();
+  }
+  return ret_o;
 }
 
 /* _cr_sing(): unifying equality.
+**
+**   on the home road, unification merges every equal pair it compares,
+**   so comparing a pair again is cheap and comparisons stay linear.
+**   elsewhere, [ovr_s] counts steps: on an inner road, after _CR_PM_TOP
+**   steps the root pair is looked up in the pair table, if it's two
+**   home cells; after _CR_PM_DEEP, the comparison continues in
+**   _cr_sing_deep(), which looks up and records the pairs unification
+**   can't merge.
 */
 static c3_o
 _cr_sing(u3_noun a, u3_noun b)
 {
-  c3_s     ovr_s = 0;
-  u3a_cell*  a_u;
-  u3a_cell*  b_u;
-  eqframe* fam_u;
-  u3a_pile pil_u;
+  c3_s         ovr_s = (c3_s)(0x10000 - _CR_PM_TOP);
+  c3_t         stg_t = 0;   //  the root has been looked up
+  _cr_sing_ctx ctx_u;
+  u3a_cell*    a_u;
+  u3a_cell*    b_u;
+  eqframe*     fam_u;
+  u3a_pile     pil_u;
+
+  ctx_u.prt_t = 0;
 
   //  initialize stack control, push arguments onto the stack (none-frame)
   //
@@ -541,21 +721,53 @@ _cr_sing(u3_noun a, u3_noun b)
       } break;
     }
 
-    //  [ovr_s] counts comparisons, if it overflows, we've likely hit
-    //  a pathological case (highly duplicated tree), so we de-duplicate
-    //  subsequent comparisons by maintaining a set of equal pairs.
-    //
     if ( 0 == ++ovr_s ) {
-      u3p(u3h_root) har_p = u3h_new();
-      c3_o ret_o = _cr_sing_cape(&pil_u, har_p);
-      u3h_free(har_p);
-      u3R->cap_p = pil_u.top_p;
-      return ret_o;
+      if ( !stg_t ) {
+        //  a long comparison: on an inner road, look up the root pair,
+        //  the stack's first frame
+        //
+        eqframe* rot_u = u3to(eqframe, pil_u.top_p + pil_u.mov_ws
+                                                   + pil_u.off_ws);
+        u3_noun  ra    = rot_u->a, rb = rot_u->b;
+
+        stg_t = 1;
+        ovr_s = (c3_s)(0x10000 - (_CR_PM_DEEP - _CR_PM_TOP));
+        _cr_sing_scope(&ctx_u);
+
+        if (  (1 == ctx_u.scp_y) && (ra != rb)
+           && (c3y == u3a_is_cell(ra)) && (c3y == u3a_is_cell(rb))
+           && _cr_home(&ctx_u, ra) && _cr_home(&ctx_u, rb) )
+        {
+          u3_assert( _cr_pm.tab_u );
+
+          if ( _cr_pm_has(ra, rb) ) {
+            u3R->cap_p = pil_u.top_p;
+            return c3y;
+          }
+          ctx_u.prt_t = 1;
+          ctx_u.ra    = ra;
+          ctx_u.rb    = rb;
+        }
+      }
+      //  a very long comparison, not on the home road
+      //
+      else if ( ctx_u.scp_y ) {
+        c3_o ret_o = _cr_sing_deep(&pil_u, &ctx_u);
+
+        u3R->cap_p = pil_u.top_p;
+        if ( ctx_u.prt_t && (c3y == ret_o) ) {
+          _cr_pm_put(ctx_u.ra, ctx_u.rb);
+        }
+        return ret_o;
+      }
     }
 
     fam_u = u3a_pop(&pil_u);
   }
 
+  if ( ctx_u.prt_t ) {
+    _cr_pm_put(ctx_u.ra, ctx_u.rb);
+  }
   return c3y;
 }
 

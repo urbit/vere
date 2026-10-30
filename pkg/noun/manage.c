@@ -1094,6 +1094,10 @@ u3m_leap(c3_w pad_w)
 
   _rod_vaal(u3R);
 
+  if ( &(u3H->rod_u) == u3R ) {
+    u3r_sing_leap();
+  }
+
   //  push a new road struct onto the stack
   //
   {

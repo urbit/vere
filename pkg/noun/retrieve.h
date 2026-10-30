@@ -233,6 +233,18 @@
                       u3_noun s,
                       u3_noun b);
 
+      /* u3r_sing_leap(): a new excursion from the home road, which
+      **                  starts the pair table afresh. home road only.
+      */
+        void
+        u3r_sing_leap(void);
+
+      /* u3r_pair_size(): resize the pair table to 2^log_y entries
+      **                  (tests). home road only.
+      */
+        void
+        u3r_pair_size(c3_y log_y);
+
       /* u3r_sing(): noun value equality.
       **
       **   Unifies noun pointers on inner roads.
