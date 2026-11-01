@@ -3285,16 +3285,16 @@ _nc_compile(u3_noun straight, u3_weak bell)
   return pog_u;
 }
 
-/* _nc_here(): is a pointer on the current road?
+/* _nc_here(): is a pointer on the given road?
 */
 static inline c3_t
-_nc_here(void* ptr_v)
+_nc_here(void* ptr_v, u3_road* rod_u)
 {
   u3_post pos_p = u3of(void, ptr_v);
 
-  return ( c3y == u3a_is_north(u3R) )
-       ? ((pos_p >= u3R->rut_p) && (pos_p < u3R->hat_p))
-       : ((pos_p >= u3R->hat_p) && (pos_p < u3R->rut_p));
+  return ( c3y == u3a_is_north(rod_u) )
+       ? ((pos_p >= rod_u->rut_p) && (pos_p < rod_u->hat_p))
+       : ((pos_p >= rod_u->hat_p) && (pos_p < rod_u->rut_p));
 }
 
 /* _nc_gain_slow(), _nc_lose_slow(): out-of-line reference counting for
@@ -3349,14 +3349,21 @@ _nc_callee(u3nc_prog* pog_u, u3nc_dire* dir_u)
   u3z(key);
   _nc_dire_fit(dir_u, gop_u);
 
-  if ( _nc_here(dir_u) ) {
-    dir_u->pog_p = u3of(u3nc_prog, gop_u);
+  //  defer linking if the callee program is junior relative to the callsite,
+  //  link otherwise
+  for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
+    c3_t dir_t = _nc_here(dir_u, rod_u);
+    c3_t gop_t = _nc_here(gop_u, rod_u);
+    if ( dir_t ) {
+      dir_u->pog_p = u3of(u3nc_prog, gop_u);
+      return gop_u;
+    }
+    if ( gop_t ) {
+      u3h_put(u3R->ska.def_p, _nc_of(pog_u), u3_nul);
+      return gop_u;
+    }
   }
-  else {
-    u3h_put(u3R->ska.def_p, _nc_of(pog_u), u3_nul);
-  }
-
-  return gop_u;
+  u3_assert(0);
 }
 
 /* _nc_entry(): entry program for [sub fol], compiling it if needed.
@@ -4204,7 +4211,7 @@ static c3_o
 _nc_link_deferred_cb(u3_noun kev, void* tox_v)
 {
   u3nc_prog* pog_u = _nc_to(u3h(kev));
-  if ( !_nc_here(pog_u) ) return c3n;
+  if ( !_nc_here(pog_u, u3R) ) return c3n;
   _nc_link(pog_u);
   return c3y;
 }
