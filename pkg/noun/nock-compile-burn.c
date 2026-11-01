@@ -360,7 +360,7 @@ static const OP_F WTAB[] = { WIDES };
 //
 #define MOVE()  do {                                                            \
     for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
-      if ( kon_y[_i] ) { ZERO(sot_h[_i]); } else { GAIN(nex[_i]); }            \
+      if ( kon_y[_i] ) { ZERO(sot_h[_i]); } else { GAIN(nex[_i]); }             \
     }                                                                           \
   } while ( 0 )
 
@@ -780,7 +780,7 @@ OP1(CAP, a_h, BODY_CAP)
   CALLEE();                                                                     \
   GATHER(gop_u->tot_h);                                                         \
   kni_h = 0;                                                                    \
-  x     = u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(u3t(dir_u->bell)));      \
+  x     = u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell));           \
   o     = _nc_find(dir_u->cid_h, x, c3n);                                       \
   if ( u3_none != o ) {                                                         \
     POP(gop_u->tot_h);                                                          \
