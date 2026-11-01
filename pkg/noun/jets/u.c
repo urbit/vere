@@ -46,6 +46,7 @@ const u3u_harm u3u_Harm[] = {
   U3U_BINARY(c_lsh),
   U3U_BINARY(c_met),
   U3U_BINARY(c_mix),
+  U3U_UNARY(c_mug),
   U3U_TERNARY(c_muk),
   U3U_BINARY(c_rap),
   U3U_BINARY(c_rip),

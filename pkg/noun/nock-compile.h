@@ -91,6 +91,14 @@
       u3_noun
       u3nc_nock_on(u3_noun bus, u3_noun fol);
 
+    /* u3nc_mean(): the product of the arm of a deferred %mean trap
+    **              [%meaf bell arg] on the trace stack, as ++toon: the
+    **              n-ary program of bell on the arguments, in a
+    **              virtualization context without a namespace.  RETAINS.
+    */
+      u3_noun
+      u3nc_mean(u3_noun bell, u3_noun arg);
+
     /* u3nc_scan(): analyze and compile [bus fol] without running it.
     */
       void

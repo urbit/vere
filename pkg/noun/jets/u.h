@@ -71,6 +71,7 @@
     u3_noun u3uc_lsh(u3_noun*);
     u3_noun u3uc_met(u3_noun*);
     u3_noun u3uc_mix(u3_noun*);
+    u3_noun u3uc_mug(u3_noun*);
     u3_noun u3uc_muk(u3_noun*);
     u3_noun u3uc_rap(u3_noun*);
     u3_noun u3uc_rip(u3_noun*);

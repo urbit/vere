@@ -69,10 +69,16 @@
 **    CEL   p        crash unless p is a cell
 **    LOB   p        crash unless p is a loobean
 **    EQU   l r      =(l r), for the side effect
-**    HSP   i        static hint prologue, literal i is [hint formula]
+**    HSP   i        static hint prologue, literal i is the hint
 **    HSE   i        static hint epilogue
 **    HDP   i p      dynamic hint prologue, clue in p
 **    HDE   i p      dynamic hint epilogue
+**    HMP   i        deferred %mean prologue: push [%meaf bell args] of
+**                   site i, the arm of the trap and the arguments it takes
+**    HME            deferred %mean epilogue
+**    HCP   i        constant %mean prologue: push [%meac literal i], the
+**                   known product of the arm
+**    HCE            constant %mean epilogue
 **    SPY   e p d    .^(e p) -> d
 **    NOK   u f d    .*(u f) -> d, through the SKA core
 **    CAL   i        call site i with its arguments -> d
@@ -149,6 +155,8 @@
   X(hse, HSE, 0,   0,   1,   0,   0,   0,   0)                                  \
   X(hdp, HDP, 1,   0,   1,   0,   0,   1,   0)                                  \
   X(hde, HDE, 1,   0,   1,   0,   0,   1,   0)                                  \
+  X(hmp, HMP, 0,   0,   1,   0,   1,   0,   0)                                  \
+  X(hcp, HCP, 0,   0,   1,   0,   0,   0,   0)                                  \
   X(spy, SPY, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(nok, NOK, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(cal, CAL, 0,   0,   1,   0,   1,   0,   0)                                  \
@@ -170,9 +178,22 @@
   X(don, DON, 1,   0,   0,   0,   0,   1,   1)                                  \
   X(dro, DRO, 1,   0,   0,   0,   0,   0,   0)
 
+/*  Families of ops without operands, X(fam, OP): one opcode each, with
+**  nothing to widen or consume.  They follow the others in the opcode
+**  space and in the family order the decoder searches.
+*/
+#define NULLARIES(X)                                                            \
+  X(hme, HME)                                                                   \
+  X(hce, HCE)
+
 #define _nc_fam_enum(fam, OP, src, dst, imm, tar, sot, kon, swe)  _nc_##fam,
-enum { FAMILIES(_nc_fam_enum) _nc_bom, _nc_imm, _nc_nop, _nc_kil };
+#define _nc_nul_enum(fam, OP)  _nc_##fam,
+enum {
+  FAMILIES(_nc_fam_enum) NULLARIES(_nc_nul_enum)
+  _nc_bom, _nc_imm, _nc_nop, _nc_kil
+};
 #undef _nc_fam_enum
+#undef _nc_nul_enum
 
 /*  The opcodes of a family, in the order of the consume variants and,
 **  within a variant, of the widths: OPCODES lists the _B and _S widths
@@ -192,8 +213,10 @@ enum { FAMILIES(_nc_fam_enum) _nc_bom, _nc_imm, _nc_nop, _nc_kil };
 #define _nc_fam_wides(fam, OP, src, dst, imm, tar, sot, kon, swe)               \
   _nc_kon_##kon(_nc_vid, OP)
 
+#define _nc_nul_ops(fam, OP)  Y(OP)
+
 #define OPCODES  Y(IMM_0) Y(IMM_1) Y(IMM_B) Y(IMM_S)                            \
-                 FAMILIES(_nc_fam_ops)                                          \
+                 FAMILIES(_nc_fam_ops) NULLARIES(_nc_nul_ops)                   \
                  Y(BOM) Y(WIDE)
 #define WIDES    FAMILIES(_nc_fam_wides)
 
@@ -212,10 +235,13 @@ static const c3_c* _nc_name_c[] = { OPCODES };
 */
 #define _nc_fam_row(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = { src, dst, imm, tar, sot, kon, swe },
+#define _nc_nul_row(fam, OP)                                                    \
+  [_nc_##fam] = { 0,   0,    0,  0,   0,   0,   0 },
 static const struct {
   c3_y src_y, dst_y, imm_y, tar_y, sot_y, kon_y, swe_y;
 } _nc_fam[] = {
   FAMILIES(_nc_fam_row)
+  NULLARIES(_nc_nul_row)
   /*fam,        src, dst, imm, tar, sot, kon, swe*/
   [_nc_bom] = { 0,   0,    0,  0,   0,   0,   0 },
   [_nc_imm] = { 0,   1,    0,  0,   0,   0,   0 },
@@ -223,6 +249,7 @@ static const struct {
   [_nc_kil] = { 0,   1,    0,  0,   0,   0,   0 },
 };
 #undef _nc_fam_row
+#undef _nc_nul_row
 
 /* _nc_edgy(): whether a family is a branch on sources, whose variant
 **             bits consume them per edge: for source i, bit 2i on the
@@ -243,18 +270,28 @@ static const struct {
   [_nc_##fam] = _nc_first_##kon(OP, B),
 #define _nc_fam_vas(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = _nc_first_##kon(OP, V),
-static const c3_y _nc_bas_y[] = { FAMILIES(_nc_fam_bas) };
-static const c3_y _nc_vas_y[] = { FAMILIES(_nc_fam_vas) };
+//  a nullary has no _V opcode: a base above every _V opcode keeps it out
+//  of the decoder's search of WIDES
+//
+#define _nc_nul_bas(fam, OP)  [_nc_##fam] = OP,
+#define _nc_nul_vas(fam, OP)  [_nc_##fam] = 0xff,
+static const c3_y _nc_bas_y[] = { FAMILIES(_nc_fam_bas) NULLARIES(_nc_nul_bas) };
+static const c3_y _nc_vas_y[] = { FAMILIES(_nc_fam_vas) NULLARIES(_nc_nul_vas) };
+static_assert(LAST_V <= 0xff);
 #undef _nc_fam_bas
 #undef _nc_fam_vas
+#undef _nc_nul_bas
+#undef _nc_nul_vas
 
 /* _nc_fam_c: names of the families, for _nc_print().
 */
 #define _nc_fam_nam(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = #OP,
+#define _nc_nul_nam(fam, OP)  [_nc_##fam] = #OP,
 
-static const c3_c* _nc_fam_c[] = { FAMILIES(_nc_fam_nam) };
+static const c3_c* _nc_fam_c[] = { FAMILIES(_nc_fam_nam) NULLARIES(_nc_nul_nam) };
 #undef _nc_fam_nam
+#undef _nc_nul_nam
 
 #define _nc_none       ((c3_h)-1)
 
@@ -876,21 +913,38 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
       op_u->src_h[1] = _nc_reg(gen_u, b);
     } break;
 
+    //  the hinted formula that the hint ops carry is not kept
+    //
     case c3__hsp:
     case c3__hse: {
+      u3x_cell(arg, &a, &b);
       op_u = _nc_op(gen_u, ( c3__hsp == tag ) ? _nc_hsp : _nc_hse);
-      op_u->imm_h = _nc_lit(gen_u, arg);
+      op_u->imm_h = _nc_lit(gen_u, a);
     } break;
 
     case c3__hdp:
     case c3__hde: {
-      u3_noun hin;
       u3x_trel(arg, &a, &b, &c);
-      hin  = u3nc(u3k(a), u3k(c));
       op_u = _nc_op(gen_u, ( c3__hdp == tag ) ? _nc_hdp : _nc_hde);
-      op_u->imm_h    = _nc_lit(gen_u, hin);
+      op_u->imm_h    = _nc_lit(gen_u, a);
       op_u->src_h[0] = _nc_reg(gen_u, b);
-      u3z(hin);
+    } break;
+
+    case c3__hmp: {
+      u3x_trel(arg, &a, &b, &c);
+      op_u = _nc_op(gen_u, _nc_hmp);
+      op_u->imm_h = _nc_dir(gen_u, a, _nc_ring(u3_nul), u3_none, b, c3n);
+    } break;
+
+    case c3__hme:
+    case c3__hce: {
+      op_u = _nc_op(gen_u, ( c3__hme == tag ) ? _nc_hme : _nc_hce);
+    } break;
+
+    case c3__hcp: {
+      u3x_cell(arg, &a, &b);
+      op_u = _nc_op(gen_u, _nc_hcp);
+      op_u->imm_h = _nc_lit(gen_u, a);
     } break;
 
     case c3__spy:
@@ -2638,7 +2692,7 @@ _nc_decode(const c3_y* pog, c3_h* ip_h, c3_y* kon_y, c3_y* wid_y)
 static void
 _nc_print_hint(u3_noun lit)
 {
-  c3_c* tag_c = u3r_string(u3h(lit));
+  c3_c* tag_c = u3r_string(lit);
 
   fprintf(stderr, " %%%s", tag_c);
   c3_free(tag_c);
@@ -2743,8 +2797,15 @@ _nc_print(u3nc_prog* pog_u)
     else {
       c3_y kon_y, wid_y, fam_y = _nc_decode(pog, &ip_h, &kon_y, &wid_y);
 
-      fprintf(stderr, "  %4u: %s_%c%s", off_h, _nc_fam_c[fam_y], "BSV"[wid_y],
-              ( _nc_fam[fam_y].swe_y && kon_y ) ? " sweep" : " ");
+      if ( !(  _nc_fam[fam_y].imm_y || _nc_fam[fam_y].src_y
+            || _nc_fam[fam_y].dst_y || _nc_fam[fam_y].tar_y) )
+      {
+        fprintf(stderr, "  %4u: %s", off_h, _nc_fam_c[fam_y]);
+      }
+      else {
+        fprintf(stderr, "  %4u: %s_%c%s", off_h, _nc_fam_c[fam_y], "BSV"[wid_y],
+                ( _nc_fam[fam_y].swe_y && kon_y ) ? " sweep" : " ");
+      }
 
       if ( _nc_fam[fam_y].imm_y ) {
         c3_h imm_h = _nc_read(pog, &ip_h, wid_y);
@@ -3285,7 +3346,7 @@ _nc_compile(u3_noun straight, u3_weak bell)
   return pog_u;
 }
 
-/* _nc_here(): is a pointer on the given road?
+/* _nc_here(): is a pointer on the given road's heap?
 */
 static inline c3_t
 _nc_here(void* ptr_v, u3_road* rod_u)
@@ -3813,6 +3874,55 @@ _nc_burn_out(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   u3t_off(noc_o);
 
   return pro;
+}
+
+/* _nc_mean_run(): the arm of a deferred %mean trap on its arguments, a
+**                 list: its n-ary program, compiled if it isn't yet, run
+**                 on them.  TRANSFERS.
+*/
+static u3_noun
+_nc_mean_run(u3_noun bell, u3_noun arg)
+{
+  u3_noun    key   = _nc_dir_key(bell, c3n);
+  u3nc_prog* pog_u = _nc_dir_get(key);
+  u3_noun    lis   = arg;
+  u3_noun*   ary_u;
+  u3_noun    pro;
+  c3_h       i_h;
+
+  if ( !pog_u ) {
+    pog_u = _nc_compile(u3d_dire(bell, c3n), bell);
+    u3h_put(u3R->ska.dir_p, key, _nc_of(pog_u));
+  }
+  u3z(key);
+
+  c3_h arg_h = pog_u->arg_h;
+  ary_u = u3a_malloc(arg_h * sizeof(u3_noun));
+  for ( i_h = 0; i_h < arg_h; i_h++ ) {
+    if ( c3n == u3du(lis) ) u3m_bail(c3__fail);
+    ary_u[i_h] = u3k(u3h(lis));
+    lis = u3t(lis);
+  }
+  if ( u3_nul != lis ) u3m_bail(c3__fail);
+  u3z(arg);
+  u3z(bell);
+
+  pro = _nc_burn_out(pog_u, ary_u, arg_h);
+  u3a_free(ary_u);
+  return pro;
+}
+
+/* u3nc_mean(): the product of the arm of a deferred %mean trap, as
+**              ++toon: _nc_mean_run() in a virtualization context
+**              without a namespace, like +mack runs the trap.  The
+**              compilation runs inside it too: a failing analysis is a
+**              %fail, which passes through, where a crash of the arm is
+**              the %2 of the toon.  RETAINS.
+*/
+u3_noun
+u3nc_mean(u3_noun bell, u3_noun arg)
+{
+  return u3m_soft_run(u3_nul, _nc_mean_run, u3k(bell), u3k(arg));
 }
 
 /* u3nc_nock_on(): produce .*(bus fol).

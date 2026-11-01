@@ -17,3 +17,11 @@
       return u3r_mug(sam);
     }
   }
+
+/* u3uc_mug(): array driver of u3wc_mug.
+*/
+u3_noun
+u3uc_mug(u3_noun* arg)
+{
+  return u3r_mug(arg[0]);
+}

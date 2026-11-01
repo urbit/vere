@@ -2023,41 +2023,13 @@ u3m_soft(c3_w    mil_w,
       }
     }
 
-    //  don't call +mook if we have no kernel
-    //
-    //    This is required to soft the boot sequence.
-    //
-    if ( 0 == u3A->roc ) {
-      while ( u3_nul != tax ) {
-        u3_noun dat, mot, val;
-        u3x_cell(tax, &dat, &tax);
-
-        if ( c3y == u3r_cell(dat, &mot, &val) ) {
-          if ( c3__spot == mot ) {
-            u3m_p("tax", val);
-          }
-          else if (  (c3__mean == mot)
-                  && (c3y == u3a_is_atom(val)) )
-          {
-            u3m_p("men", val);
-          }
-          else {
-            u3m_p("mot", mot);
-          }
-        }
-      }
-
-      pro = u3nc(u3k(cod), u3_nul);
-    }
     //  %evil leaves no trace
     //
-    else if ( c3__evil == cod ) {
+    if ( c3__evil == cod ) {
       pro = u3nc(u3k(cod), u3_nul);
     }
     else {
-      u3_noun mok = u3dc("mook", 2, u3k(tax));
-      pro = u3nc(u3k(cod), u3k(u3t(mok)));
-      u3z(mok);
+      pro = u3nc(u3k(cod), u3t_mook(u3k(tax)));
     }
 
     u3z(why);

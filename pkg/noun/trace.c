@@ -11,11 +11,15 @@
 #include "allocate.h"
 #include "imprison.h"
 #include "jets/k.h"
+#include "jets/q.h"
 #include "log.h"
 #include "manage.h"
+#include "nock-compile.h"
+#include "nock.h"
 #include "options.h"
 #include "retrieve.h"
 #include "vortex.h"
+#include "xtract.h"
 
 /** Global variables.
 **/
@@ -664,6 +668,400 @@ u3t_slog_cap(c3_h pri_h, u3_noun cap, u3_noun tan)
 }
 
 
+/* u3t_mook(): render a trace as +mook does, a (list tank).
+**
+**   The frames are +mink's, [tag dat], and two of u3nc's: [%meaf bell
+**   arg], a deferred %mean, the arm of the trap and the arguments it
+**   takes in place of the trap, and [%meac tank], a constant %mean, the
+**   known product of the arm.  Those two never reach +mook: the
+**   renderer runs the arm as +mook runs the trap, so the tangs agree.
+*/
+
+/* _t_tape(): the bytes of an atom as a tape, (trip a).  RETAINS.
+*/
+static u3_noun
+_t_tape(u3_atom a)
+{
+  c3_w    len_w = u3r_met(3, a);
+  u3_noun lis   = u3_nul;
+
+  while ( len_w-- ) {
+    lis = u3nc(u3r_byte(len_w, a), lis);
+  }
+
+  return lis;
+}
+
+/* _t_etch_ud(): (scow %ud a) of a direct atom into out_c
+*/
+static c3_c*
+_t_etch_ud(c3_c* out_c, u3_atom a)
+{
+  c3_c rev_c[14];
+  c3_w a_w, len_w = 0, dig_w = 0;
+
+  if ( c3n == u3a_is_cat(a) ) {
+    u3m_bail(c3__fail);
+  }
+  a_w = a;
+
+  do {
+    if ( dig_w && !(dig_w % 3) ) {
+      rev_c[len_w++] = '.';
+    }
+    rev_c[len_w++] = '0' + (a_w % 10);
+    a_w /= 10;
+    dig_w++;
+  } while ( a_w );
+
+  while ( len_w-- ) {
+    *out_c++ = rev_c[len_w];
+  }
+
+  return out_c;
+}
+
+/* _t_leaf(): leaf tank of a C string.
+*/
+static u3_noun
+_t_leaf(const c3_c* str_c)
+{
+  return u3nc(c3__leaf, u3i_tape(str_c));
+}
+
+/* _t_atoms(): is som a proper list of atoms (a path or a tape)?  RETAINS.
+*/
+static c3_o
+_t_atoms(u3_noun som)
+{
+  while ( c3y == u3du(som) ) {
+    if ( c3n == u3ud(u3h(som)) ) {
+      return c3n;
+    }
+    som = u3t(som);
+  }
+
+  return __(u3_nul == som);
+}
+
+/* _t_tank(), _t_tanks(): does som fit +tank, (list tank)?  RETAINS.
+**                        As (soft tank): a cord or a tagged cell.
+*/
+static c3_o _t_tank(u3_noun som);
+
+static c3_o
+_t_tanks(u3_noun som)
+{
+  while ( c3y == u3du(som) ) {
+    if ( c3n == _t_tank(u3h(som)) ) {
+      return c3n;
+    }
+    som = u3t(som);
+  }
+
+  return __(u3_nul == som);
+}
+
+static c3_o
+_t_tank(u3_noun som)
+{
+  u3_noun tag, dat, pre, lis, a, b, c, d;
+
+  if ( c3n == u3r_cell(som, &tag, &dat) ) {
+    return c3y;
+  }
+
+  switch ( tag ) {
+    case c3__leaf: {
+      return _t_atoms(dat);
+    }
+
+    case c3__palm: {
+      return __(  (c3y == u3r_cell(dat, &pre, &lis))
+               && (c3y == u3r_qual(pre, &a, &b, &c, &d))
+               && (c3y == _t_atoms(a)) && (c3y == _t_atoms(b))
+               && (c3y == _t_atoms(c)) && (c3y == _t_atoms(d))
+               && (c3y == _t_tanks(lis)) );
+    }
+
+    case c3__rose: {
+      return __(  (c3y == u3r_cell(dat, &pre, &lis))
+               && (c3y == u3r_trel(pre, &a, &b, &c))
+               && (c3y == _t_atoms(a)) && (c3y == _t_atoms(b))
+               && (c3y == _t_atoms(c))
+               && (c3y == _t_tanks(lis)) );
+    }
+
+    default: {
+      return c3n;
+    }
+  }
+}
+
+/* _t_smyt(): (smyt pax), a path as a tank.  RETAINS.
+*/
+static u3_noun
+_t_smyt(u3_noun pax)
+{
+  u3_noun lis = u3_nul;
+
+  for ( ; u3_nul != pax; pax = u3t(pax) ) {
+    lis = u3nc(u3nc(c3__leaf, _t_tape(u3h(pax))), lis);
+  }
+
+  return u3nt(c3__rose,
+              u3nt(u3nc('/', u3_nul), u3nc('/', u3_nul), u3_nul),
+              u3kb_flop(lis));
+}
+
+/* _t_sis_c, _t_dex_c: the prefix and suffix syllables of +po.
+*/
+static const c3_c _t_sis_c[] =
+  "dozmarbinwansamlitsighidfidlissogdirwacsabwissib"
+  "rigsoldopmodfoglidhopdardorlorhodfolrintogsilmir"
+  "holpaslacrovlivdalsatlibtabhanticpidtorbolfosdot"
+  "losdilforpilramtirwintadbicdifrocwidbisdasmidlop"
+  "rilnardapmolsanlocnovsitnidtipsicropwitnatpanmin"
+  "ritpodmottamtolsavposnapnopsomfinfonbanmorworsip"
+  "ronnorbotwicsocwatdolmagpicdavbidbaltimtasmallig"
+  "sivtagpadsaldivdactansidfabtarmonranniswolmispal"
+  "lasdismaprabtobrollatlonnodnavfignomnibpagsopral"
+  "bilhaddocridmocpacravripfaltodtiltinhapmicfanpat"
+  "taclabmogsimsonpinlomrictapfirhasbosbatpochactid"
+  "havsaplindibhosdabbitbarracparloddosbortochilmac"
+  "tomdigfilfasmithobharmighinradmashalraglagfadtop"
+  "mophabnilnosmilfopfamdatnoldinhatnacrisfotribhoc"
+  "nimlarfitwalrapsarnalmoslandondanladdovrivbacpol"
+  "laptalpitnambonrostonfodponsovnocsorlavmatmipfip";
+static const c3_c _t_dex_c[] =
+  "zodnecbudwessevpersutletfulpensytdurwepserwylsun"
+  "rypsyxdyrnuphebpeglupdepdysputlughecryttyvsydnex"
+  "lunmeplutseppesdelsulpedtemledtulmetwenbynhexfeb"
+  "pyldulhetmevruttylwydtepbesdexsefwycburderneppur"
+  "rysrebdennutsubpetrulsynregtydsupsemwynrecmegnet"
+  "secmulnymtevwebsummutnyxrextebfushepbenmuswyxsym"
+  "selrucdecwexsyrwetdylmynmesdetbetbeltuxtugmyrpel"
+  "syptermebsetdutdegtexsurfeltudnuxruxrenwytnubmed"
+  "lytdusnebrumtynseglyxpunresredfunrevrefmectedrus"
+  "bexlebduxrynnumpyxrygryxfeptyrtustyclegnemfermer"
+  "tenlusnussyltecmexpubrymtucfyllepdebbermughuttun"
+  "bylsudpemdevlurdefbusbeprunmelpexdytbyttyplevmyl"
+  "wedducfurfexnulluclennerlexrupnedlecrydlydfenwel"
+  "nydhusrelrudneshesfetdesretdunlernyrsebhulryllud"
+  "remlysfynwerrycsugnysnyllyndyndemluxfedsedbecmun"
+  "lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes";
+
+/* _t_scow_p(): (scow %p a) of a 32-bit atom, as a tape: +fein, then the
+**              suffix syllable alone below 256, a prefix and a suffix
+**              per 16 bits above, dashed.
+*/
+static u3_noun
+_t_scow_p(c3_w a_w)
+{
+  u3_atom pyn   = u3i_word(a_w);
+  u3_atom sxz   = u3qe_fein_ob(pyn);
+  c3_w    sxz_w = u3r_word(0, sxz);
+  c3_c    buf_c[16];
+  c3_c*   out_c = buf_c;
+
+  u3z(pyn);
+  u3z(sxz);
+  *out_c++ = '~';
+
+  if ( sxz_w < 0x100 ) {
+    memcpy(out_c, _t_dex_c + (3 * sxz_w), 3);
+    out_c += 3;
+  }
+  else {
+    c3_w imp_w = ( sxz_w > 0xffff ) ? 2 : 1;
+
+    while ( imp_w-- ) {
+      c3_w log_w = (sxz_w >> (16 * imp_w)) & 0xffff;
+
+      memcpy(out_c, _t_sis_c + (3 * (log_w >> 8)), 3);
+      out_c += 3;
+      memcpy(out_c, _t_dex_c + (3 * (log_w & 0xff)), 3);
+      out_c += 3;
+
+      if ( imp_w ) {
+        *out_c++ = '-';
+      }
+    }
+  }
+
+  *out_c = 0;
+  return u3i_tape(buf_c);
+}
+
+/* _t_mean(): the tank of a %mean arm's run, a ++toon: its product if
+**            it is a tank, as +mook renders the trap's.  TRANSFERS.
+*/
+static u3_noun
+_t_mean(u3_noun ton)
+{
+  u3_noun pro;
+
+  if ( 0 != u3h(ton) ) {
+    u3z(ton);
+    return _t_leaf("####");
+  }
+
+  pro = u3k(u3t(ton));
+  u3z(ton);
+
+  if ( c3n == _t_tank(pro) ) {
+    u3z(pro);
+    return _t_leaf("mook.mean");
+  }
+
+  return pro;
+}
+
+/* _t_rend(): a frame [tag dat] as a tank, +rend:mook.  RETAINS.
+*/
+static u3_noun
+_t_rend(u3_noun fam)
+{
+  u3_noun tag, dat;
+
+  u3x_cell(fam, &tag, &dat);
+
+  switch ( tag ) {
+    case c3__hunk: {
+      u3_noun ref, pax;
+
+      if (  (c3n == u3r_cell(dat, &ref, &pax))
+         || (c3n == _t_atoms(pax)) )
+      {
+        return _t_leaf("mook.hunk");
+      }
+
+      return _t_smyt(pax);
+    }
+
+    case c3__lose: {
+      if ( c3y == u3du(dat) ) {
+        return _t_leaf("mook.lose");
+      }
+
+      return u3nc(c3__leaf, _t_tape(dat));
+    }
+
+    case c3__hand: {
+      return u3nc(c3__leaf, _t_scow_p(u3r_mug(dat)));
+    }
+
+    //  a trap: run it like +mack, without a namespace
+    //
+    case c3__mean: {
+      if ( c3n == u3du(dat) ) {
+        return u3nc(c3__leaf, _t_tape(dat));
+      }
+
+      return _t_mean(u3m_soft_run(u3_nul, u3n_nock_on,
+                                  u3k(dat), u3k(u3h(dat))));
+    }
+
+    case c3__meaf: {
+      u3_noun bell, arg;
+
+      u3x_cell(dat, &bell, &arg);
+      return _t_mean(u3nc_mean(bell, arg));
+    }
+
+    case c3__meac: {
+      if ( c3n == _t_tank(dat) ) {
+        return _t_leaf("mook.mean");
+      }
+
+      return u3k(dat);
+    }
+
+    case c3__spot: {
+      u3_noun pax, pin, lin, col, a, b, c, d;
+      c3_c    buf_c[64];
+      c3_c*   out_c = buf_c;
+
+      if (  (c3n == u3r_cell(dat, &pax, &pin))
+         || (c3n == _t_atoms(pax))
+         || (c3n == u3r_cell(pin, &lin, &col))
+         || (c3n == u3r_cell(lin, &a, &b))
+         || (c3n == u3r_cell(col, &c, &d))
+         || (c3n == u3ud(a)) || (c3n == u3ud(b))
+         || (c3n == u3ud(c)) || (c3n == u3ud(d)) )
+      {
+        return _t_leaf("mook.spot");
+      }
+
+      //  "<[a b].[c d]>"
+      //
+      *out_c++ = '<';
+      *out_c++ = '[';
+      out_c    = _t_etch_ud(out_c, a);
+      *out_c++ = ' ';
+      out_c    = _t_etch_ud(out_c, b);
+      *out_c++ = ']';
+      *out_c++ = '.';
+      *out_c++ = '[';
+      out_c    = _t_etch_ud(out_c, c);
+      *out_c++ = ' ';
+      out_c    = _t_etch_ud(out_c, d);
+      *out_c++ = ']';
+      *out_c++ = '>';
+      *out_c   = 0;
+
+      return u3nt(c3__rose,
+                  u3nt(u3nc(':', u3_nul), u3_nul, u3_nul),
+                  u3nt(_t_smyt(pax), _t_leaf(buf_c), u3_nul));
+    }
+
+    default: {
+      return u3nc(c3__leaf, u3kb_weld(u3i_tape("mook."), _t_tape(tag)));
+    }
+  }
+}
+
+/* u3t_mook(): render a trace as +mook does, the middle of one longer
+**             than 1024 frames skipped.  TRANSFERS; produces a (list tank).
+*/
+u3_noun
+u3t_mook(u3_noun tax)
+{
+  u3_noun lis = u3_nul;
+  u3_noun yel = u3qb_lent(tax);
+  u3_noun fam;
+
+  if ( (c3n == u3a_is_cat(yel)) || (yel > 1024) ) {
+    u3_noun hed = u3qb_scag(512, tax);
+    u3_noun off = u3qa_sub(yel, 512);
+    u3_noun tel = u3qb_slag(off, tax);
+    u3_noun kip = u3qa_sub(yel, 1024);
+    c3_c    buf_c[48];
+    c3_c*   out_c = buf_c;
+
+    //  "[skipped N frames]"
+    //
+    memcpy(out_c, "[skipped ", 9);
+    out_c += 9;
+    out_c  = _t_etch_ud(out_c, kip);
+    memcpy(out_c, " frames]", 9);
+    u3z(kip);
+    u3z(off);
+
+    tel = u3nc(u3nc(c3__lose, u3i_string(buf_c)), tel);
+    u3z(tax);
+    tax = u3kb_weld(hed, tel);
+  }
+  u3z(yel);
+
+  for ( fam = tax; u3_nul != fam; fam = u3t(fam) ) {
+    lis = u3nc(_t_rend(u3h(fam)), lis);
+  }
+  u3z(tax);
+
+  return u3kb_flop(lis);
+}
+
 /* u3t_slog_trace(): given a c3_l priority pri and a raw stack tax
 ** flop the order into start-to-end, render, and slog each item
 ** until done.
@@ -681,8 +1079,8 @@ u3t_slog_trace(c3_h pri_h, u3_noun tax)
   // and thus we can free it safely at the end of the func
   // to clean up after ourselves.
   // Note: flop reverses the stack trace list 'tax'
-  u3_noun ton = u3dc("mook", 2, u3kb_flop(tax));
-  u3_noun lit = u3t(ton);
+  u3_noun tan = u3t_mook(u3kb_flop(tax));
+  u3_noun lit = tan;
 
   // print the stack one stack item at a time
   while ( u3_nul != lit ) {
@@ -690,7 +1088,7 @@ u3t_slog_trace(c3_h pri_h, u3_noun tax)
     lit = u3t(lit);
   }
 
-  u3z(ton);
+  u3z(tan);
 }
 
 

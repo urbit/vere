@@ -225,8 +225,14 @@ static const OP_F WTAB[] = { WIDES };
 //  BODY1/2/3(name, A.., body, ...): the body name_in of an opcode, naming
 //  its operands, from the body macro applied to the consume constants
 //  that follow it, if any.  A body ends in a dispatch: BURN(), DONE(), or
-//  a call.
+//  a call.  BODY0(name, body): an opcode with no operands is its own
+//  body, there being one encoding of it.
 //
+#define BODY0(name, body)                                                       \
+  static u3_noun OP(name) ARGS CONV {                                           \
+    body()                                                                      \
+  }
+
 #define BODY1(name, A, body, ...)                                               \
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
@@ -256,6 +262,7 @@ static const OP_F WTAB[] = { WIDES };
 //  bits per source for the edge it is consumed on, 0 and 1 for the first
 //  and 2 and 3 for the second, the body taking KAY, KAT, KBY and KBT.
 //
+#define OP0(op, body)           BODY0(op, body)
 #define OP1(op, A, body)        DECODE1(op) BODY1(op, A, body)
 #define OP2(op, A, B, body)     DECODE2(op) BODY2(op, A, B, body)
 #define OP3(op, A, B, C, body)  DECODE3(op) BODY3(op, A, B, C, body)
@@ -647,7 +654,7 @@ OP1K(LOB, a_h, BODY_LOB)
 OP2KK(EQU, a_h, b_h, BODY_EQU)
 
 #define BODY_HSP()                                                              \
-  u3_noun x = _nc_hilt_fore(u3h(pog_u->lit_u.non[a_h]));                        \
+  u3_noun x = _nc_hilt_fore(pog_u->lit_u.non[a_h]);                             \
   *(u3_noun*)PUSH(1) = x;                                                       \
   BURN();
 OP1(HSP, a_h, BODY_HSP)
@@ -655,12 +662,12 @@ OP1(HSP, a_h, BODY_HSP)
 #define BODY_HSE()                                                              \
   u3_noun x = *(u3_noun*)TOP(1);                                                \
   POP(1);                                                                       \
-  _nc_hilt_hind(u3h(pog_u->lit_u.non[a_h]), x);                                 \
+  _nc_hilt_hind(pog_u->lit_u.non[a_h], x);                                      \
   BURN();
 OP1(HSE, a_h, BODY_HSE)
 
 #define BODY_HDP(K)                                                             \
-  u3_noun x = _nc_hint_fore(u3h(pog_u->lit_u.non[a_h]), TAKE(b_h, K));          \
+  u3_noun x = _nc_hint_fore(pog_u->lit_u.non[a_h], TAKE(b_h, K));               \
   *(u3_noun*)PUSH(1) = x;                                                       \
   BURN();
 OP2K(HDP, a_h, b_h, BODY_HDP)
@@ -668,10 +675,43 @@ OP2K(HDP, a_h, b_h, BODY_HDP)
 #define BODY_HDE(K)                                                             \
   u3_noun x = *(u3_noun*)TOP(1);                                                \
   POP(1);                                                                       \
-  _nc_hint_hind(u3h(pog_u->lit_u.non[a_h]), x);                                 \
+  _nc_hint_hind(pog_u->lit_u.non[a_h], x);                                      \
   DROP(b_h, K);                                                                 \
   BURN();
 OP2K(HDE, a_h, b_h, BODY_HDE)
+
+#define BODY_HMP()                                                              \
+  u3nc_dire* dir_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun    lis = u3_nul;                                                      \
+  SITE();                                                                       \
+  for ( c3_h _i = len_h; _i-- > 0; ) {                                          \
+    u3_noun _v = reg[sot_h[_i]];                                                \
+    TAKEN(_v, sot_h[_i], kon_y[_i]);                                            \
+    lis = u3nc(_v, lis);                                                        \
+  }                                                                             \
+  u3t_push(u3nt(c3__meaf, GAIN(dir_u->bell), lis));                             \
+  BURN();
+OP1(HMP, a_h, BODY_HMP)
+
+#define BODY_HME()                                                              \
+  u3t_drop();                                                                   \
+  BURN();
+OP0(HME, BODY_HME)
+
+//  a constant %mean: the known product of the arm, literal a_h
+//
+#define BODY_HCP()                                                              \
+  u3t_push(u3nc(c3__meac, GAIN(pog_u->lit_u.non[a_h])));                        \
+  BURN();
+OP1(HCP, a_h, BODY_HCP)
+
+#define BODY_HCE()                                                              \
+  u3t_drop();                                                                   \
+  BURN();
+OP0(HCE, BODY_HCE)
 
 #define BODY_SPY(KA, KB)                                                        \
   u3_noun x = u3m_soft_esc(GAIN(reg[a_h]), GAIN(reg[b_h])), pro;                \
@@ -1105,6 +1145,10 @@ OP(WIDE) ARGS CONV
 #undef BODY_HSE
 #undef BODY_HDP
 #undef BODY_HDE
+#undef BODY_HMP
+#undef BODY_HME
+#undef BODY_HCP
+#undef BODY_HCE
 #undef BODY_SPY
 #undef BODY_NOK
 #undef BODY_CAL

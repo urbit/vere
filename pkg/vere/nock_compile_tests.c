@@ -629,6 +629,37 @@ _scot_cb(u3_noun kev, void* ptr_v)
   }
 }
 
+/* _off_cb(): u3h_walk callback over the rings: turn off (liv) every arm
+**            under a core whose name is in ptr_v, a comma-separated string
+**            with a leading and a trailing comma.
+*/
+static c3_w _off_w;
+
+static void
+_off_cb(u3_noun kev, void* ptr_v)
+{
+  const c3_c*     off_c = ptr_v;
+  u3_noun         pax   = u3h(u3h(kev));
+  u3j_harm*       ham_u;
+  const u3u_harm* arm_u;
+
+  for ( ; u3_nul != pax; pax = u3t(pax) ) {
+    c3_c* nam_c = u3r_string(u3h(pax));
+    c3_c  key_c[64];
+    c3_t  hit_t;
+
+    snprintf(key_c, sizeof(key_c), ",%s,", nam_c);
+    hit_t = !!strstr(off_c, key_c);
+    c3_free(nam_c);
+
+    if ( hit_t && (c3y == u3j_ring(u3h(kev), &ham_u, &arm_u)) ) {
+      ham_u->liv = c3n;
+      _off_w++;
+      return;
+    }
+  }
+}
+
 /* _test_flags(): the flags of a jet arm hold for the compiled calls
 **                through its ring: +scot off, its calls run its program;
 **                +scot not perfect, its driver is tested against nock,
@@ -654,6 +685,207 @@ _test_flags(void)
   return ret_i;
 }
 
+/* _crash(): the raw trace of [bus fol] crashing under fun_f, or u3_none
+**           if it doesn't crash.  RETAINS.
+*/
+static u3_weak
+_crash(u3_funq fun_f, u3_noun bus, u3_noun fol)
+{
+  u3_noun gon = u3m_soft_run(u3_nul, fun_f, u3k(bus), u3k(fol));
+  u3_weak tax = u3_none;
+
+  if ( 2 == u3h(gon) ) {
+    tax = u3k(u3t(gon));
+  }
+
+  u3z(gon);
+  return tax;
+}
+
+/* _has_tag(): does a frame of tax carry tag?  RETAINS.
+*/
+static c3_t
+_has_tag(u3_noun tax, u3_noun tag)
+{
+  for ( ; u3_nul != tax; tax = u3t(tax) ) {
+    if ( tag == u3h(u3h(tax)) ) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+/* _mean_both(): crash [bus fol] under u3n and u3nc and render both traces,
+**               and the u3n one through +mook too; whether the u3nc trace
+**               has a frame tagged tag, if tag is set.  For u3m_soft().
+**               Produces [[ren rec mok has] tac], tac the raw u3nc trace,
+**               or ~ if a run didn't crash.
+*/
+static u3_noun
+_mean_both(u3_noun arg)
+{
+  u3_noun tag, bus, fol, ren, rec, mok, pro;
+  u3_weak tan, tac;
+
+  u3x_trel(arg, &tag, &bus, &fol);
+
+  tan = _crash(u3n_nock_on, bus, fol);
+  tac = _crash(u3nc_nock_on, bus, fol);
+
+  if ( (u3_none == tan) || (u3_none == tac) ) {
+    if ( u3_none != tan ) u3z(tan);
+    if ( u3_none != tac ) u3z(tac);
+    u3z(arg);
+    return u3_nul;
+  }
+
+  ren = u3t_mook(u3k(tan));
+  rec = u3t_mook(u3k(tac));
+  mok = u3dc("mook", 2, u3k(tan));
+  pro = u3nc(u3nq(ren, rec, u3k(u3t(mok)), __(!tag || _has_tag(tac, tag))),
+             tac);
+
+  u3z(mok);
+  u3z(tan);
+  u3z(arg);
+  return pro;
+}
+
+/* _test_crash(): [bus fol] crashes: the rendered traces of u3n and u3nc
+**                agree, and the renderer agrees with +mook on the u3n
+**                trace; tag: the frame the u3nc trace must have, or 0.
+**                TRANSFERS.
+*/
+static c3_i
+_test_crash(const c3_c* nam_c, u3_noun bus, u3_noun fol, u3_noun tag)
+{
+  u3_noun gon = u3m_soft(0, _mean_both, u3nt(tag, bus, fol));
+  u3_noun ren, rec, mok, has;
+  c3_i    ret_i = 1;
+
+  if ( 0 != u3h(gon) ) {
+    u3_pier_punt_goof(nam_c, gon);
+    fprintf(stderr, "test %s: failed\r\n", nam_c);
+    return 0;
+  }
+
+  if ( u3_nul == u3t(gon) ) {
+    fprintf(stderr, "test %s: no crash\r\n", nam_c);
+    u3z(gon);
+    return 0;
+  }
+
+  u3x_qual(u3h(u3t(gon)), &ren, &rec, &mok, &has);
+
+  if ( c3n == u3r_sing(ren, rec) ) {
+    fprintf(stderr, "test %s: u3n and u3nc traces differ\r\n", nam_c);
+    u3_pier_punt(0, u3k(ren));
+    u3_pier_punt(0, u3k(rec));
+    ret_i = 0;
+  }
+  else if ( c3n == u3r_sing(ren, mok) ) {
+    fprintf(stderr, "test %s: renderer and +mook differ\r\n", nam_c);
+    u3_pier_punt(0, u3k(ren));
+    u3_pier_punt(0, u3k(mok));
+    ret_i = 0;
+  }
+  else if ( c3n == has ) {
+    u3_noun tac = u3t(u3t(gon));
+
+    fprintf(stderr, "test %s: u3nc pushed no %%%s frame\r\n", nam_c,
+            ( c3__meaf == tag ) ? "meaf" : "meac");
+    for ( ; u3_nul != tac; tac = u3t(tac) ) {
+      u3m_p("frame tag", u3h(u3h(tac)));
+    }
+    ret_i = 0;
+  }
+  else {
+    fprintf(stderr, "test %s: ok\r\n", nam_c);
+    u3_pier_punt(2, u3k(ren));
+  }
+
+  u3z(gon);
+  return ret_i;
+}
+
+/* _test_mean(): %mean traps: a trap with a known battery is pushed as
+**               its arm and the parts of the trap the arm takes (%meaf),
+**               the known product of a pure arm as a constant (%meac),
+**               an unknown trap as itself.  Each gate on a sample that
+**               runs through, and on 0, where +dec crashes; the arm of
+**               one crashes too (####); one is deep enough to skip
+**               frames; one is %spot-hinted.  The ~| case, a deferred
+**               +sell, runs only with U3NC_SLOW set: the analysis of the
+**               printer takes 25 s.
+*/
+static c3_i
+_test_mean(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    c3_w        sam_w;
+    u3_noun     tag;
+  } cas_u[] = {
+    { "deferred",
+      "|=  a=@\n~>  %mean.|.(leaf+(scow %ud a))\n(dec a)\n",
+      5, c3__meaf },
+    { "constant cons",
+      "|=  a=@\n~_  leaf+\"foo\"\n(dec a)\n",
+      5, c3__meac },
+    { "constant atom",
+      "|=  a=@\n~_  %foo\n(dec a)\n",
+      5, c3__meac },
+    { "unknown",
+      "|=  a=@\n~>  %mean.?:(=(a 5) |.(leaf+\"a\") |.(leaf+\"b\"))\n(dec a)\n",
+      5, 0 },
+    { "arm crash",
+      "|=  a=@\n~>  %mean.|.(leaf+(scow %ud (dec a)))\n(dec a)\n",
+      5, c3__meaf },
+    { "spotted",
+      "!:\n|=  a=@\n~>  %mean.|.(leaf+(scow %ud a))\n(dec a)\n",
+      5, c3__meaf },
+    { "deep",
+      "|=  a=@\n|-  ^-  @\n~>  %mean.|.(leaf+(scow %ud a))\n"
+      "?:  =(a 0)  !!\n$(a (dec a))\n",
+      1100, c3__meaf },
+    { "vase",
+      "|=  a=@\n~|  [%foo a]\n(dec a)\n",
+      5, c3__meaf },
+  };
+  c3_i ret_i = 1;
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    u3_noun fol;
+    c3_c    nam_c[64];
+
+    if ( !strcmp(cas_u[i_w].nam_c, "vase") && !getenv("U3NC_SLOW") ) {
+      continue;
+    }
+
+    fol = u3nq(9, 2, 0, 1);
+
+    //  the deep one runs through on no sample: it always crashes
+    //
+    if ( 1100 != cas_u[i_w].sam_w ) {
+      snprintf(nam_c, sizeof(nam_c), "mean %s", cas_u[i_w].nam_c);
+      ret_i = _test(nam_c, _gate(cas_u[i_w].src_c, cas_u[i_w].sam_w),
+                    u3k(fol), 1)
+           && ret_i;
+    }
+
+    snprintf(nam_c, sizeof(nam_c), "mean %s, crash", cas_u[i_w].nam_c);
+    ret_i = _test_crash(nam_c, _gate(cas_u[i_w].src_c,
+                                     ( 1100 == cas_u[i_w].sam_w ) ? 1100 : 0),
+                        fol, cas_u[i_w].tag)
+         && ret_i;
+  }
+
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -666,6 +898,27 @@ main(int argc, char* argv[])
   }
 
   _setup();
+
+  //  U3NC_PROBE: the source of a gate on the kernel, run on the sample
+  //  U3NC_PROBE_SAM (default 5) by both interpreters, and nothing else
+  //
+  //  U3NC_PROBE_OFF: cores whose jets to turn off first, comma-separated
+  //
+  if ( getenv("U3NC_PROBE") ) {
+    c3_c*   sam_c = getenv("U3NC_PROBE_SAM");
+    c3_c*   off_c = getenv("U3NC_PROBE_OFF");
+    u3_noun cor   = _gate(getenv("U3NC_PROBE"), sam_c ? atoi(sam_c) : 5);
+
+    if ( off_c ) {
+      c3_c* key_c = c3_malloc(strlen(off_c) + 3);
+      snprintf(key_c, strlen(off_c) + 3, ",%s,", off_c);
+      u3h_walk_with(u3H->rod_u.ska.pax_p, _off_cb, key_c);
+      c3_free(key_c);
+      fprintf(stderr, "probe: %u arms off\r\n", _off_w);
+    }
+
+    return _test("probe", cor, u3nq(9, 2, 0, 1), 1) ? 0 : 1;
+  }
 
   if ( !_test("inc", 42, u3nt(4, 0, 1), 0) ) {
     exit(1);
@@ -752,6 +1005,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_flags() ) {
+    exit(1);
+  }
+
+  if ( !_test_mean() ) {
     exit(1);
   }
 

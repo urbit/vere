@@ -993,10 +993,8 @@ static c3_c* _140_qua_sfix_ha[] = {
 };
 
 static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink}, {}};
-static c3_c* _140_qua_mink_ha[] = {
-  "99b653da6a21fa3375424811af288f59164592ece4a072abc460df03e81abcaf",
-  0
-};
+static u3j_harm _140_qua_mock_a[] = {{".2", u3we_mock}, {}};
+static u3j_harm _140_qua_monk_a[] = {{".2", u3we_monk}, {}};
 static u3j_harm _140_qua_mole_a[] = {{".2", u3we_mole}, {}};
 static c3_c* _140_qua_mole_ha[] = {
   "029c1acaff1911c54ce31a3693397394604ea970bf076078c1a1cfa23d2fa74e",
@@ -1034,8 +1032,9 @@ static u3j_core _140_qua_d[] =
   { "pose", 7, _140_qua_pose_a, 0, _140_qua_pose_ha },
   { "sfix", 7, _140_qua_sfix_a, 0, _140_qua_sfix_ha },
 
-  { "mink", 7, _140_qua_mink_a, 0, _140_qua_mink_ha },
+  { "mock", 7, _140_qua_mock_a, 0, no_hashes },
   { "mole", 7, _140_qua_mole_a, 0, _140_qua_mole_ha },
+  { "monk", 7, _140_qua_monk_a, 0, no_hashes },
   { "mule", 7, _140_qua_mule_a, 0, _140_qua_mule_ha },
 
   { "scot", 7, _140_qua_scot_a, 0, _140_qua_scot_ha },
