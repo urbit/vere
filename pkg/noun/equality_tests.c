@@ -1,6 +1,7 @@
 /// @file
 
 #include "noun.h"
+#include "crib.h"
 
 #include <time.h>
 
@@ -750,6 +751,105 @@ _test_gap(void)
   return ret_i;
 }
 
+/* _test_crib(): a crib set grows, evicts and reports at its ceiling,
+**              clears, and shrinks back; a crib array grows to its
+**              ceiling, and drops past it.
+*/
+static c3_i
+_test_crib(void)
+{
+  c3_i    ret_i = 1;
+  u3c_set set_u = {0};
+  u3c_arr arr_u = {0};
+  c3_w    i_w, mis_w;
+
+  u3c_set_init(&set_u, "test set", 4, 10);
+
+  for ( i_w = 0; i_w < 300; i_w++ ) {
+    u3c_set_put(&set_u, i_w + 2, (i_w * 7) + 3);
+  }
+  for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
+    if ( !u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+  }
+  if ( mis_w || set_u.ovf_d || (u3c_set_cap(&set_u) < 512) ) {
+    fprintf(stderr, "test: crib: growth: %u missing, %" PRIu64 " evicted, %" PRIu64 " cap\r\n",
+            (unsigned)mis_w, set_u.ovf_d, u3c_set_cap(&set_u));
+    ret_i = 0;
+  }
+
+  //  past the ceiling, entries are evicted, and counted
+  //
+  for ( i_w = 300; i_w < 3000; i_w++ ) {
+    u3c_set_put(&set_u, i_w + 2, (i_w * 7) + 3);
+  }
+  if ( (1024 != u3c_set_cap(&set_u)) || !set_u.ovf_d ) {
+    fprintf(stderr, "test: crib: ceiling: %" PRIu64 " cap, %" PRIu64 " evicted\r\n",
+            u3c_set_cap(&set_u), set_u.ovf_d);
+    ret_i = 0;
+  }
+
+  //  a clear drops everything
+  //
+  u3c_set_clear(&set_u);
+  for ( i_w = mis_w = 0; i_w < 3000; i_w++ ) {
+    if ( u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+  }
+  if ( mis_w ) {
+    fprintf(stderr, "test: crib: clear: %u left\r\n", (unsigned)mis_w);
+    ret_i = 0;
+  }
+
+  //  the report logs the evictions once; shrinking gives back memory as
+  //  the peak decays
+  //
+  u3c_set_report(&set_u);
+  for ( i_w = 0; i_w < 16; i_w++ ) {
+    u3c_set_shrink(&set_u);
+  }
+  if ( set_u.ovf_d || (16 != u3c_set_cap(&set_u)) ) {
+    fprintf(stderr, "test: crib: shrink: %" PRIu64 " cap, %" PRIu64 " evicted\r\n",
+            u3c_set_cap(&set_u), set_u.ovf_d);
+    ret_i = 0;
+  }
+
+  //  and it grows again from there, clean
+  //
+  for ( i_w = 0; i_w < 300; i_w++ ) {
+    u3c_set_put(&set_u, i_w + 5000, i_w);
+  }
+  for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
+    if ( !u3c_set_has(&set_u, i_w + 5000, i_w) ) mis_w++;
+    if ( u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+  }
+  if ( mis_w ) {
+    fprintf(stderr, "test: crib: regrowth: %u wrong\r\n", (unsigned)mis_w);
+    ret_i = 0;
+  }
+
+  //  arrays
+  //
+  u3c_arr_init(&arr_u, "test array", sizeof(c3_d), 4, 100);
+  for ( i_w = 0; i_w < 100; i_w++ ) {
+    c3_d* d_d = u3c_arr_at(&arr_u, i_w);
+    if ( !d_d ) { ret_i = 0; break; }
+    *d_d = i_w;
+  }
+  if ( u3c_arr_at(&arr_u, 100) || (1 != arr_u.drp_d) ) {
+    fprintf(stderr, "test: crib: array ceiling\r\n");
+    ret_i = 0;
+  }
+  for ( i_w = 0; i_w < 100; i_w++ ) {
+    if ( *(c3_d*)u3c_arr_at(&arr_u, i_w) != i_w ) { ret_i = 0; break; }
+  }
+  u3c_arr_report(&arr_u);
+  if ( arr_u.drp_d ) {
+    fprintf(stderr, "test: crib: array report\r\n");
+    ret_i = 0;
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -762,6 +862,11 @@ _test_equality(void)
 
   if ( !_test_dedup_lazy() ) {
     fprintf(stderr, "test: equality: dedup lazy: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_crib() ) {
+    fprintf(stderr, "test: equality: crib: failed\r\n");
     ret_i = 0;
   }
 

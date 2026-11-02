@@ -2,12 +2,14 @@
 
 #include "crib.h"
 #include "error.h"
+#include "log.h"
 
 #ifdef U3_OS_windows
 #  include <windows.h>
 #endif
 
 #define _CRIB_WIN  16   //  probe window, entries
+#define _CRIB_TOMB 1    //  a removed entry: probes continue past it
 #define _CRIB_LIS  256  //  slots logged for a cheap clear
 
 /* region primitives: reserve address space, commit as it's used, and
@@ -128,19 +130,24 @@ _crib_fence(void)
 /* sets
 */
 static inline c3_d
-_crib_idx(u3c_set* set_u, c3_d a_d, c3_d b_d)
-{
-  c3_d h_d = (a_d * 0x9e3779b97f4a7c15ULL) ^ (b_d * 0xc2b2ae3d27d4eb4fULL);
-  h_d ^= h_d >> 31;
-  h_d *= 0xbf58476d1ce4e5b9ULL;
-  return h_d >> (64 - set_u->log_y);
-}
-
-static inline c3_d
 _crib_msk(u3c_set* set_u)
 {
   return ((c3_d)1 << set_u->log_y) - 1;
 }
+
+static inline c3_d
+_crib_idx(u3c_set* set_u, c3_d a_d, c3_d b_d)
+{
+  //  the low bits index the table, so that doubling it sends each entry
+  //  either to its own slot or to the empty upper half (see _crib_grow())
+  //
+  c3_d h_d = (a_d * 0x9e3779b97f4a7c15ULL) ^ (b_d * 0xc2b2ae3d27d4eb4fULL);
+  h_d ^= h_d >> 31;
+  h_d *= 0xbf58476d1ce4e5b9ULL;
+  h_d ^= h_d >> 29;
+  return h_d & _crib_msk(set_u);
+}
+
 
 static inline void
 _crib_log(u3c_set* set_u, c3_d k_d)
@@ -168,13 +175,16 @@ _crib_write(u3c_set* set_u, c3_d k_d, c3_d a_d, c3_d b_d)
 }
 
 /* _crib_place(): put [a b] in its window, if there's room: 1 if placed,
-**                2 if present, 0 if the window is full.
+**                2 if present, 0 if the window is full. an empty slot ends
+**                the window's entries; a tombstone doesn't, but can be
+**                reused.
 */
 static c3_y
 _crib_place(u3c_set* set_u, c3_d a_d, c3_d b_d, c3_t log_t)
 {
   c3_d msk_d = _crib_msk(set_u);
   c3_d i_d   = _crib_idx(set_u, a_d, b_d);
+  c3_d fre_d = ~(c3_d)0;
   c3_w j_w;
 
   for ( j_w = 0; j_w < _CRIB_WIN; j_w++ ) {
@@ -182,13 +192,20 @@ _crib_place(u3c_set* set_u, c3_d a_d, c3_d b_d, c3_t log_t)
     c3_d* sot_d = &set_u->tab_d[2 * k_d];
 
     if ( !sot_d[0] ) {
-      _crib_write(set_u, k_d, a_d, b_d);
-      if ( log_t ) _crib_log(set_u, k_d);
-      return 1;
+      if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
+      break;
+    }
+    if ( _CRIB_TOMB == sot_d[0] ) {
+      if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
+      continue;
     }
     if ( (sot_d[0] == a_d) && (sot_d[1] == b_d) ) return 2;
   }
-  return 0;
+
+  if ( ~(c3_d)0 == fre_d ) return 0;
+  _crib_write(set_u, fre_d, a_d, b_d);
+  if ( log_t ) _crib_log(set_u, fre_d);
+  return 1;
 }
 
 /* _crib_grow(): double the capacity in place and rehash. an interrupted
@@ -208,12 +225,16 @@ _crib_grow(u3c_set* set_u)
   set_u->log_y++;
   set_u->lin_w = _CRIB_LIS + 1;
 
+  //  move each entry to its place under the new mask. a moved entry
+  //  leaves a tombstone, so that entries placed past it stay reachable;
+  //  the next clear removes them
+  //
   for ( i_d = 0; i_d < old_d; i_d++ ) {
     c3_d a_d = set_u->tab_d[2 * i_d];
     c3_d b_d = set_u->tab_d[(2 * i_d) + 1];
 
-    if ( !a_d ) continue;
-    set_u->tab_d[2 * i_d] = 0;
+    if ( !a_d || (_CRIB_TOMB == a_d) ) continue;
+    set_u->tab_d[2 * i_d] = _CRIB_TOMB;
     _crib_fence();
     (void)_crib_place(set_u, a_d, b_d, 0);   //  dropped if its window is full
   }
@@ -221,7 +242,7 @@ _crib_grow(u3c_set* set_u)
 }
 
 void
-u3c_set_init(u3c_set* set_u, c3_y min_y, c3_y max_y)
+u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y)
 {
   if ( set_u->tab_d ) {
     _crib_release(set_u->tab_d, ((size_t)1 << set_u->max_y) * 16);
@@ -230,6 +251,7 @@ u3c_set_init(u3c_set* set_u, c3_y min_y, c3_y max_y)
   max_y = c3_max(max_y, min_y);
 
   memset(set_u, 0, sizeof(*set_u));
+  set_u->nam_c = nam_c;
   set_u->min_y = set_u->log_y = min_y;
   set_u->max_y = max_y;
   set_u->tab_d = _crib_reserve(((size_t)1 << max_y) * 16);
@@ -272,6 +294,7 @@ u3c_set_put(u3c_set* set_u, c3_d a_d, c3_d b_d)
       c3_d k_d = (_crib_idx(set_u, a_d, b_d) + (set_u->evk_w++ & (_CRIB_WIN - 1)))
                & _crib_msk(set_u);
       _crib_write(set_u, k_d, a_d, b_d);
+      set_u->ovf_d++;
       break;
     }
   }
@@ -323,6 +346,17 @@ u3c_set_shrink(u3c_set* set_u)
   }
 }
 
+void
+u3c_set_report(u3c_set* set_u)
+{
+  if ( set_u->ovf_d ) {
+    u3l_log("crib: %s reached its ceiling of %" PRIu64 " entries;"
+            " %" PRIu64 " evicted since the last report",
+            set_u->nam_c, (c3_d)1 << set_u->max_y, set_u->ovf_d);
+    set_u->ovf_d = 0;
+  }
+}
+
 c3_d
 u3c_set_cap(u3c_set* set_u)
 {
@@ -332,12 +366,14 @@ u3c_set_cap(u3c_set* set_u)
 /* arrays
 */
 void
-u3c_arr_init(u3c_arr* arr_u, size_t siz_i, size_t min_i, size_t max_i)
+u3c_arr_init(u3c_arr* arr_u, const c3_c* nam_c,
+             size_t siz_i, size_t min_i, size_t max_i)
 {
   if ( arr_u->buf_y ) {
     _crib_release(arr_u->buf_y, arr_u->max_i * arr_u->siz_i);
   }
   memset(arr_u, 0, sizeof(*arr_u));
+  arr_u->nam_c = nam_c;
   arr_u->siz_i = siz_i;
   arr_u->min_i = arr_u->cap_i = min_i;
   arr_u->max_i = c3_max(max_i, min_i);
@@ -351,7 +387,10 @@ u3c_arr_at(u3c_arr* arr_u, size_t i_i)
   if ( i_i >= arr_u->cap_i ) {
     size_t new_i;
 
-    if ( i_i >= arr_u->max_i ) return 0;
+    if ( i_i >= arr_u->max_i ) {
+      arr_u->drp_d++;
+      return 0;
+    }
     new_i = c3_min(c3_max(arr_u->cap_i * 2, i_i + 1), arr_u->max_i);
     if ( !_crib_commit(arr_u->buf_y + (arr_u->cap_i * arr_u->siz_i),
                        (new_i - arr_u->cap_i) * arr_u->siz_i) )
@@ -378,5 +417,16 @@ u3c_arr_shrink(u3c_arr* arr_u, size_t len_i)
   }
   else {
     arr_u->pek_i /= 2;
+  }
+}
+
+void
+u3c_arr_report(u3c_arr* arr_u)
+{
+  if ( arr_u->drp_d ) {
+    u3l_log("crib: %s reached its ceiling of %zu entries;"
+            " %" PRIu64 " dropped since the last report",
+            arr_u->nam_c, arr_u->max_i, arr_u->drp_d);
+    arr_u->drp_d = 0;
   }
 }

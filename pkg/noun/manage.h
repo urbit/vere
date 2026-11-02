@@ -255,6 +255,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_visit_size(c3_y log_y);
 
+      /* u3m_crib_report(): log every crib's evictions and drops at its
+      **                    ceiling since the last call. between events.
+      */
+        void
+        u3m_crib_report(void);
+
       /* u3m_dedup_visit_cap(): the visited set's capacity (tests).
       */
         c3_d

@@ -4191,7 +4191,7 @@ static u3c_set _cm_vis;   //  keys: [som 0]
 void
 u3m_dedup_visit_size(c3_y log_y)
 {
-  u3c_set_init(&_cm_vis, log_y, _CM_VIS_MAX);
+  u3c_set_init(&_cm_vis, "visited set", log_y, _CM_VIS_MAX);
   _cm_vis_ini_t = 1;
 }
 
@@ -4201,6 +4201,19 @@ c3_d
 u3m_dedup_visit_cap(void)
 {
   return u3c_set_cap(&_cm_vis);
+}
+
+/* u3m_crib_report(): log every crib's evictions and drops at its ceiling
+**                    since the last call. home road only, between events
+**                    (logging may allocate).
+*/
+void
+u3m_crib_report(void)
+{
+  if ( _cm_vis_ini_t ) {
+    u3c_set_report(&_cm_vis);
+  }
+  u3r_crib_report();
 }
 
 /* _cm_vis_leap(): a new excursion from the home road. home road only.

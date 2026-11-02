@@ -275,6 +275,12 @@
         void
         u3r_pair_size(c3_y log_y);
 
+      /* u3r_crib_report(): log the pair tables' and deferral's evictions
+      **                    and drops at their ceilings. between events.
+      */
+        void
+        u3r_crib_report(void);
+
       /* u3r_pair_cap(): the excursion pair table's capacity (tests).
       */
         c3_d

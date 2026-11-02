@@ -13,7 +13,8 @@
 
   /**  Data structures.
   **/
-    /* u3c_set: a set of key pairs [a b], a != 0 (0 marks an empty slot).
+    /* u3c_set: a set of key pairs [a b], a > 1 (0 marks an empty slot,
+    **          1 a removed one).
     **
     **   a region is reserved for the most entries the set may grow to,
     **   and committed as it grows, so growing allocates nothing and makes
@@ -23,6 +24,8 @@
     **   evicts an entry.
     */
       typedef struct {
+        const c3_c* nam_c;   //  name, for the log
+        c3_d   ovf_d;   //  evictions at the ceiling, since the last report
         c3_d*  tab_d;   //  2 words per entry
         c3_y   log_y;   //  capacity, log2
         c3_y   min_y;   //  starting capacity, log2
@@ -37,6 +40,8 @@
     /* u3c_arr: an array that grows in place, up to a ceiling.
     */
       typedef struct {
+        const c3_c* nam_c;   //  name, for the log
+        c3_d   drp_d;   //  entries dropped at the ceiling, since the last report
         c3_y*  buf_y;
         size_t siz_i;   //  entry size, bytes
         size_t cap_i;   //  entries committed
@@ -51,7 +56,7 @@
     **                 replaces a set already made. home road only.
     */
       void
-      u3c_set_init(u3c_set* set_u, c3_y min_y, c3_y max_y);
+      u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y);
 
     /* u3c_set_has(): [a b] is in the set.
     */
@@ -74,6 +79,13 @@
       void
       u3c_set_shrink(u3c_set* set_u);
 
+    /* u3c_set_report(): log any evictions at the ceiling since the last
+    **                   call. home road only, between events (logging may
+    **                   allocate).
+    */
+      void
+      u3c_set_report(u3c_set* set_u);
+
     /* u3c_set_cap(): current capacity, in entries.
     */
       c3_d
@@ -83,7 +95,8 @@
     **                 at [min_i]. home road only.
     */
       void
-      u3c_arr_init(u3c_arr* arr_u, size_t siz_i, size_t min_i, size_t max_i);
+      u3c_arr_init(u3c_arr* arr_u, const c3_c* nam_c,
+                   size_t siz_i, size_t min_i, size_t max_i);
 
     /* u3c_arr_at(): entry [i_i], growing if need be; 0 past the ceiling.
     */
@@ -96,5 +109,12 @@
     */
       void
       u3c_arr_shrink(u3c_arr* arr_u, size_t len_i);
+
+    /* u3c_arr_report(): log any entries dropped at the ceiling since the
+    **                   last call. home road only, between events (logging
+    **                   may allocate).
+    */
+      void
+      u3c_arr_report(u3c_arr* arr_u);
 
 #endif /* ifndef U3_CRIB_H */

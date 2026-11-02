@@ -333,8 +333,9 @@ static void
 _cr_dh_leap(void)
 {
   if ( !_cr_dh.ini_t ) {
-    u3c_arr_init(&_cr_dh.ent_u, sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
-    u3c_set_init(&_cr_dh.sen_u, _CR_DH_LOG, _CR_DH_TOP);
+    u3c_arr_init(&_cr_dh.ent_u, "deferral entries",
+                 sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
+    u3c_set_init(&_cr_dh.sen_u, "deferral slot pairs", _CR_DH_LOG, _CR_DH_TOP);
     _cr_dh.ini_t = 1;
   }
   _cr_dh.len_w = 0;   //  a bailed excursion's entries (none: bails exit too)
@@ -463,8 +464,8 @@ typedef struct {
 void
 u3r_pair_size(c3_y log_y)
 {
-  u3c_set_init(&_cr_pm_x, log_y, _CR_PM_MAX);
-  u3c_set_init(&_cr_pm_s, log_y, _CR_PM_MAX);
+  u3c_set_init(&_cr_pm_x, "pair table", log_y, _CR_PM_MAX);
+  u3c_set_init(&_cr_pm_s, "pair scratch table", log_y, _CR_PM_MAX);
   _cr_pm_ini_t = 1;
 }
 
@@ -487,6 +488,23 @@ u3r_sing_leap(void)
   u3c_set_shrink(&_cr_pm_x);
   u3c_set_shrink(&_cr_pm_s);
   _cr_dh_leap();
+}
+
+/* u3r_crib_report(): log the pair tables' and deferral's evictions and
+**                    drops at their ceilings. home road only, between
+**                    events.
+*/
+void
+u3r_crib_report(void)
+{
+  if ( _cr_pm_ini_t ) {
+    u3c_set_report(&_cr_pm_x);
+    u3c_set_report(&_cr_pm_s);
+  }
+  if ( _cr_dh.ini_t ) {
+    u3c_arr_report(&_cr_dh.ent_u);
+    u3c_set_report(&_cr_dh.sen_u);
+  }
 }
 
 /* _cr_pm_has(): [a] and [b] are known to be equal.
