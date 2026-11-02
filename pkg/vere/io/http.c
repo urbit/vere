@@ -1456,8 +1456,18 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
       h2o_send_error_403(rec_u, "Unauthorized", "unauthorized", 0);
     }
     else {
+      u3_noun hed = u3nq(
+        u3nc(u3i_string("content-disposition"),
+             u3i_string("attachment")),  //TODO  set normal filename
+        u3nc(u3i_string("x-content-type-options"),
+             u3i_string("nosniff")),
+        u3nc(u3i_string("content-security-policy"),
+             u3i_string("sandbox")),
+        u3k(headers)
+      );
+
       req_u->sat_e = u3_rsat_plan;
-      _http_start_respond(req_u, u3k(status), u3k(headers), u3k(data), c3y);
+      _http_start_respond(req_u, u3k(status), hed, u3k(data), c3y);
     }
   }
   u3z(nun);
