@@ -6,7 +6,7 @@
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"
-#include "hints.h"
+#include "crib.h"
 #include "trace.h"
 #include "vortex.h"
 #include "xtract.h"
@@ -321,9 +321,9 @@ _cr_sing_atom(u3_atom a, u3_noun b)
 
 static struct {
   c3_t    ini_t;
-  u3g_arr ent_u;   //  entries
+  u3c_arr ent_u;   //  entries
   c3_w    len_w;   //  published
-  u3g_set sen_u;   //  slot pairs noted this excursion: [sb sa]
+  u3c_set sen_u;   //  slot pairs noted this excursion: [sb sa]
 } _cr_dh;
 
 /* _cr_dh_leap(): a new excursion: allocate, and drop any entries a
@@ -333,12 +333,12 @@ static void
 _cr_dh_leap(void)
 {
   if ( !_cr_dh.ini_t ) {
-    u3g_arr_init(&_cr_dh.ent_u, sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
-    u3g_set_init(&_cr_dh.sen_u, _CR_DH_LOG, _CR_DH_TOP);
+    u3c_arr_init(&_cr_dh.ent_u, sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
+    u3c_set_init(&_cr_dh.sen_u, _CR_DH_LOG, _CR_DH_TOP);
     _cr_dh.ini_t = 1;
   }
   _cr_dh.len_w = 0;   //  a bailed excursion's entries (none: bails exit too)
-  u3g_set_shrink(&_cr_dh.sen_u);
+  u3c_set_shrink(&_cr_dh.sen_u);
 }
 
 /* u3r_dh_take(): this excursion's entries; resets. home road only.
@@ -347,9 +347,9 @@ u3r_dh_entry*
 u3r_dh_take(c3_w* len_w)
 {
   *len_w = _cr_dh.len_w;
-  u3g_arr_shrink(&_cr_dh.ent_u, _cr_dh.len_w);
+  u3c_arr_shrink(&_cr_dh.ent_u, _cr_dh.len_w);
   _cr_dh.len_w = 0;
-  return (u3r_dh_entry*)u3g_arr_at(&_cr_dh.ent_u, 0);
+  return (u3r_dh_entry*)u3c_arr_at(&_cr_dh.ent_u, 0);
 }
 
 /* _cr_home_slot(): [sot] is in the home road's heap. during an excursion
@@ -375,7 +375,7 @@ static void
 _cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
             u3_noun* sb, u3_noun pb, u3_noun vb)
 {
-  u3r_dh_entry* ent_u = u3g_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
+  u3r_dh_entry* ent_u = u3c_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
 
   if ( !ent_u ) return;
   ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
@@ -391,8 +391,8 @@ _cr_dh_seen(u3_noun* sa, u3_noun* sb)
 {
   c3_d a_d = (c3_d)(c3_p)sb, b_d = (c3_d)(c3_p)sa;
 
-  if ( u3g_set_has(&_cr_dh.sen_u, a_d, b_d) ) return 1;
-  u3g_set_put(&_cr_dh.sen_u, a_d, b_d);
+  if ( u3c_set_has(&_cr_dh.sen_u, a_d, b_d) ) return 1;
+  u3c_set_put(&_cr_dh.sen_u, a_d, b_d);
   return 0;
 }
 
@@ -433,7 +433,7 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
 **   comparisons: a long comparison records any pairs it can in the
 **   scratch table, cleared at its start and end.
 **
-**   both grow as needed, up to a ceiling (see hints.h), so a comparison
+**   both grow as needed, up to a ceiling (see crib.h), so a comparison
 **   stays linear unless it needs more than that.
 */
 #define _CR_PM_TOP   64      //  on an inner road, probe the root after this many steps
@@ -442,15 +442,15 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
 #define _CR_PM_MAX   23      //  ... at most (NB: a first guess, to revisit)
 
 static c3_t    _cr_pm_ini_t;
-static u3g_set _cr_pm_x;   //  excursion: home pairs
-static u3g_set _cr_pm_s;   //  scratch: one comparison
+static u3c_set _cr_pm_x;   //  excursion: home pairs
+static u3c_set _cr_pm_s;   //  scratch: one comparison
 
 /* _cr_sing_ctx: where a long comparison runs, found when it gets long.
 */
 typedef struct {
   c3_y      scp_y;   //  0: home road, 1: inner road, 2: promoting a junior road
   c3_y      pmo_y;   //  pairs recorded: 1 home, 2 senior, 3 any
-  u3g_set*  pms_u;   //  ... in this table
+  u3c_set*  pms_u;   //  ... in this table
   u3a_road* one_u;   //  the outermost inner road
   c3_t      prt_t;   //  record the root pair if equal
   u3_noun   ra, rb;  //  the root pair
@@ -463,8 +463,8 @@ typedef struct {
 void
 u3r_pair_size(c3_y log_y)
 {
-  u3g_set_init(&_cr_pm_x, log_y, _CR_PM_MAX);
-  u3g_set_init(&_cr_pm_s, log_y, _CR_PM_MAX);
+  u3c_set_init(&_cr_pm_x, log_y, _CR_PM_MAX);
+  u3c_set_init(&_cr_pm_s, log_y, _CR_PM_MAX);
   _cr_pm_ini_t = 1;
 }
 
@@ -473,7 +473,7 @@ u3r_pair_size(c3_y log_y)
 c3_d
 u3r_pair_cap(void)
 {
-  return u3g_set_cap(&_cr_pm_x);
+  return u3c_set_cap(&_cr_pm_x);
 }
 
 /* u3r_sing_leap(): a new excursion from the home road. home road only.
@@ -484,27 +484,27 @@ u3r_sing_leap(void)
   if ( !_cr_pm_ini_t ) {
     u3r_pair_size(_CR_PM_LOG);
   }
-  u3g_set_shrink(&_cr_pm_x);
-  u3g_set_shrink(&_cr_pm_s);
+  u3c_set_shrink(&_cr_pm_x);
+  u3c_set_shrink(&_cr_pm_s);
   _cr_dh_leap();
 }
 
 /* _cr_pm_has(): [a] and [b] are known to be equal.
 */
 static inline c3_t
-_cr_pm_has(u3g_set* set_u, u3_noun a, u3_noun b)
+_cr_pm_has(u3c_set* set_u, u3_noun a, u3_noun b)
 {
   if ( a > b ) { u3_noun t = a; a = b; b = t; }
-  return u3g_set_has(set_u, a, b);
+  return u3c_set_has(set_u, a, b);
 }
 
 /* _cr_pm_put(): record that [a] and [b] are equal.
 */
 static inline void
-_cr_pm_put(u3g_set* set_u, u3_noun a, u3_noun b)
+_cr_pm_put(u3c_set* set_u, u3_noun a, u3_noun b)
 {
   if ( a > b ) { u3_noun t = a; a = b; b = t; }
-  u3g_set_put(set_u, a, b);
+  u3c_set_put(set_u, a, b);
 }
 
 /* _cr_sing_scope(): where this comparison runs.
@@ -597,7 +597,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
   ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : _cr_dbg_ram() ? 2 : 1;
   ctx_u->pms_u = ( 1 == ctx_u->pmo_y ) ? &_cr_pm_x : &_cr_pm_s;
   if ( 1 < ctx_u->pmo_y ) {
-    u3g_set_clear(&_cr_pm_s);
+    u3c_set_clear(&_cr_pm_s);
   }
 
   //  loop while arguments remain on the stack
@@ -694,7 +694,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
 
 done:
   if ( 1 < ctx_u->pmo_y ) {
-    u3g_set_clear(&_cr_pm_s);
+    u3c_set_clear(&_cr_pm_s);
   }
   return ret_o;
 }

@@ -1,7 +1,7 @@
 /// @file
 
 #include "manage.h"
-#include "hints.h"
+#include "crib.h"
 
 #include <ctype.h>
 #ifndef U3_OS_windows
@@ -4176,13 +4176,13 @@ _dedup_swap(u3_noun* som, u3_noun can)
 **   a hit returns the cell itself, so an entry for a freed and reused
 **   address can only miss sharing, never change a value: no counts, and
 **   no cleanup at exits or bails. it grows as needed, up to a ceiling
-**   (see hints.h). allocated on the home road.
+**   (see crib.h). allocated on the home road.
 */
 #define _CM_VIS_LOG  14   //  entries, log2, to start
 #define _CM_VIS_MAX  25   //  ... at most (NB: a first guess, to revisit)
 
 static c3_t    _cm_vis_ini_t;
-static u3g_set _cm_vis;   //  keys: [som 0]
+static u3c_set _cm_vis;   //  keys: [som 0]
 
 /* u3m_dedup_visit_size(): restart the visited set at 2^[log_y] entries
 **                         (at least 16), growing as before (tests).
@@ -4191,7 +4191,7 @@ static u3g_set _cm_vis;   //  keys: [som 0]
 void
 u3m_dedup_visit_size(c3_y log_y)
 {
-  u3g_set_init(&_cm_vis, log_y, _CM_VIS_MAX);
+  u3c_set_init(&_cm_vis, log_y, _CM_VIS_MAX);
   _cm_vis_ini_t = 1;
 }
 
@@ -4200,7 +4200,7 @@ u3m_dedup_visit_size(c3_y log_y)
 c3_d
 u3m_dedup_visit_cap(void)
 {
-  return u3g_set_cap(&_cm_vis);
+  return u3c_set_cap(&_cm_vis);
 }
 
 /* _cm_vis_leap(): a new excursion from the home road. home road only.
@@ -4211,7 +4211,7 @@ _cm_vis_leap(void)
   if ( !_cm_vis_ini_t ) {
     u3m_dedup_visit_size(_CM_VIS_LOG);
   }
-  u3g_set_shrink(&_cm_vis);
+  u3c_set_shrink(&_cm_vis);
 }
 
 /* _cm_vis_has(): junior cell [som] was canonicalized this excursion.
@@ -4219,7 +4219,7 @@ _cm_vis_leap(void)
 static inline c3_t
 _cm_vis_has(u3_noun som)
 {
-  return u3g_set_has(&_cm_vis, som, 0);
+  return u3c_set_has(&_cm_vis, som, 0);
 }
 
 /* _cm_vis_put(): note junior cell [som] as canonicalized.
@@ -4227,7 +4227,7 @@ _cm_vis_has(u3_noun som)
 static inline void
 _cm_vis_put(u3_noun som)
 {
-  u3g_set_put(&_cm_vis, som, 0);
+  u3c_set_put(&_cm_vis, som, 0);
 }
 
 /* _dedup_find(): canonical equal of [som] in any road's set, or none.
