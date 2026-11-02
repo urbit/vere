@@ -33,6 +33,52 @@ Log lines (one snapshot interval ends at each S line):
                                             home-road page records and allocation
   M <resident> <anonymous> <file-backed> <swapped>
                                             process memory in bytes at the snapshot
+  P <programs> <bytes> <formula-only> <looked-up> <compiled> <added>
+                                            bytecode: the home table at the snapshot,
+                                            then compiles and additions to it
+  H <atoms> <cells> <bytes> <added> <removed> <rebuilds> <rebuild-ms>
+    <per> <for> <byc> <war> <bas> <hot> <cod>
+                                            home hashcons set at the snapshot, its
+                                            traffic, and cells added per root at the
+                                            last rebuild
+  D <probe-take> <probe-older> <probe-dedup> <hit-new> <hit-cache> <hit-warm>
+    <hit-cold> <buckets> <table-pages> <faults-major> <faults-minor>
+                                            home hashcons probes by path, hits by the
+                                            member's origin, and the last rebuild's faults
+  G <windows> <gains> <nouns> <most-pending> <cancelled> <direct> <written>
+    <written-nouns> <shrinks>               deferred gains across the state swap
+  Y <references> <same-position> <refcount-1>
+                                            new arvo state's alignment with the old
+  W <give-ups> <write-to-member> <write-other> <neither-ours>
+                                            unification through slots on inner roads:
+                                            give-ups on two values senior to every road
+  X <noted-two> <noted-one> <repeats> <skip-promoting> <skip-slot> <skip-value>
+    <dropped> <most-at-exit> <wrote-two> <wrote-one> <skip-changed> <skip-member>
+                                            deferred home-slot unification: entries
+                                            noted (two slots, or one from the jet
+                                            checks), give-ups not deferred, and phase A
+  Q <roots> <probes> <hits-other> <hits-self>
+                                            inner roads' root sets (dup_p)
+  V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
+    <root-recorded> <deep-excursion> <deep-debug> <deep-promoting>
+    <pair-probes> <pair-hits> <pair-recorded>
+                                            the pair table: comparisons past 64 steps
+                                            by road, their root pairs, comparisons past
+                                            65,535 steps by table, and their inner pairs
+  I <calls-home> <calls-inner> <from-byc-keys> <from-memo-keys> <junior-cells>
+    <visited-hits> <senior-left> <home-probes-inner> <home-hits-inner>
+                                            the eager pass (u3m_dedup_eager)
+  Z <taken-jet> <taken-byc> <taken-per> <taken-for> <found-jet> <found-byc>
+    <found-per> <found-for> <fix-entries> <fix-rewritten> <byc-keys-fixed>
+    <byc-keys-over> <us-phase-a> <us-takes> <us-phase-b> <us-fix>
+                                            exits to home: nouns taken canonicalizing
+                                            and those swapped for a member, by table;
+                                            the fix pass; microseconds in each step
+  J <checks> <unequal> <unified> <deferred-one> <left-to-deferral>
+                                            jet battery checks whose pointers differed
+  N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
+    <clears-logged> <clears-dropped> <at-ceiling>
+                                            each crib's use in the interval
   O <time> <eve> <pack|meld|melt> <why> <options> <ms> <freed-words>
                                             a pack, meld or melt, logged when it ran.
                                             why: live (|pack, |meld, conn), memory
@@ -51,6 +97,10 @@ import glob
 import os
 import sys
 from collections import defaultdict
+
+
+#  fields in each hash-consing line (see the legend above)
+WIDTH = {"W": 4, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 16, "J": 5}
 
 
 def pct(a, b):
@@ -89,6 +139,14 @@ def new_interval():
         "P": None,
         "G": None,
         "Y": None,
+        "W": None,
+        "X": None,
+        "Q": None,
+        "V": None,
+        "I": None,
+        "Z": None,
+        "J": None,
+        "N": {},
         "ops": [],
     }
 
@@ -174,6 +232,16 @@ def parse(path):
                 cur["G"] = tuple(int(x) for x in line.split()[1:])
             elif t == "Y" and cur is not None:
                 cur["Y"] = tuple(int(x) for x in line.split()[1:])
+            elif t in WIDTH and cur is not None:
+                #  the step-0 prototype's logs used these letters for
+                #  labelled lines; take only lines of this shape
+                v = line.split()[1:]
+                if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
+                    cur[t] = tuple(int(x) for x in v)
+            elif t == "N" and cur is not None:
+                p = line.split()
+                if len(p) == 11 and all(x.isdigit() for x in p[2:]):
+                    cur["N"][p[1]] = tuple(int(x) for x in p[2:])
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -528,6 +596,98 @@ def main():
         print(f"  home nouns referenced from the new state's new cells: {y[0]}")
         print(f"    same noun at the same position in the old state: {y[1]}  {pct(y[1], y[0])}")
         print(f"      and below old cells with a refcount of 1: {y[2]}  {pct(y[2], y[0])}")
+    wis = [i for i in intervals if i["W"]]
+    xis = [i for i in intervals if i["X"]]
+    if (wis and any(any(i["W"]) for i in wis)) or (xis and any(any(i["X"]) for i in xis)):
+        tasks = sum(i["tasks"] for i in intervals)
+        per = lambda x: f"{x / tasks if tasks else 0:.2f}"
+        print("\n== unification of home values on inner roads ==")
+        if wis:
+            g, wm, wo, wn = (sum(i["W"][j] for i in wis) for j in range(4))
+            print(f"  slot step reached: {g} ({per(g)} per task)")
+            print(f"    slot written, toward a member: {wm}  {pct(wm, g)}")
+            print(f"    slot written, otherwise:       {wo}  {pct(wo, g)}")
+            print(f"    neither slot on this road:     {wn}  {pct(wn, g)}")
+        if xis:
+            x = [sum(i["X"][j] for i in xis) for j in range(12)]
+            x[7] = max(i["X"][7] for i in xis)
+            note = x[0] + x[1] + x[2] + x[3] + x[4] + x[5] + x[6]
+            print(f"  deferral, give-ups seen: {note}")
+            for name, c in (("noted, two slots", x[0]),
+                            ("noted, one slot (jet checks)", x[1]),
+                            ("repeat this excursion", x[2]),
+                            ("not deferred: promoting", x[3]),
+                            ("not deferred: a slot not home", x[4]),
+                            ("not deferred: a value not home", x[5]),
+                            ("dropped at the ceiling", x[6])):
+                print(f"    {name:<32}{c:>12}  {pct(c, note)}")
+            ent = x[0] + x[1]
+            print(f"  phase A, of {ent} entries (most at one exit: {x[7]}):")
+            for name, c in (("written, two slots", x[8]),
+                            ("written, one slot", x[9]),
+                            ("skipped: a slot changed", x[10]),
+                            ("skipped: members forbid it", x[11])):
+                print(f"    {name:<32}{c:>12}  {pct(c, ent)}")
+    qis = [i for i in intervals if i["Q"]]
+    if qis and any(any(i["Q"]) for i in qis):
+        q = [sum(i["Q"][j] for i in qis) for j in range(4)]
+        print("\n== inner roads' root sets (dup_p) ==")
+        print(f"  roots inserted: {q[0]}   probes: {q[1]}")
+        print(f"  hits, an equal noun elsewhere: {q[2]}  {pct(q[2], q[1])}")
+        print(f"  hits, the noun itself:         {q[3]}  {pct(q[3], q[1])}")
+    vis = [i for i in intervals if i["V"]]
+    if vis and any(any(i["V"]) for i in vis):
+        v = [sum(i["V"][j] for i in vis) for j in range(12)]
+        print("\n== the pair table ==")
+        print(f"  comparisons past 64 steps: home road {v[0]}, inner {v[1]}, promoting {v[2]}")
+        print(f"  root pairs looked up: {v[3]}, found {v[4]} {pct(v[4], v[3])}, recorded {v[5]}")
+        print(f"  comparisons past 65,535 steps: excursion table {v[6]}, "
+              f"scratch (debugging memory) {v[7]}, scratch (promoting) {v[8]}")
+        print(f"  inner pairs looked up: {v[9]}, found {v[10]} {pct(v[10], v[9])}, recorded {v[11]}")
+    iis = [i for i in intervals if i["I"]]
+    if iis and any(any(i["I"]) for i in iis):
+        e = [sum(i["I"][j] for i in iis) for j in range(9)]
+        print("\n== the eager pass (u3m_dedup_eager) ==")
+        print(f"  calls: home road {e[0]}, inner roads {e[1]}; "
+              f"from bytecode keys {e[2]}, memo keys {e[3]}")
+        print(f"  junior cells walked: {e[4]}   visited-set hits: {e[5]}   "
+              f"senior cells left: {e[6]}")
+        print(f"  home-set probes from inner roads: {e[7]}, hits {e[8]} {pct(e[8], e[7])}")
+    zis = [i for i in intervals if i["Z"]]
+    if zis and any(any(i["Z"]) for i in zis):
+        z = [sum(i["Z"][j] for i in zis) for j in range(16)]
+        print("\n== exits to home: canonicalizing take, fix pass ==")
+        for k, name in enumerate(("jets", "byc", "per", "for")):
+            print(f"  {name:<6} taken {z[k]:>12}, swapped for a member {z[4 + k]:>10}  "
+                  f"{pct(z[4 + k], z[k])}")
+        print(f"  fix pass: entries not members {z[8]}, fields rewritten {z[9]}")
+        print(f"  bytecode keys fixed {z[10]}, past the limit {z[11]}")
+        tus = sum(z[12:16])
+        print(f"  time, ms: phase A {z[12] / 1000:.1f}, takes {z[13] / 1000:.1f}, "
+              f"phase B {z[14] / 1000:.1f}, fix pass {z[15] / 1000:.1f}; "
+              f"total {tus / 1000:.1f}")
+    jis = [i for i in intervals if i["J"]]
+    if jis and any(any(i["J"]) for i in jis):
+        j = [sum(i["J"][k] for i in jis) for k in range(5)]
+        tasks = sum(i["tasks"] for i in jis)
+        print("\n== jet battery checks, pointers differing ==")
+        print(f"  checks: {j[0]} ({j[0] / tasks if tasks else 0:.1f} per task)")
+        for name, c in (("unequal", j[1]), ("unified", j[2]),
+                        ("deferred, one slot", j[3]), ("left to deferral", j[4])):
+            print(f"    {name:<20}{c:>12}  {pct(c, j[0])}")
+    names = sorted({n for i in intervals for n in i["N"]})
+    if names:
+        print("\n== cribs ==")
+        print(f"  {'crib':<22}{'cap now':>10}{'largest':>10}{'ceiling':>10}"
+              f"{'peak':>10}{'grows':>8}{'shrinks':>8}{'clr-log':>9}{'clr-drop':>9}"
+              f"{'at-ceil':>9}")
+        for n in names:
+            rows = [i["N"][n] for i in intervals if n in i["N"]]
+            c = rows[-1]
+            print(f"  {n:<22}{c[0]:>10}{max(r[1] for r in rows):>10}{c[2]:>10}"
+                  f"{max(r[3] for r in rows):>10}{sum(r[4] for r in rows):>8}"
+                  f"{sum(r[5] for r in rows):>8}{sum(r[6] for r in rows):>9}"
+                  f"{sum(r[7] for r in rows):>9}{sum(r[8] for r in rows):>9}")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)

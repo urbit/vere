@@ -183,6 +183,68 @@
           //
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
+
+          //  unification through slots (u3a_wed()): equal values, both
+          //  senior to every road that could hold them, on an inner road
+          //
+          c3_d wsg_d;        //  give-ups that reached the slot step
+          c3_d wsw_d[2];     //  slot writes: toward a member, otherwise
+          c3_d wsn_d;        //  neither slot in this road's heap
+
+          //  deferred home-slot unification (_cr_dh_note(), phase A)
+          //
+          c3_d dhn_d[2];     //  entries noted: two slots, one (jet checks)
+          c3_d dhr_d;        //  slot pairs already noted this excursion
+          c3_d dhx_d[3];     //  not deferred, on an inner road: promoting,
+                             //  a slot outside home memory, a value that
+                             //  isn't home
+          c3_d dhd_d;        //  dropped at the ceiling
+          c3_d dhp_d;        //  most entries applied at one exit
+          c3_d dha_d[2];     //  phase A writes: two slots, one
+          c3_d dhs_d[2];     //  skipped in phase A: a slot changed,
+                             //  members forbid it
+
+          //  inner roads' root sets (dup_p)
+          //
+          c3_d dpi_d;        //  roots inserted
+          c3_d dpp_d;        //  probes, one per road
+          c3_d dph_d[2];     //  hits: an equal noun elsewhere, the noun
+                             //  itself
+
+          //  the pair table (u3r_sing())
+          //
+          c3_d pml_d[3];     //  comparisons past _CR_PM_TOP steps: on the
+                             //  home road, an inner road, promoting
+          c3_d pmr_d[3];     //  root pairs: looked up, found, recorded
+          c3_d pmd_d[3];     //  comparisons past _CR_PM_DEEP steps, by
+                             //  table: excursion, scratch (debugging
+                             //  memory), scratch (promoting)
+          c3_d pmp_d[3];     //  ... inner pairs: looked up, found, recorded
+
+          //  the eager pass (u3m_dedup_eager())
+          //
+          c3_d eic_d[2];     //  calls: home road, inner roads
+          c3_d eiw_d[2];     //  ... from: bytecode keys, memo keys
+          c3_d eij_d;        //  junior cells walked
+          c3_d eiv_d;        //  visited-set hits
+          c3_d eis_d;        //  senior cells left, not members
+          c3_d eih_d[2];     //  home-set probes on inner roads, hits
+
+          //  exits to home: the canonicalizing take, the fix pass, and
+          //  time in each step (microseconds, while measuring)
+          //
+          c3_d ctk_d[4];     //  nouns taken canonicalizing: jets, byc,
+                             //  per, for
+          c3_d ctf_d[4];     //  ... swapped for an equal member
+          c3_d cfx_d[2];     //  fix pass: entries not members, fields
+                             //  rewritten
+          c3_d crk_d[2];     //  bytecode keys fixed, keys past the limit
+          c3_d cus_d[4];     //  time: phase A, takes, phase B, fix pass
+
+          //  jet battery checks (u3r_sing_wed()), when the pointers differ
+          //
+          c3_d jck_d[5];     //  checks, unequal, unified, deferred (one
+                             //  slot), left to deferral
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
@@ -211,6 +273,11 @@
     */
       c3_d
       u3e_measure_ms(void);
+
+    /* u3e_measure_us(): wall-clock microseconds, for short steps.
+    */
+      c3_d
+      u3e_measure_us(void);
 
     /* u3e_measure_op(): if measuring, log a pack, meld or melt [op_c],
     **                   run because of [why_c], with melt options

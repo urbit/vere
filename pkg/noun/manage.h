@@ -8,6 +8,7 @@
 
 #include "c3/c3.h"
 #include "types.h"
+#include "crib.h"
 #include "version.h"
 #include "rsignal.h"
 
@@ -260,6 +261,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
         void
         u3m_crib_report(void);
+
+      /* u3m_crib_stat(): every crib's use since the last call, into
+      **                  [sat_u] (room for u3m_crib_max); how many.
+      */
+#       define u3m_crib_max  8
+        c3_w
+        u3m_crib_stat(u3c_stat* sat_u);
 
       /* u3m_dedup_visit_cap(): the visited set's capacity (tests).
       */

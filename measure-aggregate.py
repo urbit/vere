@@ -21,7 +21,7 @@ row per ship, for further analysis.
 
 Metrics follow the plan's "Tuning the merged heuristics and policies"
 and "Prioritizing follow-up work": lines from older builds that lack
-some (P, H, D, G, Y) are used when present.
+some (P, H, D, G, Y, W, X, Q, V, I, Z, J, N) are used when present.
 """
 
 import csv
@@ -49,6 +49,10 @@ def ints(p):
         return tuple(int(x) for x in p)
     except ValueError:
         return None
+
+
+#  fields in each hash-consing line (see measure-report.py's legend)
+WIDTH = {"W": 4, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 16, "J": 5}
 
 
 def parse(lines):
@@ -96,6 +100,16 @@ def parse(lines):
             v = ints(p[1:])
             if v is not None:
                 cur[t] = v
+        elif t in WIDTH:
+            #  the step-0 prototype's logs used these letters for
+            #  labelled lines; take only lines of this shape
+            v = ints(p[1:])
+            if v is not None and len(v) == WIDTH[t]:
+                cur[t] = v
+        elif t == "N" and len(p) == 11:
+            v = ints(p[2:])
+            if v is not None:
+                cur.setdefault("N", {})[p[1]] = v
     for o in ops:
         for i in intervals:
             if i["time"] >= o["time"]:
@@ -217,7 +231,45 @@ def sums(ivs):
         if "Y" in i:
             y = i["Y"]
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
+        if "W" in i:
+            w = i["W"]
+            s["W_giv"] += w[0]; s["W_mem"] += w[1]; s["W_oth"] += w[2]
+            s["W_tasks"] += i["tasks"]
+        if "X" in i:
+            x = i["X"]
+            s["X_ent"] += x[0] + x[1]; s["X_rep"] += x[2]
+            s["X_not"] += x[3] + x[4] + x[5]; s["X_drp"] += x[6]
+            s["X_wrt"] += x[8] + x[9]; s["X_tasks"] += i["tasks"]
+        if "Q" in i:
+            q = i["Q"]
+            s["Q_ins"] += q[0]; s["Q_pro"] += q[1]; s["Q_hit"] += q[2]
+            s["Q_tasks"] += i["tasks"]
+        if "V" in i:
+            v = i["V"]
+            s["V_long"] += v[1]; s["V_rpro"] += v[3]; s["V_rhit"] += v[4]
+            s["V_deep"] += v[6] + v[7] + v[8]; s["V_ppro"] += v[9]; s["V_phit"] += v[10]
+            s["V_tasks"] += i["tasks"]
+        if "I" in i:
+            e = i["I"]
+            s["I_inn"] += e[1]; s["I_cel"] += e[4]; s["I_vis"] += e[5]
+            s["I_hpro"] += e[7]; s["I_hhit"] += e[8]
+        if "Z" in i:
+            z = i["Z"]
+            s["Z_tak"] += sum(z[0:4]); s["Z_fnd"] += sum(z[4:8])
+            s["Z_fix"] += z[8]; s["Z_rew"] += z[9]; s["Z_over"] += z[11]
+            s["Z_us"] += sum(z[12:16]); s["Z_tasks"] += i["tasks"]
+        if "J" in i:
+            j = i["J"]
+            s["J_chk"] += j[0]; s["J_neq"] += j[1]; s["J_uni"] += j[2]
+            s["J_def"] += j[3]; s["J_tasks"] += i["tasks"]
+        for n in i.get("N", {}).values():
+            s["N_ovf"] += n[8]
     return s
+
+
+def crib_peak(v, name):
+    """The most entries crib [name] held at once, over [v]."""
+    return max((i["N"][name][3] for i in v if name in i.get("N", {})), default=None)
 
 
 #  name, decision it informs, function of (sums, intervals). a name
@@ -285,12 +337,71 @@ METRICS = [
      lambda s, v: ratio(1000 * s["G_shr"], s["G_win"]) if s["G_win"] else None),
     ("Y: aligned", "(i) adaptive bound", lambda s, v: ratio(s["Y_pos"], s["Y_all"])),
     ("Y: aligned and exclusive", "(i) fused path", lambda s, v: ratio(s["Y_exc"], s["Y_all"])),
+    ("W: slot writes / 1000 tasks", "hashcons: slots",
+     lambda s, v: ratio(1000 * (s["W_mem"] + s["W_oth"]), s["W_tasks"]) if s["W_tasks"] else None),
+    ("W: slot writes / slot step", "hashcons: slots",
+     lambda s, v: ratio(s["W_mem"] + s["W_oth"], s["W_giv"])),
+    ("W: slot writes toward a member", "hashcons: slots",
+     lambda s, v: ratio(s["W_mem"], s["W_mem"] + s["W_oth"])),
+    ("X: deferred entries / 1000 tasks", "hashcons: deferral",
+     lambda s, v: ratio(1000 * s["X_ent"], s["X_tasks"]) if s["X_tasks"] else None),
+    ("X: repeats / (entries + repeats)", "hashcons: deferral",
+     lambda s, v: ratio(s["X_rep"], s["X_ent"] + s["X_rep"])),
+    ("X: phase A writes / entries", "hashcons: deferral",
+     lambda s, v: ratio(s["X_wrt"], s["X_ent"])),
+    ("X: dropped at the ceiling", "hashcons: deferral ceiling", lambda s, v: s["X_drp"]),
+    ("X: most entries at one exit", "hashcons: deferral ceiling",
+     lambda s, v: max(values(v, "X", 7), default=None)),
+    ("Q: dup_p roots / 1000 tasks", "hashcons: dup_p",
+     lambda s, v: ratio(1000 * s["Q_ins"], s["Q_tasks"]) if s["Q_tasks"] else None),
+    ("Q: dup_p hits / probes", "hashcons: dup_p", lambda s, v: ratio(s["Q_hit"], s["Q_pro"])),
+    ("V: long inner comparisons / 1000 tasks", "hashcons: pair table",
+     lambda s, v: ratio(1000 * s["V_long"], s["V_tasks"]) if s["V_tasks"] else None),
+    ("V: root pairs found / looked up", "hashcons: pair table",
+     lambda s, v: ratio(s["V_rhit"], s["V_rpro"])),
+    ("V: very long comparisons / 1000 tasks", "hashcons: pair table",
+     lambda s, v: ratio(1000 * s["V_deep"], s["V_tasks"]) if s["V_tasks"] else None),
+    ("V: inner pairs found / looked up", "hashcons: pair table",
+     lambda s, v: ratio(s["V_phit"], s["V_ppro"])),
+    ("I: junior cells walked / inner call", "hashcons: eager pass",
+     lambda s, v: ratio(s["I_cel"], s["I_inn"])),
+    ("I: visited-set hits / cells walked", "hashcons: eager pass",
+     lambda s, v: ratio(s["I_vis"], s["I_cel"])),
+    ("I: home-set hits / inner probes", "hashcons: eager pass",
+     lambda s, v: ratio(s["I_hhit"], s["I_hpro"])),
+    ("Z: taken nouns swapped for a member", "hashcons: canonicalizing take",
+     lambda s, v: ratio(s["Z_fnd"], s["Z_tak"])),
+    ("Z: fix-pass fields rewritten / entries", "hashcons: fix pass",
+     lambda s, v: ratio(s["Z_rew"], s["Z_fix"])),
+    ("Z: bytecode keys past the limit", "hashcons: _cn_rek_u", lambda s, v: s["Z_over"]),
+    ("Z: exit-home ms / 1000 tasks", "hashcons: exit cost",
+     lambda s, v: ratio(s["Z_us"], s["Z_tasks"]) if s["Z_tasks"] else None),
+    ("J: differing checks / task", "hashcons: jet checks",
+     lambda s, v: ratio(s["J_chk"], s["J_tasks"])),
+    ("J: unified / differing checks", "hashcons: jet checks",
+     lambda s, v: ratio(s["J_uni"], s["J_chk"])),
+    ("J: deferred / differing checks", "hashcons: jet checks",
+     lambda s, v: ratio(s["J_def"], s["J_chk"])),
+    ("N: pair table peak entries", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "pair-table")),
+    ("N: visited set peak entries", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "visited-set")),
+    ("N: deferral slot pairs peak entries", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "deferral-slot-pairs")),
+    ("N: deferral entries peak", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "deferral-entries")),
+    ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
 
 PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
-                               "D: on-loom", "G: cancelled", "G: spilled", "Y:"))
+                               "D: on-loom", "G: cancelled", "G: spilled", "Y:",
+                               "W: slot writes / slot", "W: slot writes toward",
+                               "X: repeats", "X: phase A", "Q: dup_p hits",
+                               "V: root pairs found", "V: inner pairs found",
+                               "I: visited", "I: home-set", "Z: taken", "Z: fix",
+                               "J: unified", "J: deferred"))
            or "keys /" in name or "looked up /" in name}
 
 

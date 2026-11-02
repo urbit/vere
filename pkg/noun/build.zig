@@ -447,6 +447,7 @@ const install_headers = [_][]const u8{
     "allocate.h",
     "canon.h",
     "copy_migrate.h",
+    "crib.h",
     "error.h",
     "events.h",
     "hashtable.h",

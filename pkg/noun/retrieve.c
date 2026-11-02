@@ -3,6 +3,7 @@
 #include "retrieve.h"
 
 #include "allocate.h"
+#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"
@@ -378,10 +379,14 @@ _cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
 {
   u3r_dh_entry* ent_u = u3c_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
 
-  if ( !ent_u ) return;
+  if ( !ent_u ) {
+    u3e_Meter.dhd_d++;
+    return;
+  }
   ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
   ent_u->sb = sb; ent_u->pb = pb; ent_u->vb = vb;
   _cr_dh.len_w++;
+  u3e_Meter.dhn_d[sa ? 0 : 1]++;
 }
 
 /* _cr_dh_seen(): slot pair [sa sb] was noted this excursion; notes it.
@@ -407,16 +412,30 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
 {
   u3a_road* one_u;
 
-  if ( (&(u3H->rod_u) == u3R) || u3R->kid_p ) return;
-  if ( !_cr_home_slot(sa) || !_cr_home_slot(sb) ) return;
+  if ( &(u3H->rod_u) == u3R ) return;
+  if ( u3R->kid_p ) {
+    u3e_Meter.dhx_d[0]++;
+    return;
+  }
+  if ( !_cr_home_slot(sa) || !_cr_home_slot(sb) ) {
+    u3e_Meter.dhx_d[1]++;
+    return;
+  }
 
   one_u = u3to(u3a_road, u3H->rod_u.kid_p);
   if (  (c3n == u3a_is_senior(one_u, *sa))
-     || (c3n == u3a_is_senior(one_u, *sb)) ) return;
+     || (c3n == u3a_is_senior(one_u, *sb)) )
+  {
+    u3e_Meter.dhx_d[2]++;
+    return;
+  }
 
   //  once per slot pair per excursion
   //
-  if ( _cr_dh_seen(sa, sb) ) return;
+  if ( _cr_dh_seen(sa, sb) ) {
+    u3e_Meter.dhr_d++;
+    return;
+  }
   _cr_dh_push(sa, pa, *sa, sb, pb, *sb);
 }
 
@@ -507,6 +526,25 @@ u3r_crib_report(void)
   }
 }
 
+/* u3r_crib_stat(): the pair tables' and deferral's use since the last
+**                  call, into [sat_u] (room for 4); how many.
+*/
+c3_w
+u3r_crib_stat(u3c_stat* sat_u)
+{
+  c3_w len_w = 0;
+
+  if ( _cr_pm_ini_t ) {
+    sat_u[len_w++] = u3c_set_stat(&_cr_pm_x);
+    sat_u[len_w++] = u3c_set_stat(&_cr_pm_s);
+  }
+  if ( _cr_dh.ini_t ) {
+    sat_u[len_w++] = u3c_set_stat(&_cr_dh.sen_u);
+    sat_u[len_w++] = u3c_arr_stat(&_cr_dh.ent_u);
+  }
+  return len_w;
+}
+
 /* _cr_pm_has(): [a] and [b] are known to be equal.
 */
 static inline c3_t
@@ -514,6 +552,19 @@ _cr_pm_has(u3c_set* set_u, u3_noun a, u3_noun b)
 {
   if ( a > b ) { u3_noun t = a; a = b; b = t; }
   return u3c_set_has(set_u, a, b);
+}
+
+/* _cr_pm_find(): _cr_pm_has() for an inner pair, counted.
+*/
+static inline c3_t
+_cr_pm_find(u3c_set* set_u, u3_noun a, u3_noun b)
+{
+  u3e_Meter.pmp_d[0]++;
+  if ( _cr_pm_has(set_u, a, b) ) {
+    u3e_Meter.pmp_d[1]++;
+    return 1;
+  }
+  return 0;
 }
 
 /* _cr_pm_put(): record that [a] and [b] are equal.
@@ -614,6 +665,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
   //
   ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : _cr_dbg_ram() ? 2 : 1;
   ctx_u->pms_u = ( 1 == ctx_u->pmo_y ) ? &_cr_pm_x : &_cr_pm_s;
+  u3e_Meter.pmd_d[ctx_u->pmo_y - 1]++;
   if ( 1 < ctx_u->pmo_y ) {
     u3c_set_clear(&_cr_pm_s);
   }
@@ -659,7 +711,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
           }
           //  a pair known to be equal
           //
-          else if ( _cr_pm_ok(ctx_u, a, b) && _cr_pm_has(ctx_u->pms_u, a, b) ) {
+          else if ( _cr_pm_ok(ctx_u, a, b) && _cr_pm_find(ctx_u->pms_u, a, b) ) {
             fam_u = u3a_pop(pil_u);
             continue;
           }
@@ -704,6 +756,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
     //
     if ( (SING_TAIL == fam_u->sat_y) && (a != b) && _cr_pm_ok(ctx_u, a, b) ) {
       _cr_pm_put(ctx_u->pms_u, a, b);
+      u3e_Meter.pmp_d[2]++;
     }
 
     fam_u = u3a_pop(pil_u);
@@ -833,6 +886,7 @@ _cr_sing(u3_noun a, u3_noun b)
         stg_t = 1;
         ovr_s = (c3_s)(0x10000 - (_CR_PM_DEEP - _CR_PM_TOP));
         _cr_sing_scope(&ctx_u);
+        u3e_Meter.pml_d[ctx_u.scp_y]++;
 
         if (  (1 == ctx_u.scp_y) && (ra != rb)
            && (c3y == u3a_is_cell(ra)) && (c3y == u3a_is_cell(rb))
@@ -840,7 +894,9 @@ _cr_sing(u3_noun a, u3_noun b)
         {
           u3_assert( _cr_pm_ini_t );
 
+          u3e_Meter.pmr_d[0]++;
           if ( _cr_pm_has(&_cr_pm_x, ra, rb) ) {
+            u3e_Meter.pmr_d[1]++;
             u3R->cap_p = pil_u.top_p;
             return c3y;
           }
@@ -857,6 +913,7 @@ _cr_sing(u3_noun a, u3_noun b)
         u3R->cap_p = pil_u.top_p;
         if ( ctx_u.prt_t && (c3y == ret_o) ) {
           _cr_pm_put(&_cr_pm_x, ctx_u.ra, ctx_u.rb);
+          u3e_Meter.pmr_d[2]++;
         }
         return ret_o;
       }
@@ -867,6 +924,7 @@ _cr_sing(u3_noun a, u3_noun b)
 
   if ( ctx_u.prt_t ) {
     _cr_pm_put(&_cr_pm_x, ctx_u.ra, ctx_u.rb);
+    u3e_Meter.pmr_d[2]++;
   }
   return c3y;
 }
@@ -893,7 +951,10 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
   if ( *a == *b ) {
     return c3y;
   }
-  else if ( c3n == u3r_sing(*a, *b) ) {
+
+  u3e_Meter.jck_d[0]++;
+  if ( c3n == u3r_sing(*a, *b) ) {
+    u3e_Meter.jck_d[1]++;
     return c3n;
   }
   else if ( *a != *b ) {
@@ -915,13 +976,21 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
         if ( !_cr_dh_seen(0, b) ) {
           _cr_dh_push(0, u3_none, *a, b, pb, *b);
         }
+        else {
+          u3e_Meter.dhr_d++;
+        }
+        u3e_Meter.jck_d[3]++;
         return c3y;
       }
     }
 
     u3a_wed(a, b);
     if ( *a != *b ) {
+      u3e_Meter.jck_d[4]++;
       _cr_dh_note(a, pa, b, pb);
+    }
+    else {
+      u3e_Meter.jck_d[2]++;
     }
   }
   return c3y;

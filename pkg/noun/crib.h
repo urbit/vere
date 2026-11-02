@@ -13,6 +13,21 @@
 
   /**  Data structures.
   **/
+    /* u3c_stat: a crib's use since the last u3c_*_stat(), for measurement.
+    */
+      typedef struct {
+        const c3_c* nam_c;   //  name
+        c3_d   cap_d;   //  capacity now, entries
+        c3_d   top_d;   //  largest capacity
+        c3_d   max_d;   //  ceiling
+        c3_d   pek_d;   //  most entries in use at once
+        c3_d   gro_d;   //  grows
+        c3_d   shr_d;   //  shrinks
+        c3_d   clg_d;   //  clears through the log (sets)
+        c3_d   cdp_d;   //  clears by dropping pages (sets)
+        c3_d   ovf_d;   //  evictions or drops at the ceiling
+      } u3c_stat;
+
     /* u3c_set: a set of key pairs [a b], a > 1 (0 marks an empty slot,
     **          1 a removed one).
     **
@@ -35,6 +50,7 @@
         c3_w   evk_w;   //  evictions, to rotate through the probe window
         c3_w   lin_w;   //  slots logged for a cheap clear, or past the log
         c3_w   lis_w[256];
+        u3c_stat sat_u; //  use since the last u3c_set_stat()
       } u3c_set;
 
     /* u3c_arr: an array that grows in place, up to a ceiling.
@@ -48,6 +64,7 @@
         size_t min_i;   //  starting capacity
         size_t max_i;   //  ceiling
         size_t pek_i;   //  most entries used since the last shrink
+        u3c_stat sat_u; //  use since the last u3c_arr_stat()
       } u3c_arr;
 
   /**  Functions.
@@ -91,6 +108,11 @@
       c3_d
       u3c_set_cap(u3c_set* set_u);
 
+    /* u3c_set_stat(): the set's use since the last call, and reset it.
+    */
+      u3c_stat
+      u3c_set_stat(u3c_set* set_u);
+
     /* u3c_arr_init(): reserve for [max_i] entries of [siz_i] bytes, starting
     **                 at [min_i]. home road only.
     */
@@ -116,5 +138,10 @@
     */
       void
       u3c_arr_report(u3c_arr* arr_u);
+
+    /* u3c_arr_stat(): the array's use since the last call, and reset it.
+    */
+      u3c_stat
+      u3c_arr_stat(u3c_arr* arr_u);
 
 #endif /* ifndef U3_CRIB_H */

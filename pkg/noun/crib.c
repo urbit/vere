@@ -224,6 +224,10 @@ _crib_grow(u3c_set* set_u)
 
   set_u->log_y++;
   set_u->lin_w = _CRIB_LIS + 1;
+  set_u->sat_u.gro_d++;
+  if ( ((c3_d)1 << set_u->log_y) > set_u->sat_u.top_d ) {
+    set_u->sat_u.top_d = (c3_d)1 << set_u->log_y;
+  }
 
   //  move each entry to its place under the new mask. a moved entry
   //  leaves a tombstone, so that entries placed past it stay reachable;
@@ -254,6 +258,7 @@ u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y)
   set_u->nam_c = nam_c;
   set_u->min_y = set_u->log_y = min_y;
   set_u->max_y = max_y;
+  set_u->sat_u.top_d = (c3_d)1 << min_y;
   set_u->tab_d = _crib_reserve(((size_t)1 << max_y) * 16);
   u3_assert( _crib_commit(set_u->tab_d, ((size_t)1 << min_y) * 16) );
 }
@@ -295,6 +300,7 @@ u3c_set_put(u3c_set* set_u, c3_d a_d, c3_d b_d)
                & _crib_msk(set_u);
       _crib_write(set_u, k_d, a_d, b_d);
       set_u->ovf_d++;
+      set_u->sat_u.ovf_d++;
       break;
     }
   }
@@ -310,11 +316,14 @@ u3c_set_clear(u3c_set* set_u)
     for ( c3_w i_w = 0; i_w < set_u->lin_w; i_w++ ) {
       set_u->tab_d[2 * (c3_d)set_u->lis_w[i_w]] = 0;
     }
+    set_u->sat_u.clg_d++;
   }
   else {
     _crib_drop(set_u->tab_d, ((size_t)1 << set_u->log_y) * 16, 1);
+    set_u->sat_u.cdp_d++;
   }
   if ( set_u->use_d > set_u->pek_d ) set_u->pek_d = set_u->use_d;
+  if ( set_u->use_d > set_u->sat_u.pek_d ) set_u->sat_u.pek_d = set_u->use_d;
   set_u->use_d = 0;
   set_u->lin_w = 0;
 }
@@ -340,6 +349,7 @@ u3c_set_shrink(u3c_set* set_u)
                (cap_d - ((c3_d)1 << new_y)) * 16, 0);
     set_u->log_y = new_y;
     set_u->pek_d = 0;
+    set_u->sat_u.shr_d++;
   }
   else {
     set_u->pek_d /= 2;
@@ -363,6 +373,21 @@ u3c_set_cap(u3c_set* set_u)
   return (c3_d)1 << set_u->log_y;
 }
 
+u3c_stat
+u3c_set_stat(u3c_set* set_u)
+{
+  u3c_stat sat_u = set_u->sat_u;
+
+  sat_u.nam_c = set_u->nam_c;
+  sat_u.cap_d = (c3_d)1 << set_u->log_y;
+  sat_u.max_d = (c3_d)1 << set_u->max_y;
+  if ( set_u->use_d > sat_u.pek_d ) sat_u.pek_d = set_u->use_d;
+
+  memset(&set_u->sat_u, 0, sizeof(set_u->sat_u));
+  set_u->sat_u.top_d = sat_u.cap_d;
+  return sat_u;
+}
+
 /* arrays
 */
 void
@@ -377,6 +402,7 @@ u3c_arr_init(u3c_arr* arr_u, const c3_c* nam_c,
   arr_u->siz_i = siz_i;
   arr_u->min_i = arr_u->cap_i = min_i;
   arr_u->max_i = c3_max(max_i, min_i);
+  arr_u->sat_u.top_d = min_i;
   arr_u->buf_y = _crib_reserve(arr_u->max_i * siz_i);
   u3_assert( _crib_commit(arr_u->buf_y, min_i * siz_i) );
 }
@@ -389,6 +415,7 @@ u3c_arr_at(u3c_arr* arr_u, size_t i_i)
 
     if ( i_i >= arr_u->max_i ) {
       arr_u->drp_d++;
+      arr_u->sat_u.ovf_d++;
       return 0;
     }
     new_i = c3_min(c3_max(arr_u->cap_i * 2, i_i + 1), arr_u->max_i);
@@ -398,6 +425,8 @@ u3c_arr_at(u3c_arr* arr_u, size_t i_i)
       return 0;
     }
     arr_u->cap_i = new_i;
+    arr_u->sat_u.gro_d++;
+    if ( new_i > arr_u->sat_u.top_d ) arr_u->sat_u.top_d = new_i;
   }
   return arr_u->buf_y + (i_i * arr_u->siz_i);
 }
@@ -406,6 +435,7 @@ void
 u3c_arr_shrink(u3c_arr* arr_u, size_t len_i)
 {
   if ( len_i > arr_u->pek_i ) arr_u->pek_i = len_i;
+  if ( len_i > arr_u->sat_u.pek_d ) arr_u->sat_u.pek_d = len_i;
 
   if ( (arr_u->cap_i > arr_u->min_i) && ((arr_u->pek_i * 8) < arr_u->cap_i) ) {
     size_t new_i = c3_max(arr_u->min_i, arr_u->pek_i * 2);
@@ -414,6 +444,7 @@ u3c_arr_shrink(u3c_arr* arr_u, size_t len_i)
                (arr_u->cap_i - new_i) * arr_u->siz_i, 0);
     arr_u->cap_i = new_i;
     arr_u->pek_i = 0;
+    arr_u->sat_u.shr_d++;
   }
   else {
     arr_u->pek_i /= 2;
@@ -429,4 +460,18 @@ u3c_arr_report(u3c_arr* arr_u)
             arr_u->nam_c, arr_u->max_i, arr_u->drp_d);
     arr_u->drp_d = 0;
   }
+}
+
+u3c_stat
+u3c_arr_stat(u3c_arr* arr_u)
+{
+  u3c_stat sat_u = arr_u->sat_u;
+
+  sat_u.nam_c = arr_u->nam_c;
+  sat_u.cap_d = arr_u->cap_i;
+  sat_u.max_d = arr_u->max_i;
+
+  memset(&arr_u->sat_u, 0, sizeof(arr_u->sat_u));
+  arr_u->sat_u.top_d = sat_u.cap_d;
+  return sat_u;
 }

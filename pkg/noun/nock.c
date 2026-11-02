@@ -1780,6 +1780,7 @@ _n_find(u3_noun pre, u3_noun fol)
     }
   }
 
+  u3e_Meter.eiw_d[0]++;
   key = u3m_dedup_eager(key);
 
   {
@@ -3192,6 +3193,9 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
       if ( _cn_rek_len_w < _CN_REK_MAX ) {
         _cn_rek_u[_cn_rek_len_w++] = yek;   //  held by the table
       }
+      else {
+        u3e_Meter.crk_d[1]++;
+      }
     }
 
     u3h_put(har_p, yek, gop_p);
@@ -3212,6 +3216,7 @@ u3n_reap_fix(void)
   for ( i_w = 0; i_w < _cn_rek_len_w; i_w++ ) {
     u3_noun key = _cn_rek_u[i_w];
     if ( (c3n == u3a_is_cat(key)) && !u3a_hcon_has(key) ) {
+      u3e_Meter.crk_d[0]++;
       u3z(u3m_dedup(u3k(key)));
     }
   }

@@ -193,6 +193,7 @@ _cm_dh_apply(void)
   _cm_dh.rel_w = 0;
   if ( !len_w ) return;
 
+  if ( len_w > u3e_Meter.dhp_d ) u3e_Meter.dhp_d = len_w;
   _cm_dh.rel_u = c3_malloc(sizeof(u3_noun) * len_w);
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
@@ -202,10 +203,18 @@ _cm_dh_apply(void)
     //
     if ( !e_u->sa ) {
       u3_noun vb = *e_u->sb;
-      if ( (vb != e_u->vb) || (vb == e_u->va) ) continue;
+      if ( (vb != e_u->vb) || (vb == e_u->va) ) {
+        u3e_Meter.dhs_d[0]++;
+        continue;
+      }
       if (  u3a_hcon_has(vb)
-         || ((u3_none != e_u->pb) && u3a_hcon_has(e_u->pb)) ) continue;
+         || ((u3_none != e_u->pb) && u3a_hcon_has(e_u->pb)) )
+      {
+        u3e_Meter.dhs_d[1]++;
+        continue;
+      }
       _cm_dh_write(e_u->sb, e_u->va);
+      u3e_Meter.dha_d[1]++;
       continue;
     }
 
@@ -213,9 +222,13 @@ _cm_dh_apply(void)
 
     //  a slot that changed since it was noted (by an earlier entry here)
     //
-    if ( (va != e_u->va) || (vb != e_u->vb) || (va == vb) ) continue;
+    if ( (va != e_u->va) || (vb != e_u->vb) || (va == vb) ) {
+      u3e_Meter.dhs_d[0]++;
+      continue;
+    }
 
     {
+      c3_w rel_w = _cm_dh.rel_w;
       c3_t amb_t = u3a_hcon_has(va), bmb_t = u3a_hcon_has(vb);
       c3_t aok_t = (u3_none == e_u->pa) || !u3a_hcon_has(e_u->pa);
       c3_t bok_t = (u3_none == e_u->pb) || !u3a_hcon_has(e_u->pb);
@@ -232,6 +245,9 @@ _cm_dh_apply(void)
       else if ( (u3_none == e_u->pb) && aok_t )       _cm_dh_write(e_u->sa, vb);
       else if ( bok_t )                               _cm_dh_write(e_u->sb, va);
       else if ( aok_t )                               _cm_dh_write(e_u->sa, vb);
+
+      if ( rel_w != _cm_dh.rel_w ) u3e_Meter.dha_d[0]++;
+      else                         u3e_Meter.dhs_d[1]++;
     }
   }
 }
@@ -274,15 +290,22 @@ _cm_canon_fix_kev(u3_noun kev, void* ptr_v)
 
   if ( u3a_hcon_has(kev) ) return;   //  never edit a member
 
+  u3e_Meter.cfx_d[0]++;
   if ( !_cm_canon_ok(kev_u->hed) ) {
     u3_noun can = u3m_dedup(u3k(kev_u->hed));
-    if ( can != kev_u->hed ) { u3_noun old = kev_u->hed; kev_u->hed = can; u3z(old); }
-    else                     { u3z(can); }
+    if ( can != kev_u->hed ) {
+      u3_noun old = kev_u->hed; kev_u->hed = can; u3z(old);
+      u3e_Meter.cfx_d[1]++;
+    }
+    else { u3z(can); }
   }
   if ( val_t && !_cm_canon_ok(kev_u->tel) ) {
     u3_noun can = u3m_dedup(u3k(kev_u->tel));
-    if ( can != kev_u->tel ) { u3_noun old = kev_u->tel; kev_u->tel = can; u3z(old); }
-    else                     { u3z(can); }
+    if ( can != kev_u->tel ) {
+      u3_noun old = kev_u->tel; kev_u->tel = can; u3z(old);
+      u3e_Meter.cfx_d[1]++;
+    }
+    else { u3z(can); }
   }
 }
 
@@ -1553,6 +1576,18 @@ u3m_road_depth(void)
 
 static void _cm_dup_take(u3p(u3h_root) dup_p);
 
+/* _cm_love_time(): measurement: add the time since [*us_d] to step [i_w]
+**                  of an exit to home, and restart it.
+*/
+static void
+_cm_love_time(c3_d* us_d, c3_w i_w)
+{
+  c3_d now_d = u3e_measure_us();
+
+  u3e_Meter.cus_d[i_w] += now_d - *us_d;
+  *us_d = now_d;
+}
+
 /* _cm_love(): return product from leap, running [hom_f] (if any) once
 **             back on the parent road, before anything is taken.
 */
@@ -1581,6 +1616,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //
   c3_o tim_o = u3du(u3R->tim);
 
+  //  measurement: time in each step of an exit to home
+  //
+  c3_d us_d = 0;
+
   //  fallback to parent road (child heap on parent's stack)
   //
   u3e_Phase = u3e_pha_road;
@@ -1589,7 +1628,9 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //  deferred home-road unification, phase A: before anything runs here
   //
   if ( &(u3H->rod_u) == u3R ) {
+    if ( u3e_Measuring ) us_d = u3e_measure_us();
     _cm_dh_apply();
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 0);
   }
 
   {
@@ -1635,6 +1676,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     pro   = u3a_take(pro);
   }
   else {
+    if ( u3e_Measuring ) us_d = u3e_measure_us();
     u3a_Take_canon_t = 1;
   }
 
@@ -1670,10 +1712,12 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   if ( hom_t ) {
     _cm_dup_take(dup_p);
     dup_p = 0;
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
 
     //  deferred home-road unification, phase B: every take is done
     //
     _cm_dh_release();
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 2);
 
     //  what was promoted into the caches but didn't end up canonical,
     //  such as entries whose children were already home nouns: now
@@ -1686,6 +1730,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     _cm_canon_fix(jed_u.han_p, 0);
     _cm_canon_fix(jed_u.bas_p, 1);
     u3n_reap_fix();
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 3);
   }
   else {
     dup_p = u3h_take(dup_p);
@@ -4216,6 +4261,20 @@ u3m_crib_report(void)
   u3r_crib_report();
 }
 
+/* u3m_crib_stat(): every crib's use since the last call, into [sat_u]
+**                  (room for u3m_crib_max); how many.
+*/
+c3_w
+u3m_crib_stat(u3c_stat* sat_u)
+{
+  c3_w len_w = 0;
+
+  if ( _cm_vis_ini_t ) {
+    sat_u[len_w++] = u3c_set_stat(&_cm_vis);
+  }
+  return len_w + u3r_crib_stat(sat_u + len_w);
+}
+
 /* _cm_vis_leap(): a new excursion from the home road. home road only.
 */
 static void
@@ -4256,8 +4315,11 @@ _dedup_find(u3_noun som)
 
   {
     u3_weak can = _cm_dup_get(som);
+    c3_t    inn_t = ( &(u3H->rod_u) != u3R );
 
+    if ( inn_t ) u3e_Meter.eih_d[0]++;
     if ( u3_none != can ) {
+      if ( inn_t ) u3e_Meter.eih_d[1]++;
       return u3k(can);
     }
   }
@@ -4269,7 +4331,9 @@ _dedup_find(u3_noun som)
       rod_u = u3to(u3a_road, rod_u->kid_p);
 
       u3_weak got = u3h_get(rod_u->dup_p, som);
+      u3e_Meter.dpp_d++;
       if ( u3_none != got ) {
+        u3e_Meter.dph_d[(got == som) ? 1 : 0]++;
         return got;
       }
     }
@@ -4319,6 +4383,7 @@ _dedup_next(u3a_pile* pil_u, u3_noun som)
     if (  (&(u3H->rod_u) != u3R) && (c3y == u3a_is_cell(som))
        && (c3n == u3a_is_senior(u3R, som)) && _cm_vis_has(som) )
     {
+      u3e_Meter.eiv_d++;
       return som;
     }
 
@@ -4338,9 +4403,11 @@ _dedup_next(u3a_pile* pil_u, u3_noun som)
     //  home canonicalizes it in place, if a promoted entry holds it
     //
     if ( c3y == u3a_is_senior(u3R, som) ) {
+      u3e_Meter.eis_d++;
       return som;
     }
 
+    if ( &(u3H->rod_u) != u3R ) u3e_Meter.eij_d++;
     _frame_dedup* fam_u = u3a_push(pil_u);
     fam_u->new_t = false;
     fam_u->cel = som;
@@ -4363,6 +4430,7 @@ u3m_dedup_eager(u3_noun som)
   _frame_dedup* fam_u;
   c3_y         pat_y = _cm_dup_u.pat_y;
 
+  u3e_Meter.eic_d[( &(u3H->rod_u) != u3R ) ? 1 : 0]++;
   _cm_dup_u.pat_y = 3;
   u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
   u3_noun new = _dedup_next(&pil_u, som);
@@ -4394,7 +4462,12 @@ u3m_dedup_eager(u3_noun som)
         //
         {
           u3_weak can = _cm_dup_get(new);
+          c3_t    inn_t = ( &(u3H->rod_u) != u3R );
 
+          if ( inn_t ) {
+            u3e_Meter.eih_d[0]++;
+            if ( (u3_none != can) && (can != new) ) u3e_Meter.eih_d[1]++;
+          }
           if ( (u3_none != can) && (can != new) ) {
             u3k(can);
             u3z(new);
@@ -4419,6 +4492,7 @@ u3m_dedup_eager(u3_noun som)
      && (c3n == u3a_is_senior(u3R, new)) )
   {
     u3h_put(u3R->dup_p, new, u3k(new));
+    u3e_Meter.dpi_d++;
   }
   return new;
 }

@@ -402,7 +402,8 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 #endif
 }
 
-/* _ce_meas_save(): report and reset per-interval measurements.
+/* _ce_meas_save(): report and reset per-interval measurements. the line
+**   formats are listed in measure-report.py; keep it in step.
 */
 static void
 _ce_meas_save(c3_w pgs_w, c3_w sip_w)
@@ -542,6 +543,87 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
+
+    //  unification through slots on inner roads
+    //
+    fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wsg_d, u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
+                   u3e_Meter.wsn_d);
+
+    //  deferred home-slot unification
+    //
+    fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.dhn_d[0], u3e_Meter.dhn_d[1], u3e_Meter.dhr_d,
+                   u3e_Meter.dhx_d[0], u3e_Meter.dhx_d[1], u3e_Meter.dhx_d[2],
+                   u3e_Meter.dhd_d, u3e_Meter.dhp_d,
+                   u3e_Meter.dha_d[0], u3e_Meter.dha_d[1],
+                   u3e_Meter.dhs_d[0], u3e_Meter.dhs_d[1]);
+
+    //  inner roads' root sets
+    //
+    fprintf(fil_u, "Q %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.dpi_d, u3e_Meter.dpp_d,
+                   u3e_Meter.dph_d[0], u3e_Meter.dph_d[1]);
+
+    //  the pair table
+    //
+    fprintf(fil_u, "V");
+    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pml_d[i_w]);
+    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmr_d[i_w]);
+    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmd_d[i_w]);
+    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmp_d[i_w]);
+    fputc('\n', fil_u);
+
+    //  the eager pass
+    //
+    fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.eic_d[0], u3e_Meter.eic_d[1],
+                   u3e_Meter.eiw_d[0], u3e_Meter.eiw_d[1],
+                   u3e_Meter.eij_d, u3e_Meter.eiv_d, u3e_Meter.eis_d,
+                   u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
+
+    //  exits to home: the canonicalizing take, the fix pass, time
+    //
+    fprintf(fil_u, "Z");
+    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctk_d[i_w]);
+    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctf_d[i_w]);
+    for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cfx_d[i_w]);
+    for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.crk_d[i_w]);
+    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cus_d[i_w]);
+    fputc('\n', fil_u);
+
+    //  jet battery checks
+    //
+    fprintf(fil_u, "J");
+    for ( i_w = 0; i_w < 5; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.jck_d[i_w]);
+    fputc('\n', fil_u);
+
+    //  cribs, one line each
+    //
+    {
+      u3c_stat sat_u[u3m_crib_max];
+      c3_w     len_w = u3m_crib_stat(sat_u);
+
+      for ( i_w = 0; i_w < len_w; i_w++ ) {
+        u3c_stat* s_u = &sat_u[i_w];
+        const c3_c* nam_c;
+
+        fputs("N ", fil_u);
+        for ( nam_c = s_u->nam_c; *nam_c; nam_c++ ) {
+          fputc((' ' == *nam_c) ? '-' : *nam_c, fil_u);
+        }
+        fprintf(fil_u, " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                       " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                       " %" PRIu64 "\n",
+                       s_u->cap_d, s_u->top_d, s_u->max_d, s_u->pek_d,
+                       s_u->gro_d, s_u->shr_d, s_u->clg_d, s_u->cdp_d,
+                       s_u->ovf_d);
+      }
+    }
   }
   fflush(fil_u);
 
@@ -771,6 +853,17 @@ u3e_measure_ms(void)
 
   gettimeofday(&tim_u, 0);
   return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
+}
+
+/* u3e_measure_us(): wall-clock microseconds, for short steps.
+*/
+c3_d
+u3e_measure_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
 }
 
 /* _ce_meas_op(): write an O line: time, event, operation, why, melt

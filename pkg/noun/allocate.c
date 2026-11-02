@@ -782,8 +782,12 @@ _ca_take_canon(u3a_noun* old_u, u3_noun new)
 {
   if ( u3a_Take_canon_t ) {
     u3_weak can = u3m_canon_take(new);
+    c3_w    idx_w = (c3_w)u3e_Phase - u3e_pha_take_jet;   //  jet byc per for
 
+    if ( idx_w > 3 ) idx_w = 3;
+    u3e_Meter.ctk_d[idx_w]++;
     if ( u3_none != can ) {
+      u3e_Meter.ctf_d[idx_w]++;
       u3z(new);
       old_u->mug_w = can;
       return can;
@@ -1388,17 +1392,22 @@ _ca_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
   c3_t aon_t = _ca_slot_ours(a);
   c3_t bon_t = _ca_slot_ours(b);
 
-  if ( !aon_t && !bon_t ) return;
+  u3e_Meter.wsg_d++;
+  if ( !aon_t && !bon_t ) {
+    u3e_Meter.wsn_d++;
+    return;
+  }
 
   {
     c3_t amb_t = u3a_hcon_has(*a);
     c3_t bmb_t = u3a_hcon_has(*b);
 
-    if      ( amb_t && bon_t )   { *b = *a; }
-    else if ( bmb_t && aon_t )   { *a = *b; }
+    if      ( amb_t && bon_t )   { *b = *a; u3e_Meter.wsw_d[0]++; return; }
+    else if ( bmb_t && aon_t )   { *a = *b; u3e_Meter.wsw_d[0]++; return; }
     else if ( aon_t && !bon_t )  { *a = *b; }
     else if ( bon_t && !aon_t )  { *b = *a; }
     else                         { *a = *b; }
+    u3e_Meter.wsw_d[1]++;
   }
 }
 

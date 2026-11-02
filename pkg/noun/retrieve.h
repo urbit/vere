@@ -5,6 +5,7 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
+#include "crib.h"
 #include "error.h"
 #include "gmp.h"
 #include "types.h"
@@ -280,6 +281,12 @@
       */
         void
         u3r_crib_report(void);
+
+      /* u3r_crib_stat(): the pair tables' and deferral's use since the
+      **                  last call, into [sat_u] (room for 4); how many.
+      */
+        c3_w
+        u3r_crib_stat(u3c_stat* sat_u);
 
       /* u3r_pair_cap(): the excursion pair table's capacity (tests).
       */
