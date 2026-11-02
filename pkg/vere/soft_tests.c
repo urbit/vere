@@ -17,7 +17,9 @@
 /// workloads, made with jam and cue (and made again every 20 interrupted
 /// runs), and two deep nouns with 2^200 paths. SOFT_TEST_RAW=1 boots
 /// from the pill without canonicalizing it first. SOFT_TEST_LOOM sets
-/// the loom size in bits of bytes (default 27).
+/// the loom size in bits of bytes (default 27). SOFT_TEST_TINY=1 starts
+/// the pair table and the visited set at 16 entries, so that they grow
+/// under interrupts.
 
 #include "noun.h"
 #include "ivory.h"
@@ -67,6 +69,10 @@ _setup(void)
   u3m_boot_lite((size_t)1 << lom_w);
   if ( getenv("SOFT_TEST_RAW") ) {
     u3v_Ivory_canon_t = 0;
+  }
+  if ( getenv("SOFT_TEST_TINY") ) {
+    u3r_pair_size(4);
+    u3m_dedup_visit_size(4);
   }
   _pil = _cue_pill();
   if ( c3n == u3v_boot_lite(u3k(_pil)) ) {
