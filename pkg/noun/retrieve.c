@@ -6,6 +6,7 @@
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"
+#include "hints.h"
 #include "trace.h"
 #include "vortex.h"
 #include "xtract.h"
@@ -309,14 +310,20 @@ _cr_sing_atom(u3_atom a, u3_noun b)
 **   to home (see _cm_dh_apply()). off the loom, allocated on the home
 **   road; an entry is written, then published by bumping the length.
 */
-#define _CR_DH_MAX  (1U << 19)
-#define _CR_DH_LOG  20
+//  NB: the starting sizes and ceilings are first guesses, at about 8x
+//  the most a replay of one ship used; revisit them with readings from
+//  more ships.
+//
+#define _CR_DH_MIN  (1U << 14)   //  entries, to start
+#define _CR_DH_MAX  (1U << 22)   //  entries, at most
+#define _CR_DH_LOG  14           //  slot pairs noted, log2, to start
+#define _CR_DH_TOP  23           //  ... at most
 
 static struct {
-  u3r_dh_entry* ent_u;   //  entries
-  c3_w          len_w;   //  published
-  struct { u3_noun* sa; u3_noun* sb; c3_w epo_w; }* tab_u;
-  c3_w          epo_w;
+  c3_t    ini_t;
+  u3g_arr ent_u;   //  entries
+  c3_w    len_w;   //  published
+  u3g_set sen_u;   //  slot pairs noted this excursion: [sb sa]
 } _cr_dh;
 
 /* _cr_dh_leap(): a new excursion: allocate, and drop any entries a
@@ -325,15 +332,13 @@ static struct {
 static void
 _cr_dh_leap(void)
 {
-  if ( !_cr_dh.ent_u ) {
-    _cr_dh.ent_u = c3_malloc(sizeof(u3r_dh_entry) * _CR_DH_MAX);
-    _cr_dh.tab_u = c3_calloc(sizeof(*_cr_dh.tab_u) << _CR_DH_LOG);
+  if ( !_cr_dh.ini_t ) {
+    u3g_arr_init(&_cr_dh.ent_u, sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
+    u3g_set_init(&_cr_dh.sen_u, _CR_DH_LOG, _CR_DH_TOP);
+    _cr_dh.ini_t = 1;
   }
-  _cr_dh.len_w = 0;
-  if ( 0 == ++_cr_dh.epo_w ) {
-    memset(_cr_dh.tab_u, 0, sizeof(*_cr_dh.tab_u) << _CR_DH_LOG);
-    _cr_dh.epo_w = 1;
-  }
+  _cr_dh.len_w = 0;   //  a bailed excursion's entries (none: bails exit too)
+  u3g_set_shrink(&_cr_dh.sen_u);
 }
 
 /* u3r_dh_take(): this excursion's entries; resets. home road only.
@@ -342,8 +347,9 @@ u3r_dh_entry*
 u3r_dh_take(c3_w* len_w)
 {
   *len_w = _cr_dh.len_w;
+  u3g_arr_shrink(&_cr_dh.ent_u, _cr_dh.len_w);
   _cr_dh.len_w = 0;
-  return _cr_dh.ent_u;
+  return (u3r_dh_entry*)u3g_arr_at(&_cr_dh.ent_u, 0);
 }
 
 /* _cr_home_slot(): [sot] is in the home road's heap. during an excursion
@@ -363,42 +369,31 @@ _cr_home_slot(u3_noun* sot)
 
 /* _cr_dh_push(): defer pointing home slots [sa] and [sb], held by [pa]
 **   and [pb], at each other's values [va] and [vb]. [sa] 0: one-sided,
-**   point [sb] at [va].
+**   point [sb] at [va]. dropped past the ceiling.
 */
 static void
 _cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
             u3_noun* sb, u3_noun pb, u3_noun vb)
 {
-  if ( _cr_dh.len_w >= _CR_DH_MAX ) return;
-  {
-    u3r_dh_entry* ent_u = &_cr_dh.ent_u[_cr_dh.len_w];
-    ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
-    ent_u->sb = sb; ent_u->pb = pb; ent_u->vb = vb;
-    _cr_dh.len_w++;
-  }
+  u3r_dh_entry* ent_u = u3g_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
+
+  if ( !ent_u ) return;
+  ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
+  ent_u->sb = sb; ent_u->pb = pb; ent_u->vb = vb;
+  _cr_dh.len_w++;
 }
 
-/* _cr_dh_seen(): slot pair [sa sb] was noted this excursion (or the
-**   table is full); notes it.
+/* _cr_dh_seen(): slot pair [sa sb] was noted this excursion; notes it.
+**   keyed by [sb], which is never 0, then [sa].
 */
 static c3_t
 _cr_dh_seen(u3_noun* sa, u3_noun* sb)
 {
-  c3_w msk_w = (1U << _CR_DH_LOG) - 1;
-  c3_w i_w   = (c3_w)((((c3_d)(c3_p)sa * 0x9e3779b97f4a7c15ULL)
-                     ^ ((c3_d)(c3_p)sb * 0xc2b2ae3d27d4eb4fULL)) >> 40) & msk_w;
-  c3_w j_w;
+  c3_d a_d = (c3_d)(c3_p)sb, b_d = (c3_d)(c3_p)sa;
 
-  for ( j_w = 0; j_w < 16; j_w++ ) {
-    typeof(_cr_dh.tab_u) sot_u = &_cr_dh.tab_u[(i_w + j_w) & msk_w];
-
-    if ( sot_u->epo_w != _cr_dh.epo_w ) {
-      sot_u->sa = sa; sot_u->sb = sb; sot_u->epo_w = _cr_dh.epo_w;
-      return 0;
-    }
-    if ( (sot_u->sa == sa) && (sot_u->sb == sb) ) return 1;
-  }
-  return 1;
+  if ( u3g_set_has(&_cr_dh.sen_u, a_d, b_d) ) return 1;
+  u3g_set_put(&_cr_dh.sen_u, a_d, b_d);
+  return 0;
 }
 
 /* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb], held
@@ -428,64 +423,57 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
 **   which unification couldn't merge. it bounds long comparisons where
 **   unification can't; on the home road, unification does.
 **
-**   on an inner road, its entries are pairs of home cells. home nouns
-**   are neither freed nor changed during an excursion from the home
-**   road, so an entry stays true until the excursion ends; the next one
-**   starts a new epoch, which drops them all. while a junior road is
-**   promoted ([kid_p] set), or on an inner road while debugging memory,
-**   unification doesn't reach the pairs a comparison meets, so a long
-**   comparison records any it can, for itself only: it starts and ends
-**   a new epoch. entries are hints, so a full probe window evicts one.
+**   the excursion table holds pairs of home cells, found on inner roads.
+**   home nouns are neither freed nor changed during an excursion from
+**   the home road, so an entry stays true until the excursion ends, and
+**   it's shared by every comparison until then; the next excursion
+**   clears it. while a junior road is promoted ([kid_p] set), or on an
+**   inner road while debugging memory, unification doesn't reach the
+**   pairs a comparison meets, and nouns may be freed between
+**   comparisons: a long comparison records any pairs it can in the
+**   scratch table, cleared at its start and end.
 **
-**   off the loom, allocated on the home road.
+**   both grow as needed, up to a ceiling (see hints.h), so a comparison
+**   stays linear unless it needs more than that.
 */
 #define _CR_PM_TOP   64      //  on an inner road, probe the root after this many steps
 #define _CR_PM_DEEP  65535   //  then probe inner pairs after this many
-#define _CR_PM_LOG   20      //  entries, log2
+#define _CR_PM_LOG   14      //  entries, log2, to start
+#define _CR_PM_MAX   23      //  ... at most (NB: a first guess, to revisit)
 
-static struct {
-  struct { u3_noun a; u3_noun b; c3_w epo_w; }* tab_u;
-  c3_w msk_w;
-  c3_w epo_w;
-  c3_w evk_w;   //  evictions, to rotate through the probe window
-} _cr_pm;
+static c3_t    _cr_pm_ini_t;
+static u3g_set _cr_pm_x;   //  excursion: home pairs
+static u3g_set _cr_pm_s;   //  scratch: one comparison
 
 /* _cr_sing_ctx: where a long comparison runs, found when it gets long.
 */
 typedef struct {
   c3_y      scp_y;   //  0: home road, 1: inner road, 2: promoting a junior road
   c3_y      pmo_y;   //  pairs recorded: 1 home, 2 senior, 3 any
+  u3g_set*  pms_u;   //  ... in this table
   u3a_road* one_u;   //  the outermost inner road
   c3_t      prt_t;   //  record the root pair if equal
   u3_noun   ra, rb;  //  the root pair
 } _cr_sing_ctx;
 
-/* u3r_pair_size(): (re)allocate the pair table at 2^[log_y] entries
-**                  (at least 16). home road only.
+/* u3r_pair_size(): restart the pair tables at 2^[log_y] entries
+**                  (at least 16), growing as before (tests). home road
+**                  only.
 */
 void
 u3r_pair_size(c3_y log_y)
 {
-  c3_w len_w = 1U << c3_max(log_y, 4);
-
-  if ( _cr_pm.tab_u && ((_cr_pm.msk_w + 1) == len_w) ) return;
-
-  c3_free(_cr_pm.tab_u);
-  _cr_pm.tab_u = c3_calloc(sizeof(*_cr_pm.tab_u) * len_w);
-  _cr_pm.msk_w = len_w - 1;
-  _cr_pm.epo_w = 1;
+  u3g_set_init(&_cr_pm_x, log_y, _CR_PM_MAX);
+  u3g_set_init(&_cr_pm_s, log_y, _CR_PM_MAX);
+  _cr_pm_ini_t = 1;
 }
 
-/* _cr_pm_fresh(): drop every entry. clears the table when the epoch
-**   wraps, so that no stale entry comes back to life.
+/* u3r_pair_cap(): the excursion table's capacity (tests).
 */
-static void
-_cr_pm_fresh(void)
+c3_d
+u3r_pair_cap(void)
 {
-  if ( 0 == ++_cr_pm.epo_w ) {
-    memset(_cr_pm.tab_u, 0, sizeof(*_cr_pm.tab_u) * (_cr_pm.msk_w + 1));
-    _cr_pm.epo_w = 1;
-  }
+  return u3g_set_cap(&_cr_pm_x);
 }
 
 /* u3r_sing_leap(): a new excursion from the home road. home road only.
@@ -493,66 +481,30 @@ _cr_pm_fresh(void)
 void
 u3r_sing_leap(void)
 {
-  if ( !_cr_pm.tab_u ) {
+  if ( !_cr_pm_ini_t ) {
     u3r_pair_size(_CR_PM_LOG);
   }
-  _cr_pm_fresh();
+  u3g_set_shrink(&_cr_pm_x);
+  u3g_set_shrink(&_cr_pm_s);
   _cr_dh_leap();
-}
-
-static inline c3_w
-_cr_pm_idx(u3_noun x, u3_noun y)
-{
-  return (c3_w)((((c3_d)x * 0x9e3779b97f4a7c15ULL)
-               ^ ((c3_d)y * 0xc2b2ae3d27d4eb4fULL)) >> 40) & _cr_pm.msk_w;
 }
 
 /* _cr_pm_has(): [a] and [b] are known to be equal.
 */
-static c3_t
-_cr_pm_has(u3_noun a, u3_noun b)
+static inline c3_t
+_cr_pm_has(u3g_set* set_u, u3_noun a, u3_noun b)
 {
-  c3_w i_w, j_w;
-
   if ( a > b ) { u3_noun t = a; a = b; b = t; }
-  i_w = _cr_pm_idx(a, b);
-
-  for ( j_w = 0; j_w < 16; j_w++ ) {
-    typeof(_cr_pm.tab_u) sot_u = &_cr_pm.tab_u[(i_w + j_w) & _cr_pm.msk_w];
-
-    if ( sot_u->epo_w != _cr_pm.epo_w ) return 0;
-    if ( (sot_u->a == a) && (sot_u->b == b) ) return 1;
-  }
-  return 0;
+  return u3g_set_has(set_u, a, b);
 }
 
-/* _cr_pm_put(): record that [a] and [b] are equal. a full probe window
-**   evicts one of its entries, in turn; replacing a live entry with
-**   another leaves no gap in the window.
+/* _cr_pm_put(): record that [a] and [b] are equal.
 */
-static void
-_cr_pm_put(u3_noun a, u3_noun b)
+static inline void
+_cr_pm_put(u3g_set* set_u, u3_noun a, u3_noun b)
 {
-  c3_w i_w, j_w;
-
   if ( a > b ) { u3_noun t = a; a = b; b = t; }
-  i_w = _cr_pm_idx(a, b);
-
-  for ( j_w = 0; j_w < 16; j_w++ ) {
-    typeof(_cr_pm.tab_u) sot_u = &_cr_pm.tab_u[(i_w + j_w) & _cr_pm.msk_w];
-
-    if ( sot_u->epo_w != _cr_pm.epo_w ) {
-      sot_u->a = a; sot_u->b = b; sot_u->epo_w = _cr_pm.epo_w;
-      return;
-    }
-    if ( (sot_u->a == a) && (sot_u->b == b) ) return;
-  }
-
-  {
-    typeof(_cr_pm.tab_u) sot_u =
-      &_cr_pm.tab_u[(i_w + (_cr_pm.evk_w++ & 15)) & _cr_pm.msk_w];
-    sot_u->a = a; sot_u->b = b;
-  }
+  u3g_set_put(set_u, a, b);
 }
 
 /* _cr_sing_scope(): where this comparison runs.
@@ -637,14 +589,15 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
   u3a_cell* a_u;
   u3a_cell* b_u;
 
-  u3_assert( _cr_pm.tab_u );
+  u3_assert( _cr_pm_ini_t );
 
   //  which pairs to record. where unification merges none, record any,
   //  for this comparison only
   //
   ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : _cr_dbg_ram() ? 2 : 1;
+  ctx_u->pms_u = ( 1 == ctx_u->pmo_y ) ? &_cr_pm_x : &_cr_pm_s;
   if ( 1 < ctx_u->pmo_y ) {
-    _cr_pm_fresh();
+    u3g_set_clear(&_cr_pm_s);
   }
 
   //  loop while arguments remain on the stack
@@ -688,7 +641,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
           }
           //  a pair known to be equal
           //
-          else if ( _cr_pm_ok(ctx_u, a, b) && _cr_pm_has(a, b) ) {
+          else if ( _cr_pm_ok(ctx_u, a, b) && _cr_pm_has(ctx_u->pms_u, a, b) ) {
             fam_u = u3a_pop(pil_u);
             continue;
           }
@@ -732,7 +685,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
     //  record equal cells, to short-circuit their re-comparison
     //
     if ( (SING_TAIL == fam_u->sat_y) && (a != b) && _cr_pm_ok(ctx_u, a, b) ) {
-      _cr_pm_put(a, b);
+      _cr_pm_put(ctx_u->pms_u, a, b);
     }
 
     fam_u = u3a_pop(pil_u);
@@ -741,7 +694,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
 
 done:
   if ( 1 < ctx_u->pmo_y ) {
-    _cr_pm_fresh();
+    u3g_set_clear(&_cr_pm_s);
   }
   return ret_o;
 }
@@ -867,9 +820,9 @@ _cr_sing(u3_noun a, u3_noun b)
            && (c3y == u3a_is_cell(ra)) && (c3y == u3a_is_cell(rb))
            && _cr_home(&ctx_u, ra) && _cr_home(&ctx_u, rb) )
         {
-          u3_assert( _cr_pm.tab_u );
+          u3_assert( _cr_pm_ini_t );
 
-          if ( _cr_pm_has(ra, rb) ) {
+          if ( _cr_pm_has(&_cr_pm_x, ra, rb) ) {
             u3R->cap_p = pil_u.top_p;
             return c3y;
           }
@@ -885,7 +838,7 @@ _cr_sing(u3_noun a, u3_noun b)
 
         u3R->cap_p = pil_u.top_p;
         if ( ctx_u.prt_t && (c3y == ret_o) ) {
-          _cr_pm_put(ctx_u.ra, ctx_u.rb);
+          _cr_pm_put(&_cr_pm_x, ctx_u.ra, ctx_u.rb);
         }
         return ret_o;
       }
@@ -895,7 +848,7 @@ _cr_sing(u3_noun a, u3_noun b)
   }
 
   if ( ctx_u.prt_t ) {
-    _cr_pm_put(ctx_u.ra, ctx_u.rb);
+    _cr_pm_put(&_cr_pm_x, ctx_u.ra, ctx_u.rb);
   }
   return c3y;
 }

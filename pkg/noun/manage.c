@@ -1,6 +1,7 @@
 /// @file
 
 #include "manage.h"
+#include "hints.h"
 
 #include <ctype.h>
 #ifndef U3_OS_windows
@@ -4171,35 +4172,35 @@ _dedup_swap(u3_noun* som, u3_noun can)
 **   canonicalized during this excursion from the home road, so that a
 **   shared junior cell is walked once, not once per path.
 **
-**   weak, off the loom, keyed by pointer, and cleared by a new epoch at
-**   each excursion. a hit returns the cell itself, so an entry for a
-**   freed and reused address can only miss sharing, never change a
-**   value: no counts, and no cleanup at exits or bails. a full probe
-**   window evicts an entry. allocated on the home road.
+**   weak, off the loom, keyed by pointer, and cleared at each excursion.
+**   a hit returns the cell itself, so an entry for a freed and reused
+**   address can only miss sharing, never change a value: no counts, and
+**   no cleanup at exits or bails. it grows as needed, up to a ceiling
+**   (see hints.h). allocated on the home road.
 */
-#define _CM_VIS_LOG  22
+#define _CM_VIS_LOG  14   //  entries, log2, to start
+#define _CM_VIS_MAX  25   //  ... at most (NB: a first guess, to revisit)
 
-static struct {
-  struct { u3_noun som; c3_w epo_w; }* tab_u;
-  c3_w msk_w;
-  c3_w epo_w;
-  c3_w evk_w;   //  evictions, to rotate through the probe window
-} _cm_vis;
+static c3_t    _cm_vis_ini_t;
+static u3g_set _cm_vis;   //  keys: [som 0]
 
-/* u3m_dedup_visit_size(): (re)allocate the visited set at 2^[log_y]
-**                         entries (at least 16). home road only.
+/* u3m_dedup_visit_size(): restart the visited set at 2^[log_y] entries
+**                         (at least 16), growing as before (tests).
+**                         home road only.
 */
 void
 u3m_dedup_visit_size(c3_y log_y)
 {
-  c3_w len_w = 1U << c3_max(log_y, 4);
+  u3g_set_init(&_cm_vis, log_y, _CM_VIS_MAX);
+  _cm_vis_ini_t = 1;
+}
 
-  if ( _cm_vis.tab_u && ((_cm_vis.msk_w + 1) == len_w) ) return;
-
-  c3_free(_cm_vis.tab_u);
-  _cm_vis.tab_u = c3_calloc(sizeof(*_cm_vis.tab_u) * len_w);
-  _cm_vis.msk_w = len_w - 1;
-  _cm_vis.epo_w = 1;
+/* u3m_dedup_visit_cap(): the visited set's capacity (tests).
+*/
+c3_d
+u3m_dedup_visit_cap(void)
+{
+  return u3g_set_cap(&_cm_vis);
 }
 
 /* _cm_vis_leap(): a new excursion from the home road. home road only.
@@ -4207,54 +4208,26 @@ u3m_dedup_visit_size(c3_y log_y)
 static void
 _cm_vis_leap(void)
 {
-  if ( !_cm_vis.tab_u ) {
+  if ( !_cm_vis_ini_t ) {
     u3m_dedup_visit_size(_CM_VIS_LOG);
   }
-  if ( 0 == ++_cm_vis.epo_w ) {
-    memset(_cm_vis.tab_u, 0, sizeof(*_cm_vis.tab_u) * (_cm_vis.msk_w + 1));
-    _cm_vis.epo_w = 1;
-  }
-}
-
-static inline c3_w
-_cm_vis_idx(u3_noun som)
-{
-  return (c3_w)(((c3_d)som * 0x9e3779b97f4a7c15ULL) >> 40) & _cm_vis.msk_w;
+  u3g_set_shrink(&_cm_vis);
 }
 
 /* _cm_vis_has(): junior cell [som] was canonicalized this excursion.
 */
-static c3_t
+static inline c3_t
 _cm_vis_has(u3_noun som)
 {
-  c3_w i_w = _cm_vis_idx(som), j_w;
-
-  for ( j_w = 0; j_w < 16; j_w++ ) {
-    typeof(_cm_vis.tab_u) sot_u = &_cm_vis.tab_u[(i_w + j_w) & _cm_vis.msk_w];
-
-    if ( sot_u->epo_w != _cm_vis.epo_w ) return 0;
-    if ( sot_u->som == som ) return 1;
-  }
-  return 0;
+  return u3g_set_has(&_cm_vis, som, 0);
 }
 
 /* _cm_vis_put(): note junior cell [som] as canonicalized.
 */
-static void
+static inline void
 _cm_vis_put(u3_noun som)
 {
-  c3_w i_w = _cm_vis_idx(som), j_w;
-
-  for ( j_w = 0; j_w < 16; j_w++ ) {
-    typeof(_cm_vis.tab_u) sot_u = &_cm_vis.tab_u[(i_w + j_w) & _cm_vis.msk_w];
-
-    if ( sot_u->epo_w != _cm_vis.epo_w ) {
-      sot_u->som = som; sot_u->epo_w = _cm_vis.epo_w;
-      return;
-    }
-    if ( sot_u->som == som ) return;
-  }
-  _cm_vis.tab_u[(i_w + (_cm_vis.evk_w++ & 15)) & _cm_vis.msk_w].som = som;
+  u3g_set_put(&_cm_vis, som, 0);
 }
 
 /* _dedup_find(): canonical equal of [som] in any road's set, or none.

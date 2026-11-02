@@ -449,7 +449,7 @@ _test_dedup_dag(void)
       ret_i = 0;
     }
   }
-  u3m_dedup_visit_size(22);
+  u3m_dedup_visit_size(14);
 
   //  a home noun that isn't a member, or an intermediate road's, is left
   //  as it is, though an equal member exists: the exit to home
@@ -614,7 +614,7 @@ _test_sing_dag(void)
     ret_i = 0;
   }
 
-  u3r_pair_size(20);
+  u3r_pair_size(14);
   return ret_i;
 }
 
@@ -660,6 +660,96 @@ _test_dedup_lazy(void)
   return ret_i;
 }
 
+/* _gap(): x_{k+1} = [x_k [w_k x_k]], w_k a fresh list of [len_w] atoms:
+**   each shared x_k is met again only after w_k's cells, so a table that
+**   evicts loses it.
+*/
+static u3_noun
+_gap(c3_w dep_w, c3_w len_w)
+{
+  u3_noun x = u3nc(1, 2);
+  for ( c3_w i_w = 0; i_w < dep_w; i_w++ ) {
+    u3_noun w = 0;
+    for ( c3_w j_w = 0; j_w < len_w; j_w++ ) {
+      w = u3nc(100 + (i_w * len_w) + j_w, w);
+    }
+    x = u3nc(u3k(x), u3nc(w, x));
+  }
+  return x;
+}
+
+/* _test_gap(): the pair table and the visited set grow instead of
+**              evicting, from 16 entries, so the worst case for an
+**              evicting table stays linear; then they shrink back.
+*/
+static c3_i
+_test_gap(void)
+{
+  c3_i ret_i = 1;
+  struct timespec bef_u;
+  c3_d mic_d;
+
+  u3r_pair_size(4);
+  u3m_dedup_visit_size(4);
+
+  //  a comparison of two home copies on an inner road
+  //
+  {
+    u3_noun a = _gap(40, 64), b = _gap(40, 64);
+
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    if ( c3y != u3r_sing(a, b) ) {
+      fprintf(stderr, "test: gap: sing: not equal\r\n");
+      ret_i = 0;
+    }
+    u3m_love(0);
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: gap: sing %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+    u3z(a); u3z(b);
+  }
+
+  //  an eager walk of a junior noun
+  //
+  {
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    u3z(u3m_dedup_eager(_gap(40, 64)));
+    u3m_love(0);
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: gap: dedup %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+  }
+
+  //  both grew, and shrink back over a few quiet excursions
+  //
+  {
+    c3_d pcp_d = u3r_pair_cap(), vcp_d = u3m_dedup_visit_cap();
+
+    if ( (pcp_d <= 16) || (vcp_d <= 16) ) {
+      fprintf(stderr, "test: gap: didn't grow (%" PRIu64 ", %" PRIu64 ")\r\n",
+              pcp_d, vcp_d);
+      ret_i = 0;
+    }
+    for ( c3_w i_w = 0; i_w < 16; i_w++ ) {
+      u3m_hate(0);
+      u3m_love(0);
+    }
+    if ( (16 != u3r_pair_cap()) || (16 != u3m_dedup_visit_cap()) ) {
+      fprintf(stderr, "test: gap: didn't shrink (%" PRIu64 ", %" PRIu64 ")\r\n",
+              u3r_pair_cap(), u3m_dedup_visit_cap());
+      ret_i = 0;
+    }
+  }
+
+  u3r_pair_size(14);
+  u3m_dedup_visit_size(14);
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -672,6 +762,11 @@ _test_equality(void)
 
   if ( !_test_dedup_lazy() ) {
     fprintf(stderr, "test: equality: dedup lazy: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_gap() ) {
+    fprintf(stderr, "test: equality: gap: failed\r\n");
     ret_i = 0;
   }
 

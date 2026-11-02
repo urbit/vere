@@ -269,11 +269,16 @@
         void
         u3r_sing_leap(void);
 
-      /* u3r_pair_size(): resize the pair table to 2^log_y entries
+      /* u3r_pair_size(): restart the pair tables at 2^log_y entries
       **                  (tests). home road only.
       */
         void
         u3r_pair_size(c3_y log_y);
+
+      /* u3r_pair_cap(): the excursion pair table's capacity (tests).
+      */
+        c3_d
+        u3r_pair_cap(void);
 
       /* u3r_sing(): noun value equality.
       **

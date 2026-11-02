@@ -255,6 +255,11 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_visit_size(c3_y log_y);
 
+      /* u3m_dedup_visit_cap(): the visited set's capacity (tests).
+      */
+        c3_d
+        u3m_dedup_visit_cap(void);
+
       /* u3m_dedup(): u3m_dedup_eager() on the home road; inner roads
       **              leave the noun to the exit home.
       */
