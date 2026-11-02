@@ -236,8 +236,9 @@
           c3_d ctk_d[4];     //  nouns taken canonicalizing: jets, byc,
                              //  per, for
           c3_d ctf_d[4];     //  ... swapped for an equal member
-          c3_d cfx_d[2];     //  fix pass: entries not members, fields
-                             //  rewritten
+          c3_d cfx_d[3];     //  fix pass: entries not members, fields
+                             //  not canonical, fields swapped for a
+                             //  member (the rest became members)
           c3_d crk_d[2];     //  bytecode keys fixed, keys past the limit
           c3_d cus_d[4];     //  time: phase A, takes, phase B, fix pass
 

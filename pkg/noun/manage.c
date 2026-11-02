@@ -293,17 +293,19 @@ _cm_canon_fix_kev(u3_noun kev, void* ptr_v)
   u3e_Meter.cfx_d[0]++;
   if ( !_cm_canon_ok(kev_u->hed) ) {
     u3_noun can = u3m_dedup(u3k(kev_u->hed));
+    u3e_Meter.cfx_d[1]++;
     if ( can != kev_u->hed ) {
       u3_noun old = kev_u->hed; kev_u->hed = can; u3z(old);
-      u3e_Meter.cfx_d[1]++;
+      u3e_Meter.cfx_d[2]++;
     }
     else { u3z(can); }
   }
   if ( val_t && !_cm_canon_ok(kev_u->tel) ) {
     u3_noun can = u3m_dedup(u3k(kev_u->tel));
+    u3e_Meter.cfx_d[1]++;
     if ( can != kev_u->tel ) {
       u3_noun old = kev_u->tel; kev_u->tel = can; u3z(old);
-      u3e_Meter.cfx_d[1]++;
+      u3e_Meter.cfx_d[2]++;
     }
     else { u3z(can); }
   }
