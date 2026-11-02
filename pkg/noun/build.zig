@@ -234,6 +234,7 @@ const c_source_files = [_][]const u8{
     "allocate.c",
     "events.c",
     "hashtable.c",
+    "hints.c",
     "imprison.c",
     "jets.c",
     "jets/a/add.c",
