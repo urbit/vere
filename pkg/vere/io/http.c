@@ -1129,8 +1129,7 @@ _http_redirect_domain(h2o_req_t* rec_u, h2o_iovec_t host, u3_weak desk)
 
   hed = u3nl(
     u3nc(u3i_string("Location"),
-         u3i_bytes(loc_u.len, (const c3_y*)loc_u.base)),
-    u3_none);
+         u3i_bytes(loc_u.len, (const c3_y*)loc_u.base)));
 
   _http_start_respond(req_u, 303, hed, u3_nul, c3y);
 }
