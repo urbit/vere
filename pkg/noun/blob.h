@@ -170,6 +170,7 @@
         c3_d   bid_d;   //  (mug_h << 32) | seq_h: inner-road dedup key
         c3_i   fid_i;   //  O_RDONLY fd, open for the hand's lifetime
         c3_w   use_w;   //  live views (inner road: evictable at zero)
+        c3_d   tic_d;   //  last open: eviction takes the idle hand opened longest ago
         c3_d   len_d;   //  file size: bounds reads, sizes the mapping
         c3_d   bit_d;   //  bit length of the content, from the file's tail at open
         c3_y*  map_y;   //  read-only mapping of the file (0 until u3b_mmap)

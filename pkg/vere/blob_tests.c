@@ -1244,6 +1244,54 @@ _hand_keep_cb(u3_noun arg)
   return 0;
 }
 
+static u3_noun
+_hand_lru_cb(u3_noun arg)
+{
+  (void)arg;
+  const c3_h mug_h = 0x1234;
+
+  //  fill the road to its cap with idle hands, 1 first
+  //
+  for ( c3_w i_w = 1; i_w <= 256; i_w++ ) {
+    u3b_shut(u3b_open(_tmp_bob, mug_h, i_w));
+  }
+
+  //  reuse 1, then open a new id: the eviction takes 2, opened longest
+  //  ago, and keeps 1, opened most recently but for the new one
+  //
+  u3b_shut(u3b_open(_tmp_bob, mug_h, 1));
+  u3b_shut(u3b_open(_tmp_bob, mug_h, 257));
+
+  c3_o one_o = c3n, two_o = c3n;
+
+  for ( u3b_hand* han_u = u3to(u3b_hand, u3R->bob_p); han_u; han_u = han_u->nex_u ) {
+    if ( u3a_bid(mug_h, 1) == han_u->bid_d ) one_o = c3y;
+    if ( u3a_bid(mug_h, 2) == han_u->bid_d ) two_o = c3y;
+  }
+  _check( (c3y == one_o) && (c3n == two_o),
+          "evicted by open order: 1 %s, 2 %s",
+          (c3y == one_o) ? "kept" : "evicted",
+          (c3y == two_o) ? "kept" : "evicted" );
+  return 0;
+}
+
+/* _test_hand_lru(): an inner road evicts the idle hand opened longest
+**   ago, so a hand it keeps reusing stays open.
+*/
+static void
+_test_hand_lru(void)
+{
+  _pier_make("hand lru");
+
+  for ( c3_w i_w = 1; i_w <= 257; i_w++ ) {
+    _hand_write_raw(0x1234, i_w, i_w);
+  }
+
+  u3z(u3m_soft_top(0, 1 << 12, _hand_lru_cb, 0, 0));
+
+  _pier_done();
+}
+
 /* _test_hand_keep(): an inner road bounds how many idle hands it retains.
 */
 static void
@@ -4074,6 +4122,7 @@ main(int argc, char* argv[])
   _test_hand_leak();
   _test_hand_outer();
   _test_hand_keep();
+  _test_hand_lru();
   _test_hand_comp();
   _test_hand_alarm();
   _test_jam_bob();

@@ -75,7 +75,8 @@ _blob_pread(c3_i fid_i, void* buf_v, size_t len_i, c3_d off_d)
 **   hands on a list headed by u3R->bob_p, in its own heap, deduplicated
 **   by blob id, and retained until the road falls (u3b_drain from
 **   u3m_fall), so a trap that reads one blob a thousand times opens it
-**   once; past BLOB_KEEP_MAX an open evicts the oldest idle hand, and
+**   once; past BLOB_KEEP_MAX an open evicts the idle hand opened
+**   longest ago (by tic_d, so reuse needs no list surgery), and
 **   out of descriptors it bails %file.  the home road never falls, so
 **   its hands live on the C heap under _blob_hom_u, one per open, freed
 **   on close.  every mutation runs inside u3m_crit_inn()/
@@ -87,9 +88,13 @@ _blob_pread(c3_i fid_i, void* buf_v, size_t len_i, c3_d off_d)
 static u3b_hand* _blob_hom_u;
 
 //  hands an inner road retains at most: past this, an open evicts the
-//  oldest hand with no live view before adding a new one.
+//  idle hand opened longest ago before adding a new one.
 //
 #define BLOB_KEEP_MAX  256
+
+//  open clock: each open stamps its hand's tic_d
+//
+static c3_d _blob_tic_d;
 
 
 /* _blob_head(): the first hand on [rod_u]'s list, or 0.
@@ -183,24 +188,21 @@ _blob_hand_find(u3a_road* rod_u, c3_d bid_d)
   return han_u;
 }
 
-/* _blob_hand_evict(): close the oldest retained hand with no live view
-**   on the current inner road.  returns c3n if none is idle.
+/* _blob_hand_evict(): close the hand with no live view on the current
+**   inner road that was opened longest ago.  returns c3n if none is
+**   idle.
 **
 **   the caller holds the critical section.
 */
 static c3_o
 _blob_hand_evict(void)
 {
-  u3b_hand* han_u = _blob_head(u3R);
+  u3b_hand* han_u = 0;
 
-  if ( !han_u ) {
-    return c3n;
-  }
-  while ( han_u->nex_u ) {
-    han_u = han_u->nex_u;
-  }
-  while ( han_u && han_u->use_w ) {
-    han_u = han_u->pre_u;
+  for ( u3b_hand* nex_u = _blob_head(u3R); nex_u; nex_u = nex_u->nex_u ) {
+    if ( !nex_u->use_w && (!han_u || (nex_u->tic_d < han_u->tic_d)) ) {
+      han_u = nex_u;
+    }
   }
   if ( !han_u ) {
     return c3n;
@@ -327,6 +329,7 @@ u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
     for ( han_u = _blob_head(u3R); han_u; han_u = han_u->nex_u, num_z++ ) {
       if ( bid_d == han_u->bid_d ) {
         han_u->use_w += 1;
+        han_u->tic_d  = ++_blob_tic_d;
         return han_u;
       }
     }
@@ -336,12 +339,13 @@ u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
           rod_u = u3to(u3a_road, rod_u->par_p) )
     {
       if ( (han_u = _blob_hand_find(rod_u, bid_d)) ) {
+        han_u->tic_d = ++_blob_tic_d;
         return han_u;
       }
     }
 
     //  bound retention: an event that touches more blobs than this
-    //  gives up its idle hands, oldest first
+    //  gives up its idle hands, least recently opened first
     //
     if ( num_z >= BLOB_KEEP_MAX ) {
       u3m_crit_inn();
@@ -360,6 +364,7 @@ u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
   han_u->bid_d = bid_d;
   han_u->fid_i = -1;
   han_u->use_w = 1;
+  han_u->tic_d = ++_blob_tic_d;
 
   {
     c3_c        fil_c[8192];
