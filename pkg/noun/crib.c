@@ -452,6 +452,12 @@ u3c_arr_shrink(u3c_arr* arr_u, size_t len_i)
 }
 
 void
+u3c_arr_used(u3c_arr* arr_u, size_t len_i)
+{
+  if ( len_i > arr_u->sat_u.pek_d ) arr_u->sat_u.pek_d = len_i;
+}
+
+void
 u3c_arr_report(u3c_arr* arr_u)
 {
   if ( arr_u->drp_d ) {

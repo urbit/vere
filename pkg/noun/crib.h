@@ -132,6 +132,12 @@
       void
       u3c_arr_shrink(u3c_arr* arr_u, size_t len_i);
 
+    /* u3c_arr_used(): note [len_i] entries in use, for u3c_arr_stat(),
+    **                 without shrinking.
+    */
+      void
+      u3c_arr_used(u3c_arr* arr_u, size_t len_i);
+
     /* u3c_arr_report(): log any entries dropped at the ceiling since the
     **                   last call. home road only, between events (logging
     **                   may allocate).

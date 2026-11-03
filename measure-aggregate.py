@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 10, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 12, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def parse(lines):
@@ -233,7 +233,8 @@ def sums(ivs):
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
         if "W" in i:
             w = i["W"]
-            s["W_giv"] += w[0] + w[4]; s["W_our"] += w[1]; s["W_hom"] += w[2]
+            s["W_giv"] += w[0] + w[4]; s["W_our"] += w[1] + w[10]; s["W_hom"] += w[2]
+            s["W_sen"] += w[10]; s["W_aga"] += w[11]
             s["W_ful"] += w[6]; s["W_lx"] += w[9]; s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
@@ -343,6 +344,10 @@ METRICS = [
      lambda s, v: ratio(s["W_our"] + s["W_hom"], s["W_giv"])),
     ("W: writes in home memory", "hashcons: eager unification",
      lambda s, v: ratio(s["W_hom"], s["W_our"] + s["W_hom"])),
+    ("W: writes on senior inner roads", "hashcons: senior slots",
+     lambda s, v: ratio(s["W_sen"], s["W_our"] + s["W_hom"])),
+    ("W: writes against the order", "hashcons: senior slots",
+     lambda s, v: ratio(s["W_aga"], s["W_our"] + s["W_hom"])),
     ("W: lose list full", "hashcons: lose list ceiling", lambda s, v: s["W_ful"]),
     ("W: most lost at one exit", "hashcons: lose list ceiling",
      lambda s, v: max(values(v, "W", 8), default=None)),
@@ -398,6 +403,7 @@ PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
                                "D: on-loom", "G: cancelled", "G: spilled", "Y:",
                                "W: slot writes / give", "W: writes in home",
+                               "W: writes on senior", "W: writes against",
                                "X: counted", "Q: dup_p hits",
                                "V: root pairs found", "V: inner pairs found",
                                "I: visited", "I: home-set", "Z: taken", "Z: fix",

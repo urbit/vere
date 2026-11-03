@@ -548,11 +548,11 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //
     fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 "\n",
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.wsg_d, u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
                    u3e_Meter.wsn_d, u3e_Meter.wsk_d[0], u3e_Meter.wsk_d[1],
                    u3e_Meter.wsk_d[2], u3e_Meter.wll_d, u3e_Meter.wlp_d,
-                   u3e_Meter.wlx_d);
+                   u3e_Meter.wlx_d, u3e_Meter.wsw_d[2], u3e_Meter.wso_d);
 
     //  unification on senior inner roads
     //

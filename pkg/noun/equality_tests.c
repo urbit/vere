@@ -155,6 +155,44 @@ _test_unify_senior(void)
   return ret_i;
 }
 
+/* _test_unify_senior_slot(): cells on an inner road holding equal home
+**                            nouns, compared from the road below it, get
+**                            one slot pointed at the other home noun,
+**                            uncounted: the home counts don't change.
+*/
+static c3_i
+_test_unify_senior_slot(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun h = u3nc(1, 2), j = u3nc(1, 2);
+  c3_w    hus_w = u3a_use(h), jus_w = u3a_use(j);
+  u3_noun a, b;
+
+  u3m_hate(0);
+
+  a = u3nc(u3k(h), 0);
+  b = u3nc(u3k(j), 0);
+
+  u3m_hate(0);
+  (void)u3r_sing(a, b);
+  u3m_love(0);
+
+  if ( u3h(a) != u3h(b) ) {
+    fprintf(stderr, "test: unify senior slot: not unified\r\n");
+    ret_i = 0;
+  }
+  if ( (u3a_use(h) != hus_w) || (u3a_use(j) != jus_w) ) {
+    fprintf(stderr, "test: unify senior slot: home counts changed\r\n");
+    ret_i = 0;
+  }
+
+  u3z(a); u3z(b);
+  u3m_love(0);
+
+  u3z(h); u3z(j);
+  return ret_i;
+}
+
 static c3_i
 _test_unify_inner_home(void)
 {
@@ -969,6 +1007,11 @@ _test_equality(void)
 
   if ( !_test_unify_senior() ) {
     fprintf(stderr, "test: equality: unify senior: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_unify_senior_slot() ) {
+    fprintf(stderr, "test: equality: unify senior slot: failed\r\n");
     ret_i = 0;
   }
 

@@ -51,10 +51,11 @@ Log lines (one snapshot interval ends at each S line):
                                             new arvo state's alignment with the old
   W <give-ups> <wrote-ours> <wrote-home> <neither-writable> <skip-promoting>
     <skip-member> <skip-list-full> <lost> <most-lost-at-exit> <lost-at-leap>
+    <wrote-senior> <against-order>
                                             unification of home values on inner roads,
                                             when u3a_wed() can't merge them: slot writes,
                                             and the lose list (jb/hcons-eager; older
-                                            logs have a four-field W line, skipped)
+                                            logs have shorter W lines, skipped)
   X <merges> <counted> <lost> <leaked-full> <dropped-at-reset>
                                             unification on senior inner roads: merges,
                                             those through a slot that counts its value,
@@ -103,7 +104,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 10, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 12, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def pct(a, b):
@@ -606,12 +607,14 @@ def main():
         per = lambda x: f"{x / tasks if tasks else 0:.2f}"
         print("\n== unification of home values on inner roads ==")
         if wis:
-            w = [sum(i["W"][j] for i in wis) for j in range(10)]
+            w = [sum(i["W"][j] for i in wis) for j in range(12)]
             w[8] = max(i["W"][8] for i in wis)
             g = w[0] + w[4]
             print(f"  give-ups: {g} ({per(g)} per task)")
             for name, c in (("written, on this road", w[1]),
                             ("written, in home memory", w[2]),
+                            ("written, on a senior inner road", w[10]),
+                            ("  of all writes, against the order", w[11]),
                             ("neither slot writable", w[3]),
                             ("not written: promoting", w[4]),
                             ("not written: a member's slot", w[5]),

@@ -377,6 +377,7 @@ _cr_lo_drain_inner(void)
 
   if ( !len_w ) return;
   lis_u = u3c_arr_at(&_cr_lo.inn_u, 0);
+  u3c_arr_used(&_cr_lo.inn_u, len_w);
 
   //  keep the entries of older roads at the front, and publish them;
   //  then lose this road's, past the end. an interrupt meanwhile drops
@@ -480,17 +481,37 @@ _cr_home_slot(u3_noun* sot)
          : ((off_d >= hom_u->hat_p) && (off_d < hom_u->rut_p));
 }
 
-/* _cr_our_slot(): [sot] is in this road's heap. the offset stays wide,
-**   so a slot off the loom is never ours.
+/* _cr_slot_on(): [sot] is in [rod_u]'s heap. the offset stays wide, so
+**   a slot off the loom is never on a road.
 */
 static inline c3_t
-_cr_our_slot(u3_noun* sot)
+_cr_slot_on(u3a_road* rod_u, u3_noun* sot)
 {
   c3_d off_d = (c3_d)u3a_outa(sot);
 
-  return ( c3y == u3a_is_north(u3R) )
-         ? ((off_d >= u3R->rut_p) && (off_d < u3R->hat_p))
-         : ((off_d >= u3R->hat_p) && (off_d < u3R->rut_p));
+  return ( c3y == u3a_is_north(rod_u) )
+         ? ((off_d >= rod_u->rut_p) && (off_d < rod_u->hat_p))
+         : ((off_d >= rod_u->hat_p) && (off_d < rod_u->rut_p));
+}
+
+/* _cr_wed_where(): where [sot] can be written from an inner road, for a
+**   home value: 1 this road's heap, 2 home memory, 3 the heap of an inner
+**   road senior to this one; 0 nowhere (off the loom, a road's stack).
+*/
+static inline c3_y
+_cr_wed_where(u3_noun* sot)
+{
+  u3a_road* rod_u = u3R;
+
+  if ( _cr_slot_on(rod_u, sot) ) return 1;
+  if ( _cr_home_slot(sot) )      return 2;
+
+  while ( rod_u->par_p ) {
+    rod_u = u3to(u3a_road, rod_u->par_p);
+    if ( &(u3H->rod_u) == rod_u ) break;
+    if ( _cr_slot_on(rod_u, sot) ) return 3;
+  }
+  return 0;
 }
 
 /* _cr_wed_keep(): of equal home nouns [a] and [b], keep [a]: as on the
@@ -553,16 +574,18 @@ _cr_wed_home(u3_noun* sot, u3_noun val)
 **   road below home: both values are senior to every road it could merge
 **   them on. on an inner road, not promoting, point one slot at the
 **   other's value: keep the value _cr_wed_keep() prefers, if both slots
-**   can be written, else write the slot that can. a slot in this road's
-**   heap is written as is (references into senior memory aren't
-**   counted); a slot in home memory gains its new value on home, and
-**   the old one is lost after the exit's takes. a slot holding a member
-**   is never written: the home set is closed, so it may be in one.
+**   can be written, else write the slot that can. a slot in the heap of
+**   this road, or of an inner road senior to it, is written as is
+**   (references from inner roads into home memory aren't counted); a
+**   slot in home memory gains its new value on home, and the old one is
+**   lost after the exit's takes. a slot holding a member is never
+**   written: the home set is closed, so it may be in one.
 */
 static void
 _cr_wed_fall(u3_noun* a, u3_noun* b)
 {
-  c3_t aon_t, bon_t, ahm_t, bhm_t, kep_t;
+  c3_y awr_y, bwr_y;
+  c3_t kep_t;
 
   if ( &(u3H->rod_u) == u3R ) return;
   if ( u3R->kid_p ) {
@@ -571,35 +594,38 @@ _cr_wed_fall(u3_noun* a, u3_noun* b)
   }
 
   u3e_Meter.wsg_d++;
-  aon_t = _cr_our_slot(a);
-  bon_t = _cr_our_slot(b);
+  awr_y = _cr_wed_where(a);
+  bwr_y = _cr_wed_where(b);
 
-  ahm_t = !aon_t && _cr_home_slot(a);
-  bhm_t = !bon_t && _cr_home_slot(b);
+  if ( !awr_y && !bwr_y ) {
+    u3e_Meter.wsn_d++;
+    return;
+  }
+  else if ( awr_y && bwr_y ) {
+    kep_t = _cr_wed_keep(*a, *b);
+  }
+  else {
+    kep_t = ( 0 != bwr_y );
 
-  {
-    c3_t wra_t = aon_t || ahm_t;
-    c3_t wrb_t = bon_t || bhm_t;
-
-    if ( !wra_t && !wrb_t ) {
-      u3e_Meter.wsn_d++;
-      return;
+    //  the one slot we can write holds the value the order prefers
+    //
+    if ( kep_t != _cr_wed_keep(*a, *b) ) {
+      u3e_Meter.wso_d++;
     }
-    kep_t = ( wra_t && wrb_t ) ? _cr_wed_keep(*a, *b) : wrb_t;
   }
 
   {
-    u3_noun* sot = kep_t ? b : a;
-    u3_noun  val = kep_t ? *a : *b;
-    c3_t     hom_t = kep_t ? bhm_t : ahm_t;
+    u3_noun* sot   = kep_t ? b : a;
+    u3_noun  val   = kep_t ? *a : *b;
+    c3_y     wri_y = kep_t ? bwr_y : awr_y;
 
     if ( u3a_hcon_has(*sot) ) {
       u3e_Meter.wsk_d[1]++;
       return;
     }
-    if ( !hom_t ) {
+    if ( 2 != wri_y ) {
       *sot = val;
-      u3e_Meter.wsw_d[0]++;
+      u3e_Meter.wsw_d[( 1 == wri_y ) ? 0 : 2]++;
     }
     else if ( _cr_wed_home(sot, val) ) {
       u3e_Meter.wsw_d[1]++;

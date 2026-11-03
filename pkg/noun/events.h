@@ -188,7 +188,10 @@
           //  can't merge them (_cr_wed_fall())
           //
           c3_d wsg_d;        //  give-ups
-          c3_d wsw_d[2];     //  slot writes: on this road, in home memory
+          c3_d wsw_d[3];     //  slot writes: on this road, in home memory,
+                             //  on a senior inner road
+          c3_d wso_d;        //  ... against the order: the one slot that
+                             //  could be written held the value it prefers
           c3_d wsn_d;        //  neither slot writable
           c3_d wsk_d[3];     //  not written: promoting, a member's slot,
                              //  the lose list full
