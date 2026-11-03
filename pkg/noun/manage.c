@@ -116,17 +116,6 @@
         void
         u3m_flog(c3_w gof_w);
 
-      /* u3m_soft_top(): top-level safety wrapper; on success, [hom_f]
-      **                 (if any) runs on return to the home road, before
-      **                 the product is taken (see u3m_soft_with()).
-      */
-        u3_noun
-        u3m_soft_top(c3_w    mil_w,                     //  timer ms
-                     c3_w    pad_w,                     //  base memory pad
-                     u3_funk fun_f,
-                     u3_noun   arg,
-                     void    (*hom_f)(void));
-
 
 //  u3m_signal uses restricted functionality signals for compatibility reasons:
 //  some platforms may not provide true POSIX asynchronous signals and their
@@ -3115,9 +3104,7 @@ u3m_pack(void)
   //
   u3m_dedup_ream();
 
-  if (  (&(u3H->rod_u) == u3R)
-     && (c3n == u3a_blob_sane()) )
-  {
+  if ( c3n == u3a_blob_sane() ) {
     fprintf(stderr, "pack: blob accounting violated (see above)\r\n");
   }
 
