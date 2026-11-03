@@ -2031,11 +2031,11 @@ _disk_blob_own_cb(void* ptr_v, c3_d eve_d, c3_d* ids_d, c3_z len_z)
 **
 **   The BLOBS rows are the epoch's manifest: the image's live set at
 **   the epoch's first key (written by the roll) and each event's ids
-**   at its own.  Ownership is process state rebuilt from them: boot
-**   marks from the epoch's first key through the snapshot's event,
-**   replay marks each batch, queu marks through the rock's event, and
-**   _find_home zeroed whatever flags the snapshot carried.  c3n if any
-**   named file is missing (all of them reported).
+**   at its own.  The snapshot's own_o already holds every row through
+**   its event, so boot marks nothing: replay marks each batch, the
+**   boot events mark theirs before the save that follows them, and
+**   queu marks through the rock's event.  c3n if any named file is
+**   missing (all of them reported).
 **
 **   NB: opens its own read txn, so it must not run inside another on
 **   this thread (MDB_BAD_RSLOT).

@@ -1118,7 +1118,7 @@ _me_gain_south(u3_noun dog)
   }
 }
 
-/* u3a_blob_get(): look up blb_p entry for (mug_h, seq_h).  RETAINS.
+/* u3a_blob_get(): the record for (mug_h, seq_h), or 0; the bank owns it.
 */
 u3a_blob*
 u3a_blob_get(c3_h mug_h, c3_h seq_h)

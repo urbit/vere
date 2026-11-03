@@ -1093,8 +1093,8 @@ u3a_post_info(u3_post);
           c3_w
           u3a_idle(u3a_road* rod_u);
 
-        /* u3a_blob_get(): look up blb_p entry by (mug_h, seq_h).
-        **   Returns NULL if no entry exists.  RETAINS.
+        /* u3a_blob_get(): the record for (mug_h, seq_h), or 0.  The bank
+        **   owns it; the pointer is good until u3a_blob_drop or a pack.
         */
           u3a_blob*
           u3a_blob_get(c3_h mug_h, c3_h seq_h);
