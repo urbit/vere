@@ -414,23 +414,59 @@ u3r_wed_drain(void)
   }
 }
 
-/* u3r_wed_lose(): lose [old], on inner road [rod_u], at the exit to it.
-**                 past the ceiling, it's leaked until the road exits.
+/* _cr_lo_leak_home(): a home value that couldn't go on the full list
+**   is leaked: the next grab, which counts references, frees it.
+*/
+static inline void
+_cr_lo_leak_home(void)
+{
+  u3C.wag_h |= u3o_check_corrupt;
+}
+
+/* u3r_wed_room(): there's room on [rod_u]'s lose list. under memory
+**                 debugging, a unification is refused without it.
+*/
+c3_t
+u3r_wed_room(u3a_road* rod_u)
+{
+  return ( &(u3H->rod_u) == rod_u )
+         ? (0 != u3c_arr_at(&_cr_lo.ent_u, _cr_lo.len_w))
+         : (0 != u3c_arr_at(&_cr_lo.inn_u, _cr_lo.inn_w));
+}
+
+/* u3r_wed_lose(): lose [old], a value on road [rod_u], once [rod_u] is
+**                 current again after its child's exit. past the
+**                 ceiling it's leaked: an inner road's heap goes at its
+**                 exit, and a home leak asks for a grab.
 */
 void
 u3r_wed_lose(u3a_road* rod_u, u3_noun old)
 {
-  _cr_lo_inner* ent_u = u3c_arr_at(&_cr_lo.inn_u, _cr_lo.inn_w);
+  if ( &(u3H->rod_u) == rod_u ) {
+    u3_noun* lis_u = u3c_arr_at(&_cr_lo.ent_u, _cr_lo.len_w);
 
-  if ( !ent_u ) {
-    u3e_Meter.wvf_d++;
-    return;
+    if ( !lis_u ) {
+      u3e_Meter.wsk_d[2]++;
+      _cr_lo_leak_home();
+      return;
+    }
+    *lis_u = old;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _cr_lo.len_w++;
   }
-  ent_u->rod_p = u3of(u3a_road, rod_u);
-  ent_u->val   = old;
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-  _cr_lo.inn_w++;
-  u3e_Meter.wvc_d++;
+  else {
+    _cr_lo_inner* ent_u = u3c_arr_at(&_cr_lo.inn_u, _cr_lo.inn_w);
+
+    if ( !ent_u ) {
+      u3e_Meter.wvf_d++;
+      return;
+    }
+    ent_u->rod_p = u3of(u3a_road, rod_u);
+    ent_u->val   = old;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _cr_lo.inn_w++;
+    u3e_Meter.wvc_d++;
+  }
 }
 
 /* u3r_wed_left(): what an interrupted exit left on the lose lists: drop
@@ -448,6 +484,19 @@ u3r_wed_left(void)
     u3e_Meter.wlx_d += _cr_lo.len_w;
     _cr_lo_drain_home();
   }
+}
+
+/* u3r_wed_size(): restart the lose lists at [min_w] entries, at most
+**                 [max_w] (tests). home road only, the lists empty.
+*/
+void
+u3r_wed_size(c3_w min_w, c3_w max_w)
+{
+  u3c_arr_init(&_cr_lo.ent_u, "lose list", sizeof(u3_noun), min_w, max_w);
+  u3c_arr_init(&_cr_lo.inn_u, "inner lose list",
+               sizeof(_cr_lo_inner), min_w, max_w);
+  _cr_lo.len_w = _cr_lo.inn_w = 0;
+  _cr_lo.ini_t = 1;
 }
 
 /* _cr_lo_leap(): a new excursion: allocate, and lose what an interrupted
@@ -495,8 +544,9 @@ _cr_slot_on(u3a_road* rod_u, u3_noun* sot)
 }
 
 /* _cr_wed_where(): where [sot] can be written from an inner road, for a
-**   home value: 1 this road's heap, 2 home memory, 3 the heap of an inner
-**   road senior to this one; 0 nowhere (off the loom, a road's stack).
+**   home value: 1 this road's heap, or its child's while it's promoted
+**   (on this road's stack), 2 home memory, 3 the heap of an inner road
+**   senior to this one; 0 nowhere (off the loom, an older road's stack).
 */
 static inline c3_y
 _cr_wed_where(u3_noun* sot)
@@ -504,6 +554,16 @@ _cr_wed_where(u3_noun* sot)
   u3a_road* rod_u = u3R;
 
   if ( _cr_slot_on(rod_u, sot) ) return 1;
+  if ( rod_u->kid_p ) {
+    c3_d off_d = (c3_d)u3a_outa(sot);
+
+    if ( ( c3y == u3a_is_north(rod_u) )
+         ? ((off_d >= rod_u->cap_p) && (off_d < rod_u->mat_p))
+         : ((off_d >= rod_u->mat_p) && (off_d < rod_u->cap_p)) )
+    {
+      return 1;
+    }
+  }
   if ( _cr_home_slot(sot) )      return 2;
 
   while ( rod_u->par_p ) {
@@ -528,8 +588,10 @@ _cr_wed_keep(u3_noun a, u3_noun b)
 }
 
 /* _cr_wed_home(): point home slot [sot] at home noun [val], gaining it
-**   on the home road; the old value goes on the lose list. 0 if not
-**   written: the list is full, or [val]'s count is at its limit.
+**   on the home road; the old value goes on the lose list. past the
+**   list's ceiling the old value is leaked, for the next grab, or under
+**   memory debugging the slot is left. 0 if not written: so, or [val]'s
+**   count is at its limit.
 **
 **   the gain, the write and the list entry are made with async signals
 **   held (u3m_hold()), so a timeout or an interrupt can't land between
@@ -545,7 +607,7 @@ _cr_wed_home(u3_noun* sot, u3_noun val)
 
   if ( !lis_u ) {
     u3e_Meter.wsk_d[2]++;
-    return 0;
+    if ( u3a_dbg_ram() ) return 0;
   }
 
   //  as _me_gain_use(): a home noun's count can't be 0 while it's held;
@@ -562,10 +624,15 @@ _cr_wed_home(u3_noun* sot, u3_noun val)
 
   u3m_hold();
   box_u->use_w += 1;
-  *sot   = val;
-  *lis_u = old;
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-  _cr_lo.len_w++;
+  *sot = val;
+  if ( lis_u ) {
+    *lis_u = old;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _cr_lo.len_w++;
+  }
+  else {
+    _cr_lo_leak_home();
+  }
   u3m_hold_done();
   return 1;
 }
@@ -588,12 +655,9 @@ _cr_wed_fall(u3_noun* a, u3_noun* b)
   c3_t kep_t;
 
   if ( &(u3H->rod_u) == u3R ) return;
-  if ( u3R->kid_p ) {
-    u3e_Meter.wsk_d[0]++;
-    return;
-  }
 
   u3e_Meter.wsg_d++;
+  if ( u3R->kid_p ) u3e_Meter.wsk_d[0]++;
   awr_y = _cr_wed_where(a);
   bwr_y = _cr_wed_where(b);
 

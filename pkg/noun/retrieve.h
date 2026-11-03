@@ -255,11 +255,23 @@
         void
         u3r_wed_drain(void);
 
-      /* u3r_wed_lose(): lose [old], a value on inner road [rod_u], once
-      **                 [rod_u] is current again.
+      /* u3r_wed_lose(): lose [old], a value on road [rod_u], once [rod_u]
+      **                 is current again after its child's exit; past the
+      **                 ceiling it's leaked.
       */
         void
         u3r_wed_lose(u3a_road* rod_u, u3_noun old);
+
+      /* u3r_wed_room(): there's room on [rod_u]'s lose list.
+      */
+        c3_t
+        u3r_wed_room(u3a_road* rod_u);
+
+      /* u3r_wed_size(): restart the lose lists at [min_w] entries, at
+      **                 most [max_w] (tests). home road only, empty.
+      */
+        void
+        u3r_wed_size(c3_w min_w, c3_w max_w);
 
       /* u3r_wed_left(): lose what an interrupted exit left on the lose
       **                 list. home road only, no excursion under way.

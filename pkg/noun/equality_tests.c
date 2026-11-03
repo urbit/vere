@@ -193,6 +193,77 @@ _test_unify_senior_slot(void)
   return ret_i;
 }
 
+/* _test_lose_full(): past the home lose list's ceiling, a home slot is
+**                    still written and its old value leaked, for the grab
+**                    u3o_check_corrupt asks for; debugging memory, the
+**                    write is refused instead.
+*/
+static c3_i
+_test_lose_full(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, i_w, uni_w = 0;
+  u3_noun hol = u3_nul;
+
+  //  [x 0] and [y 0], with x and y equal home cells, held in [hol]
+  //
+  for ( i_w = 0; i_w < num_w; i_w++ ) {
+    hol = u3nc(u3nc(u3nc(u3nc(i_w, 2), 0), u3nc(u3nc(i_w, 2), 0)), hol);
+  }
+
+  u3C.wag_h &= ~u3o_check_corrupt;
+  u3r_wed_size(16, 16);
+  u3m_hate(0);
+  {
+    u3_noun lis = hol;
+    while ( u3_nul != lis ) {
+      (void)u3r_sing(u3h(u3h(lis)), u3t(u3h(lis)));
+      lis = u3t(lis);
+    }
+  }
+  u3m_love(0);
+
+  {
+    u3_noun lis = hol;
+    while ( u3_nul != lis ) {
+      if ( u3h(u3h(u3h(lis))) == u3h(u3t(u3h(lis))) ) uni_w++;
+      lis = u3t(lis);
+    }
+  }
+
+  if ( u3a_dbg_ram() ) {
+    if ( (16 != uni_w) || (u3C.wag_h & u3o_check_corrupt) ) {
+      fprintf(stderr, "test: lose full: debugging, %" PRIc3_w " unified\r\n", uni_w);
+      ret_i = 0;
+    }
+  }
+  else if ( (num_w != uni_w) || !(u3C.wag_h & u3o_check_corrupt) ) {
+    fprintf(stderr, "test: lose full: %" PRIc3_w " unified, check %d\r\n",
+            uni_w, !!(u3C.wag_h & u3o_check_corrupt));
+    ret_i = 0;
+  }
+  else {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h &= ~u3o_leak_crash;
+    u3m_grab_check(hol);
+    if ( !u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: lose full: the grab found no leak\r\n");
+      ret_i = 0;
+    }
+    u3m_grab(hol);
+    if ( u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: lose full: still leaking after the grab\r\n");
+      ret_i = 0;
+    }
+    u3C.wag_h = wag_h & ~u3o_check_corrupt;
+  }
+
+  u3r_wed_size(1U << 14, 1U << 22);
+  u3z(hol);
+  return ret_i;
+}
+
 static c3_i
 _test_unify_inner_home(void)
 {
@@ -684,15 +755,16 @@ _test_sing_dag_all(void)
     u3C.wag_h = wag_h;
   }
 
-  //  as while promoting a junior road ([kid_p] set), when nothing is
-  //  unified: the pair table, for the one comparison
+  //  as while promoting a junior road ([kid_p] set): this road unifies
+  //  too, losing old values at the end of the exit (here, by hand)
   //
   a = _dag(200); b = _dag(200);
   u3R->kid_p = u3of(u3a_road, u3R);
   ret_i &= _sing_dag("promotion", a, b);
   u3R->kid_p = 0;
-  if ( u3h(a) == u3h(b) ) {
-    fprintf(stderr, "test: sing dag: promotion: unified\r\n");
+  u3r_wed_drain();
+  if ( u3h(a) != u3h(b) ) {
+    fprintf(stderr, "test: sing dag: promotion: not unified\r\n");
     ret_i = 0;
   }
   u3z(a); u3z(b);
@@ -1012,6 +1084,11 @@ _test_equality(void)
 
   if ( !_test_unify_senior_slot() ) {
     fprintf(stderr, "test: equality: unify senior slot: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_lose_full() ) {
+    fprintf(stderr, "test: equality: lose full: failed\r\n");
     ret_i = 0;
   }
 

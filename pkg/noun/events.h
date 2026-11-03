@@ -193,8 +193,10 @@
           c3_d wso_d;        //  ... against the order: the one slot that
                              //  could be written held the value it prefers
           c3_d wsn_d;        //  neither slot writable
-          c3_d wsk_d[3];     //  not written: promoting, a member's slot,
-                             //  the lose list full
+          c3_d wsk_d[3];     //  give-ups while promoting; not written: a
+                             //  member's slot; the home lose list full
+                             //  (leaked for the next grab, or, debugging
+                             //  memory, not written)
           c3_d wll_d;        //  values lost after an exit's takes
           c3_d wlp_d;        //  ... most at one exit
           c3_d wlx_d;        //  ... left by an interrupted exit, lost at
