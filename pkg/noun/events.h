@@ -184,25 +184,18 @@
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
 
-          //  unification through slots (_cr_wed_slot()): equal values, both
-          //  senior to every road that could hold them, on an inner road
+          //  unification of home values on inner roads, when u3a_wed()
+          //  can't merge them (_cr_wed_fall())
           //
-          c3_d wsg_d;        //  give-ups that reached the slot step
-          c3_d wsw_d[2];     //  slot writes: toward a member, otherwise
-          c3_d wsn_d;        //  neither slot in this road's heap
-
-          //  deferred home-slot unification (_cr_dh_note(), phase A)
-          //
-          c3_d dhn_d[2];     //  entries noted: two slots, one (jet checks)
-          c3_d dhr_d;        //  slot pairs already noted this excursion
-          c3_d dhx_d[3];     //  not deferred, on an inner road: promoting,
-                             //  a slot outside home memory, a value that
-                             //  isn't home
-          c3_d dhd_d;        //  dropped at the ceiling
-          c3_d dhp_d;        //  most entries applied at one exit
-          c3_d dha_d[2];     //  phase A writes: two slots, one
-          c3_d dhs_d[2];     //  skipped in phase A: already equal,
-                             //  members forbid it
+          c3_d wsg_d;        //  give-ups
+          c3_d wsw_d[2];     //  slot writes: on this road, in home memory
+          c3_d wsn_d;        //  neither slot writable
+          c3_d wsk_d[3];     //  not written: promoting, a member's slot,
+                             //  the lose list full
+          c3_d wll_d;        //  values lost after an exit's takes
+          c3_d wlp_d;        //  ... most at one exit
+          c3_d wlx_d;        //  ... left by an interrupted exit, lost at
+                             //  the next leap
 
           //  inner roads' root sets (dup_p)
           //
@@ -240,12 +233,12 @@
                              //  not canonical, fields swapped for a
                              //  member (the rest became members)
           c3_d crk_d[2];     //  bytecode keys fixed, keys past the limit
-          c3_d cus_d[4];     //  time: phase A, takes, phase B, fix pass
+          c3_d cus_d[4];     //  time: (unused), takes, the lose list,
+                             //  fix pass
 
           //  jet battery checks (u3r_sing_wed()), when the pointers differ
           //
-          c3_d jck_d[5];     //  checks, unequal, unified, deferred (one
-                             //  slot), left to deferral
+          c3_d jck_d[4];     //  checks, unequal, unified, not unified
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

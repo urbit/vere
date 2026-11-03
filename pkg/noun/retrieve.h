@@ -235,8 +235,7 @@
                       u3_noun b);
 
       /* u3r_sing_wed(): equality of two slots that own their references,
-      **                 unifying the slots when equal. [a] is a cache
-      **                 field, outside any noun; [b] is a slot in a noun.
+      **                 unifying the slots when equal.
       */
         c3_o
         u3r_sing_wed_imp(u3_noun* a, u3_noun* b);
@@ -249,32 +248,18 @@
           ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, __sb);            \
         })
 
-      /* u3r_dh_entry: a deferred home-road unification of two home slots,
-      **               [sa] (which may be a cache field) and [sb] (in a
-      **               noun); or, one-sided, of [sb] with the value [va].
-      **               phase A loads the slots' values: home memory isn't
-      **               changed during an excursion, and phase A writes only
-      **               equal values. see u3r_dh_slot().
+      /* u3r_wed_drain(): lose the values unification on inner roads
+      **                  unpointed from home slots. home road only, after
+      **                  every take of an exit to home.
       */
-        typedef struct {
-          union {
-            u3_noun* sa;   //  two-sided
-            u3_noun  va;   //  one-sided
-          };
-          c3_p       sb;   //  low bit: one-sided
-        } u3r_dh_entry;
+        void
+        u3r_wed_drain(void);
 
-      /* u3r_dh_slot(), u3r_dh_one(): an entry's [sb], and whether the
-      **                              entry is one-sided.
+      /* u3r_wed_left(): lose what an interrupted exit left on the lose
+      **                 list. home road only, no excursion under way.
       */
-#       define u3r_dh_slot(e)  ((u3_noun*)(void*)((e)->sb & ~(c3_p)1))
-#       define u3r_dh_one(e)   ((c3_t)((e)->sb & 1))
-
-      /* u3r_dh_take(): this excursion's deferred unifications; resets.
-      **                home road only.
-      */
-        u3r_dh_entry*
-        u3r_dh_take(c3_w* len_w);
+        void
+        u3r_wed_left(void);
 
       /* u3r_sing_leap(): a new excursion from the home road, which
       **                  starts the pair table afresh. home road only.

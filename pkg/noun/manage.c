@@ -162,103 +162,6 @@ static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
 static void _cm_vis_leap(void);
 
-/* deferred home-road unification: phase A's released values.
-*/
-static struct {
-  u3_noun* rel_u;
-  c3_w     rel_w;
-} _cm_dh;
-
-/* _cm_dh_write(): point home slot [sot] at [val], keeping the old value
-**   for release after the takes.
-*/
-static inline void
-_cm_dh_write(u3_noun* sot, u3_noun val)
-{
-  _cm_dh.rel_u[_cm_dh.rel_w++] = *sot;
-  *sot = u3k(val);
-}
-
-/* _cm_dh_apply(): phase A, on the home road right after u3m_fall(), before
-**   anything runs or is taken: unify the home slots inner roads noted.
-**   nothing on the home road has run since the excursion began, so every
-**   noted slot and value is live; nothing is freed here.
-*/
-static void
-_cm_dh_apply(void)
-{
-  c3_w          len_w, i_w;
-  u3r_dh_entry* ent_u = u3r_dh_take(&len_w);
-
-  _cm_dh.rel_w = 0;
-  if ( !len_w ) return;
-
-  if ( len_w > u3e_Meter.dhp_d ) u3e_Meter.dhp_d = len_w;
-  _cm_dh.rel_u = c3_malloc(sizeof(u3_noun) * len_w);
-
-  //  the slots hold what they held when noted, or (written by an earlier
-  //  entry here) an equal home noun: home memory isn't changed during an
-  //  excursion, and nothing here is freed until phase B
-  //
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    u3r_dh_entry* e_u = &ent_u[i_w];
-    u3_noun*      sb  = u3r_dh_slot(e_u);
-    u3_noun       vb  = *sb;
-
-    //  one-sided: point home slot [sb] at [va]
-    //
-    if ( u3r_dh_one(e_u) ) {
-      if ( vb == e_u->va ) {
-        u3e_Meter.dhs_d[0]++;
-        continue;
-      }
-      if ( u3a_hcon_has(vb) ) {
-        u3e_Meter.dhs_d[1]++;
-        continue;
-      }
-      _cm_dh_write(sb, e_u->va);
-      u3e_Meter.dha_d[1]++;
-      continue;
-    }
-
-    u3_noun va = *e_u->sa;
-
-    if ( va == vb ) {
-      u3e_Meter.dhs_d[0]++;
-      continue;
-    }
-
-    //  keep a member, else [sa]'s value: [sa] may be a cache field, and
-    //  keeping its value lets cores sharing a call site converge on its
-    //  battery. this never edits a member: the home set is closed, so a
-    //  slot holding a value that isn't a member isn't in one
-    //
-    if ( u3a_hcon_has(va) && u3a_hcon_has(vb) ) {
-      u3e_Meter.dhs_d[1]++;
-      continue;
-    }
-    else if ( u3a_hcon_has(vb) ) _cm_dh_write(e_u->sa, vb);
-    else                         _cm_dh_write(sb, va);
-    u3e_Meter.dha_d[0]++;
-  }
-}
-
-/* _cm_dh_release(): phase B, after every take: release the old values.
-*/
-static void
-_cm_dh_release(void)
-{
-  c3_w i_w;
-
-  if ( !_cm_dh.rel_w ) return;
-  for ( i_w = 0; i_w < _cm_dh.rel_w; i_w++ ) {
-    u3z(_cm_dh.rel_u[i_w]);
-  }
-  c3_free(_cm_dh.rel_u);
-  _cm_dh.rel_u = 0;
-  _cm_dh.rel_w = 0;
-}
-
 /* _cm_canon_ok(): [som] is canonical: direct, or a member.
 */
 static inline c3_t
@@ -452,6 +355,11 @@ _cm_signal_reset(void)
   u3R->kid_p = 0;
   u3m_Hold_w = 0;
   u3m_Held_m = 0;
+
+  //  the values unification unpointed from home slots, if a signal cut
+  //  the exit short: its product is dropped, and junior memory with it
+  //
+  u3r_wed_left();
 
   //  a signal can interrupt u3m_love() before it drops a junior heap,
   //  leaving it poisoned for the next road: unpoison all free memory
@@ -1658,13 +1566,6 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   u3e_Phase = u3e_pha_road;
   u3m_fall();
 
-  //  deferred home-road unification, phase A: before anything runs here
-  //
-  if ( &(u3H->rod_u) == u3R ) {
-    if ( u3e_Measuring ) us_d = u3e_measure_us();
-    _cm_dh_apply();
-    if ( u3e_Measuring ) _cm_love_time(&us_d, 0);
-  }
 
   {
     c3_w hom_w = ( &(u3H->rod_u) == u3R ) ? 1 : 0;
@@ -1747,9 +1648,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     dup_p = 0;
     if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
 
-    //  deferred home-road unification, phase B: every take is done
+    //  the values unification unpointed from home slots: every take is
+    //  done, so the taken nouns that hold them have gained them
     //
-    _cm_dh_release();
+    u3r_wed_drain();
     if ( u3e_Measuring ) _cm_love_time(&us_d, 2);
 
     //  what was promoted into the caches but didn't end up canonical,

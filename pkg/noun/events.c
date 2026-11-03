@@ -544,22 +544,15 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
 
-    //  unification through slots on inner roads
+    //  unification of home values on inner roads
     //
-    fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.wsg_d, u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
-                   u3e_Meter.wsn_d);
-
-    //  deferred home-slot unification
-    //
-    fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+    fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.dhn_d[0], u3e_Meter.dhn_d[1], u3e_Meter.dhr_d,
-                   u3e_Meter.dhx_d[0], u3e_Meter.dhx_d[1], u3e_Meter.dhx_d[2],
-                   u3e_Meter.dhd_d, u3e_Meter.dhp_d,
-                   u3e_Meter.dha_d[0], u3e_Meter.dha_d[1],
-                   u3e_Meter.dhs_d[0], u3e_Meter.dhs_d[1]);
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wsg_d, u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
+                   u3e_Meter.wsn_d, u3e_Meter.wsk_d[0], u3e_Meter.wsk_d[1],
+                   u3e_Meter.wsk_d[2], u3e_Meter.wll_d, u3e_Meter.wlp_d,
+                   u3e_Meter.wlx_d);
 
     //  inner roads' root sets
     //
@@ -599,7 +592,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //  jet battery checks
     //
     fprintf(fil_u, "J");
-    for ( i_w = 0; i_w < 5; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.jck_d[i_w]);
+    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.jck_d[i_w]);
     fputc('\n', fil_u);
 
     //  cribs, one line each

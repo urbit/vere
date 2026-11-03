@@ -305,53 +305,77 @@ _cr_sing_atom(u3_atom a, u3_noun b)
   return c3y;
 }
 
-/* deferred home-road unification: equal home values that unification
-**   on an inner road couldn't merge, held by two slots in home memory.
-**   recorded once per slot pair per excursion, and applied at the exit
-**   to home (see _cm_dh_apply()). off the loom, allocated on the home
-**   road; an entry is written, then published by bumping the length.
+/* the lose list: home values that unification on an inner road
+**   unpointed from home slots, each gained by the slot that replaced it.
+**   they're lost after the exit's takes (u3r_wed_drain()), or at the
+**   next leap if an interrupted exit left them. off the loom, allocated
+**   on the home road; a value is written, then published by bumping the
+**   length, so an interrupt at worst leaks.
 */
-//  NB: the starting sizes and ceilings are first guesses, at about 8x
-//  the most a replay of one ship used; revisit them with readings from
-//  more ships.
+//  NB: the starting size and ceiling are first guesses; revisit them
+//  with readings from more ships.
 //
-#define _CR_DH_MIN  (1U << 14)   //  entries, to start
-#define _CR_DH_MAX  (1U << 22)   //  entries, at most
-#define _CR_DH_LOG  14           //  slot pairs noted, log2, to start
-#define _CR_DH_TOP  23           //  ... at most
+#define _CR_LO_MIN  (1U << 14)   //  entries, to start
+#define _CR_LO_MAX  (1U << 22)   //  entries, at most
 
 static struct {
   c3_t    ini_t;
-  u3c_arr ent_u;   //  entries
+  u3c_arr ent_u;   //  values to lose
   c3_w    len_w;   //  published
-  u3c_set sen_u;   //  slot pairs noted this excursion: [sb sa]
-} _cr_dh;
+} _cr_lo;
 
-/* _cr_dh_leap(): a new excursion: allocate, and drop any entries a
-**   bailed excursion left. home road only.
+/* u3r_wed_drain(): lose the values unification unpointed from home
+**                  slots. home road only, after every take of an exit
+**                  to home, or before a leap.
 */
-static void
-_cr_dh_leap(void)
+void
+u3r_wed_drain(void)
 {
-  if ( !_cr_dh.ini_t ) {
-    u3c_arr_init(&_cr_dh.ent_u, "deferral entries",
-                 sizeof(u3r_dh_entry), _CR_DH_MIN, _CR_DH_MAX);
-    u3c_set_init(&_cr_dh.sen_u, "deferral slot pairs", _CR_DH_LOG, _CR_DH_TOP);
-    _cr_dh.ini_t = 1;
+  c3_w     len_w = _cr_lo.len_w;
+  u3_noun* lis_u;
+  c3_w     i_w;
+
+  if ( !len_w ) return;
+  lis_u = u3c_arr_at(&_cr_lo.ent_u, 0);
+  if ( len_w > u3e_Meter.wlp_d ) u3e_Meter.wlp_d = len_w;
+  u3e_Meter.wll_d += len_w;
+
+  //  each value is taken off the list before it's lost, so that an
+  //  interrupt can't lose it twice
+  //
+  for ( i_w = len_w; i_w > 0; i_w-- ) {
+    u3_noun old = lis_u[i_w - 1];
+    _cr_lo.len_w = i_w - 1;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    u3z(old);
   }
-  _cr_dh.len_w = 0;   //  a bailed excursion's entries (none: bails exit too)
-  u3c_set_shrink(&_cr_dh.sen_u);
+  u3c_arr_shrink(&_cr_lo.ent_u, len_w);
 }
 
-/* u3r_dh_take(): this excursion's entries; resets. home road only.
+/* u3r_wed_left(): lose what an interrupted exit left on the lose list.
+**                 home road only, with no excursion under way.
 */
-u3r_dh_entry*
-u3r_dh_take(c3_w* len_w)
+void
+u3r_wed_left(void)
 {
-  *len_w = _cr_dh.len_w;
-  u3c_arr_shrink(&_cr_dh.ent_u, _cr_dh.len_w);
-  _cr_dh.len_w = 0;
-  return (u3r_dh_entry*)u3c_arr_at(&_cr_dh.ent_u, 0);
+  if ( _cr_lo.len_w ) {
+    u3e_Meter.wlx_d += _cr_lo.len_w;
+    u3r_wed_drain();
+  }
+}
+
+/* _cr_lo_leap(): a new excursion: allocate, and lose what an interrupted
+**   exit left. home road only.
+*/
+static void
+_cr_lo_leap(void)
+{
+  if ( !_cr_lo.ini_t ) {
+    u3c_arr_init(&_cr_lo.ent_u, "lose list",
+                 sizeof(u3_noun), _CR_LO_MIN, _CR_LO_MAX);
+    _cr_lo.ini_t = 1;
+  }
+  u3r_wed_left();
 }
 
 /* _cr_home_slot(): [sot] is in the home road's heap. during an excursion
@@ -369,157 +393,138 @@ _cr_home_slot(u3_noun* sot)
          : ((off_d >= hom_u->hat_p) && (off_d < hom_u->rut_p));
 }
 
-/* _cr_dh_next(): room for a new entry, or 0 past the ceiling. it's
-**   published by _cr_dh_publish() once written, so that an interrupt
-**   never leaves a torn entry.
+/* _cr_our_slot(): [sot] is in this road's heap. the offset stays wide,
+**   so a slot off the loom is never ours.
 */
-static u3r_dh_entry*
-_cr_dh_next(void)
+static inline c3_t
+_cr_our_slot(u3_noun* sot)
 {
-  u3r_dh_entry* ent_u = u3c_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
+  c3_d off_d = (c3_d)u3a_outa(sot);
 
-  if ( !ent_u ) {
-    u3e_Meter.dhd_d++;
-  }
-  return ent_u;
+  return ( c3y == u3a_is_north(u3R) )
+         ? ((off_d >= u3R->rut_p) && (off_d < u3R->hat_p))
+         : ((off_d >= u3R->hat_p) && (off_d < u3R->rut_p));
 }
 
-/* _cr_dh_publish(): publish the entry just written.
+/* _cr_wed_keep(): of equal home nouns [a] and [b], keep [a]: as on the
+**   home road, a member, else the deeper address. a total order, so a
+**   slot only ever moves toward the same value.
 */
-static inline void
-_cr_dh_publish(c3_t one_t)
+static inline c3_t
+_cr_wed_keep(u3_noun a, u3_noun b)
 {
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-  _cr_dh.len_w++;
-  u3e_Meter.dhn_d[one_t ? 1 : 0]++;
+  c3_t amb_t = u3a_hcon_has(a), bmb_t = u3a_hcon_has(b);
+
+  if ( amb_t != bmb_t ) return amb_t;
+  return (a < b) == (c3y == u3a_is_north(&(u3H->rod_u)));
 }
 
-/* _cr_dh_push(): defer pointing home slots [sa] and [sb] at each other's
-**   values.
-*/
-static void
-_cr_dh_push(u3_noun* sa, u3_noun* sb)
-{
-  u3r_dh_entry* ent_u = _cr_dh_next();
-
-  if ( ent_u ) {
-    ent_u->sa = sa;
-    ent_u->sb = (c3_p)sb;
-    _cr_dh_publish(0);
-  }
-}
-
-/* _cr_dh_push_one(): defer pointing home slot [sb] at [va].
-*/
-static void
-_cr_dh_push_one(u3_noun va, u3_noun* sb)
-{
-  u3r_dh_entry* ent_u = _cr_dh_next();
-
-  if ( ent_u ) {
-    ent_u->va = va;
-    ent_u->sb = (c3_p)sb | 1;
-    _cr_dh_publish(1);
-  }
-}
-
-/* _cr_dh_seen(): slot pair [sa sb] was noted this excursion; notes it.
-**   keyed by [sb], which is never 0, then [sa].
+/* _cr_wed_home(): point home slot [sot] at home noun [val], gaining it
+**   on the home road; the old value goes on the lose list. 0 if not
+**   written: the list is full, or [val]'s count is at its limit.
+**
+**   the gain, the write and the list entry are made with async signals
+**   held (u3m_hold()), so a timeout or an interrupt can't land between
+**   them; the sampler skips while they're held too. nothing in between
+**   calls a function, so nothing there can bail or overflow the stack.
 */
 static c3_t
-_cr_dh_seen(u3_noun* sa, u3_noun* sb)
+_cr_wed_home(u3_noun* sot, u3_noun val)
 {
-  c3_d a_d = (c3_d)(c3_p)sb, b_d = (c3_d)(c3_p)sa;
+  u3_noun*  lis_u = u3c_arr_at(&_cr_lo.ent_u, _cr_lo.len_w);
+  u3a_noun* box_u = u3a_to_ptr(val);
+  u3_noun   old   = *sot;
 
-  if ( u3c_set_has(&_cr_dh.sen_u, a_d, b_d) ) return 1;
-  u3c_set_put(&_cr_dh.sen_u, a_d, b_d);
-  return 0;
-}
-
-/* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb] ([sb]
-**   in a noun). note them if both slots are in home memory and both
-**   values are home nouns. on an inner road, not promoting.
-*/
-static void
-_cr_dh_note(u3_noun* sa, u3_noun* sb)
-{
-  u3a_road* one_u;
-
-  if ( !_cr_home_slot(sa) || !_cr_home_slot(sb) ) {
-    u3e_Meter.dhx_d[1]++;
-    return;
-  }
-
-  one_u = u3to(u3a_road, u3H->rod_u.kid_p);
-  if (  (c3n == u3a_is_senior(one_u, *sa))
-     || (c3n == u3a_is_senior(one_u, *sb)) )
-  {
-    u3e_Meter.dhx_d[2]++;
-    return;
-  }
-
-  //  once per slot pair per excursion
-  //
-  if ( _cr_dh_seen(sa, sb) ) {
-    u3e_Meter.dhr_d++;
-    return;
-  }
-  _cr_dh_push(sa, sb);
-}
-
-/* _cr_wed_slot(): unify equal [*a] and [*b], both senior to every road
-**   that could hold them, by pointing a slot in this road's heap at the
-**   other value: 1 if written. references into senior memory aren't
-**   counted, so no count changes, and both values outlive the slot.
-**   write the slot we can; if both are ours, keep a member.
-*/
-static c3_t
-_cr_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
-{
-  c3_t aon_t, bon_t;
-  {
-    //  this road's heap: rut to hat, or hat to rut on a south road. the
-    //  offsets stay wide, so a slot off the loom is never ours
-    //
-    c3_t    nor_t = ( c3y == u3a_is_north(u3R) );
-    u3_post bot_p = nor_t ? u3R->rut_p : u3R->hat_p;
-    u3_post top_p = nor_t ? u3R->hat_p : u3R->rut_p;
-    c3_d    aof_d = (c3_d)u3a_outa(a);
-    c3_d    bof_d = (c3_d)u3a_outa(b);
-
-    aon_t = (aof_d >= bot_p) && (aof_d < top_p);
-    bon_t = (bof_d >= bot_p) && (bof_d < top_p);
-  }
-
-  u3e_Meter.wsg_d++;
-  if ( !aon_t && !bon_t ) {
-    u3e_Meter.wsn_d++;
+  if ( !lis_u ) {
+    u3e_Meter.wsk_d[2]++;
     return 0;
   }
 
-  if ( bon_t && (!aon_t || u3a_hcon_has(*a)) ) *b = *a;
-  else                                         *a = *b;
+  //  as _me_gain_use(): a home noun's count can't be 0 while it's held;
+  //  at the limit, leave the slot as it is. gains from an inner road are
+  //  never deferred (see u3a_defer_open())
+  //
+  if ( 0 == box_u->use_w ) {
+    u3m_bail(c3__foul);
+  }
+  if ( u3a_direct_max == box_u->use_w ) {
+    u3e_Meter.wsk_d[2]++;
+    return 0;
+  }
 
-  u3e_Meter.wsw_d[u3a_hcon_has(*a) ? 0 : 1]++;
+  u3m_hold();
+  box_u->use_w += 1;
+  *sot   = val;
+  *lis_u = old;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  _cr_lo.len_w++;
+  u3m_hold_done();
   return 1;
 }
 
-/* _cr_wed_fall(): u3a_wed() couldn't merge equal [*a] and [*b] ([b] in a
-**   noun) on any road below home: both values are senior to every road
-**   it could merge them on. on an inner road, not promoting, point a
-**   slot in this road's heap at the other value; if neither slot is
-**   ours, note both for the exit home.
+/* _cr_wed_fall(): u3a_wed() couldn't merge equal [*a] and [*b] on any
+**   road below home: both values are senior to every road it could merge
+**   them on. on an inner road, not promoting, point one slot at the
+**   other's value: keep the value _cr_wed_keep() prefers, if both slots
+**   can be written, else write the slot that can. a slot in this road's
+**   heap is written as is (references into senior memory aren't
+**   counted); a slot in home memory gains its new value on home, and
+**   the old one is lost after the exit's takes. a slot holding a member
+**   is never written: the home set is closed, so it may be in one.
 */
 static void
 _cr_wed_fall(u3_noun* a, u3_noun* b)
 {
+  c3_t aon_t, bon_t, ahm_t, bhm_t, kep_t;
+
   if ( &(u3H->rod_u) == u3R ) return;
   if ( u3R->kid_p ) {
-    u3e_Meter.dhx_d[0]++;
+    u3e_Meter.wsk_d[0]++;
     return;
   }
-  if ( !_cr_wed_slot(a, b) ) {
-    _cr_dh_note(a, b);
+
+  u3e_Meter.wsg_d++;
+  aon_t = _cr_our_slot(a);
+  bon_t = _cr_our_slot(b);
+
+  //  debugging memory, unification stays on this road, and the values
+  //  may not be home nouns
+  //
+  if ( u3a_dbg_ram() ) {
+    ahm_t = bhm_t = 0;
+  }
+  else {
+    ahm_t = !aon_t && _cr_home_slot(a);
+    bhm_t = !bon_t && _cr_home_slot(b);
+  }
+
+  {
+    c3_t wra_t = aon_t || ahm_t;
+    c3_t wrb_t = bon_t || bhm_t;
+
+    if ( !wra_t && !wrb_t ) {
+      u3e_Meter.wsn_d++;
+      return;
+    }
+    kep_t = ( wra_t && wrb_t ) ? _cr_wed_keep(*a, *b) : wrb_t;
+  }
+
+  {
+    u3_noun* sot = kep_t ? b : a;
+    u3_noun  val = kep_t ? *a : *b;
+    c3_t     hom_t = kep_t ? bhm_t : ahm_t;
+
+    if ( u3a_hcon_has(*sot) ) {
+      u3e_Meter.wsk_d[1]++;
+      return;
+    }
+    if ( !hom_t ) {
+      *sot = val;
+      u3e_Meter.wsw_d[0]++;
+    }
+    else if ( _cr_wed_home(sot, val) ) {
+      u3e_Meter.wsw_d[1]++;
+    }
   }
 }
 
@@ -590,7 +595,7 @@ u3r_sing_leap(void)
   }
   u3c_set_shrink(&_cr_pm_x);
   u3c_set_shrink(&_cr_pm_s);
-  _cr_dh_leap();
+  _cr_lo_leap();
 }
 
 /* u3r_crib_report(): log the pair tables' and deferral's evictions and
@@ -604,9 +609,8 @@ u3r_crib_report(void)
     u3c_set_report(&_cr_pm_x);
     u3c_set_report(&_cr_pm_s);
   }
-  if ( _cr_dh.ini_t ) {
-    u3c_arr_report(&_cr_dh.ent_u);
-    u3c_set_report(&_cr_dh.sen_u);
+  if ( _cr_lo.ini_t ) {
+    u3c_arr_report(&_cr_lo.ent_u);
   }
 }
 
@@ -622,9 +626,8 @@ u3r_crib_stat(u3c_stat* sat_u)
     sat_u[len_w++] = u3c_set_stat(&_cr_pm_x);
     sat_u[len_w++] = u3c_set_stat(&_cr_pm_s);
   }
-  if ( _cr_dh.ini_t ) {
-    sat_u[len_w++] = u3c_set_stat(&_cr_dh.sen_u);
-    sat_u[len_w++] = u3c_arr_stat(&_cr_dh.ent_u);
+  if ( _cr_lo.ini_t ) {
+    sat_u[len_w++] = u3c_arr_stat(&_cr_lo.ent_u);
   }
   return len_w;
 }
@@ -1026,35 +1029,13 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
     return c3n;
   }
   else if ( *a != *b ) {
-    //  [a] is a cache field, [b] the core's battery slot: if the core
-    //  is home and its battery isn't a member, don't point a junior
-    //  cache at it; defer pointing the core at the cache's battery
-    //  instead, so cores sharing a call site converge
+    //  cores sharing a call site converge on one battery: each check
+    //  keeps the value _cr_wed_keep() prefers, in the cache or the core
     //
-    if (  u3H->rod_u.kid_p && (&(u3H->rod_u) != u3R) && !u3R->kid_p
-       && _cr_home_slot(b) && !_cr_home_slot(a)
-       && !u3a_hcon_has(*b) )
-    {
-      u3a_road* one_u = u3to(u3a_road, u3H->rod_u.kid_p);
-
-      if (  (c3y == u3a_is_senior(one_u, *a))
-         && (c3y == u3a_is_senior(one_u, *b)) )
-      {
-        if ( !_cr_dh_seen(0, b) ) {
-          _cr_dh_push_one(*a, b);
-        }
-        else {
-          u3e_Meter.dhr_d++;
-        }
-        u3e_Meter.jck_d[3]++;
-        return c3y;
-      }
-    }
-
     if ( c3n == u3a_wed(a, b) ) {
       _cr_wed_fall(a, b);
     }
-    u3e_Meter.jck_d[( *a == *b ) ? 2 : 4]++;
+    u3e_Meter.jck_d[( *a == *b ) ? 2 : 3]++;
   }
   return c3y;
 }

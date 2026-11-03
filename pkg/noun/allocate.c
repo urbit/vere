@@ -1365,6 +1365,18 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 
 #undef SWAP
 
+/* u3a_gain_home(): gain a reference to home-road noun [som], on the home
+**                  road, from any road (references into senior memory
+**                  are otherwise not counted).
+*/
+void
+u3a_gain_home(u3_noun som)
+{
+  if ( c3n == u3a_is_cat(som) ) {
+    _me_gain_use(som);
+  }
+}
+
 /* u3a_wed(): unify noun references, on this road or a senior one below
 **             home: c3y if merged.
 */

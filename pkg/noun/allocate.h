@@ -875,6 +875,12 @@ u3a_post_info(u3_post);
           c3_w
           u3a_use(u3_noun som);
 
+        /* u3a_gain_home(): gain a reference to home-road noun [som], on
+        **                  the home road, from any road.
+        */
+          void
+          u3a_gain_home(u3_noun som);
+
         /* u3a_wed(): unify noun references, on this road or a senior one
         **            below home: c3y if merged. see u3r_sing() for what
         **            follows when it can't.

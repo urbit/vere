@@ -115,12 +115,32 @@ _test_unify_inner_home(void)
 
   (void)u3r_sing(a, b);
 
-  if ( u3t(a) == u3t(b) ) {
-    fprintf(stderr, "test: unify inner-home: succeeded?\r\n");
+  //  debugging memory, unification stays on the inner road; otherwise
+  //  one home slot is pointed at the other's value, which gains it on the
+  //  home road now, and the old value is lost at the exit
+  //
+  if ( u3a_dbg_ram() ) {
+    if ( u3t(a) == u3t(b) ) {
+      fprintf(stderr, "test: unify inner-home: unified while debugging\r\n");
+      ret_i = 0;
+    }
+  }
+  else if ( u3t(a) != u3t(b) ) {
+    fprintf(stderr, "test: unify inner-home: not unified\r\n");
+    ret_i = 0;
+  }
+  else if ( 2 != u3a_use(u3t(a)) ) {
+    fprintf(stderr, "test: unify inner-home: kept value not gained (%" PRIc3_w ")\r\n",
+            u3a_use(u3t(a)));
     ret_i = 0;
   }
 
   u3m_love(0);
+
+  if ( !u3a_dbg_ram() && ((u3t(a) != u3t(b)) || (2 != u3a_use(u3t(a)))) ) {
+    fprintf(stderr, "test: unify inner-home: wrong after the exit\r\n");
+    ret_i = 0;
+  }
 
   u3z(a); u3z(b);
 
@@ -725,14 +745,16 @@ _test_gap(void)
     }
   }
 
-  //  both grew, and shrink back over a few quiet excursions
+  //  the visited set grew (the comparison is bounded by unification,
+  //  which writes home slots, so the pair table needn't have), and both
+  //  shrink back over a few quiet excursions
   //
   {
-    c3_d pcp_d = u3r_pair_cap(), vcp_d = u3m_dedup_visit_cap();
+    c3_d vcp_d = u3m_dedup_visit_cap();
 
-    if ( (pcp_d <= 16) || (vcp_d <= 16) ) {
-      fprintf(stderr, "test: gap: didn't grow (%" PRIu64 ", %" PRIu64 ")\r\n",
-              pcp_d, vcp_d);
+    if ( vcp_d <= 16 ) {
+      fprintf(stderr, "test: gap: visited set didn't grow (%" PRIu64 ")\r\n",
+              vcp_d);
       ret_i = 0;
     }
     for ( c3_w i_w = 0; i_w < 16; i_w++ ) {

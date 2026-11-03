@@ -49,12 +49,15 @@ Log lines (one snapshot interval ends at each S line):
     <written-nouns> <shrinks>               deferred gains across the state swap
   Y <references> <same-position> <refcount-1>
                                             new arvo state's alignment with the old
-  W <give-ups> <write-to-member> <write-other> <neither-ours>
-                                            unification through slots on inner roads:
-                                            give-ups on two values senior to every road
+  W <give-ups> <wrote-ours> <wrote-home> <neither-writable> <skip-promoting>
+    <skip-member> <skip-list-full> <lost> <most-lost-at-exit> <lost-at-leap>
+                                            unification of home values on inner roads,
+                                            when u3a_wed() can't merge them: slot writes,
+                                            and the lose list (jb/hcons-eager; older
+                                            logs have a four-field W line, skipped)
   X <noted-two> <noted-one> <repeats> <skip-promoting> <skip-slot> <skip-value>
     <dropped> <most-at-exit> <wrote-two> <wrote-one> <skip-equal> <skip-member>
-                                            deferred home-slot unification: entries
+                                            (older logs) deferred home-slot unification: entries
                                             noted (two slots, or one from the jet
                                             checks), give-ups not deferred, and phase A
   Q <roots> <probes> <hits-other> <hits-self>
@@ -74,7 +77,7 @@ Log lines (one snapshot interval ends at each S line):
                                             exits to home: nouns taken canonicalizing
                                             and those swapped for a member, by table;
                                             the fix pass; microseconds in each step
-  J <checks> <unequal> <unified> <deferred-one> <left-to-deferral>
+  J <checks> <unequal> <unified> <not-unified>
                                             jet battery checks whose pointers differed
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
     <clears-logged> <clears-dropped> <at-ceiling>
@@ -100,7 +103,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 4, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 5}
+WIDTH = {"W": 10, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def pct(a, b):
@@ -603,11 +606,19 @@ def main():
         per = lambda x: f"{x / tasks if tasks else 0:.2f}"
         print("\n== unification of home values on inner roads ==")
         if wis:
-            g, wm, wo, wn = (sum(i["W"][j] for i in wis) for j in range(4))
-            print(f"  slot step reached: {g} ({per(g)} per task)")
-            print(f"    slot written, toward a member: {wm}  {pct(wm, g)}")
-            print(f"    slot written, otherwise:       {wo}  {pct(wo, g)}")
-            print(f"    neither slot on this road:     {wn}  {pct(wn, g)}")
+            w = [sum(i["W"][j] for i in wis) for j in range(10)]
+            w[8] = max(i["W"][8] for i in wis)
+            g = w[0] + w[4]
+            print(f"  give-ups: {g} ({per(g)} per task)")
+            for name, c in (("written, on this road", w[1]),
+                            ("written, in home memory", w[2]),
+                            ("neither slot writable", w[3]),
+                            ("not written: promoting", w[4]),
+                            ("not written: a member's slot", w[5]),
+                            ("not written: lose list full", w[6])):
+                print(f"    {name:<32}{c:>12}  {pct(c, g)}")
+            print(f"  lose list: {w[7]} values lost after takes (most at one exit: "
+                  f"{w[8]}), {w[9]} left by interrupted exits")
         if xis:
             x = [sum(i["X"][j] for i in xis) for j in range(12)]
             x[7] = max(i["X"][7] for i in xis)
@@ -669,12 +680,12 @@ def main():
               f"total {tus / 1000:.1f}")
     jis = [i for i in intervals if i["J"]]
     if jis and any(any(i["J"]) for i in jis):
-        j = [sum(i["J"][k] for i in jis) for k in range(5)]
+        j = [sum(i["J"][k] for i in jis) for k in range(4)]
         tasks = sum(i["tasks"] for i in jis)
         print("\n== jet battery checks, pointers differing ==")
         print(f"  checks: {j[0]} ({j[0] / tasks if tasks else 0:.1f} per task)")
         for name, c in (("unequal", j[1]), ("unified", j[2]),
-                        ("deferred, one slot", j[3]), ("left to deferral", j[4])):
+                        ("not unified", j[3])):
             print(f"    {name:<20}{c:>12}  {pct(c, j[0])}")
     names = sorted({n for i in intervals for n in i["N"]})
     if names:

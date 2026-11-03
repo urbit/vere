@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 4, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 5}
+WIDTH = {"W": 10, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def parse(lines):
@@ -233,8 +233,8 @@ def sums(ivs):
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
         if "W" in i:
             w = i["W"]
-            s["W_giv"] += w[0]; s["W_mem"] += w[1]; s["W_oth"] += w[2]
-            s["W_tasks"] += i["tasks"]
+            s["W_giv"] += w[0] + w[4]; s["W_our"] += w[1]; s["W_hom"] += w[2]
+            s["W_ful"] += w[6]; s["W_lx"] += w[9]; s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
             s["X_ent"] += x[0] + x[1]; s["X_rep"] += x[2]
@@ -262,7 +262,7 @@ def sums(ivs):
         if "J" in i:
             j = i["J"]
             s["J_chk"] += j[0]; s["J_neq"] += j[1]; s["J_uni"] += j[2]
-            s["J_def"] += j[3]; s["J_tasks"] += i["tasks"]
+            s["J_tasks"] += i["tasks"]
         for n in i.get("N", {}).values():
             s["N_ovf"] += n[8]
     return s
@@ -338,12 +338,16 @@ METRICS = [
      lambda s, v: ratio(1000 * s["G_shr"], s["G_win"]) if s["G_win"] else None),
     ("Y: aligned", "(i) adaptive bound", lambda s, v: ratio(s["Y_pos"], s["Y_all"])),
     ("Y: aligned and exclusive", "(i) fused path", lambda s, v: ratio(s["Y_exc"], s["Y_all"])),
-    ("W: slot writes / 1000 tasks", "hashcons: slots",
-     lambda s, v: ratio(1000 * (s["W_mem"] + s["W_oth"]), s["W_tasks"]) if s["W_tasks"] else None),
-    ("W: slot writes / slot step", "hashcons: slots",
-     lambda s, v: ratio(s["W_mem"] + s["W_oth"], s["W_giv"])),
-    ("W: slot writes toward a member", "hashcons: slots",
-     lambda s, v: ratio(s["W_mem"], s["W_mem"] + s["W_oth"])),
+    ("W: slot writes / 1000 tasks", "hashcons: eager unification",
+     lambda s, v: ratio(1000 * (s["W_our"] + s["W_hom"]), s["W_tasks"]) if s["W_tasks"] else None),
+    ("W: slot writes / give-ups", "hashcons: eager unification",
+     lambda s, v: ratio(s["W_our"] + s["W_hom"], s["W_giv"])),
+    ("W: writes in home memory", "hashcons: eager unification",
+     lambda s, v: ratio(s["W_hom"], s["W_our"] + s["W_hom"])),
+    ("W: lose list full", "hashcons: lose list ceiling", lambda s, v: s["W_ful"]),
+    ("W: most lost at one exit", "hashcons: lose list ceiling",
+     lambda s, v: max(values(v, "W", 8), default=None)),
+    ("W: left by interrupted exits", "hashcons: lose list", lambda s, v: s["W_lx"]),
     ("X: deferred entries / 1000 tasks", "hashcons: deferral",
      lambda s, v: ratio(1000 * s["X_ent"], s["X_tasks"]) if s["X_tasks"] else None),
     ("X: repeats / (entries + repeats)", "hashcons: deferral",
@@ -383,16 +387,12 @@ METRICS = [
      lambda s, v: ratio(s["J_chk"], s["J_tasks"])),
     ("J: unified / differing checks", "hashcons: jet checks",
      lambda s, v: ratio(s["J_uni"], s["J_chk"])),
-    ("J: deferred / differing checks", "hashcons: jet checks",
-     lambda s, v: ratio(s["J_def"], s["J_chk"])),
     ("N: pair table peak entries", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "pair-table")),
     ("N: visited set peak entries", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "visited-set")),
-    ("N: deferral slot pairs peak entries", "hashcons: crib sizes",
-     lambda s, v: crib_peak(v, "deferral-slot-pairs")),
-    ("N: deferral entries peak", "hashcons: crib sizes",
-     lambda s, v: crib_peak(v, "deferral-entries")),
+    ("N: lose list peak", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "lose-list")),
     ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
@@ -400,11 +400,11 @@ METRICS = [
 PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
                                "D: on-loom", "G: cancelled", "G: spilled", "Y:",
-                               "W: slot writes / slot", "W: slot writes toward",
+                               "W: slot writes / give", "W: writes in home",
                                "X: repeats", "X: phase A", "Q: dup_p hits",
                                "V: root pairs found", "V: inner pairs found",
                                "I: visited", "I: home-set", "Z: taken", "Z: fix",
-                               "J: unified", "J: deferred"))
+                               "J: unified"))
            or "keys /" in name or "looked up /" in name}
 
 
