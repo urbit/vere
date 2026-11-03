@@ -53,7 +53,7 @@ Log lines (one snapshot interval ends at each S line):
                                             unification through slots on inner roads:
                                             give-ups on two values senior to every road
   X <noted-two> <noted-one> <repeats> <skip-promoting> <skip-slot> <skip-value>
-    <dropped> <most-at-exit> <wrote-two> <wrote-one> <skip-changed> <skip-member>
+    <dropped> <most-at-exit> <wrote-two> <wrote-one> <skip-equal> <skip-member>
                                             deferred home-slot unification: entries
                                             noted (two slots, or one from the jet
                                             checks), give-ups not deferred, and phase A
@@ -625,7 +625,7 @@ def main():
             print(f"  phase A, of {ent} entries (most at one exit: {x[7]}):")
             for name, c in (("written, two slots", x[8]),
                             ("written, one slot", x[9]),
-                            ("skipped: a slot changed", x[10]),
+                            ("skipped: already equal", x[10]),
                             ("skipped: members forbid it", x[11])):
                 print(f"    {name:<32}{c:>12}  {pct(c, ent)}")
     qis = [i for i in intervals if i["Q"]]

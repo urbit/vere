@@ -369,23 +369,58 @@ _cr_home_slot(u3_noun* sot)
          : ((off_d >= hom_u->hat_p) && (off_d < hom_u->rut_p));
 }
 
-/* _cr_dh_push(): defer pointing home slots [sa] and [sb] at each other's
-**   values [va] and [vb]. [sa] 0: one-sided, point [sb] at [va]. dropped
-**   past the ceiling.
+/* _cr_dh_next(): room for a new entry, or 0 past the ceiling. it's
+**   published by _cr_dh_publish() once written, so that an interrupt
+**   never leaves a torn entry.
 */
-static void
-_cr_dh_push(u3_noun* sa, u3_noun va, u3_noun* sb, u3_noun vb)
+static u3r_dh_entry*
+_cr_dh_next(void)
 {
   u3r_dh_entry* ent_u = u3c_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
 
   if ( !ent_u ) {
     u3e_Meter.dhd_d++;
-    return;
   }
-  ent_u->sa = sa; ent_u->sb = sb;
-  ent_u->va = va; ent_u->vb = vb;
+  return ent_u;
+}
+
+/* _cr_dh_publish(): publish the entry just written.
+*/
+static inline void
+_cr_dh_publish(c3_t one_t)
+{
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
   _cr_dh.len_w++;
-  u3e_Meter.dhn_d[sa ? 0 : 1]++;
+  u3e_Meter.dhn_d[one_t ? 1 : 0]++;
+}
+
+/* _cr_dh_push(): defer pointing home slots [sa] and [sb] at each other's
+**   values.
+*/
+static void
+_cr_dh_push(u3_noun* sa, u3_noun* sb)
+{
+  u3r_dh_entry* ent_u = _cr_dh_next();
+
+  if ( ent_u ) {
+    ent_u->sa = sa;
+    ent_u->sb = (c3_p)sb;
+    _cr_dh_publish(0);
+  }
+}
+
+/* _cr_dh_push_one(): defer pointing home slot [sb] at [va].
+*/
+static void
+_cr_dh_push_one(u3_noun va, u3_noun* sb)
+{
+  u3r_dh_entry* ent_u = _cr_dh_next();
+
+  if ( ent_u ) {
+    ent_u->va = va;
+    ent_u->sb = (c3_p)sb | 1;
+    _cr_dh_publish(1);
+  }
 }
 
 /* _cr_dh_seen(): slot pair [sa sb] was noted this excursion; notes it.
@@ -429,7 +464,7 @@ _cr_dh_note(u3_noun* sa, u3_noun* sb)
     u3e_Meter.dhr_d++;
     return;
   }
-  _cr_dh_push(sa, *sa, sb, *sb);
+  _cr_dh_push(sa, sb);
 }
 
 /* _cr_wed_slot(): unify equal [*a] and [*b], both senior to every road
@@ -1006,7 +1041,7 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
          && (c3y == u3a_is_senior(one_u, *b)) )
       {
         if ( !_cr_dh_seen(0, b) ) {
-          _cr_dh_push(0, *a, b, *b);
+          _cr_dh_push_one(*a, b);
         }
         else {
           u3e_Meter.dhr_d++;

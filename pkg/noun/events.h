@@ -201,7 +201,7 @@
           c3_d dhd_d;        //  dropped at the ceiling
           c3_d dhp_d;        //  most entries applied at one exit
           c3_d dha_d[2];     //  phase A writes: two slots, one
-          c3_d dhs_d[2];     //  skipped in phase A: a slot changed,
+          c3_d dhs_d[2];     //  skipped in phase A: already equal,
                              //  members forbid it
 
           //  inner roads' root sets (dup_p)

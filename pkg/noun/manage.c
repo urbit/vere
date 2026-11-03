@@ -196,14 +196,19 @@ _cm_dh_apply(void)
   if ( len_w > u3e_Meter.dhp_d ) u3e_Meter.dhp_d = len_w;
   _cm_dh.rel_u = c3_malloc(sizeof(u3_noun) * len_w);
 
+  //  the slots hold what they held when noted, or (written by an earlier
+  //  entry here) an equal home noun: home memory isn't changed during an
+  //  excursion, and nothing here is freed until phase B
+  //
   for ( i_w = 0; i_w < len_w; i_w++ ) {
     u3r_dh_entry* e_u = &ent_u[i_w];
+    u3_noun*      sb  = u3r_dh_slot(e_u);
+    u3_noun       vb  = *sb;
 
     //  one-sided: point home slot [sb] at [va]
     //
-    if ( !e_u->sa ) {
-      u3_noun vb = *e_u->sb;
-      if ( (vb != e_u->vb) || (vb == e_u->va) ) {
+    if ( u3r_dh_one(e_u) ) {
+      if ( vb == e_u->va ) {
         u3e_Meter.dhs_d[0]++;
         continue;
       }
@@ -211,16 +216,14 @@ _cm_dh_apply(void)
         u3e_Meter.dhs_d[1]++;
         continue;
       }
-      _cm_dh_write(e_u->sb, e_u->va);
+      _cm_dh_write(sb, e_u->va);
       u3e_Meter.dha_d[1]++;
       continue;
     }
 
-    u3_noun va = *e_u->sa, vb = *e_u->sb;
+    u3_noun va = *e_u->sa;
 
-    //  a slot that changed since it was noted (by an earlier entry here)
-    //
-    if ( (va != e_u->va) || (vb != e_u->vb) || (va == vb) ) {
+    if ( va == vb ) {
       u3e_Meter.dhs_d[0]++;
       continue;
     }
@@ -235,7 +238,7 @@ _cm_dh_apply(void)
       continue;
     }
     else if ( u3a_hcon_has(vb) ) _cm_dh_write(e_u->sa, vb);
-    else                         _cm_dh_write(e_u->sb, va);
+    else                         _cm_dh_write(sb, va);
     u3e_Meter.dha_d[0]++;
   }
 }
