@@ -601,18 +601,6 @@ _cr_home(_cr_sing_ctx* ctx_u, u3_noun som)
   return c3y == u3a_is_senior(ctx_u->one_u, som);
 }
 
-/* _cr_dbg_ram(): debugging memory, unification stays on the current road.
-*/
-static inline c3_t
-_cr_dbg_ram(void)
-{
-#ifdef U3_MEMORY_DEBUG
-  return 1;
-#else
-  return !!(u3C.wag_h & u3o_debug_ram);
-#endif
-}
-
 /* _cr_pm_ok(): equal cells [a] and [b] can go in the pair table, by
 **   [pmo_y]. on an inner road, pairs of home cells, which nothing frees
 **   during the excursion. debugging memory, pairs senior to this road,
@@ -663,7 +651,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
   //  which pairs to record. where unification merges none, record any,
   //  for this comparison only
   //
-  ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : _cr_dbg_ram() ? 2 : 1;
+  ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : u3a_dbg_ram() ? 2 : 1;
   ctx_u->pms_u = ( 1 == ctx_u->pmo_y ) ? &_cr_pm_x : &_cr_pm_s;
   u3e_Meter.pmd_d[ctx_u->pmo_y - 1]++;
   if ( 1 < ctx_u->pmo_y ) {

@@ -1424,16 +1424,6 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 
   wed_o = _ca_wed_our(a, b);
 
-#ifdef U3_MEMORY_DEBUG
-  if ( (c3n == wed_o) && rod_u->par_p ) _ca_wed_slot(a, b);
-  return;
-#else
-  if ( u3C.wag_h & u3o_debug_ram ) {
-    if ( (c3n == wed_o) && rod_u->par_p ) _ca_wed_slot(a, b);
-    return;
-  }
-#endif
-
   //  while not at home, attempt to unify
   //
   //    we try to unify on our road, and retry on senior roads
@@ -1458,15 +1448,18 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
   //    itself, constantly running into duplicates.
   //
 
-  while (  (c3n == wed_o)
-        && rod_u->par_p
-        && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
-  {
-    wed_o = _ca_wed_you(rod_u, a, b);
+  if ( !u3a_dbg_ram() ) {
+    while (  (c3n == wed_o)
+          && rod_u->par_p
+          && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
+    {
+      wed_o = _ca_wed_you(rod_u, a, b);
+    }
   }
 
-  //  both values are home nouns (or senior to every road that could hold
-  //  them): unify through a slot on this road, if there is one
+  //  both values are senior to every road we could unify on (home nouns,
+  //  unless debugging memory): unify through a slot on this road, if
+  //  there is one
   //
   if ( (c3n == wed_o) && u3R->par_p ) {
     _ca_wed_slot(a, b);

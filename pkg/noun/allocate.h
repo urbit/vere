@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "options.h"
 #include "rsignal.h"
 #include "c3/c3.h"
 #include <stddef.h>
@@ -648,6 +649,19 @@ typedef struct {
         return 1 & (u3a_Hcon_w[idx_w / u3a_word_bits]
                     >> (idx_w % u3a_word_bits));
       }
+    }
+
+  /* u3a_dbg_ram(): debugging memory: unification stays on the current
+  **                road, which frees nothing it can't track.
+  */
+    static inline c3_t
+    u3a_dbg_ram(void)
+    {
+#ifdef U3_MEMORY_DEBUG
+      return 1;
+#else
+      return !!(u3C.wag_h & u3o_debug_ram);
+#endif
     }
 
     /**  road stack.
