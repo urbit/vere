@@ -1101,13 +1101,15 @@ u3a_post_info(u3_post);
 
         /* u3a_blob_new(): allocate a fresh u3a_blob and install it in
         **   blb_p under (mug_h, seq_h).  Caller is responsible for
-        **   ensuring no entry exists; struct is zero-initialized.
+        **   ensuring no entry exists; struct is zero-initialized.  Home
+        **   road only, like every writer of the bank.
         */
           u3a_blob*
           u3a_blob_new(c3_h mug_h, c3_h seq_h);
 
         /* u3a_blob_drop(): remove blb_p entry for (mug_h, seq_h) and
-        **   free the underlying u3a_blob.  No-op if no entry.
+        **   free the underlying u3a_blob.  No-op if no entry.  Home road
+        **   only.
         */
           void
           u3a_blob_drop(c3_h mug_h, c3_h seq_h);

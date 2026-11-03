@@ -774,10 +774,12 @@ _me_gain_use(u3_noun dog)
 static inline u3_atom
 _ca_take_atom(u3a_atom* old_u)
 {
-  //  a bob's body is its blob id and copies like any atom; the mask
-  //  drops the flag from len_w.  no bob is junior today.
+  //  no bob is junior: u3i_blob mints on the home road only.  a copy
+  //  here would make an atom its record's atm_h never counts
   //
-  c3_w      dat_w = old_u->len_w & u3a_blob_mask;
+  u3_assert( !(old_u->len_w & u3a_blob_flag) );
+
+  c3_w      dat_w = old_u->len_w;
   c3_w*     new_w = u3a_walloc(dat_w + c3_wiseof(u3a_atom));
   u3a_atom* new_u = (u3a_atom*)(void *)new_w;
   u3_noun     new = u3a_to_pug(u3a_outa(new_u));
@@ -1141,6 +1143,8 @@ u3a_blob_get(c3_h mug_h, c3_h seq_h)
 u3a_blob*
 u3a_blob_new(c3_h mug_h, c3_h seq_h)
 {
+  u3_assert( &(u3H->rod_u) == u3R );
+
   u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
   blb_u->atm_h = 0;
   blb_u->les_h = 0;
@@ -1170,6 +1174,8 @@ u3a_blob_got(c3_h mug_h, c3_h seq_h)
 void
 u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
 {
+  u3_assert( &(u3H->rod_u) == u3R );
+
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
     u3a_blob* blb_u = u3a_blob_got(u3a_bid_mug(bid_d[i_w]),
                                    u3a_bid_seq(bid_d[i_w]));
@@ -1182,6 +1188,8 @@ u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
 void
 u3a_blob_own(const c3_d* bid_d, c3_z len_z)
 {
+  u3_assert( &(u3H->rod_u) == u3R );
+
   for ( c3_z i_z = 0; i_z < len_z; i_z++ ) {
     u3a_blob_got(u3a_bid_mug(bid_d[i_z]), u3a_bid_seq(bid_d[i_z]))->own_o = c3y;
   }
@@ -1192,6 +1200,8 @@ u3a_blob_own(const c3_d* bid_d, c3_z len_z)
 void
 u3a_blob_drop(c3_h mug_h, c3_h seq_h)
 {
+  u3_assert( &(u3H->rod_u) == u3R );
+
   u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
   if ( !blb_u ) return;
 
