@@ -46,13 +46,23 @@ _js_init(_jam_shax* ctx)
   ctx->har_p = u3h_new();
 }
 
+//  hand the buffered bytes to SHA-256.
+//
+static inline void
+_js_flush(_jam_shax* ctx)
+{
+  if ( ctx->buf_w ) {
+    libscrypt_SHA256_Update(&ctx->sha_u, ctx->buf_y, ctx->buf_w);
+    ctx->buf_w = 0;
+  }
+}
+
 static inline void
 _js_push_byte(_jam_shax* ctx, c3_y byt_y)
 {
   ctx->buf_y[ctx->buf_w++] = byt_y;
   if ( _JS_BUFSZ == ctx->buf_w ) {
-    libscrypt_SHA256_Update(&ctx->sha_u, ctx->buf_y, _JS_BUFSZ);
-    ctx->buf_w = 0;
+    _js_flush(ctx);
   }
 }
 
@@ -83,24 +93,57 @@ _js_bytes(_jam_shax* ctx, const c3_y* src_y, c3_d len_d)
 {
   c3_g off_g = ctx->off_g;
 
+  ctx->bit_d += len_d << 3;
+
   if ( 0 == off_g ) {
-    //  fast path: byte-aligned
+    //  byte-aligned: a run that fits joins the buffer; a longer one
+    //  goes to SHA-256 as is, in pieces a 32-bit size_t can carry
     //
-    for ( c3_d i_d = 0; i_d < len_d; i_d++ ) {
-      _js_push_byte(ctx, src_y[i_d]);
+    if ( len_d <= (_JS_BUFSZ - ctx->buf_w) ) {
+      memcpy(ctx->buf_y + ctx->buf_w, src_y, len_d);
+      ctx->buf_w += len_d;
+      if ( _JS_BUFSZ == ctx->buf_w ) {
+        _js_flush(ctx);
+      }
+      return;
     }
-    ctx->bit_d += len_d * 8;
+
+    _js_flush(ctx);
+    while ( len_d ) {
+      c3_d run_d = c3_min(len_d, (c3_d)1 << 30);
+
+      libscrypt_SHA256_Update(&ctx->sha_u, src_y, run_d);
+      src_y += run_d;
+      len_d -= run_d;
+    }
   }
   else {
-    //  slow path: bit-shifted
+    //  bit-shifted: fill the buffer a run at a time, each byte the
+    //  carry from the last ORed with this one's low bits
     //
     c3_g rsh_g = 8 - off_g;
-    for ( c3_d i_d = 0; i_d < len_d; i_d++ ) {
-      c3_y src = src_y[i_d];
-      _js_push_byte(ctx, ctx->par_y | (src << off_g));
-      ctx->par_y = src >> rsh_g;
-      ctx->bit_d += 8;
+    c3_y par_y = ctx->par_y;
+
+    while ( len_d ) {
+      c3_w  run_w = c3_min(len_d, (c3_d)(_JS_BUFSZ - ctx->buf_w));
+      c3_y* out_y = ctx->buf_y + ctx->buf_w;
+
+      for ( c3_w i_w = 0; i_w < run_w; i_w++ ) {
+        c3_y byt_y = src_y[i_w];
+
+        out_y[i_w] = par_y | (c3_y)(byt_y << off_g);
+        par_y      = byt_y >> rsh_g;
+      }
+
+      ctx->buf_w += run_w;
+      src_y      += run_w;
+      len_d      -= run_w;
+
+      if ( _JS_BUFSZ == ctx->buf_w ) {
+        _js_flush(ctx);
+      }
     }
+    ctx->par_y = par_y;
   }
 }
 
@@ -112,11 +155,7 @@ _js_done(_jam_shax* ctx, c3_y out_y[32])
   if ( ctx->off_g > 0 ) {
     _js_push_byte(ctx, ctx->par_y);
   }
-  //  flush remaining buffer to SHA-256
-  //
-  if ( ctx->buf_w > 0 ) {
-    libscrypt_SHA256_Update(&ctx->sha_u, ctx->buf_y, ctx->buf_w);
-  }
+  _js_flush(ctx);
   libscrypt_SHA256_Final(out_y, &ctx->sha_u);
   u3h_free(ctx->har_p);
 }
@@ -135,13 +174,10 @@ _js_len(_jam_shax* ctx, c3_d len_d)
     _js_bits(ctx, 1, 1);
     return;
   }
-  c3_g b_g = (c3_g)c3_bits_chub(len_d);
-
-  //  the prefix is b_g + 1 bits, which _js_bits caps at 64
+  //  the prefix is b_g + 1 bits, within _js_bits's 64: len_d is a
+  //  bit count, either a view's (far below 2^63) or a c3_g's (at most 64)
   //
-  if ( b_g > 63 ) {
-    u3m_bail(c3__fail);
-  }
+  c3_g b_g = (c3_g)c3_bits_chub(len_d);
 
   _js_bits(ctx, (c3_d)1 << b_g, b_g + 1);
 

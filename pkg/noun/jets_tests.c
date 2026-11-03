@@ -986,6 +986,29 @@ _test_jam_shax(void)
     }
     ret_i &= _jam_shax_is("long list", lis);
   }
+  //  an atom after a pad of each width, so its bytes start at every
+  //  bit offset: a short one joins the buffer, a long one (20000
+  //  bytes, past the 8 KiB buffer) goes to SHA-256 or is shifted
+  //
+  {
+    c3_y* lon_y = c3_malloc(20000);
+    for ( c3_w i_w = 0; i_w < 20000; i_w++ ) {
+      lon_y[i_w] = (c3_y)((i_w * 131) + 7);
+    }
+
+    //  a pad of b bits jams in 3b + 1 (zero in 2), so b from 0 to 9
+    //  puts the atom at all eight bit offsets mod 8
+    //
+    for ( c3_w bit_w = 0; bit_w < 10; bit_w++ ) {
+      c3_w pad_w = bit_w ? (1 << (bit_w - 1)) : 0;
+
+      ret_i &= _jam_shax_is("short after pad",
+                            u3nc(pad_w, u3i_bytes(40, lon_y)));
+      ret_i &= _jam_shax_is("long after pad",
+                            u3nc(pad_w, u3i_bytes(20000, lon_y)));
+    }
+    c3_free(lon_y);
+  }
 
   return ret_i;
 }
