@@ -20,6 +20,11 @@
 /// the loom size in bits of bytes (default 27). SOFT_TEST_TINY=1 starts
 /// the pair table and the visited set at 16 entries, so that they grow
 /// under interrupts.
+///
+/// First, a stack overflow while async signals are held (u3m_hold())
+/// must leave u3o_check_corrupt set, and the grab it asks for must repair
+/// what a cut-short home write left: a leaked old value, or a new value
+/// gained but not written.
 
 #include "noun.h"
 #include "ivory.h"
@@ -313,6 +318,132 @@ _drop(_work* wok_u)
   _pil = 0;
 }
 
+/* _over_deep(): recurse until the C stack overflows.
+*/
+static volatile c3_w _over_stop_w;
+
+static c3_w
+_over_deep(c3_w dep_w)
+{
+  volatile c3_y buf_y[512];
+
+  buf_y[0] = (c3_y)dep_w;
+  if ( _over_stop_w == dep_w ) return buf_y[0];
+  return _over_deep(dep_w + 1) + buf_y[0];
+}
+
+/* _w_over(): on the soft's road, with async signals held, do what a
+**            home write cut short leaves: point the head of home cell
+**            [arg] at its tail, gaining the tail, but don't release the
+**            old head. then overflow.
+*/
+static u3_noun
+_w_over(u3_noun arg)
+{
+  u3a_cell* cel_u = u3a_to_ptr(arg);
+  u3_noun   tel   = cel_u->tel;
+
+  u3m_hold();
+  ((u3a_noun*)u3a_to_ptr(tel))->use_w += 1;
+  cel_u->hed = tel;
+  _over_stop_w = 0;
+  u3z(arg);
+  return _over_deep(1);
+}
+
+/* _w_over_gain(): as _w_over(), but cut short after the gain.
+*/
+static u3_noun
+_w_over_gain(u3_noun arg)
+{
+  u3_noun tel = u3t(arg);
+
+  u3m_hold();
+  ((u3a_noun*)u3a_to_ptr(tel))->use_w += 1;
+  _over_stop_w = 0;
+  u3z(arg);
+  return _over_deep(1);
+}
+
+/* _over_run(): run [fun_f] on [cel], expecting a held overflow.
+*/
+static void
+_over_run(u3_funk fun_f, u3_noun cel)
+{
+  u3_noun pro;
+
+  u3C.wag_h &= ~u3o_check_corrupt;
+  pro = u3m_soft(0, fun_f, u3k(cel));
+
+  if ( c3__over != u3h(pro) ) {
+    fprintf(stderr, "soft: over: expected %%over\r\n");
+    u3m_p("got", u3h(pro));
+    exit(1);
+  }
+  u3z(pro);
+
+  if ( !(u3C.wag_h & u3o_check_corrupt) ) {
+    fprintf(stderr, "soft: over: u3o_check_corrupt not set\r\n");
+    exit(1);
+  }
+}
+
+/* _test_over(): a stack overflow with signals held asks for a grab, and
+**               the grab repairs the leak, or the count left too high.
+*/
+static void
+_test_over(void)
+{
+  //  [X Y], X and Y equal home cells, and only the pair holding X
+  //
+  u3_noun cel = u3nc(u3nc(1, 2), u3nc(1, 2));
+
+  //  cut short after the write: the grab mars would make finds the
+  //  orphaned X, and frees it
+  //
+  _over_run(_w_over, cel);
+  u3m_grab_check(cel, _pil);
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "soft: over: u3o_check_corrupt not cleared\r\n");
+    exit(1);
+  }
+  if ( !u3a_sweep_leaked() ) {
+    fprintf(stderr, "soft: over: the grab found no leak\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "soft: over: grab repaired a leak of %" PRIc3_w " words\r\n",
+          u3a_sweep_leaked());
+
+  u3m_grab(cel, _pil);
+  if ( u3a_sweep_leaked() ) {
+    fprintf(stderr, "soft: over: still leaking after the grab\r\n");
+    exit(1);
+  }
+
+  //  cut short after the gain: Y is held once, by [cel], but counted
+  //  twice. counting references, the grab repairs it
+  //
+  {
+    u3_noun tel = u3t(cel);
+    c3_w    use_w = u3a_use(tel);
+
+    _over_run(_w_over_gain, cel);
+    if ( u3a_use(tel) != use_w + 1 ) {
+      fprintf(stderr, "soft: over: gain not left (%" PRIc3_w ")\r\n", u3a_use(tel));
+      exit(1);
+    }
+    u3m_grab_check(cel, _pil);
+    if ( u3a_use(tel) != use_w ) {
+      fprintf(stderr, "soft: over: count not repaired (%" PRIc3_w ", not %" PRIc3_w ")\r\n",
+              u3a_use(tel), use_w);
+      exit(1);
+    }
+    fprintf(stderr, "soft: over: grab repaired a count left at %" PRIc3_w "\r\n",
+            use_w + 1);
+  }
+  u3z(cel);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -333,6 +464,7 @@ main(int argc, char* argv[])
   c3_w  len_w = _len_w;
 
   memset(wok_u, 0, sizeof(wok_u));
+  _test_over();
   _build(wok_u);
 
   //  leaks fail the test from here on

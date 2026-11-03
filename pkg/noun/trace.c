@@ -221,7 +221,7 @@ u3t_samp(void)
   //  sampling changes the home road, so not while it's being read
   //  (the hashcons set is off the loom, and not reentrant)
   //
-  if ( u3m_Dup_busy_w ) {
+  if ( u3m_Dup_busy_w || u3m_Hold_w ) {
     return;
   }
 

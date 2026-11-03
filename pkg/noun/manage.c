@@ -348,11 +348,43 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
   u3m_signal(c3__over);
 }
 
+/* async signals held (see u3m_hold()).
+*/
+volatile c3_w u3m_Hold_w;
+volatile c3_m u3m_Held_m;
+
+/* u3m_hold_raise(): raise the signal held while signals were held.
+*/
+void
+u3m_hold_raise(void)
+{
+  c3_m sig_m = u3m_Held_m;
+
+  u3m_Held_m = 0;
+  u3m_signal(sig_m);
+}
+
 /* _cm_signal_handle(): handle a signal in general.
 */
 static void
 _cm_signal_handle(c3_m sig_m)
 {
+  //  held: raised by u3m_hold_done(). a term replaces anything else held
+  //
+  if ( u3m_Hold_w && (c3__over != sig_m) ) {
+    if ( !u3m_Held_m || (c3__term == sig_m) ) {
+      u3m_Held_m = sig_m;
+    }
+    return;
+  }
+
+  //  an overflow can't be held, and code that holds signals mustn't
+  //  overflow: if one does anyway, check the home road at the next grab
+  //
+  if ( u3m_Hold_w ) {
+    u3C.wag_h |= u3o_check_corrupt;
+  }
+
 #ifndef U3_OS_windows
   if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
@@ -418,6 +450,8 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
   u3R->kid_p = 0;
+  u3m_Hold_w = 0;
+  u3m_Held_m = 0;
 
   //  a signal can interrupt u3m_love() before it drops a junior heap,
   //  leaving it poisoned for the next road: unpoison all free memory
@@ -2257,6 +2291,25 @@ u3m_mark_mute(void)
   c3_free(arr_u);
 }
 
+/* u3m_vgrab_check(): if u3o_check_corrupt is set, garbage-collect the
+**                    world plus extra roots counting references, then
+**                    clear it.
+*/
+void
+u3m_vgrab_check(u3_noun* som, c3_z len_z)
+{
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    c3_h wag_h = u3C.wag_h;
+
+    //  counting references, the sweep rewrites each box's count, so it
+    //  repairs counts left too high as well as freeing leaks
+    //
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_vgrab(som, len_z);
+    u3C.wag_h = wag_h & ~u3o_check_corrupt;
+  }
+}
+
 /* u3m_vgrab(): garbage-collect the world, plus extra roots.
 */
 void
@@ -3079,8 +3132,7 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
-    u3m_grab();
-    u3C.wag_h &= ~u3o_check_corrupt;
+    u3m_grab_check(u3_none);
     u3l_log("boot: gc complete");
   }
 

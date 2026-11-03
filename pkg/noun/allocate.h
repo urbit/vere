@@ -997,6 +997,11 @@ u3a_dash(void);
           c3_w
           u3a_sweep(void);
 
+        /* u3a_sweep_leaked(): words the last sweep found leaked, and freed.
+        */
+          c3_w
+          u3a_sweep_leaked(void);
+
         /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
         */
           void

@@ -2311,6 +2311,14 @@ u3a_sweep(void)
   return siz_w;
 }
 
+/* u3a_sweep_leaked(): words the last sweep found leaked, and freed.
+*/
+c3_w
+u3a_sweep_leaked(void)
+{
+  return _sweep_leq_w;
+}
+
 /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
 */
 void
