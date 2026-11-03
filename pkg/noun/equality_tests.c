@@ -870,10 +870,16 @@ _test_equality(void)
     ret_i = 0;
   }
 
+  //  debugging memory, unification stays on the current road and long
+  //  comparisons use only the scratch pair table: these two expect
+  //  senior unification and the excursion table
+  //
+#ifndef U3_MEMORY_DEBUG
   if ( !_test_gap() ) {
     fprintf(stderr, "test: equality: gap: failed\r\n");
     ret_i = 0;
   }
+#endif
 
   if ( !_test_sing_dag() ) {
     fprintf(stderr, "test: equality: sing dag: failed\r\n");
@@ -895,10 +901,12 @@ _test_equality(void)
     ret_i = 0;
   }
 
+#ifndef U3_MEMORY_DEBUG
   if ( !_test_unify_inner() ) {
     fprintf(stderr, "test: equality: unify inner: failed\r\n");
     ret_i = 0;
   }
+#endif
 
   if ( !_test_unify_inner_home() ) {
     fprintf(stderr, "test: equality: unify inner-home: failed\r\n");
