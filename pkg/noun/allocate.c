@@ -1237,23 +1237,44 @@ _sane_cmp(u3_post a_p, u3_post b_p)
 #define CMPR_FN _sane_cmp
 #include "verstable.h"
 
+/* _sane_cars: C-heap map from bid to live bob atoms counted.
+*/
+#define NAME    _sane_cars
+#define KEY_TY  c3_d
+#define VAL_TY  c3_w
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
 /* _blob_sane: u3a_blob_sane() context.
 **
 **   [set_u]: visited-box set keyed by loom offset (pointer identity,
 **   not structural equality — cardinality counts atom boxes).
-**   [car_u]: per-bid live bob-atom counts (C-heap; banks are small,
-**   linear scan is fine).
+**   [car_u]: per-bid live bob-atom counts, so a walk costs one probe
+**   per atom however many ids the bank holds.
 */
 typedef struct {
   _sane_posts set_u;
-  struct _blob_sane_car {
-    c3_d bid_d;
-    c3_w qty_w;
-  }*   car_u;
-  c3_z len_z;
-  c3_z cap_z;
-  c3_o ok_o;
+  _sane_cars  car_u;
+  c3_o        ok_o;
 } _blob_sane_ctx;
+
+/* _blob_sane_init(), _blob_sane_done(): open and free a context.
+*/
+static void
+_blob_sane_init(_blob_sane_ctx* ctx_u)
+{
+  ctx_u->ok_o = c3y;
+  vt_init(&ctx_u->set_u);
+  vt_init(&ctx_u->car_u);
+}
+
+static void
+_blob_sane_done(_blob_sane_ctx* ctx_u)
+{
+  vt_cleanup(&ctx_u->set_u);
+  vt_cleanup(&ctx_u->car_u);
+}
 
 static c3_o
 _blob_sane_seen(_blob_sane_ctx* ctx_u, u3_noun som)
@@ -1279,23 +1300,10 @@ _blob_sane_atom_cb(u3_atom a, void* ptr_v)
     return;
   }
 
-  c3_d bid_d = u3a_bob_bid(a);
+  _sane_cars_itr itr_u = vt_get_or_insert(&ctx_u->car_u, u3a_bob_bid(a), 0);
+  u3_assert( !vt_is_end(itr_u) );  //  OOM
 
-  for ( c3_z i_z = 0; i_z < ctx_u->len_z; i_z++ ) {
-    if ( ctx_u->car_u[i_z].bid_d == bid_d ) {
-      ctx_u->car_u[i_z].qty_w += 1;
-      return;
-    }
-  }
-
-  if ( ctx_u->len_z == ctx_u->cap_z ) {
-    ctx_u->cap_z = ctx_u->cap_z ? ctx_u->cap_z * 2 : 8;
-    ctx_u->car_u = c3_realloc(ctx_u->car_u,
-                              ctx_u->cap_z * sizeof(*ctx_u->car_u));
-  }
-  ctx_u->car_u[ctx_u->len_z].bid_d = bid_d;
-  ctx_u->car_u[ctx_u->len_z].qty_w = 1;
-  ctx_u->len_z += 1;
+  itr_u.data->val += 1;
 }
 
 static c3_o
@@ -1347,35 +1355,36 @@ u3a_blob_live(c3_z* len_z)
 {
   u3_assert( &(u3H->rod_u) == u3R );
 
-  _blob_sane_ctx ctx_u = {0};
-  vt_init(&ctx_u.set_u);
+  _blob_sane_ctx ctx_u;
+  _blob_sane_init(&ctx_u);
   _blob_roots_walk(&ctx_u);
-  vt_cleanup(&ctx_u.set_u);
 
+  c3_z  num_z = vt_size(&ctx_u.car_u);
   c3_d* bid_d = 0;
 
-  if ( ctx_u.len_z ) {
-    bid_d = c3_malloc(ctx_u.len_z * sizeof(c3_d));
-    for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
-      bid_d[i_z] = ctx_u.car_u[i_z].bid_d;
+  if ( num_z ) {
+    c3_z i_z = 0;
+
+    bid_d = c3_malloc(num_z * sizeof(c3_d));
+    for ( _sane_cars_itr itr_u = vt_first(&ctx_u.car_u);
+          !vt_is_end(itr_u);
+          itr_u = vt_next(itr_u) )
+    {
+      bid_d[i_z++] = itr_u.data->key;
     }
-    qsort(bid_d, ctx_u.len_z, sizeof(c3_d), _blob_live_cmp);
+    qsort(bid_d, num_z, sizeof(c3_d), _blob_live_cmp);
   }
 
-  *len_z = ctx_u.len_z;
-  c3_free(ctx_u.car_u);
+  *len_z = num_z;
+  _blob_sane_done(&ctx_u);
   return bid_d;
 }
 
 static c3_w
 _blob_sane_card(_blob_sane_ctx* ctx_u, c3_d bid_d)
 {
-  for ( c3_z i_z = 0; i_z < ctx_u->len_z; i_z++ ) {
-    if ( ctx_u->car_u[i_z].bid_d == bid_d ) {
-      return ctx_u->car_u[i_z].qty_w;
-    }
-  }
-  return 0;
+  _sane_cars_itr itr_u = vt_get(&ctx_u->car_u, bid_d);
+  return vt_is_end(itr_u) ? 0 : itr_u.data->val;
 }
 
 static void
@@ -1428,28 +1437,27 @@ u3a_blob_sane(void)
 
   if ( !u3H->blb_p ) return c3y;
 
-  _blob_sane_ctx ctx_u = {0};
-  ctx_u.ok_o = c3y;
-
-  vt_init(&ctx_u.set_u);
+  _blob_sane_ctx ctx_u;
+  _blob_sane_init(&ctx_u);
   _blob_roots_walk(&ctx_u);
 
   u3h_walk_with(u3H->blb_p, _blob_sane_bank_cb, &ctx_u);
 
   //  every counted bid must exist in the bank
   //
-  for ( c3_z i_z = 0; i_z < ctx_u.len_z; i_z++ ) {
-    c3_d bid_d = ctx_u.car_u[i_z].bid_d;
+  for ( _sane_cars_itr itr_u = vt_first(&ctx_u.car_u);
+        !vt_is_end(itr_u);
+        itr_u = vt_next(itr_u) )
+  {
+    c3_d bid_d = itr_u.data->key;
     if ( !u3a_blob_get(u3a_bid_mug(bid_d), u3a_bid_seq(bid_d)) ) {
       fprintf(stderr, "blob: sane: " U3A_BID_FMT ": %" PRIc3_w " live atom(s) "
                       "with no bank entry\r\n",
                       u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
-                      ctx_u.car_u[i_z].qty_w);
+                      itr_u.data->val);
       ctx_u.ok_o = c3n;
     }
   }
-
-  vt_cleanup(&ctx_u.set_u);
 
   //  the home road is quiescent between events, so mars should hold no
   //  blob open here; the king may (http streams a body across events),
@@ -1459,8 +1467,9 @@ u3a_blob_sane(void)
     fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3b_hands());
   }
 
-  c3_free(ctx_u.car_u);
-  return ctx_u.ok_o;
+  c3_o ok_o = ctx_u.ok_o;
+  _blob_sane_done(&ctx_u);
+  return ok_o;
 }
 
 /* _me_bob_dead(): a bob atom's loom refcount just hit zero.
