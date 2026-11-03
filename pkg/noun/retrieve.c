@@ -405,18 +405,13 @@ _cr_dh_seen(u3_noun* sa, u3_noun* sb)
 /* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb], held
 **   by [pa] and [pb] (nouns, or u3_none for a slot outside any noun).
 **   note them if both slots are in home memory and both values are
-**   home nouns, on an inner road with no road below it.
+**   home nouns. on an inner road, not promoting.
 */
 static void
 _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
 {
   u3a_road* one_u;
 
-  if ( &(u3H->rod_u) == u3R ) return;
-  if ( u3R->kid_p ) {
-    u3e_Meter.dhx_d[0]++;
-    return;
-  }
   if ( !_cr_home_slot(sa) || !_cr_home_slot(sb) ) {
     u3e_Meter.dhx_d[1]++;
     return;
@@ -437,6 +432,62 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
     return;
   }
   _cr_dh_push(sa, pa, *sa, sb, pb, *sb);
+}
+
+/* _cr_wed_slot(): unify equal [*a] and [*b], both senior to every road
+**   that could hold them, by pointing a slot in this road's heap at the
+**   other value: 1 if written. references into senior memory aren't
+**   counted, so no count changes, and both values outlive the slot.
+**   write the slot we can; if both are ours, keep a member.
+*/
+static c3_t
+_cr_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
+{
+  c3_t aon_t, bon_t;
+  {
+    //  this road's heap: rut to hat, or hat to rut on a south road. the
+    //  offsets stay wide, so a slot off the loom is never ours
+    //
+    c3_t    nor_t = ( c3y == u3a_is_north(u3R) );
+    u3_post bot_p = nor_t ? u3R->rut_p : u3R->hat_p;
+    u3_post top_p = nor_t ? u3R->hat_p : u3R->rut_p;
+    c3_d    aof_d = (c3_d)u3a_outa(a);
+    c3_d    bof_d = (c3_d)u3a_outa(b);
+
+    aon_t = (aof_d >= bot_p) && (aof_d < top_p);
+    bon_t = (bof_d >= bot_p) && (bof_d < top_p);
+  }
+
+  u3e_Meter.wsg_d++;
+  if ( !aon_t && !bon_t ) {
+    u3e_Meter.wsn_d++;
+    return 0;
+  }
+
+  if ( bon_t && (!aon_t || u3a_hcon_has(*a)) ) *b = *a;
+  else                                         *a = *b;
+
+  u3e_Meter.wsw_d[u3a_hcon_has(*a) ? 0 : 1]++;
+  return 1;
+}
+
+/* _cr_wed_fall(): u3a_wed() couldn't merge equal [*a] and [*b], held by
+**   [pa] and [pb] (or u3_none), on any road below home: both values are
+**   senior to every road it could merge them on. on an inner road, not
+**   promoting, point a slot in this road's heap at the other value; if
+**   neither slot is ours, note both for the exit home.
+*/
+static void
+_cr_wed_fall(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
+{
+  if ( &(u3H->rod_u) == u3R ) return;
+  if ( u3R->kid_p ) {
+    u3e_Meter.dhx_d[0]++;
+    return;
+  }
+  if ( !_cr_wed_slot(a, b) ) {
+    _cr_dh_note(a, pa, b, pb);
+  }
 }
 
 /* the pair table: pairs of cells found equal at different addresses,
@@ -619,17 +670,15 @@ _cr_pm_ok(_cr_sing_ctx* ctx_u, u3_noun a, u3_noun b)
 }
 
 /* _cr_sing_wed(): unify the children [*a] and [*b] of equal cells
-**   [par_a] and [par_b]; if that fails, note them for the exit home.
+**   [par_a] and [par_b], through a slot or at the exit home if they
+**   can't be merged.
 */
 static inline __attribute__((always_inline)) void
 _cr_sing_wed(u3_noun par_a, u3_noun par_b,
              u3_noun *restrict a, u3_noun *restrict b)
 {
-  if ( *a != *b ) {
-    u3a_wed(a, b);
-    if ( *a != *b ) {
-      _cr_dh_note(a, par_a, b, par_b);
-    }
+  if ( (*a != *b) && (c3n == u3a_wed(a, b)) ) {
+    _cr_wed_fall(a, par_a, b, par_b);
   }
 }
 
@@ -972,14 +1021,10 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
       }
     }
 
-    u3a_wed(a, b);
-    if ( *a != *b ) {
-      u3e_Meter.jck_d[4]++;
-      _cr_dh_note(a, pa, b, pb);
+    if ( c3n == u3a_wed(a, b) ) {
+      _cr_wed_fall(a, pa, b, pb);
     }
-    else {
-      u3e_Meter.jck_d[2]++;
-    }
+    u3e_Meter.jck_d[( *a == *b ) ? 2 : 4]++;
   }
   return c3y;
 }

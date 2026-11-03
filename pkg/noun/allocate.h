@@ -875,9 +875,11 @@ u3a_post_info(u3_post);
           c3_w
           u3a_use(u3_noun som);
 
-        /* u3a_wed(): unify noun references.
+        /* u3a_wed(): unify noun references, on this road or a senior one
+        **            below home: c3y if merged. see u3r_sing() for what
+        **            follows when it can't.
         */
-          void
+          c3_o
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
         /* u3a_Defer_max_w: most nouns with deferred gains at once.

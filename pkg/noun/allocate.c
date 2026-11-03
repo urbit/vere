@@ -1365,52 +1365,17 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 
 #undef SWAP
 
-/* _ca_wed_slot(): unify equal [*a] and [*b], both senior to every road
-**   that could hold them, by pointing a slot in this road's heap at the
-**   other value. references into senior memory aren't counted, so no
-**   count changes, and both values outlive the slot. write the slot we
-**   can; if both are ours, keep a member.
+/* u3a_wed(): unify noun references, on this road or a senior one below
+**             home: c3y if merged.
 */
-static void
-_ca_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
-{
-  c3_t aon_t, bon_t;
-  {
-    //  this road's heap: rut to hat, or hat to rut on a south road. the
-    //  offsets stay wide, so a slot off the loom is never ours
-    //
-    c3_t    nor_t = ( c3y == u3a_is_north(u3R) );
-    u3_post bot_p = nor_t ? u3R->rut_p : u3R->hat_p;
-    u3_post top_p = nor_t ? u3R->hat_p : u3R->rut_p;
-    c3_d    aof_d = (c3_d)u3a_outa(a);
-    c3_d    bof_d = (c3_d)u3a_outa(b);
-
-    aon_t = (aof_d >= bot_p) && (aof_d < top_p);
-    bon_t = (bof_d >= bot_p) && (bof_d < top_p);
-  }
-
-  u3e_Meter.wsg_d++;
-  if ( !aon_t && !bon_t ) {
-    u3e_Meter.wsn_d++;
-    return;
-  }
-
-  if ( bon_t && (!aon_t || u3a_hcon_has(*a)) ) *b = *a;
-  else                                         *a = *b;
-
-  u3e_Meter.wsw_d[u3a_hcon_has(*a) ? 0 : 1]++;
-}
-
-/* u3a_wed(): unify noun references.
-*/
-void
+c3_o
 u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
   //  XX assume( *a != *b )
   u3_road* rod_u = u3R;
   c3_o     wed_o;
 
-  if ( rod_u->kid_p ) return;
+  if ( rod_u->kid_p ) return c3n;
 
   wed_o = _ca_wed_our(a, b);
 
@@ -1447,13 +1412,7 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
     }
   }
 
-  //  both values are senior to every road we could unify on (home nouns,
-  //  unless debugging memory): unify through a slot on this road, if
-  //  there is one
-  //
-  if ( (c3n == wed_o) && u3R->par_p ) {
-    _ca_wed_slot(a, b);
-  }
+  return wed_o;
 }
 
 /* u3a_luse(): check refcount sanity.

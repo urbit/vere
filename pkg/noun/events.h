@@ -184,7 +184,7 @@
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
 
-          //  unification through slots (u3a_wed()): equal values, both
+          //  unification through slots (_cr_wed_slot()): equal values, both
           //  senior to every road that could hold them, on an inner road
           //
           c3_d wsg_d;        //  give-ups that reached the slot step
