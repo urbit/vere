@@ -217,16 +217,6 @@
           c3_d dph_d[2];     //  hits: an equal noun elsewhere, the noun
                              //  itself
 
-          //  the pair table (u3r_sing())
-          //
-          c3_d pml_d[3];     //  comparisons past _CR_PM_TOP steps: on the
-                             //  home road, an inner road, promoting
-          c3_d pmr_d[3];     //  root pairs: looked up, found, recorded
-          c3_d pmd_d[3];     //  comparisons past _CR_PM_DEEP steps, by
-                             //  table: excursion, scratch (debugging
-                             //  memory), scratch (promoting)
-          c3_d pmp_d[3];     //  ... inner pairs: looked up, found, recorded
-
           //  the eager pass (u3m_dedup_eager())
           //
           c3_d eic_d[2];     //  calls: home road, inner roads

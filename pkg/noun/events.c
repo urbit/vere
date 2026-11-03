@@ -567,15 +567,6 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.dpi_d, u3e_Meter.dpp_d,
                    u3e_Meter.dph_d[0], u3e_Meter.dph_d[1]);
 
-    //  the pair table
-    //
-    fprintf(fil_u, "V");
-    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pml_d[i_w]);
-    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmr_d[i_w]);
-    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmd_d[i_w]);
-    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.pmp_d[i_w]);
-    fputc('\n', fil_u);
-
     //  the eager pass
     //
     fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64

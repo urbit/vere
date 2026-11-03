@@ -66,7 +66,7 @@ Log lines (one snapshot interval ends at each S line):
   V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
     <root-recorded> <deep-excursion> <deep-debug> <deep-promoting>
     <pair-probes> <pair-hits> <pair-recorded>
-                                            the pair table: comparisons past 64 steps
+                                            (older builds) the pair table: comparisons past 64 steps
                                             by road, their root pairs, comparisons past
                                             65,535 steps by table, and their inner pairs
   I <calls-home> <calls-inner> <from-byc-keys> <from-memo-keys> <junior-cells>

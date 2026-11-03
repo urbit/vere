@@ -784,13 +784,6 @@ _test_sing_dag(void)
     ret_i = 0;
   }
 
-  u3r_pair_size(4);
-  if ( !_test_sing_dag_all() ) {
-    fprintf(stderr, "test: sing dag: small table: failed\r\n");
-    ret_i = 0;
-  }
-
-  u3r_pair_size(14);
   return ret_i;
 }
 
@@ -865,10 +858,10 @@ _test_gap(void)
   struct timespec bef_u;
   c3_d mic_d;
 
-  u3r_pair_size(4);
   u3m_dedup_visit_size(4);
 
-  //  a comparison of two home copies on an inner road
+  //  a comparison of two home copies on an inner road, linear with no
+  //  table: unification writes home slots
   //
   {
     u3_noun a = _gap(40, 64), b = _gap(40, 64);
@@ -900,9 +893,7 @@ _test_gap(void)
     }
   }
 
-  //  the visited set grew (the comparison is bounded by unification,
-  //  which writes home slots, so the pair table needn't have), and both
-  //  shrink back over a few quiet excursions
+  //  the visited set grew, and shrinks back over a few quiet excursions
   //
   {
     c3_d vcp_d = u3m_dedup_visit_cap();
@@ -916,14 +907,13 @@ _test_gap(void)
       u3m_hate(0);
       u3m_love(0);
     }
-    if ( (16 != u3r_pair_cap()) || (16 != u3m_dedup_visit_cap()) ) {
-      fprintf(stderr, "test: gap: didn't shrink (%" PRIu64 ", %" PRIu64 ")\r\n",
-              u3r_pair_cap(), u3m_dedup_visit_cap());
+    if ( 16 != u3m_dedup_visit_cap() ) {
+      fprintf(stderr, "test: gap: didn't shrink (%" PRIu64 ")\r\n",
+              u3m_dedup_visit_cap());
       ret_i = 0;
     }
   }
 
-  u3r_pair_size(14);
   u3m_dedup_visit_size(14);
   return ret_i;
 }

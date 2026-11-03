@@ -279,34 +279,23 @@
         void
         u3r_wed_left(void);
 
-      /* u3r_sing_leap(): a new excursion from the home road, which
-      **                  starts the pair table afresh. home road only.
+      /* u3r_sing_leap(): a new excursion from the home road. home road
+      **                  only.
       */
         void
         u3r_sing_leap(void);
 
-      /* u3r_pair_size(): restart the pair tables at 2^log_y entries
-      **                  (tests). home road only.
-      */
-        void
-        u3r_pair_size(c3_y log_y);
-
-      /* u3r_crib_report(): log the pair tables' and deferral's evictions
-      **                    and drops at their ceilings. between events.
+      /* u3r_crib_report(): log the lose lists' drops at their ceilings.
+      **                    between events.
       */
         void
         u3r_crib_report(void);
 
-      /* u3r_crib_stat(): the pair tables' and deferral's use since the
-      **                  last call, into [sat_u] (room for 4); how many.
+      /* u3r_crib_stat(): the lose lists' use since the last call, into
+      **                  [sat_u] (room for 2); how many.
       */
         c3_w
         u3r_crib_stat(u3c_stat* sat_u);
-
-      /* u3r_pair_cap(): the excursion pair table's capacity (tests).
-      */
-        c3_d
-        u3r_pair_cap(void);
 
       /* u3r_sing(): noun value equality.
       **
