@@ -30,9 +30,11 @@ u3qdi_has(u3_noun a,
 u3_noun
 u3wdi_has(u3_noun cor)
 {
-  u3_noun a, b;
+  u3_noun a, b, pro;
   u3x_mean(cor, {u3x_sam, &b}, {u3x_con_sam, &a});
-  return u3qdi_has(a, b);
+  pro = u3qdi_has(a, b);
+  u3z_ut_test(a, b, pro);
+  return pro;
 }
 
 u3_noun

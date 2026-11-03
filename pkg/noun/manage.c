@@ -1065,6 +1065,10 @@ u3m_bail(u3_noun how)
     }
   }
 
+  //  the +ut memo frames in this road are gone
+  //
+  u3z_ut_bail();
+
   // Reset the spin stack pointer
   if ( NULL != u3t_Spin ) {
     u3t_Spin->off_h = u3R->off_h;
