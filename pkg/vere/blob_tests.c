@@ -2269,6 +2269,65 @@ _test_jam_wide(void)
 #endif
 
 #ifndef U3_OS_windows
+/* _test_units_wide(): u3r_halfs, u3r_chubs and u3r_words read a bob
+**   at a unit offset whose byte offset is past 4 GiB, which a 32-bit
+**   byte offset would wrap to the start.  the file is sparse: 4 GiB of
+**   hole and a last chub.
+*/
+static void
+_test_units_wide(void)
+{
+  _pier_make("units wide");
+
+  const c3_y las_y[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  const c3_d off_d    = (c3_d)1 << 32;
+
+  _han_mug_h = 0x7778;
+  _han_seq_h = 1;
+  {
+    c3_c dir_c[8192], fil_c[8192];
+    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, _han_mug_h);
+    _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
+    u3b_path(fil_c, _tmp_bob, _han_mug_h, _han_seq_h);
+
+    c3_i fid_i = open(fil_c, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    _check( -1 != fid_i, "open %s: %s", fil_c, strerror(errno) );
+    _check( 8 == pwrite(fid_i, las_y, 8, (off_t)off_d), "pwrite: %s",
+            strerror(errno) );
+    close(fid_i);
+  }
+  _han_bob = u3i_blob(_han_mug_h, _han_seq_h);
+
+  //  each reader takes the last chub and the zero chub past the end
+  //
+  {
+    c3_y wan_y[16] = {0};
+    memcpy(wan_y, las_y, 8);
+
+    {
+      c3_h hav_h[4];
+      u3r_halfs(off_d >> u3a_half_bytes_shift, 4, hav_h, _han_bob);
+      _check( 0 == memcmp(wan_y, hav_h, 16), "u3r_halfs misread" );
+    }
+    {
+      c3_d hav_d[2];
+      u3r_chubs(off_d >> u3a_chub_bytes_shift, 2, hav_d, _han_bob);
+      _check( 0 == memcmp(wan_y, hav_d, 16), "u3r_chubs misread" );
+    }
+    {
+      c3_w hav_w[16 >> u3a_word_bytes_shift];
+      u3r_words(off_d >> u3a_word_bytes_shift, 16 >> u3a_word_bytes_shift,
+                hav_w, _han_bob);
+      _check( 0 == memcmp(wan_y, hav_w, 16), "u3r_words misread" );
+    }
+  }
+
+  u3z(_han_bob);
+  _pier_done();
+}
+#endif
+
+#ifndef U3_OS_windows
 /* _hand_grab_cb(): on an inner road, keep an idle hand, then mark and
 **   sweep the road with leaks fatal.
 */
@@ -4038,6 +4097,7 @@ main(int argc, char* argv[])
   _test_jam_wide();
 #endif
 #ifndef U3_OS_windows
+  _test_units_wide();
   _test_hand_grab();
 #endif
   _test_hand_edge();

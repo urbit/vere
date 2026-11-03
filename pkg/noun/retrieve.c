@@ -1120,6 +1120,52 @@ u3r_byte(c3_w    a_w,
   }
 }
 
+/* _cr_bytes(): copy [len_z] bytes at byte offset [off_d] of [d] to
+**   [c_y], zero past its end.  a chub offset, so a bob past 4 GiB
+**   reads with 32-bit words.
+*/
+static void
+_cr_bytes(c3_d    off_d,
+          c3_z    len_z,
+          c3_y*   c_y,
+          u3_atom d)
+{
+  u3_assert(u3_none != d);
+  u3_assert(_(u3a_is_atom(d)));
+
+  c3_y* buf_y;
+  c3_d  len_d;
+
+  STATIC_ASSERT(c3_endian == c3_endian_little, "");
+  if ( _(u3a_is_cat(d)) ) {
+    buf_y = (c3_y*)&d;
+    len_d = sizeof(c3_w);
+  }
+  else {
+    if ( c3y == u3a_is_bob(d) ) {
+      _cr_bob_bytes(d, off_d, c_y, len_z);
+      return;
+    }
+
+    u3a_atom* d_u = u3a_to_ptr(d);
+
+    buf_y = (c3_y*)d_u->buf_w;
+    len_d = (c3_d)d_u->len_w * sizeof(c3_w);
+  }
+
+  {
+    c3_d hav_d = ( off_d < len_d ) ? (len_d - off_d) : 0;
+    c3_z z_z   = (c3_z)c3_min((c3_d)len_z, hav_d);
+
+    //  guarded so [buf_y + off_d] is only formed when in bounds
+    //
+    if ( z_z ) {
+      memcpy(c_y, buf_y + off_d, z_z);
+    }
+    memset(c_y + z_z, 0, len_z - z_z);
+  }
+}
+
 /* u3r_bytes():
 **
 **  Copy bytes (a_w) through (a_w + b_w - 1) from (d) to (c).
@@ -1130,40 +1176,7 @@ u3r_bytes(c3_w    a_w,
           c3_y*   c_y,
           u3_atom d)
 {
-  u3_assert(u3_none != d);
-  u3_assert(_(u3a_is_atom(d)));
-
-  c3_y* buf_y;
-  c3_w  len_w;
-
-  STATIC_ASSERT(c3_endian == c3_endian_little, "");
-  if ( _(u3a_is_cat(d)) ) {
-    buf_y = (c3_y*)&d;
-    len_w = sizeof(c3_w);
-  }
-  else {
-    if ( c3y == u3a_is_bob(d) ) {
-      _cr_bob_bytes(d, a_w, c_y, b_w);
-      return;
-    }
-
-    u3a_atom* d_u = u3a_to_ptr(d);
-
-    buf_y = (c3_y*)d_u->buf_w;
-    len_w = d_u->len_w * sizeof(c3_w);
-  }
-
-  {
-    c3_w hav_w = ( a_w < len_w ) ? (len_w - a_w) : 0;
-    c3_w z_w   = c3_min(b_w, hav_w);
-
-    //  guarded so [buf_y + a_w] is only formed when in bounds
-    //
-    if ( z_w ) {
-      memcpy(c_y, buf_y + a_w, z_w);
-    }
-    memset(c_y + z_w, 0, b_w - z_w);
-  }
+  _cr_bytes(a_w, b_w, c_y, d);
 }
 
 /* u3r_bytes_fit():
@@ -1612,18 +1625,10 @@ u3r_halfs(c3_w    a_w,
           c3_h*   c_h,
           u3_atom d)
 {
-  //  a bob reads at a chub offset, which the byte offset below
-  //  would overflow past 4 GiB with 32-bit words
-  //
-  if ( c3y == u3a_is_bob(d) ) {
-    _cr_bob_bytes(d, (c3_d)a_w << u3a_half_bytes_shift,
-                  (c3_y*)c_h, (c3_z)b_w << u3a_half_bytes_shift);
-    return;
-  }
-
   //  XX: assumes little-endian
   //
-  u3r_bytes(a_w << 2, b_w << 2, (c3_y*)c_h, d);
+  _cr_bytes((c3_d)a_w << u3a_half_bytes_shift,
+            (c3_z)b_w << u3a_half_bytes_shift, (c3_y*)c_h, d);
 }
 
 /* u3r_chubs():
@@ -1636,18 +1641,10 @@ u3r_chubs(c3_w    a_w,
           c3_d*   c_d,
           u3_atom d)
 {
-  //  a bob reads at a chub offset, which the byte offset below
-  //  would overflow past 4 GiB with 32-bit words
-  //
-  if ( c3y == u3a_is_bob(d) ) {
-    _cr_bob_bytes(d, (c3_d)a_w << u3a_chub_bytes_shift,
-                  (c3_y*)c_d, (c3_z)b_w << u3a_chub_bytes_shift);
-    return;
-  }
-
   //  XX: assumes little-endian
   //
-  u3r_bytes(a_w << 3, b_w << 3, (c3_y*)c_d, d);
+  _cr_bytes((c3_d)a_w << u3a_chub_bytes_shift,
+            (c3_z)b_w << u3a_chub_bytes_shift, (c3_y*)c_d, d);
 }
 
 /* u3r_words():
@@ -1660,19 +1657,10 @@ u3r_words(c3_w    a_w,
           c3_w*   c_w,
           u3_atom d)
 {
-  //  a bob reads at a chub offset, which the byte offset below
-  //  would overflow past 4 GiB with 32-bit words
-  //
-  if ( c3y == u3a_is_bob(d) ) {
-    _cr_bob_bytes(d, (c3_d)a_w << u3a_word_bytes_shift,
-                  (c3_y*)c_w, (c3_z)b_w << u3a_word_bytes_shift);
-    return;
-  }
-
   //  XX: assumes little-endian
   //
-  u3r_bytes(a_w << u3a_word_bytes_shift,
-            b_w << u3a_word_bytes_shift, (c3_y*)c_w, d);
+  _cr_bytes((c3_d)a_w << u3a_word_bytes_shift,
+            (c3_z)b_w << u3a_word_bytes_shift, (c3_y*)c_w, d);
 }
 
 /* u3r_safe_byte(): validate and retrieve byte.
