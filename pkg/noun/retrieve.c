@@ -369,13 +369,12 @@ _cr_home_slot(u3_noun* sot)
          : ((off_d >= hom_u->hat_p) && (off_d < hom_u->rut_p));
 }
 
-/* _cr_dh_push(): defer pointing home slots [sa] and [sb], held by [pa]
-**   and [pb], at each other's values [va] and [vb]. [sa] 0: one-sided,
-**   point [sb] at [va]. dropped past the ceiling.
+/* _cr_dh_push(): defer pointing home slots [sa] and [sb] at each other's
+**   values [va] and [vb]. [sa] 0: one-sided, point [sb] at [va]. dropped
+**   past the ceiling.
 */
 static void
-_cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
-            u3_noun* sb, u3_noun pb, u3_noun vb)
+_cr_dh_push(u3_noun* sa, u3_noun va, u3_noun* sb, u3_noun vb)
 {
   u3r_dh_entry* ent_u = u3c_arr_at(&_cr_dh.ent_u, _cr_dh.len_w);
 
@@ -383,8 +382,8 @@ _cr_dh_push(u3_noun* sa, u3_noun pa, u3_noun va,
     u3e_Meter.dhd_d++;
     return;
   }
-  ent_u->sa = sa; ent_u->pa = pa; ent_u->va = va;
-  ent_u->sb = sb; ent_u->pb = pb; ent_u->vb = vb;
+  ent_u->sa = sa; ent_u->sb = sb;
+  ent_u->va = va; ent_u->vb = vb;
   _cr_dh.len_w++;
   u3e_Meter.dhn_d[sa ? 0 : 1]++;
 }
@@ -402,13 +401,12 @@ _cr_dh_seen(u3_noun* sa, u3_noun* sb)
   return 0;
 }
 
-/* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb], held
-**   by [pa] and [pb] (nouns, or u3_none for a slot outside any noun).
-**   note them if both slots are in home memory and both values are
-**   home nouns. on an inner road, not promoting.
+/* _cr_dh_note(): unification couldn't merge equal [*sa] and [*sb] ([sb]
+**   in a noun). note them if both slots are in home memory and both
+**   values are home nouns. on an inner road, not promoting.
 */
 static void
-_cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
+_cr_dh_note(u3_noun* sa, u3_noun* sb)
 {
   u3a_road* one_u;
 
@@ -431,7 +429,7 @@ _cr_dh_note(u3_noun* sa, u3_noun pa, u3_noun* sb, u3_noun pb)
     u3e_Meter.dhr_d++;
     return;
   }
-  _cr_dh_push(sa, pa, *sa, sb, pb, *sb);
+  _cr_dh_push(sa, *sa, sb, *sb);
 }
 
 /* _cr_wed_slot(): unify equal [*a] and [*b], both senior to every road
@@ -471,14 +469,14 @@ _cr_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
   return 1;
 }
 
-/* _cr_wed_fall(): u3a_wed() couldn't merge equal [*a] and [*b], held by
-**   [pa] and [pb] (or u3_none), on any road below home: both values are
-**   senior to every road it could merge them on. on an inner road, not
-**   promoting, point a slot in this road's heap at the other value; if
-**   neither slot is ours, note both for the exit home.
+/* _cr_wed_fall(): u3a_wed() couldn't merge equal [*a] and [*b] ([b] in a
+**   noun) on any road below home: both values are senior to every road
+**   it could merge them on. on an inner road, not promoting, point a
+**   slot in this road's heap at the other value; if neither slot is
+**   ours, note both for the exit home.
 */
 static void
-_cr_wed_fall(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
+_cr_wed_fall(u3_noun* a, u3_noun* b)
 {
   if ( &(u3H->rod_u) == u3R ) return;
   if ( u3R->kid_p ) {
@@ -486,7 +484,7 @@ _cr_wed_fall(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
     return;
   }
   if ( !_cr_wed_slot(a, b) ) {
-    _cr_dh_note(a, pa, b, pb);
+    _cr_dh_note(a, b);
   }
 }
 
@@ -669,16 +667,14 @@ _cr_pm_ok(_cr_sing_ctx* ctx_u, u3_noun a, u3_noun b)
   }
 }
 
-/* _cr_sing_wed(): unify the children [*a] and [*b] of equal cells
-**   [par_a] and [par_b], through a slot or at the exit home if they
-**   can't be merged.
+/* _cr_sing_wed(): unify the children [*a] and [*b] of equal cells,
+**   through a slot or at the exit home if they can't be merged.
 */
 static inline __attribute__((always_inline)) void
-_cr_sing_wed(u3_noun par_a, u3_noun par_b,
-             u3_noun *restrict a, u3_noun *restrict b)
+_cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
   if ( (*a != *b) && (c3n == u3a_wed(a, b)) ) {
-    _cr_wed_fall(a, par_a, b, par_b);
+    _cr_wed_fall(a, b);
   }
 }
 
@@ -767,7 +763,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(a, b, &(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -781,7 +777,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(a, b, &(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -889,7 +885,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_HEAD: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(a, b, &(a_u->hed), &(b_u->hed));
+        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
 
         //  upgrade head-frame to tail-frame, check tails
         //
@@ -903,7 +899,7 @@ _cr_sing(u3_noun a, u3_noun b)
       case SING_TAIL: {
         a_u = u3a_to_ptr(a);
         b_u = u3a_to_ptr(b);
-        _cr_sing_wed(a, b, &(a_u->tel), &(b_u->tel));
+        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
       } break;
 
       default: {
@@ -983,7 +979,7 @@ u3r_sing_imp(u3_noun a, u3_noun b)
 **   the children it compares.
 */
 c3_o
-u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
+u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
 {
   if ( *a == *b ) {
     return c3y;
@@ -1002,8 +998,7 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
     //
     if (  u3H->rod_u.kid_p && (&(u3H->rod_u) != u3R) && !u3R->kid_p
        && _cr_home_slot(b) && !_cr_home_slot(a)
-       && !u3a_hcon_has(*b)
-       && (u3_none == pb || !u3a_hcon_has(pb)) )
+       && !u3a_hcon_has(*b) )
     {
       u3a_road* one_u = u3to(u3a_road, u3H->rod_u.kid_p);
 
@@ -1011,7 +1006,7 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
          && (c3y == u3a_is_senior(one_u, *b)) )
       {
         if ( !_cr_dh_seen(0, b) ) {
-          _cr_dh_push(0, u3_none, *a, b, pb, *b);
+          _cr_dh_push(0, *a, b, *b);
         }
         else {
           u3e_Meter.dhr_d++;
@@ -1022,7 +1017,7 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb)
     }
 
     if ( c3n == u3a_wed(a, b) ) {
-      _cr_wed_fall(a, pa, b, pb);
+      _cr_wed_fall(a, b);
     }
     u3e_Meter.jck_d[( *a == *b ) ? 2 : 4]++;
   }

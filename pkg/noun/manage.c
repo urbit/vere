@@ -207,9 +207,7 @@ _cm_dh_apply(void)
         u3e_Meter.dhs_d[0]++;
         continue;
       }
-      if (  u3a_hcon_has(vb)
-         || ((u3_none != e_u->pb) && u3a_hcon_has(e_u->pb)) )
-      {
+      if ( u3a_hcon_has(vb) ) {
         u3e_Meter.dhs_d[1]++;
         continue;
       }
@@ -227,28 +225,18 @@ _cm_dh_apply(void)
       continue;
     }
 
-    {
-      c3_w rel_w = _cm_dh.rel_w;
-      c3_t amb_t = u3a_hcon_has(va), bmb_t = u3a_hcon_has(vb);
-      c3_t aok_t = (u3_none == e_u->pa) || !u3a_hcon_has(e_u->pa);
-      c3_t bok_t = (u3_none == e_u->pb) || !u3a_hcon_has(e_u->pb);
-
-      //  never edit a member; keep a member; else keep a cache field's
-      //  value (no holder), so cores sharing a call site converge on its
-      //  battery
-      //
-      if      ( amb_t && bmb_t )                      {}
-      else if ( amb_t && bok_t )                      _cm_dh_write(e_u->sb, va);
-      else if ( bmb_t && aok_t )                      _cm_dh_write(e_u->sa, vb);
-      else if ( amb_t || bmb_t )                      {}
-      else if ( (u3_none == e_u->pa) && bok_t )       _cm_dh_write(e_u->sb, va);
-      else if ( (u3_none == e_u->pb) && aok_t )       _cm_dh_write(e_u->sa, vb);
-      else if ( bok_t )                               _cm_dh_write(e_u->sb, va);
-      else if ( aok_t )                               _cm_dh_write(e_u->sa, vb);
-
-      if ( rel_w != _cm_dh.rel_w ) u3e_Meter.dha_d[0]++;
-      else                         u3e_Meter.dhs_d[1]++;
+    //  keep a member, else [sa]'s value: [sa] may be a cache field, and
+    //  keeping its value lets cores sharing a call site converge on its
+    //  battery. this never edits a member: the home set is closed, so a
+    //  slot holding a value that isn't a member isn't in one
+    //
+    if ( u3a_hcon_has(va) && u3a_hcon_has(vb) ) {
+      u3e_Meter.dhs_d[1]++;
+      continue;
     }
+    else if ( u3a_hcon_has(vb) ) _cm_dh_write(e_u->sa, vb);
+    else                         _cm_dh_write(e_u->sb, va);
+    u3e_Meter.dha_d[0]++;
   }
 }
 

@@ -235,27 +235,27 @@
                       u3_noun b);
 
       /* u3r_sing_wed(): equality of two slots that own their references,
-      **                 unifying the slots when equal. [pa] and [pb] are
-      **                 the nouns holding them, or u3_none.
+      **                 unifying the slots when equal. [a] is a cache
+      **                 field, outside any noun; [b] is a slot in a noun.
       */
         c3_o
-        u3r_sing_wed_imp(u3_noun* a, u3_noun pa, u3_noun* b, u3_noun pb);
+        u3r_sing_wed_imp(u3_noun* a, u3_noun* b);
 
         //  pointer equality inline, as u3r_sing()
         //
-#       define u3r_sing_wed(a, pa, b, pb) ({                                   \
-          u3_noun* __sa = (a);                                                 \
-          u3_noun* __sb = (b);                                                 \
-          ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, (pa), __sb, (pb)); \
+#       define u3r_sing_wed(a, b) ({                                          \
+          u3_noun* __sa = (a);                                                \
+          u3_noun* __sb = (b);                                                \
+          ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, __sb);            \
         })
 
-      /* u3r_dh_entry: a deferred home-road unification: two home slots,
-      **               their holders (or u3_none) and the values they held.
-      **               [sa] 0: point [sb] at [va].
+      /* u3r_dh_entry: a deferred home-road unification: two home slots
+      **               and the values they held. [sb] is in a noun; [sa]
+      **               may be a cache field. [sa] 0: point [sb] at [va].
       */
         typedef struct {
-          u3_noun* sa;  u3_noun pa;  u3_noun va;
-          u3_noun* sb;  u3_noun pb;  u3_noun vb;
+          u3_noun* sa;  u3_noun* sb;
+          u3_noun  va;  u3_noun  vb;
         } u3r_dh_entry;
 
       /* u3r_dh_take(): this excursion's deferred unifications; resets.

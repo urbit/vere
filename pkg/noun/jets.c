@@ -721,7 +721,7 @@ _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_fist* fis_u = &(fin_u->fis_u[i_w]);
     if ( c3n == ( (c3y == u3du(cor))
-                ? u3r_sing_wed(&(fis_u->bat), u3_none, &(((u3a_cell*)u3a_to_ptr(cor))->hed), cor)
+                ? u3r_sing_wed(&(fis_u->bat), &(((u3a_cell*)u3a_to_ptr(cor))->hed))
                 : u3r_sing(fis_u->bat, u3h(cor)) ) )
     {
       return c3n;
@@ -1570,7 +1570,7 @@ _cj_site_lock(u3_noun loc, u3_noun cor, u3j_site* sit_u)
 {
   if ( (u3_none != sit_u->bat) &&
        (c3y == ( (c3y == u3du(cor))
-               ? u3r_sing_wed(&(sit_u->bat), u3_none, &(((u3a_cell*)u3a_to_ptr(cor))->hed), cor)
+               ? u3r_sing_wed(&(sit_u->bat), &(((u3a_cell*)u3a_to_ptr(cor))->hed))
                : u3r_sing(sit_u->bat, u3h(cor)) )) ) {
     return;
   }
