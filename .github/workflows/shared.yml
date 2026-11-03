@@ -129,11 +129,20 @@ jobs:
             vere-noun-test unix-test   \
             palloc-test events-test    \
             bytestream-test mesa-test  \
-            benchmarks                 \
+            soft-test benchmarks       \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
             $VERE64_FLAG               \
             --summary all
+
+      #  soft-test again, booting from an ivory pill that isn't
+      #  canonicalized, so that home holds equal nouns at different
+      #  addresses for inner roads to unify (the step above canonicalizes
+      #  the pill at boot). run the installed binary directly, so that a
+      #  cached run step can't stand in for it.
+      #
+      - name: Run soft-test (uncanonicalized pill)
+        run: SOFT_TEST_RAW=1 ./zig-out/bin/soft-test
 
       - name: Build test binary
         if: ${{ inputs.fake_tests }}
@@ -354,6 +363,7 @@ jobs:
             pact-test newt-test              \
             unix-test boot-test              \
             vere-noun-test wloom-test        \
+            soft-test                        \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \
@@ -380,6 +390,13 @@ jobs:
             echo "== ${b}"
             "${b}"
           done
+
+      #  soft-test again, from a pill that isn't canonicalized (see the
+      #  linux job)
+      #
+      - name: Run soft-test (uncanonicalized pill)
+        shell: bash
+        run: SOFT_TEST_RAW=1 zig-out/bin/soft-test.exe
 
   windows-migration-test:
     name: Windows migration roundtrip
