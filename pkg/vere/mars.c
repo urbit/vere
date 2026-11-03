@@ -1166,7 +1166,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
 
     //  %blrl: the king returns [n] holds on a blob: its last bob over
     //  the id died.  a count, not a flag: a hold granted after the king
-    //  sent this must survive it.  clamped, never below zero.
+    //  sent this must survive it.  the king returns only what mars
+    //  granted, so more than les_h, or no record, is a miscount: say
+    //  so, and clamp at zero.
     //
     case c3_s4('b','l','r','l'): {
       u3_noun mug_n, seq_n, num_n;
@@ -1184,8 +1186,18 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
       {
         u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-        if ( blb_u ) {
-          num_h = c3_min(num_h, blb_u->les_h);
+        if ( !blb_u ) {
+          fprintf(stderr, "mars: %%blrl " U3A_BID_FMT ": %" PRIc3_h
+                          " hold(s) returned on no record\r\n",
+                          mug_h, seq_h, num_h);
+        }
+        else {
+          if ( num_h > blb_u->les_h ) {
+            fprintf(stderr, "mars: %%blrl " U3A_BID_FMT ": %" PRIc3_h
+                            " hold(s) returned, %" PRIc3_h " granted\r\n",
+                            mug_h, seq_h, num_h, blb_u->les_h);
+            num_h = blb_u->les_h;
+          }
           blb_u->les_h -= num_h;
           _mars_blob_del(mug_h, seq_h);
         }
