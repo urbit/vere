@@ -315,6 +315,63 @@ _crit_handler(int sig)
 }
 #endif
 
+/* _grab(): mark the home road and sweep it, as |mass does.
+*/
+static void
+_grab(void)
+{
+  u3a_mark_init();
+  u3m_quac** qua_u = u3m_mark();
+  u3a_sweep();
+
+  for ( c3_w i_w = 0; qua_u[i_w]; i_w++ ) {
+    u3a_quac_free(qua_u[i_w]);
+  }
+  c3_free(qua_u);
+}
+
+/* _test_sweep_settle(): a sweep that frees a leaked bob takes it off
+**   its record, and calls the hook when the last one goes, so a leak
+**   cannot pin a file.
+*/
+static void
+_test_sweep_settle(void)
+{
+  _pier_make("sweep settle");
+
+  const c3_y dat_y[] = "a leaked bob must not pin its file forever";
+  const c3_d dat_d   = sizeof(dat_y) - 1;
+  c3_h mug_h = 0; c3_h seq_h = 0;
+  _check( c3y == _blob_save(dat_y, dat_d, &mug_h, &seq_h),
+          "save failed" );
+
+  //  one bob in arvo state, one leaked: no root reaches it
+  //
+  u3_noun roc = u3A->roc;
+  u3A->roc    = u3i_blob(mug_h, seq_h);
+  (void)u3i_blob(mug_h, seq_h);
+
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+  _check( blb_u && (2 == blb_u->atm_h), "atm=%u, want 2",
+          blb_u ? blb_u->atm_h : 0 );
+
+  _grab();
+  _check( (blb_u == u3a_blob_get(mug_h, seq_h)) && (1 == blb_u->atm_h)
+          && (0 == _hok_w),
+          "one leak: atm=%u hook=%u", blb_u->atm_h, _hok_w );
+  _check( c3y == u3a_blob_sane(), "bank not sane after the sweep" );
+
+  //  leak the last one: the sweep fires the hook, which drops the
+  //  unowned record
+  //
+  u3A->roc = roc;
+  _grab();
+  _check( (1 == _hok_w) && (1 == _del_w) && !u3a_blob_get(mug_h, seq_h),
+          "last leak: hook=%u del=%u", _hok_w, _del_w );
+
+  _pier_done();
+}
+
 /* _test_mark_sweep(): mass/gc marks the bank's u3a_blob records.
 **
 **   |mass marks the loom and then sweeps, freeing every chunk the mark
@@ -4123,6 +4180,7 @@ main(int argc, char* argv[])
   _test_hand_outer();
   _test_hand_keep();
   _test_hand_lru();
+  _test_sweep_settle();
   _test_hand_comp();
   _test_hand_alarm();
   _test_jam_bob();

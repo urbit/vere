@@ -112,6 +112,111 @@ u3a_drop_heap(u3_post cap_p, u3_post ear_p)
 #endif
 }
 
+/* _sane_cars: C-heap map from blob id to bob atoms counted.
+*/
+#define NAME    _sane_cars
+#define KEY_TY  c3_d
+#define VAL_TY  c3_w
+#define HASH_FN vt_hash_integer
+#define CMPR_FN vt_cmpr_integer
+#include "verstable.h"
+
+/* _ca_bob_mark: the bobs a home-road mark reached, per id.
+**
+**   open from u3a_mark_init() to the sweep, which settles atm_h against
+**   it (_ca_bob_settle), or to u3a_mark_done() when nothing sweeps.
+*/
+static struct {
+  c3_t       ope_t;
+  _sane_cars car_u;
+} _ca_bob_mark;
+
+/* _ca_bob_marked(): the mark reached [som] for the first time.
+*/
+static inline void
+_ca_bob_marked(u3_noun som)
+{
+  if (  _ca_bob_mark.ope_t
+     && (c3y == u3a_is_bob(som))
+     && u3a_bob_seq(som) )
+  {
+    _sane_cars_itr itr_u = vt_get_or_insert(&_ca_bob_mark.car_u,
+                                            u3a_bob_bid(som), 0);
+    u3_assert( !vt_is_end(itr_u) );  //  OOM
+
+    itr_u.data->val += 1;
+  }
+}
+
+/* _ca_bob_settle: _ca_bob_settle() context.
+*/
+typedef struct {
+  _sane_cars* car_u;
+  c3_d*       bid_d;  //  ids whose last atom the sweep freed
+  c3_w        len_w;
+  c3_w        cap_w;
+} _ca_bob_set;
+
+static void
+_ca_bob_settle_cb(u3_noun kev, void* ptr_v)
+{
+  _ca_bob_set* set_u = ptr_v;
+  c3_d         bid_d = 0;
+  c3_d         off_d = 0;
+
+  u3r_safe_chub(u3h(kev), &bid_d);
+  u3r_safe_chub(u3t(kev), &off_d);
+
+  u3a_blob*      blb_u = u3a_into((u3_post)off_d);
+  _sane_cars_itr itr_u = vt_get(set_u->car_u, bid_d);
+  c3_w           mar_w = vt_is_end(itr_u) ? 0 : itr_u.data->val;
+
+  if ( blb_u->atm_h <= mar_w ) {
+    return;
+  }
+
+  fprintf(stderr, "blob: sweep: " U3A_BID_FMT ": %" PRIc3_h
+                  " leaked bob(s) freed\r\n",
+                  u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
+                  (c3_h)(blb_u->atm_h - mar_w));
+  blb_u->atm_h = mar_w;
+
+  if ( !mar_w ) {
+    if ( set_u->len_w == set_u->cap_w ) {
+      set_u->cap_w = set_u->cap_w ? set_u->cap_w * 2 : 8;
+      set_u->bid_d = c3_realloc(set_u->bid_d, set_u->cap_w * sizeof(c3_d));
+    }
+    set_u->bid_d[set_u->len_w++] = bid_d;
+  }
+}
+
+/* _ca_bob_settle(): after a home-road sweep, take the bobs it freed off
+**   their records.
+**
+**   a sweep frees every unmarked box without u3a_lose, so a leaked bob
+**   never reaches _me_bob_dead and its record would count it forever,
+**   pinning its file.  the mark reached every live bob (else the sweep
+**   would have freed it), so [car_u] is the true count: lower atm_h to
+**   it, and call the hook for each id whose last atom went.  a record
+**   counting fewer than the mark reached is u3a_blob_sane's to report.
+**   collect, then act: the hook may drop a record.
+*/
+static void
+_ca_bob_settle(_sane_cars* car_u)
+{
+  _ca_bob_set set_u = { .car_u = car_u };
+
+  u3h_walk_with(u3H->blb_p, _ca_bob_settle_cb, &set_u);
+
+  for ( c3_w i_w = 0; i_w < set_u.len_w; i_w++ ) {
+    if ( u3C.blob_del_f ) {
+      u3C.blob_del_f(u3a_bid_mug(set_u.bid_d[i_w]),
+                     u3a_bid_seq(set_u.bid_d[i_w]));
+    }
+  }
+  c3_free(set_u.bid_d);
+}
+
 void
 u3a_mark_init(void)
 {
@@ -123,6 +228,14 @@ u3a_mark_init(void)
   u3a_Mark.buf_w = c3_calloc(sizeof(c3_w) * u3a_Mark.siz_w);
 
   memset(u3a_Mark.wee_w, 0, sizeof(c3_w) * u3a_crag_no);
+
+  //  the bank is home-road state, and only a home-road mark reaches
+  //  every bob
+  //
+  if ( (&(u3H->rod_u) == u3R) && u3H->blb_p && !_ca_bob_mark.ope_t ) {
+    vt_init(&_ca_bob_mark.car_u);
+    _ca_bob_mark.ope_t = 1;
+  }
 }
 
 void
@@ -131,6 +244,11 @@ u3a_mark_done(void)
   c3_free(u3a_Mark.bit_w);
   c3_free(u3a_Mark.buf_w);
   memset(&u3a_Mark, 0, sizeof(u3a_Mark));
+
+  if ( _ca_bob_mark.ope_t ) {
+    vt_cleanup(&_ca_bob_mark.car_u);
+    _ca_bob_mark.ope_t = 0;
+  }
 }
 
 void*
@@ -1237,15 +1355,6 @@ _sane_cmp(u3_post a_p, u3_post b_p)
 #define CMPR_FN _sane_cmp
 #include "verstable.h"
 
-/* _sane_cars: C-heap map from bid to live bob atoms counted.
-*/
-#define NAME    _sane_cars
-#define KEY_TY  c3_d
-#define VAL_TY  c3_w
-#define HASH_FN vt_hash_integer
-#define CMPR_FN vt_cmpr_integer
-#include "verstable.h"
-
 /* _blob_sane: u3a_blob_sane() context.
 **
 **   [set_u]: visited-box set keyed by loom offset (pointer identity,
@@ -1944,7 +2053,10 @@ u3a_mark_noun(u3_noun som)
           siz_w += u3a_mark_noun(u3h(som));
           som = u3t(som);
         }
-        else return siz_w;
+        else {
+          _ca_bob_marked(som);
+          return siz_w;
+        }
       }
     }
   }
@@ -2269,6 +2381,8 @@ _ca_prof_mark(u3_noun som)
   if ( !siz_w ) {
     return 0;
   }
+
+  _ca_bob_marked(som);
 
   if ( c3y == u3a_is_cell(som) ) {
     siz_w += u3a_mark_noun(u3h(som));
@@ -2690,15 +2804,26 @@ u3a_dash(void)
 c3_w
 u3a_sweep(void)
 {
+  //  the sweep ends the mark (u3a_mark_done), so take its bob counts
+  //  first
+  //
+  c3_t       bob_t = _ca_bob_mark.ope_t;
+  _sane_cars car_u = _ca_bob_mark.car_u;
+  _ca_bob_mark.ope_t = 0;
+
   c3_w siz_w = !(u3C.wag_h & u3o_debug_ram)
                ? _sweep_directory()
                : _sweep_counts();
 
   //  leaked nouns are freed without u3a_lose(), so the home-road
-  //  hashcons set may refer to them
+  //  hashcons set may refer to them, and the bank may count them
   //
   if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
     u3m_dedup_ream();
+  }
+  if ( bob_t ) {
+    _ca_bob_settle(&car_u);
+    vt_cleanup(&car_u);
   }
 
   return siz_w;
