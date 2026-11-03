@@ -1193,13 +1193,13 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //  hashcons the events first, so that their subtrees become canonical,
   //  then hashcons the cache keys and values against them
   //
-  eve = u3m_dedup(eve);
+  eve = u3m_sole_home(eve);
 
   //  prime memo cache
   //
   u3_noun xev = cax;
   while ( u3_nul != cax ) {
-    u3z(u3z_save_m_dedup(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+    u3z(u3z_save_m_sole(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
                          u3k(u3t(u3h(cax)))));
     cax = u3t(cax);
   }
@@ -1216,7 +1216,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
       exit(1);
     }
 
-    pil = u3m_dedup(pil);
+    pil = u3m_sole_home(pil);
 
     u3s_cue_xeno_done(sil_u);
 

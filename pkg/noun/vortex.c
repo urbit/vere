@@ -116,7 +116,7 @@ u3v_boot_lite(u3_noun pil)
   //  inner road finds its nouns as members, by pointer
   //
   if ( u3v_Ivory_canon_t ) {
-    pil = u3m_dedup(pil);
+    pil = u3m_sole_home(pil);
   }
 
   {

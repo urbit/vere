@@ -258,16 +258,24 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_w
         u3m_pack(void);
         
-      /* u3m_dedup_eager(): deduplicate the noun across the hashcons sets.
+      /* u3m_sole_try(): canonicalize the noun against the home-road set,
+      **                 on any road (on inner roads, junior cells only).
       */
         u3_noun
-        u3m_dedup_eager(u3_noun som);
+        u3m_sole_try(u3_noun som);
 
-      /* u3m_dedup_visit_size(): resize u3m_dedup_eager()'s visited set to
-      **                         2^log_y entries (tests). home road only.
+      /* u3m_sole_pin(): u3m_sole_try(), and on an inner road, put the
+      **                 result in the road's set, to be canonicalized at
+      **                 the exit home.
+      */
+        u3_noun
+        u3m_sole_pin(u3_noun som);
+
+      /* u3m_sole_visit_size(): resize u3m_sole_try()'s visited set to
+      **                        2^log_y entries (tests). home road only.
       */
         void
-        u3m_dedup_visit_size(c3_y log_y);
+        u3m_sole_visit_size(c3_y log_y);
 
       /* u3m_crib_report(): log every crib's evictions and drops at its
       **                    ceiling since the last call. between events.
@@ -282,33 +290,33 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_w
         u3m_crib_stat(u3c_stat* sat_u);
 
-      /* u3m_dedup_visit_cap(): the visited set's capacity (tests).
+      /* u3m_sole_visit_cap(): the visited set's capacity (tests).
       */
         c3_d
-        u3m_dedup_visit_cap(void);
+        u3m_sole_visit_cap(void);
 
-      /* u3m_dedup(): u3m_dedup_eager() on the home road; inner roads
-      **              leave the noun to the exit home.
+      /* u3m_sole_home(): u3m_sole_try() on the home road; inner roads
+      **                  leave the noun to the exit home.
       */
         u3_noun
-        u3m_dedup(u3_noun som);
+        u3m_sole_home(u3_noun som);
 
-      /* u3m_canon_take(): [new], a fresh home-road copy whose children
-      **                   are taken: an equal member (retained), or none,
-      **                   having made [new] a member if it can be one.
+      /* u3m_sole_take(): [new], a fresh home-road copy whose children
+      **                  are taken: an equal member (retained), or none,
+      **                  having made [new] a member if it can be one.
       */
         u3_weak
-        u3m_canon_take(u3_noun new);
+        u3m_sole_take(u3_noun new);
       
-      /* u3m_dedup_ream(): rebuild the home-road hashcons set from
-      **                   persistent tables.
+      /* u3m_sole_ream(): rebuild the home-road hashcons set from
+      **                  persistent tables.
       */
         void
-        u3m_dedup_ream(void);
+        u3m_sole_ream(void);
 
-      /* u3m_Dup_busy_w: reading the home-road hashcons set (see u3t_samp()).
+      /* u3m_Sole_busy_w: reading the home-road hashcons set (see u3t_samp()).
       */
-        extern volatile c3_w u3m_Dup_busy_w;
+        extern volatile c3_w u3m_Sole_busy_w;
 
       /* u3m_hold(), u3m_hold_done(): hold off async signals (alarm,
       **   interrupt, term) for a few instructions that must finish
@@ -341,30 +349,30 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
           }
         }
 
-      /* u3m_dedup_hint(): record the home-road hashcons set's size,
-      **                   to size its next rebuild.
+      /* u3m_sole_hint(): record the home-road hashcons set's size,
+      **                  to size its next rebuild.
       */
         void
-        u3m_dedup_hint(void);
+        u3m_sole_hint(void);
 
-      /* u3m_dedup_lose(): remove [som], about to be freed, from the
-      **                   home-road hashcons set (see u3a_hcon_has()).
+      /* u3m_sole_lose(): remove [som], about to be freed, from the
+      **                  home-road hashcons set (see u3a_sole_has()).
       */
         void
-        u3m_dedup_lose(u3_noun som);
+        u3m_sole_lose(u3_noun som);
 
-      /* u3m_dedup_stat(): the home-road hashcons set's atoms, cells,
-      **                   and estimated process memory in bytes.
+      /* u3m_sole_stat(): the home-road hashcons set's atoms, cells,
+      **                  and estimated process memory in bytes.
       */
         void
-        u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
+        u3m_sole_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
 
-      /* u3m_dedup_meas(): the home-road cell table's buckets, and the
-      **                   pages an on-loom copy would have written since
-      **                   the last call (0 unless measuring).
+      /* u3m_sole_meas(): the home-road cell table's buckets, and the
+      **                  pages an on-loom copy would have written since
+      **                  the last call (0 unless measuring).
       */
         void
-        u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d);
+        u3m_sole_meas(c3_d* buc_d, c3_d* pag_d);
 
     /*  Urbit time: 128 bits, leap-free.
     **

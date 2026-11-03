@@ -173,7 +173,7 @@
                              //  per for byc war bas hot cod
           c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
           c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
-                             //  older home nouns met in it, u3m_dedup()
+                             //  older home nouns met in it, u3m_sole_try()
           c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
@@ -210,14 +210,11 @@
           c3_d wlx_d[2];     //  left by an interrupted exit: home values
                              //  lost at the next leap, inner ones dropped
 
-          //  inner roads' root sets (dup_p)
+          //  roots pinned on inner roads (u3m_sole_pin(), into dup_p)
           //
-          c3_d dpi_d;        //  roots inserted
-          c3_d dpp_d;        //  probes, one per road
-          c3_d dph_d[2];     //  hits: an equal noun elsewhere, the noun
-                             //  itself
+          c3_d dpi_d;        //  roots pinned
 
-          //  the eager pass (u3m_dedup_eager())
+          //  canonicalizing on inner roads (u3m_sole_try())
           //
           c3_d eic_d[2];     //  calls: home road, inner roads
           c3_d eiw_d[2];     //  ... from: bytecode keys, memo keys

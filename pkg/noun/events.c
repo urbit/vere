@@ -500,7 +500,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
       c3_d vat_d, cel_d, byt_d;
       c3_w i_w;
 
-      u3m_dedup_stat(&vat_d, &cel_d, &byt_d);
+      u3m_sole_stat(&vat_d, &cel_d, &byt_d);
       fprintf(fil_u, "H %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      vat_d, cel_d, byt_d,
@@ -519,7 +519,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     {
       c3_d buc_d, pag_d;
 
-      u3m_dedup_meas(&buc_d, &pag_d);
+      u3m_sole_meas(&buc_d, &pag_d);
       fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
@@ -565,11 +565,9 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
                    u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1]);
 
-    //  inner roads' root sets
+    //  roots pinned on inner roads
     //
-    fprintf(fil_u, "Q %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.dpi_d, u3e_Meter.dpp_d,
-                   u3e_Meter.dph_d[0], u3e_Meter.dph_d[1]);
+    fprintf(fil_u, "Q %" PRIu64 "\n", u3e_Meter.dpi_d);
 
     //  the eager pass
     //

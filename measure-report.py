@@ -41,7 +41,7 @@ Log lines (one snapshot interval ends at each S line):
                                             home hashcons set at the snapshot, its
                                             traffic, and cells added per root at the
                                             last rebuild
-  D <probe-take> <probe-older> <probe-dedup> <hit-new> <hit-cache> <hit-warm>
+  D <probe-take> <probe-older> <probe-try> <hit-new> <hit-cache> <hit-warm>
     <hit-cold> <buckets> <table-pages> <faults-major> <faults-minor>
                                             home hashcons probes by path, hits by the
                                             member's origin, and the last rebuild's faults
@@ -63,8 +63,9 @@ Log lines (one snapshot interval ends at each S line):
                                             the list full, lost after an exit's takes
                                             (and most at one exit), and left by an
                                             interrupted exit
-  Q <roots> <probes> <hits-other> <hits-self>
-                                            inner roads' root sets (dup_p)
+  Q <pinned>                                roots pinned on inner roads (u3m_sole_pin,
+                                            into dup_p; older logs' four-field Q,
+                                            with probes and hits, is skipped)
   V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
     <root-recorded> <deep-excursion> <deep-debug> <deep-promoting>
     <pair-probes> <pair-hits> <pair-recorded>
@@ -73,7 +74,7 @@ Log lines (one snapshot interval ends at each S line):
                                             65,535 steps by table, and their inner pairs
   I <calls-home> <calls-inner> <from-byc-keys> <from-memo-keys> <junior-cells>
     <visited-hits> <senior-left> <home-probes-inner> <home-hits-inner>
-                                            the eager pass (u3m_dedup_eager)
+                                            canonicalizing on inner roads (u3m_sole_try)
   Z <taken-jet> <taken-byc> <taken-per> <taken-for> <found-jet> <found-byc>
     <found-per> <found-for> <fix-entries> <fix-fields> <fix-swapped> <byc-keys-fixed>
     <byc-keys-over> <us-phase-a> <us-takes> <us-phase-b> <us-fix>
@@ -106,7 +107,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 11, "X": 10, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def pct(a, b):
@@ -555,7 +556,7 @@ def main():
         hit = sum(D[3:7])
         per = lambda x: f"{x / tasks if tasks else 0:.1f}"
         print(f"  probes: {pro} ({per(pro)} per task): road-exit take {D[0]}, "
-              f"older home nouns in it {D[1]}, u3m_dedup {D[2]}")
+              f"older home nouns in it {D[1]}, u3m_sole_try {D[2]}")
         print(f"  hits: {hit} ({pct(hit, pro).strip()} of probes), by the member's origin:")
         for name, c in zip(["added since the last rebuild", "caches (per for byc)",
                             "warm jet state (war bas hot)", "cold state alone (cod)"],
@@ -633,11 +634,9 @@ def main():
                       f"{x[o + 4]} left by interrupted exits")
     qis = [i for i in intervals if i["Q"]]
     if qis and any(any(i["Q"]) for i in qis):
-        q = [sum(i["Q"][j] for i in qis) for j in range(4)]
-        print("\n== inner roads' root sets (dup_p) ==")
-        print(f"  roots inserted: {q[0]}   probes: {q[1]}")
-        print(f"  hits, an equal noun elsewhere: {q[2]}  {pct(q[2], q[1])}")
-        print(f"  hits, the noun itself:         {q[3]}  {pct(q[3], q[1])}")
+        q = sum(i["Q"][0] for i in qis)
+        print("\n== roots pinned on inner roads (u3m_sole_pin) ==")
+        print(f"  roots pinned: {q}")
     vis = [i for i in intervals if i["V"]]
     if vis and any(any(i["V"]) for i in vis):
         v = [sum(i["V"][j] for i in vis) for j in range(12)]
@@ -650,7 +649,7 @@ def main():
     iis = [i for i in intervals if i["I"]]
     if iis and any(any(i["I"]) for i in iis):
         e = [sum(i["I"][j] for i in iis) for j in range(9)]
-        print("\n== the eager pass (u3m_dedup_eager) ==")
+        print("\n== canonicalizing on inner roads (u3m_sole_try) ==")
         print(f"  calls: home road {e[0]}, inner roads {e[1]}; "
               f"from bytecode keys {e[2]}, memo keys {e[3]}")
         print(f"  junior cells walked: {e[4]}   visited-set hits: {e[5]}   "

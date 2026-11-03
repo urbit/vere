@@ -1747,7 +1747,7 @@ _n_find(u3_noun pre, u3_noun fol)
   }
 
   //  a senior road's key is already canonical, and ours is dropped when
-  //  the program merges back at road exit, so dedup only a new key
+  //  the program merges back at road exit, so canonicalize only a new key
   //
   if ( u3R != &u3H->rod_u ) {
     u3a_road* rod_u = u3R;
@@ -1781,7 +1781,7 @@ _n_find(u3_noun pre, u3_noun fol)
   }
 
   u3e_Meter.eiw_d[0]++;
-  key = u3m_dedup_eager(key);
+  key = u3m_sole_try(key);
 
   {
     u3n_prog* gop = _n_bite(fol);
@@ -2842,12 +2842,12 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       top = _n_peek(off);
       o   = *top;
       if ( u3z_memo_ford == u3h(o) && ( 0 == u3R->ski.gul ) ) {
-        x = u3z_save_m_dedup(u3h(o), 136 + c3__ford, u3t(o), x);
+        x = u3z_save_m_sole(u3h(o), 136 + c3__ford, u3t(o), x);
       }
       else if ( ( u3z_memo_toss == u3h(o) )
          ? ( &(u3H->rod_u) != u3R )
          : ( 0 == u3R->ski.gul ) ) {  //  prevents persistent memoization when scrying is avaliable
-        x = u3z_save_m_dedup(u3h(o), 144 + c3__nock, u3t(o), x);
+        x = u3z_save_m_sole(u3h(o), 144 + c3__nock, u3t(o), x);
       }
       // XX can we still print?
       // else if ( u3z_memo_keep == u3h(o) ) {
@@ -3215,9 +3215,9 @@ u3n_reap_fix(void)
 
   for ( i_w = 0; i_w < _cn_rek_len_w; i_w++ ) {
     u3_noun key = _cn_rek_u[i_w];
-    if ( (c3n == u3a_is_cat(key)) && !u3a_hcon_has(key) ) {
+    if ( (c3n == u3a_is_cat(key)) && !u3a_sole_has(key) ) {
       u3e_Meter.crk_d[0]++;
-      u3z(u3m_dedup(u3k(key)));
+      u3z(u3m_sole_home(u3k(key)));
     }
   }
   _cn_rek_len_w = 0;

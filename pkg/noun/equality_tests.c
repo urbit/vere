@@ -301,13 +301,13 @@ _test_unify_inner_home(void)
   return ret_i;
 }
 
-/* _test_dedup(): hash-consing keeps canonical cells, copies the rest.
+/* _test_sole(): hash-consing keeps canonical cells, copies the rest.
 **
 **   NB: comparison unifies equal sub-cells, so the expectations use
 **   [t], a cell only ever compared at the top level.
 */
 static c3_i
-_test_dedup(void)
+_test_sole(void)
 {
   c3_i    ret_i = 1;
   u3_noun t, b, c, d, s, e, r;
@@ -315,19 +315,19 @@ _test_dedup(void)
   //  a fresh noun is canonical as it stands
   //
   t = u3nc(2, 3);
-  r = u3m_dedup_eager(u3k(t));
+  r = u3m_sole_try(u3k(t));
   if ( r != t ) {
-    fprintf(stderr, "test: dedup: fresh noun copied\r\n");
+    fprintf(stderr, "test: sole: fresh noun copied\r\n");
     ret_i = 0;
   }
   u3z(r);
 
-  //  an equal noun dedups to it
+  //  an equal noun canonicalizes to it
   //
   b = u3nc(2, 3);
-  r = u3m_dedup_eager(u3k(b));
+  r = u3m_sole_try(u3k(b));
   if ( r != t ) {
-    fprintf(stderr, "test: dedup: equal noun not shared\r\n");
+    fprintf(stderr, "test: sole: equal noun not shared\r\n");
     ret_i = 0;
   }
   u3z(r);
@@ -335,9 +335,9 @@ _test_dedup(void)
   //  a cell with a non-canonical child is repointed in place
   //
   c = u3nc(u3nc(2, 3), 4);
-  r = u3m_dedup_eager(u3k(c));
+  r = u3m_sole_try(u3k(c));
   if ( (r != c) || (u3h(c) != t) ) {
-    fprintf(stderr, "test: dedup: non-canonical child not repointed\r\n");
+    fprintf(stderr, "test: sole: non-canonical child not repointed\r\n");
     ret_i = 0;
   }
   u3z(r);
@@ -345,9 +345,9 @@ _test_dedup(void)
   //  a cell whose children are canonical is kept
   //
   d = u3nc(u3k(t), 5);
-  r = u3m_dedup_eager(u3k(d));
+  r = u3m_sole_try(u3k(d));
   if ( r != d ) {
-    fprintf(stderr, "test: dedup: canonical children copied\r\n");
+    fprintf(stderr, "test: sole: canonical children copied\r\n");
     ret_i = 0;
   }
   u3z(r);
@@ -356,9 +356,9 @@ _test_dedup(void)
   //
   s = u3nc(6, 7);
   u3m_hate(0);
-  r = u3m_dedup_eager(u3k(s));
+  r = u3m_sole_try(u3k(s));
   if ( r != s ) {
-    fprintf(stderr, "test: dedup: senior noun copied\r\n");
+    fprintf(stderr, "test: sole: senior noun copied\r\n");
     ret_i = 0;
   }
   u3z(r);
@@ -369,9 +369,9 @@ _test_dedup(void)
   //
   e = u3nc(u3nc(2, 3), 8);
   u3m_hate(0);
-  r = u3m_dedup_eager(u3k(e));
+  r = u3m_sole_try(u3k(e));
   if ( (r != e) || (u3h(e) == t) ) {
-    fprintf(stderr, "test: dedup: senior cell copied or rewritten\r\n");
+    fprintf(stderr, "test: sole: senior cell copied or rewritten\r\n");
     ret_i = 0;
   }
   u3z(r);
@@ -381,9 +381,9 @@ _test_dedup(void)
   //
   u3m_hate(0);
   e = u3nc(u3nc(2, 3), 8);
-  r = u3m_dedup_eager(u3k(e));
+  r = u3m_sole_try(u3k(e));
   if ( (r != e) || (u3h(e) != t) ) {
-    fprintf(stderr, "test: dedup: junior child not repointed\r\n");
+    fprintf(stderr, "test: sole: junior child not repointed\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(e);
@@ -395,60 +395,60 @@ _test_dedup(void)
   return ret_i;
 }
 
-/* _test_hcons(): the off-loom home-road hashcons set.
+/* _test_sole_set(): the off-loom home-road hashcons set.
 */
 static c3_i
-_test_hcons(void)
+_test_sole_set(void)
 {
   c3_i    ret_i = 1;
   u3_noun x, y, r, p, q, a, b, m, n;
 
   //  a freed member leaves the set
   //
-  x = u3m_dedup_eager(u3nc(10, 11));
+  x = u3m_sole_try(u3nc(10, 11));
   y = u3nc(10, 11);
   u3z(x);
-  r = u3m_dedup_eager(u3k(y));
+  r = u3m_sole_try(u3k(y));
   if ( r != y ) {
-    fprintf(stderr, "test: hcons: freed member still found\r\n");
+    fprintf(stderr, "test: sole set: freed member still found\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(y);
 
   //  so do members freed in a cascade
   //
-  x = u3m_dedup_eager(u3nc(u3nc(12, 13), 14));
+  x = u3m_sole_try(u3nc(u3nc(12, 13), 14));
   y = u3nc(u3nc(12, 13), 14);
   u3z(x);
-  r = u3m_dedup_eager(u3k(y));
-  if ( (r != y) || !u3a_hcon_has(u3h(y)) ) {
-    fprintf(stderr, "test: hcons: cascade-freed member still found\r\n");
+  r = u3m_sole_try(u3k(y));
+  if ( (r != y) || !u3a_sole_has(u3h(y)) ) {
+    fprintf(stderr, "test: sole set: cascade-freed member still found\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(y);
 
-  //  junior entries that are taken join the home set
+  //  pinned junior entries that are taken join the home set
   //
   u3m_hate(0);
-  p = u3m_dedup_eager(u3nc(u3nc(20, 21), 22));
-  r = u3m_dedup_eager(u3nc(30, 31));     //  not taken
+  p = u3m_sole_pin(u3nc(u3nc(20, 21), 22));
+  r = u3m_sole_pin(u3nc(30, 31));     //  not taken
   u3z(r);
   p = u3m_love(p);
-  if ( !u3a_hcon_has(p) || !u3a_hcon_has(u3h(p)) ) {
-    fprintf(stderr, "test: hcons: taken entry not a member\r\n");
+  if ( !u3a_sole_has(p) || !u3a_sole_has(u3h(p)) ) {
+    fprintf(stderr, "test: sole set: taken entry not a member\r\n");
     ret_i = 0;
   }
   q = u3nc(u3nc(20, 21), 22);
-  r = u3m_dedup_eager(u3k(q));
+  r = u3m_sole_try(u3k(q));
   if ( r != p ) {
-    fprintf(stderr, "test: hcons: taken entry not shared\r\n");
+    fprintf(stderr, "test: sole set: taken entry not shared\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(q);
   q = u3nc(30, 31);
-  r = u3m_dedup_eager(u3k(q));
+  r = u3m_sole_try(u3k(q));
   if ( r != q ) {
-    fprintf(stderr, "test: hcons: untaken entry kept\r\n");
+    fprintf(stderr, "test: sole set: untaken entry kept\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(q); u3z(p);
@@ -459,7 +459,7 @@ _test_hcons(void)
   //  standing for a set that lists a home noun whose canonical equal
   //  [m] is a member by the time the road exits
   //
-  m = u3m_dedup_eager(u3nc(23, 24));
+  m = u3m_sole_try(u3nc(23, 24));
   {
     u3_noun c = u3nc(23, 24);
     u3_noun x = u3nc(c, 25);
@@ -469,8 +469,8 @@ _test_hcons(void)
     u3h_put(u3R->dup_p, c, c);
     u3m_love(0);
 
-    if ( (u3h(x) != c) || u3a_hcon_has(x) ) {
-      fprintf(stderr, "test: hcons: listed home noun rewritten\r\n");
+    if ( (u3h(x) != c) || u3a_sole_has(x) ) {
+      fprintf(stderr, "test: sole set: listed home noun rewritten\r\n");
       ret_i = 0;
     }
     u3z(x);
@@ -479,12 +479,12 @@ _test_hcons(void)
 
   //  rebuilding keeps members reachable from persistent tables only
   //
-  p = u3m_dedup_eager(u3nc(40, 41));
-  m = u3m_dedup_eager(u3nc(42, 43));
+  p = u3m_sole_try(u3nc(40, 41));
+  m = u3m_sole_try(u3nc(42, 43));
   u3h_put(u3R->cax.per_p, 44, u3k(p));
-  u3m_dedup_ream();
-  if ( !u3a_hcon_has(p) || u3a_hcon_has(m) ) {
-    fprintf(stderr, "test: hcons: ream kept the wrong members\r\n");
+  u3m_sole_ream();
+  if ( !u3a_sole_has(p) || u3a_sole_has(m) ) {
+    fprintf(stderr, "test: sole set: ream kept the wrong members\r\n");
     ret_i = 0;
   }
   u3h_free(u3R->cax.per_p);
@@ -500,10 +500,10 @@ _test_hcons(void)
     for ( i_w = 0; i_w < 2; i_w++ ) {
       if ( i_w ) {
         n = u3nc(45, 46);
-        m = u3m_dedup_eager(u3nc(45, 46));
+        m = u3m_sole_try(u3nc(45, 46));
       }
       else {
-        m = u3m_dedup_eager(u3nc(45, 46));
+        m = u3m_sole_try(u3nc(45, 46));
         n = u3nc(45, 46);
       }
 
@@ -511,7 +511,7 @@ _test_hcons(void)
       b = u3nc(u3k(n), 1);
       (void)u3r_sing(a, b);
       if ( (u3h(a) != m) || (u3h(b) != m) ) {
-        fprintf(stderr, "test: hcons: unified away from the member (%" PRIc3_w ")\r\n", i_w);
+        fprintf(stderr, "test: sole set: unified away from the member (%" PRIc3_w ")\r\n", i_w);
         ret_i = 0;
       }
       u3z(a); u3z(b); u3z(m); u3z(n);
@@ -556,14 +556,14 @@ _us_since(struct timespec* bef_u)
        + (aft_u.tv_nsec - bef_u->tv_nsec) / 1000;
 }
 
-/* _test_dedup_dag(): deduping a shared noun on an inner road takes time
+/* _test_sole_dag(): canonicalizing a shared noun on an inner road takes time
 **                    in its distinct cells, not its leaves (2^26 of them:
 **                    a walk of them takes seconds). junior cells are
 **                    canonicalized, each once; senior cells that aren't
 **                    members are left as they are.
 */
 static c3_i
-_test_dedup_dag(void)
+_test_sole_dag(void)
 {
   c3_i ret_i = 1;
 
@@ -574,25 +574,25 @@ _test_dedup_dag(void)
     u3_noun can, fre, r;
     c3_d    mic_d;
 
-    can = u3m_dedup_eager(_dag(i_w ? 13 : 26));
+    can = u3m_sole_try(_dag(i_w ? 13 : 26));
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
     fre = _dag(26);
-    r = u3m_dedup_eager(u3k(fre));
+    r = u3m_sole_try(u3k(fre));
     if ( !i_w && (r != can) ) {
-      fprintf(stderr, "test: dedup dag: member not found\r\n");
+      fprintf(stderr, "test: sole dag: member not found\r\n");
       ret_i = 0;
     }
     if ( c3n == u3r_sing(r, fre) ) {
-      fprintf(stderr, "test: dedup dag: changed the value\r\n");
+      fprintf(stderr, "test: sole dag: changed the value\r\n");
       ret_i = 0;
     }
     u3z(r); u3z(fre);
     u3m_love(0);
 
     if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: dedup dag: %" PRIu64 " us\r\n", mic_d);
+      fprintf(stderr, "test: sole dag: %" PRIu64 " us\r\n", mic_d);
       ret_i = 0;
     }
     u3z(can);
@@ -606,25 +606,25 @@ _test_dedup_dag(void)
     u3_noun fre, r;
     c3_d    mic_d;
 
-    if ( i_w ) u3m_dedup_visit_size(4);
+    if ( i_w ) u3m_sole_visit_size(4);
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
     fre = _dag_on(26, 9, 10);
-    r = u3m_dedup_eager(u3k(fre));
+    r = u3m_sole_try(u3k(fre));
     if ( r != fre ) {
-      fprintf(stderr, "test: dedup dag: fresh junior noun replaced\r\n");
+      fprintf(stderr, "test: sole dag: fresh junior noun replaced\r\n");
       ret_i = 0;
     }
     u3z(r); u3z(fre);
     u3m_love(0);
 
     if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: dedup dag: unvisited %" PRIu64 " us\r\n", mic_d);
+      fprintf(stderr, "test: sole dag: unvisited %" PRIu64 " us\r\n", mic_d);
       ret_i = 0;
     }
   }
-  u3m_dedup_visit_size(14);
+  u3m_sole_visit_size(14);
 
   //  a home noun that isn't a member, or an intermediate road's, is left
   //  as it is, though an equal member exists: the exit to home
@@ -637,23 +637,23 @@ _test_dedup_dag(void)
     u3_noun can, fre, r;
     c3_d    mic_d;
 
-    can = u3m_dedup_eager(_dag(26));
+    can = u3m_sole_try(_dag(26));
     if ( i_w ) u3m_hate(0);
     fre = _dag(26);
 
     if ( 2 == i_w ) u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
-    r = u3m_dedup_eager(u3k(fre));
+    r = u3m_sole_try(u3k(fre));
     if ( (r != fre) || (u3h(fre) == u3h(can)) ) {
-      fprintf(stderr, "test: dedup dag: senior noun %u rewritten\r\n", (unsigned)i_w);
+      fprintf(stderr, "test: sole dag: senior noun %u rewritten\r\n", (unsigned)i_w);
       ret_i = 0;
     }
     u3z(r);
     u3m_love(0);
 
     if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: dedup dag: senior %u %" PRIu64 " us\r\n", (unsigned)i_w, mic_d);
+      fprintf(stderr, "test: sole dag: senior %u %" PRIu64 " us\r\n", (unsigned)i_w, mic_d);
       ret_i = 0;
     }
 
@@ -787,37 +787,37 @@ _test_sing_dag(void)
   return ret_i;
 }
 
-/* _test_dedup_lazy(): u3m_dedup() canonicalizes on the home road, and
+/* _test_sole_lazy(): u3m_sole_home() canonicalizes on the home road, and
 **                    leaves inner roads' nouns to the exit home.
 */
 static c3_i
-_test_dedup_lazy(void)
+_test_sole_lazy(void)
 {
   c3_i    ret_i = 1;
-  u3_noun can = u3m_dedup(u3nt(7, 8, 9));
+  u3_noun can = u3m_sole_home(u3nt(7, 8, 9));
   u3_noun som;
 
-  if ( !u3a_hcon_has(can) ) {
-    fprintf(stderr, "test: dedup lazy: home not canonical\r\n");
+  if ( !u3a_sole_has(can) ) {
+    fprintf(stderr, "test: sole lazy: home not canonical\r\n");
     ret_i = 0;
   }
 
   u3m_hate(0);
   som = u3nt(7, 8, 9);
   {
-    u3_noun pro = u3m_dedup(u3k(som));
+    u3_noun pro = u3m_sole_home(u3k(som));
 
     if ( pro != som ) {
-      fprintf(stderr, "test: dedup lazy: inner road deduplicated\r\n");
+      fprintf(stderr, "test: sole lazy: inner road canonicalized\r\n");
       ret_i = 0;
     }
     u3z(pro);
   }
   {
-    u3_noun pro = u3m_dedup_eager(u3k(som));
+    u3_noun pro = u3m_sole_try(u3k(som));
 
     if ( pro != can ) {
-      fprintf(stderr, "test: dedup lazy: eager missed the member\r\n");
+      fprintf(stderr, "test: sole lazy: try missed the member\r\n");
       ret_i = 0;
     }
     u3z(pro);
@@ -858,7 +858,7 @@ _test_gap(void)
   struct timespec bef_u;
   c3_d mic_d;
 
-  u3m_dedup_visit_size(4);
+  u3m_sole_visit_size(4);
 
   //  a comparison of two home copies on an inner road, linear with no
   //  table: unification writes home slots
@@ -885,10 +885,10 @@ _test_gap(void)
   {
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
-    u3z(u3m_dedup_eager(_gap(40, 64)));
+    u3z(u3m_sole_try(_gap(40, 64)));
     u3m_love(0);
     if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: gap: dedup %" PRIu64 " us\r\n", mic_d);
+      fprintf(stderr, "test: gap: try %" PRIu64 " us\r\n", mic_d);
       ret_i = 0;
     }
   }
@@ -896,7 +896,7 @@ _test_gap(void)
   //  the visited set grew, and shrinks back over a few quiet excursions
   //
   {
-    c3_d vcp_d = u3m_dedup_visit_cap();
+    c3_d vcp_d = u3m_sole_visit_cap();
 
     if ( vcp_d <= 16 ) {
       fprintf(stderr, "test: gap: visited set didn't grow (%" PRIu64 ")\r\n",
@@ -907,14 +907,14 @@ _test_gap(void)
       u3m_hate(0);
       u3m_love(0);
     }
-    if ( 16 != u3m_dedup_visit_cap() ) {
+    if ( 16 != u3m_sole_visit_cap() ) {
       fprintf(stderr, "test: gap: didn't shrink (%" PRIu64 ")\r\n",
-              u3m_dedup_visit_cap());
+              u3m_sole_visit_cap());
       ret_i = 0;
     }
   }
 
-  u3m_dedup_visit_size(14);
+  u3m_sole_visit_size(14);
   return ret_i;
 }
 
@@ -1022,13 +1022,13 @@ _test_equality(void)
 {
   c3_i ret_i = 1;
 
-  if ( !_test_hcons() ) {
-    fprintf(stderr, "test: equality: hcons: failed\r\n");
+  if ( !_test_sole_set() ) {
+    fprintf(stderr, "test: equality: sole set: failed\r\n");
     ret_i = 0;
   }
 
-  if ( !_test_dedup_lazy() ) {
-    fprintf(stderr, "test: equality: dedup lazy: failed\r\n");
+  if ( !_test_sole_lazy() ) {
+    fprintf(stderr, "test: equality: sole lazy: failed\r\n");
     ret_i = 0;
   }
 
@@ -1047,13 +1047,13 @@ _test_equality(void)
     ret_i = 0;
   }
 
-  if ( !_test_dedup_dag() ) {
-    fprintf(stderr, "test: equality: dedup dag: failed\r\n");
+  if ( !_test_sole_dag() ) {
+    fprintf(stderr, "test: equality: sole dag: failed\r\n");
     ret_i = 0;
   }
 
-  if ( !_test_dedup() ) {
-    fprintf(stderr, "test: equality: dedup: failed\r\n");
+  if ( !_test_sole() ) {
+    fprintf(stderr, "test: equality: sole: failed\r\n");
     ret_i = 0;
   }
 

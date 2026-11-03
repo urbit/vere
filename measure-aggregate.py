@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 11, "X": 10, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def parse(lines):
@@ -247,7 +247,7 @@ def sums(ivs):
             s["X_iful"] += x[6]; s["X_ilx"] += x[9]
         if "Q" in i:
             q = i["Q"]
-            s["Q_ins"] += q[0]; s["Q_pro"] += q[1]; s["Q_hit"] += q[2]
+            s["Q_ins"] += q[0]
             s["Q_tasks"] += i["tasks"]
         if "V" in i:
             v = i["V"]
@@ -365,9 +365,8 @@ METRICS = [
      lambda s, v: max(values(v, "X", 8), default=None)),
     ("X: left by interrupted exits, home", "hashcons: lose list", lambda s, v: s["X_hlx"]),
     ("X: left by interrupted exits, inner", "hashcons: lose list", lambda s, v: s["X_ilx"]),
-    ("Q: dup_p roots / 1000 tasks", "hashcons: dup_p",
+    ("Q: roots pinned / 1000 tasks", "hashcons: dup_p",
      lambda s, v: ratio(1000 * s["Q_ins"], s["Q_tasks"]) if s["Q_tasks"] else None),
-    ("Q: dup_p hits / probes", "hashcons: dup_p", lambda s, v: ratio(s["Q_hit"], s["Q_pro"])),
     ("V: long inner comparisons / 1000 tasks", "hashcons: pair table",
      lambda s, v: ratio(1000 * s["V_long"], s["V_tasks"]) if s["V_tasks"] else None),
     ("V: root pairs found / looked up", "hashcons: pair table",

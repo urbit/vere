@@ -17,9 +17,9 @@
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 
-//  home-road hashcons membership (see u3m_dedup())
+//  home-road hashcons membership (see u3m_sole_home())
 //
-c3_w* u3a_Hcon_w;
+c3_w* u3a_Sole_w;
 u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
@@ -769,7 +769,7 @@ _me_gain_use(u3_noun dog)
 #undef VERBOSE_TAKE
 
 /* u3a_Take_canon_t: takes canonicalize into the home-road hashcons set
-**   (see u3m_canon_take()). set only on the home road, while the caches
+**   (see u3m_sole_take()). set only on the home road, while the caches
 **   are taken at an exit to home.
 */
 c3_t u3a_Take_canon_t;
@@ -781,7 +781,7 @@ static inline u3_noun
 _ca_take_canon(u3a_noun* old_u, u3_noun new)
 {
   if ( u3a_Take_canon_t ) {
-    u3_weak can = u3m_canon_take(new);
+    u3_weak can = u3m_sole_take(new);
     c3_w    idx_w = (c3_w)u3e_Phase - u3e_pha_take_jet;   //  jet byc per for
 
     if ( idx_w > 3 ) idx_w = 3;
@@ -1162,8 +1162,8 @@ top:
         u3m_bail(c3__foul);
       }
       else {
-        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
-          u3m_dedup_lose(dog);
+        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
+          u3m_sole_lose(dog);
         }
 
         if ( _(u3a_is_pom(dog)) ) {
@@ -1209,8 +1209,8 @@ top:
         u3m_bail(c3__foul);
       }
       else {
-        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
-          u3m_dedup_lose(dog);
+        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
+          u3m_sole_lose(dog);
         }
 
         if ( _(u3a_is_pom(dog)) ) {
@@ -1554,8 +1554,8 @@ _ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
       c3_t ahc_t = 0, bhc_t = 0;
 
       if ( &(u3H->rod_u) == u3R ) {
-        ahc_t = u3a_hcon_has(*a);
-        bhc_t = u3a_hcon_has(*b);
+        ahc_t = u3a_sole_has(*a);
+        bhc_t = u3a_sole_has(*b);
       }
 
       if ( ahc_t != bhc_t ) {
@@ -1637,8 +1637,8 @@ _ca_wed_kid(u3_noun *restrict a, u3_noun *restrict b)
         c3_t ahc_t = 0, bhc_t = 0;
 
         if ( &(u3H->rod_u) == u3R ) {
-          ahc_t = u3a_hcon_has(*a);
-          bhc_t = u3a_hcon_has(*b);
+          ahc_t = u3a_sole_has(*a);
+          bhc_t = u3a_sole_has(*b);
         }
 
         if ( ahc_t != bhc_t ) {
@@ -1750,7 +1750,7 @@ _ca_wed_where(u3_noun* sot)
 static inline c3_t
 _ca_wed_keep(u3_noun a, u3_noun b)
 {
-  c3_t amb_t = u3a_hcon_has(a), bmb_t = u3a_hcon_has(b);
+  c3_t amb_t = u3a_sole_has(a), bmb_t = u3a_sole_has(b);
 
   if ( amb_t != bmb_t ) return amb_t;
   return (a < b) == (c3y == u3a_is_north(&(u3H->rod_u)));
@@ -1841,7 +1841,7 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
     u3_noun  val   = kep_t ? *a : *b;
     c3_y     wri_y = kep_t ? bwr_y : awr_y;
 
-    if ( u3a_hcon_has(*sot) ) {
+    if ( u3a_sole_has(*sot) ) {
       u3e_Meter.wsk_d[0]++;
       return c3n;
     }
@@ -2793,7 +2793,7 @@ u3a_sweep(void)
   //  hashcons set may refer to them
   //
   if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
-    u3m_dedup_ream();
+    u3m_sole_ream();
   }
 
   return siz_w;

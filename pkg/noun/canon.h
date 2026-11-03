@@ -1,6 +1,6 @@
 /// @file
 ///
-/// Off-loom hash-consing tables, shared by u3m_dedup() and melt.
+/// Off-loom hash-consing tables, shared by u3m_sole_home() and melt.
 ///
 /// Members are canonical nouns, and the children of a member cell are
 /// members, so cells compare by mug and child pointers alone: a cell is
