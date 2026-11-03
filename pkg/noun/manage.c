@@ -418,6 +418,12 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
   u3R->kid_p = 0;
+
+  //  a signal can interrupt u3m_love() before it drops a junior heap,
+  //  leaving it poisoned for the next road: unpoison all free memory
+  //  (ASan only)
+  //
+  u3a_drop_heap(u3R->mat_p, u3R->hat_p);
 }
 
 #if 0
