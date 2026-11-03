@@ -1365,32 +1365,29 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 
 #undef SWAP
 
-/* _ca_slot_ours(): [sot] is a slot in the current road's heap (rut to hat).
-*/
-static inline c3_t
-_ca_slot_ours(u3_noun* sot)
-{
-  c3_d off_d = (c3_d)u3a_outa(sot);
-
-  if ( c3y == u3a_is_north(u3R) ) {
-    return (off_d >= u3R->rut_p) && (off_d < u3R->hat_p);
-  }
-  else {
-    return (off_d >= u3R->hat_p) && (off_d < u3R->rut_p);
-  }
-}
-
 /* _ca_wed_slot(): unify equal [*a] and [*b], both senior to every road
 **   that could hold them, by pointing a slot in this road's heap at the
 **   other value. references into senior memory aren't counted, so no
-**   count changes, and both values outlive the slot. toward a member,
-**   then toward the value a slot we can't write holds.
+**   count changes, and both values outlive the slot. write the slot we
+**   can; if both are ours, keep a member.
 */
 static void
 _ca_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
 {
-  c3_t aon_t = _ca_slot_ours(a);
-  c3_t bon_t = _ca_slot_ours(b);
+  c3_t aon_t, bon_t;
+  {
+    //  this road's heap: rut to hat, or hat to rut on a south road. the
+    //  offsets stay wide, so a slot off the loom is never ours
+    //
+    c3_t    nor_t = ( c3y == u3a_is_north(u3R) );
+    u3_post bot_p = nor_t ? u3R->rut_p : u3R->hat_p;
+    u3_post top_p = nor_t ? u3R->hat_p : u3R->rut_p;
+    c3_d    aof_d = (c3_d)u3a_outa(a);
+    c3_d    bof_d = (c3_d)u3a_outa(b);
+
+    aon_t = (aof_d >= bot_p) && (aof_d < top_p);
+    bon_t = (bof_d >= bot_p) && (bof_d < top_p);
+  }
 
   u3e_Meter.wsg_d++;
   if ( !aon_t && !bon_t ) {
@@ -1398,17 +1395,10 @@ _ca_wed_slot(u3_noun *restrict a, u3_noun *restrict b)
     return;
   }
 
-  {
-    c3_t amb_t = u3a_hcon_has(*a);
-    c3_t bmb_t = u3a_hcon_has(*b);
+  if ( bon_t && (!aon_t || u3a_hcon_has(*a)) ) *b = *a;
+  else                                         *a = *b;
 
-    if      ( amb_t && bon_t )   { *b = *a; u3e_Meter.wsw_d[0]++; return; }
-    else if ( bmb_t && aon_t )   { *a = *b; u3e_Meter.wsw_d[0]++; return; }
-    else if ( aon_t && !bon_t )  { *a = *b; }
-    else if ( bon_t && !aon_t )  { *b = *a; }
-    else                         { *a = *b; }
-    u3e_Meter.wsw_d[1]++;
-  }
+  u3e_Meter.wsw_d[u3a_hcon_has(*a) ? 0 : 1]++;
 }
 
 /* u3a_wed(): unify noun references.
