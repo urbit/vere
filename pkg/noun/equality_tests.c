@@ -103,6 +103,58 @@ _test_unify_inner(void)
   return ret_i;
 }
 
+/* _test_unify_senior(): equal cells on an inner road, compared from the
+**                       road below it, are unified there with exact
+**                       counts: the kept tail is gained, and the other
+**                       lost when the senior road is current again.
+*/
+static c3_i
+_test_unify_senior(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun a, b;
+
+  u3m_hate(0);
+
+  a = u3nt(0, 0, 0);
+  b = u3nt(0, 0, 0);
+
+  u3m_hate(0);
+  (void)u3r_sing(a, b);
+  u3m_love(0);
+
+  if ( u3t(a) != u3t(b) ) {
+    fprintf(stderr, "test: unify senior: not unified\r\n");
+    ret_i = 0;
+  }
+  else if ( 2 != u3a_use(u3t(a)) ) {
+    fprintf(stderr, "test: unify senior: count %" PRIc3_w ", not 2\r\n",
+            u3a_use(u3t(a)));
+    ret_i = 0;
+  }
+
+  //  counting references, a grab of this road finds no leak and no count
+  //  to repair
+  //
+  {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_grab(a, b);
+    u3C.wag_h = wag_h;
+    if ( u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: unify senior: leaked %" PRIc3_w " words\r\n",
+              u3a_sweep_leaked());
+      ret_i = 0;
+    }
+  }
+
+  u3z(a); u3z(b);
+  u3m_love(0);
+
+  return ret_i;
+}
+
 static c3_i
 _test_unify_inner_home(void)
 {
@@ -115,17 +167,10 @@ _test_unify_inner_home(void)
 
   (void)u3r_sing(a, b);
 
-  //  debugging memory, unification stays on the inner road; otherwise
-  //  one home slot is pointed at the other's value, which gains it on the
-  //  home road now, and the old value is lost at the exit
+  //  one home slot is pointed at the other's value, which gains it on
+  //  the home road now, and the old value is lost at the exit
   //
-  if ( u3a_dbg_ram() ) {
-    if ( u3t(a) == u3t(b) ) {
-      fprintf(stderr, "test: unify inner-home: unified while debugging\r\n");
-      ret_i = 0;
-    }
-  }
-  else if ( u3t(a) != u3t(b) ) {
+  if ( u3t(a) != u3t(b) ) {
     fprintf(stderr, "test: unify inner-home: not unified\r\n");
     ret_i = 0;
   }
@@ -137,7 +182,7 @@ _test_unify_inner_home(void)
 
   u3m_love(0);
 
-  if ( !u3a_dbg_ram() && ((u3t(a) != u3t(b)) || (2 != u3a_use(u3t(a)))) ) {
+  if ( (u3t(a) != u3t(b)) || (2 != u3a_use(u3t(a))) ) {
     fprintf(stderr, "test: unify inner-home: wrong after the exit\r\n");
     ret_i = 0;
   }
@@ -892,16 +937,10 @@ _test_equality(void)
     ret_i = 0;
   }
 
-  //  debugging memory, unification stays on the current road and long
-  //  comparisons use only the scratch pair table: these two expect
-  //  senior unification and the excursion table
-  //
-#ifndef U3_MEMORY_DEBUG
   if ( !_test_gap() ) {
     fprintf(stderr, "test: equality: gap: failed\r\n");
     ret_i = 0;
   }
-#endif
 
   if ( !_test_sing_dag() ) {
     fprintf(stderr, "test: equality: sing dag: failed\r\n");
@@ -923,12 +962,15 @@ _test_equality(void)
     ret_i = 0;
   }
 
-#ifndef U3_MEMORY_DEBUG
   if ( !_test_unify_inner() ) {
     fprintf(stderr, "test: equality: unify inner: failed\r\n");
     ret_i = 0;
   }
-#endif
+
+  if ( !_test_unify_senior() ) {
+    fprintf(stderr, "test: equality: unify senior: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_unify_inner_home() ) {
     fprintf(stderr, "test: equality: unify inner-home: failed\r\n");

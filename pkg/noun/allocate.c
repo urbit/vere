@@ -1331,7 +1331,23 @@ _ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
   return c3y;
 }
 
-/* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. leaks
+/* _ca_slot_on(): [sot] is a slot in [rod_u]'s heap. the offset stays
+**   wide, so a slot off the loom is never on a road.
+*/
+static inline c3_t
+_ca_slot_on(u3a_road* rod_u, u3_noun* sot)
+{
+  c3_d off_d = (c3_d)u3a_outa(sot);
+
+  return ( c3y == u3a_is_north(rod_u) )
+         ? ((off_d >= rod_u->rut_p) && (off_d < rod_u->hat_p))
+         : ((off_d >= rod_u->hat_p) && (off_d < rod_u->rut_p));
+}
+
+/* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. a slot in [rod_u]'s
+**   heap counts its value: its new value is gained, if it's on [rod_u],
+**   and its old one lost once [rod_u] is current again (u3r_wed_lose()).
+**   a slot on a junior road doesn't count it, and is just written.
 */
 static c3_o
 _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
@@ -1346,20 +1362,29 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
     if ( asr_t ) return c3n;
 
     //  both are on [rod_u]; keep the deeper address
-    //  (and gain a reference)
     //
     //    (N && <) || (S && >)
     //    XX consider keeping higher refcount instead
     //
     if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
-
-    _me_gain_use(*a);
   }
   //  one of [a] or [b] are senior; keep it
   //
   else if ( !asr_t ) SWAP(a, b);
 
-  *b = *a;
+  u3e_Meter.wvm_d++;
+  if ( !_ca_slot_on(rod_u, b) ) {
+    *b = *a;
+  }
+  else {
+    u3_noun old = *b;
+
+    if ( c3n == u3a_is_senior(rod_u, *a) ) {
+      _me_gain_use(*a);
+    }
+    *b = *a;
+    u3r_wed_lose(rod_u, old);
+  }
   return c3y;
 }
 
@@ -1400,28 +1425,19 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
   //    where asynchronous things can allocate.
   //    (XX anything besides u3t_samp?)
   //
-  //    when unifying on a higher road, we can't free nouns,
-  //    because we can't track junior nouns that point into
-  //    that road.
-  //
-  //    this is just an implementation issue -- we could set use
-  //    counts to 0 without actually freeing.  but the allocator
-  //    would have to be actually designed for this.
-  //    (alternately, we could keep a deferred free-list)
-  //
-  //    not freeing may generate spurious leaks, so we disable
-  //    senior unification when debugging memory.  this will
-  //    cause a very slow boot process as the compiler compiles
-  //    itself, constantly running into duplicates.
+  //    when unifying on a higher road, we can't free nouns then,
+  //    because we can't track junior nouns that point into that
+  //    road. so the value a senior slot no longer holds goes on a
+  //    lose list, and is lost once that road is current again (see
+  //    _ca_wed_you()): counts stay exact, and senior unification
+  //    runs when debugging memory too.
   //
 
-  if ( !u3a_dbg_ram() ) {
-    while (  (c3n == wed_o)
-          && rod_u->par_p
-          && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
-    {
-      wed_o = _ca_wed_you(rod_u, a, b);
-    }
+  while (  (c3n == wed_o)
+        && rod_u->par_p
+        && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
+  {
+    wed_o = _ca_wed_you(rod_u, a, b);
   }
 
   return wed_o;

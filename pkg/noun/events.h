@@ -197,6 +197,14 @@
           c3_d wlx_d;        //  ... left by an interrupted exit, lost at
                              //  the next leap
 
+          //  unification on senior inner roads (_ca_wed_you())
+          //
+          c3_d wvm_d;        //  merges
+          c3_d wvc_d;        //  ... through a slot that counts its value
+          c3_d wvl_d;        //  values lost at exits
+          c3_d wvf_d;        //  ... leaked, the inner lose list full
+          c3_d wvx_d;        //  ... dropped by a signal reset
+
           //  inner roads' root sets (dup_p)
           //
           c3_d dpi_d;        //  roots inserted

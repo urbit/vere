@@ -248,12 +248,18 @@
           ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, __sb);            \
         })
 
-      /* u3r_wed_drain(): lose the values unification on inner roads
-      **                  unpointed from home slots. home road only, after
-      **                  every take of an exit to home.
+      /* u3r_wed_drain(): lose the values unification unpointed from
+      **                  slots on this road. after every take of an exit
+      **                  to it.
       */
         void
         u3r_wed_drain(void);
+
+      /* u3r_wed_lose(): lose [old], a value on inner road [rod_u], once
+      **                 [rod_u] is current again.
+      */
+        void
+        u3r_wed_lose(u3a_road* rod_u, u3_noun old);
 
       /* u3r_wed_left(): lose what an interrupted exit left on the lose
       **                 list. home road only, no excursion under way.

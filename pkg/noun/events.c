@@ -554,6 +554,13 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.wsk_d[2], u3e_Meter.wll_d, u3e_Meter.wlp_d,
                    u3e_Meter.wlx_d);
 
+    //  unification on senior inner roads
+    //
+    fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.wvm_d, u3e_Meter.wvc_d, u3e_Meter.wvl_d,
+                   u3e_Meter.wvf_d, u3e_Meter.wvx_d);
+
     //  inner roads' root sets
     //
     fprintf(fil_u, "Q %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",

@@ -305,31 +305,44 @@ _cr_sing_atom(u3_atom a, u3_noun b)
   return c3y;
 }
 
-/* the lose list: home values that unification on an inner road
-**   unpointed from home slots, each gained by the slot that replaced it.
-**   they're lost after the exit's takes (u3r_wed_drain()), or at the
-**   next leap if an interrupted exit left them. off the loom, allocated
-**   on the home road; a value is written, then published by bumping the
-**   length, so an interrupt at worst leaks.
+/* the lose lists: values that unification unpointed from slots that
+**   counted them, each gained by the slot's new value if that needs a
+**   count. a value is lost once the road it's on is current again,
+**   after the takes of its child's exit (u3r_wed_drain()): nothing
+**   junior holds it then except through what was taken, which gained it.
+**
+**   home values (from _cr_wed_fall()) and values on other inner roads
+**   (from u3a_wed(), merging on a senior road) are kept apart: the
+**   home list is drained at the exit to home, and the inner list at
+**   every other exit, for the entries of the road exited to. after a
+**   signal reset the inner list is dropped with the roads it named, and
+**   the home list drained. off the loom, allocated on the home road; an
+**   entry is written, then published by bumping the length, so an
+**   interrupt at worst leaks.
 */
-//  NB: the starting size and ceiling are first guesses; revisit them
+//  NB: the starting sizes and ceilings are first guesses; revisit them
 //  with readings from more ships.
 //
 #define _CR_LO_MIN  (1U << 14)   //  entries, to start
 #define _CR_LO_MAX  (1U << 22)   //  entries, at most
 
+typedef struct {
+  u3_post rod_p;                 //  the road the value is on
+  u3_noun val;
+} _cr_lo_inner;
+
 static struct {
   c3_t    ini_t;
-  u3c_arr ent_u;   //  values to lose
-  c3_w    len_w;   //  published
+  u3c_arr ent_u;   //  home values to lose
+  c3_w    len_w;   //  ... published
+  u3c_arr inn_u;   //  inner-road values to lose
+  c3_w    inn_w;   //  ... published
 } _cr_lo;
 
-/* u3r_wed_drain(): lose the values unification unpointed from home
-**                  slots. home road only, after every take of an exit
-**                  to home, or before a leap.
+/* _cr_lo_drain_home(): lose the home values on the list.
 */
-void
-u3r_wed_drain(void)
+static void
+_cr_lo_drain_home(void)
 {
   c3_w     len_w = _cr_lo.len_w;
   u3_noun* lis_u;
@@ -352,15 +365,87 @@ u3r_wed_drain(void)
   u3c_arr_shrink(&_cr_lo.ent_u, len_w);
 }
 
-/* u3r_wed_left(): lose what an interrupted exit left on the lose list.
-**                 home road only, with no excursion under way.
+/* _cr_lo_drain_inner(): lose the values on this inner road.
+*/
+static void
+_cr_lo_drain_inner(void)
+{
+  c3_w          len_w = _cr_lo.inn_w;
+  u3_post       rod_p = u3of(u3a_road, u3R);
+  _cr_lo_inner* lis_u;
+  c3_w          kep_w = 0, i_w;
+
+  if ( !len_w ) return;
+  lis_u = u3c_arr_at(&_cr_lo.inn_u, 0);
+
+  //  keep the entries of older roads at the front, and publish them;
+  //  then lose this road's, past the end. an interrupt meanwhile drops
+  //  the whole list at the signal reset, with the roads it names
+  //
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    if ( lis_u[i_w].rod_p != rod_p ) {
+      _cr_lo_inner tmp_u = lis_u[kep_w];
+      lis_u[kep_w++] = lis_u[i_w];
+      lis_u[i_w]     = tmp_u;
+    }
+  }
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  _cr_lo.inn_w = kep_w;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+
+  u3e_Meter.wvl_d += len_w - kep_w;
+  for ( i_w = kep_w; i_w < len_w; i_w++ ) {
+    u3z(lis_u[i_w].val);
+  }
+}
+
+/* u3r_wed_drain(): lose the values unification unpointed from slots on
+**                  this road. after every take of an exit to it.
+*/
+void
+u3r_wed_drain(void)
+{
+  if ( &(u3H->rod_u) == u3R ) {
+    _cr_lo_drain_home();
+  }
+  else {
+    _cr_lo_drain_inner();
+  }
+}
+
+/* u3r_wed_lose(): lose [old], on inner road [rod_u], at the exit to it.
+**                 past the ceiling, it's leaked until the road exits.
+*/
+void
+u3r_wed_lose(u3a_road* rod_u, u3_noun old)
+{
+  _cr_lo_inner* ent_u = u3c_arr_at(&_cr_lo.inn_u, _cr_lo.inn_w);
+
+  if ( !ent_u ) {
+    u3e_Meter.wvf_d++;
+    return;
+  }
+  ent_u->rod_p = u3of(u3a_road, rod_u);
+  ent_u->val   = old;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  _cr_lo.inn_w++;
+  u3e_Meter.wvc_d++;
+}
+
+/* u3r_wed_left(): what an interrupted exit left on the lose lists: drop
+**                 the inner list, with its roads, and lose the home
+**                 values. home road only, no excursion under way.
 */
 void
 u3r_wed_left(void)
 {
+  if ( _cr_lo.inn_w ) {
+    u3e_Meter.wvx_d += _cr_lo.inn_w;
+    _cr_lo.inn_w = 0;
+  }
   if ( _cr_lo.len_w ) {
     u3e_Meter.wlx_d += _cr_lo.len_w;
-    u3r_wed_drain();
+    _cr_lo_drain_home();
   }
 }
 
@@ -373,6 +458,8 @@ _cr_lo_leap(void)
   if ( !_cr_lo.ini_t ) {
     u3c_arr_init(&_cr_lo.ent_u, "lose list",
                  sizeof(u3_noun), _CR_LO_MIN, _CR_LO_MAX);
+    u3c_arr_init(&_cr_lo.inn_u, "inner lose list",
+                 sizeof(_cr_lo_inner), _CR_LO_MIN, _CR_LO_MAX);
     _cr_lo.ini_t = 1;
   }
   u3r_wed_left();
@@ -487,16 +574,8 @@ _cr_wed_fall(u3_noun* a, u3_noun* b)
   aon_t = _cr_our_slot(a);
   bon_t = _cr_our_slot(b);
 
-  //  debugging memory, unification stays on this road, and the values
-  //  may not be home nouns
-  //
-  if ( u3a_dbg_ram() ) {
-    ahm_t = bhm_t = 0;
-  }
-  else {
-    ahm_t = !aon_t && _cr_home_slot(a);
-    bhm_t = !bon_t && _cr_home_slot(b);
-  }
+  ahm_t = !aon_t && _cr_home_slot(a);
+  bhm_t = !bon_t && _cr_home_slot(b);
 
   {
     c3_t wra_t = aon_t || ahm_t;
@@ -611,6 +690,7 @@ u3r_crib_report(void)
   }
   if ( _cr_lo.ini_t ) {
     u3c_arr_report(&_cr_lo.ent_u);
+    u3c_arr_report(&_cr_lo.inn_u);
   }
 }
 
@@ -628,6 +708,7 @@ u3r_crib_stat(u3c_stat* sat_u)
   }
   if ( _cr_lo.ini_t ) {
     sat_u[len_w++] = u3c_arr_stat(&_cr_lo.ent_u);
+    sat_u[len_w++] = u3c_arr_stat(&_cr_lo.inn_u);
   }
   return len_w;
 }
@@ -734,7 +815,7 @@ _cr_sing_deep(u3a_pile* pil_u, _cr_sing_ctx* ctx_u)
   //  which pairs to record. where unification merges none, record any,
   //  for this comparison only
   //
-  ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : u3a_dbg_ram() ? 2 : 1;
+  ctx_u->pmo_y = ( 2 == ctx_u->scp_y ) ? 3 : 1;
   ctx_u->pms_u = ( 1 == ctx_u->pmo_y ) ? &_cr_pm_x : &_cr_pm_s;
   u3e_Meter.pmd_d[ctx_u->pmo_y - 1]++;
   if ( 1 < ctx_u->pmo_y ) {

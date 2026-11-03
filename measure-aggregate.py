@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 10, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 10, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def parse(lines):
@@ -237,9 +237,8 @@ def sums(ivs):
             s["W_ful"] += w[6]; s["W_lx"] += w[9]; s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
-            s["X_ent"] += x[0] + x[1]; s["X_rep"] += x[2]
-            s["X_not"] += x[3] + x[4] + x[5]; s["X_drp"] += x[6]
-            s["X_wrt"] += x[8] + x[9]; s["X_tasks"] += i["tasks"]
+            s["X_mer"] += x[0]; s["X_cnt"] += x[1]; s["X_ful"] += x[3]
+            s["X_tasks"] += i["tasks"]
         if "Q" in i:
             q = i["Q"]
             s["Q_ins"] += q[0]; s["Q_pro"] += q[1]; s["Q_hit"] += q[2]
@@ -348,15 +347,11 @@ METRICS = [
     ("W: most lost at one exit", "hashcons: lose list ceiling",
      lambda s, v: max(values(v, "W", 8), default=None)),
     ("W: left by interrupted exits", "hashcons: lose list", lambda s, v: s["W_lx"]),
-    ("X: deferred entries / 1000 tasks", "hashcons: deferral",
-     lambda s, v: ratio(1000 * s["X_ent"], s["X_tasks"]) if s["X_tasks"] else None),
-    ("X: repeats / (entries + repeats)", "hashcons: deferral",
-     lambda s, v: ratio(s["X_rep"], s["X_ent"] + s["X_rep"])),
-    ("X: phase A writes / entries", "hashcons: deferral",
-     lambda s, v: ratio(s["X_wrt"], s["X_ent"])),
-    ("X: dropped at the ceiling", "hashcons: deferral ceiling", lambda s, v: s["X_drp"]),
-    ("X: most entries at one exit", "hashcons: deferral ceiling",
-     lambda s, v: max(values(v, "X", 7), default=None)),
+    ("X: senior-road merges / 1000 tasks", "hashcons: senior unification",
+     lambda s, v: ratio(1000 * s["X_mer"], s["X_tasks"]) if s["X_tasks"] else None),
+    ("X: counted / merges", "hashcons: senior unification",
+     lambda s, v: ratio(s["X_cnt"], s["X_mer"])),
+    ("X: inner lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_ful"]),
     ("Q: dup_p roots / 1000 tasks", "hashcons: dup_p",
      lambda s, v: ratio(1000 * s["Q_ins"], s["Q_tasks"]) if s["Q_tasks"] else None),
     ("Q: dup_p hits / probes", "hashcons: dup_p", lambda s, v: ratio(s["Q_hit"], s["Q_pro"])),
@@ -393,6 +388,8 @@ METRICS = [
      lambda s, v: crib_peak(v, "visited-set")),
     ("N: lose list peak", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "lose-list")),
+    ("N: inner lose list peak", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "inner-lose-list")),
     ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
@@ -401,7 +398,7 @@ PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
                                "D: on-loom", "G: cancelled", "G: spilled", "Y:",
                                "W: slot writes / give", "W: writes in home",
-                               "X: repeats", "X: phase A", "Q: dup_p hits",
+                               "X: counted", "Q: dup_p hits",
                                "V: root pairs found", "V: inner pairs found",
                                "I: visited", "I: home-set", "Z: taken", "Z: fix",
                                "J: unified"))

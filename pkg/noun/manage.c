@@ -1669,6 +1669,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   }
   else {
     dup_p = u3h_take(dup_p);
+
+    //  the values senior unification unpointed from slots on this road
+    //
+    u3r_wed_drain();
   }
 
   //  pop the stack

@@ -55,11 +55,11 @@ Log lines (one snapshot interval ends at each S line):
                                             when u3a_wed() can't merge them: slot writes,
                                             and the lose list (jb/hcons-eager; older
                                             logs have a four-field W line, skipped)
-  X <noted-two> <noted-one> <repeats> <skip-promoting> <skip-slot> <skip-value>
-    <dropped> <most-at-exit> <wrote-two> <wrote-one> <skip-equal> <skip-member>
-                                            (older logs) deferred home-slot unification: entries
-                                            noted (two slots, or one from the jet
-                                            checks), give-ups not deferred, and phase A
+  X <merges> <counted> <lost> <leaked-full> <dropped-at-reset>
+                                            unification on senior inner roads: merges,
+                                            those through a slot that counts its value,
+                                            and those values' fate (jb/hcons-eager; older
+                                            logs' twelve-field X, for deferral, is skipped)
   Q <roots> <probes> <hits-other> <hits-self>
                                             inner roads' root sets (dup_p)
   V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
@@ -103,7 +103,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 10, "X": 12, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 10, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def pct(a, b):
@@ -620,25 +620,11 @@ def main():
             print(f"  lose list: {w[7]} values lost after takes (most at one exit: "
                   f"{w[8]}), {w[9]} left by interrupted exits")
         if xis:
-            x = [sum(i["X"][j] for i in xis) for j in range(12)]
-            x[7] = max(i["X"][7] for i in xis)
-            note = x[0] + x[1] + x[2] + x[3] + x[4] + x[5] + x[6]
-            print(f"  deferral, give-ups seen: {note}")
-            for name, c in (("noted, two slots", x[0]),
-                            ("noted, one slot (jet checks)", x[1]),
-                            ("repeat this excursion", x[2]),
-                            ("not deferred: promoting", x[3]),
-                            ("not deferred: a slot not home", x[4]),
-                            ("not deferred: a value not home", x[5]),
-                            ("dropped at the ceiling", x[6])):
-                print(f"    {name:<32}{c:>12}  {pct(c, note)}")
-            ent = x[0] + x[1]
-            print(f"  phase A, of {ent} entries (most at one exit: {x[7]}):")
-            for name, c in (("written, two slots", x[8]),
-                            ("written, one slot", x[9]),
-                            ("skipped: already equal", x[10]),
-                            ("skipped: members forbid it", x[11])):
-                print(f"    {name:<32}{c:>12}  {pct(c, ent)}")
+            x = [sum(i["X"][j] for i in xis) for j in range(5)]
+            print(f"  on senior inner roads: {x[0]} merges, {x[1]} through a slot "
+                  f"that counts its value")
+            print(f"    lost at exits {x[2]}, leaked (list full) {x[3]}, "
+                  f"dropped at a signal reset {x[4]}")
     qis = [i for i in intervals if i["Q"]]
     if qis and any(any(i["Q"]) for i in qis):
         q = [sum(i["Q"][j] for i in qis) for j in range(4)]
