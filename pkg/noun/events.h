@@ -184,31 +184,31 @@
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
 
-          //  unification of home values on inner roads, when u3a_wed()
-          //  can't merge them (_cr_wed_fall())
+          //  unification (u3a_wed()): merges on senior inner roads
+          //  (_ca_wed_you()), and when no road below home can merge,
+          //  slot writes on an inner road (_ca_wed_fall())
           //
-          c3_d wsg_d;        //  give-ups
+          c3_d wvm_d;        //  merges on senior inner roads
+          c3_d wvc_d;        //  ... through a slot that counts its value
+          c3_d wsg_d;        //  give-ups: no road could merge
+          c3_d wsp_d;        //  ... while promoting
           c3_d wsw_d[3];     //  slot writes: on this road, in home memory,
                              //  on a senior inner road
           c3_d wso_d;        //  ... against the order: the one slot that
                              //  could be written held the value it prefers
           c3_d wsn_d;        //  neither slot writable
-          c3_d wsk_d[3];     //  give-ups while promoting; not written: a
-                             //  member's slot; the home lose list full
-                             //  (leaked for the next grab, or, debugging
-                             //  memory, not written)
-          c3_d wll_d;        //  values lost after an exit's takes
-          c3_d wlp_d;        //  ... most at one exit
-          c3_d wlx_d;        //  ... left by an interrupted exit, lost at
-                             //  the next leap
+          c3_d wsk_d[2];     //  not written: a member's slot; a home write
+                             //  refused (the count at its limit, or,
+                             //  debugging memory, the home lose list full)
 
-          //  unification on senior inner roads (_ca_wed_you())
+          //  the lose lists, home [0] and inner [1] (u3a_wed_drain())
           //
-          c3_d wvm_d;        //  merges
-          c3_d wvc_d;        //  ... through a slot that counts its value
-          c3_d wvl_d;        //  values lost at exits
-          c3_d wvf_d;        //  ... leaked, the inner lose list full
-          c3_d wvx_d;        //  ... dropped by a signal reset
+          c3_d wlp_d[2];     //  values put
+          c3_d wlf_d[2];     //  values leaked, the list full
+          c3_d wll_d[2];     //  values lost after an exit's takes
+          c3_d wlm_d[2];     //  ... most at one exit
+          c3_d wlx_d[2];     //  left by an interrupted exit: home values
+                             //  lost at the next leap, inner ones dropped
 
           //  inner roads' root sets (dup_p)
           //

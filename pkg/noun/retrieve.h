@@ -5,7 +5,6 @@
 
 #include "c3/c3.h"
 #include "allocate.h"
-#include "crib.h"
 #include "error.h"
 #include "gmp.h"
 #include "types.h"
@@ -247,55 +246,6 @@
           u3_noun* __sb = (b);                                                \
           ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, __sb);            \
         })
-
-      /* u3r_wed_drain(): lose the values unification unpointed from
-      **                  slots on this road. after every take of an exit
-      **                  to it.
-      */
-        void
-        u3r_wed_drain(void);
-
-      /* u3r_wed_lose(): lose [old], a value on road [rod_u], once [rod_u]
-      **                 is current again after its child's exit; past the
-      **                 ceiling it's leaked.
-      */
-        void
-        u3r_wed_lose(u3a_road* rod_u, u3_noun old);
-
-      /* u3r_wed_room(): there's room on [rod_u]'s lose list.
-      */
-        c3_t
-        u3r_wed_room(u3a_road* rod_u);
-
-      /* u3r_wed_size(): restart the lose lists at [min_w] entries, at
-      **                 most [max_w] (tests). home road only, empty.
-      */
-        void
-        u3r_wed_size(c3_w min_w, c3_w max_w);
-
-      /* u3r_wed_left(): lose what an interrupted exit left on the lose
-      **                 list. home road only, no excursion under way.
-      */
-        void
-        u3r_wed_left(void);
-
-      /* u3r_sing_leap(): a new excursion from the home road. home road
-      **                  only.
-      */
-        void
-        u3r_sing_leap(void);
-
-      /* u3r_crib_report(): log the lose lists' drops at their ceilings.
-      **                    between events.
-      */
-        void
-        u3r_crib_report(void);
-
-      /* u3r_crib_stat(): the lose lists' use since the last call, into
-      **                  [sat_u] (room for 2); how many.
-      */
-        c3_w
-        u3r_crib_stat(u3c_stat* sat_u);
 
       /* u3r_sing(): noun value equality.
       **

@@ -49,18 +49,20 @@ Log lines (one snapshot interval ends at each S line):
     <written-nouns> <shrinks>               deferred gains across the state swap
   Y <references> <same-position> <refcount-1>
                                             new arvo state's alignment with the old
-  W <give-ups> <wrote-ours> <wrote-home> <neither-writable> <skip-promoting>
-    <skip-member> <skip-list-full> <lost> <most-lost-at-exit> <lost-at-leap>
-    <wrote-senior> <against-order>
-                                            unification of home values on inner roads,
-                                            when u3a_wed() can't merge them: slot writes,
-                                            and the lose list (jb/hcons-eager; older
-                                            logs have shorter W lines, skipped)
-  X <merges> <counted> <lost> <leaked-full> <dropped-at-reset>
-                                            unification on senior inner roads: merges,
-                                            those through a slot that counts its value,
-                                            and those values' fate (jb/hcons-eager; older
-                                            logs' twelve-field X, for deferral, is skipped)
+  W <senior-merges> <counted> <give-ups> <promoting> <wrote-ours> <wrote-home>
+    <wrote-senior> <against-order> <neither-writable> <skip-member> <refused>
+                                            unification (u3a_wed()): merges on senior
+                                            inner roads, those through a slot that
+                                            counts its value, and when no road can
+                                            merge, slot writes (jb/hcons-eager; older
+                                            logs' W and X lines, of other widths, are
+                                            skipped)
+  X <home-put> <home-leaked> <home-lost> <home-most-lost> <home-left>
+    <inner-put> <inner-leaked> <inner-lost> <inner-most-lost> <inner-left>
+                                            the lose lists: values put, leaked with
+                                            the list full, lost after an exit's takes
+                                            (and most at one exit), and left by an
+                                            interrupted exit
   Q <roots> <probes> <hits-other> <hits-self>
                                             inner roads' root sets (dup_p)
   V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
@@ -104,7 +106,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 12, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def pct(a, b):
@@ -607,27 +609,28 @@ def main():
         per = lambda x: f"{x / tasks if tasks else 0:.2f}"
         print("\n== unification of home values on inner roads ==")
         if wis:
-            w = [sum(i["W"][j] for i in wis) for j in range(12)]
-            w[8] = max(i["W"][8] for i in wis)
-            g = w[0] + w[4]
-            print(f"  give-ups: {g} ({per(g)} per task)")
-            for name, c in (("written, on this road", w[1]),
-                            ("written, in home memory", w[2]),
-                            ("written, on a senior inner road", w[10]),
-                            ("  of all writes, against the order", w[11]),
-                            ("neither slot writable", w[3]),
-                            ("not written: promoting", w[4]),
-                            ("not written: a member's slot", w[5]),
-                            ("not written: lose list full", w[6])):
-                print(f"    {name:<32}{c:>12}  {pct(c, g)}")
-            print(f"  lose list: {w[7]} values lost after takes (most at one exit: "
-                  f"{w[8]}), {w[9]} left by interrupted exits")
-        if xis:
-            x = [sum(i["X"][j] for i in xis) for j in range(5)]
-            print(f"  on senior inner roads: {x[0]} merges, {x[1]} through a slot "
+            w = [sum(i["W"][j] for i in wis) for j in range(11)]
+            print(f"  merges on senior inner roads: {w[0]}, {w[1]} through a slot "
                   f"that counts its value")
-            print(f"    lost at exits {x[2]}, leaked (list full) {x[3]}, "
-                  f"dropped at a signal reset {x[4]}")
+            g = w[2]
+            print(f"  give-ups, no road could merge: {g} ({per(g)} per task), "
+                  f"{w[3]} while promoting  {pct(w[3], g)}")
+            for name, c in (("written, on this road", w[4]),
+                            ("written, in home memory", w[5]),
+                            ("written, on a senior inner road", w[6]),
+                            ("  of all writes, against the order", w[7]),
+                            ("neither slot writable", w[8]),
+                            ("not written: a member's slot", w[9]),
+                            ("not written: home write refused", w[10])):
+                print(f"    {name:<36}{c:>12}  {pct(c, g)}")
+        if xis:
+            x = [sum(i["X"][j] for i in xis) for j in range(10)]
+            x[3] = max(i["X"][3] for i in xis)
+            x[8] = max(i["X"][8] for i in xis)
+            for name, o in (("home", 0), ("inner", 5)):
+                print(f"  {name} lose list: {x[o]} put, {x[o + 1]} leaked (full), "
+                      f"{x[o + 2]} lost after takes (most at one exit: {x[o + 3]}), "
+                      f"{x[o + 4]} left by interrupted exits")
     qis = [i for i in intervals if i["Q"]]
     if qis and any(any(i["Q"]) for i in qis):
         q = [sum(i["Q"][j] for i in qis) for j in range(4)]

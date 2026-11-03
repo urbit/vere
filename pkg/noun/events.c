@@ -544,22 +544,26 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
 
-    //  unification of home values on inner roads
+    //  unification: senior merges, then slot writes
     //
     fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.wsg_d, u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
-                   u3e_Meter.wsn_d, u3e_Meter.wsk_d[0], u3e_Meter.wsk_d[1],
-                   u3e_Meter.wsk_d[2], u3e_Meter.wll_d, u3e_Meter.wlp_d,
-                   u3e_Meter.wlx_d, u3e_Meter.wsw_d[2], u3e_Meter.wso_d);
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wvm_d, u3e_Meter.wvc_d,
+                   u3e_Meter.wsg_d, u3e_Meter.wsp_d,
+                   u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1], u3e_Meter.wsw_d[2],
+                   u3e_Meter.wso_d, u3e_Meter.wsn_d,
+                   u3e_Meter.wsk_d[0], u3e_Meter.wsk_d[1]);
 
-    //  unification on senior inner roads
+    //  the lose lists, home then inner
     //
     fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 "\n",
-                   u3e_Meter.wvm_d, u3e_Meter.wvc_d, u3e_Meter.wvl_d,
-                   u3e_Meter.wvf_d, u3e_Meter.wvx_d);
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wlp_d[0], u3e_Meter.wlf_d[0], u3e_Meter.wll_d[0],
+                   u3e_Meter.wlm_d[0], u3e_Meter.wlx_d[0],
+                   u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
+                   u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1]);
 
     //  inner roads' root sets
     //

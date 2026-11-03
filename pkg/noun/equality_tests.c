@@ -212,7 +212,7 @@ _test_lose_full(void)
   }
 
   u3C.wag_h &= ~u3o_check_corrupt;
-  u3r_wed_size(16, 16);
+  u3a_wed_size(16, 16);
   u3m_hate(0);
   {
     u3_noun lis = hol;
@@ -259,7 +259,7 @@ _test_lose_full(void)
     u3C.wag_h = wag_h & ~u3o_check_corrupt;
   }
 
-  u3r_wed_size(1U << 14, 1U << 22);
+  u3a_wed_size(1U << 14, 1U << 22);
   u3z(hol);
   return ret_i;
 }
@@ -762,7 +762,7 @@ _test_sing_dag_all(void)
   u3R->kid_p = u3of(u3a_road, u3R);
   ret_i &= _sing_dag("promotion", a, b);
   u3R->kid_p = 0;
-  u3r_wed_drain();
+  u3a_wed_drain();
   if ( u3h(a) != u3h(b) ) {
     fprintf(stderr, "test: sing dag: promotion: not unified\r\n");
     ret_i = 0;

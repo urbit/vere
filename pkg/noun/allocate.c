@@ -1284,6 +1284,250 @@ u3a_use(u3_noun som)
   }
 }
 
+/* the lose lists: values that unification unpointed from slots that
+**   counted them, each gained by the slot's new value if that needs a
+**   count. a value is lost once the road it's on is current again,
+**   after the takes of its child's exit (u3a_wed_drain()): nothing
+**   junior holds it then except through what was taken, which gained it.
+**
+**   home values and values on inner roads are kept apart: the home list
+**   is drained at the exit to home, and the inner list at every other
+**   exit, for the entries of the road exited to. after a signal reset
+**   the inner list is dropped with the roads it named, and the home
+**   list drained. off the loom, allocated on the home road; an entry is
+**   written, then published by bumping the length, so an interrupt at
+**   worst leaks.
+*/
+//  NB: the starting sizes and ceilings are first guesses; revisit them
+//  with readings from more ships.
+//
+#define _CA_LO_MIN  (1U << 14)   //  entries, to start
+#define _CA_LO_MAX  (1U << 22)   //  entries, at most
+
+typedef struct {
+  u3_post rod_p;                 //  the road the value is on
+  u3_noun val;
+} _ca_lo_inner;
+
+static struct {
+  c3_t    ini_t;
+  u3c_arr hom_u;   //  home values to lose
+  c3_w    hom_w;   //  ... published
+  u3c_arr inn_u;   //  inner-road values to lose
+  c3_w    inn_w;   //  ... published
+} _ca_lo;
+
+/* _ca_lo_drain_home(): lose the home values on the list.
+*/
+static void
+_ca_lo_drain_home(void)
+{
+  c3_w     len_w = _ca_lo.hom_w;
+  u3_noun* lis_u;
+  c3_w     i_w;
+
+  if ( !len_w ) return;
+  lis_u = u3c_arr_at(&_ca_lo.hom_u, 0);
+  u3e_Meter.wll_d[0] += len_w;
+  if ( len_w > u3e_Meter.wlm_d[0] ) u3e_Meter.wlm_d[0] = len_w;
+
+  //  each value is taken off the list before it's lost, so that an
+  //  interrupt can't lose it twice
+  //
+  for ( i_w = len_w; i_w > 0; i_w-- ) {
+    u3_noun old = lis_u[i_w - 1];
+    _ca_lo.hom_w = i_w - 1;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    u3z(old);
+  }
+  u3c_arr_shrink(&_ca_lo.hom_u, len_w);
+}
+
+/* _ca_lo_drain_inner(): lose the values on this inner road.
+*/
+static void
+_ca_lo_drain_inner(void)
+{
+  c3_w          len_w = _ca_lo.inn_w;
+  u3_post       rod_p = u3of(u3a_road, u3R);
+  _ca_lo_inner* lis_u;
+  c3_w          kep_w = 0, i_w;
+
+  if ( !len_w ) return;
+  lis_u = u3c_arr_at(&_ca_lo.inn_u, 0);
+  u3c_arr_used(&_ca_lo.inn_u, len_w);
+
+  //  keep the entries of older roads at the front, and publish them;
+  //  then lose this road's, past the end. an interrupt meanwhile drops
+  //  the whole list at the signal reset, with the roads it names
+  //
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    if ( lis_u[i_w].rod_p != rod_p ) {
+      _ca_lo_inner tmp_u = lis_u[kep_w];
+      lis_u[kep_w++] = lis_u[i_w];
+      lis_u[i_w]     = tmp_u;
+    }
+  }
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  _ca_lo.inn_w = kep_w;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+
+  u3e_Meter.wll_d[1] += len_w - kep_w;
+  if ( (len_w - kep_w) > u3e_Meter.wlm_d[1] ) {
+    u3e_Meter.wlm_d[1] = len_w - kep_w;
+  }
+  for ( i_w = kep_w; i_w < len_w; i_w++ ) {
+    u3z(lis_u[i_w].val);
+  }
+}
+
+/* u3a_wed_drain(): lose the values unification unpointed from slots on
+**                  this road. after every take of an exit to it.
+*/
+void
+u3a_wed_drain(void)
+{
+  if ( &(u3H->rod_u) == u3R ) {
+    _ca_lo_drain_home();
+  }
+  else {
+    _ca_lo_drain_inner();
+  }
+}
+
+/* _ca_lo_home_at(): the next home entry, or 0 if the list is full.
+*/
+static inline __attribute__((always_inline)) u3_noun*
+_ca_lo_home_at(void)
+{
+  return u3c_arr_at(&_ca_lo.hom_u, _ca_lo.hom_w);
+}
+
+/* _ca_lo_home_put(): put [old] at [lis_u], from _ca_lo_home_at(); if 0,
+**   leak it: the next grab, which counts references, frees it. calls
+**   nothing, so it can run with async signals held (u3m_hold()).
+*/
+static inline __attribute__((always_inline)) void
+_ca_lo_home_put(u3_noun* lis_u, u3_noun old)
+{
+  if ( lis_u ) {
+    *lis_u = old;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _ca_lo.hom_w++;
+    u3e_Meter.wlp_d[0]++;
+  }
+  else {
+    u3C.wag_h |= u3o_check_corrupt;
+    u3e_Meter.wlf_d[0]++;
+  }
+}
+
+/* _ca_lo_room(): there's room on [rod_u]'s lose list. under memory
+**   debugging, a unification is refused without it.
+*/
+static inline c3_t
+_ca_lo_room(u3a_road* rod_u)
+{
+  return ( &(u3H->rod_u) == rod_u )
+         ? (0 != _ca_lo_home_at())
+         : (0 != u3c_arr_at(&_ca_lo.inn_u, _ca_lo.inn_w));
+}
+
+/* _ca_lo_put(): lose [old], a value on road [rod_u], once [rod_u] is
+**   current again after its child's exit. past the ceiling it's leaked:
+**   an inner road's heap goes at its exit, and a home leak asks for a
+**   grab.
+*/
+static void
+_ca_lo_put(u3a_road* rod_u, u3_noun old)
+{
+  if ( &(u3H->rod_u) == rod_u ) {
+    _ca_lo_home_put(_ca_lo_home_at(), old);
+  }
+  else {
+    _ca_lo_inner* ent_u = u3c_arr_at(&_ca_lo.inn_u, _ca_lo.inn_w);
+
+    if ( !ent_u ) {
+      u3e_Meter.wlf_d[1]++;
+      return;
+    }
+    ent_u->rod_p = u3of(u3a_road, rod_u);
+    ent_u->val   = old;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _ca_lo.inn_w++;
+    u3e_Meter.wlp_d[1]++;
+  }
+}
+
+/* u3a_wed_left(): what an interrupted exit left on the lose lists: drop
+**                 the inner list, with its roads, and lose the home
+**                 values. home road only, no excursion under way.
+*/
+void
+u3a_wed_left(void)
+{
+  if ( _ca_lo.inn_w ) {
+    u3e_Meter.wlx_d[1] += _ca_lo.inn_w;
+    _ca_lo.inn_w = 0;
+  }
+  if ( _ca_lo.hom_w ) {
+    u3e_Meter.wlx_d[0] += _ca_lo.hom_w;
+    _ca_lo_drain_home();
+  }
+}
+
+/* u3a_wed_size(): restart the lose lists at [min_w] entries, at most
+**                 [max_w] (tests). home road only, the lists empty.
+*/
+void
+u3a_wed_size(c3_w min_w, c3_w max_w)
+{
+  u3c_arr_init(&_ca_lo.hom_u, "lose list", sizeof(u3_noun), min_w, max_w);
+  u3c_arr_init(&_ca_lo.inn_u, "inner lose list",
+               sizeof(_ca_lo_inner), min_w, max_w);
+  _ca_lo.hom_w = _ca_lo.inn_w = 0;
+  _ca_lo.ini_t = 1;
+}
+
+/* u3a_wed_leap(): a new excursion: allocate the lose lists, and lose
+**                 what an interrupted exit left. home road only.
+*/
+void
+u3a_wed_leap(void)
+{
+  if ( !_ca_lo.ini_t ) {
+    u3a_wed_size(_CA_LO_MIN, _CA_LO_MAX);
+  }
+  u3a_wed_left();
+}
+
+/* u3a_wed_report(): log the lose lists' drops at their ceilings. home
+**                   road only, between events.
+*/
+void
+u3a_wed_report(void)
+{
+  if ( _ca_lo.ini_t ) {
+    u3c_arr_report(&_ca_lo.hom_u);
+    u3c_arr_report(&_ca_lo.inn_u);
+  }
+}
+
+/* u3a_wed_stat(): the lose lists' use since the last call, into [sat_u]
+**                 (room for 2); how many.
+*/
+c3_w
+u3a_wed_stat(u3c_stat* sat_u)
+{
+  c3_w len_w = 0;
+
+  if ( _ca_lo.ini_t ) {
+    sat_u[len_w++] = u3c_arr_stat(&_ca_lo.hom_u);
+    sat_u[len_w++] = u3c_arr_stat(&_ca_lo.inn_u);
+  }
+  return len_w;
+}
+
 #define SWAP(l, r)    \
   do { typeof(l) t = l; l = r; r = t; } while (0)
 
@@ -1363,7 +1607,7 @@ _ca_slot_junior(u3_noun* sot)
 **   a value on the child is left if both are; else the slot holding it,
 **   on the child, is pointed at the other value: the child doesn't count
 **   references to older roads. otherwise as _ca_wed_our(), but a slot on
-**   this road loses its old value at the end of the exit (u3r_wed_lose()),
+**   this road loses its old value at the end of the exit (_ca_lo_put()),
 **   since the child may still refer to it; a slot on the child is just
 **   written. nothing older is ever pointed at the child.
 */
@@ -1411,7 +1655,7 @@ _ca_wed_kid(u3_noun *restrict a, u3_noun *restrict b)
     return c3y;
   }
   if ( !_ca_slot_on(u3R, b) ) return c3n;
-  if ( u3a_dbg_ram() && !u3r_wed_room(u3R) ) return c3n;
+  if ( u3a_dbg_ram() && !_ca_lo_room(u3R) ) return c3n;
 
   {
     u3_noun old = *b;
@@ -1421,7 +1665,7 @@ _ca_wed_kid(u3_noun *restrict a, u3_noun *restrict b)
     }
     *b = *a;
     if ( c3n == u3a_is_senior(u3R, old) ) {
-      u3r_wed_lose(u3R, old);
+      _ca_lo_put(u3R, old);
     }
   }
   return c3y;
@@ -1429,7 +1673,7 @@ _ca_wed_kid(u3_noun *restrict a, u3_noun *restrict b)
 
 /* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. a slot in [rod_u]'s
 **   heap counts its value: its new value is gained, if it's on [rod_u],
-**   and its old one lost once [rod_u] is current again (u3r_wed_lose()).
+**   and its old one lost once [rod_u] is current again (_ca_lo_put()).
 **   a slot on a junior road doesn't count it, and is just written.
 */
 static c3_o
@@ -1455,39 +1699,170 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
   //
   else if ( !asr_t ) SWAP(a, b);
 
-  u3e_Meter.wvm_d++;
   if ( !_ca_slot_on(rod_u, b) ) {
     *b = *a;
   }
   else {
     u3_noun old = *b;
 
-    if ( u3a_dbg_ram() && !u3r_wed_room(rod_u) ) return c3n;
+    if ( u3a_dbg_ram() && !_ca_lo_room(rod_u) ) return c3n;
     if ( c3n == u3a_is_senior(rod_u, *a) ) {
       _me_gain_use(*a);
     }
     *b = *a;
-    u3r_wed_lose(rod_u, old);
+    _ca_lo_put(rod_u, old);
+    u3e_Meter.wvc_d++;
   }
+  u3e_Meter.wvm_d++;
   return c3y;
 }
 
 #undef SWAP
 
-/* u3a_gain_home(): gain a reference to home-road noun [som], on the home
-**                  road, from any road (references into senior memory
-**                  are otherwise not counted).
+/* _ca_wed_where(): where [sot] can be written from an inner road, for a
+**   home value: 1 this road's heap, or its child's while it's promoted
+**   (on this road's stack), 2 home memory, 3 the heap of an inner road
+**   senior to this one; 0 nowhere (off the loom, an older road's stack).
+**   during an excursion the inner roads are carved from the home road's
+**   free space, between its hat and cap, so home memory is its heap.
 */
-void
-u3a_gain_home(u3_noun som)
+static inline c3_y
+_ca_wed_where(u3_noun* sot)
 {
-  if ( c3n == u3a_is_cat(som) ) {
-    _me_gain_use(som);
+  u3a_road* rod_u = u3R;
+
+  if ( _ca_slot_on(rod_u, sot) )                  return 1;
+  if ( rod_u->kid_p && _ca_slot_junior(sot) )     return 1;
+  if ( _ca_slot_on(&(u3H->rod_u), sot) )          return 2;
+
+  while ( rod_u->par_p ) {
+    rod_u = u3to(u3a_road, rod_u->par_p);
+    if ( &(u3H->rod_u) == rod_u ) break;
+    if ( _ca_slot_on(rod_u, sot) ) return 3;
   }
+  return 0;
 }
 
-/* u3a_wed(): unify noun references, on this road or a senior one below
-**             home: c3y if merged.
+/* _ca_wed_keep(): of equal home nouns [a] and [b], keep [a]: as on the
+**   home road, a member, else the deeper address. a total order, so a
+**   slot only ever moves toward the same value.
+*/
+static inline c3_t
+_ca_wed_keep(u3_noun a, u3_noun b)
+{
+  c3_t amb_t = u3a_hcon_has(a), bmb_t = u3a_hcon_has(b);
+
+  if ( amb_t != bmb_t ) return amb_t;
+  return (a < b) == (c3y == u3a_is_north(&(u3H->rod_u)));
+}
+
+/* _ca_wed_home(): point home slot [sot] at home noun [val], gaining it
+**   on the home road; the old value goes on the home lose list. past the
+**   list's ceiling the old value is leaked, for the next grab, or under
+**   memory debugging the slot is left. 0 if not written: so, or [val]'s
+**   count is at its limit.
+**
+**   the gain, the write and the list entry are made with async signals
+**   held (u3m_hold()), so a timeout or an interrupt can't land between
+**   them; the sampler skips while they're held too. nothing in between
+**   calls a function, so nothing there can bail or overflow the stack.
+*/
+static c3_t
+_ca_wed_home(u3_noun* sot, u3_noun val)
+{
+  u3_noun*  lis_u = _ca_lo_home_at();
+  u3a_noun* box_u = u3a_to_ptr(val);
+  u3_noun   old   = *sot;
+
+  if ( !lis_u && u3a_dbg_ram() ) return 0;
+
+  //  as _me_gain_use(): a home noun's count can't be 0 while it's held;
+  //  at the limit, leave the slot as it is. gains from an inner road are
+  //  never deferred (see u3a_defer_open())
+  //
+  if ( 0 == box_u->use_w ) {
+    u3m_bail(c3__foul);
+  }
+  if ( u3a_direct_max == box_u->use_w ) {
+    return 0;
+  }
+
+  u3m_hold();
+  box_u->use_w += 1;
+  *sot = val;
+  _ca_lo_home_put(lis_u, old);
+  u3m_hold_done();
+  return 1;
+}
+
+/* _ca_wed_fall(): no road below home could merge equal [*a] and [*b]:
+**   both values are senior to every road that could. on an inner road,
+**   point one slot at the other's value: keep the value _ca_wed_keep()
+**   prefers, if both slots can be written, else write the slot that can.
+**   a slot in the heap of this road, or of an inner road senior to it,
+**   is written as is (references from inner roads into home memory
+**   aren't counted); a slot in home memory gains its new value on home,
+**   and the old one is lost after the exit's takes. a slot holding a
+**   member is never written: the home set is closed, so it may be in
+**   one. c3y if written.
+*/
+static c3_o
+_ca_wed_fall(u3_noun* a, u3_noun* b)
+{
+  c3_y awr_y, bwr_y;
+  c3_t kep_t;
+
+  if ( &(u3H->rod_u) == u3R ) return c3n;
+
+  u3e_Meter.wsg_d++;
+  if ( u3R->kid_p ) u3e_Meter.wsp_d++;
+  awr_y = _ca_wed_where(a);
+  bwr_y = _ca_wed_where(b);
+
+  if ( !awr_y && !bwr_y ) {
+    u3e_Meter.wsn_d++;
+    return c3n;
+  }
+  else if ( awr_y && bwr_y ) {
+    kep_t = _ca_wed_keep(*a, *b);
+  }
+  else {
+    kep_t = ( 0 != bwr_y );
+
+    //  the one slot we can write holds the value the order prefers
+    //
+    if ( kep_t != _ca_wed_keep(*a, *b) ) {
+      u3e_Meter.wso_d++;
+    }
+  }
+
+  {
+    u3_noun* sot   = kep_t ? b : a;
+    u3_noun  val   = kep_t ? *a : *b;
+    c3_y     wri_y = kep_t ? bwr_y : awr_y;
+
+    if ( u3a_hcon_has(*sot) ) {
+      u3e_Meter.wsk_d[0]++;
+      return c3n;
+    }
+    if ( 2 != wri_y ) {
+      *sot = val;
+      u3e_Meter.wsw_d[( 1 == wri_y ) ? 0 : 2]++;
+    }
+    else if ( _ca_wed_home(sot, val) ) {
+      u3e_Meter.wsw_d[1]++;
+    }
+    else {
+      u3e_Meter.wsk_d[1]++;
+      return c3n;
+    }
+  }
+  return c3y;
+}
+
+/* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge them on
+**   this road or a senior one below home, else, on an inner road, point
+**   one slot at the other's value (_ca_wed_fall()). c3y if unified.
 */
 c3_o
 u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
@@ -1522,7 +1897,10 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
     wed_o = _ca_wed_you(rod_u, a, b);
   }
 
-  return wed_o;
+  //  both values are senior to every road that could merge them:
+  //  unify through a slot instead
+  //
+  return ( c3y == wed_o ) ? c3y : _ca_wed_fall(a, b);
 }
 
 /* u3a_luse(): check refcount sanity.

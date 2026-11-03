@@ -6,6 +6,7 @@
 #include "options.h"
 #include "rsignal.h"
 #include "c3/c3.h"
+#include "crib.h"
 #include <stddef.h>
 
   /**  Constants.
@@ -876,18 +877,50 @@ u3a_post_info(u3_post);
           c3_w
           u3a_use(u3_noun som);
 
-        /* u3a_gain_home(): gain a reference to home-road noun [som], on
-        **                  the home road, from any road.
-        */
-          void
-          u3a_gain_home(u3_noun som);
-
-        /* u3a_wed(): unify noun references, on this road or a senior one
-        **            below home: c3y if merged. see u3r_sing() for what
-        **            follows when it can't.
+        /* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge
+        **            them on this road or a senior one below home, else,
+        **            on an inner road, point one slot at the other's
+        **            value. c3y if unified.
         */
           c3_o
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
+
+        /* u3a_wed_drain(): lose the values unification unpointed from
+        **                  slots on this road. after every take of an
+        **                  exit to it.
+        */
+          void
+          u3a_wed_drain(void);
+
+        /* u3a_wed_left(): lose what an interrupted exit left on the lose
+        **                 lists. home road only, no excursion under way.
+        */
+          void
+          u3a_wed_left(void);
+
+        /* u3a_wed_leap(): a new excursion from the home road. home road
+        **                 only.
+        */
+          void
+          u3a_wed_leap(void);
+
+        /* u3a_wed_size(): restart the lose lists at [min_w] entries, at
+        **                 most [max_w] (tests). home road only, empty.
+        */
+          void
+          u3a_wed_size(c3_w min_w, c3_w max_w);
+
+        /* u3a_wed_report(): log the lose lists' drops at their ceilings.
+        **                   between events.
+        */
+          void
+          u3a_wed_report(void);
+
+        /* u3a_wed_stat(): the lose lists' use since the last call, into
+        **                 [sat_u] (room for 2); how many.
+        */
+          c3_w
+          u3a_wed_stat(u3c_stat* sat_u);
 
         /* u3a_Defer_max_w: most nouns with deferred gains at once.
         */

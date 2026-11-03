@@ -359,7 +359,7 @@ _cm_signal_reset(void)
   //  the values unification unpointed from home slots, if a signal cut
   //  the exit short: its product is dropped, and junior memory with it
   //
-  u3r_wed_left();
+  u3a_wed_left();
 
   //  a signal can interrupt u3m_love() before it drops a junior heap,
   //  leaving it poisoned for the next road: unpoison all free memory
@@ -1194,7 +1194,7 @@ u3m_leap(c3_w pad_w)
   _rod_vaal(u3R);
 
   if ( &(u3H->rod_u) == u3R ) {
-    u3r_sing_leap();
+    u3a_wed_leap();
     _cm_vis_leap();
   }
 
@@ -1651,7 +1651,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     //  the values unification unpointed from home slots: every take is
     //  done, so the taken nouns that hold them have gained them
     //
-    u3r_wed_drain();
+    u3a_wed_drain();
     if ( u3e_Measuring ) _cm_love_time(&us_d, 2);
 
     //  what was promoted into the caches but didn't end up canonical,
@@ -1672,7 +1672,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
 
     //  the values senior unification unpointed from slots on this road
     //
-    u3r_wed_drain();
+    u3a_wed_drain();
   }
 
   //  pop the stack
@@ -4215,7 +4215,7 @@ u3m_crib_report(void)
   if ( _cm_vis_ini_t ) {
     u3c_set_report(&_cm_vis);
   }
-  u3r_crib_report();
+  u3a_wed_report();
 }
 
 /* u3m_crib_stat(): every crib's use since the last call, into [sat_u]
@@ -4229,7 +4229,7 @@ u3m_crib_stat(u3c_stat* sat_u)
   if ( _cm_vis_ini_t ) {
     sat_u[len_w++] = u3c_set_stat(&_cm_vis);
   }
-  return len_w + u3r_crib_stat(sat_u + len_w);
+  return len_w + u3a_wed_stat(sat_u + len_w);
 }
 
 /* _cm_vis_leap(): a new excursion from the home road. home road only.

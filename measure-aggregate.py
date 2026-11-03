@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 12, "X": 5, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 4, "V": 12, "I": 9, "Z": 17, "J": 4}
 
 
 def parse(lines):
@@ -176,6 +176,11 @@ def values(ivs, line, j):
     return [i[line][j] for i in ivs if line in i and len(i[line]) > j]
 
 
+def _writes(s):
+    """Unification's slot writes: this road, home memory, senior inner roads."""
+    return s["W_our"] + s["W_hom"] + s["W_sen"]
+
+
 def median(v):
     v = sorted(x for x in v if x is not None)
     return v[len(v) // 2] if v else None
@@ -233,13 +238,13 @@ def sums(ivs):
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
         if "W" in i:
             w = i["W"]
-            s["W_giv"] += w[0] + w[4]; s["W_our"] += w[1] + w[10]; s["W_hom"] += w[2]
-            s["W_sen"] += w[10]; s["W_aga"] += w[11]
-            s["W_ful"] += w[6]; s["W_lx"] += w[9]; s["W_tasks"] += i["tasks"]
+            s["W_mer"] += w[0]; s["W_cnt"] += w[1]
+            s["W_giv"] += w[2]; s["W_our"] += w[4]; s["W_hom"] += w[5]
+            s["W_sen"] += w[6]; s["W_aga"] += w[7]; s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
-            s["X_mer"] += x[0]; s["X_cnt"] += x[1]; s["X_ful"] += x[3]
-            s["X_tasks"] += i["tasks"]
+            s["X_hful"] += x[1]; s["X_hlx"] += x[4]
+            s["X_iful"] += x[6]; s["X_ilx"] += x[9]
         if "Q" in i:
             q = i["Q"]
             s["Q_ins"] += q[0]; s["Q_pro"] += q[1]; s["Q_hit"] += q[2]
@@ -339,24 +344,27 @@ METRICS = [
     ("Y: aligned", "(i) adaptive bound", lambda s, v: ratio(s["Y_pos"], s["Y_all"])),
     ("Y: aligned and exclusive", "(i) fused path", lambda s, v: ratio(s["Y_exc"], s["Y_all"])),
     ("W: slot writes / 1000 tasks", "hashcons: eager unification",
-     lambda s, v: ratio(1000 * (s["W_our"] + s["W_hom"]), s["W_tasks"]) if s["W_tasks"] else None),
+     lambda s, v: ratio(1000 * _writes(s), s["W_tasks"]) if s["W_tasks"] else None),
     ("W: slot writes / give-ups", "hashcons: eager unification",
-     lambda s, v: ratio(s["W_our"] + s["W_hom"], s["W_giv"])),
+     lambda s, v: ratio(_writes(s), s["W_giv"])),
     ("W: writes in home memory", "hashcons: eager unification",
-     lambda s, v: ratio(s["W_hom"], s["W_our"] + s["W_hom"])),
+     lambda s, v: ratio(s["W_hom"], _writes(s))),
     ("W: writes on senior inner roads", "hashcons: senior slots",
-     lambda s, v: ratio(s["W_sen"], s["W_our"] + s["W_hom"])),
+     lambda s, v: ratio(s["W_sen"], _writes(s))),
     ("W: writes against the order", "hashcons: senior slots",
-     lambda s, v: ratio(s["W_aga"], s["W_our"] + s["W_hom"])),
-    ("W: lose list full", "hashcons: lose list ceiling", lambda s, v: s["W_ful"]),
-    ("W: most lost at one exit", "hashcons: lose list ceiling",
-     lambda s, v: max(values(v, "W", 8), default=None)),
-    ("W: left by interrupted exits", "hashcons: lose list", lambda s, v: s["W_lx"]),
-    ("X: senior-road merges / 1000 tasks", "hashcons: senior unification",
-     lambda s, v: ratio(1000 * s["X_mer"], s["X_tasks"]) if s["X_tasks"] else None),
-    ("X: counted / merges", "hashcons: senior unification",
-     lambda s, v: ratio(s["X_cnt"], s["X_mer"])),
-    ("X: inner lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_ful"]),
+     lambda s, v: ratio(s["W_aga"], _writes(s))),
+    ("W: senior-road merges / 1000 tasks", "hashcons: senior unification",
+     lambda s, v: ratio(1000 * s["W_mer"], s["W_tasks"]) if s["W_tasks"] else None),
+    ("W: counted / senior-road merges", "hashcons: senior unification",
+     lambda s, v: ratio(s["W_cnt"], s["W_mer"])),
+    ("X: home lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_hful"]),
+    ("X: home most lost at one exit", "hashcons: lose list ceiling",
+     lambda s, v: max(values(v, "X", 3), default=None)),
+    ("X: inner lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_iful"]),
+    ("X: inner most lost at one exit", "hashcons: lose list ceiling",
+     lambda s, v: max(values(v, "X", 8), default=None)),
+    ("X: left by interrupted exits, home", "hashcons: lose list", lambda s, v: s["X_hlx"]),
+    ("X: left by interrupted exits, inner", "hashcons: lose list", lambda s, v: s["X_ilx"]),
     ("Q: dup_p roots / 1000 tasks", "hashcons: dup_p",
      lambda s, v: ratio(1000 * s["Q_ins"], s["Q_tasks"]) if s["Q_tasks"] else None),
     ("Q: dup_p hits / probes", "hashcons: dup_p", lambda s, v: ratio(s["Q_hit"], s["Q_pro"])),
