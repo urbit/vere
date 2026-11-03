@@ -1147,8 +1147,7 @@ _http_jump_respond(h2o_req_t* rec_u)
             "/~/holm/jump", rec_u->input.path.base );
 
   u3_noun    hed = u3nl(u3nc(u3i_string("Location"),
-                              u3i_string(loc)),
-                        u3_none);
+                              u3i_string(loc)));
   _http_start_respond(req_u, 307, hed, u3_nul, c3y);
 
   c3_free(loc);
