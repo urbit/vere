@@ -1522,9 +1522,11 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //
   c3_o tim_o = u3du(u3R->tim);
 
-  //  measurement: time in each step of an exit to home
+  //  measurement: time in each step of an exit to home, and members
+  //  added by it (the set's size, then adds, as it begins)
   //
   c3_d us_d = 0;
+  c3_d mem_d = 0, add_d = 0;
 
   //  fallback to parent road (child heap on parent's stack)
   //
@@ -1576,7 +1578,15 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   }
   else {
     if ( c3_unlikely(0 != u3m_Love_f) ) u3m_Love_f();
-    if ( u3e_Measuring ) us_d = u3e_measure_us();
+    if ( u3e_Measuring ) {
+      us_d  = u3e_measure_us();
+      add_d = u3e_Meter.hca_d;
+      {
+        c3_d vat_d, cel_d, byt_d;
+        u3m_sole_stat(&vat_d, &cel_d, &byt_d);
+        mem_d = vat_d + cel_d;
+      }
+    }
     u3a_Take_canon_t = 1;
     u3a_Take_lose_t  = 1;
   }
@@ -1614,7 +1624,13 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   if ( hom_t ) {
     _cm_sole_pins(dup_p);
     dup_p = 0;
-    if ( u3e_Measuring ) _cm_love_time(&us_d, 0);
+    if ( u3e_Measuring ) {
+      _cm_love_time(&us_d, 0);
+      if ( (u3e_Meter.hca_d - add_d) > u3e_Meter.cam_d[0] ) {
+        u3e_Meter.cam_d[0] = u3e_Meter.hca_d - add_d;
+        u3e_Meter.cam_d[1] = mem_d;
+      }
+    }
 
     //  the values unification unpointed from home slots, and those the
     //  take replaced in older home nouns: every take is done, so the

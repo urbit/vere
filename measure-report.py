@@ -77,6 +77,7 @@ Log lines (one snapshot interval ends at each S line):
                                             canonicalizing on inner roads (u3m_sole_try)
   Z <looked-jet> <looked-byc> <looked-per> <looked-for> <found-jet> <found-byc>
     <found-per> <found-for> <older-left> <us-takes> <us-drain>
+    <most-added> <members-then>
                                             exits to home: junior nouns looked up by the
                                             canonicalizing take and those found (not
                                             copied), by table; older home slots left with
@@ -108,7 +109,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 11, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
 
 
 def pct(a, b):
@@ -244,6 +245,9 @@ def parse(path):
                 #  the step-0 prototype's logs used these letters for
                 #  labelled lines; take only lines of this shape
                 v = line.split()[1:]
+                #  Z lines before the per-exit adds had 11 fields
+                if t == "Z" and len(v) == 11:
+                    v = v + ["0", "0"]
                 if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
                     cur[t] = tuple(int(x) for x in v)
             elif t == "N" and cur is not None:
@@ -666,6 +670,7 @@ def main():
     zis = [i for i in intervals if i["Z"]]
     if zis and any(any(i["Z"]) for i in zis):
         z = [sum(i["Z"][j] for i in zis) for j in range(11)]
+        top = max(zis, key=lambda i: i["Z"][11])["Z"]
         print("\n== exits to home: canonicalizing take ==")
         for k, name in enumerate(("jets", "byc", "per", "for")):
             print(f"  {name:<6} looked up {z[k]:>12}, found a member {z[4 + k]:>10}  "
@@ -673,6 +678,8 @@ def main():
         print(f"  older home slots left, lose list full: {z[8]}")
         print(f"  time, ms: takes {z[9] / 1000:.1f}, pins and drain {z[10] / 1000:.1f}; "
               f"total {(z[9] + z[10]) / 1000:.1f}")
+        print(f"  most members added at one exit, before its drain: {top[11]} "
+              f"(set then {top[12]}, {pct(top[11], top[12])})")
     jis = [i for i in intervals if i["J"]]
     if jis and any(any(i["J"]) for i in jis):
         j = [sum(i["J"][k] for i in jis) for k in range(4)]

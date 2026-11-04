@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 11, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
 
 
 def parse(lines):
@@ -104,6 +104,9 @@ def parse(lines):
             #  the step-0 prototype's logs used these letters for
             #  labelled lines; take only lines of this shape
             v = ints(p[1:])
+            #  Z lines before the per-exit adds had 11 fields
+            if v is not None and t == "Z" and len(v) == 11:
+                v = tuple(v) + (0, 0)
             if v is not None and len(v) == WIDTH[t]:
                 cur[t] = v
         elif t == "N" and len(p) == 11:
@@ -263,6 +266,8 @@ def sums(ivs):
             s["Z_tak"] += sum(z[0:4]); s["Z_fnd"] += sum(z[4:8])
             s["Z_left"] += z[8]
             s["Z_us"] += sum(z[9:11]); s["Z_tasks"] += i["tasks"]
+            if z[12] and z[11] / z[12] > s.get("Z_head", 0):
+                s["Z_head"] = z[11] / z[12]
         if "J" in i:
             j = i["J"]
             s["J_chk"] += j[0]; s["J_neq"] += j[1]; s["J_uni"] += j[2]
@@ -384,6 +389,8 @@ METRICS = [
      lambda s, v: ratio(s["Z_fnd"], s["Z_tak"])),
     ("Z: older home slots left, lose list full", "hashcons: lose list ceiling",
      lambda s, v: s["Z_left"]),
+    ("Z: most members added at one exit / set size then", "hashcons: table headroom",
+     lambda s, v: s.get("Z_head", 0)),
     ("Z: exit-home ms / 1000 tasks", "hashcons: exit cost",
      lambda s, v: ratio(s["Z_us"], s["Z_tasks"]) if s["Z_tasks"] else None),
     ("J: differing checks / task", "hashcons: jet checks",

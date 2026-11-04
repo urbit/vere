@@ -593,6 +593,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctf_d[i_w]);
     fprintf(fil_u, " %" PRIu64, u3e_Meter.ctr_d);
     for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cus_d[i_w]);
+    for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cam_d[i_w]);
     fputc('\n', fil_u);
 
     //  jet battery checks
