@@ -843,8 +843,28 @@ u3a_post_info(u3_post);
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
 
+        /* u3a_Take_lose_t: during the takes of an exit to home, loses of
+        **                  home nouns go to the home lose list
+        **                  (u3a_lose_later()).
+        */
+          extern c3_t u3a_Take_lose_t;
+
+        /* u3a_lose_later(): lose [som]; during the takes of an exit
+        **                   home, at the drain instead.
+        */
+          void
+          u3a_lose_later(u3_noun som);
+
+        /* u3a_wed_lose_home_room(): lose home noun [old] at the drain,
+        **   if there's room on the home lose list: else c3n, doing
+        **   nothing.
+        */
+          c3_o
+          u3a_wed_lose_home_room(u3_noun old);
+
         /* u3a_Take_canon_t: takes canonicalize into the home-road
-        **                   hashcons set (see u3m_sole_take()).
+        **                   hashcons set (_ca_take_sole()): an exit to
+        **                   home's cache takes.
         */
           extern c3_t u3a_Take_canon_t;
 

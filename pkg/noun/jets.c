@@ -1477,7 +1477,7 @@ u3j_rite_reap(u3j_rite* dst_u, u3j_rite* src_u)
     u3_noun clu = u3a_take(src_u->clu);
 
     if ( u3_none != dst_u->clu ) {
-      u3z(dst_u->clu);
+      u3a_lose_later(dst_u->clu);
     }
 
     dst_u->clu = clu;
@@ -1505,7 +1505,7 @@ u3j_site_reap(u3j_site* dst_u, u3j_site* src_u)
 {
   if ( dst_u->axe != src_u->axe ) {
     u3_noun axe = u3a_take(src_u->axe);
-    u3z(dst_u->axe);
+    u3a_lose_later(dst_u->axe);
     dst_u->axe = axe;
   }
 
@@ -1517,7 +1517,7 @@ u3j_site_reap(u3j_site* dst_u, u3j_site* src_u)
     u3_noun loc = u3a_take(src_u->loc);
 
     if ( u3_none != dst_u->loc ) {
-      u3z(dst_u->loc);
+      u3a_lose_later(dst_u->loc);
     }
 
     dst_u->loc = loc;
@@ -1527,7 +1527,7 @@ u3j_site_reap(u3j_site* dst_u, u3j_site* src_u)
     u3_noun lab = u3a_take(src_u->lab);
 
     if ( u3_none != dst_u->lab ) {
-      u3z(dst_u->lab);
+      u3a_lose_later(dst_u->lab);
     }
 
     dst_u->lab = lab;

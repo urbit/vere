@@ -1422,6 +1422,79 @@ VT_API_FN_QUALIFIERS VT_CAT( NAME, _itr ) VT_CAT( NAME, _get_or_insert )(
   }
 }
 
+// (vere) Inserts a key known not to be present, skipping the search for it.
+static inline VT_CAT( NAME, _itr ) VT_CAT( NAME, _insert_unique )(
+  NAME *table,
+  KEY_TY key
+  #ifdef VAL_TY
+  , VAL_TY val
+  #endif
+)
+{
+  while( true )
+  {
+    VT_CAT( NAME, _itr ) itr = VT_CAT( NAME, _insert_raw )(
+      table,
+      key,
+      #ifdef VAL_TY
+      &val,
+      #endif
+      true,
+      false
+    );
+
+    if(
+      VT_LIKELY( !VT_CAT( NAME, _is_end )( itr ) ) ||
+      VT_UNLIKELY(
+        !VT_CAT( NAME, _rehash )(
+          table, table->buckets_mask ? VT_CAT( NAME, _bucket_count )( table ) * 2 : VT_MIN_NONZERO_BUCKET_COUNT
+        )
+      )
+    )
+      return itr;
+  }
+}
+
+// (vere) Looks up a key by a caller's hash and predicate, without a key to compare: as NAME_get, with
+// pred( key, ctx ) in place of CMPR_FN. The hash must be what HASH_FN would give the key sought.
+static inline VT_CAT( NAME, _itr ) VT_CAT( NAME, _get_by )(
+  NAME *table,
+  uint64_t hash,
+  int (*pred)( KEY_TY, void * ),
+  void *ctx
+)
+{
+  size_t home_bucket = hash & table->buckets_mask;
+
+  if( !( table->metadata[ home_bucket ] & VT_IN_HOME_BUCKET_MASK ) )
+    return VT_CAT( NAME, _end_itr )();
+
+  uint16_t hashfrag = vt_hashfrag( hash );
+  size_t bucket = home_bucket;
+  while( true )
+  {
+    if(
+      ( table->metadata[ bucket ] & VT_HASH_FRAG_MASK ) == hashfrag &&
+      VT_LIKELY( pred( table->buckets[ bucket ].key, ctx ) )
+    )
+    {
+      VT_CAT( NAME, _itr ) itr = {
+        table->buckets + bucket,
+        table->metadata + bucket,
+        table->metadata + table->buckets_mask + 1,
+        home_bucket
+      };
+      return itr;
+    }
+
+    uint16_t displacement = table->metadata[ bucket ] & VT_DISPLACEMENT_MASK;
+    if( displacement == VT_DISPLACEMENT_MASK )
+      return VT_CAT( NAME, _end_itr )();
+
+    bucket = ( home_bucket + vt_quadratic( displacement ) ) & table->buckets_mask;
+  }
+}
+
 // Returns an iterator pointing to the specified key, or an end iterator if the key does not exist.
 VT_API_FN_QUALIFIERS VT_CAT( NAME, _itr ) VT_CAT( NAME, _get )( NAME *table, KEY_TY key )
 {

@@ -533,10 +533,17 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //
     fprintf(fil_u, "G %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 "\n",
+                   " %" PRIu64,
                    u3e_Meter.dfw_d, u3e_Meter.dfg_d, u3e_Meter.dfn_d,
                    u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
                    u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
+    for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.dgp_d[i_w]);
+    }
+    for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.dsp_d[i_w]);
+    }
+    fprintf(fil_u, "\n");
 
     //  alignment of the new arvo states with the old
     //
@@ -579,14 +586,13 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.eij_d, u3e_Meter.eiv_d, u3e_Meter.eis_d,
                    u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
 
-    //  exits to home: the canonicalizing take, the fix pass, time
+    //  exits to home: the canonicalizing take, time
     //
     fprintf(fil_u, "Z");
     for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctk_d[i_w]);
     for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctf_d[i_w]);
-    for ( i_w = 0; i_w < 3; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cfx_d[i_w]);
-    for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.crk_d[i_w]);
-    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cus_d[i_w]);
+    fprintf(fil_u, " %" PRIu64, u3e_Meter.ctr_d);
+    for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cus_d[i_w]);
     fputc('\n', fil_u);
 
     //  jet battery checks

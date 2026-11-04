@@ -75,12 +75,13 @@ Log lines (one snapshot interval ends at each S line):
   I <calls-home> <calls-inner> <from-byc-keys> <from-memo-keys> <junior-cells>
     <visited-hits> <senior-left> <home-probes-inner> <home-hits-inner>
                                             canonicalizing on inner roads (u3m_sole_try)
-  Z <taken-jet> <taken-byc> <taken-per> <taken-for> <found-jet> <found-byc>
-    <found-per> <found-for> <fix-entries> <fix-fields> <fix-swapped> <byc-keys-fixed>
-    <byc-keys-over> <us-phase-a> <us-takes> <us-phase-b> <us-fix>
-                                            exits to home: nouns taken canonicalizing
-                                            and those swapped for a member, by table;
-                                            the fix pass; microseconds in each step
+  Z <looked-jet> <looked-byc> <looked-per> <looked-for> <found-jet> <found-byc>
+    <found-per> <found-for> <older-left> <us-takes> <us-drain>
+                                            exits to home: junior nouns looked up by the
+                                            canonicalizing take and those found (not
+                                            copied), by table; older home slots left with
+                                            the lose list full; microseconds in each step
+                                            (older logs' 16- and 17-field Z are skipped)
   J <checks> <unequal> <unified> <not-unified>
                                             jet battery checks whose pointers differed
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
@@ -107,7 +108,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 11, "J": 4}
 
 
 def pct(a, b):
@@ -596,6 +597,13 @@ def main():
         print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
         print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
         print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
+        if all(len(i["G"]) >= 21 for i in gis):
+            names = ("jet", "byc", "per", "for", "pro", "other")
+            dg = [sum(i["G"][9 + k] for i in gis) for k in range(6)]
+            ds = [sum(i["G"][15 + k] for i in gis) for k in range(6)]
+            print("  by phase (deferred / written directly at the cap):")
+            for k in range(6):
+                print(f"    {names[k]:<6} {dg[k]:>12} {ds[k]:>12}")
     yis = [i for i in intervals if i["Y"]]
     if yis and any(i["Y"][0] for i in yis):
         y = [sum(i["Y"][j] for i in yis) for j in range(3)]
@@ -657,18 +665,14 @@ def main():
         print(f"  home-set probes from inner roads: {e[7]}, hits {e[8]} {pct(e[8], e[7])}")
     zis = [i for i in intervals if i["Z"]]
     if zis and any(any(i["Z"]) for i in zis):
-        z = [sum(i["Z"][j] for i in zis) for j in range(17)]
-        print("\n== exits to home: canonicalizing take, fix pass ==")
+        z = [sum(i["Z"][j] for i in zis) for j in range(11)]
+        print("\n== exits to home: canonicalizing take ==")
         for k, name in enumerate(("jets", "byc", "per", "for")):
-            print(f"  {name:<6} taken {z[k]:>12}, swapped for a member {z[4 + k]:>10}  "
+            print(f"  {name:<6} looked up {z[k]:>12}, found a member {z[4 + k]:>10}  "
                   f"{pct(z[4 + k], z[k])}")
-        print(f"  fix pass: entries not members {z[8]}, fields not canonical {z[9]}: "
-              f"swapped for a member {z[10]}, made members {z[9] - z[10]}")
-        print(f"  bytecode keys fixed {z[11]}, past the limit {z[12]}")
-        tus = sum(z[13:17])
-        print(f"  time, ms: phase A {z[13] / 1000:.1f}, takes {z[14] / 1000:.1f}, "
-              f"phase B {z[15] / 1000:.1f}, fix pass {z[16] / 1000:.1f}; "
-              f"total {tus / 1000:.1f}")
+        print(f"  older home slots left, lose list full: {z[8]}")
+        print(f"  time, ms: takes {z[9] / 1000:.1f}, pins and drain {z[10] / 1000:.1f}; "
+              f"total {(z[9] + z[10]) / 1000:.1f}")
     jis = [i for i in intervals if i["J"]]
     if jis and any(any(i["J"]) for i in jis):
         j = [sum(i["J"][k] for i in jis) for k in range(4)]

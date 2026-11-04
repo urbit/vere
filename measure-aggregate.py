@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 17, "J": 4}
+WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 11, "J": 4}
 
 
 def parse(lines):
@@ -261,9 +261,8 @@ def sums(ivs):
         if "Z" in i:
             z = i["Z"]
             s["Z_tak"] += sum(z[0:4]); s["Z_fnd"] += sum(z[4:8])
-            s["Z_fix"] += z[8]; s["Z_fld"] += z[9]; s["Z_rew"] += z[10]
-            s["Z_over"] += z[12]
-            s["Z_us"] += sum(z[13:17]); s["Z_tasks"] += i["tasks"]
+            s["Z_left"] += z[8]
+            s["Z_us"] += sum(z[9:11]); s["Z_tasks"] += i["tasks"]
         if "J" in i:
             j = i["J"]
             s["J_chk"] += j[0]; s["J_neq"] += j[1]; s["J_uni"] += j[2]
@@ -381,13 +380,10 @@ METRICS = [
      lambda s, v: ratio(s["I_vis"], s["I_cel"])),
     ("I: home-set hits / inner probes", "hashcons: eager pass",
      lambda s, v: ratio(s["I_hhit"], s["I_hpro"])),
-    ("Z: taken nouns swapped for a member", "hashcons: canonicalizing take",
+    ("Z: junior nouns found a member / looked up", "hashcons: canonicalizing take",
      lambda s, v: ratio(s["Z_fnd"], s["Z_tak"])),
-    ("Z: fix-pass fields not canonical / entries", "hashcons: fix pass",
-     lambda s, v: ratio(s["Z_fld"], s["Z_fix"])),
-    ("Z: fix-pass fields swapped / not canonical", "hashcons: fix pass",
-     lambda s, v: ratio(s["Z_rew"], s["Z_fld"])),
-    ("Z: bytecode keys past the limit", "hashcons: _cn_rek_u", lambda s, v: s["Z_over"]),
+    ("Z: older home slots left, lose list full", "hashcons: lose list ceiling",
+     lambda s, v: s["Z_left"]),
     ("Z: exit-home ms / 1000 tasks", "hashcons: exit cost",
      lambda s, v: ratio(s["Z_us"], s["Z_tasks"]) if s["Z_tasks"] else None),
     ("J: differing checks / task", "hashcons: jet checks",

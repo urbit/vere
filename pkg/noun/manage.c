@@ -162,57 +162,6 @@ static c3_h u3m_Ford_fresh_road_depth_h = 0;
 
 static void _cm_vis_leap(void);
 
-/* _cm_canon_ok(): [som] is canonical: direct, or a member.
-*/
-static inline c3_t
-_cm_canon_ok(u3_noun som)
-{
-  return (c3y == u3a_is_cat(som)) || u3a_sole_has(som);
-}
-
-/* _cm_canon_fix_kev(): on the home road, after every take of an exit to
-**   home: canonicalize a promoted entry's key, and value if [*val_t],
-**   in place, if they aren't members. [kev] is a home cell held by its
-**   table and not a member, so its children may be repointed; every
-**   reference into home memory is counted by now.
-*/
-static void
-_cm_canon_fix_kev(u3_noun kev, void* ptr_v)
-{
-  c3_t      val_t = *(c3_t*)ptr_v;
-  u3a_cell* kev_u = u3a_to_ptr(kev);
-
-  if ( u3a_sole_has(kev) ) return;   //  never edit a member
-
-  u3e_Meter.cfx_d[0]++;
-  if ( !_cm_canon_ok(kev_u->hed) ) {
-    u3_noun can = u3m_sole_home(u3k(kev_u->hed));
-    u3e_Meter.cfx_d[1]++;
-    if ( can != kev_u->hed ) {
-      u3_noun old = kev_u->hed; kev_u->hed = can; u3z(old);
-      u3e_Meter.cfx_d[2]++;
-    }
-    else { u3z(can); }
-  }
-  if ( val_t && !_cm_canon_ok(kev_u->tel) ) {
-    u3_noun can = u3m_sole_home(u3k(kev_u->tel));
-    u3e_Meter.cfx_d[1]++;
-    if ( can != kev_u->tel ) {
-      u3_noun old = kev_u->tel; kev_u->tel = can; u3z(old);
-      u3e_Meter.cfx_d[2]++;
-    }
-    else { u3z(can); }
-  }
-}
-
-/* _cm_canon_fix(): canonicalize table [har_p]'s entries in place.
-*/
-static void
-_cm_canon_fix(u3p(u3h_root) har_p, c3_t val_t)
-{
-  if ( har_p ) u3h_walk_with(har_p, _cm_canon_fix_kev, &val_t);
-}
-
 #if 0
 /* _cm_punt(): crudely print trace.
 */
@@ -1624,6 +1573,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   else {
     if ( u3e_Measuring ) us_d = u3e_measure_us();
     u3a_Take_canon_t = 1;
+    u3a_Take_lose_t  = 1;
   }
 
   u3e_Phase = u3e_pha_take_jet;
@@ -1646,6 +1596,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
 
   if ( hom_t ) {
     u3a_Take_canon_t = 0;
+    u3a_Take_lose_t  = 0;
     u3e_Phase = u3e_pha_take_pro;
     pro   = u3a_take(pro);
   }
@@ -1658,26 +1609,14 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   if ( hom_t ) {
     _cm_sole_pins(dup_p);
     dup_p = 0;
-    if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 0);
 
-    //  the values unification unpointed from home slots: every take is
-    //  done, so the taken nouns that hold them have gained them
+    //  the values unification unpointed from home slots, and those the
+    //  take replaced in older home nouns: every take is done, so the
+    //  taken nouns that hold them have gained them
     //
     u3a_wed_drain();
-    if ( u3e_Measuring ) _cm_love_time(&us_d, 2);
-
-    //  what was promoted into the caches but didn't end up canonical,
-    //  such as entries whose children were already home nouns: now
-    //  that every take is done, canonicalize it in place
-    //
-    _cm_canon_fix(per_p, 1);
-    _cm_canon_fix(for_p, 1);
-    _cm_canon_fix(jed_u.war_p, 1);
-    _cm_canon_fix(jed_u.cod_p, 1);
-    _cm_canon_fix(jed_u.han_p, 0);
-    _cm_canon_fix(jed_u.bas_p, 1);
-    u3n_reap_fix();
-    if ( u3e_Measuring ) _cm_love_time(&us_d, 3);
+    if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
   }
   else {
     dup_p = u3h_take(dup_p);
@@ -3646,32 +3585,88 @@ _cm_sole_put(u3_noun som)
   return can;
 }
 
-/* u3m_sole_take(): [new], a fresh home-road copy whose children are
-**                  taken: an equal member (retained), or none, having
-**                  made [new] a member if it can be one.
+/* lookup by value: a cell of mug [mug_h] and children [hed] [tel].
+*/
+typedef struct {
+  c3_w    mug_w;
+  u3_noun hed;
+  u3_noun tel;
+} _cm_sole_probe;
+
+static int
+_cm_sole_probe_cell(u3_cell key, void* ptr_v)
+{
+  _cm_sole_probe* pro_u = ptr_v;
+  u3a_cell*       key_u = u3a_to_ptr(key);
+
+  return (key_u->mug_w == pro_u->mug_w)
+      && (key_u->hed   == pro_u->hed)
+      && (key_u->tel   == pro_u->tel);
+}
+
+/* u3m_sole_find_cell(): see manage.h.
 */
 u3_weak
-u3m_sole_take(u3_noun new)
+u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel)
 {
-  u3_noun can;
+  _cm_sole_probe   pro_u = { mug_h, hed, tel };
+  _canon_cells_itr cit_u;
+  u3_weak          can;
 
-  //  a cell can be a member only if its children are
-  //
-  if ( c3y == u3a_is_cell(new) ) {
-    u3_noun hed = u3h(new), tel = u3t(new);
-
-    if (  ((c3n == u3a_is_cat(hed)) && !u3a_sole_has(hed))
-       || ((c3n == u3a_is_cat(tel)) && !u3a_sole_has(tel)) )
-    {
-      return u3_none;
-    }
-  }
+  if ( !_cm_sole_u.ini_t ) return u3_none;
 
   u3m_Sole_busy_w++;
-  can = _cm_sole_put(new);
+  cit_u = _canon_cells_get_by(&_cm_sole_u.cel_u,
+                              (c3_d)mug_h * 11400714819323198485ULL,
+                              _cm_sole_probe_cell, &pro_u);
   u3m_Sole_busy_w--;
 
-  return ( can == new ) ? u3_none : u3k(can);
+  can = _canon_cells_is_end(cit_u) ? u3_none : cit_u.data->key;
+  _cm_sole_meas_hit(u3_none, can);
+  return can;
+}
+
+/* u3m_sole_find_atom(): see manage.h.
+*/
+u3_weak
+u3m_sole_find_atom(u3_atom jun)
+{
+  _canon_atoms_itr vit_u;
+  u3_weak          can;
+
+  if ( !_cm_sole_u.ini_t ) return u3_none;
+
+  u3m_Sole_busy_w++;
+  vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, jun);
+  u3m_Sole_busy_w--;
+
+  can = _canon_atoms_is_end(vit_u) ? u3_none : vit_u.data->key;
+  _cm_sole_meas_hit(jun, can);
+  return can;
+}
+
+/* u3m_sole_add(): see manage.h.
+*/
+void
+u3m_sole_add(u3_noun new)
+{
+  _cm_sole_init();
+  u3m_Sole_busy_w++;
+
+  if ( c3y == u3a_is_atom(new) ) {
+    _canon_atoms_itr vit_u = _canon_atoms_insert_unique(&_cm_sole_u.vat_u, new);
+    u3_assert( !_canon_atoms_is_end(vit_u) ); //  oom
+  }
+  else {
+    _canon_cells_itr cit_u = _canon_cells_insert_unique(&_cm_sole_u.cel_u, new);
+    u3_assert( !_canon_cells_is_end(cit_u) ); //  oom
+    _cm_sole_meas_page(cit_u.metadatum - _cm_sole_u.cel_u.metadata);
+  }
+
+  u3m_Sole_busy_w--;
+  _cm_sole_set(new);
+  _cm_sole_meas_cls(new);
+  u3e_Meter.hca_d++;
 }
 
 /* u3m_sole_lose(): remove [som], about to be freed, from the home-road
@@ -3804,6 +3799,11 @@ _cm_walk_push(_cm_walk* wak_u)
   return &wak_u->fam_u[wak_u->len_w++];
 }
 
+/* _cm_sole_def_t: _cm_sole_xchange() defers what it replaces
+**   (u3m_sole_take_old()).
+*/
+static c3_t _cm_sole_def_t;
+
 /* _cm_sole_xchange(): point [*som] at [can], if it doesn't already.
 */
 static inline void
@@ -3812,6 +3812,25 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
   u3_noun old = *som;
 
   if ( old != can ) {
+    //  canonicalizing an older home noun during the take: the junior
+    //  heap may still refer to [old] without counting it. a count above
+    //  1 can't reach 0 here, so it's lost now (through u3z(), which
+    //  cancels a deferred gain); the last waits for the drain. with the
+    //  lose list full, the slot is left as it is, rather than leaked
+    //
+    if ( _cm_sole_def_t && (c3n == u3a_is_cat(old)) ) {
+      if ( ((u3a_noun*)u3a_to_ptr(old))->use_w > 1 ) {
+        *som = u3k(can);
+        u3z(old);
+        return;
+      }
+      if ( c3n == u3a_wed_lose_home_room(old) ) {
+        u3e_Meter.ctr_d++;
+        return;
+      }
+      *som = u3k(can);
+      return;
+    }
     *som = u3k(can);
     u3z(old);
   }
@@ -3867,7 +3886,13 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       }
       else {
         _cm_sole_xchange(pro, &cel_u->tel);
-        pro = _cm_sole_put(fam_u->som);
+
+        //  a deferred swap can be refused: a member needs canonical
+        //  children
+        //
+        pro = ( _cm_canonical(cel_u->hed) && _cm_canonical(cel_u->tel) )
+              ? _cm_sole_put(fam_u->som)
+              : fam_u->som;
         wak_u->len_w--;
       }
     }
@@ -3876,6 +3901,34 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       return pro;
     }
   }
+}
+
+/* u3m_sole_take_old(): an older home noun [som] met by the home-only
+**   take: canonicalize it in place, deferring the loss of what it
+**   replaces (see _cm_sole_xchange()). its canonical equal, not retained.
+*/
+u3_noun
+u3m_sole_take_old(u3_noun som)
+{
+  static _cm_walk wak_u;
+  static c3_t     ini_t;
+  c3_y            pat_y = _cm_sole_u.pat_y;
+  u3_noun         pro;
+
+  if ( !ini_t ) {
+    _cm_walk_init(&wak_u);
+    ini_t = 1;
+  }
+
+  u3m_Sole_busy_w++;
+  _cm_sole_u.pat_y = 2;
+  _cm_sole_def_t   = 1;
+  pro = _cm_sole_canon(&wak_u, som);
+  _cm_sole_def_t   = 0;
+  _cm_sole_u.pat_y = pat_y;
+  u3m_Sole_busy_w--;
+
+  return pro;
 }
 
 /* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road.

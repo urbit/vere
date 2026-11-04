@@ -301,13 +301,32 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_sole_home(u3_noun som);
 
-      /* u3m_sole_take(): [new], a fresh home-road copy whose children
-      **                  are taken: an equal member (retained), or none,
-      **                  having made [new] a member if it can be one.
+      /* u3m_sole_find_cell(): the member equal to a cell of mug [mug_h]
+      **                       and canonical children [hed] [tel], or
+      **                       none (not retained).
       */
         u3_weak
-        u3m_sole_take(u3_noun new);
-      
+        u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel);
+
+      /* u3m_sole_find_atom(): the member equal to junior atom [jun], or
+      **                       none (not retained).
+      */
+        u3_weak
+        u3m_sole_find_atom(u3_atom jun);
+
+      /* u3m_sole_add(): make [new], equal to no member, a member.
+      */
+        void
+        u3m_sole_add(u3_noun new);
+
+      /* u3m_sole_take_old(): an older home noun met by the home-only take:
+      **                      canonicalize it in place, deferring what it
+      **                      replaces; its canonical equal (not
+      **                      retained).
+      */
+        u3_noun
+        u3m_sole_take_old(u3_noun som);
+
       /* u3m_sole_ream(): rebuild the home-road hashcons set from
       **                  persistent tables.
       */

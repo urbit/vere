@@ -3130,7 +3130,7 @@ _cn_reap_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
   for ( i_w = 0; i_w < src_u->lit_u.len_w; ++i_w ) {
     if ( dst_u->lit_u.non[i_w] != src_u->lit_u.non[i_w] ) {
       u3_noun lit = u3a_take(src_u->lit_u.non[i_w]);
-      u3z(dst_u->lit_u.non[i_w]);
+      u3a_lose_later(dst_u->lit_u.non[i_w]);
       dst_u->lit_u.non[i_w] = lit;
     }
   }
@@ -3141,7 +3141,7 @@ _cn_reap_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
 
     if ( emo_u->key != ome_u->key ) {
       u3_noun key = u3a_take(ome_u->key);
-      u3z(emo_u->key);
+      u3a_lose_later(emo_u->key);
       emo_u->key = key;
     }
 
@@ -3159,14 +3159,6 @@ _cn_reap_prog_dat(u3n_prog* dst_u, u3n_prog* src_u)
                   &(src_u->reg_u.rit_u[i_w]));
   }
 }
-
-/*  _cn_rek_u: bytecode keys promoted into the home road's table at this
-**  exit, for u3n_reap_fix(). best effort: past the limit, keys are left
-**  as they are.
-*/
-#define _CN_REK_MAX  (1U << 16)
-static u3_noun _cn_rek_u[_CN_REK_MAX];
-static c3_w    _cn_rek_len_w;
 
 /*  _cn_reap_prog_cb(): u3h_walk_with cb for integrating junior u3n_prog's.
 */
@@ -3190,37 +3182,11 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
 
     if ( har_p == u3H->rod_u.byc.har_p ) {
       u3e_Meter.bca_d++;
-      if ( _cn_rek_len_w < _CN_REK_MAX ) {
-        _cn_rek_u[_cn_rek_len_w++] = yek;   //  held by the table
-      }
-      else {
-        u3e_Meter.crk_d[1]++;
-      }
     }
 
     u3h_put(har_p, yek, gop_p);
     u3z(yek);
   }
-}
-
-/* u3n_reap_fix(): canonicalize the bytecode keys promoted home at this
-**                 exit, in place: a key that couldn't be swapped for a
-**                 member still gets canonical children. home road, after
-**                 every take.
-*/
-void
-u3n_reap_fix(void)
-{
-  c3_w i_w;
-
-  for ( i_w = 0; i_w < _cn_rek_len_w; i_w++ ) {
-    u3_noun key = _cn_rek_u[i_w];
-    if ( (c3n == u3a_is_cat(key)) && !u3a_sole_has(key) ) {
-      u3e_Meter.crk_d[0]++;
-      u3z(u3m_sole_home(u3k(key)));
-    }
-  }
-  _cn_rek_len_w = 0;
 }
 
 /* _cn_meas_size(): bytes allocated for [pog_u], excluding padding.

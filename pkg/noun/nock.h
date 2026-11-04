@@ -50,12 +50,6 @@
 
   /**  Functions.
   **/
-    /* u3n_reap_fix(): canonicalize the bytecode keys promoted home at
-    **                 this exit, in place.
-    */
-      void
-      u3n_reap_fix(void);
-
     /* u3n_meas(): the home road's programs: count, bytes, those whose
     **             formula only their key holds, and those looked up since
     **             the last call (measurement).

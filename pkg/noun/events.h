@@ -152,6 +152,10 @@
           c3_d dfr_d;        //  gains written at close
           c3_d dfe_d;        //    on distinct nouns
           c3_d dfk_d;        //  table shrinks after a large window
+          c3_d dgp_d[6];     //  gains deferred, by phase: take jet byc
+                             //  per for pro, other (experiment)
+          c3_d dsp_d[6];     //  gains written directly at the cap, by
+                             //  phase, as [dgp_d] (experiment)
 
           //  alignment of each new arvo state with the old, per
           //  u3e_measure_align(): home nouns referenced from the new
@@ -223,18 +227,15 @@
           c3_d eis_d;        //  senior cells left, not members
           c3_d eih_d[2];     //  home-set probes on inner roads, hits
 
-          //  exits to home: the canonicalizing take, the fix pass, and
-          //  time in each step (microseconds, while measuring)
+          //  exits to home: the canonicalizing take (_ca_take_sole()),
+          //  and time in each step (microseconds, while measuring)
           //
-          c3_d ctk_d[4];     //  nouns taken canonicalizing: jets, byc,
-                             //  per, for
-          c3_d ctf_d[4];     //  ... swapped for an equal member
-          c3_d cfx_d[3];     //  fix pass: entries not members, fields
-                             //  not canonical, fields swapped for a
-                             //  member (the rest became members)
-          c3_d crk_d[2];     //  bytecode keys fixed, keys past the limit
-          c3_d cus_d[4];     //  time: (unused), takes, the lose list,
-                             //  fix pass
+          c3_d ctk_d[4];     //  junior nouns looked up: jets, byc, per,
+                             //  for
+          c3_d ctf_d[4];     //  ... found a member, so not copied
+          c3_d ctr_d;        //  older home nouns' slots left as they
+                             //  were: the home lose list full
+          c3_d cus_d[2];     //  time: takes, then pins and the lose list
 
           //  jet battery checks (u3r_sing_wed()), when the pointers differ
           //
