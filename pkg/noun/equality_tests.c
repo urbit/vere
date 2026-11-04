@@ -246,7 +246,9 @@ _test_lose_full(void)
   else {
     c3_h wag_h = u3C.wag_h;
 
-    u3C.wag_h &= ~u3o_leak_crash;
+    //  the repair grab doesn't crash on the leak it's for
+    //
+    u3C.wag_h |= u3o_leak_crash;
     u3m_grab_check(hol);
     if ( !u3a_sweep_leaked() ) {
       fprintf(stderr, "test: lose full: the grab found no leak\r\n");
