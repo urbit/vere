@@ -44,10 +44,13 @@ pub fn build(b: *std.Build) void {
     const long_bytes = target.result.cTypeByteSize(.long);
     const size_t_bytes = target.result.ptrBitWidth() / 8;
 
-    // alloca lives in <alloca.h> on unix but in <malloc.h> on Windows; pick the
-    // header the same target-driven way (config.h's alloca block keys off these).
+    // alloca lives in <alloca.h> on linux/macos, in <malloc.h> on Windows, and
+    // in <stdlib.h> on the BSDs (which nettle-internal.h already includes);
+    // pick the header the same target-driven way (config.h's alloca block
+    // keys off these).
     const is_windows = target.result.os.tag == .windows;
-    const has_alloca_h: u1 = if (is_windows) 0 else 1;
+    const is_bsd = target.result.os.tag.isBSD() and !target.result.os.tag.isDarwin();
+    const has_alloca_h: u1 = if (is_windows or is_bsd) 0 else 1;
     const has_malloc_h: u1 = if (is_windows) 1 else 0;
 
     // vendored config.h + version.h (see comment above)
