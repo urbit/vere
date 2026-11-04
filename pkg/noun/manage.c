@@ -4260,6 +4260,7 @@ u3m_sole_ream(void)
     c3_y pat_y = _cm_sole_u.pat_y;
 
     _cm_sole_u.reb_t = 1;
+    _cs_bul_t = _cm_sole_u.tab_t && !u3R->hcz_w;  //  no saved size
     _cm_sole_u.pat_y = 0;
 
     for ( i_w = 0; i_w < 7; i_w++ ) {
@@ -4273,6 +4274,14 @@ u3m_sole_ream(void)
 
     _cm_sole_u.cls_y = 0;
     _cm_sole_u.reb_t = 0;
+
+    //  the compact table, filled in bulk: settle to its target load
+    //
+    if ( _cs_bul_t ) {
+      _cs_bul_t = 0;
+      _cs_tend(&_cm_sole_u.vac_u);
+      _cs_tend(&_cm_sole_u.cec_u);
+    }
     _cm_sole_u.pat_y = pat_y;
     u3e_Meter.hca_d = add_d;
   }

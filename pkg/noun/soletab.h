@@ -62,6 +62,11 @@ static c3_w _cs_lim_w = 92;
 static c3_w _cs_tar_w = 65;
 static c3_w _cs_shr_w = 0;
 
+/* bulk filling (a rebuild): grow by twice at 70%, keeping inserts at low
+** load, and settle to the target once done (_cs_tend()).
+*/
+static c3_t _cs_bul_t;
+
 static inline c3_h*
 _cs_key(_cs_tab* tab_u, c3_d i_d)
 {
@@ -289,7 +294,12 @@ _cs_get(_cs_tab* tab_u, c3_h mug_h, c3_t (*pre_f)(u3_noun, void*), void* ptr_v)
 static inline void
 _cs_room(_cs_tab* tab_u)
 {
-  if ( (tab_u->len_d + 1) * 100 > tab_u->cap_d * _cs_lim_w ) {
+  if ( c3_unlikely(_cs_bul_t) ) {
+    if ( (tab_u->len_d + 1) * 100 > tab_u->cap_d * 70 ) {
+      _cs_resize_timed(tab_u, _cs_lines_for(tab_u->len_d * 2 + 1, 70), 1);
+    }
+  }
+  else if ( (tab_u->len_d + 1) * 100 > tab_u->cap_d * _cs_lim_w ) {
     _cs_resize_timed(tab_u, _cs_lines_for((tab_u->len_d * 3) / 2 + 1, _cs_tar_w), 1);
   }
 }
