@@ -318,6 +318,11 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
         extern volatile c3_w u3m_Sole_busy_w;
 
+      /* u3m_Pave_f: called partway through building a new road's tables
+      **             (tests).
+      */
+        extern void (*u3m_Pave_f)(void);
+
       /* u3m_hold(), u3m_hold_done(): hold off async signals (alarm,
       **   interrupt, term) for a few instructions that must finish
       **   together, such as a write to home memory and its count. a signal

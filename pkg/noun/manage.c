@@ -633,6 +633,11 @@ u3m_mark(void)
   return qua_u;
 }
 
+/* u3m_Pave_f: called partway through building a new road's tables
+**             (tests).
+*/
+void (*u3m_Pave_f)(void);
+
 /* _pave_parts(): build internal tables.
 */
 static void
@@ -650,6 +655,7 @@ _pave_parts(void)
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
+  if ( c3_unlikely(0 != u3m_Pave_f) ) u3m_Pave_f();
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
@@ -1288,6 +1294,11 @@ u3m_leap(c3_w pad_w)
     }
   }
 
+  //  until its tables are built, the new road can't be exited, so a
+  //  signal that recovers it (u3m_love() on every live road) must wait
+  //
+  u3m_hold();
+
   /* Attach the new road to its parents.
   */
   {
@@ -1308,6 +1319,7 @@ u3m_leap(c3_w pad_w)
     u3R = rod_u;
     _pave_parts();
   }
+  u3m_hold_done();
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
 #endif

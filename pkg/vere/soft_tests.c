@@ -21,6 +21,11 @@
 /// the lose lists and the visited set at 16 entries, so that they grow
 /// under interrupts.
 ///
+/// Then an alarm raised while a new inner road's tables are half built
+/// (u3m_Pave_f), at each of the first leaps of a workload with nested
+/// roads: the run must end with %alrm or complete, and the state must
+/// grab cleanly and compute the same result.
+///
 /// First, a stack overflow while async signals are held (u3m_hold())
 /// must leave u3o_check_corrupt set, and the grab it asks for must repair
 /// what a cut-short home write left: a leaked old value, or a new value
@@ -31,6 +36,7 @@
 #include "ur/ur.h"
 #include "vere.h"
 
+#include <signal.h>
 #include <time.h>
 
 typedef struct {
@@ -444,6 +450,56 @@ _test_over(void)
   u3z(cel);
 }
 
+/* the leap points: inner roads whose tables are being built, counted
+**   while armed; the alarm is raised at the [_pave_at_w]th.
+*/
+static c3_t _pave_arm_t;
+static c3_w _pave_cnt_w;
+static c3_w _pave_at_w;
+
+static void
+_pave_hook(void)
+{
+  if ( !_pave_arm_t ) return;
+
+  if ( ++_pave_cnt_w == _pave_at_w ) {
+    _pave_arm_t = 0;
+    raise(SIGVTALRM);
+  }
+}
+
+/* _test_pave(): an alarm while each of the first few inner roads of
+**   [w_u] builds its tables.
+*/
+static void
+_test_pave(_work* wok_u, c3_w len_w, _work* w_u)
+{
+  c3_w tot_w, int_w = 0;
+
+  u3m_Pave_f = _pave_hook;
+
+  _pave_cnt_w = 0;
+  _pave_at_w  = 0;
+  _pave_arm_t = 1;
+  _run(w_u, 0, 0);
+  _pave_arm_t = 0;
+  tot_w = c3_min(_pave_cnt_w, 8);
+
+  for ( c3_w at_w = 1; at_w <= tot_w; at_w++ ) {
+    _pave_cnt_w = 0;
+    _pave_at_w  = at_w;
+    _pave_arm_t = 1;
+    if ( !_run(w_u, 0, 0) ) int_w++;
+    _pave_arm_t = 0;
+    _grab(wok_u, len_w);
+    _run(w_u, 0, 0);
+  }
+
+  u3m_Pave_f = 0;
+  fprintf(stderr, "soft: pave: %s: alarm in %" PRIc3_w " leaps, %" PRIc3_w
+                  " interrupted\r\n", w_u->nam_c, tot_w, int_w);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -479,6 +535,11 @@ main(int argc, char* argv[])
     fprintf(stderr, "soft: %s: %" PRIxc3_w " in %" PRIu64 " us\r\n",
             wok_u[i_w].nam_c, wok_u[i_w].mug_w, wok_u[i_w].dur_d);
   }
+
+  //  an alarm while an inner road's tables are half built, in the
+  //  workload with nested roads
+  //
+  _test_pave(wok_u, len_w, &wok_u[2]);
 
   //  interrupted runs, each with a timeout up to a bit past its duration
   //
