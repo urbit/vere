@@ -376,6 +376,7 @@ _test_sole(void)
   }
   u3z(r);
   u3m_love(0);
+  u3z(e);
 
   //  but canonicalizes a junior cell's children, as on the home road
   //
