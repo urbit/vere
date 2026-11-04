@@ -187,7 +187,8 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       /* u3m_vgrab_check(): if u3o_check_corrupt is set, garbage-collect
       **                    the world plus extra roots counting references,
       **                    so the sweep frees leaks and repairs counts
-      **                    (as u3o_debug_ram does); then clear it.
+      **                    (as u3o_debug_ram does), quietly; then clear
+      **                    it.
       */
         void
         u3m_vgrab_check(u3_noun* som, c3_z len_z);

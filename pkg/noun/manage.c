@@ -2175,6 +2175,29 @@ u3m_mark_mute(void)
   c3_free(arr_u);
 }
 
+/* _cm_vgrab(): garbage-collect the world, plus extra roots; [qui_t] to
+**              log no totals of leaks and repairs.
+*/
+static void
+_cm_vgrab(u3_noun* som, c3_z len_z, c3_t qui_t)
+{
+  // u3h_free(u3R->cax.har_p);
+  // u3R->cax.har_p = u3h_new();
+
+  u3a_mark_init();
+  for (c3_z i_z = 0; i_z < len_z; i_z++) {
+    u3a_mark_noun(som[i_z]);
+  }
+
+  u3m_mark_mute();
+  if ( qui_t ) {
+    u3a_sweep_quiet();
+  }
+  else {
+    u3a_sweep();
+  }
+}
+
 /* u3m_vgrab_check(): if u3o_check_corrupt is set, garbage-collect the
 **                    world plus extra roots counting references, then
 **                    clear it.
@@ -2186,10 +2209,12 @@ u3m_vgrab_check(u3_noun* som, c3_z len_z)
     c3_h wag_h = u3C.wag_h;
 
     //  counting references, the sweep rewrites each box's count, so it
-    //  repairs counts left too high as well as freeing leaks
+    //  repairs counts left too high as well as freeing leaks. both are
+    //  expected after the interruptions that ask for this grab, so it
+    //  logs neither (but see u3a_sweep_leaked())
     //
     u3C.wag_h |= u3o_debug_ram;
-    u3m_vgrab(som, len_z);
+    _cm_vgrab(som, len_z, 1);
     u3C.wag_h = wag_h & ~u3o_check_corrupt;
   }
 }
@@ -2199,16 +2224,7 @@ u3m_vgrab_check(u3_noun* som, c3_z len_z)
 void
 u3m_vgrab(u3_noun* som, c3_z len_z)
 {
-  // u3h_free(u3R->cax.har_p);
-  // u3R->cax.har_p = u3h_new();
-
-  u3a_mark_init();
-  for (c3_z i_z = 0; i_z < len_z; i_z++) {
-    u3a_mark_noun(som[i_z]);
-  }
-
-  u3m_mark_mute();
-  u3a_sweep();
+  _cm_vgrab(som, len_z, 0);
 }
 
 /* u3m_soft(): top-level wrapper.
@@ -3017,6 +3033,9 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
     u3m_grab_check(u3_none);
+    if ( u3a_sweep_leaked() ) {
+      u3a_print_memory(stderr, "boot: gc: leaked", u3a_sweep_leaked());
+    }
     u3l_log("boot: gc complete");
   }
 
