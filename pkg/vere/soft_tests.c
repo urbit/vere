@@ -179,6 +179,7 @@ _run(_work* wok_u, c3_w mil_w, c3_t ref_t)
   else {
     fprintf(stderr, "soft: %s: failed with ", wok_u->nam_c);
     u3m_p("error", u3h(pro));
+    u3_pier_punt_goof(wok_u->nam_c, pro);
     exit(1);
   }
 
