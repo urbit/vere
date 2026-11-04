@@ -337,8 +337,9 @@ main(int argc, char* argv[])
   }
   fprintf(stderr, "test edit road: ok\r\n");
 
-  //  GC
+  //  GC, failing on a leak
   //
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab();
 
   fprintf(stderr, "test meme: ok\r\n");

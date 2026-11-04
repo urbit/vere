@@ -1935,8 +1935,9 @@ main(int argc, char* argv[])
     exit(1);
   }
 
-  //  GC
+  //  GC, failing on a leak
   //
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab();
 
   fprintf(stderr, "retrieve_tests: ok\n");

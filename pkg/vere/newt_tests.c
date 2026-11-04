@@ -565,8 +565,9 @@ main(int argc, char* argv[])
   _test_newt_vast_size();
   _test_newt_size_edge();
 
-  //  GC
+  //  GC, failing on a leak
   //
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab();
 
   fprintf(stderr, "test_newt: ok\n");

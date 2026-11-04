@@ -461,6 +461,7 @@ main(int argc, char* argv[])
     exit(1);
   }
 
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab(u3_none);
 
   fprintf(stderr, "test mesa: ok\r\n");

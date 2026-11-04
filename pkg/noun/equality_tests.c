@@ -733,7 +733,7 @@ _test_sole_dag(void)
     if ( i_w ) u3m_hate(0);
     fre = _dag(26);
 
-    if ( 2 == i_w ) u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
+    if ( 2 == i_w ) u3C.wag_h |= u3o_debug_ram;
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
     r = u3m_sole_try(u3k(fre));
@@ -750,6 +750,7 @@ _test_sole_dag(void)
     }
 
     if ( 2 == i_w ) {
+      u3C.wag_h |= u3o_leak_crash;
       u3m_grab(fre);
       u3C.wag_h = wag_h;
     }
@@ -1199,8 +1200,9 @@ main(int argc, char* argv[])
     exit(1);
   }
 
-  //  GC
+  //  GC, failing on a leak
   //
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab();
 
   fprintf(stderr, "test equality: ok\r\n");
