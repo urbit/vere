@@ -2,6 +2,7 @@
 
 #include "noun.h"
 #include "crib.h"
+#include "events.h"
 
 #include <time.h>
 
@@ -261,6 +262,94 @@ _test_lose_full(void)
 
   u3a_wed_size(1U << 14, 1U << 22);
   u3z(hol);
+  return ret_i;
+}
+
+/* _test_lose_full_eager(): with the home lose list full, the exit take's
+**                          rewrite of an older home noun leaves a slot as
+**                          it is, rather than leaking its old value.
+*/
+static c3_i
+_test_lose_full_eager(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, max_w = 16, i_w, swp_w = 0;
+  c3_d    ctr_d = u3e_Meter.ctr_d;
+  u3_noun mem = u3_nul, old = u3_nul, cop = u3_nul;
+
+  //  [old] lists [i 2] for each i, uncounted elsewhere and not members;
+  //  [mem] lists members equal to them. the walk meets [old]'s first
+  //  element first
+  //
+  for ( i_w = num_w; i_w--; ) {
+    mem = u3nc(u3m_sole_try(u3nc(i_w + 1, 2)), mem);
+    old = u3nc(u3nc(i_w + 1, 2), old);
+    cop = u3nc(u3nc(i_w + 1, 2), cop);
+  }
+
+  //  an inner road's cache holds [old], which the exit to home takes
+  //
+  u3a_wed_size(max_w, max_w);
+  u3m_hate(0);
+  u3h_put(u3R->cax.per_p, 50, u3k(old));
+  u3m_love(0);
+
+  {
+    u3_noun lis = old, mis = mem;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      c3_t swp_t = ( u3h(lis) == u3h(mis) );
+
+      if ( swp_t != (i_w < max_w) ) {
+        fprintf(stderr, "test: lose full eager: element %" PRIc3_w " %s\r\n",
+                i_w, swp_t ? "swapped" : "left");
+        ret_i = 0;
+      }
+      swp_w += swp_t;
+      lis = u3t(lis);
+      mis = u3t(mis);
+    }
+  }
+
+  if ( (max_w != swp_w) || ((num_w - max_w) != (u3e_Meter.ctr_d - ctr_d)) ) {
+    fprintf(stderr, "test: lose full eager: %" PRIc3_w " swapped, %" PRIu64 " left\r\n",
+            swp_w, u3e_Meter.ctr_d - ctr_d);
+    ret_i = 0;
+  }
+  if ( u3a_sole_has(old) ) {
+    fprintf(stderr, "test: lose full eager: a list with left slots is a member\r\n");
+    ret_i = 0;
+  }
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "test: lose full eager: asked for a grab\r\n");
+    ret_i = 0;
+  }
+
+  //  counting references, the drain freed what was swapped out, and
+  //  nothing else
+  //
+  {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_grab(mem, old, cop);
+    u3C.wag_h = wag_h;
+    if ( u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: lose full eager: leaked %" PRIc3_w " words\r\n",
+              u3a_sweep_leaked());
+      ret_i = 0;
+    }
+  }
+
+  if ( c3n == u3r_sing(old, cop) ) {
+    fprintf(stderr, "test: lose full eager: changed the value\r\n");
+    ret_i = 0;
+  }
+
+  u3a_wed_size(1U << 14, 1U << 22);
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(mem); u3z(old); u3z(cop);
   return ret_i;
 }
 
@@ -1080,6 +1169,11 @@ _test_equality(void)
 
   if ( !_test_lose_full() ) {
     fprintf(stderr, "test: equality: lose full: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_lose_full_eager() ) {
+    fprintf(stderr, "test: equality: lose full eager: failed\r\n");
     ret_i = 0;
   }
 
