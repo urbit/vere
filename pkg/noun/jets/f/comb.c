@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -66,3 +67,11 @@
     buz = u3t(u3h(u3t(cor)));
     return u3qf_comb(mal, buz);
   }
+
+/* u3uf_comb(): array driver of u3wf_comb.
+*/
+u3_noun
+u3uf_comb(u3_noun* arg)
+{
+  return u3qf_comb(arg[0], arg[1]);
+}

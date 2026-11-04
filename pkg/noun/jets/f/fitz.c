@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -74,4 +75,17 @@ u3wf_fitz(u3_noun cor)
   } else {
     return u3qf_fitz(yaz, wix);
   }
+}
+
+/* u3uf_fitz(): array driver of u3wf_fitz.
+*/
+u3_noun
+u3uf_fitz(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return u3qf_fitz(arg[0], arg[1]);
 }

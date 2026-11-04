@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -43,3 +44,15 @@
       return u3qb_slag(a, b);
     }
   }
+
+/* u3ub_slag(): array driver of u3wb_slag.
+*/
+u3_noun
+u3ub_slag(u3_noun* arg)
+{
+  if ( (c3n == u3ud(arg[0])) && (u3_nul != arg[1]) ) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3qb_slag(arg[0], arg[1]);
+}

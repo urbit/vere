@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -202,6 +203,20 @@
     }
   }
 
+/* u3ues_pbl(): array driver of u3wes_pbl: [p pl s sl c d] in arg[0..5].
+*/
+u3_noun
+u3ues_pbl(u3_noun* arg)
+{
+  if ( !(_(u3a_is_atom(arg[0])) && _(u3a_is_atom(arg[2])) &&
+         _(u3a_is_atom(arg[1])) && _(u3a_is_atom(arg[3])) &&
+         _(u3a_is_atom(arg[4])) && _(u3a_is_atom(arg[5]))) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqes_pbl(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]);
+}
+
   static u3_atom
   _cqes_pbk(u3_atom p, u3_atom s, u3_atom c, u3_atom d)
   {
@@ -225,3 +240,16 @@
       return _cqes_pbk(p, s, c, d);
     }
   }
+
+/* u3ues_pbk(): array driver of u3wes_pbk: [p s c d] in arg[0..3].
+*/
+u3_noun
+u3ues_pbk(u3_noun* arg)
+{
+  if ( !(_(u3a_is_atom(arg[0])) && _(u3a_is_atom(arg[1])) &&
+         _(u3a_is_atom(arg[2])) && _(u3a_is_atom(arg[3]))) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqes_pbk(arg[0], arg[1], arg[2], arg[3]);
+}

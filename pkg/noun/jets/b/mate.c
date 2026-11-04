@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -28,3 +29,10 @@
     return u3qb_mate(a, b);
   }
 
+/* u3ub_mate(): array driver of u3wb_mate.
+*/
+u3_noun
+u3ub_mate(u3_noun* arg)
+{
+  return u3qb_mate(arg[0], arg[1]);
+}

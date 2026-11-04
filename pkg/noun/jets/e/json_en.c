@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -413,4 +414,12 @@ u3_atom
 u3we_json_en(u3_noun cor)
 {
   return u3qe_json_en(u3x_at(u3x_sam, cor));
+}
+
+/* u3ue_json_en(): array driver of u3we_json_en.
+*/
+u3_noun
+u3ue_json_en(u3_noun* arg)
+{
+  return u3qe_json_en(arg[0]);
 }

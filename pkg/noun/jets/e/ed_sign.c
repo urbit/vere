@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -48,6 +49,21 @@
     }
   }
 
+/* u3uee_sign_octs(): array driver of u3wee_sign_octs:
+** [len dat sed] in arg[0..2].
+*/
+u3_noun
+u3uee_sign_octs(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[2]))
+     || (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_sign_octs(arg[0], arg[1], arg[2]);
+}
+
   static u3_atom
   _cqee_sign_octs_raw(u3_noun len, u3_noun dat, u3_noun pub, u3_noun sek)
   {
@@ -94,6 +110,22 @@
     }
   }
 
+/* u3uee_sign_octs_raw(): array driver of u3wee_sign_octs_raw:
+** [len dat pub sek] in arg[0..3].
+*/
+u3_noun
+u3uee_sign_octs_raw(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[2]))
+     || (c3n == u3ud(arg[3]))
+     || (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_sign_octs_raw(arg[0], arg[1], arg[2], arg[3]);
+}
+
   static u3_atom
   _cqee_sign(u3_noun msg,
              u3_noun sed)
@@ -130,6 +162,19 @@
       return _cqee_sign(msg, sed);
     }
   }
+
+/* u3uee_sign(): array driver of u3wee_sign.
+*/
+u3_noun
+u3uee_sign(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_sign(arg[0], arg[1]);
+}
 
   static u3_atom
   _cqee_sign_raw(u3_noun msg,
@@ -174,3 +219,17 @@
       return _cqee_sign_raw(msg, pub, sek);
     }
   }
+
+/* u3uee_sign_raw(): array driver of u3wee_sign_raw.
+*/
+u3_noun
+u3uee_sign_raw(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_sign_raw(arg[0], arg[1], arg[2]);
+}

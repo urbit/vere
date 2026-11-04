@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -28,4 +29,12 @@
       return u3qf_face(sag, tip);
     }
   }
+
+/* u3uf_face(): array driver of u3wf_face.
+*/
+u3_noun
+u3uf_face(u3_noun* arg)
+{
+  return u3qf_face(arg[0], arg[1]);
+}
 

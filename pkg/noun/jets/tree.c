@@ -993,6 +993,10 @@ static c3_c* _140_qua_sfix_ha[] = {
 };
 
 static u3j_harm _140_qua_mink_a[] = {{".2", u3we_mink}, {}};
+static c3_c* _140_qua_mink_ha[] = {
+  "99b653da6a21fa3375424811af288f59164592ece4a072abc460df03e81abcaf",
+  0
+};
 static u3j_harm _140_qua_mock_a[] = {{".2", u3we_mock}, {}};
 static u3j_harm _140_qua_monk_a[] = {{".2", u3we_monk}, {}};
 static u3j_harm _140_qua_mole_a[] = {{".2", u3we_mole}, {}};
@@ -1032,6 +1036,7 @@ static u3j_core _140_qua_d[] =
   { "pose", 7, _140_qua_pose_a, 0, _140_qua_pose_ha },
   { "sfix", 7, _140_qua_sfix_a, 0, _140_qua_sfix_ha },
 
+  { "mink", 7, _140_qua_mink_a, 0, _140_qua_mink_ha },
   { "mock", 7, _140_qua_mock_a, 0, no_hashes },
   { "mole", 7, _140_qua_mole_a, 0, _140_qua_mole_ha },
   { "monk", 7, _140_qua_monk_a, 0, no_hashes },

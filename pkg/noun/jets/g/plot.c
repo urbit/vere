@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -337,6 +338,14 @@ u3wg_plot_met(u3_noun cor)
   return u3qg_plot_met(a_p, b_p);
 }
 
+/* u3ug_plot_met(): array driver of u3wg_plot_met.
+*/
+u3_noun
+u3ug_plot_met(u3_noun* arg)
+{
+  return u3qg_plot_met(arg[0], arg[1]);
+}
+
 u3_noun
 u3qg_plot_fax(u3_noun a_p, u3_noun b_p)
 {
@@ -361,4 +370,12 @@ u3wg_plot_fax(u3_noun cor)
     b_p = u3t(sam);
   }
   return u3qg_plot_fax(a_p, b_p);
+}
+
+/* u3ug_plot_fax(): array driver of u3wg_plot_fax.
+*/
+u3_noun
+u3ug_plot_fax(u3_noun* arg)
+{
+  return u3qg_plot_fax(arg[0], arg[1]);
 }

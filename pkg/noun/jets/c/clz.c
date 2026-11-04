@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -72,4 +73,14 @@ u3wc_clz(u3_noun cor)
   }
 
   return u3qc_clz(boq, sep, vat);
+}
+
+/* u3uc_clz(): array driver of u3wc_clz.
+*/
+u3_noun
+u3uc_clz(u3_noun* arg)
+{
+  u3_atom boq, sep;
+  u3x_bite(arg[0], &boq, &sep);
+  return u3qc_clz(boq, sep, u3x_atom(arg[1]));
 }

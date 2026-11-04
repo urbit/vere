@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -22,4 +23,12 @@ u3_noun
 u3wc_cap(u3_noun cor)
 {
   return u3qc_cap(u3x_atom(u3x_at(u3x_sam, cor)));
+}
+
+/* u3uc_cap(): array driver of u3wc_cap.
+*/
+u3_noun
+u3uc_cap(u3_noun* arg)
+{
+  return u3qc_cap(u3x_atom(arg[0]));
 }

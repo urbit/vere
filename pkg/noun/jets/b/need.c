@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -27,4 +28,12 @@
       return u3qb_need(a);
     }
   }
+
+/* u3ub_need(): array driver of u3wb_need.
+*/
+u3_noun
+u3ub_need(u3_noun* arg)
+{
+  return u3qb_need(arg[0]);
+}
 

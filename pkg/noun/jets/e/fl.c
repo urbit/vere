@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -333,6 +334,15 @@
     return u3qef_lug(d, b, c, e);
   }
 
+/* u3uef_lug(): array driver of u3wef_lug: [t a s] at arg[0..2],
+** the sample of the door at arg[3].
+*/
+u3_noun
+u3uef_lug(u3_noun* arg)
+{
+  return u3qef_lug(arg[1], arg[3], arg[0], arg[2]);
+}
+
   u3_noun
   u3qef_drg(u3_noun a,
             u3_noun b)
@@ -439,3 +449,12 @@
 
     return u3qef_drg(a, b);
   }
+
+/* u3uef_drg(): array driver of u3wef_drg: a at arg[0], the sample
+** of the door at arg[1].
+*/
+u3_noun
+u3uef_drg(u3_noun* arg)
+{
+  return u3qef_drg(arg[0], arg[1]);
+}

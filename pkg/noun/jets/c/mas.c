@@ -1,4 +1,5 @@
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -45,4 +46,12 @@ u3_noun
 u3wc_mas(u3_noun cor)
 {
   return u3qc_mas(u3x_atom(u3x_at(u3x_sam, cor)));
+}
+
+/* u3uc_mas(): array driver of u3wc_mas.
+*/
+u3_noun
+u3uc_mas(u3_noun* arg)
+{
+  return u3qc_mas(u3x_atom(arg[0]));
 }

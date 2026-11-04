@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -65,3 +66,18 @@
       return _cqee_add_scalarmult_scalarmult_base(a, b, c);
     }
   }
+
+/* u3uee_add_scalarmult_scalarmult_base(): array driver of
+** u3wee_add_scalarmult_scalarmult_base.
+*/
+u3_noun
+u3uee_add_scalarmult_scalarmult_base(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_add_scalarmult_scalarmult_base(arg[0], arg[1], arg[2]);
+}

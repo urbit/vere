@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -39,6 +40,20 @@ u3wc_swp(u3_noun cor)
 
   return u3qc_swp(a, b);
  }
+
+/* u3uc_swp(): array driver of u3wc_swp.
+*/
+u3_noun
+u3uc_swp(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3qc_swp(arg[0], arg[1]);
+}
 
 u3_noun
 u3kc_swp(u3_atom a,

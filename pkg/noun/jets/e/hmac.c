@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -94,3 +95,25 @@
       return u3qe_hmac(haj, boq, out, wik, key, wid, dat);
     }
   }
+
+/* u3ue_hmac(): array driver of u3we_hmac:
+** [haj boq out wik key wid dat] in arg[0..6].
+*/
+u3_noun
+u3ue_hmac(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[1]))
+     || (c3n == u3a_is_cat(arg[1]))
+     || (c3n == u3ud(arg[2]))
+     || (c3n == u3a_is_cat(arg[2]))
+     || (c3n == u3ud(arg[3]))
+     || (c3n == u3a_is_cat(arg[3]))
+     || (c3n == u3ud(arg[4]))
+     || (c3n == u3ud(arg[5]))
+     || (c3n == u3a_is_cat(arg[5]))
+     || (c3n == u3ud(arg[6])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qe_hmac(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6]);
+}

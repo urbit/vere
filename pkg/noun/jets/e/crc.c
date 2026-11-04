@@ -4,6 +4,7 @@
 #include <allocate.h>
 #include "zlib.h"
 
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -60,4 +61,20 @@ u3we_crc32(u3_noun cor)
   } else {
     return u3m_bail(c3__exit);
   }
+}
+
+/* u3ue_crc32(): array driver of u3we_crc32.
+*/
+u3_noun
+u3ue_crc32(u3_noun* arg)
+{
+  u3_noun a = arg[0];
+
+  if (  (c3y == u3du(a))
+     && (c3y == u3ud(u3h(a)))
+     && (c3y == u3ud(u3t(a))) )
+  {
+    return u3qe_crc32(a);
+  }
+  return u3m_bail(c3__exit);
 }

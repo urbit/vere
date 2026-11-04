@@ -1281,7 +1281,7 @@ u3m_hate(c3_w pad_w)
 
   //  inherit forward-flowing flags
   //
-  u3R->how.fag_w |= (fag_w & u3a_flag_cash);
+  u3R->how.fag_w |= (fag_w & u3a_flag_fore);
 
 }
 
@@ -1429,7 +1429,9 @@ u3m_love(u3_noun pro)
 
   //  fallback to parent road (child heap on parent's stack)
   //
+  c3_w fag_w = u3R->how.fag_w;
   u3m_fall();
+  u3R->how.fag_w |= (fag_w & u3a_flag_back);
 
   if ( _(tim_o) ) _m_renew_now();
 
@@ -1803,8 +1805,6 @@ u3m_soft_run(u3_noun gul,
   u3_noun pro;
   u3_noun why = 0;
 
-  c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
-
   /* Record the cap, and leap.
   */
   u3m_hate(1 << 18);
@@ -1822,7 +1822,6 @@ u3m_soft_run(u3_noun gul,
     u3R->pro.don = u3to(u3_road, u3R->par_p)->pro.don;
     u3R->pro.trace = u3to(u3_road, u3R->par_p)->pro.trace;
     u3R->bug.tax = 0;
-    u3R->how.fag_w |= ( cash_t ) ? u3a_flag_cash : 0;
   }
   u3t_on(coy_o);
 

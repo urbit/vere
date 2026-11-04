@@ -3288,7 +3288,14 @@ _nc_dire_get(u3nc_dire* dir_u)
 static void
 _nc_dire_fit(const u3nc_dire* dir_u, const u3nc_prog* gop_u)
 {
-  u3_assert( gop_u->arg_h == dir_u->len_h );
+  if ( gop_u->arg_h != dir_u->len_h ) {
+    fprintf(stderr, "u3nc: site passes %u, program takes %u: bell %08x "
+                    "(formula %08x, sock %08x) %s\r\n",
+            dir_u->len_h, gop_u->arg_h, u3r_mug(dir_u->bell),
+            u3r_mug(u3t(dir_u->bell)), u3r_mug(u3h(dir_u->bell)),
+            ( c3y == dir_u->mon_o ) ? "mono" : "n-ary");
+    u3_assert( gop_u->arg_h == dir_u->len_h );
+  }
 }
 
 /* _nc_ent_get(): entry program for [sub fol], from any road.  RETAINS.
@@ -3925,7 +3932,27 @@ u3nc_mean(u3_noun bell, u3_noun arg)
   return u3m_soft_run(u3_nul, _nc_mean_run, u3k(bell), u3k(arg));
 }
 
-/* u3nc_nock_on(): produce .*(bus fol).
+/* u3nc_able(): can this road run compiled nock.
+*/
+c3_o
+u3nc_able(void)
+{
+  return __(  (u3_nul != u3R->ska.cor)
+           && !(u3R->how.fag_w & u3a_flag_mink) );
+}
+
+/* u3nc_slam_on(): produce (gat sam), compiled where it can be.
+*/
+u3_noun
+u3nc_slam_on(u3_noun gat, u3_noun sam)
+{
+  u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
+
+  u3z(gat);
+  return u3nc_nock_on(cor, u3nq(9, 2, 0, 1));
+}
+
+/* u3nc_nock_on(): produce .*(bus fol); with u3n if this road can't.
 */
 u3_noun
 u3nc_nock_on(u3_noun bus, u3_noun fol)
@@ -3933,6 +3960,9 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   u3nc_prog* pog_u;
   u3_noun    pro;
 
+  if ( c3n == u3nc_able() ) {
+    return u3n_nock_on(bus, fol);
+  }
 
   pog_u = _nc_entry(bus, fol);
   u3z(fol);
@@ -3951,6 +3981,46 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   }
 
   return pro;
+}
+
+/* _nc_regs_cb(): count the arguments of an n-ary program.
+*/
+static void
+_nc_regs_cb(u3_noun kev, void* ptr_v)
+{
+  c3_w* his_w = ptr_v;
+
+  if ( c3__mono != u3h(u3h(kev)) ) {
+    c3_h arg_h = _nc_to(u3t(kev))->arg_h;
+
+    his_w[c3_min(arg_h, 63)]++;
+    his_w[64]++;
+    his_w[65] += arg_h;
+  }
+}
+
+/* u3nc_regs(): print a histogram of the argument counts of the n-ary
+**              programs of this road and its seniors.
+*/
+void
+u3nc_regs(void)
+{
+  c3_w      his_w[66] = {0};
+  c3_w      i_w;
+  u3a_road* rod_u;
+
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3h_walk_with(rod_u->ska.dir_p, _nc_regs_cb, his_w);
+  }
+
+  fprintf(stderr, "u3nc: %u n-ary programs, %u arguments\r\n",
+          his_w[64], his_w[65]);
+  for ( i_w = 0; i_w < 64; i_w++ ) {
+    if ( his_w[i_w] ) {
+      fprintf(stderr, "  %u%s: %u\r\n", i_w, ( 63 == i_w ) ? "+" : "",
+              his_w[i_w]);
+    }
+  }
 }
 
 /* u3nc_scan(): analyze and compile [bus fol] without running it.

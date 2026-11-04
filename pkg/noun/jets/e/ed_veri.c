@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -47,6 +48,22 @@
     }
   }
 
+/* u3uee_veri_octs(): array driver of u3wee_veri_octs:
+** [sig len dat pub] in arg[0..3].
+*/
+u3_noun
+u3uee_veri_octs(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[3]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_veri_octs(arg[0], arg[1], arg[2], arg[3]);
+}
+
   static u3_atom
   _cqee_veri(u3_noun s,
              u3_noun m,
@@ -83,3 +100,17 @@
       return _cqee_veri(a, b, c);
     }
   }
+
+/* u3uee_veri(): array driver of u3wee_veri.
+*/
+u3_noun
+u3uee_veri(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqee_veri(arg[0], arg[1], arg[2]);
+}

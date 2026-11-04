@@ -91,6 +91,18 @@
       u3_noun
       u3nc_nock_on(u3_noun bus, u3_noun fol);
 
+    /* u3nc_slam_on(): produce (gat sam), compiled where it can be.
+    */
+      u3_noun
+      u3nc_slam_on(u3_noun gat, u3_noun sam);
+
+    /* u3nc_able(): can this road run compiled nock: an SKA core is
+    **              installed, and the road isn't the virtualization of
+    **              the +mink jet, whose trace goes to Hoon's +mook.
+    */
+      c3_o
+      u3nc_able(void);
+
     /* u3nc_mean(): the product of the arm of a deferred %mean trap
     **              [%meaf bell arg] on the trace stack, as ++toon: the
     **              n-ary program of bell on the arguments, in a
@@ -103,6 +115,12 @@
     */
       void
       u3nc_scan(u3_noun bus, u3_noun fol);
+
+    /* u3nc_regs(): print a histogram of the argument counts of the n-ary
+    **              programs of this road and its seniors.
+    */
+      void
+      u3nc_regs(void);
 
     /* u3nc_take(): copy junior program tables; sets *dir_p and *ent_p
     **              to the copies.

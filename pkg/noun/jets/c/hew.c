@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -84,4 +85,13 @@ u3wc_hew(u3_noun cor)
   }
 
   return u3qc_hew(boq, sep, vat, sam);
+}
+
+/* u3uc_hew(): array driver of u3wc_hew.
+*/
+u3_noun
+u3uc_hew(u3_noun* arg)
+{
+  return u3qc_hew(u3x_atom(arg[1]), u3x_atom(arg[2]),
+                  u3x_atom(arg[3]), arg[0]);
 }

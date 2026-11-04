@@ -1370,6 +1370,18 @@ u3wcp_ins(u3_noun cor)
   return u3qc_po_ins(a);
 }
 
+/* u3ucp_ins(): array driver of u3wcp_ins.
+*/
+u3_noun
+u3ucp_ins(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  return u3qc_po_ins(arg[0]);
+}
+
 u3_noun
 u3qc_po_ind(u3_noun a)
 {
@@ -1390,6 +1402,18 @@ u3wcp_ind(u3_noun cor)
   }
 
   return u3qc_po_ind(a);
+}
+
+/* u3ucp_ind(): array driver of u3wcp_ind.
+*/
+u3_noun
+u3ucp_ind(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__fail);
+  }
+
+  return u3qc_po_ind(arg[0]);
 }
 
 static u3_noun

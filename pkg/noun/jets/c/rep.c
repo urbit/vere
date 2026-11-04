@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -222,6 +223,17 @@ u3wc_rep(u3_noun cor)
   u3x_bite(a, &bloq, &step);
 
   return u3qc_rep(bloq, step, b);
+}
+
+/* u3uc_rep(): array driver of u3wc_rep.
+*/
+u3_noun
+u3uc_rep(u3_noun* arg)
+{
+  u3_atom bloq, step;
+  u3x_bite(arg[0], &bloq, &step);
+
+  return u3qc_rep(bloq, step, arg[1]);
 }
 
 u3_noun

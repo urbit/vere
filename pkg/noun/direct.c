@@ -6,7 +6,6 @@
 #include "hashtable.h"
 #include "imprison.h"
 #include "jets.h"
-#include "jets/k.h"
 #include "jets/q.h"
 #include "log.h"
 #include "manage.h"
@@ -162,7 +161,21 @@ _d_poke(u3_noun ovo)
   pro = u3n_slam_et(u3_nul, gat, ovo);
 
   if ( 0 != u3h(pro) ) {
-    u3l_log("ska: poke failed");
+    u3l_log("ska: poke failed: %%%u, %u frames", u3h(pro),
+            ( 2 == u3h(pro) ) ? u3qb_lent(u3t(pro)) : 0);
+
+    //  the trace of a crash, rendered
+    //
+    if ( 2 == u3h(pro) ) {
+      u3_noun tan = u3t_mook(u3k(u3t(pro)));
+      u3_noun i;
+
+      for ( i = tan; u3_nul != i; i = u3t(i) ) {
+        u3t_slog(u3nc(0, u3k(u3h(i))));
+      }
+      u3z(tan);
+    }
+
     u3z(pro);
     return u3m_bail(c3__fail);
   }
