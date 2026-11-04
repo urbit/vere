@@ -153,6 +153,16 @@ u3_auto_work(u3_ovum* egg_u)
   _auto_news(egg_u, u3_ovum_work);
 }
 
+/* u3_auto_lose(): dispose an ovum already off its queue (in flight),
+**   telling its driver it was dropped.
+*/
+void
+u3_auto_lose(u3_ovum* egg_u)
+{
+  _auto_news(egg_u, u3_ovum_drop);
+  u3_ovum_free(egg_u);
+}
+
 /* u3_auto_drop(): dequeue and dispose an ovum.
 */
 void

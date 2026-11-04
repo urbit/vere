@@ -19,6 +19,38 @@ u3_king u3_King;
 
 static const c3_c* ver_hos_c = "https://bootstrap.urbit.org/vere";
 
+/* _king_blob_del(): king-side del_f: the king's last bob over a blob
+**   died, so return every hold it received on the id to mars and drop
+**   the record.  the king never wipes files; mars owns the store.
+*/
+static void
+_king_blob_del(c3_h mug_h, c3_h seq_h)
+{
+  u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
+
+  //  the king's record has two legs, its live bobs and the holds it
+  //  received; ownership is mars's and must never appear here
+  //
+  u3_assert( blb_u && (c3n == blb_u->own_o) );
+
+  if ( blb_u->les_h && u3K.pir_u && u3K.pir_u->god_u ) {
+    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->les_h);
+  }
+  u3a_blob_drop(mug_h, seq_h);
+}
+
+/* _king_blob_init(): register blob hooks.
+**
+**   every message mars sends grants the king one hold per blob id it
+**   names; the king counts them per id and returns the lot when its
+**   last bob over the id dies.
+*/
+static void
+_king_blob_init(void)
+{
+  u3C.blob_del_f = _king_blob_del;
+}
+
 //  stash config flags for worker
 //
 static c3_h sag_h;
@@ -186,6 +218,8 @@ _king_boot_done(void* ptr_v, c3_o ret_o)
   }
 
   u3K.pir_u = u3_pier_stay(sag_h, u3i_string(u3_Host.dir_c), rift);
+
+  _king_blob_init();
 }
 
 /* _king_prop(): events from prop arguments
@@ -340,6 +374,8 @@ _king_pier(u3_noun pier)
 
   u3K.pir_u = u3_pier_stay(sag_h, u3k(u3t(pier)), u3_none);
   u3z(pier);
+
+  _king_blob_init();
 }
 
 /* king_curl_alloc(): allocate a response buffer for curl
@@ -1875,6 +1911,11 @@ u3_king_grab(void* vod_p)
   }
 
   c3_free(all_u);
+
+  //  blobs open on the king's side, one per blob being streamed
+  //
+  fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
+          u3b_hands(), u3b_mapped());
 
 #ifdef U3_MEMORY_LOG
   {

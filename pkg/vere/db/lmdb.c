@@ -48,9 +48,9 @@ u3_lmdb_init(const c3_c* pax_c, size_t siz_i)
     return 0;
   }
 
-  //  Our databases have two tables: META and EVENTS
+  //  Our databases have three tables: META, EVENTS, and BLOBS
   //
-  if ( (ret_h = mdb_env_set_maxdbs(env_u, 2)) ) {
+  if ( (ret_h = mdb_env_set_maxdbs(env_u, 3)) ) {
     mdb_logerror(stderr, ret_h, "lmdb: failed to set number of databases");
     //  XX dispose env_u
     //
@@ -350,10 +350,14 @@ u3_lmdb_save(MDB_env* env_u,
              c3_d     eve_d,               //  first event
              c3_d     len_d,               //  number of events
              void**   byt_p,               //  array of bytes
-             size_t*  siz_i)               //  array of lengths
+             size_t*  siz_i,               //  array of lengths
+             c3_d**   bid_p,               //  array of blob id arrays, or 0
+             c3_z*    bid_z)               //  array of their counts, or 0
 {
   MDB_txn* txn_u;
   MDB_dbi  mdb_u;
+  MDB_dbi  blb_u;
+  c3_o     blb_o = c3n;
   c3_h     ret_h;
 
   //  create a write transaction
@@ -395,6 +399,36 @@ u3_lmdb_save(MDB_env* env_u,
           return c3n;
         }
       }
+
+      //  the event's blob ids go in the same transaction, so the BLOBS
+      //  row can neither outlive a lost event nor go missing under a
+      //  committed one
+      //
+      if ( bid_p && bid_z && bid_z[i_d] ) {
+        if ( c3n == blb_o ) {
+          c3_h bop_h = MDB_CREATE | MDB_INTEGERKEY;
+
+          if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", bop_h, &blb_u)) ) {
+            mdb_logerror(stderr, ret_h, "lmdb: write: blobs dbi_open fail");
+            mdb_txn_abort(txn_u);
+            return c3n;
+          }
+          blb_o = c3y;
+        }
+
+        {
+          MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &key_d };
+          MDB_val val_u = { .mv_size = bid_z[i_d] * sizeof(c3_d),
+                            .mv_data = bid_p[i_d] };
+
+          if ( (ret_h = mdb_put(txn_u, blb_u, &key_u, &val_u, 0)) ) {
+            fprintf(stderr, "lmdb: blobs write failed on event %" PRIu64
+                            "\r\n", key_d);
+            mdb_txn_abort(txn_u);
+            return c3n;
+          }
+        }
+      }
     }
   }
 
@@ -402,6 +436,58 @@ u3_lmdb_save(MDB_env* env_u,
   //
   if ( (ret_h = mdb_txn_commit(txn_u)) ) {
     mdb_logerror(stderr, ret_h, "lmdb: write failed");
+    return c3n;
+  }
+
+  return c3y;
+}
+
+/* u3_lmdb_save_blobs(): write one BLOBS row, in its own transaction.
+**
+**   For the row no event writes: the image's live set at the epoch's
+**   first key, put by the roll.  An event's row goes with the event in
+**   u3_lmdb_save.
+*/
+c3_o
+u3_lmdb_save_blobs(MDB_env*    env_u,
+                   c3_d        eve_d,
+                   const c3_d* bid_d,
+                   c3_z        len_z)
+{
+  MDB_txn* txn_u;
+  MDB_dbi  blb_u;
+  c3_h     ret_h;
+
+  if ( (ret_h = mdb_txn_begin(env_u, 0, 0, &txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs write: txn_begin fail");
+    return c3n;
+  }
+
+  {
+    c3_h ops_h = MDB_CREATE | MDB_INTEGERKEY;
+
+    if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", ops_h, &blb_u)) ) {
+      mdb_logerror(stderr, ret_h, "lmdb: blobs write: dbi_open fail");
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  {
+    c3_d    key_d = eve_d;
+    MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &key_d };
+    MDB_val val_u = { .mv_size = len_z * sizeof(c3_d),
+                      .mv_data = (void*)bid_d };
+
+    if ( (ret_h = mdb_put(txn_u, blb_u, &key_u, &val_u, 0)) ) {
+      fprintf(stderr, "lmdb: blobs write failed at %" PRIu64 "\r\n", eve_d);
+      mdb_txn_abort(txn_u);
+      return c3n;
+    }
+  }
+
+  if ( (ret_h = mdb_txn_commit(txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs write: commit fail");
     return c3n;
   }
 
@@ -612,6 +698,128 @@ u3_lmdb_walk_done(u3_lmdb_walk* itr_u)
 {
   mdb_cursor_close(itr_u->cur_u);
   mdb_txn_abort(itr_u->txn_u);
+}
+
+/* u3_lmdb_read_blobs(): read blob IDs for event [eve_d] from BLOBS table.
+**
+**   on success, sets [out_d] to a malloc'd array and [out_z] to its length.
+**   caller must c3_free(*out_d).  returns c3n if no entry exists.
+*/
+c3_o
+u3_lmdb_read_blobs(MDB_env* env_u,
+                   c3_d     eve_d,
+                   c3_d**   out_d,
+                   c3_z*    out_z)
+{
+  MDB_txn* txn_u;
+  MDB_dbi  mdb_u;
+  c3_h     ret_h;
+
+  if ( (ret_h = mdb_txn_begin(env_u, 0, MDB_RDONLY, &txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs read: txn_begin fail");
+    return c3n;
+  }
+
+  //  open the BLOBS database (read-only; may not exist yet)
+  //
+  {
+    c3_h ops_h = MDB_INTEGERKEY;
+
+    if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", ops_h, &mdb_u)) ) {
+      //  database doesn't exist yet -- not an error
+      //
+      mdb_txn_abort(txn_u);
+      *out_d = 0;
+      *out_z = 0;
+      return c3n;
+    }
+  }
+
+  //  look up by event number
+  //
+  {
+    MDB_val key_u = { .mv_size = sizeof(c3_d), .mv_data = &eve_d };
+    MDB_val val_u;
+
+    if ( (ret_h = mdb_get(txn_u, mdb_u, &key_u, &val_u)) ) {
+      mdb_txn_abort(txn_u);
+      *out_d = 0;
+      *out_z = 0;
+      return c3n;
+    }
+
+    *out_z = val_u.mv_size / sizeof(c3_d);
+    *out_d = c3_malloc(val_u.mv_size);
+    memcpy(*out_d, val_u.mv_data, val_u.mv_size);
+  }
+
+  mdb_txn_abort(txn_u);
+  return c3y;
+}
+
+/* u3_lmdb_walk_blobs(): iterate BLOBS table for events in [lo_d, hi_d].
+**
+**   calls [fun_f] for each event that has blob refs.
+*/
+void
+u3_lmdb_walk_blobs(MDB_env* env_u,
+                   c3_d     lo_d,
+                   c3_d     hi_d,
+                   void*    ptr_v,
+                   void  (*fun_f)(void*, c3_d, c3_d*, c3_z))
+{
+  MDB_txn* txn_u;
+  MDB_dbi  mdb_u;
+  c3_h     ret_h;
+
+  if ( (ret_h = mdb_txn_begin(env_u, 0, MDB_RDONLY, &txn_u)) ) {
+    mdb_logerror(stderr, ret_h, "lmdb: blobs walk: txn_begin fail");
+    return;
+  }
+
+  {
+    c3_h ops_h = MDB_INTEGERKEY;
+
+    if ( (ret_h = mdb_dbi_open(txn_u, "BLOBS", ops_h, &mdb_u)) ) {
+      //  database doesn't exist yet -- nothing to walk
+      //
+      mdb_txn_abort(txn_u);
+      return;
+    }
+  }
+
+  {
+    MDB_cursor* cur_u;
+    MDB_val     key_u = { .mv_size = sizeof(c3_d), .mv_data = &lo_d };
+    MDB_val     val_u;
+
+    if ( (ret_h = mdb_cursor_open(txn_u, mdb_u, &cur_u)) ) {
+      mdb_logerror(stderr, ret_h, "lmdb: blobs walk: cursor_open fail");
+      mdb_txn_abort(txn_u);
+      return;
+    }
+
+    //  position at first key >= lo_d
+    //
+    ret_h = mdb_cursor_get(cur_u, &key_u, &val_u, MDB_SET_RANGE);
+
+    while ( !ret_h ) {
+      c3_d eve_d = c3_sift_chub(key_u.mv_data);
+
+      if ( eve_d > hi_d ) {
+        break;
+      }
+
+      c3_z len_z = val_u.mv_size / sizeof(c3_d);
+      fun_f(ptr_v, eve_d, (c3_d*)val_u.mv_data, len_z);
+
+      ret_h = mdb_cursor_get(cur_u, &key_u, &val_u, MDB_NEXT);
+    }
+
+    mdb_cursor_close(cur_u);
+  }
+
+  mdb_txn_abort(txn_u);
 }
 
 /* mdb_logerror(): writes an error message and lmdb error code to f.

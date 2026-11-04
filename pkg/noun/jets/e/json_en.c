@@ -121,19 +121,16 @@ _measure_number(u3_noun a)
 static void
 _serialize_number(json_buffer *buf_u, u3_noun a)
 {
-  const c3_y *byt_y;
-
-  // XX assumes little-endian
+  //  a view borrows the bytes wherever the atom lives
+  //  XX assumes little-endian
   //
-  if ( c3y == u3a_is_cat(a) ) {
-    byt_y = (c3_y*)&a;
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, a, c3y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
   }
-  else {
-    u3a_atom* vat_u = u3a_to_ptr(a);
-    byt_y = (c3_y*)vat_u->buf_w;
-  }
-
-  _append_text(buf_u, byt_y, u3r_met(3, a));
+  _append_text(buf_u, u3r_view_bytes(&vue_u), (c3_w)vue_u.byt_d);
+  u3r_view_done(&vue_u);
 }
 
 static c3_w

@@ -20,24 +20,44 @@ _x_octs(u3_noun octs, u3_atom* p_octs, u3_atom* q_octs) {
     u3m_bail(c3__exit);
   }
 }
+//  _x_octs_done(): release the view the octs were borrowed through,
+//  then return [x], which may have been built from them
+//
+#define _x_octs_done(vue, x)              \
+  do {                                    \
+    u3_noun _pro = (x);                   \
+    u3r_view_done(&(vue));                \
+    return _pro;                          \
+  } while ( 0 )
+
+#define _x_octs_done2(vue, vub, x)        \
+  do {                                    \
+    u3_noun _pro = (x);                   \
+    u3r_view_done(&(vue));                \
+    u3r_view_done(&(vub));                \
+    return _pro;                          \
+  } while ( 0 )
+
 static c3_o
 _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
                            c3_w* p_octs_w, c3_y** buf_y,
-                           c3_w* len_w, c3_w* lead_w)
+                           c3_w* len_w, c3_w* lead_w,
+                           u3r_view* vue_u)
 {
   if (c3n == u3r_safe_word(*p_octs, p_octs_w)) {
     return c3n;
   }
 
-  *len_w = u3r_met(3, *q_octs);
-
-  if (c3y == u3a_is_cat(*q_octs)) {
-    *buf_y = (c3_y*)q_octs;
+  //  a view borrows the bytes wherever the atom lives; the caller
+  //  releases it through _x_octs_done.  read-only.  a bob whose file
+  //  is gone bails %fail, as every other reader does
+  //
+  u3r_view_open(vue_u, *q_octs, c3y);
+  if ( vue_u->byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
   }
-  else {
-    u3a_atom* ptr_a = u3a_to_ptr(*q_octs);
-    *buf_y = (c3_y*)ptr_a->buf_w;
-  }
+  *len_w = (c3_w)vue_u->byt_d;
+  *buf_y = (c3_y*)u3r_view_bytes(vue_u);
 
   *lead_w = 0;
 
@@ -57,14 +77,15 @@ _qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
   c3_w p_octs_w, len_w, lead_w;
   c3_y* buf_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &buf_y,
-                            &len_w, &lead_w)){
-    return u3_none;
+                            &len_w, &lead_w, &vue)){
+    _x_octs_done(vue, u3_none);
   }
 
   if (p_octs_w == 0) {
-    return u3_nul;
+    _x_octs_done(vue, u3_nul);
   }
 
   u3_noun rip = u3_nul;
@@ -79,7 +100,7 @@ _qe_bytestream_rip_octs(u3_atom p_octs, u3_atom q_octs) {
     rip = u3nc(*(buf_y--), rip);
   }
 
-  return rip;
+  _x_octs_done(vue, rip);
 }
 
 u3_noun
@@ -110,24 +131,25 @@ _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
   c3_y* sea_y;
   c3_y* seb_y;
 
+  u3r_view vue = {0}, vub = {0};
   if (c3n == _x_octs_buffer(&p_octs_a, &q_octs_a,
                             &p_octs_a_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done2(vue, vub, u3_none);
   }
 
   if (c3n == _x_octs_buffer(&p_octs_b, &q_octs_b,
                             &p_octs_b_w, &seb_y,
-                            &lem_w, &leaf_w)) {
-    return u3_none;
+                            &lem_w, &leaf_w, &vub)) {
+    _x_octs_done2(vue, vub, u3_none);
   }
 
   if (p_octs_a_w == 0) {
-    return u3k(octs_b);
+    _x_octs_done2(vue, vub, u3k(octs_b));
   }
 
   if (p_octs_b_w == 0) {
-    return u3k(octs_a);
+    _x_octs_done2(vue, vub, u3k(octs_a));
   }
 
   c3_d p_octs_d = p_octs_a_w + p_octs_b_w;
@@ -152,7 +174,7 @@ _qe_bytestream_cat_octs(u3_noun octs_a, u3_noun octs_b) {
     u3_noun q_octs = u3i_slab_moot(&sab_u);
     ret = u3nc(u3i_chub(p_octs_d), q_octs);
   }
-  return ret;
+  _x_octs_done2(vue, vub, ret);
 }
 
 u3_noun
@@ -255,13 +277,15 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
     octs = u3h(octs_list);
 
     _x_octs(octs, &p_octs, &q_octs);
+    u3r_view vue = {0};
     if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                               &p_octs_w, &sea_y,
-                              &len_w, &lead_w)){
-      return u3_none;
+                              &len_w, &lead_w, &vue)){
+      _x_octs_done(vue, u3_none);
     }
 
     if (p_octs_w == 0) {
+      u3r_view_done(&vue);
       octs_list = u3t(octs_list);
       continue;
     }
@@ -278,6 +302,7 @@ _qe_bytestream_can_octs(u3_noun octs_list) {
       wit_d += lead_w;
     }
 
+    u3r_view_done(&vue);
     octs_list = u3t(octs_list);
   }
 
@@ -313,10 +338,11 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   while (pos_w < len_w) {
@@ -327,13 +353,13 @@ _qe_bytestream_skip_line(u3_atom pos, u3_noun octs)
   }
   // Newline not found, position at the end (guard deref: pos_w may be >= len_w)
   if (pos_w >= len_w || *(sea_y + pos_w) != '\n') {
-    pos_w = p_octs;
+    pos_w = p_octs_w;
   }
   else {
     pos_w++;
   }
 
-  return u3nc(u3i_word(pos_w), u3k(octs));
+  _x_octs_done(vue, u3nc(u3i_word(pos_w), u3k(octs)));
 }
 u3_noun
 u3we_bytestream_skip_line(u3_noun cor)
@@ -368,16 +394,17 @@ _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   while (pos_w < len_w) {
 
     if (*(sea_y + pos_w) == bat_w) {
-      return u3nc(u3_nul, u3i_word(pos_w));
+      _x_octs_done(vue, u3nc(u3_nul, u3i_word(pos_w)));
     }
 
     pos_w++;
@@ -390,11 +417,11 @@ _qe_bytestream_find_byte(u3_atom bat, u3_atom pos, u3_noun octs)
   //  in the stream, it means pos_w points at
   //  the first leading zero.
   //
-  if (pos_w < p_octs && bat_w == 0) {
-    return u3nc(u3_nul, u3i_word(pos_w));
+  if (pos_w < p_octs_w && bat_w == 0) {
+    _x_octs_done(vue, u3nc(u3_nul, u3i_word(pos_w)));
   }
 
-  return u3_nul;
+  _x_octs_done(vue, u3_nul);
 }
 u3_noun
 u3we_bytestream_find_byte(u3_noun cor)
@@ -430,10 +457,11 @@ _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   while (pos_w < len_w) {
@@ -441,7 +469,7 @@ _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
     if (*(sea_y + pos_w) == bat_w) {
       u3_noun idx = u3nc(u3_nul, u3i_word(pos_w));
       u3_noun new_bays = u3nc(u3i_word(pos_w), u3k(octs));
-      return u3nc(idx, new_bays);
+      _x_octs_done(vue, u3nc(idx, new_bays));
     }
 
     pos_w++;
@@ -449,13 +477,13 @@ _qe_bytestream_seek_byte(u3_atom bat, u3_atom pos, u3_noun octs)
 
   // find leading zero: see comment in *_find_byte
   //
-  if (pos_w < p_octs && bat_w == 0) {
+  if (pos_w < p_octs_w && bat_w == 0) {
       u3_noun idx = u3nc(u3_nul, u3i_word(pos_w));
       u3_noun new_bays = u3nc(u3i_word(pos_w), u3k(octs));
-      return u3nc(idx, new_bays);
+      _x_octs_done(vue, u3nc(idx, new_bays));
   }
 
-  return u3nc(u3_nul, u3nc(u3k(pos), u3k(octs)));
+  _x_octs_done(vue, u3nc(u3_nul, u3nc(u3k(pos), u3k(octs))));
 
 }
 u3_noun
@@ -490,10 +518,11 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   if (pos_w + 1 > p_octs_w) {
@@ -511,7 +540,7 @@ _qe_bytestream_read_byte(u3_atom pos, u3_noun octs)
 
   u3_noun new_bays = u3nc(u3i_word(pos_w + 1), u3k(octs));
 
-  return u3nc(bat_y, new_bays);
+  _x_octs_done(vue, u3nc(bat_y, new_bays));
 }
 
 u3_noun
@@ -552,10 +581,11 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   if (pos_w + n_w > p_octs_w) {
@@ -598,7 +628,7 @@ _qe_bytestream_read_octs(u3_atom n, u3_atom pos, u3_noun octs)
 
   u3_noun new_bays = u3nc(u3i_word(pos_w + n_w), u3k(octs));
 
-  return u3nc(read_octs, new_bays);
+  _x_octs_done(vue, u3nc(read_octs, new_bays));
 }
 
 u3_noun
@@ -678,18 +708,19 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   u3_noun hun = u3_nul;
 
-  while (pos_w < p_octs) {
+  while (pos_w < p_octs_w) {
     // Remaining bytes
     //
-    c3_w rem = (p_octs - pos_w);
+    c3_w rem = (p_octs_w - pos_w);
 
     if (rem < size) {
       u3_noun octs = _qe_peek_octs(rem, pos_w, p_octs_w, sea_y,
@@ -705,7 +736,7 @@ u3_noun _qe_bytestream_chunk(u3_atom size, u3_noun pos, u3_noun octs)
     }
   }
 
-  return u3kb_flop(hun);
+  _x_octs_done(vue, u3kb_flop(hun));
 }
 
 u3_noun
@@ -745,10 +776,11 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   u3_noun dal = u3_nul;
@@ -771,14 +803,14 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
       u3l_log("bytestream: sip fail");
       u3z(dal);
       u3z(ext);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
 
     if (c3n == u3r_safe_word(ken, &ken_w)) {
       u3l_log("bytestream: ken fail");
       u3z(dal);
       u3z(ext);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
 
     u3z(ext);
@@ -789,7 +821,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
     if (pos_w + sip_w > p_octs_w) {
       u3z(dal);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
 
     pos_w += sip_w;
@@ -805,7 +837,7 @@ _qe_bytestream_extract(u3_noun sea, u3_noun rac)
 
   new_sea = u3nc(u3i_word(pos_w), u3k(octs));
 
-  return u3nc(u3kb_flop(dal), new_sea);
+  _x_octs_done(vue, u3nc(u3kb_flop(dal), new_sea));
 }
 u3_noun
 u3we_bytestream_extract(u3_noun cor)
@@ -842,10 +874,11 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   u3_noun dal = u3_nul;
@@ -868,13 +901,13 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
       u3l_log("bytestream: sip fail");
       u3z(dal);
       u3z(ext);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
     if (c3n == u3r_safe_word(ken, &ken_w)) {
       u3l_log("bytestream: ken fail");
       u3z(dal);
       u3z(ext);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
 
     u3z(ext);
@@ -885,7 +918,7 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
 
     if (pos_w + sip_w > p_octs_w) {
       u3z(dal);
-      return u3_none;
+      _x_octs_done(vue, u3_none);
     }
 
     pos_w += sip_w;
@@ -903,12 +936,12 @@ _qe_bytestream_fuse_extract(u3_noun sea, u3_noun rac)
   u3_weak data = _qe_bytestream_can_octs(lad);
   u3z(lad);
   if ( u3_none == data ) {
-    return u3_none;
+    _x_octs_done(vue, u3_none);
   }
 
   new_sea = u3nc(u3i_word(pos_w), u3k(octs));
 
-  return u3nc(data, new_sea);
+  _x_octs_done(vue, u3nc(data, new_sea));
 }
 
 u3_noun
@@ -989,10 +1022,11 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 
   c3_y* sea_y;
 
+  u3r_view vue = {0};
   if (c3n == _x_octs_buffer(&p_octs, &q_octs,
                             &p_octs_w, &sea_y,
-                            &len_w, &lead_w)) {
-    return u3_none;
+                            &len_w, &lead_w, &vue)) {
+    _x_octs_done(vue, u3_none);
   }
 
   if (pos_w + need_bytes_w > p_octs_w) {
@@ -1002,7 +1036,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
   while (need_bytes_w--) {
 
     if (pos_w < len_w) {
-      bit_d += *(sea_y + pos_w) << num_w;
+      bit_d += (c3_d)*(sea_y + pos_w) << num_w;
     }
     num_w += 8;
     pos_w++;
@@ -1012,7 +1046,7 @@ _qe_bytestream_need_bits(u3_atom n, u3_noun bits)
 
   u3_noun new_bays = u3nc(u3i_word(pos_w), u3k(octs));
 
-  return u3nt(u3i_word(num_w), u3i_chub(bit_d), new_bays);
+  _x_octs_done(vue, u3nt(u3i_word(num_w), u3i_chub(bit_d), new_bays));
 }
 // +$  bits  $+  bits
 //           $:  num=@ud

@@ -24,19 +24,17 @@ u3qc_sew(u3_atom a,
   }
 
   c3_g a_g = a;
-  c3_w len_e_w = u3r_met(a_g, e);
-  u3i_slab sab_u;
-  c3_w* src_w;
-  c3_w len_src_w;
-  if ( _(u3a_is_cat(e)) ) {
-    len_src_w = e ? 1 : 0;
-    src_w = &e;
-  }
-  else {
-    u3a_atom* src_u = u3a_to_ptr(e);
-    len_src_w = src_u->len_w;
-    src_w = src_u->buf_w;
-  }
+
+  //  a view borrows the words wherever the atom lives
+  //
+  c3_w        len_e_w = u3r_met(a_g, e);
+  u3i_slab    sab_u;
+  u3r_view    vue_u;
+  const c3_w* src_w;
+  c3_w        len_src_w;
+
+  u3r_view_open(&vue_u, e, c3y);
+  src_w = u3r_view_words(&vue_u, &len_src_w);
   u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
   u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);
   u3r_chop(a_g, 0, c_w, b_w, sab_u.buf_w, d);
@@ -49,6 +47,7 @@ u3qc_sew(u3_atom a,
              len_src_w,
              src_w);
   }
+  u3r_view_done(&vue_u);
   return u3i_slab_mint(&sab_u);
 }
 

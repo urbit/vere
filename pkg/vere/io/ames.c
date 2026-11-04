@@ -27,6 +27,7 @@
 #define FINE_DEAD         2             //  scry cache sentinel value: "dead"
 
 #define QUEUE_MAX        30             //  max number of packets in queue
+#define UDP_MAX       65507             //  largest udp payload
 
 #define _CZAR_GONE  UINT32_MAX
 
@@ -1355,12 +1356,35 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     u3_pact* pac_u = c3_calloc(sizeof(*pac_u));
     pac_u->sam_u = sam_u;
     pac_u->lan_u = lan_u;
-    c3_w len_w = u3r_met(3, pac);
-    u3_assert( UINT32_MAX >= len_w );
+    //  read [pac] through one view into the owned packet buffer.  hun_y
+    //  is long-lived (mutated in place for origin forwarding, freed on
+    //  send), so we still copy into it; one view opens the bob's hand
+    //  once where u3r_bytes would open and close it per call.
+    //
+    u3r_view vue_u;
+    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+      //  a bob whose file is gone is a store problem, not a reason to
+      //  unwind the king: drop this packet
+      //
+      u3l_log("ames: blob " U3A_BID_FMT " is not in the store; packet dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      c3_free(pac_u);
+      u3z(lan); u3z(pac);
+      return;
+    }
+    if ( UDP_MAX < vue_u.byt_d ) {
+      u3l_log("ames: %" PRIc3_d "-byte packet exceeds a datagram; dropped",
+              vue_u.byt_d);
+      u3r_view_done(&vue_u);
+      c3_free(pac_u);
+      u3z(lan); u3z(pac);
+      return;
+    }
+    c3_w len_w = (c3_w)vue_u.byt_d;
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
-
-    u3r_bytes(0, pac_u->len_h, pac_u->hun_y, pac);
+    u3r_view_copy(&vue_u, 0, pac_u->hun_y, len_w);
+    u3r_view_done(&vue_u);
 
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);
     pac_u->typ_y = _ames_pact_typ(&pac_u->hed_u);

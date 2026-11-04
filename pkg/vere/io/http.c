@@ -2,6 +2,7 @@
 
 #include "vere.h"
 
+#include "blob.h"
 #include "h2o.h"
 #include "noun.h"
 #include "openssl/err.h"
@@ -25,6 +26,7 @@ typedef struct _u3_h2o_serv {
     u3_rsat_plan = 1,                   //  planned
     u3_rsat_peek = 2,                   //  peek planned
     u3_rsat_ripe = 3,                   //  responding
+    u3_rsat_stag = 4,                   //  staging its body (u3_stag)
   } u3_rsat;
 
 /* u3_hreq: incoming http request.
@@ -117,7 +119,7 @@ typedef struct _u3_httd {
   u3t_spin*          stk_u;             //  spin stack 
 } u3_httd;
 
-static u3_weak _http_rec_to_httq(h2o_req_t* rec_u);
+static u3_weak _http_rec_to_httq(h2o_req_t* rec_u, u3_noun bod);
 static u3_hreq* _http_req_prepare(h2o_req_t* rec_u, u3_hreq* (*new_f)(u3_hcon*, h2o_req_t*));
 static void _http_serv_free(u3_http* htp_u);
 static void _http_serv_start_all(u3_httd* htd_u);
@@ -169,6 +171,11 @@ _http_vec_to_atom(h2o_iovec_t vec_u)
 }
 
 /* _http_vec_to_octs(): convert h2o_iovec_t to (unit octs)
+**
+**   A body over U3_BLOB_THRESH normally does not come through
+**   here: _http_rec_start stages it and the event carries a stub mars
+**   fills.  It does when staging fails, and on the scry fallback,
+**   which then build it inline.
 */
 static u3_noun
 _http_vec_to_octs(h2o_iovec_t vec_u)
@@ -179,10 +186,15 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 
   // XX correct size_t -> atom?
   return u3nt(u3_nul, u3i_chubs(1, (const c3_d*)&vec_u.len),
-                      _http_vec_to_atom(vec_u));
+              _http_vec_to_atom(vec_u));
 }
 
 /* _cttp_bods_free(): free body structure.
+**
+**   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
+**   shares one view; the tail carries own_o and closes it.  Free walks
+**   head→tail, so the view is released only after every chunk that
+**   read through it.
 */
 static void
 _cttp_bods_free(u3_hbod* bod_u)
@@ -190,19 +202,133 @@ _cttp_bods_free(u3_hbod* bod_u)
   while ( bod_u ) {
     u3_hbod* nex_u = bod_u->nex_u;
 
+    if ( bod_u->win_u ) {
+      c3_free(bod_u->buf_y);
+
+      if ( c3y == bod_u->own_o ) {
+        u3r_view_done(bod_u->win_u);
+        c3_free(bod_u->win_u);
+      }
+    }
     c3_free(bod_u);
     bod_u = nex_u;
   }
 }
 
+//  chunk size for blob-backed response streaming.  Each h2o_send call
+//  covers up to this many bytes so TLS output pools / HTTP/2 frame
+//  buffers / libuv write queues stay bounded and flow control drives
+//  the next read from the blob.
+//
+#define U3_HTTP_BOB_CHUNK  (1U << 20)
+
+/* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
+**   blob-backed hbods: no loom allocation, no mapping.
+**
+**   The bob is opened once, as a view on the king's home road.  The
+**   chain is a list of U3_HTTP_BOB_CHUNK-sized chunks that share it;
+**   _http_hgen_send copies each into a heap buffer only as h2o asks
+**   for it.  The tail chunk owns the view (own_o) and closes it when
+**   the chain is freed.
+**
+**   Returns 0 if the blob can't be opened (missing file, empty, too
+**   short); the caller fails the response.
+*/
+static u3_hbod*
+_cttp_bod_from_bob(u3_atom a, c3_d len_d)
+{
+  //  the view outlives this event: it must belong to the home road,
+  //  the one road no bail or signal ever unwinds.
+  //
+  u3_assert( &(u3H->rod_u) == u3R );
+
+  u3r_view* win_u = c3_malloc(sizeof(*win_u));
+
+  if ( c3n == u3r_view_open(win_u, a, c3n) ) {
+    c3_free(win_u);
+    return 0;
+  }
+
+  //  a zero-length body needs no chunk, and no view
+  //
+  if ( 0 == len_d ) {
+    u3_hbod* bod_u = c3_malloc(1 + sizeof(*bod_u));
+    bod_u->nex_u    = 0;
+    bod_u->len_w    = 0;
+    bod_u->buf_y    = 0;
+    bod_u->win_u    = 0;
+    bod_u->off_d    = 0;
+    bod_u->own_o    = c3n;
+    bod_u->hun_y[0] = 0;
+    u3r_view_done(win_u);
+    c3_free(win_u);
+    return bod_u;
+  }
+
+  u3_hbod* hed_u = 0;
+  u3_hbod* tal_u = 0;
+  c3_d     off_d = 0;
+
+  while ( off_d < len_d ) {
+    c3_d rem_d = len_d - off_d;
+    c3_w cnk_w = (rem_d > U3_HTTP_BOB_CHUNK) ? U3_HTTP_BOB_CHUNK : (c3_w)rem_d;
+
+    u3_hbod* bod_u = c3_malloc(sizeof(*bod_u));
+    bod_u->nex_u = 0;
+    bod_u->len_w = cnk_w;
+    bod_u->buf_y = 0;              //  read at send time
+    bod_u->win_u = win_u;
+    bod_u->off_d = off_d;
+    bod_u->own_o = c3n;
+
+    if ( !hed_u ) hed_u = bod_u;
+    else          tal_u->nex_u = bod_u;
+    tal_u = bod_u;
+
+    off_d += cnk_w;
+  }
+
+  tal_u->own_o = c3y;
+  return hed_u;
+}
+
 /* _cttp_bod_from_octs(): translate octet-stream noun into body.
+**
+**   Bob atoms take the streaming path: the blob is read chunk by chunk
+**   on the king's side as h2o drains the response.  The inline
+**   path would copy the whole body into the hbod's hun_y, a heap
+**   allocation the size of the file.
+**
+**   Returns 0 for a bob whose blob cannot be opened; the caller fails
+**   the response.  Falling back to the inline path would open the
+**   same file again and, failing again, serve zeros.
 */
 static u3_hbod*
 _cttp_bod_from_octs(u3_noun oct)
 {
   c3_w len_w;
 
-  if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max
+  //  streaming path for bob atoms: any length a chub holds
+  //
+  if ( c3y == u3a_is_bob(u3t(oct)) ) {
+    c3_d     len_d;
+    u3_hbod* bod_u;
+
+    if ( c3n == u3r_safe_chub(u3h(oct), &len_d) ) {
+      u3m_bail(c3__fail); return 0;
+    }
+
+    bod_u = _cttp_bod_from_bob(u3t(oct), len_d);
+
+    if ( !bod_u ) {
+      u3l_log("http: blob " U3A_BID_FMT " unavailable",
+              u3a_bob_mug(u3t(oct)), u3a_bob_seq(u3t(oct)));
+    }
+    u3z(oct);
+    return bod_u;
+  }
+
+  if ( !_(u3a_is_cat(u3h(oct))) ) {     //  2GB max inline
     u3m_bail(c3__fail); return 0;
   }
   len_w = u3h(oct);
@@ -211,6 +337,10 @@ _cttp_bod_from_octs(u3_noun oct)
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
     bod_u->hun_y[len_w] = 0;
     bod_u->len_w = len_w;
+    bod_u->buf_y = 0;
+    bod_u->win_u = 0;
+    bod_u->off_d = 0;
+    bod_u->own_o = c3n;
     u3r_bytes(0, len_w, bod_u->hun_y, u3t(oct));
 
     bod_u->nex_u = 0;
@@ -242,7 +372,8 @@ _cttp_bods_to_vec(u3_hbod* bod_u, c3_w* tot_w)
   len_w = 0;
 
   while( bod_u ) {
-    vec_u[len_w] = h2o_iovec_init(bod_u->hun_y, bod_u->len_w);
+    c3_y* base_y = bod_u->buf_y ? bod_u->buf_y : bod_u->hun_y;
+    vec_u[len_w] = h2o_iovec_init(base_y, bod_u->len_w);
     len_w++;
     bod_u = bod_u->nex_u;
   }
@@ -585,6 +716,12 @@ _http_req_close(u3_hreq* req_u)
     req_u->peq_u->req_u = 0;
   }
 
+  //  a body still staging is not wanted
+  //
+  if ( u3_rsat_stag == req_u->sat_e ) {
+    u3_stag_drop(req_u);
+  }
+
 
   if ( 0 != req_u->tim_u ) {
     uv_close((uv_handle_t*)req_u->tim_u, _http_close_cb);
@@ -645,6 +782,12 @@ _http_req_timer_cb(uv_timer_t* tim_u)
 
     case u3_rsat_peek: {
       req_u->peq_u->req_u = 0;
+      c3_c* msg_c = "gateway timeout";
+      h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
+    } break;
+
+    case u3_rsat_stag: {
+      u3_stag_drop(req_u);
       c3_c* msg_c = "gateway timeout";
       h2o_send_error_generic(req_u->rec_u, 504, msg_c, msg_c, 0);
     } break;
@@ -1004,10 +1147,90 @@ _http_peek_dispatch(u3_hreq* req_u, beam* bem_u, u3_noun gang, u3_noun spur)
   }
 }
 
-/* _http_req_dispatch(): dispatch http request. RETAINS `req`
+/* _http_stg_drop(): remove the staged files of a request that will not
+**   reach arvo.  transfers [pax].
 */
 static void
-_http_req_dispatch(u3_hreq* req_u, u3_noun req)
+_http_stg_drop(u3_noun pax)
+{
+  u3_noun pak = pax;
+
+  while ( u3_nul != pak ) {
+    c3_c* stg_c = u3r_string(u3h(pak));
+    c3_unlink(stg_c);
+    c3_free(stg_c);
+    pak = u3t(pak);
+  }
+  u3z(pax);
+}
+
+/* _http_stg_ctx: a request whose body mars installs inside the event.
+**
+**   the request is named by server, connection, and sequence rather
+**   than held by pointer: the client may close it, and a config change
+**   may free its server, before mars answers.
+*/
+typedef struct _http_stg_ctx {
+  c3_w     sev_l;
+  c3_w     coq_l;
+  c3_w     seq_l;
+} _http_stg_ctx;
+
+static void
+_http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c);
+static u3_hcon*
+_http_conn_find(u3_http *htp_u, c3_w coq_l);
+static u3_http*
+_http_serv_find(u3_httd* htd_u, c3_w sev_l);
+static c3_o
+_http_rec_scry(h2o_req_t* rec_u);
+
+/* _http_req_news(): the event carrying a staged body ended without a
+**   bail (done, or dropped at shutdown): the context is no longer
+**   needed.  u3_ovum_free knows nothing of ptr_v.
+*/
+static void
+_http_req_news(u3_ovum* egg_u, u3_ovum_news new_e)
+{
+  if ( u3_ovum_work != new_e ) {
+    c3_free(egg_u->ptr_v);
+    egg_u->ptr_v = 0;
+  }
+}
+
+/* _http_req_bail(): the event carrying a staged body was refused:
+**   answer the client, which no other bail does.  a %blob goof is an
+**   install that failed; anything else is arvo's.
+*/
+static void
+_http_req_bail(u3_ovum* egg_u, u3_noun lud)
+{
+  _http_stg_ctx* ctx_u = egg_u->ptr_v;
+  u3_http*       htp_u = _http_serv_find((u3_httd*)egg_u->car_u, ctx_u->sev_l);
+  u3_hcon*       hon_u = htp_u ? _http_conn_find(htp_u, ctx_u->coq_l) : 0;
+  u3_hreq*       req_u = hon_u ? _http_req_find(hon_u, ctx_u->seq_l) : 0;
+
+  //  only a request still waiting on arvo is answered: one the timer
+  //  has already answered is left alone
+  //
+  if ( req_u && (u3_rsat_plan == req_u->sat_e) ) {
+    c3_o blb_o = (  (c3y == u3du(lud))
+                 && (c3y == u3du(u3h(lud)))
+                 && (c3__blob == u3h(u3h(lud))) );
+    _http_req_reject(req_u, 500, blb_o ? "blob install failed"
+                                       : "event failed");
+  }
+
+  u3_auto_bail_slog(egg_u, lud);
+  u3_ovum_free(egg_u);
+  c3_free(ctx_u);
+}
+
+/* _http_req_dispatch(): dispatch http request. RETAINS `req`,
+**   transfers [pax], the staged files the event installs.
+*/
+static void
+_http_req_dispatch(u3_hreq* req_u, u3_noun req, u3_noun pax)
 {
   u3_assert(u3_rsat_init == req_u->sat_e);
   req_u->sat_e = u3_rsat_plan;
@@ -1019,10 +1242,7 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
     c3_c* bas_c = req_u->rec_u->input.path.base;
     c3_w len_w = req_u->rec_u->input.path.len;
 
-    // check if base url starts with '/_~_/'
-    if (  (len_w < 6)
-       || (0 != memcmp("/_~_/", bas_c, 5)) )
-    {
+    if ( c3n == _http_rec_scry(req_u->rec_u) ) {
       // no: inject to arvo
       u3_noun wir = _http_req_to_duct(req_u);
       u3_noun cad;
@@ -1034,10 +1254,23 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       cad = ( c3y == req_u->hon_u->htp_u->lop )
             ? u3nc(u3i_string("request-local"), dat)
             : u3nc(u3i_string("request"), dat);
-      u3_auto_plan(&htd_u->car_u, u3_ovum_init(0, c3__e, wir, cad));
+
+      u3_ovum* egg_u = u3_ovum_init(0, c3__e, wir, cad);
+
+      if ( u3_nul != pax ) {
+        _http_stg_ctx* ctx_u = c3_malloc(sizeof(*ctx_u));
+        ctx_u->sev_l = htp_u->sev_l;
+        ctx_u->coq_l = req_u->hon_u->coq_l;
+        ctx_u->seq_l = req_u->seq_l;
+
+        egg_u->pax = pax;
+        u3_auto_peer(egg_u, ctx_u, _http_req_news, _http_req_bail);
+      }
+      u3_auto_plan(&htd_u->car_u, egg_u);
     }
     else {
       // '/_~_/' found
+      _http_stg_drop(pax);
       bas_c = bas_c + 4;  //  retain '/' after /_~_
       len_w = len_w - 4;
 
@@ -1073,23 +1306,25 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
       byte_range rng_u;
       c3_o rng_o = _get_range(req_headers, &rng_u);
 
-      // prepare spur for eyre range scry
+      //  if no Range header, synthesize bytes=0- so the response is
+      //  always a chunked 206 with Content-Range (not a 200 with the
+      //  entire body).  this lets the browser discover accept-ranges
+      //  and switch to Range-based seeking — critical for large video
+      //  files with moov-at-end.
       //
-      u3_noun spur;
       if ( c3n == rng_o ) {
-        // full range: '/range/0//foo'
-        spur = u3nq(u3i_string("range"), c3_s1('0'), u3_blip, u3k(bem.pur));
+        rng_u.beg_z = 0;
+        rng_u.end_z = SIZE_MAX;
       }
-      else {
-        _chunk_align(&rng_u);
 
-        u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
-                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
-        u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
-                      u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+      _chunk_align(&rng_u);
 
-        spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
-      }
+      u3_atom beg = ( SIZE_MAX == rng_u.beg_z) ?
+                    u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.beg_z));
+      u3_atom end = ( SIZE_MAX == rng_u.end_z) ?
+                    u3_blip : u3dc("scot", c3__ud, u3i_chub(rng_u.end_z));
+
+      u3_noun spur = u3nq(u3i_string("range"), beg, end, u3k(bem.pur));
 
       if ( c3n == _http_peek_dispatch(req_u, &bem, gang, spur) ) {
         u3z(req_u->peq_u->pax);
@@ -1103,6 +1338,124 @@ _http_req_dispatch(u3_hreq* req_u, u3_noun req)
   }
 }
 
+static c3_o
+_http_req_cache(u3_hreq* req_u);
+
+/* _http_req_reject(): fail a request that never reached arvo.
+*/
+static void
+_http_req_reject(u3_hreq* req_u, c3_i sas_i, c3_c* msg_c)
+{
+  //  ripe with no generator: the request timer must not fire into it
+  //
+  uv_timer_stop(req_u->tim_u);
+  req_u->sat_e = u3_rsat_ripe;
+  h2o_send_error_generic(req_u->rec_u, sas_i, msg_c, msg_c, 0);
+}
+
+/* _http_req_start(): send a request to arvo with body [bod]; its method
+**   is known good.  transfers [pax], the staged files the event installs.
+*/
+static void
+_http_req_start(u3_hreq* req_u, u3_noun bod, u3_noun pax)
+{
+  u3_noun req = _http_rec_to_httq(req_u->rec_u, bod);
+
+  _http_req_dispatch(req_u, req, pax);
+  u3z(req);
+}
+
+/* _http_rec_scry(): the request is for the scry path, /_~_/..., which
+**   answers from a scry and reads no body.
+*/
+static c3_o
+_http_rec_scry(h2o_req_t* rec_u)
+{
+  c3_c* bas_c = rec_u->input.path.base;
+  c3_w  len_w = rec_u->input.path.len;
+
+  return __( (len_w >= 6) && (0 == memcmp("/_~_/", bas_c, 5)) );
+}
+
+/* _http_rec_staged(): the request's body is staged, or could not be:
+**   send it to arvo with a stub, or inline.
+*/
+static void
+_http_rec_staged(u3_stag* tag_u)
+{
+  u3_hreq*   req_u = tag_u->ptr_v;
+  h2o_req_t* rec_u = req_u->rec_u;
+
+  u3_assert( u3_rsat_stag == req_u->sat_e );
+  req_u->sat_e = u3_rsat_init;
+
+  if ( c3y == tag_u->ok_o ) {
+    u3_noun bod = u3nt(u3_nul,
+                       u3i_chub(tag_u->len_d),
+                       u3i_blob(tag_u->mug_h, 0));
+
+    _http_req_start(req_u, bod, u3nc(u3i_string(tag_u->stg_c), u3_nul));
+    return;
+  }
+
+  u3l_log("http: %" PRIu64 "-byte body not staged; sending inline",
+          tag_u->len_d);
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), u3_nul);
+}
+
+/* _http_rec_start(): take an incoming request from h2o.
+**
+**   a body over U3_BLOB_THRESH is staged on the thread pool from a
+**   copy (h2o frees the original with the request); once it is, the
+**   event goes to arvo with a stub where the body belongs and the
+**   staging path riding along, and mars installs the file and fills
+**   the stub before it computes.  only a request bound for arvo
+**   stages: a bad method is refused first, a cache hit is answered (a
+**   miss comes back with cache_o clear), and the scry path reads no
+**   body.  anything smaller, or a body that cannot be staged, goes to
+**   arvo as an inline atom.
+*/
+static void
+_http_rec_start(h2o_req_t* rec_u, c3_o cache_o)
+{
+  {
+    u3_weak med = _http_vec_to_meth(rec_u->method);
+
+    if ( u3_none == med ) {
+      if ( (u3C.wag_h & u3o_verbose) ) {
+        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
+                rec_u->method.base);
+      }
+      c3_c* msg_c = "bad request";
+      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
+      return;
+    }
+    u3z(med);
+  }
+
+  u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
+
+  if ( (c3y == cache_o) && (c3y == _http_req_cache(req_u)) ) {
+    return;
+  }
+
+  if (  (c3y == u3b_over(rec_u->entity.len))
+     && (c3n == _http_rec_scry(rec_u)) )
+  {
+    u3_stag* tag_u = u3_stag_new(req_u, _http_rec_staged);
+
+    tag_u->len_d = (c3_d)rec_u->entity.len;
+    tag_u->buf_y = c3_malloc(tag_u->len_d);
+    memcpy(tag_u->buf_y, rec_u->entity.base, tag_u->len_d);
+
+    req_u->sat_e = u3_rsat_stag;
+    u3_stag_plan(tag_u);
+    return;
+  }
+
+  _http_req_start(req_u, _http_vec_to_octs(rec_u->entity), u3_nul);
+}
+
 /* _http_cache_respond(): respond with a simple-payload:http
 */
 static void
@@ -1112,22 +1465,7 @@ _http_cache_respond(u3_hreq* req_u, u3_noun nun)
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   if ( u3_nul == nun ) {
-    u3_weak req = _http_rec_to_httq(rec_u);
-    if ( u3_none == req ) {
-      if ( (u3C.wag_h & u3o_verbose) ) {
-        u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
-                rec_u->method.base);
-      }
-      c3_c* msg_c = "bad request";
-      h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
-    }
-    else {
-      u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-      _http_req_dispatch(req_u, req);
-    }
-    //  can be u3_none
-    //
-    u3z(req);
+    _http_rec_start(rec_u, c3n);
   }
   else if ( u3_none == u3r_at(7, nun) ) {
     h2o_send_error_500(rec_u, "Internal Server Error", "scry failed", 0);
@@ -1161,7 +1499,7 @@ _http_scry_respond(u3_hreq* req_u, u3_noun nun)
   u3_httd* htd_u = req_u->hon_u->htp_u->htd_u;
 
   if ( u3_nul == nun ) {
-    u3_weak req = _http_rec_to_httq(rec_u);
+    u3_weak req = _http_rec_to_httq(rec_u, _http_vec_to_octs(rec_u->entity));
     if ( u3_none == req ) {
       if ( (u3C.wag_h & u3o_verbose) ) {
         u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
@@ -1275,47 +1613,123 @@ _http_hgen_dispose(void* ptr_v)
 }
 
 /* _http_hgen_send(): send (some/more of a) response.
+**
+**   Pops up to U3_HTTP_BOB_CHUNK bytes of pending body from gen_u->bod_u
+**   and hands them to h2o in one h2o_send call.  If any body remains
+**   after this pop, or if we're still waiting on a %continue from arvo
+**   (u3_hgen_wait), the send is marked IN_PROGRESS and h2o will call
+**   back via _http_hgen_proceed when it's ready for the next batch.
+**   FINAL fires only when there's nothing left to emit.
+**
+**   Inline (small) bodies fit in a single chunk so this is a no-op
+**   change for them.  Large bob-atom bodies chunk naturally because
+**   _cttp_bod_from_bob produced U3_HTTP_BOB_CHUNK-sized chunks, and a
+**   chunk is read from the blob only here, as it is about to be sent.
+**   At most two batches of chunks are ever resident (this one and the
+**   one h2o is still draining), which is what keeps king's memory and
+**   h2o's internal buffers bounded while streaming multi-GiB files.
 */
 static void
 _http_hgen_send(u3_hgen* gen_u)
 {
-  u3_hreq*     req_u = gen_u->req_u;
-  h2o_req_t*   rec_u = req_u->rec_u;
-  c3_w         len_w;
-  h2o_iovec_t* vec_u = _cttp_bods_to_vec(gen_u->bod_u, &len_w);
+  u3_hreq*   req_u = gen_u->req_u;
+  h2o_req_t* rec_u = req_u->rec_u;
 
-  //  not ready again until _proceed
-  //
   u3_assert( c3y == gen_u->red );
   gen_u->red = c3n;
 
-  //  stash [bod_u] to free later
+  //  detach up to U3_HTTP_BOB_CHUNK bytes of body from the head of
+  //  gen_u->bod_u into a private sub-chain to send this round.
+  //
+  u3_hbod* send_u = 0;
+  u3_hbod* tal_u  = 0;
+  c3_d     acc_d  = 0;
+
+  while ( gen_u->bod_u && acc_d < U3_HTTP_BOB_CHUNK ) {
+    u3_hbod* cur_u = gen_u->bod_u;
+    gen_u->bod_u   = cur_u->nex_u;
+    cur_u->nex_u   = 0;
+
+    if ( !send_u ) send_u = cur_u;
+    else           tal_u->nex_u = cur_u;
+    tal_u = cur_u;
+
+    acc_d += cur_u->len_w;
+  }
+
+  //  free the previous round's sent chunks; the current batch becomes
+  //  the new "just sent" set.  its memory must stay live until h2o is
+  //  done with the iovecs we're about to hand it.
   //
   _cttp_bods_free(gen_u->nud_u);
-  gen_u->nud_u = gen_u->bod_u;
-  gen_u->bod_u = 0;
+  gen_u->nud_u = send_u;
 
+  //  read this batch's blob chunks into heap buffers
+  //
+  for ( u3_hbod* cur_u = send_u; cur_u; cur_u = cur_u->nex_u ) {
+    if ( cur_u->win_u && !cur_u->buf_y ) {
+      cur_u->buf_y = c3_malloc(cur_u->len_w);
+
+      //  the read zero-fills past the atom, which is how octs longer
+      //  than their atom end (the store trims trailing zeros); the
+      //  count says whether the file was shortened under the response
+      //
+      c3_d byt_d = cur_u->win_u->byt_d;
+      c3_d off_d = cur_u->off_d;
+      c3_z exp_z = ( off_d >= byt_d ) ? 0
+                 : ( (byt_d - off_d) < cur_u->len_w ) ? (c3_z)(byt_d - off_d)
+                 : cur_u->len_w;
+      c3_z got_z = u3r_view_copy(cur_u->win_u, off_d,
+                                 cur_u->buf_y, cur_u->len_w);
+
+      if ( got_z != exp_z ) {
+        u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
+        gen_u->sat_e = u3_hgen_fail;
+      }
+    }
+  }
+
+  //  build iovec for this batch
+  //
+  c3_w         len_w = 0;
+  h2o_iovec_t* vec_u = _cttp_bods_to_vec(send_u, &len_w);
+
+  //  pick h2o send state based on whether any body still pending
+  //
+  h2o_send_state_t ste_e;
   switch ( gen_u->sat_e ) {
     case u3_hgen_wait: {
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_IN_PROGRESS);
-      uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
+      ste_e = H2O_SEND_STATE_IN_PROGRESS;
     } break;
 
     case u3_hgen_done: {
-      //  close connection if shutdown pending
-      //
-      u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
-
-      if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
-        rec_u->http1_is_persistent = 0;
+      if ( gen_u->bod_u ) {
+        ste_e = H2O_SEND_STATE_IN_PROGRESS;
       }
-
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_FINAL);
+      else {
+        //  last batch — close connection if shutdown pending
+        //
+        u3_h2o_serv* h2o_u = req_u->hon_u->htp_u->h2o_u;
+        if ( 0 != h2o_u->ctx_u.shutdown_requested ) {
+          rec_u->http1_is_persistent = 0;
+        }
+        ste_e = H2O_SEND_STATE_FINAL;
+      }
     } break;
 
     case u3_hgen_fail: {
-      h2o_send(rec_u, vec_u, len_w, H2O_SEND_STATE_ERROR);
+      ste_e = H2O_SEND_STATE_ERROR;
     } break;
+
+    default: {
+      ste_e = H2O_SEND_STATE_ERROR;   //  unreachable
+    } break;
+  }
+
+  h2o_send(rec_u, vec_u, len_w, ste_e);
+
+  if ( H2O_SEND_STATE_IN_PROGRESS == ste_e ) {
+    uv_timer_start(req_u->tim_u, _http_req_timer_cb, 45 * 1000, 0);
   }
 
   c3_free(vec_u);
@@ -1392,6 +1806,7 @@ _http_start_respond(u3_hreq* req_u,
   u3_hhed* deh_u = hed_u;
 
   c3_i has_len_i = 0;
+  size_t con_len = 0;
 
   while ( 0 != hed_u ) {
     if ( 0x200 <= rec_u->version ) {
@@ -1404,6 +1819,7 @@ _http_start_respond(u3_hreq* req_u,
     }
     if ( 0 == strncmp(hed_u->nam_c, "content-length", 14) ) {
       has_len_i = 1;
+      con_len   = strtoull(hed_u->val_c, 0, 10);
     }
     else {
       h2o_add_header_by_str(&rec_u->pool, &rec_u->res.headers,
@@ -1428,12 +1844,24 @@ _http_start_respond(u3_hreq* req_u,
   gen_u->hed_u = deh_u;
   gen_u->req_u = req_u;
 
-  //  if we don't explicitly set this field, h2o will send with
-  //  transfer-encoding: chunked
+  //  a bob body whose blob could not be opened: fail the response
+  //  outright rather than send a truncated or zero-filled one
+  //
+  if ( (u3_nul != data) && !emp_t && !gen_u->bod_u ) {
+    gen_u->sat_e = u3_hgen_done;
+    req_u->gen_u = gen_u;
+    h2o_send_error_500(rec_u, "Internal Server Error", "blob unavailable", 0);
+    u3z(status); u3z(headers); u3z(data); u3z(complete);
+    return;
+  }
+
+  //  tell h2o the true content-length from eyre's response headers.
+  //  without this, h2o defaults to transfer-encoding: chunked.
+  //  the old code used gen_u->bod_u->len_w which is only the first
+  //  chunk (1MB for bob-streamed bodies), not the total — wrong.
   //
   if ( 1 == has_len_i ) {
-    rec_u->res.content_length = ( 0 == gen_u->bod_u ) ?
-                                0 : gen_u->bod_u->len_w;
+    rec_u->res.content_length = con_len;
   }
 
   req_u->gen_u = gen_u;
@@ -1472,7 +1900,12 @@ _http_continue_respond(u3_hreq* req_u,
   if ( u3_nul != data ) {
     u3_hbod* bod_u = _cttp_bod_from_octs(u3k(u3t(data)));
 
-    if ( 0 == gen_u->bod_u ) {
+    //  a bob body whose blob could not be opened: error the stream
+    //
+    if ( !bod_u ) {
+      gen_u->sat_e = u3_hgen_fail;
+    }
+    else if ( 0 == gen_u->bod_u ) {
       gen_u->bod_u = bod_u;
     }
     else {
@@ -1501,6 +1934,7 @@ _http_cancel_respond(u3_hreq* req_u)
   switch ( req_u->sat_e ) {
     case u3_rsat_init: u3_assert(0);
     case u3_rsat_peek: u3_assert(0);
+    case u3_rsat_stag: u3_assert(0);   //  arvo has not seen it
 
     case u3_rsat_plan: {
       req_u->sat_e = u3_rsat_ripe; // XX confirm
@@ -1522,14 +1956,17 @@ _http_cancel_respond(u3_hreq* req_u)
   }
 }
 
-/* _http_rec_to_httq(): convert h2o_req_t to httq
+/* _http_rec_to_httq(): convert h2o_req_t to httq, with body [bod].
+**
+**   [bod] is transferred; u3_none for a request arvo cannot take.
 */
 static u3_weak
-_http_rec_to_httq(h2o_req_t* rec_u)
+_http_rec_to_httq(h2o_req_t* rec_u, u3_noun bod)
 {
   u3_noun med = _http_vec_to_meth(rec_u->method);
 
   if ( u3_none == med ) {
+    u3z(bod);
     return u3_none;
   }
 
@@ -1541,8 +1978,6 @@ _http_rec_to_httq(h2o_req_t* rec_u)
   hed = u3nc(u3nc(u3i_string("host"),
                   _http_vec_to_atom(rec_u->authority)),
              hed);
-
-  u3_noun bod = _http_vec_to_octs(rec_u->entity);
 
   return u3nq(med, url, hed, bod);
 }
@@ -1697,27 +2132,7 @@ _http_sat_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 static c3_i
 _http_rec_accept(h2o_handler_t* han_u, h2o_req_t* rec_u)
 {
-  u3_weak req = _http_rec_to_httq(rec_u);
-
-  if ( u3_none == req ) {
-    if ( (u3C.wag_h & u3o_verbose) ) {
-      u3l_log("strange %.*s request", (c3_i)rec_u->method.len,
-              rec_u->method.base);
-    }
-    c3_c* msg_c = "bad request";
-    h2o_send_error_generic(rec_u, 400, msg_c, msg_c, 0);
-  }
-  else {
-    u3_hreq* req_u = _http_req_prepare(rec_u, _http_req_new);
-    if ( c3n == _http_req_cache(req_u) ) {
-      _http_req_dispatch(req_u, req);
-    }
-  }
-
-  //  can be u3_none
-  //
-  u3z(req);
-
+  _http_rec_start(rec_u, c3y);
   return 0;
 }
 

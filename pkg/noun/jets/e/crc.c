@@ -13,30 +13,37 @@ u3qe_crc32(u3_noun input_octs)
 {
   u3_atom head = u3h(input_octs);
   u3_atom tail = u3t(input_octs);
-  c3_w  tel_w = u3r_met(3, tail);
+
   c3_w hed_w;
   if ( c3n == u3r_safe_word(head, &hed_w) ) {
     return u3m_bail(c3__fail);
   }
-  c3_y* input;
 
-  if (c3y == u3a_is_cat(tail)) {
-    input = (c3_y*)&tail;
+  //  a view borrows the bytes wherever the atom lives; read-only
+  //
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, tail, c3y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    return u3m_bail(c3__fail);
   }
-  else {
-    u3a_atom* vat_u = u3a_to_ptr(tail);
-    // XX: little endian
-    input = (c3_y*)vat_u->buf_w;
-  }
+  c3_w        tel_w = (c3_w)vue_u.byt_d;
+  const c3_y* input = u3r_view_bytes(&vue_u);
 
   if ( tel_w > hed_w ) {
+    u3r_view_done(&vue_u);
     return u3m_error("subtract-underflow");
   }
 
   c3_w led_w = hed_w - tel_w;
   c3_w crc_w = 0;
 
-  crc_w = crc32(crc_w, input, tel_w);
+  //  zlib takes a uInt length: feed the bytes in pieces it can count
+  //
+  for ( c3_w off_w = 0; off_w < tel_w; ) {
+    c3_w cnk_w = c3_min(tel_w - off_w, (c3_w)1 << 30);
+    crc_w  = crc32(crc_w, input + off_w, (uInt)cnk_w);
+    off_w += cnk_w;
+  }
 
   while ( led_w > 0 ) {
     c3_y byt_y = 0;
@@ -44,6 +51,7 @@ u3qe_crc32(u3_noun input_octs)
     led_w--;
   }
 
+  u3r_view_done(&vue_u);
   return u3i_word(crc_w);
 }
 

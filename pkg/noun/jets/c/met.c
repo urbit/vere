@@ -14,15 +14,12 @@
       return 0;
     }
     else if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
-      return u3m_bail(c3__fail);;
+      return u3m_bail(c3__fail);
     }
+    //  full width: a c3_w bit count overflows on a large blob
+    //
     else {
-      c3_w met_w = u3r_met(a, b);
-
-      if ( !_(u3a_is_cat(met_w)) ) {
-        return u3i_word(met_w);
-      }
-      else return met_w;
+      return u3i_chub(u3r_met_d(a, b));
     }
   }
   u3_noun

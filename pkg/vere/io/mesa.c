@@ -9,6 +9,7 @@
 #include "io/ames/stun.h"
 #include "mesa/mesa.h"
 #include "mesa/bitset.h"
+#include "blob.h"
 #include <allocate.h>
 #include <error.h>
 #include <imprison.h>
@@ -39,6 +40,7 @@ static c3_y are_y[524288];
 #define PIT_EXPIRE_MICROS           20000000
 
 #define JUMBO_CACHE_MAX_SIZE 200000000 // 200 mb
+#define UDP_MAX              65507     //  largest udp payload
 
 #define PEEK_QUEUE_MAX       40
 #define POKE_QUEUE_MAX       30
@@ -1408,11 +1410,35 @@ _mesa_hear(u3_mesa* sam_u,
 static void
 _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
-  c3_w len_w = u3r_met(3, pac);
-  u3_assert( UINT32_MAX >= len_w );
+  //  read [pac] through one view into the arena buffer.  the arena is
+  //  the long-lived owner: it is stashed in u3_mesa_resend_data->buf_y
+  //  for the resend timer, so we still copy into it; one view opens the
+  //  bob's hand once where u3r_bytes would open and close it per call.
+  //
+  u3r_view vue_u;
+  if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+    //  a bob whose file is gone is a store problem, not a reason to
+    //  unwind the king: drop this send
+    //
+    u3l_log("mesa: ef_send: blob " U3A_BID_FMT " is not in the store; dropped",
+            u3a_bob_mug(pac), u3a_bob_seq(pac));
+    u3z(pac);
+    u3z(las);
+    return;
+  }
+  if ( UDP_MAX < vue_u.byt_d ) {
+    u3l_log("mesa: ef_send: %" PRIc3_d "-byte packet exceeds a datagram; dropped",
+            vue_u.byt_d);
+    u3r_view_done(&vue_u);
+    u3z(pac);
+    u3z(las);
+    return;
+  }
+  c3_w len_w = (c3_w)vue_u.byt_d;
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
-  u3r_bytes(0, len_w, buf_y, pac);
+  u3r_view_copy(&vue_u, 0, buf_y, len_w);
+  u3r_view_done(&vue_u);
 
   u3_mesa_pact pac_u;
   memset(&pac_u, 0x11, sizeof(pac_u));
@@ -1594,6 +1620,7 @@ static void
 _mesa_io_exit(u3_auto* car_u)
 {
   u3_mesa* sam_u = (u3_mesa*)car_u;
+  u3_stag_drop(sam_u);
   uv_timer_stop(&sam_u->tim_u);
   sam_u->tim_u.data = sam_u;
   uv_udp_recv_stop(&u3_Host.wax_u);
@@ -1790,6 +1817,21 @@ _mesa_send_piece(u3_mesa* sam_u, u3_mesa_line* lin_u, u3_mesa_name* nam_u, c3_d 
   }
 }
 
+/* _mesa_tob_fits(): a [tob_d]-byte message fits the driver: its whole
+**   jumbo frame (the spine, the data, and a hash pair per leaf) is
+**   counted in 32 bits on both ends.  the frame is about 17/16 of the
+**   message, so the bound is near 4.04 GB, below UINT32_MAX.
+*/
+static c3_o
+_mesa_tob_fits(c3_d tob_d)
+{
+  c3_d mev_d = mesa_num_leaves(tob_d);
+  c3_d tip_d = ( mev_d > 1 ) ? lss_proof_size(mev_d) * sizeof(lss_hash) : 0;
+  c3_d len_d = tip_d + tob_d + (mev_d * sizeof(lss_pair));
+
+  return __( UINT32_MAX >= len_d );
+}
+
 static void
 _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 {
@@ -1824,9 +1866,30 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    c3_w jumbo_w = u3r_met(3, pac);
+    //  zero-copy read of the jumbo frame bytes (a bob through its hand).
+    //  we still copy into a c3_calloc'd buffer because mesa_sift_pact_from_buf
+    //  expects a stable, mutable buffer that outlives the view.
+    //
+    u3r_view vue_u;
+    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+      u3l_log("mesa: jumbo blob " U3A_BID_FMT " is not in the store; dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      arena_free(&han_u->are_u);
+      u3z(res);
+      return;
+    }
+    if ( UINT32_MAX < vue_u.byt_d ) {
+      u3l_log("mesa: %" PRIc3_d "-byte jumbo frame too large; dropped",
+              vue_u.byt_d);
+      u3r_view_done(&vue_u);
+      arena_free(&han_u->are_u);
+      u3z(res);
+      return;
+    }
+    c3_w jumbo_w = (c3_w)vue_u.byt_d;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
-    u3r_bytes(0, jumbo_w, jumbo_y, pac);
+    u3r_view_copy(&vue_u, 0, jumbo_y, jumbo_w);
+    u3r_view_done(&vue_u);
 
     u3_mesa_pact jum_u;
     c3_c* err_c = mesa_sift_pact_from_buf(&jum_u, jumbo_y, jumbo_w);
@@ -1840,9 +1903,16 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     u3_mesa_data* dat_u = &jum_u.pag_u.dat_u;
 
     //  every 32-bit frame size below (tip/dat/haz/len, tob) is bounded by
-    //  the whole-message byte count; enforce it fits to rule out truncation
+    //  the whole message's frame; refuse a message whose frame overflows
     //
-    u3_assert( UINT32_MAX >= dat_u->tob_d );
+    if ( c3n == _mesa_tob_fits(dat_u->tob_d) ) {
+      u3l_log("mesa: %" PRIu64 "-byte message too large; dropped",
+              dat_u->tob_d);
+      arena_free(&han_u->are_u);
+      u3z(res);
+      c3_free(jumbo_y);
+      return;
+    }
 
     c3_d mev_d = mesa_num_leaves(dat_u->tob_d); // leaves in message
     c3_h tip_h = // bytes in Merkle spine
@@ -1852,7 +1922,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     c3_h dat_h = dat_u->len_h; // bytes in fragment data in this jumbo frame
     c3_h lev_h = mesa_num_leaves(dat_h); // number of leaves in this frame
     c3_h haz_h = lev_h * sizeof(lss_pair); // bytes in hash pairs
-    c3_h len_h = tip_h + dat_h + haz_h;  //  bounded by tob_d (asserted above)
+    c3_h len_h = tip_h + dat_h + haz_h;  //  bounded by _mesa_tob_fits
 
     arena are_u = arena_create(sizeof(u3_mesa_line) + len_h + 2048);
 
@@ -2098,6 +2168,14 @@ _mesa_req_pact_init(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u, u3_p
     return; // TODO: handle like other auth failures
   }
 
+  //  the peer names the size; refuse one we cannot count or reassemble
+  //
+  if ( c3n == _mesa_tob_fits(dat_u->tob_d) ) {
+    u3l_log("mesa: %" PRIu64 "-byte message too large; refused",
+            dat_u->tob_d);
+    return;
+  }
+
   arena are_u = arena_create(5*dat_u->tob_d);
   u3_pend_req* req_u = new(&are_u, u3_pend_req, 1);
   req_u->are_u = are_u;
@@ -2245,6 +2323,41 @@ _mesa_forward_request(u3_mesa* sam_u, u3_mesa_pict* pic_u, sockaddr_in lan_u)
   }
 }
 
+/* _mesa_plan_heer(): plan a %heer of [pac] from [lan], with [stg] the
+**   staged files the event installs.
+*/
+static void
+_mesa_plan_heer(u3_mesa* sam_u, u3_noun lan, u3_noun pac, u3_noun stg)
+{
+  u3_noun  cad   = u3nt(c3__heer, lan, pac);
+  u3_ovum* egg_u = u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad);
+
+  egg_u->pax = stg;
+  u3_auto_plan(&sam_u->car_u, egg_u);
+}
+
+/* _mesa_heer_staged(): a large packet is staged: the %heer carries a
+**   stub mars fills when it installs the file inside the event.  a
+**   refused install drops the packet and the sender retransmits.  one
+**   that cannot be staged goes in as a loom atom.
+*/
+static void
+_mesa_heer_staged(u3_stag* tag_u)
+{
+  u3_mesa* sam_u = tag_u->ptr_v;
+  u3_noun  lan   = u3k(tag_u->som);
+
+  if ( c3y == tag_u->ok_o ) {
+    _mesa_plan_heer(sam_u, lan, u3i_blob(tag_u->mug_h, 0),
+                    u3nc(u3i_string(tag_u->stg_c), u3_nul));
+  }
+  else {
+    u3l_log("mesa: %" PRIu64 "-byte packet not staged; sending inline",
+            tag_u->len_d);
+    _mesa_plan_heer(sam_u, lan, u3i_bytes(tag_u->len_d, tag_u->buf_y), u3_nul);
+  }
+}
+
 static void
 _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
 {
@@ -2369,33 +2482,37 @@ _mesa_hear_page(u3_mesa_pict* pic_u, sockaddr_in lan_u)
   // c3_o done_with_jumbo_frame = __(0 == req_u->hav_d % boq_y);
   c3_o done_with_jumbo_frame = __(req_u->hav_d == req_u->tof_d); // TODO: fix for non-message-sized jumbo frames
   if ( c3y == done_with_jumbo_frame ) {
-    u3_noun cad;
+    // construct jumbo frame
+    u3_noun lan = u3_mesa_encode_lane(lan_u);
 
-    {
-      // construct jumbo frame
-      u3_noun lan = u3_mesa_encode_lane(lan_u);
-      u3_noun pac;
-      {
-        pac_u->pag_u.nam_u.boq_y = boq_y;
-        pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
-        pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
-        pac_u->pag_u.dat_u.len_h = req_u->tob_d;
-        pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
-        pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
+    pac_u->pag_u.nam_u.boq_y = boq_y;
+    pac_u->pag_u.dat_u.tob_d = req_u->tob_d;
+    pac_u->pag_u.nam_u.fra_d = (req_u->hav_d >> boq_y);
+    pac_u->pag_u.dat_u.len_h = req_u->tob_d;
+    pac_u->pag_u.dat_u.fra_y = req_u->dat_y;
+    pac_u->pag_u.dat_u.aut_u = req_u->aut_u;
 
-        c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
-        c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
-        pac = u3i_bytes(res_h, buf_y);
-        c3_free(buf_y);
-      }
-      cad = u3nt(c3__heer, lan, pac);
-    }
-
+    c3_y* buf_y = c3_calloc(mesa_size_pact(pac_u));
+    c3_h res_h = mesa_etch_pact_to_buf(buf_y, mesa_size_pact(pac_u), pac_u);
 
     _mesa_del_request(sam_u, &pac_u->pag_u.nam_u);
 
-    u3_auto_plan(&sam_u->car_u,
-                 u3_ovum_init(0, c3__ames, u3nc(c3__ames, u3_nul), cad));
+    //  a large reassembled packet is staged on the thread pool, and its
+    //  %heer planned when it is (_mesa_heer_staged)
+    //
+    if ( c3y == u3b_over(res_h) ) {
+      u3_stag* tag_u = u3_stag_new(sam_u, _mesa_heer_staged);
+
+      tag_u->pax_c = sam_u->pir_u->pax_c;
+      tag_u->buf_y = buf_y;
+      tag_u->len_d = res_h;
+      tag_u->som   = lan;
+      u3_stag_plan(tag_u);
+    }
+    else {
+      _mesa_plan_heer(sam_u, lan, u3i_bytes(res_h, buf_y), u3_nul);
+      c3_free(buf_y);
+    }
   } else if ( req_u->hav_d < lev_d ) {
     _mesa_request_next_fragments(sam_u, req_u, lan_u);
   }
