@@ -53,12 +53,14 @@ static struct {
   c3_d dmx_d;               //  largest distance placed
 } _cs_met;
 
-/* load factors, in percent: grow between events above [gro_w], at the
-** limit [lim_w] within an event; size to [tar_w] on a resize.
+/* load factors, in percent: between events, grow above [gro_w] and
+** shrink below [shr_w] (0: a third of [gro_w]); within an event, grow at
+** the limit [lim_w]; size to [tar_w] on a resize.
 */
 static c3_w _cs_gro_w = 80;
 static c3_w _cs_lim_w = 92;
 static c3_w _cs_tar_w = 65;
+static c3_w _cs_shr_w = 0;
 
 static inline c3_h*
 _cs_key(_cs_tab* tab_u, c3_d i_d)
@@ -380,16 +382,17 @@ _cs_erase(_cs_tab* tab_u, u3_noun som)
   return pos_d;
 }
 
-/* _cs_tend(): between events, grow above [_cs_gro_w], or shrink below a
-**   third of it.
+/* _cs_tend(): between events, grow above [_cs_gro_w], or shrink below
+**   [_cs_shr_w].
 */
 static void
 _cs_tend(_cs_tab* tab_u)
 {
   c3_d pct_d = ( tab_u->len_d * 100 ) / tab_u->cap_d;
+  c3_w shr_w = _cs_shr_w ? _cs_shr_w : (_cs_gro_w / 3);
 
   if (  (pct_d >= _cs_gro_w)
-     || ((pct_d < (_cs_gro_w / 3)) && (tab_u->lin_d > _CS_LIN_MIN)) )
+     || ((pct_d < shr_w) && (tab_u->lin_d > _CS_LIN_MIN)) )
   {
     c3_d lin_d = _cs_lines_for(tab_u->len_d, _cs_tar_w);
 

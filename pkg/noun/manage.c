@@ -3586,10 +3586,13 @@ _cm_sole_init(void)
       _cs_gro_w = _cm_cs_env("U3_SOLE_TAB_GRO", _cs_gro_w);
       _cs_lim_w = _cm_cs_env("U3_SOLE_TAB_LIM", _cs_lim_w);
       _cs_tar_w = _cm_cs_env("U3_SOLE_TAB_TAR", _cs_tar_w);
+      _cs_shr_w = _cm_cs_env("U3_SOLE_TAB_SHR", _cs_shr_w);
       _cs_init(&_cm_sole_u.vac_u, 0);
       _cs_init(&_cm_sole_u.cec_u, 1);
-      u3l_log("hashcons: compact table, grow at %u%%, limit %u%%, target %u%%",
-              (unsigned)_cs_gro_w, (unsigned)_cs_lim_w, (unsigned)_cs_tar_w);
+      u3l_log("hashcons: compact table, grow at %u%%, limit %u%%, "
+              "target %u%%, shrink below %u%%",
+              (unsigned)_cs_gro_w, (unsigned)_cs_lim_w, (unsigned)_cs_tar_w,
+              (unsigned)(_cs_shr_w ? _cs_shr_w : _cs_gro_w / 3));
     }
 
     if ( _cm_sole_meas_on() ) {
