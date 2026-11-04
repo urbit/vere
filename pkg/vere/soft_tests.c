@@ -26,6 +26,9 @@
 /// roads: the run must end with %alrm or complete, and the state must
 /// grab cleanly and compute the same result.
 ///
+/// Also, an exit to home after a bail runs in the outer signal regime,
+/// with the timer disarmed, as after success (u3m_Love_f).
+///
 /// First, a stack overflow while async signals are held (u3m_hold())
 /// must leave u3o_check_corrupt set, and the grab it asks for must repair
 /// what a cut-short home write left: a leaked old value, or a new value
@@ -37,6 +40,7 @@
 #include "vere.h"
 
 #include <signal.h>
+#include <sys/time.h>
 #include <time.h>
 
 typedef struct {
@@ -450,6 +454,85 @@ _test_over(void)
   u3z(cel);
 }
 
+/* the exits to home: whether each ran with the virtual timer armed, or
+**   with a SIGTERM handler other than the outer one ([_love_out_u]).
+*/
+static c3_w             _love_cnt_w;
+static c3_w             _love_arm_w;
+static c3_w             _love_sig_w;
+static struct sigaction _love_out_u;
+
+static void
+_love_hook(void)
+{
+  struct itimerval itm_u;
+  struct sigaction act_u;
+
+  _love_cnt_w++;
+  if ( !getitimer(ITIMER_VIRTUAL, &itm_u) && timerisset(&itm_u.it_value) ) {
+    _love_arm_w++;
+  }
+  if (  !sigaction(SIGTERM, 0, &act_u)
+     && (act_u.sa_handler != _love_out_u.sa_handler) )
+  {
+    _love_sig_w++;
+  }
+}
+
+static u3_noun
+_love_bail(u3_noun arg)
+{
+  u3z(arg);
+  return u3m_bail(c3__exit);
+}
+
+static u3_noun
+_love_pass(u3_noun arg)
+{
+  return arg;
+}
+
+/* _test_love(): exits to home, after success and after a bail, with a
+**   long timeout: neither may run with the timer armed, or with the
+**   inner signal handlers.
+*/
+static void
+_test_love(void)
+{
+  u3_noun pro;
+
+  sigaction(SIGTERM, 0, &_love_out_u);
+  u3m_Love_f = _love_hook;
+  _love_cnt_w = _love_arm_w = _love_sig_w = 0;
+
+  pro = u3m_soft(60000, _love_pass, u3nc(1, 2));
+  if ( 0 != u3h(pro) ) {
+    fprintf(stderr, "soft: love: expected success\r\n");
+    exit(1);
+  }
+  u3z(pro);
+
+  pro = u3m_soft(60000, _love_bail, u3nc(1, 2));
+  if ( c3__exit != u3h(pro) ) {
+    fprintf(stderr, "soft: love: expected %%exit\r\n");
+    u3m_p("got", u3h(pro));
+    exit(1);
+  }
+  u3z(pro);
+
+  //  three exits: the bail's trace is rendered in a third u3m_soft()
+  //
+  u3m_Love_f = 0;
+  if ( (3 != _love_cnt_w) || _love_arm_w || _love_sig_w ) {
+    fprintf(stderr, "soft: love: %" PRIc3_w " exits, %" PRIc3_w " with the timer"
+                    " armed, %" PRIc3_w " with inner handlers\r\n",
+            _love_cnt_w, _love_arm_w, _love_sig_w);
+    exit(1);
+  }
+  fprintf(stderr, "soft: love: %" PRIc3_w " exits home, all in the outer signal regime\r\n",
+          _love_cnt_w);
+}
+
 /* the leap points: inner roads whose tables are being built, counted
 **   while armed; the alarm is raised at the [_pave_at_w]th.
 */
@@ -521,6 +604,7 @@ main(int argc, char* argv[])
 
   memset(wok_u, 0, sizeof(wok_u));
   _test_over();
+  _test_love();
   _build(wok_u);
 
   //  leaks fail the test from here on

@@ -338,6 +338,10 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
         extern void (*u3m_Pave_f)(void);
 
+      /* u3m_Love_f: called as an exit to home starts its takes (tests).
+      */
+        extern void (*u3m_Love_f)(void);
+
       /* u3m_hold(), u3m_hold_done(): hold off async signals (alarm,
       **   interrupt, term) for work that must finish together, such as a
       **   write to home memory and its count, or an operation on the

@@ -587,6 +587,10 @@ u3m_mark(void)
 */
 void (*u3m_Pave_f)(void);
 
+/* u3m_Love_f: called as an exit to home starts its takes (tests).
+*/
+void (*u3m_Love_f)(void);
+
 /* _pave_parts(): build internal tables.
 */
 static void
@@ -1571,6 +1575,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     pro   = u3a_take(pro);
   }
   else {
+    if ( c3_unlikely(0 != u3m_Love_f) ) u3m_Love_f();
     if ( u3e_Measuring ) us_d = u3e_measure_us();
     u3a_Take_canon_t = 1;
     u3a_Take_lose_t  = 1;
@@ -1816,6 +1821,12 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
+    /* Revert to external signal regime, as on success, so that a term
+    ** signal can't cut short the exit's takes into the home set. (the
+    ** timer is already disarmed there, once the road's timers go.)
+    */
+    _cm_signal_done();
+
     /* Overload the error result.
     */
     pro = u3m_love(why);
