@@ -18,7 +18,7 @@
 /// runs), and two deep nouns with 2^200 paths. SOFT_TEST_RAW=1 boots
 /// from the pill without canonicalizing it first. SOFT_TEST_LOOM sets
 /// the loom size in bits of bytes (default 28). SOFT_TEST_TINY=1 starts
-/// the lose lists and the visited set at 16 entries, so that they grow
+/// the home lose list and the visited set at 16 entries, so they grow
 /// under interrupts.
 ///
 /// Then an alarm raised while a new inner road's tables are half built

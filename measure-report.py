@@ -109,7 +109,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
+WIDTH = {"W": 11, "X": 11, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
 
 
 def pct(a, b):
@@ -248,6 +248,9 @@ def parse(path):
                 #  Z lines before the per-exit adds had 11 fields
                 if t == "Z" and len(v) == 11:
                     v = v + ["0", "0"]
+                #  X lines before inner lists moved onto the loom had 10
+                if t == "X" and len(v) == 10:
+                    v = v + ["0"]
                 if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
                     cur[t] = tuple(int(x) for x in v)
             elif t == "N" and cur is not None:
@@ -637,13 +640,14 @@ def main():
                             ("not written: home write refused", w[10])):
                 print(f"    {name:<36}{c:>12}  {pct(c, g)}")
         if xis:
-            x = [sum(i["X"][j] for i in xis) for j in range(10)]
+            x = [sum(i["X"][j] for i in xis) for j in range(11)]
             x[3] = max(i["X"][3] for i in xis)
             x[8] = max(i["X"][8] for i in xis)
             for name, o in (("home", 0), ("inner", 5)):
                 print(f"  {name} lose list: {x[o]} put, {x[o + 1]} leaked (full), "
                       f"{x[o + 2]} lost after takes (most at one exit: {x[o + 3]}), "
                       f"{x[o + 4]} left by interrupted exits")
+            print(f"  inner entries copied up a road at an exit: {x[10]}")
     qis = [i for i in intervals if i["Q"]]
     if qis and any(any(i["Q"]) for i in qis):
         q = sum(i["Q"][0] for i in qis)

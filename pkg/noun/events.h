@@ -213,6 +213,8 @@
           c3_d wlm_d[2];     //  ... most at one exit
           c3_d wlx_d[2];     //  left by an interrupted exit: home values
                              //  lost at the next leap, inner ones dropped
+                             //  with the road they're on
+          c3_d wlc_d;        //  inner entries copied up a road at an exit
 
           //  roots pinned on inner roads (u3m_sole_pin(), into dup_p)
           //

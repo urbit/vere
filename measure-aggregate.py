@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 11, "X": 10, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
+WIDTH = {"W": 11, "X": 11, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
 
 
 def parse(lines):
@@ -107,6 +107,9 @@ def parse(lines):
             #  Z lines before the per-exit adds had 11 fields
             if v is not None and t == "Z" and len(v) == 11:
                 v = tuple(v) + (0, 0)
+            #  X lines before inner lists moved onto the loom had 10
+            if v is not None and t == "X" and len(v) == 10:
+                v = tuple(v) + (0,)
             if v is not None and len(v) == WIDTH[t]:
                 cur[t] = v
         elif t == "N" and len(p) == 11:

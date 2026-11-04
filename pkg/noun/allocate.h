@@ -271,7 +271,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
+  U3_W(S) lol_p;                                /*  lose list (inner roads; allocate.c)       */ \
+  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -905,15 +906,28 @@ u3a_post_info(u3_post);
           c3_o
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
+        /* u3a_wed_fall(): an exit from road [kid_p], whose lose list is
+        **                 [lol_p], to this road begins. after u3m_fall(),
+        **                 before the takes.
+        */
+          void
+          u3a_wed_fall(u3_post kid_p, u3_post lol_p);
+
         /* u3a_wed_drain(): lose the values unification unpointed from
-        **                  slots on this road. after every take of an
-        **                  exit to it.
+        **                  slots on this road, and copy the child's other
+        **                  entries up. after every take of an exit to it.
         */
           void
           u3a_wed_drain(void);
 
-        /* u3a_wed_left(): lose what an interrupted exit left on the lose
-        **                 lists. home road only, no excursion under way.
+        /* u3a_wed_mark(): mark this road's lose list, for a grab.
+        */
+          c3_w
+          u3a_wed_mark(void);
+
+        /* u3a_wed_left(): lose what an interrupted exit left on the home
+        **                 lose list. home road only, no excursion under
+        **                 way.
         */
           void
           u3a_wed_left(void);
@@ -924,20 +938,20 @@ u3a_post_info(u3_post);
           void
           u3a_wed_leap(void);
 
-        /* u3a_wed_size(): restart the lose lists at [min_w] entries, at
-        **                 most [max_w] (tests). home road only, empty.
+        /* u3a_wed_size(): restart the home lose list at [min_w] entries,
+        **                 at most [max_w] (tests). home road only, empty.
         */
           void
           u3a_wed_size(c3_w min_w, c3_w max_w);
 
-        /* u3a_wed_report(): log the lose lists' drops at their ceilings.
+        /* u3a_wed_report(): log the home lose list's drops at its ceiling.
         **                   between events.
         */
           void
           u3a_wed_report(void);
 
-        /* u3a_wed_stat(): the lose lists' use since the last call, into
-        **                 [sat_u] (room for 2); how many.
+        /* u3a_wed_stat(): the home lose list's use since the last call,
+        **                 into [sat_u] (room for 1); how many.
         */
           c3_w
           u3a_wed_stat(u3c_stat* sat_u);

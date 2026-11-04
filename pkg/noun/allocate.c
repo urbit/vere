@@ -1468,31 +1468,57 @@ u3a_use(u3_noun som)
 **   after the takes of its child's exit (u3a_wed_drain()): nothing
 **   junior holds it then except through what was taken, which gained it.
 **
-**   home values and values on inner roads are kept apart: the home list
-**   is drained at the exit to home, and the inner list at every other
-**   exit, for the entries of the road exited to. after a signal reset
-**   the inner list is dropped with the roads it named, and the home
-**   list drained. off the loom, allocated on the home road; an entry is
-**   written, then published by bumping the length, so an interrupt at
-**   worst leaks.
+**   home values go on the home list: off the loom, allocated on the home
+**   road, drained at the exit to home, and after a signal reset. an
+**   entry is written, then published by bumping the length, so an
+**   interrupt at worst leaks.
+**
+**   values on inner roads go on the current road's own list (lol_p): a
+**   stack of chunks in its heap, each entry naming the road its value is
+**   on, which is this road or an older one. at each exit, the entries
+**   the exit itself made for the road exited to are lost, and the
+**   child's list is walked: entries for the road exited to are lost,
+**   those for the child dropped (an interrupted exit's leftovers: they go
+**   with its heap), and the rest copied onto this road's list. so an
+**   entry rises with the computation until its road is current again,
+**   and a list goes with its road. an entry is cleared before its value
+**   is lost, so nothing walks it twice; one that isn't put or copied for
+**   want of room (short of loom, rather than bail) leaks onto a road
+**   whose heap goes at its own exit.
 */
-//  NB: the starting sizes and ceilings are first guesses; revisit them
-//  with readings from more ships.
+//  NB: the home list's starting size and ceiling are first guesses;
+//  revisit them with readings from more ships.
 //
-#define _CA_LO_MIN  (1U << 14)   //  entries, to start
-#define _CA_LO_MAX  (1U << 22)   //  entries, at most
+#define _CA_LO_MIN  (1U << 14)   //  home entries, to start
+#define _CA_LO_MAX  (1U << 22)   //  home entries, at most
+#define _CA_LO_CHU  128          //  inner chunk, words (a power of two)
+#define _CA_LO_OPEN (1U << 12)   //  free words a new chunk leaves, at least
 
 typedef struct {
   u3_post rod_p;                 //  the road the value is on
-  u3_noun val;
-} _ca_lo_inner;
+  u3_noun val;                   //  u3_none once lost
+} _ca_lo_ent;
+
+typedef struct {
+  u3_post    nex_p;              //  older chunk
+  c3_w       len_w;              //  entries published
+  _ca_lo_ent ent_u[];
+} _ca_lo_chunk;
+
+#define _CA_LO_PER  ( ((_CA_LO_CHU * sizeof(c3_w)) - sizeof(_ca_lo_chunk)) \
+                      / sizeof(_ca_lo_ent) )
 
 static struct {
   c3_t    ini_t;
   u3c_arr hom_u;   //  home values to lose
   c3_w    hom_w;   //  ... published
-  u3c_arr inn_u;   //  inner-road values to lose
-  c3_w    inn_w;   //  ... published
+  struct {         //  the exit under way (u3a_wed_fall())
+    u3_post rod_p; //    road exited to, or 0
+    u3_post kid_p; //    child road
+    u3_post lol_p; //    child's list
+    u3_post chu_p; //    this road's list as the exit began: top chunk
+    c3_w    len_w; //    ... and its entries
+  } ext_u;
 } _ca_lo;
 
 /* _ca_lo_drain_home(): lose the home values on the list.
@@ -1521,42 +1547,164 @@ _ca_lo_drain_home(void)
   u3c_arr_shrink(&_ca_lo.hom_u, len_w);
 }
 
-/* _ca_lo_drain_inner(): lose the values on this inner road.
+/* _ca_lo_room_inner(): an entry can go on this road's list now without
+**   allocating, or with a chunk that leaves room to spare.
+*/
+static inline c3_t
+_ca_lo_room_inner(void)
+{
+  if ( u3R->lol_p ) {
+    _ca_lo_chunk* chu_u = u3to(_ca_lo_chunk, u3R->lol_p);
+    if ( chu_u->len_w < _CA_LO_PER ) return 1;
+  }
+  return u3a_open(u3R) >= (_CA_LO_CHU + _CA_LO_OPEN);
+}
+
+/* _ca_lo_push(): put [val], a value on road [rod_p], on this road's
+**   list. 0 if there's no room (see _ca_lo_room_inner()).
+*/
+static c3_t
+_ca_lo_push(u3_post rod_p, u3_noun val)
+{
+  _ca_lo_chunk* chu_u = u3R->lol_p ? u3to(_ca_lo_chunk, u3R->lol_p) : 0;
+  _ca_lo_ent*   ent_u;
+
+  if ( !chu_u || (_CA_LO_PER == chu_u->len_w) ) {
+    _ca_lo_chunk* new_u;
+
+    if ( u3a_open(u3R) < (_CA_LO_CHU + _CA_LO_OPEN) ) return 0;
+
+    new_u = u3a_walloc(_CA_LO_CHU);
+    new_u->nex_p = u3R->lol_p;
+    new_u->len_w = 0;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    u3R->lol_p = u3a_outa(new_u);
+    chu_u = new_u;
+  }
+
+  ent_u = &chu_u->ent_u[chu_u->len_w];
+  ent_u->rod_p = rod_p;
+  ent_u->val   = val;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  chu_u->len_w++;
+  return 1;
+}
+
+/* _ca_lo_lose(): clear [ent_u], then lose its value.
+*/
+static inline void
+_ca_lo_lose(_ca_lo_ent* ent_u)
+{
+  u3_noun val = ent_u->val;
+
+  ent_u->val = u3_none;
+  __atomic_signal_fence(__ATOMIC_SEQ_CST);
+  u3z(val);
+}
+
+/* _ca_lo_drain_inner(): lose the values on this inner road: those the
+**   exit under way put on this road's list, then those on the child's,
+**   copying the child's other entries up.
 */
 static void
 _ca_lo_drain_inner(void)
 {
-  c3_w          len_w = _ca_lo.inn_w;
-  u3_post       rod_p = u3of(u3a_road, u3R);
-  _ca_lo_inner* lis_u;
-  c3_w          kep_w = 0, i_w;
+  u3_post rod_p = u3of(u3a_road, u3R);
+  c3_t    ext_t = ( rod_p == _ca_lo.ext_u.rod_p );
+  u3_post bot_p = ext_t ? _ca_lo.ext_u.chu_p : 0;
+  c3_w    bot_w = ext_t ? _ca_lo.ext_u.len_w : 0;
+  c3_d    los_d = 0;
+  c3_t    kep_t = 0;
 
-  if ( !len_w ) return;
-  lis_u = u3c_arr_at(&_ca_lo.inn_u, 0);
-  u3c_arr_used(&_ca_lo.inn_u, len_w);
-
-  //  keep the entries of older roads at the front, and publish them;
-  //  then lose this road's, past the end. an interrupt meanwhile drops
-  //  the whole list at the signal reset, with the roads it names
+  //  this road's entries since the exit began (all of them, outside an
+  //  exit): entries for older roads stay
   //
-  for ( i_w = 0; i_w < len_w; i_w++ ) {
-    if ( lis_u[i_w].rod_p != rod_p ) {
-      _ca_lo_inner tmp_u = lis_u[kep_w];
-      lis_u[kep_w++] = lis_u[i_w];
-      lis_u[i_w]     = tmp_u;
+  {
+    u3_post chu_p = u3R->lol_p;
+
+    while ( chu_p ) {
+      _ca_lo_chunk* chu_u = u3to(_ca_lo_chunk, chu_p);
+      c3_w          low_w = ( chu_p == bot_p ) ? bot_w : 0;
+
+      for ( c3_w i_w = chu_u->len_w; i_w > low_w; i_w-- ) {
+        _ca_lo_ent* ent_u = &chu_u->ent_u[i_w - 1];
+
+        if ( u3_none == ent_u->val ) continue;
+        if ( ent_u->rod_p == rod_p ) {
+          _ca_lo_lose(ent_u);
+          los_d++;
+        }
+        else kep_t = 1;
+      }
+      if ( chu_p == bot_p ) break;
+      chu_p = chu_u->nex_p;
+    }
+
+    //  with nothing kept, back to where the exit began
+    //
+    if ( ext_t && !kep_t && (u3R->lol_p != bot_p) ) {
+      u3_post top_p = u3R->lol_p;
+
+      u3R->lol_p = bot_p;
+      __atomic_signal_fence(__ATOMIC_SEQ_CST);
+      while ( top_p != bot_p ) {
+        _ca_lo_chunk* chu_u = u3to(_ca_lo_chunk, top_p);
+        top_p = chu_u->nex_p;
+        u3a_wfree(chu_u);
+      }
+    }
+    if ( ext_t && !kep_t && bot_p ) {
+      u3to(_ca_lo_chunk, bot_p)->len_w = bot_w;
     }
   }
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
-  _ca_lo.inn_w = kep_w;
-  __atomic_signal_fence(__ATOMIC_SEQ_CST);
 
-  u3e_Meter.wll_d[1] += len_w - kep_w;
-  if ( (len_w - kep_w) > u3e_Meter.wlm_d[1] ) {
-    u3e_Meter.wlm_d[1] = len_w - kep_w;
+  //  the child's list, still in its heap
+  //
+  if ( ext_t ) {
+    u3_post chu_p = _ca_lo.ext_u.lol_p;
+    u3_post kid_p = _ca_lo.ext_u.kid_p;
+
+    while ( chu_p ) {
+      _ca_lo_chunk* chu_u = u3to(_ca_lo_chunk, chu_p);
+
+      for ( c3_w i_w = chu_u->len_w; i_w > 0; i_w-- ) {
+        _ca_lo_ent* ent_u = &chu_u->ent_u[i_w - 1];
+
+        if ( u3_none == ent_u->val ) continue;
+        if ( ent_u->rod_p == rod_p ) {
+          _ca_lo_lose(ent_u);
+          los_d++;
+        }
+        else if ( ent_u->rod_p == kid_p ) {
+          u3e_Meter.wlx_d[1]++;
+        }
+        else if ( _ca_lo_push(ent_u->rod_p, ent_u->val) ) {
+          u3e_Meter.wlc_d++;
+        }
+        else {
+          u3e_Meter.wlf_d[1]++;
+        }
+      }
+      chu_p = chu_u->nex_p;
+    }
+    _ca_lo.ext_u.rod_p = 0;
   }
-  for ( i_w = kep_w; i_w < len_w; i_w++ ) {
-    u3z(lis_u[i_w].val);
-  }
+
+  u3e_Meter.wll_d[1] += los_d;
+  if ( los_d > u3e_Meter.wlm_d[1] ) u3e_Meter.wlm_d[1] = los_d;
+}
+
+/* u3a_wed_fall(): an exit from road [kid_p], whose list is [lol_p], to
+**                 this road begins. after u3m_fall(), before the takes.
+*/
+void
+u3a_wed_fall(u3_post kid_p, u3_post lol_p)
+{
+  _ca_lo.ext_u.rod_p = u3of(u3a_road, u3R);
+  _ca_lo.ext_u.kid_p = kid_p;
+  _ca_lo.ext_u.lol_p = lol_p;
+  _ca_lo.ext_u.chu_p = u3R->lol_p;
+  _ca_lo.ext_u.len_w = u3R->lol_p ? u3to(_ca_lo_chunk, u3R->lol_p)->len_w : 0;
 }
 
 /* u3a_wed_drain(): lose the values unification unpointed from slots on
@@ -1566,11 +1714,36 @@ void
 u3a_wed_drain(void)
 {
   if ( &(u3H->rod_u) == u3R ) {
+    //  inner roads' lists go with them
+    //
+    _ca_lo.ext_u.rod_p = 0;
     _ca_lo_drain_home();
   }
   else {
     _ca_lo_drain_inner();
   }
+}
+
+/* u3a_wed_mark(): mark this road's lose list, for a grab.
+*/
+c3_w
+u3a_wed_mark(void)
+{
+  c3_w    siz_w = 0;
+  u3_post chu_p = u3R->lol_p;
+
+  while ( chu_p ) {
+    _ca_lo_chunk* chu_u = u3to(_ca_lo_chunk, chu_p);
+
+    siz_w += u3a_mark_ptr(chu_u);
+    for ( c3_w i_w = 0; i_w < chu_u->len_w; i_w++ ) {
+      if ( u3_none != chu_u->ent_u[i_w].val ) {
+        siz_w += u3a_mark_noun(chu_u->ent_u[i_w].val);
+      }
+    }
+    chu_p = chu_u->nex_p;
+  }
+  return siz_w;
 }
 
 /* _ca_lo_home_at(): the next home entry, or 0 if the list is full.
@@ -1600,21 +1773,20 @@ _ca_lo_home_put(u3_noun* lis_u, u3_noun old)
   }
 }
 
-/* _ca_lo_room(): there's room on [rod_u]'s lose list. under memory
-**   debugging, a unification is refused without it.
+/* _ca_lo_room(): there's room on the list for a value on [rod_u]. under
+**   memory debugging, a unification is refused without it.
 */
 static inline c3_t
 _ca_lo_room(u3a_road* rod_u)
 {
   return ( &(u3H->rod_u) == rod_u )
          ? (0 != _ca_lo_home_at())
-         : (0 != u3c_arr_at(&_ca_lo.inn_u, _ca_lo.inn_w));
+         : _ca_lo_room_inner();
 }
 
 /* _ca_lo_put(): lose [old], a value on road [rod_u], once [rod_u] is
-**   current again after its child's exit. past the ceiling it's leaked:
-**   an inner road's heap goes at its exit, and a home leak asks for a
-**   grab.
+**   current again after its child's exit. without room it's leaked: an
+**   inner road's heap goes at its exit, and a home leak asks for a grab.
 */
 static void
 _ca_lo_put(u3a_road* rod_u, u3_noun old)
@@ -1622,18 +1794,11 @@ _ca_lo_put(u3a_road* rod_u, u3_noun old)
   if ( &(u3H->rod_u) == rod_u ) {
     _ca_lo_home_put(_ca_lo_home_at(), old);
   }
-  else {
-    _ca_lo_inner* ent_u = u3c_arr_at(&_ca_lo.inn_u, _ca_lo.inn_w);
-
-    if ( !ent_u ) {
-      u3e_Meter.wlf_d[1]++;
-      return;
-    }
-    ent_u->rod_p = u3of(u3a_road, rod_u);
-    ent_u->val   = old;
-    __atomic_signal_fence(__ATOMIC_SEQ_CST);
-    _ca_lo.inn_w++;
+  else if ( _ca_lo_push(u3of(u3a_road, rod_u), old) ) {
     u3e_Meter.wlp_d[1]++;
+  }
+  else {
+    u3e_Meter.wlf_d[1]++;
   }
 }
 
@@ -1669,37 +1834,32 @@ u3a_lose_later(u3_noun som)
   u3z(som);
 }
 
-/* u3a_wed_left(): what an interrupted exit left on the lose lists: drop
-**                 the inner list, with its roads, and lose the home
-**                 values. home road only, no excursion under way.
+/* u3a_wed_left(): what an interrupted exit left on the home list: lose
+**                 it. (inner roads' lists went with them.) home road
+**                 only, no excursion under way.
 */
 void
 u3a_wed_left(void)
 {
-  if ( _ca_lo.inn_w ) {
-    u3e_Meter.wlx_d[1] += _ca_lo.inn_w;
-    _ca_lo.inn_w = 0;
-  }
+  _ca_lo.ext_u.rod_p = 0;
   if ( _ca_lo.hom_w ) {
     u3e_Meter.wlx_d[0] += _ca_lo.hom_w;
     _ca_lo_drain_home();
   }
 }
 
-/* u3a_wed_size(): restart the lose lists at [min_w] entries, at most
-**                 [max_w] (tests). home road only, the lists empty.
+/* u3a_wed_size(): restart the home lose list at [min_w] entries, at most
+**                 [max_w] (tests). home road only, the list empty.
 */
 void
 u3a_wed_size(c3_w min_w, c3_w max_w)
 {
   u3c_arr_init(&_ca_lo.hom_u, "lose list", sizeof(u3_noun), min_w, max_w);
-  u3c_arr_init(&_ca_lo.inn_u, "inner lose list",
-               sizeof(_ca_lo_inner), min_w, max_w);
-  _ca_lo.hom_w = _ca_lo.inn_w = 0;
+  _ca_lo.hom_w = 0;
   _ca_lo.ini_t = 1;
 }
 
-/* u3a_wed_leap(): a new excursion: allocate the lose lists, and lose
+/* u3a_wed_leap(): a new excursion: allocate the home lose list, and lose
 **                 what an interrupted exit left. home road only.
 */
 void
@@ -1711,7 +1871,7 @@ u3a_wed_leap(void)
   u3a_wed_left();
 }
 
-/* u3a_wed_report(): log the lose lists' drops at their ceilings. home
+/* u3a_wed_report(): log the home lose list's drops at its ceiling. home
 **                   road only, between events.
 */
 void
@@ -1719,12 +1879,11 @@ u3a_wed_report(void)
 {
   if ( _ca_lo.ini_t ) {
     u3c_arr_report(&_ca_lo.hom_u);
-    u3c_arr_report(&_ca_lo.inn_u);
   }
 }
 
-/* u3a_wed_stat(): the lose lists' use since the last call, into [sat_u]
-**                 (room for 2); how many.
+/* u3a_wed_stat(): the home lose list's use since the last call, into
+**                 [sat_u] (room for 1); how many.
 */
 c3_w
 u3a_wed_stat(u3c_stat* sat_u)
@@ -1733,7 +1892,6 @@ u3a_wed_stat(u3c_stat* sat_u)
 
   if ( _ca_lo.ini_t ) {
     sat_u[len_w++] = u3c_arr_stat(&_ca_lo.hom_u);
-    sat_u[len_w++] = u3c_arr_stat(&_ca_lo.inn_u);
   }
   return len_w;
 }
@@ -2699,7 +2857,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 18);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2908,7 +3066,11 @@ u3a_mark_road()
     qua_u[15]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
-  qua_u[16] = NULL;
+  qua_u[16] = c3_calloc(sizeof(*qua_u[16]));
+  qua_u[16]->nam_c = strdup("lose list");
+  qua_u[16]->siz_w = u3a_wed_mark() * sizeof(c3_w);
+
+  qua_u[17] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {

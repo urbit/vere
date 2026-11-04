@@ -1508,6 +1508,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
   u3p(u3h_root) dup_p = u3R->dup_p;
+  u3_post       lol_p = u3R->lol_p;
   c3_y          pha_y = u3e_Phase;
 
   //  measurement: junior table sizes at exit (jb/measure-base)
@@ -1532,6 +1533,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //
   u3e_Phase = u3e_pha_road;
   u3m_fall();
+  u3a_wed_fall(kid_p, lol_p);
 
 
   {
@@ -1642,7 +1644,8 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   else {
     dup_p = u3h_take(dup_p);
 
-    //  the values senior unification unpointed from slots on this road
+    //  the values senior unification unpointed from slots on this road,
+    //  and the child's entries for older roads copied up
     //
     u3a_wed_drain();
   }

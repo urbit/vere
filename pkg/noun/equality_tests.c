@@ -156,6 +156,80 @@ _test_unify_senior(void)
   return ret_i;
 }
 
+/* _test_unify_senior_deep(): equal cells on an inner road, compared two
+**                            roads below it: the entry rises a road at
+**                            the first exit, with the middle road's list
+**                            marked by a grab there, and the other cell
+**                            is lost when its own road is current again.
+*/
+static c3_i
+_test_unify_senior_deep(void)
+{
+  c3_i    ret_i = 1;
+  c3_d    cop_d = u3e_Meter.wlc_d;
+  u3_noun a, b;
+
+  u3m_hate(0);
+
+  a = u3nt(0, 0, 0);
+  b = u3nt(0, 0, 0);
+
+  u3m_hate(0);
+  u3m_hate(0);
+  (void)u3r_sing(a, b);
+  u3m_love(0);
+
+  if ( (cop_d + 1) != u3e_Meter.wlc_d ) {
+    fprintf(stderr, "test: unify senior deep: %" PRIu64 " copied up, not 1\r\n",
+            u3e_Meter.wlc_d - cop_d);
+    ret_i = 0;
+  }
+
+  //  counting references, a grab of the middle road finds its list
+  //
+  {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_grab(u3_none);
+    u3C.wag_h = wag_h;
+    if ( u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: unify senior deep: middle road leaked %" PRIc3_w " words\r\n",
+              u3a_sweep_leaked());
+      ret_i = 0;
+    }
+  }
+  u3m_love(0);
+
+  if ( u3t(a) != u3t(b) ) {
+    fprintf(stderr, "test: unify senior deep: not unified\r\n");
+    ret_i = 0;
+  }
+  else if ( 2 != u3a_use(u3t(a)) ) {
+    fprintf(stderr, "test: unify senior deep: count %" PRIc3_w ", not 2\r\n",
+            u3a_use(u3t(a)));
+    ret_i = 0;
+  }
+
+  {
+    c3_h wag_h = u3C.wag_h;
+
+    u3C.wag_h |= u3o_debug_ram;
+    u3m_grab(a, b);
+    u3C.wag_h = wag_h;
+    if ( u3a_sweep_leaked() ) {
+      fprintf(stderr, "test: unify senior deep: leaked %" PRIc3_w " words\r\n",
+              u3a_sweep_leaked());
+      ret_i = 0;
+    }
+  }
+
+  u3z(a); u3z(b);
+  u3m_love(0);
+
+  return ret_i;
+}
+
 /* _test_unify_senior_slot(): cells on an inner road holding equal home
 **                            nouns, compared from the road below it, get
 **                            one slot pointed at the other home noun,
@@ -1162,6 +1236,11 @@ _test_equality(void)
 
   if ( !_test_unify_senior() ) {
     fprintf(stderr, "test: equality: unify senior: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_unify_senior_deep() ) {
+    fprintf(stderr, "test: equality: unify senior deep: failed\r\n");
     ret_i = 0;
   }
 

@@ -566,11 +566,11 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //
     fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                    " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 "\n",
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.wlp_d[0], u3e_Meter.wlf_d[0], u3e_Meter.wll_d[0],
                    u3e_Meter.wlm_d[0], u3e_Meter.wlx_d[0],
                    u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
-                   u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1]);
+                   u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
 
     //  roots pinned on inner roads
     //
