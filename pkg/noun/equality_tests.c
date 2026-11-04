@@ -1023,10 +1023,10 @@ _test_crib(void)
   u3c_set_init(&set_u, "test set", 4, 10);
 
   for ( i_w = 0; i_w < 300; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 2, (i_w * 7) + 3);
+    u3c_set_put(&set_u, i_w + 2);
   }
   for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
-    if ( !u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+    if ( !u3c_set_has(&set_u, i_w + 2) ) mis_w++;
   }
   if ( mis_w || set_u.ovf_d || (u3c_set_cap(&set_u) < 512) ) {
     fprintf(stderr, "test: crib: growth: %u missing, %" PRIu64 " evicted, %" PRIu64 " cap\r\n",
@@ -1037,7 +1037,7 @@ _test_crib(void)
   //  past the ceiling, entries are evicted, and counted
   //
   for ( i_w = 300; i_w < 3000; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 2, (i_w * 7) + 3);
+    u3c_set_put(&set_u, i_w + 2);
   }
   if ( (1024 != u3c_set_cap(&set_u)) || !set_u.ovf_d ) {
     fprintf(stderr, "test: crib: ceiling: %" PRIu64 " cap, %" PRIu64 " evicted\r\n",
@@ -1049,7 +1049,7 @@ _test_crib(void)
   //
   u3c_set_clear(&set_u);
   for ( i_w = mis_w = 0; i_w < 3000; i_w++ ) {
-    if ( u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+    if ( u3c_set_has(&set_u, i_w + 2) ) mis_w++;
   }
   if ( mis_w ) {
     fprintf(stderr, "test: crib: clear: %u left\r\n", (unsigned)mis_w);
@@ -1072,11 +1072,11 @@ _test_crib(void)
   //  and it grows again from there, clean
   //
   for ( i_w = 0; i_w < 300; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 5000, i_w);
+    u3c_set_put(&set_u, i_w + 5000);
   }
   for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
-    if ( !u3c_set_has(&set_u, i_w + 5000, i_w) ) mis_w++;
-    if ( u3c_set_has(&set_u, i_w + 2, (i_w * 7) + 3) ) mis_w++;
+    if ( !u3c_set_has(&set_u, i_w + 5000) ) mis_w++;
+    if ( u3c_set_has(&set_u, i_w + 2) ) mis_w++;
   }
   if ( mis_w ) {
     fprintf(stderr, "test: crib: regrowth: %u wrong\r\n", (unsigned)mis_w);

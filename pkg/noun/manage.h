@@ -286,7 +286,7 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       /* u3m_crib_stat(): every crib's use since the last call, into
       **                  [sat_u] (room for u3m_crib_max); how many.
       */
-#       define u3m_crib_max  8
+#       define u3m_crib_max  3
         c3_w
         u3m_crib_stat(u3c_stat* sat_u);
 

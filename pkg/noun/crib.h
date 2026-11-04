@@ -2,9 +2,9 @@
 ///
 /// Cribs (u3c): growable off-loom open-addressing sets and arrays for
 /// the hash-consing and unification state that lives for one excursion
-/// from the home road, or one comparison. Like a crib sheet, they hold
-/// answers already worked out (pairs found equal, cells already
-/// canonicalized, slot pairs already noted), and are thrown away after.
+/// from the home road. Like a crib sheet, they hold answers already
+/// worked out (cells already canonicalized, values to lose later), and
+/// are thrown away after.
 
 #ifndef U3_CRIB_H
 #define U3_CRIB_H
@@ -28,20 +28,19 @@
         c3_d   ovf_d;   //  evictions or drops at the ceiling
       } u3c_stat;
 
-    /* u3c_set: a set of key pairs [a b], a > 1 (0 marks an empty slot,
-    **          1 a removed one).
+    /* u3c_set: a set of keys, each > 1 (0 marks an empty slot, 1 a
+    **          removed one).
     **
     **   a region is reserved for the most entries the set may grow to,
     **   and committed as it grows, so growing allocates nothing and makes
     **   no system call on POSIX: it's safe at any point an interrupt may
-    **   unwind. writes are ordered (a last), so an interrupted write
-    **   leaves an empty slot, never a torn pair. a full set at its ceiling
-    **   evicts an entry.
+    **   unwind. an entry is one word, so an interrupted write never leaves
+    **   a torn one. a full set at its ceiling evicts an entry.
     */
       typedef struct {
         const c3_c* nam_c;   //  name, for the log
         c3_d   ovf_d;   //  evictions at the ceiling, since the last report
-        c3_d*  tab_d;   //  2 words per entry
+        c3_d*  tab_d;   //  1 word per entry
         c3_y   log_y;   //  capacity, log2
         c3_y   min_y;   //  starting capacity, log2
         c3_y   max_y;   //  ceiling, log2
@@ -75,15 +74,15 @@
       void
       u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y);
 
-    /* u3c_set_has(): [a b] is in the set.
+    /* u3c_set_has(): [a_d] is in the set.
     */
       c3_t
-      u3c_set_has(u3c_set* set_u, c3_d a_d, c3_d b_d);
+      u3c_set_has(u3c_set* set_u, c3_d a_d);
 
-    /* u3c_set_put(): add [a b], growing if need be.
+    /* u3c_set_put(): add [a_d], growing if need be.
     */
       void
-      u3c_set_put(u3c_set* set_u, c3_d a_d, c3_d b_d);
+      u3c_set_put(u3c_set* set_u, c3_d a_d);
 
     /* u3c_set_clear(): drop every entry, cheaply if few were added.
     */

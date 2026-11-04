@@ -11,6 +11,7 @@
 #define _CRIB_WIN  16   //  probe window, entries
 #define _CRIB_TOMB 1    //  a removed entry: probes continue past it
 #define _CRIB_LIS  256  //  slots logged for a cheap clear
+#define _CRIB_ENT  sizeof(c3_d)  //  bytes per set entry
 
 /* region primitives: reserve address space, commit as it's used, and
 **   give memory back. on POSIX the whole reservation is readable and
@@ -136,12 +137,12 @@ _crib_msk(u3c_set* set_u)
 }
 
 static inline c3_d
-_crib_idx(u3c_set* set_u, c3_d a_d, c3_d b_d)
+_crib_idx(u3c_set* set_u, c3_d a_d)
 {
   //  the low bits index the table, so that doubling it sends each entry
   //  either to its own slot or to the empty upper half (see _crib_grow())
   //
-  c3_d h_d = (a_d * 0x9e3779b97f4a7c15ULL) ^ (b_d * 0xc2b2ae3d27d4eb4fULL);
+  c3_d h_d = a_d * 0x9e3779b97f4a7c15ULL;
   h_d ^= h_d >> 31;
   h_d *= 0xbf58476d1ce4e5b9ULL;
   h_d ^= h_d >> 29;
@@ -160,50 +161,36 @@ _crib_log(u3c_set* set_u, c3_d k_d)
   }
 }
 
-/* _crib_write(): store [a b] in slot [k_d], publishing [a] last.
-*/
-static inline void
-_crib_write(u3c_set* set_u, c3_d k_d, c3_d a_d, c3_d b_d)
-{
-  c3_d* sot_d = &set_u->tab_d[2 * k_d];
-
-  sot_d[0] = 0;
-  _crib_fence();
-  sot_d[1] = b_d;
-  _crib_fence();
-  sot_d[0] = a_d;
-}
-
-/* _crib_place(): put [a b] in its window, if there's room: 1 if placed,
+/* _crib_place(): put [a_d] in its window, if there's room: 1 if placed,
 **                2 if present, 0 if the window is full. an empty slot ends
 **                the window's entries; a tombstone doesn't, but can be
 **                reused.
 */
 static c3_y
-_crib_place(u3c_set* set_u, c3_d a_d, c3_d b_d, c3_t log_t)
+_crib_place(u3c_set* set_u, c3_d a_d, c3_t log_t)
 {
   c3_d msk_d = _crib_msk(set_u);
-  c3_d i_d   = _crib_idx(set_u, a_d, b_d);
+  c3_d i_d   = _crib_idx(set_u, a_d);
   c3_d fre_d = ~(c3_d)0;
   c3_w j_w;
 
   for ( j_w = 0; j_w < _CRIB_WIN; j_w++ ) {
-    c3_d  k_d   = (i_d + j_w) & msk_d;
-    c3_d* sot_d = &set_u->tab_d[2 * k_d];
+    c3_d k_d = (i_d + j_w) & msk_d;
+    c3_d e_d = set_u->tab_d[k_d];
 
-    if ( !sot_d[0] ) {
+    if ( !e_d ) {
       if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
       break;
     }
-    if ( _CRIB_TOMB == sot_d[0] ) {
+    if ( _CRIB_TOMB == e_d ) {
       if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
       continue;
     }
-    if ( (sot_d[0] == a_d) && (sot_d[1] == b_d) ) return 2;
+    if ( e_d == a_d ) return 2;
   }
 
   if ( ~(c3_d)0 == fre_d ) return 0;
-  _crib_write(set_u, fre_d, a_d, b_d);
+  set_u->tab_d[fre_d] = a_d;
   if ( log_t ) _crib_log(set_u, fre_d);
   return 1;
 }
@@ -220,7 +207,7 @@ _crib_grow(u3c_set* set_u)
   //  NB: every slot past the capacity is zero (see u3c_set_shrink())
   //
   if ( set_u->log_y >= set_u->max_y ) return 0;
-  if ( !_crib_commit(&set_u->tab_d[2 * old_d], old_d * 16) ) return 0;
+  if ( !_crib_commit(&set_u->tab_d[old_d], old_d * _CRIB_ENT) ) return 0;
 
   set_u->log_y++;
   set_u->lin_w = _CRIB_LIS + 1;
@@ -234,13 +221,12 @@ _crib_grow(u3c_set* set_u)
   //  the next clear removes them
   //
   for ( i_d = 0; i_d < old_d; i_d++ ) {
-    c3_d a_d = set_u->tab_d[2 * i_d];
-    c3_d b_d = set_u->tab_d[(2 * i_d) + 1];
+    c3_d a_d = set_u->tab_d[i_d];
 
     if ( !a_d || (_CRIB_TOMB == a_d) ) continue;
-    set_u->tab_d[2 * i_d] = _CRIB_TOMB;
+    set_u->tab_d[i_d] = _CRIB_TOMB;
     _crib_fence();
-    (void)_crib_place(set_u, a_d, b_d, 0);   //  dropped if its window is full
+    (void)_crib_place(set_u, a_d, 0);   //  dropped if its window is full
   }
   return 1;
 }
@@ -249,7 +235,7 @@ void
 u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y)
 {
   if ( set_u->tab_d ) {
-    _crib_release(set_u->tab_d, ((size_t)1 << set_u->max_y) * 16);
+    _crib_release(set_u->tab_d, ((size_t)1 << set_u->max_y) * _CRIB_ENT);
   }
   min_y = c3_max(min_y, 4);
   max_y = c3_max(max_y, min_y);
@@ -259,28 +245,28 @@ u3c_set_init(u3c_set* set_u, const c3_c* nam_c, c3_y min_y, c3_y max_y)
   set_u->min_y = set_u->log_y = min_y;
   set_u->max_y = max_y;
   set_u->sat_u.top_d = (c3_d)1 << min_y;
-  set_u->tab_d = _crib_reserve(((size_t)1 << max_y) * 16);
-  u3_assert( _crib_commit(set_u->tab_d, ((size_t)1 << min_y) * 16) );
+  set_u->tab_d = _crib_reserve(((size_t)1 << max_y) * _CRIB_ENT);
+  u3_assert( _crib_commit(set_u->tab_d, ((size_t)1 << min_y) * _CRIB_ENT) );
 }
 
 c3_t
-u3c_set_has(u3c_set* set_u, c3_d a_d, c3_d b_d)
+u3c_set_has(u3c_set* set_u, c3_d a_d)
 {
   c3_d msk_d = _crib_msk(set_u);
-  c3_d i_d   = _crib_idx(set_u, a_d, b_d);
+  c3_d i_d   = _crib_idx(set_u, a_d);
   c3_w j_w;
 
   for ( j_w = 0; j_w < _CRIB_WIN; j_w++ ) {
-    c3_d* sot_d = &set_u->tab_d[2 * ((i_d + j_w) & msk_d)];
+    c3_d e_d = set_u->tab_d[(i_d + j_w) & msk_d];
 
-    if ( !sot_d[0] ) return 0;
-    if ( (sot_d[0] == a_d) && (sot_d[1] == b_d) ) return 1;
+    if ( !e_d ) return 0;
+    if ( e_d == a_d ) return 1;
   }
   return 0;
 }
 
 void
-u3c_set_put(u3c_set* set_u, c3_d a_d, c3_d b_d)
+u3c_set_put(u3c_set* set_u, c3_d a_d)
 {
   //  keep the load at half or less while below the ceiling
   //
@@ -289,16 +275,16 @@ u3c_set_put(u3c_set* set_u, c3_d a_d, c3_d b_d)
   }
 
   while ( 1 ) {
-    c3_y pla_y = _crib_place(set_u, a_d, b_d, 1);
+    c3_y pla_y = _crib_place(set_u, a_d, 1);
 
     if ( 2 == pla_y ) return;
     if ( 1 == pla_y ) break;
     if ( !_crib_grow(set_u) ) {
       //  at the ceiling: evict an entry from the window, in turn
       //
-      c3_d k_d = (_crib_idx(set_u, a_d, b_d) + (set_u->evk_w++ & (_CRIB_WIN - 1)))
+      c3_d k_d = (_crib_idx(set_u, a_d) + (set_u->evk_w++ & (_CRIB_WIN - 1)))
                & _crib_msk(set_u);
-      _crib_write(set_u, k_d, a_d, b_d);
+      set_u->tab_d[k_d] = a_d;
       set_u->ovf_d++;
       set_u->sat_u.ovf_d++;
       break;
@@ -314,12 +300,12 @@ u3c_set_clear(u3c_set* set_u)
 
   if ( set_u->lin_w <= _CRIB_LIS ) {
     for ( c3_w i_w = 0; i_w < set_u->lin_w; i_w++ ) {
-      set_u->tab_d[2 * (c3_d)set_u->lis_w[i_w]] = 0;
+      set_u->tab_d[set_u->lis_w[i_w]] = 0;
     }
     set_u->sat_u.clg_d++;
   }
   else {
-    _crib_drop(set_u->tab_d, ((size_t)1 << set_u->log_y) * 16, 1);
+    _crib_drop(set_u->tab_d, ((size_t)1 << set_u->log_y) * _CRIB_ENT, 1);
     set_u->sat_u.cdp_d++;
   }
   if ( set_u->use_d > set_u->pek_d ) set_u->pek_d = set_u->use_d;
@@ -345,8 +331,8 @@ u3c_set_shrink(u3c_set* set_u)
     while ( (new_y < set_u->log_y) && (((c3_d)1 << new_y) < (set_u->pek_d * 4)) ) {
       new_y++;
     }
-    _crib_drop(&set_u->tab_d[2 * ((c3_d)1 << new_y)],
-               (cap_d - ((c3_d)1 << new_y)) * 16, 0);
+    _crib_drop(&set_u->tab_d[(c3_d)1 << new_y],
+               (cap_d - ((c3_d)1 << new_y)) * _CRIB_ENT, 0);
     set_u->log_y = new_y;
     set_u->pek_d = 0;
     set_u->sat_u.shr_d++;

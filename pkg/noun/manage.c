@@ -4279,7 +4279,7 @@ _cm_sole_swap(u3_noun* som, u3_noun can)
 #define _CM_VIS_MAX  25   //  ... at most (NB: a first guess, to revisit)
 
 static c3_t    _cm_vis_ini_t;
-static u3c_set _cm_vis;   //  keys: [som 0]
+static u3c_set _cm_vis;   //  keys: junior cells
 
 /* u3m_sole_visit_size(): restart the visited set at 2^[log_y] entries
 **                        (at least 16), growing as before (tests).
@@ -4343,7 +4343,7 @@ _cm_vis_leap(void)
 static inline c3_t
 _cm_vis_has(u3_noun som)
 {
-  return u3c_set_has(&_cm_vis, som, 0);
+  return u3c_set_has(&_cm_vis, som);
 }
 
 /* _cm_vis_put(): note junior cell [som] as canonicalized.
@@ -4351,7 +4351,7 @@ _cm_vis_has(u3_noun som)
 static inline void
 _cm_vis_put(u3_noun som)
 {
-  u3c_set_put(&_cm_vis, som, 0);
+  u3c_set_put(&_cm_vis, som);
 }
 
 /* _cm_sole_look(): the member equal to [som], a cell with canonical
