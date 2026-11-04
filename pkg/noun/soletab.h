@@ -2,10 +2,9 @@
 ///
 /// A compact open-addressing table for the home-road hashcons set.
 ///
-/// A bucket holds a member's slot index (its loom offset in units of
-/// u3a_minimum words, plus 1; 0 is empty) and its probe distance: five
-/// bytes, 12 buckets to a 64-byte line, at 32 bits; six, 10 to a line,
-/// at 64. Linear probing
+/// A bucket holds a member's slot index (its loom offset in cell-sized
+/// units, plus 1; 0 is empty) and its probe distance: five bytes, 12
+/// buckets to a 64-byte line, at either width. Linear probing
 /// in Robin Hood order, with backward-shift deletion: no tombstones,
 /// and neither a lookup nor an erase reads another member's box except
 /// to compare one with the same home bucket. The hash is the mug, so a
@@ -26,14 +25,16 @@
 #define _CS_DIS_MAX  254    //  largest distance a bucket holds
 #define _CS_LIN_MIN  64     //  fewest lines
 
-/* a key is a member's slot index (its offset in u3a_minimum units) + 1,
-** or 0 for an empty bucket: 4 bytes at 32 bits, which covers the whole
-** loom, and 5 at 64 (a 16 TiB loom), split into a low word and a high
-** byte. each bucket also holds its distance from its home bucket.
+/* a key is a member's slot index + 1, or 0 for an empty bucket: its
+** loom offset in units of a cell's size. every noun box is at least a
+** cell's size, a power of two, naturally aligned, so this loses nothing;
+** members are home nouns, and the home road's heap is low (it's north),
+** so 4 bytes cover the whole 32-bit loom and 128 GiB of home heap at 64
+** bits. each bucket also holds its distance from its home bucket.
 */
-#ifndef VERE64
-#  define _CS_PER    12     //  buckets a line
-#  define _CS_KEY_MAX  0xffffffffULL
+#define _CS_PER      12     //  buckets a line
+#define _CS_UNIT     ((c3_d)c3_wiseof(u3a_cell))  //  words a key step
+#define _CS_KEY_MAX  0xffffffffULL
 
 typedef c3_h _cs_key_t;
 
@@ -42,19 +43,6 @@ typedef struct {
   c3_y dis_y[_CS_PER];      //  distance from the home bucket
   c3_y pad_y[4];
 } _cs_line;
-#else
-#  define _CS_PER    10     //  buckets a line
-#  define _CS_KEY_MAX  0xffffffffffULL
-
-typedef c3_d _cs_key_t;
-
-typedef struct {
-  c3_h key_h[_CS_PER];      //  key, low 32 bits
-  c3_y kei_y[_CS_PER];      //  key, high 8 bits
-  c3_y dis_y[_CS_PER];      //  distance from the home bucket
-  c3_y pad_y[4];
-} _cs_line;
-#endif
 
 _Static_assert(64 == sizeof(_cs_line), "soletab: line size");
 
@@ -95,11 +83,7 @@ static c3_t _cs_bul_t;
 static inline _cs_key_t
 _cs_line_key(_cs_line* lin_u, c3_w j_w)
 {
-#ifndef VERE64
   return lin_u->key_h[j_w];
-#else
-  return lin_u->key_h[j_w] | ((c3_d)lin_u->kei_y[j_w] << 32);
-#endif
 }
 
 /* _cs_key(): the key in bucket [i_d].
@@ -115,13 +99,7 @@ _cs_key(_cs_tab* tab_u, c3_d i_d)
 static inline void
 _cs_key_put(_cs_tab* tab_u, c3_d i_d, _cs_key_t key)
 {
-  _cs_line* lin_u = &tab_u->lin_u[i_d / _CS_PER];
-  c3_w      j_w   = i_d % _CS_PER;
-
-  lin_u->key_h[j_w] = (c3_h)key;
-#ifdef VERE64
-  lin_u->kei_y[j_w] = (c3_y)(key >> 32);
-#endif
+  tab_u->lin_u[i_d / _CS_PER].key_h[i_d % _CS_PER] = key;
 }
 
 static inline c3_y*
@@ -136,12 +114,19 @@ _cs_next(_cs_tab* tab_u, c3_d i_d)
   return ( ++i_d == tab_u->cap_d ) ? 0 : i_d;
 }
 
-/* _cs_slot(): [som]'s key.
+/* _cs_slot(): [som]'s key. a home noun past the keys' reach (128 GiB of
+**   home heap at 64 bits) can't be a member: no ship is near that size,
+**   and the startup warns long before (see u3m_sole_ream()).
 */
 static inline _cs_key_t
 _cs_slot(u3_noun som)
 {
-  return (_cs_key_t)(u3a_to_off(som) / u3a_minimum) + 1;
+  c3_d key_d = ((c3_d)u3a_to_off(som) / _CS_UNIT) + 1;
+
+  if ( c3_unlikely(key_d > _CS_KEY_MAX) ) {
+    u3_assert(!"hashcons: a home noun past the set's keys");
+  }
+  return (_cs_key_t)key_d;
 }
 
 /* _cs_noun(): the member whose key is [key].
@@ -149,7 +134,7 @@ _cs_slot(u3_noun som)
 static inline u3_noun
 _cs_noun(_cs_tab* tab_u, _cs_key_t key)
 {
-  c3_w off_w = (c3_w)(key - 1) * u3a_minimum;
+  c3_w off_w = (c3_w)((c3_d)(key - 1) * _CS_UNIT);
   return ( tab_u->cel_t ) ? u3a_to_pom(off_w) : u3a_to_pug(off_w);
 }
 
@@ -162,12 +147,12 @@ _cs_home(_cs_tab* tab_u, c3_h mug_h)
   return ((has_d >> 32) * tab_u->cap_d) >> 32;
 }
 
-/* _cs_fits(): every key of a loom of [wor_d] words fits.
+/* _cs_reach(): words of home heap the keys cover.
 */
-static inline c3_t
-_cs_fits(c3_d wor_d)
+static inline c3_d
+_cs_reach(void)
 {
-  return (wor_d / u3a_minimum) < _CS_KEY_MAX;
+  return _CS_KEY_MAX * _CS_UNIT;
 }
 
 /* _cs_alloc(): an empty table of [lin_d] lines.

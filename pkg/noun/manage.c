@@ -3552,13 +3552,6 @@ _cm_sole_init(void)
     _cm_sole_u.len_w = (bit_w + u3a_word_bits - 1) / u3a_word_bits;
     u3a_Sole_w      = c3_calloc(sizeof(c3_w) * _cm_sole_u.len_w);
 
-    //  a key holds any slot of a 32-bit loom, and of a 64-bit one up to
-    //  16 TiB
-    //
-    if ( !_cs_fits(u3C.wor_i) ) {
-      u3l_log("hashcons: loom of %" PRIu64 " words too large", (c3_d)u3C.wor_i);
-      u3_assert(0);
-    }
     _cs_init(&_cm_sole_u.vat_u, 0);
     _cs_init(&_cm_sole_u.cel_u, 1);
 
@@ -4066,6 +4059,23 @@ u3m_sole_ream(void)
 
   _cm_sole_init();
   _cm_sole_clear();
+
+  //  the set's keys cover 128 GiB of home heap at 64 bits (all of a
+  //  32-bit loom): warn, once, when the heap's top is three quarters
+  //  of the way there. the home road is north, so its heap is low
+  //
+  {
+    static c3_t war_t;
+    c3_d        top_d = (c3_d)u3R->hat_p;
+
+    if ( !war_t && ((top_d * 4) >= (_cs_reach() * 3)) ) {
+      war_t = 1;
+      u3l_log("hashcons: warning: the home heap reaches %" PRIu64 " MiB, "
+              "near the %" PRIu64 " MiB its set can hold; past that, the "
+              "runtime stops",
+              (top_d * sizeof(c3_w)) >> 20, (_cs_reach() * sizeof(c3_w)) >> 20);
+    }
+  }
 
   //  size the table for the set's last saved size, to avoid rehashing
   //  as it regrows (a cleared table keeps its capacity)
