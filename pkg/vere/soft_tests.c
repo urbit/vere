@@ -143,6 +143,74 @@ _slam_of(const c3_c* nam_c, const c3_c* gat_c, u3_noun sam)
   return wok_u;
 }
 
+/* _tape_print(): print tape [tap].
+*/
+static void
+_tape_print(u3_noun tap)
+{
+  while ( c3y == u3du(tap) ) {
+    if ( c3y == u3a_is_cat(u3h(tap)) ) fputc((c3_i)u3h(tap), stderr);
+    tap = u3t(tap);
+  }
+}
+
+/* _tank_print(): print tank [tac] without running Hoon, which may be
+**   what failed: leaves as text, roses and palms joined by their own
+**   separators, anything else raw.
+*/
+static void
+_tank_print(u3_noun tac)
+{
+  u3_noun hed, tal, sty, kid;
+
+  if ( c3y == u3a_is_atom(tac) ) {
+    c3_c* str_c = u3r_string(tac);
+    fputs(str_c, stderr);
+    c3_free(str_c);
+  }
+  else if ( (c3y == u3r_cell(tac, &hed, &tal)) && (c3__leaf == hed) ) {
+    _tape_print(tal);
+  }
+  else if (  (c3y == u3r_trel(tac, &hed, &sty, &kid))
+          && ((c3__rose == hed) || (c3__palm == hed)) )
+  {
+    u3_noun sep = ( c3__rose == hed ) ? u3h(sty) : u3_nul;
+    u3_noun opn = ( c3__rose == hed ) ? u3h(u3t(sty)) : u3_nul;
+    u3_noun cls = ( c3__rose == hed ) ? u3t(u3t(sty)) : u3_nul;
+    c3_t    fir_t = 1;
+
+    _tape_print(opn);
+    while ( c3y == u3du(kid) ) {
+      if ( !fir_t ) {
+        if ( u3_nul == sep ) fputc(' ', stderr); else _tape_print(sep);
+      }
+      _tank_print(u3h(kid));
+      fir_t = 0;
+      kid   = u3t(kid);
+    }
+    _tape_print(cls);
+  }
+  else {
+    u3m_p("tank", tac);
+  }
+}
+
+/* _goof_print(): print a failed run's [mote tang], top first.
+*/
+static void
+_goof_print(const c3_c* nam_c, u3_noun pro)
+{
+  u3_noun tan = u3t(pro);
+
+  fprintf(stderr, "soft: %s: trace:\r\n", nam_c);
+  while ( c3y == u3du(tan) ) {
+    fprintf(stderr, "  ");
+    _tank_print(u3h(tan));
+    fprintf(stderr, "\r\n");
+    tan = u3t(tan);
+  }
+}
+
 /* _run(): run [wok_u] under a timeout of [mil_w] ms (0 for none).
 **         produces 1 if it completed, 0 if interrupted; fails on any
 **         other outcome, or a product that differs.
@@ -179,7 +247,7 @@ _run(_work* wok_u, c3_w mil_w, c3_t ref_t)
   else {
     fprintf(stderr, "soft: %s: failed with ", wok_u->nam_c);
     u3m_p("error", u3h(pro));
-    u3_pier_punt_goof(wok_u->nam_c, pro);
+    _goof_print(wok_u->nam_c, pro);
     exit(1);
   }
 
