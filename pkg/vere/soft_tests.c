@@ -17,7 +17,7 @@
 /// workloads, made with jam and cue (and made again every 20 interrupted
 /// runs), and two deep nouns with 2^200 paths. SOFT_TEST_RAW=1 boots
 /// from the pill without canonicalizing it first. SOFT_TEST_LOOM sets
-/// the loom size in bits of bytes (default 27). SOFT_TEST_TINY=1 starts
+/// the loom size in bits of bytes (default 28). SOFT_TEST_TINY=1 starts
 /// the lose lists and the visited set at 16 entries, so that they grow
 /// under interrupts.
 ///
@@ -79,7 +79,7 @@ static void
 _setup(void)
 {
   c3_c* lom_c = getenv("SOFT_TEST_LOOM");
-  c3_w  lom_w = lom_c ? (c3_w)atoi(lom_c) : 27;
+  c3_w  lom_w = lom_c ? (c3_w)atoi(lom_c) : 28;
 
   u3m_boot_lite((size_t)1 << lom_w);
   if ( getenv("SOFT_TEST_RAW") ) {
