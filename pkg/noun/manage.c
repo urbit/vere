@@ -4327,99 +4327,136 @@ _cm_vis_put(u3_noun som)
   u3c_set_put(&_cm_vis, som, 0);
 }
 
-/* _cm_sole_find(): the member of the home-road set equal to [som], or
-**   none. a cell is found only once its children are canonical. RETAIN,
-**   result PRODUCED.
+/* _cm_sole_look(): the member equal to [som], a cell with canonical
+**   children (a lookup can find a cell only then), or none.
 */
 static u3_weak
-_cm_sole_find(u3_noun som)
+_cm_sole_look(u3_noun som)
 {
-  if ( u3a_sole_has(som) ) {
-    return u3k(som);
+  u3_weak can = _cm_sole_get(som);
+
+  if ( &(u3H->rod_u) != u3R ) {
+    u3e_Meter.eih_d[0]++;
+    if ( (u3_none != can) && (can != som) ) u3e_Meter.eih_d[1]++;
   }
-
-  {
-    u3_weak can = _cm_sole_get(som);
-    c3_t    inn_t = ( &(u3H->rod_u) != u3R );
-
-    if ( inn_t ) u3e_Meter.eih_d[0]++;
-    if ( u3_none != can ) {
-      if ( inn_t ) u3e_Meter.eih_d[1]++;
-      return u3k(can);
-    }
-  }
-
-  return u3_none;
+  return can;
 }
 
-/* _cm_sole_done(): [som] is canonical: on the home road, insert it into the
-**                  set; on an inner road, note a cell as visited.
-**                  TRANSFER, result PRODUCED.
+/* _cm_sole_miss(): [som], a cell with canonical children, has no equal
+**   member: on the home road, make it one ([*add_t]); on an inner road,
+**   note it as visited. TRANSFER, result PRODUCED.
 */
 static u3_noun
-_cm_sole_done(u3_noun som)
+_cm_sole_miss(u3_noun som, c3_t* add_t)
 {
   if ( &(u3H->rod_u) == u3R ) {
-    u3_noun can = _cm_sole_put(som);
-
-    if ( can != som ) {
-      u3k(can);
-      u3z(som);
-    }
-    return can;
+    u3m_sole_add(som);
+    *add_t = 1;
   }
   else {
-    if ( c3y == u3a_is_cell(som) ) {
-      _cm_vis_put(som);
-    }
-    return som;
+    _cm_vis_put(som);
   }
+  return som;
+}
+
+/* _cm_sole_found(): [som], a cell with canonical children, and [can],
+**   the result of looking it up. TRANSFER, result PRODUCED.
+*/
+static inline u3_noun
+_cm_sole_found(u3_noun som, u3_weak can, c3_t* add_t)
+{
+  if ( u3_none == can ) {
+    return _cm_sole_miss(som, add_t);
+  }
+  if ( can != som ) {
+    u3k(can);
+    u3z(som);
+  }
+  return can;
 }
 
 typedef struct {
-  c3_t    new_t;
+  c3_t    new_t;  //  [som] is the canonical head
+  c3_t    add_t;  //    which the walk added to the set
   u3_noun cel;    //  original cell (retained)
   u3_noun som;    //  tail to visit, then canonical head
 } _cm_sole_frame;
 
+/* _cm_sole_next(): canonicalize [som], pushing cells whose children
+**   aren't canonical yet. each cell is looked up at most once: on the way
+**   down if its children are already canonical, else on the way up. on
+**   the home road, [*add_t] if the result is a member added here: no
+**   existing member can have it as a child, so its parent needs no
+**   lookup. TRANSFER, result PRODUCED.
+*/
 static u3_noun
-_cm_sole_next(u3a_pile* pil_u, u3_noun som)
+_cm_sole_next(u3a_pile* pil_u, u3_noun som, c3_t* add_t)
 {
+  c3_t inn_t = ( &(u3H->rod_u) != u3R );
+
+  *add_t = 0;
+
   while (1) {
-    if ( c3y == u3a_is_cat(som) ) return som;
+    if ( _cm_canonical(som) ) return som;
+
+    //  an atom: put it on the home road, else find it
+    //
+    if ( c3y == u3a_is_atom(som) ) {
+      if ( !inn_t ) {
+        u3_noun can = _cm_sole_put(som);
+
+        if ( can != som ) {
+          u3k(can);
+          u3z(som);
+        }
+        else {
+          *add_t = 1;
+        }
+        return can;
+      }
+      else {
+        u3_weak can = _cm_sole_get(som);
+
+        u3e_Meter.eih_d[0]++;
+        if ( u3_none == can ) return som;
+        u3e_Meter.eih_d[1]++;
+        u3k(can);
+        u3z(som);
+        return can;
+      }
+    }
 
     //  a junior cell already canonicalized
     //
-    if (  (&(u3H->rod_u) != u3R) && (c3y == u3a_is_cell(som))
-       && (c3n == u3a_is_senior(u3R, som)) && _cm_vis_has(som) )
-    {
+    if ( inn_t && (c3n == u3a_is_senior(u3R, som)) && _cm_vis_has(som) ) {
       u3e_Meter.eiv_d++;
       return som;
     }
 
-    {
-      u3_weak got = _cm_sole_find(som);
-      if ( u3_none != got ) {
-        u3z(som);
-        return got;
-      }
-    }
+    //  a cell whose children are canonical: its one lookup
+    //
+    if ( _cm_canonical(u3h(som)) && _cm_canonical(u3t(som)) ) {
+      u3_weak can = _cm_sole_look(som);
 
-    if ( c3y == u3a_is_atom(som) ) {
-      return _cm_sole_done(som);
+      if ( (u3_none == can) && inn_t && (c3y == u3a_is_senior(u3R, som)) ) {
+        u3e_Meter.eis_d++;
+        return som;
+      }
+      return _cm_sole_found(som, can, add_t);
     }
 
     //  a senior cell that isn't a member is left as it is: the exit to
     //  home canonicalizes it in place, if a promoted entry holds it
     //
-    if ( c3y == u3a_is_senior(u3R, som) ) {
+    if ( inn_t && (c3y == u3a_is_senior(u3R, som)) ) {
       u3e_Meter.eis_d++;
       return som;
     }
 
-    if ( &(u3H->rod_u) != u3R ) u3e_Meter.eij_d++;
+    if ( inn_t ) u3e_Meter.eij_d++;
     _cm_sole_frame* fam_u = u3a_push(pil_u);
     fam_u->new_t = false;
+    fam_u->add_t = 0;
     fam_u->cel = som;
     fam_u->som = u3k(u3t(som));
     som = u3k(u3h(som));
@@ -4442,7 +4479,8 @@ u3m_sole_try(u3_noun som)
   u3e_Meter.eic_d[( &(u3H->rod_u) != u3R ) ? 1 : 0]++;
   _cm_sole_u.pat_y = 3;
   u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
-  u3_noun new = _cm_sole_next(&pil_u, som);
+  c3_t    add_t;
+  u3_noun new = _cm_sole_next(&pil_u, som, &add_t);
   if ( c3n == u3a_pile_done(&pil_u) ) {
     fam_u = u3a_peek(&pil_u);
     do {
@@ -4450,7 +4488,8 @@ u3m_sole_try(u3_noun som)
         som = fam_u->som;
         fam_u->som = new;
         fam_u->new_t = true;
-        new = _cm_sole_next(&pil_u, som);
+        fam_u->add_t = add_t;
+        new = _cm_sole_next(&pil_u, som, &add_t);
         fam_u = u3a_peek(&pil_u);
       }
       else {
@@ -4467,24 +4506,20 @@ u3m_sole_try(u3_noun som)
         new = cel;
 
         //  with canonical children, an equal member of the home-road
-        //  set (if any) can now be found
+        //  set (if any) can now be found, unless a child was just added.
+        //  on an inner road, a child may be a senior cell left as it is,
+        //  and then nothing can be
         //
-        {
-          u3_weak can = _cm_sole_get(new);
-          c3_t    inn_t = ( &(u3H->rod_u) != u3R );
-
-          if ( inn_t ) {
-            u3e_Meter.eih_d[0]++;
-            if ( (u3_none != can) && (can != new) ) u3e_Meter.eih_d[1]++;
-          }
-          if ( (u3_none != can) && (can != new) ) {
-            u3k(can);
-            u3z(new);
-            new = can;
-          }
-          else {
-            new = _cm_sole_done(new);
-          }
+        if ( fam_u->add_t || add_t ) {
+          u3m_sole_add(new);
+          add_t = 1;
+        }
+        else if ( _cm_canonical(cel_u->hed) && _cm_canonical(cel_u->tel) ) {
+          new = _cm_sole_found(new, _cm_sole_look(new), &add_t);
+        }
+        else {
+          u3_assert( &(u3H->rod_u) != u3R );
+          _cm_vis_put(new);
         }
 
         fam_u = u3a_pop(&pil_u);
