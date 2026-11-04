@@ -529,9 +529,9 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                      u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
                      buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
 
-      //  the compact table (experiment): lookup steps, members compared,
-      //  resizes between events and at the limit, time resizing (us),
-      //  the largest distance, and whether it's in use
+      //  the set's tables: lookup steps, members compared, resizes
+      //  between events and at the limit, time resizing (us), the
+      //  largest distance, and 1 (0 in older logs: verstable)
       //
       for ( c3_w i_w = 0; i_w < 7; i_w++ ) {
         fprintf(fil_u, " %" PRIu64, tab_d[i_w]);

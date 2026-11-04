@@ -376,8 +376,8 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
           }
         }
 
-      /* u3m_sole_tend(): between events, resize the compact table if its
-      **                  load has left its range (experiment).
+      /* u3m_sole_tend(): between events, resize the home-road set's
+      **                  tables if their load has left its range.
       */
         void
         u3m_sole_tend(void);

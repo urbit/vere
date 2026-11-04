@@ -1,6 +1,7 @@
 /// @file
 ///
-/// Off-loom hash-consing tables, shared by u3m_sole_home() and melt.
+/// Off-loom hash-consing tables for melt, and the comparisons the
+/// home-road set's compact table (soletab.h) shares.
 ///
 /// Members are canonical nouns, and the children of a member cell are
 /// members, so cells compare by mug and child pointers alone: a cell is

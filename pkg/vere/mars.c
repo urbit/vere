@@ -781,7 +781,7 @@ _mars_post(u3_mars* mar_u)
   //
   u3m_crib_report();
 
-  //  the compact hashcons table, if in use (experiment)
+  //  resize the home-road hashcons set's tables, if need be
   //
   u3m_sole_tend();
 

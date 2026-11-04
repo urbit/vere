@@ -578,7 +578,7 @@ def main():
             sp = sorted(pgs)
             print(f"  pages an on-loom cell table would write per interval "
                   f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
-        #  the compact table (experiment), when in use
+        #  the compact table (not in logs from verstable builds)
         tab = [i["D"] for i in dis if len(i["D"]) >= 18 and i["D"][17]]
         if tab:
             T = [sum(d[k] for d in tab) for k in range(11, 16)]

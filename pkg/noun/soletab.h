@@ -1,11 +1,11 @@
 /// @file
 ///
-/// A compact open-addressing table for the home-road hashcons set
-/// (prototype, beside verstable; see U3_SOLE_TAB in manage.c).
+/// A compact open-addressing table for the home-road hashcons set.
 ///
-/// Five bytes a bucket at both widths: a member's slot index (its loom
-/// offset in units of u3a_minimum words, plus 1; 0 is empty) and its
-/// probe distance, packed 12 buckets to a 64-byte line. Linear probing
+/// A bucket holds a member's slot index (its loom offset in units of
+/// u3a_minimum words, plus 1; 0 is empty) and its probe distance: five
+/// bytes, 12 buckets to a 64-byte line, at 32 bits; six, 10 to a line,
+/// at 64. Linear probing
 /// in Robin Hood order, with backward-shift deletion: no tombstones,
 /// and neither a lookup nor an erase reads another member's box except
 /// to compare one with the same home bucket. The hash is the mug, so a
@@ -76,14 +76,14 @@ static struct {
   c3_d dmx_d;               //  largest distance placed
 } _cs_met;
 
-/* load factors, in percent: between events, grow above [gro_w] and
-** shrink below [shr_w] (0: a third of [gro_w]); within an event, grow at
-** the limit [lim_w]; size to [tar_w] on a resize.
+/* load factors, in percent, from replays of one ship: between events,
+** grow above _CS_GRO and shrink below _CS_SHR; within an event, grow at
+** the limit _CS_LIM; size to _CS_TAR on a resize.
 */
-static c3_w _cs_gro_w = 90;
-static c3_w _cs_lim_w = 95;
-static c3_w _cs_tar_w = 85;
-static c3_w _cs_shr_w = 75;
+#define _CS_GRO  90
+#define _CS_LIM  95
+#define _CS_TAR  85
+#define _CS_SHR  75
 
 /* bulk filling (a rebuild): grow by twice at 70%, keeping inserts at low
 ** load, and settle to the target once done (_cs_tend()).
@@ -351,8 +351,8 @@ _cs_room(_cs_tab* tab_u)
       _cs_resize_timed(tab_u, _cs_lines_for(tab_u->len_d * 2 + 1, 70), 1);
     }
   }
-  else if ( (tab_u->len_d + 1) * 100 > tab_u->cap_d * _cs_lim_w ) {
-    _cs_resize_timed(tab_u, _cs_lines_for((tab_u->len_d * 3) / 2 + 1, _cs_tar_w), 1);
+  else if ( (tab_u->len_d + 1) * 100 > tab_u->cap_d * _CS_LIM ) {
+    _cs_resize_timed(tab_u, _cs_lines_for((tab_u->len_d * 3) / 2 + 1, _CS_TAR), 1);
   }
 }
 
@@ -445,19 +445,17 @@ _cs_erase(_cs_tab* tab_u, u3_noun som)
   return pos_d;
 }
 
-/* _cs_tend(): between events, grow above [_cs_gro_w], or shrink below
-**   [_cs_shr_w].
+/* _cs_tend(): between events, grow above _CS_GRO, or shrink below
+**   _CS_SHR.
 */
 static void
 _cs_tend(_cs_tab* tab_u)
 {
   c3_d pct_d = ( tab_u->len_d * 100 ) / tab_u->cap_d;
-  c3_w shr_w = _cs_shr_w ? _cs_shr_w : (_cs_gro_w / 3);
-
-  if (  (pct_d >= _cs_gro_w)
-     || ((pct_d < shr_w) && (tab_u->lin_d > _CS_LIN_MIN)) )
+  if (  (pct_d >= _CS_GRO)
+     || ((pct_d < _CS_SHR) && (tab_u->lin_d > _CS_LIN_MIN)) )
   {
-    c3_d lin_d = _cs_lines_for(tab_u->len_d, _cs_tar_w);
+    c3_d lin_d = _cs_lines_for(tab_u->len_d, _CS_TAR);
 
     if ( lin_d != tab_u->lin_d ) {
       _cs_resize_timed(tab_u, lin_d, 0);
@@ -470,7 +468,7 @@ _cs_tend(_cs_tab* tab_u)
 static void
 _cs_reserve(_cs_tab* tab_u, c3_d len_d)
 {
-  c3_d lin_d = _cs_lines_for(len_d, _cs_tar_w);
+  c3_d lin_d = _cs_lines_for(len_d, _CS_TAR);
 
   if ( lin_d > tab_u->lin_d ) {
     _cs_resize(tab_u, lin_d);
