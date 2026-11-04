@@ -1491,8 +1491,8 @@ u3a_use(u3_noun som)
 //
 #define _CA_LO_MIN  (1U << 14)   //  home entries, to start
 #define _CA_LO_MAX  (1U << 22)   //  home entries, at most
-#define _CA_LO_CHU  128          //  inner chunk, words (a power of two)
-#define _CA_LO_OPEN (1U << 12)   //  free words a new chunk leaves, at least
+#define _CA_LO_CHU  ((c3_w)1 << u3a_page)   //  inner chunk, words: a page
+#define _CA_LO_OPEN ((c3_w)8 << u3a_page)   //  free words a new chunk leaves
 
 typedef struct {
   u3_post rod_p;                 //  the road the value is on
