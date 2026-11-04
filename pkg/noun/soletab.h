@@ -57,10 +57,10 @@ static struct {
 ** shrink below [shr_w] (0: a third of [gro_w]); within an event, grow at
 ** the limit [lim_w]; size to [tar_w] on a resize.
 */
-static c3_w _cs_gro_w = 80;
-static c3_w _cs_lim_w = 92;
-static c3_w _cs_tar_w = 65;
-static c3_w _cs_shr_w = 0;
+static c3_w _cs_gro_w = 90;
+static c3_w _cs_lim_w = 95;
+static c3_w _cs_tar_w = 85;
+static c3_w _cs_shr_w = 75;
 
 /* bulk filling (a rebuild): grow by twice at 70%, keeping inserts at low
 ** load, and settle to the target once done (_cs_tend()).
