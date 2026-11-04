@@ -23,15 +23,38 @@
 #include "allocate.h"
 #include "retrieve.h"
 
-#define _CS_PER      12     //  buckets a line
 #define _CS_DIS_MAX  254    //  largest distance a bucket holds
 #define _CS_LIN_MIN  64     //  fewest lines
 
+/* a key is a member's slot index (its offset in u3a_minimum units) + 1,
+** or 0 for an empty bucket: 4 bytes at 32 bits, which covers the whole
+** loom, and 5 at 64 (a 16 TiB loom), split into a low word and a high
+** byte. each bucket also holds its distance from its home bucket.
+*/
+#ifndef VERE64
+#  define _CS_PER    12     //  buckets a line
+#  define _CS_KEY_MAX  0xffffffffULL
+
+typedef c3_h _cs_key_t;
+
 typedef struct {
-  c3_h key_h[_CS_PER];      //  slot index + 1, or 0
+  c3_h key_h[_CS_PER];      //  key
   c3_y dis_y[_CS_PER];      //  distance from the home bucket
   c3_y pad_y[4];
 } _cs_line;
+#else
+#  define _CS_PER    10     //  buckets a line
+#  define _CS_KEY_MAX  0xffffffffffULL
+
+typedef c3_d _cs_key_t;
+
+typedef struct {
+  c3_h key_h[_CS_PER];      //  key, low 32 bits
+  c3_y kei_y[_CS_PER];      //  key, high 8 bits
+  c3_y dis_y[_CS_PER];      //  distance from the home bucket
+  c3_y pad_y[4];
+} _cs_line;
+#endif
 
 _Static_assert(64 == sizeof(_cs_line), "soletab: line size");
 
@@ -67,10 +90,38 @@ static c3_w _cs_shr_w = 75;
 */
 static c3_t _cs_bul_t;
 
-static inline c3_h*
+/* _cs_line_key(): the key in bucket [j_w] of line [lin_u].
+*/
+static inline _cs_key_t
+_cs_line_key(_cs_line* lin_u, c3_w j_w)
+{
+#ifndef VERE64
+  return lin_u->key_h[j_w];
+#else
+  return lin_u->key_h[j_w] | ((c3_d)lin_u->kei_y[j_w] << 32);
+#endif
+}
+
+/* _cs_key(): the key in bucket [i_d].
+*/
+static inline _cs_key_t
 _cs_key(_cs_tab* tab_u, c3_d i_d)
 {
-  return &tab_u->lin_u[i_d / _CS_PER].key_h[i_d % _CS_PER];
+  return _cs_line_key(&tab_u->lin_u[i_d / _CS_PER], i_d % _CS_PER);
+}
+
+/* _cs_key_put(): put [key] in bucket [i_d].
+*/
+static inline void
+_cs_key_put(_cs_tab* tab_u, c3_d i_d, _cs_key_t key)
+{
+  _cs_line* lin_u = &tab_u->lin_u[i_d / _CS_PER];
+  c3_w      j_w   = i_d % _CS_PER;
+
+  lin_u->key_h[j_w] = (c3_h)key;
+#ifdef VERE64
+  lin_u->kei_y[j_w] = (c3_y)(key >> 32);
+#endif
 }
 
 static inline c3_y*
@@ -87,18 +138,18 @@ _cs_next(_cs_tab* tab_u, c3_d i_d)
 
 /* _cs_slot(): [som]'s key.
 */
-static inline c3_h
+static inline _cs_key_t
 _cs_slot(u3_noun som)
 {
-  return (c3_h)(u3a_to_off(som) / u3a_minimum) + 1;
+  return (_cs_key_t)(u3a_to_off(som) / u3a_minimum) + 1;
 }
 
-/* _cs_noun(): the member whose key is [key_h].
+/* _cs_noun(): the member whose key is [key].
 */
 static inline u3_noun
-_cs_noun(_cs_tab* tab_u, c3_h key_h)
+_cs_noun(_cs_tab* tab_u, _cs_key_t key)
 {
-  c3_w off_w = (c3_w)(key_h - 1) * u3a_minimum;
+  c3_w off_w = (c3_w)(key - 1) * u3a_minimum;
   return ( tab_u->cel_t ) ? u3a_to_pom(off_w) : u3a_to_pug(off_w);
 }
 
@@ -116,7 +167,7 @@ _cs_home(_cs_tab* tab_u, c3_h mug_h)
 static inline c3_t
 _cs_fits(c3_d wor_d)
 {
-  return (wor_d / u3a_minimum) < 0xffffffffULL;
+  return (wor_d / u3a_minimum) < _CS_KEY_MAX;
 }
 
 /* _cs_alloc(): an empty table of [lin_d] lines.
@@ -147,34 +198,33 @@ _cs_lines_for(c3_d len_d, c3_w pct_w)
   return (cap_d + _CS_PER - 1) / _CS_PER;
 }
 
-/* _cs_place_from(): put [key_h], known absent, Robin Hood, from bucket
+/* _cs_place_from(): put [key], known absent, Robin Hood, from bucket
 **   [i_d] at distance [dis_d] from its home; produces its bucket.
 */
 static c3_d
-_cs_place_from(_cs_tab* tab_u, c3_h key_h, c3_d i_d, c3_d dis_d)
+_cs_place_from(_cs_tab* tab_u, _cs_key_t key, c3_d i_d, c3_d dis_d)
 {
   c3_d pos_d = ~0ULL;
 
   while ( 1 ) {
-    c3_h* key_p = _cs_key(tab_u, i_d);
-    c3_y* dis_p = _cs_dis(tab_u, i_d);
+    _cs_key_t kei = _cs_key(tab_u, i_d);
+    c3_y*     dis_p = _cs_dis(tab_u, i_d);
 
-    if ( !*key_p ) {
-      *key_p = key_h;
+    if ( !kei ) {
+      _cs_key_put(tab_u, i_d, key);
       *dis_p = (c3_y)dis_d;
       if ( dis_d > _cs_met.dmx_d ) _cs_met.dmx_d = dis_d;
       tab_u->len_d++;
       return ( ~0ULL == pos_d ) ? i_d : pos_d;
     }
     if ( *dis_p < dis_d ) {
-      c3_h kep_h = *key_p;
       c3_y kis_y = *dis_p;
 
-      *key_p = key_h;
+      _cs_key_put(tab_u, i_d, key);
       *dis_p = (c3_y)dis_d;
       if ( dis_d > _cs_met.dmx_d ) _cs_met.dmx_d = dis_d;
       if ( ~0ULL == pos_d ) pos_d = i_d;
-      key_h = kep_h;
+      key   = kei;
       dis_d = kis_y;
     }
     i_d = _cs_next(tab_u, i_d);
@@ -186,12 +236,12 @@ _cs_place_from(_cs_tab* tab_u, c3_h key_h, c3_d i_d, c3_d dis_d)
   }
 }
 
-/* _cs_place(): put [key_h] of mug [mug_h], known absent.
+/* _cs_place(): put [key] of mug [mug_h], known absent.
 */
 static inline c3_d
-_cs_place(_cs_tab* tab_u, c3_h key_h, c3_h mug_h)
+_cs_place(_cs_tab* tab_u, _cs_key_t key, c3_h mug_h)
 {
-  return _cs_place_from(tab_u, key_h, _cs_home(tab_u, mug_h), 0);
+  return _cs_place_from(tab_u, key, _cs_home(tab_u, mug_h), 0);
 }
 
 /* _cs_resize(): rebuild into [lin_d] lines, reading each member's mug.
@@ -211,18 +261,19 @@ _cs_resize(_cs_tab* tab_u, c3_d lin_d)
     if ( l_d + 4 < old_u.lin_d ) {
       _cs_line* pre_u = &old_u.lin_u[l_d + 4];
       for ( c3_w j_w = 0; j_w < _CS_PER; j_w++ ) {
-        if ( pre_u->key_h[j_w] ) {
-          __builtin_prefetch(u3a_to_ptr(_cs_noun(&old_u, pre_u->key_h[j_w])));
+        _cs_key_t key = _cs_line_key(pre_u, j_w);
+        if ( key ) {
+          __builtin_prefetch(u3a_to_ptr(_cs_noun(&old_u, key)));
         }
       }
     }
 
     for ( c3_w j_w = 0; j_w < _CS_PER; j_w++ ) {
-      c3_h key_h = lin_u->key_h[j_w];
+      _cs_key_t key = _cs_line_key(lin_u, j_w);
 
-      if ( key_h ) {
-        u3_noun som = _cs_noun(&old_u, key_h);
-        _cs_place(tab_u, key_h, u3r_mug(som));
+      if ( key ) {
+        u3_noun som = _cs_noun(&old_u, key);
+        _cs_place(tab_u, key, u3r_mug(som));
       }
     }
   }
@@ -254,14 +305,15 @@ _cs_find(_cs_tab* tab_u, c3_h mug_h, c3_t (*pre_f)(u3_noun, void*), void* ptr_v)
   c3_d dis_d = 0;
 
   while ( 1 ) {
-    c3_h key_h = *_cs_key(tab_u, i_d);
     c3_y dis_y = *_cs_dis(tab_u, i_d);
+    _cs_key_t key;
 
     _cs_met.ste_d++;
 
-    //  past where it would be, in Robin Hood order
+    //  past where it would be, in Robin Hood order (an empty bucket has
+    //  distance 0, so only distance 0 needs the key)
     //
-    if ( !key_h || (dis_y < dis_d) ) {
+    if ( (dis_y < dis_d) || !(key = _cs_key(tab_u, i_d)) ) {
       return ~0ULL;
     }
 
@@ -269,7 +321,7 @@ _cs_find(_cs_tab* tab_u, c3_h mug_h, c3_t (*pre_f)(u3_noun, void*), void* ptr_v)
     //
     if ( dis_y == dis_d ) {
       _cs_met.der_d++;
-      if ( pre_f(_cs_noun(tab_u, key_h), ptr_v) ) {
+      if ( pre_f(_cs_noun(tab_u, key), ptr_v) ) {
         return i_d;
       }
     }
@@ -285,7 +337,7 @@ static inline u3_weak
 _cs_get(_cs_tab* tab_u, c3_h mug_h, c3_t (*pre_f)(u3_noun, void*), void* ptr_v)
 {
   c3_d i_d = _cs_find(tab_u, mug_h, pre_f, ptr_v);
-  return ( ~0ULL == i_d ) ? u3_none : _cs_noun(tab_u, *_cs_key(tab_u, i_d));
+  return ( ~0ULL == i_d ) ? u3_none : _cs_noun(tab_u, _cs_key(tab_u, i_d));
 }
 
 /* _cs_room(): before an insert, at the limit, grow: by about twice, to
@@ -328,17 +380,17 @@ _cs_put(_cs_tab* tab_u, u3_noun som, c3_h mug_h,
   *pos_d = ~0ULL;
 
   while ( 1 ) {
-    c3_h key_h = *_cs_key(tab_u, i_d);
     c3_y dis_y = *_cs_dis(tab_u, i_d);
+    _cs_key_t key;
 
     _cs_met.ste_d++;
 
-    if ( !key_h || (dis_y < dis_d) ) {
+    if ( (dis_y < dis_d) || !(key = _cs_key(tab_u, i_d)) ) {
       *pos_d = _cs_place_from(tab_u, _cs_slot(som), i_d, dis_d);
       return som;
     }
     if ( dis_y == dis_d ) {
-      u3_noun can = _cs_noun(tab_u, key_h);
+      u3_noun can = _cs_noun(tab_u, key);
 
       _cs_met.der_d++;
       if ( pre_f(can, &som) ) {
@@ -356,34 +408,35 @@ _cs_put(_cs_tab* tab_u, u3_noun som, c3_h mug_h,
 static c3_d
 _cs_erase(_cs_tab* tab_u, u3_noun som)
 {
-  c3_h key_h = _cs_slot(som);
-  c3_d i_d   = _cs_home(tab_u, u3r_mug(som));
-  c3_d dis_d = 0;
-  c3_d pos_d;
+  _cs_key_t key   = _cs_slot(som);
+  c3_d      i_d   = _cs_home(tab_u, u3r_mug(som));
+  c3_d      dis_d = 0;
+  c3_d      pos_d;
 
   while ( 1 ) {
-    c3_h kei_h = *_cs_key(tab_u, i_d);
-    c3_y dis_y = *_cs_dis(tab_u, i_d);
+    _cs_key_t kei   = _cs_key(tab_u, i_d);
+    c3_y      dis_y = *_cs_dis(tab_u, i_d);
 
-    if ( !kei_h || (dis_y < dis_d) ) return ~0ULL;
-    if ( kei_h == key_h ) break;
+    if ( !kei || (dis_y < dis_d) ) return ~0ULL;
+    if ( kei == key ) break;
     i_d = _cs_next(tab_u, i_d);
     dis_d++;
   }
 
   pos_d = i_d;
 
+  //  an empty bucket has distance 0, so a distance of 0 ends the run
+  //
   while ( 1 ) {
     c3_d j_d   = _cs_next(tab_u, i_d);
-    c3_h kej_h = *_cs_key(tab_u, j_d);
     c3_y dij_y = *_cs_dis(tab_u, j_d);
 
-    if ( !kej_h || !dij_y ) {
-      *_cs_key(tab_u, i_d) = 0;
+    if ( !dij_y ) {
+      _cs_key_put(tab_u, i_d, 0);
       *_cs_dis(tab_u, i_d) = 0;
       break;
     }
-    *_cs_key(tab_u, i_d) = kej_h;
+    _cs_key_put(tab_u, i_d, _cs_key(tab_u, j_d));
     *_cs_dis(tab_u, i_d) = dij_y - 1;
     i_d = j_d;
   }
@@ -433,8 +486,9 @@ _cs_clear(_cs_tab* tab_u, void (*fun_f)(u3_noun))
     _cs_line* lin_u = &tab_u->lin_u[l_d];
 
     for ( c3_w j_w = 0; j_w < _CS_PER; j_w++ ) {
-      if ( lin_u->key_h[j_w] ) {
-        fun_f(_cs_noun(tab_u, lin_u->key_h[j_w]));
+      _cs_key_t key = _cs_line_key(lin_u, j_w);
+      if ( key ) {
+        fun_f(_cs_noun(tab_u, key));
       }
     }
   }

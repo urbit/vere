@@ -1202,10 +1202,10 @@ _ts_check(_cs_tab* tab_u)
   c3_d len_d = 0;
 
   for ( c3_d i_d = 0; i_d < tab_u->cap_d; i_d++ ) {
-    c3_h key_h = *_cs_key(tab_u, i_d);
+    _cs_key_t key = _cs_key(tab_u, i_d);
 
-    if ( key_h ) {
-      u3_noun som   = _cs_noun(tab_u, key_h);
+    if ( key ) {
+      u3_noun som   = _cs_noun(tab_u, key);
       c3_d    hom_d = _cs_home(tab_u, u3r_mug(som));
       c3_d    dis_d = ( i_d >= hom_d ) ? i_d - hom_d : i_d + tab_u->cap_d - hom_d;
 
@@ -1254,6 +1254,26 @@ _test_soletab(void)
       ret_i = 0;
     }
     u3z(c); u3z(a);
+  }
+
+  //  a bucket holds the widest key, beside its neighbors
+  //
+  {
+    _cs_key_t big = (_cs_key_t)_CS_KEY_MAX;
+    _cs_tab   tes_u;
+
+    _cs_init(&tes_u, 1);
+    _cs_key_put(&tes_u, _CS_PER + 1, big);
+    _cs_key_put(&tes_u, _CS_PER + 2, 5);
+    if (  (big != _cs_key(&tes_u, _CS_PER + 1))
+       || (5 != _cs_key(&tes_u, _CS_PER + 2))
+       || (0 != _cs_key(&tes_u, _CS_PER))
+       || (0 != _cs_key(&tes_u, _CS_PER + 3)) )
+    {
+      fprintf(stderr, "test: soletab: wide keys don't round-trip\r\n");
+      ret_i = 0;
+    }
+    c3_free(tes_u.lin_u);
   }
 
   for ( i_w = 0; i_w < num_w; i_w++ ) {
