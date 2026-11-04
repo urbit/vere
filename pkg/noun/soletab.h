@@ -114,19 +114,22 @@ _cs_next(_cs_tab* tab_u, c3_d i_d)
   return ( ++i_d == tab_u->cap_d ) ? 0 : i_d;
 }
 
-/* _cs_slot(): [som]'s key. a home noun past the keys' reach (128 GiB of
-**   home heap at 64 bits) can't be a member: no ship is near that size,
-**   and the startup warns long before (see u3m_sole_ream()).
+/* _cs_reaches(): [som] has a key. a home noun past the keys' reach (128
+**   GiB of home heap at 64 bits) stays out of the set, unshared: no ship
+**   is near that size, and the startup warns (see u3m_sole_ream()).
+*/
+static inline c3_t
+_cs_reaches(u3_noun som)
+{
+  return (((c3_d)u3a_to_off(som) / _CS_UNIT) + 1) <= _CS_KEY_MAX;
+}
+
+/* _cs_slot(): [som]'s key; see _cs_reaches().
 */
 static inline _cs_key_t
 _cs_slot(u3_noun som)
 {
-  c3_d key_d = ((c3_d)u3a_to_off(som) / _CS_UNIT) + 1;
-
-  if ( c3_unlikely(key_d > _CS_KEY_MAX) ) {
-    u3_assert(!"hashcons: a home noun past the set's keys");
-  }
-  return (_cs_key_t)key_d;
+  return (_cs_key_t)(((c3_d)u3a_to_off(som) / _CS_UNIT) + 1);
 }
 
 /* _cs_noun(): the member whose key is [key].

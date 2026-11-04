@@ -3417,7 +3417,7 @@ static struct {
 static inline c3_w
 _cm_sole_idx(u3_noun som)
 {
-  return u3a_to_off(som) >> u3a_min_log;
+  return u3a_to_off(som) >> u3a_sole_log;
 }
 
 static inline void
@@ -3547,7 +3547,7 @@ static void
 _cm_sole_init(void)
 {
   if ( !_cm_sole_u.ini_t ) {
-    c3_w bit_w = (c3_w)(u3C.wor_i >> u3a_min_log);
+    c3_w bit_w = (c3_w)(u3C.wor_i >> u3a_sole_log);
 
     _cm_sole_u.len_w = (bit_w + u3a_word_bits - 1) / u3a_word_bits;
     u3a_Sole_w      = c3_calloc(sizeof(c3_w) * _cm_sole_u.len_w);
@@ -3620,6 +3620,15 @@ _cm_sole_put(u3_noun som)
   u3_noun can;
 
   _cm_sole_init();
+
+  //  past the keys' reach, a noun can't be a member: find an equal one,
+  //  or leave it as it is
+  //
+  if ( c3_unlikely(!_cs_reaches(som)) ) {
+    u3_weak pro = _cm_sole_get(som);
+    return ( u3_none == pro ) ? som : pro;
+  }
+
   u3m_hold();
 
   {
@@ -3701,10 +3710,13 @@ u3m_sole_find_atom(u3_atom jun)
 
 /* u3m_sole_add(): see manage.h.
 */
-void
+c3_t
 u3m_sole_add(u3_noun new)
 {
   _cm_sole_init();
+  if ( c3_unlikely(!_cs_reaches(new)) ) {
+    return 0;
+  }
   u3m_hold();
 
   if ( c3y == u3a_is_atom(new) ) {
@@ -3718,6 +3730,7 @@ u3m_sole_add(u3_noun new)
   _cm_sole_set(new);
   _cm_sole_meas_cls(new);
   u3e_Meter.hca_d++;
+  return 1;
 }
 
 /* u3m_sole_lose(): remove [som], about to be freed, from the home-road
@@ -4061,8 +4074,9 @@ u3m_sole_ream(void)
   _cm_sole_clear();
 
   //  the set's keys cover 128 GiB of home heap at 64 bits (all of a
-  //  32-bit loom): warn, once, when the heap's top is three quarters
-  //  of the way there. the home road is north, so its heap is low
+  //  32-bit loom), and nouns past that stay out of the set: warn, once,
+  //  when the heap's top is three quarters of the way there. the home
+  //  road is north, so its heap is low
   //
   {
     static c3_t war_t;
@@ -4071,8 +4085,8 @@ u3m_sole_ream(void)
     if ( !war_t && ((top_d * 4) >= (_cs_reach() * 3)) ) {
       war_t = 1;
       u3l_log("hashcons: warning: the home heap reaches %" PRIu64 " MiB, "
-              "near the %" PRIu64 " MiB its set can hold; past that, the "
-              "runtime stops",
+              "near the %" PRIu64 " MiB its set can hold; nouns past that "
+              "won't be shared",
               (top_d * sizeof(c3_w)) >> 20, (_cs_reach() * sizeof(c3_w)) >> 20);
     }
   }
@@ -4449,8 +4463,7 @@ static u3_noun
 _cm_sole_miss(u3_noun som, c3_t* add_t)
 {
   if ( &(u3H->rod_u) == u3R ) {
-    u3m_sole_add(som);
-    *add_t = 1;
+    *add_t = u3m_sole_add(som);
   }
   else {
     _cm_vis_put(som);
@@ -4509,7 +4522,7 @@ _cm_sole_next(u3a_pile* pil_u, u3_noun som, c3_t* add_t)
           u3z(som);
         }
         else {
-          *add_t = 1;
+          *add_t = u3a_sole_has(som);
         }
         return can;
       }
@@ -4609,16 +4622,18 @@ u3m_sole_try(u3_noun som)
         //  on an inner road, a child may be a senior cell left as it is,
         //  and then nothing can be
         //
-        if ( fam_u->add_t || add_t ) {
-          u3m_sole_add(new);
-          add_t = 1;
+        if ( !_cm_canonical(cel_u->hed) || !_cm_canonical(cel_u->tel) ) {
+          //  a child isn't a member: on an inner road, a senior cell left
+          //  as it is; at home, a noun past the keys' reach
+          //
+          add_t = 0;
+          if ( &(u3H->rod_u) != u3R ) _cm_vis_put(new);
         }
-        else if ( _cm_canonical(cel_u->hed) && _cm_canonical(cel_u->tel) ) {
-          new = _cm_sole_found(new, _cm_sole_look(new), &add_t);
+        else if ( fam_u->add_t || add_t ) {
+          add_t = u3m_sole_add(new);
         }
         else {
-          u3_assert( &(u3H->rod_u) != u3R );
-          _cm_vis_put(new);
+          new = _cm_sole_found(new, _cm_sole_look(new), &add_t);
         }
 
         fam_u = u3a_pop(&pil_u);

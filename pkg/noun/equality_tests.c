@@ -1256,6 +1256,21 @@ _test_soletab(void)
     u3z(c); u3z(a);
   }
 
+#ifdef VERE64
+  //  a home noun past the keys' reach (128 GiB of home heap) has no key,
+  //  and isn't added
+  //
+  {
+    u3_noun far = u3a_to_pom((c3_w)(_CS_KEY_MAX * _CS_UNIT));
+    u3_noun ner = u3a_to_pom((c3_w)((_CS_KEY_MAX - 1) * _CS_UNIT));
+
+    if ( _cs_reaches(far) || !_cs_reaches(ner) || u3m_sole_add(far) ) {
+      fprintf(stderr, "test: soletab: reach\r\n");
+      ret_i = 0;
+    }
+  }
+#endif
+
   //  a bucket holds the widest key, beside its neighbors
   //
   {

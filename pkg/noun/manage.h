@@ -315,9 +315,11 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_weak
         u3m_sole_find_atom(u3_atom jun);
 
-      /* u3m_sole_add(): make [new], equal to no member, a member.
+      /* u3m_sole_add(): make [new], equal to no member, a member; 0 if
+      **                 it's past the set's reach (128 GiB of home heap
+      **                 at 64 bits), and stays out.
       */
-        void
+        c3_t
         u3m_sole_add(u3_noun new);
 
       /* u3m_sole_take_old(): an older home noun met by the home-only take:

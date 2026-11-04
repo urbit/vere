@@ -633,13 +633,23 @@ typedef struct {
   }
 
   /* u3a_Sole_w: home-road hashcons membership (off-loom), one bit per
-  **             u3a_minimum words of loom, or 0. see u3m_sole_home().
+  **             cell-sized step of loom (u3a_sole_log), or 0. see
+  **             u3m_sole_home().
   */
     extern c3_w* u3a_Sole_w;
 
   /* u3a_sole_has(): indirect [som] is a member of the home-road
   **                 hashcons set.
   */
+    /* u3a_sole_log: log2 of the bitmap's step, in words: a cell's size,
+    **               the smallest noun box at either width (boxes are
+    **               powers of two, naturally aligned).
+    */
+#     define u3a_sole_log  2
+
+STATIC_ASSERT( (((c3_w)1) << u3a_sole_log) == c3_wiseof(u3a_cell),
+               "sole bitmap step is a cell" );
+
     static inline c3_t
     u3a_sole_has(u3_noun som)
     {
@@ -647,7 +657,7 @@ typedef struct {
         return 0;
       }
       else {
-        c3_w idx_w = u3a_to_off(som) >> u3a_min_log;
+        c3_w idx_w = u3a_to_off(som) >> u3a_sole_log;
         return 1 & (u3a_Sole_w[idx_w / u3a_word_bits]
                     >> (idx_w % u3a_word_bits));
       }
