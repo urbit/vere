@@ -218,10 +218,11 @@ u3t_samp(void)
     return;
   }
 
-  //  sampling changes the home road, so not while it's being read
-  //  (the hashcons set is off the loom, and not reentrant)
+  //  sampling changes the home road, so not while signals are held
+  //  (among other things, the hashcons set is off the loom, and not
+  //  reentrant)
   //
-  if ( u3m_Sole_busy_w || u3m_Hold_w ) {
+  if ( u3m_Hold_w ) {
     return;
   }
 

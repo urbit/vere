@@ -3343,11 +3343,6 @@ u3m_time_gap_in_mil(c3_w mil_w)
 */
 #include "canon.h"
 
-//  set while reading the home-road set: the profiling signal handler
-//  (u3t_samp()) runs on the home road, and must not change it then
-//
-volatile c3_w u3m_Sole_busy_w;
-
 static struct {
   c3_t         ini_t;  //  initialized
   c3_w         len_w;  //  bitmap length, in words
@@ -3538,9 +3533,9 @@ _cm_sole_get(u3_noun som)
 {
   u3_weak pro;
 
-  u3m_Sole_busy_w++;
+  u3m_hold();
   pro = _cm_sole_get_in(som);
-  u3m_Sole_busy_w--;
+  u3m_hold_done();
 
   _cm_sole_meas_hit(som, pro);
 
@@ -3558,6 +3553,7 @@ _cm_sole_put(u3_noun som)
   u3_noun can;
 
   _cm_sole_init();
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get_or_insert(&_cm_sole_u.vat_u, som);
@@ -3573,6 +3569,8 @@ _cm_sole_put(u3_noun som)
       _cm_sole_meas_page(cit_u.metadatum - _cm_sole_u.cel_u.metadata);
     }
   }
+
+  u3m_hold_done();
 
   _cm_sole_meas_hit(som, can);
 
@@ -3615,11 +3613,11 @@ u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel)
 
   if ( !_cm_sole_u.ini_t ) return u3_none;
 
-  u3m_Sole_busy_w++;
+  u3m_hold();
   cit_u = _canon_cells_get_by(&_cm_sole_u.cel_u,
                               (c3_d)mug_h * 11400714819323198485ULL,
                               _cm_sole_probe_cell, &pro_u);
-  u3m_Sole_busy_w--;
+  u3m_hold_done();
 
   can = _canon_cells_is_end(cit_u) ? u3_none : cit_u.data->key;
   _cm_sole_meas_hit(u3_none, can);
@@ -3636,9 +3634,9 @@ u3m_sole_find_atom(u3_atom jun)
 
   if ( !_cm_sole_u.ini_t ) return u3_none;
 
-  u3m_Sole_busy_w++;
+  u3m_hold();
   vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, jun);
-  u3m_Sole_busy_w--;
+  u3m_hold_done();
 
   can = _canon_atoms_is_end(vit_u) ? u3_none : vit_u.data->key;
   _cm_sole_meas_hit(jun, can);
@@ -3651,7 +3649,7 @@ void
 u3m_sole_add(u3_noun new)
 {
   _cm_sole_init();
-  u3m_Sole_busy_w++;
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(new) ) {
     _canon_atoms_itr vit_u = _canon_atoms_insert_unique(&_cm_sole_u.vat_u, new);
@@ -3663,7 +3661,7 @@ u3m_sole_add(u3_noun new)
     _cm_sole_meas_page(cit_u.metadatum - _cm_sole_u.cel_u.metadata);
   }
 
-  u3m_Sole_busy_w--;
+  u3m_hold_done();
   _cm_sole_set(new);
   _cm_sole_meas_cls(new);
   u3e_Meter.hca_d++;
@@ -3676,6 +3674,7 @@ void
 u3m_sole_lose(u3_noun som)
 {
   _cm_sole_clr(som);
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, som);
@@ -3694,6 +3693,8 @@ u3m_sole_lose(u3_noun som)
       u3e_Meter.hcd_d++;
     }
   }
+
+  u3m_hold_done();
 }
 
 /* u3m_sole_stat(): the home-road set's atoms, cells, and estimated
@@ -3920,13 +3921,15 @@ u3m_sole_take_old(u3_noun som)
     ini_t = 1;
   }
 
-  u3m_Sole_busy_w++;
+  //  held, so a signal can't leave the walk's modes set
+  //
+  u3m_hold();
   _cm_sole_u.pat_y = 2;
   _cm_sole_def_t   = 1;
   pro = _cm_sole_canon(&wak_u, som);
   _cm_sole_def_t   = 0;
   _cm_sole_u.pat_y = pat_y;
-  u3m_Sole_busy_w--;
+  u3m_hold_done();
 
   return pro;
 }
