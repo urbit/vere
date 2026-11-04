@@ -578,6 +578,14 @@ def main():
             sp = sorted(pgs)
             print(f"  pages an on-loom cell table would write per interval "
                   f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
+        #  the compact table (experiment), when in use
+        tab = [i["D"] for i in dis if len(i["D"]) >= 18 and i["D"][17]]
+        if tab:
+            T = [sum(d[k] for d in tab) for k in range(11, 16)]
+            print(f"  compact table: {T[0] / pro if pro else 0:.2f} buckets visited "
+                  f"and {T[1] / pro if pro else 0:.2f} members compared per probe; "
+                  f"resizes {T[2]} between events, {T[3]} at the limit "
+                  f"({T[4] / 1000:.0f} ms); largest distance {max(d[16] for d in tab)}")
     if rebuilds:
         n = sum(h[5] for h, _ in rebuilds)
         ms = sum(h[6] for h, _ in rebuilds)

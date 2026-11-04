@@ -517,16 +517,26 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //  on-loom table would have written; faults in the last rebuild
     //
     {
-      c3_d buc_d, pag_d;
+      c3_d buc_d, pag_d, tab_d[7];
 
       u3m_sole_meas(&buc_d, &pag_d);
+      u3m_sole_tab_meas(tab_d);
       fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      u3e_Meter.hcp_d[0], u3e_Meter.hcp_d[1], u3e_Meter.hcp_d[2],
                      u3e_Meter.hch_d[0], u3e_Meter.hch_d[1],
                      u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
                      buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
+
+      //  the compact table (experiment): lookup steps, members compared,
+      //  resizes between events and at the limit, time resizing (us),
+      //  the largest distance, and whether it's in use
+      //
+      for ( c3_w i_w = 0; i_w < 7; i_w++ ) {
+        fprintf(fil_u, " %" PRIu64, tab_d[i_w]);
+      }
+      fputc('\n', fil_u);
     }
 
     //  deferred gains across the state swap

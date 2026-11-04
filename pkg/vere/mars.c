@@ -781,6 +781,10 @@ _mars_post(u3_mars* mar_u)
   //
   u3m_crib_report();
 
+  //  the compact hashcons table, if in use (experiment)
+  //
+  u3m_sole_tend();
+
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
@@ -1074,6 +1078,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
   u3z(gon);
   u3a_defer_close();
+  u3m_sole_tend();
   u3e_Phase = pha_y;
   u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;

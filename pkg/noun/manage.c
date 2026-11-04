@@ -3391,12 +3391,16 @@ u3m_time_gap_in_mil(c3_w mil_w)
 **    works bottom-up.
 */
 #include "canon.h"
+#include "soletab.h"
 
 static struct {
   c3_t         ini_t;  //  initialized
   c3_w         len_w;  //  bitmap length, in words
   _canon_atoms vat_u;  //  member atoms
   _canon_cells cel_u;  //  member cells
+  c3_t         tab_t;  //  the compact table instead (U3_SOLE_TAB)
+  _cs_tab      vac_u;  //    member atoms
+  _cs_tab      cec_u;  //    member cells
   //  measurement (U3_MEASURE) only
   //
   c3_t         reb_t;     //  rebuilding
@@ -3488,18 +3492,76 @@ _cm_sole_meas_hit(u3_noun som, u3_noun can)
   }
 }
 
-/* _cm_sole_meas_page(): note a write to cell bucket [buc_d].
+/* _cm_sole_meas_off(): note a write to the cell table at byte [off_d].
 */
 static inline void
-_cm_sole_meas_page(c3_d buc_d)
+_cm_sole_meas_off(c3_d off_d)
 {
   if ( _cm_sole_u.pag_w && !_cm_sole_u.reb_t ) {
-    c3_d pag_d = (buc_d * (sizeof(u3_noun) + 2)) >> 14;
+    c3_d pag_d = off_d >> 14;
 
     if ( pag_d < _CM_DUP_PAGES ) {
       _cm_sole_u.pag_w[pag_d >> 5] |= (c3_w)1 << (pag_d & 31);
     }
   }
+}
+
+/* _cm_sole_meas_page(): note a write to cell bucket [buc_d].
+*/
+static inline void
+_cm_sole_meas_page(c3_d buc_d)
+{
+  _cm_sole_meas_off(buc_d * (sizeof(u3_noun) + 2));
+}
+
+/* _cm_sole_meas_line(): note a write to compact-table bucket [buc_d].
+*/
+static inline void
+_cm_sole_meas_line(c3_d buc_d)
+{
+  if ( ~0ULL != buc_d ) {
+    _cm_sole_meas_off((buc_d / _CS_PER) * sizeof(_cs_line));
+  }
+}
+
+/* _cm_sole_cel_len(), _cm_sole_vat_len(): members.
+*/
+static inline c3_d
+_cm_sole_cel_len(void)
+{
+  return ( _cm_sole_u.tab_t ) ? _cm_sole_u.cec_u.len_d
+                              : _canon_cells_size(&_cm_sole_u.cel_u);
+}
+
+static inline c3_d
+_cm_sole_vat_len(void)
+{
+  return ( _cm_sole_u.tab_t ) ? _cm_sole_u.vac_u.len_d
+                              : _canon_atoms_size(&_cm_sole_u.vat_u);
+}
+
+/* compact-table comparisons: by value against [*ptr_v].
+*/
+static c3_t
+_cm_cs_atom_eq(u3_noun key, void* ptr_v)
+{
+  return _canon_cmp_atoms(key, *(u3_noun*)ptr_v);
+}
+
+static c3_t
+_cm_cs_cell_eq(u3_noun key, void* ptr_v)
+{
+  return _canon_cmp_cells(key, *(u3_noun*)ptr_v);
+}
+
+/* _cm_cs_env(): a percentage from the environment, or [def_w].
+*/
+static c3_w
+_cm_cs_env(const c3_c* nam_c, c3_w def_w)
+{
+  c3_c* env_c = getenv(nam_c);
+  c3_w  pct_w = env_c ? (c3_w)atoi(env_c) : 0;
+  return ( pct_w && (pct_w < 100) ) ? pct_w : def_w;
 }
 
 /* _cm_sole_init(): allocate the home-road set.
@@ -3514,6 +3576,21 @@ _cm_sole_init(void)
     u3a_Sole_w      = c3_calloc(sizeof(c3_w) * _cm_sole_u.len_w);
     _canon_atoms_init(&_cm_sole_u.vat_u);
     _canon_cells_init(&_cm_sole_u.cel_u);
+
+    //  (experiment) the compact table, if every key fits
+    //
+    if ( getenv("U3_SOLE_TAB") && atoi(getenv("U3_SOLE_TAB"))
+       && _cs_fits(u3C.wor_i) )
+    {
+      _cm_sole_u.tab_t = 1;
+      _cs_gro_w = _cm_cs_env("U3_SOLE_TAB_GRO", _cs_gro_w);
+      _cs_lim_w = _cm_cs_env("U3_SOLE_TAB_LIM", _cs_lim_w);
+      _cs_tar_w = _cm_cs_env("U3_SOLE_TAB_TAR", _cs_tar_w);
+      _cs_init(&_cm_sole_u.vac_u, 0);
+      _cs_init(&_cm_sole_u.cec_u, 1);
+      u3l_log("hashcons: compact table, grow at %u%%, limit %u%%, target %u%%",
+              (unsigned)_cs_gro_w, (unsigned)_cs_lim_w, (unsigned)_cs_tar_w);
+    }
 
     if ( _cm_sole_meas_on() ) {
       _cm_sole_u.cls_w[0] = c3_calloc(sizeof(c3_w) * _cm_sole_u.len_w);
@@ -3533,7 +3610,11 @@ _cm_sole_init(void)
 static void
 _cm_sole_clear(void)
 {
-  if ( _cm_sole_u.ini_t ) {
+  if ( _cm_sole_u.ini_t && _cm_sole_u.tab_t ) {
+    _cs_clear(&_cm_sole_u.vac_u, _cm_sole_clr);
+    _cs_clear(&_cm_sole_u.cec_u, _cm_sole_clr);
+  }
+  else if ( _cm_sole_u.ini_t ) {
     _canon_atoms_itr vit_u;
     _canon_cells_itr cit_u;
 
@@ -3566,6 +3647,11 @@ _cm_sole_get_in(u3_noun som)
 {
   if ( !_cm_sole_u.ini_t ) {
     return u3_none;
+  }
+  else if ( _cm_sole_u.tab_t ) {
+    return ( c3y == u3a_is_atom(som) )
+           ? _cs_get(&_cm_sole_u.vac_u, u3r_mug(som), _cm_cs_atom_eq, &som)
+           : _cs_get(&_cm_sole_u.cec_u, u3r_mug(som), _cm_cs_cell_eq, &som);
   }
   else if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, som);
@@ -3604,7 +3690,18 @@ _cm_sole_put(u3_noun som)
   _cm_sole_init();
   u3m_hold();
 
-  if ( c3y == u3a_is_atom(som) ) {
+  if ( _cm_sole_u.tab_t ) {
+    c3_d pos_d;
+
+    if ( c3y == u3a_is_atom(som) ) {
+      can = _cs_put(&_cm_sole_u.vac_u, som, u3r_mug(som), _cm_cs_atom_eq, &pos_d);
+    }
+    else {
+      can = _cs_put(&_cm_sole_u.cec_u, som, u3r_mug(som), _cm_cs_cell_eq, &pos_d);
+      _cm_sole_meas_line(pos_d);
+    }
+  }
+  else if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get_or_insert(&_cm_sole_u.vat_u, som);
     u3_assert( !_canon_atoms_is_end(vit_u) ); //  oom
     can = vit_u.data->key;
@@ -3651,6 +3748,12 @@ _cm_sole_probe_cell(u3_cell key, void* ptr_v)
       && (key_u->tel   == pro_u->tel);
 }
 
+static c3_t
+_cm_cs_probe(u3_noun key, void* ptr_v)
+{
+  return !!_cm_sole_probe_cell(key, ptr_v);
+}
+
 /* u3m_sole_find_cell(): see manage.h.
 */
 u3_weak
@@ -3661,6 +3764,14 @@ u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel)
   u3_weak          can;
 
   if ( !_cm_sole_u.ini_t ) return u3_none;
+
+  if ( _cm_sole_u.tab_t ) {
+    u3m_hold();
+    can = _cs_get(&_cm_sole_u.cec_u, mug_h, _cm_cs_probe, &pro_u);
+    u3m_hold_done();
+    _cm_sole_meas_hit(u3_none, can);
+    return can;
+  }
 
   u3m_hold();
   cit_u = _canon_cells_get_by(&_cm_sole_u.cel_u,
@@ -3683,6 +3794,14 @@ u3m_sole_find_atom(u3_atom jun)
 
   if ( !_cm_sole_u.ini_t ) return u3_none;
 
+  if ( _cm_sole_u.tab_t ) {
+    u3m_hold();
+    can = _cs_get(&_cm_sole_u.vac_u, u3r_mug(jun), _cm_cs_atom_eq, &jun);
+    u3m_hold_done();
+    _cm_sole_meas_hit(jun, can);
+    return can;
+  }
+
   u3m_hold();
   vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, jun);
   u3m_hold_done();
@@ -3700,7 +3819,15 @@ u3m_sole_add(u3_noun new)
   _cm_sole_init();
   u3m_hold();
 
-  if ( c3y == u3a_is_atom(new) ) {
+  if ( _cm_sole_u.tab_t ) {
+    if ( c3y == u3a_is_atom(new) ) {
+      _cs_add(&_cm_sole_u.vac_u, new);
+    }
+    else {
+      _cm_sole_meas_line(_cs_add(&_cm_sole_u.cec_u, new));
+    }
+  }
+  else if ( c3y == u3a_is_atom(new) ) {
     _canon_atoms_itr vit_u = _canon_atoms_insert_unique(&_cm_sole_u.vat_u, new);
     u3_assert( !_canon_atoms_is_end(vit_u) ); //  oom
   }
@@ -3725,7 +3852,15 @@ u3m_sole_lose(u3_noun som)
   _cm_sole_clr(som);
   u3m_hold();
 
-  if ( c3y == u3a_is_atom(som) ) {
+  if ( _cm_sole_u.tab_t ) {
+    c3_d i_d = _cs_erase(( c3y == u3a_is_atom(som) ) ? &_cm_sole_u.vac_u
+                                                     : &_cm_sole_u.cec_u, som);
+    if ( ~0ULL != i_d ) {
+      if ( c3n == u3a_is_atom(som) ) _cm_sole_meas_line(i_d);
+      u3e_Meter.hcd_d++;
+    }
+  }
+  else if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_sole_u.vat_u, som);
 
     if ( !_canon_atoms_is_end(vit_u) && (som == vit_u.data->key) ) {
@@ -3758,8 +3893,15 @@ u3m_sole_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d)
     return;
   }
 
-  *vat_d = _canon_atoms_size(&_cm_sole_u.vat_u);
-  *cel_d = _canon_cells_size(&_cm_sole_u.cel_u);
+  *vat_d = _cm_sole_vat_len();
+  *cel_d = _cm_sole_cel_len();
+
+  if ( _cm_sole_u.tab_t ) {
+    *byt_d = _cs_bytes(&_cm_sole_u.vac_u) + _cs_bytes(&_cm_sole_u.cec_u)
+           + (c3_d)_cm_sole_u.len_w * sizeof(c3_w);
+    return;
+  }
+
   *byt_d = ( (c3_d)_canon_atoms_bucket_count(&_cm_sole_u.vat_u)
            + (c3_d)_canon_cells_bucket_count(&_cm_sole_u.cel_u) )
            * (sizeof(u3_noun) + sizeof(uint16_t))
@@ -3777,7 +3919,8 @@ u3m_sole_meas(c3_d* buc_d, c3_d* pag_d)
   *pag_d = 0;
 
   if ( _cm_sole_u.ini_t ) {
-    *buc_d = _canon_cells_bucket_count(&_cm_sole_u.cel_u);
+    *buc_d = ( _cm_sole_u.tab_t ) ? _cm_sole_u.cec_u.cap_d
+                                  : _canon_cells_bucket_count(&_cm_sole_u.cel_u);
 
     if ( _cm_sole_u.pag_w ) {
       c3_w i_w;
@@ -3797,8 +3940,38 @@ void
 u3m_sole_hint(void)
 {
   if ( _cm_sole_u.ini_t ) {
-    u3H->rod_u.hcz_w = (c3_w)_canon_cells_size(&_cm_sole_u.cel_u);
+    u3H->rod_u.hcz_w = (c3_w)_cm_sole_cel_len();
   }
+}
+
+/* u3m_sole_tend(): between events, resize the compact table if its
+**                  load has left its range (experiment).
+*/
+void
+u3m_sole_tend(void)
+{
+  if ( _cm_sole_u.ini_t && _cm_sole_u.tab_t ) {
+    _cs_tend(&_cm_sole_u.vac_u);
+    _cs_tend(&_cm_sole_u.cec_u);
+  }
+}
+
+/* u3m_sole_tab_meas(): the compact table's meters since the last call:
+**   lookup steps, members compared, resizes between events and at the
+**   limit, time resizing (us), the largest distance, and whether it's in
+**   use.
+*/
+void
+u3m_sole_tab_meas(c3_d* met_d)
+{
+  met_d[0] = _cs_met.ste_d;
+  met_d[1] = _cs_met.der_d;
+  met_d[2] = _cs_met.gro_d[0];
+  met_d[3] = _cs_met.gro_d[1];
+  met_d[4] = _cs_met.gus_d;
+  met_d[5] = _cs_met.dmx_d;
+  met_d[6] = _cm_sole_u.tab_t;
+  memset(&_cs_met, 0, sizeof(_cs_met));
 }
 
 /* _cm_canonical(): [som] is a cat or a member of the home-road set.
@@ -4040,7 +4213,12 @@ u3m_sole_ream(void)
   //  as it regrows (a cleared table keeps its capacity)
   //
   if ( u3R->hcz_w ) {
-    u3_assert( _canon_cells_reserve(&_cm_sole_u.cel_u, u3R->hcz_w) ); //  oom
+    if ( _cm_sole_u.tab_t ) {
+      _cs_reserve(&_cm_sole_u.cec_u, u3R->hcz_w);
+    }
+    else {
+      u3_assert( _canon_cells_reserve(&_cm_sole_u.cel_u, u3R->hcz_w) ); //  oom
+    }
   }
 
   //  tables never canonicalized off the loom have no saved size (it was
@@ -4086,8 +4264,8 @@ u3m_sole_ream(void)
       u3h_walk_with(roo_p[i_w],
                     ( 2 == i_w ) ? _cm_sole_ream_key : _cm_sole_ream_kev,
                     &wak_u);
-      u3e_Meter.hcc_d[i_w] = _canon_cells_size(&_cm_sole_u.cel_u) - pre_d;
-      pre_d = _canon_cells_size(&_cm_sole_u.cel_u);
+      u3e_Meter.hcc_d[i_w] = _cm_sole_cel_len() - pre_d;
+      pre_d = _cm_sole_cel_len();
     }
 
     _cm_sole_u.cls_y = 0;
@@ -4115,8 +4293,8 @@ u3m_sole_ream(void)
 
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("hashcons: %zu atoms, %zu cells in %" PRIu64 "ms",
-              _canon_atoms_size(&_cm_sole_u.vat_u),
-              _canon_cells_size(&_cm_sole_u.cel_u),
+              (size_t)_cm_sole_vat_len(),
+              (size_t)_cm_sole_cel_len(),
               mil_d);
     }
   }

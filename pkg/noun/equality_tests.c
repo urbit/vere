@@ -3,6 +3,7 @@
 #include "noun.h"
 #include "crib.h"
 #include "events.h"
+#include "soletab.h"
 
 #include <time.h>
 
@@ -1184,6 +1185,191 @@ _test_crib(void)
   return ret_i;
 }
 
+/* _ts_same(): the compact table's member is [*ptr_v].
+*/
+static c3_t
+_ts_same(u3_noun key, void* ptr_v)
+{
+  return key == *(u3_noun*)ptr_v;
+}
+
+/* _ts_check(): every bucket's distance is from its member's home, in
+**              Robin Hood order, and the count is right.
+*/
+static c3_i
+_ts_check(_cs_tab* tab_u)
+{
+  c3_d len_d = 0;
+
+  for ( c3_d i_d = 0; i_d < tab_u->cap_d; i_d++ ) {
+    c3_h key_h = *_cs_key(tab_u, i_d);
+
+    if ( key_h ) {
+      u3_noun som   = _cs_noun(tab_u, key_h);
+      c3_d    hom_d = _cs_home(tab_u, u3r_mug(som));
+      c3_d    dis_d = ( i_d >= hom_d ) ? i_d - hom_d : i_d + tab_u->cap_d - hom_d;
+
+      if ( dis_d != *_cs_dis(tab_u, i_d) ) {
+        fprintf(stderr, "test: soletab: bucket %" PRIu64 " distance %u, not %" PRIu64 "\r\n",
+                i_d, (unsigned)*_cs_dis(tab_u, i_d), dis_d);
+        return 0;
+      }
+      len_d++;
+    }
+  }
+  if ( len_d != tab_u->len_d ) {
+    fprintf(stderr, "test: soletab: %" PRIu64 " members, counted %" PRIu64 "\r\n",
+            tab_u->len_d, len_d);
+    return 0;
+  }
+  return 1;
+}
+
+/* _test_soletab(): the compact table against a reference: random adds,
+**                  erases and lookups, growing at the limit and between
+**                  "events", then shrinking.
+*/
+static c3_i
+_test_soletab(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 6000, i_w, k_w;
+  u3_noun cel[6000];
+  c3_t    has_t[6000] = {0};
+  c3_d    len_d = 0;
+  _cs_tab tab_u;
+
+  //  keys round-trip, for cells and atoms
+  //
+  {
+    u3_noun c = u3nc(1, 2);
+    c3_d    big_d[2] = { 0x123456789abcdefULL, 0xfedcba987654321ULL };
+    u3_noun a = u3i_chubs(2, big_d);
+
+    _cs_tab vat_u = { .cel_t = 0 }, cet_u = { .cel_t = 1 };
+    if (  (c != _cs_noun(&cet_u, _cs_slot(c)))
+       || (a != _cs_noun(&vat_u, _cs_slot(a))) )
+    {
+      fprintf(stderr, "test: soletab: keys don't round-trip\r\n");
+      ret_i = 0;
+    }
+    u3z(c); u3z(a);
+  }
+
+  for ( i_w = 0; i_w < num_w; i_w++ ) {
+    cel[i_w] = u3nc(i_w + 1, 7);
+    (void)u3r_mug(cel[i_w]);
+  }
+
+  _cs_init(&tab_u, 1);
+  srand(1);
+
+  for ( k_w = 0; ret_i && (k_w < 300000); k_w++ ) {
+    i_w = (c3_w)rand() % num_w;
+
+    switch ( rand() % 3 ) {
+      case 0: {
+        if ( !has_t[i_w] ) {
+          if ( k_w & 1 ) {
+            _cs_add(&tab_u, cel[i_w]);
+          }
+          else {
+            c3_d pos_d;
+            if (  (cel[i_w] != _cs_put(&tab_u, cel[i_w], u3r_mug(cel[i_w]), _ts_same, &pos_d))
+               || (~0ULL == pos_d) )
+            {
+              fprintf(stderr, "test: soletab: put of %u wrong\r\n", (unsigned)i_w);
+              ret_i = 0;
+            }
+          }
+          has_t[i_w] = 1;
+          len_d++;
+        }
+        else {
+          c3_d pos_d;
+          if (  (cel[i_w] != _cs_put(&tab_u, cel[i_w], u3r_mug(cel[i_w]), _ts_same, &pos_d))
+             || (~0ULL != pos_d) )
+          {
+            fprintf(stderr, "test: soletab: put of present %u wrong\r\n", (unsigned)i_w);
+            ret_i = 0;
+          }
+        }
+      } break;
+
+      case 1: {
+        c3_d pos_d = _cs_erase(&tab_u, cel[i_w]);
+
+        if ( has_t[i_w] != (~0ULL != pos_d) ) {
+          fprintf(stderr, "test: soletab: erase of %u wrong\r\n", (unsigned)i_w);
+          ret_i = 0;
+        }
+        if ( has_t[i_w] ) len_d--;
+        has_t[i_w] = 0;
+      } break;
+
+      default: {
+        u3_weak got = _cs_get(&tab_u, u3r_mug(cel[i_w]), _ts_same, &cel[i_w]);
+
+        if ( has_t[i_w] != (u3_none != got) ) {
+          fprintf(stderr, "test: soletab: lookup of %u wrong\r\n", (unsigned)i_w);
+          ret_i = 0;
+        }
+      } break;
+    }
+
+    if ( len_d != tab_u.len_d ) {
+      fprintf(stderr, "test: soletab: length %" PRIu64 ", not %" PRIu64 "\r\n",
+              tab_u.len_d, len_d);
+      ret_i = 0;
+    }
+
+    //  an "event" boundary now and then
+    //
+    if ( 0 == (k_w % 5000) ) {
+      _cs_tend(&tab_u);
+      ret_i &= _ts_check(&tab_u);
+    }
+  }
+
+  //  erase most, then shrink between events
+  //
+  {
+    c3_d lin_d;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      if ( has_t[i_w] && (i_w % 16) ) {
+        _cs_erase(&tab_u, cel[i_w]);
+        has_t[i_w] = 0;
+      }
+    }
+    lin_d = tab_u.lin_d;
+    _cs_tend(&tab_u);
+    if ( tab_u.lin_d >= lin_d ) {
+      fprintf(stderr, "test: soletab: didn't shrink (%" PRIu64 " lines)\r\n", lin_d);
+      ret_i = 0;
+    }
+    ret_i &= _ts_check(&tab_u);
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3_weak got = _cs_get(&tab_u, u3r_mug(cel[i_w]), _ts_same, &cel[i_w]);
+      if ( has_t[i_w] != (u3_none != got) ) {
+        fprintf(stderr, "test: soletab: after shrinking, %u wrong\r\n", (unsigned)i_w);
+        ret_i = 0;
+        break;
+      }
+    }
+  }
+
+  if ( !_cs_met.gro_d[0] || !_cs_met.gro_d[1] ) {
+    fprintf(stderr, "test: soletab: resizes %" PRIu64 " between, %" PRIu64 " at the limit\r\n",
+            _cs_met.gro_d[0], _cs_met.gro_d[1]);
+    ret_i = 0;
+  }
+
+  c3_free(tab_u.lin_u);
+  for ( i_w = 0; i_w < num_w; i_w++ ) u3z(cel[i_w]);
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
@@ -1196,6 +1382,11 @@ _test_equality(void)
 
   if ( !_test_sole_lazy() ) {
     fprintf(stderr, "test: equality: sole lazy: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_soletab() ) {
+    fprintf(stderr, "test: equality: soletab: failed\r\n");
     ret_i = 0;
   }
 
