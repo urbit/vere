@@ -504,7 +504,7 @@ u3a_wash(u3_noun som)
 #define CMPR_FN vt_cmpr_integer
 #include "verstable.h"
 
-c3_w u3a_Defer_max_w = 1U << 20;
+c3_w u3a_Defer_max_w = 1U << 23;
 
 static struct {
   c3_t     ope_t;  //  open
