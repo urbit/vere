@@ -43,51 +43,67 @@ Log lines (one snapshot interval ends at each S line):
                                             last rebuild
   D <probe-take> <probe-older> <probe-try> <hit-new> <hit-cache> <hit-warm>
     <hit-cold> <buckets> <table-pages> <faults-major> <faults-minor>
+    <tab-steps> <tab-compared> <tab-grow-between> <tab-grow-limit>
+    <tab-resize-us> <tab-max-distance>
                                             home hashcons probes by path, hits by the
-                                            member's origin, and the last rebuild's faults
+                                            member's origin, the last rebuild's faults,
+                                            and the compact table's buckets visited,
+                                            members compared, resizes and longest probe
+                                            (older logs: 11 fields with verstable, or 18
+                                            with a last "in use" flag)
   G <windows> <gains> <nouns> <most-pending> <cancelled> <direct> <written>
     <written-nouns> <shrinks>               deferred gains across the state swap
+                                            (older logs add 12 by phase: deferred,
+                                            then written directly at the cap)
   Y <references> <same-position> <refcount-1>
                                             new arvo state's alignment with the old
-  W <senior-merges> <counted> <give-ups> <promoting> <wrote-ours> <wrote-home>
-    <wrote-senior> <against-order> <neither-writable> <skip-member> <refused>
+  W <senior-merges> <give-ups> <wrote-ours> <wrote-home> <wrote-senior>
+    <home-refused>
                                             unification (u3a_wed()): merges on senior
-                                            inner roads, those through a slot that
-                                            counts its value, and when no road can
-                                            merge, slot writes (jb/hcons-eager; older
-                                            logs' W and X lines, of other widths, are
-                                            skipped)
+                                            inner roads, and when no road can merge,
+                                            slot writes by place and home writes
+                                            refused (older 11-field W lines are mapped
+                                            onto these; other widths are skipped)
   X <home-put> <home-leaked> <home-lost> <home-most-lost> <home-left>
     <inner-put> <inner-leaked> <inner-lost> <inner-most-lost> <inner-left>
+    <inner-copied>
                                             the lose lists: values put, leaked with
-                                            the list full, lost after an exit's takes
-                                            (and most at one exit), and left by an
-                                            interrupted exit
-  Q <pinned>                                roots pinned on inner roads (u3m_sole_pin,
-                                            into dup_p; older logs' four-field Q,
-                                            with probes and hits, is skipped)
+                                            the list full (inner: no room on the
+                                            loom), lost after an exit's takes (and most
+                                            at one exit), left by an interrupted exit
+                                            (inner: dropped with its road), and inner
+                                            entries copied up a road at an exit (older
+                                            10-field X lines get a 0)
   V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
     <root-recorded> <deep-excursion> <deep-debug> <deep-promoting>
     <pair-probes> <pair-hits> <pair-recorded>
                                             (older builds) the pair table: comparisons past 64 steps
                                             by road, their root pairs, comparisons past
                                             65,535 steps by table, and their inner pairs
-  I <calls-home> <calls-inner> <from-byc-keys> <from-memo-keys> <junior-cells>
-    <visited-hits> <senior-left> <home-probes-inner> <home-hits-inner>
-                                            canonicalizing on inner roads (u3m_sole_try)
-  Z <looked-jet> <looked-byc> <looked-per> <looked-for> <found-jet> <found-byc>
-    <found-per> <found-for> <older-left> <us-takes> <us-drain>
-    <most-added> <members-then>
+  I <calls-home> <calls-inner> <junior-cells> <visited-hits>
+    <home-probes-inner> <home-hits-inner>
+                                            canonicalizing (u3m_sole_try): calls by
+                                            road, and on inner roads cells walked,
+                                            visited-set hits, home-set probes and hits
+                                            (older 9-field I lines are mapped)
+  Z <looked-up> <found> <older-left> <us-takes> <us-drain> <most-added>
+    <members-then>
                                             exits to home: junior nouns looked up by the
                                             canonicalizing take and those found (not
-                                            copied), by table; older home slots left with
-                                            the lose list full; microseconds in each step
-                                            (older logs' 16- and 17-field Z are skipped)
-  J <checks> <unequal> <unified> <not-unified>
-                                            jet battery checks whose pointers differed
+                                            copied); older home slots left with the lose
+                                            list full; microseconds in each step; the
+                                            most members added at one exit, before its
+                                            drain, and the set's size then (older 11-
+                                            and 13-field Z lines are mapped; 16- and
+                                            17-field ones are skipped)
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
     <clears-logged> <clears-dropped> <at-ceiling>
-                                            each crib's use in the interval
+                                            each crib's use in the interval: the
+                                            visited set and the home lose list (older
+                                            logs: the pair tables and the inner list)
+
+Older logs also have Q (roots pinned) and J (jet battery checks) lines,
+which are ignored.
   O <time> <eve> <pack|meld|melt> <why> <options> <ms> <freed-words>
                                             a pack, meld or melt, logged when it ran.
                                             why: live (|pack, |meld, conn), memory
