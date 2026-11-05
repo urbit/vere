@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -48,4 +49,14 @@ u3wc_end(u3_noun cor)
   u3x_bite(a, &bloq, &step);
 
   return u3qc_end(bloq, step, u3x_atom(b));
+}
+
+/* u3uc_end(): array driver of u3wc_end.
+*/
+u3_noun
+u3uc_end(u3_noun* arg)
+{
+  u3_atom bloq, step;
+  u3x_bite(arg[0], &bloq, &step);
+  return u3qc_end(bloq, step, u3x_atom(arg[1]));
 }

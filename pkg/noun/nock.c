@@ -9,6 +9,7 @@
 #include "jets/k.h"
 #include "jets/q.h"
 #include "manage.h"
+#include "nock-compile.h"
 #include "options.h"
 #include "retrieve.h"
 #include "trace.h"
@@ -536,7 +537,13 @@ _n_nock_on(u3_noun bus, u3_noun fol)
   X(KUTS, "kuts", &&do_kuts),  /* 92: c3_s */                                  \
   X(KITB, "kitb", &&do_kitb),  /* 93: c3_b */                                  \
   X(KITS, "kits", &&do_kits),  /* 94: c3_s */                                  \
-  X(LAST,   NULL,      NULL),  /* 95 */
+  /* nock 11: ska (keep) */                                                    \
+  X(SKAB, "skab", &&do_skab),  /* 95: c3_b */                                  \
+  X(SKAS, "skas", &&do_skas),  /* 96: c3_s */                                  \
+  /* nock 11: ska (lose) */                                                    \
+  X(SLAB, "slab", &&do_slab),  /* 97: c3_b */                                  \
+  X(SLAS, "slas", &&do_slas),  /* 98: c3_s */                                  \
+  X(LAST,   NULL,      NULL),  /* 99 */
 
 // Opcodes. Define X to select the enum name from OPCODES.
 #define X(opcode, name, indirect_jump) opcode
@@ -555,7 +562,7 @@ _n_arg(c3_y cod_y)
     case SLIB: case SKIB: case KICB: case TICB:
     case BUSH: case BAST: case BALT:
     case MUTB: case KUTB: case MITB: case KITB:
-    case HILB: case HINB:
+    case HILB: case HINB: case SKAB: case SLAB:
       return sizeof(c3_y);
 
     case FASK: case FASL: case FISL: case FISK:
@@ -564,7 +571,7 @@ _n_arg(c3_y cod_y)
     case SLIS: case SKIS: case KICS: case TICS:
     case SUSH: case SAST: case SALT:
     case MUTS: case KUTS: case MITS: case KITS:
-    case HILS: case HINS:
+    case HILS: case HINS: case SKAS: case SLAS:
       return sizeof(c3_s);
 
     case SWIP: case SWIN:
@@ -658,7 +665,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         case SAST: case SALT: case KICS: case TICS:
         case FISK: case FISL: case SUSH: case SANS:
         case LISL: case LISK: case SKIS: case SLIS:
-        case HILS: case HINS:
+        case HILS: case HINS: case SKAS: case SLAS:
           u3_assert(0); //overflows
           break;
 
@@ -679,7 +686,7 @@ _n_melt(u3_noun ops, c3_w* byc_w, c3_w* cal_w,
         case BUSH: case FIBK: case FIBL:
         case SANB: case LIBL: case LIBK:
         case KITB: case MITB:
-        case HILB: case HINB:
+        case HILB: case HINB: case SKAB: case SLAB:
           a_w = (*lit_w)++;
           if ( a_w <= 0xFF ) {
             siz_y[i_w] = 2;
@@ -920,7 +927,7 @@ _n_prog_asm(u3_noun ops, u3n_prog* pog_u, u3_noun sip)
         case LIBK: case LIBL:
         case BUSH: case SANB:
         case KITB: case MITB:
-        case HILB: case HINB:
+        case HILB: case HINB: case SKAB: case SLAB:
           _n_prog_asm_inx(buf_y, &i_w, lit_s, cod);
           pog_u->lit_u.non[lit_s++] = u3k(u3t(op));
           break;
@@ -1063,6 +1070,19 @@ _n_bint(u3_noun* ops, u3_noun hif, u3_noun nef, c3_o los_o, c3_o tel_o)
         tot_w += nef_w; _n_apen(ops, fen);
         // post-skip cleanup opcode
         ++tot_w; _n_emit(ops, ( c3y == los_o ) ? TOSS : SWAP);
+      } break;
+
+      //  compiled nock: the op runs the formula, a literal, on the
+      //  subject and skips the bytecode, or falls through to it
+      //
+      case c3__ska: {
+        u3_noun fen = u3_nul;
+        c3_w  nef_w = _n_comp(&fen, nef, los_o, tel_o);
+        // overflows to SLAS / SKAS
+        ++tot_w; _n_emit(ops, u3nc((c3y == los_o) ? SLAB : SKAB, u3k(nef)));
+        // if the op ran it, skip fen
+        ++tot_w; _n_emit(ops, u3nc(SBIN, nef_w));
+        tot_w += nef_w; _n_apen(ops, fen);
       } break;
     }
   }
@@ -2791,6 +2811,39 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
       u3j_rite_mine(rit_u, *top, u3k(o));
       u3t_on(noc_o);
       *top = o;
+      BURN();
+
+    do_skas:
+      x     = _n_resh(pog, &ip_w);
+      goto skat_in;
+
+    do_skab:
+      x     = pog[ip_w++];
+    skat_in:                     // [bus]
+      if ( c3n == u3nc_able() ) {
+        _n_push(mov, off, c3y);  // run the bytecode
+        BURN();
+      }
+      top = _n_peek(off);
+      x   = u3nc_nock_on(u3k(*top), u3k(pog_u->lit_u.non[x]));
+      _n_push(mov, off, x);      // [pro bus]
+      _n_push(mov, off, c3n);    // skip the bytecode
+      BURN();
+
+    do_slas:
+      x     = _n_resh(pog, &ip_w);
+      goto slat_in;
+
+    do_slab:
+      x     = pog[ip_w++];
+    slat_in:                     // [bus]
+      if ( c3n == u3nc_able() ) {
+        _n_push(mov, off, c3y);
+        BURN();
+      }
+      top  = _n_peek(off);
+      *top = u3nc_nock_on(*top, u3k(pog_u->lit_u.non[x]));  // [pro]
+      _n_push(mov, off, c3n);
       BURN();
 
     do_skis:

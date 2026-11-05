@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -35,6 +36,14 @@ u3wdi_tap(u3_noun cor)
   u3_noun a;
   u3x_mean(cor, {u3x_con_sam, &a});
   return u3qdi_tap(a);
+}
+
+/* u3udi_tap(): array driver of u3wdi_tap.
+*/
+u3_noun
+u3udi_tap(u3_noun* arg)
+{
+  return u3qdi_tap(arg[0]);
 }
 
 u3_noun

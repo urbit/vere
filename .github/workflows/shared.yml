@@ -48,6 +48,9 @@ jobs:
       #
       - uses: actions/checkout@v3
 
+      - name: Fetch LFS sources
+        run: git lfs pull --include=pkg/vere/steel/steel.c,pkg/vere/ivory/ivory.c
+
       - name: Set swap space
         run: |
           echo "Memory and swap:"
@@ -285,6 +288,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # steel.c and ivory.c are stored in git LFS; fetch just those objects rather than
+      # the (much larger) migration-test fixtures.
+      - name: Fetch LFS sources
+        run: git lfs pull --include=pkg/vere/steel/steel.c,pkg/vere/ivory/ivory.c
+
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
@@ -443,6 +451,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      # steel.c and ivory.c are stored in git LFS; fetch just those objects rather than
+      # the (much larger) migration-test fixtures.
+      - name: Fetch LFS sources
+        run: git lfs pull --include=pkg/vere/steel/steel.c,pkg/vere/ivory/ivory.c
 
       - uses: mlugg/setup-zig@v2
         with:

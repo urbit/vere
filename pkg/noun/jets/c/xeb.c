@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -29,4 +30,15 @@
       return u3qc_xeb(a);
     }
   }
+
+/* u3uc_xeb(): array driver of u3wc_xeb.
+*/
+u3_noun
+u3uc_xeb(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_xeb(arg[0]);
+}
 

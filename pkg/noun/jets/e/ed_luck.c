@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -35,3 +36,14 @@
       return _cqee_luck(a);
     }
   }
+
+/* u3uee_luck(): array driver of u3wee_luck.
+*/
+u3_noun
+u3uee_luck(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_luck(arg[0]);
+}

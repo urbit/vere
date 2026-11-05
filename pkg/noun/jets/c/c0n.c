@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -54,4 +55,17 @@ u3kc_con(u3_noun a,
   u3_noun c = u3qc_con(a, b);
   u3z(a); u3z(b);
   return c;
+}
+
+/* u3uc_con(): array driver of u3wc_con.
+*/
+u3_noun
+u3uc_con(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_con(arg[0], arg[1]);
 }

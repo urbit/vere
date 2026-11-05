@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -79,4 +80,17 @@ u3wc_rig(u3_noun cor)
   }
 
   return u3qc_rig(boq, sep, vat);
+}
+
+/* u3uc_rig(): array driver of u3wc_rig.
+*/
+u3_noun
+u3uc_rig(u3_noun* arg)
+{
+  if ( c3y == u3a_is_atom(arg[0]) ) {
+    return 0;
+  }
+  return u3qc_rig(u3x_atom(u3h(arg[0])),
+                  u3x_atom(u3t(arg[0])),
+                  u3x_atom(arg[1]));
 }

@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -32,4 +33,12 @@ u3_noun
 u3wdi_wyt(u3_noun cor)
 {
   return u3qdi_wyt(u3x_at(u3x_con_2, cor));
+}
+
+/* u3udi_wyt(): array driver of u3wdi_wyt.
+*/
+u3_noun
+u3udi_wyt(u3_noun* arg)
+{
+  return u3qdi_wyt(arg[0]);
 }

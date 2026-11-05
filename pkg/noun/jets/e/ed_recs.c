@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -46,3 +47,14 @@
       return u3qee_recs(a);
     }
   }
+
+/* u3uee_recs(): array driver of u3wee_recs.
+*/
+u3_noun
+u3uee_recs(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return u3qee_recs(arg[0]);
+}

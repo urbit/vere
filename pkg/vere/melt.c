@@ -1,5 +1,6 @@
 #include "allocate.h"
 #include "canon.h"
+#include "direct.h"
 #include "events.h"
 #include "hashtable.h"
 #include "jets.h"
@@ -142,8 +143,11 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
   u3m_reclaim();
 
   _melt_canon_ptr(&can_u, &(u3A->roc));
+  _melt_canon_ptr(&can_u, &(u3R->ska.cor));
+  _melt_canon_ptr(&can_u, &(u3R->ska.new));
 
   u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
+  u3h_walk_with(u3R->ska.tem_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
   u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
 
@@ -168,6 +172,12 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
 
   u3j_boot(c3n);
   u3j_ream();
+
+  //  the core forgets what was pruned; the programs are gone already
+  //
+  if ( (opt_w & u3_melt_cold) && (u3_nul != u3R->ska.cor) ) {
+    u3d_cold();
+  }
 
   if ( fil_u ) {
     fprintf(fil_u, "atoms (%zu)", vt_size(&can_u.vat_u));

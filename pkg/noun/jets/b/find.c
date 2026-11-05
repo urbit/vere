@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -47,4 +48,12 @@ u3wb_find(u3_noun cor)
   u3_noun a, b;
   u3x_mean(cor, {u3x_sam_2, &a}, {u3x_sam_3, &b});
   return u3qb_find(a, b);
+}
+
+/* u3ub_find(): array driver of u3wb_find.
+*/
+u3_noun
+u3ub_find(u3_noun* arg)
+{
+  return u3qb_find(arg[0], arg[1]);
 }

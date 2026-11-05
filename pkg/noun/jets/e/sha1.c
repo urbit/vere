@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -40,3 +41,16 @@
       return _cqe_sha1(wid, dat);
     }
   }
+
+/* u3ue_sha1(): array driver of u3we_sha1.
+*/
+u3_noun
+u3ue_sha1(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_sha1(arg[0], arg[1]);
+}

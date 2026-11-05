@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -42,6 +43,19 @@
     }
   }
 
+/* u3uee_shar(): array driver of u3wee_shar.
+*/
+u3_noun
+u3uee_shar(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_shar(arg[0], arg[1]);
+}
+
   static u3_atom
   _cqee_slar(u3_atom pub, u3_atom sek)
   {
@@ -76,3 +90,16 @@
       return _cqee_slar(pub, sek);
     }
   }
+
+/* u3uee_slar(): array driver of u3wee_slar.
+*/
+u3_noun
+u3uee_slar(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_slar(arg[0], arg[1]);
+}

@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -60,4 +61,14 @@ u3kc_lsh(u3_noun a,
 
   u3z(a); u3z(b); u3z(c);
   return d;
+}
+
+/* u3uc_lsh(): array driver of u3wc_lsh.
+*/
+u3_noun
+u3uc_lsh(u3_noun* arg)
+{
+  u3_atom bloq, step;
+  u3x_bite(arg[0], &bloq, &step);
+  return u3qc_lsh(bloq, step, u3x_atom(arg[1]));
 }

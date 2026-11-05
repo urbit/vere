@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -132,3 +133,11 @@
       return u3qf_look(cog, dab);
     }
   }
+
+/* u3uf_look(): array driver of u3wf_look.
+*/
+u3_noun
+u3uf_look(u3_noun* arg)
+{
+  return u3qf_look(arg[0], arg[1]);
+}

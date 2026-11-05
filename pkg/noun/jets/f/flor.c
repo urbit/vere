@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -45,3 +46,11 @@
       return u3qf_flor(bos, nif);
     }
   }
+
+/* u3uf_flor_139(): array driver of u3wf_flor_139.
+*/
+u3_noun
+u3uf_flor_139(u3_noun* arg)
+{
+  return u3qf_flor(arg[0], arg[1]);
+}

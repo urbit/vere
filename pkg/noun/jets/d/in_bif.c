@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -55,6 +56,14 @@ u3wdi_bif(u3_noun cor)
   u3_noun a, b;
   u3x_mean(cor, {u3x_sam, &b}, {u3x_con_sam, &a});
   return u3qdi_bif(a, b);
+}
+
+/* u3udi_bif(): array driver of u3wdi_bif.
+*/
+u3_noun
+u3udi_bif(u3_noun* arg)
+{
+  return u3qdi_bif(arg[1], arg[0]);
 }
 
 u3_noun

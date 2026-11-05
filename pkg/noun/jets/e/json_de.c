@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -254,4 +255,12 @@ u3_noun
 u3we_json_de(u3_noun cor)
 {
   return u3qe_json_de(u3x_atom(u3x_at(u3x_sam, cor)));
+}
+
+/* u3ue_json_de(): array driver of u3we_json_de.
+*/
+u3_noun
+u3ue_json_de(u3_noun* arg)
+{
+  return u3qe_json_de(u3x_atom(arg[0]));
 }

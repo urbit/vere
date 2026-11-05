@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -37,3 +38,11 @@
       return u3qf_flip(hel);
     }
   }
+
+/* u3uf_flip_139(): array driver of u3wf_flip_139.
+*/
+u3_noun
+u3uf_flip_139(u3_noun* arg)
+{
+  return u3qf_flip(arg[0]);
+}

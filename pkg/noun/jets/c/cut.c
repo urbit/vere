@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -67,3 +68,18 @@
     }
   }
 
+
+/* u3uc_cut(): array driver of u3wc_cut.
+*/
+u3_noun
+u3uc_cut(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2]))
+     || (c3n == u3ud(arg[3])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_cut(arg[0], arg[1], arg[2], arg[3]);
+}

@@ -10,7 +10,8 @@ typedef c3_d       u3v_version;
 #define U3V_VER3   (u3v_version)3  //  3.0-rc: persistent memoization
 #define U3V_VER4   (u3v_version)4  //  3.0:    bytecode alignment
 #define U3V_VER5   (u3v_version)5  //  4.0:    palloc
-#define U3V_VERLAT U3V_VER5
+#define U3V_VER6   (u3v_version)6  //          SKA state in the road
+#define U3V_VERLAT U3V_VER6
 
 /*  bytecode semantics (within u3v_version)
  */
@@ -19,6 +20,13 @@ typedef c3_h       u3n_version;
 #define U3N_VER1   (u3n_version)0  // zero-indexedfor backcompat
 #define U3N_VER2   (u3n_version)1
 #define U3N_VERLAT U3N_VER2
+
+/*  compiled nock (u3nc) bytecode (within u3v_version)
+ */
+typedef c3_h       u3nc_version;
+
+#define U3NC_VER1   (u3nc_version)0  // zero-indexed for backcompat
+#define U3NC_VERLAT U3NC_VER1
 
 /*  snapshot patch format
  */

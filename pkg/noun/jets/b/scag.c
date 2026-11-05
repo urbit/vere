@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -50,4 +51,16 @@ u3wb_scag(u3_noun cor)
   }
 
   return u3qb_scag(a, b);
+}
+
+/* u3ub_scag(): array driver of u3wb_scag.
+*/
+u3_noun
+u3ub_scag(u3_noun* arg)
+{
+  if ( (c3n == u3ud(arg[0])) && (u3_nul != arg[1]) ) {
+    return u3m_bail(c3__exit);
+  }
+
+  return u3qb_scag(arg[0], arg[1]);
 }

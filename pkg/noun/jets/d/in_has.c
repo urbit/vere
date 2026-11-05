@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -33,6 +34,14 @@ u3wdi_has(u3_noun cor)
   u3_noun a, b;
   u3x_mean(cor, {u3x_sam, &b}, {u3x_con_sam, &a});
   return u3qdi_has(a, b);
+}
+
+/* u3udi_has(): array driver of u3wdi_has.
+*/
+u3_noun
+u3udi_has(u3_noun* arg)
+{
+  return u3qdi_has(arg[1], arg[0]);
 }
 
 u3_noun
