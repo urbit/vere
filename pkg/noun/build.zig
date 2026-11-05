@@ -461,6 +461,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "canon.h",
     "direct.h",
     "copy_migrate.h",
     "error.h",

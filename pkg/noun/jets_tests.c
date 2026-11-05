@@ -925,6 +925,55 @@ _test_mas(void)
   return ret_i;
 }
 
+/* _lug_check(): run +lug on [e a] with f32 options, compare to [exp].
+**   p=24, v=-149, w=253, so emx is --104 and lfn is [--104 0xff.ffff].
+**   @s atoms: --n is 2n, -n is 2n-1.
+*/
+static c3_i
+_lug_check(c3_m t_m, c3_w e_w, c3_w a_w, u3_noun exp, const c3_c* cas_c)
+{
+  u3_noun a   = u3nc(e_w, a_w);
+  u3_noun b   = u3nt(u3nt(24, 297, 253), c3__z, c3__d);
+  u3_noun pro = u3qef_lug(a, b, t_m, c3y);
+  c3_i  ret_i = 1;
+
+  if ( c3n == u3r_sing(exp, pro) ) {
+    fprintf(stderr, "test lug fail: %s\r\n", cas_c);
+    u3m_p("expected", exp);
+    u3m_p("got", pro);
+    ret_i = 0;
+  }
+
+  u3z(a); u3z(b); u3z(exp); u3z(pro);
+  return ret_i;
+}
+
+static c3_i
+_test_lug(void)
+{
+  c3_i ret_i = 1;
+
+  //  2 * MAX (exponent --105) overflows: toward zero saturates,
+  //  every other direction gives infinity (urbit/urbit#7426)
+  //
+  ret_i &= _lug_check(c3__fl, 210, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%fl overflow");
+  ret_i &= _lug_check(c3__sm, 210, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%sm overflow");
+  ret_i &= _lug_check(c3__ce, 210, 0xffffff, u3nc(c3__i, c3y), "%ce overflow");
+  ret_i &= _lug_check(c3__lg, 210, 0xffffff, u3nc(c3__i, c3y), "%lg overflow");
+  ret_i &= _lug_check(c3__ne, 210, 0xffffff, u3nc(c3__i, c3y), "%ne overflow");
+
+  //  MAX itself is in range in every direction
+  //
+  ret_i &= _lug_check(c3__fl, 208, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%fl max");
+  ret_i &= _lug_check(c3__ce, 208, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%ce max");
+
+  return ret_i;
+}
+
 static c3_i
 _test_jets(void)
 {
@@ -967,6 +1016,11 @@ _test_jets(void)
 
   if ( !_test_mas() ) {
     fprintf(stderr, "test jets: mas: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_lug() ) {
+    fprintf(stderr, "test jets: lug: failed\r\n");
     ret_i = 0;
   }
 

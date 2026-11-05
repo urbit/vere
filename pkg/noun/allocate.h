@@ -268,7 +268,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+  U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
+  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -489,8 +490,18 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          ?  u3a_north_is_senior(r, som) \
                          :  u3a_south_is_senior(r, som) )
 
+  /* u3a_is_mutable(): [som] may be edited in place on road [r]: a cell
+  **                   on [r] that we hold the only reference to.
+  **
+  **   Never on the home road: the home-road hashcons set refers to its
+  **   members without counting, so a member can look uniquely held, and
+  **   editing it in place would change a value the set has filed. Nock
+  **   rarely runs on the home road, so copying there costs nothing.
+  */
 #     define  u3a_is_mutable(r, som) \
                 ( _(u3a_is_atom(som)) \
+                  ? c3n \
+                  : !(r)->par_p \
                   ? c3n \
                   : _(u3a_is_senior(r, som)) \
                   ? c3n \
@@ -631,6 +642,27 @@ typedef struct {
     c3_dessert((off & u3a_walign-1) == 0);
     return (off >> u3a_vits) | u3a_cell_flag;
   }
+
+  /* u3a_Hcon_w: home-road hashcons membership (off-loom), one bit per
+  **             u3a_minimum words of loom, or 0. see u3m_dedup().
+  */
+    extern c3_w* u3a_Hcon_w;
+
+  /* u3a_hcon_has(): indirect [som] is a member of the home-road
+  **                 hashcons set.
+  */
+    static inline c3_t
+    u3a_hcon_has(u3_noun som)
+    {
+      if ( !u3a_Hcon_w ) {
+        return 0;
+      }
+      else {
+        c3_w idx_w = u3a_to_off(som) >> u3a_min_log;
+        return 1 & (u3a_Hcon_w[idx_w / u3a_word_bits]
+                    >> (idx_w % u3a_word_bits));
+      }
+    }
 
     /**  road stack.
     **/
@@ -843,6 +875,22 @@ u3a_post_info(u3_post);
           void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
+        /* u3a_Defer_max_w: most nouns with deferred gains at once.
+        */
+          extern c3_w u3a_Defer_max_w;
+
+        /* u3a_defer_open(): defer home-road refcount gains, cancelling
+        **                   them against loses, until u3a_defer_close().
+        **                   a hook for u3m_soft_with().
+        */
+          void
+          u3a_defer_open(void);
+
+        /* u3a_defer_close(): write the gains still pending, stop deferring.
+        */
+          void
+          u3a_defer_close(void);
+
         /* u3a_luse(): check refcount sanity.
         */
           void
@@ -862,6 +910,11 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_mark_rptr(void* ptr_v);
+
+        /* u3a_marked(): [som] was marked, without marking it.
+        */
+          c3_t
+          u3a_marked(u3_noun som);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
