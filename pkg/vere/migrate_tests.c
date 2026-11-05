@@ -196,7 +196,7 @@ _test_ska(void)
   u3_noun a, b;
   c3_i    ret_i = 1;
 
-  u3d_boot(_cue(u3_Steel_pill, u3_Steel_pill_len));
+  u3d_boot(u3i_bytes(u3_Steel_pill_len, u3_Steel_pill));
 
   a = u3m_soft(0, _nock_n, u3nc(u3k(cor), u3k(fol)));
   b = u3m_soft(0, _nock_nc, u3nc(cor, fol));

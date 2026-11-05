@@ -10,7 +10,9 @@
 #include "ship.h"
 #include "types.h"
 #include "vere.h"
+#include "direct.h"
 #include "ivory.h"
+#include "steel.h"
 #include "ur/ur.h"
 #include "db/lmdb.h"
 #include <mars.h>
@@ -1564,6 +1566,14 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   return pay_d;
 }
 
+/* u3_mars_steel(): bring the SKA core up to the steel pill of this binary.
+*/
+void
+u3_mars_steel(void)
+{
+  u3d_boot(u3i_bytes(u3_Steel_pill_len, u3_Steel_pill));
+}
+
 /* u3_mars_load(): load pier.
 */
 void
@@ -1584,6 +1594,8 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
     u3_disk_exit(mar_u->log_u);
     exit(1); // XX
   }
+
+  u3_mars_steel();
 }
 
 /* u3_mars_work(): init mars

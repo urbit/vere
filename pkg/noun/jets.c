@@ -1215,7 +1215,8 @@ u3j_boot(c3_o nuu_o)
 
 /* u3j_ring(): find the drivers of an arm by ring [path axis]: the arm in
 **             the hot state in *ham_u, its array driver in *arm_u, NULL
-**             if none.  RETAINS.  Produces c3n if there is no driver.
+**             if it has none or is off.  RETAINS.  Produces c3n if there
+**             is no driver.
 */
 c3_o
 u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
@@ -1232,7 +1233,7 @@ u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u)
 
   u3x_trel(val, &jax, &inx, &arg);
   *ham_u = &(u3D.ray_u[jax].arm_u[inx]);
-  *arm_u = ( arg ) ? &(u3u_Harm[arg - 1]) : NULL;
+  *arm_u = ( arg && (c3y == (*ham_u)->liv) ) ? &(u3u_Harm[arg - 1]) : NULL;
 
   return c3y;
 }
@@ -2810,6 +2811,7 @@ _cj_prune_drop(u3_noun kev, void* ptr_v)
 
   u3h_del(u3R->jed.cod_p, u3h(kev));
   u3h_del(u3R->jed.bas_p, u3h(kev));
+  u3h_del(u3R->ska.tem_p, u3h(kev));
   (*num_w)++;
 }
 
@@ -2854,6 +2856,14 @@ u3j_prune(c3_w* tot_w, c3_w* dea_w)
   u3a_mark_init();
   u3a_mark_noun(u3A->roc);
   u3a_mark_noun(u3A->yot);
+  //  the code of the SKA core, which runs jetted, and not its state at axis
+  //  14, which remembers every core there has been
+  //
+  if ( u3_nul != u3R->ska.cor ) {
+    u3a_mark_noun(u3x_at(2, u3R->ska.cor));
+    u3a_mark_noun(u3x_at(6, u3R->ska.cor));
+    u3a_mark_noun(u3x_at(15, u3R->ska.cor));
+  }
   u3h_walk_with(u3R->cax.har_p, _cj_prune_mark, 0);
   u3h_walk_with(u3R->cax.per_p, _cj_prune_mark, 0);
   u3h_walk_with(u3R->cax.for_p, _cj_prune_mark, 0);

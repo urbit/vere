@@ -4013,12 +4013,12 @@ u3nc_regs(void)
     u3h_walk_with(rod_u->ska.dir_p, _nc_regs_cb, his_w);
   }
 
-  fprintf(stderr, "u3nc: %u n-ary programs, %u arguments\r\n",
-          his_w[64], his_w[65]);
+  fprintf(stderr, "u3nc: %" PRIc3_w " n-ary programs, %" PRIc3_w
+                  " arguments\r\n", his_w[64], his_w[65]);
   for ( i_w = 0; i_w < 64; i_w++ ) {
     if ( his_w[i_w] ) {
-      fprintf(stderr, "  %u%s: %u\r\n", i_w, ( 63 == i_w ) ? "+" : "",
-              his_w[i_w]);
+      fprintf(stderr, "  %" PRIc3_w "%s: %" PRIc3_w "\r\n",
+              i_w, ( 63 == i_w ) ? "+" : "", his_w[i_w]);
     }
   }
 }
@@ -4326,6 +4326,64 @@ u3nc_reclaim(void)
   u3R->ska.dir_p = u3h_new();
   u3R->ska.ent_p = u3h_new();
   u3R->ska.def_p = u3h_new();
+}
+
+/* _nc_drop_dir(): free the program under a key of ska.dir_p, if there is
+**                 one.  TRANSFERS.
+*/
+static void
+_nc_drop_dir(u3_noun key)
+{
+  u3_weak pog = u3h_git(u3R->ska.dir_p, key);
+
+  if ( u3_none != pog ) {
+    _nc_prog_free(_nc_to(pog));
+    u3h_del(u3R->ska.dir_p, key);
+  }
+
+  u3z(key);
+}
+
+/* _nc_drop_ent(): free the entry program of a bell, if there is one.  RETAINS.
+*/
+static void
+_nc_drop_ent(u3_noun bell)
+{
+  u3_weak lis = u3h_git(u3R->ska.ent_p, u3t(bell));
+  u3_noun out = u3_nul, i;
+
+  if ( u3_none == lis ) {
+    return;
+  }
+
+  for ( ; u3_nul != lis; lis = u3t(lis) ) {
+    i = u3h(lis);
+
+    if ( c3y == u3r_sing(u3h(i), u3h(bell)) ) {
+      _nc_prog_free(_nc_to(u3t(i)));
+    }
+    else {
+      out = u3nc(u3k(i), out);
+    }
+  }
+
+  u3h_put(u3R->ska.ent_p, u3t(bell), out);
+}
+
+/* u3nc_drop(): free the programs of functions on the home road, lis a
+**              (list bell) that holds the callers of all of them, so no
+**              program is left linked to a dropped one.  RETAINS.
+*/
+void
+u3nc_drop(u3_noun lis)
+{
+  u3_assert( u3R == &(u3H->rod_u) );
+
+  for ( ; u3_nul != lis; lis = u3t(lis) ) {
+    _nc_drop_dir(_nc_dir_key(u3h(lis), c3n));
+    _nc_drop_dir(_nc_dir_key(u3h(lis), c3y));
+    _nc_drop_ent(u3h(lis));
+  }
 }
 
 /* u3nc_rewrite_compact(): rewrite the SKA state for compaction.

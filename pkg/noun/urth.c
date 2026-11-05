@@ -422,9 +422,10 @@ _cu_realloc(FILE* fil_u, ur_root_t** tor_u, ur_nvec_t* doc_u)
   u3m_grab();
   u3C.wag_h  = wag_h;
 
-  //  re-establish warm jet state
+  //  re-establish warm jet state and the registrations for SKA
   //
   u3j_ream();
+  u3j_ska_ream();
 
   //  restore event number
   //

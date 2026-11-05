@@ -13,10 +13,22 @@
   *** poked like an arvo core.
   **/
 
-    /* u3d_boot(): install the SKA core from a steel pill [%steel nok trap ~].
+    /* u3d_boot(): bring the SKA core up to a jammed steel pill [%steel nok
+    **             trap ~]: install it if there is no core; if the pill's
+    **             version is not the installed core's, replace the core by
+    **             the pill's +load of it and drop all programs; then
+    **             u3d_hot().  TRANSFERS.
     */
       void
-      u3d_boot(u3_noun steel);
+      u3d_boot(u3_atom pil);
+
+    /* u3d_hot(): feed the core the jet drivers there are, and drop the
+    **            programs of the functions a change in them, or a core
+    **            registered since the last time, invalidates.  No compiled
+    **            nock may be running: on the home road, at boot.
+    */
+      void
+      u3d_hot(void);
 
     /* u3d_cold(): feed the core every registration there is, in place of
     **             those it has: after installing a core.

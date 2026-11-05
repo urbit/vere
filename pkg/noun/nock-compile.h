@@ -143,6 +143,13 @@
       void
       u3nc_reclaim(void);
 
+    /* u3nc_drop(): free the programs of functions on the home road, lis a
+    **              (list bell) that holds the callers of all of them, so no
+    **              program is left linked to a dropped one.  RETAINS.
+    */
+      void
+      u3nc_drop(u3_noun lis);
+
     /* u3nc_rewrite_compact(): rewrite the SKA state for compaction.
     */
       void

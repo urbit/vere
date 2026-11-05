@@ -1,5 +1,6 @@
 #include "allocate.h"
 #include "canon.h"
+#include "direct.h"
 #include "events.h"
 #include "hashtable.h"
 #include "jets.h"
@@ -171,6 +172,12 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
 
   u3j_boot(c3n);
   u3j_ream();
+
+  //  the core forgets what was pruned; the programs are gone already
+  //
+  if ( (opt_w & u3_melt_cold) && (u3_nul != u3R->ska.cor) ) {
+    u3d_cold();
+  }
 
   if ( fil_u ) {
     fprintf(fil_u, "atoms (%zu)", vt_size(&can_u.vat_u));

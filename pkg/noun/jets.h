@@ -200,7 +200,8 @@
 
       /* u3j_ring(): find the drivers of an arm by ring [path axis] for u3nc:
       **             the arm in the hot state in *ham_u, its array driver in
-      **             *arm_u or NULL.  RETAINS.  Produces c3n for no driver.
+      **             *arm_u, NULL if it has none or is off.  RETAINS.
+      **             Produces c3n for no driver.
       */
         c3_o
         u3j_ring(u3_noun ring, u3j_harm** ham_u, const u3u_harm** arm_u);

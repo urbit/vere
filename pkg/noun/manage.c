@@ -583,6 +583,8 @@ _pave_params(void)
          ^ (U3NC_VERLAT << 11);
 }
 
+static void _cm_dup_clear(void);
+
 /* _pave_home(): initialize pristine home road.
 */
 static void
@@ -590,6 +592,10 @@ _pave_home(void)
 {
   u3_post top_p = u3C.wor_i - u3a_walign;
   u3_post bot_p = ((c3_w)1) << u3a_page;
+
+  //  the nouns of the home-road hashcons set are gone
+  //
+  _cm_dup_clear();
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));

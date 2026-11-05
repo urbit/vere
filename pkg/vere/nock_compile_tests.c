@@ -7,6 +7,7 @@
 
 #include "ivory.h"
 #include "direct.h"
+#include "mars.h"
 #include "nock-compile.h"
 
 #include <sys/time.h>
@@ -31,7 +32,7 @@ static void
 _setup(void)
 {
   u3_cue_xeno* sil_u;
-  u3_weak      pil, ska;
+  u3_weak      pil;
 
   u3C.wag_h |= u3o_hashless;
   u3C.hap_w  = 50000;   //  memo cache sizes, as in the runtime
@@ -57,11 +58,6 @@ _setup(void)
     printf("*** fail _setup 1\n");
     exit(1);
   }
-  if ( u3_none == (ska = u3s_cue_xeno_with(sil_u, u3_Steel_pill_len,
-                                                  u3_Steel_pill)) ) {
-    printf("*** fail _setup 2\n");
-    exit(1);
-  }
   u3s_cue_xeno_done(sil_u);
 
   if ( c3n == u3v_boot_lite(u3k(pil)) ) {
@@ -69,7 +65,7 @@ _setup(void)
     exit(1);
   }
 
-  u3d_boot(ska);
+  u3_mars_steel();
   u3z(pil);
 
   //  check reference counts after every run: u3m_soft_top() marks and
@@ -310,6 +306,55 @@ _test_memo_keep(void)
   u3z(pro);
   u3z(fol);
   return _test("memo keep", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_memo_jet(): persistent memoization of a formula that is also a
+**                   jetted arm: CSM still gets the whole subject, not the
+**                   first of the registers of the jet's need.
+*/
+static c3_i
+_test_memo_jet(void)
+{
+  u3_noun gat = u3v_wish("dec");
+  u3_noun cor = u3nt(u3k(u3h(gat)), 1001, u3k(u3t(u3t(gat))));
+  u3_noun hin = u3nt(11,
+                     u3nt(c3__memo, 1, u3nc(c3__ska, u3_nul)),
+                     u3k(u3h(gat)));
+  u3_noun fol = u3nq(2, u3nc(0, 1), 1, hin);
+  u3_weak pro = _run("u3nc fresh ", _nock_nc, cor, fol);
+
+  u3z(gat);
+
+  if ( u3_none == pro ) {
+    fprintf(stderr, "test memo jet: crashed\r\n");
+    u3z(cor); u3z(fol);
+    return 0;
+  }
+
+  u3z(pro);
+  return _test("memo jet", cor, fol, 1);
+}
+
+/* _test_memo_mono(): persistent memoization right in a function compiled as
+**                    one of its whole subject: CSM there too.
+*/
+static c3_i
+_test_memo_mono(void)
+{
+  u3_noun fol = u3nt(11,
+                     u3nt(c3__memo, 1, u3nc(c3__ska, u3_nul)),
+                     u3nt(4, 0, 2));
+  u3_noun bus = u3nc(1001, 7);
+  u3_weak pro = _run("u3nc fresh ", _nock_nc, bus, fol);
+
+  if ( u3_none == pro ) {
+    fprintf(stderr, "test memo mono: crashed\r\n");
+    u3z(bus); u3z(fol);
+    return 0;
+  }
+
+  u3z(pro);
+  return _test("memo mono", bus, fol, 1);
 }
 
 /* _test_dies(): a value live into one arm of a branch only: dropped at
@@ -633,22 +678,40 @@ _test_fast(void)
   return ret_i;
 }
 
-/* _scot_cb(): u3h_walk callback over the rings: set the flags in ptr_v
-**             on every arm of a core named scot.
+/* _flags: flags to set on the arms of the cores with a name.
+*/
+typedef struct {
+  const c3_c* nam_c;
+  c3_o        liv;
+  c3_o        ice;
+} _flags;
+
+/* _flags_cb(): u3h_walk callback over the rings: set the flags in ptr_v.
 */
 static void
-_scot_cb(u3_noun kev, void* ptr_v)
+_flags_cb(u3_noun kev, void* ptr_v)
 {
-  const c3_o*     fla_o = ptr_v;
+  const _flags*   fla_u = ptr_v;
   u3j_harm*       ham_u;
   const u3u_harm* arm_u;
 
-  if (  (c3y == u3r_sing_c("scot", u3h(u3h(u3h(kev)))))
+  if (  (c3y == u3r_sing_c(fla_u->nam_c, u3h(u3h(u3h(kev)))))
      && (c3y == u3j_ring(u3h(kev), &ham_u, &arm_u)) )
   {
-    ham_u->liv = fla_o[0];
-    ham_u->ice = fla_o[1];
+    ham_u->liv = fla_u->liv;
+    ham_u->ice = fla_u->ice;
   }
+}
+
+/* _set_flags(): set the flags and feed the core the drivers there are now.
+*/
+static void
+_set_flags(const c3_c* nam_c, c3_o liv, c3_o ice)
+{
+  _flags fla_u = { nam_c, liv, ice };
+
+  u3h_walk_with(u3H->rod_u.ska.pax_p, _flags_cb, &fla_u);
+  u3d_hot();
 }
 
 /* _off_cb(): u3h_walk callback over the rings: turn off (liv) every arm
@@ -690,20 +753,306 @@ _off_cb(u3_noun kev, void* ptr_v)
 static c3_i
 _test_flags(void)
 {
-  c3_o off_o[2] = { c3n, c3y };
-  c3_o tes_o[2] = { c3y, c3n };
-  c3_o def_o[2] = { c3y, c3y };
   c3_i ret_i = 1;
 
-  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, off_o);
+  _set_flags("scot", c3n, c3y);
   ret_i = _test_scot() && ret_i;
 
-  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, tes_o);
+  _set_flags("scot", c3y, c3n);
   ret_i = _test_scot() && ret_i;
 
-  u3h_walk_with(u3H->rod_u.ska.pax_p, _scot_cb, def_o);
+  _set_flags("scot", c3y, c3y);
 
   fprintf(stderr, "test flags: %s\r\n", ret_i ? "ok" : "failed");
+  return ret_i;
+}
+
+/* _check(): report a condition.
+*/
+static c3_i
+_check(const c3_c* nam_c, c3_t cnd_t)
+{
+  fprintf(stderr, "test %s: %s\r\n", nam_c, cnd_t ? "ok" : "failed");
+  return cnd_t;
+}
+
+/* _has_entry(): is there an entry program for [bus fol]?  RETAINS.
+*/
+static c3_t
+_has_entry(u3_noun bus, u3_noun fol)
+{
+  u3_weak lis = u3h_git(u3R->ska.ent_p, fol);
+
+  return (u3_none != lis) && (u3_none != u3d_match(bus, lis));
+}
+
+/* _links: a walk over the programs of the road, first collecting them, then
+**         counting the links to programs that aren't among them.
+*/
+typedef struct {
+  u3p(u3h_root) pog_p;
+  c3_t          chk_t;
+  c3_w          bad_w;
+} _links;
+
+static void
+_links_prog(_links* lin_u, u3_noun pog)
+{
+  u3nc_prog* pog_u = u3to(u3nc_prog, pog << u3a_vits);
+
+  if ( !lin_u->chk_t ) {
+    u3h_put(lin_u->pog_p, pog, u3_nul);
+    return;
+  }
+
+  for ( c3_h i_h = 0; i_h < pog_u->dir_u.len_h; i_h++ ) {
+    u3p(u3nc_prog) gop_p = pog_u->dir_u.dat_u[i_h].pog_p;
+
+    if ( gop_p && (u3_none == u3h_git(lin_u->pog_p, gop_p >> u3a_vits)) ) {
+      lin_u->bad_w++;
+    }
+  }
+}
+
+static void
+_links_dir_cb(u3_noun kev, void* ptr_v)
+{
+  _links_prog(ptr_v, u3t(kev));
+}
+
+static void
+_links_ent_cb(u3_noun kev, void* ptr_v)
+{
+  for ( u3_noun lis = u3t(kev); u3_nul != lis; lis = u3t(lis) ) {
+    _links_prog(ptr_v, u3t(u3h(lis)));
+  }
+}
+
+/* _links_ok(): no program is linked to a program that is gone.
+*/
+static c3_t
+_links_ok(void)
+{
+  _links lin_u = { u3h_new(), 0, 0 };
+
+  u3h_walk_with(u3R->ska.dir_p, _links_dir_cb, &lin_u);
+  u3h_walk_with(u3R->ska.ent_p, _links_ent_cb, &lin_u);
+  lin_u.chk_t = 1;
+  u3h_walk_with(u3R->ska.dir_p, _links_dir_cb, &lin_u);
+  u3h_walk_with(u3R->ska.ent_p, _links_ent_cb, &lin_u);
+
+  u3h_free(lin_u.pog_p);
+  return !lin_u.bad_w;
+}
+
+/* _test_hot(): turn off and on the jets of the cores named nam_c: with each
+**              change the programs of a function that calls them go, and
+**              those of one that doesn't stay; no program is left linked to
+**              a dropped one; what is compiled again agrees with u3n.  No
+**              change changes nothing.  src_c: source of a gate calling
+**              them, on sample sam.
+*/
+static c3_i
+_test_hot(const c3_c* nam_c, const c3_c* src_c, u3_noun sam)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun cor = _gate(src_c, sam);
+  u3_noun oth = _gate("|=  n=@\n^-  @\n+(n)\n", 5);
+  c3_i    ret_i = 1;
+
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    c3_w wyt_w;
+
+    u3z(_run("hot, caller", _nock_nc, cor, fol));
+    u3z(_run("hot, other ", _nock_nc, oth, fol));
+    wyt_w = u3h_wyt(u3R->ska.dir_p);
+
+    _set_flags(nam_c, ( 0 == i_w ) ? c3n : c3y, c3y);
+    fprintf(stderr, "test hot: %" PRIc3_w " of %" PRIc3_w " direct programs "
+                    "left\r\n", (c3_w)u3h_wyt(u3R->ska.dir_p), wyt_w);
+
+    ret_i = _check("hot: caller dropped", !_has_entry(cor, fol)) && ret_i;
+    ret_i = _check("hot: other kept", _has_entry(oth, fol)) && ret_i;
+    ret_i = _check("hot: links", _links_ok()) && ret_i;
+    ret_i = _test("hot", u3k(cor), u3k(fol), 1) && ret_i;
+  }
+
+  //  once the registrations made meanwhile are settled
+  //
+  u3d_hot();
+
+  {
+    u3_noun old   = u3R->ska.cor;
+    c3_w    wyt_w = u3h_wyt(u3R->ska.dir_p);
+
+    u3d_hot();
+    ret_i = _check("hot: no change", (old == u3R->ska.cor)
+                                  && (wyt_w == u3h_wyt(u3R->ska.dir_p))
+                                  && _has_entry(cor, fol)) && ret_i;
+  }
+
+  u3z(cor); u3z(oth); u3z(fol);
+  return ret_i;
+}
+
+/* _rings: a walk over the programs of the road, counting the call sites of
+**         a formula that go through a ring.
+*/
+typedef struct {
+  u3_noun fol;
+  c3_w    num_w;
+} _rings;
+
+static void
+_rings_prog(_rings* rin_u, u3_noun pog)
+{
+  u3nc_prog* pog_u = u3to(u3nc_prog, pog << u3a_vits);
+
+  for ( c3_h i_h = 0; i_h < pog_u->dir_u.len_h; i_h++ ) {
+    u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
+
+    if (  (u3_nul != dir_u->ring)
+       && (c3y == u3r_sing(rin_u->fol, u3t(dir_u->bell))) )
+    {
+      rin_u->num_w++;
+    }
+  }
+}
+
+static void
+_rings_dir_cb(u3_noun kev, void* ptr_v)
+{
+  _rings_prog(ptr_v, u3t(kev));
+}
+
+static void
+_rings_ent_cb(u3_noun kev, void* ptr_v)
+{
+  for ( u3_noun lis = u3t(kev); u3_nul != lis; lis = u3t(lis) ) {
+    _rings_prog(ptr_v, u3t(u3h(lis)));
+  }
+}
+
+static c3_w
+_rings_of(u3_noun fol)
+{
+  _rings rin_u = { fol, 0 };
+
+  u3h_walk_with(u3R->ska.dir_p, _rings_dir_cb, &rin_u);
+  u3h_walk_with(u3R->ska.ent_p, _rings_ent_cb, &rin_u);
+
+  return rin_u.num_w;
+}
+
+/* _test_rung(): a core registered after a function calling it was analyzed.
+**               Until the next u3d_hot() the function has no ring, so what
+**               calls it compiles the same as before, even newly; then its
+**               callers are dropped, and compile through the ring.
+*/
+static c3_i
+_test_rung(void)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun cor = _gate("|=  n=@\n"
+                      "=/  g  =>(..add |=(a=@ (sub +(a) 2)))\n"
+                      "(g n)\n", 5);
+  u3_noun nex = _gate("|=  n=@\n"
+                      "=/  g  =>(..add |=(a=@ (sub +(a) 2)))\n"
+                      "+((g n))\n", 5);
+  u3_noun oth = _gate("|=  n=@\n^-  @\n(mul n n)\n", 5);
+  u3_noun reg = _gate("|=  *\n"
+                      "=>  ..add\n"
+                      "~%  %dec  +>  ~\n"
+                      "|=  a=@\n"
+                      "(sub +(a) 2)\n", 0);
+  u3_noun gat, bat;
+  c3_i    ret_i = 1;
+
+  u3z(_run("rung, caller", _nock_nc, cor, fol));
+  u3z(_run("rung, other ", _nock_nc, oth, fol));
+
+  //  u3n registers the core; the compilation of the next function feeds
+  //  the registration to the SKA core
+  //
+  gat = _run("rung, hint  ", _nock_n, reg, fol);
+  bat = u3k(u3h(gat));
+  u3z(gat);
+  ret_i = _check("rung: no ring yet", 0 == _rings_of(bat)) && ret_i;
+
+  u3z(_run("rung, newer ", _nock_nc, nex, fol));
+  ret_i = _check("rung: the same after the registration",
+                 _has_entry(cor, fol) && (0 == _rings_of(bat))) && ret_i;
+
+  u3d_hot();
+  ret_i = _check("rung: callers dropped", !_has_entry(cor, fol)
+                                       && !_has_entry(nex, fol)) && ret_i;
+  ret_i = _check("rung: other kept", _has_entry(oth, fol)) && ret_i;
+  ret_i = _check("rung: links", _links_ok()) && ret_i;
+
+  ret_i = _test("rung, ring", u3k(cor), u3k(fol), 1) && ret_i;
+  ret_i = _check("rung: through the ring", 0 < _rings_of(bat)) && ret_i;
+  ret_i = _test("rung, ring, newer", u3k(nex), u3k(fol), 1) && ret_i;
+
+  u3z(cor); u3z(nex); u3z(oth); u3z(reg); u3z(fol); u3z(bat);
+  return ret_i;
+}
+
+/* _test_boot(): u3d_boot() over an installed core.  With the pill's version
+**               the core and the programs stay, and a run of a function
+**               compiled before doesn't poke the core.  With another version
+**               the core is the pill's +load of the installed one: the pill's
+**               arms, the state of the installed one, no programs.
+*/
+static c3_i
+_test_boot(void)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun cor = _gate("|=  n=@\n^-  @\n+(n)\n", 5);
+  u3_noun old, lon, pek, ver;
+  c3_w    wyt_w;
+  c3_i    ret_i = 1;
+
+  u3z(_run("boot, first", _nock_nc, cor, fol));
+
+  old   = u3R->ska.cor;
+  wyt_w = u3h_wyt(u3R->ska.dir_p);
+
+  {
+    c3_d beg_d = _time();
+
+    u3_mars_steel();
+    fprintf(stderr, "boot, same version: %" PRIu64 " us\r\n", _time() - beg_d);
+  }
+
+  ret_i = _check("boot, same version: core", old == u3R->ska.cor) && ret_i;
+  ret_i = _check("boot, same version: programs",
+                 (wyt_w == u3h_wyt(u3R->ska.dir_p))
+                 && _has_entry(cor, fol)) && ret_i;
+
+  u3z(_run("boot, again", _nock_nc, cor, fol));
+  ret_i = _check("boot, same version: no poke", old == u3R->ska.cor) && ret_i;
+
+  //  an installed core whose +peek, at axis 22, gives another version; its
+  //  state [%0 long-ska jets-hot cache] is at axis 14, long-ska at 58
+  //
+  lon = u3k(u3x_at(58, u3R->ska.cor));
+  pek = u3k(u3x_at(22, u3R->ska.cor));
+  ver = u3nc(1, u3nt(u3nc(1, u3nt(u3_nul, c3__ud, 99)), 0, 0));
+  u3R->ska.cor = u3i_edit(u3R->ska.cor, 22, ver);
+
+  u3_mars_steel();
+  ret_i = _check("boot, other version: arms",
+                 c3y == u3r_sing(pek, u3x_at(22, u3R->ska.cor))) && ret_i;
+  ret_i = _check("boot, other version: state",
+                 c3y == u3r_sing(lon, u3x_at(58, u3R->ska.cor))) && ret_i;
+  ret_i = _check("boot, other version: programs",
+                 (0 == u3h_wyt(u3R->ska.dir_p))
+                 && !_has_entry(cor, fol)) && ret_i;
+
+  u3z(lon); u3z(pek);
+
+  ret_i = _test("boot, loaded", cor, fol, 1) && ret_i;
+
   return ret_i;
 }
 
@@ -1272,8 +1621,9 @@ main(int argc, char* argv[])
       c3_c* key_c = c3_malloc(strlen(off_c) + 3);
       snprintf(key_c, strlen(off_c) + 3, ",%s,", off_c);
       u3h_walk_with(u3H->rod_u.ska.pax_p, _off_cb, key_c);
+      u3d_hot();
       c3_free(key_c);
-      fprintf(stderr, "probe: %u arms off\r\n", _off_w);
+      fprintf(stderr, "probe: %" PRIc3_w " arms off\r\n", _off_w);
     }
 
     c3_i ret_i = _test("probe", cor, u3nq(9, 2, 0, 1), 1);
@@ -1285,6 +1635,16 @@ main(int argc, char* argv[])
     }
 
     return ret_i ? 0 : 1;
+  }
+
+  //  U3NC_BOOT: the tests of u3d_boot() and u3d_hot(), and nothing else
+  //
+  if ( getenv("U3NC_BOOT") ) {
+    return (  _test_hot("scot", "|=  n=@\n^-  @t\n(scot %ud n)\n", 5)
+           && _test_rung()
+           && _test_boot()
+           && _test_hot("add", "|=  n=@\n^-  @\n(mul 2 (add n 2))\n", 5) )
+           ? 0 : 1;
   }
 
   if ( !_test("inc", 42, u3nt(4, 0, 1), 0) ) {
@@ -1320,6 +1680,14 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_memo_keep() ) {
+    exit(1);
+  }
+
+  if ( !_test_memo_jet() ) {
+    exit(1);
+  }
+
+  if ( !_test_memo_mono() ) {
     exit(1);
   }
 
@@ -1383,7 +1751,25 @@ main(int argc, char* argv[])
     exit(1);
   }
 
+  if ( !_test_hot("scot", "|=  n=@\n^-  @t\n(scot %ud n)\n", 5) ) {
+    exit(1);
+  }
+
+  if ( !_test_rung() ) {
+    exit(1);
+  }
+
+  if ( !_test_boot() ) {
+    exit(1);
+  }
+
   if ( !_test_jets() ) {
+    exit(1);
+  }
+
+  //  many programs by now, calling +add in many ways
+  //
+  if ( !_test_hot("add", "|=  n=@\n^-  @\n(mul 2 (add n 2))\n", 5) ) {
     exit(1);
   }
 

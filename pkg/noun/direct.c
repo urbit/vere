@@ -9,8 +9,10 @@
 #include "jets/q.h"
 #include "log.h"
 #include "manage.h"
+#include "nock-compile.h"
 #include "nock.h"
 #include "retrieve.h"
+#include "serial.h"
 #include "trace.h"
 #include "vortex.h"
 #include "xtract.h"
@@ -24,8 +26,16 @@
 **
 **    [%full sub=* fol=^]                 ->  [%ir bell straight new]
 **    [%dire bell mono=?]                 ->  [%ir bell straight ~]
-**    [%jets (list [ring need-ordered])]  ->  ~
+**    [%jets (list [ring need-ordered])]  ->  [%drop (list bell)]
 **    [%fast reset=? regs]                ->  ~
+**
+**  %drop: the functions a change of the jets invalidated, which the core
+**  has forgotten the compiled forms of, and vere drops the programs of:
+**  a driver added, changed or removed, or a ring for a function the core
+**  had seen without one.  Those only change here: a core registered at
+**  runtime gives rings to new functions alone, as programs may be running.
+**  Its +peek at /ver is its version, and its +load is a gate from a core
+**  of any version to itself with that core's state.
 **
 **  regs: (list [path sock]), cores registered with %fast hints, a label
 **  path and the template of the core's shape.  jets.c builds the same for
@@ -138,6 +148,16 @@ u3d_match(u3_noun sub, u3_noun lis)
   return pro;
 }
 
+/* _d_slog(): print a list of tanks.  RETAINS.
+*/
+static void
+_d_slog(u3_noun tan)
+{
+  for ( ; u3_nul != tan; tan = u3t(tan) ) {
+    u3t_slog(u3nc(0, u3k(u3h(tan))));
+  }
+}
+
 /* _d_poke(): poke the SKA core, rebails.
 */
 static u3_noun
@@ -161,18 +181,15 @@ _d_poke(u3_noun ovo)
   pro = u3n_slam_et(u3_nul, gat, ovo);
 
   if ( 0 != u3h(pro) ) {
-    u3l_log("ska: poke failed: %%%u, %u frames", u3h(pro),
+    u3l_log("ska: poke failed: %%%" PRIc3_w ", %" PRIc3_w " frames", u3h(pro),
             ( 2 == u3h(pro) ) ? u3qb_lent(u3t(pro)) : 0);
 
     //  the trace of a crash, rendered
     //
     if ( 2 == u3h(pro) ) {
       u3_noun tan = u3t_mook(u3k(u3t(pro)));
-      u3_noun i;
 
-      for ( i = tan; u3_nul != i; i = u3t(i) ) {
-        u3t_slog(u3nc(0, u3k(u3h(i))));
-      }
+      _d_slog(tan);
       u3z(tan);
     }
 
@@ -275,18 +292,19 @@ _d_shape(c3_l* axe_l, c3_w len_w)
               _d_shape(axe_l + piv_w, len_w - piv_w));
 }
 
-/* _d_rings_cb(): collect [ring need-ordered] of one jet arm.
+/* _d_rings_cb(): collect [ring need-ordered] of one jet arm that has an
+**                array driver and is on.
 */
 static void
 _d_rings_cb(u3_noun kev, void* ptr_v)
 {
-  u3_noun* lis = ptr_v;
-  u3_noun  jax, inx, arg;
+  u3_noun*        lis = ptr_v;
+  u3j_harm*       ham_u;
+  const u3u_harm* arm_u;
 
-  u3x_trel(u3t(kev), &jax, &inx, &arg);
+  u3j_ring(u3h(kev), &ham_u, &arm_u);
 
-  if ( arg ) {
-    const u3u_harm* arm_u = &(u3u_Harm[arg - 1]);
+  if ( arm_u ) {
     //  XX VLA. Assumes sane number of arguments in the driver
     c3_l axe_l[arm_u->len_w];
 
@@ -305,12 +323,33 @@ _d_rings(void)
   return lis;
 }
 
-/* u3d_boot(): install the SKA core from a steel pill [%steel nok trap ~].
+/* _d_version(): the version of a core.  RETAINS.
 */
-void
-u3d_boot(u3_noun steel)
+static u3_noun
+_d_version(u3_noun cor)
 {
-  u3_noun tag, nok, trap, nul, cor;
+  u3_noun gat = u3n_nock_on(u3k(cor), u3nt(9, _CVX_PEEK, u3nc(0, 1)));
+  u3_noun pro = u3n_slam_on(gat, u3nc(c3__ver, u3_nul));
+  u3_noun ver = u3k(u3t(u3t(pro)));
+
+  u3z(pro);
+  return ver;
+}
+
+/* _d_load(): the core of a jammed steel pill [%steel nok trap ~], if none is
+**            installed; if one is, ~ if it is of the pill's version, else the
+**            pill's +load of it.  All on the junior road: the pill is cued
+**            here and hash-consed, so that the kernel of the core is the
+**            one the cold state has batteries of, for jet lookups not to
+**            compare them whole, and a pill that isn't kept costs the home
+**            road nothing.  RETAINS.
+*/
+static u3_noun
+_d_load(u3_atom pil)
+{
+  u3_noun old   = u3R->ska.cor;
+  u3_noun steel = u3m_dedup(u3s_cue_atom(pil));
+  u3_noun tag, nok, trap, nul, cor, ver, ole;
 
   u3x_qual(steel, &tag, &nok, &trap, &nul);
 
@@ -321,16 +360,86 @@ u3d_boot(u3_noun steel)
   cor = u3n_nock_on(u3nc(u3k(trap), u3_nul), u3k(nok));
   u3z(steel);
 
-  u3z(u3R->ska.cor);
-  u3R->ska.cor = cor;
-
-  {
-    u3_noun lis = _d_rings();
-    u3l_log("ska: %" PRIc3_w " jetted arms", u3qb_lent(lis));
-    u3z(_d_poke(u3nc(c3__jets, lis)));
+  if ( u3_nul == old ) {
+    return cor;
   }
 
-  u3d_cold();
+  ver = _d_version(cor);
+  ole = _d_version(old);
+
+  if ( c3y == u3r_sing(ver, ole) ) {
+    u3z(cor);
+    return u3_nul;
+  }
+
+  u3l_log("ska: loading the core of version %" PRIc3_w " into version %"
+          PRIc3_w, ole, ver);
+
+  return u3n_slam_on(u3n_nock_on(cor, u3nt(9, _CVX_LOAD, u3nc(0, 1))),
+                     u3k(old));
+}
+
+/* u3d_boot(): bring the SKA core up to a jammed steel pill: install it if
+**             there is no core; if the pill's version is not the installed
+**             core's, replace the core by the pill's +load of it and drop
+**             all programs; then u3d_hot().  TRANSFERS.
+*/
+void
+u3d_boot(u3_atom pil)
+{
+  c3_o    nuu_o = __(u3_nul == u3R->ska.cor);
+  u3_noun pro   = u3m_soft(0, _d_load, pil);
+
+  if ( 0 != u3h(pro) ) {
+    u3l_log("ska: boot failed: %%%s", u3r_string(u3h(pro)));
+    _d_slog(u3t(pro));
+    u3m_bail(c3__fail);
+  }
+
+  if ( u3_nul != u3t(pro) ) {
+    u3z(u3R->ska.cor);
+    u3R->ska.cor = u3k(u3t(pro));
+
+    if ( c3n == nuu_o ) {
+      u3nc_reclaim();
+    }
+  }
+
+  u3z(pro);
+
+  u3d_hot();
+
+  if ( c3y == nuu_o ) {
+    u3d_cold();
+  }
+}
+
+/* u3d_hot(): feed the core the jet drivers there are, and drop the programs
+**            of the functions a change in them invalidates.
+*/
+void
+u3d_hot(void)
+{
+  u3_noun lis = _d_rings();
+  u3_noun pro, tag, bes;
+
+  u3l_log("ska: %" PRIc3_w " jetted arms", u3qb_lent(lis));
+
+  _d_flush();
+  pro = _d_poke(u3nc(c3__jets, lis));
+  u3x_cell(pro, &tag, &bes);
+
+  if ( c3__drop != tag ) {
+    u3m_bail(c3__fail);
+  }
+
+  if ( u3_nul != bes ) {
+    u3l_log("ska: the jets changed: dropping %" PRIc3_w " functions",
+            u3qb_lent(bes));
+    u3nc_drop(bes);
+  }
+
+  u3z(pro);
 }
 
 /* _d_tem_cb(): collect the registrations of a battery.
