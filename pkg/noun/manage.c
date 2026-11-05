@@ -3822,8 +3822,7 @@ u3m_sole_tend(void)
 
 /* u3m_sole_tab_meas(): the tables' meters since the last call: lookup
 **   steps, members compared, resizes between events and at the limit,
-**   time resizing (us), the largest distance, and 1 (the compact table:
-**   older logs had 0 for verstable).
+**   time resizing (us), and the largest distance.
 */
 void
 u3m_sole_tab_meas(c3_d* met_d)
@@ -3834,7 +3833,6 @@ u3m_sole_tab_meas(c3_d* met_d)
   met_d[3] = _cs_met.gro_d[1];
   met_d[4] = _cs_met.gus_d;
   met_d[5] = _cs_met.dmx_d;
-  met_d[6] = 1;
   memset(&_cs_met, 0, sizeof(_cs_met));
 }
 
@@ -4551,7 +4549,6 @@ _cm_sole_next(u3a_pile* pil_u, u3_noun som, c3_t* add_t)
       u3_weak can = _cm_sole_look(som);
 
       if ( (u3_none == can) && inn_t && (c3y == u3a_is_senior(u3R, som)) ) {
-        u3e_Meter.eis_d++;
         return som;
       }
       return _cm_sole_found(som, can, add_t);
@@ -4561,7 +4558,6 @@ _cm_sole_next(u3a_pile* pil_u, u3_noun som, c3_t* add_t)
     //  home canonicalizes it in place, if a promoted entry holds it
     //
     if ( inn_t && (c3y == u3a_is_senior(u3R, som)) ) {
-      u3e_Meter.eis_d++;
       return som;
     }
 
@@ -4660,7 +4656,6 @@ u3m_sole_pin(u3_noun som)
      && (c3n == u3a_is_senior(u3R, pro)) )
   {
     u3h_put(u3R->dup_p, pro, u3k(pro));
-    u3e_Meter.dpi_d++;
   }
   return pro;
 }

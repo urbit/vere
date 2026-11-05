@@ -565,22 +565,6 @@ _ca_defer_on(void)
   return _ca_defer_u.ope_t && (&(u3H->rod_u) == u3R);
 }
 
-/* _ca_defer_phase(): the phase, for counting: take jet byc per for pro,
-**                    other.
-*/
-static inline c3_w
-_ca_defer_phase(void)
-{
-  switch ( u3e_Phase ) {
-    case u3e_pha_take_jet: return 0;
-    case u3e_pha_take_byc: return 1;
-    case u3e_pha_take_per: return 2;
-    case u3e_pha_take_for: return 3;
-    case u3e_pha_take_pro: return 4;
-    default:               return 5;
-  }
-}
-
 /* _ca_defer_gain(): count a gain on [dog], if there's room.
 */
 static c3_t
@@ -591,13 +575,11 @@ _ca_defer_gain(u3_noun dog)
   if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
     u3e_Meter.dfg_d++;
-    u3e_Meter.dgp_d[_ca_defer_phase()]++;
     return 1;
   }
 
   if ( _ca_pend_size(&_ca_defer_u.pen_u) >= u3a_Defer_max_w ) {
     u3e_Meter.dfs_d++;
-    u3e_Meter.dsp_d[_ca_defer_phase()]++;
     return 0;
   }
 
@@ -610,7 +592,6 @@ _ca_defer_gain(u3_noun dog)
   _ca_defer_mark(dog);
 
   u3e_Meter.dfg_d++;
-  u3e_Meter.dgp_d[_ca_defer_phase()]++;
   u3e_Meter.dfn_d++;
   {
     c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
@@ -1097,13 +1078,6 @@ _ca_sole_adopt(u3_noun som, c3_t own_t)
   }
 }
 
-static inline c3_w
-_ca_sole_phase(void)
-{
-  c3_w idx_w = (c3_w)u3e_Phase - u3e_pha_take_jet;
-  return ( idx_w > 3 ) ? 3 : idx_w;
-}
-
 /* _ca_sole_next(): take [veb], pushing junior cells.
 */
 static inline u3_noun
@@ -1131,9 +1105,9 @@ _ca_sole_next(u3a_pile* pil_u, u3_noun veb, c3_t* own_t)
       else if ( c3y == u3a_is_atom(veb) ) {
         u3_weak can = u3m_sole_find_atom(veb);
 
-        u3e_Meter.ctk_d[_ca_sole_phase()]++;
+        u3e_Meter.ctk_d++;
         if ( u3_none != can ) {
-          u3e_Meter.ctf_d[_ca_sole_phase()]++;
+          u3e_Meter.ctf_d++;
           veb_u->mug_w = can;
           *own_t = 0;
           return can;
@@ -1179,9 +1153,9 @@ _ca_sole_cell(u3a_cell* old_u,
     }
     can = u3m_sole_find_cell((c3_h)old_u->mug_w, hed, tel);
 
-    u3e_Meter.ctk_d[_ca_sole_phase()]++;
+    u3e_Meter.ctk_d++;
     if ( u3_none != can ) {
-      u3e_Meter.ctf_d[_ca_sole_phase()]++;
+      u3e_Meter.ctf_d++;
       old_u->mug_w = can;
       *own_t = 0;
       return can;
@@ -2079,7 +2053,6 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
     }
     *b = *a;
     _ca_lo_put(rod_u, old);
-    u3e_Meter.wvc_d++;
   }
   u3e_Meter.wvm_d++;
   return c3y;
@@ -2183,12 +2156,10 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
   if ( &(u3H->rod_u) == u3R ) return c3n;
 
   u3e_Meter.wsg_d++;
-  if ( u3R->kid_p ) u3e_Meter.wsp_d++;
   awr_y = _ca_wed_where(a);
   bwr_y = _ca_wed_where(b);
 
   if ( !awr_y && !bwr_y ) {
-    u3e_Meter.wsn_d++;
     return c3n;
   }
   else if ( awr_y && bwr_y ) {
@@ -2196,12 +2167,6 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
   }
   else {
     kep_t = ( 0 != bwr_y );
-
-    //  the one slot we can write holds the value the order prefers
-    //
-    if ( kep_t != _ca_wed_keep(*a, *b) ) {
-      u3e_Meter.wso_d++;
-    }
   }
 
   {
@@ -2210,7 +2175,6 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
     c3_y     wri_y = kep_t ? bwr_y : awr_y;
 
     if ( u3a_sole_has(*sot) ) {
-      u3e_Meter.wsk_d[0]++;
       return c3n;
     }
     if ( 2 != wri_y ) {
@@ -2221,7 +2185,7 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
       u3e_Meter.wsw_d[1]++;
     }
     else {
-      u3e_Meter.wsk_d[1]++;
+      u3e_Meter.wsk_d++;
       return c3n;
     }
   }

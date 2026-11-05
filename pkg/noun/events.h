@@ -152,10 +152,6 @@
           c3_d dfr_d;        //  gains written at close
           c3_d dfe_d;        //    on distinct nouns
           c3_d dfk_d;        //  table shrinks after a large window
-          c3_d dgp_d[6];     //  gains deferred, by phase: take jet byc
-                             //  per for pro, other (experiment)
-          c3_d dsp_d[6];     //  gains written directly at the cap, by
-                             //  phase, as [dgp_d] (experiment)
 
           //  alignment of each new arvo state with the old, per
           //  u3e_measure_align(): home nouns referenced from the new
@@ -193,17 +189,12 @@
           //  slot writes on an inner road (_ca_wed_fall())
           //
           c3_d wvm_d;        //  merges on senior inner roads
-          c3_d wvc_d;        //  ... through a slot that counts its value
           c3_d wsg_d;        //  give-ups: no road could merge
-          c3_d wsp_d;        //  ... while promoting
           c3_d wsw_d[3];     //  slot writes: on this road, in home memory,
                              //  on a senior inner road
-          c3_d wso_d;        //  ... against the order: the one slot that
-                             //  could be written held the value it prefers
-          c3_d wsn_d;        //  neither slot writable
-          c3_d wsk_d[2];     //  not written: a member's slot; a home write
-                             //  refused (the count at its limit, or,
-                             //  debugging memory, the home lose list full)
+          c3_d wsk_d;        //  home writes refused (the count at its
+                             //  limit, or, debugging memory, the home lose
+                             //  list full)
 
           //  the lose lists, home [0] and inner [1] (u3a_wed_drain())
           //
@@ -216,34 +207,23 @@
                              //  with the road they're on
           c3_d wlc_d;        //  inner entries copied up a road at an exit
 
-          //  roots pinned on inner roads (u3m_sole_pin(), into dup_p)
-          //
-          c3_d dpi_d;        //  roots pinned
-
           //  canonicalizing on inner roads (u3m_sole_try())
           //
           c3_d eic_d[2];     //  calls: home road, inner roads
-          c3_d eiw_d[2];     //  ... from: bytecode keys, memo keys
           c3_d eij_d;        //  junior cells walked
           c3_d eiv_d;        //  visited-set hits
-          c3_d eis_d;        //  senior cells left, not members
           c3_d eih_d[2];     //  home-set probes on inner roads, hits
 
           //  exits to home: the canonicalizing take (_ca_take_sole()),
           //  and time in each step (microseconds, while measuring)
           //
-          c3_d ctk_d[4];     //  junior nouns looked up: jets, byc, per,
-                             //  for
-          c3_d ctf_d[4];     //  ... found a member, so not copied
+          c3_d ctk_d;        //  junior nouns looked up
+          c3_d ctf_d;        //  ... found a member, so not copied
           c3_d ctr_d;        //  older home nouns' slots left as they
                              //  were: the home lose list full
           c3_d cus_d[2];     //  time: takes, then pins and the lose list
           c3_d cam_d[2];     //  most members added at one exit, before
                              //  its drain; the set's size as it began
-
-          //  jet battery checks (u3r_sing_wed()), when the pointers differ
-          //
-          c3_d jck_d[4];     //  checks, unequal, unified, not unified
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

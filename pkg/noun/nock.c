@@ -1780,7 +1780,6 @@ _n_find(u3_noun pre, u3_noun fol)
     }
   }
 
-  u3e_Meter.eiw_d[0]++;
   key = u3m_sole_try(key);
 
   {

@@ -384,7 +384,7 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_sole_tend(void);
 
-      /* u3m_sole_tab_meas(): the compact table's meters (7) since the
+      /* u3m_sole_tab_meas(): the compact table's meters (6) since the
       **                      last call.
       */
         void

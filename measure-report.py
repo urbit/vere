@@ -109,7 +109,26 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 11, "X": 11, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
+WIDTH = {"W": 6, "X": 11, "V": 12, "I": 6, "Z": 7}
+
+def norm_line(t, v):
+    """Map an older layout of line [t] (a list of ints) onto the current
+    one: W, I and Z were trimmed (Nov 5), X and Z gained fields."""
+    v = list(v)
+    n = len(v)
+    if t == "Z":
+        if n == 11:            #  before the per-exit adds
+            v, n = v + [0, 0], 13
+        if n == 13:            #  lookups and finds by phase
+            v = [sum(v[0:4]), sum(v[4:8])] + v[8:13]
+    elif t == "X" and n == 10:  #  before inner lists moved onto the loom
+        v = v + [0]
+    elif t == "W" and n == 11:
+        v = [v[0], v[2], v[4], v[5], v[6], v[10]]
+    elif t == "I" and n == 9:
+        v = [v[0], v[1], v[4], v[5], v[7], v[8]]
+    return v
+
 
 
 def pct(a, b):
@@ -150,11 +169,9 @@ def new_interval():
         "Y": None,
         "W": None,
         "X": None,
-        "Q": None,
         "V": None,
         "I": None,
         "Z": None,
-        "J": None,
         "N": {},
         "ops": [],
     }
@@ -245,14 +262,10 @@ def parse(path):
                 #  the step-0 prototype's logs used these letters for
                 #  labelled lines; take only lines of this shape
                 v = line.split()[1:]
-                #  Z lines before the per-exit adds had 11 fields
-                if t == "Z" and len(v) == 11:
-                    v = v + ["0", "0"]
-                #  X lines before inner lists moved onto the loom had 10
-                if t == "X" and len(v) == 10:
-                    v = v + ["0"]
-                if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
-                    cur[t] = tuple(int(x) for x in v)
+                if all(x.isdigit() for x in v):
+                    v = norm_line(t, [int(x) for x in v])
+                    if len(v) == WIDTH[t]:
+                        cur[t] = tuple(v)
             elif t == "N" and cur is not None:
                 p = line.split()
                 if len(p) == 11 and all(x.isdigit() for x in p[2:]):
@@ -579,7 +592,8 @@ def main():
             print(f"  pages an on-loom cell table would write per interval "
                   f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
         #  the compact table (not in logs from verstable builds)
-        tab = [i["D"] for i in dis if len(i["D"]) >= 18 and i["D"][17]]
+        tab = [i["D"] for i in dis
+               if (len(i["D"]) == 17) or (len(i["D"]) >= 18 and i["D"][17])]
         if tab:
             T = [sum(d[k] for d in tab) for k in range(11, 16)]
             print(f"  compact table: {T[0] / pro if pro else 0:.2f} buckets visited "
@@ -633,19 +647,14 @@ def main():
         per = lambda x: f"{x / tasks if tasks else 0:.2f}"
         print("\n== unification of home values on inner roads ==")
         if wis:
-            w = [sum(i["W"][j] for i in wis) for j in range(11)]
-            print(f"  merges on senior inner roads: {w[0]}, {w[1]} through a slot "
-                  f"that counts its value")
-            g = w[2]
-            print(f"  give-ups, no road could merge: {g} ({per(g)} per task), "
-                  f"{w[3]} while promoting  {pct(w[3], g)}")
-            for name, c in (("written, on this road", w[4]),
-                            ("written, in home memory", w[5]),
-                            ("written, on a senior inner road", w[6]),
-                            ("  of all writes, against the order", w[7]),
-                            ("neither slot writable", w[8]),
-                            ("not written: a member's slot", w[9]),
-                            ("not written: home write refused", w[10])):
+            w = [sum(i["W"][j] for i in wis) for j in range(6)]
+            print(f"  merges on senior inner roads: {w[0]}")
+            g = w[1]
+            print(f"  give-ups, no road could merge: {g} ({per(g)} per task)")
+            for name, c in (("written, on this road", w[2]),
+                            ("written, in home memory", w[3]),
+                            ("written, on a senior inner road", w[4]),
+                            ("not written: home write refused", w[5])):
                 print(f"    {name:<36}{c:>12}  {pct(c, g)}")
         if xis:
             x = [sum(i["X"][j] for i in xis) for j in range(11)]
@@ -656,11 +665,6 @@ def main():
                       f"{x[o + 2]} lost after takes (most at one exit: {x[o + 3]}), "
                       f"{x[o + 4]} left by interrupted exits")
             print(f"  inner entries copied up a road at an exit: {x[10]}")
-    qis = [i for i in intervals if i["Q"]]
-    if qis and any(any(i["Q"]) for i in qis):
-        q = sum(i["Q"][0] for i in qis)
-        print("\n== roots pinned on inner roads (u3m_sole_pin) ==")
-        print(f"  roots pinned: {q}")
     vis = [i for i in intervals if i["V"]]
     if vis and any(any(i["V"]) for i in vis):
         v = [sum(i["V"][j] for i in vis) for j in range(12)]
@@ -672,35 +676,22 @@ def main():
         print(f"  inner pairs looked up: {v[9]}, found {v[10]} {pct(v[10], v[9])}, recorded {v[11]}")
     iis = [i for i in intervals if i["I"]]
     if iis and any(any(i["I"]) for i in iis):
-        e = [sum(i["I"][j] for i in iis) for j in range(9)]
+        e = [sum(i["I"][j] for i in iis) for j in range(6)]
         print("\n== canonicalizing on inner roads (u3m_sole_try) ==")
-        print(f"  calls: home road {e[0]}, inner roads {e[1]}; "
-              f"from bytecode keys {e[2]}, memo keys {e[3]}")
-        print(f"  junior cells walked: {e[4]}   visited-set hits: {e[5]}   "
-              f"senior cells left: {e[6]}")
-        print(f"  home-set probes from inner roads: {e[7]}, hits {e[8]} {pct(e[8], e[7])}")
+        print(f"  calls: home road {e[0]}, inner roads {e[1]}")
+        print(f"  junior cells walked: {e[2]}   visited-set hits: {e[3]}")
+        print(f"  home-set probes from inner roads: {e[4]}, hits {e[5]} {pct(e[5], e[4])}")
     zis = [i for i in intervals if i["Z"]]
     if zis and any(any(i["Z"]) for i in zis):
-        z = [sum(i["Z"][j] for i in zis) for j in range(11)]
-        top = max(zis, key=lambda i: i["Z"][11])["Z"]
+        z = [sum(i["Z"][j] for i in zis) for j in range(5)]
+        top = max(zis, key=lambda i: i["Z"][5])["Z"]
         print("\n== exits to home: canonicalizing take ==")
-        for k, name in enumerate(("jets", "byc", "per", "for")):
-            print(f"  {name:<6} looked up {z[k]:>12}, found a member {z[4 + k]:>10}  "
-                  f"{pct(z[4 + k], z[k])}")
-        print(f"  older home slots left, lose list full: {z[8]}")
-        print(f"  time, ms: takes {z[9] / 1000:.1f}, pins and drain {z[10] / 1000:.1f}; "
-              f"total {(z[9] + z[10]) / 1000:.1f}")
-        print(f"  most members added at one exit, before its drain: {top[11]} "
-              f"(set then {top[12]}, {pct(top[11], top[12])})")
-    jis = [i for i in intervals if i["J"]]
-    if jis and any(any(i["J"]) for i in jis):
-        j = [sum(i["J"][k] for i in jis) for k in range(4)]
-        tasks = sum(i["tasks"] for i in jis)
-        print("\n== jet battery checks, pointers differing ==")
-        print(f"  checks: {j[0]} ({j[0] / tasks if tasks else 0:.1f} per task)")
-        for name, c in (("unequal", j[1]), ("unified", j[2]),
-                        ("not unified", j[3])):
-            print(f"    {name:<20}{c:>12}  {pct(c, j[0])}")
+        print(f"  junior nouns looked up {z[0]}, found a member {z[1]}  {pct(z[1], z[0])}")
+        print(f"  older home slots left, lose list full: {z[2]}")
+        print(f"  time, ms: takes {z[3] / 1000:.1f}, pins and drain {z[4] / 1000:.1f}; "
+              f"total {(z[3] + z[4]) / 1000:.1f}")
+        print(f"  most members added at one exit, before its drain: {top[5]} "
+              f"(set then {top[6]}, {pct(top[5], top[6])})")
     names = sorted({n for i in intervals for n in i["N"]})
     if names:
         print("\n== cribs ==")

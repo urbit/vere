@@ -21,7 +21,7 @@ row per ship, for further analysis.
 
 Metrics follow the plan's "Tuning the merged heuristics and policies"
 and "Prioritizing follow-up work": lines from older builds that lack
-some (P, H, D, G, Y, W, X, Q, V, I, Z, J, N) are used when present.
+some (P, H, D, G, Y, W, X, V, I, Z, N) are used when present.
 """
 
 import csv
@@ -52,7 +52,26 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 11, "X": 11, "Q": 1, "V": 12, "I": 9, "Z": 13, "J": 4}
+WIDTH = {"W": 6, "X": 11, "V": 12, "I": 6, "Z": 7}
+
+def norm_line(t, v):
+    """Map an older layout of line [t] (a list of ints) onto the current
+    one: W, I and Z were trimmed (Nov 5), X and Z gained fields."""
+    v = list(v)
+    n = len(v)
+    if t == "Z":
+        if n == 11:            #  before the per-exit adds
+            v, n = v + [0, 0], 13
+        if n == 13:            #  lookups and finds by phase
+            v = [sum(v[0:4]), sum(v[4:8])] + v[8:13]
+    elif t == "X" and n == 10:  #  before inner lists moved onto the loom
+        v = v + [0]
+    elif t == "W" and n == 11:
+        v = [v[0], v[2], v[4], v[5], v[6], v[10]]
+    elif t == "I" and n == 9:
+        v = [v[0], v[1], v[4], v[5], v[7], v[8]]
+    return v
+
 
 
 def parse(lines):
@@ -104,14 +123,10 @@ def parse(lines):
             #  the step-0 prototype's logs used these letters for
             #  labelled lines; take only lines of this shape
             v = ints(p[1:])
-            #  Z lines before the per-exit adds had 11 fields
-            if v is not None and t == "Z" and len(v) == 11:
-                v = tuple(v) + (0, 0)
-            #  X lines before inner lists moved onto the loom had 10
-            if v is not None and t == "X" and len(v) == 10:
-                v = tuple(v) + (0,)
-            if v is not None and len(v) == WIDTH[t]:
-                cur[t] = v
+            if v is not None:
+                v = norm_line(t, v)
+                if len(v) == WIDTH[t]:
+                    cur[t] = tuple(v)
         elif t == "N" and len(p) == 11:
             v = ints(p[2:])
             if v is not None:
@@ -244,17 +259,13 @@ def sums(ivs):
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
         if "W" in i:
             w = i["W"]
-            s["W_mer"] += w[0]; s["W_cnt"] += w[1]
-            s["W_giv"] += w[2]; s["W_our"] += w[4]; s["W_hom"] += w[5]
-            s["W_sen"] += w[6]; s["W_aga"] += w[7]; s["W_tasks"] += i["tasks"]
+            s["W_mer"] += w[0]; s["W_giv"] += w[1]
+            s["W_our"] += w[2]; s["W_hom"] += w[3]; s["W_sen"] += w[4]
+            s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
             s["X_hful"] += x[1]; s["X_hlx"] += x[4]
             s["X_iful"] += x[6]; s["X_ilx"] += x[9]
-        if "Q" in i:
-            q = i["Q"]
-            s["Q_ins"] += q[0]
-            s["Q_tasks"] += i["tasks"]
         if "V" in i:
             v = i["V"]
             s["V_long"] += v[1]; s["V_rpro"] += v[3]; s["V_rhit"] += v[4]
@@ -262,19 +273,15 @@ def sums(ivs):
             s["V_tasks"] += i["tasks"]
         if "I" in i:
             e = i["I"]
-            s["I_inn"] += e[1]; s["I_cel"] += e[4]; s["I_vis"] += e[5]
-            s["I_hpro"] += e[7]; s["I_hhit"] += e[8]
+            s["I_inn"] += e[1]; s["I_cel"] += e[2]; s["I_vis"] += e[3]
+            s["I_hpro"] += e[4]; s["I_hhit"] += e[5]
         if "Z" in i:
             z = i["Z"]
-            s["Z_tak"] += sum(z[0:4]); s["Z_fnd"] += sum(z[4:8])
-            s["Z_left"] += z[8]
-            s["Z_us"] += sum(z[9:11]); s["Z_tasks"] += i["tasks"]
-            if z[12] and z[11] / z[12] > s.get("Z_head", 0):
-                s["Z_head"] = z[11] / z[12]
-        if "J" in i:
-            j = i["J"]
-            s["J_chk"] += j[0]; s["J_neq"] += j[1]; s["J_uni"] += j[2]
-            s["J_tasks"] += i["tasks"]
+            s["Z_tak"] += z[0]; s["Z_fnd"] += z[1]
+            s["Z_left"] += z[2]
+            s["Z_us"] += z[3] + z[4]; s["Z_tasks"] += i["tasks"]
+            if z[6] and z[5] / z[6] > s.get("Z_head", 0):
+                s["Z_head"] = z[5] / z[6]
         for n in i.get("N", {}).values():
             s["N_ovf"] += n[8]
     return s
@@ -358,12 +365,8 @@ METRICS = [
      lambda s, v: ratio(s["W_hom"], _writes(s))),
     ("W: writes on senior inner roads", "hashcons: senior slots",
      lambda s, v: ratio(s["W_sen"], _writes(s))),
-    ("W: writes against the order", "hashcons: senior slots",
-     lambda s, v: ratio(s["W_aga"], _writes(s))),
     ("W: senior-road merges / 1000 tasks", "hashcons: senior unification",
      lambda s, v: ratio(1000 * s["W_mer"], s["W_tasks"]) if s["W_tasks"] else None),
-    ("W: counted / senior-road merges", "hashcons: senior unification",
-     lambda s, v: ratio(s["W_cnt"], s["W_mer"])),
     ("X: home lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_hful"]),
     ("X: home most lost at one exit", "hashcons: lose list ceiling",
      lambda s, v: max(values(v, "X", 3), default=None)),
@@ -372,8 +375,6 @@ METRICS = [
      lambda s, v: max(values(v, "X", 8), default=None)),
     ("X: left by interrupted exits, home", "hashcons: lose list", lambda s, v: s["X_hlx"]),
     ("X: left by interrupted exits, inner", "hashcons: lose list", lambda s, v: s["X_ilx"]),
-    ("Q: roots pinned / 1000 tasks", "hashcons: dup_p",
-     lambda s, v: ratio(1000 * s["Q_ins"], s["Q_tasks"]) if s["Q_tasks"] else None),
     ("V: long inner comparisons / 1000 tasks", "hashcons: pair table",
      lambda s, v: ratio(1000 * s["V_long"], s["V_tasks"]) if s["V_tasks"] else None),
     ("V: root pairs found / looked up", "hashcons: pair table",
@@ -396,10 +397,6 @@ METRICS = [
      lambda s, v: s.get("Z_head", 0)),
     ("Z: exit-home ms / 1000 tasks", "hashcons: exit cost",
      lambda s, v: ratio(s["Z_us"], s["Z_tasks"]) if s["Z_tasks"] else None),
-    ("J: differing checks / task", "hashcons: jet checks",
-     lambda s, v: ratio(s["J_chk"], s["J_tasks"])),
-    ("J: unified / differing checks", "hashcons: jet checks",
-     lambda s, v: ratio(s["J_uni"], s["J_chk"])),
     ("N: pair table peak entries", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "pair-table")),
     ("N: visited set peak entries", "hashcons: crib sizes",

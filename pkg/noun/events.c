@@ -517,7 +517,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //  on-loom table would have written; faults in the last rebuild
     //
     {
-      c3_d buc_d, pag_d, tab_d[7];
+      c3_d buc_d, pag_d, tab_d[6];
 
       u3m_sole_meas(&buc_d, &pag_d);
       u3m_sole_tab_meas(tab_d);
@@ -531,9 +531,9 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
 
       //  the set's tables: lookup steps, members compared, resizes
       //  between events and at the limit, time resizing (us), the
-      //  largest distance, and 1 (0 in older logs: verstable)
+      //  largest distance
       //
-      for ( c3_w i_w = 0; i_w < 7; i_w++ ) {
+      for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
         fprintf(fil_u, " %" PRIu64, tab_d[i_w]);
       }
       fputc('\n', fil_u);
@@ -547,12 +547,6 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.dfw_d, u3e_Meter.dfg_d, u3e_Meter.dfn_d,
                    u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
                    u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
-    for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
-      fprintf(fil_u, " %" PRIu64, u3e_Meter.dgp_d[i_w]);
-    }
-    for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
-      fprintf(fil_u, " %" PRIu64, u3e_Meter.dsp_d[i_w]);
-    }
     fprintf(fil_u, "\n");
 
     //  alignment of the new arvo states with the old
@@ -561,16 +555,14 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
 
-    //  unification: senior merges, then slot writes
+    //  unification: senior merges, give-ups, slot writes (this road,
+    //  home, a senior inner road), home writes refused
     //
     fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.wvm_d, u3e_Meter.wvc_d,
-                   u3e_Meter.wsg_d, u3e_Meter.wsp_d,
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wvm_d, u3e_Meter.wsg_d,
                    u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1], u3e_Meter.wsw_d[2],
-                   u3e_Meter.wso_d, u3e_Meter.wsn_d,
-                   u3e_Meter.wsk_d[0], u3e_Meter.wsk_d[1]);
+                   u3e_Meter.wsk_d);
 
     //  the lose lists, home then inner
     //
@@ -582,34 +574,21 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
                    u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
 
-    //  roots pinned on inner roads
-    //
-    fprintf(fil_u, "Q %" PRIu64 "\n", u3e_Meter.dpi_d);
-
     //  the eager pass
     //
     fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 "\n",
+                   " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.eic_d[0], u3e_Meter.eic_d[1],
-                   u3e_Meter.eiw_d[0], u3e_Meter.eiw_d[1],
-                   u3e_Meter.eij_d, u3e_Meter.eiv_d, u3e_Meter.eis_d,
+                   u3e_Meter.eij_d, u3e_Meter.eiv_d,
                    u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
 
     //  exits to home: the canonicalizing take, time
     //
     fprintf(fil_u, "Z");
-    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctk_d[i_w]);
-    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.ctf_d[i_w]);
+    fprintf(fil_u, " %" PRIu64 " %" PRIu64, u3e_Meter.ctk_d, u3e_Meter.ctf_d);
     fprintf(fil_u, " %" PRIu64, u3e_Meter.ctr_d);
     for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cus_d[i_w]);
     for ( i_w = 0; i_w < 2; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.cam_d[i_w]);
-    fputc('\n', fil_u);
-
-    //  jet battery checks
-    //
-    fprintf(fil_u, "J");
-    for ( i_w = 0; i_w < 4; i_w++ ) fprintf(fil_u, " %" PRIu64, u3e_Meter.jck_d[i_w]);
     fputc('\n', fil_u);
 
     //  cribs, one line each

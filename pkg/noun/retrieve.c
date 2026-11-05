@@ -442,16 +442,14 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
     return c3y;
   }
 
-  u3e_Meter.jck_d[0]++;
   if ( c3n == u3r_sing(*a, *b) ) {
-    u3e_Meter.jck_d[1]++;
     return c3n;
   }
   else if ( *a != *b ) {
     //  cores sharing a call site converge on one battery: each check
     //  keeps the value u3a_wed() prefers, in the cache or the core
     //
-    u3e_Meter.jck_d[( c3y == u3a_wed(a, b) ) ? 2 : 3]++;
+    (void)u3a_wed(a, b);
   }
   return c3y;
 }
