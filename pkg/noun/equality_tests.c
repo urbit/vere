@@ -337,7 +337,7 @@ _test_lose_full(void)
     u3C.wag_h = wag_h & ~u3o_check_corrupt;
   }
 
-  u3a_wed_size(1U << 14, 1U << 22);
+  u3a_wed_size(1U << 14, 1U << 23);
   u3z(hol);
   return ret_i;
 }
@@ -423,7 +423,7 @@ _test_lose_full_eager(void)
     ret_i = 0;
   }
 
-  u3a_wed_size(1U << 14, 1U << 22);
+  u3a_wed_size(1U << 14, 1U << 23);
   u3h_free(u3R->cax.per_p);
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);
   u3z(mem); u3z(old); u3z(cop);

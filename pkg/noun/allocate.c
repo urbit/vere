@@ -1464,7 +1464,7 @@ u3a_use(u3_noun som)
 //  revisit them with readings from more ships.
 //
 #define _CA_LO_MIN  (1U << 14)   //  home entries, to start
-#define _CA_LO_MAX  (1U << 22)   //  home entries, at most
+#define _CA_LO_MAX  (1U << 23)   //  home entries, at most
 #define _CA_LO_CHU  ((c3_w)1 << u3a_page)   //  inner chunk, words: a page
 #define _CA_LO_OPEN ((c3_w)8 << u3a_page)   //  free words a new chunk leaves
 

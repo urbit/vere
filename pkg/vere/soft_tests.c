@@ -86,7 +86,7 @@ _setup(void)
     u3v_Ivory_canon_t = 0;
   }
   if ( getenv("SOFT_TEST_TINY") ) {
-    u3a_wed_size(16, 1U << 22);
+    u3a_wed_size(16, 1U << 23);
     u3m_sole_visit_size(4);
   }
   _pil = _cue_pill();
