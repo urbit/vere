@@ -96,6 +96,11 @@ u3wfu_nest_dext2(u3_noun dext_core)
   else {
     c3_t roo_t = !(u3R->how.fag_w & u3a_flag_nest);
     if ( roo_t ) {
+      if ( u3_nul != seg || u3_nul != reg || u3_nul != gil ) {
+        //  root call to dext but the sets aren't bunts. impossible without
+        //  screwing around
+        return u3m_bail(c3__fail);
+      }
       _hits_reg = u3_nul;
       _hits_gil = u3_nul;
       u3R->how.fag_w |= u3a_flag_nest;
