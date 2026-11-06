@@ -390,7 +390,8 @@
     u3_noun u3wfu_redo(u3_noun);
     u3_noun u3wfu_mint(u3_noun);
     u3_noun u3wfu_mull(u3_noun);
-    u3_noun u3wfu_nest_dext(u3_noun);
+    u3_noun u3wfu_nest_dext1(u3_noun);
+    u3_noun u3wfu_nest_dext2(u3_noun);
     u3_noun u3wfu_peek(u3_noun);
     u3_noun u3wfu_play(u3_noun);
     u3_noun u3wfu_repo(u3_noun);

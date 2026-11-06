@@ -310,7 +310,7 @@ static u3j_harm _136_pen__ut_redo_a[] = {{".2", u3wfu_redo}, {}};
 static u3j_harm _136_pen__ut_mint_a[] = {{".2", u3wfu_mint}, {}};
 static u3j_harm _136_pen__ut_mull_a[] = {{".2", u3wfu_mull}, {}};
 
-static u3j_harm _136_pen__ut_nest_dext_a[] = {{".2", u3wfu_nest_dext}, {}};
+static u3j_harm _136_pen__ut_nest_dext_a[] = {{".2", u3wfu_nest_dext1}, {}};
 static u3j_core _136_pen__ut_nest_in_d[] =
   {
     { "nest-dext", 3, _136_pen__ut_nest_dext_a, 0, no_hashes },

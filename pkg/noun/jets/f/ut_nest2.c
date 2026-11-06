@@ -74,7 +74,7 @@ _set_drop(u3_noun hit, u3_noun som)
 }
 
 u3_noun
-u3wfu_nest_dext(u3_noun dext_core)
+u3wfu_nest_dext2(u3_noun dext_core)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil, tel, vet;
