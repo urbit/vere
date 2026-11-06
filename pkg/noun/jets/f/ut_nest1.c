@@ -5,8 +5,12 @@
 
 #include "noun.h"
 
+//  This version of the jet has a bug, fixing which makes some versions of the
+//  compiler too strict, making them fail to compile correct Hoon code.
+//  See ut_nest2.c
+
 u3_noun
-u3wfu_nest_dext(u3_noun dext_core)
+u3wfu_nest_dext1(u3_noun dext_core)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil;
