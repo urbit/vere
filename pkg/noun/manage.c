@@ -1840,9 +1840,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
-    /* Revert to external signal regime, as on success, so that a term
-    ** signal can't cut short the exit's takes into the home set. (the
-    ** timer is already disarmed there, once the road's timers go.)
+    /* Revert to external signal regime.
     */
     _cm_signal_done();
 
@@ -1850,10 +1848,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     */
     pro = u3m_love(why);
   }
-
-  /* Revert to external signal regime.
-  */
-  _cm_signal_done();
 
   /* Free the argument.
   */
