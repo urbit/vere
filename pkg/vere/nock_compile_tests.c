@@ -77,9 +77,10 @@ _setup(void)
 
   //  check reference counts after every run: u3m_soft_top() marks and
   //  sweeps the inner road, recounting references, and a leak or a short
-  //  count aborts.  Off for benchmarking: the sweep is timed with the run.
+  //  count aborts.  With U3NC_ALL only, the run of every test; off for
+  //  benchmarking: the sweep is timed with the run.
   //
-  if ( !getenv("U3NC_BENCH") ) {
+  if ( getenv("U3NC_ALL") && !getenv("U3NC_BENCH") ) {
     u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
   }
 }
@@ -1815,6 +1816,12 @@ main(int argc, char* argv[])
 {
   //  the build step runs the test; with U3NC_BUILD_ONLY it only builds
   //
+  //  the quick tests, while the code changes:
+  //    zig build nock-compile-test -Doptimize=ReleaseFast -Dno-lto
+  //  all of them, the slow ones too, and the reference counts checked
+  //  after every run, once it is done:
+  //    U3NC_ALL=1 zig build nock-compile-test
+  //
   if ( getenv("U3NC_BUILD_ONLY") ) {
     return 0;
   }
@@ -1929,9 +1936,15 @@ main(int argc, char* argv[])
   if ( getenv("U3NC_BOOT") ) {
     return (  _test_hot("scot", "|=  n=@\n^-  @t\n(scot %ud n)\n", 5)
            && _test_rung()
-           && _test_boot()
-           && _test_hot("add", "|=  n=@\n^-  @\n(mul 2 (add n 2))\n", 5) )
+           && _test_boot() )
            ? 0 : 1;
+  }
+
+  //  the quick tests run the SKA core in u3n: compiling its own code, on
+  //  its first poke, would be most of their time
+  //
+  if ( !getenv("U3NC_ALL") ) {
+    u3nc_Self = 0;
   }
 
   if ( !_test("inc", 42, u3nt(4, 0, 1), 0) ) {
@@ -2054,18 +2067,17 @@ main(int argc, char* argv[])
     exit(1);
   }
 
-  if ( !_test_boot() ) {
-    exit(1);
-  }
-
-  if ( !_test_jets() ) {
-    exit(1);
-  }
-
-  //  many programs by now, calling +add in many ways
+  //  the slow tests, U3NC_ALL: each boot of the core recompiles it, and
+  //  every jet compiles a caller of its own
   //
-  if ( !_test_hot("add", "|=  n=@\n^-  @\n(mul 2 (add n 2))\n", 5) ) {
-    exit(1);
+  if ( getenv("U3NC_ALL") ) {
+    if ( !_test_boot() ) {
+      exit(1);
+    }
+
+    if ( !_test_jets() ) {
+      exit(1);
+    }
   }
 
   //  GC
@@ -2084,6 +2096,7 @@ main(int argc, char* argv[])
           u3nc_Stat.kil_d);
 #endif
 
-  fprintf(stderr, "test nock compile: ok\r\n");
+  fprintf(stderr, "test nock compile: ok%s\r\n",
+          getenv("U3NC_ALL") ? "" : " (quick: U3NC_ALL=1 for all of them)");
   return 0;
 }

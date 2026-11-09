@@ -4567,17 +4567,20 @@ u3nc_mean(u3_noun bell, u3_noun arg)
   return u3m_soft_run(u3_nul, _nc_mean_run, u3k(bell), u3k(arg));
 }
 
+c3_t u3nc_Self = 1;
+
 /* u3nc_able(): can this road run compiled nock.
 */
 c3_o
 u3nc_able(void)
 {
   //  in a poke of the SKA core made from inside one, the core runs in u3n:
-  //  its %ska hints would ask it to compile its own code again, without end
+  //  its %ska hints would ask it to compile its own code again, without end;
+  //  without u3nc_Self, in any poke of it
   //
   return __(  (u3_nul != u3R->ska.cor)
            && !(u3R->how.fag_w & u3a_flag_mink)
-           && (u3a_ska_depth(u3R->how.fag_w) < 2) );
+           && (u3a_ska_depth(u3R->how.fag_w) < (u3nc_Self ? 2 : 1)) );
 }
 
 /* u3nc_slam_on(): produce (gat sam), compiled where it can be.

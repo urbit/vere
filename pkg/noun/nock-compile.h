@@ -152,10 +152,16 @@
     **              +mink jet, whose trace goes to Hoon's +mook, and it isn't
     **              in a poke of the SKA core made from inside another one
     **              (u3a_ska_depth()), where the core would compile its own
-    **              code again.
+    **              code again; nor in any poke of it without u3nc_Self.
     */
       c3_o
       u3nc_able(void);
+
+    /* u3nc_Self: whether the SKA core runs compiled, compiling its own
+    **            code on its first pokes (the default), or in u3n, for the
+    **            quick tests of the harness.
+    */
+      extern c3_t u3nc_Self;
 
     /* u3nc_Gop: the unary program of the callee of the call by subject
     **           whose memoizing jet is being kicked (see _nc_memo_jet()),
