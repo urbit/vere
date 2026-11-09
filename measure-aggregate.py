@@ -21,7 +21,7 @@ row per ship, for further analysis.
 
 Metrics follow the plan's "Tuning the merged heuristics and policies"
 and "Prioritizing follow-up work": lines from older builds that lack
-some (P, H, D, G, Y, W, X, V, I, Z, N) are used when present.
+some (P, H, D, G, Y, W, X, I, Z, N) are used when present.
 """
 
 import csv
@@ -52,26 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 6, "X": 11, "V": 12, "I": 6, "Z": 7}
-
-def norm_line(t, v):
-    """Map an older layout of line [t] (a list of ints) onto the current
-    one: W, I and Z were trimmed (Nov 5), X and Z gained fields."""
-    v = list(v)
-    n = len(v)
-    if t == "Z":
-        if n == 11:            #  before the per-exit adds
-            v, n = v + [0, 0], 13
-        if n == 13:            #  lookups and finds by phase
-            v = [sum(v[0:4]), sum(v[4:8])] + v[8:13]
-    elif t == "X" and n == 10:  #  before inner lists moved onto the loom
-        v = v + [0]
-    elif t == "W" and n == 11:
-        v = [v[0], v[2], v[4], v[5], v[6], v[10]]
-    elif t == "I" and n == 9:
-        v = [v[0], v[1], v[4], v[5], v[7], v[8]]
-    return v
-
+WIDTH = {"W": 6, "X": 11, "I": 6, "Z": 7}
 
 
 def parse(lines):
@@ -120,13 +101,11 @@ def parse(lines):
             if v is not None:
                 cur[t] = v
         elif t in WIDTH:
-            #  the step-0 prototype's logs used these letters for
-            #  labelled lines; take only lines of this shape
+            #  take only lines of this shape (other widths are from
+            #  prototype builds: see measure-piers/scripts/)
             v = ints(p[1:])
-            if v is not None:
-                v = norm_line(t, v)
-                if len(v) == WIDTH[t]:
-                    cur[t] = tuple(v)
+            if v is not None and len(v) == WIDTH[t]:
+                cur[t] = tuple(v)
         elif t == "N" and len(p) == 11:
             v = ints(p[2:])
             if v is not None:
@@ -266,11 +245,6 @@ def sums(ivs):
             x = i["X"]
             s["X_hful"] += x[1]; s["X_hlx"] += x[4]
             s["X_iful"] += x[6]; s["X_ilx"] += x[9]
-        if "V" in i:
-            v = i["V"]
-            s["V_long"] += v[1]; s["V_rpro"] += v[3]; s["V_rhit"] += v[4]
-            s["V_deep"] += v[6] + v[7] + v[8]; s["V_ppro"] += v[9]; s["V_phit"] += v[10]
-            s["V_tasks"] += i["tasks"]
         if "I" in i:
             e = i["I"]
             s["I_inn"] += e[1]; s["I_cel"] += e[2]; s["I_vis"] += e[3]
@@ -375,14 +349,6 @@ METRICS = [
      lambda s, v: max(values(v, "X", 8), default=None)),
     ("X: left by interrupted exits, home", "hashcons: lose list", lambda s, v: s["X_hlx"]),
     ("X: left by interrupted exits, inner", "hashcons: lose list", lambda s, v: s["X_ilx"]),
-    ("V: long inner comparisons / 1000 tasks", "hashcons: pair table",
-     lambda s, v: ratio(1000 * s["V_long"], s["V_tasks"]) if s["V_tasks"] else None),
-    ("V: root pairs found / looked up", "hashcons: pair table",
-     lambda s, v: ratio(s["V_rhit"], s["V_rpro"])),
-    ("V: very long comparisons / 1000 tasks", "hashcons: pair table",
-     lambda s, v: ratio(1000 * s["V_deep"], s["V_tasks"]) if s["V_tasks"] else None),
-    ("V: inner pairs found / looked up", "hashcons: pair table",
-     lambda s, v: ratio(s["V_phit"], s["V_ppro"])),
     ("I: junior cells walked / inner call", "hashcons: eager pass",
      lambda s, v: ratio(s["I_cel"], s["I_inn"])),
     ("I: visited-set hits / cells walked", "hashcons: eager pass",
@@ -397,14 +363,10 @@ METRICS = [
      lambda s, v: s.get("Z_head", 0)),
     ("Z: exit-home ms / 1000 tasks", "hashcons: exit cost",
      lambda s, v: ratio(s["Z_us"], s["Z_tasks"]) if s["Z_tasks"] else None),
-    ("N: pair table peak entries", "hashcons: crib sizes",
-     lambda s, v: crib_peak(v, "pair-table")),
     ("N: visited set peak entries", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "visited-set")),
     ("N: lose list peak", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "lose-list")),
-    ("N: inner lose list peak", "hashcons: crib sizes",
-     lambda s, v: crib_peak(v, "inner-lose-list")),
     ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
@@ -413,11 +375,8 @@ PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
                                "D: on-loom", "G: cancelled", "G: spilled", "Y:",
                                "W: slot writes / give", "W: writes in home",
-                               "W: writes on senior", "W: writes against",
-                               "X: counted", "Q: dup_p hits",
-                               "V: root pairs found", "V: inner pairs found",
-                               "I: visited", "I: home-set", "Z: taken", "Z: fix",
-                               "J: unified"))
+                               "W: writes on senior", "I: visited", "I: home-set",
+                               "Z: junior nouns found", "Z: most members added"))
            or "keys /" in name or "looked up /" in name}
 
 

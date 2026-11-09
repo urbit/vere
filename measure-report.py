@@ -49,12 +49,10 @@ Log lines (one snapshot interval ends at each S line):
                                             member's origin, the last rebuild's faults,
                                             and the compact table's buckets visited,
                                             members compared, resizes and longest probe
-                                            (older logs: 11 fields with verstable, or 18
-                                            with a last "in use" flag)
+                                            (logs from verstable builds, such as
+                                            develop's, have the first 11)
   G <windows> <gains> <nouns> <most-pending> <cancelled> <direct> <written>
     <written-nouns> <shrinks>               deferred gains across the state swap
-                                            (older logs add 12 by phase: deferred,
-                                            then written directly at the cap)
   Y <references> <same-position> <refcount-1>
                                             new arvo state's alignment with the old
   W <senior-merges> <give-ups> <wrote-ours> <wrote-home> <wrote-senior>
@@ -62,8 +60,7 @@ Log lines (one snapshot interval ends at each S line):
                                             unification (u3a_wed()): merges on senior
                                             inner roads, and when no road can merge,
                                             slot writes by place and home writes
-                                            refused (older 11-field W lines are mapped
-                                            onto these; other widths are skipped)
+                                            refused
   X <home-put> <home-leaked> <home-lost> <home-most-lost> <home-left>
     <inner-put> <inner-leaked> <inner-lost> <inner-most-lost> <inner-left>
     <inner-copied>
@@ -72,20 +69,12 @@ Log lines (one snapshot interval ends at each S line):
                                             loom), lost after an exit's takes (and most
                                             at one exit), left by an interrupted exit
                                             (inner: dropped with its road), and inner
-                                            entries copied up a road at an exit (older
-                                            10-field X lines get a 0)
-  V <long-home> <long-inner> <long-promoting> <root-probes> <root-hits>
-    <root-recorded> <deep-excursion> <deep-debug> <deep-promoting>
-    <pair-probes> <pair-hits> <pair-recorded>
-                                            (older builds) the pair table: comparisons past 64 steps
-                                            by road, their root pairs, comparisons past
-                                            65,535 steps by table, and their inner pairs
+                                            entries copied up a road at an exit
   I <calls-home> <calls-inner> <junior-cells> <visited-hits>
     <home-probes-inner> <home-hits-inner>
                                             canonicalizing (u3m_sole_try): calls by
                                             road, and on inner roads cells walked,
                                             visited-set hits, home-set probes and hits
-                                            (older 9-field I lines are mapped)
   Z <looked-up> <found> <older-left> <us-takes> <us-drain> <most-added>
     <members-then>
                                             exits to home: junior nouns looked up by the
@@ -93,17 +82,14 @@ Log lines (one snapshot interval ends at each S line):
                                             copied); older home slots left with the lose
                                             list full; microseconds in each step; the
                                             most members added at one exit, before its
-                                            drain, and the set's size then (older 11-
-                                            and 13-field Z lines are mapped; 16- and
-                                            17-field ones are skipped)
+                                            drain, and the set's size then
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
     <clears-logged> <clears-dropped> <at-ceiling>
                                             each crib's use in the interval: the
-                                            visited set and the home lose list (older
-                                            logs: the pair tables and the inner list)
+                                            visited set and the home lose list
 
-Older logs also have Q (roots pinned) and J (jet battery checks) lines,
-which are ignored.
+W, X, I, Z and N lines of other widths (from prototype builds) are
+skipped; measure-piers/scripts/measure-report-proto.py reads them.
   O <time> <eve> <pack|meld|melt> <why> <options> <ms> <freed-words>
                                             a pack, meld or melt, logged when it ran.
                                             why: live (|pack, |meld, conn), memory
@@ -125,26 +111,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 6, "X": 11, "V": 12, "I": 6, "Z": 7}
-
-def norm_line(t, v):
-    """Map an older layout of line [t] (a list of ints) onto the current
-    one: W, I and Z were trimmed (Nov 5), X and Z gained fields."""
-    v = list(v)
-    n = len(v)
-    if t == "Z":
-        if n == 11:            #  before the per-exit adds
-            v, n = v + [0, 0], 13
-        if n == 13:            #  lookups and finds by phase
-            v = [sum(v[0:4]), sum(v[4:8])] + v[8:13]
-    elif t == "X" and n == 10:  #  before inner lists moved onto the loom
-        v = v + [0]
-    elif t == "W" and n == 11:
-        v = [v[0], v[2], v[4], v[5], v[6], v[10]]
-    elif t == "I" and n == 9:
-        v = [v[0], v[1], v[4], v[5], v[7], v[8]]
-    return v
-
+WIDTH = {"W": 6, "X": 11, "I": 6, "Z": 7}
 
 
 def pct(a, b):
@@ -185,7 +152,6 @@ def new_interval():
         "Y": None,
         "W": None,
         "X": None,
-        "V": None,
         "I": None,
         "Z": None,
         "N": {},
@@ -275,13 +241,10 @@ def parse(path):
             elif t == "Y" and cur is not None:
                 cur["Y"] = tuple(int(x) for x in line.split()[1:])
             elif t in WIDTH and cur is not None:
-                #  the step-0 prototype's logs used these letters for
-                #  labelled lines; take only lines of this shape
+                #  take only lines of this shape
                 v = line.split()[1:]
-                if all(x.isdigit() for x in v):
-                    v = norm_line(t, [int(x) for x in v])
-                    if len(v) == WIDTH[t]:
-                        cur[t] = tuple(v)
+                if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
+                    cur[t] = tuple(int(x) for x in v)
             elif t == "N" and cur is not None:
                 p = line.split()
                 if len(p) == 11 and all(x.isdigit() for x in p[2:]):
@@ -608,8 +571,7 @@ def main():
             print(f"  pages an on-loom cell table would write per interval "
                   f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
         #  the compact table (not in logs from verstable builds)
-        tab = [i["D"] for i in dis
-               if (len(i["D"]) == 17) or (len(i["D"]) >= 18 and i["D"][17])]
+        tab = [i["D"] for i in dis if len(i["D"]) == 17]
         if tab:
             T = [sum(d[k] for d in tab) for k in range(11, 16)]
             print(f"  compact table: {T[0] / pro if pro else 0:.2f} buckets visited "
@@ -642,13 +604,6 @@ def main():
         print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
         print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
         print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
-        if all(len(i["G"]) >= 21 for i in gis):
-            names = ("jet", "byc", "per", "for", "pro", "other")
-            dg = [sum(i["G"][9 + k] for i in gis) for k in range(6)]
-            ds = [sum(i["G"][15 + k] for i in gis) for k in range(6)]
-            print("  by phase (deferred / written directly at the cap):")
-            for k in range(6):
-                print(f"    {names[k]:<6} {dg[k]:>12} {ds[k]:>12}")
     yis = [i for i in intervals if i["Y"]]
     if yis and any(i["Y"][0] for i in yis):
         y = [sum(i["Y"][j] for i in yis) for j in range(3)]
@@ -681,15 +636,6 @@ def main():
                       f"{x[o + 2]} lost after takes (most at one exit: {x[o + 3]}), "
                       f"{x[o + 4]} left by interrupted exits")
             print(f"  inner entries copied up a road at an exit: {x[10]}")
-    vis = [i for i in intervals if i["V"]]
-    if vis and any(any(i["V"]) for i in vis):
-        v = [sum(i["V"][j] for i in vis) for j in range(12)]
-        print("\n== the pair table ==")
-        print(f"  comparisons past 64 steps: home road {v[0]}, inner {v[1]}, promoting {v[2]}")
-        print(f"  root pairs looked up: {v[3]}, found {v[4]} {pct(v[4], v[3])}, recorded {v[5]}")
-        print(f"  comparisons past 65,535 steps: excursion table {v[6]}, "
-              f"scratch (debugging memory) {v[7]}, scratch (promoting) {v[8]}")
-        print(f"  inner pairs looked up: {v[9]}, found {v[10]} {pct(v[10], v[9])}, recorded {v[11]}")
     iis = [i for i in intervals if i["I"]]
     if iis and any(any(i["I"]) for i in iis):
         e = [sum(i["I"][j] for i in iis) for j in range(6)]
