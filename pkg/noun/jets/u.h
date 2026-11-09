@@ -243,6 +243,14 @@
     u3_noun u3uf_fork(u3_noun*);
     u3_noun u3uf_look(u3_noun*);
     u3_noun u3uf_loot(u3_noun*);
+    u3_noun u3ufu_crop(u3_noun);
+    u3_noun u3ufu_fish(u3_noun);
+    u3_noun u3ufu_fuse(u3_noun);
+    u3_noun u3ufu_mint(u3_noun);
+    u3_noun u3ufu_mull(u3_noun);
+    u3_noun u3ufu_nest_dext(u3_noun);
+    u3_noun u3ufu_redo(u3_noun);
+    u3_noun u3ufu_rest(u3_noun);
 
   /** Tier 7.
   **/

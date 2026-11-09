@@ -792,10 +792,19 @@ OP1(CAF, a_h, BODY_CAF)
   u3nc_prog* gop_u;                                                             \
   u3_noun    x = TAKE(SUB(), KON());                                            \
   u3_noun    pro;                                                               \
-  if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u,                        \
-                                        dir_u->arm_u->mon_f,                    \
-                                        u3t(dir_u->ring)))) )                   \
+  if ( dir_u->arm_u && dir_u->arm_u->mon_f ) {                                  \
+    if ( _nc_memo_jet(dir_u->arm_u) ) {                                         \
+      CALLEE();                                                                 \
+      u3nc_Gop = gop_u;                                                         \
+    }                                                                           \
+    pro = u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
+                       u3t(dir_u->ring));                                       \
+    u3nc_Gop = 0;                                                               \
+  }                                                                             \
+  else {                                                                        \
+    pro = u3_none;                                                              \
+  }                                                                             \
+  if ( u3_none != pro )                                                         \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     PUT(dir_u->des_h, pro);                                                     \
@@ -1031,10 +1040,19 @@ OP1K(JMF, a_h, BODY_JMF)
     *sot = 0;                                                                   \
   }                                                                             \
   SWEEP(S);                                                                     \
-  if (  dir_u->arm_u && dir_u->arm_u->mon_f                                     \
-     && (u3_none != (pro = u3j_kick_arm(x, dir_u->ham_u,                        \
-                                        dir_u->arm_u->mon_f,                    \
-                                        u3t(dir_u->ring)))) )                   \
+  if ( dir_u->arm_u && dir_u->arm_u->mon_f ) {                                  \
+    if ( _nc_memo_jet(dir_u->arm_u) ) {                                         \
+      CALLEE();                                                                 \
+      u3nc_Gop = gop_u;                                                         \
+    }                                                                           \
+    pro = u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
+                       u3t(dir_u->ring));                                       \
+    u3nc_Gop = 0;                                                               \
+  }                                                                             \
+  else {                                                                        \
+    pro = u3_none;                                                              \
+  }                                                                             \
+  if ( u3_none != pro )                                                         \
   {                                                                             \
     _nc_stat(jet_d);                                                            \
     DONE(pro);                                                                  \

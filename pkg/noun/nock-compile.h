@@ -97,11 +97,28 @@
       u3nc_slam_on(u3_noun gat, u3_noun sam);
 
     /* u3nc_able(): can this road run compiled nock: an SKA core is
-    **              installed, and the road isn't the virtualization of
-    **              the +mink jet, whose trace goes to Hoon's +mook.
+    **              installed, the road isn't the virtualization of the
+    **              +mink jet, whose trace goes to Hoon's +mook, and it isn't
+    **              in a poke of the SKA core made from inside another one
+    **              (u3a_ska_depth()), where the core would compile its own
+    **              code again.
     */
       c3_o
       u3nc_able(void);
+
+    /* u3nc_Gop: the unary program of the callee of the call by subject
+    **           whose memoizing jet is being kicked (see _nc_memo_jet()),
+    **           linked once by the site, for the driver's misses, or 0.
+    */
+      extern struct _u3nc_prog* u3nc_Gop;
+
+    /* u3nc_gop_nock(): .*(bus fol) on a miss of a memoizing driver of
+    **                  compiled nock: the program the site published, without
+    **                  an entry search, if there is one, else u3nc_nock_on().
+    **                  TRANSFERS.
+    */
+      u3_noun
+      u3nc_gop_nock(u3_noun bus, u3_noun fol);
 
     /* u3nc_mean(): the product of the arm of a deferred %mean trap
     **              [%meaf bell arg] on the trace stack, as ++toon: the

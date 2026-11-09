@@ -3,10 +3,13 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "nock-compile.h"
 #include "noun.h"
 
-u3_noun
-u3wfu_nest_dext(u3_noun dext_core)
+/* _fu_nest_dext(): the memoized arm, a miss run by fun_f.
+*/
+static u3_noun
+_fu_nest_dext(u3_noun dext_core, u3_funq fun_f)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil;
@@ -34,7 +37,7 @@ u3wfu_nest_dext(u3_noun dext_core)
       return pro;
     }
     else {
-      pro = u3n_nock_on(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
+      pro = fun_f(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
 
       if ( ((c3y == pro) && (u3_nul == reg)) ||
            ((c3n == pro) && (u3_nul == seg)) )
@@ -47,4 +50,20 @@ u3wfu_nest_dext(u3_noun dext_core)
       }
     }
   }
+}
+
+/* u3wfu_nest_dext(): from u3n, in u3n.
+*/
+u3_noun
+u3wfu_nest_dext(u3_noun dext_core)
+{
+  return _fu_nest_dext(dext_core, u3n_nock_on);
+}
+
+/* u3ufu_nest_dext(): from compiled nock, in compiled nock.
+*/
+u3_noun
+u3ufu_nest_dext(u3_noun dext_core)
+{
+  return _fu_nest_dext(dext_core, u3nc_gop_nock);
 }

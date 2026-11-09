@@ -3851,6 +3851,24 @@ _nc_doomed(const u3nc_prog* pog_u, const c3_y* ip)
 }
 #endif
 
+/* _nc_memo_jet(): is the driver of a call by subject a memoizing one, the
+**                 +ut drivers: their misses run the callee's unary program,
+**                 which the site then links before the kick and publishes in
+**                 u3nc_Gop, so that a miss costs no entry search.
+*/
+static inline c3_t
+_nc_memo_jet(const u3u_harm* arm_u)
+{
+  u3_noun (*mon_f)(u3_noun) = arm_u->mon_f;
+
+  return (  (u3ufu_crop == mon_f) || (u3ufu_fish == mon_f)
+         || (u3ufu_fuse == mon_f) || (u3ufu_mint == mon_f)
+         || (u3ufu_mull == mon_f) || (u3ufu_nest_dext == mon_f)
+         || (u3ufu_redo == mon_f) || (u3ufu_rest == mon_f) );
+}
+
+u3nc_prog* u3nc_Gop;
+
 /* _nc_burn_north(), _nc_burn_south(): run a program on its arguments.
 **   TRANSFERS the arguments.  Body in nock-compile-burn.c, instantiated
 **   once per road direction.
@@ -3881,6 +3899,25 @@ _nc_burn_out(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   u3t_off(noc_o);
 
   return pro;
+}
+
+/* u3nc_gop_nock(): .*(bus fol) on a miss of a memoizing driver: the program
+**                  of the call site, if it published one (consumed here,
+**                  before the run, so that nested sites publish their own),
+**                  else through the entry.  TRANSFERS.
+*/
+u3_noun
+u3nc_gop_nock(u3_noun bus, u3_noun fol)
+{
+  u3nc_prog* gop_u = u3nc_Gop;
+
+  if ( !gop_u ) {
+    return u3nc_nock_on(bus, fol);
+  }
+
+  u3nc_Gop = 0;
+  u3z(fol);
+  return _nc_burn_out(gop_u, &bus, 1);
 }
 
 /* _nc_mean_run(): the arm of a deferred %mean trap on its arguments, a
@@ -3937,8 +3974,12 @@ u3nc_mean(u3_noun bell, u3_noun arg)
 c3_o
 u3nc_able(void)
 {
+  //  in a poke of the SKA core made from inside one, the core runs in u3n:
+  //  its %ska hints would ask it to compile its own code again, without end
+  //
   return __(  (u3_nul != u3R->ska.cor)
-           && !(u3R->how.fag_w & u3a_flag_mink) );
+           && !(u3R->how.fag_w & u3a_flag_mink)
+           && (u3a_ska_depth(u3R->how.fag_w) < 2) );
 }
 
 /* u3nc_slam_on(): produce (gat sam), compiled where it can be.

@@ -158,45 +158,82 @@ _d_slog(u3_noun tan)
   }
 }
 
+/* _d_ver_d: commits of a core state that changes what the core knows: of
+**           every poke but %dire, whose changes are caches.  A poke made
+**           from inside another one (the core running its own code
+**           compiled, see u3a_flag_ska) commits into the junior road of the
+**           outer poke, whose product, computed from the state before,
+**           would undo it on return: the outer poke then runs again, on the
+**           new state.
+*/
+static c3_d _d_ver_d;
+
 /* _d_poke(): poke the SKA core, rebails.
 */
 static u3_noun
 _d_poke(u3_noun ovo)
 {
-  u3_noun cor = u3R->ska.cor;
   u3_noun gat, pro, res;
 
-  u3_assert( u3_nul != cor );
+  u3_assert( u3_nul != u3R->ska.cor );
 
   c3_m    tag_m = u3h(ovo);
   c3_d    beg_d = u3t_trace_time();
   c3_c    tag_c[5] = {0};
+  c3_w    try_w = 0;
 
   memcpy(tag_c, &tag_m, 4);
   if ( getenv("U3NC_VERBOSE") ) {
     u3l_log("ska: poke %%%s: start, ovum mug %08x", tag_c, u3r_mug(u3t(ovo)));
   }
 
-  gat = u3n_nock_on(u3k(cor), u3nt(9, _CVX_POKE, u3nc(0, 1)));
-  pro = u3n_slam_et(u3_nul, gat, ovo);
+  while ( 1 ) {
+    c3_d ver_d = _d_ver_d;
+    c3_w fag_w = u3R->how.fag_w;
+    c3_w dep_w = u3a_ska_depth(fag_w);
 
-  if ( 0 != u3h(pro) ) {
-    u3l_log("ska: poke failed: %%%" PRIc3_w ", %" PRIc3_w " frames", u3h(pro),
-            ( 2 == u3h(pro) ) ? u3qb_lent(u3t(pro)) : 0);
-
-    //  the trace of a crash, rendered
+    //  the core runs one poke deeper, see u3a_flag_ska
     //
-    if ( 2 == u3h(pro) ) {
-      u3_noun tan = u3t_mook(u3k(u3t(pro)));
+    u3R->how.fag_w = (fag_w & ~u3a_flag_ska)
+                   | ((( dep_w < 3 ) ? (dep_w + 1) : 3) << 4);
+    gat = u3n_nock_on(u3k(u3R->ska.cor), u3nt(9, _CVX_POKE, u3nc(0, 1)));
+    pro = u3n_slam_et(u3_nul, gat, u3k(ovo));
+    u3R->how.fag_w = (u3R->how.fag_w & ~u3a_flag_ska)
+                   | (fag_w & u3a_flag_ska);
 
-      _d_slog(tan);
-      u3z(tan);
+    if ( 0 != u3h(pro) ) {
+      u3l_log("ska: poke failed: %%%" PRIc3_w ", %" PRIc3_w " frames", u3h(pro),
+              ( 2 == u3h(pro) ) ? u3qb_lent(u3t(pro)) : 0);
+
+      //  the trace of a crash, rendered
+      //
+      if ( 2 == u3h(pro) ) {
+        u3_noun tan = u3t_mook(u3k(u3t(pro)));
+
+        _d_slog(tan);
+        u3z(tan);
+      }
+
+      u3z(pro);
+      u3z(ovo);
+      return u3m_bail(c3__fail);
     }
 
+    if ( ver_d == _d_ver_d ) {
+      break;
+    }
+
+    //  a poke made from inside this one changed the state it ran on
+    //
+    try_w++;
+    if ( getenv("U3NC_VERBOSE") ) {
+      u3l_log("ska: poke %%%s: the state changed underneath, again (%u)",
+              tag_c, try_w);
+    }
     u3z(pro);
-    return u3m_bail(c3__fail);
   }
 
+  u3z(ovo);
   res = u3k(u3h(u3t(pro)));
 
   if ( getenv("U3NC_VERBOSE") ) {
@@ -207,6 +244,10 @@ _d_poke(u3_noun ovo)
   u3z(u3R->ska.cor);
   u3R->ska.cor = u3k(u3t(u3t(pro)));
   u3z(pro);
+
+  if ( c3__dire != tag_m ) {
+    _d_ver_d++;
+  }
 
   return res;
 }

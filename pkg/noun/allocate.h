@@ -352,9 +352,18 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
         u3a_flag_mink  = 1 << 3,              //  we are in +mink jet
+        u3a_flag_ska1  = 1 << 4,              //  SKA core poke depth, low bit
+        u3a_flag_ska2  = 1 << 5,              //  SKA core poke depth, high bit
       };
 
-#define u3a_flag_fore (c3_w)u3a_flag_cash
+    /* u3a_flag_ska: the two bits of the SKA core poke depth, a counter
+    **   0..3 that flows forward: 0 outside the core, 1 in a poke of it, 2
+    **   in a poke made from inside one (the core compiling its own code).
+    */
+#define u3a_flag_ska  (c3_w)(u3a_flag_ska1 | u3a_flag_ska2)
+#define u3a_ska_depth(fag_w) (((fag_w) & u3a_flag_ska) >> 4)
+
+#define u3a_flag_fore (c3_w)(u3a_flag_cash | u3a_flag_ska)
 #define u3a_flag_back (c3_w)0
 
     /* u3a_pile: stack control, abstracted over road direction.

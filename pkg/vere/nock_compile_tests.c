@@ -38,6 +38,12 @@ _setup(void)
   u3C.hap_w  = 50000;   //  memo cache sizes, as in the runtime
   u3C.per_w  = 50000;
 
+  //  U3NC_HAP: the transient memo cache's cap instead, for benchmarks
+  //
+  if ( getenv("U3NC_HAP") ) {
+    u3C.hap_w = atoi(getenv("U3NC_HAP"));
+  }
+
   //  U3NC_LOOM: loom size in bits, for machines that can't map 16GB
   //
   {
@@ -1635,6 +1641,79 @@ main(int argc, char* argv[])
     }
 
     return ret_i ? 0 : 1;
+  }
+
+  //  U3NC_MINT: a hoon file, parsed in u3n untimed as a list of hoons
+  //  (like ford and the steel pill generator), then
+  //  (~(mint ut -:!>(..ride)) %noun gen) in both interpreters, and nothing
+  //  else
+  //
+  if ( getenv("U3NC_MINT") ) {
+    FILE*   fil_u = fopen(getenv("U3NC_MINT"), "rb");
+    c3_y*   buf_y;
+    long    len_l;
+    u3_noun txt, gen, cor;
+
+    if ( !fil_u ) {
+      fprintf(stderr, "mint: can't open %s\r\n", getenv("U3NC_MINT"));
+      return 1;
+    }
+    fseek(fil_u, 0, SEEK_END);
+    len_l = ftell(fil_u);
+    fseek(fil_u, 0, SEEK_SET);
+    buf_y = c3_malloc(len_l);
+    if ( (size_t)len_l != fread(buf_y, 1, len_l, fil_u) ) {
+      fprintf(stderr, "mint: short read\r\n");
+      return 1;
+    }
+    fclose(fil_u);
+    txt = u3i_bytes(len_l, buf_y);
+    c3_free(buf_y);
+
+    {
+      //  U3NC_MINT_REAM: one hoon, as +ream parses it (hoon.hoon)
+      //
+      u3_noun gat = getenv("U3NC_MINT_REAM")
+        ? u3v_wish("ream")
+        : u3v_wish("|=  txt=@t\n"
+                   "%+  scan  (trip txt)\n"
+                   "%-  full\n"
+                   "(ifix [gay gay] (stag %tssg (most gap tall:vast)))\n");
+      u3_noun rem = u3nc(u3k(u3h(gat)), u3nc(txt, u3k(u3t(u3t(gat)))));
+      u3_noun fol = u3nq(9, 2, 0, 1);
+      u3_weak pro = _run("mint: parse", _nock_n, rem, fol);
+
+      u3z(gat); u3z(rem); u3z(fol);
+      if ( u3_none == pro ) {
+        return 1;
+      }
+      gen = pro;
+    }
+    //  U3NC_MINT_SUT=noun: against %noun, as hoon.hoon is compiled
+    //
+    cor = ( getenv("U3NC_MINT_SUT") && !strcmp(getenv("U3NC_MINT_SUT"), "noun") )
+        ? _gate("|=  gen=hoon\n"
+                "(~(mint ut %noun) %noun gen)\n", gen)
+        : _gate("=/  sut  -:!>(..ride)\n"
+                "|=  gen=hoon\n"
+                "(~(mint ut sut) %noun gen)\n", gen);
+    {
+      c3_i    ret_i = _test("mint", u3k(cor), u3nq(9, 2, 0, 1), 1);
+      u3_noun fol   = u3nq(9, 2, 0, 1);
+
+      //  U3NC_MINT_REPS: that many more compiled runs, for the steady
+      //  state (a second run may still compile entries)
+      //
+      for ( c3_w i_w = 0;
+            i_w < (getenv("U3NC_MINT_REPS") ? (c3_w)atoi(getenv("U3NC_MINT_REPS")) : 0);
+            i_w++ )
+      {
+        u3z(_run("u3nc again ", _nock_nc, cor, fol));
+      }
+      u3z(fol);
+      u3z(cor);
+      return ret_i ? 0 : 1;
+    }
   }
 
   //  U3NC_BOOT: the tests of u3d_boot() and u3d_hot(), and nothing else

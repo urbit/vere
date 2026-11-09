@@ -3,10 +3,13 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "nock-compile.h"
 #include "noun.h"
 
-u3_noun
-u3wfu_fish(u3_noun cor)
+/* _fu_fish(): the memoized arm, a miss run by fun_f.
+*/
+static u3_noun
+_fu_fish(u3_noun cor, u3_funq fun_f)
 {
   u3_noun bat, sut, axe, van;
 
@@ -28,8 +31,24 @@ u3wfu_fish(u3_noun cor)
       return pro;
     }
     else {
-      pro = u3n_nock_on(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
+      pro = fun_f(u3k(cor), u3k(u3x_at(u3x_bat, cor)));
       return u3z_save(u3z_memo_toss, key, pro);
     }
   }
+}
+
+/* u3wfu_fish(): from u3n, in u3n.
+*/
+u3_noun
+u3wfu_fish(u3_noun cor)
+{
+  return _fu_fish(cor, u3n_nock_on);
+}
+
+/* u3ufu_fish(): from compiled nock, in compiled nock.
+*/
+u3_noun
+u3ufu_fish(u3_noun cor)
+{
+  return _fu_fish(cor, u3nc_gop_nock);
 }
