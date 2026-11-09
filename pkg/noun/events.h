@@ -185,13 +185,14 @@
           c3_d bca_d;        //  added to the home road's table
 
           //  unification (u3a_wed()): merges on senior inner roads
-          //  (_ca_wed_you()), and when no road below home can merge,
-          //  slot writes on an inner road (_ca_wed_fall())
+          //  (_ca_wed_stow()), and when no road below home can merge,
+          //  slot writes on an inner road (_ca_wed_home())
           //
           c3_d wvm_d;        //  merges on senior inner roads
           c3_d wsg_d;        //  give-ups: no road could merge
-          c3_d wsw_d[3];     //  slot writes: on this road, in home memory,
-                             //  on a senior inner road
+          c3_d wsw_d[3];     //  slot writes: outside home memory, in home
+                             //  memory, and (no longer counted apart,
+                             //  always 0) on a senior inner road
           c3_d wsk_d;        //  home writes refused (the count at its
                              //  limit, or, debugging memory, the home lose
                              //  list full)
