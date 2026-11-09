@@ -17,7 +17,9 @@
     **             trap ~]: install it if there is no core; if the pill's
     **             version is not the installed core's, replace the core by
     **             the pill's +load of it and drop all programs; then
-    **             u3d_hot().  TRANSFERS.
+    **             u3d_hot().  The empty pill, (jam 0) = 2, runs no SKA: no
+    **             core is installed, and an installed one is dropped with
+    **             its programs.  TRANSFERS.
     */
       void
       u3d_boot(u3_atom pil);

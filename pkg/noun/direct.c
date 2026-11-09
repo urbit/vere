@@ -423,13 +423,30 @@ _d_load(u3_atom pil)
 /* u3d_boot(): bring the SKA core up to a jammed steel pill: install it if
 **             there is no core; if the pill's version is not the installed
 **             core's, replace the core by the pill's +load of it and drop
-**             all programs; then u3d_hot().  TRANSFERS.
+**             all programs; then u3d_hot().  The empty pill, (jam 0), is
+**             a binary without SKA: no core, and one a previous binary
+**             installed goes, with its programs.  TRANSFERS.
 */
 void
 u3d_boot(u3_atom pil)
 {
-  c3_o    nuu_o = __(u3_nul == u3R->ska.cor);
-  u3_noun pro   = u3m_soft(0, _d_load, pil);
+  c3_o    nuu_o;
+  u3_noun pro;
+
+  if ( 2 == pil ) {
+    if ( u3_nul != u3R->ska.cor ) {
+      u3l_log("ska: no core in this binary, dropping the installed one");
+      u3z(u3R->ska.cor);
+      u3R->ska.cor = u3_nul;
+      u3z(u3R->ska.new);
+      u3R->ska.new = u3_nul;
+      u3nc_reclaim();
+    }
+    return;
+  }
+
+  nuu_o = __(u3_nul == u3R->ska.cor);
+  pro   = u3m_soft(0, _d_load, pil);
 
   if ( 0 != u3h(pro) ) {
     u3l_log("ska: boot failed: %%%s", u3r_string(u3h(pro)));

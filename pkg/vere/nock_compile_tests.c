@@ -1246,7 +1246,25 @@ _test_boot(void)
 
   u3z(lon); u3z(pek);
 
-  ret_i = _test("boot, loaded", cor, fol, 1) && ret_i;
+  ret_i = _test("boot, loaded", u3k(cor), u3k(fol), 1) && ret_i;
+
+  //  the empty pill, (jam 0): no core, the installed one dropped with its
+  //  programs, and u3n runs; the binary's pill installs one again
+  //
+  u3d_boot(2);
+  ret_i = _check("boot, empty pill: no core",
+                 (u3_nul == u3R->ska.cor) && (c3n == u3nc_able())
+                 && (0 == u3h_wyt(u3R->ska.dir_p))
+                 && (u3_nul == u3R->ska.new)) && ret_i;
+  ret_i = _test("boot, empty pill", u3k(cor), u3k(fol), 1) && ret_i;
+  ret_i = _check("boot, empty pill: still no core",
+                 (u3_nul == u3R->ska.cor) && (u3_nul == u3R->ska.new))
+       && ret_i;
+
+  u3_mars_steel();
+  ret_i = _check("boot, after the empty pill: core",
+                 u3_nul != u3R->ska.cor) && ret_i;
+  ret_i = _test("boot, after the empty pill", cor, fol, 1) && ret_i;
 
   return ret_i;
 }
