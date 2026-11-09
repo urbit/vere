@@ -449,7 +449,7 @@ u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
     //  cores sharing a call site converge on one battery: each check
     //  keeps the value u3a_wed() prefers, in the cache or the core
     //
-    (void)u3a_wed(a, b);
+    u3a_wed(a, b);
   }
   return c3y;
 }

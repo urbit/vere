@@ -1949,53 +1949,6 @@ u3a_wed_stat(u3c_stat* sat_u)
   return len_w;
 }
 
-#define SWAP(l, r)    \
-  do { typeof(l) t = l; l = r; r = t; } while (0)
-
-/* _ca_wed_our(): unify [a] and [b] on u3R.
-*/
-static inline c3_o
-_ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
-{
-  c3_t asr_t = ( c3y == u3a_is_senior(u3R, *a) );
-  c3_t bsr_t = ( c3y == u3a_is_senior(u3R, *b) );
-
-  if ( asr_t == bsr_t ) {
-    //  both [a] and [b] are senior; we can't unify on u3R
-    //
-    if ( asr_t ) return c3n;
-
-    //  both are on u3R. on the home road, keep a hashcons member;
-    //  otherwise keep the deeper address (and gain a reference)
-    //
-    //    (N && <) || (S && >)
-    //    XX consider keeping higher refcount instead
-    //
-    {
-      c3_t ahc_t = 0, bhc_t = 0;
-
-      if ( &(u3H->rod_u) == u3R ) {
-        ahc_t = u3a_sole_has(*a);
-        bhc_t = u3a_sole_has(*b);
-      }
-
-      if ( ahc_t != bhc_t ) {
-        if ( bhc_t ) SWAP(a, b);
-      }
-      else if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
-    }
-
-    _me_gain_use(*a);
-  }
-  //  one of [a] or [b] are senior; keep it
-  //
-  else if ( !asr_t ) SWAP(a, b);
-
-  u3z(*b);
-  *b = *a;
-  return c3y;
-}
-
 /* _ca_slot_on(): [sot] is a slot in [rod_u]'s heap. the offset stays
 **   wide, so a slot off the loom is never on a road.
 */
@@ -2009,171 +1962,32 @@ _ca_slot_on(u3a_road* rod_u, u3_noun* sot)
          : ((off_d >= rod_u->hat_p) && (off_d < rod_u->rut_p));
 }
 
-/* _ca_slot_junior(): [sot] is on a junior road: on this road's stack,
-**   where its child's heap is while it's promoted.
+/* _ca_slot_kid(): [sot] is on our child road, under promotion.
 */
 static inline c3_t
-_ca_slot_junior(u3_noun* sot)
+_ca_slot_kid(u3_noun* sot)
 {
   c3_d off_d = (c3_d)u3a_outa(sot);
 
-  return ( c3y == u3a_is_north(u3R) )
-         ? ((off_d >= u3R->cap_p) && (off_d < u3R->mat_p))
-         : ((off_d >= u3R->mat_p) && (off_d < u3R->cap_p));
+  return u3R->kid_p
+         && ( (c3y == u3a_is_north(u3R))
+            ? ((off_d >= u3R->cap_p) && (off_d < u3R->mat_p))
+            : ((off_d >= u3R->mat_p) && (off_d < u3R->cap_p)));
 }
 
-/* _ca_wed_kid(): unify [a] and [b] on u3R while it promotes its child
-**   ([kid_p] set): the child is live, and is being taken.
-**
-**   a value on the child is left if both are; else the slot holding it,
-**   on the child, is pointed at the other value: the child doesn't count
-**   references to older roads. otherwise as _ca_wed_our(), but a slot on
-**   this road loses its old value at the end of the exit (_ca_lo_put()),
-**   since the child may still refer to it; a slot on the child is just
-**   written. nothing older is ever pointed at the child.
-*/
-static c3_o
-_ca_wed_kid(u3_noun *restrict a, u3_noun *restrict b)
-{
-  c3_t aju_t = ( c3y == u3a_is_junior(u3R, *a) );
-  c3_t bju_t = ( c3y == u3a_is_junior(u3R, *b) );
-
-  if ( aju_t && bju_t ) return c3n;
-
-  if ( aju_t || bju_t ) {
-    if ( aju_t ) SWAP(a, b);
-    if ( !_ca_slot_junior(b) ) return c3n;
-    *b = *a;
-    return c3y;
-  }
-
-  {
-    c3_t asr_t = ( c3y == u3a_is_senior(u3R, *a) );
-    c3_t bsr_t = ( c3y == u3a_is_senior(u3R, *b) );
-
-    if ( asr_t == bsr_t ) {
-      if ( asr_t ) return c3n;
-
-      {
-        c3_t ahc_t = 0, bhc_t = 0;
-
-        if ( &(u3H->rod_u) == u3R ) {
-          ahc_t = u3a_sole_has(*a);
-          bhc_t = u3a_sole_has(*b);
-        }
-
-        if ( ahc_t != bhc_t ) {
-          if ( bhc_t ) SWAP(a, b);
-        }
-        else if ( (*a > *b) == (c3y == u3a_is_north(u3R)) ) SWAP(a, b);
-      }
-    }
-    else if ( !asr_t ) SWAP(a, b);
-  }
-
-  if ( _ca_slot_junior(b) ) {
-    *b = *a;
-    return c3y;
-  }
-  if ( !_ca_slot_on(u3R, b) ) return c3n;
-  if ( u3a_dbg_ram() && !_ca_lo_room(u3R) ) return c3n;
-
-  {
-    u3_noun old = *b;
-
-    if ( c3n == u3a_is_senior(u3R, *a) ) {
-      _me_gain_use(*a);
-    }
-    *b = *a;
-    if ( c3n == u3a_is_senior(u3R, old) ) {
-      _ca_lo_put(u3R, old);
-    }
-  }
-  return c3y;
-}
-
-/* _ca_wed_you(): unify [a] and [b] on senior [rod_u]. a slot in [rod_u]'s
-**   heap counts its value: its new value is gained, if it's on [rod_u],
-**   and its old one lost once [rod_u] is current again (_ca_lo_put()).
-**   a slot on a junior road doesn't count it, and is just written.
-*/
-static c3_o
-_ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
-{
-  //  XX assume( rod_u != u3R )
-  c3_t asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
-  c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
-
-  if ( asr_t == bsr_t ) {
-    //  both [a] and [b] are senior; we can't unify on [rod_u]
-    //
-    if ( asr_t ) return c3n;
-
-    //  both are on [rod_u]; keep the deeper address
-    //
-    //    (N && <) || (S && >)
-    //    XX consider keeping higher refcount instead
-    //
-    if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
-  }
-  //  one of [a] or [b] are senior; keep it
-  //
-  else if ( !asr_t ) SWAP(a, b);
-
-  if ( !_ca_slot_on(rod_u, b) ) {
-    *b = *a;
-  }
-  else {
-    u3_noun old = *b;
-
-    if ( u3a_dbg_ram() && !_ca_lo_room(rod_u) ) return c3n;
-    if ( c3n == u3a_is_senior(rod_u, *a) ) {
-      _me_gain_use(*a);
-    }
-    *b = *a;
-    _ca_lo_put(rod_u, old);
-  }
-  u3e_Meter.wvm_d++;
-  return c3y;
-}
-
-#undef SWAP
-
-/* _ca_wed_where(): where [sot] can be written from an inner road, for a
-**   home value: 1 this road's heap, or its child's while it's promoted
-**   (on this road's stack), 2 home memory, 3 the heap of an inner road
-**   senior to this one; 0 nowhere (off the loom, an older road's stack).
-**   during an excursion the inner roads are carved from the home road's
-**   free space, between its hat and cap, so home memory is its heap.
-*/
-static inline c3_y
-_ca_wed_where(u3_noun* sot)
-{
-  u3a_road* rod_u = u3R;
-
-  if ( _ca_slot_on(rod_u, sot) )                  return 1;
-  if ( rod_u->kid_p && _ca_slot_junior(sot) )     return 1;
-  if ( _ca_slot_on(&(u3H->rod_u), sot) )          return 2;
-
-  while ( rod_u->par_p ) {
-    rod_u = u3to(u3a_road, rod_u->par_p);
-    if ( &(u3H->rod_u) == rod_u ) break;
-    if ( _ca_slot_on(rod_u, sot) ) return 3;
-  }
-  return 0;
-}
-
-/* _ca_wed_keep(): of equal home nouns [a] and [b], keep [a]: as on the
-**   home road, a member, else the deeper address. a total order, so a
+/* _ca_wed_keep(): of equal nouns [a] and [b] on [rod_u], keep [a]: on the
+**   home road a member, else the deeper address. a total order, so a
 **   slot only ever moves toward the same value.
 */
 static inline c3_t
-_ca_wed_keep(u3_noun a, u3_noun b)
+_ca_wed_keep(u3a_road* rod_u, u3_noun a, u3_noun b)
 {
-  c3_t amb_t = u3a_sole_has(a), bmb_t = u3a_sole_has(b);
+  if ( &(u3H->rod_u) == rod_u ) {
+    c3_t amb_t = u3a_sole_has(a), bmb_t = u3a_sole_has(b);
 
-  if ( amb_t != bmb_t ) return amb_t;
-  return (a < b) == (c3y == u3a_is_north(&(u3H->rod_u)));
+    if ( amb_t != bmb_t ) return amb_t;
+  }
+  return (a < b) == (c3y == u3a_is_north(rod_u));
 }
 
 /* _ca_wed_home(): point home slot [sot] at home noun [val], gaining it
@@ -2215,34 +2029,32 @@ _ca_wed_home(u3_noun* sot, u3_noun val)
   return 1;
 }
 
-/* _ca_wed_fall(): no road below home could merge equal [*a] and [*b]:
-**   both values are senior to every road that could. on an inner road,
-**   point one slot at the other's value: keep the value _ca_wed_keep()
-**   prefers, if both slots can be written, else write the slot that can.
-**   a slot in the heap of this road, or of an inner road senior to it,
-**   is written as is (references from inner roads into home memory
-**   aren't counted); a slot in home memory gains its new value on home,
-**   and the old one is lost after the exit's takes. a slot holding a
-**   member is never written: the home set is closed, so it may be in
-**   one. c3y if written.
+/* _ca_wed_slot(): equal [*a] and [*b] are both home values, and u3R is an
+**   inner road, so no road can merge them: point one slot at the other's
+**   value. [awr_y] and [bwr_y] say where slots [a] and [b] are: 1 in the
+**   heap of u3R or its child, 2 in home memory, 3 in the heap of an inner
+**   road senior to u3R, or 0 nowhere a value can be written (off the
+**   loom, an older road's stack).
+**
+**   keep the value _ca_wed_keep() prefers, if both slots can be written,
+**   else write the slot that can. a slot on an inner road is written as is
+**   (references from inner roads into home memory aren't counted); a slot
+**   in home memory gains its new value on home, and the old one is lost
+**   after the exit's takes. a slot holding a member is never written: the
+**   home set is closed, so it may be in one.
 */
-static c3_o
-_ca_wed_fall(u3_noun* a, u3_noun* b)
+static void
+_ca_wed_slot(u3_noun* a, u3_noun* b, c3_y awr_y, c3_y bwr_y)
 {
-  c3_y awr_y, bwr_y;
   c3_t kep_t;
 
-  if ( &(u3H->rod_u) == u3R ) return c3n;
-
   u3e_Meter.wsg_d++;
-  awr_y = _ca_wed_where(a);
-  bwr_y = _ca_wed_where(b);
 
   if ( !awr_y && !bwr_y ) {
-    return c3n;
+    return;
   }
   else if ( awr_y && bwr_y ) {
-    kep_t = _ca_wed_keep(*a, *b);
+    kep_t = _ca_wed_keep(&(u3H->rod_u), *a, *b);
   }
   else {
     kep_t = ( 0 != bwr_y );
@@ -2254,7 +2066,7 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
     c3_y     wri_y = kep_t ? bwr_y : awr_y;
 
     if ( u3a_sole_has(*sot) ) {
-      return c3n;
+      return;
     }
     if ( 2 != wri_y ) {
       *sot = val;
@@ -2265,53 +2077,146 @@ _ca_wed_fall(u3_noun* a, u3_noun* b)
     }
     else {
       u3e_Meter.wsk_d++;
-      return c3n;
     }
   }
-  return c3y;
 }
 
-/* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge them on
-**   this road or a senior one below home, else, on an inner road, point
-**   one slot at the other's value (_ca_wed_fall()). c3y if unified.
+/* _ca_wed_stow(): store [kep] to [sot] which holds [old] of [rod_u];
+**   [kep] is more senior or preferred (also on [rod_u] if [sam_t]).
+**   [wri_y] is nonzero if [sot] was observed in a heap junior to [rod_u].
+**   [rod_u] is home only if [u3R] is.
 */
-c3_o
+static void
+_ca_wed_stow(u3_noun* sot, u3_noun kep,
+             u3a_road* rod_u, c3_t sam_t, c3_y wri_y)
+{
+  u3_noun old = *sot;
+
+  //  on u3R, not promoting: [sot] owns [old]; gain [kep] if same
+  //
+  if ( (u3R == rod_u) && !u3R->kid_p ) {
+    if ( sam_t ) {
+      _me_gain_use(kep);
+    }
+    u3z(old);
+    *sot = kep;
+    return;
+  }
+
+  //  [sot] borrows [old] (per [wri_y] or on the child in promotion)
+  //
+  if ( wri_y || _ca_slot_kid(sot) ) {
+    *sot = kep;
+  }
+  //  [sot] owns [old] which may be borrowed by a junior road;
+  //  defer lose if possible (or leak if no one's watching)
+  //
+  else if ( _ca_slot_on(rod_u, sot) ) {
+    if ( u3a_dbg_ram() && !_ca_lo_room(rod_u) ) return;
+    if ( sam_t ) {
+      _me_gain_use(kep);
+    }
+    *sot = kep;
+    _ca_lo_put(rod_u, old);
+  }
+  //  [sot] is on a road stack or off the loom
+  //
+  else {
+    return;
+  }
+
+  if ( u3R != rod_u ) {
+    u3e_Meter.wvm_d++;
+  }
+}
+
+/* u3a_wed(): unify the equal nouns in slots [a] and [b], in one walk of
+**   the roads from u3R up. on the first road holding either value, merge
+**   them there (_ca_wed_merge()): keep the more senior, or between values
+**   both on that road the one _ca_wed_keep() prefers, and write the other
+**   slot. but two home values on an inner road can't be merged: point one
+**   slot at the other (_ca_wed_slot()), with the slots found on the way up,
+**   on roads that held neither value. while u3R promotes, values on its
+**   child are left if both are; else the child's slot is written.
+**
+**   not on the home road from an inner road: there asynchronous things
+**   can allocate (XX anything besides u3t_samp?). on a road senior to
+**   u3R, nouns can't be freed, since junior nouns that point into it
+**   aren't tracked, so the value a slot there no longer holds goes on a
+**   lose list, and is lost once that road is current again: counts stay
+**   exact, and senior unification runs when debugging memory too.
+*/
+void
 u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
   //  XX assume( *a != *b )
-  u3_road* rod_u = u3R;
-  c3_o     wed_o;
+  //  slot locations:
+  //     0: unobserved, assumed off-loom or on some road stack
+  //     1: u3R or child, 2: home-road, 3: intermediate road
+  c3_y      awr_y = 0, bwr_y = 0;
+  u3a_road *rod_u = u3R;
 
-  wed_o = ( rod_u->kid_p ) ? _ca_wed_kid(a, b) : _ca_wed_our(a, b);
+  if ( rod_u->kid_p ) {
+    c3_t aju_t = ( c3y == u3a_is_junior(rod_u, *a) );
+    c3_t bju_t = ( c3y == u3a_is_junior(rod_u, *b) );
 
-  //  while not at home, attempt to unify
-  //
-  //    we try to unify on our road, and retry on senior roads
-  //    until we succeed or reach the home road.
-  //
-  //    we can't perform this kind of butchery on the home road,
-  //    where asynchronous things can allocate.
-  //    (XX anything besides u3t_samp?)
-  //
-  //    when unifying on a higher road, we can't free nouns then,
-  //    because we can't track junior nouns that point into that
-  //    road. so the value a senior slot no longer holds goes on a
-  //    lose list, and is lost once that road is current again (see
-  //    _ca_wed_you()): counts stay exact, and senior unification
-  //    runs when debugging memory too.
-  //
-
-  while (  (c3n == wed_o)
-        && rod_u->par_p
-        && (&u3H->rod_u != (rod_u = u3to(u3_road, rod_u->par_p))) )
-  {
-    wed_o = _ca_wed_you(rod_u, a, b);
+    //  promoting: if only one of [*a] or [*b] is on the child,
+    //  keep the other (nothing to do if both are).
+    //
+    if ( aju_t || bju_t ) {
+      if ( aju_t != bju_t ) {
+        if ( aju_t ) *a = *b; else *b = *a;
+      }
+      return;
+    }
   }
 
-  //  both values are senior to every road that could merge them:
-  //  unify through a slot instead
-  //
-  return ( c3y == wed_o ) ? c3y : _ca_wed_fall(a, b);
+  while ( 1 ) {
+    c3_t aon_t = ( c3n == u3a_is_senior(rod_u, *a) );
+    c3_t bon_t = ( c3n == u3a_is_senior(rod_u, *b) );
+
+    if ( aon_t || bon_t ) {
+      c3_t kep_t;  //  keep [*a]
+
+      if ( aon_t && bon_t ) {
+        //  [*a] and [*b] are both at home and we are not
+        //
+        if ( (&(u3H->rod_u) == rod_u) && (&(u3H->rod_u) != u3R) ) {
+          if ( !awr_y ) {
+            awr_y = _ca_slot_on(rod_u, a) ? 2 : _ca_slot_kid(a) ? 1 : 0;
+          }
+          if ( !bwr_y ) {
+            bwr_y = _ca_slot_on(rod_u, b) ? 2 : _ca_slot_kid(b) ? 1 : 0;
+          }
+          _ca_wed_slot(a, b, awr_y, bwr_y);
+          return;
+        }
+
+        kep_t = _ca_wed_keep(rod_u, *a, *b);  //  [*a] is preferred
+      }
+      else {
+        kep_t = bon_t;                        //  [*a] is senior
+      }
+
+      if ( kep_t ) {
+        _ca_wed_stow(b, *a, rod_u, aon_t, bwr_y);
+      }
+      else {
+        _ca_wed_stow(a, *b, rod_u, bon_t, awr_y);
+      }
+      return;
+    }
+
+    //  neither value is here: note the slots that are
+    //
+    if ( !awr_y && _ca_slot_on(rod_u, a) ) awr_y = ( u3R == rod_u ) ? 1 : 3;
+    if ( !bwr_y && _ca_slot_on(rod_u, b) ) bwr_y = ( u3R == rod_u ) ? 1 : 3;
+
+    //  every value is on some road, home at the last
+    //
+    u3_assert( rod_u->par_p );
+    rod_u = u3to(u3a_road, rod_u->par_p);
+  }
 }
 
 /* u3a_luse(): check refcount sanity.

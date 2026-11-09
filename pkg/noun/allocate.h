@@ -911,9 +911,9 @@ u3a_post_info(u3_post);
         /* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge
         **            them on this road or a senior one below home, else,
         **            on an inner road, point one slot at the other's
-        **            value. c3y if unified.
+        **            value.
         */
-          c3_o
+          void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
 
         /* u3a_wed_fall(): an exit from road [kid_p], whose lose list is

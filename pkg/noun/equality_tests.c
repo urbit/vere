@@ -250,6 +250,52 @@ _test_unify_senior_slot(void)
   return ret_i;
 }
 
+/* _test_unify_senior_full(): debugging memory, with no room on this road
+**                            for a lose-list chunk, equal cells on the road
+**                            above are left as they are, with exact counts,
+**                            not written uncounted from another road.
+*/
+static c3_i
+_test_unify_senior_full(void)
+{
+  c3_i    ret_i = 1;
+  c3_h    wag_h = u3C.wag_h;
+  u3_noun a, b;
+
+  u3m_hate(0);
+
+  a = u3nt(0, 0, 0);
+  b = u3nt(0, 0, 0);
+
+  //  fill this road until a new chunk wouldn't leave 8 pages free; the
+  //  heap goes with the road
+  //
+  u3m_hate(0);
+  while ( u3a_open(u3R) > ((c3_w)6 << u3a_page) ) {
+    (void)u3a_walloc((c3_w)1 << u3a_page);
+  }
+  u3C.wag_h |= u3o_debug_ram;
+  (void)u3r_sing(a, b);
+  u3C.wag_h = wag_h;
+  u3m_love(0);
+
+  if ( u3t(a) == u3t(b) ) {
+    fprintf(stderr, "test: unify senior full: unified without room\r\n");
+    ret_i = 0;
+  }
+  else if ( (1 != u3a_use(u3t(a))) || (1 != u3a_use(u3t(b))) ) {
+    fprintf(stderr, "test: unify senior full: counts %" PRIc3_w " %" PRIc3_w ", not 1\r\n",
+            u3a_use(u3t(a)), u3a_use(u3t(b)));
+    ret_i = 0;
+  }
+  _GRAB_EXACT("unify senior full", a, b);
+
+  u3z(a); u3z(b);
+  u3m_love(0);
+
+  return ret_i;
+}
+
 /* _test_lose_full(): past the home lose list's ceiling, a home slot is
 **                    still written and its old value leaked, for the grab
 **                    u3o_check_corrupt asks for; debugging memory, the
@@ -1403,6 +1449,10 @@ _test_equality(void)
     ret_i = 0;
   }
 
+  if ( !_test_unify_senior_full() ) {
+    fprintf(stderr, "test: equality: unify senior full: failed\r\n");
+    ret_i = 0;
+  }
   if ( !_test_lose_full() ) {
     fprintf(stderr, "test: equality: lose full: failed\r\n");
     ret_i = 0;
