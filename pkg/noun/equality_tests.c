@@ -15,6 +15,23 @@ _setup(void)
   u3m_boot_lite(1 << 24);
 }
 
+/* _GRAB_EXACT(): a grab of this road that counts references, with the
+**   given roots, finds no leak and no count to repair; else fail [cas_c].
+*/
+#define _GRAB_EXACT(cas_c, ...)                                         \
+  do {                                                                  \
+    c3_h wag_h = u3C.wag_h;                                             \
+                                                                        \
+    u3C.wag_h |= u3o_debug_ram;                                         \
+    u3m_grab(__VA_ARGS__);                                              \
+    u3C.wag_h = wag_h;                                                  \
+    if ( u3a_sweep_leaked() ) {                                         \
+      fprintf(stderr, "test: %s: leaked %" PRIc3_w " words\r\n",        \
+              cas_c, u3a_sweep_leaked());                               \
+      ret_i = 0;                                                        \
+    }                                                                   \
+  } while (0)
+
 static c3_i
 _test_unify_home(void)
 {
@@ -135,21 +152,7 @@ _test_unify_senior(void)
     ret_i = 0;
   }
 
-  //  counting references, a grab of this road finds no leak and no count
-  //  to repair
-  //
-  {
-    c3_h wag_h = u3C.wag_h;
-
-    u3C.wag_h |= u3o_debug_ram;
-    u3m_grab(a, b);
-    u3C.wag_h = wag_h;
-    if ( u3a_sweep_leaked() ) {
-      fprintf(stderr, "test: unify senior: leaked %" PRIc3_w " words\r\n",
-              u3a_sweep_leaked());
-      ret_i = 0;
-    }
-  }
+  _GRAB_EXACT("unify senior", a, b);
 
   u3z(a); u3z(b);
   u3m_love(0);
@@ -186,20 +189,9 @@ _test_unify_senior_deep(void)
     ret_i = 0;
   }
 
-  //  counting references, a grab of the middle road finds its list
+  //  a grab of the middle road finds its list
   //
-  {
-    c3_h wag_h = u3C.wag_h;
-
-    u3C.wag_h |= u3o_debug_ram;
-    u3m_grab(u3_none);
-    u3C.wag_h = wag_h;
-    if ( u3a_sweep_leaked() ) {
-      fprintf(stderr, "test: unify senior deep: middle road leaked %" PRIc3_w " words\r\n",
-              u3a_sweep_leaked());
-      ret_i = 0;
-    }
-  }
+  _GRAB_EXACT("unify senior deep: middle road", u3_none);
   u3m_love(0);
 
   if ( u3t(a) != u3t(b) ) {
@@ -212,18 +204,7 @@ _test_unify_senior_deep(void)
     ret_i = 0;
   }
 
-  {
-    c3_h wag_h = u3C.wag_h;
-
-    u3C.wag_h |= u3o_debug_ram;
-    u3m_grab(a, b);
-    u3C.wag_h = wag_h;
-    if ( u3a_sweep_leaked() ) {
-      fprintf(stderr, "test: unify senior deep: leaked %" PRIc3_w " words\r\n",
-              u3a_sweep_leaked());
-      ret_i = 0;
-    }
-  }
+  _GRAB_EXACT("unify senior deep", a, b);
 
   u3z(a); u3z(b);
   u3m_love(0);
@@ -402,21 +383,9 @@ _test_lose_full_eager(void)
     ret_i = 0;
   }
 
-  //  counting references, the drain freed what was swapped out, and
-  //  nothing else
+  //  the drain freed what was swapped out, and nothing else
   //
-  {
-    c3_h wag_h = u3C.wag_h;
-
-    u3C.wag_h |= u3o_debug_ram;
-    u3m_grab(mem, old, cop);
-    u3C.wag_h = wag_h;
-    if ( u3a_sweep_leaked() ) {
-      fprintf(stderr, "test: lose full eager: leaked %" PRIc3_w " words\r\n",
-              u3a_sweep_leaked());
-      ret_i = 0;
-    }
-  }
+  _GRAB_EXACT("lose full eager", mem, old, cop);
 
   if ( c3n == u3r_sing(old, cop) ) {
     fprintf(stderr, "test: lose full eager: changed the value\r\n");
@@ -851,10 +820,12 @@ _sing_dag(const c3_c* cas_c, u3_noun a, u3_noun b)
   return 1;
 }
 
-/* _test_sing_dag_all(): every setting, at the current table size.
+/* _test_sing_dag(): comparisons of equal DAGs with 2^200 paths finish, in
+**                   every place unification can merge or write a slot: a
+**                   comparison that re-compared every path never would.
 */
 static c3_i
-_test_sing_dag_all(void)
+_test_sing_dag(void)
 {
   c3_i    ret_i = 1;
   u3_noun a, b;
@@ -865,7 +836,7 @@ _test_sing_dag_all(void)
   ret_i &= _sing_dag("home", a, b);
   u3z(a); u3z(b);
 
-  //  inner road, two home nouns: the pair table
+  //  inner road, two home nouns: a home slot is written
   //
   a = _dag(200); b = _dag(200);
   u3m_hate(0);
@@ -883,7 +854,7 @@ _test_sing_dag_all(void)
   u3z(a);
 
   //  inner road, a junior DAG over a home one, against an equal home
-  //  copy: unification gives up at each junior-home boundary
+  //  copy: junior slots and home slots are written
   //
   a = _dag(200); b = _dag(220);
   u3m_hate(0);
@@ -907,22 +878,6 @@ _test_sing_dag_all(void)
   u3m_love(0);
   u3m_love(0);
 
-  //  the same while debugging memory, which unifies on this road only:
-  //  the pair table, for the one comparison
-  //
-  {
-    c3_h wag_h = u3C.wag_h;
-
-    u3C.wag_h |= u3o_debug_ram;
-    u3m_hate(0);
-    a = _dag(200); b = _dag(200);
-    u3m_hate(0);
-    ret_i &= _sing_dag("nested, debug", a, b);
-    u3m_love(0);
-    u3m_love(0);
-    u3C.wag_h = wag_h;
-  }
-
   //  as while promoting a junior road ([kid_p] set): this road unifies
   //  too, losing old values at the end of the exit (here, by hand)
   //
@@ -936,21 +891,6 @@ _test_sing_dag_all(void)
     ret_i = 0;
   }
   u3z(a); u3z(b);
-
-  return ret_i;
-}
-
-/* _test_sing_dag(): long comparisons are bounded everywhere, and with a
-**   table small enough to evict.
-*/
-static c3_i
-_test_sing_dag(void)
-{
-  c3_i ret_i = 1;
-
-  if ( !_test_sing_dag_all() ) {
-    ret_i = 0;
-  }
 
   return ret_i;
 }
@@ -998,8 +938,8 @@ _test_sole_lazy(void)
 }
 
 /* _gap(): x_{k+1} = [x_k [w_k x_k]], w_k a fresh list of [len_w] atoms:
-**   each shared x_k is met again only after w_k's cells, so a table that
-**   evicts loses it.
+**   each shared x_k is met again only after w_k's cells, so a visited set
+**   that evicted would lose it.
 */
 static u3_noun
 _gap(c3_w dep_w, c3_w len_w)
@@ -1013,77 +953,6 @@ _gap(c3_w dep_w, c3_w len_w)
     x = u3nc(u3k(x), u3nc(w, x));
   }
   return x;
-}
-
-/* _test_gap(): the pair table and the visited set grow instead of
-**              evicting, from 16 entries, so the worst case for an
-**              evicting table stays linear; then they shrink back.
-*/
-static c3_i
-_test_gap(void)
-{
-  c3_i ret_i = 1;
-  struct timespec bef_u;
-  c3_d mic_d;
-
-  u3m_sole_visit_size(4, 0);
-
-  //  a comparison of two home copies on an inner road, linear with no
-  //  table: unification writes home slots
-  //
-  {
-    u3_noun a = _gap(40, 64), b = _gap(40, 64);
-
-    clock_gettime(CLOCK_MONOTONIC, &bef_u);
-    u3m_hate(0);
-    if ( c3y != u3r_sing(a, b) ) {
-      fprintf(stderr, "test: gap: sing: not equal\r\n");
-      ret_i = 0;
-    }
-    u3m_love(0);
-    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: gap: sing %" PRIu64 " us\r\n", mic_d);
-      ret_i = 0;
-    }
-    u3z(a); u3z(b);
-  }
-
-  //  an eager walk of a junior noun
-  //
-  {
-    clock_gettime(CLOCK_MONOTONIC, &bef_u);
-    u3m_hate(0);
-    u3z(u3m_sole_try(_gap(40, 64)));
-    u3m_love(0);
-    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
-      fprintf(stderr, "test: gap: try %" PRIu64 " us\r\n", mic_d);
-      ret_i = 0;
-    }
-  }
-
-  //  the visited set grew, and shrinks back over a few quiet excursions
-  //
-  {
-    c3_d vcp_d = u3m_sole_visit_cap();
-
-    if ( vcp_d <= 16 ) {
-      fprintf(stderr, "test: gap: visited set didn't grow (%" PRIu64 ")\r\n",
-              vcp_d);
-      ret_i = 0;
-    }
-    for ( c3_w i_w = 0; i_w < 16; i_w++ ) {
-      u3m_hate(0);
-      u3m_love(0);
-    }
-    if ( 16 != u3m_sole_visit_cap() ) {
-      fprintf(stderr, "test: gap: didn't shrink (%" PRIu64 ")\r\n",
-              u3m_sole_visit_cap());
-      ret_i = 0;
-    }
-  }
-
-  u3m_sole_visit_size(14, 0);
-  return ret_i;
 }
 
 /* _crib_list(): a fresh list of [len_w] distinct cells, [ [bas_w+i] ...].
@@ -1100,8 +969,9 @@ _crib_list(c3_w len_w, c3_w bas_w)
 }
 
 /* _test_crib(): a crib grows to its ceiling, zeroes, and gives memory
-**              back; the visited set evicts at its ceiling, reports it,
-**              and is cleared between excursions.
+**              back; the visited set grows from 16 entries rather than
+**              evicting below its ceiling, and shrinks back; it evicts at
+**              its ceiling, reports it, and is cleared between excursions.
 */
 static c3_i
 _test_crib(void)
@@ -1146,6 +1016,39 @@ _test_crib(void)
       ret_i = 0;
     }
     //  NB: the test's reservation (1 MiB of address space) is kept
+  }
+
+  //  the visited set grows from 16 entries, so a walk that meets each
+  //  shared cell again only after many others stays linear; then it
+  //  shrinks back over a few quiet excursions
+  //
+  {
+    struct timespec bef_u;
+    c3_d mic_d, vcp_d;
+
+    u3m_sole_visit_size(4, 0);
+    clock_gettime(CLOCK_MONOTONIC, &bef_u);
+    u3m_hate(0);
+    u3z(u3m_sole_try(_gap(40, 64)));
+    u3m_love(0);
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: crib: gap %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+    if ( (vcp_d = u3m_sole_visit_cap()) <= 16 ) {
+      fprintf(stderr, "test: crib: visited set didn't grow (%" PRIu64 ")\r\n",
+              vcp_d);
+      ret_i = 0;
+    }
+    for ( c3_w i_w = 0; i_w < 16; i_w++ ) {
+      u3m_hate(0);
+      u3m_love(0);
+    }
+    if ( 16 != u3m_sole_visit_cap() ) {
+      fprintf(stderr, "test: crib: visited set didn't shrink (%" PRIu64 ")\r\n",
+              u3m_sole_visit_cap());
+      ret_i = 0;
+    }
   }
 
   //  the visited set at a ceiling of 64 entries: try still leaves a
@@ -1459,10 +1362,6 @@ _test_equality(void)
     ret_i = 0;
   }
 
-  if ( !_test_gap() ) {
-    fprintf(stderr, "test: equality: gap: failed\r\n");
-    ret_i = 0;
-  }
 
   if ( !_test_sing_dag() ) {
     fprintf(stderr, "test: equality: sing dag: failed\r\n");
