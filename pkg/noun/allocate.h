@@ -499,16 +499,20 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          ?  u3a_north_is_senior(r, som) \
                          :  u3a_south_is_senior(r, som) )
 
-  /* u3a_is_mutable(): [som] may be edited in place on road [r]: a cell
-  **                   on [r] that we hold the only reference to.
+  /* u3a_is_mutable(): [som] may be edited in place on road [r]: an
+  **                   indirect noun on [r] that we hold the only
+  **                   reference to.  An atom edited in place must have
+  **                   its mug cleared and its length kept normalized.
   **
   **   Never on the home road: the home-road hashcons set refers to its
   **   members without counting, so a member can look uniquely held, and
   **   editing it in place would change a value the set has filed. Nock
   **   rarely runs on the home road, so copying there costs nothing.
+  **   (A junior road's set holds references, so a member of it has a
+  **   count of at least two, and the rule below excludes it.)
   */
 #     define  u3a_is_mutable(r, som) \
-                ( _(u3a_is_atom(som)) \
+                ( _(u3a_is_cat(som)) \
                   ? c3n \
                   : !(r)->par_p \
                   ? c3n \

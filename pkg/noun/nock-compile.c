@@ -33,10 +33,10 @@
 **  with over 65535 slots, literals, sites or bytes of code needs, are a
 **  second table of them behind the prefix WIDE, for a dispatch more.
 **  Slots, literal and call site indices, and jump targets (absolute byte
-**  offsets) are immediates.  The IMM opcodes are the exception: IMM_B
-**  and IMM_S carry the atom itself, and all of them write to a one-byte
-**  slot.  A call site holds its argument slots and its destination slot
-**  d, so the call opcodes carry only the site index.
+**  offsets) are immediates, and so is the atom of IMM and EQI, which
+**  carry it rather than a literal index.  A call site holds its argument
+**  slots and its destination slot d, so the call opcodes carry only the
+**  site index.
 **
 **  Slots hold counted references.  An op reads a source slot either
 **  borrowed, gaining a reference for its product and leaving the slot as
@@ -52,12 +52,10 @@
 **  written, and an activation ends with every slot empty but the one it
 **  returns.
 **  An empty slot is zeroed only in a build that reads empty slots: for
-**  sweeps, or for the checks (_nc_zer_t).
+**  sweeps, for the checks, or for the drops at the start of a block of
+**  the registers that die on some edges into it only (_nc_zer_t).
 **
-**    IMM_0 d        0 -> d
-**    IMM_1 d        1 -> d
-**    IMM_B n d      n -> d
-**    IMM_S n d      n -> d
+**    IMM   n d      n -> d, n a direct atom
 **    IML   i d      literal i -> d
 **    MOV   s d      s -> d
 **    INC   s d      +(s) -> d
@@ -66,6 +64,12 @@
 **    CON   h t d    [h t] -> d
 **    HED   s d      -.s -> d, s is guaranteed to be a cell by Hoon IR emitter
 **    TAL   s d      +.s -> d, s is guaranteed to be a cell by Hoon IR emitter
+**    HER   s d      HED consuming s, paired with a COR: pushes the cell of
+**                   s on the stack for it when the slot's reference was
+**                   the only one, the cell giving d its reference to the
+**                   head and losing the tail, else 0 (_nc_reuse())
+**    TAR   s d      TAL the same way, for the tail
+**    COR   h t d    CON into the cell a HER or TAR pushed, popped, if any
 **    CEL   p        crash unless p is a cell
 **    LOB   p        crash unless p is a loobean
 **    EQU   l r      =(l r), for the side effect
@@ -73,6 +77,8 @@
 **    HSE   i        static hint epilogue
 **    HDP   i p      dynamic hint prologue, clue in p
 **    HDE   i p      dynamic hint epilogue
+**    HLP   i        literal hint prologue: push literal i, the [tag clue]
+**                   of a trace hint whose clue is a constant (_nc_fold())
 **    HMP   i        deferred %mean prologue: push [%meaf bell args] of
 **                   site i, the arm of the trap and the arguments it takes
 **    HME            deferred %mean epilogue
@@ -83,6 +89,14 @@
 **    NOK   u f d    .*(u f) -> d, through the SKA core
 **    CAL   i        call site i with its arguments -> d
 **    CAF   i        CAL, by the total array jet of the site
+**    CAX   i        CAF, by the transferring driver of the jet, which
+**                   takes the references of the arguments the site
+**                   consumes and retains the others
+**    CAC   i        CAF under the flags of the jet arm, which isn't trusted:
+**                   the driver tested against the unary program of the
+**                   callee on the core rebuilt from the arguments; the
+**                   program alone if the arm is off, the driver alone if
+**                   it is trusted (for sites compiled before a change)
 **    CAP   i        call site i with the whole subject, its one argument,
 **                   -> d: by the u3w jet of the site if it has one and
 **                   doesn't punt, else by the unary program of the callee
@@ -101,15 +115,17 @@
 **                   emitted sweeping only, the others being moves and a
 **                   HOP to the entry (_nc_shuffle())
 **    JMF   i        CAF in tail position
+**    JMX   i        CAX in tail position
 **    JSP   i        CAP in tail position
 **    DON   s        return s, consumed
 **    DRO   s        drop s: lose its reference, 0 -> s
+**    JMC   i        CAC in tail position
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
-**  DON, JMP, JMS, JMF and JSP end the activation, and come in a sweeping
-**  variant (_1) that first drops every slot it doesn't take: it stands
-**  for the drops at the start of a block that does nothing else.
+**  DON, JMP, JMS, JMF, JMX, JSP and JMC end the activation, and come in a
+**  sweeping variant (_1) that first drops every slot it doesn't take: it
+**  stands for the drops at the start of a block that does nothing else.
 */
 
 /*  Families of the IR ops: X(fam, OP, src, dst, imm, tar, sot, kon, swe):
@@ -117,7 +133,8 @@
 **    OP  - its opcode name,
 **    src - the number of source slots in the op,
 **    dst - whether it has a destination slot
-**    imm - an index immediate (literal or call site)
+**    imm - an immediate: a literal or call site index, or the atom itself
+**          (IMM, EQI)
 **    tar - has a jump target
 **    sot - has a call site (whose argument slots are sources and which holds
 **          the destination slot, if any)
@@ -131,8 +148,9 @@
 **
 **  BOM has no variants.
 **
-**  Other special families, imm, nop and kil have no opcodes of their own: imm
-**  encodes as an IMM opcode or as IML, nop as nothing, and kil as an imm of 0.
+**  Other special families, nop and kil have no opcodes of their own: nop
+**  encodes as nothing, and kil as IMM 0, or as nothing where consuming zeroes
+**  the slot (_nc_zer_t).
 **  kil defines a register as 0: a parameter of a block that a jump to it leaves
 **  undefined, so that the register is not live on the way to that jump; and 0
 **  drops as nothing where the register dies on a path that never defined it
@@ -140,6 +158,7 @@
 */
 #define FAMILIES(X)                                                             \
   /*fam, OP,  src, dst, imm, tar, sot, kon, swe*/                               \
+  X(imm, IMM, 0,   1,   1,   0,   0,   0,   0)                                  \
   X(iml, IML, 0,   1,   1,   0,   0,   0,   0)                                  \
   X(mov, MOV, 1,   1,   0,   0,   0,   1,   0)                                  \
   X(inc, INC, 1,   1,   0,   0,   0,   1,   0)                                  \
@@ -148,6 +167,9 @@
   X(con, CON, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(hed, HED, 1,   1,   0,   0,   0,   1,   0)                                  \
   X(tal, TAL, 1,   1,   0,   0,   0,   1,   0)                                  \
+  X(her, HER, 1,   1,   0,   0,   0,   0,   0)                                  \
+  X(tar, TAR, 1,   1,   0,   0,   0,   0,   0)                                  \
+  X(cor, COR, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(cel, CEL, 1,   0,   0,   0,   0,   1,   0)                                  \
   X(lob, LOB, 1,   0,   0,   0,   0,   1,   0)                                  \
   X(equ, EQU, 2,   0,   0,   0,   0,   2,   0)                                  \
@@ -155,12 +177,14 @@
   X(hse, HSE, 0,   0,   1,   0,   0,   0,   0)                                  \
   X(hdp, HDP, 1,   0,   1,   0,   0,   1,   0)                                  \
   X(hde, HDE, 1,   0,   1,   0,   0,   1,   0)                                  \
+  X(hlp, HLP, 0,   0,   1,   0,   0,   0,   0)                                  \
   X(hmp, HMP, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(hcp, HCP, 0,   0,   1,   0,   0,   0,   0)                                  \
   X(spy, SPY, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(nok, NOK, 2,   1,   0,   0,   0,   2,   0)                                  \
   X(cal, CAL, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(caf, CAF, 0,   0,   1,   0,   1,   0,   0)                                  \
+  X(cax, CAX, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(cap, CAP, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(cam, CAM, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(csm, CSM, 0,   0,   1,   0,   1,   0,   0)                                  \
@@ -174,9 +198,12 @@
   X(jmp, JMP, 0,   0,   1,   0,   1,   1,   1)                                  \
   X(jms, JMS, 0,   0,   1,   0,   1,   1,   1)                                  \
   X(jmf, JMF, 0,   0,   1,   0,   1,   1,   1)                                  \
+  X(jmx, JMX, 0,   0,   1,   0,   1,   1,   1)                                  \
   X(jsp, JSP, 0,   0,   1,   0,   1,   1,   1)                                  \
   X(don, DON, 1,   0,   0,   0,   0,   1,   1)                                  \
-  X(dro, DRO, 1,   0,   0,   0,   0,   0,   0)
+  X(dro, DRO, 1,   0,   0,   0,   0,   0,   0)                                  \
+  X(cac, CAC, 0,   0,   1,   0,   1,   0,   0)                                  \
+  X(jmc, JMC, 0,   0,   1,   0,   1,   1,   1)
 
 /*  Families of ops without operands, X(fam, OP): one opcode each, with
 **  nothing to widen or consume.  They follow the others in the opcode
@@ -190,7 +217,7 @@
 #define _nc_nul_enum(fam, OP)  _nc_##fam,
 enum {
   FAMILIES(_nc_fam_enum) NULLARIES(_nc_nul_enum)
-  _nc_bom, _nc_imm, _nc_nop, _nc_kil
+  _nc_bom, _nc_nop, _nc_kil
 };
 #undef _nc_fam_enum
 #undef _nc_nul_enum
@@ -215,19 +242,13 @@ enum {
 
 #define _nc_nul_ops(fam, OP)  Y(OP)
 
-#define OPCODES  Y(IMM_0) Y(IMM_1) Y(IMM_B) Y(IMM_S)                            \
-                 FAMILIES(_nc_fam_ops) NULLARIES(_nc_nul_ops)                   \
-                 Y(BOM) Y(WIDE)
+#define OPCODES  FAMILIES(_nc_fam_ops) NULLARIES(_nc_nul_ops) Y(BOM) Y(WIDE)
 #define WIDES    FAMILIES(_nc_fam_wides)
 
 #define Y(op) op,
 enum { OPCODES LAST };
 enum { WIDES LAST_V };
 static_assert((LAST <= 256) && (LAST_V <= 256));
-#undef Y
-
-#define Y(op) #op,
-static const c3_c* _nc_name_c[] = { OPCODES };
 #undef Y
 
 /* _nc_fam: operands of a family, materializes X table and adds special-cased
@@ -244,7 +265,6 @@ static const struct {
   NULLARIES(_nc_nul_row)
   /*fam,        src, dst, imm, tar, sot, kon, swe*/
   [_nc_bom] = { 0,   0,    0,  0,   0,   0,   0 },
-  [_nc_imm] = { 0,   1,    0,  0,   0,   0,   0 },
   [_nc_nop] = { 0,   0,    0,  0,   0,   0,   0 },
   [_nc_kil] = { 0,   1,    0,  0,   0,   0,   0 },
 };
@@ -283,13 +303,15 @@ static_assert(LAST_V <= 0xff);
 #undef _nc_nul_bas
 #undef _nc_nul_vas
 
-/* _nc_fam_c: names of the families, for _nc_print().
+/* _nc_fam_c: names of the families, and of BOM, for _nc_print().
 */
 #define _nc_fam_nam(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
   [_nc_##fam] = #OP,
 #define _nc_nul_nam(fam, OP)  [_nc_##fam] = #OP,
 
-static const c3_c* _nc_fam_c[] = { FAMILIES(_nc_fam_nam) NULLARIES(_nc_nul_nam) };
+static const c3_c* _nc_fam_c[] = {
+  FAMILIES(_nc_fam_nam) NULLARIES(_nc_nul_nam) [_nc_bom] = "BOM"
+};
 #undef _nc_fam_nam
 #undef _nc_nul_nam
 
@@ -305,10 +327,12 @@ typedef struct {
   c3_y  kon_y;    //  variant bits: consumed sources, bit i for src_h[i],
                   //  or a sweep (_nc_lives())
   c3_y  ded_y;    //  the product is never used: drop it (_nc_lives())
+  c3_y  ali_y;    //  a borrowing HED/TAL whose product could be an alias
+                  //  of a part of its source, for the statistics
   c3_h  src_h[2]; //  source registers
   c3_h  dst_h;    //  destination register for non-call ops
-  c3_h  imm_h;    //  index immediate, or the atom of an inline immediate
-  c3_h  tar_h;    //  target block, or the literal of an inline immediate
+  c3_h  imm_h;    //  index immediate, or the atom of an IMM
+  c3_h  tar_h;    //  target block
 } nc_op;
 
 /* nc_blk: a basic block.
@@ -341,6 +365,7 @@ typedef struct {
   c3_h    cid_h;
   c3_h    des_h;  //  destination slot, set by _nc_emit() from the op
   c3_o    mon_o;  //  call by subject: the one argument is the whole subject
+  c3_o    ice_o;  //  compiled trusting the jet arm (u3nc_dire)
   c3_h    sot_h;
   c3_h    len_h;
 } nc_dir;
@@ -364,8 +389,11 @@ typedef struct {
   c3_h          pon_h;    //    and its length
   c3_y*         pok_y;    //  consume flags of the argument registers
   c3_h          pkc_h;    //    and its capacity (grows with pol_h)
+  u3_noun       jet;      //  (list ring) of the jets ops stand in for
   u3p(u3h_root) lit_p;    //  literal -> index
   c3_h          lit_h;
+  u3_noun*      lin;      //  index -> literal, borrowed from lit_p
+  c3_h          lic_h;    //    and its capacity
   c3_h          reg_h;    //  registers
   c3_h          tot_h;    //  slots
   u3_weak       bell;     //  bell of the program, if a tail call to it can
@@ -391,9 +419,66 @@ u3nc_stat u3nc_Stat;
 #ifdef U3NC_STAT
 #  define _nc_stat(fel)  (u3nc_Stat.fel++)
 #  define _nc_stat_if(con, fel)  do { if ( con ) { u3nc_Stat.fel++; } } while(0)
+#  define _nc_stat_add(fel, n)  (u3nc_Stat.fel += (n))
+
+/*  models of cell reuse beyond the pairing, for the statistics: a spare
+**  cell kept by the last unique free of an unpaired consuming HED/TAL and
+**  taken by the next CON, globally (_nc_spg_t) or within an activation
+**  (_nc_spa_t, saved in the frame across calls).
+*/
+static c3_t _nc_spg_t, _nc_spa_t;
+
+#  define _nc_stat_uni(uni_t)  do {                                             \
+    if ( uni_t ) {                                                              \
+      u3nc_Stat.uni_d++;                                                        \
+      if ( _nc_spg_t ) { u3nc_Stat.spw_d++; }                                   \
+      _nc_spg_t = 1;                                                            \
+      _nc_spa_t = 1;                                                            \
+    }                                                                           \
+  } while ( 0 )
+#  define _nc_stat_con()  do {                                                  \
+    if ( _nc_spg_t ) { u3nc_Stat.spg_d++; _nc_spg_t = 0; }                      \
+    if ( _nc_spa_t ) { u3nc_Stat.spa_d++; _nc_spa_t = 0; }                      \
+  } while ( 0 )
+#  define _nc_stat_move(gop_u, kon_y, len_h, tai_t)  do {                       \
+    for ( c3_h _j = 0; _j < (len_h); _j++ ) {                                   \
+      c3_t _b = (_j < 64) && (((gop_u)->bor_d >> _j) & 1);                      \
+      u3nc_Stat.kal_d++;                                                        \
+      if ( !(kon_y)[_j] ) {                                                     \
+        u3nc_Stat.gan_d++;                                                      \
+        if ( _b ) { u3nc_Stat.bor_d++; }                                        \
+      }                                                                         \
+      else if ( _b ) {                                                          \
+        if ( tai_t ) { u3nc_Stat.bot_d++; } else { u3nc_Stat.bok_d++; }         \
+      }                                                                         \
+    }                                                                           \
+  } while ( 0 )
+#  define _nc_stat_ali(pog_u, ip, pro, K)  do {                                 \
+    if ( !(K) ) {                                                               \
+      c3_t _ind = (c3n == u3a_is_cat(pro));                                     \
+      if ( _ind ) { u3nc_Stat.dbi_d++; }                                        \
+      if ( (pog_u)->ali_y[(ip) - (pog_u)->byc_u.ops_y] ) {                      \
+        u3nc_Stat.ali_d++;                                                      \
+        if ( _ind ) { u3nc_Stat.alx_d++; }                                      \
+      }                                                                         \
+    }                                                                           \
+  } while ( 0 )
+#  define _nc_stat_spa_set(v)  (_nc_spa_t = (v))
+#  define _nc_stat_spa_get()   (_nc_spa_t)
+#  define _nc_stat_frame(f)    ((f)->spa_y = _nc_spa_t)
+#  define _nc_stat_unframe(f)  (_nc_spa_t = (f)->spa_y)
 #else
 #  define _nc_stat(fel)  ((void)0)
 #  define _nc_stat_if(con, fel)  ((void)0)
+#  define _nc_stat_add(fel, n)  ((void)0)
+#  define _nc_stat_uni(uni_t)  ((void)0)
+#  define _nc_stat_con()  ((void)0)
+#  define _nc_stat_move(gop_u, kon_y, len_h, tai_t)  ((void)0)
+#  define _nc_stat_ali(pog_u, ip, pro, K)  ((void)0)
+#  define _nc_stat_spa_set(v)  ((void)0)
+#  define _nc_stat_spa_get()   0
+#  define _nc_stat_frame(f)    ((void)0)
+#  define _nc_stat_unframe(f)  ((void)0)
 #endif
 
 #ifdef U3NC_VERBOSE
@@ -414,9 +499,13 @@ static const c3_t _nc_swe_t = 0;
 #endif
 
 /* _nc_zer_t: whether the interpreter zeroes a slot it empties.  A slot
-**            holds a reference iff its register is live, and a drop
-**            never meets an empty slot (_nc_lives()), so only a sweep,
-**            and the checks of U3NC_CHECK and C3DBG, read empty slots.
+**            holds a reference iff its register is live, and without
+**            zeroing a drop never meets an empty slot (_nc_lives()), so
+**            only a sweep, and the checks of U3NC_CHECK and C3DBG, read
+**            empty slots.  With zeroing, _nc_lives() drops a register
+**            that dies on some edges into a block only at the start of
+**            the block, where its slot is zero on the other edges,
+**            rather than in a block of drops made for each edge.
 */
 #if defined(U3NC_SWEEP) || defined(U3NC_CHECK) || defined(C3DBG)
 static const c3_t _nc_zer_t = 1;
@@ -458,6 +547,8 @@ _nc_lit(nc_gen* gen_u, u3_noun som)
   if ( u3_none == got ) {
     got = gen_u->lit_h++;
     u3h_put(gen_u->lit_p, som, got);
+    _nc_grow(gen_u->lin, got, gen_u->lic_h, u3_noun);
+    gen_u->lin[got] = som;
   }
 
   return got;
@@ -487,6 +578,7 @@ _nc_op_init(nc_op* op_u, c3_y fam_y)
   op_u->fam_y    = fam_y;
   op_u->kon_y    = 0;
   op_u->ded_y    = 0;
+  op_u->ali_y    = 0;
   op_u->src_h[0] = _nc_none;
   op_u->src_h[1] = _nc_none;
   op_u->dst_h    = _nc_none;
@@ -571,15 +663,23 @@ _nc_ring(u3_noun ring)
 
 /* _nc_kind(): the kind of a call with len_h arguments through a resolved
 **             ring: plain, with no array driver (the arguments are the
-**             analysis's); of a total array driver on the arguments; or
-**             by subject, of a u3w driver that may punt, whose one argument
-**             is the whole subject.  Bails if the arguments don't fit the
-**             driver: the %jets table of the SKA core and u3u_Harm then
-**             disagree.
+**             analysis's); of a total array driver on the arguments,
+**             trusted (CAF) or checked under the flags of its arm (CAC);
+**             or by subject, of a u3w driver that may punt, whose one
+**             argument is the whole subject.  Bails if the arguments don't
+**             fit the driver: the %jets table of the SKA core and u3u_Harm
+**             then disagree.
+**
+**             The flags of the arm are compile-time: an arm that is off
+**             has no driver here (u3j_ring()), and the SKA core isn't told
+**             of it, so a call of it is plain; one that isn't trusted
+**             compiles to a checked call.  A change of the flags drops the
+**             programs compiled under the old ones (u3d_hot(), u3nc_stale()).
 */
 typedef enum {
   _nc_kind_plain,
   _nc_kind_total,
+  _nc_kind_check,
   _nc_kind_punt
 } _nc_kind_e ;
 
@@ -594,7 +694,11 @@ _nc_kind(const nc_jet* jet_u, c3_h len_h)
     u3m_bail(c3__fail);
   }
 
-  return ( jet_u->arm_u->pun_t ) ? _nc_kind_punt : _nc_kind_total;
+  if ( jet_u->arm_u->pun_t ) {
+    return _nc_kind_punt;
+  }
+
+  return ( c3y == jet_u->ham_u->ice ) ? _nc_kind_total : _nc_kind_check;
 }
 
 /* _nc_jet_op(): an op standing in for a call of a total array jet, for
@@ -640,6 +744,7 @@ _nc_dir(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun arg,
   dir_u->cid_h = ( u3_none == clu ) ? 0 : _nc_cid(clu);
   dir_u->des_h = _nc_none;
   dir_u->mon_o = mon_o;
+  dir_u->ice_o = ( jet_u.ham_u ) ? jet_u.ham_u->ice : c3y;
   dir_u->sot_h = gen_u->pon_h;
   dir_u->len_h = 0;
   u3k(jet_u.ring);
@@ -671,11 +776,34 @@ _nc_dir_sub(nc_gen* gen_u, u3_noun bell, nc_jet jet_u, u3_weak clu, u3_noun sub)
   return dir_h;
 }
 
+/* _nc_opjet(): record the ring of a jet an op stands in for, once.
+**              RETAINS.
+*/
+static void
+_nc_opjet(nc_gen* gen_u, u3_noun ring)
+{
+  u3_noun i;
+
+  for ( i = gen_u->jet; u3_nul != i; i = u3t(i) ) {
+    if ( c3y == u3r_sing(u3h(i), ring) ) {
+      return;
+    }
+  }
+
+  gen_u->jet = u3nc(u3k(ring), gen_u->jet);
+}
+
 /* _nc_call(): translate a call with arguments through a ring, in tail
 **             position if tal_t, as an op for its kind (_nc_kind()): a
-**             plain call; a call of the total array jet, or the op standing
-**             in for it; or a call by subject, of its one argument.
+**             plain call; a call of the total array jet, trusted (or the
+**             op standing in for it, and transferring, CAX/JMX, if the jet
+**             has a driver that takes the consumed arguments) or checked
+**             (CAC/JMC); or a call by subject, of its one argument.
 **             RETAINS.
+**
+**             The ring of an op standing in for a jet goes in the
+**             program's list of them: the record of the jets it trusts,
+**             for u3nc_stale().
 */
 static nc_op*
 _nc_call(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_noun arg, c3_t tal_t)
@@ -693,9 +821,17 @@ _nc_call(nc_gen* gen_u, u3_noun bell, u3_noun ring, u3_noun arg, c3_t tal_t)
 
     case _nc_kind_total: {
       if ( !tal_t && (op_u = _nc_jet_op(gen_u, jet_u.arm_u, arg)) ) {
+        _nc_opjet(gen_u, ring);
         break;
       }
-      op_u = _nc_op(gen_u, tal_t ? _nc_jmf : _nc_caf);
+      op_u = _nc_op(gen_u, jet_u.arm_u->own_f
+                           ? ( tal_t ? _nc_jmx : _nc_cax )
+                           : ( tal_t ? _nc_jmf : _nc_caf ));
+      op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);
+    } break;
+
+    case _nc_kind_check: {
+      op_u = _nc_op(gen_u, tal_t ? _nc_jmc : _nc_cac);
       op_u->imm_h = _nc_dir(gen_u, bell, jet_u, u3_none, arg, c3n);
     } break;
 
@@ -866,10 +1002,9 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
 
     case c3__imm: {
       u3x_cell(arg, &a, &b);
-      if ( (c3y == u3a_is_cat(a)) && (a < 0x10000) ) {
+      if ( c3y == u3a_is_cat(a) ) {
         op_u = _nc_op(gen_u, _nc_imm);
         op_u->imm_h = a;
-        op_u->tar_h = _nc_lit(gen_u, a);
       }
       else {
         op_u = _nc_op(gen_u, _nc_iml);
@@ -1029,10 +1164,6 @@ _nc_jump(nc_gen* gen_u, u3_noun jmp, c3_h nex_h)
     else {
       nc_op* op_u = _nc_op(gen_u, _nc_kil);
       op_u->dst_h = _nc_reg(gen_u, p);
-      if ( !_nc_zer_t ) {
-        //  KIL can become IML[0] when encoding
-        op_u->tar_h = _nc_lit(gen_u, 0);
-      }
     }
   }
 
@@ -1158,6 +1289,11 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
 **             immediate is defined once, so wherever it is compared,
 **             the immediate can stand in for it; a comparison with 0 is
 **             a BRZ.
+**             Likewise a trace hint (%hunk, %lose, %mean, %spot) whose
+**             clue is an immediate, as every %spot of a !: is, pushes a
+**             constant [tag clue]: it becomes a literal and the prologue
+**             an HLP, which allocates nothing.  The epilogue still reads
+**             the clue's register, to drop it.
 */
 static void
 _nc_fold(nc_gen* gen_u)
@@ -1211,6 +1347,37 @@ _nc_fold(nc_gen* gen_u)
       op_u->imm_h = def_u->imm_h;
     }
     op_u->src_h[1] = _nc_none;
+  }
+
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    nc_op*  op_u = &(gen_u->ops_u[i_h]);
+    nc_op*  def_u;
+    u3_noun tag, clu, lit;
+
+    if ( _nc_hdp != op_u->fam_y ) {
+      continue;
+    }
+
+    tag = gen_u->lin[op_u->imm_h];
+    if (  (c3__hunk != tag) && (c3__lose != tag)
+       && (c3__mean != tag) && (c3__spot != tag) )
+    {
+      continue;
+    }
+
+    if ( _nc_none == def_h[op_u->src_h[0]] ) {
+      continue;
+    }
+
+    def_u = &(gen_u->ops_u[def_h[op_u->src_h[0]]]);
+    clu   = ( _nc_imm == def_u->fam_y ) ? def_u->imm_h
+                                        : gen_u->lin[def_u->imm_h];
+    lit   = u3nc(tag, u3k(clu));
+
+    op_u->fam_y    = _nc_hlp;
+    op_u->imm_h    = _nc_lit(gen_u, lit);
+    op_u->src_h[0] = _nc_none;
+    u3z(lit);
   }
 
   u3a_free(def_h);
@@ -1625,7 +1792,10 @@ _nc_consume(nc_op* bra_u, c3_y edg_y, c3_d* ded_d, c3_h lo_h, c3_h hi_h)
 **  the branches, _nc_edgy()), else into a block of drops made for the
 **  edge; a block with a lone predecessor lets its branch take its own
 **  sources the same way, over a drop at the start.  So no drop ever
-**  meets an empty slot, which _nc_zer_t does not allow.
+**  meets an empty slot, which a build without _nc_zer_t does not allow.
+**  A build with it zeroes every empty slot, and a drop of a zero does
+**  nothing: the drops left over for an edge go to the start of the block
+**  with the common ones instead, and no block is made for the edge.
 **
 **  Then the ops are rebuilt in layout order: a block's drops first (or
 **  left to its terminator's sweep, _nc_swe_t), then its ops, with a DRO
@@ -1649,6 +1819,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   c3_d* inn_d;                           //  live into each block
   c3_d* liv_d;                           //  scratch
   c3_d* out_d;                           //  scratch: live out of a block
+  c3_d* sta_d;                           //  scratch: left over from the edges
+                                         //  in, for the start (_nc_zer_t)
   c3_d* dro_d = NULL;                    //  drops: layout << 32 | reg
   c3_h  dro_h = 0, drc_h = 0;
   c3_d* edr_d = NULL;                    //  edge drops: edge << 32 | reg
@@ -1754,7 +1926,8 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  the edges into each block, and of the unused arguments at the
   //  entry; the drops of one edge in but not all, into the branch that
   //  ends the predecessor when it reads the register, else for a block
-  //  on the edge
+  //  on the edge, or at the start of the block too when empty slots are
+  //  zero (_nc_zer_t)
   //
   //  live-in array is bounded to be about (1 << 17) doubles == a megabyte
   //
@@ -1766,6 +1939,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   inn_d = u3a_malloc((c3_z)blk_h * chu_h * sizeof(c3_d));
   liv_d = u3a_malloc(chu_h * sizeof(c3_d));
   out_d = u3a_malloc(chu_h * sizeof(c3_d));
+  sta_d = ( _nc_zer_t ) ? u3a_malloc(chu_h * sizeof(c3_d)) : NULL;
   edc_h = u3a_calloc((2 * (c3_z)gen_u->lan_h) + 1, sizeof(c3_h));
 
 #define _nc_in(b)  (inn_d + ((c3_z)(b) * chu_h))
@@ -1841,23 +2015,18 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         }
       }
 
-      //  emit DROs
-      for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
-        c3_d ded_d = liv_d[w_h];
-
-        while ( ded_d ) {
-          c3_h bit_h = c3_tz_d(ded_d);
-          ded_d &= ded_d - 1;
-          _nc_grow(dro_d, dro_h, drc_h, c3_d);
-          dro_d[dro_h++] = ((c3_d)i_h << 32) | (lo_h + (w_h << 6) + bit_h);
-          cnt_y[i_h] |= 1;
-        }
-      }
-
       //  dead on this edge in but not all: into the branch, or for a
-      //  block on the edge
+      //  block on the edge; or, with empty slots zeroed, to the start of
+      //  the block with the common drops: on the other edges in the
+      //  register is dead already, its slot is zero, and the drop does
+      //  nothing.  The branch takes what it can first either way, so
+      //  that the two builds differ in the drops alone.
       //
       if ( pre_n > 1 ) {
+        if ( _nc_zer_t ) {
+          memset(sta_d, 0, chu_h * sizeof(c3_d));
+        }
+
         for ( j_h = pro_h[b_h]; j_h < pro_h[b_h + 1]; j_h++ ) {
           c3_h p_h   = pre_h[j_h];
           nc_op* bra_u = _nc_branch(gen_u, p_h);
@@ -1880,6 +2049,13 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           //  branching op can consume its sources itself
           _nc_consume(bra_u, edg_y, out_d, lo_h, hi_h);
 
+          if ( _nc_zer_t ) {
+            for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+              sta_d[w_h] |= out_d[w_h];
+            }
+            continue;
+          }
+
           //  and the remainder will get emitted into a block that will get
           //  spliced into the edge
           for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
@@ -1896,6 +2072,25 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
             }
           }
         }
+
+        if ( _nc_zer_t ) {
+          for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+            liv_d[w_h] |= sta_d[w_h];
+          }
+        }
+      }
+
+      //  emit DROs
+      for ( c3_h w_h = 0; w_h < chu_h; w_h++ ) {
+        c3_d ded_d = liv_d[w_h];
+
+        while ( ded_d ) {
+          c3_h bit_h = c3_tz_d(ded_d);
+          ded_d &= ded_d - 1;
+          _nc_grow(dro_d, dro_h, drc_h, c3_d);
+          dro_d[dro_h++] = ((c3_d)i_h << 32) | (lo_h + (w_h << 6) + bit_h);
+          cnt_y[i_h] |= 1;
+        }
       }
     }
   }
@@ -1906,10 +2101,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //  rebuild the ops in layout order with the drops: those common to the
   //  edges into a block at its start, as drops or left to the terminator;
   //  that of a product never used right after its op; those of one edge
-  //  in a block on the edge: after the predecessor for its fall-through,
-  //  taking over its jump to the yes block if it had one, else at the
-  //  end, jumping on, with the branch retargeted to it.  The removed
-  //  ops go.
+  //  in a block on the edge (none with _nc_zer_t): after the predecessor
+  //  for its fall-through, taking over its jump to the yes block if it
+  //  had one, else at the end, jumping on, with the branch retargeted to
+  //  it.  The removed ops go.
   //
   _nc_key_sort(dro_d, dro_h);
   _nc_key_sort(edr_d, edr_h);
@@ -1931,6 +2126,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       edo_h[e_h + 1] = edo_h[e_h] + edc_h[e_h];
       edn_h += !!edc_h[e_h];
     }
+    u3_assert( !_nc_zer_t || !edn_h );
 
     cap_d = (2 * (c3_d)gen_u->opn_h) + dro_h + edr_h + edn_h;
     if ( cap_d > c3_h_max ) {
@@ -2116,6 +2312,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   u3a_free(inn_d);
   u3a_free(liv_d);
   u3a_free(out_d);
+  u3a_free(sta_d);
   u3a_free(dro_d);
   u3a_free(edr_d);
   u3a_free(edc_h);
@@ -2227,6 +2424,10 @@ _nc_take(const nc_ran* ran_u, c3_h fir_h, c3_d* occ_d)
 **  zeroes it. If _nc_zer_t == 0 KIL zeroes out the slot, otherwise a slot with
 **  a potentially poisoned register (control flow join where only one side sets
 **  a register) could contain either a live value or an already freed garbage.
+**  With _nc_zer_t == 1 a drop at the start of a block may read a register that
+**  is dead on another edge in (_nc_lives()): its ranges then cover that path
+**  back to a definition, or to the entry, and keep the slot, zero there, from
+**  other registers.
 **  Occupancy of slots and liveness of registers is expressed in terms of half-
 **  positions: before and after a given op.
 **  Input registers get first N slots. Then the registers get slots in this
@@ -2536,6 +2737,22 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
   c3_h  val_h[5], len_h = 0, max_h = 0, siz_h = 1, i_h;
   c3_y  wid_y, fam_y = op_u->fam_y;
 
+  //  the counts of the immediates encoded, for sizing their encodings
+  //
+  if ( buf_y ) {
+    switch ( fam_y ) {
+      case _nc_imm: {
+        _nc_stat(imm_d);
+        _nc_stat_if(0 == op_u->imm_h, imz_d);
+        _nc_stat_if(1 == op_u->imm_h, imo_d);
+        _nc_stat_if(op_u->dst_h >= 0x100, imw_d);
+      } break;
+      case _nc_kil: _nc_stat_if(!_nc_zer_t, kil_d); break;
+      case _nc_iml: _nc_stat(iml_d); break;
+      default: break;
+    }
+  }
+
   switch ( fam_y ) {
     case _nc_nop: {
       return 0;
@@ -2552,45 +2769,9 @@ _nc_encode(nc_gen* gen_u, nc_op* op_u, c3_y* buf_y)
       if ( _nc_zer_t ) {
         return 0;       //  noop when consuming ops zero out the consumed slot
       }
-      [[fallthrough]];  //  becomes IMM_0 or IML[0] when consuming does not zero
-    }
-    case _nc_imm: {
-      if ( op_u->dst_h < 0x100 ) {
-        c3_h n_h = op_u->imm_h;
-        c3_y cod_y;
-
-        if ( n_h < 2 ) {
-          cod_y = n_h ? IMM_1 : IMM_0;
-          siz_h = 2;
-        }
-        else if ( n_h < 0x100 ) {
-          cod_y = IMM_B;
-          siz_h = 3;
-        }
-        else {
-          cod_y = IMM_S;
-          siz_h = 4;
-        }
-
-        if ( buf_y ) {
-          buf_y[0] = cod_y;
-          if ( 3 == siz_h ) {
-            buf_y[1] = n_h;
-          }
-          else if ( 4 == siz_h ) {
-            buf_y[1] = n_h & 0xff;
-            buf_y[2] = n_h >> 8;
-          }
-          buf_y[siz_h - 1] = op_u->dst_h;
-        }
-        return siz_h;
-      }
-
-      //  a wide slot: use the literal
-      //
-      tmp_u       = *op_u;
-      tmp_u.fam_y = fam_y = _nc_iml;
-      tmp_u.imm_h = op_u->tar_h;
+      tmp_u       = *op_u;    //  IMM 0 when consuming does not zero
+      tmp_u.fam_y = fam_y = _nc_imm;
+      tmp_u.imm_h = 0;
       op_u        = &tmp_u;
     } break;
   }
@@ -2665,7 +2846,7 @@ _nc_read(const c3_y* pog, c3_h* ip_h, c3_y wid_y)
 
 /* _nc_decode(): the family of the op at ip, past its opcode (a byte, or
 **               two behind WIDE), with its variant bits and its width.
-**               Not for IMM_* or BOM, which are no family's.
+**               Not for BOM, which is no family's.
 */
 static c3_y
 _nc_decode(const c3_y* pog, c3_h* ip_h, c3_y* kon_y, c3_y* wid_y)
@@ -2738,19 +2919,26 @@ _nc_print(u3nc_prog* pog_u)
   const c3_y* pog = pog_u->byc_u.ops_y;
   c3_h        ip_h = 0, i_h;
 
-  fprintf(stderr, "program %p: %u slots, %u args, %u bytes, %u literals, "
-                  "%u call sites\r\n",
+  fprintf(stderr, "program %p: %u slots, %u args, %u bytes (mug %08x), "
+                  "%u literals, %u call sites\r\n",
           (void*)pog_u, pog_u->tot_h, pog_u->arg_h, pog_u->byc_u.len_h,
+          u3r_mug_bytes(pog, pog_u->byc_u.len_h),
           pog_u->lit_u.len_h, pog_u->dir_u.len_h);
 
   for ( i_h = 0; i_h < pog_u->dir_u.len_h; i_h++ ) {
     u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
     c3_h       j_h;
 
-    fprintf(stderr, "  site %u: bell %08x %s%s cid %u args",
+    fprintf(stderr, "  site %u: bell %08x %s%s%s cid %u args",
             i_h, u3r_mug(dir_u->bell),
             ( c3y == dir_u->mon_o ) ? "subject" : "direct",
-            !dir_u->arm_u ? "" : dir_u->arm_u->pun_t ? " punt-jet" : " array-jet",
+            !dir_u->arm_u ? ""
+              : dir_u->arm_u->pun_t ? " punt-jet"
+              : ( dir_u->arm_u->own_f && (c3y == dir_u->ice_o) )
+              ? " owning-jet"
+              : " array-jet",
+            ( dir_u->arm_u && !dir_u->arm_u->pun_t && (c3n == dir_u->ice_o) )
+              ? " checked" : "",
             dir_u->cid_h);
 
     for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
@@ -2780,19 +2968,9 @@ _nc_print(u3nc_prog* pog_u)
     c3_y cod_y = pog[ip_h];
     c3_h off_h = ip_h;
 
-    if ( (cod_y < IML_B) || (BOM == cod_y) ) {
+    if ( BOM == cod_y ) {
       ip_h++;
-      fprintf(stderr, "  %4u: %-6s", off_h, _nc_name_c[cod_y]);
-
-      if ( IMM_B == cod_y ) {
-        fprintf(stderr, " %u", _nc_read(pog, &ip_h, 0));
-      }
-      else if ( IMM_S == cod_y ) {
-        fprintf(stderr, " %u", _nc_read(pog, &ip_h, 1));
-      }
-      if ( BOM != cod_y ) {
-        fprintf(stderr, " -> %u", _nc_read(pog, &ip_h, 0));
-      }
+      fprintf(stderr, "  %4u: %s", off_h, _nc_fam_c[_nc_bom]);
     }
     else {
       c3_y kon_y, wid_y, fam_y = _nc_decode(pog, &ip_h, &kon_y, &wid_y);
@@ -2810,12 +2988,19 @@ _nc_print(u3nc_prog* pog_u)
       if ( _nc_fam[fam_y].imm_y ) {
         c3_h imm_h = _nc_read(pog, &ip_h, wid_y);
 
-        fprintf(stderr, " #%u", imm_h);
+        //  the atom itself, or an index
+        //
+        fprintf(stderr, " %s%u",
+                ((_nc_imm == fam_y) || (_nc_eqi == fam_y)) ? "" : "#", imm_h);
 
         if (  (_nc_hsp == fam_y) || (_nc_hse == fam_y)
            || (_nc_hdp == fam_y) || (_nc_hde == fam_y) )
         {
           _nc_print_hint(pog_u->lit_u.non[imm_h]);
+        }
+        else if ( _nc_hlp == fam_y ) {
+          _nc_print_hint(u3h(pog_u->lit_u.non[imm_h]));
+          _nc_print_spot(u3t(pog_u->lit_u.non[imm_h]));
         }
         else if ( _nc_iml == fam_y ) {
           _nc_print_spot(pog_u->lit_u.non[imm_h]);
@@ -2825,7 +3010,9 @@ _nc_print(u3nc_prog* pog_u)
         static const c3_c* edg_c[] = { "", "!f", "!j", "!" };
         const c3_c*        kon_c   = _nc_edgy(fam_y)
                                    ? edg_c[(kon_y >> (2 * i_h)) & 3]
-                                   : ( ((kon_y >> i_h) & 1) ? "!" : "" );
+                                   : ( ((kon_y >> i_h) & 1)
+                                     || (_nc_her == fam_y)
+                                     || (_nc_tar == fam_y) ) ? "!" : "";
         fprintf(stderr, " %u%s", _nc_read(pog, &ip_h, wid_y), kon_c);
       }
       if ( _nc_fam[fam_y].dst_y ) {
@@ -2847,6 +3034,9 @@ typedef struct {
   c3_w dir_w;   //  call sites
   c3_w sot_w;   //  argument slots
   c3_w kon_w;   //  their consume flags
+#ifdef U3NC_STAT
+  c3_w ali_w;   //  aliasable HED/TAL by bytecode offset (byc + 1 bytes)
+#endif
   c3_w len_w;   //  total
 } nc_lay;
 
@@ -2874,6 +3064,11 @@ _nc_prog_lay(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
   lay_u.kon_w = len_w = c3_align(len_w, alignof(c3_y), C3_ALGHI);
   len_w += sot_h * sizeof(c3_y);
 
+#ifdef U3NC_STAT
+  lay_u.ali_w = len_w;
+  len_w += byc_h + 1;
+#endif
+
   lay_u.len_w = len_w;
   return lay_u;
 }
@@ -2892,6 +3087,9 @@ _nc_prog_fix(u3nc_prog* pog_u)
   pog_u->dir_u.dat_u = (u3nc_dire*)(dat_y + lay_u.dir_w);
   pog_u->sot_u.sot_h = (c3_h*)(dat_y + lay_u.sot_w);
   pog_u->sot_u.kon_y = dat_y + lay_u.kon_w;
+#ifdef U3NC_STAT
+  pog_u->ali_y       = dat_y + lay_u.ali_w;
+#endif
 }
 
 /* _nc_prog_new(): allocate a program.
@@ -2906,7 +3104,12 @@ _nc_prog_new(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
   pog_u->lit_u.len_h = lit_h;
   pog_u->dir_u.len_h = dir_h;
   pog_u->sot_u.len_h = sot_h;
+  pog_u->jet         = u3_nul;
   _nc_prog_fix(pog_u);
+#ifdef U3NC_STAT
+  pog_u->bor_d = 0;
+  memset(pog_u->ali_y, 0, byc_h + 1);
+#endif
 
   return pog_u;
 }
@@ -3042,6 +3245,293 @@ _nc_shuffle(nc_gen* gen_u, nc_dir* dir_u, c3_h ent_h,
   u3a_free(sta_y);
 }
 
+#ifdef U3NC_STAT
+/* _nc_stat_borrow(): for the statistics, the drop-only parameters:
+**                    argument registers, through the moves that rename
+**                    them, that no op ever consumes into a product, a
+**                    call, a hint or a return: every path only reads and
+**                    drops them, so the callee could borrow them.
+**                    Produces them as a bitmask.
+*/
+static c3_d
+_nc_stat_borrow(nc_gen* gen_u, c3_h arg_h)
+{
+  c3_h  reg_h = c3_max(gen_u->reg_h, arg_h);
+  c3_h* par_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));  //  union-find
+  c3_y* con_y = u3a_calloc(c3_max(reg_h, 1), sizeof(c3_y));   //  consumed
+  c3_d  bor_d = 0;
+  c3_h  i_h, j_h, r_h;
+
+#define _nc_root(r)  ({ c3_h _r = (r); while ( par_h[_r] != _r ) { _r = par_h[_r]; } _r; })
+
+  for ( r_h = 0; r_h < reg_h; r_h++ ) {
+    par_h[r_h] = r_h;
+  }
+
+  //  consuming moves rename: union source and destination
+  //
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    nc_op* op_u = &(gen_u->ops_u[i_h]);
+    if ( (_nc_mov == op_u->fam_y) && (op_u->kon_y & 1) ) {
+      par_h[_nc_root(op_u->src_h[0])] = _nc_root(op_u->dst_h);
+    }
+  }
+
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+      c3_y   fam_y = op_u->fam_y;
+
+      //  consumption: an op that takes a source into its product or
+      //  elsewhere; every other variant bit is a drop
+      //
+      switch ( fam_y ) {
+        default: break;
+
+        case _nc_inc: case _nc_con: case _nc_cor: {
+          for ( c3_h k_h = 0; k_h < _nc_fam[fam_y].src_y; k_h++ ) {
+            if ( (op_u->kon_y >> k_h) & 1 ) {
+              con_y[_nc_root(op_u->src_h[k_h])] = 1;
+            }
+          }
+        } break;
+
+        case _nc_nok: case _nc_hdp: {
+          if ( op_u->kon_y & 1 ) {
+            con_y[_nc_root(op_u->src_h[0])] = 1;
+          }
+        } break;
+
+        case _nc_don: {
+          con_y[_nc_root(op_u->src_h[0])] = 1;
+        } break;
+
+        case _nc_cal: case _nc_cap: case _nc_cam: case _nc_csm:
+        case _nc_jmp: case _nc_jms: case _nc_jsp: case _nc_hmp:
+        case _nc_cax: case _nc_jmx: {
+          nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+          for ( c3_h k_h = 0; k_h < dir_u->len_h; k_h++ ) {
+            if ( gen_u->pok_y[dir_u->sot_h + k_h] ) {
+              con_y[_nc_root(gen_u->pol_h[dir_u->sot_h + k_h])] = 1;
+            }
+          }
+        } break;
+      }
+    }
+  }
+
+  for ( r_h = 0; (r_h < arg_h) && (r_h < 64); r_h++ ) {
+    if ( !con_y[_nc_root(r_h)] ) {
+      bor_d |= (c3_d)1 << r_h;
+    }
+  }
+
+#undef _nc_root
+  u3a_free(par_h);
+  u3a_free(con_y);
+  return bor_d;
+}
+#endif
+
+#ifdef U3NC_STAT
+/* _nc_stat_consumes(): whether op consumes, as opposed to drops, its
+**                      source register r read with its consume bit set:
+**                      takes it into a product, a call, a hint or the
+**                      return.  Call sites: by the flags of their args.
+*/
+static c3_t
+_nc_stat_consumes(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
+{
+  c3_y fam_y = op_u->fam_y;
+
+  switch ( fam_y ) {
+    default: return 0;
+
+    case _nc_mov: case _nc_inc: case _nc_con: case _nc_cor: {
+      for ( c3_h k_h = 0; k_h < _nc_fam[fam_y].src_y; k_h++ ) {
+        if ( (op_u->src_h[k_h] == r_h) && ((op_u->kon_y >> k_h) & 1) ) {
+          return 1;
+        }
+      }
+      return 0;
+    }
+
+    case _nc_nok: case _nc_hdp: {
+      return (op_u->src_h[0] == r_h) && (op_u->kon_y & 1);
+    }
+
+    case _nc_don: return 1;
+
+    case _nc_cal: case _nc_cap: case _nc_cam: case _nc_csm:
+    case _nc_jmp: case _nc_jms: case _nc_jsp: case _nc_hmp:
+    case _nc_cax: case _nc_jmx: {
+      nc_dir* dir_u = &(gen_u->dir_u[op_u->imm_h]);
+      for ( c3_h k_h = 0; k_h < dir_u->len_h; k_h++ ) {
+        if (  (gen_u->pol_h[dir_u->sot_h + k_h] == r_h)
+           && gen_u->pok_y[dir_u->sot_h + k_h] )
+        {
+          return 1;
+        }
+      }
+      return 0;
+    }
+  }
+}
+
+/* _nc_stat_reads(): whether op reads register r, and whether its read of
+**                   it releases it (consume bit, or DRO), into *rel_t.
+*/
+static c3_t
+_nc_stat_reads(nc_gen* gen_u, nc_op* op_u, c3_h r_h, c3_t* rel_t)
+{
+  c3_t red_t = 0;
+  *rel_t = 0;
+  _nc_srcs(gen_u, op_u, reg_h, {
+    if ( *reg_h == r_h ) {
+      red_t = 1;
+      if ( _nc_fam[op_u->fam_y].sot_y ) {
+        *rel_t |= gen_u->pok_y[reg_h - gen_u->pol_h];
+      }
+      else if ( _nc_dro == op_u->fam_y ) {
+        *rel_t = 1;
+      }
+      else if ( !_nc_fam[op_u->fam_y].swe_y ) {
+        c3_h k_h = reg_h - op_u->src_h;
+        *rel_t |= _nc_edgy(op_u->fam_y)
+                ? !!((op_u->kon_y >> (2 * k_h)) & 3)
+                : ((op_u->kon_y >> k_h) & 1);
+      }
+    }
+  });
+  return red_t;
+}
+
+/* _nc_stat_alias(): for the statistics, mark each borrowing HED/TAL
+**                   whose product r could be an uncounted alias of the
+**                   part of its source p: every read of r is in its
+**                   block, none consumes it (they only read and drop
+**                   it), r dies in the block, and p is not released
+**                   before the last read of r.  Then the gain at the
+**                   HED/TAL and the drop of r could both go.
+*/
+static void
+_nc_stat_alias(nc_gen* gen_u)
+{
+  c3_h i_h, j_h, k_h;
+
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+      c3_h   r_h, p_h;
+      c3_t   die_t = 0, bad_t = 0;
+
+      if (  ((_nc_hed != op_u->fam_y) && (_nc_tal != op_u->fam_y))
+         || (op_u->kon_y & 1) )
+      {
+        continue;
+      }
+      r_h = op_u->dst_h;
+      p_h = op_u->src_h[0];
+
+      for ( k_h = j_h + 1; k_h < blk_u->len_h; k_h++ ) {
+        nc_op* nex_u = &(gen_u->ops_u[blk_u->fir_h + k_h]);
+        c3_t   rel_t, prl_t;
+        c3_t   red_t = _nc_stat_reads(gen_u, nex_u, r_h, &rel_t);
+        c3_t   pre_t = _nc_stat_reads(gen_u, nex_u, p_h, &prl_t);
+
+        if ( red_t ) {
+          if ( _nc_stat_consumes(gen_u, nex_u, r_h) ) {
+            bad_t = 1;
+            break;
+          }
+          if ( rel_t ) {
+            die_t = 1;
+            break;      //  r dies here; p may go with it
+          }
+        }
+        if ( (pre_t && prl_t) || (nex_u->dst_h == p_h) ) {
+          bad_t = 1;    //  p released or redefined while r lives
+          break;
+        }
+        if ( _nc_fam[nex_u->fam_y].tar_y || _nc_fam[nex_u->fam_y].swe_y ) {
+          break;        //  block ends: r live out, if not dead
+        }
+      }
+
+      op_u->ali_y = die_t && !bad_t;
+    }
+  }
+}
+#endif
+
+/* _nc_reuse(): pair each CON with a consuming HED or TAL before it in
+**              its block, whose cell it reuses when the slot's reference
+**              was the only one: the HED or TAL becomes a HER or TAR,
+**              which pushes the cell it frees, or 0, on the road stack,
+**              and the CON a COR, which pops it.  The tokens nest on the
+**              stack, so a CON takes the latest pending one.  Nothing
+**              else touches the stack between the ops of a block but a
+**              hint prologue or epilogue, which pushes or pops its own
+**              word, so those cut the pending tokens off.  Runs after
+**              _nc_lives() and the slot assignment, when the consume
+**              bits are final; a block runs through in order, so every
+**              token pushed is popped before its block ends, and a bail
+**              in between abandons the road, tokens and all.
+*/
+static void
+_nc_reuse(nc_gen* gen_u)
+{
+  c3_h* pen_h = NULL;   //  pending tokens: the ops that push them
+  c3_h  pen_n = 0, pec_h = 0;
+  c3_h  i_h, j_h;
+
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+
+    pen_n = 0;
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      c3_h   o_h  = blk_u->fir_h + j_h;
+      nc_op* op_u = &(gen_u->ops_u[o_h]);
+
+      switch ( op_u->fam_y ) {
+        default: break;
+
+        case _nc_hed:
+        case _nc_tal: {
+          if ( op_u->kon_y & 1 ) {
+            _nc_grow(pen_h, pen_n, pec_h, c3_h);
+            pen_h[pen_n++] = o_h;
+          }
+        } break;
+
+        case _nc_con: {
+          if ( pen_n ) {
+            nc_op* tok_u = &(gen_u->ops_u[pen_h[--pen_n]]);
+
+            tok_u->fam_y = ( _nc_hed == tok_u->fam_y ) ? _nc_her : _nc_tar;
+            tok_u->kon_y = 0;
+            op_u->fam_y  = _nc_cor;
+          }
+        } break;
+
+        case _nc_hsp: case _nc_hse:
+        case _nc_hdp: case _nc_hde: case _nc_hlp: {
+          pen_n = 0;
+        } break;
+      }
+    }
+  }
+
+  if ( pen_h ) {
+    u3a_free(pen_h);
+  }
+}
+
 /* _nc_emit(): lay the ops out and assemble the program.  RETAINS ned.
 */
 static u3nc_prog*
@@ -3097,6 +3587,13 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
     gen_u->opn_h = new_h;
   }
 
+  _nc_reuse(gen_u);
+
+#ifdef U3NC_STAT
+  c3_d bor_d = _nc_stat_borrow(gen_u, arg_h);
+  _nc_stat_alias(gen_u);
+#endif
+
   //  Fixed-point loop on the block offsets. Immediate arguments only widen
   //  and their size is capped, so this converges. 
   //
@@ -3127,9 +3624,13 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   }
 
   pog_u = _nc_prog_new(byc_h, gen_u->lit_h, gen_u->din_h, gen_u->pon_h);
+  _nc_stat_add(byc_d, byc_h);
+  _nc_stat_add(lit_d, gen_u->lit_h);
   pog_u->tot_h = gen_u->tot_h;
   pog_u->arg_h = arg_h;
   pog_u->ned   = u3k(ned);
+  pog_u->jet   = gen_u->jet;
+  gen_u->jet   = u3_nul;
 
   {
     c3_y* buf_y = pog_u->byc_u.ops_y;
@@ -3143,10 +3644,16 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
       for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
         pos_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]),
                             buf_y + pos_h);
+#ifdef U3NC_STAT
+        pog_u->ali_y[pos_h] = gen_u->ops_u[blk_u->fir_h + j_h].ali_y;
+#endif
       }
     }
 
     u3_assert( pos_h == byc_h );
+#ifdef U3NC_STAT
+    pog_u->bor_d = bor_d;
+#endif
   }
 
   u3h_walk_with(gen_u->lit_p, _nc_lit_cb, pog_u->lit_u.non);
@@ -3175,6 +3682,7 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
     dat_u->cid_h = dir_u->cid_h;
     dat_u->des_h = dir_u->des_h;
     dat_u->mon_o = dir_u->mon_o;
+    dat_u->ice_o = dir_u->ice_o;
     dat_u->ham_u = dir_u->jet_u.ham_u;
     dat_u->arm_u = dir_u->jet_u.arm_u;
   }
@@ -3219,6 +3727,7 @@ _nc_build(u3_noun straight, u3_weak bell)
 
   u3h_free(gen_u.idx_p);
   u3h_free(gen_u.lit_p);
+  u3a_free(gen_u.lin);
   u3a_free(gen_u.blk_u);
   u3a_free(gen_u.lay_h);
   u3a_free(gen_u.ops_u);
@@ -3317,7 +3826,9 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
 
 /* _nc_link(): set the callee programs of the call sites that have been
 **             compiled; the rest are linked when first called.  A call
-**             with arguments of a total array jet never calls a program.
+**             with arguments of a total array jet never calls a program
+**             by link: a checked one looks the unary program of its bell
+**             up (_nc_mono()).
 */
 static void
 _nc_link(u3nc_prog* pog_u)
@@ -3434,6 +3945,81 @@ _nc_callee(u3nc_prog* pog_u, u3nc_dire* dir_u)
   u3_assert(0);
 }
 
+/* _nc_edit(): som at axis axe_l of big, a cell made of an atom in the way.
+**             TRANSFERS big and som.
+*/
+static u3_noun
+_nc_edit(u3_noun big, c3_l axe_l, u3_noun som)
+{
+  u3_noun hed, tal;
+
+  if ( 1 == axe_l ) {
+    u3z(big);
+    return som;
+  }
+
+  if ( c3y == u3du(big) ) {
+    hed = u3k(u3h(big));
+    tal = u3k(u3t(big));
+  }
+  else {
+    hed = tal = 0;
+  }
+  u3z(big);
+
+  return ( 2 == u3x_cap(axe_l) )
+       ? u3nc(_nc_edit(hed, u3x_mas(axe_l), som), tal)
+       : u3nc(hed, _nc_edit(tal, u3x_mas(axe_l), som));
+}
+
+/* _nc_core(): the core a call site of a total array jet calls the arm of,
+**             rebuilt for a checked call: the parts of the subject the
+**             sock of the bell knows, and the arguments, gained, at the
+**             axes the driver takes them from (depth-first, like them).
+**             What neither has is 0: the driver is the arm's function of
+**             what it takes, so the arm doesn't read it.  RETAINS nex.
+*/
+static u3_noun
+_nc_core(const u3nc_dire* dir_u, const u3_noun* nex)
+{
+  const u3u_harm* arm_u = dir_u->arm_u;
+  u3_noun         cor   = u3k(u3t(u3h(dir_u->bell)));
+  c3_w            i_w;
+
+  for ( i_w = 0; i_w < arm_u->len_w; i_w++ ) {
+    cor = _nc_edit(cor, arm_u->axe_l[i_w], u3k(nex[i_w]));
+  }
+
+  return cor;
+}
+
+/* _nc_mono(): the unary program of the bell of a call site, compiled if it
+**             isn't yet, for a checked call, which rebuilds the core: a
+**             call by subject (_nc_callee()), but looked up by bell every
+**             time, never linked, so that the site keeps no pointer to
+**             a program it isn't a caller of by kind.  The slow path of
+**             an op that is slow by design.
+*/
+static u3nc_prog*
+_nc_mono(const u3nc_dire* dir_u)
+{
+  u3_noun    key = _nc_dir_key(dir_u->bell, c3y);
+  u3nc_prog* gop_u;
+
+  u3t_off(noc_o);
+
+  if ( !(gop_u = _nc_dir_get(key)) ) {
+    gop_u = _nc_compile(u3d_dire(dir_u->bell, c3y), u3_none);
+    u3h_put(u3R->ska.dir_p, key, _nc_of(gop_u));
+  }
+
+  u3t_on(noc_o);
+  u3z(key);
+
+  u3_assert( 1 == gop_u->arg_h );
+  return gop_u;
+}
+
 /* _nc_entry(): entry program for [sub fol], compiling it if needed.
 **              RETAINS.
 */
@@ -3515,28 +4101,41 @@ _nc_memo_seed(c3_h cid_h, c3_o all_o)
   return fun_m;
 }
 
-/* _nc_save(): save the product of a memoized call, as nock.c does, but use our
-**             key partition if the subject is partial (all_o is c3n)
-**             RETAINS key, TRANSFERS pro
+/* _nc_key(): the key of a memoized call over inn: seeded as nock.c's keys
+**            are, or in our partition if the subject is partial (all_o
+**            is c3n).  One cell, looked up and then saved: nock.c builds
+**            one for the lookup and another for the save.  TRANSFERS inn.
 */
 static u3_noun
-_nc_save(c3_h cid_h, u3_noun key, u3_noun pro, c3_o all_o)
+_nc_key(c3_h cid_h, c3_o all_o, u3_noun inn)
+{
+  return u3nc(_nc_memo_seed(cid_h, all_o), inn);
+}
+
+/* _nc_save(): save the product of a memoized call under its key, as
+**             nock.c does.  TRANSFERS key and pro.
+*/
+static u3_noun
+_nc_save(c3_h cid_h, u3_noun key, u3_noun pro)
 {
   if ( (u3z_memo_toss == cid_h)
        ? (&(u3H->rod_u) != u3R)
        : (0 == u3R->ski.gul) )
   {
-    pro = u3z_save_m_dedup(cid_h, _nc_memo_seed(cid_h, all_o), key, pro);
+    pro = u3z_save_dedup(cid_h, key, pro);
+  }
+  else {
+    u3z(key);
   }
   return pro;
 }
 
-/* _nc_find(): look for a memoization entry. RETAINS key
+/* _nc_find(): look for a memoization entry by its key.  RETAINS key.
 */
 static u3_weak
-_nc_find(c3_h cid_h, u3_noun key, c3_o all_o)
+_nc_find(c3_h cid_h, u3_noun key)
 {
-  return u3z_find_m(cid_h, _nc_memo_seed(cid_h, all_o), key);
+  return u3z_find(cid_h, key);
 }
 
 /* _nc_normal(), _nc_senior(): where an indirect noun lives relative to
@@ -3607,7 +4206,9 @@ typedef struct __attribute__((__packed__)) {
   c3_h       des_h;   //  caller slot for the product
   u3_weak    key;     //  memo key to save the product under
   c3_h       cid_h;   //  memo cache
-  c3_o       all_o;   //  does memo cache capture the entire subject?
+#ifdef U3NC_STAT
+  c3_y       spa_y;   //  the caller's activation-local spare (_nc_spa_t)
+#endif
 } nc_frame;
 
 #define _nc_frame_w  c3_wiseof(nc_frame)
@@ -3830,9 +4431,6 @@ _nc_doomed(const u3nc_prog* pog_u, const c3_y* ip)
     if ( BOM == cod_y ) {
       return 1;
     }
-    else if ( cod_y < IML_B ) {   //  IMM_0, IMM_1, IMM_B, IMM_S
-      ip_h += ( IMM_S == cod_y ) ? 4 : ( IMM_B == cod_y ) ? 3 : 2;
-    }
     else {
       c3_y kon_y, wid_y, n_y, fam_y = _nc_decode(pog, &ip_h, &kon_y, &wid_y);
 
@@ -4014,11 +4612,13 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
                     "%" PRIu64 " jetted sites, %" PRIu64 " unresolved rings, "
                     "%" PRIu64 " direct calls, %" PRIu64 " subject calls, "
                     "%" PRIu64 " jet hits, %" PRIu64 " cons, "
-                    "%" PRIu64 " unique decons, %" PRIu64 " drops\r\n",
+                    "%" PRIu64 " unique decons, %" PRIu64 " drops, "
+                    "%" PRIu64 " transferring calls, "
+                    "%" PRIu64 " edits in place\r\n",
             u3nc_Stat.ent_d, u3nc_Stat.com_d, u3nc_Stat.arm_d,
             u3nc_Stat.rin_d, u3nc_Stat.dir_d, u3nc_Stat.sub_d,
             u3nc_Stat.jet_d, u3nc_Stat.con_d, u3nc_Stat.uni_d,
-            u3nc_Stat.dro_d);
+            u3nc_Stat.dro_d, u3nc_Stat.tra_d, u3nc_Stat.mut_d);
   }
 
   return pro;
@@ -4082,6 +4682,7 @@ _nc_prog_free(u3nc_prog* pog_u)
   c3_h i_h;
 
   u3z(pog_u->ned);
+  u3z(pog_u->jet);
 
   for ( i_h = 0; i_h < pog_u->lit_u.len_h; i_h++ ) {
     u3z(pog_u->lit_u.non[i_h]);
@@ -4109,12 +4710,17 @@ _nc_prog_take(u3nc_prog* pog_u)
   gop_u->tot_h = pog_u->tot_h;
   gop_u->arg_h = pog_u->arg_h;
   gop_u->ned   = u3a_take(pog_u->ned);
+  gop_u->jet   = u3a_take(pog_u->jet);
 
   memcpy(gop_u->byc_u.ops_y, pog_u->byc_u.ops_y, pog_u->byc_u.len_h);
   memcpy(gop_u->sot_u.sot_h, pog_u->sot_u.sot_h,
          pog_u->sot_u.len_h * sizeof(c3_h));
   memcpy(gop_u->sot_u.kon_y, pog_u->sot_u.kon_y,
          pog_u->sot_u.len_h * sizeof(c3_y));
+#ifdef U3NC_STAT
+  gop_u->bor_d = pog_u->bor_d;
+  memcpy(gop_u->ali_y, pog_u->ali_y, pog_u->byc_u.len_h + 1);
+#endif
 
   for ( i_h = 0; i_h < pog_u->lit_u.len_h; i_h++ ) {
     gop_u->lit_u.non[i_h] = u3a_take(pog_u->lit_u.non[i_h]);
@@ -4245,6 +4851,7 @@ _nc_prog_mark(u3nc_prog* pog_u)
   c3_w tot_w = u3a_mark_mptr(pog_u);
 
   tot_w += u3a_mark_noun(pog_u->ned);
+  tot_w += u3a_mark_noun(pog_u->jet);
 
   for ( i_h = 0; i_h < pog_u->lit_u.len_h; i_h++ ) {
     tot_w += u3a_mark_noun(pog_u->lit_u.non[i_h]);
@@ -4425,6 +5032,83 @@ u3nc_drop(u3_noun lis)
     _nc_drop_dir(_nc_dir_key(u3h(lis), c3y));
     _nc_drop_ent(u3h(lis));
   }
+}
+
+/* _nc_stale_prog(): put in the set set_p the rings of the sites of a
+**                   program compiled trusting a jet arm that isn't trusted
+**                   now, or checking one that is; and of the ops standing
+**                   in for jets, which trust them, that aren't trusted now.
+*/
+static void
+_nc_stale_prog(u3p(u3h_root) set_p, u3nc_prog* pog_u)
+{
+  u3_noun lis;
+  c3_h    i_h;
+
+  for ( lis = pog_u->jet; u3_nul != lis; lis = u3t(lis) ) {
+    u3j_harm*       ham_u;
+    const u3u_harm* arm_u;
+
+    if (  (c3y == u3j_ring(u3h(lis), &ham_u, &arm_u))
+       && (c3n == ham_u->ice) )
+    {
+      u3h_put(set_p, u3h(lis), u3_nul);
+    }
+  }
+
+  for ( i_h = 0; i_h < pog_u->dir_u.len_h; i_h++ ) {
+    u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[i_h]);
+
+    if (  dir_u->arm_u && !dir_u->arm_u->pun_t && (c3n == dir_u->mon_o)
+       && (dir_u->ice_o != dir_u->ham_u->ice) )
+    {
+      u3h_put(set_p, dir_u->ring, u3_nul);
+    }
+  }
+}
+
+static void
+_nc_stale_dir_cb(u3_noun kev, void* ptr_v)
+{
+  _nc_stale_prog(*(u3p(u3h_root)*)ptr_v, _nc_to(u3t(kev)));
+}
+
+static void
+_nc_stale_ent_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun lis = u3t(kev), i;
+
+  while ( u3_nul != lis ) {
+    u3x_cell(lis, &i, &lis);
+    _nc_stale_prog(*(u3p(u3h_root)*)ptr_v, _nc_to(u3t(i)));
+  }
+}
+
+static void
+_nc_stale_set_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun* lis = ptr_v;
+  *lis = u3nc(u3k(u3h(kev)), *lis);
+}
+
+/* u3nc_stale(): the rings of the total array jets whose trust changed since
+**               the programs on the home road compiled calls through them.
+**               Produces a (list ring).
+*/
+u3_noun
+u3nc_stale(void)
+{
+  u3p(u3h_root) set_p = u3h_new();
+  u3_noun       lis   = u3_nul;
+
+  u3_assert( u3R == &(u3H->rod_u) );
+
+  u3h_walk_with(u3R->ska.dir_p, _nc_stale_dir_cb, &set_p);
+  u3h_walk_with(u3R->ska.ent_p, _nc_stale_ent_cb, &set_p);
+  u3h_walk_with(set_p, _nc_stale_set_cb, &lis);
+  u3h_free(set_p);
+
+  return lis;
 }
 
 /* u3nc_rewrite_compact(): rewrite the SKA state for compaction.

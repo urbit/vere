@@ -14,6 +14,7 @@
 
 static c3_d    _time(void);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
+static u3_noun _nock_nc(u3_noun bus_fol);
 
 /* _slog(): render a slog, as the king would.
 */
@@ -121,6 +122,9 @@ _nock_nc(u3_noun bus_fol)
 static u3_weak
 _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 {
+#ifdef U3NC_STAT
+  u3nc_stat sav_u = u3nc_Stat;
+#endif
   c3_d    beg_d = _time();
   u3_noun gon   = u3m_soft(0, fun_f, u3nc(u3k(bus), u3k(fol)));
   c3_d    end_d = _time();
@@ -133,28 +137,82 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 
   fprintf(stderr, "%s: %" PRIu64 " us\r\n", nam_c, end_d - beg_d);
 
+  //  the runtime counters of this run of the compiled interpreter
+  //
+#ifdef U3NC_STAT
+  if ( _nock_nc == fun_f ) {
+#define D(f)  (u3nc_Stat.f - sav_u.f)
+    fprintf(stderr, "  stat con %" PRIu64 " uni %" PRIu64 " tok %" PRIu64
+                    " rus %" PRIu64
+                    " spa %" PRIu64 " spg %" PRIu64 " spw %" PRIu64
+                    " dek %" PRIu64 " deb %" PRIu64
+                    " dro %" PRIu64 " drt %" PRIu64
+                    " kal %" PRIu64 " gan %" PRIu64 " bor %" PRIu64
+                    " bok %" PRIu64 " bot %" PRIu64
+                    " dbi %" PRIu64 " ali %" PRIu64 " alx %" PRIu64
+                    " dir %" PRIu64 " sub %" PRIu64 " jet %" PRIu64 "\r\n",
+            D(con_d), D(uni_d), D(tok_d), D(rus_d), D(spa_d), D(spg_d), D(spw_d),
+            D(dek_d), D(deb_d), D(dro_d), D(drt_d),
+            D(kal_d), D(gan_d), D(bor_d), D(bok_d), D(bot_d),
+            D(dbi_d), D(ali_d), D(alx_d),
+            D(dir_d), D(sub_d), D(jet_d));
+#undef D
+  }
+#endif
+
   pro = u3k(u3t(gon));
   u3z(gon);
   return pro;
 }
 
+/* _lose(): release a product, or nothing.
+*/
+static void
+_lose(u3_weak pro)
+{
+  if ( u3_none != pro ) {
+    u3z(pro);
+  }
+}
+
 /* _test(): compare u3n and u3nc on [bus fol].  TRANSFERS.
+**
+**   U3NC_ONLY=n|nc: run only that interpreter (u3nc for any other
+**   value), and don't compare: to profile one of them alone.
+**   U3NC_REPS=k: k warm runs instead of one,
+**   the last compared: to drown the compilation in a profile.
 */
 static c3_i
 _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
 {
-  u3_weak a, b;
+  c3_c*   onl_c = getenv("U3NC_ONLY");
+  c3_c*   rep_c = getenv("U3NC_REPS");
+  c3_t    n_t   = !onl_c || !strcmp(onl_c, "n");
+  c3_t    nc_t  = !onl_c || strcmp(onl_c, "n");
+  c3_w    rep_w = ( rep_c && (atoi(rep_c) > 0) ) ? atoi(rep_c) : 1;
+  u3_weak a = u3_none, b = u3_none;
   c3_i    ret_i = 1;
 
-  u3z(_run("u3n  first ", _nock_n, bus, fol));
-  u3z(_run("u3nc first ", _nock_nc, bus, fol));
+  if ( n_t ) {
+    u3z(_run("u3n  first ", _nock_n, bus, fol));
+  }
+  if ( nc_t ) {
+    u3z(_run("u3nc first ", _nock_nc, bus, fol));
+  }
 
-  a = _run("u3n  second", _nock_n, bus, fol);
-  b = _run("u3nc second", _nock_nc, bus, fol);
+  while ( rep_w-- ) {
+    _lose(a); _lose(b);
+    a = n_t  ? _run("u3n  second", _nock_n, bus, fol) : u3_none;
+    b = nc_t ? _run("u3nc second", _nock_nc, bus, fol) : u3_none;
+  }
 
-  if ( (u3_none == a) || (u3_none == b) ) {
+  if ( (n_t && (u3_none == a)) || (nc_t && (u3_none == b)) ) {
     fprintf(stderr, "test %s: crashed\r\n", nam_c);
     ret_i = 0;
+  }
+  else if ( !n_t || !nc_t ) {
+    fprintf(stderr, "test %s: ran (%s only, not compared)\r\n",
+                    nam_c, n_t ? "u3n" : "u3nc");
   }
   else if ( c3n == u3r_sing(a, b) ) {
     fprintf(stderr, "test %s: mismatch\r\n", nam_c);
@@ -166,7 +224,7 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
     fprintf(stderr, "test %s: ok\r\n", nam_c);
   }
 
-  u3z(a); u3z(b);
+  _lose(a); _lose(b);
   u3z(bus); u3z(fol);
   return ret_i;
 }
@@ -269,6 +327,28 @@ _test_scot(void)
                       123456789);
 
   return _test("scot", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_scot_loop(): a loop of punting +scot calls (%p, planets), long
+**                    enough to profile: U3NC_SCOT_N iterations, default
+**                    100000 under U3NC_BENCH and 1000 otherwise.  The
+**                    product sums the lengths of the cords.
+*/
+static c3_i
+_test_scot_loop(void)
+{
+  c3_c*   len_c = getenv("U3NC_SCOT_N");
+  c3_w    len_w = len_c ? atoi(len_c) : ( getenv("U3NC_BENCH") ? 100000 : 1000 );
+  u3_noun cor   = _gate("|=  n=@\n"
+                        "^-  @\n"
+                        "=/  i  0\n"
+                        "=/  acc  0\n"
+                        "|-\n"
+                        "?:  =(i n)  acc\n"
+                        "$(i +(i), acc (add acc (met 3 (scot %p (add i 123.456.789)))))\n",
+                        u3i_word(len_w));
+
+  return _test("scot loop", cor, u3nq(9, 2, 0, 1), 1);
 }
 
 /* _test_memo_toss(): transient memoization (~+), keyed by the parts of
@@ -600,6 +680,115 @@ _test_owned(void)
                       10000);
 
   return _test("owned", cor, u3nq(9, 2, 0, 1), 1);
+}
+
+/* _test_sew_one(): run src on sam through both interpreters, and, with the
+**                  runtime counters, check that u3nc edited an atom in
+**                  place mut_d times (over its two runs).
+*/
+static c3_i
+_test_sew_one(const c3_c* nam_c, const c3_c* src_c, u3_noun sam, c3_d mut_d)
+{
+  c3_i ret_i;
+#ifdef U3NC_STAT
+  c3_d old_d = u3nc_Stat.mut_d;
+#endif
+
+  ret_i = _test(nam_c, _gate(src_c, sam), u3nq(9, 2, 0, 1), 1);
+
+#ifdef U3NC_STAT
+  if ( (u3nc_Stat.mut_d - old_d) != mut_d ) {
+    fprintf(stderr, "test %s: %" PRIu64 " edits in place, expected %" PRIu64
+                    "\r\n", nam_c, u3nc_Stat.mut_d - old_d, mut_d);
+    ret_i = 0;
+  }
+#else
+  (void)mut_d;
+#endif
+
+  return ret_i;
+}
+
+/* _test_sew(): +sew through its transferring driver (CAX/JMX).  A buffer
+**              filled byte by byte, consumed at each call, so the driver
+**              edits it in place; the same with the buffer borrowed (live
+**              after the call), and with a second reference to it (the
+**              previous buffer kept), where it must copy; and the edge
+**              cases of the edit in place: a write reaching past the
+**              buffer's words, writes that clear its top word down to a
+**              shorter atom, a direct one and zero, bit and word bloqs,
+**              spans across word boundaries, a value wider than its span,
+**              an empty span, and a tail call.  The oracles are +rep and
+**              +cut, and the copying driver that u3n runs.
+*/
+static c3_i
+_test_sew(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i = _test_sew_one("sew fill",
+                        "|=  n=@\n"
+                        "=/  buf=@  (bex (mul 8 n))\n"
+                        "=/  i=@  0\n"
+                        "=/  out=@\n"
+                        "  |-  ^-  @\n"
+                        "  ?:  =(i n)  buf\n"
+                        "  $(i +(i), buf (sew 3 [i 1 (end 3 i)] buf))\n"
+                        "?>  =(out (add (bex (mul 8 n)) (rep 3 (gulf 0 (dec n)))))\n"
+                        "out\n",
+                        4096, 2 * 4096) && ret_i;
+
+  ret_i = _test_sew_one("sew borrowed",
+                        "|=  n=@\n"
+                        "=/  buf=@  (bex (mul 8 n))\n"
+                        "=/  i=@  0\n"
+                        "=/  acc=@  0\n"
+                        "|-  ^-  @\n"
+                        "?:  =(i n)  ?>(=(0 acc) buf)\n"
+                        "=/  x=@  (sew 3 [i 1 (end 3 i)] buf)\n"
+                        "$(i +(i), acc (mix acc (cut 3 [i 1] x)))\n",
+                        4096, 0) && ret_i;
+
+  ret_i = _test_sew_one("sew shared",
+                        "|=  n=@\n"
+                        "=/  buf=@  (bex (mul 8 n))\n"
+                        "=/  old=@  0\n"
+                        "=/  i=@  0\n"
+                        "|-  ^-  [@ @]\n"
+                        "?:  =(i n)\n"
+                        "  ?>  =(buf (add (bex (mul 8 n)) (rep 3 (gulf 0 (dec n)))))\n"
+                        "  ?>  =(old (add (bex (mul 8 n)) (rep 3 (gulf 0 (sub n 2)))))\n"
+                        "  [old buf]\n"
+                        "$(i +(i), old buf, buf (sew 3 [i 1 (end 3 i)] buf))\n",
+                        4096, 0) && ret_i;
+
+  ret_i = _test_sew_one("sew edges",
+                        "|=  n=@\n"
+                        "=/  w=@  (mul 64 n)\n"
+                        ":*  (sew 3 [8 1 0xff] (bex w))\n"
+                        "    (sew 3 [12 1 0xff] (bex w))\n"
+                        "    (sew 3 [8 1 0] (bex w))\n"
+                        "    (sew 3 [8 1 0] (add (bex w) 5))\n"
+                        "    (sew 3 [8 1 0] (add (bex w) (bex 40)))\n"
+                        "    (sew 0 [31 2 0b11] (bex w))\n"
+                        "    (sew 5 [1 1 0xdead.beef] (bex w))\n"
+                        "    (sew 3 [1 1 0x1234] (bex w))\n"
+                        "    (sew 3 [0 8 (bex (add w 6))] (bex w))\n"
+                        "    (sew 3 [0 0 0xff] (bex w))\n"
+                        "    (sew 4 [2 3 (dec (bex 48))] (bex w))\n"
+                        "    (sew 3 [7 2 0xffff] (bex w))\n"
+                        "    (sew 3 [0 9 (dec (bex 72))] (bex w))\n"
+                        "    =/  e=@  (bex w)\n"
+                        "    [(sew 3 [8 1 0xff] e) e]\n"
+                        "==\n",
+                        1, 2 * 11) && ret_i;
+
+  ret_i = _test_sew_one("sew tail",
+                        "|=  n=@\n"
+                        "(sew 3 [8 1 0xff] (bex (mul 64 n)))\n",
+                        1, 2 * 1) && ret_i;
+
+  return ret_i;
 }
 
 /* _fast_n(): the gate cor kicked through u3n's jet dashboard: ~ if
@@ -1385,6 +1574,7 @@ _test_jets(void)
     { "pow", "|=([a=@ b=@] (pow a b))", "[3 5]" },
     { "rep", "|=([a=bite b=(list @)] (rep a b))", "[[3 2] ~[1 2 3]]" },
     { "rev", "|=([a=bloq b=@ c=@] (rev a b c))", "[3 4 999]" },
+    { "sew", "|=([a=bloq [b=step c=step d=@] e=@] (sew a [b c d] e))", "[3 [1 2 0xabcd] 0x1234.5678.9abc]" },
     { "swp", "|=([a=bloq b=@] (swp a b))", "[3 999]" },
     { "sqt", "|=(a=@ (sqt a))", "99" },
     { "xeb", "|=(a=@ (xeb a))", "99" },
@@ -1754,6 +1944,10 @@ main(int argc, char* argv[])
     exit(1);
   }
 
+  if ( !_test_scot_loop() ) {
+    exit(1);
+  }
+
   if ( !_test_memo_toss() ) {
     exit(1);
   }
@@ -1814,6 +2008,10 @@ main(int argc, char* argv[])
     exit(1);
   }
 
+  if ( !_test_sew() ) {
+    exit(1);
+  }
+
   if ( !_test_fast() ) {
     exit(1);
   }
@@ -1855,6 +2053,18 @@ main(int argc, char* argv[])
   //  GC
   //
   u3m_grab(u3_none);
+
+  //  the sizes of everything compiled, for comparing encodings
+  //
+#ifdef U3NC_STAT
+  fprintf(stderr, "stat: %" PRIu64 " programs, %" PRIu64 " bytes, "
+                  "%" PRIu64 " literals, %" PRIu64 " IML, %" PRIu64 " IMM "
+                  "(%" PRIu64 " of 0, %" PRIu64 " of 1, %" PRIu64 " wide slot), "
+                  "%" PRIu64 " KIL\r\n",
+          u3nc_Stat.com_d, u3nc_Stat.byc_d, u3nc_Stat.lit_d, u3nc_Stat.iml_d,
+          u3nc_Stat.imm_d, u3nc_Stat.imz_d, u3nc_Stat.imo_d, u3nc_Stat.imw_d,
+          u3nc_Stat.kil_d);
+#endif
 
   fprintf(stderr, "test nock compile: ok\r\n");
   return 0;

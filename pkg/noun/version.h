@@ -26,7 +26,9 @@ typedef c3_h       u3n_version;
 typedef c3_h       u3nc_version;
 
 #define U3NC_VER1   (u3nc_version)0  // zero-indexed for backcompat
-#define U3NC_VERLAT U3NC_VER1
+#define U3NC_VER2   (u3nc_version)1  // CAX/JMX, CAC/JMC, the trust of a site,
+                                     // op jets, HLP, HER/TAR/COR, IMM family
+#define U3NC_VERLAT U3NC_VER2
 
 /*  snapshot patch format
  */

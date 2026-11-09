@@ -37,6 +37,10 @@
       c3_h             des_h;         //  slot for the product; none in tail position
       c3_o             mon_o;         //  call by subject: the one argument is
                                       //  the whole subject, pog_p its unary program
+      c3_o             ice_o;         //  compiled trusting the jet arm: its
+                                      //  array driver runs unchecked (CAF);
+                                      //  else under the flags of the arm
+                                      //  (CAC).  For u3nc_stale()
       u3j_harm*        ham_u;         //  jet arm in the hot state: its flags
       const u3u_harm*  arm_u;         //  its array driver, or NULL
     } u3nc_dire;
@@ -47,6 +51,9 @@
       c3_h       tot_h;               //  number of slots
       c3_h       arg_h;               //  number of arguments (first slots)
       u3_noun    ned;                 //  need-ordered shape of the arguments
+      u3_noun    jet;                 //  (list ring): the jets the ops that
+                                      //  stand in for calls (DEC, ADD) trust,
+                                      //  for u3nc_stale()
       struct {
         c3_h       len_h;             //  length of bytecode (bytes)
         c3_y*      ops_y;             //  bytecode
@@ -64,6 +71,11 @@
         c3_h*      sot_h;             //  argument slots of all call sites
         c3_y*      kon_y;             //  whether each is consumed by its call
       } sot_u;
+#ifdef U3NC_STAT
+      c3_d       bor_d;               //  drop-only parameters, bit per argument
+      c3_y*      ali_y;               //  by bytecode offset past an op: a
+                                      //  borrowing HED/TAL that could alias
+#endif
     } u3nc_prog;
 
   /* u3nc_stat: cumulative counters; the runtime ones need U3NC_STAT.
@@ -80,9 +92,48 @@
       c3_d uni_d;   //  cells freed by a consuming HED or TAL: the only
                     //  reference to the cell was the slot's
       c3_d dro_d;   //  indirect nouns dropped by DRO
+      c3_d byc_d;   //  bytes of bytecode compiled
+      c3_d lit_d;   //  literal table entries compiled
+      c3_d imm_d;   //  IR imm ops of a direct atom encoded, of which:
+      c3_d imz_d;   //    of 0
+      c3_d imo_d;   //    of 1
+      c3_d imw_d;   //    to a slot of two bytes or more
+      c3_d kil_d;   //  kil ops encoded (a build that doesn't zero slots)
+      c3_d iml_d;   //  IR iml ops (literal loads) encoded
+      c3_d tra_d;   //  calls of transferring array jets (CAX, JMX)
+      c3_d mut_d;   //  arguments a transferring jet edited in place
+      //  reuse and borrowing opportunity counters (U3NC_STAT)
+      c3_d dek_d;   //  consuming HED/TAL executed
+      c3_d deb_d;   //  borrowing HED/TAL executed
+      c3_d tok_d;   //  HER/TAR executed: consuming HED/TAL paired with a COR
+      c3_d rus_d;   //  cells reused by COR
+      c3_d spa_d;   //  CONs that find a spare cell freed by an unpaired
+                    //  HED/TAL earlier in the same activation
+      c3_d spg_d;   //  CONs that find such a spare cell, global (any activation)
+      c3_d spw_d;   //  unpaired unique frees wasted: a global spare was held
+      c3_d drt_d;   //  DROs executed
+      c3_d kal_d;   //  arguments moved into callees (CAL, CAM, JMP, JMS)
+      c3_d gan_d;   //  of them, gained (the caller keeps its reference)
+      c3_d bor_d;   //  of the gained, to a drop-only parameter: borrowing
+                    //  would save the gain and the callee's drop
+      c3_d bok_d;   //  consumed, to a drop-only parameter of a call
+      c3_d bot_d;   //  consumed, to a drop-only parameter of a tail call
+      c3_d dbi_d;   //  borrowing HED/TAL whose product is an indirect noun
+      c3_d ali_d;   //  borrowing HED/TAL whose product is only read and
+                    //  dropped in its block while the source stays live:
+                    //  an alias, needing no gain and no drop
+      c3_d alx_d;   //  of them, with an indirect product
     } u3nc_stat;
 
     extern u3nc_stat u3nc_Stat;
+
+  /* u3nc_stat(): count an event, in a build with the runtime counters.
+  */
+#ifdef U3NC_STAT
+#  define u3nc_stat(fel)  (u3nc_Stat.fel++)
+#else
+#  define u3nc_stat(fel)  ((void)0)
+#endif
 
   /**  Functions.
   **/
@@ -166,6 +217,16 @@
     */
       void
       u3nc_drop(u3_noun lis);
+
+    /* u3nc_stale(): the rings of the total array jets whose trust (the ice
+    **               flag of their arm) changed since the programs on the
+    **               home road compiled calls through them: trusting a
+    **               driver that is checked now, or the other way around.
+    **               For u3d_hot(), which drops those programs.  Produces
+    **               a (list ring).
+    */
+      u3_noun
+      u3nc_stale(void);
 
     /* u3nc_rewrite_compact(): rewrite the SKA state for compaction.
     */

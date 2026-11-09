@@ -50,6 +50,11 @@
     */
       u3_noun u3z_save_m_dedup(u3z_cid cid, c3_m fun, u3_noun one, u3_noun val);
 
+    /* u3z_save_dedup(): save in memo cache, deduplicate unless transient.
+    **                   TRANSFER key and val; produces val.
+    */
+      u3_noun u3z_save_dedup(u3z_cid cid, u3_noun key, u3_noun val);
+
     /* u3z_uniq(): uniquify with memo cache.
     */
       u3_noun

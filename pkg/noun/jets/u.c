@@ -11,6 +11,8 @@ static const c3_l _u_sam[]   = { u3x_sam };
 static const c3_l _u_sam_2[] = { u3x_sam_2, u3x_sam_3 };
 static const c3_l _u_sam_3[] = { u3x_sam_2, u3x_sam_6, u3x_sam_7 };
 static const c3_l _u_cut[]   = { u3x_sam_2, u3x_sam_12, u3x_sam_13, u3x_sam_7 };
+static const c3_l _u_sew[]   = { u3x_sam_2, u3x_sam_12, u3x_sam_26, u3x_sam_27,
+                                 u3x_sam_7 };
 
 /* _u_con: the sample of the door an arm is in, after the arm's own; a
 **         trap on the door itself (+wyt) has it at _u_con_2.
@@ -46,6 +48,11 @@ static const c3_l _u_blake3_compress[] = { u3x_sam_2, u3x_sam_6, u3x_sam_14,
 #define U3U_ARM(fun, len, axe) { u3w##fun, u3w##fun, u3u##fun, len, axe, false }
 #define U3U_PUNT(fun)    { u3w##fun, u3w##fun, 0, 1, (c3_l[]){1}, true  }
 #define U3U_MONO(fun)    { u3w##fun, u3u##fun, 0, 1, (c3_l[]){1}, true  }
+
+/* U3U_OWN: an arm with a transferring driver too, u3u<fun>_own.
+*/
+#define U3U_OWN(fun, len, axe)                                        \
+  { u3w##fun, u3w##fun, u3u##fun, len, axe, false, u3u##fun##_own }
 
 /* U3U_REAL: the arms of a floating point door (+rd, +rs, +rq, +rh); the
 **           comparisons don't read the rounding mode.
@@ -121,7 +128,7 @@ const u3u_harm u3u_Harm[] = {
   U3U_BINARY(c_rig),
   U3U_BINARY(c_rip),
   U3U_BINARY(c_rsh),
-  U3U_PUNT(c_sew),
+  U3U_OWN(c_sew, 5, _u_sew),
   U3U_UNARY(c_sqt),
   U3U_BINARY(c_swp),
   U3U_UNARY(c_xeb),

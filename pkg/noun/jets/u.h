@@ -14,8 +14,19 @@
   *** array driver may be listed as punting instead: compiled nock then
   *** calls a driver on the whole core, its u3w driver or one of its own,
   *** and the nock of the arm if the driver punts.
+  ***
+  *** A total arm may have a transferring driver besides (own_f), which
+  *** compiled nock prefers: the call site passes the references of the
+  *** arguments it consumes (the slot's last use, so the program holds no
+  *** other reference to them) to the driver, which owns them, and
+  *** retains the others; own_y[i] says which argument i is.  The driver
+  *** may edit an owned argument in place when nothing else refers to it
+  *** (u3a_is_mutable()) and return it as the product, and releases what
+  *** it owns and doesn't return.  Like u3k*: TRANSFERS the owned
+  *** arguments, RETAINS the rest, the product is transferred.
   **/
     typedef u3_noun (*u3u_fun)(u3_noun*);
+    typedef u3_noun (*u3u_own)(u3_noun*, const c3_y*);
 
   /* u3u_harm: array-driver arm.
   **    key_f: a key to map this entry to the hot state, u3w* driver in practice
@@ -24,6 +35,7 @@
   **    len_w: number of arguments, 1 if punting
   **    axe_l: argument axes in the core, {1} if punting
   **    pun_t: punting driver, u3w* driver from the hot state will apply
+  **    own_f: transferring array driver, or NULL
   */
     typedef struct _u3u_harm {
       u3_noun     (*key_f)(u3_noun);
@@ -32,6 +44,7 @@
       c3_w          len_w;
       const c3_l*   axe_l;
       c3_t          pun_t;
+      u3u_own       own_f;
     } u3u_harm;
 
   /* u3u_Harm: blank-terminated table of array drivers.
@@ -99,6 +112,8 @@
     u3_noun u3uc_rig(u3_noun*);
     u3_noun u3uc_rip(u3_noun*);
     u3_noun u3uc_rsh(u3_noun*);
+    u3_noun u3uc_sew(u3_noun*);
+    u3_noun u3uc_sew_own(u3_noun*, const c3_y*);
     u3_noun u3uc_sqt(u3_noun*);
     u3_noun u3uc_swp(u3_noun*);
     u3_noun u3uc_xeb(u3_noun*);

@@ -455,13 +455,12 @@ u3d_boot(u3_atom pil)
   }
 }
 
-/* u3d_hot(): feed the core the jet drivers there are, and drop the programs
-**            of the functions a change in them invalidates.
+/* _d_jets(): feed the core the jet drivers lis, and drop the programs of
+**            the functions a change in them invalidates.  TRANSFERS.
 */
-void
-u3d_hot(void)
+static void
+_d_jets(u3_noun lis)
 {
-  u3_noun lis = _d_rings();
   u3_noun pro, tag, bes;
 
   u3l_log("ska: %" PRIc3_w " jetted arms", u3qb_lent(lis));
@@ -481,6 +480,55 @@ u3d_hot(void)
   }
 
   u3z(pro);
+}
+
+/* _d_skip(): the drivers of lis but those through the rings in ban.
+**            RETAINS.
+*/
+static u3_noun
+_d_skip(u3_noun lis, u3_noun ban)
+{
+  u3_noun out = u3_nul, i, j;
+
+  for ( ; u3_nul != lis; lis = u3t(lis) ) {
+    i = u3h(lis);
+
+    for ( j = ban; u3_nul != j; j = u3t(j) ) {
+      if ( c3y == u3r_sing(u3h(i), u3h(j)) ) {
+        break;
+      }
+    }
+
+    if ( u3_nul == j ) {
+      out = u3nc(u3k(i), out);
+    }
+  }
+
+  return out;
+}
+
+/* u3d_hot(): feed the core the jet drivers there are, and drop the programs
+**            of the functions a change in them invalidates.  The trust of
+**            an arm (its ice flag) is no concern of the core's, which the
+**            driver is all the same to, but a compiled call through it
+**            either checks the driver or doesn't: to drop the callers of
+**            an arm whose trust changed since they compiled (u3nc_stale()),
+**            the core is fed the drivers without it first, as if it were
+**            gone, then with it.
+*/
+void
+u3d_hot(void)
+{
+  u3_noun lis = _d_rings();
+  u3_noun bad = u3nc_stale();
+
+  if ( u3_nul != bad ) {
+    u3l_log("ska: the trust of %" PRIc3_w " jets changed", u3qb_lent(bad));
+    _d_jets(_d_skip(lis, bad));
+  }
+
+  u3z(bad);
+  _d_jets(lis);
 }
 
 /* _d_tem_cb(): collect the registrations of a battery.

@@ -320,6 +320,7 @@ static const OP_F WTAB[] = { WIDES };
     _f->des_h = (des);                                                          \
     _f->key   = u3_none;                                                        \
     _f->cid_h = 0;                                                              \
+    _nc_stat_frame(_f);                                                         \
     _f;                                                                         \
   })
 
@@ -384,6 +385,17 @@ static const OP_F WTAB[] = { WIDES };
     }                                                                           \
   } while ( 0 )
 
+//  GIVE(): the consumed arguments of the site leave their slots: their
+//          references go with the gathered copies, to a transferring jet
+//
+#define GIVE()  do {                                                            \
+    if ( _nc_zer_t ) {                                                          \
+      for ( c3_h _i = 0; _i < len_h; _i++ ) {                                   \
+        if ( kon_y[_i] ) { reg[sot_h[_i]] = 0; }                                \
+      }                                                                         \
+    }                                                                           \
+  } while ( 0 )
+
 //  ENTER(len): run pog_u, its len arguments in its slots at reg
 //
 #define ENTER(len)  do {                                                        \
@@ -392,6 +404,7 @@ static const OP_F WTAB[] = { WIDES };
         reg[_i] = 0;                                                            \
       }                                                                         \
     }                                                                           \
+    _nc_stat_spa_set(0);                                                        \
     ip = pog_u->byc_u.ops_y;                                                    \
     BURN();                                                                     \
   } while ( 0 )
@@ -433,7 +446,9 @@ static const OP_F WTAB[] = { WIDES };
 **   caller's state: a call site copies its arguments straight into the
 **   slots of the callee's new activation, consumed or gained.  A total
 **   array jet gets its arguments copied above the activation instead,
-**   uncounted, and leaves no other trace.  A tail call copies its
+**   uncounted, and leaves no other trace; a transferring jet gets them
+**   the same way, with the consume flags of the site, and the consumed
+**   slots are emptied as it takes their references.  A tail call copies its
 **   arguments to a temporary above its own activation, which is empty by
 **   then (every other slot was consumed or dropped, or the call sweeps
 **   them), and moves the temporary down in its place, under the same
@@ -465,6 +480,8 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 
   fam_u = PUSH(_nc_frame_w);
   fam_u->pog_u = NULL;
+  _nc_stat_frame(fam_u);
+  _nc_stat_spa_set(0);
 
   ip   = pog_u->byc_u.ops_y;
   op_y = *ip++;
@@ -486,6 +503,7 @@ OP(done) ARGS CONV
   EMPTY();
 
   fam_u = TOP(_nc_frame_w);
+  _nc_stat_unframe(fam_u);
 
   if ( !fam_u->pog_u ) {
     POP(_nc_frame_w + pog_u->tot_h);
@@ -493,8 +511,7 @@ OP(done) ARGS CONV
   }
 
   if ( u3_none != fam_u->key ) {
-    pro = _nc_save(fam_u->cid_h, fam_u->key, pro, fam_u->all_o);
-    LOSE(fam_u->key);
+    pro = _nc_save(fam_u->cid_h, fam_u->key, pro);
   }
 
   POP(_nc_frame_w + pog_u->tot_h);
@@ -506,39 +523,10 @@ OP(done) ARGS CONV
   BURN();
 }
 
-static u3_noun
-OP(IMM_0) ARGS CONV
-{
-  c3_h d_h = RB();
-  PUT(d_h, 0);
+#define BODY_IMM()                                                              \
+  PUT(d_h, a_h);                                                                \
   BURN();
-}
-
-static u3_noun
-OP(IMM_1) ARGS CONV
-{
-  c3_h d_h = RB();
-  PUT(d_h, 1);
-  BURN();
-}
-
-static u3_noun
-OP(IMM_B) ARGS CONV
-{
-  c3_h a_h = RB();
-  c3_h d_h = RB();
-  PUT(d_h, a_h);
-  BURN();
-}
-
-static u3_noun
-OP(IMM_S) ARGS CONV
-{
-  c3_h a_h = RS();
-  c3_h d_h = RB();
-  PUT(d_h, a_h);
-  BURN();
-}
+OP2(IMM, a_h, d_h, BODY_IMM)
 
 #define BODY_IML()                                                              \
   PUT(d_h, GAIN(pog_u->lit_u.non[a_h]));                                        \
@@ -587,6 +575,7 @@ OP3KK(ADD, a_h, b_h, d_h, BODY_ADD)
   TAKEN(h, a_h, KA);                                                            \
   TAKEN(t, b_h, KB);                                                            \
   _nc_stat(con_d);                                                              \
+  _nc_stat_con();                                                               \
   PUT(d_h, u3nc(h, t));                                                         \
   BURN();
 OP3KK(CON, a_h, b_h, d_h, BODY_CON)
@@ -615,7 +604,10 @@ OP3KK(CON, a_h, b_h, d_h, BODY_CON)
 #define BODY_HED(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
   u3_noun h = GAIN(CELL(x)->hed);                                               \
-  _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
+  _nc_stat_if(K, dek_d);                                                        \
+  _nc_stat_if(!(K), deb_d);                                                     \
+  _nc_stat_uni(UNIQUE(x, K));                                                   \
+  _nc_stat_ali(pog_u, ip, h, K);                                                \
   DROP(a_h, K);                                                                 \
   PUT(d_h, h);                                                                  \
   BURN();
@@ -624,11 +616,97 @@ OP2K(HED, a_h, d_h, BODY_HED)
 #define BODY_TAL(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
   u3_noun t = GAIN(CELL(x)->tel);                                               \
-  _nc_stat_if(UNIQUE(x, K), uni_d);                                             \
+  _nc_stat_if(K, dek_d);                                                        \
+  _nc_stat_if(!(K), deb_d);                                                     \
+  _nc_stat_uni(UNIQUE(x, K));                                                   \
+  _nc_stat_ali(pog_u, ip, t, K);                                                \
   DROP(a_h, K);                                                                 \
   PUT(d_h, t);                                                                  \
   BURN();
 OP2K(TAL, a_h, d_h, BODY_TAL)
+
+//  REUSE(x): whether a consuming HER or TAR may keep the cell x for its
+//  COR: the slot's reference is the only one, and the cell is on this
+//  road, not the home road, whose hash-cons set may hold it
+//
+#define REUSE(x)                                                                \
+  (  (c3y == _nc_normal(rod_u, x))                                              \
+  && (1 == ((u3a_noun*)u3a_to_ptr(x))->use_w)                                   \
+  && (rod_u != &(u3H->rod_u)) )
+
+//  HER and TAR: a consuming HED or TAL paired with a COR (_nc_reuse()).
+//  The cell, when it would be freed, goes on the stack instead, as the
+//  token the COR pops: it gives the product its reference to the part
+//  taken and loses the other part.  Shared, it is read and released as
+//  by HED_1 or TAL_1, and the token is 0.
+//
+#define BODY_HER()                                                              \
+  u3_noun   x     = reg[a_h], tok, h;                                           \
+  u3a_cell* cel_u = CELL(x);                                                    \
+  ZERO(a_h);                                                                    \
+  _nc_stat(dek_d);                                                              \
+  _nc_stat(tok_d);                                                              \
+  if ( REUSE(x) ) {                                                             \
+    _nc_stat(uni_d);                                                            \
+    tok = x;                                                                    \
+    h   = cel_u->hed;                                                           \
+    LOSE(cel_u->tel);                                                           \
+  }                                                                             \
+  else {                                                                        \
+    tok = 0;                                                                    \
+    h   = GAIN(cel_u->hed);                                                     \
+    LOSE(x);                                                                    \
+  }                                                                             \
+  *(u3_noun*)PUSH(1) = tok;                                                     \
+  PUT(d_h, h);                                                                  \
+  BURN();
+OP2(HER, a_h, d_h, BODY_HER)
+
+#define BODY_TAR()                                                              \
+  u3_noun   x     = reg[a_h], tok, t;                                           \
+  u3a_cell* cel_u = CELL(x);                                                    \
+  ZERO(a_h);                                                                    \
+  _nc_stat(dek_d);                                                              \
+  _nc_stat(tok_d);                                                              \
+  if ( REUSE(x) ) {                                                             \
+    _nc_stat(uni_d);                                                            \
+    tok = x;                                                                    \
+    t   = cel_u->tel;                                                           \
+    LOSE(cel_u->hed);                                                           \
+  }                                                                             \
+  else {                                                                        \
+    tok = 0;                                                                    \
+    t   = GAIN(cel_u->tel);                                                     \
+    LOSE(x);                                                                    \
+  }                                                                             \
+  *(u3_noun*)PUSH(1) = tok;                                                     \
+  PUT(d_h, t);                                                                  \
+  BURN();
+OP2(TAR, a_h, d_h, BODY_TAR)
+
+//  COR: CON into the cell its HER or TAR pushed, if it pushed one
+//
+#define BODY_COR(KA, KB)                                                        \
+  u3_noun h   = reg[a_h], t = reg[b_h];                                         \
+  u3_noun tok = *(u3_noun*)TOP(1);                                              \
+  POP(1);                                                                       \
+  TAKEN(h, a_h, KA);                                                            \
+  TAKEN(t, b_h, KB);                                                            \
+  _nc_stat(con_d);                                                              \
+  _nc_stat_con();                                                               \
+  if ( tok ) {                                                                  \
+    u3a_cell* cel_u = (u3a_cell*)u3a_to_ptr(tok);                               \
+    _nc_stat(rus_d);                                                            \
+    cel_u->mug_w = 0;                                                           \
+    cel_u->hed   = h;                                                           \
+    cel_u->tel   = t;                                                           \
+    PUT(d_h, tok);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    PUT(d_h, u3nc(h, t));                                                       \
+  }                                                                             \
+  BURN();
+OP3KK(COR, a_h, b_h, d_h, BODY_COR)
 
 #define BODY_CEL(K)                                                             \
   if ( c3n == u3du(reg[a_h]) ) {                                                \
@@ -679,6 +757,15 @@ OP2K(HDP, a_h, b_h, BODY_HDP)
   DROP(b_h, K);                                                                 \
   BURN();
 OP2K(HDE, a_h, b_h, BODY_HDE)
+
+//  a trace hint whose clue is a constant: push the literal [tag clue];
+//  the epilogue is an HDE, which drops the clue's register
+//
+#define BODY_HLP()                                                              \
+  u3t_push(GAIN(pog_u->lit_u.non[a_h]));                                        \
+  *(u3_noun*)PUSH(1) = u3_nul;                                                  \
+  BURN();
+OP1(HLP, a_h, BODY_HLP)
 
 #define BODY_HMP()                                                              \
   u3nc_dire* dir_u;                                                             \
@@ -754,6 +841,7 @@ OP3KK(NOK, a_h, b_h, d_h, BODY_NOK)
   SITE();                                                                       \
   CALLEE();                                                                     \
   GATHER(gop_u->tot_h);                                                         \
+  _nc_stat_move(gop_u, kon_y, len_h, 0);                                        \
   MOVE();                                                                       \
   (void)FRAME(dir_u->des_h);                                                    \
   _nc_stat(dir_d);                                                              \
@@ -781,6 +869,105 @@ OP1(CAL, a_h, BODY_CAL)
   PUT(dir_u->des_h, pro);                                                       \
   BURN();
 OP1(CAF, a_h, BODY_CAF)
+
+//  the transferring driver of the jet, on its arguments: it takes the
+//  references of the consumed ones, and retains the others
+//
+#define BODY_CAX()                                                              \
+  u3nc_dire* dir_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun*   nex;                                                               \
+  u3_noun    pro;                                                               \
+  SITE();                                                                       \
+  GATHER(len_h);                                                                \
+  GIVE();                                                                       \
+  _nc_stat(jet_d);                                                              \
+  _nc_stat(tra_d);                                                              \
+  pro = dir_u->arm_u->own_f(nex, kon_y);                                        \
+  POP(len_h);                                                                   \
+  PUT(dir_u->des_h, pro);                                                       \
+  BURN();
+OP1(CAX, a_h, BODY_CAX)
+
+/* _nc_burn_check(): the product of the array driver of the site dir_u on
+**   its arguments nex, tested against the unary program of its bell on the
+**   core rebuilt from them, as _cj_kick_f() tests a u3w driver: the arm
+**   trusted while the driver runs, lest it test itself, and off while the
+**   program runs, lest the program use it (the checked sites in it read
+**   the flags); a mismatch turns the arm off and fails.  RETAINS nex.
+*/
+static u3_noun
+_nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
+{
+  u3j_harm*  ham_u = dir_u->ham_u;
+  u3nc_prog* gop_u;
+  u3_noun    cor, pro, ame;
+
+  ham_u->ice = c3y;
+  pro = dir_u->arm_u->arg_f(nex);
+  ham_u->ice = c3n;
+
+  cor   = _nc_core(dir_u, nex);
+  gop_u = _nc_mono(dir_u);
+
+  ham_u->liv = c3n;
+  ame = _nc_burn(gop_u, &cor, 1);
+  ham_u->liv = c3y;
+
+  if ( c3n == u3r_sing(ame, pro) ) {
+    u3l_log("test: %s %s: mismatch: good %x, bad %x",
+            ham_u->cop_u->cos_c,
+            (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
+            u3r_mug(ame),
+            u3r_mug(pro));
+    ham_u->liv = c3n;
+    return u3m_bail(c3__fail);
+  }
+
+  u3z(ame);
+  return pro;
+}
+
+#define CHECK(dir, nex, len)  _nc_cat(_nc_burn, _check)(dir, nex, len)
+
+//  the total array jet of the site under the flags of its arm, as u3n
+//  kicks a jet (_cj_kick_f()): the arm off, the unary program of the
+//  callee on the core rebuilt from the arguments, by subject, as CAP
+//  without a driver; trusted, the driver alone, as CAF; else the driver
+//  tested against the program (_nc_burn_check()).  Compiled where the arm
+//  isn't trusted, and recompiled when its flags change (u3nc_stale()):
+//  the flags are read here for the test, which turns the arm off while
+//  the program runs, and for the sites compiled before a change.
+//
+#define BODY_CAC()                                                              \
+  u3nc_dire* dir_u;                                                             \
+  u3nc_prog* gop_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun*   nex;                                                               \
+  u3_noun    pro;                                                               \
+  SITE();                                                                       \
+  GATHER(len_h);                                                                \
+  if ( c3n == dir_u->ham_u->liv ) {                                             \
+    u3_noun cor = _nc_core(dir_u, nex);                                         \
+    POP(len_h);                                                                 \
+    LEAVE();                                                                    \
+    _nc_stat(sub_d);                                                            \
+    gop_u = _nc_mono(dir_u);                                                    \
+    CALL_MONO(gop_u, cor, dir_u->des_h);                                        \
+  }                                                                             \
+  _nc_stat(jet_d);                                                              \
+  pro = ( c3y == dir_u->ham_u->ice )                                            \
+      ? dir_u->arm_u->arg_f(nex)                                                \
+      : CHECK(dir_u, nex, len_h);                                               \
+  POP(len_h);                                                                   \
+  LEAVE();                                                                      \
+  PUT(dir_u->des_h, pro);                                                       \
+  BURN();
+OP1(CAC, a_h, BODY_CAC)
 
 //  a call by subject: the u3w jet of the site, if it has one, on the
 //  subject, under the flags of its arm; the unary program of the bell if
@@ -829,8 +1016,9 @@ OP1(CAP, a_h, BODY_CAP)
   CALLEE();                                                                     \
   GATHER(gop_u->tot_h);                                                         \
   kni_h = 0;                                                                    \
-  x     = u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell));           \
-  o     = _nc_find(dir_u->cid_h, x, c3n);                                       \
+  x     = _nc_key(dir_u->cid_h, c3n,                                            \
+                  u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell)));  \
+  o     = _nc_find(dir_u->cid_h, x);                                            \
   if ( u3_none != o ) {                                                         \
     POP(gop_u->tot_h);                                                          \
     LOSE(x);                                                                    \
@@ -838,11 +1026,11 @@ OP1(CAP, a_h, BODY_CAP)
     PUT(dir_u->des_h, o);                                                       \
     BURN();                                                                     \
   }                                                                             \
+  _nc_stat_move(gop_u, kon_y, len_h, 0);                                        \
   MOVE();                                                                       \
   fam_u = FRAME(dir_u->des_h);                                                  \
   fam_u->key   = x;                                                             \
   fam_u->cid_h = dir_u->cid_h;                                                  \
-  fam_u->all_o = c3n;                                                           \
   _nc_stat(dir_d);                                                              \
   pog_u = gop_u;                                                                \
   reg   = nex;                                                                  \
@@ -856,8 +1044,9 @@ OP1(CAM, a_h, BODY_CAM)
   u3_noun*   nex;                                                               \
   c3_h       s_h = SUB();                                                       \
   u3_noun    x   = reg[s_h];                                                    \
-  u3_noun    o   = u3nc(GAIN(x), GAIN(u3t(dir_u->bell)));                       \
-  u3_weak    pro = _nc_find(dir_u->cid_h, o, c3y);                              \
+  u3_noun    o   = _nc_key(dir_u->cid_h, c3y,                                   \
+                           u3nc(GAIN(x), GAIN(u3t(dir_u->bell))));              \
+  u3_weak    pro = _nc_find(dir_u->cid_h, o);                                   \
   if ( u3_none != pro ) {                                                       \
     LOSE(o);                                                                    \
     DROP(s_h, KON());                                                           \
@@ -872,7 +1061,6 @@ OP1(CAM, a_h, BODY_CAM)
   fam_u  = FRAME(dir_u->des_h);                                                 \
   fam_u->key   = o;                                                             \
   fam_u->cid_h = dir_u->cid_h;                                                  \
-  fam_u->all_o = c3y;                                                           \
   pog_u = gop_u;                                                                \
   reg   = nex;                                                                  \
   ENTER(1);
@@ -975,6 +1163,7 @@ OP1(HOP, a_h, BODY_HOP)
   CALLEE();                                                                     \
   GATHER(len_h);                                                                \
   _nc_stat(dir_d);                                                              \
+  _nc_stat_move(gop_u, kon_y, len_h, 1);                                        \
   MOVE();                                                                       \
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
@@ -1000,6 +1189,7 @@ OP1K(JMP, a_h, BODY_JMP)
   SITE();                                                                       \
   GATHER(len_h);                                                                \
   _nc_stat(dir_d);                                                              \
+  _nc_stat_move(pog_u, kon_y, len_h, 1);                                        \
   MOVE();                                                                       \
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
@@ -1027,6 +1217,24 @@ OP1K(JMS, a_h, BODY_JMS)
   SWEEP(S);                                                                     \
   DONE(pro);
 OP1K(JMF, a_h, BODY_JMF)
+
+#define BODY_JMX(S)                                                             \
+  u3nc_dire* dir_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun*   nex;                                                               \
+  u3_noun    pro;                                                               \
+  SITE();                                                                       \
+  GATHER(len_h);                                                                \
+  GIVE();                                                                       \
+  _nc_stat(jet_d);                                                              \
+  _nc_stat(tra_d);                                                              \
+  pro = dir_u->arm_u->own_f(nex, kon_y);                                        \
+  POP(len_h);                                                                   \
+  SWEEP(S);                                                                     \
+  DONE(pro);
+OP1K(JMX, a_h, BODY_JMX)
 
 //  the subject's slot gives up its reference, to the jet or the callee
 //
@@ -1062,6 +1270,37 @@ OP1K(JMF, a_h, BODY_JMF)
   TAIL_MONO(gop_u, x);
 OP1K(JSP, a_h, BODY_JSP)
 
+//  CAC in tail position: JMF, or JSP without a driver when the arm is off
+//
+#define BODY_JMC(S)                                                             \
+  u3nc_dire* dir_u;                                                             \
+  u3nc_prog* gop_u;                                                             \
+  c3_h*      sot_h;                                                             \
+  c3_y*      kon_y;                                                             \
+  c3_h       len_h;                                                             \
+  u3_noun*   nex;                                                               \
+  u3_noun    pro;                                                               \
+  SITE();                                                                       \
+  GATHER(len_h);                                                                \
+  if ( c3n == dir_u->ham_u->liv ) {                                             \
+    u3_noun cor = _nc_core(dir_u, nex);                                         \
+    POP(len_h);                                                                 \
+    LEAVE();                                                                    \
+    SWEEP(S);                                                                   \
+    _nc_stat(sub_d);                                                            \
+    gop_u = _nc_mono(dir_u);                                                    \
+    TAIL_MONO(gop_u, cor);                                                      \
+  }                                                                             \
+  _nc_stat(jet_d);                                                              \
+  pro = ( c3y == dir_u->ham_u->ice )                                            \
+      ? dir_u->arm_u->arg_f(nex)                                                \
+      : CHECK(dir_u, nex, len_h);                                               \
+  POP(len_h);                                                                   \
+  LEAVE();                                                                      \
+  SWEEP(S);                                                                     \
+  DONE(pro);
+OP1K(JMC, a_h, BODY_JMC)
+
 #define BODY_DON(S)                                                             \
   u3_noun pro = reg[a_h];                                                       \
   ZERO(a_h);                                                                    \
@@ -1071,6 +1310,7 @@ OP1K(DON, a_h, BODY_DON)
 
 #define BODY_DRO()                                                              \
   u3_noun x = reg[a_h];                                                         \
+  _nc_stat(drt_d);                                                              \
   _nc_stat_if(c3n == u3a_is_cat(x), dro_d);                                     \
   ZERO(a_h);                                                                    \
   LOSE(x);                                                                      \
@@ -1148,6 +1388,7 @@ OP(WIDE) ARGS CONV
 #undef CALL
 #undef TAIL
 #undef DONE
+#undef BODY_IMM
 #undef BODY_IML
 #undef BODY_MOV
 #undef BODY_INC
@@ -1156,6 +1397,10 @@ OP(WIDE) ARGS CONV
 #undef BODY_CON
 #undef BODY_HED
 #undef BODY_TAL
+#undef REUSE
+#undef BODY_HER
+#undef BODY_TAR
+#undef BODY_COR
 #undef BODY_CEL
 #undef BODY_LOB
 #undef BODY_EQU
@@ -1163,6 +1408,7 @@ OP(WIDE) ARGS CONV
 #undef BODY_HSE
 #undef BODY_HDP
 #undef BODY_HDE
+#undef BODY_HLP
 #undef BODY_HMP
 #undef BODY_HME
 #undef BODY_HCP
@@ -1171,6 +1417,7 @@ OP(WIDE) ARGS CONV
 #undef BODY_NOK
 #undef BODY_CAL
 #undef BODY_CAF
+#undef BODY_CAX
 #undef BODY_CAP
 #undef BODY_CAM
 #undef BODY_CSM
@@ -1184,6 +1431,7 @@ OP(WIDE) ARGS CONV
 #undef BODY_JMP
 #undef BODY_JMS
 #undef BODY_JMF
+#undef BODY_JMX
 #undef BODY_JSP
 #undef BODY_DON
 #undef BODY_DRO
