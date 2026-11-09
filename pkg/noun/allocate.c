@@ -2923,18 +2923,10 @@ u3a_mark_road()
     qua_u[10]->siz_w = fre_w * sizeof(c3_w);
   }
 
+  //  sized below, once everything is marked
+  //
   qua_u[11] = c3_calloc(sizeof(*qua_u[11]));
   qua_u[11]->nam_c = strdup("metadata");
-
-  {
-    c3_w wee_w = 0;
-
-    for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
-      wee_w += u3a_Mark.wee_w[i_w];
-    }
-
-    qua_u[11]->siz_w = wee_w * sizeof(c3_w);
-  }
 
   qua_u[12] = c3_calloc(sizeof(*qua_u[12]));
   qua_u[12]->nam_c = strdup("loop hint set");
@@ -3035,6 +3027,18 @@ u3a_mark_road()
   qua_u[16]->siz_w = u3a_wed_mark() * sizeof(c3_w);
 
   qua_u[17] = NULL;
+
+  //  marking a chunk can mark its page's metadata, so add it up last
+  //
+  {
+    c3_w wee_w = 0;
+
+    for ( c3_w i_w = 0; i_w < u3a_crag_no; i_w++ ) {
+      wee_w += u3a_Mark.wee_w[i_w];
+    }
+
+    qua_u[11]->siz_w = wee_w * sizeof(c3_w);
+  }
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {
