@@ -31,16 +31,25 @@
 //
 #define MACH_RXT_S       180
 
+//  how often to check a write in flight for progress
+//
+#define MACH_STALL_MS    10000
+
 //  most bytes in one %received event
 //
 #define MACH_EVENT_MAX   (1 << 20)
 
-//  most bytes queued in either direction, per connection. a full
-//  outgoing queue closes the connection; a full incoming queue stops
-//  reading, so tcp slows the peer down, until arvo drains it to half
+//  most bytes queued per connection. a full incoming queue stops
+//  reading, so tcp slows the peer down, until a %received takes it;
+//  a full outgoing queue closes the connection
 //
-#define MACH_QUEUE_MAX   (64 << 20)
-#define MACH_QUEUE_LOW   (MACH_QUEUE_MAX / 2)
+#define MACH_IN_MAX      MACH_EVENT_MAX
+#define MACH_OUT_MAX     (16 << 20)
+
+//  most bytes in one write. on unix the stall timer sees partial
+//  writes, but on windows libuv reports a write only once it ends
+//
+#define MACH_WRITE_MAX   (64 << 10)
 
 struct _u3_mach;
 
@@ -66,7 +75,7 @@ typedef struct _u3_mque {
 typedef struct _u3_tcon {
   c3_d             id_d;   // id from mach
   uv_tcp_t*        tcp_u;  // tcp handle, owned
-  uv_timer_t       tim_u;  // connect timer, then drain timer
+  uv_timer_t       tim_u;  // connect, stall, then drain timer
   struct _u3_mach* mac_u;  // driver, for planning events
   struct _u3_tcon* nex_u;  // next tcon in list
   c3_o             opn_o;  // opened
@@ -75,6 +84,9 @@ typedef struct _u3_tcon {
   const c3_c*      why_c;  // peer closed; cause for %closed
   u3_mque          out_u;  // outgoing bytes
   c3_o             wri_o;  // write in flight
+  c3_w             wrl_w;  // bytes in the write in flight
+  size_t           lef_i;  // bytes of it unwritten, at last check
+  c3_d             pro_d;  // loop time of last write progress, ms
   c3_o             paz_o;  // reading paused, incoming queue full
   u3_mque          inc_u;  // incoming bytes
   u3_ovum*         egg_u;  // %received event in flight
@@ -294,6 +306,7 @@ _mach_con_dead(u3_tcon* con_u, const c3_c* cat_c, const c3_c* why_c)
 {
   con_u->cat_c = cat_c;
   con_u->why_c = why_c;
+  uv_timer_stop(&con_u->tim_u);
   _mach_sock_close(con_u);
   _mach_que_free(&con_u->out_u);
   con_u->wri_o = c3n;
@@ -377,8 +390,8 @@ _mach_received_bail(u3_ovum* egg_u, u3_noun lud)
 }
 
 /* _mach_pump(): send the next %received event, if none is in flight,
- * and resume reading once the queue drains to half; once a dead
- * connection has delivered everything, close it.
+ * and resume reading once the queue has room; once a dead connection
+ * has delivered everything, close it.
  */
 static void
 _mach_pump(u3_tcon* con_u)
@@ -402,7 +415,7 @@ _mach_pump(u3_tcon* con_u)
                  _mach_received_news, _mach_received_bail);
 
     if (  (c3y == con_u->paz_o)
-       && (con_u->inc_u.len_w <= MACH_QUEUE_LOW)
+       && (con_u->inc_u.len_w < MACH_IN_MAX)
        && (c3y == _mach_live(con_u))
        && (c3n == con_u->clo_o) )
     {
@@ -456,7 +469,7 @@ _mach_tcp_read_cb(uv_stream_t* str_u, ssize_t red_i, const uv_buf_t* buf_u)
 
   //  the queue may pass the cap by one read, at most
   //
-  if ( con_u->inc_u.len_w >= MACH_QUEUE_MAX ) {
+  if ( con_u->inc_u.len_w >= MACH_IN_MAX ) {
     uv_read_stop(str_u);
     con_u->paz_o = c3y;
   }
@@ -521,11 +534,24 @@ _mach_write_done(u3_tcon* con_u, const c3_c* why_c)
     return;
   }
 
-  _mach_que_pop(&con_u->out_u);
+  {
+    u3_mbuf* buf_u = con_u->out_u.hed_u;
 
-  if ( (c3y == con_u->clo_o) && !con_u->out_u.hed_u ) {
-    _mach_flushed(con_u);
-    return;
+    buf_u->pos_w       += con_u->wrl_w;
+    con_u->out_u.len_w -= con_u->wrl_w;
+
+    if ( buf_u->pos_w == buf_u->len_w ) {
+      _mach_que_pop(&con_u->out_u);
+    }
+  }
+
+  if ( !con_u->out_u.hed_u ) {
+    if ( c3y == con_u->clo_o ) {
+      _mach_flushed(con_u);
+      return;
+    }
+
+    uv_timer_stop(&con_u->tim_u);
   }
 
   _mach_write_next(con_u);
@@ -553,7 +579,35 @@ _mach_tcp_write_cb(uv_write_t* req_u, c3_i sas_i)
                         : "reset");
 }
 
-/* _mach_write_next(): start writing the next queued buffer.
+/* _mach_stall_cb(): check the write in flight; if no bytes have left
+ * it for MACH_RXT_S, the peer stopped taking them.
+ */
+static void
+_mach_stall_cb(uv_timer_t* tim_u)
+{
+  u3_tcon* con_u = tim_u->data;
+  c3_d     now_d = uv_now(u3L);
+
+  if ( con_u->tcp_u && (c3y == con_u->wri_o) ) {
+    size_t lef_i = uv_stream_get_write_queue_size((uv_stream_t*)con_u->tcp_u);
+
+    if ( lef_i < con_u->lef_i ) {
+      con_u->lef_i = lef_i;
+      con_u->pro_d = now_d;
+    }
+  }
+
+  if ( (now_d - con_u->pro_d) < (MACH_RXT_S * 1000) ) {
+    return;
+  }
+
+  u3l_log("mach: %" PRIu64 ": stalled, %u bytes unsent",
+          con_u->id_d, con_u->out_u.len_w);
+  _mach_con_dead(con_u, "peer", "dead");
+}
+
+/* _mach_write_next(): start writing the next slice of the queue, and
+ * unless we're draining on %close, watch it for progress.
  */
 static void
 _mach_write_next(u3_tcon* con_u)
@@ -566,11 +620,13 @@ _mach_write_next(u3_tcon* con_u)
   }
 
   u3_mbuf*    buf_u = con_u->out_u.hed_u;
-  uv_buf_t    buf_v = uv_buf_init((c3_c*)buf_u->buf_y, buf_u->len_w);
+  c3_w        len_w = c3_min(buf_u->len_w - buf_u->pos_w, MACH_WRITE_MAX);
+  uv_buf_t    buf_v = uv_buf_init((c3_c*)buf_u->buf_y + buf_u->pos_w, len_w);
   uv_write_t* req_u = c3_malloc(sizeof(*req_u));
   c3_i        sas_i;
 
   con_u->wri_o = c3y;
+  con_u->wrl_w = len_w;
   req_u->data  = con_u;
 
   if ( 0 != (sas_i = uv_write(req_u, (uv_stream_t*)con_u->tcp_u,
@@ -579,6 +635,14 @@ _mach_write_next(u3_tcon* con_u)
     u3l_log("mach: %" PRIu64 ": write: %s", con_u->id_d, uv_strerror(sas_i));
     c3_free(req_u);
     _mach_write_done(con_u, "reset");
+    return;
+  }
+
+  if ( c3n == con_u->clo_o ) {
+    con_u->lef_i = uv_stream_get_write_queue_size((uv_stream_t*)con_u->tcp_u);
+    con_u->pro_d = uv_now(u3L);
+    uv_timer_start(&con_u->tim_u, _mach_stall_cb,
+                   MACH_STALL_MS, MACH_STALL_MS);
   }
 }
 
@@ -869,7 +933,7 @@ _mach_send(u3_mach* mac_u, c3_d id_d, c3_w len_w, u3_atom dat)
     return;
   }
 
-  if ( (con_u->out_u.len_w + (c3_d)len_w) > MACH_QUEUE_MAX ) {
+  if ( (con_u->out_u.len_w + (c3_d)len_w) > MACH_OUT_MAX ) {
     u3l_log("mach: send %" PRIu64 ": outgoing queue full", id_d);
     _mach_con_shut(con_u, "local", "overflowed");
     return;
