@@ -4361,19 +4361,160 @@ _cm_sole_swap(u3_noun* som, u3_noun can)
 */
 #define _CM_VIS_LOG  14   //  entries, log2, to start
 #define _CM_VIS_MAX  25   //  ... at most (NB: a first guess, to revisit)
+#define _CM_VIS_WIN  16   //  probe window, entries
+#define _CM_VIS_TOMB 1    //  a moved entry: probes continue past it
+#define _CM_VIS_LIS  256  //  slots logged for a cheap clear
 
-static c3_t    _cm_vis_ini_t;
-static u3c_set _cm_vis;   //  keys: junior cells
+/*   an open-addressing table of single words (0 empty, 1 a tombstone)
+**   in a crib, reserved for its ceiling and committed as it grows, so
+**   growing allocates nothing. probes stay within a 16-slot window;
+**   below the ceiling the load stays at half or less, and at the
+**   ceiling a full window evicts an entry, in turn.
+*/
+static struct {
+  c3_t     ini_t;
+  u3c_crib cib_u;
+  c3_d     ovf_d;   //  evictions at the ceiling, since the last report
+  c3_y     log_y;   //  capacity, log2
+  c3_y     min_y;   //  starting capacity, log2
+  c3_y     max_y;   //  ceiling, log2
+  c3_d     use_d;   //  inserts since the last clear
+  c3_d     pek_d;   //  most inserts between clears since the last shrink
+  c3_w     evk_w;   //  evictions, to rotate through the probe window
+  c3_w     lin_w;   //  slots logged for a cheap clear, or past the log
+  c3_w     lis_w[_CM_VIS_LIS];
+  u3c_stat sat_u;   //  use since the last u3m_crib_stat()
+} _cm_vis;
+
+static inline c3_d*
+_cm_vis_tab(void)
+{
+  return (c3_d*)_cm_vis.cib_u.buf_y;
+}
+
+static inline c3_d
+_cm_vis_msk(void)
+{
+  return ((c3_d)1 << _cm_vis.log_y) - 1;
+}
+
+static inline c3_d
+_cm_vis_idx(c3_d a_d)
+{
+  //  the low bits index the table, so that doubling it sends each entry
+  //  either to its own slot or to the empty upper half (see _cm_vis_grow())
+  //
+  c3_d h_d = a_d * 0x9e3779b97f4a7c15ULL;
+  h_d ^= h_d >> 31;
+  h_d *= 0xbf58476d1ce4e5b9ULL;
+  h_d ^= h_d >> 29;
+  return h_d & _cm_vis_msk();
+}
+
+static inline void
+_cm_vis_log(c3_d k_d)
+{
+  if ( _cm_vis.lin_w < _CM_VIS_LIS ) {
+    _cm_vis.lis_w[_cm_vis.lin_w++] = (c3_w)k_d;
+  }
+  else {
+    _cm_vis.lin_w = _CM_VIS_LIS + 1;
+  }
+}
+
+/* _cm_vis_place(): put [a_d] in its window, if there's room: 1 if
+**   placed, 2 if present, 0 if the window is full. an empty slot ends
+**   the window's entries; a tombstone doesn't, but can be reused.
+*/
+static c3_y
+_cm_vis_place(c3_d a_d, c3_t log_t)
+{
+  c3_d* tab_d = _cm_vis_tab();
+  c3_d  msk_d = _cm_vis_msk();
+  c3_d  i_d   = _cm_vis_idx(a_d);
+  c3_d  fre_d = ~(c3_d)0;
+  c3_w  j_w;
+
+  for ( j_w = 0; j_w < _CM_VIS_WIN; j_w++ ) {
+    c3_d k_d = (i_d + j_w) & msk_d;
+    c3_d e_d = tab_d[k_d];
+
+    if ( !e_d ) {
+      if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
+      break;
+    }
+    if ( _CM_VIS_TOMB == e_d ) {
+      if ( ~(c3_d)0 == fre_d ) fre_d = k_d;
+      continue;
+    }
+    if ( e_d == a_d ) return 2;
+  }
+
+  if ( ~(c3_d)0 == fre_d ) return 0;
+  tab_d[fre_d] = a_d;
+  if ( log_t ) _cm_vis_log(fre_d);
+  return 1;
+}
+
+/* _cm_vis_grow(): double the capacity in place and rehash. an
+**   interrupted rehash loses entries, never corrupts one. 0 at the
+**   ceiling.
+*/
+static c3_t
+_cm_vis_grow(void)
+{
+  c3_d  old_d = (c3_d)1 << _cm_vis.log_y;
+  c3_d* tab_d;
+  c3_d  i_d;
+
+  //  NB: every slot past the capacity is zero (see _cm_vis_leap())
+  //
+  if ( _cm_vis.log_y >= _cm_vis.max_y ) return 0;
+  if ( !u3c_grow(&_cm_vis.cib_u, 2 * old_d * sizeof(c3_d)) ) return 0;
+
+  _cm_vis.log_y++;
+  _cm_vis.lin_w = _CM_VIS_LIS + 1;
+  _cm_vis.sat_u.gro_d++;
+  if ( ((c3_d)1 << _cm_vis.log_y) > _cm_vis.sat_u.top_d ) {
+    _cm_vis.sat_u.top_d = (c3_d)1 << _cm_vis.log_y;
+  }
+
+  //  move each entry to its place under the new mask. a moved entry
+  //  leaves a tombstone, so that entries placed past it stay reachable;
+  //  the next clear removes them
+  //
+  tab_d = _cm_vis_tab();
+  for ( i_d = 0; i_d < old_d; i_d++ ) {
+    c3_d a_d = tab_d[i_d];
+
+    if ( !a_d || (_CM_VIS_TOMB == a_d) ) continue;
+    tab_d[i_d] = _CM_VIS_TOMB;
+    u3c_fence();
+    (void)_cm_vis_place(a_d, 0);   //  dropped if its window is full
+  }
+  return 1;
+}
 
 /* u3m_sole_visit_size(): restart the visited set at 2^[log_y] entries
-**                        (at least 16), growing as before (tests).
-**                        home road only.
+**                        (at least 16), growing up to 2^[max_y] (0 for
+**                        the usual ceiling) (tests). home road only.
 */
 void
-u3m_sole_visit_size(c3_y log_y)
+u3m_sole_visit_size(c3_y log_y, c3_y max_y)
 {
-  u3c_set_init(&_cm_vis, "visited set", log_y, _CM_VIS_MAX);
-  _cm_vis_ini_t = 1;
+  log_y = c3_max(log_y, 4);
+  max_y = c3_max(max_y ? max_y : _CM_VIS_MAX, log_y);
+
+  u3c_init(&_cm_vis.cib_u, ((size_t)1 << log_y) * sizeof(c3_d),
+                           ((size_t)1 << max_y) * sizeof(c3_d));
+  _cm_vis.ovf_d = 0;
+  _cm_vis.min_y = _cm_vis.log_y = log_y;
+  _cm_vis.max_y = max_y;
+  _cm_vis.use_d = _cm_vis.pek_d = 0;
+  _cm_vis.evk_w = _cm_vis.lin_w = 0;
+  memset(&_cm_vis.sat_u, 0, sizeof(_cm_vis.sat_u));
+  _cm_vis.sat_u.top_d = (c3_d)1 << log_y;
+  _cm_vis.ini_t = 1;
 }
 
 /* u3m_sole_visit_cap(): the visited set's capacity (tests).
@@ -4381,7 +4522,7 @@ u3m_sole_visit_size(c3_y log_y)
 c3_d
 u3m_sole_visit_cap(void)
 {
-  return u3c_set_cap(&_cm_vis);
+  return (c3_d)1 << _cm_vis.log_y;
 }
 
 /* u3m_crib_report(): log every crib's evictions and drops at its ceiling
@@ -4391,8 +4532,11 @@ u3m_sole_visit_cap(void)
 void
 u3m_crib_report(void)
 {
-  if ( _cm_vis_ini_t ) {
-    u3c_set_report(&_cm_vis);
+  if ( _cm_vis.ini_t && _cm_vis.ovf_d ) {
+    u3l_log("crib: visited set reached its ceiling of %" PRIu64 " entries;"
+            " %" PRIu64 " evicted since the last report",
+            (c3_d)1 << _cm_vis.max_y, _cm_vis.ovf_d);
+    _cm_vis.ovf_d = 0;
   }
   u3a_wed_report();
 }
@@ -4405,21 +4549,78 @@ u3m_crib_stat(u3c_stat* sat_u)
 {
   c3_w len_w = 0;
 
-  if ( _cm_vis_ini_t ) {
-    sat_u[len_w++] = u3c_set_stat(&_cm_vis);
+  if ( _cm_vis.ini_t ) {
+    u3c_stat* s_u = &sat_u[len_w++];
+
+    *s_u = _cm_vis.sat_u;
+    s_u->nam_c = "visited set";
+    s_u->cap_d = (c3_d)1 << _cm_vis.log_y;
+    s_u->max_d = (c3_d)1 << _cm_vis.max_y;
+    if ( _cm_vis.use_d > s_u->pek_d ) s_u->pek_d = _cm_vis.use_d;
+
+    memset(&_cm_vis.sat_u, 0, sizeof(_cm_vis.sat_u));
+    _cm_vis.sat_u.top_d = s_u->cap_d;
   }
   return len_w + u3a_wed_stat(sat_u + len_w);
 }
 
-/* _cm_vis_leap(): a new excursion from the home road. home road only.
+/* _cm_vis_clear(): drop every entry, cheaply if few were added.
+*/
+static void
+_cm_vis_clear(void)
+{
+  if ( !_cm_vis.use_d ) return;
+
+  if ( _cm_vis.lin_w <= _CM_VIS_LIS ) {
+    c3_d* tab_d = _cm_vis_tab();
+
+    for ( c3_w i_w = 0; i_w < _cm_vis.lin_w; i_w++ ) {
+      tab_d[_cm_vis.lis_w[i_w]] = 0;
+    }
+    _cm_vis.sat_u.clg_d++;
+  }
+  else {
+    u3c_zero(&_cm_vis.cib_u, 0, ((size_t)1 << _cm_vis.log_y) * sizeof(c3_d));
+    _cm_vis.sat_u.cdp_d++;
+  }
+  if ( _cm_vis.use_d > _cm_vis.pek_d ) _cm_vis.pek_d = _cm_vis.use_d;
+  if ( _cm_vis.use_d > _cm_vis.sat_u.pek_d ) _cm_vis.sat_u.pek_d = _cm_vis.use_d;
+  _cm_vis.use_d = 0;
+  _cm_vis.lin_w = 0;
+}
+
+/* _cm_vis_leap(): a new excursion from the home road: clear the set,
+**   and give back memory if the capacity is well above recent use. home
+**   road only.
 */
 static void
 _cm_vis_leap(void)
 {
-  if ( !_cm_vis_ini_t ) {
-    u3m_sole_visit_size(_CM_VIS_LOG);
+  c3_d cap_d;
+
+  if ( !_cm_vis.ini_t ) {
+    u3m_sole_visit_size(_CM_VIS_LOG, 0);
   }
-  u3c_set_shrink(&_cm_vis);
+  _cm_vis_clear();
+  cap_d = (c3_d)1 << _cm_vis.log_y;
+
+  //  shrink once recent use is an eighth of the capacity; the peak
+  //  decays by half at each call, so a burst is given back after a few
+  //
+  if ( (_cm_vis.log_y > _cm_vis.min_y) && ((_cm_vis.pek_d * 8) < cap_d) ) {
+    c3_y new_y = _cm_vis.min_y;
+
+    while ( (new_y < _cm_vis.log_y) && (((c3_d)1 << new_y) < (_cm_vis.pek_d * 4)) ) {
+      new_y++;
+    }
+    u3c_shrink(&_cm_vis.cib_u, ((size_t)1 << new_y) * sizeof(c3_d));
+    _cm_vis.log_y = new_y;
+    _cm_vis.pek_d = 0;
+    _cm_vis.sat_u.shr_d++;
+  }
+  else {
+    _cm_vis.pek_d /= 2;
+  }
 }
 
 /* _cm_vis_has(): junior cell [som] was canonicalized this excursion.
@@ -4427,15 +4628,48 @@ _cm_vis_leap(void)
 static inline c3_t
 _cm_vis_has(u3_noun som)
 {
-  return u3c_set_has(&_cm_vis, som);
+  c3_d* tab_d = _cm_vis_tab();
+  c3_d  msk_d = _cm_vis_msk();
+  c3_d  i_d   = _cm_vis_idx(som);
+
+  for ( c3_w j_w = 0; j_w < _CM_VIS_WIN; j_w++ ) {
+    c3_d e_d = tab_d[(i_d + j_w) & msk_d];
+
+    if ( !e_d ) return 0;
+    if ( e_d == som ) return 1;
+  }
+  return 0;
 }
 
-/* _cm_vis_put(): note junior cell [som] as canonicalized.
+/* _cm_vis_put(): note junior cell [som] as canonicalized, growing if
+**   need be.
 */
-static inline void
+static void
 _cm_vis_put(u3_noun som)
 {
-  u3c_set_put(&_cm_vis, som);
+  //  keep the load at half or less while below the ceiling
+  //
+  if ( ((_cm_vis.use_d + 1) * 2) > ((c3_d)1 << _cm_vis.log_y) ) {
+    (void)_cm_vis_grow();
+  }
+
+  while ( 1 ) {
+    c3_y pla_y = _cm_vis_place(som, 1);
+
+    if ( 2 == pla_y ) return;
+    if ( 1 == pla_y ) break;
+    if ( !_cm_vis_grow() ) {
+      //  at the ceiling: evict an entry from the window, in turn
+      //
+      c3_d k_d = (_cm_vis_idx(som) + (_cm_vis.evk_w++ & (_CM_VIS_WIN - 1)))
+               & _cm_vis_msk();
+      _cm_vis_tab()[k_d] = som;
+      _cm_vis.ovf_d++;
+      _cm_vis.sat_u.ovf_d++;
+      break;
+    }
+  }
+  _cm_vis.use_d++;
 }
 
 /* _cm_sole_look(): the member equal to [som], a cell with canonical

@@ -87,7 +87,7 @@ _setup(void)
   }
   if ( getenv("SOFT_TEST_TINY") ) {
     u3a_wed_size(16, 1U << 23);
-    u3m_sole_visit_size(4);
+    u3m_sole_visit_size(4, 0);
   }
   _pil = _cue_pill();
   if ( c3n == u3v_boot_lite(u3k(_pil)) ) {

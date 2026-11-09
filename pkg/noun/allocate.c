@@ -1483,9 +1483,17 @@ typedef struct {
                       / sizeof(_ca_lo_ent) )
 
 static struct {
-  c3_t    ini_t;
-  u3c_arr hom_u;   //  home values to lose
-  c3_w    hom_w;   //  ... published
+  c3_t     ini_t;
+  struct {         //  home values to lose, in a crib
+    u3c_crib cib_u;
+    c3_w     len_w;  //  entries published
+    c3_w     cap_w;  //  entries committed
+    c3_w     min_w;  //  starting capacity
+    c3_w     max_w;  //  ceiling
+    c3_w     pek_w;  //  most entries used since the last shrink
+    c3_d     drp_d;  //  entries dropped at the ceiling, since the last report
+    u3c_stat sat_u;  //  use since the last u3a_wed_stat()
+  } hom_u;
   struct {         //  the exit under way (u3a_wed_fall())
     u3_post rod_p; //    road exited to, or 0
     u3_post kid_p; //    child road
@@ -1495,17 +1503,64 @@ static struct {
   } ext_u;
 } _ca_lo;
 
+/* _ca_lo_home_grow(): commit room for entry [len_w] of the home list:
+**   0 past the ceiling. allocates nothing (see crib.h).
+*/
+static c3_t
+_ca_lo_home_grow(c3_w len_w)
+{
+  c3_w new_w;
+
+  if ( len_w >= _ca_lo.hom_u.max_w ) {
+    _ca_lo.hom_u.drp_d++;
+    _ca_lo.hom_u.sat_u.ovf_d++;
+    return 0;
+  }
+  new_w = c3_min(c3_max(_ca_lo.hom_u.cap_w * 2, len_w + 1), _ca_lo.hom_u.max_w);
+  if ( !u3c_grow(&_ca_lo.hom_u.cib_u, (size_t)new_w * sizeof(u3_noun)) ) {
+    return 0;
+  }
+  _ca_lo.hom_u.cap_w = new_w;
+  _ca_lo.hom_u.sat_u.gro_d++;
+  if ( new_w > _ca_lo.hom_u.sat_u.top_d ) _ca_lo.hom_u.sat_u.top_d = new_w;
+  return 1;
+}
+
+/* _ca_lo_home_shrink(): [len_w] entries were just drained; give back
+**   memory if the capacity is well above recent use.
+*/
+static void
+_ca_lo_home_shrink(c3_w len_w)
+{
+  if ( len_w > _ca_lo.hom_u.pek_w ) _ca_lo.hom_u.pek_w = len_w;
+  if ( len_w > _ca_lo.hom_u.sat_u.pek_d ) _ca_lo.hom_u.sat_u.pek_d = len_w;
+
+  if (  (_ca_lo.hom_u.cap_w > _ca_lo.hom_u.min_w)
+     && (((c3_d)_ca_lo.hom_u.pek_w * 8) < _ca_lo.hom_u.cap_w) )
+  {
+    c3_w new_w = c3_max(_ca_lo.hom_u.min_w, _ca_lo.hom_u.pek_w * 2);
+
+    u3c_shrink(&_ca_lo.hom_u.cib_u, (size_t)new_w * sizeof(u3_noun));
+    _ca_lo.hom_u.cap_w = new_w;
+    _ca_lo.hom_u.pek_w = 0;
+    _ca_lo.hom_u.sat_u.shr_d++;
+  }
+  else {
+    _ca_lo.hom_u.pek_w /= 2;
+  }
+}
+
 /* _ca_lo_drain_home(): lose the home values on the list.
 */
 static void
 _ca_lo_drain_home(void)
 {
-  c3_w     len_w = _ca_lo.hom_w;
+  c3_w     len_w = _ca_lo.hom_u.len_w;
   u3_noun* lis_u;
   c3_w     i_w;
 
   if ( !len_w ) return;
-  lis_u = u3c_arr_at(&_ca_lo.hom_u, 0);
+  lis_u = (u3_noun*)_ca_lo.hom_u.cib_u.buf_y;
   u3e_Meter.wll_d[0] += len_w;
   if ( len_w > u3e_Meter.wlm_d[0] ) u3e_Meter.wlm_d[0] = len_w;
 
@@ -1514,11 +1569,11 @@ _ca_lo_drain_home(void)
   //
   for ( i_w = len_w; i_w > 0; i_w-- ) {
     u3_noun old = lis_u[i_w - 1];
-    _ca_lo.hom_w = i_w - 1;
+    _ca_lo.hom_u.len_w = i_w - 1;
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
     u3z(old);
   }
-  u3c_arr_shrink(&_ca_lo.hom_u, len_w);
+  _ca_lo_home_shrink(len_w);
 }
 
 /* _ca_lo_room_inner(): an entry can go on this road's list now without
@@ -1725,7 +1780,12 @@ u3a_wed_mark(void)
 static inline __attribute__((always_inline)) u3_noun*
 _ca_lo_home_at(void)
 {
-  return u3c_arr_at(&_ca_lo.hom_u, _ca_lo.hom_w);
+  c3_w len_w = _ca_lo.hom_u.len_w;
+
+  if ( (len_w >= _ca_lo.hom_u.cap_w) && !_ca_lo_home_grow(len_w) ) {
+    return 0;
+  }
+  return (u3_noun*)_ca_lo.hom_u.cib_u.buf_y + len_w;
 }
 
 /* _ca_lo_home_put(): put [old] at [lis_u], from _ca_lo_home_at(); if 0,
@@ -1738,7 +1798,7 @@ _ca_lo_home_put(u3_noun* lis_u, u3_noun old)
   if ( lis_u ) {
     *lis_u = old;
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
-    _ca_lo.hom_w++;
+    _ca_lo.hom_u.len_w++;
     u3e_Meter.wlp_d[0]++;
   }
   else {
@@ -1816,8 +1876,8 @@ void
 u3a_wed_left(void)
 {
   _ca_lo.ext_u.rod_p = 0;
-  if ( _ca_lo.hom_w ) {
-    u3e_Meter.wlx_d[0] += _ca_lo.hom_w;
+  if ( _ca_lo.hom_u.len_w ) {
+    u3e_Meter.wlx_d[0] += _ca_lo.hom_u.len_w;
     _ca_lo_drain_home();
   }
 }
@@ -1828,8 +1888,16 @@ u3a_wed_left(void)
 void
 u3a_wed_size(c3_w min_w, c3_w max_w)
 {
-  u3c_arr_init(&_ca_lo.hom_u, "lose list", sizeof(u3_noun), min_w, max_w);
-  _ca_lo.hom_w = 0;
+  max_w = c3_max(max_w, min_w);
+  u3c_init(&_ca_lo.hom_u.cib_u, (size_t)min_w * sizeof(u3_noun),
+                                (size_t)max_w * sizeof(u3_noun));
+  _ca_lo.hom_u.len_w = 0;
+  _ca_lo.hom_u.cap_w = _ca_lo.hom_u.min_w = min_w;
+  _ca_lo.hom_u.max_w = max_w;
+  _ca_lo.hom_u.pek_w = 0;
+  _ca_lo.hom_u.drp_d = 0;
+  memset(&_ca_lo.hom_u.sat_u, 0, sizeof(_ca_lo.hom_u.sat_u));
+  _ca_lo.hom_u.sat_u.top_d = min_w;
   _ca_lo.ini_t = 1;
 }
 
@@ -1851,8 +1919,11 @@ u3a_wed_leap(void)
 void
 u3a_wed_report(void)
 {
-  if ( _ca_lo.ini_t ) {
-    u3c_arr_report(&_ca_lo.hom_u);
+  if ( _ca_lo.ini_t && _ca_lo.hom_u.drp_d ) {
+    u3l_log("crib: lose list reached its ceiling of %" PRIc3_w " entries;"
+            " %" PRIu64 " dropped since the last report",
+            _ca_lo.hom_u.max_w, _ca_lo.hom_u.drp_d);
+    _ca_lo.hom_u.drp_d = 0;
   }
 }
 
@@ -1865,7 +1936,15 @@ u3a_wed_stat(u3c_stat* sat_u)
   c3_w len_w = 0;
 
   if ( _ca_lo.ini_t ) {
-    sat_u[len_w++] = u3c_arr_stat(&_ca_lo.hom_u);
+    u3c_stat* s_u = &sat_u[len_w++];
+
+    *s_u = _ca_lo.hom_u.sat_u;
+    s_u->nam_c = "lose list";
+    s_u->cap_d = _ca_lo.hom_u.cap_w;
+    s_u->max_d = _ca_lo.hom_u.max_w;
+
+    memset(&_ca_lo.hom_u.sat_u, 0, sizeof(_ca_lo.hom_u.sat_u));
+    _ca_lo.hom_u.sat_u.top_d = s_u->cap_d;
   }
   return len_w;
 }

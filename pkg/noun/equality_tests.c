@@ -766,14 +766,14 @@ _test_sole_dag(void)
   }
 
   //  a junior noun with no equal member: the visited set keeps it
-  //  linear, at full size and when it must evict
+  //  linear, at full size and starting small
   //
   for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
     struct timespec bef_u;
     u3_noun fre, r;
     c3_d    mic_d;
 
-    if ( i_w ) u3m_sole_visit_size(4);
+    if ( i_w ) u3m_sole_visit_size(4, 0);
 
     clock_gettime(CLOCK_MONOTONIC, &bef_u);
     u3m_hate(0);
@@ -791,7 +791,7 @@ _test_sole_dag(void)
       ret_i = 0;
     }
   }
-  u3m_sole_visit_size(14);
+  u3m_sole_visit_size(14, 0);
 
   //  a home noun that isn't a member, or an intermediate road's, is left
   //  as it is, though an equal member exists: the exit to home
@@ -1026,7 +1026,7 @@ _test_gap(void)
   struct timespec bef_u;
   c3_d mic_d;
 
-  u3m_sole_visit_size(4);
+  u3m_sole_visit_size(4, 0);
 
   //  a comparison of two home copies on an inner road, linear with no
   //  table: unification writes home slots
@@ -1082,106 +1082,135 @@ _test_gap(void)
     }
   }
 
-  u3m_sole_visit_size(14);
+  u3m_sole_visit_size(14, 0);
   return ret_i;
 }
 
-/* _test_crib(): a crib set grows, evicts and reports at its ceiling,
-**              clears, and shrinks back; a crib array grows to its
-**              ceiling, and drops past it.
+/* _crib_list(): a fresh list of [len_w] distinct cells, [ [bas_w+i] ...].
+*/
+static u3_noun
+_crib_list(c3_w len_w, c3_w bas_w)
+{
+  u3_noun lis = u3_nul;
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    lis = u3nc(bas_w + i_w, lis);
+  }
+  return lis;
+}
+
+/* _test_crib(): a crib grows to its ceiling, zeroes, and gives memory
+**              back; the visited set evicts at its ceiling, reports it,
+**              and is cleared between excursions.
 */
 static c3_i
 _test_crib(void)
 {
-  c3_i    ret_i = 1;
-  u3c_set set_u = {0};
-  u3c_arr arr_u = {0};
-  c3_w    i_w, mis_w;
+  c3_i ret_i = 1;
 
-  u3c_set_init(&set_u, "test set", 4, 10);
-
-  for ( i_w = 0; i_w < 300; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 2);
-  }
-  for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
-    if ( !u3c_set_has(&set_u, i_w + 2) ) mis_w++;
-  }
-  if ( mis_w || set_u.ovf_d || (u3c_set_cap(&set_u) < 512) ) {
-    fprintf(stderr, "test: crib: growth: %u missing, %" PRIu64 " evicted, %" PRIu64 " cap\r\n",
-            (unsigned)mis_w, set_u.ovf_d, u3c_set_cap(&set_u));
-    ret_i = 0;
-  }
-
-  //  past the ceiling, entries are evicted, and counted
+  //  the region
   //
-  for ( i_w = 300; i_w < 3000; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 2);
-  }
-  if ( (1024 != u3c_set_cap(&set_u)) || !set_u.ovf_d ) {
-    fprintf(stderr, "test: crib: ceiling: %" PRIu64 " cap, %" PRIu64 " evicted\r\n",
-            u3c_set_cap(&set_u), set_u.ovf_d);
-    ret_i = 0;
+  {
+    u3c_crib cib_u = {0};
+    size_t   max_i = 1 << 20;
+    c3_w     bad_w = 0;
+
+    u3c_init(&cib_u, 4096, max_i);
+    memset(cib_u.buf_y, 0xff, 4096);
+    if ( !u3c_grow(&cib_u, max_i) || u3c_grow(&cib_u, max_i + 1)
+       || (max_i != cib_u.len_i) )
+    {
+      fprintf(stderr, "test: crib: grow\r\n");
+      ret_i = 0;
+    }
+    for ( size_t i_i = 4096; i_i < max_i; i_i++ ) {
+      if ( cib_u.buf_y[i_i] ) bad_w++;
+    }
+    memset(cib_u.buf_y, 0xff, max_i);
+    u3c_zero(&cib_u, 100, 1000);               //  small: written
+    u3c_zero(&cib_u, 4096 + 7, max_i / 2);     //  large: pages dropped
+    for ( size_t i_i = 0; i_i < max_i; i_i++ ) {
+      c3_t zer_t = ( ((i_i >= 100) && (i_i < 1100))
+                  || ((i_i >= 4096 + 7) && (i_i < 4096 + 7 + max_i / 2)) );
+      if ( zer_t != !cib_u.buf_y[i_i] ) bad_w++;
+    }
+    memset(cib_u.buf_y, 0xff, max_i);          //  still committed
+    u3c_shrink(&cib_u, 4096 + 7);
+    if ( (4096 + 7) != cib_u.len_i ) bad_w++;
+    u3_assert( u3c_grow(&cib_u, max_i) );
+    for ( size_t i_i = 0; i_i < max_i; i_i++ ) {
+      if ( (i_i < 4096 + 7) != !!cib_u.buf_y[i_i] ) bad_w++;
+    }
+    if ( bad_w ) {
+      fprintf(stderr, "test: crib: %u bytes wrong\r\n", (unsigned)bad_w);
+      ret_i = 0;
+    }
+    //  NB: the test's reservation (1 MiB of address space) is kept
   }
 
-  //  a clear drops everything
+  //  the visited set at a ceiling of 64 entries: try still leaves a
+  //  fresh junior noun as it is, and the evictions are counted and
+  //  reported
   //
-  u3c_set_clear(&set_u);
-  for ( i_w = mis_w = 0; i_w < 3000; i_w++ ) {
-    if ( u3c_set_has(&set_u, i_w + 2) ) mis_w++;
-  }
-  if ( mis_w ) {
-    fprintf(stderr, "test: crib: clear: %u left\r\n", (unsigned)mis_w);
-    ret_i = 0;
+  {
+    u3c_stat sat_u[u3m_crib_max];
+    u3_noun  fre, r;
+
+    u3m_crib_stat(sat_u);
+    u3m_sole_visit_size(4, 6);
+    u3m_hate(0);
+    fre = _crib_list(1000, 1U << 20);
+    r   = u3m_sole_try(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: crib: evicting: fresh noun replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    {
+      c3_w len_w = u3m_crib_stat(sat_u);
+
+      if ( !len_w || strcmp("visited set", sat_u[0].nam_c)
+         || (64 != sat_u[0].cap_d) || !sat_u[0].ovf_d )
+      {
+        fprintf(stderr, "test: crib: evicting: no evictions counted\r\n");
+        ret_i = 0;
+      }
+    }
+    u3m_crib_report();
   }
 
-  //  the report logs the evictions once; shrinking gives back memory as
-  //  the peak decays
+  //  clearing: an excursion fills the set with a junior list's cells; the
+  //  next builds a junior copy of a member list, likely at the same
+  //  addresses, and try must find the member. a short list in a set at
+  //  full size is cleared through the set's log; a long one, in a set
+  //  that grew, by zeroing it
   //
-  u3c_set_report(&set_u);
-  for ( i_w = 0; i_w < 16; i_w++ ) {
-    u3c_set_shrink(&set_u);
-  }
-  if ( set_u.ovf_d || (16 != u3c_set_cap(&set_u)) ) {
-    fprintf(stderr, "test: crib: shrink: %" PRIu64 " cap, %" PRIu64 " evicted\r\n",
-            u3c_set_cap(&set_u), set_u.ovf_d);
-    ret_i = 0;
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    c3_w    len_w = i_w ? 5000 : 100;
+    u3_noun hom   = u3m_sole_home(_crib_list(len_w, 0));
+    u3_noun jun, r;
+
+    u3m_sole_visit_size(i_w ? 4 : 14, 0);
+    u3m_hate(0);
+    u3z(u3m_sole_try(_crib_list(len_w, 1U << 20)));
+    u3m_love(0);
+
+    u3m_hate(0);
+    jun = _crib_list(len_w, 0);
+    r   = u3m_sole_try(jun);
+    if ( r != hom ) {
+      fprintf(stderr, "test: crib: clear (%u cells): member not found\r\n",
+              (unsigned)len_w);
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    u3z(hom);
   }
 
-  //  and it grows again from there, clean
-  //
-  for ( i_w = 0; i_w < 300; i_w++ ) {
-    u3c_set_put(&set_u, i_w + 5000);
-  }
-  for ( i_w = mis_w = 0; i_w < 300; i_w++ ) {
-    if ( !u3c_set_has(&set_u, i_w + 5000) ) mis_w++;
-    if ( u3c_set_has(&set_u, i_w + 2) ) mis_w++;
-  }
-  if ( mis_w ) {
-    fprintf(stderr, "test: crib: regrowth: %u wrong\r\n", (unsigned)mis_w);
-    ret_i = 0;
-  }
-
-  //  arrays
-  //
-  u3c_arr_init(&arr_u, "test array", sizeof(c3_d), 4, 100);
-  for ( i_w = 0; i_w < 100; i_w++ ) {
-    c3_d* d_d = u3c_arr_at(&arr_u, i_w);
-    if ( !d_d ) { ret_i = 0; break; }
-    *d_d = i_w;
-  }
-  if ( u3c_arr_at(&arr_u, 100) || (1 != arr_u.drp_d) ) {
-    fprintf(stderr, "test: crib: array ceiling\r\n");
-    ret_i = 0;
-  }
-  for ( i_w = 0; i_w < 100; i_w++ ) {
-    if ( *(c3_d*)u3c_arr_at(&arr_u, i_w) != i_w ) { ret_i = 0; break; }
-  }
-  u3c_arr_report(&arr_u);
-  if ( arr_u.drp_d ) {
-    fprintf(stderr, "test: crib: array report\r\n");
-    ret_i = 0;
-  }
-
+  u3m_sole_visit_size(14, 0);
   return ret_i;
 }
 

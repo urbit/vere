@@ -272,11 +272,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_sole_pin(u3_noun som);
 
-      /* u3m_sole_visit_size(): resize u3m_sole_try()'s visited set to
-      **                        2^log_y entries (tests). home road only.
+      /* u3m_sole_visit_size(): restart u3m_sole_try()'s visited set at
+      **                        2^log_y entries, growing up to 2^max_y (0
+      **                        for the usual ceiling) (tests). home road
+      **                        only.
       */
         void
-        u3m_sole_visit_size(c3_y log_y);
+        u3m_sole_visit_size(c3_y log_y, c3_y max_y);
 
       /* u3m_crib_report(): log every crib's evictions and drops at its
       **                    ceiling since the last call. between events.
