@@ -162,6 +162,7 @@ const BuildCfg = struct {
     urth_mass: bool = false,
     ska_stat: bool = false,
     ska_verbose: bool = false,
+    ska_zero: bool = false,
     ubsan: bool = false,
     asan: bool = false,
     vere64: bool = false,
@@ -238,6 +239,12 @@ pub fn build(b: *std.Build) !void {
         bool,
         "ska-verbose",
         "Dump compiled nock programs (-DU3NC_VERBOSE)",
+    ) orelse false;
+
+    const ska_zero = b.option(
+        bool,
+        "ska-zero",
+        "Zero the slots compiled nock empties, as checking builds do (-DU3NC_ZERO)",
     ) orelse false;
 
     const binary_name = b.option(
@@ -318,6 +325,7 @@ pub fn build(b: *std.Build) !void {
         .urth_mass = urth_mass,
         .ska_stat = ska_stat,
         .ska_verbose = ska_verbose,
+        .ska_zero = ska_zero,
         .asan = asan,
         .ubsan = ubsan,
         .vere64 = vere64,
@@ -464,6 +472,9 @@ fn buildBinary(
 
     if (cfg.ska_verbose)
         try urbit_flags.appendSlice(&.{"-DU3NC_VERBOSE"});
+
+    if (cfg.ska_zero)
+        try urbit_flags.appendSlice(&.{"-DU3NC_ZERO"});
 
     if (cfg.tracy_enable) {
         try urbit_flags.appendSlice(&.{"-DTRACY_ENABLE"});

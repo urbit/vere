@@ -24,6 +24,10 @@
 #include "zave.h"
 #include <limits.h>
 
+#ifdef U3NC_STAT
+#include <time.h>
+#endif
+
 /*  Bytecode.
 **
 **  Every opcode with immediate arguments comes in three widths, for all
@@ -507,7 +511,8 @@ static const c3_t _nc_swe_t = 0;
 **            the block, where its slot is zero on the other edges,
 **            rather than in a block of drops made for each edge.
 */
-#if defined(U3NC_SWEEP) || defined(U3NC_CHECK) || defined(C3DBG)
+#if defined(U3NC_SWEEP) || defined(U3NC_CHECK) || defined(C3DBG) \
+    || defined(U3NC_ZERO)
 static const c3_t _nc_zer_t = 1;
 #else
 static const c3_t _nc_zer_t = 0;
@@ -2127,6 +2132,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       edn_h += !!edc_h[e_h];
     }
     u3_assert( !_nc_zer_t || !edn_h );
+    _nc_stat_add(edb_d, edn_h);
 
     cap_d = (2 * (c3_d)gen_u->opn_h) + dro_h + edr_h + edn_h;
     if ( cap_d > c3_h_max ) {
@@ -3642,9 +3648,16 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
       u3_assert( blk_u->off_h == pos_h );
 
       for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+#ifdef U3NC_STAT
+        c3_h was_h = pos_h;
+#endif
         pos_h += _nc_encode(gen_u, &(gen_u->ops_u[blk_u->fir_h + j_h]),
                             buf_y + pos_h);
 #ifdef U3NC_STAT
+        if ( _nc_dro == gen_u->ops_u[blk_u->fir_h + j_h].fam_y ) {
+          u3nc_Stat.dre_d++;
+          u3nc_Stat.drb_d += pos_h - was_h;
+        }
         pog_u->ali_y[pos_h] = gen_u->ops_u[blk_u->fir_h + j_h].ali_y;
 #endif
       }
@@ -3712,6 +3725,12 @@ _nc_build(u3_noun straight, u3_weak bell)
   gen_u.lit_p = u3h_new();
   gen_u.bell  = bell;
 
+#ifdef U3NC_STAT
+  c3_d byc_d = u3nc_Stat.byc_d;
+  c3_d drb_d = u3nc_Stat.drb_d;
+  c3_d edb_d = u3nc_Stat.edb_d;
+#endif
+
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
   _nc_fold(&gen_u);
@@ -3721,6 +3740,22 @@ _nc_build(u3_noun straight, u3_weak bell)
   pog_u = _nc_emit(&gen_u, ned, arg_h);
 
   _nc_stat(com_d);
+
+  //  a big program, or one with many blocks of drops for edges: its
+  //  number, as _nc_print() counts them, and how much of it is drops
+  //
+#ifdef U3NC_STAT
+  if (  (u3nc_Stat.byc_d - byc_d >= 16384)
+     || (u3nc_Stat.edb_d - edb_d >= 64) )
+  {
+    fprintf(stderr, "u3nc: big program %" PRIu64 ": %" PRIu64 " bytes, "
+                    "%" PRIu64 " of DRO, %" PRIu64 " edge blocks, "
+                    "%" PRIc3_h " blocks, %" PRIc3_h " args\r\n",
+            u3nc_Stat.com_d, u3nc_Stat.byc_d - byc_d,
+            u3nc_Stat.drb_d - drb_d, u3nc_Stat.edb_d - edb_d,
+            gen_u.blk_h, arg_h);
+  }
+#endif
   if ( _nc_verb_t ) {
     _nc_print(pog_u);
   }
@@ -3859,7 +3894,16 @@ _nc_link(u3nc_prog* pog_u)
 static u3nc_prog*
 _nc_compile(u3_noun straight, u3_weak bell)
 {
+#ifdef U3NC_STAT
+  struct timespec beg_u, end_u;
+  clock_gettime(CLOCK_MONOTONIC, &beg_u);
+#endif
   u3nc_prog* pog_u = _nc_build(straight, bell);
+#ifdef U3NC_STAT
+  clock_gettime(CLOCK_MONOTONIC, &end_u);
+  u3nc_Stat.bld_d += ((c3_d)(end_u.tv_sec - beg_u.tv_sec) * 1000000000ULL
+                      + end_u.tv_nsec - beg_u.tv_nsec) / 1000;
+#endif
   _nc_link(pog_u);
   return pog_u;
 }

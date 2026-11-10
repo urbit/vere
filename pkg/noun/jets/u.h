@@ -163,6 +163,15 @@
     u3_noun u3ue_fein_ob(u3_noun*);
     u3_noun u3ue_fynd_ob(u3_noun*);
     u3_noun u3ue_hmac(u3_noun*);
+    u3_noun u3ue_hmac_sha1(u3_noun*);
+    u3_noun u3ue_hmac_sha256(u3_noun*);
+    u3_noun u3ue_hmac_sha512(u3_noun*);
+    u3_noun u3ue_hmac_sha1t(u3_noun*);
+    u3_noun u3ue_hmac_sha256t(u3_noun*);
+    u3_noun u3ue_hmac_sha512t(u3_noun*);
+    u3_noun u3ue_hmac_sha1l(u3_noun*);
+    u3_noun u3ue_hmac_sha256l(u3_noun*);
+    u3_noun u3ue_hmac_sha512l(u3_noun*);
     u3_noun u3ue_jam(u3_noun*);
     u3_noun u3ue_json_de(u3_noun*);
     u3_noun u3ue_json_en(u3_noun*);

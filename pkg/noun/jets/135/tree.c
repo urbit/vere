@@ -209,8 +209,26 @@ static u3j_core _135_hex_coed_d[] =
   };
 
 static u3j_harm _135_hex_hmac_hmac_a[] = {{".2", u3we_hmac}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha1_a[] = {{".2", u3we_hmac_sha1}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha256_a[] = {{".2", u3we_hmac_sha256}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha512_a[] = {{".2", u3we_hmac_sha512}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha1t_a[] = {{".2", u3we_hmac_sha1t}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha256t_a[] = {{".2", u3we_hmac_sha256t}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha512t_a[] = {{".2", u3we_hmac_sha512t}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha1l_a[] = {{".2", u3we_hmac_sha1l}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha256l_a[] = {{".2", u3we_hmac_sha256l}, {}};
+static u3j_harm _135_hex_hmac_hmac_sha512l_a[] = {{".2", u3we_hmac_sha512l}, {}};
 static u3j_core _135_hex_hmac_d[] =
   { { "hmac", 7, _135_hex_hmac_hmac_a, 0, no_hashes },
+    { "hmac-sha1", 7, _135_hex_hmac_hmac_sha1_a, 0, no_hashes },
+    { "hmac-sha256", 7, _135_hex_hmac_hmac_sha256_a, 0, no_hashes },
+    { "hmac-sha512", 7, _135_hex_hmac_hmac_sha512_a, 0, no_hashes },
+    { "hmac-sha1t", 7, _135_hex_hmac_hmac_sha1t_a, 0, no_hashes },
+    { "hmac-sha256t", 7, _135_hex_hmac_hmac_sha256t_a, 0, no_hashes },
+    { "hmac-sha512t", 7, _135_hex_hmac_hmac_sha512t_a, 0, no_hashes },
+    { "hmac-sha1l", 7, _135_hex_hmac_hmac_sha1l_a, 0, no_hashes },
+    { "hmac-sha256l", 7, _135_hex_hmac_hmac_sha256l_a, 0, no_hashes },
+    { "hmac-sha512l", 7, _135_hex_hmac_hmac_sha512l_a, 0, no_hashes },
     {}
   };
 
@@ -1241,9 +1259,27 @@ static u3j_core _135_zuse_coed_d[] =
   };
 
 static u3j_harm _135_zuse_hmac_hmac_a[] = {{".2", u3we_hmac}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha1_a[] = {{".2", u3we_hmac_sha1}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha256_a[] = {{".2", u3we_hmac_sha256}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha512_a[] = {{".2", u3we_hmac_sha512}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha1t_a[] = {{".2", u3we_hmac_sha1t}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha256t_a[] = {{".2", u3we_hmac_sha256t}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha512t_a[] = {{".2", u3we_hmac_sha512t}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha1l_a[] = {{".2", u3we_hmac_sha1l}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha256l_a[] = {{".2", u3we_hmac_sha256l}, {}};
+static u3j_harm _135_zuse_hmac_hmac_sha512l_a[] = {{".2", u3we_hmac_sha512l}, {}};
 
 static u3j_core _135_zuse_hmac_d[] =
   { { "hmac", 7, _135_zuse_hmac_hmac_a, 0, no_hashes },
+    { "hmac-sha1", 7, _135_zuse_hmac_hmac_sha1_a, 0, no_hashes },
+    { "hmac-sha256", 7, _135_zuse_hmac_hmac_sha256_a, 0, no_hashes },
+    { "hmac-sha512", 7, _135_zuse_hmac_hmac_sha512_a, 0, no_hashes },
+    { "hmac-sha1t", 7, _135_zuse_hmac_hmac_sha1t_a, 0, no_hashes },
+    { "hmac-sha256t", 7, _135_zuse_hmac_hmac_sha256t_a, 0, no_hashes },
+    { "hmac-sha512t", 7, _135_zuse_hmac_hmac_sha512t_a, 0, no_hashes },
+    { "hmac-sha1l", 7, _135_zuse_hmac_hmac_sha1l_a, 0, no_hashes },
+    { "hmac-sha256l", 7, _135_zuse_hmac_hmac_sha256l_a, 0, no_hashes },
+    { "hmac-sha512l", 7, _135_zuse_hmac_hmac_sha512l_a, 0, no_hashes },
     {}
   };
 

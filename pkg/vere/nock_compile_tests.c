@@ -117,6 +117,14 @@ _nock_nc(u3_noun bus_fol)
   return u3nc_nock_on(bus, fol);
 }
 
+#ifdef U3NC_STAT
+/* _run_jet_d: the jet hits of the last run of the compiled interpreter,
+**             which, in a second run, are the program's own: a first
+**             one compiles, and the SKA core hits jets of its own.
+*/
+static c3_d _run_jet_d;
+#endif
+
 /* _run(): run fun_f on [bus fol] softly, timing it.  RETAINS.
 **         Produces the product, or u3_none after printing the trace.
 */
@@ -143,6 +151,7 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 #ifdef U3NC_STAT
   if ( _nock_nc == fun_f ) {
 #define D(f)  (u3nc_Stat.f - sav_u.f)
+    _run_jet_d = D(jet_d);
     fprintf(stderr, "  stat con %" PRIu64 " uni %" PRIu64 " tok %" PRIu64
                     " rus %" PRIu64
                     " spa %" PRIu64 " spg %" PRIu64 " spw %" PRIu64
@@ -1560,20 +1569,53 @@ _test_ska(void)
   return ret_i;
 }
 
+/* _jets_pick(): is the case nam_c picked by U3NC_JETS: all of them
+**               unless it is a comma-separated list of names.
+*/
+static c3_t
+_jets_pick(const c3_c* nam_c)
+{
+  c3_c*  lis_c = getenv("U3NC_JETS");
+  size_t len_i = strlen(nam_c);
+  c3_c*  hit_c;
+
+  if ( !lis_c || !strcmp(lis_c, "1") ) {
+    return 1;
+  }
+
+  for ( hit_c = lis_c; (hit_c = strstr(hit_c, nam_c)); hit_c++ ) {
+    if (  ((hit_c == lis_c) || (',' == hit_c[-1]))
+       && ((',' == hit_c[len_i]) || ('\0' == hit_c[len_i])) )
+    {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 /* _test_jets(): one call of every array-driven and punting arm, from a
 **               gate on the kernel whose sample carries the arguments,
 **               so the compiler can't fold the call: both interpreters
 **               agree, and, built with -Dska-stat, the compiled call
 **               hit a driver.
+**
+**               With len_w, for the timings: each gate called on every
+**               item of a list of len_w copies of its sample, by a loop
+**               shaped like _test_iter_vint()'s, so that the entry into
+**               the program is paid once, not per call.  A first case,
+**               (vint), increments through the same gate call: the cost
+**               of the traversal, to take out of the others.
 */
 static c3_i
-_test_jets(void)
+_test_jets(c3_w len_w)
 {
   static const struct {
     const c3_c* nam_c;
     const c3_c* src_c;
     const c3_c* sam_c;
   } cas_u[] = {
+    { "(vint)", "|=(a=@ +(a))", "1" },
     { "add", "|=([a=@ b=@] (add a b))", "[3 4]" },
     { "find", "|=([a=(list @) b=(list @)] (find a b))", "[~[3 4] ~[1 2 3 4 5]]" },
     { "flop", "|=(a=(list @) (flop a))", "~[1 2 3]" },
@@ -1716,6 +1758,18 @@ _test_jets(void)
     { "add-scalarmult-scalarmult-base:ed", "|=([a=@ p=@ b=@] (add-scalarmult-scalarmult-base:ed:crypto a (puck:ed:crypto p) b))", "[(shax 'foo') (shax 'bar') (shax 'baz')]" },
     { "add-double-scalarmult:ed", "|=([a=@ p=@ b=@ q=@] (add-double-scalarmult:ed:crypto a (puck:ed:crypto p) b (puck:ed:crypto q)))", "[(shax 'foo') (shax 'bar') (shax 'baz') (shax 'qux')]" },
     { "hmac:hmac", "|=([k=@ m=@] (hmac:hmac:crypto [sha-256l:sha 64 32] [(met 3 k) k] [(met 3 m) m]))", "['key' 'hello world']" },
+    { "hmac-sha1l:hmac", "|=([k=byts m=byts] (hmac-sha1l:hmac:crypto k m))", "[[3 'key'] [11 'hello world']]" },
+    { "hmac-sha256l:hmac", "|=([k=byts m=byts] (hmac-sha256l:hmac:crypto k m))", "[[3 'key'] [11 'hello world']]" },
+    { "hmac-sha512l:hmac", "|=([k=byts m=byts] (hmac-sha512l:hmac:crypto k m))", "[[3 'key'] [11 'hello world']]" },
+    { "hmac-sha1l:hmac long key", "|=([k=byts m=byts] (hmac-sha1l:hmac:crypto k m))", "[[100 (fil 3 100 'k')] [0 0]]" },
+    { "hmac-sha256l:hmac long key", "|=([k=byts m=byts] (hmac-sha256l:hmac:crypto k m))", "[[100 (fil 3 100 'k')] [0 0]]" },
+    { "hmac-sha512l:hmac long key", "|=([k=byts m=byts] (hmac-sha512l:hmac:crypto k m))", "[[200 (fil 3 200 'k')] [5 'hello']]" },
+    { "hmac-sha1:hmac", "|=([k=@ m=@] (hmac-sha1:hmac:crypto k m))", "['key' 'hello world']" },
+    { "hmac-sha256:hmac", "|=([k=@ m=@] (hmac-sha256:hmac:crypto k m))", "['key' 'hello world']" },
+    { "hmac-sha512:hmac", "|=([k=@ m=@] (hmac-sha512:hmac:crypto k m))", "['key' 'hello world']" },
+    { "hmac-sha1t:hmac", "|=([k=@t m=@t] (hmac-sha1t:hmac:crypto k m))", "['key' 'hello world']" },
+    { "hmac-sha256t:hmac", "|=([k=@t m=@t] (hmac-sha256t:hmac:crypto k m))", "['key' 'hello world']" },
+    { "hmac-sha512t:hmac", "|=([k=@t m=@t] (hmac-sha512t:hmac:crypto k m))", "['key' 'hello world']" },
     { "pbk:scr", "|=([p=@ s=@ c=@ d=@] (pbk:scr:crypto p s c d))", "['password' 'salt' 2 32]" },
     { "pbl:scr", "|=([p=@ pl=@ s=@ sl=@ c=@ d=@] (pbl:scr:crypto p pl s sl c d))", "['password' 8 'salt' 4 2 32]" },
     { "verify:schnorr:secp256k1", "|=([pk=@I m=@I sig=@J] (verify:schnorr:secp256k1:secp:crypto pk m sig))", "[0xf930.8a01.9258.c310.4934.4f85.f89d.5229.b531.c845.836f.99b0.8601.f113.bce0.36f9 0 0xe907.831f.8084.8d10.69a5.371b.4024.1036.4bdf.1c5f.8307.b008.4c55.f1ce.2dca.8215.25f6.6a4a.85ea.8b71.e482.a74f.382d.2ce5.ebee.e8fd.b217.2f47.7df4.900d.3105.36c0]" },
@@ -1762,14 +1816,49 @@ _test_jets(void)
   c3_i    ret_i = 1;
   c3_w    i_w;
 
-  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
-    u3_noun gat = u3m_soft(0, u3v_wish_w, u3i_string(cas_u[i_w].src_c));
-    u3_noun sam = u3m_soft(0, u3v_wish_w, u3i_string(cas_u[i_w].sam_c));
-    u3_noun cor;
+  //  the (vint) case is only a baseline for the loops
+  //
+  for ( i_w = len_w ? 0 : 1; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    u3_noun gat, sam, cor;
     c3_c    nam_c[64];
-#ifdef U3NC_STAT
-    c3_d    jet_d = u3nc_Stat.jet_d;
-#endif
+
+    //  U3NC_JETS=a,b: those cases only, and the baseline
+    //
+    if ( i_w && !_jets_pick(cas_u[i_w].nam_c) ) {
+      continue;
+    }
+
+    sam = u3m_soft(0, u3v_wish_w, u3i_string(cas_u[i_w].sam_c));
+
+    if ( !len_w ) {
+      gat = u3m_soft(0, u3v_wish_w, u3i_string(cas_u[i_w].src_c));
+    }
+    else {
+      //  the gate, by a face in the context of the loop, is a known call
+      //
+      c3_c* src_c = c3_malloc(strlen(cas_u[i_w].src_c) + 128);
+
+      sprintf(src_c, "=/  f  %s\n"
+                     "|=  l=(list _+<.f)\n"
+                     "^-  (list)\n"
+                     "?~  l  ~\n"
+                     "[(f i.l) $(l t.l)]\n", cas_u[i_w].src_c);
+      gat = u3m_soft(0, u3v_wish_w, u3i_string(src_c));
+      c3_free(src_c);
+
+      //  the list of samples, the same noun len_w times
+      //
+      if ( 0 == u3h(sam) ) {
+        u3_noun lis = u3_nul;
+        c3_w    j_w;
+
+        for ( j_w = 0; j_w < len_w; j_w++ ) {
+          lis = u3nc(u3k(u3t(sam)), lis);
+        }
+        u3z(sam);
+        sam = u3nc(0, lis);
+      }
+    }
 
     snprintf(nam_c, sizeof(nam_c), "jet %s", cas_u[i_w].nam_c);
 
@@ -1793,13 +1882,38 @@ _test_jets(void)
                u3nc(u3k(u3t(sam)), u3k(u3t(u3t(u3t(gat))))));
     u3z(gat); u3z(sam);
 
-    ret_i = _test(nam_c, cor, u3k(fol), 1) && ret_i;
+    ret_i = _test(nam_c, u3k(cor), u3k(fol), 1) && ret_i;
+
+    //  the entry lookup alone: u3d_match() checks the subject against
+    //  every program entered with this formula, the gates of every test
+    //  run before this one (all are entered with [9 2 0 1])
+    //
+    {
+      u3_weak lis = u3h_git(u3R->ska.ent_p, fol);
+      c3_w    ent_w = 0, rep_w;
+      c3_d    beg_d;
+
+      for ( u3_weak l = lis; (u3_none != l) && (u3_nul != l); l = u3t(l) ) {
+        ent_w++;
+      }
+      beg_d = _time();
+      for ( rep_w = 0; rep_w < 1000; rep_w++ ) {
+        if ( u3_none != lis ) {
+          (void)u3d_match(cor, lis);
+        }
+      }
+      fprintf(stderr, "entry lookup: %" PRIc3_w " programs, %.2f us\r\n",
+              ent_w, (double)(_time() - beg_d) / 1000.0);
+    }
+    u3z(cor);
 
     //  a small arm with a known battery is inlined rather than called,
-    //  so no driver runs for it: a note, not a failure
+    //  so no driver runs for it: a note, not a failure.  Counted over the
+    //  last run, a second one: in the first, the SKA core compiling the
+    //  program hits jets of its own, which would hide a miss
     //
 #ifdef U3NC_STAT
-    if ( jet_d == u3nc_Stat.jet_d ) {
+    if ( !_run_jet_d && i_w ) {
       fprintf(stderr, "test %s: no jet hit\r\n", nam_c);
     }
 #endif
@@ -1807,6 +1921,35 @@ _test_jets(void)
 
   u3z(fol);
   return ret_i;
+}
+
+/* _jets_len(): the length of the lists _test_jets() loops on:
+**              U3NC_JETS_N, else 1000 under U3NC_BENCH, else none.
+*/
+static c3_w
+_jets_len(void)
+{
+  c3_c* len_c = getenv("U3NC_JETS_N");
+  return len_c ? (c3_w)atoi(len_c) : ( getenv("U3NC_BENCH") ? 1000 : 0 );
+}
+
+/* _stat_sum(): the sizes of everything compiled, for comparing
+**              encodings, and the time spent building it (-Dska-stat).
+*/
+static void
+_stat_sum(void)
+{
+#ifdef U3NC_STAT
+  fprintf(stderr, "stat: %" PRIu64 " programs, %" PRIu64 " bytes, "
+                  "%" PRIu64 " literals, %" PRIu64 " IML, %" PRIu64 " IMM "
+                  "(%" PRIu64 " of 0, %" PRIu64 " of 1, %" PRIu64 " wide slot), "
+                  "%" PRIu64 " KIL, %" PRIu64 " DRO in %" PRIu64 " bytes, "
+                  "%" PRIu64 " edge blocks, %" PRIu64 " us building\r\n",
+          u3nc_Stat.com_d, u3nc_Stat.byc_d, u3nc_Stat.lit_d, u3nc_Stat.iml_d,
+          u3nc_Stat.imm_d, u3nc_Stat.imz_d, u3nc_Stat.imo_d, u3nc_Stat.imw_d,
+          u3nc_Stat.kil_d, u3nc_Stat.dre_d, u3nc_Stat.drb_d,
+          u3nc_Stat.edb_d, u3nc_Stat.bld_d);
+#endif
 }
 
 /* main(): run all test cases.
@@ -1835,6 +1978,13 @@ main(int argc, char* argv[])
   //
   if ( getenv("U3NC_PROBE") ) {
     c3_c*   sam_c = getenv("U3NC_PROBE_SAM");
+
+    //  as the quick tests do, unless U3NC_ALL: else the stats would count
+    //  the SKA core compiling itself
+    //
+    if ( !getenv("U3NC_ALL") ) {
+      u3nc_Self = 0;
+    }
     c3_c*   off_c = getenv("U3NC_PROBE_OFF");
     u3_noun cor   = _gate(getenv("U3NC_PROBE"), sam_c ? atoi(sam_c) : 5);
 
@@ -1855,6 +2005,7 @@ main(int argc, char* argv[])
       u3nc_regs();
     }
 
+    _stat_sum();
     return ret_i ? 0 : 1;
   }
 
@@ -1945,6 +2096,15 @@ main(int argc, char* argv[])
   //
   if ( !getenv("U3NC_ALL") ) {
     u3nc_Self = 0;
+  }
+
+  //  U3NC_JETS: the tests of the jets, and nothing else; =1 all of
+  //  them, else a comma-separated list of their names
+  //
+  if ( getenv("U3NC_JETS") ) {
+    c3_i ret_i = _test_jets(_jets_len());
+    _stat_sum();
+    return ret_i ? 0 : 1;
   }
 
   if ( !_test("inc", 42, u3nt(4, 0, 1), 0) ) {
@@ -2075,7 +2235,7 @@ main(int argc, char* argv[])
       exit(1);
     }
 
-    if ( !_test_jets() ) {
+    if ( !_test_jets(_jets_len()) ) {
       exit(1);
     }
   }
@@ -2084,17 +2244,7 @@ main(int argc, char* argv[])
   //
   u3m_grab(u3_none);
 
-  //  the sizes of everything compiled, for comparing encodings
-  //
-#ifdef U3NC_STAT
-  fprintf(stderr, "stat: %" PRIu64 " programs, %" PRIu64 " bytes, "
-                  "%" PRIu64 " literals, %" PRIu64 " IML, %" PRIu64 " IMM "
-                  "(%" PRIu64 " of 0, %" PRIu64 " of 1, %" PRIu64 " wide slot), "
-                  "%" PRIu64 " KIL\r\n",
-          u3nc_Stat.com_d, u3nc_Stat.byc_d, u3nc_Stat.lit_d, u3nc_Stat.iml_d,
-          u3nc_Stat.imm_d, u3nc_Stat.imz_d, u3nc_Stat.imo_d, u3nc_Stat.imw_d,
-          u3nc_Stat.kil_d);
-#endif
+  _stat_sum();
 
   fprintf(stderr, "test nock compile: ok%s\r\n",
           getenv("U3NC_ALL") ? "" : " (quick: U3NC_ALL=1 for all of them)");

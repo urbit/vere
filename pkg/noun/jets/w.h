@@ -222,6 +222,15 @@
     u3_noun u3wee_add_double_scalarmult(u3_noun);
 
     u3_noun u3we_hmac(u3_noun);
+    u3_noun u3we_hmac_sha1(u3_noun);
+    u3_noun u3we_hmac_sha256(u3_noun);
+    u3_noun u3we_hmac_sha512(u3_noun);
+    u3_noun u3we_hmac_sha1t(u3_noun);
+    u3_noun u3we_hmac_sha256t(u3_noun);
+    u3_noun u3we_hmac_sha512t(u3_noun);
+    u3_noun u3we_hmac_sha1l(u3_noun);
+    u3_noun u3we_hmac_sha256l(u3_noun);
+    u3_noun u3we_hmac_sha512l(u3_noun);
 
     u3_noun u3we_kecc224(u3_noun);
     u3_noun u3we_kecc256(u3_noun);

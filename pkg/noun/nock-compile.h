@@ -99,6 +99,10 @@
       c3_d imo_d;   //    of 1
       c3_d imw_d;   //    to a slot of two bytes or more
       c3_d kil_d;   //  kil ops encoded (a build that doesn't zero slots)
+      c3_d dre_d;   //  DRO ops encoded (U3NC_STAT)
+      c3_d drb_d;   //  bytes of them (U3NC_STAT)
+      c3_d edb_d;   //  blocks of drops made for an edge
+      c3_d bld_d;   //  microseconds in _nc_build() (U3NC_STAT)
       c3_d iml_d;   //  IR iml ops (literal loads) encoded
       c3_d tra_d;   //  calls of transferring array jets (CAX, JMX)
       c3_d mut_d;   //  arguments a transferring jet edited in place
