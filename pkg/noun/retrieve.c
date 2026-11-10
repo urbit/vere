@@ -320,9 +320,9 @@ _cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
 **   (if both are senior to every road below home) through one of their
 **   slots, deferring the loss of the old value (see u3a_wed()). a pair
 **   met again is then pointer-equal, so a comparison, and its repeats,
-**   stay linear on every road, promoting or not. only a pair whose slots can't be written (off the loom, or
-**   refused under memory debugging past a lose list's ceiling) is
-**   compared again in full.
+**   stay linear on every road, promoting or not. only a pair u3a_wed()
+**   leaves (a member's slot, a home count at its limit, or under memory
+**   debugging a lose list out of room) is compared again in full.
 */
 static c3_o
 _cr_sing(u3_noun a, u3_noun b)
@@ -431,9 +431,12 @@ u3r_sing_imp(u3_noun a, u3_noun b)
   return ret_o;
 }
 
-/* u3r_sing_wed(): u3r_sing() on two slots that own their references,
-**   unifying the slots themselves when equal, as unification does for
-**   the children it compares.
+/* u3r_sing_wed(): u3r_sing() on two slots, unifying the slots themselves
+**   when equal, as unification does for the children it compares. see
+**   retrieve.h for what a slot must be: a slot off the loom, or on u3R's
+**   stack, is u3R's, and is written as u3R's heap would be. one on an
+**   older road's stack, or off the loom but holding a count on home, is
+**   not allowed.
 */
 c3_o
 u3r_sing_wed_imp(u3_noun* a, u3_noun* b)

@@ -233,8 +233,14 @@
                       u3_noun s,
                       u3_noun b);
 
-      /* u3r_sing_wed(): equality of two slots that own their references,
-      **                 unifying the slots when equal.
+      /* u3r_sing_wed(): equality of the nouns in slots [a] and [b],
+      **                 unifying the slots when equal: either may be
+      **                 rewritten to hold the other's value. each slot
+      **                 must be in a road's heap, or be u3R's (off the
+      **                 loom, or on u3R's stack); it must own its
+      **                 reference to a noun on u3R, and still owns what
+      **                 it holds afterward. to compare a borrowed noun,
+      **                 gain it first and lose the slot's value after.
       */
         c3_o
         u3r_sing_wed_imp(u3_noun* a, u3_noun* b);
