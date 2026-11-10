@@ -238,9 +238,11 @@
       **                 rewritten to hold the other's value. each slot
       **                 must be in a road's heap, or be u3R's (off the
       **                 loom, or on u3R's stack); it must own its
-      **                 reference to a noun on u3R, and still owns what
-      **                 it holds afterward. to compare a borrowed noun,
-      **                 gain it first and lose the slot's value after.
+      **                 reference if the noun is on u3R (references to
+      **                 senior nouns are never counted), and still owns
+      **                 what it holds afterward. to compare a borrowed
+      **                 noun, gain it first and lose the slot's value
+      **                 after.
       */
         c3_o
         u3r_sing_wed_imp(u3_noun* a, u3_noun* b);
