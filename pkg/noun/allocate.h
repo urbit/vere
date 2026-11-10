@@ -404,7 +404,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 #     define u3t(som) u3a_t(som)
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
-#     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
+#     define  u3tn(type, x) ((x) ? (type*)u3a_into(x) : (void*)NULL)
 
 #     define  u3of(type, x) (u3a_outa((type*)x))
 

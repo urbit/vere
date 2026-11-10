@@ -1962,7 +1962,7 @@ _ca_slot_on(u3a_road* rod_u, u3_noun* sot)
          : ((off_d >= rod_u->hat_p) && (off_d < rod_u->rut_p));
 }
 
-/* _ca_slot_kid(): [sot] is on our child road, under promotion.
+/* _ca_slot_kid(): [sot] is on our stack (child road), under promotion.
 */
 static inline c3_t
 _ca_slot_kid(u3_noun* sot)
@@ -2013,93 +2013,72 @@ _ca_wed_keep(u3a_road* rod_u, u3_noun a, u3_noun b)
 **   calls a function, so nothing there can bail or overflow the stack.
 */
 static void
-_ca_wed_home(u3_noun* a, u3_noun* b, c3_y awr_y, c3_y bwr_y)
+_ca_wed_home(u3_noun* sot, u3_noun kep)
 {
-  c3_t     kep_t = _ca_wed_keep(&(u3H->rod_u), *a, *b);
-  u3_noun* sot   = kep_t ? b : a;
-  u3_noun  val   = kep_t ? *a : *b;
-  c3_y     wri_y = kep_t ? bwr_y : awr_y;
+  u3_noun*  lis_u = _ca_lo_home_at();
+  u3a_noun* box_u = u3a_to_ptr(kep);
+  u3_noun   old   = *sot;
 
-  u3e_Meter.wsg_d++;
-
-  if ( 2 != wri_y ) {
-    *sot = val;
-    u3e_Meter.wsw_d[( 1 == wri_y ) ? 0 : 2]++;
+  if ( !lis_u && u3a_dbg_ram() ) {
+    u3e_Meter.wsk_d++;
     return;
   }
 
-  {
-    u3_noun*  lis_u = _ca_lo_home_at();
-    u3a_noun* box_u = u3a_to_ptr(val);
-    u3_noun   old   = *sot;
-
-    if ( !lis_u && u3a_dbg_ram() ) {
-      u3e_Meter.wsk_d++;
-      return;
-    }
-
-    //  as _me_gain_use(): a home noun's count can't be 0 while it's held;
-    //  at the limit, leave the slot as it is. gains from an inner road
-    //  are never deferred (see u3a_defer_open())
-    //
-    if ( 0 == box_u->use_w ) {
-      u3m_bail(c3__foul);
-    }
-    if ( u3a_direct_max == box_u->use_w ) {
-      u3e_Meter.wsk_d++;
-      return;
-    }
-
-    u3m_hold();
-    box_u->use_w += 1;
-    *sot = val;
-    _ca_lo_home_put(lis_u, old);
-    u3m_hold_done();
-    u3e_Meter.wsw_d[1]++;
+  //  as _me_gain_use(): a home noun's count can't be 0 while it's held;
+  //  at the limit, leave the slot as it is. gains from an inner road
+  //  are never deferred (see u3a_defer_open())
+  //
+  if ( 0 == box_u->use_w ) {
+    u3m_bail(c3__foul);
   }
+  if ( u3a_direct_max == box_u->use_w ) {
+    u3e_Meter.wsk_d++;
+    return;
+  }
+
+  u3m_hold();
+  box_u->use_w += 1;
+  *sot = kep;
+  _ca_lo_home_put(lis_u, old);
+  u3m_hold_done();
+  u3e_Meter.wsw_d[1]++;
 }
 
 /* _ca_wed_stow(): store [kep] to [sot], which holds [old] of [rod_u];
 **   [kep] is more senior or preferred (also on [rod_u] if [sam_t]).
-**   [rod_u] is home only if [u3R] is. [sot] is in some road's heap, or
-**   is u3R's (see u3r_sing_wed()).
+**   [rod_u] is home only if [u3R] is.
 */
 static void
 _ca_wed_stow(u3_noun* sot, u3_noun kep, u3a_road* rod_u, c3_t sam_t)
 {
   u3_noun old = *sot;
+  c3_t  our_t = (u3R == rod_u);
 
-  //  on u3R, not promoting: [sot] owns [old]; gain [kep] if same
+  //  [sot] owns [old], can lose (on u3R, not promoting)
   //
-  if ( (u3R == rod_u) && !u3R->kid_p ) {
-    if ( sam_t ) {
-      _me_gain_use(kep);
-    }
-    u3z(old);
+  if ( our_t && !u3R->kid_p ) {
+    if ( sam_t ) _me_gain_use(kep);
     *sot = kep;
+    u3z(old);
     return;
   }
 
-  //  [sot] owns [old] if it's [rod_u]'s: in its heap, or u3R's but not
-  //  on the child while promoting. [old] may be borrowed by a junior
-  //  road; defer lose if possible (or leak if no one's watching)
+  //  [sot] owns [old], can't lose (on u3R, promoting; or inner [rod_u])
+  //  defer lose if possible (or leak if no one's watching)
   //
-  if ( (u3R == rod_u) ? !_ca_slot_kid(sot) : _ca_slot_on(rod_u, sot) ) {
+  if ( (our_t && !_ca_slot_kid(sot)) || _ca_slot_on(rod_u, sot) ) {
     if ( u3a_dbg_ram() && !_ca_lo_room(rod_u) ) return;
-    if ( sam_t ) {
-      _me_gain_use(kep);
-    }
+    if ( sam_t ) _me_gain_use(kep);
     *sot = kep;
     _ca_lo_put(rod_u, old);
   }
-  //  [sot] borrows [old]: it's junior to [rod_u] (found below it on the
-  //  walk, on the child while promoting, or u3R's off every heap)
+  //  [sot] borrows [old]
   //
   else {
     *sot = kep;
   }
 
-  if ( u3R != rod_u ) {
+  if ( !our_t ) {
     u3e_Meter.wvm_d++;
   }
 }
@@ -2124,11 +2103,8 @@ void
 u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
   //  XX assume( *a != *b )
-  //  where slots are, for _ca_wed_home(): 0 not yet found, 1 u3R's (its
-  //  heap, its child's, or off every heap), 2 home-road heap, 3 the heap
-  //  of an intermediate road
-  c3_y      awr_y = 0, bwr_y = 0;
   u3a_road *rod_u = u3R;
+  c3_t      our_t = 1;
 
   if ( rod_u->kid_p ) {
     c3_t aju_t = ( c3y == u3a_is_junior(rod_u, *a) );
@@ -2145,52 +2121,41 @@ u3a_wed(u3_noun *restrict a, u3_noun *restrict b)
     }
   }
 
-  while ( 1 ) {
+  do {
     c3_t aon_t = ( c3n == u3a_is_senior(rod_u, *a) );
     c3_t bon_t = ( c3n == u3a_is_senior(rod_u, *b) );
 
     if ( aon_t || bon_t ) {
-      c3_t kep_t;  //  keep [*a]
+      c3_t   kep_t = ( aon_t != bon_t )            //  keep [*a] if it's
+                   ? bon_t                         //    senior
+                   : _ca_wed_keep(rod_u, *a, *b);  //    preferred
+      u3_noun* sot = kep_t ?  b :  a;
+      u3_noun  kep = kep_t ? *a : *b;
 
-      if ( aon_t && bon_t ) {
-        //  [*a] and [*b] are both at home and we are not
-        //
-        if ( (&(u3H->rod_u) == rod_u) && (&(u3H->rod_u) != u3R) ) {
-          if ( !awr_y ) {
-            awr_y = _ca_slot_on(rod_u, a) ? 2 : 1;
-          }
-          if ( !bwr_y ) {
-            bwr_y = _ca_slot_on(rod_u, b) ? 2 : 1;
-          }
-          _ca_wed_home(a, b, awr_y, bwr_y);
-          return;
+      //  [*a] and [*b] are both at home and we are not
+      //
+      if ( !our_t && (&(u3H->rod_u) == rod_u) ) {
+        u3e_Meter.wsg_d++;
+
+        if ( _ca_slot_on(rod_u, sot) ) {  //  [sot] owns [*sot]
+          _ca_wed_home(sot, kep);
         }
+        else {                            //  [sot] borrows
+          *sot = kep;
+          u3e_Meter.wsw_d[0]++;
+        }
+        return;
+      }
 
-        kep_t = _ca_wed_keep(rod_u, *a, *b);  //  [*a] is preferred
-      }
-      else {
-        kep_t = bon_t;                        //  [*a] is senior
-      }
-
-      if ( kep_t ) {
-        _ca_wed_stow(b, *a, rod_u, aon_t);
-      }
-      else {
-        _ca_wed_stow(a, *b, rod_u, bon_t);
-      }
+      _ca_wed_stow(sot, kep, rod_u, kep_t ? aon_t : bon_t);
       return;
     }
 
-    //  neither value is here: note the slots that are
-    //
-    if ( !awr_y && _ca_slot_on(rod_u, a) ) awr_y = ( u3R == rod_u ) ? 1 : 3;
-    if ( !bwr_y && _ca_slot_on(rod_u, b) ) bwr_y = ( u3R == rod_u ) ? 1 : 3;
-
-    //  every value is on some road, home at the last
-    //
-    u3_assert( rod_u->par_p );
-    rod_u = u3to(u3a_road, rod_u->par_p);
+    our_t = 0;
   }
+  while ( (rod_u = u3tn(u3a_road, rod_u->par_p)) );
+
+  u3_assert(!"unreachable");
 }
 
 /* u3a_luse(): check refcount sanity.
