@@ -190,9 +190,8 @@
           //
           c3_d wvm_d;        //  merges on senior inner roads
           c3_d wsg_d;        //  give-ups: no road could merge
-          c3_d wsw_d[3];     //  slot writes: outside home memory, in home
-                             //  memory, and (no longer counted apart,
-                             //  always 0) on a senior inner road
+          c3_d wsw_d[2];     //  slot writes: outside home memory, in home
+                             //  memory
           c3_d wsk_d;        //  home writes refused (the count at its
                              //  limit, or, debugging memory, the home lose
                              //  list full)
