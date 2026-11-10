@@ -555,13 +555,13 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
 
-    //  unification: senior merges, give-ups, slot writes (this road,
-    //  home, a senior inner road), home writes refused
+    //  unification: senior merges, give-ups, slot writes (outside home
+    //  memory, in it), home writes refused
     //
     fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 "\n",
+                   " %" PRIu64 "\n",
                    u3e_Meter.wvm_d, u3e_Meter.wsg_d,
-                   u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1], u3e_Meter.wsw_d[2],
+                   u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
                    u3e_Meter.wsk_d);
 
     //  the lose lists, home then inner

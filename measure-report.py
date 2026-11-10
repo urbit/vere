@@ -55,7 +55,7 @@ Log lines (one snapshot interval ends at each S line):
     <written-nouns> <shrinks>               deferred gains across the state swap
   Y <references> <same-position> <refcount-1>
                                             new arvo state's alignment with the old
-  W <senior-merges> <give-ups> <wrote-ours> <wrote-home> <wrote-senior>
+  W <senior-merges> <give-ups> <wrote-outside-home> <wrote-home>
     <home-refused>
                                             unification (u3a_wed()): merges on senior
                                             inner roads, and when no road can merge,
@@ -111,7 +111,7 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 6, "X": 11, "I": 6, "Z": 7}
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 7}
 
 
 def pct(a, b):
@@ -618,14 +618,13 @@ def main():
         per = lambda x: f"{x / tasks if tasks else 0:.2f}"
         print("\n== unification of home values on inner roads ==")
         if wis:
-            w = [sum(i["W"][j] for i in wis) for j in range(6)]
+            w = [sum(i["W"][j] for i in wis) for j in range(5)]
             print(f"  merges on senior inner roads: {w[0]}")
             g = w[1]
             print(f"  give-ups, no road could merge: {g} ({per(g)} per task)")
-            for name, c in (("written, on this road", w[2]),
+            for name, c in (("written, outside home memory", w[2]),
                             ("written, in home memory", w[3]),
-                            ("written, on a senior inner road", w[4]),
-                            ("not written: home write refused", w[5])):
+                            ("not written: home write refused", w[4])):
                 print(f"    {name:<36}{c:>12}  {pct(c, g)}")
         if xis:
             x = [sum(i["X"][j] for i in xis) for j in range(11)]

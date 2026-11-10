@@ -52,7 +52,7 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 6, "X": 11, "I": 6, "Z": 7}
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 7}
 
 
 def parse(lines):
@@ -177,8 +177,8 @@ def values(ivs, line, j):
 
 
 def _writes(s):
-    """Unification's slot writes: this road, home memory, senior inner roads."""
-    return s["W_our"] + s["W_hom"] + s["W_sen"]
+    """Unification's slot writes: outside home memory, and in it."""
+    return s["W_out"] + s["W_hom"]
 
 
 def median(v):
@@ -239,7 +239,7 @@ def sums(ivs):
         if "W" in i:
             w = i["W"]
             s["W_mer"] += w[0]; s["W_giv"] += w[1]
-            s["W_our"] += w[2]; s["W_hom"] += w[3]; s["W_sen"] += w[4]
+            s["W_out"] += w[2]; s["W_hom"] += w[3]
             s["W_tasks"] += i["tasks"]
         if "X" in i:
             x = i["X"]
@@ -337,8 +337,6 @@ METRICS = [
      lambda s, v: ratio(_writes(s), s["W_giv"])),
     ("W: writes in home memory", "hashcons: eager unification",
      lambda s, v: ratio(s["W_hom"], _writes(s))),
-    ("W: writes on senior inner roads", "hashcons: senior slots",
-     lambda s, v: ratio(s["W_sen"], _writes(s))),
     ("W: senior-road merges / 1000 tasks", "hashcons: senior unification",
      lambda s, v: ratio(1000 * s["W_mer"], s["W_tasks"]) if s["W_tasks"] else None),
     ("X: home lose list full", "hashcons: lose list ceiling", lambda s, v: s["X_hful"]),
