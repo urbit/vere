@@ -72,6 +72,8 @@
         c3_y*      kon_y;             //  whether each is consumed by its call
       } sot_u;
 #ifdef U3NC_STAT
+      c3_d       ent_d;               //  activations (u3nc_hot())
+      c3_d       con_d;               //  cells made by its CONs (u3nc_hot())
       c3_d       bor_d;               //  drop-only parameters, bit per argument
       c3_y*      ali_y;               //  by bytecode offset past an op: a
                                       //  borrowing HED/TAL that could alias
@@ -88,6 +90,19 @@
       c3_d dir_d;   //  direct calls
       c3_d sub_d;   //  calls by subject
       c3_d jet_d;   //  jet hits
+      c3_d jet_c;   //    TSC cycles in jets, the ones that punt too
+      c3_d nok_d;   //  indirect calls (NOK) (U3NC_STAT)
+      c3_d nok_c;   //    TSC cycles in _nc_entry() for them
+      c3_d mat_d;   //  entries u3d_match() scanned in entry lookups
+      c3_d mem_d;   //  memo lookups of memoized calls (CAM, CSM)
+      c3_d meh_d;   //    of them hits
+      c3_d mem_c;   //    TSC cycles making their keys and looking up
+      c3_d mes_d;   //  memo saves of memoized calls' products
+      c3_d mes_c;   //    TSC cycles in them
+      c3_d hug_d;   //  nodes of socks walked by u3d_match() (direct.c)
+      c3_d hus_d;   //    known subtrees compared with u3r_sing(), not
+                    //    the same noun on both sides
+      c3_d hus_c;   //    TSC cycles in those comparisons
       c3_d con_d;   //  cells made by CON
       c3_d uni_d;   //  cells freed by a consuming HED or TAL: the only
                     //  reference to the cell was the slot's
@@ -193,6 +208,14 @@
     */
       void
       u3nc_scan(u3_noun bus, u3_noun fol);
+
+#ifdef U3NC_STAT
+    /* u3nc_hot(): print the programs that made the most cells, num_w of
+    **             them, dum_w of those in full.
+    */
+      void
+      u3nc_hot(c3_w num_w, c3_w dum_w);
+#endif
 
     /* u3nc_regs(): print a histogram of the argument counts of the n-ary
     **              programs of this road and its seniors.

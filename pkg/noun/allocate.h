@@ -801,6 +801,12 @@ u3a_post_info(u3_post);
           c3_w*
           u3a_celloc(void);
 
+#ifdef U3NC_STAT
+        /* u3a_Cel_d: cells allocated (-Dska-stat).
+        */
+          extern c3_d u3a_Cel_d;
+#endif
+
         /* u3a_wfree(): free storage.
         */
           void

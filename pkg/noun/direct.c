@@ -22,6 +22,10 @@
 #define _CVX_POKE 23
 #define _CVX_WISH 10
 
+//  steps an analysis-time fold may take (+ev of the SKA lib)
+//
+#define U3D_EV_FUEL  200000
+
 /*  The SKA core is an arvo-shaped core whose +poke is the arm at axis 23:
 **
 **    [%full sub=* fol=^]                 ->  [%ir bell straight new]
@@ -77,6 +81,24 @@ static c3_o
 _d_huge(u3_noun cape_one, u3_noun data_one,
         u3_noun cape_two, u3_noun data_two)
 {
+#ifdef U3NC_STAT
+  u3nc_Stat.hug_d++;
+  if ( (c3y == u3r_sing(cape_one, cape_two)) && (data_one != data_two) ) {
+    c3_o ret_o;
+#  ifdef __x86_64__
+    c3_d tsc_d = __builtin_ia32_rdtsc();
+#  endif
+    u3nc_Stat.hus_d++;
+    ret_o = u3r_sing(data_one, data_two);
+#  ifdef __x86_64__
+    u3nc_Stat.hus_c += __builtin_ia32_rdtsc() - tsc_d;
+#  endif
+    if ( c3y == ret_o ) {
+      return c3y;
+    }
+  }
+  else
+#endif
   if (  (c3y == u3r_sing(cape_one, cape_two))
      && (c3y == u3r_sing(data_one, data_two)) )
   {
@@ -115,6 +137,111 @@ _d_huge(u3_noun cape_one, u3_noun data_one,
     return c3a(_d_huge(lope, l_one, loop, l_two),
                _d_huge(rope, r_one, roop, r_two));
   }
+}
+
+/* _d_huge_las(): does sub nest under the sock [cape data], given las, a
+**   noun that nested under it before, or u3_none?  A part of sub that is
+**   the very same noun as the part of las at its axis nests too, so it is
+**   neither walked nor compared: only the parts that changed since las
+**   are checked, and an equal copy is compared once, when it first comes.
+**   RETAINS.
+*/
+static c3_o
+_d_huge_las(u3_noun cape, u3_noun data, u3_noun sub, u3_weak las)
+{
+  while ( 1 ) {
+    if ( sub == las ) {
+      return c3y;
+    }
+#ifdef U3NC_STAT
+    u3nc_Stat.hug_d++;
+#endif
+    if ( c3y == u3ud(cape) ) {
+      c3_o ret_o;
+
+      if ( c3n == _d_loob(cape) ) {
+        return c3y;
+      }
+#ifdef U3NC_STAT
+      if ( data != sub ) {
+#  ifdef __x86_64__
+        c3_d tsc_d = __builtin_ia32_rdtsc();
+#  endif
+        u3nc_Stat.hus_d++;
+        ret_o = u3r_sing(data, sub);
+#  ifdef __x86_64__
+        u3nc_Stat.hus_c += __builtin_ia32_rdtsc() - tsc_d;
+#  endif
+        return ret_o;
+      }
+#endif
+      ret_o = u3r_sing(data, sub);
+      return ret_o;
+    }
+
+    if ( c3n == u3du(sub) ) {
+      return c3n;
+    }
+
+    {
+      u3_noun dh, dt;
+      u3_weak lh = u3_none, lt = u3_none;
+
+      u3x_cell(data, &dh, &dt);
+      if ( (u3_none != las) && (c3y == u3du(las)) ) {
+        lh = u3h(las);
+        lt = u3t(las);
+      }
+      if ( c3n == _d_huge_las(u3h(cape), dh, u3h(sub), lh) ) {
+        return c3n;
+      }
+      cape = u3t(cape);
+      data = dt;
+      sub  = u3t(sub);
+      las  = lt;
+    }
+  }
+}
+
+/* u3d_match_las(): u3d_match(), checking each candidate i against the
+**   last subject that matched it, las_f(i, ptr_v) (transferred, or
+**   u3_none).  RETAINS.
+*/
+u3_weak
+u3d_match_las(u3_noun sub, u3_noun lis,
+              u3_weak (*las_f)(u3_noun, void*), void* ptr_v)
+{
+  u3_weak pro = u3_none;
+  u3_noun cape_max = 0, data_max = 0;
+  u3_noun i, cape_i, data_i;
+
+  while ( u3_nul != lis ) {
+    u3_weak las;
+    c3_o    hug_o;
+
+    u3x_cell(lis, &i, &lis);
+    cape_i = u3h(u3h(i));
+    data_i = u3t(u3h(i));
+    las    = las_f(i, ptr_v);
+    hug_o  = _d_huge_las(cape_i, data_i, sub, las);
+
+    if ( u3_none != las ) {
+      u3z(las);
+    }
+    if ( c3n == hug_o ) {
+      continue;
+    }
+
+    if (  (u3_none == pro)
+       || (c3y == _d_huge(cape_max, data_max, cape_i, data_i)) )
+    {
+      pro      = i;
+      cape_max = cape_i;
+      data_max = data_i;
+    }
+  }
+
+  return pro;
 }
 
 /* u3d_match(): find the most specific [sock *] in `lis` whose sock
@@ -587,8 +714,24 @@ u3d_cold(void)
 u3_noun
 u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 {
+  //  the analysis folds the calls it can run within .eva steps (+ev)
+  //  only for a poke from outside the core: a poke made from inside one
+  //  is the core compiling its own code, which gains little from it and
+  //  pays for every try
+  //
+  c3_d eva_d = ( 0 == u3a_ska_depth(u3R->how.fag_w) ) ? U3D_EV_FUEL : 0;
+
+#ifdef U3NC_STAT
+  //  U3NC_EV_FUEL: the steps of a try, 0 for no folding (diagnostics)
+  //
+  if ( eva_d && getenv("U3NC_EV_FUEL") ) {
+    eva_d = strtoull(getenv("U3NC_EV_FUEL"), 0, 10);
+  }
+#endif
+
   _d_flush();
-  return _d_ir(_d_poke(u3nt(c3__full, u3k(sub), u3k(fol))), bell);
+  return _d_ir(_d_poke(u3nq(c3__full, u3k(sub), u3k(fol), u3i_chub(eva_d))),
+               bell);
 }
 
 /* u3d_dire(): compile a bell [sock formula] as a function of the

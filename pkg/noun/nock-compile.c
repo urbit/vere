@@ -1777,6 +1777,443 @@ _nc_consume(nc_op* bra_u, c3_y edg_y, c3_d* ded_d, c3_h lo_h, c3_h hi_h)
   }
 }
 
+#ifdef U3NC_STAT
+/* _nc_ls: scratch of _nc_lives_stat(), for qsort.
+*/
+static c3_h        _nc_ls_wor_h;
+static const c3_d* _nc_ls_set_d;
+
+static int
+_nc_ls_cmp_set(const void* a_v, const void* b_v)
+{
+  c3_h a_h = *(const c3_h*)a_v, b_h = *(const c3_h*)b_v;
+  return memcmp(_nc_ls_set_d + (c3_d)a_h * _nc_ls_wor_h,
+                _nc_ls_set_d + (c3_d)b_h * _nc_ls_wor_h,
+                _nc_ls_wor_h * sizeof(c3_d));
+}
+
+static c3_h
+_nc_ls_pop(const c3_d* set_d, c3_h wor_h)
+{
+  c3_h pop_h = 0;
+  for ( c3_h w_h = 0; w_h < wor_h; w_h++ ) pop_h += __builtin_popcountll(set_d[w_h]);
+  return pop_h;
+}
+
+static int
+_nc_ls_cmp_pop(const void* a_v, const void* b_v)
+{
+  c3_h a_h = _nc_ls_pop(_nc_ls_set_d + (c3_d)(*(const c3_h*)a_v) * _nc_ls_wor_h, _nc_ls_wor_h);
+  c3_h b_h = _nc_ls_pop(_nc_ls_set_d + (c3_d)(*(const c3_h*)b_v) * _nc_ls_wor_h, _nc_ls_wor_h);
+  return ( a_h > b_h ) - ( a_h < b_h );
+}
+
+/* _nc_ls_chain(): drops of num_h distinct sets (indices idx_h into set_d),
+**                 each falling through into the biggest smaller one it
+**                 contains (sorted ascending by size first).  Sorts idx_h.
+*/
+static c3_d
+_nc_ls_chain(const c3_d* set_d, c3_h wor_h, c3_h* idx_h, c3_h num_h)
+{
+  c3_d tot_d = 0;
+
+  _nc_ls_wor_h = wor_h; _nc_ls_set_d = set_d;
+  qsort(idx_h, num_h, sizeof(c3_h), _nc_ls_cmp_pop);
+
+  for ( c3_h i_h = 0; i_h < num_h; i_h++ ) {
+    const c3_d* s_d = set_d + (c3_d)idx_h[i_h] * wor_h;
+    c3_h s_h = _nc_ls_pop(s_d, wor_h), best_h = 0;
+
+    for ( c3_h j_h = 0; j_h < i_h; j_h++ ) {
+      const c3_d* t_d = set_d + (c3_d)idx_h[j_h] * wor_h;
+      c3_t sub_t = 1;
+      for ( c3_h w_h = 0; w_h < wor_h; w_h++ ) {
+        if ( t_d[w_h] & ~s_d[w_h] ) { sub_t = 0; break; }
+      }
+      if ( sub_t ) {
+        c3_h t_h = _nc_ls_pop(t_d, wor_h);
+        if ( t_h > best_h ) best_h = t_h;
+      }
+    }
+    tot_d += s_h - best_h;
+  }
+  return tot_d;
+}
+
+/* _nc_ls_dedup(): sort the indices of num_h sets and keep one of each.
+*/
+static c3_h
+_nc_ls_dedup(const c3_d* set_d, c3_h wor_h, c3_h* idx_h, c3_h num_h)
+{
+  c3_h dis_h = 0;
+
+  _nc_ls_wor_h = wor_h; _nc_ls_set_d = set_d;
+  qsort(idx_h, num_h, sizeof(c3_h), _nc_ls_cmp_set);
+  for ( c3_h i_h = 0; i_h < num_h; i_h++ ) {
+    if ( !dis_h || _nc_ls_cmp_set(&idx_h[dis_h - 1], &idx_h[i_h]) ) {
+      idx_h[dis_h++] = idx_h[i_h];
+    }
+  }
+  return dis_h;
+}
+
+/* _nc_lives_stat(): for each block with many blocks of drops on the
+**   edges into it, how many drops two release-scheme alternatives would
+**   leave: sharing the edge blocks (identical sets, then falling through
+**   into a contained one), and dropping at the block start the registers
+**   that are undefined, rather than consumed, on the edges in where they
+**   don't die (zeroed at the entry instead).  Diagnostics only.
+*/
+static void
+_nc_lives_stat(nc_gen* gen_u, const c3_d* edr_d, c3_h edr_h, c3_h reg_h,
+               c3_h arg_h, const c3_h* pro_h, const c3_h* pre_h)
+{
+  c3_h  blk_h = gen_u->blk_h;
+  c3_h  wor_h = (reg_h + 63) >> 6;
+  c3_h* cnt_h = c3_calloc((c3_max(blk_h, 1)) * sizeof(c3_h));
+  c3_h* def_h = NULL;
+  c3_h  i_h, j_h, b_h;
+
+  #define _NC_TARGET(edg) \
+    ( gen_u->blk_u[gen_u->lay_h[(edg) >> 1]].kid_h[((edg) & 1) ? 1 : 0] )
+
+  for ( i_h = 0; i_h < edr_h; i_h = j_h ) {
+    c3_h edg_h = edr_d[i_h] >> 32;
+    for ( j_h = i_h; (j_h < edr_h) && ((edr_d[j_h] >> 32) == edg_h); j_h++ );
+    cnt_h[_NC_TARGET(edg_h)]++;
+  }
+
+  for ( b_h = 0; b_h < blk_h; b_h++ ) {
+    c3_h  num_h = cnt_h[b_h], k_h = 0, dis_h, us_h = 0, uu_h = 0;
+    c3_d* set_d;
+    c3_h* edg_h;
+    c3_h* idx_h;
+    c3_d* uni_d;
+    c3_d* saf_d;
+    c3_d* res_d;
+    c3_d  tot_d = 0, dis_d = 0, cha_d, res_tot_d = 0, res_cha_d;
+    c3_h  pre_n = pro_h[b_h + 1] - pro_h[b_h];
+
+    if ( num_h < 32 ) continue;
+
+    set_d = c3_calloc(((c3_z)num_h * wor_h) * sizeof(c3_d));
+    res_d = c3_calloc(((c3_z)num_h * wor_h) * sizeof(c3_d));
+    edg_h = c3_malloc(num_h * sizeof(c3_h));
+    idx_h = c3_malloc(num_h * sizeof(c3_h));
+    uni_d = c3_calloc((wor_h) * sizeof(c3_d));
+    saf_d = c3_calloc((wor_h) * sizeof(c3_d));
+
+    for ( i_h = 0; i_h < edr_h; i_h = j_h ) {
+      c3_h e_h = edr_d[i_h] >> 32;
+      for ( j_h = i_h; (j_h < edr_h) && ((edr_d[j_h] >> 32) == e_h); j_h++ );
+      if ( _NC_TARGET(e_h) != b_h ) continue;
+      edg_h[k_h] = e_h;
+      for ( c3_h r_i = i_h; r_i < j_h; r_i++ ) {
+        c3_h r_h = (c3_h)edr_d[r_i];
+        set_d[(c3_d)k_h * wor_h + (r_h >> 6)] |= 1ULL << (r_h & 63);
+        uni_d[r_h >> 6] |= 1ULL << (r_h & 63);
+      }
+      tot_d += j_h - i_h;
+      k_h++;
+    }
+
+    for ( i_h = 0; i_h < num_h; i_h++ ) idx_h[i_h] = i_h;
+    dis_h = _nc_ls_dedup(set_d, wor_h, idx_h, num_h);
+    for ( i_h = 0; i_h < dis_h; i_h++ ) {
+      dis_d += _nc_ls_pop(set_d + (c3_d)idx_h[i_h] * wor_h, wor_h);
+    }
+    cha_d = _nc_ls_chain(set_d, wor_h, idx_h, dis_h);
+
+    //  defining blocks, once per program
+    //
+    if ( !def_h ) {
+      def_h = c3_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+      for ( i_h = 0; i_h < reg_h; i_h++ ) {
+        def_h[i_h] = ( i_h < arg_h ) ? gen_u->lay_h[0] : _nc_none;
+      }
+      for ( c3_h x_h = 0; x_h < blk_h; x_h++ ) {
+        nc_blk* blk_u = &(gen_u->blk_u[x_h]);
+        if ( _nc_none == blk_u->lay_h ) continue;
+        if ( u3_none != blk_u->blob ) {
+          for ( u3_noun par = u3h(blk_u->blob); u3_nul != par; par = u3t(par) ) {
+            c3_h r_h = _nc_cat(u3h(par));
+            if ( r_h < reg_h ) def_h[r_h] = x_h;
+          }
+        }
+        for ( c3_h o_h = 0; o_h < blk_u->len_h; o_h++ ) {
+          c3_h d_h = gen_u->ops_u[blk_u->fir_h + o_h].dst_h;
+          if ( (_nc_none != d_h) && (d_h < reg_h) ) def_h[d_h] = x_h;
+        }
+      }
+    }
+
+    //  a register of the union is safe if on every edge in where it
+    //  doesn't die its definition can't have run: its slot there is
+    //  undefined (zeroed at the entry), never consumed
+    //
+    {
+      c3_y* rea_y = c3_malloc(blk_h);
+      c3_h* stk_h = c3_malloc(c3_max(blk_h, 1) * sizeof(c3_h));
+
+      for ( c3_h r_h = 0; r_h < reg_h; r_h++ ) {
+        c3_t ok_t = 1;
+        c3_h top_h = 0;
+
+        if ( !(uni_d[r_h >> 6] & (1ULL << (r_h & 63))) ) continue;
+        uu_h++;
+        if ( _nc_none == def_h[r_h] ) continue;
+
+        memset(rea_y, 0, blk_h);
+        stk_h[top_h++] = def_h[r_h];
+        rea_y[def_h[r_h]] = 1;
+        while ( top_h ) {
+          nc_blk* x_u = &(gen_u->blk_u[stk_h[--top_h]]);
+          for ( c3_y q_y = 0; q_y < x_u->kin_y; q_y++ ) {
+            c3_h q_h = x_u->kid_h[q_y];
+            if ( (_nc_none != q_h) && !rea_y[q_h] ) { rea_y[q_h] = 1; stk_h[top_h++] = q_h; }
+          }
+        }
+
+        for ( j_h = pro_h[b_h]; ok_t && (j_h < pro_h[b_h + 1]); j_h++ ) {
+          c3_h p_h = pre_h[j_h];
+          c3_t die_t = 0;
+          if ( gen_u->blk_u[p_h].kin_y > 1 ) {
+            c3_h e_h = (2 * gen_u->blk_u[p_h].lay_h) + (_nc_edge_y(gen_u, p_h, b_h) & 1);
+            for ( c3_h n_h = 0; n_h < num_h; n_h++ ) {
+              if ( (edg_h[n_h] == e_h)
+                && (set_d[(c3_d)n_h * wor_h + (r_h >> 6)] & (1ULL << (r_h & 63))) )
+              {
+                die_t = 1; break;
+              }
+            }
+          }
+          if ( !die_t && rea_y[p_h] ) ok_t = 0;
+        }
+        if ( ok_t ) {
+          saf_d[r_h >> 6] |= 1ULL << (r_h & 63);
+          us_h++;
+        }
+      }
+      c3_free(rea_y);
+      c3_free(stk_h);
+    }
+
+    for ( i_h = 0; i_h < num_h; i_h++ ) {
+      for ( c3_h w_h = 0; w_h < wor_h; w_h++ ) {
+        res_d[(c3_d)i_h * wor_h + w_h] = set_d[(c3_d)i_h * wor_h + w_h] & ~saf_d[w_h];
+      }
+      res_tot_d += _nc_ls_pop(res_d + (c3_d)i_h * wor_h, wor_h);
+      idx_h[i_h] = i_h;
+    }
+    {
+      c3_h rd_h = _nc_ls_dedup(res_d, wor_h, idx_h, num_h);
+      res_cha_d = _nc_ls_chain(res_d, wor_h, idx_h, rd_h);
+    }
+
+    fprintf(stderr, "u3nc edge drops into block %u: %u preds, %u edge blocks, "
+                    "%" PRIu64 " drops of %u registers, %u distinct sets | "
+                    "shared: %" PRIu64 " drops, chained: %" PRIu64 " | "
+                    "undefined-only: %u of %u registers, edges keep %" PRIu64
+                    " drops, chained %" PRIu64 "\r\n",
+            b_h, pre_n, num_h, tot_d, uu_h, dis_h, dis_d, cha_d,
+            us_h, uu_h, res_tot_d, res_cha_d);
+
+    c3_free(set_d); c3_free(res_d); c3_free(edg_h); c3_free(idx_h);
+    c3_free(uni_d); c3_free(saf_d);
+  }
+
+  #undef _NC_TARGET
+  c3_free(def_h);
+  c3_free(cnt_h);
+}
+#endif
+
+/* _nc_dt: scratch of _nc_drop_tree(), for qsort.
+*/
+static const c3_h* _nc_dt_edo_h;
+static const c3_d* _nc_dt_edr_d;
+static const c3_h* _nc_dt_tgt_h;
+
+/* _nc_dt_len(): the number of drops on edge e.
+*/
+static inline c3_h
+_nc_dt_len(c3_h e_h)
+{
+  return _nc_dt_edo_h[e_h + 1] - _nc_dt_edo_h[e_h];
+}
+
+/* _nc_dt_cmp(): edges by target, then drop sets by size and registers.
+*/
+static int
+_nc_dt_cmp(const void* a_v, const void* b_v)
+{
+  c3_h a_h = *(const c3_h*)a_v, b_h = *(const c3_h*)b_v;
+  c3_h l_h, i_h;
+
+  if ( _nc_dt_tgt_h[a_h] != _nc_dt_tgt_h[b_h] ) {
+    return ( _nc_dt_tgt_h[a_h] > _nc_dt_tgt_h[b_h] ) ? 1 : -1;
+  }
+  if ( _nc_dt_len(a_h) != _nc_dt_len(b_h) ) {
+    return ( _nc_dt_len(a_h) > _nc_dt_len(b_h) ) ? 1 : -1;
+  }
+  for ( l_h = _nc_dt_len(a_h), i_h = 0; i_h < l_h; i_h++ ) {
+    c3_h r_h = (c3_h)_nc_dt_edr_d[_nc_dt_edo_h[a_h] + i_h];
+    c3_h q_h = (c3_h)_nc_dt_edr_d[_nc_dt_edo_h[b_h] + i_h];
+    if ( r_h != q_h ) {
+      return ( r_h > q_h ) ? 1 : -1;
+    }
+  }
+  return ( a_h > b_h ) - ( a_h < b_h );
+}
+
+/* _nc_drop_tree(): share the blocks of drops of the edges into a block.
+**
+**   The edges with drops into one block get a node per distinct set of
+**   drops, the edges with that set all leading to its block; a node's
+**   parent is the biggest node into the same block whose set is a subset
+**   of its own, so its block drops only the difference and goes on to the
+**   parent's, the root's to the block itself.  The edges into a join that
+**   many paths reach, a parser's failure, carry sets that mostly contain
+**   one another: the drops are then about linear in the edges rather than
+**   their product with the registers that die there.
+**
+**   edo_h: drops of edge e in edr_d[edo_h[e] .. edo_h[e + 1]), by
+**   register; edn_h jump edges have drops.  The fall-through edges keep a
+**   block of their own drops, after the predecessor: no jumps on a path
+**   that may be hot.  Produces the number of nodes and,
+**   for an edge with drops, nod_h[e], its node; for a node, nde_h an edge
+**   with its set, ndp_h its parent or _nc_none, and ndt_h the target.
+*/
+static c3_h
+_nc_drop_tree(nc_gen* gen_u, const c3_h* edo_h, const c3_d* edr_d,
+              c3_h edn_h, c3_h reg_h,
+              c3_h* nod_h, c3_h* nde_h, c3_h* ndp_h, c3_h* ndt_h)
+{
+  c3_h  egn_h = 2 * gen_u->lan_h;
+  c3_h* eds_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+  c3_h* tgt_h = u3a_malloc(c3_max(egn_h, 1) * sizeof(c3_h));
+  c3_h* cix_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  c3_h* rgs_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  c3_h  non_h = 0, i_h, n_h = 0, e_h;
+
+  for ( e_h = 0; e_h < egn_h; e_h++ ) {
+    nod_h[e_h] = _nc_none;
+    if ( (edo_h[e_h] != edo_h[e_h + 1]) && !(e_h & 1) ) {
+      nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[e_h >> 1]]);
+      tgt_h[e_h]    = blk_u->kid_h[(e_h & 1) ? 1 : 0];
+      eds_h[n_h++]  = e_h;
+    }
+  }
+  u3_assert( n_h == edn_h );
+
+  _nc_dt_edo_h = edo_h;
+  _nc_dt_edr_d = edr_d;
+  _nc_dt_tgt_h = tgt_h;
+  qsort(eds_h, edn_h, sizeof(c3_h), _nc_dt_cmp);
+
+  //  one node per distinct set into a target, by size within the target;
+  //  the keys of edr_d carry the edge above the register, so compare the
+  //  registers
+  //
+  for ( i_h = 0; i_h < edn_h; i_h++ ) {
+    e_h = eds_h[i_h];
+    if ( non_h ) {
+      c3_h f_h = nde_h[non_h - 1];
+      c3_t eql_t = (tgt_h[f_h] == tgt_h[e_h])
+                && (_nc_dt_len(f_h) == _nc_dt_len(e_h));
+
+      for ( c3_h k_h = 0; eql_t && (k_h < _nc_dt_len(e_h)); k_h++ ) {
+        eql_t = ( (c3_h)edr_d[edo_h[f_h] + k_h]
+               == (c3_h)edr_d[edo_h[e_h] + k_h] );
+      }
+      if ( eql_t ) {
+        nod_h[e_h] = non_h - 1;
+        continue;
+      }
+    }
+    nde_h[non_h] = e_h;
+    ndt_h[non_h] = tgt_h[e_h];
+    ndp_h[non_h] = _nc_none;
+    nod_h[e_h]   = non_h++;
+  }
+
+  //  the parents, a target at a time: the sets as bitmaps of the
+  //  registers dropped into it, the biggest smaller subset first
+  //
+  for ( i_h = 0; i_h < reg_h; i_h++ ) {
+    cix_h[i_h] = _nc_none;
+  }
+
+  for ( c3_h g_h = 0, h_h; g_h < non_h; g_h = h_h ) {
+    c3_h  uni_h = 0, wor_h, m_h;
+    c3_d* bit_d;
+
+    for ( h_h = g_h; (h_h < non_h) && (ndt_h[h_h] == ndt_h[g_h]); h_h++ );
+    if ( (h_h - g_h) < 2 ) {
+      continue;
+    }
+
+    for ( m_h = g_h; m_h < h_h; m_h++ ) {
+      c3_h f_h = nde_h[m_h];
+      for ( c3_h k_h = edo_h[f_h]; k_h < edo_h[f_h + 1]; k_h++ ) {
+        c3_h r_h = (c3_h)edr_d[k_h];
+        if ( _nc_none == cix_h[r_h] ) {
+          cix_h[r_h] = uni_h;
+          rgs_h[uni_h++] = r_h;
+        }
+      }
+    }
+
+    wor_h = (uni_h + 63) >> 6;
+    bit_d = u3a_calloc((c3_z)(h_h - g_h) * wor_h, sizeof(c3_d));
+
+    for ( m_h = g_h; m_h < h_h; m_h++ ) {
+      c3_h  f_h = nde_h[m_h];
+      c3_d* b_d = bit_d + ((c3_z)(m_h - g_h) * wor_h);
+      for ( c3_h k_h = edo_h[f_h]; k_h < edo_h[f_h + 1]; k_h++ ) {
+        c3_h x_h = cix_h[(c3_h)edr_d[k_h]];
+        b_d[x_h >> 6] |= 1ULL << (x_h & 63);
+      }
+    }
+
+    for ( m_h = g_h + 1; m_h < h_h; m_h++ ) {
+      c3_d* s_d = bit_d + ((c3_z)(m_h - g_h) * wor_h);
+      c3_h  s_h = _nc_dt_len(nde_h[m_h]);
+      c3_h  j_h, ned_h = 0;
+
+      for ( j_h = m_h; (j_h-- > g_h) && (ned_h < 4096); ned_h++ ) {
+        c3_d* t_d = bit_d + ((c3_z)(j_h - g_h) * wor_h);
+        c3_t  sub_t = 1;
+
+        if ( _nc_dt_len(nde_h[j_h]) >= s_h ) {
+          continue;
+        }
+        for ( c3_h w_h = 0; w_h < wor_h; w_h++ ) {
+          if ( t_d[w_h] & ~s_d[w_h] ) {
+            sub_t = 0;
+            break;
+          }
+        }
+        if ( sub_t ) {
+          ndp_h[m_h] = j_h;
+          break;
+        }
+      }
+    }
+
+    for ( m_h = 0; m_h < uni_h; m_h++ ) {
+      cix_h[rgs_h[m_h]] = _nc_none;
+    }
+    u3a_free(bit_d);
+  }
+
+  u3a_free(eds_h);
+  u3a_free(tgt_h);
+  u3a_free(cix_h);
+  u3a_free(rgs_h);
+  return non_h;
+}
+
 /* _nc_lives(): code transformations to respect the lifetimes of the registers.
 **
 **  First pass is dead code elimination: non-crashing ops whose products are not
@@ -1794,9 +2231,12 @@ _nc_consume(nc_op* bra_u, c3_y edg_y, c3_d* ded_d, c3_h lo_h, c3_h hi_h)
 **  The drops common to every edge into a block are collected for its
 **  start.  A drop on one edge but not all goes into the branch that ends
 **  the predecessor, if that is one of its sources (the edge variants of
-**  the branches, _nc_edgy()), else into a block of drops made for the
-**  edge; a block with a lone predecessor lets its branch take its own
-**  sources the same way, over a drop at the start.  So no drop ever
+**  the branches, _nc_edgy()), else into a block of drops for the edge:
+**  for a jump, shared (_nc_drop_tree()), the jumps into a block with the
+**  same drops sharing one and one whose drops contain another's dropping
+**  the difference and going on to it; a block with a lone predecessor
+**  lets its branch take its own sources the same way, over a drop at the
+**  start.  So no drop ever
 **  meets an empty slot, which a build without _nc_zer_t does not allow.
 **  A build with it zeroes every empty slot, and a drop of a zero does
 **  nothing: the drops left over for an edge go to the start of the block
@@ -1806,8 +2246,10 @@ _nc_consume(nc_op* bra_u, c3_y edg_y, c3_d* ded_d, c3_h lo_h, c3_h hi_h)
 **  left to its terminator's sweep, _nc_swe_t), then its ops, with a DRO
 **  after an op whose product is dead on arrival; a block of drops for a
 **  fall-through edge follows the predecessor, taking over its jump to
-**  the yes block if it had one; those for jump edges go at the end,
-**  jumping on to their targets, and the branches are retargeted to them.
+**  the yes block if it had one; those for jumps go at the end, the
+**  branches retargeted to them, each falling through into the one it
+**  goes on to when it comes right before it, else jumping there or to
+**  its target.
 */
 static void
 _nc_lives(nc_gen* gen_u, c3_h arg_h)
@@ -2113,15 +2555,33 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   //
   _nc_key_sort(dro_d, dro_h);
   _nc_key_sort(edr_d, edr_h);
+#ifdef U3NC_STAT
+  //  U3NC_LIVES_STAT: what the alternatives to the drop blocks would save
+  //
+  {
+    static c3_y lis_y = 2;
+    if ( 2 == lis_y ) {
+      lis_y = !!getenv("U3NC_LIVES_STAT");
+    }
+    if ( lis_y ) {
+      _nc_lives_stat(gen_u, edr_d, edr_h, reg_h, arg_h, pro_h, pre_h);
+    }
+  }
+#endif
 
   {
     c3_h*  edo_h = u3a_malloc(((2 * (c3_z)gen_u->lan_h) + 1) * sizeof(c3_h));
-    c3_h   edn_h = 0, e_h;                     //  edge blocks
+    c3_h   edn_h = 0, e_h;                     //  edges with drops
+    c3_h   edj_h = 0;                          //    of them jumps
+    c3_h   eft_h = 0;                          //    and fall-throughs
+    c3_h   non_h = 0;                          //  blocks of drops (nodes)
+    c3_h*  nod_h;                              //  edge -> node
+    c3_h*  nde_h;                              //  node -> an edge with its set
+    c3_h*  ndp_h;                              //  node -> parent, or _nc_none
+    c3_h*  ndt_h;                              //  node -> target block
+    c3_h*  ndb_h;                              //  node -> its block
     c3_h*  lay_h;                              //  the new layout
     c3_h   lan_h = 0;
-    c3_h*  def_h;                              //  edge blocks for the end
-    c3_h*  dfe_h;                              //    and their edges
-    c3_h   dfn_h = 0;
     c3_d   cap_d;
     c3_h   cap_h;
     nc_op* new_u;
@@ -2130,33 +2590,62 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
     for ( e_h = 0, edo_h[0] = 0; e_h < 2 * gen_u->lan_h; e_h++ ) {
       edo_h[e_h + 1] = edo_h[e_h] + edc_h[e_h];
       edn_h += !!edc_h[e_h];
+      edj_h += !!edc_h[e_h] && !(e_h & 1);
     }
+    eft_h = edn_h - edj_h;
     u3_assert( !_nc_zer_t || !edn_h );
-    _nc_stat_add(edb_d, edn_h);
 
-    cap_d = (2 * (c3_d)gen_u->opn_h) + dro_h + edr_h + edn_h;
+    nod_h = u3a_malloc(c3_max(2 * (c3_z)gen_u->lan_h, 1) * sizeof(c3_h));
+    nde_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    ndp_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    ndt_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    ndb_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    if ( edj_h ) {
+      non_h = _nc_drop_tree(gen_u, edo_h, edr_d, edj_h, reg_h,
+                            nod_h, nde_h, ndp_h, ndt_h);
+    }
+    else {
+      for ( e_h = 0; e_h < 2 * gen_u->lan_h; e_h++ ) {
+        nod_h[e_h] = _nc_none;
+      }
+    }
+    _nc_stat_add(edb_d, non_h + eft_h);
+
+    //  ops: the old ones twice over (a drop of a dead product each), the
+    //  block drops, the edge drops (at most), a jump per node and one per
+    //  fall-through edge
+    //
+    cap_d = (2 * (c3_d)gen_u->opn_h) + dro_h + edr_h + non_h + edn_h;
     if ( cap_d > c3_h_max ) {
       u3m_bail(c3__meme);
     }
     cap_h = cap_d;
     new_u = u3a_malloc(c3_max(cap_h, 1) * sizeof(nc_op));
-    lay_h = u3a_malloc(((c3_z)gen_u->lan_h + edn_h) * sizeof(c3_h));
-    def_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
-    dfe_h = u3a_malloc(c3_max(edn_h, 1) * sizeof(c3_h));
+    lay_h = u3a_malloc(((c3_z)gen_u->lan_h + non_h + eft_h) * sizeof(c3_h));
 
-    if ( edn_h ) {
+    if ( non_h + eft_h ) {
       gen_u->blk_u = u3a_realloc(gen_u->blk_u, blk_h * sizeof(nc_blk),
-                                 ((c3_z)blk_h + edn_h) * sizeof(nc_blk));
+                                 ((c3_z)blk_h + non_h + eft_h)
+                                 * sizeof(nc_blk));
     }
-
-    //  _nc_edrops(): the drops of edge e
-    //
-#define _nc_edrops(e)  do {                                                     \
-    for ( c3_h _i = edo_h[e]; _i < edo_h[(e) + 1]; _i++ ) {                     \
-      nc_op* _op = _nc_op_init(&(new_u[new_h++]), _nc_dro);                     \
-      _op->src_h[0] = (c3_h)edr_d[_i];                                          \
-    }                                                                           \
-  } while ( 0 )
+    if ( non_h ) {
+      for ( c3_h n_h = 0; n_h < non_h; n_h++ ) {
+        ndb_h[n_h] = gen_u->blk_h++;
+      }
+      for ( c3_h n_h = 0; n_h < non_h; n_h++ ) {
+        nc_blk* nod_u = &(gen_u->blk_u[ndb_h[n_h]]);
+        nod_u->blob     = u3_none;
+        nod_u->fir_h    = 0;
+        nod_u->len_h    = 0;
+        nod_u->off_h    = 0;
+        nod_u->lay_h    = _nc_none;
+        nod_u->kin_y    = 1;
+        nod_u->kid_h[0] = ( _nc_none == ndp_h[n_h] )
+                        ? ndt_h[n_h]
+                        : ndb_h[ndp_h[n_h]];
+        nod_u->kid_h[1] = _nc_none;
+      }
+    }
 
     for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
       nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
@@ -2220,11 +2709,13 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
       blk_u->fir_h = fir_h;
       blk_u->len_h = new_h - fir_h;
 
-      //  the blocks of drops on the edges out of this one
+      //  the edges out of this one with drops: the jump goes to the block
+      //  of its node, its branch retargeted; the fall-through to a block
+      //  of its drops that follows, which either falls through to the yes
+      //  block in turn or takes over the jump to it
       //
       for ( k_y = 0; k_y < 2; k_y++ ) {
-        c3_h    kid_h, edg_h;
-        nc_blk* edg_u;
+        c3_h kid_h;
 
         e_h = (2 * i_h) + k_y;
 
@@ -2235,21 +2726,19 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
         //  if a block's edge has drops then it gotta be branchy
         u3_assert( bra_u && (blk_u->kin_y > 1) );
 
-        //  insert a block with drops
         kid_h = blk_u->kid_h[k_y];
-        edg_h = gen_u->blk_h++;
-        edg_u = &(gen_u->blk_u[edg_h]);
-        edg_u->blob     = u3_none;
-        edg_u->off_h    = 0;
-        edg_u->lay_h    = _nc_none;
-        edg_u->kin_y    = 1;
-        edg_u->kid_h[0] = kid_h;
-        edg_u->kid_h[1] = _nc_none;
 
         if ( k_y ) {
-          //  the fall-through: the block follows, and either falls
-          //  through to the yes block in turn or takes over the jump
-          //
+          c3_h    edg_h = gen_u->blk_h++;
+          nc_blk* edg_u = &(gen_u->blk_u[edg_h]);
+
+          edg_u->blob     = u3_none;
+          edg_u->off_h    = 0;
+          edg_u->lay_h    = _nc_none;
+          edg_u->kin_y    = 1;
+          edg_u->kid_h[0] = kid_h;
+          edg_u->kid_h[1] = _nc_none;
+
           if ( hop_u ) {
             u3_assert( (hop_u->tar_h == kid_h)
                     && (hop_u == &(new_u[new_h - 1])) );
@@ -2257,7 +2746,10 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
             blk_u->len_h--;
           }
           edg_u->fir_h = new_h;
-          _nc_edrops(e_h);
+          for ( c3_h d_h = edo_h[e_h]; d_h < edo_h[e_h + 1]; d_h++ ) {
+            nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_dro);
+            op_u->src_h[0] = (c3_h)edr_d[d_h];
+          }
           if ( hop_u ) {
             nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
             op_u->tar_h = kid_h;
@@ -2266,35 +2758,75 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           lay_h[lan_h++] = edg_h;
         }
         else {
-          //  the jump: retargeted to the block, which goes at the end
-          //
+          c3_h nob_h = ndb_h[nod_h[e_h]];
+
+          u3_assert( gen_u->blk_u[nob_h].lay_h == _nc_none );
           u3_assert( bra_u->tar_h == kid_h );
-          bra_u->tar_h = edg_h;
-          def_h[dfn_h] = edg_h;
-          dfe_h[dfn_h] = e_h;
-          dfn_h++;
+          bra_u->tar_h = nob_h;
         }
       }
     }
 
-    for ( i_h = 0; i_h < dfn_h; i_h++ ) {
-      nc_blk* edg_u = &(gen_u->blk_u[def_h[i_h]]);
-      nc_op*  op_u;
+    //  the blocks of the nodes, at the end: each drops what its set has
+    //  beyond its parent's and goes on to the parent, falling through when
+    //  it comes right before it; a chain at a time, from a node no other
+    //  node precedes, up to a parent already laid out or the target
+    //
+    if ( non_h ) {
+      c3_y* don_y = u3a_calloc(non_h, sizeof(c3_y));
 
-      edg_u->fir_h = new_h;
-      _nc_edrops(dfe_h[i_h]);
-      op_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
-      op_u->tar_h = edg_u->kid_h[0];
-      edg_u->len_h = new_h - edg_u->fir_h;
-      lay_h[lan_h++] = def_h[i_h];
+      for ( c3_h n_h = non_h; n_h-- > 0; ) {
+        c3_h m_h = n_h;
+
+        while ( (_nc_none != m_h) && !don_y[m_h] ) {
+          nc_blk* nod_u = &(gen_u->blk_u[ndb_h[m_h]]);
+          c3_h    p_h   = ndp_h[m_h];
+          c3_h    f_h   = nde_h[m_h];
+          c3_h    k_h   = edo_h[f_h];
+          c3_h    q_h, l_h;
+
+          don_y[m_h]   = 1;
+          nod_u->fir_h = new_h;
+
+          //  the drops of the set but not of the parent's: both sorted
+          //
+          if ( _nc_none == p_h ) {
+            q_h = l_h = 0;
+          }
+          else {
+            q_h = edo_h[nde_h[p_h]];
+            l_h = edo_h[nde_h[p_h] + 1];
+          }
+          for ( ; k_h < edo_h[f_h + 1]; k_h++ ) {
+            c3_h r_h = (c3_h)edr_d[k_h];
+
+            while ( (q_h < l_h) && ((c3_h)edr_d[q_h] < r_h) ) {
+              q_h++;
+            }
+            if ( (q_h < l_h) && ((c3_h)edr_d[q_h] == r_h) ) {
+              continue;
+            }
+            nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_dro);
+            op_u->src_h[0] = r_h;
+          }
+
+          if ( (_nc_none == p_h) || don_y[p_h] ) {
+            nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
+            op_u->tar_h = nod_u->kid_h[0];
+          }
+
+          nod_u->len_h = new_h - nod_u->fir_h;
+          lay_h[lan_h++] = ndb_h[m_h];
+          m_h = p_h;
+        }
+      }
+      u3a_free(don_y);
     }
-
-#undef _nc_edrops
 
     u3_assert( (dri_h == dro_h)
             && (new_h <= cap_h)
-            && (lan_h == gen_u->lan_h + edn_h)
-            && (gen_u->blk_h == blk_h + edn_h) );
+            && (lan_h == gen_u->lan_h + non_h + eft_h)
+            && (gen_u->blk_h == blk_h + non_h + eft_h) );
 
     for ( i_h = 0; i_h < lan_h; i_h++ ) {
       gen_u->blk_u[lay_h[i_h]].lay_h = i_h;
@@ -2308,8 +2840,11 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
     gen_u->lay_h = lay_h;
     gen_u->lan_h = lan_h;
     u3a_free(edo_h);
-    u3a_free(def_h);
-    u3a_free(dfe_h);
+    u3a_free(nod_h);
+    u3a_free(nde_h);
+    u3a_free(ndp_h);
+    u3a_free(ndt_h);
+    u3a_free(ndb_h);
   }
 
   u3a_free(use_h);
@@ -2970,6 +3505,35 @@ _nc_print(u3nc_prog* pog_u)
     fprintf(stderr, "\r\n");
   }
 
+  //  literals: a small atom as text if it prints, else its mug
+  //
+  for ( i_h = 0; i_h < pog_u->lit_u.len_h; i_h++ ) {
+    u3_noun lit = pog_u->lit_u.non[i_h];
+
+    if ( (c3y == u3ud(lit)) && (u3r_met(3, lit) <= 16) ) {
+      c3_y  buf_y[17] = {0};
+      c3_w  len_w = u3r_met(3, lit), j_w;
+      c3_t  txt_t = (len_w > 0);
+
+      u3r_bytes(0, len_w, buf_y, lit);
+      for ( j_w = 0; j_w < len_w; j_w++ ) {
+        if ( (buf_y[j_w] < 32) || (buf_y[j_w] > 126) ) txt_t = 0;
+      }
+      if ( txt_t ) {
+        fprintf(stderr, "  lit #%u: '%s'\r\n", i_h, (c3_c*)buf_y);
+      }
+      else {
+        fprintf(stderr, "  lit #%u: atom 0x%" PRIx64 "%s\r\n", i_h,
+                (len_w <= 8) ? u3r_chub(0, lit) : (c3_d)u3r_mug(lit),
+                (len_w <= 8) ? "" : " (mug)");
+      }
+    }
+    else {
+      fprintf(stderr, "  lit #%u: %s mug %08x\r\n", i_h,
+              (c3y == u3ud(lit)) ? "atom" : "cell", u3r_mug(lit));
+    }
+  }
+
   while ( ip_h < pog_u->byc_u.len_h ) {
     c3_y cod_y = pog[ip_h];
     c3_h off_h = ip_h;
@@ -3113,6 +3677,8 @@ _nc_prog_new(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
   pog_u->jet         = u3_nul;
   _nc_prog_fix(pog_u);
 #ifdef U3NC_STAT
+  pog_u->ent_d = 0;
+  pog_u->con_d = 0;
   pog_u->bor_d = 0;
   memset(pog_u->ali_y, 0, byc_h + 1);
 #endif
@@ -3842,16 +4408,84 @@ _nc_dire_fit(const u3nc_dire* dir_u, const u3nc_prog* gop_u)
   }
 }
 
-/* _nc_ent_get(): entry program for [sub fol], from any road.  RETAINS.
+/* _nc_las_key(): the key, in this road's transient memo cache, of the
+**   last subject that matched the sock of the entry [sock prog] i: that
+**   cache lives and dies with the road, as such a subject may.
+*/
+static u3_noun
+_nc_las_key(u3_noun i)
+{
+  return u3nc(c3__last, u3k(u3t(i)));
+}
+
+/* _nc_las_get(): the last subject that matched the entry i on this road,
+**   or u3_none.  For u3d_match_las().
+*/
+static u3_weak
+_nc_las_get(u3_noun i, void* ptr_v)
+{
+  u3_noun key = _nc_las_key(i);
+  u3_weak las = u3z_find(u3z_memo_toss, key);
+
+  (void)ptr_v;
+  u3z(key);
+  return las;
+}
+
+/* _nc_las_put(): remember sub as the last subject that matched the entry
+**   i on this road.  RETAINS.
+*/
+static void
+_nc_las_put(u3_noun i, u3_noun sub)
+{
+  u3_noun key = _nc_las_key(i);
+  u3_weak old = u3z_find(u3z_memo_toss, key);
+
+  if ( old == sub ) {
+    u3z(key);
+  }
+  else {
+    (void)u3z_save(u3z_memo_toss, key, sub);
+  }
+  if ( u3_none != old ) {
+    u3z(old);
+  }
+}
+
+/* _nc_ent_get(): entry program for [sub fol], from any road: the most
+**   specific whose sock sub matches.  Off the home road a match walks
+**   only what changed since the last subject that matched.  RETAINS.
 */
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
   u3_weak got, lis;
+  c3_t    hom_t = ( &(u3H->rod_u) == u3R );
+
   for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
-    if (  (u3_none != (lis = u3h_git(rod_u->ska.ent_p, fol)))
-       && (u3_none != (got = u3d_match(sub, lis))) )
-    {
+    if ( u3_none == (lis = u3h_git(rod_u->ska.ent_p, fol)) ) {
+      continue;
+    }
+#ifdef U3NC_STAT
+    //  u3d_match() scans every entry of the formula
+    //
+    for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
+      _nc_stat(mat_d);
+    }
+#endif
+    //  the home road matches in full: it would keep subjects alive
+    //  from one event to the next
+    //
+    if ( hom_t ) {
+      got = u3d_match(sub, lis);
+    }
+    else {
+      got = u3d_match_las(sub, lis, _nc_las_get, 0);
+      if ( u3_none != got ) {
+        _nc_las_put(got, sub);
+      }
+    }
+    if ( u3_none != got ) {
       return _nc_to(u3t(got));
     }
   }
@@ -4077,6 +4711,37 @@ _nc_entry(u3_noun sub, u3_noun fol)
   if ( !pog_u ) {
     u3_noun bell, old, lis;
 
+#ifdef U3NC_STAT
+    //  U3NC_ENT_LOG: each entry compiled, its formula and the depth of
+    //  the poke it comes from (diagnostics)
+    //
+    {
+      static c3_y log_y = 2;
+      if ( 2 == log_y ) {
+        log_y = !!getenv("U3NC_ENT_LOG");
+      }
+      if ( log_y ) {
+        u3_noun jam = u3qe_jam(fol);
+        c3_w    len_w = u3r_met(3, jam);
+        fprintf(stderr, "u3nc entry miss: fol %08x (%u B jammed), sub %08x,"
+                        " %u entries of the formula\r\n",
+                u3r_mug(fol), len_w, u3r_mug(sub),
+                (c3_w)(( u3_none == (old = u3h_git(u3R->ska.ent_p, fol)) )
+                       ? 0 : u3qb_lent(old)));
+        {
+          static c3_w num_w = 0;
+          if ( (len_w < 48) || ((len_w > 2100) && (len_w < 2200) && (num_w++ < 2)) ) {
+            u3m_p("    fol", fol);
+            //  the subject's shape, by mugs: printing it would take ages
+            fprintf(stderr, "    sub: head %08x (%s), tail %08x\r\n",
+                    u3r_mug(u3h(sub)), (c3y == u3du(u3h(sub))) ? "cell" : "atom",
+                    u3r_mug(u3t(sub)));
+          }
+        }
+        u3z(jam);
+      }
+    }
+#endif
     pog_u = _nc_compile(u3d_full(sub, fol, &bell), u3_none);
 
     old = u3h_get(u3R->ska.ent_p, fol);
@@ -4710,6 +5375,287 @@ u3nc_regs(void)
     }
   }
 }
+
+#ifdef U3NC_STAT
+/* _nc_hot: the programs u3nc_hot() collects, each once.
+*/
+typedef struct {
+  u3nc_prog** pog_u;
+  c3_w*       mug_w;              //  mug of its bell (as call sites print it)
+  c3_w        len_w;
+  c3_w        cap_w;
+} _nc_hot;
+
+static void
+_nc_hot_add(_nc_hot* hot_u, u3nc_prog* pog_u, c3_w mug_w)
+{
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < hot_u->len_w; i_w++ ) {
+    if ( hot_u->pog_u[i_w] == pog_u ) {
+      if ( mug_w ) hot_u->mug_w[i_w] = mug_w;
+      return;
+    }
+  }
+  if ( hot_u->len_w == hot_u->cap_w ) {
+    hot_u->cap_w = hot_u->cap_w ? 2 * hot_u->cap_w : 256;
+    hot_u->pog_u = c3_realloc(hot_u->pog_u, hot_u->cap_w * sizeof(u3nc_prog*));
+    hot_u->mug_w = c3_realloc(hot_u->mug_w, hot_u->cap_w * sizeof(c3_w));
+  }
+  hot_u->mug_w[hot_u->len_w] = mug_w;
+  hot_u->pog_u[hot_u->len_w++] = pog_u;
+}
+
+static void
+_nc_hot_dir_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun key = u3h(kev);
+  u3_noun bel = ( (c3y == u3du(key)) && (c3__mono == u3h(key)) ) ? u3t(key) : key;
+
+  _nc_hot_add(ptr_v, _nc_to(u3t(kev)), u3r_mug(bel));
+}
+
+static void
+_nc_hot_ent_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun lis;
+
+  for ( lis = u3t(kev); u3_nul != lis; lis = u3t(lis) ) {
+    _nc_hot_add(ptr_v, _nc_to(u3t(u3h(lis))), 0);
+  }
+}
+
+/* _nc_hof: the formulas of the entry programs, for u3nc_hot(): how many
+**          programs each has, which an entry lookup scans every time, and
+**          their activations.
+*/
+typedef struct {
+  c3_w     len_w, cap_w;
+  c3_w*    mug_w;
+  c3_w*    num_w;
+  c3_d*    act_d;
+  u3_noun* kev;
+} _nc_hof;
+
+/* _nc_cape_size(): cells of a cape, the nodes u3d_match() walks; and its
+**                  known leaves.
+*/
+static c3_d
+_nc_cape_size(u3_noun cap, c3_d* yes_d)
+{
+  if ( c3y == u3ud(cap) ) {
+    if ( 0 == cap ) (*yes_d)++;
+    return 0;
+  }
+  return 1 + _nc_cape_size(u3h(cap), yes_d) + _nc_cape_size(u3t(cap), yes_d);
+}
+
+/* _nc_cape_axes(): the known leaves of a cape, by axis, the first num_w
+**                  of them, in a list.  RETAINS cap.
+*/
+static void
+_nc_cape_axes(u3_noun cap, u3_noun axe, c3_w* num_w, u3_noun* out)
+{
+  if ( !*num_w ) return;
+  if ( c3y == u3ud(cap) ) {
+    if ( 0 == cap ) {
+      *out = u3nc(u3k(axe), *out);
+      (*num_w)--;
+    }
+    return;
+  }
+  {
+    u3_noun l = u3qc_peg(axe, 2), r = u3qc_peg(axe, 3);
+    _nc_cape_axes(u3h(cap), l, num_w, out);
+    _nc_cape_axes(u3t(cap), r, num_w, out);
+    u3z(l); u3z(r);
+  }
+}
+
+static void
+_nc_hof_cb(u3_noun kev, void* ptr_v)
+{
+  _nc_hof* hof_u = ptr_v;
+  c3_w     num_w = 0;
+  c3_d     act_d = 0;
+  u3_noun  lis;
+
+  for ( lis = u3t(kev); u3_nul != lis; lis = u3t(lis) ) {
+    num_w++;
+    act_d += _nc_to(u3t(u3h(lis)))->ent_d;
+  }
+  if ( hof_u->len_w == hof_u->cap_w ) {
+    hof_u->cap_w = hof_u->cap_w ? 2 * hof_u->cap_w : 64;
+    hof_u->mug_w = c3_realloc(hof_u->mug_w, hof_u->cap_w * sizeof(c3_w));
+    hof_u->num_w = c3_realloc(hof_u->num_w, hof_u->cap_w * sizeof(c3_w));
+    hof_u->act_d = c3_realloc(hof_u->act_d, hof_u->cap_w * sizeof(c3_d));
+    hof_u->kev   = c3_realloc(hof_u->kev, hof_u->cap_w * sizeof(u3_noun));
+  }
+  hof_u->mug_w[hof_u->len_w] = u3r_mug(u3h(kev));
+  hof_u->num_w[hof_u->len_w] = num_w;
+  hof_u->act_d[hof_u->len_w] = act_d;
+  hof_u->kev[hof_u->len_w]   = kev;
+  hof_u->len_w++;
+}
+
+/* _nc_hof_print(): the formulas whose entry programs ran the most, top
+**                  num_w of them.
+*/
+static void
+_nc_hof_print(c3_w num_w)
+{
+  _nc_hof   hof_u = {0};
+  u3a_road* rod_u;
+  c3_w      i_w, j_w, top_w;
+  c3_d      act_d = 0, scn_d = 0;
+
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3h_walk_with(rod_u->ska.ent_p, _nc_hof_cb, &hof_u);
+  }
+  for ( i_w = 0; i_w < hof_u.len_w; i_w++ ) {
+    act_d += hof_u.act_d[i_w];
+    scn_d += hof_u.act_d[i_w] * hof_u.num_w[i_w];
+  }
+  fprintf(stderr, "u3nc entries: %" PRIc3_w " formulas, %" PRIu64
+                  " activations of their programs, %" PRIu64
+                  " programs scanned for them\r\n",
+          hof_u.len_w, act_d, scn_d);
+
+  //  selection of the top ones by activations
+  //
+  for ( top_w = 0; (top_w < num_w) && (top_w < hof_u.len_w); top_w++ ) {
+    c3_w m_w = top_w;
+    for ( j_w = top_w + 1; j_w < hof_u.len_w; j_w++ ) {
+      if ( hof_u.act_d[j_w] > hof_u.act_d[m_w] ) m_w = j_w;
+    }
+    {
+      c3_w mug_w = hof_u.mug_w[m_w], n_w = hof_u.num_w[m_w];
+      c3_d a_d = hof_u.act_d[m_w];
+      u3_noun k = hof_u.kev[m_w];
+      hof_u.mug_w[m_w] = hof_u.mug_w[top_w];
+      hof_u.num_w[m_w] = hof_u.num_w[top_w];
+      hof_u.act_d[m_w] = hof_u.act_d[top_w];
+      hof_u.kev[m_w]   = hof_u.kev[top_w];
+      hof_u.mug_w[top_w] = mug_w;
+      hof_u.num_w[top_w] = n_w;
+      hof_u.act_d[top_w] = a_d;
+      hof_u.kev[top_w]   = k;
+    }
+    fprintf(stderr, "u3nc entry formula %08x: %" PRIc3_w " programs, %" PRIu64
+                    " activations\r\n",
+            hof_u.mug_w[top_w], hof_u.num_w[top_w], hof_u.act_d[top_w]);
+    //  the formula, when small, and the capes of its programs' socks: the
+    //  nodes an entry lookup walks, and the first known leaves by axis
+    //
+    {
+      u3_noun fol = u3h(hof_u.kev[top_w]), lis;
+      u3_noun jam = u3qe_jam(fol);
+      if ( u3r_met(3, jam) < 64 ) {
+        u3m_p("    formula", fol);
+      }
+      else {
+        fprintf(stderr, "    formula: %" PRIc3_w " bytes jammed\r\n",
+                (c3_w)u3r_met(3, jam));
+      }
+      u3z(jam);
+      for ( lis = u3t(hof_u.kev[top_w]); u3_nul != lis; lis = u3t(lis) ) {
+        u3_noun cap = u3h(u3h(u3h(lis)));
+        c3_d    yes_d = 0;
+        c3_d    siz_d = _nc_cape_size(cap, &yes_d);
+        c3_w    n_w = 40;
+        u3_noun out = u3_nul;
+        fprintf(stderr, "    sock cape: %" PRIu64 " cells, %" PRIu64
+                        " known leaves\r\n", siz_d, yes_d);
+        _nc_cape_axes(cap, 1, &n_w, &out);
+        u3m_p("    first known axes (reversed)", out);
+        u3z(out);
+      }
+    }
+  }
+
+  c3_free(hof_u.mug_w);
+  c3_free(hof_u.num_w);
+  c3_free(hof_u.act_d);
+  c3_free(hof_u.kev);
+}
+
+static int
+_nc_hot_cmp(const void* a_v, const void* b_v)
+{
+  const u3nc_prog* a_u = *(u3nc_prog* const*)a_v;
+  const u3nc_prog* b_u = *(u3nc_prog* const*)b_v;
+
+  return ( a_u->con_d < b_u->con_d ) - ( a_u->con_d > b_u->con_d );
+}
+
+/* u3nc_hot(): the num_w programs of this road and its seniors that made
+**             the most cells since they were compiled, the first dum_w
+**             of them in full (-Dska-stat).
+*/
+void
+u3nc_hot(c3_w num_w, c3_w dum_w)
+{
+  _nc_hot   hot_u = {0};
+  c3_d      con_d = 0, ent_d = 0;
+  c3_w      i_w;
+  u3a_road* rod_u;
+
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3h_walk_with(rod_u->ska.dir_p, _nc_hot_dir_cb, &hot_u);
+    u3h_walk_with(rod_u->ska.ent_p, _nc_hot_ent_cb, &hot_u);
+  }
+  //  sort both arrays by the programs' cells: sort an index
+  //
+  {
+    c3_w*       idx_w = c3_malloc(hot_u.len_w * sizeof(c3_w) + 1);
+    u3nc_prog** pog_u = c3_malloc(hot_u.len_w * sizeof(u3nc_prog*) + 1);
+    c3_w*       mug_w = c3_malloc(hot_u.len_w * sizeof(c3_w) + 1);
+
+    for ( i_w = 0; i_w < hot_u.len_w; i_w++ ) {
+      pog_u[i_w] = hot_u.pog_u[i_w];
+    }
+    qsort(pog_u, hot_u.len_w, sizeof(u3nc_prog*), _nc_hot_cmp);
+    for ( i_w = 0; i_w < hot_u.len_w; i_w++ ) {
+      c3_w j_w;
+      for ( j_w = 0; hot_u.pog_u[j_w] != pog_u[i_w]; j_w++ );
+      mug_w[i_w] = hot_u.mug_w[j_w];
+    }
+    c3_free(idx_w);
+    c3_free(hot_u.pog_u);
+    c3_free(hot_u.mug_w);
+    hot_u.pog_u = pog_u;
+    hot_u.mug_w = mug_w;
+  }
+
+  for ( i_w = 0; i_w < hot_u.len_w; i_w++ ) {
+    con_d += hot_u.pog_u[i_w]->con_d;
+    ent_d += hot_u.pog_u[i_w]->ent_d;
+  }
+  fprintf(stderr, "u3nc hot: %" PRIc3_w " programs, %" PRIu64 " activations, "
+                  "%" PRIu64 " cells\r\n", hot_u.len_w, ent_d, con_d);
+  _nc_hof_print(10);
+
+  for ( i_w = 0; (i_w < num_w) && (i_w < hot_u.len_w); i_w++ ) {
+    u3nc_prog* pog_u = hot_u.pog_u[i_w];
+
+    fprintf(stderr, "u3nc hot %" PRIc3_w ": %p, bell %08x, %u bytes, %u slots, "
+                    "%u args, "
+                    "%" PRIu64 " activations, %" PRIu64 " cells (%.1f each), "
+                    "%u call sites\r\n",
+            i_w, (void*)pog_u, hot_u.mug_w[i_w],
+            pog_u->byc_u.len_h, pog_u->tot_h, pog_u->arg_h,
+            pog_u->ent_d, pog_u->con_d,
+            pog_u->ent_d ? (double)pog_u->con_d / pog_u->ent_d : 0.0,
+            pog_u->dir_u.len_h);
+    if ( i_w < dum_w ) {
+      _nc_print(pog_u);
+    }
+  }
+
+  c3_free(hot_u.pog_u);
+  c3_free(hot_u.mug_w);
+}
+#endif
 
 /* u3nc_scan(): analyze and compile [bus fol] without running it.
 */

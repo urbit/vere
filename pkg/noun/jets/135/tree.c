@@ -310,6 +310,34 @@ static u3j_core _135_hex_ripe_d[] =
 /* layer five
  */
 static u3j_harm _135_pen_cell_a[] = {{".2", u3wf_cell}, {}};
+static u3j_harm _135_pen__ev_eval_a[] = {{".2", u3we_ev_eval}, {}};
+static u3j_harm _135_pen_core_chains_a[] = {{".2", u3we_core_chains}, {}};
+#ifdef U3NC_STAT
+static u3j_harm _135_pen__prof_ska_callgraph_a[] = {{".2", u3we_prof_ska_callgraph}, {}};
+static u3j_harm _135_pen__prof_ska_analyze_a[] = {{".2", u3we_prof_ska_analyze}, {}};
+static u3j_harm _135_pen__prof_ska_callgraph_iteration_a[] = {{".2", u3we_prof_ska_callgraph_iteration}, {}};
+static u3j_harm _135_pen__prof_fol_loop_a[] = {{".2", u3we_prof_fol_loop}, {}};
+static u3j_harm _135_pen__prof_register_fast_a[] = {{".2", u3we_prof_register_fast}, {}};
+static u3j_harm _135_pen__prof_know_a[] = {{".2", u3we_prof_know}, {}};
+static u3j_harm _135_pen__prof_bake_graph_a[] = {{".2", u3we_prof_bake_graph}, {}};
+static u3j_harm _135_pen__prof_poke_scc_loop_a[] = {{".2", u3we_prof_poke_scc_loop}, {}};
+static u3j_harm _135_pen__prof_eval_finalized_a[] = {{".2", u3we_prof_eval_finalized}, {}};
+static u3j_harm _135_pen__prof_scc_of_a[] = {{".2", u3we_prof_scc_of}, {}};
+static u3j_harm _135_pen__prof_compile_unary_a[] = {{".2", u3we_prof_compile_unary}, {}};
+static u3j_harm _135_pen__prof_huge_a[] = {{".2", u3we_prof_huge}, {}};
+static u3j_harm _135_pen__prof_pull_a[] = {{".2", u3we_prof_pull}, {}};
+static u3j_harm _135_pen__prof_alias_a[] = {{".2", u3we_prof_alias}, {}};
+static u3j_harm _135_pen__prof_bake_need_a[] = {{".2", u3we_prof_bake_need}, {}};
+static u3j_harm _135_pen__prof_poke_tarjan_a[] = {{".2", u3we_prof_poke_tarjan}, {}};
+static u3j_harm _135_pen__prof_remove_hops_a[] = {{".2", u3we_prof_remove_hops}, {}};
+static u3j_harm _135_pen__prof_compile_scc_in_a[] = {{".2", u3we_prof_compile_scc_in}, {}};
+static u3j_harm _135_pen__prof_optimize_a[] = {{".2", u3we_prof_optimize}, {}};
+static u3j_core _135_pen__so_d[] =
+  { { "huge", 7, _135_pen__prof_huge_a, 0, no_hashes },
+    { "pull", 7, _135_pen__prof_pull_a, 0, no_hashes },
+    {}
+  };
+#endif
 static u3j_harm _135_pen_comb_a[] = {{".2", u3wf_comb}, {}};
 static u3j_harm _135_pen_cons_a[] = {{".2", u3wf_cons}, {}};
 static u3j_harm _135_pen_core_a[] = {{".2", u3wf_core}, {}};
@@ -1513,6 +1541,13 @@ static u3j_core _135_hex_d[] =
     {}
   };
 
+//  the SKA lib's fueled evaluator (nock-compilation.hoon, +ev)
+//
+static u3j_core _135_pen__ev_d[] =
+  { { "eval", 7, _135_pen__ev_eval_a, 0, no_hashes },
+    {}
+  };
+
 static u3j_core _135_pen_d[] =
   { { "hex", 7, 0, _135_hex_d, no_hashes },
 
@@ -1526,6 +1561,28 @@ static u3j_core _135_pen_d[] =
     { "look", 7, _135_pen_look_a, 0, no_hashes },
     { "loot", 7, _135_pen_loot_a, 0, no_hashes },
     { "ut", 15, 0, _135_pen__ut_d, no_hashes, _135_pen__ut_ho },
+    { "ev", 16383, 0, _135_pen__ev_d, no_hashes },
+    { "core-chains", 2047, _135_pen_core_chains_a, 0, no_hashes },
+#ifdef U3NC_STAT
+    { "ska-callgraph", 3, _135_pen__prof_ska_callgraph_a, 0, no_hashes },
+    { "ska-analyze", 3, _135_pen__prof_ska_analyze_a, 0, no_hashes },
+    { "ska-callgraph-iteration", 3, _135_pen__prof_ska_callgraph_iteration_a, 0, no_hashes },
+    { "fol-loop", 3, _135_pen__prof_fol_loop_a, 0, no_hashes },
+    { "register-fast", 3, _135_pen__prof_register_fast_a, 0, no_hashes },
+    { "know", 3, _135_pen__prof_know_a, 0, no_hashes },
+    { "bake-graph", 3, _135_pen__prof_bake_graph_a, 0, no_hashes },
+    { "poke-scc-loop", 3, _135_pen__prof_poke_scc_loop_a, 0, no_hashes },
+    { "eval-finalized", 3, _135_pen__prof_eval_finalized_a, 0, no_hashes },
+    { "scc-of", 3, _135_pen__prof_scc_of_a, 0, no_hashes },
+    { "compile-unary", 3, _135_pen__prof_compile_unary_a, 0, no_hashes },
+    { "bake-need", 3, _135_pen__prof_bake_need_a, 0, no_hashes },
+    { "poke-tarjan", 3, _135_pen__prof_poke_tarjan_a, 0, no_hashes },
+    { "remove-hops", 3, _135_pen__prof_remove_hops_a, 0, no_hashes },
+    { "compile-scc-in", 3, _135_pen__prof_compile_scc_in_a, 0, no_hashes },
+    { "optimize", 3, _135_pen__prof_optimize_a, 0, no_hashes },
+    { "alias", 3, _135_pen__prof_alias_a, 0, no_hashes },
+    { "so", 3, 0, _135_pen__so_d, no_hashes },
+#endif
     {}
   };
 

@@ -143,6 +143,37 @@
     u3_noun u3we_mink(u3_noun);
     u3_noun u3we_mock(u3_noun);
     u3_noun u3we_mole(u3_noun);
+    u3_noun u3we_ev_eval(u3_noun);
+    u3_noun u3we_core_chains(u3_noun);
+    extern c3_d u3we_ev_stat_d[4];
+#ifdef U3NC_STAT
+#   define U3WE_PROF_N 20
+    extern c3_d u3we_prof_d[U3WE_PROF_N][3];
+    extern c3_w u3we_prof_dep_w[U3WE_PROF_N];
+    extern const c3_c* u3we_prof_nam_c[U3WE_PROF_N];
+    u3_noun u3we_prof_ska_callgraph(u3_noun);
+    u3_noun u3we_prof_ska_analyze(u3_noun);
+    u3_noun u3we_prof_ska_callgraph_iteration(u3_noun);
+    u3_noun u3we_prof_fol_loop(u3_noun);
+    u3_noun u3we_prof_register_fast(u3_noun);
+    u3_noun u3we_prof_know(u3_noun);
+    u3_noun u3we_prof_bake_graph(u3_noun);
+    u3_noun u3we_prof_poke_scc_loop(u3_noun);
+    u3_noun u3we_prof_eval_finalized(u3_noun);
+    u3_noun u3we_prof_scc_of(u3_noun);
+    u3_noun u3we_prof_compile_unary(u3_noun);
+    u3_noun u3we_prof_huge(u3_noun);
+    u3_noun u3we_prof_pull(u3_noun);
+    u3_noun u3we_prof_alias(u3_noun);
+    u3_noun u3we_prof_bake_need(u3_noun);
+    u3_noun u3we_prof_poke_tarjan(u3_noun);
+    u3_noun u3we_prof_remove_hops(u3_noun);
+    u3_noun u3we_prof_compile_scc_in(u3_noun);
+    u3_noun u3we_prof_optimize(u3_noun);
+#endif
+#ifdef U3NC_STAT
+    extern c3_d u3we_ev_why_d[6][2];
+#endif
     u3_noun u3we_monk(u3_noun);
     u3_noun u3we_mule(u3_noun);
     u3_noun u3we_repg(u3_noun);

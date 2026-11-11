@@ -58,4 +58,13 @@
       u3_weak
       u3d_match(u3_noun sub, u3_noun lis);
 
+    /* u3d_match_las(): u3d_match(), each candidate i checked against the
+    **                  last subject that matched it, las_f(i, ptr_v)
+    **                  (transferred, or u3_none): what is the same noun
+    **                  there is skipped.  RETAINS.
+    */
+      u3_weak
+      u3d_match_las(u3_noun sub, u3_noun lis,
+                    u3_weak (*las_f)(u3_noun, void*), void* ptr_v);
+
 #endif /* ifndef U3_DIRECT_H */

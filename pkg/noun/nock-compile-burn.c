@@ -398,7 +398,30 @@ static const OP_F WTAB[] = { WIDES };
 
 //  ENTER(len): run pog_u, its len arguments in its slots at reg
 //
+#ifdef U3NC_STAT
+#  define _nc_stat_pog(fel)  (pog_u->fel++)
+#else
+#  define _nc_stat_pog(fel)  ((void)0)
+#endif
+
+//  _nc_tsc_beg(), _nc_tsc_end(fel): TSC cycles of a stretch into a
+//  counter (U3NC_STAT, x86_64)
+//
+#if defined(U3NC_STAT) && defined(__x86_64__)
+#  include <x86intrin.h>
+#  define _nc_tsc_beg()     c3_d _tsc_d = __rdtsc()
+#  define _nc_tsc_end(fel)  (u3nc_Stat.fel += __rdtsc() - _tsc_d)
+//  JT(x): x, a call of a jet, its cycles counted (nested ones twice)
+#  define JT(x)  ({ c3_d _jt_d = __rdtsc(); u3_noun _jr = (x);                  \
+                    u3nc_Stat.jet_c += __rdtsc() - _jt_d; _jr; })
+#else
+#  define _nc_tsc_beg()     ((void)0)
+#  define _nc_tsc_end(fel)  ((void)0)
+#  define JT(x)  (x)
+#endif
+
 #define ENTER(len)  do {                                                        \
+    _nc_stat_pog(ent_d);                                                        \
     if ( _nc_zer_t ) {                                                          \
       for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                        \
         reg[_i] = 0;                                                            \
@@ -481,6 +504,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   fam_u = PUSH(_nc_frame_w);
   fam_u->pog_u = NULL;
   _nc_stat_frame(fam_u);
+  _nc_stat_pog(ent_d);
   _nc_stat_spa_set(0);
 
   ip   = pog_u->byc_u.ops_y;
@@ -511,7 +535,10 @@ OP(done) ARGS CONV
   }
 
   if ( u3_none != fam_u->key ) {
+    _nc_tsc_beg();
     pro = _nc_save(fam_u->cid_h, fam_u->key, pro);
+    _nc_tsc_end(mes_c);
+    _nc_stat(mes_d);
   }
 
   POP(_nc_frame_w + pog_u->tot_h);
@@ -576,6 +603,7 @@ OP3KK(ADD, a_h, b_h, d_h, BODY_ADD)
   TAKEN(t, b_h, KB);                                                            \
   _nc_stat(con_d);                                                              \
   _nc_stat_con();                                                               \
+  _nc_stat_pog(con_d);                                                          \
   PUT(d_h, u3nc(h, t));                                                         \
   BURN();
 OP3KK(CON, a_h, b_h, d_h, BODY_CON)
@@ -694,6 +722,7 @@ OP2(TAR, a_h, d_h, BODY_TAR)
   TAKEN(t, b_h, KB);                                                            \
   _nc_stat(con_d);                                                              \
   _nc_stat_con();                                                               \
+  _nc_stat_pog(con_d);                                                          \
   if ( tok ) {                                                                  \
     u3a_cell* cel_u = (u3a_cell*)u3a_to_ptr(tok);                               \
     _nc_stat(rus_d);                                                            \
@@ -820,9 +849,12 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
 #define BODY_NOK(KA, KB)                                                        \
   u3nc_prog* gop_u;                                                             \
   u3_noun    x = reg[a_h];                                                      \
+  _nc_tsc_beg();                                                                \
   u3t_off(noc_o);                                                               \
   gop_u = _nc_entry(x, reg[b_h]);                                               \
   u3t_on(noc_o);                                                                \
+  _nc_tsc_end(nok_c);                                                           \
+  _nc_stat(nok_d);                                                              \
   TAKEN(x, a_h, KA);                                                            \
   DROP(b_h, KB);                                                                \
   CALL_MONO(gop_u, x, d_h);
@@ -863,7 +895,7 @@ OP1(CAL, a_h, BODY_CAL)
   SITE();                                                                       \
   GATHER(len_h);                                                                \
   _nc_stat(jet_d);                                                              \
-  pro = dir_u->arm_u->arg_f(nex);                                               \
+  pro = JT(dir_u->arm_u->arg_f(nex));                                               \
   POP(len_h);                                                                   \
   LEAVE();                                                                      \
   PUT(dir_u->des_h, pro);                                                       \
@@ -885,7 +917,7 @@ OP1(CAF, a_h, BODY_CAF)
   GIVE();                                                                       \
   _nc_stat(jet_d);                                                              \
   _nc_stat(tra_d);                                                              \
-  pro = dir_u->arm_u->own_f(nex, kon_y);                                        \
+  pro = JT(dir_u->arm_u->own_f(nex, kon_y));                                        \
   POP(len_h);                                                                   \
   PUT(dir_u->des_h, pro);                                                       \
   BURN();
@@ -906,7 +938,7 @@ _nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
   u3_noun    cor, pro, ame;
 
   ham_u->ice = c3y;
-  pro = dir_u->arm_u->arg_f(nex);
+  pro = JT(dir_u->arm_u->arg_f(nex));
   ham_u->ice = c3n;
 
   cor   = _nc_core(dir_u, nex);
@@ -961,7 +993,7 @@ _nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
   }                                                                             \
   _nc_stat(jet_d);                                                              \
   pro = ( c3y == dir_u->ham_u->ice )                                            \
-      ? dir_u->arm_u->arg_f(nex)                                                \
+      ? JT(dir_u->arm_u->arg_f(nex))                                                \
       : CHECK(dir_u, nex, len_h);                                               \
   POP(len_h);                                                                   \
   LEAVE();                                                                      \
@@ -984,8 +1016,8 @@ OP1(CAC, a_h, BODY_CAC)
       CALLEE();                                                                 \
       u3nc_Gop = gop_u;                                                         \
     }                                                                           \
-    pro = u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
-                       u3t(dir_u->ring));                                       \
+    pro = JT(u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
+                       u3t(dir_u->ring)));                                       \
     u3nc_Gop = 0;                                                               \
   }                                                                             \
   else {                                                                        \
@@ -1016,9 +1048,15 @@ OP1(CAP, a_h, BODY_CAP)
   CALLEE();                                                                     \
   GATHER(gop_u->tot_h);                                                         \
   kni_h = 0;                                                                    \
-  x     = _nc_key(dir_u->cid_h, c3n,                                            \
-                  u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell)));  \
-  o     = _nc_find(dir_u->cid_h, x);                                            \
+  {                                                                             \
+    _nc_tsc_beg();                                                              \
+    x = _nc_key(dir_u->cid_h, c3n,                                              \
+                u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell)));    \
+    o = _nc_find(dir_u->cid_h, x);                                              \
+    _nc_tsc_end(mem_c);                                                         \
+  }                                                                             \
+  _nc_stat(mem_d);                                                              \
+  _nc_stat_if(u3_none != o, meh_d);                                             \
   if ( u3_none != o ) {                                                         \
     POP(gop_u->tot_h);                                                          \
     LOSE(x);                                                                    \
@@ -1044,9 +1082,17 @@ OP1(CAM, a_h, BODY_CAM)
   u3_noun*   nex;                                                               \
   c3_h       s_h = SUB();                                                       \
   u3_noun    x   = reg[s_h];                                                    \
-  u3_noun    o   = _nc_key(dir_u->cid_h, c3y,                                   \
-                           u3nc(GAIN(x), GAIN(u3t(dir_u->bell))));              \
-  u3_weak    pro = _nc_find(dir_u->cid_h, o);                                   \
+  u3_noun    o;                                                                 \
+  u3_weak    pro;                                                               \
+  {                                                                             \
+    _nc_tsc_beg();                                                              \
+    o   = _nc_key(dir_u->cid_h, c3y,                                            \
+                  u3nc(GAIN(x), GAIN(u3t(dir_u->bell))));                       \
+    pro = _nc_find(dir_u->cid_h, o);                                            \
+    _nc_tsc_end(mem_c);                                                         \
+  }                                                                             \
+  _nc_stat(mem_d);                                                              \
+  _nc_stat_if(u3_none != pro, meh_d);                                           \
   if ( u3_none != pro ) {                                                       \
     LOSE(o);                                                                    \
     DROP(s_h, KON());                                                           \
@@ -1211,7 +1257,7 @@ OP1K(JMS, a_h, BODY_JMS)
   SITE();                                                                       \
   GATHER(len_h);                                                                \
   _nc_stat(jet_d);                                                              \
-  pro = dir_u->arm_u->arg_f(nex);                                               \
+  pro = JT(dir_u->arm_u->arg_f(nex));                                               \
   POP(len_h);                                                                   \
   LEAVE();                                                                      \
   SWEEP(S);                                                                     \
@@ -1230,7 +1276,7 @@ OP1K(JMF, a_h, BODY_JMF)
   GIVE();                                                                       \
   _nc_stat(jet_d);                                                              \
   _nc_stat(tra_d);                                                              \
-  pro = dir_u->arm_u->own_f(nex, kon_y);                                        \
+  pro = JT(dir_u->arm_u->own_f(nex, kon_y));                                        \
   POP(len_h);                                                                   \
   SWEEP(S);                                                                     \
   DONE(pro);
@@ -1253,8 +1299,8 @@ OP1K(JMX, a_h, BODY_JMX)
       CALLEE();                                                                 \
       u3nc_Gop = gop_u;                                                         \
     }                                                                           \
-    pro = u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
-                       u3t(dir_u->ring));                                       \
+    pro = JT(u3j_kick_arm(x, dir_u->ham_u, dir_u->arm_u->mon_f,                    \
+                       u3t(dir_u->ring)));                                       \
     u3nc_Gop = 0;                                                               \
   }                                                                             \
   else {                                                                        \
@@ -1293,7 +1339,7 @@ OP1K(JSP, a_h, BODY_JSP)
   }                                                                             \
   _nc_stat(jet_d);                                                              \
   pro = ( c3y == dir_u->ham_u->ice )                                            \
-      ? dir_u->arm_u->arg_f(nex)                                                \
+      ? JT(dir_u->arm_u->arg_f(nex))                                                \
       : CHECK(dir_u, nex, len_h);                                               \
   POP(len_h);                                                                   \
   LEAVE();                                                                      \

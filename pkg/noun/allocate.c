@@ -344,12 +344,21 @@ u3a_free(void* tox_v)
   u3a_wfree((c3_w*)tox_v);
 }
 
+#ifdef U3NC_STAT
+/* u3a_Cel_d: cells allocated, for comparing the interpreters (-Dska-stat)
+*/
+c3_d u3a_Cel_d;
+#endif
+
 /* u3a_celloc(): allocate a cell.
 */
 c3_w*
 u3a_celloc(void)
 {
   u3a_cell *cel_u;
+#ifdef U3NC_STAT
+  u3a_Cel_d++;
+#endif
   u3_post  *cel_p;
 
   if ( u3R->cel.cel_p ) {

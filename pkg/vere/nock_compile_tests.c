@@ -9,8 +9,15 @@
 #include "direct.h"
 #include "mars.h"
 #include "nock-compile.h"
+#include "jets/w.h"
 
 #include <sys/time.h>
+#if defined(U3NC_STAT) && defined(__x86_64__)
+#  include <x86intrin.h>
+#  define _tsc()  ((c3_d)__rdtsc())
+#else
+#  define _tsc()  ((c3_d)0)
+#endif
 
 static c3_d    _time(void);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
@@ -18,11 +25,17 @@ static u3_noun _nock_nc(u3_noun bus_fol);
 
 /* _slog(): render a slog, as the king would.
 */
+static c3_d _slog_d[2];   //  slogs printed, and their cycles
+
 static void
 _slog(u3_noun hod)
 {
+  c3_d beg_d = _tsc();
+
   u3_pier_tank(0, u3h(hod), u3k(u3t(hod)));
   u3z(hod);
+  _slog_d[0]++;
+  _slog_d[1] += _tsc() - beg_d;
 }
 
 /* _setup(): boot the kernel from the ivory pill in the u3n interpreter,
@@ -85,6 +98,142 @@ _setup(void)
   }
 }
 
+/* _prof_moth(): the samples of a +moan.
+*/
+static c3_d
+_prof_moth(u3_noun mon)
+{
+  c3_d tot_d = 0;
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < 6; i_w++ ) {
+    tot_d += u3r_chub(0, u3h(mon));
+    mon = u3t(mon);
+  }
+  return tot_d + u3r_chub(0, mon);
+}
+
+/* _prof_term(): a is a printable term of 2 to 40 bytes.
+*/
+static c3_t
+_prof_term(u3_atom a)
+{
+  c3_w met_w = u3r_met(3, a);
+  c3_y buf_y[40];
+  c3_w i_w;
+  c3_t let_t = 0;
+
+  if ( (met_w < 2) || (met_w > 40) ) return 0;
+  u3r_bytes(0, met_w, buf_y, a);
+  for ( i_w = 0; i_w < met_w; i_w++ ) {
+    c3_y c_y = buf_y[i_w];
+    if ( (c_y >= 'a') && (c_y <= 'z') ) { let_t = 1; continue; }
+    if ( ((c_y >= '0') && (c_y <= '9')) || ('-' == c_y) || ('.' == c_y) ) continue;
+    return 0;
+  }
+  return let_t;
+}
+
+/* _prof_names(): the terms in a label, depth first within a budget: a
+**                label is a path of names, or for cores the SKA
+**                registered, a location (the names nested root last) or
+**                a battery (the names of the hints in it).
+*/
+static void
+_prof_names(u3_noun lab, c3_c* buf_c, c3_w* b_w, c3_w* bud_w, c3_w* num_w)
+{
+  while ( (*bud_w > 0) && (*num_w < 10) && (*b_w < 200) ) {
+    (*bud_w)--;
+    if ( c3y == u3ud(lab) ) {
+      if ( _prof_term(lab) ) {
+        c3_w met_w = u3r_met(3, lab);
+        buf_c[(*b_w)++] = '/';
+        u3r_bytes(0, met_w, (c3_y*)buf_c + *b_w, lab);
+        *b_w += met_w;
+        (*num_w)++;
+      }
+      return;
+    }
+    _prof_names(u3h(lab), buf_c, b_w, bud_w, num_w);
+    lab = u3t(lab);
+  }
+}
+
+typedef struct {
+  u3_noun pax;
+  c3_d    inc_d;
+  c3_d    sef_d;
+} _prof_row;
+
+static c3_i
+_prof_cmp(const void* a, const void* b)
+{
+  const _prof_row* x = a;
+  const _prof_row* y = b;
+  return ( x->inc_d < y->inc_d ) ? 1 : ( x->inc_d > y->inc_d ) ? -1 : 0;
+}
+
+/* _prof_dump(): print the profile (+doss) by label: the samples a label
+**               was on the stack for, and those it was the innermost.
+**               In C: +pi-tell crashes on this profile.
+*/
+static void
+_prof_dump(c3_w top_w)
+{
+  u3_noun day = u3R->pro.day;
+  u3_noun mon, hit, cut, lis, i;
+  c3_d    tot_d;
+  c3_w    len_w = 0, n_w = 0;
+  _prof_row* row_u;
+
+  if ( !day ) {
+    fprintf(stderr, "prof: no samples\r\n");
+    return;
+  }
+  u3x_trel(day, &mon, &hit, &cut);
+  tot_d = _prof_moth(mon);
+  lis   = u3qdb_tap(cut);
+  for ( i = lis; u3_nul != i; i = u3t(i) ) len_w++;
+  row_u = c3_malloc(sizeof(*row_u) * (len_w + 1));
+
+  for ( i = lis; u3_nul != i; i = u3t(i) ) {
+    u3_noun pax = u3h(u3h(i)), hum = u3t(u3h(i));
+    u3_noun out = u3qdb_tap(u3h(u3t(hum))), j;
+    c3_d    inc_d = _prof_moth(u3h(hum)), cal_d = 0;
+
+    for ( j = out; u3_nul != j; j = u3t(j) ) {
+      cal_d += u3r_chub(0, u3t(u3h(j)));
+    }
+    u3z(out);
+    row_u[n_w].pax   = pax;
+    row_u[n_w].inc_d = inc_d;
+    row_u[n_w].sef_d = ( inc_d > cal_d ) ? inc_d - cal_d : 0;
+    n_w++;
+  }
+  qsort(row_u, n_w, sizeof(*row_u), _prof_cmp);
+
+  fprintf(stderr, "prof: %" PRIu64 " samples (10 ms), %u labels; "
+                  "on stack %%, innermost %%, label\r\n", tot_d, n_w);
+  for ( c3_w k_w = 0; (k_w < n_w) && (k_w < top_w); k_w++ ) {
+    c3_c   buf_c[256];
+    c3_w   b_w = 0;
+
+    {
+      c3_w bud_w = 4000, num_w = 0;
+      _prof_names(row_u[k_w].pax, buf_c, &b_w, &bud_w, &num_w);
+    }
+    buf_c[b_w] = 0;
+    if ( (k_w < 4) && getenv("U3NC_PROF_RAW") ) {
+      u3m_p("prof label", row_u[k_w].pax);
+    }
+    fprintf(stderr, "prof %5.1f %5.1f  %s\r\n",
+                    tot_d ? 100.0 * row_u[k_w].inc_d / tot_d : 0.0,
+                    tot_d ? 100.0 * row_u[k_w].sef_d / tot_d : 0.0, buf_c);
+  }
+  c3_free(row_u);
+  u3z(lis);
+}
+
 /* _time(): wall clock, in microseconds.
 */
 static c3_d
@@ -134,10 +283,17 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 #ifdef U3NC_STAT
   u3nc_stat sav_u = u3nc_Stat;
 #endif
+#ifdef U3NC_STAT
+  c3_d    cel_d = u3a_Cel_d;
+#endif
   c3_d    beg_d = _time();
+  c3_d    tsb_d = _tsc();
   u3_noun gon   = u3m_soft(0, fun_f, u3nc(u3k(bus), u3k(fol)));
+  c3_d    tse_d = _tsc();
   c3_d    end_d = _time();
   u3_noun pro;
+
+  (void)tsb_d; (void)tse_d;
 
   if ( 0 != u3h(gon) ) {
     u3_pier_punt_goof(nam_c, gon);
@@ -145,6 +301,12 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
   }
 
   fprintf(stderr, "%s: %" PRIu64 " us\r\n", nam_c, end_d - beg_d);
+#ifdef U3NC_STAT
+  //  the cells the run allocated, in either interpreter
+  //
+  fprintf(stderr, "  alloc %" PRIu64 " cells, %.1f Mc\r\n",
+          u3a_Cel_d - cel_d, (tse_d - tsb_d) / 1e6);
+#endif
 
   //  the runtime counters of this run of the compiled interpreter
   //
@@ -166,6 +328,22 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
             D(kal_d), D(gan_d), D(bor_d), D(bok_d), D(bot_d),
             D(dbi_d), D(ali_d), D(alx_d),
             D(dir_d), D(sub_d), D(jet_d));
+    //  where the time of the run went, in TSC cycles (Mc: millions):
+    //  indirect calls finding their programs, memoized calls making
+    //  keys, looking them up and saving products
+    //
+    fprintf(stderr, "  time run %.1f Mc ent %" PRIu64 " nok %" PRIu64
+                    " in %.1f Mc (%.0f c each), %" PRIu64 " entries scanned;"
+                    " memo %" PRIu64 " (%" PRIu64 " hits) in %.1f Mc,"
+                    " %" PRIu64 " saves in %.1f Mc; jets %" PRIu64
+                    " in %.1f Mc\r\n",
+            (tse_d - tsb_d) / 1e6, D(ent_d), D(nok_d), D(nok_c) / 1e6,
+            D(nok_d) ? (double)D(nok_c) / D(nok_d) : 0.0, D(mat_d),
+            D(mem_d), D(meh_d), D(mem_c) / 1e6, D(mes_d), D(mes_c) / 1e6,
+            D(jet_d), D(jet_c) / 1e6);
+    fprintf(stderr, "  match %" PRIu64 " sock nodes walked, %" PRIu64
+                    " known subtrees compared (not the same noun) in %.1f Mc\r\n",
+            D(hug_d), D(hus_d), D(hus_c) / 1e6);
 #undef D
   }
 #endif
@@ -207,7 +385,47 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
     u3z(_run("u3n  first ", _nock_n, bus, fol));
   }
   if ( nc_t ) {
+    //  U3NC_PROF: vere's sampling profiler over the compiling run, the
+    //  samples by the labels of the registered cores they ran in
+    //
+    c3_t pof_t = !!getenv("U3NC_PROF");
+
+    if ( pof_t ) {
+      u3C.wag_h |= u3o_debug_cpu;
+      u3t_boot();
+    }
     u3z(_run("u3nc first ", _nock_nc, bus, fol));
+    if ( pof_t ) {
+      u3t_boff();
+      u3C.wag_h &= ~u3o_debug_cpu;
+      _prof_dump(atoi(getenv("U3NC_PROF")) > 1 ? atoi(getenv("U3NC_PROF")) : 60);
+    }
+    fprintf(stderr, "  slogs: %" PRIu64 " printed in %.3f s\r\n",
+                    _slog_d[0], _slog_d[1] / 1.99e9);
+    fprintf(stderr, "  ev jet: %" PRIu64 " calls, %" PRIu64 " memo hits, "
+                    "%" PRIu64 " punts, %" PRIu64 " steps\r\n",
+                    u3we_ev_stat_d[0], u3we_ev_stat_d[1],
+                    u3we_ev_stat_d[2], u3we_ev_stat_d[3]);
+#ifdef U3NC_STAT
+    if ( getenv("U3NC_PROF_ARMS") ) {
+      for ( c3_w p_w = 0; p_w < U3WE_PROF_N; p_w++ ) {
+        fprintf(stderr, "  arm %-26s %9.3f s in %7" PRIu64 " outer calls, %8" PRIu64 " calls%s\r\n",
+                        u3we_prof_nam_c[p_w], u3we_prof_d[p_w][0] / 1.99e9,
+                        u3we_prof_d[p_w][1], u3we_prof_d[p_w][2],
+                        u3we_prof_dep_w[p_w] ? " (unbalanced)" : "");
+      }
+    }
+    fprintf(stderr, "  ev fails: form %" PRIu64 " (%" PRIu64 " steps), "
+                    "fuel %" PRIu64 " (%" PRIu64 "), slot %" PRIu64 " (%" PRIu64 "), "
+                    "data %" PRIu64 " (%" PRIu64 "), hide %" PRIu64 " (%" PRIu64 "), "
+                    "crash %" PRIu64 " (%" PRIu64 ")\r\n",
+                    u3we_ev_why_d[0][0], u3we_ev_why_d[0][1],
+                    u3we_ev_why_d[1][0], u3we_ev_why_d[1][1],
+                    u3we_ev_why_d[2][0], u3we_ev_why_d[2][1],
+                    u3we_ev_why_d[3][0], u3we_ev_why_d[3][1],
+                    u3we_ev_why_d[4][0], u3we_ev_why_d[4][1],
+                    u3we_ev_why_d[5][0], u3we_ev_why_d[5][1]);
+#endif
   }
 
   while ( rep_w-- ) {
@@ -2004,6 +2222,16 @@ main(int argc, char* argv[])
     if ( getenv("U3NC_REGS") ) {
       u3nc_regs();
     }
+
+    //  U3NC_HOT=n: the n programs that made the most cells, and
+    //  U3NC_HOT_DUMP=k of them in full (-Dska-stat)
+    //
+#ifdef U3NC_STAT
+    if ( getenv("U3NC_HOT") ) {
+      u3nc_hot(atoi(getenv("U3NC_HOT")),
+               getenv("U3NC_HOT_DUMP") ? atoi(getenv("U3NC_HOT_DUMP")) : 0);
+    }
+#endif
 
     _stat_sum();
     return ret_i ? 0 : 1;
