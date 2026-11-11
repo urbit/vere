@@ -30,7 +30,9 @@
       if ( (0 == c_w) || (b_w >= len_w) ) {
         return 0;
       }
-      if ( b_w + c_w > len_w ) {
+      //  .b_w < .len_w here, so this can't wrap like .b_w + .c_w
+      //
+      if ( c_w > len_w - b_w ) {
         c_w = (len_w - b_w);
       }
       if ( (b_w == 0) && (c_w == len_w) ) {
