@@ -16,24 +16,24 @@
     if ( !_(u3a_is_cat(a)) || (a >= u3a_word_bits) ) {
       return u3m_bail(c3__fail);
     }
-    if ( !_(u3r_safe_word(b, &b_w)) ) {
-      return u3m_bail(c3__fail);
-    }
-    if ( !_(u3r_safe_word(c, &c_w)) ) {
-      return u3m_bail(c3__fail);
-    }
 
     {
       c3_g a_g   = a;
       c3_w len_w = u3r_met(a_g, d);
 
-      if ( (0 == c_w) || (b_w >= len_w) ) {
+      //  .len_w always fits a word: an offset that doesn't starts past
+      //  the end of .d, and a width that doesn't runs past it
+      //
+      if ( !_(u3r_safe_word(b, &b_w)) || (b_w >= len_w) ) {
         return 0;
       }
       //  .b_w < .len_w here, so this can't wrap like .b_w + .c_w
       //
-      if ( c_w > len_w - b_w ) {
-        c_w = (len_w - b_w);
+      if ( !_(u3r_safe_word(c, &c_w)) || (c_w > len_w - b_w) ) {
+        c_w = len_w - b_w;
+      }
+      if ( 0 == c_w ) {
+        return 0;
       }
       if ( (b_w == 0) && (c_w == len_w) ) {
         return u3k(d);
