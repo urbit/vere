@@ -997,13 +997,14 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[25] = {0};  //  NB: expand as necessary
+    c3_c* arg_c[27] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
     c3_c  sap_c[11];
+    c3_c  cho_c[11];
     c3_c  cev_c[11];
     c3_c  siz_c[21];
     c3_i  err_i;
@@ -1050,6 +1051,12 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     if ( u3C.eph_c ) {
       arg_c[i_w++] = "--ephemeral-file";      //  ephemeral file
       arg_c[i_w++] = strdup(u3C.eph_c);
+    }
+
+    if ( u3_Host.ops_u.cho_y ) {
+      sprintf(cho_c, "%u", u3_Host.ops_u.cho_y);
+      arg_c[i_w++] = "--chop";                //  autochop bex
+      arg_c[i_w++] = cho_c;
     }
 
 #ifdef U3_OS_windows
