@@ -290,6 +290,68 @@
     u3_noun u3qi_la_trace_i754(u3_noun, u3_noun, u3_noun);
     u3_noun u3qi_la_mmul_i754(u3_noun, u3_noun, u3_noun, u3_noun, u3_noun);
 
+    u3_noun u3qi_rd_exp(u3_noun);
+    u3_noun u3qi_rd_log(u3_noun);
+    u3_noun u3qi_rd_sin(u3_atom);
+    u3_noun u3qi_rd_cos(u3_atom);
+    u3_noun u3qi_rd_tan(u3_atom);
+    u3_noun u3qi_rd_atan(u3_atom);
+    u3_noun u3qi_rd_atan2(u3_atom, u3_atom);
+    u3_noun u3qi_rd_asin(u3_atom);
+    u3_noun u3qi_rd_acos(u3_atom);
+    u3_noun u3qi_rd_sqt(u3_atom);
+    u3_noun u3qi_rd_cbt(u3_atom);
+    u3_noun u3qi_rd_pow(u3_atom, u3_atom);
+    u3_noun u3qi_rd_pow_n(u3_atom, u3_atom);
+    u3_noun u3qi_rd_log2(u3_atom);
+    u3_noun u3qi_rd_log10(u3_atom);
+    u3_noun u3qi_rs_exp(u3_atom);
+    u3_noun u3qi_rs_log(u3_atom);
+    u3_noun u3qi_rs_sin(u3_atom);
+    u3_noun u3qi_rs_cos(u3_atom);
+    u3_noun u3qi_rs_tan(u3_atom);
+    u3_noun u3qi_rs_atan(u3_atom);
+    u3_noun u3qi_rs_atan2(u3_atom, u3_atom);
+    u3_noun u3qi_rs_asin(u3_atom);
+    u3_noun u3qi_rs_acos(u3_atom);
+    u3_noun u3qi_rs_sqt(u3_atom);
+    u3_noun u3qi_rs_cbt(u3_atom);
+    u3_noun u3qi_rs_pow(u3_atom, u3_atom);
+    u3_noun u3qi_rs_pow_n(u3_atom, u3_atom);
+    u3_noun u3qi_rs_log2(u3_atom);
+    u3_noun u3qi_rs_log10(u3_atom);
+    u3_noun u3qi_rh_exp(u3_atom);
+    u3_noun u3qi_rh_log(u3_atom);
+    u3_noun u3qi_rh_sin(u3_atom);
+    u3_noun u3qi_rh_cos(u3_atom);
+    u3_noun u3qi_rh_tan(u3_atom);
+    u3_noun u3qi_rh_atan(u3_atom);
+    u3_noun u3qi_rh_atan2(u3_atom, u3_atom);
+    u3_noun u3qi_rh_asin(u3_atom);
+    u3_noun u3qi_rh_acos(u3_atom);
+    u3_noun u3qi_rh_sqt(u3_atom);
+    u3_noun u3qi_rh_cbt(u3_atom);
+    u3_noun u3qi_rh_pow(u3_atom, u3_atom);
+    u3_noun u3qi_rh_pow_n(u3_atom, u3_atom);
+    u3_noun u3qi_rh_log2(u3_atom);
+    u3_noun u3qi_rh_log10(u3_atom);
+
+    u3_noun u3qi_rq_exp(u3_atom);
+    u3_noun u3qi_rq_log(u3_atom);
+    u3_noun u3qi_rq_sin(u3_atom);
+    u3_noun u3qi_rq_cos(u3_atom);
+    u3_noun u3qi_rq_tan(u3_atom);
+    u3_noun u3qi_rq_atan(u3_atom);
+    u3_noun u3qi_rq_atan2(u3_atom, u3_atom);
+    u3_noun u3qi_rq_asin(u3_atom);
+    u3_noun u3qi_rq_acos(u3_atom);
+    u3_noun u3qi_rq_sqt(u3_atom);
+    u3_noun u3qi_rq_cbt(u3_atom);
+    u3_noun u3qi_rq_pow(u3_atom, u3_atom);
+    u3_noun u3qi_rq_pow_n(u3_atom, u3_atom);
+    u3_noun u3qi_rq_log2(u3_atom);
+    u3_noun u3qi_rq_log10(u3_atom);
+
 #   define u3qfu_van_fan  28
 #   define u3qfu_van_rib  58
 #   define u3qfu_van_vet  59
