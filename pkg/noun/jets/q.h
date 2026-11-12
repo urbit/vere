@@ -261,6 +261,8 @@
     u3_noun u3qfp_nepo(u3_noun, u3_noun);
     u3_noun u3qfp_rake(u3_noun);
 
+    u3_noun u3qi_sip_grab(u3_atom, u3_atom, u3_atom);
+
     u3_noun u3qi_la_add_i754(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qi_la_sub_i754(u3_noun, u3_noun, u3_noun, u3_noun);
     u3_noun u3qi_la_mul_i754(u3_noun, u3_noun, u3_noun, u3_noun);
