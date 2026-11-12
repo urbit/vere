@@ -2668,6 +2668,143 @@ _cm_signals(void)
 
 extern void u3je_secp_init(void);
 
+#ifndef U3_OS_windows
+//  The native loom and at most two migration sources. Never release a
+//  reservation to resize it: another allocation could occupy the gap.
+//
+static struct {
+  uintptr_t bas_i;
+  size_t len_i;
+  c3_i par_i;  // 1-based parent slot, for a borrowed migration range
+} _cm_looms[3];
+
+c3_o
+u3m_loom_stake(void* bas_v, size_t len_i)
+{
+  uintptr_t bas_i = (uintptr_t)bas_v;
+  long pag_l = sysconf(_SC_PAGESIZE);
+  size_t old_i = 0;
+  c3_i slo_i = -1;
+
+  if (  (pag_l <= 0) || !len_i
+     || (bas_i % (size_t)pag_l) || (len_i % (size_t)pag_l)
+     || (len_i > UINTPTR_MAX - bas_i) )
+  {
+    errno = EINVAL;
+    return c3n;
+  }
+  for ( c3_i i_i = 0; i_i < 3; i_i++ ) {
+    if ( _cm_looms[i_i].len_i && (_cm_looms[i_i].bas_i == bas_i) ) {
+      if ( len_i <= _cm_looms[i_i].len_i ) {
+        return c3y;
+      }
+      slo_i = i_i;
+      old_i = _cm_looms[i_i].len_i;
+      break;
+    }
+    if ( !_cm_looms[i_i].len_i ) {
+      slo_i = i_i;
+    }
+  }
+  if ( -1 == slo_i ) {
+    errno = ENOSPC;
+    return c3n;
+  }
+
+  //  A wide native reservation may already contain a migration source.
+  //  Track that claim separately so dropping it cannot unmap the parent.
+  //
+  for ( c3_i i_i = 0; i_i < 3; i_i++ ) {
+    uintptr_t own_i = _cm_looms[i_i].bas_i;
+    size_t    siz_i = _cm_looms[i_i].len_i;
+    if ( siz_i && !_cm_looms[i_i].par_i && (bas_i >= own_i)
+               && (bas_i - own_i < siz_i)
+               && (len_i <= siz_i - (bas_i - own_i)) )
+    {
+      _cm_looms[slo_i].bas_i = bas_i;
+      _cm_looms[slo_i].len_i = len_i;
+      _cm_looms[slo_i].par_i = i_i + 1;
+      return c3y;
+    }
+  }
+  if ( _cm_looms[slo_i].par_i ) {
+    errno = EEXIST;
+    return c3n;
+  }
+
+  //  A non-fixed hint is portable and cannot evict an existing mapping.
+  //  Accept only the exact address, including on kernels without NOREPLACE.
+  //
+  void* adr_v = (void*)(bas_i + old_i);
+  void* map_v = mmap(adr_v, len_i - old_i, PROT_NONE,
+                     MAP_ANON | MAP_PRIVATE, -1, 0);
+  if ( MAP_FAILED == map_v ) {
+    return c3n;
+  }
+  if ( adr_v != map_v ) {
+    munmap(map_v, len_i - old_i);
+    errno = EEXIST;
+    return c3n;
+  }
+
+  _cm_looms[slo_i].bas_i = bas_i;
+  _cm_looms[slo_i].len_i = len_i;
+  _cm_looms[slo_i].par_i = 0;
+  return c3y;
+}
+
+void*
+u3m_loom_map(void* adr_v, size_t len_i, c3_i pro_i,
+            c3_i flg_i, c3_i fid_i, off_t off_i)
+{
+  uintptr_t adr_i = (uintptr_t)adr_v;
+  for ( c3_i i_i = 0; i_i < 3; i_i++ ) {
+    uintptr_t bas_i = _cm_looms[i_i].bas_i;
+    size_t    own_i = _cm_looms[i_i].len_i;
+    if ( own_i && (adr_i >= bas_i) && (adr_i - bas_i < own_i)
+               && (len_i <= own_i - (adr_i - bas_i)) )
+    {
+      return mmap(adr_v, len_i, pro_i, flg_i | MAP_FIXED, fid_i, off_i);
+    }
+  }
+  errno = EINVAL;
+  return MAP_FAILED;
+}
+
+c3_i
+u3m_loom_drop(void* bas_v)
+{
+  for ( c3_i i_i = 0; i_i < 3; i_i++ ) {
+    if ( _cm_looms[i_i].len_i
+      && (_cm_looms[i_i].bas_i == (uintptr_t)bas_v) )
+    {
+      for ( c3_i j_i = 0; j_i < 3; j_i++ ) {
+        if ( _cm_looms[j_i].len_i && (_cm_looms[j_i].par_i == i_i + 1) ) {
+          errno = EBUSY;
+          return -1;
+        }
+      }
+      c3_i ret_i;
+      if ( _cm_looms[i_i].par_i ) {
+        ret_i = (MAP_FAILED == u3m_loom_map(bas_v, _cm_looms[i_i].len_i,
+                                           PROT_NONE, MAP_ANON | MAP_PRIVATE,
+                                           -1, 0)) ? -1 : 0;
+      }
+      else {
+        ret_i = munmap(bas_v, _cm_looms[i_i].len_i);
+      }
+      if ( !ret_i ) {
+        _cm_looms[i_i].len_i = 0;
+        _cm_looms[i_i].par_i = 0;
+      }
+      return ret_i;
+    }
+  }
+  errno = EINVAL;
+  return -1;
+}
+#endif
+
 /* _cm_crypto(): initialize openssl and crypto jets.
 */
 static void
@@ -2689,16 +2826,6 @@ _cm_free2(void* tox_v, size_t siz_i)
 void
 u3m_init(size_t len_i)
 {
-  _cm_limits();
-  _cm_signals();
-  _cm_crypto();
-
-  u3a_init_once();
-
-  //  make sure GMP uses our malloc.
-  //
-  mp_set_memory_functions(u3a_malloc, u3a_realloc, _cm_free2);
-
   //  make sure that [len_i] is a fully-addressible non-zero power of two.
   //
   if (  !len_i
@@ -2709,6 +2836,21 @@ u3m_init(size_t len_i)
     u3l_log("loom: bad size: %zu", len_i);
     exit(1);
   }
+
+#ifndef U3_OS_windows
+  if ( c3n == u3m_loom_stake((void*)u3_Loom, len_i) ) {
+    u3l_log("loom: cannot reserve %zuMB at %p: %s",
+            len_i >> 20, (void*)u3_Loom, strerror(errno));
+    exit(1);
+  }
+#endif
+
+  _cm_limits();
+  _cm_signals();
+  _cm_crypto();
+
+  u3a_init_once();
+  mp_set_memory_functions(u3a_malloc, u3a_realloc, _cm_free2);
 
   // map at fixed address.
   //
@@ -2737,7 +2879,7 @@ u3m_init(size_t len_i)
       map_v = (void *)u3_Loom;
     }
 #else
-    map_v = mmap((void *)u3_Loom,
+    map_v = u3m_loom_map((void *)u3_Loom,
                  len_i,
                  (PROT_READ | PROT_WRITE),
                  (MAP_ANON | MAP_FIXED | MAP_PRIVATE),

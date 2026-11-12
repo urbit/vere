@@ -87,6 +87,20 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_init(size_t len_i);
 
+#ifndef U3_OS_windows
+      /* POSIX loom mappings may replace only ranges we have reserved.
+      */
+        c3_o
+        u3m_loom_stake(void* bas_v, size_t len_i);
+
+        void*
+        u3m_loom_map(void* adr_v, size_t len_i, c3_i pro_i,
+                    c3_i flg_i, c3_i fid_i, off_t off_i);
+
+        c3_i
+        u3m_loom_drop(void* bas_v);
+#endif
+
       /* u3m_pave(): instantiate or activate image.
       */
         void
