@@ -21,16 +21,23 @@
 /// the loom is one placeholder, split in two at the image boundary:
 ///
 ///   [0, map_i)      copy-on-write view of image.bin, protected read-only
-///   [map_i, len_i)  read/write view of [sec_h], a pagefile section
+///   [map_i, len_i)  private memory, reserved and committed on first touch
 ///
-/// with no image mapped, it is a single view of [sec_h] covering the loom.
+/// with no image mapped, it is a single private allocation covering the
+/// loom.
 ///
-/// the volatile part of the loom is a *section* view rather than ordinary
-/// private memory, because moving the boundary means unmapping and remapping
-/// it, and windows cannot resize a private region from below without
-/// discarding it. section contents outlive their views, so the loom's heap
-/// and stack survive a remap. the view always sits at section offset ==
-/// loom offset, so addresses are stable across boundary moves.
+/// this is the same shape as the loom on POSIX: a MAP_PRIVATE view of the
+/// image over anonymous private memory. u3_wnd_loom_toss() decommits, the
+/// analogue of madvise(MADV_DONTNEED): the pages read as zero on the next
+/// touch, and their commit charge is returned at once.
+///
+/// unlike mmap(MAP_FIXED), moving the boundary cannot leave the rest of
+/// the loom alone. a private allocation cannot be released in part, so
+/// every remap releases the whole volatile allocation back to a
+/// placeholder and reserves a new one, and nothing above the image
+/// survives it. that is safe because a remap only happens at boot and
+/// during u3e_save(), when the heap is in the image, the free middle is
+/// about to be tossed, and the home road's stack is empty.
 ///
 /// ### limitations
 ///
@@ -43,10 +50,10 @@
 ///     a read-only view cannot be upgraded later.
 ///   - remapping resets every protection above the image, so the caller
 ///     must re-post the guard page.
-///   - committed pages of a section view cannot be decommitted; they stay
-///     committed until the view is unmapped. so the loom's commit charge
-///     is a high-water mark, and u3_wnd_loom_toss() returns resident
-///     memory without returning commit.
+///   - windows does not overcommit. every committed page of the loom is
+///     charged against RAM plus the paging file, and the write-copy image
+///     view is charged in full when it is mapped, whether or not a page
+///     of it is ever written.
 ///
 /// ### minimum windows
 ///
@@ -89,7 +96,6 @@ typedef struct {
   void*  bas_v;   //  base
   size_t len_i;   //  length, bytes (0 if slot free)
   size_t map_i;   //  image mapping length, bytes (0 if none)
-  HANDLE sec_h;   //  pagefile section backing the volatile part
 } _wnd_reg;
 
 //  an address claimed at startup for a migration to use later.
@@ -307,21 +313,27 @@ u3_wnd_truncate(c3_i fid_i, c3_d off_d)
   return 0;
 }
 
-/* _wnd_hold(): collapse the current mapping into one placeholder.
+/* _wnd_hold(): collapse the current mapping into one placeholder,
+**              discarding the volatile part.
 */
 static c3_o
 _wnd_hold(_wnd_reg* reg_u)
 {
   c3_y* bas_y = (c3_y*)reg_u->bas_v;
 
-  if ( !UnmapViewOfFileEx(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
-    _wnd_fail("unmap low");
+  //  NB: releasing the private allocation back to a placeholder discards
+  //  its contents, and returns its commit charge.
+  //
+  if ( !VirtualFree(bas_y + reg_u->map_i, reg_u->len_i - reg_u->map_i,
+                    MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER) )
+  {
+    _wnd_fail("release volatile");
     return c3n;
   }
 
   if ( reg_u->map_i ) {
-    if ( !UnmapViewOfFileEx(bas_y + reg_u->map_i, MEM_PRESERVE_PLACEHOLDER) ) {
-      _wnd_fail("unmap high");
+    if ( !UnmapViewOfFileEx(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
+      _wnd_fail("unmap image");
       return c3n;
     }
 
@@ -363,8 +375,29 @@ _wnd_image(c3_i fid_i, size_t byt_i)
   return sec_h;
 }
 
+/* _wnd_volatile(): reserve private memory over the placeholder [len_i]
+**                  at [bas_y].
+*/
+static c3_o
+_wnd_volatile(c3_y* bas_y, size_t len_i)
+{
+  //  reserved, not committed: the loom costs commit charge only as it is
+  //  touched. windows does not overcommit, and a committed loom cannot be
+  //  had at all on a box whose RAM plus paging file is smaller.
+  //
+  if ( !VirtualAlloc2(NULL, bas_y, len_i,
+                      MEM_RESERVE | MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE,
+                      NULL, 0) )
+  {
+    _wnd_fail("reserve volatile");
+    return c3n;
+  }
+
+  return c3y;
+}
+
 /* _wnd_remap(): rebuild [reg_u] with [byt_i] bytes of [fid_i], leaving the
-**               image pages protected [pro_u].
+**               image pages protected [pro_u], over fresh volatile memory.
 */
 static c3_o
 _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
@@ -432,15 +465,7 @@ _wnd_remap(_wnd_reg* reg_u, c3_i fid_i, size_t byt_i, DWORD pro_u)
     reg_u->map_i = byt_i;
   }
 
-  if ( !MapViewOfFile3(reg_u->sec_h, NULL, bas_y + byt_i, (ULONG64)byt_i,
-                    reg_u->len_i - byt_i,
-                    MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
-  {
-    _wnd_fail("map loom");
-    return c3n;
-  }
-
-  return c3y;
+  return _wnd_volatile(bas_y + byt_i, reg_u->len_i - byt_i);
 }
 
 /* _wnd_stake_claim(): take over the stake at [bas_v] for [len_i], if any.
@@ -489,32 +514,15 @@ _wnd_stake_claim(void* bas_v, size_t len_i)
 static c3_o
 _wnd_release(_wnd_reg* reg_u);
 
-/* _wnd_reserve(): reserve [len_i] at [bas_v], backed by a reserved section.
+/* _wnd_reserve(): reserve [len_i] at [bas_v] as private memory.
 */
 static c3_o
 _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
 {
   SYSTEM_INFO inf_u;
-  HANDLE      sec_h;
 
   GetSystemInfo(&inf_u);
   wnd_gan_i = inf_u.dwAllocationGranularity;
-
-  //  SEC_RESERVE: the section's pages are reserved, not committed, so the
-  //  loom costs commit charge only as it is touched. windows does not
-  //  overcommit, and a committed section of the whole loom cannot be
-  //  created at all on a box whose RAM plus paging file is smaller.
-  //
-  sec_h = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
-                             PAGE_READWRITE | SEC_RESERVE,
-                             (DWORD)((c3_d)len_i >> 32),
-                             (DWORD)(len_i & 0xffffffffULL),
-                             NULL);
-
-  if ( !sec_h ) {
-    _wnd_fail("loom section");
-    return c3n;
-  }
 
   //  a staked address is already a placeholder. reserving it again
   //  would fail as occupied, by us.
@@ -526,16 +534,11 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
   {
     _wnd_fail("reserve");
     _wnd_report(bas_v, len_i);
-    CloseHandle(sec_h);
     return c3n;
   }
 
-  if ( !MapViewOfFile3(sec_h, NULL, bas_v, 0, len_i,
-                  MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0) )
-  {
-    _wnd_fail("map loom");
+  if ( c3n == _wnd_volatile((c3_y*)bas_v, len_i) ) {
     VirtualFree(bas_v, 0, MEM_RELEASE);
-    CloseHandle(sec_h);
     return c3n;
   }
 
@@ -545,7 +548,6 @@ _wnd_reserve(_wnd_reg* reg_u, void* bas_v, size_t len_i)
   reg_u->bas_v = bas_v;
   reg_u->len_i = len_i;
   reg_u->map_i = 0;
-  reg_u->sec_h = sec_h;
 
   return c3y;
 }
@@ -618,7 +620,7 @@ u3_wnd_loom_stake(void* bas_v, size_t len_i)
   return c3y;
 }
 
-/* u3_wnd_loom_init(): reserve loom address space, back it with a section.
+/* u3_wnd_loom_init(): reserve loom address space as private memory.
 */
 c3_o
 u3_wnd_loom_init(void* bas_v, size_t len_i)
@@ -726,7 +728,7 @@ u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i)
   return _wnd_remap(&wnd_u[0], fid_i, byt_i, PAGE_READONLY);
 }
 
-/* u3_wnd_loom_unmapf(): drop the image mapping, restoring pagefile backing.
+/* u3_wnd_loom_unmapf(): drop the image mapping, restoring private backing.
 */
 c3_o
 u3_wnd_loom_unmapf(void)
@@ -798,28 +800,22 @@ u3_wnd_loom_hold(void* bas_v, size_t len_i, c3_i fid_i, size_t byt_i)
 static c3_o
 _wnd_release(_wnd_reg* reg_u)
 {
+  c3_y* bas_y = (c3_y*)reg_u->bas_v;
+
   //  NB: the image view must go, or the file stays mapped.
   //
-  if ( !UnmapViewOfFileEx(reg_u->bas_v, MEM_PRESERVE_PLACEHOLDER) ) {
-    _wnd_fail("release unmap low");
-    return c3n;
-  }
-
   if ( reg_u->map_i ) {
-    if ( !UnmapViewOfFileEx((c3_y*)reg_u->bas_v + reg_u->map_i,
-                    MEM_PRESERVE_PLACEHOLDER) )
-    {
-      _wnd_fail("release unmap high");
+    if ( !UnmapViewOfFileEx(bas_y, MEM_PRESERVE_PLACEHOLDER) ) {
+      _wnd_fail("release unmap");
       return c3n;
     }
 
     //  the reservation was split, so each half is released on its own
     //
-    VirtualFree((c3_y*)reg_u->bas_v + reg_u->map_i, 0, MEM_RELEASE);
+    VirtualFree(bas_y + reg_u->map_i, 0, MEM_RELEASE);
   }
 
-  VirtualFree(reg_u->bas_v, 0, MEM_RELEASE);
-  CloseHandle(reg_u->sec_h);
+  VirtualFree(bas_y, 0, MEM_RELEASE);
 
   memset(reg_u, 0, sizeof(*reg_u));
 
@@ -893,15 +889,23 @@ u3_wnd_loom_toss(void* adr_v, size_t len_i)
       siz_i = (size_t)(end_y - cur_y);
     }
 
-    //  a reserved page has nothing to release, and the guard page is
-    //  PAGE_NOACCESS. DiscardVirtualMemory rejects both with
-    //  ERROR_INVALID_PARAMETER, which is why this walks the range
-    //  instead of passing it whole.
+    //  a reserved page has nothing to release, and the guard page must
+    //  stay committed to stay protected, which is why this walks the
+    //  range instead of passing it whole.
+    //
+    //    private memory is decommitted, returning its commit charge. the
+    //    image view cannot be decommitted, and is discarded instead.
     //
     if (  (MEM_COMMIT == inf_u.State)
        && !(inf_u.Protect & PAGE_NOACCESS) )
     {
-      if ( 0 != (ret_u = DiscardVirtualMemory(cur_y, siz_i)) ) {
+      if ( MEM_PRIVATE == inf_u.Type ) {
+        if ( !VirtualFree(cur_y, siz_i, MEM_DECOMMIT) ) {
+          _wnd_fail("toss decommit");
+          san_o = c3n;
+        }
+      }
+      else if ( 0 != (ret_u = DiscardVirtualMemory(cur_y, siz_i)) ) {
         fprintf(stderr, "loom: toss discard (%zu bytes at %p): win32 %lu\r\n",
                         siz_i, (void*)cur_y, (unsigned long)ret_u);
         san_o = c3n;
