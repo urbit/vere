@@ -1414,9 +1414,7 @@ _check(const c3_c* nam_c, c3_t cnd_t)
 static c3_t
 _has_entry(u3_noun bus, u3_noun fol)
 {
-  u3_weak lis = u3h_git(u3R->ska.ent_p, fol);
-
-  return (u3_none != lis) && (u3_none != u3d_match(bus, lis));
+  return c3y == u3nc_entered(bus, fol);
 }
 
 /* _links: a walk over the programs of the road, first collecting them, then
@@ -2312,26 +2310,18 @@ _test_jets(c3_w len_w)
 
     ret_i = _test(nam_c, u3k(cor), u3k(fol), 1) && ret_i;
 
-    //  the entry lookup alone: u3d_match() checks the subject against
-    //  every program entered with this formula, the gates of every test
-    //  run before this one (all are entered with [9 2 0 1])
+    //  the entry lookup alone, on the home road: among the programs of
+    //  every test run before this one, all entered with [9 2 0 1]
     //
     {
-      u3_weak lis = u3h_git(u3R->ska.ent_p, fol);
-      c3_w    ent_w = 0, rep_w;
-      c3_d    beg_d;
+      c3_w rep_w;
+      c3_d beg_d = _time();
 
-      for ( u3_weak l = lis; (u3_none != l) && (u3_nul != l); l = u3t(l) ) {
-        ent_w++;
-      }
-      beg_d = _time();
       for ( rep_w = 0; rep_w < 1000; rep_w++ ) {
-        if ( u3_none != lis ) {
-          (void)u3d_match(cor, lis);
-        }
+        (void)u3nc_entered(cor, fol);
       }
-      fprintf(stderr, "entry lookup: %" PRIc3_w " programs, %.2f us\r\n",
-              ent_w, (double)(_time() - beg_d) / 1000.0);
+      fprintf(stderr, "entry lookup: %.2f us\r\n",
+              (double)(_time() - beg_d) / 1000.0);
     }
     u3z(cor);
 

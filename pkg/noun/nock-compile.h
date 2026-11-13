@@ -21,7 +21,9 @@
   ***              called directly by other programs with its arguments
   ***              in the slots it asks for;
   ***   ska.ent_p: formula -> (list [sock program]), the entry programs,
-  ***              functions of the whole subject as their one argument.
+  ***              functions of the whole subject as their one argument;
+  ***              those whose sock knows the head of the subject, or the
+  ***              head of that, under [%head axis formula part] instead.
   **/
 
   /* u3nc_dire: a call site.
@@ -203,6 +205,11 @@
     */
       u3_noun
       u3nc_mean(u3_noun bell, u3_noun arg);
+
+    /* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
+    */
+      c3_o
+      u3nc_entered(u3_noun bus, u3_noun fol);
 
     /* u3nc_scan(): analyze and compile [bus fol] without running it.
     */

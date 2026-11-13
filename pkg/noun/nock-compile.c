@@ -4446,19 +4446,113 @@ _nc_las_key(u3_noun sub, u3_noun fol)
   return u3nt(c3__last, u3k(fol), u3k(con));
 }
 
+/* _nc_ent_all(): does a cape know everything under it?  RETAINS.
+*/
+static c3_o
+_nc_ent_all(u3_noun cape)
+{
+  while ( c3y == u3du(cape) ) {
+    if ( c3n == _nc_ent_all(u3h(cape)) ) {
+      return c3n;
+    }
+    cape = u3t(cape);
+  }
+  return __(c3y == cape);
+}
+
+/* _nc_ent_tag: the head of the keys of ska.ent_p that index entries by a
+**              part of the subject.  No formula has it: an atom at the
+**              head of a formula is an opcode, which this is not, so
+**              _nc_entry() crashes on one before it makes a key of it.
+*/
+#define _nc_ent_tag  c3__head
+
+/* _nc_ent_idx(): the key [%head axe fol part] of the entries for fol
+**   whose socks know all of the subject at axe: part.  RETAINS.
+*/
+static u3_noun
+_nc_ent_idx(c3_l axe_l, u3_noun fol, u3_noun part)
+{
+  return u3nq(_nc_ent_tag, axe_l, u3k(fol), u3k(part));
+}
+
+/* _nc_ent_key(): the key of the entry of a bell [sock fol] in ska.ent_p.
+**   Many functions are entered with one formula, as every gate slammed
+**   from C is with [9 2 0 1], so an entry whose sock knows all of the head
+**   of its subject (the battery of a gate or a trap), or else all of the
+**   head of that (the battery of the gate that +slum's formula is run on),
+**   is filed under the formula and that part, and found by a subject
+**   without a scan of the rest; the others under the formula alone.
+**   RETAINS bell; TRANSFERS the key.
+*/
+static u3_noun
+_nc_ent_key(u3_noun bell)
+{
+  u3_noun sock = u3h(bell), fol = u3t(bell);
+
+  if ( (c3y == u3du(sock)) && (c3y == u3du(u3t(sock))) ) {
+    u3_noun cape = u3h(sock), data = u3t(sock);
+    u3_noun cap2 = ( c3y == u3du(cape) ) ? u3h(cape) : cape;
+
+    if ( c3y == _nc_ent_all(cap2) ) {
+      return _nc_ent_idx(2, fol, u3h(data));
+    }
+    if (  (c3y == u3du(cap2))
+       && (c3y == u3du(u3h(data)))
+       && (c3y == _nc_ent_all(u3h(cap2))) )
+    {
+      return _nc_ent_idx(4, fol, u3h(u3h(data)));
+    }
+  }
+
+  return u3k(fol);
+}
+
+/* _nc_ent_road(): the entry [sock program] of a road for [sub fol], the
+**   most specific among those filed under the head of sub (ke2), else under
+**   the head of that (ke4), else under the formula alone.  RETAINS.
+*/
+static u3_weak
+_nc_ent_road(u3_road* rod_u, u3_noun sub, u3_noun fol, u3_weak ke2, u3_weak ke4)
+{
+  u3_weak keys[3] = { ke2, ke4, fol };
+  u3_weak lis, got;
+
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    if (  (u3_none == keys[i_w])
+       || (u3_none == (lis = u3h_git(rod_u->ska.ent_p, keys[i_w]))) )
+    {
+      continue;
+    }
+#ifdef U3NC_STAT
+    //  u3d_match() scans every entry of the list
+    //
+    for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
+      _nc_stat(mat_d);
+    }
+#endif
+    if ( u3_none != (got = u3d_match(sub, lis)) ) {
+      return got;
+    }
+  }
+
+  return u3_none;
+}
+
 /* _nc_ent_get(): entry program for [sub fol], from any road: the most
-**   specific whose sock sub matches.  Off the home road, which would keep
-**   subjects alive from one event to the next, the entry that a subject
-**   with the same context matched last is tried first, [entry subject]
-**   in the cache: sub is checked against it only where it is not the
-**   same noun as that subject.  RETAINS.
+**   specific whose sock sub matches (_nc_ent_road()).  Off the home road,
+**   which would keep subjects alive from one event to the next, the entry
+**   that a subject with the same context matched last is tried first,
+**   [entry subject] in the cache: sub is checked against it only where it
+**   is not the same noun as that subject.  RETAINS.
 */
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
-  u3_weak got, lis;
+  u3_weak got;
   c3_t    hom_t = ( &(u3H->rod_u) == u3R );
   u3_noun key   = hom_t ? u3_nul : _nc_las_key(sub, fol);
+  u3_weak ke2   = u3_none, ke4 = u3_none;
 
   if ( !hom_t ) {
     u3_weak las = u3z_find(u3z_memo_toss, key);
@@ -4475,30 +4569,34 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
     }
   }
 
-  for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
-    if ( u3_none == (lis = u3h_git(rod_u->ska.ent_p, fol)) ) {
-      continue;
-    }
-#ifdef U3NC_STAT
-    //  u3d_match() scans every entry of the formula
-    //
-    for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
-      _nc_stat(mat_d);
-    }
-#endif
-    if ( u3_none != (got = u3d_match(sub, lis)) ) {
-      if ( !hom_t ) {
-        u3_noun las = u3nc(u3k(got), u3k(sub));
-
-        u3z_save(u3z_memo_toss, key, las);
-        u3z(las);
-      }
-      return _nc_to(u3t(got));
+  if ( c3y == u3du(sub) ) {
+    ke2 = _nc_ent_idx(2, fol, u3h(sub));
+    if ( c3y == u3du(u3h(sub)) ) {
+      ke4 = _nc_ent_idx(4, fol, u3h(u3h(sub)));
     }
   }
 
-  u3z(key);
-  return NULL;
+  for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
+    if ( u3_none != (got = _nc_ent_road(rod_u, sub, fol, ke2, ke4)) ) {
+      break;
+    }
+  }
+
+  if ( u3_none != ke2 ) u3z(ke2);
+  if ( u3_none != ke4 ) u3z(ke4);
+
+  if ( u3_none == got ) {
+    u3z(key);
+    return NULL;
+  }
+
+  if ( !hom_t ) {
+    u3_noun las = u3nc(u3k(got), u3k(sub));
+
+    u3z_save(u3z_memo_toss, key, las);
+    u3z(las);
+  }
+  return _nc_to(u3t(got));
 }
 
 /* _nc_link(): set the callee programs of the call sites that have been
@@ -4717,7 +4815,7 @@ _nc_entry(u3_noun sub, u3_noun fol)
   _nc_stat(ent_d);
 
   if ( !pog_u ) {
-    u3_noun bell, old, lis;
+    u3_noun bell, old, lis, key;
 
 #ifdef U3NC_STAT
     //  U3NC_ENT_LOG: each entry compiled, its formula and the depth of
@@ -4750,12 +4848,20 @@ _nc_entry(u3_noun sub, u3_noun fol)
       }
     }
 #endif
+    //  not a formula, and it would be a key of the index (_nc_ent_tag)
+    //
+    if ( (c3y == u3du(fol)) && (_nc_ent_tag == u3h(fol)) ) {
+      u3m_bail(c3__exit);
+    }
+
     pog_u = _nc_compile(u3d_full(sub, fol, &bell), u3_none);
 
-    old = u3h_get(u3R->ska.ent_p, fol);
+    key = _nc_ent_key(bell);
+    old = u3h_get(u3R->ska.ent_p, key);
     lis = u3nc(u3nc(u3k(u3h(bell)), _nc_of(pog_u)),
                ( u3_none == old ) ? u3_nul : old);
-    u3h_put(u3R->ska.ent_p, fol, lis);
+    u3h_put(u3R->ska.ent_p, key, lis);
+    u3z(key);
     u3z(bell);
   }
 
@@ -5342,6 +5448,14 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   }
 
   return pro;
+}
+
+/* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
+*/
+c3_o
+u3nc_entered(u3_noun bus, u3_noun fol)
+{
+  return __(0 != _nc_ent_get(bus, fol));
 }
 
 /* _nc_regs_cb(): count the arguments of an n-ary program.
@@ -5998,10 +6112,12 @@ _nc_drop_dir(u3_noun key)
 static void
 _nc_drop_ent(u3_noun bell)
 {
-  u3_weak lis = u3h_git(u3R->ska.ent_p, u3t(bell));
+  u3_noun key = _nc_ent_key(bell);
+  u3_weak lis = u3h_git(u3R->ska.ent_p, key);
   u3_noun out = u3_nul, i;
 
   if ( u3_none == lis ) {
+    u3z(key);
     return;
   }
 
@@ -6016,7 +6132,8 @@ _nc_drop_ent(u3_noun bell)
     }
   }
 
-  u3h_put(u3R->ska.ent_p, u3t(bell), out);
+  u3h_put(u3R->ska.ent_p, key, out);
+  u3z(key);
 }
 
 /* u3nc_drop(): free the programs of functions on the home road, lis a
