@@ -332,6 +332,10 @@ _nock_nc(u3_noun bus_fol)
 static c3_d _run_jet_d;
 #endif
 
+/* _run_us_d: the time of the last _run(), in microseconds.
+*/
+static c3_d _run_us_d;
+
 /* _run(): run fun_f on [bus fol] softly, timing it.  RETAINS.
 **         Produces the product, or u3_none after printing the trace.
 */
@@ -359,6 +363,7 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
   }
 
   fprintf(stderr, "%s: %" PRIu64 " us\r\n", nam_c, end_d - beg_d);
+  _run_us_d = end_d - beg_d;
 #ifdef U3NC_STAT
   //  the cells the run allocated, in either interpreter
   //
@@ -421,6 +426,139 @@ _lose(u3_weak pro)
   }
 }
 
+/* _nano(): monotonic clock, in nanoseconds.
+*/
+static c3_d
+_nano(void)
+{
+  struct timespec tim_u;
+  clock_gettime(CLOCK_MONOTONIC, &tim_u);
+  return ((c3_d)tim_u.tv_sec * 1000000000ULL) + tim_u.tv_nsec;
+}
+
+/* _loop_n(), _loop_nc(): .*(bus fol) rep times in one road, the products
+**                        dropped (U3NC_SWEEP_INNER).
+*/
+static u3_noun
+_loop_n(u3_noun arg)
+{
+  u3_noun bus = u3h(arg), fol = u3h(u3t(arg));
+  c3_d    rep_d = u3r_chub(0, u3t(u3t(arg)));
+
+  while ( rep_d-- ) {
+    u3z(u3n_nock_on(u3k(bus), u3k(fol)));
+  }
+  u3z(arg);
+  return 0;
+}
+
+static u3_noun
+_loop_nc(u3_noun arg)
+{
+  u3_noun bus = u3h(arg), fol = u3h(u3t(arg));
+  c3_d    rep_d = u3r_chub(0, u3t(u3t(arg)));
+
+  while ( rep_d-- ) {
+    u3z(u3nc_nock_on(u3k(bus), u3k(fol)));
+  }
+  u3z(arg);
+  return 0;
+}
+
+/* _sweep_round(): nanoseconds per run of fun_f on [bus fol], over itr_d
+**                 runs: each in a road of its own as an event would be, or,
+**                 with inr_t, all in one road.  0 if a run failed.
+*/
+static double
+_sweep_round(u3_funk fun_f, u3_noun bus, u3_noun fol, c3_d itr_d, c3_t inr_t)
+{
+  c3_d beg_d = _nano();
+
+  if ( inr_t ) {
+    u3_noun gon = u3m_soft(0, (_nock_n == fun_f) ? _loop_n : _loop_nc,
+                           u3nt(u3k(bus), u3k(fol), u3i_chub(itr_d)));
+    c3_t    bad_t = ( 0 != u3h(gon) );
+
+    u3z(gon);
+    if ( bad_t ) return 0.0;
+  }
+  else {
+    for ( c3_d i_d = 0; i_d < itr_d; i_d++ ) {
+      u3_noun gon = u3m_soft(0, fun_f, u3nc(u3k(bus), u3k(fol)));
+      c3_t    bad_t = ( 0 != u3h(gon) );
+
+      u3z(gon);
+      if ( bad_t ) return 0.0;
+    }
+  }
+  return (double)(_nano() - beg_d) / (double)itr_d;
+}
+
+/* _sweep(): steady state of both interpreters on [bus fol], which have
+**           run it already: each loops for U3NC_SWEEP_MS milliseconds
+**           (default 20) per round, U3NC_SWEEP_ROUNDS rounds (default 7)
+**           alternating, and the minimum of the rounds is reported in
+**           nanoseconds per run, on one line starting with "sweep" and
+**           tab-separated: name, u3n ns, u3nc ns, u3nc/u3n, first run of
+**           u3n and of u3nc in us, runs per round of each.
+**           U3NC_SWEEP_INNER: all the runs of a round in one road.
+**           U3NC_SWEEP_ONLY=n|nc: loop one interpreter only, for a profile.
+*/
+static void
+_sweep(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_d fin_d, c3_d fic_d)
+{
+  c3_c*   mil_c = getenv("U3NC_SWEEP_MS");
+  c3_c*   rou_c = getenv("U3NC_SWEEP_ROUNDS");
+  c3_t    inr_t = !!getenv("U3NC_SWEEP_INNER");
+  double  goal  = 1e6 * (mil_c ? atof(mil_c) : 20.0);
+  c3_w    rou_w = rou_c ? atoi(rou_c) : 7;
+  u3_funk fun_f[2] = { _nock_n, _nock_nc };
+  c3_d    itr_d[2];
+  double  min_f[2] = { 0.0, 0.0 };
+  c3_c*   onl_c = getenv("U3NC_SWEEP_ONLY");
+  c3_t    run_t[2] = { !onl_c || !strcmp(onl_c, "n"),
+                       !onl_c || !!strcmp(onl_c, "n") };
+
+  //  calibration: double the runs until a round takes a quarter of the
+  //  goal, then scale
+  //
+  for ( c3_w k_w = 0; k_w < 2; k_w++ ) {
+    c3_d   n_d = 1;
+    double one;
+
+    if ( !run_t[k_w] ) { itr_d[k_w] = 0; continue; }
+
+    while ( 1 ) {
+      one = _sweep_round(fun_f[k_w], bus, fol, n_d, inr_t);
+      if ( (0.0 == one) || ((one * n_d) >= (goal / 4)) ) break;
+      n_d *= 2;
+    }
+    if ( 0.0 == one ) {
+      fprintf(stderr, "sweep\t%s\tfailed\r\n", nam_c);
+      return;
+    }
+    itr_d[k_w] = c3_max(1, (c3_d)(goal / one));
+  }
+
+  for ( c3_w r_w = 0; r_w < rou_w; r_w++ ) {
+    for ( c3_w k_w = 0; k_w < 2; k_w++ ) {
+      double one;
+
+      if ( !run_t[k_w] ) continue;
+      one = _sweep_round(fun_f[k_w], bus, fol, itr_d[k_w], inr_t);
+
+      if ( (0 == r_w) || (one < min_f[k_w]) ) {
+        min_f[k_w] = one;
+      }
+    }
+  }
+
+  fprintf(stderr, "sweep\t%s\t%.1f\t%.1f\t%.3f\t%" PRIu64 "\t%" PRIu64
+                  "\t%" PRIu64 "\t%" PRIu64 "\r\n",
+          nam_c, min_f[0], min_f[1], min_f[1] / min_f[0],
+          fin_d, fic_d, itr_d[0], itr_d[1]);
+}
+
 /* _test(): compare u3n and u3nc on [bus fol].  TRANSFERS.
 **
 **   U3NC_ONLY=n|nc: run only that interpreter (u3nc for any other
@@ -438,9 +576,11 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
   c3_w    rep_w = ( rep_c && (atoi(rep_c) > 0) ) ? atoi(rep_c) : 1;
   u3_weak a = u3_none, b = u3_none;
   c3_i    ret_i = 1;
+  c3_d    fin_d = 0, fic_d = 0;
 
   if ( n_t ) {
-    u3z(_run("u3n  first ", _nock_n, bus, fol));
+    _lose(_run("u3n  first ", _nock_n, bus, fol));
+    fin_d = _run_us_d;
   }
   if ( nc_t ) {
     //  U3NC_PROF: vere's sampling profiler over the compiling run, the
@@ -452,7 +592,8 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
       u3C.wag_h |= u3o_debug_cpu;
       u3t_boot();
     }
-    u3z(_run("u3nc first ", _nock_nc, bus, fol));
+    _lose(_run("u3nc first ", _nock_nc, bus, fol));
+    fic_d = _run_us_d;
     if ( pof_t ) {
       u3t_boff();
       u3C.wag_h &= ~u3o_debug_cpu;
@@ -494,6 +635,12 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
   }
   else {
     fprintf(stderr, "test %s: ok\r\n", nam_c);
+
+    //  U3NC_SWEEP: the steady state of both, measured in loops
+    //
+    if ( getenv("U3NC_SWEEP") ) {
+      _sweep(nam_c, bus, fol, fin_d, fic_d);
+    }
   }
 
   _lose(a); _lose(b);
@@ -510,6 +657,25 @@ _gate(const c3_c* src_c, u3_noun sam)
   u3_noun gat = u3v_wish(src_c);
   u3_noun cor = u3nc(u3k(u3h(gat)), u3nc(sam, u3k(u3t(u3t(gat)))));
   u3z(gat);
+  return cor;
+}
+
+/* _gate_soft(): _gate(), or u3_none after printing the trace if the
+**               source doesn't compile.  TRANSFERS.
+*/
+static u3_weak
+_gate_soft(const c3_c* src_c, u3_noun sam)
+{
+  u3_noun gon = u3m_soft(0, u3v_wish_w, u3i_string(src_c));
+  u3_noun cor;
+
+  if ( 0 != u3h(gon) ) {
+    u3_pier_punt_goof("probe: bad source", gon);
+    u3z(sam);
+    return u3_none;
+  }
+  cor = u3nc(u3k(u3h(u3t(gon))), u3nc(sam, u3k(u3t(u3t(u3t(gon))))));
+  u3z(gon);
   return cor;
 }
 
@@ -2410,7 +2576,34 @@ main(int argc, char* argv[])
       c3_free(buf_c);
     }
 
-    u3_noun cor   = _gate(src_c, sam);
+    //  U3NC_PROBE_SAMX: the sample is the product of that hoon, on the
+    //  kernel (=@file: of that file's contents), computed here in u3n and
+    //  not timed; `sam` in it is the sample so far (the number or the file)
+    //
+    if ( getenv("U3NC_PROBE_SAMX") ) {
+      const c3_c* exp_c = getenv("U3NC_PROBE_SAMX");
+      c3_c*       gat_c;
+      u3_noun     gat, fol;
+      u3_weak     pro;
+
+      if ( '@' == exp_c[0] ) {
+        if ( !(exp_c = _slurp(exp_c + 1, 0)) ) return 1;
+      }
+      gat_c = c3_malloc(strlen(exp_c) + 32);
+      sprintf(gat_c, "|=  sam=@\n%s\n", exp_c);
+      gat = _gate_soft(gat_c, sam);
+      c3_free(gat_c);
+      if ( u3_none == gat ) return 1;
+      fol = u3nq(9, 2, 0, 1);
+      pro = _run("probe sample", _nock_n, gat, fol);
+      u3z(gat); u3z(fol);
+      if ( u3_none == pro ) return 1;
+      sam = pro;
+    }
+
+    u3_weak cor   = _gate_soft(src_c, sam);
+
+    if ( u3_none == cor ) return 1;
 
     if ( off_c ) {
       c3_c* key_c = c3_malloc(strlen(off_c) + 3);
@@ -2421,7 +2614,31 @@ main(int argc, char* argv[])
       fprintf(stderr, "probe: %" PRIc3_w " arms off\r\n", _off_w);
     }
 
-    c3_i ret_i = _test("probe", cor, u3nq(9, 2, 0, 1), 1);
+    //  U3NC_PROBE_FILL=n: first run n other gates compiled, each an entry
+    //  program of the formula the probe is entered with: what the entry
+    //  lookup costs among many
+    //
+    if ( getenv("U3NC_PROBE_FILL") ) {
+      c3_w    fil_w = atoi(getenv("U3NC_PROBE_FILL"));
+      u3_noun fol   = u3nq(9, 2, 0, 1);
+
+      for ( c3_w i_w = 0; i_w < fil_w; i_w++ ) {
+        c3_c    gat_c[64];
+        u3_noun gat, gon;
+
+        snprintf(gat_c, sizeof(gat_c), "|=(a=@ (add (mul a %u) %u))",
+                 1 + (i_w / 1000), i_w % 1000);
+        gat = _gate(gat_c, 1);
+        gon = u3m_soft(0, _nock_nc, u3nc(gat, u3k(fol)));
+        u3z(gon);
+      }
+      u3z(fol);
+      fprintf(stderr, "probe: %" PRIc3_w " gates compiled first\r\n", fil_w);
+    }
+
+    c3_i ret_i = _test(getenv("U3NC_PROBE_NAME") ? getenv("U3NC_PROBE_NAME")
+                                                 : "probe",
+                       cor, u3nq(9, 2, 0, 1), 1);
 
     //  U3NC_REGS: the argument counts of the programs compiled
     //
