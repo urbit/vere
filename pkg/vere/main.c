@@ -207,7 +207,7 @@ _main_init(void)
   u3_Host.ops_u.tra = c3n;
   u3_Host.ops_u.veb = c3n;
   u3_Host.ops_u.puf_c = "jam";
-  u3_Host.ops_u.hap_w = 50000;
+  u3_Host.ops_u.hap_w = 1000000;
   u3C.hap_w = u3_Host.ops_u.hap_w;
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;

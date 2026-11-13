@@ -94,7 +94,7 @@ _setup(void)
   u3_weak      pil;
 
   u3C.wag_h |= u3o_hashless;
-  u3C.hap_w  = 50000;   //  memo cache sizes, as in the runtime
+  u3C.hap_w  = 1000000; //  memo cache sizes, as in the runtime
   u3C.per_w  = 50000;
 
   //  U3NC_HAP: the transient memo cache's cap instead, for benchmarks
