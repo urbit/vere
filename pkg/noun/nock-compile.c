@@ -4409,58 +4409,50 @@ _nc_dire_fit(const u3nc_dire* dir_u, const u3nc_prog* gop_u)
 }
 
 /* _nc_las_key(): the key, in this road's transient memo cache, of the
-**   last subject that matched the sock of the entry [sock prog] i: that
-**   cache lives and dies with the road, as such a subject may.
+**   entry found last for a formula and a subject with sub's context: the
+**   tail of its tail, what a gate keeps when its sample changes.  A rule
+**   that a parser picks from a table is called over and over as the same
+**   noun but for its sample, and many rules share a formula.  The cache
+**   lives and dies with the road, as the subjects may.  RETAINS.
 */
 static u3_noun
-_nc_las_key(u3_noun i)
+_nc_las_key(u3_noun sub, u3_noun fol)
 {
-  return u3nc(c3__last, u3k(u3t(i)));
-}
+  u3_noun con = ( (c3y == u3du(sub)) && (c3y == u3du(u3t(sub))) )
+              ? u3t(u3t(sub))
+              : u3_nul;
 
-/* _nc_las_get(): the last subject that matched the entry i on this road,
-**   or u3_none.  For u3d_match_las().
-*/
-static u3_weak
-_nc_las_get(u3_noun i, void* ptr_v)
-{
-  u3_noun key = _nc_las_key(i);
-  u3_weak las = u3z_find(u3z_memo_toss, key);
-
-  (void)ptr_v;
-  u3z(key);
-  return las;
-}
-
-/* _nc_las_put(): remember sub as the last subject that matched the entry
-**   i on this road.  RETAINS.
-*/
-static void
-_nc_las_put(u3_noun i, u3_noun sub)
-{
-  u3_noun key = _nc_las_key(i);
-  u3_weak old = u3z_find(u3z_memo_toss, key);
-
-  if ( old == sub ) {
-    u3z(key);
-  }
-  else {
-    (void)u3z_save(u3z_memo_toss, key, sub);
-  }
-  if ( u3_none != old ) {
-    u3z(old);
-  }
+  return u3nt(c3__last, u3k(fol), u3k(con));
 }
 
 /* _nc_ent_get(): entry program for [sub fol], from any road: the most
-**   specific whose sock sub matches.  Off the home road a match walks
-**   only what changed since the last subject that matched.  RETAINS.
+**   specific whose sock sub matches.  Off the home road, which would keep
+**   subjects alive from one event to the next, the entry that a subject
+**   with the same context matched last is tried first, [entry subject]
+**   in the cache: sub is checked against it only where it is not the
+**   same noun as that subject.  RETAINS.
 */
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
   u3_weak got, lis;
   c3_t    hom_t = ( &(u3H->rod_u) == u3R );
+  u3_noun key   = hom_t ? u3_nul : _nc_las_key(sub, fol);
+
+  if ( !hom_t ) {
+    u3_weak las = u3z_find(u3z_memo_toss, key);
+
+    if ( u3_none != las ) {
+      u3nc_prog* pog_u = ( c3y == u3d_fits_las(u3h(las), sub, u3t(las)) )
+                       ? _nc_to(u3t(u3h(las)))
+                       : NULL;
+      u3z(las);
+      if ( pog_u ) {
+        u3z(key);
+        return pog_u;
+      }
+    }
+  }
 
   for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
     if ( u3_none == (lis = u3h_git(rod_u->ska.ent_p, fol)) ) {
@@ -4473,23 +4465,18 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
       _nc_stat(mat_d);
     }
 #endif
-    //  the home road matches in full: it would keep subjects alive
-    //  from one event to the next
-    //
-    if ( hom_t ) {
-      got = u3d_match(sub, lis);
-    }
-    else {
-      got = u3d_match_las(sub, lis, _nc_las_get, 0);
-      if ( u3_none != got ) {
-        _nc_las_put(got, sub);
+    if ( u3_none != (got = u3d_match(sub, lis)) ) {
+      if ( !hom_t ) {
+        u3_noun las = u3nc(u3k(got), u3k(sub));
+
+        u3z_save(u3z_memo_toss, key, las);
+        u3z(las);
       }
-    }
-    if ( u3_none != got ) {
       return _nc_to(u3t(got));
     }
   }
 
+  u3z(key);
   return NULL;
 }
 

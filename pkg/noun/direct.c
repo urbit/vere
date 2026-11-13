@@ -199,45 +199,13 @@ _d_huge_las(u3_noun cape, u3_noun data, u3_noun sub, u3_weak las)
   }
 }
 
-/* u3d_match_las(): u3d_match(), checking each candidate i against the
-**   last subject that matched it, las_f(i, ptr_v) (transferred, or
-**   u3_none).  RETAINS.
+/* u3d_fits_las(): does sub nest under the sock of the entry i, [sock *],
+**   given las, a noun that did?  RETAINS.
 */
-u3_weak
-u3d_match_las(u3_noun sub, u3_noun lis,
-              u3_weak (*las_f)(u3_noun, void*), void* ptr_v)
+c3_o
+u3d_fits_las(u3_noun i, u3_noun sub, u3_noun las)
 {
-  u3_weak pro = u3_none;
-  u3_noun cape_max = 0, data_max = 0;
-  u3_noun i, cape_i, data_i;
-
-  while ( u3_nul != lis ) {
-    u3_weak las;
-    c3_o    hug_o;
-
-    u3x_cell(lis, &i, &lis);
-    cape_i = u3h(u3h(i));
-    data_i = u3t(u3h(i));
-    las    = las_f(i, ptr_v);
-    hug_o  = _d_huge_las(cape_i, data_i, sub, las);
-
-    if ( u3_none != las ) {
-      u3z(las);
-    }
-    if ( c3n == hug_o ) {
-      continue;
-    }
-
-    if (  (u3_none == pro)
-       || (c3y == _d_huge(cape_max, data_max, cape_i, data_i)) )
-    {
-      pro      = i;
-      cape_max = cape_i;
-      data_max = data_i;
-    }
-  }
-
-  return pro;
+  return _d_huge_las(u3h(u3h(i)), u3t(u3h(i)), sub, las);
 }
 
 /* u3d_match(): find the most specific [sock *] in `lis` whose sock

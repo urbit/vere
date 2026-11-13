@@ -64,6 +64,25 @@ _slog(u3_noun hod)
   _slog_d[1] += _tsc() - beg_d;
 }
 
+/* _steel(): bring the SKA core up to the steel pill: this binary's, or
+**           the one in the file U3NC_STEEL.
+*/
+static void
+_steel(void)
+{
+  if ( getenv("U3NC_STEEL") ) {
+    size_t len_i;
+    c3_c*  buf_c = _slurp(getenv("U3NC_STEEL"), &len_i);
+
+    if ( !buf_c ) exit(1);
+    u3d_boot(u3i_bytes(len_i, (c3_y*)buf_c));
+    c3_free(buf_c);
+  }
+  else {
+    u3_mars_steel();
+  }
+}
+
 /* _setup(): boot the kernel from the ivory pill in the u3n interpreter,
 **           which registers its cores, and boot the SKA core from the
 **           steel pill, which gets the registrations.
@@ -111,19 +130,7 @@ _setup(void)
     exit(1);
   }
 
-  //  U3NC_STEEL: the steel pill from that file instead of this binary's
-  //
-  if ( getenv("U3NC_STEEL") ) {
-    size_t len_i;
-    c3_c*  buf_c = _slurp(getenv("U3NC_STEEL"), &len_i);
-
-    if ( !buf_c ) exit(1);
-    u3d_boot(u3i_bytes(len_i, (c3_y*)buf_c));
-    c3_free(buf_c);
-  }
-  else {
-    u3_mars_steel();
-  }
+  _steel();
   u3z(pil);
 
   //  check reference counts after every run: u3m_soft_top() marks and
@@ -1467,7 +1474,7 @@ _test_boot(void)
   {
     c3_d beg_d = _time();
 
-    u3_mars_steel();
+    _steel();
     fprintf(stderr, "boot, same version: %" PRIu64 " us\r\n", _time() - beg_d);
   }
 
@@ -1487,7 +1494,7 @@ _test_boot(void)
   ver = u3nc(1, u3nt(u3nc(1, u3nt(u3_nul, c3__ud, 99)), 0, 0));
   u3R->ska.cor = u3i_edit(u3R->ska.cor, 22, ver);
 
-  u3_mars_steel();
+  _steel();
   ret_i = _check("boot, other version: arms",
                  c3y == u3r_sing(pek, u3x_at(22, u3R->ska.cor))) && ret_i;
   ret_i = _check("boot, other version: state",
@@ -1513,7 +1520,7 @@ _test_boot(void)
                  (u3_nul == u3R->ska.cor) && (u3_nul == u3R->ska.new))
        && ret_i;
 
-  u3_mars_steel();
+  _steel();
   ret_i = _check("boot, after the empty pill: core",
                  u3_nul != u3R->ska.cor) && ret_i;
   ret_i = _test("boot, after the empty pill", cor, fol, 1) && ret_i;

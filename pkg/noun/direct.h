@@ -58,13 +58,11 @@
       u3_weak
       u3d_match(u3_noun sub, u3_noun lis);
 
-    /* u3d_match_las(): u3d_match(), each candidate i checked against the
-    **                  last subject that matched it, las_f(i, ptr_v)
-    **                  (transferred, or u3_none): what is the same noun
-    **                  there is skipped.  RETAINS.
+    /* u3d_fits_las(): does sub nest under the sock of the entry i, [sock *],
+    **                 given las, a noun that did?  What is the same noun in
+    **                 both is not walked.  RETAINS.
     */
-      u3_weak
-      u3d_match_las(u3_noun sub, u3_noun lis,
-                    u3_weak (*las_f)(u3_noun, void*), void* ptr_v);
+      c3_o
+      u3d_fits_las(u3_noun i, u3_noun sub, u3_noun las);
 
 #endif /* ifndef U3_DIRECT_H */
