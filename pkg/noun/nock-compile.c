@@ -37,7 +37,7 @@
 **  with over 65535 slots, literals, sites or bytes of code needs, are a
 **  second table of them behind the prefix WIDE, for a dispatch more.
 **  Slots, literal and call site indices, and jump targets (absolute byte
-**  offsets) are immediates, and so is the atom of IMM and EQI, which
+**  offsets) are immediates, and so is the atom of IMM, EQI and LTI, which
 **  carry it rather than a literal index.  A call site holds its argument
 **  slots and its destination slot d, so the call opcodes carry only the
 **  site index.
@@ -124,6 +124,9 @@
 **    DON   s        return s, consumed
 **    DRO   s        drop s: lose its reference, 0 -> s
 **    JMC   i        CAC in tail position
+**    LTI   n s t    goto t unless s is a direct atom less than n, a direct
+**                   atom: the steps of a binary search among the constants
+**                   a noun is compared with (+switch-chains)
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
@@ -207,7 +210,8 @@
   X(don, DON, 1,   0,   0,   0,   0,   1,   1)                                  \
   X(dro, DRO, 1,   0,   0,   0,   0,   0,   0)                                  \
   X(cac, CAC, 0,   0,   1,   0,   1,   0,   0)                                  \
-  X(jmc, JMC, 0,   0,   1,   0,   1,   1,   1)
+  X(jmc, JMC, 0,   0,   1,   0,   1,   1,   1)                                  \
+  X(lti, LTI, 1,   0,   1,   1,   0,   2,   0)
 
 /*  Families of ops without operands, X(fam, OP): one opcode each, with
 **  nothing to widen or consume.  They follow the others in the opcode
@@ -870,7 +874,8 @@ _nc_kids(nc_gen* gen_u, u3_noun blob, c3_h* kid_h)
       return 1;
     }
 
-    case c3__eqq: {
+    case c3__eqq:
+    case c3_s3('l','t','i'): {
       u3x_qual(a, NULL, NULL, &z, &o);
       break;
     }
@@ -1226,6 +1231,17 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
       op_u = _nc_op(gen_u, _nc_eqq);
       op_u->src_h[0] = _nc_reg(gen_u, a);
       op_u->src_h[1] = _nc_reg(gen_u, b);
+      op_u->tar_h    = _nc_bare(gen_u, d);
+    } break;
+
+    case c3_s3('l','t','i'): {
+      u3x_qual(arg, &a, &b, &c, &d);
+      if ( c3n == u3a_is_cat(a) ) {
+        u3m_bail(c3__fail);
+      }
+      op_u = _nc_op(gen_u, _nc_lti);
+      op_u->imm_h    = a;
+      op_u->src_h[0] = _nc_reg(gen_u, b);
       op_u->tar_h    = _nc_bare(gen_u, d);
     } break;
 
@@ -3561,7 +3577,8 @@ _nc_print(u3nc_prog* pog_u)
         //  the atom itself, or an index
         //
         fprintf(stderr, " %s%u",
-                ((_nc_imm == fam_y) || (_nc_eqi == fam_y)) ? "" : "#", imm_h);
+                (  (_nc_imm == fam_y) || (_nc_eqi == fam_y)
+                || (_nc_lti == fam_y) ) ? "" : "#", imm_h);
 
         if (  (_nc_hsp == fam_y) || (_nc_hse == fam_y)
            || (_nc_hdp == fam_y) || (_nc_hde == fam_y) )
@@ -3619,8 +3636,10 @@ _nc_prog_lay(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
   nc_lay lay_u;
   c3_w   len_w = sizeof(u3nc_prog);
 
+  //  three bytes more: the interpreter reads a _V immediate as a word
+  //
   lay_u.byc_w = len_w = c3_align(len_w, alignof(c3_y), C3_ALGHI);
-  len_w += byc_h;
+  len_w += byc_h + 3;
 
   lay_u.lit_w = len_w = c3_align(len_w, alignof(u3_noun), C3_ALGHI);
   len_w += lit_h * sizeof(u3_noun);

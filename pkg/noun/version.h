@@ -28,7 +28,8 @@ typedef c3_h       u3nc_version;
 #define U3NC_VER1   (u3nc_version)0  // zero-indexed for backcompat
 #define U3NC_VER2   (u3nc_version)1  // CAX/JMX, CAC/JMC, the trust of a site,
                                      // op jets, HLP, HER/TAR/COR, IMM family
-#define U3NC_VERLAT U3NC_VER2
+#define U3NC_VER3   (u3nc_version)2  // LTI, the padding of the bytecode
+#define U3NC_VERLAT U3NC_VER3
 
 /*  snapshot patch format
  */

@@ -78,13 +78,16 @@ static const OP_F WTAB[] = { WIDES };
 
 #define RB()  (*ip++)
 #define RS()  ({ c3_h _v = ip[0] | (ip[1] << 8); ip += 2; _v; })
+//  RV(): a length byte, then that many bytes, four at most, little-endian:
+//  read as one word and masked (the bytecode is padded for it,
+//  _nc_prog_lay())
+//
 #define RV()  ({                                                                \
     c3_y _n = *ip++;                                                            \
-    c3_h _v = 0;                                                                \
-    for ( c3_y _i = 0; _i < _n; _i++ ) {                                        \
-      _v |= ((c3_h)*ip++) << (8 * _i);                                          \
-    }                                                                           \
-    _v;                                                                         \
+    c3_h _v;                                                                    \
+    memcpy(&_v, ip, sizeof(_v));                                                \
+    ip += _n;                                                                   \
+    _v & (c3_h)(0xffffffffULL >> (8 * (4 - _n)));                               \
   })
 
 //  BURN(): dispatch the next opcode
@@ -1151,6 +1154,19 @@ OP3K4(EQQ, a_h, b_h, c_h, BODY_EQQ)
   BURN();
 OP3KK(EQI, a_h, b_h, c_h, BODY_EQI)
 
+//  cells and indirect atoms are above every direct atom
+//
+#define BODY_LTI(KY, KT)                                                        \
+  if ( reg[b_h] < a_h ) {                                                       \
+    DROP(b_h, KY);                                                              \
+  }                                                                             \
+  else {                                                                        \
+    DROP(b_h, KT);                                                              \
+    JUMP(c_h);                                                                  \
+  }                                                                             \
+  BURN();
+OP3KK(LTI, a_h, b_h, c_h, BODY_LTI)
+
 #define BODY_EQL(KY, KT)                                                        \
   if ( c3y == u3r_sing(pog_u->lit_u.non[a_h], reg[b_h]) ) {                     \
     DROP(b_h, KY);                                                              \
@@ -1470,6 +1486,7 @@ OP(WIDE) ARGS CONV
 #undef BODY_CLQ
 #undef BODY_EQQ
 #undef BODY_EQI
+#undef BODY_LTI
 #undef BODY_EQL
 #undef BODY_BRN
 #undef BODY_BRZ
