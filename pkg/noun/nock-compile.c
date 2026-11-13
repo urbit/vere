@@ -4533,48 +4533,39 @@ _nc_ent_key(u3_noun bell)
   return u3k(fol);
 }
 
-/* _nc_ent_road(): the entry [sock program] of a road for [sub fol], the
-**   most specific among those filed under the head of sub (ke2), else under
-**   the head of that (ke4), else under the formula alone.  RETAINS.
+/* _nc_ent_list(): the entry [sock program] among those of a road under a
+**   key of ska.ent_p that is the most specific for sub.  RETAINS.
 */
 static u3_weak
-_nc_ent_road(u3_road* rod_u, u3_noun sub, u3_noun fol, u3_weak ke2, u3_weak ke4)
+_nc_ent_list(u3_road* rod_u, u3_noun sub, u3_noun key)
 {
-  u3_weak keys[3] = { ke2, ke4, fol };
-  u3_weak lis, got;
+  u3_weak lis = u3h_git(rod_u->ska.ent_p, key);
 
-  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
-    if (  (u3_none == keys[i_w])
-       || (u3_none == (lis = u3h_git(rod_u->ska.ent_p, keys[i_w]))) )
-    {
-      continue;
-    }
-#ifdef U3NC_STAT
-    //  u3d_match() scans every entry of the list
-    //
-    for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
-      _nc_stat(mat_d);
-    }
-#endif
-    if ( u3_none != (got = u3d_match(sub, lis)) ) {
-      return got;
-    }
+  if ( u3_none == lis ) {
+    return u3_none;
   }
-
-  return u3_none;
+#ifdef U3NC_STAT
+  //  u3d_match() scans every entry of the list
+  //
+  for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
+    _nc_stat(mat_d);
+  }
+#endif
+  return u3d_match(sub, lis);
 }
 
 /* _nc_ent_get(): entry program for [sub fol], from any road: the most
-**   specific whose sock sub matches (_nc_ent_road()).  Off the home road,
+**   specific whose sock sub matches (_nc_ent_list()).  Off the home road,
 **   which would keep subjects alive from one event to the next, the entry
 **   that a subject with the same context matched last is tried first,
-**   [entry subject] in the cache: sub is checked against it only where it
-**   is not the same noun as that subject.  RETAINS.
+**   [entry subject formula] in the cache (_nc_las_key()): sub is checked
+**   against it only where it is not the same noun as that subject.
+**   RETAINS.
 */
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
-  u3_weak got;
+  u3_weak got   = u3_none;
   c3_t    hom_t = ( &(u3H->rod_u) == u3R );
   u3_noun key   = hom_t ? u3_nul : _nc_las_key(sub, fol);
   u3_weak ke2   = u3_none, ke4 = u3_none;
@@ -4596,15 +4587,31 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
     }
   }
 
-  if ( c3y == u3du(sub) ) {
-    ke2 = _nc_ent_idx(2, fol, u3h(sub));
-    if ( c3y == u3du(u3h(sub)) ) {
-      ke4 = _nc_ent_idx(4, fol, u3h(u3h(sub)));
-    }
-  }
-
+  //  by the head of the subject, then by the head of that, then by the
+  //  formula alone, in each road that has entries; a key is made when it
+  //  is first needed
+  //
   for (u3_road* rod_u = u3R; rod_u; rod_u = u3tn(u3_road, rod_u->par_p)) {
-    if ( u3_none != (got = _nc_ent_road(rod_u, sub, fol, ke2, ke4)) ) {
+    if ( 0 == u3to(u3h_root, rod_u->ska.ent_p)->use_w ) {
+      continue;
+    }
+    if ( c3y == u3du(sub) ) {
+      if ( u3_none == ke2 ) {
+        ke2 = _nc_ent_idx(2, fol, u3h(sub));
+      }
+      if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke2)) ) {
+        break;
+      }
+      if ( c3y == u3du(u3h(sub)) ) {
+        if ( u3_none == ke4 ) {
+          ke4 = _nc_ent_idx(4, fol, u3h(u3h(sub)));
+        }
+        if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke4)) ) {
+          break;
+        }
+      }
+    }
+    if ( u3_none != (got = _nc_ent_list(rod_u, sub, fol)) ) {
       break;
     }
   }
