@@ -4434,16 +4434,41 @@ _nc_dire_fit(const u3nc_dire* dir_u, const u3nc_prog* gop_u)
 **   tail of its tail, what a gate keeps when its sample changes.  A rule
 **   that a parser picks from a table is called over and over as the same
 **   noun but for its sample, and many rules share a formula.  The cache
-**   lives and dies with the road, as the subjects may.  RETAINS.
+**   lives and dies with the road, as the subjects may.
+**
+**   The key is a direct atom, the mugs of the two joined: no key of a
+**   memoized computation is an atom, and nothing is allocated, hashed
+**   through or compared to look it up.  Two formulas may share one, so the
+**   value holds the formula, [entry subject formula], to be checked; the
+**   context needs no check, the subject being matched against the entry
+**   wherever it isn't the noun that matched last.  RETAINS.
 */
+static inline c3_h
+_nc_las_mug(u3_noun som)
+{
+  //  the mug a cell or an indirect atom remembers, without u3r_mug()'s
+  //  stack frame
+  //
+  if ( c3n == u3a_is_cat(som) ) {
+    c3_h mug_h = ((u3a_noun*)u3a_to_ptr(som))->mug_w;
+
+    if ( mug_h ) {
+      return mug_h;
+    }
+  }
+  return u3r_mug(som);
+}
+
 static u3_noun
 _nc_las_key(u3_noun sub, u3_noun fol)
 {
-  u3_noun con = ( (c3y == u3du(sub)) && (c3y == u3du(u3t(sub))) )
-              ? u3t(u3t(sub))
-              : u3_nul;
+  c3_h mug_h = _nc_las_mug(fol);
 
-  return u3nt(c3__last, u3k(fol), u3k(con));
+  if ( (c3y == u3du(sub)) && (c3y == u3du(u3t(sub))) ) {
+    mug_h = u3r_mug_both(mug_h, _nc_las_mug(u3t(u3t(sub))));
+  }
+
+  return mug_h;
 }
 
 /* _nc_ent_all(): does a cape know everything under it?  RETAINS.
@@ -4555,16 +4580,18 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
   u3_weak ke2   = u3_none, ke4 = u3_none;
 
   if ( !hom_t ) {
-    u3_weak las = u3z_find(u3z_memo_toss, key);
+    //  [entry subject formula], the cache's: nothing here allocates
+    //
+    u3_weak las = u3h_git(u3R->cax.har_p, key);
 
     if ( u3_none != las ) {
-      u3nc_prog* pog_u = ( c3y == u3d_fits_las(u3h(las), sub, u3t(las)) )
-                       ? _nc_to(u3t(u3h(las)))
-                       : NULL;
-      u3z(las);
-      if ( pog_u ) {
-        u3z(key);
-        return pog_u;
+      u3_noun i, old, lof;
+
+      u3x_trel(las, &i, &old, &lof);
+      if (  ((fol == lof) || (c3y == u3r_sing(fol, lof)))
+         && (c3y == u3d_fits_las(i, sub, old)) )
+      {
+        return _nc_to(u3t(i));
       }
     }
   }
@@ -4586,15 +4613,11 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
   if ( u3_none != ke4 ) u3z(ke4);
 
   if ( u3_none == got ) {
-    u3z(key);
     return NULL;
   }
 
   if ( !hom_t ) {
-    u3_noun las = u3nc(u3k(got), u3k(sub));
-
-    u3z_save(u3z_memo_toss, key, las);
-    u3z(las);
+    u3h_put(u3R->cax.har_p, key, u3nt(u3k(got), u3k(sub), u3k(fol)));
   }
   return _nc_to(u3t(got));
 }
