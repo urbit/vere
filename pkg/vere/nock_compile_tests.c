@@ -23,6 +23,32 @@ static c3_d    _time(void);
 static u3_weak _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol);
 static u3_noun _nock_nc(u3_noun bus_fol);
 
+/* _slurp(): the contents of a file, NUL-terminated, or 0 with a message.
+*/
+static c3_c*
+_slurp(const c3_c* pax_c, size_t* len_i)
+{
+  FILE* fil_u = fopen(pax_c, "rb");
+  c3_c* buf_c;
+  long  len_l;
+
+  if ( !fil_u ) {
+    fprintf(stderr, "can't open %s\r\n", pax_c);
+    return 0;
+  }
+  fseek(fil_u, 0, SEEK_END);
+  len_l = ftell(fil_u);
+  fseek(fil_u, 0, SEEK_SET);
+  buf_c = c3_calloc(len_l + 1);
+  if ( (size_t)len_l != fread(buf_c, 1, len_l, fil_u) ) {
+    fprintf(stderr, "short read of %s\r\n", pax_c);
+    return 0;
+  }
+  fclose(fil_u);
+  if ( len_i ) *len_i = len_l;
+  return buf_c;
+}
+
 /* _slog(): render a slog, as the king would.
 */
 static c3_d _slog_d[2];   //  slogs printed, and their cycles
@@ -85,7 +111,19 @@ _setup(void)
     exit(1);
   }
 
-  u3_mars_steel();
+  //  U3NC_STEEL: the steel pill from that file instead of this binary's
+  //
+  if ( getenv("U3NC_STEEL") ) {
+    size_t len_i;
+    c3_c*  buf_c = _slurp(getenv("U3NC_STEEL"), &len_i);
+
+    if ( !buf_c ) exit(1);
+    u3d_boot(u3i_bytes(len_i, (c3_y*)buf_c));
+    c3_free(buf_c);
+  }
+  else {
+    u3_mars_steel();
+  }
   u3z(pil);
 
   //  check reference counts after every run: u3m_soft_top() marks and
@@ -2175,6 +2213,67 @@ main(int argc, char* argv[])
 
   _setup();
 
+  //  U3NC_STEEL_GEN: write a steel pill to that file, as the generator
+  //  desk/gen/steel-pill.hoon of the SKA repository does on a ship: the
+  //  core's own hoon.hoon (U3NC_STEEL_SYS) built from nothing, the
+  //  library (U3NC_STEEL_LIB) on it.  In u3n, and nothing else
+  //
+  if ( getenv("U3NC_STEEL_GEN") ) {
+    size_t  sys_i, lib_i;
+    c3_c*   sys_c = _slurp(getenv("U3NC_STEEL_SYS"), &sys_i);
+    c3_c*   lib_c = _slurp(getenv("U3NC_STEEL_LIB"), &lib_i);
+    u3_noun cor, fol;
+    u3_weak pro;
+
+    if ( !sys_c || !lib_c ) return 1;
+    cor = _gate(
+      "|=  [sys=@t lib=@t]\n"
+      "^-  [%steel p=(list)]\n"
+      "=/  mist\n"
+      "  |=  [bon=path txt=@]\n"
+      "  ^-  hoon\n"
+      "  =+  vas=vast\n"
+      "  ~|  bon\n"
+      "  %+  scan  (trip txt)\n"
+      "  %-  full\n"
+      "  =/  skip-ford\n"
+      "    %-  star\n"
+      "    ;~  pose  vul\n"
+      "      %+  ifix  [fas (just `@`10)]\n"
+      "      (star ;~(less (just `@`10) next))\n"
+      "    ==\n"
+      "  %+  ifix  [;~(plug gay skip-ford) gay]\n"
+      "  (stag %tssg (most gap tall:vas(wer bon, bug &)))\n"
+      "=/  trap\n"
+      "  =/  sub  *(trap vase)\n"
+      "  =.  sub  (swat sub (rain /sys/hoon/hoon sys))\n"
+      "  (swat sub (mist /lib/nock-compilation/hoon lib))\n"
+      "=/  nok  !.\n"
+      "  =>  [=_trap ~]  !=\n"
+      "  q:$:trap\n"
+      "[%steel nok trap ~]\n",
+      u3nc(u3i_bytes(sys_i, (c3_y*)sys_c), u3i_bytes(lib_i, (c3_y*)lib_c)));
+    fol = u3nq(9, 2, 0, 1);
+    pro = _run("steel: build", _nock_n, cor, fol);
+    u3z(cor); u3z(fol);
+    if ( u3_none == pro ) return 1;
+    {
+      u3_noun jam   = u3qe_jam(pro);
+      c3_w    len_w = u3r_met(3, jam);
+      c3_y*   buf_y = c3_malloc(len_w);
+      FILE*   fil_u = fopen(getenv("U3NC_STEEL_GEN"), "wb");
+
+      u3r_bytes(0, len_w, buf_y, jam);
+      if ( !fil_u || (len_w != fwrite(buf_y, 1, len_w, fil_u)) ) {
+        fprintf(stderr, "steel: can't write %s\r\n", getenv("U3NC_STEEL_GEN"));
+        return 1;
+      }
+      fclose(fil_u);
+      fprintf(stderr, "steel: %u bytes\r\n", len_w);
+    }
+    return 0;
+  }
+
   //  U3NC_PROBE: the source of a gate on the kernel, run on the sample
   //  U3NC_PROBE_SAM (default 5) by both interpreters, and nothing else
   //
@@ -2190,7 +2289,25 @@ main(int argc, char* argv[])
       u3nc_Self = 0;
     }
     c3_c*   off_c = getenv("U3NC_PROBE_OFF");
-    u3_noun cor   = _gate(getenv("U3NC_PROBE"), sam_c ? atoi(sam_c) : 5);
+    c3_c*   src_c = getenv("U3NC_PROBE");
+    u3_noun sam   = sam_c ? atoi(sam_c) : 5;
+
+    //  U3NC_PROBE=@file: the gate's source is that file's contents;
+    //  U3NC_PROBE_FILE: the sample is that file's contents, as an atom
+    //
+    if ( '@' == src_c[0] ) {
+      if ( !(src_c = _slurp(src_c + 1, 0)) ) return 1;
+    }
+    if ( getenv("U3NC_PROBE_FILE") ) {
+      size_t len_i;
+      c3_c*  buf_c = _slurp(getenv("U3NC_PROBE_FILE"), &len_i);
+
+      if ( !buf_c ) return 1;
+      sam = u3i_bytes(len_i, (c3_y*)buf_c);
+      c3_free(buf_c);
+    }
+
+    u3_noun cor   = _gate(src_c, sam);
 
     if ( off_c ) {
       c3_c* key_c = c3_malloc(strlen(off_c) + 3);
