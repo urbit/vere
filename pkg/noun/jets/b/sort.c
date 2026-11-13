@@ -112,3 +112,23 @@ u3wb_sort(u3_noun cor)
   b = u3t(u3h(u3t(cor)));
   return u3qb_sort(a, b);
 }
+
+/* u3ub_sort(): from compiled nock, on the whole core.  By a comparator
+**              that has a jet (+lth, +aor, +dor), the sort above: the
+**              list partitioned in an array, the comparator called as a
+**              jet, which compiled +sort, +skid and +weld don't match.
+**              By any other gate it punts: compiled +sort calls the gate
+**              compiled, where the sort above would call it in u3n.
+*/
+u3_noun
+u3ub_sort(u3_noun cor)
+{
+  u3_weak a = u3r_at(u3x_sam_2, cor);
+  u3_weak b = u3r_at(u3x_sam_3, cor);
+
+  if ( (u3_none == a) || (u3_none == b) || (c3n == u3j_gate_jet(b)) ) {
+    return u3_none;
+  }
+
+  return u3qb_sort(a, b);
+}

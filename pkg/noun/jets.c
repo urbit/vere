@@ -2197,6 +2197,51 @@ u3j_kink(u3_noun cor, u3_noun axe)
   }
 }
 
+/* u3j_gate_jet(): does a gate have a jet driver that is on, as
+**                 u3j_gate_prep() would find it by the cold state?
+**                 Without the gate's program, for a caller that only
+**                 needs to know.  RETAINS.
+*/
+c3_o
+u3j_gate_jet(u3_noun cor)
+{
+  u3_weak bar = u3_none, loc;
+  c3_o    jet_o = c3n;
+
+  if ( (c3n == u3du(cor)) || (c3n == u3du(u3t(cor))) ) {
+    return c3n;
+  }
+
+  loc = _cj_spot_cold(cor, &bar);
+
+  if ( u3_none != bar ) {
+    u3z(bar);
+  }
+
+  if ( u3_none != loc ) {
+    u3_noun pax = _cj_loc_axe(loc),
+            pay = u3qc_cap(pax),
+            pam = u3qc_mas(pax);
+
+    //  as u3j_gate_prep(): not if the parent axis includes the sample
+    //
+    if ( !(3 != pay || 2 == pam || (3 != pam && 3 != u3qc_cap(pam))) ) {
+      u3_noun   lab;
+      u3j_core* cop_u;
+      u3j_harm* ham_u;
+
+      if ( c3y == _cj_nail(loc, 2, &lab, &cop_u, &ham_u) ) {
+        jet_o = ham_u->liv;
+      }
+      u3z(lab);
+    }
+    u3z(pam); u3z(pax);
+    u3z(loc);
+  }
+
+  return jet_o;
+}
+
 /* u3j_gate_prep(): prepare a locally cached gate to call repeatedly.
  *                  core is TRANSFERRED.
  */

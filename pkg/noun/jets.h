@@ -307,6 +307,11 @@
         u3_weak
         u3j_site_kick(u3_noun cor, u3j_site* sit_u);
 
+      /* u3j_gate_jet(): does a gate have a jet driver that is on?  RETAINS.
+       */
+        c3_o
+        u3j_gate_jet(u3_noun cor);
+
       /* u3j_gate_prep(): prepare a locally cached gate to call repeatedly.
        */
         void

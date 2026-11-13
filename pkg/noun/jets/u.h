@@ -77,6 +77,7 @@
     u3_noun u3ub_scag(u3_noun*);
     u3_noun u3ub_slag(u3_noun*);
     u3_noun u3ub_snag(u3_noun*);
+    u3_noun u3ub_sort(u3_noun);
     u3_noun u3ub_weld(u3_noun*);
     u3_noun u3ub_zing(u3_noun*);
 

@@ -96,6 +96,7 @@ const u3u_harm u3u_Harm[] = {
   U3U_BINARY(b_scag),
   U3U_BINARY(b_slag),
   U3U_BINARY(b_snag),
+  U3U_MONO(b_sort),
   U3U_BINARY(b_weld),
   U3U_UNARY(b_zing),
   U3U_UNARY(c_bex),
