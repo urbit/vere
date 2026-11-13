@@ -4471,6 +4471,59 @@ _nc_las_key(u3_noun sub, u3_noun fol)
   return mug_h;
 }
 
+/* nc_idem: the entry found for a formula and the context of a subject (the
+**   tail of its tail), both by identity.  Kept outside the loom, so the
+**   programs stay read-only and nothing of it is saved; it holds no
+**   references.  What makes that sound:
+**
+**   - it is filled and read off the home road only, and holds nouns of the
+**     home road only (the formula, the context unless it is a direct atom,
+**     the entry [sock program] of the home road's table).  While any other
+**     road runs, nothing on the home road is freed, moved or unified
+**     (u3a_wed() stops below it), and no program of it is dropped;
+**   - u3nc_Era_d counts the departures from the home road (u3m_leap()), and
+**     an entry of another era is no entry: what the home road frees while
+**     it runs is never compared with;
+**   - within an era the same noun of the home road is the same formula, so
+**     the entry is one for this formula, and the same context fits the sock
+**     where it did; the rest of the subject is checked (u3d_fits_con()).
+**
+**   The entry is the one the lookup below gave a subject with this formula
+**   and context earlier in the era: what the cache of the road keeps, by
+**   the nouns instead of their mugs, and across the roads of the era.
+*/
+typedef struct {
+  c3_d    era_d;
+  u3_noun fol;
+  u3_noun con;
+  u3_noun i;
+} nc_idem;
+
+#define _nc_idem_bits  10
+
+static nc_idem _nc_idem_u[1 << _nc_idem_bits];
+
+c3_d u3nc_Era_d = 1;
+
+static inline nc_idem*
+_nc_idem_slot(u3_noun fol, u3_noun con)
+{
+  c3_w has_w = (fol * 0x9e3779b1u) ^ (con * 0x85ebca77u);
+
+  return &(_nc_idem_u[has_w >> (32 - _nc_idem_bits)]);
+}
+
+static inline c3_t
+_nc_here(void* ptr_v, u3_road* rod_u);
+
+/* _nc_home(): is a noun a direct atom, or on the home road?
+*/
+static inline c3_t
+_nc_home(u3_noun som)
+{
+  return (c3y == u3a_is_cat(som)) || _nc_here(u3a_to_ptr(som), &(u3H->rod_u));
+}
+
 /* _nc_ent_all(): does a cape know everything under it?  RETAINS.
 */
 static c3_o
@@ -4565,24 +4618,46 @@ _nc_ent_list(u3_road* rod_u, u3_noun sub, u3_noun key)
 static u3nc_prog*
 _nc_ent_get(u3_noun sub, u3_noun fol)
 {
-  u3_weak got   = u3_none;
-  c3_t    hom_t = ( &(u3H->rod_u) == u3R );
-  u3_noun key   = hom_t ? u3_nul : _nc_las_key(sub, fol);
-  u3_weak ke2   = u3_none, ke4 = u3_none;
+  u3_weak  got   = u3_none;
+  c3_t     hom_t = ( &(u3H->rod_u) == u3R );
+  nc_idem* ide_u = NULL;
+  u3_noun  key   = u3_nul;
+  u3_weak  ke2   = u3_none, ke4 = u3_none;
 
   if ( !hom_t ) {
+    //  by the nouns of the formula and the context (nc_idem)
+    //
+    if ( (c3y == u3du(sub)) && (c3y == u3du(u3t(sub))) ) {
+      u3_noun con = u3t(u3t(sub));
+
+      ide_u = _nc_idem_slot(fol, con);
+
+      if (  (u3nc_Era_d == ide_u->era_d)
+         && (fol == ide_u->fol)
+         && (con == ide_u->con)
+         && (c3y == u3d_fits_con(ide_u->i, sub)) )
+      {
+        _nc_stat(idm_d);
+        return _nc_to(u3t(ide_u->i));
+      }
+    }
+
     //  [entry subject formula], the cache's: nothing here allocates
     //
-    u3_weak las = u3h_git(u3R->cax.har_p, key);
+    key = _nc_las_key(sub, fol);
+    {
+      u3_weak las = u3h_git(u3R->cax.har_p, key);
 
-    if ( u3_none != las ) {
-      u3_noun i, old, lof;
+      if ( u3_none != las ) {
+        u3_noun i, old, lof;
 
-      u3x_trel(las, &i, &old, &lof);
-      if (  ((fol == lof) || (c3y == u3r_sing(fol, lof)))
-         && (c3y == u3d_fits_las(i, sub, old)) )
-      {
-        return _nc_to(u3t(i));
+        u3x_trel(las, &i, &old, &lof);
+        if (  ((fol == lof) || (c3y == u3r_sing(fol, lof)))
+           && (c3y == u3d_fits_las(i, sub, old)) )
+        {
+          got = i;
+          goto done;
+        }
       }
     }
   }
@@ -4625,6 +4700,18 @@ _nc_ent_get(u3_noun sub, u3_noun fol)
 
   if ( !hom_t ) {
     u3h_put(u3R->cax.har_p, key, u3nt(u3k(got), u3k(sub), u3k(fol)));
+  }
+
+done:
+  if (  ide_u
+     && _nc_home(fol)
+     && _nc_home(u3t(u3t(sub)))
+     && _nc_home(got) )
+  {
+    ide_u->era_d = u3nc_Era_d;
+    ide_u->fol   = fol;
+    ide_u->con   = u3t(u3t(sub));
+    ide_u->i     = got;
   }
   return _nc_to(u3t(got));
 }

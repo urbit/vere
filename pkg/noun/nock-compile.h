@@ -96,6 +96,13 @@
       c3_d nok_d;   //  indirect calls (NOK) (U3NC_STAT)
       c3_d nok_c;   //    TSC cycles in _nc_entry() for them
       c3_d mat_d;   //  entries u3d_match() scanned in entry lookups
+      c3_d idm_d;   //  entry lookups answered by formula and context nouns
+                    //  (nc_idem) (U3NC_STAT)
+      c3_d nkc_d;   //  indirect calls made by a program of the current road
+                    //  (U3NC_STAT): the others run in a senior road's
+      c3_d nkf_d;   //  indirect calls of a formula that is a noun of the
+                    //  home road (U3NC_STAT)
+      c3_d nkb_d;   //    of them, on a subject whose context is one too
       c3_d mem_d;   //  memo lookups of memoized calls (CAM, CSM)
       c3_d meh_d;   //    of them hits
       c3_d mem_c;   //    TSC cycles making their keys and looking up
@@ -205,6 +212,13 @@
     */
       u3_noun
       u3nc_mean(u3_noun bell, u3_noun arg);
+
+    /* u3nc_Era_d: the departures from the home road so far: u3m_leap()
+    **             counts one when it leaves it.  What compiled nock
+    **             remembers of the home road's nouns without holding them
+    **             (nc_idem in nock-compile.c) is good for one.
+    */
+      extern c3_d u3nc_Era_d;
 
     /* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
     */

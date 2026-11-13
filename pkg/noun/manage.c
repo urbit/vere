@@ -1192,6 +1192,13 @@ u3m_leap(c3_w pad_w)
     u3R->kid_p = u3of(u3_road, rod_u);
   }
 
+  //  leaving the home road: what compiled nock remembers of its nouns
+  //  by address is stale from here (u3nc_Era_d)
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    u3nc_Era_d++;
+  }
+
   // Stash slow stack pointer
   if ( NULL != u3t_Spin ) {
     u3R->off_h = u3t_Spin->off_h;

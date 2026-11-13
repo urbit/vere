@@ -858,6 +858,10 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
   u3t_on(noc_o);                                                                \
   _nc_tsc_end(nok_c);                                                           \
   _nc_stat(nok_d);                                                              \
+  _nc_stat_if(_nc_here(pog_u, u3R), nkc_d);                                     \
+  _nc_stat_if(_nc_home(reg[b_h]), nkf_d);                                       \
+  _nc_stat_if(_nc_home(reg[b_h]) && (c3y == u3du(x)) && (c3y == u3du(u3t(x)))   \
+              && _nc_home(u3t(u3t(x))), nkb_d);                                 \
   TAKEN(x, a_h, KA);                                                            \
   DROP(b_h, KB);                                                                \
   CALL_MONO(gop_u, x, d_h);

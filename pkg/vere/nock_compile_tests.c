@@ -395,15 +395,20 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
     //  indirect calls finding their programs, memoized calls making
     //  keys, looking them up and saving products
     //
-    fprintf(stderr, "  time run %.1f Mc ent %" PRIu64 " nok %" PRIu64
+    fprintf(stderr, "  time run %.1f Mc ent %" PRIu64 " (%" PRIu64 " by nouns)"
+                    " nok %" PRIu64
                     " in %.1f Mc (%.0f c each), %" PRIu64 " entries scanned;"
                     " memo %" PRIu64 " (%" PRIu64 " hits) in %.1f Mc,"
                     " %" PRIu64 " saves in %.1f Mc; jets %" PRIu64
                     " in %.1f Mc\r\n",
-            (tse_d - tsb_d) / 1e6, D(ent_d), D(nok_d), D(nok_c) / 1e6,
+            (tse_d - tsb_d) / 1e6, D(ent_d), D(idm_d), D(nok_d), D(nok_c) / 1e6,
             D(nok_d) ? (double)D(nok_c) / D(nok_d) : 0.0, D(mat_d),
             D(mem_d), D(meh_d), D(mem_c) / 1e6, D(mes_d), D(mes_c) / 1e6,
             D(jet_d), D(jet_c) / 1e6);
+    fprintf(stderr, "  nok %" PRIu64 ": %" PRIu64 " from a program of the"
+                    " current road; %" PRIu64 " of a formula on the home road,"
+                    " %" PRIu64 " with the context there too\r\n",
+            D(nok_d), D(nkc_d), D(nkf_d), D(nkb_d));
     fprintf(stderr, "  match %" PRIu64 " sock nodes walked, %" PRIu64
                     " known subtrees compared (not the same noun) in %.1f Mc\r\n",
             D(hug_d), D(hus_d), D(hus_c) / 1e6);

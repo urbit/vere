@@ -208,6 +208,35 @@ u3d_fits_las(u3_noun i, u3_noun sub, u3_noun las)
   return _d_huge_las(u3h(u3h(i)), u3t(u3h(i)), sub, las);
 }
 
+/* u3d_fits_con(): does sub, a cell [h s c], nest under the sock of the
+**   entry i, [sock *], given that c is the very noun a subject that did
+**   had there?  Only h and s are checked.  RETAINS.
+*/
+c3_o
+u3d_fits_con(u3_noun i, u3_noun sub)
+{
+  u3_noun cape = u3h(u3h(i)), data = u3t(u3h(i));
+  u3_noun tal  = u3t(sub);
+  u3_noun cat, dat;
+
+  if ( c3y == u3ud(cape) ) {
+    return ( c3n == _d_loob(cape) ) ? c3y : u3r_sing(data, sub);
+  }
+
+  if ( c3n == _d_huge_las(u3h(cape), u3h(data), u3h(sub), u3_none) ) {
+    return c3n;
+  }
+
+  cat = u3t(cape);
+  dat = u3t(data);
+
+  if ( c3y == u3ud(cat) ) {
+    return ( c3n == _d_loob(cat) ) ? c3y : u3r_sing(dat, tal);
+  }
+
+  return _d_huge_las(u3h(cat), u3h(dat), u3h(tal), u3_none);
+}
+
 /* u3d_match(): find the most specific [sock *] in `lis` whose sock
 **              matches sub.  RETAINS.  Produces u3_none if none do.
 */

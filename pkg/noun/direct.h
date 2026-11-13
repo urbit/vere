@@ -65,4 +65,11 @@
       c3_o
       u3d_fits_las(u3_noun i, u3_noun sub, u3_noun las);
 
+    /* u3d_fits_con(): does sub, a cell [h s c], nest under the sock of the
+    **   entry i, given that c is the very noun a subject that did had
+    **   there?  RETAINS.
+    */
+      c3_o
+      u3d_fits_con(u3_noun i, u3_noun sub);
+
 #endif /* ifndef U3_DIRECT_H */
