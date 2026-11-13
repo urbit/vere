@@ -402,10 +402,6 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
     }
     fprintf(stderr, "  slogs: %" PRIu64 " printed in %.3f s\r\n",
                     _slog_d[0], _slog_d[1] / 1.99e9);
-    fprintf(stderr, "  ev jet: %" PRIu64 " calls, %" PRIu64 " memo hits, "
-                    "%" PRIu64 " punts, %" PRIu64 " steps\r\n",
-                    u3we_ev_stat_d[0], u3we_ev_stat_d[1],
-                    u3we_ev_stat_d[2], u3we_ev_stat_d[3]);
 #ifdef U3NC_STAT
     if ( getenv("U3NC_PROF_ARMS") ) {
       for ( c3_w p_w = 0; p_w < U3WE_PROF_N; p_w++ ) {
@@ -415,16 +411,6 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
                         u3we_prof_dep_w[p_w] ? " (unbalanced)" : "");
       }
     }
-    fprintf(stderr, "  ev fails: form %" PRIu64 " (%" PRIu64 " steps), "
-                    "fuel %" PRIu64 " (%" PRIu64 "), slot %" PRIu64 " (%" PRIu64 "), "
-                    "data %" PRIu64 " (%" PRIu64 "), hide %" PRIu64 " (%" PRIu64 "), "
-                    "crash %" PRIu64 " (%" PRIu64 ")\r\n",
-                    u3we_ev_why_d[0][0], u3we_ev_why_d[0][1],
-                    u3we_ev_why_d[1][0], u3we_ev_why_d[1][1],
-                    u3we_ev_why_d[2][0], u3we_ev_why_d[2][1],
-                    u3we_ev_why_d[3][0], u3we_ev_why_d[3][1],
-                    u3we_ev_why_d[4][0], u3we_ev_why_d[4][1],
-                    u3we_ev_why_d[5][0], u3we_ev_why_d[5][1]);
 #endif
   }
 

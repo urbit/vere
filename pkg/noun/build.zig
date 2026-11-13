@@ -393,7 +393,7 @@ const c_source_files = [_][]const u8{
     "jets/e/mink.c",
     "jets/e/mock.c",
     "jets/e/mole.c",
-    "jets/e/ska_ev.c",
+    "jets/e/ska_core_chains.c",
     "jets/e/ska_prof.c",
     "jets/e/monk.c",
     "jets/e/mule.c",

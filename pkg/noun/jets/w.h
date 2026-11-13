@@ -143,9 +143,7 @@
     u3_noun u3we_mink(u3_noun);
     u3_noun u3we_mock(u3_noun);
     u3_noun u3we_mole(u3_noun);
-    u3_noun u3we_ev_eval(u3_noun);
     u3_noun u3we_core_chains(u3_noun);
-    extern c3_d u3we_ev_stat_d[4];
 #ifdef U3NC_STAT
 #   define U3WE_PROF_N 20
     extern c3_d u3we_prof_d[U3WE_PROF_N][3];
@@ -170,9 +168,6 @@
     u3_noun u3we_prof_remove_hops(u3_noun);
     u3_noun u3we_prof_compile_scc_in(u3_noun);
     u3_noun u3we_prof_optimize(u3_noun);
-#endif
-#ifdef U3NC_STAT
-    extern c3_d u3we_ev_why_d[6][2];
 #endif
     u3_noun u3we_monk(u3_noun);
     u3_noun u3we_mule(u3_noun);

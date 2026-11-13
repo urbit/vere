@@ -22,10 +22,6 @@
 #define _CVX_POKE 23
 #define _CVX_WISH 10
 
-//  steps an analysis-time fold may take (+ev of the SKA lib)
-//
-#define U3D_EV_FUEL  200000
-
 /*  The SKA core is an arvo-shaped core whose +poke is the arm at axis 23:
 **
 **    [%full sub=* fol=^]                 ->  [%ir bell straight new]
@@ -714,24 +710,8 @@ u3d_cold(void)
 u3_noun
 u3d_full(u3_noun sub, u3_noun fol, u3_noun* bell)
 {
-  //  the analysis folds the calls it can run within .eva steps (+ev)
-  //  only for a poke from outside the core: a poke made from inside one
-  //  is the core compiling its own code, which gains little from it and
-  //  pays for every try
-  //
-  c3_d eva_d = ( 0 == u3a_ska_depth(u3R->how.fag_w) ) ? U3D_EV_FUEL : 0;
-
-#ifdef U3NC_STAT
-  //  U3NC_EV_FUEL: the steps of a try, 0 for no folding (diagnostics)
-  //
-  if ( eva_d && getenv("U3NC_EV_FUEL") ) {
-    eva_d = strtoull(getenv("U3NC_EV_FUEL"), 0, 10);
-  }
-#endif
-
   _d_flush();
-  return _d_ir(_d_poke(u3nq(c3__full, u3k(sub), u3k(fol), u3i_chub(eva_d))),
-               bell);
+  return _d_ir(_d_poke(u3nt(c3__full, u3k(sub), u3k(fol))), bell);
 }
 
 /* u3d_dire(): compile a bell [sock formula] as a function of the

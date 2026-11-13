@@ -310,7 +310,6 @@ static u3j_core _135_hex_ripe_d[] =
 /* layer five
  */
 static u3j_harm _135_pen_cell_a[] = {{".2", u3wf_cell}, {}};
-static u3j_harm _135_pen__ev_eval_a[] = {{".2", u3we_ev_eval}, {}};
 static u3j_harm _135_pen_core_chains_a[] = {{".2", u3we_core_chains}, {}};
 #ifdef U3NC_STAT
 static u3j_harm _135_pen__prof_ska_callgraph_a[] = {{".2", u3we_prof_ska_callgraph}, {}};
@@ -1541,13 +1540,6 @@ static u3j_core _135_hex_d[] =
     {}
   };
 
-//  the SKA lib's fueled evaluator (nock-compilation.hoon, +ev)
-//
-static u3j_core _135_pen__ev_d[] =
-  { { "eval", 7, _135_pen__ev_eval_a, 0, no_hashes },
-    {}
-  };
-
 static u3j_core _135_pen_d[] =
   { { "hex", 7, 0, _135_hex_d, no_hashes },
 
@@ -1561,7 +1553,6 @@ static u3j_core _135_pen_d[] =
     { "look", 7, _135_pen_look_a, 0, no_hashes },
     { "loot", 7, _135_pen_loot_a, 0, no_hashes },
     { "ut", 15, 0, _135_pen__ut_d, no_hashes, _135_pen__ut_ho },
-    { "ev", 16383, 0, _135_pen__ev_d, no_hashes },
     { "core-chains", 2047, _135_pen_core_chains_a, 0, no_hashes },
 #ifdef U3NC_STAT
     { "ska-callgraph", 3, _135_pen__prof_ska_callgraph_a, 0, no_hashes },
