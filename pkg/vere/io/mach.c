@@ -27,15 +27,14 @@
 //
 #define MACH_RXT_S       180
 
-//  most bytes in one %received event
+//  most bytes in one %received event. we read nothing while %mach
+//  works on one, so the kernel's receive buffer, which we ask to be
+//  this size, fills and tcp slows the peer down
 //
-#define MACH_EVENT_MAX   (1 << 20)
+#define MACH_EVENT_MAX   (4 << 20)
 
-//  most bytes queued per connection. a full incoming queue stops
-//  reading, so tcp slows the peer down, until a %received takes it;
-//  a full outgoing queue closes the connection
+//  most outgoing bytes queued per connection; a full queue closes it
 //
-#define MACH_IN_MAX      MACH_EVENT_MAX
 #define MACH_OUT_MAX     (16 << 20)
 
 //  most bytes in one write. a write that has not finished after
@@ -73,13 +72,9 @@ typedef struct _u3_tcon {
   struct _u3_tcon* nex_u;  // next tcon in list
   c3_o             opn_o;  // opened?
   c3_o             clo_o;  // %close received?
-  const c3_c*      cat_c;  // peer closed; category for %closed
-  const c3_c*      why_c;  // peer closed; cause for %closed
-  u3_mque          inc_u;  // incoming byte queue
   u3_mque          out_u;  // outgoing byte queue
   c3_o             wri_o;  // write in transit?
   c3_w             wrl_w;  // bytes in transit
-  c3_o             paz_o;  // paused?
   u3_ovum*         egg_u;  // planned %received event
   c3_o             wok_o;  // planned event in work?
 } u3_tcon;
@@ -89,6 +84,8 @@ typedef struct _u3_tcon {
 typedef struct _u3_mach {
   u3_auto  car_u;  //  driver
   u3_tcon* con_u;  //  connection list
+  c3_y*    buf_y;  //  read buffer, MACH_EVENT_MAX bytes
+  c3_o     bus_o;  //  read buffer in use?
 } u3_mach;
 
 /* _mach_queue_push(): append bytes to a queue.
@@ -142,31 +139,6 @@ _mach_queue_free(u3_mque* que_u)
   }
 }
 
-/* _mach_queue_take(): copy up to [max_w] bytes off the front of a queue.
- */
-static c3_w
-_mach_queue_take(u3_mque* que_u, c3_y* buf_y, c3_w max_w)
-{
-  c3_w len_w = 0;
-
-  while ( que_u->hed_u && (len_w < max_w) ) {
-    u3_mbuf* buf_u = que_u->hed_u;
-    c3_w     cop_w = c3_min(buf_u->len_w - buf_u->pos_w, max_w - len_w);
-
-    memcpy(buf_y + len_w, buf_u->buf_y + buf_u->pos_w, cop_w);
-    len_w        += cop_w;
-    buf_u->pos_w += cop_w;
-    que_u->len_w -= cop_w;
-
-    if ( buf_u->pos_w == buf_u->len_w ) {
-      //  adjusts len_w by the unconsumed rest, which is now zero
-      _mach_queue_pop(que_u);
-    }
-  }
-
-  return len_w;
-}
-
 /* _mach_event_plan(): inject an event into %mach.
  */
 static u3_ovum*
@@ -206,33 +178,13 @@ _mach_conn_free_cb(uv_handle_t* han_u)
   c3_free(han_u->data);
 }
 
-/* _mach_sock_close(): close the socket.
- *
- *   libuv cancels a closing handle's requests, so their callbacks
- *   check for UV_ECANCELED and touch nothing else; the connection
- *   may be freed by then.
- */
-static void
-_mach_sock_close(u3_tcon* con_u)
-{
-  if ( con_u->tcp_u ) {
-    uv_close((uv_handle_t*)con_u->tcp_u, _mach_tcp_free_cb);
-    con_u->tcp_u = 0;
-  }
-}
-
-/* _mach_conn_live(): is the connection open, with a socket to use?
- */
-static c3_o
-_mach_conn_live(u3_tcon* con_u)
-{
-  return __( (c3y == con_u->opn_o) && con_u->tcp_u );
-}
-
 /* _mach_conn_free(): unlink a connection, close its handles, then free it.
  *
- *   libuv owns a handle until its close callback runs, so the
- *   struct holding the timer is freed in _mach_conn_free_cb().
+ *   libuv owns a handle until its close callback runs, so the socket
+ *   is freed in _mach_tcp_free_cb() and the struct holding the timer
+ *   in _mach_conn_free_cb(). libuv cancels a closing handle's
+ *   requests, so their callbacks check for UV_ECANCELED and touch
+ *   nothing else; the connection may be freed by then.
  */
 static void
 _mach_conn_free(u3_tcon* con_u)
@@ -247,7 +199,10 @@ _mach_conn_free(u3_tcon* con_u)
     *pre_u = con_u->nex_u;
   }
 
-  _mach_sock_close(con_u);
+  if ( con_u->tcp_u ) {
+    uv_close((uv_handle_t*)con_u->tcp_u, _mach_tcp_free_cb);
+    con_u->tcp_u = 0;
+  }
 
   //  the event outlives this call; detach it
   if ( con_u->egg_u ) {
@@ -256,13 +211,15 @@ _mach_conn_free(u3_tcon* con_u)
   }
 
   _mach_queue_free(&con_u->out_u);
-  _mach_queue_free(&con_u->inc_u);
 
   uv_timer_stop(&con_u->tim_u);
   uv_close((uv_handle_t*)&con_u->tim_u, _mach_conn_free_cb);
 }
 
 /* _mach_conn_shut(): tell %mach a connection closed, free it.
+ *
+ *   a %received still on its way to %mach was planned first, so
+ *   %mach hears it before this %closed.
  */
 static void
 _mach_conn_shut(u3_tcon* con_u, const c3_c* cat_c, const c3_c* why_c)
@@ -271,24 +228,6 @@ _mach_conn_shut(u3_tcon* con_u, const c3_c* cat_c, const c3_c* why_c)
              u3nq(u3i_string("closed"), u3i_chub(con_u->id_d),
                   u3i_string(cat_c), u3i_string(why_c)));
   _mach_conn_free(con_u);
-}
-
-static void
-_mach_event_pump(u3_tcon* con_u);
-
-/* _mach_conn_dead(): the peer is gone; close the socket, then
- * deliver what we already received before telling %mach.
- */
-static void
-_mach_conn_dead(u3_tcon* con_u, const c3_c* cat_c, const c3_c* why_c)
-{
-  con_u->cat_c = cat_c;
-  con_u->why_c = why_c;
-  uv_timer_stop(&con_u->tim_u);
-  _mach_sock_close(con_u);
-  _mach_queue_free(&con_u->out_u);
-  con_u->wri_o = c3n;
-  _mach_event_pump(con_u);
 }
 
 static void
@@ -307,21 +246,11 @@ _mach_conn_read_start(u3_tcon* con_u)
 
   if ( sas_i ) {
     u3l_log("mach: %" PRIu64 ": read: %s", con_u->id_d, uv_strerror(sas_i));
-    _mach_conn_dead(con_u, "peer", "reset");
+    _mach_conn_shut(con_u, "peer", "reset");
     return c3n;
   }
 
   return c3y;
-}
-
-/* _mach_read_stop(): stop reading.
- */
-static void
-_mach_read_stop(u3_tcon* con_u)
-{
-  if ( con_u->tcp_u ) {
-    uv_read_stop((uv_stream_t*)con_u->tcp_u);
-  }
 }
 
 /* _mach_event_received_news(): a %received event changed state.
@@ -343,7 +272,11 @@ _mach_event_received_news(u3_ovum* egg_u, u3_ovum_news new_e)
   con_u->egg_u = 0;
 
   if ( u3_ovum_done == new_e ) {
-    _mach_event_pump(con_u);
+    //  %mach has the bytes; read more, unless the agent asked to go
+    //
+    if ( c3n == con_u->clo_o ) {
+      _mach_conn_read_start(con_u);
+    }
   }
   else {
     //  dropped: the stream has a gap, so it can't go on
@@ -372,90 +305,74 @@ _mach_event_received_bail(u3_ovum* egg_u, u3_noun lud)
   }
 }
 
-/* _mach_event_pump(): plan the next %received event unless one is
- * already on its way to %mach; resume reading once the queue has
- * room; close a dead connection once its queue is empty.
- */
-static void
-_mach_event_pump(u3_tcon* con_u)
-{
-  if ( con_u->egg_u ) {
-    return;
-  }
-
-  if ( con_u->inc_u.len_w ) {
-    c3_w     len_w = c3_min(con_u->inc_u.len_w, MACH_EVENT_MAX);
-    u3i_slab sab_u;
-
-    u3i_slab_init(&sab_u, 3, len_w);
-    _mach_queue_take(&con_u->inc_u, sab_u.buf_y, len_w);
-
-    u3_noun dat = u3nc(u3i_word(len_w), u3i_slab_mint(&sab_u));
-    u3_noun cad = u3nt(u3i_string("received"), u3i_chub(con_u->id_d), dat);
-
-    con_u->egg_u = _mach_event_plan(con_u->mac_u, cad);
-    con_u->wok_o = c3n;
-    u3_auto_peer(con_u->egg_u, con_u,
-                 _mach_event_received_news, _mach_event_received_bail);
-
-    if (  (c3y == con_u->paz_o)
-       && (con_u->inc_u.len_w < MACH_IN_MAX)
-       && (c3y == _mach_conn_live(con_u))
-       && (c3n == con_u->clo_o) )
-    {
-      con_u->paz_o = c3n;
-      _mach_conn_read_start(con_u);
-    }
-  }
-  else if ( con_u->why_c ) {
-    _mach_conn_shut(con_u, con_u->cat_c, con_u->why_c);
-  }
-}
-
-/* _mach_tcp_alloc_cb(): make a buffer for a plain read.
+/* _mach_tcp_alloc_cb(): lend the driver's read buffer.
+ *
+ *   one buffer serves every connection, since _mach_tcp_read_cb()
+ *   copies the bytes into an event before the next read. should
+ *   libuv ask again before then, we make a spare.
  */
 static void
 _mach_tcp_alloc_cb(uv_handle_t* han_u, size_t siz_i, uv_buf_t* buf_u)
 {
-  buf_u->base = c3_malloc(siz_i);
-  buf_u->len  = siz_i;
+  u3_tcon* con_u = han_u->data;
+  u3_mach* mac_u = con_u->mac_u;
+
+  if ( c3n == mac_u->bus_o ) {
+    mac_u->bus_o = c3y;
+    buf_u->base  = (c3_c*)mac_u->buf_y;
+  }
+  else {
+    buf_u->base = c3_malloc(MACH_EVENT_MAX);
+  }
+
+  buf_u->len = MACH_EVENT_MAX;
 }
 
-/* _mach_tcp_read_cb(): bytes arrived on a plain socket, or the peer
- * closed.
+/* _mach_tcp_read_cb(): bytes arrived, or the peer closed.
  *
- *   the buffer becomes the queue's, trimmed to what we read.
+ *   one %received goes to %mach at a time: we stop reading until
+ *   %mach has taken this one, and the kernel buffers what follows.
  */
 static void
 _mach_tcp_read_cb(uv_stream_t* str_u, ssize_t red_i, const uv_buf_t* buf_u)
 {
   u3_tcon* con_u = str_u->data;
+  u3_mach* mac_u = con_u->mac_u;
+  u3_noun  dat   = ( red_i > 0 ) ? u3i_bytes(red_i, (c3_y*)buf_u->base) : 0;
 
-  if ( red_i <= 0 ) {
+  if ( buf_u->base == (c3_c*)mac_u->buf_y ) {
+    mac_u->bus_o = c3n;
+  }
+  else {
     c3_free(buf_u->base);
+  }
 
-    if ( red_i < 0 ) {
-      //  keepalive and retransmission failures show up as a
-      //  timed-out read
-      const c3_c* why_c = ( UV_EOF == red_i )       ? "done"
-                        : ( UV_ETIMEDOUT == red_i ) ? "dead"
-                        : "reset";
+  if ( red_i < 0 ) {
+    //  keepalive and retransmission failures show up as a
+    //  timed-out read
+    const c3_c* why_c = ( UV_EOF == red_i )       ? "done"
+                      : ( UV_ETIMEDOUT == red_i ) ? "dead"
+                      : "reset";
 
-      _mach_conn_dead(con_u, "peer", why_c);
-    }
+    _mach_conn_shut(con_u, "peer", why_c);
     return;
   }
 
-  c3_y* buf_y = c3_realloc(buf_u->base, red_i);
-  _mach_queue_push(&con_u->inc_u, buf_y, (c3_w)red_i);
-
-  //  the queue may pass the cap by one read, at most
-  if ( con_u->inc_u.len_w >= MACH_IN_MAX ) {
-    uv_read_stop(str_u);
-    con_u->paz_o = c3y;
+  if ( !red_i ) {
+    return;
   }
 
-  _mach_event_pump(con_u);
+  uv_read_stop(str_u);
+
+  {
+    u3_noun cad = u3nq(u3i_string("received"), u3i_chub(con_u->id_d),
+                       u3i_word((c3_w)red_i), dat);
+
+    con_u->egg_u = _mach_event_plan(con_u->mac_u, cad);
+    con_u->wok_o = c3n;
+    u3_auto_peer(con_u->egg_u, con_u,
+                 _mach_event_received_news, _mach_event_received_bail);
+  }
 }
 
 /* _mach_shutdown_cb(): our fin went out after the last write.
@@ -507,7 +424,7 @@ _mach_write_done(u3_tcon* con_u, const c3_c* why_c)
   con_u->wri_o = c3n;
 
   if ( why_c ) {
-    _mach_conn_dead(con_u, "peer", why_c);
+    _mach_conn_shut(con_u, "peer", why_c);
     return;
   }
 
@@ -562,7 +479,7 @@ _mach_stall_cb(uv_timer_t* tim_u)
 
   u3l_log("mach: %" PRIu64 ": stalled, %u bytes unsent",
           con_u->id_d, con_u->out_u.len_w);
-  _mach_conn_dead(con_u, "peer", "dead");
+  _mach_conn_shut(con_u, "peer", "dead");
 }
 
 /* _mach_queue_write_next(): start writing the next slice of the queue, and
@@ -571,7 +488,7 @@ _mach_stall_cb(uv_timer_t* tim_u)
 static void
 _mach_queue_write_next(u3_tcon* con_u)
 {
-  if (  (c3n == _mach_conn_live(con_u))
+  if (  (c3n == con_u->opn_o)
      || (c3y == con_u->wri_o)
      || !con_u->out_u.hed_u )
   {
@@ -839,7 +756,6 @@ _mach_conn_connect(u3_mach* mac_u, c3_d id_d, u3_noun adr)
   con_u->opn_o = c3n;
   con_u->clo_o = c3n;
   con_u->wri_o = c3n;
-  con_u->paz_o = c3n;
   con_u->wok_o = c3n;
   con_u->nex_u = mac_u->con_u;
   mac_u->con_u = con_u;
@@ -849,7 +765,9 @@ _mach_conn_connect(u3_mach* mac_u, c3_d id_d, u3_noun adr)
 
   con_u->tcp_u = c3_malloc(sizeof(*con_u->tcp_u));
 
-  if ( 0 != (sas_i = uv_tcp_init(u3L, con_u->tcp_u)) ) {
+  //  make the socket now, so we can size its buffer before connecting
+  //
+  if ( 0 != (sas_i = uv_tcp_init_ex(u3L, con_u->tcp_u, sas_u.ss_family)) ) {
     u3l_log("mach: connect %" PRIu64 ": %s", id_d, uv_strerror(sas_i));
     c3_free(con_u->tcp_u);
     con_u->tcp_u = 0;
@@ -858,6 +776,15 @@ _mach_conn_connect(u3_mach* mac_u, c3_d id_d, u3_noun adr)
   }
 
   con_u->tcp_u->data = con_u;
+
+  //  the kernel's receive buffer is our incoming queue, so we ask for
+  //  room for one whole event, before tcp picks its window scale. the
+  //  os may grant less, which costs only speed
+  //
+  {
+    c3_i rcv_i = MACH_EVENT_MAX;
+    uv_recv_buffer_size((uv_handle_t*)con_u->tcp_u, &rcv_i);
+  }
 
   req_u = c3_malloc(sizeof(*req_u));
   req_u->data = con_u;
@@ -887,7 +814,7 @@ _mach_conn_send_bytes(u3_mach* mac_u, c3_d id_d, c3_w len_w, u3_atom dat)
     return;
   }
 
-  if ( (c3y == con_u->clo_o) || con_u->why_c ) {
+  if ( c3y == con_u->clo_o ) {
     u3l_log("mach: send %" PRIu64 ": closing, dropped %u bytes", id_d, len_w);
     return;
   }
@@ -925,9 +852,9 @@ _mach_conn_close(u3_mach* mac_u, c3_d id_d)
     return;
   }
 
-  //  nothing to flush, or no socket to flush it to
+  //  nothing to flush
   //
-  if ( !con_u->out_u.hed_u || !con_u->tcp_u ) {
+  if ( !con_u->out_u.hed_u ) {
     _mach_conn_shut(con_u, "close", "done");
     return;
   }
@@ -943,8 +870,7 @@ _mach_conn_close(u3_mach* mac_u, c3_d id_d)
 
   //  stop delivering; the agent asked to go
   //
-  _mach_read_stop(con_u);
-  _mach_queue_free(&con_u->inc_u);
+  uv_read_stop((uv_stream_t*)con_u->tcp_u);
 
   uv_timer_start(&con_u->tim_u, _mach_conn_drain_cb, MACH_DRAIN_MS, 0);
 }
@@ -1079,6 +1005,7 @@ _mach_io_exit(u3_auto* car_u)
     _mach_conn_free(con_u);
   }
 
+  c3_free(mac_u->buf_y);
   c3_free(mac_u);
 }
 
@@ -1089,6 +1016,9 @@ u3_mach_io_init(u3_pier* pir_u)
 {
   u3_mach* mac_u = c3_calloc(sizeof(*mac_u));
   u3_auto* car_u = &mac_u->car_u;
+
+  mac_u->buf_y = c3_malloc(MACH_EVENT_MAX);
+  mac_u->bus_o = c3n;
 
   car_u->nam_m = c3__mach;
   car_u->liv_o = c3n;
