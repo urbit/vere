@@ -1157,7 +1157,7 @@ OP3KK(EQI, a_h, b_h, c_h, BODY_EQI)
 //  cells and indirect atoms are above every direct atom
 //
 #define BODY_LTI(KY, KT)                                                        \
-  if ( reg[b_h] < a_h ) {                                                       \
+  if ( reg[b_h] < pog_u->lit_u.non[a_h] ) {                                     \
     DROP(b_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \
@@ -1167,8 +1167,14 @@ OP3KK(EQI, a_h, b_h, c_h, BODY_EQI)
   BURN();
 OP3KK(LTI, a_h, b_h, c_h, BODY_LTI)
 
+//  a direct atom equals only itself
+//
 #define BODY_EQL(KY, KT)                                                        \
-  if ( c3y == u3r_sing(pog_u->lit_u.non[a_h], reg[b_h]) ) {                     \
+  u3_noun l = pog_u->lit_u.non[a_h], x = reg[b_h];                              \
+  if (  (l == x)                                                                \
+     || (  (c3n == u3a_is_cat(l)) && (c3n == u3a_is_cat(x))                     \
+        && (c3y == u3r_sing(l, x)) ) )                                          \
+  {                                                                             \
     DROP(b_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \

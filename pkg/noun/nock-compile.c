@@ -37,7 +37,7 @@
 **  with over 65535 slots, literals, sites or bytes of code needs, are a
 **  second table of them behind the prefix WIDE, for a dispatch more.
 **  Slots, literal and call site indices, and jump targets (absolute byte
-**  offsets) are immediates, and so is the atom of IMM, EQI and LTI, which
+**  offsets) are immediates, and so is the atom of IMM and EQI, which
 **  carry it rather than a literal index.  A call site holds its argument
 **  slots and its destination slot d, so the call opcodes carry only the
 **  site index.
@@ -124,9 +124,9 @@
 **    DON   s        return s, consumed
 **    DRO   s        drop s: lose its reference, 0 -> s
 **    JMC   i        CAC in tail position
-**    LTI   n s t    goto t unless s is a direct atom less than n, a direct
-**                   atom: the steps of a binary search among the constants
-**                   a noun is compared with (+switch-chains)
+**    LTI   i s t    goto t unless s is a direct atom less than literal i,
+**                   a direct atom: the steps of a binary search among the
+**                   constants a noun is compared with (+switch-chains)
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
@@ -1012,7 +1012,10 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
 
     case c3__imm: {
       u3x_cell(arg, &a, &b);
-      if ( c3y == u3a_is_cat(a) ) {
+      //  an atom of two bytes at most is an immediate; a longer one, as
+      //  the tags of hoon are, would make every operand of its ops _V
+      //
+      if ( (c3y == u3a_is_cat(a)) && (a <= 0xffff) ) {
         op_u = _nc_op(gen_u, _nc_imm);
         op_u->imm_h = a;
       }
@@ -1240,7 +1243,7 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
         u3m_bail(c3__fail);
       }
       op_u = _nc_op(gen_u, _nc_lti);
-      op_u->imm_h    = a;
+      op_u->imm_h    = _nc_lit(gen_u, a);
       op_u->src_h[0] = _nc_reg(gen_u, b);
       op_u->tar_h    = _nc_bare(gen_u, d);
     } break;
@@ -3577,8 +3580,7 @@ _nc_print(u3nc_prog* pog_u)
         //  the atom itself, or an index
         //
         fprintf(stderr, " %s%u",
-                (  (_nc_imm == fam_y) || (_nc_eqi == fam_y)
-                || (_nc_lti == fam_y) ) ? "" : "#", imm_h);
+                ((_nc_imm == fam_y) || (_nc_eqi == fam_y)) ? "" : "#", imm_h);
 
         if (  (_nc_hsp == fam_y) || (_nc_hse == fam_y)
            || (_nc_hdp == fam_y) || (_nc_hde == fam_y) )
