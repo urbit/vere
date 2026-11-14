@@ -356,7 +356,8 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       **   held, since it runs on the home road and may change the set. a
       **   stack overflow can't be held: code between the two must stay
       **   shallow, and if one lands there, the next grab checks the home
-      **   road (u3o_check_corrupt).
+      **   road (u3o_check_corrupt). both are always inlined, so neither
+      **   adds a call to the code between.
       */
         extern volatile c3_w u3m_Hold_w;
         extern volatile c3_m u3m_Held_m;
@@ -364,14 +365,14 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_hold_raise(void);
 
-        static inline void
+        static inline __attribute__((always_inline)) void
         u3m_hold(void)
         {
           u3m_Hold_w++;
           __atomic_signal_fence(__ATOMIC_SEQ_CST);
         }
 
-        static inline void
+        static inline __attribute__((always_inline)) void
         u3m_hold_done(void)
         {
           __atomic_signal_fence(__ATOMIC_SEQ_CST);
