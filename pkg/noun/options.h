@@ -6,6 +6,18 @@
 #include "c3/c3.h"
 #include "types.h"
 
+  /** Constants.
+  **/
+    /* u3o_sand_default: megabytes of the sand zone of an inner road
+    **   unless configured: room for four million cells, which are 16
+    **   bytes on the 32-bit loom and 32 on the 64-bit.
+    */
+#     ifdef VERE64
+#       define u3o_sand_default  128
+#     else
+#       define u3o_sand_default  64
+#     endif
+
   /** Data structures.
   **/
     /* u3o_config: process / system configuration.

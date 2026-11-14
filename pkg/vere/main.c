@@ -211,7 +211,7 @@ _main_init(void)
   u3C.hap_w = u3_Host.ops_u.hap_w;
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;
-  u3_Host.ops_u.san_w = 64;
+  u3_Host.ops_u.san_w = u3o_sand_default;
   u3C.san_w = u3_Host.ops_u.san_w;
   u3_Host.ops_u.kno_h = DefaultKernel;
 
@@ -922,7 +922,8 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-R, --versions                Report urbit build info\n",
     "-S, --skip-battery-hashes     Disable battery hashing\n",
     "    --sand-zone MB            Megabytes a computation allocates before it\n"
-    "                              counts references (default 64; 0 for none)\n",
+    "                              counts references (default 64, or 128 on\n"
+    "                              the 64-bit loom; 0 for none)\n",
     // XX find a way to re-enable
     // "-s, --autoselect-pill      Pill URL from arvo git hash\n",
     "-t, --no-tty                  Disable terminal/tty assumptions\n",
