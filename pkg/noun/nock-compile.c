@@ -4942,8 +4942,8 @@ _nc_entry(u3_noun sub, u3_noun fol)
       if ( log_y ) {
         u3_noun jam = u3qe_jam(fol);
         c3_w    len_w = u3r_met(3, jam);
-        fprintf(stderr, "u3nc entry miss: fol %08x (%u B jammed), sub %08x,"
-                        " %u entries of the formula\r\n",
+        fprintf(stderr, "u3nc entry miss: fol %08x (%" PRIc3_w " B jammed), "
+                        "sub %08x, %" PRIc3_w " entries of the formula\r\n",
                 u3r_mug(fol), len_w, u3r_mug(sub),
                 (c3_w)(( u3_none == (old = u3h_git(u3R->ska.ent_p, fol)) )
                        ? 0 : u3qb_lent(old)));
@@ -5776,8 +5776,8 @@ _nc_hof_print(c3_w num_w)
       hof_u.act_d[top_w] = a_d;
       hof_u.kev[top_w]   = k;
     }
-    fprintf(stderr, "u3nc entry formula %08x: %" PRIc3_w " programs, %" PRIu64
-                    " activations\r\n",
+    fprintf(stderr, "u3nc entry formula %08" PRIxc3_w ": %" PRIc3_w
+                    " programs, %" PRIu64 " activations\r\n",
             hof_u.mug_w[top_w], hof_u.num_w[top_w], hof_u.act_d[top_w]);
     //  the formula, when small, and the capes of its programs' socks: the
     //  nodes an entry lookup walks, and the first known leaves by axis
@@ -5873,8 +5873,8 @@ u3nc_hot(c3_w num_w, c3_w dum_w)
   for ( i_w = 0; (i_w < num_w) && (i_w < hot_u.len_w); i_w++ ) {
     u3nc_prog* pog_u = hot_u.pog_u[i_w];
 
-    fprintf(stderr, "u3nc hot %" PRIc3_w ": %p, bell %08x, %u bytes, %u slots, "
-                    "%u args, "
+    fprintf(stderr, "u3nc hot %" PRIc3_w ": %p, bell %08" PRIxc3_w ", "
+                    "%u bytes, %u slots, %u args, "
                     "%" PRIu64 " activations, %" PRIu64 " cells (%.1f each), "
                     "%u call sites\r\n",
             i_w, (void*)pog_u, hot_u.mug_w[i_w],

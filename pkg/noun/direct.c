@@ -347,8 +347,8 @@ _d_poke(u3_noun ovo)
     //
     try_w++;
     if ( getenv("U3NC_VERBOSE") ) {
-      u3l_log("ska: poke %%%s: the state changed underneath, again (%u)",
-              tag_c, try_w);
+      u3l_log("ska: poke %%%s: the state changed underneath, again (%"
+              PRIc3_w ")", tag_c, try_w);
     }
     u3z(pro);
   }

@@ -278,7 +278,7 @@ _prof_dump(c3_w top_w)
   }
   qsort(row_u, n_w, sizeof(*row_u), _prof_cmp);
 
-  fprintf(stderr, "prof: %" PRIu64 " samples (10 ms), %u labels; "
+  fprintf(stderr, "prof: %" PRIu64 " samples (10 ms), %" PRIc3_w " labels; "
                   "on stack %%, innermost %%, label\r\n", tot_d, n_w);
   for ( c3_w k_w = 0; (k_w < n_w) && (k_w < top_w); k_w++ ) {
     c3_c   buf_c[256];
@@ -2594,7 +2594,7 @@ main(int argc, char* argv[])
         return 1;
       }
       fclose(fil_u);
-      fprintf(stderr, "ivory: %u bytes\r\n", len_w);
+      fprintf(stderr, "ivory: %" PRIc3_w " bytes\r\n", len_w);
     }
     return 0;
   }
@@ -2655,7 +2655,7 @@ main(int argc, char* argv[])
         return 1;
       }
       fclose(fil_u);
-      fprintf(stderr, "steel: %u bytes\r\n", len_w);
+      fprintf(stderr, "steel: %" PRIc3_w " bytes\r\n", len_w);
     }
     return 0;
   }
@@ -2743,7 +2743,8 @@ main(int argc, char* argv[])
         c3_c    gat_c[64];
         u3_noun gat, gon;
 
-        snprintf(gat_c, sizeof(gat_c), "|=(a=@ (add (mul a %u) %u))",
+        snprintf(gat_c, sizeof(gat_c),
+                 "|=(a=@ (add (mul a %" PRIc3_w ") %" PRIc3_w "))",
                  1 + (i_w / 1000), i_w % 1000);
         gat = _gate(gat_c, 1);
         gon = u3m_soft(0, _nock_nc, u3nc(gat, u3k(fol)));
