@@ -176,6 +176,11 @@ static const OP_F WTAB[] = { WIDES };
     }                                                                           \
   } while ( 0 )
 
+//  VOID(s, K): DROP(s, K) of a slot the op has seen a direct atom in:
+//  nothing to release
+//
+#define VOID(s, K)  do { if ( K ) { ZERO(s); } } while ( 0 )
+
 //  DECODE1/2/3(name): the width variants name_B, name_S and name_V of an
 //  opcode with one, two or three immediates, each decoding them into the
 //  operand registers and tail-calling the shared body, name_in
@@ -568,8 +573,18 @@ OP2(IML, a_h, d_h, BODY_IML)
   BURN();
 OP2K(MOV, a_h, d_h, BODY_MOV)
 
+//  INC, DEC and ADD of direct atoms with a direct product are done in
+//  line: a stencil cannot inline u3i_vint or the jets
+//
 #define BODY_INC(K)                                                             \
-  PUT(d_h, u3i_vint(TAKE(a_h, K)));                                             \
+  u3_noun x = reg[a_h];                                                         \
+  if ( c3_likely(x < u3a_direct_max) ) {                                        \
+    VOID(a_h, K);                                                               \
+    PUT(d_h, x + 1);                                                            \
+  }                                                                             \
+  else {                                                                        \
+    PUT(d_h, u3i_vint(TAKE(a_h, K)));                                           \
+  }                                                                             \
   BURN();
 OP2K(INC, a_h, d_h, BODY_INC)
 
@@ -578,25 +593,38 @@ OP2K(INC, a_h, d_h, BODY_INC)
 #define BODY_DEC(K)                                                             \
   u3_noun x = reg[a_h], pro;                                                    \
   _nc_stat(jet_d);                                                              \
-  if ( c3n == u3ud(x) ) {                                                       \
-    u3m_bail(c3__fail);                                                         \
+  if ( c3_likely((c3_w)(x - 1) < u3a_direct_max) ) {  /*  direct, not zero  */  \
+    VOID(a_h, K);                                                               \
+    PUT(d_h, x - 1);                                                            \
   }                                                                             \
-  pro = u3qa_dec(x);                                                            \
-  DROP(a_h, K);                                                                 \
-  PUT(d_h, pro);                                                                \
+  else {                                                                        \
+    if ( c3n == u3ud(x) ) {                                                     \
+      u3m_bail(c3__fail);                                                       \
+    }                                                                           \
+    pro = u3qa_dec(x);                                                          \
+    DROP(a_h, K);                                                               \
+    PUT(d_h, pro);                                                              \
+  }                                                                             \
   BURN();
 OP2K(DEC, a_h, d_h, BODY_DEC)
 
 #define BODY_ADD(KA, KB)                                                        \
   u3_noun x = reg[a_h], y = reg[b_h], pro;                                      \
   _nc_stat(jet_d);                                                              \
-  if ( (c3n == u3ud(x)) || (c3n == u3ud(y)) ) {                                 \
-    u3m_bail(c3__fail);                                                         \
+  if ( c3_likely((x | y | (c3_w)(x + y)) <= u3a_direct_max) ) {                 \
+    VOID(a_h, KA);                                                              \
+    VOID(b_h, KB);                                                              \
+    PUT(d_h, x + y);                                                            \
   }                                                                             \
-  pro = u3qa_add(x, y);                                                         \
-  DROP(a_h, KA);                                                                \
-  DROP(b_h, KB);                                                                \
-  PUT(d_h, pro);                                                                \
+  else {                                                                        \
+    if ( (c3n == u3ud(x)) || (c3n == u3ud(y)) ) {                               \
+      u3m_bail(c3__fail);                                                       \
+    }                                                                           \
+    pro = u3qa_add(x, y);                                                       \
+    DROP(a_h, KA);                                                              \
+    DROP(b_h, KB);                                                              \
+    PUT(d_h, pro);                                                              \
+  }                                                                             \
   BURN();
 OP3KK(ADD, a_h, b_h, d_h, BODY_ADD)
 
