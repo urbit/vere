@@ -103,6 +103,14 @@ _setup(void)
     u3C.hap_w = atoi(getenv("U3NC_HAP"));
   }
 
+  //  the sand zone of an inner road, as in the runtime; U3NC_SAND: its
+  //  size in megabytes instead, 0 for none
+  //
+  u3C.san_w = 64;
+  if ( getenv("U3NC_SAND") ) {
+    u3C.san_w = atoi(getenv("U3NC_SAND"));
+  }
+
   //  U3NC_LOOM: loom size in bits, for machines that can't map 16GB
   //
   {
@@ -1580,6 +1588,117 @@ _rings_of(u3_noun fol)
   return rin_u.num_w;
 }
 
+/* _sand_work(): on an inner road, whether its allocations are where
+**               they should be: with a sand zone (the tail of [arg]) a cell
+**               and a small atom are in the zone and senior to the
+**               road, and an atom of u3a_sand_big words or more is
+**               counted; without one everything is counted.  In either
+**               case the home road has no zone.  If the head of [arg] is
+**               yes, the same again on a road within this one.
+*/
+static u3_noun _sand_work(u3_noun arg);
+
+/* _sand_inner(): _sand_work() for u3m_soft_run().
+*/
+static u3_noun
+_sand_inner(u3_noun top, u3_noun zon)
+{
+  u3_noun arg = u3nc(top, zon);
+  u3_noun pro = _sand_work(arg);
+
+  u3z(arg);
+  return pro;
+}
+
+static u3_noun
+_sand_work(u3_noun arg)
+{
+  c3_t    zon_t = ( c3y == u3t(arg) );
+  u3_noun cel   = u3nc(1, 2);
+  u3_noun sma   = u3qc_bex(100);
+  u3_noun big   = u3qc_bex(u3a_word_bits * (u3a_sand_big + 8));
+  c3_t    ok_t  = 1;
+
+  ok_t = ok_t && ( !!(u3R->how.fag_w & u3a_flag_sand) == zon_t );
+  ok_t = ok_t && ( (c3y == u3a_is_senior(u3R, cel)) == zon_t );
+  ok_t = ok_t && ( (c3y == u3a_is_senior(u3R, sma)) == zon_t );
+  ok_t = ok_t && ( u3a_in_sand(u3R, cel) == zon_t );
+  ok_t = ok_t && ( u3a_in_sand(u3R, sma) == zon_t );
+  ok_t = ok_t && ( c3n == u3a_is_senior(u3R, big) );
+  ok_t = ok_t && !u3a_in_sand(u3R, big);
+  ok_t = ok_t && ( 1 == u3a_use(big) );
+  ok_t = ok_t && !(u3H->rod_u.how.fag_w & u3a_flag_zone);
+
+  //  a road within this one
+  //
+  if ( c3y == u3h(arg) ) {
+    u3_noun pro = u3m_soft_run(u3_nul, _sand_inner, c3n, u3t(arg));
+
+    ok_t = ok_t && ( 0 == u3h(pro) ) && ( c3y == u3t(pro) );
+    u3z(pro);
+    ok_t = ok_t && ( !!(u3R->how.fag_w & u3a_flag_zone) == zon_t );
+  }
+
+  u3z(big); u3z(sma); u3z(cel);
+  return ok_t ? c3y : c3n;
+}
+
+/* _sand_run(): _sand_work() on a road of its own and on one within it.
+*/
+static c3_t
+_sand_run(c3_t zon_t)
+{
+  u3_noun pro  = u3m_soft(0, _sand_work,
+                          u3nc(c3y, zon_t ? c3y : c3n));
+  c3_t    ok_t = ( 0 == u3h(pro) ) && ( c3y == u3t(pro) );
+
+  u3z(pro);
+  return ok_t;
+}
+
+/* _test_sand(): sand zones: on inner roads when a size is set and the
+**               leak check is off, and never on the home road.
+*/
+static c3_i
+_test_sand(void)
+{
+  c3_w    san_w = u3C.san_w;
+  c3_h    wag_h = u3C.wag_h;
+  u3_noun cel   = u3nc(1, 2);
+  c3_i    ret_i = 1;
+
+  ret_i = _check("sand: none on the home road",
+                 (&(u3H->rod_u) == u3R)
+                 && !(u3R->how.fag_w & u3a_flag_zone)
+                 && (c3n == u3a_is_senior(u3R, cel))
+                 && !u3a_in_sand(u3R, cel)
+                 && (1 == u3a_use(cel))) && ret_i;
+  u3z(cel);
+
+  //  as configured: a zone unless the leak check is on or the size is 0
+  //
+  ret_i = _check("sand: inner roads as configured",
+                 _sand_run(san_w && !(wag_h & u3o_debug_ram))) && ret_i;
+
+  u3C.san_w  = 64;
+  u3C.wag_h &= ~(c3_h)(u3o_debug_ram | u3o_leak_crash);
+  ret_i = _check("sand: a zone on inner roads", _sand_run(1)) && ret_i;
+
+  u3C.wag_h |= u3o_debug_ram;
+  ret_i = _check("sand: none under the leak check", _sand_run(0)) && ret_i;
+
+  u3C.wag_h &= ~(c3_h)u3o_debug_ram;
+  u3C.san_w  = 0;
+  ret_i = _check("sand: none with a size of 0", _sand_run(0)) && ret_i;
+
+  u3C.san_w = san_w;
+  u3C.wag_h = wag_h;
+
+  ret_i = _check("sand: none on the home road after",
+                 !(u3H->rod_u.how.fag_w & u3a_flag_zone)) && ret_i;
+  return ret_i;
+}
+
 /* _test_rung(): a core registered after a function calling it was analyzed.
 **               Until the next u3d_hot() the function has no ring, so what
 **               calls it compiles the same as before, even newly; then its
@@ -2873,6 +2992,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_rung() ) {
+    exit(1);
+  }
+
+  if ( !_test_sand() ) {
     exit(1);
   }
 

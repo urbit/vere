@@ -4770,11 +4770,7 @@ _nc_compile(u3_noun straight, u3_weak bell)
 static inline c3_t
 _nc_here(void* ptr_v, u3_road* rod_u)
 {
-  u3_post pos_p = u3of(void, ptr_v);
-
-  return ( c3y == u3a_is_north(rod_u) )
-       ? ((pos_p >= rod_u->rut_p) && (pos_p < rod_u->hat_p))
-       : ((pos_p >= rod_u->hat_p) && (pos_p < rod_u->rut_p));
+  return u3a_here(rod_u, u3of(void, ptr_v));
 }
 
 /* _nc_gain_slow(), _nc_lose_slow(): out-of-line reference counting for
