@@ -997,10 +997,11 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[25] = {0};  //  NB: expand as necessary
+    c3_c* arg_c[27] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
     c3_c  per_c[11];
+    c3_c  san_c[21];
     c3_c  lom_c[11];
     c3_c  tos_c[11];
     c3_c  sap_c[11];
@@ -1013,6 +1014,8 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     sprintf(hap_c, "%"PRIc3_w, u3_Host.ops_u.hap_w);
 
     sprintf(per_c, "%"PRIc3_w, u3_Host.ops_u.per_w);
+
+    sprintf(san_c, "%"PRIc3_w, u3_Host.ops_u.san_w);
 
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
@@ -1037,6 +1040,8 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     arg_c[i_w++] = tos_c;
     arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
     arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--sand-zone-size";        //  sand zone of a road, in MB
+    arg_c[i_w++] = san_c;
     arg_c[i_w++] = "--snap-time";             //  snapshot interval
     arg_c[i_w++] = sap_c;
     arg_c[i_w++] = "--lmdb-map-size";
@@ -1265,9 +1270,10 @@ u3_lord_boot(c3_c* pax_c,
   //  spawn new process and connect to it
   //
   {
-    c3_c* arg_c[19] = {0};  //  NB: expand as necessary
+    c3_c* arg_c[21] = {0};  //  NB: expand as necessary
     c3_c  wag_c[11];
     c3_c  hap_c[11];
+    c3_c  san_c[21];
     c3_c  lom_c[11];
     c3_c  eph_c[11];
     c3_c  tos_c[11];
@@ -1284,6 +1290,8 @@ u3_lord_boot(c3_c* pax_c,
     sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
     sprintf(per_c, "%"PRIc3_w, u3_Host.ops_u.per_w);
+
+    sprintf(san_c, "%"PRIc3_w, u3_Host.ops_u.san_w);
 
     sprintf(siz_c, "%" PRIc3_z, u3_Host.ops_u.siz_i);
 
@@ -1302,6 +1310,8 @@ u3_lord_boot(c3_c* pax_c,
     arg_c[i_w++] = tos_c;
     arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
     arg_c[i_w++] = per_c;
+    arg_c[i_w++] = "--sand-zone-size";        //  sand zone of a road, in MB
+    arg_c[i_w++] = san_c;
     arg_c[i_w++] = "--lmdb-map-size";
     arg_c[i_w++] = siz_c;
 
