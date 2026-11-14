@@ -92,6 +92,21 @@ u3a_init_once(void)
 void
 u3a_init_heap(void)
 {
+  //  a road with a sand zone gets its page directory and its cell cache
+  //  when it first needs them (_ca_heap())
+  //
+  if ( u3R->how.fag_w & u3a_flag_sand ) {
+    if ( c3y == u3a_is_north(u3R) ) {
+      u3R->hep.dir_ws = 1;
+      u3R->hep.off_ws = 0;
+    }
+    else {
+      u3R->hep.dir_ws = -1;
+      u3R->hep.off_ws = -1;
+    }
+    return;
+  }
+
   _init_heap();
 }
 
@@ -216,11 +231,167 @@ _ca_reclaim_half(void)
 #endif
 }
 
+/* sand zones.
+**
+**   a noun is senior to a road when it lies outside the road's memory,
+**   and a senior noun is not counted, not freed and not edited in
+**   place, by every path of the runtime.  an inner road can therefore
+**   allocate without counting, by allocating outside [rut, hat): when a
+**   road is made, the first u3C.san_w megabytes of its heap are set
+**   aside as its sand zone, and its rut and hat start past them.  cells
+**   and small blocks are taken from the zone by moving a pointer
+**   (san_p); they are senior to the road that made them from the moment
+**   they exist, and nothing in the zone is freed before the road ends,
+**   when the product is copied out as it always is.
+**
+**   blocks of u3a_sand_big words or more are not sand: large atoms are
+**   worth editing and resizing in place, and worth freeing.  they go to
+**   the counted heap, past the zone, which gets its page directory and
+**   its cell cache when the first of them is allocated.  a counted
+**   block that a cell of the zone refers to is not freed before the
+**   road ends, since the cell never lets go of it, so the words of such
+**   blocks allocated while the zone has room are added up (big_w), and
+**   past the size of the zone the zone is declared full.  when the zone
+**   is full, everything is counted, as on a road without one.  a road
+**   that allocates less than the zone never counts a cell; one that
+**   allocates more keeps at most twice the zone beyond what it kept
+**   before.
+**
+**   what is senior by its address is still the road's own to write
+**   where that is safe: u3a_wed() unifies nouns of a road's sand, since
+**   nothing there is counted or freed, and u3m_dedup() writes its cells.
+**
+**   the home road has no zone: its nouns outlive the event.  nor has
+**   any road under u3o_debug_ram: the leak check marks through counted
+**   nouns and sweeps the counted heap.
+*/
+
+/* _ca_counted(): [som_p] is in the counted heap of u3R.
+*/
+static inline c3_t
+_ca_counted(u3_post som_p)
+{
+  return ( c3y == u3a_is_north(u3R) )
+       ? ((som_p >= u3R->rut_p) && (som_p < u3R->hat_p))
+       : ((som_p >= u3R->hat_p) && (som_p < u3R->rut_p));
+}
+
+/* u3a_sand_open(): set aside the sand zone of u3R, a road just leapt to
+**                  (never the home road), before anything is allocated
+**                  on it.
+*/
+void
+u3a_sand_open(void)
+{
+  u3a_road* rod_u = u3R;
+
+  if ( !u3C.san_w || (u3C.wag_h & u3o_debug_ram) ) {
+    return;
+  }
+
+  u3_assert( rod_u->par_p && (rod_u->hat_p == rod_u->rut_p) );
+
+  {
+    c3_w fre_w = u3a_full(rod_u);
+    c3_d san_d = (c3_d)u3C.san_w << (20 - u3a_word_bytes_shift);
+    c3_w san_w = (c3_w)c3_min(san_d, (c3_d)(fre_w / 2));
+
+    san_w &= ~(((c3_w)1 << u3a_page) - 1);
+
+    if ( !san_w ) {
+      return;
+    }
+
+    rod_u->bas_p = rod_u->san_p = rod_u->rut_p;
+
+    if ( c3y == u3a_is_north(rod_u) ) {
+      rod_u->rut_p += san_w;
+    }
+    else {
+      rod_u->rut_p -= san_w;
+    }
+    rod_u->hat_p = rod_u->rut_p;
+    rod_u->how.fag_w |= u3a_flag_sand;
+  }
+}
+
+/* _ca_heap(): the counted heap of u3R, a road with a sand zone, made
+**             on first need.
+*/
+static inline void
+_ca_heap(void)
+{
+  if ( c3_unlikely(!u3R->hep.pag_p) ) {
+    _init_heap();
+    u3R->cel.cel_p = _imalloc(((c3_w)1) << u3a_page);
+  }
+}
+
+/* _ca_bump(): [len_w] words of the sand zone of u3R; or 0, with the
+**             zone marked full, if it has no room for them.
+*/
+static void*
+_ca_bump(c3_w len_w)
+{
+  u3a_road* rod_u = u3R;
+  u3_post   pot_p;
+
+  len_w = (len_w + u3a_minimum - 1) & ~(u3a_minimum - 1);
+
+  if ( rod_u->hep.dir_ws > 0 ) {
+    pot_p = rod_u->san_p;
+
+    if ( len_w > (rod_u->rut_p - pot_p) ) {
+      rod_u->how.fag_w = (rod_u->how.fag_w & ~u3a_flag_sand) | u3a_flag_froz;
+      return 0;
+    }
+    rod_u->san_p = pot_p + len_w;
+  }
+  else {
+    if ( len_w > (rod_u->san_p - rod_u->rut_p) ) {
+      rod_u->how.fag_w = (rod_u->how.fag_w & ~u3a_flag_sand) | u3a_flag_froz;
+      return 0;
+    }
+    pot_p = rod_u->san_p - len_w;
+    rod_u->san_p = pot_p;
+  }
+
+  return u3a_into(pot_p);
+}
+
 /* u3a_walloc(): allocate storage words on hat heap.
 */
 void*
 u3a_walloc(c3_w len_w)
 {
+  if ( c3_unlikely(u3R->how.fag_w & u3a_flag_zone) ) {
+    u3a_road* rod_u = u3R;
+
+    if ( rod_u->how.fag_w & u3a_flag_sand ) {
+      if ( len_w < u3a_sand_big ) {
+        void* ptr_v = _ca_bump(len_w);
+
+        if ( ptr_v ) {
+          return ptr_v;
+        }
+      }
+      //  a counted block beside a zone with room: see above
+      //
+      else {
+        c3_w san_w = ( rod_u->hep.dir_ws > 0 )
+                   ? (rod_u->rut_p - rod_u->bas_p)
+                   : (rod_u->bas_p - rod_u->rut_p);
+
+        rod_u->big_w += len_w;
+
+        if ( rod_u->big_w > san_w ) {
+          rod_u->how.fag_w = (rod_u->how.fag_w & ~u3a_flag_sand)
+                           | u3a_flag_froz;
+        }
+      }
+    }
+    _ca_heap();
+  }
   return u3a_into(_imalloc(len_w));
 }
 
@@ -229,10 +400,19 @@ u3a_walloc(c3_w len_w)
 void*
 u3a_wealloc(void* lag_v, c3_w old_w, c3_w len_w)
 {
-  (void)old_w;
-
   if ( !lag_v ) {
     return u3a_walloc(len_w);
+  }
+
+  //  sand is not freed: copy out of it
+  //
+  if (  c3_unlikely(u3R->how.fag_w & u3a_flag_zone)
+     && !_ca_counted(u3a_outa(lag_v)) )
+  {
+    void* new_v = u3a_walloc(len_w);
+
+    memcpy(new_v, lag_v, (c3_z)c3_min(old_w, len_w) << u3a_word_bytes_shift);
+    return new_v;
   }
 
   return u3a_into(_irealloc(u3a_outa(lag_v), len_w));
@@ -267,6 +447,13 @@ void
 u3a_wfree(void* tox_v)
 {
   if ( tox_v ) {
+    //  sand is not freed
+    //
+    if (  c3_unlikely(u3R->how.fag_w & u3a_flag_zone)
+       && !_ca_counted(u3a_outa(tox_v)) )
+    {
+      return;
+    }
     _ifree(u3a_outa(tox_v));
   }
 }
@@ -351,6 +538,15 @@ u3a_celloc_cold(void)
 {
   u3a_cell *cel_u;
   u3_post  *cel_p;
+
+  if ( u3R->how.fag_w & u3a_flag_zone ) {
+    if (  (u3R->how.fag_w & u3a_flag_sand)
+       && (cel_u = _ca_bump(c3_wiseof(*cel_u))) )
+    {
+      return (c3_w*)cel_u;
+    }
+    _ca_heap();
+  }
 
   if ( u3R->cel.cel_p ) {
     cel_p = u3to(u3_post, u3R->cel.cel_p);
@@ -889,7 +1085,9 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
       if ( veb_u->mug_w >> 31 ) {
         u3_noun nov = (u3_noun)veb_u->mug_w;
 
-        u3_assert( c3y == u3a_north_is_normal(u3R, nov) );
+        //  normal, or in the sand of u3R
+        //
+        u3_assert( c3n == u3a_north_is_junior(u3R, nov) );
 
 #ifdef VERBOSE_TAKE
         u3l_log("north: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -944,7 +1142,9 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
       if ( veb_u->mug_w >> 31 ) {
         u3_noun nov = (u3_noun)veb_u->mug_w;
 
-        u3_assert( c3y == u3a_south_is_normal(u3R, nov) );
+        //  normal, or in the sand of u3R
+        //
+        u3_assert( c3n == u3a_south_is_junior(u3R, nov) );
 
 #ifdef VERBOSE_TAKE
         u3l_log("south: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -1480,9 +1680,26 @@ _ca_wed_our(u3_noun *restrict a, u3_noun *restrict b)
   c3_t bsr_t = ( c3y == u3a_is_senior(u3R, *b) );
 
   if ( asr_t == bsr_t ) {
-    //  both [a] and [b] are senior; we can't unify on u3R
+    //  both [a] and [b] are senior; we can't unify on u3R, unless one
+    //  is in our own sand: nothing in the sand is counted or freed, and
+    //  whatever refers to a noun of the sand is ours to write.  keep the
+    //  one that is not ours; of two of ours, the deeper address.
     //
-    if ( asr_t ) return c3n;
+    if ( asr_t ) {
+      c3_t asa_t = u3a_in_sand(u3R, *a);
+      c3_t bsa_t = u3a_in_sand(u3R, *b);
+
+      if ( !asa_t && !bsa_t ) return c3n;
+
+      if (  (asa_t && !bsa_t)
+         || (  (asa_t == bsa_t)
+            && ((*a > *b) == (c3y == u3a_is_north(u3R))) ) )
+      {
+        SWAP(a, b);
+      }
+      *b = *a;
+      return c3y;
+    }
 
     //  both are on u3R. on the home road, keep a hashcons member;
     //  otherwise keep the deeper address (and gain a reference)
@@ -1521,8 +1738,14 @@ static c3_o
 _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
 {
   //  XX assume( rod_u != u3R )
-  c3_t asr_t = ( c3y == u3a_is_senior(rod_u, *a) );
-  c3_t bsr_t = ( c3y == u3a_is_senior(rod_u, *b) );
+  //
+  //  a noun in the sand of [rod_u] is on [rod_u], whatever the
+  //  seniority test says of it
+  //
+  c3_t asr_t = (  (c3y == u3a_is_senior(rod_u, *a))
+               && !u3a_in_sand(rod_u, *a) );
+  c3_t bsr_t = (  (c3y == u3a_is_senior(rod_u, *b))
+               && !u3a_in_sand(rod_u, *b) );
 
   if ( asr_t == bsr_t ) {
     //  both [a] and [b] are senior; we can't unify on [rod_u]
@@ -1530,14 +1753,17 @@ _ca_wed_you(u3a_road* rod_u, u3_noun *restrict a, u3_noun *restrict b)
     if ( asr_t ) return c3n;
 
     //  both are on [rod_u]; keep the deeper address
-    //  (and gain a reference)
+    //  (and gain a reference, unless it is sand, which is not counted
+    //  and, being older than the heap, is the deeper of the two)
     //
     //    (N && <) || (S && >)
     //    XX consider keeping higher refcount instead
     //
     if ( (*a > *b) == (c3y == u3a_is_north(rod_u)) ) SWAP(a, b);
 
-    _me_gain_use(*a);
+    if ( !u3a_in_sand(rod_u, *a) ) {
+      _me_gain_use(*a);
+    }
   }
   //  one of [a] or [b] are senior; keep it
   //
