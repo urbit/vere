@@ -215,6 +215,64 @@ pub fn build(b: *std.Build) !void {
         .flags = burn_flags.items,
     });
 
+    //  native code for compiled nock (-DU3NC_JIT): nock-compile.c is
+    //  compiled a second time, apart, into the stencils of the opcodes, an
+    //  object that is never linked; jit/stencils.py turns it into the
+    //  header nock-compile-jit.c includes.  The stencils want absolute
+    //  32-bit addresses for their holes (no PIC, the small code model), a
+    //  section per function, and no jump tables
+    //
+    var jit = false;
+    for (copts) |opt| {
+        if (std.mem.eql(u8, opt, "-DU3NC_JIT")) jit = true;
+    }
+    if (jit) {
+        const sten = b.addObject(.{
+            .name = "nock-stencils",
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+                .pic = false,
+                .link_libc = true,
+            }),
+        });
+        sten.root_module.addIncludePath(b.path(""));
+        sten.root_module.addIncludePath(b.path("platform/linux"));
+        for (pkg_noun.root_module.link_objects.items) |obj| {
+            switch (obj) {
+                .other_step => |dep| sten.root_module.linkLibrary(dep),
+                else => {},
+            }
+        }
+
+        var sten_flags = std.array_list.Managed([]const u8).init(b.allocator);
+        defer sten_flags.deinit();
+        try sten_flags.appendSlice(burn_flags.items);
+        try sten_flags.appendSlice(&.{
+            "-DU3NC_STENCIL",
+            "-fno-pic",
+            "-mcmodel=small",
+            "-ffunction-sections",
+            "-fno-jump-tables",
+            "-fno-vectorize",
+            "-fno-slp-vectorize",
+            "-fno-unroll-loops",
+            "-fno-asynchronous-unwind-tables",
+            "-fno-stack-protector",
+        });
+        sten.root_module.addCSourceFiles(.{
+            .root = b.path(""),
+            .files = &.{"nock-compile.c"},
+            .flags = sten_flags.items,
+        });
+
+        const gen = b.addSystemCommand(&.{"python3"});
+        gen.addFileArg(b.path("jit/stencils.py"));
+        gen.addFileArg(sten.getEmittedBin());
+        const hdr = gen.addOutputFileArg("nock-stencils.h");
+        pkg_noun.root_module.addIncludePath(hdr.dirname());
+    }
+
     if (t.os.tag == .windows) {
         pkg_noun.addCSourceFiles(.{
             .root = b.path("platform/windows"),
