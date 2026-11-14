@@ -117,9 +117,22 @@ _setup(void)
   u3_Host.ops_u.dem = c3y;
   u3_Host.ops_u.tem = c3y;
 
+  //  U3NC_IVORY: the kernel from the ivory pill in that file instead of
+  //  this binary's
+  //
   sil_u = u3s_cue_xeno_init_with(ur_fib27, ur_fib28);
-  if ( u3_none == (pil = u3s_cue_xeno_with(sil_u, u3_Ivory_pill_len,
-                                                  u3_Ivory_pill)) ) {
+  if ( getenv("U3NC_IVORY") ) {
+    size_t len_i;
+    c3_c*  buf_c = _slurp(getenv("U3NC_IVORY"), &len_i);
+
+    if ( !buf_c ) exit(1);
+    pil = u3s_cue_xeno_with(sil_u, len_i, (c3_y*)buf_c);
+    c3_free(buf_c);
+  }
+  else {
+    pil = u3s_cue_xeno_with(sil_u, u3_Ivory_pill_len, u3_Ivory_pill);
+  }
+  if ( u3_none == pil ) {
     printf("*** fail _setup 1\n");
     exit(1);
   }
@@ -2219,6 +2232,89 @@ main(int argc, char* argv[])
   }
 
   _setup();
+
+  //  U3NC_IVORY_GEN: write an ivory pill to that file, as +ivory of
+  //  lib/pill.hoon does on a ship, from the sources in the directory
+  //  U3NC_IVORY_SRC: hoon, arvo, lull, zuse, and the libraries ethereum,
+  //  azimuth and vere (.hoon).  In u3n, and nothing else
+  //
+  if ( getenv("U3NC_IVORY_GEN") ) {
+    static const c3_c* nam_c[] = { "hoon", "arvo", "lull", "zuse",
+                                   "ethereum", "azimuth", "vere" };
+    u3_noun sam = u3_nul, cor, fol;
+    u3_weak pro;
+
+    for ( c3_w i_w = 7; i_w-- > 0; ) {
+      c3_c   pax_c[4096];
+      size_t len_i;
+      c3_c*  buf_c;
+
+      snprintf(pax_c, sizeof(pax_c), "%s/%s.hoon",
+               getenv("U3NC_IVORY_SRC"), nam_c[i_w]);
+      if ( !(buf_c = _slurp(pax_c, &len_i)) ) return 1;
+      sam = ( 6 == i_w ) ? u3i_bytes(len_i, (c3_y*)buf_c)
+                         : u3nc(u3i_bytes(len_i, (c3_y*)buf_c), sam);
+      c3_free(buf_c);
+    }
+    cor = _gate(
+      "|=  [hon=@t arv=@t lul=@t zus=@t eth=@t azi=@t vir=@t]\n"
+      "^-  [%ivory p=(list)]\n"
+      "=/  mist\n"
+      "  |=  [bon=path txt=@]\n"
+      "  ^-  hoon\n"
+      "  =+  vas=vast\n"
+      "  ~|  bon\n"
+      "  %+  scan  (trip txt)\n"
+      "  %-  full\n"
+      "  =;  fud\n"
+      "    (ifix [;~(plug gay fud) gay] tall:vas(wer bon))\n"
+      "  %-  star\n"
+      "  ;~  pose  vul\n"
+      "    %+  ifix  [fas (just `@`10)]\n"
+      "    (star ;~(less (just `@`10) next))\n"
+      "  ==\n"
+      "=/  swel\n"
+      "  |=  [tap=(trap vase) gen=hoon]\n"
+      "  ^-  (trap vase)\n"
+      "  =/  gun  (~(mint ut p:$:tap) %noun gen)\n"
+      "  =>  [tap=tap gun=gun]\n"
+      "  |.  ~+\n"
+      "  =/  pro  q:$:tap\n"
+      "  [[%cell p.gun p:$:tap] [.*(pro q.gun) pro]]\n"
+      "=/  ver\n"
+      "  =/  sub  *(trap vase)\n"
+      "  =.  sub  (swat sub (rain /sys/hoon/hoon hon))\n"
+      "  =.  sub  (swat sub (rain /sys/arvo/hoon arv))\n"
+      "  =.  sub  (swat sub (rain /sys/lull/hoon lul))\n"
+      "  =.  sub  (swat sub (rain /sys/zuse/hoon zus))\n"
+      "  =.  sub  (swel sub [%ktts %ethereum (mist /lib/ethereum/hoon eth)])\n"
+      "  =.  sub  (swel sub [%ktts %azimuth (mist /lib/azimuth/hoon azi)])\n"
+      "  (swat sub (mist /lib/vere/hoon vir))\n"
+      "=/  nok  !.\n"
+      "  =>  *[ver=(trap vase) ~]\n"
+      "  !=  q:$:ver\n"
+      "[%ivory nok ver ~]\n",
+      sam);
+    fol = u3nq(9, 2, 0, 1);
+    pro = _run("ivory: build", _nock_n, cor, fol);
+    u3z(cor); u3z(fol);
+    if ( u3_none == pro ) return 1;
+    {
+      u3_noun jam   = u3qe_jam(pro);
+      c3_w    len_w = u3r_met(3, jam);
+      c3_y*   buf_y = c3_malloc(len_w);
+      FILE*   fil_u = fopen(getenv("U3NC_IVORY_GEN"), "wb");
+
+      u3r_bytes(0, len_w, buf_y, jam);
+      if ( !fil_u || (len_w != fwrite(buf_y, 1, len_w, fil_u)) ) {
+        fprintf(stderr, "ivory: can't write %s\r\n", getenv("U3NC_IVORY_GEN"));
+        return 1;
+      }
+      fclose(fil_u);
+      fprintf(stderr, "ivory: %u bytes\r\n", len_w);
+    }
+    return 0;
+  }
 
   //  U3NC_STEEL_GEN: write a steel pill to that file, as the generator
   //  desk/gen/steel-pill.hoon of the SKA repository does on a ship: the
