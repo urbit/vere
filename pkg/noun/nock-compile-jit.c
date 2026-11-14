@@ -39,14 +39,15 @@
 /* nj_rel: a hole in a stencil.
 */
 enum { nj_abs32, nj_abs32s, nj_pc32, nj_abs64 };
-enum { nj_slot, nj_value, nj_next, nj_jump, nj_ext, nj_rod };
+enum { nj_slot, nj_value, nj_next, nj_jump, nj_ext, nj_rod, nj_ret };
 
 typedef struct {
   c3_h    off_h;    //  where, in the code of the stencil
   c3_y    typ_y;    //  how it is written: nj_abs32..
   c3_y    sym_y;    //  what goes in: nj_slot..
-  c3_h    idx_h;    //  which: the operand, the external symbol (_nj_ext_v),
-                    //  or the offset in the constants (_nj_rod_y)
+  c3_h    idx_h;    //  which: the operand (for nj_ret, the index in _nc_ret
+                    //  whose address goes in), the external symbol
+                    //  (_nj_ext_v), or the offset in the constants (_nj_rod_y)
   int32_t add_i;    //  added to it
 } nj_rel;
 
@@ -57,7 +58,9 @@ typedef struct {
   c3_h len_h;       //    and its length
   c3_h rel_h;       //  its holes in _nj_rel_u
   c3_h ren_h;       //    and their number
-  c3_y tal_y;       //  ends in a jump to the next op, of 5 bytes
+  c3_y tal_y;       //  1: ends in a jump to the next op, of 5 bytes, which
+                    //  is dropped; 2: ends "jcc next; jmp elsewhere", which
+                    //  can be "j!cc elsewhere" (u3nc_Jop & 1)
   const c3_c* nam_c;  //  the opcode, for profiles
 } nj_sten;
 
@@ -72,6 +75,17 @@ typedef struct _nj_blob {
 } nj_blob;
 
 #define _nj_are_z  ((c3_z)1 << 28)
+
+/* _nj_cnt_d: with u3nc_Jop & 4, what native code has run, by stencil:
+**            [0] ops, counted at the first stencil of each; [1] jumps to
+**            the next op that are conditional, [2] that are not: the ones
+**            the lowering did not drop; [3] HOPs to the op that follows.
+*/
+static c3_d _nj_cnt_d[4][nj_last];
+static c3_d _nj_old_d[4][nj_last];
+
+#define _nj_pre_w  8    //  inc qword [abs32]
+#define _nj_tra_w  13   //    and jmp rel32
 
 static FILE*    _nj_map_u;  //  /tmp/perf-PID.map, the symbols of the code
                             //  for perf, if U3NC_JIT_MAP is set
@@ -161,7 +175,37 @@ typedef struct {
   c3_y*      cod_y;   //  its code, or 0
   c3_w       off_w;   //  the length of the code so far
   c3_w*      map_w;   //  offset of an op in the bytecode -> in the code
+  c3_w       tra_w;   //  counting: the length of the trampolines so far
+  c3_w       siz_w;   //    where they start: after the code
+  c3_t       fir_t;   //    the next stencil is the first of its op
 } nj_gen;
+
+/* _nj_inc(): counting: the code that adds one to a counter, at out_y.
+*/
+static void
+_nj_inc(c3_y* out_y, c3_d* cnt_d)
+{
+  c3_h adr_h = (c3_h)(uintptr_t)cnt_d;
+
+  u3_assert( (uintptr_t)cnt_d == adr_h );
+  out_y[0] = 0x48; out_y[1] = 0xff; out_y[2] = 0x04; out_y[3] = 0x25;
+  memcpy(out_y + 4, &adr_h, 4);
+}
+
+/* _nj_hop(): whether the hole at her_y, a distance to code, is the operand
+**            of a jump: 1 conditional, 2 not; 0 if it is anything else.
+*/
+static c3_y
+_nj_hop(const c3_y* her_y, c3_h off_h)
+{
+  if ( (off_h >= 1) && (0xe9 == her_y[-1]) ) {
+    return 2;
+  }
+  if ( (off_h >= 2) && (0x0f == her_y[-2]) && (0x80 == (her_y[-1] & 0xf0)) ) {
+    return 1;
+  }
+  return 0;
+}
 
 /* _nj_put(): the stencil cod_h, its holes filled with the operands and,
 **            for a branch, with the code of the op at tar_h.
@@ -170,41 +214,88 @@ static void
 _nj_put(nj_gen* gen_u, c3_h cod_h, c3_h a_h, c3_h b_h, c3_h c_h, c3_h tar_h)
 {
   const nj_sten* ste_u = &_nj_sten_u[gen_u->dir_y][cod_h];
-  c3_h           lon_h = ste_u->len_h - (ste_u->tal_y ? 5 : 0);
+  c3_t           inv_t = (2 == ste_u->tal_y) && (u3nc_Jop & 1);
+  c3_t           cnt_t = !!(u3nc_Jop & 4);
+  c3_h           lon_h = ste_u->len_h
+                       - ( ((1 == ste_u->tal_y) || inv_t) ? 5 : 0 );
   c3_h           arg_h[3] = { a_h, b_h, c_h };
+  const nj_rel*  rel_u = _nj_rel_u + ste_u->rel_h;
+  c3_h           i_h;
 
   u3_assert( ste_u->len_h );
+
+  //  counting: the op is counted before its first stencil
+  //
+  if ( cnt_t && gen_u->fir_t ) {
+    if ( gen_u->cod_y ) {
+      _nj_inc(gen_u->cod_y + gen_u->off_w, &_nj_cnt_d[0][cod_h]);
+    }
+    gen_u->off_w += _nj_pre_w;
+  }
+  gen_u->fir_t = 0;
 
   if ( gen_u->cod_y ) {
     c3_y*         out_y = gen_u->cod_y + gen_u->off_w;
     c3_y*         jum_y = gen_u->cod_y + gen_u->map_w[tar_h];
-    const nj_rel* rel_u = _nj_rel_u + ste_u->rel_h;
-    c3_h          i_h;
 
     memcpy(out_y, _nj_cod_y + ste_u->cod_h, lon_h);
+    if ( inv_t ) {
+      out_y[lon_h - 5] ^= 1;
+    }
     if ( _nj_map_u ) {
       fprintf(_nj_map_u, "%lx %x nj_%s\n", (unsigned long)(uintptr_t)out_y,
               lon_h, ste_u->nam_c);
     }
 
     for ( i_h = 0; i_h < ste_u->ren_h; i_h++, rel_u++ ) {
-      c3_y* her_y = out_y + rel_u->off_h;
-      c3_ds val_ds;
+      c3_y*         her_y = out_y + rel_u->off_h;
+      const nj_rel* use_u = rel_u;
+      c3_ds         val_ds;
+      c3_y          sym_y;
 
       if ( rel_u->off_h >= lon_h ) {
         continue;
       }
+      //  the inverted jump goes where the dropped one went: the last hole
+      //
+      if ( inv_t && (rel_u->off_h == (lon_h - 4)) ) {
+        use_u = _nj_rel_u + ste_u->rel_h + ste_u->ren_h - 1;
+      }
+      sym_y = use_u->sym_y;
 
-      switch ( rel_u->sym_y ) {
+      //  counting: a jump to the next op that stays goes by a trampoline
+      //  that counts it
+      //
+      if ( cnt_t && (nj_next == sym_y) && (nj_pc32 == rel_u->typ_y) ) {
+        c3_y hop_y = _nj_hop(her_y, rel_u->off_h);
+
+        if ( hop_y ) {
+          c3_y*   tra_y = gen_u->cod_y + gen_u->siz_w + gen_u->tra_w;
+          int32_t dis_i = (out_y + lon_h) - (tra_y + _nj_tra_w);
+
+          _nj_inc(tra_y, &_nj_cnt_d[hop_y][cod_h]);
+          tra_y[_nj_pre_w] = 0xe9;
+          memcpy(tra_y + _nj_pre_w + 1, &dis_i, 4);
+
+          dis_i = tra_y - (her_y + 4);
+          memcpy(her_y, &dis_i, 4);
+          gen_u->tra_w += _nj_tra_w;
+          continue;
+        }
+      }
+
+      switch ( sym_y ) {
         default: u3_assert(0);
-        case nj_slot:  val_ds = sizeof(u3_noun) * arg_h[rel_u->idx_h];  break;
-        case nj_value: val_ds = arg_h[rel_u->idx_h];                    break;
+        case nj_slot:  val_ds = sizeof(u3_noun) * arg_h[use_u->idx_h];  break;
+        case nj_value: val_ds = arg_h[use_u->idx_h];                    break;
         case nj_next:  val_ds = (uintptr_t)(out_y + lon_h);             break;
         case nj_jump:  val_ds = (uintptr_t)jum_y;                       break;
-        case nj_ext:   val_ds = (uintptr_t)_nj_ext_v[rel_u->idx_h];     break;
-        case nj_rod:   val_ds = (uintptr_t)(_nj_rod_y + rel_u->idx_h);  break;
+        case nj_ext:   val_ds = (uintptr_t)_nj_ext_v[use_u->idx_h];     break;
+        case nj_rod:   val_ds = (uintptr_t)(_nj_rod_y + use_u->idx_h);  break;
+        case nj_ret:   val_ds = (uintptr_t)&_nc_ret[arg_h[use_u->idx_h]];
+                       break;
       }
-      val_ds += rel_u->add_i;
+      val_ds += use_u->add_i;
 
       switch ( rel_u->typ_y ) {
         default: u3_assert(0);
@@ -233,6 +324,21 @@ _nj_put(nj_gen* gen_u, c3_h cod_h, c3_h a_h, c3_h b_h, c3_h c_h, c3_h tar_h)
       }
     }
   }
+  else if ( cnt_t ) {
+    //  measuring: room for the trampolines
+    //
+    const c3_y* cod_y = _nj_cod_y + ste_u->cod_h;
+
+    for ( i_h = 0; i_h < ste_u->ren_h; i_h++, rel_u++ ) {
+      if (  (rel_u->off_h < lon_h) && (nj_next == rel_u->sym_y)
+         && (nj_pc32 == rel_u->typ_y)
+         && !(inv_t && (rel_u->off_h == (lon_h - 4)))
+         && _nj_hop(cod_y + rel_u->off_h, rel_u->off_h) )
+      {
+        gen_u->tra_w += _nj_tra_w;
+      }
+    }
+  }
 
   gen_u->off_w += lon_h;
 }
@@ -255,6 +361,7 @@ _nj_code(nj_gen* gen_u)
     c3_y fam_y, kon_y, wid_y, num_y, i_y;
 
     gen_u->map_w[ip_h] = gen_u->off_w;
+    gen_u->fir_t = 1;
 
     if ( BOM == byc_y[ip_h] ) {
       ip_h++;
@@ -309,6 +416,20 @@ _nj_code(nj_gen* gen_u)
         _nj_put(gen_u, JETP, wor_h, dir_u->des_h, 0, 0);
       }
     }
+    else if ( (_nc_hop == fam_y) && (arg_h[0] == ip_h) ) {
+      //  a HOP to the op that follows: nothing, or, counting, the jump and
+      //  a count of it
+      //
+      if ( !(u3nc_Jop & 2) ) {
+        if ( u3nc_Jop & 4 ) {
+          if ( gen_u->cod_y ) {
+            _nj_inc(gen_u->cod_y + gen_u->off_w, &_nj_cnt_d[3][HOP_B]);
+          }
+          gen_u->off_w += _nj_pre_w;
+        }
+        _nj_put(gen_u, HOP_B, arg_h[0], 0, 0, arg_h[0]);
+      }
+    }
     else {
       _nj_put(gen_u, _nc_bas_y[fam_y] + (2 * kon_y),
               arg_h[0], arg_h[1], arg_h[2], num_y ? arg_h[num_y - 1] : 0);
@@ -325,8 +446,8 @@ static void
 _nj_lower(u3nc_prog* pog_u, c3_y dir_y)
 {
   c3_h            len_h = pog_u->byc_u.len_h;
-  nj_gen          gen_u = { pog_u, dir_y, 0, 0, 0 };
-  c3_w            siz_w;
+  nj_gen          gen_u = { pog_u, dir_y, 0, 0, 0, 0, 0, 0 };
+  c3_w            siz_w, tra_w;
   struct timespec beg_u, end_u;
 
   clock_gettime(CLOCK_MONOTONIC, &beg_u);
@@ -338,11 +459,15 @@ _nj_lower(u3nc_prog* pog_u, c3_y dir_y)
   _nj_code(&gen_u);
   siz_w = gen_u.off_w;
 
-  gen_u.cod_y = _nj_alloc(siz_w + 2);
+  gen_u.cod_y = _nj_alloc(siz_w + 2 + gen_u.tra_w);
   gen_u.cod_y[siz_w]     = 0x0f;
   gen_u.cod_y[siz_w + 1] = 0x0b;
+  gen_u.siz_w = siz_w + 2;
+  tra_w       = gen_u.tra_w;
+  gen_u.tra_w = 0;
   _nj_code(&gen_u);
   u3_assert( siz_w == gen_u.off_w );
+  u3_assert( tra_w == gen_u.tra_w );
 
   c3_free(gen_u.map_w);
   pog_u->nat_f[dir_y] = gen_u.cod_y;
@@ -356,4 +481,36 @@ _nj_lower(u3nc_prog* pog_u, c3_y dir_y)
   u3nc_Stat.lon_d += siz_w;
   u3nc_Stat.lot_d += ((end_u.tv_sec - beg_u.tv_sec) * 1000000000LL)
                    + (end_u.tv_nsec - beg_u.tv_nsec);
+}
+
+/* u3nc_jit_counts(): print what native code has run since the last call,
+**                    by stencil: ops, then the jumps to the next op that
+**                    the lowering did not drop, conditional and not, then
+**                    the HOPs to the op that follows (u3nc_Jop & 4).
+*/
+void
+u3nc_jit_counts(void)
+{
+  c3_d  sum_d[4] = {0};
+  c3_w  i_w, k_w;
+
+  for ( i_w = 0; i_w < nj_last; i_w++ ) {
+    c3_d now_d[4];
+    c3_t any_t = 0;
+
+    for ( k_w = 0; k_w < 4; k_w++ ) {
+      now_d[k_w] = _nj_cnt_d[k_w][i_w] - _nj_old_d[k_w][i_w];
+      _nj_old_d[k_w][i_w] = _nj_cnt_d[k_w][i_w];
+      sum_d[k_w] += now_d[k_w];
+      any_t |= !!now_d[k_w];
+    }
+    if ( any_t ) {
+      fprintf(stderr, "  nat %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                      " %u\r\n",
+              _nj_sten_u[0][i_w].nam_c, now_d[0], now_d[1], now_d[2], now_d[3],
+              _nj_sten_u[0][i_w].tal_y);
+    }
+  }
+  fprintf(stderr, "  nat ALL %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                  "\r\n", sum_d[0], sum_d[1], sum_d[2], sum_d[3]);
 }

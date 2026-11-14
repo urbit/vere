@@ -121,10 +121,11 @@ static const OP_F WTAB[] = { WIDES };
 
 //  the holes: _nj_s0.._nj_s2, the operand of that index when it is a slot,
 //  the address of the symbol its offset in bytes from reg; _nj_v0.._nj_v2,
-//  when it is anything else, the address its value; _nj_next, the code of
-//  the next op; _nj_jump, of the target of a branch
+//  when it is anything else, the address its value; _nj_r0, the part of a
+//  product in parts that the first operand is the index of, in _nc_ret;
+//  _nj_next, the code of the next op; _nj_jump, of the target of a branch
 //
-extern u3_noun _nj_s0[], _nj_s1[], _nj_s2[];
+extern u3_noun _nj_s0[], _nj_s1[], _nj_s2[], _nj_r0[];
 extern c3_y    _nj_v0[], _nj_v1[], _nj_v2[];
 u3_noun _nj_next ARGS CONV;
 u3_noun _nj_jump ARGS CONV;
@@ -166,7 +167,22 @@ u3_noun _nj_jump ARGS CONV;
 #elif 1 == _nc_mode
 #  define BURN()   return (nj_run){ 0, 0 }
 #else
+//  NG_LEAD(): for the statistics of repeated gains (U3NC_GAINS): the op
+//  about to run starts a basic block (_ng_leaders())
+//
+#  ifdef U3NC_GAINS
+#    define NG_LEAD()  do {                                                     \
+      if ( pog_u->ali_y[ip - pog_u->byc_u.ops_y] & 2 ) { _ng_block(); }         \
+    } while ( 0 )
+#    define NG_START()  do {                                                    \
+      if ( !(pog_u->ali_y[pog_u->byc_u.len_h] & 4) ) { _ng_leaders(pog_u); }    \
+    } while ( 0 )
+#  else
+#    define NG_LEAD()   ((void)0)
+#    define NG_START()  ((void)0)
+#  endif
 #  define BURN()  do {                                                          \
+    NG_LEAD();                                                                  \
     c3_y _op = *ip++;                                                           \
     MUSTTAIL return TAB[_op](NEXT);                                             \
   } while ( 0 )
@@ -217,14 +233,18 @@ u3_noun _nj_jump ARGS CONV;
     }                                                                           \
   } while ( 0 )
 #else
-#  define PUT(d, v)  (reg[d] = (v))
+#  ifdef U3NC_GAINS
+#    define PUT(d, v)  ({ u3_noun _pv = (v); NG_KILL(d); reg[d] = _pv; })
+#  else
+#    define PUT(d, v)  (reg[d] = (v))
+#  endif
 #  define EMPTY()    ((void)0)
 #endif
 
 //  ZERO(s): empty slot s, zeroing it if the build reads empty slots
 //  (_nc_zer_t): for a sweep, or for the checks
 //
-#define ZERO(s)  do { if ( _nc_zer_t ) { reg[s] = 0; } } while ( 0 )
+#define ZERO(s)  do { NG_KILL(s); if ( _nc_zer_t ) { reg[s] = 0; } } while ( 0 )
 
 //  SWEEP(S): if S, drop whatever every slot of the activation still holds:
 //  the registers that died on the edge into this block, at an op that
@@ -241,7 +261,7 @@ u3_noun _nj_jump ARGS CONV;
   } while ( 0 )
 
 #define TAKEN(v, s, K)  do {                                                    \
-    if ( K ) { ZERO(s); } else { GAIN(v); }                                    \
+    if ( K ) { ZERO(s); } else { NG_SLOT(s, v); GAIN(v); }                      \
   } while ( 0 )
 #define TAKE(s, K)  ({ u3_noun _v = reg[s]; TAKEN(_v, s, K); _v; })
 #define DROP(s, K)  do {                                                        \
@@ -362,12 +382,14 @@ u3_noun _nj_jump ARGS CONV;
 //
 #define BODY0(name, body)                                                       \
   static u3_noun OP(name) ARGS CONV {                                           \
+    _nc_stat_op(name);                                                          \
     body()                                                                      \
   }
 
 #define BODY1(name, fam, A, body, ...)                                          \
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
+    _nc_stat_op(name##_B);                                                      \
     body(__VA_ARGS__)                                                           \
   }
 
@@ -375,6 +397,7 @@ u3_noun _nj_jump ARGS CONV;
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
     const c3_h B = arg_b_w;                                                     \
+    _nc_stat_op(name##_B);                                                      \
     body(__VA_ARGS__)                                                           \
   }
 
@@ -383,6 +406,7 @@ u3_noun _nj_jump ARGS CONV;
     const c3_h A = arg_a_w;                                                     \
     const c3_h B = arg_b_w;                                                     \
     const c3_h C = arg_c_w;                                                     \
+    _nc_stat_op(name##_B);                                                      \
     body(__VA_ARGS__)                                                           \
   }
 
@@ -587,6 +611,7 @@ u3_noun _nj_jump ARGS CONV;
     _f->key   = u3_none;                                                        \
     _f->cid_h = 0;                                                              \
     _nc_stat_frame(_f);                                                         \
+    NG_BAR();                                                                   \
     _f;                                                                         \
   })
 #endif
@@ -635,7 +660,8 @@ u3_noun _nj_jump ARGS CONV;
 //
 #define MOVE()  do {                                                            \
     for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
-      if ( kon_y[_i] ) { ZERO(sot_h[_i]); } else { GAIN(nex[_i]); }             \
+      if ( kon_y[_i] ) { ZERO(sot_h[_i]); }                                     \
+      else { NG_SLOT(sot_h[_i], nex[_i]); GAIN(nex[_i]); }                      \
     }                                                                           \
   } while ( 0 )
 
@@ -655,6 +681,13 @@ u3_noun _nj_jump ARGS CONV;
 //  GIVE(): the consumed arguments of the site leave their slots: their
 //          references go with the gathered copies, to a transferring jet
 //
+#ifdef U3NC_GAINS
+#define GIVE()  do {                                                            \
+    for ( c3_h _i = 0; _i < len_h; _i++ ) {                                     \
+      if ( kon_y[_i] ) { NG_SEE(nex[_i]); ZERO(sot_h[_i]); }                    \
+    }                                                                           \
+  } while ( 0 )
+#else
 #define GIVE()  do {                                                            \
     if ( _nc_zer_t ) {                                                          \
       for ( c3_h _i = 0; _i < len_h; _i++ ) {                                   \
@@ -662,6 +695,7 @@ u3_noun _nj_jump ARGS CONV;
       }                                                                         \
     }                                                                           \
   } while ( 0 )
+#endif
 
 //  ENTER(len): run pog_u, its len arguments in its slots at reg
 //
@@ -697,7 +731,11 @@ u3_noun _nj_jump ARGS CONV;
 #elif defined(U3NC_JIT)
 #  define START()  MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT)
 #else
-#  define START()  do { ip = pog_u->byc_u.ops_y; BURN(); } while ( 0 )
+#  define START()  do {                                                         \
+    NG_START();                                                                 \
+    ip = pog_u->byc_u.ops_y;                                                    \
+    BURN();                                                                     \
+  } while ( 0 )
 #endif
 #define AGAIN()  START()
 
@@ -850,6 +888,10 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   (void)ip; (void)op_y;
   pro  = ((OP_F)pog_u->nat_f[_nc_dir])(0, reg, pog_u, rod_u, 0, 0, 0);
 #else
+  NG_START();
+#  ifdef U3NC_GAINS
+  _ng_block();
+#  endif
   ip   = pog_u->byc_u.ops_y;
   op_y = *ip++;
   pro  = TAB[op_y](ip, reg, pog_u, rod_u, 0, 0, 0);
@@ -906,6 +948,22 @@ OP(done) ARGS CONV
 }
 
 #ifdef U3NC_JIT
+//  bail_exit, bail_fail: crash.  A stencil whose test fails comes here by a
+//  jump, so that the test is one conditional jump out and the next op
+//  follows the stencil (U3NC_JIT_BAIL)
+//
+__attribute__((unused, noinline)) static u3_noun
+OP(bail_exit) ARGS CONV
+{
+  return u3m_bail(c3__exit);
+}
+
+__attribute__((unused, noinline)) static u3_noun
+OP(bail_fail) ARGS CONV
+{
+  return u3m_bail(c3__fail);
+}
+
 //  cold: what a program without native code for this road direction runs
 //  as: its bytecode, until it is hot: it has started u3nc_Hot times within
 //  one stretch of the clock (_nj_tick(); a start is a call, or a turn of a
@@ -976,6 +1034,14 @@ _nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
 }
 #endif
 
+//  BAIL(mot): crash with the mote c3__mot (exit, fail)
+//
+#if (2 == _nc_mode) && defined(U3NC_JIT_BAIL)
+#  define BAIL(mot)  MUSTTAIL return BASE(bail_##mot)(NEXT)
+#else
+#  define BAIL(mot)  u3m_bail(c3__##mot)
+#endif
+
 #define BODY_IMM()                                                              \
   PUT(d_h, a_h);                                                                \
   BURN();
@@ -1002,7 +1068,7 @@ OP2K(INC, a_h, d_h, BODY_INC)
   u3_noun x = reg[a_h], pro;                                                    \
   _nc_stat(jet_d);                                                              \
   if ( c3n == u3ud(x) ) {                                                       \
-    u3m_bail(c3__fail);                                                         \
+    BAIL(fail);                                                                 \
   }                                                                             \
   pro = u3qa_dec(x);                                                            \
   DROP(a_h, K);                                                                 \
@@ -1014,7 +1080,7 @@ OP2K(DEC, a_h, d_h, BODY_DEC)
   u3_noun x = reg[a_h], y = reg[b_h], pro;                                      \
   _nc_stat(jet_d);                                                              \
   if ( (c3n == u3ud(x)) || (c3n == u3ud(y)) ) {                                 \
-    u3m_bail(c3__fail);                                                         \
+    BAIL(fail);                                                                 \
   }                                                                             \
   pro = u3qa_add(x, y);                                                         \
   DROP(a_h, KA);                                                                \
@@ -1058,6 +1124,7 @@ OP3KK(CON, a_h, b_h, d_h, BODY_CON)
 #define BODY_HED(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
   u3_noun h = GAIN(CELL(x)->hed);                                               \
+  if ( !(K) ) { NG_PART(a_h, 1, h); }                                           \
   _nc_stat_if(K, dek_d);                                                        \
   _nc_stat_if(!(K), deb_d);                                                     \
   _nc_stat_uni(UNIQUE(x, K));                                                   \
@@ -1070,6 +1137,7 @@ OP2K(HED, a_h, d_h, BODY_HED)
 #define BODY_TAL(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
   u3_noun t = GAIN(CELL(x)->tel);                                               \
+  if ( !(K) ) { NG_PART(a_h, 2, t); }                                           \
   _nc_stat_if(K, dek_d);                                                        \
   _nc_stat_if(!(K), deb_d);                                                     \
   _nc_stat_uni(UNIQUE(x, K));                                                   \
@@ -1097,6 +1165,7 @@ OP2K(TAL, a_h, d_h, BODY_TAL)
 #define BODY_HER()                                                              \
   u3_noun   x     = reg[a_h], tok, h;                                           \
   u3a_cell* cel_u = CELL(x);                                                    \
+  NG_SEE(x);                                                                    \
   ZERO(a_h);                                                                    \
   _nc_stat(dek_d);                                                              \
   _nc_stat(tok_d);                                                              \
@@ -1119,6 +1188,7 @@ OP2(HER, a_h, d_h, BODY_HER)
 #define BODY_TAR()                                                              \
   u3_noun   x     = reg[a_h], tok, t;                                           \
   u3a_cell* cel_u = CELL(x);                                                    \
+  NG_SEE(x);                                                                    \
   ZERO(a_h);                                                                    \
   _nc_stat(dek_d);                                                              \
   _nc_stat(tok_d);                                                              \
@@ -1165,7 +1235,7 @@ OP3KK(COR, a_h, b_h, d_h, BODY_COR)
 
 #define BODY_CEL(K)                                                             \
   if ( c3n == u3du(reg[a_h]) ) {                                                \
-    u3m_bail(c3__exit);                                                         \
+    BAIL(exit);                                                                 \
   }                                                                             \
   DROP(a_h, K);                                                                 \
   BURN();
@@ -1173,7 +1243,7 @@ OP1K(CEL, a_h, BODY_CEL)
 
 #define BODY_LOB(K)                                                             \
   if ( reg[a_h] > 1 ) {                                                         \
-    u3m_bail(c3__exit);                                                         \
+    BAIL(exit);                                                                 \
   }                                                                             \
   VOID(a_h, K);                                                                 \
   BURN();
@@ -1467,6 +1537,7 @@ OP1I(CAM, a_h, BODY_CAM)
   u3_weak    pro;                                                               \
   {                                                                             \
     _nc_tsc_beg();                                                              \
+    NG_SLOT(s_h, x);                                                            \
     o   = _nc_key(dir_u->cid_h, c3y,                                            \
                   u3nc(GAIN(x), GAIN(u3t(dir_u->bell))));                       \
     pro = _nc_find(dir_u->cid_h, o);                                            \
@@ -1560,7 +1631,7 @@ OP3KK(EQL, a_h, b_h, c_h, BODY_EQL)
 #define BODY_BRN(KY, KT)                                                        \
   u3_noun x = reg[a_h];                                                         \
   if ( x > 1 ) {                                                                \
-    u3m_bail(c3__exit);                                                         \
+    BAIL(exit);                                                                 \
   }                                                                             \
   if ( 1 == x ) {                                                               \
     VOID(a_h, KT);                                                              \
@@ -1633,6 +1704,7 @@ OP1KT(JMP, a_h, BODY_JMP)
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
   for ( c3_h _i = 0; _i < len_h; _i++ ) {                                       \
+    NG_KILL(_i);                                                                \
     reg[_i] = nex[_i];                                                          \
   }                                                                             \
   POP(len_h);                                                                   \
@@ -1682,6 +1754,7 @@ OP1KT(JMX, a_h, BODY_JMX)
   u3_noun*   sot = &(reg[SUB()]);                                               \
   u3_noun    x   = *sot;                                                        \
   u3_noun    pro;                                                               \
+  NG_KILL(SUB());                                                               \
   if ( _nc_zer_t ) {                                                            \
     *sot = 0;                                                                   \
   }                                                                             \
@@ -1749,13 +1822,22 @@ OP1K(DON, a_h, BODY_DON)
 //  a product in parts: the first is the product of the activation, the
 //  rest go through _nc_ret; where the caller takes one noun, they are consed
 //
+//  RET(i): part i; in a stencil its address is a hole, so that the op is
+//  a load and a store
+//
+#if 2 == _nc_mode
+#  define RET(i)  (*((void)(i), _nj_r0))
+#else
+#  define RET(i)  (_nc_ret[i])
+#endif
+
 #define BODY_RTL()                                                              \
-  PUT(d_h, _nc_ret[a_h]);                                                       \
+  PUT(d_h, RET(a_h));                                                           \
   BURN();
 OP2(RTL, a_h, d_h, BODY_RTL)
 
 #define BODY_RTS(K)                                                             \
-  _nc_ret[a_h] = TAKE(b_h, K);                                                  \
+  RET(a_h) = TAKE(b_h, K);                                                      \
   BURN();
 OP2K(RTS, a_h, b_h, BODY_RTS)
 
@@ -1987,6 +2069,8 @@ u3_noun OP(JETP) ARGS CONV {
 #undef RS
 #undef RV
 #undef BURN
+#undef NG_LEAD
+#undef NG_START
 #undef JUMP
 #undef PUSH
 #undef POP
@@ -2027,6 +2111,7 @@ u3_noun OP(JETP) ARGS CONV {
 #undef CALL
 #undef TAIL
 #undef DONE
+#undef BAIL
 #undef BODY_IMM
 #undef BODY_IML
 #undef BODY_MOV
@@ -2077,4 +2162,5 @@ u3_noun OP(JETP) ARGS CONV {
 #undef BODY_DRO
 #undef BODY_RTL
 #undef BODY_RTS
+#undef RET
 #undef BODY_DOX

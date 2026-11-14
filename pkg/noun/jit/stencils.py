@@ -7,12 +7,15 @@ each stencil, the function _nj_burn_{north,south}_OP of an opcode, and its
 relocations, as the tables nock-compile-jit.c lowers programs from.
 """
 import re
+import shutil
 import struct
+import subprocess
 import sys
 
 HOLES = {
     '_nj_s0': ('nj_slot', 0), '_nj_s1': ('nj_slot', 1), '_nj_s2': ('nj_slot', 2),
     '_nj_v0': ('nj_value', 0), '_nj_v1': ('nj_value', 1), '_nj_v2': ('nj_value', 2),
+    '_nj_r0': ('nj_ret', 0),
     '_nj_next': ('nj_next', 0), '_nj_jump': ('nj_jump', 0),
 }
 #  R_X86_64_64, _PC32, _PLT32, _32, _32S
@@ -132,6 +135,31 @@ def main(obj, out):
                         z = func_at.get(z['shndx'], z)
                     kept.add(z['name'])
 
+    #  the offsets the jumps inside each function go to, from objdump, if
+    #  there is one: a stencil that ends "jcc next; jmp target" can lose the
+    #  second jump, with the condition inverted, if nothing else jumps to it
+    jumps = None
+    if shutil.which('objdump'):
+        jumps = {}
+        dis = subprocess.run(['objdump', '-dr', '--no-show-raw-insn', obj],
+                             capture_output=True, text=True).stdout
+        fun, pend = None, None
+        for line in dis.split('\n'):
+            m = re.match(r'^[0-9a-f]+ <(\w+)>:$', line)
+            if m:
+                fun, pend = m.group(1), None
+                jumps[fun] = set()
+                continue
+            if re.match(r'^\s+[0-9a-f]+: R_X86_64_', line):
+                pend = None             #  a jump out, not a local one
+                continue
+            if pend is not None:
+                jumps[fun].add(pend)
+                pend = None
+            m = re.match(r'^\s*[0-9a-f]+:\s+j\w+\s+[0-9a-f]+ <(\w+)\+0x([0-9a-f]+)>$', line)
+            if m and fun and m.group(1) == fun:
+                pend = int(m.group(2), 16)
+
     code = bytearray()
     rels = []
     stens = [dict(), dict()]
@@ -161,6 +189,17 @@ def main(obj, out):
                     and off == len(body) - 4 and body[-5] == 0xe9):
                 tal = 1
             rels.append((off, TYPES[typ], kind, idx, add + more))
+        #  ends "jcc next; jmp elsewhere", and nothing else jumps to the
+        #  jmp: 2
+        n = len(body)
+        if (not tal and jumps is not None and len(rels) - first >= 2
+                and rels[-1][:2] == (n - 4, 'nj_pc32') and rels[-1][4] == -4
+                and rels[-1][2] in ('nj_jump', 'nj_ext')
+                and rels[-2] == (n - 9, 'nj_pc32', 'nj_next', 0, -4)
+                and body[n - 5] == 0xe9 and body[n - 11] == 0x0f
+                and (body[n - 10] & 0xf0) == 0x80
+                and (n - 5) not in jumps.get(y['name'], {n - 5})):
+            tal = 2
         stens[dir_i][op] = (len(code), len(body), first, len(rels) - first, tal)
         code.extend(body)
 

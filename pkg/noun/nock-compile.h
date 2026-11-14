@@ -168,6 +168,38 @@
 
     extern u3nc_stat u3nc_Stat;
 
+  /* u3nc_Ops_d: ops the interpreter has run, by the _B opcode of their
+  **             variant (U3NC_STAT).
+  */
+    extern c3_d u3nc_Ops_d[256];
+
+  /* u3nc_gain: reference-count gains the interpreter has run, and how many
+  **            of them repeat one of the same slot (U3NC_GAINS, with
+  **            U3NC_STAT).  Each counter three times: all of them, those
+  **            of an indirect noun, and those of a noun of the running
+  **            road, the only ones that move a count.
+  */
+    typedef struct {
+      c3_d gan_d[3];     //  gains
+      //  [0]: of the noun in a slot an op reads and does not consume;
+      //  [1]: of the head or the tail of one, by a borrowing HED or TAL
+      c3_d slo_d[2][3];  //  of the gains, those
+      c3_d rep_d[2][3];  //  of them, a second or later gain of that slot,
+                         //  or that part of it, in one run of its basic
+                         //  block, the slot not written in between
+      c3_d rno_d[2][3];  //  of them, with no test of the count of that
+                         //  noun in between (HER, TAR, a transferring jet)
+      c3_d rnc_d[2][3];  //  of them, with no call of compiled code and no
+                         //  such test of any noun in between
+      c3_d nou_d[3];     //  gains of a noun gained before in the same run
+                         //  of the block, through any slot or none
+      c3_d evi_d;     //  records of a slot lost to another (undercount)
+      c3_d see_d;     //  tests of counts
+      c3_d blk_d;     //  runs of basic blocks
+    } u3nc_gain;
+
+    extern u3nc_gain u3nc_Gain;
+
   /* u3nc_stat(): count an event, in a build with the runtime counters.
   */
 #ifdef U3NC_STAT
@@ -212,6 +244,19 @@
       extern c3_t u3nc_Jit;
       extern c3_h u3nc_Hot;
       extern c3_h u3nc_Win;
+
+    /* u3nc_Jop: experiments in the lowering, bits: 1, a stencil that ends
+    **           "jcc next; jmp target" becomes "j!cc target" and falls
+    **           through; 2, a HOP to the op that follows is nothing; 4,
+    **           the code counts its ops and the jumps to the next op that
+    **           were not dropped (u3nc_jit_counts()).
+    */
+      extern c3_h u3nc_Jop;
+
+#ifdef U3NC_JIT
+      void
+      u3nc_jit_counts(void);
+#endif
 
     /* u3nc_Gop: the unary program of the callee of the call by subject
     **           whose memoizing jet is being kicked (see _nc_memo_jet()),
@@ -259,6 +304,17 @@
       void
       u3nc_hot(c3_w num_w, c3_w dum_w);
 #endif
+
+    /* u3nc_op_name(): the name of an opcode.
+    */
+      const c3_c*
+      u3nc_op_name(c3_w op_w);
+
+    /* u3nc_census(): print the ops of the programs of this road and its
+    **                seniors, counted by opcode (U3NC_STAT).
+    */
+      void
+      u3nc_census(void);
 
     /* u3nc_regs(): print a histogram of the argument counts of the n-ary
     **              programs of this road and its seniors.

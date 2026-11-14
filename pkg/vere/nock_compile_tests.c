@@ -105,6 +105,11 @@ _setup(void)
   if ( getenv("U3NC_WIN") ) {
     u3nc_Win = atoi(getenv("U3NC_WIN"));
   }
+  //  U3NC_JOP: experiments in the lowering (u3nc_Jop)
+  //
+  if ( getenv("U3NC_JOP") ) {
+    u3nc_Jop = atoi(getenv("U3NC_JOP"));
+  }
 #endif
 
   u3C.wag_h |= u3o_hashless;
@@ -361,6 +366,10 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 #endif
 #ifdef U3NC_STAT
   c3_d    cel_d = u3a_Cel_d;
+  c3_d    ops_d[256];
+  u3nc_gain gan_u = u3nc_Gain;
+
+  memcpy(ops_d, u3nc_Ops_d, sizeof(ops_d));
 #endif
   u3nc_stat low_u = u3nc_Stat;
   c3_d    beg_d = _time();
@@ -390,6 +399,11 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
             u3nc_Stat.lon_d - low_u.lon_d,
             (u3nc_Stat.lot_d - low_u.lot_d) / 1000);
   }
+#ifdef U3NC_JIT
+  if ( u3nc_Jop & 4 ) {
+    u3nc_jit_counts();
+  }
+#endif
 #ifdef U3NC_STAT
   //  the cells the run allocated, in either interpreter
   //
@@ -439,6 +453,50 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
                     " known subtrees compared (not the same noun) in %.1f Mc\r\n",
             D(hug_d), D(hus_d), D(hus_c) / 1e6);
 #undef D
+
+    //  U3NC_OPS: the ops the run executed, by opcode, and its gains of
+    //  references (a build with -DU3NC_GAINS)
+    //
+    if ( getenv("U3NC_OPS") ) {
+      c3_d all_d = 0;
+
+      fprintf(stderr, "  ops");
+      for ( c3_w i_w = 0; i_w < 256; i_w++ ) {
+        c3_d num_d = u3nc_Ops_d[i_w] - ops_d[i_w];
+
+        if ( num_d ) {
+          all_d += num_d;
+          fprintf(stderr, " %s=%" PRIu64, u3nc_op_name(i_w), num_d);
+        }
+      }
+      fprintf(stderr, " ALL=%" PRIu64 "\r\n", all_d);
+
+#define G(f, i)  (u3nc_Gain.f[i] - gan_u.f[i])
+#define H(f, k, i)  (u3nc_Gain.f[k][i] - gan_u.f[k][i])
+      if ( u3nc_Gain.gan_d[0] != gan_u.gan_d[0] ) {
+        static const c3_c* nam_c[3] = { "all", "indirect", "counted" };
+
+        for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+          fprintf(stderr, "  gains %s: %" PRIu64 "; of a slot %" PRIu64
+                          ", repeated %" PRIu64 ", untested %" PRIu64
+                          ", and no call %" PRIu64 "; of a part of a slot %"
+                          PRIu64 ", repeated %" PRIu64 ", untested %" PRIu64
+                          ", and no call %" PRIu64 "; of a noun gained"
+                          " before %" PRIu64 "\r\n",
+                  nam_c[i_w], G(gan_d, i_w),
+                  H(slo_d, 0, i_w), H(rep_d, 0, i_w), H(rno_d, 0, i_w),
+                  H(rnc_d, 0, i_w),
+                  H(slo_d, 1, i_w), H(rep_d, 1, i_w), H(rno_d, 1, i_w),
+                  H(rnc_d, 1, i_w), G(nou_d, i_w));
+        }
+        fprintf(stderr, "  gains: %" PRIu64 " records lost, %" PRIu64
+                        " tests of counts, %" PRIu64 " runs of blocks\r\n",
+                u3nc_Gain.evi_d - gan_u.evi_d, u3nc_Gain.see_d - gan_u.see_d,
+                u3nc_Gain.blk_d - gan_u.blk_d);
+      }
+#undef H
+#undef G
+    }
   }
 #endif
 
@@ -642,6 +700,20 @@ _test(const c3_c* nam_c, u3_noun bus, u3_noun fol, c3_t jet_t)
       }
     }
 #endif
+  }
+
+  //  U3NC_WAIT=t: the warm runs start at the time t, in seconds of the
+  //  epoch, so that processes compared side by side run them together,
+  //  whatever their first runs took
+  //
+  if ( getenv("U3NC_WAIT") ) {
+    struct timespec now_u, til_u = { atol(getenv("U3NC_WAIT")), 0 };
+
+    clock_gettime(CLOCK_REALTIME, &now_u);
+    fprintf(stderr, "wait: %ld s\r\n", (long)(til_u.tv_sec - now_u.tv_sec));
+    if ( til_u.tv_sec > now_u.tv_sec ) {
+      clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &til_u, 0);
+    }
   }
 
   while ( rep_w-- ) {
@@ -2392,6 +2464,11 @@ static void
 _stat_sum(void)
 {
 #ifdef U3NC_STAT
+  //  U3NC_OPS: the ops of every program compiled, by opcode
+  //
+  if ( getenv("U3NC_OPS") ) {
+    u3nc_census();
+  }
   fprintf(stderr, "stat: %" PRIu64 " programs, %" PRIu64 " bytes, "
                   "%" PRIu64 " literals, %" PRIu64 " IML, %" PRIu64 " IMM "
                   "(%" PRIu64 " of 0, %" PRIu64 " of 1, %" PRIu64 " wide slot), "

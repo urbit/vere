@@ -487,7 +487,7 @@ static c3_t _nc_spg_t, _nc_spa_t;
     if ( !(K) ) {                                                               \
       c3_t _ind = (c3n == u3a_is_cat(pro));                                     \
       if ( _ind ) { u3nc_Stat.dbi_d++; }                                        \
-      if ( (pog_u)->ali_y[(ip) - (pog_u)->byc_u.ops_y] ) {                      \
+      if ( (pog_u)->ali_y[(ip) - (pog_u)->byc_u.ops_y] & 1 ) {                  \
         u3nc_Stat.ali_d++;                                                      \
         if ( _ind ) { u3nc_Stat.alx_d++; }                                      \
       }                                                                         \
@@ -495,8 +495,13 @@ static c3_t _nc_spg_t, _nc_spa_t;
   } while ( 0 )
 #  define _nc_stat_spa_set(v)  (_nc_spa_t = (v))
 #  define _nc_stat_spa_get()   (_nc_spa_t)
-#  define _nc_stat_frame(f)    ((f)->spa_y = _nc_spa_t)
-#  define _nc_stat_unframe(f)  (_nc_spa_t = (f)->spa_y)
+#  ifdef U3NC_GAINS
+#    define _nc_stat_frame(f)    ((f)->spa_y = _nc_spa_t, (f)->blk_d = _ng_blk_d)
+#    define _nc_stat_unframe(f)  (_nc_spa_t = (f)->spa_y, _ng_blk_d = (f)->blk_d)
+#  else
+#    define _nc_stat_frame(f)    ((f)->spa_y = _nc_spa_t)
+#    define _nc_stat_unframe(f)  (_nc_spa_t = (f)->spa_y)
+#  endif
 #else
 #  define _nc_stat(fel)  ((void)0)
 #  define _nc_stat_if(con, fel)  ((void)0)
@@ -509,6 +514,206 @@ static c3_t _nc_spg_t, _nc_spa_t;
 #  define _nc_stat_spa_get()   0
 #  define _nc_stat_frame(f)    ((void)0)
 #  define _nc_stat_unframe(f)  ((void)0)
+#endif
+
+/* u3nc_Ops_d: ops the interpreter has run, by the _B opcode of their
+**             variant (U3NC_STAT).
+*/
+c3_d u3nc_Ops_d[256];
+
+#ifdef U3NC_STAT
+#  define _nc_stat_op(op)  (u3nc_Ops_d[op]++)
+#else
+#  define _nc_stat_op(op)  ((void)0)
+#endif
+
+#define Y(op) #op,
+static const c3_c* _nc_opn_c[] = { OPCODES };
+#undef Y
+
+const c3_c*
+u3nc_op_name(c3_w op_w)
+{
+  return ( op_w < LAST ) ? _nc_opn_c[op_w] : "?";
+}
+
+/*  Repeated gains, for the statistics (U3NC_GAINS, with U3NC_STAT): which
+**  of the reference-count gains the interpreter runs are a second or later
+**  gain of the noun in one slot, within one run of a basic block, with the
+**  slot not written in between: what one addition to the count could
+**  replace.  A run of a block has a number (_ng_blk_d), kept in the frame
+**  across a call; a slot gained in it is recorded by its address, and
+**  forgotten when it is written or emptied.  An op that tests a count (a
+**  HER or a TAR looking for a cell to reuse, a transferring jet) stamps the
+**  noun (_ng_see()), so that a repeated gain can tell whether its noun was
+**  tested since the gain before.  The tables are direct-mapped: a record
+**  lost to another slot is a repeat missed (evi_d).
+*/
+u3nc_gain u3nc_Gain;
+
+#ifdef U3NC_GAINS
+#  ifndef U3NC_STAT
+#    error "U3NC_GAINS needs U3NC_STAT"
+#  endif
+typedef struct {
+  uintptr_t key_p;  //  the slot, by its address, and in the low bits what
+                    //  of it: the noun in it (0), its head (1), its tail (2)
+  u3_noun  non;     //  the noun gained
+  c3_d     blk_d;   //  the run of the block it was gained in, or 0
+  c3_d     see_d;   //  _ng_see_d at its last gain
+  c3_d     bar_d;   //  _ng_bar_d at its last gain
+} ng_slot;
+
+typedef struct {
+  u3_noun non;
+  c3_d    see_d;    //  when its count was last tested
+} ng_seen;
+
+typedef struct {
+  u3_noun non;
+  c3_d    blk_d;    //  the run of a block it was last gained in
+} ng_noun;
+
+#define _ng_slo_w  16
+#define _ng_see_w  20
+static ng_slot _ng_slo_u[1 << _ng_slo_w];
+static ng_noun _ng_non_u[1 << _ng_slo_w];
+static ng_seen _ng_see_u[1 << _ng_see_w];
+static c3_d    _ng_blk_d;       //  the run of a block we are in
+static c3_d    _ng_ser_d;       //  runs of blocks so far
+static c3_d    _ng_see_d = 1;   //  tests of counts so far
+static c3_d    _ng_bar_d;       //  calls of compiled code so far
+
+#define _ng_hash(v, bit)                                                        \
+  ( (c3_w)(((c3_d)(uintptr_t)(v) * 0x9e3779b97f4a7c15ULL) >> (64 - (bit))) )
+#define _ng_bump(fel, ind_t, nor_t)  do {                                       \
+    u3nc_Gain.fel[0]++;                                                         \
+    if ( ind_t ) { u3nc_Gain.fel[1]++; }                                        \
+    if ( nor_t ) { u3nc_Gain.fel[2]++; }                                        \
+  } while ( 0 )
+
+/* _ng_block(): a new run of a block.
+*/
+static inline void
+_ng_block(void)
+{
+  _ng_blk_d = ++_ng_ser_d;
+  u3nc_Gain.blk_d++;
+}
+
+/* _ng_gain(): a gain of som; nor_t: it is a noun of the running road.
+*/
+static inline void
+_ng_gain(u3_noun som, c3_t nor_t)
+{
+  c3_t ind_t = (c3n == u3a_is_cat(som));
+
+  _ng_bump(gan_d, ind_t, nor_t);
+
+  if ( ind_t ) {
+    ng_noun* non_u = &_ng_non_u[_ng_hash(som, _ng_slo_w)];
+
+    if ( (non_u->non == som) && (non_u->blk_d == _ng_blk_d) ) {
+      _ng_bump(nou_d, ind_t, nor_t);
+    }
+    else {
+      non_u->non   = som;
+      non_u->blk_d = _ng_blk_d;
+    }
+  }
+}
+
+/* _ng_slot(): a gain of som, which is the noun in the slot at adr
+**             (par_y 0), its head (1) or its tail (2); the slot stays.
+*/
+static inline void
+_ng_slot(u3_noun* adr, c3_y par_y, u3_noun som, c3_t nor_t)
+{
+  c3_t      ind_t = (c3n == u3a_is_cat(som));
+  uintptr_t key_p = (uintptr_t)adr | par_y;
+  ng_slot*  slo_u = &_ng_slo_u[_ng_hash(key_p, _ng_slo_w)];
+  c3_y      kin_y = !!par_y;
+  c3_d      see_d = 0;
+
+  _ng_bump(slo_d[kin_y], ind_t, nor_t);
+
+  if ( ind_t ) {
+    ng_seen* see_u = &_ng_see_u[_ng_hash(som, _ng_see_w)];
+
+    if ( see_u->non == som ) {
+      see_d = see_u->see_d;
+    }
+  }
+
+  if (  (slo_u->key_p == key_p) && (slo_u->blk_d == _ng_blk_d)
+     && (slo_u->non == som) )
+  {
+    _ng_bump(rep_d[kin_y], ind_t, nor_t);
+    if ( see_d <= slo_u->see_d ) {
+      _ng_bump(rno_d[kin_y], ind_t, nor_t);
+    }
+    if ( (_ng_see_d == slo_u->see_d) && (_ng_bar_d == slo_u->bar_d) ) {
+      _ng_bump(rnc_d[kin_y], ind_t, nor_t);
+    }
+  }
+  else {
+    if ( (slo_u->blk_d == _ng_blk_d) && (slo_u->key_p != key_p) ) {
+      u3nc_Gain.evi_d++;
+    }
+    slo_u->key_p = key_p;
+    slo_u->non   = som;
+    slo_u->blk_d = _ng_blk_d;
+  }
+  slo_u->see_d = _ng_see_d;
+  slo_u->bar_d = _ng_bar_d;
+}
+
+/* _ng_kill(): the slot at adr is written, or emptied.
+*/
+static inline void
+_ng_kill(u3_noun* adr)
+{
+  c3_y par_y;
+
+  for ( par_y = 0; par_y < 3; par_y++ ) {
+    uintptr_t key_p = (uintptr_t)adr | par_y;
+    ng_slot*  slo_u = &_ng_slo_u[_ng_hash(key_p, _ng_slo_w)];
+
+    if ( slo_u->key_p == key_p ) {
+      slo_u->blk_d = 0;
+    }
+  }
+}
+
+/* _ng_see(): the count of som is tested.
+*/
+static inline void
+_ng_see(u3_noun som)
+{
+  if ( c3n == u3a_is_cat(som) ) {
+    ng_seen* see_u = &_ng_see_u[_ng_hash(som, _ng_see_w)];
+
+    see_u->non   = som;
+    see_u->see_d = ++_ng_see_d;
+    u3nc_Gain.see_d++;
+  }
+}
+
+#  define NG_KILL(s)     _ng_kill(&reg[s])
+#  define NG_SEE(x)      _ng_see(x)
+#  define NG_BAR()       (_ng_bar_d++)
+#  define NG_PART(s, p, v)  ({                                                  \
+    u3_noun _n = (v);                                                           \
+    _ng_slot(&reg[s], (p), _n,                                                  \
+             (c3n == u3a_is_cat(_n)) && (c3y == _nc_normal(rod_u, _n)));        \
+  })
+#  define NG_SLOT(s, v)  NG_PART(s, 0, v)
+#else
+#  define NG_KILL(s)        ((void)0)
+#  define NG_SEE(x)         ((void)0)
+#  define NG_BAR()          ((void)0)
+#  define NG_SLOT(s, v)     ((void)0)
+#  define NG_PART(s, p, v)  ((void)0)
 #endif
 
 #ifdef U3NC_VERBOSE
@@ -3492,6 +3697,60 @@ _nc_decode(const c3_y* pog, c3_h* ip_h, c3_y* kon_y, c3_y* wid_y)
   return fam_y;
 }
 
+#ifdef U3NC_STAT
+/* _nc_ends(): whether a family ends its block without a target.
+*/
+static c3_t
+_nc_ends(c3_y fam_y)
+{
+  switch ( fam_y ) {
+    default: return 0;
+    case _nc_don: case _nc_dox: case _nc_jmp: case _nc_jms: case _nc_jmf:
+    case _nc_jmx: case _nc_jsp: case _nc_jmc: return 1;
+  }
+}
+
+/* _ng_leaders(): mark the ops of a program that start a basic block, bit
+**                1 of ali_y at the offset of the op: the first, the target
+**                of a branch, and what follows a branch or an op that ends
+**                the activation.  Bit 2 at the length: done.
+*/
+static __attribute__((noinline)) void
+_ng_leaders(u3nc_prog* pog_u)
+{
+  const c3_y* byc_y = pog_u->byc_u.ops_y;
+  c3_h        len_h = pog_u->byc_u.len_h, ip_h, arg_h[3] = {0};
+
+  pog_u->ali_y[0] |= 2;
+
+  for ( ip_h = 0; ip_h < len_h; ) {
+    c3_y fam_y, kon_y, wid_y, num_y, i_y;
+
+    if ( BOM == byc_y[ip_h] ) {
+      ip_h++;
+      pog_u->ali_y[ip_h] |= 2;
+      continue;
+    }
+
+    fam_y = _nc_decode(byc_y, &ip_h, &kon_y, &wid_y);
+    num_y = _nc_fam[fam_y].imm_y + _nc_fam[fam_y].src_y
+          + _nc_fam[fam_y].dst_y + _nc_fam[fam_y].tar_y;
+    for ( i_y = 0; i_y < num_y; i_y++ ) {
+      arg_h[i_y] = _nc_read(byc_y, &ip_h, wid_y);
+    }
+
+    if ( _nc_fam[fam_y].tar_y ) {
+      pog_u->ali_y[arg_h[num_y - 1]] |= 2;
+      pog_u->ali_y[ip_h] |= 2;
+    }
+    else if ( _nc_ends(fam_y) ) {
+      pog_u->ali_y[ip_h] |= 2;
+    }
+  }
+  pog_u->ali_y[len_h] |= 4;
+}
+#endif
+
 /* _nc_print_hint(): print the tag of a hint literal [tag formula].
 */
 static void
@@ -5278,7 +5537,17 @@ _nc_find(c3_h cid_h, u3_noun key)
     (void)0;                                                             \
   })
 #else
-#define GAIN(som)  ({                                                    \
+#ifdef U3NC_GAINS
+#  define GAIN(som)  ({                                                  \
+    u3_noun _g = (som);                                                  \
+    _ng_gain(_g, (c3n == u3a_is_cat(_g))                                 \
+                 && (c3y == _nc_normal(rod_u, _g)));                     \
+    GAIN_(_g);                                                           \
+  })
+#else
+#  define GAIN(som)  GAIN_(som)
+#endif
+#define GAIN_(som)  ({                                                   \
     u3_noun _s = (som);                                                  \
     if ( c3n == u3a_is_cat(_s) ) {                                       \
       if ( c3y == _nc_normal(rod_u, _s) ) {                              \
@@ -5322,6 +5591,9 @@ typedef struct __attribute__((__packed__)) {
   c3_h       cid_h;   //  memo cache
 #ifdef U3NC_STAT
   c3_y       spa_y;   //  the caller's activation-local spare (_nc_spa_t)
+#endif
+#ifdef U3NC_GAINS
+  c3_d       blk_d;   //  the run of a block the caller is in (_ng_blk_d)
 #endif
 #ifdef U3NC_JIT
   void*      ret_f;   //  caller code past the call, if it is native; else 0
@@ -5587,6 +5859,7 @@ u3nc_prog* u3nc_Gop;
 c3_t u3nc_Jit = 0;
 c3_h u3nc_Hot = 500;
 c3_h u3nc_Win = 10000;
+c3_h u3nc_Jop = 0;
 
 /*  the stencils that are pieces of a call (nock-compile-burn.c): past the
 **  opcodes in the table of the stencils
@@ -5684,7 +5957,9 @@ _nj_tick(void)
 void* const _nj_keep_v[] = {
   (void*)_nc_gain_slow,       (void*)_nc_lose_slow,
   (void*)_nc_burn_north_done, (void*)_nc_burn_south_done,
-  (void*)_nc_callee,          (void*)_nc_box
+  (void*)_nc_callee,          (void*)_nc_box,
+  (void*)_nc_burn_north_bail_exit, (void*)_nc_burn_south_bail_exit,
+  (void*)_nc_burn_north_bail_fail, (void*)_nc_burn_south_bail_fail
 };
 
 //  the interpreter of this compilation is never run
@@ -6165,6 +6440,60 @@ u3nc_hot(c3_w num_w, c3_w dum_w)
       _nc_print(pog_u);
     }
   }
+
+  c3_free(hot_u.pog_u);
+  c3_free(hot_u.mug_w);
+}
+
+/* u3nc_census(): print the ops of the programs of this road and its
+**                seniors, counted by opcode.
+*/
+void
+u3nc_census(void)
+{
+  _nc_hot   hot_u = {0};
+  c3_d      num_d[LAST] = {0}, all_d = 0, byc_d = 0;
+  c3_w      i_w;
+  u3a_road* rod_u;
+
+  for ( rod_u = u3R; rod_u; rod_u = u3tn(u3a_road, rod_u->par_p) ) {
+    u3h_walk_with(rod_u->ska.dir_p, _nc_hot_dir_cb, &hot_u);
+    u3h_walk_with(rod_u->ska.ent_p, _nc_hot_ent_cb, &hot_u);
+  }
+
+  for ( i_w = 0; i_w < hot_u.len_w; i_w++ ) {
+    const u3nc_prog* pog_u = hot_u.pog_u[i_w];
+    const c3_y*      byc_y = pog_u->byc_u.ops_y;
+    c3_h             len_h = pog_u->byc_u.len_h, ip_h;
+
+    byc_d += len_h;
+    for ( ip_h = 0; ip_h < len_h; ) {
+      c3_y fam_y, kon_y, wid_y, num_y, i_y;
+
+      all_d++;
+      if ( BOM == byc_y[ip_h] ) {
+        ip_h++;
+        num_d[BOM]++;
+        continue;
+      }
+      fam_y = _nc_decode(byc_y, &ip_h, &kon_y, &wid_y);
+      num_y = _nc_fam[fam_y].imm_y + _nc_fam[fam_y].src_y
+            + _nc_fam[fam_y].dst_y + _nc_fam[fam_y].tar_y;
+      for ( i_y = 0; i_y < num_y; i_y++ ) {
+        (void)_nc_read(byc_y, &ip_h, wid_y);
+      }
+      num_d[_nc_bas_y[fam_y] + (2 * kon_y)]++;
+    }
+  }
+
+  fprintf(stderr, "census: %" PRIc3_w " programs, %" PRIu64 " bytes, %" PRIu64
+                  " ops:", hot_u.len_w, byc_d, all_d);
+  for ( i_w = 0; i_w < LAST; i_w++ ) {
+    if ( num_d[i_w] ) {
+      fprintf(stderr, " %s=%" PRIu64, _nc_opn_c[i_w], num_d[i_w]);
+    }
+  }
+  fprintf(stderr, "\r\n");
 
   c3_free(hot_u.pog_u);
   c3_free(hot_u.mug_w);
