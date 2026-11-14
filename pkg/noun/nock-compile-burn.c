@@ -32,6 +32,27 @@ static_assert(1, "Hack to end the preamble");
 #  error "the u3nc interpreter needs clang's musttail and preserve_none"
 #endif
 
+//  _nc_mode: what an inclusion defines:
+//
+//    0: the interpreter: the opcode functions and _nc_burn(), their entry;
+//    1: the bodies native code shares rather than copies, of the ops too
+//       big to copy at every site (OP1F.., below);
+//    2: the stencils of native code (nock-compile-jit.c): the body of each
+//       opcode as a function of its own, global, in a section of its own,
+//       whose operands and continuations are undefined symbols, the holes
+//       the lowering fills in a copy of its machine code; and the pieces
+//       it makes calls of (CALB.., at the end).  Compiled apart, never
+//       linked.
+//
+//  Native code is more opcode functions: it runs with the interpreter's
+//  state in the interpreter's registers, on the interpreter's frames, and
+//  the two call each other with a jump.  A program starts as bytecode,
+//  and gets native code when it is hot (cold, below).
+//
+#ifndef _nc_mode
+#  define _nc_mode  0
+#endif
+
 #define _nc_cat_(a, b)  a##b
 #define _nc_cat(a, b)   _nc_cat_(a, b)
 
@@ -60,21 +81,65 @@ static_assert(1, "Hack to end the preamble");
    c3_w A, c3_w B, c3_w C)
 #define ARGS  SIG(arg_a_w, arg_b_w, arg_c_w)
 #define PASS  ip, reg, pog_u, rod_u, arg_a_w, arg_b_w, arg_c_w
-#define NEXT  ip, reg, pog_u, rod_u, 0, 0, 0
 
 typedef u3_noun (*OP_F)ARGS CONV;
 
-#define Y(op)  static u3_noun OP(op) ARGS CONV;
+//  BASE(op): the function op of the interpreter of this road direction,
+//  for the native code that goes with it
+//
+#ifndef _nc_base
+#  define _nc_base  _nc_burn
+#endif
+#define BASE(op)  _nc_cat(_nc_base, _##op)
+
+#if 0 == _nc_mode
+#  define NEXT  ip, reg, pog_u, rod_u, 0, 0, 0
+
+#  define Y(op)  static u3_noun OP(op) ARGS CONV;
 OPCODES
 WIDES
-#undef Y
+#  undef Y
 
 static u3_noun OP(done) ARGS CONV;
 
-#define Y(op)  OP(op),
+#  define Y(op)  OP(op),
 static const OP_F TAB[]  = { OPCODES };
 static const OP_F WTAB[] = { WIDES };
-#undef Y
+#  undef Y
+
+#elif 1 == _nc_mode
+#  define NEXT  ip, reg, pog_u, rod_u, 0, 0, 0
+
+#else
+//  a stencil passes nothing in the operand registers: und_w, a variable
+//  it never sets
+//
+#  define NEXT  ip, reg, pog_u, rod_u, und_w, und_w, und_w
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wuninitialized"
+#  pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+//  the holes: _nj_s0.._nj_s2, the operand of that index when it is a slot,
+//  the address of the symbol its offset in bytes from reg; _nj_v0.._nj_v2,
+//  when it is anything else, the address its value; _nj_next, the code of
+//  the next op; _nj_jump, of the target of a branch
+//
+extern u3_noun _nj_s0[], _nj_s1[], _nj_s2[];
+extern c3_y    _nj_v0[], _nj_v1[], _nj_v2[];
+u3_noun _nj_next ARGS CONV;
+u3_noun _nj_jump ARGS CONV;
+
+#  define SLT(i)  ((c3_d)(uintptr_t)_nj_s##i / sizeof(u3_noun))
+#  define VAL(i)  ((c3_d)(c3_h)(uintptr_t)_nj_v##i)
+#  define HOLE(fam, i)  ( (1 == _nj_k##i##_##fam) ? SLT(i) : VAL(i) )
+#endif
+
+#define FRAME_T  nc_frame
+#define FRAME_W  c3_wiseof(FRAME_T)
+
+//  _nc_dir: the index of the road direction, for the native code of a program
+//
+#define _nc_dir  ((_nc_mov_ws < 0) ? 0 : 1)
 
 #define RB()  (*ip++)
 #define RS()  ({ c3_h _v = ip[0] | (ip[1] << 8); ip += 2; _v; })
@@ -90,14 +155,24 @@ static const OP_F WTAB[] = { WIDES };
     _v & (c3_h)(0xffffffffULL >> (8 * (4 - _n)));                               \
   })
 
-//  BURN(): dispatch the next opcode
+//  BURN(): dispatch the next opcode; JUMP(t): the next is at t.  In a
+//  stencil: go to the code of the next op, or of the target (JUMP()
+//  leaves, and the BURN() after it is dead).  In a body native code
+//  shares: go back to the stencil that called it, which goes on.
 //
-#define BURN()  do {                                                            \
+#if 2 == _nc_mode
+#  define BURN()   MUSTTAIL return _nj_next(NEXT)
+#  define JUMP(t)  MUSTTAIL return _nj_jump(NEXT)
+#elif 1 == _nc_mode
+#  define BURN()   return (nj_run){ 0, 0 }
+#else
+#  define BURN()  do {                                                          \
     c3_y _op = *ip++;                                                           \
     MUSTTAIL return TAB[_op](NEXT);                                             \
   } while ( 0 )
 
-#define JUMP(t)  (ip = pog_u->byc_u.ops_y + (t))
+#  define JUMP(t)  (ip = pog_u->byc_u.ops_y + (t))
+#endif
 
 #define PUSH(n)  _nc_push(rod_u, _nc_mov_ws, n)
 #define POP(n)   _nc_pop(rod_u, _nc_mov_ws, n)
@@ -120,6 +195,7 @@ static const OP_F WTAB[] = { WIDES };
 //                  two slots that may be the same reads both before it
 //                  takes either
 //  DROP(s, K): release slot s after a borrowing read of it, if K
+//  VOID(s, K): the same, where the op knows a direct atom is in it
 //  EMPTY(): when checking, assert that every slot of the activation is
 //           zero: at a return or a tail call, they must be
 //
@@ -176,6 +252,59 @@ static const OP_F WTAB[] = { WIDES };
     }                                                                           \
   } while ( 0 )
 
+//  VOID(s, K): DROP(s, K) of a slot the op has seen a direct atom in:
+//  nothing to release
+//
+#define VOID(s, K)  do { if ( K ) { ZERO(s); } } while ( 0 )
+
+#if 2 == _nc_mode
+//  a stencil: no widths to decode, the operands are holes, by their kind
+//  (_nj_kin()), and the function is named as the opcode of its _B width
+//
+#define DECODE1(name)
+#define DECODE2(name)
+#define DECODE3(name)
+
+#define BODY0(name, body)                                                       \
+  u3_noun OP(name) ARGS CONV {                                                  \
+    c3_w und_w;                                                                 \
+    body()                                                                      \
+  }
+
+#define BODY1(name, fam, A, body, ...)                                          \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w;                                                                 \
+    const c3_d A = HOLE(fam, 0);                                                \
+    body(__VA_ARGS__)                                                           \
+  }
+
+#define BODY2(name, fam, A, B, body, ...)                                       \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w;                                                                 \
+    const c3_d A = HOLE(fam, 0);                                                \
+    const c3_d B = HOLE(fam, 1);                                                \
+    body(__VA_ARGS__)                                                           \
+  }
+
+#define BODY3(name, fam, A, B, C, body, ...)                                    \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w;                                                                 \
+    const c3_d A = HOLE(fam, 0);                                                \
+    const c3_d B = HOLE(fam, 1);                                                \
+    const c3_d C = HOLE(fam, 2);                                                \
+    body(__VA_ARGS__)                                                           \
+  }
+#elif 1 == _nc_mode
+//  no bodies of the ops that have stencils
+//
+#define DECODE1(name)
+#define DECODE2(name)
+#define DECODE3(name)
+#define BODY0(name, body)
+#define BODY1(name, fam, A, body, ...)
+#define BODY2(name, fam, A, B, body, ...)
+#define BODY3(name, fam, A, B, C, body, ...)
+#else
 //  DECODE1/2/3(name): the width variants name_B, name_S and name_V of an
 //  opcode with one, two or three immediates, each decoding them into the
 //  operand registers and tail-calling the shared body, name_in
@@ -236,26 +365,28 @@ static const OP_F WTAB[] = { WIDES };
     body()                                                                      \
   }
 
-#define BODY1(name, A, body, ...)                                               \
+#define BODY1(name, fam, A, body, ...)                                          \
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
     body(__VA_ARGS__)                                                           \
   }
 
-#define BODY2(name, A, B, body, ...)                                            \
+#define BODY2(name, fam, A, B, body, ...)                                       \
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
     const c3_h B = arg_b_w;                                                     \
     body(__VA_ARGS__)                                                           \
   }
 
-#define BODY3(name, A, B, C, body, ...)                                         \
+#define BODY3(name, fam, A, B, C, body, ...)                                    \
   static u3_noun OP(name##_in) ARGS CONV {                                      \
     const c3_h A = arg_a_w;                                                     \
     const c3_h B = arg_b_w;                                                     \
     const c3_h C = arg_c_w;                                                     \
     body(__VA_ARGS__)                                                           \
   }
+
+#endif
 
 //  OP1/2/3(op, A.., body): an opcode with one, two or three operands and
 //  no consume variants.  OP1K/2K/3K: with one consumable source, op_0
@@ -266,66 +397,199 @@ static const OP_F WTAB[] = { WIDES };
 //  and 2 and 3 for the second, the body taking KAY, KAT, KBY and KBT.
 //
 #define OP0(op, body)           BODY0(op, body)
-#define OP1(op, A, body)        DECODE1(op) BODY1(op, A, body)
-#define OP2(op, A, B, body)     DECODE2(op) BODY2(op, A, B, body)
-#define OP3(op, A, B, C, body)  DECODE3(op) BODY3(op, A, B, C, body)
+#define OP1(op, A, body)        DECODE1(op) BODY1(op, op, A, body)
+#define OP2(op, A, B, body)     DECODE2(op) BODY2(op, op, A, B, body)
+#define OP3(op, A, B, C, body)  DECODE3(op) BODY3(op, op, A, B, C, body)
 
 #define OP1K(op, A, body)                                                       \
-  DECODE1(op##_0) BODY1(op##_0, A, body, 0)                                     \
-  DECODE1(op##_1) BODY1(op##_1, A, body, 1)
+  DECODE1(op##_0) BODY1(op##_0, op, A, body, 0)                                 \
+  DECODE1(op##_1) BODY1(op##_1, op, A, body, 1)
 
 #define OP2K(op, A, B, body)                                                    \
-  DECODE2(op##_0) BODY2(op##_0, A, B, body, 0)                                  \
-  DECODE2(op##_1) BODY2(op##_1, A, B, body, 1)
+  DECODE2(op##_0) BODY2(op##_0, op, A, B, body, 0)                              \
+  DECODE2(op##_1) BODY2(op##_1, op, A, B, body, 1)
 
 #define OP3K(op, A, B, C, body)                                                 \
-  DECODE3(op##_0) BODY3(op##_0, A, B, C, body, 0)                               \
-  DECODE3(op##_1) BODY3(op##_1, A, B, C, body, 1)
+  DECODE3(op##_0) BODY3(op##_0, op, A, B, C, body, 0)                           \
+  DECODE3(op##_1) BODY3(op##_1, op, A, B, C, body, 1)
 
 #define OP2KK(op, A, B, body)                                                   \
-  DECODE2(op##_0) BODY2(op##_0, A, B, body, 0, 0)                               \
-  DECODE2(op##_1) BODY2(op##_1, A, B, body, 1, 0)                               \
-  DECODE2(op##_2) BODY2(op##_2, A, B, body, 0, 1)                               \
-  DECODE2(op##_3) BODY2(op##_3, A, B, body, 1, 1)
+  DECODE2(op##_0) BODY2(op##_0, op, A, B, body, 0, 0)                           \
+  DECODE2(op##_1) BODY2(op##_1, op, A, B, body, 1, 0)                           \
+  DECODE2(op##_2) BODY2(op##_2, op, A, B, body, 0, 1)                           \
+  DECODE2(op##_3) BODY2(op##_3, op, A, B, body, 1, 1)
 
 #define OP3KK(op, A, B, C, body)                                                \
-  DECODE3(op##_0) BODY3(op##_0, A, B, C, body, 0, 0)                            \
-  DECODE3(op##_1) BODY3(op##_1, A, B, C, body, 1, 0)                            \
-  DECODE3(op##_2) BODY3(op##_2, A, B, C, body, 0, 1)                            \
-  DECODE3(op##_3) BODY3(op##_3, A, B, C, body, 1, 1)
+  DECODE3(op##_0) BODY3(op##_0, op, A, B, C, body, 0, 0)                        \
+  DECODE3(op##_1) BODY3(op##_1, op, A, B, C, body, 1, 0)                        \
+  DECODE3(op##_2) BODY3(op##_2, op, A, B, C, body, 0, 1)                        \
+  DECODE3(op##_3) BODY3(op##_3, op, A, B, C, body, 1, 1)
 
 #define OP3K4(op, A, B, C, body)                                                \
-  DECODE3(op##_0)  BODY3(op##_0,  A, B, C, body, 0, 0, 0, 0)                    \
-  DECODE3(op##_1)  BODY3(op##_1,  A, B, C, body, 1, 0, 0, 0)                    \
-  DECODE3(op##_2)  BODY3(op##_2,  A, B, C, body, 0, 1, 0, 0)                    \
-  DECODE3(op##_3)  BODY3(op##_3,  A, B, C, body, 1, 1, 0, 0)                    \
-  DECODE3(op##_4)  BODY3(op##_4,  A, B, C, body, 0, 0, 1, 0)                    \
-  DECODE3(op##_5)  BODY3(op##_5,  A, B, C, body, 1, 0, 1, 0)                    \
-  DECODE3(op##_6)  BODY3(op##_6,  A, B, C, body, 0, 1, 1, 0)                    \
-  DECODE3(op##_7)  BODY3(op##_7,  A, B, C, body, 1, 1, 1, 0)                    \
-  DECODE3(op##_8)  BODY3(op##_8,  A, B, C, body, 0, 0, 0, 1)                    \
-  DECODE3(op##_9)  BODY3(op##_9,  A, B, C, body, 1, 0, 0, 1)                    \
-  DECODE3(op##_10) BODY3(op##_10, A, B, C, body, 0, 1, 0, 1)                    \
-  DECODE3(op##_11) BODY3(op##_11, A, B, C, body, 1, 1, 0, 1)                    \
-  DECODE3(op##_12) BODY3(op##_12, A, B, C, body, 0, 0, 1, 1)                    \
-  DECODE3(op##_13) BODY3(op##_13, A, B, C, body, 1, 0, 1, 1)                    \
-  DECODE3(op##_14) BODY3(op##_14, A, B, C, body, 0, 1, 1, 1)                    \
-  DECODE3(op##_15) BODY3(op##_15, A, B, C, body, 1, 1, 1, 1)
+  DECODE3(op##_0)  BODY3(op##_0, op,  A, B, C, body, 0, 0, 0, 0)                \
+  DECODE3(op##_1)  BODY3(op##_1, op,  A, B, C, body, 1, 0, 0, 0)                \
+  DECODE3(op##_2)  BODY3(op##_2, op,  A, B, C, body, 0, 1, 0, 0)                \
+  DECODE3(op##_3)  BODY3(op##_3, op,  A, B, C, body, 1, 1, 0, 0)                \
+  DECODE3(op##_4)  BODY3(op##_4, op,  A, B, C, body, 0, 0, 1, 0)                \
+  DECODE3(op##_5)  BODY3(op##_5, op,  A, B, C, body, 1, 0, 1, 0)                \
+  DECODE3(op##_6)  BODY3(op##_6, op,  A, B, C, body, 0, 1, 1, 0)                \
+  DECODE3(op##_7)  BODY3(op##_7, op,  A, B, C, body, 1, 1, 1, 0)                \
+  DECODE3(op##_8)  BODY3(op##_8, op,  A, B, C, body, 0, 0, 0, 1)                \
+  DECODE3(op##_9)  BODY3(op##_9, op,  A, B, C, body, 1, 0, 0, 1)                \
+  DECODE3(op##_10) BODY3(op##_10, op, A, B, C, body, 0, 1, 0, 1)                \
+  DECODE3(op##_11) BODY3(op##_11, op, A, B, C, body, 1, 1, 0, 1)                \
+  DECODE3(op##_12) BODY3(op##_12, op, A, B, C, body, 0, 0, 1, 1)                \
+  DECODE3(op##_13) BODY3(op##_13, op, A, B, C, body, 1, 0, 1, 1)                \
+  DECODE3(op##_14) BODY3(op##_14, op, A, B, C, body, 0, 1, 1, 1)                \
+  DECODE3(op##_15) BODY3(op##_15, op, A, B, C, body, 1, 1, 1, 1)
+
+//  OP1F.., OP1I.., OP1KT: an op whose native code is not a copy of its
+//  body: the stencil calls the one body all the sites of the op share, by
+//  the C convention, which saves the stencil's registers.  The body gets
+//  the state and the operands, and where the stencil goes on (ret_v), for
+//  a frame; it produces what to run next: a program on its slots, or
+//  nothing.  F: an op that never enters a program: the stencil goes on.
+//  I: one that may: the stencil enters it, or goes on.  T: one that ends
+//  the activation: the stencil enters the program, or is done with the
+//  product, which comes in place of the slots.  To the interpreter they
+//  are ops as the others.
+//
+#if 0 == _nc_mode
+#  define OP1F(op, A, body)          OP1(op, A, body)
+#  define OP1I(op, A, body)          OP1(op, A, body)
+#  define OP2KF(op, A, B, body)      OP2K(op, A, B, body)
+#  define OP3KKF(op, A, B, C, body)  OP3KK(op, A, B, C, body)
+#  define OP3KKI(op, A, B, C, body)  OP3KK(op, A, B, C, body)
+#  define OP1KT(op, A, body)         OP1K(op, A, body)
+#elif 1 == _nc_mode
+#  define FAR1(name, A, body, ...)                                              \
+  static nj_run OP(name##_far)(u3_noun* reg, u3nc_prog* pog_u,                  \
+                                u3a_road* rod_u, c3_d A, void* ret_v)           \
+  {                                                                             \
+    c3_y* ip = 0;                                                               \
+    body(__VA_ARGS__)                                                           \
+  }
+#  define FAR2(name, A, B, body, ...)                                           \
+  static nj_run OP(name##_far)(u3_noun* reg, u3nc_prog* pog_u,                  \
+                                u3a_road* rod_u, c3_d A, c3_d B, void* ret_v)   \
+  {                                                                             \
+    c3_y* ip = 0;                                                               \
+    body(__VA_ARGS__)                                                           \
+  }
+#  define FAR3(name, A, B, C, body, ...)                                        \
+  static nj_run OP(name##_far)(u3_noun* reg, u3nc_prog* pog_u,                  \
+                                u3a_road* rod_u, c3_d A, c3_d B, c3_d C,        \
+                                void* ret_v)                                    \
+  {                                                                             \
+    c3_y* ip = 0;                                                               \
+    body(__VA_ARGS__)                                                           \
+  }
+#  define OP1F(op, A, body)  FAR1(op, A, body)
+#  define OP1I(op, A, body)  FAR1(op, A, body)
+#  define OP2KF(op, A, B, body)                                                 \
+  FAR2(op##_0, A, B, body, 0) FAR2(op##_1, A, B, body, 1)
+#  define OP3KKF(op, A, B, C, body)                                             \
+  FAR3(op##_0, A, B, C, body, 0, 0) FAR3(op##_1, A, B, C, body, 1, 0)           \
+  FAR3(op##_2, A, B, C, body, 0, 1) FAR3(op##_3, A, B, C, body, 1, 1)
+#  define OP3KKI(op, A, B, C, body)  OP3KKF(op, A, B, C, body)
+#  define OP1KT(op, A, body)                                                    \
+  FAR1(op##_0, A, body, 0) FAR1(op##_1, A, body, 1)
+#else
+//  GO(wha): run the program a shared body produced, on its slots
+//
+#  define GO(wha)  do {                                                         \
+    pog_u = (wha).gop_u;                                                        \
+    reg   = (wha).nex;                                                          \
+    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);                        \
+  } while ( 0 )
+
+#  define FAR1(name)                                                            \
+  nj_run OP(name##_far)(u3_noun*, u3nc_prog*, u3a_road*, c3_d, void*);
+#  define FAR2(name)                                                            \
+  nj_run OP(name##_far)(u3_noun*, u3nc_prog*, u3a_road*, c3_d, c3_d, void*);
+#  define FAR3(name)                                                            \
+  nj_run OP(name##_far)(u3_noun*, u3nc_prog*, u3a_road*, c3_d, c3_d, c3_d,      \
+                         void*);
+
+#  define STF1(name)  FAR1(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w; void* und_v;                                                    \
+    (void)OP(name##_far)(reg, pog_u, rod_u, VAL(0), und_v);                     \
+    BURN();                                                                     \
+  }
+#  define STF2(name)  FAR2(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w; void* und_v;                                                    \
+    (void)OP(name##_far)(reg, pog_u, rod_u, VAL(0), VAL(1), und_v);             \
+    BURN();                                                                     \
+  }
+#  define STF3(name)  FAR3(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w und_w; void* und_v;                                                    \
+    (void)OP(name##_far)(reg, pog_u, rod_u, VAL(0), VAL(1), VAL(2), und_v);     \
+    BURN();                                                                     \
+  }
+#  define STI1(name)  FAR1(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w    und_w;                                                              \
+    nj_run nex_u = OP(name##_far)(reg, pog_u, rod_u, VAL(0),                    \
+                                   (void*)_nj_next);                            \
+    if ( nex_u.gop_u ) { GO(nex_u); }                                           \
+    BURN();                                                                     \
+  }
+#  define STI3(name)  FAR3(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w    und_w;                                                              \
+    nj_run nex_u = OP(name##_far)(reg, pog_u, rod_u, VAL(0), VAL(1), VAL(2),    \
+                                   (void*)_nj_next);                            \
+    if ( nex_u.gop_u ) { GO(nex_u); }                                           \
+    BURN();                                                                     \
+  }
+#  define STT1(name)  FAR1(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w    und_w; void* und_v;                                                 \
+    nj_run nex_u = OP(name##_far)(reg, pog_u, rod_u, VAL(0), und_v);            \
+    if ( nex_u.gop_u ) { GO(nex_u); }                                           \
+    MUSTTAIL return BASE(done)(ip, reg, pog_u, rod_u,                           \
+                               (u3_noun)(uintptr_t)nex_u.nex, und_w, und_w);    \
+  }
+
+#  define OP1F(op, A, body)          STF1(op)
+#  define OP1I(op, A, body)          STI1(op)
+#  define OP2KF(op, A, B, body)      STF2(op##_0) STF2(op##_1)
+#  define OP3KKF(op, A, B, C, body)                                             \
+  STF3(op##_0) STF3(op##_1) STF3(op##_2) STF3(op##_3)
+#  define OP3KKI(op, A, B, C, body)                                             \
+  STI3(op##_0) STI3(op##_1) STI3(op##_2) STI3(op##_3)
+#  define OP1KT(op, A, body)         STT1(op##_0) STT1(op##_1)
+#endif
 
 //  FRAME(des): push a frame recording this activation, its product to
-//              slot des; produces the frame
+//              slot des; produces the frame.  It says where the activation
+//              goes on: in the bytecode, or in native code (ret_f)
 //
+#if 2 != _nc_mode
+#ifndef U3NC_JIT
+#  define FRAME_BACK(f)  ((f)->ip_h = ip - pog_u->byc_u.ops_y)
+#elif 0 == _nc_mode
+#  define FRAME_BACK(f)                                                         \
+     ((f)->ret_f = 0, (f)->ip_h = ip - pog_u->byc_u.ops_y)
+#else
+#  define FRAME_BACK(f)  ((f)->ret_f = ret_v)
+#endif
+
 #define FRAME(des)  ({                                                          \
-    nc_frame* _f = PUSH(_nc_frame_w);                                           \
+    FRAME_T* _f = PUSH(FRAME_W);                                                \
     _f->pog_u = pog_u;                                                          \
     _f->reg   = reg;                                                            \
-    _f->ip_h  = ip - pog_u->byc_u.ops_y;                                        \
+    FRAME_BACK(_f);                                                             \
     _f->des_h = (des);                                                          \
     _f->key   = u3_none;                                                        \
     _f->cid_h = 0;                                                              \
     _nc_stat_frame(_f);                                                         \
     _f;                                                                         \
   })
+#endif
 
 //  SITE(): the call site a_h, its argument slots sot_h, their consume
 //          flags kon_y, and their number len_h
@@ -423,16 +687,58 @@ static const OP_F WTAB[] = { WIDES };
 #  define JT(x)  (x)
 #endif
 
-#define ENTER(len)  do {                                                        \
-    _nc_stat_pog(ent_d);                                                        \
+//  START(): run pog_u from its first op.  With native code in the build:
+//  through nat_f, the program's native code or the stub that runs its
+//  bytecode (cold); a shared body leaves it to its stencil.
+//  AGAIN(): the same for the running program, a loop
+//
+#if 1 == _nc_mode
+#  define START()  return (nj_run){ pog_u, reg }
+#elif defined(U3NC_JIT)
+#  define START()  MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT)
+#else
+#  define START()  do { ip = pog_u->byc_u.ops_y; BURN(); } while ( 0 )
+#endif
+#define AGAIN()  START()
+
+//  REST(gop, nex, len): zero the slots of gop at nex past its len
+//  arguments, if the build reads empty slots
+//
+#define REST(gop, nex, len)  do {                                               \
     if ( _nc_zer_t ) {                                                          \
-      for ( c3_h _i = (len); _i < pog_u->tot_h; _i++ ) {                        \
-        reg[_i] = 0;                                                            \
+      for ( c3_h _i = (len); _i < (gop)->tot_h; _i++ ) {                        \
+        (nex)[_i] = 0;                                                          \
       }                                                                         \
     }                                                                           \
+  } while ( 0 )
+
+#define ENTER(len)  do {                                                        \
+    _nc_stat_pog(ent_d);                                                        \
+    REST(pog_u, reg, len);                                                      \
     _nc_stat_spa_set(0);                                                        \
-    ip = pog_u->byc_u.ops_y;                                                    \
-    BURN();                                                                     \
+    START();                                                                    \
+  } while ( 0 )
+
+//  INVOKE(gop, nex, len, des): call gop on its len arguments, in its slots
+//    at nex, its product to slot des of this activation, which goes on
+//    after it;
+//  INVOKE_MEMO(gop, nex, len, des, kee, cid): the same, the product saved
+//    under the key kee in the memo cache cid
+//
+#define INVOKE(gop, nex, len, des)  do {                                        \
+    (void)FRAME(des);                                                           \
+    pog_u = (gop);                                                              \
+    reg   = (nex);                                                              \
+    ENTER(len);                                                                 \
+  } while ( 0 )
+
+#define INVOKE_MEMO(gop, nex, len, des, kee, cid)  do {                         \
+    FRAME_T* _fam = FRAME(des);                                                 \
+    _fam->key   = (kee);                                                        \
+    _fam->cid_h = (cid);                                                        \
+    pog_u = (gop);                                                              \
+    reg   = (nex);                                                              \
+    ENTER(len);                                                                 \
   } while ( 0 )
 
 //  CALL_MONO(gop, arg, des): call gop on its one argument arg, transferred,
@@ -441,30 +747,56 @@ static const OP_F WTAB[] = { WIDES };
 #define CALL_MONO(gop, arg, des)  do {                                          \
     u3_noun* _nex = PUSH((gop)->tot_h);                                         \
     _nex[0] = (arg);                                                            \
-    (void)FRAME(des);                                                           \
-    pog_u = (gop);                                                              \
-    reg   = _nex;                                                               \
-    ENTER(1);                                                                   \
+    INVOKE(gop, _nex, 1, des);                                                  \
   } while ( 0 )
+
+//  QUIT(): this activation, its slots all empty, makes way for one that
+//          returns in its place: its frame comes off;
+//  REJOIN(): and goes back over the slots of the new one
+//
+#define QUIT()                                                                  \
+    FRAME_T _fam = *(FRAME_T*)TOP(FRAME_W);                                     \
+    POP(FRAME_W + pog_u->tot_h)
+#define REJOIN()  (*(FRAME_T*)PUSH(FRAME_W) = _fam)
 
 //  TAIL_MONO(gop, arg): call gop on its one argument arg, transferred, in
 //                  place of this activation, whose slots are all empty
 //
 #define TAIL_MONO(gop, arg)  do {                                               \
-    nc_frame _fam;                                                              \
     EMPTY();                                                                    \
-    _fam = *(nc_frame*)TOP(_nc_frame_w);                                        \
-    POP(_nc_frame_w + pog_u->tot_h);                                            \
+    QUIT();                                                                     \
     pog_u  = (gop);                                                             \
     reg    = PUSH(pog_u->tot_h);                                                \
     reg[0] = (arg);                                                             \
-    *(nc_frame*)PUSH(_nc_frame_w) = _fam;                                       \
+    REJOIN();                                                                   \
     ENTER(1);                                                                   \
   } while ( 0 )
 
-//  DONE(pro): return pro, transferred, from this activation
+//  DONE(pro): return pro, transferred, from this activation.  A shared
+//  body leaves it to its stencil, which goes to the interpreter's done
 //
-#define DONE(pro)  MUSTTAIL return OP(done)(ip, reg, pog_u, rod_u, (pro), 0, 0)
+#if 2 == _nc_mode
+//  back to native code that takes no memo of the product, from here: a
+//  jump of this site's, which predicts better than one all sites share
+//
+#  define DONE(pro)  do {                                                       \
+    u3_noun  _pro = (pro);                                                      \
+    FRAME_T* _fam = TOP(FRAME_W);                                               \
+    if ( _fam->ret_f && (u3_none == _fam->key) ) {                              \
+      POP(FRAME_W + pog_u->tot_h);                                              \
+      pog_u = _fam->pog_u;                                                      \
+      reg   = _fam->reg;                                                        \
+      reg[_fam->des_h] = _pro;                                                  \
+      MUSTTAIL return ((OP_F)_fam->ret_f)(NEXT);                                \
+    }                                                                           \
+    MUSTTAIL return BASE(done)(ip, reg, pog_u, rod_u, _pro, und_w, und_w);      \
+  } while ( 0 )
+#elif 1 == _nc_mode
+#  define DONE(pro)  return (nj_run){ 0, (u3_noun*)(uintptr_t)(pro) }
+#else
+#  define DONE(pro)                                                             \
+     MUSTTAIL return OP(done)(ip, reg, pog_u, rod_u, (pro), 0, 0)
+#endif
 
 /* _nc_burn(): run a program on its arguments.  TRANSFERS the arguments.
 **
@@ -483,13 +815,14 @@ static const OP_F WTAB[] = { WIDES };
 **   emits it sweeping only, lowering the others to moves and a jump to
 **   the entry.
 */
+#if 0 == _nc_mode
 static u3_noun
 _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 {
   u3a_road* rod_u = u3R;
   u3_post   emp_p = rod_u->cap_p;
   u3_noun*  reg   = PUSH(pog_u->tot_h);
-  nc_frame* fam_u;
+  FRAME_T*  fam_u;
   c3_y*     ip;
   c3_y      op_y;
   c3_h      i_h;
@@ -504,15 +837,23 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
     }
   }
 
-  fam_u = PUSH(_nc_frame_w);
+  fam_u = PUSH(FRAME_W);
   fam_u->pog_u = NULL;
+#ifdef U3NC_JIT
+  fam_u->ret_f = 0;
+#endif
   _nc_stat_frame(fam_u);
   _nc_stat_pog(ent_d);
   _nc_stat_spa_set(0);
 
+#ifdef U3NC_JIT
+  (void)ip; (void)op_y;
+  pro  = ((OP_F)pog_u->nat_f[_nc_dir])(0, reg, pog_u, rod_u, 0, 0, 0);
+#else
   ip   = pog_u->byc_u.ops_y;
   op_y = *ip++;
   pro  = TAB[op_y](ip, reg, pog_u, rod_u, 0, 0, 0);
+#endif
 
   u3_assert( emp_p == rod_u->cap_p );
   return pro;
@@ -520,20 +861,23 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 
 //  done: arg_a_h is the product, transferred; the slots are all empty
 //
+#ifdef U3NC_STENCIL
+__attribute__((noinline))
+#endif
 static u3_noun
 OP(done) ARGS CONV
 {
   u3_noun   pro = arg_a_w;
-  nc_frame* fam_u;
+  FRAME_T*  fam_u;
   c3_h      d_h;
 
   EMPTY();
 
-  fam_u = TOP(_nc_frame_w);
+  fam_u = TOP(FRAME_W);
   _nc_stat_unframe(fam_u);
 
   if ( !fam_u->pog_u ) {
-    POP(_nc_frame_w + pog_u->tot_h);
+    POP(FRAME_W + pog_u->tot_h);
     return pro;
   }
 
@@ -544,14 +888,93 @@ OP(done) ARGS CONV
     _nc_stat(mes_d);
   }
 
-  POP(_nc_frame_w + pog_u->tot_h);
+  POP(FRAME_W + pog_u->tot_h);
   pog_u = fam_u->pog_u;
   reg   = fam_u->reg;
-  ip    = pog_u->byc_u.ops_y + fam_u->ip_h;
   d_h   = fam_u->des_h;
+#ifdef U3NC_JIT
+  //  the caller is native code
+  //
+  if ( fam_u->ret_f ) {
+    reg[d_h] = pro;
+    MUSTTAIL return ((OP_F)fam_u->ret_f)(NEXT);
+  }
+#endif
+  ip    = pog_u->byc_u.ops_y + fam_u->ip_h;
   PUT(d_h, pro);
   BURN();
 }
+
+#ifdef U3NC_JIT
+//  cold: what a program without native code for this road direction runs
+//  as: its bytecode, until it is hot: it has started u3nc_Hot times within
+//  one stretch of the clock (_nj_tick(); a start is a call, or a turn of a
+//  loop that is a tail call of itself); then native code, made here.
+//  Anything enters a program through nat_f, so the activation the count is
+//  reached on is the first to run natively.
+//
+static u3_noun
+OP(cold) ARGS CONV
+{
+  if ( pog_u->epo_h != _nj_epo_h ) {
+    pog_u->epo_h = _nj_epo_h;
+    pog_u->hot_h = 0;
+  }
+  if ( u3nc_Jit && (++pog_u->hot_h >= u3nc_Hot) ) {
+    _nj_lower(pog_u, _nc_dir);
+    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(PASS);
+  }
+  if ( !(++_nj_tic_h & 0xfff) ) {
+    _nj_tick();
+  }
+
+  ip = pog_u->byc_u.ops_y;
+  BURN();
+}
+#endif
+#endif
+
+
+#if 0 == _nc_mode
+/* _nc_burn_check(): the product of the array driver of the site dir_u on
+**   its arguments nex, tested against the unary program of its bell on the
+**   core rebuilt from them, as _cj_kick_f() tests a u3w driver: the arm
+**   trusted while the driver runs, lest it test itself, and off while the
+**   program runs, lest the program use it (the checked sites in it read
+**   the flags); a mismatch turns the arm off and fails.  RETAINS nex.
+*/
+static u3_noun
+_nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
+{
+  u3j_harm*  ham_u = dir_u->ham_u;
+  u3nc_prog* gop_u;
+  u3_noun    cor, pro, ame;
+
+  ham_u->ice = c3y;
+  pro = JT(dir_u->arm_u->arg_f(nex));
+  ham_u->ice = c3n;
+
+  cor   = _nc_core(dir_u, nex);
+  gop_u = _nc_mono(dir_u);
+
+  ham_u->liv = c3n;
+  ame = _nc_burn(gop_u, &cor, 1);
+  ham_u->liv = c3y;
+
+  if ( c3n == u3r_sing(ame, pro) ) {
+    u3l_log("test: %s %s: mismatch: good %x, bad %x",
+            ham_u->cop_u->cos_c,
+            (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
+            u3r_mug(ame),
+            u3r_mug(pro));
+    ham_u->liv = c3n;
+    return u3m_bail(c3__fail);
+  }
+
+  u3z(ame);
+  return pro;
+}
+#endif
 
 #define BODY_IMM()                                                              \
   PUT(d_h, a_h);                                                                \
@@ -752,7 +1175,7 @@ OP1K(CEL, a_h, BODY_CEL)
   if ( reg[a_h] > 1 ) {                                                         \
     u3m_bail(c3__exit);                                                         \
   }                                                                             \
-  DROP(a_h, K);                                                                 \
+  VOID(a_h, K);                                                                 \
   BURN();
 OP1K(LOB, a_h, BODY_LOB)
 
@@ -767,20 +1190,20 @@ OP2KK(EQU, a_h, b_h, BODY_EQU)
   u3_noun x = _nc_hilt_fore(pog_u->lit_u.non[a_h]);                             \
   *(u3_noun*)PUSH(1) = x;                                                       \
   BURN();
-OP1(HSP, a_h, BODY_HSP)
+OP1F(HSP, a_h, BODY_HSP)
 
 #define BODY_HSE()                                                              \
   u3_noun x = *(u3_noun*)TOP(1);                                                \
   POP(1);                                                                       \
   _nc_hilt_hind(pog_u->lit_u.non[a_h], x);                                      \
   BURN();
-OP1(HSE, a_h, BODY_HSE)
+OP1F(HSE, a_h, BODY_HSE)
 
 #define BODY_HDP(K)                                                             \
   u3_noun x = _nc_hint_fore(pog_u->lit_u.non[a_h], TAKE(b_h, K));               \
   *(u3_noun*)PUSH(1) = x;                                                       \
   BURN();
-OP2K(HDP, a_h, b_h, BODY_HDP)
+OP2KF(HDP, a_h, b_h, BODY_HDP)
 
 #define BODY_HDE(K)                                                             \
   u3_noun x = *(u3_noun*)TOP(1);                                                \
@@ -788,7 +1211,7 @@ OP2K(HDP, a_h, b_h, BODY_HDP)
   _nc_hint_hind(pog_u->lit_u.non[a_h], x);                                      \
   DROP(b_h, K);                                                                 \
   BURN();
-OP2K(HDE, a_h, b_h, BODY_HDE)
+OP2KF(HDE, a_h, b_h, BODY_HDE)
 
 //  a trace hint whose clue is a constant: push the literal [tag clue];
 //  the epilogue is an HDE, which drops the clue's register
@@ -797,7 +1220,7 @@ OP2K(HDE, a_h, b_h, BODY_HDE)
   u3t_push(GAIN(pog_u->lit_u.non[a_h]));                                        \
   *(u3_noun*)PUSH(1) = u3_nul;                                                  \
   BURN();
-OP1(HLP, a_h, BODY_HLP)
+OP1F(HLP, a_h, BODY_HLP)
 
 #define BODY_HMP()                                                              \
   u3nc_dire* dir_u;                                                             \
@@ -813,7 +1236,7 @@ OP1(HLP, a_h, BODY_HLP)
   }                                                                             \
   u3t_push(u3nt(c3__meaf, GAIN(dir_u->bell), lis));                             \
   BURN();
-OP1(HMP, a_h, BODY_HMP)
+OP1F(HMP, a_h, BODY_HMP)
 
 #define BODY_HME()                                                              \
   u3t_drop();                                                                   \
@@ -825,7 +1248,7 @@ OP0(HME, BODY_HME)
 #define BODY_HCP()                                                              \
   u3t_push(u3nc(c3__meac, GAIN(pog_u->lit_u.non[a_h])));                        \
   BURN();
-OP1(HCP, a_h, BODY_HCP)
+OP1F(HCP, a_h, BODY_HCP)
 
 #define BODY_HCE()                                                              \
   u3t_drop();                                                                   \
@@ -847,7 +1270,7 @@ OP0(HCE, BODY_HCE)
   DROP(b_h, KB);                                                                \
   PUT(d_h, pro);                                                                \
   BURN();
-OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
+OP3KKF(SPY, a_h, b_h, d_h, BODY_SPY)
 
 #define BODY_NOK(KA, KB)                                                        \
   u3nc_prog* gop_u;                                                             \
@@ -865,7 +1288,7 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
   TAKEN(x, a_h, KA);                                                            \
   DROP(b_h, KB);                                                                \
   CALL_MONO(gop_u, x, d_h);
-OP3KK(NOK, a_h, b_h, d_h, BODY_NOK)
+OP3KKI(NOK, a_h, b_h, d_h, BODY_NOK)
 
 //  the call opcodes: the site a_h holds the argument slots, their consume
 //  flags and the destination slot of the product
@@ -882,12 +1305,9 @@ OP3KK(NOK, a_h, b_h, d_h, BODY_NOK)
   GATHER(gop_u->tot_h);                                                         \
   _nc_stat_move(gop_u, kon_y, len_h, 0);                                        \
   MOVE();                                                                       \
-  (void)FRAME(dir_u->des_h);                                                    \
   _nc_stat(dir_d);                                                              \
-  pog_u = gop_u;                                                                \
-  reg   = nex;                                                                  \
-  ENTER(len_h);
-OP1(CAL, a_h, BODY_CAL)
+  INVOKE(gop_u, nex, len_h, dir_u->des_h);
+OP1I(CAL, a_h, BODY_CAL)
 
 //  the total array jet of the site, on its arguments: retained, so the
 //  consumed ones are released after
@@ -907,7 +1327,7 @@ OP1(CAL, a_h, BODY_CAL)
   LEAVE();                                                                      \
   PUT(dir_u->des_h, pro);                                                       \
   BURN();
-OP1(CAF, a_h, BODY_CAF)
+OP1F(CAF, a_h, BODY_CAF)
 
 //  the transferring driver of the jet, on its arguments: it takes the
 //  references of the consumed ones, and retains the others
@@ -928,48 +1348,9 @@ OP1(CAF, a_h, BODY_CAF)
   POP(len_h);                                                                   \
   PUT(dir_u->des_h, pro);                                                       \
   BURN();
-OP1(CAX, a_h, BODY_CAX)
+OP1F(CAX, a_h, BODY_CAX)
 
-/* _nc_burn_check(): the product of the array driver of the site dir_u on
-**   its arguments nex, tested against the unary program of its bell on the
-**   core rebuilt from them, as _cj_kick_f() tests a u3w driver: the arm
-**   trusted while the driver runs, lest it test itself, and off while the
-**   program runs, lest the program use it (the checked sites in it read
-**   the flags); a mismatch turns the arm off and fails.  RETAINS nex.
-*/
-static u3_noun
-_nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
-{
-  u3j_harm*  ham_u = dir_u->ham_u;
-  u3nc_prog* gop_u;
-  u3_noun    cor, pro, ame;
-
-  ham_u->ice = c3y;
-  pro = JT(dir_u->arm_u->arg_f(nex));
-  ham_u->ice = c3n;
-
-  cor   = _nc_core(dir_u, nex);
-  gop_u = _nc_mono(dir_u);
-
-  ham_u->liv = c3n;
-  ame = _nc_burn(gop_u, &cor, 1);
-  ham_u->liv = c3y;
-
-  if ( c3n == u3r_sing(ame, pro) ) {
-    u3l_log("test: %s %s: mismatch: good %x, bad %x",
-            ham_u->cop_u->cos_c,
-            (!strcmp(".2", ham_u->fcs_c)) ? "$" : ham_u->fcs_c,
-            u3r_mug(ame),
-            u3r_mug(pro));
-    ham_u->liv = c3n;
-    return u3m_bail(c3__fail);
-  }
-
-  u3z(ame);
-  return pro;
-}
-
-#define CHECK(dir, nex, len)  _nc_cat(_nc_burn, _check)(dir, nex, len)
+#define CHECK(dir, nex, len)  BASE(check)(dir, nex, len)
 
 //  the total array jet of the site under the flags of its arm, as u3n
 //  kicks a jet (_cj_kick_f()): the arm off, the unary program of the
@@ -1006,7 +1387,7 @@ _nc_cat(_nc_burn, _check)(u3nc_dire* dir_u, u3_noun* nex, c3_h len_h)
   LEAVE();                                                                      \
   PUT(dir_u->des_h, pro);                                                       \
   BURN();
-OP1(CAC, a_h, BODY_CAC)
+OP1I(CAC, a_h, BODY_CAC)
 
 //  a call by subject: the u3w jet of the site, if it has one, on the
 //  subject, under the flags of its arm; the unary program of the bell if
@@ -1039,12 +1420,11 @@ OP1(CAC, a_h, BODY_CAC)
   _nc_stat(sub_d);                                                              \
   CALLEE();                                                                     \
   CALL_MONO(gop_u, x, dir_u->des_h);
-OP1(CAP, a_h, BODY_CAP)
+OP1I(CAP, a_h, BODY_CAP)
 
 #define BODY_CAM()                                                              \
   u3nc_dire* dir_u;                                                             \
   u3nc_prog* gop_u;                                                             \
-  nc_frame*  fam_u;                                                             \
   c3_h*      sot_h;                                                             \
   c3_y*      kon_y;                                                             \
   c3_h       len_h;                                                             \
@@ -1073,19 +1453,13 @@ OP1(CAP, a_h, BODY_CAP)
   }                                                                             \
   _nc_stat_move(gop_u, kon_y, len_h, 0);                                        \
   MOVE();                                                                       \
-  fam_u = FRAME(dir_u->des_h);                                                  \
-  fam_u->key   = x;                                                             \
-  fam_u->cid_h = dir_u->cid_h;                                                  \
   _nc_stat(dir_d);                                                              \
-  pog_u = gop_u;                                                                \
-  reg   = nex;                                                                  \
-  ENTER(len_h);
-OP1(CAM, a_h, BODY_CAM)
+  INVOKE_MEMO(gop_u, nex, len_h, dir_u->des_h, x, dir_u->cid_h);
+OP1I(CAM, a_h, BODY_CAM)
 
 #define BODY_CSM()                                                              \
   u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[a_h]);                                \
   u3nc_prog* gop_u;                                                             \
-  nc_frame*  fam_u;                                                             \
   u3_noun*   nex;                                                               \
   c3_h       s_h = SUB();                                                       \
   u3_noun    x   = reg[s_h];                                                    \
@@ -1111,13 +1485,8 @@ OP1(CAM, a_h, BODY_CAM)
   nex = PUSH(gop_u->tot_h);                                                     \
   TAKEN(x, s_h, KON());                                                         \
   nex[0] = x;                                                                   \
-  fam_u  = FRAME(dir_u->des_h);                                                 \
-  fam_u->key   = o;                                                             \
-  fam_u->cid_h = dir_u->cid_h;                                                  \
-  pog_u = gop_u;                                                                \
-  reg   = nex;                                                                  \
-  ENTER(1);
-OP1(CSM, a_h, BODY_CSM)
+  INVOKE_MEMO(gop_u, nex, 1, dir_u->des_h, o, dir_u->cid_h);
+OP1I(CSM, a_h, BODY_CSM)
 
 //  branches release a source on the edge that consumes it, before they
 //  go: KY (KAY, KBY) on the fall-through to the yes block, KT (KAT, KBT)
@@ -1149,7 +1518,7 @@ OP3K4(EQQ, a_h, b_h, c_h, BODY_EQQ)
 
 #define BODY_EQI(KY, KT)                                                        \
   if ( reg[b_h] == a_h ) {                                                      \
-    DROP(b_h, KY);                                                              \
+    VOID(b_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \
     DROP(b_h, KT);                                                              \
@@ -1194,18 +1563,18 @@ OP3KK(EQL, a_h, b_h, c_h, BODY_EQL)
     u3m_bail(c3__exit);                                                         \
   }                                                                             \
   if ( 1 == x ) {                                                               \
-    DROP(a_h, KT);                                                              \
+    VOID(a_h, KT);                                                              \
     JUMP(b_h);                                                                  \
   }                                                                             \
   else {                                                                        \
-    DROP(a_h, KY);                                                              \
+    VOID(a_h, KY);                                                              \
   }                                                                             \
   BURN();
 OP2KK(BRN, a_h, b_h, BODY_BRN)
 
 #define BODY_BRZ(KY, KT)                                                        \
   if ( 0 == reg[a_h] ) {                                                        \
-    DROP(a_h, KY);                                                              \
+    VOID(a_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \
     DROP(a_h, KT);                                                              \
@@ -1226,7 +1595,6 @@ OP1(HOP, a_h, BODY_HOP)
 #define BODY_JMP(S)                                                             \
   u3nc_dire* dir_u;                                                             \
   u3nc_prog* gop_u;                                                             \
-  nc_frame   fam;                                                               \
   c3_h*      sot_h;                                                             \
   c3_y*      kon_y;                                                             \
   c3_h       len_h;                                                             \
@@ -1240,14 +1608,13 @@ OP1(HOP, a_h, BODY_HOP)
   SWEEP(S);                                                                     \
   EMPTY();                                                                      \
   POP(len_h);                                                                   \
-  fam = *(nc_frame*)TOP(_nc_frame_w);                                           \
-  POP(_nc_frame_w + pog_u->tot_h);                                              \
+  QUIT();                                                                       \
   pog_u = gop_u;                                                                \
   reg   = PUSH(pog_u->tot_h);                                                   \
   memmove(reg, nex, len_h * sizeof(u3_noun));                                   \
-  *(nc_frame*)PUSH(_nc_frame_w) = fam;                                          \
+  REJOIN();                                                                     \
   ENTER(len_h);
-OP1K(JMP, a_h, BODY_JMP)
+OP1KT(JMP, a_h, BODY_JMP)
 
 //  a tail call to itself. Only the sweeping variant S == 1 is called, the other
 //  gets lowered to a bunch of MOVs + HOP to entry point
@@ -1269,9 +1636,8 @@ OP1K(JMP, a_h, BODY_JMP)
     reg[_i] = nex[_i];                                                          \
   }                                                                             \
   POP(len_h);                                                                   \
-  ip = pog_u->byc_u.ops_y;                                                      \
-  BURN();
-OP1K(JMS, a_h, BODY_JMS)
+  AGAIN();
+OP1KT(JMS, a_h, BODY_JMS)
 
 #define BODY_JMF(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -1288,7 +1654,7 @@ OP1K(JMS, a_h, BODY_JMS)
   LEAVE();                                                                      \
   SWEEP(S);                                                                     \
   DONE(pro);
-OP1K(JMF, a_h, BODY_JMF)
+OP1KT(JMF, a_h, BODY_JMF)
 
 #define BODY_JMX(S)                                                             \
   u3nc_dire* dir_u;                                                             \
@@ -1306,7 +1672,7 @@ OP1K(JMF, a_h, BODY_JMF)
   POP(len_h);                                                                   \
   SWEEP(S);                                                                     \
   DONE(pro);
-OP1K(JMX, a_h, BODY_JMX)
+OP1KT(JMX, a_h, BODY_JMX)
 
 //  the subject's slot gives up its reference, to the jet or the callee
 //
@@ -1340,7 +1706,7 @@ OP1K(JMX, a_h, BODY_JMX)
   _nc_stat(sub_d);                                                              \
   CALLEE();                                                                     \
   TAIL_MONO(gop_u, x);
-OP1K(JSP, a_h, BODY_JSP)
+OP1KT(JSP, a_h, BODY_JSP)
 
 //  CAC in tail position: JMF, or JSP without a driver when the arm is off
 //
@@ -1371,7 +1737,7 @@ OP1K(JSP, a_h, BODY_JSP)
   LEAVE();                                                                      \
   SWEEP(S);                                                                     \
   DONE(pro);
-OP1K(JMC, a_h, BODY_JMC)
+OP1KT(JMC, a_h, BODY_JMC)
 
 #define BODY_DON(S)                                                             \
   u3_noun pro = reg[a_h];                                                       \
@@ -1415,12 +1781,19 @@ OP2K(DOX, a_h, b_h, BODY_DOX)
 OP1(DRO, a_h, BODY_DRO)
 
 
+#if 1 != _nc_mode
+#if 2 == _nc_mode
+u3_noun
+#else
 static u3_noun
+#endif
 OP(BOM) ARGS CONV
 {
   u3m_bail(c3__exit);
 }
+#endif
 
+#if 0 == _nc_mode
 //  WIDE: the _V width of the opcode in the next byte, from its own table
 //
 static u3_noun
@@ -1429,6 +1802,174 @@ OP(WIDE) ARGS CONV
   c3_y op_y = RB();
   MUSTTAIL return WTAB[op_y](NEXT);
 }
+#endif
+
+#if 2 == _nc_mode
+//  The stencils of a call, which native code makes of pieces, one per
+//  argument, where the interpreter loops over the site: no loop, and the
+//  slots are in the code.  Between the pieces the slots of the callee
+//  travel in the instruction pointer's register, which native code has no
+//  other use for, and the callee, by its loom offset, in the first
+//  operand's.
+//
+//    CALB i     the callee of site i, linked; its slots pushed
+//    ARGB s j   slot s to argument j, borrowed
+//    ARGK s j   slot s to argument j, consumed
+//    ARGC s j   slot s to argument j, uncounted: for a jet, which retains
+//    CALE d n   the frame, the product to slot d; enter the callee, which
+//               has n arguments
+//    JETB n     room for the arguments of a total array jet, n words
+//    JETE i     the jet of site i on them; the product waits in their
+//               place for the drops of the arguments the site consumes,
+//               which follow as DROs: it may go to the slot of one
+//    JETP n d   the product to slot d; the n words popped
+//    JMPB i n   the callee of site i, linked; room for its n arguments,
+//               above this activation
+//    JMPE n     this activation gives way to the callee's, the frame over
+//               its slots, the n arguments moved into them; enter it.
+//               JMPE1..JMPE4: the same for that many arguments, the move
+//               in line
+//
+#define HAND  ip, reg, pog_u, rod_u, arg_a_w, und_w, und_w
+
+u3_noun OP(CALB) ARGS CONV {
+  c3_w       und_w;
+  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[VAL(0)]);
+  u3nc_prog* gop_u;
+  CALLEE();
+  ip      = (c3_y*)PUSH(gop_u->tot_h);
+  arg_a_w = u3of(u3nc_prog, gop_u);
+  MUSTTAIL return _nj_next(HAND);
+}
+
+u3_noun OP(ARGB) ARGS CONV {
+  c3_w und_w;
+  ((u3_noun*)ip)[SLT(1)] = GAIN(reg[SLT(0)]);
+  MUSTTAIL return _nj_next(HAND);
+}
+
+u3_noun OP(ARGK) ARGS CONV {
+  c3_w und_w;
+  ((u3_noun*)ip)[SLT(1)] = reg[SLT(0)];
+  ZERO(SLT(0));
+  MUSTTAIL return _nj_next(HAND);
+}
+
+u3_noun OP(ARGC) ARGS CONV {
+  c3_w und_w;
+  ((u3_noun*)ip)[SLT(1)] = reg[SLT(0)];
+  MUSTTAIL return _nj_next(HAND);
+}
+
+u3_noun OP(CALE) ARGS CONV {
+  c3_w       und_w;
+  u3nc_prog* gop_u = u3to(u3nc_prog, arg_a_w);
+  FRAME_T*   fam_u = PUSH(FRAME_W);
+  fam_u->pog_u = pog_u;
+  fam_u->reg   = reg;
+  fam_u->ret_f = (void*)_nj_next;
+  fam_u->des_h = VAL(0);
+  fam_u->key   = u3_none;
+  fam_u->cid_h = 0;
+  pog_u = gop_u;
+  reg   = (u3_noun*)ip;
+  REST(pog_u, reg, VAL(1));
+  MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);
+}
+
+u3_noun OP(JMPB) ARGS CONV {
+  c3_w       und_w;
+  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[VAL(0)]);
+  u3nc_prog* gop_u;
+  CALLEE();
+  ip      = (c3_y*)PUSH(VAL(1));
+  arg_a_w = u3of(u3nc_prog, gop_u);
+  MUSTTAIL return _nj_next(HAND);
+}
+
+#define JMPE(nam, num)                                                          \
+  u3_noun OP(nam) ARGS CONV {                                                   \
+    c3_w       und_w;                                                           \
+    u3nc_prog* gop_u = u3to(u3nc_prog, arg_a_w);                                \
+    u3_noun*   nex   = (u3_noun*)ip;                                            \
+    POP(num);                                                                   \
+    QUIT();                                                                     \
+    pog_u = gop_u;                                                              \
+    reg   = PUSH(pog_u->tot_h);                                                 \
+    memmove(reg, nex, (num) * sizeof(u3_noun));                                 \
+    REJOIN();                                                                   \
+    REST(pog_u, reg, num);                                                      \
+    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);                        \
+  }
+JMPE(JMPE,  VAL(0))
+JMPE(JMPE1, 1)
+JMPE(JMPE2, 2)
+JMPE(JMPE3, 3)
+JMPE(JMPE4, 4)
+#undef JMPE
+
+u3_noun OP(JETB) ARGS CONV {
+  c3_w und_w;
+  ip = (c3_y*)PUSH(VAL(0));
+  BURN();
+}
+
+u3_noun OP(JETE) ARGS CONV {
+  c3_w       und_w;
+  u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[VAL(0)]);
+  u3_noun*   nex   = (u3_noun*)ip;
+  nex[0] = dir_u->arm_u->arg_f(nex);
+  BURN();
+}
+
+u3_noun OP(JETP) ARGS CONV {
+  c3_w    und_w;
+  u3_noun pro = ((u3_noun*)ip)[0];
+  POP(VAL(0));
+  reg[SLT(1)] = pro;
+  BURN();
+}
+
+#undef HAND
+#  pragma clang diagnostic pop
+#  undef SLT
+#  undef VAL
+#  undef HOLE
+#endif
+#undef _nc_mode
+#undef FAR1
+#undef FAR2
+#undef FAR3
+#undef STF1
+#undef STF2
+#undef STF3
+#undef STI1
+#undef STI3
+#undef STT1
+#undef GO
+#undef OP1F
+#undef OP1I
+#undef OP2KF
+#undef OP3KKF
+#undef OP3KKI
+#undef OP1KT
+#undef BASE
+#undef _nc_base
+#undef FRAME_T
+#undef FRAME_W
+#undef FRAME_BACK
+#undef REST
+#undef INVOKE
+#undef INVOKE_MEMO
+#undef CALL_MONO
+#undef QUIT
+#undef REJOIN
+#undef TAIL_MONO
+#undef START
+#undef AGAIN
+#undef _nc_dir
+#undef BODY0
+#undef OP0
 
 #undef _nc_cat_
 #undef _nc_cat
@@ -1456,6 +1997,7 @@ OP(WIDE) ARGS CONV
 #undef TAKEN
 #undef TAKE
 #undef DROP
+#undef VOID
 #undef UNIQUE
 #undef CELL
 #undef DECODE1

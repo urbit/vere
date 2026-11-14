@@ -93,6 +93,20 @@ _setup(void)
   u3_cue_xeno* sil_u;
   u3_weak      pil;
 
+  //  U3NC_JIT: compiled nock gets native code (a build with -Dska-jit):
+  //  the programs that start U3NC_HOT times within U3NC_WIN microseconds
+  //  (1: all of them, from the first run)
+  //
+#ifdef U3NC_JIT
+  u3nc_Jit = getenv("U3NC_JIT") && atoi(getenv("U3NC_JIT"));
+  if ( getenv("U3NC_HOT") ) {
+    u3nc_Hot = atoi(getenv("U3NC_HOT"));
+  }
+  if ( getenv("U3NC_WIN") ) {
+    u3nc_Win = atoi(getenv("U3NC_WIN"));
+  }
+#endif
+
   u3C.wag_h |= u3o_hashless;
   u3C.hap_w  = 1000000; //  memo cache sizes, as in the runtime
   u3C.per_w  = 50000;
@@ -348,6 +362,7 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 #ifdef U3NC_STAT
   c3_d    cel_d = u3a_Cel_d;
 #endif
+  u3nc_stat low_u = u3nc_Stat;
   c3_d    beg_d = _time();
   c3_d    tsb_d = _tsc();
   u3_noun gon   = u3m_soft(0, fun_f, u3nc(u3k(bus), u3k(fol)));
@@ -364,6 +379,17 @@ _run(const c3_c* nam_c, u3_funk fun_f, u3_noun bus, u3_noun fol)
 
   fprintf(stderr, "%s: %" PRIu64 " us\r\n", nam_c, end_d - beg_d);
   _run_us_d = end_d - beg_d;
+
+  //  what the run lowered to native code
+  //
+  if ( u3nc_Stat.low_d != low_u.low_d ) {
+    fprintf(stderr, "  lowered %" PRIu64 " programs, %" PRIu64 " bytes of "
+                    "bytecode to %" PRIu64 " of native code, in %" PRIu64
+                    " us\r\n",
+            u3nc_Stat.low_d - low_u.low_d, u3nc_Stat.lob_d - low_u.lob_d,
+            u3nc_Stat.lon_d - low_u.lon_d,
+            (u3nc_Stat.lot_d - low_u.lot_d) / 1000);
+  }
 #ifdef U3NC_STAT
   //  the cells the run allocated, in either interpreter
   //

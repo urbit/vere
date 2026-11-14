@@ -24,9 +24,7 @@
 #include "zave.h"
 #include <limits.h>
 
-#ifdef U3NC_STAT
 #include <time.h>
-#endif
 
 /*  Bytecode.
 **
@@ -288,6 +286,21 @@ static const struct {
 #undef _nc_fam_row
 #undef _nc_nul_row
 
+/* _nj_kin(): the kind of operand i of a family, in the order of the
+**            encoding (the immediate, the sources, the destination, the
+**            target): 0, an index or an atom; 1, a slot; 2, a jump target.
+**            _nj_k0_OP.._nj_k2_OP: of the operands of each, for the holes
+**            of its stencil (nock-compile-burn.c).
+*/
+#define _nj_kin(imm, src, dst, i)                                               \
+  ( ((i) < (imm)) ? 0 : ((i) < ((imm) + (src) + (dst))) ? 1 : 2 )
+#define _nc_fam_kin(fam, OP, src, dst, imm, tar, sot, kon, swe)                 \
+  _nj_k0_##OP = _nj_kin(imm, src, dst, 0),                                      \
+  _nj_k1_##OP = _nj_kin(imm, src, dst, 1),                                      \
+  _nj_k2_##OP = _nj_kin(imm, src, dst, 2),
+enum { FAMILIES(_nc_fam_kin) };
+#undef _nc_fam_kin
+
 /* _nc_edgy(): whether a family is a branch on sources, whose variant
 **             bits consume them per edge: for source i, bit 2i on the
 **             fall-through (the yes block), bit 2i+1 on the jump.
@@ -517,10 +530,15 @@ static const c3_t _nc_swe_t = 0;
 
 /* _nc_ret: the parts of a product returned in parts, but the first: from
 **          the RTS ops before a DOX to the RTL ops after the call, with
-**          nothing run in between.
+**          nothing run in between.  With native code in the build it has
+**          a name the stencils can share it by.
 */
 #define _nc_ret_max  8
+#ifdef U3NC_JIT
+u3_noun _nc_ret[_nc_ret_max];
+#else
 static u3_noun _nc_ret[_nc_ret_max];
+#endif
 
 /* _nc_zer_t: whether the interpreter zeroes a slot it empties.  A slot
 **            holds a reference iff its register is live, and without
@@ -3710,6 +3728,33 @@ _nc_prog_lay(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
   return lay_u;
 }
 
+#ifdef U3NC_JIT
+/* _nc_burn_north_cold(), _nc_burn_south_cold(): what runs a program that
+**   has no native code: the stubs for its bytecode, which count its starts
+**   and lower it when it has had enough (nock-compile-burn.c).
+** _nj_lower(): make the native code of a program for a road direction.
+** _nj_keep(), _nj_lose(): hand over, free the native code of a program.
+*/
+static u3_noun _nc_burn_north_cold(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
+                                   c3_w, c3_w, c3_w)
+  __attribute__((preserve_none));
+static u3_noun _nc_burn_south_cold(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
+                                   c3_w, c3_w, c3_w)
+  __attribute__((preserve_none));
+static void _nj_lower(u3nc_prog* pog_u, c3_y dir_y);
+static void _nj_keep(u3nc_prog* gop_u, const u3nc_prog* pog_u);
+static void _nj_lose(u3nc_prog* pog_u);
+
+/* nj_run: what a body shared by native code tells its stencil to run
+**          next: a program on its slots, or nothing; or, from an op that
+**          ends the activation, its product in place of the slots.
+*/
+typedef struct {
+  u3nc_prog* gop_u;
+  u3_noun*   nex;
+} nj_run;
+#endif
+
 /* _nc_prog_fix(): set the pointers of a program from its lengths.
 */
 static void
@@ -3726,6 +3771,12 @@ _nc_prog_fix(u3nc_prog* pog_u)
   pog_u->sot_u.kon_y = dat_y + lay_u.kon_w;
 #ifdef U3NC_STAT
   pog_u->ali_y       = dat_y + lay_u.ali_w;
+#endif
+#ifdef U3NC_JIT
+  pog_u->nat_f[0]    = (void*)_nc_burn_north_cold;
+  pog_u->nat_f[1]    = (void*)_nc_burn_south_cold;
+  pog_u->hot_h       = 0;
+  pog_u->epo_h       = 0;
 #endif
 }
 
@@ -5179,6 +5230,11 @@ _nc_box_in(u3_noun sap, c3_h* i_h)
   }
 }
 
+#ifdef U3NC_JIT
+//  out of line: a stencil calls the one copy of the real build (_nj_keep_v)
+//
+__attribute__((noinline))
+#endif
 static u3_noun
 _nc_box(u3_noun sap, u3_noun pro)
 {
@@ -5266,6 +5322,9 @@ typedef struct __attribute__((__packed__)) {
   c3_h       cid_h;   //  memo cache
 #ifdef U3NC_STAT
   c3_y       spa_y;   //  the caller's activation-local spare (_nc_spa_t)
+#endif
+#ifdef U3NC_JIT
+  void*      ret_f;   //  caller code past the call, if it is native; else 0
 #endif
 } nc_frame;
 
@@ -5525,6 +5584,51 @@ _nc_memo_jet(const u3u_harm* arm_u)
 
 u3nc_prog* u3nc_Gop;
 
+c3_t u3nc_Jit = 0;
+c3_h u3nc_Hot = 500;
+c3_h u3nc_Win = 10000;
+
+/*  the stencils that are pieces of a call (nock-compile-burn.c): past the
+**  opcodes in the table of the stencils
+*/
+enum {
+  CALB = LAST + 1, ARGB, ARGK, ARGC, CALE, JETB, JETE, JETP,
+  JMPB, JMPE, JMPE1, JMPE2, JMPE3, JMPE4, nj_last
+};
+
+#ifdef U3NC_JIT
+/* _nj_epo_h: the stretch of the clock we are in: the count of a program's
+**            starts as bytecode (u3nc_prog.hot_h) starts over in a new
+**            one, so that it measures how often the program runs now, not
+**            how long the process has been up.  Native code is some tens
+**            of times the size of bytecode, and code that isn't hot runs
+**            faster out of the bytecode, which stays in the caches.
+** _nj_tic_h: starts as bytecode, of all programs: the clock is read
+**            once in 4096 of them.
+*/
+static c3_h _nj_epo_h = 1;
+static c3_h _nj_tic_h;
+
+/* _nj_tick(): read the clock: a new stretch, if this one has lasted
+**             u3nc_Win microseconds.
+*/
+static __attribute__((noinline, preserve_most)) void
+_nj_tick(void)
+{
+  static c3_d     las_d;
+  struct timespec now_u;
+  c3_d            now_d;
+
+  clock_gettime(CLOCK_MONOTONIC, &now_u);
+  now_d = ((c3_d)now_u.tv_sec * 1000000) + (now_u.tv_nsec / 1000);
+
+  if ( (now_d - las_d) >= u3nc_Win ) {
+    las_d = now_d;
+    _nj_epo_h++;
+  }
+}
+#endif
+
 /* _nc_burn_north(), _nc_burn_south(): run a program on its arguments.
 **   TRANSFERS the arguments.  Body in nock-compile-burn.c, instantiated
 **   once per road direction.
@@ -5540,6 +5644,59 @@ u3nc_prog* u3nc_Gop;
 #include "nock-compile-burn.c"
 #undef _nc_mov_ws
 #undef _nc_burn
+
+/* _nj_burn_north_OP_far(), ..: the bodies native code shares or, in the
+**   compilation that makes the stencils (U3NC_STENCIL), the stencils.
+*/
+#ifdef U3NC_JIT
+#  if defined(U3NC_CHECK) || defined(C3DBG) || defined(U3NC_STAT)
+#    error "U3NC_JIT: no native code in a checking or counting build"
+#  endif
+#  ifdef U3NC_STENCIL
+#    define _nj_mode  2
+#  else
+#    define _nj_mode  1
+#  endif
+
+#  define _nc_mode  _nj_mode
+#  define _nc_mov_ws   (-1)
+#  define _nc_burn  _nj_burn_north
+#  define _nc_base  _nc_burn_north
+#  include "nock-compile-burn.c"
+#  undef _nc_mov_ws
+#  undef _nc_burn
+
+#  define _nc_mode  _nj_mode
+#  define _nc_mov_ws   1
+#  define _nc_burn  _nj_burn_south
+#  define _nc_base  _nc_burn_south
+#  include "nock-compile-burn.c"
+#  undef _nc_mov_ws
+#  undef _nc_burn
+
+#  ifdef U3NC_STENCIL
+/* _nj_keep_v: the functions of this file the stencils call out of line.
+**             The stencils' calls reach the copies of the real build, so
+**             the compiler must not change how the ones here take their
+**             arguments: an address taken keeps it from that.
+**             jit/stencils.py checks the list.
+*/
+void* const _nj_keep_v[] = {
+  (void*)_nc_gain_slow,       (void*)_nc_lose_slow,
+  (void*)_nc_burn_north_done, (void*)_nc_burn_south_done,
+  (void*)_nc_callee,          (void*)_nc_box
+};
+
+//  the interpreter of this compilation is never run
+//
+static void
+_nj_lower(u3nc_prog* pog_u, c3_y dir_y)
+{
+}
+#  else
+#    include "nock-compile-jit.c"
+#  endif
+#endif
 
 /* _nc_burn_out(): run a program on its arguments.  TRANSFERS.
 */
@@ -6042,6 +6199,9 @@ _nc_prog_free(u3nc_prog* pog_u)
     u3z(pog_u->dir_u.dat_u[i_h].bell);
     u3z(pog_u->dir_u.dat_u[i_h].ring);
   }
+#if defined(U3NC_JIT) && !defined(U3NC_STENCIL)
+  _nj_lose(pog_u);
+#endif
 
   u3a_free(pog_u);
 }
@@ -6061,6 +6221,9 @@ _nc_prog_take(u3nc_prog* pog_u)
   gop_u->arg_h = pog_u->arg_h;
   gop_u->ned   = u3a_take(pog_u->ned);
   gop_u->jet   = u3a_take(pog_u->jet);
+#if defined(U3NC_JIT) && !defined(U3NC_STENCIL)
+  _nj_keep(gop_u, pog_u);
+#endif
 
   memcpy(gop_u->byc_u.ops_y, pog_u->byc_u.ops_y, pog_u->byc_u.len_h);
   memcpy(gop_u->sot_u.sot_h, pog_u->sot_u.sot_h,

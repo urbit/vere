@@ -73,6 +73,14 @@
         c3_h*      sot_h;             //  argument slots of all call sites
         c3_y*      kon_y;             //  whether each is consumed by its call
       } sot_u;
+#ifdef U3NC_JIT
+      void*      nat_f[2];            //  what runs it, by road direction
+                                      //  (north, south): its native code,
+                                      //  or the stub for its bytecode; of
+                                      //  this process
+      c3_h       hot_h;               //  times it has started as bytecode
+      c3_h       epo_h;               //    in this stretch of the clock
+#endif
 #ifdef U3NC_STAT
       c3_d       ent_d;               //  activations (u3nc_hot())
       c3_d       con_d;               //  cells made by its CONs (u3nc_hot())
@@ -151,6 +159,11 @@
                     //  dropped in its block while the source stays live:
                     //  an alias, needing no gain and no drop
       c3_d alx_d;   //  of them, with an indirect product
+      //  native code (U3NC_JIT)
+      c3_d low_d;   //  programs lowered to native code, per road direction
+      c3_d lob_d;   //    bytes of bytecode lowered
+      c3_d lon_d;   //    bytes of native code made
+      c3_d lot_d;   //    nanoseconds making it
     } u3nc_stat;
 
     extern u3nc_stat u3nc_Stat;
@@ -190,6 +203,15 @@
     **            quick tests of the harness.
     */
       extern c3_t u3nc_Self;
+
+    /* u3nc_Jit: whether programs get native code (a build with U3NC_JIT):
+    **           the hot ones, those that start, as bytecode,
+    ** u3nc_Hot: times within
+    ** u3nc_Win: microseconds.
+    */
+      extern c3_t u3nc_Jit;
+      extern c3_h u3nc_Hot;
+      extern c3_h u3nc_Win;
 
     /* u3nc_Gop: the unary program of the callee of the call by subject
     **           whose memoizing jet is being kicked (see _nc_memo_jet()),
