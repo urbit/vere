@@ -127,10 +127,16 @@
 **    LTI   i s t    goto t unless s is a direct atom less than literal i,
 **                   a direct atom: the steps of a binary search among the
 **                   constants a noun is compared with (+switch-chains)
+**    RTL   i d      part i of the product of the call before -> d
+**    RTS   i s      s -> part i of the product, for the DOX that follows
+**    DOX   i s      return s, consumed, the first part of a product in
+**                   parts; the rest are in _nc_ret (RTS).  Literal i is
+**                   the shape of the product: where the caller takes one
+**                   noun (C, a memoizing call), the parts are consed
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
-**  DON, JMP, JMS, JMF, JMX, JSP and JMC end the activation, and come in a
+**  DON, DOX, JMP, JMS, JMF, JMX, JSP and JMC end the activation, and come in a
 **  sweeping variant (_1) that first drops every slot it doesn't take: it
 **  stands for the drops at the start of a block that does nothing else.
 */
@@ -211,7 +217,10 @@
   X(dro, DRO, 1,   0,   0,   0,   0,   0,   0)                                  \
   X(cac, CAC, 0,   0,   1,   0,   1,   0,   0)                                  \
   X(jmc, JMC, 0,   0,   1,   0,   1,   1,   1)                                  \
-  X(lti, LTI, 1,   0,   1,   1,   0,   2,   0)
+  X(lti, LTI, 1,   0,   1,   1,   0,   2,   0)                                  \
+  X(rtl, RTL, 0,   1,   1,   0,   0,   0,   0)                                  \
+  X(rts, RTS, 1,   0,   1,   0,   0,   1,   0)                                  \
+  X(dox, DOX, 1,   0,   1,   0,   0,   1,   1)
 
 /*  Families of ops without operands, X(fam, OP): one opcode each, with
 **  nothing to widen or consume.  They follow the others in the opcode
@@ -505,6 +514,13 @@ static const c3_t _nc_swe_t = 1;
 #else
 static const c3_t _nc_swe_t = 0;
 #endif
+
+/* _nc_ret: the parts of a product returned in parts, but the first: from
+**          the RTS ops before a DOX to the RTL ops after the call, with
+**          nothing run in between.
+*/
+#define _nc_ret_max  8
+static u3_noun _nc_ret[_nc_ret_max];
 
 /* _nc_zer_t: whether the interpreter zeroes a slot it empties.  A slot
 **            holds a reference iff its register is live, and without
@@ -1095,6 +1111,16 @@ _nc_pole(nc_gen* gen_u, u3_noun pole)
       op_u->imm_h = _nc_lit(gen_u, a);
     } break;
 
+    case c3_s3('r','t','l'): {
+      u3x_cell(arg, &a, &b);
+      if ( (c3n == u3a_is_cat(a)) || (a >= _nc_ret_max) ) {
+        u3m_bail(c3__fail);
+      }
+      op_u = _nc_op(gen_u, _nc_rtl);
+      op_u->imm_h = a;
+      op_u->dst_h = _nc_reg(gen_u, b);
+    } break;
+
     case c3__spy:
     case c3__nok: {
       u3x_trel(arg, &a, &b, &c);
@@ -1288,6 +1314,26 @@ _nc_fin(nc_gen* gen_u, u3_noun fin, c3_h nex_h)
     case c3__don: {
       op_u = _nc_op(gen_u, _nc_don);
       op_u->src_h[0] = _nc_reg(gen_u, arg);
+      return;
+    }
+
+    //  [%dox v n]: the parts v of the product, of the shape n
+    //
+    case c3_s3('d','o','x'): {
+      c3_h i_h = 1;
+
+      u3x_cell(arg, &a, &b);
+      for ( c = u3t(a); u3_nul != c; c = u3t(c), i_h++ ) {
+        if ( i_h >= _nc_ret_max ) {
+          u3m_bail(c3__fail);
+        }
+        op_u = _nc_op(gen_u, _nc_rts);
+        op_u->imm_h    = i_h;
+        op_u->src_h[0] = _nc_reg(gen_u, u3h(c));
+      }
+      op_u = _nc_op(gen_u, _nc_dox);
+      op_u->imm_h    = _nc_lit(gen_u, b);
+      op_u->src_h[0] = _nc_reg(gen_u, u3h(a));
       return;
     }
 
@@ -3897,7 +3943,7 @@ _nc_stat_borrow(nc_gen* gen_u, c3_h arg_h)
           }
         } break;
 
-        case _nc_don: {
+        case _nc_don: case _nc_dox: {
           con_y[_nc_root(op_u->src_h[0])] = 1;
         } break;
 
@@ -3955,7 +4001,7 @@ _nc_stat_consumes(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
       return (op_u->src_h[0] == r_h) && (op_u->kon_y & 1);
     }
 
-    case _nc_don: return 1;
+    case _nc_don: case _nc_dox: return 1;
 
     case _nc_cal: case _nc_cap: case _nc_cam: case _nc_csm:
     case _nc_jmp: case _nc_jms: case _nc_jsp: case _nc_hmp:
@@ -5068,6 +5114,78 @@ _nc_save(c3_h cid_h, u3_noun key, u3_noun pro)
     u3z(key);
   }
   return pro;
+}
+
+/* _nc_box(): cons the parts of a product of the shape sap, pro the first
+**            and the rest in _nc_ret.  A shape is ~, one part; [%c p q],
+**            a pair of shapes; [%m p q], a tag, then p and q: the pair of
+**            them if the tag is a cell, else the tag itself, an atom,
+**            with zeros in the parts of p and q; or [%k n], the atom n and
+**            no part.  TRANSFERS the parts, RETAINS sap.
+*/
+static c3_h
+_nc_box_len(u3_noun sap)
+{
+  if ( u3_nul == sap ) {
+    return 1;
+  }
+  switch ( u3h(sap) ) {
+    default:  return u3m_bail(c3__fail);
+    case 'k': return 0;
+    case 'c': return _nc_box_len(u3h(u3t(sap))) + _nc_box_len(u3t(u3t(sap)));
+    case 'm': return 1 + _nc_box_len(u3h(u3t(sap)))
+                       + _nc_box_len(u3t(u3t(sap)));
+  }
+}
+
+static u3_noun
+_nc_box_in(u3_noun sap, c3_h* i_h)
+{
+  if ( u3_nul == sap ) {
+    return _nc_ret[(*i_h)++];
+  }
+
+  switch ( u3h(sap) ) {
+    default: {
+      return u3m_bail(c3__fail);
+    }
+
+    case 'k': {
+      return u3k(u3t(sap));
+    }
+
+    case 'm': {
+      u3_noun tag = _nc_ret[(*i_h)++];
+
+      if ( c3n == u3du(tag) ) {
+        c3_h len_h = _nc_box_len(sap) - 1;
+
+        while ( len_h-- ) {
+          u3z(_nc_ret[(*i_h)++]);
+        }
+        return tag;
+      }
+      u3z(tag);
+    } break;
+
+    case 'c': break;
+  }
+
+  {
+    u3_noun hed = _nc_box_in(u3h(u3t(sap)), i_h);
+    u3_noun tel = _nc_box_in(u3t(u3t(sap)), i_h);
+
+    return u3nc(hed, tel);
+  }
+}
+
+static u3_noun
+_nc_box(u3_noun sap, u3_noun pro)
+{
+  c3_h i_h = 0;
+
+  _nc_ret[0] = pro;
+  return _nc_box_in(sap, &i_h);
 }
 
 /* _nc_find(): look for a memoization entry by its key.  RETAINS key.

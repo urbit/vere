@@ -1380,6 +1380,31 @@ OP1K(JMC, a_h, BODY_JMC)
   DONE(pro);
 OP1K(DON, a_h, BODY_DON)
 
+//  a product in parts: the first is the product of the activation, the
+//  rest go through _nc_ret; where the caller takes one noun, they are consed
+//
+#define BODY_RTL()                                                              \
+  PUT(d_h, _nc_ret[a_h]);                                                       \
+  BURN();
+OP2(RTL, a_h, d_h, BODY_RTL)
+
+#define BODY_RTS(K)                                                             \
+  _nc_ret[a_h] = TAKE(b_h, K);                                                  \
+  BURN();
+OP2K(RTS, a_h, b_h, BODY_RTS)
+
+#define BODY_DOX(S)                                                             \
+  u3_noun   pro = reg[b_h];                                                     \
+  nc_frame* fam_u;                                                              \
+  ZERO(b_h);                                                                    \
+  SWEEP(S);                                                                     \
+  fam_u = TOP(_nc_frame_w);                                                     \
+  if ( !fam_u->pog_u || (u3_none != fam_u->key) ) {                             \
+    pro = _nc_box(pog_u->lit_u.non[a_h], pro);                                  \
+  }                                                                             \
+  DONE(pro);
+OP2K(DOX, a_h, b_h, BODY_DOX)
+
 #define BODY_DRO()                                                              \
   u3_noun x = reg[a_h];                                                         \
   _nc_stat(drt_d);                                                              \
@@ -1508,3 +1533,6 @@ OP(WIDE) ARGS CONV
 #undef BODY_JSP
 #undef BODY_DON
 #undef BODY_DRO
+#undef BODY_RTL
+#undef BODY_RTS
+#undef BODY_DOX
