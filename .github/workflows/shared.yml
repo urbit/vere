@@ -116,6 +116,11 @@ jobs:
       #  noun, and the 64-bit one is never exercised at all.
       #
       - name: Run unit tests
+        env:
+          #  nock-compile-test maps 16 GB by default; its quick suite,
+          #  which this runs, fits a loom of 4 GB on both legs
+          #
+          U3NC_LOOM: 32
         run: |
           VERE64_FLAG=""
           if [[ "${{ matrix.bits }}" == "64" ]]; then
@@ -132,6 +137,7 @@ jobs:
             vere-noun-test unix-test   \
             palloc-test events-test    \
             bytestream-test mesa-test  \
+            nock-compile-test          \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
