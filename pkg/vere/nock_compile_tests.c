@@ -106,7 +106,7 @@ _setup(void)
   //  the sand zone of an inner road, as in the runtime; U3NC_SAND: its
   //  size in megabytes instead, 0 for none
   //
-  u3C.san_w = 64;
+  u3C.san_w = u3o_sand_default;
   if ( getenv("U3NC_SAND") ) {
     u3C.san_w = atoi(getenv("U3NC_SAND"));
   }
@@ -1680,7 +1680,7 @@ _test_sand(void)
   ret_i = _check("sand: inner roads as configured",
                  _sand_run(san_w && !(wag_h & u3o_debug_ram))) && ret_i;
 
-  u3C.san_w  = 64;
+  u3C.san_w  = u3o_sand_default;
   u3C.wag_h &= ~(c3_h)(u3o_debug_ram | u3o_leak_crash);
   ret_i = _check("sand: a zone on inner roads", _sand_run(1)) && ret_i;
 
