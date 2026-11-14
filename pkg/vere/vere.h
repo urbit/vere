@@ -296,6 +296,7 @@
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
         c3_w    per_w;                      //  -M, cap persistent memo cache
+        c3_w    san_w;                      //      sand zone of a road, in MB
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port
