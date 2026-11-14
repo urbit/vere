@@ -4508,9 +4508,11 @@ c3_d u3nc_Era_d = 1;
 static inline nc_idem*
 _nc_idem_slot(u3_noun fol, u3_noun con)
 {
-  c3_w has_w = (fol * 0x9e3779b1u) ^ (con * 0x85ebca77u);
+  //  of 32 bits whatever the word: the slot is the top bits of it
+  //
+  c3_h has_h = ((c3_h)fol * 0x9e3779b1u) ^ ((c3_h)con * 0x85ebca77u);
 
-  return &(_nc_idem_u[has_w >> (32 - _nc_idem_bits)]);
+  return &(_nc_idem_u[has_h >> (32 - _nc_idem_bits)]);
 }
 
 static inline c3_t
