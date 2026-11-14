@@ -4797,7 +4797,7 @@ _nc_gain_slow(u3_noun som)
 static _nc_cold void
 _nc_lose_slow(u3_noun som)
 {
-  u3a_lose(som);
+  u3a_lose_free(som);
 }
 
 /* _nc_callee(): the program of a call site, compiling it on the first

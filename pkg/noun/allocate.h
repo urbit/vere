@@ -796,10 +796,41 @@ u3a_post_info(u3_post);
           void*
           u3a_walloc(c3_w len_w);
 
-        /* u3a_celloc(): allocate a cell.  Faster, sometimes.
+        /* u3a_celloc_cold(): allocate a cell, out of line: the home road,
+        **                    an empty cell cache, the counting builds.
         */
           c3_w*
-          u3a_celloc(void);
+          u3a_celloc_cold(void);
+
+        /* u3a_celloc_try(): a cell from the cell cache of an inner road,
+        **                   or 0.  In line: four loads and a store.
+        */
+          static inline c3_w*
+          u3a_celloc_try(void)
+          {
+#if !defined(U3NC_STAT) && !defined(U3_CPU_DEBUG)
+            u3a_road* rod_u = u3R;
+            c3_w      hav_w = rod_u->cel.hav_w;
+
+            //  the home road has no cache, and so never has any
+            //
+            if ( c3_likely(hav_w) ) {
+              rod_u->cel.hav_w = --hav_w;
+              return (c3_w*)u3a_into(u3to(u3_post, rod_u->cel.cel_p)[hav_w]);
+            }
+#endif
+            return 0;
+          }
+
+        /* u3a_celloc(): allocate a cell.
+        */
+          static inline c3_w*
+          u3a_celloc(void)
+          {
+            c3_w* cel_w = u3a_celloc_try();
+
+            return c3_likely(cel_w) ? cel_w : u3a_celloc_cold();
+          }
 
 #ifdef U3NC_STAT
         /* u3a_Cel_d: cells allocated (-Dska-stat).
@@ -878,6 +909,13 @@ u3a_post_info(u3_post);
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
           })
+
+        /* u3a_lose_free(): lose an indirect noun: u3a_lose() for a caller
+        **                  that has found the count at 1 and the noun on
+        **                  u3R, straight to the loop that frees.
+        */
+          void
+          u3a_lose_free(u3_weak som);
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */
