@@ -116,7 +116,12 @@ _setup(void)
   //
   u3nc_Emit = 0;
   if ( getenv("U3NC_EMIT") && atoi(getenv("U3NC_EMIT")) ) {
+#if defined(U3NC_ZERO) || defined(U3NC_SWEEP)
+    fprintf(stderr, "U3NC_EMIT: the emitter lowers nothing in a build that "
+                    "zeroes empty slots: stencils\r\n");
+#else
     u3nc_Emit = ( 2 == atoi(getenv("U3NC_EMIT")) ) ? 2 : 1;
+#endif
     u3nc_Jit  = 1;
   }
 #endif
@@ -141,9 +146,20 @@ _setup(void)
 
   //  U3NC_LOOM: loom size in bits, for machines that can't map 16GB
   //
+  //  U3NC_PIER: the loom is backed by that pier: restored from its image
+  //  if it has one, and saved to it after a probe (U3NC_PROBE): a
+  //  restart, for the tests of what must not survive one
+  //
   {
     c3_c* lom_c = getenv("U3NC_LOOM");
-    u3m_boot_lite(1ULL << (lom_c ? atoi(lom_c) : 34));
+    c3_z  len_z = 1ULL << (lom_c ? atoi(lom_c) : 34);
+
+    if ( getenv("U3NC_PIER") ) {
+      u3m_boot(getenv("U3NC_PIER"), len_z);
+    }
+    else {
+      u3m_boot_lite(len_z);
+    }
   }
 
   //  slogs rendered to stderr, which the build shows, without color codes;
@@ -152,6 +168,18 @@ _setup(void)
   u3C.slog_f = _slog;
   u3_Host.ops_u.dem = c3y;
   u3_Host.ops_u.tem = c3y;
+
+  //  a restored image has its kernel
+  //
+  if ( u3A->roc ) {
+    fprintf(stderr, "setup: image restored, %" PRIc3_w " direct programs\r\n",
+            u3h_wyt(u3H->rod_u.ska.dir_p));
+    _steel();
+    if ( getenv("U3NC_ALL") && !getenv("U3NC_BENCH") ) {
+      u3C.wag_h |= u3o_debug_ram | u3o_leak_crash;
+    }
+    return;
+  }
 
   //  U3NC_IVORY: the kernel from the ivory pill in that file instead of
   //  this binary's
@@ -2074,6 +2102,798 @@ _test_alias(void)
   return ret_i;
 }
 
+#ifdef U3NC_JIT
+/* _test_life(): the arena of machine functions (the emitter) is not grown
+**               by computations that bail, each on programs of its own,
+**               nor by programs that are compiled, run and dropped: what
+**               is in use, where its top is, and the records of native
+**               code are the same after the last as after the middle one.
+*/
+static c3_i
+_test_life(void)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  c3_d    use_d[2], top_d[2], sid_d[2], pek_d, evi_d;
+  c3_t    sel_t = u3nc_Self;
+  c3_h    hot_h = u3nc_Hot;
+  c3_i    ret_i = 1;
+  c3_t    all_t = 1;
+  c3_w    i_w;
+
+  if ( !u3nc_Emit ) {
+    u3z(fol);
+    return 1;
+  }
+
+  //  every program lowered when it starts; and the SKA core in u3n, lest
+  //  its own programs, compiled as it goes, be lowered and dropped too
+  //
+  u3nc_Hot  = 1;
+  u3nc_Self = 0;
+
+  for ( i_w = 0; i_w < 40; i_w++ ) {
+    c3_c    src_c[256];
+    u3_noun gat, gon;
+
+    snprintf(src_c, sizeof(src_c),
+             "|=  a=@\n=/  b=@  %u\n|-  ^-  @\n?:  =(0 a)  !!\n"
+             "$(a (dec a), b (add b %u))\n",
+             (c3_h)(100 + i_w), (c3_h)(7 + i_w));
+    gat = _gate(src_c, 20);
+    gon = u3m_soft(0, _nock_nc, u3nc(gat, u3k(fol)));
+    all_t = all_t && (0 != u3h(gon));
+    u3z(gon);
+
+    if ( 19 == i_w ) {
+      u3nc_emit_usage(&use_d[0], &top_d[0], &pek_d, &evi_d, &sid_d[0]);
+    }
+  }
+  u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d, &sid_d[1]);
+
+  fprintf(stderr, "life: 40 bails: arena in use %" PRIu64 " then %" PRIu64
+                  ", top %" PRIu64 " then %" PRIu64 ", peak %" PRIu64
+                  ", records %" PRIu64 " then %" PRIu64 "\r\n",
+          use_d[0], use_d[1], top_d[0], top_d[1], pek_d, sid_d[0], sid_d[1]);
+  ret_i = _check("life: every one bailed", all_t) && ret_i;
+  ret_i = _check("life: bails don't grow the arena",
+                 (use_d[0] == use_d[1]) && (top_d[0] == top_d[1])
+                 && (sid_d[0] == sid_d[1])) && ret_i;
+
+  all_t = 1;
+  for ( i_w = 0; i_w < 20; i_w++ ) {
+    u3_noun gat = _gate("|=  a=@\n^-  @\n"
+                        "=/  f  |=(b=@ (mul b +(b)))\n"
+                        "(roll (turn (gulf 1 a) f) add)\n", 30 + i_w);
+    u3_noun one = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+    u3_noun two = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+    u3_noun ref = u3m_soft(0, _nock_n,  u3nc(gat, u3k(fol)));
+
+    all_t = all_t && (0 == u3h(ref)) && (c3y == u3r_sing(one, ref))
+                  && (c3y == u3r_sing(two, ref));
+    u3z(one); u3z(two); u3z(ref);
+
+    if ( 0 == i_w ) {
+      u3nc_emit_usage(&use_d[0], &top_d[0], &pek_d, &evi_d, &sid_d[0]);
+    }
+    u3nc_reclaim();
+    u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d, &sid_d[1]);
+    all_t = all_t && !use_d[1] && !top_d[1] && !sid_d[1];
+  }
+
+  fprintf(stderr, "life: 20 times compiled, run and dropped: arena in use "
+                  "%" PRIu64 " before a drop, %" PRIu64 " after, top %"
+                  PRIu64 ", records %" PRIu64 "\r\n",
+          use_d[0], use_d[1], top_d[1], sid_d[1]);
+  ret_i = _check("life: dropped programs leave nothing in the arena",
+                 all_t && use_d[0]) && ret_i;
+
+  //  a full arena: the same computation with room for a third of its
+  //  code: what doesn't fit runs as bytecode, the arena is emptied when
+  //  no machine function is running, and the products are the same
+  //
+  {
+    u3_noun gat = _gate("|=  n=@\n^-  @t\n(scot %ud n)\n", 123456);
+    u3_noun ref = u3m_soft(0, _nock_n, u3nc(u3k(gat), u3k(fol)));
+    c3_d    was_d, evi_d[2];
+    u3_noun one;
+
+    u3z(u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol))));
+    u3z(u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol))));
+    u3nc_emit_usage(&was_d, &top_d[0], &pek_d, &evi_d[0], &sid_d[0]);
+    u3nc_reclaim();
+
+    u3nc_emit_limit(was_d / 3);
+    all_t = (0 == u3h(ref));
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      one   = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+      all_t = all_t && (c3y == u3r_sing(one, ref));
+      u3z(one);
+    }
+    u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d[1], &sid_d[1]);
+    u3nc_emit_limit(0);
+    u3nc_reclaim();
+
+    fprintf(stderr, "life: room for %" PRIu64 " of %" PRIu64 " bytes of "
+                    "code: %" PRIu64 " in use, %" PRIu64 " evictions\r\n",
+            was_d / 3, was_d, use_d[1], evi_d[1] - evi_d[0]);
+    ret_i = _check("life: a full arena: same products", all_t) && ret_i;
+    ret_i = _check("life: a full arena: evicted, and within its room",
+                   (evi_d[1] > evi_d[0]) && (top_d[1] <= (was_d / 3)))
+            && ret_i;
+    u3z(gat); u3z(ref);
+  }
+
+  //  a change of the arena abandoned half made, as a signal that came
+  //  in the middle of one would leave it: nothing in the arena is
+  //  trusted, the code is evicted before any of it runs, and the
+  //  programs are lowered again; and the same with the programs dropped
+  //  in between, whose pieces are then not freed one by one, and are
+  //  gone all the same
+  //
+  {
+    c3_d evi_d[2], was_d = 0;
+    c3_t sam_t = 1;
+
+    for ( i_w = 0; i_w < 2; i_w++ ) {
+      u3_noun gat = _gate("|=  a=@\n^-  @\n"
+                          "=/  f  |=(b=@ (mul b +(b)))\n"
+                          "(roll (turn (gulf 1 a) f) add)\n", 60 + i_w);
+      u3_noun ref = u3m_soft(0, _nock_n,  u3nc(u3k(gat), u3k(fol)));
+      u3_noun one, two;
+
+      u3z(u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol))));
+      one = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+      u3nc_emit_usage(&use_d[0], &top_d[0], &pek_d, &evi_d[0], &sid_d[0]);
+
+      u3nc_emit_break();
+      if ( i_w ) {
+        u3nc_reclaim();
+      }
+      two = u3m_soft(0, _nock_nc, u3nc(gat, u3k(fol)));
+      u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d[1], &sid_d[1]);
+
+      //  the programs stayed: their code is there again; they were
+      //  dropped: the new ones were lowered where they were compiled,
+      //  and nothing is left of that or of the pieces before
+      //
+      sam_t = sam_t && (0 == u3h(ref)) && (c3y == u3r_sing(one, ref))
+                    && (c3y == u3r_sing(two, ref))
+                    && (evi_d[1] == (evi_d[0] + 1)) && use_d[0]
+                    && (use_d[1] == (i_w ? 0 : use_d[0]))
+                    && (top_d[1] == use_d[1]);
+      was_d = use_d[0];
+      u3z(ref); u3z(one); u3z(two);
+      u3nc_reclaim();
+    }
+    u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d[1], &sid_d[1]);
+    fprintf(stderr, "life: a change abandoned, twice: evicted once each "
+                    "time, %" PRIu64 " bytes of code in use before, %"
+                    PRIu64 " at the end\r\n", was_d, use_d[1]);
+    ret_i = _check("life: an abandoned change: evicted, same products, "
+                   "nothing left over", sam_t && !use_d[1] && !top_d[1])
+            && ret_i;
+  }
+
+  u3nc_Hot  = hot_h;
+  u3nc_Self = sel_t;
+  u3z(fol);
+  return ret_i;
+}
+#endif
+
+#ifdef U3NC_JIT
+/* _gone_run(): a computation in u3n and twice in u3nc: whether the
+**              three agree.  A parse, of many programs, or a small one.
+*/
+static c3_t
+_gone_run(c3_t big_t, c3_w sam_w)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun gat = big_t
+              ? _gate("|=  a=@t\n^-  hoon\n(ream a)\n",
+                      u3v_wish("'=+  a=1  ?:  =(a 2)  [a a]  (add a 3)'"))
+              : _gate("|=  a=@\n^-  @\n"
+                      "=/  f  |=(b=@ (mul b +(b)))\n"
+                      "(roll (turn (gulf 1 a) f) add)\n", sam_w);
+  u3_noun ref = u3m_soft(0, _nock_n,  u3nc(u3k(gat), u3k(fol)));
+  u3_noun one = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+  u3_noun two = u3m_soft(0, _nock_nc, u3nc(gat, fol));
+  c3_t    sam_t = (0 == u3h(ref)) && (c3y == u3r_sing(one, ref))
+                                  && (c3y == u3r_sing(two, ref));
+
+  u3z(ref); u3z(one); u3z(two);
+  return sam_t;
+}
+
+/* _test_gone(): the events that take every program at once, or make the
+**               records of native code stale, leave no machine code and
+**               no record (the emitter), and what runs next runs, as
+**               machine code again: the records wiped under programs
+**               that stay, as when an image is restored, with a parse
+**               to run on them (0); the loom compacted (1); the loom
+**               melded (2): those from fro_w and below til_w.  No noun
+**               is held across them: they move.
+*/
+static c3_i
+_test_gone(c3_w fro_w, c3_w til_w)
+{
+  static const c3_c* nam_c[3] = { "wiped", "packed", "melded" };
+  c3_t  sel_t = u3nc_Self;
+  c3_h  hot_h = u3nc_Hot;
+  c3_i  ret_i = 1;
+  c3_w  i_w;
+
+  if ( !u3nc_Emit ) {
+    return 1;
+  }
+  u3nc_Hot  = 1;
+  u3nc_Self = 0;
+
+  for ( i_w = fro_w; i_w < til_w; i_w++ ) {
+    c3_d use_d[3], top_d[3], sid_d[3], pek_d, evi_d;
+    c3_c lab_c[64];
+    c3_t sam_t = _gone_run(0 == i_w, 40 + i_w);
+
+    u3nc_emit_usage(&use_d[0], &top_d[0], &pek_d, &evi_d, &sid_d[0]);
+    switch ( i_w ) {
+      case 0: u3nc_wipe();              break;
+      case 1: (void)u3m_pack();         break;
+      case 2: (void)u3_meld_all(0, 0);  break;
+    }
+    u3nc_emit_usage(&use_d[1], &top_d[1], &pek_d, &evi_d, &sid_d[1]);
+    sam_t = _gone_run(0 == i_w, 40 + i_w) && sam_t;
+    u3nc_emit_usage(&use_d[2], &top_d[2], &pek_d, &evi_d, &sid_d[2]);
+
+    fprintf(stderr, "gone: %s: arena in use %" PRIu64 " (records %" PRIu64
+                    "), then %" PRIu64 " (top %" PRIu64 ", records %" PRIu64
+                    "), then %" PRIu64 " (records %" PRIu64 ")\r\n",
+            nam_c[i_w], use_d[0], sid_d[0], use_d[1], top_d[1], sid_d[1],
+            use_d[2], sid_d[2]);
+    snprintf(lab_c, sizeof(lab_c), "gone, %s: no code is left", nam_c[i_w]);
+    ret_i = _check(lab_c, use_d[0] && !use_d[1] && !top_d[1] && !sid_d[1])
+            && ret_i;
+    snprintf(lab_c, sizeof(lab_c), "gone, %s: same products, as machine "
+                                   "code again", nam_c[i_w]);
+    ret_i = _check(lab_c, sam_t && use_d[2] && sid_d[2]) && ret_i;
+  }
+
+  u3nc_Hot  = hot_h;
+  u3nc_Self = sel_t;
+  return ret_i;
+}
+#endif
+
+#ifdef U3NC_JIT
+/* _scry_n(), _scry_nc(): .*(bus fol) under a namespace that answers
+**                        every request with 42, in u3n and in u3nc: the
+**                        toon of the run.
+*/
+static u3_noun
+_scry_n(u3_noun bus_fol)
+{
+  u3_noun bus, fol;
+
+  u3x_cell(bus_fol, &bus, &fol);
+  u3k(bus); u3k(fol); u3z(bus_fol);
+  return u3m_soft_run(u3v_wish("|=(* [~ ~ 42])"), u3n_nock_on, bus, fol);
+}
+
+static u3_noun
+_scry_nc(u3_noun bus_fol)
+{
+  u3_noun bus, fol;
+
+  u3x_cell(bus_fol, &bus, &fol);
+  u3k(bus); u3k(fol); u3z(bus_fol);
+  return u3m_soft_run(u3v_wish("|=(* [~ ~ 42])"), u3nc_nock_on, bus, fol);
+}
+
+/* _test_fams(): every op family the emitter lowers, run as machine code
+**               and checked against u3n: gates chosen to reach them all,
+**               the rare ones too, with the code counting what it runs.
+*/
+static c3_i
+_test_fams(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    const c3_c* sam_c;
+  } cas_u[] = {
+    { "fams, ackermann",
+      "|=  s=@\n=/  m=@  2\n=/  n=@  s\n|-  ^-  @\n?:  =(0 m)  +(n)\n"
+      "?:  =(0 n)  $(m (dec m), n 1)\n$(m (dec m), n $(n (dec n)))\n",
+      "3" },
+    { "fams, fork",
+      "|=  [a=@ n=@]\n^-  @\n=/  acc  0\n|-  ^-  @\n?:  =(0 n)  acc\n"
+      "=/  y  (add a n)\n"
+      "=/  p  ?:(=(y (add a 3)) [(add y 1) 1] [2 (add y 2)])\n"
+      "?:  =(0 (mod n 2))\n  $(n (dec n), acc (add acc -.p))\n"
+      "$(n (dec n), acc (add acc +.p))\n",
+      "['an atom long enough to be indirect, yes' 5]" },
+    { "fams, mean",
+      "|=  a=@\n=/  foo\n  |=  b=@\n  ~>  %mean.|.(leaf+(scow %ud b))\n"
+      "  (dec b)\n~>  %ska\n(foo a)\n",
+      "5" },
+    { "fams, mule",
+      "|=  a=@\n[(mule |.((dec a))) (mole |.((dec a)))]\n",
+      "5" },
+    { "fams, mule, crash",
+      "|=  a=@\n[(mule |.((dec a))) (mole |.((dec a)))]\n",
+      "0" },
+    { "fams, memo",
+      "|=  n=@\n^-  @\n~>  %memo./fams\n?:  =(0 n)  0\n+($(n (dec n)))\n",
+      "50" },
+    { "fams, memo call",
+      "|=  n=@\n^-  @\n=/  f  |=(a=@ ?:((lth a 2) a (add a (dec a))))\n"
+      "|-  ^-  @\n?:  =(0 n)  0\n(add ~+((f n)) $(n (dec n)))\n",
+      "20" },
+    { "fams, sew",
+      "|=  n=@\n=/  buf=@  (bex (mul 8 n))\n=/  old=@  0\n=/  i=@  0\n"
+      "|-  ^-  [@ @]\n?:  =(i n)  [old buf]\n"
+      "$(i +(i), old buf, buf (sew 3 [i 1 (end 3 i)] buf))\n",
+      "64" },
+    { "fams, sew tail",
+      "|=  n=@\n(sew 3 [8 1 0xff] (bex (mul 64 n)))\n",
+      "1" },
+    { "fams, hew",
+      "|=([a=bite c=@ b=[@ @ @]] ((hew a c) b))",
+      "[[3 0] 0x1234.5678 [1 2 1]]" },
+    { "fams, rig",
+      "|=([a=bite b=bloq] (rig a b))",
+      "[[3 2] 0]" },
+    { "fams, nock",
+      "|=  [a=@ f=*]\n^-  *\n=/  n=@  3\n=/  acc=*  a\n|-  ^-  *\n"
+      "?:  =(0 n)  acc\n$(n (dec n), acc .*(acc f))\n",
+      "[5 [4 0 1]]" },
+    { "fams, bout",
+      "|=  a=@\n^-  @\n~>  %bout\n(add a 1)\n",
+      "5" },
+    { "fams, slog",
+      "|=  a=@\n^-  @\n~>  %slog.[0 leaf+\"fams\"]\n(add a 1)\n",
+      "5" },
+    { "fams, spot",
+      "!:\n|=  a=@\n^-  @\n?:  =(a 1.000)  !!\n(add a 1)\n",
+      "5" },
+    { "fams, pair",
+      "|=  n=@\n^-  @\n=<  -\n|-  ^-  [@ @]\n?:  =(0 n)  [0 1]\n"
+      "=/  r  $(n (dec n))\n[+.r (add -.r +.r)]\n",
+      "30" },
+    { "fams, list",
+      "|=  l=(list @)\n^-  (list @)\n?~  l  ~\n[(add i.l 1) $(l t.l)]\n",
+      "(gulf 1 100)" },
+    { "fams, scot",
+      "|=  n=@\n^-  @t\n(scot %p n)\n",
+      "123.456.789" },
+    { "fams, scow",
+      "|=  n=@\n^-  tape\n=/  i=@  0\n=/  out=tape  ~\n|-  ^-  tape\n"
+      "?:  =(i 20)  out\n$(i +(i), out (weld (scow %ud (add n i)) out))\n",
+      "123.456" },
+    { "fams, turn",
+      "|=  a=@\n^-  @\n=/  f  |=(b=@ (mul b +(b)))\n"
+      "(roll (turn (gulf 1 a) f) add)\n",
+      "40" },
+    { "fams, big",
+      "|=  a=@\n^-  [@ ? ?]\n=/  b  (add a 0xffff.ffff.ffff.ffff.ffff)\n"
+      "[b =(b 0x1.0000.0000.0000.0000.0004) =(a 5)]\n",
+      "5" },
+    //  at the edges of the words of both looms: 31, 32 and 63 bits
+    //
+    { "fams, words",
+      "|=  a=@\n^-  [@ @ @ ? ? ? @ @ @]\n"
+      "=/  b  (add a 0x7fff.fffb)\n=/  c  (add a 0xffff.fffb)\n"
+      "=/  d  (add a 0x7fff.ffff.ffff.fffb)\n"
+      ":*  b  c  d\n    =(b 0x8000.0000)  =(c 0x1.0000.0000)\n"
+      "    =(d 0x8000.0000.0000.0000)\n    (dec b)  (dec c)  (dec d)\n==\n",
+      "5" },
+    { "fams, words, loop",
+      "|=  n=@\n^-  [@ @ @ @]\n"
+      "=/  f\n  |=  a=@\n  =/  i=@  0\n  |-  ^-  @\n"
+      "  ?:  =(i 8)\n"
+      "    ?:  =(a 0x8000.0004)  1\n"
+      "    ?:  =(a 0x1.0000.0004)  2\n"
+      "    ?:  =(a 0x8000.0000.0000.0004)  3\n    a\n"
+      "  $(i +(i), a +(a))\n"
+      "[(f (sub 0x8000.0000 n)) (f (sub 0x1.0000.0000 n)) "
+      "(f (sub 0x8000.0000.0000.0000 n)) (f n)]\n",
+      "4" },
+    { "fams, equal",
+      "|=  [a=* b=* c=@]\n^-  @\n?:  =(a b)  ?:(=(c 7) 1 2)\n"
+      "?^  a  ?:(=(-.a c) 3 4)\n5\n",
+      "[[1 2 3] [1 2 3] 7]" },
+    { "fams, cords",
+      "|=  a=@t\n^-  @\n?+  a  0\n  %foo  1\n  %bar  2\n  %baz  3\n"
+      "  %quux  4\n  %a-rather-long-cord  5\n  %another-rather-long-one  6\n"
+      "  %xyzzy  7\n  %plugh  8\n==\n",
+      "%another-rather-long-one" },
+    { "fams, loobean",
+      "|=  [a=@ b=@]\n^-  @\n=/  c=?  (gth a b)\n=/  d=?  (lth a 100)\n"
+      "?:  &(c d)  (sub a b)\n?:  |(c d)  (add a b)\n0\n",
+      "[7 3]" },
+    { "fams, ream",
+      "|=  a=@t\n^-  hoon\n(ream a)\n",
+      "'=+  a=1  ?:  =(a 2)  [a a]  (add a 3)'" },
+    { "fams, same arms",
+      "|=  s=@\n^-  @\n=/  a=?  (lth s 1.000)\n?:(a s s)\n",
+      "104" },
+    { "fams, same arms, loop",
+      "|=  s=@\n^-  @\n=/  i=@  0\n=/  acc=@  0\n|-  ^-  @\n"
+      "?:  =(i 50)  acc\n=/  a=?  (lth i s)\n"
+      "$(i +(i), acc (add acc ?:(a i i)))\n",
+      "25" },
+    { "fams, constant trap",
+      "|=  s=@\n^-  @\n~_  leaf+\"fams\"\n(dec s)\n",
+      "104" },
+    { "fams, constant trap, loop",
+      "|=  s=@\n^-  @\n=/  i=@  0\n=/  acc=@  0\n|-  ^-  @\n"
+      "?:  =(i 50)  acc\n"
+      "$(i +(i), acc (add acc ~_(leaf+\"fams\" (dec (add s i)))))\n",
+      "104" },
+    { "fams, hew, loop",
+      "|=  [a=bite c=@ b=[@ @ @]]\n^-  *\n=/  i=@  0\n=/  acc=*  ~\n"
+      "|-  ^-  *\n?:  =(i 20)  acc\n"
+      "$(i +(i), acc [((hew a (add c i)) b) acc])\n",
+      "[[3 0] 0x1234.5678 [1 2 1]]" },
+    { "fams, rig, loop",
+      "|=  [a=bite b=bloq]\n^-  @\n=/  i=@  0\n=/  acc=@  0\n|-  ^-  @\n"
+      "?:  =(i 20)  acc\n$(i +(i), acc (add acc (rig a b)))\n",
+      "[[3 2] 0]" },
+    { "fams, sew tail, loop",
+      "|=  n=@\n^-  @\n"
+      "=/  f  |=(m=@ (sew 3 [8 1 0xff] (bex (mul 64 m))))\n"
+      "=/  i=@  1\n=/  acc=@  0\n|-  ^-  @\n?:  =(i n)  acc\n"
+      "$(i +(i), acc (mix acc (f i)))\n",
+      "30" },
+    { "fams, scot tail, loop",
+      "|=  n=@\n^-  @\n=/  f  |=(m=@ ^-(@t (scot %p m)))\n"
+      "=/  i=@  1\n=/  acc=@  0\n|-  ^-  @\n?:  =(i n)  acc\n"
+      "$(i +(i), acc (mix acc (f (add 1.000.000 i))))\n",
+      "30" },
+    { "fams, bout, loop",
+      "|=  a=@\n^-  @\n=/  i=@  0\n|-  ^-  @\n?:  =(i 3)  a\n"
+      "$(i +(i), a ~>(%bout (add a i)))\n",
+      "5" },
+    { "fams, switch",
+      "|=  a=$%([%a p=@] [%b p=@] [%c p=@] [%d p=@] [%e p=@] [%f p=@]"
+      " [%g p=@] [%h p=@])\n^-  @\n?-  a\n  [%a *]  1\n  [%b *]  2\n"
+      "  [%c *]  3\n  [%d *]  4\n  [%e *]  (add 5 p.a)\n  [%f *]  6\n"
+      "  [%g *]  7\n  [%h *]  8\n==\n",
+      "[%e 5]" },
+  };
+  static const c3_c* fam_c[] = {
+    "IMM", "IML", "MOV", "INC", "DEC", "ADD", "CON", "HED", "TAL", "HER",
+    "TAR", "COR", "CEL", "LOB", "EQU", "HSP", "HSE", "HDP", "HDE", "HLP",
+    "HMP", "HCP", "SPY", "NOK", "CAL", "CAF", "CAX", "CAP", "CAM", "CSM",
+    "CLQ", "EQQ", "EQI", "EQL", "BRN", "BRZ", "HOP", "JMP", "JMF", "JMX",
+    "JSP", "DON", "DRO", "CAC", "JMC", "LTI", "RTL", "RTS", "DOX", "HME",
+    "HCE", "BOM", "HEA", "TAA"
+  };
+  u3_noun fol   = u3nq(9, 2, 0, 1);
+  c3_h    hot_h = u3nc_Hot;
+  c3_i    ret_i = 1;
+  c3_w    i_w, mis_w = 0;
+
+  if ( !u3nc_Emit ) {
+    u3z(fol);
+    return 1;
+  }
+  u3nc_Hot = 1;
+  u3nc_emit_count(1);
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    ret_i = _test(cas_u[i_w].nam_c,
+                  _gate(cas_u[i_w].src_c, u3v_wish(cas_u[i_w].sam_c)),
+                  u3k(fol), 1) && ret_i;
+  }
+
+  //  .^ under a namespace
+  //
+  {
+    u3_noun gat = _gate("|=  a=@\n^-  @\n=/  i=@  0\n|-  ^-  @\n"
+                        "?:  =(i 50)  a\n"
+                        "$(i +(i), a (add a .^(@ %x /fams)))\n", 5);
+    u3_weak one = _run("u3n  scry  ", _scry_n, gat, fol);
+    u3_weak two = _run("u3nc scry  ", _scry_nc, gat, fol);
+    u3_weak tri = _run("u3nc scry  ", _scry_nc, gat, fol);
+
+    ret_i = _check("fams, scry",
+                   (u3_none != one) && (u3_none != two) && (u3_none != tri)
+                   && (0 == u3h(one)) && (c3y == u3r_sing(one, two))
+                   && (c3y == u3r_sing(one, tri))) && ret_i;
+    _lose(one); _lose(two); _lose(tri);
+    u3z(gat);
+  }
+
+  //  a persistent memo, which u3n and u3nc share: u3nc first, on a
+  //  sample neither has seen, so that it misses at every level
+  //
+  {
+    u3_noun gat = _gate("|=  n=@\n^-  @\n~>  %memo./fams-keep\n"
+                        "?:  =(0 n)  0\n+($(n (dec n)))\n", 300);
+
+    _lose(_run("u3nc fresh ", _nock_nc, gat, fol));
+    ret_i = _test("fams, memo, fresh", gat, u3k(fol), 1) && ret_i;
+  }
+
+  //  a crash, which u3n and u3nc must both report as one
+  //
+  {
+    u3_noun gat = _gate("|=  a=@\n^-  @\n?:  =(a 5)  !!\n(add a 1)\n", 5);
+    u3_noun one = u3m_soft(0, _nock_n,  u3nc(u3k(gat), u3k(fol)));
+    u3_noun two = u3m_soft(0, _nock_nc, u3nc(u3k(gat), u3k(fol)));
+    u3_noun tri = u3m_soft(0, _nock_nc, u3nc(gat, u3k(fol)));
+
+    ret_i = _check("fams, crash",
+                   (c3__exit == u3h(one)) && (c3__exit == u3h(two))
+                   && (c3__exit == u3h(tri))) && ret_i;
+    u3z(one); u3z(two); u3z(tri);
+  }
+
+  fprintf(stderr, "fams:");
+  for ( i_w = 0; i_w < (sizeof(fam_c) / sizeof(fam_c[0])); i_w++ ) {
+    c3_d ran_d = u3nc_emit_ran(fam_c[i_w]);
+
+    fprintf(stderr, " %s %" PRIu64, fam_c[i_w], ran_d);
+    if ( !ran_d ) {
+      mis_w++;
+    }
+  }
+  fprintf(stderr, "\r\n");
+  ret_i = _check("fams: every family the emitter lowers ran as machine code",
+                 0 == mis_w) && ret_i;
+
+  u3nc_emit_count(0);
+  u3nc_Hot = hot_h;
+  u3z(fol);
+  return ret_i;
+}
+
+/* _test_home(): machine code (the emitter) with the home road as the
+**               running road: programs compiled, lowered and run there,
+**               where the road's own nouns are the persistent ones and no
+**               cell may be reused, checked against u3n on the same road,
+**               and then the home road's reference counts by a GC.
+*/
+static c3_i
+_test_home(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    const c3_c* sam_c;
+  } cas_u[] = {
+    { "home, ackermann",
+      "|=  s=@\n=/  m=@  2\n=/  n=@  s\n|-  ^-  @\n?:  =(0 m)  +(n)\n"
+      "?:  =(0 n)  $(m (dec m), n 1)\n$(m (dec m), n $(n (dec n)))\n",
+      "5" },
+    { "home, list",
+      "|=  l=(list @)\n^-  (list @)\n?~  l  ~\n[(add i.l 1) $(l t.l)]\n",
+      "(gulf 1 200)" },
+    { "home, pair",
+      "|=  n=@\n^-  @\n=<  -\n|-  ^-  [@ @]\n?:  =(0 n)  [0 1]\n"
+      "=/  r  $(n (dec n))\n[+.r (add -.r +.r)]\n",
+      "60" },
+    { "home, turn",
+      "|=  a=@\n^-  @\n=/  f  |=(b=@ (mul b +(b)))\n"
+      "(roll (turn (gulf 1 a) f) add)\n",
+      "50" },
+    { "home, scow",
+      "|=  n=@\n^-  tape\n=/  i=@  0\n=/  out=tape  ~\n|-  ^-  tape\n"
+      "?:  =(i 20)  out\n$(i +(i), out (weld (scow %ud (add n i)) out))\n",
+      "123.456" },
+    { "home, big",
+      "|=  a=@\n^-  [@ ? ?]\n=/  b  (add a 0xffff.ffff.ffff.ffff.ffff)\n"
+      "[b =(b 0x1.0000.0000.0000.0000.0004) =(a 5)]\n",
+      "5" },
+    { "home, words",
+      "|=  a=@\n^-  [@ @ @ ? ? ? @ @ @]\n"
+      "=/  b  (add a 0x7fff.fffb)\n=/  c  (add a 0xffff.fffb)\n"
+      "=/  d  (add a 0x7fff.ffff.ffff.fffb)\n"
+      ":*  b  c  d\n    =(b 0x8000.0000)  =(c 0x1.0000.0000)\n"
+      "    =(d 0x8000.0000.0000.0000)\n    (dec b)  (dec c)  (dec d)\n==\n",
+      "5" },
+    { "home, ream",
+      "|=  a=@t\n^-  hoon\n(ream a)\n",
+      "'=+  a=1  ?:  =(a 2)  [a a]  (add a 3)'" },
+  };
+  u3_noun fol   = u3nq(9, 2, 0, 1);
+  c3_h    hot_h = u3nc_Hot;
+  c3_i    ret_i = 1;
+  c3_d    ran_d;
+  c3_w    i_w;
+
+  if ( !u3nc_Emit ) {
+    u3z(fol);
+    return 1;
+  }
+  u3_assert( u3R == &(u3H->rod_u) );
+  u3nc_Hot = 1;
+  u3nc_emit_count(1);
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    u3_noun cor = _gate(cas_u[i_w].src_c, u3v_wish(cas_u[i_w].sam_c));
+    u3_noun one = u3n_nock_on(u3k(cor), u3k(fol));
+    u3_noun two = u3nc_nock_on(u3k(cor), u3k(fol));
+    u3_noun tri = u3nc_nock_on(cor, u3k(fol));
+
+    ret_i = _check(cas_u[i_w].nam_c, (c3y == u3r_sing(one, two))
+                                  && (c3y == u3r_sing(one, tri))) && ret_i;
+    u3z(one); u3z(two); u3z(tri);
+  }
+
+  ran_d = u3nc_emit_ran("DON") + u3nc_emit_ran("DOX");
+  fprintf(stderr, "home: %" PRIu64 " returns of machine code on the home "
+                  "road, %" PRIu64 " cells made, %" PRIu64 " reusing ops\r\n",
+          ran_d, u3nc_emit_ran("CON"), u3nc_emit_ran("COR"));
+  ret_i = _check("home: machine code ran there", 0 != ran_d) && ret_i;
+
+  u3nc_emit_count(0);
+  u3nc_Hot = hot_h;
+
+  //  the counts of the home road, which machine code has gained and
+  //  released on directly
+  //
+  u3m_grab(fol, u3_none);
+  ret_i = _check("home: the home road's counts are right", 1) && ret_i;
+
+  u3z(fol);
+  return ret_i;
+}
+
+/* _poke_guard(): write into the guard of the stack of the code, from C,
+**                far from the stack pointer.
+*/
+static u3_noun
+_poke_guard(u3_noun arg)
+{
+  c3_d           tri_d;
+  volatile c3_y* adr_y = u3nc_emit_guard(&tri_d);
+
+  u3z(arg);
+  *adr_y = 1;
+  return 0;
+}
+
+/* _over(): whether the product of a u3m_soft() is the signal of a stack
+**          overflow.  TRANSFERS.
+*/
+static c3_t
+_over(u3_noun gon)
+{
+  c3_t ove_t = (c3y == u3du(gon)) && (c3__over == u3h(gon));
+
+  u3z(gon);
+  return ove_t;
+}
+
+/* _test_deep(): the stack of the code out of room (the emitter): a
+**               recursion without end, in machine code and with a jet at
+**               every level, and a write into the guard from C, are the
+**               signal of a stack overflow each, the pages are given
+**               back, and what runs next runs.
+*/
+static c3_i
+_test_deep(void)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  c3_h    hot_h = u3nc_Hot;
+  c3_d    tri_d[2];
+  c3_i    ret_i = 1;
+
+  if ( !u3nc_Emit ) {
+    u3z(fol);
+    return 1;
+  }
+  u3nc_Hot = 1;
+
+  ret_i = _check("deep: a recursion without end is a stack overflow",
+                 _over(u3m_soft(0, _nock_nc,
+                         u3nc(_gate("|=  s=@\n=/  n=@  s\n|-  ^-  @\n"
+                                    "+($(n +(n)))\n", 1), u3k(fol)))))
+          && ret_i;
+  (void)u3nc_emit_guard(&tri_d[0]);
+  ret_i = _test("deep, after", _gate("|=  s=@\n=/  n=@  s\n|-  ^-  @\n"
+                                     "?:  =(0 n)  0\n+($(n (dec n)))\n",
+                                     100000),
+                u3k(fol), 1) && ret_i;
+  (void)u3nc_emit_guard(&tri_d[1]);
+  ret_i = _check("deep: the pages of the stack were given back",
+                 tri_d[1] > tri_d[0]) && ret_i;
+
+  ret_i = _check("deep: the same with a jet at every level",
+                 _over(u3m_soft(0, _nock_nc,
+                         u3nc(_gate("|=  s=@\n=/  n=@  s\n|-  ^-  @\n"
+                                    "+($(n (mul 1 +(n))))\n", 1),
+                              u3k(fol))))) && ret_i;
+  ret_i = _check("deep: a write into the guard from C is one too",
+                 _over(u3m_soft(0, _poke_guard, 0))) && ret_i;
+  ret_i = _test("deep, last", _gate("|=  s=@\n=/  n=@  s\n|-  ^-  @\n"
+                                    "?:  =(0 n)  0\n+($(n (dec n)))\n",
+                                    200000),
+                u3k(fol), 1) && ret_i;
+
+  u3nc_Hot = hot_h;
+  u3z(fol);
+  return ret_i;
+}
+
+/* _lost_home(): out as a signal goes, on the home road.  For
+**               u3m_soft_with(), which runs it before the takes: as a
+**               failure in the takes does, it abandons the road of the
+**               computation with the programs compiled on it.
+*/
+static void
+_lost_home(void)
+{
+  u3m_signal(c3__intr);
+}
+
+/* _test_lost(): a road abandoned with its programs, which are neither
+**               freed nor taken: what native code kept of them, their
+**               records and their code, is freed when the computation
+**               has failed, and the same programs are compiled and run
+**               after.
+*/
+static c3_i
+_test_lost(void)
+{
+  static const c3_c* src_c = "|=  n=@\n^-  @\n"
+                             "=/  f  |=(a=@ ^-(@ (add (mul a 3) 7)))\n"
+                             "=/  g  |=(a=@ ^-(@ (f (f a))))\n"
+                             "(add (g n) (f +(n)))\n";
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  c3_h    hot_h = u3nc_Hot, wag_h = u3C.wag_h;
+  c3_d    use_d[2], sid_d[2], top_d, pek_d, evi_d[2], str_d = 0;
+  c3_t    int_t = 1;
+  c3_i    ret_i = 1;
+  c3_w    i_w;
+
+  if ( !u3nc_Jit ) {
+    u3z(fol);
+    return 1;
+  }
+  u3nc_Hot = 1;
+
+  //  what the gate calls is compiled on the home road first
+  //
+  ret_i = _test("lost, before",
+                _gate("|=  n=@\n^-  @\n(add (mul n 3) 7)\n", 5),
+                u3k(fol), 1) && ret_i;
+  ret_i = _check("lost: every record is of a program of the home road",
+                 0 == u3nc_emit_stray()) && ret_i;
+  for ( i_w = 0; i_w < 4; i_w++ ) {
+    u3_noun gon;
+
+    u3nc_emit_usage(&use_d[0], &top_d, &pek_d, &evi_d[0], &sid_d[0]);
+    gon = u3m_soft_with(0, _nock_nc, u3nc(_gate(src_c, 5 + i_w), u3k(fol)),
+                        _lost_home);
+    u3nc_emit_usage(&use_d[1], &top_d, &pek_d, &evi_d[1], &sid_d[1]);
+
+    int_t  = int_t && (c3y == u3du(gon)) && (c3__intr == u3h(gon));
+    str_d += u3nc_emit_stray();
+    u3z(gon);
+  }
+  u3C.wag_h = wag_h;
+
+  fprintf(stderr, "lost: the last run: records %" PRIu64 ", then %" PRIu64
+                  "; arena in use %" PRIu64 ", then %" PRIu64 "\r\n",
+          sid_d[0], sid_d[1], use_d[0], use_d[1]);
+  ret_i = _check("lost: the runs were interrupted on the home road", int_t)
+          && ret_i;
+  ret_i = _check("lost: no record of the abandoned programs is left",
+                 0 == str_d) && ret_i;
+  ret_i = _check("lost: nor their code",
+                 (sid_d[1] == sid_d[0])
+                 && ((use_d[1] == use_d[0]) || (evi_d[1] != evi_d[0])))
+          && ret_i;
+  ret_i = _test("lost, after", _gate(src_c, 5), u3k(fol), 1) && ret_i;
+
+  u3nc_Hot = hot_h;
+  u3z(fol);
+  return ret_i;
+}
+#endif
+
 /* _test_rung(): a core registered after a function calling it was analyzed.
 **               Until the next u3d_hot() the function has no ring, so what
 **               calls it compiles the same as before, even newly; then its
@@ -3907,6 +4727,15 @@ main(int argc, char* argv[])
                                                  : "probe",
                        cor, u3nq(9, 2, 0, 1), 1);
 
+    //  U3NC_PIER: the image, with the programs the probe compiled, saved
+    //  for the next process
+    //
+    if ( getenv("U3NC_PIER") ) {
+      u3m_save();
+      fprintf(stderr, "pier: saved, %" PRIc3_w " direct programs\r\n",
+              u3h_wyt(u3H->rod_u.ska.dir_p));
+    }
+
     //  U3NC_REGS: the argument counts of the programs compiled
     //
     if ( getenv("U3NC_REGS") ) {
@@ -3999,6 +4828,24 @@ main(int argc, char* argv[])
       return ret_i ? 0 : 1;
     }
   }
+
+#ifdef U3NC_JIT
+  //  U3NC_LIFE: the tests of the stack and of the arena of machine
+  //  functions, and nothing else
+  //
+  if ( getenv("U3NC_LIFE") ) {
+    return (  _test_deep() && _test_lost() && _test_gone(0, 1)
+           && _test_life() && _test_gone(1, 3) ) ? 0 : 1;
+  }
+  //  U3NC_FAMS: the test of every op family, and nothing else
+  //
+  if ( getenv("U3NC_FAMS") ) {
+    if ( !getenv("U3NC_ALL") ) {
+      u3nc_Self = 0;
+    }
+    return (_test_fams() && _test_home()) ? 0 : 1;
+  }
+#endif
 
   //  U3NC_BOOT: the tests of u3d_boot() and u3d_hot(), and nothing else
   //
@@ -4193,6 +5040,38 @@ main(int argc, char* argv[])
       exit(1);
     }
   }
+
+#ifdef U3NC_JIT
+  if ( !_test_fams() ) {
+    exit(1);
+  }
+
+  if ( !_test_home() ) {
+    exit(1);
+  }
+
+  if ( !_test_deep() ) {
+    exit(1);
+  }
+
+  if ( !_test_lost() ) {
+    exit(1);
+  }
+
+  //  last: they drop every program
+  //
+  if ( !_test_gone(0, 1) ) {
+    exit(1);
+  }
+
+  if ( !_test_life() ) {
+    exit(1);
+  }
+
+  if ( !_test_gone(1, 3) ) {
+    exit(1);
+  }
+#endif
 
   //  GC
   //
