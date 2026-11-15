@@ -2123,6 +2123,14 @@ u3m_soft_with(c3_w    mil_w,
   u3nc_event();
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
+  //  a failure past [hom_f], in the takes (%meme on the home road), leaves
+  //  what it opened open: the window of deferred gains is shut here, for
+  //  the next run (below, or the next event) to open it again
+  //
+  if ( 0 != u3h(why) ) {
+    u3a_defer_close();
+  }
+
   //  a failure of a computation that ran compiled nock: once more without,
   //  so that a hint cannot fail what would go through in u3n (u3nc_fail());
   //  out of memory: once more without what the hints keep (u3d_drop())
@@ -2134,6 +2142,10 @@ u3m_soft_with(c3_w    mil_w,
     u3nc_Off = 1;
     why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);
     u3nc_Off = 0;
+
+    if ( 0 != u3h(why) ) {
+      u3a_defer_close();
+    }
   }
   u3z(arg);
 
