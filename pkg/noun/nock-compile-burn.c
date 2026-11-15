@@ -1951,7 +1951,8 @@ OP(WIDE) ARGS CONV
 //
 //    CALB i     the callee of site i, linked; its slots pushed
 //    ARGB s j   slot s to argument j, borrowed
-//    ARGK s j   slot s to argument j, consumed
+//    ARGK s j   slot s to argument j, consumed: after the ARGBs of the
+//               site, one of which may read the slot (_nj_args())
 //    ARGC s j   slot s to argument j, uncounted: for a jet, which retains
 //    CALE d n   the frame, the product to slot d; enter the callee, which
 //               has n arguments
