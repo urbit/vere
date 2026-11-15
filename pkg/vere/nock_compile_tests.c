@@ -1774,6 +1774,12 @@ _test_boot(void)
 
   u3z(_run("boot, first", _nock_nc, cor, fol));
 
+  //  the core up to date first: the tests before may have left it cores
+  //  that u3n registered and it has not been told of, which the boot
+  //  would tell it of
+  //
+  u3d_hot();
+
   old   = u3R->ska.cor;
   wyt_w = u3h_wyt(u3R->ska.dir_p);
 
@@ -2134,6 +2140,213 @@ _test_mean(void)
                                      ( 1100 == cas_u[i_w].sam_w ) ? 1100 : 0),
                         fol, cas_u[i_w].tag)
          && ret_i;
+  }
+
+  return ret_i;
+}
+
+/* _test_leap(): forks whose branches both take a part of their product
+**               from one place of the subject, and what follows reads that
+**               part under a hint or a fork; and what follows a hinted
+**               expression crashing on a part of its product, which is no
+**               crash inside the hint.  Products on samples that run
+**               through, the traces of u3n and u3nc on samples that crash,
+**               and no crash on a sample whose missing part is never read.
+**               Fetches are untyped (.*) so that a sample of any shape
+**               reaches them.  Every gate runs once more under !:.
+*/
+static c3_i
+_test_leap(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    const c3_c* sam_c[6];   //  samples, hoon
+    c3_t        bad_t[6];   //  whether the sample crashes
+  } cas_u[] = {
+    { "tail",
+      "|=  sam=*\n"
+      "=/  new=*\n  ?:  =(0 .*(sam [0 2]))\n    [1 .*(sam [0 3])]\n  sam\n"
+      "~|  %after\n[.*(new [0 2]) .*(new [0 14])]\n",
+      { "[0 5 6 7]", "[3 5 6 7]", "[0 5 6]", "[3 5]", "7", 0 },
+      { 0, 0, 1, 1, 1, 0 } },
+    { "chain",
+      "|=  sam=*\n=/  old=*  sam\n"
+      "=.  old  ?:(=(0 .*(old [0 2])) [1 .*(old [0 3])] old)\n"
+      "=.  old  ?:(=(1 .*(old [0 2])) [2 .*(old [0 3])] old)\n"
+      "=.  old  ?:(=(2 .*(old [0 2])) [3 .*(old [0 3])] old)\n"
+      "~|  %end\n[.*(old [0 2]) .*(old [0 6]) .*(old [0 7])]\n",
+      { "[0 5 6]", "[1 5 6]", "[9 5 6]", "[0 5]", "[2 5]", "5" },
+      { 0, 0, 0, 1, 1, 1 } },
+    { "chain, no hints",
+      "|=  sam=*\n=/  old=*  sam\n"
+      "=.  old  ?:(=(0 .*(old [0 2])) [1 .*(old [0 3])] old)\n"
+      "=.  old  ?:(=(1 .*(old [0 2])) [2 .*(old [0 3])] old)\n"
+      "=.  old  ?:(=(2 .*(old [0 2])) [3 .*(old [0 3])] old)\n"
+      "?:  =(3 .*(old [0 2]))  [.*(old [0 6]) .*(old [0 7])]\n0\n",
+      { "[0 5 6]", "[1 5 6]", "[9 5 6]", "[0 5]", "[9 5]", "5" },
+      { 0, 0, 0, 1, 0, 1 } },
+    { "whole",
+      "|=  sam=*\n"
+      "=/  new=*  ?:(=(0 .*(sam [0 2])) [1 .*(sam [0 3])] sam)\n"
+      "~|  %after\n[new .*(new [0 6])]\n",
+      { "[0 5 6]", "[4 5 6]", "[0 5]", "[4 5]", 0, 0 },
+      { 0, 0, 1, 1, 0, 0 } },
+    { "moved",
+      "|=  sam=*\n"
+      "=/  new=*  ?:(=(0 .*(sam [0 2])) [1 .*(sam [0 6])] sam)\n"
+      "~|  %after\n.*(new [0 6])\n",
+      { "[0 [5 6] 7]", "[4 [5 6] 7]", "[0 5 7]", "[4 5]", 0, 0 },
+      { 0, 0, 1, 1, 0, 0 } },
+    { "bang",
+      "|=  sam=*\n"
+      "=/  new=*  ?:(=(0 .*(sam [0 2])) !! sam)\n"
+      "~|  %after\n.*(new [0 6])\n",
+      { "[1 5 6]", "[0 5 6]", "[1 5]", 0, 0, 0 },
+      { 0, 1, 1, 0, 0, 0 } },
+    { "edit",
+      "|=  sam=[t=@ a=* b=*]\n"
+      "=/  new  ?:(=(0 t.sam) sam(t 1) sam)\n"
+      "~|  %x\n[t.new .*(a.new [0 3]) b.new]\n",
+      { "[0 [5 6] 7]", "[2 [5 6] 7]", "[0 5 7]", "[2 5 7]", 0, 0 },
+      { 0, 0, 1, 1, 0, 0 } },
+    { "let",
+      "|=  sam=*\n"
+      "=/  new=*\n  ?:  =(0 .*(sam [0 2]))\n    =/  x=@  (add 1 1)\n"
+      "    [x .*(sam [0 3])]\n  sam\n"
+      "~|  %after\n.*(new [0 7])\n",
+      { "[0 5 6]", "[3 5 6]", "[0 5]", "[3 5]", 0, 0 },
+      { 0, 0, 1, 1, 0, 0 } },
+    { "under",
+      "|=  sam=*\n"
+      "=/  new=*  ?:(=(0 .*(sam [0 2])) [1 .*(sam [0 3])] sam)\n"
+      "?:  =(1 .*(new [0 2]))\n  ~|  %inner\n  .*(new [0 7])\n0\n",
+      { "[0 5 6]", "[3 5]", "[3 5 6]", "[0 5]", "[1 5]", "3" },
+      { 0, 0, 0, 1, 1, 1 } },
+    { "spot product",
+      "!:\n|=  sam=*\n.*(sam [0 6])\n",
+      { "5", 0, 0, 0, 0, 0 },
+      { 1, 0, 0, 0, 0, 0 } },
+    { "mean product",
+      "|=  sam=*\n=/  x=*  ~|(%making sam)\n.*(x [0 6])\n",
+      { "5", 0, 0, 0, 0, 0 },
+      { 1, 0, 0, 0, 0, 0 } },
+    { "mean call product",
+      "|=  sam=@\n=/  x=*  ~|(%making (cue sam))\n.*(x [0 6])\n",
+      { "(jam 5)", 0, 0, 0, 0, 0 },
+      { 1, 0, 0, 0, 0, 0 } },
+    { "mean cons",
+      "|=  sam=*\n=/  x=*  ~|(%making [sam sam])\n.*(x [0 6])\n",
+      { "[5 6]", "5", 0, 0, 0, 0 },
+      { 0, 1, 0, 0, 0, 0 } },
+    { "mean fork",
+      "|=  sam=*\n=/  x=*  ~|(%making ?:(=(0 sam) [1 2] sam))\n"
+      ".*(x [0 2])\n",
+      { "0", "[7 8]", "5", 0, 0, 0 },
+      { 0, 0, 1, 0, 0, 0 } },
+    { "mean in mean",
+      "|=  sam=*\n~|  %outer\n=/  x=*  ~|(%inner sam)\n.*(x [0 2])\n",
+      { "[7 8]", "5", 0, 0, 0, 0 },
+      { 0, 1, 0, 0, 0, 0 } },
+    { "mean inside",
+      "|=  sam=*\n=/  x=*  ~|(%making .*(sam [0 6]))\nx\n",
+      { "[5 6 7]", "5", 0, 0, 0, 0 },
+      { 0, 1, 0, 0, 0, 0 } },
+    { "mean callee",
+      "|=  sam=*\n=/  f  |=(a=* ~|(%in a))\n.*((f sam) [0 2])\n",
+      { "[7 8]", "5", 0, 0, 0, 0 },
+      { 0, 1, 0, 0, 0, 0 } },
+    { "spot call product",
+      "!:\n|=  sam=@\n=/  x=*  (cue sam)\n.*(x [0 6])\n",
+      { "(jam 5)", 0, 0, 0, 0, 0 },
+      { 1, 0, 0, 0, 0, 0 } },
+  };
+  c3_i ret_i = 1;
+  c3_w i_w, j_w, k_w;
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    //  once as it is, once under !: if it isn't already
+    //
+    for ( k_w = 0; k_w < 2; k_w++ ) {
+      c3_c src_c[1024];
+
+      if ( k_w && !strncmp(cas_u[i_w].src_c, "!:", 2) ) {
+        continue;
+      }
+      snprintf(src_c, sizeof(src_c), "%s%s", k_w ? "!:\n" : "",
+               cas_u[i_w].src_c);
+
+      for ( j_w = 0; (j_w < 6) && cas_u[i_w].sam_c[j_w]; j_w++ ) {
+        u3_noun cor = _gate(src_c, u3v_wish(cas_u[i_w].sam_c[j_w]));
+        u3_noun fol = u3nq(9, 2, 0, 1);
+        c3_c    nam_c[96];
+
+        snprintf(nam_c, sizeof(nam_c), "leap %s%s, %s%s", cas_u[i_w].nam_c,
+                 k_w ? ", spots" : "", cas_u[i_w].sam_c[j_w],
+                 cas_u[i_w].bad_t[j_w] ? ", crash" : "");
+        ret_i = ( cas_u[i_w].bad_t[j_w]
+                  ? _test_crash(nam_c, cor, fol, 0)
+                  : _test(nam_c, cor, fol, 1) )
+             && ret_i;
+      }
+    }
+  }
+
+  return ret_i;
+}
+
+/* _test_switch(): a switch of six cases, which the library turns into a
+**                 binary search: over the head of a tagged union, over a
+**                 union of atoms, on an untyped noun with a default, and
+**                 a chain of plain compares of one register with a default
+**                 and a repeated target; on samples of the first case, of
+**                 a middle one and of the last, and for the untyped ones
+**                 on what takes the default: another atom, a cell, an
+**                 indirect atom, 0.
+*/
+static c3_i
+_test_switch(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    const c3_c* sam_c[7];   //  samples, hoon
+  } cas_u[] = {
+    { "head",
+      "|=  x=$%([%a p=@] [%b p=@] [%c p=@] [%d p=@] [%e p=@] [%f p=@])\n"
+      "?-  -.x\n  %a  1\n  %b  2\n  %c  3\n  %d  4\n  %e  5\n  %f  6\n"
+      "==\n",
+      { "[%a 7]", "[%c 7]", "[%f 7]", 0, 0, 0, 0 } },
+    { "atoms",
+      "|=  x=?(%a %b %c %d %e %f)\n"
+      "?-  x\n  %a  1\n  %b  2\n  %c  3\n  %d  4\n  %e  5\n  %f  6\n"
+      "==\n",
+      { "%a", "%d", "%f", 0, 0, 0, 0 } },
+    { "noun",
+      "|=  x=*\n"
+      "?+  x  0\n  [%a *]  1\n  [%b *]  2\n  [%c *]  3\n  [%d *]  4\n"
+      "  [%e *]  5\n  [%f *]  6\n==\n",
+      { "[%a 7]", "[%f 7]", "[%z 7]", "5", "[[1 2] 3]", 0, 0 } },
+    { "plain",
+      "|=  x=*\n"
+      "?+  x  0\n  %a  1\n  %b  2\n  %c  1\n  %d  4\n  %e  5\n  %f  6\n"
+      "==\n",
+      { "%a", "%c", "%f", "%z", "[1 2]", "0x1.0000.0000.0000.0000", "0" } },
+  };
+  c3_i ret_i = 1;
+  c3_w i_w, j_w;
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    for ( j_w = 0; (j_w < 7) && cas_u[i_w].sam_c[j_w]; j_w++ ) {
+      c3_c nam_c[64];
+
+      snprintf(nam_c, sizeof(nam_c), "switch %s, %s", cas_u[i_w].nam_c,
+               cas_u[i_w].sam_c[j_w]);
+      ret_i = _test(nam_c, _gate(cas_u[i_w].src_c,
+                                 u3v_wish(cas_u[i_w].sam_c[j_w])),
+                    u3nq(9, 2, 0, 1), 1)
+           && ret_i;
+    }
   }
 
   return ret_i;
@@ -3104,6 +3317,14 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_mean() ) {
+    exit(1);
+  }
+
+  if ( !_test_leap() ) {
+    exit(1);
+  }
+
+  if ( !_test_switch() ) {
     exit(1);
   }
 
