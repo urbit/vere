@@ -20,6 +20,7 @@
 
 #include "allocate.h"
 #include "backtrace.h"
+#include "direct.h"
 #include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
@@ -2093,6 +2094,20 @@ u3m_soft(c3_w    mil_w,
   return u3m_soft_with(mil_w, fun_f, arg, 0);
 }
 
+/* _cm_again(): should a top-level computation that failed with mot_m run
+**              once more, in u3n?  If it ran compiled nock (u3nc_fail());
+**              and if it ran out of memory, without what the hints keep
+**              (u3d_drop()).
+*/
+static c3_t
+_cm_again(c3_m mot_m)
+{
+  c3_o ran_o = u3nc_fail(mot_m);
+  c3_t dro_t = u3nc_Redo && (c3__meme == mot_m) && u3d_drop();
+
+  return (c3y == ran_o) || dro_t;
+}
+
 /* u3m_soft_with(): u3m_soft(), running [hom_f] (if any) on success, back
 **                  on the home road, after the event's road falls and
 **                  before its product and caches are taken.
@@ -2109,10 +2124,11 @@ u3m_soft_with(c3_w    mil_w,
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
   //  a failure of a computation that ran compiled nock: once more without,
-  //  so that a hint cannot fail what would go through in u3n (u3nc_fail())
+  //  so that a hint cannot fail what would go through in u3n (u3nc_fail());
+  //  out of memory: once more without what the hints keep (u3d_drop())
   //
   if (  (0 != u3h(why))
-     && (c3y == u3nc_fail(( 3 == u3h(why) ) ? u3h(u3t(why)) : c3__exit)) )
+     && _cm_again(( 3 == u3h(why) ) ? u3h(u3t(why)) : c3__exit) )
   {
     u3z(why);
     u3nc_Off = 1;

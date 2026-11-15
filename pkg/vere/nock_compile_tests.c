@@ -1890,6 +1890,54 @@ _test_redo(void)
   return ret_i;
 }
 
+/* _meme_once(): out of memory the first time, 42 after.  For u3m_soft().
+*/
+static c3_t _meme_t;
+
+static u3_noun
+_meme_once(u3_noun arg)
+{
+  if ( !_meme_t ) {
+    _meme_t = 1;
+    return u3m_bail(c3__meme);
+  }
+  return 42;
+}
+
+/* _test_drop(): a computation out of memory: the core goes with all it
+**               has analyzed and every program, and the computation runs
+**               once more; a core installed anew, as mars does after the
+**               event, compiles again.
+*/
+static c3_i
+_test_drop(void)
+{
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  u3_noun cor = _gate("|=  n=@\n^-  @\n+(n)\n", 5);
+  u3_noun gon;
+  c3_i    ret_i = 1;
+
+  u3z(_run("drop, first", _nock_nc, cor, fol));
+
+  u3nc_Redo = 1;
+  gon       = u3m_soft(0, _meme_once, 0);
+  u3nc_Redo = 0;
+
+  ret_i = _check("drop: once more", (0 == u3h(gon)) && (42 == u3t(gon)))
+       && ret_i;
+  ret_i = _check("drop: no core, no programs",
+                 (u3_nul == u3R->ska.cor) && u3d_Gone
+                 && (0 == u3h_wyt(u3R->ska.dir_p))
+                 && !_has_entry(cor, fol)) && ret_i;
+  u3z(gon);
+
+  u3d_Gone = 0;
+  _steel();
+  ret_i = _test("drop, a new core", cor, fol, 1) && ret_i;
+
+  return ret_i;
+}
+
 /* _crash(): the raw trace of [bus fol] crashing under fun_f, or u3_none
 **           if it doesn't crash.  RETAINS.
 */
@@ -3072,6 +3120,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_redo() ) {
+    exit(1);
+  }
+
+  if ( !_test_drop() ) {
     exit(1);
   }
 

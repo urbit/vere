@@ -24,6 +24,14 @@
       void
       u3d_boot(u3_atom pil);
 
+    /* u3d_drop(): forget the core with all it has analyzed, and every
+    **             program, for memory; u3d_Gone: the core is to be installed
+    **             anew.  Produces whether there was a core.
+    */
+      extern c3_t u3d_Gone;
+      c3_t
+      u3d_drop(void);
+
     /* u3d_hot(): feed the core the jet drivers there are, and drop the
     **            programs of the functions a change in them, or a core
     **            registered since the last time, invalidates.  No compiled

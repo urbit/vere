@@ -776,6 +776,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
+  //  memory is short, or the kernel is replaced: what the %ska hints keep
+  //  goes too (u3d_drop())
+  //
+  if ( mar_u->fag_w & (_mars_fag_hit1 | _mars_fag_hit0 | _mars_fag_vega) ) {
+    u3d_drop();
+  }
+
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
@@ -825,6 +832,13 @@ _mars_post(u3_mars* mar_u)
 
   if ( u3C.wag_h & u3o_toss ) {
     u3m_toss();
+  }
+
+  //  the SKA core went (u3d_drop()): a new one
+  //
+  if ( u3d_Gone ) {
+    u3d_Gone = 0;
+    u3_mars_steel();
   }
 
   mar_u->fag_w = _mars_fag_none;

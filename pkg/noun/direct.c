@@ -592,6 +592,33 @@ u3d_boot(u3_atom pil)
   }
 }
 
+/* u3d_drop(): forget the core with all it has analyzed, and every program:
+**             what the hints keep on the loom goes when memory is short (an
+**             event out of memory, the thresholds of mars) or the kernel is
+**             replaced, as the other caches do.  On the home road, with
+**             nothing running.  Until u3d_boot() installs the core anew
+**             (u3d_Gone says it should) every hint is left to u3n.
+**             Produces whether there was a core.
+*/
+c3_t u3d_Gone = 0;
+
+c3_t
+u3d_drop(void)
+{
+  if ( (u3_nul == u3R->ska.cor) || (&(u3H->rod_u) != u3R) ) {
+    return 0;
+  }
+
+  u3l_log("ska: the analysis of the core and the programs go");
+  u3z(u3R->ska.cor);
+  u3R->ska.cor = u3_nul;
+  u3z(u3R->ska.new);
+  u3R->ska.new = u3_nul;
+  u3nc_reclaim();
+  u3d_Gone = 1;
+  return 1;
+}
+
 /* _d_jets(): feed the core the jet drivers lis, and drop the programs of
 **            the functions a change in them invalidates.  TRANSFERS.
 */
