@@ -3283,6 +3283,9 @@ main(int argc, char* argv[])
   //  core's own hoon.hoon (U3NC_STEEL_SYS) built from nothing, the
   //  library (U3NC_STEEL_LIB) on it.  In u3n, and nothing else
   //
+  //  U3NC_STEEL_BUG: the library keeps the spots of its source, for
+  //  debugging the core; a core with them compiles three times slower
+  //
   if ( getenv("U3NC_STEEL_GEN") ) {
     size_t  sys_i, lib_i;
     c3_c*   sys_c = _slurp(getenv("U3NC_STEEL_SYS"), &sys_i);
@@ -3292,7 +3295,7 @@ main(int argc, char* argv[])
 
     if ( !sys_c || !lib_c ) return 1;
     cor = _gate(
-      "|=  [sys=@t lib=@t]\n"
+      "|=  [sys=@t lib=@t bug=?]\n"
       "^-  [%steel p=(list)]\n"
       "=/  mist\n"
       "  |=  [bon=path txt=@]\n"
@@ -3308,7 +3311,7 @@ main(int argc, char* argv[])
       "      (star ;~(less (just `@`10) next))\n"
       "    ==\n"
       "  %+  ifix  [;~(plug gay skip-ford) gay]\n"
-      "  (stag %tssg (most gap tall:vas(wer bon, bug &)))\n"
+      "  (stag %tssg (most gap tall:vas(wer bon, bug bug)))\n"
       "=/  trap\n"
       "  =/  sub  *(trap vase)\n"
       "  =.  sub  (swat sub (rain /sys/hoon/hoon sys))\n"
@@ -3317,7 +3320,8 @@ main(int argc, char* argv[])
       "  =>  [=_trap ~]  !=\n"
       "  q:$:trap\n"
       "[%steel nok trap ~]\n",
-      u3nc(u3i_bytes(sys_i, (c3_y*)sys_c), u3i_bytes(lib_i, (c3_y*)lib_c)));
+      u3nt(u3i_bytes(sys_i, (c3_y*)sys_c), u3i_bytes(lib_i, (c3_y*)lib_c),
+           getenv("U3NC_STEEL_BUG") ? c3y : c3n));
     fol = u3nq(9, 2, 0, 1);
     pro = _run("steel: build", _nock_n, cor, fol);
     u3z(cor); u3z(fol);
