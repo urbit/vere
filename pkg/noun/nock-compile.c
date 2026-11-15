@@ -139,12 +139,25 @@
 **    FGT   s        forget s: 0 -> s, nothing released; the end of an
 **                   alias, emitted only where empty slots are zero
 **                   (_nc_zer_t)
+**    LNK   x s      link the cell s, consumed, into the product this
+**                   activation's caller waits for: the noun at axis x of
+**                   s, a zero, is the place of the product of the tail
+**                   call that follows (_nc_tails())
+**    TRK   n        keep the trace: n is 256 times the words on the stack
+**                   that the hints open here pushed, popped now, plus
+**                   the number of their entries on the trace stack,
+**                   which stay for the tail call that follows and come
+**                   off when the caller of this activation gets its
+**                   product (_nc_tails())
+**    JNK   u f      NOK in tail position: both consumed, there being
+**                   nothing after it for them to be alive for
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
 **  DON, DOX, JMP, JMS, JMF, JMX, JSP and JMC end the activation, and come in a
 **  sweeping variant (_1) that first drops every slot it doesn't take: it
 **  stands for the drops at the start of a block that does nothing else.
+**  JNK ends it too, and has none.
 */
 
 /*  Families of the IR ops: X(fam, OP, src, dst, imm, tar, sot, kon, swe):
@@ -229,7 +242,10 @@
   X(dox, DOX, 1,   0,   1,   0,   0,   1,   1)                                  \
   X(hea, HEA, 1,   1,   0,   0,   0,   0,   0)                                  \
   X(taa, TAA, 1,   1,   0,   0,   0,   0,   0)                                  \
-  X(fgt, FGT, 1,   0,   0,   0,   0,   0,   0)
+  X(fgt, FGT, 1,   0,   0,   0,   0,   0,   0)                                  \
+  X(lnk, LNK, 1,   0,   1,   0,   0,   0,   0)                                  \
+  X(trk, TRK, 0,   0,   1,   0,   0,   0,   0)                                  \
+  X(jnk, JNK, 2,   0,   0,   0,   0,   0,   0)
 
 /*  Families of ops without operands, X(fam, OP): one opcode each, with
 **  nothing to widen or consume.  They follow the others in the opcode
@@ -1744,6 +1760,553 @@ _nc_translate(nc_gen* gen_u)
       }                                                                         \
     }                                                                           \
   } while ( 0 )
+
+/*  The classes of a call that makes a frame, by what stands between it
+**  and the return of its function (_nc_way()): what it would take to make
+**  it a tail call.
+*/
+enum {
+  _nc_wy_tail_nok = 1,  //  nothing: an indirect call (NOK) and a return
+  _nc_wy_tail_memo,     //  nothing: a memoized call and a return
+  _nc_wy_tail_else,     //  nothing: any other call and a return
+  _nc_wy_cons_tail,     //  one cons, the product its tail
+  _nc_wy_cons_head,     //  one cons, the product its head
+  _nc_wy_cons_more,     //  two or more conses around the product
+  _nc_wy_cons_late,     //  conses whose other half is computed after
+  _nc_wy_hint,          //  the ends of trace hints
+  _nc_wy_hint_cons,     //  the ends of trace hints, and conses
+  _nc_wy_part,          //  the moves of a product returned in parts
+  _nc_wy_part_more,     //  those, with conses or the ends of trace hints
+  _nc_wy_memo,          //  a memoized call, and anything
+  _nc_wy_arit,          //  an increment, a decrement or an addition
+  _nc_wy_jet,           //  the product is an argument of a jet
+  _nc_wy_call,          //  the product is an argument of another call
+  _nc_wy_test,          //  the product decides a branch
+  _nc_wy_held,          //  the end of a hint that does something then
+  _nc_wy_else           //  anything else
+};
+
+/* _nc_tag_end(): what the end of a hint with this tag does: 0, nothing;
+**                1, it pops the trace stack; 2, anything else.  dyn_t: a
+**                dynamic hint (_nc_hint_hind()), else a static one
+**                (_nc_hilt_hind()).
+*/
+static c3_y
+_nc_tag_end(u3_noun tag, c3_t dyn_t)
+{
+  switch ( tag ) {
+    default:        return 0;
+    case c3__bout:  return 2;
+    case c3__jinx:
+    case c3__spin:  return dyn_t ? 2 : 0;
+    case c3__hunk:
+    case c3__lose:
+    case c3__mean:
+    case c3__spot:  return dyn_t ? 1 : 0;
+  }
+}
+
+/* nc_way: what stands between a call that makes a frame and the return
+**         of its function (_nc_way()).
+*/
+#define _nc_way_max  8
+
+typedef struct {
+  c3_y way_y;               //  its class (_nc_wy_)
+  c3_y con_y;               //  conses around the product
+  c3_h hin_h;               //  ends of trace hints
+  c3_h wor_h;               //  words on the stack the ends of hints pop
+  c3_h oth_h[_nc_way_max];  //  the other half of each cons, the innermost
+                            //  first: a register alive before the call
+  c3_y sid_y[_nc_way_max];  //  the half the product is: 0 head, 1 tail
+} nc_way;
+
+/* _nc_way_in(): whether a register is among num_h of them.
+*/
+static c3_t
+_nc_way_in(const c3_h* set_h, c3_h num_h, c3_h reg_h)
+{
+  while ( num_h-- ) {
+    if ( set_h[num_h] == reg_h ) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/* _nc_way(): the path from the call at op j_h of block b_h to the return
+**            of the function: the ops after it, through the jumps that
+**            carry its product on, until an op that returns, branches,
+**            or does anything a tail call could not leave behind.  The
+**            product is followed by name: through the moves into block
+**            parameters, into the conses around it, and it must have no
+**            other reader.  use_h: the number of reads of each register.
+*/
+static void
+_nc_way(nc_gen* gen_u, const c3_h* use_h, c3_h b_h, c3_h j_h, nc_way* way_u)
+{
+#define _nc_way_set  32
+  nc_blk* blk_u = &(gen_u->blk_u[b_h]);
+  nc_op*  cal_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+  c3_h    c_h   = cal_u->dst_h;         //  the product, as it is named now
+  c3_h    par_h[_nc_way_set];           //  block parameters on the path,
+  c3_h    src_h[_nc_way_set];           //    and what was moved into each
+  c3_h    lat_h[_nc_way_set];           //  registers defined after the call
+  c3_h    pat_h[_nc_way_set];           //  parts of the product (RTL)
+  c3_h    par_n = 0, lat_n = 0, pat_n = 0;
+  c3_t    par_t = 0, ari_t = 0, jet_t = 0, lat_t = 0, end_t = 0;
+  c3_y    way_y = 0;
+  c3_h    i_h   = j_h + 1;
+
+  memset(way_u, 0, sizeof(*way_u));
+
+  //  _nc_res(): a register as it was named before the jumps of the path
+  //
+#define _nc_res(r)  ({                                                          \
+    c3_h _r = (r), _k = par_n;                                                  \
+    while ( _k-- ) { if ( par_h[_k] == _r ) { _r = src_h[_k]; } }               \
+    _r;                                                                         \
+  })
+#define _nc_lat(r)  do {                                                       \
+    if ( lat_n < _nc_way_set ) { lat_h[lat_n++] = (r); }                        \
+    else { way_y = _nc_wy_else; }                                             \
+  } while ( 0 )
+
+  if ( (_nc_none == c_h) || (1 != use_h[c_h]) ) {
+    way_y = _nc_wy_else;
+  }
+
+  while ( !way_y && !end_t ) {
+    c3_t hop_t = 0;
+
+    for ( ; !way_y && !end_t && !hop_t && (i_h < blk_u->len_h); i_h++ ) {
+      nc_op* op_u  = &(gen_u->ops_u[blk_u->fir_h + i_h]);
+      c3_y   fam_y = op_u->fam_y;
+      c3_t   got_t = 0;       //  the op reads the product
+
+      _nc_srcs(gen_u, op_u, reg_h, { got_t |= (*reg_h == c_h); });
+
+      switch ( fam_y ) {
+        default: {
+          way_y = ( got_t && _nc_edgy(fam_y) ) ? _nc_wy_test : _nc_wy_else;
+        } break;
+
+        case _nc_nop:
+        case _nc_kil: break;
+
+        case _nc_hop: {
+          hop_t = 1;
+        } break;
+
+        case _nc_mov: {
+          if ( got_t ) {
+            c_h = op_u->dst_h;
+          }
+          else if ( _nc_way_in(pat_h, pat_n, op_u->src_h[0]) ) {
+            if ( pat_n < _nc_way_set ) { pat_h[pat_n++] = op_u->dst_h; }
+            else { way_y = _nc_wy_else; }
+          }
+          else if ( par_n < _nc_way_set ) {
+            src_h[par_n]   = _nc_res(op_u->src_h[0]);
+            par_h[par_n++] = op_u->dst_h;
+          }
+          else {
+            way_y = _nc_wy_else;
+          }
+        } break;
+
+        case _nc_imm:
+        case _nc_iml: {
+          _nc_lat(op_u->dst_h);
+        } break;
+
+        case _nc_hed:
+        case _nc_tal: {
+          if ( got_t ) { way_y = _nc_wy_else; }
+          else { _nc_lat(op_u->dst_h); }
+        } break;
+
+        case _nc_con: {
+          c3_t hed_t = (op_u->src_h[0] == c_h);
+          c3_t tal_t = (op_u->src_h[1] == c_h);
+
+          if ( (hed_t && tal_t) || (way_u->con_y >= _nc_way_max) ) {
+            way_y = _nc_wy_else;
+          }
+          else if ( hed_t || tal_t ) {
+            c3_h oth_h = _nc_res(op_u->src_h[hed_t ? 1 : 0]);
+
+            lat_t |= _nc_way_in(lat_h, lat_n, oth_h);
+            way_u->oth_h[way_u->con_y]   = oth_h;
+            way_u->sid_y[way_u->con_y++] = tal_t;
+            c_h = op_u->dst_h;
+          }
+          else {
+            _nc_lat(op_u->dst_h);
+          }
+        } break;
+
+        case _nc_hde:
+        case _nc_hse: {
+          switch ( _nc_tag_end(gen_u->lin[op_u->imm_h], _nc_hde == fam_y) ) {
+            case 0: way_u->wor_h++; break;
+            case 1: way_u->wor_h++; way_u->hin_h++; break;
+            default: way_y = _nc_wy_held; break;
+          }
+        } break;
+
+        case _nc_hme:
+        case _nc_hce: {
+          way_u->hin_h++;
+        } break;
+
+        case _nc_rtl: {
+          par_t = 1;
+          if ( pat_n < _nc_way_set ) { pat_h[pat_n++] = op_u->dst_h; }
+          else { way_y = _nc_wy_else; }
+        } break;
+
+        case _nc_rts: {
+          par_t = 1;
+        } break;
+
+        case _nc_dox: {
+          par_t = 1;
+          end_t = 1;
+        } break;
+
+        case _nc_don: {
+          if ( got_t ) { end_t = 1; }
+          else { way_y = _nc_wy_else; }
+        } break;
+
+        case _nc_inc:
+        case _nc_dec:
+        case _nc_add: {
+          if ( got_t ) { ari_t = 1; c_h = op_u->dst_h; }
+          else { way_y = _nc_wy_else; }
+        } break;
+
+        case _nc_caf:
+        case _nc_cax: {
+          if ( got_t ) { jet_t = 1; c_h = op_u->dst_h; }
+          else { way_y = _nc_wy_else; }
+        } break;
+
+        case _nc_jmf:
+        case _nc_jmx: {
+          if ( got_t ) { jet_t = 1; end_t = 1; }
+          else { way_y = _nc_wy_else; }
+        } break;
+
+        case _nc_cal: case _nc_cam: case _nc_csm: case _nc_cap:
+        case _nc_cac: case _nc_nok: case _nc_jmp: case _nc_jms:
+        case _nc_jsp: case _nc_jmc: {
+          way_y = got_t ? _nc_wy_call : _nc_wy_else;
+        } break;
+      }
+
+      //  the product under a new name: no other reader of it
+      //
+      if ( !way_y && !end_t && (1 != use_h[c_h]) ) {
+        way_y = _nc_wy_else;
+      }
+    }
+
+    if ( !way_y && !end_t ) {
+      if ( 1 != blk_u->kin_y ) {
+        way_y = _nc_wy_else;
+      }
+      else {
+        blk_u = &(gen_u->blk_u[blk_u->kid_h[0]]);
+        i_h   = 0;
+      }
+    }
+  }
+
+#undef _nc_res
+#undef _nc_lat
+#undef _nc_way_set
+
+  if ( !way_y ) {
+    c3_t mem_t = (_nc_cam == cal_u->fam_y) || (_nc_csm == cal_u->fam_y);
+    c3_t bar_t = !(par_t || ari_t || jet_t || way_u->con_y || way_u->wor_h
+                   || way_u->hin_h);
+
+    way_y = bar_t ? ( mem_t ? _nc_wy_tail_memo
+                    : (_nc_nok == cal_u->fam_y) ? _nc_wy_tail_nok
+                    : _nc_wy_tail_else )
+          : mem_t ? _nc_wy_memo
+          : jet_t ? _nc_wy_jet
+          : ari_t ? _nc_wy_arit
+          : par_t ? ( (way_u->con_y || way_u->wor_h || way_u->hin_h)
+                      ? _nc_wy_part_more : _nc_wy_part )
+          : !way_u->con_y ? _nc_wy_hint
+          : lat_t ? _nc_wy_cons_late
+          : (way_u->wor_h || way_u->hin_h) ? _nc_wy_hint_cons
+          : (way_u->con_y > 1) ? _nc_wy_cons_more
+          : way_u->sid_y[0] ? _nc_wy_cons_tail
+          : _nc_wy_cons_head;
+  }
+  else if ( (_nc_cam == cal_u->fam_y) || (_nc_csm == cal_u->fam_y) ) {
+    way_y = _nc_wy_memo;
+  }
+
+  way_u->way_y = way_y;
+}
+
+/* u3nc_Tail: which calls _nc_tails() makes tail calls of, bits: 1, those
+**            whose product is only consed; 2, those inside trace hints; 4,
+**            those in tail position already (NOK, and a call that jumps to
+**            a block that returns its product).
+*/
+c3_h u3nc_Tail = 7;
+
+/* _nc_tail_ok(): whether the call op_u, with the path way_u to the
+**                return, is to be a tail call.  A memoized call is not:
+**                its product is saved when it returns.
+*/
+static c3_t
+_nc_tail_ok(const nc_op* op_u, const nc_way* way_u)
+{
+  switch ( op_u->fam_y ) {
+    default: return 0;
+    case _nc_cal: case _nc_cap: case _nc_cac: case _nc_nok: break;
+  }
+
+  if ( (way_u->wor_h > 255) || (way_u->hin_h > 255) ) {
+    return 0;
+  }
+
+  switch ( way_u->way_y ) {
+    default: return 0;
+
+    case _nc_wy_tail_nok:
+    case _nc_wy_tail_else:  return !!(u3nc_Tail & 4);
+
+    case _nc_wy_cons_tail:
+    case _nc_wy_cons_head:
+    case _nc_wy_cons_more:  return !!(u3nc_Tail & 1);
+
+    case _nc_wy_hint:       return !!(u3nc_Tail & 2);
+    case _nc_wy_hint_cons:  return 3 == (u3nc_Tail & 3);
+  }
+}
+
+/* _nc_tails(): tail calls where the IR has none.
+**
+**   The SKA core makes a call a tail call when nothing follows it.  A
+**   call whose product is only consed with nouns made before it, or that
+**   only the ends of trace hints follow, or both, keeps its frame for
+**   nothing but that, and a recursion of such calls is as deep as its
+**   data is long (a list builder, a loop compiled with !:).  Here such a
+**   call becomes a tail call too, and what followed it is left with the
+**   caller's frame, which outlives the chain of tail calls:
+**
+**     the conses are made before the call, around a zero where the
+**     product goes, and LNK hangs the cell on the frame: the product of
+**     the first, to be returned in place of the callee's, or the filling
+**     of the zero the one before left.  When the last callee returns,
+**     its product fills the last zero.  The zero is a noun: nothing ever
+**     sees a cell that is not one, and no one but the frame holds the
+**     cells, which are new or were the only reference to themselves
+**     (COR), so that filling one is finishing it, not editing a noun
+**     another reader has.
+**
+**     the entries the hints pushed on the trace stack stay there, as
+**     they did while the call ran, and TRK notes on the frame what the
+**     trace stack was before them: it is put back when the last callee
+**     returns, which is when the ends of the hints would all have run,
+**     one after another with nothing in between.  A crash in the chain
+**     finds every entry it found before.
+**
+**   What is left with the frame is a record under the slots of the
+**   activation (nc_rec), made by the first LNK or TRK that finds the
+**   frame without one (_nc_mark()), and seen to by the return through
+**   that frame (_nc_mend()); a frame with a record has the key 0, so
+**   that a return tests nothing it did not test.  A tail call takes the
+**   frame along and leaves the record where it is.
+**
+**   Only a call whose path to the return (_nc_way()) is of those ops is
+**   changed: the block is cut at the call, the conses, TRK and LNK
+**   follow, then the call as a tail call of its kind, and the blocks
+**   nothing jumps to any more leave the layout.
+*/
+static void
+_nc_tails(nc_gen* gen_u)
+{
+  c3_h*   use_h = u3a_calloc(c3_max(gen_u->reg_h, 1), sizeof(c3_h));
+  c3_h*   cut_h = u3a_malloc(c3_max(gen_u->blk_h, 1) * sizeof(c3_h));
+  c3_h*   wai_h = u3a_malloc(c3_max(gen_u->blk_h, 1) * sizeof(c3_h));
+  nc_way* way_u = NULL;
+  c3_h    way_n = 0, wac_h = 0;
+  c3_h    i_h, j_h;
+
+  for ( i_h = 0; i_h < gen_u->opn_h; i_h++ ) {
+    _nc_srcs(gen_u, &(gen_u->ops_u[i_h]), reg_h, { use_h[*reg_h]++; });
+  }
+  for ( i_h = 0; i_h < gen_u->blk_h; i_h++ ) {
+    cut_h[i_h] = _nc_none;
+  }
+
+  //  the calls that make a frame, each with its path to the return
+  //
+  for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+    c3_h    b_h   = gen_u->lay_h[i_h];
+    nc_blk* blk_u = &(gen_u->blk_u[b_h]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      nc_op* op_u = &(gen_u->ops_u[blk_u->fir_h + j_h]);
+      nc_way one_u;
+
+      switch ( op_u->fam_y ) {
+        default: continue;
+        case _nc_cal: case _nc_cam: case _nc_csm:
+        case _nc_cap: case _nc_cac: case _nc_nok: break;
+      }
+
+      _nc_way(gen_u, use_h, b_h, j_h, &one_u);
+
+      if ( _nc_tail_ok(op_u, &one_u) ) {
+        u3_assert( _nc_none == cut_h[b_h] );
+        _nc_grow(way_u, way_n, wac_h, nc_way);
+        cut_h[b_h]     = j_h;
+        wai_h[b_h]     = way_n;
+        way_u[way_n++] = one_u;
+      }
+    }
+  }
+
+  if ( way_n ) {
+    c3_h   cap_h = gen_u->opn_h + (way_n * (_nc_way_max + 4));
+    nc_op* new_u = u3a_malloc(cap_h * sizeof(nc_op));
+    c3_h   new_h = 0, lan_h = 0;
+
+    //  the blocks still reached from the entry keep their order: one that
+    //  falls through into the next is its predecessor, so no fall-through
+    //  comes apart
+    //
+    {
+      c3_y* saw_y = u3a_calloc(gen_u->blk_h, sizeof(c3_y));
+      c3_h* sak_h = u3a_malloc(gen_u->blk_h * sizeof(c3_h));
+      c3_h  dep_h = 0;
+
+      for ( i_h = 0; i_h < gen_u->blk_h; i_h++ ) {
+        if ( _nc_none != cut_h[i_h] ) {
+          gen_u->blk_u[i_h].kin_y = 0;
+        }
+      }
+
+      sak_h[dep_h++]         = gen_u->lay_h[0];
+      saw_y[gen_u->lay_h[0]] = 1;
+
+      while ( dep_h ) {
+        nc_blk* blk_u = &(gen_u->blk_u[sak_h[--dep_h]]);
+
+        for ( j_h = 0; j_h < blk_u->kin_y; j_h++ ) {
+          if ( !saw_y[blk_u->kid_h[j_h]] ) {
+            saw_y[blk_u->kid_h[j_h]] = 1;
+            sak_h[dep_h++] = blk_u->kid_h[j_h];
+          }
+        }
+      }
+
+      for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+        c3_h b_h = gen_u->lay_h[i_h];
+
+        if ( saw_y[b_h] ) {
+          gen_u->blk_u[b_h].lay_h = lan_h;
+          gen_u->lay_h[lan_h++]   = b_h;
+        }
+        else {
+          gen_u->blk_u[b_h].lay_h = _nc_none;
+        }
+      }
+      gen_u->lan_h = lan_h;
+
+      u3a_free(saw_y);
+      u3a_free(sak_h);
+    }
+
+    for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+      c3_h    b_h   = gen_u->lay_h[i_h];
+      nc_blk* blk_u = &(gen_u->blk_u[b_h]);
+      c3_h    fir_h = new_h;
+      c3_h    len_h = ( _nc_none == cut_h[b_h] ) ? blk_u->len_h : cut_h[b_h];
+
+      memcpy(new_u + new_h, gen_u->ops_u + blk_u->fir_h,
+             len_h * sizeof(nc_op));
+      new_h += len_h;
+
+      if ( _nc_none != cut_h[b_h] ) {
+        const nc_way* one_u = &(way_u[wai_h[b_h]]);
+        nc_op         cal_u = gen_u->ops_u[blk_u->fir_h + cut_h[b_h]];
+        c3_h          pre_h = _nc_none, axe_h = 1, k_h;
+        nc_op*        op_u;
+
+        if ( one_u->con_y ) {
+          op_u = _nc_op_init(&(new_u[new_h++]), _nc_imm);
+          op_u->dst_h = pre_h = gen_u->reg_h++;
+
+          for ( k_h = 0; k_h < one_u->con_y; k_h++ ) {
+            op_u = _nc_op_init(&(new_u[new_h++]), _nc_con);
+            op_u->src_h[0] = one_u->sid_y[k_h] ? one_u->oth_h[k_h] : pre_h;
+            op_u->src_h[1] = one_u->sid_y[k_h] ? pre_h : one_u->oth_h[k_h];
+            op_u->dst_h    = pre_h = gen_u->reg_h++;
+          }
+          for ( k_h = one_u->con_y; k_h-- > 0; ) {
+            axe_h = (axe_h << 1) | one_u->sid_y[k_h];
+          }
+        }
+
+        if ( one_u->wor_h || one_u->hin_h ) {
+          op_u = _nc_op_init(&(new_u[new_h++]), _nc_trk);
+          op_u->imm_h = ((c3_h)one_u->wor_h << 8) | one_u->hin_h;
+        }
+
+        if ( one_u->con_y ) {
+          op_u = _nc_op_init(&(new_u[new_h++]), _nc_lnk);
+          op_u->imm_h    = axe_h;
+          op_u->src_h[0] = pre_h;
+        }
+
+        op_u  = &(new_u[new_h++]);
+        *op_u = cal_u;
+        op_u->dst_h = _nc_none;
+
+        switch ( cal_u.fam_y ) {
+          default: u3_assert(0);
+
+          case _nc_cal: {
+            op_u->fam_y = (  (u3_none != gen_u->bell)
+                          && (c3y == u3r_sing(gen_u->dir_u[cal_u.imm_h].bell,
+                                              gen_u->bell)) )
+                        ? _nc_jms
+                        : _nc_jmp;
+          } break;
+
+          case _nc_cap: op_u->fam_y = _nc_jsp; break;
+          case _nc_cac: op_u->fam_y = _nc_jmc; break;
+          case _nc_nok: op_u->fam_y = _nc_jnk; break;
+        }
+      }
+
+      blk_u->fir_h = fir_h;
+      blk_u->len_h = new_h - fir_h;
+    }
+
+    u3_assert( new_h <= cap_h );
+    u3a_free(gen_u->ops_u);
+    gen_u->ops_u = new_u;
+    gen_u->opn_h = new_h;
+    gen_u->opc_h = cap_h;
+    u3a_free(way_u);
+  }
+
+  u3a_free(use_h);
+  u3a_free(cut_h);
+  u3a_free(wai_h);
+}
 
 /* _nc_key_sort(): quicksort key_d. The inputs are typically almost-sorted so
 **  middle element is used as a pivot. Small arrays are insertion-sorted.
@@ -4705,7 +5268,7 @@ _nc_ends(c3_y fam_y)
   switch ( fam_y ) {
     default: return 0;
     case _nc_don: case _nc_dox: case _nc_jmp: case _nc_jms: case _nc_jmf:
-    case _nc_jmx: case _nc_jsp: case _nc_jmc: return 1;
+    case _nc_jmx: case _nc_jsp: case _nc_jmc: case _nc_jnk: return 1;
   }
 }
 
@@ -4923,7 +5486,9 @@ _nc_print(u3nc_prog* pog_u)
                                    ? edg_c[(kon_y >> (2 * i_h)) & 3]
                                    : ( ((kon_y >> i_h) & 1)
                                      || (_nc_her == fam_y)
-                                     || (_nc_tar == fam_y) ) ? "!" : "";
+                                     || (_nc_tar == fam_y)
+                                     || (_nc_lnk == fam_y)
+                                     || (_nc_jnk == fam_y) ) ? "!" : "";
         fprintf(stderr, " %u%s", _nc_read(pog, &ip_h, wid_y), kon_c);
       }
       if ( _nc_fam[fam_y].dst_y ) {
@@ -5417,6 +5982,15 @@ _nc_stat_borrow(nc_gen* gen_u, c3_h arg_h)
           }
         } break;
 
+        case _nc_lnk: {
+          con_y[_nc_root(op_u->src_h[0])] = 1;
+        } break;
+
+        case _nc_jnk: {
+          con_y[_nc_root(op_u->src_h[0])] = 1;
+          con_y[_nc_root(op_u->src_h[1])] = 1;
+        } break;
+
         case _nc_nok: case _nc_hdp: {
           if ( op_u->kon_y & 1 ) {
             con_y[_nc_root(op_u->src_h[0])] = 1;
@@ -5481,7 +6055,7 @@ _nc_stat_consumes(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
       return (op_u->src_h[0] == r_h) && (op_u->kon_y & 1);
     }
 
-    case _nc_don: case _nc_dox: return 1;
+    case _nc_don: case _nc_dox: case _nc_lnk: case _nc_jnk: return 1;
 
     case _nc_cal: case _nc_cap: case _nc_cam: case _nc_csm:
     case _nc_jmp: case _nc_jms: case _nc_jsp: case _nc_hmp:
@@ -5918,6 +6492,7 @@ _nc_build(u3_noun straight, u3_weak bell)
   _nc_blocks(&gen_u, map);
   _nc_translate(&gen_u);
   _nc_fold(&gen_u);
+  _nc_tails(&gen_u);
   _nc_sink(&gen_u);
   _nc_lives(&gen_u, arg_h);
   _nc_alias(&gen_u, arg_h);
@@ -7191,6 +7766,86 @@ _nc_pop(u3a_road* rod_u, c3_ws mov_ws, c3_w len_w)
   rod_u->cap_p -= mov_ws * (c3_ws)len_w;
 }
 
+/* nc_rec: what a chain of tail calls leaves to the return through the
+**         frame it runs under (_nc_tails()), under the slots of the
+**         activation of that frame, whose key is 0 while it has one.
+*/
+typedef struct {
+  u3_noun rot;      //  the product in place of the last callee's: the first
+                    //  cell linked (LNK); nothing while hol_p is 0
+  u3_post hol_p;    //  where the product of the last callee goes: the zero
+                    //  in the last cell linked; or 0
+  u3_weak tax;      //  the trace stack to put back (TRK): a tail of the
+                    //  one there is, not counted; or none
+  u3_weak key;      //  the memo key the frame had, or none
+} nc_rec;
+
+#define _nc_rec_w  c3_wiseof(nc_rec)
+
+/* _nc_rec_of(): the record under the slots reg of an activation of tot_h
+**               slots.
+*/
+static inline __attribute__((always_inline)) nc_rec*
+_nc_rec_of(u3_noun* reg, c3_h tot_h, c3_ws mov_ws)
+{
+  return (nc_rec*)( (mov_ws < 0) ? (reg + tot_h) : (reg - _nc_rec_w) );
+}
+
+/* _nc_mark(): give the frame of the running activation a record: the
+**             frame and the slots move over by its size, and it is under
+**             them.  Produces the slots where they are now.  The rare
+**             path of LNK and TRK, out of line.
+*/
+__attribute__((noinline)) static u3_noun*
+_nc_mark(u3_noun* reg, u3nc_prog* pog_u, u3a_road* rod_u, c3_ws mov_ws)
+{
+  c3_w      len_w = _nc_frame_w + pog_u->tot_h;
+  c3_w*     old_w = _nc_top(rod_u, mov_ws, len_w);
+  c3_w*     new_w;
+  nc_frame* fam_u;
+  nc_rec*   rec_u;
+
+  (void)_nc_push(rod_u, mov_ws, _nc_rec_w);
+  new_w = _nc_top(rod_u, mov_ws, len_w);
+  memmove(new_w, old_w, len_w * sizeof(c3_w));
+
+  reg   = ( mov_ws < 0 ) ? (reg - _nc_rec_w) : (reg + _nc_rec_w);
+  fam_u = _nc_top(rod_u, mov_ws, _nc_frame_w);
+  rec_u = _nc_rec_of(reg, pog_u->tot_h, mov_ws);
+
+  rec_u->rot   = 0;
+  rec_u->hol_p = 0;
+  rec_u->tax   = u3_none;
+  rec_u->key   = fam_u->key;
+  fam_u->key   = 0;
+
+  return reg;
+}
+
+/* _nc_mend(): the return through a frame with a record: the product pro
+**             of the last callee goes where the last cell linked waits
+**             for it, and the first cell linked is the product; the trace
+**             stack is what it was before the entries the chain kept.
+**             TRANSFERS pro; produces the product.
+*/
+__attribute__((noinline)) static u3_noun
+_nc_mend(nc_rec* rec_u, u3a_road* rod_u, u3_noun pro)
+{
+  if ( rec_u->hol_p ) {
+    *u3to(u3_noun, rec_u->hol_p) = pro;
+    pro = rec_u->rot;
+  }
+
+  if ( u3_none != rec_u->tax ) {
+    u3_noun old = rod_u->bug.tax;
+
+    rod_u->bug.tax = u3k(rec_u->tax);
+    u3z(old);
+  }
+
+  return pro;
+}
+
 /* _nc_hilt_fore(): static hint prologue.  tag: the hint atom, RETAIN.
 **   Produces the token for _nc_hilt_hind(): what the epilogue needs, or ~.
 **   nock-compilation.hoon passes only %bout and %xray; %xray is not
@@ -7517,6 +8172,7 @@ void* const _nj_keep_v[] = {
   (void*)_nc_gain_slow,       (void*)_nc_lose_slow,
   (void*)_nc_burn_north_done, (void*)_nc_burn_south_done,
   (void*)_nc_callee,          (void*)_nc_box,
+  (void*)_nc_mark,
   (void*)_nc_burn_north_bail_exit, (void*)_nc_burn_south_bail_exit,
   (void*)_nc_burn_north_bail_fail, (void*)_nc_burn_south_bail_fail,
   (void*)_nc_burn_north_cold, (void*)_nc_burn_south_cold

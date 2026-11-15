@@ -93,6 +93,13 @@ _setup(void)
   u3_cue_xeno* sil_u;
   u3_weak      pil;
 
+  //  U3NC_TAIL: which calls are made tail calls where the IR has none
+  //  (u3nc_Tail): 0 for none of them
+  //
+  if ( getenv("U3NC_TAIL") ) {
+    u3nc_Tail = atoi(getenv("U3NC_TAIL"));
+  }
+
   //  U3NC_JIT: compiled nock gets native code (a build with -Dska-jit):
   //  the programs that start U3NC_HOT times within U3NC_WIN microseconds
   //  (1: all of them, from the first run)

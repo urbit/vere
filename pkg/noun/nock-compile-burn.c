@@ -496,6 +496,7 @@ u3_noun _nj_jump ARGS CONV;
 #  define OP3KKF(op, A, B, C, body)  OP3KK(op, A, B, C, body)
 #  define OP3KKI(op, A, B, C, body)  OP3KK(op, A, B, C, body)
 #  define OP1KT(op, A, body)         OP1K(op, A, body)
+#  define OP2T(op, A, B, body)       OP2(op, A, B, body)
 #elif 1 == _nc_mode
 #  define FAR1(name, A, body, ...)                                              \
   static nj_run OP(name##_far)(u3_noun* reg, u3nc_prog* pog_u,                  \
@@ -529,6 +530,7 @@ u3_noun _nj_jump ARGS CONV;
 #  define OP3KKI(op, A, B, C, body)  OP3KKF(op, A, B, C, body)
 #  define OP1KT(op, A, body)                                                    \
   FAR1(op##_0, A, body, 0) FAR1(op##_1, A, body, 1)
+#  define OP2T(op, A, B, body)       FAR2(op, A, B, body)
 #else
 //  GO(wha): run the program a shared body produced, on its slots
 //
@@ -588,6 +590,14 @@ u3_noun _nj_jump ARGS CONV;
     MUSTTAIL return BASE(done)(ip, reg, pog_u, rod_u,                           \
                                (u3_noun)(uintptr_t)nex_u.nex, und_w, und_w);    \
   }
+#  define STT2(name)  FAR2(name)                                                \
+  u3_noun OP(name##_B) ARGS CONV {                                              \
+    c3_w    und_w; void* und_v;                                                 \
+    nj_run nex_u = OP(name##_far)(reg, pog_u, rod_u, VAL(0), VAL(1), und_v);    \
+    if ( nex_u.gop_u ) { GO(nex_u); }                                           \
+    MUSTTAIL return BASE(done)(ip, reg, pog_u, rod_u,                           \
+                               (u3_noun)(uintptr_t)nex_u.nex, und_w, und_w);    \
+  }
 
 #  define OP1F(op, A, body)          STF1(op)
 #  define OP1I(op, A, body)          STI1(op)
@@ -597,7 +607,19 @@ u3_noun _nj_jump ARGS CONV;
 #  define OP3KKI(op, A, B, C, body)                                             \
   STI3(op##_0) STI3(op##_1) STI3(op##_2) STI3(op##_3)
 #  define OP1KT(op, A, body)         STT1(op##_0) STT1(op##_1)
+#  define OP2T(op, A, B, body)       STT2(op)
 #endif
+
+//  RECORD(): the record under the slots of the running activation, whose
+//  frame has one (nc_rec)
+//  WHOLE(f): the frame f of the running activation wants its product in
+//  one noun: that of a memoized call, or one with a record that has a
+//  place for the product, or a key
+//
+#define RECORD()  _nc_rec_of(reg, pog_u->tot_h, _nc_mov_ws)
+#define WHOLE(f)                                                                \
+  (  (u3_none != (f)->key)                                                      \
+  && ((0 != (f)->key) || RECORD()->hol_p || (u3_none != RECORD()->key)) )
 
 //  FRAME(des): push a frame recording this activation, its product to
 //              slot des; produces the frame.  It says where the activation
@@ -895,6 +917,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 
   fam_u = PUSH(FRAME_W);
   fam_u->pog_u = NULL;
+  fam_u->key   = u3_none;
 #ifdef U3NC_JIT
   fam_u->ret_f = 0;
   //  for a machine function of the emitter: a product in parts stays so
@@ -933,25 +956,41 @@ OP(done) ARGS CONV
   u3_noun   pro = arg_a_w;
   FRAME_T*  fam_u;
   c3_h      d_h;
+  c3_w      pop_w = FRAME_W + pog_u->tot_h;
 
   EMPTY();
 
   fam_u = TOP(FRAME_W);
   _nc_stat_unframe(fam_u);
 
+  //  a memoized call: the product is saved; a frame with a record (key 0):
+  //  what a chain of tail calls left to this return is seen to first
+  //  (_nc_mend()), while the activation is still on the stack
+  //
+  if ( c3_unlikely(u3_none != fam_u->key) ) {
+    u3_weak key = fam_u->key;
+
+    if ( 0 == key ) {
+      nc_rec* rec_u = RECORD();
+
+      pro    = _nc_mend(rec_u, rod_u, pro);
+      key    = rec_u->key;
+      pop_w += _nc_rec_w;
+    }
+    if ( u3_none != key ) {
+      _nc_tsc_beg();
+      pro = _nc_save(fam_u->cid_h, key, pro);
+      _nc_tsc_end(mes_c);
+      _nc_stat(mes_d);
+    }
+  }
+
   if ( !fam_u->pog_u ) {
-    POP(FRAME_W + pog_u->tot_h);
+    POP(pop_w);
     return pro;
   }
 
-  if ( u3_none != fam_u->key ) {
-    _nc_tsc_beg();
-    pro = _nc_save(fam_u->cid_h, fam_u->key, pro);
-    _nc_tsc_end(mes_c);
-    _nc_stat(mes_d);
-  }
-
-  POP(FRAME_W + pog_u->tot_h);
+  POP(pop_w);
   pog_u = fam_u->pog_u;
   reg   = fam_u->reg;
   d_h   = fam_u->des_h;
@@ -1053,16 +1092,16 @@ OP(emit) ARGS CONV
   if ( sap ) {
     FRAME_T* fam_u = TOP(FRAME_W);
 
-    if ( !fam_u->pog_u ) {
+    if ( WHOLE(fam_u) ) {
+      pro = _nc_box(sap, pro);
+    }
+    else if ( !fam_u->pog_u ) {
       if ( fam_u->des_h ) {
         _ne_sap = sap;
       }
       else {
         pro = _nc_box(sap, pro);
       }
-    }
-    else if ( u3_none != fam_u->key ) {
-      pro = _nc_box(sap, pro);
     }
   }
   MUSTTAIL return OP(done)(ip, reg, pog_u, rod_u, pro, 0, 0);
@@ -1787,9 +1826,23 @@ OP2KK(BRN, a_h, b_h, BODY_BRN)
   BURN();
 OP2KK(BRZ, a_h, b_h, BODY_BRZ)
 
+//  a jump to the entry is a turn of a loop (a self call in tail position,
+//  _nc_shuffle()): where programs get native code it is a start of the
+//  program, through nat_f, as a call is, so that a program that only
+//  loops gets its native code too
+//
+#if (0 == _nc_mode) && defined(U3NC_JIT)
+#define BODY_HOP()                                                              \
+  if ( (0 == a_h) && u3nc_Jit ) {                                               \
+    AGAIN();                                                                    \
+  }                                                                             \
+  JUMP(a_h);                                                                    \
+  BURN();
+#else
 #define BODY_HOP()                                                              \
   JUMP(a_h);                                                                    \
   BURN();
+#endif
 OP1(HOP, a_h, BODY_HOP)
 
 //  a tail call: the arguments are the last registers alive, so the
@@ -1991,10 +2044,13 @@ OP2K(RTS, a_h, b_h, BODY_RTS)
   ZERO(b_h);                                                                    \
   SWEEP(S);                                                                     \
   fam_u = TOP(_nc_frame_w);                                                     \
-  if ( RAW(fam_u) ) {                                                           \
+  if ( WHOLE(fam_u) ) {                                                         \
+    pro = _nc_box(pog_u->lit_u.non[a_h], pro);                                  \
+  }                                                                             \
+  else if ( RAW(fam_u) ) {                                                      \
     RAW_SAP(pog_u->lit_u.non[a_h]);                                             \
   }                                                                             \
-  else if ( !fam_u->pog_u || (u3_none != fam_u->key) ) {                        \
+  else if ( !fam_u->pog_u ) {                                                   \
     pro = _nc_box(pog_u->lit_u.non[a_h], pro);                                  \
   }                                                                             \
   DONE(pro);
@@ -2008,6 +2064,102 @@ OP2K(DOX, a_h, b_h, BODY_DOX)
   LOSE(x);                                                                      \
   BURN();
 OP1(DRO, a_h, BODY_DRO)
+
+//  LNK: the cell in slot b_h, whose noun at axis a_h is a zero, goes on
+//  the record of the frame: the product, if it is the first, else in the
+//  place of the zero of the cell before; its own zero is the place the
+//  product of the tail call that follows goes to (_nc_tails())
+//
+#define BODY_LNK()                                                              \
+  FRAME_T*  fam_u = TOP(FRAME_W);                                               \
+  u3_noun   d     = reg[b_h];                                                   \
+  u3a_cell* cel_u = CELL(d);                                                    \
+  c3_h      bit_h = 31 - __builtin_clz((c3_h)a_h);                              \
+  nc_rec*   rec_u;                                                              \
+  u3_post   hol_p;                                                              \
+  ZERO(b_h);                                                                    \
+  while ( bit_h-- > 1 ) {                                                       \
+    cel_u = CELL(((a_h >> bit_h) & 1) ? cel_u->tel : cel_u->hed);               \
+  }                                                                             \
+  hol_p = u3of(u3_noun, ((a_h & 1) ? &(cel_u->tel) : &(cel_u->hed)));           \
+  if ( 0 != fam_u->key ) {                                                      \
+    reg = _nc_mark(reg, pog_u, rod_u, _nc_mov_ws);                              \
+  }                                                                             \
+  rec_u = RECORD();                                                             \
+  if ( rec_u->hol_p ) {                                                         \
+    *u3to(u3_noun, rec_u->hol_p) = d;                                           \
+  }                                                                             \
+  else {                                                                        \
+    rec_u->rot = d;                                                             \
+  }                                                                             \
+  rec_u->hol_p = hol_p;                                                         \
+  BURN();
+OP2(LNK, a_h, b_h, BODY_LNK)
+
+//  TRK: the hints open here end: the words they pushed come off the
+//  stack (their tokens are all ~), and their entries stay on the trace
+//  stack for the tail call that follows: the record of the frame notes
+//  what the trace stack was before them, unless it has that of an
+//  earlier link of the chain, which is older (_nc_tails())
+//
+#define BODY_TRK()                                                              \
+  c3_h num_h = a_h & 255;                                                       \
+  POP(a_h >> 8);                                                                \
+  if ( num_h ) {                                                                \
+    FRAME_T* fam_u = TOP(FRAME_W);                                              \
+    nc_rec*  rec_u;                                                             \
+    if ( 0 != fam_u->key ) {                                                    \
+      reg = _nc_mark(reg, pog_u, rod_u, _nc_mov_ws);                            \
+    }                                                                           \
+    rec_u = RECORD();                                                           \
+    if ( u3_none == rec_u->tax ) {                                              \
+      u3_noun tax = rod_u->bug.tax;                                             \
+      while ( num_h-- ) {                                                       \
+        tax = CELL(tax)->tel;                                                   \
+      }                                                                         \
+      rec_u->tax = tax;                                                         \
+    }                                                                           \
+  }                                                                             \
+  BURN();
+OP1(TRK, a_h, BODY_TRK)
+
+//  NOK in tail position: the subject's reference goes to the callee and
+//  the formula's is released, whether they are one slot or two; a formula
+//  without a program runs in u3n, and its product is this activation's
+//
+#define BODY_JNK()                                                              \
+  u3nc_prog* gop_u;                                                             \
+  u3_noun    x   = reg[a_h];                                                    \
+  u3_noun    fol = reg[b_h];                                                    \
+  _nc_tsc_beg();                                                                \
+  u3t_off(noc_o);                                                               \
+  gop_u = _nc_entry(x, fol, 0);                                                 \
+  u3t_on(noc_o);                                                                \
+  _nc_tsc_end(nok_c);                                                           \
+  _nc_stat(nok_d);                                                              \
+  _nc_stat_if(_nc_here(pog_u, u3R), nkc_d);                                     \
+  _nc_stat_if(_nc_home(fol), nkf_d);                                            \
+  _nc_stat_if(_nc_home(fol) && (c3y == u3du(x)) && (c3y == u3du(u3t(x)))        \
+              && _nc_home(u3t(u3t(x))), nkb_d);                                 \
+  ZERO(a_h);                                                                    \
+  if ( !gop_u ) {                                                               \
+    u3_noun pro;                                                                \
+    if ( b_h == a_h ) {                                                         \
+      fol = GAIN(fol);                                                          \
+    }                                                                           \
+    else {                                                                      \
+      ZERO(b_h);                                                                \
+    }                                                                           \
+    u3t_off(noc_o);                                                             \
+    pro = u3n_nock_on(x, fol);                                                  \
+    u3t_on(noc_o);                                                              \
+    DONE(pro);                                                                  \
+  }                                                                             \
+  if ( b_h != a_h ) {                                                           \
+    DROP(b_h, 1);                                                               \
+  }                                                                             \
+  TAIL_MONO(gop_u, x);
+OP2T(JNK, a_h, b_h, BODY_JNK)
 
 
 #if 1 != _nc_mode
@@ -2176,6 +2328,7 @@ u3_noun OP(JETP) ARGS CONV {
 #undef STI1
 #undef STI3
 #undef STT1
+#undef STT2
 #undef GO
 #undef OP1F
 #undef OP1I
@@ -2183,6 +2336,9 @@ u3_noun OP(JETP) ARGS CONV {
 #undef OP3KKF
 #undef OP3KKI
 #undef OP1KT
+#undef OP2T
+#undef RECORD
+#undef WHOLE
 #undef BASE
 #undef _nc_base
 #undef FRAME_T
@@ -2312,6 +2468,9 @@ u3_noun OP(JETP) ARGS CONV {
 #undef BODY_JSP
 #undef BODY_DON
 #undef BODY_DRO
+#undef BODY_LNK
+#undef BODY_TRK
+#undef BODY_JNK
 #undef BODY_RTL
 #undef BODY_RTS
 #undef RET

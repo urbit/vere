@@ -265,6 +265,13 @@
       c3_o
       u3nc_fail(c3_m mot_m);
 
+    /* u3nc_Tail: which calls that are not tail calls in the IR are made
+    **            tail calls (_nc_tails()), bits: 1, those whose product is
+    **            only consed; 2, those inside trace hints; 4, those in tail
+    **            position.  All of them unless this is changed.
+    */
+      extern c3_h u3nc_Tail;
+
     /* u3nc_Jit: whether programs get native code, which they do in a
     **           build with U3NC_JIT unless this is cleared: the hot ones,
     **           those that start, as bytecode,
