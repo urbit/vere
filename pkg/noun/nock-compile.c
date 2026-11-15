@@ -356,7 +356,13 @@ typedef struct {
   c3_h    kid_h[2]; //  successors: the jump target first, then the yes
                     //  block of a branch (_nc_kids())
   c3_y    kin_y;    //    and their number
+  c3_y    col_y;    //  cold: laid out last (_nc_emit())
 } nc_blk;
+
+/* _nc_late(): whether the library marked the block with this id as one
+**             that runs when a try has failed (+emit-cold): bit 30.
+*/
+#define _nc_late(id)  ( (c3y == u3a_is_cat(id)) && (((id) >> 30) & 1) )
 
 /* nc_jet: a ring [path axis], resolved to its drivers.
 */
@@ -926,6 +932,7 @@ _nc_blocks(nc_gen* gen_u, u3_noun map)
       //  and `straight` noun outlives this reference
       gen_u->blk_u[gen_u->blk_h].blob  = u3t(n);
       gen_u->blk_u[gen_u->blk_h].lay_h = _nc_none;
+      gen_u->blk_u[gen_u->blk_h].col_y = _nc_late(u3h(n));
       u3h_put(gen_u->idx_p, u3h(n), _nc_cat(gen_u->blk_h));
       gen_u->blk_h++;
 
@@ -2772,6 +2779,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
                         ? ndt_h[n_h]
                         : ndb_h[ndp_h[n_h]];
         nod_u->kid_h[1] = _nc_none;
+        nod_u->col_y    = 0;
       }
     }
 
@@ -2866,6 +2874,7 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
           edg_u->kin_y    = 1;
           edg_u->kid_h[0] = kid_h;
           edg_u->kid_h[1] = _nc_none;
+          edg_u->col_y    = blk_u->col_y;
 
           if ( hop_u ) {
             u3_assert( (hop_u->tar_h == kid_h)
@@ -4373,6 +4382,49 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
 {
   u3nc_prog* pog_u;
   c3_h       byc_h, i_h, j_h;
+  c3_h*      fal_h = NULL;    //  by block: the one it was laid out before
+
+  //  the blocks that run when a try has failed (col_y) go last, in the
+  //  order they had, out of the way of the code that falls through.  A
+  //  block that fell through to the next one jumps there if another
+  //  follows it now, and a jump to the block that follows now goes (in
+  //  the loop below).  The layout is no topological order from here on:
+  //  the passes that walk it as one are over.
+  //
+  {
+    c3_h col_h = 0;
+
+    for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+      col_h += gen_u->blk_u[gen_u->lay_h[i_h]].col_y;
+    }
+
+    if ( col_h ) {
+      c3_h* lay_h = u3a_malloc(gen_u->lan_h * sizeof(c3_h));
+      c3_h  lan_h = 0;
+      c3_y  col_y;
+
+      fal_h = u3a_malloc(gen_u->blk_h * sizeof(c3_h));
+
+      for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+        fal_h[gen_u->lay_h[i_h]] = ( (i_h + 1) < gen_u->lan_h )
+                                 ? gen_u->lay_h[i_h + 1]
+                                 : _nc_none;
+      }
+      for ( col_y = 0; col_y < 2; col_y++ ) {
+        for ( i_h = 0; i_h < gen_u->lan_h; i_h++ ) {
+          if ( col_y == gen_u->blk_u[gen_u->lay_h[i_h]].col_y ) {
+            lay_h[lan_h++] = gen_u->lay_h[i_h];
+          }
+        }
+      }
+      for ( i_h = 0; i_h < lan_h; i_h++ ) {
+        gen_u->blk_u[lay_h[i_h]].lay_h = i_h;
+      }
+
+      u3a_free(gen_u->lay_h);
+      gen_u->lay_h = lay_h;
+    }
+  }
 
   //  a self call that doesn't sweep starts over: a jump to the entry,
   //  after the moves that put its arguments in their parameter slots
@@ -4411,8 +4463,35 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
         }
       }
 
+      //  where control goes past the last op, if the layout changed
+      //
+      if ( fal_h ) {
+        c3_h   was_h = fal_h[gen_u->lay_h[i_h]];
+        c3_h   fol_h = ( (i_h + 1) < gen_u->lan_h ) ? gen_u->lay_h[i_h + 1]
+                                                    : _nc_none;
+        nc_op* las_u = ( new_h > fir_h ) ? &(new_u[new_h - 1]) : NULL;
+
+        if ( las_u && (_nc_hop == las_u->fam_y) ) {
+          if ( las_u->tar_h == fol_h ) {
+            new_h--;
+          }
+        }
+        else if ( blk_u->kin_y && (was_h != fol_h) ) {
+          nc_op* hop_u;
+
+          u3_assert( _nc_none != was_h );
+          _nc_grow(new_u, new_h, cap_h, nc_op);
+          hop_u = _nc_op_init(&(new_u[new_h++]), _nc_hop);
+          hop_u->tar_h = was_h;
+        }
+      }
+
       blk_u->fir_h = fir_h;
       blk_u->len_h = new_h - fir_h;
+    }
+
+    if ( fal_h ) {
+      u3a_free(fal_h);
     }
 
     u3a_free(gen_u->ops_u);
