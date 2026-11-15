@@ -123,9 +123,9 @@ _setup(void)
   //
   u3nc_Emit = 0;
   if ( getenv("U3NC_EMIT") && atoi(getenv("U3NC_EMIT")) ) {
-#if defined(U3NC_ZERO) || defined(U3NC_SWEEP)
+#ifdef U3NC_SWEEP
     fprintf(stderr, "U3NC_EMIT: the emitter lowers nothing in a build that "
-                    "zeroes empty slots: stencils\r\n");
+                    "sweeps: stencils\r\n");
 #else
     u3nc_Emit = ( 2 == atoi(getenv("U3NC_EMIT")) ) ? 2 : 1;
 #endif
@@ -2591,7 +2591,12 @@ _test_fams(void)
     "HMP", "HCP", "SPY", "NOK", "CAL", "CAF", "CAX", "CAP", "CAM", "CSM",
     "CLQ", "EQQ", "EQI", "EQL", "BRN", "BRZ", "HOP", "JMP", "JMF", "JMX",
     "JSP", "DON", "DRO", "CAC", "JMC", "LTI", "RTL", "RTS", "DOX", "HME",
-    "HCE", "BOM", "HEA", "TAA", "LNK", "TRK", "JNK"
+    "HCE", "BOM", "HEA", "TAA", "LNK", "TRK", "JNK",
+    //  made only where empty slots are zero
+    //
+#ifdef U3NC_ZERO
+    "FGT"
+#endif
   };
   u3_noun fol   = u3nq(9, 2, 0, 1);
   c3_h    hot_h = u3nc_Hot;

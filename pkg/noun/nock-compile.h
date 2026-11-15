@@ -287,9 +287,8 @@
     **            starts, which is how a build with U3NC_JIT runs unless
     **            this is changed; 2, the emitter, for the programs that
     **            the rule above finds hot; 0, the stencils, for those,
-    **            which is all there is in a build that zeroes the slots
-    **            compiled nock empties (U3NC_ZERO): the emitter lowers
-    **            nothing there.
+    **            which is all there is in a build whose terminators sweep
+    **            (U3NC_SWEEP): the emitter lowers nothing there.
     */
       extern c3_t u3nc_Emit;
 

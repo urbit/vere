@@ -8058,10 +8058,10 @@ _nc_memo_jet(const u3u_harm* arm_u)
 
 u3nc_prog* u3nc_Gop;
 
-//  the emitter keeps no empty slot zero: in a build that zeroes them
-//  (_nc_zer_t) native code is the stencils'
+//  the emitter has no terminators that sweep: in a build that sweeps
+//  (_nc_swe_t) native code is the stencils'
 //
-#if defined(U3NC_JIT) && !defined(U3NC_ZERO) && !defined(U3NC_SWEEP)
+#if defined(U3NC_JIT) && !defined(U3NC_SWEEP)
 c3_t u3nc_Jit  = 1;
 c3_t u3nc_Emit = 1;
 #elif defined(U3NC_JIT)

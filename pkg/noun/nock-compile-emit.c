@@ -1406,7 +1406,7 @@ typedef struct {
 enum {
   ne_s_gain, ne_s_lose, ne_s_inc, ne_s_dec, ne_s_add, ne_s_eqq, ne_s_eql,
   ne_s_edge, ne_s_link, ne_s_bail, ne_s_box, ne_s_cons, ne_s_deep,
-  ne_s_mend, ne_s_tail
+  ne_s_mend, ne_s_tail, ne_s_zero
 };
 
 typedef struct {
@@ -1421,6 +1421,16 @@ typedef struct {
   c3_w one_w;       //  another way in, and
   c3_w two_w;       //  another way back (ne_s_cons)
 } ne_stub;
+
+/* ne_zero: where empty slots are zero (_nc_zer_t), a slot that an op
+**          empties and that is read after, by a drop that counts on the
+**          zero: on the way on from the op, or on its jump.
+*/
+typedef struct {
+  c3_w op_w;        //  the op
+  c3_h sot_h;       //  the slot
+  c3_y jum_y;       //  on the jump of a branch
+} ne_zero;
 
 /* ne_gen: the lowering of a program.
 */
@@ -1458,6 +1468,11 @@ typedef struct {
                           //  its frame, and under it
   c3_w       rec_w;       //    the cell of the address of the record it
                           //    uses: its own, or its caller's
+  c3_d*      ent_d;       //  where empty slots are zero (_nc_zer_t): the
+                          //  slots live into the function, a set
+  ne_zero*   zer_u;       //    and the slots to zero where an op empties
+  c3_w       zen_w;       //    them, by op
+  c3_w       zec_w;
 } ne_gen;
 
 #define _ne_sot_kep     4         //  the first slot registers are the ones a
@@ -1585,6 +1600,96 @@ _ne_back(ne_gen* gen_u, const ne_op* op_u, c3_d* liv_d)
       liv_d[sot_h[i_w] >> 6] |= (c3_d)1 << (sot_h[i_w] & 63);
     }
   }
+}
+
+/*  Where empty slots are zero (_nc_zer_t, a build with -Dska-zero) the
+**  bytecode counts on it in two ways.  A register that a jump into a
+**  block leaves undefined is not defined as 0 by an op (kil is nothing
+**  there): its slot is zero since the activation began.  And a register
+**  that dies on some edges into a block only is dropped at the start of
+**  the block, where its slot is zero on the edges it was consumed on.  So
+**  a drop may read a slot that nothing wrote on the way, or that an op on
+**  the way emptied, and the liveness here, which takes a drop for a read,
+**  finds such a slot live from the start of the function, or after the
+**  op that consumed it.  Machine code makes those reads read a zero, and
+**  no others: the slots live into the function that are no parameters
+**  are zeroed at its start, and a slot is zeroed after an op that
+**  consumes or drops it if it is live after that op.  Two slots live at
+**  the start are live at once, though no op defines one while the other
+**  is live.
+*/
+
+/* _ne_zero_add(): the op i_w empties the slot: to be zeroed if it is live
+**                 in liv_d, the slots live where the op goes on, or
+**                 where it jumps, and is not what the op makes.
+*/
+static void
+_ne_zero_add(ne_gen* gen_u, c3_w i_w, c3_h sot_h, c3_y jum_y,
+             const c3_d* liv_d)
+{
+  if (  liv_d && (sot_h != gen_u->ops_u[i_w].dst_h)
+     && ((liv_d[sot_h >> 6] >> (sot_h & 63)) & 1) )
+  {
+    _nx_grow(gen_u->zer_u, gen_u->zen_w, gen_u->zec_w, ne_zero);
+    gen_u->zer_u[gen_u->zen_w++] = (ne_zero){ i_w, sot_h, jum_y };
+  }
+}
+
+/* _ne_zero_op(): the slots the op i_w empties: its consumed sources, as
+**                the variant bits and the flags of its site say, what a
+**                drop drops, what a fetch for a reuse or a link takes.
+**                fal_d: the slots live where it goes on; jum_d: where it
+**                jumps, a branch.
+*/
+static void
+_ne_zero_op(ne_gen* gen_u, c3_w i_w, const c3_d* fal_d, const c3_d* jum_d)
+{
+  const ne_op* op_u  = &gen_u->ops_u[i_w];
+  c3_y         fam_y = op_u->fam_y;
+  c3_w         j_w;
+
+  if ( (_nc_bom == fam_y) || _ne_ends(fam_y) ) {
+    return;
+  }
+  if ( _nc_fam[fam_y].sot_y ) {
+    const u3nc_dire* dir_u = &(gen_u->pog_u->dir_u.dat_u[op_u->imm_h]);
+    const c3_h*      sot_h = gen_u->pog_u->sot_u.sot_h + dir_u->sot_h;
+    const c3_y*      kon_y = gen_u->pog_u->sot_u.kon_y + dir_u->sot_h;
+
+    for ( j_w = 0; j_w < dir_u->len_h; j_w++ ) {
+      if ( kon_y[j_w] ) {
+        _ne_zero_add(gen_u, i_w, sot_h[j_w], 0, fal_d);
+      }
+    }
+    return;
+  }
+  for ( j_w = 0; j_w < _nc_fam[fam_y].src_y; j_w++ ) {
+    c3_h s_h = op_u->src_h[j_w];
+
+    if ( _nc_edgy(fam_y) ) {
+      if ( (op_u->kon_y >> (2 * j_w)) & 1 ) {
+        _ne_zero_add(gen_u, i_w, s_h, 0, fal_d);
+      }
+      if ( (op_u->kon_y >> ((2 * j_w) + 1)) & 1 ) {
+        _ne_zero_add(gen_u, i_w, s_h, 1, jum_d);
+      }
+    }
+    else if (  (_nc_dro == fam_y) || (_nc_fgt == fam_y) || (_nc_her == fam_y)
+            || (_nc_tar == fam_y) || (_nc_lnk == fam_y)
+            || (_nc_fam[fam_y].kon_y && ((op_u->kon_y >> j_w) & 1)) )
+    {
+      _ne_zero_add(gen_u, i_w, s_h, 0, fal_d);
+    }
+  }
+}
+
+static int
+_ne_zero_cmp(const void* a_v, const void* b_v)
+{
+  const ne_zero* a_u = a_v;
+  const ne_zero* b_u = b_v;
+
+  return (a_u->op_w > b_u->op_w) - (a_u->op_w < b_u->op_w);
 }
 
 /* _ne_rts_run(): if the ops from i_w on are RTS ops and then their DOX,
@@ -1756,6 +1861,24 @@ _ne_homes(ne_gen* gen_u)
     }
   } while ( chg_t );
 
+  //  where empty slots are zero, the slots live into the function are
+  //  all defined at its start, the parameters and those to zero there
+  //
+  if ( _nc_zer_t && blk_w ) {
+    gen_u->ent_d = c3_malloc((c3_z)wor_w * sizeof(c3_d));
+    memcpy(gen_u->ent_d, inn_d, wor_w * sizeof(c3_d));
+
+    for ( i_w = 0; mat_t && (i_w < tot_w); i_w++ ) {
+      if ( (inn_d[i_w >> 6] >> (i_w & 63)) & 1 ) {
+        c3_d* row_d = mat_d + ((c3_z)i_w * wor_w);
+
+        for ( j_w = 0; j_w < wor_w; j_w++ ) {
+          row_d[j_w] |= inn_d[j_w];
+        }
+      }
+    }
+  }
+
   //  what is live across calls, and at once
   //
   for ( b_w = 0; b_w < blk_w; b_w++ ) {
@@ -1763,6 +1886,20 @@ _ne_homes(ne_gen* gen_u)
     for ( i_w = fir_w[b_w + 1]; i_w-- > fir_w[b_w]; ) {
       const ne_op* op_u = &ops_u[i_w];
       c3_h         d_h  = op_u->dst_h;
+
+      if ( _nc_zer_t ) {
+        if (  ((i_w + 1) == fir_w[b_w + 1]) && (_nc_none != op_u->tar_h)
+           && (_nc_hop != op_u->fam_y) )
+        {
+          _ne_zero_op(gen_u, i_w,
+                      ((b_w + 1) < blk_w) ? (inn_d + ((c3_z)(b_w + 1) * wor_w))
+                                          : 0,
+                      inn_d + ((c3_z)blo_w[op_u->tar_h] * wor_w));
+        }
+        else {
+          _ne_zero_op(gen_u, i_w, liv_d, 0);
+        }
+      }
 
       if ( _ne_nock_call(op_u->fam_y) ) {
         gen_u->cal_t = 1;
@@ -1817,6 +1954,9 @@ _ne_homes(ne_gen* gen_u)
     }
   }
 #undef OUT
+  if ( gen_u->zen_w ) {
+    qsort(gen_u->zer_u, gen_u->zen_w, sizeof(ne_zero), _ne_zero_cmp);
+  }
 
   //  homes
   //
@@ -2641,13 +2781,89 @@ _ne_args(ne_gen* gen_u, const u3nc_dire* dir_u)
   c3_free(src_ws);
 }
 
+/* _ne_blank(): a zero to the home of a slot.
+*/
+static void
+_ne_blank(ne_gen* gen_u, c3_h sot_h)
+{
+  c3_ws hom_ws = gen_u->hom_ws[sot_h];
+
+  if ( _ne_isreg(hom_ws) ) {
+    _nx_mov_ri(A, hom_ws, 0);
+  }
+  else {
+    _nx_st_i(A, nx_sp, _ne_cell(hom_ws), 0);
+  }
+}
+
+/* _ne_zeros(): where empty slots are zero: the first of the slots to
+**              zero for the op i_w (ne_zero), and their number.
+*/
+static c3_w
+_ne_zeros(const ne_gen* gen_u, c3_w i_w, c3_w* num_w)
+{
+  c3_w lo_w = 0, hi_w = gen_u->zen_w;
+
+  while ( lo_w < hi_w ) {
+    c3_w mid_w = (lo_w + hi_w) / 2;
+
+    if ( gen_u->zer_u[mid_w].op_w < i_w ) { lo_w = mid_w + 1; }
+    else { hi_w = mid_w; }
+  }
+  for ( hi_w = lo_w; (hi_w < gen_u->zen_w)
+                  && (gen_u->zer_u[hi_w].op_w == i_w); hi_w++ ) {
+  }
+  *num_w = hi_w - lo_w;
+  return lo_w;
+}
+
+/* _ne_blanks(): zero the slots that the ops from i_w to las_w empty and
+**               that are read after, on the way on from them.
+*/
+static void
+_ne_blanks(ne_gen* gen_u, c3_w i_w, c3_w las_w)
+{
+  for ( ; i_w <= las_w; i_w++ ) {
+    c3_w num_w, k_w = _ne_zeros(gen_u, i_w, &num_w);
+
+    for ( ; num_w--; k_w++ ) {
+      if ( !gen_u->zer_u[k_w].jum_y ) {
+        _ne_blank(gen_u, gen_u->zer_u[k_w].sot_h);
+      }
+    }
+  }
+}
+
+/* _ne_jump(): the label of the target of a branch; where empty slots are
+**             zero and the jump empties slots that are read after, a
+**             stub that zeroes them on the way.
+*/
+static c3_w
+_ne_jump(ne_gen* gen_u, const ne_op* op_u)
+{
+  c3_w tar_w = gen_u->ops_u[op_u->tar_h].lab_w;
+  c3_w i_w   = op_u - gen_u->ops_u;
+  c3_w num_w, k_w = _ne_zeros(gen_u, i_w, &num_w);
+
+  for ( ; num_w--; k_w++ ) {
+    if ( gen_u->zer_u[k_w].jum_y ) {
+      ne_stub* stu_u = _ne_stub(gen_u, ne_s_zero);
+
+      stu_u->imm_w = i_w;
+      stu_u->tar_w = tar_w;
+      return stu_u->ent_w;
+    }
+  }
+  return tar_w;
+}
+
 /* _ne_edge(): the label a branch jumps to: its target or, if the jump
 **             consumes sources, a stub that releases them and goes on.
 */
 static c3_w
 _ne_edge(ne_gen* gen_u, const ne_op* op_u, c3_t one_t, c3_t two_t)
 {
-  c3_w tar_w = gen_u->ops_u[op_u->tar_h].lab_w;
+  c3_w tar_w = _ne_jump(gen_u, op_u);
 
   if ( one_t || two_t ) {
     ne_stub* stu_u = _ne_stub(gen_u, ne_s_edge);
@@ -2992,7 +3208,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       stu_u->a_y    = reg_y;
       stu_u->imm_w  = lit;
       stu_u->s_h[0] = (kon_y & 2) ? a_h : _nc_none;
-      stu_u->tar_w  = gen_u->ops_u[op_u->tar_h].lab_w;
+      stu_u->tar_w  = _ne_jump(gen_u, op_u);
       stu_u->bak_w  = _nx_label(A);
       _nx_bind(A, stu_u->bak_w);
       if ( kon_y & 1 ) {
@@ -3011,7 +3227,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       stu_u->b_y    = two_y;
       stu_u->s_h[0] = (kon_y & 2) ? a_h : _nc_none;
       stu_u->s_h[1] = (kon_y & 8) ? b_h : _nc_none;
-      stu_u->tar_w  = gen_u->ops_u[op_u->tar_h].lab_w;
+      stu_u->tar_w  = _ne_jump(gen_u, op_u);
       stu_u->bak_w  = _nx_label(A);
       _nx_bind(A, stu_u->bak_w);
       if ( kon_y & 1 ) {
@@ -3025,7 +3241,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
     case _nc_brn: {
       _ne_cmp_i(gen_u, a_h, 1);
       _nx_jcc(A, nx_a, _ne_bail(gen_u, 0));
-      _nx_jcc(A, nx_e, gen_u->ops_u[op_u->tar_h].lab_w);
+      _nx_jcc(A, nx_e, _ne_jump(gen_u, op_u));
     } break;
 
     case _nc_brz: {
@@ -3041,6 +3257,13 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
 
     case _nc_dro: {
       _ne_drop(gen_u, a_h, 0);
+    } break;
+
+    //  the alias in a slot is dead: where empty slots are zero, the only
+    //  place this op is made, the slot is zeroed after it if anything
+    //  reads it again (_ne_blanks())
+    //
+    case _nc_fgt: {
     } break;
 
     case _nc_don: {
@@ -3678,6 +3901,19 @@ _ne_stubs(ne_gen* gen_u)
 
       //  the parts to _nc_ret, and the product consed of them
       //
+      //  the slots a jump empties, zeroed on the way
+      //
+      case ne_s_zero: {
+        c3_w num_w, k_w = _ne_zeros(gen_u, stu_u.imm_w, &num_w);
+
+        for ( ; num_w--; k_w++ ) {
+          if ( gen_u->zer_u[k_w].jum_y ) {
+            _ne_blank(gen_u, gen_u->zer_u[k_w].sot_h);
+          }
+        }
+        _nx_jmp(A, stu_u.tar_w);
+      } break;
+
       //  the record of the function is in use at a return: it is seen
       //  to, the product in its registers
       //
@@ -3813,6 +4049,16 @@ _ne_code(ne_gen* gen_u)
              (c3_d)(uintptr_t)&_ne_dat_u->arg[i_w - _nx_sot_w]);
     _ne_put(gen_u, i_w, reg_y);
   }
+  //  where empty slots are zero: the slots a drop may read before
+  //  anything has written them
+  //
+  if ( gen_u->ent_d ) {
+    for ( i_w = pog_u->arg_h; i_w < pog_u->tot_h; i_w++ ) {
+      if ( (gen_u->ent_d[i_w >> 6] >> (i_w & 63)) & 1 ) {
+        _ne_blank(gen_u, i_w);
+      }
+    }
+  }
 
   for ( i_w = 0; (i_w < gen_u->opn_w) && !gen_u->bad_t; i_w++ ) {
     ne_op* op_u = &gen_u->ops_u[i_w];
@@ -3839,7 +4085,12 @@ _ne_code(ne_gen* gen_u)
       }
     }
     {
+      c3_w fir_w = i_w;
+
       i_w += _ne_op(gen_u, i_w);
+      if ( gen_u->zen_w && !gen_u->bad_t ) {
+        _ne_blanks(gen_u, fir_w, i_w);
+      }
     }
   }
   _nx_trap(A);
@@ -3910,11 +4161,12 @@ _ne_lower(u3nc_prog* pog_u)
       return (_ne_fail != sid_u->emi_f);
     }
   }
-  //  machine code keeps no empty slot zero, which a build that zeroes
-  //  them relies on (a drop of a slot that may be empty, FGT): no program
-  //  is lowered there
+  //  a terminator that sweeps (_nc_swe_t) releases whatever every slot
+  //  holds, and machine code zeroes an empty slot only where a drop reads
+  //  it (_ne_zero_op()), and has no sweeping variant of a terminator: no
+  //  program is lowered in a build that sweeps
   //
-  if ( _nc_zer_t || !_ne_init() ) {
+  if ( _nc_swe_t || !_ne_init() ) {
     _nj_side_get(pog_u)->emi_f = _ne_fail;
     return 0;
   }
@@ -3991,6 +4243,8 @@ _ne_lower(u3nc_prog* pog_u)
   c3_free(gen_u.sit_w);
   c3_free(gen_u.ins_w);
   c3_free(gen_u.tai_y);
+  c3_free(gen_u.ent_d);
+  c3_free(gen_u.zer_u);
 
   return !bad_t;
 }
