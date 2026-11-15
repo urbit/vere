@@ -90,7 +90,8 @@
 **                   known product of the arm
 **    HCE            constant %mean epilogue
 **    SPY   e p d    .^(e p) -> d
-**    NOK   u f d    .*(u f) -> d, through the SKA core
+**    NOK   u f d    .*(u f) -> d, through the SKA core, or in u3n if f
+**                   has no program (_nc_entry())
 **    CAL   i        call site i with its arguments -> d
 **    CAF   i        CAL, by the total array jet of the site
 **    CAX   i        CAF, by the transferring driver of the jet, which
@@ -5159,13 +5160,36 @@ _nc_mono(const u3nc_dire* dir_u)
   return gop_u;
 }
 
-/* _nc_entry(): entry program for [sub fol], compiling it if needed.
+/* _nc_plain(): is fol a formula under the static hint %bare, [11 %bare f]?
+**              Such a formula is not for compiled nock: it runs in u3n,
+**              hint and all (u3n ignores the hint), whether it is what
+**              u3nc_nock_on() is given or the formula of an indirect call,
+**              which is what the library makes of the hint inside the code
+**              it analyzes.  The boundary of code that is compiled only
+**              under hints of its own.
+*/
+#define _nc_bare_tag  c3_s4('b','a','r','e')
+
+static inline c3_t
+_nc_plain(u3_noun fol)
+{
+  return (c3y == u3du(fol)) && (11 == u3h(fol))
+      && (c3y == u3du(u3t(fol))) && (_nc_bare_tag == u3h(u3t(fol)));
+}
+
+/* _nc_entry(): entry program for [sub fol], compiling it if needed; or
+**              NULL if it is to run in u3n: a formula under %bare.
 **              RETAINS.
 */
 static u3nc_prog*
 _nc_entry(u3_noun sub, u3_noun fol)
 {
-  u3nc_prog* pog_u = _nc_ent_get(sub, fol);
+  u3nc_prog* pog_u;
+
+  if ( _nc_plain(fol) ) {
+    return NULL;
+  }
+  pog_u = _nc_ent_get(sub, fol);
 
   _nc_stat(ent_d);
 
@@ -5780,11 +5804,10 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   u3nc_prog* pog_u;
   u3_noun    pro;
 
-  if ( c3n == u3nc_able() ) {
+  if ( (c3n == u3nc_able()) || !(pog_u = _nc_entry(bus, fol)) ) {
     return u3n_nock_on(bus, fol);
   }
 
-  pog_u = _nc_entry(bus, fol);
   u3z(fol);
   pro = _nc_burn_out(pog_u, &bus, 1);
 

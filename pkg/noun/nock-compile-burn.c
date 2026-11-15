@@ -890,6 +890,17 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
   _nc_stat_if(_nc_home(reg[b_h]), nkf_d);                                       \
   _nc_stat_if(_nc_home(reg[b_h]) && (c3y == u3du(x)) && (c3y == u3du(u3t(x)))   \
               && _nc_home(u3t(u3t(x))), nkb_d);                                 \
+  if ( !gop_u ) {                                                               \
+    /*  no program: the formula runs in u3n  */                                 \
+    u3_noun fol = reg[b_h], pro;                                                \
+    TAKEN(x, a_h, KA);                                                          \
+    TAKEN(fol, b_h, KB);                                                        \
+    u3t_off(noc_o);                                                             \
+    pro = u3n_nock_on(x, fol);                                                  \
+    u3t_on(noc_o);                                                              \
+    PUT(d_h, pro);                                                              \
+    BURN();                                                                     \
+  }                                                                             \
   TAKEN(x, a_h, KA);                                                            \
   DROP(b_h, KB);                                                                \
   CALL_MONO(gop_u, x, d_h);
