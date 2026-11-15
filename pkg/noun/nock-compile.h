@@ -275,8 +275,14 @@
       extern c3_h u3nc_Hot;
       extern c3_h u3nc_Win;
 
-    /* u3nc_Emit: native code is made by the emitter (nock-compile-emit.c),
-    **            not from the stencils.
+    /* u3nc_Emit: who makes the native code, and when: 1, the emitter
+    **            (nock-compile-emit.c), for every program when it first
+    **            starts, which is how a build with U3NC_JIT runs unless
+    **            this is changed; 2, the emitter, for the programs that
+    **            the rule above finds hot; 0, the stencils, for those,
+    **            which is all there is in a build that zeroes the slots
+    **            compiled nock empties (U3NC_ZERO): the emitter lowers
+    **            nothing there.
     */
       extern c3_t u3nc_Emit;
 

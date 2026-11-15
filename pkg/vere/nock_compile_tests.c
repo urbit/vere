@@ -110,10 +110,13 @@ _setup(void)
   if ( getenv("U3NC_JOP") ) {
     u3nc_Jop = atoi(getenv("U3NC_JOP"));
   }
-  //  U3NC_EMIT: native code by the emitter instead of the stencils
+  //  U3NC_EMIT: native code by the emitter instead of the stencils: for
+  //  every program when it first starts, or with 2 for the programs that
+  //  start often (U3NC_HOT, U3NC_WIN)
   //
+  u3nc_Emit = 0;
   if ( getenv("U3NC_EMIT") && atoi(getenv("U3NC_EMIT")) ) {
-    u3nc_Emit = 1;
+    u3nc_Emit = ( 2 == atoi(getenv("U3NC_EMIT")) ) ? 2 : 1;
     u3nc_Jit  = 1;
   }
 #endif

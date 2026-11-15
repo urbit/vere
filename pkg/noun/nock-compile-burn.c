@@ -995,7 +995,16 @@ OP(bail_fail) ARGS CONV
 static u3_noun
 OP(cold) ARGS CONV
 {
-  if ( u3nc_Jit ) {
+  //  the emitter makes the machine code of a program when the program
+  //  first starts, and counts nothing, unless it is told to follow the
+  //  rule (u3nc_Emit)
+  //
+  if ( u3nc_Jit && (1 == u3nc_Emit) ) {
+    if ( _ne_lower(pog_u) ) {
+      MUSTTAIL return NAT(pog_u)(PASS);
+    }
+  }
+  else if ( u3nc_Jit ) {
     nj_side* sid_u = _nj_side_get(pog_u);
 
     if ( sid_u->epo_h != _nj_epo_h ) {

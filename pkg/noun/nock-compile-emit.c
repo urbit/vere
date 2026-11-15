@@ -635,7 +635,9 @@ _ne_target(u3nc_prog* gop_u)
 {
   nj_side* sid_u;
 
-  if ( _ne_has(gop_u) || ((u3nc_Hot <= 1) && _ne_lower(gop_u)) ) {
+  if (  _ne_has(gop_u)
+     || (((1 == u3nc_Emit) || (u3nc_Hot <= 1)) && _ne_lower(gop_u)) )
+  {
     return _nj_side(gop_u)->emi_f;
   }
   sid_u = _nj_side_get(gop_u);
