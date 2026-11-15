@@ -2352,6 +2352,278 @@ _test_switch(void)
   return ret_i;
 }
 
+/* _test_entry(): an arm is entered with the parts of its subject that it
+**                reads, also the ones it reads under a hint that keeps a
+**                trace frame, or past one, or past a call that may
+**                crash.  A caller that has to take a noun apart for them
+**                tries: a noun that is not a cell goes whole to the
+**                subject version of the arm, which crashes where u3n
+**                does, with its frames, or does not.  The arms recur,
+**                so they are not inlined; the second part of the sample
+**                is jammed, so the caller knows no shape of it.  Products
+**                on samples that run through, the traces of u3n and u3nc
+**                on samples that crash.  A trap's arm reads its
+**                parts only when the trace is rendered: one pushed on
+**                a branch takes nothing apart with a crash.  Nor does a
+**                branch that makes an argument, before the code that
+**                runs after it.
+*/
+static c3_i
+_test_entry(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    const c3_c* sam_c[5];   //  samples, hoon
+    c3_t        bad_t[5];   //  whether the sample crashes
+  } cas_u[] = {
+    { "read under a hint",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ~|  %in-g\n"
+      "      =/  h  .*(s [0 2])\n"
+      "      ?:  =(0 x)  h\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(g -.p (cue +.p))\n",
+      { "[0 (jam [7 8])]", "[[1 0] (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", 0 },
+      { 0, 0, 1, 1, 0 } },
+    { "hint in the callee",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  .*(s [0 2])\n"
+      "      (g x s)\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ~|  %in-g\n"
+      "      (f .*(x [0 3]) s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[0 (jam [7 8])]", "[[1 0] (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", "[5 (jam [7 8])]" },
+      { 0, 0, 1, 1, 1 } },
+    { "hint around the call",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  .*(s [0 2])\n"
+      "      ~|  %rec\n"
+      "      (f .*(x [0 3]) s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", "[[1 1 0] (jam 5)]", 0 },
+      { 0, 1, 1, 1, 0 } },
+    { "read under a hint on one branch",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  ~|(%leaf .*(s [0 2]))\n"
+      "      (f .*(x [0 3]) s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", 0, 0 },
+      { 0, 1, 1, 0, 0 } },
+    { "read past a hint",
+      "=>  |%\n"
+      "    ++  h\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      =/  y  ~|(%step .*(x [0 3]))\n"
+      "      =/  k  |-(?:(=(0 y) 0 $(y 0)))\n"
+      "      [k .*(s [0 2])]\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(h -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[5 (jam 5)]", "[[1 0] (jam 5)]", "[5 (jam [7 8])]", 0 },
+      { 0, 1, 1, 1, 0 } },
+    { "hint before the call",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  .*(s [0 2])\n"
+      "      =/  y  ~|(%step .*(x [0 3]))\n"
+      "      (f y s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[5 (jam 5)]", "[[1 0] (jam 5)]", 0, 0 },
+      { 0, 1, 1, 0, 0 } },
+    { "read past a call",
+      "=>  |%\n"
+      "    ++  k\n"
+      "      |=  x=*\n"
+      "      ^-  *\n"
+      "      ~|  %in-k\n"
+      "      =/  y  .*(x [0 3])\n"
+      "      ?:  =(0 y)  y\n"
+      "      $(x y)\n"
+      "    ++  h\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      [(k x) .*(s [0 2])]\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(h -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[5 (jam 5)]", "[[1 0] (jam 5)]", 0, 0 },
+      { 0, 1, 1, 0, 0 } },
+    { "parts of a trap",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(0 x)  7\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[0 (jam 5)]", "[[1 0] (jam 5)]", "[[1 0] (jam [7 8])]", "[5 (jam 5)]", "[5 (jam [7 8])]" },
+      { 0, 0, 0, 1, 1 } },
+    { "no hints",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  .*(s [0 2])\n"
+      "      (f .*(x [0 3]) s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "~|  %outer\n"
+      "(f -.p (cue +.p))\n",
+      { "[[1 0] (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", "[5 (jam 5)]", "[[1 5] (jam [7 8])]" },
+      { 0, 1, 1, 1, 1 } },
+    { "field of a loop",
+      "=>  |%\n"
+      "    ++  miss\n"
+      "      |=  [a=* b=*]\n"
+      "      ^-  *\n"
+      "      (dext a b)\n"
+      "    ++  dext\n"
+      "      |=  [sut=* tal=*]\n"
+      "      ^-  *\n"
+      "      ?@  sut  .*(tal [0 7])\n"
+      "      =/  yed=*  +.sut\n"
+      "      |-  ^-  *\n"
+      "      ?@  yed  .*(tal [0 7])\n"
+      "      =.  tal  [.*(tal [0 2]) .*(tal [0 6]) ^$(sut -.yed)]\n"
+      "      $(yed +.yed)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "~|  %outer\n"
+      "(miss -.p (cue +.p))\n",
+      { "[0 (jam [3 4 5])]", "[[1 [2 3] 4] (jam [3 4 5])]", "[[1 2] (jam 5)]", "[0 (jam [3 4])]", "[[1 2] (jam [3 4])]" },
+      { 0, 0, 1, 1, 1 } },
+    { "field of a loop, spots",
+      "!:\n"
+      "=>  |%\n"
+      "    ++  miss\n"
+      "      |=  [a=* b=*]\n"
+      "      ^-  *\n"
+      "      (dext a b)\n"
+      "    ++  dext\n"
+      "      |=  [sut=* tal=*]\n"
+      "      ^-  *\n"
+      "      ?@  sut  .*(tal [0 7])\n"
+      "      =/  yed=*  +.sut\n"
+      "      |-  ^-  *\n"
+      "      ?@  yed  .*(tal [0 7])\n"
+      "      =.  tal  [.*(tal [0 2]) .*(tal [0 6]) ^$(sut -.yed)]\n"
+      "      $(yed +.yed)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(miss -.p (cue +.p))\n",
+      { "[0 (jam [3 4 5])]", "[[1 [2 3] 4] (jam [3 4 5])]", "[[1 2] (jam 5)]", "[0 (jam [3 4])]", "[[1 2] (jam [3 4])]" },
+      { 0, 0, 1, 1, 1 } },
+    { "parts of a trap on a branch",
+      "=>  |%\n"
+      "    ++  f\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ?:  =(0 x)  7\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(1 x)  8\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "(f -.p (cue +.p))\n",
+      { "[1 (jam 5)]", "[[1 0] (jam 5)]", "[[1 1] (jam [7 8])]", "[5 (jam 5)]", "[5 (jam [7 8])]" },
+      { 0, 0, 0, 1, 1 } },
+    { "argument made by a conditional",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  *\n"
+      "      ~|  %in-g\n"
+      "      =/  h  .*(s [0 2])\n"
+      "      ?:  =(0 x)  h\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  c  (cue +.p)\n"
+      "(g -.p ?:(=(0 -.p) c [7 .*(c [0 3])]))\n",
+      { "[[1 0] (jam [5 6])]", "[0 (jam [7 8])]", "[0 (jam 5)]", "[[1 0] (jam 5)]", 0 },
+      { 0, 0, 1, 1, 0 } },
+    { "hint past a conditional argument",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [s=* x=*]\n"
+      "      ^-  *\n"
+      "      =/  h  .*(s [0 2])\n"
+      "      ?:  =(0 x)  h\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  c  (cue +.p)\n"
+      "(g ?:(=(0 -.p) c [7 8]) ~|(%arg .*(c [0 3])))\n",
+      { "[0 (jam [5 0])]", "[1 (jam [5 1 0])]", "[0 (jam 5)]", "[1 (jam 5)]", 0 },
+      { 0, 0, 1, 1, 0 } },
+  };
+  c3_i ret_i = 1;
+  c3_w i_w, j_w;
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    for ( j_w = 0; (j_w < 5) && cas_u[i_w].sam_c[j_w]; j_w++ ) {
+      u3_noun cor = _gate(cas_u[i_w].src_c, u3v_wish(cas_u[i_w].sam_c[j_w]));
+      u3_noun fol = u3nq(9, 2, 0, 1);
+      c3_c    nam_c[96];
+
+      snprintf(nam_c, sizeof(nam_c), "entry %s, %s%s", cas_u[i_w].nam_c,
+               cas_u[i_w].sam_c[j_w], cas_u[i_w].bad_t[j_w] ? ", crash" : "");
+      ret_i = ( cas_u[i_w].bad_t[j_w]
+                ? _test_crash(nam_c, cor, fol, 0)
+                : _test(nam_c, cor, fol, 1) )
+           && ret_i;
+    }
+  }
+
+  return ret_i;
+}
+
 /* _test_ska(): the %ska hint runs its formula compiled, from u3n: the
 **              raw trace of a crash inside it carries a deferred %mean
 **              frame, which only compiled nock pushes.  (The trap sits
@@ -3396,6 +3668,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_switch() ) {
+    exit(1);
+  }
+
+  if ( !_test_entry() ) {
     exit(1);
   }
 
