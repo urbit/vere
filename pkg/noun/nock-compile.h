@@ -262,8 +262,9 @@
       c3_o
       u3nc_fail(c3_m mot_m);
 
-    /* u3nc_Jit: whether programs get native code (a build with U3NC_JIT):
-    **           the hot ones, those that start, as bytecode,
+    /* u3nc_Jit: whether programs get native code, which they do in a
+    **           build with U3NC_JIT unless this is cleared: the hot ones,
+    **           those that start, as bytecode,
     ** u3nc_Hot: times within
     ** u3nc_Win: microseconds.
     */

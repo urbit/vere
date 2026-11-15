@@ -7219,7 +7219,11 @@ _nc_memo_jet(const u3u_harm* arm_u)
 
 u3nc_prog* u3nc_Gop;
 
+#ifdef U3NC_JIT
+c3_t u3nc_Jit = 1;
+#else
 c3_t u3nc_Jit = 0;
+#endif
 c3_h u3nc_Hot = 500;
 c3_h u3nc_Win = 10000;
 c3_h u3nc_Jop = 0;
