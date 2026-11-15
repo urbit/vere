@@ -1032,6 +1032,31 @@ _test_twice(void)
   return _test("twice", cor, u3nq(9, 2, 0, 1), 1);
 }
 
+/* _test_twice_call(): a register twice among the arguments of a call of
+**                     another program, and of a tail call of one, consumed
+**                     by the first of the two: the second reads the slot
+**                     the first has emptied, if they are moved one by one.
+**                     A cell, so that the second gains a real reference.
+*/
+static c3_i
+_test_twice_call(void)
+{
+  u3_noun cor = _gate("=>  |%\n"
+                      "    ++  f\n"
+                      "      |=  [a=* b=* n=@]\n"
+                      "      ^-  *\n"
+                      "      ?:  =(0 n)  [a b]\n"
+                      "      $(n (dec n))\n"
+                      "    --\n"
+                      "|=  x=*\n"
+                      "^-  *\n"
+                      "=/  p  (f x x 3)\n"
+                      "(f p p 2)\n",
+                      u3nc(u3i_string("an indirect atom in a cell"), 7));
+
+  return _test("twice, call", cor, u3nq(9, 2, 0, 1), 1);
+}
+
 /* _test_cycle(): the arguments of a self call in each other's parameter
 **                slots, a rotation of three: the moves that put them in
 **                place need a slot to step aside into, and the program
@@ -4044,6 +4069,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_twice() ) {
+    exit(1);
+  }
+
+  if ( !_test_twice_call() ) {
     exit(1);
   }
 

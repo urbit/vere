@@ -346,6 +346,32 @@ _nj_put(nj_gen* gen_u, c3_h cod_h, c3_h a_h, c3_h b_h, c3_h c_h, c3_h tar_h)
   gen_u->off_w += lon_h;
 }
 
+/* _nj_args(): the pieces that move the arguments of a site to its callee:
+**             the borrowed ones, then the consumed ones.  A site may pass
+**             a register twice, the first of the two consumed
+**             (_nc_lives()), and ARGK zeroes the slot it takes in a build
+**             that zeroes (_nc_zer_t): every read of a slot comes before
+**             that, as in the interpreter, which gathers the arguments
+**             before it moves any.
+*/
+static void
+_nj_args(nj_gen* gen_u, const u3nc_dire* dir_u,
+         const c3_h* sot_h, const c3_y* kos_y)
+{
+  c3_h j_h;
+
+  for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
+    if ( !kos_y[j_h] ) {
+      _nj_put(gen_u, ARGB, sot_h[j_h], j_h, 0, 0);
+    }
+  }
+  for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
+    if ( kos_y[j_h] ) {
+      _nj_put(gen_u, ARGK, sot_h[j_h], j_h, 0, 0);
+    }
+  }
+}
+
 /* _nj_code(): the code of the program, all its ops: measured, if there is
 **             nowhere to put it yet.  A call, a tail call and a call of a
 **             total array jet are made of pieces, one per argument, from
@@ -389,16 +415,12 @@ _nj_code(nj_gen* gen_u)
 
       if ( _nc_cal == fam_y ) {
         _nj_put(gen_u, CALB, arg_h[0], 0, 0, 0);
-        for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
-          _nj_put(gen_u, kos_y[j_h] ? ARGK : ARGB, sot_h[j_h], j_h, 0, 0);
-        }
+        _nj_args(gen_u, dir_u, sot_h, kos_y);
         _nj_put(gen_u, CALE, dir_u->des_h, dir_u->len_h, 0, 0);
       }
       else if ( _nc_jmp == fam_y ) {
         _nj_put(gen_u, JMPB, arg_h[0], dir_u->len_h, 0, 0);
-        for ( j_h = 0; j_h < dir_u->len_h; j_h++ ) {
-          _nj_put(gen_u, kos_y[j_h] ? ARGK : ARGB, sot_h[j_h], j_h, 0, 0);
-        }
+        _nj_args(gen_u, dir_u, sot_h, kos_y);
         _nj_put(gen_u, ( dir_u->len_h && (dir_u->len_h <= 4) )
                        ? (JMPE + dir_u->len_h) : JMPE,
                 dir_u->len_h, 0, 0, 0);
