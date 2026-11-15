@@ -3168,16 +3168,37 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
   u3_noun         key;
   c3_w          pog_w;
   u3_weak         got;
+  u3_weak         yek = u3_none;
   u3x_cell(kev, &key, &pog_w);
+
+  //  a key can have left already, as a part of a key or a literal taken
+  //  earlier in this walk (keys are deduplicated, see _n_find()): its mug
+  //  slot holds the address of its copy, which is looked up in its place
+  //
+  if (  (c3y == u3a_is_junior(u3R, key))
+     && (c3y == u3a_left(key)) )
+  {
+    yek = u3a_take(key);
+    key = yek;
+  }
 
   got = u3h_git(har_p, key);
 
   if ( u3_none != got ) {
     _cn_reap_prog_dat(_cn_to_prog(got), _cn_to_prog(pog_w));
+
+    if ( u3_none != yek ) {
+      u3z(yek);
+    }
   }
   else {
-    u3_noun     yek = u3a_take(key);
-    u3p(u3n_prog) gop_p = _cn_take_prog_cb(pog_w);
+    u3p(u3n_prog) gop_p;
+
+    if ( u3_none == yek ) {
+      yek = u3a_take(key);
+    }
+
+    gop_p = _cn_take_prog_cb(pog_w);
 
     if ( har_p == u3H->rod_u.byc.har_p ) {
       u3e_Meter.bca_d++;
