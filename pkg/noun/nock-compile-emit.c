@@ -100,7 +100,8 @@ enum {
   ne_h_dec, ne_h_add, ne_h_cons, ne_h_sing, ne_h_ret, ne_h_tin,
   ne_h_box, ne_h_nok, ne_h_cap, ne_h_cam, ne_h_csm, ne_h_save, ne_h_hmp,
   ne_h_tdrop, ne_h_hcp, ne_h_hlp, ne_h_hsp, ne_h_hse, ne_h_hdp, ne_h_hde,
-  ne_h_spy, ne_h_cac, ne_h_mono, ne_h_deep,
+  ne_h_spy, ne_h_cac, ne_h_mono, ne_h_deep, ne_h_mend, ne_h_trax,
+  ne_h_scal,
   ne_h_last
 };
 
@@ -205,6 +206,38 @@ static ne_duo (*_ne_ent_f)(void* cod_v, u3_noun* arg, ne_ctx* ctx_u,
                             c3_y* new_y);
 static c3_y* _ne_tin_y;
 static c3_y* _ne_gen_y;             //  the same, the program from ne_data
+
+/*  What a chain of tail calls leaves to the return (_nc_tails(), LNK and
+**  TRK) is, in machine code, a record of three eight-byte words on the
+**  stack: the cell to return in place of the product of the last callee,
+**  the address of the zero in the last cell linked, where that product
+**  goes, or 0, and the trace stack to put back, or all ones.
+**
+**  A function that has a LNK or a TRK keeps room for a record at the top
+**  of its frame, under its return address.  It is the first of a chain if
+**  it was called from anywhere but the one call below, and then the
+**  record it uses is its own: when it returns, it sees to what the record
+**  holds first (_ne_mnd_y), and when it leaves by a tail call with the
+**  record in use, it frees its frame down to the record and makes the call
+**  through _ne_sca_y, a call whose return address, _ne_srt_y, is right
+**  above the record: so the function called, and whatever it calls in
+**  tail position, finds the record by its own return address being that
+**  one, and uses it; and the return of the last of them lands there, where
+**  the record is seen to and the first function's return address is
+**  returned through.  Every return is to the place its call came from.
+**  A function that neither links nor keeps a trace knows nothing of this,
+**  and a chain ends where it leaves machine code: the interpreter has
+**  frames of its own for a record (nc_rec).
+*/
+#define _ne_rec_w    24     //  bytes of a record
+#define _ne_rec_rot  0
+#define _ne_rec_hol  8
+#define _ne_rec_tax  16
+
+static c3_y* _ne_mnd_y;             //  see to the record at nx_t2
+static c3_y* _ne_sca_y;             //  call nx_t0 over the record at the
+                                    //  top of the stack, and see to it
+static c3_y* _ne_srt_y;             //    the return address of that call
 
 
 /* _ne_has(): whether a program has code made here.
@@ -841,6 +874,18 @@ _ne_h_deep(ne_ctx* ctx_u)
   ctx_u->lim_y = 0;
 }
 
+/* _ne_h_trax(): the trace stack is tax again, a tail of what it is: the
+**               entries a chain of tail calls kept come off (TRK).
+*/
+static void
+_ne_h_trax(u3_noun tax)
+{
+  u3_noun old = u3R->bug.tax;
+
+  u3R->bug.tax = u3k(tax);
+  u3z(old);
+}
+
 /* _ne_h_interp(): run the bytecode of a program for native code: the
 **                 first arguments in arg, the rest in the arena.  The
 **                 product, and above it, in the high half, the shape of a
@@ -993,6 +1038,7 @@ _ne_init(void)
   HEL[ne_h_cac]    = (void*)_ne_h_cac;
   HEL[ne_h_mono]   = (void*)_ne_h_mono;
   HEL[ne_h_deep]   = (void*)_ne_h_deep;
+  HEL[ne_h_trax]   = (void*)_ne_h_trax;
 
   {
     _ne_stk_z = (c3_z)1024 << 20;
@@ -1110,7 +1156,93 @@ _ne_init(void)
     _ne_gen_y = _ne_place(&asm_u);
     _nx_done(&asm_u);
   }
-  u3_assert( _ne_ent_f && _ne_tin_y && _ne_gen_y );
+  //  the record of a chain of tail calls at nx_t2 seen to: the product
+  //  (nx_t0, its shape in nx_t1, its parts in the slot registers) fills
+  //  the zero of the last cell linked, in one noun, and the first cell
+  //  linked is the product; the trace stack is what the record noted
+  //
+  {
+    c3_w tra_w, box_w, fil_w, tax_w;
+
+    memset(&asm_u, 0, sizeof(asm_u));
+    tra_w = _nx_label(&asm_u); box_w = _nx_label(&asm_u);
+    fil_w = _nx_label(&asm_u); tax_w = _nx_label(&asm_u);
+
+    _nx_ld64(&asm_u, nx_t3, nx_t2, _ne_rec_hol);
+    _nx_test_rr64(&asm_u, nx_t3, nx_t3);
+    _nx_jcc8(&asm_u, nx_e, tra_w);
+    _nx_test_rr(&asm_u, nx_t1, nx_t1);
+    _nx_jcc8(&asm_u, nx_ne, box_w);
+    _nx_bind(&asm_u, fil_w);
+    _nx_st(&asm_u, nx_t3, 0, nx_t0);
+    _nx_ld(&asm_u, nx_t0, nx_t2, _ne_rec_rot);
+    _nx_bind(&asm_u, tra_w);
+    _nx_rm(&asm_u, 1, 0x83, nx_cmp, nx_t2, _ne_rec_tax);
+    _nx_b(&asm_u, 0xff);
+    _nx_jcc8(&asm_u, nx_ne, tax_w);
+    _nx_ret(&asm_u);
+
+    //  the parts consed, as a call that takes one noun has them (ne_s_box)
+    //
+    _nx_bind(&asm_u, box_w);
+    _nx_push(&asm_u, nx_t2);
+    _nx_push(&asm_u, nx_t3);
+    _nx_alu_ri64(&asm_u, nx_sub, nx_rsp, 8);
+    _nx_ld64_l(&asm_u, nx_t2, ~(c3_w)0, _ne_hel(ne_h_ret));
+    for ( i_w = 0; i_w < _nx_sot_w; i_w++ ) {
+      _nx_st(&asm_u, nx_t2, _ne_wb * (i_w + 1), _nx_sot_y[i_w]);
+    }
+    _nx_mov_rr(&asm_u, nx_a0, nx_t1);
+    _nx_mov_rr(&asm_u, nx_a1, nx_t0);
+    _nx_call_l(&asm_u, ~(c3_w)0, _ne_hel(ne_h_box));
+    _nx_alu_ri64(&asm_u, nx_add, nx_rsp, 8);
+    _nx_pop(&asm_u, nx_t3);
+    _nx_pop(&asm_u, nx_t2);
+    _nx_mov_ri(&asm_u, nx_t1, 0);
+    _nx_jmp8(&asm_u, fil_w);
+
+    //  the helper is C: the product and its parts are kept from it
+    //
+    _nx_bind(&asm_u, tax_w);
+    _nx_push(&asm_u, nx_t0);
+    _nx_push(&asm_u, nx_t1);
+    _nx_push(&asm_u, nx_r8);
+    _nx_push(&asm_u, nx_r9);
+    _nx_push(&asm_u, nx_r10);
+    _nx_ld(&asm_u, nx_a0, nx_t2, _ne_rec_tax);
+    _nx_call_l(&asm_u, ~(c3_w)0, _ne_hel(ne_h_trax));
+    _nx_pop(&asm_u, nx_r10);
+    _nx_pop(&asm_u, nx_r9);
+    _nx_pop(&asm_u, nx_r8);
+    _nx_pop(&asm_u, nx_t1);
+    _nx_pop(&asm_u, nx_t0);
+    _nx_ret(&asm_u);
+
+    _ne_mnd_y = _ne_place(&asm_u);
+    _nx_done(&asm_u);
+  }
+  ((ne_base*)_ne_w(_ne_bas_u))->hel_v[ne_h_mend] = _ne_mnd_y;
+
+  //  the call of a chain: the function in nx_t0 over the record at the
+  //  top of the stack; back, the record is seen to and comes off, and the
+  //  return address above it is returned through
+  //
+  {
+    memset(&asm_u, 0, sizeof(asm_u));
+    _nx_call_r(&asm_u, nx_t0);
+    i_w = asm_u.len_w;
+    _nx_mov_rr64(&asm_u, nx_t2, nx_rsp);
+    _nx_call_l(&asm_u, ~(c3_w)0, _ne_hel(ne_h_mend));
+    _nx_alu_ri64(&asm_u, nx_add, nx_rsp, _ne_rec_w);
+    _nx_ret(&asm_u);
+
+    _ne_sca_y = _ne_place(&asm_u);
+    _ne_srt_y = _ne_sca_y ? (_ne_sca_y + i_w) : 0;
+    _nx_done(&asm_u);
+  }
+  ((ne_base*)_ne_w(_ne_bas_u))->hel_v[ne_h_scal] = _ne_sca_y;
+
+  u3_assert( _ne_ent_f && _ne_tin_y && _ne_gen_y && _ne_mnd_y && _ne_sca_y );
 
   //  what is in the arena now is never freed
   //
@@ -1273,7 +1405,8 @@ typedef struct {
 */
 enum {
   ne_s_gain, ne_s_lose, ne_s_inc, ne_s_dec, ne_s_add, ne_s_eqq, ne_s_eql,
-  ne_s_edge, ne_s_link, ne_s_bail, ne_s_box, ne_s_cons, ne_s_deep
+  ne_s_edge, ne_s_link, ne_s_bail, ne_s_box, ne_s_cons, ne_s_deep,
+  ne_s_mend, ne_s_tail
 };
 
 typedef struct {
@@ -1320,6 +1453,11 @@ typedef struct {
   c3_y       why_y;       //  the family it failed on
   c3_t       bad_t;       //  it failed
   c3_t       cal_t;       //  it calls a nock function
+  c3_t       cha_t;       //  it links or keeps a trace (LNK, TRK): it has
+                          //  room for the record of a chain at the top of
+                          //  its frame, and under it
+  c3_w       rec_w;       //    the cell of the address of the record it
+                          //    uses: its own, or its caller's
 } ne_gen;
 
 #define _ne_sot_kep     4         //  the first slot registers are the ones a
@@ -1349,7 +1487,8 @@ _ne_ends(c3_y fam_y)
   switch ( fam_y ) {
     default: return 0;
     case _nc_don: case _nc_dox: case _nc_jmp: case _nc_jms: case _nc_jmf:
-    case _nc_jmx: case _nc_jsp: case _nc_jmc: case _nc_bom: return 1;
+    case _nc_jmx: case _nc_jsp: case _nc_jmc: case _nc_bom: case _nc_jnk:
+      return 1;
   }
 }
 
@@ -1822,6 +1961,17 @@ _ne_homes(ne_gen* gen_u)
               dep_h--;
             }
           } break;
+          //  the words of the hints it ends
+          //
+          case _nc_trk: {
+            if ( dep_h < (op_u->imm_h >> 8) ) {
+              gen_u->bad_t = 1;
+              gen_u->why_y = op_u->fam_y;
+            }
+            else {
+              dep_h -= (op_u->imm_h >> 8);
+            }
+          } break;
         }
         max_w = c3_max(max_w, dep_h);
 
@@ -1873,9 +2023,17 @@ _ne_homes(ne_gen* gen_u)
     gen_u->cel_w += stg_t ? (_nc_ret_max - 1) : 0;
   }
 
-  //  the frame keeps the stack aligned for the helpers
+  //  the frame keeps the stack aligned for the helpers; at its top, the
+  //  record of a chain and, under that, the address of the one in use
   //
-  gen_u->fra_w = (((_ne_wb * gen_u->cel_w) + 8 + 15) & ~(c3_w)15) - 8;
+  for ( i_w = 0; i_w < opn_w; i_w++ ) {
+    if ( (_nc_lnk == ops_u[i_w].fam_y) || (_nc_trk == ops_u[i_w].fam_y) ) {
+      gen_u->cha_t = 1;
+    }
+  }
+  gen_u->fra_w = (((_ne_wb * gen_u->cel_w) + (gen_u->cha_t ? (_ne_rec_w + 8) : 0)
+                   + 8 + 15) & ~(c3_w)15) - 8;
+  gen_u->rec_w = gen_u->fra_w - _ne_rec_w - 8;
 
   c3_free(blo_w);
   c3_free(fir_w);
@@ -2215,6 +2373,34 @@ _ne_leave(ne_gen* gen_u)
   _nx_alu_ri64(A, nx_add, nx_sp, gen_u->fra_w);
 }
 
+/* _ne_chain(): before the frame comes off, in a function that has a
+**              record of its own for a chain of tail calls: if the record
+**              is in use, a slow path sees to it.  Before a return, the
+**              product in its registers: the record is seen to here.
+**              Before a jump, in tail position, to the cell of a site
+**              (its label, tar_w) or to the address in nx_t0 (~0): the
+**              frame comes off down to the record and the function is
+**              called over it instead (_ne_sca_y).  No register is used.
+*/
+static void
+_ne_chain(ne_gen* gen_u, c3_t jum_t, c3_w tar_w)
+{
+  if ( gen_u->cha_t ) {
+    ne_stub* stu_u = _ne_stub(gen_u, jum_t ? ne_s_tail : ne_s_mend);
+    c3_w     own_w = gen_u->fra_w - _ne_rec_w;
+
+    stu_u->tar_w = tar_w;
+    _nx_rm(A, 1, 0x83, nx_cmp, nx_sp, own_w + _ne_rec_hol);
+    _nx_b(A, 0);
+    _nx_jcc(A, nx_ne, stu_u->ent_w);
+    _nx_rm(A, 1, 0x83, nx_cmp, nx_sp, own_w + _ne_rec_tax);
+    _nx_b(A, 0xff);
+    _nx_jcc(A, nx_ne, stu_u->ent_w);
+    stu_u->bak_w = _nx_label(A);
+    _nx_bind(A, stu_u->bak_w);
+  }
+}
+
 /* _ne_stage(): the cell of the frame where part i_w of a product waits.
 */
 #define _ne_stage(gen_u, i_w)  (_ne_wb * ((gen_u)->stg_w + (i_w) - 1))
@@ -2397,6 +2583,7 @@ _ne_call(ne_gen* gen_u, c3_h sit_h, c3_t tal_t)
   gen_u->ins_w[sit_h] = _nx_label(A);
   gen_u->tai_y[sit_h] = tal_t;
   if ( tal_t ) {
+    _ne_chain(gen_u, 1, _ne_site(gen_u, sit_h));
     _ne_leave(gen_u);
     _nx_bind(A, gen_u->ins_w[sit_h]);
     _nx_jmp_l(A, _ne_site(gen_u, sit_h), 0);
@@ -2413,6 +2600,7 @@ static void
 _ne_return(ne_gen* gen_u)
 {
   _nx_mov_ri(A, nx_t1, 0);
+  _ne_chain(gen_u, 0, 0);
   _ne_leave(gen_u);
   _nx_ret(A);
 }
@@ -2857,9 +3045,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
 
     case _nc_don: {
       _ne_move(gen_u, nx_t0, gen_u->hom_ws[a_h]);
-      _nx_mov_ri(A, nx_t1, 0);
-      _ne_leave(gen_u);
-      _nx_ret(A);
+      _ne_return(gen_u);
     } break;
 
     //  RTS.. DOX: the parts to the slot registers and the product to its
@@ -2945,6 +3131,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
         }
       }
       _nx_mov_ri(A, nx_t1, sap);
+      _ne_chain(gen_u, 0, 0);
       _ne_leave(gen_u);
       _nx_ret(A);
       return run_w;
@@ -3117,6 +3304,88 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _ne_put(gen_u, d_h, nx_t0);
     } break;
 
+    //  .*(u f) in tail position: both are consumed, the subject by the
+    //  callee, and whether they are one slot or two.  A formula that has
+    //  no program was gained by the helper, for u3n
+    //
+    case _nc_jnk: {
+      c3_y one_y = _ne_get(gen_u, a_h, nx_t2);
+      c3_y two_y = _ne_get(gen_u, b_h, nx_t3);
+
+      _nx_mov_rr(A, nx_a0, one_y);
+      _nx_mov_rr(A, nx_a1, two_y);
+      _nx_call_l(A, ~(c3_w)0, _ne_hel(ne_h_nok));
+      if ( b_h != a_h ) {
+        _ne_less(gen_u, two_y, nx_t1, nx_t4, 0);
+      }
+      _nx_mov_rr(A, _nx_sot_y[0], one_y);
+      _ne_chain(gen_u, 1, ~(c3_w)0);
+      _ne_leave(gen_u);
+      _nx_jmp_r(A, nx_t0);
+    } break;
+
+    //  LNK: the cell goes on the record of the chain: the product, if it
+    //  is the first, else in the place of the zero of the cell before;
+    //  the address of its own zero, at the axis, is noted for the next
+    //
+    case _nc_lnk: {
+      c3_y reg_y = _ne_get(gen_u, a_h, nx_t2);
+      c3_w axe_w = op_u->imm_h;
+      c3_w bit_w = 31 - __builtin_clz(axe_w);
+      c3_w fir_w = _nx_label(A), don_w = _nx_label(A);
+
+      if ( axe_w < 2 ) {
+        gen_u->bad_t = 1;
+        gen_u->why_y = op_u->fam_y;
+        break;
+      }
+      _nx_mov_rr(A, nx_t0, reg_y);
+      _nx_shl_ri(A, nx_t0, 2);
+      while ( bit_w-- > 1 ) {
+        _nx_ldx(A, nx_t0, nx_bas, nx_t0,
+                ((axe_w >> bit_w) & 1) ? _ne_c_tel : _ne_c_hed);
+        _nx_shl_ri(A, nx_t0, 2);
+      }
+      _nx_rx(A, 1, 0x8d, nx_t3, nx_bas, nx_t0,
+             (axe_w & 1) ? _ne_c_tel : _ne_c_hed);
+      _nx_ld64(A, nx_t1, nx_sp, gen_u->rec_w);
+      _nx_ld64(A, nx_t4, nx_t1, _ne_rec_hol);
+      _nx_test_rr64(A, nx_t4, nx_t4);
+      _nx_jcc8(A, nx_e, fir_w);
+      _nx_st(A, nx_t4, 0, reg_y);
+      _nx_jmp8(A, don_w);
+      _nx_bind(A, fir_w);
+      _nx_st(A, nx_t1, _ne_rec_rot, reg_y);
+      _nx_bind(A, don_w);
+      _nx_st64(A, nx_t1, _ne_rec_hol, nx_t3);
+    } break;
+
+    //  TRK: the words of the hints that end here are cells of the frame,
+    //  and nothing; their entries stay on the trace stack, and the record
+    //  of the chain notes what the trace stack was before them, unless it
+    //  has an older note
+    //
+    case _nc_trk: {
+      c3_w num_w = op_u->imm_h & 255, k_w;
+
+      if ( num_w ) {
+        c3_w don_w = _nx_label(A);
+
+        _nx_ld64(A, nx_t1, nx_sp, gen_u->rec_w);
+        _nx_rm(A, 1, 0x83, nx_cmp, nx_t1, _ne_rec_tax);
+        _nx_b(A, 0xff);
+        _nx_jcc(A, nx_ne, don_w);
+        _nx_ld64(A, nx_t0, nx_ctx, _ne_ctx_rod);
+        _nx_ld(A, nx_t0, nx_t0, offsetof(u3a_road, bug.tax));
+        for ( k_w = 0; k_w < num_w; k_w++ ) {
+          _nx_shl_ri(A, nx_t0, 2);
+          _nx_ldx(A, nx_t0, nx_bas, nx_t0, _ne_c_tel);
+        }
+        _nx_st64(A, nx_t1, _ne_rec_tax, nx_t0);
+        _nx_bind(A, don_w);
+      }
+    } break;
+
     case _nc_equ: {
       c3_y one_y = _ne_get(gen_u, a_h, nx_t2);
       c3_y two_y = _ne_get(gen_u, b_h, nx_t3);
@@ -3286,6 +3555,7 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _ne_helper(gen_u, ne_h_mono, op_u->imm_h);
       _nx_ld(A, _nx_sot_y[0], nx_sp, _ne_wb * gen_u->jet_w);
       if ( tal_t ) {
+        _ne_chain(gen_u, 1, ~(c3_w)0);
         _ne_leave(gen_u);
         _nx_jmp_r(A, nx_t0);
       }
@@ -3408,6 +3678,26 @@ _ne_stubs(ne_gen* gen_u)
 
       //  the parts to _nc_ret, and the product consed of them
       //
+      //  the record of the function is in use at a return: it is seen
+      //  to, the product in its registers
+      //
+      case ne_s_mend: {
+        _nx_lea64(A, nx_t2, nx_sp, gen_u->fra_w - _ne_rec_w);
+        _nx_call_l(A, ~(c3_w)0, _ne_hel(ne_h_mend));
+        _nx_jmp(A, stu_u.bak_w);
+      } break;
+
+      //  and at a jump in tail position: the frame comes off down to the
+      //  record, and the function is called over it
+      //
+      case ne_s_tail: {
+        _nx_alu_ri64(A, nx_add, nx_sp, gen_u->fra_w - _ne_rec_w);
+        if ( ~(c3_w)0 != stu_u.tar_w ) {
+          _nx_ld64_l(A, nx_t0, stu_u.tar_w, 0);
+        }
+        _nx_jmp_l(A, ~(c3_w)0, _ne_hel(ne_h_scal));
+      } break;
+
       case ne_s_box: {
         c3_w j_w;
 
@@ -3487,6 +3777,24 @@ _ne_code(ne_gen* gen_u)
   //  parameters that live in the frame, and those that came in memory
   //
   _nx_alu_ri64(A, nx_sub, nx_sp, gen_u->fra_w);
+  if ( gen_u->cha_t ) {
+    //  the record of the chain this activation is in: its caller's, if
+    //  it was called over one; else its own, empty
+    //
+    c3_w own_w = _nx_label(A);
+
+    _nx_mov_ri64(A, nx_t5, (c3_d)(uintptr_t)_ne_srt_y);
+    _nx_lea64(A, nx_t0, nx_sp, gen_u->fra_w - _ne_rec_w);
+    _nx_alu_rm64(A, nx_cmp, nx_t5, nx_sp, gen_u->fra_w);
+    _nx_jcc8(A, nx_ne, own_w);
+    _nx_lea64(A, nx_t0, nx_sp, gen_u->fra_w + 8);
+    _nx_bind(A, own_w);
+    _nx_st64(A, nx_sp, gen_u->rec_w, nx_t0);
+    _nx_rm(A, 1, 0xc7, 0, nx_sp, gen_u->fra_w - _ne_rec_w + _ne_rec_hol);
+    _nx_h(A, 0);
+    _nx_rm(A, 1, 0xc7, 0, nx_sp, gen_u->fra_w - _ne_rec_w + _ne_rec_tax);
+    _nx_h(A, 0xffffffff);
+  }
   if ( gen_u->cal_t ) {
     ne_stub* stu_u = _ne_stub(gen_u, ne_s_deep);
 

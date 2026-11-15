@@ -2560,6 +2560,24 @@ _test_fams(void)
       "|=  a=@\n^-  @\n=/  i=@  0\n|-  ^-  @\n?:  =(i 3)  a\n"
       "$(i +(i), a ~>(%bout (add a i)))\n",
       "5" },
+    //  the calls made tail calls: a cell linked, a trace kept, the
+    //  indirect call; and a chain that leaves its first function
+    //
+    { "fams, loop under !:",
+      "!:\n|=  n=@\n=/  a=@  0\n|-  ^-  @\n?:  =(0 n)  a\n"
+      "$(n (dec n), a (add a n))\n",
+      "50" },
+    { "fams, nock in tail position",
+      "|=  [a=@ f=*]\n^-  *\n?:  =(a 0)  a\n.*(a f)\n",
+      "[5 [4 0 1]]" },
+    { "fams, links of two functions",
+      "|=  n=@\n^-  (list @)\n"
+      "=<  (even n)\n"
+      "|%\n"
+      "++  even  |=(a=@ ^-((list @) ?:(=(0 a) ~ [a (odd (dec a))])))\n"
+      "++  odd   |=(a=@ ^-((list @) ?:(=(0 a) ~ [(mul 2 a) (even (dec a))])))\n"
+      "--\n",
+      "40" },
     { "fams, switch",
       "|=  a=$%([%a p=@] [%b p=@] [%c p=@] [%d p=@] [%e p=@] [%f p=@]"
       " [%g p=@] [%h p=@])\n^-  @\n?-  a\n  [%a *]  1\n  [%b *]  2\n"
@@ -2573,7 +2591,7 @@ _test_fams(void)
     "HMP", "HCP", "SPY", "NOK", "CAL", "CAF", "CAX", "CAP", "CAM", "CSM",
     "CLQ", "EQQ", "EQI", "EQL", "BRN", "BRZ", "HOP", "JMP", "JMF", "JMX",
     "JSP", "DON", "DRO", "CAC", "JMC", "LTI", "RTL", "RTS", "DOX", "HME",
-    "HCE", "BOM", "HEA", "TAA"
+    "HCE", "BOM", "HEA", "TAA", "LNK", "TRK", "JNK"
   };
   u3_noun fol   = u3nq(9, 2, 0, 1);
   c3_h    hot_h = u3nc_Hot;
