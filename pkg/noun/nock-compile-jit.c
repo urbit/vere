@@ -236,7 +236,6 @@ _nj_put(nj_gen* gen_u, c3_h cod_h, c3_h a_h, c3_h b_h, c3_h c_h, c3_h tar_h)
 
   if ( gen_u->cod_y ) {
     c3_y*         out_y = gen_u->cod_y + gen_u->off_w;
-    c3_y*         jum_y = gen_u->cod_y + gen_u->map_w[tar_h];
 
     memcpy(out_y, _nj_cod_y + ste_u->cod_h, lon_h);
     if ( inv_t ) {
@@ -289,7 +288,11 @@ _nj_put(nj_gen* gen_u, c3_h cod_h, c3_h a_h, c3_h b_h, c3_h c_h, c3_h tar_h)
         case nj_slot:  val_ds = sizeof(u3_noun) * arg_h[use_u->idx_h];  break;
         case nj_value: val_ds = arg_h[use_u->idx_h];                    break;
         case nj_next:  val_ds = (uintptr_t)(out_y + lon_h);             break;
-        case nj_jump:  val_ds = (uintptr_t)jum_y;                       break;
+        //  tar_h is a place in the bytecode for a branch alone: for any
+        //  other op it is its last operand, whatever that is
+        //
+        case nj_jump:  val_ds = (uintptr_t)(gen_u->cod_y + gen_u->map_w[tar_h]);
+                       break;
         case nj_ext:   val_ds = (uintptr_t)_nj_ext_v[use_u->idx_h];     break;
         case nj_rod:   val_ds = (uintptr_t)(_nj_rod_y + use_u->idx_h);  break;
         case nj_ret:   val_ds = (uintptr_t)&_nc_ret[arg_h[use_u->idx_h]];
