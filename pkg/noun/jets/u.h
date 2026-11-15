@@ -273,7 +273,8 @@
     u3_noun u3ufu_fuse(u3_noun);
     u3_noun u3ufu_mint(u3_noun);
     u3_noun u3ufu_mull(u3_noun);
-    u3_noun u3ufu_nest_dext(u3_noun);
+    u3_noun u3ufu_nest_dext1(u3_noun);
+    u3_noun u3ufu_nest_dext2(u3_noun);
     u3_noun u3ufu_redo(u3_noun);
     u3_noun u3ufu_rest(u3_noun);
 

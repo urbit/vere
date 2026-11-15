@@ -2277,6 +2277,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
 {
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
+  c3_w sav_w, sip_w;
 
   if ( u3C.wag_h & u3o_dryrun ) {
     return;
@@ -2328,7 +2329,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
 
   u3_assert( c3y == _ce_image_sync(&u3P.img_u) );
 
-  _ce_meas_save(pat_u->con_u->pgs_w, pat_u->sip_w);
+  sav_w = pat_u->con_u->pgs_w;
+  sip_w = pat_u->sip_w;
 
   _ce_patch_free(pat_u);
   _ce_patch_delete();
@@ -2361,6 +2363,8 @@ u3e_save(u3_post low_p, u3_post hig_p)
     _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, old_w);
   }
 
+  _ce_meas_save(sav_w, sip_w);
+
   u3e_toss(low_p, hig_p);
 }
 
@@ -2373,7 +2377,7 @@ _ce_toss_pages(c3_w nor_w, c3_w sou_w)
   void* ptr_v = _ce_ptr(nor_w);
 
   #ifdef U3_OS_windows
-  //  NB: returns resident pages, but not commit charge; see wloom.h.
+  //  NB: decommits, returning commit charge; see wloom.h.
   //
   u3_wnd_loom_toss(ptr_v, _ce_len(pgs_w));
   #else

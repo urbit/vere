@@ -6,10 +6,14 @@
 #include "nock-compile.h"
 #include "noun.h"
 
-/* _fu_nest_dext(): the memoized arm, a miss run by fun_f.
+//  This version of the jet has a bug, fixing which makes some versions of the
+//  compiler too strict, making them fail to compile correct Hoon code.
+//  See ut_nest2.c
+
+/* _fu_nest_dext1(): the memoized arm, a miss run by fun_f.
 */
 static u3_noun
-_fu_nest_dext(u3_noun dext_core, u3_funq fun_f)
+_fu_nest_dext1(u3_noun dext_core, u3_funq fun_f)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil;
@@ -52,18 +56,18 @@ _fu_nest_dext(u3_noun dext_core, u3_funq fun_f)
   }
 }
 
-/* u3wfu_nest_dext(): from u3n, in u3n.
+/* u3wfu_nest_dext1(): from u3n, in u3n.
 */
 u3_noun
-u3wfu_nest_dext(u3_noun dext_core)
+u3wfu_nest_dext1(u3_noun dext_core)
 {
-  return _fu_nest_dext(dext_core, u3n_nock_on);
+  return _fu_nest_dext1(dext_core, u3n_nock_on);
 }
 
-/* u3ufu_nest_dext(): from compiled nock, in compiled nock.
+/* u3ufu_nest_dext1(): from compiled nock, in compiled nock.
 */
 u3_noun
-u3ufu_nest_dext(u3_noun dext_core)
+u3ufu_nest_dext1(u3_noun dext_core)
 {
-  return _fu_nest_dext(dext_core, u3nc_gop_nock);
+  return _fu_nest_dext1(dext_core, u3nc_gop_nock);
 }

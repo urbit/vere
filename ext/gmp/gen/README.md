@@ -17,6 +17,12 @@ linux-aarch64:
 ./configure --with-pic --disable-shared --host=aarch64-linux-musl
 ```
 
+freebsd-x86_64 / freebsd-aarch64 (cross, with `zig cc -target <arch>-freebsd`
+as `CC`):
+```terminal
+CC_FOR_BUILD=gcc ./configure --with-pic --disable-shared --host=<arch>-unknown-freebsd14.0
+```
+
 windows (from wsl):
 ```terminal
 CC_FOR_BUILD=gcc ./configure --host=x86_64-w64-mingw32 --disable-shared

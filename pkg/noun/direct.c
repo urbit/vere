@@ -315,7 +315,7 @@ _d_poke(u3_noun ovo)
     //  the core runs one poke deeper, see u3a_flag_ska
     //
     u3R->how.fag_w = (fag_w & ~u3a_flag_ska)
-                   | ((( dep_w < 3 ) ? (dep_w + 1) : 3) << 4);
+                   | ((( dep_w < 3 ) ? (dep_w + 1) : 3) << 6);
     gat = u3n_nock_on(u3k(u3R->ska.cor), u3nt(9, _CVX_POKE, u3nc(0, 1)));
     pro = u3n_slam_et(u3_nul, gat, u3k(ovo));
     u3R->how.fag_w = (u3R->how.fag_w & ~u3a_flag_ska)

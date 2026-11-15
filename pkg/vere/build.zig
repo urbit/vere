@@ -157,7 +157,7 @@ pub fn build(b: *std.Build) !void {
     pkg_vere.addIncludePath(b.path("steel"));
     pkg_vere.addIncludePath(b.path("ca_bundle"));
 
-    if (t.os.tag == .linux) {
+    if (t.os.tag == .linux or t.os.tag == .freebsd) {
         pkg_vere.linkLibrary(avahi.artifact("dns-sd"));
     }
     pkg_vere.linkLibrary(natpmp.artifact("natpmp"));
@@ -197,7 +197,7 @@ pub fn build(b: *std.Build) !void {
             "platform/darwin/mach.c",
         });
     }
-    if (t.os.tag == .linux) {
+    if (t.os.tag == .linux or t.os.tag == .freebsd) {
         try files.appendSlice(&.{
             "platform/linux/daemon.c",
             "platform/linux/ptty.c",

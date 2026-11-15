@@ -5933,7 +5933,8 @@ _nc_memo_jet(const u3u_harm* arm_u)
 
   return (  (u3ufu_crop == mon_f) || (u3ufu_fish == mon_f)
          || (u3ufu_fuse == mon_f) || (u3ufu_mint == mon_f)
-         || (u3ufu_mull == mon_f) || (u3ufu_nest_dext == mon_f)
+         || (u3ufu_mull == mon_f) || (u3ufu_nest_dext1 == mon_f)
+         || (u3ufu_nest_dext2 == mon_f)
          || (u3ufu_redo == mon_f) || (u3ufu_rest == mon_f) );
 }
 
