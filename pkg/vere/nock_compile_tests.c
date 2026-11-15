@@ -2455,6 +2455,77 @@ _test_ska(void)
   return ret_i;
 }
 
+/* _test_bare(): a formula under %bare runs in u3n: the formula given to
+**               u3nc_nock_on(), and one inside analyzed code, which the
+**               library makes an indirect call of.  The raw trace of a
+**               crash tells where a callee ran: its %mean trap is a
+**               deferred frame in compiled nock and a plain one in u3n;
+**               under %bare it is plain, and deferred again under a %ska
+**               hint inside the %bare.  +mink with its jet off runs
+**               compiled, and runs a dynamic hint for its effect under
+**               %bare, by a formula made anew every time.
+*/
+static c3_i
+_test_bare(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    c3_t        def_t;      //  whether the frame is deferred
+  } cas_u[] = {
+    { "bare, none",   "(foo a)\n", 1 },
+    { "bare, callee", "~>  %bare\n(foo a)\n", 0 },
+    { "bare, inside", "(add 0 ~>(%bare (foo a)))\n", 0 },
+    { "bare, ska",    "~>  %bare\n~>  %ska\n(foo a)\n", 1 },
+  };
+  const c3_c* foo_c = "|=  a=@\n"
+                      "=/  foo\n"
+                      "  |=  b=@\n"
+                      "  ~>  %mean.|.(leaf+(scow %ud b))\n"
+                      "  (dec b)\n";
+  const c3_c* min_c = "|=  n=@\n"
+                      ":*  (mink [n [11 [%slog 1 0 'x'] 1 42]] |=(^ ~))\n"
+                      "    (mink [n [11 [%foo 0 1] 4 0 1]] |=(^ ~))\n"
+                      "    (mink [n [11 %foo 4 0 1]] |=(^ ~))\n"
+                      "    (mink [n [11 [%mean 1 %oops] 0 0]] |=(^ ~))\n"
+                      "    (mink [[n 1] [11 [%memo 0 3] 4 0 2]] |=(^ ~))\n"
+                      "==\n";
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  c3_i    ret_i;
+  c3_w    i_w;
+
+  ret_i = _test("bare, top", 42,
+                u3nt(11, c3_s4('b','a','r','e'), u3nt(4, 0, 1)), 0);
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    c3_c    src_c[256], nam_c[64];
+    u3_noun cor;
+    u3_weak tax;
+    c3_t    ok_t;
+
+    snprintf(src_c, sizeof(src_c), "%s%s", foo_c, cas_u[i_w].src_c);
+    ret_i = _test(cas_u[i_w].nam_c, _gate(src_c, 5), u3k(fol), 1) && ret_i;
+
+    cor  = _gate(src_c, 0);
+    tax  = _crash(u3nc_nock_on, cor, fol);
+    ok_t = (u3_none != tax)
+        && ( cas_u[i_w].def_t
+             ? _has_tag(tax, c3__meaf)
+             : (_has_tag(tax, c3__mean) && !_has_tag(tax, c3__meaf)) );
+    snprintf(nam_c, sizeof(nam_c), "%s, %s frame", cas_u[i_w].nam_c,
+             cas_u[i_w].def_t ? "deferred" : "plain");
+    ret_i = _check(nam_c, ok_t) && ret_i;
+    if ( u3_none != tax ) u3z(tax);
+    u3z(cor);
+  }
+
+  _set_flags("mink", c3n, c3y);
+  ret_i = _test("bare, mink in nock", _gate(min_c, 5), fol, 1) && ret_i;
+  _set_flags("mink", c3y, c3y);
+
+  return ret_i;
+}
+
 /* _jets_pick(): is the case nam_c picked by U3NC_JETS: all of them
 **               unless it is a comma-separated list of names.
 */
@@ -3329,6 +3400,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_ska() ) {
+    exit(1);
+  }
+
+  if ( !_test_bare() ) {
     exit(1);
   }
 
