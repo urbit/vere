@@ -132,6 +132,13 @@
 **                   parts; the rest are in _nc_ret (RTS).  Literal i is
 **                   the shape of the product: where the caller takes one
 **                   noun (C, a memoizing call), the parts are consed
+**    HEA   s d      -.s -> d, uncounted: d is an alias of the reference the
+**                   cell of s holds to its head, good while that cell keeps
+**                   it, and no op consumes or drops d (_nc_alias())
+**    TAA   s d      +.s -> d, the same way
+**    FGT   s        forget s: 0 -> s, nothing released; the end of an
+**                   alias, emitted only where empty slots are zero
+**                   (_nc_zer_t)
 **    BOM            crash
 **    WIDE  o        the _V width of an op, o its index in their table
 **
@@ -219,7 +226,10 @@
   X(lti, LTI, 1,   0,   1,   1,   0,   2,   0)                                  \
   X(rtl, RTL, 0,   1,   1,   0,   0,   0,   0)                                  \
   X(rts, RTS, 1,   0,   1,   0,   0,   1,   0)                                  \
-  X(dox, DOX, 1,   0,   1,   0,   0,   1,   1)
+  X(dox, DOX, 1,   0,   1,   0,   0,   1,   1)                                  \
+  X(hea, HEA, 1,   1,   0,   0,   0,   0,   0)                                  \
+  X(taa, TAA, 1,   1,   0,   0,   0,   0,   0)                                  \
+  X(fgt, FGT, 1,   0,   0,   0,   0,   0,   0)
 
 /*  Families of ops without operands, X(fam, OP): one opcode each, with
 **  nothing to widen or consume.  They follow the others in the opcode
@@ -360,6 +370,8 @@ typedef struct {
   c3_y  ded_y;    //  the product is never used: drop it (_nc_lives())
   c3_y  ali_y;    //  a borrowing HED/TAL whose product could be an alias
                   //  of a part of its source, for the statistics
+  c3_y  lat_y;    //  a DRO of a register whose release was postponed
+                  //  (_nc_alias()): the register is live until it
   c3_h  src_h[2]; //  source registers
   c3_h  dst_h;    //  destination register for non-call ops
   c3_h  imm_h;    //  index immediate, or the atom of an IMM
@@ -834,6 +846,7 @@ _nc_op_init(nc_op* op_u, c3_y fam_y)
   op_u->kon_y    = 0;
   op_u->ded_y    = 0;
   op_u->ali_y    = 0;
+  op_u->lat_y    = 0;
   op_u->src_h[0] = _nc_none;
   op_u->src_h[1] = _nc_none;
   op_u->dst_h    = _nc_none;
@@ -1806,6 +1819,13 @@ _nc_liv_free(nc_liv* liv_u)
   u3a_free(liv_u->lis_h);
 }
 
+/* _nc_reads(): whether the sources of an op are reads for the liveness:
+**              all but that of a DRO, which drops a register that is dead
+**              already, unless the release was postponed to it
+**              (_nc_alias()) and the register lives until then.
+*/
+#define _nc_reads(op_u)  ( (_nc_dro != (op_u)->fam_y) || (op_u)->lat_y )
+
 /* _nc_src_n(): the number of sources of an op, its call site's with its own.
 */
 static inline c3_h
@@ -1893,7 +1913,7 @@ _nc_live_all(nc_gen* gen_u, c3_d* set_d, nc_liv* liv_u,
         _nc_bit_clr(set_d, r_h);
       }
 
-      if ( _nc_dro != op_u->fam_y ) {
+      if ( _nc_reads(op_u) ) {
         c3_h s_h = 0;                    //  index of the source in the op
 
         _nc_srcs(gen_u, op_u, rep_h, {
@@ -3273,6 +3293,735 @@ _nc_lives(nc_gen* gen_u, c3_h arg_h)
   u3a_free(cnt_y);
 }
 
+/*  Uncounted fetches.
+**
+**  A borrowing HED or TAL gains a reference for its product r, a part of
+**  the cell in its source p, and the last read of r, or a drop, loses it
+**  again.  Where r is only read in between, both can go: the fetch becomes
+**  a HEA or a TAA, which copies the part into the slot of r uncounted, an
+**  alias of the reference the cell holds to it, and nothing consumes or
+**  drops r.  The alias is good while that reference is: while the cell is
+**  alive and its field still holds the part.
+**
+**  Two things end a cell's reference to a part.  The cell is freed, when
+**  its last reference is released.  Or the field is written: by unifying
+**  equality, u3r_sing(), which, where two cells at the same place in its
+**  operands have equal heads, or equal tails, that are not one noun,
+**  makes that field of one cell point at the part of the other
+**  (u3a_wed()), whether or not the operands turn out equal.  The part it
+**  replaced is released, and freed if nothing else held it, when it is a
+**  counted noun of the running road; a noun of the sand of the road is
+**  never freed, and one of a senior road is never released.  Nothing else
+**  writes a cell that is shared: a COR writes the cell its HER or TAR
+**  took, which nothing else held, and the code that edits a noun in place
+**  because its count is one (HER, TAR, a transferring jet) reaches it
+**  through a counted reference it consumes, which for a noun that hangs
+**  from the owner would mean consuming the owner first.
+**
+**  So r is an alias only if, on every path from the fetch to the last read
+**  of r on that path:
+**
+**    - the owner stays: the register at the root of r holds its counted
+**      reference throughout.  The root is p, or, if p is itself an alias,
+**      the root of p: an alias of a part of an alias is a part of a part
+**      of the root's cell, and the cells in between are held by fields
+**      that the conditions on the older aliases keep.  No op consumes,
+**      drops or writes the root while r is alive, but the op where r
+**      dies may: every op that may read an alias reads its sources before
+**      it releases any;
+**
+**    - nothing unifies and nothing unknown runs: every op run while r is
+**      alive is one of those _nc_al_wild() lists, which neither reach
+**      u3r_sing() nor call anything that might.  An equality that can
+**      reach u3r_sing() ends every alias, the ones it reads too
+**      (_nc_al_kind() has the finer rule, switched off);
+**
+**    - r needs no reference of its own that it cannot get in time: an op
+**      that reads r reads the noun and at most releases it (a test, a
+**      fetch of a part, arithmetic), or takes a reference to it and gains
+**      one first thing (MOV, CON, RTS, a trace hint).  A call of any kind
+**      may not read r: it runs code (the link of the callee, a memo
+**      lookup, a jet) before it gains its arguments, or never gains them.
+**      DON and DOX take the slot's reference and have none to gain;
+**
+**    - r is not alive at the end of the activation: a sweep would release
+**      it.
+**
+**  A crash abandons the road with its slots, which nothing reads again:
+**  an alias left in one is as lost as a reference.
+**
+**  Then the fetch is rewritten, the consume bits of the reads of r are
+**  cleared (an op that took the reference gains one instead), and the
+**  drops of r go.  Where empty slots are zero (_nc_zer_t), r is forgotten
+**  (FGT) wherever it was consumed or dropped: after the op, or, for an edge
+**  of a branch, at the start of the block the edge leads to.  FGT reads r
+**  for the liveness of the slot assignment, so no other register that is
+**  alive there shares the slot.
+**
+**  The release of the owner can be postponed: where the root is released
+**  by a fetch or a CEL while r is alive, or by the fetch of r itself, a
+**  consuming one, that op keeps the root instead and a DRO of it follows
+**  the last read of r, if r dies in the block of the fetch, at an op that
+**  is no branch and takes no reference to it (there the alias would save
+**  nothing, and the DRO would be an op more).  The DRO is marked (lat_y)
+**  so that the slot assignment keeps the root until it.  A fetch that
+**  _nc_reuse() would pair with a COR is left alone, and so is a root whose
+**  longer life would cover one: its cell would no longer be the only
+**  reference to its parts.
+**
+**  Runs after _nc_lives(), on registers: the consume bits and the drops
+**  say where each register dies.  The ops it removes are taken out, and
+**  the ones it adds put in, in one pass over the ops at the end: the slot
+**  assignment walks them all.
+*/
+#define _nc_al_many  ((c3_h)-2)
+#define _nc_al_born  ((c3_h)-3)
+
+typedef struct {
+  c3_h* sf_h;     //  by layout position: where the block falls through or
+                  //  hops to (a layout position), or _nc_none
+  c3_h* sj_h;     //    and where its branch jumps to, or _nc_none
+  c3_h* def_h;    //  by register: the one op that defines it, _nc_none,
+                  //  _nc_al_born (an argument), _nc_al_many
+  c3_h* rot_h;    //  by register: the root of an alias, or _nc_none
+  c3_h* lat_h;    //  by register: the op its postponed release follows, in
+                  //  the block being done, or _nc_none
+  c3_h* lar_h;    //    the registers that have one
+  c3_h  lan_h;
+  c3_y* par_y;    //  by op: a consuming fetch a CON would be paired with
+  c3_h* see_h;    //  by layout position: the last candidate that reached it
+  c3_h  ser_h;    //  candidates so far
+  c3_h* sak_h;    //  blocks to follow
+  c3_d* dea_d;    //  where the candidate dies: layout << 33 | op << 2 |
+                  //  edges
+  c3_h  den_h, dec_h;
+  c3_d* aft_d;    //  ops to add after an op: op << 32 | late << 31 | register
+  c3_h  afn_h, afc_h;
+  c3_d* bef_d;    //  FGTs to add at the start of a block: layout << 32 |
+                  //  register
+  c3_h  ben_h, bec_h;
+  c3_h  del_h;    //  ops removed
+} nc_al;
+
+/* _nc_al_trace(): whether the hint of an HDP or HDE only pushes or pops
+**                 the trace stack.
+*/
+static c3_t
+_nc_al_trace(nc_gen* gen_u, nc_op* op_u)
+{
+  u3_noun tag = gen_u->lin[op_u->imm_h];
+
+  return (c3__hunk == tag) || (c3__lose == tag)
+      || (c3__mean == tag) || (c3__spot == tag);
+}
+
+/* _nc_al_same(): whether an EQL can reach u3r_sing(): not with a literal
+**                that is a direct atom, which is compared as a word.
+**
+**                Not in force, the finer rule: nor with a literal that is
+**                an indirect atom.  u3r_sing() unifies by writing a field
+**                of a cell where it has two cells to pair, and with an
+**                atom for an operand it pairs none (_cr_sing_atom()).
+*/
+static c3_t
+_nc_al_same(nc_gen* gen_u, nc_op* op_u)
+{
+  u3_noun lit = gen_u->lin[op_u->imm_h];
+
+  if ( 0 ) {
+    return ( c3n == u3ud(lit) );
+  }
+  return ( c3n == u3a_is_cat(lit) );
+}
+
+/* _nc_al_wild(): whether an op may unify nouns or run code that could: an
+**                alias that it doesn't read may not be alive across it.
+**                Every family not listed here is.  The ones listed
+**                allocate, gain, release, compare with a direct atom, push
+**                on the trace stack or jump, and nothing else: a release
+**                frees what nothing else holds, and an alias is held by
+**                its cell.
+*/
+static c3_t
+_nc_al_wild(nc_gen* gen_u, nc_op* op_u)
+{
+  switch ( op_u->fam_y ) {
+    default: return 1;
+
+    case _nc_kil: case _nc_imm: case _nc_iml: case _nc_mov: case _nc_inc:
+    case _nc_dec: case _nc_add: case _nc_con: case _nc_hed: case _nc_tal:
+    case _nc_hea: case _nc_taa: case _nc_fgt: case _nc_cel: case _nc_lob:
+    case _nc_hlp: case _nc_hmp: case _nc_hme: case _nc_hcp: case _nc_hce:
+    case _nc_clq: case _nc_eqi: case _nc_lti: case _nc_brn: case _nc_brz:
+    case _nc_hop: case _nc_rtl: case _nc_rts: case _nc_dro: case _nc_bom: {
+      return 0;
+    }
+
+    case _nc_eql: {
+      return _nc_al_same(gen_u, op_u);
+    }
+
+    case _nc_hdp: case _nc_hde: {
+      return !_nc_al_trace(gen_u, op_u);
+    }
+  }
+}
+
+/* _nc_al_kind(): how an op reads a source that is an alias: 0, it may
+**                not; 1, it reads the noun and at most releases it; 3, it
+**                takes a reference to it, which it gains first thing when
+**                it doesn't consume.
+**
+**                An equality that can reach u3r_sing() may not read an
+**                alias: 0.  Not in force, the finer rule, 2: it may, and
+**                the alias lives on past it, though no alias that is not
+**                an operand does.  It relies on how u3r_sing(x, y)
+**                unifies: _cr_sing() writes a field of a cell only where
+**                that cell and another are at the same place inside x and
+**                y and the same field of both holds equal nouns
+**                (u3a_wed()), and it never replaces x or y themselves.  A
+**                cell that holds x, or holds a cell that holds it, up to
+**                the owner, is not inside x; if it is inside y, the cell
+**                it is paired with is inside x, and no part of x equals
+**                something that contains x.  So no field on the way from
+**                the owner to x is written and x is not freed, while the
+**                parts of x may be replaced by equal ones, which is why
+**                the aliases of those are not spared.
+*/
+static c3_y
+_nc_al_kind(nc_gen* gen_u, nc_op* op_u)
+{
+  switch ( op_u->fam_y ) {
+    default: return 0;
+
+    case _nc_cel: case _nc_lob: case _nc_clq: case _nc_eqi: case _nc_lti:
+    case _nc_brn: case _nc_brz: case _nc_hed: case _nc_tal: case _nc_hea:
+    case _nc_taa: case _nc_inc: case _nc_dec: case _nc_add: {
+      return 1;
+    }
+
+    case _nc_eql: {
+      if ( !_nc_al_same(gen_u, op_u) ) {
+        return 1;
+      }
+      if ( 0 ) {
+        return 2;
+      }
+      return 0;
+    }
+
+    case _nc_equ: case _nc_eqq: {
+      if ( 0 ) {
+        return 2;
+      }
+      return 0;
+    }
+
+    case _nc_mov: case _nc_con: case _nc_rts: case _nc_hmp: {
+      return 3;
+    }
+
+    case _nc_hdp: {
+      return _nc_al_trace(gen_u, op_u) ? 3 : 0;
+    }
+
+    case _nc_hde: {
+      return _nc_al_trace(gen_u, op_u) ? 1 : 0;
+    }
+  }
+}
+
+/* _nc_al_reads(): how an op reads register r: bit 2, it does; bit 0, it
+**                 consumes or drops it on the fall-through; bit 1, on the
+**                 jump (both, for an op that is no branch).
+*/
+static c3_y
+_nc_al_reads(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
+{
+  c3_y fam_y = op_u->fam_y, use_y = 0;
+
+  if ( (_nc_nop == fam_y) || (_nc_bom == fam_y) || (_nc_kil == fam_y) ) {
+    return 0;
+  }
+
+  _nc_srcs(gen_u, op_u, reg_h, {
+    if ( *reg_h == r_h ) {
+      use_y |= 4;
+
+      if ( _nc_fam[fam_y].sot_y ) {
+        if ( gen_u->pok_y[reg_h - gen_u->pol_h] ) {
+          use_y |= 3;
+        }
+      }
+      else if (  (_nc_dro == fam_y) || _nc_fam[fam_y].swe_y
+              || (_nc_her == fam_y) || (_nc_tar == fam_y) )
+      {
+        use_y |= 3;
+      }
+      else if ( _nc_edgy(fam_y) ) {
+        use_y |= (op_u->kon_y >> (2 * (reg_h - op_u->src_h))) & 3;
+      }
+      else if ( (op_u->kon_y >> (reg_h - op_u->src_h)) & 1 ) {
+        use_y |= 3;
+      }
+    }
+  });
+
+  return use_y;
+}
+
+/* _nc_al_keep(): the op reads register r without consuming it.
+*/
+static void
+_nc_al_keep(nc_gen* gen_u, nc_op* op_u, c3_h r_h)
+{
+  c3_y fam_y = op_u->fam_y;
+
+  _nc_srcs(gen_u, op_u, reg_h, {
+    if ( *reg_h == r_h ) {
+      if ( _nc_fam[fam_y].sot_y ) {
+        gen_u->pok_y[reg_h - gen_u->pol_h] = 0;
+      }
+      else if ( _nc_edgy(fam_y) ) {
+        op_u->kon_y &= ~(3 << (2 * (reg_h - op_u->src_h)));
+      }
+      else {
+        u3_assert( _nc_fam[fam_y].kon_y && !_nc_fam[fam_y].swe_y );
+        op_u->kon_y &= ~(1 << (reg_h - op_u->src_h));
+      }
+    }
+  });
+}
+
+/* _nc_al_try(): make the fetch at op f_h, in the block at layout position
+**               lay_h, an uncounted one if its product can be an alias.
+*/
+static void
+_nc_al_try(nc_gen* gen_u, nc_al* al_u, c3_h lay_h, c3_h f_h)
+{
+  nc_op* fet_u = &(gen_u->ops_u[f_h]);
+  c3_h   r_h   = fet_u->dst_h;
+  c3_h   rot_h = fet_u->src_h[0];
+  c3_t   pos_t = 0;           //  the release of the root is postponed
+  c3_h   x_h   = _nc_none;    //    from this op
+  c3_h   bud_h = 0, top_h = 0, pos_h = lay_h, o_h = f_h + 1;
+  c3_h   i_h;
+
+  if ( (r_h == rot_h) || (al_u->def_h[r_h] != f_h) ) {
+    return;
+  }
+
+  //  the root: the register that holds the reference r hangs by
+  //
+  if ( _nc_none != al_u->rot_h[rot_h] ) {
+    rot_h = al_u->rot_h[rot_h];
+  }
+
+  if ( fet_u->kon_y & 1 ) {
+    if ( al_u->par_y[f_h] || (_nc_al_many == al_u->def_h[rot_h]) ) {
+      return;
+    }
+    u3_assert( rot_h == fet_u->src_h[0] );
+    pos_t = 1;
+    x_h   = f_h;
+  }
+  else if ( _nc_none != al_u->lat_h[rot_h] ) {
+    pos_t = 1;
+  }
+
+  al_u->den_h = 0;
+  al_u->ser_h++;
+  al_u->see_h[pos_h] = al_u->ser_h;
+
+  //  every path from the fetch, until r dies on it
+  //
+  while ( 1 ) {
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[pos_h]]);
+    c3_h    end_h = blk_u->fir_h + blk_u->len_h;
+    c3_y    liv_y = 3;      //  the edges out that r is alive on
+
+    for ( ; liv_y && (o_h < end_h); o_h++ ) {
+      nc_op* op_u  = &(gen_u->ops_u[o_h]);
+      c3_y   fam_y = op_u->fam_y;
+      c3_y   use_y, rus_y;
+
+      if ( _nc_nop == fam_y ) {
+        continue;
+      }
+      if (  (++bud_h > 4096)
+         || (op_u->dst_h == r_h) || (op_u->dst_h == rot_h) )
+      {
+        return;
+      }
+
+      use_y = _nc_al_reads(gen_u, op_u, r_h);
+      rus_y = _nc_al_reads(gen_u, op_u, rot_h);
+
+      //  the root may go where r does
+      //
+      if ( use_y & 3 ) {
+        rus_y &= ~( _nc_edgy(fam_y) ? (use_y & 3) : 3 );
+      }
+
+      //  the root goes here, and r goes on: later, if this op only
+      //  fetches from it or tests it, and we are still in the block of
+      //  the fetch
+      //
+      if ( rus_y & 3 ) {
+        if (  (pos_h != lay_h) || (_nc_none != x_h)
+           || (_nc_none != al_u->lat_h[rot_h])
+           || (_nc_al_many == al_u->def_h[rot_h])
+           || !(  (_nc_cel == fam_y)
+               || (  ((_nc_hed == fam_y) || (_nc_tal == fam_y))
+                  && !al_u->par_y[o_h] ) ) )
+        {
+          return;
+        }
+        pos_t = 1;
+        x_h   = o_h;
+      }
+
+      if ( use_y & 4 ) {
+        if ( _nc_dro != fam_y ) {
+          c3_y kin_y = _nc_al_kind(gen_u, op_u);
+
+          if ( 0 == kin_y ) {
+            return;
+          }
+        }
+
+        if ( use_y & 3 ) {
+          _nc_grow(al_u->dea_d, al_u->den_h, al_u->dec_h, c3_d);
+          al_u->dea_d[al_u->den_h++] = ((c3_d)pos_h << 33)
+                                     | ((c3_d)o_h << 2) | (use_y & 3);
+          liv_y &= _nc_edgy(fam_y) ? ~(use_y & 3) : 0;
+        }
+      }
+      else if ( _nc_fam[fam_y].swe_y || _nc_al_wild(gen_u, op_u) ) {
+        return;
+      }
+      else if ( _nc_bom == fam_y ) {
+        liv_y = 0;
+      }
+    }
+
+    //  alive out of the block: on to where it leads, unless the root is
+    //  to be kept for it
+    //
+    if ( liv_y ) {
+      if ( pos_t ) {
+        return;
+      }
+      if ( _nc_none == al_u->sj_h[pos_h] ) {
+        liv_y &= 1;
+      }
+      for ( i_h = 0; i_h < 2; i_h++ ) {
+        c3_h nex_h = i_h ? al_u->sj_h[pos_h] : al_u->sf_h[pos_h];
+
+        if ( !((liv_y >> i_h) & 1) ) {
+          continue;
+        }
+        if ( _nc_none == nex_h ) {
+          return;
+        }
+        if ( al_u->see_h[nex_h] != al_u->ser_h ) {
+          al_u->see_h[nex_h]    = al_u->ser_h;
+          al_u->sak_h[top_h++]  = nex_h;
+        }
+      }
+    }
+
+    if ( !top_h ) {
+      break;
+    }
+    pos_h = al_u->sak_h[--top_h];
+    o_h   = gen_u->blk_u[gen_u->lay_h[pos_h]].fir_h;
+  }
+
+  //  a root kept longer: r dies once, in this block, at an op that is no
+  //  branch and doesn't take it, and no fetch that reuses its cell is in
+  //  the way
+  //
+  if ( pos_t ) {
+    c3_h m_h, lo_h;
+
+    if ( 1 != al_u->den_h ) {
+      return;
+    }
+    m_h = (al_u->dea_d[0] >> 2) & 0x7fffffff;
+    if (  _nc_edgy(gen_u->ops_u[m_h].fam_y)
+       || (3 == _nc_al_kind(gen_u, &(gen_u->ops_u[m_h]))) )
+    {
+      return;
+    }
+    lo_h = ( _nc_none != x_h ) ? x_h : al_u->lat_h[rot_h];
+
+    for ( i_h = lo_h + 1; i_h <= m_h; i_h++ ) {
+      if ( al_u->par_y[i_h] ) {
+        return;
+      }
+    }
+
+    if ( (_nc_none != x_h) && (x_h != f_h) ) {
+      _nc_al_keep(gen_u, &(gen_u->ops_u[x_h]), rot_h);
+    }
+    if ( _nc_none == al_u->lat_h[rot_h] ) {
+      al_u->lar_h[al_u->lan_h++] = rot_h;
+      al_u->lat_h[rot_h] = m_h;
+    }
+    else if ( al_u->lat_h[rot_h] < m_h ) {
+      al_u->lat_h[rot_h] = m_h;
+    }
+  }
+
+  //  the fetch gains nothing, and nothing consumes or drops r
+  //
+  fet_u->fam_y = ( _nc_hed == fet_u->fam_y ) ? _nc_hea : _nc_taa;
+  fet_u->kon_y = 0;
+  al_u->rot_h[r_h] = rot_h;
+
+  for ( i_h = 0; i_h < al_u->den_h; i_h++ ) {
+    c3_h   d_h   = (al_u->dea_d[i_h] >> 2) & 0x7fffffff;
+    c3_h   b_h   = al_u->dea_d[i_h] >> 33;
+    c3_y   edg_y = al_u->dea_d[i_h] & 3;
+    nc_op* op_u  = &(gen_u->ops_u[d_h]);
+
+    if ( _nc_dro == op_u->fam_y ) {
+      if ( _nc_zer_t ) {
+        op_u->fam_y = _nc_fgt;
+      }
+      else {
+        op_u->fam_y = _nc_nop;
+        al_u->del_h++;
+      }
+      continue;
+    }
+
+    _nc_al_keep(gen_u, op_u, r_h);
+
+    if ( !_nc_zer_t ) {
+      continue;
+    }
+    if ( !_nc_edgy(op_u->fam_y) ) {
+      _nc_grow(al_u->aft_d, al_u->afn_h, al_u->afc_h, c3_d);
+      al_u->aft_d[al_u->afn_h++] = ((c3_d)d_h << 32) | r_h;
+    }
+    else {
+      for ( c3_h k_h = 0; k_h < 2; k_h++ ) {
+        c3_h nex_h = k_h ? al_u->sj_h[b_h] : al_u->sf_h[b_h];
+
+        if ( (edg_y >> k_h) & 1 ) {
+          u3_assert( _nc_none != nex_h );
+          _nc_grow(al_u->bef_d, al_u->ben_h, al_u->bec_h, c3_d);
+          al_u->bef_d[al_u->ben_h++] = ((c3_d)nex_h << 32) | r_h;
+        }
+      }
+    }
+  }
+}
+
+/* _nc_alias(): uncounted fetches: see above.
+*/
+static void
+_nc_alias(nc_gen* gen_u, c3_h arg_h)
+{
+  c3_h  reg_h = c3_max(gen_u->reg_h, arg_h);
+  c3_h  lan_h = gen_u->lan_h;
+  c3_h  opn_h = gen_u->opn_h;
+  nc_al al_u  = {0};
+  c3_h  i_h, j_h, r_h;
+
+  if ( !opn_h ) {
+    return;
+  }
+
+  al_u.sf_h  = u3a_malloc(lan_h * sizeof(c3_h));
+  al_u.sj_h  = u3a_malloc(lan_h * sizeof(c3_h));
+  al_u.def_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  al_u.rot_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  al_u.lat_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  al_u.lar_h = u3a_malloc(c3_max(reg_h, 1) * sizeof(c3_h));
+  al_u.par_y = u3a_calloc(opn_h, sizeof(c3_y));
+  al_u.see_h = u3a_calloc(lan_h, sizeof(c3_h));
+  al_u.sak_h = u3a_malloc(lan_h * sizeof(c3_h));
+
+  for ( r_h = 0; r_h < reg_h; r_h++ ) {
+    al_u.def_h[r_h] = ( r_h < arg_h ) ? _nc_al_born : _nc_none;
+    al_u.rot_h[r_h] = _nc_none;
+    al_u.lat_h[r_h] = _nc_none;
+  }
+
+  //  where each block leads, from its last ops; what defines each
+  //  register; and the fetches _nc_reuse() would pair with a CON
+  //
+  {
+    c3_h* pen_h = u3a_malloc(opn_h * sizeof(c3_h));
+
+    for ( i_h = 0; i_h < lan_h; i_h++ ) {
+      nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+      nc_op*  bra_u = NULL;
+      nc_op*  hop_u = NULL;
+      c3_t    end_t = 0;
+      c3_h    pen_n = 0;
+
+      for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+        c3_h   o_h   = blk_u->fir_h + j_h;
+        nc_op* op_u  = &(gen_u->ops_u[o_h]);
+        c3_y   fam_y = op_u->fam_y;
+
+        if ( _nc_nop == fam_y ) {
+          continue;
+        }
+
+        if ( _nc_none != op_u->dst_h ) {
+          c3_h d_h = op_u->dst_h;
+          al_u.def_h[d_h] = ( _nc_none == al_u.def_h[d_h] ) ? o_h
+                                                             : _nc_al_many;
+        }
+
+        if ( _nc_fam[fam_y].tar_y ) {
+          if ( _nc_fam[fam_y].src_y ) {
+            bra_u = op_u;
+          }
+          else {
+            hop_u = op_u;
+          }
+        }
+        else if ( _nc_fam[fam_y].swe_y || (_nc_bom == fam_y) ) {
+          end_t = 1;
+        }
+
+        switch ( fam_y ) {
+          default: break;
+
+          case _nc_hed: case _nc_tal: {
+            if ( op_u->kon_y & 1 ) {
+              pen_h[pen_n++] = o_h;
+            }
+          } break;
+
+          case _nc_con: {
+            if ( pen_n ) {
+              al_u.par_y[pen_h[--pen_n]] = 1;
+            }
+          } break;
+
+          case _nc_hsp: case _nc_hse:
+          case _nc_hdp: case _nc_hde: case _nc_hlp: {
+            pen_n = 0;
+          } break;
+        }
+      }
+
+      al_u.sj_h[i_h] = bra_u ? gen_u->blk_u[bra_u->tar_h].lay_h : _nc_none;
+      al_u.sf_h[i_h] = end_t ? _nc_none
+                     : hop_u ? gen_u->blk_u[hop_u->tar_h].lay_h
+                     : ( (i_h + 1) < lan_h ) ? (i_h + 1)
+                     : _nc_none;
+    }
+
+    u3a_free(pen_h);
+  }
+
+  //  the fetches, in layout order: an alias before the aliases of its
+  //  parts
+  //
+  for ( i_h = 0; i_h < lan_h; i_h++ ) {
+    nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+
+    for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+      c3_h   o_h  = blk_u->fir_h + j_h;
+      nc_op* op_u = &(gen_u->ops_u[o_h]);
+
+      if ( (_nc_hed == op_u->fam_y) || (_nc_tal == op_u->fam_y) ) {
+        _nc_al_try(gen_u, &al_u, i_h, o_h);
+      }
+    }
+
+    //  the releases postponed in this block: a register may be released
+    //  in several, on different paths
+    //
+    while ( al_u.lan_h ) {
+      r_h = al_u.lar_h[--al_u.lan_h];
+      _nc_grow(al_u.aft_d, al_u.afn_h, al_u.afc_h, c3_d);
+      al_u.aft_d[al_u.afn_h++] = ((c3_d)al_u.lat_h[r_h] << 32)
+                               | ((c3_d)1 << 31) | r_h;
+      al_u.lat_h[r_h] = _nc_none;
+    }
+  }
+
+  //  the ops again, without the drops removed and with the ones to add:
+  //  an FGT of an alias after the op that read it last, or at the start
+  //  of the block where an edge that it dies on leads; a DRO of a root
+  //  kept longer
+  //
+  if ( al_u.del_h || al_u.afn_h || al_u.ben_h ) {
+    c3_h   cap_h = opn_h + al_u.afn_h + al_u.ben_h;
+    nc_op* new_u = u3a_malloc(cap_h * sizeof(nc_op));
+    c3_h   new_h = 0, a_h = 0, b_h = 0;
+
+    _nc_key_sort(al_u.aft_d, al_u.afn_h);
+    _nc_key_sort(al_u.bef_d, al_u.ben_h);
+
+    //  the ops of the blocks follow one another in layout order
+    //  (_nc_lives())
+    //
+    for ( i_h = 0; i_h < lan_h; i_h++ ) {
+      nc_blk* blk_u = &(gen_u->blk_u[gen_u->lay_h[i_h]]);
+      c3_h    fir_h = new_h;
+
+      for ( ; (b_h < al_u.ben_h) && ((al_u.bef_d[b_h] >> 32) == i_h);
+              b_h++ )
+      {
+        nc_op* op_u = _nc_op_init(&(new_u[new_h++]), _nc_fgt);
+        op_u->src_h[0] = (c3_h)al_u.bef_d[b_h];
+      }
+
+      for ( j_h = 0; j_h < blk_u->len_h; j_h++ ) {
+        c3_h o_h = blk_u->fir_h + j_h;
+
+        if ( _nc_nop != gen_u->ops_u[o_h].fam_y ) {
+          new_u[new_h++] = gen_u->ops_u[o_h];
+        }
+
+        for ( ; (a_h < al_u.afn_h) && ((al_u.aft_d[a_h] >> 32) == o_h);
+                a_h++ )
+        {
+          c3_t   lat_t = (al_u.aft_d[a_h] >> 31) & 1;
+          nc_op* op_u  = _nc_op_init(&(new_u[new_h++]),
+                                     lat_t ? _nc_dro : _nc_fgt);
+          op_u->src_h[0] = (c3_h)(al_u.aft_d[a_h] & 0x7fffffff);
+          op_u->lat_y    = lat_t;
+        }
+      }
+
+      blk_u->fir_h = fir_h;
+      blk_u->len_h = new_h - fir_h;
+    }
+
+    u3_assert( (a_h == al_u.afn_h) && (b_h == al_u.ben_h)
+            && (new_h == cap_h - al_u.del_h) );
+
+    u3a_free(gen_u->ops_u);
+    gen_u->ops_u = new_u;
+    gen_u->opn_h = new_h;
+    gen_u->opc_h = cap_h;
+  }
+
+  u3a_free(al_u.sf_h);
+  u3a_free(al_u.sj_h);
+  u3a_free(al_u.def_h);
+  u3a_free(al_u.rot_h);
+  u3a_free(al_u.lat_h);
+  u3a_free(al_u.lar_h);
+  u3a_free(al_u.par_y);
+  u3a_free(al_u.see_h);
+  u3a_free(al_u.sak_h);
+  if ( al_u.dea_d ) { u3a_free(al_u.dea_d); }
+  if ( al_u.aft_d ) { u3a_free(al_u.aft_d); }
+  if ( al_u.bef_d ) { u3a_free(al_u.bef_d); }
+}
+
 /* _nc_range(): append an occupancy range [sta, end] of a register.
 */
 typedef struct {
@@ -3533,7 +4282,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
         nc_op* op_u  = &(gen_u->ops_u[nex_h]);
         c3_h   h_h   = 2 * nex_h;
         c3_t   nop_t = (_nc_nop == op_u->fam_y);
-        c3_h   dro_h = ( _nc_dro == op_u->fam_y ) ? op_u->src_h[0] : _nc_none;
+        c3_h   dro_h = _nc_reads(op_u) ? _nc_none : op_u->src_h[0];
         c3_h   dst_h = op_u->dst_h;
 
         //  before the op: the live (none are counted at a removed op), the
@@ -3604,7 +4353,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
           continue;
         }
 
-        if ( _nc_dro != op_u->fam_y ) {
+        if ( _nc_reads(op_u) ) {
           k_h = 0;
           _nc_srcs(gen_u, op_u, rep_h, {
             if ( die_y[sof_h[nex_h] + k_h] ) {
@@ -3617,7 +4366,7 @@ _nc_slots(nc_gen* gen_u, c3_h arg_h)
           _nc_bit_set(liv_d, dst_h);
         }
 
-        if ( _nc_dro != op_u->fam_y ) {
+        if ( _nc_reads(op_u) ) {
           _nc_srcs(gen_u, op_u, rep_h, {
             r_h = *rep_h;
             _nc_flip(r_h, h_h, _nc_bit_get(liv_d, r_h) || (r_h == dst_h));
@@ -4786,7 +5535,8 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
   //  after the moves that put its arguments in their parameter slots
   //  (_nc_shuffle()).  A move of a slot onto itself (an argument
   //  coalesced with the block parameter it is passed to) does nothing,
-  //  and goes.
+  //  and goes, unless it gains: the argument was an alias (_nc_alias()),
+  //  and the parameter is a reference.
   //  NB: this adds a backedge into an otherwise DAG. It's OK because the passes
   //  that depended on acyclity of the CFG happened before this point.
   //
@@ -4809,9 +5559,9 @@ _nc_emit(nc_gen* gen_u, u3_noun ned, c3_h arg_h)
           _nc_shuffle(gen_u, dir_u, ent_h, &new_u, &new_h, &cap_h);
         }
         else if (  (_nc_mov == op_u->fam_y)
-                && (op_u->src_h[0] == op_u->dst_h) )
+                && (op_u->src_h[0] == op_u->dst_h)
+                && op_u->kon_y )
         {
-          u3_assert( op_u->kon_y );
         }
         else {
           _nc_grow(new_u, new_h, cap_h, nc_op);
@@ -4999,6 +5749,7 @@ _nc_build(u3_noun straight, u3_weak bell)
   _nc_fold(&gen_u);
   _nc_sink(&gen_u);
   _nc_lives(&gen_u, arg_h);
+  _nc_alias(&gen_u, arg_h);
   _nc_slots(&gen_u, arg_h);
   pog_u = _nc_emit(&gen_u, ned, arg_h);
 

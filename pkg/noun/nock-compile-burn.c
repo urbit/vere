@@ -1231,6 +1231,27 @@ OP2(HER, a_h, d_h, BODY_HER)
   BURN();
 OP2(TAR, a_h, d_h, BODY_TAR)
 
+//  HEA and TAA: a part of the cell in a slot, uncounted: an alias of the
+//  cell's reference to it, which nothing consumes or drops (_nc_alias())
+//
+#define BODY_HEA()                                                              \
+  PUT(d_h, CELL(reg[a_h])->hed);                                                \
+  BURN();
+OP2(HEA, a_h, d_h, BODY_HEA)
+
+#define BODY_TAA()                                                              \
+  PUT(d_h, CELL(reg[a_h])->tel);                                                \
+  BURN();
+OP2(TAA, a_h, d_h, BODY_TAA)
+
+//  FGT: the alias in a slot is dead: where empty slots are zero, so is
+//  this one
+//
+#define BODY_FGT()                                                              \
+  ZERO(a_h);                                                                    \
+  BURN();
+OP1(FGT, a_h, BODY_FGT)
+
 //  COR: CON into the cell its HER or TAR pushed, if it pushed one
 //
 #define BODY_COR(KA, KB)                                                        \
@@ -2157,6 +2178,9 @@ u3_noun OP(JETP) ARGS CONV {
 #undef BODY_TAL
 #undef REUSE
 #undef BODY_HER
+#undef BODY_HEA
+#undef BODY_TAA
+#undef BODY_FGT
 #undef BODY_TAR
 #undef BODY_COR
 #undef BODY_CEL
