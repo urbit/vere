@@ -2366,7 +2366,13 @@ _test_switch(void)
 **                parts only when the trace is rendered: one pushed on
 **                a branch takes nothing apart with a crash.  Nor does a
 **                branch that makes an argument, before the code that
-**                runs after it.
+**                runs after it.  The last cases take the fallback and
+**                come back from it: the part that is tried is read by a
+**                trap's arm only, so the subject version returns where
+**                the noun is an atom, a pair that the argument version
+**                returns in parts, to the middle of the caller, to a
+**                tail call and with spots on; with another head in the
+**                sample it reads the part after all and crashes late.
 */
 static c3_i
 _test_entry(void)
@@ -2602,6 +2608,91 @@ _test_entry(void)
       "(g ?:(=(0 -.p) c [7 8]) ~|(%arg .*(c [0 3])))\n",
       { "[0 (jam [5 0])]", "[1 (jam [5 1 0])]", "[0 (jam 5)]", "[1 (jam 5)]", 0 },
       { 0, 0, 1, 1, 0 } },
+    { "fallback that returns, a pair",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(0 x)  [7 x]\n"
+      "      ?:  =(1 x)  [.*(s [0 2]) x]\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  r  (g -.p (cue +.p))\n"
+      "[+.r -.r 9]\n",
+      { "[0 (jam 5)]", "[[2 0] (jam 5)]", "[0 (jam [3 4])]", "[1 (jam [3 4])]", "[1 (jam 5)]" },
+      { 0, 0, 0, 0, 1 } },
+    { "fallback that returns, its product taken apart",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(0 .*(x [0 2]))  [x 7]\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  r  (g -.p (cue +.p))\n"
+      "[.*(-.r [0 3]) +.r]\n",
+      { "[[0 5] (jam 9)]", "[[1 0 6] (jam 9)]", "[[0 5] (jam [3 4])]", "[5 (jam 9)]", "[[1 5] (jam [3 4])]" },
+      { 0, 0, 0, 1, 1 } },
+    { "fallback that returns, a tail call",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(0 x)  [7 x]\n"
+      "      ?:  =(1 x)  [.*(s [0 2]) x]\n"
+      "      $(x .*(x [0 3]))\n"
+      "    ++  k\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ?:  =(7 x)  [1 2]\n"
+      "      ?:  =(8 x)  $(x 7)\n"
+      "      (g x s)\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  r  (k -.p (cue +.p))\n"
+      "[+.r -.r]\n",
+      { "[0 (jam 5)]", "[7 (jam 5)]", "[8 (jam 5)]", "[1 (jam [3 4])]", "[1 (jam 5)]" },
+      { 0, 0, 0, 0, 1 } },
+    { "fallback that returns, spots",
+      "!:\n"
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ~|  .*(s [0 2])\n"
+      "      ?:  =(0 x)  [7 x]\n"
+      "      ?:  =(1 x)  [.*(s [0 2]) x]\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  r  (g -.p (cue +.p))\n"
+      "[+.r -.r 9]\n",
+      { "[0 (jam 5)]", "[[2 0] (jam 5)]", "[0 (jam [3 4])]", "[1 (jam [3 4])]", "[1 (jam 5)]" },
+      { 0, 0, 0, 0, 1 } },
+    { "read on one branch only",
+      "=>  |%\n"
+      "    ++  g\n"
+      "      |=  [x=* s=*]\n"
+      "      ^-  [* *]\n"
+      "      ?:  =(0 x)  [7 x]\n"
+      "      ?:  =(1 x)  [~|(%leaf .*(s [0 2])) x]\n"
+      "      $(x .*(x [0 3]))\n"
+      "    --\n"
+      "|=  n=*\n"
+      "=/  p  ;;([* @] n)\n"
+      "=/  r  (g -.p (cue +.p))\n"
+      "[+.r -.r 9]\n",
+      { "[0 (jam 5)]", "[[2 0] (jam 5)]", "[1 (jam [3 4])]", "[1 (jam 5)]", 0 },
+      { 0, 0, 0, 1, 0 } },
   };
   c3_i ret_i = 1;
   c3_w i_w, j_w;
