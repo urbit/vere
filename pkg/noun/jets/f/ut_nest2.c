@@ -49,10 +49,14 @@
 
 
 //  hits on `reg` and `gil` not discharged yet: unordered lists of `ref`s and
-//  pairs, which may repeat
+//  pairs, which may repeat.  They are kept in the road, as the root flag
+//  is: compiled nock can leap inside +nest (a callee compiled on demand
+//  pokes the SKA core on an inner road), and a +nest that starts on an
+//  inner road while one runs on an outer road must have lists of its own;
+//  a road that is abandoned takes its lists with it
 //
-static u3_noun _hits_reg = u3_nul;
-static u3_noun _hits_gil = u3_nul;
+#define _hits_reg  (u3R->ska.hir)
+#define _hits_gil  (u3R->ska.hig)
 
 //  drop every `som` from unordered list `hit`
 static u3_noun

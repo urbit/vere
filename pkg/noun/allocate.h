@@ -341,6 +341,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) def_p;                              /*  Linking worklist                          */ \
     U3_W(S) tem_p;                              /*  battery -> (list [path sock]) registered  */ \
     U3_N(S) new;                                /*  registrations the SKA core hasn't seen    */ \
+    U3_N(S) hir;                                /*  +nest jet: hits on reg not discharged     */ \
+    U3_N(S) hig;                                /*  +nest jet: hits on gil not discharged     */ \
     /* road struct terminator: no data after it, no */\
     /* padding between the last real field and it   */\
     c3_y end_y[0];                                    \
@@ -598,8 +600,8 @@ typedef struct {
 #       define u3R  u3a_Road
 
       static_assert(
-        offsetof(u3a_road, ska.end_y) == offsetof(u3a_road, ska.new)
-                                       + sizeof(u3R->ska.new),
+        offsetof(u3a_road, ska.end_y) == offsetof(u3a_road, ska.hig)
+                                       + sizeof(u3R->ska.hig),
       "no padding between the last real field of u3_road and end marker");
 
     /* u3_Code: memory code.
