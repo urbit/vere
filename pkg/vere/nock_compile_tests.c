@@ -154,6 +154,11 @@ _setup(void)
   _steel();
   u3z(pil);
 
+  //  a run of compiled nock that fails fails here: run once more in u3n
+  //  (u3nc_Redo), it would pass for one that went through
+  //
+  u3nc_Redo = 0;
+
   //  check reference counts after every run: u3m_soft_top() marks and
   //  sweeps the inner road, recounting references, and a leak or a short
   //  count aborts.  With U3NC_ALL only, the run of every test; off for
@@ -1829,6 +1834,62 @@ _test_boot(void)
   return ret_i;
 }
 
+/* _test_redo(): a computation whose compilation fails is run once more in
+**               u3n, and its formula with its battery is declined: the
+**               next time it runs in u3n, without a poke of the core, and
+**               its key is on the loom.  First the compilation of the
+**               entry fails, then that of a callee on its first call, the
+**               entry compiled before: the entry is declined with it.  The
+**               compilation fails by a core whose +poke, at axis 23, makes
+**               a gate that crashes.
+*/
+static c3_i
+_test_redo(void)
+{
+  static const c3_c* src_c[2] = {
+    "|=  n=@\n^-  @\n(add 40 n)\n",
+    "|=  n=@\n=/  f  |=(a=@ ^-(@ (add 40 a)))\n(f n)\n"
+  };
+  u3_noun fol = u3nq(9, 2, 0, 1);
+  c3_i    ret_i = 1;
+
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    u3_noun cor = _gate(src_c[i_w], 2);
+    u3_noun key = u3nt(c3_s4('s','k','i','p'), u3k(fol), u3k(u3h(cor)));
+    u3_noun old;
+    u3_weak pro;
+
+    if ( i_w ) {
+      u3nc_scan(u3k(cor), u3k(fol));
+    }
+
+    old          = u3k(u3R->ska.cor);
+    u3R->ska.cor = u3i_edit(u3R->ska.cor, 23,
+                            u3nc(1, u3nt(u3nc(0, 0), 0, 0)));
+    u3nc_Redo    = 1;
+    pro          = _run(i_w ? "redo, failing callee" : "redo, failing entry ",
+                        _nock_nc, cor, fol);
+    u3nc_Redo    = 0;
+    u3z(u3R->ska.cor);
+    u3R->ska.cor = old;
+
+    ret_i = _check("redo: once more in u3n", 42 == pro) && ret_i;
+    _lose(pro);
+
+    pro   = _run("redo, declined      ", _nock_nc, cor, fol);
+    ret_i = _check("redo: declined",
+                   (42 == pro) && (!!i_w == _has_entry(cor, fol))
+                   && (old == u3R->ska.cor)
+                   && (u3_none != u3h_git(u3R->ska.ent_p, key))) && ret_i;
+    _lose(pro);
+
+    u3z(key); u3z(cor);
+  }
+
+  u3z(fol);
+  return ret_i;
+}
+
 /* _crash(): the raw trace of [bus fol] crashing under fun_f, or u3_none
 **           if it doesn't crash.  RETAINS.
 */
@@ -2993,6 +3054,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_rung() ) {
+    exit(1);
+  }
+
+  if ( !_test_redo() ) {
     exit(1);
   }
 

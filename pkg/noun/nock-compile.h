@@ -191,6 +191,26 @@
     */
       extern c3_t u3nc_Self;
 
+    /* u3nc_Off: compiled nock is off: u3nc_able() says no.  For the second
+    **           run of a top-level computation that failed with it on.
+    ** u3nc_Redo: whether there is such a second run (the default); not in
+    **            the test harness, which is after the failures of compiled
+    **            nock.
+    */
+      extern c3_t u3nc_Off;
+      extern c3_t u3nc_Redo;
+
+    /* u3nc_event(): a top-level computation begins.
+    ** u3nc_fail():  it failed, with the mote mot_m: what it was compiling,
+    **               if anything, is declined, to run in u3n from now on;
+    **               yes if it ran compiled nock and should be run again
+    **               with u3nc_Off.
+    */
+      void
+      u3nc_event(void);
+      c3_o
+      u3nc_fail(c3_m mot_m);
+
     /* u3nc_Gop: the unary program of the callee of the call by subject
     **           whose memoizing jet is being kicked (see _nc_memo_jet()),
     **           linked once by the site, for the driver's misses, or 0.

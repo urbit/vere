@@ -119,6 +119,7 @@
       /* u3m_soft_top(): top-level safety wrapper; on success, [hom_f]
       **                 (if any) runs on return to the home road, before
       **                 the product is taken (see u3m_soft_with()).
+      **                 RETAINS [arg].
       */
         u3_noun
         u3m_soft_top(c3_w    mil_w,                     //  timer ms
@@ -331,10 +332,10 @@ _cm_stack_unwind(void)
   return tax;
 }
 
-/* _cm_signal_recover(): recover from a deep signal, after longjmp.  Free arg.
+/* _cm_signal_recover(): recover from a deep signal, after longjmp.
 */
 static u3_noun
-_cm_signal_recover(c3_m sig_m, u3_noun arg)
+_cm_signal_recover(c3_m sig_m)
 {
   u3_noun tax;
 
@@ -400,7 +401,6 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
     pro = u3nt(3, sig_m, tax);
     _cm_signal_reset();
 
-    u3z(arg);
     return pro;
   }
 }
@@ -1660,7 +1660,8 @@ u3m_water(u3_post* low_p, u3_post* hig_p)
   }
 }
 
-/* u3m_soft_top(): top-level safety wrapper.
+/* u3m_soft_top(): top-level safety wrapper.  RETAINS [arg], for
+**                 u3m_soft_with() to run it twice.
 */
 u3_noun
 u3m_soft_top(c3_w    mil_w,                     //  timer ms
@@ -1701,7 +1702,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
     //  recover memory state from the top down
     //
-    return _cm_signal_recover(sig_m, arg);
+    return _cm_signal_recover(sig_m);
   }
 
   /* Record the cap, and leap.
@@ -1746,10 +1747,6 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
   */
   _cm_signal_done();
 
-  /* Free the argument.
-  */
-  u3z(arg);
-
   /* Return the product.
   */
   return pro;
@@ -1762,6 +1759,7 @@ u3m_soft_sure(u3_funk fun_f, u3_noun arg)
 {
   u3_noun pro, pru = u3m_soft_top(0, (1 << 18), fun_f, arg, 0);
 
+  u3z(arg);
   u3_assert( 0 == u3h(pru) );
   pro = u3k(u3t(pru));
   u3z(pru);
@@ -2107,7 +2105,21 @@ u3m_soft_with(c3_w    mil_w,
 {
   u3_noun why;
 
+  u3nc_event();
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
+
+  //  a failure of a computation that ran compiled nock: once more without,
+  //  so that a hint cannot fail what would go through in u3n (u3nc_fail())
+  //
+  if (  (0 != u3h(why))
+     && (c3y == u3nc_fail(( 3 == u3h(why) ) ? u3h(u3t(why)) : c3__exit)) )
+  {
+    u3z(why);
+    u3nc_Off = 1;
+    why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);
+    u3nc_Off = 0;
+  }
+  u3z(arg);
 
   if ( 0 == u3h(why) ) {
     return why;

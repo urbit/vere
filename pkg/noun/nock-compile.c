@@ -5039,6 +5039,192 @@ _nc_lose_slow(u3_noun som)
   u3a_lose_free(som);
 }
 
+/*  A computation that fails is run once more in u3n, and what it was
+**  compiling is declined.
+**
+**  A hint must not make a computation fail that would have gone through
+**  without it.  So when a top-level computation that ran compiled nock
+**  fails (the SKA core failed, memory ran out), u3m_soft_with() runs it
+**  again without compiled nock (u3nc_fail(), u3nc_Off), once.  What was
+**  being compiled when it failed is declined: a formula with the battery
+**  it ran on (the head of its subject), which stands for its bell here,
+**  since the bell is a product of the analysis that did not end.  A
+**  declined formula runs in u3n from then on, in this process by a table
+**  off the loom, and across restarts by a key in ska.ent_p with no
+**  entries, [%skip fol bat], written at its next run (the road of the
+**  failed computation is gone).
+**
+**  A callee whose compilation fails cannot be run in u3n at its call site
+**  (its arguments are parts of a subject only its program knows how to
+**  put together), so the entry of the outermost run is declined with it,
+**  and the callee's bell fails at once if it is called again from a
+**  program reached another way.
+**
+**  The SKA core's own code (a compilation inside a poke of it) is not
+**  declined by itself: its failure is laid to the compilation that poked
+**  the core.
+*/
+#define _nc_dec_tag  c3_s4('s','k','i','p')
+
+static struct {
+  c3_t  ini_t;          //  the keys of earlier processes have been read
+  c3_t  run_t;          //  this top-level computation ran compiled nock
+  c3_t  arm_t;          //  a compilation is in progress
+  c3_d  cur_d;          //    what to decline if it fails
+  c3_d  bel_d;          //    and its bell, if it is a callee
+  c3_w  dep_w;          //  u3nc_nock_on() in progress
+  c3_d  top_d;          //    the key of the outermost
+  c3_d  dec_d[1024];    //  declined: formula mug << 32 | battery mug
+  c3_w  dec_w;
+  c3_d  bad_d[256];     //  declined bells of callees: 1 << 32 | mug
+  c3_w  bad_w;
+} _nc_decl;
+
+c3_t u3nc_Off  = 0;
+c3_t u3nc_Redo = 1;
+
+static void
+_nc_dec_cb(u3_noun kev, void* ptr_v)
+{
+  u3_noun key = u3h(kev);
+
+  if (  (c3y == u3du(key)) && (_nc_dec_tag == u3h(key))
+     && (c3y == u3du(u3t(key))) && (_nc_decl.dec_w < 1024) )
+  {
+    _nc_decl.dec_d[_nc_decl.dec_w++] = ((c3_d)u3r_mug(u3h(u3t(key))) << 32)
+                                     | u3r_mug(u3t(u3t(key)));
+  }
+}
+
+//  _nc_dec_key(): what stands for the bell of [sub fol] before its analysis
+//
+static inline c3_d
+_nc_dec_key(u3_noun sub, u3_noun fol)
+{
+  return ((c3_d)_nc_las_mug(fol) << 32)
+       | _nc_las_mug(( c3y == u3du(sub) ) ? u3h(sub) : sub);
+}
+
+static inline c3_t
+_nc_dec_has(const c3_d* set_d, c3_w len_w, c3_d key_d)
+{
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    if ( key_d == set_d[i_w] ) return 1;
+  }
+  return 0;
+}
+
+/* _nc_declined(): is [sub fol] declined?  If so its key goes on the loom,
+**                 for the next process, whose first compilation reads the
+**                 keys there are (_nc_entry()).  RETAINS.
+*/
+static c3_t
+_nc_declined(u3_noun sub, u3_noun fol)
+{
+  u3_noun key;
+
+  if (  !_nc_decl.dec_w || u3a_ska_depth(u3R->how.fag_w)
+     || !_nc_dec_has(_nc_decl.dec_d, _nc_decl.dec_w, _nc_dec_key(sub, fol)) )
+  {
+    return 0;
+  }
+
+  key = u3nt(_nc_dec_tag, u3k(fol),
+             u3k(( c3y == u3du(sub) ) ? u3h(sub) : sub));
+
+  if (  (u3_none == u3h_git(u3R->ska.ent_p, key))
+     && (u3_none == u3h_git(u3H->rod_u.ska.ent_p, key)) )
+  {
+    u3h_put(u3R->ska.ent_p, key, u3_nul);
+  }
+  u3z(key);
+  return 1;
+}
+
+/* _nc_dec_in(): a compilation begins: key_d is what to decline if it
+**               fails, bel_d its bell if it is a callee (the key is then
+**               the outermost entry's).  Produces whether it is the one
+**               to lay a failure to, for _nc_dec_out(): not one inside
+**               another, nor one of the SKA core's own code.
+*/
+static c3_t
+_nc_dec_in(c3_d key_d, c3_d bel_d)
+{
+  if ( _nc_decl.arm_t || u3a_ska_depth(u3R->how.fag_w) ) {
+    return 0;
+  }
+  _nc_decl.arm_t = 1;
+  _nc_decl.cur_d = key_d;
+  _nc_decl.bel_d = bel_d;
+  return 1;
+}
+
+static void
+_nc_dec_out(c3_t arm_t)
+{
+  if ( arm_t ) {
+    _nc_decl.arm_t = 0;
+  }
+}
+
+/* _nc_dec_bell(): the bell of a callee as _nc_decl.bad_d holds it; fails at
+**                 once if its compilation has failed before.  RETAINS.
+*/
+static c3_d
+_nc_dec_bell(u3_noun bell)
+{
+  c3_d bel_d = 0x100000000ULL | u3r_mug(bell);
+
+  if ( _nc_dec_has(_nc_decl.bad_d, _nc_decl.bad_w, bel_d) ) {
+    u3m_bail(c3__fail);
+  }
+  return bel_d;
+}
+
+/* u3nc_event(): a top-level computation begins (u3m_soft_with()).
+*/
+void
+u3nc_event(void)
+{
+  _nc_decl.run_t = 0;
+  _nc_decl.arm_t = 0;
+  _nc_decl.dep_w = 0;
+  _nc_decl.top_d = 0;
+  u3nc_Gop = 0;
+}
+
+/* u3nc_fail(): a top-level computation failed with the mote mot_m: what it
+**              was compiling, if anything, is declined; yes if it ran
+**              compiled nock and is worth running again without
+**              (u3nc_Off), which an interrupt is not.
+*/
+c3_o
+u3nc_fail(c3_m mot_m)
+{
+  c3_o ret_o = __(  u3nc_Redo && !u3nc_Off && _nc_decl.run_t
+                 && (c3__intr != mot_m) && (c3__evil != mot_m) );
+
+  if ( _nc_decl.arm_t && (c3__intr != mot_m) ) {
+    if (  _nc_decl.cur_d && (_nc_decl.dec_w < 1024)
+       && !_nc_dec_has(_nc_decl.dec_d, _nc_decl.dec_w, _nc_decl.cur_d) )
+    {
+      _nc_decl.dec_d[_nc_decl.dec_w++] = _nc_decl.cur_d;
+    }
+    if (  _nc_decl.bel_d && (_nc_decl.bad_w < 256)
+       && !_nc_dec_has(_nc_decl.bad_d, _nc_decl.bad_w, _nc_decl.bel_d) )
+    {
+      _nc_decl.bad_d[_nc_decl.bad_w++] = _nc_decl.bel_d;
+    }
+    u3l_log("ska: a compilation failed (%%%c%c%c%c): formula %08x on "
+            "battery %08x runs in u3n from now on",
+            (c3_c)(mot_m & 0xff), (c3_c)((mot_m >> 8) & 0xff),
+            (c3_c)((mot_m >> 16) & 0xff), (c3_c)((mot_m >> 24) & 0xff),
+            (c3_h)(_nc_decl.cur_d >> 32), (c3_h)_nc_decl.cur_d);
+  }
+  _nc_decl.arm_t = 0;
+  return ret_o;
+}
+
 /* _nc_callee(): the program of a call site, compiling it on the first
 **               call: the program of its bell or, for a call by subject,
 **               the unary program of the bell's whole subject.  The site
@@ -5060,8 +5246,11 @@ _nc_callee(u3nc_prog* pog_u, u3nc_dire* dir_u)
   key = _nc_dir_key(dir_u->bell, dir_u->mon_o);
 
   if ( !(gop_u = _nc_dir_get(key)) ) {
+    c3_t arm_t = _nc_dec_in(_nc_decl.top_d, _nc_dec_bell(dir_u->bell));
+
     gop_u = _nc_compile(u3d_dire(dir_u->bell, dir_u->mon_o),
                         ( c3n == dir_u->mon_o ) ? dir_u->bell : u3_none);
+    _nc_dec_out(arm_t);
     u3h_put(u3R->ska.dir_p, key, _nc_of(gop_u));
   }
 
@@ -5149,7 +5338,10 @@ _nc_mono(const u3nc_dire* dir_u)
   u3t_off(noc_o);
 
   if ( !(gop_u = _nc_dir_get(key)) ) {
+    c3_t arm_t = _nc_dec_in(_nc_decl.top_d, _nc_dec_bell(dir_u->bell));
+
     gop_u = _nc_compile(u3d_dire(dir_u->bell, c3y), u3_none);
+    _nc_dec_out(arm_t);
     u3h_put(u3R->ska.dir_p, key, _nc_of(gop_u));
   }
 
@@ -5178,8 +5370,8 @@ _nc_plain(u3_noun fol)
 }
 
 /* _nc_entry(): entry program for [sub fol], compiling it if needed; or
-**              NULL if it is to run in u3n: a formula under %bare.
-**              RETAINS.
+**              NULL if it is to run in u3n: a formula under %bare, or one
+**              that is declined (above).  RETAINS.
 */
 static u3nc_prog*
 _nc_entry(u3_noun sub, u3_noun fol)
@@ -5228,12 +5420,30 @@ _nc_entry(u3_noun sub, u3_noun fol)
     }
 #endif
     //  not a formula, and it would be a key of the index (_nc_ent_tag)
+    //  or that of a declined formula (_nc_dec_tag)
     //
-    if ( (c3y == u3du(fol)) && (_nc_ent_tag == u3h(fol)) ) {
+    if (  (c3y == u3du(fol))
+       && ((_nc_ent_tag == u3h(fol)) || (_nc_dec_tag == u3h(fol))) )
+    {
       u3m_bail(c3__exit);
     }
 
-    pog_u = _nc_compile(u3d_full(sub, fol, &bell), u3_none);
+    //  the formulas declined in earlier runs of this pier
+    //
+    if ( !_nc_decl.ini_t ) {
+      _nc_decl.ini_t = 1;
+      u3h_walk_with(u3H->rod_u.ska.ent_p, _nc_dec_cb, 0);
+    }
+    if ( _nc_declined(sub, fol) ) {
+      return NULL;
+    }
+
+    {
+      c3_t arm_t = _nc_dec_in(_nc_dec_key(sub, fol), 0);
+
+      pog_u = _nc_compile(u3d_full(sub, fol, &bell), u3_none);
+      _nc_dec_out(arm_t);
+    }
 
     key = _nc_ent_key(bell);
     old = u3h_get(u3R->ska.ent_p, key);
@@ -5781,6 +5991,7 @@ u3nc_able(void)
   //  without u3nc_Self, in any poke of it
   //
   return __(  (u3_nul != u3R->ska.cor)
+           && !u3nc_Off
            && !(u3R->how.fag_w & u3a_flag_mink)
            && (u3a_ska_depth(u3R->how.fag_w) < (u3nc_Self ? 2 : 1)) );
 }
@@ -5804,12 +6015,30 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   u3nc_prog* pog_u;
   u3_noun    pro;
 
-  if ( (c3n == u3nc_able()) || !(pog_u = _nc_entry(bus, fol)) ) {
+  if ( (c3n == u3nc_able()) || _nc_plain(fol) ) {
     return u3n_nock_on(bus, fol);
   }
 
+  _nc_decl.run_t = 1;
+
+  //  a declined formula, even one with an entry (a callee of it failed
+  //  to compile); the outermost run in progress is what a callee's
+  //  failure is laid to
+  //
+  if ( _nc_declined(bus, fol) ) {
+    return u3n_nock_on(bus, fol);
+  }
+  if ( !_nc_decl.dep_w ) {
+    _nc_decl.top_d = _nc_dec_key(bus, fol);
+  }
+
+  if ( !(pog_u = _nc_entry(bus, fol)) ) {
+    return u3n_nock_on(bus, fol);
+  }
   u3z(fol);
+  _nc_decl.dep_w++;
   pro = _nc_burn_out(pog_u, &bus, 1);
+  _nc_decl.dep_w--;
 
   if ( _nc_verb_t ) {
     fprintf(stderr, "u3nc: %" PRIu64 " entries, %" PRIu64 " compiled, "
