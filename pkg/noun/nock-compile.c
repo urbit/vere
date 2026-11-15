@@ -4756,6 +4756,43 @@ _nc_idem_slot(u3_noun fol, u3_noun con)
   return &(_nc_idem_u[has_h >> (32 - _nc_idem_bits)]);
 }
 
+/* nc_bate: the entry a subject matched last, by the nouns of its formula
+**          and of its battery (the head of the subject), across events.
+**
+**   The cache above is of one era, and by the context: a vane's context is
+**   its state, a new noun after every event, so the first call of a vane's
+**   arm in an event went the long way (keys, three lookups, the match, a
+**   put in the road's cache), where the arm itself may take less.  What a
+**   program assumes of its subject is the sock of its entry, which is
+**   checked here in full (u3d_fits_las() with nothing known), so the
+**   battery is only where to look.  The formula has to be the same formula
+**   though, and a noun is that only while it lives: so this is for
+**   formulas that are literals of u3n's bytecode on the home road (the
+**   %ska op's, u3nc_hint_on()), which live as long as their programs, and
+**   everything here is forgotten (u3nc_Gen_d) when a program of u3n on the
+**   home road goes or moves, or the entries of the home road change.
+*/
+typedef struct {
+  c3_d    gen_d;
+  u3_noun fol;
+  u3_noun bat;
+  u3_noun i;
+} nc_bate;
+
+#define _nc_bate_bits  10
+
+static nc_bate _nc_bate_u[1 << _nc_bate_bits];
+
+c3_d u3nc_Gen_d = 1;
+
+static inline nc_bate*
+_nc_bate_slot(u3_noun fol, u3_noun bat)
+{
+  c3_h has_h = ((c3_h)fol * 0x9e3779b1u) ^ ((c3_h)bat * 0x85ebca77u);
+
+  return &(_nc_bate_u[has_h >> (32 - _nc_bate_bits)]);
+}
+
 static inline c3_t
 _nc_here(void* ptr_v, u3_road* rod_u);
 
@@ -4856,16 +4893,32 @@ _nc_ent_list(u3_road* rod_u, u3_noun sub, u3_noun key)
 **   that a subject with the same context matched last is tried first,
 **   [entry subject formula] in the cache (_nc_las_key()): sub is checked
 **   against it only where it is not the same noun as that subject.
-**   RETAINS.
+**   lit_t: fol is a literal of a program of u3n (nc_bate).  RETAINS.
 */
 static u3nc_prog*
-_nc_ent_get(u3_noun sub, u3_noun fol)
+_nc_ent_get(u3_noun sub, u3_noun fol, c3_t lit_t)
 {
   u3_weak  got   = u3_none;
   c3_t     hom_t = ( &(u3H->rod_u) == u3R );
   nc_idem* ide_u = NULL;
+  nc_bate* bat_u = NULL;
   u3_noun  key   = u3_nul;
   u3_weak  ke2   = u3_none, ke4 = u3_none;
+
+  //  across events, by the nouns of the formula and the battery (nc_bate)
+  //
+  if ( lit_t && (c3y == u3du(sub)) && _nc_home(fol) ) {
+    bat_u = _nc_bate_slot(fol, u3h(sub));
+
+    if (  (u3nc_Gen_d == bat_u->gen_d)
+       && (fol == bat_u->fol)
+       && (u3h(sub) == bat_u->bat)
+       && (c3y == u3d_fits_las(bat_u->i, sub, u3_none)) )
+    {
+      _nc_stat(idm_d);
+      return _nc_to(u3t(bat_u->i));
+    }
+  }
 
   if ( !hom_t ) {
     //  by the nouns of the formula and the context (nc_idem)
@@ -4955,6 +5008,12 @@ done:
     ide_u->fol   = fol;
     ide_u->con   = u3t(u3t(sub));
     ide_u->i     = got;
+  }
+  if ( bat_u && _nc_home(got) ) {
+    bat_u->gen_d = u3nc_Gen_d;
+    bat_u->fol   = fol;
+    bat_u->bat   = u3h(sub);
+    bat_u->i     = got;
   }
   return _nc_to(u3t(got));
 }
@@ -5371,17 +5430,18 @@ _nc_plain(u3_noun fol)
 
 /* _nc_entry(): entry program for [sub fol], compiling it if needed; or
 **              NULL if it is to run in u3n: a formula under %bare, or one
-**              that is declined (above).  RETAINS.
+**              that is declined (above).  lit_t: fol is a literal of a
+**              program of u3n (_nc_ent_get()).  RETAINS.
 */
 static u3nc_prog*
-_nc_entry(u3_noun sub, u3_noun fol)
+_nc_entry(u3_noun sub, u3_noun fol, c3_t lit_t)
 {
   u3nc_prog* pog_u;
 
   if ( _nc_plain(fol) ) {
     return NULL;
   }
-  pog_u = _nc_ent_get(sub, fol);
+  pog_u = _nc_ent_get(sub, fol, lit_t);
 
   _nc_stat(ent_d);
 
@@ -6007,10 +6067,12 @@ u3nc_slam_on(u3_noun gat, u3_noun sam)
   return u3nc_nock_on(cor, u3nq(9, 2, 0, 1));
 }
 
-/* u3nc_nock_on(): produce .*(bus fol); with u3n if this road can't.
+/* _nc_nock_on(): produce .*(bus fol); with u3n if this road can't.
+**                lit_t: fol is a literal of a program of u3n
+**                (_nc_ent_get()).
 */
-u3_noun
-u3nc_nock_on(u3_noun bus, u3_noun fol)
+static u3_noun
+_nc_nock_on(u3_noun bus, u3_noun fol, c3_t lit_t)
 {
   u3nc_prog* pog_u;
   u3_noun    pro;
@@ -6032,7 +6094,7 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
     _nc_decl.top_d = _nc_dec_key(bus, fol);
   }
 
-  if ( !(pog_u = _nc_entry(bus, fol)) ) {
+  if ( !(pog_u = _nc_entry(bus, fol, lit_t)) ) {
     return u3n_nock_on(bus, fol);
   }
   u3z(fol);
@@ -6057,12 +6119,30 @@ u3nc_nock_on(u3_noun bus, u3_noun fol)
   return pro;
 }
 
+/* u3nc_nock_on(): produce .*(bus fol); with u3n if this road can't.
+*/
+u3_noun
+u3nc_nock_on(u3_noun bus, u3_noun fol)
+{
+  return _nc_nock_on(bus, fol, 0);
+}
+
+/* u3nc_hint_on(): u3nc_nock_on() for the %ska op of u3n: fol is a literal
+**                 of its program, by which its entry is found across
+**                 events (nc_bate).
+*/
+u3_noun
+u3nc_hint_on(u3_noun bus, u3_noun fol)
+{
+  return _nc_nock_on(bus, fol, 1);
+}
+
 /* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
 */
 c3_o
 u3nc_entered(u3_noun bus, u3_noun fol)
 {
-  return __(0 != _nc_ent_get(bus, fol));
+  return __(0 != _nc_ent_get(bus, fol, 0));
 }
 
 /* _nc_regs_cb(): count the arguments of an n-ary program.
@@ -6391,7 +6471,7 @@ u3nc_hot(c3_w num_w, c3_w dum_w)
 void
 u3nc_scan(u3_noun bus, u3_noun fol)
 {
-  _nc_entry(bus, fol);
+  _nc_entry(bus, fol, 0);
   u3z(bus);
   u3z(fol);
 }
@@ -6556,6 +6636,13 @@ _nc_link_ent_cb(u3_noun kev, void* ptr_v)
 void
 u3nc_reap(u3p(u3h_root) dir_p, u3p(u3h_root) ent_p)
 {
+  //  the entries of the home road change: nc_bate
+  //
+  if (  (&(u3H->rod_u) == u3R)
+     && (u3to(u3h_root, dir_p)->use_w || u3to(u3h_root, ent_p)->use_w) )
+  {
+    u3nc_Gen_d++;
+  }
   u3h_walk_with(dir_p, _nc_reap_dir_cb, NULL);
   u3h_walk_with(ent_p, _nc_reap_ent_cb, NULL);
   u3h_walk_with(dir_p, _nc_link_dir_cb, NULL);
@@ -6680,6 +6767,7 @@ _nc_free_ent_cb(u3_noun kev)
 void
 u3nc_free(void)
 {
+  u3nc_Gen_d++;   //  nc_bate
   u3h_walk(u3R->ska.dir_p, _nc_free_dir_cb);
   u3h_walk(u3R->ska.ent_p, _nc_free_ent_cb);
   u3h_free(u3R->ska.dir_p);
@@ -6750,6 +6838,7 @@ _nc_drop_ent(u3_noun bell)
 void
 u3nc_drop(u3_noun lis)
 {
+  u3nc_Gen_d++;   //  nc_bate
   u3_assert( u3R == &(u3H->rod_u) );
 
   for ( ; u3_nul != lis; lis = u3t(lis) ) {
@@ -6844,6 +6933,7 @@ u3nc_stale(void)
 void
 u3nc_rewrite_compact(void)
 {
+  u3nc_Gen_d++;   //  nc_bate
   u3a_relocate_noun(&(u3R->ska.cor));
   u3h_relocate(&(u3R->ska.dir_p));
   u3h_relocate(&(u3R->ska.ent_p));
@@ -6890,6 +6980,7 @@ _nc_ream_ent_cb(u3_noun kev)
 void
 u3nc_ream(void)
 {
+  u3nc_Gen_d++;   //  nc_bate
   u3_assert( u3R == &(u3H->rod_u) );
   u3h_walk(u3R->ska.dir_p, _nc_ream_dir_cb);
   u3h_walk(u3R->ska.ent_p, _nc_ream_ent_cb);

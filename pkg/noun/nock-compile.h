@@ -170,6 +170,12 @@
       u3_noun
       u3nc_nock_on(u3_noun bus, u3_noun fol);
 
+    /* u3nc_hint_on(): u3nc_nock_on() for the %ska op of u3n, whose formula
+    **                 is a literal of its program.
+    */
+      u3_noun
+      u3nc_hint_on(u3_noun bus, u3_noun fol);
+
     /* u3nc_slam_on(): produce (gat sam), compiled where it can be.
     */
       u3_noun
@@ -232,6 +238,13 @@
     */
       u3_noun
       u3nc_mean(u3_noun bell, u3_noun arg);
+
+    /* u3nc_Gen_d: the changes so far of what the entry cache across events
+    **             (nc_bate, nock-compile.c) holds by address: the entries
+    **             of the home road, and the programs of u3n there, whose
+    **             literals the formulas of %ska hints are.
+    */
+      extern c3_d u3nc_Gen_d;
 
     /* u3nc_Era_d: the departures from the home road so far: u3m_leap()
     **             counts one when it leaves it.  What compiled nock

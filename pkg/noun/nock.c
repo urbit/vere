@@ -2825,7 +2825,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         BURN();
       }
       top = _n_peek(off);
-      x   = u3nc_nock_on(u3k(*top), u3k(pog_u->lit_u.non[x]));
+      x   = u3nc_hint_on(u3k(*top), u3k(pog_u->lit_u.non[x]));
       _n_push(mov, off, x);      // [pro bus]
       _n_push(mov, off, c3n);    // skip the bytecode
       BURN();
@@ -2842,7 +2842,7 @@ _n_burn(u3n_prog* pog_u, u3_noun bus, c3_ys mov, c3_ys off)
         BURN();
       }
       top  = _n_peek(off);
-      *top = u3nc_nock_on(*top, u3k(pog_u->lit_u.non[x]));  // [pro]
+      *top = u3nc_hint_on(*top, u3k(pog_u->lit_u.non[x]));  // [pro]
       _n_push(mov, off, c3n);
       BURN();
 
@@ -3339,6 +3339,7 @@ _n_ream(u3_noun kev)
 void
 u3n_ream()
 {
+  u3nc_Gen_d++;   //  the literals of the programs move: nc_bate
   u3_assert(u3R == &(u3H->rod_u));
   u3h_walk(u3R->byc.har_p, _n_ream);
 }
@@ -3463,6 +3464,7 @@ u3n_reclaim(void)
 void
 u3n_rewrite_compact()
 {
+  u3nc_Gen_d++;   //  the literals of the programs move: nc_bate
   u3h_relocate(&(u3R->byc.har_p));
 }
 
@@ -3480,6 +3482,7 @@ _n_feb(u3_noun kev)
 void
 u3n_free()
 {
+  u3nc_Gen_d++;   //  the literals of the programs go: nc_bate
   u3p(u3h_root) har_p = u3R->byc.har_p;
   u3h_walk(har_p, _n_feb);
   u3h_free(har_p);

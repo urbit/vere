@@ -882,7 +882,7 @@ OP3KK(SPY, a_h, b_h, d_h, BODY_SPY)
   u3_noun    x = reg[a_h];                                                      \
   _nc_tsc_beg();                                                                \
   u3t_off(noc_o);                                                               \
-  gop_u = _nc_entry(x, reg[b_h]);                                               \
+  gop_u = _nc_entry(x, reg[b_h], 0);                                            \
   u3t_on(noc_o);                                                                \
   _nc_tsc_end(nok_c);                                                           \
   _nc_stat(nok_d);                                                              \

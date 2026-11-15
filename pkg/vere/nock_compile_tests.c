@@ -2099,7 +2099,10 @@ _test_mean(void)
 **              inside the +mink jet, whose raw trace goes to Hoon's
 **              +mook: there the frame is a plain %mean.  +mock renders
 **              the same crash in C, like u3t_mook on +mink's trace;
-**              +mule and +mole run their traps through hooks.
+**              +mule and +mole run their traps through hooks.  A hint
+**              in an arm of a door, as a vane has it: from its second
+**              event on the entry is found by the formula, a literal of
+**              u3n's program, and the battery.
 */
 static c3_i
 _test_ska(void)
@@ -2121,6 +2124,14 @@ _test_ska(void)
   const c3_c* kok_c = "(mock [g(+< a) 9 2 0 1] ~)\n";
   const c3_c* vir_c = "|=  a=@\n"
                       "[(mule |.((dec a))) (mole |.((dec a)))]\n";
+  const c3_c* dor_c = "|=  a=@\n"
+                      "=/  cor\n"
+                      "  |_  s=@\n"
+                      "  ++  arm\n"
+                      "    ~>  %ska\n"
+                      "    (add s 2)\n"
+                      "  --\n"
+                      "[~(arm cor a) ~(arm cor +(a))]\n";
   u3_noun fol = u3nq(9, 2, 0, 1);
   c3_c    mik_c[256], mok_c[256];
   u3_noun cor, kin, kok;
@@ -2175,6 +2186,9 @@ _test_ska(void)
   ret_i = _test("ska mule mole", _gate(vir_c, 5), u3k(fol), 1) && ret_i;
   ret_i = _test("ska mule mole, crash", _gate(vir_c, 0), u3k(fol), 1)
        && ret_i;
+
+  ret_i = _test("ska door", _gate(dor_c, 5), u3k(fol), 1) && ret_i;
+  ret_i = _test("ska door, again", _gate(dor_c, 7), u3k(fol), 1) && ret_i;
 
   u3z(fol);
   return ret_i;
