@@ -36,12 +36,13 @@ _fu_crop(u3_noun cor, u3_funq fun_f)
   }
 }
 
-/* u3wfu_crop(): from u3n, in u3n.
+/* u3wfu_crop(): from u3n; a miss in compiled nock if a run of it is in
+**              progress, else in u3n.
 */
 u3_noun
 u3wfu_crop(u3_noun cor)
 {
-  return _fu_crop(cor, u3n_nock_on);
+  return _fu_crop(cor, u3nc_miss_nock);
 }
 
 /* u3ufu_crop(): from compiled nock, in compiled nock.

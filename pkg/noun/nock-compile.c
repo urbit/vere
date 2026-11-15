@@ -6070,6 +6070,22 @@ u3nc_gop_nock(u3_noun bus, u3_noun fol)
   return _nc_burn_out(gop_u, &bus, 1);
 }
 
+/* u3nc_miss_nock(): .*(bus fol) on a miss of a memoizing driver that u3n
+**                   kicked: compiled, through the entry, if a run of
+**                   compiled nock is in progress (the kick is from code that
+**                   run reached, under %bare or in a jet); in u3n if none
+**                   is, so that nothing is compiled that no %ska hint asked
+**                   for.  TRANSFERS.
+*/
+u3_noun
+u3nc_miss_nock(u3_noun bus, u3_noun fol)
+{
+  if ( !_nc_decl.dep_w ) {
+    return u3n_nock_on(bus, fol);
+  }
+  return u3nc_nock_on(bus, fol);
+}
+
 /* _nc_mean_run(): the arm of a deferred %mean trap on its arguments, a
 **                 list: its n-ary program, compiled if it isn't yet, run
 **                 on them.  TRANSFERS.

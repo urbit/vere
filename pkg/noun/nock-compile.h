@@ -231,6 +231,16 @@
       u3_noun
       u3nc_gop_nock(u3_noun bus, u3_noun fol);
 
+    /* u3nc_miss_nock(): .*(bus fol) on a miss of a memoizing driver that
+    **                   u3n kicked: u3nc_nock_on() if a run of compiled nock
+    **                   is in progress (the kick is from code that run
+    **                   reached, under %bare or in a jet), else
+    **                   u3n_nock_on(): nothing is compiled that no %ska hint
+    **                   asked for.  TRANSFERS.
+    */
+      u3_noun
+      u3nc_miss_nock(u3_noun bus, u3_noun fol);
+
     /* u3nc_mean(): the product of the arm of a deferred %mean trap
     **              [%meaf bell arg] on the trace stack, as ++toon: the
     **              n-ary program of bell on the arguments, in a
