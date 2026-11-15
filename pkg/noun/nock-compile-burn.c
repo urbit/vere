@@ -135,6 +135,17 @@ u3_noun _nj_jump ARGS CONV;
 #  define HOLE(fam, i)  ( (1 == _nj_k##i##_##fam) ? SLT(i) : VAL(i) )
 #endif
 
+//  NAT(pog): what runs the program pog for this road direction: what its
+//  record says (nj_side), or, without one, the stub for its bytecode
+//
+#ifdef U3NC_JIT
+#  define NAT(pog)  ({                                                          \
+    const u3nc_prog* _np = (pog);                                               \
+    const nj_side*   _ns = &_nj_sid_u[_np->byc_u.sid_h & _nj_sid_mas_h];        \
+    (OP_F)( (_ns->pog_u == _np) ? _ns->nat_f[_nc_dir] : (void*)BASE(cold) );    \
+  })
+#endif
+
 #define FRAME_T  nc_frame
 #define FRAME_W  c3_wiseof(FRAME_T)
 
@@ -524,7 +535,7 @@ u3_noun _nj_jump ARGS CONV;
 #  define GO(wha)  do {                                                         \
     pog_u = (wha).gop_u;                                                        \
     reg   = (wha).nex;                                                          \
-    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);                        \
+    MUSTTAIL return NAT(pog_u)(NEXT);                        \
   } while ( 0 )
 
 #  define FAR1(name)                                                            \
@@ -729,7 +740,7 @@ u3_noun _nj_jump ARGS CONV;
 #if 1 == _nc_mode
 #  define START()  return (nj_run){ pog_u, reg }
 #elif defined(U3NC_JIT)
-#  define START()  MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT)
+#  define START()  MUSTTAIL return NAT(pog_u)(NEXT)
 #else
 #  define START()  do {                                                         \
     NG_START();                                                                 \
@@ -859,7 +870,14 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 {
   u3a_road* rod_u = u3R;
   u3_post   emp_p = rod_u->cap_p;
+#ifdef U3NC_JIT
+  //  read before anything can bail: the flag is for this run only
+  //
+  c3_t      raw_t = _ne_raw_t;
+  u3_noun*  reg   = (_ne_raw_t = 0, PUSH(pog_u->tot_h));
+#else
   u3_noun*  reg   = PUSH(pog_u->tot_h);
+#endif
   FRAME_T*  fam_u;
   c3_y*     ip;
   c3_y      op_y;
@@ -879,6 +897,9 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
   fam_u->pog_u = NULL;
 #ifdef U3NC_JIT
   fam_u->ret_f = 0;
+  //  for a machine function of the emitter: a product in parts stays so
+  //
+  fam_u->des_h = raw_t;
 #endif
   _nc_stat_frame(fam_u);
   _nc_stat_pog(ent_d);
@@ -886,7 +907,7 @@ _nc_burn(u3nc_prog* pog_u, u3_noun* arg, c3_h len_h)
 
 #ifdef U3NC_JIT
   (void)ip; (void)op_y;
-  pro  = ((OP_F)pog_u->nat_f[_nc_dir])(0, reg, pog_u, rod_u, 0, 0, 0);
+  pro  = NAT(pog_u)(0, reg, pog_u, rod_u, 0, 0, 0);
 #else
   NG_START();
 #  ifdef U3NC_GAINS
@@ -974,13 +995,22 @@ OP(bail_fail) ARGS CONV
 static u3_noun
 OP(cold) ARGS CONV
 {
-  if ( pog_u->epo_h != _nj_epo_h ) {
-    pog_u->epo_h = _nj_epo_h;
-    pog_u->hot_h = 0;
-  }
-  if ( u3nc_Jit && (++pog_u->hot_h >= u3nc_Hot) ) {
-    _nj_lower(pog_u, _nc_dir);
-    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(PASS);
+  if ( u3nc_Jit ) {
+    nj_side* sid_u = _nj_side_get(pog_u);
+
+    if ( sid_u->epo_h != _nj_epo_h ) {
+      sid_u->epo_h = _nj_epo_h;
+      sid_u->hot_h = 0;
+    }
+    if ( ++sid_u->hot_h >= u3nc_Hot ) {
+      if ( !u3nc_Emit ) {
+        _nj_lower(pog_u, _nc_dir);
+        MUSTTAIL return NAT(pog_u)(PASS);
+      }
+      if ( (_ne_fail != sid_u->emi_f) && _ne_lower(pog_u) ) {
+        MUSTTAIL return NAT(pog_u)(PASS);
+      }
+    }
   }
   if ( !(++_nj_tic_h & 0xfff) ) {
     _nj_tick();
@@ -988,6 +1018,45 @@ OP(cold) ARGS CONV
 
   ip = pog_u->byc_u.ops_y;
   BURN();
+}
+
+//  emit: what a program with a machine function of the emitter
+//  (nock-compile-emit.c) runs as for bytecode, for stencils and for C,
+//  which enter a program through nat_f: the function on the arguments in
+//  the slots, and done with its product.  A product in parts stays in
+//  parts (_nc_ret) for a caller that takes them, and is consed for one
+//  that takes a noun, as DOX does.
+//
+static u3_noun
+OP(emit) ARGS CONV
+{
+  //  a full arena is emptied here, where no machine function is running;
+  //  the program is bytecode again
+  //
+  if ( _ne_evict_idle() ) {
+    MUSTTAIL return OP(cold)(PASS);
+  }
+
+  ne_duo   duo_u = _ne_run(pog_u, reg);
+  u3_noun  pro   = _ne_duo_pro(duo_u);
+  u3_noun  sap   = _ne_duo_sap(duo_u);
+
+  if ( sap ) {
+    FRAME_T* fam_u = TOP(FRAME_W);
+
+    if ( !fam_u->pog_u ) {
+      if ( fam_u->des_h ) {
+        _ne_sap = sap;
+      }
+      else {
+        pro = _nc_box(sap, pro);
+      }
+    }
+    else if ( u3_none != fam_u->key ) {
+      pro = _nc_box(sap, pro);
+    }
+  }
+  MUSTTAIL return OP(done)(ip, reg, pog_u, rod_u, pro, 0, 0);
 }
 #endif
 #endif
@@ -1896,13 +1965,27 @@ OP2(RTL, a_h, d_h, BODY_RTL)
   BURN();
 OP2K(RTS, a_h, b_h, BODY_RTS)
 
+//  RAW(f): the frame is the entry of a run for a machine function of the
+//  emitter, which takes the parts as they are (_ne_raw_t)
+//
+#ifdef U3NC_JIT
+#  define RAW(f)       (!(f)->pog_u && (f)->des_h)
+#  define RAW_SAP(sap)  (_ne_sap = (sap))
+#else
+#  define RAW(f)       0
+#  define RAW_SAP(sap)  ((void)0)
+#endif
+
 #define BODY_DOX(S)                                                             \
   u3_noun   pro = reg[b_h];                                                     \
   nc_frame* fam_u;                                                              \
   ZERO(b_h);                                                                    \
   SWEEP(S);                                                                     \
   fam_u = TOP(_nc_frame_w);                                                     \
-  if ( !fam_u->pog_u || (u3_none != fam_u->key) ) {                             \
+  if ( RAW(fam_u) ) {                                                           \
+    RAW_SAP(pog_u->lit_u.non[a_h]);                                             \
+  }                                                                             \
+  else if ( !fam_u->pog_u || (u3_none != fam_u->key) ) {                        \
     pro = _nc_box(pog_u->lit_u.non[a_h], pro);                                  \
   }                                                                             \
   DONE(pro);
@@ -2012,7 +2095,7 @@ u3_noun OP(CALE) ARGS CONV {
   pog_u = gop_u;
   reg   = (u3_noun*)ip;
   REST(pog_u, reg, VAL(1));
-  MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);
+  MUSTTAIL return NAT(pog_u)(NEXT);
 }
 
 u3_noun OP(JMPB) ARGS CONV {
@@ -2037,7 +2120,7 @@ u3_noun OP(JMPB) ARGS CONV {
     memmove(reg, nex, (num) * sizeof(u3_noun));                                 \
     REJOIN();                                                                   \
     REST(pog_u, reg, num);                                                      \
-    MUSTTAIL return ((OP_F)pog_u->nat_f[_nc_dir])(NEXT);                        \
+    MUSTTAIL return NAT(pog_u)(NEXT);                        \
   }
 JMPE(JMPE,  VAL(0))
 JMPE(JMPE1, 1)
@@ -2094,6 +2177,7 @@ u3_noun OP(JETP) ARGS CONV {
 #undef BASE
 #undef _nc_base
 #undef FRAME_T
+#undef NAT
 #undef FRAME_W
 #undef FRAME_BACK
 #undef REST
@@ -2223,3 +2307,5 @@ u3_noun OP(JETP) ARGS CONV {
 #undef BODY_RTS
 #undef RET
 #undef BODY_DOX
+#undef RAW
+#undef RAW_SAP

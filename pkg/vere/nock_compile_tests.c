@@ -110,6 +110,12 @@ _setup(void)
   if ( getenv("U3NC_JOP") ) {
     u3nc_Jop = atoi(getenv("U3NC_JOP"));
   }
+  //  U3NC_EMIT: native code by the emitter instead of the stencils
+  //
+  if ( getenv("U3NC_EMIT") && atoi(getenv("U3NC_EMIT")) ) {
+    u3nc_Emit = 1;
+    u3nc_Jit  = 1;
+  }
 #endif
 
   u3C.wag_h |= u3o_hashless;

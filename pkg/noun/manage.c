@@ -602,6 +602,10 @@ _pave_home(void)
   //
   _cm_dup_clear();
 
+  //  and the compiled programs, with what native code was made for them
+  //
+  u3nc_wipe();
+
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
   u3H->ver_d = U3V_VERLAT;
@@ -2530,6 +2534,18 @@ u3m_fault(void* adr_v, c3_i ser_i)
   //
   if ( 0 == ser_i ) {
     return 0;
+  }
+  //  the machine code of compiled nock, or the C it called, is out of
+  //  its stack, and the fault was too far from the stack pointer for the
+  //  stack overflow handler to claim it: the same signal
+  //
+  if ( c3y == u3nc_fault(adr_v) ) {
+#if !defined(U3_OS_windows) && !defined(NO_OVERFLOW)
+    sigsegv_leave_handler(_cm_overflow, NULL, NULL, NULL);
+#else
+    u3m_signal(c3__over);
+#endif
+    return 1;
   }
   //  this could be avoided by registering the loom bounds in libsigsegv
   //

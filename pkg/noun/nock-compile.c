@@ -4992,6 +4992,7 @@ _nc_prog_lay(c3_h byc_h, c3_h lit_h, c3_h dir_h, c3_h sot_h)
 **   and lower it when it has had enough (nock-compile-burn.c).
 ** _nj_lower(): make the native code of a program for a road direction.
 ** _nj_keep(), _nj_lose(): hand over, free the native code of a program.
+** _nj_sweep(): free the native code of the programs that are on no road.
 */
 static u3_noun _nc_burn_north_cold(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
                                    c3_w, c3_w, c3_w)
@@ -5002,6 +5003,179 @@ static u3_noun _nc_burn_south_cold(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
 static void _nj_lower(u3nc_prog* pog_u, c3_y dir_y);
 static void _nj_keep(u3nc_prog* gop_u, const u3nc_prog* pog_u);
 static void _nj_lose(u3nc_prog* pog_u);
+static void _nj_sweep(void);
+
+/* _ne_lower(): make the machine function of a program (the emitter,
+**              nock-compile-emit.c); whether it could.
+** _ne_run(): run it on its arguments, for C: the product, and above it,
+**            in the high half, the shape of a product that came in parts.
+** _ne_evict_idle(): if the arena of machine functions is full and none is
+**                   running, drop them all: whether it did.
+** _ne_lose(): free it.
+** _ne_fail: nj_side.emi_f of a program the emitter can't lower.
+** _ne_raw_t: the next _nc_burn() is for a machine function: a product in
+**            parts stays in parts, and
+** _ne_sap: its shape, from the DOX that returned it to that _nc_burn().
+*/
+struct _nj_side;
+
+/* ne_duo: a product and its shape, as C returns two nouns: in a register
+**         each on the 64-bit loom, in the halves of one on the 32-bit.
+*/
+#ifdef VERE64
+typedef struct { u3_noun pro; u3_noun sap; } ne_duo;
+#  define _ne_duo(pro, sap)  ((ne_duo){ (pro), (sap) })
+#  define _ne_duo_pro(duo)   ((duo).pro)
+#  define _ne_duo_sap(duo)   ((duo).sap)
+#else
+typedef c3_d ne_duo;
+#  define _ne_duo(pro, sap)  ((c3_d)(pro) | ((c3_d)(sap) << 32))
+#  define _ne_duo_pro(duo)   ((u3_noun)(duo))
+#  define _ne_duo_sap(duo)   ((u3_noun)((duo) >> 32))
+#endif
+
+static c3_t _ne_lower(u3nc_prog* pog_u);
+static c3_t _ne_evict_idle(void);
+static ne_duo _ne_run(u3nc_prog* pog_u, u3_noun* arg);
+static void _ne_lose(struct _nj_side* sid_u);
+static u3_noun _nc_burn_north_emit(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
+                                   c3_w, c3_w, c3_w)
+  __attribute__((preserve_none));
+static u3_noun _nc_burn_south_emit(c3_y*, u3_noun*, u3nc_prog*, u3a_road*,
+                                   c3_w, c3_w, c3_w)
+  __attribute__((preserve_none));
+#define _ne_fail  ((void*)1)
+static c3_t _ne_raw_t;
+u3_noun     _ne_sap;
+
+/* nj_side: what native code keeps of a program: off the loom, so that
+**          nothing of it is in a snapshot and a program is laid out as in
+**          a build without native code.  A program holds the index of its
+**          record (u3nc_prog.byc_u.sid_h), which may be anything: stale
+**          from an image another process wrote, or of a record that was
+**          wiped and given to another program.  So a record is good for a
+**          program only if it names it (_nj_side()).
+*/
+typedef struct _nj_side {
+  u3nc_prog* pog_u;       //  the program it is of, or 0: free
+  void*      nat_f[2];    //  what runs it, by road direction (north,
+                          //  south): the stub for its bytecode (cold),
+                          //  its stencils, or the adapter of its machine
+                          //  function (emit)
+  void*      emi_f;       //  its machine function, made by the emitter;
+                          //  0, or _ne_fail if it can't be made
+  void*      thk_f;       //  what machine functions call it through
+                          //  while it has none, or 0
+  c3_h       hot_h;       //  times it has started as bytecode
+  c3_h       epo_h;       //    in this stretch of the clock
+  c3_h       nex_h;       //  the next free record
+  c3_h       pad_h[3];
+} nj_side;
+
+static_assert(64 == sizeof(nj_side), "a record of native code is 64 bytes");
+
+//  a program is laid out as in a build without native code: the index of
+//  its record is in what is padding there, between the length of the
+//  bytecode and the pointer to it
+//
+static_assert(  offsetof(u3nc_prog, byc_u.ops_y)
+             == (offsetof(u3nc_prog, byc_u.len_h) + sizeof(c3_y*)),
+             "u3nc_prog keeps its layout");
+static_assert(  offsetof(u3nc_prog, byc_u.sid_h)
+             == (offsetof(u3nc_prog, byc_u.len_h) + sizeof(c3_h)),
+             "u3nc_prog keeps its layout");
+
+/* _nj_sid_u: the records, _nj_sid_mas_h + 1 of them, a power of two; the
+**            first is never given out.  They have names the stencils can
+**            share them by.
+*/
+static nj_side _nj_sid_non_u;
+nj_side*       _nj_sid_u     = &_nj_sid_non_u;
+c3_h           _nj_sid_mas_h = 0;
+static c3_h    _nj_sid_top_h = 1;   //  records ever given out, and the first
+static c3_h    _nj_sid_fre_h;       //  the first free one, or 0
+static c3_d    _nj_sid_use_d;       //  records in use
+
+/* _nj_side(): the record of a program, or 0.
+*/
+static inline nj_side*
+_nj_side(const u3nc_prog* pog_u)
+{
+  nj_side* sid_u = &_nj_sid_u[pog_u->byc_u.sid_h & _nj_sid_mas_h];
+
+  return ( sid_u->pog_u == pog_u ) ? sid_u : 0;
+}
+
+/* _nj_side_new(): a record for a program that has none.  The records may
+**                 move: no pointer to one outlives this.
+*/
+static __attribute__((noinline)) nj_side*
+_nj_side_new(u3nc_prog* pog_u)
+{
+  nj_side* sid_u;
+  c3_h     idx_h;
+
+  if ( _nj_sid_fre_h ) {
+    idx_h         = _nj_sid_fre_h;
+    _nj_sid_fre_h = _nj_sid_u[idx_h].nex_h;
+  }
+  else {
+    if ( _nj_sid_top_h > _nj_sid_mas_h ) {
+      c3_z     len_z = (c3_z)_nj_sid_mas_h + 1;
+      c3_z     new_z = ( &_nj_sid_non_u == _nj_sid_u ) ? 1024 : (2 * len_z);
+      nj_side* new_u = c3_calloc(new_z * sizeof(nj_side));
+
+      if ( &_nj_sid_non_u != _nj_sid_u ) {
+        memcpy(new_u, _nj_sid_u, len_z * sizeof(nj_side));
+        c3_free(_nj_sid_u);
+      }
+      _nj_sid_u     = new_u;
+      _nj_sid_mas_h = new_z - 1;
+    }
+    idx_h = _nj_sid_top_h++;
+  }
+
+  sid_u = &_nj_sid_u[idx_h];
+  memset(sid_u, 0, sizeof(*sid_u));
+  sid_u->pog_u    = pog_u;
+  sid_u->nat_f[0] = (void*)_nc_burn_north_cold;
+  sid_u->nat_f[1] = (void*)_nc_burn_south_cold;
+  pog_u->byc_u.sid_h = idx_h;
+  _nj_sid_use_d++;
+  return sid_u;
+}
+
+/* _nj_side_get(): the record of a program, made if it has none.
+*/
+static inline nj_side*
+_nj_side_get(u3nc_prog* pog_u)
+{
+  nj_side* sid_u = _nj_side(pog_u);
+
+  return sid_u ? sid_u : _nj_side_new(pog_u);
+}
+
+/* _nj_side_free(): a record is free again.
+*/
+static void
+_nj_side_free(nj_side* sid_u)
+{
+  sid_u->pog_u  = 0;
+  sid_u->nex_h  = _nj_sid_fre_h;
+  _nj_sid_fre_h = sid_u - _nj_sid_u;
+  _nj_sid_use_d--;
+}
+
+/* _nj_side_wipe(): no program has a record.
+*/
+static void
+_nj_side_wipe(void)
+{
+  memset(_nj_sid_u, 0, ((c3_z)_nj_sid_mas_h + 1) * sizeof(nj_side));
+  _nj_sid_top_h = 1;
+  _nj_sid_fre_h = 0;
+  _nj_sid_use_d = 0;
+}
 
 /* nj_run: what a body shared by native code tells its stencil to run
 **          next: a program on its slots, or nothing; or, from an op that
@@ -5031,10 +5205,7 @@ _nc_prog_fix(u3nc_prog* pog_u)
   pog_u->ali_y       = dat_y + lay_u.ali_w;
 #endif
 #ifdef U3NC_JIT
-  pog_u->nat_f[0]    = (void*)_nc_burn_north_cold;
-  pog_u->nat_f[1]    = (void*)_nc_burn_south_cold;
-  pog_u->hot_h       = 0;
-  pog_u->epo_h       = 0;
+  pog_u->byc_u.sid_h = 0;
 #endif
 }
 
@@ -6467,6 +6638,19 @@ u3nc_fail(c3_m mot_m)
             (c3_h)(_nc_decl.cur_d >> 32), (c3_h)_nc_decl.cur_d);
   }
   _nc_decl.arm_t = 0;
+
+#if defined(U3NC_JIT) && !defined(U3NC_STENCIL)
+  //  a signal abandons the road of the computation, and the roads within
+  //  it, with their programs, which nothing walks: what native code kept
+  //  of them goes here, and what a machine function was saying to the
+  //  bytecode it called (u3nc_take())
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    _nj_sweep();
+  }
+  _ne_raw_t = 0;
+  _ne_sap   = 0;
+#endif
   return ret_o;
 }
 
@@ -7224,6 +7408,7 @@ c3_t u3nc_Jit = 1;
 #else
 c3_t u3nc_Jit = 0;
 #endif
+c3_t u3nc_Emit = 0;
 c3_h u3nc_Hot = 500;
 c3_h u3nc_Win = 10000;
 c3_h u3nc_Jop = 0;
@@ -7238,7 +7423,7 @@ enum {
 
 #ifdef U3NC_JIT
 /* _nj_epo_h: the stretch of the clock we are in: the count of a program's
-**            starts as bytecode (u3nc_prog.hot_h) starts over in a new
+**            starts as bytecode (nj_side.hot_h) starts over in a new
 **            one, so that it measures how often the program runs now, not
 **            how long the process has been up.  Native code is some tens
 **            of times the size of bytecode, and code that isn't hot runs
@@ -7326,7 +7511,8 @@ void* const _nj_keep_v[] = {
   (void*)_nc_burn_north_done, (void*)_nc_burn_south_done,
   (void*)_nc_callee,          (void*)_nc_box,
   (void*)_nc_burn_north_bail_exit, (void*)_nc_burn_south_bail_exit,
-  (void*)_nc_burn_north_bail_fail, (void*)_nc_burn_south_bail_fail
+  (void*)_nc_burn_north_bail_fail, (void*)_nc_burn_south_bail_fail,
+  (void*)_nc_burn_north_cold, (void*)_nc_burn_south_cold
 };
 
 //  the interpreter of this compilation is never run
@@ -7335,8 +7521,32 @@ static void
 _nj_lower(u3nc_prog* pog_u, c3_y dir_y)
 {
 }
+
+static c3_t
+_ne_lower(u3nc_prog* pog_u)
+{
+  return 0;
+}
+
+static ne_duo
+_ne_run(u3nc_prog* pog_u, u3_noun* arg)
+{
+  return _ne_duo(0, 0);
+}
+
+static void
+_ne_lose(nj_side* sid_u)
+{
+}
+
+static c3_t
+_ne_evict_idle(void)
+{
+  return 0;
+}
 #  else
 #    include "nock-compile-jit.c"
+#    include "nock-compile-emit.c"
 #  endif
 #endif
 
@@ -8036,6 +8246,14 @@ _nc_take_ent_cb(u3_noun lis)
 void
 u3nc_take(u3p(u3h_root)* dir_p, u3p(u3h_root)* ent_p)
 {
+#ifdef U3NC_JIT
+  //  how a machine function wants the product of the bytecode it calls,
+  //  and the answer, are said in two globals that never outlive a road:
+  //  a signal can unwind between the saying and the hearing
+  //
+  _ne_raw_t = 0;
+  _ne_sap   = 0;
+#endif
   *dir_p = u3h_take_with(*dir_p, _nc_take_dir_cb);
   *ent_p = u3h_take_with(*ent_p, _nc_take_ent_cb);
 }
@@ -8436,6 +8654,33 @@ _nc_ream_ent_cb(u3_noun kev)
   }
 }
 
+/* u3nc_wipe(): no program has native code: for when the programs are
+**              gone wholesale (a new home road), or are not what the
+**              records of native code were made for (a restored image).
+*/
+void
+u3nc_wipe(void)
+{
+#if defined(U3NC_JIT) && !defined(U3NC_STENCIL)
+  _nj_reset();
+#endif
+}
+
+/* u3nc_fault(): whether a memory fault at an address is machine code of
+**               compiled nock, or the C it called, out of stack: for
+**               u3m_fault(), which makes it the signal that a stack
+**               overflow is.
+*/
+c3_o
+u3nc_fault(void* adr_v)
+{
+#if defined(U3NC_JIT) && !defined(U3NC_STENCIL)
+  return _ne_fault(adr_v);
+#else
+  return c3n;
+#endif
+}
+
 /* u3nc_ream(): refresh after restoring from checkpoint.
 */
 void
@@ -8443,6 +8688,7 @@ u3nc_ream(void)
 {
   u3nc_Gen_d++;   //  nc_bate
   u3_assert( u3R == &(u3H->rod_u) );
+  u3nc_wipe();
   u3h_walk(u3R->ska.dir_p, _nc_ream_dir_cb);
   u3h_walk(u3R->ska.ent_p, _nc_ream_ent_cb);
 }

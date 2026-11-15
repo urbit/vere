@@ -16,7 +16,7 @@
 ///
 /// The code runs as the interpreter's opcode functions do, with the same
 /// state in the same registers, on the same frames, so the two mix: a
-/// program is entered through the pointer in it (u3nc_prog.nat_f), which
+/// program is entered through the pointer in its record (nj_side.nat_f), which
 /// is its native code or the stub that runs its bytecode, and a frame says
 /// which of the two to go back to.  A program gets native code when it has
 /// started often enough as bytecode (u3nc_Hot): native code is some tens of
@@ -130,38 +130,93 @@ _nj_alloc(c3_w len_w)
   return (c3_y*)(blo_u + 1);
 }
 
-/* _nj_has(): whether a program has native code for a road direction.
+/* _nj_has(): whether a record has stencils for a road direction.
 */
 static inline c3_t
-_nj_has(const u3nc_prog* pog_u, c3_y dir_y)
+_nj_has(const nj_side* sid_u, c3_y dir_y)
 {
-  return pog_u->nat_f[dir_y]
-      != ( dir_y ? (void*)_nc_burn_south_cold : (void*)_nc_burn_north_cold );
+  void* nat_f = sid_u->nat_f[dir_y];
+
+  return (  nat_f != ( dir_y ? (void*)_nc_burn_south_cold
+                             : (void*)_nc_burn_north_cold )
+         && (nat_f != ( dir_y ? (void*)_nc_burn_south_emit
+                              : (void*)_nc_burn_north_emit )) );
 }
 
-/* _nj_keep(): the native code of pog_u goes to its copy gop_u, on a
-**             senior road: pog_u is left behind with its road.
+/* _nj_keep(): pog_u is left behind with its road, and its copy gop_u is
+**             on a senior one.  Stencils name nothing of their program, so
+**             they go to the copy, with the record.  A machine function of
+**             the emitter names its program: it is freed, and the copy
+**             starts over without one.
 */
 static void
 _nj_keep(u3nc_prog* gop_u, const u3nc_prog* pog_u)
 {
-  gop_u->nat_f[0] = pog_u->nat_f[0];
-  gop_u->nat_f[1] = pog_u->nat_f[1];
+  nj_side* sid_u = _nj_side(pog_u);
+
+  if ( !sid_u ) {
+    return;
+  }
+  _ne_lose(sid_u);
+
+  if ( _nj_has(sid_u, 0) || _nj_has(sid_u, 1) ) {
+    sid_u->pog_u = gop_u;
+    sid_u->hot_h = sid_u->epo_h = 0;
+    gop_u->byc_u.sid_h = sid_u - _nj_sid_u;
+  }
+  else {
+    _nj_side_free(sid_u);
+  }
 }
 
-/* _nj_lose(): free the native code of a program.
+/* _nj_drop(): free the native code of a record, and the record.
+*/
+static void
+_nj_drop(nj_side* sid_u)
+{
+  c3_y dir_y;
+
+  _ne_lose(sid_u);
+
+  for ( dir_y = 0; dir_y < 2; dir_y++ ) {
+    if ( _nj_has(sid_u, dir_y) ) {
+      nj_blob* blo_u = (nj_blob*)sid_u->nat_f[dir_y] - 1;
+
+      blo_u->nex_u = _nj_fre_u;
+      _nj_fre_u    = blo_u;
+    }
+  }
+  _nj_side_free(sid_u);
+}
+
+/* _nj_lose(): free the native code of a program, and its record.
 */
 static void
 _nj_lose(u3nc_prog* pog_u)
 {
-  c3_y dir_y;
+  nj_side* sid_u = _nj_side(pog_u);
 
-  for ( dir_y = 0; dir_y < 2; dir_y++ ) {
-    if ( _nj_has(pog_u, dir_y) ) {
-      nj_blob* blo_u = (nj_blob*)pog_u->nat_f[dir_y] - 1;
+  if ( sid_u ) {
+    _nj_drop(sid_u);
+  }
+}
 
-      blo_u->nex_u = _nj_fre_u;
-      _nj_fre_u    = blo_u;
+/* _nj_sweep(): free the native code and the records of the programs that
+**              are not on the home road, when it is the only road: a
+**              road abandoned by a signal leaves its programs unfreed and
+**              untaken, and their records name memory that is no
+**              program now.
+*/
+static void
+_nj_sweep(void)
+{
+  c3_h i_h;
+
+  for ( i_h = 1; i_h < _nj_sid_top_h; i_h++ ) {
+    nj_side* sid_u = &_nj_sid_u[i_h];
+
+    if ( sid_u->pog_u && !_nc_here(sid_u->pog_u, &(u3H->rod_u)) ) {
+      _nj_drop(sid_u);
     }
   }
 }
@@ -495,7 +550,7 @@ _nj_lower(u3nc_prog* pog_u, c3_y dir_y)
   u3_assert( tra_w == gen_u.tra_w );
 
   c3_free(gen_u.map_w);
-  pog_u->nat_f[dir_y] = gen_u.cod_y;
+  _nj_side_get(pog_u)->nat_f[dir_y] = gen_u.cod_y;
   if ( _nj_map_u ) {
     fflush(_nj_map_u);
   }

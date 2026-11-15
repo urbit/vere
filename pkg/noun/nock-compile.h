@@ -58,6 +58,17 @@
                                       //  for u3nc_stale()
       struct {
         c3_h       len_h;             //  length of bytecode (bytes)
+#ifdef U3NC_JIT
+        c3_h       sid_h;             //  where native code keeps its record
+                                      //  of the program, off the loom
+                                      //  (nj_side, nock-compile.c): of
+                                      //  this process, and never trusted,
+                                      //  since the record names its
+                                      //  program.  In four bytes that are
+                                      //  padding in a build without
+                                      //  native code, so that the layout
+                                      //  of a program is the same in both
+#endif
         c3_y*      ops_y;             //  bytecode
       } byc_u;
       struct {
@@ -73,14 +84,6 @@
         c3_h*      sot_h;             //  argument slots of all call sites
         c3_y*      kon_y;             //  whether each is consumed by its call
       } sot_u;
-#ifdef U3NC_JIT
-      void*      nat_f[2];            //  what runs it, by road direction
-                                      //  (north, south): its native code,
-                                      //  or the stub for its bytecode; of
-                                      //  this process
-      c3_h       hot_h;               //  times it has started as bytecode
-      c3_h       epo_h;               //    in this stretch of the clock
-#endif
 #ifdef U3NC_STAT
       c3_d       ent_d;               //  activations (u3nc_hot())
       c3_d       con_d;               //  cells made by its CONs (u3nc_hot())
@@ -272,6 +275,11 @@
       extern c3_h u3nc_Hot;
       extern c3_h u3nc_Win;
 
+    /* u3nc_Emit: native code is made by the emitter (nock-compile-emit.c),
+    **            not from the stencils.
+    */
+      extern c3_t u3nc_Emit;
+
     /* u3nc_Jop: experiments in the lowering, bits: 1, a stencil that ends
     **           "jcc next; jmp target" becomes "j!cc target" and falls
     **           through; 2, a HOP to the op that follows is nothing; 4,
@@ -283,6 +291,29 @@
 #ifdef U3NC_JIT
       void
       u3nc_jit_counts(void);
+
+
+      void
+      u3nc_emit_usage(c3_d* use_d, c3_d* top_d, c3_d* pek_d, c3_d* evi_d,
+                      c3_d* sid_d);
+
+      c3_d
+      u3nc_emit_stray(void);
+
+      void
+      u3nc_emit_limit(c3_d lim_d);
+
+      void
+      u3nc_emit_break(void);
+
+      void*
+      u3nc_emit_guard(c3_d* tri_d);
+
+      void
+      u3nc_emit_count(c3_t on_t);
+
+      c3_d
+      u3nc_emit_ran(const c3_c* nam_c);
 #endif
 
     /* u3nc_Gop: the unary program of the callee of the call by subject
@@ -413,6 +444,18 @@
     */
       void
       u3nc_free(void);
+
+    /* u3nc_fault(): whether a memory fault at an address is machine code
+    **               of compiled nock out of stack.
+    */
+      c3_o
+      u3nc_fault(void* adr_v);
+
+    /* u3nc_wipe(): no program has native code (a build with U3NC_JIT):
+    **              the programs are gone wholesale, or restored.
+    */
+      void
+      u3nc_wipe(void);
 
     /* u3nc_ream(): refresh after restoring from checkpoint.
     */
