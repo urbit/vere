@@ -3912,6 +3912,441 @@ _test_entry(void)
   return ret_i;
 }
 
+/* _trace_tag(): the tag of a frame of a raw trace, a deferred or constant
+**               %mean of compiled nock as %mean.
+*/
+static u3_noun
+_trace_tag(u3_noun fam)
+{
+  u3_noun tag = u3h(fam);
+
+  return ( (c3__meaf == tag) || (c3__meac == tag) ) ? c3__mean : tag;
+}
+
+/* _trace_both(): crash [bus fol] under u3n and u3nc and compare the raw
+**                traces frame by frame: as many frames, each with the
+**                tag of its peer, a %mean rendering to the same tank and
+**                any other frame the same noun; and the two rendered
+**                whole.  For u3m_soft().  Produces ~ if a run didn't
+**                crash, else [ok frames-u3n frames-u3nc first-difference].
+*/
+static u3_noun
+_trace_both(u3_noun arg)
+{
+  u3_noun bus, fol, i, j, pro;
+  u3_weak tan, tac;
+  c3_d    lan_d = 0, lac_d = 0, dif_d = 0;
+  c3_o    ok_o  = c3y;
+
+  u3x_cell(arg, &bus, &fol);
+
+  tan = _crash(u3n_nock_on, bus, fol);
+  tac = _crash(u3nc_nock_on, bus, fol);
+
+  if ( (u3_none == tan) || (u3_none == tac) ) {
+    if ( u3_none != tan ) u3z(tan);
+    if ( u3_none != tac ) u3z(tac);
+    u3z(arg);
+    return u3_nul;
+  }
+
+  for ( i = tan; u3_nul != i; i = u3t(i) ) lan_d++;
+  for ( j = tac; u3_nul != j; j = u3t(j) ) lac_d++;
+
+  if ( lan_d != lac_d ) {
+    ok_o = c3n;
+  }
+
+  for ( i = tan, j = tac;
+        (c3y == ok_o) && (u3_nul != i);
+        i = u3t(i), j = u3t(j), dif_d++ )
+  {
+    u3_noun a = u3h(i), b = u3h(j);
+
+    if ( _trace_tag(a) != _trace_tag(b) ) {
+      ok_o = c3n;
+    }
+    else if ( c3__mean != _trace_tag(a) ) {
+      ok_o = u3r_sing(a, b);
+    }
+    else {
+      u3_noun ren = u3t_mook(u3nc(u3k(a), u3_nul));
+      u3_noun rec = u3t_mook(u3nc(u3k(b), u3_nul));
+
+      ok_o = u3r_sing(ren, rec);
+      u3z(ren); u3z(rec);
+    }
+    if ( c3n == ok_o ) {
+      break;
+    }
+  }
+
+  if ( c3y == ok_o ) {
+    u3_noun ren = u3t_mook(u3k(tan));
+    u3_noun rec = u3t_mook(u3k(tac));
+
+    ok_o = u3r_sing(ren, rec);
+    u3z(ren); u3z(rec);
+  }
+
+  pro = u3nq(ok_o, u3i_chub(lan_d), u3i_chub(lac_d), u3i_chub(dif_d));
+  u3z(tan); u3z(tac);
+  u3z(arg);
+  return pro;
+}
+
+/* _test_trace(): [bus fol] crashes, and the trace of compiled nock is
+**                that of u3n, frame for frame (_trace_both()).  TRANSFERS.
+*/
+static c3_i
+_test_trace(const c3_c* nam_c, u3_noun bus, u3_noun fol)
+{
+  u3_noun gon = u3m_soft(0, _trace_both, u3nc(bus, fol));
+  c3_i    ret_i = 0;
+
+  if ( 0 != u3h(gon) ) {
+    u3_pier_punt_goof(nam_c, gon);
+    fprintf(stderr, "test %s: failed\r\n", nam_c);
+    return 0;
+  }
+
+  if ( u3_nul == u3t(gon) ) {
+    fprintf(stderr, "test %s: no crash\r\n", nam_c);
+  }
+  else {
+    u3_noun ok, lan, lac, dif;
+
+    u3x_qual(u3t(gon), &ok, &lan, &lac, &dif);
+    if ( c3y == ok ) {
+      fprintf(stderr, "test %s: ok (%" PRIu64 " frames)\r\n", nam_c,
+              u3r_chub(0, lan));
+      ret_i = 1;
+    }
+    else {
+      fprintf(stderr, "test %s: traces differ: u3n %" PRIu64 " frames, u3nc %"
+                      PRIu64 ", first difference at %" PRIu64 "\r\n", nam_c,
+              u3r_chub(0, lan), u3r_chub(0, lac), u3r_chub(0, dif));
+    }
+  }
+
+  u3z(gon);
+  return ret_i;
+}
+
+/* _tax_kept(): run [bus fol] compiled with a frame on the trace stack:
+**              whether the trace stack is the same noun after.  For
+**              u3m_soft().
+*/
+static u3_noun
+_tax_kept(u3_noun arg)
+{
+  u3_noun bus, fol, tax, pro;
+  c3_o    ok_o;
+
+  u3x_cell(arg, &bus, &fol);
+  u3t_push(u3nc(c3__lose, u3i_string("the frame before")));
+  tax = u3R->bug.tax;
+
+  pro  = u3nc_nock_on(u3k(bus), u3k(fol));
+  ok_o = __(tax == u3R->bug.tax);
+
+  u3t_drop();
+  u3z(pro);
+  u3z(arg);
+  return ok_o;
+}
+
+/* _test_kept(): [bus fol] runs through compiled, and leaves the trace
+**               stack as it found it.  TRANSFERS.
+*/
+static c3_i
+_test_kept(const c3_c* nam_c, u3_noun bus, u3_noun fol)
+{
+  u3_noun gon   = u3m_soft(0, _tax_kept, u3nc(bus, fol));
+  c3_i    ret_i = (0 == u3h(gon)) && (c3y == u3t(gon));
+
+  if ( 0 != u3h(gon) ) {
+    u3_pier_punt_goof(nam_c, gon);
+  }
+  else {
+    u3z(gon);
+  }
+  fprintf(stderr, "test %s: %s\r\n", nam_c, ret_i ? "ok" : "failed");
+  return ret_i;
+}
+
+/* _test_tail(): the calls made tail calls (_nc_tails() in nock-compile.c):
+**               those whose product is only consed, as a tail, as a head,
+**               under two conses, in a mutual recursion, in a tree,
+**               through another function, a jet and a memoized call, with
+**               a half made after the call (left alone), a million deep;
+**               those inside trace hints, in code compiled with !:, a
+**               million deep; both at once; the indirect call in tail
+**               position, of a gate picked at run time so that the
+**               analysis cannot know it.  Each against u3n; then the
+**               trace of a crash inside a chain of them against u3n's,
+**               frame for frame: deep in a loop, in a mutual recursion,
+**               through a memoized call, through a jet that runs nock
+**               (+mule, +mock, whose products are the traces), with traps
+**               pushed as their arms; and the trace stack after a run
+**               that returns.
+*/
+static c3_i
+_test_tail(void)
+{
+#define _tail_list                                                              \
+  "=/  l=(list @)\n"                                                            \
+  "  =|  l=(list @)\n"                                                          \
+  "  |-  ^-  (list @)\n"                                                        \
+  "  ?:  =(0 n)  l\n"                                                           \
+  "  $(n (dec n), l [n l])\n"
+#define _tail_evod                                                              \
+  "=<  (even n)\n"                                                              \
+  "|%\n"                                                                        \
+  "++  even  |=(a=@ ^-(* ?:(=(0 a) ~ [%e (odd (dec a))])))\n"                   \
+  "++  odd   |=(a=@ ^-(* ?:(=(0 a) ~ [%o a (even (dec a))])))\n"                \
+  "--\n"
+#define _tail_evod_dies                                                         \
+  "=<  (even n)\n"                                                              \
+  "|%\n"                                                                        \
+  "++  even  |=(a=@ ^-(* ?:(=(0 a) !! (odd (dec a)))))\n"                       \
+  "++  odd   |=(a=@ ^-(* ?:(=(0 a) !! [%o a (even (dec a))])))\n"               \
+  "--\n"
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+    c3_w        sam_w;
+    c3_y        how_y;    //  0: against u3n; 1: the trace of its crash;
+                          //  2: 0, and the trace stack kept
+  } cas_u[] = {
+    { "cons",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  (list @)\n?~  l  ~\n[+(i.l) $(l t.l)]\n",
+      1000, 0 },
+    { "cons, a million",
+      "|=  n=@\n" _tail_list
+      "=/  m=(list @)\n  |-  ^-  (list @)\n  ?~  l  ~\n  [+(i.l) $(l t.l)]\n"
+      "(lent m)\n",
+      1000000, 0 },
+    { "cons, shared",
+      "|=  n=@\n" _tail_list
+      "=/  f  |=(l=(list @) ^-((list @) ?~(l ~ [+(i.l) $(l t.l)])))\n"
+      "[(f l) (f l) l]\n",
+      1000, 0 },
+    { "cons, end",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  n\n[+(i.l) $(l t.l)]\n",
+      1000, 0 },
+    { "cons, head",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[$(l t.l) i.l]\n",
+      1000, 0 },
+    { "cons, two",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[i.l +(i.l) $(l t.l)]\n",
+      1000, 0 },
+    { "cons, two, head",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[[i.l $(l t.l)] i.l]\n",
+      1000, 0 },
+    { "cons, three",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[i.l [$(l t.l) 7] 8]\n",
+      1000, 0 },
+    { "cons, late half",
+      "|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[$(l t.l) [i.l 7]]\n",
+      1000, 0 },
+    { "cons, mutual",
+      "|=  n=@\n" _tail_evod,
+      1001, 0 },
+    { "cons, tree",
+      "|=  n=@\n" _tail_list
+      "=/  t=*  [l [l 3] l]\n"
+      "|-  ^-  *\n?@  t  +(t)\n[$(t -.t) $(t +.t)]\n",
+      300, 0 },
+    { "cons, other function and jet",
+      "|=  n=@\n" _tail_list
+      "=/  g  |=(a=(list @) ^-((list @) (weld a a)))\n"
+      "=/  f  |=(a=(list @) ^-((list @) [0 1 (g a)]))\n"
+      "(f l)\n",
+      1000, 0 },
+    { "cons, memoized",
+      "|=  n=@\n" _tail_list
+      "=/  g  |=(a=(list @) ^-((list @) ?~(a ~ [+(i.a) $(a t.a)])))\n"
+      "=/  f  |=(a=(list @) ^-((list @) [0 (g a)]))\n"
+      "=/  h  |=(a=(list @) ^-((list @) ?~(a ~ [i.a ~+($(a t.a))])))\n"
+      "[~+((f l)) ~+((f l)) ~+((g l)) (h (scag 50 l))]\n",
+      1000, 0 },
+    { "nok",
+      "|=  n=@\n"
+      "=/  step\n"
+      "  |=  [fs=(list *) n=@]\n"
+      "  ^-  *\n"
+      "  ?:  =(0 n)  [7 fs]\n"
+      "  =/  f  (snag (mod n 2) fs)\n"
+      "  .*([f fs (dec n)] [9 2 10 [6 0 3] 0 2])\n"
+      "(step ~[step step] n)\n",
+      1000, 0 },
+    { "nok, a million",
+      "|=  n=@\n"
+      "=/  step\n"
+      "  |=  [fs=(list *) n=@]\n"
+      "  ^-  *\n"
+      "  ?:  =(0 n)  7\n"
+      "  =/  f  (snag (mod n 2) fs)\n"
+      "  .*([f fs (dec n)] [9 2 10 [6 0 3] 0 2])\n"
+      "(step ~[step step] n)\n",
+      1000000, 0 },
+    { "nok, the same noun twice",
+      "|=  n=@\n"
+      "=/  go  |=(a=* ^-(* .*(a a)))\n"
+      "(go (snag (mod n 2) `(list *)`~[[1 n 42] [1 n 43]]))\n",
+      5, 0 },
+    { "hint",
+      "!:\n|=  n=@\n=/  a=@  0\n|-  ^-  @\n?:  =(0 n)  a\n"
+      "$(n (dec n), a (add a n))\n",
+      1000, 2 },
+    { "hint, a million",
+      "!:\n|=  n=@\n=/  a=@  0\n|-  ^-  @\n?:  =(0 n)  a\n"
+      "$(n (dec n), a (add a n))\n",
+      1000000, 2 },
+    { "hint, cons",
+      "!:\n|=  n=@\n" _tail_list
+      "|-  ^-  (list @)\n?~  l  ~\n[+(i.l) $(l t.l)]\n",
+      1000, 2 },
+    { "hint, cons, a million",
+      "!:\n|=  n=@\n" _tail_list
+      "=/  m=(list @)\n  |-  ^-  (list @)\n  ?~  l  ~\n  [+(i.l) $(l t.l)]\n"
+      "(lent m)\n",
+      1000000, 2 },
+    { "hint, cons, late half",
+      "!:\n|=  n=@\n" _tail_list
+      "|-  ^-  *\n?~  l  ~\n[$(l t.l) [i.l 7]]\n",
+      1000, 2 },
+    { "hint, mutual",
+      "!:\n|=  n=@\n" _tail_evod,
+      1001, 2 },
+    { "hint, memoized",
+      "!:\n|=  n=@\n"
+      "=/  f  |=(a=@ ^-(@ ?:(=(0 a) 7 $(a (dec a)))))\n"
+      "[~+((f n)) ~+((f n))]\n",
+      1000, 2 },
+    { "hint, traps",
+      "|=  n=@\n|-  ^-  @\n~>  %mean.|.(leaf+(scow %ud n))\n~_  leaf+\"foo\"\n"
+      "?:  =(n 0)  7\n$(n (dec n))\n",
+      1000, 2 },
+    { "hint, +mule",
+      "!:\n|=  n=@\n"
+      "=/  f  |=(a=@ ^-(@ ?:(=(0 a) 7 $(a (dec a)))))\n"
+      "=/  g  |=(a=@ ^-(@ ?:(=(0 a) !! $(a (dec a)))))\n"
+      "=/  r=(list *)  ~\n"
+      "|-  ^-  (list *)\n"
+      "?:  =(0 n)  r\n"
+      "$(n (dec n), r [(mule |.((f 9))) (mule |.((g 9))) r])\n",
+      20, 2 },
+    { "trace, loop",
+      "!:\n|=  n=@\n|-  ^-  @\n?:  =(0 n)  !!\n$(n (dec n))\n",
+      100, 1 },
+    { "trace, loop, 3.000",
+      "!:\n|=  n=@\n|-  ^-  @\n?:  =(0 n)  !!\n$(n (dec n))\n",
+      3000, 1 },
+    { "trace, cons",
+      "!:\n|=  n=@\n" _tail_list
+      "|-  ^-  (list @)\n?~  l  !!\n[+(i.l) $(l t.l)]\n",
+      300, 1 },
+    { "trace, mutual",
+      "!:\n|=  n=@\n" _tail_evod_dies,
+      301, 1 },
+    { "trace, memoized",
+      "!:\n|=  n=@\n"
+      "=/  f  |=(a=@ ^-(@ ?:(=(0 a) !! $(a (dec a)))))\n"
+      "=/  g  |=(a=@ ^-(@ ?:(=(0 a) 7 $(a (dec a)))))\n"
+      "[~+((g n)) ~+((g n)) ~+((f n))]\n",
+      300, 1 },
+    { "trace, traps",
+      "|=  n=@\n|-  ^-  @\n~>  %mean.|.(leaf+(scow %ud n))\n~_  leaf+\"foo\"\n"
+      "?:  =(n 0)  !!\n$(n (dec n))\n",
+      300, 1 },
+    { "trace, traps, spots",
+      "!:\n|=  n=@\n|-  ^-  @\n~>  %mean.|.(leaf+(scow %ud n))\n"
+      "?:  =(n 0)  !!\n$(n (dec n))\n",
+      300, 1 },
+    { "trace, after +mule",
+      "!:\n|=  n=@\n"
+      "=/  f  |=(a=@ ^-(@ ?:(=(0 a) 7 $(a (dec a)))))\n"
+      "=/  g  |=(a=@ ^-(@ ?:(=(0 a) !! $(a (dec a)))))\n"
+      "|-  ^-  @\n"
+      "?:  =(0 n)  (g 5)\n"
+      "=/  r  [(mule |.((f 9))) (mule |.((g 9)))]\n"
+      "$(n (dec n))\n",
+      20, 1 },
+  };
+#undef _tail_list
+#undef _tail_evod
+#undef _tail_evod_dies
+  c3_i ret_i = 1;
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < (sizeof(cas_u) / sizeof(cas_u[0])); i_w++ ) {
+    u3_noun fol = u3nq(9, 2, 0, 1);
+    c3_c    nam_c[64];
+
+    snprintf(nam_c, sizeof(nam_c), "tail %s", cas_u[i_w].nam_c);
+
+    if ( 1 == cas_u[i_w].how_y ) {
+      ret_i = _test_trace(nam_c, _gate(cas_u[i_w].src_c, cas_u[i_w].sam_w), fol)
+           && ret_i;
+      continue;
+    }
+
+    ret_i = _test(nam_c, _gate(cas_u[i_w].src_c, cas_u[i_w].sam_w), u3k(fol), 1)
+         && ret_i;
+
+    if ( 2 == cas_u[i_w].how_y ) {
+      snprintf(nam_c, sizeof(nam_c), "tail %s: trace stack", cas_u[i_w].nam_c);
+      ret_i = _test_kept(nam_c, _gate(cas_u[i_w].src_c, cas_u[i_w].sam_w),
+                         u3k(fol))
+           && ret_i;
+    }
+    u3z(fol);
+  }
+
+  //  a call under twenty spots, one for each =/ before it: more hints
+  //  open than a nibble counts
+  //
+  {
+    c3_c    src_c[2048], *out_c = src_c;
+    u3_noun fol = u3nq(9, 2, 0, 1);
+
+    out_c += sprintf(out_c, "!:\n|=  n=@\n|-  ^-  @\n?:  =(0 n)  %s\n"
+                            "=/  a0  n\n", "7");
+    for ( i_w = 1; i_w < 20; i_w++ ) {
+      out_c += sprintf(out_c, "=/  a%u  a%u\n", (unsigned)i_w,
+                       (unsigned)(i_w - 1));
+    }
+    sprintf(out_c, "$(n (dec a19))\n");
+
+    ret_i = _test("tail hint, twenty", _gate(src_c, 300), u3k(fol), 1)
+         && ret_i;
+    ret_i = _test_kept("tail hint, twenty: trace stack", _gate(src_c, 300),
+                       u3k(fol))
+         && ret_i;
+
+    //  the same crashing: !! for the 7
+    //
+    {
+      c3_c* sev_c = strstr(src_c, "  7\n");
+      memmove(sev_c + 4, sev_c + 3, strlen(sev_c + 3) + 1);
+      memcpy(sev_c, "  !!", 4);
+    }
+    ret_i = _test_trace("tail trace, twenty", _gate(src_c, 100), fol) && ret_i;
+  }
+
+  return ret_i;
+}
+
+
 /* _test_ska(): the %ska hint runs its formula compiled, from u3n: the
 **              raw trace of a crash inside it carries a deferred %mean
 **              frame, which only compiled nock pushes.  (The trap sits
@@ -4870,6 +5305,12 @@ main(int argc, char* argv[])
     u3nc_Self = 0;
   }
 
+  //  U3NC_TAILS: the tests of the calls made tail calls, and nothing else
+  //
+  if ( getenv("U3NC_TAILS") ) {
+    return _test_tail() ? 0 : 1;
+  }
+
   //  U3NC_JETS: the tests of the jets, and nothing else; =1 all of
   //  them, else a comma-separated list of their names
   //
@@ -5032,6 +5473,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_alias() ) {
+    exit(1);
+  }
+
+  if ( !_test_tail() ) {
     exit(1);
   }
 
