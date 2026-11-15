@@ -2684,6 +2684,23 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _ne_put(gen_u, d_h, out_y);
     } break;
 
+    //  a part of a cell, uncounted: an alias of the cell's reference to
+    //  it (_nc_alias()), good while the ops that read it read as the
+    //  bytecode does: the sources before any release, and a gain of one
+    //  that is kept first thing
+    //
+    case _nc_hea:
+    case _nc_taa: {
+      c3_y reg_y = _ne_get(gen_u, a_h, nx_t3);
+      c3_y out_y = _ne_out(gen_u, d_h, nx_t2);
+
+      _nx_mov_rr(A, nx_t0, reg_y);
+      _nx_shl_ri(A, nx_t0, 2);
+      _nx_ldx(A, out_y, nx_bas, nx_t0,
+              (_nc_hea == op_u->fam_y) ? _ne_c_hed : _ne_c_tel);
+      _ne_put(gen_u, d_h, out_y);
+    } break;
+
     case _nc_her:
     case _nc_tar: {
       c3_y reg_y = _ne_get(gen_u, a_h, nx_t3);
