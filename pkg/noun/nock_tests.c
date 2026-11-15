@@ -122,6 +122,16 @@ _defer_fail(u3_noun arg)
   return u3m_bail(c3__exit);
 }
 
+/* _defer_open_fail(): u3m_soft_with() hook: opens the window, then fails
+**                     as a take out of memory on the home road does.
+*/
+static void
+_defer_open_fail(void)
+{
+  u3a_defer_open();
+  u3m_signal(c3__meme);
+}
+
 /* _test_defer(): deferred gains across a successful exit into home.
 **
 **   each armed step must leave [hom]'s count where an unarmed control
@@ -255,6 +265,26 @@ _test_defer(void)
 
   if ( (bas_w + 1) != u3a_use(hom) ) {
     fprintf(stderr, "defer: window open after failure\r\n");
+    ret_i = 0;
+  }
+
+  u3z(arg);
+
+  //  a failure past the hook, in the takes, finds the window open:
+  //  u3m_soft_with() shuts it, and the next event opens it again
+  //
+  gon = u3m_soft_with(0, _defer_pair, u3_nul, _defer_open_fail);
+
+  if ( 0 == u3h(gon) ) {
+    fprintf(stderr, "defer: no failure past the hook\r\n");
+    ret_i = 0;
+  }
+
+  u3z(gon);
+  arg = u3k(hom);
+
+  if ( (bas_w + 1) != u3a_use(hom) ) {
+    fprintf(stderr, "defer: window open after a failure past the hook\r\n");
     ret_i = 0;
   }
 
