@@ -1802,6 +1802,244 @@ _test_sand(void)
   return ret_i;
 }
 
+/* _test_alias(): fetches that gain nothing (_nc_alias()): a part taken
+**                from a cell and read after something that would have
+**                freed it, had the cell alone held it.  The nouns are made
+**                by jets inside the run, and each case runs once without a
+**                sand zone, so that they are counted nouns of the road it
+**                runs on, which unifying equality releases and frees, and
+**                once with the zone as it is set.  An equal copy is made
+**                before the owner, which is then the one that loses its
+**                parts.  After the equality a list is made that takes the
+**                cells it freed, and only then is the part read: in the
+**                cases with a copy made first, with a call, with a jet and
+**                with a part of the other operand, a part that crossed
+**                the equality uncounted comes back as another noun.
+*/
+static c3_i
+_test_alias(void)
+{
+  static const struct {
+    const c3_c* nam_c;
+    const c3_c* src_c;
+  } cas_u[] = {
+    //  the owner is compared with an equal copy, directly: the copy made
+    //  after it, and before it
+    //
+    { "alias, equality",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (gulf 1 n)\n"
+      "=/  b  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "?.  =(a b)  [1 a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  p  [2 a c]\n"
+      "[i.p a c]\n" },
+    { "alias, equality, copy first",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  b  (gulf 1 n)\n"
+      "=/  a  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "?.  =(a b)  [1 a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  p  [2 a c]\n"
+      "[i.p a c]\n" },
+    //  by a gate that is called
+    //
+    { "alias, equality in a call",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  eq  |=  [k=@ x=* y=*]\n"
+      "        ^-  ?\n"
+      "        ?:  =(0 k)  =(x y)\n"
+      "        $(k (dec k))\n"
+      "=/  b  (gulf 1 n)\n"
+      "=/  a  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "?.  (eq 2 a b)  [1 a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  p  [2 a c]\n"
+      "[i.p a c]\n" },
+    //  by a jet that compares: a member of a set, a key of a map
+    //
+    { "alias, equality in +has:in",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  b  (gulf 1 n)\n"
+      "=/  s  (~(put in *(set (list @))) b)\n"
+      "=/  a  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "?.  (~(has in s) a)  [1 a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  p  [2 a c]\n"
+      "[i.p a c]\n" },
+    { "alias, equality in +get:by",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  m  (~(put by *(map (list @) @)) (gulf 1 n) 7)\n"
+      "=/  a  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "=/  g  (~(get by m) a)\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  p  [2 a c g]\n"
+      "[i.p a c g]\n" },
+    //  two parts compared with each other, and read after
+    //
+    { "alias, operands",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (turn (gulf 1 2) |=(k=@ (gulf 1 n)))\n"
+      "?~  a  0\n"
+      "?~  t.a  0\n"
+      "=/  p  i.a\n"
+      "=/  q  i.t.a\n"
+      "?.  =(p q)  [1 a]\n"
+      "?~  p  [2 a]\n"
+      "?~  q  [3 a]\n"
+      "[i.p t.q a]\n" },
+    //  a part of an operand that lives on, taken before the equality
+    //  that replaces the parts of one operand by those of the other: of
+    //  the first operand, and of the second
+    //
+    { "alias, part of an operand",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (turn (gulf 1 2) |=(k=@ (gulf 1 n)))\n"
+      "?~  a  0\n"
+      "?~  t.a  0\n"
+      "=/  p  i.a\n"
+      "?~  p  0\n"
+      "=/  pt  t.p\n"
+      "?.  =(p i.t.a)  [1 p a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  pt  [2 p c]\n"
+      "[i.pt p c]\n" },
+    { "alias, part of the other operand",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (turn (gulf 1 2) |=(k=@ (gulf 1 n)))\n"
+      "?~  a  0\n"
+      "?~  t.a  0\n"
+      "=/  q  i.t.a\n"
+      "?~  q  0\n"
+      "=/  qt  t.q\n"
+      "?.  =(i.a q)  [1 q a]\n"
+      "=/  c  (gulf 100 300)\n"
+      "?~  qt  [2 q c]\n"
+      "[i.qt q c]\n" },
+    //  an alias across a branch: the owner dies on one edge, and the
+    //  alias is returned, consed, or dropped on the others
+    //
+    { "alias, branch",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (gulf 1 n)\n"
+      "?~  a  0\n"
+      "=/  p  t.a\n"
+      "?:  =(0 (mod n 2))\n"
+      "  p\n"
+      "[p a]\n" },
+    { "alias, branches in a loop",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (turn (gulf 1 n) |=(k=@ [[k +(k)] (gulf 1 k)]))\n"
+      "=/  acc=(list *)  ~\n"
+      "|-  ^-  (list *)\n"
+      "?~  a  acc\n"
+      "=/  p  -.i.a\n"
+      "?:  =(-.p 2)\n"
+      "  $(a t.a, acc [1 acc])\n"
+      "?:  =(+.p 4)\n"
+      "  $(a t.a, acc [i.a acc])\n"
+      "?:  =(-.p 5)\n"
+      "  $(a t.a, acc [+.i.a acc])\n"
+      "$(a t.a, acc [p acc])\n" },
+    { "alias, owner dies on an edge",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  a  (turn (gulf 1 n) |=(k=@ [[k +(k)] (gulf 1 k)]))\n"
+      "=/  acc=(list *)  ~\n"
+      "|-  ^-  (list *)\n"
+      "?~  a  acc\n"
+      "=/  p  -.i.a\n"
+      "=/  q  +.i.a\n"
+      "?:  =(0 (mod -.p 3))\n"
+      "  $(a t.a, acc [p acc])\n"
+      "?:  =(1 (mod -.p 3))\n"
+      "  $(a t.a, acc [q i.a acc])\n"
+      "?~  q  $(a t.a)\n"
+      "$(a t.a, acc [i.q +.p acc])\n" },
+    //  aliases of parts of aliases, tested and added up
+    //
+    { "alias, chains",
+      "|=  n=@\n"
+      "^-  @\n"
+      "=/  l  (turn (gulf 1 n) |=(a=@ [[a +(a)] [a a] a]))\n"
+      "=/  acc  0\n"
+      "|-  ^-  @\n"
+      "?~  l  acc\n"
+      "?:  =(-<.i.l 3)  $(l t.l, acc (add acc ->.i.l))\n"
+      "?:  =(+>.i.l 4)  $(l t.l, acc (add acc +<-.i.l))\n"
+      "$(l t.l, acc +(acc))\n" },
+    //  cells taken apart and consed again: the cells of lists that no one
+    //  else holds are reused beside aliases
+    //
+    { "alias, reuse",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  l  (gulf 1 n)\n"
+      "=/  m  (turn l |=(a=@ [a +(a) (add a 2)]))\n"
+      ":+  |-  ^-  (list *)\n"
+      "    ?~  m  ~\n"
+      "    [[+>.i.m +<.i.m -.i.m] $(m t.m)]\n"
+      "  =|  out=(list @)\n"
+      "  |-  ^-  (list @)\n"
+      "  ?~  l  out\n"
+      "  $(l t.l, out [i.l out])\n"
+      "=/  k  (turn (gulf 1 n) |=(a=@ [a a]))\n"
+      "|-  ^-  (list *)\n"
+      "?~  k  ~\n"
+      "?:  =(-.i.k 3)  [i.k $(k t.k)]\n"
+      "[[+.i.k -.i.k] $(k t.k)]\n" },
+    //  indirect atoms: a part that is one, compared, added to and kept
+    //
+    { "alias, indirect atoms",
+      "|=  n=@\n"
+      "^-  *\n"
+      "=/  l  (turn (gulf 1 n) |=(a=@ [(bex (add 70 a)) (bex (add 71 a))]))\n"
+      "=/  acc=@  0\n"
+      "=/  out=(list @)  ~\n"
+      "|-  ^-  *\n"
+      "?~  l  [acc out]\n"
+      "?:  =(-.i.l +.i.l)  $(l t.l)\n"
+      "?:  =(0 (mod n 2))\n"
+      "  $(l t.l, acc (add acc -.i.l), out [+.i.l out])\n"
+      "$(l t.l, acc +(acc), out [-.i.l out])\n" },
+  };
+  c3_w san_w = u3C.san_w;
+  c3_i ret_i = 1;
+  c3_w i_w, k_w;
+
+  for ( i_w = 0; ret_i && (i_w < (sizeof(cas_u) / sizeof(cas_u[0]))); i_w++ ) {
+    for ( k_w = 0; ret_i && (k_w < 2); k_w++ ) {
+      u3_noun cor = _gate(cas_u[i_w].src_c, 6 + k_w);
+
+      u3C.san_w = k_w ? san_w : 0;
+      ret_i = _test(cas_u[i_w].nam_c, cor, u3nq(9, 2, 0, 1), 1);
+    }
+  }
+
+  u3C.san_w = san_w;
+  return ret_i;
+}
+
 /* _test_rung(): a core registered after a function calling it was analyzed.
 **               Until the next u3d_hot() the function has no ring, so what
 **               calls it compiles the same as before, even newly; then its
@@ -3898,6 +4136,10 @@ main(int argc, char* argv[])
   }
 
   if ( !_test_sand() ) {
+    exit(1);
+  }
+
+  if ( !_test_alias() ) {
     exit(1);
   }
 
