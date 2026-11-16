@@ -7,6 +7,10 @@
 #include <netinet/tcp.h>
 #endif
 
+#ifdef U3_OS_osx
+#include <sys/sysctl.h>
+#endif
+
 //  connect timeout
 //
 #define MACH_CONNECT_MS  30000
@@ -27,11 +31,11 @@
 //
 #define MACH_RXT_S       180
 
-//  most bytes in one %received event. we read nothing while %mach
-//  works on one, so the kernel's receive buffer, which we ask to be
-//  this size, fills and tcp slows the peer down
+//  read buffer, and so most bytes in one %received event, where the
+//  host's limits can't be read. windows autotunes its receive buffer
+//  to about 16 MB
 //
-#define MACH_EVENT_MAX   (4 << 20)
+#define MACH_READ_DEFAULT  (16 << 20)
 
 //  most outgoing bytes libuv may hold for a connection; a %send past
 //  this closes it
@@ -74,7 +78,9 @@ typedef struct _u3_mwri {
 typedef struct _u3_mach {
   u3_auto  car_u;  //  driver
   u3_tcon* con_u;  //  connection list
-  c3_y*    buf_y;  //  read buffer, MACH_EVENT_MAX bytes
+  c3_y*    buf_y;  //  read buffer, siz_w bytes
+  c3_w     siz_w;  //  read buffer size, most bytes in one event
+  c3_w     rcv_w;  //  SO_RCVBUF to ask for; 0 leaves it to the os
   c3_o     bus_o;  //  read buffer in use?
 } u3_mach;
 
@@ -275,10 +281,10 @@ _mach_tcp_alloc_cb(uv_handle_t* han_u, size_t siz_i, uv_buf_t* buf_u)
     buf_u->base  = (c3_c*)mac_u->buf_y;
   }
   else {
-    buf_u->base = c3_malloc(MACH_EVENT_MAX);
+    buf_u->base = c3_malloc(mac_u->siz_w);
   }
 
-  buf_u->len = MACH_EVENT_MAX;
+  buf_u->len = mac_u->siz_w;
 }
 
 /* _mach_tcp_read_cb(): bytes arrived, or the peer closed.
@@ -681,12 +687,10 @@ _mach_conn_connect(u3_mach* mac_u, c3_d id_d, u3_noun adr)
 
   con_u->tcp_u->data = con_u;
 
-  //  the kernel's receive buffer is our incoming queue, so we ask for
-  //  room for one whole event, before tcp picks its window scale. the
-  //  os may grant less, which costs only speed
+  //  see _mach_rcv_limits(); ask before tcp picks its window scale
   //
-  {
-    c3_i rcv_i = MACH_EVENT_MAX;
+  if ( mac_u->rcv_w ) {
+    c3_i rcv_i = mac_u->rcv_w;
     uv_recv_buffer_size((uv_handle_t*)con_u->tcp_u, &rcv_i);
   }
 
@@ -937,6 +941,94 @@ _mach_io_exit(u3_auto* car_u)
   c3_free(mac_u);
 }
 
+/* _mach_rcv_read(): read one unsigned number from a host setting.
+ */
+#if defined(U3_OS_osx)
+static c3_w
+_mach_rcv_read(const c3_c* nam_c, c3_w col_w)
+{
+  c3_w   val_w = 0;
+  size_t len_i = sizeof(val_w);
+
+  (void)col_w;
+  return ( sysctlbyname(nam_c, &val_w, &len_i, 0, 0) ) ? 0 : val_w;
+}
+#elif defined(U3_OS_linux)
+static c3_w
+_mach_rcv_read(const c3_c* nam_c, c3_w col_w)
+{
+  FILE*         fil_u = fopen(nam_c, "r");
+  unsigned long val_l = 0;
+
+  if ( !fil_u ) {
+    return 0;
+  }
+
+  for ( c3_w i_w = 0; i_w <= col_w; i_w++ ) {
+    if ( 1 != fscanf(fil_u, "%lu", &val_l) ) {
+      val_l = 0;
+      break;
+    }
+  }
+
+  fclose(fil_u);
+
+  //  linux doubles what we ask for, into an int
+  return ( val_l > (INT_MAX / 2) ) ? (INT_MAX / 2) : (c3_w)val_l;
+}
+#endif
+
+/* _mach_rcv_limits(): size the read buffer and the SO_RCVBUF request.
+ *
+ *   the kernel's receive buffer caps both the tcp window and how many
+ *   bytes one read can take, so we want it as big as the host allows.
+ *   left alone, it autotunes up to one limit; asked for, it gets up
+ *   to another, and stops autotuning. so we ask only where the second
+ *   limit is higher. root can raise either, so we read them at start.
+ *
+ *   macos: autotunes to net.inet.tcp.autorcvbufmax (4 MiB); grants up
+ *   to kern.ipc.maxsockbuf (8 MiB), so we ask.
+ *   linux: autotunes to the third field of net.ipv4.tcp_rmem (6 MB,
+ *   32 MB on new kernels); grants up to net.core.rmem_max (208 KiB),
+ *   which it doubles for overhead, so we usually don't ask.
+ *   elsewhere we leave the buffer alone and guess its size.
+ *
+ *   we read with a buffer as big as the kernel's, so one event can
+ *   take all it holds.
+ */
+static void
+_mach_rcv_limits(u3_mach* mac_u)
+{
+  c3_w aut_w = 0;  //  autotuning limit
+  c3_w ask_w = 0;  //  most we can ask for
+  c3_w got_w = 0;  //  what that gets us
+
+#if defined(U3_OS_osx)
+  aut_w = _mach_rcv_read("net.inet.tcp.autorcvbufmax", 0);
+  ask_w = _mach_rcv_read("kern.ipc.maxsockbuf", 0);
+  got_w = ask_w;
+#elif defined(U3_OS_linux)
+  aut_w = _mach_rcv_read("/proc/sys/net/ipv4/tcp_rmem", 2);
+  ask_w = _mach_rcv_read("/proc/sys/net/core/rmem_max", 0);
+  got_w = 2 * ask_w;
+#endif
+
+  if ( !aut_w && !got_w ) {
+    mac_u->siz_w = MACH_READ_DEFAULT;
+    mac_u->rcv_w = 0;
+  }
+  else if ( got_w > aut_w ) {
+    mac_u->siz_w = got_w;
+    mac_u->rcv_w = ask_w;
+  }
+  else {
+    mac_u->siz_w = aut_w;
+    mac_u->rcv_w = 0;
+  }
+
+  u3l_log("mach: read buffer %u, SO_RCVBUF %u", mac_u->siz_w, mac_u->rcv_w);
+}
+
 /* u3_mach_io_init(): initialize mach driver.
  */
 u3_auto*
@@ -945,7 +1037,8 @@ u3_mach_io_init(u3_pier* pir_u)
   u3_mach* mac_u = c3_calloc(sizeof(*mac_u));
   u3_auto* car_u = &mac_u->car_u;
 
-  mac_u->buf_y = c3_malloc(MACH_EVENT_MAX);
+  _mach_rcv_limits(mac_u);
+  mac_u->buf_y = c3_malloc(mac_u->siz_w);
   mac_u->bus_o = c3n;
 
   car_u->nam_m = c3__mach;
