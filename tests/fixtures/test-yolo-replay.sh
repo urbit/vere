@@ -18,6 +18,9 @@
 #   VERE_BINARY     vere binary path, relative to GITHUB_WORKSPACE or PWD
 #                   (caller runs this script once per bitness)
 #
+# Optional environment variable:
+#   VERE_LOOM       loom size in bits for every vere run (default: vere's own)
+#
 # Eligible fixtures are listed explicitly below; adding a new fixture without
 # auditing its layout is a deliberate two-step operation.
 
@@ -25,6 +28,7 @@ set -xeuo pipefail
 
 workspace=${GITHUB_WORKSPACE:-$(pwd)}
 vere="$workspace/$VERE_BINARY"
+loom=${VERE_LOOM:+--loom $VERE_LOOM}
 fixtures_dir="$(cd "$(dirname "$0")" && pwd)"
 
 # Explicit allowlist.
@@ -146,7 +150,7 @@ for name in "${ELIGIBLE[@]}"; do
   # ── replay ──
   play_stderr="$tmpdir/vere-play-stderr.log"
   set +e
-  "$vere" play -f -y --no-migrate "$pier" 2>"$play_stderr"
+  "$vere" play -f -y --no-migrate $loom "$pier" 2>"$play_stderr"
   play_exit=$?
   set -e
 
@@ -172,7 +176,7 @@ for name in "${ELIGIBLE[@]}"; do
   # log it sees on disk (replay does not rewrite the log structure).
   boot_stderr="$tmpdir/vere-boot-stderr.log"
   set +e
-  "$vere" --no-migrate --lite-boot --daemon "$pier" 2>"$boot_stderr"
+  "$vere" --no-migrate --lite-boot --daemon $loom "$pier" 2>"$boot_stderr"
   boot_exit=$?
   set -e
 
