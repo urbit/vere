@@ -222,7 +222,7 @@ u3_noun _nj_jump ARGS CONV;
 //                  two slots that may be the same reads both before it
 //                  takes either
 //  DROP(s, K): release slot s after a borrowing read of it, if K
-//  VOID(s, K): the same, where the op knows a direct atom is in it
+//  CLIN(s, K): the same, where the op knows a direct atom is in it
 //  EMPTY(): when checking, assert that every slot of the activation is
 //           zero: at a return or a tail call, they must be
 //
@@ -1406,7 +1406,7 @@ OP1K(CEL, a_h, BODY_CEL)
   if ( reg[a_h] > 1 ) {                                                         \
     BAIL(exit);                                                                 \
   }                                                                             \
-  VOID(a_h, K);                                                                 \
+  CLIN(a_h, K);                                                                 \
   BURN();
 OP1K(LOB, a_h, BODY_LOB)
 
@@ -1761,7 +1761,7 @@ OP3K4(EQQ, a_h, b_h, c_h, BODY_EQQ)
 
 #define BODY_EQI(KY, KT)                                                        \
   if ( reg[b_h] == a_h ) {                                                      \
-    VOID(b_h, KY);                                                              \
+    CLIN(b_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \
     DROP(b_h, KT);                                                              \
@@ -1806,18 +1806,18 @@ OP3KK(EQL, a_h, b_h, c_h, BODY_EQL)
     BAIL(exit);                                                                 \
   }                                                                             \
   if ( 1 == x ) {                                                               \
-    VOID(a_h, KT);                                                              \
+    CLIN(a_h, KT);                                                              \
     JUMP(b_h);                                                                  \
   }                                                                             \
   else {                                                                        \
-    VOID(a_h, KY);                                                              \
+    CLIN(a_h, KY);                                                              \
   }                                                                             \
   BURN();
 OP2KK(BRN, a_h, b_h, BODY_BRN)
 
 #define BODY_BRZ(KY, KT)                                                        \
   if ( 0 == reg[a_h] ) {                                                        \
-    VOID(a_h, KY);                                                              \
+    CLIN(a_h, KY);                                                              \
   }                                                                             \
   else {                                                                        \
     DROP(a_h, KT);                                                              \
@@ -2386,7 +2386,7 @@ u3_noun OP(JETP) ARGS CONV {
 #undef TAKEN
 #undef TAKE
 #undef DROP
-#undef VOID
+#undef CLIN
 #undef UNIQUE
 #undef CELL
 #undef DECODE1
