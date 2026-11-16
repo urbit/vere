@@ -176,10 +176,10 @@ static const OP_F WTAB[] = { WIDES };
     }                                                                           \
   } while ( 0 )
 
-//  VOID(s, K): DROP(s, K) of a slot the op has seen a direct atom in:
+//  CLIN(s, K): DROP(s, K) of a slot the op has seen a direct atom in:
 //  nothing to release
 //
-#define VOID(s, K)  do { if ( K ) { ZERO(s); } } while ( 0 )
+#define CLIN(s, K)  do { if ( K ) { ZERO(s); } } while ( 0 )
 
 //  DECODE1/2/3(name): the width variants name_B, name_S and name_V of an
 //  opcode with one, two or three immediates, each decoding them into the
@@ -579,7 +579,7 @@ OP2K(MOV, a_h, d_h, BODY_MOV)
 #define BODY_INC(K)                                                             \
   u3_noun x = reg[a_h];                                                         \
   if ( c3_likely(x < u3a_direct_max) ) {                                        \
-    VOID(a_h, K);                                                               \
+    CLIN(a_h, K);                                                               \
     PUT(d_h, x + 1);                                                            \
   }                                                                             \
   else {                                                                        \
@@ -594,7 +594,7 @@ OP2K(INC, a_h, d_h, BODY_INC)
   u3_noun x = reg[a_h], pro;                                                    \
   _nc_stat(jet_d);                                                              \
   if ( c3_likely((c3_w)(x - 1) < u3a_direct_max) ) {  /*  direct, not zero  */  \
-    VOID(a_h, K);                                                               \
+    CLIN(a_h, K);                                                               \
     PUT(d_h, x - 1);                                                            \
   }                                                                             \
   else {                                                                        \
@@ -612,8 +612,8 @@ OP2K(DEC, a_h, d_h, BODY_DEC)
   u3_noun x = reg[a_h], y = reg[b_h], pro;                                      \
   _nc_stat(jet_d);                                                              \
   if ( c3_likely((x | y | (c3_w)(x + y)) <= u3a_direct_max) ) {                 \
-    VOID(a_h, KA);                                                              \
-    VOID(b_h, KB);                                                              \
+    CLIN(a_h, KA);                                                              \
+    CLIN(b_h, KB);                                                              \
     PUT(d_h, x + y);                                                            \
   }                                                                             \
   else {                                                                        \
