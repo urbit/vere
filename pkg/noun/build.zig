@@ -245,9 +245,19 @@ pub fn build(b: *std.Build) !void {
             }
         }
 
+        //  kept out of compile_commands.json, where an editor would take it
+        //  for the nock-compile.c of the build
+        //
         var sten_flags = std.array_list.Managed([]const u8).init(b.allocator);
         defer sten_flags.deinit();
-        try sten_flags.appendSlice(burn_flags.items);
+        var cdb = false;
+        for (burn_flags.items) |opt| {
+            if (cdb) {
+                cdb = false;
+            } else if (std.mem.eql(u8, opt, "-gen-cdb-fragment-path")) {
+                cdb = true;
+            } else try sten_flags.append(opt);
+        }
         try sten_flags.appendSlice(&.{
             "-DU3NC_STENCIL",
             "-fno-pic",

@@ -50,10 +50,15 @@ const CdbGenStep = struct {
         var ww = out_file.writer(&write_buffer);
         const w = &ww.interface;
 
-        try w.writeByte('[');
+        // A source compiled again with other flags leaves its old fragment
+        // behind: an include directory of generated headers (-Dska-jit's
+        // stencils) moves whenever what it is generated from changes. Keep
+        // the newest fragment of each source and delete the others, or clangd
+        // takes whichever it reads first.
+        const Frag = struct { name: []const u8, mtime: i128, json: []const u8 };
+        var newest = std.StringArrayHashMap(Frag).init(self.b.allocator);
 
         var it = dir.iterate();
-        var first: bool = true;
         while (try it.next()) |ent| {
             if (ent.kind != .file) continue;
 
@@ -62,7 +67,6 @@ const CdbGenStep = struct {
             defer frag_file.close();
 
             const frag = try frag_file.readToEndAlloc(self.b.allocator, 1024 * 1024);
-            defer self.b.allocator.free(frag);
 
             // zig terminates each fragment with a trailing comma; strip it so
             // joining them doesn't emit "},,{" (and a trailing comma before
@@ -71,11 +75,33 @@ const CdbGenStep = struct {
             const trimmed = std.mem.trim(u8, frag, " \t\r\n,");
             if (trimmed.len == 0) continue;
 
-            if (!first) try w.writeByte(',');
-            first = false;
-            try w.writeAll(trimmed);
+            const src = try std.json.parseFromSliceLeaky(
+                struct { file: []const u8 },
+                self.b.allocator,
+                trimmed,
+                .{ .ignore_unknown_fields = true },
+            );
+            const new: Frag = .{
+                .name = try self.b.allocator.dupe(u8, ent.name),
+                .mtime = (try frag_file.stat()).mtime,
+                .json = trimmed,
+            };
+            const got = try newest.getOrPut(src.file);
+            if (got.found_existing) {
+                if (got.value_ptr.mtime > new.mtime) {
+                    try dir.deleteFile(new.name);
+                    continue;
+                }
+                try dir.deleteFile(got.value_ptr.name);
+            }
+            got.value_ptr.* = new;
         }
 
+        try w.writeByte('[');
+        for (newest.values(), 0..) |frag, i| {
+            if (i != 0) try w.writeByte(',');
+            try w.writeAll(frag.json);
+        }
         try w.writeAll("]\n");
         try w.flush();
 

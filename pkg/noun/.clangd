@@ -1,0 +1,9 @@
+#  nock-compile-jit.c is not a translation unit of its own: nock-compile.c
+#  includes it, in a -Dska-jit build, and it names what nock-compile.c
+#  defines before it.  An editor parses it after nock-compile.c, whose
+#  include of it, the file being parsed, clang skips; the flags are
+#  nock-compile.c's, so compile_commands.json must be from a -Dska-jit build.
+If:
+  PathMatch: nock-compile-jit\.c
+CompileFlags:
+  Add: [-include, nock-compile.c]
