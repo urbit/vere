@@ -3,6 +3,7 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "nock-compile.h"
 #include "noun.h"
 
 
@@ -48,10 +49,14 @@
 
 
 //  hits on `reg` and `gil` not discharged yet: unordered lists of `ref`s and
-//  pairs, which may repeat
+//  pairs, which may repeat.  They are kept in the road, as the root flag
+//  is: compiled nock can leap inside +nest (a callee compiled on demand
+//  pokes the SKA core on an inner road), and a +nest that starts on an
+//  inner road while one runs on an outer road must have lists of its own;
+//  a road that is abandoned takes its lists with it
 //
-static u3_noun _hits_reg = u3_nul;
-static u3_noun _hits_gil = u3_nul;
+#define _hits_reg  (u3R->ska.hir)
+#define _hits_gil  (u3R->ska.hig)
 
 //  drop every `som` from unordered list `hit`
 static u3_noun
@@ -73,8 +78,10 @@ _set_drop(u3_noun hit, u3_noun som)
   return out;
 }
 
-u3_noun
-u3wfu_nest_dext2(u3_noun dext_core)
+/* _fu_nest_dext2(): the memoized arm, a miss run by fun_f.
+*/
+static u3_noun
+_fu_nest_dext2(u3_noun dext_core, u3_funq fun_f)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil, tel, vet;
@@ -142,7 +149,7 @@ u3wfu_nest_dext2(u3_noun dext_core)
     u3_noun here_reg, here_gil;
     c3_t    sav_t;
 
-    pro = u3n_nock_on(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
+    pro = fun_f(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
 
     //  A frame that could've hit a set records its own hit. Otherwise every hit
     //  below on its `ref` or pair was on an entry pushed at or below this
@@ -194,4 +201,21 @@ u3wfu_nest_dext2(u3_noun dext_core)
     return pro;
 
   }
+}
+
+/* u3wfu_nest_dext2(): from u3n; a miss in compiled nock if a run of it is in
+**                    progress, else in u3n.
+*/
+u3_noun
+u3wfu_nest_dext2(u3_noun dext_core)
+{
+  return _fu_nest_dext2(dext_core, u3nc_miss_nock);
+}
+
+/* u3ufu_nest_dext2(): from compiled nock, in compiled nock.
+*/
+u3_noun
+u3ufu_nest_dext2(u3_noun dext_core)
+{
+  return _fu_nest_dext2(dext_core, u3nc_gop_nock);
 }

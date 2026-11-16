@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -27,4 +28,12 @@
     b = u3t(u3h(u3t(cor)));
     return u3qc_gor(a, b);
   }
+
+/* u3uc_gor(): array driver of u3wc_gor.
+*/
+u3_noun
+u3uc_gor(u3_noun* arg)
+{
+  return u3qc_gor(arg[0], arg[1]);
+}
 

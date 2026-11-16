@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -84,6 +85,17 @@ u3we_lore(u3_noun cor)
   }
 }
 
+/* u3ue_lore(): array driver of u3we_lore.
+*/
+u3_noun
+u3ue_lore(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__fail);
+  }
+  return u3qe_lore(arg[0]);
+}
+
 u3_noun
 u3qe_leer(u3_atom txt)
 {
@@ -129,4 +141,15 @@ u3we_leer(u3_noun cor)
   }
 
   return u3qe_leer(txt);
+}
+
+/* u3ue_leer(): array driver of u3we_leer.
+*/
+u3_noun
+u3ue_leer(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__fail);
+  }
+  return u3qe_leer(arg[0]);
 }

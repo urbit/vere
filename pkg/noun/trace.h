@@ -173,6 +173,13 @@
       void
       u3t_slog_cap(c3_h pri_l, u3_noun cap, u3_noun tan);
 
+    /* u3t_mook(): render a trace as +mook does, a (list tank); the
+    **             frames u3nc pushes for %mean, [%meaf bell arg] and
+    **             [%meac tank], as the traps they stand for.  TRANSFERS.
+    */
+      u3_noun
+      u3t_mook(u3_noun tax);
+
     /* u3t_slog_trace(): given a c3_h priority pri and a raw stack tax
     ** flop the order into start-to-end, render, and slog each item
     ** until done.

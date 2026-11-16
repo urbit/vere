@@ -2,14 +2,15 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
 #include "urcrypt.h"
 
 
-  static u3_atom
-  _cqe_shay(u3_atom wid,
+  u3_atom
+  u3qe_shay(u3_atom wid,
             u3_atom dat)
   {
     c3_w len_w;
@@ -36,8 +37,8 @@
     return u3i_bytes(32, out_y);
   }
 
-  static u3_atom
-  _cqe_shal(u3_atom wid,
+  u3_atom
+  u3qe_shal(u3_atom wid,
             u3_atom dat)
   {
     c3_w len_w;
@@ -82,6 +83,17 @@
     }
   }
 
+/* u3ue_shax(): array driver of u3we_shax.
+*/
+u3_noun
+u3ue_shax(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_shax(arg[0]);
+}
+
   u3_noun
   u3we_shay(u3_noun cor)
   {
@@ -94,9 +106,22 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return _cqe_shay(a, b);
+      return u3qe_shay(a, b);
     }
   }
+
+/* u3ue_shay(): array driver of u3we_shay.
+*/
+u3_noun
+u3ue_shay(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qe_shay(arg[0], arg[1]);
+}
 
   u3_noun
   u3we_shal(u3_noun cor)
@@ -110,9 +135,22 @@
     {
       return u3m_bail(c3__exit);
     } else {
-      return _cqe_shal(a, b);
+      return u3qe_shal(a, b);
     }
   }
+
+/* u3ue_shal(): array driver of u3we_shal.
+*/
+u3_noun
+u3ue_shal(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qe_shal(arg[0], arg[1]);
+}
 
   u3_noun
   u3we_shas(u3_noun cor)
@@ -129,6 +167,19 @@
       return _cqe_shas(sal, ruz);
     }
   }
+
+/* u3ue_shas(): array driver of u3we_shas.
+*/
+u3_noun
+u3ue_shas(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_shas(arg[0], arg[1]);
+}
 
   static u3_noun
   _og_list(u3_noun a,
@@ -190,3 +241,13 @@
     a = u3h(u3t(u3t(u3t(cor))));
     return u3qeo_raw(a, b);
   }
+
+/* u3ueo_raw(): array driver of u3weo_raw.
+**              arg[0] is the sample b (bits), arg[1] the door
+**              sample a (seed).
+*/
+u3_noun
+u3ueo_raw(u3_noun* arg)
+{
+  return u3qeo_raw(arg[1], arg[0]);
+}

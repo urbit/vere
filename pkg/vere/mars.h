@@ -71,6 +71,11 @@
       void
       u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e);
 
+    /* u3_mars_steel(): bring the SKA core up to the steel pill of this binary.
+    */
+      void
+      u3_mars_steel(void);
+
     /* u3_mars_work(): init mars
     */
       void

@@ -1,6 +1,7 @@
  /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -49,3 +50,11 @@
       return u3qe_mat(a);
     }
   }
+
+/* u3ue_mat(): array driver of u3we_mat.
+*/
+u3_noun
+u3ue_mat(u3_noun* arg)
+{
+  return u3qe_mat(arg[0]);
+}

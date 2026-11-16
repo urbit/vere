@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -55,4 +56,10 @@ u3wc_bex(u3_noun cor)
 {
   u3_noun a = u3x_at(u3x_sam, cor);
   return u3qc_bex(u3x_atom(a));
+}
+
+u3_noun
+u3uc_bex(u3_noun* arg)
+{
+  return u3qc_bex(u3x_atom(arg[0]));
 }

@@ -296,6 +296,7 @@
         c3_y    lom_y;                      //      loom bex
         c3_y    lut_y;                      //      urth-loom bex
         c3_w    per_w;                      //  -M, cap persistent memo cache
+        c3_w    san_w;                      //      sand zone of a road, in MB
         c3_c*   til_c;                      //  -n, play till eve_d
         c3_o    pro;                        //  -P, profile
         c3_s    per_s;                      //      http port
@@ -848,6 +849,17 @@
       */
         c3_o
         u3_disk_make(c3_c* pax_c);
+
+      /* u3_disk_migrate_home(): migrate a checkpoint whose home is at loom
+      **                         position 0 (version 5 onward) in place to
+      **                         the latest version, with a loom of [lom_z]
+      **                         bytes, at event [eve_d].  Produces c3y if
+      **                         it did (the loom is left running:
+      **                         u3m_stop() before booting), c3n if there
+      **                         was nothing to do.
+      */
+        c3_o
+        u3_disk_migrate_home(c3_c* dir_c, c3_z lom_z, c3_d eve_d);
 
       /* u3_disk_stake(): claim the fixed addresses this process will map at.
       **

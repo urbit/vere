@@ -165,6 +165,19 @@
 
     u3_noun u3qe_hmac(u3_noun, u3_atom, u3_atom,
                       u3_atom, u3_atom, u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha1(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha256(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha512(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha1t(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha256t(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha512t(u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha1l(u3_atom, u3_atom, u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha256l(u3_atom, u3_atom, u3_atom, u3_atom);
+    u3_atom u3qe_hmac_sha512l(u3_atom, u3_atom, u3_atom, u3_atom);
+
+    u3_atom u3qe_shay(u3_atom, u3_atom);
+    u3_atom u3qe_shal(u3_atom, u3_atom);
+    u3_atom u3qe_sha1(u3_atom, u3_atom);
 
     u3_noun u3qe_en_base16(u3_atom len, u3_atom dat);
     u3_noun u3qe_de_base16(u3_atom inp);

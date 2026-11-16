@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -297,3 +298,16 @@
       return u3qe_loss(hel, hev);
     }
   }
+
+/* u3ue_loss(): array driver of u3we_loss.
+*/
+u3_noun
+u3ue_loss(u3_noun* arg)
+{
+  if (  (c3n == _listp(arg[0]))
+     || (c3n == _listp(arg[1])) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return u3qe_loss(arg[0], arg[1]);
+}

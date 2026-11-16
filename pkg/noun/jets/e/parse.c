@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -367,6 +368,15 @@
     }
   }
 
+/* u3ue_easy_fun(): array driver of u3we_easy_fun: tub at arg[0],
+** huf of the enclosing gate at arg[1].
+*/
+u3_noun
+u3ue_easy_fun(u3_noun* arg)
+{
+  return _cqe_easy_fun(arg[1], arg[0]);
+}
+
 /* glue
 */
   static u3_noun
@@ -538,6 +548,15 @@
     }
   }
 
+/* u3ue_just_fun(): array driver of u3we_just_fun: tub at arg[0],
+** daf of the enclosing gate at arg[1].
+*/
+u3_noun
+u3ue_just_fun(u3_noun* arg)
+{
+  return _cqe_just_fun(arg[1], arg[0]);
+}
+
 /* mask
 */
   static u3_noun
@@ -576,6 +595,16 @@
       return _cqe_mask_fun(bud, tub);
     }
   }
+
+/* u3ue_mask_fun(): array driver of u3we_mask_fun: tub at arg[0],
+** bud of the enclosing gate at arg[1].
+*/
+u3_noun
+u3ue_mask_fun(u3_noun* arg)
+{
+  return _cqe_mask_fun(arg[1], arg[0]);
+}
+
 /* pfix
 */
   static u3_noun
@@ -801,6 +830,15 @@
       return _cqe_shim_fun(zep, tub);
     }
   }
+
+/* u3ue_shim_fun(): array driver of u3we_shim_fun: tub at arg[0],
+** zep of the enclosing gate at arg[1].
+*/
+u3_noun
+u3ue_shim_fun(u3_noun* arg)
+{
+  return _cqe_shim_fun(arg[1], arg[0]);
+}
 
 /* stag
 */

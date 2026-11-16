@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -39,4 +40,12 @@ u3_noun
 u3wdb_key(u3_noun cor)
 {
   return u3qdb_key(u3x_at(u3x_con_sam, cor));
+}
+
+/* u3udb_key(): array driver of u3wdb_key.
+*/
+u3_noun
+u3udb_key(u3_noun* arg)
+{
+  return u3qdb_key(arg[0]);
 }

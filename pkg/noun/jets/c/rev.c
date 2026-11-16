@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -40,6 +41,20 @@
       return u3qc_rev(boz, len, dat);
     }
   }
+
+/* u3uc_rev(): array driver of u3wc_rev.
+*/
+u3_noun
+u3uc_rev(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1]))
+     || (c3n == u3ud(arg[2])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_rev(arg[0], arg[1], arg[2]);
+}
 
   u3_noun
   u3kc_rev(u3_atom boz,

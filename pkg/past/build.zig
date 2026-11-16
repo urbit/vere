@@ -72,6 +72,7 @@ pub fn build(b: *std.Build) !void {
         "v2.c",
         "v3.c",
         "v4.c",
+        "v5.c",
         "migrate_v2.c",
         "migrate_v3.c",
         "migrate_v4.c",

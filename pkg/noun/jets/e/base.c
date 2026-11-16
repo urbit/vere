@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -144,9 +145,25 @@ u3we_en_base16(u3_noun cor)
   return u3qe_en_base16(u3x_atom(a), u3x_atom(b));
 }
 
+/* u3ue_en_base16(): array driver of u3we_en_base16.
+*/
+u3_noun
+u3ue_en_base16(u3_noun* arg)
+{
+  return u3qe_en_base16(u3x_atom(arg[0]), u3x_atom(arg[1]));
+}
+
 u3_noun
 u3we_de_base16(u3_noun cor)
 {
   u3_noun sam = u3x_at(u3x_sam, cor);
   return u3qe_de_base16(u3x_atom(sam));
+}
+
+/* u3ue_de_base16(): array driver of u3we_de_base16.
+*/
+u3_noun
+u3ue_de_base16(u3_noun* arg)
+{
+  return u3qe_de_base16(u3x_atom(arg[0]));
 }

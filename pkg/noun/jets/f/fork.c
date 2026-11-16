@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -68,6 +69,14 @@
       return u3qf_fork(yed);
     }
   }
+
+/* u3uf_fork(): array driver of u3wf_fork.
+*/
+u3_noun
+u3uf_fork(u3_noun* arg)
+{
+  return u3qf_fork(arg[0]);
+}
 
   u3_noun
   u3kf_fork(u3_noun yed)

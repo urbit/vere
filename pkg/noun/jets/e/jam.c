@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -57,4 +58,12 @@ u3ke_jam(u3_noun a)
   u3_atom b = u3qe_jam(a);
   u3z(a);
   return b;
+}
+
+/* u3ue_jam(): array driver of u3we_jam.
+*/
+u3_noun
+u3ue_jam(u3_noun* arg)
+{
+  return u3qe_jam(arg[0]);
 }

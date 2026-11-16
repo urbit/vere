@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -52,6 +53,21 @@
     }
   }
 
+/* _rs_arr(): defines u3uet_<fun>, array driver of u3wet_<fun>: len sample
+** atoms at arg[0..len-1], then the rounding mode of the door if used.
+*/
+#define _rs_arr(fun, len, ...)                                \
+  u3_noun                                                     \
+  u3uet_##fun(u3_noun* arg)                                   \
+  {                                                           \
+    for ( c3_w i_w = 0; i_w < len; i_w++ ) {                  \
+      if ( c3n == u3ud(arg[i_w]) ) {                          \
+        return u3m_bail(c3__exit);                            \
+      }                                                       \
+    }                                                         \
+    return u3qet_##fun(__VA_ARGS__);                          \
+  }
+
 /* add
 */
   u3_noun
@@ -85,6 +101,7 @@
       return u3qet_add(a, b, u3x_at(30, cor));
     }
   }
+  _rs_arr(add, 2, arg[0], arg[1], arg[2])
 
 /* sub
 */
@@ -119,6 +136,7 @@
       return u3qet_sub(a, b, u3x_at(30, cor));
     }
   }
+  _rs_arr(sub, 2, arg[0], arg[1], arg[2])
 
 /* mul
 */
@@ -153,6 +171,7 @@
       return u3qet_mul(a, b, u3x_at(30, cor));
     }
   }
+  _rs_arr(mul, 2, arg[0], arg[1], arg[2])
 
 /* div
 */
@@ -187,6 +206,7 @@
       return u3qet_div(a, b, u3x_at(30, cor));
     }
   }
+  _rs_arr(div, 2, arg[0], arg[1], arg[2])
 
 /* sqt
 */
@@ -216,6 +236,7 @@
       return u3qet_sqt(a, u3x_at(30, cor));
     }
   }
+  _rs_arr(sqt, 1, arg[0], arg[1])
 
 /* fma
 */
@@ -254,6 +275,7 @@
       return u3qet_fma(a, b, c, u3x_at(30, cor));
     }
   }
+  _rs_arr(fma, 3, arg[0], arg[1], arg[2], arg[3])
 
 /* lth
 */
@@ -285,6 +307,7 @@
       return u3qet_lth(a, b);
     }
   }
+  _rs_arr(lth, 2, arg[0], arg[1])
 
 /* lte
 */
@@ -316,6 +339,7 @@
       return u3qet_lte(a, b);
     }
   }
+  _rs_arr(lte, 2, arg[0], arg[1])
 
 /* equ
 */
@@ -347,6 +371,7 @@
       return u3qet_equ(a, b);
     }
   }
+  _rs_arr(equ, 2, arg[0], arg[1])
 
 /* gte
 */
@@ -378,6 +403,7 @@
       return u3qet_gte(a, b);
     }
   }
+  _rs_arr(gte, 2, arg[0], arg[1])
 
 /* gth
 */
@@ -409,3 +435,4 @@
       return u3qet_gth(a, b);
     }
   }
+  _rs_arr(gth, 2, arg[0], arg[1])

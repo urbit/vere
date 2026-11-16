@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -34,6 +35,18 @@
       : (!u3r_word_fit(&len_w, len)) \
       ? u3m_bail(c3__fail) \
       : _kecc_##bits(len_w, tom); \
+  } \
+  \
+  /* u3ue_kecc##bits(): array driver of u3we_kecc##bits. */ \
+  u3_noun \
+  u3ue_kecc##bits(u3_noun* arg) \
+  { \
+    c3_w len_w; \
+    return ( (c3n == u3ud(arg[0])) || (c3n == u3ud(arg[1])) ) \
+      ? u3m_bail(c3__exit) \
+      : (!u3r_word_fit(&len_w, arg[0])) \
+      ? u3m_bail(c3__fail) \
+      : _kecc_##bits(len_w, arg[1]); \
   }
 
 defw(224, 28)

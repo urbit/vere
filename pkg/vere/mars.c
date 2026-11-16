@@ -10,7 +10,9 @@
 #include "ship.h"
 #include "types.h"
 #include "vere.h"
+#include "direct.h"
 #include "ivory.h"
+#include "steel.h"
 #include "ur/ur.h"
 #include "db/lmdb.h"
 #include <mars.h>
@@ -774,6 +776,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
+  //  memory is short, or the kernel is replaced: what the %ska hints keep
+  //  goes too (u3d_drop())
+  //
+  if ( mar_u->fag_w & (_mars_fag_hit1 | _mars_fag_hit0 | _mars_fag_vega) ) {
+    u3d_drop();
+  }
+
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
@@ -823,6 +832,13 @@ _mars_post(u3_mars* mar_u)
 
   if ( u3C.wag_h & u3o_toss ) {
     u3m_toss();
+  }
+
+  //  the SKA core went (u3d_drop()): a new one
+  //
+  if ( u3d_Gone ) {
+    u3d_Gone = 0;
+    u3_mars_steel();
   }
 
   mar_u->fag_w = _mars_fag_none;
@@ -1564,6 +1580,14 @@ u3_mars_play(u3_mars* mar_u, c3_d eve_d, c3_d sap_d)
   return pay_d;
 }
 
+/* u3_mars_steel(): bring the SKA core up to the steel pill of this binary.
+*/
+void
+u3_mars_steel(void)
+{
+  u3d_boot(u3i_bytes(u3_Steel_pill_len, u3_Steel_pill));
+}
+
 /* u3_mars_load(): load pier.
 */
 void
@@ -1584,6 +1608,8 @@ u3_mars_load(u3_mars* mar_u, u3_disk_load_e lod_e)
     u3_disk_exit(mar_u->log_u);
     exit(1); // XX
   }
+
+  u3_mars_steel();
 }
 
 /* u3_mars_work(): init mars

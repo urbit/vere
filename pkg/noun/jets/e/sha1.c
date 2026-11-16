@@ -1,13 +1,14 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
 #include "urcrypt.h"
 
-  static u3_noun
-  _cqe_sha1(u3_atom wid, u3_atom dat)
+  u3_atom
+  u3qe_sha1(u3_atom wid, u3_atom dat)
   {
     c3_w len_w;
     if ( !u3r_word_fit(&len_w, wid) ) {
@@ -37,6 +38,19 @@
       return u3m_bail(c3__exit);
     }
     else {
-      return _cqe_sha1(wid, dat);
+      return u3qe_sha1(wid, dat);
     }
   }
+
+/* u3ue_sha1(): array driver of u3we_sha1.
+*/
+u3_noun
+u3ue_sha1(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return u3qe_sha1(arg[0], arg[1]);
+}

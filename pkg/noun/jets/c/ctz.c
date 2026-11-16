@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -31,4 +32,12 @@ u3_noun
 u3wc_ctz(u3_noun cor)
 {
   return u3qc_ctz(u3x_atom(u3h(u3t(cor))));
+}
+
+/* u3uc_ctz(): array driver of u3wc_ctz.
+*/
+u3_noun
+u3uc_ctz(u3_noun* arg)
+{
+  return u3qc_ctz(u3x_atom(arg[0]));
 }

@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -39,3 +40,16 @@
       return _cqee_point_add(a, b);
     }
   }
+
+/* u3uee_point_add(): array driver of u3wee_point_add.
+*/
+u3_noun
+u3uee_point_add(u3_noun* arg)
+{
+  if (  (c3n == u3ud(arg[0]))
+     || (c3n == u3ud(arg[1])) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_point_add(arg[0], arg[1]);
+}

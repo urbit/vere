@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -101,6 +102,20 @@
     }
   }
 
+/* u3ue_blake3_hash(): array driver of u3we_blake3_hash:
+** [out wid dat cv flags] in arg[0..4].
+*/
+u3_noun
+u3ue_blake3_hash(u3_noun* arg)
+{
+  if (  u3ud(arg[0]) || u3ud(arg[1]) || u3ud(arg[2])
+     || u3ud(arg[3]) || u3ud(arg[4]) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_blake3_hash(arg[1], arg[2], arg[3], arg[4], arg[0]);
+}
+
   static u3_noun
   _cqe_blake3_chunk_output(u3_atom wid, u3_atom dat, u3_atom cv, u3_atom counter, u3_atom flags)
   {
@@ -139,6 +154,18 @@
     }
   }
 
+/* u3ue_blake3_chunk_output(): array driver of u3we_blake3_chunk_output:
+** [counter wid dat cv flags] in arg[0..4].
+*/
+u3_noun
+u3ue_blake3_chunk_output(u3_noun* arg)
+{
+  if ( u3ud(arg[1]) || u3ud(arg[2]) || u3ud(arg[3]) || u3ud(arg[4]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_blake3_chunk_output(arg[1], arg[2], arg[3], arg[0], arg[4]);
+}
+
   static u3_atom
   _cqe_blake3_compress(u3_atom cv, u3_atom counter,
                        u3_atom block, u3_atom block_len, u3_atom flags)
@@ -164,3 +191,17 @@
       return u3l_punt("blake3_compress", _cqe_blake3_compress(cv, counter, block, block_len,  flags));
     }
   }
+
+/* u3ue_blake3_compress(): array driver of u3we_blake3_compress:
+** [cv counter block blocklen flags] in arg[0..4].
+*/
+u3_noun
+u3ue_blake3_compress(u3_noun* arg)
+{
+  if (  u3ud(arg[0]) || u3ud(arg[2]) || u3ud(arg[3])
+     || u3ud(arg[1]) || u3ud(arg[4]) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_blake3_compress(arg[0], arg[1], arg[2], arg[3], arg[4]);
+}

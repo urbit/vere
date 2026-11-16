@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -88,3 +89,14 @@
     }
   }
 
+
+/* u3uc_rap(): array driver of u3wc_rap.
+*/
+u3_noun
+u3uc_rap(u3_noun* arg)
+{
+  if ( (c3n == u3ud(arg[0])) ) {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_rap(arg[0], arg[1]);
+}

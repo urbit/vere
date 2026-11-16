@@ -269,7 +269,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
+  U3_W(S) san_p;                                /*  next word of the sand zone (inner roads)  */ \
+  U3_W(S) bas_p;                                /*  rut before the sand zone (inner roads)    */ \
+  U3_W(S) big_w;                                /*  words counted beside sand (inner roads)   */ \
+  U3_W(S) fut_w[23];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -328,10 +331,22 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     U3_W(S) har_p;                              /*  transient                                 */ \
     U3_W(S) per_p;                              /*  persistent                                */ \
     U3_W(S) for_p;                              /*  ford                                      */ \
+  } cax;                                                                                         \
+                                                                                                 \
+  struct {                                      /*  SKA state (version 6)                     */ \
+    U3_N(S) cor;                                /*  SKA core                                  */ \
+    U3_W(S) pax_p;                              /*  [path axis] -> jet drivers                */ \
+    U3_W(S) dir_p;                              /*  SKA direct programs                       */ \
+    U3_W(S) ent_p;                              /*  SKA entry point programs                  */ \
+    U3_W(S) def_p;                              /*  Linking worklist                          */ \
+    U3_W(S) tem_p;                              /*  battery -> (list [path sock]) registered  */ \
+    U3_N(S) new;                                /*  registrations the SKA core hasn't seen    */ \
+    U3_N(S) hir;                                /*  +nest jet: hits on reg not discharged     */ \
+    U3_N(S) hig;                                /*  +nest jet: hits on gil not discharged     */ \
     /* road struct terminator: no data after it, no */\
     /* padding between the last real field and it   */\
     c3_y end_y[0];                                    \
-  } cax;
+  } ska;
 
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
@@ -339,10 +354,29 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation: a sand zone with room
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
         u3a_flag_nest  = 1 << 3,              //  root +nest:ut call on the stack
+        u3a_flag_froz  = 1 << 4,              //  a full sand zone
+        u3a_flag_mink  = 1 << 5,              //  we are in +mink jet
+        u3a_flag_ska1  = 1 << 6,              //  SKA core poke depth, low bit
+        u3a_flag_ska2  = 1 << 7,              //  SKA core poke depth, high bit
       };
+
+    /* u3a_flag_zone: the road has a sand zone, with room or full: memory
+    **                of the road outside [rut, hat), senior by its address.
+    */
+#define u3a_flag_zone  (c3_w)(u3a_flag_sand | u3a_flag_froz)
+
+    /* u3a_flag_ska: the two bits of the SKA core poke depth, a counter
+    **   0..3 that flows forward: 0 outside the core, 1 in a poke of it, 2
+    **   in a poke made from inside one (the core compiling its own code).
+    */
+#define u3a_flag_ska  (c3_w)(u3a_flag_ska1 | u3a_flag_ska2)
+#define u3a_ska_depth(fag_w) (((fag_w) & u3a_flag_ska) >> 6)
+
+#define u3a_flag_fore (c3_w)(u3a_flag_cash | u3a_flag_ska)
+#define u3a_flag_back (c3_w)0
 
     /* u3a_pile: stack control, abstracted over road direction.
     */
@@ -477,16 +511,20 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          ?  u3a_north_is_senior(r, som) \
                          :  u3a_south_is_senior(r, som) )
 
-  /* u3a_is_mutable(): [som] may be edited in place on road [r]: a cell
-  **                   on [r] that we hold the only reference to.
+  /* u3a_is_mutable(): [som] may be edited in place on road [r]: an
+  **                   indirect noun on [r] that we hold the only
+  **                   reference to.  An atom edited in place must have
+  **                   its mug cleared and its length kept normalized.
   **
   **   Never on the home road: the home-road hashcons set refers to its
   **   members without counting, so a member can look uniquely held, and
   **   editing it in place would change a value the set has filed. Nock
   **   rarely runs on the home road, so copying there costs nothing.
+  **   (A junior road's set holds references, so a member of it has a
+  **   count of at least two, and the rule below excludes it.)
   */
 #     define  u3a_is_mutable(r, som) \
-                ( _(u3a_is_atom(som)) \
+                ( _(u3a_is_cat(som)) \
                   ? c3n \
                   : !(r)->par_p \
                   ? c3n \
@@ -562,8 +600,8 @@ typedef struct {
 #       define u3R  u3a_Road
 
       static_assert(
-        offsetof(u3a_road, cax.end_y) == offsetof(u3a_road, cax.for_p)
-                                       + sizeof(u3R->cax.for_p),
+        offsetof(u3a_road, ska.end_y) == offsetof(u3a_road, ska.hig)
+                                       + sizeof(u3R->ska.hig),
       "no padding between the last real field of u3_road and end marker");
 
     /* u3_Code: memory code.
@@ -770,10 +808,104 @@ u3a_post_info(u3_post);
           void*
           u3a_walloc(c3_w len_w);
 
-        /* u3a_celloc(): allocate a cell.  Faster, sometimes.
+        /* u3a_sand_big: a block of this many words or more is not sand:
+        **               it is counted, freed and resized in place.
+        */
+#         define u3a_sand_big  128
+
+        /* u3a_sand_open(): set aside the sand zone of u3R, a road just
+        **                  leapt to, before anything is allocated on it.
+        */
+          void
+          u3a_sand_open(void);
+
+        /* u3a_here(): [som_p] is in the heap of [rod_u], with its sand.
+        */
+          c3_t
+          u3a_here(u3a_road* rod_u, u3_post som_p);
+
+        /* u3a_in_sand(): indirect [som] is in the sand zone of [rod_u]:
+        **                memory of that road which every seniority test
+        **                takes for senior.
+        */
+          static inline c3_t
+          u3a_in_sand(u3a_road* rod_u, u3_noun som)
+          {
+            if ( !(rod_u->how.fag_w & u3a_flag_zone) ) {
+              return 0;
+            }
+            else {
+              u3_post off_p = u3a_to_off(som);
+
+              return ( c3y == u3a_is_north(rod_u) )
+                   ? ((off_p >= rod_u->bas_p) && (off_p < rod_u->rut_p))
+                   : ((off_p >= rod_u->rut_p) && (off_p < rod_u->bas_p));
+            }
+          }
+
+        /* u3a_celloc_cold(): allocate a cell, out of line: the home road,
+        **                    an empty cell cache, the counting builds.
         */
           c3_w*
-          u3a_celloc(void);
+          u3a_celloc_cold(void);
+
+        /* u3a_celloc_try(): a cell from the cell cache of an inner road,
+        **                   or 0.  In line: four loads and a store.
+        */
+          static inline c3_w*
+          u3a_celloc_try(void)
+          {
+#if !defined(U3NC_STAT) && !defined(U3_CPU_DEBUG)
+            u3a_road* rod_u = u3R;
+            c3_w      hav_w = rod_u->cel.hav_w;
+
+            //  the home road has no cache, and so never has any
+            //
+            if ( c3_likely(hav_w) ) {
+              rod_u->cel.hav_w = --hav_w;
+              return (c3_w*)u3a_into(u3to(u3_post, rod_u->cel.cel_p)[hav_w]);
+            }
+            //  a sand zone with room: the cell is its next four words,
+            //  which lie outside [rut, hat) and so are senior from birth
+            //
+            else if ( rod_u->how.fag_w & u3a_flag_sand ) {
+              if ( rod_u->hep.dir_ws > 0 ) {
+                u3_post pot_p = rod_u->san_p;
+                u3_post new_p = pot_p + c3_wiseof(u3a_cell);
+
+                if ( c3_likely(new_p <= rod_u->rut_p) ) {
+                  rod_u->san_p = new_p;
+                  return (c3_w*)u3a_into(pot_p);
+                }
+              }
+              else {
+                u3_post new_p = rod_u->san_p - c3_wiseof(u3a_cell);
+
+                if ( c3_likely(new_p >= rod_u->rut_p) ) {
+                  rod_u->san_p = new_p;
+                  return (c3_w*)u3a_into(new_p);
+                }
+              }
+            }
+#endif
+            return 0;
+          }
+
+        /* u3a_celloc(): allocate a cell.
+        */
+          static inline c3_w*
+          u3a_celloc(void)
+          {
+            c3_w* cel_w = u3a_celloc_try();
+
+            return c3_likely(cel_w) ? cel_w : u3a_celloc_cold();
+          }
+
+#ifdef U3NC_STAT
+        /* u3a_Cel_d: cells allocated (-Dska-stat).
+        */
+          extern c3_d u3a_Cel_d;
+#endif
 
         /* u3a_wfree(): free storage.
         */
@@ -846,6 +978,13 @@ u3a_post_info(u3_post);
             u3_noun __som = som;                                                \
             ( c3y == u3a_is_cat(__som) ) ? (void)0 : u3a_lose(__som);           \
           })
+
+        /* u3a_lose_free(): lose an indirect noun: u3a_lose() for a caller
+        **                  that has found the count at 1 and the noun on
+        **                  u3R, straight to the loop that frees.
+        */
+          void
+          u3a_lose_free(u3_weak som);
 
         /* u3a_wash(): wash all lazy mugs in subtree.  RETAIN.
         */

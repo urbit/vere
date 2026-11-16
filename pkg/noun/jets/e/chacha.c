@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -48,6 +49,26 @@
     }
   }
 
+/* u3ue_chacha_crypt(): array driver of u3we_chacha_crypt.
+*/
+u3_noun
+u3ue_chacha_crypt(u3_noun* arg)
+{
+  u3_noun rounds, key, nonce, counter, msg, wid, dat;
+
+  if (  (c3n == u3r_quil(arg[0], &rounds, &key, &nonce, &counter, &msg))
+     || (c3n == u3ud(rounds))
+     || (c3n == u3ud(key))
+     || (c3n == u3ud(nonce))
+     || (c3n == u3ud(counter))
+     || (c3n == u3r_cell(msg, &wid, &dat))
+     || (c3n == u3ud(wid))
+     || (c3n == u3ud(dat)) )
+  {
+    return u3m_bail(c3__fail);
+  }
+  return _cqe_chacha_crypt(rounds, key, nonce, counter, wid, dat);
+}
 
   static u3_noun
   _cqe_chacha_xchacha(u3_atom rounds, u3_atom key, u3_atom nonce)
@@ -78,3 +99,20 @@
       return u3l_punt("chacha_xchacha", _cqe_chacha_xchacha(rounds, key, nonce));
     }
   }
+
+/* u3ue_chacha_xchacha(): array driver of u3we_chacha_xchacha.
+*/
+u3_noun
+u3ue_chacha_xchacha(u3_noun* arg)
+{
+  u3_noun rounds, key, nonce;
+
+  if (  (c3n == u3r_trel(arg[0], &rounds, &key, &nonce))
+     || (c3n == u3ud(rounds))
+     || (c3n == u3ud(key))
+     || (c3n == u3ud(nonce)) )
+  {
+    return u3m_bail(c3__exit);
+  }
+  return _cqe_chacha_xchacha(rounds, key, nonce);
+}

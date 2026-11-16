@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -44,3 +45,14 @@
       return _cqee_scalarmult_base(a);
     }
   }
+
+/* u3uee_scalarmult_base(): array driver of u3wee_scalarmult_base.
+*/
+u3_noun
+u3uee_scalarmult_base(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return _cqee_scalarmult_base(arg[0]);
+}

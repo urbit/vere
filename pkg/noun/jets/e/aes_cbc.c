@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -200,3 +201,22 @@ typedef int (*urcrypt_cbc)(c3_y*, size_t, c3_y*, c3_y*);
       return u3l_punt("cbcc-de", _cqea_cbcc_de(a, b, c));
     }
   }
+
+/* u3uea_cbc*(): array drivers of u3wea_cbc*: [txt key prv] in arg[0..2].
+*/
+#define _cbc_arr(mod, fun)                                      \
+  u3_noun                                                       \
+  u3uea_##mod##_##fun(u3_noun* arg)                             \
+  {                                                             \
+    if ( c3n == u3ud(arg[1]) || c3n == u3ud(arg[2]) ) {         \
+      return u3m_bail(c3__exit);                                \
+    }                                                           \
+    return _cqea_##mod##_##fun(arg[1], arg[2], arg[0]);         \
+  }
+
+  _cbc_arr(cbca, en)
+  _cbc_arr(cbca, de)
+  _cbc_arr(cbcb, en)
+  _cbc_arr(cbcb, de)
+  _cbc_arr(cbcc, en)
+  _cbc_arr(cbcc, de)

@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -27,3 +28,11 @@
       return u3qf_cell(hed, tal);
     }
   }
+
+/* u3uf_cell(): array driver of u3wf_cell.
+*/
+u3_noun
+u3uf_cell(u3_noun* arg)
+{
+  return u3qf_cell(arg[0], arg[1]);
+}

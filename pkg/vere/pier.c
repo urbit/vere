@@ -1456,10 +1456,7 @@ u3_pier_punt_ovum(const c3_c* cap_c, u3_noun wir, u3_noun tag)
 void
 u3_pier_sway(c3_h tab_h, u3_noun tax)
 {
-  u3_noun mok = u3dc("mook", 2, tax);
-
-  u3_pier_punt(tab_h, u3k(u3t(mok)));
-  u3z(mok);
+  u3_pier_punt(tab_h, u3t_mook(tax));
 }
 
 static c3_w

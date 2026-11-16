@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -40,6 +41,14 @@
       return u3qf_core(pac, con);
     }
   }
+
+/* u3uf_core(): array driver of u3wf_core.
+*/
+u3_noun
+u3uf_core(u3_noun* arg)
+{
+  return u3qf_core(arg[0], arg[1]);
+}
 
 #if 0
   static void

@@ -6,6 +6,18 @@
 #include "c3/c3.h"
 #include "types.h"
 
+  /** Constants.
+  **/
+    /* u3o_sand_default: megabytes of the sand zone of an inner road
+    **   unless configured: room for four million cells, which are 16
+    **   bytes on the 32-bit loom and 32 on the 64-bit.
+    */
+#     ifdef VERE64
+#       define u3o_sand_default  128
+#     else
+#       define u3o_sand_default  64
+#     endif
+
   /** Data structures.
   **/
     /* u3o_config: process / system configuration.
@@ -19,6 +31,7 @@
         c3_w    tos_w;                        //  loom toss skip-length
         c3_w    hap_w;                        //  transient memoization cache size
         c3_w    per_w;                        //  persistent memoization cache size
+        c3_w    san_w;                        //  sand zone of an inner road, in MB; 0: none
         void (*stderr_log_f)(c3_c*);          //  errors from c code
         void (*slog_f)(u3_noun);              //  function pointer for slog
         void (*sign_hold_f)(void);            //  suspend system signal regime

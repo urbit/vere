@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -35,6 +36,14 @@ u3wdb_get(u3_noun cor)
   u3_noun a, b;
   u3x_mean(cor, {u3x_sam, &b}, {u3x_con_sam, &a});
   return u3qdb_get(a, b);
+}
+
+/* u3udb_get(): array driver of u3wdb_get.
+*/
+u3_noun
+u3udb_get(u3_noun* arg)
+{
+  return u3qdb_get(arg[1], arg[0]);
 }
 
 u3_weak

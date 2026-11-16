@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -37,4 +38,15 @@
       return u3qc_pow(a, b);
     }
   }
+
+/* u3uc_pow(): array driver of u3wc_pow.
+*/
+u3_noun
+u3uc_pow(u3_noun* arg)
+{
+  if ( c3n == u3ud(arg[0]) ) {
+    return u3m_bail(c3__exit);
+  }
+  return u3qc_pow(arg[0], arg[1]);
+}
 

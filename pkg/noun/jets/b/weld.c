@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -45,4 +46,12 @@ u3kb_weld(u3_noun a, u3_noun b)
   u3_noun c = u3qb_weld(a, b);
   u3z(a); u3z(b);
   return c;
+}
+
+/* u3ub_weld(): array driver of u3wb_weld.
+*/
+u3_noun
+u3ub_weld(u3_noun* arg)
+{
+  return u3qb_weld(arg[0], arg[1]);
 }

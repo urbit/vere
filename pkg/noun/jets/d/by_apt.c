@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -75,4 +76,12 @@ u3_noun
 u3wdb_apt(u3_noun cor)
 {
   return u3qdb_apt(u3x_at(u3x_con_sam, cor));
+}
+
+/* u3udb_apt(): array driver of u3wdb_apt.
+*/
+u3_noun
+u3udb_apt(u3_noun* arg)
+{
+  return u3qdb_apt(arg[0]);
 }

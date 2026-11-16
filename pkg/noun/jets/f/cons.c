@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -52,3 +53,11 @@
       return u3qf_cons(vur, sed);
     }
   }
+
+/* u3uf_cons(): array driver of u3wf_cons.
+*/
+u3_noun
+u3uf_cons(u3_noun* arg)
+{
+  return u3qf_cons(arg[0], arg[1]);
+}

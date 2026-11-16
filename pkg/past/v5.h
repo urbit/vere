@@ -21,9 +21,12 @@
 #     define  u3_v5_none          u3_none
 
 #     define  u3A_v5              u3A
+#     define  u3H_v5              u3H
 #     define  u3R_v5              u3R
-#     define  u3j_v5_boot         u3j_boot
-#     define  u3j_v5_ream         u3j_ream
+#     define  u3v_v5_home         u3v_home
+#     define  u3a_v5_init_heap    u3a_init_heap
+#     define  u3h_v5_new          u3h_new
+#     define  u3h_v5_new_cache    u3h_new_cache
 #     define  u3a_v5_walloc       u3a_walloc
 #     define  u3a_v5_to_pug       u3a_to_pug
 #     define  u3a_v5_outa         u3a_outa
@@ -61,6 +64,11 @@
 #     define  u3h_v5_slot_is_null u3h_slot_is_null
 #     define  u3h_v5_noun_to_slot u3h_noun_to_slot
 #     define  u3h_v5_slot_to_noun u3h_slot_to_noun
+
+    /* u3m_v5_pave(): instantiate a pristine version 5 home road.
+    */
+      void
+      u3m_v5_pave(void);
 
 #endif /* !VERE64 */
 #endif /* U3_V5_H */

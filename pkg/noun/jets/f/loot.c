@@ -1,6 +1,7 @@
 /// @file
 
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -131,3 +132,11 @@
       return u3qf_loot(cog, dom);
     }
   }
+
+/* u3uf_loot(): array driver of u3wf_loot.
+*/
+u3_noun
+u3uf_loot(u3_noun* arg)
+{
+  return u3qf_loot(arg[0], arg[1]);
+}

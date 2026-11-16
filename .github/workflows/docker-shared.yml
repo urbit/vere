@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Fetch LFS sources
+        run: git lfs pull --include=pkg/vere/steel/steel.c,pkg/vere/ivory/ivory.c
+
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2

@@ -3,14 +3,17 @@
 #include "jets/q.h"
 #include "jets/w.h"
 
+#include "nock-compile.h"
 #include "noun.h"
 
 //  This version of the jet has a bug, fixing which makes some versions of the
 //  compiler too strict, making them fail to compile correct Hoon code.
 //  See ut_nest2.c
 
-u3_noun
-u3wfu_nest_dext1(u3_noun dext_core)
+/* _fu_nest_dext1(): the memoized arm, a miss run by fun_f.
+*/
+static u3_noun
+_fu_nest_dext1(u3_noun dext_core, u3_funq fun_f)
 {
   u3_noun nest_in_core, nest_core;
   u3_noun bat, sut, ref, van, seg, reg, gil;
@@ -38,7 +41,7 @@ u3wfu_nest_dext1(u3_noun dext_core)
       return pro;
     }
     else {
-      pro = u3n_nock_on(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
+      pro = fun_f(u3k(dext_core), u3k(u3x_at(u3x_bat, dext_core)));
 
       if ( ((c3y == pro) && (u3_nul == reg)) ||
            ((c3n == pro) && (u3_nul == seg)) )
@@ -51,4 +54,21 @@ u3wfu_nest_dext1(u3_noun dext_core)
       }
     }
   }
+}
+
+/* u3wfu_nest_dext1(): from u3n; a miss in compiled nock if a run of it is in
+**                    progress, else in u3n.
+*/
+u3_noun
+u3wfu_nest_dext1(u3_noun dext_core)
+{
+  return _fu_nest_dext1(dext_core, u3nc_miss_nock);
+}
+
+/* u3ufu_nest_dext1(): from compiled nock, in compiled nock.
+*/
+u3_noun
+u3ufu_nest_dext1(u3_noun dext_core)
+{
+  return _fu_nest_dext1(dext_core, u3nc_gop_nock);
 }

@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -89,6 +90,14 @@ u3wdb_put(u3_noun cor)
                 {u3x_sam_3,   &c},
                 {u3x_con_sam, &a});
   return u3qdb_put(a, b, c);
+}
+
+/* u3udb_put(): array driver of u3wdb_put.
+*/
+u3_noun
+u3udb_put(u3_noun* arg)
+{
+  return u3qdb_put(arg[2], arg[0], arg[1]);
 }
 
 u3_noun

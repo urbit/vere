@@ -2,6 +2,7 @@
 
 #include "jets/k.h"
 #include "jets/q.h"
+#include "jets/u.h"
 #include "jets/w.h"
 
 #include "noun.h"
@@ -216,4 +217,14 @@ u3kc_rip(u3_atom a,
   u3_noun pro = u3qc_rip(a, b, c);
   u3z(a); u3z(b); u3z(c);
   return pro;
+}
+
+/* u3uc_rip(): array driver of u3wc_rip.
+*/
+u3_noun
+u3uc_rip(u3_noun* arg)
+{
+  u3_atom bloq, step;
+  u3x_bite(arg[0], &bloq, &step);
+  return u3qc_rip(bloq, step, u3x_atom(arg[1]));
 }

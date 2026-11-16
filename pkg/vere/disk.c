@@ -1955,11 +1955,12 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   c3_i fid_i = _disk_load_stale_loom(dir_c, sou_z);
 
 #ifdef VERE64
-  //  v5 (32-bit) home is at loom position 0; version is the first c3_d
+  //  v5 or v6 (32-bit) home is at loom position 0; version is the first
+  //  c3_d
   //
   c3_d lom_d = *((c3_d *)u3_Loom_h);
 
-  if ( U3V_VER5 != lom_d ) {
+  if ( (U3V_VER5 != lom_d) && (U3V_VER6 != lom_d) ) {
     fprintf(stderr, "loom: unknown stale loom version: %" PRIu64 "\r\n", lom_d);
     u3_assert(0);
   }
@@ -1973,7 +1974,9 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     u3m_save();
   }
 #else
-  //  v1-v4 (32-bit) home is at the high end; version is the last word
+  //  v1-v4 (32-bit) home is at the high end; version is the last word.
+  //  the chain ends at version 5, the first with the home at position 0;
+  //  u3_disk_migrate_home() takes it from there.
   //  NB: all fallthru, all the time
   //
   c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
@@ -1983,10 +1986,7 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
     case U3V_VER2: u3_migrate_v3(eve_d); [[fallthrough]];
     case U3V_VER3: u3_migrate_v4(eve_d); [[fallthrough]];
     case U3V_VER4: {
-      u3m_init((c3_z)1 << des_y);
-      u3e_live(c3y, strdup(dir_c));
-      u3m_pave(c3y);
-      u3_migrate_v5(eve_d);
+      u3_migrate_v5(dir_c, (c3_z)1 << des_y, eve_d);
       _disk_drop_stale_loom(fid_i, sou_z);
       u3m_save();
       return;
@@ -1998,6 +1998,62 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   //
   _disk_drop_stale_loom(fid_i, sou_z);
 #endif
+}
+
+/* u3_disk_migrate_home(): migrate a checkpoint whose home is at loom
+**                         position 0 (version 5 onward) in place: the
+**                         image is loaded live, and each step from the
+**                         image's version on brings it one version up.
+*/
+c3_o
+u3_disk_migrate_home(c3_c* dir_c, c3_z lom_z, c3_d eve_d)
+{
+  c3_c img_c[8193];
+  c3_d ver_d = 0;
+  c3_i fid_i;
+
+  snprintf(img_c, 8193, "%s/.urb/chk/image.bin", dir_c);
+
+  if ( -1 == (fid_i = open(img_c, O_RDONLY)) ) {
+    return c3n;
+  }
+
+  pread(fid_i, &ver_d, sizeof(ver_d), 0);
+  close(fid_i);
+
+  //  the latest already, or unknown (boot refuses those)
+  //
+  if ( (ver_d < U3V_VER5) || (ver_d >= U3V_VERLAT) ) {
+    return c3n;
+  }
+
+  fprintf(stderr, "loom: migrating the checkpoint from version %" PRIu64
+                  " to %" PRIu64 "\r\n", ver_d, U3V_VERLAT);
+
+  u3m_init(lom_z);
+  u3e_live(c3n, u3m_pier(dir_c));
+
+  switch ( ver_d ) {
+    case U3V_VER5: u3_migrate_v6(eve_d); [[fallthrough]];
+    case U3V_VER6: break;
+  }
+
+  u3m_save();
+  return c3y;
+}
+
+/* _disk_migrate_home(): bring the checkpoint, at version 5 or later, up
+**                       to date before booting.
+*/
+static void
+_disk_migrate_home(u3_disk* log_u, c3_d eve_d)
+{
+  if ( c3y == u3_disk_migrate_home(log_u->dir_u->pax_c,
+                                   (size_t)1 << u3_Host.ops_u.lom_y,
+                                   eve_d) )
+  {
+    u3m_stop();
+  }
 }
 
 static void
@@ -2014,6 +2070,7 @@ _disk_migrate_old(u3_disk* log_u)
   switch ( log_u->ver_h ) {
     case U3D_VER1: {
       _disk_migrate_loom(log_u->dir_u->pax_c, las_d);
+      u3m_stop();
 
       //  set version to 2 (migration in progress)
       log_u->ver_h = U3D_VER2;
@@ -2025,6 +2082,7 @@ _disk_migrate_old(u3_disk* log_u)
 
     case U3D_VER2: {
       _disk_unlink_stale_loom(log_u->dir_u->pax_c);
+      _disk_migrate_home(log_u, las_d);
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( c3n == _disk_migrate_epoc(log_u, las_d) ) {
@@ -2146,6 +2204,7 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
 
       _disk_migrate_loom(log_u->dir_u->pax_c, log_u->dun_d);
       u3m_stop();
+      _disk_migrate_home(log_u, log_u->dun_d);
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
       if ( c3n == _disk_epoc_roll(log_u, log_u->dun_d) ) {
@@ -2220,6 +2279,13 @@ _disk_epoc_load(u3_disk* log_u, c3_d lat_d, u3_disk_load_e lod_e)
         }
       }
 #endif
+
+      //  migrate an older loom (version 5 onward) in chk in place
+      //  before booting
+      //
+      if ( !(u3C.wag_h & u3o_no_migrate) ) {
+        _disk_migrate_home(log_u, log_u->dun_d);
+      }
 
       u3m_boot(log_u->dir_u->pax_c, (size_t)1 << u3_Host.ops_u.lom_y); // XX confirm
 
