@@ -33,34 +33,18 @@
 //
 #define MACH_EVENT_MAX   (4 << 20)
 
-//  most outgoing bytes queued per connection; a full queue closes it
+//  most outgoing bytes libuv may hold for a connection; a %send past
+//  this closes it
 //
 #define MACH_OUT_MAX     (16 << 20)
 
-//  most bytes in one write. a write that has not finished after
-//  MACH_RXT_S kills the connection, so this is also the least a
+//  most bytes in one write. a connection with bytes to send that
+//  finishes no write in MACH_RXT_S dies, so this is also the least a
 //  peer must take in that time
 //
 #define MACH_WRITE_MAX   (64 << 10)
 
 struct _u3_mach;
-
-/* u3_mbuf: queued bytes
- */
-typedef struct _u3_mbuf {
-  c3_y*            buf_y;  // bytes in buffer
-  c3_w             len_w;  // length
-  c3_w             pos_w;  // bytes already consumed
-  struct _u3_mbuf* nex_u;  // next buffer
-} u3_mbuf;
-
-/* u3_mque: queue of buffers
- */
-typedef struct _u3_mque {
-  u3_mbuf* hed_u;  // first buffer
-  u3_mbuf* tal_u;  // last buffer
-  c3_w     len_w;  // unconsumed bytes in queue
-} u3_mque;
 
 /* u3_tcon: tcp connection
  */
@@ -72,12 +56,18 @@ typedef struct _u3_tcon {
   struct _u3_tcon* nex_u;  // next tcon in list
   c3_o             opn_o;  // opened?
   c3_o             clo_o;  // %close received?
-  u3_mque          out_u;  // outgoing byte queue
-  c3_o             wri_o;  // write in transit?
-  c3_w             wrl_w;  // bytes in transit
+  c3_o             ded_o;  // freeing; callbacks must do nothing
   u3_ovum*         egg_u;  // planned %received event
   c3_o             wok_o;  // planned event in work?
 } u3_tcon;
+
+/* u3_mwri: one write, and the bytes it sends
+ */
+typedef struct _u3_mwri {
+  uv_write_t       req_u;  // request, first so we can cast back
+  u3_tcon*         con_u;  // connection
+  c3_y             buf_y[];
+} u3_mwri;
 
 /* u3_mach: list of connections
  */
@@ -88,55 +78,12 @@ typedef struct _u3_mach {
   c3_o     bus_o;  //  read buffer in use?
 } u3_mach;
 
-/* _mach_queue_push(): append bytes to a queue.
+/* _mach_out_size(): bytes libuv has yet to hand the kernel.
  */
-static void
-_mach_queue_push(u3_mque* que_u, c3_y* buf_y, c3_w len_w)
+static size_t
+_mach_out_size(u3_tcon* con_u)
 {
-  u3_mbuf* buf_u = c3_malloc(sizeof(*buf_u));
-
-  buf_u->buf_y = buf_y;
-  buf_u->len_w = len_w;
-  buf_u->pos_w = 0;
-  buf_u->nex_u = 0;
-
-  if ( que_u->tal_u ) {
-    que_u->tal_u->nex_u = buf_u;
-  }
-  else {
-    que_u->hed_u = buf_u;
-  }
-
-  que_u->tal_u  = buf_u;
-  que_u->len_w += len_w;
-}
-
-/* _mach_queue_pop(): free the first buffer in a queue.
- */
-static void
-_mach_queue_pop(u3_mque* que_u)
-{
-  u3_mbuf* buf_u = que_u->hed_u;
-
-  que_u->len_w -= buf_u->len_w - buf_u->pos_w;
-  que_u->hed_u  = buf_u->nex_u;
-
-  if ( !que_u->hed_u ) {
-    que_u->tal_u = 0;
-  }
-
-  c3_free(buf_u->buf_y);
-  c3_free(buf_u);
-}
-
-/* _mach_queue_free(): free every buffer in a queue.
- */
-static void
-_mach_queue_free(u3_mque* que_u)
-{
-  while ( que_u->hed_u ) {
-    _mach_queue_pop(que_u);
-  }
+  return uv_stream_get_write_queue_size((uv_stream_t*)con_u->tcp_u);
 }
 
 /* _mach_event_plan(): inject an event into %mach.
@@ -162,14 +109,6 @@ _mach_conn_find(u3_mach* mac_u, c3_d id_d)
   return con_u;
 }
 
-/* _mach_tcp_free_cb(): free a closed tcp handle.
- */
-static void
-_mach_tcp_free_cb(uv_handle_t* han_u)
-{
-  c3_free(han_u);
-}
-
 /* _mach_conn_free_cb(): free a connection once its timer has closed.
  */
 static void
@@ -178,13 +117,25 @@ _mach_conn_free_cb(uv_handle_t* han_u)
   c3_free(han_u->data);
 }
 
+/* _mach_tcp_close_cb(): the socket has closed; close the timer.
+ */
+static void
+_mach_tcp_close_cb(uv_handle_t* han_u)
+{
+  u3_tcon* con_u = han_u->data;
+
+  c3_free(han_u);
+  uv_close((uv_handle_t*)&con_u->tim_u, _mach_conn_free_cb);
+}
+
 /* _mach_conn_free(): unlink a connection, close its handles, then free it.
  *
- *   libuv owns a handle until its close callback runs, so the socket
- *   is freed in _mach_tcp_free_cb() and the struct holding the timer
- *   in _mach_conn_free_cb(). libuv cancels a closing handle's
- *   requests, so their callbacks check for UV_ECANCELED and touch
- *   nothing else; the connection may be freed by then.
+ *   libuv owns a handle until its close callback runs. closing the
+ *   socket runs the callback of every request on it, some with
+ *   UV_ECANCELED and some with the status they finished with, and
+ *   only then _mach_tcp_close_cb(). so we close the timer and free
+ *   the connection after the socket, and every request callback
+ *   checks .ded_o and touches nothing else.
  */
 static void
 _mach_conn_free(u3_tcon* con_u)
@@ -199,10 +150,7 @@ _mach_conn_free(u3_tcon* con_u)
     *pre_u = con_u->nex_u;
   }
 
-  if ( con_u->tcp_u ) {
-    uv_close((uv_handle_t*)con_u->tcp_u, _mach_tcp_free_cb);
-    con_u->tcp_u = 0;
-  }
+  con_u->ded_o = c3y;
 
   //  the event outlives this call; detach it
   if ( con_u->egg_u ) {
@@ -210,10 +158,15 @@ _mach_conn_free(u3_tcon* con_u)
     con_u->egg_u = 0;
   }
 
-  _mach_queue_free(&con_u->out_u);
-
   uv_timer_stop(&con_u->tim_u);
-  uv_close((uv_handle_t*)&con_u->tim_u, _mach_conn_free_cb);
+
+  if ( con_u->tcp_u ) {
+    uv_close((uv_handle_t*)con_u->tcp_u, _mach_tcp_close_cb);
+    con_u->tcp_u = 0;
+  }
+  else {
+    uv_close((uv_handle_t*)&con_u->tim_u, _mach_conn_free_cb);
+  }
 }
 
 /* _mach_conn_shut(): tell %mach a connection closed, free it.
@@ -384,145 +337,98 @@ _mach_shutdown_cb(uv_shutdown_t* req_u, c3_i sas_i)
 
   c3_free(req_u);
 
-  if ( UV_ECANCELED == sas_i ) {
+  if ( c3y == con_u->ded_o ) {
     return;
   }
 
   _mach_conn_shut(con_u, "close", "done");
 }
 
-/* _mach_conn_flushed(): a closing connection has sent everything; send
- * our fin, then end it.
+static void
+_mach_conn_drain_cb(uv_timer_t* tim_u);
+
+/* _mach_conn_drain(): stop reading, and close once libuv has sent
+ * what the agent queued.
+ *
+ *   uv_shutdown() waits for every write before it sends our fin.
  */
 static void
-_mach_conn_flushed(u3_tcon* con_u)
+_mach_conn_drain(u3_tcon* con_u)
 {
   uv_shutdown_t* req_u = c3_malloc(sizeof(*req_u));
   c3_i           sas_i;
 
+  uv_read_stop((uv_stream_t*)con_u->tcp_u);
+  uv_timer_start(&con_u->tim_u, _mach_conn_drain_cb, MACH_DRAIN_MS, 0);
+
   req_u->data = con_u;
 
-  if ( 0 == (sas_i = uv_shutdown(req_u, (uv_stream_t*)con_u->tcp_u,
+  if ( 0 != (sas_i = uv_shutdown(req_u, (uv_stream_t*)con_u->tcp_u,
                                  _mach_shutdown_cb)) )
   {
-    return;
+    u3l_log("mach: %" PRIu64 ": shutdown: %s", con_u->id_d, uv_strerror(sas_i));
+    c3_free(req_u);
+    _mach_conn_shut(con_u, "close", "done");
   }
-
-  u3l_log("mach: %" PRIu64 ": shutdown: %s", con_u->id_d, uv_strerror(sas_i));
-  c3_free(req_u);
-  _mach_conn_shut(con_u, "close", "done");
 }
 
-static void
-_mach_queue_write_next(u3_tcon* con_u);
-
-/* _mach_write_done(): a write finished, or failed with reason [why_c].
- */
-static void
-_mach_write_done(u3_tcon* con_u, const c3_c* why_c)
-{
-  con_u->wri_o = c3n;
-
-  if ( why_c ) {
-    _mach_conn_shut(con_u, "peer", why_c);
-    return;
-  }
-
-  {
-    u3_mbuf* buf_u = con_u->out_u.hed_u;
-
-    buf_u->pos_w       += con_u->wrl_w;
-    con_u->out_u.len_w -= con_u->wrl_w;
-
-    if ( buf_u->pos_w == buf_u->len_w ) {
-      _mach_queue_pop(&con_u->out_u);
-    }
-  }
-
-  if ( !con_u->out_u.hed_u ) {
-    if ( c3y == con_u->clo_o ) {
-      _mach_conn_flushed(con_u);
-      return;
-    }
-
-    uv_timer_stop(&con_u->tim_u);
-  }
-
-  _mach_queue_write_next(con_u);
-}
-
-/* _mach_tcp_write_cb(): a plain write finished.
- */
-static void
-_mach_tcp_write_cb(uv_write_t* req_u, c3_i sas_i)
-{
-  u3_tcon* con_u = req_u->data;
-
-  c3_free(req_u);
-
-  if ( UV_ECANCELED == sas_i ) {
-    return;
-  }
-
-  _mach_write_done(con_u, !sas_i                   ? 0
-                        : (UV_ETIMEDOUT == sas_i) ? "dead"
-                        : "reset");
-}
-
-/* _mach_stall_cb(): the write in flight did not finish in MACH_RXT_S;
- * the peer stopped taking bytes.
+/* _mach_stall_cb(): no write finished in MACH_RXT_S; the peer stopped
+ * taking bytes.
  */
 static void
 _mach_stall_cb(uv_timer_t* tim_u)
 {
   u3_tcon* con_u = tim_u->data;
 
-  u3l_log("mach: %" PRIu64 ": stalled, %u bytes unsent",
-          con_u->id_d, con_u->out_u.len_w);
+  u3l_log("mach: %" PRIu64 ": stalled, %zu bytes unsent",
+          con_u->id_d, _mach_out_size(con_u));
   _mach_conn_shut(con_u, "peer", "dead");
 }
 
-/* _mach_queue_write_next(): start writing the next slice of the queue, and
- * unless we're draining on %close, time it.
+/* _mach_stall_time(): give the peer MACH_RXT_S from now to take more
+ * bytes, or stop timing if libuv has none left to send.
+ *
+ *   only for an open connection that is not draining; the timer
+ *   counts the connect, then the drain, otherwise.
  */
 static void
-_mach_queue_write_next(u3_tcon* con_u)
+_mach_stall_time(u3_tcon* con_u)
 {
-  if (  (c3n == con_u->opn_o)
-     || (c3y == con_u->wri_o)
-     || !con_u->out_u.hed_u )
-  {
+  if ( (c3n == con_u->opn_o) || (c3y == con_u->clo_o) ) {
     return;
   }
 
-  u3_mbuf*    buf_u = con_u->out_u.hed_u;
-  c3_w        len_w = c3_min(buf_u->len_w - buf_u->pos_w, MACH_WRITE_MAX);
-  uv_buf_t    buf_v = uv_buf_init((c3_c*)buf_u->buf_y + buf_u->pos_w, len_w);
-  uv_write_t* req_u = c3_malloc(sizeof(*req_u));
-  c3_i        sas_i;
-
-  con_u->wri_o = c3y;
-  con_u->wrl_w = len_w;
-  req_u->data  = con_u;
-
-  if ( 0 != (sas_i = uv_write(req_u, (uv_stream_t*)con_u->tcp_u,
-                              &buf_v, 1, _mach_tcp_write_cb)) )
-  {
-    u3l_log("mach: %" PRIu64 ": write: %s", con_u->id_d, uv_strerror(sas_i));
-    c3_free(req_u);
-    _mach_write_done(con_u, "reset");
-    return;
-  }
-
-  if ( c3n == con_u->clo_o ) {
+  if ( _mach_out_size(con_u) ) {
     uv_timer_start(&con_u->tim_u, _mach_stall_cb, MACH_RXT_S * 1000, 0);
+  }
+  else {
+    uv_timer_stop(&con_u->tim_u);
   }
 }
 
+/* _mach_tcp_write_cb(): a write finished; the peer is taking bytes.
+ */
 static void
-_mach_conn_drain_cb(uv_timer_t* tim_u);
+_mach_tcp_write_cb(uv_write_t* req_u, c3_i sas_i)
+{
+  u3_tcon* con_u = ((u3_mwri*)req_u)->con_u;
 
-/* _mach_conn_open(): the connection is ready; start reading and writing.
+  c3_free(req_u);
+
+  if ( c3y == con_u->ded_o ) {
+    return;
+  }
+
+  if ( sas_i ) {
+    _mach_conn_shut(con_u, "peer", (UV_ETIMEDOUT == sas_i) ? "dead" : "reset");
+    return;
+  }
+
+  _mach_stall_time(con_u);
+}
+
+/* _mach_conn_open(): the connection is ready; start reading, and time
+ * the bytes queued while we connected.
  */
 static void
 _mach_conn_open(u3_tcon* con_u)
@@ -533,8 +439,7 @@ _mach_conn_open(u3_tcon* con_u)
   //  %close came while we were connecting: tell %mach nothing, read
   //  nothing, and flush what the agent queued
   if ( c3y == con_u->clo_o ) {
-    uv_timer_start(&con_u->tim_u, _mach_conn_drain_cb, MACH_DRAIN_MS, 0);
-    _mach_queue_write_next(con_u);
+    _mach_conn_drain(con_u);
     return;
   }
 
@@ -542,7 +447,7 @@ _mach_conn_open(u3_tcon* con_u)
              u3nc(u3i_string("opened"), u3i_chub(con_u->id_d)));
 
   if ( c3y == _mach_conn_read_start(con_u) ) {
-    _mach_queue_write_next(con_u);
+    _mach_stall_time(con_u);
   }
 }
 
@@ -563,8 +468,8 @@ _mach_conn_drain_cb(uv_timer_t* tim_u)
 {
   u3_tcon* con_u = tim_u->data;
 
-  u3l_log("mach: close %" PRIu64 ": drain timeout, %u bytes unsent",
-          con_u->id_d, con_u->out_u.len_w);
+  u3l_log("mach: close %" PRIu64 ": drain timeout, %zu bytes unsent",
+          con_u->id_d, _mach_out_size(con_u));
   _mach_conn_shut(con_u, "close", "timeout");
 }
 
@@ -642,8 +547,7 @@ _mach_tcp_connect_cb(uv_connect_t* req_u, c3_i sas_i)
 
   c3_free(req_u);
 
-  //  we closed the handle; con_u may be gone
-  if ( UV_ECANCELED == sas_i ) {
+  if ( c3y == con_u->ded_o ) {
     return;
   }
 
@@ -755,7 +659,7 @@ _mach_conn_connect(u3_mach* mac_u, c3_d id_d, u3_noun adr)
   con_u->mac_u = mac_u;
   con_u->opn_o = c3n;
   con_u->clo_o = c3n;
-  con_u->wri_o = c3n;
+  con_u->ded_o = c3n;
   con_u->wok_o = c3n;
   con_u->nex_u = mac_u->con_u;
   mac_u->con_u = con_u;
@@ -823,17 +727,45 @@ _mach_conn_send_bytes(u3_mach* mac_u, c3_d id_d, c3_w len_w, u3_atom dat)
     return;
   }
 
-  if ( (con_u->out_u.len_w + (c3_d)len_w) > MACH_OUT_MAX ) {
+  if ( (_mach_out_size(con_u) + len_w) > MACH_OUT_MAX ) {
     u3l_log("mach: send %" PRIu64 ": outgoing queue full", id_d);
     _mach_conn_shut(con_u, "local", "overflowed");
     return;
   }
 
-  c3_y* buf_y = c3_malloc(len_w);
-  u3r_bytes(0, len_w, buf_y, dat);
+  //  XX libuv on windows marks a socket writable only once it has
+  //  connected, so a %send before %connected may fail there with
+  //  UV_EPIPE and close the connection with [%peer %reset]. it also
+  //  hands every write to the kernel at once, so the write queue size
+  //  shrinks only as whole slices finish. untested on windows
+  //
+  //  one write per slice, so each that finishes shows the peer is
+  //  still taking bytes
+  //
+  for ( c3_w pos_w = 0; pos_w < len_w; pos_w += MACH_WRITE_MAX ) {
+    c3_w     siz_w = c3_min(len_w - pos_w, MACH_WRITE_MAX);
+    u3_mwri* wri_u = c3_malloc(sizeof(*wri_u) + siz_w);
+    uv_buf_t buf_u = uv_buf_init((c3_c*)wri_u->buf_y, siz_w);
+    c3_i     sas_i;
 
-  _mach_queue_push(&con_u->out_u, buf_y, len_w);
-  _mach_queue_write_next(con_u);
+    wri_u->con_u = con_u;
+    u3r_bytes(pos_w, siz_w, wri_u->buf_y, dat);
+
+    if ( 0 != (sas_i = uv_write(&wri_u->req_u, (uv_stream_t*)con_u->tcp_u,
+                                &buf_u, 1, _mach_tcp_write_cb)) )
+    {
+      u3l_log("mach: %" PRIu64 ": write: %s", id_d, uv_strerror(sas_i));
+      c3_free(wri_u);
+      _mach_conn_shut(con_u, "peer", "reset");
+      return;
+    }
+  }
+
+  //  start timing, unless writes already in flight are being timed
+  //
+  if ( !uv_is_active((uv_handle_t*)&con_u->tim_u) ) {
+    _mach_stall_time(con_u);
+  }
 }
 
 /* _mach_conn_close(): close a connection, flushing what we owe the peer.
@@ -854,7 +786,7 @@ _mach_conn_close(u3_mach* mac_u, c3_d id_d)
 
   //  nothing to flush
   //
-  if ( !con_u->out_u.hed_u ) {
+  if ( !_mach_out_size(con_u) ) {
     _mach_conn_shut(con_u, "close", "done");
     return;
   }
@@ -868,11 +800,7 @@ _mach_conn_close(u3_mach* mac_u, c3_d id_d)
     return;
   }
 
-  //  stop delivering; the agent asked to go
-  //
-  uv_read_stop((uv_stream_t*)con_u->tcp_u);
-
-  uv_timer_start(&con_u->tim_u, _mach_conn_drain_cb, MACH_DRAIN_MS, 0);
+  _mach_conn_drain(con_u);
 }
 
 /* _mach_io_kick(): apply effects.
