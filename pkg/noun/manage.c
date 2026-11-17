@@ -1096,6 +1096,19 @@ u3m_bail(u3_noun how)
     u3m_signal(how);
   }
 
+  //  a bail with async signals held skips the u3m_hold_done() that
+  //  would end the hold: end it here, or they'd stay held. a signal
+  //  that arrived meanwhile takes the bail's place, since it would
+  //  have unwound this road anyway. (no held section should bail)
+  //
+  if ( u3m_Hold_w ) {
+    u3m_Hold_w = 0;
+
+    if ( u3m_Held_m ) {
+      u3m_hold_raise();
+    }
+  }
+
   //  release the emergency buffer, ensuring space for cells
   //
   u3z(u3R->bug.mer);
