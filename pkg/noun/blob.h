@@ -11,7 +11,8 @@
   **
   ** An epoch owns its blob files: they live in
   ** $pier/.urb/log/0i<epoch>/bob/<mug>/<seq>, the store root of that
-  ** epoch (u3b_root).  Every store function takes a root; a process
+  ** epoch (u3b_root), with <mug> in hex (U3B_MUG_FMT) and <seq> in
+  ** decimal.  Every store function takes a root; a process
   ** keeps the current one in u3C.bob_c, and an unset root declines.
   **
   ** Mars is the sole writer, so the next seq in a bucket is one past
@@ -57,6 +58,11 @@
 
   _Static_assert(U3_BLOB_THRESH > U3_BLOB_MIN,
                  "blobified atoms must be indirect in the loom");
+
+  /* U3B_MUG_FMT: a bucket's name: its mug as eight lowercase hex digits,
+  **   as U3A_BID_FMT prints the mug in logs.
+  */
+#   define U3B_MUG_FMT  "%08" PRIx32
 
     /* u3b_root(): write the store root of epoch [epo_d] in pier [pax_c]
     **   into [out_c]: $pier/.urb/log/0i<epo>/bob.
@@ -121,7 +127,7 @@
     /* u3b_walk(): enumerate every blob file in the store.
     **
     ** Calls [fun_f] with (mug_h, seq_h) for each <root>/<mug>/<seq>
-    ** file on disk.  Skips any name not strictly decimal.  The
+    ** file on disk.  Skips any name u3b_path would not write.  The
     ** callback must not create or delete blob files (collect, then act).
     */
       void

@@ -646,7 +646,7 @@ u3b_root(c3_c* out_c, const c3_c* pax_c, c3_d epo_d)
 static void
 _blob_mug_dir(c3_c* out_c, const c3_c* bob_c, c3_h mug_h)
 {
-  snprintf(out_c, 8192, "%s/%" PRIc3_h, bob_c, mug_h);
+  snprintf(out_c, 8192, "%s/" U3B_MUG_FMT, bob_c, mug_h);
 }
 
 /* _blob_sync_path(): fsync directory [dir_c] so a freshly-created
@@ -707,7 +707,7 @@ _blob_bucket_make(const c3_c* bob_c, c3_h mug_h)
 void
 u3b_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
 {
-  snprintf(out_c, 8192, "%s/%" PRIc3_h "/%" PRIc3_h, bob_c, mug_h, seq_h);
+  snprintf(out_c, 8192, "%s/" U3B_MUG_FMT "/%" PRIc3_h, bob_c, mug_h, seq_h);
 }
 
 /* u3b_stg_dir(): write path to $pier/.urb/stg/ into [out_c].
@@ -1146,6 +1146,46 @@ _blob_name_num(const c3_c* nam_c, c3_h* out_h)
   return c3y;
 }
 
+/* _blob_name_mug(): parse a bucket name, eight lowercase hex digits,
+**   into [out_h].
+**
+**   Rejects anything else: dotfiles, junk, uppercase, other widths.
+*/
+static c3_o
+_blob_name_mug(const c3_c* nam_c, c3_h* out_h)
+{
+  //  exactly the spelling U3B_MUG_FMT writes, so one name per mug
+  //
+  c3_h val_h = 0;
+  c3_w len_w = 0;
+
+  for ( ; nam_c[len_w]; len_w++ ) {
+    c3_c   c_c = nam_c[len_w];
+    c3_h dig_h;
+
+    if ( len_w >= 8 ) {
+      return c3n;
+    }
+    else if ( (c_c >= '0') && (c_c <= '9') ) {
+      dig_h = (c3_h)(c_c - '0');
+    }
+    else if ( (c_c >= 'a') && (c_c <= 'f') ) {
+      dig_h = (c3_h)(c_c - 'a' + 10);
+    }
+    else {
+      return c3n;
+    }
+    val_h = (val_h << 4) | dig_h;
+  }
+
+  if ( 8 != len_w ) {
+    return c3n;
+  }
+
+  *out_h = val_h;
+  return c3y;
+}
+
 /* u3b_walk(): enumerate every blob file in the store.
 */
 void
@@ -1166,7 +1206,7 @@ u3b_walk(const c3_c* bob_c,
   while ( (mug_e = readdir(bob_u)) ) {
     c3_h mug_h;
     if (  ('.' == mug_e->d_name[0])
-       || (c3n == _blob_name_num(mug_e->d_name, &mug_h)) )
+       || (c3n == _blob_name_mug(mug_e->d_name, &mug_h)) )
     {
       continue;
     }

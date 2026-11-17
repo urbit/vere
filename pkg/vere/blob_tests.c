@@ -232,7 +232,7 @@ _hand_write_raw(c3_h mug_h, c3_h seq_h, c3_w num_w)
   c3_c  pax_c[8192];
   FILE* fil_f;
 
-  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h, _tmp_bob, mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT, _tmp_bob, mug_h);
   if ( (0 != mkdir(pax_c, 0700)) && (EEXIST != errno) ) {
     _fail("raw mkdir: %s", strerror(errno));
   }
@@ -467,14 +467,14 @@ _test_path(void)
 
   u3b_path(pax_c, bob_c, 0x12345678, 42);
 
-  const c3_c* exp_c = "/pier/.urb/log/0i7/bob/305419896/42";
+  const c3_c* exp_c = "/pier/.urb/log/0i7/bob/12345678/42";
   _check( 0 == strcmp(pax_c, exp_c), "got %s, expected %s", pax_c, exp_c );
 
   fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
 }
 
 /* _test_walk(): u3b_walk reports every installed blob exactly once,
-**   skipping the staging dir and any name not strictly decimal.
+**   skipping the staging dir and any name u3b_path would not write.
 */
 typedef struct {
   c3_d bid_d[8];
@@ -534,8 +534,20 @@ _test_walk(void)
     //
     const c3_c* odd_c[] = { "07", "+7" };
     for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
-      snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h "/%s",
+      snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT "/%s",
                _tmp_bob, mug_h[0], odd_c[i_w]);
+      fil_u = fopen(pax_c, "w");
+      if ( fil_u ) { fputs("junk", fil_u); fclose(fil_u); }
+    }
+
+    //  and buckets holding a well-named seq whose own names are not
+    //  how a mug is spelled: uppercase, seven and nine digits, a prefix
+    //
+    const c3_c* bad_c[] = { "ABCDEF01", "abcdef0", "0abcdef01", "0xabcdef" };
+    for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
+      snprintf(pax_c, sizeof(pax_c), "%s/%s", _tmp_bob, bad_c[i_w]);
+      _check( 0 == mkdir(pax_c, 0700), "mkdir %s: %s", pax_c, strerror(errno) );
+      snprintf(pax_c, sizeof(pax_c), "%s/%s/1", _tmp_bob, bad_c[i_w]);
       fil_u = fopen(pax_c, "w");
       if ( fil_u ) { fputs("junk", fil_u); fclose(fil_u); }
     }
@@ -547,7 +559,7 @@ _test_walk(void)
 
   for ( c3_z i_z = 0; i_z < 3; i_z++ ) {
     _check( c3y == _walk_acc_has(&acc_u, mug_h[i_z], seq_h[i_z]),
-            "missing %" PRIc3_h "/%" PRIc3_h, mug_h[i_z], seq_h[i_z] );
+            "missing " U3A_BID_FMT, mug_h[i_z], seq_h[i_z] );
   }
 
   //  after wiping one blob, the walk reports exactly the other two
@@ -577,7 +589,7 @@ _test_delete_empty_bucket(void)
 
   c3_c fil_c[8192], dir_c[8192];
   u3b_path(fil_c, _tmp_bob, mug_h, seq_h);
-  snprintf(dir_c, sizeof(dir_c), "%s/%" PRIc3_h, _tmp_bob, mug_h);
+  snprintf(dir_c, sizeof(dir_c), "%s/" U3B_MUG_FMT, _tmp_bob, mug_h);
   _check( c3y == _path_exists(dir_c), "setup: bucket missing" );
 
   u3b_wipe(_tmp_bob, mug_h, seq_h);
@@ -596,7 +608,7 @@ _test_delete_empty_bucket(void)
   {
     _hand_write_raw(0x7777, 1, 1);
     _hand_write_raw(0x7777, 2, 2);
-    snprintf(dir_c, sizeof(dir_c), "%s/%" PRIc3_h, _tmp_bob, (c3_h)0x7777);
+    snprintf(dir_c, sizeof(dir_c), "%s/" U3B_MUG_FMT, _tmp_bob, (c3_h)0x7777);
 
     u3b_wipe(_tmp_bob, 0x7777, 1);
     _check( c3y == _path_exists(dir_c), "bucket removed with a blob remaining" );
@@ -2302,7 +2314,7 @@ _test_jam_wide(void)
   _han_seq_h = 1;
   {
     c3_c dir_c[8192], fil_c[8192];
-    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, _han_mug_h);
+    snprintf(dir_c, sizeof(dir_c), "%s/" U3B_MUG_FMT, _tmp_bob, _han_mug_h);
     _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
     u3b_path(fil_c, _tmp_bob, _han_mug_h, _han_seq_h);
 
@@ -2391,7 +2403,7 @@ _test_units_wide(void)
   _han_seq_h = 1;
   {
     c3_c dir_c[8192], fil_c[8192];
-    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, _han_mug_h);
+    snprintf(dir_c, sizeof(dir_c), "%s/" U3B_MUG_FMT, _tmp_bob, _han_mug_h);
     _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
     u3b_path(fil_c, _tmp_bob, _han_mug_h, _han_seq_h);
 
@@ -2729,7 +2741,7 @@ _test_hand_empty(void)
   const c3_h mug_h = 0x5678;
   c3_c pax_c[8192];
 
-  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h, _tmp_bob, mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT, _tmp_bob, mug_h);
   mkdir(pax_c, 0700);
   u3b_path(pax_c, _tmp_bob, mug_h, 1);
   fclose(fopen(pax_c, "wb"));
@@ -3537,7 +3549,7 @@ _test_link_copy(void)
   u3b_path(src_c, _tmp_bob, 0x1234, 1);
   {
     c3_c dir_c[8192];
-    snprintf(dir_c, sizeof(dir_c), "%s/%u", _tmp_bob, 0x1234);
+    snprintf(dir_c, sizeof(dir_c), "%s/" U3B_MUG_FMT, _tmp_bob, (c3_h)0x1234);
     _check( 0 == mkdir(dir_c, 0700), "mkdir %s: %s", dir_c, strerror(errno) );
   }
   _check( 0 == mkdir(src_c, 0700), "mkdir %s: %s", src_c, strerror(errno) );
@@ -3884,7 +3896,7 @@ _test_chop_kill(void)
     c3_c dot_c[8192];
     snprintf(dot_c, sizeof(dot_c), "%s/.DS_Store", _tmp_bob);
     _check( c3y == _file_put(dot_c, "x", 1), "plant %s", dot_c );
-    snprintf(dot_c, sizeof(dot_c), "%s/%" PRIc3_h "/.DS_Store", _tmp_bob, mug_h);
+    snprintf(dot_c, sizeof(dot_c), "%s/" U3B_MUG_FMT "/.DS_Store", _tmp_bob, mug_h);
     _check( c3y == _file_put(dot_c, "x", 1), "plant %s", dot_c );
   }
 

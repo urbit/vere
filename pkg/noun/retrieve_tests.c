@@ -1447,14 +1447,14 @@ _test_view(void)
     const c3_h mug_h = 0xabcd1234;
     const c3_h seq_h = 7;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
+    snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT, dir_c, mug_h);
     mkdir(pax_c, 0755);
 
     const c3_y bob_y[] = "bob atom backed by a real file";
     const c3_d bob_d   = sizeof(bob_y) - 1;
 
-    snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
-             dir_c, (unsigned)mug_h, (unsigned)seq_h);
+    snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT "/%" PRIc3_h,
+             dir_c, mug_h, seq_h);
     FILE* fil_f = fopen(pax_c, "wb");
     if ( !fil_f ) {
       fprintf(stderr, "_test_view(): fopen %s: %s\r\n", pax_c, strerror(errno));
@@ -1516,10 +1516,10 @@ _aor_write_blob(const c3_c* dir_c, c3_h mug_h, c3_h seq_h,
                 const c3_y* byt_y, c3_w len_w)
 {
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/%u", dir_c, (unsigned)mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT, dir_c, mug_h);
   mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/%u/%u",
-           dir_c, (unsigned)mug_h, (unsigned)seq_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT "/%" PRIc3_h,
+           dir_c, mug_h, seq_h);
   FILE* fil_f = fopen(pax_c, "wb");
   if ( !fil_f ) {
     fprintf(stderr, "_aor_write_blob(): fopen %s: %s\r\n", pax_c, strerror(errno));

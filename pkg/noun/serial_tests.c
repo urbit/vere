@@ -394,9 +394,9 @@ static c3_o
 _ram_make_blob(c3_h mug_h, c3_h seq_h, const c3_y* dat_y, c3_d len_d)
 {
   c3_c pax_c[2048];
-  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h, _ram_tmp_dir, mug_h);
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT, _ram_tmp_dir, mug_h);
   mkdir(pax_c, 0755);
-  snprintf(pax_c, sizeof(pax_c), "%s/%" PRIc3_h "/%" PRIc3_h,
+  snprintf(pax_c, sizeof(pax_c), "%s/" U3B_MUG_FMT "/%" PRIc3_h,
            _ram_tmp_dir, mug_h, seq_h);
   FILE* fil_f = fopen(pax_c, "wb");
   if ( !fil_f ) {
