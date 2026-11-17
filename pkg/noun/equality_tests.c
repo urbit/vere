@@ -441,6 +441,84 @@ _us_since(struct timespec* bef_u)
        + (aft_u.tv_nsec - bef_u->tv_nsec) / 1000;
 }
 
+/* _test_sole_refused(): a home noun the set refuses (here one with the
+**   mug of 255 members, or fewer if their neighbors crowd them) keeps
+**   every cell above it out, with no bit to end a later descent. over
+**   one shared 200 levels deep, a walk that took every path (2^200 of
+**   them) would never finish.
+*/
+static c3_i
+_test_sole_refused(void)
+{
+# define _TR_RUN  300
+# define _TR_MUG  0x2468ace
+  c3_i    ret_i = 1;
+  u3_noun mem[_TR_RUN];
+  u3_noun bot = u3_none, dag, r;
+  c3_w    i_w, len_w;
+
+  for ( len_w = 0; len_w < _TR_RUN; len_w++ ) {
+    u3_noun cel = u3nc(0x7e570000 + len_w, 0x7e57);
+
+    ((u3a_noun*)u3a_to_ptr(cel))->mug_w = _TR_MUG;
+    r = u3m_sole_try(u3k(cel));
+
+    if ( r != cel ) {
+      fprintf(stderr, "test: sole refused: a fresh cell was replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+
+    if ( !u3a_sole_has(cel) ) {
+      bot = cel;
+      break;
+    }
+    mem[len_w] = cel;
+  }
+
+  if ( (u3_none == bot) || !len_w || (len_w > 255) ) {
+    fprintf(stderr, "test: sole refused: %u members with one mug\r\n",
+                    (unsigned)len_w);
+    for ( i_w = 0; i_w < len_w; i_w++ ) u3z(mem[i_w]);
+    return 0;
+  }
+
+  dag = u3k(bot);
+  for ( i_w = 0; i_w < 200; i_w++ ) {
+    dag = u3nc(u3k(dag), dag);
+  }
+
+  //  twice: nothing noted by the first walk outlives it
+  //
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    r = u3m_sole_try(u3k(dag));
+
+    if ( (r != dag) || u3a_sole_has(dag) || u3a_sole_has(bot) ) {
+      fprintf(stderr, "test: sole refused: the noun over it is a member,"
+                      " or was replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+  }
+
+  //  with room for it, the whole of it is canonicalized
+  //
+  u3z(mem[len_w - 1]);
+  r = u3m_sole_try(u3k(dag));
+
+  if ( (r != dag) || !u3a_sole_has(dag) || !u3a_sole_has(bot) ) {
+    fprintf(stderr, "test: sole refused: not a member once there's room\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  u3z(dag); u3z(bot);
+  for ( i_w = 0; i_w < (len_w - 1); i_w++ ) u3z(mem[i_w]);
+  return ret_i;
+# undef _TR_RUN
+# undef _TR_MUG
+}
+
 /* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
 **   in the current setting. with 2^dep_w paths, a comparison that
 **   re-compared every path would never finish.
@@ -976,6 +1054,11 @@ static c3_i
 _test_equality(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_sole_refused() ) {
+    fprintf(stderr, "test: equality: sole refused: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_dedup() ) {
     fprintf(stderr, "test: equality: dedup: failed\r\n");

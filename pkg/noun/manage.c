@@ -3781,6 +3781,13 @@ _cm_walk_push(_cm_walk* wak_u)
   return &wak_u->fam_u[wak_u->len_w++];
 }
 
+/* visited marks (below), for the home road's walk.
+*/
+static void _cm_vis_home(void);
+static void _cm_vis_home_done(void);
+static c3_t _cm_vis_home_has(u3_noun som);
+static void _cm_vis_home_put(u3_noun som);
+
 /* _cm_sole_xchange(): point [*som] at [can], if it doesn't already.
 */
 static inline void
@@ -3800,6 +3807,13 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
 **
 **   as in melt, nothing is written (not even reference counts) unless
 **   a child is replaced, so canonical nouns are walked without writes.
+**
+**   a member is walked once, since its bit ends the descent. a cell that
+**   ends the walk out of the set (refused by the table, or over a child
+**   that was) has no bit, so it's marked as visited, and a shared one
+**   is walked once too.
+**   the caller brackets the walk with _cm_vis_home() and
+**   _cm_vis_home_done().
 */
 static u3_noun
 _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
@@ -3817,6 +3831,12 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       }
       else if ( c3y == u3a_is_atom(som) ) {
         pro = _cm_sole_put(som);
+        break;
+      }
+      //  a cell this walk already left out of the set
+      //
+      else if ( _cm_vis_home_has(som) ) {
+        pro = som;
         break;
       }
       //  NB: no lookup on the way down: the children aren't members
@@ -3851,6 +3871,10 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
         pro = ( _cm_canonical(cel_u->hed) && _cm_canonical(cel_u->tel) )
               ? _cm_sole_put(fam_u->som)
               : fam_u->som;
+
+        if ( c3_unlikely((pro == fam_u->som) && !_cm_canonical(pro)) ) {
+          _cm_vis_home_put(pro);
+        }
         wak_u->len_w--;
       }
     }
@@ -3859,6 +3883,37 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       return pro;
     }
   }
+}
+
+/* _cm_sole_canon_home(): _cm_sole_canon() on home noun [som], on the
+**   home road, counting its probes as path [pat_y]. its canonical
+**   equal, not retained.
+**
+**   nothing interrupts it: the home road computes outside the inner
+**   signal regime (see u3m_soft_top()), but for the profiling sampler,
+**   which is on only under u3o_debug_cpu.
+*/
+static u3_noun
+_cm_sole_canon_home(u3_noun som, c3_y pat_y)
+{
+  static _cm_walk wak_u;
+  static c3_t     ini_t;
+  c3_y            pre_y = _cm_sole_u.pat_y;
+  u3_noun         pro;
+
+  if ( !ini_t ) {
+    _cm_walk_init(&wak_u);
+    ini_t = 1;
+  }
+
+  wak_u.len_w      = 0;
+  _cm_sole_u.pat_y = pat_y;
+  _cm_vis_home();
+  pro = _cm_sole_canon(&wak_u, som);
+  _cm_vis_home_done();
+  _cm_sole_u.pat_y = pre_y;
+
+  return pro;
 }
 
 /* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road.
@@ -3956,6 +4011,7 @@ u3m_sole_ream(void)
   }
 
   _cm_walk_init(&wak_u);
+  _cm_vis_home();
 
   //  measurement: cells contributed by each root, in walk order; the
   //  rebuild's inserts don't count as additions. cold state is walked
@@ -4001,6 +4057,7 @@ u3m_sole_ream(void)
     u3e_Meter.hca_d = add_d;
   }
 
+  _cm_vis_home_done();
   _cm_walk_done(&wak_u);
 
   gettimeofday(&aft_u, 0);
@@ -4025,6 +4082,115 @@ u3m_sole_ream(void)
               mil_d);
     }
   }
+}
+
+/* visited marks: cells the home road's walk (_cm_sole_canon()) has
+**   finished and left out of the set, so that a shared one is walked
+**   once, not once per path. a member needs none: its bit ends a descent.
+**
+**   a mark is a bit, at the cell's place in a bitmap shaped like the
+**   membership one (u3a_Sole_w), and the cell's index on a list, from
+**   which the marks are cleared. they last for one walk: the home road
+**   allocates between walks.
+*/
+#define _CM_VIS_HOM  256  //  home entries, to start
+
+static struct {
+  c3_t     ini_t;   //  bitmap allocated
+  c3_w*    mar_w;   //  home marks
+  c3_w*    hom_w;   //  home list: indices marked
+  c3_d     hol_d;   //    entries
+  c3_d     hos_d;   //    room
+} _cm_vis;
+
+/* _cm_vis_init(): allocate the bitmap and the home list. home road
+**   only.
+*/
+static void
+_cm_vis_init(void)
+{
+  if ( !_cm_vis.ini_t ) {
+    c3_w bit_w = (c3_w)(u3C.wor_i >> u3a_sole_log);
+    c3_w len_w = (bit_w + u3a_word_bits - 1) / u3a_word_bits;
+
+    _cm_vis.mar_w = c3_calloc(sizeof(c3_w) * len_w);
+    _cm_vis.hos_d = _CM_VIS_HOM;
+    _cm_vis.hom_w = c3_malloc(sizeof(c3_w) * _cm_vis.hos_d);
+    _cm_vis.hol_d = 0;
+    _cm_vis.ini_t = 1;
+  }
+}
+
+static inline c3_t
+_cm_vis_bit(c3_w* map_w, c3_w idx_w)
+{
+  return 1 & (map_w[idx_w / u3a_word_bits] >> (idx_w % u3a_word_bits));
+}
+
+static inline void
+_cm_vis_bit_set(c3_w* map_w, c3_w idx_w)
+{
+  map_w[idx_w / u3a_word_bits] |= ((c3_w)1 << (idx_w % u3a_word_bits));
+}
+
+static inline void
+_cm_vis_bit_clr(c3_w* map_w, c3_w idx_w)
+{
+  map_w[idx_w / u3a_word_bits] &= ~((c3_w)1 << (idx_w % u3a_word_bits));
+}
+
+/* _cm_vis_home_clear(): drop the home road's marks.
+*/
+static void
+_cm_vis_home_clear(void)
+{
+  for ( c3_d i_d = 0; i_d < _cm_vis.hol_d; i_d++ ) {
+    _cm_vis_bit_clr(_cm_vis.mar_w, _cm_vis.hom_w[i_d]);
+  }
+  _cm_vis.hol_d = 0;
+}
+
+/* _cm_vis_home(): the home road's walk starts, with no marks: a walk
+**   cut short by a bail leaves its own.
+*/
+static void
+_cm_vis_home(void)
+{
+  _cm_vis_init();
+  _cm_vis_home_clear();
+}
+
+/* _cm_vis_home_done(): the home road's walk is over: drop its marks.
+*/
+static void
+_cm_vis_home_done(void)
+{
+  _cm_vis_home_clear();
+}
+
+/* _cm_vis_home_has(): the home road's walk marked [som]. most walks
+**   mark nothing, and don't look.
+*/
+static c3_t
+_cm_vis_home_has(u3_noun som)
+{
+  return _cm_vis.hol_d && _cm_vis_bit(_cm_vis.mar_w, _cm_sole_idx(som));
+}
+
+/* _cm_vis_home_put(): the home road's walk marks [som], a cell it
+**   leaves out of the set.
+*/
+static void
+_cm_vis_home_put(u3_noun som)
+{
+  c3_w idx_w = _cm_sole_idx(som);
+
+  if ( _cm_vis.hol_d == _cm_vis.hos_d ) {
+    _cm_vis.hos_d *= 2;
+    _cm_vis.hom_w  = c3_realloc(_cm_vis.hom_w, sizeof(c3_w) * _cm_vis.hos_d);
+  }
+  _cm_vis.hom_w[_cm_vis.hol_d++] = idx_w;
+  _cm_vis_bit_set(_cm_vis.mar_w, idx_w);
 }
 
 /* _cm_sole_take_noun(): from u3m_love(), after every take and before the
@@ -4171,7 +4337,9 @@ _cm_sole_take(u3p(u3h_root) dup_p)
 
     _cm_sole_u.pat_y = 1;
     _cm_walk_init(&wak_u);
+    _cm_vis_home();
     u3h_walk_with(dup_p, _cm_sole_take_kev, &wak_u);
+    _cm_vis_home_done();
     _cm_walk_done(&wak_u);
     _cm_sole_u.pat_y = pat_y;
   }
@@ -4298,6 +4466,19 @@ u3m_sole_try(u3_noun som)
   u3a_pile pil_u;
   _frame_dedup* fam_u;
   c3_y pat_y = _cm_sole_u.pat_y;
+
+  //  on the home road, the in-place walk: it marks what it leaves out
+  //  of the set, where this one would walk it again on each path
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    u3_noun new = _cm_sole_canon_home(som, 3);
+
+    if ( new != som ) {
+      u3k(new);
+      u3z(som);
+    }
+    return new;
+  }
 
   _cm_sole_u.pat_y = 3;
   u3a_pile_prep(&pil_u, sizeof(*fam_u), _Alignof(*fam_u));
