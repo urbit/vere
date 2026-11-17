@@ -374,7 +374,7 @@ METRICS = [
      lambda s, v: crib_peak(v, "visited-set")),
     ("N: lose list peak", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "lose-list")),
-    ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
+    ("N: fills or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
 

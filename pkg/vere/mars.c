@@ -777,9 +777,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
-  //  the home lose list, if it reached its ceiling during the event
+  //  the cribs (see crib.h): any that reached its ceiling during the event
   //
-  u3a_lose_report();
+  u3m_crib_report();
 
   //  resize the home-road hashcons set's tables, if need be
   //
@@ -1198,7 +1198,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //  hashcons the events first, so that their subtrees become canonical,
   //  then hashcons the cache keys and values against them
   //
-  eve = u3m_sole_try(eve);
+  eve = u3m_sole_home(eve);
 
   //  prime memo cache
   //
@@ -1221,7 +1221,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
       exit(1);
     }
 
-    pil = u3m_sole_try(pil);
+    pil = u3m_sole_home(pil);
 
     u3s_cue_xeno_done(sil_u);
 

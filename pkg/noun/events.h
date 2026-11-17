@@ -216,9 +216,27 @@
                              //  with the road they're on
           c3_d wlc_d;        //  inner entries copied up a road at an exit
 
-          //  cribs (see crib.h): the home lose list is [1]; [0] is kept
-          //  for a set. capacity and ceiling are states, kept across
-          //  intervals; the rest is use in the interval
+          //  canonicalizing on inner roads (u3m_sole_try())
+          //
+          c3_d eic_d[2];     //  calls: home road, inner roads
+          c3_d eij_d;        //  junior cells walked
+          c3_d eiv_d;        //  visited-set hits
+          c3_d eih_d[2];     //  home-set probes on inner roads, hits
+
+          //  exits to home: the canonicalizing take (_ca_take_sole()),
+          //  and time in each step (microseconds, while measuring)
+          //
+          c3_d ctk_d;        //  junior nouns looked up
+          c3_d ctf_d;        //  ... found a member, so not copied
+          c3_d ctr_d;        //  kept for the rewrite of older home
+                             //  nouns at the exit: always 0 without it
+          c3_d cus_d[2];     //  time: takes, then the lose list
+          c3_d cam_d[2];     //  most members added at one exit, before
+                             //  its drain; the set's size as it began
+
+          //  cribs (see crib.h): the visited set [0], the home lose list
+          //  [1]. capacity and ceiling are states, kept across intervals;
+          //  the rest is use in the interval
           //
           struct {
             c3_d cap_d;      //  capacity now, entries (0: not made yet)
@@ -229,7 +247,7 @@
             c3_d shr_d;      //  shrinks
             c3_d clg_d;      //  clears through a log of slots (sets)
             c3_d cdp_d;      //  clears by zeroing the table (sets)
-            c3_d ovf_d;      //  evictions or drops at the ceiling
+            c3_d ovf_d;      //  fills or drops at the ceiling
           } cib_u[2];
         } u3e_meter;
 
@@ -259,6 +277,11 @@
     */
       c3_d
       u3e_measure_ms(void);
+
+    /* u3e_measure_us(): wall-clock microseconds, for short steps.
+    */
+      c3_d
+      u3e_measure_us(void);
 
     /* u3e_measure_op(): if measuring, log a pack, meld or melt [op_c],
     **                   run because of [why_c], with melt options

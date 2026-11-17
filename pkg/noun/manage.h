@@ -265,11 +265,58 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_w
         u3m_pack(void);
         
-      /* u3m_sole_try(): deduplicate the noun across the hashcons sets
+      /* u3m_sole_try(): canonicalize the noun against the home-road set,
+      **                 on any road (on inner roads, junior cells only).
       */
         u3_noun
         u3m_sole_try(u3_noun som);
-      
+
+      /* u3m_sole_visit_size(): restart u3m_sole_try()'s visited set at
+      **                        2^log_y entries, growing up to 2^max_y (0
+      **                        for the usual ceiling) (tests). home road
+      **                        only.
+      */
+        void
+        u3m_sole_visit_size(c3_y log_y, c3_y max_y);
+
+      /* u3m_crib_report(): log every crib's fills and drops at its
+      **                    ceiling since the last call. between events.
+      */
+        void
+        u3m_crib_report(void);
+
+      /* u3m_sole_visit_cap(): the visited set's capacity (tests).
+      */
+        c3_d
+        u3m_sole_visit_cap(void);
+
+      /* u3m_sole_home(): u3m_sole_try() on the home road; inner roads
+      **                  leave the noun to the exit home.
+      */
+        u3_noun
+        u3m_sole_home(u3_noun som);
+
+      /* u3m_sole_find_cell(): the member equal to a cell of mug [mug_h]
+      **                       and canonical children [hed] [tel], or
+      **                       none (not retained).
+      */
+        u3_weak
+        u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel);
+
+      /* u3m_sole_find_atom(): the member equal to junior atom [jun], or
+      **                       none (not retained).
+      */
+        u3_weak
+        u3m_sole_find_atom(u3_atom jun);
+
+      /* u3m_sole_add(): make [new], equal to no member, a member; 0 if
+      **                 it stays out: past the set's reach (128 GiB of
+      **                 home heap at 64 bits), or one too many with the
+      **                 same mug (255 fit).
+      */
+        c3_t
+        u3m_sole_add(u3_noun new);
+
       /* u3m_sole_ream(): rebuild the home-road hashcons set from
       **                  persistent tables.
       */
