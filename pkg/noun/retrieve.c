@@ -244,9 +244,11 @@ _cr_sing_push(u3a_pile* pil_u, u3_noun a, u3_noun b)
 static inline c3_o
 _cr_sing_mug(u3a_noun* a_u, u3a_noun* b_u)
 {
-  //  XX add debug assertions that both mugs are 31-bit
-  //  (ie, not u3a_take() relocation references)
+  //  a noun that has left (u3a_take()) holds the address of its copy in
+  //  its mug slot, and isn't compared
   //
+  c3_dessert( !(a_u->mug_w >> 31) && !(b_u->mug_w >> 31) );
+
   if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) {
     return c3n;
   }
@@ -1862,9 +1864,11 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
 
       //  veb has already been mugged, return memoized value
       //
-      //    XX add debug assertion that mug is 31-bit?
+      //    a noun that has left (u3a_take()) holds the address of its
+      //    copy there, and isn't mugged
       //
       if ( veb_u->mug_w ) {
+        c3_dessert( !(veb_u->mug_w >> 31) );
         return (c3_h)veb_u->mug_w;
       }
       //  veb is an indirect atom, mug its bytes and memoize
