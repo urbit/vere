@@ -8,6 +8,28 @@
 #include "vortex.h"
 #include "vere.h"
 
+/* _canon_hash(): table hash, from the (cached) mug.
+*/
+static inline c3_d
+_canon_hash(u3_noun som)
+{
+  return u3r_mug(som) * 11400714819323198485ULL;
+}
+
+/* the tables of canonical atoms and cells (see canon.h).
+*/
+#define NAME    _canon_atoms
+#define KEY_TY  u3_atom
+#define HASH_FN _canon_hash
+#define CMPR_FN _canon_cmp_atoms
+#include "verstable.h"
+
+#define NAME    _canon_cells
+#define KEY_TY  u3_cell
+#define HASH_FN _canon_hash
+#define CMPR_FN _canon_cmp_cells
+#include "verstable.h"
+
 typedef struct {
   _canon_atoms vat_u;
   _canon_cells cel_u;
