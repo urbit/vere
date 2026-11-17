@@ -302,6 +302,14 @@ _cm_signal_reset(void)
   u3m_Hold_w = 0;
   u3m_Held_m = 0;
 
+  //  a failure in the takes of an exit home (%meme, with no room for the
+  //  product) comes after the exit's hook opened the window of deferred
+  //  gains: the gains still pending are written, as they would have been
+  //  without it. taken nouns can hold them, some already in the parent's
+  //  programs (see u3n_reap())
+  //
+  u3a_defer_close();
+
   //  a signal can interrupt u3m_love() before it drops a junior heap,
   //  leaving it poisoned for the next road: unpoison all free memory
   //  (ASan only)
@@ -2193,14 +2201,6 @@ u3m_soft_with(c3_w    mil_w,
   u3_noun why;
 
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
-
-  //  a failure past [hom_f], in the takes (%meme on the home road), leaves
-  //  what it opened open: the window of deferred gains is shut here, for
-  //  the next event to open it again
-  //
-  if ( 0 != u3h(why) ) {
-    u3a_defer_close();
-  }
 
   if ( 0 == u3h(why) ) {
     return why;

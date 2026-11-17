@@ -122,13 +122,19 @@ _defer_fail(u3_noun arg)
   return u3m_bail(c3__exit);
 }
 
-/* _defer_open_fail(): u3m_soft_with() hook: opens the window, then fails
-**                     as a take out of memory on the home road does.
+/* _defer_hom: the home noun that _defer_open_fail() gains.
+*/
+static u3_noun _defer_hom;
+
+/* _defer_open_fail(): u3m_soft_with() hook: opens the window, gains
+**                     [_defer_hom] as a take does, then fails as a take
+**                     out of memory on the home road does.
 */
 static void
 _defer_open_fail(void)
 {
   u3a_defer_open();
+  u3k(_defer_hom);
   u3m_signal(c3__meme);
 }
 
@@ -270,9 +276,11 @@ _test_defer(void)
 
   u3z(arg);
 
-  //  a failure past the hook, in the takes, finds the window open:
-  //  u3m_soft_with() shuts it, and the next event opens it again
+  //  a failure past the hook, in the takes, finds the window open, with
+  //  a gain pending: the signal's reset writes the gain and shuts the
+  //  window, and the next event opens it again
   //
+  _defer_hom = hom;
   gon = u3m_soft_with(0, _defer_pair, u3_nul, _defer_open_fail);
 
   if ( 0 == u3h(gon) ) {
@@ -281,14 +289,27 @@ _test_defer(void)
   }
 
   u3z(gon);
-  arg = u3k(hom);
 
   if ( (bas_w + 1) != u3a_use(hom) ) {
+    fprintf(stderr, "defer: pending gain not written after a failure past "
+                    "the hook: have %"PRIc3_w", need %"PRIc3_w"\r\n",
+                    u3a_use(hom), bas_w + 1);
+    ret_i = 0;
+  }
+
+  arg = u3k(hom);
+
+  if ( (bas_w + 2) != u3a_use(hom) ) {
     fprintf(stderr, "defer: window open after a failure past the hook\r\n");
     ret_i = 0;
   }
 
   u3z(arg);
+  u3z(hom);   //  the hook's gain
+
+  gon = u3m_soft_with(0, _defer_pair, u3_nul, u3a_defer_open);
+  u3z(gon);
+  u3a_defer_close();
   u3a_defer_close();
   u3z(hom);
   return ret_i;
