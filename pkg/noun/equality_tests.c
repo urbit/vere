@@ -779,7 +779,7 @@ static c3_i
 _test_sole_set(void)
 {
   c3_i    ret_i = 1;
-  u3_noun x, y, r, p, a, b, m, n;
+  u3_noun x, y, r, p, q, a, b, m, n;
 
   //  a freed member leaves the set
   //
@@ -804,6 +804,56 @@ _test_sole_set(void)
     ret_i = 0;
   }
   u3z(r); u3z(y);
+
+  //  pinned junior entries that are taken join the home set
+  //
+  u3m_hate(0);
+  p = u3m_sole_pin(u3nc(u3nc(20, 21), 22));
+  r = u3m_sole_pin(u3nc(30, 31));     //  not taken
+  u3z(r);
+  p = u3m_love(p);
+  if ( !u3a_sole_has(p) || !u3a_sole_has(u3h(p)) ) {
+    fprintf(stderr, "test: sole set: taken entry not a member\r\n");
+    ret_i = 0;
+  }
+  q = u3nc(u3nc(20, 21), 22);
+  r = u3m_sole_try(u3k(q));
+  if ( r != p ) {
+    fprintf(stderr, "test: sole set: taken entry not shared\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(q);
+  q = u3nc(30, 31);
+  r = u3m_sole_try(u3k(q));
+  if ( r != q ) {
+    fprintf(stderr, "test: sole set: untaken entry kept\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(q); u3z(p);
+
+  //  home nouns listed in a junior set are left alone at exit: the set
+  //  holds no references to them, so canonicalizing [x] in place would
+  //  free [c], which it still lists (#1133). they're put directly,
+  //  standing for a set that lists a home noun whose canonical equal
+  //  [m] is a member by the time the road exits
+  //
+  m = u3m_sole_try(u3nc(23, 24));
+  {
+    u3_noun c = u3nc(23, 24);
+    u3_noun x = u3nc(c, 25);
+
+    u3m_hate(0);
+    u3h_put(u3R->dup_p, x, x);
+    u3h_put(u3R->dup_p, c, c);
+    u3m_love(0);
+
+    if ( (u3h(x) != c) || u3a_sole_has(x) ) {
+      fprintf(stderr, "test: sole set: listed home noun rewritten\r\n");
+      ret_i = 0;
+    }
+    u3z(x);
+  }
+  u3z(m);
 
   //  rebuilding keeps members reachable from persistent tables only
   //
@@ -1099,6 +1149,71 @@ _walk_list(c3_w len_w, c3_w bas_w)
     lis = u3nc(u3nc(bas_w + len_w, 0x7a11), lis);
   }
   return lis;
+}
+
+/* _test_pin_bound(): the pins' walk at the exit home has frames for 64
+**   cells. a list of 1.000 pinned on an inner road comes home equal, left
+**   as it was taken from the 65th cell up, with every cell above that out
+**   of the set and the 63 heads the walk had a frame for members. nothing
+**   leaks, and with room the whole list becomes a member.
+*/
+static c3_i
+_test_pin_bound(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    len_w = 1000, dep_w = 64, i_w, men_w, hed_w;
+  c3_d    ovf_d;
+  u3_noun lis, ref, t;
+
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    c3_t rom_t = !i_w;   //  bounded first, then with room
+
+    if ( rom_t ) {
+      u3m_yard_size(dep_w * sizeof(u3_noun), 0);
+    }
+    ovf_d = u3e_Meter.cib_u[4].ovf_d;
+
+    u3m_hate(0);
+    lis = u3m_sole_pin(_walk_list(len_w, 0x7d000000 + (i_w << 16)));
+    lis = u3m_love(lis);
+
+    ref = _walk_list(len_w, 0x7d000000 + (i_w << 16));
+    if ( c3n == u3r_sing(ref, lis) ) {
+      fprintf(stderr, "test: pin bound: not equal\r\n");
+      ret_i = 0;
+    }
+    u3z(ref);
+
+    for ( men_w = 0, hed_w = 0, t = lis; u3_nul != t; t = u3t(t) ) {
+      men_w += u3a_is_sole(t);
+      hed_w += u3a_is_sole(u3h(t));
+    }
+
+    if ( rom_t ) {
+      if (  men_w || ((dep_w - 1) != hed_w)
+         || (ovf_d == u3e_Meter.cib_u[4].ovf_d) )
+      {
+        fprintf(stderr, "test: pin bound: %" PRIc3_w " list cells and %"
+                        PRIc3_w " heads are members, the bound met %" PRIu64
+                        " times\r\n",
+                men_w, hed_w, u3e_Meter.cib_u[4].ovf_d - ovf_d);
+        ret_i = 0;
+      }
+      u3m_crib_report();
+      _GRAB_EXACT("pin bound", lis);
+      u3m_yard_size(0, 0);
+    }
+    else {
+      if ( (len_w != men_w) || (len_w != hed_w) ) {
+        fprintf(stderr, "test: pin bound: with room, %" PRIc3_w " of %"
+                        PRIc3_w " cells are members\r\n", men_w, len_w);
+        ret_i = 0;
+      }
+      _GRAB_EXACT("pin bound: with room", lis);
+    }
+    u3z(lis);
+  }
+  return ret_i;
 }
 
 /* _test_walk_bound(): the home road's walk has frames for 64 cells. a
@@ -2154,6 +2269,11 @@ _test_equality(void)
 
   if ( !_test_walk_bound() ) {
     fprintf(stderr, "test: equality: walk bound: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_pin_bound() ) {
+    fprintf(stderr, "test: equality: pin bound: failed\r\n");
     ret_i = 0;
   }
 

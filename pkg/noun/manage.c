@@ -1548,6 +1548,7 @@ u3m_road_depth(void)
   return dep_w;
 }
 
+static void _cm_sole_pins(u3p(u3h_root) dup_p);
 
 /* _cm_love_time(): measurement: add the time since [*us_d] to step [i_w]
 **                  of an exit to home, and restart it.
@@ -1704,11 +1705,12 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   }
   u3e_Phase = u3e_pha_take_dup;
 
-  //  into the home road, the junior set dies with the road: the cache
-  //  takes canonicalized what they took. otherwise, it's merged into
-  //  ours
+  //  into the home road, junior hashcons entries that were taken join
+  //  the off-loom set, and the rest die with the road; otherwise, the
+  //  junior set is merged into ours
   //
   if ( hom_t ) {
+    _cm_sole_pins(dup_p);
     dup_p = 0;
     if ( u3e_Measuring ) {
       _cm_love_time(&us_d, 0);
@@ -3469,12 +3471,13 @@ u3m_time_gap_in_mil(c3_w mil_w)
 
 /*  Hash-consing.
 **
-**    The home road keeps an off-loom set that holds no references:
-**    membership is marked in an off-loom bitmap (u3a_Sole_w), and a
-**    member is removed when it is freed (u3m_sole_lose(), from
-**    u3a_lose()). It is rebuilt from persistent tables at startup, after
-**    compaction, and after a sweep that freed leaks. Inner roads keep no
-**    set of their own: nothing fills a road's on-loom table (u3R->dup_p).
+**    Each inner road keeps an on-loom set (u3R->dup_p, a u3h table that
+**    holds references), discarded with the road. The home road keeps
+**    an off-loom set that holds no references: membership is marked in
+**    an off-loom bitmap (u3a_Sole_w), and a member is removed when it
+**    is freed (u3m_sole_lose(), from u3a_lose()). It is rebuilt from
+**    persistent tables at startup, after compaction, and after a sweep
+**    that freed leaks.
 **
 **    Members are canonical, and the children of a member cell are
 **    members, so a cell is looked up by its mug and child pointers once
@@ -3967,9 +3970,10 @@ u3m_sole_tab_meas(c3_d* met_d)
 **   of their users. its state (_cm_walk) is its caller's, passed down:
 **   one walk doesn't run inside another.
 */
-/* _cm_frame: a cell the walk is in. while its head is walked, the
-**   cell itself; once its tail is, the cell with its cell bit clear
-**   (every frame is a cell, so the bit is free to say which).
+/* _cm_frame: a cell the walk is in (a home cell, or for the pins at the
+**   exit home a junior one). while its head is walked, the cell itself;
+**   once its tail is, the cell with its cell bit clear (every frame is a
+**   cell, so the bit is free to say which).
 */
 typedef u3_noun _cm_frame;
 
@@ -4545,6 +4549,150 @@ u3m_sole_ream(void)
   }
 }
 
+/* _cm_sole_pin_noun(): from u3m_love(), after every take and before the
+**                      junior heap is dropped: canonicalize the home-road
+**                      copy of junior [jun] into the home-road set, in
+**                      walk [wal_u], producing it (not retained), or none.
+**
+**   taken copies are rewritten to point at canonical children, and
+**   older home-road nouns are canonicalized in place. the junior
+**   original's forwarding pointer is redirected to the result, so that
+**   shared subtrees are visited once.
+**
+**   a frame is the junior cell: its copy is found through its forwarding
+**   pointer, which is redirected only as the cell is done, and the
+**   copy's head is pointed at its canonical equal once the head is done.
+**   a junior cell past the walk's frames is left as it was taken, and so
+**   is every copy over it.
+*/
+static u3_weak
+_cm_sole_pin_noun(_cm_walk* wal_u, u3_noun jun)
+{
+  size_t  bot_i = u3a_yard_here(&u3a_Yard_wok);
+  u3_weak pro;
+
+  while ( 1 ) {
+    //  descend
+    //
+    while ( 1 ) {
+      if ( c3y == u3a_is_cat(jun) ) {
+        pro = jun;
+        break;
+      }
+      else if ( c3n == u3a_is_junior(u3R, jun) ) {
+        c3_y pat_y = _cm_sole_u.pat_y;
+
+        _cm_sole_u.pat_y = 2;
+        pro = _cm_sole_canon(wal_u, jun);
+        _cm_sole_u.pat_y = pat_y;
+        break;
+      }
+      else {
+        u3a_noun* jun_u = u3a_to_ptr(jun);
+        u3_noun   nov;
+
+        //  not taken
+        //
+        if ( !(jun_u->mug_w >> 31) ) {
+          pro = u3_none;
+          break;
+        }
+
+        nov = (u3_noun)jun_u->mug_w;
+
+        if ( u3a_sole_has(nov) ) {
+          pro = nov;
+          break;
+        }
+        else if ( c3y == u3a_is_atom(nov) ) {
+          pro = _cm_sole_put(nov);
+          jun_u->mug_w = pro;
+          break;
+        }
+        else {
+          _cm_frame* fam_u = _cm_walk_push();
+
+          if ( c3_unlikely(!fam_u) ) {
+            pro = nov;
+            break;
+          }
+          *fam_u = jun;
+          jun    = u3h(jun);
+        }
+      }
+    }
+
+    //  ascend
+    //
+    while ( u3a_yard_here(&u3a_Yard_wok) > bot_i ) {
+      _cm_frame* fam_u = _cm_walk_peek();
+      u3_noun    cel   = *fam_u | _CM_FRAME_TEL;
+      u3a_noun*  jun_u = u3a_to_ptr(cel);
+      u3_noun    nov   = (u3_noun)jun_u->mug_w;
+      u3a_cell*  nov_u = u3a_to_ptr(nov);
+
+      //  point the fresh copy at canonical children
+      //
+      if ( *fam_u & _CM_FRAME_TEL ) {
+        if ( u3_none != pro ) _cm_sole_xchange(pro, &nov_u->hed);
+        *fam_u = cel ^ _CM_FRAME_TEL;
+        jun    = u3t(cel);
+        break;
+      }
+      else {
+        if ( u3_none != pro ) _cm_sole_xchange(pro, &nov_u->tel);
+
+        pro = ( u3a_is_sole(nov_u->hed) && u3a_is_sole(nov_u->tel) )
+              ? _cm_sole_put(nov)
+              : nov;
+        jun_u->mug_w = pro;
+        u3a_yard_give(&u3a_Yard_wok, sizeof(*fam_u));
+      }
+    }
+
+    if ( u3a_yard_here(&u3a_Yard_wok) == bot_i ) {
+      return pro;
+    }
+  }
+}
+
+/* _cm_sole_pins_kev(): u3h_walk callback over a junior set.
+**
+**   a junior set can list home nouns, but it can't hold references to
+**   them, and rewriting one in place can free another that it lists
+**   before the walk reaches it. so they're skipped: those held by a
+**   taken copy are canonicalized through it, and the rest wait for a
+**   later u3m_sole_home() on the home road, or the next ream.
+*/
+static void
+_cm_sole_pins_kev(u3_noun kev, void* ptr_v)
+{
+  u3_noun som = u3h(kev);
+
+  if ( (c3n == u3a_is_cat(som)) && (c3n == u3a_is_junior(u3R, som)) ) {
+    return;
+  }
+
+  (void)_cm_sole_pin_noun(ptr_v, som);
+}
+
+/* _cm_sole_pins(): integrate junior set [dup_p] into the home-road set.
+*/
+static void
+_cm_sole_pins(u3p(u3h_root) dup_p)
+{
+  if ( u3h_wyt(dup_p) ) {
+    _cm_walk wal_u;
+    c3_y     pat_y = _cm_sole_u.pat_y;
+
+    _cm_sole_u.pat_y = 1;
+    _cm_walk_open(&wal_u);
+    u3h_walk_with(dup_p, _cm_sole_pins_kev, &wal_u);
+    _cm_walk_shut(&wal_u);
+    _cm_sole_u.pat_y = pat_y;
+  }
+}
+
 /* _cm_sole_swap(): point [*som] at its canonical equal [can] (transferred).
 */
 static inline void
@@ -5105,6 +5253,25 @@ u3m_sole_try(u3_noun som)
   _cm_sole_u.pat_y = pat_y;
 
   return new;
+}
+
+/* u3m_sole_pin(): u3m_sole_try(), and on an inner road, put the result
+**                 in the road's set (dup_p), which goes up with each exit
+**                 and is canonicalized into the home-road set at the exit
+**                 home. TRANSFER, result PRODUCED.
+*/
+u3_noun
+u3m_sole_pin(u3_noun som)
+{
+  u3_noun pro = u3m_sole_try(som);
+
+  if (  (&(u3H->rod_u) != u3R)
+     && (c3n == u3a_is_cat(pro)) && !u3a_sole_has(pro)
+     && (c3n == u3a_is_senior(u3R, pro)) )
+  {
+    u3h_put(u3R->dup_p, pro, u3k(pro));
+  }
+  return pro;
 }
 
 /* u3m_sole_home(): u3m_sole_try() on the home road. inner roads leave
