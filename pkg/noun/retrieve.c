@@ -245,11 +245,11 @@ static inline c3_o
 _cr_sing_mug(u3a_noun* a_u, u3a_noun* b_u)
 {
   //  a noun that has left (u3a_take()) holds the address of its copy in
-  //  its mug slot, and isn't compared
+  //  its mug slot, not a mug: nothing is known from it
   //
-  c3_dessert( !(a_u->mug_w >> 31) && !(b_u->mug_w >> 31) );
-
-  if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) {
+  if (  a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w)
+     && !((a_u->mug_w | b_u->mug_w) >> 31) )
+  {
     return c3n;
   }
 
@@ -1865,10 +1865,13 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
       //  veb has already been mugged, return memoized value
       //
       //    a noun that has left (u3a_take()) holds the address of its
-      //    copy there, and isn't mugged
+      //    copy there: the copy's mug is its own
       //
       if ( veb_u->mug_w ) {
-        c3_dessert( !(veb_u->mug_w >> 31) );
+        if ( c3_unlikely(veb_u->mug_w >> 31) ) {
+          veb = (u3_noun)veb_u->mug_w;
+          continue;
+        }
         return (c3_h)veb_u->mug_w;
       }
       //  veb is an indirect atom, mug its bytes and memoize

@@ -3175,11 +3175,9 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
   //  earlier in this walk (keys are deduplicated, see _n_find()): its mug
   //  slot holds the address of its copy, which is looked up in its place
   //
-  //    a key that hasn't left is looked up as it is, by its own mug. parts
-  //    of it can have left, and wouldn't compare equal to anything. but a
-  //    key with an equal in the parent's table is one _n_find() made to
-  //    copy the parent's program, and the lookup that found the program
-  //    unified the key's parts with the parent's: none of them is junior.
+  //    a key that hasn't left is looked up as it is. parts of it can
+  //    have left (its formula, say, with the product): the mug and
+  //    equality allow for those (u3r_mug(), u3r_sing()).
   //
   if (  (c3y == u3a_is_junior(u3R, key))
      && (c3y == u3a_left(key)) )

@@ -458,6 +458,73 @@ _test_reap(void)
   return ret_i;
 }
 
+/* _part_run(): u3m_soft_run() test fn: runs formula [aga].
+*/
+static u3_noun
+_part_run(u3_noun aga, u3_noun agb)
+{
+  return u3n_nock_on(u3_nul, u3k(aga));
+}
+
+/* _part_top(): u3m_soft() test fn: makes a formula on this road, runs it
+**              a road down, and produces it with its product.
+**
+**   The road below finds home's program for an equal formula. Its key
+**   keeps this road's formula, since senior unification is off for the
+**   run (as it is under memory debugging).
+*/
+static u3_noun
+_part_top(u3_noun arg)
+{
+  u3_noun fol = u3nt(1, 77, 88);
+  u3_noun gon;
+
+  u3C.wag_h |= u3o_debug_ram;
+  gon = u3m_soft_run(u3_nul, _part_run, u3k(fol), u3_nul);
+  u3C.wag_h &= ~u3o_debug_ram;
+
+  return u3nc(fol, gon);
+}
+
+/* _test_reap_part(): a junior program whose key hasn't left, but whose
+**                    formula has, with the product.
+**
+**   Home has a program for an equal formula, and the junior one must be
+**   merged into it: looked up by its key, whose formula holds the address
+**   of its copy where its mug was, it must still be found.
+*/
+static c3_i
+_test_reap_part(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun fol   = u3nt(1, 77, 88);
+  u3_noun key   = u3nc(u3_nul, u3k(fol));
+  u3_noun gon;
+  u3_weak one, two;
+
+  gon = u3m_soft(0, _nock_fol, u3k(fol));
+  u3z(gon);
+  one = u3h_git(u3R->byc.har_p, key);
+
+  gon = u3m_soft(0, _part_top, u3_nul);
+
+  if ( (0 != u3h(gon)) || (c3n == u3r_sing(fol, u3h(u3t(gon)))) ) {
+    u3m_p("reap part: unexpected product", gon);
+    ret_i = 0;
+  }
+  u3z(gon);
+  two = u3h_git(u3R->byc.har_p, key);
+
+  if ( (u3_none == one) || (one != two) ) {
+    fprintf(stderr, "reap part: home's program was replaced, not merged\r\n");
+    ret_i = 0;
+  }
+
+  u3z(key);
+  u3z(fol);
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -485,6 +552,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test reap: ok\r\n");
+
+  if ( !_test_reap_part() ) {
+    fprintf(stderr, "test reap part: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test reap part: ok\r\n");
 
   if ( !_test_edit_road() ) {
     fprintf(stderr, "test edit road: failed\r\n");
