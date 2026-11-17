@@ -20,11 +20,18 @@ pub fn build(b: *std.Build) !void {
 
     const linux_cflags = .{};
 
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+
     const crypto = try libcrypto(
         b,
         target,
         optimize,
         if (target.result.os.tag.isDarwin()) &macos_cflags else &linux_cflags,
+        no_lto,
     );
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -44,6 +51,7 @@ pub fn build(b: *std.Build) !void {
         target,
         optimize,
         if (target.result.os.tag.isDarwin()) &macos_cflags else &linux_cflags,
+        no_lto,
     ));
 }
 
@@ -52,12 +60,14 @@ fn libcrypto(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cflags: []const []const u8,
+    no_lto: bool,
 ) !*std.Build.Step.Compile {
     const t = target.result;
 
     const dep = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
@@ -65,6 +75,7 @@ fn libcrypto(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.pie = true;
 
     switch (optimize) {
@@ -133,6 +144,7 @@ fn libcrypto(
 
         const nasm_dep = b.dependency("nasm", .{
             .optimize = .ReleaseFast,
+            .no_lto = no_lto,
         });
 
         // const nasm_dep = nasm_dep2 orelse unreachable;
@@ -210,13 +222,13 @@ fn libcrypto(
         });
     }
 
-    if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch.isAARCH64()) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/crypto", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})));
 
         lib.addCSourceFiles(.{
-            .root = b.path("gen/linux-aarch64/crypto"),
+            .root = b.path(b.fmt("gen/{s}-aarch64/crypto", .{@tagName(t.os.tag)})),
             .files = &.{
                 "aes/aesv8-armx.S",
                 "aes/vpaes-armv8.S",
@@ -282,18 +294,18 @@ fn libcrypto(
         });
     }
 
-    if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch == .x86_64) {
         lib.root_module.addCMacro("AESNI_ASM", "");
         lib.root_module.addCMacro("X25519_ASM", "");
         lib.root_module.addCMacro("MD5_ASM", "");
         lib.root_module.addCMacro("RC4_ASM", "");
 
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/crypto", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})));
 
         lib.addCSourceFiles(.{
-            .root = b.path("gen/linux-x86_64"),
+            .root = b.path(b.fmt("gen/{s}-x86_64", .{@tagName(t.os.tag)})),
             .files = &.{
                 "crypto/aes/aesni-mb-x86_64.s",
                 "crypto/aes/aesni-sha1-x86_64.s",
@@ -336,6 +348,12 @@ fn libcrypto(
     if (t.os.tag == .linux) {
         try srcs.appendSlice(&.{
             "engines/e_afalg.c",
+        });
+    }
+
+    if (t.os.tag == .freebsd) {
+        try srcs.appendSlice(&.{
+            "crypto/engine/eng_devcrypto.c",
         });
     }
 
@@ -392,11 +410,13 @@ fn libssl(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cflags: []const []const u8,
+    no_lto: bool,
 ) *std.Build.Step.Compile {
     const t = target.result;
     const dep = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const lib = b.addLibrary(.{
@@ -404,6 +424,7 @@ fn libssl(
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    lib.lto = if (optimize != .Debug and !no_lto) .full else null;
     lib.pie = true;
 
     switch (optimize) {
@@ -425,10 +446,10 @@ fn libssl(
         lib.installHeadersDirectory(b.path("gen/macos-aarch64/include/openssl"), "openssl", .{});
     }
 
-    if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
-        lib.installHeadersDirectory(b.path("gen/linux-aarch64/include/openssl"), "openssl", .{});
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch.isAARCH64()) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})));
+        lib.installHeadersDirectory(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})), "openssl", .{});
     }
 
     if (t.os.tag.isDarwin() and t.cpu.arch == .x86_64) {
@@ -437,10 +458,10 @@ fn libssl(
         lib.installHeadersDirectory(b.path("gen/macos-x86_64/include/openssl"), "openssl", .{});
     }
 
-    if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
-        lib.installHeadersDirectory(b.path("gen/linux-x86_64/include/openssl"), "openssl", .{});
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})));
+        lib.installHeadersDirectory(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})), "openssl", .{});
     }
 
     if (t.os.tag == .windows and t.cpu.arch == .x86_64) {

@@ -18,6 +18,12 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    expat.lto = if (optimize != .Debug and !no_lto) .full else null;
     expat.linkLibC();
 
     const expat_cmake_config = b.addConfigHeader(.{
@@ -76,6 +82,7 @@ pub fn build(b: *std.Build) void {
             .patch = 0,
         },
     });
+    dbus.lto = if (optimize != .Debug and !no_lto) .full else null;
     dbus.linkLibC();
     dbus.linkLibrary(expat);
 
@@ -89,7 +96,9 @@ pub fn build(b: *std.Build) void {
     dbus.root_module.addCMacro("DBUS_SYSTEM_BUS_DEFAULT_ADDRESS", "\"unix:tmpdir=/tmp\"");
     dbus.root_module.addCMacro("DBUS_ENABLE_CHECKS", "");
     dbus.root_module.addCMacro("DBUS_ENABLE_ASSERT", "");
-    dbus.root_module.addCMacro("HAVE_ALLOCA_H", "");
+    // the BSDs declare alloca in <stdlib.h> and have no <alloca.h>
+    if (t.os.tag != .freebsd)
+        dbus.root_module.addCMacro("HAVE_ALLOCA_H", "");
     dbus.root_module.addCMacro("_GNU_SOURCE", "");
     dbus.root_module.addCMacro("HAVE_SYSLOG_H", "");
     dbus.root_module.addCMacro("HAVE_SOCKLEN_T", "");
@@ -108,6 +117,11 @@ pub fn build(b: *std.Build) void {
         dbus.root_module.addCMacro("HAVE_LIBAUDIT", "");
         dbus.root_module.addCMacro("HAVE_SELINUX", "");
         dbus.root_module.addCMacro("DBUS_HAVE_LINUX_EPOLL", "");
+    }
+
+    if (t.os.tag == .freebsd) {
+        // credentials are passed as SCM_CREDS control messages
+        dbus.root_module.addCMacro("HAVE_CMSGCRED", "");
     }
 
     // dbus.root_module.addCMacro("DBUS_PREFIX", b.fmt("\"{s}\"", .{
@@ -525,6 +539,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
 
+    avahi.lto = if (optimize != .Debug and !no_lto) .full else null;
     avahi.linkLibC();
     avahi.linkLibrary(dbus);
 

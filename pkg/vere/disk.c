@@ -1979,9 +1979,9 @@ _disk_migrate_loom(c3_c* dir_c, c3_d eve_d)
   c3_w lom_w = *(u3_Loom_v4 + u3C.wor_i - 1);
 
   switch ( lom_w ) {
-    case U3V_VER1: u3_migrate_v2(eve_d);
-    case U3V_VER2: u3_migrate_v3(eve_d);
-    case U3V_VER3: u3_migrate_v4(eve_d);
+    case U3V_VER1: u3_migrate_v2(eve_d); [[fallthrough]];
+    case U3V_VER2: u3_migrate_v3(eve_d); [[fallthrough]];
+    case U3V_VER3: u3_migrate_v4(eve_d); [[fallthrough]];
     case U3V_VER4: {
       u3m_init((c3_z)1 << des_y);
       u3e_live(c3y, strdup(dir_c));
@@ -2021,7 +2021,7 @@ _disk_migrate_old(u3_disk* log_u)
         fprintf(stderr, "disk: failed to set version to 2\r\n");
         exit(1);
       }
-    }  // fallthru
+    }  [[fallthrough]]; // fallthru
 
     case U3D_VER2: {
       _disk_unlink_stale_loom(log_u->dir_u->pax_c);

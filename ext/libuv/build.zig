@@ -14,6 +14,12 @@ pub fn build(b: *std.Build) !void {
         .name = "libuv",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    uv.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     uv.linkLibC();
 
@@ -70,6 +76,7 @@ pub fn build(b: *std.Build) !void {
         .files = switch (t.os.tag) {
             .macos => &uv_srcs_macos,
             .linux => &uv_srcs_linux,
+            .freebsd => &uv_srcs_freebsd,
             .windows => &uv_srcs_windows,
             else => &.{},
         },
@@ -122,7 +129,6 @@ const uv_srcs_unix = uv_srcs ++ [_][]const u8{
     "unix/pipe.c",
     "unix/poll.c",
     "unix/process.c",
-    "unix/proctitle.c",
     "unix/random-devurandom.c",
     "unix/signal.c",
     "unix/stream.c",
@@ -135,6 +141,7 @@ const uv_srcs_unix = uv_srcs ++ [_][]const u8{
 const uv_srcs_linux = uv_srcs_unix ++ [_][]const u8{
     "unix/linux.c",
     "unix/procfs-exepath.c",
+    "unix/proctitle.c",
     "unix/random-getrandom.c",
     "unix/random-sysctl-linux.c",
 };
@@ -142,10 +149,20 @@ const uv_srcs_linux = uv_srcs_unix ++ [_][]const u8{
 const uv_srcs_macos = uv_srcs_unix ++ [_][]const u8{
     "unix/bsd-ifaddrs.c",
     "unix/kqueue.c",
+    "unix/proctitle.c",
     "unix/random-getentropy.c",
     "unix/darwin-proctitle.c",
     "unix/darwin.c",
     "unix/fsevents.c",
+};
+
+const uv_srcs_freebsd = uv_srcs_unix ++ [_][]const u8{
+    "unix/bsd-ifaddrs.c",
+    "unix/bsd-proctitle.c",
+    "unix/freebsd.c",
+    "unix/kqueue.c",
+    "unix/posix-hrtime.c",
+    "unix/random-getrandom.c",
 };
 
 const uv_srcs_windows = uv_srcs ++ [_][]const u8{

@@ -1373,8 +1373,8 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
   } while (0)
 
   switch ( num_y ) {
-    case 3: NEXT();
-    case 2: NEXT();
+    case 3: NEXT(); [[fallthrough]];
+    case 2: NEXT(); [[fallthrough]];
     case 1: NEXT(); break;
     case 0: return u3_none;
   }

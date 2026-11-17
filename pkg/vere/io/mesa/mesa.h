@@ -10,6 +10,7 @@
 #define FINE_PATH_MAX   384             //  longest allowed scry path
 #define HEAD_SIZE         4             //  header size in bytes
 #define PACT_SIZE      1472
+#define MESA_NAME_MAX  305
 
 static c3_h MESA_COOKIE = 0x67e00200;
 
@@ -158,6 +159,7 @@ typedef struct _u3_etcher {
 
 c3_d mesa_num_leaves(c3_d tot_d);
 c3_h mesa_size_pact(u3_mesa_pact* pac_u);
+c3_h mesa_size_name(u3_mesa_name* nam_u);
 c3_o mesa_is_new_pact(c3_y* buf_y, c3_h len_h);
 
 void mesa_free_pact(u3_mesa_pact* pac_u);

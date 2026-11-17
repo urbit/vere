@@ -926,9 +926,159 @@ _test_mas(void)
 }
 
 static c3_i
+_cut_check(c3_g a_g, u3_atom b, u3_atom c, u3_atom d,
+           u3_atom exp, const c3_c* cas_c)
+{
+  u3_atom pro = u3qc_cut(a_g, b, c, d);
+  c3_i  ret_i = 1;
+
+  if ( c3n == u3r_sing(exp, pro) ) {
+    fprintf(stderr, "test cut fail: %s\r\n", cas_c);
+    u3m_p("expected", exp);
+    u3m_p("got", pro);
+    ret_i = 0;
+  }
+
+  u3z(b); u3z(c); u3z(exp); u3z(pro);
+  return ret_i;
+}
+
+static c3_i
+_test_cut(void)
+{
+  c3_i    ret_i = 1;
+  u3_atom d     = u3qc_bex(100);   //  101 bits
+
+  ret_i &= _cut_check(0, 0, 0, d, 0, "zero width");
+  ret_i &= _cut_check(0, 100, 1, d, 1, "top bit");
+  ret_i &= _cut_check(0, 101, 1, d, 0, "past the end");
+  ret_i &= _cut_check(0, 0, 101, d, u3k(d), "whole atom");
+  ret_i &= _cut_check(0, 64, 1000, d, u3qc_bex(36), "clamped width");
+
+  //  an offset or width wider than a word used to bail %fail;
+  //  hoon's +cut gives 0 or the rest of the atom
+  //
+  ret_i &= _cut_check(0, 0, u3qc_bex(40), d, u3k(d), "huge width");
+  ret_i &= _cut_check(0, 64, u3qc_bex(40), d, u3qc_bex(36),
+                      "huge width at offset");
+  ret_i &= _cut_check(0, u3qc_bex(40), 1, d, 0, "huge offset");
+  ret_i &= _cut_check(0, u3qc_bex(40), u3qc_bex(40), d, 0,
+                      "huge offset and width");
+
+  //  .b + .c used to wrap around a word and skip the clamp
+  //
+  ret_i &= _cut_check(0, 64, u3i_word((c3_w)0 - 16), d, u3qc_bex(36),
+                      "width that wraps");
+
+  u3z(d);
+  return ret_i;
+}
+
+static c3_i
+_test_rub(void)
+{
+  c3_i ret_i = 1;
+
+  //  40 leading zeros claim a 2^39-bit value: the jet used to bail
+  //  %fail, which +mole can't catch.  hoon gives [(add 80 (bex 39)) 0]
+  //
+  {
+    u3_atom b   = u3qc_bex(40);
+    u3_atom e   = u3qc_bex(39);
+    u3_noun pro = u3qe_rub(0, b);
+    u3_noun exp = u3nc(u3qa_add(80, e), 0);
+
+    if ( c3n == u3r_sing(exp, pro) ) {
+      fprintf(stderr, "test rub fail: (rub 0 (bex 40))\r\n");
+      u3m_p("got", pro);
+      ret_i = 0;
+    }
+
+    u3z(b); u3z(e); u3z(pro); u3z(exp);
+  }
+
+  //  a well-formed +mat still decodes
+  //
+  {
+    u3_noun mat = u3qe_mat(c3__ames);
+    u3_noun pro = u3qe_rub(0, u3t(mat));
+    u3_noun exp = u3nc(u3k(u3h(mat)), c3__ames);
+
+    if ( c3n == u3r_sing(exp, pro) ) {
+      fprintf(stderr, "test rub fail: (rub 0 q:(mat %%ames))\r\n");
+      u3m_p("got", pro);
+      ret_i = 0;
+    }
+
+    u3z(mat); u3z(pro); u3z(exp);
+  }
+
+  return ret_i;
+}
+
+/* _lug_check(): run +lug on [e a] with f32 options, compare to [exp].
+**   p=24, v=-149, w=253, so emx is --104 and lfn is [--104 0xff.ffff].
+**   @s atoms: --n is 2n, -n is 2n-1.
+*/
+static c3_i
+_lug_check(c3_m t_m, c3_w e_w, c3_w a_w, u3_noun exp, const c3_c* cas_c)
+{
+  u3_noun a   = u3nc(e_w, a_w);
+  u3_noun b   = u3nt(u3nt(24, 297, 253), c3__z, c3__d);
+  u3_noun pro = u3qef_lug(a, b, t_m, c3y);
+  c3_i  ret_i = 1;
+
+  if ( c3n == u3r_sing(exp, pro) ) {
+    fprintf(stderr, "test lug fail: %s\r\n", cas_c);
+    u3m_p("expected", exp);
+    u3m_p("got", pro);
+    ret_i = 0;
+  }
+
+  u3z(a); u3z(b); u3z(exp); u3z(pro);
+  return ret_i;
+}
+
+static c3_i
+_test_lug(void)
+{
+  c3_i ret_i = 1;
+
+  //  2 * MAX (exponent --105) overflows: toward zero saturates,
+  //  every other direction gives infinity (urbit/urbit#7426)
+  //
+  ret_i &= _lug_check(c3__fl, 210, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%fl overflow");
+  ret_i &= _lug_check(c3__sm, 210, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%sm overflow");
+  ret_i &= _lug_check(c3__ce, 210, 0xffffff, u3nc(c3__i, c3y), "%ce overflow");
+  ret_i &= _lug_check(c3__lg, 210, 0xffffff, u3nc(c3__i, c3y), "%lg overflow");
+  ret_i &= _lug_check(c3__ne, 210, 0xffffff, u3nc(c3__i, c3y), "%ne overflow");
+
+  //  MAX itself is in range in every direction
+  //
+  ret_i &= _lug_check(c3__fl, 208, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%fl max");
+  ret_i &= _lug_check(c3__ce, 208, 0xffffff,
+                      u3nq(c3__f, c3y, 208, 0xffffff), "%ce max");
+
+  return ret_i;
+}
+
+static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_cut() ) {
+    fprintf(stderr, "test jets: cut: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_rub() ) {
+    fprintf(stderr, "test jets: rub: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_etch_ud() ) {
     fprintf(stderr, "test jets: etch_ud: failed\r\n");
@@ -967,6 +1117,11 @@ _test_jets(void)
 
   if ( !_test_mas() ) {
     fprintf(stderr, "test jets: mas: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_lug() ) {
+    fprintf(stderr, "test jets: lug: failed\r\n");
     ret_i = 0;
   }
 

@@ -183,7 +183,7 @@ ur_bsr32_any(ur_bsr_t *bsr, uint8_t len)
       mask = (1 << off) - 1;
 
       switch ( len_byt ) {
-        default: assert(0);
+        default: assert(0); [[fallthrough]];
 
         case 4: {
           l = (uint32_t)b[0]

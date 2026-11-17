@@ -4,10 +4,16 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
 
     const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const wasm3_c = b.dependency("wasm3", .{
@@ -19,6 +25,7 @@ pub fn build(b: *std.Build) void {
         .name = "wasm3",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    wasm3.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     wasm3.linkLibC();
 

@@ -27,6 +27,12 @@ pub fn build(b: *std.Build) !void {
         .name = "noun",
         .root_module = b.createModule(.{ .target = target, .optimize = optimize }),
     });
+    const no_lto = b.option(bool, "no_lto", "") orelse blk: {
+        std.debug.print("{s}: 'no_lto' option not found\n",
+        .{std.fs.path.basename(b.build_root.path.?)});
+        break :blk target.result.os.tag == .macos;
+    };
+    pkg_noun.lto = if (optimize != .Debug and !no_lto) .full else null;
 
     if (target.result.os.tag.isDarwin() and !target.query.isNative()) {
         const macos_sdk = b.lazyDependency("macos_sdk", .{
@@ -44,73 +50,87 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ent = b.dependency("pkg_ent", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const pkg_ur = b.dependency("pkg_ur", .{
         .target = target,
         .optimize = optimize,
         .copt = copts,
+        .no_lto = no_lto,
     });
 
     const backtrace = b.dependency("backtrace", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const gmp = b.dependency("gmp", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const murmur3 = b.dependency("murmur3", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const openssl = b.dependency("openssl", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const pdjson = b.dependency("pdjson", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const sigsegv = b.dependency("sigsegv", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const softblas = b.dependency("softblas", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const softfloat = b.dependency("softfloat", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const unwind = b.dependency("unwind", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const urcrypt = b.dependency("urcrypt", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const whereami = b.dependency("whereami", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const zlib = b.dependency("zlib", .{
@@ -121,11 +141,13 @@ pub fn build(b: *std.Build) !void {
     const wasm3 = b.dependency("wasm3", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     });
 
     const tracy = if (tracy_enabled) b.dependency("tracy", .{
         .target = target,
         .optimize = optimize,
+        .no_lto = no_lto,
     }) else null;
 
     pkg_noun.linkLibC();
@@ -160,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
         pkg_noun.addIncludePath(b.path("platform/darwin"));
-    if (t.os.tag == .linux)
+    if (t.os.tag == .linux or t.os.tag == .freebsd)
         pkg_noun.addIncludePath(b.path("platform/linux"));
     if (t.os.tag == .windows)
         pkg_noun.addIncludePath(b.path("platform/windows"));
@@ -202,7 +224,7 @@ pub fn build(b: *std.Build) !void {
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
-        .linux => "platform/linux/rsignal.h",
+        .linux, .freebsd => "platform/linux/rsignal.h",
         .windows => "platform/windows/rsignal.h",
         else => "",
     }), "rsignal.h");
@@ -397,7 +419,8 @@ const c_source_files = [_][]const u8{
     "jets/f/ut_redo.c",
     "jets/f/ut_mint.c",
     "jets/f/ut_mull.c",
-    "jets/f/ut_nest.c",
+    "jets/f/ut_nest1.c",
+    "jets/f/ut_nest2.c",
     "jets/f/ut_rest.c",
     "jets/g/plot.c",
     "jets/i/lagoon.c",
@@ -424,6 +447,7 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "canon.h",
     "copy_migrate.h",
     "error.h",
     "events.h",

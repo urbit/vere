@@ -218,6 +218,13 @@ u3t_samp(void)
     return;
   }
 
+  //  sampling changes the home road, so not while it's being read
+  //  (the hashcons set is off the loom, and not reentrant)
+  //
+  if ( u3m_Dup_busy_w ) {
+    return;
+  }
+
   c3_h old_wag = u3C.wag_h;
   u3C.wag_h &= ~u3o_debug_cpu;
   u3C.wag_h &= ~u3o_trace;
