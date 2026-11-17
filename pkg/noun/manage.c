@@ -2081,6 +2081,14 @@ u3m_soft_with(c3_w    mil_w,
 
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
+  //  a failure past [hom_f], in the takes (%meme on the home road), leaves
+  //  what it opened open: the window of deferred gains is shut here, for
+  //  the next event to open it again
+  //
+  if ( 0 != u3h(why) ) {
+    u3a_defer_close();
+  }
+
   if ( 0 == u3h(why) ) {
     return why;
   }
