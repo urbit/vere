@@ -321,6 +321,18 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
           }
         }
 
+      /* u3m_sole_tend(): between events, resize the home-road set's
+      **                  tables if their load has left its range.
+      */
+        void
+        u3m_sole_tend(void);
+
+      /* u3m_sole_tab_meas(): the compact table's meters (6) since the
+      **                      last call.
+      */
+        void
+        u3m_sole_tab_meas(c3_d* met_d);
+
       /* u3m_sole_hint(): record the home-road hashcons set's size,
       **                  to size its next rebuild.
       */
