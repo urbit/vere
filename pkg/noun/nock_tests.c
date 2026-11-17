@@ -492,19 +492,23 @@ _part_top(u3_noun arg)
 **   Home has a program for an equal formula, and the junior one must be
 **   merged into it: looked up by its key, whose formula holds the address
 **   of its copy where its mug was, it must still be found.
+**
+**   Home's program is asked of u3n_find(), not read from the road: this
+**   file doesn't see the road's layout as the library does on 64-bit
+**   windows, where the system's jmp_buf, which the library replaces,
+**   aligns the fields that follow it differently.
 */
 static c3_i
 _test_reap_part(void)
 {
   c3_i    ret_i = 1;
   u3_noun fol   = u3nt(1, 77, 88);
-  u3_noun key   = u3nc(u3_nul, u3k(fol));
   u3_noun gon;
-  u3_weak one, two;
+  u3p(u3n_prog) one_p, two_p;
 
   gon = u3m_soft(0, _nock_fol, u3k(fol));
   u3z(gon);
-  one = u3h_git(u3R->byc.har_p, key);
+  one_p = u3n_find(u3_nul, fol);
 
   gon = u3m_soft(0, _part_top, u3_nul);
 
@@ -513,14 +517,13 @@ _test_reap_part(void)
     ret_i = 0;
   }
   u3z(gon);
-  two = u3h_git(u3R->byc.har_p, key);
+  two_p = u3n_find(u3_nul, fol);
 
-  if ( (u3_none == one) || (one != two) ) {
+  if ( one_p != two_p ) {
     fprintf(stderr, "reap part: home's program was replaced, not merged\r\n");
     ret_i = 0;
   }
 
-  u3z(key);
   u3z(fol);
   return ret_i;
 }
