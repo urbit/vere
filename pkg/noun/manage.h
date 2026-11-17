@@ -107,6 +107,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_i
         u3m_error(c3_c* str_c);
 
+      /* u3m_road_min: the fewest pages a new road can have (roads are
+      **               page-aligned). a leap into less bails %meme on
+      **               the road it leaves, since building the new road's
+      **               tables (5 pages, with the emergency buffer) can't.
+      */
+#       define u3m_road_min  16
+
       /* u3m_hate(): new, integrated leap mechanism (enter).
       */
         void

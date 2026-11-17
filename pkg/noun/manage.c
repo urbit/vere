@@ -568,6 +568,15 @@ u3m_mark(void)
   return qua_u;
 }
 
+/* u3m_Pave_f: called partway through building a new road's tables
+**             (tests).
+*/
+void (*u3m_Pave_f)(void);
+
+/* u3m_Love_f: called as an exit to home starts its takes (tests).
+*/
+void (*u3m_Love_f)(void);
+
 /* _pave_parts(): build internal tables.
 */
 static void
@@ -585,6 +594,7 @@ _pave_parts(void)
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
+  if ( c3_unlikely(0 != u3m_Pave_f) ) u3m_Pave_f();
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
@@ -1160,7 +1170,9 @@ u3m_leap(c3_w pad_w)
       top_p  = u3R->cap_p;
       top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
-      if ( bot_p >= top_p ) {
+      if (  (bot_p >= top_p)
+         || (((top_p - bot_p) >> u3a_page) < u3m_road_min) )
+      {
         u3m_bail(c3__meme);
       }
 
@@ -1193,8 +1205,9 @@ u3m_leap(c3_w pad_w)
       top_p  = u3R->hat_p - pad_w;
       top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
-      //  XX moar
-      if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
+      if (  (u3R->hat_p < pad_w) || (bot_p >= top_p)
+         || (((top_p - bot_p) >> u3a_page) < u3m_road_min) )
+      {
         u3m_bail(c3__meme);
       }
 
@@ -1224,6 +1237,13 @@ u3m_leap(c3_w pad_w)
     }
   }
 
+  //  until its tables are built, the new road can't be exited, so a
+  //  signal that recovers it (u3m_love() on every live road) must wait.
+  //  nor can it bail: its escape isn't set, and there's room for what
+  //  _pave_parts() allocates (u3m_road_min)
+  //
+  u3m_hold();
+
   /* Attach the new road to its parents.
   */
   {
@@ -1244,6 +1264,7 @@ u3m_leap(c3_w pad_w)
     u3R = rod_u;
     _pave_parts();
   }
+  u3m_hold_done();
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
 #endif
