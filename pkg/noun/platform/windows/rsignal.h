@@ -23,4 +23,9 @@ struct itimerval {
 
 int rsignal_setitimer(int type, struct itimerval *in, struct itimerval *out);
 
+//  for tests: a handler is installed for [sig]; the virtual timer is armed
+//
+int rsignal_installed(int sig);
+int rsignal_armed(void);
+
 #endif//_RSIGNAL_H

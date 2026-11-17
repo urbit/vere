@@ -73,6 +73,16 @@ cleanup:
   CloseHandle(hthread);
 }
 
+int rsignal_installed(int sig)
+{
+  return (sig >= 0) && (sig < SIG_COUNT) && (0 != _fns[sig]);
+}
+
+int rsignal_armed(void)
+{
+  return NULL != _hvt;
+}
+
 static void _rsignal_vt_cb(PVOID param, BOOLEAN timedOut)
 {
   rsignal_raise(SIGVTALRM);

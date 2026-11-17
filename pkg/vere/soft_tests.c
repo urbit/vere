@@ -31,9 +31,6 @@
 /// pages builds its road, from a north road and from a south one; into
 /// one page less, it bails %meme on the road it would have left.
 ///
-/// Of these cases, only the leaps run on Windows: the others raise a
-/// signal themselves, or ask the system for the timer and the handlers.
-///
 /// First, a stack overflow while async signals are held (u3m_hold())
 /// must leave u3o_check_corrupt set, and the grab it asks for must repair
 /// what a cut-short home write left: a leaked old value, or a new value
@@ -395,11 +392,14 @@ _drop(_work* wok_u)
   _pil = 0;
 }
 
-//  the cases that raise a signal themselves, or ask the system for
-//  the timer and the handlers, are posix only: windows has no raise()
-//  for these signals, sigaction() or getitimer() (see rsignal.c)
+//  windows has no raise() for these signals, sigaction() or getitimer():
+//  its signals come through rsignal.c, which is asked instead
 //
-#ifndef U3_OS_windows
+#ifdef U3_OS_windows
+#  define _soft_raise(sig)  rsignal_raise(sig)
+#else
+#  define _soft_raise(sig)  raise(sig)
+#endif
 
 /* _over_deep(): recurse until the C stack overflows.
 */
@@ -533,23 +533,39 @@ _test_over(void)
 static c3_w             _love_cnt_w;
 static c3_w             _love_arm_w;
 static c3_w             _love_sig_w;
+#ifndef U3_OS_windows
 static struct sigaction _love_out_u;
+#endif
 
 static void
 _love_hook(void)
 {
-  struct itimerval itm_u;
-  struct sigaction act_u;
-
   _love_cnt_w++;
-  if ( !getitimer(ITIMER_VIRTUAL, &itm_u) && timerisset(&itm_u.it_value) ) {
+#ifdef U3_OS_windows
+  //  outside the inner regime no SIGTERM handler is installed (the test
+  //  sets no outer one)
+  //
+  if ( rsignal_armed() ) {
     _love_arm_w++;
   }
-  if (  !sigaction(SIGTERM, 0, &act_u)
-     && (act_u.sa_handler != _love_out_u.sa_handler) )
-  {
+  if ( rsignal_installed(SIGTERM) ) {
     _love_sig_w++;
   }
+#else
+  {
+    struct itimerval itm_u;
+    struct sigaction act_u;
+
+    if ( !getitimer(ITIMER_VIRTUAL, &itm_u) && timerisset(&itm_u.it_value) ) {
+      _love_arm_w++;
+    }
+    if (  !sigaction(SIGTERM, 0, &act_u)
+       && (act_u.sa_handler != _love_out_u.sa_handler) )
+    {
+      _love_sig_w++;
+    }
+  }
+#endif
 }
 
 static u3_noun
@@ -574,7 +590,9 @@ _test_love(void)
 {
   u3_noun pro;
 
+#ifndef U3_OS_windows
   sigaction(SIGTERM, 0, &_love_out_u);
+#endif
   u3m_Love_f = _love_hook;
   _love_cnt_w = _love_arm_w = _love_sig_w = 0;
 
@@ -614,7 +632,7 @@ _w_hold_bail(u3_noun arg)
 {
   u3m_hold();
   if ( arg ) {
-    raise(SIGVTALRM);
+    _soft_raise(SIGVTALRM);
   }
   return u3m_bail(c3__exit);
 }
@@ -644,8 +662,6 @@ _test_hold_bail(void)
   }
   fprintf(stderr, "soft: hold: a bail ends the hold, and raises a held alarm\r\n");
 }
-
-#endif  //  !U3_OS_windows
 
 /* _leap_ask(): leap, asking for u3m_road_min pages less [arg] - 1 (the
 **              leap itself takes up to a page of that, for the road's
@@ -735,8 +751,6 @@ _test_leap(void)
                   "%d are refused\r\n", u3m_road_min, u3m_road_min - 1);
 }
 
-#ifndef U3_OS_windows
-
 /* the leap points: inner roads whose tables are being built, counted
 **   while armed; the alarm is raised at the [_pave_at_w]th.
 */
@@ -751,7 +765,7 @@ _pave_hook(void)
 
   if ( ++_pave_cnt_w == _pave_at_w ) {
     _pave_arm_t = 0;
-    raise(SIGVTALRM);
+    _soft_raise(SIGVTALRM);
   }
 }
 
@@ -787,8 +801,6 @@ _test_pave(_work* wok_u, c3_w len_w, _work* w_u)
                   " interrupted\r\n", w_u->nam_c, tot_w, int_w);
 }
 
-#endif  //  !U3_OS_windows
-
 int
 main(int argc, char* argv[])
 {
@@ -809,11 +821,9 @@ main(int argc, char* argv[])
   c3_w  len_w = _len_w;
 
   memset(wok_u, 0, sizeof(wok_u));
-#ifndef U3_OS_windows
   _test_over();
   _test_love();
   _test_hold_bail();
-#endif
   _test_leap();
   _build(wok_u);
 
@@ -833,9 +843,7 @@ main(int argc, char* argv[])
   //  an alarm while an inner road's tables are half built, in the
   //  workload with nested roads
   //
-#ifndef U3_OS_windows
   _test_pave(wok_u, len_w, &wok_u[2]);
-#endif
 
   //  interrupted runs, each with a timeout up to a bit past its duration
   //
