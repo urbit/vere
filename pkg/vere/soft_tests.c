@@ -16,7 +16,8 @@
 /// road: copies of the slam workloads, made with jam and cue (and made
 /// again every 20 interrupted runs), and two deep nouns with 2^200
 /// paths. SOFT_TEST_LOOM sets the loom size in bits of bytes (default
-/// 28).
+/// 28). SOFT_TEST_TINY=1 starts the home lose list at 16 entries, so it
+/// grows under interrupts.
 ///
 /// Then an alarm raised while a new inner road's tables are half built
 /// (u3m_Pave_f), at each of the first leaps of a workload with nested
@@ -84,6 +85,9 @@ _setup(void)
   c3_w  lom_w = lom_c ? (c3_w)atoi(lom_c) : 28;
 
   u3m_boot_lite((size_t)1 << lom_w);
+  if ( getenv("SOFT_TEST_TINY") ) {
+    u3a_lose_size(16, 1U << 23);
+  }
   _pil = _cue_pill();
   if ( c3n == u3v_boot_lite(u3k(_pil)) ) {
     fprintf(stderr, "soft: boot failed\r\n");
