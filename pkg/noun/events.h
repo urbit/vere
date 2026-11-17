@@ -230,7 +230,7 @@
           c3_d ctf_d;        //  ... found a member, so not copied
           c3_d ctr_d;        //  older home nouns' slots left as they
                              //  were: the home lose list full
-          c3_d cus_d[2];     //  time: takes, then the lose list
+          c3_d cus_d[2];     //  time: takes and pins, then the lose list
           c3_d cam_d[2];     //  most members added at one exit, before
                              //  its drain; the set's size as it began
 

@@ -663,7 +663,7 @@ static c3_i
 _test_sole_set(void)
 {
   c3_i    ret_i = 1;
-  u3_noun x, y, r, p, a, b, m, n;
+  u3_noun x, y, r, p, q, a, b, m, n;
 
   //  a freed member leaves the set
   //
@@ -688,6 +688,56 @@ _test_sole_set(void)
     ret_i = 0;
   }
   u3z(r); u3z(y);
+
+  //  pinned junior entries that are taken join the home set
+  //
+  u3m_hate(0);
+  p = u3m_sole_pin(u3nc(u3nc(20, 21), 22));
+  r = u3m_sole_pin(u3nc(30, 31));     //  not taken
+  u3z(r);
+  p = u3m_love(p);
+  if ( !u3a_sole_has(p) || !u3a_sole_has(u3h(p)) ) {
+    fprintf(stderr, "test: sole set: taken entry not a member\r\n");
+    ret_i = 0;
+  }
+  q = u3nc(u3nc(20, 21), 22);
+  r = u3m_sole_try(u3k(q));
+  if ( r != p ) {
+    fprintf(stderr, "test: sole set: taken entry not shared\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(q);
+  q = u3nc(30, 31);
+  r = u3m_sole_try(u3k(q));
+  if ( r != q ) {
+    fprintf(stderr, "test: sole set: untaken entry kept\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(q); u3z(p);
+
+  //  home nouns listed in a junior set are left alone at exit: the set
+  //  holds no references to them, so canonicalizing [x] in place would
+  //  free [c], which it still lists (#1133). they're put directly,
+  //  standing for a set that lists a home noun whose canonical equal
+  //  [m] is a member by the time the road exits
+  //
+  m = u3m_sole_try(u3nc(23, 24));
+  {
+    u3_noun c = u3nc(23, 24);
+    u3_noun x = u3nc(c, 25);
+
+    u3m_hate(0);
+    u3h_put(u3R->dup_p, x, x);
+    u3h_put(u3R->dup_p, c, c);
+    u3m_love(0);
+
+    if ( (u3h(x) != c) || u3a_sole_has(x) ) {
+      fprintf(stderr, "test: sole set: listed home noun rewritten\r\n");
+      ret_i = 0;
+    }
+    u3z(x);
+  }
+  u3z(m);
 
   //  rebuilding keeps members reachable from persistent tables only
   //
