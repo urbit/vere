@@ -1774,10 +1774,14 @@ static inline void
 _cs_ram_bsw_bob(_ram_xeno_t* ram_u, u3_atom a)
 {
   ur_bsw_t* rit_u = &(ram_u->rit_u);
-  c3_h      mug_h = u3a_bob_mug(a);
-  c3_h      seq_h = u3a_bob_seq(a);
+  c3_d      bid_d = u3a_bob_bid(a);
+  c3_h      mug_h = u3a_bid_mug(bid_d);
+  c3_h      seq_h = u3a_bid_seq(bid_d);
 
-  u3s_bids_push(ram_u->bid_u, u3a_bob_bid(a));
+  //  the bits name the id the collector records, so the BLOBS row and
+  //  a tap of these bytes agree by construction (not via mug_w)
+  //
+  u3s_bids_push(ram_u->bid_u, bid_d);
 
   //  write 2-bit tag 01
   //
