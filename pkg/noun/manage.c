@@ -232,6 +232,7 @@ _cm_signal_handle(c3_m sig_m)
   //
   if ( u3m_Hold_w ) {
     u3C.wag_h |= u3o_check_corrupt;
+    u3e_Meter.ccs_d[1]++;
   }
 
 #ifndef U3_OS_windows
@@ -400,6 +401,7 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
     //
     _cm_emergency("recover: top", sig_m);
     u3C.wag_h |= u3o_check_corrupt;
+    u3e_Meter.ccs_d[0]++;
 
     //  Reset the top road - the problem could be a fat cap.
     //
@@ -2156,6 +2158,7 @@ u3m_vgrab_check(u3_noun* som, c3_z len_z)
 {
   if ( u3C.wag_h & u3o_check_corrupt ) {
     c3_h wag_h = u3C.wag_h;
+    c3_d  ms_d = u3e_measure_ms();
 
     //  counting references, the sweep rewrites each box's count, so it
     //  repairs counts left too high as well as freeing leaks. both are
@@ -2165,6 +2168,10 @@ u3m_vgrab_check(u3_noun* som, c3_z len_z)
     u3C.wag_h |= u3o_debug_ram;
     _cm_vgrab(som, len_z, 1);
     u3C.wag_h = wag_h & ~u3o_check_corrupt;
+
+    u3e_Meter.ccg_d++;
+    u3e_Meter.ccm_d += u3e_measure_ms() - ms_d;
+    u3e_Meter.ccl_d += u3a_sweep_leaked();
   }
 }
 
