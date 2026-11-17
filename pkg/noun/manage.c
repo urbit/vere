@@ -301,6 +301,12 @@ _cm_signal_reset(void)
   u3R->kid_p = 0;
   u3m_Hold_w = 0;
   u3m_Held_m = 0;
+
+  //  a signal can interrupt u3m_love() before it drops a junior heap,
+  //  leaving it poisoned for the next road: unpoison all free memory
+  //  (ASan only)
+  //
+  u3a_drop_heap(u3R->mat_p, u3R->hat_p);
 }
 
 #if 0
