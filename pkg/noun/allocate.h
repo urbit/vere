@@ -887,6 +887,13 @@ u3a_post_info(u3_post);
           void
           u3a_lose_later(u3_noun som);
 
+        /* u3a_lose_home_room(): lose home noun [old] at the drain,
+        **   if there's room on the home lose list: else c3n, doing
+        **   nothing.
+        */
+          c3_o
+          u3a_lose_home_room(u3_noun old);
+
         /* u3a_take(): gain, copying juniors.
         */
           u3_noun

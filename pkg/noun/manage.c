@@ -1683,8 +1683,8 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     }
 
     //  the values unification unpointed from home slots, and those the
-    //  bytecode merge replaced: every take is done, so the taken nouns
-    //  that hold them have gained them
+    //  take replaced in older home nouns: every take is done, so the
+    //  taken nouns that hold them have gained them
     //
     u3a_lose_drain(kid_p, lol_p, bot_p, bot_w);
     if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
@@ -3938,12 +3938,18 @@ _cm_walk_push(_cm_walk* wak_u)
   return &wak_u->fam_u[wak_u->len_w++];
 }
 
+/* _cm_sole_def_t: _cm_sole_xchange() defers what it replaces
+**   (u3m_sole_take_old()).
+*/
+static c3_t _cm_sole_def_t;
+
 /* _cm_sole_reset(): an event failed, perhaps within a walk: none is
 **   under way (see _cm_signal_reset()).
 */
 static void
 _cm_sole_reset(void)
 {
+  _cm_sole_def_t   = 0;
   _cm_sole_u.pat_y = 0;
 }
 
@@ -3962,6 +3968,25 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
   u3_noun old = *som;
 
   if ( old != can ) {
+    //  canonicalizing an older home noun during the take: the junior
+    //  heap may still refer to [old] without counting it. a count above
+    //  1 can't reach 0 here, so it's lost now (through u3z(), which
+    //  cancels a deferred gain); the last waits for the drain. with the
+    //  lose list full, the slot is left as it is, rather than leaked
+    //
+    if ( _cm_sole_def_t && (c3n == u3a_is_cat(old)) ) {
+      if ( ((u3a_noun*)u3a_to_ptr(old))->use_w > 1 ) {
+        *som = u3k(can);
+        u3z(old);
+        return;
+      }
+      if ( c3n == u3a_lose_home_room(old) ) {
+        u3e_Meter.ctr_d++;
+        return;
+      }
+      *som = u3k(can);
+      return;
+    }
     *som = u3k(can);
     u3z(old);
   }
@@ -3976,8 +4001,8 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
 **
 **   a member is walked once, since its bit ends the descent. a cell that
 **   ends the walk out of the set (refused by the table, or over a child
-**   that was) has no bit, so it's marked as visited, and a shared one
-**   is walked once too.
+**   that was, or one whose swap was deferred and refused) has no bit, so
+**   it's marked as visited, and a shared one is walked once too.
 **   the caller brackets the walk with _cm_vis_home() and
 **   _cm_vis_home_done().
 */
@@ -4031,8 +4056,8 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       else {
         _cm_sole_xchange(pro, &cel_u->tel);
 
-        //  a child the table refused stays out: a member needs
-        //  canonical children
+        //  a deferred swap can be refused: a member needs canonical
+        //  children
         //
         pro = ( u3a_is_sole(cel_u->hed) && u3a_is_sole(cel_u->tel) )
               ? _cm_sole_put(fam_u->som)
@@ -4052,15 +4077,16 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
 }
 
 /* _cm_sole_canon_home(): _cm_sole_canon() on home noun [som], on the
-**   home road, counting its probes as path [pat_y]. its canonical
-**   equal, not retained.
+**   home road, counting its probes as path [pat_y], and deferring the
+**   loss of what it replaces if [def_t] (see _cm_sole_xchange()). its
+**   canonical equal, not retained.
 **
 **   nothing interrupts it: the home road computes outside the inner
 **   signal regime (see u3m_soft_top()), but for the profiling sampler,
 **   which is on only under u3o_debug_cpu.
 */
 static u3_noun
-_cm_sole_canon_home(u3_noun som, c3_y pat_y)
+_cm_sole_canon_home(u3_noun som, c3_y pat_y, c3_t def_t)
 {
   static _cm_walk wak_u;
   static c3_t     ini_t;
@@ -4074,12 +4100,24 @@ _cm_sole_canon_home(u3_noun som, c3_y pat_y)
 
   wak_u.len_w      = 0;
   _cm_sole_u.pat_y = pat_y;
+  _cm_sole_def_t   = def_t;
   _cm_vis_home();
   pro = _cm_sole_canon(&wak_u, som);
   _cm_vis_home_done();
+  _cm_sole_def_t   = 0;
   _cm_sole_u.pat_y = pre_y;
 
   return pro;
+}
+
+/* u3m_sole_take_old(): an older home noun [som] met by the home-only
+**   take: canonicalize it in place, deferring the loss of what it
+**   replaces. its canonical equal, not retained.
+*/
+u3_noun
+u3m_sole_take_old(u3_noun som)
+{
+  return _cm_sole_canon_home(som, 2, 1);
 }
 
 /* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road.
@@ -4656,7 +4694,7 @@ u3m_sole_try(u3_noun som)
 
   if ( &(u3H->rod_u) == u3R ) {
     u3e_Meter.eic_d[0]++;
-    new = _cm_sole_canon_home(som, 3);
+    new = _cm_sole_canon_home(som, 3, 0);
 
     if ( new != som ) {
       u3k(new);

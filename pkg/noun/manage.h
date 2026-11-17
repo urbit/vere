@@ -317,6 +317,14 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_t
         u3m_sole_add(u3_noun new);
 
+      /* u3m_sole_take_old(): an older home noun met by the home-only take:
+      **                      canonicalize it in place, deferring what it
+      **                      replaces; its canonical equal (not
+      **                      retained).
+      */
+        u3_noun
+        u3m_sole_take_old(u3_noun som);
+
       /* u3m_sole_ream(): rebuild the home-road hashcons set from
       **                  persistent tables.
       */
