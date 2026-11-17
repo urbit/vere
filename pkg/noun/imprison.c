@@ -597,6 +597,43 @@ u3i_vint(u3_noun a)
   }
 }
 
+/* _ci_defcons_cold(), _ci_cell_cold(): out of line, for when the cell
+**   cache of the road has no cell to give (u3a_celloc_try()).
+*/
+static __attribute__((noinline)) u3_cell
+_ci_defcons_cold(u3_noun** hed, u3_noun** tel)
+{
+  c3_w*     nov_w = u3a_celloc_cold();
+  u3a_cell* nov_u = (void *)nov_w;
+
+  nov_u->use_w = 1;
+  nov_u->mug_w = 0;
+
+#ifdef U3_MEMORY_DEBUG
+  nov_u->hed = u3_none;
+  nov_u->tel = u3_none;
+#endif
+
+  *hed = &nov_u->hed;
+  *tel = &nov_u->tel;
+
+  return u3a_to_pom(u3a_outa(nov_w));
+}
+
+static __attribute__((noinline)) u3_noun
+_ci_cell_cold(u3_noun a, u3_noun b)
+{
+  c3_w*     nov_w = u3a_celloc_cold();
+  u3a_cell* nov_u = (void *)nov_w;
+
+  nov_u->use_w = 1;
+  nov_u->mug_w = 0;
+  nov_u->hed = a;
+  nov_u->tel = b;
+
+  return u3a_to_pom(u3a_outa(nov_w));
+}
+
 /* u3i_defcons(): allocate cell for deferred construction.
 **            NB: [hed] and [tel] pointers MUST be filled.
 */
@@ -607,28 +644,33 @@ u3i_defcons(u3_noun** hed, u3_noun** tel)
 
   u3t_on(mal_o);
   {
-    c3_w*     nov_w = u3a_celloc();
-    u3a_cell* nov_u = (void *)nov_w;
+    u3a_cell* nov_u = (void *)u3a_celloc_try();
 
-    nov_u->use_w = 1;
-    nov_u->mug_w = 0;
+    if ( c3_unlikely(!nov_u) ) {
+      pro = _ci_defcons_cold(hed, tel);
+    }
+    else {
+      nov_u->use_w = 1;
+      nov_u->mug_w = 0;
 
 #ifdef U3_MEMORY_DEBUG
-    nov_u->hed = u3_none;
-    nov_u->tel = u3_none;
+      nov_u->hed = u3_none;
+      nov_u->tel = u3_none;
 #endif
 
-    *hed = &nov_u->hed;
-    *tel = &nov_u->tel;
+      *hed = &nov_u->hed;
+      *tel = &nov_u->tel;
 
-    pro = u3a_to_pom(u3a_outa(nov_w));
+      pro = u3a_to_pom(u3a_outa(nov_u));
+    }
   }
   u3t_off(mal_o);
 
   return pro;
 }
 
-/* u3i_cell(): Produce the cell `[a b]`.
+/* u3i_cell(): Produce the cell `[a b]`.  No frame when the cell cache
+**             of the road has a cell.
 */
 u3_noun
 u3i_cell(u3_noun a, u3_noun b)
@@ -637,15 +679,19 @@ u3i_cell(u3_noun a, u3_noun b)
 
   u3t_on(mal_o);
   {
-    c3_w*     nov_w = u3a_celloc();
-    u3a_cell* nov_u = (void *)nov_w;
+    u3a_cell* nov_u = (void *)u3a_celloc_try();
 
-    nov_u->use_w = 1;
-    nov_u->mug_w = 0;
-    nov_u->hed = a;
-    nov_u->tel = b;
+    if ( c3_unlikely(!nov_u) ) {
+      pro = _ci_cell_cold(a, b);
+    }
+    else {
+      nov_u->use_w = 1;
+      nov_u->mug_w = 0;
+      nov_u->hed = a;
+      nov_u->tel = b;
 
-    pro = u3a_to_pom(u3a_outa(nov_w));
+      pro = u3a_to_pom(u3a_outa(nov_u));
+    }
   }
   u3t_off(mal_o);
 

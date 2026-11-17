@@ -217,8 +217,12 @@ pub fn build(b: *std.Build) !void {
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
-    if (t.os.tag == .windows)
+    if (t.os.tag == .windows) {
         pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
+        //  u3a_road embeds a jmp_buf: whoever includes noun.h must see
+        //  the same one as the library, or the road's layout differs
+        pkg_noun.installHeader(b.path("platform/windows/setjmp.h"), "setjmp.h");
+    }
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",

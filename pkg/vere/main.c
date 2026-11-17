@@ -211,6 +211,8 @@ _main_init(void)
   u3C.hap_w = u3_Host.ops_u.hap_w;
   u3_Host.ops_u.per_w = 50000;
   u3C.per_w = u3_Host.ops_u.per_w;
+  u3_Host.ops_u.san_w = u3o_sand_default;
+  u3C.san_w = u3_Host.ops_u.san_w;
   u3_Host.ops_u.kno_h = DefaultKernel;
 
   u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
@@ -341,6 +343,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "lmdb-map-size",       required_argument, NULL, 12 },
     { "gc-abort",            no_argument,       NULL, 13 },
     { "no-migrate",          no_argument,       NULL, 14 },
+    { "sand-zone",           required_argument, NULL, 15 },
     //
     { NULL, 0, NULL, 0 },
   };
@@ -402,6 +405,13 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case 14: {  //  no-migrate
         u3C.wag_h |= u3o_no_migrate;
+        break;
+      }
+      case 15: {  //  sand-zone
+        if ( c3n == _main_readn(optarg, 1 << 16, &u3_Host.ops_u.san_w) ) {
+          return c3n;
+        }
+        u3C.san_w = u3_Host.ops_u.san_w;
         break;
       }
       //  special args
@@ -911,6 +921,9 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-S, --skip-battery-hashes     Disable battery hashing\n",
+    "    --sand-zone MB            Megabytes a computation allocates before it\n"
+    "                              counts references (default 64, or 128 on\n"
+    "                              the 64-bit loom; 0 for none)\n",
     // XX find a way to re-enable
     // "-s, --autoselect-pill      Pill URL from arvo git hash\n",
     "-t, --no-tty                  Disable terminal/tty assumptions\n",
@@ -2996,6 +3009,7 @@ _cw_boot(c3_i argc, c3_c* argv[])
     c3_i ch_i, lid_i;
 
     static struct option lop_u[] = {
+      { "sand-zone-size",        required_argument, NULL, 'a' },
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
       { "loom",                  required_argument, NULL, 'l' },
@@ -3009,10 +3023,14 @@ _cw_boot(c3_i argc, c3_c* argv[])
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:p:r:s:t:z:",
+                   "a:c:e:k:l:p:r:s:t:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
+        case 'a': {  //  sand-zone-size
+          sscanf(optarg, "%" SCNc3_w, &u3C.san_w);
+          break;
+        }
         case 'c': {  //  temporary-cache-size
           sscanf(optarg, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
           break;
@@ -3120,6 +3138,7 @@ _cw_work(c3_i argc, c3_c* argv[])
     c3_i ch_i, lid_i;
 
     static struct option lop_u[] = {
+      { "sand-zone-size",        required_argument, NULL, 'a' },
       { "temporary-cache-size",  required_argument, NULL, 'c' },
       { "ephemeral-file",        required_argument, NULL, 'e' },
       { "loom",                  required_argument, NULL, 'l' },
@@ -3136,10 +3155,14 @@ _cw_work(c3_i argc, c3_c* argv[])
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:n:p:r:s:t:u:w:z:",
+                   "a:c:e:k:l:n:p:r:s:t:u:w:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
+        case 'a': {  //  sand-zone-size
+          sscanf(optarg, "%" SCNc3_w, &u3C.san_w);
+          break;
+        }
         case 'c': {  //  temporary-cache-size
           sscanf(optarg, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
           break;
