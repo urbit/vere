@@ -402,7 +402,30 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 #endif
 }
 
-/* _ce_meas_save(): report and reset per-interval measurements.
+/* _ce_meter_zero(): reset the meters for a new interval. the cribs'
+**   capacities and ceilings are states, and stay.
+*/
+static void
+_ce_meter_zero(void)
+{
+  c3_d cap_d[2], max_d[2];
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
+    max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
+  }
+  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
+    u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
+    u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
+  }
+}
+
+/* _ce_meas_save(): report and reset per-interval measurements. the line
+**   formats are listed in measure-report.py; keep it in step.
 */
 static void
 _ce_meas_save(c3_w pgs_w, c3_w sip_w)
@@ -550,11 +573,50 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
+
+    //  unification: senior merges, give-ups, slot writes (outside home
+    //  memory, in it), home writes refused
+    //
+    fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.wvm_d, u3e_Meter.wsg_d,
+                   u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
+                   u3e_Meter.wsk_d);
+
+    //  the lose lists, home then inner
+    //
+    fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wlp_d[0], u3e_Meter.wlf_d[0], u3e_Meter.wll_d[0],
+                   u3e_Meter.wlm_d[0], u3e_Meter.wlx_d[0],
+                   u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
+                   u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
+
+    //  cribs, one line each
+    //
+    {
+      static const c3_c* nam_c[2] = { "visited-set", "lose-list" };
+
+      for ( i_w = 0; i_w < 2; i_w++ ) {
+        if ( u3e_Meter.cib_u[i_w].cap_d ) {
+          fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                         " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                         " %" PRIu64 "\n",
+                         nam_c[i_w],
+                         u3e_Meter.cib_u[i_w].cap_d, u3e_Meter.cib_u[i_w].top_d,
+                         u3e_Meter.cib_u[i_w].max_d, u3e_Meter.cib_u[i_w].pek_d,
+                         u3e_Meter.cib_u[i_w].gro_d, u3e_Meter.cib_u[i_w].shr_d,
+                         u3e_Meter.cib_u[i_w].clg_d, u3e_Meter.cib_u[i_w].cdp_d,
+                         u3e_Meter.cib_u[i_w].ovf_d);
+        }
+      }
+    }
   }
   fflush(fil_u);
 
   memset(_ce_meas.tal_d, 0, sizeof(_ce_meas.tal_d));
-  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+  _ce_meter_zero();
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
 
@@ -756,7 +818,7 @@ u3e_measure_init(const c3_c* dir_c,
     {
       u3e_meter met_u = u3e_Meter;
 
-      memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+      _ce_meter_zero();
       u3e_Meter.hcr_d = met_u.hcr_d;
       u3e_Meter.hcm_d = met_u.hcm_d;
       memcpy(u3e_Meter.hcc_d, met_u.hcc_d, sizeof(met_u.hcc_d));
