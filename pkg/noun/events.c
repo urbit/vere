@@ -522,7 +522,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
       c3_d vat_d, cel_d, byt_d;
       c3_w i_w;
 
-      u3m_dedup_stat(&vat_d, &cel_d, &byt_d);
+      u3m_sole_stat(&vat_d, &cel_d, &byt_d);
       fprintf(fil_u, "H %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      vat_d, cel_d, byt_d,
@@ -541,7 +541,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     {
       c3_d buc_d, pag_d;
 
-      u3m_dedup_meas(&buc_d, &pag_d);
+      u3m_sole_meas(&buc_d, &pag_d);
       fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
