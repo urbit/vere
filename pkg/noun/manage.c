@@ -197,11 +197,43 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
   u3m_signal(c3__over);
 }
 
+/* async signals held (see u3m_hold()).
+*/
+volatile c3_w u3m_Hold_w;
+volatile c3_m u3m_Held_m;
+
+/* u3m_hold_raise(): raise the signal held while signals were held.
+*/
+void
+u3m_hold_raise(void)
+{
+  c3_m sig_m = u3m_Held_m;
+
+  u3m_Held_m = 0;
+  u3m_signal(sig_m);
+}
+
 /* _cm_signal_handle(): handle a signal in general.
 */
 static void
 _cm_signal_handle(c3_m sig_m)
 {
+  //  held: raised by u3m_hold_done(). a term replaces anything else held
+  //
+  if ( u3m_Hold_w && (c3__over != sig_m) ) {
+    if ( !u3m_Held_m || (c3__term == sig_m) ) {
+      u3m_Held_m = sig_m;
+    }
+    return;
+  }
+
+  //  an overflow can't be held, and code that holds signals mustn't
+  //  overflow: if one does anyway, check the home road at the next grab
+  //
+  if ( u3m_Hold_w ) {
+    u3C.wag_h |= u3o_check_corrupt;
+  }
+
 #ifndef U3_OS_windows
   if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
@@ -267,6 +299,8 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
   u3R->kid_p = 0;
+  u3m_Hold_w = 0;
+  u3m_Held_m = 0;
 }
 
 #if 0
@@ -3223,11 +3257,6 @@ u3m_time_gap_in_mil(c3_w mil_w)
 */
 #include "canon.h"
 
-//  set while reading the home-road set: the profiling signal handler
-//  (u3t_samp()) runs on the home road, and must not change it then
-//
-volatile c3_w u3m_Dup_busy_w;
-
 static struct {
   c3_t         ini_t;  //  initialized
   c3_w         len_w;  //  bitmap length, in words
@@ -3418,9 +3447,14 @@ _cm_dup_get(u3_noun som)
 {
   u3_weak pro;
 
-  u3m_Dup_busy_w++;
+  //  the mug first: computing one can bail, and nothing may with
+  //  signals held. the profiling signal handler (u3t_samp()) runs on
+  //  the home road, and must not change the set while it's read
+  //
+  (void)u3r_mug(som);
+  u3m_hold();
   pro = _cm_dup_get_in(som);
-  u3m_Dup_busy_w--;
+  u3m_hold_done();
 
   _cm_dup_meas_hit(som, pro);
 
@@ -3438,6 +3472,8 @@ _cm_dup_put(u3_noun som)
   u3_noun can;
 
   _cm_dup_init();
+  (void)u3r_mug(som);   //  before the hold, as _cm_dup_get()
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get_or_insert(&_cm_dup_u.vat_u, som);
@@ -3454,6 +3490,7 @@ _cm_dup_put(u3_noun som)
     }
   }
 
+  u3m_hold_done();
   _cm_dup_meas_hit(som, can);
 
   if ( can == som ) {
@@ -3472,6 +3509,7 @@ void
 u3m_dedup_lose(u3_noun som)
 {
   _cm_dup_clr(som);
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_dup_u.vat_u, som);
@@ -3490,6 +3528,8 @@ u3m_dedup_lose(u3_noun som)
       u3e_Meter.hcd_d++;
     }
   }
+
+  u3m_hold_done();
 }
 
 /* u3m_dedup_stat(): the home-road set's atoms, cells, and estimated
