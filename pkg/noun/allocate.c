@@ -2284,6 +2284,29 @@ u3a_sweep(void)
   return siz_w;
 }
 
+/* u3a_sweep_quiet(): u3a_sweep(), without logging the words it frees as
+**                    leaks or whose counts it repairs (still logged per
+**                    box with u3o_verbose).
+*/
+c3_w
+u3a_sweep_quiet(void)
+{
+  c3_w siz_w;
+
+  _sweep_qui_t = 1;
+  siz_w = u3a_sweep();
+  _sweep_qui_t = 0;
+  return siz_w;
+}
+
+/* u3a_sweep_leaked(): words the last sweep found leaked, and freed.
+*/
+c3_w
+u3a_sweep_leaked(void)
+{
+  return _sweep_leq_w;
+}
+
 /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
 */
 void
