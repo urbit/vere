@@ -31,6 +31,9 @@
 /// pages builds its road, from a north road and from a south one; into
 /// one page less, it bails %meme on the road it would have left.
 ///
+/// Of these cases, only the leaps run on Windows: the others raise a
+/// signal themselves, or ask the system for the timer and the handlers.
+///
 /// First, a stack overflow while async signals are held (u3m_hold())
 /// must leave u3o_check_corrupt set, and the grab it asks for must repair
 /// what a cut-short home write left: a leaked old value, or a new value
@@ -392,6 +395,12 @@ _drop(_work* wok_u)
   _pil = 0;
 }
 
+//  the cases that raise a signal themselves, or ask the system for
+//  the timer and the handlers, are posix only: windows has no raise()
+//  for these signals, sigaction() or getitimer() (see rsignal.c)
+//
+#ifndef U3_OS_windows
+
 /* _over_deep(): recurse until the C stack overflows.
 */
 static volatile c3_w _over_stop_w;
@@ -636,6 +645,8 @@ _test_hold_bail(void)
   fprintf(stderr, "soft: hold: a bail ends the hold, and raises a held alarm\r\n");
 }
 
+#endif  //  !U3_OS_windows
+
 /* _leap_ask(): leap, asking for u3m_road_min pages less [arg] - 1 (the
 **              leap itself takes up to a page of that, for the road's
 **              record); make a cell there, and come back with it and
@@ -724,6 +735,8 @@ _test_leap(void)
                   "%d are refused\r\n", u3m_road_min, u3m_road_min - 1);
 }
 
+#ifndef U3_OS_windows
+
 /* the leap points: inner roads whose tables are being built, counted
 **   while armed; the alarm is raised at the [_pave_at_w]th.
 */
@@ -774,6 +787,8 @@ _test_pave(_work* wok_u, c3_w len_w, _work* w_u)
                   " interrupted\r\n", w_u->nam_c, tot_w, int_w);
 }
 
+#endif  //  !U3_OS_windows
+
 int
 main(int argc, char* argv[])
 {
@@ -794,9 +809,11 @@ main(int argc, char* argv[])
   c3_w  len_w = _len_w;
 
   memset(wok_u, 0, sizeof(wok_u));
+#ifndef U3_OS_windows
   _test_over();
   _test_love();
   _test_hold_bail();
+#endif
   _test_leap();
   _build(wok_u);
 
@@ -816,7 +833,9 @@ main(int argc, char* argv[])
   //  an alarm while an inner road's tables are half built, in the
   //  workload with nested roads
   //
+#ifndef U3_OS_windows
   _test_pave(wok_u, len_w, &wok_u[2]);
+#endif
 
   //  interrupted runs, each with a timeout up to a bit past its duration
   //
