@@ -1549,6 +1549,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     hom_f();
   }
 
+  if ( c3_unlikely(0 != u3m_Love_f) && (&(u3H->rod_u) == u3R) ) {
+    u3m_Love_f();
+  }
+
   //  copy product and caches off our stack
   //
   u3e_Phase = u3e_pha_take_pro;
@@ -1774,14 +1778,14 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
+    /* Revert to external signal regime.
+    */
+    _cm_signal_done();
+
     /* Overload the error result.
     */
     pro = u3m_love(why);
   }
-
-  /* Revert to external signal regime.
-  */
-  _cm_signal_done();
 
   /* Free the argument.
   */
