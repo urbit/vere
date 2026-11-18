@@ -249,6 +249,24 @@
       void
       u3e_measure_event(c3_d eve_d, const c3_c* tag_c);
 
+    /* u3e_measure_work(): the task just run, of kind [kin_w] (u3e_wok_*),
+    **                     took [use_d] microseconds. call before
+    **                     u3e_measure_event().
+    */
+#     define u3e_wok_poke  0            //  event computed
+#     define u3e_wok_fail  1            //  event failed (not replayed)
+#     define u3e_wok_peek  2            //  peek
+#     define u3e_wok_max   3
+
+      void
+      u3e_measure_work(c3_w kin_w, c3_d use_d);
+
+    /* u3e_dirty(): pages written since the last save, free pages
+    **              included. call on the home road.
+    */
+      c3_w
+      u3e_dirty(void);
+
     /* u3e_measure_align(): at the end of a poke, on the event's road,
     **                      compare the new arvo state [new] with the
     **                      old [old] by position. read-only.

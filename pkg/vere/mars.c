@@ -586,6 +586,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3_noun tim, job;
       c3_h  mil_h;
       c3_w  pre_w;
+      c3_d  bef_d;
 
       if ( (c3n == u3r_cell(dat, &tim, &job)) ||
            (c3n == u3r_safe_half(tim, &mil_h)) )
@@ -611,7 +612,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       mar_u->sen_d++;
 
       u3e_Phase = u3e_pha_poke;
+      bef_d = uv_hrtime();
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
+        u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
         mar_u->dun_d = mar_u->sen_d;
         u3e_Phase = u3e_pha_mug_roc;
         mar_u->mug_h = u3r_mug(u3A->roc);
@@ -623,6 +626,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
       }
       else {
+        u3e_measure_work(u3e_wok_fail, (uv_hrtime() - bef_d) / 1000);
         mar_u->sen_d = mar_u->dun_d;
         u3z(job);
         _mars_gift(mar_u, u3nt(c3__poke, c3n, pro));
@@ -644,7 +648,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
       u3k(sam); u3z(jar);
       u3e_Phase = u3e_pha_peek;
-      _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_h, sam)));
+      {
+        c3_d bef_d = uv_hrtime();
+
+        pro = _mars_peek(mil_h, sam);
+        u3e_measure_work(u3e_wok_peek, (uv_hrtime() - bef_d) / 1000);
+      }
+      _mars_gift(mar_u, u3nc(c3__peek, pro));
     } break;
 
     case c3__sync: {
@@ -1022,6 +1032,7 @@ static u3_weak
 _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 {
   c3_y    pha_y = u3e_Phase;
+  c3_d    bef_d = uv_hrtime();
   u3_noun gon, tag, dat;
 
   //  measurement: tagged as in u3v_poke_sure()
@@ -1033,6 +1044,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
+    u3e_measure_work(u3e_wok_fail, (uv_hrtime() - bef_d) / 1000);
     u3e_Phase = pha_y;
     return gon;
   }
@@ -1068,6 +1080,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   u3z(gon);
   u3a_defer_close();
   u3e_Phase = pha_y;
+  u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
   u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;
 }

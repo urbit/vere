@@ -88,6 +88,10 @@ def parse(lines):
             intervals.append(cur)
         elif cur is None:
             continue
+        elif t == "J":
+            v = ints(p[1:])
+            if v is not None and len(v) >= 6:
+                cur["J"] = v
         elif t == "F" and len(p) == 5:
             n = ints(p[4:5])
             if n:
@@ -191,6 +195,11 @@ def sums(ivs):
                 s["F_dup"] += n
             if pha == "take-pro":
                 s["F_pro"] += n
+        if "J" in i:
+            w = i["J"]
+            s["J_eve"] += w[0]; s["J_eus"] += w[1]; s["J_pek"] += w[4]
+            s["J_pus"] += w[5]; s["J_secs"] += i.get("secs", 0)
+            s["J_tasks"] += i["tasks"]
         if "A" in i:
             a = i["A"]
             s["A_fre"] += a[0]; s["A_cln"] += a[1]; s["A_alt"] += a[2]; s["A_reu"] += a[3]
@@ -231,6 +240,17 @@ METRICS = [
     ("patch pages / hour", "overall churn",
      lambda s, v: ratio(s["patch"], s["secs"] / 3600)),
     ("patch pages / task", "overall churn", lambda s, v: ratio(s["patch"], s["tasks"])),
+    ("J: event compute / elapsed", "snapshot work budget",
+     lambda s, v: ratio(s["J_eus"] / 1e6, s["J_secs"])),
+    ("J: peek compute / elapsed", "snapshot work budget",
+     lambda s, v: ratio(s["J_pus"] / 1e6, s["J_secs"])),
+    ("J: peeks / tasks", "snapshot work budget", lambda s, v: ratio(s["J_pek"], s["J_tasks"])),
+    ("J: event ms (mean)", "snapshot work budget",
+     lambda s, v: ratio(s["J_eus"] / 1e3, s["J_eve"])),
+    ("J: event seconds / interval (median)", "snapshot work budget",
+     lambda s, v: (lambda m: None if m is None else m / 1e6)(median(values(v, "J", 1)))),
+    ("J: event seconds / interval (max)", "snapshot work budget",
+     lambda s, v: (lambda m: None if m is None else m / 1e6)(max(values(v, "J", 1), default=None))),
     ("first writes: page records", "C1 tier 2", lambda s, v: ratio(s["F_crag"], s["F"])),
     ("first writes: refcounts (w0)", "C3", lambda s, v: ratio(s["F_w0"], s["F"])),
     ("first writes: roc-lose", "C1 tier 2 / C3", lambda s, v: ratio(s["F_roclose"], s["F"])),
@@ -292,6 +312,10 @@ PERCENT = {name for name, _, _ in METRICS
            if name.startswith(("first writes", "A:", "D: hits", "D: table",
                                "D: on-loom", "G: cancelled", "G: spilled", "Y:"))
            or "keys /" in name or "looked up /" in name}
+
+
+PERCENT |= {"J: event compute / elapsed", "J: peek compute / elapsed",
+            "J: peeks / tasks"}
 
 
 def mb(b):

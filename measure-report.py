@@ -18,6 +18,15 @@ Log lines (one snapshot interval ends at each S line):
   S <eve> <time> <patch-pages> <skipped-free> <tasks>
   F <phase> <kind> <chunk-log2> <pages>     first write that dirtied a patch page
   U <pages>                                 patch pages with no fault (fresh pages)
+  J <events> <event-us> <failed> <failed-us> <peeks> <peek-us>
+                                            events computed, failed events and peeks
+                                            in the interval, and the microseconds each
+                                            took. replay after a crash recomputes the
+                                            events only
+  Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
+                                            a sample of the interval so far, written
+                                            at each power of two tasks, before the
+                                            interval's S line
   R <table> <exits-home> <empty-home> <entries-home> <exits-all> <empty-all> <entries-all>
   K <jet> <declined> <no-jet> <unregistered>      (jb/measure only)
   B <home|inner> <nock2|site> <cur-ptr> <cur-cur> <cur-sen> <anc-ptr> <anc-cur> <anc-sen> <miss>
@@ -76,6 +85,8 @@ def new_interval():
         "patch": 0, "skip": 0, "tasks": 0, "eve": 0,
         "F": defaultdict(int),
         "U": 0,
+        "J": None,
+        "Q": [],
         "A": None,
         "M": None,
         "R": {},
@@ -102,6 +113,7 @@ def parse(path):
     intervals = []
     ops = []
     cur_events = []
+    cur_samples = []
     cur = None
     header = ""
     with open(path) as f:
@@ -148,6 +160,18 @@ def parse(path):
                 cur["F"][(pha, kin, int(log2))] += int(n)
             elif t == "U" and cur is not None:
                 cur["U"] = int(line.split()[1])
+                #  the samples logged since the last S line are this interval's
+                cur["Q"] = cur_samples
+                cur_samples = []
+            elif t == "Q":
+                try:
+                    v = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
+                if len(v) >= 6:
+                    cur_samples.append(v)
+            elif t == "J" and cur is not None:
+                cur["J"] = tuple(int(x) for x in line.split()[1:])
             elif t == "A" and cur is not None:
                 cur["A"] = tuple(int(x) for x in line.split()[1:])
             elif t == "M" and cur is not None:
@@ -422,6 +446,42 @@ def main():
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
+    wis = [i for i in intervals if i["J"] and len(i["J"]) >= 6]
+    if wis:
+        def q(v, f):
+            v = sorted(v)
+            return v[min(len(v) - 1, int(f * len(v)))]
+        secs = sum(i["secs"] for i in wis)
+        tasks = sum(i["tasks"] for i in wis)
+        eve, eus, fal, fus, pek, pus = (sum(i["J"][j] for i in wis) for j in range(6))
+        per = [i["J"][1] / 1e6 for i in wis]
+        print("\n== work per snapshot interval ==")
+        print("  (replay after a crash recomputes the events since the last"
+              " snapshot, not the peeks)")
+        print(f"  {'':<16}{'count':>12}{'seconds':>12}{'ms each':>10}{'of elapsed':>12}")
+        for nam, n, us in (("events", eve, eus), ("failed events", fal, fus),
+                           ("peeks", pek, pus)):
+            print(f"  {nam:<16}{n:>12}{us / 1e6:>12.1f}"
+                  f"{us / 1e3 / n if n else 0:>10.2f}{pct(us / 1e6, secs):>12}")
+        print(f"  other tasks: {tasks - eve - fal - pek} of {tasks}")
+        print(f"  event seconds per interval: median {q(per, .5):.1f}, "
+              f"p90 {q(per, .9):.1f}, max {max(per):.1f}")
+        #  the interval so far, at each power of two tasks
+        by_n = defaultdict(list)
+        for i in wis:
+            for s in i["Q"]:
+                by_n[s[0]].append(s)
+        if by_n:
+            print("  within an interval, after N tasks (medians; intervals that got that far):")
+            print(f"  {'tasks':>10}{'intervals':>11}{'event s':>10}{'peek s':>9}"
+                  f"{'dirty pages':>13}{'dirty MB':>10}{'p90 pages':>11}")
+            for n in sorted(by_n):
+                ss = by_n[n]
+                dit = [s[5] for s in ss]
+                print(f"  {n:>10}{len(ss):>11}{q([s[2] for s in ss], .5) / 1e6:>10.2f}"
+                      f"{q([s[4] for s in ss], .5) / 1e6:>9.2f}"
+                      f"{q(dit, .5):>13}{q(dit, .5) * 16 / 1024:>10.1f}{q(dit, .9):>11}")
+
     cis = [i for i in intervals if i["C"]]
     if cis:
         rec = sum(i["C"][0] for i in cis)

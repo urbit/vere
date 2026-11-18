@@ -197,6 +197,7 @@ static struct {
   c3_d   tal_d[u3e_pha_max][_ce_kin_max][_CE_MEAS_LOGS];
   c3_d   uns_d;                 //  patch pages with no fault this interval
   c3_d   tak_d;                 //  tasks this interval
+  c3_d   wok_d[u3e_wok_max][2]; //  [kind] tasks, microseconds this interval
   c3_y*  alf_y;                 //  [pag] page records and allocation:
                                 //        1: dirtied by a free's page
                                 //           record this interval
@@ -418,6 +419,15 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                  (c3_d)u3A->eve_d, (c3_d)time(0),
                  (c3_d)pgs_w, (c3_d)sip_w, _ce_meas.tak_d);
 
+  //  J: events computed, failed events and peeks: count and
+  //  microseconds of each
+  //
+  fprintf(fil_u, "J %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 "\n",
+                 _ce_meas.wok_d[u3e_wok_poke][0], _ce_meas.wok_d[u3e_wok_poke][1],
+                 _ce_meas.wok_d[u3e_wok_fail][0], _ce_meas.wok_d[u3e_wok_fail][1],
+                 _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1]);
+
   for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
     for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
       for ( k_w = 0; k_w < _CE_MEAS_LOGS; k_w++ ) {
@@ -549,6 +559,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   memset(&u3e_Meter, 0, sizeof(u3e_Meter));
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
+  memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
@@ -854,6 +865,46 @@ u3e_measure_note(const c3_c* dir_c,
   fclose(fil_u);
 }
 
+/* u3e_dirty(): pages written since the last save, free pages included.
+**              call on the home road.
+*/
+c3_w
+u3e_dirty(void)
+{
+  u3_post low_p, hig_p;
+  c3_w    max_w, blk_w, bit_w, i_w, num_w = 0;
+
+  //  pages past the heap are marked dirty, but hold nothing
+  //
+  u3m_water(&low_p, &hig_p);
+  max_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+  if ( max_w > u3P.pag_w ) max_w = u3P.pag_w;
+
+  blk_w = max_w >> u3a_chub_bits_log;
+  bit_w = max_w & (u3a_chub_bits - 1);
+
+  for ( i_w = 0; i_w < blk_w; i_w++ ) {
+    num_w += __builtin_popcountll(u3P.dit_d[i_w]);
+  }
+
+  if ( bit_w ) {
+    num_w += __builtin_popcountll(u3P.dit_d[blk_w] & (((c3_d)1 << bit_w) - 1));
+  }
+
+  return num_w;
+}
+
+/* u3e_measure_work(): the task just run took [use_d] microseconds.
+*/
+void
+u3e_measure_work(c3_w kin_w, c3_d use_d)
+{
+  if ( _ce_meas.on_t && (kin_w < u3e_wok_max) ) {
+    _ce_meas.wok_d[kin_w][0]++;
+    _ce_meas.wok_d[kin_w][1] += use_d;
+  }
+}
+
 /* u3e_measure_event(): record pages changed by the task just completed.
 */
 void
@@ -864,6 +915,21 @@ u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
   }
 
   _ce_meas.tak_d++;
+
+  //  Q: a sample of the interval so far, at each power of two tasks:
+  //  tasks, events computed and their microseconds, microseconds of
+  //  failed events and of peeks, dirty pages
+  //
+  if ( !(_ce_meas.tak_d & (_ce_meas.tak_d - 1)) ) {
+    fprintf(_ce_meas.fil_u, "Q %" PRIu64 " %" PRIu64 " %" PRIu64
+                            " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                            _ce_meas.tak_d,
+                            _ce_meas.wok_d[u3e_wok_poke][0],
+                            _ce_meas.wok_d[u3e_wok_poke][1],
+                            _ce_meas.wok_d[u3e_wok_fail][1],
+                            _ce_meas.wok_d[u3e_wok_peek][1],
+                            (c3_d)u3e_dirty());
+  }
 
   if ( !_ce_meas.has_t ) {
     return;
