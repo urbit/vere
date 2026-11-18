@@ -199,6 +199,8 @@ static struct {
   c3_d   tak_d;                 //  tasks this interval
   c3_d   wok_d[u3e_wok_max][2]; //  [kind] tasks, microseconds this interval
   c3_d   lon_d;                 //  longest event this interval, microseconds
+  c3_d   flt_d[2][2];           //  page faults (minor, major) so far, at
+                                //  the last save's end and this save's start
   c3_y*  alf_y;                 //  [pag] page records and allocation:
                                 //        1: dirtied by a free's page
                                 //           record this interval
@@ -216,6 +218,26 @@ _ce_meas_us(void)
 
   gettimeofday(&tim_u, 0);
   return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
+/* _ce_meas_faults(): the process's page faults so far: minor (no I/O)
+**                    and major (read from disk). zeros on windows.
+*/
+static void
+_ce_meas_faults(c3_d* flt_d)
+{
+  flt_d[0] = flt_d[1] = 0;
+
+#ifndef U3_OS_windows
+  {
+    struct rusage rus_u;
+
+    if ( !getrusage(RUSAGE_SELF, &rus_u) ) {
+      flt_d[0] = (c3_d)rus_u.ru_minflt;
+      flt_d[1] = (c3_d)rus_u.ru_majflt;
+    }
+  }
+#endif
 }
 
 /* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
@@ -436,11 +458,28 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   //  took, up to here (the serf does no work meanwhile)
   //
   fprintf(fil_u, "J %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                  _ce_meas.wok_d[u3e_wok_poke][0], _ce_meas.wok_d[u3e_wok_poke][1],
                  _ce_meas.wok_d[u3e_wok_fail][0], _ce_meas.wok_d[u3e_wok_fail][1],
                  _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1],
                  _ce_meas.lon_d, _ce_meas_us() - bef_d);
+
+  //  ...and page faults, minor then major: between the last save and
+  //  this one (a save maps the image again, so everything the ship
+  //  uses is faulted back in), then during this save
+  //
+  {
+    c3_d now_d[2];
+
+    _ce_meas_faults(now_d);
+    fprintf(fil_u, " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   _ce_meas.flt_d[1][0] - _ce_meas.flt_d[0][0],
+                   _ce_meas.flt_d[1][1] - _ce_meas.flt_d[0][1],
+                   now_d[0] - _ce_meas.flt_d[1][0],
+                   now_d[1] - _ce_meas.flt_d[1][1]);
+    _ce_meas.flt_d[0][0] = now_d[0];
+    _ce_meas.flt_d[0][1] = now_d[1];
+  }
 
   //  Q 0 (a Q line whose first field is 0 is not a sample): the G and
   //  Y lines by kind. gains deferred on atoms and of those cancelled;
@@ -2435,6 +2474,10 @@ u3e_save(u3_post low_p, u3_post hig_p)
   }
 
   bef_d = _ce_meas.on_t ? _ce_meas_us() : 0;
+
+  if ( _ce_meas.on_t ) {
+    _ce_meas_faults(_ce_meas.flt_d[1]);
+  }
 
   //  XX discard hig_p and friends
   {

@@ -19,12 +19,18 @@ Log lines (one snapshot interval ends at each S line):
   F <phase> <kind> <chunk-log2> <pages>     first write that dirtied a patch page
   U <pages>                                 patch pages with no fault (fresh pages)
   J <events> <event-us> <failed> <failed-us> <peeks> <peek-us> <longest-event-us> <save-us>
+    <minor-faults> <major-faults> <save-minor-faults> <save-major-faults>
                                             events computed, failed events and peeks
                                             in the interval, and the microseconds each
                                             took. replay after a crash recomputes the
                                             events only. then the longest event, and
                                             how long the save that ended the interval
-                                            took (the serf does no work meanwhile)
+                                            took (the serf does no work meanwhile).
+                                            then page faults between the last save and
+                                            this one, and during this one: minor (no
+                                            I/O) and major (read from disk). a save maps
+                                            the image again, so what the ship uses is
+                                            faulted back in afterwards. zeros on windows
   Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
                                             a sample of the interval so far, written
                                             at each power of two tasks, before the
@@ -494,6 +500,16 @@ def main():
             print(f"  save, ms: median {q(sav, .5):.0f}, p90 {q(sav, .9):.0f}, "
                   f"max {max(sav):.0f}; {sum(sav) / pgs if pgs else 0:.3f} ms per patch page; "
                   f"{pct(sum(sav) / 1e3, sum(i['secs'] for i in sis)).strip()} of elapsed")
+        fis = [i for i in wis if len(i["J"]) >= 12]
+        if fis:
+            mn = [i["J"][8] for i in fis]; mj = [i["J"][9] for i in fis]
+            pgs = sum(i["patch"] for i in fis)
+            print(f"  page faults between saves: minor median {q(mn, .5)}, max {max(mn)} "
+                  f"({sum(mn) / pgs if pgs else 0:.1f} per patch page); "
+                  f"major median {q(mj, .5)}, max {max(mj)}, "
+                  f"{sum(mj) / (sum(i['secs'] for i in fis) / 3600 or 1):.0f} an hour")
+            print(f"  page faults during saves: minor {sum(i['J'][10] for i in fis)}, "
+                  f"major {sum(i['J'][11] for i in fis)}")
         #  the interval so far, at each power of two tasks
         by_n = defaultdict(list)
         for i in wis:
