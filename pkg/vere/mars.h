@@ -39,6 +39,7 @@
           uv_timer_t tim_u;               //    timer
           c3_d       eve_d;               //    last saved
         } sav_u;                          //
+        c3_o    rol_o;                    //  roll and chop after next save
         u3_moat*     inn_u;               //  input stream
         u3_mojo*     out_u;               //  output stream
         u3_cue_xeno* sil_u;               //  cue handle
