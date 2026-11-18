@@ -37,9 +37,13 @@ Log lines (one snapshot interval ends at each S line):
                                             call-site battery checks (jb/measure only)
   T <war> <cod> <han> <bas> <byc> <per> <for> <dup> <memo>
                                             home-road table entries at the snapshot
-  C <reclaims> <byc-cleared> <han-cleared> [<dup-before-prune> <dup-pruned>]
+  C <reclaims> <byc-cleared> <han-cleared> [<dup-before-prune> <dup-pruned>
+    [<cap-clears> <cap-byc-cleared>]]
                                             u3m_reclaim() calls since the last snapshot
-                                            (the dedup-prune fields: older logs only)
+                                            (the dedup-prune fields: older logs only,
+                                            now zeros); then clears of the bytecode
+                                            table at its cap, which don't go through
+                                            u3m_reclaim(), and the programs they cleared
   A <record-frees> <clean-allocs> <with-dirty-room> <frees-then-allocated>
                                             home-road page records and allocation
   M <resident> <anonymous> <file-backed> <swapped>
@@ -502,9 +506,14 @@ def main():
         han = sum(i["C"][2] for i in cis)
         #  older logs, from the on-loom set's periodic prune
         pre = sum(i["C"][3] for i in cis if len(i["C"]) > 4)
-        pru = sum(i["C"][4] for i in cis if len(i["C"]) > 4)
+        pru = sum(i["C"][4] for i in cis if len(i["C"]) > 4)  # zeros in newer logs
         print("\n== u3m_reclaim() ==")
         print(f"  reclaims: {rec}   tasks per reclaim: {tasks / rec if rec else 0:.0f}")
+        cap = sum(i["C"][5] for i in cis if len(i["C"]) > 6)
+        if any(len(i["C"]) > 6 for i in cis):
+            capn = sum(i["C"][6] for i in cis if len(i["C"]) > 6)
+            print(f"  bytecode cap clears: {cap}"
+                  + (f", {capn / cap:.0f} programs each" if cap else ""))
         if rec:
             print(f"  per reclaim: bytecode entries cleared {byc / rec:.0f}, "
                   f"hank entries cleared {han / rec:.0f}")

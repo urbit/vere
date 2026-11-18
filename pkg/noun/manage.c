@@ -4153,6 +4153,8 @@ u3m_dedup(u3_noun som)
 void
 u3m_reclaim_due(void)
 {
+  c3_w wyt_w = u3h_wyt(u3R->byc.har_p);
+
   u3_assert( &(u3H->rod_u) == u3R );
 
   //  bytecode programs can't be freed individually (call sites point
@@ -4162,5 +4164,7 @@ u3m_reclaim_due(void)
   if ( _CM_BYC_MAX <= u3h_wyt(u3R->byc.har_p) ) {
     u3j_reclaim();
     u3n_reclaim();
+    u3e_Meter.rcc_d++;
+    u3e_Meter.rcp_d += wyt_w;
   }
 }

@@ -240,6 +240,9 @@ METRICS = [
     ("patch pages / hour", "overall churn",
      lambda s, v: ratio(s["patch"], s["secs"] / 3600)),
     ("patch pages / task", "overall churn", lambda s, v: ratio(s["patch"], s["tasks"])),
+    ("C: bytecode cap clears", "(b)",
+     lambda s, v: (sum(i["C"][5] for i in v if "C" in i and len(i["C"]) > 6)
+                   if any("C" in i and len(i["C"]) > 6 for i in v) else None)),
     ("J: event compute / elapsed", "snapshot work budget",
      lambda s, v: ratio(s["J_eus"] / 1e6, s["J_secs"])),
     ("J: peek compute / elapsed", "snapshot work budget",

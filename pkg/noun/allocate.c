@@ -661,8 +661,23 @@ _ca_defer_lose_cold(u3_noun dog)
 void
 u3a_defer_open(void)
 {
+  //  U3_DEFER_OFF=1 in the environment leaves every window shut, so
+  //  gains are written as they happen: for comparing a live ship with
+  //  and without deferral (its measurement log then has no windows)
+  //
+  static c3_ws off_ws = -1;
+
   u3_assert( !_ca_defer_u.ope_t );
   u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( off_ws < 0 ) {
+    c3_c* env_c = getenv("U3_DEFER_OFF");
+    off_ws = ( env_c && ('1' == *env_c) ) ? 1 : 0;
+  }
+
+  if ( off_ws ) {
+    return;
+  }
 
   if ( !_ca_defer_u.ini_t ) {
     c3_w pag_w = (c3_w)(u3C.wor_i >> u3a_page);

@@ -140,6 +140,8 @@
           c3_d rec_d;        //  reclaims
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
+          c3_d rcc_d;        //  bytecode cap clears (u3m_reclaim_due())
+          c3_d rcp_d;        //  bytecode entries they cleared
 
           //  deferred gains across the state swap (u3a_defer_open())
           //
