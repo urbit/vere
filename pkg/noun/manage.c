@@ -4530,8 +4530,13 @@ _cm_vis_leap(void)
     while ( (new_y < _cm_vis.log_y) && (((c3_d)1 << new_y) < (_cm_vis.pek_d * 4)) ) {
       new_y++;
     }
-    u3a_crib_shrink(&_cm_vis.cib_u, ((size_t)1 << new_y) * sizeof(c3_w));
+    //  the capacity is lowered before the crib is shrunk: an interrupt
+    //  between the two must not leave room here that the crib doesn't
+    //  have (see crib.h)
+    //
     _cm_vis.log_y = new_y;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    u3a_crib_shrink(&_cm_vis.cib_u, ((size_t)1 << new_y) * sizeof(c3_w));
     _cm_vis.pek_d = 0;
     u3e_Meter.cib_u[0].shr_d++;
     u3e_Meter.cib_u[0].cap_d = (c3_d)1 << new_y;
