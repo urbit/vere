@@ -119,6 +119,7 @@ jobs:
             zig build                  \
               -Dall                    \
               -Doptimize=ReleaseFast   \
+              -Dno-lto                 \
               -Dpace=${{inputs.pace}}  \
               $VERE64_FLAG             \
               --summary all
@@ -146,6 +147,7 @@ jobs:
             bytestream-test mesa-test  \
             benchmarks                 \
             -Doptimize=ReleaseFast     \
+            -Dno-lto                   \
             -Dpace=${{inputs.pace}}    \
             $VERE64_FLAG               \
             --summary all
@@ -161,6 +163,7 @@ jobs:
 
           zig build                    \
             -Doptimize=ReleaseFast     \
+            -Dno-lto                   \
             -Dpace=${{inputs.pace}}    \
             -Dbinary-name=urbit-test   \
             -Dcpu-dbg                  \
@@ -336,6 +339,7 @@ jobs:
           zig build                          \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
+            -Dno-lto                         \
             -Dpace=${{ inputs.pace }}        \
             $VERE64_FLAG                     \
             --summary all
@@ -386,6 +390,7 @@ jobs:
             vere-noun-test wloom-test        \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
+            -Dno-lto                         \
             -Dpace=${{ inputs.pace }}        \
             $VERE64_FLAG                     \
             --summary all
@@ -449,6 +454,7 @@ jobs:
             -Dtarget=x86_64-windows-gnu      \
             -Dvere64                         \
             -Doptimize=ReleaseFast           \
+            -Dno-lto                         \
             -Dpace=${{ inputs.pace }}        \
             -Dbinary-name=vere-migration     \
             --summary all
@@ -459,6 +465,7 @@ jobs:
           zig build                          \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
+            -Dno-lto                         \
             -Dpace=${{ inputs.pace }}        \
             -Dbinary-name=vere32-migration   \
             --summary all
@@ -520,6 +527,7 @@ jobs:
           zig build                          \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
+            -Dno-lto                         \
             -Dpace=${{ inputs.pace }}        \
             $VERE64_FLAG                     \
             --summary all
@@ -587,6 +595,7 @@ jobs:
           zig build                           \
             -Dvere64                          \
             -Doptimize=ReleaseFast            \
+            -Dno-lto                          \
             -Dpace=${{inputs.pace}}           \
             -Dbinary-name=vere-migration     \
             --summary all
@@ -595,6 +604,7 @@ jobs:
         run: |
           zig build                           \
             -Doptimize=ReleaseFast            \
+            -Dno-lto                          \
             -Dpace=${{inputs.pace}}           \
             -Dbinary-name=vere32-migration   \
             --summary all

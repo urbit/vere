@@ -30,6 +30,7 @@ jobs:
           zig build                    \
             -Dtarget=x86_64-linux-musl \
             -Doptimize=ReleaseFast     \
+            -Dno-lto                   \
             -Dpace=${{inputs.pace}}    \
             --summary all
 
