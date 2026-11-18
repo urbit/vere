@@ -1452,10 +1452,10 @@ _test_soletab(void)
   //  and isn't added
   //
   {
-    u3_noun far = u3a_to_pom((c3_w)(_CS_KEY_MAX * _CS_UNIT));
+    u3_noun yon = u3a_to_pom((c3_w)(_CS_KEY_MAX * _CS_UNIT));
     u3_noun ner = u3a_to_pom((c3_w)((_CS_KEY_MAX - 1) * _CS_UNIT));
 
-    if ( _cs_reaches(far) || !_cs_reaches(ner) || u3m_sole_add(far) ) {
+    if ( _cs_reaches(yon) || !_cs_reaches(ner) || u3m_sole_add(yon) ) {
       fprintf(stderr, "test: soletab: reach\r\n");
       ret_i = 0;
     }
