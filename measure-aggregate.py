@@ -153,7 +153,8 @@ def long_limit(hdr, ivs):
     Uses the header's snap_secs; for older logs without it, the log's
     median interval, if it looks live (a replay's intervals are short).
     """
-    if hdr.get("mode") in ("replay", "offline"):
+    #  snap_by=work: snapshots follow work done, so no interval is long
+    if hdr.get("mode") in ("replay", "offline") or hdr.get("snap_by") == "work":
         return None
     sap = int(hdr.get("snap_secs", 0) or 0)
     if not sap:

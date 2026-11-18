@@ -1004,6 +1004,8 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     c3_c  lom_c[11];
     c3_c  tos_c[11];
     c3_c  sap_c[11];
+    c3_c  sad_c[11];
+    c3_c  sat_c[11];
     c3_c  cev_c[11];
     c3_c  siz_c[21];
     c3_i  err_i;
@@ -1017,6 +1019,8 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     sprintf(lom_c, "%u", u3_Host.ops_u.lom_y);
 
     sprintf(sap_c, "%u", u3_Host.ops_u.sap_h);
+    sprintf(sad_c, "%u", u3_Host.ops_u.sad_h);
+    sprintf(sat_c, "%u", u3_Host.ops_u.sat_h);
 
     sprintf(tos_c, "%"PRIc3_w, u3C.tos_w);
 
@@ -1037,8 +1041,12 @@ u3_lord_init(c3_c* pax_c, c3_h wag_h, c3_d key_d[4], u3_lord_cb cb_u)
     arg_c[i_w++] = tos_c;
     arg_c[i_w++] = "--persistent-cache-size"; //  persistent cache size
     arg_c[i_w++] = per_c;
-    arg_c[i_w++] = "--snap-time";             //  snapshot interval
+    arg_c[i_w++] = "--snap-time";             //  snapshot: seconds of events
     arg_c[i_w++] = sap_c;
+    arg_c[i_w++] = "--snap-dirty";            //  snapshot: MB dirty
+    arg_c[i_w++] = sad_c;
+    arg_c[i_w++] = "--snap-tasks";            //  snapshot: tasks between checks
+    arg_c[i_w++] = sat_c;
     arg_c[i_w++] = "--lmdb-map-size";
     arg_c[i_w++] = siz_c;
 

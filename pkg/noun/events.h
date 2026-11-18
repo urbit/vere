@@ -295,8 +295,10 @@
 
     /* u3e_measure_init(): start measuring if U3_MEASURE is set. the
     **                     header records [mod_c] ("live" or "replay")
-    **                     and the snapshot interval: [sas_d] seconds
-    **                     (live) or [sae_d] events (replay), 0 if none.
+    **                     and when it snapshots: after [sas_d] seconds
+    **                     of events or with [sad_d] MB dirty, checked
+    **                     every [sat_d] tasks (live), or every [sae_d]
+    **                     events (replay); 0 if none.
     */
       void
       u3e_measure_init(const c3_c* dir_c,
@@ -304,7 +306,9 @@
                        const c3_c* who_c,
                        const c3_c* mod_c,
                        c3_d        sas_d,
-                       c3_d        sae_d);
+                       c3_d        sae_d,
+                       c3_d        sad_d,
+                       c3_d        sat_d);
 
     /* u3e_measure_ms(): wall-clock milliseconds, to time an operation
     **                   for u3e_measure_op() or u3e_measure_note().
