@@ -233,6 +233,28 @@
                       u3_noun s,
                       u3_noun b);
 
+      /* u3r_sing_wed(): equality of the nouns in slots [a] and [b],
+      **                 unifying the slots when equal: either may be
+      **                 rewritten to hold the other's value. each slot
+      **                 must be in a road's heap, or be u3R's (off the
+      **                 loom, or on u3R's stack); it must own its
+      **                 reference if the noun is on u3R (references to
+      **                 senior nouns are never counted), and still owns
+      **                 what it holds afterward. to compare a borrowed
+      **                 noun, gain it first and lose the slot's value
+      **                 after.
+      */
+        c3_o
+        u3r_sing_wed_imp(u3_noun* a, u3_noun* b);
+
+        //  pointer equality inline, as u3r_sing()
+        //
+#       define u3r_sing_wed(a, b) ({                                          \
+          u3_noun* __sa = (a);                                                \
+          u3_noun* __sb = (b);                                                \
+          ( *__sa == *__sb ) ? c3y : u3r_sing_wed_imp(__sa, __sb);            \
+        })
+
       /* u3r_sing(): noun value equality.
       **
       **   Unifies noun pointers on inner roads.

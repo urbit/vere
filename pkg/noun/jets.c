@@ -711,6 +711,17 @@ _cj_cast(u3_noun cor, u3_noun loc)
   return u3of(u3j_fink, fin_u);
 }
 
+/* _cj_bat_sing(): [*bat] equals the battery of [cor]; if so, the slot
+**   and the core's are unified (see u3r_sing_wed()). RETAIN.
+*/
+static inline c3_o
+_cj_bat_sing(u3_noun* bat, u3_noun cor)
+{
+  return ( c3y == u3du(cor) )
+         ? u3r_sing_wed(bat, &(((u3a_cell*)u3a_to_ptr(cor))->hed))
+         : u3r_sing(*bat, u3h(cor));
+}
+
 /* _cj_fine(): check that a core matches a u3j_fink. RETAIN.
  */
 static c3_o
@@ -720,7 +731,7 @@ _cj_fine(u3_noun cor, u3p(u3j_fink) fin_p)
   c3_w i_w;
   for ( i_w = 0; i_w < fin_u->len_w; ++i_w ) {
     u3j_fist* fis_u = &(fin_u->fis_u[i_w]);
-    if ( c3n == u3r_sing(fis_u->bat, u3h(cor)) ) {
+    if ( c3n == _cj_bat_sing(&(fis_u->bat), cor) ) {
       return c3n;
     }
     else {
@@ -1566,7 +1577,7 @@ static void
 _cj_site_lock(u3_noun loc, u3_noun cor, u3j_site* sit_u)
 {
   if ( (u3_none != sit_u->bat) &&
-       (c3y == u3r_sing(sit_u->bat, u3h(cor))) ) {
+       (c3y == _cj_bat_sing(&(sit_u->bat), cor)) ) {
     return;
   }
   {

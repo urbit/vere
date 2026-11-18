@@ -315,6 +315,11 @@ _cm_signal_reset(void)
   //
   u3a_defer_close();
 
+  //  the values unification unpointed from home slots, if a signal cut
+  //  the exit short: its product is dropped, and junior memory with it
+  //
+  u3a_lose_leap();
+
   //  a signal can interrupt u3m_love() before it drops a junior heap,
   //  leaving it poisoned for the next road: unpoison all free memory
   //  (ASan only)
@@ -1183,6 +1188,10 @@ u3m_leap(c3_w pad_w)
 
   _rod_vaal(u3R);
 
+  if ( &(u3H->rod_u) == u3R ) {
+    u3a_lose_leap();
+  }
+
   //  push a new road struct onto the stack
   //
   {
@@ -1527,6 +1536,9 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   u3p(u3h_root) per_p = u3R->cax.per_p;
   u3p(u3h_root) for_p = u3R->cax.for_p;
   u3p(u3h_root) dup_p = u3R->dup_p;
+  u3_post       lol_p = u3R->lol_p;
+  u3_post       bot_p;
+  c3_w          bot_w;
   c3_y          pha_y = u3e_Phase;
 
   //  measurement: junior table sizes at exit (jb/measure-base)
@@ -1545,6 +1557,11 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //
   u3e_Phase = u3e_pha_road;
   u3m_fall();
+
+  //  where our lose list stands, before the takes add to it
+  //
+  bot_p = u3R->lol_p;
+  bot_w = bot_p ? u3to(u3a_lose_chunk, bot_p)->len_w : 0;
 
   {
     c3_w hom_w = ( &(u3H->rod_u) == u3R ) ? 1 : 0;
@@ -1613,6 +1630,12 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   else {
     dup_p = u3h_take(dup_p);
   }
+
+  //  the values unification unpointed from slots on this road: every
+  //  take is done, so the taken nouns that hold them have gained them.
+  //  on an inner road, the child's entries for older roads are copied up
+  //
+  u3a_lose_drain(kid_p, lol_p, bot_p, bot_w);
 
   //  pop the stack
   //
