@@ -198,6 +198,7 @@ static struct {
   c3_d   uns_d;                 //  patch pages with no fault this interval
   c3_d   tak_d;                 //  tasks this interval
   c3_d   wok_d[u3e_wok_max][2]; //  [kind] tasks, microseconds this interval
+  c3_d   lon_d;                 //  longest event this interval, microseconds
   c3_y*  alf_y;                 //  [pag] page records and allocation:
                                 //        1: dirtied by a free's page
                                 //           record this interval
@@ -403,10 +404,22 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 #endif
 }
 
-/* _ce_meas_save(): report and reset per-interval measurements.
+/* _ce_meas_us(): wall-clock microseconds.
+*/
+static c3_d
+_ce_meas_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
+/* _ce_meas_save(): report and reset per-interval measurements. the
+**                  save began at [bef_d] (_ce_meas_us()).
 */
 static void
-_ce_meas_save(c3_w pgs_w, c3_w sip_w)
+_ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
 {
   FILE* fil_u = _ce_meas.fil_u;
   c3_w  i_w, j_w, k_w;
@@ -420,13 +433,15 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                  (c3_d)pgs_w, (c3_d)sip_w, _ce_meas.tak_d);
 
   //  J: events computed, failed events and peeks: count and
-  //  microseconds of each
+  //  microseconds of each; the longest event; and how long this save
+  //  took, up to here (the serf does no work meanwhile)
   //
   fprintf(fil_u, "J %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                 " %" PRIu64 " %" PRIu64 "\n",
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                  _ce_meas.wok_d[u3e_wok_poke][0], _ce_meas.wok_d[u3e_wok_poke][1],
                  _ce_meas.wok_d[u3e_wok_fail][0], _ce_meas.wok_d[u3e_wok_fail][1],
-                 _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1]);
+                 _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1],
+                 _ce_meas.lon_d, _ce_meas_us() - bef_d);
 
   for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
     for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
@@ -560,6 +575,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
+  _ce_meas.lon_d = 0;
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
@@ -902,6 +918,10 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
   if ( _ce_meas.on_t && (kin_w < u3e_wok_max) ) {
     _ce_meas.wok_d[kin_w][0]++;
     _ce_meas.wok_d[kin_w][1] += use_d;
+
+    if ( (u3e_wok_poke == kin_w) && (use_d > _ce_meas.lon_d) ) {
+      _ce_meas.lon_d = use_d;
+    }
   }
 }
 
@@ -2344,10 +2364,13 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
   c3_w sav_w, sip_w;
+  c3_d bef_d;
 
   if ( u3C.wag_h & u3o_dryrun ) {
     return;
   }
+
+  bef_d = _ce_meas.on_t ? _ce_meas_us() : 0;
 
   //  XX discard hig_p and friends
   {
@@ -2429,7 +2452,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
     _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, old_w);
   }
 
-  _ce_meas_save(sav_w, sip_w);
+  _ce_meas_save(sav_w, sip_w, bef_d);
 
   u3e_toss(low_p, hig_p);
 }

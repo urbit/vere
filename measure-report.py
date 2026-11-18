@@ -18,11 +18,13 @@ Log lines (one snapshot interval ends at each S line):
   S <eve> <time> <patch-pages> <skipped-free> <tasks>
   F <phase> <kind> <chunk-log2> <pages>     first write that dirtied a patch page
   U <pages>                                 patch pages with no fault (fresh pages)
-  J <events> <event-us> <failed> <failed-us> <peeks> <peek-us>
+  J <events> <event-us> <failed> <failed-us> <peeks> <peek-us> <longest-event-us> <save-us>
                                             events computed, failed events and peeks
                                             in the interval, and the microseconds each
                                             took. replay after a crash recomputes the
-                                            events only
+                                            events only. then the longest event, and
+                                            how long the save that ended the interval
+                                            took (the serf does no work meanwhile)
   Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
                                             a sample of the interval so far, written
                                             at each power of two tasks, before the
@@ -466,6 +468,16 @@ def main():
         print(f"  other tasks: {tasks - eve - fal - pek} of {tasks}")
         print(f"  event seconds per interval: median {q(per, .5):.1f}, "
               f"p90 {q(per, .9):.1f}, max {max(per):.1f}")
+        sis = [i for i in wis if len(i["J"]) >= 8]
+        if sis:
+            lon = [i["J"][6] / 1e6 for i in sis]
+            sav = [i["J"][7] / 1e3 for i in sis]
+            pgs = sum(i["patch"] for i in sis)
+            print(f"  longest event in an interval, seconds: median {q(lon, .5):.2f}, "
+                  f"p90 {q(lon, .9):.2f}, max {max(lon):.2f}")
+            print(f"  save, ms: median {q(sav, .5):.0f}, p90 {q(sav, .9):.0f}, "
+                  f"max {max(sav):.0f}; {sum(sav) / pgs if pgs else 0:.3f} ms per patch page; "
+                  f"{pct(sum(sav) / 1e3, sum(i['secs'] for i in sis)).strip()} of elapsed")
         #  the interval so far, at each power of two tasks
         by_n = defaultdict(list)
         for i in wis:
