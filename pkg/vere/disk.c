@@ -1598,9 +1598,9 @@ _disk_unlink_stale_loom(c3_c* dir_c)
 
 /* _disk_migrate_size(): destination loom bex, and source reservation length.
 **
-**   shared by the migration and by u3_disk_stake(), which claims the
-**   source address up front -- if these two ever disagreed, the stake
-**   would silently stop matching and the protection would lapse.
+**   shared by the migration and Windows' upfront source reservation in
+**   u3_disk_stake(). Keep their lengths in sync so the stake still matches
+**   the migration mapping.
 */
 static void
 _disk_migrate_size(c3_y* des_y, c3_z* sou_z)
@@ -1629,8 +1629,9 @@ _disk_migrate_size(c3_y* des_y, c3_z* sou_z)
 
 /* u3_disk_stake(): claim the fixed addresses this process will map at.
 **
-**   a no-op off windows, where mmap(MAP_FIXED) evicts whatever occupies
-**   a fixed address and a collision cannot arise. see wloom.h.
+**   POSIX reserves the native loom without replacing other mappings.
+**   Migration sources are claimed only when needed, also without replacement.
+**   Windows additionally stakes its migration sources; see wloom.h.
 **
 **   [lom_i] is the length this process will reserve at u3_Loom -- 1 <<
 **   lut_y for a lite boot, 1 << lom_y otherwise. it wants to be exact:
@@ -1639,8 +1640,7 @@ _disk_migrate_size(c3_y* des_y, c3_z* sou_z)
 **
 **   call this before anything else in the process can allocate, and in
 **   particular before u3_disk_load(): that opens the event log first and
-**   maps the loom second, and lmdb's map is 60GB placed wherever windows
-**   likes -- large enough, and often near enough, to land on u3_Loom.
+**   maps the loom second, so LMDB must see the native loom as occupied.
 */
 void
 u3_disk_stake(size_t lom_i)
@@ -1666,7 +1666,11 @@ u3_disk_stake(size_t lom_i)
   u3_wnd_loom_stake(u3_Loom_v4, sou_z);
 # endif
 #else
-  (void)lom_i;
+  if ( c3n == u3m_loom_stake((void*)u3_Loom, lom_i) ) {
+    fprintf(stderr, "loom: cannot reserve %zuMB at %p: %s\r\n",
+                    lom_i >> 20, (void*)u3_Loom, strerror(errno));
+    exit(1);
+  }
 #endif
 }
 
@@ -1682,10 +1686,16 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
 #ifndef U3_OS_windows
   {
 #ifdef VERE64
-    void* map_v = mmap((void *)u3_Loom_h,
+    void* bas_v = u3_Loom_h;
 #else
-    void* map_v = mmap((void *)u3_Loom_v4,
+    void* bas_v = u3_Loom_v4;
 #endif
+    if ( c3n == u3m_loom_stake(bas_v, len_z) ) {
+      fprintf(stderr, "loom: cannot reserve migration source at %p: %s\r\n",
+                      bas_v, strerror(errno));
+      exit(1);
+    }
+    void* map_v = u3m_loom_map(bas_v,
                        len_z,
                        (PROT_READ | PROT_WRITE),
                        (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
@@ -1749,7 +1759,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       u3_assert(0);
     }
 #else
-    if ( MAP_FAILED == mmap(u3_Loom_h,
+    if ( MAP_FAILED == u3m_loom_map(u3_Loom_h,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
                             (MAP_FIXED | MAP_PRIVATE),
@@ -1785,7 +1795,7 @@ _disk_load_stale_loom(c3_c* dir_c, c3_z len_z)
       u3_assert(0);
     }
 #else
-    if ( MAP_FAILED == mmap(u3_Loom_v4,
+    if ( MAP_FAILED == u3m_loom_map(u3_Loom_v4,
                             lom_z,
                             (PROT_READ | PROT_WRITE),
                             (MAP_FIXED | MAP_PRIVATE),
@@ -1864,7 +1874,12 @@ _disk_load_loom_d(c3_c* dir_c, c3_z lom_z)
     u3_assert(0);
   }
 #else
-  if ( MAP_FAILED == mmap((void*)u3_Loom_d,
+  if ( c3n == u3m_loom_stake((void*)u3_Loom_d, lom_z) ) {
+    fprintf(stderr, "loom: cannot reserve migration source at %p: %s\r\n",
+                    (void*)u3_Loom_d, strerror(errno));
+    exit(1);
+  }
+  if ( MAP_FAILED == u3m_loom_map((void*)u3_Loom_d,
                           img_z,
                           (PROT_READ | PROT_WRITE),
                           (MAP_FIXED | MAP_PRIVATE),
@@ -1904,7 +1919,7 @@ _disk_migrate_h(c3_c* dir_c, c3_d eve_d)
 #ifdef U3_OS_windows
     u3_wnd_loom_drop((void*)u3_Loom_d);
 #else
-    munmap((void*)u3_Loom_d, lom_z);
+    u3_assert( !u3m_loom_drop((void*)u3_Loom_d) );
 #endif
     close(fid_i);
     u3m_save();
@@ -1925,13 +1940,13 @@ _disk_drop_stale_loom(c3_i fid_i, c3_z sou_z)
 # ifdef U3_OS_windows
   u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_h) );
 # else
-  munmap(u3_Loom_h, sou_z);
+  u3_assert( !u3m_loom_drop(u3_Loom_h) );
 # endif
 #else
 # ifdef U3_OS_windows
   u3_assert( c3y == u3_wnd_loom_drop(u3_Loom_v4) );
 # else
-  munmap(u3_Loom_v4, sou_z);
+  u3_assert( !u3m_loom_drop(u3_Loom_v4) );
 # endif
 #endif
   close(fid_i);
