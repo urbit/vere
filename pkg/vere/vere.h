@@ -1191,6 +1191,13 @@
         u3_auto*
         u3_lick_io_init(u3_pier* pir_u);
 
+    /**  mach, TCP client.
+    **/
+      /* u3_mach_io_init(): initialize tcp driver.
+      */
+        u3_auto*
+        u3_mach_io_init(u3_pier* pir_u);
+
     /**  HTTP server.
     **/
       /* u3_http_io_init(): initialize http I/O.
