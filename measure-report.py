@@ -89,6 +89,7 @@ def new_interval():
         "P": None,
         "G": None,
         "Y": None,
+        "V": None,
         "ops": [],
     }
 
@@ -174,6 +175,10 @@ def parse(path):
                 cur["G"] = tuple(int(x) for x in line.split()[1:])
             elif t == "Y" and cur is not None:
                 cur["Y"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "V" and cur is not None:
+                v = tuple(int(x) for x in line.split()[1:])
+                if len(v) == 6:  # prototype logs have V lines of other shapes
+                    cur["V"] = v
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -521,6 +526,17 @@ def main():
         print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
         print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
         print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
+    vis = [i for i in intervals if i["V"]]
+    if vis and any(any(i["V"]) for i in vis):
+        v = [sum(i["V"][j] for i in vis) for j in range(6)]
+        print("\n== grabs asked for by u3o_check_corrupt ==")
+        print(f"  asked: {v[0]} by a signal recovered on the home road, "
+              f"{v[1]} by an overflow with signals held, "
+              f"{v[2]} by a full home lose list")
+        print(f"  grabs run: {v[3]}   time: {v[4]} ms"
+              f" ({v[4] / v[3] if v[3] else 0:.0f} ms each,"
+              f" longest interval {max(i['V'][4] for i in vis)} ms)")
+        print(f"  words freed as leaks: {v[5]}")
     yis = [i for i in intervals if i["Y"]]
     if yis and any(i["Y"][0] for i in yis):
         y = [sum(i["Y"][j] for i in yis) for j in range(3)]

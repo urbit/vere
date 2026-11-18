@@ -1638,6 +1638,20 @@ _print_chunk(FILE* fil_u, u3_post som_p, c3_w siz_w)
 //
 static c3_w _sweep_leq_w;
 
+//  log no totals of leaks and counts repaired (u3a_sweep_quiet())
+//
+static c3_t _sweep_qui_t;
+
+/* _sweep_crash(): a leak or a wrong count fails (u3o_leak_crash), unless
+**                 u3o_check_corrupt asked for this sweep to repair them.
+*/
+static inline c3_t
+_sweep_crash(void)
+{
+  return (u3C.wag_h & u3o_leak_crash)
+      && !(u3C.wag_h & u3o_check_corrupt);
+}
+
 static c3_w
 _sweep_directory(void)
 {
@@ -1763,8 +1777,10 @@ _sweep_directory(void)
   _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
-    u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
-    if ( u3C.wag_h & u3o_leak_crash ) {
+    if ( !_sweep_qui_t ) {
+      u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
+    }
+    if ( _sweep_crash() ) {
       u3_assert(!"leak");
     }
   }
@@ -2102,14 +2118,18 @@ _sweep_counts(void)
   _sweep_leq_w = leq_w;
 
   if ( leq_w ) {
-    u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
-    if ( u3C.wag_h & u3o_leak_crash ) {
+    if ( !_sweep_qui_t ) {
+      u3a_print_memory(stderr, "palloc: sweep: leaked", leq_w);
+    }
+    if ( _sweep_crash() ) {
       u3_assert(!"leak");
     }
   }
   if ( weq_w ) {
-    u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
-    if ( u3C.wag_h & u3o_leak_crash ) {
+    if ( !_sweep_qui_t ) {
+      u3a_print_memory(stderr, "palloc: sweep: weaked", weq_w);
+    }
+    if ( _sweep_crash() ) {
       u3_assert(!"weak");
     }
   }

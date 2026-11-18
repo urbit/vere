@@ -92,7 +92,7 @@ def parse(lines):
             n = ints(p[4:5])
             if n:
                 cur["F"][(p[1], p[2])] += n[0]
-        elif t in "ACDGHMPTY":
+        elif t in "ACDGHMPTVY":
             v = ints(p[1:])
             if v is not None:
                 cur[t] = v
@@ -214,6 +214,10 @@ def sums(ivs):
             g = i["G"]
             s["G_win"] += g[0]; s["G_gan"] += g[1]; s["G_can"] += g[4]
             s["G_spl"] += g[5]; s["G_shr"] += g[8]
+        if "V" in i and len(i["V"]) == 6:
+            v = i["V"]
+            s["V_ask"] += v[0] + v[1] + v[2]; s["V_run"] += v[3]
+            s["V_ms"] += v[4]; s["V_tasks"] += i["tasks"]
         if "Y" in i:
             y = i["Y"]
             s["Y_all"] += y[0]; s["Y_pos"] += y[1]; s["Y_exc"] += y[2]
@@ -283,6 +287,11 @@ METRICS = [
     ("G: peak pending", "(i) cap", lambda s, v: max(values(v, "G", 3), default=None)),
     ("G: shrinks / 1000 windows", "(i) hysteresis",
      lambda s, v: ratio(1000 * s["G_shr"], s["G_win"]) if s["G_win"] else None),
+    ("V: check grabs / 1M tasks", "signal safety",
+     lambda s, v: ratio(1e6 * s["V_run"], s["V_tasks"]) if s["V_tasks"] else None),
+    ("V: ms per check grab", "signal safety", lambda s, v: ratio(s["V_ms"], s["V_run"])),
+    ("V: longest check grab, ms", "signal safety",
+     lambda s, v: max((i["V"][4] for i in v if "V" in i and len(i["V"]) == 6), default=None)),
     ("Y: aligned", "(i) adaptive bound", lambda s, v: ratio(s["Y_pos"], s["Y_all"])),
     ("Y: aligned and exclusive", "(i) fused path", lambda s, v: ratio(s["Y_exc"], s["Y_all"])),
 ]

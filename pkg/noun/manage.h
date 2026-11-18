@@ -107,6 +107,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_i
         u3m_error(c3_c* str_c);
 
+      /* u3m_road_min: the fewest pages a new road can have (roads are
+      **               page-aligned). a leap into less bails %meme on
+      **               the road it leaves, since building the new road's
+      **               tables (5 pages, with the emergency buffer) can't.
+      */
+#       define u3m_road_min  16
+
       /* u3m_hate(): new, integrated leap mechanism (enter).
       */
         void
@@ -183,6 +190,20 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3m_quac**
         u3m_mark();
 
+      /* u3m_vgrab_check(): if u3o_check_corrupt is set, garbage-collect
+      **                    the world plus extra roots counting references,
+      **                    so the sweep frees leaks and repairs counts
+      **                    (as u3o_debug_ram does), quietly; then clear
+      **                    it.
+      */
+        void
+        u3m_vgrab_check(u3_noun* som, c3_z len_z);
+
+#       define u3m_grab_check(...) ({                         \
+          u3_noun _args[] = { __VA_ARGS__ };                  \
+          u3m_vgrab_check(_args, sizeof(_args) / sizeof(u3_noun)); \
+        })
+
       /* u3m_grab(): garbage-collect the world, plus extra roots.
       */
         void
@@ -255,9 +276,50 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_dedup_ream(void);
 
-      /* u3m_Dup_busy_w: reading the home-road hashcons set (see u3t_samp()).
+      /* u3m_Pave_f: called partway through building a new road's tables
+      **             (tests).
       */
-        extern volatile c3_w u3m_Dup_busy_w;
+        extern void (*u3m_Pave_f)(void);
+
+      /* u3m_Love_f: called as an exit to home starts its takes (tests).
+      */
+        extern void (*u3m_Love_f)(void);
+
+      /* u3m_hold(), u3m_hold_done(): hold off async signals (alarm,
+      **   interrupt, term) for work that must finish together, such as a
+      **   write to home memory and its count, or an operation on the
+      **   off-loom home-road hashcons set. a signal that arrives meanwhile
+      **   is raised by u3m_hold_done(), as its handler would have; a held
+      **   term is never replaced. the sampler skips while signals are
+      **   held, since it runs on the home road and may change the set. a
+      **   stack overflow can't be held: code between the two must stay
+      **   shallow, and if one lands there, the process aborts, since
+      **   the work is left half done. nor may it bail; if it does anyway,
+      **   u3m_bail() ends the hold, and raises a held signal in the
+      **   bail's place. both are always inlined, so neither
+      **   adds a call to the code between.
+      */
+        extern volatile c3_w u3m_Hold_w;
+        extern volatile c3_m u3m_Held_m;
+
+        void
+        u3m_hold_raise(void);
+
+        static inline __attribute__((always_inline)) void
+        u3m_hold(void)
+        {
+          u3m_Hold_w++;
+          __atomic_signal_fence(__ATOMIC_SEQ_CST);
+        }
+
+        static inline __attribute__((always_inline)) void
+        u3m_hold_done(void)
+        {
+          __atomic_signal_fence(__ATOMIC_SEQ_CST);
+          if ( (0 == --u3m_Hold_w) && u3m_Held_m ) {
+            u3m_hold_raise();
+          }
+        }
 
       /* u3m_dedup_hint(): record the home-road hashcons set's size,
       **                   to size its next rebuild.
