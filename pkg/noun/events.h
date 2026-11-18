@@ -143,6 +143,17 @@
           c3_d rcc_d;        //  bytecode cap clears (u3m_reclaim_due())
           c3_d rcp_d;        //  bytecode entries they cleared
 
+          //  by kind, to see what deferral and alignment act on: atoms
+          //  that fit a word at 64 bits are allocated at 32
+          //
+          c3_d dfa_d;        //  gains deferred on atoms
+          c3_d dfb_d;        //    of which cancelled by a lose
+          c3_d ala_d;        //  alignment: references to atoms
+          c3_d alp_d;        //    of which at the same position
+          c3_d fec_d;        //  home nouns referenced from the effects'
+                             //  cells on the event's road
+          c3_d fea_d;        //    of which atoms
+
           //  deferred gains across the state swap (u3a_defer_open())
           //
           c3_d dfw_d;        //  windows
@@ -250,6 +261,13 @@
     */
       void
       u3e_measure_event(c3_d eve_d, const c3_c* tag_c);
+
+    /* u3e_measure_effect(): at the end of a poke, on the event's road,
+    **                       count home nouns referenced from the
+    **                       effects [fec].
+    */
+      void
+      u3e_measure_effect(u3_noun fec);
 
     /* u3e_measure_work(): the task just run, of kind [kin_w] (u3e_wok_*),
     **                     took [use_d] microseconds. call before

@@ -88,6 +88,10 @@ def parse(lines):
             intervals.append(cur)
         elif cur is None:
             continue
+        elif t == "Q" and len(p) >= 8 and p[1] == "0":
+            v = ints(p[2:])
+            if v is not None:
+                cur["Q0"] = v
         elif t == "J":
             v = ints(p[1:])
             if v is not None and len(v) >= 6:
@@ -195,6 +199,11 @@ def sums(ivs):
                 s["F_dup"] += n
             if pha == "take-pro":
                 s["F_pro"] += n
+        if "Q0" in i and "G" in i and "Y" in i:
+            k = i["Q0"]
+            s["K_ag"] += k[0]; s["K_ac"] += k[1]; s["K_ar"] += k[2]
+            s["K_fe"] += k[4]; s["K_gan"] += i["G"][1]; s["K_can"] += i["G"][4]
+            s["K_win"] += i["G"][0]; s["K_ref"] += i["Y"][0]
         if "J" in i:
             w = i["J"]
             s["J_eve"] += w[0]; s["J_eus"] += w[1]; s["J_pek"] += w[4]
@@ -243,6 +252,14 @@ METRICS = [
     ("C: bytecode cap clears", "(b)",
      lambda s, v: (sum(i["C"][5] for i in v if "C" in i and len(i["C"]) > 6)
                    if any("C" in i and len(i["C"]) > 6 for i in v) else None)),
+    ("G: gains on atoms / gains", "(i) scope", lambda s, v: ratio(s["K_ag"], s["K_gan"])),
+    ("G: cancelled, atoms", "(i) scope", lambda s, v: ratio(s["K_ac"], s["K_ag"])),
+    ("G: cancelled, cells", "(i) scope",
+     lambda s, v: ratio(s["K_can"] - s["K_ac"], s["K_gan"] - s["K_ag"])),
+    ("Y: references to atoms / references", "(i) adaptive bound",
+     lambda s, v: ratio(s["K_ar"], s["K_ref"])),
+    ("effects: home references / window", "(i) adaptive bound",
+     lambda s, v: ratio(s["K_fe"], s["K_win"])),
     ("J: event compute / elapsed", "snapshot work budget",
      lambda s, v: ratio(s["J_eus"] / 1e6, s["J_secs"])),
     ("J: peek compute / elapsed", "snapshot work budget",
@@ -326,6 +343,8 @@ PERCENT = {name for name, _, _ in METRICS
            or "keys /" in name or "looked up /" in name}
 
 
+PERCENT |= {"G: gains on atoms / gains", "G: cancelled, atoms", "G: cancelled, cells",
+            "Y: references to atoms / references"}
 PERCENT |= {"J: event compute / elapsed", "J: peek compute / elapsed",
             "J: peeks / tasks"}
 

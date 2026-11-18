@@ -296,6 +296,7 @@ u3v_poke(u3_noun sam)
   //
   if ( c3y == u3a_is_cell(pro) ) {
     u3e_measure_align(u3t(pro), u3A->roc);
+    u3e_measure_effect(u3h(pro));
   }
 
   return pro;

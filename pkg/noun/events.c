@@ -442,6 +442,17 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
                  _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1],
                  _ce_meas.lon_d, _ce_meas_us() - bef_d);
 
+  //  Q 0 (a Q line whose first field is 0 is not a sample): the G and
+  //  Y lines by kind. gains deferred on atoms and of those cancelled;
+  //  alignment's references to atoms and of those at the same
+  //  position; home nouns the effects reference and of those atoms
+  //
+  fprintf(fil_u, "Q 0 %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.dfa_d, u3e_Meter.dfb_d,
+                 u3e_Meter.ala_d, u3e_Meter.alp_d,
+                 u3e_Meter.fec_d, u3e_Meter.fea_d);
+
   for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
     for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
       for ( k_w = 0; k_w < _CE_MEAS_LOGS; k_w++ ) {
@@ -587,6 +598,50 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   }
 }
 
+/* u3e_measure_effect(): at the end of a poke, on the event's road,
+**                       count the home nouns its effects [fec]
+**                       reference from cells on this road. the take
+**                       gains these too, and u3e_measure_align() walks
+**                       only the state.
+*/
+void
+u3e_measure_effect(u3_noun fec)
+{
+  u3_noun* sac_u;
+  c3_w     len_w = 0, cap_w = 1024;
+
+  if ( !_ce_meas.on_t ) return;
+
+  //  effects are a tree far smaller than the state; cells on this
+  //  road that are shared are walked again, which overcounts a little
+  //
+  sac_u = c3_malloc(cap_w * sizeof(*sac_u));
+  sac_u[len_w++] = fec;
+
+  while ( len_w ) {
+    u3_noun n = sac_u[--len_w];
+
+    if ( c3y == u3a_is_cat(n) ) continue;
+
+    if ( c3y == u3a_is_senior(u3R, n) ) {
+      u3e_Meter.fec_d++;
+      if ( c3n == u3a_is_cell(n) ) u3e_Meter.fea_d++;
+      continue;
+    }
+
+    if ( c3n == u3a_is_cell(n) ) continue;
+
+    if ( (len_w + 2) > cap_w ) {
+      cap_w *= 2;
+      sac_u = c3_realloc(sac_u, cap_w * sizeof(*sac_u));
+    }
+    sac_u[len_w++] = u3h(n);
+    sac_u[len_w++] = u3t(n);
+  }
+
+  c3_free(sac_u);
+}
+
 /* u3e_measuring(): measurement is on.
 */
 c3_t
@@ -635,9 +690,13 @@ u3e_measure_align(u3_noun new, u3_noun old)
     if ( c3y == u3a_is_cat(n) ) continue;
 
     if ( c3y == u3a_is_senior(u3R, n) ) {
+      c3_t atm_t = ( c3n == u3a_is_cell(n) );
+
       u3e_Meter.aln_all_d++;
+      if ( atm_t ) u3e_Meter.ala_d++;
       if ( n == o ) {
         u3e_Meter.aln_pos_d++;
+        if ( atm_t ) u3e_Meter.alp_d++;
         if ( aln_u.exc_t ) u3e_Meter.aln_exc_d++;
       }
       continue;

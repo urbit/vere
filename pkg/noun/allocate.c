@@ -575,6 +575,7 @@ _ca_defer_gain(u3_noun dog)
   if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
     u3e_Meter.dfg_d++;
+    if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
     return 1;
   }
 
@@ -593,6 +594,7 @@ _ca_defer_gain(u3_noun dog)
 
   u3e_Meter.dfg_d++;
   u3e_Meter.dfn_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
   {
     c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
 
@@ -622,6 +624,7 @@ _ca_defer_lose(u3_noun dog)
   }
 
   u3e_Meter.dfc_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfb_d++;
   return 1;
 }
 

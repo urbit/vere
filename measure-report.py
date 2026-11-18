@@ -29,6 +29,14 @@ Log lines (one snapshot interval ends at each S line):
                                             a sample of the interval so far, written
                                             at each power of two tasks, before the
                                             interval's S line
+  Q 0 <atom-gains> <atom-cancelled> <atom-refs> <atom-same-position> <effect-refs> <effect-atom-refs>
+                                            after the S line, the G and Y lines by kind:
+                                            deferred gains on atoms and those cancelled;
+                                            alignment's references to atoms and those at
+                                            the same position; home nouns referenced from
+                                            the event's effects (which the alignment walk
+                                            leaves out) and those that are atoms. atoms
+                                            that fit a word at 64 bits are allocated at 32
   R <table> <exits-home> <empty-home> <entries-home> <exits-all> <empty-all> <entries-all>
   K <jet> <declined> <no-jet> <unregistered>      (jb/measure only)
   B <home|inner> <nock2|site> <cur-ptr> <cur-cur> <cur-sen> <anc-ptr> <anc-cur> <anc-sen> <miss>
@@ -93,6 +101,7 @@ def new_interval():
         "U": 0,
         "J": None,
         "Q": [],
+        "Q0": None,
         "A": None,
         "M": None,
         "R": {},
@@ -174,7 +183,10 @@ def parse(path):
                     v = tuple(int(x) for x in line.split()[1:])
                 except ValueError:
                     continue
-                if len(v) >= 6:
+                if len(v) >= 7 and v[0] == 0:
+                    if cur is not None:
+                        cur["Q0"] = v[1:]
+                elif len(v) >= 6:
                     cur_samples.append(v)
             elif t == "J" and cur is not None:
                 cur["J"] = tuple(int(x) for x in line.split()[1:])
@@ -497,6 +509,23 @@ def main():
                 print(f"  {n:>10}{len(ss):>11}{q([s[2] for s in ss], .5) / 1e6:>10.2f}"
                       f"{q([s[4] for s in ss], .5) / 1e6:>9.2f}"
                       f"{q(dit, .5):>13}{q(dit, .5) * 16 / 1024:>10.1f}{q(dit, .9):>11}")
+
+    kis = [i for i in intervals if i["Q0"] and i["G"] and i["Y"]]
+    if kis and any(i["G"][0] for i in kis):
+        k = [sum(i["Q0"][j] for i in kis) for j in range(6)]
+        kg = sum(i["G"][1] for i in kis); kc = sum(i["G"][4] for i in kis)
+        kw = sum(i["G"][0] for i in kis) or 1
+        ya = sum(i["Y"][0] for i in kis); yp = sum(i["Y"][1] for i in kis)
+        print("\n== deferral and alignment by kind ==")
+        print("  (atoms that fit a word at 64 bits are allocated, and counted, at 32)")
+        print(f"  deferred gains: atoms {k[0]} ({pct(k[0], kg).strip()}), "
+              f"{pct(k[1], k[0]).strip()} cancelled; cells {kg - k[0]}, "
+              f"{pct(kc - k[1], kg - k[0]).strip()} cancelled")
+        print(f"  alignment's references: atoms {k[2]} ({pct(k[2], ya).strip()}), "
+              f"{pct(k[3], k[2]).strip()} at the same position; cells {ya - k[2]}, "
+              f"{pct(yp - k[3], ya - k[2]).strip()}")
+        print(f"  home nouns referenced from effects (not in the alignment walk): "
+              f"{k[4] / kw:.0f} per window, {pct(k[5], k[4]).strip()} atoms")
 
     cis = [i for i in intervals if i["C"]]
     if cis:
