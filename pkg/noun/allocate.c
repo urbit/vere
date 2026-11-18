@@ -18,9 +18,9 @@
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 
-//  home-road hashcons membership (see u3m_dedup())
+//  home-road hashcons membership (see u3m_sole_try())
 //
-c3_w* u3a_Hcon_w;
+c3_w* u3a_Sole_w;
 u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
@@ -1135,8 +1135,8 @@ top:
         u3m_bail(c3__foul);
       }
       else {
-        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
-          u3m_dedup_lose(dog);
+        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
+          u3m_sole_lose(dog);
         }
 
         if ( _(u3a_is_pom(dog)) ) {
@@ -1182,8 +1182,8 @@ top:
         u3m_bail(c3__foul);
       }
       else {
-        if ( (&(u3H->rod_u) == u3R) && u3a_hcon_has(dog) ) {
-          u3m_dedup_lose(dog);
+        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
+          u3m_sole_lose(dog);
         }
 
         if ( _(u3a_is_pom(dog)) ) {
@@ -1697,7 +1697,7 @@ static inline c3_t
 _ca_wed_keep(u3a_road* rod_u, u3_noun a, u3_noun b)
 {
   if ( &(u3H->rod_u) == rod_u ) {
-    c3_t amb_t = u3a_hcon_has(a), bmb_t = u3a_hcon_has(b);
+    c3_t amb_t = u3a_sole_has(a), bmb_t = u3a_sole_has(b);
 
     if ( amb_t != bmb_t ) return amb_t;
   }
@@ -2754,7 +2754,7 @@ u3a_sweep(void)
   //  hashcons set may refer to them
   //
   if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
-    u3m_dedup_ream();
+    u3m_sole_ream();
   }
 
   return siz_w;
