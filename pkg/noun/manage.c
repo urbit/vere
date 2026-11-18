@@ -228,11 +228,15 @@ _cm_signal_handle(c3_m sig_m)
   }
 
   //  an overflow can't be held, and code that holds signals mustn't
-  //  overflow: if one does anyway, check the home road at the next grab
+  //  overflow. if one does anyway, the work it cut short stays half
+  //  done: a road without its tables, a call site with a new program
+  //  and an old battery, the home-road set mid-insert. no grab repairs
+  //  those, and unwinding would carry them on, perhaps into a snapshot.
+  //  so the process ends here, to restart from the last one
   //
   if ( u3m_Hold_w ) {
-    u3C.wag_h |= u3o_check_corrupt;
-    u3e_Meter.ccs_d[1]++;
+    _cm_emergency("fatal: stack overflow with signals held", 0);
+    abort();
   }
 
 #ifndef U3_OS_windows
