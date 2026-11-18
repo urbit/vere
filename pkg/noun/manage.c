@@ -4145,7 +4145,7 @@ u3m_dedup(u3_noun som)
 
 /* bounds for u3m_reclaim_due()
 */
-#define _CM_BYC_MAX  (1U << 14)  //  bytecode programs
+#define _CM_BYC_MAX  (1U << 16)  //  bytecode programs (about 1 KB each)
 
 /* u3m_reclaim_due(): clear home-road caches that have outgrown their
 **                    bounds. cheap enough to call after every event.
