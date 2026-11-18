@@ -207,6 +207,17 @@ static struct {
                                 //           allocation this interval
 } _ce_meas;
 
+/* _ce_meas_us(): wall-clock microseconds.
+*/
+static c3_d
+_ce_meas_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
 /* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
 */
 static inline c3_t
@@ -404,19 +415,7 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 #endif
 }
 
-/* _ce_meas_us(): wall-clock microseconds.
-*/
-static c3_d
-_ce_meas_us(void)
-{
-  struct timeval tim_u;
-
-  gettimeofday(&tim_u, 0);
-  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
-}
-
-/* _ce_meas_save(): report and reset per-interval measurements. the
-**                  save began at [bef_d] (_ce_meas_us()).
+/* _ce_meas_save(): report and reset per-interval measurements.
 */
 static void
 _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
