@@ -502,6 +502,12 @@ _cm_signal_deep(void)
 static void
 _cm_signal_done(void)
 {
+  //  no signal raised from another thread unwinds this one from here
+  //  (windows: a timer callback already running would, after the
+  //  handlers below are gone)
+  //
+  rsignal_disarm();
+
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
   rsignal_deinstall_handler(SIGVTALRM);
@@ -1764,6 +1770,11 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     //
     return _cm_signal_recover(sig_m, arg);
   }
+
+  //  the jump buffer is set: signals may unwind to it, until
+  //  _cm_signal_done()
+  //
+  rsignal_arm();
 
   /* Record the cap, and leap.
   */
