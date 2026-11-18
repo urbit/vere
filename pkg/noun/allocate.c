@@ -1567,6 +1567,13 @@ static inline __attribute__((always_inline)) void
 _ca_lo_home_put(u3_noun* lis_u, u3_noun old)
 {
   if ( lis_u ) {
+    //  the entry is written before the length publishes it. no interrupt
+    //  can unwind between the two today: every caller either holds
+    //  signals or runs on the home road during an exit, outside the
+    //  inner signal regime. the fence (no instruction) keeps the order
+    //  should that change: unwound in between, an entry would leak, and
+    //  not be lost twice
+    //
     *lis_u = old;
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
     _ca_lo.len_w++;
