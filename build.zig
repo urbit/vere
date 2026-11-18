@@ -940,7 +940,10 @@ fn buildBinary(
                 if (cfg.ubsan) test_exe.linkSystemLibrary("clang_rt.ubsan_osx_dynamic");
             }
 
-            test_exe.stack_size = 0;
+            //  as the urbit binary: on windows the stack's size is the
+            //  executable's (0 there leaves the tests about 256 KB)
+            //
+            test_exe.stack_size = if (t.os.tag == .windows) 67108864 else 0;
             test_exe.linkLibC();
             for (tst.deps) |dep| {
                 test_exe.linkLibrary(dep);
