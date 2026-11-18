@@ -529,8 +529,7 @@ _test_sing_dag(void)
   return ret_i;
 }
 
-/* _test_crib(): a crib grows to its ceiling, zeroes, and gives memory
-**              back.
+/* _test_crib(): a crib grows to its ceiling, and gives memory back.
 */
 static c3_i
 _test_crib(void)
@@ -556,14 +555,6 @@ _test_crib(void)
       if ( cib_u.buf_y[i_i] ) bad_w++;
     }
     memset(cib_u.buf_y, 0xff, max_i);
-    u3a_crib_zero(&cib_u, 100, 1000);               //  small: written
-    u3a_crib_zero(&cib_u, 4096 + 7, max_i / 2);     //  large: pages dropped
-    for ( size_t i_i = 0; i_i < max_i; i_i++ ) {
-      c3_t zer_t = ( ((i_i >= 100) && (i_i < 1100))
-                  || ((i_i >= 4096 + 7) && (i_i < 4096 + 7 + max_i / 2)) );
-      if ( zer_t != !cib_u.buf_y[i_i] ) bad_w++;
-    }
-    memset(cib_u.buf_y, 0xff, max_i);          //  still committed
     u3a_crib_shrink(&cib_u, 4096 + 7);
     if ( (4096 + 7) != cib_u.len_i ) bad_w++;
     u3_assert( u3a_crib_grow(&cib_u, max_i) );

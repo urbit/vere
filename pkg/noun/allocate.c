@@ -1352,8 +1352,11 @@ _ca_lo_drain_home(void)
     u3z(old);
   }
 
+  //  the capacity is lowered before the crib is shrunk (see crib.h)
+  //
   if ( _ca_lo.cap_w > _ca_lo.min_w ) {
     _ca_lo.cap_w = _ca_lo.min_w;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
     u3a_crib_shrink(&_ca_lo.cib_u, (size_t)_ca_lo.cap_w * sizeof(u3_noun));
     u3e_Meter.cib_u[1].shr_d++;
     u3e_Meter.cib_u[1].cap_d = _ca_lo.cap_w;

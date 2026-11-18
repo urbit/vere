@@ -11,6 +11,16 @@
 /// no system call (the whole reservation is mapped from the start, and
 /// pages materialize on first touch), so it's safe wherever an
 /// interrupt may unwind, and with async signals held.
+///
+/// An interrupt may unwind a grow or a shrink anywhere, if the crib's
+/// user keeps the capacity it relies on within the crib's length at
+/// every step: raised after a grow returns, lowered before a shrink is
+/// called. The crib does the same with the memory under its length
+/// (committed before the length is raised, given back after it's
+/// lowered), and nothing else is written, so no step leaves a state the
+/// next call can't go on from. What an interrupted shrink does leave is
+/// memory past the length that wasn't given back: it keeps its contents
+/// when grown into again.
 
 #ifndef U3_CRIB_H
 #define U3_CRIB_H
@@ -43,15 +53,9 @@
       c3_t
       u3a_crib_grow(u3a_crib* cib_u, size_t len_i);
 
-    /* u3a_crib_zero(): zero [off_i, +len_i), which stays committed;
-    **                  large ranges give their whole pages back to the
-    **                  system.
-    */
-      void
-      u3a_crib_zero(u3a_crib* cib_u, size_t off_i, size_t len_i);
-
     /* u3a_crib_shrink(): give back everything past the first [len_i]
-    **                    bytes; it reads as zero when grown into again.
+    **                    bytes; it reads as zero when grown into again,
+    **                    unless an interrupt unwound the shrink.
     */
       void
       u3a_crib_shrink(u3a_crib* cib_u, size_t len_i);
