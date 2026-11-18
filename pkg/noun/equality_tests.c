@@ -1349,7 +1349,12 @@ _test_visit_samp(void)
   {
     u3a_road* rod_u = u3R;
 
-    u3R = &(u3H->rod_u);
+    //  the home road is this road's parent. it isn't named as
+    //  &(u3H->rod_u): this file doesn't see the road's alignment as
+    //  the library does on 64-bit windows (the system's jmp_buf), so
+    //  it would place the road 8 bytes off within u3H
+    //
+    u3R = u3to(u3a_road, u3R->par_p);
     r   = u3m_sole_try(hom);
     u3R = rod_u;
   }
