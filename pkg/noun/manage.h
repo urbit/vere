@@ -293,12 +293,8 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       **   term is never replaced. the sampler skips while signals are
       **   held, since it runs on the home road and may change the set. a
       **   stack overflow can't be held: code between the two must stay
-      **   shallow, within u3m_hold_room bytes of stack. u3m_hold() checks
-      **   that there's that much left, and if not, raises the overflow
-      **   itself, before the work starts (in the inner signal regime, and
-      **   where the stack's bounds are known: see u3m_Hold_min_y). if one
-      **   lands between the two anyway, the process aborts, since the
-      **   work is left half done. nor may it bail; if it does anyway,
+      **   shallow, and if one lands there, the process aborts, since
+      **   the work is left half done. nor may it bail; if it does anyway,
       **   u3m_bail() ends the hold, and raises a held signal in the
       **   bail's place. both are always inlined, so neither
       **   adds a call to the code between.
@@ -309,31 +305,9 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_hold_raise(void);
 
-      /* u3m_hold_room: stack reserved for work done with signals held.
-      */
-#       define u3m_hold_room  (64 << 10)
-
-      /* u3m_Hold_min_y: the lowest frame address at which u3m_hold() may
-      **                 start a hold: the stack's floor plus u3m_hold_room.
-      **                 0 outside the inner signal regime, where nothing
-      **                 could catch the overflow, and where the stack's
-      **                 bounds aren't known.
-      */
-        extern c3_y* u3m_Hold_min_y;
-
-      /* u3m_hold_over(): raise a stack overflow from u3m_hold().
-      */
-        __attribute__((noreturn, cold)) void
-        u3m_hold_over(void);
-
         static inline __attribute__((always_inline)) void
         u3m_hold(void)
         {
-          if ( c3_unlikely(  ((c3_y*)__builtin_frame_address(0) < u3m_Hold_min_y)
-                          && !u3m_Hold_w ) )
-          {
-            u3m_hold_over();
-          }
           u3m_Hold_w++;
           __atomic_signal_fence(__ATOMIC_SEQ_CST);
         }

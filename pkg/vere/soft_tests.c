@@ -35,9 +35,7 @@
 /// write cut short by a stack overflow left: a leaked old value, or a
 /// new value gained but not written. And a stack overflow while async
 /// signals are held (u3m_hold()) must abort the process: it's run in a
-/// child, which must not survive it. A hold started with too little
-/// stack left raises the overflow itself, before its work, and the event
-/// fails as with any other.
+/// child, which must not survive it.
 
 #include "noun.h"
 #include "ivory.h"
@@ -569,87 +567,6 @@ _test_over_held(void)
 #endif
 }
 
-/* _room_deep(): recurse until there's less stack than u3m_hold() asks
-**               for, then hold.
-*/
-static volatile c3_w _room_hit_w;
-
-static c3_w
-_room_deep(c3_w dep_w)
-{
-  volatile c3_y buf_y[512];
-
-  buf_y[0] = (c3_y)dep_w;
-  if ( (c3_y*)__builtin_frame_address(0) < u3m_Hold_min_y ) {
-    _room_hit_w = 1;
-    u3m_hold();
-    _room_hit_w = 2;
-    u3m_hold_done();
-    return buf_y[0];
-  }
-  return _room_deep(dep_w + 1) + buf_y[0];
-}
-
-static volatile size_t _room_top_i;
-
-static u3_noun
-_w_room(u3_noun arg)
-{
-  _room_top_i = u3m_Hold_min_y
-              ? (size_t)((c3_y*)__builtin_frame_address(0) - u3m_Hold_min_y)
-              : 0;
-
-  if ( !u3m_Hold_min_y ) {
-    return arg;
-  }
-  return _room_deep(1) + arg;
-}
-
-/* _test_room(): a hold that would start with less than u3m_hold_room
-**   of stack left raises the overflow first, and it's an ordinary one:
-**   the event fails with %over, no hold is under way, and the process
-**   goes on. the recursion must reach that point before the stack's
-**   real end, and a shallow frame must be far above it: so the stack's
-**   floor is where this platform says it is.
-*/
-static void
-_test_room(void)
-{
-  u3_noun pro;
-
-  _room_hit_w = 0;
-  pro = u3m_soft(0, _w_room, 0);
-
-  if ( !_room_top_i ) {
-    fprintf(stderr, "soft: room: the stack's bounds aren't known here\r\n");
-    exit(1);
-  }
-  if ( _room_top_i < (256 << 10) ) {
-    fprintf(stderr, "soft: room: only %zu bytes above the reserve at the top\r\n",
-            _room_top_i);
-    exit(1);
-  }
-  if ( c3__over != u3h(pro) ) {
-    fprintf(stderr, "soft: room: expected %%over\r\n");
-    u3m_p("got", u3h(pro));
-    exit(1);
-  }
-  if ( 1 != _room_hit_w ) {
-    fprintf(stderr, "soft: room: %s\r\n",
-            _room_hit_w ? "the hold started without room"
-                        : "the stack ended above the reserve");
-    exit(1);
-  }
-  if ( u3m_Hold_w || u3m_Held_m || u3m_Hold_min_y ) {
-    fprintf(stderr, "soft: room: a hold, or its bound, is left\r\n");
-    exit(1);
-  }
-  u3z(pro);
-  fprintf(stderr, "soft: room: a hold with less than %u KB of stack left "
-                  "raises %%over (%zu KB above that at the top)\r\n",
-          (unsigned)(u3m_hold_room >> 10), _room_top_i >> 10);
-}
-
 /* _test_over(): the grab u3o_check_corrupt asks for repairs what a home
 **               write cut short by an overflow leaves: the leak, or the
 **               count left too high.
@@ -1008,7 +925,6 @@ main(int argc, char* argv[])
   memset(wok_u, 0, sizeof(wok_u));
   _test_over();
   _test_over_held();
-  _test_room();
   _test_love();
   _test_hold_bail();
   _test_leap();
