@@ -2,40 +2,49 @@
 ///
 /// Interrupts at random points: a test of inner-road virtualization.
 ///
-/// Runs Nock workloads under u3m_soft() with random millisecond timeouts,
-/// so timer signals unwind them at arbitrary instructions, and every live
-/// road is promoted from wherever it stopped. Then checks that each result
-/// that completes matches an uninterrupted run, that nothing on the home
-/// road leaked (u3o_leak_crash), and that the state still packs and
-/// computes the same results.
+/// In the order it runs:
+///
+/// 1. A stack overflow while async signals are held (u3m_hold()) must
+///    leave u3o_check_corrupt set, and the grab it asks for must repair
+///    what a cut-short home write left: a leaked old value, or a new
+///    value gained but not written.
+///
+/// 2. Both exits to home, after success and after a bail, run in the
+///    outer signal regime, with the timer disarmed (u3m_Love_f).
+///
+/// 3. A bail with async signals held ends the hold, and a signal held by
+///    then is raised in the bail's place.
+///
+/// 4. A leap into exactly u3m_road_min pages builds its road, from a
+///    north road and from a south one; into one page less, it bails
+///    %meme on the road it would have left.
+///
+/// 5. Each workload runs to completion, for reference.
+///
+/// 6. An alarm is raised while a new inner road's tables are half built
+///    (u3m_Pave_f), at each of the first leaps of a workload with nested
+///    roads: the run must end with %alrm or complete, and the state must
+///    grab cleanly and compute the same result.
+///
+/// 7. The workloads run under u3m_soft() with random millisecond
+///    timeouts, so timer signals unwind them at arbitrary instructions,
+///    and every live road is promoted from wherever it stopped. Each
+///    result that completes must match its reference, and nothing on
+///    the home road may leak (u3o_leak_crash).
+///
+/// 8. The state must still pack, and compute the same results.
 ///
 /// SOFT_TEST_N sets the number of interrupted runs (default 120), and
 /// SOFT_TEST_SEED the random seed (default: the time).
 ///
-/// SOFT_TEST_DUP=1 adds equal nouns at different addresses on the home
-/// road: copies of the slam workloads, made with jam and cue (and made
-/// again every 20 interrupted runs), and two deep nouns with 2^200
-/// paths. SOFT_TEST_LOOM sets the loom size in bits of bytes (default
-/// 28). SOFT_TEST_TINY=1 starts the home lose list at 16 entries, so it
-/// grows under interrupts.
-///
-/// Then an alarm raised while a new inner road's tables are half built
-/// (u3m_Pave_f), at each of the first leaps of a workload with nested
-/// roads: the run must end with %alrm or complete, and the state must
-/// grab cleanly and compute the same result.
-///
-/// Also, an exit to home after a bail runs in the outer signal regime,
-/// with the timer disarmed, as after success (u3m_Love_f).
-///
-/// A bail with async signals held ends the hold, and a signal held by
-/// then is raised in the bail's place. A leap into exactly u3m_road_min
-/// pages builds its road, from a north road and from a south one; into
-/// one page less, it bails %meme on the road it would have left.
-///
-/// First, a stack overflow while async signals are held (u3m_hold())
-/// must leave u3o_check_corrupt set, and the grab it asks for must repair
-/// what a cut-short home write left: a leaked old value, or a new value
-/// gained but not written.
+/// The canonical ivory pill leaves no equal nouns at different addresses
+/// on the home road. SOFT_TEST_DUP=1 adds some: copies of the slam
+/// workloads, made with jam and cue (and made again every 20 interrupted
+/// runs), and two deep nouns with 2^200 paths. SOFT_TEST_RAW=1 boots
+/// from the pill without canonicalizing it first. SOFT_TEST_LOOM sets
+/// the loom size in bits of bytes (default 28). SOFT_TEST_TINY=1 starts
+/// the home lose list and the visited set at 16 entries, so they grow
+/// under interrupts.
 
 #include "noun.h"
 #include "ivory.h"
@@ -85,8 +94,12 @@ _setup(void)
   c3_w  lom_w = lom_c ? (c3_w)atoi(lom_c) : 28;
 
   u3m_boot_lite((size_t)1 << lom_w);
+  if ( getenv("SOFT_TEST_RAW") ) {
+    u3v_Ivory_canon_t = 0;
+  }
   if ( getenv("SOFT_TEST_TINY") ) {
     u3a_lose_size(16, 1U << 23);
+    u3m_sole_visit_size(4, 0);
   }
   _pil = _cue_pill();
   if ( c3n == u3v_boot_lite(u3k(_pil)) ) {

@@ -603,6 +603,22 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
                    u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
 
+    //  canonicalizing on inner roads (u3m_sole_try())
+    //
+    fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.eic_d[0], u3e_Meter.eic_d[1],
+                   u3e_Meter.eij_d, u3e_Meter.eiv_d,
+                   u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
+
+    //  exits to home: the canonicalizing take, time
+    //
+    fprintf(fil_u, "Z %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.ctk_d, u3e_Meter.ctf_d, u3e_Meter.ctr_d,
+                   u3e_Meter.cus_d[0], u3e_Meter.cus_d[1],
+                   u3e_Meter.cam_d[0], u3e_Meter.cam_d[1]);
+
     //  cribs, one line each
     //
     {
@@ -851,6 +867,17 @@ u3e_measure_ms(void)
 
   gettimeofday(&tim_u, 0);
   return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
+}
+
+/* u3e_measure_us(): wall-clock microseconds, for short steps.
+*/
+c3_d
+u3e_measure_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
 }
 
 /* _ce_meas_op(): write an O line: time, event, operation, why, melt
