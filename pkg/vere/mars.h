@@ -36,8 +36,9 @@
         u3_disk* log_u;                   //  event log
         u3_meta met_u;                    //  metadata
         struct {                          //  snapshot
-          uv_timer_t tim_u;               //    timer
           c3_d       eve_d;               //    last saved
+          c3_d       use_d;               //    microseconds of events since
+          c3_d       tak_d;               //    tasks since dirty pages were checked
         } sav_u;                          //
         u3_moat*     inn_u;               //  input stream
         u3_mojo*     out_u;               //  output stream
