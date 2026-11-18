@@ -73,7 +73,10 @@ Lines after an S line report on that interval, except O lines, which
 carry their own time. The header gives the ship, the runtime version,
 OS and architecture, the mode (live, replay, or offline for a log
 holding only an offline operation) and the snapshot interval
-(snap_secs for live, snap_events for replay). To integrate logs across ships, see measure-aggregate.py.
+(snap_secs for live, snap_events for replay). With snap_by=work in the
+header, a live ship snapshots after snap_secs seconds of event
+computation, or with snap_dirty_mb dirty, checked every snap_tasks
+tasks; without it, every snap_secs of wall-clock time. To integrate logs across ships, see measure-aggregate.py.
 """
 
 import glob
@@ -245,7 +248,8 @@ def long_limit(hdr, ivs):
     Uses the header's snap_secs; for older logs without it, the log's
     median interval, if it looks live (a replay's intervals are short).
     """
-    if hdr.get("mode") in ("replay", "offline"):
+    #  snap_by=work: snapshots follow work done, so no interval is long
+    if hdr.get("mode") in ("replay", "offline") or hdr.get("snap_by") == "work":
         return None
     sap = int(hdr.get("snap_secs", 0) or 0)
     if not sap:
