@@ -143,6 +143,10 @@ static _Atomic c3_w u3_Sighow;
 
 #ifndef U3_OS_windows
 #include "sigsegv.h"
+#include <pthread.h>
+#ifdef U3_OS_linux
+#include <sys/syscall.h>
+#endif
 
 #ifndef SIGSTKSZ
 # define SIGSTKSZ 16384
@@ -201,6 +205,108 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
 */
 volatile c3_w u3m_Hold_w;
 volatile c3_m u3m_Held_m;
+
+/* stack room for held work (see u3m_hold()).
+*/
+c3_y* u3m_Hold_min_y;
+
+/* u3m_hold_over(): raise a stack overflow from u3m_hold(), which found
+**                  less than u3m_hold_room left. no hold is under way.
+*/
+void
+u3m_hold_over(void)
+{
+  u3m_signal(c3__over);
+  abort();
+}
+
+/* _cm_stack_floor(): the lowest address this thread's stack can use, or
+**                    0 if that isn't known.
+*/
+static c3_y*
+_cm_stack_floor(void)
+{
+#if defined(U3_OS_windows)
+  //  above the reservation's low end: the room guaranteed to the
+  //  overflow handler (u3_windows_stack_guard()), and the guard pages
+  //
+  ULONG_PTR low_u, hih_u;
+
+  GetCurrentThreadStackLimits(&low_u, &hih_u);
+  return (c3_y*)low_u + (64 << 10) + (2 << 12);
+
+#elif defined(U3_OS_osx)
+  pthread_t thr_u = pthread_self();
+
+  return (c3_y*)pthread_get_stackaddr_np(thr_u)
+         - pthread_get_stacksize_np(thr_u);
+
+#elif defined(U3_OS_linux)
+  //  the main thread's stack grows down from its mapping's end to the
+  //  limit (_cm_limits()); another thread's is fixed
+  //
+  if ( getpid() == (pid_t)syscall(SYS_gettid) ) {
+    struct rlimit rlm_u;
+    FILE*         fil_u;
+    c3_c          lin_c[256];
+    c3_y*         top_y = 0;
+
+    if (  (0 != getrlimit(RLIMIT_STACK, &rlm_u))
+       || (RLIM_INFINITY == rlm_u.rlim_cur) )
+    {
+      return 0;
+    }
+    if ( !(fil_u = fopen("/proc/self/maps", "r")) ) {
+      return 0;
+    }
+    while ( fgets(lin_c, sizeof(lin_c), fil_u) ) {
+      unsigned long long bot_d, end_d;
+
+      if (  (2 == sscanf(lin_c, "%llx-%llx", &bot_d, &end_d))
+         && ((c3_y*)lin_c >= (c3_y*)(uintptr_t)bot_d)
+         && ((c3_y*)lin_c <  (c3_y*)(uintptr_t)end_d) )
+      {
+        top_y = (c3_y*)(uintptr_t)end_d;
+        break;
+      }
+    }
+    fclose(fil_u);
+
+    return top_y ? (top_y - rlm_u.rlim_cur) : 0;
+  }
+  else {
+    pthread_attr_t tar_u;
+    void*          adr_v;
+    size_t         siz_i;
+
+    if ( 0 != pthread_getattr_np(pthread_self(), &tar_u) ) {
+      return 0;
+    }
+    pthread_attr_getstack(&tar_u, &adr_v, &siz_i);
+    pthread_attr_destroy(&tar_u);
+    return adr_v;
+  }
+#else
+  return 0;
+#endif
+}
+
+/* _cm_hold_min(): u3m_Hold_min_y for this thread; found once.
+*/
+static c3_y*
+_cm_hold_min(void)
+{
+  static c3_t  don_t;
+  static c3_y* min_y;
+
+  if ( !don_t ) {
+    c3_y* flo_y = _cm_stack_floor();
+
+    min_y = flo_y ? (flo_y + u3m_hold_room) : 0;
+    don_t = 1;
+  }
+  return min_y;
+}
 
 /* u3m_hold_raise(): raise the signal held while signals were held.
 */
@@ -487,6 +593,12 @@ _cm_signal_deep(void)
   rsignal_install_handler(SIGTERM, _cm_signal_handle_term);
   rsignal_install_handler(SIGVTALRM, _cm_signal_handle_alrm);
 
+#ifndef NO_OVERFLOW
+  //  from here an overflow is caught, so u3m_hold() can raise one
+  //
+  u3m_Hold_min_y = _cm_hold_min();
+#endif
+
   // Provide a little emergency memory, for use in case things
   // go utterly haywire.
   //
@@ -507,6 +619,8 @@ _cm_signal_done(void)
   //  handlers below are gone)
   //
   rsignal_disarm();
+
+  u3m_Hold_min_y = 0;
 
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
