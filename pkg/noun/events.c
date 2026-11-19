@@ -214,6 +214,9 @@ static struct {
                                 //  at once, the sum and the most of the
                                 //  bound on their wait; events that did;
                                 //  the longest run of work
+  c3_d   hol_d[4];              //  effects this interval: events released,
+                                //  microseconds held, the longest hold,
+                                //  times any were released
   c3_d   las_d;                 //  the last event computed, microseconds
   c3_d   van_d[27][3];          //  [vane a-z, other] events this interval,
                                 //  their microseconds, the longest
@@ -560,6 +563,17 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
                  _ce_meas.wai_d[3], _ce_meas.wai_d[4], _ce_meas.pek_d,
                  _ce_meas_load(), (c3_d)_ce_meas_cpus());
 
+  //  c: effects held for the log. an event's effects go to the king
+  //  only once the event is committed, and the serf sees a commit only
+  //  between tasks. events whose effects were released, the
+  //  microseconds between computing each and releasing its effects,
+  //  the longest such, and the times any were released (so events per
+  //  release is the size of a batch)
+  //
+  fprintf(fil_u, "c %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 _ce_meas.hol_d[0], _ce_meas.hol_d[1],
+                 _ce_meas.hol_d[2], _ce_meas.hol_d[3]);
+
   //  v: events computed, by the vane their wire names (- for none,
   //  as on a %crud): how many, their microseconds, the longest, and
   //  the longest's card tag
@@ -759,6 +773,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
   memset(_ce_meas.wai_d, 0, sizeof(_ce_meas.wai_d));
   memset(_ce_meas.cru_d, 0, sizeof(_ce_meas.cru_d));
+  memset(_ce_meas.hol_d, 0, sizeof(_ce_meas.hol_d));
   memset(_ce_meas.van_d, 0, sizeof(_ce_meas.van_d));
   memset(_ce_meas.vat_d, 0, sizeof(_ce_meas.vat_d));
   _ce_meas.lon_d = 0;
@@ -1178,6 +1193,23 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
         _ce_meas.wai_d[3]++;
       }
       _ce_meas.bak_t = 0;
+    }
+  }
+}
+
+/* u3e_measure_hold(): an event's effects were released.
+*/
+void
+u3e_measure_hold(c3_d use_d, c3_o fir_o)
+{
+  if ( _ce_meas.on_t ) {
+    _ce_meas.hol_d[0]++;
+    _ce_meas.hol_d[1] += use_d;
+    if ( use_d > _ce_meas.hol_d[2] ) {
+      _ce_meas.hol_d[2] = use_d;
+    }
+    if ( c3y == fir_o ) {
+      _ce_meas.hol_d[3]++;
     }
   }
 }

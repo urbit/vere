@@ -301,6 +301,13 @@
       void
       u3e_measure_vane(u3_noun ovo);
 
+    /* u3e_measure_hold(): an event's effects were released [use_d]
+    **                     microseconds after it was computed. [fir_o]
+    **                     is c3y for the first released at one time.
+    */
+      void
+      u3e_measure_hold(c3_d use_d, c3_o fir_o);
+
     /* u3e_dirty(): pages written since the last save, free pages
     **              included. call on the home road.
     */

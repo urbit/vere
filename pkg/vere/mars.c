@@ -260,6 +260,7 @@ _mars_fact(u3_mars* mar_u,
     gif_u->nex_u = 0;
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
+    gif_u->tim_d = uv_hrtime();
 
     u3e_Phase = u3e_pha_jam;
     u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
@@ -896,6 +897,7 @@ _mars_flush(u3_mars* mar_u)
 top:
   {
     u3_gift* gif_u = mar_u->gif_u.ext_u;
+    c3_o     fir_o = c3y;
 
     //  XX gather i/o
     //
@@ -903,6 +905,10 @@ top:
           && (  (u3_gift_rest_e == gif_u->sat_e)
              || (gif_u->eve_d <= mar_u->log_u->dun_d)) )
     {
+      if ( u3_gift_fact_e == gif_u->sat_e ) {
+        u3e_measure_hold((uv_hrtime() - gif_u->tim_d) / 1000, fir_o);
+        fir_o = c3n;
+      }
       u3_newt_send(mar_u->out_u, gif_u->len_d, gif_u->hun_y);
 
       mar_u->gif_u.ext_u = gif_u->nex_u;
