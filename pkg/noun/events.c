@@ -101,6 +101,7 @@
 #include "murmur3.h"
 #include "nock.h"
 #include "options.h"
+#include "retrieve.h"
 #include "vortex.h"
 
 #include <sys/time.h>
@@ -213,6 +214,10 @@ static struct {
                                 //  at once, the sum and the most of the
                                 //  bound on their wait; events that did;
                                 //  the longest run of work
+  c3_d   las_d;                 //  the last event computed, microseconds
+  c3_d   van_d[27][3];          //  [vane a-z, other] events this interval,
+                                //  their microseconds, the longest
+  c3_d   vat_d[27];             //  [vane] the longest's card tag
   c3_d   cru_d[8][3];           //  [cause] first failures this interval,
                                 //  their microseconds, those recovered
   c3_d   flt_d[2][2];           //  page faults (minor, major) so far, at
@@ -555,6 +560,36 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
                  _ce_meas.wai_d[3], _ce_meas.wai_d[4], _ce_meas.pek_d,
                  _ce_meas_load(), (c3_d)_ce_meas_cpus());
 
+  //  v: events computed, by the vane their wire names (- for none,
+  //  as on a %crud): how many, their microseconds, the longest, and
+  //  the longest's card tag
+  //
+  for ( i_w = 0; i_w < 27; i_w++ ) {
+    if ( _ce_meas.van_d[i_w][0] ) {
+      c3_c tag_c[9];
+
+      for ( j_w = 0; j_w < 8; j_w++ ) {
+        c3_y byt_y = (c3_y)(_ce_meas.vat_d[i_w] >> (8 * j_w));
+
+        if ( !byt_y ) {
+          break;
+        }
+        tag_c[j_w] = (  ((byt_y >= 'a') && (byt_y <= 'z'))
+                     || ((byt_y >= '0') && (byt_y <= '9'))
+                     || ('-' == byt_y) ) ? (c3_c)byt_y : '?';
+      }
+      if ( !j_w ) {
+        tag_c[j_w++] = '-';
+      }
+      tag_c[j_w] = 0;
+
+      fprintf(fil_u, "v %c %" PRIu64 " %" PRIu64 " %" PRIu64 " %s\n",
+                     ( 26 == i_w ) ? '-' : (c3_c)('a' + i_w),
+                     _ce_meas.van_d[i_w][0], _ce_meas.van_d[i_w][1],
+                     _ce_meas.van_d[i_w][2], tag_c);
+    }
+  }
+
   //  x: events whose first attempt failed, by cause: how many, the
   //  microseconds the failed attempts took, and how many were then
   //  recovered (the %crud computed, and was logged in the event's
@@ -724,6 +759,8 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
   memset(_ce_meas.wai_d, 0, sizeof(_ce_meas.wai_d));
   memset(_ce_meas.cru_d, 0, sizeof(_ce_meas.cru_d));
+  memset(_ce_meas.van_d, 0, sizeof(_ce_meas.van_d));
+  memset(_ce_meas.vat_d, 0, sizeof(_ce_meas.vat_d));
   _ce_meas.lon_d = 0;
   _ce_meas.pek_d = 0;
 
@@ -1120,6 +1157,9 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
     if ( (u3e_wok_poke == kin_w) && (use_d > _ce_meas.lon_d) ) {
       _ce_meas.lon_d = use_d;
     }
+    if ( u3e_wok_poke == kin_w ) {
+      _ce_meas.las_d = use_d;
+    }
     if ( (u3e_wok_peek == kin_w) && (use_d > _ce_meas.pek_d) ) {
       _ce_meas.pek_d = use_d;
     }
@@ -1138,6 +1178,28 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
         _ce_meas.wai_d[3]++;
       }
       _ce_meas.bak_t = 0;
+    }
+  }
+}
+
+/* u3e_measure_vane(): the event just computed was [ovo].
+*/
+void
+u3e_measure_vane(u3_noun ovo)
+{
+  if ( _ce_meas.on_t && (c3y == u3du(ovo)) ) {
+    u3_noun wir = u3h(ovo);
+    u3_noun cad = u3t(ovo);
+    u3_noun van = ( c3y == u3du(wir) ) ? u3h(wir) : 0;
+    u3_noun tag = ( c3y == u3du(cad) ) ? u3h(cad) : cad;
+    c3_w  idx_w = ( (van >= 'a') && (van <= 'z') ) ? (c3_w)(van - 'a') : 26;
+
+    _ce_meas.van_d[idx_w][0]++;
+    _ce_meas.van_d[idx_w][1] += _ce_meas.las_d;
+
+    if ( _ce_meas.las_d >= _ce_meas.van_d[idx_w][2] ) {
+      _ce_meas.van_d[idx_w][2] = _ce_meas.las_d;
+      _ce_meas.vat_d[idx_w]    = ( c3y == u3ud(tag) ) ? u3r_chub(0, tag) : 0;
     }
   }
 }

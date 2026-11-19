@@ -96,6 +96,10 @@ def parse(lines):
             v = ints(p[1:])
             if v is not None and len(v) >= 6:
                 cur["J"] = v
+        elif t == "v" and len(p) >= 5:
+            v = ints(p[2:5])
+            if v is not None:
+                cur.setdefault("v", {})[p[1]] = v
         elif t == "x" and len(p) >= 5:
             v = ints(p[2:5])
             if v is not None:
@@ -221,6 +225,8 @@ def sums(ivs):
             w = i["w"]
             s["W_pek"] += w[0]; s["W_bon"] += w[1]; s["W_eve"] += w[3]
             s["W_peks"] += i["J"][4]; s["W_eves"] += i["J"][0] + i["J"][2]
+        for k, x in i.get("v", {}).items():
+            s["V_us"] += x[1]; s["V_us_" + k] += x[1]
         for k, x in i.get("x", {}).items():
             s["X_all"] += x[0]; s["X_us"] += x[1]
             if k != "exit":
@@ -317,6 +323,14 @@ METRICS = [
     ("w: processors", "host", lambda s, v: max(values(v, "w", 7), default=None)),
     ("w: load average (median)", "host",
      lambda s, v: (lambda m: None if m is None else m / 100)(median(values(v, "w", 6)))),
+    ("v: event time in ames (a)", "where the work is", lambda s, v: ratio(s["V_us_a"], s["V_us"])),
+    ("v: event time in behn (b)", "where the work is", lambda s, v: ratio(s["V_us_b"], s["V_us"])),
+    ("v: event time in clay (c)", "where the work is", lambda s, v: ratio(s["V_us_c"], s["V_us"])),
+    ("v: event time in eyre (e)", "where the work is", lambda s, v: ratio(s["V_us_e"], s["V_us"])),
+    ("v: event time in gall (g)", "where the work is", lambda s, v: ratio(s["V_us_g"], s["V_us"])),
+    ("v: longest event, clay, seconds", "where the work is",
+     lambda s, v: (lambda m: None if m is None else m / 1e6)(
+         max((i["v"]["c"][2] for i in v if "c" in i.get("v", {})), default=None))),
     ("x: first failures / 1000 events", "log before compute",
      lambda s, v: ratio(1000 * s["X_all"], s["W_eves"])),
     ("x: of those, not deterministic", "log before compute",
@@ -390,7 +404,10 @@ PERCENT |= {"J: event compute / elapsed", "J: peek compute / elapsed",
             "J: peeks / tasks"}
 PERCENT |= {"w: peeks that followed work at once / peeks",
             "w: events that followed work at once / events",
-            "x: of those, not deterministic"}
+            "x: of those, not deterministic",
+            "v: event time in ames (a)", "v: event time in behn (b)",
+            "v: event time in clay (c)", "v: event time in eyre (e)",
+            "v: event time in gall (g)"}
 
 
 def mb(b):

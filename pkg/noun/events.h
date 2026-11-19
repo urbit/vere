@@ -294,6 +294,13 @@
       void
       u3e_measure_crud(u3_noun mot, c3_d use_d, c3_o rec_o);
 
+    /* u3e_measure_vane(): the event just computed was [ovo] (a wire and
+    **                     a card; retained). call after
+    **                     u3e_measure_work(), which has its time.
+    */
+      void
+      u3e_measure_vane(u3_noun ovo);
+
     /* u3e_dirty(): pages written since the last save, free pages
     **              included. call on the home road.
     */
