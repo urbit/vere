@@ -96,6 +96,10 @@ def parse(lines):
             v = ints(p[1:])
             if v is not None and len(v) >= 6:
                 cur["J"] = v
+        elif t == "x" and len(p) >= 5:
+            v = ints(p[2:5])
+            if v is not None:
+                cur.setdefault("x", {})[p[1]] = v
         elif t == "w":
             v = ints(p[1:])
             if v is not None and len(v) >= 7:
@@ -217,6 +221,10 @@ def sums(ivs):
             w = i["w"]
             s["W_pek"] += w[0]; s["W_bon"] += w[1]; s["W_eve"] += w[3]
             s["W_peks"] += i["J"][4]; s["W_eves"] += i["J"][0] + i["J"][2]
+        for k, x in i.get("x", {}).items():
+            s["X_all"] += x[0]; s["X_us"] += x[1]
+            if k != "exit":
+                s["X_non"] += x[0]
         if "A" in i:
             a = i["A"]
             s["A_fre"] += a[0]; s["A_cln"] += a[1]; s["A_alt"] += a[2]; s["A_reu"] += a[3]
@@ -309,6 +317,10 @@ METRICS = [
     ("w: processors", "host", lambda s, v: max(values(v, "w", 7), default=None)),
     ("w: load average (median)", "host",
      lambda s, v: (lambda m: None if m is None else m / 100)(median(values(v, "w", 6)))),
+    ("x: first failures / 1000 events", "log before compute",
+     lambda s, v: ratio(1000 * s["X_all"], s["W_eves"])),
+    ("x: of those, not deterministic", "log before compute",
+     lambda s, v: ratio(s["X_non"], s["X_all"])),
     ("first writes: page records", "C1 tier 2", lambda s, v: ratio(s["F_crag"], s["F"])),
     ("first writes: refcounts (w0)", "C3", lambda s, v: ratio(s["F_w0"], s["F"])),
     ("first writes: roc-lose", "C1 tier 2 / C3", lambda s, v: ratio(s["F_roclose"], s["F"])),
@@ -376,6 +388,9 @@ PERCENT |= {"G: gains on atoms / gains", "G: cancelled, atoms", "G: cancelled, c
             "Y: references to atoms / references"}
 PERCENT |= {"J: event compute / elapsed", "J: peek compute / elapsed",
             "J: peeks / tasks"}
+PERCENT |= {"w: peeks that followed work at once / peeks",
+            "w: events that followed work at once / events",
+            "x: of those, not deterministic"}
 
 
 def mb(b):

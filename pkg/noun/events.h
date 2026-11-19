@@ -287,6 +287,13 @@
       void
       u3e_measure_seen(void);
 
+    /* u3e_measure_crud(): an event's first attempt failed with [mot]
+    **                     after [use_d] microseconds. [rec_o] is c3y if
+    **                     its %crud was then computed.
+    */
+      void
+      u3e_measure_crud(u3_noun mot, c3_d use_d, c3_o rec_o);
+
     /* u3e_dirty(): pages written since the last save, free pages
     **              included. call on the home road.
     */

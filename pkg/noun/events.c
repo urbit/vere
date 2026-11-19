@@ -213,6 +213,8 @@ static struct {
                                 //  at once, the sum and the most of the
                                 //  bound on their wait; events that did;
                                 //  the longest run of work
+  c3_d   cru_d[8][3];           //  [cause] first failures this interval,
+                                //  their microseconds, those recovered
   c3_d   flt_d[2][2];           //  page faults (minor, major) so far, at
                                 //  the last save's end and this save's start
   c3_y*  alf_y;                 //  [pag] page records and allocation:
@@ -238,6 +240,12 @@ _ce_meas_us(void)
 **                last task's end counts as having followed it at once.
 */
 #define _CE_MEAS_BACK  2000
+
+/* _ce_cru_names: causes of an event's first failure (u3e_measure_crud()).
+*/
+static const c3_c* _ce_cru_names[8] = {
+  "exit", "meme", "alrm", "intr", "over", "oops", "evil", "other"
+};
 
 /* _ce_meas_load(): the host's 1-minute load average, times 100.
 */
@@ -547,6 +555,20 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
                  _ce_meas.wai_d[3], _ce_meas.wai_d[4], _ce_meas.pek_d,
                  _ce_meas_load(), (c3_d)_ce_meas_cpus());
 
+  //  x: events whose first attempt failed, by cause: how many, the
+  //  microseconds the failed attempts took, and how many were then
+  //  recovered (the %crud computed, and was logged in the event's
+  //  place). the J line counts a recovered event as computed, and
+  //  as failed only one that left nothing in the log
+  //
+  for ( i_w = 0; i_w < 8; i_w++ ) {
+    if ( _ce_meas.cru_d[i_w][0] ) {
+      fprintf(fil_u, "x %s %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     _ce_cru_names[i_w], _ce_meas.cru_d[i_w][0],
+                     _ce_meas.cru_d[i_w][1], _ce_meas.cru_d[i_w][2]);
+    }
+  }
+
   //  the save is work too: a message that came in during it waited
   //
   _ce_meas.end_d = _ce_meas_us();
@@ -701,6 +723,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   _ce_meas.tak_d = 0;
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
   memset(_ce_meas.wai_d, 0, sizeof(_ce_meas.wai_d));
+  memset(_ce_meas.cru_d, 0, sizeof(_ce_meas.cru_d));
   _ce_meas.lon_d = 0;
   _ce_meas.pek_d = 0;
 
@@ -1115,6 +1138,33 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
         _ce_meas.wai_d[3]++;
       }
       _ce_meas.bak_t = 0;
+    }
+  }
+}
+
+/* u3e_measure_crud(): an event's first attempt failed with [mot].
+*/
+void
+u3e_measure_crud(u3_noun mot, c3_d use_d, c3_o rec_o)
+{
+  if ( _ce_meas.on_t ) {
+    c3_w kin_w;
+
+    switch ( mot ) {
+      case c3__exit: kin_w = 0; break;
+      case c3__meme: kin_w = 1; break;
+      case c3__alrm: kin_w = 2; break;
+      case c3__intr: kin_w = 3; break;
+      case c3__over: kin_w = 4; break;
+      case c3__oops: kin_w = 5; break;
+      case c3__evil: kin_w = 6; break;
+      default:       kin_w = 7; break;
+    }
+
+    _ce_meas.cru_d[kin_w][0]++;
+    _ce_meas.cru_d[kin_w][1] += use_d;
+    if ( c3y == rec_o ) {
+      _ce_meas.cru_d[kin_w][2]++;
     }
   }
 }

@@ -515,15 +515,19 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
 
   {
     u3_noun pro;
+    c3_d  bef_d = uv_hrtime();
 
     if ( c3y == (ret_o = u3v_poke_sure(mil_w, u3k(*eve), &pro)) ) {
       *out = pro;
     }
     else if ( c3__evil == u3h(pro) ) {
+      u3e_measure_crud(c3__evil, (uv_hrtime() - bef_d) / 1000, c3n);
       *out = u3nc(pro, u3_nul);
     }
     else {
       u3_noun dud = pro;
+      u3_noun mot = u3h(dud);    //  compared, never read: safe once freed
+      c3_d  use_d = (uv_hrtime() - bef_d) / 1000;
 
       *eve = _mars_make_crud(*eve, u3k(dud));
 
@@ -534,6 +538,7 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
       else {
         *out = u3nt(dud, pro, u3_nul);
       }
+      u3e_measure_crud(mot, use_d, ret_o);
     }
   }
 
