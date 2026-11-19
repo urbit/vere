@@ -30,7 +30,10 @@ Log lines (one snapshot interval ends at each S line):
                                             this one, and during this one: minor (no
                                             I/O) and major (read from disk). a save maps
                                             the image again, so what the ship uses is
-                                            faulted back in afterwards. zeros on windows
+                                            faulted back in afterwards. zeros on windows.
+                                            on macos minor is faults less page-ins, and
+                                            a fault can page in a cluster, so it reads
+                                            low, and 0 where page-ins outran faults
   w <peeks-waited> <wait-bound-us> <longest-wait-bound-us> <events-waited>
     <longest-run-us> <longest-peek-us> <load-x100> <cpus>
                                             tasks that waited. a message the serf sees
