@@ -249,6 +249,18 @@ _ce_meas_us(void)
 */
 #define _CE_MEAS_BACK  2000
 
+/* _ce_meas_gap(): [now_d] less [was_d], or 0 if a count fell.
+**
+**   on macos, getrusage()'s minor faults are the task's faults less
+**   its page-ins, and one fault can page in a cluster. so the count
+**   falls when page-ins outrun faults, as they do during a save.
+*/
+static c3_d
+_ce_meas_gap(c3_d now_d, c3_d was_d)
+{
+  return ( now_d > was_d ) ? (now_d - was_d) : 0;
+}
+
 /* _ce_cru_names: causes of an event's first failure (u3e_measure_crud()).
 */
 static const c3_c* _ce_cru_names[8] = {
@@ -540,10 +552,10 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
 
     _ce_meas_faults(now_d);
     fprintf(fil_u, " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   _ce_meas.flt_d[1][0] - _ce_meas.flt_d[0][0],
-                   _ce_meas.flt_d[1][1] - _ce_meas.flt_d[0][1],
-                   now_d[0] - _ce_meas.flt_d[1][0],
-                   now_d[1] - _ce_meas.flt_d[1][1]);
+                   _ce_meas_gap(_ce_meas.flt_d[1][0], _ce_meas.flt_d[0][0]),
+                   _ce_meas_gap(_ce_meas.flt_d[1][1], _ce_meas.flt_d[0][1]),
+                   _ce_meas_gap(now_d[0], _ce_meas.flt_d[1][0]),
+                   _ce_meas_gap(now_d[1], _ce_meas.flt_d[1][1]));
     _ce_meas.flt_d[0][0] = now_d[0];
     _ce_meas.flt_d[0][1] = now_d[1];
   }
