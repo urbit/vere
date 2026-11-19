@@ -44,6 +44,16 @@ Log lines (one snapshot interval ends at each S line):
                                             once. the longest run and the longest peek.
                                             the host's 1-minute load average times 100
                                             (0 on windows), and its processors online
+  x <cause> <events> <failed-us> <recovered>
+                                            events whose first attempt failed, by cause
+                                            (exit: a deterministic crash. meme, alrm,
+                                            intr, over: memory, timer, interrupt, stack.
+                                            oops, evil, other): how many, the
+                                            microseconds the failed attempts took, and
+                                            how many were recovered, the %crud computed
+                                            and logged in the event's place. J counts a
+                                            recovered event as computed, and as failed
+                                            only one that left nothing in the log
   Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
                                             a sample of the interval so far, written
                                             at each power of two tasks, before the
@@ -120,6 +130,7 @@ def new_interval():
         "U": 0,
         "J": None,
         "w": None,
+        "x": {},
         "Q": [],
         "Q0": None,
         "A": None,
@@ -214,6 +225,12 @@ def parse(path):
                 try:
                     cur["w"] = tuple(int(x) for x in line.split()[1:])
                 except ValueError:
+                    continue
+            elif t == "x" and cur is not None:
+                p = line.split()
+                try:
+                    cur["x"][p[1]] = tuple(int(x) for x in p[2:5])
+                except (ValueError, IndexError):
                     continue
             elif t == "A" and cur is not None:
                 cur["A"] = tuple(int(x) for x in line.split()[1:])
@@ -556,6 +573,22 @@ def main():
                   f"{q(run, .5):.2f}, p90 {q(run, .9):.2f}, max {max(run):.2f}")
             print(f"  longest peek in an interval, ms: median {q(lpk, .5):.1f}, "
                   f"p90 {q(lpk, .9):.1f}, max {max(lpk):.1f}")
+        if wws:
+            xs = defaultdict(lambda: [0, 0, 0])
+            for i in wws:
+                for k, v in i["x"].items():
+                    if len(v) == 3:
+                        for j in range(3):
+                            xs[k][j] += v[j]
+            ev = sum(i["J"][0] + i["J"][2] for i in wws)
+            n = sum(v[0] for v in xs.values())
+            print("\n== events whose first attempt failed ==")
+            print(f"  {n} of {ev} events ({pct(n, ev).strip()}); only exit is"
+                  " deterministic")
+            if xs:
+                print(f"  {'cause':<8}{'events':>10}{'seconds':>10}{'recovered':>11}")
+                for k, v in sorted(xs.items(), key=lambda kv: -kv[1][0]):
+                    print(f"  {k:<8}{v[0]:>10}{v[1] / 1e6:>10.1f}{v[2]:>11}")
         #  the interval so far, at each power of two tasks
         by_n = defaultdict(list)
         for i in wis:
