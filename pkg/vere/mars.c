@@ -628,6 +628,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         u3e_Phase = u3e_pha_feck;
         pro = _mars_sure_feck(mar_u, pre_w, pro);
 
+        u3e_measure_vane(u3t(job));
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
       }
       else {
