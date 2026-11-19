@@ -44,6 +44,13 @@ Log lines (one snapshot interval ends at each S line):
                                             once. the longest run and the longest peek.
                                             the host's 1-minute load average times 100
                                             (0 on windows), and its processors online
+  c <events> <held-us> <longest-held-us> <releases>
+                                            effects held for the log. an event's effects
+                                            go to the king once it is committed, and the
+                                            serf sees a commit only between tasks. events
+                                            whose effects were released, the microseconds
+                                            from computing each to releasing its effects,
+                                            the longest, and the times any were released
   v <vane> <events> <event-us> <longest-us> <longest-tag>
                                             events computed, by the vane their wire
                                             names (a to z; - for none, as on a %crud):
@@ -136,6 +143,7 @@ def new_interval():
         "J": None,
         "w": None,
         "x": {},
+        "c": None,
         "v": {},
         "Q": [],
         "Q0": None,
@@ -230,6 +238,11 @@ def parse(path):
             elif t == "w" and cur is not None:
                 try:
                     cur["w"] = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
+            elif t == "c" and cur is not None:
+                try:
+                    cur["c"] = tuple(int(x) for x in line.split()[1:])
                 except ValueError:
                     continue
             elif t == "v" and cur is not None:
@@ -585,6 +598,18 @@ def main():
                   f"{q(run, .5):.2f}, p90 {q(run, .9):.2f}, max {max(run):.2f}")
             print(f"  longest peek in an interval, ms: median {q(lpk, .5):.1f}, "
                   f"p90 {q(lpk, .9):.1f}, max {max(lpk):.1f}")
+        cws = [i for i in wis if i["c"] and len(i["c"]) >= 4 and i["c"][0]]
+        if cws:
+            c = [sum(i["c"][j] for i in cws) for j in (0, 1, 3)]
+            eus = sum(i["J"][1] for i in cws)
+            print("\n== effects held for the log ==")
+            print("  (from an event's computing to its effects' release: the commit,"
+                  "\n   and any task the serf ran before it saw the commit)")
+            print(f"  events released: {c[0]}, {c[0] / c[2] if c[2] else 0:.2f} at a time")
+            print(f"  held, ms: mean {c[1] / 1e3 / c[0]:.2f}, longest "
+                  f"{max(i['c'][2] for i in cws) / 1e3:.1f}")
+            print(f"  held against computed: {c[1] / 1e6:.1f} s against {eus / 1e6:.1f} s "
+                  f"({c[1] / eus if eus else 0:.2f} to 1)")
         if wws and any(i["v"] for i in wws):
             vs = defaultdict(lambda: [0, 0, 0, "-"])
             for i in wws:

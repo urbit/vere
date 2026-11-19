@@ -96,6 +96,10 @@ def parse(lines):
             v = ints(p[1:])
             if v is not None and len(v) >= 6:
                 cur["J"] = v
+        elif t == "c":
+            v = ints(p[1:])
+            if v is not None and len(v) >= 4:
+                cur["c"] = v
         elif t == "v" and len(p) >= 5:
             v = ints(p[2:5])
             if v is not None:
@@ -225,6 +229,10 @@ def sums(ivs):
             w = i["w"]
             s["W_pek"] += w[0]; s["W_bon"] += w[1]; s["W_eve"] += w[3]
             s["W_peks"] += i["J"][4]; s["W_eves"] += i["J"][0] + i["J"][2]
+        if "c" in i and "J" in i:
+            c = i["c"]
+            s["HL_n"] += c[0]; s["HL_us"] += c[1]; s["HL_rel"] += c[3]
+            s["HL_eus"] += i["J"][1]
         for k, x in i.get("v", {}).items():
             s["V_us"] += x[1]; s["V_us_" + k] += x[1]
         for k, x in i.get("x", {}).items():
@@ -331,6 +339,14 @@ METRICS = [
     ("v: longest event, clay, seconds", "where the work is",
      lambda s, v: (lambda m: None if m is None else m / 1e6)(
          max((i["v"]["c"][2] for i in v if "c" in i.get("v", {})), default=None))),
+    ("c: effects held, ms (mean)", "log before compute",
+     lambda s, v: (lambda m: None if m is None else m / 1e3)(ratio(s["HL_us"], s["HL_n"]))),
+    ("c: effects held, ms (max)", "log before compute",
+     lambda s, v: (lambda m: None if m is None else m / 1e3)(max(values(v, "c", 2), default=None))),
+    ("c: time held / time computed", "log before compute",
+     lambda s, v: ratio(s["HL_us"], s["HL_eus"])),
+    ("c: events per release", "log before compute",
+     lambda s, v: ratio(s["HL_n"], s["HL_rel"])),
     ("x: first failures / 1000 events", "log before compute",
      lambda s, v: ratio(1000 * s["X_all"], s["W_eves"])),
     ("x: of those, not deterministic", "log before compute",

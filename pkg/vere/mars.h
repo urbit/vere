@@ -12,6 +12,7 @@
         struct _u3_gift* nex_u;           //  next response
         c3_d             len_d;           //  length
         c3_y*            hun_y;           //  bytes
+        c3_d             tim_d;           //  when queued (effects), ns
         enum {                            //  type
           u3_gift_fact_e = 0,             //    effects
           u3_gift_rest_e = 1              //    any
