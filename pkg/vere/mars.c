@@ -260,6 +260,7 @@ _mars_fact(u3_mars* mar_u,
     gif_u->nex_u = 0;
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
+    gif_u->tim_d = uv_hrtime();
 
     u3e_Phase = u3e_pha_jam;
     u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
@@ -515,15 +516,19 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
 
   {
     u3_noun pro;
+    c3_d  bef_d = uv_hrtime();
 
     if ( c3y == (ret_o = u3v_poke_sure(mil_w, u3k(*eve), &pro)) ) {
       *out = pro;
     }
     else if ( c3__evil == u3h(pro) ) {
+      u3e_measure_crud(c3__evil, (uv_hrtime() - bef_d) / 1000, c3n);
       *out = u3nc(pro, u3_nul);
     }
     else {
       u3_noun dud = pro;
+      u3_noun mot = u3h(dud);    //  compared, never read: safe once freed
+      c3_d  use_d = (uv_hrtime() - bef_d) / 1000;
 
       *eve = _mars_make_crud(*eve, u3k(dud));
 
@@ -534,6 +539,7 @@ _mars_poke(c3_w mil_w, u3_noun* eve, u3_noun* out)
       else {
         *out = u3nt(dud, pro, u3_nul);
       }
+      u3e_measure_crud(mot, use_d, ret_o);
     }
   }
 
@@ -586,6 +592,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3_noun tim, job;
       c3_h  mil_h;
       c3_w  pre_w;
+      c3_d  bef_d;
 
       if ( (c3n == u3r_cell(dat, &tim, &job)) ||
            (c3n == u3r_safe_half(tim, &mil_h)) )
@@ -611,7 +618,9 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       mar_u->sen_d++;
 
       u3e_Phase = u3e_pha_poke;
+      bef_d = uv_hrtime();
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
+        u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
         mar_u->dun_d = mar_u->sen_d;
         u3e_Phase = u3e_pha_mug_roc;
         mar_u->mug_h = u3r_mug(u3A->roc);
@@ -620,9 +629,11 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
         u3e_Phase = u3e_pha_feck;
         pro = _mars_sure_feck(mar_u, pre_w, pro);
 
+        u3e_measure_vane(u3t(job));
         _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
       }
       else {
+        u3e_measure_work(u3e_wok_fail, (uv_hrtime() - bef_d) / 1000);
         mar_u->sen_d = mar_u->dun_d;
         u3z(job);
         _mars_gift(mar_u, u3nt(c3__poke, c3n, pro));
@@ -644,7 +655,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 
       u3k(sam); u3z(jar);
       u3e_Phase = u3e_pha_peek;
-      _mars_gift(mar_u, u3nc(c3__peek, _mars_peek(mil_h, sam)));
+      {
+        c3_d bef_d = uv_hrtime();
+
+        pro = _mars_peek(mil_h, sam);
+        u3e_measure_work(u3e_wok_peek, (uv_hrtime() - bef_d) / 1000);
+      }
+      _mars_gift(mar_u, u3nc(c3__peek, pro));
     } break;
 
     case c3__sync: {
@@ -880,6 +897,7 @@ _mars_flush(u3_mars* mar_u)
 top:
   {
     u3_gift* gif_u = mar_u->gif_u.ext_u;
+    c3_o     fir_o = c3y;
 
     //  XX gather i/o
     //
@@ -887,6 +905,10 @@ top:
           && (  (u3_gift_rest_e == gif_u->sat_e)
              || (gif_u->eve_d <= mar_u->log_u->dun_d)) )
     {
+      if ( u3_gift_fact_e == gif_u->sat_e ) {
+        u3e_measure_hold((uv_hrtime() - gif_u->tim_d) / 1000, fir_o);
+        fir_o = c3n;
+      }
       u3_newt_send(mar_u->out_u, gif_u->len_d, gif_u->hun_y);
 
       mar_u->gif_u.ext_u = gif_u->nex_u;
@@ -956,6 +978,8 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
   //
   if ( u3_mars_work_e == mar_u->sat_e ) {
     c3_d    eve_d = u3A->eve_d;
+
+    u3e_measure_seen();
     u3e_Phase     = u3e_pha_cue;
     u3_weak jar   = u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
 
@@ -1022,6 +1046,7 @@ static u3_weak
 _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 {
   c3_y    pha_y = u3e_Phase;
+  c3_d    bef_d = uv_hrtime();
   u3_noun gon, tag, dat;
 
   //  measurement: tagged as in u3v_poke_sure()
@@ -1033,6 +1058,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   //  event failed, produce trace
   //
   if ( u3_blip != tag ) {
+    u3e_measure_work(u3e_wok_fail, (uv_hrtime() - bef_d) / 1000);
     u3e_Phase = pha_y;
     return gon;
   }
@@ -1068,6 +1094,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
   u3z(gon);
   u3a_defer_close();
   u3e_Phase = pha_y;
+  u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
   u3e_measure_event(u3A->eve_d, "poke");
   return u3_none;
 }

@@ -18,6 +18,69 @@ Log lines (one snapshot interval ends at each S line):
   S <eve> <time> <patch-pages> <skipped-free> <tasks>
   F <phase> <kind> <chunk-log2> <pages>     first write that dirtied a patch page
   U <pages>                                 patch pages with no fault (fresh pages)
+  J <events> <event-us> <failed> <failed-us> <peeks> <peek-us> <longest-event-us> <save-us>
+    <minor-faults> <major-faults> <save-minor-faults> <save-major-faults>
+                                            events computed, failed events and peeks
+                                            in the interval, and the microseconds each
+                                            took. replay after a crash recomputes the
+                                            events only. then the longest event, and
+                                            how long the save that ended the interval
+                                            took (the serf does no work meanwhile).
+                                            then page faults between the last save and
+                                            this one, and during this one: minor (no
+                                            I/O) and major (read from disk). a save maps
+                                            the image again, so what the ship uses is
+                                            faulted back in afterwards. zeros on windows.
+                                            on macos minor is faults less page-ins, and
+                                            a fault can page in a cluster, so it reads
+                                            low, and 0 where page-ins outran faults
+  w <peeks-waited> <wait-bound-us> <longest-wait-bound-us> <events-waited>
+    <longest-run-us> <longest-peek-us> <load-x100> <cpus>
+                                            tasks that waited. a message the serf sees
+                                            within 2 ms of its last task's end (or a
+                                            save's) was most likely queued behind it; a
+                                            run is tasks so joined. peeks that followed
+                                            work at once, with the sum and the most of
+                                            the bound on their wait (the run's start to
+                                            when the peek was seen: the wait is between
+                                            zero and that). events that followed work at
+                                            once. the longest run and the longest peek.
+                                            the host's 1-minute load average times 100
+                                            (0 on windows), and its processors online
+  c <events> <held-us> <longest-held-us> <releases>
+                                            effects held for the log. an event's effects
+                                            go to the king once it is committed, and the
+                                            serf sees a commit only between tasks. events
+                                            whose effects were released, the microseconds
+                                            from computing each to releasing its effects,
+                                            the longest, and the times any were released
+  v <vane> <events> <event-us> <longest-us> <longest-tag>
+                                            events computed, by the vane their wire
+                                            names (a to z; - for none, as on a %crud):
+                                            how many, their microseconds, the longest,
+                                            and the longest's card tag
+  x <cause> <events> <failed-us> <recovered>
+                                            events whose first attempt failed, by cause
+                                            (exit: a deterministic crash. meme, alrm,
+                                            intr, over: memory, timer, interrupt, stack.
+                                            oops, evil, other): how many, the
+                                            microseconds the failed attempts took, and
+                                            how many were recovered, the %crud computed
+                                            and logged in the event's place. J counts a
+                                            recovered event as computed, and as failed
+                                            only one that left nothing in the log
+  Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
+                                            a sample of the interval so far, written
+                                            at each power of two tasks, before the
+                                            interval's S line
+  Q 0 <atom-gains> <atom-cancelled> <atom-refs> <atom-same-position> <effect-refs> <effect-atom-refs>
+                                            after the S line, the G and Y lines by kind:
+                                            deferred gains on atoms and those cancelled;
+                                            alignment's references to atoms and those at
+                                            the same position; home nouns referenced from
+                                            the event's effects (which the alignment walk
+                                            leaves out) and those that are atoms. atoms
+                                            that fit a word at 64 bits are allocated at 32
   R <table> <exits-home> <empty-home> <entries-home> <exits-all> <empty-all> <entries-all>
   K <jet> <declined> <no-jet> <unregistered>      (jb/measure only)
   B <home|inner> <nock2|site> <cur-ptr> <cur-cur> <cur-sen> <anc-ptr> <anc-cur> <anc-sen> <miss>
@@ -26,9 +89,13 @@ Log lines (one snapshot interval ends at each S line):
                                             call-site battery checks (jb/measure only)
   T <war> <cod> <han> <bas> <byc> <per> <for> <dup> <memo>
                                             home-road table entries at the snapshot
-  C <reclaims> <byc-cleared> <han-cleared> [<dup-before-prune> <dup-pruned>]
+  C <reclaims> <byc-cleared> <han-cleared> [<dup-before-prune> <dup-pruned>
+    [<cap-clears> <cap-byc-cleared>]]
                                             u3m_reclaim() calls since the last snapshot
-                                            (the dedup-prune fields: older logs only)
+                                            (the dedup-prune fields: older logs only,
+                                            now zeros); then clears of the bytecode
+                                            table at its cap, which don't go through
+                                            u3m_reclaim(), and the programs they cleared
   A <record-frees> <clean-allocs> <with-dirty-room> <frees-then-allocated>
                                             home-road page records and allocation
   M <resident> <anonymous> <file-backed> <swapped>
@@ -76,6 +143,13 @@ def new_interval():
         "patch": 0, "skip": 0, "tasks": 0, "eve": 0,
         "F": defaultdict(int),
         "U": 0,
+        "J": None,
+        "w": None,
+        "x": {},
+        "c": None,
+        "v": {},
+        "Q": [],
+        "Q0": None,
         "A": None,
         "M": None,
         "R": {},
@@ -102,6 +176,7 @@ def parse(path):
     intervals = []
     ops = []
     cur_events = []
+    cur_samples = []
     cur = None
     header = ""
     with open(path) as f:
@@ -148,6 +223,43 @@ def parse(path):
                 cur["F"][(pha, kin, int(log2))] += int(n)
             elif t == "U" and cur is not None:
                 cur["U"] = int(line.split()[1])
+                #  the samples logged since the last S line are this interval's
+                cur["Q"] = cur_samples
+                cur_samples = []
+            elif t == "Q":
+                try:
+                    v = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
+                if len(v) >= 7 and v[0] == 0:
+                    if cur is not None:
+                        cur["Q0"] = v[1:]
+                elif len(v) >= 6:
+                    cur_samples.append(v)
+            elif t == "J" and cur is not None:
+                cur["J"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "w" and cur is not None:
+                try:
+                    cur["w"] = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
+            elif t == "c" and cur is not None:
+                try:
+                    cur["c"] = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
+            elif t == "v" and cur is not None:
+                p = line.split()
+                try:
+                    cur["v"][p[1]] = tuple(int(x) for x in p[2:5]) + (p[5],)
+                except (ValueError, IndexError):
+                    continue
+            elif t == "x" and cur is not None:
+                p = line.split()
+                try:
+                    cur["x"][p[1]] = tuple(int(x) for x in p[2:5])
+                except (ValueError, IndexError):
+                    continue
             elif t == "A" and cur is not None:
                 cur["A"] = tuple(int(x) for x in line.split()[1:])
             elif t == "M" and cur is not None:
@@ -422,6 +534,148 @@ def main():
             v = [i["T"][j] for i in tis]
             sv = sorted(v)
             print(f"  {name:<6} {sv[0]:>9} {sv[len(sv) // 2]:>9} {sv[-1]:>9} {v[0]:>9} {v[-1]:>9}")
+    wis = [i for i in intervals if i["J"] and len(i["J"]) >= 6]
+    if wis:
+        def q(v, f):
+            v = sorted(v)
+            return v[min(len(v) - 1, int(f * len(v)))]
+        secs = sum(i["secs"] for i in wis)
+        tasks = sum(i["tasks"] for i in wis)
+        eve, eus, fal, fus, pek, pus = (sum(i["J"][j] for i in wis) for j in range(6))
+        per = [i["J"][1] / 1e6 for i in wis]
+        print("\n== work per snapshot interval ==")
+        print("  (replay after a crash recomputes the events since the last"
+              " snapshot, not the peeks)")
+        print(f"  {'':<16}{'count':>12}{'seconds':>12}{'ms each':>10}{'of elapsed':>12}")
+        for nam, n, us in (("events", eve, eus), ("failed events", fal, fus),
+                           ("peeks", pek, pus)):
+            print(f"  {nam:<16}{n:>12}{us / 1e6:>12.1f}"
+                  f"{us / 1e3 / n if n else 0:>10.2f}{pct(us / 1e6, secs):>12}")
+        print(f"  other tasks: {tasks - eve - fal - pek} of {tasks}")
+        print(f"  event seconds per interval: median {q(per, .5):.1f}, "
+              f"p90 {q(per, .9):.1f}, max {max(per):.1f}")
+        sis = [i for i in wis if len(i["J"]) >= 8]
+        if sis:
+            lon = [i["J"][6] / 1e6 for i in sis]
+            sav = [i["J"][7] / 1e3 for i in sis]
+            pgs = sum(i["patch"] for i in sis)
+            print(f"  longest event in an interval, seconds: median {q(lon, .5):.2f}, "
+                  f"p90 {q(lon, .9):.2f}, max {max(lon):.2f}")
+            print(f"  save, ms: median {q(sav, .5):.0f}, p90 {q(sav, .9):.0f}, "
+                  f"max {max(sav):.0f}; {sum(sav) / pgs if pgs else 0:.3f} ms per patch page; "
+                  f"{pct(sum(sav) / 1e3, sum(i['secs'] for i in sis)).strip()} of elapsed")
+        fis = [i for i in wis if len(i["J"]) >= 12]
+        if fis:
+            mn = [i["J"][8] for i in fis]; mj = [i["J"][9] for i in fis]
+            pgs = sum(i["patch"] for i in fis)
+            print(f"  page faults between saves: minor median {q(mn, .5)}, max {max(mn)} "
+                  f"({sum(mn) / pgs if pgs else 0:.1f} per patch page); "
+                  f"major median {q(mj, .5)}, max {max(mj)}, "
+                  f"{sum(mj) / (sum(i['secs'] for i in fis) / 3600 or 1):.0f} an hour")
+            print(f"  page faults during saves: minor {sum(i['J'][10] for i in fis)}, "
+                  f"major {sum(i['J'][11] for i in fis)}")
+        wws = [i for i in wis if i["w"] and len(i["w"]) >= 7]
+        if wws:
+            w = [sum(i["w"][j] for i in wws) for j in range(4)]
+            pk = sum(i["J"][4] for i in wws)
+            ev = sum(i["J"][0] + i["J"][2] for i in wws)
+            lod = [i["w"][6] / 100 for i in wws]
+            print("\n== waiting behind other work ==")
+            print("  (a task counts as waiting if the serf saw it within 2 ms of"
+                  " the last task's end;\n   the bound on a peek's wait is the"
+                  " time from the run's start to when it was seen)")
+            cpu = sorted(set(i["w"][7] for i in wws if len(i["w"]) > 7))
+            print(f"  host: {'/'.join(str(c) for c in cpu) or '?'} processors; "
+                  f"load average median "
+                  f"{q(lod, .5):.2f}, p90 {q(lod, .9):.2f}, max {max(lod):.2f}")
+            print(f"  peeks that followed work at once: {w[0]} of {pk} "
+                  f"({pct(w[0], pk).strip()})")
+            if w[0]:
+                print(f"    bound on their wait, ms: mean {w[1] / 1e3 / w[0]:.2f}, "
+                      f"longest {max(i['w'][2] for i in wws) / 1e3:.1f}")
+            print(f"  events that followed work at once: {w[3]} of {ev} "
+                  f"({pct(w[3], ev).strip()})")
+            run = [i["w"][4] / 1e6 for i in wws]
+            lpk = [i["w"][5] / 1e3 for i in wws]
+            print(f"  longest run of work in an interval, seconds: median "
+                  f"{q(run, .5):.2f}, p90 {q(run, .9):.2f}, max {max(run):.2f}")
+            print(f"  longest peek in an interval, ms: median {q(lpk, .5):.1f}, "
+                  f"p90 {q(lpk, .9):.1f}, max {max(lpk):.1f}")
+        cws = [i for i in wis if i["c"] and len(i["c"]) >= 4 and i["c"][0]]
+        if cws:
+            c = [sum(i["c"][j] for i in cws) for j in (0, 1, 3)]
+            eus = sum(i["J"][1] for i in cws)
+            print("\n== effects held for the log ==")
+            print("  (from an event's computing to its effects' release: the commit,"
+                  "\n   and any task the serf ran before it saw the commit)")
+            print(f"  events released: {c[0]}, {c[0] / c[2] if c[2] else 0:.2f} at a time")
+            print(f"  held, ms: mean {c[1] / 1e3 / c[0]:.2f}, longest "
+                  f"{max(i['c'][2] for i in cws) / 1e3:.1f}")
+            print(f"  held against computed: {c[1] / 1e6:.1f} s against {eus / 1e6:.1f} s "
+                  f"({c[1] / eus if eus else 0:.2f} to 1)")
+        if wws and any(i["v"] for i in wws):
+            vs = defaultdict(lambda: [0, 0, 0, "-"])
+            for i in wws:
+                for k, v in i["v"].items():
+                    vs[k][0] += v[0]; vs[k][1] += v[1]
+                    if v[2] >= vs[k][2]:
+                        vs[k][2] = v[2]; vs[k][3] = v[3]
+            tot = sum(v[1] for v in vs.values())
+            print("\n== events by vane ==")
+            print(f"  {'vane':<6}{'events':>10}{'seconds':>10}{'of events':>11}"
+                  f"{'ms each':>10}{'longest s':>11}  its card")
+            for k, v in sorted(vs.items(), key=lambda kv: -kv[1][1]):
+                print(f"  {k:<6}{v[0]:>10}{v[1] / 1e6:>10.1f}{pct(v[1], tot):>11}"
+                      f"{v[1] / 1e3 / v[0]:>10.2f}{v[2] / 1e6:>11.2f}  %{v[3]}")
+        if wws:
+            xs = defaultdict(lambda: [0, 0, 0])
+            for i in wws:
+                for k, v in i["x"].items():
+                    if len(v) == 3:
+                        for j in range(3):
+                            xs[k][j] += v[j]
+            ev = sum(i["J"][0] + i["J"][2] for i in wws)
+            n = sum(v[0] for v in xs.values())
+            print("\n== events whose first attempt failed ==")
+            print(f"  {n} of {ev} events ({pct(n, ev).strip()}); only exit is"
+                  " deterministic")
+            if xs:
+                print(f"  {'cause':<8}{'events':>10}{'seconds':>10}{'recovered':>11}")
+                for k, v in sorted(xs.items(), key=lambda kv: -kv[1][0]):
+                    print(f"  {k:<8}{v[0]:>10}{v[1] / 1e6:>10.1f}{v[2]:>11}")
+        #  the interval so far, at each power of two tasks
+        by_n = defaultdict(list)
+        for i in wis:
+            for s in i["Q"]:
+                by_n[s[0]].append(s)
+        if by_n:
+            print("  within an interval, after N tasks (medians; intervals that got that far):")
+            print(f"  {'tasks':>10}{'intervals':>11}{'event s':>10}{'peek s':>9}"
+                  f"{'dirty pages':>13}{'dirty MB':>10}{'p90 pages':>11}")
+            for n in sorted(by_n):
+                ss = by_n[n]
+                dit = [s[5] for s in ss]
+                print(f"  {n:>10}{len(ss):>11}{q([s[2] for s in ss], .5) / 1e6:>10.2f}"
+                      f"{q([s[4] for s in ss], .5) / 1e6:>9.2f}"
+                      f"{q(dit, .5):>13}{q(dit, .5) * 16 / 1024:>10.1f}{q(dit, .9):>11}")
+
+    kis = [i for i in intervals if i["Q0"] and i["G"] and i["Y"]]
+    if kis and any(i["G"][0] for i in kis):
+        k = [sum(i["Q0"][j] for i in kis) for j in range(6)]
+        kg = sum(i["G"][1] for i in kis); kc = sum(i["G"][4] for i in kis)
+        kw = sum(i["G"][0] for i in kis) or 1
+        ya = sum(i["Y"][0] for i in kis); yp = sum(i["Y"][1] for i in kis)
+        print("\n== deferral and alignment by kind ==")
+        print("  (atoms that fit a word at 64 bits are allocated, and counted, at 32)")
+        print(f"  deferred gains: atoms {k[0]} ({pct(k[0], kg).strip()}), "
+              f"{pct(k[1], k[0]).strip()} cancelled; cells {kg - k[0]}, "
+              f"{pct(kc - k[1], kg - k[0]).strip()} cancelled")
+        print(f"  alignment's references: atoms {k[2]} ({pct(k[2], ya).strip()}), "
+              f"{pct(k[3], k[2]).strip()} at the same position; cells {ya - k[2]}, "
+              f"{pct(yp - k[3], ya - k[2]).strip()}")
+        print(f"  home nouns referenced from effects (not in the alignment walk): "
+              f"{k[4] / kw:.0f} per window, {pct(k[5], k[4]).strip()} atoms")
+
     cis = [i for i in intervals if i["C"]]
     if cis:
         rec = sum(i["C"][0] for i in cis)
@@ -430,9 +684,14 @@ def main():
         han = sum(i["C"][2] for i in cis)
         #  older logs, from the on-loom set's periodic prune
         pre = sum(i["C"][3] for i in cis if len(i["C"]) > 4)
-        pru = sum(i["C"][4] for i in cis if len(i["C"]) > 4)
+        pru = sum(i["C"][4] for i in cis if len(i["C"]) > 4)  # zeros in newer logs
         print("\n== u3m_reclaim() ==")
         print(f"  reclaims: {rec}   tasks per reclaim: {tasks / rec if rec else 0:.0f}")
+        cap = sum(i["C"][5] for i in cis if len(i["C"]) > 6)
+        if any(len(i["C"]) > 6 for i in cis):
+            capn = sum(i["C"][6] for i in cis if len(i["C"]) > 6)
+            print(f"  bytecode cap clears: {cap}"
+                  + (f", {capn / cap:.0f} programs each" if cap else ""))
         if rec:
             print(f"  per reclaim: bytecode entries cleared {byc / rec:.0f}, "
                   f"hank entries cleared {han / rec:.0f}")

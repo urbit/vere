@@ -575,6 +575,7 @@ _ca_defer_gain(u3_noun dog)
   if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
     u3e_Meter.dfg_d++;
+    if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
     return 1;
   }
 
@@ -593,6 +594,7 @@ _ca_defer_gain(u3_noun dog)
 
   u3e_Meter.dfg_d++;
   u3e_Meter.dfn_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
   {
     c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
 
@@ -622,6 +624,7 @@ _ca_defer_lose(u3_noun dog)
   }
 
   u3e_Meter.dfc_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfb_d++;
   return 1;
 }
 
@@ -661,8 +664,23 @@ _ca_defer_lose_cold(u3_noun dog)
 void
 u3a_defer_open(void)
 {
+  //  U3_DEFER_OFF=1 in the environment leaves every window shut, so
+  //  gains are written as they happen: for comparing a live ship with
+  //  and without deferral (its measurement log then has no windows)
+  //
+  static c3_ws off_ws = -1;
+
   u3_assert( !_ca_defer_u.ope_t );
   u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( off_ws < 0 ) {
+    c3_c* env_c = getenv("U3_DEFER_OFF");
+    off_ws = ( env_c && ('1' == *env_c) ) ? 1 : 0;
+  }
+
+  if ( off_ws ) {
+    return;
+  }
 
   if ( !_ca_defer_u.ini_t ) {
     c3_w pag_w = (c3_w)(u3C.wor_i >> u3a_page);
