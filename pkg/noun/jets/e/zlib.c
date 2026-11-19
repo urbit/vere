@@ -64,7 +64,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_y* input = (c3_y*)u3r_view_bytes(&vue_u) + pos_w;
+  c3_y* input = (c3_y*)u3r_view_bytes(&vue_u, c3y) + pos_w;
 
   int ret;
   z_stream strm;

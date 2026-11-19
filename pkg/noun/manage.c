@@ -10,6 +10,7 @@
 #include <signal.h>
 #if defined(U3_OS_osx)
 #include <execinfo.h>
+#include <sys/sysctl.h>
 #endif
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -257,8 +258,8 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
 
-  //  the discarded roads' blob hands go with them; the kid chain is
-  //  the only path to their lists, so drain before cutting it
+  //  the discarded roads' blob mappings go with them, before the kid
+  //  chain that names those roads is cut
   //
   u3b_drain_kids();
   u3R->kid_p = 0;
@@ -802,11 +803,6 @@ _find_home(void)
   //  no hold outlives one.  ownership is the snapshot's, kept
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);
-
-  //  the home road never lists blob hands in the loom; anything a
-  //  snapshot carries there belongs to a dead process
-  //
-  u3H->rod_u.bob_p = 0;
 }
 
 /* u3m_pave(): instantiate or activate image.
@@ -1300,7 +1296,7 @@ u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
-  //  the road's blob hands, retained for reuse since it leapt, go with
+  //  the road's blob mappings, kept for reuse since it leapt, go with
   //  its frames.  this is the one exit every road takes except a
   //  signal unwind, which drains the kid chain itself.
   //
@@ -2520,7 +2516,23 @@ _cm_limits(void)
     getrlimit(RLIMIT_NOFILE, &rlm);
 
   #ifdef U3_OS_osx
-    rlm.rlim_cur = c3_min(OPEN_MAX, rlm.rlim_max);
+    //  the kernel stops open() at kern.maxfilesperproc, whatever the
+    //  rlimit says; OPEN_MAX if it can't be read.  never lower a limit
+    //  the parent already raised
+    //
+    {
+      c3_i   per_i = 0;
+      size_t len_i = sizeof(per_i);
+      rlim_t max_t = OPEN_MAX;
+
+      if (  (0 == sysctlbyname("kern.maxfilesperproc", &per_i, &len_i, 0, 0))
+         && (0 < per_i) )
+      {
+        max_t = (rlim_t)per_i;
+      }
+
+      rlm.rlim_cur = c3_max(rlm.rlim_cur, c3_min(max_t, rlm.rlim_max));
+    }
   #else
     rlm.rlim_cur = rlm.rlim_max;
   #endif

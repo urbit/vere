@@ -196,7 +196,16 @@ _cttp_bod_from_octs(u3_noun oct)
   {
     u3_hbod* bod_u = c3_malloc(1 + len_w + sizeof(*bod_u));
 
-    u3r_view_copy(&vue_u, 0, bod_u->hun_y, len_w);
+    c3_z exp_z = ( vue_u.byt_d < len_w ) ? (c3_z)vue_u.byt_d : len_w;
+
+    if ( exp_z != u3r_view_copy(&vue_u, 0, bod_u->hun_y, len_w, c3n) ) {
+      u3l_log("cttp: blob " U3A_BID_FMT " short read",
+              u3a_bob_mug(u3t(oct)), u3a_bob_seq(u3t(oct)));
+      u3r_view_done(&vue_u);
+      c3_free(bod_u);
+      u3z(oct);
+      return 0;
+    }
     u3r_view_done(&vue_u);
 
     bod_u->hun_y[len_w] = 0;

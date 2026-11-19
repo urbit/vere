@@ -484,7 +484,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
                  : ( (vue_u.byt_d - off_d) < ask_z ) ? (c3_z)(vue_u.byt_d - off_d)
                  : ask_z;
 
-      if ( exp_z != u3r_view_copy(&vue_u, off_d, buf_y, ask_z) ) {
+      if ( exp_z != u3r_view_copy(&vue_u, off_d, buf_y, ask_z, c3n) ) {
         u3l_log("error reading the content for %s: short read", pax_c);
         ok_o = c3n;
         break;

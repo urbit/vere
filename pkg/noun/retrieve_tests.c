@@ -1345,7 +1345,7 @@ _test_view(void)
 
     u3r_view vue_u;
     u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
 
     if ( vue_u.byt_d != src_w ) {
       fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_d
@@ -1383,7 +1383,7 @@ _test_view(void)
 
     u3r_view vue_u;
     u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
 
     if ( vue_u.byt_d != src_w ) {
       fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_d
@@ -1418,10 +1418,10 @@ _test_view(void)
   {
     u3r_view vue_u;
     u3r_view_open(&vue_u, 0, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
     if (  vue_u.byt_d != 0
        || vue_u.kin_e != u3r_view_even
-       || vue_u.han_u != 0
+       || vue_u.bid_d != 0
        || vue_y != (const c3_y*)&vue_u.raw_d
        || 0 != vue_y[0] )
     {
@@ -1431,7 +1431,7 @@ _test_view(void)
     u3r_view_done(&vue_u);
   }
 
-  //  bob atom: view opens the underlying blob through its hand
+  //  bob atom: view reads the underlying blob from the store
   //
   {
     //  set up a temp store root with a blob at <mug>/<seq>
@@ -1471,18 +1471,15 @@ _test_view(void)
 
     u3r_view vue_u;
     u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u);
+    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
 
-    //  expect a hand-backed view: kin_e == u3r_view_blob, u.han_u set
+    //  expect a store-backed view: kin_e == u3r_view_blob, its id set
     //
-    if ( vue_u.kin_e != u3r_view_blob || 0 == vue_u.han_u ) {
-      fprintf(stderr, "_test_view(): bob atom should be hand-backed "
+    if (  vue_u.kin_e != u3r_view_blob
+       || vue_u.bid_d != u3a_bid(mug_h, seq_h) )
+    {
+      fprintf(stderr, "_test_view(): bob atom should be store-backed "
                       "(len=%" PRIc3_d ")\r\n", vue_u.byt_d);
-      exit(1);
-    }
-    if ( vue_u.han_u->len_d != bob_d ) {
-      fprintf(stderr, "_test_view(): hand len %" PRIc3_d " != %" PRIc3_d "\r\n",
-              vue_u.han_u->len_d, bob_d);
       exit(1);
     }
     if ( vue_u.byt_d == 0 || vue_u.byt_d > bob_d ) {
@@ -1491,8 +1488,7 @@ _test_view(void)
               vue_u.byt_d, bob_d);
       exit(1);
     }
-    //  first bytes must match the source; trailing bytes past len_w are
-    //  still in the hand's buffer (full file size) but out of logical scope
+    //  first bytes must match the source
     //
     if ( 0 != memcmp(vue_y, bob_y, vue_u.byt_d) ) {
       fprintf(stderr, "_test_view(): bob bytes mismatch\r\n");
@@ -1504,6 +1500,7 @@ _test_view(void)
 
     //  clean up temp pier
     //
+    u3b_flush();
     c3_tmp_kill(dir_c);
     u3C.bob_c = 0;
   }
@@ -1596,6 +1593,7 @@ _test_aor(void)
 
   u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
 
+  u3b_flush();
   c3_tmp_kill(dir_c);
   u3C.bob_c = 0;
 }

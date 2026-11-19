@@ -36,8 +36,8 @@
 
           c3_w len_a_w = (c3_w)a_vue.byt_d;
           c3_w len_b_w = (c3_w)b_vue.byt_d;
-          const c3_y *buf_a_y = u3r_view_bytes(&a_vue);
-          const c3_y *buf_b_y = u3r_view_bytes(&b_vue);
+          const c3_y *buf_a_y = u3r_view_bytes(&a_vue, c3y);
+          const c3_y *buf_b_y = u3r_view_bytes(&b_vue, c3y);
           c3_y cut_a_y = 0, cut_b_y = 0;
           c3_o ret_o;
           c3_w len_min_w = c3_min(len_a_w, len_b_w);

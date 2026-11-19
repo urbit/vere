@@ -69,455 +69,113 @@ _blob_pread(c3_i fid_i, void* buf_v, size_t len_i, c3_d off_d)
 //
 #define BLOB_IO_MAX  ((size_t)0x40000000UL)
 
-/* blob hands: per-road lists of open blob file handles.
+/* blob reads: a process-wide fd cache and road-owned mappings.
 **
-**   a hand belongs to the road that opened it.  an inner road keeps its
-**   hands on a list headed by u3R->bob_p, in its own heap, deduplicated
-**   by blob id, and retained until the road falls (u3b_drain from
-**   u3m_fall), so a trap that reads one blob a thousand times opens it
-**   once; past BLOB_KEEP_MAX an open evicts the idle hand opened
-**   longest ago (by tic_d, so reuse needs no list surgery), and
-**   out of descriptors it bails %file.  the home road never falls, so
-**   its hands live on the C heap under _blob_hom_u, one per open, freed
-**   on close.  every mutation runs inside u3m_crit_inn()/
-**   u3m_crit_out(), so a signal can neither leak an fd nor cut a list.
+**   no caller holds an fd once a call returns.  every fd a read uses
+**   lives in a slot of _blob_fds_u, a direct-mapped table keyed by
+**   blob id, so any slot may be closed between calls and nothing counts
+**   its users.  a signal that unwinds through a read leaves the fd in
+**   its slot.  out of descriptors, a miss closes every slot and retries
+**   once, so a computation never fails for the fds it has touched.
+**
+**   a flat view needs bytes that outlive the call, so it gets a
+**   mapping, which holds no fd.  mappings live on one C-heap list, each
+**   tagged with the road that made it.  an inner road shares its own
+**   and its inner ancestors' mappings and releases them when it falls
+**   (u3b_drain) or at a signal reset (u3b_drain_kids).  the home road
+**   never falls: each of its flat views maps alone and unmaps at done.
+**
+**   a cached fd must not outlive the file it names: the store drops a
+**   slot before it unlinks or installs that id, and flushes the table
+**   when it kills an epoch or changes its root (u3b_flush).  the king
+**   drops its slot when its last bob over an id dies, before it returns
+**   the holds that let mars wipe the file.
+**
+**   every change to the table or the list runs inside
+**   u3m_crit_inn()/u3m_crit_out(), so a signal can neither leak an fd
+**   or a mapping nor cut the list.  one thread per process reads.
 */
 
-//  home-road hands
+//  slots in the fd cache; a power of two
 //
-static u3b_hand* _blob_hom_u;
+#define BLOB_FDS  64
 
-//  hands an inner road retains at most: past this, an open evicts the
-//  idle hand opened longest ago before adding a new one.
+//  read-only, and never inherited by a process this one starts
 //
-#define BLOB_KEEP_MAX  256
+#ifdef U3_OS_windows
+#  define BLOB_O_READ  (O_RDONLY | _O_NOINHERIT)
+#else
+#  define BLOB_O_READ  (O_RDONLY | O_CLOEXEC)
+#endif
 
-//  open clock: each open stamps its hand's tic_d
-//
-static c3_d _blob_tic_d;
-
-
-/* _blob_head(): the first hand on [rod_u]'s list, or 0.
-**
-**   an inner road's head is a post in the road itself; nodes link by
-**   pointer from there.
+/* _blob_fd: a cache slot.  bid_d is 0 when empty: no blob has seq 0.
 */
-static inline u3b_hand*
-_blob_head(u3a_road* rod_u)
+typedef struct {
+  c3_d bid_d;   //  (mug_h << 32) | seq_h, or 0
+  c3_i fid_i;   //  open read-only, when bid_d is set
+  c3_d len_d;   //  file size at open
+  c3_d bit_d;   //  bit length of the content
+} _blob_fd;
+
+static _blob_fd _blob_fds_u[BLOB_FDS];
+
+/* _blob_flat: a mapping, owned by the road that made it.
+*/
+typedef struct _blob_flat {
+  struct _blob_flat* nex_u;   //  next on the process's list
+  u3a_road*          rod_u;   //  owning road
+  c3_d               bid_d;   //  blob id
+  c3_y*              map_y;   //  read-only mapping
+  c3_d               map_d;   //  mapped extent, for munmap
+} _blob_flat;
+
+static _blob_flat* _blob_flats_u;
+
+/* _blob_slot(): the cache slot of [bid_d].
+*/
+static inline _blob_fd*
+_blob_slot(c3_d bid_d)
 {
-  if ( &(u3H->rod_u) == rod_u ) {
-    return _blob_hom_u;
-  }
-  return rod_u->bob_p ? u3a_into(rod_u->bob_p) : 0;
+  return &_blob_fds_u[((bid_d >> 32) ^ bid_d) & (BLOB_FDS - 1)];
 }
 
-/* _blob_head_set(): make [han_u] the first hand on [rod_u]'s list.
-*/
-static inline void
-_blob_head_set(u3a_road* rod_u, u3b_hand* han_u)
-{
-  if ( &(u3H->rod_u) == rod_u ) {
-    _blob_hom_u = han_u;
-  }
-  else {
-    rod_u->bob_p = han_u ? u3a_outa(han_u) : 0;
-  }
-}
-
-/* _blob_hand_shut(): release the fd and mapping of [han_u].
-**
-**   the caller holds the critical section.
+/* _blob_slot_close(): empty [fd_u].  the caller holds the critical
+**   section.
 */
 static void
-_blob_hand_shut(u3b_hand* han_u)
+_blob_slot_close(_blob_fd* fd_u)
 {
-  if ( han_u->map_y ) {
-    munmap(han_u->map_y, (size_t)han_u->map_d);
-    han_u->map_y = 0;
-  }
-
-  if ( han_u->fid_i >= 0 ) {
-    c3_i fid_i   = han_u->fid_i;
-    han_u->fid_i = -1;
+  if ( fd_u->bid_d ) {
+    c3_i fid_i   = fd_u->fid_i;
+    fd_u->bid_d  = 0;
+    fd_u->fid_i  = -1;
     close(fid_i);
   }
 }
 
-/* _blob_hand_link(): put [han_u] at the head of the current road's list.
+/* _blob_slots_close(): empty every slot.  the caller holds the
+**   critical section.
 */
 static void
-_blob_hand_link(u3b_hand* han_u)
+_blob_slots_close(void)
 {
-  u3b_hand* hed_u = _blob_head(u3R);
-
-  han_u->pre_u = 0;
-  han_u->nex_u = hed_u;
-  if ( hed_u ) {
-    hed_u->pre_u = han_u;
+  for ( c3_w i_w = 0; i_w < BLOB_FDS; i_w++ ) {
+    _blob_slot_close(&_blob_fds_u[i_w]);
   }
-  _blob_head_set(u3R, han_u);
 }
 
-/* _blob_hand_unlink(): take [han_u] off the current road's list.
-*/
-static void
-_blob_hand_unlink(u3b_hand* han_u)
-{
-  if ( han_u->pre_u ) {
-    han_u->pre_u->nex_u = han_u->nex_u;
-  }
-  else {
-    _blob_head_set(u3R, han_u->nex_u);
-  }
-  if ( han_u->nex_u ) {
-    han_u->nex_u->pre_u = han_u->pre_u;
-  }
-  han_u->nex_u = han_u->pre_u = 0;
-}
-
-/* _blob_hand_find(): the hand for [bid_d] on [rod_u], or 0.
-*/
-static u3b_hand*
-_blob_hand_find(u3a_road* rod_u, c3_d bid_d)
-{
-  u3b_hand* han_u = _blob_head(rod_u);
-
-  while ( han_u && (han_u->bid_d != bid_d) ) {
-    han_u = han_u->nex_u;
-  }
-  return han_u;
-}
-
-/* _blob_hand_evict(): close the hand with no live view on the current
-**   inner road that was opened longest ago.  returns c3n if none is
-**   idle.
-**
-**   the caller holds the critical section.
-*/
-static c3_o
-_blob_hand_evict(void)
-{
-  u3b_hand* han_u = 0;
-
-  for ( u3b_hand* nex_u = _blob_head(u3R); nex_u; nex_u = nex_u->nex_u ) {
-    if ( !nex_u->use_w && (!han_u || (nex_u->tic_d < han_u->tic_d)) ) {
-      han_u = nex_u;
-    }
-  }
-  if ( !han_u ) {
-    return c3n;
-  }
-
-  _blob_hand_unlink(han_u);
-  _blob_hand_shut(han_u);
-  u3a_wfree(han_u);
-  return c3y;
-}
-
-/* _blob_hand_count(): hands on [rod_u]'s list.
+/* _blob_read_fd(): read [len_z] bytes at [off_d] of blob [bid_d],
+**   open on [fid_i], into [dst_y]: a pread in BLOB_IO_MAX chunks,
+**   retrying EINTR.  short only at end of file or on error.
 */
 static c3_z
-_blob_hand_count(u3a_road* rod_u)
-{
-  c3_z          num_z = 0;
-  u3b_hand* han_u = _blob_head(rod_u);
-
-  while ( han_u ) {
-    num_z++;
-    han_u = han_u->nex_u;
-  }
-  return num_z;
-}
-
-/* u3b_hands(): hands open on the home road.
-*/
-c3_z
-u3b_hands(void)
-{
-  return _blob_hand_count(&u3H->rod_u);
-}
-
-/* u3b_mapped(): bytes mapped by home-road hands.
-*/
-c3_d
-u3b_mapped(void)
-{
-  c3_d tot_d = 0;
-
-  for ( u3b_hand* han_u = _blob_hom_u; han_u; han_u = han_u->nex_u ) {
-    if ( han_u->map_y ) {
-      tot_d += han_u->map_d;
-    }
-  }
-  return tot_d;
-}
-
-/* u3b_mark(): mark the current road's hand nodes for gc; words marked.
-**
-**   an inner road keeps its hands on its own heap, reachable only from
-**   bob_p, so a sweep would free them as leaks.  the home road's are on
-**   the C heap.
-*/
-c3_w
-u3b_mark(void)
-{
-  c3_w siz_w = 0;
-
-  if ( &(u3H->rod_u) != u3R ) {
-    for ( u3b_hand* han_u = _blob_head(u3R); han_u; han_u = han_u->nex_u ) {
-      siz_w += u3a_mark_ptr(han_u);
-    }
-  }
-  return siz_w;
-}
-
-/* u3b_hands_road(): hands open on road [rod_v].
-*/
-c3_z
-u3b_hands_road(void* rod_v)
-{
-  return _blob_hand_count(rod_v);
-}
-
-/* _blob_hand_met(): bit length of [han_u]'s content: u3r_met(0, atom).
-**
-**   a blob is canonical, so its last byte is nonzero and the length
-**   follows from that byte alone.  returns 0 if it is zero or cannot
-**   be read: no blob denotes such an atom.
-*/
-static c3_d
-_blob_hand_met(u3b_hand* han_u)
-{
-  c3_y las_y;
-
-  if (  !han_u->len_d
-     || (1 != u3b_read(han_u, han_u->len_d - 1, &las_y, 1))
-     || !las_y )
-  {
-    return 0;
-  }
-
-  return ((han_u->len_d - 1) * 8) + (32 - __builtin_clz((unsigned int)las_y));
-}
-
-/* u3b_open(): open a blob on the current road.
-*/
-u3b_hand*
-u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
-{
-  c3_d          bid_d = u3a_bid(mug_h, seq_h);
-  c3_o          hom_o = ( &(u3H->rod_u) == u3R ) ? c3y : c3n;
-  u3b_hand*     han_u = 0;
-
-  //  a process that never learned its epoch has no store
-  //
-  if ( !bob_c ) {
-    return 0;
-  }
-
-  //  an inner road reuses its own hand, or one held by an inner
-  //  ancestor: the ancestor is suspended until this road falls, so its
-  //  hand outlives every view this road can take.  the home road's
-  //  hands belong to C callers that may close at any moment, so the
-  //  walk stops short of it.
-  //
-  if ( c3n == hom_o ) {
-    c3_z num_z = 0;
-
-    //  this road's list, counted on the way
-    //
-    for ( han_u = _blob_head(u3R); han_u; han_u = han_u->nex_u, num_z++ ) {
-      if ( bid_d == han_u->bid_d ) {
-        han_u->use_w += 1;
-        han_u->tic_d  = ++_blob_tic_d;
-        return han_u;
-      }
-    }
-
-    for ( u3a_road* rod_u = u3to(u3a_road, u3R->par_p);
-          rod_u != &(u3H->rod_u);
-          rod_u = u3to(u3a_road, rod_u->par_p) )
-    {
-      if ( (han_u = _blob_hand_find(rod_u, bid_d)) ) {
-        han_u->tic_d = ++_blob_tic_d;
-        return han_u;
-      }
-    }
-
-    //  bound retention: an event that touches more blobs than this
-    //  gives up its idle hands, least recently opened first
-    //
-    if ( num_z >= BLOB_KEEP_MAX ) {
-      u3m_crit_inn();
-      _blob_hand_evict();
-      u3m_crit_out();
-    }
-  }
-
-  //  the node is allocated before the fd exists, so the allocation's own
-  //  bail leaks nothing
-  //
-  han_u = ( c3y == hom_o ) ? c3_calloc(sizeof(*han_u))
-                           : u3a_walloc(sizeof(*han_u) / sizeof(c3_w)
-                                        + !!(sizeof(*han_u) % sizeof(c3_w)));
-  memset(han_u, 0, sizeof(*han_u));
-  han_u->bid_d = bid_d;
-  han_u->fid_i = -1;
-  han_u->use_w = 1;
-  han_u->tic_d = ++_blob_tic_d;
-
-  {
-    c3_c        fil_c[8192];
-    struct stat st_u;
-
-    u3b_path(fil_c, bob_c, mug_h, seq_h);
-
-    u3m_crit_inn();
-
-    while ( -1 == (han_u->fid_i = open(fil_c, O_RDONLY)) ) {
-      //  out of descriptors: an inner road first gives up its idle
-      //  hands; if none are idle, or the ceiling is the process's, the
-      //  event cannot be computed and bails %file.  the home road
-      //  reports failure to its C caller and returns 0.
-      //
-      if (  ((EMFILE == errno) || (ENFILE == errno))
-         && (c3n == hom_o) )
-      {
-        if ( c3y == _blob_hand_evict() ) {
-          continue;
-        }
-        u3m_crit_out();
-        u3a_wfree(han_u);
-        fprintf(stderr, "blob: open %s: %s\r\n", fil_c, strerror(errno));
-        u3m_bail(c3__file);
-        return 0;
-      }
-      break;
-    }
-
-    if ( -1 == han_u->fid_i ) {
-      fprintf(stderr, "blob: open failed %s: %s\r\n",
-              fil_c, strerror(errno));
-    }
-    else if ( -1 == fstat(han_u->fid_i, &st_u) ) {
-      fprintf(stderr, "blob: fstat failed %s: %s\r\n",
-              fil_c, strerror(errno));
-    }
-    else {
-      han_u->len_d = (c3_d)st_u.st_size;
-      han_u->bit_d = _blob_hand_met(han_u);
-    }
-
-    //  empty, all zero, or unreadable: no blob denotes such an atom
-    //
-    if ( 0 == han_u->bit_d ) {
-      _blob_hand_shut(han_u);
-      u3m_crit_out();
-
-      if ( c3y == hom_o ) {
-        c3_free(han_u);
-      }
-      else {
-        u3a_wfree(han_u);
-      }
-      return 0;
-    }
-
-    _blob_hand_link(han_u);
-    u3m_crit_out();
-  }
-
-  return han_u;
-}
-
-/* u3b_shut(): the current road is done with [han_u].
-*/
-void
-u3b_shut(u3b_hand* han_u)
-{
-  //  an inner road keeps the hand for reuse; only its live-view count
-  //  drops, which makes it evictable.  a hand borrowed from an inner
-  //  ancestor was never counted here.
-  //
-  if ( &(u3H->rod_u) != u3R ) {
-    if ( han_u->use_w && _blob_hand_find(u3R, han_u->bid_d) == han_u ) {
-      han_u->use_w -= 1;
-    }
-    return;
-  }
-
-  u3m_crit_inn();
-  _blob_hand_unlink(han_u);
-  _blob_hand_shut(han_u);
-  u3m_crit_out();
-
-  c3_free(han_u);
-}
-
-/* u3b_drain(): close every hand held by road [rod_v].
-**
-**   an inner road's nodes go with its heap, so only the home road's
-**   are freed here.  every road falls through here, and most hold no
-**   hand: those skip the critical section and its two syscalls.
-*/
-void
-u3b_drain(void* rod_v)
-{
-  u3a_road* rod_u = rod_v;
-  c3_o      hom_o = ( &(u3H->rod_u) == rod_u ) ? c3y : c3n;
-
-  if ( !_blob_head(rod_u) ) {
-    return;
-  }
-
-  u3m_crit_inn();
-
-  for ( u3b_hand* han_u; (han_u = _blob_head(rod_u)); ) {
-    _blob_head_set(rod_u, han_u->nex_u);
-    _blob_hand_shut(han_u);
-
-    if ( c3y == hom_o ) {
-      c3_free(han_u);
-    }
-  }
-
-  u3m_crit_out();
-}
-
-/* u3b_drain_kids(): close every hand held below the home road.
-**
-**   the only unwind that skips u3m_fall is a signal caught at the top;
-**   the kid chain is then the sole path to the abandoned roads' lists.
-*/
-void
-u3b_drain_kids(void)
-{
-  u3a_road* rod_u = &(u3H->rod_u);
-
-  while ( rod_u->kid_p ) {
-    rod_u = u3to(u3a_road, rod_u->kid_p);
-    u3b_drain(rod_u);
-  }
-}
-
-/* u3b_stop(): close every home-road hand.
-*/
-void
-u3b_stop(void)
-{
-  u3b_drain(&u3H->rod_u);
-}
-
-/* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
-*/
-c3_z
-u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+_blob_read_fd(c3_i fid_i, c3_d bid_d, c3_d off_d, c3_y* dst_y, c3_z len_z)
 {
   c3_z tot_z = 0;
 
   while ( len_z ) {
     size_t  ask_i = ( len_z < BLOB_IO_MAX ) ? len_z : BLOB_IO_MAX;
-    ssize_t got_i = _blob_pread(han_u->fid_i, dst_y, ask_i, off_d);
+    ssize_t got_i = _blob_pread(fid_i, dst_y, ask_i, off_d);
 
     if ( got_i < 0 ) {
       if ( EINTR == errno ) {
@@ -525,7 +183,7 @@ u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
       }
       fprintf(stderr, "blob: read: " U3A_BID_FMT " at %" PRIc3_d
                       ": %s\r\n",
-              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d),
+              u3a_bid_mug(bid_d), u3a_bid_seq(bid_d),
               off_d, strerror(errno));
       break;
     }
@@ -543,91 +201,429 @@ u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
   return tot_z;
 }
 
-/* _blob_map(): map [han_u]'s file read-only, zero to one page past it.
+/* _blob_met(): bit length of the content of blob [bid_d], [len_d]
+**   bytes open on [fid_i]: u3r_met(0, atom).
+**
+**   a blob is canonical, so its last byte is nonzero and the length
+**   follows from that byte alone.  returns 0 if it is zero or cannot
+**   be read: no blob denotes such an atom.
+*/
+static c3_d
+_blob_met(c3_i fid_i, c3_d bid_d, c3_d len_d)
+{
+  c3_y las_y;
+
+  if (  !len_d
+     || (1 != _blob_read_fd(fid_i, bid_d, len_d - 1, &las_y, 1))
+     || !las_y )
+  {
+    return 0;
+  }
+
+  return ((len_d - 1) * 8) + (32 - __builtin_clz((unsigned int)las_y));
+}
+
+/* _blob_fd_get(): the cache slot holding blob [bid_d] open, filled on a
+**   miss; 0 if the file is missing, empty, all zero, or unreadable.
+**
+**   a miss replaces the slot's blob.  out of descriptors, it closes
+**   every slot and retries once: no caller holds a cached fd past its
+**   call, so every slot is free to go.
+*/
+static _blob_fd*
+_blob_fd_get(const c3_c* bob_c, c3_d bid_d)
+{
+  _blob_fd*   fd_u = _blob_slot(bid_d);
+  c3_c        fil_c[8192];
+  struct stat st_u;
+  c3_i        fid_i;
+  c3_d        len_d;
+  c3_d        bit_d;
+
+  if ( bid_d == fd_u->bid_d ) {
+    return fd_u;
+  }
+
+  //  a process that never learned its epoch has no store
+  //
+  if ( !bob_c ) {
+    return 0;
+  }
+
+  u3b_path(fil_c, bob_c, u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
+
+  u3m_crit_inn();
+
+  _blob_slot_close(fd_u);
+
+  if (  (-1 == (fid_i = open(fil_c, BLOB_O_READ)))
+     && ((EMFILE == errno) || (ENFILE == errno)) )
+  {
+    _blob_slots_close();
+    fid_i = open(fil_c, BLOB_O_READ);
+  }
+
+  if ( -1 == fid_i ) {
+    u3m_crit_out();
+    fprintf(stderr, "blob: open %s: %s\r\n", fil_c, strerror(errno));
+    return 0;
+  }
+
+  if ( -1 == fstat(fid_i, &st_u) ) {
+    close(fid_i);
+    u3m_crit_out();
+    fprintf(stderr, "blob: fstat %s: %s\r\n", fil_c, strerror(errno));
+    return 0;
+  }
+
+  len_d = (c3_d)st_u.st_size;
+
+  //  empty, all zero, or unreadable: no blob denotes such an atom
+  //
+  if ( !(bit_d = _blob_met(fid_i, bid_d, len_d)) ) {
+    close(fid_i);
+    u3m_crit_out();
+    return 0;
+  }
+
+  fd_u->bid_d = bid_d;
+  fd_u->fid_i = fid_i;
+  fd_u->len_d = len_d;
+  fd_u->bit_d = bit_d;
+
+  u3m_crit_out();
+
+  return fd_u;
+}
+
+/* u3b_stat(): the bit length of blob [bid_d] in [bit_d].
+*/
+c3_o
+u3b_stat(const c3_c* bob_c, c3_d bid_d, c3_d* bit_d)
+{
+  _blob_fd* fd_u = _blob_fd_get(bob_c, bid_d);
+
+  if ( !fd_u ) {
+    return c3n;
+  }
+  *bit_d = fd_u->bit_d;
+  return c3y;
+}
+
+/* u3b_read(): read [len_z] bytes at [off_d] of blob [bid_d] into [dst_y].
+*/
+c3_z
+u3b_read(const c3_c* bob_c, c3_d bid_d, c3_d off_d, c3_y* dst_y, c3_z len_z)
+{
+  _blob_fd* fd_u = _blob_fd_get(bob_c, bid_d);
+
+  if ( !fd_u ) {
+    return 0;
+  }
+  return _blob_read_fd(fd_u->fid_i, bid_d, off_d, dst_y, len_z);
+}
+
+/* u3b_drop(): close the cached fd of blob (mug, seq), if any.
+*/
+void
+u3b_drop(c3_h mug_h, c3_h seq_h)
+{
+  _blob_fd* fd_u = _blob_slot(u3a_bid(mug_h, seq_h));
+
+  if ( u3a_bid(mug_h, seq_h) == fd_u->bid_d ) {
+    u3m_crit_inn();
+    _blob_slot_close(fd_u);
+    u3m_crit_out();
+  }
+}
+
+/* u3b_flush(): close every cached fd.
+*/
+void
+u3b_flush(void)
+{
+  u3m_crit_inn();
+  _blob_slots_close();
+  u3m_crit_out();
+}
+
+/* u3b_fds(): fds the cache holds open.
+*/
+c3_z
+u3b_fds(void)
+{
+  c3_z num_z = 0;
+
+  for ( c3_w i_w = 0; i_w < BLOB_FDS; i_w++ ) {
+    num_z += !!_blob_fds_u[i_w].bid_d;
+  }
+  return num_z;
+}
+
+/* _blob_map_fd(): map [len_d] bytes open on [fid_i] read-only, zero to
+**   one page past them, setting [map_d] to the extent munmap is given.
 **
 **   within the file's own pages the kernel zero-fills the tail of the
 **   last.  past them, on posix, the bytes come from an anonymous zero
 **   page the file's pages are fixed over, so a reader may run one page
 **   past the end.  windows refuses a section longer than the file, so
 **   there the mapping is the file's pages and a reader stays within
-**   the last word, as every accessor does.  records map_d, the extent
-**   munmap is given.
+**   the last word, as every accessor does.  the mapping holds no fd:
+**   it outlives [fid_i] on both.
 */
 static c3_y*
-_blob_map(u3b_hand* han_u)
+_blob_map_fd(c3_i fid_i, c3_d len_d, c3_d* map_d)
 {
 #ifdef U3_OS_windows
-  void* map_v = mmap(0, (size_t)han_u->len_d, PROT_READ, MAP_PRIVATE,
-                     han_u->fid_i, 0);
+  void* map_v = mmap(0, (size_t)len_d, PROT_READ, MAP_PRIVATE, fid_i, 0);
 
   if ( MAP_FAILED == map_v ) {
     return 0;
   }
-  han_u->map_d = han_u->len_d;
+  *map_d = len_d;
   return map_v;
 #else
   c3_d  pag_d = (c3_d)sysconf(_SC_PAGESIZE);
-  c3_d  siz_d = ((han_u->len_d + pag_d - 1) & ~(pag_d - 1)) + pag_d;
+  c3_d  siz_d = ((len_d + pag_d - 1) & ~(pag_d - 1)) + pag_d;
   void* res_v = mmap(0, (size_t)siz_d, PROT_READ,
                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   if ( MAP_FAILED == res_v ) {
     return 0;
   }
-  if ( MAP_FAILED == mmap(res_v, (size_t)han_u->len_d, PROT_READ,
-                          MAP_PRIVATE | MAP_FIXED, han_u->fid_i, 0) )
+  if ( MAP_FAILED == mmap(res_v, (size_t)len_d, PROT_READ,
+                          MAP_PRIVATE | MAP_FIXED, fid_i, 0) )
   {
     munmap(res_v, (size_t)siz_d);
     return 0;
   }
-  han_u->map_d = siz_d;
+  *map_d = siz_d;
   return res_v;
 #endif
 }
 
-/* u3b_mmap(): the file mapped read-only.
+/* _blob_road_line(): [rod_u] is the current inner road or an inner
+**   ancestor of it.
+*/
+static c3_t
+_blob_road_line(const u3a_road* rod_u)
+{
+  for ( u3a_road* lin_u = u3R;
+        lin_u != &(u3H->rod_u);
+        lin_u = u3to(u3a_road, lin_u->par_p) )
+  {
+    if ( lin_u == rod_u ) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/* u3b_map(): blob [bid_d], [len_d] bytes, mapped read-only.
 **
-**   the mapping is recorded on the hand inside the critical section so
-**   a signal cannot leak it.  a file shortened under the hand would
-**   fault inside the mapping instead of failing a read, so one is
-**   refused.
+**   an ancestor outlives its children, so an inner road may return any
+**   mapping on its line.  a file shortened under the view would fault
+**   inside the mapping instead of failing a read, so one is refused.
 */
 const c3_y*
-u3b_mmap(u3b_hand* han_u)
+u3b_map(const c3_c* bob_c, c3_d bid_d, c3_d len_d)
 {
-  if ( han_u->map_y ) {
-    return han_u->map_y;
+  _blob_fd*   fd_u;
+  _blob_flat* fla_u;
+  c3_y*       map_y;
+  struct stat st_u;
+
+  if ( &(u3H->rod_u) != u3R ) {
+    for ( fla_u = _blob_flats_u; fla_u; fla_u = fla_u->nex_u ) {
+      if ( (bid_d == fla_u->bid_d) && _blob_road_line(fla_u->rod_u) ) {
+        return fla_u->map_y;
+      }
+    }
   }
 
+  if ( !(fd_u = _blob_fd_get(bob_c, bid_d)) ) {
+    return 0;
+  }
+
+  if (  (-1 == fstat(fd_u->fid_i, &st_u))
+     || ((c3_d)st_u.st_size < len_d) )
   {
-    struct stat st_u;
+    fprintf(stderr, "blob: map: " U3A_BID_FMT ": file shrank\r\n",
+            u3a_bid_mug(bid_d), u3a_bid_seq(bid_d));
+    return 0;
+  }
 
-    if (  (-1 == fstat(han_u->fid_i, &st_u))
-       || ((c3_d)st_u.st_size < han_u->len_d) )
-    {
-      fprintf(stderr, "blob: data: " U3A_BID_FMT ": file shrank"
-                      "\r\n",
-              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d));
-      return 0;
+  fla_u = c3_malloc(sizeof(*fla_u));
+  fla_u->rod_u = u3R;
+  fla_u->bid_d = bid_d;
+
+  u3m_crit_inn();
+  if ( (map_y = _blob_map_fd(fd_u->fid_i, len_d, &fla_u->map_d)) ) {
+    fla_u->map_y  = map_y;
+    fla_u->nex_u  = _blob_flats_u;
+    _blob_flats_u = fla_u;
+  }
+  u3m_crit_out();
+
+  if ( !map_y ) {
+    fprintf(stderr, "blob: map: " U3A_BID_FMT ": mmap: %s\r\n",
+            u3a_bid_mug(bid_d), u3a_bid_seq(bid_d), strerror(errno));
+    c3_free(fla_u);
+  }
+  return map_y;
+}
+
+/* _blob_flats_free(): unmap every mapping [fun_f] selects; how many.
+*/
+static c3_w
+_blob_flats_free(c3_t (*fun_f)(const _blob_flat*, const void*),
+                 const void* arg_v)
+{
+  _blob_flat** fla_u;
+  c3_w         num_w = 0;
+
+  //  most roads map nothing: those skip the critical section
+  //
+  if ( !_blob_flats_u ) {
+    return 0;
+  }
+
+  u3m_crit_inn();
+
+  for ( fla_u = &_blob_flats_u; *fla_u; ) {
+    _blob_flat* dis_u = *fla_u;
+
+    if ( fun_f(dis_u, arg_v) ) {
+      *fla_u = dis_u->nex_u;
+      munmap(dis_u->map_y, (size_t)dis_u->map_d);
+      c3_free(dis_u);
+      num_w++;
+    }
+    else {
+      fla_u = &dis_u->nex_u;
     }
   }
 
-  {
-    c3_y* map_y;
+  u3m_crit_out();
 
-    u3m_crit_inn();
-    if ( (map_y = _blob_map(han_u)) ) {
-      han_u->map_y = map_y;
-    }
-    u3m_crit_out();
+  return num_w;
+}
 
-    if ( !map_y ) {
-      fprintf(stderr, "blob: data: " U3A_BID_FMT ": mmap: %s\r\n",
-              u3a_bid_mug(han_u->bid_d), u3a_bid_seq(han_u->bid_d),
-              strerror(errno));
-    }
-    return map_y;
+static c3_t
+_blob_flat_ptr(const _blob_flat* fla_u, const void* map_v)
+{
+  return (&(u3H->rod_u) == fla_u->rod_u) && (map_v == fla_u->map_y);
+}
+
+static c3_t
+_blob_flat_road(const _blob_flat* fla_u, const void* rod_v)
+{
+  return rod_v == fla_u->rod_u;
+}
+
+static c3_t
+_blob_flat_kid(const _blob_flat* fla_u, const void* rod_v)
+{
+  (void)rod_v;
+  return &(u3H->rod_u) != fla_u->rod_u;
+}
+
+static c3_t
+_blob_flat_any(const _blob_flat* fla_u, const void* rod_v)
+{
+  (void)fla_u;
+  (void)rod_v;
+  return 1;
+}
+
+/* u3b_unmap(): the home road is done with mapping [map_y].
+*/
+void
+u3b_unmap(const c3_y* map_y)
+{
+  //  an inner road's mappings go with the road
+  //
+  if ( &(u3H->rod_u) == u3R ) {
+    c3_w num_w = _blob_flats_free(_blob_flat_ptr, map_y);
+    u3_assert( 1 == num_w );
   }
+}
+
+/* u3b_drain(): release every mapping road [rod_v] made.
+*/
+void
+u3b_drain(void* rod_v)
+{
+  _blob_flats_free(_blob_flat_road, rod_v);
+}
+
+/* u3b_drain_kids(): release every mapping made below the home road.
+*/
+void
+u3b_drain_kids(void)
+{
+  _blob_flats_free(_blob_flat_kid, 0);
+}
+
+/* u3b_stop(): release every mapping and close every cached fd.
+*/
+void
+u3b_stop(void)
+{
+  _blob_flats_free(_blob_flat_any, 0);
+  u3b_flush();
+}
+
+/* u3b_maps(): mappings the process holds.
+*/
+c3_z
+u3b_maps(void)
+{
+  c3_z num_z = 0;
+
+  for ( _blob_flat* fla_u = _blob_flats_u; fla_u; fla_u = fla_u->nex_u ) {
+    num_z++;
+  }
+  return num_z;
+}
+
+/* u3b_maps_road(): mappings road [rod_v] made.
+*/
+c3_z
+u3b_maps_road(void* rod_v)
+{
+  c3_z num_z = 0;
+
+  for ( _blob_flat* fla_u = _blob_flats_u; fla_u; fla_u = fla_u->nex_u ) {
+    num_z += ( rod_v == fla_u->rod_u );
+  }
+  return num_z;
+}
+
+/* u3b_mapped(): bytes the process holds mapped.
+*/
+c3_d
+u3b_mapped(void)
+{
+  c3_d tot_d = 0;
+
+  for ( _blob_flat* fla_u = _blob_flats_u; fla_u; fla_u = fla_u->nex_u ) {
+    tot_d += fla_u->map_d;
+  }
+  return tot_d;
+}
+
+/* _blob_mapped_bid(): mappings of blob [bid_d] on any road.
+*/
+static c3_w
+_blob_mapped_bid(c3_d bid_d)
+{
+  c3_w num_w = 0;
+
+  for ( _blob_flat* fla_u = _blob_flats_u; fla_u; fla_u = fla_u->nex_u ) {
+    num_w += ( bid_d == fla_u->bid_d );
+  }
+  return num_w;
 }
 
 /* u3b_root(): write the store root of epoch [epo_d] into [out_c].
@@ -879,6 +875,13 @@ _blob_stage_open(const c3_c* pax_c, c3_c* stg_c)
   if ( -1 == (fid_i = mkstemp(stg_c)) ) {
     fprintf(stderr, "blob: stage: mkstemp %s: %s\r\n", stg_c, strerror(errno));
   }
+#ifndef U3_OS_windows
+  //  a process this one starts inherits no staging fd
+  //
+  else {
+    fcntl(fid_i, F_SETFD, FD_CLOEXEC);
+  }
+#endif
   return fid_i;
 }
 
@@ -953,7 +956,7 @@ u3b_mug_fd(c3_i fid_i, c3_h* mug_h)
 static c3_o
 _blob_measure(const c3_c* stg_c, c3_h* mug_h)
 {
-  c3_i fid_i = open(stg_c, O_RDONLY);
+  c3_i fid_i = open(stg_c, BLOB_O_READ);
 
   if ( -1 == fid_i ) {
     return c3n;
@@ -1076,27 +1079,24 @@ u3b_wipe(const c3_c* bob_c, c3_h mug_h, c3_h seq_h)
   u3b_path(fil_c, bob_c, mug_h, seq_h);
 
   //  a wipe is driven by the blob's refcount reaching zero, so no reader
-  //  can still hold it open; an open hand here is an accounting bug.
-  //  posix keeps the inode alive for the reader regardless; windows
-  //  refuses the unlink, which the error below reports.
+  //  can still map it: a reader holds a live bob, and the king keeps
+  //  the bob behind each view, and so its holds, until the view closes.
+  //  a mapping here is an accounting bug; the check sees only this
+  //  process.  posix keeps the inode alive for the mapping regardless;
+  //  windows refuses the unlink, which the error below reports.  the
+  //  cached fd goes first: it would hold the file on windows, and read
+  //  the old bytes on posix once the seq is reused
   //
   {
-    c3_d      bid_d = u3a_bid(mug_h, seq_h);
-    u3a_road* rod_u = &(u3H->rod_u);
-    c3_w      num_w = 0;
-
-    while ( rod_u ) {
-      if ( _blob_hand_find(rod_u, bid_d) ) {
-        num_w++;
-      }
-      rod_u = rod_u->kid_p ? u3to(u3a_road, rod_u->kid_p) : 0;
-    }
+    c3_w num_w = _blob_mapped_bid(u3a_bid(mug_h, seq_h));
 
     if ( num_w ) {
-      fprintf(stderr, "blob: wipe: " U3A_BID_FMT ": open on %"
-                      PRIc3_w " road(s)\r\n", mug_h, seq_h, num_w);
+      fprintf(stderr, "blob: wipe: " U3A_BID_FMT ": %" PRIc3_w
+                      " mapping(s) live\r\n", mug_h, seq_h, num_w);
     }
   }
+
+  u3b_drop(mug_h, seq_h);
 
   if ( 0 != unlink(fil_c) && ENOENT != errno ) {
     fprintf(stderr, "blob: failed to delete %s: %s\r\n",
@@ -1412,7 +1412,14 @@ void
 u3b_kill(const c3_c* bob_c)
 {
   c3_w   mug_w;
-  c3_c** mug_c = _blob_dir_names(bob_c, &mug_w);
+  c3_c** mug_c;
+
+  //  no cached fd may hold a file of the epoch, which windows would
+  //  refuse to delete
+  //
+  u3b_flush();
+
+  mug_c = _blob_dir_names(bob_c, &mug_w);
 
   if ( !mug_c ) {
     if ( ENOENT != errno ) {
@@ -1620,6 +1627,11 @@ u3b_move_stg(const c3_c* bob_c,
   //
   c3_c dst_c[8192];
   u3b_path(dst_c, bob_c, *mug_h, nex_h);
+
+  //  a seq is reused once its bucket's highest is wiped: no cached fd
+  //  may name the file this one replaces
+  //
+  u3b_drop(*mug_h, nex_h);
 
   {
     struct stat st_u;

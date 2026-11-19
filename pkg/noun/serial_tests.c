@@ -387,6 +387,9 @@ _ram_setup_tmp(void)
 static void
 _ram_cleanup_tmp(void)
 {
+  //  the fd cache would read the next store's files from this one's
+  //
+  u3b_flush();
   c3_tmp_kill(_ram_tmp_dir);
 }
 

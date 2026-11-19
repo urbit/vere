@@ -105,7 +105,7 @@ _parse(u3_atom txt)
     return u3m_bail(c3__fail);
   }
   len_w = (c3_w)vue_u.byt_d;
-  byt_y = u3r_view_bytes(&vue_u);
+  byt_y = u3r_view_bytes(&vue_u, c3y);
 
   //
   // initialization

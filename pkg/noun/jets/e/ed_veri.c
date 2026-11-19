@@ -26,7 +26,7 @@
 
       u3r_view_open(&vue_u, dat, c3y);
       if ( len_d <= vue_u.byt_d ) {
-        dat_y = u3r_view_bytes(&vue_u);
+        dat_y = u3r_view_bytes(&vue_u, c3y);
       }
       else if ( len_d <= c3_w_max ) {
         dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
@@ -83,7 +83,7 @@
     else {
       u3r_view vue_u;
       u3r_view_open(&vue_u, m, c3y);
-      c3_t     val_t = urcrypt_ed_veri(u3r_view_bytes(&vue_u), vue_u.byt_d,
+      c3_t     val_t = urcrypt_ed_veri(u3r_view_bytes(&vue_u, c3y), vue_u.byt_d,
                                        pub_y, sig_y);
       u3r_view_done(&vue_u);
 

@@ -37,7 +37,9 @@
 
     /* u3_hbod: http body block, inline (payload in hun_y) or a chunk of
     **   a bob read through win_u, a u3r_view on the king's home road.  A
-    **   bob's chunks share one view; the last chunk owns it.
+    **   bob's chunks share one view; the last chunk owns it and the bob.
+    **   Holding the bob keeps the king's holds on its file until the
+    **   response is done, so mars never wipes a file the view reads.
     */
       typedef struct _u3_hbod {
         struct _u3_hbod* nex_u;
@@ -45,7 +47,8 @@
         c3_y*            buf_y;   //  blob: heap copy of the chunk, or 0
         u3r_view*        win_u;   //  blob: the shared view, or 0
         c3_d             off_d;   //  blob: byte offset of this chunk
-        c3_o             own_o;   //  blob: frees win_u
+        c3_o             own_o;   //  blob: frees win_u and loses bob
+        u3_atom          bob;     //  blob, owner only: the bob win_u reads
         c3_y             hun_y[0];
       } u3_hbod;
 

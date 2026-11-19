@@ -33,6 +33,12 @@ _king_blob_del(c3_h mug_h, c3_h seq_h)
   //
   u3_assert( blb_u && (c3n == blb_u->own_o) );
 
+  //  the cached fd goes before the holds that let mars wipe the file:
+  //  windows would refuse that unlink, and a reused seq would read old
+  //  bytes through it
+  //
+  u3b_drop(mug_h, seq_h);
+
   if ( blb_u->les_h && u3K.pir_u && u3K.pir_u->god_u ) {
     u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->les_h);
   }
@@ -1912,10 +1918,10 @@ u3_king_grab(void* vod_p)
 
   c3_free(all_u);
 
-  //  blobs open on the king's side, one per blob being streamed
+  //  blobs mapped on the king's side
   //
-  fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
-          u3b_hands(), u3b_mapped());
+  fprintf(fil_u, "blob mappings: %zu (%" PRIc3_d " bytes)\r\n",
+          u3b_maps(), u3b_mapped());
 
 #ifdef U3_MEMORY_LOG
   {

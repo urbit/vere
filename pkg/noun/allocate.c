@@ -1269,6 +1269,7 @@ u3a_blob_new(c3_h mug_h, c3_h seq_h)
   blb_u->own_o = c3n;
   blb_u->mug_h = mug_h;
   blb_u->seq_h = seq_h;
+  blb_u->bit_d = 0;
 
   u3_post off_p = u3a_outa(blb_u);
   u3_noun bid   = u3i_chub(u3a_bid(mug_h, seq_h));
@@ -1569,11 +1570,11 @@ u3a_blob_sane(void)
   }
 
   //  the home road is quiescent between events, so mars should hold no
-  //  blob open here; the king may (http streams a body across events),
-  //  so this is reported, not counted as a violation.
+  //  blob mapped here; the king may, so this is reported, not counted
+  //  as a violation.
   //
-  if ( u3b_hands() ) {
-    fprintf(stderr, "blob: sane: %zu open handle(s)\r\n", u3b_hands());
+  if ( u3b_maps() ) {
+    fprintf(stderr, "blob: sane: %zu mapping(s) live\r\n", u3b_maps());
   }
 
   c3_o ok_o = ctx_u.ok_o;
@@ -2504,7 +2505,7 @@ u3a_print_quac(FILE* fil_u, c3_h den_h, u3m_quac* mas_u)
 u3m_quac*
 u3a_mark_road()
 {
-  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 18);
+  u3m_quac** qua_u = c3_malloc(sizeof(*qua_u) * 17);
 
   qua_u[0] = c3_calloc(sizeof(*qua_u[0]));
   qua_u[0]->nam_c = strdup("namespace");
@@ -2713,11 +2714,7 @@ u3a_mark_road()
     qua_u[15]->siz_w = (mas_u.key_w + mas_u.val_w + mas_u.kev_w + mas_u.nod_w) * sizeof(c3_w);
   }
 
-  qua_u[16] = c3_calloc(sizeof(*qua_u[16]));
-  qua_u[16]->nam_c = strdup("blob hands");
-  qua_u[16]->siz_w = u3b_mark() * sizeof(c3_w);
-
-  qua_u[17] = NULL;
+  qua_u[16] = NULL;
 
   c3_w sum_w = 0;
   for (c3_w i_w = 0; qua_u[i_w]; i_w++) {

@@ -381,6 +381,7 @@ U3C_SYM(_blob)(U3C_OLD_NOUN kev, void *ptr_v)
   nbl_u->atm_h = obl_u->atm_h;
   nbl_u->les_h = obl_u->les_h;
   nbl_u->own_o = obl_u->own_o;
+  nbl_u->bit_d = obl_u->bit_d;
 }
 #endif
 

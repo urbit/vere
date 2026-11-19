@@ -129,7 +129,7 @@ _serialize_number(json_buffer *buf_u, u3_noun a)
   if ( vue_u.byt_d > c3_w_max ) {
     u3m_bail(c3__fail);
   }
-  _append_text(buf_u, u3r_view_bytes(&vue_u), (c3_w)vue_u.byt_d);
+  _append_text(buf_u, u3r_view_bytes(&vue_u, c3y), (c3_w)vue_u.byt_d);
   u3r_view_done(&vue_u);
 }
 

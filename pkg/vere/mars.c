@@ -293,11 +293,11 @@ _mars_grab(u3_noun sac, c3_o pri_o)
       if ( c3y == pri_o ) {
         _mars_print_quacs(fil_u, all_u);
 
-        //  blobs the serf holds open: zero between events, so anything
-        //  here is a reader that never closed
+        //  blobs the serf holds mapped: zero between events, so
+        //  anything here is a home-road view that never closed
         //
-        fprintf(fil_u, "blob handles: %zu (%" PRIc3_d " bytes mapped)\r\n",
-                u3b_hands(), u3b_mapped());
+        fprintf(fil_u, "blob mappings: %zu (%" PRIc3_d " bytes)\r\n",
+                u3b_maps(), u3b_mapped());
       }
       fflush(fil_u);
 

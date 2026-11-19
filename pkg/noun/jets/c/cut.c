@@ -58,7 +58,7 @@
       {
         u3i_slab sab_u;
         u3i_slab_init(&sab_u, 3, cnt_d);
-        u3r_view_copy(&vue_u, off_d, sab_u.buf_y, (c3_z)cnt_d);
+        u3r_view_copy(&vue_u, off_d, sab_u.buf_y, (c3_z)cnt_d, c3y);
         u3r_view_done(&vue_u);
         return u3i_slab_mint(&sab_u);
       }

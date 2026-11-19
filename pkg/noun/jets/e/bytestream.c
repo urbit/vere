@@ -57,7 +57,7 @@ _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
     u3m_bail(c3__fail);
   }
   *len_w = (c3_w)vue_u->byt_d;
-  *buf_y = (c3_y*)u3r_view_bytes(vue_u);
+  *buf_y = (c3_y*)u3r_view_bytes(vue_u, c3y);
 
   *lead_w = 0;
 

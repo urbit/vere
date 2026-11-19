@@ -28,7 +28,7 @@
 
       u3r_view_open(&vue_u, dat, c3y);
       if ( len_d <= vue_u.byt_d ) {
-        dat_y = u3r_view_bytes(&vue_u);
+        dat_y = u3r_view_bytes(&vue_u, c3y);
       }
       else if ( len_d <= c3_w_max ) {
         dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
@@ -90,7 +90,7 @@
 
       u3r_view_open(&vue_u, dat, c3y);
       if ( len_d <= vue_u.byt_d ) {
-        dat_y = u3r_view_bytes(&vue_u);
+        dat_y = u3r_view_bytes(&vue_u, c3y);
       }
       else if ( len_d <= c3_w_max ) {
         dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
@@ -144,7 +144,7 @@
       c3_y     sig_y[64];
       u3r_view vue_u;
       u3r_view_open(&vue_u, msg, c3y);
-      urcrypt_ed_sign(u3r_view_bytes(&vue_u), vue_u.byt_d, sed_y, sig_y);
+      urcrypt_ed_sign(u3r_view_bytes(&vue_u, c3y), vue_u.byt_d, sed_y, sig_y);
       u3r_view_done(&vue_u);
 
       return u3i_bytes(64, sig_y);
@@ -185,7 +185,7 @@
       c3_y     sig_y[64];
       u3r_view vue_u;
       u3r_view_open(&vue_u, msg, c3y);
-      urcrypt_ed_sign_raw(u3r_view_bytes(&vue_u), vue_u.byt_d,
+      urcrypt_ed_sign_raw(u3r_view_bytes(&vue_u, c3y), vue_u.byt_d,
                           pub_y, sek_y, sig_y);
       u3r_view_done(&vue_u);
 

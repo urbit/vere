@@ -167,78 +167,84 @@
       void
       u3b_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
-    /* u3b_hand: an open blob file handle, owned by the road that
-    **           opened it; exclusively accessed publicly via views.
+    /* Reads.  No caller holds an fd once a call returns: each process
+    **   keeps blob fds in a small cache, any of which may close between
+    **   calls.  A flat view gets a mapping, which holds no fd.  An inner
+    **   road owns its mappings until it falls; the home road's go at
+    **   u3b_unmap.  See blob.c.
     */
-      typedef struct _u3b_hand {
-        struct _u3b_hand* nex_u;  //  next on the owning road
-        struct _u3b_hand* pre_u;  //  previous: constant-time unlink
-        c3_d   bid_d;   //  (mug_h << 32) | seq_h: inner-road dedup key
-        c3_i   fid_i;   //  O_RDONLY fd, open for the hand's lifetime
-        c3_w   use_w;   //  live views (inner road: evictable at zero)
-        c3_d   tic_d;   //  last open: eviction takes the idle hand opened longest ago
-        c3_d   len_d;   //  file size: bounds reads, sizes the mapping
-        c3_d   bit_d;   //  bit length of the content, from the file's tail at open
-        c3_y*  map_y;   //  read-only mapping of the file (0 until u3b_mmap)
-        c3_d   map_d;   //  mapped extent: the file's pages, plus one zero page on posix
-      } u3b_hand;
 
-    /* u3b_open(): open a blob on the current road.
+    /* u3b_stat(): the bit length of blob [bid_d] in [bit_d].
     **
-    **   An inner road returns its own hand for an already-open blob, or
-    **   one held by an inner ancestor.  Returns 0 (without bailing) if
-    **   the file is missing, empty, or all zero.  Out of descriptors, an inner road
-    **   evicts its idle hands and, if none are, bails %file; the home
-    **   road returns 0.
+    **   c3n if the file is missing, empty, all zero, or unreadable.
     */
-      u3b_hand*
-      u3b_open(const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
+      c3_o
+      u3b_stat(const c3_c* bob_c, c3_d bid_d, c3_d* bit_d);
 
-    /* u3b_shut(): the current road is done with [han_u].
-    **
-    **   On an inner road the hand stays open for reuse; only its live-view
-    **   count drops.  On the home road the fd, mapping, and node go.
-    */
-      void
-      u3b_shut(u3b_hand* han_u);
-
-    /* u3b_read(): read [len_z] bytes at [off_d] into [dst_y].
+    /* u3b_read(): read [len_z] bytes at [off_d] of blob [bid_d] into
+    **   [dst_y].
     **
     **   Returns the number of bytes read; short only at end of file or
-    **   on error.  A pread in BLOB_IO_MAX chunks; never allocates.  A
-    **   caller that reads a range more than once wants the mapping
-    **   (u3b_mmap) instead.
+    **   on error.  A pread in BLOB_IO_MAX chunks; never allocates.
     */
       c3_z
-      u3b_read(u3b_hand* han_u, c3_d off_d, c3_y* dst_y, c3_z len_z);
+      u3b_read(const c3_c* bob_c,
+               c3_d        bid_d,
+               c3_d        off_d,
+               c3_y*       dst_y,
+               c3_z        len_z);
 
-    /* u3b_mmap(): the file mapped read-only.
+    /* u3b_map(): blob [bid_d], [len_d] bytes, mapped read-only; 0 if
+    **   the file is unreadable or shorter than [len_d], or the mapping
+    **   fails.
     **
-    **   The mapping lives as long as the hand.  On posix it is the
-    **   file's pages followed by one anonymous zero page, so a reader
-    **   may run one page past the file's end; on Windows it is the
-    **   file's own pages, and the rest of the last one reads as zero,
-    **   which covers any reader bound by the atom's word count.
-    **   Returns 0 if the mapping fails or the file was shortened under
-    **   the hand.
+    **   On an inner road the mapping is the road's, shared with the
+    **   roads nested in it, and lives until the road falls; an inner
+    **   road returns any mapping on its line.  On the home road each
+    **   call maps anew, until u3b_unmap.  On posix the file's pages
+    **   are followed by one anonymous zero page, so a reader may run
+    **   one page past the file's end; on Windows the rest of the last
+    **   page reads as zero, which covers any reader bound by the
+    **   atom's word count.
     */
       const c3_y*
-      u3b_mmap(u3b_hand* han_u);
+      u3b_map(const c3_c* bob_c, c3_d bid_d, c3_d len_d);
 
-    /* u3b_stop(): close every home-road hand (from u3m_stop).
+    /* u3b_unmap(): the home road is done with [map_y], from u3b_map.
+    **
+    **   A no-op on an inner road, whose mappings go when it falls.
+    */
+      void
+      u3b_unmap(const c3_y* map_y);
+
+    /* u3b_drop(): close the cached fd of blob (mug, seq), if any.
+    **
+    **   Called before the file is unlinked or its id reused, and by the
+    **   king when its last bob over the id dies.
+    */
+      void
+      u3b_drop(c3_h mug_h, c3_h seq_h);
+
+    /* u3b_flush(): close every cached fd: the root changed, or an
+    **   epoch is going.
+    */
+      void
+      u3b_flush(void);
+
+    /* u3b_stop(): release every mapping and cached fd (from u3m_stop).
     */
       void
       u3b_stop(void);
 
-    /* u3b_drain(): close every hand held by road [rod_v].
+    /* u3b_drain(): release every mapping road [rod_v] made.
     **
     **   Called from u3m_fall: the road's C frames, and with them every
-    **   view they held, are gone.
+    **   pointer they held, are gone.
     */
       void
       u3b_drain(void* rod_v);
 
-    /* u3b_drain_kids(): close every hand held below the home road.
+    /* u3b_drain_kids(): release every mapping made below the home road.
     **
     **   Called after a signal unwinds to the top level, the one path
     **   that skips u3m_fall.
@@ -246,26 +252,25 @@
       void
       u3b_drain_kids(void);
 
-    /* u3b_hands(): hands open on the home road.
+    /* u3b_maps(): mappings the process holds.
     */
       c3_z
-      u3b_hands(void);
+      u3b_maps(void);
 
-    /* u3b_mapped(): bytes mapped by home-road hands.
+    /* u3b_maps_road(): mappings road [rod_v] made.  Test support.
+    */
+      c3_z
+      u3b_maps_road(void* rod_v);
+
+    /* u3b_mapped(): bytes the process holds mapped.
     */
       c3_d
       u3b_mapped(void);
 
-    /* u3b_mark(): mark the current road's hand nodes for gc; words
-    **   marked.  Called from u3a_mark_road.
-    */
-      c3_w
-      u3b_mark(void);
-
-    /* u3b_hands_road(): hands open on road [rod_v].  Test support.
+    /* u3b_fds(): fds the cache holds open.  Test support.
     */
       c3_z
-      u3b_hands_road(void* rod_v);
+      u3b_fds(void);
 
     /* u3b_bsink: streaming byte sink for blob-aware cue (u3s_bsink).
     **

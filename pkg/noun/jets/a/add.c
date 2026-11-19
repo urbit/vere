@@ -98,8 +98,8 @@ u3qa_add(u3_atom a,
     //
     u3r_view_open(&a_vue, a, c3y);
     u3r_view_open(&b_vue, b, c3y);
-    a_buf_w = u3r_view_words(&a_vue, &a_len_w);
-    b_buf_w = u3r_view_words(&b_vue, &b_len_w);
+    a_buf_w = u3r_view_words(&a_vue, &a_len_w, c3y);
+    b_buf_w = u3r_view_words(&b_vue, &b_len_w, c3y);
 
     //  sized in bits to avoid growing atom buffers on each addition,
     //  as u3a_wtrim noops as of 3e8473d

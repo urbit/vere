@@ -1412,8 +1412,8 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
 {
   //  read [pac] through one view into the arena buffer.  the arena is
   //  the long-lived owner: it is stashed in u3_mesa_resend_data->buf_y
-  //  for the resend timer, so we still copy into it; one view opens the
-  //  bob's hand once where u3r_bytes would open and close it per call.
+  //  for the resend timer, so we still copy into it; one view measures
+  //  the bob once where u3r_bytes would open a view per call.
   //
   u3r_view vue_u;
   if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
@@ -1437,7 +1437,16 @@ _mesa_ef_send(u3_mesa* sam_u, u3_noun las, u3_noun pac)
   c3_w len_w = (c3_w)vue_u.byt_d;
   arena are_u = arena_create(len_w + 16384);
   c3_y* buf_y = new(&are_u, c3_y, len_w);
-  u3r_view_copy(&vue_u, 0, buf_y, len_w);
+
+  if ( len_w != u3r_view_copy(&vue_u, 0, buf_y, len_w, c3n) ) {
+    u3l_log("mesa: ef_send: blob " U3A_BID_FMT " short read; dropped",
+            u3a_bob_mug(pac), u3a_bob_seq(pac));
+    u3r_view_done(&vue_u);
+    arena_free(&are_u);
+    u3z(pac);
+    u3z(las);
+    return;
+  }
   u3r_view_done(&vue_u);
 
   u3_mesa_pact pac_u;
@@ -1866,7 +1875,7 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
 
   u3_mesa_line* lin_u;
   {
-    //  zero-copy read of the jumbo frame bytes (a bob through its hand).
+    //  zero-copy read of the jumbo frame bytes (a bob through the store).
     //  we still copy into a c3_calloc'd buffer because mesa_sift_pact_from_buf
     //  expects a stable, mutable buffer that outlives the view.
     //
@@ -1888,7 +1897,16 @@ _mesa_page_scry_jumbo_cb(void* vod_p, u3_noun res)
     }
     c3_w jumbo_w = (c3_w)vue_u.byt_d;
     c3_y* jumbo_y = c3_calloc(jumbo_w);
-    u3r_view_copy(&vue_u, 0, jumbo_y, jumbo_w);
+
+    if ( jumbo_w != u3r_view_copy(&vue_u, 0, jumbo_y, jumbo_w, c3n) ) {
+      u3l_log("mesa: jumbo blob " U3A_BID_FMT " short read; dropped",
+              u3a_bob_mug(pac), u3a_bob_seq(pac));
+      u3r_view_done(&vue_u);
+      c3_free(jumbo_y);
+      arena_free(&han_u->are_u);
+      u3z(res);
+      return;
+    }
     u3r_view_done(&vue_u);
 
     u3_mesa_pact jum_u;

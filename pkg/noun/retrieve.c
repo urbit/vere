@@ -1019,11 +1019,11 @@ u3r_met(c3_y  a_y,
 }
 
 /* _cr_bob_bytes(): [len_z] bytes at byte offset [off_d] of bob [a],
-**   zero past its end.  Bails %fail if the file is missing.
+**   zero past its end.  Bails %file if the file is missing.
 **
-**   maps the hand before copying: on an inner road the hand keeps the
-**   mapping until the road falls, so an accessor walk maps once and
-**   then costs a memcpy per call.
+**   maps the bob before copying: an inner road keeps the mapping until
+**   it falls, so an accessor walk maps once and then costs a memcpy
+**   per call.
 */
 static void
 _cr_bob_bytes(u3_atom a, c3_d off_d, c3_y* dst_y, c3_z len_z)
@@ -1031,8 +1031,8 @@ _cr_bob_bytes(u3_atom a, c3_d off_d, c3_y* dst_y, c3_z len_z)
   u3r_view vue_u;
 
   u3r_view_open(&vue_u, a, c3y);
-  u3r_view_bytes(&vue_u);
-  u3r_view_copy(&vue_u, off_d, dst_y, len_z);
+  u3r_view_bytes(&vue_u, c3y);
+  u3r_view_copy(&vue_u, off_d, dst_y, len_z, c3y);
   u3r_view_done(&vue_u);
 }
 
@@ -1093,9 +1093,9 @@ u3r_byte(c3_w    a_w,
     else return (255 & (b >> (a_w << 3)));
   }
 
-  //  bob atom: one byte through a view.  on an inner road the hand and
-  //  its mapping are retained, so a loop pays a list walk and a memcpy
-  //  per call; callers that scan many bytes should hold one view.
+  //  bob atom: one byte through a view.  an inner road keeps the
+  //  mapping, so a loop pays a list walk and a memcpy per call; callers
+  //  that scan many bytes should hold one view.
   //
   if ( c3y == u3a_is_bob(b) ) {
     c3_y res_y;
@@ -1222,7 +1222,7 @@ u3r_bytes_all(c3_w* len_w, u3_atom a)
   return u3r_bytes_alloc(0, met_w, a);
 }
 
-/* _cr_view_blank(): the empty view: no hand, no bytes.
+/* _cr_view_blank(): the empty view: no bytes.
 */
 static inline void
 _cr_view_blank(u3r_view* vue_u)
@@ -1230,12 +1230,30 @@ _cr_view_blank(u3r_view* vue_u)
   vue_u->byt_d = 0;
   vue_u->bit_d = 0;
   vue_u->kin_e = u3r_view_loom;
-  vue_u->han_u = 0;
+  vue_u->bid_d = 0;
   vue_u->byt_y = 0;
   vue_u->raw_d = 0;
+  vue_u->rod_u = 0;
 }
 
-/* u3r_view_open(): open a view of [a]; [bal_o] bails %fail where it
+/* _cr_bob_bank(): on the home road, the bank record of bob [a], or 0.
+**
+**   the record caches the bob's bit length (bit_d).  only the home road
+**   consults it: an inner road never writes home-road memory, and the
+**   fd cache measures a bob once per open.  a stub has no record.
+*/
+static u3a_blob*
+_cr_bob_bank(u3_atom a)
+{
+  //  the home road has no parent
+  //
+  if ( u3R->par_p || !u3a_bob_seq(a) ) {
+    return 0;
+  }
+  return u3a_blob_get(u3a_bob_mug(a), u3a_bob_seq(a));
+}
+
+/* u3r_view_open(): open a view of [a]; [bal_o] bails %file where it
 **   would otherwise decline.
 */
 c3_o
@@ -1243,27 +1261,40 @@ u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
 {
   _cr_view_blank(vue_u);
 
-  //  bob: the road's hand, which measured the file at open.  the hand
-  //  is on the road's list before anything else can bail, so no unwind
-  //  leaks it.  no bytes until read or flat.
+  //  bob: measured, nothing held.  no bytes until read or flat.  an
+  //  unreadable file is a store fault, not a property of the atom:
+  //  %file, which mars refuses rather than commit as a %crud
   //
   if ( c3y == u3a_is_bob(a) ) {
-    u3b_hand* han_u = u3b_open(u3C.bob_c, u3a_bob_mug(a), u3a_bob_seq(a));
+    c3_d bid_d = u3a_bid(u3a_bob_mug(a), u3a_bob_seq(a));
+    c3_d bit_d;
 
-    if ( !han_u ) {
+    if ( c3n == u3b_stat(u3C.bob_c, bid_d, &bit_d) ) {
       if ( c3y == bal_o ) {
-        u3m_bail(c3__fail);
+        u3m_bail(c3__file);
       }
       return c3n;
     }
 
-    vue_u->bit_d = han_u->bit_d;
-    vue_u->byt_d = (han_u->bit_d + 7) >> 3;
+    //  the home road's first measure of the bob fills the bank's cache
+    //
+    {
+      u3a_blob* blb_u = _cr_bob_bank(a);
+
+      if ( blb_u && !blb_u->bit_d ) {
+        blb_u->bit_d = bit_d;
+      }
+    }
+
+    vue_u->rod_u = u3R;
+    vue_u->bit_d = bit_d;
+    vue_u->byt_d = (bit_d + 7) >> 3;
     vue_u->kin_e = u3r_view_blob;
-    vue_u->han_u = han_u;
+    vue_u->bid_d = bid_d;
     return c3y;
   }
 
+  vue_u->rod_u = u3R;
   vue_u->bit_d = u3r_met_d(0, a);
   vue_u->byt_d = (vue_u->bit_d + 7) >> 3;
 
@@ -1285,27 +1316,41 @@ u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o)
 /* u3r_view_copy(): [len_z] bytes at [off_d] of the atom, zero past its end.
 */
 c3_z
-u3r_view_copy(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
+u3r_view_copy(u3r_view* vue_u,
+              c3_d      off_d,
+              c3_y*     dst_y,
+              c3_z      len_z,
+              c3_o      bal_o)
 {
   c3_z got_z = 0;
 
-  if ( vue_u->han_u ) {
-    //  bounded by the file, not the mapping, so the zero fill past the
-    //  end is this function's whether the bytes come from the road's
-    //  mapping or from a pread
-    //
-    u3b_hand* han_u = vue_u->han_u;
+  //  only the opening road reads
+  //
+  u3_assert( u3R == vue_u->rod_u );
 
-    if ( off_d < han_u->len_d ) {
-      c3_d rem_d = han_u->len_d - off_d;
+  if ( u3r_view_blob == vue_u->kin_e ) {
+    //  bounded by the atom, not the mapping, so the zero fill past the
+    //  end is this function's whether the bytes come from the view's
+    //  mapping or from a pread.  a blob's file is exactly its bytes
+    //
+    if ( off_d < vue_u->byt_d ) {
+      c3_d rem_d = vue_u->byt_d - off_d;
       c3_z ask_z = ( (c3_d)len_z < rem_d ) ? len_z : (c3_z)rem_d;
 
-      if ( han_u->map_y ) {
-        memcpy(dst_y, han_u->map_y + off_d, ask_z);
+      if ( vue_u->byt_y ) {
+        memcpy(dst_y, vue_u->byt_y + off_d, ask_z);
         got_z = ask_z;
       }
       else {
-        got_z = u3b_read(han_u, off_d, dst_y, ask_z);
+        got_z = u3b_read(u3C.bob_c, vue_u->bid_d, off_d, dst_y, ask_z);
+      }
+
+      //  the file was shortened or failed a read: zeros in its place
+      //  would be computed on as the atom's bytes
+      //
+      if ( (got_z < ask_z) && (c3y == bal_o) ) {
+        u3r_view_done(vue_u);
+        u3m_bail(c3__file);
       }
     }
   }
@@ -1322,16 +1367,23 @@ u3r_view_copy(u3r_view* vue_u, c3_d off_d, c3_y* dst_y, c3_z len_z)
 /* u3r_view_bytes(): the atom's bytes, contiguous: byt_d of them.
 */
 const c3_y*
-u3r_view_bytes(u3r_view* vue_u)
+u3r_view_bytes(u3r_view* vue_u, c3_o bal_o)
 {
-  //  bob: the bytes are the hand's mapping, so a view costs no copy
+  //  only the opening road reads
   //
-  if ( u3r_view_blob == vue_u->kin_e ) {
-    const c3_y* byt_y = u3b_mmap(vue_u->han_u);
+  u3_assert( u3R == vue_u->rod_u );
+
+  //  bob: the bytes are a mapping, so a view costs no copy
+  //
+  if ( (u3r_view_blob == vue_u->kin_e) && !vue_u->byt_y ) {
+    const c3_y* byt_y = u3b_map(u3C.bob_c, vue_u->bid_d, vue_u->byt_d);
 
     if ( !byt_y ) {
-      u3r_view_done(vue_u);
-      u3m_bail(c3__fail);
+      if ( c3y == bal_o ) {
+        u3r_view_done(vue_u);
+        u3m_bail(c3__file);
+      }
+      return 0;
     }
     vue_u->byt_y = byt_y;
   }
@@ -1341,16 +1393,19 @@ u3r_view_bytes(u3r_view* vue_u)
 /* u3r_view_words(): the atom's words, contiguous: [len_w] of them.
 */
 const c3_w*
-u3r_view_words(u3r_view* vue_u, c3_w* len_w)
+u3r_view_words(u3r_view* vue_u, c3_w* len_w, c3_o bal_o)
 {
   c3_d wor_d = (vue_u->bit_d + u3a_word_bits - 1) >> u3a_word_bits_log;
 
   if ( wor_d > c3_w_max ) {
-    u3r_view_done(vue_u);
-    u3m_bail(c3__fail);
+    if ( c3y == bal_o ) {
+      u3r_view_done(vue_u);
+      u3m_bail(c3__fail);
+    }
+    return 0;
   }
   *len_w = (c3_w)wor_d;
-  return (const c3_w*)u3r_view_bytes(vue_u);
+  return (const c3_w*)u3r_view_bytes(vue_u, bal_o);
 }
 
 /* u3r_view_done(): release the view.
@@ -1358,8 +1413,15 @@ u3r_view_words(u3r_view* vue_u, c3_w* len_w)
 void
 u3r_view_done(u3r_view* vue_u)
 {
-  if ( u3r_view_blob == vue_u->kin_e ) {
-    u3b_shut(vue_u->han_u);   //  loom and even hold nothing
+  //  only the opening road releases
+  //
+  u3_assert( !vue_u->rod_u || (u3R == vue_u->rod_u) );
+
+  //  a home-road view owns its mapping; an inner road's goes with the
+  //  road, and loom and even hold nothing
+  //
+  if ( (u3r_view_blob == vue_u->kin_e) && vue_u->byt_y ) {
+    u3b_unmap(vue_u->byt_y);
   }
   _cr_view_blank(vue_u);
 }
@@ -1401,7 +1463,7 @@ u3r_mp(mpz_t   a_mp,
     if ( c3y == u3a_is_bob(b) ) {
       u3r_view vue_u;
       u3r_view_open(&vue_u, b, c3y);
-      const c3_y* vue_y = u3r_view_bytes(&vue_u);
+      const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
       mpz_init2(a_mp, vue_u.bit_d);
       mpz_import(a_mp, vue_u.byt_d, -1, 1, 0, 0, vue_y);
       u3r_view_done(&vue_u);
@@ -1913,7 +1975,7 @@ u3r_chop(c3_g  met_g,
       const c3_w*  bob_w;
 
       u3r_view_open(&vue_u, src, c3y);
-      bob_w = u3r_view_words(&vue_u, &len_w);
+      bob_w = u3r_view_words(&vue_u, &len_w, c3y);
       u3r_chop_words(met_g, fum_w, wid_w, tou_w, dst_w, len_w, bob_w);
       u3r_view_done(&vue_u);
       return;
@@ -2183,7 +2245,7 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
           }
           u3r_view vue_u;
           u3r_view_open(&vue_u, veb, c3y);
-          const c3_y* vue_y = u3r_view_bytes(&vue_u);
+          const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
           mug_h = u3r_mug_bytes(vue_y, vue_u.byt_d);
           u3r_view_done(&vue_u);
         }
@@ -2404,8 +2466,8 @@ u3r_comp(u3_atom a, u3_atom b)
       res = (c3_ys)(va_u.byt_d > vb_u.byt_d) - (c3_ys)(va_u.byt_d < vb_u.byt_d);
     }
     else {
-      const c3_y* a_y = u3r_view_bytes(&va_u);
-      const c3_y* b_y = u3r_view_bytes(&vb_u);
+      const c3_y* a_y = u3r_view_bytes(&va_u, c3y);
+      const c3_y* b_y = u3r_view_bytes(&vb_u, c3y);
 
       for ( c3_d i_d = va_u.byt_d; i_d--; ) {
         if ( a_y[i_d] != b_y[i_d] ) {
@@ -2456,11 +2518,21 @@ u3r_met_d(c3_g a_g, u3_atom b)
     bit_d = c3_bits_word(b);
   }
   else if ( c3y == u3a_is_bob(b) ) {
-    u3r_view vue_u;
+    u3a_blob* blb_u = _cr_bob_bank(b);
 
-    u3r_view_open(&vue_u, b, c3y);
-    bit_d = vue_u.bit_d;
-    u3r_view_done(&vue_u);
+    //  the bank's cache spares the home road the store; elsewhere the
+    //  fd cache measures a bob once per open
+    //
+    if ( blb_u && blb_u->bit_d ) {
+      bit_d = blb_u->bit_d;
+    }
+    else {
+      u3r_view vue_u;
+
+      u3r_view_open(&vue_u, b, c3y);
+      bit_d = vue_u.bit_d;
+      u3r_view_done(&vue_u);
+    }
   }
   else {
     u3a_atom* b_u   = u3a_to_ptr(b);

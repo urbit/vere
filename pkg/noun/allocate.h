@@ -217,6 +217,13 @@
     **   The file is deleted iff nothing is counted and own_o is not
     **   set.  u3a_blob_sane checks atm_h against the live atoms.
     **
+    **   bit_d caches the content's bit length, so u3r_met_d on the home
+    **   road measures a bob without opening its file.  0 until the home
+    **   road's first view of the bob fills it.  Inner roads neither read
+    **   nor write it: they measure through the hands they keep.  The
+    **   file under an id never changes while its record lives, so the
+    **   cache never goes stale.
+    **
     **   A stub is a bob with seq 0: the king mints one for a file it
     **   has staged but mars has not installed, carrying the content mug
     **   so equality and u3r_mug work.  Mars replaces it inside the
@@ -234,6 +241,7 @@
         c3_o own_o;   //  owned by the current epoch
         c3_h mug_h;   //  blob mug: names the file in the epoch's store
         c3_h seq_h;   //  blob seq
+        c3_d bit_d;   //  content bit length; 0 until measured
       } u3a_blob;
 
       typedef u3a_blob u3a_blob_h;
@@ -352,8 +360,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) bob_p;                                /*  first blob hand                           */ \
-  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
+  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \

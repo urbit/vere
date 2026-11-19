@@ -192,9 +192,10 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 /* _cttp_bods_free(): free body structure.
 **
 **   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
-**   shares one view; the tail carries own_o and closes it.  Free walks
-**   head→tail, so the view is released only after every chunk that
-**   read through it.
+**   shares one view; the tail carries own_o, closes the view, and loses
+**   the bob.  Free walks head→tail, so the view is released only after
+**   every chunk that read through it, and the bob, whose death returns
+**   the king's holds on its file, only after the view.
 */
 static void
 _cttp_bods_free(u3_hbod* bod_u)
@@ -208,6 +209,7 @@ _cttp_bods_free(u3_hbod* bod_u)
       if ( c3y == bod_u->own_o ) {
         u3r_view_done(bod_u->win_u);
         c3_free(bod_u->win_u);
+        u3z(bod_u->bob);
       }
     }
     c3_free(bod_u);
@@ -228,8 +230,9 @@ _cttp_bods_free(u3_hbod* bod_u)
 **   The bob is opened once, as a view on the king's home road.  The
 **   chain is a list of U3_HTTP_BOB_CHUNK-sized chunks that share it;
 **   _http_hgen_send copies each into a heap buffer only as h2o asks
-**   for it.  The tail chunk owns the view (own_o) and closes it when
-**   the chain is freed.
+**   for it.  The tail chunk owns the view (own_o) and a reference to
+**   [a], and releases both when the chain is freed: the bob outlives
+**   the view, so the king keeps its holds and mars keeps the file.
 **
 **   Returns 0 if the blob can't be opened (missing file, empty, too
 **   short); the caller fails the response.
@@ -280,6 +283,7 @@ _cttp_bod_from_bob(u3_atom a, c3_d len_d)
     bod_u->win_u = win_u;
     bod_u->off_d = off_d;
     bod_u->own_o = c3n;
+    bod_u->bob   = 0;
 
     if ( !hed_u ) hed_u = bod_u;
     else          tal_u->nex_u = bod_u;
@@ -289,6 +293,7 @@ _cttp_bod_from_bob(u3_atom a, c3_d len_d)
   }
 
   tal_u->own_o = c3y;
+  tal_u->bob   = u3k(a);
   return hed_u;
 }
 
@@ -1680,7 +1685,7 @@ _http_hgen_send(u3_hgen* gen_u)
                  : ( (byt_d - off_d) < cur_u->len_w ) ? (c3_z)(byt_d - off_d)
                  : cur_u->len_w;
       c3_z got_z = u3r_view_copy(cur_u->win_u, off_d,
-                                 cur_u->buf_y, cur_u->len_w);
+                                 cur_u->buf_y, cur_u->len_w, c3n);
 
       if ( got_z != exp_z ) {
         u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
