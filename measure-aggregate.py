@@ -96,6 +96,10 @@ def parse(lines):
             v = ints(p[1:])
             if v is not None and len(v) >= 6:
                 cur["J"] = v
+        elif t == "w":
+            v = ints(p[1:])
+            if v is not None and len(v) >= 7:
+                cur["w"] = v
         elif t == "F" and len(p) == 5:
             n = ints(p[4:5])
             if n:
@@ -209,6 +213,10 @@ def sums(ivs):
             s["J_eve"] += w[0]; s["J_eus"] += w[1]; s["J_pek"] += w[4]
             s["J_pus"] += w[5]; s["J_secs"] += i.get("secs", 0)
             s["J_tasks"] += i["tasks"]
+        if "w" in i and "J" in i:
+            w = i["w"]
+            s["W_pek"] += w[0]; s["W_bon"] += w[1]; s["W_eve"] += w[3]
+            s["W_peks"] += i["J"][4]; s["W_eves"] += i["J"][0] + i["J"][2]
         if "A" in i:
             a = i["A"]
             s["A_fre"] += a[0]; s["A_cln"] += a[1]; s["A_alt"] += a[2]; s["A_reu"] += a[3]
@@ -286,6 +294,21 @@ METRICS = [
     ("J: save ms / patch page", "snapshot pause",
      lambda s, v: ratio(sum(values(v, "J", 7)) / 1e3,
                         sum(i["patch"] for i in v if "J" in i and len(i["J"]) > 7))),
+    ("w: peeks that followed work at once / peeks", "parallel peek",
+     lambda s, v: ratio(s["W_pek"], s["W_peks"])),
+    ("w: bound on such a peek's wait, ms (mean)", "parallel peek",
+     lambda s, v: (lambda m: None if m is None else m / 1e3)(ratio(s["W_bon"], s["W_pek"]))),
+    ("w: bound on a peek's wait, ms (max)", "parallel peek",
+     lambda s, v: (lambda m: None if m is None else m / 1e3)(max(values(v, "w", 2), default=None))),
+    ("w: longest peek, ms", "parallel peek",
+     lambda s, v: (lambda m: None if m is None else m / 1e3)(max(values(v, "w", 5), default=None))),
+    ("w: events that followed work at once / events", "queued input",
+     lambda s, v: ratio(s["W_eve"], s["W_eves"])),
+    ("w: longest run of work, seconds", "queued input",
+     lambda s, v: (lambda m: None if m is None else m / 1e6)(max(values(v, "w", 4), default=None))),
+    ("w: processors", "host", lambda s, v: max(values(v, "w", 7), default=None)),
+    ("w: load average (median)", "host",
+     lambda s, v: (lambda m: None if m is None else m / 100)(median(values(v, "w", 6)))),
     ("first writes: page records", "C1 tier 2", lambda s, v: ratio(s["F_crag"], s["F"])),
     ("first writes: refcounts (w0)", "C3", lambda s, v: ratio(s["F_w0"], s["F"])),
     ("first writes: roc-lose", "C1 tier 2 / C3", lambda s, v: ratio(s["F_roclose"], s["F"])),

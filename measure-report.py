@@ -31,6 +31,19 @@ Log lines (one snapshot interval ends at each S line):
                                             I/O) and major (read from disk). a save maps
                                             the image again, so what the ship uses is
                                             faulted back in afterwards. zeros on windows
+  w <peeks-waited> <wait-bound-us> <longest-wait-bound-us> <events-waited>
+    <longest-run-us> <longest-peek-us> <load-x100> <cpus>
+                                            tasks that waited. a message the serf sees
+                                            within 2 ms of its last task's end (or a
+                                            save's) was most likely queued behind it; a
+                                            run is tasks so joined. peeks that followed
+                                            work at once, with the sum and the most of
+                                            the bound on their wait (the run's start to
+                                            when the peek was seen: the wait is between
+                                            zero and that). events that followed work at
+                                            once. the longest run and the longest peek.
+                                            the host's 1-minute load average times 100
+                                            (0 on windows), and its processors online
   Q <tasks> <events> <event-us> <failed-us> <peek-us> <dirty-pages>
                                             a sample of the interval so far, written
                                             at each power of two tasks, before the
@@ -106,6 +119,7 @@ def new_interval():
         "F": defaultdict(int),
         "U": 0,
         "J": None,
+        "w": None,
         "Q": [],
         "Q0": None,
         "A": None,
@@ -196,6 +210,11 @@ def parse(path):
                     cur_samples.append(v)
             elif t == "J" and cur is not None:
                 cur["J"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "w" and cur is not None:
+                try:
+                    cur["w"] = tuple(int(x) for x in line.split()[1:])
+                except ValueError:
+                    continue
             elif t == "A" and cur is not None:
                 cur["A"] = tuple(int(x) for x in line.split()[1:])
             elif t == "M" and cur is not None:
@@ -510,6 +529,33 @@ def main():
                   f"{sum(mj) / (sum(i['secs'] for i in fis) / 3600 or 1):.0f} an hour")
             print(f"  page faults during saves: minor {sum(i['J'][10] for i in fis)}, "
                   f"major {sum(i['J'][11] for i in fis)}")
+        wws = [i for i in wis if i["w"] and len(i["w"]) >= 7]
+        if wws:
+            w = [sum(i["w"][j] for i in wws) for j in range(4)]
+            pk = sum(i["J"][4] for i in wws)
+            ev = sum(i["J"][0] + i["J"][2] for i in wws)
+            lod = [i["w"][6] / 100 for i in wws]
+            print("\n== waiting behind other work ==")
+            print("  (a task counts as waiting if the serf saw it within 2 ms of"
+                  " the last task's end;\n   the bound on a peek's wait is the"
+                  " time from the run's start to when it was seen)")
+            cpu = sorted(set(i["w"][7] for i in wws if len(i["w"]) > 7))
+            print(f"  host: {'/'.join(str(c) for c in cpu) or '?'} processors; "
+                  f"load average median "
+                  f"{q(lod, .5):.2f}, p90 {q(lod, .9):.2f}, max {max(lod):.2f}")
+            print(f"  peeks that followed work at once: {w[0]} of {pk} "
+                  f"({pct(w[0], pk).strip()})")
+            if w[0]:
+                print(f"    bound on their wait, ms: mean {w[1] / 1e3 / w[0]:.2f}, "
+                      f"longest {max(i['w'][2] for i in wws) / 1e3:.1f}")
+            print(f"  events that followed work at once: {w[3]} of {ev} "
+                  f"({pct(w[3], ev).strip()})")
+            run = [i["w"][4] / 1e6 for i in wws]
+            lpk = [i["w"][5] / 1e3 for i in wws]
+            print(f"  longest run of work in an interval, seconds: median "
+                  f"{q(run, .5):.2f}, p90 {q(run, .9):.2f}, max {max(run):.2f}")
+            print(f"  longest peek in an interval, ms: median {q(lpk, .5):.1f}, "
+                  f"p90 {q(lpk, .9):.1f}, max {max(lpk):.1f}")
         #  the interval so far, at each power of two tasks
         by_n = defaultdict(list)
         for i in wis:

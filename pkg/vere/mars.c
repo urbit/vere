@@ -966,6 +966,8 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
   //
   if ( u3_mars_work_e == mar_u->sat_e ) {
     c3_d    eve_d = u3A->eve_d;
+
+    u3e_measure_seen();
     u3e_Phase     = u3e_pha_cue;
     u3_weak jar   = u3s_cue_xeno_with(mar_u->sil_u, len_d, hun_y);
 

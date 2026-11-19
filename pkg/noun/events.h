@@ -281,6 +281,12 @@
       void
       u3e_measure_work(c3_w kin_w, c3_d use_d);
 
+    /* u3e_measure_seen(): a message has come off the pipe. call before
+    **                     its task is run.
+    */
+      void
+      u3e_measure_seen(void);
+
     /* u3e_dirty(): pages written since the last save, free pages
     **              included. call on the home road.
     */

@@ -106,6 +106,11 @@
 #include <sys/time.h>
 #include <time.h>
 
+#ifndef U3_OS_windows
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 #ifdef U3_OS_windows
 #include "wloom.h"
 #include <psapi.h>
@@ -199,6 +204,15 @@ static struct {
   c3_d   tak_d;                 //  tasks this interval
   c3_d   wok_d[u3e_wok_max][2]; //  [kind] tasks, microseconds this interval
   c3_d   lon_d;                 //  longest event this interval, microseconds
+  c3_d   pek_d;                 //  longest peek this interval, microseconds
+  c3_d   sen_d;                 //  when the last message was seen
+  c3_d   end_d;                 //  when the last task or save ended
+  c3_d   run_d;                 //  when this run of work began
+  c3_t   bak_t;                 //  the last message followed work at once
+  c3_d   wai_d[5];              //  this interval: peeks that followed work
+                                //  at once, the sum and the most of the
+                                //  bound on their wait; events that did;
+                                //  the longest run of work
   c3_d   flt_d[2][2];           //  page faults (minor, major) so far, at
                                 //  the last save's end and this save's start
   c3_y*  alf_y;                 //  [pag] page records and allocation:
@@ -218,6 +232,43 @@ _ce_meas_us(void)
 
   gettimeofday(&tim_u, 0);
   return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
+/* _CE_MEAS_BACK: a message seen within this many microseconds of the
+**                last task's end counts as having followed it at once.
+*/
+#define _CE_MEAS_BACK  2000
+
+/* _ce_meas_load(): the host's 1-minute load average, times 100.
+*/
+static c3_d
+_ce_meas_load(void)
+{
+#ifndef U3_OS_windows
+  double lod_f;
+
+  if ( 1 == getloadavg(&lod_f, 1) ) {
+    return (c3_d)(lod_f * 100.0);
+  }
+#endif
+  return 0;
+}
+
+/* _ce_meas_cpus(): processors online on the host, or 0.
+*/
+static c3_w
+_ce_meas_cpus(void)
+{
+#ifdef U3_OS_windows
+  SYSTEM_INFO inf_u;
+
+  GetSystemInfo(&inf_u);
+  return (c3_w)inf_u.dwNumberOfProcessors;
+#else
+  long num_i = sysconf(_SC_NPROCESSORS_ONLN);
+
+  return ( num_i > 0 ) ? (c3_w)num_i : 0;
+#endif
 }
 
 /* _ce_meas_faults(): the process's page faults so far: minor (no I/O)
@@ -481,6 +532,25 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
     _ce_meas.flt_d[0][1] = now_d[1];
   }
 
+  //  w: tasks that waited. a message seen within _CE_MEAS_BACK of the
+  //  last task's end (or a save's) was most likely queued behind it,
+  //  and a run is tasks so joined. peeks that followed work at once,
+  //  and the sum and the most of the bound on their wait (from the
+  //  run's start to when the peek was seen); events that followed work
+  //  at once; the longest run; the longest peek; and the host's
+  //  1-minute load average, times 100 (0 on windows), and its
+  //  processors online
+  //
+  fprintf(fil_u, "w %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 _ce_meas.wai_d[0], _ce_meas.wai_d[1], _ce_meas.wai_d[2],
+                 _ce_meas.wai_d[3], _ce_meas.wai_d[4], _ce_meas.pek_d,
+                 _ce_meas_load(), (c3_d)_ce_meas_cpus());
+
+  //  the save is work too: a message that came in during it waited
+  //
+  _ce_meas.end_d = _ce_meas_us();
+
   //  Q 0 (a Q line whose first field is 0 is not a sample): the G and
   //  Y lines by kind. gains deferred on atoms and of those cancelled;
   //  alignment's references to atoms and of those at the same
@@ -630,7 +700,9 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
+  memset(_ce_meas.wai_d, 0, sizeof(_ce_meas.wai_d));
   _ce_meas.lon_d = 0;
+  _ce_meas.pek_d = 0;
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
@@ -1025,6 +1097,44 @@ u3e_measure_work(c3_w kin_w, c3_d use_d)
     if ( (u3e_wok_poke == kin_w) && (use_d > _ce_meas.lon_d) ) {
       _ce_meas.lon_d = use_d;
     }
+    if ( (u3e_wok_peek == kin_w) && (use_d > _ce_meas.pek_d) ) {
+      _ce_meas.pek_d = use_d;
+    }
+
+    if ( _ce_meas.bak_t ) {
+      if ( u3e_wok_peek == kin_w ) {
+        c3_d bon_d = _ce_meas.sen_d - _ce_meas.run_d;
+
+        _ce_meas.wai_d[0]++;
+        _ce_meas.wai_d[1] += bon_d;
+        if ( bon_d > _ce_meas.wai_d[2] ) {
+          _ce_meas.wai_d[2] = bon_d;
+        }
+      }
+      else {
+        _ce_meas.wai_d[3]++;
+      }
+      _ce_meas.bak_t = 0;
+    }
+  }
+}
+
+/* u3e_measure_seen(): a message has come off the pipe.
+*/
+void
+u3e_measure_seen(void)
+{
+  if ( _ce_meas.on_t ) {
+    c3_d now_d = _ce_meas_us();
+
+    _ce_meas.bak_t = _ce_meas.end_d
+                  && (now_d >= _ce_meas.end_d)
+                  && ((now_d - _ce_meas.end_d) < _CE_MEAS_BACK);
+
+    if ( !_ce_meas.bak_t ) {
+      _ce_meas.run_d = now_d;
+    }
+    _ce_meas.sen_d = now_d;
   }
 }
 
@@ -1038,6 +1148,19 @@ u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
   }
 
   _ce_meas.tak_d++;
+
+  //  the task's end, and the run of work it ends so far (not in replay,
+  //  where no message is seen)
+  //
+  if ( _ce_meas.sen_d ) {
+    _ce_meas.end_d = _ce_meas_us();
+
+    if (  (_ce_meas.end_d >= _ce_meas.run_d)
+       && ((_ce_meas.end_d - _ce_meas.run_d) > _ce_meas.wai_d[4]) )
+    {
+      _ce_meas.wai_d[4] = _ce_meas.end_d - _ce_meas.run_d;
+    }
+  }
 
   //  Q: a sample of the interval so far, at each power of two tasks:
   //  tasks, events computed and their microseconds, microseconds of
