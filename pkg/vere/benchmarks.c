@@ -12,7 +12,7 @@
 static void
 _setup(void)
 {
-  u3m_boot_lite(1 << 24);
+  u3m_boot_lite(1 << 25);
 }
 
 /* _bench_ns(): monotonic timestamp in nanoseconds.
@@ -365,6 +365,206 @@ _cue_soft_bench(void)
   u3z(vat);
 }
 
+/* _alloc_cons_work(): build and discard lists; arg=[rep len].
+*/
+static u3_noun
+_alloc_cons_work(u3_noun arg)
+{
+  c3_w rep_w = u3h(arg);
+  c3_w len_w = u3t(arg);
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3qb_reap(len_w, u3_blip));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_keep_work(): gain and lose an indirect noun, which is senior
+**                     to an inner road that runs this; arg=[rep noun].
+*/
+static u3_noun
+_alloc_keep_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_noun non   = u3t(arg);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3k(non));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_mine_work(): gain and lose an indirect noun made on the
+**                     road that runs this; arg=rep.
+*/
+static u3_noun
+_alloc_mine_work(u3_noun arg)
+{
+  c3_w    rep_w = arg;
+  u3_noun non   = u3i_string("a relatively unexceptional noun");
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3k(non));
+  }
+
+  u3z(non);
+  return u3_blip;
+}
+
+/* _alloc_atom_work(): churn indirect atoms by repeated addition;
+**                     arg=[rep bex].
+*/
+static u3_noun
+_alloc_atom_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_noun big   = u3qc_bex(u3t(arg));
+  u3_noun pro   = u3k(big);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    pro = u3ka_add(pro, u3k(big));
+  }
+
+  u3z(pro);
+  u3z(big);
+  return u3_blip;
+}
+
+/* _alloc_cue_work(): cue a jammed noun; arg=[rep vat].
+*/
+static u3_noun
+_alloc_cue_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_atom vat   = u3t(arg);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3s_cue(vat));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_copy_work(): build a list to be copied out of the road; arg=len.
+*/
+static u3_noun
+_alloc_copy_work(u3_noun arg)
+{
+  return u3qb_reap(arg, u3_blip);
+}
+
+/* _alloc_run(): time [rep_w] u3m_soft() invocations of [fun_f].
+*/
+static c3_d
+_alloc_run(u3_funk fun_f, u3_noun arg, c3_w rep_w)
+{
+  c3_d ber_d, end_d;
+  c3_w i_w;
+
+  ber_d = _bench_ns();
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3_noun pro = u3m_soft(0, fun_f, u3k(arg));
+
+    if ( u3_blip != u3h(pro) ) {
+      fprintf(stderr, "  alloc bench: workload failed\r\n");
+    }
+
+    u3z(pro);
+  }
+
+  end_d = _bench_ns();
+  u3z(arg);
+  return end_d - ber_d;
+}
+
+/* _alloc_run_home(): time [rep_w] direct invocations of [fun_f]
+**                    on the home road.  [fun_f] must not consume
+**                    or return allocations.
+*/
+static c3_d
+_alloc_run_home(u3_funk fun_f, u3_noun arg, c3_w rep_w)
+{
+  c3_d ber_d, end_d;
+  c3_w i_w;
+
+  ber_d = _bench_ns();
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(fun_f(arg));
+  }
+
+  end_d = _bench_ns();
+  u3z(arg);
+  return end_d - ber_d;
+}
+
+/* _alloc_row(): run a workload on an inner road and, if [hom_o], on
+**               the home road, and print the home time's ratio to the
+**               inner one.
+*/
+static void
+_alloc_row(const c3_c* lab_c,
+           u3_funk     fun_f,
+           u3_noun     arg,
+           c3_w        rep_w,
+           c3_o        hom_o)
+{
+  c3_d inn_d = _alloc_run(fun_f, u3k(arg), rep_w);
+
+  fprintf(stderr, "  %-12s %8.2f ms", lab_c, (double)inn_d / 1e6);
+
+  if ( c3y == hom_o ) {
+    c3_d hom_d = _alloc_run_home(fun_f, u3k(arg), rep_w);
+
+    fprintf(stderr, "  %8.2f ms (%.2fx)",
+                    (double)hom_d / 1e6, (double)hom_d / (double)inn_d);
+  }
+  else {
+    fprintf(stderr, "  %11s", "-");
+  }
+
+  fprintf(stderr, "\r\n");
+  u3z(arg);
+}
+
+/* _alloc_bench(): allocator workloads on an inner road, where each
+**                 runs under u3m_soft(), with home-road timings for
+**                 reference.
+*/
+static void
+_alloc_bench(void)
+{
+  fprintf(stderr, "\r\nallocator microbenchmark "
+                  "(ratios to the inner road):\r\n");
+  fprintf(stderr, "  %-12s %11s  %11s\r\n", "", "inner", "home");
+
+  _alloc_row("cons", _alloc_cons_work, u3nc(50, 10000), 10, c3y);
+
+  _alloc_row("keep senior", _alloc_keep_work,
+             u3nc(1000000, u3i_string("a relatively unexceptional noun")),
+             10, c3y);
+
+  _alloc_row("keep own", _alloc_mine_work, 1000000, 10, c3y);
+
+  _alloc_row("atoms", _alloc_atom_work, u3nc(2000, 4096), 20, c3y);
+
+  _alloc_row("cue", _alloc_cue_work,
+             u3nc(2000, u3ke_jam(_ames_writ_ex())),
+             10, c3y);
+
+  //  no home-road run: the workload measures the copy out of the road
+  //
+  _alloc_row("copy out", _alloc_copy_work, 20000, 100, c3n);
+}
+
 static void
 _edit_bench_impl(c3_w max_w)
 {
@@ -425,6 +625,7 @@ main(int argc, char* argv[])
   _jam_bench();
   _cue_bench();
   _cue_soft_bench();
+  _alloc_bench();
   _edit_bench();
 
   //  GC
