@@ -198,10 +198,10 @@
     **   the file is unreadable or shorter than [len_d], or the mapping
     **   fails.
     **
-    **   On an inner road the mapping is the road's, shared with the
-    **   roads nested in it, and lives until the road falls; an inner
-    **   road returns any mapping on its line.  On the home road each
-    **   call maps anew, until u3b_unmap.  On posix the file's pages
+    **   An inner road returns any mapping on its line: its own, an
+    **   inner ancestor's, or the home road's.  Failing that it maps
+    **   anew, and the mapping is the road's until it falls.  On the
+    **   home road each call maps anew, until u3b_unmap.  On posix the file's pages
     **   are followed by one anonymous zero page, so a reader may run
     **   one page past the file's end; on Windows the rest of the last
     **   page reads as zero, which covers any reader bound by the

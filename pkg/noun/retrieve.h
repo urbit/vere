@@ -450,9 +450,10 @@
       **   itself.
       **
       **   A view holds no fd.  On an inner road it owns nothing: a bob's
-      **   mapping is the road's and lives until the road falls, so a
-      **   bail or signal leaks nothing and a pointer from bytes stays
-      **   valid past done.  On the home road a view owns its mapping and
+      **   mapping belongs to the road or to one on its line, home
+      **   included, and lives at least until the road falls, so a bail
+      **   or signal leaks nothing and a pointer from bytes stays valid
+      **   past done.  On the home road a view owns its mapping and
       **   done unmaps it: reading through the pointer after done faults.
       **
       **   Each call that can fail takes [bal_o].  Set, a failure bails:
@@ -513,8 +514,9 @@
 
       /* u3r_view_bytes(): the atom's bytes, contiguous: byt_d of them.
       **
-      **   Borrowed for the view's lifetime.  A bob is mapped here, once
-      **   per inner road or once per home-road view (u3b_map).  A bob that cannot be mapped bails %file with
+      **   Borrowed for the view's lifetime.  A bob is mapped here unless
+      **   an inner road's line already maps it; on the home road, once
+      **   per view (u3b_map).  A bob that cannot be mapped bails %file with
       **   [bal_o] set, and returns 0 otherwise.
       */
         const c3_y*

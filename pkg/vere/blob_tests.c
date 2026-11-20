@@ -1217,7 +1217,28 @@ _test_hand_leak(void)
   _hand_unwind_check();
 }
 
-/* _test_hand_outer(): a home-road mapping survives an inner bail.
+//  the home road's mapping in the outer test
+//
+static const c3_y* _han_hom_y;
+
+static u3_noun
+_hand_outer_cb(u3_noun arg)
+{
+  (void)arg;
+  u3r_view vue_u;
+
+  //  an inner road reads the home road's mapping and makes none, then
+  //  bails with its view open
+  //
+  u3r_view_open(&vue_u, _han_bob, c3y);
+  _check(  (_han_hom_y == u3r_view_bytes(&vue_u, c3y))
+        && !u3b_maps_road(u3R) && (1 == u3b_maps()),
+          "inner road did not share the home road's mapping" );
+  return u3m_bail(c3__fail);
+}
+
+/* _test_hand_outer(): an inner road reads the home road's mapping, and
+**   its bail leaves that mapping to the home road's view.
 */
 static void
 _test_hand_outer(void)
@@ -1230,11 +1251,10 @@ _test_hand_outer(void)
   u3r_view_open(&vue_u, _han_bob, c3y);
   vue_y = u3r_view_bytes(&vue_u, c3y);
   _check( vue_y, "home map failed" );
+  _han_hom_y = vue_y;
 
-  u3z(u3m_soft_top(0, 1 << 12, _hand_bail_cb, 0, 0));
+  u3z(u3m_soft_top(0, 1 << 12, _hand_outer_cb, 0, 0));
 
-  //  the inner road made its own mapping; only that went
-  //
   _check(  (1 == u3b_maps()) && (vue_y[0] == u3r_byte(0, _han_bob)),
           "home mapping swept (maps %zu)", u3b_maps() );
 

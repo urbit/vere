@@ -80,10 +80,12 @@ _blob_pread(c3_i fid_i, void* buf_v, size_t len_i, c3_d off_d)
 **
 **   a flat view needs bytes that outlive the call, so it gets a
 **   mapping, which holds no fd.  mappings live on one C-heap list, each
-**   tagged with the road that made it.  an inner road shares its own
-**   and its inner ancestors' mappings and releases them when it falls
-**   (u3b_drain) or at a signal reset (u3b_drain_kids).  the home road
-**   never falls: each of its flat views maps alone and unmaps at done.
+**   tagged with the road that made it.  an inner road releases its own
+**   when it falls (u3b_drain) or at a signal reset (u3b_drain_kids).
+**   the home road never falls: each of its flat views maps alone and
+**   unmaps at done.  an inner road reads any mapping on its line, its
+**   own, an inner ancestor's, or the home road's, since each outlives
+**   it (see _blob_road_line).
 **
 **   a cached fd must not outlive the file it names: the store drops a
 **   slot before it unlinks or installs that id, and flushes the table
@@ -402,27 +404,33 @@ _blob_map_fd(c3_i fid_i, c3_d len_d, c3_d* map_d)
 #endif
 }
 
-/* _blob_road_line(): [rod_u] is the current inner road or an inner
-**   ancestor of it.
+/* _blob_road_line(): [rod_u] is the current road or an ancestor of
+**   it, the home road included.
+**
+**   a mapping on the line outlives the current road.  an ancestor falls
+**   only after its children.  a home-road mapping goes only at its
+**   view's done, which runs on the home road, and home-road code runs
+**   below an inner road's frames, never beside them: a section that
+**   switches to the home road from above (the profiler's) reaches only
+**   the views it opens itself.
 */
 static c3_t
 _blob_road_line(const u3a_road* rod_u)
 {
-  for ( u3a_road* lin_u = u3R;
-        lin_u != &(u3H->rod_u);
-        lin_u = u3to(u3a_road, lin_u->par_p) )
-  {
+  for ( u3a_road* lin_u = u3R; ; lin_u = u3to(u3a_road, lin_u->par_p) ) {
     if ( lin_u == rod_u ) {
       return 1;
     }
+    if ( !lin_u->par_p ) {
+      return 0;
+    }
   }
-  return 0;
 }
 
 /* u3b_map(): blob [bid_d], [len_d] bytes, mapped read-only.
 **
-**   an ancestor outlives its children, so an inner road may return any
-**   mapping on its line.  a file shortened under the view would fault
+**   an inner road returns any mapping on its line, the home road's
+**   included.  a file shortened under the view would fault
 **   inside the mapping instead of failing a read, so one is refused.
 */
 const c3_y*
