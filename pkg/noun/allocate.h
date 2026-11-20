@@ -429,11 +429,12 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
                      "32-bit road alignment" );
 
-    /* u3a_flag: flags for how.fag_w.  All arena related.
+    /* u3a_flag: flags for how.fag_w.
     */
       enum u3a_flag {
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
+        u3a_flag_nest  = 1 << 3,              //  root +nest:ut call on the stack
       };
 
     /* u3a_pile: stack control, abstracted over road direction.

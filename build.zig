@@ -145,6 +145,8 @@ const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
     .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    .{ .cpu_arch = .aarch64, .os_tag = .freebsd, .abi = null },
+    .{ .cpu_arch = .x86_64, .os_tag = .freebsd, .abi = null },
 };
 
 const targets: []const std.Target.Query = main_targets;
@@ -469,6 +471,13 @@ fn buildBinary(
     if (t.os.tag == .linux) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_linux=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
+    if (t.os.tag == .freebsd) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_bsd=1",
             "-DENT_GETENTROPY_UNISTD", //pkg_ent
         });
     }

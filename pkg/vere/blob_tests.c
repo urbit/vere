@@ -1839,10 +1839,14 @@ _test_hand_cue(void)
 {
   _pier_make("hand cue");
 
-  //  an atom tag followed by a run-length prefix that never terminates
+  //  a backref to bit 0, which holds the backref itself: cue bails
+  //  %exit on the lookup.  (a run-length prefix too long to read no
+  //  longer bails, since +cut is total on wide widths.)  the high byte
+  //  keeps the atom 64 bytes wide
   //
   c3_y dat_y[64];
   memset(dat_y, 0, sizeof(dat_y));
+  dat_y[0] = 0x07;
   dat_y[sizeof(dat_y) - 1] = 0x80;
 
   _check( c3y == _blob_save(dat_y, sizeof(dat_y),

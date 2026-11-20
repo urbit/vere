@@ -602,6 +602,8 @@ _pave_params(void)
          ^ (U3N_VERLAT << 6);
 }
 
+static void _cm_dup_clear(void);
+
 /* _pave_home(): initialize pristine home road.
 */
 static void
@@ -609,6 +611,10 @@ _pave_home(void)
 {
   u3_post top_p = u3C.wor_i - u3a_walign;
   u3_post bot_p = ((c3_w)1) << u3a_page;
+
+  //  the nouns of the home-road hashcons set are gone
+  //
+  _cm_dup_clear();
 
   u3H = u3to(u3v_home, 0);
   memset(u3H, 0, (c3_z)bot_p * sizeof(c3_w));
@@ -2159,6 +2165,14 @@ u3m_soft_with(c3_w    mil_w,
 
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
 
+  //  a failure past [hom_f], in the takes (%meme on the home road), leaves
+  //  what it opened open: the window of deferred gains is shut here, for
+  //  the next event to open it again
+  //
+  if ( 0 != u3h(why) ) {
+    u3a_defer_close();
+  }
+
   if ( 0 == u3h(why) ) {
     return why;
   }
@@ -3324,13 +3338,13 @@ u3m_time_gap_in_mil(c3_w mil_w)
 
 /*  Hash-consing.
 **
-**    Each inner road keeps an on-loom set (u3R->dup_p, a u3h table that
-**    holds references), discarded with the road. The home road keeps
-**    an off-loom set that holds no references: membership is marked in
-**    an off-loom bitmap (u3a_Hcon_w), and a member is removed when it
-**    is freed (u3m_dedup_lose(), from u3a_lose()). It is rebuilt from
-**    persistent tables at startup, after compaction, and after a sweep
-**    that freed leaks.
+**    Each inner road keeps an on-loom set (u3R->dup_p, a u3h table from
+**    a noun to its canonical equal, holding references), discarded with
+**    the road. The home road keeps an off-loom set that holds no
+**    references: membership is marked in an off-loom bitmap (u3a_Hcon_w),
+**    and a member is removed when it is freed (u3m_dedup_lose(), from
+**    u3a_lose()). It is rebuilt from persistent tables at startup, after
+**    compaction, and after a sweep that freed leaks.
 **
 **    Members are canonical, and the children of a member cell are
 **    members, so a cell is looked up by its mug and child pointers once
@@ -4235,6 +4249,13 @@ u3m_dedup(u3_noun som)
           u3_weak can = _cm_dup_get(new);
 
           if ( (u3_none != can) && (can != new) ) {
+            //  a senior cell isn't repointed, so its children won't find
+            //  it next time: list it, or each path to it walks it again
+            //
+            if ( c3y == u3a_is_senior(u3R, cel) ) {
+              u3h_put(u3R->dup_p, cel, u3k(can));
+            }
+
             u3k(can);
             u3z(new);
             new = can;

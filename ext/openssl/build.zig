@@ -222,13 +222,13 @@ fn libcrypto(
         });
     }
 
-    if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch.isAARCH64()) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/crypto", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})));
 
         lib.addCSourceFiles(.{
-            .root = b.path("gen/linux-aarch64/crypto"),
+            .root = b.path(b.fmt("gen/{s}-aarch64/crypto", .{@tagName(t.os.tag)})),
             .files = &.{
                 "aes/aesv8-armx.S",
                 "aes/vpaes-armv8.S",
@@ -294,18 +294,18 @@ fn libcrypto(
         });
     }
 
-    if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch == .x86_64) {
         lib.root_module.addCMacro("AESNI_ASM", "");
         lib.root_module.addCMacro("X25519_ASM", "");
         lib.root_module.addCMacro("MD5_ASM", "");
         lib.root_module.addCMacro("RC4_ASM", "");
 
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/crypto"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/crypto", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})));
 
         lib.addCSourceFiles(.{
-            .root = b.path("gen/linux-x86_64"),
+            .root = b.path(b.fmt("gen/{s}-x86_64", .{@tagName(t.os.tag)})),
             .files = &.{
                 "crypto/aes/aesni-mb-x86_64.s",
                 "crypto/aes/aesni-sha1-x86_64.s",
@@ -348,6 +348,12 @@ fn libcrypto(
     if (t.os.tag == .linux) {
         try srcs.appendSlice(&.{
             "engines/e_afalg.c",
+        });
+    }
+
+    if (t.os.tag == .freebsd) {
+        try srcs.appendSlice(&.{
+            "crypto/engine/eng_devcrypto.c",
         });
     }
 
@@ -440,10 +446,10 @@ fn libssl(
         lib.installHeadersDirectory(b.path("gen/macos-aarch64/include/openssl"), "openssl", .{});
     }
 
-    if (t.os.tag == .linux and t.cpu.arch.isAARCH64()) {
-        lib.addIncludePath(b.path("gen/linux-aarch64/include"));
-        lib.addIncludePath(b.path("gen/linux-aarch64/include/openssl"));
-        lib.installHeadersDirectory(b.path("gen/linux-aarch64/include/openssl"), "openssl", .{});
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch.isAARCH64()) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})));
+        lib.installHeadersDirectory(b.path(b.fmt("gen/{s}-aarch64/include/openssl", .{@tagName(t.os.tag)})), "openssl", .{});
     }
 
     if (t.os.tag.isDarwin() and t.cpu.arch == .x86_64) {
@@ -452,10 +458,10 @@ fn libssl(
         lib.installHeadersDirectory(b.path("gen/macos-x86_64/include/openssl"), "openssl", .{});
     }
 
-    if (t.os.tag == .linux and t.cpu.arch == .x86_64) {
-        lib.addIncludePath(b.path("gen/linux-x86_64/include"));
-        lib.addIncludePath(b.path("gen/linux-x86_64/include/openssl"));
-        lib.installHeadersDirectory(b.path("gen/linux-x86_64/include/openssl"), "openssl", .{});
+    if ((t.os.tag == .linux or t.os.tag == .freebsd) and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include", .{@tagName(t.os.tag)})));
+        lib.addIncludePath(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})));
+        lib.installHeadersDirectory(b.path(b.fmt("gen/{s}-x86_64/include/openssl", .{@tagName(t.os.tag)})), "openssl", .{});
     }
 
     if (t.os.tag == .windows and t.cpu.arch == .x86_64) {

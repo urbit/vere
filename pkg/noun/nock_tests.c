@@ -122,6 +122,16 @@ _defer_fail(u3_noun arg)
   return u3m_bail(c3__exit);
 }
 
+/* _defer_open_fail(): u3m_soft_with() hook: opens the window, then fails
+**                     as a take out of memory on the home road does.
+*/
+static void
+_defer_open_fail(void)
+{
+  u3a_defer_open();
+  u3m_signal(c3__meme);
+}
+
 /* _test_defer(): deferred gains across a successful exit into home.
 **
 **   each armed step must leave [hom]'s count where an unarmed control
@@ -259,6 +269,26 @@ _test_defer(void)
   }
 
   u3z(arg);
+
+  //  a failure past the hook, in the takes, finds the window open:
+  //  u3m_soft_with() shuts it, and the next event opens it again
+  //
+  gon = u3m_soft_with(0, _defer_pair, u3_nul, _defer_open_fail);
+
+  if ( 0 == u3h(gon) ) {
+    fprintf(stderr, "defer: no failure past the hook\r\n");
+    ret_i = 0;
+  }
+
+  u3z(gon);
+  arg = u3k(hom);
+
+  if ( (bas_w + 1) != u3a_use(hom) ) {
+    fprintf(stderr, "defer: window open after a failure past the hook\r\n");
+    ret_i = 0;
+  }
+
+  u3z(arg);
   u3a_defer_close();
   u3z(hom);
   return ret_i;
@@ -309,6 +339,104 @@ _test_edit_road(void)
   return ret_i;
 }
 
+/* _reap_fill(): u3m_soft() test fn: leaves half of the road's free
+**               memory filled, as roads leave what they have used: with
+**               the bytes of a hashtable slot that points nowhere.
+*/
+static u3_noun
+_reap_fill(u3_noun arg)
+{
+  c3_w  len_w = u3a_open(u3R) / 2;
+  c3_w* buf_w = u3a_walloc(len_w);
+
+  memset(buf_w, 0x6b, (size_t)len_w * sizeof(c3_w));
+  u3a_wfree(buf_w);
+  return arg;
+}
+
+/* _reap_fol(): the formula that produces [aga] by running [1 aga] on 0,
+**              with the pair of them, [0 1 aga], as a constant.
+*/
+static u3_noun
+_reap_fol(u3_noun aga)
+{
+  return u3nt(7, u3nc(1, u3nt(0, 1, aga)), u3nq(2, u3nc(0, 2), 0, 3));
+}
+
+/* _reap_part(): u3m_soft_run() test fn: makes and runs _reap_fol(aga).
+**
+**   The key of a program is [0 formula], deduplicated: the key of
+**   [1 aga] is the constant, a part of the key of the formula around it.
+*/
+static u3_noun
+_reap_part(u3_noun aga, u3_noun agb)
+{
+  return u3n_nock_on(u3_nul, _reap_fol(aga));
+}
+
+/* _reap_deep(): u3m_soft_run() test fn: _reap_part(agb), [aga] roads down.
+*/
+static u3_noun
+_reap_deep(u3_noun aga, u3_noun agb)
+{
+  u3_noun gon = ( 0 == aga )
+              ? u3m_soft_run(u3_nul, _reap_part, agb, u3_nul)
+              : u3m_soft_run(u3_nul, _reap_deep, aga - 1, agb);
+  u3_noun pro = u3k(u3t(gon));
+
+  u3z(gon);
+  return pro;
+}
+
+/* _reap_top(): u3m_soft() test fn: _reap_part(arg), three roads down.
+*/
+static u3_noun
+_reap_top(u3_noun arg)
+{
+  return _reap_deep(2, arg);
+}
+
+/* _test_reap(): a junior program whose key has left before it is reaped.
+**
+**   u3n_reap() takes the keys and the literals of the programs that the
+**   parent road lacks, in the order of the walk. A key met later can be
+**   a part of what was taken: its mug slot then holds the address of its
+**   copy, and looked up as it is, it reads the parent's table past its
+**   end. The memory there is free memory, filled here beforehand.
+*/
+static c3_i
+_test_reap(void)
+{
+  c3_i    ret_i = 1;
+  u3_atom aga;
+  u3_noun gon;
+
+  //  the least atom for which the walk (in the order of the mugs) meets
+  //  the key of the formula before the key of its part
+  //
+  for ( aga = 0; ; aga++ ) {
+    u3_noun fol = _reap_fol(aga);
+    u3_noun key = u3nc(u3_nul, fol);
+    c3_o    fit = __( u3r_mug(key) < u3r_mug(u3t(u3h(u3t(fol)))) );
+
+    u3z(key);
+    if ( c3y == fit ) {
+      break;
+    }
+  }
+
+  u3z(u3m_soft(0, _reap_fill, u3_nul));
+  gon = u3m_soft(0, _reap_top, aga);
+
+  if ( (0 != u3h(gon)) || (aga != u3t(gon)) ) {
+    u3m_p("reap: unexpected product", gon);
+    ret_i = 0;
+  }
+
+  u3z(gon);
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -330,6 +458,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test defer: ok\r\n");
+
+  if ( !_test_reap() ) {
+    fprintf(stderr, "test reap: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test reap: ok\r\n");
 
   if ( !_test_edit_road() ) {
     fprintf(stderr, "test edit road: failed\r\n");

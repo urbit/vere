@@ -203,7 +203,7 @@ static void register_cb(DNSServiceRef sref,
 
 void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
 {
-  #if defined(U3_OS_linux)
+  #if defined(U3_OS_linux) || defined(U3_OS_bsd)
   setenv("AVAHI_COMPAT_NOWARN", "1", 0);
   setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/var/run/dbus/system_bus_socket", 0);
   #   endif
@@ -228,7 +228,7 @@ void mdns_init(uint16_t port, bool fake, char* our, mdns_cb* cb, void* context)
 
   if (err != kDNSServiceErr_NoError) {
     if (err == kDNSServiceErr_Unknown) {
-      #if defined(U3_OS_linux)
+      #if defined(U3_OS_linux) || defined(U3_OS_bsd)
       u3l_log("mdns: init failed, install avahi on this system for mdns support");
       #else
       u3l_log("mdns: service register error %i", err);

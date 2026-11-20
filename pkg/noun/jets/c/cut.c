@@ -24,14 +24,20 @@
       c3_g shf_g = (c3_g)(a - 3);
       c3_d b_d, c_d;
 
-      if (  (c3n == u3r_safe_chub(b, &b_d))
-         || (c3n == u3r_safe_chub(c, &c_d)) )
-      {
-        return u3m_bail(c3__fail);
+      //  an offset wider than a chub starts past the end of .d
+      //
+      if ( c3n == u3r_safe_chub(b, &b_d) ) {
+        return 0;
       }
 
       u3r_view vue_u;
       u3r_view_open(&vue_u, d, c3y);
+
+      //  a width wider than a chub runs past the end of .d
+      //
+      if ( c3n == u3r_safe_chub(c, &c_d) ) {
+        c_d = c3_d_max;
+      }
 
       c3_d max_d = vue_u.byt_d >> shf_g;   //  whole bloqs, a floor
       c3_d off_d = b_d << shf_g;
@@ -64,22 +70,23 @@
       }
     }
 
-    if ( !_(u3r_safe_word(b, &b_w)) ) {
-      return u3m_bail(c3__fail);
-    }
-    if ( !_(u3r_safe_word(c, &c_w)) ) {
-      return u3m_bail(c3__fail);
-    }
-
     {
       c3_g a_g   = a;
       c3_w len_w = u3r_met(a_g, d);
 
-      if ( (0 == c_w) || (b_w >= len_w) ) {
+      //  .len_w always fits a word: an offset that doesn't starts past
+      //  the end of .d, and a width that doesn't runs past it
+      //
+      if ( !_(u3r_safe_word(b, &b_w)) || (b_w >= len_w) ) {
         return 0;
       }
-      if ( b_w + c_w > len_w ) {
-        c_w = (len_w - b_w);
+      //  .b_w < .len_w here, so this can't wrap like .b_w + .c_w
+      //
+      if ( !_(u3r_safe_word(c, &c_w)) || (c_w > len_w - b_w) ) {
+        c_w = len_w - b_w;
+      }
+      if ( 0 == c_w ) {
+        return 0;
       }
       if ( (b_w == 0) && (c_w == len_w) ) {
         return u3k(d);

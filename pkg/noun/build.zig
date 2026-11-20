@@ -182,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
         pkg_noun.addIncludePath(b.path("platform/darwin"));
-    if (t.os.tag == .linux)
+    if (t.os.tag == .linux or t.os.tag == .freebsd)
         pkg_noun.addIncludePath(b.path("platform/linux"));
     if (t.os.tag == .windows)
         pkg_noun.addIncludePath(b.path("platform/windows"));
@@ -224,7 +224,7 @@ pub fn build(b: *std.Build) !void {
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
-        .linux => "platform/linux/rsignal.h",
+        .linux, .freebsd => "platform/linux/rsignal.h",
         .windows => "platform/windows/rsignal.h",
         else => "",
     }), "rsignal.h");
@@ -420,7 +420,8 @@ const c_source_files = [_][]const u8{
     "jets/f/ut_redo.c",
     "jets/f/ut_mint.c",
     "jets/f/ut_mull.c",
-    "jets/f/ut_nest.c",
+    "jets/f/ut_nest1.c",
+    "jets/f/ut_nest2.c",
     "jets/f/ut_rest.c",
     "jets/g/plot.c",
     "jets/i/lagoon.c",
