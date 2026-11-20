@@ -139,10 +139,13 @@
         u3r_mug_both(c3_h lef_h, c3_h rit_h);
 
       /* u3r_mug_bytes(): Compute the mug of `buf`, `len`, LSW first.
+      **
+      **   [len_d] is a byte count, not a word count; it is 64-bit so that
+      **   atoms and blobs larger than 4 GiB mug correctly under VERE64.
       */
         c3_h
         u3r_mug_bytes(const c3_y *buf_y,
-                      c3_h        len_h);
+                      c3_d        len_d);
 
       /* u3r_mug_c(): Compute the mug of `a`, LSB first.
       */
@@ -431,6 +434,113 @@
         u3r_bytes_all(c3_w*   len_w,
                       u3_atom a);
 
+      /* u3r_view: a look into an atom's bytes, wherever the atom lives.
+      **
+      **   The one way to read a bob, and the same for every other atom.
+      **   open copies no atom bytes.  copy copies a byte range into the caller's memory, zero past
+      **   the end.  bytes and words borrow a read-only pointer to the
+      **   atom's bytes or words (a loom atom's buffer, a bob's mapping,
+      **   a direct atom's value held in the view).  done releases.
+      **
+      **   byt_d and bit_d are public and valid from open; the rest is
+      **   private.  A view is valid until done.  The road that opened it
+      **   reads it and calls done.  The caller keeps [a] live until done:
+      **   a loom view borrows the atom's buffer and holds no reference.
+      **   A view is never copied: the even kind points into the view
+      **   itself.
+      **
+      **   A view holds no fd.  On an inner road it owns nothing: a bob's
+      **   mapping belongs to the road or to one on its line, home
+      **   included, and lives at least until the road falls, so a bail
+      **   or signal leaks nothing and a pointer from bytes stays valid
+      **   past done.  On the home road a view owns its mapping and
+      **   done unmaps it: reading through the pointer after done faults.
+      **
+      **   Each call that can fail takes [bal_o].  Set, a failure bails:
+      **   %file for a store fault (a bob with no readable file, a failed
+      **   mapping, a short read), which mars refuses rather than commit,
+      **   and %fail for a word count that overflows.  Clear, the call
+      **   reports the failure and the view stays open for done.
+      **
+      **   Every byte from byt_d to the next word boundary reads as zero;
+      **   a bob's mapping on posix reads as zero to one page past the
+      **   file.
+      **
+      **   The legacy u3r_bytes and u3r_words copy.  On the home road a
+      **   legacy accessor on a bob opens, maps, and closes per call, so
+      **   home-road code holds a view across a loop.
+      */
+        typedef enum {
+          u3r_view_loom = 0,    //  the loom word buffer
+          u3r_view_blob,        //  a bob: read from the store
+          u3r_view_even         //  a direct atom's value in raw_d
+        } u3r_view_e;
+
+        typedef struct {
+          c3_d                  byt_d;  //  the atom's significant bytes
+          c3_d                  bit_d;  //  the atom's significant bits
+          u3r_view_e            kin_e;  //  private
+          c3_d                  bid_d;  //  private: blob: the bob's id
+          const c3_y*           byt_y;  //  private: the borrowed pointer
+          c3_d                  raw_d;  //  private: even: the atom's value
+          u3a_road*             rod_u;  //  private: the road that opened it
+        } u3r_view;
+
+      /* u3r_view_open(): open a view of [a].
+      **
+      **   A bob whose file is missing, empty, or all zero cannot be
+      **   viewed: with [bal_o] set that bails %file, otherwise it
+      **   returns c3n and leaves the view empty.
+      */
+        c3_o
+        u3r_view_open(u3r_view* vue_u, u3_atom a, c3_o bal_o);
+
+      /* u3r_view_copy(): [len_z] bytes at byte offset [off_d] of the
+      **   atom into [dst_y], zero-filled past its end.
+      **
+      **   A bob is read with pread, or from the view's mapping once
+      **   bytes or words made one.  A mapping faults if something
+      **   outside the store shortens the file; pread reads short.
+      **   Returns the number of bytes that came from the atom, before
+      **   the zero fill.  A short read leaves it short of the atom's
+      **   extent: with [bal_o] set that bails %file.
+      */
+        c3_z
+        u3r_view_copy(u3r_view* vue_u,
+                      c3_d      off_d,
+                      c3_y*     dst_y,
+                      c3_z      len_z,
+                      c3_o      bal_o);
+
+      /* u3r_view_bytes(): the atom's bytes, contiguous: byt_d of them.
+      **
+      **   Borrowed for the view's lifetime.  A bob is mapped here unless
+      **   an inner road's line already maps it; on the home road, once
+      **   per view (u3b_map).  A bob that cannot be mapped bails %file with
+      **   [bal_o] set, and returns 0 otherwise.
+      */
+        const c3_y*
+        u3r_view_bytes(u3r_view* vue_u, c3_o bal_o);
+
+      /* u3r_view_words(): the atom's words, contiguous: [len_w] of them.
+      **
+      **   The same pointer as u3r_view_bytes, word-aligned, with the
+      **   word count from bit_d.  A count that does not fit a word bails
+      **   %fail with [bal_o] set, as u3r_met would, and returns 0
+      **   otherwise; a failed mapping is as u3r_view_bytes.
+      */
+        const c3_w*
+        u3r_view_words(u3r_view* vue_u, c3_w* len_w, c3_o bal_o);
+
+      /* u3r_view_done(): release the view.
+      **
+      **   On the home road, unmaps a blob view's mapping; nothing else
+      **   holds anything.  Leaves the view empty.  Called on the road that
+      **   opened the view.
+      */
+        void
+        u3r_view_done(u3r_view* vue_u);
+
       /* u3r_chop_bits():
       **
       **   XOR `wid_d` bits from`src_w` at `bif_g` to `dst_w` at `bif_g`
@@ -620,16 +730,19 @@
       c3_o
       u3r_safe(u3_noun fol, u3_weak* out);
 
-      /* u3r_word_buffer(): returns word buffer pointer of atom `*a`
-      ** and the length of the buffer
-      */
-      c3_w*
-      u3r_word_buffer(u3_atom* a, c3_w* len_w);
-
       /* u3r_comp(): compares two atoms:
       ** returns 1 if a > b, -1 if a < b, 0 if they are equal
       */
       c3_ys
       u3r_comp(u3_atom a, u3_atom b);
+
+      /* u3r_met_d(): u3r_met at full width, for any atom.
+      **
+      **   A c3_w bit count overflows past 512 MiB on a 32-bit build,
+      **   which blobs exceed.  Bails %file for a bob whose file is
+      **   missing or empty.
+      */
+      c3_d
+      u3r_met_d(c3_g a_g, u3_atom b);
 
 #endif /* ifndef U3_RETRIEVE_H */
