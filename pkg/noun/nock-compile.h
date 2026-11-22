@@ -271,6 +271,15 @@
       void
       u3nc_road(void);
 
+    /* u3nc_seen(), u3nc_see(): was a part of a subject found to nest under
+    **   a part of a sock in this stay in the road (by identity), and
+    **   remember that it was (nc_seen in nock-compile.c).  RETAIN.
+    */
+      c3_t
+      u3nc_seen(u3_noun cape, u3_noun data, u3_noun sub);
+      void
+      u3nc_see(u3_noun cape, u3_noun data, u3_noun sub);
+
     /* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
     */
       c3_o

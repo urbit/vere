@@ -4866,6 +4866,93 @@ _nc_idin_live(nc_idin* idn_u)
   return (_nc_idin_d == idn_u->sta_d) && (u3R == idn_u->rod_u);
 }
 
+static inline c3_t
+_nc_home(u3_noun som);
+
+/* nc_seen: a part of a subject that was found to nest under a part of a
+**   sock, [cape data], in this stay in the road, all three by identity.
+**   A gate that is made in an event matches its entry once in the event
+**   (nc_hint), in full; the gates of one parser share most of what they
+**   close over, and so do the socks of their entries, so nine nodes in ten
+**   of those walks were of a triple that had been walked.  The sock is of
+**   the home road, good for the era; the part of the subject is held, as
+**   nc_idin holds a context, and given back the same way.  Only a cell
+**   that something else holds too is remembered (u3d_fits_las()).
+*/
+typedef struct {
+  c3_d     sta_d;
+  u3_road* rod_u;
+  u3_noun  cape;
+  u3_noun  data;
+  u3_noun  sub;
+} nc_seen;
+
+#define _nc_seen_bits  13
+
+static nc_seen _nc_seen_u[1 << _nc_seen_bits];
+static c3_s    _nc_seen_s[1 << _nc_seen_bits];  //  the entries of this stay
+static c3_w    _nc_seen_w;                      //  how many
+
+static inline nc_seen*
+_nc_seen_slot(u3_noun cape, u3_noun data, u3_noun sub)
+{
+  c3_h has_h = ((c3_h)cape * 0x9e3779b1u) ^ ((c3_h)data * 0x85ebca77u)
+             ^ ((c3_h)sub * 0xc2b2ae3du);
+
+  return &(_nc_seen_u[has_h >> (32 - _nc_seen_bits)]);
+}
+
+static inline c3_t
+_nc_seen_live(nc_seen* see_u)
+{
+  return (_nc_idin_d == see_u->sta_d) && (u3R == see_u->rod_u);
+}
+
+/* u3nc_seen(): was sub found to nest under [cape data] in this stay in
+**              the road?  By identity.
+*/
+c3_t
+u3nc_seen(u3_noun cape, u3_noun data, u3_noun sub)
+{
+  nc_seen* see_u = _nc_seen_slot(cape, data, sub);
+
+  return _nc_seen_live(see_u)
+      && (cape == see_u->cape)
+      && (data == see_u->data)
+      && (sub  == see_u->sub);
+}
+
+/* u3nc_see(): sub nests under [cape data]: remember it for this stay in
+**             the road.  RETAINS.
+*/
+void
+u3nc_see(u3_noun cape, u3_noun data, u3_noun sub)
+{
+  nc_seen* see_u;
+
+  //  the home road is not counted on; a sock of another road may go
+  //
+  if (  (&(u3H->rod_u) == u3R)
+     || !_nc_home(cape)
+     || !_nc_home(data) )
+  {
+    return;
+  }
+  see_u = _nc_seen_slot(cape, data, sub);
+
+  if ( _nc_seen_live(see_u) ) {
+    u3z(see_u->sub);
+  }
+  else {
+    _nc_seen_s[_nc_seen_w++] = (c3_s)(see_u - _nc_seen_u);
+  }
+  see_u->sta_d = _nc_idin_d;
+  see_u->rod_u = u3R;
+  see_u->cape  = cape;
+  see_u->data  = data;
+  see_u->sub   = u3k(sub);
+}
+
 void
 u3nc_road(void)
 {
@@ -4881,7 +4968,15 @@ u3nc_road(void)
       u3z(idn_u->con);
     }
   }
+  for ( i_w = 0; i_w < _nc_seen_w; i_w++ ) {
+    nc_seen* see_u = &(_nc_seen_u[_nc_seen_s[i_w]]);
+
+    if ( _nc_seen_live(see_u) ) {
+      u3z(see_u->sub);
+    }
+  }
   _nc_idin_w = 0;
+  _nc_seen_w = 0;
   _nc_idin_d++;
 }
 
@@ -7231,6 +7326,11 @@ u3nc_mark(void)
   for ( i_h = 0; i_h < (1 << _nc_idem_bits); i_h++ ) {
     if ( _nc_idin_live(&(_nc_idin_u[i_h])) ) {
       u3a_mark_noun(_nc_idin_u[i_h].con);
+    }
+  }
+  for ( i_h = 0; i_h < (1 << _nc_seen_bits); i_h++ ) {
+    if ( _nc_seen_live(&(_nc_seen_u[i_h])) ) {
+      u3a_mark_noun(_nc_seen_u[i_h].sub);
     }
   }
 
