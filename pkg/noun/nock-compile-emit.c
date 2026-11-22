@@ -377,6 +377,16 @@ _ne_h_hse(u3_noun tag, u3_noun tok)
   _nc_hilt_hind(tag, tok);
 }
 
+/* _ne_trace_tag(): a dynamic hint whose prologue only pushes on the trace
+**                  stack and whose token is null (_nc_hint_fore()).
+*/
+static inline c3_t
+_ne_trace_tag(u3_noun tag)
+{
+  return (c3__mean == tag) || (c3__spot == tag)
+      || (c3__hunk == tag) || (c3__lose == tag);
+}
+
 static _nc_cold u3_noun
 _ne_h_hdp(u3_noun tag, u3_noun clu)
 {
@@ -2088,11 +2098,34 @@ _ne_homes(ne_gen* gen_u)
         }
         switch ( op_u->fam_y ) {
           default: break;
-          case _nc_her: case _nc_tar: case _nc_hsp: case _nc_hdp:
-          case _nc_hlp: {
+          //  a dynamic hint that only pushes on the trace stack has no
+          //  token to keep, with a clue in a register or a literal one
+          //  (HLP, which is of such a hint only: _nc_fold()): its
+          //  epilogue is the pop a deferred %mean has (HME), and the two
+          //  may end one body (a trap pushed whole where its arm lacks a
+          //  part)
+          //
+          case _nc_hdp: {
+            if ( !_ne_trace_tag(pog_u->lit_u.non[op_u->imm_h]) ) {
+              dep_h++;
+            }
+          } break;
+          case _nc_her: case _nc_tar: case _nc_hsp: {
             dep_h++;
           } break;
-          case _nc_cor: case _nc_hse: case _nc_hde: {
+          case _nc_hde: {
+            if ( _ne_trace_tag(pog_u->lit_u.non[op_u->imm_h]) ) {
+              break;
+            }
+            if ( !dep_h ) {
+              gen_u->bad_t = 1;
+              gen_u->why_y = op_u->fam_y;
+            }
+            else {
+              dep_h--;
+            }
+          } break;
+          case _nc_cor: case _nc_hse: {
             if ( !dep_h ) {
               gen_u->bad_t = 1;
               gen_u->why_y = op_u->fam_y;
@@ -2103,14 +2136,15 @@ _ne_homes(ne_gen* gen_u)
           } break;
           //  the words of the hints it ends
           //
+          //  It counts a word for a trace hint too, which keeps none
+          //  here: so it may ask for more than there are.  Nothing after
+          //  it reads a token: an LNK and the tail call follow
+          //  (_nc_tails())
+          //
           case _nc_trk: {
-            if ( dep_h < (op_u->imm_h >> 8) ) {
-              gen_u->bad_t = 1;
-              gen_u->why_y = op_u->fam_y;
-            }
-            else {
-              dep_h -= (op_u->imm_h >> 8);
-            }
+            c3_h wor_h = op_u->imm_h >> 8;
+
+            dep_h = ( dep_h < wor_h ) ? 0 : (dep_h - wor_h);
           } break;
         }
         max_w = c3_max(max_w, dep_h);
@@ -3661,9 +3695,6 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _nx_mov_ri(A, nx_a0, pog_u->lit_u.non[op_u->imm_h]);
       _nx_call_l(A, ~(c3_w)0,
                  _ne_hel((_nc_hcp == op_u->fam_y) ? ne_h_hcp : ne_h_hlp));
-      if ( _nc_hlp == op_u->fam_y ) {
-        _nx_st_i(A, nx_sp, tok_w, 0);
-      }
     } break;
 
     case _nc_hsp: {
@@ -3687,12 +3718,19 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _nx_mov_rr(A, nx_a1, reg_y);
       _nx_mov_ri(A, nx_a0, pog_u->lit_u.non[op_u->imm_h]);
       _nx_call_l(A, ~(c3_w)0, _ne_hel(ne_h_hdp));
-      _nx_st(A, nx_sp, tok_w, nx_t0);
+      if ( !_ne_trace_tag(pog_u->lit_u.non[op_u->imm_h]) ) {
+        _nx_st(A, nx_sp, tok_w, nx_t0);
+      }
     } break;
 
     case _nc_hde: {
       _nx_mov_ri(A, nx_a0, pog_u->lit_u.non[op_u->imm_h]);
-      _nx_ld(A, nx_a1, nx_sp, tok_w - _ne_wb);
+      if ( _ne_trace_tag(pog_u->lit_u.non[op_u->imm_h]) ) {
+        _nx_mov_ri(A, nx_a1, u3_nul);
+      }
+      else {
+        _nx_ld(A, nx_a1, nx_sp, tok_w - _ne_wb);
+      }
       _nx_call_l(A, ~(c3_w)0, _ne_hel(ne_h_hde));
       if ( kon_y ) {
         _ne_drop(gen_u, a_h, 0);
