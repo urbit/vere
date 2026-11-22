@@ -1664,35 +1664,53 @@ u3r_tape(u3_noun a)
 }
 
 /* u3r_mug_both(): Join two mugs.
+**
+**   MurmurHash3_x86_32 of the two, four bytes of lef_l then the bytes of
+**   rit_l that are not leading zeros, written out for that length: one
+**   block, then a second block or a tail.  What does not depend on the
+**   seed is done once.
 */
+static inline c3_h
+_cr_mug_rotl(c3_h x_h, c3_y r_y)
+{
+  return (x_h << r_y) | (x_h >> (32 - r_y));
+}
+
 c3_m
 u3r_mug_both(c3_m lef_l, c3_m rit_l)
 {
-  c3_y len_y = 4 + ((c3_bits_half(rit_l) + 0x7) >> 3);
+  c3_h byt_h = (c3_bits_half(rit_l) + 0x7) >> 3;
+  c3_h len_h = 4 + byt_h;
   c3_h syd_h = 0xdeadbeef;
-  c3_h   i_h = 0;
-  c3_y buf_y[8];
+  c3_h kel_h = _cr_mug_rotl((c3_h)lef_l * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h ker_h = _cr_mug_rotl((c3_h)rit_l * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h   i_h;
 
-  buf_y[0] = lef_l         & 0xff;
-  buf_y[1] = (lef_l >>  8) & 0xff;
-  buf_y[2] = (lef_l >> 16) & 0xff;
-  buf_y[3] = (lef_l >> 24) & 0xff;
-  buf_y[4] = rit_l         & 0xff;
-  buf_y[5] = (rit_l >>  8) & 0xff;
-  buf_y[6] = (rit_l >> 16) & 0xff;
-  buf_y[7] = (rit_l >> 24) & 0xff;
-
-  while ( i_h < 8 ) {
-    c3_h haz_h;
+  for ( i_h = 0; i_h < 8; i_h++, syd_h++ ) {
+    c3_h haz_h = syd_h;
     c3_m ham_m;
 
-    MurmurHash3_x86_32(buf_y, len_y, syd_h, &haz_h);
+    haz_h ^= kel_h;
+    haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+
+    if ( 4 == byt_h ) {
+      haz_h ^= ker_h;
+      haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+    }
+    else if ( byt_h ) {
+      haz_h ^= ker_h;
+    }
+
+    haz_h ^= len_h;
+    haz_h ^= haz_h >> 16;
+    haz_h *= 0x85ebca6b;
+    haz_h ^= haz_h >> 13;
+    haz_h *= 0xc2b2ae35;
+    haz_h ^= haz_h >> 16;
+
     ham_m = (haz_h >> 31) ^ (haz_h & 0x7fffffff);
 
-    if ( 0 == ham_m ) {
-      syd_h++; i_h++;
-    }
-    else {
+    if ( 0 != ham_m ) {
       return ham_m;
     }
   }
@@ -1904,6 +1922,16 @@ u3r_mug(u3_noun veb)
   //  sanity check
   //
   u3_assert( u3_none != veb );
+
+  //  a mug that is remembered needs no stack
+  //
+  if ( c3n == u3a_is_cat(veb) ) {
+    c3_h hav_h = ((u3a_noun*)u3a_to_ptr(veb))->mug_w;
+
+    if ( hav_h ) {
+      return hav_h;
+    }
+  }
 
   u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
