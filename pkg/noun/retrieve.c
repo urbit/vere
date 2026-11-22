@@ -198,6 +198,25 @@ c3_o
 u3r_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z)
 {
   u3_assert(len_z < c3_w_max);
+
+  //  a few shallow axes, as every jet asks for: each fetched by itself,
+  //  which costs less than sharing the walk does (_mean_extract())
+  //
+  if ( len_z <= 8 ) {
+    c3_z i_z;
+
+    for ( i_z = 0; i_z < len_z; i_z++ ) {
+      u3_weak som;
+
+      if (  (0 == pairs[i_z].axe_w)
+         || (u3_none == (som = _frag_word(pairs[i_z].axe_w, a))) )
+      {
+        return c3n;
+      }
+      *(pairs[i_z].som) = som;
+    }
+    return c3y;
+  }
   return _mean_extract(a, (c3_w)len_z, pairs);
 }
 
