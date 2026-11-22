@@ -1450,6 +1450,8 @@ typedef struct {
   ne_op*     ops_u;       //  its ops
   c3_w       opn_w;
   c3_w*      map_w;       //  offset in the bytecode -> op
+  c3_w*      nat_w;       //  op -> where its code starts, and one more for
+                          //  the slow paths (U3NC_EMIT_MAP), or 0
   c3_ws*     hom_ws;      //  slot -> its home: a register, or -(cell + 1)
                           //  in the frame
   c3_w       cel_w;       //  cells of the frame (four bytes each)
@@ -4101,6 +4103,9 @@ _ne_code(ne_gen* gen_u)
   for ( i_w = 0; (i_w < gen_u->opn_w) && !gen_u->bad_t; i_w++ ) {
     ne_op* op_u = &gen_u->ops_u[i_w];
 
+    if ( gen_u->nat_w ) {
+      gen_u->nat_w[i_w] = A->len_w;
+    }
     if ( op_u->led_y ) {
       _nx_bind(A, op_u->lab_w);
     }
@@ -4126,10 +4131,22 @@ _ne_code(ne_gen* gen_u)
       c3_w fir_w = i_w;
 
       i_w += _ne_op(gen_u, i_w);
+      //  the ops it took with it start where it does
+      //
+      if ( gen_u->nat_w ) {
+        c3_w k_w;
+
+        for ( k_w = fir_w + 1; (k_w <= i_w) && (k_w < gen_u->opn_w); k_w++ ) {
+          gen_u->nat_w[k_w] = gen_u->nat_w[fir_w];
+        }
+      }
       if ( gen_u->zen_w && !gen_u->bad_t ) {
         _ne_blanks(gen_u, fir_w, i_w);
       }
     }
+  }
+  if ( gen_u->nat_w ) {
+    gen_u->nat_w[gen_u->opn_w] = A->len_w;
   }
   _nx_trap(A);
 
@@ -4182,6 +4199,56 @@ _ne_code(ne_gen* gen_u)
   }
 }
 
+/* U3NC_EMIT_MAP=file: where the code of each program and of each of its
+**   ops is, a line "P address length mug args bytes" then a line "O
+**   offset where-in-the-bytecode FAMILY" per op and one for the slow
+**   paths, then "B" and the code in hex, so that the samples of a
+**   profiler can be told apart
+**   (diagnostics).  The mug is the one a dump of the program prints.
+*/
+static FILE* _ne_map_f;
+
+static c3_t
+_ne_map_on(void)
+{
+  static c3_y try_y = 0;
+
+  if ( !try_y ) {
+    const c3_c* pax_c = getenv("U3NC_EMIT_MAP");
+
+    try_y = 1;
+    if ( pax_c ) {
+      _ne_map_f = fopen(pax_c, "w");
+    }
+  }
+  return 0 != _ne_map_f;
+}
+
+static void
+_ne_map_put(ne_gen* gen_u, c3_y* cod_y)
+{
+  u3nc_prog* pog_u = gen_u->pog_u;
+  c3_w       i_w;
+
+  fprintf(_ne_map_f, "P %p %u %08x %u %u\n", (void*)cod_y,
+          gen_u->asm_u.len_w,
+          u3r_mug_bytes(pog_u->byc_u.ops_y, pog_u->byc_u.len_h),
+          pog_u->arg_h, pog_u->byc_u.len_h);
+  for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
+    fprintf(_ne_map_f, "O %u %u %s\n", gen_u->nat_w[i_w],
+            gen_u->ops_u[i_w].off_h, _nc_fam_c[gen_u->ops_u[i_w].fam_y]);
+  }
+  fprintf(_ne_map_f, "O %u - SLOW\n", gen_u->nat_w[gen_u->opn_w]);
+  //  the code itself, for a disassembler
+  //
+  fprintf(_ne_map_f, "B ");
+  for ( i_w = 0; i_w < gen_u->asm_u.len_w; i_w++ ) {
+    fprintf(_ne_map_f, "%02x", cod_y[i_w]);
+  }
+  fprintf(_ne_map_f, "\n");
+  fflush(_ne_map_f);
+}
+
 /* _ne_lower(): make the code of a program; whether it could.
 */
 static c3_t
@@ -4228,6 +4295,9 @@ _ne_lower(u3nc_prog* pog_u)
   }
   else {
     _ne_decode(&gen_u);
+    if ( _ne_map_on() ) {
+      gen_u.nat_w = c3_calloc(((c3_z)gen_u.opn_w + 1) * sizeof(c3_w));
+    }
     _ne_homes(&gen_u);
     if ( !gen_u.bad_t ) {
       _ne_code(&gen_u);
@@ -4251,6 +4321,9 @@ _ne_lower(u3nc_prog* pog_u)
     nj_side* sid_u = _nj_side_get(pog_u);
 
     sid_u->emi_f    = cod_y;
+    if ( gen_u.nat_w ) {
+      _ne_map_put(&gen_u, cod_y);
+    }
     sid_u->nat_f[0] = (void*)_nc_burn_north_emit;
     sid_u->nat_f[1] = (void*)_nc_burn_south_emit;
     //  its thunk goes to the code from now on: a jump
@@ -4276,6 +4349,7 @@ _ne_lower(u3nc_prog* pog_u)
   _nx_done(&gen_u.asm_u);
   c3_free(gen_u.ops_u);
   c3_free(gen_u.map_w);
+  c3_free(gen_u.nat_w);
   c3_free(gen_u.hom_ws);
   c3_free(gen_u.stu_u);
   c3_free(gen_u.sit_w);
