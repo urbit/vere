@@ -3110,11 +3110,26 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _nx_shl_ri(A, nx_t0, 2);
       _nx_ldx(A, out_y, nx_bas, nx_t0,
               (_nc_hed == op_u->fam_y) ? _ne_c_hed : _ne_c_tel);
-      _ne_gain(gen_u, out_y, nx_t1, nx_t4, 0);
-      if ( kon_y ) {
-        c3_w out_w = _nx_label(A);
+      if ( !kon_y ) {
+        _ne_gain(gen_u, out_y, nx_t1, nx_t4, 0);
+      }
+      else {
+        //  the cell is given up: if it is not of this road, its part is
+        //  not either (a senior noun has senior parts), and nothing is
+        //  counted; if it is, the part is counted and the cell, which is
+        //  known to be ours, released
+        //
+        c3_w     out_w = _nx_label(A);
+        ne_stub* stu_u;
 
-        _ne_less_off(gen_u, reg_y, nx_t0, nx_t1, out_w);
+        _ne_normal(gen_u, nx_t0, nx_t1, out_w);
+        _ne_gain(gen_u, out_y, nx_t1, nx_t4, 0);
+        _nx_alu_xi(A, nx_cmp, nx_bas, nx_t0, _ne_c_use, 1);
+        stu_u = _ne_stub(gen_u, ne_s_lose);
+        stu_u->a_y   = reg_y;
+        stu_u->bak_w = out_w;
+        _nx_jcc(A, nx_be, stu_u->ent_w);
+        _nx_decx(A, nx_bas, nx_t0, _ne_c_use);
         _nx_bind(A, out_w);
       }
       _ne_put(gen_u, d_h, out_y);
@@ -3748,11 +3763,46 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
                             || (_nc_jmx == op_u->fam_y);
       c3_t             own_t = (_nc_cax == op_u->fam_y)
                             || (_nc_jmx == op_u->fam_y);
+      c3_t             cmp_t = 0;
+      c3_w             cmp_w = 0;
 
       if ( tal_t && kon_y ) {
         gen_u->bad_t = 1;
         gen_u->why_y = op_u->fam_y;
         break;
+      }
+      //  a comparison of two direct atoms is made here: the jump that is
+      //  taken when the answer is no, or none
+      //
+      {
+        c3_y nay_y = 0xff;
+
+        if ( !own_t && (2 == dir_u->len_h) ) {
+          if      ( u3ua_gth == dir_u->arm_u->arg_f ) { nay_y = nx_be; }
+          else if ( u3ua_gte == dir_u->arm_u->arg_f ) { nay_y = nx_b;  }
+          else if ( u3ua_lth == dir_u->arm_u->arg_f ) { nay_y = nx_ae; }
+          else if ( u3ua_lte == dir_u->arm_u->arg_f ) { nay_y = nx_a;  }
+        }
+        if ( 0xff != nay_y ) {
+          const c3_h* sot_h = pog_u->sot_u.sot_h + dir_u->sot_h;
+          c3_y        one_y = _ne_get(gen_u, sot_h[0], nx_t0);
+          c3_y        two_y = _ne_get(gen_u, sot_h[1], nx_t1);
+          c3_w        slo_w = _nx_label(A);
+
+          cmp_w = _nx_label(A);
+          cmp_t = 1;
+          _nx_mov_rr(A, nx_t3, one_y);
+          _nx_alu_rr(A, nx_or, nx_t3, two_y);
+          _nx_jcc8(A, nx_s, slo_w);
+          //  the flags outlive this move, not the one of a zero
+          //
+          _nx_mov_ri(A, nx_t3, c3n);
+          _nx_alu_rr(A, nx_cmp, one_y, two_y);
+          _nx_jcc(A, nay_y, cmp_w);
+          _nx_mov_ri(A, nx_t3, c3y);
+          _nx_jmp(A, cmp_w);
+          _nx_bind(A, slo_w);
+        }
       }
       _ne_gather(gen_u, dir_u);
       _nx_mov_rr64(A, nx_a0, nx_a2);
@@ -3771,6 +3821,9 @@ _ne_op(ne_gen* gen_u, c3_w i_w)
       _nx_mov_rr(A, nx_t3, nx_t0);
       if ( !own_t ) {
         _ne_release(gen_u, dir_u);
+      }
+      if ( cmp_t ) {
+        _nx_bind(A, cmp_w);
       }
       if ( tal_t ) {
         _nx_mov_rr(A, nx_t0, nx_t3);
