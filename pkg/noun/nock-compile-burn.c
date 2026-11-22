@@ -1087,25 +1087,20 @@ OP1(CAP, a_h, BODY_CAP)
   c3_h*      sot_h;                                                             \
   c3_y*      kon_y;                                                             \
   c3_h       len_h;                                                             \
-  c3_h       kni_h;       /*  argument cursor of _nc_knit(), address-taken  */  \
   u3_noun*   nex;                                                               \
   u3_noun    x, o;                                                              \
   SITE();                                                                       \
   CALLEE();                                                                     \
   GATHER(gop_u->tot_h);                                                         \
-  kni_h = 0;                                                                    \
   {                                                                             \
     _nc_tsc_beg();                                                              \
-    x = _nc_key(dir_u->cid_h, c3n,                                              \
-                u3nc(_nc_knit(gop_u->ned, nex, &kni_h), GAIN(dir_u->bell)));    \
-    o = _nc_find(dir_u->cid_h, x);                                              \
+    o = _nc_cam_get(dir_u, gop_u, nex, &x);                                         \
     _nc_tsc_end(mem_c);                                                         \
   }                                                                             \
   _nc_stat(mem_d);                                                              \
   _nc_stat_if(u3_none != o, meh_d);                                             \
   if ( u3_none != o ) {                                                         \
     POP(gop_u->tot_h);                                                          \
-    LOSE(x);                                                                    \
     LEAVE();                                                                    \
     PUT(dir_u->des_h, o);                                                       \
     BURN();                                                                     \

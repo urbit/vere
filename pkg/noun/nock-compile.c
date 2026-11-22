@@ -5813,6 +5813,130 @@ _nc_find(c3_h cid_h, u3_noun key)
   return u3z_find(cid_h, key);
 }
 
+/* _nc_knit_mug(): the mug of _nc_knit(ned, arg), which is not made.
+*/
+static c3_h
+_nc_knit_mug(u3_noun ned, u3_noun* arg, c3_h* i_h)
+{
+  u3_noun tag = u3h(ned);
+
+  if ( c3y == u3du(tag) ) {
+    c3_h hed_h = _nc_knit_mug(tag, arg, i_h);
+    return u3r_mug_both(hed_h, _nc_knit_mug(u3t(ned), arg, i_h));
+  }
+
+  switch ( tag ) {
+    default:        return u3r_mug(0);
+    case c3__this:  return u3r_mug(arg[(*i_h)++]);
+    case c3__both: {
+      c3_h mug_h = u3r_mug(arg[(*i_h)++]);
+      *i_h += _nc_count(u3h(u3t(ned))) + _nc_count(u3t(u3t(ned)));
+      return mug_h;
+    }
+  }
+}
+
+/* _nc_knit_same(): is som the noun _nc_knit(ned, arg) would make?
+*/
+static c3_o
+_nc_knit_same(u3_noun ned, u3_noun* arg, c3_h* i_h, u3_noun som)
+{
+  u3_noun tag = u3h(ned);
+
+  if ( c3y == u3du(tag) ) {
+    if (  (c3n == u3du(som))
+       || (c3n == _nc_knit_same(tag, arg, i_h, u3h(som))) )
+    {
+      return c3n;
+    }
+    return _nc_knit_same(u3t(ned), arg, i_h, u3t(som));
+  }
+
+  switch ( tag ) {
+    default:        return __(0 == som);
+    case c3__this:  return u3r_sing(arg[(*i_h)++], som);
+    case c3__both: {
+      c3_o sam_o = u3r_sing(arg[(*i_h)++], som);
+      *i_h += _nc_count(u3h(u3t(ned))) + _nc_count(u3t(u3t(ned)));
+      return sam_o;
+    }
+  }
+}
+
+typedef struct {
+  c3_m     sed_m;
+  u3_noun  ned;
+  u3_noun* arg;
+  u3_noun  bell;
+} nc_camq;
+
+static c3_o
+_nc_cam_same(u3_noun key, void* ptr_v)
+{
+  nc_camq* cam_u = ptr_v;
+  c3_h     i_h   = 0;
+  u3_noun  inn;
+
+  //  the table has other keys than ours
+  //
+  if (  (c3n == u3du(key))
+     || (cam_u->sed_m != u3h(key))
+     || (c3n == u3du(inn = u3t(key))) )
+  {
+    return c3n;
+  }
+  if (  (cam_u->bell != u3t(inn))
+     && (c3n == u3r_sing(cam_u->bell, u3t(inn))) )
+  {
+    return c3n;
+  }
+  return _nc_knit_same(cam_u->ned, cam_u->arg, &i_h, u3h(inn));
+}
+
+/* _nc_cam_get(): the memo of a memoized call on a part of its subject, the
+**            arguments of the callee gop_u in arg, RETAINED: the product,
+**            a hit; or u3_none, and the key in *key for the save.
+**
+**   The key is [seed (the subject knit from the arguments) bell].  On a
+**   hit none is made: its mug is the mugs of the arguments joined as the
+**   subject would join them, and a key of the table is compared with the
+**   arguments in place.  Where the key would be found is where u3z_find()
+**   looks for one of this cache, in the table of the road.
+*/
+static u3_weak
+_nc_cam_get(u3nc_dire* dir_u, u3nc_prog* gop_u, u3_noun* arg, u3_noun* key)
+{
+  c3_h    i_h = 0;
+  u3_weak pro;
+
+  if ( u3z_memo_toss == dir_u->cid_h ) {
+    nc_camq cam_u = { _nc_memo_seed(dir_u->cid_h, c3n), gop_u->ned, arg,
+                      dir_u->bell };
+    c3_h    kni_h = _nc_knit_mug(gop_u->ned, arg, &i_h);
+    c3_h    mug_h = u3r_mug_both(u3r_mug(cam_u.sed_m),
+                                 u3r_mug_both(kni_h, u3r_mug(dir_u->bell)));
+
+    pro = u3h_git_by(u3R->cax.har_p, mug_h, _nc_cam_same, &cam_u);
+
+    if ( u3_none != pro ) {
+      return u3k(pro);
+    }
+    i_h  = 0;
+    *key = _nc_key(dir_u->cid_h, c3n,
+                   u3nc(_nc_knit(gop_u->ned, arg, &i_h), u3k(dir_u->bell)));
+    return u3_none;
+  }
+
+  *key = _nc_key(dir_u->cid_h, c3n,
+                 u3nc(_nc_knit(gop_u->ned, arg, &i_h), u3k(dir_u->bell)));
+  pro  = _nc_find(dir_u->cid_h, *key);
+
+  if ( u3_none != pro ) {
+    u3z(*key);
+  }
+  return pro;
+}
+
 /* _nc_normal(), _nc_senior(): where an indirect noun lives relative to
 **   the road, with the direction known at compile time.
 */
