@@ -263,6 +263,14 @@
     */
       extern c3_d u3nc_Era_d;
 
+    /* u3nc_road(): the road that runs is about to be left, for a new one
+    **              (u3m_leap()) or for its parent (u3m_fall()): what
+    **              compiled nock remembers of the road's own nouns
+    **              (nc_idin in nock-compile.c) is forgotten.
+    */
+      void
+      u3nc_road(void);
+
     /* u3nc_entered(): is there an entry program for [bus fol]?  RETAINS.
     */
       c3_o

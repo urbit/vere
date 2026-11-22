@@ -1203,6 +1203,7 @@ u3m_leap(c3_w pad_w)
   if ( &(u3H->rod_u) == u3R ) {
     u3nc_Era_d++;
   }
+  u3nc_road();
 
   // Stash slow stack pointer
   if ( NULL != u3t_Spin ) {
@@ -1279,6 +1280,7 @@ u3m_fall(void)
   */
   u3R = u3to(u3_road, u3R->par_p);
   u3R->kid_p = 0;
+  u3nc_road();
 
   // restore slow stack pointer
   if ( NULL != u3t_Spin ) {

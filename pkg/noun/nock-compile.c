@@ -4835,6 +4835,56 @@ _nc_idem_slot(u3_noun fol, u3_noun con)
   return &(_nc_idem_u[has_h >> (32 - _nc_idem_bits)]);
 }
 
+/* nc_idin: the same for a context that is a noun of the road that runs,
+**   as the core a gate was made in during the event is.  Such a noun may
+**   be freed, and another made where it was, while the road runs: so the
+**   cache holds a reference to the context, which keeps the address its
+**   own.  The references are counts of the road that runs, given back when
+**   an entry is replaced and when the road is left for a new one
+**   (u3nc_road()); a road that is left for its parent takes them with it.
+**   Either way the entries are of one stay in one road: _nc_idin_d counts
+**   the stays.  The home road is never counted on (nc_idem serves it).
+**   The formula and the entry are of the home road, good for the era,
+**   which no stay in a road outlasts.  u3nc_mark() marks the contexts.
+*/
+typedef struct {
+  c3_d     sta_d;
+  u3_road* rod_u;
+  u3_noun  fol;
+  u3_noun  con;
+  u3_noun  i;
+} nc_idin;
+
+static nc_idin _nc_idin_u[1 << _nc_idem_bits];
+static c3_s    _nc_idin_s[1 << _nc_idem_bits];  //  the entries of this stay
+static c3_w    _nc_idin_w;                      //  how many
+static c3_d    _nc_idin_d = 1;
+
+static inline c3_t
+_nc_idin_live(nc_idin* idn_u)
+{
+  return (_nc_idin_d == idn_u->sta_d) && (u3R == idn_u->rod_u);
+}
+
+void
+u3nc_road(void)
+{
+  c3_w i_w;
+
+  //  a road that was left without a word (a signal) left entries that are
+  //  not of the road that runs: its nouns are gone
+  //
+  for ( i_w = 0; i_w < _nc_idin_w; i_w++ ) {
+    nc_idin* idn_u = &(_nc_idin_u[_nc_idin_s[i_w]]);
+
+    if ( _nc_idin_live(idn_u) ) {
+      u3z(idn_u->con);
+    }
+  }
+  _nc_idin_w = 0;
+  _nc_idin_d++;
+}
+
 /* nc_bate: the entry a subject matched last, by the nouns of its formula
 **          and of its battery (the head of the subject), across events.
 **
@@ -4945,16 +4995,55 @@ _nc_ent_key(u3_noun bell)
   return u3k(fol);
 }
 
+/* nc_hint: the entry that a subject with this formula and context, by
+**          their mugs (_nc_las_key()), matched last, in any event.  A
+**          context that is built anew for every event (the core a parser's
+**          rules close over) misses the cache of the road once per event
+**          and per gate, and the scan of the list that follows walks the
+**          sock of every entry of the gate's battery.  The hint says which
+**          entry of the list to try first.  It is only ever compared with
+**          the entries of a list that the formula was looked up in, and
+**          the subject is checked against its sock in full, so a stale or
+**          a colliding one costs a check and nothing else.  Kept outside
+**          the loom; it holds no references.
+*/
+typedef struct {
+  c3_h    key_h;
+  u3_noun i;
+} nc_hint;
+
+#define _nc_hint_bits  12
+
+static nc_hint _nc_hint_u[1 << _nc_hint_bits];
+
+static inline nc_hint*
+_nc_hint_slot(c3_h key_h)
+{
+  return &(_nc_hint_u[(key_h * 0x9e3779b1u) >> (32 - _nc_hint_bits)]);
+}
+
 /* _nc_ent_list(): the entry [sock program] among those of a road under a
-**   key of ska.ent_p that is the most specific for sub.  RETAINS.
+**   key of ska.ent_p that is the most specific for sub; or the one of
+**   them that hin_u names, if sub matches it.  RETAINS.
 */
 static u3_weak
-_nc_ent_list(u3_road* rod_u, u3_noun sub, u3_noun key)
+_nc_ent_list(u3_road* rod_u, u3_noun sub, u3_noun key, nc_hint* hin_u,
+             c3_h las_h)
 {
   u3_weak lis = u3h_git(rod_u->ska.ent_p, key);
 
   if ( u3_none == lis ) {
     return u3_none;
+  }
+  if ( hin_u && (las_h == hin_u->key_h) ) {
+    for ( u3_noun l = lis; u3_nul != l; l = u3t(l) ) {
+      if ( u3h(l) == hin_u->i ) {
+        if ( c3y == u3d_fits_las(u3h(l), sub, u3_none) ) {
+          return u3h(l);
+        }
+        break;
+      }
+    }
   }
 #ifdef U3NC_STAT
   //  u3d_match() scans every entry of the list
@@ -4980,9 +5069,11 @@ _nc_ent_get(u3_noun sub, u3_noun fol, c3_t lit_t)
   u3_weak  got   = u3_none;
   c3_t     hom_t = ( &(u3H->rod_u) == u3R );
   nc_idem* ide_u = NULL;
+  nc_idin* idn_u = NULL;
   nc_bate* bat_u = NULL;
   u3_noun  key   = u3_nul;
   u3_weak  ke2   = u3_none, ke4 = u3_none;
+  nc_hint* hin_u = NULL;
 
   //  across events, by the nouns of the formula and the battery (nc_bate)
   //
@@ -5015,11 +5106,25 @@ _nc_ent_get(u3_noun sub, u3_noun fol, c3_t lit_t)
         _nc_stat(idm_d);
         return _nc_to(u3t(ide_u->i));
       }
+
+      //  by the nouns of the formula and a context of this road (nc_idin)
+      //
+      idn_u = &(_nc_idin_u[ide_u - _nc_idem_u]);
+
+      if (  _nc_idin_live(idn_u)
+         && (fol == idn_u->fol)
+         && (con == idn_u->con)
+         && (c3y == u3d_fits_con(idn_u->i, sub)) )
+      {
+        _nc_stat(idm_d);
+        return _nc_to(u3t(idn_u->i));
+      }
     }
 
     //  [entry subject formula], the cache's: nothing here allocates
     //
-    key = _nc_las_key(sub, fol);
+    key   = _nc_las_key(sub, fol);
+    hin_u = _nc_hint_slot((c3_h)key);
     {
       u3_weak las = u3h_git(u3R->cax.har_p, key);
 
@@ -5049,19 +5154,19 @@ _nc_ent_get(u3_noun sub, u3_noun fol, c3_t lit_t)
       if ( u3_none == ke2 ) {
         ke2 = _nc_ent_idx(2, fol, u3h(sub));
       }
-      if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke2)) ) {
+      if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke2, hin_u, (c3_h)key)) ) {
         break;
       }
       if ( c3y == u3du(u3h(sub)) ) {
         if ( u3_none == ke4 ) {
           ke4 = _nc_ent_idx(4, fol, u3h(u3h(sub)));
         }
-        if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke4)) ) {
+        if ( u3_none != (got = _nc_ent_list(rod_u, sub, ke4, hin_u, (c3_h)key)) ) {
           break;
         }
       }
     }
-    if ( u3_none != (got = _nc_ent_list(rod_u, sub, fol)) ) {
+    if ( u3_none != (got = _nc_ent_list(rod_u, sub, fol, hin_u, (c3_h)key)) ) {
       break;
     }
   }
@@ -5075,6 +5180,8 @@ _nc_ent_get(u3_noun sub, u3_noun fol, c3_t lit_t)
 
   if ( !hom_t ) {
     u3h_put(u3R->cax.har_p, key, u3nt(u3k(got), u3k(sub), u3k(fol)));
+    hin_u->key_h = (c3_h)key;
+    hin_u->i     = got;
   }
 
 done:
@@ -5087,6 +5194,23 @@ done:
     ide_u->fol   = fol;
     ide_u->con   = u3t(u3t(sub));
     ide_u->i     = got;
+  }
+  if (  idn_u
+     && _nc_home(fol)
+     && _nc_home(got)
+     && !_nc_home(u3t(u3t(sub))) )
+  {
+    if ( _nc_idin_live(idn_u) ) {
+      u3z(idn_u->con);
+    }
+    else {
+      _nc_idin_s[_nc_idin_w++] = (c3_s)(idn_u - _nc_idin_u);
+    }
+    idn_u->sta_d = _nc_idin_d;
+    idn_u->rod_u = u3R;
+    idn_u->fol   = fol;
+    idn_u->con   = u3k(u3t(u3t(sub)));
+    idn_u->i     = got;
   }
   if ( bat_u && _nc_home(got) ) {
     bat_u->gen_d = u3nc_Gen_d;
@@ -6827,6 +6951,15 @@ u3nc_mark(void)
   qua_u[5]->siz_w = u3h_mark_tot(u3R->ska.def_p) * sizeof(c3_w);
 
   qua_u[6] = NULL;
+
+  //  the contexts nc_idin holds for this stay in the road: counted
+  //  references that nothing in the loom accounts for
+  //
+  for ( i_h = 0; i_h < (1 << _nc_idem_bits); i_h++ ) {
+    if ( _nc_idin_live(&(_nc_idin_u[i_h])) ) {
+      u3a_mark_noun(_nc_idin_u[i_h].con);
+    }
+  }
 
   tot_u->nam_c = strdup("total compiled nock");
   tot_u->qua_u = qua_u;
