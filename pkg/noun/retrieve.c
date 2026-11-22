@@ -1881,6 +1881,59 @@ typedef struct {
   u3_cell cel;
 } _cr_mugf;
 
+/* _cr_mug_cat(): the mug of a direct atom: u3r_mug_words() of the one
+**                word, MurmurHash3_x86_32 of its bytes that are not
+**                leading zeros, written out for a word (see
+**                u3r_mug_both()).
+*/
+static inline c3_h
+_cr_mug_cat(c3_w veb_w)
+{
+  c3_h byt_h = (c3_bits_word(veb_w) + 0x7) >> 3;
+  c3_d val_d = veb_w;
+  c3_h kel_h = _cr_mug_rotl((c3_h)val_d * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h keh_h = _cr_mug_rotl((c3_h)(val_d >> 32) * 0xcc9e2d51, 15)
+               * 0x1b873593;
+  c3_h syd_h = 0xcafebabe;
+  c3_h   i_h;
+
+  for ( i_h = 0; i_h < 8; i_h++, syd_h++ ) {
+    c3_h haz_h = syd_h;
+    c3_m ham_m;
+
+    if ( byt_h >= 4 ) {
+      haz_h ^= kel_h;
+      haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+
+      if ( 8 == byt_h ) {
+        haz_h ^= keh_h;
+        haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+      }
+      else if ( byt_h > 4 ) {
+        haz_h ^= keh_h;
+      }
+    }
+    else if ( byt_h ) {
+      haz_h ^= kel_h;
+    }
+
+    haz_h ^= byt_h;
+    haz_h ^= haz_h >> 16;
+    haz_h *= 0x85ebca6b;
+    haz_h ^= haz_h >> 13;
+    haz_h *= 0xc2b2ae35;
+    haz_h ^= haz_h >> 16;
+
+    ham_m = (haz_h >> 31) ^ (haz_h & 0x7fffffff);
+
+    if ( 0 != ham_m ) {
+      return ham_m;
+    }
+  }
+
+  return 0x7fff;
+}
+
 /* _cr_mug_next(): advance mug calculation, pushing cells onto the stack.
 */
 static inline c3_h
@@ -1890,7 +1943,7 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
     //  veb is a direct atom, mug is not memoized
     //
     if ( c3y == u3a_is_cat(veb) ) {
-      return (c3_h)u3r_mug_words(&veb, 1);
+      return _cr_mug_cat(veb);
     }
     //  veb is indirect, a pointer into the loom
     //
@@ -1942,9 +1995,12 @@ u3r_mug(u3_noun veb)
   //
   u3_assert( u3_none != veb );
 
-  //  a mug that is remembered needs no stack
+  //  a mug that is remembered needs no stack, nor does a direct atom's
   //
-  if ( c3n == u3a_is_cat(veb) ) {
+  if ( c3y == u3a_is_cat(veb) ) {
+    return _cr_mug_cat(veb);
+  }
+  else {
     c3_h hav_h = ((u3a_noun*)u3a_to_ptr(veb))->mug_w;
 
     if ( hav_h ) {
