@@ -5813,6 +5813,132 @@ _nc_find(c3_h cid_h, u3_noun key)
   return u3z_find(cid_h, key);
 }
 
+/* nc_plan: the need of a memoized callee, flat: what _nc_knit() does with
+**   it, in the order it does it.  A cell of the subject (two plans
+**   follow), a zero where nothing is needed, or the argument that goes
+**   there (a noun taken whole and in parts too is its first register, the
+**   others are passed over).  Walking the need itself for every call, and
+**   counting the registers under each such noun, was a twentieth of a
+**   parser's run.  Kept outside the loom, by the address of the program,
+**   which names it for as long as the home road is not run on
+**   (u3nc_Era_d); a need too large for it is walked as before.
+*/
+#define _nc_plan_cel  0
+#define _nc_plan_nul  1
+#define _nc_plan_arg  2
+#define _nc_plan_max  94
+
+typedef struct {
+  c3_d       era_d;
+  u3nc_prog* gop_u;
+  c3_y       len_y;                   //  0: none, the need is too large
+  c3_y       ops_y[_nc_plan_max];
+} nc_plan;
+
+#define _nc_plan_bits  8
+
+static nc_plan _nc_plan_u[1 << _nc_plan_bits];
+
+static c3_t
+_nc_plan_make(nc_plan* pan_u, u3_noun ned, c3_h* i_h)
+{
+  u3_noun tag = u3h(ned);
+
+  if ( pan_u->len_y >= _nc_plan_max ) {
+    return 0;
+  }
+  if ( c3y == u3du(tag) ) {
+    pan_u->ops_y[pan_u->len_y++] = _nc_plan_cel;
+    return _nc_plan_make(pan_u, tag, i_h)
+        && _nc_plan_make(pan_u, u3t(ned), i_h);
+  }
+
+  switch ( tag ) {
+    default: {
+      pan_u->ops_y[pan_u->len_y++] = _nc_plan_nul;
+      return 1;
+    }
+    case c3__this:
+    case c3__both: {
+      if ( *i_h > (255 - _nc_plan_arg) ) {
+        return 0;
+      }
+      pan_u->ops_y[pan_u->len_y++] = _nc_plan_arg + *i_h;
+      *i_h += ( c3__this == tag ) ? 1 : _nc_count(ned);
+      return 1;
+    }
+  }
+}
+
+static nc_plan*
+_nc_plan_of(u3nc_prog* gop_u)
+{
+  static nc_plan non_u;               //  no plan
+  c3_h     has_h = (c3_h)((c3_d)(c3_p)gop_u >> 4) * 0x9e3779b1u;
+  nc_plan* pan_u = &(_nc_plan_u[has_h >> (32 - _nc_plan_bits)]);
+
+  //  a program of another road may go, and another come where it was,
+  //  within the era
+  //
+  if ( !_nc_here(gop_u, &(u3H->rod_u)) ) {
+    return &non_u;
+  }
+
+  if ( (u3nc_Era_d != pan_u->era_d) || (gop_u != pan_u->gop_u) ) {
+    c3_h i_h = 0;
+
+    pan_u->era_d = u3nc_Era_d;
+    pan_u->gop_u = gop_u;
+    pan_u->len_y = 0;
+
+    if ( !_nc_plan_make(pan_u, gop_u->ned, &i_h) ) {
+      pan_u->len_y = 0;
+    }
+  }
+  return pan_u;
+}
+
+/* _nc_plan_mug(): the mug of the subject knit from arg by the plan at
+**                 *ops_y, which is passed over.
+*/
+static c3_h
+_nc_plan_mug(const c3_y** ops_y, u3_noun* arg)
+{
+  c3_y op_y = *(*ops_y)++;
+
+  if ( _nc_plan_cel == op_y ) {
+    c3_h hed_h = _nc_plan_mug(ops_y, arg);
+    return u3r_mug_both(hed_h, _nc_plan_mug(ops_y, arg));
+  }
+  return u3r_mug(( _nc_plan_nul == op_y ) ? 0 : arg[op_y - _nc_plan_arg]);
+}
+
+/* _nc_plan_same(): is som the subject knit from arg by the plan at *ops_y?
+**                  The plan is passed over if it is.
+*/
+static c3_o
+_nc_plan_same(const c3_y** ops_y, u3_noun* arg, u3_noun som)
+{
+  c3_y op_y = *(*ops_y)++;
+
+  if ( _nc_plan_cel == op_y ) {
+    if (  (c3n == u3du(som))
+       || (c3n == _nc_plan_same(ops_y, arg, u3h(som))) )
+    {
+      return c3n;
+    }
+    return _nc_plan_same(ops_y, arg, u3t(som));
+  }
+  if ( _nc_plan_nul == op_y ) {
+    return __(0 == som);
+  }
+  {
+    u3_noun one = arg[op_y - _nc_plan_arg];
+
+    return ( one == som ) ? c3y : u3r_sing(one, som);
+  }
+}
+
 /* _nc_knit_mug(): the mug of _nc_knit(ned, arg), which is not made.
 */
 static c3_h
@@ -5865,6 +5991,7 @@ _nc_knit_same(u3_noun ned, u3_noun* arg, c3_h* i_h, u3_noun som)
 
 typedef struct {
   c3_m     sed_m;
+  nc_plan* pan_u;
   u3_noun  ned;
   u3_noun* arg;
   u3_noun  bell;
@@ -5890,6 +6017,11 @@ _nc_cam_same(u3_noun key, void* ptr_v)
   {
     return c3n;
   }
+  if ( cam_u->pan_u->len_y ) {
+    const c3_y* ops_y = cam_u->pan_u->ops_y;
+
+    return _nc_plan_same(&ops_y, cam_u->arg, u3h(inn));
+  }
   return _nc_knit_same(cam_u->ned, cam_u->arg, &i_h, u3h(inn));
 }
 
@@ -5910,11 +6042,28 @@ _nc_cam_get(u3nc_dire* dir_u, u3nc_prog* gop_u, u3_noun* arg, u3_noun* key)
   u3_weak pro;
 
   if ( u3z_memo_toss == dir_u->cid_h ) {
-    nc_camq cam_u = { _nc_memo_seed(dir_u->cid_h, c3n), gop_u->ned, arg,
-                      dir_u->bell };
-    c3_h    kni_h = _nc_knit_mug(gop_u->ned, arg, &i_h);
-    c3_h    mug_h = u3r_mug_both(u3r_mug(cam_u.sed_m),
-                                 u3r_mug_both(kni_h, u3r_mug(dir_u->bell)));
+    static c3_m sed_m;
+    static c3_h sem_h;
+    nc_plan*    pan_u = _nc_plan_of(gop_u);
+    nc_camq     cam_u = { _nc_memo_seed(dir_u->cid_h, c3n), pan_u,
+                          gop_u->ned, arg, dir_u->bell };
+    c3_h        kni_h, mug_h;
+
+    if ( pan_u->len_y ) {
+      const c3_y* ops_y = pan_u->ops_y;
+
+      kni_h = _nc_plan_mug(&ops_y, arg);
+    }
+    else {
+      kni_h = _nc_knit_mug(gop_u->ned, arg, &i_h);
+    }
+    //  the mug of the seed, which is one atom for this cache
+    //
+    if ( sed_m != cam_u.sed_m ) {
+      sed_m = cam_u.sed_m;
+      sem_h = u3r_mug(sed_m);
+    }
+    mug_h = u3r_mug_both(sem_h, u3r_mug_both(kni_h, u3r_mug(dir_u->bell)));
 
     pro = u3h_git_by(u3R->cax.har_p, mug_h, _nc_cam_same, &cam_u);
 
