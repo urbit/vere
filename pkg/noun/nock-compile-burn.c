@@ -2099,7 +2099,7 @@ OP2(LNK, a_h, b_h, BODY_LNK)
 //
 #define BODY_TRK()                                                              \
   c3_h num_h = a_h & 255;                                                       \
-  POP(a_h >> 8);                                                                \
+  POP((a_h >> 8) & 255);                                                        \
   if ( num_h ) {                                                                \
     FRAME_T* fam_u = TOP(FRAME_W);                                              \
     nc_rec*  rec_u;                                                             \

@@ -1515,6 +1515,48 @@ _ne_ends(c3_y fam_y)
   }
 }
 
+/* _ne_unbalanced(): the tokens of a program do not balance at an op: a
+**   way to it has another depth than the first that reached it, an
+**   epilogue finds no token of its prologue, or the function ends with one
+**   left.  The prologues and the epilogues of the IR are paired on every
+**   way, so this is a bug of whoever made the bytecode, or of the count in
+**   _ne_homes(), and never a reason to leave the program to the
+**   interpreter: prints the ops with their depths and the program, and
+**   stops.
+*/
+static void
+_ne_unbalanced(ne_gen* gen_u, c3_w i_w, const c3_c* why_c, c3_h hav_h,
+               c3_h wan_h)
+{
+  ne_op* ops_u = gen_u->ops_u;
+  c3_w   k_w;
+
+  fprintf(stderr, "\r\nemit: tokens out of balance at op %u (%s): %s, "
+                  "%u against %u\r\n",
+          (unsigned)i_w, _nc_fam_c[ops_u[i_w].fam_y], why_c,
+          (unsigned)hav_h, (unsigned)wan_h);
+
+  for ( k_w = 0; k_w < gen_u->opn_w; k_w++ ) {
+    ne_op* op_u = &ops_u[k_w];
+
+    fprintf(stderr, "  %s%4u @%-5u %-4s imm %u",
+            ( k_w == i_w ) ? ">" : " ", (unsigned)k_w, (unsigned)op_u->off_h,
+            _nc_fam_c[op_u->fam_y], (unsigned)op_u->imm_h);
+    if ( _nc_none != op_u->tar_h ) {
+      fprintf(stderr, " -> %u", (unsigned)op_u->tar_h);
+    }
+    if ( _nc_none == op_u->dep_h ) {
+      fprintf(stderr, "  depth ?\r\n");
+    }
+    else {
+      fprintf(stderr, "  depth %u\r\n", (unsigned)op_u->dep_h);
+    }
+  }
+  _nc_print(gen_u->pog_u);
+  fflush(stderr);
+  abort();
+}
+
 /* _ne_decode(): the ops of the program.
 */
 static void
@@ -2116,33 +2158,38 @@ _ne_homes(ne_gen* gen_u)
               break;
             }
             if ( !dep_h ) {
-              gen_u->bad_t = 1;
-              gen_u->why_y = op_u->fam_y;
+              _ne_unbalanced(gen_u, i_w, "an epilogue with no token", 0, 1);
             }
-            else {
-              dep_h--;
-            }
+            dep_h--;
           } break;
           case _nc_cor: case _nc_hse: {
             if ( !dep_h ) {
-              gen_u->bad_t = 1;
-              gen_u->why_y = op_u->fam_y;
+              _ne_unbalanced(gen_u, i_w, "an epilogue with no token", 0, 1);
             }
-            else {
-              dep_h--;
-            }
+            dep_h--;
           } break;
-          //  the words of the hints it ends
-          //
-          //  It counts a word for a trace hint too, which keeps none
-          //  here: so it may ask for more than there are.  Nothing after
-          //  it reads a token: an LNK and the tail call follow
-          //  (_nc_tails())
+          //  the words of the hints it ends, but for those of the trace
+          //  hints, which keep none here
           //
           case _nc_trk: {
-            c3_h wor_h = op_u->imm_h >> 8;
+            c3_h wor_h = ((op_u->imm_h >> 8) & 255) - (op_u->imm_h >> 16);
 
-            dep_h = ( dep_h < wor_h ) ? 0 : (dep_h - wor_h);
+            if ( dep_h < wor_h ) {
+              _ne_unbalanced(gen_u, i_w, "the hints it ends have more words",
+                             dep_h, wor_h);
+            }
+            dep_h -= wor_h;
+          } break;
+          //  a function that crashes leaves its tokens where they are;
+          //  any other end has none left
+          //
+          case _nc_don: case _nc_dox: case _nc_jmp: case _nc_jms:
+          case _nc_jmf: case _nc_jmx: case _nc_jsp: case _nc_jmc:
+          case _nc_jnk: {
+            if ( dep_h ) {
+              _ne_unbalanced(gen_u, i_w, "the function ends with tokens",
+                             dep_h, 0);
+            }
           } break;
         }
         max_w = c3_max(max_w, dep_h);
@@ -2172,12 +2219,12 @@ _ne_homes(ne_gen* gen_u)
             new_t = 1;
           }
           else if ( nex_u->dep_h != dep_h ) {
-            gen_u->bad_t = 1;
-            gen_u->why_y = _nc_hop;
+            _ne_unbalanced(gen_u, (c3_w)(nex_u - ops_u),
+                           "two ways to it differ", dep_h, nex_u->dep_h);
           }
         }
       }
-    } while ( new_t && !gen_u->bad_t );
+    } while ( new_t );
 
     //  what nothing reaches is dead
     //

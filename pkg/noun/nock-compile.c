@@ -148,7 +148,9 @@
 **                   the number of their entries on the trace stack,
 **                   which stay for the tail call that follows and come
 **                   off when the caller of this activation gets its
-**                   product (_nc_tails())
+**                   product (_nc_tails()); plus 65536 times the words
+**                   among them that dynamic trace hints pushed, which
+**                   machine code keeps no word for
 **    JNK   u f      NOK in tail position: both consumed, there being
 **                   nothing after it for them to be alive for
 **    BOM            crash
@@ -1816,6 +1818,8 @@ typedef struct {
   c3_y con_y;               //  conses around the product
   c3_h hin_h;               //  ends of trace hints
   c3_h wor_h;               //  words on the stack the ends of hints pop
+  c3_h tra_h;               //  of them, the words of dynamic trace hints:
+                            //  no token, and no word in machine code
   c3_h oth_h[_nc_way_max];  //  the other half of each cons, the innermost
                             //  first: a register alive before the call
   c3_y sid_y[_nc_way_max];  //  the half the product is: 0 head, 1 tail
@@ -1950,7 +1954,7 @@ _nc_way(nc_gen* gen_u, const c3_h* use_h, c3_h b_h, c3_h j_h, nc_way* way_u)
         case _nc_hse: {
           switch ( _nc_tag_end(gen_u->lin[op_u->imm_h], _nc_hde == fam_y) ) {
             case 0: way_u->wor_h++; break;
-            case 1: way_u->wor_h++; way_u->hin_h++; break;
+            case 1: way_u->wor_h++; way_u->hin_h++; way_u->tra_h++; break;
             default: way_y = _nc_wy_held; break;
           }
         } break;
@@ -2261,7 +2265,8 @@ _nc_tails(nc_gen* gen_u)
 
         if ( one_u->wor_h || one_u->hin_h ) {
           op_u = _nc_op_init(&(new_u[new_h++]), _nc_trk);
-          op_u->imm_h = ((c3_h)one_u->wor_h << 8) | one_u->hin_h;
+          op_u->imm_h = ((c3_h)one_u->tra_h << 16)
+                      | ((c3_h)one_u->wor_h << 8) | one_u->hin_h;
         }
 
         if ( one_u->con_y ) {
