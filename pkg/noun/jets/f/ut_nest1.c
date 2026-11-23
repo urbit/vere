@@ -30,6 +30,11 @@ _fu_nest_dext1(u3_noun dext_core, u3_funq fun_f)
   {
     return u3m_bail(c3__fail);
   }
+  //  a type nests in itself: what +dext asks first, before any lookup
+  //
+  else if ( sut == ref ) {
+    return c3y;
+  }
   else {
     u3_weak vet = u3r_at(u3qfu_van_vet, van);
     c3_m  fun_m = 141 + c3__dext + ((!!vet) << 8);

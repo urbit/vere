@@ -202,9 +202,60 @@ _d_huge_las(u3_noun cape, u3_noun data, u3_noun sub, u3_weak las)
 /* u3d_fits_las(): does sub nest under the sock of the entry i, [sock *],
 **   given las, a noun that did?  RETAINS.
 */
+/* _d_huge_new(): does sub nest under the sock [cape data], nothing
+**   known of it?  A cell of sub that something else holds too may come
+**   again under the same part of a sock, with another subject of the
+**   event: what was found of it is remembered (u3nc_see()) and not walked
+**   again.  dep_w: how many such cells this one is under by their tails,
+**   which is as deep as this goes for them.  RETAINS.
+*/
+static c3_o
+_d_huge_new(u3_noun cape, u3_noun data, u3_noun sub, c3_w dep_w)
+{
+  while ( 1 ) {
+#ifdef U3NC_STAT
+    u3nc_Stat.hug_d++;
+#endif
+    if ( c3y == u3ud(cape) ) {
+      return ( c3n == _d_loob(cape) ) ? c3y : u3r_sing(data, sub);
+    }
+    if ( c3n == u3du(sub) ) {
+      return c3n;
+    }
+
+    {
+      u3_noun dh, dt;
+      c3_t    sha_t = (dep_w < 64)
+                   && (((u3a_noun*)u3a_to_ptr(sub))->use_w > 1);
+
+      if ( sha_t && u3nc_seen(cape, data, sub) ) {
+        return c3y;
+      }
+      u3x_cell(data, &dh, &dt);
+
+      if ( c3n == _d_huge_new(u3h(cape), dh, u3h(sub), 0) ) {
+        return c3n;
+      }
+      if ( sha_t ) {
+        if ( c3n == _d_huge_new(u3t(cape), dt, u3t(sub), dep_w + 1) ) {
+          return c3n;
+        }
+        u3nc_see(cape, data, sub);
+        return c3y;
+      }
+      cape = u3t(cape);
+      data = dt;
+      sub  = u3t(sub);
+    }
+  }
+}
+
 c3_o
 u3d_fits_las(u3_noun i, u3_noun sub, u3_noun las)
 {
+  if ( u3_none == las ) {
+    return _d_huge_new(u3h(u3h(i)), u3t(u3h(i)), sub, 0);
+  }
   return _d_huge_las(u3h(u3h(i)), u3t(u3h(i)), sub, las);
 }
 

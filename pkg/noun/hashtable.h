@@ -189,6 +189,14 @@
         u3_weak
         u3h_get(u3p(u3h_root) har_p, u3_noun key);
 
+      /* u3h_git_by(): read from hashtable by the mug of a key that is not
+      **               made: fun_f(key, ptr_v) says whether a stored key is
+      **               the one.  The result is RETAINED.
+      */
+        u3_weak
+        u3h_git_by(u3p(u3h_root) har_p, c3_h mug_h,
+                   c3_o (*fun_f)(u3_noun, void*), void* ptr_v);
+
       /* u3h_git(): read from hashtable, retaining result.
       **
       ** `key` is RETAINED; result is RETAINED.

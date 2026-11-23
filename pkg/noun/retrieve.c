@@ -198,6 +198,25 @@ c3_o
 u3r_vmean(u3_noun a, u3r_mean_pair pairs[], c3_z len_z)
 {
   u3_assert(len_z < c3_w_max);
+
+  //  a few shallow axes, as every jet asks for: each fetched by itself,
+  //  which costs less than sharing the walk does (_mean_extract())
+  //
+  if ( len_z <= 8 ) {
+    c3_z i_z;
+
+    for ( i_z = 0; i_z < len_z; i_z++ ) {
+      u3_weak som;
+
+      if (  (0 == pairs[i_z].axe_w)
+         || (u3_none == (som = _frag_word(pairs[i_z].axe_w, a))) )
+      {
+        return c3n;
+      }
+      *(pairs[i_z].som) = som;
+    }
+    return c3y;
+  }
   return _mean_extract(a, (c3_w)len_z, pairs);
 }
 
@@ -1664,35 +1683,53 @@ u3r_tape(u3_noun a)
 }
 
 /* u3r_mug_both(): Join two mugs.
+**
+**   MurmurHash3_x86_32 of the two, four bytes of lef_l then the bytes of
+**   rit_l that are not leading zeros, written out for that length: one
+**   block, then a second block or a tail.  What does not depend on the
+**   seed is done once.
 */
+static inline c3_h
+_cr_mug_rotl(c3_h x_h, c3_y r_y)
+{
+  return (x_h << r_y) | (x_h >> (32 - r_y));
+}
+
 c3_m
 u3r_mug_both(c3_m lef_l, c3_m rit_l)
 {
-  c3_y len_y = 4 + ((c3_bits_half(rit_l) + 0x7) >> 3);
+  c3_h byt_h = (c3_bits_half(rit_l) + 0x7) >> 3;
+  c3_h len_h = 4 + byt_h;
   c3_h syd_h = 0xdeadbeef;
-  c3_h   i_h = 0;
-  c3_y buf_y[8];
+  c3_h kel_h = _cr_mug_rotl((c3_h)lef_l * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h ker_h = _cr_mug_rotl((c3_h)rit_l * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h   i_h;
 
-  buf_y[0] = lef_l         & 0xff;
-  buf_y[1] = (lef_l >>  8) & 0xff;
-  buf_y[2] = (lef_l >> 16) & 0xff;
-  buf_y[3] = (lef_l >> 24) & 0xff;
-  buf_y[4] = rit_l         & 0xff;
-  buf_y[5] = (rit_l >>  8) & 0xff;
-  buf_y[6] = (rit_l >> 16) & 0xff;
-  buf_y[7] = (rit_l >> 24) & 0xff;
-
-  while ( i_h < 8 ) {
-    c3_h haz_h;
+  for ( i_h = 0; i_h < 8; i_h++, syd_h++ ) {
+    c3_h haz_h = syd_h;
     c3_m ham_m;
 
-    MurmurHash3_x86_32(buf_y, len_y, syd_h, &haz_h);
+    haz_h ^= kel_h;
+    haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+
+    if ( 4 == byt_h ) {
+      haz_h ^= ker_h;
+      haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+    }
+    else if ( byt_h ) {
+      haz_h ^= ker_h;
+    }
+
+    haz_h ^= len_h;
+    haz_h ^= haz_h >> 16;
+    haz_h *= 0x85ebca6b;
+    haz_h ^= haz_h >> 13;
+    haz_h *= 0xc2b2ae35;
+    haz_h ^= haz_h >> 16;
+
     ham_m = (haz_h >> 31) ^ (haz_h & 0x7fffffff);
 
-    if ( 0 == ham_m ) {
-      syd_h++; i_h++;
-    }
-    else {
+    if ( 0 != ham_m ) {
       return ham_m;
     }
   }
@@ -1844,6 +1881,59 @@ typedef struct {
   u3_cell cel;
 } _cr_mugf;
 
+/* _cr_mug_cat(): the mug of a direct atom: u3r_mug_words() of the one
+**                word, MurmurHash3_x86_32 of its bytes that are not
+**                leading zeros, written out for a word (see
+**                u3r_mug_both()).
+*/
+static inline c3_h
+_cr_mug_cat(c3_w veb_w)
+{
+  c3_h byt_h = (c3_bits_word(veb_w) + 0x7) >> 3;
+  c3_d val_d = veb_w;
+  c3_h kel_h = _cr_mug_rotl((c3_h)val_d * 0xcc9e2d51, 15) * 0x1b873593;
+  c3_h keh_h = _cr_mug_rotl((c3_h)(val_d >> 32) * 0xcc9e2d51, 15)
+               * 0x1b873593;
+  c3_h syd_h = 0xcafebabe;
+  c3_h   i_h;
+
+  for ( i_h = 0; i_h < 8; i_h++, syd_h++ ) {
+    c3_h haz_h = syd_h;
+    c3_m ham_m;
+
+    if ( byt_h >= 4 ) {
+      haz_h ^= kel_h;
+      haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+
+      if ( 8 == byt_h ) {
+        haz_h ^= keh_h;
+        haz_h  = (_cr_mug_rotl(haz_h, 13) * 5) + 0xe6546b64;
+      }
+      else if ( byt_h > 4 ) {
+        haz_h ^= keh_h;
+      }
+    }
+    else if ( byt_h ) {
+      haz_h ^= kel_h;
+    }
+
+    haz_h ^= byt_h;
+    haz_h ^= haz_h >> 16;
+    haz_h *= 0x85ebca6b;
+    haz_h ^= haz_h >> 13;
+    haz_h *= 0xc2b2ae35;
+    haz_h ^= haz_h >> 16;
+
+    ham_m = (haz_h >> 31) ^ (haz_h & 0x7fffffff);
+
+    if ( 0 != ham_m ) {
+      return ham_m;
+    }
+  }
+
+  return 0x7fff;
+}
+
 /* _cr_mug_next(): advance mug calculation, pushing cells onto the stack.
 */
 static inline c3_h
@@ -1853,7 +1943,7 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
     //  veb is a direct atom, mug is not memoized
     //
     if ( c3y == u3a_is_cat(veb) ) {
-      return (c3_h)u3r_mug_words(&veb, 1);
+      return _cr_mug_cat(veb);
     }
     //  veb is indirect, a pointer into the loom
     //
@@ -1904,6 +1994,19 @@ u3r_mug(u3_noun veb)
   //  sanity check
   //
   u3_assert( u3_none != veb );
+
+  //  a mug that is remembered needs no stack, nor does a direct atom's
+  //
+  if ( c3y == u3a_is_cat(veb) ) {
+    return _cr_mug_cat(veb);
+  }
+  else {
+    c3_h hav_h = ((u3a_noun*)u3a_to_ptr(veb))->mug_w;
+
+    if ( hav_h ) {
+      return hav_h;
+    }
+  }
 
   u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 

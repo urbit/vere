@@ -966,6 +966,89 @@ u3h_git(u3p(u3h_root) har_p, u3_noun key)
   }
 }
 
+/* _ch_buck_git_by(), _ch_node_git_by(): as the above, the key not made:
+**   fun_f says whether a stored key is the one.
+*/
+static u3_weak
+_ch_buck_git_by(u3h_buck* hab_u, c3_o (*fun_f)(u3_noun, void*), void* ptr_v)
+{
+  c3_h i_h;
+
+  for ( i_h = 0; i_h < hab_u->len_h; i_h++ ) {
+    u3_noun kev = u3h_slot_to_noun(hab_u->sot_w[i_h]);
+    if ( _(fun_f(u3h(kev), ptr_v)) ) {
+      return u3t(kev);
+    }
+  }
+  return u3_none;
+}
+
+static u3_weak
+_ch_node_git_by(u3h_node* han_u, c3_h lef_h, c3_h rem_h,
+                c3_o (*fun_f)(u3_noun, void*), void* ptr_v)
+{
+  while ( 1 ) {
+    c3_h bit_h, map_h;
+
+    lef_h -= 5;
+    bit_h = (rem_h >> lef_h);
+    rem_h = CUT_END(rem_h, lef_h);
+    map_h = han_u->map_h;
+
+    if ( !BIT_SET(map_h, bit_h) ) {
+      return u3_none;
+    }
+    else {
+      c3_h inx_h = _ch_popcount(CUT_END(map_h, bit_h));
+      u3h_slot sot_w = han_u->sot_w[inx_h];
+
+      if ( _(u3h_slot_is_noun(sot_w)) ) {
+        u3_noun kev = u3h_slot_to_noun(sot_w);
+
+        return _(fun_f(u3h(kev), ptr_v)) ? u3t(kev) : u3_none;
+      }
+      else {
+        void* hav_v = u3h_slot_to_node(sot_w);
+
+        if ( 0 == lef_h ) {
+          return _ch_buck_git_by(hav_v, fun_f, ptr_v);
+        }
+        han_u = hav_v;
+      }
+    }
+  }
+}
+
+/* u3h_git_by(): read from hashtable by the mug of a key that is not made:
+**               fun_f(key, ptr_v) says whether a stored key, RETAINED, is
+**               the one.  The result is RETAINED.
+*/
+u3_weak
+u3h_git_by(u3p(u3h_root) har_p, c3_h mug_h,
+           c3_o (*fun_f)(u3_noun, void*), void* ptr_v)
+{
+  u3h_root* har_u = u3to(u3h_root, har_p);
+  c3_h      inx_h = (mug_h >> 25);
+  c3_h      rem_h = CUT_END(mug_h, 25);
+  u3h_slot  sot_w = har_u->sot_w[inx_h];
+
+  if ( _(u3h_slot_is_null(sot_w)) ) {
+    return u3_none;
+  }
+  else if ( _(u3h_slot_is_noun(sot_w)) ) {
+    u3_noun kev = u3h_slot_to_noun(sot_w);
+
+    if ( _(fun_f(u3h(kev), ptr_v)) ) {
+      har_u->sot_w[inx_h] = u3h_noun_be_warm(sot_w);
+      return u3t(kev);
+    }
+    return u3_none;
+  }
+  else {
+    return _ch_node_git_by(u3h_slot_to_node(sot_w), 25, rem_h, fun_f, ptr_v);
+  }
+}
+
 /* u3h_get(): read from hashtable, incrementing refcount.
 **
 ** `key` is RETAINED; result is PRODUCED.
