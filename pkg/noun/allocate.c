@@ -1376,9 +1376,7 @@ _ca_gain_cold(u3_noun som)
 u3_noun
 u3a_gain(u3_noun som)
 {
-#ifdef C3DBG
-  u3_assert(u3_none != som);
-#endif
+  c3_dessert(u3_none != som);
 
   u3t_on(mal_o);
 
