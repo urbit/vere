@@ -4326,15 +4326,15 @@ _ne_map_put(ne_gen* gen_u, c3_y* cod_y)
   u3nc_prog* pog_u = gen_u->pog_u;
   c3_w       i_w;
 
-  fprintf(_ne_map_f, "P %p %u %08x %u %u\n", (void*)cod_y,
+  fprintf(_ne_map_f, "P %p %" PRIc3_w " %08x %u %u\n", (void*)cod_y,
           gen_u->asm_u.len_w,
           u3r_mug_bytes(pog_u->byc_u.ops_y, pog_u->byc_u.len_h),
           pog_u->arg_h, pog_u->byc_u.len_h);
   for ( i_w = 0; i_w < gen_u->opn_w; i_w++ ) {
-    fprintf(_ne_map_f, "O %u %u %s\n", gen_u->nat_w[i_w],
+    fprintf(_ne_map_f, "O %" PRIc3_w " %u %s\n", gen_u->nat_w[i_w],
             gen_u->ops_u[i_w].off_h, _nc_fam_c[gen_u->ops_u[i_w].fam_y]);
   }
-  fprintf(_ne_map_f, "O %u - SLOW\n", gen_u->nat_w[gen_u->opn_w]);
+  fprintf(_ne_map_f, "O %" PRIc3_w " - SLOW\n", gen_u->nat_w[gen_u->opn_w]);
   //  the code itself, for a disassembler
   //
   fprintf(_ne_map_f, "B ");
