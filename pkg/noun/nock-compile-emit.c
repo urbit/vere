@@ -805,15 +805,11 @@ _ne_h_cam(u3nc_prog* pog_u, c3_w sit_w, u3_noun* arg)
 {
   u3nc_dire* dir_u = &(pog_u->dir_u.dat_u[sit_w]);
   u3nc_prog* gop_u = _ne_callee(pog_u, dir_u);
-  c3_h       kni_h = 0;
   u3_noun    key, pro;
 
-  key = _nc_key(dir_u->cid_h, c3n,
-                u3nc(_nc_knit(gop_u->ned, arg, &kni_h), u3k(dir_u->bell)));
-  pro = _nc_find(dir_u->cid_h, key);
+  pro = _nc_cam_get(dir_u, gop_u, arg, &key);
 
   if ( u3_none != pro ) {
-    u3z(key);
     return pro;
   }
   arg[dir_u->len_h] = key;
