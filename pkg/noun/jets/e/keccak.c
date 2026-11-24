@@ -6,34 +6,21 @@
 #include "noun.h"
 #include "urcrypt.h"
 
-//  the message is read through a view: borrowed, not copied, unless the
-//  width runs past the atom
+//  the message is read through a view opened at the width: its bytes,
+//  then zeros, with nothing copied onto the loom
 //
 #define defw(bits,byts) \
   u3_atom \
   _kecc_##bits(c3_d len_d, u3_atom a) \
   { \
     c3_y        out[byts]; \
-    c3_y*       cop_y = 0; \
     const c3_y* dat_y; \
     u3r_view    vue_u; \
   \
-    u3r_view_open(&vue_u, a, 0, c3y); \
-    if ( len_d <= vue_u.byt_d ) { \
-      dat_y = vue_u.byt_y; \
-    } \
-    else if ( len_d <= c3_w_max ) { \
-      dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, a); \
-    } \
-    else { \
-      u3r_view_done(&vue_u); \
-      return u3m_bail(c3__fail); \
-    } \
+    u3r_view_open(&vue_u, a, len_d, c3y); \
+    dat_y = vue_u.byt_y; \
   \
     c3_i ret_i = urcrypt_keccak_##bits(dat_y, len_d, out); \
-    if ( cop_y ) { \
-      u3a_free(cop_y); \
-    } \
     u3r_view_done(&vue_u); \
     if ( 0 != ret_i ) { \
       /* urcrypt_keccac_##bits always succeeds when called correctly */ \

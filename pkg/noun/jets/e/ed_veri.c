@@ -20,30 +20,20 @@
       return c3n;
     }
     else {
-      c3_y*       cop_y = 0;
       const c3_y* dat_y;
       u3r_view    vue_u;
 
-      u3r_view_open(&vue_u, dat, 0, c3y);
-      if ( len_d <= vue_u.byt_d ) {
-        dat_y = vue_u.byt_y;
-      }
-      else if ( len_d <= c3_w_max ) {
-        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
-      }
-      else {
-        //  a width past the atom that no word holds: c3n, as develop's
-        //  word check gives
-        //
-        u3r_view_done(&vue_u);
+      //  a width no word holds: c3n, as develop's word check gives
+      //
+      if ( len_d > c3_w_max ) {
         return c3n;
       }
 
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
+
       c3_t val_t = urcrypt_ed_veri(dat_y, len_d, pub_y, sig_y);
 
-      if ( cop_y ) {
-        u3a_free(cop_y);
-      }
       u3r_view_done(&vue_u);
 
       return val_t ? c3y : c3n;

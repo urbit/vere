@@ -1813,6 +1813,67 @@ _test_jets_bob(void)
     }
   }
 
+  //  widths far past the atom, more than a page of zeros: a bob's view
+  //  maps a zero tail, and a loom atom's a padded copy
+  //
+  {
+    const c3_w wid_w = len_w + (3 * 16384) + 5;
+    u3_noun    cob   = u3nt(0, u3nc(wid_w, u3k(bob)), 0);
+    u3_noun    col   = u3nt(0, u3nc(wid_w, u3k(loa)), 0);
+
+    _jet_same("shay", wid_w, 0, 0, u3we_shay(cob), u3we_shay(col));
+    _jet_same("shal", wid_w, 0, 0, u3we_shal(cob), u3we_shal(col));
+    _jet_same("keccak-256", wid_w, 0, 0, u3we_kecc256(cob), u3we_kecc256(col));
+    u3z(cob); u3z(col);
+
+    //  ed25519 over the padded message: sign-octs agrees, and the
+    //  signature verifies over both
+    //
+    {
+      u3_atom sed = 0x1234567;
+      u3_noun sob = u3nt(0, u3nc(u3nc(wid_w, u3k(bob)), sed), 0);
+      u3_noun sol = u3nt(0, u3nc(u3nc(wid_w, u3k(loa)), sed), 0);
+      u3_noun cop = u3nt(0, sed, 0);
+      u3_atom sig = u3wee_sign_octs(sob);
+      u3_atom pub = u3wee_puck(cop);
+
+      _jet_same("ed-sign-octs", wid_w, 0, 0, u3k(sig), u3wee_sign_octs(sol));
+      {
+        u3_noun vob = u3nt(0, u3nt(u3k(sig), u3nc(wid_w, u3k(bob)), u3k(pub)), 0);
+        _check( c3y == u3wee_veri_octs(vob), "ed-veri-octs rejects the padded bob" );
+        u3z(vob);
+      }
+      u3z(sig); u3z(pub); u3z(sob); u3z(sol); u3z(cop);
+    }
+
+    //  blake3: hash and chunk output read their message at its width
+    //
+    {
+      u3_noun ctx = u3nc(0, u3nc(u3nc(0, 0), 0));
+      u3_noun hob = u3nt(0, u3nc(32, u3nc(wid_w, u3k(bob))), u3k(ctx));
+      u3_noun hol = u3nt(0, u3nc(32, u3nc(wid_w, u3k(loa))), u3k(ctx));
+      _jet_same("blake3-hash", wid_w, 0, 0,
+                u3we_blake3_hash(hob), u3we_blake3_hash(hol));
+      u3z(hob); u3z(hol);
+
+      hob = u3nt(0, u3nc(0, u3nc(wid_w, u3k(bob))), u3k(ctx));
+      hol = u3nt(0, u3nc(0, u3nc(wid_w, u3k(loa))), u3k(ctx));
+      _jet_same("blake3-chunk", wid_w, 0, 0,
+                u3we_blake3_chunk_output(hob), u3we_blake3_chunk_output(hol));
+      u3z(hob); u3z(hol);
+      u3z(ctx);
+    }
+
+    //  scrypt pbkdf: the password and the salt each at their widths
+    //
+    {
+      u3_noun pob = u3nt(0, u3nq(u3k(bob), len_w + 10, u3k(bob), u3nt(len_w + 7, 1, 32)), 0);
+      u3_noun pol = u3nt(0, u3nq(u3k(loa), len_w + 10, u3k(loa), u3nt(len_w + 7, 1, 32)), 0);
+      _jet_same("scrypt-pbl", len_w + 10, 0, 0, u3wes_pbl(pob), u3wes_pbl(pol));
+      u3z(pob); u3z(pol);
+    }
+  }
+
   //  lore and leer over a bob exactly one page long whose last byte
   //  is not a newline, the shape whose final read once left the mapping
   //

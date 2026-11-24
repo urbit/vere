@@ -22,26 +22,13 @@
     }
     else {
       c3_y        sig_y[64];
-      c3_y*       cop_y = 0;
       const c3_y* dat_y;
       u3r_view    vue_u;
 
-      u3r_view_open(&vue_u, dat, 0, c3y);
-      if ( len_d <= vue_u.byt_d ) {
-        dat_y = vue_u.byt_y;
-      }
-      else if ( len_d <= c3_w_max ) {
-        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
-      }
-      else {
-        u3r_view_done(&vue_u);
-        return u3m_bail(c3__fail);
-      }
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
 
       urcrypt_ed_sign(dat_y, len_d, sed_y, sig_y);
-      if ( cop_y ) {
-        u3a_free(cop_y);
-      }
       u3r_view_done(&vue_u);
       return u3i_bytes(64, sig_y);
     }
@@ -84,26 +71,13 @@
     }
     else {
       c3_y        sig_y[64];
-      c3_y*       cop_y = 0;
       const c3_y* dat_y;
       u3r_view    vue_u;
 
-      u3r_view_open(&vue_u, dat, 0, c3y);
-      if ( len_d <= vue_u.byt_d ) {
-        dat_y = vue_u.byt_y;
-      }
-      else if ( len_d <= c3_w_max ) {
-        dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
-      }
-      else {
-        u3r_view_done(&vue_u);
-        return u3m_bail(c3__fail);
-      }
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
 
       urcrypt_ed_sign_raw(dat_y, len_d, pub_y, sek_y, sig_y);
-      if ( cop_y ) {
-        u3a_free(cop_y);
-      }
       u3r_view_done(&vue_u);
       return u3i_bytes(64, sig_y);
     }

@@ -47,23 +47,25 @@
       return u3_none;
     }
     else {
-      u3_noun pro;
-      c3_d    n_d = u3r_chub(0, n);
-      c3_h    r_w = u3r_half(0, r),
-              z_w = u3r_half(0, z);
-      c3_y   *pwd_y = u3a_malloc(pwd_w),
-             *sal_y = u3a_malloc(sal_w),
-             *out_y = u3a_malloc(d);
-      u3r_bytes(0, pwd_w, pwd_y, p);
-      u3r_bytes(0, sal_w, sal_y, s);
-      pro = ( 0 == urcrypt_scrypt(pwd_y, pwd_w,
-                                  sal_y, sal_w,
+      u3_noun  pro;
+      c3_d     n_d = u3r_chub(0, n);
+      c3_h     r_w = u3r_half(0, r),
+               z_w = u3r_half(0, z);
+      c3_y    *out_y = u3a_malloc(d);
+      u3r_view pwd_u, sal_u;
+
+      //  read at their widths through views: their bytes, then zeros
+      //
+      u3r_view_open(&pwd_u, p, pwd_w, c3y);
+      u3r_view_open(&sal_u, s, sal_w, c3y);
+      pro = ( 0 == urcrypt_scrypt(pwd_u.byt_y, pwd_w,
+                                  sal_u.byt_y, sal_w,
                                   n_d, r_w, z_w,
                                   out_w, out_y) )
         ? u3i_bytes(out_w, out_y)
         : u3_none;
-      u3a_free(pwd_y);
-      u3a_free(sal_y);
+      u3r_view_done(&sal_u);
+      u3r_view_done(&pwd_u);
       u3a_free(out_y);
       return pro;
     }
@@ -152,16 +154,19 @@
       return u3m_bail(c3__exit);
     }
     else {
-      u3_noun pro;
-      c3_y   *pwd_y = u3a_malloc(pwd_w),
-             *sal_y = u3a_malloc(sal_w),
-             *out_y = u3a_malloc(d);
-      u3r_bytes(0, pwd_w, pwd_y, p);
-      u3r_bytes(0, sal_w, sal_y, s);
-      urcrypt_scrypt_pbkdf_sha256(pwd_y, pwd_w, sal_y, sal_w, c, d, out_y);
+      u3_noun  pro;
+      c3_y    *out_y = u3a_malloc(d);
+      u3r_view pwd_u, sal_u;
+
+      //  read at their widths through views: their bytes, then zeros
+      //
+      u3r_view_open(&pwd_u, p, pwd_w, c3y);
+      u3r_view_open(&sal_u, s, sal_w, c3y);
+      urcrypt_scrypt_pbkdf_sha256(pwd_u.byt_y, pwd_w,
+                                  sal_u.byt_y, sal_w, c, d, out_y);
       pro = u3i_bytes(d, out_y);
-      u3a_free(pwd_y);
-      u3a_free(sal_y);
+      u3r_view_done(&sal_u);
+      u3r_view_done(&pwd_u);
       u3a_free(out_y);
       return pro;
     }
