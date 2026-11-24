@@ -82,7 +82,7 @@ _blob_del_cb(c3_h mug_h, c3_h seq_h)
 
   _hok_w += 1;
 
-  if ( blb_u && (blb_u->les_h || (c3y == blb_u->own_o)) ) {
+  if ( blb_u && (blb_u->hol_h || (c3y == blb_u->own_o)) ) {
     return;
   }
   _del_w += 1;
@@ -843,9 +843,9 @@ _test_sane(void)
 
   //  holds are not atoms: the check ignores them
   //
-  blb_u->les_h += 2;
+  blb_u->hol_h += 2;
   _check( c3y == u3a_blob_sane(), "holds read as atoms" );
-  blb_u->les_h -= 2;
+  blb_u->hol_h -= 2;
 
   //  an atom count with no atom behind it
   //
@@ -3492,13 +3492,13 @@ _test_roll_link(void)
   u3a_blob* blb_b = u3a_blob_new(mug_h[1], seq_h[1]);
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
   blb_b->own_o  = c3y;   //  a ghost: the old epoch's input, nothing holds it
-  blb_c->les_h += 1;
+  blb_c->hol_h += 1;
 
   //  d: held, no root reaches it, and its file is gone.  the new epoch
   //  can do without it, so the roll reports it and goes on
   //
   u3a_blob* blb_d = u3a_blob_new(0x5eed, 1);
-  blb_d->les_h += 1;
+  blb_d->hol_h += 1;
 
   //  the image holds a: the roll owns what a root reaches
   //
@@ -3602,10 +3602,10 @@ _test_roll_link(void)
   u3a_blob_get(mug_h[0], seq_h[0])->own_o = c3n;
   u3z(u3A->roc);
   u3A->roc = old;
-  blb_c->les_h = 0;
+  blb_c->hol_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _check( u3a_blob_get(0x5eed, 1), "the fileless hold-only record went" );
-  u3a_blob_get(0x5eed, 1)->les_h = 0;
+  u3a_blob_get(0x5eed, 1)->hol_h = 0;
   u3a_blob_drop(0x5eed, 1);
   _pier_done();
 }
@@ -3779,8 +3779,8 @@ _test_grants(void)
 
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
-    _check( (1 == blb_u->les_h) && (2 == blb_u->atm_h),
-            "id 0: les=%u atm=%u", blb_u->les_h, blb_u->atm_h );
+    _check( (1 == blb_u->hol_h) && (2 == blb_u->atm_h),
+            "id 0: les=%u atm=%u", blb_u->hol_h, blb_u->atm_h );
   }
 
   //  the last atoms go: the hook fires once per id, and the holds keep
@@ -3791,7 +3791,7 @@ _test_grants(void)
   _check( 2 == _hok_w, "hook fired %u time(s) for two ids", _hok_w );
   {
     u3a_blob* blb_u = u3a_blob_get(mug_h[0], seq_h[0]);
-    _check( blb_u && (1 == blb_u->les_h) && (0 == blb_u->atm_h) && (0 == _del_w),
+    _check( blb_u && (1 == blb_u->hol_h) && (0 == blb_u->atm_h) && (0 == _del_w),
             "held record not kept" );
   }
 
@@ -3799,9 +3799,9 @@ _test_grants(void)
   //
   for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
     u3a_blob* blb_u = u3a_blob_get(mug_h[i_w], seq_h[i_w]);
-    c3_h      num_h = c3_min(5, blb_u->les_h);
-    blb_u->les_h -= num_h;
-    _check( 0 == blb_u->les_h, "id %u not released", i_w );
+    c3_h      num_h = c3_min(5, blb_u->hol_h);
+    blb_u->hol_h -= num_h;
+    _check( 0 == blb_u->hol_h, "id %u not released", i_w );
     _blob_del_cb(mug_h[i_w], seq_h[i_w]);
   }
   _check( (2 == _del_w) && !u3a_blob_get(mug_h[0], seq_h[0]),
@@ -4083,7 +4083,7 @@ _test_blob_own(void)
   u3_atom   bob_a = u3i_blob(mug_h[0], seq_h[0]);
   u3_atom   bob_d = u3i_blob(mug_h[3], seq_h[3]);
   u3a_blob* blb_c = u3a_blob_new(mug_h[2], seq_h[2]);
-  blb_c->les_h += 1;
+  blb_c->hol_h += 1;
 
   //  epoch 5: the image's row at 5, one event at 6
   //
@@ -4123,7 +4123,7 @@ _test_blob_own(void)
   u3z(bob_a);
   u3z(bob_d);
   u3a_blob_drop(mug_h[1], seq_h[1]);
-  blb_c->les_h = 0;
+  blb_c->hol_h = 0;
   u3a_blob_drop(mug_h[2], seq_h[2]);
   _pier_done();
 }

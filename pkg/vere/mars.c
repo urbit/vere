@@ -23,7 +23,7 @@
 **   blb_p HAMT: bid -> u3a_blob* (loom offset), bid = (mug_h << 32) | seq_h.
 **   See the u3a_blob block in allocate.h for the record:
 **     atm_h = live bob atoms
-**     les_h = holds the king has (mars memory only; zeroed at boot)
+**     hol_h = holds the king has (mars memory only; zeroed at boot)
 **     own_o = a durable holder in the current epoch names the file: an
 **             input committed in this epoch, or the epoch's image
 **
@@ -40,6 +40,14 @@
 **   [%blrl mug seq n] when its last bob over the id dies.  no expiry:
 **   king and mars die together, holds are memory only, and the boot gc
 **   reclaims whatever a dead king held.
+**
+**   XX when mars serves more than one client, holds need expiries: a
+**   client can die while mars lives, and its holds would pin their
+**   files until mars restarts.  an expiry must say what a client does
+**   once its hold lapses (a later open of the file fails cleanly) and
+**   what becomes of a mapping still open on it: posix keeps reading
+**   the unlinked bytes, while windows refuses the unlink, so the wipe
+**   must retry or defer.
 **
 **   Lifecycle:
 **     1. king stages a large file to .urb/stg/, learns its content mug,
@@ -59,7 +67,7 @@
 **        what a root reaches, and writes that live set as the epoch's
 **        first BLOBS row; chop deletes old epochs whole, files included,
 **        and touches no count
-**     *. boot: _find_home zeroes les_h (no hold outlives a process);
+**     *. boot: _find_home zeroes hol_h (no hold outlives a process);
 **        own_o is the snapshot's, marked by the roll and by every commit
 **        before the save, and replay marks the events after it;
 **        u3_disk_blob_gc reclaims any unowned blob nothing holds
@@ -340,7 +348,7 @@ _mars_blob_sure(const u3s_bids* bid_u)
     c3_h      seq_h = u3a_bid_seq(bid_u->bid_d[i_w]);
     u3a_blob* blb_u = u3a_blob_get(mug_h, seq_h);
 
-    if ( blb_u && blb_u->les_h ) {
+    if ( blb_u && blb_u->hol_h ) {
       continue;
     }
     if ( c3y == u3b_live(u3C.bob_c, mug_h, seq_h) ) {
@@ -1167,7 +1175,7 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
     //  %blrl: the king returns [n] holds on a blob: its last bob over
     //  the id died.  a count, not a flag: a hold granted after the king
     //  sent this must survive it.  the king returns only what mars
-    //  granted, so more than les_h, or no record, is a miscount: say
+    //  granted, so more than hol_h, or no record, is a miscount: say
     //  so, and clamp at zero.
     //
     case c3_s4('b','l','r','l'): {
@@ -1192,13 +1200,13 @@ _mars_work(u3_mars* mar_u, u3_noun jar, const u3s_bids* bid_u)
                           mug_h, seq_h, num_h);
         }
         else {
-          if ( num_h > blb_u->les_h ) {
+          if ( num_h > blb_u->hol_h ) {
             fprintf(stderr, "mars: %%blrl " U3A_BID_FMT ": %" PRIc3_h
                             " hold(s) returned, %" PRIc3_h " granted\r\n",
-                            mug_h, seq_h, num_h, blb_u->les_h);
-            num_h = blb_u->les_h;
+                            mug_h, seq_h, num_h, blb_u->hol_h);
+            num_h = blb_u->hol_h;
           }
-          blb_u->les_h -= num_h;
+          blb_u->hol_h -= num_h;
           _mars_blob_del(mug_h, seq_h);
         }
       }

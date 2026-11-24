@@ -1265,7 +1265,7 @@ u3a_blob_new(c3_h mug_h, c3_h seq_h)
 
   u3a_blob* blb_u = u3a_walloc(c3_wiseof(u3a_blob));
   blb_u->atm_h = 0;
-  blb_u->les_h = 0;
+  blb_u->hol_h = 0;
   blb_u->own_o = c3n;
   blb_u->mug_h = mug_h;
   blb_u->seq_h = seq_h;
@@ -1298,7 +1298,7 @@ u3a_blob_hold(const c3_d* bid_d, c3_w len_w)
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
     u3a_blob* blb_u = u3a_blob_got(u3a_bid_mug(bid_d[i_w]),
                                    u3a_bid_seq(bid_d[i_w]));
-    blb_u->les_h += 1;
+    blb_u->hol_h += 1;
   }
 }
 
@@ -1532,7 +1532,7 @@ _blob_sane_bank_cb(u3_noun kev, void* ptr_v)
 **   wish cache, cold jets, memo/ford caches, trace) with a visited
 **   set; also flags counted bids missing from the bank.  An unscanned
 **   root reads as a leak-direction mismatch, so the message
-**   distinguishes the two directions.  les_h and own_o have no
+**   distinguishes the two directions.  hol_h and own_o have no
 **   identity to check.
 **
 **   Home road only.  Returns c3n (after loud per-entry reports) on any

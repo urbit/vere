@@ -640,7 +640,7 @@ STATIC_ASSERT( ((c3_wiseof(u3v_home) * sizeof(c3_w)) == sizeof(u3v_home)),
 
 STATIC_ASSERT( U3N_VERLAT < (1U << 5), "5-bit bytecode version" );
 
-/* _find_home_zero_cb(): u3h_walk_with callback — zero les_h on each
+/* _find_home_zero_cb(): u3h_walk_with callback — zero hol_h on each
 **   u3a_blob.  The count belongs to the process that wrote the snapshot:
 **   no hold outlives a restart, since it ends both processes and the
 **   king that owed the holds is gone.  own_o stays: the snapshot is
@@ -658,8 +658,8 @@ _find_home_zero_cb(u3_noun kev, void* ptr_v)
   u3r_safe_chub(val, &off_d);
 
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
-  if ( blb_u->les_h ) {
-    blb_u->les_h = 0;
+  if ( blb_u->hol_h ) {
+    blb_u->hol_h = 0;
   }
 }
 
@@ -805,7 +805,7 @@ _find_home(void)
     _migrate_v6();
   }
 
-  //  reset les_h: the snapshot's count belongs to a dead process, and
+  //  reset hol_h: the snapshot's count belongs to a dead process, and
   //  no hold outlives one.  ownership is the snapshot's, kept
   //
   u3h_walk_with(u3H->blb_p, _find_home_zero_cb, 0);

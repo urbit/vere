@@ -1207,7 +1207,7 @@ _disk_roll_link_cb(u3_noun kev, void* ptr_v)
   //  unless a root reaches it
   //
   if (  !blb_u->atm_h
-     && !blb_u->les_h
+     && !blb_u->hol_h
      && (c3n == _disk_roll_live(lin_u->ban_u, bid_d)) )
   {
     return;
@@ -1244,7 +1244,7 @@ _disk_roll_bank_cb(u3_noun kev, void* ptr_v)
   u3a_blob* blb_u = (u3a_blob*)u3a_into((u3_post)off_d);
   c3_o      liv_o = _disk_roll_live(ban_u, bid_d);
 
-  if ( (c3n == liv_o) && !blb_u->atm_h && !blb_u->les_h ) {
+  if ( (c3n == liv_o) && !blb_u->atm_h && !blb_u->hol_h ) {
     u3s_bids_push(gho_u, bid_d);
     return;
   }

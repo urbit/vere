@@ -201,7 +201,7 @@
     **     atm_h  live bob atoms over this id: u3i_blob adds one,
     **            _me_bob_dead takes one; ordinary noun refcount
     **            traffic never touches it.
-    **     les_h  holds the king has on the file: mars issues them, the
+    **     hol_h  holds the king has on the file: mars issues them, the
     **            king releases them (%blrl).  Memory only, zeroed at
     **            every boot: king and mars die together.
     **     own_o  a durable holder in the current epoch names the file:
@@ -237,7 +237,7 @@
     */
       typedef struct _u3a_blob {
         c3_h atm_h;   //  live bob atoms
-        c3_h les_h;   //  king holds
+        c3_h hol_h;   //  king holds
         c3_o own_o;   //  owned by the current epoch
         c3_h mug_h;   //  blob mug: names the file in the epoch's store
         c3_h seq_h;   //  blob seq
@@ -254,7 +254,7 @@
       static inline c3_o
       u3a_blob_dead(const u3a_blob* blb_u)
       {
-        return __( !blb_u->atm_h && !blb_u->les_h && (c3n == blb_u->own_o) );
+        return __( !blb_u->atm_h && !blb_u->hol_h && (c3n == blb_u->own_o) );
       }
 
     /* u3a_bid(): the blob id of (mug_h, seq_h): (mug << 32) | seq, the

@@ -39,8 +39,8 @@ _king_blob_del(c3_h mug_h, c3_h seq_h)
   //
   u3b_drop(mug_h, seq_h);
 
-  if ( blb_u->les_h && u3K.pir_u && u3K.pir_u->god_u ) {
-    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->les_h);
+  if ( blb_u->hol_h && u3K.pir_u && u3K.pir_u->god_u ) {
+    u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->hol_h);
   }
   u3a_blob_drop(mug_h, seq_h);
 }
