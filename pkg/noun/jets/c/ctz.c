@@ -14,10 +14,24 @@ u3qc_ctz(u3_atom a)
     return 0;
   }
 
-  do {
-    wor_w = u3r_word(i_w++, a);
+  //  one view for the loop: a bob maps once, not per word.  a nonzero
+  //  atom has a nonzero word, so the scan stays within it
+  //
+  {
+    u3r_view    vue_u;
+    c3_w        len_w;
+    const c3_w* a_w;
+
+    u3r_view_open(&vue_u, a, 0, c3y);
+    a_w = u3r_view_words(&vue_u, &len_w, c3y);
+
+    do {
+      wor_w = a_w[i_w++];
+    }
+    while ( !wor_w );
+
+    u3r_view_done(&vue_u);
   }
-  while ( !wor_w );
 
   {
     c3_w bit_d = i_w - 1;

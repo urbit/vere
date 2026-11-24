@@ -458,20 +458,37 @@ _cs_rub(u3_atom cur, u3_atom a)
   return pro;
 }
 
+/* _cs_cue_bit(): bit [cur] of the atom [vue_u] views, 0 past its end.
+*/
+static inline c3_y
+_cs_cue_bit(const u3r_view* vue_u, u3_atom cur)
+{
+  c3_d cur_d;
+
+  if ( (c3n == u3r_safe_chub(cur, &cur_d)) || (cur_d >= vue_u->bit_d) ) {
+    return 0;
+  }
+  return (vue_u->byt_y[cur_d >> 3] >> (cur_d & 7)) & 1;
+}
+
 /* _cs_cue_next(): advance into [a], reading next value
 **                 TRANSFER [cur], RETAIN [a]
+**
+**   tag bits are read from [vue_u], a view of [a]: a bob maps once per
+**   cue, not per tag.
 */
 static inline u3_noun
-_cs_cue_next(u3a_pile*     pil_u,
-             u3p(u3h_root) har_p,
-             u3_atom         cur,
-             u3_atom           a,
-             u3_atom*        wid)
+_cs_cue_next(u3a_pile*       pil_u,
+             u3p(u3h_root)   har_p,
+             u3_atom           cur,
+             u3_atom             a,
+             const u3r_view* vue_u,
+             u3_atom*          wid)
 {
   while ( 1 ) {
     //  read tag bit at cur
     //
-    c3_y tag_y = u3qc_cut(0, cur, 1, a);
+    c3_y tag_y = _cs_cue_bit(vue_u, cur);
 
     //  low bit unset, (1 + cur) points to an atom
     //
@@ -492,7 +509,7 @@ _cs_cue_next(u3a_pile*     pil_u,
       //
       {
         u3_noun x = u3qa_inc(cur);
-        tag_y = u3qc_cut(0, x, 1, a);
+        tag_y = _cs_cue_bit(vue_u, x);
         u3z(x);
       }
 
@@ -542,14 +559,17 @@ u3s_cue(u3_atom a)
   _cs_cue*      fam_u;
   u3p(u3h_root) har_p = u3h_new();
   u3a_pile      pil_u;
+  u3r_view      vue_u;
 
   //  initialize stack control
   //
   u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
 
+  u3r_view_open(&vue_u, a, 0, c3y);
+
   //  commence cueing at bit-position 0
   //
-  pro = _cs_cue_next(&pil_u, har_p, 0, a, &wid);
+  pro = _cs_cue_next(&pil_u, har_p, 0, a, &vue_u, &wid);
 
   //  process cell results
   //
@@ -568,7 +588,7 @@ u3s_cue(u3_atom a)
         //  continue reading at the bit-position after [pro]
         {
           u3_noun cur = u3ka_add(2, u3qa_add(wid, fam_u->cur));
-          pro = _cs_cue_next(&pil_u, har_p, cur, a, &wid);
+          pro = _cs_cue_next(&pil_u, har_p, cur, a, &vue_u, &wid);
         }
 
         fam_u = u3a_peek(&pil_u);
@@ -585,6 +605,7 @@ u3s_cue(u3_atom a)
     } while ( c3n == u3a_pile_done(&pil_u) );
   }
 
+  u3r_view_done(&vue_u);
   u3z(wid);
   u3h_free(har_p);
 
@@ -1254,16 +1275,38 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   return len_i;
 }
 
+/* _cs_etch_short(): short [i_w] of the atom [vue_u] views, 0 past it.
+*/
+static inline c3_s
+_cs_etch_short(const u3r_view* vue_u, c3_w i_w)
+{
+  c3_d byt_d = (c3_d)i_w << 1;
+  c3_s inp_s = 0;
+
+  if ( byt_d < vue_u->byt_d ) {
+    inp_s = vue_u->byt_y[byt_d];
+  }
+  if ( (byt_d + 1) < vue_u->byt_d ) {
+    inp_s |= (c3_s)vue_u->byt_y[byt_d + 1] << 8;
+  }
+  return inp_s;
+}
+
 /* _cs_etch_ux_bytes(): atom to @ux impl.
+**
+**   reads one view of [a]: a bob maps once, not per digit group.
 */
 static void
 _cs_etch_ux_bytes(u3_atom a, c3_w len_w, c3_y* buf_y)
 {
-  c3_w   i_w;
-  c3_s inp_s;
+  c3_w     i_w;
+  c3_s   inp_s;
+  u3r_view vue_u;
+
+  u3r_view_open(&vue_u, a, 0, c3y);
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    inp_s = u3r_short(i_w, a);
+    inp_s = _cs_etch_short(&vue_u, i_w);
 
     *buf_y-- = u3s_dit_y[(inp_s >>  0) & 0xf];
     *buf_y-- = u3s_dit_y[(inp_s >>  4) & 0xf];
@@ -1272,7 +1315,8 @@ _cs_etch_ux_bytes(u3_atom a, c3_w len_w, c3_y* buf_y)
     *buf_y-- = '.';
   }
 
-  inp_s = u3r_short(len_w, a);
+  inp_s = _cs_etch_short(&vue_u, len_w);
+  u3r_view_done(&vue_u);
 
   while ( inp_s ) {
     *buf_y-- = u3s_dit_y[inp_s & 0xf];
@@ -1356,12 +1400,20 @@ _cs_etch_uv_size(u3_atom a, c3_w* out_w)
 static void
 _cs_etch_uv_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
 {
-  c3_w   i_w;
-  c3_w inp_w;
+  c3_w          i_w;
+  c3_w        inp_w;
+  c3_w        wor_w;
+  u3r_view    vue_u;
+  const c3_w* a_w;
+
+  //  one view for the loop: a bob maps once, not per digit group
+  //
+  u3r_view_open(&vue_u, a, 0, c3y);
+  a_w = u3r_view_words(&vue_u, &wor_w, c3y);
 
   for ( i_w = 0; i_w < max_w; i_w += 25 ) {
     inp_w = 0;
-    u3r_chop(0, i_w, 25, 0, &inp_w, a);
+    u3r_chop_words(0, i_w, 25, 0, &inp_w, wor_w, a_w);
 
     *buf_y-- = u3s_dit_y[(inp_w >>  0) & 0x1f];
     *buf_y-- = u3s_dit_y[(inp_w >>  5) & 0x1f];
@@ -1372,7 +1424,8 @@ _cs_etch_uv_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
   }
 
   inp_w = 0;
-  u3r_chop(0, max_w, 25, 0, &inp_w, a);
+  u3r_chop_words(0, max_w, 25, 0, &inp_w, wor_w, a_w);
+  u3r_view_done(&vue_u);
 
   while ( inp_w ) {
     *buf_y-- = u3s_dit_y[inp_w & 0x1f];
@@ -1450,12 +1503,20 @@ _cs_etch_uw_size(u3_atom a, c3_w* out_w)
 static void
 _cs_etch_uw_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
 {
-  c3_w   i_w;
-  c3_w inp_w;
+  c3_w          i_w;
+  c3_w        inp_w;
+  c3_w        wor_w;
+  u3r_view    vue_u;
+  const c3_w* a_w;
+
+  //  one view for the loop: a bob maps once, not per digit group
+  //
+  u3r_view_open(&vue_u, a, 0, c3y);
+  a_w = u3r_view_words(&vue_u, &wor_w, c3y);
 
   for ( i_w = 0; i_w < max_w; i_w += 30 ) {
     inp_w = 0;
-    u3r_chop(0, i_w, 30, 0, &inp_w, a);
+    u3r_chop_words(0, i_w, 30, 0, &inp_w, wor_w, a_w);
 
     *buf_y-- = u3s_dit_y[(inp_w >>  0) & 0x3f];
     *buf_y-- = u3s_dit_y[(inp_w >>  6) & 0x3f];
@@ -1466,7 +1527,8 @@ _cs_etch_uw_bytes(u3_atom a, c3_w max_w, c3_y* buf_y)
   }
 
   inp_w = 0;
-  u3r_chop(0, max_w, 30, 0, &inp_w, a);
+  u3r_chop_words(0, max_w, 30, 0, &inp_w, wor_w, a_w);
+  u3r_view_done(&vue_u);
 
   while ( inp_w ) {
     *buf_y-- = u3s_dit_y[inp_w & 0x3f];

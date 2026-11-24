@@ -23,8 +23,20 @@
       u3i_slab sab_u;
       u3i_slab_from(&sab_u, a, u3a_word_bits_log, len_w);
 
-      for ( i_w = 0; i_w < lnb_w; i_w++ ) {
-        sab_u.buf_w[i_w] |= u3r_word(i_w, b);
+      //  one view of .b for the loop: a bob maps once, not per word
+      //
+      {
+        u3r_view    vue_u;
+        c3_w        wib_w;
+        const c3_w* b_w;
+
+        u3r_view_open(&vue_u, b, 0, c3y);
+        b_w = u3r_view_words(&vue_u, &wib_w, c3y);
+
+        for ( i_w = 0; i_w < lnb_w; i_w++ ) {
+          sab_u.buf_w[i_w] |= b_w[i_w];
+        }
+        u3r_view_done(&vue_u);
       }
 
       return u3i_slab_mint(&sab_u);

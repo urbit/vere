@@ -1874,6 +1874,84 @@ _test_jets_bob(void)
     }
   }
 
+  //  the loops that read an atom one element per step open one view of
+  //  it: the bitwise and counting jets, rip, the etchers, base16, rub,
+  //  fitz, u3r_sing_c, and the legacy cue
+  //
+  {
+    _jet_same("mix", 0, 0, 0, u3qc_mix(0x616263, bob), u3qc_mix(0x616263, loa));
+    _jet_same("mix", 1, 0, 0, u3qc_mix(bob, bob), u3qc_mix(loa, loa));
+    _jet_same("con", 0, 0, 0, u3qc_con(0x616263, bob), u3qc_con(0x616263, loa));
+    _jet_same("dis", 0, 0, 0, u3qc_dis(bob, 0x7f7f7f7f), u3qc_dis(loa, 0x7f7f7f7f));
+    _jet_same("dis", 1, 0, 0, u3qc_dis(0x7f7f7f7f, bob), u3qc_dis(0x7f7f7f7f, loa));
+    _jet_same("ham", 0, 0, 0, u3qc_ham(bob), u3qc_ham(loa));
+    _jet_same("ctz", 0, 0, 0, u3qc_ctz(bob), u3qc_ctz(loa));
+    _jet_same("clz", 3, len_w + 4, 0,
+              u3qc_clz(3, len_w + 4, bob), u3qc_clz(3, len_w + 4, loa));
+    _jet_same("clz", 0, (len_w * 8) - 3, 0,
+              u3qc_clz(0, (len_w * 8) - 3, bob), u3qc_clz(0, (len_w * 8) - 3, loa));
+    _jet_same("etch-ux", 0, 0, 0, u3s_etch_ux(bob), u3s_etch_ux(loa));
+    _jet_same("etch-uv", 0, 0, 0, u3s_etch_uv(bob), u3s_etch_uv(loa));
+    _jet_same("etch-uw", 0, 0, 0, u3s_etch_uw(bob), u3s_etch_uw(loa));
+    _jet_same("en-base16", len_w + 3, 0, 0,
+              u3qe_en_base16(len_w + 3, bob), u3qe_en_base16(len_w + 3, loa));
+    _jet_same("rub", 1, 0, 0, u3qe_rub(1, bob), u3qe_rub(1, loa));
+    _jet_same("fitz", 0, 0, 0, u3qf_fitz(bob, loa), u3qf_fitz(loa, loa));
+
+    {
+      c3_c* str_c = c3_malloc(len_w + 1);
+      memcpy(str_c, dat_y, len_w);
+      str_c[len_w] = 0;
+      _check( c3y == u3r_sing_c(str_c, bob), "sing_c rejects the bob" );
+      str_c[17] ^= 1;
+      _check( c3n == u3r_sing_c(str_c, bob), "sing_c accepts a mismatch" );
+      c3_free(str_c);
+    }
+
+    //  de-base16 over hex text of odd and even length
+    //
+    {
+      const c3_w hex_w[] = { 4099, 4100 };
+
+      for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+        c3_y* hex_y = c3_malloc(hex_w[i_w]);
+
+        for ( c3_w j_w = 0; j_w < hex_w[i_w]; j_w++ ) {
+          hex_y[j_w] = (c3_y)"0123456789abcdef"[(j_w * 7) % 16];
+        }
+        hex_y[hex_w[i_w] - 1] = 'a';
+
+        c3_h hm_h = 0; c3_h hs_h = 0;
+        _check( c3y == _blob_save(hex_y, hex_w[i_w], &hm_h, &hs_h), "hex save failed" );
+
+        u3_atom hob = u3i_blob(hm_h, hs_h);
+        u3_atom hol = u3i_bytes(hex_w[i_w], hex_y);
+        _jet_same("de-base16", hex_w[i_w], 0, 0,
+                  u3qe_de_base16(hob), u3qe_de_base16(hol));
+        u3z(hob); u3z(hol);
+        c3_free(hex_y);
+      }
+    }
+
+    //  the legacy cue reads its tag bits through one view
+    //
+    {
+      u3_noun non = u3nt(u3k(loa), 42, u3k(loa));
+      c3_d    jam_d = 0;
+      c3_y*   jam_y = 0;
+      c3_h    jm_h = 0; c3_h js_h = 0;
+
+      u3s_jam_xeno(non, &jam_d, &jam_y);
+      _check( c3y == _blob_save(jam_y, jam_d, &jm_h, &js_h), "jam save failed" );
+
+      u3_atom job = u3i_blob(jm_h, js_h);
+      u3_noun cue = u3s_cue(job);
+      _check( c3y == u3r_sing(cue, non), "legacy cue of a bob differs" );
+      u3z(cue); u3z(job); u3z(non);
+      c3_free(jam_y);
+    }
+  }
+
   //  lore and leer over a bob exactly one page long whose last byte
   //  is not a newline, the shape whose final read once left the mapping
   //
@@ -1893,6 +1971,20 @@ _test_jets_bob(void)
 
     _jet_same("lore", 0, 0, 0, u3qe_lore(lin), u3qe_lore(lil));
     _jet_same("leer", 0, 0, 0, u3qe_leer(lin), u3qe_leer(lil));
+
+    //  lune wants the last byte a newline
+    //
+    {
+      c3_h nm_h = 0; c3_h ns_h = 0;
+      lin_y[pag_w - 1] = '\n';
+      _check( c3y == _blob_save(lin_y, pag_w, &nm_h, &ns_h), "lune save failed" );
+
+      u3_atom lun = u3i_blob(nm_h, ns_h);
+      u3_atom lul = u3i_bytes(pag_w, lin_y);
+      _jet_same("lune", 0, 0, 0, u3qe_lune(lun), u3qe_lune(lul));
+      u3z(lun); u3z(lul);
+    }
+
     u3z(lin); u3z(lil);
     c3_free(lin_y);
   }

@@ -18,8 +18,20 @@ u3qc_swp(u3_atom a,
   u3i_slab sab_u;
   u3i_slab_init(&sab_u, a_g, len_w);
 
-  for (c3_w i = 0; i < len_w; i++) {
-    u3r_chop(a_g, i, 1, len_w - i - 1, sab_u.buf_w, b);
+  //  one view for the loop: a bob maps once, not per bloq
+  //
+  {
+    u3r_view    vue_u;
+    c3_w        wor_w;
+    const c3_w* b_w;
+
+    u3r_view_open(&vue_u, b, 0, c3y);
+    b_w = u3r_view_words(&vue_u, &wor_w, c3y);
+
+    for (c3_w i = 0; i < len_w; i++) {
+      u3r_chop_words(a_g, i, 1, len_w - i - 1, sab_u.buf_w, wor_w, b_w);
+    }
+    u3r_view_done(&vue_u);
   }
          
   return u3i_slab_mint(&sab_u);

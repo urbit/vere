@@ -18,16 +18,23 @@ u3qe_en_base16(u3_atom len, u3_atom dat)
     u3i_slab_bare(&sab_u, 4, len_w);
     sab_u.buf_w[sab_u.len_w - 1] = 0;
 
+    //  one view for the loop: a bob maps once, not per byte
+    //
     {
-      c3_y* buf_y = sab_u.buf_y;
-      c3_y  inp_y;
+      c3_y*    buf_y = sab_u.buf_y;
+      c3_y     inp_y;
+      u3r_view vue_u;
+
+      u3r_view_open(&vue_u, dat, 0, c3y);
 
       while ( len_w-- ) {
-        inp_y = u3r_byte(len_w, dat);
+        inp_y = ( len_w < vue_u.byt_d ) ? vue_u.byt_y[len_w] : 0;
 
         *buf_y++ = u3s_dit_y[inp_y >> 4];
         *buf_y++ = u3s_dit_y[inp_y & 0xf];
       }
+
+      u3r_view_done(&vue_u);
     }
 
     return u3i_slab_moot_bytes(&sab_u);
@@ -54,14 +61,14 @@ _of_hex_digit(c3_y inp_y, c3_y* out_y)
 }
 
 static inline c3_o
-_of_hex_odd(u3_atom inp, c3_w len_w, c3_w byt_w, c3_y* buf_y)
+_of_hex_odd(const c3_y* inp_y, c3_w len_w, c3_w byt_w, c3_y* buf_y)
 {
   c3_y low_y, hig_y, lit_y, hit_y;
 
-  hig_y = u3r_byte(--byt_w, inp);
+  hig_y = inp_y[--byt_w];
 
   while ( --len_w ) {
-    low_y = u3r_byte(--byt_w, inp);
+    low_y = inp_y[--byt_w];
 
     if (  (c3n == _of_hex_digit(low_y, &lit_y))
        || (c3n == _of_hex_digit(hig_y, &hit_y)) )
@@ -72,7 +79,7 @@ _of_hex_odd(u3_atom inp, c3_w len_w, c3_w byt_w, c3_y* buf_y)
       *buf_y++ = (hit_y & 0xf) ^ (lit_y << 4);
     }
 
-    hig_y = u3r_byte(--byt_w, inp);
+    hig_y = inp_y[--byt_w];
   }
 
   if ( c3n == _of_hex_digit(hig_y, &hit_y) ) {
@@ -86,13 +93,13 @@ _of_hex_odd(u3_atom inp, c3_w len_w, c3_w byt_w, c3_y* buf_y)
 }
 
 static inline c3_o
-_of_hex_even(u3_atom inp, c3_w len_w, c3_y* buf_y)
+_of_hex_even(const c3_y* inp_y, c3_w len_w, c3_y* buf_y)
 {
   c3_y lit_y, hit_y;
   c3_s inp_s;
 
   while ( len_w-- ) {
-    inp_s = u3r_short(len_w, inp);
+    inp_s = inp_y[len_w << 1] | ((c3_s)inp_y[(len_w << 1) + 1] << 8);
 
     if (  (c3n == _of_hex_digit(inp_s & 0xff, &lit_y))
        || (c3n == _of_hex_digit(inp_s >> 8,   &hit_y)) )
@@ -118,12 +125,18 @@ u3qe_de_base16(u3_atom inp)
 
   //  even byte-length input can be parsed in aligned, 16-bit increments,
   //  but odd byte-length input cannot, and is expressed more simply in bytes.
+  //  both read one view: a bob maps once, not per digit
   //
   {
-    c3_w byt_w = u3r_met(3, inp);
-    c3_o ret_o = ( byt_w & 1 )
-               ? _of_hex_odd(inp, len_w, byt_w, sab_u.buf_y)
-               : _of_hex_even(inp, len_w, sab_u.buf_y);
+    u3r_view vue_u;
+    c3_w     byt_w = u3r_met(3, inp);
+    c3_o     ret_o;
+
+    u3r_view_open(&vue_u, inp, 0, c3y);
+    ret_o = ( byt_w & 1 )
+          ? _of_hex_odd(vue_u.byt_y, len_w, byt_w, sab_u.buf_y)
+          : _of_hex_even(vue_u.byt_y, len_w, sab_u.buf_y);
+    u3r_view_done(&vue_u);
 
     if ( c3n == ret_o ) {
       u3i_slab_free(&sab_u);

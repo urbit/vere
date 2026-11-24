@@ -13,32 +13,47 @@
       return u3_nul;
     }
 
+    //  one view for the scan and every line: a bob maps once, not per
+    //  byte or line.  every index is within the atom
+    //
     {
-      c3_w end_w  = u3r_met(3, lub) - 1;
-      c3_w pos_w  = end_w;
-      u3_noun lin = u3_nul;
+      c3_w        end_w  = u3r_met(3, lub) - 1;
+      c3_w        pos_w  = end_w;
+      u3_noun     lin = u3_nul;
+      u3_noun     pro;
+      u3r_view    vue_u;
+      const c3_y* lub_y;
 
-      if (u3r_byte(pos_w, lub) != 10) {
+      u3r_view_open(&vue_u, lub, 0, c3y);
+      lub_y = vue_u.byt_y;
+
+      if (lub_y[pos_w] != 10) {
+        u3r_view_done(&vue_u);
         return u3m_error("noeol");
       }
 
       if (pos_w == 0) {
+        u3r_view_done(&vue_u);
         return u3nc(u3_nul, lin);
       }
 
       while (--pos_w) {
-        if (u3r_byte(pos_w, lub) == 10) {
-          lin = u3nc(u3qc_cut(3, (pos_w + 1), (end_w - pos_w - 1), lub), lin);
+        if (lub_y[pos_w] == 10) {
+          lin = u3nc(u3i_bytes((end_w - pos_w - 1), lub_y + pos_w + 1), lin);
           end_w = pos_w;
         }
       }
 
-      if (u3r_byte(pos_w, lub) == 10) {
-        return u3nc(u3_nul,
-                    u3nc(u3qc_cut(3, (pos_w + 1), (end_w - pos_w - 1), lub), lin));
+      if (lub_y[pos_w] == 10) {
+        pro = u3nc(u3_nul,
+                   u3nc(u3i_bytes((end_w - pos_w - 1), lub_y + pos_w + 1), lin));
+      }
+      else {
+        pro = u3nc(u3i_bytes((end_w - pos_w), lub_y + pos_w), lin);
       }
 
-      return u3nc(u3qc_cut(3, pos_w, (end_w - pos_w), lub), lin);
+      u3r_view_done(&vue_u);
+      return pro;
     }
   }
 

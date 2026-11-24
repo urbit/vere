@@ -2242,15 +2242,15 @@ u3m_soft_with(c3_w    mil_w,
   }
 }
 
-/* _cm_is_tas(): yes iff som (RETAIN) is @tas.
+/* _cm_is_tas(): yes iff the [len_w] bytes at [som_y] are @tas.
 */
 static c3_o
-_cm_is_tas(u3_atom som, c3_w len_w)
+_cm_is_tas(const c3_y* som_y, c3_w len_w)
 {
   c3_w i_w;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_c c_c = u3r_byte(i_w, som);
+    c3_c c_c = som_y[i_w];
 
     if ( islower(c_c) ||
         (isdigit(c_c) && (0 != i_w) && ((len_w - 1) != i_w))
@@ -2263,15 +2263,15 @@ _cm_is_tas(u3_atom som, c3_w len_w)
   return c3y;
 }
 
-/* _cm_is_ta(): yes iff som (RETAIN) is @ta.
+/* _cm_is_ta(): yes iff the [len_w] bytes at [som_y] are @ta.
 */
 static c3_o
-_cm_is_ta(u3_noun som, c3_w len_w)
+_cm_is_ta(const c3_y* som_y, c3_w len_w)
 {
   c3_w i_w;
 
   for ( i_w = 0; i_w < len_w; i_w++ ) {
-    c3_c c_c = u3r_byte(i_w, som);
+    c3_c c_c = som_y[i_w];
 
     if ( (c_c < 32) || (c_c > 127) ) {
       return c3n;
@@ -2329,23 +2329,33 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
       return len_w;
     }
     else {
-      c3_w len_w = u3r_met(3, som);
+      //  one view of the atom for every byte read below: a bob maps
+      //  once, not per byte
+      //
+      u3r_view    vue_u;
+      c3_w        len_w = u3r_met(3, som);
+      const c3_y* som_y;
 
-      if ( _(_cm_is_tas(som, len_w)) ) {
+      u3r_view_open(&vue_u, som, 0, c3y);
+      som_y = vue_u.byt_y;
+
+      if ( _(_cm_is_tas(som_y, len_w)) ) {
         if ( str_c ) {
           *(str_c++) = '%';
-          u3r_bytes(0, len_w, (c3_y *)str_c, som);
+          memcpy(str_c, som_y, len_w);
           str_c += len_w;
         }
+        u3r_view_done(&vue_u);
         return len_w + 1;
       }
-      else if ( _(_cm_is_ta(som, len_w)) ) {
+      else if ( _(_cm_is_ta(som_y, len_w)) ) {
         if ( str_c ) {
           *(str_c++) = '\'';
-          u3r_bytes(0, len_w, (c3_y *)str_c, som);
+          memcpy(str_c, som_y, len_w);
           str_c += len_w;
           *(str_c++) = '\'';
         }
+        u3r_view_done(&vue_u);
         return len_w + 2;
       }
       else {
@@ -2357,7 +2367,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         buf_c[a_w++] = 'x';
 
         for ( i_w = 0; i_w < len_w; i_w++ ) {
-          c3_y c_y = u3r_byte(len_w - (i_w + 1), som);
+          c3_y c_y = som_y[len_w - (i_w + 1)];
 
           if ( (i_w == 0) && (c_y <= 0xf) ) {
             buf_c[a_w++] = _cm_hex(c_y);
@@ -2372,6 +2382,7 @@ _cm_in_pretty(u3_noun som, c3_o sel_o, c3_c* str_c)
         if ( str_c ) { strcpy(str_c, buf_c); str_c += len_w; }
 
         c3_free(buf_c);
+        u3r_view_done(&vue_u);
         return len_w;
       }
     }

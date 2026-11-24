@@ -804,18 +804,20 @@ u3r_sing_c(const c3_c* a_c,
     return c3n;
   }
   else {
-    c3_w w_sof = strlen(a_c);
-    c3_w i_w;
+    c3_w     w_sof = strlen(a_c);
+    c3_o     sam_o;
+    u3r_view vue_u;
 
     if ( w_sof != u3r_met(3, b) ) {
       return c3n;
     }
-    for ( i_w = 0; i_w < w_sof; i_w++ ) {
-      if ( u3r_byte(i_w, b) != a_c[i_w] ) {
-        return c3n;
-      }
-    }
-    return c3y;
+
+    //  one view for the compare: a bob maps once, not per byte
+    //
+    u3r_view_open(&vue_u, b, 0, c3y);
+    sam_o = ( 0 == memcmp(vue_u.byt_y, a_c, w_sof) ) ? c3y : c3n;
+    u3r_view_done(&vue_u);
+    return sam_o;
   }
 }
 
