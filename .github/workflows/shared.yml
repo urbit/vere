@@ -86,6 +86,21 @@ jobs:
           # 8GB cache limit chosen at random
           cache-size-limit: 8192
 
+      #  the dependencies come from half a dozen hosts, and one failed
+      #  download loses the job: fetch them first, and try again. what
+      #  is fetched is cached, so a retry only repeats what failed.
+      #  (all of them here: -Dall builds for macos, whose sdk is lazy.)
+      #
+      - name: Fetch dependencies
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if zig build --fetch=all; then exit 0; fi
+            echo "fetch failed, attempt $i" >&2
+            sleep 20
+          done
+          echo "::error title=dependencies did not download::six attempts"
+          exit 1
+
       - name: Build binaries
         run: |
           # Add -Dvere64 flag for 64-bit builds
@@ -290,6 +305,21 @@ jobs:
           version: 0.15.2
           cache-size-limit: 8192
 
+      #  the dependencies come from half a dozen hosts, and one failed
+      #  download loses the job: fetch them first, and try again. what
+      #  is fetched is cached, so a retry only repeats what failed.
+      #
+      - name: Fetch dependencies
+        shell: bash
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if zig build --fetch; then exit 0; fi
+            echo "fetch failed, attempt $i" >&2
+            sleep 20
+          done
+          echo "::error title=dependencies did not download::six attempts"
+          exit 1
+
       #  NB: -Dtarget is explicit even though this is a windows host. a
       #  native build would default to the msvc abi, and we ship gnu --
       #  pkg/c3/platform/windows and pkg/noun/platform/windows are mingw
@@ -398,6 +428,21 @@ jobs:
           version: 0.15.2
           cache-size-limit: 8192
 
+      #  the dependencies come from half a dozen hosts, and one failed
+      #  download loses the job: fetch them first, and try again. what
+      #  is fetched is cached, so a retry only repeats what failed.
+      #
+      - name: Fetch dependencies
+        shell: bash
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if zig build --fetch; then exit 0; fi
+            echo "fetch failed, attempt $i" >&2
+            sleep 20
+          done
+          echo "::error title=dependencies did not download::six attempts"
+          exit 1
+
       - name: Build 64-bit migration binary
         shell: bash
         run: |
@@ -449,6 +494,21 @@ jobs:
         with:
           version: 0.15.2
           cache-size-limit: 8192
+
+      #  the dependencies come from half a dozen hosts, and one failed
+      #  download loses the job: fetch them first, and try again. what
+      #  is fetched is cached, so a retry only repeats what failed.
+      #
+      - name: Fetch dependencies
+        shell: bash
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if zig build --fetch; then exit 0; fi
+            echo "fetch failed, attempt $i" >&2
+            sleep 20
+          done
+          echo "::error title=dependencies did not download::six attempts"
+          exit 1
 
       - name: Build
         shell: bash
@@ -508,6 +568,20 @@ jobs:
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
+
+      #  the dependencies come from half a dozen hosts, and one failed
+      #  download loses the job: fetch them first, and try again. what
+      #  is fetched is cached, so a retry only repeats what failed.
+      #
+      - name: Fetch dependencies
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if zig build --fetch; then exit 0; fi
+            echo "fetch failed, attempt $i" >&2
+            sleep 20
+          done
+          echo "::error title=dependencies did not download::six attempts"
+          exit 1
 
       - name: Build 64-bit migration binary
         run: |
