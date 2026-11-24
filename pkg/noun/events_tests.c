@@ -535,7 +535,7 @@ _test_patch_apply_roundtrip(void)
   {
     u3_ce_patch pat_u = { .ctl_i = ctl_i, .mem_i = mem_i,
                           .sip_w = 0,     .con_u = con_u };
-    _ce_patch_apply(&pat_u);
+    _ce_patch_apply(&pat_u, &u3P.img_u);
   }
 
   u3_assert( 4 == u3P.img_u.pgs_w );
@@ -590,6 +590,180 @@ _test_save_dryrun(void)
   fprintf(stderr, "test_save_dryrun: ok\r\n");
 }
 
+/* _put_patch(): write a one-page patch into [dir_c]: page [pag_w] filled
+**               with [fil_y], image total [tot_w] pages.
+*/
+static void
+_put_patch(c3_c* dir_c, c3_w pag_w, c3_y fil_y, c3_w tot_w)
+{
+  c3_c pax_c[8192];
+  c3_z len_z = sizeof(u3e_control) + sizeof(u3e_line);
+  u3e_control* con_u = c3_malloc(len_z);
+  c3_y pag_y[_ce_page];
+
+  memset(pag_y, fil_y, _ce_page);
+  con_u->ver_h = U3P_VERLAT;
+  con_u->tot_w = tot_w;
+  con_u->pgs_w = 1;
+  con_u->mem_u[0].pag_w = pag_w;
+  con_u->mem_u[0].has_h = _ce_muk_page(pag_y);
+  {
+    c3_z off_z = offsetof(u3e_control, tot_w);
+    con_u->has_h = _ce_muk_buf(len_z - off_z, (c3_y*)con_u + off_z);
+  }
+
+  snprintf(pax_c, sizeof(pax_c), "%s/memory.bin", dir_c);
+  c3_i mem_i = c3_open(pax_c, O_RDWR | O_CREAT | O_TRUNC, 0600);
+  u3_assert(-1 != mem_i);
+  u3_assert(_ce_page == pwrite(mem_i, pag_y, _ce_page, 0));
+  close(mem_i);
+
+  snprintf(pax_c, sizeof(pax_c), "%s/control.bin", dir_c);
+  c3_i ctl_i = c3_open(pax_c, O_RDWR | O_CREAT | O_TRUNC, 0600);
+  u3_assert(-1 != ctl_i);
+  u3_assert((c3_zs)len_z == write(ctl_i, con_u, len_z));
+  close(ctl_i);
+
+  c3_free(con_u);
+}
+
+/* _put_image(): write a [pgs_w]-page checkpoint image into [dir_c], its
+**               header naming event [eve_d] and word size [wid_d] (1: 64).
+*/
+static void
+_put_image(c3_c* dir_c, c3_w pgs_w, c3_d eve_d, c3_d wid_d)
+{
+  c3_c pax_c[8192];
+  snprintf(pax_c, sizeof(pax_c), "%s/image.bin", dir_c);
+  c3_i fid_i = c3_open(pax_c, O_RDWR | O_CREAT | O_TRUNC, 0600);
+  u3_assert(-1 != fid_i);
+  u3_assert(0 == ftruncate(fid_i, _ce_len(pgs_w)));
+  u3_assert(sizeof(c3_d) == pwrite(fid_i, &wid_d, sizeof(c3_d),
+                                   offsetof(u3v_home, pam_d)));
+  u3_assert(sizeof(c3_d) == pwrite(fid_i, &eve_d, sizeof(c3_d),
+                                   offsetof(u3v_home, arv_u)
+                                   + offsetof(u3v_arvo, eve_d)));
+  close(fid_i);
+}
+
+/* _page_is(): yes if page [pag_w] of [dir_c]/image.bin is all [fil_y].
+*/
+static c3_o
+_page_is(c3_c* dir_c, c3_w pag_w, c3_y fil_y)
+{
+  c3_c pax_c[8192];
+  c3_y buf_y[_ce_page], fil_a[_ce_page];
+  snprintf(pax_c, sizeof(pax_c), "%s/image.bin", dir_c);
+  c3_i fid_i = c3_open(pax_c, O_RDONLY, 0);
+  u3_assert(-1 != fid_i);
+  memset(fil_a, fil_y, _ce_page);
+  c3_o ret_o = ( (_ce_page == pread(fid_i, buf_y, _ce_page, _ce_len(pag_w)))
+               && !memcmp(buf_y, fil_a, _ce_page) ) ? c3y : c3n;
+  close(fid_i);
+  return ret_o;
+}
+
+/* _has_patch(): yes if [dir_c] holds control.bin.
+*/
+static c3_o
+_has_patch(c3_c* dir_c)
+{
+  c3_c pax_c[8192];
+  snprintf(pax_c, sizeof(pax_c), "%s/control.bin", dir_c);
+  return ( 0 == access(pax_c, F_OK) ) ? c3y : c3n;
+}
+
+/* _test_land(): u3e_land lands a roll's patch on a checkpoint still at
+**   the roll's event, after the checkpoint's own patch; drops it on a
+**   checkpoint past the roll; keeps it, refusing, on a checkpoint before
+**   the roll, of the other word size, or when it can't be read.
+*/
+static void
+_test_land(void)
+{
+  c3_d wid_d = (8 == sizeof(c3_w)) ? 1 : 0;
+
+  //  nothing to land
+  //
+  {
+    c3_c* epo_c = _tmpdir();
+    c3_c* chk_c = _tmpdir();
+    u3_assert( c3y == u3e_land(epo_c, chk_c, 7) );
+    _rmtree(epo_c); _rmtree(chk_c); c3_free(epo_c); c3_free(chk_c);
+  }
+
+  //  lands, after the checkpoint's own patch, and the patch goes
+  //
+  {
+    c3_c* epo_c = _tmpdir();
+    c3_c* chk_c = _tmpdir();
+    _put_image(chk_c, 4, 7, wid_d);
+    _put_patch(chk_c, 1, 0x11, 4);   //  an older save's pages
+    _put_patch(epo_c, 1, 0x22, 3);   //  the roll's, shrinking the image
+    u3_assert( c3y == u3e_land(epo_c, chk_c, 7) );
+    u3_assert( c3y == _page_is(chk_c, 1, 0x22) );
+    u3_assert( c3n == _has_patch(epo_c) );
+    u3_assert( c3n == _has_patch(chk_c) );
+    {
+      c3_c pax_c[8192];
+      struct stat buf_u;
+      snprintf(pax_c, sizeof(pax_c), "%s/image.bin", chk_c);
+      u3_assert( (0 == stat(pax_c, &buf_u)) && (_ce_len(3) == buf_u.st_size) );
+    }
+
+    //  landing again finds nothing
+    //
+    u3_assert( c3y == u3e_land(epo_c, chk_c, 7) );
+    _rmtree(epo_c); _rmtree(chk_c); c3_free(epo_c); c3_free(chk_c);
+  }
+
+  //  a checkpoint past the roll took the pages: the patch is dropped
+  //
+  {
+    c3_c* epo_c = _tmpdir();
+    c3_c* chk_c = _tmpdir();
+    _put_image(chk_c, 4, 8, wid_d);
+    _put_patch(epo_c, 1, 0x22, 4);
+    u3_assert( c3y == u3e_land(epo_c, chk_c, 7) );
+    u3_assert( c3n == _page_is(chk_c, 1, 0x22) );
+    u3_assert( c3n == _has_patch(epo_c) );
+    _rmtree(epo_c); _rmtree(chk_c); c3_free(epo_c); c3_free(chk_c);
+  }
+
+  //  refused, patch kept: before the roll, other word size, unreadable
+  //
+  {
+    c3_c* epo_c = _tmpdir();
+    c3_c* chk_c = _tmpdir();
+    _put_patch(epo_c, 1, 0x22, 4);
+
+    _put_image(chk_c, 4, 6, wid_d);
+    u3_assert( c3n == u3e_land(epo_c, chk_c, 7) );
+    u3_assert( c3y == _has_patch(epo_c) );
+
+    _put_image(chk_c, 4, 7, wid_d ^ 1);
+    u3_assert( c3n == u3e_land(epo_c, chk_c, 7) );
+    u3_assert( c3y == _has_patch(epo_c) );
+
+    {
+      c3_c pax_c[8192];
+      c3_y bad_y = 0xff;
+      snprintf(pax_c, sizeof(pax_c), "%s/memory.bin", epo_c);
+      c3_i mem_i = c3_open(pax_c, O_RDWR, 0);
+      u3_assert( 1 == pwrite(mem_i, &bad_y, 1, 0) );
+      close(mem_i);
+    }
+    _put_image(chk_c, 4, 7, wid_d);
+    u3_assert( c3n == u3e_land(epo_c, chk_c, 7) );
+    u3_assert( c3y == _has_patch(epo_c) );
+    u3_assert( c3n == _page_is(chk_c, 1, 0x22) );
+
+    _rmtree(epo_c); _rmtree(chk_c); c3_free(epo_c); c3_free(chk_c);
+  }
+
+  fprintf(stderr, "test_land: ok\r\n");
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -613,6 +787,7 @@ main(int argc, char* argv[])
   _test_patch_verify_truncated_control();
   _test_patch_apply_roundtrip();
   _test_save_dryrun();
+  _test_land();
 
   fprintf(stderr, "events okeedokee\r\n");
   return 0;

@@ -31,21 +31,30 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
     return u3i_word(tot_w);
   }
   else {
-    c3_w wid_w = tot_w >>  u3a_word_bits_log;
-    c3_w bit_w = tot_w  & (u3a_word_bits - 1);
-    c3_w wor_w;
+    c3_w        wid_w = tot_w >>  u3a_word_bits_log;
+    c3_w        bit_w = tot_w  & (u3a_word_bits - 1);
+    c3_w        wor_w, len_w;
+    u3r_view    vue_u;
+    const c3_w* a_w;
+
+    //  one view for the scan: a bob maps once, not per word.  the atom
+    //  is longer than .tot_w, so every index is within it
+    //
+    u3r_view_open(&vue_u, a, 0, c3y);
+    a_w = u3r_view_words(&vue_u, &len_w, c3y);
 
     if ( bit_w ) {
-      wor_w  = u3r_word(wid_w, a);
+      wor_w  = a_w[wid_w];
       wor_w &= (1u << bit_w) - 1;
 
       if ( wor_w ) {
+        u3r_view_done(&vue_u);
         return bit_w - (u3a_word_bits - c3_lz_w(wor_w));
       }
     }
 
     while ( wid_w-- ) {
-      wor_w = u3r_word(wid_w, a);
+      wor_w = a_w[wid_w];
 
       if ( wor_w ) {
         bit_w += c3_lz_w(wor_w);
@@ -55,6 +64,7 @@ u3qc_clz(u3_atom boq, u3_atom sep, u3_atom a)
       bit_w += u3a_word_bits;
     }
 
+    u3r_view_done(&vue_u);
     return u3i_word(bit_w);
   }
 }

@@ -8,19 +8,28 @@
 #include "urcrypt.h"
 
 
+  //  the hashes read the atom through a view opened at the width: its
+  //  bytes, then zeros.  nothing is copied onto the loom; a width past
+  //  the atom's last word reads zeros from the view's mapping.
+  //
   static u3_atom
   _cqe_shay(u3_atom wid,
             u3_atom dat)
   {
-    c3_w len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_d len_d;
+    if ( c3n == u3r_safe_chub(wid, &len_d) ) {
       return u3m_bail(c3__fail);
     }
     else {
-      c3_y  out_y[32];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_shay(dat_y, len_w, out_y);
-      u3a_free(dat_y);
+      c3_y        out_y[32];
+      const c3_y* dat_y;
+      u3r_view    vue_u;
+
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
+
+      urcrypt_shay(dat_y, len_d, out_y);
+      u3r_view_done(&vue_u);
       return u3i_bytes(32, out_y);
     }
   }
@@ -28,11 +37,11 @@
   static u3_atom
   _cqe_shax(u3_atom a)
   {
-    c3_w  len_w;
-    c3_y  out_y[32];
-    c3_y* dat_y = u3r_bytes_all(&len_w, a);
-    urcrypt_shay(dat_y, len_w, out_y);
-    u3a_free(dat_y);
+    c3_y     out_y[32];
+    u3r_view vue_u;
+    u3r_view_open(&vue_u, a, 0, c3y);
+    urcrypt_shay(vue_u.byt_y, vue_u.byt_d, out_y);
+    u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
   }
 
@@ -40,15 +49,20 @@
   _cqe_shal(u3_atom wid,
             u3_atom dat)
   {
-    c3_w len_w;
-    if ( !u3r_word_fit(&len_w, wid) ) {
+    c3_d len_d;
+    if ( c3n == u3r_safe_chub(wid, &len_d) ) {
       return u3m_bail(c3__fail);
     }
     else {
-      c3_y  out_y[64];
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      urcrypt_shal(dat_y, len_w, out_y);
-      u3a_free(dat_y);
+      c3_y        out_y[64];
+      const c3_y* dat_y;
+      u3r_view    vue_u;
+
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
+
+      urcrypt_shal(dat_y, len_d, out_y);
+      u3r_view_done(&vue_u);
       return u3i_bytes(64, out_y);
     }
   }

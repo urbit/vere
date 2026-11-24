@@ -94,6 +94,14 @@
           u3i_bytes(c3_w        a_w,
                     const c3_y* b_y);
 
+        /* u3i_blob(): construct a bob atom (blob reference).
+        **
+        **   Finds or creates the bank record and mints a new atom over it
+        **   each call; nothing is interned.  Home road only.
+        */
+          u3_atom
+          u3i_blob(c3_h mug_h, c3_h seq_h);
+
         /* u3i_words(): Copy [a] words from [b] into an atom.
         */
           u3_atom

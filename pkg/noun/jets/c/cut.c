@@ -17,6 +17,59 @@
       return u3m_bail(c3__fail);
     }
 
+    //  a bob cut on a byte boundary: chub offsets, since a blob can run
+    //  past a word of bits, and a copy out of a view
+    //
+    if ( (a >= 3) && (c3y == u3a_is_bob(d)) ) {
+      c3_g shf_g = (c3_g)(a - 3);
+      c3_d b_d, c_d;
+
+      //  an offset wider than a chub starts past the end of .d
+      //
+      if ( c3n == u3r_safe_chub(b, &b_d) ) {
+        return 0;
+      }
+
+      u3r_view vue_u;
+      u3r_view_open(&vue_u, d, 0, c3y);
+
+      //  a width wider than a chub runs past the end of .d
+      //
+      if ( c3n == u3r_safe_chub(c, &c_d) ) {
+        c_d = c3_d_max;
+      }
+
+      c3_d max_d = vue_u.byt_d >> shf_g;   //  whole bloqs, a floor
+      c3_d off_d = b_d << shf_g;
+      c3_d cnt_d;
+
+      if ( !c_d || (b_d > max_d) || (off_d >= vue_u.byt_d) ) {
+        u3r_view_done(&vue_u);
+        return 0;
+      }
+      cnt_d = vue_u.byt_d - off_d;
+      if ( c_d <= ((vue_u.byt_d - off_d) >> shf_g) ) {
+        cnt_d = c_d << shf_g;
+      }
+
+      if ( !off_d && (cnt_d == vue_u.byt_d) ) {
+        u3r_view_done(&vue_u);
+        return u3k(d);
+      }
+      if ( cnt_d > c3_w_max ) {
+        u3r_view_done(&vue_u);
+        return u3m_bail(c3__fail);
+      }
+
+      {
+        u3i_slab sab_u;
+        u3i_slab_init(&sab_u, 3, cnt_d);
+        u3r_view_copy(&vue_u, off_d, sab_u.buf_y, (c3_z)cnt_d);
+        u3r_view_done(&vue_u);
+        return u3i_slab_mint(&sab_u);
+      }
+    }
+
     {
       c3_g a_g   = a;
       c3_w len_w = u3r_met(a_g, d);

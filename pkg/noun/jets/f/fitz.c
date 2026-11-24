@@ -35,28 +35,43 @@ u3qf_fitz(u3_noun yaz,
   c3_w yet_w = u3r_met(3, yaz);
   c3_w wet_w = u3r_met(3, wix);
 
-  c3_w i_w, met_w = c3_min(yet_w, wet_w);
+  c3_w     i_w, met_w = c3_min(yet_w, wet_w);
+  c3_o     pro_o = c3y;
+  u3r_view yaz_u, wix_u;
 
   if ( c3n == _fitz_fiz(yaz, wix) ) {
     return c3n;
   }
+
+  //  one view of each for the loop: a bob maps once, not per byte.
+  //  every index is within both atoms
+  //
+  u3r_view_open(&yaz_u, yaz, 0, c3y);
+  u3r_view_open(&wix_u, wix, 0, c3y);
+
   for ( i_w = 0; i_w < met_w; i_w++ ) {
-    c3_y yaz_y = u3r_byte(i_w, yaz);
-    c3_y wix_y = u3r_byte(i_w, wix);
+    c3_y yaz_y = yaz_u.byt_y[i_w];
+    c3_y wix_y = wix_u.byt_y[i_w];
 
     if ( (i_w == (yet_w - 1)) && (yaz_y >= 'A') && (yaz_y <= 'Z')) {
-      return c3y;
+      pro_o = c3y;
+      break;
     }
 
     if ( (i_w == (wet_w - 1)) && (wix_y >= 'A') && (wix_y <= 'Z')) {
-      return c3y;
+      pro_o = c3y;
+      break;
     }
 
     if ( yaz_y != wix_y ) {
-      return c3n;
+      pro_o = c3n;
+      break;
     }
   }
-  return c3y;
+
+  u3r_view_done(&wix_u);
+  u3r_view_done(&yaz_u);
+  return pro_o;
 }
 
 u3_noun

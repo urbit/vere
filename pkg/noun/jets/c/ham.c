@@ -8,14 +8,20 @@
 u3_atom
 u3qc_ham(u3_atom a)
 {
-  c3_w len_w = u3r_met(u3a_word_bits_log, a);
-  c3_d pop_d = 0;
-  c3_w wor_w;
+  c3_w        len_w;
+  c3_d        pop_d = 0;
+  u3r_view    vue_u;
+  const c3_w* a_w;
+
+  //  one view for the loop: a bob maps once, not per word
+  //
+  u3r_view_open(&vue_u, a, 0, c3y);
+  a_w = u3r_view_words(&vue_u, &len_w, c3y);
 
   for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
-    wor_w  = u3r_word(i_w, a);
-    pop_d += c3_pc_w(wor_w);
+    pop_d += c3_pc_w(a_w[i_w]);
   }
+  u3r_view_done(&vue_u);
 
   return u3i_chub(pop_d);
 }

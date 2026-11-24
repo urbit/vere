@@ -13,16 +13,28 @@
              u3_noun pub)
   {
     c3_y sig_y[64], pub_y[32];
-    c3_w len_w;
+    c3_d len_d;
     if ( (0 != u3r_bytes_fit(64, sig_y, sig)) ||
          (0 != u3r_bytes_fit(32, pub_y, pub)) ||
-         !u3r_word_fit(&len_w, len) ) {
+         (c3n == u3r_safe_chub(len, &len_d)) ) {
       return c3n;
     }
     else {
-      c3_y* dat_y = u3r_bytes_alloc(0, len_w, dat);
-      c3_t  val_t = urcrypt_ed_veri(dat_y, len_w, pub_y, sig_y);
-      u3a_free(dat_y);
+      const c3_y* dat_y;
+      u3r_view    vue_u;
+
+      //  a width no word holds: c3n, as develop's word check gives
+      //
+      if ( len_d > c3_w_max ) {
+        return c3n;
+      }
+
+      u3r_view_open(&vue_u, dat, len_d, c3y);
+      dat_y = vue_u.byt_y;
+
+      c3_t val_t = urcrypt_ed_veri(dat_y, len_d, pub_y, sig_y);
+
+      u3r_view_done(&vue_u);
 
       return val_t ? c3y : c3n;
     }
@@ -59,10 +71,11 @@
       return c3n;
     }
     else {
-      c3_w  met_w;
-      c3_y* mes_y = u3r_bytes_all(&met_w, m);
-      c3_t  val_t = urcrypt_ed_veri(mes_y, met_w, pub_y, sig_y);
-      u3a_free(mes_y);
+      u3r_view vue_u;
+      u3r_view_open(&vue_u, m, 0, c3y);
+      c3_t     val_t = urcrypt_ed_veri(vue_u.byt_y, vue_u.byt_d,
+                                       pub_y, sig_y);
+      u3r_view_done(&vue_u);
 
       return val_t ? c3y : c3n;
     }

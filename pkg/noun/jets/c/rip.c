@@ -22,6 +22,17 @@
   1 + ((x - 1) / y);
 
 /*
+  Word `i_w` of an atom's `len_w` words at `a_w`, or 0 past them, as
+  `u3r_word` gives.  The loops below read one view of the atom, so a bob
+  maps once, not per word.
+*/
+static inline c3_w
+_rip_word(const c3_w* a_w, c3_w len_w, c3_w i_w)
+{
+  return ( i_w < len_w ) ? a_w[i_w] : 0;
+}
+
+/*
   `ripn` breaks `atom` into a list of blocks, of bit-width `bits`. The
   resulting list will be least-significant block first.
 
@@ -58,6 +69,13 @@ _bit_rip(u3_atom bits, u3_atom atom)
     return u3m_bail(c3__fail);
   }
 
+  u3r_view    vue_u;
+  c3_w        len_w;
+  const c3_w* atm_w;
+
+  u3r_view_open(&vue_u, atom, 0, c3y);
+  atm_w = u3r_view_words(&vue_u, &len_w, c3y);
+
   c3_w bit_width  = u3r_met(0, atom);
   c3_w num_blocks = DIVCEIL(bit_width, bits);
 
@@ -72,8 +90,8 @@ _bit_rip(u3_atom bits, u3_atom atom)
 
     c3_w bit_rems_in_ins_word = bits_rem % u3a_word_bits;
 
-    c3_w ins_word  = u3r_word(ins_idx, atom);
-    c3_w sig_word  = u3r_word(sig_idx, atom);
+    c3_w ins_word  = _rip_word(atm_w, len_w, ins_idx);
+    c3_w sig_word  = _rip_word(atm_w, len_w, sig_idx);
     c3_w nbits_ins = c3_min(bits, u3a_word_bits - bit_rems_in_ins_word);
     c3_w nbits_sig = bits - nbits_ins;
 
@@ -85,6 +103,7 @@ _bit_rip(u3_atom bits, u3_atom atom)
     res = u3nc(item, res);
   }
 
+  u3r_view_done(&vue_u);
   return res;
 }
 
@@ -92,7 +111,13 @@ static u3_noun
 _block_rip(u3_atom bloq, u3_atom b)
 {
 
-  c3_g bloq_g = bloq;
+  c3_g        bloq_g = bloq;
+  u3r_view    vue_u;
+  c3_w        wor_len_w;
+  const c3_w* b_w;
+
+  u3r_view_open(&vue_u, b, 0, c3y);
+  b_w = u3r_view_words(&vue_u, &wor_len_w, c3y);
 
   /*
     This is a fast-path for the case where all the resulting blocks will
@@ -111,12 +136,13 @@ _block_rip(u3_atom bloq, u3_atom b)
       c3_w bit_w = pat_w << bloq_g;                     //  bits left after this
       c3_w wor_w = bit_w >> u3a_word_bits_log;                          //  wrds left after this
       c3_w sif_w = bit_w & (u3a_word_bits-1);                          //  bits left in word
-      c3_w src_w = u3r_word(wor_w, b);                  //  find word by index
+      c3_w src_w = _rip_word(b_w, wor_len_w, wor_w);    //  find word by index
       c3_w rip_w = (src_w >> sif_w) & bmask_w;          //  get item from word
 
       acc = u3nc(rip_w, acc);
     }
 
+    u3r_view_done(&vue_u);
     return acc;
   }
 
@@ -138,7 +164,7 @@ _block_rip(u3_atom bloq, u3_atom b)
     u3i_slab_bare(&sab_u, u3a_word_bits_log, sap_w);
 
     for ( j_w = 0; j_w < sap_w; j_w++ ) {
-      sab_u.buf_w[j_w] = u3r_word(wut_w + j_w, b);
+      sab_u.buf_w[j_w] = _rip_word(b_w, wor_len_w, wut_w + j_w);
     }
 
     rip = u3i_slab_mint(&sab_u);
@@ -146,6 +172,7 @@ _block_rip(u3_atom bloq, u3_atom b)
     len_w -= san_w;
   }
 
+  u3r_view_done(&vue_u);
   return acc;
 }
 
@@ -180,19 +207,28 @@ u3qc_rip(u3_atom a,
   //u3_noun *lit = &pro;
   //u3_noun *hed;
   //u3_noun *tal;
+  u3r_view    vue_u;
+  c3_w        wor_w;
+  const c3_w* c_w;
+
+  //  one view for the loop: a bob maps once, not per block
+  //
+  u3r_view_open(&vue_u, c, 0, c3y);
+  c_w = u3r_view_words(&vue_u, &wor_w, c3y);
+
   c3_w len_w = DIVCEIL(u3r_met(a, c), b);
 
   //for (c3_w i_w = 0; i_w < len_w; i_w++) {
   for (c3_w i_w = len_w; 0 < i_w; i_w--) {
     u3i_slab_init(&sab_u, a, b);
-    u3r_chop(a, (i_w - 1) * b, b, 0, sab_u.buf_w, c);
+    u3r_chop_words(a, (i_w - 1) * b, b, 0, sab_u.buf_w, wor_w, c_w);
     //*lit = u3i_defcons(&hed, &tal);
     //*hed = u3i_slab_mint(&sab_u);
     //lit = tal;
     pro = u3nc(u3i_slab_mint(&sab_u), pro);
   }
   //*lit = u3_nul;
-
+  u3r_view_done(&vue_u);
   return pro;
 }
 

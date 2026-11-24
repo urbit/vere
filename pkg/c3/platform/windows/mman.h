@@ -23,4 +23,16 @@ int mprotect(void *addr, size_t len, int prot);
 #define MS_SYNC         0      /* Synchronous memory sync.  */
 #define MS_INVALIDATE   2      /* Invalidate the caches.  */
 
+/*  madvise: no-op on Windows.  Advisory only — safe to skip.
+*/
+#define MADV_NORMAL     0
+#define MADV_SEQUENTIAL 2
+#define MADV_DONTNEED   4
+
+static inline int madvise(void* addr, size_t len, int advice)
+{
+  (void)addr; (void)len; (void)advice;
+  return 0;
+}
+
 #endif//_SYS_MMAN_H

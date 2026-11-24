@@ -5,7 +5,18 @@
 
 #include "noun.h"
 
+  /* _rub_bit(): bit [x] of the atom [vue_u] views, 0 past its end.
+  */
+  static c3_y
+  _rub_bit(const u3r_view* vue_u, u3_atom x)
+  {
+    c3_d x_d;
 
+    if ( (c3n == u3r_safe_chub(x, &x_d)) || (x_d >= vue_u->bit_d) ) {
+      return 0;
+    }
+    return (vue_u->byt_y[x_d >> 3] >> (x_d & 7)) & 1;
+  }
   u3_noun
   u3qe_rub(u3_atom a,
            u3_atom b)
@@ -22,22 +33,29 @@
       u3z(bit);
     }
 
-    //  Compute c and d.
+    //  Compute c and d.  one view of .b for the scan: a bob maps once,
+    //  not per bit
     {
+      u3r_view vue_u;
+
+      u3r_view_open(&vue_u, b, 0, c3y);
       x = u3k(a);
 
-      while ( 0 == u3qc_cut(0, x, 1, b) ) {
+      while ( 0 == _rub_bit(&vue_u, x) ) {
         u3_atom y = u3qa_inc(x);
 
         //  Sanity check: crash if decoding more bits than available
         if ( c3y == u3qa_gth(x, m)) {
           //  u3l_log("[%%rub-hard %d %d %d]", a, x, m);
+          u3r_view_done(&vue_u);
           return u3m_bail(c3__exit);
         }
 
         u3z(x);
         x = y;
       }
+      u3r_view_done(&vue_u);
+
       if ( c3y == u3r_sing(x, a) ) {
         u3z(x);
         u3z(m);

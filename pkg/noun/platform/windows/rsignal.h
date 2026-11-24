@@ -16,6 +16,15 @@ void rsignal_install_handler(int sig, __p_sig_fn_t fn);
 void rsignal_deinstall_handler(int sig);
 void rsignal_post_longjmp(unsigned long tid, intptr_t* builtin_jb);
 
+/* rsignal_block()/rsignal_unblock(): hold signals across a critical section.
+**
+**   while held, rsignal_raise() records the signal as pending instead of
+**   running its handler; rsignal_unblock() delivers pending signals on the
+**   calling thread once the hold count drops to zero.
+*/
+void rsignal_block(void);
+void rsignal_unblock(void);
+
 #define ITIMER_VIRTUAL 1
 struct itimerval {
 	struct timeval it_value, it_interval;

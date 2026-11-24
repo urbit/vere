@@ -70,12 +70,17 @@
       c3_y key_y[32];
       u3r_bytes(0, 32, key_y, key);
       c3_y flags_y = u3r_byte(0, flags);
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
+      u3r_view vue_u;
       u3i_slab sab_u;
+
+      //  the message at its width, through a view: its bytes, then
+      //  zeros.  urcrypt_blake3_hash only reads it
+      //
+      u3r_view_open(&vue_u, dat, wid_w, c3y);
       u3i_slab_bare(&sab_u, 3, out_w);
       c3_y* out_y = sab_u.buf_y;
-      urcrypt_blake3_hash(wid_w, dat_y, key_y, flags_y, out, out_y);
-      u3a_free(dat_y);
+      urcrypt_blake3_hash(wid_w, (c3_y*)vue_u.byt_y, key_y, flags_y, out, out_y);
+      u3r_view_done(&vue_u);
       return u3i_slab_mint(&sab_u);
     }
   }
@@ -109,12 +114,17 @@
       return u3m_bail(c3__fail);
     } else {
       c3_y  cv_y[32], block_y[64], block_len;
-      c3_y *dat_y = u3r_bytes_alloc(0, wid_w, dat);
+      u3r_view vue_u;
       c3_d counter_d = u3r_chub(0, counter);
       c3_y flags_y = u3r_byte(0, flags);
       u3r_bytes(0, 32, cv_y, cv);
-      urcrypt_blake3_chunk_output(wid_w, dat_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
-      u3a_free(dat_y);
+
+      //  the chunk at its width, through a view: its bytes, then zeros.
+      //  urcrypt_blake3_chunk_output only reads it
+      //
+      u3r_view_open(&vue_u, dat, wid_w, c3y);
+      urcrypt_blake3_chunk_output(wid_w, (c3_y*)vue_u.byt_y, cv_y, block_y, &block_len, &counter_d, &flags_y);
+      u3r_view_done(&vue_u);
       return u3i_cell(u3i_bytes(32, cv_y), u3i_qual(u3k(counter), u3i_bytes(64, block_y), block_len, flags_y));
     }
   }

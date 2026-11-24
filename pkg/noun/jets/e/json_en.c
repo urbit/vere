@@ -121,19 +121,16 @@ _measure_number(u3_noun a)
 static void
 _serialize_number(json_buffer *buf_u, u3_noun a)
 {
-  const c3_y *byt_y;
-
-  // XX assumes little-endian
+  //  a view borrows the bytes wherever the atom lives
+  //  XX assumes little-endian
   //
-  if ( c3y == u3a_is_cat(a) ) {
-    byt_y = (c3_y*)&a;
+  u3r_view vue_u;
+  u3r_view_open(&vue_u, a, 0, c3y);
+  if ( vue_u.byt_d > c3_w_max ) {
+    u3m_bail(c3__fail);
   }
-  else {
-    u3a_atom* vat_u = u3a_to_ptr(a);
-    byt_y = (c3_y*)vat_u->buf_w;
-  }
-
-  _append_text(buf_u, byt_y, u3r_met(3, a));
+  _append_text(buf_u, vue_u.byt_y, (c3_w)vue_u.byt_d);
+  u3r_view_done(&vue_u);
 }
 
 static c3_w
@@ -143,11 +140,16 @@ _measure_string(u3_noun a)
     u3m_bail(c3__exit);
   }
 
-  c3_w len_w = u3r_met(3, a);
-  c3_w siz_w = 0;
+  c3_w     len_w = u3r_met(3, a);
+  c3_w     siz_w = 0;
+  u3r_view vue_u;
+
+  //  one view for the loop: a bob maps once, not per byte
+  //
+  u3r_view_open(&vue_u, a, 0, c3y);
 
   for (c3_w i = 0; i < len_w; ++i) {
-    c3_y c_y = u3r_byte(i, a);
+    c3_y c_y = vue_u.byt_y[i];
 
     switch ( c_y ) {
       case 0 ... 9:
@@ -177,6 +179,8 @@ _measure_string(u3_noun a)
     }
   }
 
+  u3r_view_done(&vue_u);
+
   // surrounding double quotes
   return (siz_w + 2);
 }
@@ -184,11 +188,16 @@ _measure_string(u3_noun a)
 static void
 _serialize_string(json_buffer *buf_u, u3_noun a)
 {
-  c3_w len_w = u3r_met(3, a);
+  c3_w     len_w = u3r_met(3, a);
+  u3r_view vue_u;
+
+  //  one view for the loop: a bob maps once, not per byte
+  //
+  u3r_view_open(&vue_u, a, 0, c3y);
 
   _append_char(buf_u, '"');
   for (c3_w i = 0; i < len_w; ++i) {
-    c3_y c_y = u3r_byte(i, a);
+    c3_y c_y = vue_u.byt_y[i];
 
     switch ( c_y ) {
       case 0 ... 9:
@@ -218,6 +227,7 @@ _serialize_string(json_buffer *buf_u, u3_noun a)
     }
   }
   _append_char(buf_u, '"');
+  u3r_view_done(&vue_u);
 }
 
 static c3_w

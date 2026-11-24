@@ -4,27 +4,28 @@
 #define U3_URTH_H
 
 #include "c3/c3.h"
+#include "serial.h"
 
     /**  Functions.
     **/
-      /* u3u_meld(): globally deduplicate memory, returns u3a_open delta.
-      */
-        c3_w
-        u3u_meld(void) __attribute__ ((deprecated));
-
       /* u3u_melt(): globally deduplicate memory and pack in-place.
       */
         c3_w
         u3u_melt(void) __attribute__ ((deprecated));
 
-      /* u3u_cram(): globably deduplicate memory, and write a rock to disk.
+      /* u3u_cram(): jam persistent state (rock) and write it to disk.
+      **   blob-aware: bob atoms are expanded into the rock as regular
+      **   atoms; the loom and blob bank are untouched.
       */
         c3_o
         u3u_cram(c3_c* dir_c, c3_d eve_d);
       /* u3u_uncram(): restore persistent state from a rock.
+      **   cued atoms larger than [thr_d] bytes stream through [snk_u]
+      **   (blobified) instead of materializing on the loom; NULL [snk_u]
+      **   disables.
       */
         c3_o
-        u3u_uncram(c3_c* dir_c, c3_d eve_d);
+        u3u_uncram(c3_c* dir_c, c3_d eve_d, c3_d thr_d, u3s_bsink* snk_u);
 
       /* u3u_mmap_read(): open and mmap the file at [pat_c] for reading.
       */
