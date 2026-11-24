@@ -4,10 +4,11 @@
 ///
 /// In the order it runs:
 ///
-/// 1. A stack overflow while async signals are held (u3m_hold()) must
-///    leave u3o_check_corrupt set, and the grab it asks for must repair
-///    what a cut-short home write left: a leaked old value, or a new
-///    value gained but not written.
+/// 1. The grab u3o_check_corrupt asks for must repair what a home write
+///    cut short by a stack overflow left: a leaked old value, or a new
+///    value gained but not written. And a stack overflow while async
+///    signals are held (u3m_hold()) must abort the process: it's run in
+///    a child, which must not survive it.
 ///
 /// 2. Both exits to home, after success and after a bail, run in the
 ///    outer signal regime, with the timer disarmed (u3m_Love_f).
@@ -54,6 +55,11 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <time.h>
+#ifdef U3_OS_windows
+#  include <process.h>
+#else
+#  include <sys/wait.h>
+#endif
 
 typedef struct {
   const c3_c* nam_c;            //  name
@@ -432,10 +438,10 @@ _over_deep(c3_w dep_w)
   return _over_deep(dep_w + 1) + buf_y[0];
 }
 
-/* _w_over(): on the soft's road, with async signals held, do what a
-**            home write cut short leaves: point the head of home cell
-**            [arg] at its tail, gaining the tail, but don't release the
-**            old head. then overflow.
+/* _w_over(): on the soft's road, do what a home write cut short
+**            leaves: point the head of home cell [arg] at its tail,
+**            gaining the tail, but don't release the old head. then
+**            overflow.
 */
 static u3_noun
 _w_over(u3_noun arg)
@@ -443,7 +449,6 @@ _w_over(u3_noun arg)
   u3a_cell* cel_u = u3a_to_ptr(arg);
   u3_noun   tel   = cel_u->tel;
 
-  u3m_hold();
   ((u3a_noun*)u3a_to_ptr(tel))->use_w += 1;
   cel_u->hed = tel;
   _over_stop_w = 0;
@@ -458,22 +463,19 @@ _w_over_gain(u3_noun arg)
 {
   u3_noun tel = u3t(arg);
 
-  u3m_hold();
   ((u3a_noun*)u3a_to_ptr(tel))->use_w += 1;
   _over_stop_w = 0;
   u3z(arg);
   return _over_deep(1);
 }
 
-/* _over_run(): run [fun_f] on [cel], expecting a held overflow.
+/* _over_run(): run [fun_f] on [cel], expecting an overflow, and ask
+**              for the grab that checks the home road.
 */
 static void
 _over_run(u3_funk fun_f, u3_noun cel)
 {
-  u3_noun pro;
-
-  u3C.wag_h &= ~u3o_check_corrupt;
-  pro = u3m_soft(0, fun_f, u3k(cel));
+  u3_noun pro = u3m_soft(0, fun_f, u3k(cel));
 
   if ( c3__over != u3h(pro) ) {
     fprintf(stderr, "soft: over: expected %%over\r\n");
@@ -482,14 +484,109 @@ _over_run(u3_funk fun_f, u3_noun cel)
   }
   u3z(pro);
 
-  if ( !(u3C.wag_h & u3o_check_corrupt) ) {
-    fprintf(stderr, "soft: over: u3o_check_corrupt not set\r\n");
-    exit(1);
-  }
+  u3C.wag_h |= u3o_check_corrupt;
 }
 
-/* _test_over(): a stack overflow with signals held asks for a grab, and
-**               the grab repairs the leak, or the count left too high.
+/* _w_over_held(): overflow with async signals held.
+*/
+static u3_noun
+_w_over_held(u3_noun arg)
+{
+  u3m_hold();
+  _over_stop_w = 0;
+  return _over_deep(1) + arg;
+}
+
+#ifndef U3_OS_windows
+/* _over_held_abrt(): the child's SIGABRT handler: exit with a status
+**                    that tells the abort from anything else. (left to
+**                    its default, the abort is slow where the system
+**                    writes a crash report.)
+*/
+#define _OVER_HELD_ABRT  86
+
+static void
+_over_held_abrt(int sig_i)
+{
+  _exit(_OVER_HELD_ABRT);
+}
+#endif
+
+/* _over_held_child(): overflow with signals held, which must end the
+**                     process: if it's still running after, exit 0.
+*/
+static void
+_over_held_child(void)
+{
+#ifndef U3_OS_windows
+  signal(SIGABRT, _over_held_abrt);
+#endif
+  u3_noun pro = u3m_soft(0, _w_over_held, 0);
+
+  fprintf(stderr, "soft: over: held: survived\r\n");
+  u3m_p("got", u3h(pro));
+  fflush(stderr);
+  _exit(0);
+}
+
+/* _test_over_held(): a stack overflow with signals held aborts. the
+**   overflow runs in a child: a fork, or on windows this program again
+**   (SOFT_TEST_OVER_HELD, see main()).
+*/
+static void
+_test_over_held(void)
+{
+  fflush(stdout);
+  fflush(stderr);
+
+#ifdef U3_OS_windows
+  {
+    c3_c     pat_c[MAX_PATH];
+    intptr_t ret_i;
+
+    if ( !GetModuleFileNameA(0, pat_c, sizeof(pat_c)) ) {
+      fprintf(stderr, "soft: over: held: no path to this program\r\n");
+      exit(1);
+    }
+    _putenv_s("SOFT_TEST_OVER_HELD", "1");
+    ret_i = _spawnl(_P_WAIT, pat_c, "soft-test", (c3_c*)0);
+    _putenv_s("SOFT_TEST_OVER_HELD", "");
+
+    if ( (0 == ret_i) || (-1 == ret_i) ) {
+      fprintf(stderr, "soft: over: held: the child %s\r\n",
+              ret_i ? "didn't start" : "survived");
+      exit(1);
+    }
+    fprintf(stderr, "soft: over: held: the child ended with %lx\r\n",
+            (unsigned long)ret_i);
+  }
+#else
+  {
+    pid_t pid_i = fork();
+    c3_i  sat_i;
+
+    if ( pid_i < 0 ) {
+      fprintf(stderr, "soft: over: held: fork: %s\r\n", strerror(errno));
+      exit(1);
+    }
+    if ( 0 == pid_i ) {
+      _over_held_child();
+    }
+    if ( (pid_i != waitpid(pid_i, &sat_i, 0))
+       || !WIFEXITED(sat_i) || (_OVER_HELD_ABRT != WEXITSTATUS(sat_i)) )
+    {
+      fprintf(stderr, "soft: over: held: the child wasn't aborted (%d)\r\n",
+              sat_i);
+      exit(1);
+    }
+    fprintf(stderr, "soft: over: held: the child was aborted\r\n");
+  }
+#endif
+}
+
+/* _test_over(): the grab u3o_check_corrupt asks for repairs what a home
+**               write cut short by an overflow leaves: the leak, or the
+**               count left too high.
 */
 static void
 _test_over(void)
@@ -830,6 +927,11 @@ main(int argc, char* argv[])
   if ( getenv("SOFT_TEST_DUP") )            _len_w = 10;
 
   _setup();
+#ifdef U3_OS_windows
+  if ( (env_c = getenv("SOFT_TEST_OVER_HELD")) && *env_c ) {
+    _over_held_child();
+  }
+#endif
   srand(sed_w);
   fprintf(stderr, "soft: seed %" PRIc3_w ", %" PRIc3_w " interrupted runs\r\n",
           sed_w, num_w);
@@ -839,6 +941,7 @@ main(int argc, char* argv[])
 
   memset(wok_u, 0, sizeof(wok_u));
   _test_over();
+  _test_over_held();
   _test_love();
   _test_hold_bail();
   _test_leap();

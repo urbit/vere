@@ -378,8 +378,8 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       **   term is never replaced. the sampler skips while signals are
       **   held, since it runs on the home road and may change the set. a
       **   stack overflow can't be held: code between the two must stay
-      **   shallow, and if one lands there, the next grab checks the home
-      **   road (u3o_check_corrupt). nor may it bail; if it does anyway,
+      **   shallow, and if one lands there, the process aborts, since
+      **   the work is left half done. nor may it bail; if it does anyway,
       **   u3m_bail() ends the hold, and raises a held signal in the
       **   bail's place. both are always inlined, so neither
       **   adds a call to the code between.

@@ -158,8 +158,8 @@
           //  the grab u3o_check_corrupt asks for (u3m_vgrab_check())
           //
           c3_d ccs_d[3];     //  times asked: a signal recovered on the
-                             //  home road, an overflow with signals
-                             //  held, a full home lose list
+                             //  home road, (unused, 0), a full home
+                             //  lose list
           c3_d ccg_d;        //  grabs run
           c3_d ccm_d;        //    their time, ms
           c3_d ccl_d;        //    words they found leaked, and freed

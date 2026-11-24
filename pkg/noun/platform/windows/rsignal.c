@@ -12,6 +12,12 @@ static __p_sig_fn_t   _fns[SIG_COUNT];
 static volatile DWORD _tid;
 static HANDLE _hvt;
 
+//  a longjmp may be posted to the thread (see rsignal_arm()). read by
+//  the raising thread only once the thread is stopped, so it can't
+//  change between the check and the post
+//
+static volatile LONG  _liv;
+
 void rsignal_install_handler(int sig, __p_sig_fn_t fn)
 {
   if (sig < 0 || sig >= SIG_COUNT)
@@ -60,6 +66,21 @@ void rsignal_raise(int sig)
     goto cleanup;
   }
 
+  //  SuspendThread() only asks; GetThreadContext() waits until the
+  //  thread has stopped. if it has disarmed by then, the handler taken
+  //  above is one it has finished with: the signal is dropped, neither
+  //  delivered nor left for the thread to raise itself
+  //
+  {
+    CONTEXT context;
+    context.ContextFlags = CONTEXT_CONTROL;
+
+    if (!GetThreadContext(hthread, &context) || !_liv) {
+      ResumeThread(hthread);
+      goto cleanup;
+    }
+  }
+
   oldfn(sig);
 
   if (!ResumeThread(hthread)) {
@@ -81,6 +102,28 @@ int rsignal_installed(int sig)
 int rsignal_armed(void)
 {
   return NULL != _hvt;
+}
+
+void rsignal_arm(void)
+{
+  _liv = 1;
+}
+
+//  a raise takes the handler before it stops the thread, so removing
+//  the handlers doesn't stop one already under way: its longjmp would be
+//  posted after the thread had left the frame it jumps to, or into work
+//  that runs with no handler installed. so: no deliveries from here
+//  (rsignal_raise() checks once the thread is stopped), then wait for
+//  the timer's callback, which now can't redirect this thread.
+//
+void rsignal_disarm(void)
+{
+  _liv = 0;
+
+  if (_hvt != NULL) {
+    DeleteTimerQueueTimer(NULL, _hvt, INVALID_HANDLE_VALUE);
+    _hvt = NULL;
+  }
 }
 
 static void _rsignal_vt_cb(PVOID param, BOOLEAN timedOut)
@@ -136,6 +179,14 @@ void rsignal_post_longjmp(DWORD tid, intptr_t* builtin_jb)
   context.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
   if (!GetThreadContext(hthread, &context)) {
     fprintf(stderr, "\r\nrsignal: GetThreadContext(%lu): %lu\r\n", tid, GetLastError());
+    goto cleanup;
+  }
+
+  //  the thread is stopped now (GetThreadContext() waits for the
+  //  suspension). if it has disarmed, its jump buffer is stale: drop
+  //  the signal
+  //
+  if (!_liv) {
     goto cleanup;
   }
 
