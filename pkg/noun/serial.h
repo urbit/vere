@@ -29,10 +29,19 @@
         c3_w
         u3s_jam_fib(u3i_slab* sab_u, u3_noun a);
 
-      /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation.
+      /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation. on the
+      **                 home road, its backreferences are off the loom,
+      **                 in the result yard: no references, no table on
+      **                 the loom.
       */
         c3_d
         u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
+
+      /* u3s_jam_report(): log the jams that met a yard's ceiling since
+      **                   the last report.
+      */
+        void
+        u3s_jam_report(void);
 
       /* u3s_cue(): cue [a]
       */

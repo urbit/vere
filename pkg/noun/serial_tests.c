@@ -1,6 +1,8 @@
 /// @file
 
 #include "noun.h"
+#include "crib.h"
+#include "events.h"
 
 /* _setup(): prepare for tests.
 */
@@ -243,6 +245,153 @@ _test_jam_roundtrip(void)
   return ret_i;
 }
 
+/* _test_jam_deep(): a noun [n_w] cells deep, by its heads. its values
+**   are distinct, and the walk keeps a tail for each.
+*/
+static u3_noun
+_test_jam_deep(c3_w n_w)
+{
+  u3_noun a = 0;
+  c3_w  i_w;
+
+  for ( i_w = 0; i_w < n_w; i_w++ ) {
+    a = u3nc(a, i_w);
+  }
+  return a;
+}
+
+/* _test_jam_same(): u3s_jam_xeno() of [a] gives [ref_d] bytes at
+**   [ref_y].
+*/
+static c3_i
+_test_jam_same(const c3_c* cap_c, u3_noun a, c3_d ref_d, const c3_y* ref_y)
+{
+  c3_d  out_d;
+  c3_y* out_y;
+  c3_i  ret_i = 1;
+
+  u3s_jam_xeno(a, &out_d, &out_y);
+
+  if ( (out_d != ref_d) || memcmp(out_y, ref_y, out_d) ) {
+    fprintf(stderr, "\033[31mjam xeno %s: %" PRIu64 " bytes against %"
+                    PRIu64 "\033[0m\r\n", cap_c, out_d, ref_d);
+    ret_i = 0;
+  }
+  if ( u3a_Yard_res.use_i || u3a_Yard_wok.use_i ) {
+    fprintf(stderr, "\033[31mjam xeno %s: yards in use\033[0m\r\n", cap_c);
+    ret_i = 0;
+  }
+
+  free(out_y);
+  return ret_i;
+}
+
+/* _test_jam_yards(): u3s_jam_xeno() at the yards' ceilings: +jam's
+**   bytes every time.
+*/
+static c3_i
+_test_jam_yards(void)
+{
+  c3_i  ret_i = 1;
+  c3_d  ful_d = u3e_Meter.cib_u[6].ovf_d;
+  c3_d  pil_d = u3e_Meter.cib_u[5].ovf_d;
+
+  //  a table that can't grow: the jam starts over with the u3h table
+  //
+  {
+    u3_noun  lis = _test_jam_deep(2000);
+    u3_noun    a = u3nc(u3k(lis), lis);
+    u3i_slab sab_u;
+    c3_w   bit_w = u3s_jam_fib(&sab_u, a);
+
+    u3m_yard_size(0, 32 << 10);
+    ret_i &= _test_jam_same("table ceiling", a,
+                            ((c3_d)bit_w + 7) >> 3, sab_u.buf_y);
+
+    if ( (ful_d + 1) != u3e_Meter.cib_u[6].ovf_d ) {
+      fprintf(stderr, "test jam: table ceiling: %" PRIu64 " fills\r\n",
+              u3e_Meter.cib_u[6].ovf_d - ful_d);
+      ret_i = 0;
+    }
+
+    u3i_slab_free(&sab_u);
+    u3m_yard_size(0, 0);
+    u3z(a);
+  }
+
+  //  no room for a first table: the u3h table
+  //
+  {
+    c3_y    res_y[5] = { 0xc5, 0xc8, 0x26, 0x27, 0x1 };
+    u3_noun a = u3nt(u3nc(1, 2), u3nc(1, 2), u3nc(1, 2));
+
+    u3m_yard_size(0, 64);
+    ret_i &= _test_jam_same("no room", a, sizeof(res_y), res_y);
+    u3m_yard_size(0, 0);
+    u3z(a);
+  }
+
+  //  a stack past the scratch yard: the rest goes on the road's stack
+  //
+  {
+    u3_noun  a = _test_jam_deep(1000);
+    u3i_slab sab_u;
+    c3_w   bit_w = u3s_jam_fib(&sab_u, a);
+
+    u3m_yard_size(16 * sizeof(u3_noun), 0);
+    ret_i &= _test_jam_same("stack ceiling", a,
+                            ((c3_d)bit_w + 7) >> 3, sab_u.buf_y);
+
+    if ( (pil_d + 1) != u3e_Meter.cib_u[5].ovf_d ) {
+      fprintf(stderr, "test jam: stack ceiling: %" PRIu64 " spills\r\n",
+              u3e_Meter.cib_u[5].ovf_d - pil_d);
+      ret_i = 0;
+    }
+
+    u3i_slab_free(&sab_u);
+    u3m_yard_size(0, 0);
+    u3z(a);
+  }
+
+  //  inside an enclosing user that left both ends unaligned: the same
+  //  bytes, and the ends back where they were
+  //
+  {
+    u3_noun  a = _test_jam_deep(1000);
+    u3i_slab sab_u;
+    c3_w   bit_w = u3s_jam_fib(&sab_u, a);
+
+    (void)u3a_yard_take(&u3a_Yard_wok, 1, 1);
+    (void)u3a_yard_take(&u3a_Yard_res, 3, 1);
+
+    {
+      c3_d  out_d;
+      c3_y* out_y;
+
+      u3s_jam_xeno(a, &out_d, &out_y);
+
+      if (  (out_d != (((c3_d)bit_w + 7) >> 3))
+         || memcmp(out_y, sab_u.buf_y, out_d)
+         || (1 != u3a_Yard_wok.use_i) || (3 != u3a_Yard_res.use_i) )
+      {
+        fprintf(stderr, "\033[31mjam xeno nested: %" PRIu64 " bytes, ends"
+                        " at %zu and %zu\033[0m\r\n",
+                out_d, u3a_Yard_wok.use_i, u3a_Yard_res.use_i);
+        ret_i = 0;
+      }
+      free(out_y);
+    }
+
+    u3a_yard_back(&u3a_Yard_wok, 0);
+    u3a_yard_back(&u3a_Yard_res, 0);
+    u3i_slab_free(&sab_u);
+    u3z(a);
+  }
+
+  u3s_jam_report();
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -252,6 +401,11 @@ main(int argc, char* argv[])
 
   if ( !_test_jam_roundtrip() ) {
     fprintf(stderr, "test jam: failed\r\n");
+    exit(1);
+  }
+
+  if ( !_test_jam_yards() ) {
+    fprintf(stderr, "test jam: yards failed\r\n");
     exit(1);
   }
 

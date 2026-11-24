@@ -6,9 +6,12 @@
 #include <fcntl.h>
 
 #include "allocate.h"
+#include "crib.h"
+#include "events.h"
 #include "hashtable.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "log.h"
 #include "retrieve.h"
 #include "serial.h"
 #include "ur/ur.h"
@@ -323,19 +326,322 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
   }
 }
 
+/*  u3s_jam_xeno()'s backreferences, off the loom.
+**
+**    the table maps each noun met to its position in the output. on the
+**    home road it lives in the result yard (crib.h), open-addressed with
+**    linear probing and at most half full, and the walk's stack of tails
+**    lives in the scratch yard. it's keyed by mug and compares with
+**    u3r_sing(), as the u3h table did, so the bytes are +jam's; but it
+**    takes no references and allocates nothing on the loom. it still
+**    stores the mugs it computes, and unifies the equal nouns it
+**    compares.
+**
+**    a table that can't grow within the yard ends the walk, and the jam
+**    starts over with the u3h table: the same bytes, on the loom.
+*/
+typedef struct {
+  u3_noun key;      //  noun
+  c3_h    has_h;    //  its mug
+  c3_d    bit_d;    //  its position plus one; 0 if the slot is empty
+} _cs_jam_slot;
+
+typedef struct {
+  _cs_jam_slot* tab_u;  //  table, at the result yard's end
+  c3_w          cap_w;  //  slots, a power of two
+  c3_w          len_w;  //  slots filled
+  c3_t          ful_t;  //  the table met the yard's ceiling: stop
+  ur_bsw_t      rit_u;  //  output
+} _cs_jam_back;
+
+#define _CS_JAM_SLOTS  (1 << 10)
+
+//  measurement and reports: jams whose table met the yard's ceiling
+//  and started over, and walks whose stack spilled onto the road's (see
+//  u3s_jam_report())
+//
+static c3_d _cs_jam_ful_d;
+static c3_d _cs_jam_pil_d;
+
+/* _cs_jam_find(): [a]'s slot, or the empty slot where it would go.
+*/
+static inline _cs_jam_slot*
+_cs_jam_find(_cs_jam_back* jam_u, u3_noun a, c3_h has_h)
+{
+  c3_w msk_w = jam_u->cap_w - 1;
+  c3_w idx_w = has_h & msk_w;
+
+  while ( 1 ) {
+    _cs_jam_slot* sot_u = &jam_u->tab_u[idx_w];
+
+    if (  !sot_u->bit_d
+       || (a == sot_u->key)
+       || ((has_h == sot_u->has_h) && (c3y == u3r_sing(a, sot_u->key))) )
+    {
+      return sot_u;
+    }
+    idx_w = (idx_w + 1) & msk_w;
+  }
+}
+
+/* _cs_jam_hole(): the empty slot for hash [has_h] in [tab_u]: for
+**   rehashing, where every key is new.
+*/
+static inline _cs_jam_slot*
+_cs_jam_hole(_cs_jam_slot* tab_u, c3_w cap_w, c3_h has_h)
+{
+  c3_w msk_w = cap_w - 1;
+  c3_w idx_w = has_h & msk_w;
+
+  while ( tab_u[idx_w].bit_d ) {
+    idx_w = (idx_w + 1) & msk_w;
+  }
+
+  return &tab_u[idx_w];
+}
+
+/* _cs_jam_grow(): double the table, or note that it met the yard's
+**   ceiling. the new table is built past the old one, then moved down
+**   over it.
+*/
+static void
+_cs_jam_grow(_cs_jam_back* jam_u)
+{
+  c3_w          old_w = jam_u->cap_w;
+  c3_w          cap_w = old_w << 1;
+  _cs_jam_slot* tab_u = jam_u->tab_u;
+  _cs_jam_slot* new_u;
+  c3_w          i_w;
+
+  if (  (cap_w < old_w)
+     || !(new_u = u3a_yard_take(&u3a_Yard_res,
+                                (size_t)cap_w * sizeof(*new_u),
+                                alignof(_cs_jam_slot))) )
+  {
+    jam_u->ful_t = 1;
+    u3e_Meter.cib_u[6].ovf_d++;
+    _cs_jam_ful_d++;
+    return;
+  }
+
+  memset(new_u, 0, (size_t)cap_w * sizeof(*new_u));
+
+  for ( i_w = 0; i_w < old_w; i_w++ ) {
+    if ( tab_u[i_w].bit_d ) {
+      *_cs_jam_hole(new_u, cap_w, tab_u[i_w].has_h) = tab_u[i_w];
+    }
+  }
+
+  memmove(tab_u, new_u, (size_t)cap_w * sizeof(*new_u));
+  u3a_yard_give(&u3a_Yard_res, (size_t)old_w * sizeof(*new_u));
+  jam_u->cap_w = cap_w;
+}
+
+/* _cs_jam_look(): [a]'s position plus one, or 0 after entering it at
+**   the output's end.
+*/
+static inline c3_d
+_cs_jam_look(_cs_jam_back* jam_u, u3_noun a)
+{
+  c3_h          has_h = u3r_mug(a);
+  _cs_jam_slot* sot_u = _cs_jam_find(jam_u, a, has_h);
+
+  if ( sot_u->bit_d ) {
+    return sot_u->bit_d;
+  }
+
+  sot_u->key   = a;
+  sot_u->has_h = has_h;
+  sot_u->bit_d = jam_u->rit_u.bits + 1;
+
+  if ( ++jam_u->len_w > (jam_u->cap_w >> 1) ) {
+    _cs_jam_grow(jam_u);
+  }
+
+  return 0;
+}
+
+/* _cs_jam_back_atom(): encode atom or backref.
+*/
+static inline void
+_cs_jam_back_atom(_cs_jam_back* jam_u, u3_atom a)
+{
+  ur_bsw_t* rit_u = &(jam_u->rit_u);
+  c3_w      met_w = u3r_met(0, a);
+  c3_d      bak_d = _cs_jam_look(jam_u, a);
+  c3_w      bak_w;
+
+  if ( bak_d ) {
+    bak_d--;
+    bak_w = c3_bits_chub(bak_d);
+
+    if ( met_w > bak_w ) {
+      ur_bsw_back64(rit_u, (c3_y)bak_w, bak_d);
+      return;
+    }
+  }
+
+  _cs_jam_bsw_atom(rit_u, met_w, a);
+}
+
+/* _cs_jam_back_cell(): encode cell or backref; c3y if its head and tail
+**   are to follow.
+*/
+static inline c3_o
+_cs_jam_back_cell(_cs_jam_back* jam_u, u3_noun a)
+{
+  ur_bsw_t* rit_u = &(jam_u->rit_u);
+  c3_d      bak_d = _cs_jam_look(jam_u, a);
+
+  if ( !bak_d ) {
+    ur_bsw_cell(rit_u);
+    return c3y;
+  }
+
+  bak_d--;
+  ur_bsw_back64(rit_u, (c3_y)c3_bits_chub(bak_d), bak_d);
+  return c3n;
+}
+
+/* _cs_jam_walk(): encode [a], preorder, with the stack of tails in the
+**   scratch yard; 0 if the table met its ceiling. past the scratch
+**   yard's ceiling, tails go on the road's stack, which is popped first.
+*/
+static c3_t
+_cs_jam_walk(_cs_jam_back* jam_u, u3_noun a)
+{
+  u3a_yard* yar_u = &u3a_Yard_wok;
+  size_t    end_i = u3a_yard_here(yar_u);
+  size_t    bot_i;
+  c3_t      pil_t = 0;
+  u3a_pile  pil_u;
+  u3_noun*  top;
+
+  //  align the end, so that a frame is the last [sizeof(u3_noun)]
+  //  bytes taken: an enclosing user (the home walk, with a log line in
+  //  it) may have left it anywhere. the end goes back where it was
+  //
+  (void)u3a_yard_take(yar_u, 0, alignof(u3_noun));
+  bot_i = u3a_yard_here(yar_u);
+
+  while ( 1 ) {
+    if ( c3_unlikely(jam_u->ful_t) ) {
+      if ( pil_t ) {
+        u3R->cap_p = pil_u.beg_p;
+      }
+      u3a_yard_back(yar_u, end_i);
+      return 0;
+    }
+
+    if ( c3y == u3a_is_atom(a) ) {
+      _cs_jam_back_atom(jam_u, a);
+    }
+    else if ( c3y == _cs_jam_back_cell(jam_u, a) ) {
+      top = u3a_yard_take(yar_u, sizeof(u3_noun), alignof(u3_noun));
+
+      if ( c3_unlikely(!top) ) {
+        if ( !pil_t ) {
+          u3a_pile_prep(&pil_u, sizeof(u3_noun), alignof(u3_noun));
+          u3e_Meter.cib_u[5].ovf_d++;
+          _cs_jam_pil_d++;
+          pil_t = 1;
+        }
+        top = u3a_push(&pil_u);
+      }
+
+      *top = u3t(a);
+      a    = u3h(a);
+      continue;
+    }
+
+    //  the road's stack, until it's empty and given back
+    //
+    if ( pil_t ) {
+      if ( c3n == u3a_pile_done(&pil_u) ) {
+        a = *(u3_noun*)u3a_peek(&pil_u);
+        u3a_pop(&pil_u);
+        continue;
+      }
+      pil_t = 0;
+    }
+
+    if ( u3a_yard_here(yar_u) > bot_i ) {
+      u3a_yard_give(yar_u, sizeof(u3_noun));
+      a = *(u3_noun*)(void*)(yar_u->buf_y + u3a_yard_here(yar_u));
+    }
+    else {
+      u3a_yard_back(yar_u, end_i);
+      return 1;
+    }
+  }
+}
+
 /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation.
 */
 c3_d
 u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
-  _jam_xeno_t jam_u = {0};
-  ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
-  jam_u.har_p = u3h_new();
+  //  the yards are the home road's. on another road, with no room in
+  //  the result yard for a first table, or when the table meets the
+  //  yard's ceiling, a u3h table on the loom
+  //
+  if ( u3R == &(u3H->rod_u) ) {
+    size_t        end_i = u3a_yard_here(&u3a_Yard_res);
+    _cs_jam_back  jam_u = {0};
 
-  u3a_walk_fore(a, &jam_u, _cs_jam_xeno_atom, _cs_jam_xeno_cell);
+    jam_u.cap_w = _CS_JAM_SLOTS;
+    jam_u.tab_u = u3a_yard_take(&u3a_Yard_res,
+                                (size_t)jam_u.cap_w * sizeof(_cs_jam_slot),
+                                alignof(_cs_jam_slot));
 
-  u3h_free(jam_u.har_p);
-  return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+    if ( jam_u.tab_u ) {
+      c3_t done_t;
+
+      memset(jam_u.tab_u, 0, (size_t)jam_u.cap_w * sizeof(_cs_jam_slot));
+      ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
+
+      done_t = _cs_jam_walk(&jam_u, a);
+      u3a_yard_back(&u3a_Yard_res, end_i);
+
+      if ( done_t ) {
+        return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+      }
+
+      ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+      c3_free(*byt_y);
+    }
+  }
+
+  {
+    _jam_xeno_t jam_u = {0};
+    ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
+    jam_u.har_p = u3h_new();
+
+    u3a_walk_fore(a, &jam_u, _cs_jam_xeno_atom, _cs_jam_xeno_cell);
+
+    u3h_free(jam_u.har_p);
+    return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+  }
+}
+
+/* u3s_jam_report(): log the jams that met a yard's ceiling since the
+**                   last report.
+*/
+void
+u3s_jam_report(void)
+{
+  if ( _cs_jam_ful_d ) {
+    u3l_log("jam: %" PRIu64 " jams filled the result yard, and started"
+            " over with their table on the loom",
+            _cs_jam_ful_d);
+    _cs_jam_ful_d = 0;
+  }
+  if ( _cs_jam_pil_d ) {
+    u3l_log("jam: %" PRIu64 " jams filled the scratch yard; the rest of"
+            " their walks used the road's stack",
+            _cs_jam_pil_d);
+    _cs_jam_pil_d = 0;
+  }
 }
 
 /* _cs_cue: stack frame for tracking intermediate cell results
