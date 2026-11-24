@@ -204,10 +204,16 @@ void
 u3a_yard_drop(u3a_yard* yar_u)
 {
   size_t new_i = c3_max(yar_u->min_i, yar_u->use_i);
+  size_t old_i = yar_u->com_i;
 
-  if ( new_i < yar_u->com_i ) {
-    _crib_drop(yar_u->buf_y + new_i, yar_u->com_i - new_i);
+  if ( new_i < old_i ) {
+    //  what's committed is lowered first, as a crib's length is (see
+    //  u3a_crib_shrink()): on windows the drop decommits, and the next
+    //  u3a_yard_more() commits only from [com_i] up
+    //
     yar_u->com_i = new_i;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _crib_drop(yar_u->buf_y + new_i, old_i - new_i);
     yar_u->shr_w++;
   }
 }

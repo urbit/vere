@@ -68,9 +68,10 @@
   ***  Two yards used together hold two objects that grow at once (a
   ***  stack in one, a list in the other). Memory taken isn't zeroed.
   ***
-  ***  Like a crib's, a yard's growth allocates nothing. It's for the
-  ***  home road's scratch all the same: its fields aren't written in an
-  ***  order that an interrupt could unwind.
+  ***  Like a crib's, a yard's growth allocates nothing, and an interrupt
+  ***  may unwind any of its calls: memory is committed before it's
+  ***  counted, and given back after. It's for the home road's scratch
+  ***  all the same: its users don't keep their own state in that order.
   ***
   ***  The runtime has two, reserved by u3m_init(): u3a_Yard_wok for
   ***  scratch, and u3a_Yard_res for results. A user is a scope: it reads
