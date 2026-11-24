@@ -369,82 +369,6 @@ _test_lose_full(void)
   return ret_i;
 }
 
-/* _test_lose_full_eager(): with the home lose list full, the exit take's
-**                          rewrite of an older home noun leaves a slot as
-**                          it is, rather than leaking its old value.
-*/
-static c3_i
-_test_lose_full_eager(void)
-{
-  c3_i    ret_i = 1;
-  c3_w    num_w = 20, max_w = 16, i_w, swp_w = 0;
-  c3_d    ctr_d = u3e_Meter.ctr_d;
-  u3_noun mem = u3_nul, old = u3_nul, cop = u3_nul;
-
-  //  [old] lists [i 2] for each i, uncounted elsewhere and not members;
-  //  [mem] lists members equal to them. the walk meets [old]'s first
-  //  element first
-  //
-  for ( i_w = num_w; i_w--; ) {
-    mem = u3nc(u3m_sole_try(u3nc(i_w + 1, 2)), mem);
-    old = u3nc(u3nc(i_w + 1, 2), old);
-    cop = u3nc(u3nc(i_w + 1, 2), cop);
-  }
-
-  //  an inner road's cache holds [old], which the exit to home takes
-  //
-  u3a_lose_size(max_w, max_w);
-  u3m_hate(0);
-  u3h_put(u3R->cax.per_p, 50, u3k(old));
-  u3m_love(0);
-
-  {
-    u3_noun lis = old, mis = mem;
-
-    for ( i_w = 0; i_w < num_w; i_w++ ) {
-      c3_t swp_t = ( u3h(lis) == u3h(mis) );
-
-      if ( swp_t != (i_w < max_w) ) {
-        fprintf(stderr, "test: lose full eager: element %" PRIc3_w " %s\r\n",
-                i_w, swp_t ? "swapped" : "left");
-        ret_i = 0;
-      }
-      swp_w += swp_t;
-      lis = u3t(lis);
-      mis = u3t(mis);
-    }
-  }
-
-  if ( (max_w != swp_w) || ((num_w - max_w) != (u3e_Meter.ctr_d - ctr_d)) ) {
-    fprintf(stderr, "test: lose full eager: %" PRIc3_w " swapped, %" PRIu64 " left\r\n",
-            swp_w, u3e_Meter.ctr_d - ctr_d);
-    ret_i = 0;
-  }
-  if ( u3a_sole_has(old) ) {
-    fprintf(stderr, "test: lose full eager: a list with left slots is a member\r\n");
-    ret_i = 0;
-  }
-  if ( u3C.wag_h & u3o_check_corrupt ) {
-    fprintf(stderr, "test: lose full eager: asked for a grab\r\n");
-    ret_i = 0;
-  }
-
-  //  the drain freed what was swapped out, and nothing else
-  //
-  _GRAB_EXACT("lose full eager", mem, old, cop);
-
-  if ( c3n == u3r_sing(old, cop) ) {
-    fprintf(stderr, "test: lose full eager: changed the value\r\n");
-    ret_i = 0;
-  }
-
-  u3a_lose_size(1U << 14, 1U << 23);
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-  u3z(mem); u3z(old); u3z(cop);
-  return ret_i;
-}
-
 /* _test_take_sole(): the exit to home's canonicalizing take. of the
 **   nouns an inner road's cache holds, one equal to a member isn't
 **   copied, a fresh one becomes a member, and a cell over both is added
@@ -522,6 +446,198 @@ _test_take_sole(void)
   u3h_free(u3R->cax.per_p);
   u3R->cax.per_p = u3h_new_cache(u3C.per_w);
   u3z(got); u3z(pro); u3z(mem); u3z(key);
+  return ret_i;
+}
+
+/* _test_take_mend(): the exit to home leaves an older home noun that
+**   isn't a member as it is during its takes, and canonicalizes what
+**   the takes produced over one after them: its duplicates point at
+**   members, it and the copy over it become members, and a taken noun
+**   equal to a member stays, the one cell not shared.
+*/
+static c3_i
+_test_take_mend(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, i_w;
+  c3_d    ctr_d = u3e_Meter.ctr_d;
+  u3_noun mem = u3_nul, old = u3_nul, cop = u3_nul;
+  u3_noun dup, sam, pro, got;
+
+  //  [old] lists [i 2] for each i, not members; [mem] lists members
+  //  equal to them, and isn't one itself
+  //
+  for ( i_w = num_w; i_w--; ) {
+    mem = u3nc(u3m_sole_try(u3nc(i_w + 0x7d01, 2)), mem);
+    old = u3nc(u3nc(i_w + 0x7d01, 2), old);
+    cop = u3nc(u3nc(i_w + 0x7d01, 2), cop);
+  }
+
+  //  [sam] is a member, and [dup] an equal noun that isn't
+  //
+  sam = u3m_sole_try(u3nt(0x7e01, 0x7e02, 0x7e03));
+  dup = u3nt(0x7e01, 0x7e02, 0x7e03);
+
+  //  an inner road's cache holds a cell over [old], and [dup] itself;
+  //  its product holds [old]
+  //
+  u3m_hate(0);
+  pro = u3nc(u3k(old), 0x7d00);
+  u3h_put(u3R->cax.per_p, 50, u3k(pro));
+  u3h_put(u3R->cax.per_p, 51, u3k(dup));
+  pro = u3m_love(pro);
+
+  if ( 2 != (u3e_Meter.ctr_d - ctr_d) ) {
+    fprintf(stderr, "test: take mend: %" PRIu64 " nouns noted, not 2\r\n",
+            u3e_Meter.ctr_d - ctr_d);
+    ret_i = 0;
+  }
+
+  got = u3h_get(u3R->cax.per_p, 50);
+
+  if ( (u3_none == got) || (u3h(got) != old) ) {
+    fprintf(stderr, "test: take mend: the older noun was replaced\r\n");
+    ret_i = 0;
+  }
+  else {
+    u3_noun lis = old, mis = mem;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      if ( u3h(lis) != u3h(mis) ) {
+        fprintf(stderr, "test: take mend: element %" PRIc3_w " left\r\n", i_w);
+        ret_i = 0;
+      }
+      lis = u3t(lis);
+      mis = u3t(mis);
+    }
+    if ( !u3a_sole_has(old) || !u3a_sole_has(got) ) {
+      fprintf(stderr, "test: take mend: the older noun or the copy over it "
+                      "isn't a member\r\n");
+      ret_i = 0;
+    }
+    if ( pro != got ) {
+      fprintf(stderr, "test: take mend: the product has its own copy\r\n");
+      ret_i = 0;
+    }
+  }
+  u3z(got);
+
+  //  a taken noun with an equal member is left where it is
+  //
+  got = u3h_get(u3R->cax.per_p, 51);
+
+  if ( (got != dup) || u3a_sole_has(dup) ) {
+    fprintf(stderr, "test: take mend: a noun equal to a member was %s\r\n",
+            (got != dup) ? "replaced" : "made a member");
+    ret_i = 0;
+  }
+  if ( u3t(dup) != u3t(sam) ) {
+    fprintf(stderr, "test: take mend: its children weren't shared\r\n");
+    ret_i = 0;
+  }
+  u3z(got);
+
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "test: take mend: asked for a grab\r\n");
+    ret_i = 0;
+  }
+
+  //  what the pass replaced was freed, and nothing else
+  //
+  _GRAB_EXACT("take mend", mem, old, cop, sam, dup, pro);
+
+  if ( c3n == u3r_sing(old, cop) ) {
+    fprintf(stderr, "test: take mend: changed the value\r\n");
+    ret_i = 0;
+  }
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(mem); u3z(old); u3z(cop); u3z(sam); u3z(dup); u3z(pro);
+  return ret_i;
+}
+
+/* _test_take_mend_full(): with the notes at their ceiling, a taken noun
+**   that isn't noted stays as the take left it: nothing is lost but its
+**   sharing, and the next exit's pass still runs.
+*/
+static c3_i
+_test_take_mend_full(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, max_w = 16, i_w, men_w = 0;
+  c3_d    ctr_d = u3e_Meter.ctr_d;
+  c3_d    ovf_d = u3e_Meter.cib_u[2].ovf_d;
+  u3_noun mem = u3_nul, old = u3_nul;
+
+  //  [old] lists [i 3] for each i, not members; [mem] lists members
+  //  equal to them
+  //
+  for ( i_w = num_w; i_w--; ) {
+    mem = u3nc(u3m_sole_try(u3nc(i_w + 0x7f01, 3)), mem);
+    old = u3nc(u3nc(i_w + 0x7f01, 3), old);
+  }
+
+  //  an inner road's cache holds a cell over each element, one entry
+  //  each: twenty nouns to note, with room for sixteen
+  //
+  u3m_sole_note_size(16);
+  u3m_hate(0);
+  {
+    u3_noun lis = old;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3h_put(u3R->cax.per_p, 100 + i_w, u3nc(u3k(u3h(lis)), 0x7f00));
+      lis = u3t(lis);
+    }
+  }
+  u3m_love(0);
+
+  {
+    u3_noun mis = mem;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3_weak got = u3h_get(u3R->cax.per_p, 100 + i_w);
+
+      if ( u3_none == got ) {
+        fprintf(stderr, "test: take mend full: entry %" PRIc3_w " didn't come home\r\n", i_w);
+        ret_i = 0;
+      }
+      else {
+        c3_t men_t = ( u3h(got) == u3h(mis) );
+
+        if ( men_t != u3a_sole_has(got) ) {
+          fprintf(stderr, "test: take mend full: entry %" PRIc3_w " is %s\r\n", i_w,
+                  men_t ? "shared, not a member" : "a member over a noun that isn't");
+          ret_i = 0;
+        }
+        men_w += men_t;
+        u3z(got);
+      }
+      mis = u3t(mis);
+    }
+  }
+
+  if (  (max_w != men_w)
+     || (max_w != (u3e_Meter.ctr_d - ctr_d))
+     || ((num_w - max_w) != (u3e_Meter.cib_u[2].ovf_d - ovf_d)) )
+  {
+    fprintf(stderr, "test: take mend full: %" PRIc3_w " canonicalized, %" PRIu64
+                    " noted, %" PRIu64 " past the ceiling\r\n",
+            men_w, u3e_Meter.ctr_d - ctr_d, u3e_Meter.cib_u[2].ovf_d - ovf_d);
+    ret_i = 0;
+  }
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "test: take mend full: asked for a grab\r\n");
+    ret_i = 0;
+  }
+
+  _GRAB_EXACT("take mend full", mem, old);
+
+  u3m_sole_note_size(0);
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(mem); u3z(old);
   return ret_i;
 }
 
@@ -1934,8 +2050,13 @@ _test_equality(void)
     ret_i = 0;
   }
 
-  if ( !_test_lose_full_eager() ) {
-    fprintf(stderr, "test: equality: lose full eager: failed\r\n");
+  if ( !_test_take_mend() ) {
+    fprintf(stderr, "test: equality: take mend: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_take_mend_full() ) {
+    fprintf(stderr, "test: equality: take mend full: failed\r\n");
     ret_i = 0;
   }
 

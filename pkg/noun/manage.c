@@ -1677,6 +1677,15 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     u3e_Phase = u3e_pha_take_pro;
     pro   = u3a_take(pro);
     u3a_Take_open_t = 0;
+
+    //  the cache takes left older home nouns that aren't members as
+    //  they were, and nothing over one was added. the product is home,
+    //  so junior memory no longer holds a home noun uncounted: what the
+    //  takes noted is canonicalized in place, losing what that replaces
+    //  as any walk of the home road does
+    //
+    u3e_Phase = u3e_pha_take_dup;
+    u3m_sole_mend();
   }
   u3e_Phase = u3e_pha_take_dup;
 
@@ -1695,8 +1704,8 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     }
 
     //  the values unification unpointed from home slots, and those the
-    //  take replaced in older home nouns: every take is done, so the
-    //  taken nouns that hold them have gained them
+    //  bytecode merge replaced: every take is done, so the taken nouns
+    //  that hold them have gained them
     //
     u3a_lose_drain(kid_p, lol_p, bot_p, bot_w);
     if ( u3e_Measuring ) _cm_love_time(&us_d, 1);
@@ -3954,10 +3963,38 @@ _cm_walk_push(_cm_walk* wak_u)
   return &wak_u->fam_u[wak_u->len_w++];
 }
 
-/* _cm_sole_def_t: _cm_sole_xchange() defers what it replaces
-**   (u3m_sole_take_old()).
+/* _cm_note: nouns the takes of the exit home under way produced that
+**   hold a noun that isn't a member (u3m_sole_note()), for the pass
+**   after them (u3m_sole_mend()).
+**
+**   each is held by what its take filled in, or by the home lose list
+**   if a later take of the same exit replaced it: nothing on the home
+**   road is freed until the drain, so the list holds no counts.
+**
+**   the list is in the result yard, from where its end was at the
+**   exit's first note, with a ceiling of its own. past it a noun isn't
+**   noted, and stays as the take left it: sharing is missed, until a
+**   later exit or the next rebuild finds it.
 */
-static c3_t _cm_sole_def_t;
+#define _CM_NOTE_MAX  ((c3_w)1 << 22)   //  entries, at most
+
+static struct {
+  c3_w     max_w;     //  ceiling, entries
+  c3_d     ovf_d;     //  nouns not noted, since the last report
+  u3_noun* lot;       //  the exit's notes, in the result yard
+  c3_w     len_w;     //    how many
+  size_t   end_i;     //    the yard's end before the first
+} _cm_note = { .max_w = _CM_NOTE_MAX };
+
+/* _cm_yard_peak(): crib meter [idx_w] has held [num_i] entries.
+*/
+static inline void
+_cm_yard_peak(c3_w idx_w, size_t num_i)
+{
+  if ( num_i > u3e_Meter.cib_u[idx_w].pek_d ) {
+    u3e_Meter.cib_u[idx_w].pek_d = num_i;
+  }
+}
 
 /* _cm_sole_reset(): an event failed, perhaps within a walk: none is
 **   under way (see _cm_signal_reset()).
@@ -3965,8 +4002,12 @@ static c3_t _cm_sole_def_t;
 static void
 _cm_sole_reset(void)
 {
-  _cm_sole_def_t   = 0;
   _cm_sole_u.pat_y = 0;
+
+  //  the notes go with the yards' memory
+  //
+  _cm_note.lot   = 0;
+  _cm_note.len_w = 0;
 }
 
 /* visited marks (below), for the home road's walk.
@@ -3984,25 +4025,6 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
   u3_noun old = *som;
 
   if ( old != can ) {
-    //  canonicalizing an older home noun during the take: the junior
-    //  heap may still refer to [old] without counting it. a count above
-    //  1 can't reach 0 here, so it's lost now (through u3z(), which
-    //  cancels a deferred gain); the last waits for the drain. with the
-    //  lose list full, the slot is left as it is, rather than leaked
-    //
-    if ( _cm_sole_def_t && (c3n == u3a_is_cat(old)) ) {
-      if ( ((u3a_noun*)u3a_to_ptr(old))->use_w > 1 ) {
-        *som = u3k(can);
-        u3z(old);
-        return;
-      }
-      if ( c3n == u3a_lose_home_room(old) ) {
-        u3e_Meter.ctr_d++;
-        return;
-      }
-      *som = u3k(can);
-      return;
-    }
     *som = u3k(can);
     u3z(old);
   }
@@ -4017,8 +4039,8 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
 **
 **   a member is walked once, since its bit ends the descent. a cell that
 **   ends the walk out of the set (refused by the table, or over a child
-**   that was, or one whose swap was deferred and refused) has no bit, so
-**   it's marked as visited, and a shared one is walked once too.
+**   that was) has no bit, so it's marked as visited, and a shared one
+**   is walked once too.
 **   the caller brackets the walk with _cm_vis_home() and
 **   _cm_vis_home_done().
 */
@@ -4072,8 +4094,8 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       else {
         _cm_sole_xchange(pro, &cel_u->tel);
 
-        //  a deferred swap can be refused: a member needs canonical
-        //  children
+        //  a child the table refused stays out: a member needs
+        //  canonical children
         //
         pro = ( u3a_is_sole(cel_u->hed) && u3a_is_sole(cel_u->tel) )
               ? _cm_sole_put(fam_u->som)
@@ -4093,16 +4115,15 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
 }
 
 /* _cm_sole_canon_home(): _cm_sole_canon() on home noun [som], on the
-**   home road, counting its probes as path [pat_y], and deferring the
-**   loss of what it replaces if [def_t] (see _cm_sole_xchange()). its
-**   canonical equal, not retained.
+**   home road, counting its probes as path [pat_y]. its canonical
+**   equal, not retained.
 **
 **   nothing interrupts it: the home road computes outside the inner
 **   signal regime (see u3m_soft_top()), but for the profiling sampler,
 **   which is on only under u3o_debug_cpu.
 */
 static u3_noun
-_cm_sole_canon_home(u3_noun som, c3_y pat_y, c3_t def_t)
+_cm_sole_canon_home(u3_noun som, c3_y pat_y)
 {
   static _cm_walk wak_u;
   static c3_t     ini_t;
@@ -4116,24 +4137,84 @@ _cm_sole_canon_home(u3_noun som, c3_y pat_y, c3_t def_t)
 
   wak_u.len_w      = 0;
   _cm_sole_u.pat_y = pat_y;
-  _cm_sole_def_t   = def_t;
   _cm_vis_home();
   pro = _cm_sole_canon(&wak_u, som);
   _cm_vis_home_done();
-  _cm_sole_def_t   = 0;
   _cm_sole_u.pat_y = pre_y;
 
   return pro;
 }
 
-/* u3m_sole_take_old(): an older home noun [som] met by the home-only
-**   take: canonicalize it in place, deferring the loss of what it
-**   replaces. its canonical equal, not retained.
+/* u3m_sole_note_size(): see manage.h.
 */
-u3_noun
-u3m_sole_take_old(u3_noun som)
+void
+u3m_sole_note_size(c3_w max_w)
 {
-  return _cm_sole_canon_home(som, 2, 1);
+  _cm_note.max_w = max_w ? max_w : _CM_NOTE_MAX;
+  _cm_note.ovf_d = 0;
+  u3e_Meter.cib_u[2].max_d = _cm_note.max_w;
+}
+
+/* u3m_sole_note(): see manage.h.
+*/
+void
+u3m_sole_note(u3_noun som)
+{
+  size_t   end_i = u3a_yard_here(&u3a_Yard_res);
+  u3_noun* lot   = 0;
+
+  if ( c3y == u3a_is_cat(som) ) return;
+
+  if ( _cm_note.len_w < _cm_note.max_w ) {
+    lot = u3a_yard_take(&u3a_Yard_res, sizeof(*lot), __alignof__(u3_noun));
+  }
+  if ( !lot ) {
+    _cm_note.ovf_d++;
+    u3e_Meter.cib_u[2].ovf_d++;
+    return;
+  }
+
+  //  the notes are together: whatever else used the yard since the
+  //  last one put its end back
+  //
+  if ( !_cm_note.len_w ) {
+    _cm_note.lot   = lot;
+    _cm_note.end_i = end_i;
+  }
+  c3_dessert( lot == (_cm_note.lot + _cm_note.len_w) );
+
+  *lot = som;
+  _cm_note.len_w++;
+  u3e_Meter.ctr_d++;
+}
+
+/* u3m_sole_mend(): see manage.h.
+**
+**   a noted noun's children are canonicalized in place, and it becomes
+**   a member unless an equal one exists: then it stays where it's
+**   referred to, the one cell not shared. the walk stops at members and
+**   at cells it has marked, so it covers the copies made over a noun
+**   that wasn't a member, and that noun.
+*/
+void
+u3m_sole_mend(void)
+{
+  u3_noun* som   = _cm_note.lot;
+  size_t   len_i = _cm_note.len_w;
+  size_t   i_i;
+
+  u3_assert( &(u3H->rod_u) == u3R );
+  u3_assert( !u3a_Take_open_t );
+
+  if ( !len_i ) return;
+
+  for ( i_i = 0; i_i < len_i; i_i++ ) {
+    _cm_sole_canon_home(som[i_i], 2);
+  }
+  _cm_note.lot   = 0;
+  _cm_note.len_w = 0;
+  u3a_yard_back(&u3a_Yard_res, _cm_note.end_i);
+  _cm_yard_peak(2, len_i);
 }
 
 /* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road.
@@ -4412,6 +4493,7 @@ u3m_yard_size(size_t wok_i, size_t res_i)
 
   u3a_yard_init(&u3a_Yard_wok, wok_i ? wok_i : max_i);
   u3a_yard_init(&u3a_Yard_res, res_i ? res_i : max_i);
+  u3e_Meter.cib_u[2].max_d = _cm_note.max_w;
 }
 
 /* _cm_vis_home_clear(): drop the home road's marks.
@@ -4531,6 +4613,12 @@ u3m_crib_report(void)
             " %" PRIu64 " times since the last report; nouns went unshared",
             (c3_d)1 << _cm_vis.max_y, _cm_vis.ovf_d);
     _cm_vis.ovf_d = 0;
+  }
+  if ( _cm_note.ovf_d ) {
+    u3l_log("crib: the exit home's notes filled their ceiling of %" PRIu64
+            " entries; %" PRIu64 " nouns since the last report went unshared",
+            (c3_d)_cm_note.max_w, _cm_note.ovf_d);
+    _cm_note.ovf_d = 0;
   }
   u3a_lose_report();
 }
@@ -4728,7 +4816,7 @@ u3m_sole_try(u3_noun som)
 
   if ( &(u3H->rod_u) == u3R ) {
     u3e_Meter.eic_d[0]++;
-    new = _cm_sole_canon_home(som, 3, 0);
+    new = _cm_sole_canon_home(som, 3);
 
     if ( new != som ) {
       u3k(new);

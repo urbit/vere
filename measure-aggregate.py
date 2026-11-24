@@ -364,7 +364,7 @@ METRICS = [
      lambda s, v: ratio(s["I_hhit"], s["I_hpro"])),
     ("Z: junior nouns found a member / looked up", "hashcons: canonicalizing take",
      lambda s, v: ratio(s["Z_fnd"], s["Z_tak"])),
-    ("Z: older home slots left, lose list full", "hashcons: lose list ceiling",
+    ("Z: taken nouns canonicalized after the takes", "hashcons: canonicalizing take",
      lambda s, v: s["Z_left"]),
     ("Z: most members added at one exit / set size then", "hashcons: table headroom",
      lambda s, v: s.get("Z_head", 0)),
@@ -374,6 +374,8 @@ METRICS = [
      lambda s, v: crib_peak(v, "visited-set")),
     ("N: lose list peak", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "lose-list")),
+    ("N: notes peak (nouns canonicalized after one exit's takes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "notes")),
     ("N: fills or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 

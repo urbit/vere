@@ -75,12 +75,12 @@ Log lines (one snapshot interval ends at each S line):
                                             canonicalizing (u3m_sole_try): calls by
                                             road, and on inner roads cells walked,
                                             visited-set hits, home-set probes and hits
-  Z <looked-up> <found> <older-left> <us-takes> <us-drain> <most-added>
+  Z <looked-up> <found> <noted> <us-takes> <us-drain> <most-added>
     <members-then>
                                             exits to home: junior nouns looked up by the
                                             canonicalizing take and those found (not
-                                            copied); older home slots left with the lose
-                                            list full; microseconds in each step; the
+                                            copied); taken nouns noted and canonicalized
+                                            after the takes; microseconds in each step; the
                                             most members added at one exit, before its
                                             drain, and the set's size then
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
@@ -561,7 +561,7 @@ def main():
         hit = sum(D[3:7])
         per = lambda x: f"{x / tasks if tasks else 0:.1f}"
         print(f"  probes: {pro} ({per(pro)} per task): road-exit take {D[0]}, "
-              f"older home nouns in it {D[1]}, u3m_sole_try {D[2]}")
+              f"the pass after it {D[1]}, u3m_sole_try {D[2]}")
         print(f"  hits: {hit} ({pct(hit, pro).strip()} of probes), by the member's origin:")
         for name, c in zip(["added since the last rebuild", "caches (per for byc)",
                             "warm jet state (war bas hot)", "cold state alone (cod)"],
@@ -664,7 +664,7 @@ def main():
         top = max(zis, key=lambda i: i["Z"][5])["Z"]
         print("\n== exits to home: canonicalizing take ==")
         print(f"  junior nouns looked up {z[0]}, found a member {z[1]}  {pct(z[1], z[0])}")
-        print(f"  older home slots left, lose list full: {z[2]}")
+        print(f"  taken nouns canonicalized after the takes: {z[2]}")
         print(f"  time, ms: takes {z[3] / 1000:.1f}, pins and drain {z[4] / 1000:.1f}; "
               f"total {(z[3] + z[4]) / 1000:.1f}")
         print(f"  most members added at one exit, before its drain: {top[5]} "

@@ -182,7 +182,8 @@
                              //  per for byc war bas hot cod
           c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
           c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
-                             //  older home nouns met in it, u3m_sole_try()
+                             //  the pass after it (u3m_sole_mend()),
+                             //  u3m_sole_try()
           c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
@@ -228,14 +229,16 @@
           //
           c3_d ctk_d;        //  junior nouns looked up
           c3_d ctf_d;        //  ... found a member, so not copied
-          c3_d ctr_d;        //  older home nouns' slots left as they
-                             //  were: the home lose list full
+          c3_d ctr_d;        //  taken nouns noted, and canonicalized
+                             //  in place after the takes
           c3_d cus_d[2];     //  time: takes, then the lose list
           c3_d cam_d[2];     //  most members added at one exit, before
                              //  its drain; the set's size as it began
 
           //  cribs (see crib.h): the visited set [0], the home lose list
-          //  [1]. capacity and ceiling are states, kept across intervals;
+          //  [1]; and the exit home's notes [2], in the result yard, which
+          //  have a ceiling, a peak and fills, but no capacity of their
+          //  own. capacity and ceiling are states, kept across intervals;
           //  the rest is use in the interval
           //
           struct {
@@ -248,7 +251,7 @@
             c3_d clg_d;      //  clears through a log of slots (sets)
             c3_d cdp_d;      //  clears by zeroing the table (sets)
             c3_d ovf_d;      //  fills or drops at the ceiling
-          } cib_u[2];
+          } cib_u[3];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

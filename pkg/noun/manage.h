@@ -326,13 +326,27 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_t
         u3m_sole_add(u3_noun new);
 
-      /* u3m_sole_take_old(): an older home noun met by the home-only take:
-      **                      canonicalize it in place, deferring what it
-      **                      replaces; its canonical equal (not
-      **                      retained).
+      /* u3m_sole_note(): the exit home's take produced [som], which
+      **                  holds a noun that isn't a member (see
+      **                  u3m_sole_mend()). past the notes' ceiling it's
+      **                  left as it is.
       */
-        u3_noun
-        u3m_sole_take_old(u3_noun som);
+        void
+        u3m_sole_note(u3_noun som);
+
+      /* u3m_sole_note_size(): the notes' ceiling is [max_w] entries (0
+      **                       for the usual one) (tests). home road only.
+      */
+        void
+        u3m_sole_note_size(c3_w max_w);
+
+      /* u3m_sole_mend(): canonicalize in place every noun noted by the
+      **                  takes of an exit home. the product has been
+      **                  taken: junior memory holds no home noun that
+      **                  isn't counted.
+      */
+        void
+        u3m_sole_mend(void);
 
       /* u3m_sole_ream(): rebuild the home-road hashcons set from
       **                  persistent tables.

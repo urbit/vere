@@ -408,16 +408,16 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 static void
 _ce_meter_zero(void)
 {
-  c3_d cap_d[2], max_d[2];
+  c3_d cap_d[3], max_d[3];
   c3_w i_w;
 
-  for ( i_w = 0; i_w < 2; i_w++ ) {
+  for ( i_w = 0; i_w < 3; i_w++ ) {
     cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
     max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
   }
   memset(&u3e_Meter, 0, sizeof(u3e_Meter));
 
-  for ( i_w = 0; i_w < 2; i_w++ ) {
+  for ( i_w = 0; i_w < 3; i_w++ ) {
     u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
@@ -622,10 +622,10 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //  cribs, one line each
     //
     {
-      static const c3_c* nam_c[2] = { "visited-set", "lose-list" };
+      static const c3_c* nam_c[3] = { "visited-set", "lose-list", "notes" };
 
-      for ( i_w = 0; i_w < 2; i_w++ ) {
-        if ( u3e_Meter.cib_u[i_w].cap_d ) {
+      for ( i_w = 0; i_w < 3; i_w++ ) {
+        if ( u3e_Meter.cib_u[i_w].max_d ) {
           fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 "\n",

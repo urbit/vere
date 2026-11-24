@@ -1054,8 +1054,10 @@ _ca_take_south(u3_noun veb)
 **   canonical is looked up by value before it's copied: a member found
 **   costs nothing. an owned child rules out a member (no existing cell
 **   holds it), so its parent is copied and added without a lookup. a
-**   home noun that isn't a member is canonicalized in place, deferring
-**   what that replaces (u3m_sole_take_old()).
+**   home noun that isn't a member is left as it is, and nothing over
+**   it is added: a take that met one notes what it produced
+**   (u3m_sole_note()), to be canonicalized in place once every take is
+**   done (u3m_sole_mend()).
 */
 typedef struct {
   u3_weak hed;    //  taken head, or none: head-frame
@@ -1071,6 +1073,11 @@ _ca_sole_adopt(u3_noun som, c3_t own_t)
   }
 }
 
+/* _ca_sole_odd_t: the take under way produced a noun that isn't a
+**   member: a home noun left as it is, or a copy over one.
+*/
+static c3_t _ca_sole_odd_t;
+
 /* _ca_sole_next(): take [veb], pushing junior cells.
 */
 static inline u3_noun
@@ -1083,7 +1090,7 @@ _ca_sole_next(u3a_pile* pil_u, u3_noun veb, c3_t* own_t)
     }
     else if ( c3n == u3a_north_is_junior(u3R, veb) ) {
       if ( !u3a_sole_has(veb) ) {
-        veb = u3m_sole_take_old(veb);
+        _ca_sole_odd_t = 1;
       }
       *own_t = 0;
       return veb;
@@ -1092,6 +1099,12 @@ _ca_sole_next(u3a_pile* pil_u, u3_noun veb, c3_t* own_t)
       u3a_noun* veb_u = u3a_to_ptr(veb);
 
       if ( veb_u->mug_w >> 31 ) {
+        //  an earlier take's copy: if it isn't a member, that take noted
+        //  it, but whatever this one builds over it isn't one either
+        //
+        if ( !u3a_is_sole((u3_noun)veb_u->mug_w) ) {
+          _ca_sole_odd_t = 1;
+        }
         *own_t = 0;
         return (u3_noun)veb_u->mug_w;
       }
@@ -1180,6 +1193,7 @@ _ca_take_sole(u3_noun veb)
 
   u3_assert( &(u3H->rod_u) == u3R );
   u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
+  _ca_sole_odd_t = 0;
   pro = _ca_sole_next(&pil_u, veb, &own_t);
 
   if ( c3n == u3a_pile_done(&pil_u) ) {
@@ -1202,6 +1216,11 @@ _ca_take_sole(u3_noun veb)
   }
 
   _ca_sole_adopt(pro, own_t);
+
+  if ( _ca_sole_odd_t ) {
+    _ca_sole_odd_t = 0;
+    u3m_sole_note(pro);
+  }
   return pro;
 }
 
@@ -1780,18 +1799,6 @@ _ca_lo_put(u3a_road* rod_u, u3_noun old)
   else {
     u3e_Meter.wlf_d[1]++;
   }
-}
-
-/* u3a_lose_home_room(): see allocate.h.
-*/
-c3_o
-u3a_lose_home_room(u3_noun old)
-{
-  u3_noun* lis_u = _ca_lo_home_at();
-
-  if ( !lis_u ) return c3n;
-  _ca_lo_home_put(lis_u, old);
-  return c3y;
 }
 
 /* u3a_lose_later(): see allocate.h.
