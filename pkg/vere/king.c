@@ -33,12 +33,10 @@ _king_blob_del(c3_h mug_h, c3_h seq_h)
   //
   u3_assert( blb_u && (c3n == blb_u->own_o) );
 
-  //  the cached fd goes before the holds that let mars wipe the file:
-  //  windows would refuse that unlink, and a reused seq would read old
-  //  bytes through it
+  //  no view still maps the file: a view retains its bob until done,
+  //  and done unmaps before it lets the bob go.  so mars may wipe the
+  //  file once the holds return, windows included
   //
-  u3b_drop(mug_h, seq_h);
-
   if ( blb_u->hol_h && u3K.pir_u && u3K.pir_u->god_u ) {
     u3_lord_blob_release(u3K.pir_u->god_u, mug_h, seq_h, blb_u->hol_h);
   }

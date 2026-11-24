@@ -468,7 +468,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
     c3_o     ok_o  = c3y;
 
     if (  (c3n == u3r_safe_chub(u3h(u3t(mim)), &siz_d))
-       || (c3n == u3r_view_open(&vue_u, dat, c3n)) )
+       || (c3n == u3r_view_open(&vue_u, dat, 0, c3n)) )
     {
       u3l_log("error reading the content for %s", pax_c);
       close(fid_i);
@@ -480,15 +480,7 @@ _unix_write_file_hard(c3_c* pax_c, u3_noun mim)
       c3_z ask_z = ( (siz_d - off_d) < sizeof(buf_y) )
                  ? (c3_z)(siz_d - off_d)
                  : sizeof(buf_y);
-      c3_z exp_z = ( off_d >= vue_u.byt_d ) ? 0
-                 : ( (vue_u.byt_d - off_d) < ask_z ) ? (c3_z)(vue_u.byt_d - off_d)
-                 : ask_z;
-
-      if ( exp_z != u3r_view_copy(&vue_u, off_d, buf_y, ask_z, c3n) ) {
-        u3l_log("error reading the content for %s: short read", pax_c);
-        ok_o = c3n;
-        break;
-      }
+      u3r_view_copy(&vue_u, off_d, buf_y, ask_z);
 
       for ( c3_y* ptr_y = buf_y; ptr_y < buf_y + ask_z; ) {
         ssize_t wrt_i = write(fid_i, ptr_y, (buf_y + ask_z) - ptr_y);

@@ -1362,7 +1362,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     //  where u3r_bytes would open a view per call.
     //
     u3r_view vue_u;
-    if ( c3n == u3r_view_open(&vue_u, pac, c3n) ) {
+    if ( c3n == u3r_view_open(&vue_u, pac, 0, c3n) ) {
       //  a bob whose file is gone is a store problem, not a reason to
       //  unwind the king: drop this packet
       //
@@ -1384,15 +1384,7 @@ _ames_ef_send(u3_ames* sam_u, u3_noun lan, u3_noun pac)
     pac_u->len_h = len_w;
     pac_u->hun_y = c3_malloc(pac_u->len_h);
 
-    if ( len_w != u3r_view_copy(&vue_u, 0, pac_u->hun_y, len_w, c3n) ) {
-      u3l_log("ames: blob " U3A_BID_FMT " short read; packet dropped",
-              u3a_bob_mug(pac), u3a_bob_seq(pac));
-      u3r_view_done(&vue_u);
-      c3_free(pac_u->hun_y);
-      c3_free(pac_u);
-      u3z(lan); u3z(pac);
-      return;
-    }
+    u3r_view_copy(&vue_u, 0, pac_u->hun_y, len_w);
     u3r_view_done(&vue_u);
 
     _ames_sift_head(&pac_u->hed_u, pac_u->hun_y);

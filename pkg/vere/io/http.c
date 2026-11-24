@@ -192,10 +192,11 @@ _http_vec_to_octs(h2o_iovec_t vec_u)
 /* _cttp_bods_free(): free body structure.
 **
 **   Ownership rule for blob chains (see u3_hbod in vere.h): every chunk
-**   shares one view; the tail carries own_o, closes the view, and loses
-**   the bob.  Free walks head→tail, so the view is released only after
-**   every chunk that read through it, and the bob, whose death returns
-**   the king's holds on its file, only after the view.
+**   shares one view, and the tail carries own_o and closes it.  Free
+**   walks head→tail, so the view is released only after every chunk
+**   that read through it.  The view retains the bob and unmaps before
+**   it lets go, so the bob, whose death returns the king's holds on its
+**   file, outlives the mapping.
 */
 static void
 _cttp_bods_free(u3_hbod* bod_u)
@@ -209,7 +210,6 @@ _cttp_bods_free(u3_hbod* bod_u)
       if ( c3y == bod_u->own_o ) {
         u3r_view_done(bod_u->win_u);
         c3_free(bod_u->win_u);
-        u3z(bod_u->bob);
       }
     }
     c3_free(bod_u);
@@ -225,14 +225,14 @@ _cttp_bods_free(u3_hbod* bod_u)
 #define U3_HTTP_BOB_CHUNK  (1U << 20)
 
 /* _cttp_bod_from_bob(): wrap a bob atom's blob file in a chain of
-**   blob-backed hbods: no loom allocation, no mapping.
+**   blob-backed hbods: no loom allocation.
 **
-**   The bob is opened once, as a view on the king's home road.  The
-**   chain is a list of U3_HTTP_BOB_CHUNK-sized chunks that share it;
-**   _http_hgen_send copies each into a heap buffer only as h2o asks
-**   for it.  The tail chunk owns the view (own_o) and a reference to
-**   [a], and releases both when the chain is freed: the bob outlives
-**   the view, so the king keeps its holds and mars keeps the file.
+**   The bob is opened once, as a view on the king's home road, which
+**   maps it and retains it.  The chain is a list of U3_HTTP_BOB_CHUNK-
+**   sized chunks that share the view; _http_hgen_send copies each into
+**   a heap buffer only as h2o asks for it.  The tail chunk owns the
+**   view (own_o) and closes it when the chain is freed, so the king
+**   keeps its holds, and mars the file, for the whole response.
 **
 **   Returns 0 if the blob can't be opened (missing file, empty, too
 **   short); the caller fails the response.
@@ -247,7 +247,7 @@ _cttp_bod_from_bob(u3_atom a, c3_d len_d)
 
   u3r_view* win_u = c3_malloc(sizeof(*win_u));
 
-  if ( c3n == u3r_view_open(win_u, a, c3n) ) {
+  if ( c3n == u3r_view_open(win_u, a, 0, c3n) ) {
     c3_free(win_u);
     return 0;
   }
@@ -283,7 +283,6 @@ _cttp_bod_from_bob(u3_atom a, c3_d len_d)
     bod_u->win_u = win_u;
     bod_u->off_d = off_d;
     bod_u->own_o = c3n;
-    bod_u->bob   = 0;
 
     if ( !hed_u ) hed_u = bod_u;
     else          tal_u->nex_u = bod_u;
@@ -293,7 +292,6 @@ _cttp_bod_from_bob(u3_atom a, c3_d len_d)
   }
 
   tal_u->own_o = c3y;
-  tal_u->bob   = u3k(a);
   return hed_u;
 }
 
@@ -1676,21 +1674,9 @@ _http_hgen_send(u3_hgen* gen_u)
       cur_u->buf_y = c3_malloc(cur_u->len_w);
 
       //  the read zero-fills past the atom, which is how octs longer
-      //  than their atom end (the store trims trailing zeros); the
-      //  count says whether the file was shortened under the response
+      //  than their atom end (the store trims trailing zeros)
       //
-      c3_d byt_d = cur_u->win_u->byt_d;
-      c3_d off_d = cur_u->off_d;
-      c3_z exp_z = ( off_d >= byt_d ) ? 0
-                 : ( (byt_d - off_d) < cur_u->len_w ) ? (c3_z)(byt_d - off_d)
-                 : cur_u->len_w;
-      c3_z got_z = u3r_view_copy(cur_u->win_u, off_d,
-                                 cur_u->buf_y, cur_u->len_w, c3n);
-
-      if ( got_z != exp_z ) {
-        u3l_log("http: short blob read at %" PRIc3_d, cur_u->off_d);
-        gen_u->sat_e = u3_hgen_fail;
-      }
+      u3r_view_copy(cur_u->win_u, cur_u->off_d, cur_u->buf_y, cur_u->len_w);
     }
   }
 

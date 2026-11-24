@@ -220,7 +220,7 @@
     **   bit_d caches the content's bit length, so u3r_met_d on the home
     **   road measures a bob without opening its file.  0 until the home
     **   road's first view of the bob fills it.  Inner roads neither read
-    **   nor write it: they measure through the hands they keep.  The
+    **   nor write it: they measure from their view's mapping.  The
     **   file under an id never changes while its record lives, so the
     **   cache never goes stale.
     **
@@ -360,7 +360,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
+  U3_W(S) fla_p;                                /*  inner road: blob mapping records (u3b_flat) */ \
+  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \

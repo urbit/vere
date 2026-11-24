@@ -60,7 +60,7 @@ _cqes_in_order(u3_atom a)
     c3_w     len_w;
     c3_t     ord_t = 1;
 
-    u3r_view_open(&vue_u, a, c3y);
+    u3r_view_open(&vue_u, a, 0, c3y);
 
     if ( vue_u.byt_d < 32 ) {
       ord_t = 1;

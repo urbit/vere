@@ -28,16 +28,16 @@
           //  views borrow the bytes wherever the atoms live
           //
           u3r_view a_vue, b_vue;
-          u3r_view_open(&a_vue, a, c3y);
-          u3r_view_open(&b_vue, b, c3y);
+          u3r_view_open(&a_vue, a, 0, c3y);
+          u3r_view_open(&b_vue, b, 0, c3y);
           if ( (a_vue.byt_d > c3_w_max) || (b_vue.byt_d > c3_w_max) ) {
             return u3m_bail(c3__fail);
           }
 
           c3_w len_a_w = (c3_w)a_vue.byt_d;
           c3_w len_b_w = (c3_w)b_vue.byt_d;
-          const c3_y *buf_a_y = u3r_view_bytes(&a_vue, c3y);
-          const c3_y *buf_b_y = u3r_view_bytes(&b_vue, c3y);
+          const c3_y *buf_a_y = a_vue.byt_y;
+          const c3_y *buf_b_y = b_vue.byt_y;
           c3_y cut_a_y = 0, cut_b_y = 0;
           c3_o ret_o;
           c3_w len_min_w = c3_min(len_a_w, len_b_w);

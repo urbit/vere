@@ -18,9 +18,9 @@
     const c3_y* dat_y; \
     u3r_view    vue_u; \
   \
-    u3r_view_open(&vue_u, a, c3y); \
+    u3r_view_open(&vue_u, a, 0, c3y); \
     if ( len_d <= vue_u.byt_d ) { \
-      dat_y = u3r_view_bytes(&vue_u, c3y); \
+      dat_y = vue_u.byt_y; \
     } \
     else if ( len_d <= c3_w_max ) { \
       dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, a); \

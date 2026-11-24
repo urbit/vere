@@ -42,7 +42,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
   //  a view borrows the bytes wherever the atom lives; read-only
   //
   u3r_view vue_u;
-  u3r_view_open(&vue_u, q_octs, c3y);
+  u3r_view_open(&vue_u, q_octs, 0, c3y);
   if ( vue_u.byt_d > c3_w_max ) {
     return u3m_bail(c3__fail);
   }
@@ -64,7 +64,7 @@ _decompress(u3_atom pos, u3_noun octs, int window_bits)
     return u3_none;
   }
 
-  c3_y* input = (c3_y*)u3r_view_bytes(&vue_u, c3y) + pos_w;
+  c3_y* input = (c3_y*)vue_u.byt_y + pos_w;
 
   int ret;
   z_stream strm;

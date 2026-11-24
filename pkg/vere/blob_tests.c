@@ -149,15 +149,12 @@ _pier_make(const c3_c* nam_c)
   u3_disk_blob_init(_tmp_pier);
 }
 
-/* _pier_done(): no mapping survives a test; empty the fd cache, which
-**   would otherwise read this pier's deleted files as the next pier's;
-**   remove the pier and report.
+/* _pier_done(): no mapping survives a test; remove the pier and report.
 */
 static void
 _pier_done(void)
 {
   _check( 0 == u3b_maps(), "%zu mapping(s) left", u3b_maps() );
-  u3b_flush();
   c3_tmp_kill(_tmp_pier);
   fprintf(stderr, "test blob %s: ok\r\n", _nam_c);
 }
@@ -1037,9 +1034,10 @@ _test_cue_blob(void)
   _pier_done();
 }
 
-/* _test_hand(): the store's readers round-trip a blob on the home road:
-**   stat measures it, read copies a window, and each map is its
-**   caller's own until unmap.
+/* _test_hand(): the store's mappings on the home road: u3b_map measures
+**   a blob and maps it zero to a page past its end or to a width; each
+**   mapping is its caller's own until unmap; a padded copy reads its
+**   bytes, then zeros.
 */
 static void
 _test_hand(void)
@@ -1052,89 +1050,126 @@ _test_hand(void)
   _blob_save(dat_y, dat_d, &mug_h, &seq_h);
 
   c3_d bid_d = u3a_bid(mug_h, seq_h);
+  c3_d pag_d = (c3_d)sysconf(_SC_PAGESIZE);
 
-  //  bit-length: top byte is the last one, u3r_met(0) semantics
+  //  bit-length: top byte is the last one, u3r_met(0) semantics; the
+  //  home road lists nothing
   //
   {
-    c3_y top_y = dat_y[dat_d - 1];
-    c3_d exp_d = (dat_d - 1) * 8
-               + (c3_d)(8 - (__builtin_clz((unsigned int)top_y) - 24));
-    c3_d met_d = 0;
-    _check(  (c3y == u3b_stat(_tmp_bob, bid_d, &met_d))
-          && (met_d == exp_d) && (1 == u3b_fds()),
+    c3_y     top_y = dat_y[dat_d - 1];
+    c3_d     exp_d = (dat_d - 1) * 8
+                   + (c3_d)(8 - (__builtin_clz((unsigned int)top_y) - 24));
+    c3_d     met_d = 0;
+    c3_m     mot_m = 0;
+    u3b_flat fla_u;
+
+    _check(  (c3y == u3b_map(&fla_u, _tmp_bob, bid_d, 0, &met_d, &mot_m))
+          && (met_d == exp_d) && (1 == u3b_maps())
+          && !u3H->rod_u.fla_p,
             "met %" PRIc3_d " != %" PRIc3_d, met_d, exp_d );
-  }
 
-  //  a window through pread; a read past the end is short, not an error
-  //
-  {
-    c3_y win_y[8];
-    _check(  (5 == u3b_read(_tmp_bob, bid_d, 7, win_y, 5))
-          && (0 == memcmp(win_y, dat_y + 7, 5)),
-            "read window mismatch" );
-    _check( 3 == u3b_read(_tmp_bob, bid_d, dat_d - 3, win_y, 8),
-            "read past end not short" );
-  }
-
-  //  the home road never shares a mapping, and holds no fd for one
-  //
-  {
-    const c3_y* one_y = u3b_map(_tmp_bob, bid_d, dat_d);
-    const c3_y* two_y = u3b_map(_tmp_bob, bid_d, dat_d);
-
-    _check(  one_y && two_y && (one_y != two_y)
-          && (0 == memcmp(one_y, dat_y, dat_d))
-          && (2 == u3b_maps()) && (1 == u3b_fds()),
-            "home road shared a mapping" );
-
-    u3b_unmap(one_y);
-    _check(  (1 == u3b_maps()) && (0 == memcmp(two_y, dat_y, dat_d)),
-            "first unmap disturbed the other" );
-
-    //  a flushed cache leaves the mapping readable
+    //  the bytes, then zeros to a page past them
     //
-    u3b_flush();
-    _check(  !u3b_fds() && (0 == memcmp(two_y, dat_y, dat_d)),
-            "mapping needed its fd" );
-    u3b_unmap(two_y);
+    _check( 0 == memcmp(fla_u.map_y, dat_y, dat_d), "bytes mismatch" );
+    for ( c3_d i_d = dat_d; i_d < dat_d + pag_d; i_d++ ) {
+      _check( !fla_u.map_y[i_d], "tail byte %" PRIc3_d " not zero", i_d );
+    }
+
+    u3b_unmap(&fla_u);
+    _check( !u3b_maps() && !fla_u.map_y, "unmap left residue" );
   }
 
-  //  missing blob: declined, no bail
+  //  two maps of one blob are two mappings
   //
   {
-    c3_d bit_d;
-    _check( c3n == u3b_stat(_tmp_bob, u3a_bid(0xdeadbeef, 999), &bit_d),
-            "missing should decline" );
+    u3b_flat one_u, two_u;
+    c3_d     bit_d;
+    c3_m     mot_m;
+
+    _check(  (c3y == u3b_map(&one_u, _tmp_bob, bid_d, 0, &bit_d, &mot_m))
+          && (c3y == u3b_map(&two_u, _tmp_bob, bid_d, 0, &bit_d, &mot_m))
+          && (one_u.map_y != two_u.map_y) && (2 == u3b_maps()),
+            "two maps shared a mapping" );
+
+    u3b_unmap(&one_u);
+    _check(  (1 == u3b_maps()) && (0 == memcmp(two_u.map_y, dat_y, dat_d)),
+            "first unmap disturbed the other" );
+    u3b_unmap(&two_u);
+  }
+
+  //  a width far past the file reads zero throughout
+  //
+  {
+    u3b_flat fla_u;
+    c3_d     bit_d;
+    c3_m     mot_m;
+    c3_d     wid_d = dat_d + (3 * pag_d) + 5;
+
+    _check(  (c3y == u3b_map(&fla_u, _tmp_bob, bid_d, wid_d, &bit_d, &mot_m))
+          && (fla_u.ext_d >= wid_d),
+            "padded map failed" );
+    _check( 0 == memcmp(fla_u.map_y, dat_y, dat_d), "padded bytes" );
+    for ( c3_d i_d = dat_d; i_d < wid_d; i_d++ ) {
+      _check( !fla_u.map_y[i_d], "pad byte %" PRIc3_d " not zero", i_d );
+    }
+    u3b_unmap(&fla_u);
+  }
+
+  //  a padded anonymous copy: its bytes, then zeros, read-only
+  //
+  {
+    u3b_flat fla_u;
+    c3_d     wid_d = (2 * pag_d) + 3;
+
+    _check(  (c3y == u3b_pad(&fla_u, dat_y, dat_d, wid_d))
+          && (1 == u3b_maps())
+          && (0 == memcmp(fla_u.map_y, dat_y, dat_d)),
+            "pad copy failed" );
+    for ( c3_d i_d = dat_d; i_d < wid_d; i_d++ ) {
+      _check( !fla_u.map_y[i_d], "pad copy byte %" PRIc3_d " not zero", i_d );
+    }
+    u3b_unmap(&fla_u);
+    _check( !u3b_maps(), "pad copy left a mapping" );
+  }
+
+  //  missing blob: declined with %file, nothing mapped
+  //
+  {
+    u3b_flat fla_u;
+    c3_d     bit_d;
+    c3_m     mot_m = 0;
+
+    _check(  (c3n == u3b_map(&fla_u, _tmp_bob, u3a_bid(0xdeadbeef, 999), 0,
+                             &bit_d, &mot_m))
+          && (c3__file == mot_m) && !u3b_maps(),
+            "missing should decline with %%file" );
   }
 
   _pier_done();
 }
 
-//  shared state for the unwind tests: the blob, a bob atom over it
-//  (built on the home road), and the fd the inner road opened.
+//  shared state for the unwind tests: the blob, and a bob atom over it
+//  (built on the home road).
 //
 static c3_h    _han_mug_h;
 static c3_h    _han_seq_h;
 static u3_atom _han_bob;
 
 /* _hand_open_inner(): map the blob from the inner road through two
-**   views: the road shares one mapping, which the views leave behind
-**   for the road's unwind to release.
+**   views, which the road lists as two mappings and the caller leaves
+**   open for the road's unwind to release.
 */
 static void
 _hand_open_inner(void)
 {
-  u3r_view    one_u, two_u;
-  const c3_y* one_y;
-  const c3_y* two_y;
+  u3r_view one_u, two_u;
 
-  u3r_view_open(&one_u, _han_bob, c3y);
-  one_y = u3r_view_bytes(&one_u, c3y);
-  u3r_view_open(&two_u, _han_bob, c3y);
-  two_y = u3r_view_bytes(&two_u, c3y);
+  u3r_view_open(&one_u, _han_bob, 0, c3y);
+  u3r_view_open(&two_u, _han_bob, 0, c3y);
 
-  _check(  one_y && (one_y == two_y) && (1 == u3b_maps_road(u3R)),
-          "views did not share the road's mapping" );
+  _check(  one_u.byt_y && two_u.byt_y && (one_u.byt_y != two_u.byt_y)
+        && (2 == u3b_maps_road(u3R)) && !u3H->rod_u.fla_p,
+          "views did not each map on the road" );
 }
 
 static u3_noun
@@ -1169,7 +1204,7 @@ _hand_unwind_setup(const c3_c* nam_c)
 {
   _pier_make(nam_c);
 
-  const c3_y dat_y[] = "unwinding must release every hand the road held";
+  const c3_y dat_y[] = "unwinding must release every mapping the road held";
   _check( c3y == _blob_save(dat_y, sizeof(dat_y) - 1,
                               &_han_mug_h, &_han_seq_h),
           "save failed" );
@@ -1182,6 +1217,7 @@ static void
 _hand_unwind_check(void)
 {
   _check( !u3b_maps(), "%zu mapping(s) survived the road", u3b_maps() );
+  _check( !u3H->rod_u.fla_p, "the home road lists a mapping" );
   u3z(_han_bob);
   _pier_done();
 }
@@ -1227,18 +1263,18 @@ _hand_outer_cb(u3_noun arg)
   (void)arg;
   u3r_view vue_u;
 
-  //  an inner road reads the home road's mapping and makes none, then
-  //  bails with its view open
+  //  an inner road maps the blob for itself, beside the home road's
+  //  mapping, then bails with its view open
   //
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  _check(  (_han_hom_y == u3r_view_bytes(&vue_u, c3y))
-        && !u3b_maps_road(u3R) && (1 == u3b_maps()),
-          "inner road did not share the home road's mapping" );
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  _check(  (_han_hom_y != vue_u.byt_y)
+        && (1 == u3b_maps_road(u3R)) && (2 == u3b_maps()),
+          "inner road did not map for itself" );
   return u3m_bail(c3__fail);
 }
 
-/* _test_hand_outer(): an inner road reads the home road's mapping, and
-**   its bail leaves that mapping to the home road's view.
+/* _test_hand_outer(): an inner road's bail releases its own mapping and
+**   leaves the home road's view alone.
 */
 static void
 _test_hand_outer(void)
@@ -1248,8 +1284,8 @@ _test_hand_outer(void)
   u3r_view    vue_u;
   const c3_y* vue_y;
 
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  vue_y = u3r_view_bytes(&vue_u, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  vue_y = vue_u.byt_y;
   _check( vue_y, "home map failed" );
   _han_hom_y = vue_y;
 
@@ -1260,6 +1296,61 @@ _test_hand_outer(void)
 
   u3r_view_done(&vue_u);
   _hand_unwind_check();
+}
+
+//  the hook's count, and the mappings live when it last ran
+//
+static c3_w _hold_hit_w;
+static c3_z _hold_map_z;
+
+static void
+_hold_del_cb(c3_h mug_h, c3_h seq_h)
+{
+  _hold_hit_w++;
+  _hold_map_z = u3b_maps();
+  _blob_del_cb(mug_h, seq_h);
+}
+
+/* _test_view_hold(): a view retains its bob on the home road.  the
+**   caller's last ref can go while the view is open, and the bob dies,
+**   firing the deletion hook that returns the king's holds, only at
+**   done, after the mapping is gone.
+*/
+static void
+_test_view_hold(void)
+{
+  _pier_make("view hold");
+
+  const c3_y dat_y[] = "a view keeps its bob, and the bob its file";
+  c3_h       mug_h = 0, seq_h = 0;
+  u3r_view   vue_u;
+  void       (*old_f)(c3_h, c3_h) = u3C.blob_del_f;
+
+  _check( c3y == _blob_save(dat_y, sizeof(dat_y) - 1, &mug_h, &seq_h),
+          "save failed" );
+
+  _hold_hit_w     = 0;
+  _hold_map_z     = 0;
+  u3C.blob_del_f = _hold_del_cb;
+
+  {
+    u3_atom bob = u3i_blob(mug_h, seq_h);
+
+    u3r_view_open(&vue_u, bob, 0, c3y);
+    u3z(bob);
+  }
+
+  _check(  !_hold_hit_w && (1 == u3b_maps())
+        && (0 == memcmp(vue_u.byt_y, dat_y, sizeof(dat_y) - 1)),
+          "the bob died under its view (hook %" PRIc3_w ")", _hold_hit_w );
+
+  u3r_view_done(&vue_u);
+  _check(  (1 == _hold_hit_w) && !_hold_map_z && !u3b_maps(),
+          "done: hook %" PRIc3_w " with %zu mapping(s) live",
+          _hold_hit_w, _hold_map_z );
+
+  u3C.blob_del_f = old_f;
+  _pier_done();
 }
 
 /* _test_hand_comp(): windowed comparison of bobs against bobs and loom atoms.
@@ -1327,24 +1418,23 @@ _hand_alarm_cb(u3_noun arg)
 {
   (void)arg;
 
-  //  hold a mapping for the whole spin, and churn the fd cache so the
-  //  event timer's SIGVTALRM can land inside a critical section as
-  //  easily as between two.  the timer counts user CPU time, which the
-  //  open/close syscalls barely consume, so each round also burns some
+  //  hold a mapping for the whole spin, and open and close views so the
+  //  event timer's SIGVTALRM can land inside a critical section (map,
+  //  unmap) as easily as between two.  the timer counts user CPU time,
+  //  which the syscalls barely consume, so each round also burns some
   //  arithmetic.  the round cap turns a timer that never fires into a
   //  test failure instead of a hang.
   //
   u3r_view vue_u;
-  c3_d     bid_d = u3a_bid(_han_mug_h, _han_seq_h);
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_bytes(&vue_u, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
 
   volatile c3_d sum_d = 0;
 
   for ( c3_w rou_w = 0; rou_w < 2000000; rou_w++ ) {
-    c3_d bit_d;
-    u3b_drop(_han_mug_h, _han_seq_h);
-    (void)u3b_stat(_tmp_bob, bid_d, &bit_d);
+    u3r_view tmp_u;
+    u3r_view_open(&tmp_u, _han_bob, 0, c3y);
+    sum_d += tmp_u.byt_y[0];
+    u3r_view_done(&tmp_u);
 
     for ( c3_w i_w = 0; i_w < 20000; i_w++ ) {
       sum_d += i_w;
@@ -1356,9 +1446,9 @@ _hand_alarm_cb(u3_noun arg)
 }
 
 /* _test_hand_alarm(): a real SIGVTALRM from the event timer, delivered
-**   through the production handler while a mapping is live and the fd
-**   cache is being mutated, unwinds cleanly and leaves the cache
-**   usable.
+**   through the production handler while a mapping is live and views
+**   open and close, unwinds cleanly, releases the road's mappings, and
+**   leaves the store readable.
 */
 static void
 _test_hand_alarm(void)
@@ -1369,12 +1459,13 @@ _test_hand_alarm(void)
   _check( c3__alrm == _hand_mote(gon), "no %%alrm unwind" );
   u3z(gon);
 
-  //  the cache is usable after the unwind
+  //  the store reads after the unwind
   //
   {
-    c3_d bit_d;
-    _check( c3y == u3b_stat(_tmp_bob, u3a_bid(_han_mug_h, _han_seq_h), &bit_d),
-            "stat after unwind failed" );
+    u3r_view vue_u;
+    _check( c3y == u3r_view_open(&vue_u, _han_bob, 0, c3n),
+            "open after unwind failed" );
+    u3r_view_done(&vue_u);
   }
 
   _hand_unwind_check();
@@ -1741,7 +1832,6 @@ _test_jets_bob(void)
 
     _jet_same("lore", 0, 0, 0, u3qe_lore(lin), u3qe_lore(lil));
     _jet_same("leer", 0, 0, 0, u3qe_leer(lin), u3qe_leer(lil));
-
     u3z(lin); u3z(lil);
     c3_free(lin_y);
   }
@@ -1894,8 +1984,10 @@ _hand_emfile_cb(u3_noun arg)
   (void)arg;
   const c3_w  hal_w = HAND_EMF_W / 2;
   const c3_y* par_y[HAND_EMF_W / 2];
+  u3r_view    par_u[HAND_EMF_W / 2];
 
-  //  a ceiling three descriptors above the lowest free one
+  //  a ceiling one descriptor above the lowest free one: a map holds its
+  //  fd only while it maps
   //
   struct rlimit old_u, new_u;
   c3_i          fre_i = dup(0);
@@ -1903,21 +1995,18 @@ _hand_emfile_cb(u3_noun arg)
   close(fre_i);
   getrlimit(RLIMIT_NOFILE, &old_u);
   new_u = old_u;
-  new_u.rlim_cur = (rlim_t)fre_i + 3;
+  new_u.rlim_cur = (rlim_t)fre_i + 1;
   _check( 0 == setrlimit(RLIMIT_NOFILE, &new_u), "setrlimit failed" );
 
   //  the parent maps half the blobs and keeps every view live
   //
   for ( c3_w i_w = 0; i_w < hal_w; i_w++ ) {
-    u3r_view vue_u;
-
-    u3r_view_open(&vue_u, _hand_emf_bob[i_w], c3y);
-    par_y[i_w] = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&par_u[i_w], _hand_emf_bob[i_w], 0, c3y);
+    par_y[i_w] = par_u[i_w].byt_y;
     _check( par_y[i_w], "parent map %" PRIc3_w " failed", i_w );
   }
 
-  //  a child maps and copies the rest, and reads the parent's: no
-  //  mapping holds an fd, and a miss flushes the cache to make room
+  //  a child maps and copies the rest, and reads the parent's
   //
   u3m_leap(512);
   for ( c3_w i_w = hal_w; i_w < HAND_EMF_W; i_w++ ) {
@@ -1925,10 +2014,10 @@ _hand_emfile_cb(u3_noun arg)
     const c3_y* vue_y;
     c3_y        win_y[8];
 
-    u3r_view_open(&vue_u, _hand_emf_bob[i_w], c3y);
-    vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, _hand_emf_bob[i_w], 0, c3y);
+    vue_y = vue_u.byt_y;
     _check(  vue_y
-          && (8 == u3r_view_copy(&vue_u, 0, win_y, 8, c3y))
+          && (8 == u3r_view_copy(&vue_u, 0, win_y, 8))
           && (0 == memcmp(win_y, vue_y, 8)),
             "child read %" PRIc3_w " failed", i_w );
   }
@@ -1937,18 +2026,23 @@ _hand_emfile_cb(u3_noun arg)
     u3r_bytes(0, 8, win_y, _hand_emf_bob[i_w]);
     _check( 0 == memcmp(win_y, par_y[i_w], 8), "parent's blob %" PRIc3_w, i_w );
   }
-  _check(  (hal_w == u3b_maps_road(u3R)) && (u3b_fds() <= 3),
-          "%zu child mapping(s), %zu fd(s)", u3b_maps_road(u3R), u3b_fds() );
+  _check( hal_w == u3b_maps_road(u3R),
+          "%zu child mapping(s)", u3b_maps_road(u3R) );
   u3m_fall();
 
   setrlimit(RLIMIT_NOFILE, &old_u);
 
   _check( hal_w == u3b_maps_road(u3R), "the child's fall took the parent's" );
+
+  for ( c3_w i_w = 0; i_w < hal_w; i_w++ ) {
+    u3r_view_done(&par_u[i_w]);
+  }
+  _check( !u3b_maps_road(u3R), "done left a mapping" );
   return 0;
 }
 
-/* _test_hand_emfile(): out of descriptors, every read still succeeds:
-**   mappings hold no fd, and a cache miss closes the cache to make room.
+/* _test_hand_emfile(): one descriptor from the ceiling, every read
+**   still succeeds: no mapping holds an fd.
 */
 static void
 _test_hand_emfile(void)
@@ -1971,46 +2065,42 @@ _test_hand_emfile(void)
   _pier_done();
 }
 
-/* _test_hand_cloexec(): every fd the cache opens is closed on exec, so
-**   a process this one starts inherits none.
+/* _test_hand_nofd(): a live view holds no descriptor.
 */
 static void
-_test_hand_cloexec(void)
+_test_hand_nofd(void)
 {
-  _pier_make("hand cloexec");
+  _pier_make("hand nofd");
 
-  c3_t was_t[256];
+  c3_t     was_t[256];
+  u3r_view vue_u[4];
+  u3_atom  bob[4];
 
   for ( c3_i i_i = 0; i_i < 256; i_i++ ) {
     was_t[i_i] = _fd_open(i_i);
   }
 
-  for ( c3_w i_w = 1; i_w <= 4; i_w++ ) {
-    c3_d bit_d;
-    _hand_write_raw(0x2345, i_w, i_w);
-    _check( c3y == u3b_stat(_tmp_bob, u3a_bid(0x2345, i_w), &bit_d),
-            "stat %" PRIc3_w " failed", i_w );
+  for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
+    _hand_write_raw(0x2345, i_w + 1, i_w + 1);
+    bob[i_w] = u3i_blob(0x2345, i_w + 1);
+    _check( c3y == u3r_view_open(&vue_u[i_w], bob[i_w], 0, c3n),
+            "open %" PRIc3_w " failed", i_w );
   }
 
-  {
-    c3_w new_w = 0;
+  for ( c3_i i_i = 0; i_i < 256; i_i++ ) {
+    _check( was_t[i_i] || !_fd_open(i_i), "fd %d left open", i_i );
+  }
 
-    for ( c3_i i_i = 0; i_i < 256; i_i++ ) {
-      if ( !was_t[i_i] && _fd_open(i_i) ) {
-        new_w++;
-        _check( FD_CLOEXEC & fcntl(i_i, F_GETFD),
-                "fd %d inheritable", i_i );
-      }
-    }
-    _check( new_w == u3b_fds(), "%" PRIc3_w " new fd(s), %zu cached",
-            new_w, u3b_fds() );
+  for ( c3_w i_w = 0; i_w < 4; i_w++ ) {
+    u3r_view_done(&vue_u[i_w]);
+    u3z(bob[i_w]);
   }
 
   _pier_done();
 }
 
-/* _test_hand_wipe(): a wipe closes the blob's cached fd, so a file
-**   later installed at the same id reads as itself.
+/* _test_hand_wipe(): a file later installed at a wiped id reads as
+**   itself: every open maps the file the path names now.
 */
 static void
 _test_hand_wipe(void)
@@ -2019,95 +2109,35 @@ _test_hand_wipe(void)
 
   const c3_h mug_h = 0x3456;
   const c3_h seq_h = 1;
-  const c3_d bid_d = u3a_bid(mug_h, seq_h);
   c3_y       one_y[32];
   c3_y       two_y[32];
-  c3_d       bit_d;
+  u3_atom    bob   = u3i_blob(mug_h, seq_h);
+  u3r_view   vue_u;
 
   _hand_write_raw(mug_h, seq_h, 1);
-  _check(  (c3y == u3b_stat(_tmp_bob, bid_d, &bit_d))
-        && (32 == u3b_read(_tmp_bob, bid_d, 0, one_y, 32))
-        && (1 == u3b_fds()),
-          "first read failed" );
+  _check( c3y == u3r_view_open(&vue_u, bob, 0, c3n), "first open failed" );
+  u3r_view_copy(&vue_u, 0, one_y, 32);
+  u3r_view_done(&vue_u);
 
   u3b_wipe(_tmp_bob, mug_h, seq_h);
-  _check(  (c3n == u3b_live(_tmp_bob, mug_h, seq_h)) && !u3b_fds(),
-          "wipe left the file or its fd" );
-  _check( c3n == u3b_stat(_tmp_bob, bid_d, &bit_d), "stat of a wiped blob" );
+  _check( c3n == u3b_live(_tmp_bob, mug_h, seq_h), "wipe left the file" );
+  _check(  (c3n == u3r_view_open(&vue_u, bob, 0, c3n)) && !u3b_maps(),
+          "opened a wiped blob" );
 
   //  the id's next file: a reused seq
   //
   _hand_write_raw(mug_h, seq_h, 2);
-  _check(  (32 == u3b_read(_tmp_bob, bid_d, 0, two_y, 32))
-        && (0 != memcmp(one_y, two_y, 32)),
-          "read the wiped file's bytes" );
+  _check( c3y == u3r_view_open(&vue_u, bob, 0, c3n), "second open failed" );
+  u3r_view_copy(&vue_u, 0, two_y, 32);
+  u3r_view_done(&vue_u);
+  _check( 0 != memcmp(one_y, two_y, 32), "read the wiped file's bytes" );
 
-  //  the king's path: a drop closes the fd
-  //
-  u3b_drop(mug_h, seq_h);
-  _check( !u3b_fds(), "drop left the fd" );
-
-  _pier_done();
-}
-#endif
-
-/* _test_hand_stop(): u3b_stop releases every home-road mapping and
-**   cached fd, and leaves both usable.
-*/
-static void
-_test_hand_stop(void)
-{
-  _pier_make("hand stop");
-
-  const c3_h mug_h = 0x3456;
-
-  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
-    _hand_write_raw(mug_h, i_w + 1, i_w);
-    _check( u3b_map(_tmp_bob, u3a_bid(mug_h, i_w + 1), 32), "map failed" );
-  }
-  _check( (3 == u3b_maps()) && (3 == u3b_fds()), "residue before stop" );
-
-  u3b_stop();
-  _check( !u3b_maps() && !u3b_fds(), "residue after stop" );
-
-  {
-    c3_d bit_d;
-    _check( c3y == u3b_stat(_tmp_bob, u3a_bid(mug_h, 1), &bit_d),
-            "stat after stop failed" );
-  }
-
+  u3z(bob);
   _pier_done();
 }
 
-/* _test_hand_fds(): the cache holds at most its slots, and a changed
-**   root empties it.
-*/
-static void
-_test_hand_fds(void)
-{
-  _pier_make("hand fds");
-
-  const c3_h mug_h = 0x6789;
-
-  for ( c3_w i_w = 1; i_w <= 100; i_w++ ) {
-    c3_d bit_d;
-    _hand_write_raw(mug_h, i_w, i_w);
-    _check( c3y == u3b_stat(_tmp_bob, u3a_bid(mug_h, i_w), &bit_d),
-            "stat %" PRIc3_w " failed", i_w );
-  }
-  _check( (u3b_fds() > 0) && (u3b_fds() <= 64), "%zu fd(s) cached", u3b_fds() );
-
-  //  the disk code points the root at the newest epoch's store
-  //
-  u3_disk_blob_root(_tmp_pier);
-  _check( !u3b_fds(), "%zu fd(s) survived a new root", u3b_fds() );
-  u3C.bob_c = _tmp_bob;
-
-  _pier_done();
-}
-
-#ifndef U3_OS_windows
-/* _test_hand_trunc(): every reader reports a file shortened under it.
+/* _test_hand_trunc(): a file whose last byte is zero is no blob: a map
+**   declines it with %file and leaves nothing mapped.
 */
 static void
 _test_hand_trunc(void)
@@ -2123,27 +2153,27 @@ _test_hand_trunc(void)
   c3_h mug_h = 0; c3_h seq_h = 0;
   _blob_save(dat_y, len_w, &mug_h, &seq_h);
 
-  c3_d bid_d = u3a_bid(mug_h, seq_h);
-  c3_d bit_d;
-  _check( c3y == u3b_stat(_tmp_bob, bid_d, &bit_d), "stat failed" );
-
   {
-    //  blob files are created read-only; shortening one needs write bits
+    //  blob files are created read-only; rewriting one needs write bits
     //
     c3_c pax_c[8192];
     u3b_path(pax_c, _tmp_bob, mug_h, seq_h);
-    _check( (0 == chmod(pax_c, 0600)) && (0 == truncate(pax_c, 100)),
-            "truncate failed" );
+    dat_y[len_w - 1] = 0;
+    _check(  (0 == chmod(pax_c, 0600))
+          && (c3y == _file_put(pax_c, (c3_c*)dat_y, len_w)),
+            "rewrite failed" );
   }
 
   {
-    c3_y* buf_y = c3_malloc(len_w);
-    _check( 100 == u3b_read(_tmp_bob, bid_d, 0, buf_y, len_w), "read not short" );
-    c3_free(buf_y);
-  }
+    u3b_flat fla_u;
+    c3_d     bit_d;
+    c3_m     mot_m = 0;
 
-  _check( !u3b_map(_tmp_bob, bid_d, len_w) && !u3b_maps(),
-          "map did not fail cleanly" );
+    _check(  (c3n == u3b_map(&fla_u, _tmp_bob, u3a_bid(mug_h, seq_h), 0,
+                             &bit_d, &mot_m))
+          && (c3__file == mot_m) && !u3b_maps(),
+            "map did not decline cleanly" );
+  }
 
   c3_free(dat_y);
   _pier_done();
@@ -2155,8 +2185,8 @@ _hand_gone_view_cb(u3_noun arg)
 {
   (void)arg;
   u3r_view vue_u;
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_bytes(&vue_u, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  (void)vue_u.byt_y;
   u3r_view_done(&vue_u);
   return 0;
 }
@@ -2231,7 +2261,7 @@ _test_hand_gone(void)
   //
   {
     u3r_view win_u;
-    _check( (c3n == u3r_view_open(&win_u, _han_bob, c3n)) && !u3b_maps(),
+    _check( (c3n == u3r_view_open(&win_u, _han_bob, 0, c3n)) && !u3b_maps(),
             "open did not decline" );
   }
 
@@ -2393,10 +2423,11 @@ _hand_grab_cb(u3_noun arg)
 {
   (void)arg;
   u3r_view vue_u;
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_bytes(&vue_u, c3y);
-  u3r_view_done(&vue_u);
-  _check( 1 == u3b_maps_road(u3R), "no mapping kept" );
+  c3_y     fir_y;
+
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  fir_y = vue_u.byt_y[0];
+  _check( 1 == u3b_maps_road(u3R), "no mapping listed" );
 
   u3C.wag_h |= u3o_leak_crash;
   u3a_mark_init();
@@ -2408,12 +2439,20 @@ _hand_grab_cb(u3_noun arg)
     c3_free(qua_u);
   }
   u3a_sweep();
+
+  //  the sweep kept the record: the list still reaches it, and done
+  //  unlists and frees it
+  //
+  _check(  (1 == u3b_maps_road(u3R)) && (fir_y == vue_u.byt_y[0]),
+          "the sweep took a live mapping's record" );
+  u3r_view_done(&vue_u);
+  _check( !u3b_maps_road(u3R), "done left the record listed" );
   return 0;
 }
 
 /* _test_hand_grab(): a sweep on an inner road, as -g's u3m_grab runs
-**   at every event, finds no leak while the road keeps a mapping: the
-**   mapping list is on the C heap, not the road's.  a leak aborts, so
+**   at every event, finds no leak while a view is open: u3b_mark marks
+**   the mapping records the road keeps on its heap.  a leak aborts, so
 **   the sweep runs in a child.
 */
 static void
@@ -2542,8 +2581,8 @@ _hand_share_cb(u3_noun arg)
   (void)arg;
 
   u3r_view vue_u;
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  const c3_y* vue_y = vue_u.byt_y;
 
   c3_w met_w = u3r_met(3, _han_bob);
   c3_y byt_y = u3r_byte(3, _han_bob);
@@ -2552,9 +2591,9 @@ _hand_share_cb(u3_noun arg)
         && (met_w == vue_u.byt_d) && (byt_y == vue_y[3]),
           "second open under a view" );
 
-  //  under the view's mapping, the fixed-width readers read the file:
-  //  inside it they agree with the mapping, across the end they are
-  //  zero-filled past the file's own length
+  //  beside the view's mapping, the fixed-width readers each map and
+  //  release their own: inside the file they agree with the view, across
+  //  the end they are zero-filled past the file's own length
   //
   {
     c3_y win_y[16];
@@ -2578,8 +2617,8 @@ _hand_share_cb(u3_noun arg)
   return 0;
 }
 
-/* _test_hand_share(): on an inner road, met and byte reads under a live
-**   view agree with its mapping and make no second one.
+/* _test_hand_share(): on an inner road, met and byte reads beside a
+**   live view agree with its mapping and leave no mapping of their own.
 */
 static void
 _test_hand_share(void)
@@ -2593,31 +2632,24 @@ static u3_noun
 _hand_reuse_cb(u3_noun arg)
 {
   (void)arg;
-  const c3_y* fir_y = 0;
 
-  //  a trap's thousand flat views land on the one mapping the road keeps
+  //  a trap's thousand views each map the blob and release it at done:
+  //  the road never holds more than the open view's
   //
   for ( c3_w i_w = 0; i_w < 1000; i_w++ ) {
-    u3r_view    vue_u;
-    const c3_y* vue_y;
+    u3r_view vue_u;
 
-    u3r_view_open(&vue_u, _han_bob, c3y);
-    vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, _han_bob, 0, c3y);
+    _check(  vue_u.byt_y && (1 == u3b_maps_road(u3R)),
+            "open %" PRIc3_w " left %zu mapping(s)", i_w, u3b_maps_road(u3R) );
     u3r_view_done(&vue_u);
-
-    if ( !fir_y ) {
-      fir_y = vue_y;
-    }
-    _check( vue_y && (vue_y == fir_y), "remapped at %" PRIc3_w, i_w );
+    _check( !u3b_maps_road(u3R), "done %" PRIc3_w " kept its mapping", i_w );
   }
-
-  _check( 1 == u3b_maps_road(u3R), "%zu mappings on the road",
-          u3b_maps_road(u3R) );
   return 0;
 }
 
-/* _test_hand_reuse(): an inner road keeps a mapping past its views,
-**   for the next, and the fall releases it.
+/* _test_hand_reuse(): no mapping outlives its view: each done on an
+**   inner road unmaps at once.
 */
 static void
 _test_hand_reuse(void)
@@ -2634,19 +2666,20 @@ _hand_deep_cb(u3_noun arg)
   u3r_view    par_u;
   const c3_y* par_y;
 
-  u3r_view_open(&par_u, _han_bob, c3y);
-  par_y = u3r_view_bytes(&par_u, c3y);
+  u3r_view_open(&par_u, _han_bob, 0, c3y);
+  par_y = par_u.byt_y;
 
-  //  a grandchild reads the parent's mapping and makes none
+  //  a grandchild maps for itself, and its done releases only its own
   //
   u3m_leap(512);
   {
     u3r_view kid_u;
-    u3r_view_open(&kid_u, _han_bob, c3y);
-    _check(  (par_y == u3r_view_bytes(&kid_u, c3y))
-          && !u3b_maps_road(u3R),
-            "child did not share" );
+    u3r_view_open(&kid_u, _han_bob, 0, c3y);
+    _check(  (par_y != kid_u.byt_y) && (par_y[0] == kid_u.byt_y[0])
+          && (1 == u3b_maps_road(u3R)),
+            "child shared the parent's mapping" );
     u3r_view_done(&kid_u);
+    _check( !u3b_maps_road(u3R), "child's done kept its mapping" );
   }
   u3m_fall();
 
@@ -2656,7 +2689,8 @@ _hand_deep_cb(u3_noun arg)
   return 0;
 }
 
-/* _test_hand_deep(): a nested road shares an inner ancestor's mapping.
+/* _test_hand_deep(): a nested road maps for itself beside an inner
+**   ancestor's mapping, and leaves the ancestor's alone.
 */
 static void
 _test_hand_deep(void)
@@ -2674,8 +2708,8 @@ _hand_fall_cb(u3_noun arg)
   (void)arg;
   u3r_view vue_u;
 
-  u3r_view_open(&vue_u, _han_bob, c3y);
-  u3r_view_bytes(&vue_u, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
+  (void)vue_u.byt_y;
 
   //  a grandchild maps a blob its parent never did, and falls with the
   //  view open
@@ -2683,8 +2717,8 @@ _hand_fall_cb(u3_noun arg)
   u3m_leap(512);
   {
     u3r_view kid_u;
-    u3r_view_open(&kid_u, _hand_fall_bob, c3y);
-    u3r_view_bytes(&kid_u, c3y);
+    u3r_view_open(&kid_u, _hand_fall_bob, 0, c3y);
+    (void)kid_u.byt_y;
     _check( 1 == u3b_maps_road(u3R), "child did not map its own" );
   }
   u3m_fall();
@@ -2716,7 +2750,7 @@ _hand_done_off_cb(u3_noun arg)
   (void)arg;
   u3r_view vue_u;
 
-  u3r_view_open(&vue_u, _han_bob, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
   u3m_leap(512);
   u3r_view_done(&vue_u);
   _exit(0);
@@ -2730,9 +2764,9 @@ _hand_read_off_cb(u3_noun arg)
   c3_y     byt_y;
 
   u3m_leap(512);
-  u3r_view_open(&vue_u, _han_bob, c3y);
+  u3r_view_open(&vue_u, _han_bob, 0, c3y);
   u3m_fall();
-  u3r_view_copy(&vue_u, 0, &byt_y, 1, c3y);
+  u3r_view_copy(&vue_u, 0, &byt_y, 1);
   _exit(0);
 }
 
@@ -2830,11 +2864,15 @@ _test_hand_empty(void)
 
   u3_atom  bob = u3i_blob(mug_h, 1);
   u3r_view win_u;
+  u3b_flat fla_u;
   c3_d     bit_d;
+  c3_m     mot_m = 0;
 
-  _check(  (c3n == u3b_stat(_tmp_bob, u3a_bid(mug_h, 1), &bit_d))
-        && (c3n == u3r_view_open(&win_u, bob, c3n))
-        && !u3b_fds(),
+  _check(  (c3n == u3b_map(&fla_u, _tmp_bob, u3a_bid(mug_h, 1), 0,
+                           &bit_d, &mot_m))
+        && (c3__file == mot_m)
+        && (c3n == u3r_view_open(&win_u, bob, 0, c3n))
+        && !u3b_maps(),
           "empty file not rejected" );
 
   u3z(bob);
@@ -2980,9 +3018,9 @@ _test_hand_access(void)
   {
     u3r_view vue_u;
 
-    u3r_view_open(&vue_u, bob, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
-    _check(  (u3r_view_blob == vue_u.kin_e) && (len_w == vue_u.byt_d)
+    u3r_view_open(&vue_u, bob, 0, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
+    _check(  vue_u.fla_u && (len_w == vue_u.byt_d)
           && (vue_y == vue_u.byt_y) && (0 == memcmp(vue_y, dat_y, len_w))
           && (1 == u3b_maps()),
             "flat bob" );
@@ -2993,10 +3031,9 @@ _test_hand_access(void)
       u3_atom sma = u3i_string("small loom atom, wider than a word");
       c3_w    met_w = u3r_met(3, sma);
 
-      u3r_view_open(&vue_u, sma, c3y);
-      vue_y = u3r_view_bytes(&vue_u, c3y);
-      _check( (u3r_view_loom == vue_u.kin_e) && (met_w == vue_u.byt_d),
-              "flat loom" );
+      u3r_view_open(&vue_u, sma, 0, c3y);
+      vue_y = vue_u.byt_y;
+      _check( !vue_u.fla_u && (met_w == vue_u.byt_d), "flat loom" );
       {
         u3_atom cop = u3i_bytes(met_w, vue_y);
         _check( c3y == u3r_sing(sma, cop), "flat loom bytes" );
@@ -3004,56 +3041,54 @@ _test_hand_access(void)
       }
       u3r_view_done(&vue_u);
 
-      u3r_view_open(&vue_u, 0x44332211, c3y);
-      vue_y = u3r_view_bytes(&vue_u, c3y);
-      _check(  (u3r_view_even == vue_u.kin_e) && (4 == vue_u.byt_d)
+      u3r_view_open(&vue_u, 0x44332211, 0, c3y);
+      vue_y = vue_u.byt_y;
+      _check(  !vue_u.fla_u && (4 == vue_u.byt_d)
             && (vue_y == (const c3_y*)&vue_u.raw_d)
             && (0x11 == vue_y[0]) && (0x44 == vue_y[3]),
               "init cat" );
       u3r_view_done(&vue_u);
 
-      //  windows: a bob opens without mapping and reads straight from
-      //  the file, zero past the end; a loom atom and a direct atom
-      //  read the same way from their own bytes.  met agrees with the
-      //  atom's at every bloq
+      //  windows: a bob's view copies from its mapping, zero past the
+      //  end; a loom atom and a direct atom read the same way from their
+      //  own bytes.  met agrees with the atom's at every bloq
       //
       {
         u3r_view win_u;
         c3_y     win_y[64];
         c3_y     exp_y[64];
 
-        _check( c3y == u3r_view_open(&win_u, bob, c3n), "open bob" );
-        _check(  win_u.bid_d && !win_u.byt_y
+        _check( c3y == u3r_view_open(&win_u, bob, 0, c3n), "open bob" );
+        _check(  win_u.fla_u && win_u.byt_y
               && (len_w == win_u.byt_d)
               && (u3r_met(0, loa) == win_u.bit_d)
               && (u3r_met(5, loa) == ((win_u.bit_d + 31) >> 5))
-              && (0 == u3b_maps()),
+              && (1 == u3b_maps()),
                 "open bob shape" );
 
         memset(exp_y, 0, sizeof(exp_y));
         memcpy(exp_y, dat_y + len_w - 40, 40);
-        _check(  (40 == u3r_view_copy(&win_u, len_w - 40, win_y, sizeof(win_y), c3n))
-              && (0 == memcmp(win_y, exp_y, sizeof(win_y)))
-              && !win_u.byt_y,
+        _check(  (40 == u3r_view_copy(&win_u, len_w - 40, win_y, sizeof(win_y)))
+              && (0 == memcmp(win_y, exp_y, sizeof(win_y))),
                 "read bob tail" );
-        _check(  (0 == u3r_view_copy(&win_u, (c3_d)len_w << 20, win_y, 8, c3n))
+        _check(  (0 == u3r_view_copy(&win_u, (c3_d)len_w << 20, win_y, 8))
               && (0 == memcmp(win_y, exp_y + 40, 8)),
                 "read bob past" );
         u3r_view_done(&win_u);
         _check( 0 == u3b_maps(), "open bob done" );
 
-        _check( c3y == u3r_view_open(&win_u, sma, c3n), "open loom" );
-        _check(  !win_u.bid_d && (met_w == win_u.byt_d)
-              && (3 == u3r_view_copy(&win_u, met_w - 3, win_y, 16, c3n))
+        _check( c3y == u3r_view_open(&win_u, sma, 0, c3n), "open loom" );
+        _check(  !win_u.fla_u && (met_w == win_u.byt_d)
+              && (3 == u3r_view_copy(&win_u, met_w - 3, win_y, 16))
               && (0 == memcmp(win_y, win_u.byt_y + met_w - 3, 3))
               && (0 == memcmp(win_y + 3, exp_y + 40, 13)),
                 "read loom" );
         u3r_view_done(&win_u);
 
-        _check( c3y == u3r_view_open(&win_u, 0x44332211, c3n), "open cat" );
+        _check( c3y == u3r_view_open(&win_u, 0x44332211, 0, c3n), "open cat" );
         _check(  (win_u.byt_y == (const c3_y*)&win_u.raw_d)
               && (31 == win_u.bit_d)
-              && (2 == u3r_view_copy(&win_u, 2, win_y, 4, c3n))
+              && (2 == u3r_view_copy(&win_u, 2, win_y, 4))
               && (0x33 == win_y[0]) && (0x44 == win_y[1])
               && (0 == win_y[2]) && (0 == win_y[3]),
                 "read cat" );
@@ -4272,6 +4307,7 @@ main(int argc, char* argv[])
   _test_hand_signal();
   _test_hand_leak();
   _test_hand_outer();
+  _test_view_hold();
   _test_sweep_settle();
   _test_hand_comp();
   _test_hand_alarm();
@@ -4284,11 +4320,9 @@ main(int argc, char* argv[])
   _test_hand_cue();
 #ifndef U3_OS_windows
   _test_hand_emfile();
-  _test_hand_cloexec();
+  _test_hand_nofd();
   _test_hand_wipe();
 #endif
-  _test_hand_stop();
-  _test_hand_fds();
 #ifndef U3_OS_windows
   _test_hand_trunc();
 #endif

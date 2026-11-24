@@ -44,8 +44,8 @@ u3qc_muk(u3_atom sed,
         loc_o = c3y;
       }
       else if ( len_h > 0 ) {
-        u3r_view_open(&vue_u, key, c3y);
-        key_y = u3r_view_bytes(&vue_u, c3y);
+        u3r_view_open(&vue_u, key, 0, c3y);
+        key_y = vue_u.byt_y;
       }
 
       MurmurHash3_x86_32(key_y, len_h, sed_h, &out_h);

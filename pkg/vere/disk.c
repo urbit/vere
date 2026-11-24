@@ -1710,11 +1710,6 @@ _disk_blob_root(const c3_c* pax_c, c3_d epo_d)
 {
   static c3_c bob_c[8192];
 
-  //  the buffer keeps its address across roots, so the fd cache cannot
-  //  tell an old root's files from the new one's: it starts empty
-  //
-  u3b_flush();
-
   u3b_root(bob_c, pax_c, epo_d);
 
   //  a store that cannot be made (a flat log under --no-migrate has no

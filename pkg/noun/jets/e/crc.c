@@ -22,12 +22,12 @@ u3qe_crc32(u3_noun input_octs)
   //  a view borrows the bytes wherever the atom lives; read-only
   //
   u3r_view vue_u;
-  u3r_view_open(&vue_u, tail, c3y);
+  u3r_view_open(&vue_u, tail, 0, c3y);
   if ( vue_u.byt_d > c3_w_max ) {
     return u3m_bail(c3__fail);
   }
   c3_w        tel_w = (c3_w)vue_u.byt_d;
-  const c3_y* input = u3r_view_bytes(&vue_u, c3y);
+  const c3_y* input = vue_u.byt_y;
 
   if ( tel_w > hed_w ) {
     u3r_view_done(&vue_u);

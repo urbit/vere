@@ -581,7 +581,7 @@ u3i_vint(u3_noun a)
     c3_w        len_w;
     u3i_slab    sab_u;
 
-    u3r_view_open(&vue_u, a, c3y);
+    u3r_view_open(&vue_u, a, 0, c3y);
     a_buf_w = u3r_view_words(&vue_u, &len_w, c3y);
     u3i_slab_init(&sab_u, 0, vue_u.bit_d + 1);
 

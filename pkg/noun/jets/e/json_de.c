@@ -100,12 +100,12 @@ _parse(u3_atom txt)
   //  a view borrows the bytes wherever the atom lives
   //  XX assumes little-endian
   //
-  u3r_view_open(&vue_u, txt, c3y);
+  u3r_view_open(&vue_u, txt, 0, c3y);
   if ( vue_u.byt_d > c3_w_max ) {
     return u3m_bail(c3__fail);
   }
   len_w = (c3_w)vue_u.byt_d;
-  byt_y = u3r_view_bytes(&vue_u, c3y);
+  byt_y = vue_u.byt_y;
 
   //
   // initialization

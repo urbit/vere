@@ -52,12 +52,12 @@ _x_octs_buffer(u3_atom* p_octs, u3_atom *q_octs,
   //  releases it through _x_octs_done.  read-only.  a bob whose file
   //  is gone bails %fail, as every other reader does
   //
-  u3r_view_open(vue_u, *q_octs, c3y);
+  u3r_view_open(vue_u, *q_octs, 0, c3y);
   if ( vue_u->byt_d > c3_w_max ) {
     u3m_bail(c3__fail);
   }
   *len_w = (c3_w)vue_u->byt_d;
-  *buf_y = (c3_y*)u3r_view_bytes(vue_u, c3y);
+  *buf_y = (c3_y*)vue_u->byt_y;
 
   *lead_w = 0;
 

@@ -94,8 +94,8 @@ u3qa_sub(u3_atom a,
     //  a view borrows the words wherever the atom lives; the views go
     //  with the road if the slab bails
     //
-    u3r_view_open(&a_vue, a, c3y);
-    u3r_view_open(&b_vue, b, c3y);
+    u3r_view_open(&a_vue, a, 0, c3y);
+    u3r_view_open(&b_vue, b, 0, c3y);
     a_buf_w = u3r_view_words(&a_vue, &a_len_w, c3y);
     b_buf_w = u3r_view_words(&b_vue, &b_len_w, c3y);
     u3i_slab_init(&sab_u, u3a_word_bits_log, a_len_w);

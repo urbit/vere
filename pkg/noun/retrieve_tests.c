@@ -1331,7 +1331,7 @@ _test_cell_trel_qual(void)
     exit(1);
 }
 
-/* _test_view(): u3r_view_bytes on both regular and bob atoms.
+/* _test_view(): a view's bytes for regular and bob atoms.
 */
 static void
 _test_view(void)
@@ -1344,8 +1344,8 @@ _test_view(void)
     u3_atom a = u3i_bytes(src_w, src_y);
 
     u3r_view vue_u;
-    u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, a, 0, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
 
     if ( vue_u.byt_d != src_w ) {
       fprintf(stderr, "_test_view(): normal len mismatch %" PRIc3_d
@@ -1353,9 +1353,11 @@ _test_view(void)
               vue_u.byt_d, src_w);
       exit(1);
     }
-    if ( vue_u.kin_e != u3r_view_loom ) {
+    if (  (vue_u.byt_y != (const c3_y*)((u3a_atom*)u3a_to_ptr(a))->buf_w)
+       || vue_u.fla_u )
+    {
       fprintf(stderr, "_test_view(): normal atom should alias the loom "
-                      "(zero-copy, no blob hand or heap)\r\n");
+                      "(zero-copy, no mapping)\r\n");
       exit(1);
     }
     if ( 0 != memcmp(vue_y, src_y, src_w) ) {
@@ -1366,7 +1368,7 @@ _test_view(void)
     u3r_view_done(&vue_u);
     if (  vue_u.byt_y != 0
        || vue_u.byt_d != 0
-       || vue_u.kin_e != u3r_view_loom )
+       || vue_u.fla_u )
     {
       fprintf(stderr, "_test_view(): normal view not reset on done\r\n");
       exit(1);
@@ -1382,17 +1384,13 @@ _test_view(void)
     const c3_w    src_w   = sizeof(src_y);
 
     u3r_view vue_u;
-    u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, a, 0, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
 
     if ( vue_u.byt_d != src_w ) {
       fprintf(stderr, "_test_view(): cat len mismatch %" PRIc3_d
                       " vs %" PRIc3_w "\r\n",
               vue_u.byt_d, src_w);
-      exit(1);
-    }
-    if ( vue_u.kin_e != u3r_view_even ) {
-      fprintf(stderr, "_test_view(): cat atom should be flat/inline\r\n");
       exit(1);
     }
     if ( vue_y != (const c3_y*)&vue_u.raw_d ) {
@@ -1406,7 +1404,7 @@ _test_view(void)
 
     u3r_view_done(&vue_u);
     if (  vue_u.byt_y != 0
-       || vue_u.kin_e != u3r_view_loom )
+       || vue_u.fla_u )
     {
       fprintf(stderr, "_test_view(): cat view not reset on done\r\n");
       exit(1);
@@ -1417,11 +1415,10 @@ _test_view(void)
   //
   {
     u3r_view vue_u;
-    u3r_view_open(&vue_u, 0, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, 0, 0, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
     if (  vue_u.byt_d != 0
-       || vue_u.kin_e != u3r_view_even
-       || vue_u.bid_d != 0
+       || vue_u.fla_u
        || vue_y != (const c3_y*)&vue_u.raw_d
        || 0 != vue_y[0] )
     {
@@ -1470,13 +1467,13 @@ _test_view(void)
     u3_atom a = u3i_blob(mug_h, seq_h);
 
     u3r_view vue_u;
-    u3r_view_open(&vue_u, a, c3y);
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+    u3r_view_open(&vue_u, a, 0, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
 
-    //  expect a store-backed view: kin_e == u3r_view_blob, its id set
+    //  expect a store-backed view: a mapping the view owns
     //
-    if (  vue_u.kin_e != u3r_view_blob
-       || vue_u.bid_d != u3a_bid(mug_h, seq_h) )
+    if (  !vue_u.fla_u
+       || (vue_u.byt_y != vue_u.fla_u->map_y) )
     {
       fprintf(stderr, "_test_view(): bob atom should be store-backed "
                       "(len=%" PRIc3_d ")\r\n", vue_u.byt_d);
@@ -1500,7 +1497,6 @@ _test_view(void)
 
     //  clean up temp pier
     //
-    u3b_flush();
     c3_tmp_kill(dir_c);
     u3C.bob_c = 0;
   }
@@ -1593,7 +1589,6 @@ _test_aor(void)
 
   u3z(nor_a); u3z(nor_b); u3z(bob_a); u3z(bob_b);
 
-  u3b_flush();
   c3_tmp_kill(dir_c);
   u3C.bob_c = 0;
 }

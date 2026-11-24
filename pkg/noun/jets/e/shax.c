@@ -26,9 +26,9 @@
       const c3_y* dat_y;
       u3r_view    vue_u;
 
-      u3r_view_open(&vue_u, dat, c3y);
+      u3r_view_open(&vue_u, dat, 0, c3y);
       if ( len_d <= vue_u.byt_d ) {
-        dat_y = u3r_view_bytes(&vue_u, c3y);
+        dat_y = vue_u.byt_y;
       }
       else if ( len_d <= c3_w_max ) {
         dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);
@@ -52,8 +52,8 @@
   {
     c3_y     out_y[32];
     u3r_view vue_u;
-    u3r_view_open(&vue_u, a, c3y);
-    urcrypt_shay(u3r_view_bytes(&vue_u, c3y), vue_u.byt_d, out_y);
+    u3r_view_open(&vue_u, a, 0, c3y);
+    urcrypt_shay(vue_u.byt_y, vue_u.byt_d, out_y);
     u3r_view_done(&vue_u);
     return u3i_bytes(32, out_y);
   }
@@ -72,9 +72,9 @@
       const c3_y* dat_y;
       u3r_view    vue_u;
 
-      u3r_view_open(&vue_u, dat, c3y);
+      u3r_view_open(&vue_u, dat, 0, c3y);
       if ( len_d <= vue_u.byt_d ) {
-        dat_y = u3r_view_bytes(&vue_u, c3y);
+        dat_y = vue_u.byt_y;
       }
       else if ( len_d <= c3_w_max ) {
         dat_y = cop_y = u3r_bytes_alloc(0, (c3_w)len_d, dat);

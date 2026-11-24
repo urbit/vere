@@ -213,10 +213,10 @@ _js_mat_atom(_jam_shax* ctx, u3_atom a)
   }
 
   u3r_view vue_u;
-  u3r_view_open(&vue_u, a, c3y);
+  u3r_view_open(&vue_u, a, 0, c3y);
 
   {
-    const c3_y* vue_y = u3r_view_bytes(&vue_u, c3y);
+    const c3_y* vue_y = vue_u.byt_y;
     c3_d        bit_d = vue_u.bit_d;
     c3_d        ful_d = bit_d >> 3;
     c3_g        rem_g = bit_d & 7;

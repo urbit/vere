@@ -254,14 +254,14 @@ _cm_signal_handle_alrm(int x)
 static void
 _cm_signal_reset(void)
 {
+  //  the discarded roads' blob mappings go with them, while their
+  //  structs and heaps are intact and the kid chain still names them
+  //
+  u3b_drain_kids();
+
   u3R = &u3H->rod_u;
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
-
-  //  the discarded roads' blob mappings go with them, before the kid
-  //  chain that names those roads is cut
-  //
-  u3b_drain_kids();
   u3R->kid_p = 0;
 }
 
@@ -1302,9 +1302,9 @@ u3m_fall(void)
 {
   u3_assert(0 != u3R->par_p);
 
-  //  the road's blob mappings, kept for reuse since it leapt, go with
-  //  its frames.  this is the one exit every road takes except a
-  //  signal unwind, which drains the kid chain itself.
+  //  the blob mappings a bail left on the road go with its frames.
+  //  this is the one exit every road takes except a signal unwind,
+  //  which drains the kid chain itself.
   //
   u3b_drain(u3R);
 
@@ -2919,7 +2919,6 @@ extern void u3je_secp_stop(void);
 void
 u3m_stop(void)
 {
-  u3b_stop();
   u3t_sstack_exit();
 
   u3e_stop();

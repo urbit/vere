@@ -33,7 +33,7 @@ u3qc_sew(u3_atom a,
   const c3_w* src_w;
   c3_w        len_src_w;
 
-  u3r_view_open(&vue_u, e, c3y);
+  u3r_view_open(&vue_u, e, 0, c3y);
   src_w = u3r_view_words(&vue_u, &len_src_w, c3y);
   u3i_slab_init(&sab_u, a_g, c3_max(len_e_w, b_w + c_w));
   u3r_chop_words(a_g, 0, b_w, 0, sab_u.buf_w, len_src_w, src_w);

@@ -167,97 +167,82 @@
       void
       u3b_path(c3_c* out_c, const c3_c* bob_c, c3_h mug_h, c3_h seq_h);
 
-    /* Reads.  No caller holds an fd once a call returns: each process
-    **   keeps blob fds in a small cache, any of which may close between
-    **   calls.  A flat view gets a mapping, which holds no fd.  An inner
-    **   road owns its mappings until it falls; the home road's go at
-    **   u3b_unmap.  See blob.c.
+    /* Reads.  Every read of a blob goes through a read-only mapping that
+    **   one view owns (u3r_view, retrieve.h).  A mapping holds the
+    **   file's bytes, then zeros: to at least one page past the file, or
+    **   to the width asked for.  No fd outlives the call that maps.  An
+    **   inner road lists its mappings in its fla_p slot, records on its
+    **   own heap, so its fall or a signal reset releases any a bail left;
+    **   the home road lists none.  See blob.c.
     */
 
-    /* u3b_stat(): the bit length of blob [bid_d] in [bit_d].
+    /* u3b_flat: a mapping.  On an inner road the record lives on the
+    **   road's heap and is listed from the road's fla_p slot; on the
+    **   home road it lives in the view that owns the mapping.
+    */
+      typedef struct _u3b_flat {
+        u3_post nex_p;    //  next record on its inner road's list
+        c3_y*   map_y;    //  base: the content's bytes, then zeros
+        c3_d    ext_d;    //  readable extent, in bytes
+        c3_d    hed_d;    //  windows: bytes of the file view at map_y
+      } u3b_flat;
+
+    /* u3b_map(): map blob [bid_d] read-only into [fla_u]: its bytes,
+    **   then zeros to [wid_d] and at least one page past them.
     **
-    **   c3n if the file is missing, empty, all zero, or unreadable.
+    **   Sets [bit_d] to the content's bit length.  On failure returns c3n
+    **   and sets [mot_m]: c3__file for a store fault (an unset root, a
+    **   missing, empty, or non-canonical file, a failed open or map),
+    **   c3__meme when the address space cannot hold the extent.  On an
+    **   inner road [fla_u] must be a record on the road's heap, which a
+    **   success lists.
     */
       c3_o
-      u3b_stat(const c3_c* bob_c, c3_d bid_d, c3_d* bit_d);
+      u3b_map(u3b_flat*   fla_u,
+              const c3_c* bob_c,
+              c3_d        bid_d,
+              c3_d        wid_d,
+              c3_d*       bit_d,
+              c3_m*       mot_m);
 
-    /* u3b_read(): read [len_z] bytes at [off_d] of blob [bid_d] into
-    **   [dst_y].
-    **
-    **   Returns the number of bytes read; short only at end of file or
-    **   on error.  A pread in BLOB_IO_MAX chunks; never allocates.
+    /* u3b_pad(): map a read-only anonymous copy of [len_d] bytes at
+    **   [src_y] into [fla_u], zero to [wid_d].  c3n if the address space
+    **   cannot hold it.  Listed as u3b_map lists.
     */
-      c3_z
-      u3b_read(const c3_c* bob_c,
-               c3_d        bid_d,
-               c3_d        off_d,
-               c3_y*       dst_y,
-               c3_z        len_z);
+      c3_o
+      u3b_pad(u3b_flat* fla_u, const c3_y* src_y, c3_d len_d, c3_d wid_d);
 
-    /* u3b_map(): blob [bid_d], [len_d] bytes, mapped read-only; 0 if
-    **   the file is unreadable or shorter than [len_d], or the mapping
-    **   fails.
-    **
-    **   An inner road returns any mapping on its line: its own, an
-    **   inner ancestor's, or the home road's.  Failing that it maps
-    **   anew, and the mapping is the road's until it falls.  On the
-    **   home road each call maps anew, until u3b_unmap.  On posix the file's pages
-    **   are followed by one anonymous zero page, so a reader may run
-    **   one page past the file's end; on Windows the rest of the last
-    **   page reads as zero, which covers any reader bound by the
-    **   atom's word count.
-    */
-      const c3_y*
-      u3b_map(const c3_c* bob_c, c3_d bid_d, c3_d len_d);
-
-    /* u3b_unmap(): the home road is done with [map_y], from u3b_map.
-    **
-    **   A no-op on an inner road, whose mappings go when it falls.
+    /* u3b_unmap(): release [fla_u], on the road that mapped it, and
+    **   unlist it on an inner road.  The record's memory is the
+    **   caller's.  A no-op on an empty record.
     */
       void
-      u3b_unmap(const c3_y* map_y);
+      u3b_unmap(u3b_flat* fla_u);
 
-    /* u3b_drop(): close the cached fd of blob (mug, seq), if any.
-    **
-    **   Called before the file is unlinked or its id reused, and by the
-    **   king when its last bob over the id dies.
-    */
-      void
-      u3b_drop(c3_h mug_h, c3_h seq_h);
-
-    /* u3b_flush(): close every cached fd: the root changed, or an
-    **   epoch is going.
-    */
-      void
-      u3b_flush(void);
-
-    /* u3b_stop(): release every mapping and cached fd (from u3m_stop).
-    */
-      void
-      u3b_stop(void);
-
-    /* u3b_drain(): release every mapping road [rod_v] made.
-    **
-    **   Called from u3m_fall: the road's C frames, and with them every
-    **   pointer they held, are gone.
+    /* u3b_drain(): release every mapping road [rod_v] lists (u3m_fall).
+    **   The records go with the road's memory.
     */
       void
       u3b_drain(void* rod_v);
 
-    /* u3b_drain_kids(): release every mapping made below the home road.
-    **
-    **   Called after a signal unwinds to the top level, the one path
-    **   that skips u3m_fall.
+    /* u3b_drain_kids(): release every mapping every road above home
+    **   lists: a signal unwound them all, skipping u3m_fall.
     */
       void
       u3b_drain_kids(void);
+
+    /* u3b_mark(): mark the current road's mapping records for gc; words
+    **   marked.
+    */
+      c3_w
+      u3b_mark(void);
 
     /* u3b_maps(): mappings the process holds.
     */
       c3_z
       u3b_maps(void);
 
-    /* u3b_maps_road(): mappings road [rod_v] made.  Test support.
+    /* u3b_maps_road(): mappings road [rod_v] lists.  Test support.
     */
       c3_z
       u3b_maps_road(void* rod_v);
@@ -266,11 +251,6 @@
     */
       c3_d
       u3b_mapped(void);
-
-    /* u3b_fds(): fds the cache holds open.  Test support.
-    */
-      c3_z
-      u3b_fds(void);
 
     /* u3b_bsink: streaming byte sink for blob-aware cue (u3s_bsink).
     **
