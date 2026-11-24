@@ -376,6 +376,8 @@ METRICS = [
      lambda s, v: crib_peak(v, "lose-list")),
     ("N: notes peak (nouns canonicalized after one exit's takes)", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "notes")),
+    ("N: home walk's deepest stack (frames)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "walk-frames")),
     ("N: fills or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 

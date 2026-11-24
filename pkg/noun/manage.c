@@ -3925,42 +3925,78 @@ u3m_sole_tab_meas(c3_d* met_d)
   memset(&_cs_met, 0, sizeof(_cs_met));
 }
 
-/* _cm_stack: growable stack of cell frames for the walks below.
+/* working memory for the home road's walk (_cm_sole_canon()), in the
+**   runtime's two yards (see crib.h), each an eighth of the loom,
+**   reserved whole and committed as it's used.
+**
+**   the scratch yard holds the walk's stack of cell frames. a frame is
+**   one word, a quarter of a cell, so it walks a list half the loom
+**   long. past that the walk goes no deeper: a cell it has no frame for is left as
+**   it is, like one the table refused, and so is every cell over it.
+**   sharing is missed below that depth, until the noun is walked with
+**   more room.
+**
+**   the result yard holds the exit home's notes (_cm_note), and above
+**   them the list of the walk's marks (below). the notes don't grow
+**   while a walk runs. a walk that marks more than the yard has room to
+**   list keeps marking in the bitmap, and its marks are dropped by
+**   zeroing it.
+**
+**   a walk is a scope of both yards (_cm_walk_open(), _cm_walk_shut()):
+**   it leaves their ends as it found them, so it can run inside another
+**   of their users. its state (_cm_walk) is its caller's, passed down:
+**   one walk doesn't run inside another.
 */
-typedef struct {
-  u3_noun som;    //  cell
-  c3_t    tel_t;  //  head done, tail pending
-} _cm_frame;
+/* _cm_frame: a cell the walk is in. while its head is walked, the
+**   cell itself; once its tail is, the cell with its cell bit clear
+**   (every frame is a cell, so the bit is free to say which).
+*/
+typedef u3_noun _cm_frame;
+
+#define _CM_FRAME_TEL  ((u3_noun)1 << (u3a_word_bits - 2))
 
 typedef struct {
-  c3_w       len_w;
-  c3_w       siz_w;
-  _cm_frame* fam_u;
+  size_t wok_i;   //  the scratch yard's end as the walk began
+  size_t res_i;   //  the result yard's
+  c3_w*  lis_w;   //  its marks' indices, in the result yard
+  c3_w   num_w;   //    how many are listed
+  c3_t   ovf_t;   //  marks past the list: the bitmap is zeroed as the
+                  //  walk ends
+  //  measurement
+  //
+  size_t bot_i;   //  the scratch yard's end under the first frame
+  size_t pek_i;   //  the scratch yard's peak as the walk began
 } _cm_walk;
 
-static void
-_cm_walk_init(_cm_walk* wak_u)
-{
-  wak_u->len_w = 0;
-  wak_u->siz_w = 64;
-  wak_u->fam_u = c3_malloc(sizeof(*wak_u->fam_u) * wak_u->siz_w);
-}
+//  cells left for want of a frame, since the last report
+//
+static c3_d _cm_wak_ovf_d;
 
-static void
-_cm_walk_done(_cm_walk* wak_u)
-{
-  c3_free(wak_u->fam_u);
-}
+static void _cm_walk_open(_cm_walk* wal_u);
+static void _cm_walk_shut(_cm_walk* wal_u);
 
+/* _cm_walk_push(): a new top frame, or 0 at the walk's bound.
+*/
 static inline _cm_frame*
-_cm_walk_push(_cm_walk* wak_u)
+_cm_walk_push(void)
 {
-  if ( wak_u->len_w == wak_u->siz_w ) {
-    wak_u->siz_w += c3_min(wak_u->siz_w, 4096);
-    wak_u->fam_u  = c3_realloc(wak_u->fam_u,
-                               sizeof(*wak_u->fam_u) * wak_u->siz_w);
+  _cm_frame* fam_u = u3a_yard_take(&u3a_Yard_wok, sizeof(*fam_u),
+                                   __alignof__(_cm_frame));
+
+  if ( c3_unlikely(!fam_u) ) {
+    _cm_wak_ovf_d++;
+    u3e_Meter.cib_u[4].ovf_d++;
   }
-  return &wak_u->fam_u[wak_u->len_w++];
+  return fam_u;
+}
+
+/* _cm_walk_peek(): the top frame.
+*/
+static inline _cm_frame*
+_cm_walk_peek(void)
+{
+  return (_cm_frame*)(void*)(  u3a_Yard_wok.buf_y + u3a_Yard_wok.use_i
+                             - sizeof(_cm_frame));
 }
 
 /* _cm_note: nouns the takes of the exit home under way produced that
@@ -4004,7 +4040,9 @@ _cm_sole_reset(void)
 {
   _cm_sole_u.pat_y = 0;
 
-  //  the notes go with the yards' memory
+  //  the notes go with the yards' memory. a walk cut short leaves its
+  //  marks in the bitmap, and the next walk zeroes it (see
+  //  _cm_walk_open())
   //
   _cm_note.lot   = 0;
   _cm_note.len_w = 0;
@@ -4012,10 +4050,8 @@ _cm_sole_reset(void)
 
 /* visited marks (below), for the home road's walk.
 */
-static void _cm_vis_home(void);
-static void _cm_vis_home_done(void);
 static c3_t _cm_vis_home_has(u3_noun som);
-static void _cm_vis_home_put(u3_noun som);
+static void _cm_vis_home_put(_cm_walk* wal_u, u3_noun som);
 
 /* _cm_sole_xchange(): point [*som] at [can], if it doesn't already.
 */
@@ -4041,13 +4077,18 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
 **   ends the walk out of the set (refused by the table, or over a child
 **   that was) has no bit, so it's marked as visited, and a shared one
 **   is walked once too.
-**   the caller brackets the walk with _cm_vis_home() and
-**   _cm_vis_home_done().
+**
+**   a cell past the depth the walk has frames for is left as it is,
+**   and isn't marked: a shallower path to it may have room (see
+**   _cm_frame).
+**
+**   the caller brackets the walk [wal_u] with _cm_walk_open() and
+**   _cm_walk_shut().
 */
 static u3_noun
-_cm_sole_canon(_cm_walk* wak_u, u3_noun som)
+_cm_sole_canon(_cm_walk* wal_u, u3_noun som)
 {
-  c3_w    bot_w = wak_u->len_w;
+  size_t  bot_i = u3a_Yard_wok.use_i;
   u3_noun pro;
 
   while ( 1 ) {
@@ -4072,43 +4113,48 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
       //  yet, and a duplicate is found by _cm_sole_put() on the way up
       //
       else {
-        _cm_frame* fam_u = _cm_walk_push(wak_u);
-        fam_u->som   = som;
-        fam_u->tel_t = 0;
-        som = u3h(som);
+        _cm_frame* fam_u = _cm_walk_push();
+
+        if ( c3_unlikely(!fam_u) ) {
+          pro = som;
+          break;
+        }
+        *fam_u = som;
+        som    = u3h(som);
       }
     }
 
     //  ascend
     //
-    while ( wak_u->len_w > bot_w ) {
-      _cm_frame* fam_u = &wak_u->fam_u[wak_u->len_w - 1];
-      u3a_cell*  cel_u = u3a_to_ptr(fam_u->som);
+    while ( u3a_Yard_wok.use_i > bot_i ) {
+      _cm_frame* fam_u = _cm_walk_peek();
+      u3_noun    cel   = *fam_u | _CM_FRAME_TEL;
+      u3a_cell*  cel_u = u3a_to_ptr(cel);
 
-      if ( !fam_u->tel_t ) {
+      if ( *fam_u & _CM_FRAME_TEL ) {
         _cm_sole_xchange(pro, &cel_u->hed);
-        fam_u->tel_t = 1;
-        som = cel_u->tel;
+        *fam_u = cel ^ _CM_FRAME_TEL;
+        som    = cel_u->tel;
         break;
       }
       else {
         _cm_sole_xchange(pro, &cel_u->tel);
 
-        //  a child the table refused stays out: a member needs
-        //  canonical children
+        //  a child the table refused, or the walk left, stays out: a
+        //  member needs canonical children
         //
         pro = ( u3a_is_sole(cel_u->hed) && u3a_is_sole(cel_u->tel) )
-              ? _cm_sole_put(fam_u->som)
-              : fam_u->som;
+              ? _cm_sole_put(cel)
+              : cel;
 
-        if ( c3_unlikely((pro == fam_u->som) && !u3a_is_sole(pro)) ) {
-          _cm_vis_home_put(pro);
+        if ( c3_unlikely((pro == cel) && !u3a_is_sole(pro)) ) {
+          _cm_vis_home_put(wal_u, pro);
         }
-        wak_u->len_w--;
+        u3a_yard_give(&u3a_Yard_wok, sizeof(*fam_u));
       }
     }
 
-    if ( wak_u->len_w == bot_w ) {
+    if ( u3a_Yard_wok.use_i == bot_i ) {
       return pro;
     }
   }
@@ -4125,21 +4171,14 @@ _cm_sole_canon(_cm_walk* wak_u, u3_noun som)
 static u3_noun
 _cm_sole_canon_home(u3_noun som, c3_y pat_y)
 {
-  static _cm_walk wak_u;
-  static c3_t     ini_t;
-  c3_y            pre_y = _cm_sole_u.pat_y;
-  u3_noun         pro;
+  _cm_walk wal_u;
+  c3_y     pre_y = _cm_sole_u.pat_y;
+  u3_noun  pro;
 
-  if ( !ini_t ) {
-    _cm_walk_init(&wak_u);
-    ini_t = 1;
-  }
-
-  wak_u.len_w      = 0;
   _cm_sole_u.pat_y = pat_y;
-  _cm_vis_home();
-  pro = _cm_sole_canon(&wak_u, som);
-  _cm_vis_home_done();
+  _cm_walk_open(&wal_u);
+  pro = _cm_sole_canon(&wal_u, som);
+  _cm_walk_shut(&wal_u);
   _cm_sole_u.pat_y = pre_y;
 
   return pro;
@@ -4208,6 +4247,8 @@ u3m_sole_mend(void)
 
   if ( !len_i ) return;
 
+  //  each walk lists its marks after the notes
+  //
   for ( i_i = 0; i_i < len_i; i_i++ ) {
     _cm_sole_canon_home(som[i_i], 2);
   }
@@ -4217,15 +4258,17 @@ u3m_sole_mend(void)
   _cm_yard_peak(2, len_i);
 }
 
-/* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road.
+/* _cm_sole_canon_ptr(): canonicalize [*som] in place, on the home road,
+**   in walk [wal_u].
 */
 static void
-_cm_sole_canon_ptr(_cm_walk* wak_u, u3_noun* som)
+_cm_sole_canon_ptr(_cm_walk* wal_u, u3_noun* som)
 {
-  _cm_sole_xchange(_cm_sole_canon(wak_u, *som), som);
+  _cm_sole_xchange(_cm_sole_canon(wal_u, *som), som);
 }
 
-/* _cm_sole_ream_kev(): u3h_walk callback, canonicalizing key and value.
+/* _cm_sole_ream_kev(): u3h_walk callback, canonicalizing key and value
+**   in the walk at [ptr_v].
 */
 static void
 _cm_sole_ream_kev(u3_noun kev, void* ptr_v)
@@ -4236,7 +4279,8 @@ _cm_sole_ream_kev(u3_noun kev, void* ptr_v)
   _cm_sole_canon_ptr(ptr_v, &kev_u->tel);
 }
 
-/* _cm_sole_ream_key(): u3h_walk callback, canonicalizing the key alone.
+/* _cm_sole_ream_key(): u3h_walk callback, canonicalizing the key alone
+**   in the walk at [ptr_v].
 */
 static void
 _cm_sole_ream_key(u3_noun kev, void* ptr_v)
@@ -4254,7 +4298,7 @@ _cm_sole_ream_key(u3_noun kev, void* ptr_v)
 void
 u3m_sole_ream(void)
 {
-  _cm_walk       wak_u;
+  _cm_walk       wal_u;
   struct timeval bef_u, aft_u;
 #ifndef U3_OS_windows
   struct rusage  ruf_u, rug_u;
@@ -4311,8 +4355,7 @@ u3m_sole_ream(void)
     u3R->dup_p = u3h_new();
   }
 
-  _cm_walk_init(&wak_u);
-  _cm_vis_home();
+  _cm_walk_open(&wal_u);
 
   //  measurement: cells contributed by each root, in walk order; the
   //  rebuild's inserts don't count as additions. cold state is walked
@@ -4339,7 +4382,7 @@ u3m_sole_ream(void)
       _cm_sole_u.cls_y = cls_y[i_w];
       u3h_walk_with(roo_p[i_w],
                     ( 2 == i_w ) ? _cm_sole_ream_key : _cm_sole_ream_kev,
-                    &wak_u);
+                    &wal_u);
       u3e_Meter.hcc_d[i_w] = _cm_sole_u.cel_u.len_d - pre_d;
       pre_d = _cm_sole_u.cel_u.len_d;
     }
@@ -4358,8 +4401,7 @@ u3m_sole_ream(void)
     u3e_Meter.hca_d = add_d;
   }
 
-  _cm_vis_home_done();
-  _cm_walk_done(&wak_u);
+  _cm_walk_shut(&wal_u);
 
   gettimeofday(&aft_u, 0);
 #ifndef U3_OS_windows
@@ -4411,7 +4453,10 @@ _cm_sole_swap(u3_noun* som, u3_noun can)
 **
 **   the home road's walk (_cm_sole_canon()) marks the home cells it
 **   leaves out of the set, for one walk: the home road allocates
-**   between walks.
+**   between walks. its list is in the result yard (u3a_Yard_res): a walk
+**   that marks more than the yard can list keeps marking, and its marks
+**   are dropped by zeroing the bitmap, so it stays linear whatever it
+**   meets (a heap past the set's reach, where no cell can be a member).
 **
 **   the inner walk (u3m_sole_try()) marks junior cells, for one
 **   excursion from the home road. an interrupt can unwind it at any
@@ -4422,14 +4467,13 @@ _cm_sole_swap(u3_noun* som, u3_noun can)
 */
 #define _CM_VIS_LOG  14   //  inner entries, log2, to start
 #define _CM_VIS_MAX  25   //  ... at most (NB: a first guess, to revisit)
-#define _CM_VIS_HOM  256  //  home entries, to start
 
 static struct {
   c3_t     ini_t;   //  bitmaps allocated
   c3_w*    mar_w;   //  home marks
-  c3_w*    hom_w;   //  home list: indices marked
-  c3_d     hol_d;   //    entries
-  c3_d     hos_d;   //    room
+  c3_t     mar_t;   //    some are set: a walk is under way, or one was
+                    //    cut short, or its marks went past their list
+  c3_w     mal_w;   //  each bitmap's length, words
   c3_w*    jar_w;   //  junior marks
   u3a_crib cib_u;   //  junior list: indices marked
   c3_t     cib_t;   //    crib reserved
@@ -4445,8 +4489,7 @@ static struct {
                     //    shared structure isn't linear
 } _cm_vis;
 
-/* _cm_vis_init(): allocate the bitmaps and the home list. home road
-**   only.
+/* _cm_vis_init(): allocate the bitmaps. home road only.
 */
 static void
 _cm_vis_init(void)
@@ -4457,9 +4500,7 @@ _cm_vis_init(void)
 
     _cm_vis.mar_w = c3_calloc(sizeof(c3_w) * len_w);
     _cm_vis.jar_w = c3_calloc(sizeof(c3_w) * len_w);
-    _cm_vis.hos_d = _CM_VIS_HOM;
-    _cm_vis.hom_w = c3_malloc(sizeof(c3_w) * _cm_vis.hos_d);
-    _cm_vis.hol_d = 0;
+    _cm_vis.mal_w = len_w;
     _cm_vis.ini_t = 1;
   }
 }
@@ -4493,36 +4534,85 @@ u3m_yard_size(size_t wok_i, size_t res_i)
 
   u3a_yard_init(&u3a_Yard_wok, wok_i ? wok_i : max_i);
   u3a_yard_init(&u3a_Yard_res, res_i ? res_i : max_i);
+  _cm_wak_ovf_d = 0;
   u3e_Meter.cib_u[2].max_d = _cm_note.max_w;
+  u3e_Meter.cib_u[3].max_d = u3a_Yard_res.max_i / sizeof(c3_w);
+  u3e_Meter.cib_u[4].max_d = u3a_Yard_wok.max_i / sizeof(_cm_frame);
 }
 
-/* _cm_vis_home_clear(): drop the home road's marks.
+/* _cm_walk_zero(): drop every home mark, by zeroing the bitmap.
 */
 static void
-_cm_vis_home_clear(void)
+_cm_walk_zero(void)
 {
-  for ( c3_d i_d = 0; i_d < _cm_vis.hol_d; i_d++ ) {
-    _cm_vis_bit_clr(_cm_vis.mar_w, _cm_vis.hom_w[i_d]);
-  }
-  _cm_vis.hol_d = 0;
+  memset(_cm_vis.mar_w, 0, sizeof(c3_w) * _cm_vis.mal_w);
+  _cm_vis.mar_t = 0;
+  u3e_Meter.cib_u[3].cdp_d++;
 }
 
-/* _cm_vis_home(): the home road's walk starts, with no marks: a walk
-**   cut short by a bail leaves its own.
+/* _cm_walk_open(): walk [wal_u] of the home road starts, with no marks
+**   of its own, and the yards' ends aligned for it.
 */
 static void
-_cm_vis_home(void)
+_cm_walk_open(_cm_walk* wal_u)
 {
   _cm_vis_init();
-  _cm_vis_home_clear();
+
+  //  an earlier walk was cut short
+  //
+  if ( _cm_vis.mar_t ) {
+    _cm_walk_zero();
+  }
+
+  wal_u->wok_i = u3a_yard_here(&u3a_Yard_wok);
+  wal_u->res_i = u3a_yard_here(&u3a_Yard_res);
+  wal_u->lis_w = 0;
+  wal_u->num_w = 0;
+  wal_u->ovf_t = 0;
+
+  //  frames are popped by size: the walk's stack starts where one fits.
+  //  NB: if there's no room to align the yard's end, there's none for a
+  //  frame either
+  //
+  (void)u3a_yard_take(&u3a_Yard_wok, 0, __alignof__(_cm_frame));
+
+  //  measurement: the yard's peak is this walk's until it ends
+  //
+  wal_u->bot_i = u3a_yard_here(&u3a_Yard_wok);
+  wal_u->pek_i = u3a_Yard_wok.pek_i;
+  u3a_Yard_wok.pek_i = wal_u->bot_i;
 }
 
-/* _cm_vis_home_done(): the home road's walk is over: drop its marks.
+/* _cm_walk_shut(): walk [wal_u] is over: drop its marks, and put the
+**   yards' ends back.
 */
 static void
-_cm_vis_home_done(void)
+_cm_walk_shut(_cm_walk* wal_u)
 {
-  _cm_vis_home_clear();
+  //  marks past their list are in the bitmap alone
+  //
+  if ( wal_u->ovf_t ) {
+    _cm_walk_zero();
+  }
+  else if ( wal_u->num_w ) {
+    c3_w i_w;
+
+    _cm_yard_peak(3, wal_u->num_w);
+
+    for ( i_w = 0; i_w < wal_u->num_w; i_w++ ) {
+      _cm_vis_bit_clr(_cm_vis.mar_w, wal_u->lis_w[i_w]);
+    }
+    _cm_vis.mar_t = 0;
+    u3e_Meter.cib_u[3].clg_d++;
+  }
+
+  //  measurement: the walk's deepest stack, in frames
+  //
+  _cm_yard_peak(4, (u3a_Yard_wok.pek_i - wal_u->bot_i) / sizeof(_cm_frame));
+  u3a_Yard_wok.pek_i = c3_max(u3a_Yard_wok.pek_i, wal_u->pek_i);
+
+  u3a_yard_back(&u3a_Yard_wok, wal_u->wok_i);
+  u3a_yard_back(&u3a_Yard_res, wal_u->res_i);
 }
 
 /* _cm_vis_home_has(): the home road's walk marked [som]. most walks
@@ -4531,23 +4621,38 @@ _cm_vis_home_done(void)
 static c3_t
 _cm_vis_home_has(u3_noun som)
 {
-  return _cm_vis.hol_d && _cm_vis_bit(_cm_vis.mar_w, _cm_sole_idx(som));
+  return _cm_vis.mar_t && _cm_vis_bit(_cm_vis.mar_w, _cm_sole_idx(som));
 }
 
-/* _cm_vis_home_put(): the home road's walk marks [som], a cell it
-**   leaves out of the set.
+/* _cm_vis_home_put(): walk [wal_u] of the home road marks [som], a cell
+**   it leaves out of the set. with no room to list it, the walk's list
+**   is given up.
 */
 static void
-_cm_vis_home_put(u3_noun som)
+_cm_vis_home_put(_cm_walk* wal_u, u3_noun som)
 {
   c3_w idx_w = _cm_sole_idx(som);
 
-  if ( _cm_vis.hol_d == _cm_vis.hos_d ) {
-    _cm_vis.hos_d *= 2;
-    _cm_vis.hom_w  = c3_realloc(_cm_vis.hom_w, sizeof(c3_w) * _cm_vis.hos_d);
+  if ( !wal_u->ovf_t ) {
+    c3_w* lot_w = u3a_yard_take(&u3a_Yard_res, sizeof(*lot_w),
+                                __alignof__(c3_w));
+
+    if ( lot_w ) {
+      if ( !wal_u->num_w ) {
+        wal_u->lis_w = lot_w;
+      }
+      wal_u->num_w++;
+      *lot_w = idx_w;
+    }
+    else {
+      u3a_yard_back(&u3a_Yard_res, wal_u->res_i);
+      wal_u->num_w = 0;
+      wal_u->ovf_t = 1;
+      u3e_Meter.cib_u[3].ovf_d++;
+    }
   }
-  _cm_vis.hom_w[_cm_vis.hol_d++] = idx_w;
   _cm_vis_bit_set(_cm_vis.mar_w, idx_w);
+  _cm_vis.mar_t = 1;
 }
 
 /* _cm_vis_clear(): drop the inner walk's marks.
@@ -4619,6 +4724,13 @@ u3m_crib_report(void)
             " entries; %" PRIu64 " nouns since the last report went unshared",
             (c3_d)_cm_note.max_w, _cm_note.ovf_d);
     _cm_note.ovf_d = 0;
+  }
+  if ( _cm_wak_ovf_d ) {
+    u3l_log("crib: the home road's walk reached its depth of %" PRIu64
+            " cells %" PRIu64 " times since the last report; nouns went"
+            " unshared",
+            (c3_d)(u3a_Yard_wok.max_i / sizeof(_cm_frame)), _cm_wak_ovf_d);
+    _cm_wak_ovf_d = 0;
   }
   u3a_lose_report();
 }

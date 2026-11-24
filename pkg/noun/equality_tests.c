@@ -1087,6 +1087,146 @@ _test_sole_refused(void)
 # undef _TR_MUG
 }
 
+/* _walk_list(): a fresh list of [len_w] cells [bas_w+i 0x7a11], none
+**   of them members.
+*/
+static u3_noun
+_walk_list(c3_w len_w, c3_w bas_w)
+{
+  u3_noun lis = u3_nul;
+
+  while ( len_w-- ) {
+    lis = u3nc(u3nc(bas_w + len_w, 0x7a11), lis);
+  }
+  return lis;
+}
+
+/* _test_walk_bound(): the home road's walk has frames for 64 cells. a
+**   list of 1.000 is left as it is from the 65th cell up, every cell
+**   above that stays out of the set, and the 63 heads the walk had a
+**   frame for are members. nothing leaks, and with room the whole list is
+**   canonicalized, and an equal one shares it.
+*/
+static c3_i
+_test_walk_bound(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    len_w = 1000, dep_w = 64, i_w, men_w = 0, hed_w = 0;
+  c3_d    ovf_d = u3e_Meter.cib_u[4].ovf_d;
+  u3_noun lis   = _walk_list(len_w, 0x7b000000);
+  u3_noun r, t;
+
+  u3m_yard_size(dep_w * sizeof(u3_noun), 0);
+
+  //  twice: the second walk meets the same bound
+  //
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    r = u3m_sole_try(u3k(lis));
+
+    if ( r != lis ) {
+      fprintf(stderr, "test: walk bound: replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+  }
+
+  for ( t = lis; u3_nul != t; t = u3t(t) ) {
+    men_w += u3a_is_sole(t);
+    hed_w += u3a_is_sole(u3h(t));
+  }
+
+  if ( men_w || ((dep_w - 1) != hed_w) || (ovf_d == u3e_Meter.cib_u[4].ovf_d) ) {
+    fprintf(stderr, "test: walk bound: %" PRIc3_w " list cells and %" PRIc3_w
+                    " heads are members, the bound met %" PRIu64 " times\r\n",
+            men_w, hed_w, u3e_Meter.cib_u[4].ovf_d - ovf_d);
+    ret_i = 0;
+  }
+  u3m_crib_report();
+
+  _GRAB_EXACT("walk bound", lis);
+
+  u3m_yard_size(0, 0);
+  r = u3m_sole_try(u3k(lis));
+
+  for ( men_w = 0, t = lis; u3_nul != t; t = u3t(t) ) {
+    men_w += u3a_is_sole(t);
+  }
+  if ( (r != lis) || (len_w != men_w) ) {
+    fprintf(stderr, "test: walk bound: with room, %" PRIc3_w " of %" PRIc3_w
+                    " cells are members\r\n", men_w, len_w);
+    ret_i = 0;
+  }
+  u3z(r);
+
+  r = u3m_sole_try(_walk_list(len_w, 0x7b000000));
+  if ( r != lis ) {
+    fprintf(stderr, "test: walk bound: an equal list isn't shared\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  _GRAB_EXACT("walk bound: with room", lis);
+  u3z(lis);
+  return ret_i;
+}
+
+/* _test_walk_scope(): a walk runs inside another user of its yards,
+**   whose bytes (taken at odd lengths) and ends it leaves alone.
+*/
+static c3_i
+_test_walk_scope(void)
+{
+  c3_i      ret_i = 1;
+  u3a_yard* wok_u = &u3a_Yard_wok;
+  u3a_yard* res_u = &u3a_Yard_res;
+  size_t    wok_i = wok_u->use_i, res_i = res_u->use_i;
+  c3_y*     wok_y = u3a_yard_take(wok_u, 1001, 1);
+  c3_y*     res_y = u3a_yard_take(res_u, 333, 1);
+  size_t    wom_i = wok_u->use_i, rem_i = res_u->use_i, i_i;
+  u3_noun   lis   = _walk_list(500, 0x7c000000);
+  u3_noun   r;
+
+  if ( !wok_y || !res_y ) {
+    fprintf(stderr, "test: walk scope: no room\r\n");
+    return 0;
+  }
+  memset(wok_y, 0xa5, 1001);
+  memset(res_y, 0x5a, 333);
+
+  //  a walk with marks, too (see _test_sole_refused())
+  //
+  r = u3m_sole_try(u3k(lis));
+  if ( (r != lis) || !u3a_is_sole(lis) ) {
+    fprintf(stderr, "test: walk scope: not canonicalized\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  if ( !_test_sole_refused() ) {
+    fprintf(stderr, "test: walk scope: sole refused\r\n");
+    ret_i = 0;
+  }
+
+  if ( (wom_i != wok_u->use_i) || (rem_i != res_u->use_i) ) {
+    fprintf(stderr, "test: walk scope: an end moved\r\n");
+    ret_i = 0;
+  }
+  for ( i_i = 0; i_i < 1001; i_i++ ) {
+    if ( 0xa5 != wok_y[i_i] ) { ret_i = 0; }
+  }
+  for ( i_i = 0; i_i < 333; i_i++ ) {
+    if ( 0x5a != res_y[i_i] ) { ret_i = 0; }
+  }
+  if ( !ret_i ) {
+    fprintf(stderr, "test: walk scope: the enclosing user's memory changed\r\n");
+  }
+
+  wok_u->use_i = wok_i;
+  res_u->use_i = res_i;
+  u3z(lis);
+  return ret_i;
+}
+
 /* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
 **   in the current setting. with 2^dep_w paths, a comparison that
 **   re-compared every path would never finish.
@@ -2003,6 +2143,30 @@ _test_equality(void)
 
   if ( !_test_sole_refused() ) {
     fprintf(stderr, "test: equality: sole refused: failed\r\n");
+    ret_i = 0;
+  }
+
+  //  again with room to list 16 of the walk's 201 marks: the rest are
+  //  kept in the bitmap alone, and the walk is still linear
+  //
+  {
+    c3_d cdp_d = u3e_Meter.cib_u[3].cdp_d;
+
+    u3m_yard_size(0, 16 * sizeof(c3_w));
+    if ( !_test_sole_refused() || (cdp_d == u3e_Meter.cib_u[3].cdp_d) ) {
+      fprintf(stderr, "test: equality: sole refused, marks past their list: failed\r\n");
+      ret_i = 0;
+    }
+    u3m_yard_size(0, 0);
+  }
+
+  if ( !_test_walk_bound() ) {
+    fprintf(stderr, "test: equality: walk bound: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_walk_scope() ) {
+    fprintf(stderr, "test: equality: walk scope: failed\r\n");
     ret_i = 0;
   }
 

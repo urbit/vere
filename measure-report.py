@@ -85,8 +85,12 @@ Log lines (one snapshot interval ends at each S line):
                                             drain, and the set's size then
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
     <clears-logged> <clears-dropped> <at-ceiling>
-                                            each crib's use in the interval: the
-                                            visited set and the home lose list
+                                            use in the interval. cribs, in entries:
+                                            visited-set, lose-list. the yards' users, in
+                                            entries, with a ceiling, a peak and fills but
+                                            no capacity of their own: notes (the exit
+                                            home's), home-marks and walk-frames (the home
+                                            walk's)
 
 W, X, I, Z and N lines of other widths (from prototype builds) are
 skipped; measure-piers/scripts/measure-report-proto.py reads them.

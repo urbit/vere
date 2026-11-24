@@ -408,16 +408,16 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 static void
 _ce_meter_zero(void)
 {
-  c3_d cap_d[3], max_d[3];
+  c3_d cap_d[5], max_d[5];
   c3_w i_w;
 
-  for ( i_w = 0; i_w < 3; i_w++ ) {
+  for ( i_w = 0; i_w < 5; i_w++ ) {
     cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
     max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
   }
   memset(&u3e_Meter, 0, sizeof(u3e_Meter));
 
-  for ( i_w = 0; i_w < 3; i_w++ ) {
+  for ( i_w = 0; i_w < 5; i_w++ ) {
     u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
@@ -619,12 +619,13 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.cus_d[0], u3e_Meter.cus_d[1],
                    u3e_Meter.cam_d[0], u3e_Meter.cam_d[1]);
 
-    //  cribs, one line each
+    //  cribs and the yards' users, one line each
     //
     {
-      static const c3_c* nam_c[3] = { "visited-set", "lose-list", "notes" };
+      static const c3_c* nam_c[5] = { "visited-set", "lose-list", "notes",
+                                      "home-marks", "walk-frames" };
 
-      for ( i_w = 0; i_w < 3; i_w++ ) {
+      for ( i_w = 0; i_w < 5; i_w++ ) {
         if ( u3e_Meter.cib_u[i_w].max_d ) {
           fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64

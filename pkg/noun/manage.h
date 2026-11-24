@@ -10,6 +10,7 @@
 #include "types.h"
 #include "version.h"
 #include "rsignal.h"
+#include "crib.h"
 
 extern c3_h u3m_Ford_fresh_road_depth_h;
 

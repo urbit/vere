@@ -236,7 +236,8 @@
                              //  its drain; the set's size as it began
 
           //  cribs (see crib.h): the visited set [0], the home lose list
-          //  [1]; and the exit home's notes [2], in the result yard, which
+          //  [1]; the yards' users, in entries: the exit home's notes
+          //  [2], the home walk's marks [3] and its frames [4], which
           //  have a ceiling, a peak and fills, but no capacity of their
           //  own. capacity and ceiling are states, kept across intervals;
           //  the rest is use in the interval
@@ -251,7 +252,7 @@
             c3_d clg_d;      //  clears through a log of slots (sets)
             c3_d cdp_d;      //  clears by zeroing the table (sets)
             c3_d ovf_d;      //  fills or drops at the ceiling
-          } cib_u[3];
+          } cib_u[5];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
