@@ -597,6 +597,62 @@ _test_take_fail(void)
   return ret_i;
 }
 
+/* _bare_bail(): under the trap of the u3m_soft_top() that runs it, enter
+**   [dep] roads by u3m_hate() alone, put a cell on each, and bail [how]
+**   on the last. [arg] is [dep how].
+*/
+static u3_noun
+_bare_bail(u3_noun arg)
+{
+  c3_w dep_w = u3r_word(0, u3h(arg));
+  c3_m how_m = u3t(arg);
+
+  u3z(arg);
+
+  while ( dep_w-- ) {
+    u3m_hate(0);
+    (void)u3nc(1, 2);
+  }
+
+  u3m_bail(how_m);
+  return u3_none;
+}
+
+/* _test_bare_bail(): a bail on a road entered without a trap goes back
+**   to the road that entered it, and bails again there, one road at a
+**   time up to the trap: the trap gets the ball the bail made, and the
+**   roads it unwinds give back what they held.
+*/
+static c3_i
+_test_bare_bail(void)
+{
+  c3_i ret_i = 1;
+  c3_w dep_w;
+
+  for ( dep_w = 1; dep_w <= 3; dep_w++ ) {
+    u3_noun gon = u3m_soft_top(0, (1 << 18), _bare_bail,
+                               u3nc(dep_w, c3__exit), 0);
+
+    if ( (2 != u3h(gon)) || (&(u3H->rod_u) != u3R) ) {
+      fprintf(stderr, "bare bail: exit at %d deep\r\n", (c3_i)dep_w);
+      ret_i = 0;
+    }
+    u3z(gon);
+
+    gon = u3m_soft_top(0, (1 << 18), _bare_bail, u3nc(dep_w, c3__meme), 0);
+
+    if (  (3 != u3h(gon)) || (c3__meme != u3h(u3t(gon)))
+       || (&(u3H->rod_u) != u3R) )
+    {
+      fprintf(stderr, "bare bail: meme at %d deep\r\n", (c3_i)dep_w);
+      ret_i = 0;
+    }
+    u3z(gon);
+  }
+
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -642,6 +698,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test edit road: ok\r\n");
+
+  if ( !_test_bare_bail() ) {
+    fprintf(stderr, "test bare bail: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test bare bail: ok\r\n");
 
   //  GC, failing on a leak
   //

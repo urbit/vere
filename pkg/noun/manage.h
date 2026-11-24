@@ -115,7 +115,10 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
       */
 #       define u3m_road_min  16
 
-      /* u3m_hate(): new, integrated leap mechanism (enter).
+      /* u3m_hate(): new, integrated leap mechanism (enter). until the
+      **             caller sets a trap on the new road, a bail there
+      **             goes back to the road that entered it, and bails
+      **             again there (see u3m_bail()).
       */
         void
         u3m_hate(c3_w pad_w);
