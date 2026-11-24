@@ -52,7 +52,10 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 7}
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 18}
+
+#  a Z line from before the pass was metered
+Z_OLD = 7
 
 
 def parse(lines):
@@ -104,6 +107,8 @@ def parse(lines):
             #  take only lines of this shape (other widths are from
             #  prototype builds: see measure-piers/scripts/)
             v = ints(p[1:])
+            if v is not None and t == "Z" and len(v) == Z_OLD:
+                v = list(v) + [0] * (WIDTH[t] - Z_OLD)
             if v is not None and len(v) == WIDTH[t]:
                 cur[t] = tuple(v)
         elif t == "N" and len(p) == 11:
@@ -378,6 +383,10 @@ METRICS = [
      lambda s, v: crib_peak(v, "notes")),
     ("N: home walk's deepest stack (frames)", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "walk-frames")),
+    ("N: scratch yard peak (bytes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "yard-scratch")),
+    ("N: result yard peak (bytes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "yard-result")),
     ("N: fills or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 

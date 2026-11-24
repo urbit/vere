@@ -738,6 +738,21 @@ u3a_defer_close(void)
   }
 }
 
+/* u3a_lose_ends(): see allocate.h.
+*/
+c3_t
+u3a_lose_ends(u3_noun dog)
+{
+  u3a_noun* box_u = u3a_to_ptr(dog);
+
+  if ( 1 != box_u->use_w ) {
+    return 0;
+  }
+  return !(  _ca_defer_on()
+          && _ca_defer_seen(dog)
+          && !_ca_pend_is_end(_ca_pend_get(&_ca_defer_u.pen_u, dog)) );
+}
+
 /* _me_gain_use(): increment use count.
 */
 static void

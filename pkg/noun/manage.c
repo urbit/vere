@@ -1684,7 +1684,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     //  takes noted is canonicalized in place, losing what that replaces
     //  as any walk of the home road does
     //
-    u3e_Phase = u3e_pha_take_dup;
+    u3e_Phase = u3e_pha_mend;
     u3m_sole_mend();
   }
   u3e_Phase = u3e_pha_take_dup;
@@ -4020,6 +4020,12 @@ static struct {
   u3_noun* lot;       //  the exit's notes, in the result yard
   c3_w     len_w;     //    how many
   size_t   end_i;     //    the yard's end before the first
+  //  measurement (U3_MEASURE) only
+  //
+  c3_w     end_w[4];  //  the notes' length after each take's last: jet
+                      //  state, bytecode, persistent memo, ford memo
+  c3_t     tal_t;     //  the pass is under way, and tallied
+  c3_w     cls_w;     //    for the take that noted its noun, as end_w[]
 } _cm_note = { .max_w = _CM_NOTE_MAX };
 
 /* _cm_yard_peak(): crib meter [idx_w] has held [num_i] entries.
@@ -4030,6 +4036,40 @@ _cm_yard_peak(c3_w idx_w, size_t num_i)
   if ( num_i > u3e_Meter.cib_u[idx_w].pek_d ) {
     u3e_Meter.cib_u[idx_w].pek_d = num_i;
   }
+}
+
+/* _cm_yard_meas(): measurement: read [yar_u]'s meters into crib
+**   [idx_w]'s, in bytes, and zero them.
+*/
+static void
+_cm_yard_meas(u3a_yard* yar_u, c3_w idx_w)
+{
+  c3_d cap_d = yar_u->com_i;
+  c3_d top_d = c3_max(cap_d, (c3_d)yar_u->pek_i);
+
+  _cm_yard_peak(idx_w, yar_u->pek_i);
+  yar_u->pek_i = yar_u->use_i;
+
+  u3e_Meter.cib_u[idx_w].gro_d += yar_u->gro_w;
+  u3e_Meter.cib_u[idx_w].shr_d += yar_u->shr_w;
+  yar_u->gro_w = yar_u->shr_w = 0;
+
+  //  NB: a burst is given back as its user ends, so the largest
+  //  capacity is no less than the peak
+  //
+  u3e_Meter.cib_u[idx_w].cap_d = cap_d;
+  if ( top_d > u3e_Meter.cib_u[idx_w].top_d ) {
+    u3e_Meter.cib_u[idx_w].top_d = top_d;
+  }
+}
+
+/* u3m_yard_meas(): see manage.h.
+*/
+void
+u3m_yard_meas(void)
+{
+  _cm_yard_meas(&u3a_Yard_wok, 5);
+  _cm_yard_meas(&u3a_Yard_res, 6);
 }
 
 /* _cm_sole_reset(): an event failed, perhaps within a walk: none is
@@ -4046,12 +4086,34 @@ _cm_sole_reset(void)
   //
   _cm_note.lot   = 0;
   _cm_note.len_w = 0;
+  _cm_note.tal_t = 0;
+  memset(_cm_note.end_w, 0, sizeof(_cm_note.end_w));
 }
 
 /* visited marks (below), for the home road's walk.
 */
 static c3_t _cm_vis_home_has(u3_noun som);
 static void _cm_vis_home_put(_cm_walk* wal_u, u3_noun som);
+
+/* _cm_mend_tally(): measurement: the pass after the takes is about to
+**   repoint a slot that holds [old].
+**
+**   [old] has an equal member, so if it's a cell its children are
+**   members that the other holds too: only [old] itself can be freed.
+**   chunks round up, so the words are a little under what's freed.
+*/
+static __attribute__((noinline, cold)) void
+_cm_mend_tally(u3_noun old)
+{
+  u3e_Meter.cms_d[_cm_note.cls_w]++;
+
+  if ( (c3n == u3a_is_cat(old)) && u3a_lose_ends(old) ) {
+    u3e_Meter.cmw_d[_cm_note.cls_w] +=
+      ( c3y == u3a_is_cell(old) )
+      ? c3_wiseof(u3a_cell)
+      : c3_wiseof(u3a_atom) + ((u3a_atom*)u3a_to_ptr(old))->len_w;
+  }
+}
 
 /* _cm_sole_xchange(): point [*som] at [can], if it doesn't already.
 */
@@ -4061,6 +4123,7 @@ _cm_sole_xchange(u3_noun can, u3_noun* som)
   u3_noun old = *som;
 
   if ( old != can ) {
+    if ( c3_unlikely(_cm_note.tal_t) ) _cm_mend_tally(old);
     *som = u3k(can);
     u3z(old);
   }
@@ -4225,6 +4288,19 @@ u3m_sole_note(u3_noun som)
   *lot = som;
   _cm_note.len_w++;
   u3e_Meter.ctr_d++;
+
+  //  measurement: the takes run in the order of [end_w], so each one's
+  //  notes are together. a note from anywhere else (a test) counts
+  //  with the first or the last
+  //
+  {
+    c3_y pha_y = u3e_Phase;
+    c3_w cls_w = ( pha_y <= u3e_pha_take_jet ) ? 0
+               : ( pha_y >= u3e_pha_take_for ) ? 3
+               : (c3_w)(pha_y - u3e_pha_take_jet);
+
+    _cm_note.end_w[cls_w] = _cm_note.len_w;
+  }
 }
 
 /* u3m_sole_mend(): see manage.h.
@@ -4241,17 +4317,39 @@ u3m_sole_mend(void)
   u3_noun* som   = _cm_note.lot;
   size_t   len_i = _cm_note.len_w;
   size_t   i_i;
+  c3_d     bef_d = 0;
 
   u3_assert( &(u3H->rod_u) == u3R );
   u3_assert( !u3a_Take_open_t );
 
   if ( !len_i ) return;
 
+  if ( u3e_Measuring ) {
+    bef_d = u3e_measure_us();
+    _cm_note.tal_t = 1;
+    _cm_note.cls_w = 0;
+  }
+
   //  each walk lists its marks after the notes
   //
   for ( i_i = 0; i_i < len_i; i_i++ ) {
+    while ( (_cm_note.cls_w < 3) && (i_i >= _cm_note.end_w[_cm_note.cls_w]) ) {
+      _cm_note.cls_w++;
+    }
     _cm_sole_canon_home(som[i_i], 2);
   }
+
+  if ( _cm_note.tal_t ) {
+    c3_d dif_d = u3e_measure_us() - bef_d;
+
+    _cm_note.tal_t = 0;
+    u3e_Meter.cmn_d++;
+    u3e_Meter.cmu_d[0] += dif_d;
+    if ( dif_d > u3e_Meter.cmu_d[1] ) {
+      u3e_Meter.cmu_d[1] = dif_d;
+    }
+  }
+  memset(_cm_note.end_w, 0, sizeof(_cm_note.end_w));
   _cm_note.lot   = 0;
   _cm_note.len_w = 0;
   u3a_yard_back(&u3a_Yard_res, _cm_note.end_i);
@@ -4538,6 +4636,10 @@ u3m_yard_size(size_t wok_i, size_t res_i)
   u3e_Meter.cib_u[2].max_d = _cm_note.max_w;
   u3e_Meter.cib_u[3].max_d = u3a_Yard_res.max_i / sizeof(c3_w);
   u3e_Meter.cib_u[4].max_d = u3a_Yard_wok.max_i / sizeof(_cm_frame);
+  u3e_Meter.cib_u[5].cap_d = u3e_Meter.cib_u[5].top_d = 0;
+  u3e_Meter.cib_u[6].cap_d = u3e_Meter.cib_u[6].top_d = 0;
+  u3e_Meter.cib_u[5].max_d = u3a_Yard_wok.max_i;
+  u3e_Meter.cib_u[6].max_d = u3a_Yard_res.max_i;
 }
 
 /* _cm_walk_zero(): drop every home mark, by zeroing the bitmap.

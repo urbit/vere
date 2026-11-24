@@ -992,6 +992,14 @@ u3a_post_info(u3_post);
           void
           u3a_defer_close(void);
 
+        /* u3a_lose_ends(): yes if losing [dog], an indirect noun of
+        **                  the home road, on the home road now would
+        **                  free it: its count is 1, and no gain on it
+        **                  is deferred. for measurement.
+        */
+          c3_t
+          u3a_lose_ends(u3_noun dog);
+
         /* u3a_luse(): check refcount sanity.
         */
           void

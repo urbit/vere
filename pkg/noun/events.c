@@ -168,7 +168,8 @@ static const c3_c* _ce_pha_names[u3e_pha_max] = {
   "roc-lose", "roc-misc", "mug-roc", "feck", "etch", "jam", "io-free",
   "post", "save", "task", "pack",
   "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
-  "trim-per", "trim-for"
+  "trim-per", "trim-for",
+  "mend"
 };
 
 static const c3_c* _ce_kin_names[_ce_kin_max] = {
@@ -408,16 +409,16 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 static void
 _ce_meter_zero(void)
 {
-  c3_d cap_d[5], max_d[5];
+  c3_d cap_d[7], max_d[7];
   c3_w i_w;
 
-  for ( i_w = 0; i_w < 5; i_w++ ) {
+  for ( i_w = 0; i_w < 7; i_w++ ) {
     cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
     max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
   }
   memset(&u3e_Meter, 0, sizeof(u3e_Meter));
 
-  for ( i_w = 0; i_w < 5; i_w++ ) {
+  for ( i_w = 0; i_w < 7; i_w++ ) {
     u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
@@ -611,21 +612,35 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.eij_d, u3e_Meter.eiv_d,
                    u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
 
-    //  exits to home: the canonicalizing take, time
+    //  exits to home: the canonicalizing take, time; then the pass
+    //  after the takes: exits with one, its time in all and the most
+    //  at one exit, and slots repointed and words freed by the take
+    //  that noted the noun
     //
     fprintf(fil_u, "Z %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64,
                    u3e_Meter.ctk_d, u3e_Meter.ctf_d, u3e_Meter.ctr_d,
                    u3e_Meter.cus_d[0], u3e_Meter.cus_d[1],
-                   u3e_Meter.cam_d[0], u3e_Meter.cam_d[1]);
+                   u3e_Meter.cam_d[0], u3e_Meter.cam_d[1],
+                   u3e_Meter.cmn_d, u3e_Meter.cmu_d[0], u3e_Meter.cmu_d[1]);
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cms_d[i_w]);
+    }
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cmw_d[i_w]);
+    }
+    fputc('\n', fil_u);
 
-    //  cribs and the yards' users, one line each
+    //  cribs, the yards' users and the yards, one line each
     //
+    u3m_yard_meas();
     {
-      static const c3_c* nam_c[5] = { "visited-set", "lose-list", "notes",
-                                      "home-marks", "walk-frames" };
+      static const c3_c* nam_c[7] = { "visited-set", "lose-list", "notes",
+                                      "home-marks", "walk-frames",
+                                      "yard-scratch", "yard-result" };
 
-      for ( i_w = 0; i_w < 5; i_w++ ) {
+      for ( i_w = 0; i_w < 7; i_w++ ) {
         if ( u3e_Meter.cib_u[i_w].max_d ) {
           fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64

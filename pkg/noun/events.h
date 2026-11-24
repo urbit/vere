@@ -113,7 +113,9 @@
           u3e_pha_rec_dup   = 32,  //  u3m_reclaim: hash-consing prune
           u3e_pha_trim_per  = 33,  //  _mars_post: persistent memo trim
           u3e_pha_trim_for  = 34,  //  _mars_post: ford memo trim
-          u3e_pha_max       = 35
+          u3e_pha_mend      = 35,  //  u3m_love: the pass after an exit
+                                   //  home's takes (u3m_sole_mend())
+          u3e_pha_max       = 36
         } u3e_phase;
 
       /* u3e_meter: counters reported at each snapshot.
@@ -235,11 +237,23 @@
           c3_d cam_d[2];     //  most members added at one exit, before
                              //  its drain; the set's size as it began
 
+          //  the pass after an exit home's takes (u3m_sole_mend()); by
+          //  the take that noted the noun: jet state, bytecode,
+          //  persistent memo, ford memo. counted while measuring
+          //
+          c3_d cmn_d;        //  exits with a pass
+          c3_d cmu_d[2];     //  time, microseconds: in all (part of
+                             //  cus_d[0]), the most at one exit
+          c3_d cms_d[4];     //  slots repointed at a member
+          c3_d cmw_d[4];     //  words in the nouns that freed at once
+                             //  (see u3a_lose_ends())
+
           //  cribs (see crib.h): the visited set [0], the home lose list
           //  [1]; the yards' users, in entries: the exit home's notes
           //  [2], the home walk's marks [3] and its frames [4], which
           //  have a ceiling, a peak and fills, but no capacity of their
-          //  own. capacity and ceiling are states, kept across intervals;
+          //  own; and the yards, in bytes: scratch [5] and result [6].
+          //  capacity and ceiling are states, kept across intervals;
           //  the rest is use in the interval
           //
           struct {
@@ -252,7 +266,7 @@
             c3_d clg_d;      //  clears through a log of slots (sets)
             c3_d cdp_d;      //  clears by zeroing the table (sets)
             c3_d ovf_d;      //  fills or drops at the ceiling
-          } cib_u[5];
+          } cib_u[7];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;

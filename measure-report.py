@@ -76,13 +76,22 @@ Log lines (one snapshot interval ends at each S line):
                                             road, and on inner roads cells walked,
                                             visited-set hits, home-set probes and hits
   Z <looked-up> <found> <noted> <us-takes> <us-drain> <most-added>
-    <members-then>
+    <members-then> <passes> <us-pass> <us-pass-most>
+    <slots-jet> <slots-byc> <slots-per> <slots-for>
+    <words-jet> <words-byc> <words-per> <words-for>
                                             exits to home: junior nouns looked up by the
                                             canonicalizing take and those found (not
                                             copied); taken nouns noted and canonicalized
                                             after the takes; microseconds in each step; the
                                             most members added at one exit, before its
-                                            drain, and the set's size then
+                                            drain, and the set's size then. the pass after
+                                            the takes: exits with one, its microseconds
+                                            (part of us-takes) and the most at one exit;
+                                            then, by the take that noted the noun (jet
+                                            state, bytecode, persistent memo, ford memo),
+                                            slots repointed at a member, and words in the
+                                            nouns that freed at once. a Z line without
+                                            the pass's fields reads as zeros there
   N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
     <clears-logged> <clears-dropped> <at-ceiling>
                                             use in the interval. cribs, in entries:
@@ -90,7 +99,8 @@ Log lines (one snapshot interval ends at each S line):
                                             entries, with a ceiling, a peak and fills but
                                             no capacity of their own: notes (the exit
                                             home's), home-marks and walk-frames (the home
-                                            walk's)
+                                            walk's). the yards, in bytes: yard-scratch,
+                                            yard-result
 
 W, X, I, Z and N lines of other widths (from prototype builds) are
 skipped; measure-piers/scripts/measure-report-proto.py reads them.
@@ -115,7 +125,10 @@ from collections import defaultdict
 
 
 #  fields in each hash-consing line (see the legend above)
-WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 7}
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 18}
+
+#  a Z line from before the pass was metered
+Z_OLD = 7
 
 
 def pct(a, b):
@@ -252,6 +265,8 @@ def parse(path):
             elif t in WIDTH and cur is not None:
                 #  take only lines of this shape
                 v = line.split()[1:]
+                if t == "Z" and len(v) == Z_OLD:
+                    v += ["0"] * (WIDTH[t] - Z_OLD)
                 if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
                     cur[t] = tuple(int(x) for x in v)
             elif t == "N" and cur is not None:
@@ -673,6 +688,16 @@ def main():
               f"total {(z[3] + z[4]) / 1000:.1f}")
         print(f"  most members added at one exit, before its drain: {top[5]} "
               f"(set then {top[6]}, {pct(top[5], top[6])})")
+        m = [sum(i["Z"][j] for i in zis) for j in range(7, 18)]
+        if any(m):
+            most = max(i["Z"][9] for i in zis)
+            print("\n== the pass after an exit home's takes (u3m_sole_mend) ==")
+            print(f"  exits with a pass: {m[0]}   time, ms: {m[1] / 1000:.1f} "
+                  f"(of the takes' {z[3] / 1000:.1f}), most at one exit {most / 1000:.1f}")
+            print(f"  {'noted by the take of':<22}{'slots repointed':>17}{'words freed at once':>21}")
+            for k, n in enumerate(("jet state", "bytecode", "persistent memo", "ford memo")):
+                print(f"  {n:<22}{m[3 + k]:>17}{m[7 + k]:>21}")
+            print(f"  {'all':<22}{sum(m[3:7]):>17}{sum(m[7:11]):>21}")
     names = sorted({n for i in intervals for n in i["N"]})
     if names:
         print("\n== cribs ==")

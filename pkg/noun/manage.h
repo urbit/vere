@@ -295,6 +295,12 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_yard_size(size_t wok_i, size_t res_i);
 
+      /* u3m_yard_meas(): measurement: read the yards' meters into
+      **                  u3e_Meter, before it's reported.
+      */
+        void
+        u3m_yard_meas(void);
+
       /* u3m_sole_visit_cap(): the visited set's capacity (tests).
       */
         c3_d
