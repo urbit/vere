@@ -456,7 +456,7 @@
       **   listed on the road, so a bail or signal that skips done leaks
       **   nothing: the road's fall releases it.  On the home road done
       **   always runs.  The road that opened a view reads it and calls
-      **   done, and done asserts it.  A view is never copied: a direct
+      **   done; copy, words, and done assert it.  A view is never copied: a direct
       **   atom's bytes point into the view itself.  A zeroed view is
       **   empty, and done on it does nothing.
       */
@@ -503,6 +503,10 @@
         {
           c3_z got_z = 0;
 
+          //  only the opening road reads: past its fall the mapping is gone
+          //
+          u3_assert( u3R == vue_u->rod_u );
+
           if ( off_d < vue_u->byt_d ) {
             c3_d rem_d = vue_u->byt_d - off_d;
             got_z = ( (c3_d)len_z < rem_d ) ? len_z : (c3_z)rem_d;
@@ -520,6 +524,10 @@
         u3r_view_words(u3r_view* vue_u, c3_w* len_w, c3_o bal_o)
         {
           c3_d wor_d = (vue_u->bit_d + u3a_word_bits - 1) >> u3a_word_bits_log;
+
+          //  only the opening road reads
+          //
+          u3_assert( u3R == vue_u->rod_u );
 
           if ( wor_d > c3_w_max ) {
             if ( c3y == bal_o ) {
