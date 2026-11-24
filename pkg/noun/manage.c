@@ -313,6 +313,11 @@ _cm_signal_reset(void)
   u3a_Take_home_t = 0;
   u3a_Take_open_t = 0;
 
+  //  nothing holds the yards' memory across an event (see crib.h)
+  //
+  u3a_yard_back(&u3a_Yard_wok, 0);
+  u3a_yard_back(&u3a_Yard_res, 0);
+
   //  likewise a walk of the home road's hashcons set
   //
   _cm_sole_reset();
@@ -1196,6 +1201,13 @@ u3m_leap(c3_w pad_w)
   if ( &(u3H->rod_u) == u3R ) {
     u3a_lose_leap();
     _cm_vis_leap();
+
+    //  nothing holds the yards' memory across an excursion (see
+    //  crib.h): a user that left some has a bug, and it goes
+    //
+    c3_dessert( !u3a_Yard_wok.use_i && !u3a_Yard_res.use_i );
+    u3a_yard_back(&u3a_Yard_wok, 0);
+    u3a_yard_back(&u3a_Yard_res, 0);
   }
 
   //  push a new road struct onto the stack
@@ -2999,6 +3011,10 @@ u3m_init(size_t len_i)
     u3C.wor_i = len_i >> u3a_word_bytes_shift;
     u3l_log("loom: mapped %zuMB", len_i >> 20);
   }
+
+  //  the yards are sized from the loom
+  //
+  u3m_yard_size(0, 0);
 }
 
 extern void u3je_secp_stop(void);
@@ -4383,6 +4399,19 @@ static inline void
 _cm_vis_bit_clr(c3_w* map_w, c3_w idx_w)
 {
   map_w[idx_w / u3a_word_bits] &= ~((c3_w)1 << (idx_w % u3a_word_bits));
+}
+
+/* u3m_yard_size(): see manage.h.
+*/
+void
+u3m_yard_size(size_t wok_i, size_t res_i)
+{
+  size_t max_i = (u3C.wor_i / 8) * sizeof(c3_w);
+
+  u3_assert( !u3a_Yard_wok.use_i && !u3a_Yard_res.use_i );
+
+  u3a_yard_init(&u3a_Yard_wok, wok_i ? wok_i : max_i);
+  u3a_yard_init(&u3a_Yard_res, res_i ? res_i : max_i);
 }
 
 /* _cm_vis_home_clear(): drop the home road's marks.

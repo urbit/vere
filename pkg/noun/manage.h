@@ -285,6 +285,15 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_crib_report(void);
 
+      /* u3m_yard_size(): reserve the runtime's yards (see crib.h):
+      **                  [wok_i] bytes of scratch and [res_i] for results
+      **                  (0 for the usual eighth of the loom). from
+      **                  u3m_init(); again from tests, on the home road,
+      **                  with both yards empty.
+      */
+        void
+        u3m_yard_size(size_t wok_i, size_t res_i);
+
       /* u3m_sole_visit_cap(): the visited set's capacity (tests).
       */
         c3_d

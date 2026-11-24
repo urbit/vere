@@ -1149,6 +1149,114 @@ _test_crib(void)
 {
   c3_i ret_i = 1;
 
+  //  a yard takes up to its reservation and no further, gives back to
+  //  a saved end keeping what it committed, and back at its start gives
+  //  back what it committed past its floor
+  //
+  {
+    u3a_yard yar_u = {0};
+    size_t   max_i = 1 << 22, sav_i;
+    c3_y*    one_y;
+    c3_y*    two_y;
+
+    u3a_yard_init(&yar_u, max_i);
+    one_y = u3a_yard_take(&yar_u, 24, 1);
+    sav_i = yar_u.use_i;
+    two_y = u3a_yard_take(&yar_u, max_i - 24, 1);
+
+    if (  !one_y || (two_y != (one_y + 24)) || u3a_yard_take(&yar_u, 1, 1)
+       || (max_i != yar_u.use_i) || (max_i != yar_u.com_i) )
+    {
+      fprintf(stderr, "test: crib: yard: take\r\n");
+      ret_i = 0;
+    }
+    else {
+      memset(one_y, 0x11, 24);
+      memset(two_y, 0x22, max_i - 24);
+    }
+
+    u3a_yard_back(&yar_u, sav_i);
+    if ( (yar_u.com_i != max_i) || yar_u.shr_w || (0x11 != one_y[23]) ) {
+      fprintf(stderr, "test: crib: yard: back to a saved end\r\n");
+      ret_i = 0;
+    }
+    u3a_yard_give(&yar_u, sav_i);
+    if ( yar_u.use_i || (yar_u.com_i != max_i) ) {
+      fprintf(stderr, "test: crib: yard: give\r\n");
+      ret_i = 0;
+    }
+    u3a_yard_back(&yar_u, 0);
+    if ( (yar_u.com_i != yar_u.min_i) || (1 != yar_u.shr_w) ) {
+      fprintf(stderr, "test: crib: yard: back to the start (%zu committed)\r\n",
+              yar_u.com_i);
+      ret_i = 0;
+    }
+    if ( u3a_yard_take(&yar_u, 24, 1) != one_y ) {
+      fprintf(stderr, "test: crib: yard: take after the drop\r\n");
+      ret_i = 0;
+    }
+    if (  (u3a_yard_take(&yar_u, max_i - 24, 1) != two_y)
+       || u3a_yard_take(&yar_u, 8, 1) )
+    {
+      fprintf(stderr, "test: crib: yard: take again\r\n");
+      ret_i = 0;
+    }
+    else {
+      memset(two_y, 0x33, max_i - 24);
+    }
+    u3a_yard_init(&yar_u, 100);
+    if (  (96 != yar_u.max_i) || !u3a_yard_take(&yar_u, 96, 1)
+       || u3a_yard_take(&yar_u, 1, 1) )
+    {
+      fprintf(stderr, "test: crib: yard: small\r\n");
+      ret_i = 0;
+    }
+
+    //  aligned takes: the end moves up to the alignment first, takes of
+    //  one size and alignment are contiguous, a zero-length take aligns
+    //  the end alone, and a take that doesn't fit takes nothing, pad
+    //  included
+    //
+    {
+      c3_y *odd_y, *one_y, *two_y, *nul_y;
+      size_t end_i;
+
+      u3a_yard_init(&yar_u, 64);
+      odd_y = u3a_yard_take(&yar_u, 3, 1);
+      one_y = u3a_yard_take(&yar_u, 8, 8);
+      two_y = u3a_yard_take(&yar_u, 8, 8);
+
+      if (  !odd_y || (one_y != (odd_y + 8)) || (two_y != (one_y + 8))
+         || (24 != u3a_yard_here(&yar_u)) )
+      {
+        fprintf(stderr, "test: crib: yard: aligned takes\r\n");
+        ret_i = 0;
+      }
+
+      (void)u3a_yard_take(&yar_u, 1, 1);
+      nul_y = u3a_yard_take(&yar_u, 0, 16);
+      if ( (nul_y != (odd_y + 32)) || (32 != u3a_yard_here(&yar_u)) ) {
+        fprintf(stderr, "test: crib: yard: zero-length take\r\n");
+        ret_i = 0;
+      }
+
+      (void)u3a_yard_take(&yar_u, 25, 1);
+      end_i = u3a_yard_here(&yar_u);
+      if (  u3a_yard_take(&yar_u, 8, 8) || (end_i != u3a_yard_here(&yar_u))
+         || !u3a_yard_take(&yar_u, 7, 1) )
+      {
+        fprintf(stderr, "test: crib: yard: aligned take at the end\r\n");
+        ret_i = 0;
+      }
+
+      u3a_yard_back(&yar_u, 3);
+      if ( u3a_yard_take(&yar_u, 1, 1) != (odd_y + 3) ) {
+        fprintf(stderr, "test: crib: yard: back\r\n");
+        ret_i = 0;
+      }
+    }
+  }
+
   //  the region
   //
   {
