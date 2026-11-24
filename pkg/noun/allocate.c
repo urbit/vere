@@ -1352,8 +1352,11 @@ _ca_lo_drain_home(void)
     u3z(old);
   }
 
+  //  the capacity is lowered before the crib is shrunk (see crib.h)
+  //
   if ( _ca_lo.cap_w > _ca_lo.min_w ) {
     _ca_lo.cap_w = _ca_lo.min_w;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
     u3a_crib_shrink(&_ca_lo.cib_u, (size_t)_ca_lo.cap_w * sizeof(u3_noun));
     u3e_Meter.cib_u[1].shr_d++;
     u3e_Meter.cib_u[1].cap_d = _ca_lo.cap_w;
@@ -1564,6 +1567,13 @@ static inline __attribute__((always_inline)) void
 _ca_lo_home_put(u3_noun* lis_u, u3_noun old)
 {
   if ( lis_u ) {
+    //  the entry is written before the length publishes it. no interrupt
+    //  can unwind between the two today: every caller either holds
+    //  signals or runs on the home road during an exit, outside the
+    //  inner signal regime. the fence (no instruction) keeps the order
+    //  should that change: unwound in between, an entry would leak, and
+    //  not be lost twice
+    //
     *lis_u = old;
     __atomic_signal_fence(__ATOMIC_SEQ_CST);
     _ca_lo.len_w++;

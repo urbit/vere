@@ -69,8 +69,8 @@ _crib_commit(void* ptr_v, size_t len_i)
 
 /* _crib_drop(): zero [ptr_v, +len_i), giving back its whole pages. the
 **   pages come back zero-filled when next touched: on Linux by
-**   madvise(MADV_DONTNEED), on Windows by decommitting (and committing
-**   again if [kep_t]), and elsewhere (macOS, BSD), where MADV_DONTNEED
+**   madvise(MADV_DONTNEED), on Windows by decommitting (the next grow
+**   commits them again), and elsewhere (macOS, BSD), where MADV_DONTNEED
 **   doesn't promise that, by mapping fresh pages over them. only partial
 **   pages at the edges, and ranges too small to be worth a system call,
 **   are written.
@@ -78,7 +78,7 @@ _crib_commit(void* ptr_v, size_t len_i)
 #define _CRIB_DROP_MIN  (64 * 1024)
 
 static void
-_crib_drop(void* ptr_v, size_t len_i, c3_t kep_t)
+_crib_drop(void* ptr_v, size_t len_i)
 {
   size_t    pag_i = _crib_page();
   uintptr_t bot_p = ((uintptr_t)ptr_v + pag_i - 1) & ~(uintptr_t)(pag_i - 1);
@@ -94,14 +94,9 @@ _crib_drop(void* ptr_v, size_t len_i, c3_t kep_t)
 
 #if defined(U3_OS_windows)
   VirtualFree((void*)bot_p, top_p - bot_p, MEM_DECOMMIT);
-  if ( kep_t ) {
-    u3_assert( VirtualAlloc((void*)bot_p, top_p - bot_p, MEM_COMMIT, PAGE_READWRITE) );
-  }
 #elif defined(U3_OS_linux)
-  (void)kep_t;
   u3_assert( 0 == madvise((void*)bot_p, top_p - bot_p, MADV_DONTNEED) );
 #else
-  (void)kep_t;
   {
     c3_i flg_i = MAP_PRIVATE | MAP_ANON | MAP_FIXED;
 #  ifdef MAP_NORESERVE
@@ -138,17 +133,19 @@ u3a_crib_grow(u3a_crib* cib_u, size_t len_i)
 }
 
 void
-u3a_crib_zero(u3a_crib* cib_u, size_t off_i, size_t len_i)
-{
-  u3_assert( (off_i + len_i) <= cib_u->len_i );
-  _crib_drop(cib_u->buf_y + off_i, len_i, 1);
-}
-
-void
 u3a_crib_shrink(u3a_crib* cib_u, size_t len_i)
 {
-  if ( len_i < cib_u->len_i ) {
-    _crib_drop(cib_u->buf_y + len_i, cib_u->len_i - len_i, 0);
+  size_t old_i = cib_u->len_i;
+
+  if ( len_i < old_i ) {
+    //  the length first: on windows the drop decommits, and an interrupt
+    //  between the two must not leave the length over memory that's gone
+    //  (the next grow would return without committing it). the fence
+    //  keeps the compiler from moving the store past the drop; the
+    //  interrupt is on this thread, so nothing more is needed
+    //
     cib_u->len_i = len_i;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _crib_drop(cib_u->buf_y + len_i, old_i - len_i);
   }
 }
