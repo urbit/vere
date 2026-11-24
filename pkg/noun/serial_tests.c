@@ -32,6 +32,25 @@ _byte_print(c3_d        out_d,
   fprintf(stderr, "}\r\n");
 }
 
+/* _test_share(): [a] with its equal subnouns at one address. RETAIN.
+*/
+static u3_noun
+_test_share(u3p(u3h_root) har_p, u3_noun a)
+{
+  u3_weak pro = u3h_git(har_p, a);
+
+  if ( u3_none != pro ) {
+    return u3k(pro);
+  }
+
+  pro = ( c3y == u3a_is_atom(a) )
+      ? u3k(a)
+      : u3nc(_test_share(har_p, u3h(a)), _test_share(har_p, u3t(a)));
+
+  u3h_put(har_p, a, u3k(pro));
+  return pro;
+}
+
 static c3_i
 _test_jam_spec(const c3_c* cap_c,
                u3_noun       ref,
@@ -52,6 +71,42 @@ _test_jam_spec(const c3_c* cap_c,
     }
 
     free(out_y);
+  }
+
+  //  u3s_ram_xeno() tells nouns apart by pointer: the noun as built
+  //  cues back, and with its equal parts shared, it's +jam's bytes.
+  //  (first: _test_share() unifies the noun's equal parts)
+  //
+  {
+    u3_weak out;
+
+    u3s_ram_xeno(ref, &out_d, &out_y);
+    out = u3s_cue_xeno(out_d, out_y);
+
+    if ( (u3_none == out) || (c3n == u3r_sing(ref, out)) ) {
+      fprintf(stderr, "\033[31mram xeno %s: cue fail\033[0m\r\n", cap_c);
+      ret_i = 0;
+    }
+
+    u3z(out);
+    free(out_y);
+  }
+
+  {
+    u3p(u3h_root) har_p = u3h_new();
+    u3_noun         sar = _test_share(har_p, ref);
+
+    u3h_free(har_p);
+    u3s_ram_xeno(sar, &out_d, &out_y);
+
+    if ( (out_d != len_w) || (0 != memcmp(out_y, byt_y, len_w)) ) {
+      fprintf(stderr, "\033[31mram xeno %s fail\033[0m\r\n", cap_c);
+      _byte_print(out_d, out_y, len_w, byt_y);
+      ret_i = 0;
+    }
+
+    free(out_y);
+    u3z(sar);
   }
 
   {
@@ -392,6 +447,147 @@ _test_jam_yards(void)
   return ret_i;
 }
 
+/* _test_ram_same(): u3s_ram_xeno() of [a] gives [ref_d] bytes at
+**   [ref_y].
+*/
+static c3_i
+_test_ram_same(const c3_c* cap_c, u3_noun a, c3_d ref_d, const c3_y* ref_y)
+{
+  c3_d  out_d;
+  c3_y* out_y;
+  c3_i  ret_i = 1;
+
+  u3s_ram_xeno(a, &out_d, &out_y);
+
+  if ( (out_d != ref_d) || memcmp(out_y, ref_y, out_d) ) {
+    fprintf(stderr, "\033[31mram xeno %s: %" PRIu64 " bytes against %"
+                    PRIu64 "\033[0m\r\n", cap_c, out_d, ref_d);
+    ret_i = 0;
+  }
+  if ( u3a_Yard_res.use_i || u3a_Yard_wok.use_i ) {
+    fprintf(stderr, "\033[31mram xeno %s: yards in use\033[0m\r\n", cap_c);
+    ret_i = 0;
+  }
+
+  free(out_y);
+  return ret_i;
+}
+
+//  _test_ram_road(): u3s_ram_xeno() on an inner road
+//
+static c3_d  _test_ram_d;
+static c3_y* _test_ram_y;
+
+static u3_noun
+_test_ram_road(u3_noun a)
+{
+  u3s_ram_xeno(a, &_test_ram_d, &_test_ram_y);
+  u3z(a);
+  return u3_nul;
+}
+
+/* _test_ram_yards(): u3s_ram_xeno() wherever its table is: the same
+**   bytes every time.
+*/
+static c3_i
+_test_ram_yards(void)
+{
+  c3_i  ret_i = 1;
+  c3_d  ful_d = u3e_Meter.cib_u[6].ovf_d;
+  c3_d  ref_d;
+  c3_y* ref_y;
+
+  //  a table that can't grow in the yard moves to the heap, and the
+  //  walk goes on. [dag] is 2^48 cells as a tree, met after the move
+  //
+  {
+    u3_noun dag = 0;
+    u3_noun a;
+    c3_w  i_w;
+
+    for ( i_w = 0; i_w < 48; i_w++ ) {
+      dag = u3nc(u3k(dag), dag);
+    }
+    a = u3nc(_test_jam_deep(2000), dag);
+
+    u3s_ram_xeno(a, &ref_d, &ref_y);
+
+    if ( ref_d > (16 << 10) ) {
+      fprintf(stderr, "test ram: %" PRIu64 " bytes\r\n", ref_d);
+      ret_i = 0;
+    }
+
+    u3m_yard_size(0, 32 << 10);
+    ret_i &= _test_ram_same("table ceiling", a, ref_d, ref_y);
+
+    if ( (ful_d + 1) != u3e_Meter.cib_u[6].ovf_d ) {
+      fprintf(stderr, "test ram: table ceiling: %" PRIu64 " fills\r\n",
+              u3e_Meter.cib_u[6].ovf_d - ful_d);
+      ret_i = 0;
+    }
+
+    //  no room for a first table: on the heap from the start
+    //
+    u3m_yard_size(0, 64);
+    ret_i &= _test_ram_same("no room", a, ref_d, ref_y);
+    u3m_yard_size(0, 0);
+
+    //  on an inner road: on that road's heap
+    //
+    {
+      u3_noun pro = u3m_soft(0, _test_ram_road, u3k(a));
+
+      if (  (u3_blip != u3h(pro))
+         || (_test_ram_d != ref_d)
+         || memcmp(_test_ram_y, ref_y, ref_d) )
+      {
+        fprintf(stderr, "\033[31mram xeno inner road: %" PRIu64
+                        " bytes against %" PRIu64 "\033[0m\r\n",
+                _test_ram_d, ref_d);
+        ret_i = 0;
+      }
+
+      u3z(pro);
+      free(_test_ram_y);
+    }
+
+    free(ref_y);
+    u3z(a);
+  }
+
+  //  inside an enclosing user that left both ends unaligned: the same
+  //  bytes, and the ends back where they were
+  //
+  {
+    c3_d  out_d;
+    c3_y* out_y;
+    u3_noun a = _test_jam_deep(1000);
+
+    u3s_ram_xeno(a, &ref_d, &ref_y);
+    (void)u3a_yard_take(&u3a_Yard_wok, 1, 1);
+    (void)u3a_yard_take(&u3a_Yard_res, 3, 1);
+    u3s_ram_xeno(a, &out_d, &out_y);
+
+    if (  (out_d != ref_d) || memcmp(out_y, ref_y, out_d)
+       || (1 != u3a_Yard_wok.use_i) || (3 != u3a_Yard_res.use_i) )
+    {
+      fprintf(stderr, "\033[31mram xeno nested: %" PRIu64 " bytes against %"
+                      PRIu64 ", ends at %zu and %zu\033[0m\r\n",
+              out_d, ref_d, u3a_Yard_wok.use_i, u3a_Yard_res.use_i);
+      ret_i = 0;
+    }
+
+    u3a_yard_back(&u3a_Yard_wok, 0);
+    u3a_yard_back(&u3a_Yard_res, 0);
+    free(out_y);
+    free(ref_y);
+    u3z(a);
+  }
+
+  u3s_jam_report();
+  return ret_i;
+}
+
 /* main(): run all test cases.
 */
 int
@@ -406,6 +602,11 @@ main(int argc, char* argv[])
 
   if ( !_test_jam_yards() ) {
     fprintf(stderr, "test jam: yards failed\r\n");
+    exit(1);
+  }
+
+  if ( !_test_ram_yards() ) {
+    fprintf(stderr, "test ram: yards failed\r\n");
     exit(1);
   }
 

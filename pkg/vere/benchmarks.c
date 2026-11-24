@@ -101,6 +101,22 @@ _jam_bench(void)
     _bench_print("jam xeno:", _bench_ns() - ber_d);
   }
 
+  {
+    ber_d = _bench_ns();
+
+    {
+      c3_d  len_d;
+      c3_y* byt_y;
+
+      for ( i_w = 0; i_w < max_w; i_w++ ) {
+        u3s_ram_xeno(wit, &len_d, &byt_y);
+        c3_free(byt_y);
+      }
+    }
+
+    _bench_print("ram xeno:", _bench_ns() - ber_d);
+  }
+
   while ( 1 ) {
     ur_root_t* rot_u = ur_root_init();
     c3_d       len_d;

@@ -662,7 +662,7 @@ _lord_writ_send(u3_lord* god_u, u3_writ* wit_u)
     u3t_event_trace("king ipc jam", 'B');
 #endif
 
-    u3s_jam_xeno(jar, &len_d, &byt_y);
+    u3s_ram_xeno(jar, &len_d, &byt_y);
 
 #ifdef LORD_TRACE_JAM
     u3t_event_trace("king ipc jam", 'E');
@@ -685,7 +685,7 @@ _lord_send(u3_lord* god_u, u3_noun jar)
   u3t_event_trace("king ipc jam", 'B');
 #endif
 
-  u3s_jam_xeno(jar, &len_d, &byt_y);
+  u3s_ram_xeno(jar, &len_d, &byt_y);
 
 #ifdef LORD_TRACE_JAM
   u3t_event_trace("king ipc jam", 'E');
@@ -1368,7 +1368,7 @@ u3_lord_boot(c3_c* pax_c,
   {
     c3_d  len_d;
     c3_y* byt_y;
-    u3s_jam_xeno(msg, &len_d, &byt_y);
+    u3s_ram_xeno(msg, &len_d, &byt_y);
     u3_newt_send(&bot_u->inn_u, len_d, byt_y);
     u3z(msg);
   }

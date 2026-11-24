@@ -266,7 +266,7 @@ _mars_fact(u3_mars* mar_u,
     gif_u->tim_d = uv_hrtime();
 
     u3e_Phase = u3e_pha_jam;
-    u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
+    u3s_ram_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
     u3e_Phase = u3e_pha_io_free;
     u3z(pro);
 
@@ -297,7 +297,7 @@ _mars_gift(u3_mars* mar_u, u3_noun pro)
     c3_t pek_t = ( u3e_pha_peek == u3e_Phase );
 
     u3e_Phase = pek_t ? u3e_pha_jam_pek : u3e_pha_jam;
-    u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
+    u3s_ram_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
     u3e_Phase = pek_t ? u3e_pha_free_pek : u3e_pha_io_free;
     u3z(pro);
   }
@@ -1675,7 +1675,7 @@ u3_mars_work(u3_mars* mar_u)
                        u3nc(u3i_chub(mar_u->dun_d),
                             mar_u->mug_h));
 
-    u3s_jam_xeno(msg, &len_d, &hun_y);
+    u3s_ram_xeno(msg, &len_d, &hun_y);
     u3_newt_send(mar_u->out_u, len_d, hun_y);
     u3z(msg);
   }

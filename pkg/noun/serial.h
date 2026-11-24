@@ -37,8 +37,21 @@
         c3_d
         u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
 
-      /* u3s_jam_report(): log the jams that met a yard's ceiling since
-      **                   the last report.
+      /* u3s_ram_xeno(): jam by pointer, with off-loom buffer
+      **                 (re-)allocation: equal nouns apart in memory are
+      **                 each written out, so the bytes depend on the
+      **                 noun's layout, not only its value. they cue to
+      **                 the same noun, and are no longer than the noun
+      **                 is in memory. reads nothing on the loom but the
+      **                 noun, and writes nothing there on the home road.
+      **                 for bytes read once and thrown away (ipc); the
+      **                 event log and exports take u3s_jam_xeno().
+      */
+        c3_d
+        u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
+
+      /* u3s_jam_report(): log the jams and rams that met a yard's
+      **                   ceiling since the last report.
       */
         void
         u3s_jam_report(void);
