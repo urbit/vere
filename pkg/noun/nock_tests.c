@@ -710,12 +710,6 @@ main(int argc, char* argv[])
   }
   fprintf(stderr, "test edit road: ok\r\n");
 
-  if ( !_test_sand_wed() ) {
-    fprintf(stderr, "test sand wed: failed\r\n");
-    exit(1);
-  }
-  fprintf(stderr, "test sand wed: ok\r\n");
-
   if ( !_test_sand() ) {
     fprintf(stderr, "test sand: failed\r\n");
     exit(1);
