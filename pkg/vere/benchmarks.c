@@ -5,12 +5,32 @@
 #include "ur/ur.h"
 #include "vere.h"
 
+#include <time.h>
+
 /* _setup(): prepare for tests.
 */
 static void
 _setup(void)
 {
-  u3m_boot_lite(1 << 24);
+  u3m_boot_lite(1 << 25);
+}
+
+/* _bench_ns(): monotonic timestamp in nanoseconds.
+*/
+static c3_d
+_bench_ns(void)
+{
+  struct timespec tim_u;
+  clock_gettime(CLOCK_MONOTONIC, &tim_u);
+  return ((c3_d)tim_u.tv_sec * 1000000000ULL) + (c3_d)tim_u.tv_nsec;
+}
+
+/* _bench_print(): print elapsed time under a label.
+*/
+static void
+_bench_print(const c3_c* lab_c, c3_d ned_d)
+{
+  fprintf(stderr, "  %-18s %8.2f ms\r\n", lab_c, (double)ned_d / 1e6);
 }
 
 /* _ames_writ_ex(): |hi packet from fake ~zod to fake ~nec
@@ -44,14 +64,14 @@ _ames_writ_ex(void)
 static void
 _jam_bench(void)
 {
-  struct timeval b4, f2, d0;
-  c3_w mil_w, i_w, max_w = 10000;
+  c3_d ber_d;
+  c3_w i_w, max_w = 10000;
   u3_noun wit = _ames_writ_ex();
 
   fprintf(stderr, "\r\njam microbenchmark:\r\n");
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       u3i_slab sab_u;
@@ -62,14 +82,11 @@ _jam_bench(void)
       }
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  jam og: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("jam og:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       c3_d  len_d;
@@ -81,10 +98,7 @@ _jam_bench(void)
       }
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  jam xeno: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("jam xeno:", _bench_ns() - ber_d);
   }
 
   while ( 1 ) {
@@ -102,21 +116,18 @@ _jam_bench(void)
     c3_free(byt_y);
 
     {
-      gettimeofday(&b4, 0);
+      ber_d = _bench_ns();
 
       for ( i_w = 0; i_w < max_w; i_w++ ) {
         ur_jam(rot_u, ref, &len_d, &byt_y);
         c3_free(byt_y);
       }
 
-      gettimeofday(&f2, 0);
-      timersub(&f2, &b4, &d0);
-      mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-      fprintf(stderr, "  jam cons: %"PRIc3_w" ms\r\n", mil_w);
+      _bench_print("jam cons:", _bench_ns() - ber_d);
     }
 
     {
-      gettimeofday(&b4, 0);
+      ber_d = _bench_ns();
 
       {
         ur_jam_t *jam_u = ur_jam_init(rot_u);
@@ -131,10 +142,7 @@ _jam_bench(void)
         ur_jam_done(jam_u);
       }
 
-      gettimeofday(&f2, 0);
-      timersub(&f2, &b4, &d0);
-      mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-      fprintf(stderr, "  jam cons with: %"PRIc3_w" ms\r\n", mil_w);
+      _bench_print("jam cons with:", _bench_ns() - ber_d);
     }
 
     ur_root_free(rot_u);
@@ -147,40 +155,34 @@ _jam_bench(void)
 static void
 _cue_bench(void)
 {
-  struct timeval b4, f2, d0;
-  c3_w mil_w, i_w, max_w = 20000;
+  c3_d ber_d;
+  c3_w i_w, max_w = 20000;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
 
   fprintf(stderr, "\r\ncue microbenchmark:\r\n");
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     for ( i_w = 0; i_w < max_w; i_w++ ) {
       u3z(u3s_cue(vat));
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue og: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue og:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     for ( i_w = 0; i_w < max_w; i_w++ ) {
       u3z(u3s_cue_atom(vat));
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue atom: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue atom:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       c3_d  len_d = u3r_met(3, vat);
@@ -195,14 +197,11 @@ _cue_bench(void)
       }
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue xeno: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue xeno:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       u3_cue_xeno* sil_u = u3s_cue_xeno_init();
@@ -221,14 +220,11 @@ _cue_bench(void)
       u3s_cue_xeno_done(sil_u);
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue xeno with: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue xeno with:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       c3_d  len_d = u3r_met(3, vat);
@@ -243,14 +239,11 @@ _cue_bench(void)
       }
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue test: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue test:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       ur_cue_test_t *t = ur_cue_test_init();
@@ -269,14 +262,11 @@ _cue_bench(void)
       ur_cue_test_done(t);
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue test with: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue test with:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       ur_root_t* rot_u = ur_root_init();
@@ -295,14 +285,11 @@ _cue_bench(void)
       ur_root_free(rot_u);
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue cons: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue cons:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     {
       ur_root_t* rot_u;
@@ -321,10 +308,7 @@ _cue_bench(void)
       }
     }
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue re-cons: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue re-cons:", _bench_ns() - ber_d);
   }
 
   u3z(vat);
@@ -357,35 +341,228 @@ _cue_atom_loop(u3_atom a)
 static void
 _cue_soft_bench(void)
 {
-  struct timeval b4, f2, d0;
+  c3_d ber_d;
   u3_atom vat = u3ke_jam(_ames_writ_ex());
-  c3_w mil_w;
 
   fprintf(stderr, "\r\ncue virtual microbenchmark:\r\n");
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     u3z(u3m_soft(0, _cue_loop, u3k(vat)));
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue virtual og: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue virtual og:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     u3z(u3m_soft(0, _cue_atom_loop, u3k(vat)));
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  cue virtual atom: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("cue virtual atom:", _bench_ns() - ber_d);
   }
 
   u3z(vat);
+}
+
+/* _alloc_cons_work(): build and discard lists; arg=[rep len].
+*/
+static u3_noun
+_alloc_cons_work(u3_noun arg)
+{
+  c3_w rep_w = u3h(arg);
+  c3_w len_w = u3t(arg);
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3qb_reap(len_w, u3_blip));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_keep_work(): gain and lose an indirect noun, which is senior
+**                     to an inner road that runs this; arg=[rep noun].
+*/
+static u3_noun
+_alloc_keep_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_noun non   = u3t(arg);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3k(non));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_mine_work(): gain and lose an indirect noun made on the
+**                     road that runs this; arg=rep.
+*/
+static u3_noun
+_alloc_mine_work(u3_noun arg)
+{
+  c3_w    rep_w = arg;
+  u3_noun non   = u3i_string("a relatively unexceptional noun");
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3k(non));
+  }
+
+  u3z(non);
+  return u3_blip;
+}
+
+/* _alloc_atom_work(): churn indirect atoms by repeated addition;
+**                     arg=[rep bex].
+*/
+static u3_noun
+_alloc_atom_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_noun big   = u3qc_bex(u3t(arg));
+  u3_noun pro   = u3k(big);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    pro = u3ka_add(pro, u3k(big));
+  }
+
+  u3z(pro);
+  u3z(big);
+  return u3_blip;
+}
+
+/* _alloc_cue_work(): cue a jammed noun; arg=[rep vat].
+*/
+static u3_noun
+_alloc_cue_work(u3_noun arg)
+{
+  c3_w    rep_w = u3h(arg);
+  u3_atom vat   = u3t(arg);
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(u3s_cue(vat));
+  }
+
+  return u3_blip;
+}
+
+/* _alloc_copy_work(): build a list to be copied out of the road; arg=len.
+*/
+static u3_noun
+_alloc_copy_work(u3_noun arg)
+{
+  return u3qb_reap(arg, u3_blip);
+}
+
+/* _alloc_run(): time [rep_w] u3m_soft() invocations of [fun_f].
+*/
+static c3_d
+_alloc_run(u3_funk fun_f, u3_noun arg, c3_w rep_w)
+{
+  c3_d ber_d, end_d;
+  c3_w i_w;
+
+  ber_d = _bench_ns();
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3_noun pro = u3m_soft(0, fun_f, u3k(arg));
+
+    if ( u3_blip != u3h(pro) ) {
+      fprintf(stderr, "  alloc bench: workload failed\r\n");
+    }
+
+    u3z(pro);
+  }
+
+  end_d = _bench_ns();
+  u3z(arg);
+  return end_d - ber_d;
+}
+
+/* _alloc_run_home(): time [rep_w] direct invocations of [fun_f]
+**                    on the home road.  [fun_f] must not consume
+**                    or return allocations.
+*/
+static c3_d
+_alloc_run_home(u3_funk fun_f, u3_noun arg, c3_w rep_w)
+{
+  c3_d ber_d, end_d;
+  c3_w i_w;
+
+  ber_d = _bench_ns();
+
+  for ( i_w = 0; i_w < rep_w; i_w++ ) {
+    u3z(fun_f(arg));
+  }
+
+  end_d = _bench_ns();
+  u3z(arg);
+  return end_d - ber_d;
+}
+
+/* _alloc_row(): run a workload on an inner road and, if [hom_o], on
+**               the home road, and print the home time's ratio to the
+**               inner one.
+*/
+static void
+_alloc_row(const c3_c* lab_c,
+           u3_funk     fun_f,
+           u3_noun     arg,
+           c3_w        rep_w,
+           c3_o        hom_o)
+{
+  c3_d inn_d = _alloc_run(fun_f, u3k(arg), rep_w);
+
+  fprintf(stderr, "  %-12s %8.2f ms", lab_c, (double)inn_d / 1e6);
+
+  if ( c3y == hom_o ) {
+    c3_d hom_d = _alloc_run_home(fun_f, u3k(arg), rep_w);
+
+    fprintf(stderr, "  %8.2f ms (%.2fx)",
+                    (double)hom_d / 1e6, (double)hom_d / (double)inn_d);
+  }
+  else {
+    fprintf(stderr, "  %11s", "-");
+  }
+
+  fprintf(stderr, "\r\n");
+  u3z(arg);
+}
+
+/* _alloc_bench(): allocator workloads on an inner road, where each
+**                 runs under u3m_soft(), with home-road timings for
+**                 reference.
+*/
+static void
+_alloc_bench(void)
+{
+  fprintf(stderr, "\r\nallocator microbenchmark "
+                  "(ratios to the inner road):\r\n");
+  fprintf(stderr, "  %-12s %11s  %11s\r\n", "", "inner", "home");
+
+  _alloc_row("cons", _alloc_cons_work, u3nc(50, 10000), 10, c3y);
+
+  _alloc_row("keep senior", _alloc_keep_work,
+             u3nc(1000000, u3i_string("a relatively unexceptional noun")),
+             10, c3y);
+
+  _alloc_row("keep own", _alloc_mine_work, 1000000, 10, c3y);
+
+  _alloc_row("atoms", _alloc_atom_work, u3nc(2000, 4096), 20, c3y);
+
+  _alloc_row("cue", _alloc_cue_work,
+             u3nc(2000, u3ke_jam(_ames_writ_ex())),
+             10, c3y);
+
+  //  no home-road run: the workload measures the copy out of the road
+  //
+  _alloc_row("copy out", _alloc_copy_work, 20000, 100, c3n);
 }
 
 static void
@@ -417,31 +594,24 @@ _edit_bench_impl(c3_w max_w)
 static void
 _edit_bench(void)
 {
-  struct timeval b4, f2, d0;
-  c3_w mil_w;
+  c3_d ber_d;
 
   fprintf(stderr, "\r\nopcode 10 microbenchmark:\r\n");
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     _edit_bench_impl(1000);
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  opcode 10 1k list: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("opcode 10 1k list:", _bench_ns() - ber_d);
   }
 
   {
-    gettimeofday(&b4, 0);
+    ber_d = _bench_ns();
 
     _edit_bench_impl(10000);
 
-    gettimeofday(&f2, 0);
-    timersub(&f2, &b4, &d0);
-    mil_w = (d0.tv_sec * 1000) + (d0.tv_usec / 1000);
-    fprintf(stderr, "  opcode 10 10k list: %"PRIc3_w" ms\r\n", mil_w);
+    _bench_print("opcode 10 10k list:", _bench_ns() - ber_d);
   }
 }
 
@@ -455,6 +625,7 @@ main(int argc, char* argv[])
   _jam_bench();
   _cue_bench();
   _cue_soft_bench();
+  _alloc_bench();
   _edit_bench();
 
   //  GC
