@@ -15,6 +15,7 @@
 
 typedef struct _u3qedj_coll {
   u3_noun col;        // collection (list for array, map for object)
+  c3_o    art;        // c3y: array; c3n: object
   union {             // store context for recursive arrays/objects:
     u3_noun* tel;     //   - pointer to tail for array
     u3_atom  key;     //   - key for object
@@ -27,6 +28,7 @@ _push_stack(const u3a_pile *pil_u)
   u3qedj_coll *res_u = u3a_push(pil_u);
 
   res_u->col = u3_nul;
+  res_u->art = c3n;
   res_u->key = u3_none;
 
   return res_u;
@@ -45,7 +47,9 @@ _close_stack(const u3a_pile *pil_u)
     u3qedj_coll *tak_u = u3a_peek(pil_u);
 
     u3z(tak_u->col);
-    if ( u3_none != tak_u->key ) {
+    //  only an object frame owns [key]; for an array frame the union
+    //  holds [tel], a pointer borrowed into [col], which must not be lost
+    if ( (c3n == tak_u->art) && (u3_none != tak_u->key) ) {
       u3z(tak_u->key);
     }
 
@@ -122,7 +126,11 @@ _parse(u3_atom txt)
       // unreachable barring programming error
       default: u3_assert(0);
 
-      case JSON_ARRAY:
+      case JSON_ARRAY: {
+        tak_u = _push_stack(pil_u);
+        tak_u->art = c3y;
+      } continue;
+
       case JSON_OBJECT: {
         tak_u = _push_stack(pil_u);
       } continue;
