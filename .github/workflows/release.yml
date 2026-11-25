@@ -12,6 +12,7 @@ on:
       - 'pkg/**'
       - 'tests/**'
       - '.github/workflows/**.yml'
+      - '.github/actions/**'
       - '*.sh'
 
 jobs:

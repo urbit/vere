@@ -1,0 +1,32 @@
+name: Prepare a linux host for the loom
+description: Add swap and allow memory overcommit, which mapping a loom needs.
+
+runs:
+  using: composite
+  steps:
+    - name: Set swap space
+      shell: bash
+      run: |
+        export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+        if test -z "${SWAP_FILE}"; then
+            export SWAP_FILE=/swapfile
+        else
+            sudo swapoff -a
+            sudo rm "${SWAP_FILE}"
+        fi
+        sudo fallocate -l 10G "${SWAP_FILE}"
+        sudo chmod 600 "${SWAP_FILE}"
+        sudo mkswap "${SWAP_FILE}"
+        sudo swapon "${SWAP_FILE}"
+
+        echo "Memory and swap:"
+        free -h
+        echo
+        swapon --show
+        echo
+
+    - name: Set memory overcommit
+      shell: bash
+      run: |
+        sudo sysctl -w vm.overcommit_memory=1
+        sysctl vm.overcommit_memory

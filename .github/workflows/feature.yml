@@ -10,7 +10,14 @@ on:
       - 'pkg/**'
       - 'tests/**'
       - '.github/workflows/**.yml'
+      - '.github/actions/**'
       - '*.sh'
+
+#  a push to a pull request supersedes the run of the push before it
+#
+concurrency:
+  group: feature-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   urbit:

@@ -14,11 +14,16 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: mlugg/setup-zig@v2
+      #  for zig, the linux build cache and the dependencies. the
+      #  build below keeps its own flags, not $VERE_FLAGS.
+      #
+      - uses: ./.github/actions/zig
         with:
-          version: 0.15.2
+          cache: linux
+          pace: ${{ inputs.pace }}
+          bits: 32
 
       #
       # BUILD

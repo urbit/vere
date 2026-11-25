@@ -1,0 +1,24 @@
+name: Fetch the pier fixtures
+description: >
+  Fetch the git-lfs objects under tests/fixtures (about 1 GB), from the
+  actions cache when it has them. Check out without lfs first.
+
+runs:
+  using: composite
+  steps:
+    - name: List lfs objects
+      shell: bash
+      run: git lfs ls-files -l | cut -d' ' -f1 | sort > "$RUNNER_TEMP/lfs-ids"
+
+    - id: ids
+      shell: bash
+      run: echo "hash=$(sha256sum "$RUNNER_TEMP/lfs-ids" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v4
+      with:
+        path: .git/lfs
+        key: lfs-${{ steps.ids.outputs.hash }}
+
+    - name: Pull lfs objects
+      shell: bash
+      run: git lfs pull

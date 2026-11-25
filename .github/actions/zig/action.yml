@@ -1,0 +1,96 @@
+name: Set up zig
+description: >
+  Install zig, restore the build cache for one target, fetch the
+  dependencies, and set $VERE_FLAGS to the build flags for a pace
+  and width.
+
+inputs:
+  cache:
+    description: 'Which cache to restore: the name of a build leg (linux, windows, cross)'
+    required: true
+  pace:
+    description: 'Release pace'
+    required: true
+  bits:
+    description: 'Loom width: 32 or 64'
+    required: true
+
+outputs:
+  cache-key:
+    description: 'The key of the cache for this target'
+    value: ${{ steps.key.outputs.key }}
+  cache-hit:
+    description: "'true' if that cache was restored"
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    #  setup-zig's own cache is off. it saves a new cache from every
+    #  job of every run (the key ends in the run's id), and a
+    #  repository gets 10 GB: a handful of runs evicts everything,
+    #  the default branch's caches included, and a pull request can
+    #  only read its own caches and its base's. it also keys a
+    #  matrix's legs alike unless told otherwise, and empties a cache
+    #  that has grown past its limit.
+    #
+    #  it still points both of zig's cache directories at .zig-cache
+    #  in the workspace, which is the directory cached below.
+    #
+    - uses: mlugg/setup-zig@v2
+      with:
+        version: 0.15.2
+        use-cache: false
+
+    #  what is slow to build and seldom changes is the dependencies:
+    #  ext/ and the packages the manifests name. the key is a hash of
+    #  those, so a cache is saved once (by the build job, see
+    #  shared.yml) and read by every job and pull request until they
+    #  change. vere's own objects in it go stale, and are rebuilt:
+    #  seconds, beside the link.
+    #
+    #  the dependencies are built alike for both widths and for the
+    #  debugging options, so a target has one cache.
+    #
+    - id: key
+      shell: bash
+      run: echo "key=zig-0.15.2-${{ inputs.cache }}-${{ hashFiles('ext/**', 'build.zig.zon', 'pkg/*/build.zig.zon') }}" >> "$GITHUB_OUTPUT"
+
+    - id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: .zig-cache
+        key: ${{ steps.key.outputs.key }}
+
+    #  the dependencies come from half a dozen hosts, and one failed
+    #  download loses the job: fetch them first, and try again. what
+    #  is fetched is cached, so a retry only repeats what failed, and
+    #  with the cache restored there is nothing to fetch.
+    #  (all of them: the macos sdk, which the cross leg needs, is lazy.)
+    #
+    - name: Fetch dependencies
+      shell: bash
+      run: |
+        for i in 1 2 3 4 5 6; do
+          if zig build --fetch=all; then exit 0; fi
+          echo "fetch failed, attempt $i" >&2
+          sleep 20
+        done
+        echo "::error title=dependencies did not download::six attempts"
+        exit 1
+
+    #  one place for the flags every build of a run shares, so that
+    #  the tests are compiled the way the binary is.
+    #
+    - name: Set build flags
+      shell: bash
+      run: |
+        if [[ "${{ inputs.pace }}" == "live" ]]; then
+          flags="-Drelease"
+        else
+          flags="-Doptimize=ReleaseFast -Dpace=${{ inputs.pace }}"
+        fi
+        if [[ "${{ inputs.bits }}" == "64" ]]; then
+          flags="$flags -Dvere64"
+        fi
+        echo "VERE_FLAGS=$flags" >> "$GITHUB_ENV"

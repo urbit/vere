@@ -33,321 +33,317 @@ env:
   UPLOAD_BASE: bootstrap.urbit.org/vere
   GH_TOKEN: ${{ github.token }}
 
+#  the shape of a run:
+#
+#    build (target x width)   the binaries that ship, each built once
+#    unit (width)             the unit tests, linux
+#    windows-tests (width)    the unit tests for windows, cross-compiled
+#    fake-ship (width)        a debugging build, booted and tested
+#       -- those four start together; the rest wait for build --
+#    migration, replay        the linux binaries against old piers
+#    windows, windows-migration
+#                             the windows binary and tests, run on windows
+#    upload                   after everything, if asked for
+#
+#  nothing is compiled twice: a job that tests a binary downloads the
+#  one build made, which is the one upload publishes.
+#
+#  every build names its target. zig's default on linux is the host's
+#  own cpu, so a build without one is for whatever machine the runner
+#  happens to be: not what ships, and no use to a cache.
+#
 jobs:
-  urbit:
+  build:
+    name: Build (${{ matrix.leg }}, ${{ matrix.bits }}-bit)
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+        leg: [linux, windows, cross]
+        include:
+          - leg: linux
+            targets: x86_64-linux-musl
+          - leg: windows
+            targets: x86_64-windows-gnu
+          #  built to see that they build, and to upload: no job runs them.
+          #  (build.zig's list of targets has macos without an abi, and
+          #  refuses "aarch64-macos-none", though it installs to that.)
+          - leg: cross
+            targets: aarch64-linux-musl aarch64-macos x86_64-macos
+
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: zig
+        uses: ./.github/actions/zig
+        with:
+          cache: ${{ matrix.leg }}
+          pace: ${{ inputs.pace }}
+          bits: ${{ matrix.bits }}
+
+      - name: Build binaries
+        run: |
+          for target in ${{ matrix.targets }}; do
+            zig build -Dtarget=$target $VERE_FLAGS --summary all
+          done
+
+      #  one cache per leg, written when the dependencies change (see
+      #  the zig action). the legs of both widths would write the same
+      #  thing, so one of them does.
+      #
+      - name: Save build cache
+        if: ${{ steps.zig.outputs.cache-hit != 'true' && matrix.bits == 32 }}
+        uses: actions/cache/save@v4
+        with:
+          path: .zig-cache
+          key: ${{ steps.zig.outputs.cache-key }}
+
+      #  laid out as <width>/<target>/urbit, so that the artifacts of
+      #  every leg can be downloaded into one directory.
+      #
+      - name: Stage artifact
+        run: |
+          out=dist/${{ matrix.bits }}
+          mkdir -p $out
+
+          for dir in zig-out/*-*-*/; do
+            target=$(basename $dir)
+            mkdir $out/$target
+            cp $dir/urbit* $out/$target/
+          done
+
+          if [[ "${{ matrix.leg }}" == "linux" ]]; then
+            sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h > $out/VERSION
+            echo "version: $(cat $out/VERSION)"
+            test -s $out/VERSION
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.leg }}-${{ matrix.bits }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 5
+
+  unit:
+    name: Unit tests (${{ matrix.bits }}-bit)
     strategy:
       fail-fast: false
       matrix:
         bits: [64, 32]
 
     runs-on: ubuntu-22.04
+    timeout-minutes: 45
 
     steps:
-      #
-      # BUILD AND TEST
-      #
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set swap space
-        run: |
-          echo "Memory and swap:"
-          free -h
-          echo
-          swapon --show
-          echo
+      - uses: ./.github/actions/loom-host
 
-          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
-          if test -z "${SWAP_FILE}"; then
-              export SWAP_FILE=/swapfile
-          else
-              sudo swapoff -a
-              sudo rm "${SWAP_FILE}"
-          fi
-          sudo fallocate -l 10G "${SWAP_FILE}"
-          sudo chmod 600 "${SWAP_FILE}"
-          sudo mkswap "${SWAP_FILE}"
-          sudo swapon "${SWAP_FILE}"
-
-          echo "Memory and swap:"
-          free -h
-          echo
-          swapon --show
-          echo
-
-      - name: Set memory overcommit
-        run: |
-          sudo sysctl -w vm.overcommit_memory=1
-          echo "vm.overcommit_memory=1" | sudo tee -a /etc/sysctl.conf
-          sysctl vm.overcommit_memory
-
-      - uses: mlugg/setup-zig@v2
+      - uses: ./.github/actions/zig
         with:
-          version: 0.15.2
-          # 8GB cache limit chosen at random
-          cache-size-limit: 8192
+          cache: linux
+          pace: ${{ inputs.pace }}
+          bits: ${{ matrix.bits }}
 
-      #  the dependencies come from half a dozen hosts, and one failed
-      #  download loses the job: fetch them first, and try again. what
-      #  is fetched is cached, so a retry only repeats what failed.
-      #  (all of them here: -Dall builds for macos, whose sdk is lazy.)
+      #  most of this job is here: each test is linked with lto, as
+      #  the binary is, and that is a minute of one core apiece.
       #
-      - name: Fetch dependencies
-        run: |
-          for i in 1 2 3 4 5 6; do
-            if zig build --fetch=all; then exit 0; fi
-            echo "fetch failed, attempt $i" >&2
-            sleep 20
-          done
-          echo "::error title=dependencies did not download::six attempts"
-          exit 1
+      - name: Build unit tests
+        run: zig build test-bins -Dtarget=x86_64-linux-musl $VERE_FLAGS --summary all
 
-      - name: Build binaries
-        run: |
-          # Add -Dvere64 flag for 64-bit builds
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
-
-          if [[ "${{ inputs.pace }}" == "live" ]]; then
-            zig build                  \
-              -Dall                    \
-              -Drelease                \
-              $VERE64_FLAG             \
-              --summary all
-          else
-            zig build                  \
-              -Dall                    \
-              -Doptimize=ReleaseFast   \
-              -Dpace=${{inputs.pace}}  \
-              $VERE64_FLAG             \
-              --summary all
-          fi
-      #  NB: $VERE64_FLAG matters here as much as it does for the
-      #  binary. without it both matrix legs compile the same 32-bit
-      #  noun, and the 64-bit one is never exercised at all.
-      #
       - name: Run unit tests
+        run: ./unit-tests.sh zig-out/bin
+
+  #  the tests that run on windows are built on linux: cross-compiled,
+  #  as the windows binary that ships is, and from the same cache.
+  #
+  windows-tests:
+    name: Build windows tests (${{ matrix.bits }}-bit)
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/zig
+        with:
+          cache: windows
+          pace: ${{ inputs.pace }}
+          bits: ${{ matrix.bits }}
+
+      - name: Build unit tests
+        run: zig build test-bins -Dtarget=x86_64-windows-gnu $VERE_FLAGS --summary all
+
+      - name: Build loom probe
         run: |
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
+          zig cc -target x86_64-windows-gnu  \
+            -o zig-out/bin/wloom_probe.exe   \
+            pkg/noun/platform/windows/wloom_probe.c
 
-          zig build                    \
-            ur-test ent-test           \
-            hashtable-test jets-test   \
-            nock-test retrieve-test    \
-            serial-test ames-test      \
-            pact-test equality-test    \
-            boot-test newt-test        \
-            vere-noun-test unix-test   \
-            palloc-test events-test    \
-            bytestream-test mesa-test  \
-            soft-test benchmarks       \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
-            $VERE64_FLAG               \
-            --summary all
+      - name: Stage artifact
+        run: |
+          mkdir -p dist/${{ matrix.bits }}/tests
+          cp zig-out/bin/*.exe dist/${{ matrix.bits }}/tests/
 
-      #  soft-test again, booting from an ivory pill that isn't
-      #  canonicalized, so that home holds equal nouns at different
-      #  addresses for inner roads to unify (the step above canonicalizes
-      #  the pill at boot). run the installed binary directly, so that a
-      #  cached run step can't stand in for it.
-      #
-      - name: Run soft-test (uncanonicalized pill)
-        run: SOFT_TEST_RAW=1 ./zig-out/bin/soft-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wintests-${{ matrix.bits }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 5
+
+  fake-ship:
+    name: Fake ship (${{ matrix.bits }}-bit)
+    if: ${{ inputs.fake_tests }}
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    env:
+      URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/loom-host
+
+      - uses: ./.github/actions/zig
+        with:
+          cache: linux
+          pace: ${{ inputs.pace }}
+          bits: ${{ matrix.bits }}
 
       - name: Build test binary
-        if: ${{ inputs.fake_tests }}
         run: |
-          # Add -Dvere64 flag for 64-bit builds
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
-
           zig build                    \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
+            -Dtarget=x86_64-linux-musl \
+            $VERE_FLAGS                \
             -Dbinary-name=urbit-test   \
             -Dcpu-dbg                  \
             -Dmem-dbg                  \
             -Dc3dbg                    \
             -Dsnapshot-validation      \
             -Durth-mass                \
-            $VERE64_FLAG               \
             --summary all
 
       - name: Boot fake ship
-        if: ${{ inputs.fake_tests }}
-        env:
-          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
         run: ./boot-fake-ship.sh
 
       - name: Run fake ship tests
-        if: ${{ inputs.fake_tests }}
-        env:
-          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
         run: ./test-fake-ship.sh
 
       - name: Overflow the C stack repeatedly
-        if: ${{ inputs.fake_tests }}
         env:
-          URBIT_BINARY: "zig-out/x86_64-linux-musl/urbit-test"
           PIER_DIR: "pier"
           OVERFLOW_RUNS: "3"
         run: ./stack-overflow-test.sh
 
-      #
-      # UPLOAD TO GCP
-      #
+  migration:
+    name: Migration roundtrip tests
+    needs: [build]
+    if: ${{ inputs.fake_tests }}
 
-      - uses: google-github-actions/auth@v1
-        if: ${{ inputs.upload }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    env:
+      VERE64_BINARY: "dist/64/x86_64-linux-musl/urbit"
+      VERE32_BINARY: "dist/32/x86_64-linux-musl/urbit"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/fixtures
+
+      - uses: ./.github/actions/loom-host
+
+      - uses: actions/download-artifact@v4
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          pattern: bin-linux-*
+          path: dist
+          merge-multiple: true
 
-      - uses: google-github-actions/setup-gcloud@v1
-        if: ${{ inputs.upload }}
+      #  an artifact doesn't keep file modes
+      - run: chmod +x $VERE64_BINARY $VERE32_BINARY
+
+      - name: Run 32↔64 roundtrip migration test
+        run: ./migration-test.sh
+
+      - name: Run legacy v1–v4 migration tests
+        run: ./tests/fixtures/test-legacy.sh
+
+  replay:
+    name: Replay tests (${{ matrix.bits }}-bit)
+    needs: [build]
+    if: ${{ inputs.fake_tests }}
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    env:
+      VERE_BINARY: "dist/${{ matrix.bits }}/x86_64-linux-musl/urbit"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/fixtures
+
+      - uses: ./.github/actions/loom-host
+
+      - uses: actions/download-artifact@v4
         with:
-          project_id: ${{ secrets.GCP_PROJECT }}
+          name: bin-linux-${{ matrix.bits }}
+          path: dist
 
-      - name: Upload binary to bootstrap.urbit.org
-        if: ${{ inputs.upload }}
-        run: |
-          sha_version=$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h)
+      - run: chmod +x $VERE_BINARY
 
-          # Define all targets with bits field
-          declare -a all_targets=(
-            "aarch64-linux-musl linux-aarch64 64"
-            "aarch64-macos-none macos-aarch64 64"
-            "x86_64-linux-musl linux-x86_64 64"
-            "x86_64-macos-none macos-x86_64 64"
-            "x86_64-windows-gnu windows-x86_64 64"
-            "aarch64-linux-musl linux-aarch64 32"
-            "aarch64-macos-none macos-aarch64 32"
-            "x86_64-linux-musl linux-x86_64 32"
-            "x86_64-macos-none macos-x86_64 32"
-            "x86_64-windows-gnu windows-x86_64 32"
-          )
-
-          # Filter targets based on matrix.bits
-          declare -a targets=()
-          for t in "${all_targets[@]}"; do
-            IFS=' ' read zig_target target bits_flag <<< "${t}"
-            if [[ "$bits_flag" == "${{ matrix.bits }}" ]]; then
-              targets+=("$zig_target $target")
-            fi
-          done
-
-          for t in "${targets[@]}"
-          do
-            IFS=' ' read zig_target target <<< "${t}"
-            if [[ "$zig_target" == *"windows"* ]]; then
-              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit.exe
-            else
-              urbit_static=$GITHUB_WORKSPACE/zig-out/${zig_target}/urbit
-            fi
-
-            # Determine binary prefix (vere32 or vere64)
-            if [[ "${{ matrix.bits }}" == "32" ]]; then
-              binary_prefix="vere32"
-            else
-              binary_prefix="vere64"
-            fi
-
-            if ${{ inputs.next != null }}; then
-              next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
-              dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
-              legacy_dest="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}/vere-v${sha_version}-${target}"
-            else
-              dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/${binary_prefix}-v${sha_version}-${target}"
-              legacy_dest="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}/vere-v${sha_version}-${target}"
-            fi
-
-            args=""
-            # We never overwrite a binary deployed to the "live" train, but we do
-            # overwrite same-versioned binaries deployed to the "soon" and "edge"
-            # trains.
-            if [[ "${{ inputs.pace }}" == "live" ]]; then
-              gsutil cp -n "${urbit_static}" "$dest"
-            else
-              gsutil cp "${urbit_static}" "$dest"
-            fi
-            exitcode=$?
-
-            ([ $exitcode -eq 0 ] && echo "upload to $dest complete.") ||
-            (echo "upload to $dest failed." && exit $exitcode);
-
-            # 32-bit remains the default, so also publish it at the
-            # pre-vere32/vere64 unprefixed path for old links/scripts
-            # that still expect "vere-v...".
-            if [[ "$binary_prefix" == "vere32" ]]; then
-              if [[ "${{ inputs.pace }}" == "live" ]]; then
-                gsutil cp -n "$dest" "$legacy_dest"
-              else
-                gsutil cp "$dest" "$legacy_dest"
-              fi
-              exitcode=$?
-
-              ([ $exitcode -eq 0 ] && echo "upload to $legacy_dest complete.") ||
-              (echo "upload to $legacy_dest failed." && exit $exitcode);
-            fi
-          done
+      - name: Run yolo-replay tests
+        run: ./tests/fixtures/test-yolo-replay.sh
 
   windows:
     name: Windows (${{ matrix.bits }}-bit)
+    needs: [build, windows-tests]
     strategy:
       fail-fast: false
       matrix:
         bits: [64, 32]
 
     runs-on: windows-2022
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: mlugg/setup-zig@v2
+      - uses: actions/download-artifact@v4
         with:
-          version: 0.15.2
-          cache-size-limit: 8192
+          name: bin-windows-${{ matrix.bits }}
+          path: dist
 
-      #  the dependencies come from half a dozen hosts, and one failed
-      #  download loses the job: fetch them first, and try again. what
-      #  is fetched is cached, so a retry only repeats what failed.
-      #
-      - name: Fetch dependencies
-        shell: bash
-        run: |
-          for i in 1 2 3 4 5 6; do
-            if zig build --fetch; then exit 0; fi
-            echo "fetch failed, attempt $i" >&2
-            sleep 20
-          done
-          echo "::error title=dependencies did not download::six attempts"
-          exit 1
-
-      #  NB: -Dtarget is explicit even though this is a windows host. a
-      #  native build would default to the msvc abi, and we ship gnu --
-      #  pkg/c3/platform/windows and pkg/noun/platform/windows are mingw
-      #  code, so an msvc build would not be the thing we release.
-      #
-      - name: Build
-        shell: bash
-        run: |
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
-
-          zig build                          \
-            -Dtarget=x86_64-windows-gnu      \
-            -Doptimize=ReleaseFast           \
-            -Dpace=${{ inputs.pace }}        \
-            $VERE64_FLAG                     \
-            --summary all
+      - uses: actions/download-artifact@v4
+        with:
+          name: wintests-${{ matrix.bits }}
+          path: dist
 
       #  the loom's mapping design rests on properties of the windows
       #  memory api that microsoft does not document outright -- above
@@ -357,293 +353,95 @@ jobs:
       #  is re-checked on every run rather than trusted.
       #
       - name: Loom probe
-        shell: bash
-        run: |
-          zig cc -target x86_64-windows-gnu  \
-            -o wloom_probe.exe               \
-            pkg/noun/platform/windows/wloom_probe.c
-          ./wloom_probe.exe
+        run: dist/${{ matrix.bits }}/tests/wloom_probe.exe
 
       #  the linux job's tests, less events-test and plus wloom-test.
-      #  each was run by hand on windows in both bitnesses before
-      #  landing here. (hamt-test and tracy-test build for windows but
-      #  are run on no platform, so they are no more excluded here than
-      #  there.)
-      #
-      #  events-test does not build at all: it is posix-only (mkdtemp,
-      #  nftw, /tmp), so build.zig skips it for windows targets and
-      #  naming it here would fail to resolve a step. porting it means
-      #  porting those three, not fixing a bug.
-      #
-      - name: Build unit tests
-        shell: bash
-        run: |
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
-
-          zig build                          \
-            ur-test ent-test                 \
-            hashtable-test jets-test         \
-            nock-test retrieve-test          \
-            serial-test equality-test        \
-            palloc-test bytestream-test      \
-            ames-test mesa-test              \
-            pact-test newt-test              \
-            unix-test boot-test              \
-            vere-noun-test wloom-test        \
-            soft-test                        \
-            -Dtarget=x86_64-windows-gnu      \
-            -Doptimize=ReleaseFast           \
-            -Dpace=${{ inputs.pace }}        \
-            $VERE64_FLAG                     \
-            --summary all
-
-      #  the step above already runs each test as part of building it,
-      #  but a zig run step is cached: a rerun on a warm cache reports
-      #  success without executing anything. run the installed binaries
-      #  directly, so a green job cannot mean that nothing ran.
+      #  events-test is posix-only (mkdtemp, nftw, /tmp), so build.zig
+      #  skips it for windows targets. porting it means porting those
+      #  three, not fixing a bug.
       #
       - name: Run unit tests
-        shell: bash
-        run: |
-          shopt -s nullglob
-          bins=(zig-out/bin/*-test.exe)
+        run: ./unit-tests.sh dist/${{ matrix.bits }}/tests
 
-          if [ ${#bins[@]} -eq 0 ]; then
-            echo "no test binaries were installed -- nothing ran" >&2
-            exit 1
-          fi
-
-          for b in "${bins[@]}"; do
-            echo "== ${b}"
-            "${b}"
-          done
-
-      #  soft-test again, from a pill that isn't canonicalized (see the
-      #  linux job)
+      #  the handler itself is bitness-independent, but the stack it
+      #  runs on is whatever is left under a loom of a different size,
+      #  reached through a different interpreter. so: both widths.
       #
-      - name: Run soft-test (uncanonicalized pill)
-        shell: bash
-        run: SOFT_TEST_RAW=1 zig-out/bin/soft-test.exe
-
-  windows-migration-test:
-    name: Windows migration roundtrip
-    runs-on: windows-2022
-    needs: [windows]
-    if: ${{ inputs.fake_tests }}
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
-          cache-size-limit: 8192
-
-      #  the dependencies come from half a dozen hosts, and one failed
-      #  download loses the job: fetch them first, and try again. what
-      #  is fetched is cached, so a retry only repeats what failed.
-      #
-      - name: Fetch dependencies
-        shell: bash
-        run: |
-          for i in 1 2 3 4 5 6; do
-            if zig build --fetch; then exit 0; fi
-            echo "fetch failed, attempt $i" >&2
-            sleep 20
-          done
-          echo "::error title=dependencies did not download::six attempts"
-          exit 1
-
-      - name: Build 64-bit migration binary
-        shell: bash
-        run: |
-          zig build                          \
-            -Dtarget=x86_64-windows-gnu      \
-            -Dvere64                         \
-            -Doptimize=ReleaseFast           \
-            -Dpace=${{ inputs.pace }}        \
-            -Dbinary-name=vere-migration     \
-            --summary all
-
-      - name: Build 32-bit migration binary
-        shell: bash
-        run: |
-          zig build                          \
-            -Dtarget=x86_64-windows-gnu      \
-            -Doptimize=ReleaseFast           \
-            -Dpace=${{ inputs.pace }}        \
-            -Dbinary-name=vere32-migration   \
-            --summary all
-
-      - name: Run 32<->64 roundtrip migration test
-        shell: bash
-        env:
-          VERE64_BINARY: "zig-out/x86_64-windows-gnu/vere-migration.exe"
-          VERE32_BINARY: "zig-out/x86_64-windows-gnu/vere32-migration.exe"
-        run: ./migration-test.sh
-
-  windows-stack-overflow:
-    name: Windows stack overflow (${{ matrix.bits }}-bit)
-
-    #  the handler itself is bitness-independent, but the stack it runs
-    #  on is whatever is left under a loom of a different size, reached
-    #  through a different interpreter. run both.
-    #
-    strategy:
-      fail-fast: false
-      matrix:
-        bits: [64, 32]
-
-    runs-on: windows-2022
-    needs: [windows]
-    if: ${{ inputs.fake_tests }}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
-          cache-size-limit: 8192
-
-      #  the dependencies come from half a dozen hosts, and one failed
-      #  download loses the job: fetch them first, and try again. what
-      #  is fetched is cached, so a retry only repeats what failed.
-      #
-      - name: Fetch dependencies
-        shell: bash
-        run: |
-          for i in 1 2 3 4 5 6; do
-            if zig build --fetch; then exit 0; fi
-            echo "fetch failed, attempt $i" >&2
-            sleep 20
-          done
-          echo "::error title=dependencies did not download::six attempts"
-          exit 1
-
-      - name: Build
-        shell: bash
-        run: |
-          VERE64_FLAG=""
-          if [[ "${{ matrix.bits }}" == "64" ]]; then
-            VERE64_FLAG="-Dvere64"
-          fi
-
-          zig build                          \
-            -Dtarget=x86_64-windows-gnu      \
-            -Doptimize=ReleaseFast           \
-            -Dpace=${{ inputs.pace }}        \
-            $VERE64_FLAG                     \
-            --summary all
-
       #  more than one run is the point: the first overflow tests that
       #  the handler has stack to run on, the second that the guard page
       #  it consumed was put back. a single pass cannot tell them apart.
       #
       - name: Overflow the C stack repeatedly
-        shell: bash
+        if: ${{ inputs.fake_tests }}
         env:
-          URBIT_BINARY: "zig-out/x86_64-windows-gnu/urbit.exe"
+          URBIT_BINARY: "dist/${{ matrix.bits }}/x86_64-windows-gnu/urbit.exe"
           OVERFLOW_RUNS: "3"
         run: ./stack-overflow-test.sh
 
-  migration-test:
-    name: Migration roundtrip tests
-    runs-on: ubuntu-22.04
-    needs: [urbit]
+  windows-migration:
+    name: Windows migration roundtrip
+    needs: [build]
     if: ${{ inputs.fake_tests }}
 
+    runs-on: windows-2022
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
         with:
-          lfs: true
+          pattern: bin-windows-*
+          path: dist
+          merge-multiple: true
 
-      - name: Set swap space
-        run: |
-          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
-          if test -z "${SWAP_FILE}"; then
-              export SWAP_FILE=/swapfile
-          else
-              sudo swapoff -a
-              sudo rm "${SWAP_FILE}"
-          fi
-          sudo fallocate -l 10G "${SWAP_FILE}"
-          sudo chmod 600 "${SWAP_FILE}"
-          sudo mkswap "${SWAP_FILE}"
-          sudo swapon "${SWAP_FILE}"
-
-      - name: Set memory overcommit
-        run: |
-          sudo sysctl -w vm.overcommit_memory=1
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
-
-      #  the dependencies come from half a dozen hosts, and one failed
-      #  download loses the job: fetch them first, and try again. what
-      #  is fetched is cached, so a retry only repeats what failed.
-      #
-      - name: Fetch dependencies
-        run: |
-          for i in 1 2 3 4 5 6; do
-            if zig build --fetch; then exit 0; fi
-            echo "fetch failed, attempt $i" >&2
-            sleep 20
-          done
-          echo "::error title=dependencies did not download::six attempts"
-          exit 1
-
-      - name: Build 64-bit migration binary
-        run: |
-          zig build                           \
-            -Dvere64                          \
-            -Doptimize=ReleaseFast            \
-            -Dpace=${{inputs.pace}}           \
-            -Dbinary-name=vere-migration     \
-            --summary all
-
-      - name: Build 32-bit migration binary
-        run: |
-          zig build                           \
-            -Doptimize=ReleaseFast            \
-            -Dpace=${{inputs.pace}}           \
-            -Dbinary-name=vere32-migration   \
-            --summary all
-
-      - name: Run 32↔64 roundtrip migration test
+      - name: Run 32<->64 roundtrip migration test
+        shell: bash
         env:
-          VERE64_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
-          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
+          VERE64_BINARY: "dist/64/x86_64-windows-gnu/urbit.exe"
+          VERE32_BINARY: "dist/32/x86_64-windows-gnu/urbit.exe"
         run: ./migration-test.sh
 
-      - name: Run legacy v1–v4 migration tests
-        env:
-          VERE32_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
-        run: ./tests/fixtures/test-legacy.sh
+  #  one job publishes everything, after every test: the binaries of
+  #  both widths, then the version string that points at them.
+  #
+  #  (always() so that jobs skipped for fake_tests don't skip this one;
+  #  a failed or cancelled job still does.)
+  #
+  upload:
+    name: Upload to GCP
+    needs: [build, unit, fake-ship, migration, replay, windows, windows-migration]
+    if: ${{ always() && !failure() && !cancelled() && inputs.upload }}
 
-      - name: Run yolo-replay tests (32-bit)
-        env:
-          VERE_BINARY: "zig-out/x86_64-linux-musl/vere32-migration"
-        run: ./tests/fixtures/test-yolo-replay.sh
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
 
-      - name: Run yolo-replay tests (64-bit)
-        env:
-          VERE_BINARY: "zig-out/x86_64-linux-musl/vere-migration"
-        run: ./tests/fixtures/test-yolo-replay.sh
-
-  upload-version-string:
-    name: Upload latest deployed version string to GCP
-    runs-on: ubuntu-latest
-    needs: [urbit]
-    if: inputs.upload
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          path: dist
+          merge-multiple: true
+
+      #  the version the binaries carry, and the one `last` will name:
+      #  if they differ, publish nothing.
+      #
+      - name: Check version
+        run: |
+          if [ "${{ inputs.pace }}" == "live" ]; then
+            sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig > ./VERSION
+          else
+            printf "$(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.7s" "$(git rev-parse HEAD)" > ./VERSION
+          fi
+
+          for bits in 32 64; do
+            if [ "$(cat ./VERSION)" != "$(cat dist/$bits/VERSION)" ]; then
+              echo "::error::version mismatch: $(cat ./VERSION) from the checkout, $(cat dist/$bits/VERSION) in the $bits-bit build"
+              exit 1
+            fi
+          done
 
       - uses: google-github-actions/auth@v1
         with:
@@ -653,15 +451,65 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Upload latest deployed version string to GCP
+      - name: Upload binaries to bootstrap.urbit.org
         run: |
-          echo "${{ inputs.pace }}" > ./PACE
-          if [ "${{ inputs.pace }}" == "live" ]; then
-            sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig > ./VERSION
+          set -e
+
+          sha_version=$(cat ./VERSION)
+
+          declare -a targets=(
+            "aarch64-linux-musl linux-aarch64"
+            "aarch64-macos-none macos-aarch64"
+            "x86_64-linux-musl linux-x86_64"
+            "x86_64-macos-none macos-x86_64"
+            "x86_64-windows-gnu windows-x86_64"
+          )
+
+          if ${{ inputs.next != null }}; then
+            next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
+            base="gs://${UPLOAD_BASE}/next/kelvin/${next}/v${sha_version}"
           else
-            printf "$(sed -nr 's/const VERSION = "(.*)"\;/\1/p' build.zig)-%.7s" "$(git rev-parse HEAD)" > ./VERSION
+            base="gs://${UPLOAD_BASE}/${{ inputs.pace }}/v${sha_version}"
           fi
 
+          # We never overwrite a binary deployed to the "live" train, but we do
+          # overwrite same-versioned binaries deployed to the "soon" and "edge"
+          # trains.
+          if [[ "${{ inputs.pace }}" == "live" ]]; then
+            copy="gsutil cp -n"
+          else
+            copy="gsutil cp"
+          fi
+
+          for bits in 32 64; do
+            for t in "${targets[@]}"; do
+              IFS=' ' read zig_target target <<< "${t}"
+
+              if [[ "$zig_target" == *"windows"* ]]; then
+                urbit_static=dist/${bits}/${zig_target}/urbit.exe
+              else
+                urbit_static=dist/${bits}/${zig_target}/urbit
+              fi
+
+              dest="${base}/vere${bits}-v${sha_version}-${target}"
+
+              $copy "${urbit_static}" "$dest"
+              echo "upload to $dest complete."
+
+              # 32-bit remains the default, so also publish it at the
+              # pre-vere32/vere64 unprefixed path for old links/scripts
+              # that still expect "vere-v...".
+              if [[ "$bits" == "32" ]]; then
+                legacy_dest="${base}/vere-v${sha_version}-${target}"
+
+                $copy "$dest" "$legacy_dest"
+                echo "upload to $legacy_dest complete."
+              fi
+            done
+          done
+
+      - name: Upload latest deployed version string to GCP
+        run: |
           if ${{ inputs.next != null }}; then
             next=$(echo "${{ inputs.next }}" | sed 's/[^0-9]//g')
             target="gs://${UPLOAD_BASE}/next/kelvin/${next}/last"
@@ -672,9 +520,4 @@ jobs:
           # We don't use -n here because we want to overwrite the version
           # string.
           gsutil cp ./VERSION "$target"
-          exitcode=$?
-
-          [ $exitcode -eq 0 ] &&
-            echo "Upload to $target completed successfully." ||
-            echo "Upload to $target failed.";
-          exit $exitcode
+          echo "Upload to $target completed successfully."

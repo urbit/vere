@@ -11,6 +11,7 @@ on:
       - '!ext/**.md'
       - 'pkg/**'
       - '.github/workflows/**.yml'
+      - '.github/actions/**'
       - '*.sh'
 
 jobs:
