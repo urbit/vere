@@ -486,6 +486,7 @@ fn buildBinary(
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_windows=1",
             "-DWIN32_LEAN_AND_MEAN",
+            "-D_FILE_OFFSET_BITS=64", // off_t is 32 bits without it
             "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
             "-DO_CLOEXEC=0",
             "-DH2O_NO_UNIX_SOCKETS",

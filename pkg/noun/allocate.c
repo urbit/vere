@@ -345,10 +345,10 @@ u3a_free(void* tox_v)
   u3a_wfree((c3_w*)tox_v);
 }
 
-/* u3a_celloc(): allocate a cell.
+/* u3a_celloc_cold(): allocate a cell, out of line.
 */
 c3_w*
-u3a_celloc(void)
+u3a_celloc_cold(void)
 {
   u3a_cell *cel_u;
   u3_post  *cel_p;
@@ -391,6 +391,23 @@ u3a_cfree(c3_w* cel_w)
   }
 
   u3a_wfree(cel_w);
+}
+
+/* _ca_cfree(): free a cell of [rod_u], the current road: onto its cell
+**              cache in line, the rest out of line.
+*/
+static inline __attribute__((always_inline)) void
+_ca_cfree(u3a_road* rod_u, u3a_cell* cel_u)
+{
+  c3_w hav_w = rod_u->cel.hav_w;
+
+  if ( c3_likely(rod_u->cel.cel_p && (hav_w < (((c3_w)1) << u3a_page))) ) {
+    u3to(u3_post, rod_u->cel.cel_p)[hav_w] = u3a_outa(cel_u);
+    rod_u->cel.hav_w = hav_w + 1;
+  }
+  else {
+    u3a_cfree((c3_w*)cel_u);
+  }
 }
 
 /* _me_wash_north(): clean up mug slots after copy.
@@ -1320,111 +1337,240 @@ _me_gain_south(u3_noun dog)
   }
 }
 
-/* _me_lose_north(): lose on a north road.
-*/
-static void
-_me_lose_north(u3_noun dog)
-{
-top:
-  if ( c3y == u3a_north_is_normal(u3R, dog) ) {
-    u3a_noun* box_u = u3a_to_ptr(dog);
+static void _me_free_north(u3_noun dog);
+static void _me_free_south(u3_noun dog);
 
-    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
+/* _me_part(): release [som], a part of a cell being freed on [rod_u]: in
+**             line if that leaves it alive; if not, yes, and the caller
+**             frees it.
+*/
+static inline __attribute__((always_inline)) c3_t
+_me_part(u3a_road* rod_u, u3_noun som, const c3_t nor_t)
+{
+  if ( _(u3a_is_cat(som)) ) {
+    return 0;
+  }
+  if ( c3n == ( nor_t ? u3a_north_is_normal(rod_u, som)
+                      : u3a_south_is_normal(rod_u, som) ) )
+  {
+    return 0;
+  }
+  if ( c3_unlikely(_ca_defer_u.ope_t) ) {
+    return 1;
+  }
+  {
+    u3a_noun* box_u = u3a_to_ptr(som);
+    c3_w      use_w = box_u->use_w;
+
+    if ( use_w > 1 ) {
+      box_u->use_w = use_w - 1;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+/* _me_free_home(): lose [dog], an indirect noun, on u3R, whose direction
+**                  is [nor_t]: the loop that frees, with the checks of
+**                  the home road (deferred gains, the hash-cons set).
+**                  It decrements the parts of a cell it frees in line,
+**                  follows the part that dies, and calls itself only
+**                  when both parts do.
+*/
+static inline __attribute__((always_inline)) void
+_me_free_home(u3_noun dog, const c3_t nor_t)
+{
+  u3a_road* rod_u = u3R;
+
+  while ( 1 ) {
+    if ( c3n == ( nor_t ? u3a_north_is_normal(rod_u, dog)
+                        : u3a_south_is_normal(rod_u, dog) ) )
+    {
       return;
     }
-
-    if ( box_u->use_w > 1 ) {
-      box_u->use_w -= 1;
-    }
     else {
-      if ( 0 == box_u->use_w ) {
+      u3a_noun* box_u = u3a_to_ptr(dog);
+      c3_w      use_w;
+
+      if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
+        return;
+      }
+
+      use_w = box_u->use_w;
+
+      if ( use_w > 1 ) {
+        box_u->use_w = use_w - 1;
+        return;
+      }
+      if ( c3_unlikely(0 == use_w) ) {
         u3m_bail(c3__foul);
       }
+
+      //  during the takes of an exit home, junior memory can hold
+      //  [dog] without counting it (see u3a_Take_open_t)
+      //
+      c3_dessert( !u3a_Take_open_t );
+
+      if ( c3_unlikely(&(u3H->rod_u) == rod_u) && u3a_sole_has(dog) ) {
+        u3m_sole_lose(dog);
+      }
+
+      if ( _(u3a_is_pom(dog)) ) {
+        u3a_cell* dog_u = (void*)box_u;
+        u3_noun   h_dog = dog_u->hed;
+        u3_noun   t_dog = dog_u->tel;
+        c3_t      hed_t, tel_t;
+
+        _ca_cfree(rod_u, dog_u);
+
+        hed_t = _me_part(rod_u, h_dog, nor_t);
+        tel_t = _me_part(rod_u, t_dog, nor_t);
+
+        if ( hed_t ) {
+          if ( tel_t ) {
+            if ( nor_t ) { _me_free_north(h_dog); }
+            else         { _me_free_south(h_dog); }
+            dog = t_dog;
+          }
+          else {
+            dog = h_dog;
+          }
+        }
+        else if ( tel_t ) {
+          dog = t_dog;
+        }
+        else {
+          return;
+        }
+      }
       else {
-        //  during the takes of an exit home, junior memory can hold
-        //  [dog] without counting it (see u3a_Take_open_t)
+        u3a_wfree(box_u);
+        return;
+      }
+    }
+  }
+}
+
+/* _me_free_in(): the same on an inner road, which has no deferred gains
+**                and no hash-cons set.  The bounds of the road's nouns
+**                are read once: nothing lives between the hat and the
+**                cap, so they are [rut, cap) on a north road and
+**                [cap, rut) on a south one, and a noun is tested against
+**                them with one comparison.
+*/
+static inline __attribute__((always_inline)) void
+_me_free_in(u3_noun dog, const c3_t nor_t)
+{
+  u3a_road* rod_u = u3R;
+
+  if ( c3_unlikely(&(u3H->rod_u) == rod_u) ) {
+    _me_free_home(dog, nor_t);
+    return;
+  }
+
+  {
+    const u3_post low_p = nor_t ? rod_u->rut_p : rod_u->cap_p;
+    const c3_w    len_w = nor_t ? (rod_u->cap_p - rod_u->rut_p)
+                                : (rod_u->rut_p - rod_u->cap_p);
+
+#   define _ME_OURS(som)  ( (c3_w)(u3a_to_off(som) - low_p) < len_w )
+
+    while ( 1 ) {
+      u3a_noun* box_u;
+      c3_w      use_w;
+
+      if ( !_ME_OURS(dog) ) {
+        return;
+      }
+
+      box_u = u3a_to_ptr(dog);
+      use_w = box_u->use_w;
+
+      if ( use_w > 1 ) {
+        box_u->use_w = use_w - 1;
+        return;
+      }
+      if ( c3_unlikely(0 == use_w) ) {
+        u3m_bail(c3__foul);
+      }
+
+      if ( _(u3a_is_pom(dog)) ) {
+        u3a_cell* dog_u = (void*)box_u;
+        u3_noun   h_dog = dog_u->hed;
+        u3_noun   t_dog = dog_u->tel;
+        c3_t      hed_t = 0, tel_t = 0;
+
+        _ca_cfree(rod_u, dog_u);
+
+        //  its parts: decremented here unless they die too
         //
-        c3_dessert( !u3a_Take_open_t );
+        if ( !_(u3a_is_cat(h_dog)) && _ME_OURS(h_dog) ) {
+          u3a_noun* hed_u = u3a_to_ptr(h_dog);
+          c3_w      heu_w = hed_u->use_w;
 
-        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
-          u3m_sole_lose(dog);
+          if ( heu_w > 1 ) { hed_u->use_w = heu_w - 1; }
+          else             { hed_t = 1; }
+        }
+        if ( !_(u3a_is_cat(t_dog)) && _ME_OURS(t_dog) ) {
+          u3a_noun* tel_u = u3a_to_ptr(t_dog);
+          c3_w      teu_w = tel_u->use_w;
+
+          if ( teu_w > 1 ) { tel_u->use_w = teu_w - 1; }
+          else             { tel_t = 1; }
         }
 
-        if ( _(u3a_is_pom(dog)) ) {
-          u3a_cell* dog_u = (void*)box_u;
-          u3_noun   h_dog = dog_u->hed;
-          u3_noun   t_dog = dog_u->tel;
-
-          if ( !_(u3a_is_cat(h_dog)) ) {
-            _me_lose_north(h_dog);
-          }
-          u3a_cfree((c3_w*)dog_u);
-          if ( !_(u3a_is_cat(t_dog)) ) {
+        if ( hed_t ) {
+          if ( tel_t ) {
+            if ( nor_t ) { _me_free_north(h_dog); }
+            else         { _me_free_south(h_dog); }
             dog = t_dog;
-            goto top;
           }
+          else {
+            dog = h_dog;
+          }
+        }
+        else if ( tel_t ) {
+          dog = t_dog;
         }
         else {
-          u3a_wfree(box_u);
+          return;
         }
-      }
-    }
-  }
-}
-
-/* _me_lose_south(): lose on a south road.
-*/
-static void
-_me_lose_south(u3_noun dog)
-{
-top:
-  if ( c3y == u3a_south_is_normal(u3R, dog) ) {
-    u3a_noun* box_u = u3a_to_ptr(dog);
-
-    if ( c3_unlikely(_ca_defer_u.ope_t) && _ca_defer_lose_cold(dog) ) {
-      return;
-    }
-
-    if ( box_u->use_w > 1 ) {
-      box_u->use_w -= 1;
-    }
-    else {
-      if ( 0 == box_u->use_w ) {
-        u3m_bail(c3__foul);
       }
       else {
-        if ( (&(u3H->rod_u) == u3R) && u3a_sole_has(dog) ) {
-          u3m_sole_lose(dog);
-        }
-
-        if ( _(u3a_is_pom(dog)) ) {
-          u3a_cell* dog_u = (void*)box_u;
-          u3_noun   h_dog = dog_u->hed;
-          u3_noun   t_dog = dog_u->tel;
-
-          if ( !_(u3a_is_cat(h_dog)) ) {
-            _me_lose_south(h_dog);
-          }
-          u3a_cfree((c3_w*)dog_u);
-          if ( !_(u3a_is_cat(t_dog)) ) {
-            dog = t_dog;
-            goto top;
-          }
-        }
-        else {
-          u3a_wfree(box_u);
-        }
+        u3a_wfree(box_u);
+        return;
       }
     }
+#   undef _ME_OURS
   }
 }
 
-/* u3a_gain(): gain a reference count in normal space.
-*/
-u3_noun
-u3a_gain(u3_noun som)
+static void
+_me_free_north(u3_noun dog)
 {
-  u3t_on(mal_o);
+  _me_free_in(dog, 1);
+}
+
+static void
+_me_free_south(u3_noun dog)
+{
+  _me_free_in(dog, 0);
+}
+
+/* _ca_tail: a call that must be a jump, where the compiler can promise it.
+*/
+#if defined(__has_attribute) && __has_attribute(musttail)
+#  define _ca_tail  __attribute__((musttail))
+#else
+#  define _ca_tail
+#endif
+
+/* _ca_gain_cold(): u3a_gain() with every check: the assertions, the
+**                  deferred gains of the home road, a full count.
+*/
+static __attribute__((noinline)) u3_noun
+_ca_gain_cold(u3_noun som)
+{
   u3_assert(u3_none != som);
 
   if ( !_(u3a_is_cat(som)) ) {
@@ -1432,24 +1578,91 @@ u3a_gain(u3_noun som)
               ? _me_gain_north(som)
               : _me_gain_south(som);
   }
-  u3t_off(mal_o);
+  return som;
+}
 
+/* u3a_gain(): gain a reference count in normal space.
+**
+**   no frame on the paths that matter: a senior noun is left alone, a
+**   count of this road is incremented; the rest is _ca_gain_cold().
+*/
+u3_noun
+u3a_gain(u3_noun som)
+{
+  c3_dessert(u3_none != som);
+
+  u3t_on(mal_o);
+
+  if ( !_(u3a_is_cat(som)) ) {
+    u3a_road* rod_u = u3R;
+    c3_o      nor_o = u3a_is_north(rod_u);
+
+    if ( c3n == ( _(nor_o) ? u3a_north_is_senior(rod_u, som)
+                           : u3a_south_is_senior(rod_u, som) ) )
+    {
+      c3_o      jun_o = _(nor_o) ? u3a_north_is_junior(rod_u, som)
+                                 : u3a_south_is_junior(rod_u, som);
+      u3a_noun* box_u = u3a_to_ptr(som);
+      c3_w      use_w = box_u->use_w;
+
+      if ( c3_likely(  (c3n == jun_o)
+                    && !_ca_defer_u.ope_t
+                    && ((use_w - 1) < (u3a_direct_max - 1)) ) )
+      {
+        box_u->use_w = use_w + 1;
+      }
+      else {
+        u3t_off(mal_o);
+        _ca_tail return _ca_gain_cold(som);
+      }
+    }
+  }
+
+  u3t_off(mal_o);
   return som;
 }
 
 /* u3a_lose(): lose a reference count.
+**
+**   no frame unless something is freed: a noun that is not of this road
+**   is left alone, a count above 1 is decremented.
 */
 void
 u3a_lose(u3_noun som)
 {
   u3t_on(mal_o);
+
   if ( !_(u3a_is_cat(som)) ) {
-    if ( _(u3a_is_north(u3R)) ) {
-      _me_lose_north(som);
-    } else {
-      _me_lose_south(som);
+    u3a_road* rod_u = u3R;
+
+    if ( _(u3a_is_north(rod_u)) ) {
+      if ( c3y == u3a_north_is_normal(rod_u, som) ) {
+        u3a_noun* box_u = u3a_to_ptr(som);
+        c3_w      use_w = box_u->use_w;
+
+        if ( c3_likely(!_ca_defer_u.ope_t && (use_w > 1)) ) {
+          box_u->use_w = use_w - 1;
+        }
+        else {
+          _me_free_north(som);
+        }
+      }
+    }
+    else {
+      if ( c3y == u3a_south_is_normal(rod_u, som) ) {
+        u3a_noun* box_u = u3a_to_ptr(som);
+        c3_w      use_w = box_u->use_w;
+
+        if ( c3_likely(!_ca_defer_u.ope_t && (use_w > 1)) ) {
+          box_u->use_w = use_w - 1;
+        }
+        else {
+          _me_free_south(som);
+        }
+      }
     }
   }
+
   u3t_off(mal_o);
 }
 
