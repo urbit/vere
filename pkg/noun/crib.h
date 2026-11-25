@@ -70,8 +70,7 @@
   ***
   ***  Like a crib's, a yard's growth allocates nothing, and an interrupt
   ***  may unwind any of its calls: memory is committed before it's
-  ***  counted, and given back after. It's for the home road's scratch
-  ***  all the same: its users don't keep their own state in that order.
+  ***  counted, and given back after.
   ***
   ***  The runtime has two, reserved by u3m_init(): u3a_Yard_wok for
   ***  scratch, and u3a_Yard_res for results. A user is a scope: it reads
@@ -80,11 +79,14 @@
   ***  callee takes from the result yard and leaves there is its caller's
   ***  to give back.
   ***
-  ***  Nothing holds a yard's memory across an excursion from the home
-  ***  road: u3m_leap() from home puts both ends back to the start, as a
-  ***  failed event's reset does (_cm_signal_reset()). That catches a
-  ***  user that never reached its u3a_yard_back(); it's a bug all the
-  ***  same, and asserted under C3DBG.
+  ***  A user may be on any road, and may hold a yard's memory across
+  ***  an excursion to inner roads. A user that a bail or a signal
+  ***  unwinds never reaches its u3a_yard_back(): whatever catches the
+  ***  jump puts both ends back where they were when it was set, so
+  ***  every trap (u3m_soft_run() and the others) records them first,
+  ***  and u3m_soft_top() does for signals. A user on the home road
+  ***  that keeps its own state between calls must still be able to
+  ***  lose it at any point (see _cm_sole_reset()).
   ***
   ***  A yard put back to its start gives back what it committed past
   ***  its floor. A user that grew it did work for every byte, so
@@ -108,7 +110,7 @@
 
     /* u3a_yard_init(): reserve [max_i] bytes (rounded down to 16, 64 at
     **                  least), committing none. releases [yar_u]'s old
-    **                  region, if any. home road only.
+    **                  region, if any: nothing may be using it.
     */
       void
       u3a_yard_init(u3a_yard* yar_u, size_t max_i);

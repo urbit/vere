@@ -1227,6 +1227,128 @@ _test_walk_scope(void)
   return ret_i;
 }
 
+/* _yard_user(): take from both yards on whatever road this is, and
+**   write there. what [how] says next: 0, put the ends back and return;
+**   1, bail with them out; 2, be interrupted with them out; 3, with
+**   them out, run a computation that fails the same way under a trap
+**   of its own, find the ends back where they were here, then return.
+*/
+static u3_noun
+_yard_user(u3_noun how, u3_noun dep)
+{
+  size_t wok_i = u3a_yard_here(&u3a_Yard_wok);
+  size_t res_i = u3a_yard_here(&u3a_Yard_res);
+  c3_y*  wok_y = u3a_yard_take(&u3a_Yard_wok, 4096 + 7, 1);
+  c3_y*  res_y = u3a_yard_take(&u3a_Yard_res, 4096 + 5, 1);
+  size_t wom_i = u3a_yard_here(&u3a_Yard_wok);
+  size_t rem_i = u3a_yard_here(&u3a_Yard_res);
+  c3_o   ret_o = c3y;
+
+  if ( !wok_y || !res_y ) {
+    return c3n;
+  }
+  memset(wok_y, 0x11 * (c3_y)(dep + 1), 4096 + 7);
+  memset(res_y, 0x11 * (c3_y)(dep + 1), 4096 + 5);
+
+  switch ( how ) {
+    case 1: return u3m_bail(c3__exit);
+    case 2: u3m_signal(c3__intr); return c3n;
+
+    case 3: {
+      u3_noun pro = u3m_soft_run(u3_nul, _yard_user, 1, dep + 1);
+      size_t  i_i;
+
+      if (  (wom_i != u3a_yard_here(&u3a_Yard_wok))
+         || (rem_i != u3a_yard_here(&u3a_Yard_res)) )
+      {
+        ret_o = c3n;
+      }
+      for ( i_i = 0; i_i < (4096 + 7); i_i++ ) {
+        if ( wok_y[i_i] != (c3_y)(0x11 * (dep + 1)) ) { ret_o = c3n; }
+      }
+      for ( i_i = 0; i_i < (4096 + 5); i_i++ ) {
+        if ( res_y[i_i] != (c3_y)(0x11 * (dep + 1)) ) { ret_o = c3n; }
+      }
+      if ( 2 != u3h(pro) ) {
+        ret_o = c3n;
+      }
+      u3z(pro);
+    } break;
+
+    default: break;
+  }
+
+  u3a_yard_back(&u3a_Yard_wok, wok_i);
+  u3a_yard_back(&u3a_Yard_res, res_i);
+  return ret_o;
+}
+
+static u3_noun
+_yard_user_top(u3_noun how)
+{
+  return _yard_user(how, 1);
+}
+
+/* _test_yard_roads(): the yards on inner roads, under a user on the
+**   home road that holds some of each: a leap leaves its memory alone,
+**   and a failure of any kind puts both ends back where the trap that
+**   catches it found them.
+*/
+static c3_i
+_test_yard_roads(void)
+{
+  static const c3_c* cas_c[4] = { "returns", "bails", "interrupted",
+                                  "bails under a trap" };
+  c3_i      ret_i = 1;
+  u3a_yard* wok_u = &u3a_Yard_wok;
+  u3a_yard* res_u = &u3a_Yard_res;
+  size_t    wok_i = wok_u->use_i, res_i = res_u->use_i;
+  c3_y*     wok_y = u3a_yard_take(wok_u, 1001, 1);
+  c3_y*     res_y = u3a_yard_take(res_u, 333, 1);
+  size_t    wom_i = wok_u->use_i, rem_i = res_u->use_i, i_i;
+  c3_w      how_w;
+
+  if ( !wok_y || !res_y ) {
+    fprintf(stderr, "test: yard roads: no room\r\n");
+    return 0;
+  }
+  memset(wok_y, 0xa5, 1001);
+  memset(res_y, 0x5a, 333);
+
+  for ( how_w = 0; how_w < 4; how_w++ ) {
+    u3_noun pro = u3m_soft(0, _yard_user_top, how_w);
+    c3_m    wan_w = (1 == how_w) ? c3__exit : (2 == how_w) ? c3__intr : 0;
+
+    if ( (wan_w != u3h(pro)) || (!wan_w && (c3y != u3t(pro))) ) {
+      fprintf(stderr, "test: yard roads: %s: wrong result\r\n", cas_c[how_w]);
+      ret_i = 0;
+    }
+    u3z(pro);
+
+    if ( (wom_i != wok_u->use_i) || (rem_i != res_u->use_i) ) {
+      fprintf(stderr, "test: yard roads: %s: ends at %zu and %zu, not %zu"
+                      " and %zu\r\n",
+              cas_c[how_w], wok_u->use_i, res_u->use_i, wom_i, rem_i);
+      wok_u->use_i = wom_i;
+      res_u->use_i = rem_i;
+      ret_i = 0;
+    }
+    for ( i_i = 0; i_i < 1001; i_i++ ) {
+      if ( 0xa5 != wok_y[i_i] ) { ret_i = 0; }
+    }
+    for ( i_i = 0; i_i < 333; i_i++ ) {
+      if ( 0x5a != res_y[i_i] ) { ret_i = 0; }
+    }
+  }
+  if ( !ret_i ) {
+    fprintf(stderr, "test: yard roads: failed\r\n");
+  }
+
+  u3a_yard_back(wok_u, wok_i);
+  u3a_yard_back(res_u, res_i);
+  return ret_i;
+}
+
 /* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
 **   in the current setting. with 2^dep_w paths, a comparison that
 **   re-compared every path would never finish.
@@ -2159,6 +2281,11 @@ _test_equality(void)
 
   if ( !_test_walk_scope() ) {
     fprintf(stderr, "test: equality: walk scope: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_yard_roads() ) {
+    fprintf(stderr, "test: equality: yard roads: failed\r\n");
     ret_i = 0;
   }
 
