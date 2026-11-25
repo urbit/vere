@@ -1108,6 +1108,8 @@ _test_jets(void)
 
   if ( !_test_json_de_array() ) {
     fprintf(stderr, "test jets: json_de_array: failed\r\n");
+  }
+  
   if ( !_test_cut() ) {
     fprintf(stderr, "test jets: cut: failed\r\n");
     ret_i = 0;
