@@ -277,6 +277,31 @@ _ca_counted(u3_post som_p)
        : ((som_p >= u3R->hat_p) && (som_p < u3R->rut_p));
 }
 
+/* _ca_slot_on(): [sot] is a slot in [rod_u]'s heap, or in its sand: a
+**   sand slot owns a count too. the offset stays wide, so a slot off
+**   the loom is never on a road.
+*/
+static inline c3_t
+_ca_slot_on(u3a_road* rod_u, u3_noun* sot)
+{
+  c3_d    off_d = (c3_d)u3a_outa(sot);
+  u3_post rut_p = ( rod_u->how.fag_w & u3a_flag_zone )
+                ? rod_u->bas_p
+                : rod_u->rut_p;
+
+  return ( c3y == u3a_is_north(rod_u) )
+         ? ((off_d >= rut_p) && (off_d < rod_u->hat_p))
+         : ((off_d >= rod_u->hat_p) && (off_d < rut_p));
+}
+
+/* _ca_normal_or_sand(): [som_p] is either counted or sand part of u3R
+*/
+static inline c3_t
+_ca_normal_or_sand(u3_post som_p)
+{
+  return _ca_slot_on(u3R, u3a_into(som_p));
+}
+
 /* u3a_sand_open(): set aside the sand zone of u3R, a road just leapt to
 **                  (never the home road), before anything is allocated
 **                  on it.
@@ -1092,7 +1117,7 @@ _ca_take_next_north(u3a_pile* pil_u, u3_noun veb)
 
         //  normal, or in the sand of u3R
         //
-        u3_assert( c3n == u3a_north_is_junior(u3R, nov) );
+        u3_assert( _ca_normal_or_sand(u3a_to_off(nov)) );
 
 #ifdef VERBOSE_TAKE
         u3l_log("north: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -1147,9 +1172,7 @@ _ca_take_next_south(u3a_pile* pil_u, u3_noun veb)
       if ( veb_u->mug_w >> 31 ) {
         u3_noun nov = (u3_noun)veb_u->mug_w;
 
-        //  normal, or in the sand of u3R
-        //
-        u3_assert( c3n == u3a_south_is_junior(u3R, nov) );
+        u3_assert( _ca_normal_or_sand(u3a_to_off(nov)) );
 
 #ifdef VERBOSE_TAKE
         u3l_log("south: %p is already %p", veb_u, u3a_to_ptr(nov));
@@ -2077,23 +2100,6 @@ u3a_lose_report(void)
             _ca_lo.max_w, _ca_lo.drp_d);
     _ca_lo.drp_d = 0;
   }
-}
-
-/* _ca_slot_on(): [sot] is a slot in [rod_u]'s heap, or in its sand: a
-**   sand slot owns a count too. the offset stays wide, so a slot off
-**   the loom is never on a road.
-*/
-static inline c3_t
-_ca_slot_on(u3a_road* rod_u, u3_noun* sot)
-{
-  c3_d    off_d = (c3_d)u3a_outa(sot);
-  u3_post rut_p = ( rod_u->how.fag_w & u3a_flag_zone )
-                ? rod_u->bas_p
-                : rod_u->rut_p;
-
-  return ( c3y == u3a_is_north(rod_u) )
-         ? ((off_d >= rut_p) && (off_d < rod_u->hat_p))
-         : ((off_d >= rod_u->hat_p) && (off_d < rut_p));
 }
 
 /* _ca_slot_kid(): [sot] is on our stack (child road), under promotion.
