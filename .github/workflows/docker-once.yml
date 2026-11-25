@@ -4,7 +4,15 @@ on:
   workflow_dispatch
 
 jobs:
+  #  builds and tests the binary that the image gets; uploads nothing
+  urbit:
+    uses: ./.github/workflows/shared.yml
+    with:
+      pace: 'edge'
+      upload: false
+
   docker:
+    needs: [urbit]
     uses: ./.github/workflows/docker-shared.yml
     with:
       pace: 'edge'

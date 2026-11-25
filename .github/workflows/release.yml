@@ -23,7 +23,9 @@ jobs:
       upload: true
     secrets: inherit
 
+  #  after the tests, with the binary they ran
   docker:
+    needs: [urbit]
     uses: ./.github/workflows/docker-shared.yml
     with:
       pace: 'soon'

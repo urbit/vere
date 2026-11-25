@@ -16,31 +16,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      #  for zig, the linux build cache and the dependencies. the
-      #  build below keeps its own flags, not $VERE_FLAGS.
       #
-      - uses: ./.github/actions/zig
+      # THE BINARY
+      #
+      #  not built here: the image gets the 32-bit linux binary that
+      #  shared.yml built and tested in this run (and uploads, when
+      #  it uploads). the caller runs shared.yml as a job, and makes
+      #  this one need it.
+      #
+
+      - uses: actions/download-artifact@v4
         with:
-          cache: linux
-          pace: ${{ inputs.pace }}
-          bits: 32
+          name: bin-linux-32
+          path: dist
 
-      #
-      # BUILD
-      #
-
-      - name: Build binary
+      - name: Take binary
         id: build
         run: |
-          zig build                    \
-            -Dtarget=x86_64-linux-musl \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
-            --summary all
+          cp dist/32/x86_64-linux-musl/urbit docker/.
 
-          cp zig-out/x86_64-linux-musl/urbit docker/.
+          #  an artifact doesn't keep file modes
+          chmod +x docker/urbit
 
-          echo version=v$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h) >> $GITHUB_OUTPUT
+          test -s dist/32/VERSION
+          echo version=v$(cat dist/32/VERSION) >> $GITHUB_OUTPUT
 
       #
       # UPLOAD TO DOCKER
