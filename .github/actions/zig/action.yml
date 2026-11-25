@@ -44,7 +44,7 @@ runs:
 
     #  what is slow to build and seldom changes is the dependencies:
     #  ext/ and the packages the manifests name. the key is a hash of
-    #  those, so a cache is saved once (by the build job, see
+    #  those, so a cache is saved once (by the build action, or see
     #  shared.yml) and read by every job and pull request until they
     #  change. vere's own objects in it go stale, and are rebuilt:
     #  seconds, beside the link.

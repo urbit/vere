@@ -1,0 +1,73 @@
+name: Build a binary
+description: >
+  Build the binary for one target and width, as it ships, and upload
+  it as the artifact bin-<leg>-<bits>. Saves the leg's build cache
+  when the dependencies have changed.
+
+inputs:
+  leg:
+    description: 'The name of the build leg: names the cache and the artifact'
+    required: true
+  target:
+    description: 'The zig target'
+    required: true
+  pace:
+    description: 'Release pace'
+    required: true
+  bits:
+    description: 'Loom width: 32 or 64'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: zig
+      uses: ./.github/actions/zig
+      with:
+        cache: ${{ inputs.leg }}
+        pace: ${{ inputs.pace }}
+        bits: ${{ inputs.bits }}
+
+    - name: Build binary
+      shell: bash
+      run: zig build -Dtarget=${{ inputs.target }} $VERE_FLAGS --summary all
+
+    #  one cache per leg, written when the dependencies change (see
+    #  the zig action). the legs of both widths would write the same
+    #  thing, so one of them does.
+    #
+    - name: Save build cache
+      if: ${{ steps.zig.outputs.cache-hit != 'true' && inputs.bits == '32' }}
+      uses: actions/cache/save@v4
+      with:
+        path: .zig-cache
+        key: ${{ steps.zig.outputs.cache-key }}
+
+    #  laid out as <width>/<target>/urbit, so that the artifacts of
+    #  every leg can be downloaded into one directory. the linux leg
+    #  adds the version the binaries carry.
+    #
+    - name: Stage artifact
+      shell: bash
+      run: |
+        out=dist/${{ inputs.bits }}
+        mkdir -p $out
+
+        for dir in zig-out/*-*-*/; do
+          target=$(basename $dir)
+          mkdir $out/$target
+          cp $dir/urbit* $out/$target/
+        done
+
+        if [[ "${{ inputs.leg }}" == "linux" ]]; then
+          sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h > $out/VERSION
+          echo "version: $(cat $out/VERSION)"
+          test -s $out/VERSION
+        fi
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: bin-${{ inputs.leg }}-${{ inputs.bits }}
+        path: dist
+        if-no-files-found: error
+        retention-days: 5

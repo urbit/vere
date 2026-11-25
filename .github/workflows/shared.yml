@@ -35,14 +35,17 @@ env:
 
 #  the shape of a run:
 #
-#    build (target x width)   the binaries that ship, each built once
+#    build-linux (width)      the linux binary that ships
+#    build (target x width)   the other binaries that ship
 #    unit (width)             the unit tests, linux
 #    windows-tests (width)    the unit tests for windows, cross-compiled
 #    fake-ship (width)        a debugging build, booted and tested
-#       -- those four start together; the rest wait for build --
-#    migration, replay        the linux binaries against old piers
+#       -- those five start together --
+#    migration, replay        the linux binaries against old piers,
+#                             after build-linux
 #    windows, windows-migration
-#                             the windows binary and tests, run on windows
+#                             the windows binary and tests, run on
+#                             windows, after build and windows-tests
 #    upload                   after everything, if asked for
 #
 #  nothing is compiled twice: a job that tests a binary downloads the
@@ -53,21 +56,42 @@ env:
 #  happens to be: not what ships, and no use to a cache.
 #
 jobs:
+  #  the linux binaries have a job of their own, so that the jobs
+  #  that test them wait for it and not for every target.
+  #
+  build-linux:
+    name: Build (linux, ${{ matrix.bits }}-bit)
+    strategy:
+      fail-fast: false
+      matrix:
+        bits: [64, 32]
+
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build
+        with:
+          leg: linux
+          target: x86_64-linux-musl
+          pace: ${{ inputs.pace }}
+          bits: ${{ matrix.bits }}
+
   build:
     name: Build (${{ matrix.leg }}, ${{ matrix.bits }}-bit)
     strategy:
       fail-fast: false
       matrix:
         bits: [64, 32]
-        leg: [linux, windows, aarch64-linux, aarch64-macos, x86_64-macos]
+        leg: [windows, aarch64-linux, aarch64-macos, x86_64-macos]
         include:
-          - leg: linux
-            target: x86_64-linux-musl
           - leg: windows
             target: x86_64-windows-gnu
           #  the rest are built to see that they build, and to upload:
-          #  no job runs them. a leg each, since the jobs that test the
-          #  linux and windows binaries wait for the slowest leg.
+          #  no job runs them. a leg each, since the windows jobs wait
+          #  for the slowest leg.
           #  (build.zig's list of targets has macos without an abi, and
           #  refuses "aarch64-macos-none", though it installs to that.)
           - leg: aarch64-linux
@@ -83,53 +107,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: zig
-        uses: ./.github/actions/zig
+      - uses: ./.github/actions/build
         with:
-          cache: ${{ matrix.leg }}
+          leg: ${{ matrix.leg }}
+          target: ${{ matrix.target }}
           pace: ${{ inputs.pace }}
           bits: ${{ matrix.bits }}
-
-      - name: Build binary
-        run: zig build -Dtarget=${{ matrix.target }} $VERE_FLAGS --summary all
-
-      #  one cache per leg, written when the dependencies change (see
-      #  the zig action). the legs of both widths would write the same
-      #  thing, so one of them does.
-      #
-      - name: Save build cache
-        if: ${{ steps.zig.outputs.cache-hit != 'true' && matrix.bits == 32 }}
-        uses: actions/cache/save@v4
-        with:
-          path: .zig-cache
-          key: ${{ steps.zig.outputs.cache-key }}
-
-      #  laid out as <width>/<target>/urbit, so that the artifacts of
-      #  every leg can be downloaded into one directory.
-      #
-      - name: Stage artifact
-        run: |
-          out=dist/${{ matrix.bits }}
-          mkdir -p $out
-
-          for dir in zig-out/*-*-*/; do
-            target=$(basename $dir)
-            mkdir $out/$target
-            cp $dir/urbit* $out/$target/
-          done
-
-          if [[ "${{ matrix.leg }}" == "linux" ]]; then
-            sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h > $out/VERSION
-            echo "version: $(cat $out/VERSION)"
-            test -s $out/VERSION
-          fi
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bin-${{ matrix.leg }}-${{ matrix.bits }}
-          path: dist
-          if-no-files-found: error
-          retention-days: 5
 
   unit:
     name: Unit tests (${{ matrix.bits }}-bit)
@@ -279,7 +262,7 @@ jobs:
 
   migration:
     name: Migration roundtrip tests
-    needs: [build]
+    needs: [build-linux]
     if: ${{ inputs.fake_tests }}
 
     runs-on: ubuntu-22.04
@@ -313,7 +296,7 @@ jobs:
 
   replay:
     name: Replay tests (${{ matrix.bits }}-bit)
-    needs: [build]
+    needs: [build-linux]
     if: ${{ inputs.fake_tests }}
     strategy:
       fail-fast: false
@@ -436,7 +419,7 @@ jobs:
   #
   upload:
     name: Upload to GCP
-    needs: [build, unit, fake-ship, migration, replay, windows, windows-migration]
+    needs: [build-linux, build, unit, fake-ship, migration, replay, windows, windows-migration]
     if: ${{ always() && !failure() && !cancelled() && inputs.upload }}
 
     runs-on: ubuntu-22.04
