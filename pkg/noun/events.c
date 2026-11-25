@@ -175,7 +175,8 @@ static const c3_c* _ce_pha_names[u3e_pha_max] = {
   "post", "save", "task", "pack",
   "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
   "trim-per", "trim-for",
-  "mend"
+  "mend",
+  "take-pek", "jam-pek", "free-pek"
 };
 
 static const c3_c* _ce_kin_names[_ce_kin_max] = {

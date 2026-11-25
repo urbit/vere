@@ -17,6 +17,9 @@ Log lines (one snapshot interval ends at each S line):
   E <eve> <poke|task> <changed> <first-faults> <dirty> <hash-us>: <pages...>
   S <eve> <time> <patch-pages> <skipped-free> <tasks>
   F <phase> <kind> <chunk-log2> <pages>     first write that dirtied a patch page
+                                            (take-pek, jam-pek, free-pek: a peek's
+                                            product taken, its response encoded
+                                            and freed, apart from an event's)
   U <pages>                                 patch pages with no fault (fresh pages)
   J <events> <event-us> <failed> <failed-us> <peeks> <peek-us> <longest-event-us> <save-us>
     <minor-faults> <major-faults> <save-minor-faults> <save-major-faults>

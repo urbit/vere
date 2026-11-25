@@ -237,8 +237,10 @@ def sums(ivs):
                 s["F_rec"] += n
             if pha.endswith("-dup"):
                 s["F_dup"] += n
-            if pha == "take-pro":
+            if pha in ("take-pro", "take-pek"):
                 s["F_pro"] += n
+            if pha.endswith("-pek"):
+                s["F_pek"] += n
         if "Q0" in i and "G" in i and "Y" in i:
             k = i["Q0"]
             s["K_ag"] += k[0]; s["K_ac"] += k[1]; s["K_ar"] += k[2]
@@ -412,7 +414,9 @@ METRICS = [
     ("first writes: bytecode take/reap", "(h)", lambda s, v: ratio(s["F_byc"], s["F"])),
     ("first writes: reclaims (rec-*)", "(b)", lambda s, v: ratio(s["F_rec"], s["F"])),
     ("first writes: dedup set (*-dup)", "(b), (c)", lambda s, v: ratio(s["F_dup"], s["F"])),
-    ("first writes: product take (take-pro)", "(i)", lambda s, v: ratio(s["F_pro"], s["F"])),
+    ("first writes: product take (take-pro, take-pek)", "(i)", lambda s, v: ratio(s["F_pro"], s["F"])),
+    ("first writes: a peek's take, jam and free (*-pek)", "jam lead 2",
+     lambda s, v: ratio(s["F_pek"], s["F"])),
     ("A: alloc onto clean page, dirty had room / patch", "C1 tier 1",
      lambda s, v: ratio(s["A_alt"], s["A_patch"])),
     ("A: page-record frees / patch", "C1 tier 2",

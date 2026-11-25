@@ -115,7 +115,10 @@
           u3e_pha_trim_for  = 34,  //  _mars_post: ford memo trim
           u3e_pha_mend      = 35,  //  u3m_love: the pass after an exit
                                    //  home's takes (u3m_sole_mend())
-          u3e_pha_max       = 36
+          u3e_pha_take_pek  = 36,  //  u3m_love: a peek's product
+          u3e_pha_jam_pek   = 37,  //  encoding a peek's response
+          u3e_pha_free_pek  = 38,  //  freeing a peek's response
+          u3e_pha_max       = 39
         } u3e_phase;
 
       /* u3e_meter: counters reported at each snapshot.

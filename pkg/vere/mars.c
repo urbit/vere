@@ -291,10 +291,16 @@ _mars_gift(u3_mars* mar_u, u3_noun pro)
   gif_u->sat_e = u3_gift_rest_e;
   gif_u->ptr_v = 0;
 
-  u3e_Phase = u3e_pha_jam;
-  u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-  u3e_Phase = u3e_pha_io_free;
-  u3z(pro);
+  //  measurement: a peek's response apart from the others
+  //
+  {
+    c3_t pek_t = ( u3e_pha_peek == u3e_Phase );
+
+    u3e_Phase = pek_t ? u3e_pha_jam_pek : u3e_pha_jam;
+    u3s_jam_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
+    u3e_Phase = pek_t ? u3e_pha_free_pek : u3e_pha_io_free;
+    u3z(pro);
+  }
 
   if ( !mar_u->gif_u.ent_u ) {
     u3_assert( !mar_u->gif_u.ext_u );
