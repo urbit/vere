@@ -59,17 +59,23 @@ jobs:
       fail-fast: false
       matrix:
         bits: [64, 32]
-        leg: [linux, windows, cross]
+        leg: [linux, windows, aarch64-linux, aarch64-macos, x86_64-macos]
         include:
           - leg: linux
-            targets: x86_64-linux-musl
+            target: x86_64-linux-musl
           - leg: windows
-            targets: x86_64-windows-gnu
-          #  built to see that they build, and to upload: no job runs them.
+            target: x86_64-windows-gnu
+          #  the rest are built to see that they build, and to upload:
+          #  no job runs them. a leg each, since the jobs that test the
+          #  linux and windows binaries wait for the slowest leg.
           #  (build.zig's list of targets has macos without an abi, and
           #  refuses "aarch64-macos-none", though it installs to that.)
-          - leg: cross
-            targets: aarch64-linux-musl aarch64-macos x86_64-macos
+          - leg: aarch64-linux
+            target: aarch64-linux-musl
+          - leg: aarch64-macos
+            target: aarch64-macos
+          - leg: x86_64-macos
+            target: x86_64-macos
 
     runs-on: ubuntu-22.04
     timeout-minutes: 45
@@ -84,11 +90,8 @@ jobs:
           pace: ${{ inputs.pace }}
           bits: ${{ matrix.bits }}
 
-      - name: Build binaries
-        run: |
-          for target in ${{ matrix.targets }}; do
-            zig build -Dtarget=$target $VERE_FLAGS --summary all
-          done
+      - name: Build binary
+        run: zig build -Dtarget=${{ matrix.target }} $VERE_FLAGS --summary all
 
       #  one cache per leg, written when the dependencies change (see
       #  the zig action). the legs of both widths would write the same

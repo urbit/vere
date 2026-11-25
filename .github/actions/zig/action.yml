@@ -6,7 +6,7 @@ description: >
 
 inputs:
   cache:
-    description: 'Which cache to restore: linux, windows, cross, linux-no-lto or windows-no-lto'
+    description: 'Which cache to restore: a build leg (linux, windows, aarch64-linux, ...), or linux-no-lto or windows-no-lto'
     required: true
   pace:
     description: 'Release pace'
@@ -67,7 +67,7 @@ runs:
     #  download loses the job: fetch them first, and try again. what
     #  is fetched is cached, so a retry only repeats what failed, and
     #  with the cache restored there is nothing to fetch.
-    #  (all of them: the macos sdk, which the cross leg needs, is lazy.)
+    #  (all of them: the macos sdk, which the macos legs need, is lazy.)
     #
     - name: Fetch dependencies
       shell: bash
