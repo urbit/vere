@@ -3,6 +3,7 @@
 #include "noun.h"
 #include "crib.h"
 #include "events.h"
+#include "soletab.h"
 
 #include <time.h>
 
@@ -440,6 +441,84 @@ _us_since(struct timespec* bef_u)
        + (aft_u.tv_nsec - bef_u->tv_nsec) / 1000;
 }
 
+/* _test_sole_refused(): a home noun the set refuses (here one with the
+**   mug of 255 members, or fewer if their neighbors crowd them) keeps
+**   every cell above it out, with no bit to end a later descent. over
+**   one shared 200 levels deep, a walk that took every path (2^200 of
+**   them) would never finish.
+*/
+static c3_i
+_test_sole_refused(void)
+{
+# define _TR_RUN  300
+# define _TR_MUG  0x2468ace
+  c3_i    ret_i = 1;
+  u3_noun mem[_TR_RUN];
+  u3_noun bot = u3_none, dag, r;
+  c3_w    i_w, len_w;
+
+  for ( len_w = 0; len_w < _TR_RUN; len_w++ ) {
+    u3_noun cel = u3nc(0x7e570000 + len_w, 0x7e57);
+
+    ((u3a_noun*)u3a_to_ptr(cel))->mug_w = _TR_MUG;
+    r = u3m_sole_try(u3k(cel));
+
+    if ( r != cel ) {
+      fprintf(stderr, "test: sole refused: a fresh cell was replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+
+    if ( !u3a_sole_has(cel) ) {
+      bot = cel;
+      break;
+    }
+    mem[len_w] = cel;
+  }
+
+  if ( (u3_none == bot) || !len_w || (len_w > 255) ) {
+    fprintf(stderr, "test: sole refused: %u members with one mug\r\n",
+                    (unsigned)len_w);
+    for ( i_w = 0; i_w < len_w; i_w++ ) u3z(mem[i_w]);
+    return 0;
+  }
+
+  dag = u3k(bot);
+  for ( i_w = 0; i_w < 200; i_w++ ) {
+    dag = u3nc(u3k(dag), dag);
+  }
+
+  //  twice: nothing noted by the first walk outlives it
+  //
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    r = u3m_sole_try(u3k(dag));
+
+    if ( (r != dag) || u3a_sole_has(dag) || u3a_sole_has(bot) ) {
+      fprintf(stderr, "test: sole refused: the noun over it is a member,"
+                      " or was replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+  }
+
+  //  with room for it, the whole of it is canonicalized
+  //
+  u3z(mem[len_w - 1]);
+  r = u3m_sole_try(u3k(dag));
+
+  if ( (r != dag) || !u3a_sole_has(dag) || !u3a_sole_has(bot) ) {
+    fprintf(stderr, "test: sole refused: not a member once there's room\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  u3z(dag); u3z(bot);
+  for ( i_w = 0; i_w < (len_w - 1); i_w++ ) u3z(mem[i_w]);
+  return ret_i;
+# undef _TR_RUN
+# undef _TR_MUG
+}
+
 /* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
 **   in the current setting. with 2^dep_w paths, a comparison that
 **   re-compared every path would never finish.
@@ -585,7 +664,7 @@ _test_dedup(void)
   //  a fresh noun is canonical as it stands
   //
   t = u3nc(2, 3);
-  r = u3m_dedup(u3k(t));
+  r = u3m_sole_try(u3k(t));
   if ( r != t ) {
     fprintf(stderr, "test: dedup: fresh noun copied\r\n");
     ret_i = 0;
@@ -595,7 +674,7 @@ _test_dedup(void)
   //  an equal noun dedups to it
   //
   b = u3nc(2, 3);
-  r = u3m_dedup(u3k(b));
+  r = u3m_sole_try(u3k(b));
   if ( r != t ) {
     fprintf(stderr, "test: dedup: equal noun not shared\r\n");
     ret_i = 0;
@@ -605,7 +684,7 @@ _test_dedup(void)
   //  a cell with a non-canonical child is repointed in place
   //
   c = u3nc(u3nc(2, 3), 4);
-  r = u3m_dedup(u3k(c));
+  r = u3m_sole_try(u3k(c));
   if ( (r != c) || (u3h(c) != t) ) {
     fprintf(stderr, "test: dedup: non-canonical child not repointed\r\n");
     ret_i = 0;
@@ -615,7 +694,7 @@ _test_dedup(void)
   //  a cell whose children are canonical is kept
   //
   d = u3nc(u3k(t), 5);
-  r = u3m_dedup(u3k(d));
+  r = u3m_sole_try(u3k(d));
   if ( r != d ) {
     fprintf(stderr, "test: dedup: canonical children copied\r\n");
     ret_i = 0;
@@ -626,7 +705,7 @@ _test_dedup(void)
   //
   s = u3nc(6, 7);
   u3m_hate(0);
-  r = u3m_dedup(u3k(s));
+  r = u3m_sole_try(u3k(s));
   if ( r != s ) {
     fprintf(stderr, "test: dedup: senior noun copied\r\n");
     ret_i = 0;
@@ -638,7 +717,7 @@ _test_dedup(void)
   //
   e = u3nc(u3nc(2, 3), 8);
   u3m_hate(0);
-  r = u3m_dedup(u3k(e));
+  r = u3m_sole_try(u3k(e));
   if ( (r == e) || (u3h(r) != t) || (u3h(e) == t) ) {
     fprintf(stderr, "test: dedup: senior cell not copied\r\n");
     ret_i = 0;
@@ -661,10 +740,10 @@ _test_hcons(void)
 
   //  a freed member leaves the set
   //
-  x = u3m_dedup(u3nc(10, 11));
+  x = u3m_sole_try(u3nc(10, 11));
   y = u3nc(10, 11);
   u3z(x);
-  r = u3m_dedup(u3k(y));
+  r = u3m_sole_try(u3k(y));
   if ( r != y ) {
     fprintf(stderr, "test: hcons: freed member still found\r\n");
     ret_i = 0;
@@ -673,11 +752,11 @@ _test_hcons(void)
 
   //  so do members freed in a cascade
   //
-  x = u3m_dedup(u3nc(u3nc(12, 13), 14));
+  x = u3m_sole_try(u3nc(u3nc(12, 13), 14));
   y = u3nc(u3nc(12, 13), 14);
   u3z(x);
-  r = u3m_dedup(u3k(y));
-  if ( (r != y) || !u3a_hcon_has(u3h(y)) ) {
+  r = u3m_sole_try(u3k(y));
+  if ( (r != y) || !u3a_sole_has(u3h(y)) ) {
     fprintf(stderr, "test: hcons: cascade-freed member still found\r\n");
     ret_i = 0;
   }
@@ -686,23 +765,23 @@ _test_hcons(void)
   //  junior entries that are taken join the home set
   //
   u3m_hate(0);
-  p = u3m_dedup(u3nc(u3nc(20, 21), 22));
-  r = u3m_dedup(u3nc(30, 31));     //  not taken
+  p = u3m_sole_try(u3nc(u3nc(20, 21), 22));
+  r = u3m_sole_try(u3nc(30, 31));     //  not taken
   u3z(r);
   p = u3m_love(p);
-  if ( !u3a_hcon_has(p) || !u3a_hcon_has(u3h(p)) ) {
+  if ( !u3a_sole_has(p) || !u3a_sole_has(u3h(p)) ) {
     fprintf(stderr, "test: hcons: taken entry not a member\r\n");
     ret_i = 0;
   }
   q = u3nc(u3nc(20, 21), 22);
-  r = u3m_dedup(u3k(q));
+  r = u3m_sole_try(u3k(q));
   if ( r != p ) {
     fprintf(stderr, "test: hcons: taken entry not shared\r\n");
     ret_i = 0;
   }
   u3z(r); u3z(q);
   q = u3nc(30, 31);
-  r = u3m_dedup(u3k(q));
+  r = u3m_sole_try(u3k(q));
   if ( r != q ) {
     fprintf(stderr, "test: hcons: untaken entry kept\r\n");
     ret_i = 0;
@@ -715,7 +794,7 @@ _test_hcons(void)
   //  standing for a set that lists a home noun whose canonical equal
   //  [m] is a member by the time the road exits
   //
-  m = u3m_dedup(u3nc(23, 24));
+  m = u3m_sole_try(u3nc(23, 24));
   {
     u3_noun c = u3nc(23, 24);
     u3_noun x = u3nc(c, 25);
@@ -725,7 +804,7 @@ _test_hcons(void)
     u3h_put(u3R->dup_p, c, c);
     u3m_love(0);
 
-    if ( (u3h(x) != c) || u3a_hcon_has(x) ) {
+    if ( (u3h(x) != c) || u3a_sole_has(x) ) {
       fprintf(stderr, "test: hcons: listed home noun rewritten\r\n");
       ret_i = 0;
     }
@@ -735,11 +814,11 @@ _test_hcons(void)
 
   //  rebuilding keeps members reachable from persistent tables only
   //
-  p = u3m_dedup(u3nc(40, 41));
-  m = u3m_dedup(u3nc(42, 43));
+  p = u3m_sole_try(u3nc(40, 41));
+  m = u3m_sole_try(u3nc(42, 43));
   u3h_put(u3R->cax.per_p, 44, u3k(p));
-  u3m_dedup_ream();
-  if ( !u3a_hcon_has(p) || u3a_hcon_has(m) ) {
+  u3m_sole_ream();
+  if ( !u3a_sole_has(p) || u3a_sole_has(m) ) {
     fprintf(stderr, "test: hcons: ream kept the wrong members\r\n");
     ret_i = 0;
   }
@@ -756,10 +835,10 @@ _test_hcons(void)
     for ( i_w = 0; i_w < 2; i_w++ ) {
       if ( i_w ) {
         n = u3nc(45, 46);
-        m = u3m_dedup(u3nc(45, 46));
+        m = u3m_sole_try(u3nc(45, 46));
       }
       else {
-        m = u3m_dedup(u3nc(45, 46));
+        m = u3m_sole_try(u3nc(45, 46));
         n = u3nc(45, 46);
       }
 
@@ -777,10 +856,200 @@ _test_hcons(void)
   return ret_i;
 }
 
+/* _ts_same(): the compact table's member is [*ptr_v].
+*/
+static c3_t
+_ts_same(u3_noun key, void* ptr_v)
+{
+  return key == *(u3_noun*)ptr_v;
+}
+
+/* _ts_check(): every bucket's distance is from its member's home, in
+**              Robin Hood order, and the count is right.
+*/
+static c3_i
+_ts_check(_cs_tab* tab_u)
+{
+  c3_d len_d = 0;
+
+  for ( c3_d i_d = 0; i_d < tab_u->cap_d; i_d++ ) {
+    c3_h key_h = _cs_key(tab_u, i_d);
+
+    if ( key_h ) {
+      u3_noun som   = _cs_noun(tab_u, key_h);
+      c3_d    hom_d = _cs_home(tab_u, u3r_mug(som));
+      c3_d    dis_d = ( i_d >= hom_d ) ? i_d - hom_d : i_d + tab_u->cap_d - hom_d;
+
+      if ( dis_d != *_cs_dis(tab_u, i_d) ) {
+        fprintf(stderr, "test: soletab: bucket %" PRIu64 " distance %u, not %" PRIu64 "\r\n",
+                i_d, (unsigned)*_cs_dis(tab_u, i_d), dis_d);
+        return 0;
+      }
+      len_d++;
+    }
+  }
+  if ( len_d != tab_u->len_d ) {
+    fprintf(stderr, "test: soletab: %" PRIu64 " members, counted %" PRIu64 "\r\n",
+            tab_u->len_d, len_d);
+    return 0;
+  }
+  return 1;
+}
+
+/* _test_soletab(): the compact table against a reference: random adds,
+**                  erases and lookups, growing at the limit and between
+**                  "events", then shrinking.
+*/
+static c3_i
+_test_soletab(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 6000, i_w, k_w;
+  u3_noun cel[6000];
+  c3_t    has_t[6000] = {0};
+  c3_d    len_d = 0;
+  _cs_tab tab_u;
+
+  //  keys round-trip, for cells and atoms
+  //
+  {
+    u3_noun c = u3nc(1, 2);
+    c3_d    big_d[2] = { 0x123456789abcdefULL, 0xfedcba987654321ULL };
+    u3_noun a = u3i_chubs(2, big_d);
+
+    _cs_tab vat_u = { .cel_t = 0 }, cet_u = { .cel_t = 1 };
+    if (  (c != _cs_noun(&cet_u, _cs_slot(c)))
+       || (a != _cs_noun(&vat_u, _cs_slot(a))) )
+    {
+      fprintf(stderr, "test: soletab: keys don't round-trip\r\n");
+      ret_i = 0;
+    }
+    u3z(c); u3z(a);
+  }
+
+  for ( i_w = 0; i_w < num_w; i_w++ ) {
+    cel[i_w] = u3nc(i_w + 1, 7);
+    (void)u3r_mug(cel[i_w]);
+  }
+
+  _cs_init(&tab_u, 1);
+  srand(1);
+
+  for ( k_w = 0; ret_i && (k_w < 300000); k_w++ ) {
+    i_w = (c3_w)rand() % num_w;
+
+    switch ( rand() % 3 ) {
+      case 0: {
+        if ( !has_t[i_w] ) {
+          if ( k_w & 1 ) {
+            _cs_add(&tab_u, cel[i_w]);
+          }
+          else {
+            c3_d pos_d;
+            if (  (cel[i_w] != _cs_put(&tab_u, cel[i_w], u3r_mug(cel[i_w]), _ts_same, &pos_d))
+               || (~0ULL == pos_d) )
+            {
+              fprintf(stderr, "test: soletab: put of %u wrong\r\n", (unsigned)i_w);
+              ret_i = 0;
+            }
+          }
+          has_t[i_w] = 1;
+          len_d++;
+        }
+        else {
+          c3_d pos_d;
+          if (  (cel[i_w] != _cs_put(&tab_u, cel[i_w], u3r_mug(cel[i_w]), _ts_same, &pos_d))
+             || (~0ULL != pos_d) )
+          {
+            fprintf(stderr, "test: soletab: put of present %u wrong\r\n", (unsigned)i_w);
+            ret_i = 0;
+          }
+        }
+      } break;
+
+      case 1: {
+        c3_d pos_d = _cs_erase(&tab_u, cel[i_w]);
+
+        if ( has_t[i_w] != (~0ULL != pos_d) ) {
+          fprintf(stderr, "test: soletab: erase of %u wrong\r\n", (unsigned)i_w);
+          ret_i = 0;
+        }
+        if ( has_t[i_w] ) len_d--;
+        has_t[i_w] = 0;
+      } break;
+
+      default: {
+        u3_weak got = _cs_get(&tab_u, u3r_mug(cel[i_w]), _ts_same, &cel[i_w]);
+
+        if ( has_t[i_w] != (u3_none != got) ) {
+          fprintf(stderr, "test: soletab: lookup of %u wrong\r\n", (unsigned)i_w);
+          ret_i = 0;
+        }
+      } break;
+    }
+
+    if ( len_d != tab_u.len_d ) {
+      fprintf(stderr, "test: soletab: length %" PRIu64 ", not %" PRIu64 "\r\n",
+              tab_u.len_d, len_d);
+      ret_i = 0;
+    }
+
+    //  an "event" boundary now and then
+    //
+    if ( 0 == (k_w % 5000) ) {
+      _cs_tend(&tab_u);
+      ret_i &= _ts_check(&tab_u);
+    }
+  }
+
+  //  erase most, then shrink between events
+  //
+  {
+    c3_d lin_d;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      if ( has_t[i_w] && (i_w % 16) ) {
+        _cs_erase(&tab_u, cel[i_w]);
+        has_t[i_w] = 0;
+      }
+    }
+    lin_d = tab_u.lin_d;
+    _cs_tend(&tab_u);
+    if ( tab_u.lin_d >= lin_d ) {
+      fprintf(stderr, "test: soletab: didn't shrink (%" PRIu64 " lines)\r\n", lin_d);
+      ret_i = 0;
+    }
+    ret_i &= _ts_check(&tab_u);
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3_weak got = _cs_get(&tab_u, u3r_mug(cel[i_w]), _ts_same, &cel[i_w]);
+      if ( has_t[i_w] != (u3_none != got) ) {
+        fprintf(stderr, "test: soletab: after shrinking, %u wrong\r\n", (unsigned)i_w);
+        ret_i = 0;
+        break;
+      }
+    }
+  }
+
+  if ( !_cs_met.gro_d[0] || !_cs_met.gro_d[1] ) {
+    fprintf(stderr, "test: soletab: resizes %" PRIu64 " between, %" PRIu64 " at the limit\r\n",
+            _cs_met.gro_d[0], _cs_met.gro_d[1]);
+    ret_i = 0;
+  }
+
+  c3_free(tab_u.lin_u);
+  for ( i_w = 0; i_w < num_w; i_w++ ) u3z(cel[i_w]);
+  return ret_i;
+}
+
 static c3_i
 _test_equality(void)
 {
   c3_i ret_i = 1;
+
+  if ( !_test_sole_refused() ) {
+    fprintf(stderr, "test: equality: sole refused: failed\r\n");
+    ret_i = 0;
+  }
 
   if ( !_test_dedup() ) {
     fprintf(stderr, "test: equality: dedup: failed\r\n");
@@ -838,6 +1107,11 @@ _test_equality(void)
 
   if ( !_test_unify_inner_home() ) {
     fprintf(stderr, "test: equality: unify inner-home: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_soletab() ) {
+    fprintf(stderr, "test: equality: soletab: failed\r\n");
     ret_i = 0;
   }
 

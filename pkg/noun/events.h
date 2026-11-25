@@ -182,7 +182,7 @@
                              //  per for byc war bas hot cod
           c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
           c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
-                             //  older home nouns met in it, u3m_dedup()
+                             //  older home nouns met in it, u3m_sole_try()
           c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
