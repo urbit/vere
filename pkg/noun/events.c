@@ -1014,7 +1014,7 @@ _ce_flaw_mmap(c3_w pag_w)
 
   // map the dirty page into the ephemeral file
   //
-  if ( MAP_FAILED == mmap(_ce_ptr(pag_w),
+  if ( MAP_FAILED == u3m_loom_map(_ce_ptr(pag_w),
                           _ce_page,
                           (PROT_READ | PROT_WRITE),
                           (MAP_FIXED | MAP_SHARED),
@@ -1878,7 +1878,7 @@ _ce_loom_protect(c3_w pgs_w, c3_w old_w)
 static void
 _ce_loom_mapf_ephemeral(void)
 {
-  if ( MAP_FAILED == mmap(_ce_ptr(0),
+  if ( MAP_FAILED == u3m_loom_map(_ce_ptr(0),
                           _ce_len(u3P.pag_w),
                           (PROT_READ | PROT_WRITE),
                           (MAP_FIXED | MAP_SHARED),
@@ -2013,7 +2013,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
   c3_w dif_w = 0;
 
   if ( pgs_w ) {
-    if ( MAP_FAILED == mmap(_ce_ptr(0),
+    if ( MAP_FAILED == u3m_loom_map(_ce_ptr(0),
                             _ce_len(pgs_w),
                             PROT_READ,
                             (MAP_FIXED | MAP_PRIVATE),
@@ -2029,7 +2029,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
     dif_w = old_w - pgs_w;
 
     if ( u3C.wag_h & u3o_swap ) {
-      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+      if ( MAP_FAILED == u3m_loom_map(_ce_ptr(pgs_w),
                               _ce_len(dif_w),
                               (PROT_READ | PROT_WRITE),
                               (MAP_FIXED | MAP_SHARED),
@@ -2041,7 +2041,7 @@ _ce_loom_mapf(c3_i fid_i, c3_w pgs_w, c3_w old_w)
       }
     }
     else {
-      if ( MAP_FAILED == mmap(_ce_ptr(pgs_w),
+      if ( MAP_FAILED == u3m_loom_map(_ce_ptr(pgs_w),
                               _ce_len(dif_w),
                               (PROT_READ | PROT_WRITE),
                               (MAP_ANON | MAP_FIXED | MAP_PRIVATE),
