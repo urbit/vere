@@ -5,8 +5,8 @@ set -xeuo pipefail
 urbit_binary=$GITHUB_WORKSPACE/$URBIT_BINARY
 brass_pill=$GITHUB_WORKSPACE/brass.pill
 
-curl -LJ -o $brass_pill https://github.com/urbit/urbit/raw/88c6173048d61ebd86455f0c1a8ce8f8099cbe01/bin/brass.pill
-curl -LJ -o urbit.tar.gz https://github.com/urbit/urbit/archive/88c6173048d61ebd86455f0c1a8ce8f8099cbe01.tar.gz
+curl -LJ --fail --retry 5 --retry-delay 10 -o $brass_pill https://github.com/urbit/urbit/raw/88c6173048d61ebd86455f0c1a8ce8f8099cbe01/bin/brass.pill
+curl -LJ --fail --retry 5 --retry-delay 10 -o urbit.tar.gz https://github.com/urbit/urbit/archive/88c6173048d61ebd86455f0c1a8ce8f8099cbe01.tar.gz
 
 mkdir ./urbit
 tar xfz urbit.tar.gz -C ./urbit --strip-components=1
