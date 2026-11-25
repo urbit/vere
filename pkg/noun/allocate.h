@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "options.h"
 #include "rsignal.h"
 #include "c3/c3.h"
 #include <stddef.h>
@@ -269,7 +270,8 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
-  U3_W(S) fut_w[26];                            /*  futureproof buffer                        */ \
+  U3_W(S) lol_p;                                /*  lose list (inner roads; allocate.c)       */ \
+  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -407,7 +409,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 #     define u3t(som) u3a_t(som)
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
-#     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
+#     define  u3tn(type, x) ((x) ? (type*)u3a_into(x) : (void*)NULL)
 
 #     define  u3of(type, x) (u3a_outa((type*)x))
 
@@ -656,6 +658,20 @@ typedef struct {
       }
     }
 
+  /* u3a_dbg_ram(): debugging memory, where a leak fails the checks: a
+  **                unification whose old value can't go on a lose list
+  **                is refused, not leaked.
+  */
+    static inline c3_t
+    u3a_dbg_ram(void)
+    {
+#ifdef U3_MEMORY_DEBUG
+      return 1;
+#else
+      return !!(u3C.wag_h & u3o_debug_ram);
+#endif
+    }
+
     /**  road stack.
     **/
         /* u3a_drop(): drop a road stack frame per [pil_u].
@@ -862,10 +878,65 @@ u3a_post_info(u3_post);
           c3_w
           u3a_use(u3_noun som);
 
-        /* u3a_wed(): unify noun references.
+        /* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge
+        **            them on this road or a senior one below home, else,
+        **            on an inner road, point one slot at the other's
+        **            value.
         */
           void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
+
+        /* u3a_lose_ent, u3a_lose_chunk: an inner road's lose list
+        **                   (lol_p): a stack of chunks in its heap.
+        */
+          typedef struct {
+            u3_post rod_p;                      //  the road the value is on
+            u3_noun val;                        //  u3_none once lost
+          } u3a_lose_ent;
+
+          typedef struct {
+            u3_post      nex_p;                 //  older chunk
+            c3_w         len_w;                 //  entries published
+            u3a_lose_ent ent_u[];
+          } u3a_lose_chunk;
+
+        /* u3a_lose_drain(): lose the values unification unpointed from
+        **                   slots on this road, and copy the other
+        **                   entries of the child's list [lol_p] up. after
+        **                   every take of the exit from road [kid_p];
+        **                   this road's list stood at entry [bot_w] of
+        **                   chunk [bot_p] as the exit began, after
+        **                   u3m_fall(). (all unused on the home road.)
+        */
+          void
+          u3a_lose_drain(u3_post kid_p,
+                         u3_post lol_p,
+                         u3_post bot_p,
+                         c3_w    bot_w);
+
+        /* u3a_lose_mark(): mark this road's lose list, for a grab.
+        */
+          c3_w
+          u3a_lose_mark(void);
+
+        /* u3a_lose_leap(): a new excursion from the home road, or a
+        **                  signal's reset of it: lose what an interrupted
+        **                  exit left on the home lose list. home road only.
+        */
+          void
+          u3a_lose_leap(void);
+
+        /* u3a_lose_size(): restart the home lose list at [min_w] entries,
+        **                  at most [max_w] (tests). home road only, empty.
+        */
+          void
+          u3a_lose_size(c3_w min_w, c3_w max_w);
+
+        /* u3a_lose_report(): log the home lose list's drops at its ceiling.
+        **                    between events.
+        */
+          void
+          u3a_lose_report(void);
 
         /* u3a_Defer_max_w: most nouns with deferred gains at once.
         */

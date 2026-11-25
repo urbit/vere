@@ -234,6 +234,7 @@ pub fn build(b: *std.Build) !void {
 
 const c_source_files = [_][]const u8{
     "allocate.c",
+    "crib.c",
     "events.c",
     "hashtable.c",
     "imprison.c",
@@ -449,6 +450,7 @@ const install_headers = [_][]const u8{
     "allocate.h",
     "canon.h",
     "copy_migrate.h",
+    "crib.h",
     "error.h",
     "events.h",
     "hashtable.h",
