@@ -13,9 +13,9 @@
     **   bytes on the 32-bit loom and 32 on the 64-bit.
     */
 #     ifdef VERE64
-#       define u3o_sand_default  128
+#       define u3o_sand_default  8
 #     else
-#       define u3o_sand_default  64
+#       define u3o_sand_default  4
 #     endif
 
   /** Data structures.

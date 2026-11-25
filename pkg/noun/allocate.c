@@ -289,6 +289,10 @@ u3a_sand_open(void)
     return;
   }
 
+  //  Deeply nested roads run out of memory much faster with sand zones
+  //
+  if ( u3m_road_depth() > 10 ) return;
+
   u3_assert( rod_u->par_p && (rod_u->hat_p == rod_u->rut_p) );
 
   {
