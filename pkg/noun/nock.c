@@ -3175,6 +3175,10 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
   //  earlier in this walk (keys are deduplicated, see _n_find()): its mug
   //  slot holds the address of its copy, which is looked up in its place
   //
+  //    a key that hasn't left is looked up as it is. parts of it can
+  //    have left (its formula, say, with the product): the mug and
+  //    equality allow for those (u3r_mug(), u3r_sing()).
+  //
   if (  (c3y == u3a_is_junior(u3R, key))
      && (c3y == u3a_left(key)) )
   {
@@ -3187,6 +3191,9 @@ _cn_reap_prog_cb(u3_noun kev, void* wit)
   if ( u3_none != got ) {
     _cn_reap_prog_dat(_cn_to_prog(got), _cn_to_prog(pog_w));
 
+    //  the copy is held by what took it first: this loses the count
+    //  gained above, and frees nothing
+    //
     if ( u3_none != yek ) {
       u3z(yek);
     }

@@ -120,9 +120,12 @@ static u3_noun
 _mars_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
-    if ( u3C.wag_h & (u3o_debug_ram | u3o_check_corrupt) ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(sac, u3_none);
       u3C.wag_h &= ~u3o_check_corrupt;
+    }
+    else {
+      u3m_grab_check(sac, u3_none);
     }
     return u3_nul;
   }
@@ -774,6 +777,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
+  //  the home lose list, if it reached its ceiling during the event
+  //
+  u3a_lose_report();
+
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));

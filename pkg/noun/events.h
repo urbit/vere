@@ -153,6 +153,15 @@
           c3_d dfe_d;        //    on distinct nouns
           c3_d dfk_d;        //  table shrinks after a large window
 
+          //  the grab u3o_check_corrupt asks for (u3m_vgrab_check())
+          //
+          c3_d ccs_d[3];     //  times asked: a signal recovered on the
+                             //  home road, (unused, 0), a full home
+                             //  lose list
+          c3_d ccg_d;        //  grabs run
+          c3_d ccm_d;        //    their time, ms
+          c3_d ccl_d;        //    words they found leaked, and freed
+
           //  alignment of each new arvo state with the old, per
           //  u3e_measure_align(): home nouns referenced from the new
           //  state's cells on the event's road (which the take gains)
@@ -183,6 +192,45 @@
           //
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
+
+          //  unification (u3a_wed()): merges on senior inner roads
+          //  (_ca_wed_stow()), and when no road below home can merge,
+          //  slot writes on an inner road (_ca_wed_home())
+          //
+          c3_d wvm_d;        //  merges on senior inner roads
+          c3_d wsg_d;        //  give-ups: no road could merge
+          c3_d wsw_d[2];     //  slot writes: outside home memory, in home
+                             //  memory
+          c3_d wsk_d;        //  home writes refused (the count at its
+                             //  limit, or, debugging memory, the home lose
+                             //  list full)
+
+          //  the lose lists, home [0] and inner [1] (u3a_lose_drain())
+          //
+          c3_d wlp_d[2];     //  values put
+          c3_d wlf_d[2];     //  values leaked, the list full
+          c3_d wll_d[2];     //  values lost after an exit's takes
+          c3_d wlm_d[2];     //  ... most at one exit
+          c3_d wlx_d[2];     //  left by an interrupted exit: home values
+                             //  lost at the next leap, inner ones dropped
+                             //  with the road they're on
+          c3_d wlc_d;        //  inner entries copied up a road at an exit
+
+          //  cribs (see crib.h): the home lose list is [1]; [0] is kept
+          //  for a set. capacity and ceiling are states, kept across
+          //  intervals; the rest is use in the interval
+          //
+          struct {
+            c3_d cap_d;      //  capacity now, entries (0: not made yet)
+            c3_d top_d;      //  largest capacity
+            c3_d max_d;      //  ceiling
+            c3_d pek_d;      //  most entries in use at once
+            c3_d gro_d;      //  grows
+            c3_d shr_d;      //  shrinks
+            c3_d clg_d;      //  clears through a log of slots (sets)
+            c3_d cdp_d;      //  clears by zeroing the table (sets)
+            c3_d ovf_d;      //  evictions or drops at the ceiling
+          } cib_u[2];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
