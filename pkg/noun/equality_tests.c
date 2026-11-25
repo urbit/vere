@@ -369,6 +369,278 @@ _test_lose_full(void)
   return ret_i;
 }
 
+/* _test_take_sole(): the exit to home's canonicalizing take. of the
+**   nouns an inner road's cache holds, one equal to a member isn't
+**   copied, a fresh one becomes a member, and a cell over both is added
+**   too; the product, taken after, reaches all of them by pointer. a
+**   noun in the product alone is copied, and isn't a member.
+*/
+static c3_i
+_test_take_sole(void)
+{
+  c3_i    ret_i = 1;
+  c3_d    ctf_d = u3e_Meter.ctf_d;
+  u3_noun mem   = u3m_sole_try(u3nt(0x7a01, 0x7a02, 0x7a03));
+  u3_noun key   = u3nc(0x7a00, 0x7a00);
+  u3_noun pro, got;
+
+  u3m_hate(0);
+  {
+    u3_noun a = u3nt(0x7a01, 0x7a02, 0x7a03);          //  equals [mem]
+    u3_noun b = u3nc(0x7b01, u3nc(0x7b02, 0x7b03));    //  fresh
+    u3_noun c = u3nc(u3k(a), u3k(b));
+    u3_noun d = u3nc(0x7c01, 0x7c02);                  //  product only
+
+    u3z_save(u3z_memo_keep, u3k(key), c);
+    pro = u3nq(a, b, c, d);
+  }
+  pro = u3m_love(pro);
+  got = u3z_find_up(key);
+
+  if ( u3_none == got ) {
+    fprintf(stderr, "test: take sole: the cache entry didn't come home\r\n");
+    u3z(pro); u3z(mem); u3z(key);
+    return 0;
+  }
+
+  if ( (u3h(got) != mem) || (ctf_d == u3e_Meter.ctf_d) ) {
+    fprintf(stderr, "test: take sole: a noun equal to a member was copied\r\n");
+    ret_i = 0;
+  }
+  if ( !u3a_sole_has(u3t(got)) || !u3a_sole_has(u3t(u3t(got))) ) {
+    fprintf(stderr, "test: take sole: a fresh noun isn't a member\r\n");
+    ret_i = 0;
+  }
+  if ( !u3a_sole_has(got) ) {
+    fprintf(stderr, "test: take sole: the cell over them isn't a member\r\n");
+    ret_i = 0;
+  }
+  {
+    u3_noun a, b, c, d;
+
+    u3x_qual(pro, &a, &b, &c, &d);
+    if ( (a != mem) || (b != u3t(got)) || (c != got) ) {
+      fprintf(stderr, "test: take sole: the product has its own copies\r\n");
+      ret_i = 0;
+    }
+    if ( u3a_sole_has(d) || u3a_sole_has(pro) ) {
+      fprintf(stderr, "test: take sole: a noun in the product alone is a member\r\n");
+      ret_i = 0;
+    }
+  }
+
+  //  an equal noun made at home finds the member the take added
+  //
+  {
+    u3_noun r = u3m_sole_try(u3nc(0x7b01, u3nc(0x7b02, 0x7b03)));
+
+    if ( r != u3t(got) ) {
+      fprintf(stderr, "test: take sole: the member added isn't found\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+  }
+
+  _GRAB_EXACT("take sole", pro, mem, key, got);
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(got); u3z(pro); u3z(mem); u3z(key);
+  return ret_i;
+}
+
+/* _test_take_mend(): the exit to home leaves an older home noun that
+**   isn't a member as it is during its takes, and canonicalizes what
+**   the takes produced over one after them: its duplicates point at
+**   members, it and the copy over it become members, and a taken noun
+**   equal to a member stays, the one cell not shared.
+*/
+static c3_i
+_test_take_mend(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, i_w;
+  c3_d    ctr_d = u3e_Meter.ctr_d;
+  u3_noun mem = u3_nul, old = u3_nul, cop = u3_nul;
+  u3_noun dup, sam, pro, got;
+
+  //  [old] lists [i 2] for each i, not members; [mem] lists members
+  //  equal to them, and isn't one itself
+  //
+  for ( i_w = num_w; i_w--; ) {
+    mem = u3nc(u3m_sole_try(u3nc(i_w + 0x7d01, 2)), mem);
+    old = u3nc(u3nc(i_w + 0x7d01, 2), old);
+    cop = u3nc(u3nc(i_w + 0x7d01, 2), cop);
+  }
+
+  //  [sam] is a member, and [dup] an equal noun that isn't
+  //
+  sam = u3m_sole_try(u3nt(0x7e01, 0x7e02, 0x7e03));
+  dup = u3nt(0x7e01, 0x7e02, 0x7e03);
+
+  //  an inner road's cache holds a cell over [old], and [dup] itself;
+  //  its product holds [old]
+  //
+  u3m_hate(0);
+  pro = u3nc(u3k(old), 0x7d00);
+  u3h_put(u3R->cax.per_p, 50, u3k(pro));
+  u3h_put(u3R->cax.per_p, 51, u3k(dup));
+  pro = u3m_love(pro);
+
+  if ( 2 != (u3e_Meter.ctr_d - ctr_d) ) {
+    fprintf(stderr, "test: take mend: %" PRIu64 " nouns noted, not 2\r\n",
+            u3e_Meter.ctr_d - ctr_d);
+    ret_i = 0;
+  }
+
+  got = u3h_get(u3R->cax.per_p, 50);
+
+  if ( (u3_none == got) || (u3h(got) != old) ) {
+    fprintf(stderr, "test: take mend: the older noun was replaced\r\n");
+    ret_i = 0;
+  }
+  else {
+    u3_noun lis = old, mis = mem;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      if ( u3h(lis) != u3h(mis) ) {
+        fprintf(stderr, "test: take mend: element %" PRIc3_w " left\r\n", i_w);
+        ret_i = 0;
+      }
+      lis = u3t(lis);
+      mis = u3t(mis);
+    }
+    if ( !u3a_sole_has(old) || !u3a_sole_has(got) ) {
+      fprintf(stderr, "test: take mend: the older noun or the copy over it "
+                      "isn't a member\r\n");
+      ret_i = 0;
+    }
+    if ( pro != got ) {
+      fprintf(stderr, "test: take mend: the product has its own copy\r\n");
+      ret_i = 0;
+    }
+  }
+  u3z(got);
+
+  //  a taken noun with an equal member is left where it is
+  //
+  got = u3h_get(u3R->cax.per_p, 51);
+
+  if ( (got != dup) || u3a_sole_has(dup) ) {
+    fprintf(stderr, "test: take mend: a noun equal to a member was %s\r\n",
+            (got != dup) ? "replaced" : "made a member");
+    ret_i = 0;
+  }
+  if ( u3t(dup) != u3t(sam) ) {
+    fprintf(stderr, "test: take mend: its children weren't shared\r\n");
+    ret_i = 0;
+  }
+  u3z(got);
+
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "test: take mend: asked for a grab\r\n");
+    ret_i = 0;
+  }
+
+  //  what the pass replaced was freed, and nothing else
+  //
+  _GRAB_EXACT("take mend", mem, old, cop, sam, dup, pro);
+
+  if ( c3n == u3r_sing(old, cop) ) {
+    fprintf(stderr, "test: take mend: changed the value\r\n");
+    ret_i = 0;
+  }
+
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(mem); u3z(old); u3z(cop); u3z(sam); u3z(dup); u3z(pro);
+  return ret_i;
+}
+
+/* _test_take_mend_full(): with the notes at their ceiling, a taken noun
+**   that isn't noted stays as the take left it: nothing is lost but its
+**   sharing, and the next exit's pass still runs.
+*/
+static c3_i
+_test_take_mend_full(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    num_w = 20, max_w = 16, i_w, men_w = 0;
+  c3_d    ctr_d = u3e_Meter.ctr_d;
+  c3_d    ovf_d = u3e_Meter.cib_u[2].ovf_d;
+  u3_noun mem = u3_nul, old = u3_nul;
+
+  //  [old] lists [i 3] for each i, not members; [mem] lists members
+  //  equal to them
+  //
+  for ( i_w = num_w; i_w--; ) {
+    mem = u3nc(u3m_sole_try(u3nc(i_w + 0x7f01, 3)), mem);
+    old = u3nc(u3nc(i_w + 0x7f01, 3), old);
+  }
+
+  //  an inner road's cache holds a cell over each element, one entry
+  //  each: twenty nouns to note, with room for sixteen
+  //
+  u3m_sole_note_size(16);
+  u3m_hate(0);
+  {
+    u3_noun lis = old;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3h_put(u3R->cax.per_p, 100 + i_w, u3nc(u3k(u3h(lis)), 0x7f00));
+      lis = u3t(lis);
+    }
+  }
+  u3m_love(0);
+
+  {
+    u3_noun mis = mem;
+
+    for ( i_w = 0; i_w < num_w; i_w++ ) {
+      u3_weak got = u3h_get(u3R->cax.per_p, 100 + i_w);
+
+      if ( u3_none == got ) {
+        fprintf(stderr, "test: take mend full: entry %" PRIc3_w " didn't come home\r\n", i_w);
+        ret_i = 0;
+      }
+      else {
+        c3_t men_t = ( u3h(got) == u3h(mis) );
+
+        if ( men_t != u3a_sole_has(got) ) {
+          fprintf(stderr, "test: take mend full: entry %" PRIc3_w " is %s\r\n", i_w,
+                  men_t ? "shared, not a member" : "a member over a noun that isn't");
+          ret_i = 0;
+        }
+        men_w += men_t;
+        u3z(got);
+      }
+      mis = u3t(mis);
+    }
+  }
+
+  if (  (max_w != men_w)
+     || (max_w != (u3e_Meter.ctr_d - ctr_d))
+     || ((num_w - max_w) != (u3e_Meter.cib_u[2].ovf_d - ovf_d)) )
+  {
+    fprintf(stderr, "test: take mend full: %" PRIc3_w " canonicalized, %" PRIu64
+                    " noted, %" PRIu64 " past the ceiling\r\n",
+            men_w, u3e_Meter.ctr_d - ctr_d, u3e_Meter.cib_u[2].ovf_d - ovf_d);
+    ret_i = 0;
+  }
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    fprintf(stderr, "test: take mend full: asked for a grab\r\n");
+    ret_i = 0;
+  }
+
+  _GRAB_EXACT("take mend full", mem, old);
+
+  u3m_sole_note_size(0);
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(mem); u3z(old);
+  return ret_i;
+}
+
 static c3_i
 _test_unify_inner_home(void)
 {
@@ -406,6 +678,177 @@ _test_unify_inner_home(void)
   return ret_i;
 }
 
+/* _test_sole(): hash-consing keeps canonical cells, copies the rest.
+**
+**   NB: comparison unifies equal sub-cells, so the expectations use
+**   [t], a cell only ever compared at the top level.
+*/
+static c3_i
+_test_sole(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun t, b, c, d, s, e, r;
+
+  //  a fresh noun is canonical as it stands
+  //
+  t = u3nc(2, 3);
+  r = u3m_sole_try(u3k(t));
+  if ( r != t ) {
+    fprintf(stderr, "test: sole: fresh noun copied\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  //  an equal noun canonicalizes to it
+  //
+  b = u3nc(2, 3);
+  r = u3m_sole_try(u3k(b));
+  if ( r != t ) {
+    fprintf(stderr, "test: sole: equal noun not shared\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  //  a cell with a non-canonical child is repointed in place
+  //
+  c = u3nc(u3nc(2, 3), 4);
+  r = u3m_sole_try(u3k(c));
+  if ( (r != c) || (u3h(c) != t) ) {
+    fprintf(stderr, "test: sole: non-canonical child not repointed\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  //  a cell whose children are canonical is kept
+  //
+  d = u3nc(u3k(t), 5);
+  r = u3m_sole_try(u3k(d));
+  if ( r != d ) {
+    fprintf(stderr, "test: sole: canonical children copied\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  //  an inner road keeps a senior noun, rather than copying it
+  //
+  s = u3nc(6, 7);
+  u3m_hate(0);
+  r = u3m_sole_try(u3k(s));
+  if ( r != s ) {
+    fprintf(stderr, "test: sole: senior noun copied\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+  u3m_love(0);
+
+  //  an inner road leaves a senior cell with a non-canonical child as
+  //  it is, rather than copying it
+  //
+  e = u3nc(u3nc(2, 3), 8);
+  u3m_hate(0);
+  r = u3m_sole_try(u3k(e));
+  if ( (r != e) || (u3h(e) == t) ) {
+    fprintf(stderr, "test: sole: senior cell copied or rewritten\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+  u3m_love(0);
+  u3z(e);
+
+  //  but canonicalizes a junior cell's children, as on the home road
+  //
+  u3m_hate(0);
+  e = u3nc(u3nc(2, 3), 8);
+  r = u3m_sole_try(u3k(e));
+  if ( (r != e) || (u3h(e) != t) ) {
+    fprintf(stderr, "test: sole: junior child not repointed\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(e);
+  u3m_love(0);
+  e = 0;
+
+  u3z(t); u3z(b); u3z(c); u3z(d); u3z(s); u3z(e);
+
+  return ret_i;
+}
+
+/* _test_sole_set(): the off-loom home-road hashcons set.
+*/
+static c3_i
+_test_sole_set(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun x, y, r, p, a, b, m, n;
+
+  //  a freed member leaves the set
+  //
+  x = u3m_sole_try(u3nc(10, 11));
+  y = u3nc(10, 11);
+  u3z(x);
+  r = u3m_sole_try(u3k(y));
+  if ( r != y ) {
+    fprintf(stderr, "test: sole set: freed member still found\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(y);
+
+  //  so do members freed in a cascade
+  //
+  x = u3m_sole_try(u3nc(u3nc(12, 13), 14));
+  y = u3nc(u3nc(12, 13), 14);
+  u3z(x);
+  r = u3m_sole_try(u3k(y));
+  if ( (r != y) || !u3a_sole_has(u3h(y)) ) {
+    fprintf(stderr, "test: sole set: cascade-freed member still found\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(y);
+
+  //  rebuilding keeps members reachable from persistent tables only
+  //
+  p = u3m_sole_try(u3nc(40, 41));
+  m = u3m_sole_try(u3nc(42, 43));
+  u3h_put(u3R->cax.per_p, 44, u3k(p));
+  u3m_sole_ream();
+  if ( !u3a_sole_has(p) || u3a_sole_has(m) ) {
+    fprintf(stderr, "test: sole set: ream kept the wrong members\r\n");
+    ret_i = 0;
+  }
+  u3h_free(u3R->cax.per_p);
+  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
+  u3z(p); u3z(m);
+
+  //  unification on the home road keeps the member,
+  //  whichever is allocated first
+  //
+  {
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < 2; i_w++ ) {
+      if ( i_w ) {
+        n = u3nc(45, 46);
+        m = u3m_sole_try(u3nc(45, 46));
+      }
+      else {
+        m = u3m_sole_try(u3nc(45, 46));
+        n = u3nc(45, 46);
+      }
+
+      a = u3nc(u3k(m), 1);
+      b = u3nc(u3k(n), 1);
+      (void)u3r_sing(a, b);
+      if ( (u3h(a) != m) || (u3h(b) != m) ) {
+        fprintf(stderr, "test: sole set: unified away from the member (%" PRIc3_w ")\r\n", i_w);
+        ret_i = 0;
+      }
+      u3z(a); u3z(b); u3z(m); u3z(n);
+    }
+  }
+
+  return ret_i;
+}
+
 /* _dag(): [x_n x_n] for x_0 = [1 2], n deep: 2^n leaves, n+1 cells.
 */
 static u3_noun
@@ -430,15 +873,140 @@ _dag_on(c3_w dep_w, u3_noun p, u3_noun q)
   return x;
 }
 
-/* _us_since(): microseconds since [bef_u].
+/* _cpu_mark(), _us_since(): this process's CPU time, and microseconds
+**   of it since [bef_u]. the tests below bound a walk that is linear in a
+**   noun's cells (microseconds) and would take seconds if it followed
+**   every path. CPU time, not elapsed time, so that a loaded machine
+**   can't fail them; the bound leaves room for sanitizer builds.
 */
+static void
+_cpu_mark(struct timespec* bef_u)
+{
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, bef_u);
+}
+
 static c3_d
 _us_since(struct timespec* bef_u)
 {
   struct timespec aft_u;
-  clock_gettime(CLOCK_MONOTONIC, &aft_u);
+
+  _cpu_mark(&aft_u);
   return (c3_d)(aft_u.tv_sec - bef_u->tv_sec) * 1000000
        + (aft_u.tv_nsec - bef_u->tv_nsec) / 1000;
+}
+
+/* _test_sole_dag(): canonicalizing a shared noun on an inner road takes time
+**                    in its distinct cells, not its leaves (2^26 of them:
+**                    a walk of them takes seconds). junior cells are
+**                    canonicalized, each once; senior cells that aren't
+**                    members are left as they are.
+*/
+static c3_i
+_test_sole_dag(void)
+{
+  c3_i ret_i = 1;
+
+  //  a junior noun, with an equal member for the whole of it, or a part
+  //
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    struct timespec bef_u;
+    u3_noun can, fre, r;
+    c3_d    mic_d;
+
+    can = u3m_sole_try(_dag(i_w ? 13 : 26));
+
+    _cpu_mark(&bef_u);
+    u3m_hate(0);
+    fre = _dag(26);
+    r = u3m_sole_try(u3k(fre));
+    if ( !i_w && (r != can) ) {
+      fprintf(stderr, "test: sole dag: member not found\r\n");
+      ret_i = 0;
+    }
+    if ( c3n == u3r_sing(r, fre) ) {
+      fprintf(stderr, "test: sole dag: changed the value\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: sole dag: %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+    u3z(can);
+  }
+
+  //  a junior noun with no equal member: the visited set keeps it
+  //  linear, at full size and starting small
+  //
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    struct timespec bef_u;
+    u3_noun fre, r;
+    c3_d    mic_d;
+
+    if ( i_w ) u3m_sole_visit_size(4, 0);
+
+    _cpu_mark(&bef_u);
+    u3m_hate(0);
+    fre = _dag_on(26, 9, 10);
+    r = u3m_sole_try(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: sole dag: fresh junior noun replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: sole dag: unvisited %" PRIu64 " us\r\n", mic_d);
+      ret_i = 0;
+    }
+  }
+  u3m_sole_visit_size(14, 0);
+
+  //  a home noun that isn't a member, or an intermediate road's, is left
+  //  as it is, though an equal member exists: the exit to home
+  //  canonicalizes what's promoted. likewise while debugging memory,
+  //  where a sweep of the intermediate road finds no leaks
+  //
+  for ( c3_w i_w = 0; i_w < 3; i_w++ ) {
+    c3_h    wag_h = u3C.wag_h;
+    struct timespec bef_u;
+    u3_noun can, fre, r;
+    c3_d    mic_d;
+
+    can = u3m_sole_try(_dag(26));
+    if ( i_w ) u3m_hate(0);
+    fre = _dag(26);
+
+    if ( 2 == i_w ) u3C.wag_h |= u3o_debug_ram;
+    _cpu_mark(&bef_u);
+    u3m_hate(0);
+    r = u3m_sole_try(u3k(fre));
+    if ( (r != fre) || (u3h(fre) == u3h(can)) ) {
+      fprintf(stderr, "test: sole dag: senior noun %u rewritten\r\n", (unsigned)i_w);
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: sole dag: senior %u %" PRIu64 " us\r\n", (unsigned)i_w, mic_d);
+      ret_i = 0;
+    }
+
+    if ( 2 == i_w ) {
+      u3C.wag_h |= u3o_leak_crash;
+      u3m_grab(fre);
+      u3C.wag_h = wag_h;
+    }
+    u3z(fre);
+    if ( i_w ) u3m_love(0);
+    u3z(can);
+  }
+
+  return ret_i;
 }
 
 /* _test_sole_refused(): a home noun the set refuses (here one with the
@@ -469,7 +1037,7 @@ _test_sole_refused(void)
     }
     u3z(r);
 
-    if ( !u3a_sole_has(cel) ) {
+    if ( !u3a_is_sole(cel) ) {
       bot = cel;
       break;
     }
@@ -493,7 +1061,7 @@ _test_sole_refused(void)
   for ( i_w = 0; i_w < 2; i_w++ ) {
     r = u3m_sole_try(u3k(dag));
 
-    if ( (r != dag) || u3a_sole_has(dag) || u3a_sole_has(bot) ) {
+    if ( (r != dag) || u3a_is_sole(dag) || u3a_is_sole(bot) ) {
       fprintf(stderr, "test: sole refused: the noun over it is a member,"
                       " or was replaced\r\n");
       ret_i = 0;
@@ -506,7 +1074,7 @@ _test_sole_refused(void)
   u3z(mem[len_w - 1]);
   r = u3m_sole_try(u3k(dag));
 
-  if ( (r != dag) || !u3a_sole_has(dag) || !u3a_sole_has(bot) ) {
+  if ( (r != dag) || !u3a_is_sole(dag) || !u3a_is_sole(bot) ) {
     fprintf(stderr, "test: sole refused: not a member once there's room\r\n");
     ret_i = 0;
   }
@@ -517,6 +1085,146 @@ _test_sole_refused(void)
   return ret_i;
 # undef _TR_RUN
 # undef _TR_MUG
+}
+
+/* _walk_list(): a fresh list of [len_w] cells [bas_w+i 0x7a11], none
+**   of them members.
+*/
+static u3_noun
+_walk_list(c3_w len_w, c3_w bas_w)
+{
+  u3_noun lis = u3_nul;
+
+  while ( len_w-- ) {
+    lis = u3nc(u3nc(bas_w + len_w, 0x7a11), lis);
+  }
+  return lis;
+}
+
+/* _test_walk_bound(): the home road's walk has frames for 64 cells. a
+**   list of 1.000 is left as it is from the 65th cell up, every cell
+**   above that stays out of the set, and the 63 heads the walk had a
+**   frame for are members. nothing leaks, and with room the whole list is
+**   canonicalized, and an equal one shares it.
+*/
+static c3_i
+_test_walk_bound(void)
+{
+  c3_i    ret_i = 1;
+  c3_w    len_w = 1000, dep_w = 64, i_w, men_w = 0, hed_w = 0;
+  c3_d    ovf_d = u3e_Meter.cib_u[4].ovf_d;
+  u3_noun lis   = _walk_list(len_w, 0x7b000000);
+  u3_noun r, t;
+
+  u3m_yard_size(dep_w * sizeof(u3_noun), 0);
+
+  //  twice: the second walk meets the same bound
+  //
+  for ( i_w = 0; i_w < 2; i_w++ ) {
+    r = u3m_sole_try(u3k(lis));
+
+    if ( r != lis ) {
+      fprintf(stderr, "test: walk bound: replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+  }
+
+  for ( t = lis; u3_nul != t; t = u3t(t) ) {
+    men_w += u3a_is_sole(t);
+    hed_w += u3a_is_sole(u3h(t));
+  }
+
+  if ( men_w || ((dep_w - 1) != hed_w) || (ovf_d == u3e_Meter.cib_u[4].ovf_d) ) {
+    fprintf(stderr, "test: walk bound: %" PRIc3_w " list cells and %" PRIc3_w
+                    " heads are members, the bound met %" PRIu64 " times\r\n",
+            men_w, hed_w, u3e_Meter.cib_u[4].ovf_d - ovf_d);
+    ret_i = 0;
+  }
+  u3m_crib_report();
+
+  _GRAB_EXACT("walk bound", lis);
+
+  u3m_yard_size(0, 0);
+  r = u3m_sole_try(u3k(lis));
+
+  for ( men_w = 0, t = lis; u3_nul != t; t = u3t(t) ) {
+    men_w += u3a_is_sole(t);
+  }
+  if ( (r != lis) || (len_w != men_w) ) {
+    fprintf(stderr, "test: walk bound: with room, %" PRIc3_w " of %" PRIc3_w
+                    " cells are members\r\n", men_w, len_w);
+    ret_i = 0;
+  }
+  u3z(r);
+
+  r = u3m_sole_try(_walk_list(len_w, 0x7b000000));
+  if ( r != lis ) {
+    fprintf(stderr, "test: walk bound: an equal list isn't shared\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  _GRAB_EXACT("walk bound: with room", lis);
+  u3z(lis);
+  return ret_i;
+}
+
+/* _test_walk_scope(): a walk runs inside another user of its yards,
+**   whose bytes (taken at odd lengths) and ends it leaves alone.
+*/
+static c3_i
+_test_walk_scope(void)
+{
+  c3_i      ret_i = 1;
+  u3a_yard* wok_u = &u3a_Yard_wok;
+  u3a_yard* res_u = &u3a_Yard_res;
+  size_t    wok_i = wok_u->use_i, res_i = res_u->use_i;
+  c3_y*     wok_y = u3a_yard_take(wok_u, 1001, 1);
+  c3_y*     res_y = u3a_yard_take(res_u, 333, 1);
+  size_t    wom_i = wok_u->use_i, rem_i = res_u->use_i, i_i;
+  u3_noun   lis   = _walk_list(500, 0x7c000000);
+  u3_noun   r;
+
+  if ( !wok_y || !res_y ) {
+    fprintf(stderr, "test: walk scope: no room\r\n");
+    return 0;
+  }
+  memset(wok_y, 0xa5, 1001);
+  memset(res_y, 0x5a, 333);
+
+  //  a walk with marks, too (see _test_sole_refused())
+  //
+  r = u3m_sole_try(u3k(lis));
+  if ( (r != lis) || !u3a_is_sole(lis) ) {
+    fprintf(stderr, "test: walk scope: not canonicalized\r\n");
+    ret_i = 0;
+  }
+  u3z(r);
+
+  if ( !_test_sole_refused() ) {
+    fprintf(stderr, "test: walk scope: sole refused\r\n");
+    ret_i = 0;
+  }
+
+  if ( (wom_i != wok_u->use_i) || (rem_i != res_u->use_i) ) {
+    fprintf(stderr, "test: walk scope: an end moved\r\n");
+    ret_i = 0;
+  }
+  for ( i_i = 0; i_i < 1001; i_i++ ) {
+    if ( 0xa5 != wok_y[i_i] ) { ret_i = 0; }
+  }
+  for ( i_i = 0; i_i < 333; i_i++ ) {
+    if ( 0x5a != res_y[i_i] ) { ret_i = 0; }
+  }
+  if ( !ret_i ) {
+    fprintf(stderr, "test: walk scope: the enclosing user's memory changed\r\n");
+  }
+
+  wok_u->use_i = wok_i;
+  res_u->use_i = res_i;
+  u3z(lis);
+  return ret_i;
 }
 
 /* _sing_dag(): compare two equal nouns of [dep_w] levels, built apart,
@@ -608,12 +1316,202 @@ _test_sing_dag(void)
   return ret_i;
 }
 
-/* _test_crib(): a crib grows to its ceiling, and gives memory back.
+/* _test_sole_lazy(): u3m_sole_home() canonicalizes on the home road, and
+**                    leaves inner roads' nouns to the exit home.
+*/
+static c3_i
+_test_sole_lazy(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun can = u3m_sole_home(u3nt(7, 8, 9));
+  u3_noun som;
+
+  if ( !u3a_sole_has(can) ) {
+    fprintf(stderr, "test: sole lazy: home not canonical\r\n");
+    ret_i = 0;
+  }
+
+  u3m_hate(0);
+  som = u3nt(7, 8, 9);
+  {
+    u3_noun pro = u3m_sole_home(u3k(som));
+
+    if ( pro != som ) {
+      fprintf(stderr, "test: sole lazy: inner road canonicalized\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+  {
+    u3_noun pro = u3m_sole_try(u3k(som));
+
+    if ( pro != can ) {
+      fprintf(stderr, "test: sole lazy: try missed the member\r\n");
+      ret_i = 0;
+    }
+    u3z(pro);
+  }
+  u3z(som);
+  u3m_love(0);
+
+  u3z(can);
+  return ret_i;
+}
+
+/* _gap_on(): x_{k+1} = [x_k [w_k x_k]] over [x] (transferred), w_k a
+**   fresh list of [len_w] atoms: each shared x_k is met again only after
+**   w_k's cells, so a visited set that forgot entries would lose it.
+*/
+static u3_noun
+_gap_on(u3_noun x, c3_w dep_w, c3_w len_w)
+{
+  for ( c3_w i_w = 0; i_w < dep_w; i_w++ ) {
+    u3_noun w = 0;
+    for ( c3_w j_w = 0; j_w < len_w; j_w++ ) {
+      w = u3nc(100 + (i_w * len_w) + j_w, w);
+    }
+    x = u3nc(u3k(x), u3nc(w, x));
+  }
+  return x;
+}
+
+static u3_noun
+_gap(c3_w dep_w, c3_w len_w)
+{
+  return _gap_on(u3nc(1, 2), dep_w, len_w);
+}
+
+/* _crib_list(): a fresh list of [len_w] distinct cells, [ [bas_w+i] ...].
+*/
+static u3_noun
+_crib_list(c3_w len_w, c3_w bas_w)
+{
+  u3_noun lis = u3_nul;
+
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    lis = u3nc(bas_w + i_w, lis);
+  }
+  return lis;
+}
+
+/* _test_crib(): a crib grows to its ceiling, and gives memory back;
+**              the visited set grows from 16 entries rather than
+**              filling below its ceiling, and shrinks back; full at its
+**              ceiling, the walk stops, which is reported; and it's
+**              cleared between excursions.
 */
 static c3_i
 _test_crib(void)
 {
   c3_i ret_i = 1;
+
+  //  a yard takes up to its reservation and no further, gives back to
+  //  a saved end keeping what it committed, and back at its start gives
+  //  back what it committed past its floor
+  //
+  {
+    u3a_yard yar_u = {0};
+    size_t   max_i = 1 << 22, sav_i;
+    c3_y*    one_y;
+    c3_y*    two_y;
+
+    u3a_yard_init(&yar_u, max_i);
+    one_y = u3a_yard_take(&yar_u, 24, 1);
+    sav_i = yar_u.use_i;
+    two_y = u3a_yard_take(&yar_u, max_i - 24, 1);
+
+    if (  !one_y || (two_y != (one_y + 24)) || u3a_yard_take(&yar_u, 1, 1)
+       || (max_i != yar_u.use_i) || (max_i != yar_u.com_i) )
+    {
+      fprintf(stderr, "test: crib: yard: take\r\n");
+      ret_i = 0;
+    }
+    else {
+      memset(one_y, 0x11, 24);
+      memset(two_y, 0x22, max_i - 24);
+    }
+
+    u3a_yard_back(&yar_u, sav_i);
+    if ( (yar_u.com_i != max_i) || yar_u.shr_w || (0x11 != one_y[23]) ) {
+      fprintf(stderr, "test: crib: yard: back to a saved end\r\n");
+      ret_i = 0;
+    }
+    u3a_yard_give(&yar_u, sav_i);
+    if ( yar_u.use_i || (yar_u.com_i != max_i) ) {
+      fprintf(stderr, "test: crib: yard: give\r\n");
+      ret_i = 0;
+    }
+    u3a_yard_back(&yar_u, 0);
+    if ( (yar_u.com_i != yar_u.min_i) || (1 != yar_u.shr_w) ) {
+      fprintf(stderr, "test: crib: yard: back to the start (%zu committed)\r\n",
+              yar_u.com_i);
+      ret_i = 0;
+    }
+    if ( u3a_yard_take(&yar_u, 24, 1) != one_y ) {
+      fprintf(stderr, "test: crib: yard: take after the drop\r\n");
+      ret_i = 0;
+    }
+    if (  (u3a_yard_take(&yar_u, max_i - 24, 1) != two_y)
+       || u3a_yard_take(&yar_u, 8, 1) )
+    {
+      fprintf(stderr, "test: crib: yard: take again\r\n");
+      ret_i = 0;
+    }
+    else {
+      memset(two_y, 0x33, max_i - 24);
+    }
+    u3a_yard_init(&yar_u, 100);
+    if (  (96 != yar_u.max_i) || !u3a_yard_take(&yar_u, 96, 1)
+       || u3a_yard_take(&yar_u, 1, 1) )
+    {
+      fprintf(stderr, "test: crib: yard: small\r\n");
+      ret_i = 0;
+    }
+
+    //  aligned takes: the end moves up to the alignment first, takes of
+    //  one size and alignment are contiguous, a zero-length take aligns
+    //  the end alone, and a take that doesn't fit takes nothing, pad
+    //  included
+    //
+    {
+      c3_y *odd_y, *one_y, *two_y, *nul_y;
+      size_t end_i;
+
+      u3a_yard_init(&yar_u, 64);
+      odd_y = u3a_yard_take(&yar_u, 3, 1);
+      one_y = u3a_yard_take(&yar_u, 8, 8);
+      two_y = u3a_yard_take(&yar_u, 8, 8);
+
+      if (  !odd_y || (one_y != (odd_y + 8)) || (two_y != (one_y + 8))
+         || (24 != u3a_yard_here(&yar_u)) )
+      {
+        fprintf(stderr, "test: crib: yard: aligned takes\r\n");
+        ret_i = 0;
+      }
+
+      (void)u3a_yard_take(&yar_u, 1, 1);
+      nul_y = u3a_yard_take(&yar_u, 0, 16);
+      if ( (nul_y != (odd_y + 32)) || (32 != u3a_yard_here(&yar_u)) ) {
+        fprintf(stderr, "test: crib: yard: zero-length take\r\n");
+        ret_i = 0;
+      }
+
+      (void)u3a_yard_take(&yar_u, 25, 1);
+      end_i = u3a_yard_here(&yar_u);
+      if (  u3a_yard_take(&yar_u, 8, 8) || (end_i != u3a_yard_here(&yar_u))
+         || !u3a_yard_take(&yar_u, 7, 1) )
+      {
+        fprintf(stderr, "test: crib: yard: aligned take at the end\r\n");
+        ret_i = 0;
+      }
+
+      u3a_yard_back(&yar_u, 3);
+      if ( u3a_yard_take(&yar_u, 1, 1) != (odd_y + 3) ) {
+        fprintf(stderr, "test: crib: yard: back\r\n");
+        ret_i = 0;
+      }
+    }
+  }
 
   //  the region
   //
@@ -647,212 +1545,195 @@ _test_crib(void)
     //  NB: the test's reservation (1 MiB of address space) is kept
   }
 
-  return ret_i;
-}
-
-/* _test_dedup(): hash-consing keeps canonical cells, copies the rest.
-**
-**   NB: comparison unifies equal sub-cells, so the expectations use
-**   [t], a cell only ever compared at the top level.
-*/
-static c3_i
-_test_dedup(void)
-{
-  c3_i    ret_i = 1;
-  u3_noun t, b, c, d, s, e, r;
-
-  //  a fresh noun is canonical as it stands
+  //  the visited set grows from 16 entries, so a walk that meets each
+  //  shared cell again only after many others stays linear; then it
+  //  shrinks back over a few quiet excursions
   //
-  t = u3nc(2, 3);
-  r = u3m_sole_try(u3k(t));
-  if ( r != t ) {
-    fprintf(stderr, "test: dedup: fresh noun copied\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-
-  //  an equal noun dedups to it
-  //
-  b = u3nc(2, 3);
-  r = u3m_sole_try(u3k(b));
-  if ( r != t ) {
-    fprintf(stderr, "test: dedup: equal noun not shared\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-
-  //  a cell with a non-canonical child is repointed in place
-  //
-  c = u3nc(u3nc(2, 3), 4);
-  r = u3m_sole_try(u3k(c));
-  if ( (r != c) || (u3h(c) != t) ) {
-    fprintf(stderr, "test: dedup: non-canonical child not repointed\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-
-  //  a cell whose children are canonical is kept
-  //
-  d = u3nc(u3k(t), 5);
-  r = u3m_sole_try(u3k(d));
-  if ( r != d ) {
-    fprintf(stderr, "test: dedup: canonical children copied\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-
-  //  an inner road keeps a senior noun, rather than copying it
-  //
-  s = u3nc(6, 7);
-  u3m_hate(0);
-  r = u3m_sole_try(u3k(s));
-  if ( r != s ) {
-    fprintf(stderr, "test: dedup: senior noun copied\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-  u3m_love(0);
-
-  //  an inner road copies a senior cell with a non-canonical child
-  //
-  e = u3nc(u3nc(2, 3), 8);
-  u3m_hate(0);
-  r = u3m_sole_try(u3k(e));
-  if ( (r == e) || (u3h(r) != t) || (u3h(e) == t) ) {
-    fprintf(stderr, "test: dedup: senior cell not copied\r\n");
-    ret_i = 0;
-  }
-  u3z(r);
-  u3m_love(0);
-
-  u3z(t); u3z(b); u3z(c); u3z(d); u3z(s); u3z(e);
-
-  return ret_i;
-}
-
-/* _test_hcons(): the off-loom home-road hashcons set.
-*/
-static c3_i
-_test_hcons(void)
-{
-  c3_i    ret_i = 1;
-  u3_noun x, y, r, p, q, a, b, m, n;
-
-  //  a freed member leaves the set
-  //
-  x = u3m_sole_try(u3nc(10, 11));
-  y = u3nc(10, 11);
-  u3z(x);
-  r = u3m_sole_try(u3k(y));
-  if ( r != y ) {
-    fprintf(stderr, "test: hcons: freed member still found\r\n");
-    ret_i = 0;
-  }
-  u3z(r); u3z(y);
-
-  //  so do members freed in a cascade
-  //
-  x = u3m_sole_try(u3nc(u3nc(12, 13), 14));
-  y = u3nc(u3nc(12, 13), 14);
-  u3z(x);
-  r = u3m_sole_try(u3k(y));
-  if ( (r != y) || !u3a_sole_has(u3h(y)) ) {
-    fprintf(stderr, "test: hcons: cascade-freed member still found\r\n");
-    ret_i = 0;
-  }
-  u3z(r); u3z(y);
-
-  //  junior entries that are taken join the home set
-  //
-  u3m_hate(0);
-  p = u3m_sole_try(u3nc(u3nc(20, 21), 22));
-  r = u3m_sole_try(u3nc(30, 31));     //  not taken
-  u3z(r);
-  p = u3m_love(p);
-  if ( !u3a_sole_has(p) || !u3a_sole_has(u3h(p)) ) {
-    fprintf(stderr, "test: hcons: taken entry not a member\r\n");
-    ret_i = 0;
-  }
-  q = u3nc(u3nc(20, 21), 22);
-  r = u3m_sole_try(u3k(q));
-  if ( r != p ) {
-    fprintf(stderr, "test: hcons: taken entry not shared\r\n");
-    ret_i = 0;
-  }
-  u3z(r); u3z(q);
-  q = u3nc(30, 31);
-  r = u3m_sole_try(u3k(q));
-  if ( r != q ) {
-    fprintf(stderr, "test: hcons: untaken entry kept\r\n");
-    ret_i = 0;
-  }
-  u3z(r); u3z(q); u3z(p);
-
-  //  home nouns listed in a junior set are left alone at exit: the set
-  //  holds no references to them, so canonicalizing [x] in place would
-  //  free [c], which it still lists (#1133). they're put directly,
-  //  standing for a set that lists a home noun whose canonical equal
-  //  [m] is a member by the time the road exits
-  //
-  m = u3m_sole_try(u3nc(23, 24));
   {
-    u3_noun c = u3nc(23, 24);
-    u3_noun x = u3nc(c, 25);
+    struct timespec bef_u;
+    c3_d mic_d, vcp_d;
 
+    u3m_sole_visit_size(4, 0);
+    _cpu_mark(&bef_u);
     u3m_hate(0);
-    u3h_put(u3R->dup_p, x, x);
-    u3h_put(u3R->dup_p, c, c);
+    u3z(u3m_sole_try(_gap(40, 64)));
     u3m_love(0);
-
-    if ( (u3h(x) != c) || u3a_sole_has(x) ) {
-      fprintf(stderr, "test: hcons: listed home noun rewritten\r\n");
+    if ( (mic_d = _us_since(&bef_u)) > 1000000 ) {
+      fprintf(stderr, "test: crib: gap %" PRIu64 " us\r\n", mic_d);
       ret_i = 0;
     }
-    u3z(x);
-  }
-  u3z(m);
-
-  //  rebuilding keeps members reachable from persistent tables only
-  //
-  p = u3m_sole_try(u3nc(40, 41));
-  m = u3m_sole_try(u3nc(42, 43));
-  u3h_put(u3R->cax.per_p, 44, u3k(p));
-  u3m_sole_ream();
-  if ( !u3a_sole_has(p) || u3a_sole_has(m) ) {
-    fprintf(stderr, "test: hcons: ream kept the wrong members\r\n");
-    ret_i = 0;
-  }
-  u3h_free(u3R->cax.per_p);
-  u3R->cax.per_p = u3h_new_cache(u3C.per_w);
-  u3z(p); u3z(m);
-
-  //  unification on the home road keeps the member,
-  //  whichever is allocated first
-  //
-  {
-    c3_w i_w;
-
-    for ( i_w = 0; i_w < 2; i_w++ ) {
-      if ( i_w ) {
-        n = u3nc(45, 46);
-        m = u3m_sole_try(u3nc(45, 46));
-      }
-      else {
-        m = u3m_sole_try(u3nc(45, 46));
-        n = u3nc(45, 46);
-      }
-
-      a = u3nc(u3k(m), 1);
-      b = u3nc(u3k(n), 1);
-      (void)u3r_sing(a, b);
-      if ( (u3h(a) != m) || (u3h(b) != m) ) {
-        fprintf(stderr, "test: hcons: unified away from the member (%" PRIc3_w ")\r\n", i_w);
-        ret_i = 0;
-      }
-      u3z(a); u3z(b); u3z(m); u3z(n);
+    if ( (vcp_d = u3m_sole_visit_cap()) <= 16 ) {
+      fprintf(stderr, "test: crib: visited set didn't grow (%" PRIu64 ")\r\n",
+              vcp_d);
+      ret_i = 0;
+    }
+    for ( c3_w i_w = 0; i_w < 16; i_w++ ) {
+      u3m_hate(0);
+      u3m_love(0);
+    }
+    if ( 16 != u3m_sole_visit_cap() ) {
+      fprintf(stderr, "test: crib: visited set didn't shrink (%" PRIu64 ")\r\n",
+              u3m_sole_visit_cap());
+      ret_i = 0;
     }
   }
 
+  //  the visited set at a ceiling of 64 entries: try still leaves a
+  //  fresh junior noun as it is, and the fill is counted, once, and
+  //  reported
+  //
+  {
+    u3_noun fre, r;
+
+    u3m_sole_visit_size(4, 6);
+    u3e_Meter.cib_u[0].ovf_d = 0;
+    u3m_hate(0);
+    fre = _crib_list(1000, 1U << 20);
+    r   = u3m_sole_try(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: crib: full: fresh noun replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    if ( (64 != u3e_Meter.cib_u[0].cap_d) || (1 != u3e_Meter.cib_u[0].ovf_d) ) {
+      fprintf(stderr, "test: crib: full: counted %" PRIu64 " times\r\n",
+                      u3e_Meter.cib_u[0].ovf_d);
+      ret_i = 0;
+    }
+    u3m_crib_report();
+  }
+
+  //  full, the walk stops: a shared noun whose parts are met again only
+  //  after more cells than the set holds (2^200 paths) is left as it is,
+  //  as is a copy of a member for the rest of the excursion. the next
+  //  excursion shares again
+  //
+  {
+    u3_noun can = u3m_sole_try(_crib_list(8, 1U << 22));
+    u3_noun fre, r;
+
+    u3e_Meter.cib_u[0].ovf_d = 0;
+    u3m_hate(0);
+    fre = _gap(200, 100);
+    r   = u3m_sole_try(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: crib: full: shared noun replaced\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+
+    fre = _crib_list(8, 1U << 22);
+    r   = u3m_sole_try(u3k(fre));
+    if ( r != fre ) {
+      fprintf(stderr, "test: crib: full: shared while full\r\n");
+      ret_i = 0;
+    }
+    u3z(r); u3z(fre);
+    u3m_love(0);
+
+    if ( 1 != u3e_Meter.cib_u[0].ovf_d ) {
+      fprintf(stderr, "test: crib: full: shared noun didn't fill the set\r\n");
+      ret_i = 0;
+    }
+
+    u3m_hate(0);
+    r = u3m_sole_try(_crib_list(8, 1U << 22));
+    if ( r != can ) {
+      fprintf(stderr, "test: crib: full: not shared on the next excursion\r\n");
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    u3z(can);
+    u3m_crib_report();
+  }
+
+  //  clearing: an excursion fills the set with a junior list's cells; the
+  //  next builds a junior copy of a member list, likely at the same
+  //  addresses, and try must find the member. a short list in a set at
+  //  full size is cleared through the set's log; a long one, in a set
+  //  that grew, by zeroing it
+  //
+  for ( c3_w i_w = 0; i_w < 2; i_w++ ) {
+    c3_w    len_w = i_w ? 5000 : 100;
+    u3_noun hom   = u3m_sole_home(_crib_list(len_w, 0));
+    u3_noun jun, r;
+
+    u3m_sole_visit_size(i_w ? 4 : 14, 0);
+    u3m_hate(0);
+    u3z(u3m_sole_try(_crib_list(len_w, 1U << 20)));
+    u3m_love(0);
+
+    u3m_hate(0);
+    jun = _crib_list(len_w, 0);
+    r   = u3m_sole_try(jun);
+    if ( r != hom ) {
+      fprintf(stderr, "test: crib: clear (%u cells): member not found\r\n",
+              (unsigned)len_w);
+      ret_i = 0;
+    }
+    u3z(r);
+    u3m_love(0);
+    u3z(hom);
+  }
+
+  u3m_sole_visit_size(14, 0);
+  return ret_i;
+}
+
+/* _test_visit_samp(): the profiling sampler runs nock on the home road
+**   in the middle of an inner road's computation. a walk of the home
+**   road there has marks of its own: the inner walk's aren't cleared,
+**   and are still found.
+*/
+static c3_i
+_test_visit_samp(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun hom   = u3nc(0x7d01, 0x7d02);
+  u3_noun jun, r;
+  c3_d    clr_d, eiv_d;
+
+  u3m_hate(0);
+  jun = _crib_list(8, 1U << 23);
+  r   = u3m_sole_try(u3k(jun));
+  u3z(r);
+
+  clr_d = u3e_Meter.cib_u[0].clg_d + u3e_Meter.cib_u[0].cdp_d;
+  {
+    u3a_road* rod_u = u3R;
+
+    //  the home road is this road's parent. it isn't named as
+    //  &(u3H->rod_u): this file doesn't see the road's alignment as
+    //  the library does on 64-bit windows (the system's jmp_buf), so
+    //  it would place the road 8 bytes off within u3H
+    //
+    u3R = u3to(u3a_road, u3R->par_p);
+    r   = u3m_sole_try(hom);
+    u3R = rod_u;
+  }
+
+  if ( (r != hom) || !u3a_sole_has(hom) ) {
+    fprintf(stderr, "test: visit samp: the home noun isn't a member\r\n");
+    ret_i = 0;
+  }
+  if ( clr_d != (u3e_Meter.cib_u[0].clg_d + u3e_Meter.cib_u[0].cdp_d) ) {
+    fprintf(stderr, "test: visit samp: the home walk cleared the inner marks\r\n");
+    ret_i = 0;
+  }
+
+  eiv_d = u3e_Meter.eiv_d;
+  r     = u3m_sole_try(u3k(jun));
+  if ( (r != jun) || (eiv_d == u3e_Meter.eiv_d) ) {
+    fprintf(stderr, "test: visit samp: the inner walk's mark is gone\r\n");
+    ret_i = 0;
+  }
+  u3z(r); u3z(jun);
+  u3m_love(0);
+
+  u3z(hom);
   return ret_i;
 }
 
@@ -926,6 +1807,21 @@ _test_soletab(void)
     }
     u3z(c); u3z(a);
   }
+
+#ifdef VERE64
+  //  a home noun past the keys' reach (128 GiB of home heap) has no key,
+  //  and isn't added
+  //
+  {
+    u3_noun yon = u3a_to_pom((c3_w)(_CS_KEY_MAX * _CS_UNIT));
+    u3_noun ner = u3a_to_pom((c3_w)((_CS_KEY_MAX - 1) * _CS_UNIT));
+
+    if ( _cs_reaches(yon) || !_cs_reaches(ner) || u3m_sole_add(yon) ) {
+      fprintf(stderr, "test: soletab: reach\r\n");
+      ret_i = 0;
+    }
+  }
+#endif
 
   for ( i_w = 0; i_w < num_w; i_w++ ) {
     cel[i_w] = u3nc(i_w + 1, 7);
@@ -1041,23 +1937,183 @@ _test_soletab(void)
   return ret_i;
 }
 
+/* _ts_forge(): a fresh cell whose cached mug is [mug_h].
+*/
+static u3_noun
+_ts_forge(c3_w i_w, c3_h mug_h)
+{
+  u3_noun cel = u3nc(i_w + 1, 9);
+
+  ((u3a_noun*)u3a_to_ptr(cel))->mug_w = mug_h;
+  return cel;
+}
+
+/* _ts_all(): cells [cel] are members of [tab_u], which checks out.
+*/
+static c3_i
+_ts_all(_cs_tab* tab_u, u3_noun* cel, c3_w len_w)
+{
+  for ( c3_w i_w = 0; i_w < len_w; i_w++ ) {
+    if ( cel[i_w] != _cs_get(tab_u, u3r_mug(cel[i_w]), _ts_same, &cel[i_w]) ) {
+      return 0;
+    }
+  }
+  return _ts_check(tab_u);
+}
+
+/* _test_soletab_mug(): members that share a mug, or have neighboring
+**   ones, crowd one run of buckets. the 256th with one mug is refused,
+**   not placed past the largest distance; and a rebuild too small to
+**   hold a run keeps every member, at a larger size.
+*/
+static c3_i
+_test_soletab_mug(void)
+{
+# define _TS_ONE  300
+# define _TS_RUN  (_CS_DIS_MAX + 1)
+# define _TS_TWO  100
+  c3_i    ret_i = 1;
+  u3_noun cel[_TS_ONE];
+  _cs_tab tab_u;
+  c3_w    i_w;
+
+  //  one mug: 255 fit, at distances 0 to 254
+  //
+  _cs_init(&tab_u, 1);
+  for ( i_w = 0; i_w < _TS_ONE; i_w++ ) {
+    c3_t add_t;
+
+    cel[i_w] = _ts_forge(i_w, 0x1234567);
+
+    if ( i_w & 1 ) {
+      add_t = ( ~0ULL != _cs_add(&tab_u, cel[i_w]) );
+    }
+    else {
+      c3_d pos_d;
+      add_t = ( cel[i_w] == _cs_put(&tab_u, cel[i_w], 0x1234567, _ts_same, &pos_d) );
+    }
+    if ( add_t != (i_w < _TS_RUN) ) {
+      fprintf(stderr, "test: soletab: mug: member %u %s\r\n", (unsigned)i_w,
+              add_t ? "added past the limit" : "refused");
+      ret_i = 0;
+    }
+  }
+  if ( (_TS_RUN != tab_u.len_d) || !_ts_all(&tab_u, cel, _TS_RUN) ) {
+    fprintf(stderr, "test: soletab: mug: the run is wrong\r\n");
+    ret_i = 0;
+  }
+  if ( u3_none != _cs_get(&tab_u, 0x1234567, _ts_same, &cel[_TS_RUN]) ) {
+    fprintf(stderr, "test: soletab: mug: a refused noun is a member\r\n");
+    ret_i = 0;
+  }
+
+  //  with one gone, another fits; and the run survives a rebuild
+  //
+  _cs_erase(&tab_u, cel[7]);
+  if ( ~0ULL == _cs_add(&tab_u, cel[_TS_RUN]) ) {
+    fprintf(stderr, "test: soletab: mug: no room after an erase\r\n");
+    ret_i = 0;
+  }
+  {
+    u3_noun out = cel[7];
+    cel[7]       = cel[_TS_RUN];
+    cel[_TS_RUN] = out;
+  }
+  _cs_resize(&tab_u, 4 * _CS_LIN_MIN);
+  if ( (_TS_RUN != tab_u.len_d) || !_ts_all(&tab_u, cel, _TS_RUN) ) {
+    fprintf(stderr, "test: soletab: mug: the run didn't survive a rebuild\r\n");
+    ret_i = 0;
+  }
+  c3_free(tab_u.lin_u);
+
+  //  two mugs whose home buckets are over a run apart in a large table,
+  //  and under 100 apart in the smallest: 255 members of one and 100 of
+  //  the other fit in the first, and can't in the second
+  //
+  {
+    u3_noun two[_TS_TWO];
+    c3_h    mua_h = 1, mub_h;
+    c3_d    lin_d;
+
+    _cs_init(&tab_u, 1);
+    _cs_resize(&tab_u, 8 * _CS_LIN_MIN);
+
+    while ( _cs_home(&tab_u, mua_h) > (tab_u.cap_d / 2) ) mua_h++;
+    for ( mub_h = mua_h + 1; ; mub_h++ ) {
+      c3_d hom_d = _cs_home(&tab_u, mub_h), bas_d = _cs_home(&tab_u, mua_h);
+      if ( (hom_d >= (bas_d + 260)) && (hom_d <= (bas_d + 700)) ) break;
+    }
+
+    for ( i_w = 0; i_w < _TS_RUN; i_w++ ) {
+      ((u3a_noun*)u3a_to_ptr(cel[i_w]))->mug_w = mua_h;
+      if ( ~0ULL == _cs_add(&tab_u, cel[i_w]) ) ret_i = 0;
+    }
+    for ( i_w = 0; i_w < _TS_TWO; i_w++ ) {
+      two[i_w] = _ts_forge(1000 + i_w, mub_h);
+      if ( ~0ULL == _cs_add(&tab_u, two[i_w]) ) ret_i = 0;
+    }
+    if ( !ret_i ) {
+      fprintf(stderr, "test: soletab: mug: two runs don't fit when apart\r\n");
+    }
+
+    _cs_resize(&tab_u, _CS_LIN_MIN);
+    lin_d = tab_u.lin_d;
+
+    if (  (lin_d <= _CS_LIN_MIN) || (lin_d != tab_u.flo_d)
+       || ((_TS_RUN + _TS_TWO) != tab_u.len_d)
+       || !_ts_all(&tab_u, cel, _TS_RUN) || !_ts_all(&tab_u, two, _TS_TWO) )
+    {
+      fprintf(stderr, "test: soletab: mug: a rebuild too small lost members,"
+                      " or stayed small (%" PRIu64 " lines)\r\n", lin_d);
+      ret_i = 0;
+    }
+
+    //  between events, it doesn't shrink below what worked
+    //
+    _cs_tend(&tab_u);
+    if ( lin_d != tab_u.lin_d ) {
+      fprintf(stderr, "test: soletab: mug: shrank below its floor\r\n");
+      ret_i = 0;
+    }
+
+    c3_free(tab_u.lin_u);
+    for ( i_w = 0; i_w < _TS_TWO; i_w++ ) u3z(two[i_w]);
+  }
+
+  for ( i_w = 0; i_w < _TS_ONE; i_w++ ) u3z(cel[i_w]);
+  return ret_i;
+# undef _TS_ONE
+# undef _TS_RUN
+# undef _TS_TWO
+}
+
 static c3_i
 _test_equality(void)
 {
   c3_i ret_i = 1;
 
-  if ( !_test_sole_refused() ) {
-    fprintf(stderr, "test: equality: sole refused: failed\r\n");
+  if ( !_test_sole_set() ) {
+    fprintf(stderr, "test: equality: sole set: failed\r\n");
     ret_i = 0;
   }
 
-  if ( !_test_dedup() ) {
-    fprintf(stderr, "test: equality: dedup: failed\r\n");
+  if ( !_test_sole_lazy() ) {
+    fprintf(stderr, "test: equality: sole lazy: failed\r\n");
     ret_i = 0;
   }
 
-  if ( !_test_hcons() ) {
-    fprintf(stderr, "test: equality: hcons: failed\r\n");
+  if ( !_test_soletab() ) {
+    fprintf(stderr, "test: equality: soletab: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_soletab_mug() ) {
+    fprintf(stderr, "test: equality: soletab mug: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_visit_samp() ) {
+    fprintf(stderr, "test: equality: visit samp: failed\r\n");
     ret_i = 0;
   }
 
@@ -1066,8 +2122,53 @@ _test_equality(void)
     ret_i = 0;
   }
 
+
   if ( !_test_sing_dag() ) {
     fprintf(stderr, "test: equality: sing dag: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sole_dag() ) {
+    fprintf(stderr, "test: equality: sole dag: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sole_refused() ) {
+    fprintf(stderr, "test: equality: sole refused: failed\r\n");
+    ret_i = 0;
+  }
+
+  //  again with room to list 16 of the walk's 201 marks: the rest are
+  //  kept in the bitmap alone, and the walk is still linear
+  //
+  {
+    c3_d cdp_d = u3e_Meter.cib_u[3].cdp_d;
+
+    u3m_yard_size(0, 16 * sizeof(c3_w));
+    if ( !_test_sole_refused() || (cdp_d == u3e_Meter.cib_u[3].cdp_d) ) {
+      fprintf(stderr, "test: equality: sole refused, marks past their list: failed\r\n");
+      ret_i = 0;
+    }
+    u3m_yard_size(0, 0);
+  }
+
+  if ( !_test_walk_bound() ) {
+    fprintf(stderr, "test: equality: walk bound: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_walk_scope() ) {
+    fprintf(stderr, "test: equality: walk scope: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_take_sole() ) {
+    fprintf(stderr, "test: equality: take sole: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_sole() ) {
+    fprintf(stderr, "test: equality: sole: failed\r\n");
     ret_i = 0;
   }
 
@@ -1105,13 +2206,18 @@ _test_equality(void)
     ret_i = 0;
   }
 
-  if ( !_test_unify_inner_home() ) {
-    fprintf(stderr, "test: equality: unify inner-home: failed\r\n");
+  if ( !_test_take_mend() ) {
+    fprintf(stderr, "test: equality: take mend: failed\r\n");
     ret_i = 0;
   }
 
-  if ( !_test_soletab() ) {
-    fprintf(stderr, "test: equality: soletab: failed\r\n");
+  if ( !_test_take_mend_full() ) {
+    fprintf(stderr, "test: equality: take mend full: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_unify_inner_home() ) {
+    fprintf(stderr, "test: equality: unify inner-home: failed\r\n");
     ret_i = 0;
   }
 

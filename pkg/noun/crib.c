@@ -149,3 +149,71 @@ u3a_crib_shrink(u3a_crib* cib_u, size_t len_i)
     _crib_drop(cib_u->buf_y + len_i, old_i - len_i);
   }
 }
+
+#define _YARD_MIN  (64 * 1024)
+
+u3a_yard u3a_Yard_wok;
+u3a_yard u3a_Yard_res;
+
+void
+u3a_yard_init(u3a_yard* yar_u, size_t max_i)
+{
+  if ( yar_u->buf_y ) {
+    _crib_release(yar_u->buf_y, yar_u->max_i);
+  }
+  memset(yar_u, 0, sizeof(*yar_u));
+
+  max_i = c3_max(max_i, 64) & ~(size_t)15;
+
+  yar_u->max_i = max_i;
+  yar_u->min_i = c3_min(_YARD_MIN, max_i);
+  yar_u->buf_y = _crib_reserve(max_i);
+}
+
+void*
+u3a_yard_more(u3a_yard* yar_u, size_t bas_i, size_t len_i)
+{
+  size_t new_i = bas_i + len_i;
+  size_t old_i = yar_u->com_i;
+  size_t com_i;
+
+  if ( (bas_i < yar_u->use_i) || (new_i < len_i) || (new_i > yar_u->max_i) ) {
+    return 0;
+  }
+
+  //  commit twice what's committed, or what's asked if that's more
+  //
+  com_i = c3_max(new_i, c3_max(yar_u->min_i, old_i * 2));
+  com_i = c3_min(com_i, yar_u->max_i);
+
+  if ( !_crib_commit(yar_u->buf_y + old_i, com_i - old_i) ) {
+    return 0;
+  }
+  yar_u->com_i = com_i;
+  yar_u->gro_w++;
+
+  if ( new_i > yar_u->pek_i ) {
+    yar_u->pek_i = new_i;
+  }
+  yar_u->use_i = new_i;
+
+  return yar_u->buf_y + bas_i;
+}
+
+void
+u3a_yard_drop(u3a_yard* yar_u)
+{
+  size_t new_i = c3_max(yar_u->min_i, yar_u->use_i);
+  size_t old_i = yar_u->com_i;
+
+  if ( new_i < old_i ) {
+    //  what's committed is lowered first, as a crib's length is (see
+    //  u3a_crib_shrink()): on windows the drop decommits, and the next
+    //  u3a_yard_more() commits only from [com_i] up
+    //
+    yar_u->com_i = new_i;
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    _crib_drop(yar_u->buf_y + new_i, old_i - new_i);
+    yar_u->shr_w++;
+  }
+}

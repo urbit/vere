@@ -52,7 +52,10 @@ def ints(p):
 
 
 #  fields in each hash-consing line (see measure-report.py's legend)
-WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 7}
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 18}
+
+#  a Z line from before the pass was metered
+Z_OLD = 7
 
 
 def parse(lines):
@@ -104,6 +107,8 @@ def parse(lines):
             #  take only lines of this shape (other widths are from
             #  prototype builds: see measure-piers/scripts/)
             v = ints(p[1:])
+            if v is not None and t == "Z" and len(v) == Z_OLD:
+                v = list(v) + [0] * (WIDTH[t] - Z_OLD)
             if v is not None and len(v) == WIDTH[t]:
                 cur[t] = tuple(v)
         elif t == "N" and len(p) == 11:
@@ -364,7 +369,7 @@ METRICS = [
      lambda s, v: ratio(s["I_hhit"], s["I_hpro"])),
     ("Z: junior nouns found a member / looked up", "hashcons: canonicalizing take",
      lambda s, v: ratio(s["Z_fnd"], s["Z_tak"])),
-    ("Z: older home slots left, lose list full", "hashcons: lose list ceiling",
+    ("Z: taken nouns canonicalized after the takes", "hashcons: canonicalizing take",
      lambda s, v: s["Z_left"]),
     ("Z: most members added at one exit / set size then", "hashcons: table headroom",
      lambda s, v: s.get("Z_head", 0)),
@@ -374,7 +379,15 @@ METRICS = [
      lambda s, v: crib_peak(v, "visited-set")),
     ("N: lose list peak", "hashcons: crib sizes",
      lambda s, v: crib_peak(v, "lose-list")),
-    ("N: evictions or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
+    ("N: notes peak (nouns canonicalized after one exit's takes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "notes")),
+    ("N: home walk's deepest stack (frames)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "walk-frames")),
+    ("N: scratch yard peak (bytes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "yard-scratch")),
+    ("N: result yard peak (bytes)", "hashcons: crib sizes",
+     lambda s, v: crib_peak(v, "yard-result")),
+    ("N: fills or drops at a ceiling", "hashcons: crib ceilings", lambda s, v: s["N_ovf"]),
 ]
 
 
