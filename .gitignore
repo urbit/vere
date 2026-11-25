@@ -288,3 +288,7 @@ GTAGS
 /nel
 /nev
 /fes
+
+# Python
+__pycache__/
+*.pyc

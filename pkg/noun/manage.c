@@ -1580,6 +1580,11 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   c3_w          bot_w;
   c3_y          pha_y = u3e_Phase;
 
+  //  measurement: a peek's product apart from an event's
+  //
+  c3_y          pro_y = ( u3e_pha_peek == pha_y ) ? u3e_pha_take_pek
+                                                  : u3e_pha_take_pro;
+
   //  measurement: junior table sizes at exit (jb/measure-base)
   //
   c3_w          wyt_w[8] = {
@@ -1646,7 +1651,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
   //    caches made through forwarding pointers.
   //
   if ( !hom_t ) {
-    u3e_Phase = u3e_pha_take_pro;
+    u3e_Phase = pro_y;
     pro   = u3a_take(pro);
   }
   else {
@@ -1684,7 +1689,7 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
 
   if ( hom_t ) {
     u3a_Take_home_t = 0;
-    u3e_Phase = u3e_pha_take_pro;
+    u3e_Phase = pro_y;
     pro   = u3a_take(pro);
     u3a_Take_open_t = 0;
 
@@ -5126,6 +5131,8 @@ u3m_sole_home(u3_noun som)
 void
 u3m_reclaim_due(void)
 {
+  c3_w wyt_w = u3h_wyt(u3R->byc.har_p);
+
   u3_assert( &(u3H->rod_u) == u3R );
 
   //  bytecode programs can't be freed individually (call sites point
@@ -5135,5 +5142,7 @@ u3m_reclaim_due(void)
   if ( _CM_BYC_MAX <= u3h_wyt(u3R->byc.har_p) ) {
     u3j_reclaim();
     u3n_reclaim();
+    u3e_Meter.rcc_d++;
+    u3e_Meter.rcp_d += wyt_w;
   }
 }
