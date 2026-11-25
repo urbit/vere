@@ -315,8 +315,10 @@ _test_defer(void)
   return ret_i;
 }
 
-/* _test_edit_road(): u3i_edit() copies on the home road, and edits a
-**                    uniquely held cell in place on a junior road.
+/* _test_edit_road(): u3i_edit() copies on the home road, edits a
+**                    uniquely held cell in place on a junior road, and
+**                    copies a cell of the sand zone of a junior road,
+**                    which is senior to it.
 */
 static c3_i
 _test_edit_road(void)
@@ -336,12 +338,14 @@ _test_edit_road(void)
     u3z(pro);
   }
 
-  //  junior road: edited in place
+  //  junior road without a sand zone: edited in place
   //
   {
+    c3_w    san_w = u3C.san_w;
     u3_noun q, pro;
     c3_t    our_t;
 
+    u3C.san_w = 0;
     u3m_hate(0);
 
     q     = u3nt(1, 2, 3);
@@ -350,6 +354,7 @@ _test_edit_road(void)
     u3z(pro);
 
     u3m_love(0);
+    u3C.san_w = san_w;
 
     if ( !our_t ) {
       fprintf(stderr, "edit: junior road not edited in place\r\n");
@@ -357,6 +362,143 @@ _test_edit_road(void)
     }
   }
 
+  //  junior road with a sand zone: the cell is senior to the road, so
+  //  the edit copies it, as it copies a cell of the home road
+  //
+  {
+    c3_w    san_w = u3C.san_w;
+    u3_noun q, pro;
+    c3_t    our_t;
+
+    u3C.san_w = 64;
+    u3m_hate(0);
+
+    q     = u3nt(1, 2, 3);
+    pro   = u3i_edit(u3k(q), 2, 99);
+    our_t = (pro != q) && (99 == u3h(pro)) && (2 == u3h(u3t(pro)))
+         && (1 == u3h(q)) && (c3y == u3a_is_senior(u3R, q));
+    u3z(pro); u3z(q);
+
+    u3m_love(0);
+    u3C.san_w = san_w;
+
+    if ( !our_t ) {
+      fprintf(stderr, "edit: sand of a junior road edited in place\r\n");
+      ret_i = 0;
+    }
+  }
+
+  return ret_i;
+}
+
+/* _sand_work(): on an inner road, whether its allocations are where
+**               they should be: with a sand zone (the tail of [arg]) a
+**               cell and a small atom are in the zone and senior to the
+**               road, and an atom of u3a_sand_big words or more is
+**               counted; without one everything is counted.  In either
+**               case the home road has no zone.  If the head of [arg] is
+**               yes, the same again on a road within this one.
+*/
+static u3_noun _sand_work(u3_noun arg);
+
+static u3_noun
+_sand_inner(u3_noun top, u3_noun zon)
+{
+  u3_noun arg = u3nc(top, zon);
+  u3_noun pro = _sand_work(arg);
+
+  u3z(arg);
+  return pro;
+}
+
+static u3_noun
+_sand_work(u3_noun arg)
+{
+  c3_t    zon_t = ( c3y == u3t(arg) );
+  u3_noun cel   = u3nc(1, 2);
+  u3_noun sma   = u3qc_bex(100);
+  u3_noun big   = u3qc_bex(u3a_word_bits * (u3a_sand_big + 8));
+  c3_t    ok_t  = 1;
+
+  ok_t = ok_t && ( !!(u3R->how.fag_w & u3a_flag_sand) == zon_t );
+  ok_t = ok_t && ( (c3y == u3a_is_senior(u3R, cel)) == zon_t );
+  ok_t = ok_t && ( (c3y == u3a_is_senior(u3R, sma)) == zon_t );
+  ok_t = ok_t && ( u3a_in_sand(u3R, cel) == zon_t );
+  ok_t = ok_t && ( u3a_in_sand(u3R, sma) == zon_t );
+  ok_t = ok_t && ( c3n == u3a_is_senior(u3R, big) );
+  ok_t = ok_t && !u3a_in_sand(u3R, big);
+  ok_t = ok_t && ( 1 == u3a_use(big) );
+  ok_t = ok_t && !(u3H->rod_u.how.fag_w & u3a_flag_zone);
+
+  //  a road within this one
+  //
+  if ( c3y == u3h(arg) ) {
+    u3_noun pro = u3m_soft_run(u3_nul, _sand_inner, c3n, u3t(arg));
+
+    ok_t = ok_t && ( 0 == u3h(pro) ) && ( c3y == u3t(pro) );
+    u3z(pro);
+    ok_t = ok_t && ( !!(u3R->how.fag_w & u3a_flag_zone) == zon_t );
+  }
+
+  u3z(big); u3z(sma); u3z(cel);
+  return ok_t ? c3y : c3n;
+}
+
+/* _sand_run(): _sand_work() on a road of its own and on one within it.
+*/
+static c3_t
+_sand_run(const c3_c* cap_c, c3_t zon_t)
+{
+  u3_noun pro  = u3m_soft(0, _sand_work, u3nc(c3y, zon_t ? c3y : c3n));
+  c3_t    ok_t = ( 0 == u3h(pro) ) && ( c3y == u3t(pro) );
+
+  u3z(pro);
+  if ( !ok_t ) {
+    fprintf(stderr, "sand: %s: failed\r\n", cap_c);
+  }
+  return ok_t;
+}
+
+/* _test_sand(): sand zones: on inner roads when a size is set and the
+**               leak check is off, and never on the home road.
+*/
+static c3_i
+_test_sand(void)
+{
+  c3_w    san_w = u3C.san_w;
+  c3_h    wag_h = u3C.wag_h;
+  u3_noun cel   = u3nc(1, 2);
+  c3_i    ret_i = 1;
+
+  if (  (&(u3H->rod_u) != u3R)
+     || (u3R->how.fag_w & u3a_flag_zone)
+     || (c3y == u3a_is_senior(u3R, cel))
+     || u3a_in_sand(u3R, cel)
+     || (1 != u3a_use(cel)) )
+  {
+    fprintf(stderr, "sand: a zone on the home road\r\n");
+    ret_i = 0;
+  }
+  u3z(cel);
+
+  u3C.san_w  = 64;
+  u3C.wag_h &= ~(c3_h)(u3o_debug_ram | u3o_leak_crash);
+  ret_i = _sand_run("a zone on inner roads", 1) && ret_i;
+
+  u3C.wag_h |= u3o_debug_ram;
+  ret_i = _sand_run("none under the leak check", 0) && ret_i;
+
+  u3C.wag_h &= ~(c3_h)u3o_debug_ram;
+  u3C.san_w  = 0;
+  ret_i = _sand_run("none with a size of 0", 0) && ret_i;
+
+  u3C.san_w = san_w;
+  u3C.wag_h = wag_h;
+
+  if ( u3H->rod_u.how.fag_w & u3a_flag_zone ) {
+    fprintf(stderr, "sand: a zone on the home road afterwards\r\n");
+    ret_i = 0;
+  }
   return ret_i;
 }
 
@@ -567,6 +709,12 @@ main(int argc, char* argv[])
     exit(1);
   }
   fprintf(stderr, "test edit road: ok\r\n");
+
+  if ( !_test_sand() ) {
+    fprintf(stderr, "test sand: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test sand: ok\r\n");
 
   //  GC
   //

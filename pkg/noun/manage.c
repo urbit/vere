@@ -615,7 +615,11 @@ _pave_parts(void)
 {
   u3a_init_heap();
 
-  if ( &(u3H->rod_u) != u3R ) {
+  //  a road with a sand zone gets its cell cache with its counted heap
+  //
+  if (  (&(u3H->rod_u) != u3R)
+     && !(u3R->how.fag_w & u3a_flag_sand) )
+  {
     u3R->cel.cel_p = u3of(u3_post, u3a_walloc(((c3_w)1) << u3a_page));
   }
   u3R->cax.har_p = u3h_new_cache(u3C.hap_w);  //  transient
@@ -630,7 +634,7 @@ _pave_parts(void)
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
   u3R->dup_p     = u3h_new();
-  u3R->how.fag_w = 0;
+  u3R->how.fag_w &= u3a_flag_zone;
 }
 
 static c3_d
@@ -1310,6 +1314,7 @@ u3m_leap(c3_w pad_w)
   */
   {
     u3R = rod_u;
+    u3a_sand_open();
     _pave_parts();
   }
   u3m_hold_done();
@@ -4257,7 +4262,9 @@ u3m_dedup(u3_noun som)
         //  senior cells can't be written: keep the original if both
         //  children were already canonical, and copy it otherwise
         //
-        if ( c3y == u3a_is_senior(u3R, cel) ) {
+        if (  (c3y == u3a_is_senior(u3R, cel))
+           && !u3a_in_sand(u3R, cel) )
+        {
           if ( (hed == u3h(cel)) && (new == u3t(cel)) ) {
             u3z(hed);
             u3z(new);

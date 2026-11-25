@@ -271,7 +271,10 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                                                                                                  \
   U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
   U3_W(S) lol_p;                                /*  lose list (inner roads; allocate.c)       */ \
-  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
+  U3_W(S) san_p;                                /*  next word of the sand zone (inner roads)  */ \
+  U3_W(S) bas_p;                                /*  rut before the sand zone (inner roads)    */ \
+  U3_W(S) big_w;                                /*  words counted beside sand (inner roads)   */ \
+  U3_W(S) fut_w[22];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -346,10 +349,16 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
     /* u3a_flag: flags for how.fag_w.
     */
       enum u3a_flag {
-        u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
+        u3a_flag_sand  = 1 << 1,              //  bump allocation: a sand zone with room
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
         u3a_flag_nest  = 1 << 3,              //  root +nest:ut call on the stack
+        u3a_flag_froz  = 1 << 4,              //  a full sand zone
       };
+
+    /* u3a_flag_zone: the road has a sand zone, with room or full: memory
+    **                of the road outside [rut, hat), senior by its address.
+    */
+#define u3a_flag_zone  (c3_w)(u3a_flag_sand | u3a_flag_froz)
 
     /* u3a_pile: stack control, abstracted over road direction.
     */
@@ -791,6 +800,36 @@ u3a_post_info(u3_post);
           void*
           u3a_walloc(c3_w len_w);
 
+        /* u3a_sand_big: a block of this many words or more is not sand:
+        **               it is counted, freed and resized in place.
+        */
+#         define u3a_sand_big  128
+
+        /* u3a_sand_open(): set aside the sand zone of u3R, a road just
+        **                  leapt to, before anything is allocated on it.
+        */
+          void
+          u3a_sand_open(void);
+
+        /* u3a_in_sand(): indirect [som] is in the sand zone of [rod_u]:
+        **                memory of that road which every seniority test
+        **                takes for senior.
+        */
+          static inline c3_t
+          u3a_in_sand(u3a_road* rod_u, u3_noun som)
+          {
+            if ( !(rod_u->how.fag_w & u3a_flag_zone) ) {
+              return 0;
+            }
+            else {
+              u3_post off_p = u3a_to_off(som);
+
+              return ( c3y == u3a_is_north(rod_u) )
+                   ? ((off_p >= rod_u->bas_p) && (off_p < rod_u->rut_p))
+                   : ((off_p >= rod_u->rut_p) && (off_p < rod_u->bas_p));
+            }
+          }
+
         /* u3a_celloc_cold(): allocate a cell, out of line: the home road,
         **                    an empty cell cache, the profiling build.
         */
@@ -812,6 +851,28 @@ u3a_post_info(u3_post);
             if ( c3_likely(hav_w) ) {
               rod_u->cel.hav_w = --hav_w;
               return (c3_w*)u3a_into(u3to(u3_post, rod_u->cel.cel_p)[hav_w]);
+            }
+            //  a sand zone with room: the cell is its next four words,
+            //  which lie outside [rut, hat) and so are senior from birth
+            //
+            else if ( rod_u->how.fag_w & u3a_flag_sand ) {
+              if ( rod_u->hep.dir_ws > 0 ) {
+                u3_post pot_p = rod_u->san_p;
+                u3_post new_p = pot_p + c3_wiseof(u3a_cell);
+
+                if ( c3_likely(new_p <= rod_u->rut_p) ) {
+                  rod_u->san_p = new_p;
+                  return (c3_w*)u3a_into(pot_p);
+                }
+              }
+              else {
+                u3_post new_p = rod_u->san_p - c3_wiseof(u3a_cell);
+
+                if ( c3_likely(new_p >= rod_u->rut_p) ) {
+                  rod_u->san_p = new_p;
+                  return (c3_w*)u3a_into(new_p);
+                }
+              }
             }
 #endif
             return 0;
