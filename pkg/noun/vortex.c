@@ -315,12 +315,18 @@ u3v_poke(u3_noun sam)
 }
 
 /* u3v_poke_sure(): inject an event, saving new state if successful.
+**
+**   on success, home-road gains are still deferred (u3a_defer_open()):
+**   the caller frees what it won't keep of [*pro], then calls
+**   u3a_defer_close().
 */
 c3_o
 u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 {
   //  defer home-road gains from the product's take to the old state's
-  //  release, so that the many that cancel are never written
+  //  release, so that the many that cancel are never written. the
+  //  effects' gains on the state they point into cancel when the
+  //  caller frees them, if the window is still open then
   //
   u3_noun gon = u3m_soft_with(mil_w, u3v_poke, eve, u3a_defer_open);
   u3_noun tag, dat;
@@ -349,7 +355,6 @@ u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro)
 
     *pro = u3k(vir);
     u3z(gon);
-    u3a_defer_close();
     u3e_Phase = pha_y;
     return c3y;
   }

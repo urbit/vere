@@ -115,6 +115,9 @@
       u3v_poke(u3_noun sam);
 
     /* u3v_poke_sure(): inject an event, saving new state if successful.
+    **
+    **   on success, home-road gains are still deferred: free what you
+    **   won't keep of [*pro], then call u3a_defer_close().
     */
       c3_o
       u3v_poke_sure(c3_w mil_w, u3_noun eve, u3_noun* pro);

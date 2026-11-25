@@ -238,12 +238,13 @@ _mars_grab(u3_noun sac, c3_o pri_o)
   }
 }
 
-/* _mars_fact(): commit a fact and enqueue its effects.
+/* _mars_fact(): commit a fact and enqueue its (encoded) effects.
 */
 static void
 _mars_fact(u3_mars* mar_u,
            u3_noun    job,
-           u3_noun    pro)
+           c3_d     len_d,
+           c3_y*    hun_y)
 {
   {
     u3_fact tac_u = {
@@ -264,11 +265,8 @@ _mars_fact(u3_mars* mar_u,
     gif_u->sat_e = u3_gift_fact_e;
     gif_u->eve_d = mar_u->dun_d;
     gif_u->tim_d = uv_hrtime();
-
-    u3e_Phase = u3e_pha_jam;
-    u3s_ram_xeno(pro, &gif_u->len_d, &gif_u->hun_y);
-    u3e_Phase = u3e_pha_io_free;
-    u3z(pro);
+    gif_u->len_d = len_d;
+    gif_u->hun_y = hun_y;
 
     if ( !mar_u->gif_u.ent_u ) {
       u3_assert( !mar_u->gif_u.ext_u );
@@ -629,17 +627,31 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3e_Phase = u3e_pha_poke;
       bef_d = uv_hrtime();
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
+        c3_d  len_d;
+        c3_y* hun_y;
+
         u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
         mar_u->dun_d = mar_u->sen_d;
-        u3e_Phase = u3e_pha_mug_roc;
-        mar_u->mug_h = u3r_mug(u3A->roc);
         mar_u->fag_w |= _mars_fag_mute;
 
+        //  encode and free the effects before anything else, while
+        //  gains are still deferred (see u3v_poke_sure()): the
+        //  references they hold into the state then cancel unwritten
+        //
         u3e_Phase = u3e_pha_feck;
-        pro = _mars_sure_feck(mar_u, pre_w, pro);
+        pro = u3nt(c3__poke, c3y, _mars_sure_feck(mar_u, pre_w, pro));
+
+        u3e_Phase = u3e_pha_jam;
+        u3s_ram_xeno(pro, &len_d, &hun_y);
+        u3e_Phase = u3e_pha_io_free;
+        u3z(pro);
+        u3a_defer_close();
+
+        u3e_Phase = u3e_pha_mug_roc;
+        mar_u->mug_h = u3r_mug(u3A->roc);
 
         u3e_measure_vane(u3t(job));
-        _mars_fact(mar_u, job, u3nt(c3__poke, c3y, pro));
+        _mars_fact(mar_u, job, len_d, hun_y);
       }
       else {
         u3e_measure_work(u3e_wok_fail, (uv_hrtime() - bef_d) / 1000);
