@@ -4954,7 +4954,6 @@ u3m_crib_report(void)
     _cm_wak_ovf_d = 0;
   }
   u3a_lose_report();
-  u3s_jam_report();
 }
 
 /* _cm_vis_leap(): a new excursion from the home road: no marks, and
