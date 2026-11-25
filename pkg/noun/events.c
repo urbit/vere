@@ -174,7 +174,8 @@ static const c3_c* _ce_pha_names[u3e_pha_max] = {
   "roc-lose", "roc-misc", "mug-roc", "feck", "etch", "jam", "io-free",
   "post", "save", "task", "pack",
   "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
-  "trim-per", "trim-for"
+  "trim-per", "trim-for",
+  "mend"
 };
 
 static const c3_c* _ce_kin_names[_ce_kin_max] = {
@@ -516,7 +517,30 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 #endif
 }
 
-/* _ce_meas_save(): report and reset per-interval measurements.
+/* _ce_meter_zero(): reset the meters for a new interval. the cribs'
+**   capacities and ceilings are states, and stay.
+*/
+static void
+_ce_meter_zero(void)
+{
+  c3_d cap_d[7], max_d[7];
+  c3_w i_w;
+
+  for ( i_w = 0; i_w < 7; i_w++ ) {
+    cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
+    max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
+  }
+  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+
+  for ( i_w = 0; i_w < 7; i_w++ ) {
+    u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
+    u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
+    u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
+  }
+}
+
+/* _ce_meas_save(): report and reset per-interval measurements. the line
+**   formats are listed in measure-report.py; keep it in step.
 */
 static void
 _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
@@ -732,7 +756,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
       c3_d vat_d, cel_d, byt_d;
       c3_w i_w;
 
-      u3m_dedup_stat(&vat_d, &cel_d, &byt_d);
+      u3m_sole_stat(&vat_d, &cel_d, &byt_d);
       fprintf(fil_u, "H %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      vat_d, cel_d, byt_d,
@@ -749,16 +773,26 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
     //  on-loom table would have written; faults in the last rebuild
     //
     {
-      c3_d buc_d, pag_d;
+      c3_d buc_d, pag_d, tab_d[6];
 
-      u3m_dedup_meas(&buc_d, &pag_d);
+      u3m_sole_meas(&buc_d, &pag_d);
+      u3m_sole_tab_meas(tab_d);
       fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      u3e_Meter.hcp_d[0], u3e_Meter.hcp_d[1], u3e_Meter.hcp_d[2],
                      u3e_Meter.hch_d[0], u3e_Meter.hch_d[1],
                      u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
                      buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
+
+      //  the set's tables: lookup steps, members compared, resizes
+      //  between events and at the limit, time resizing (us), the
+      //  largest distance
+      //
+      for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+        fprintf(fil_u, " %" PRIu64, tab_d[i_w]);
+      }
+      fputc('\n', fil_u);
     }
 
     //  deferred gains across the state swap
@@ -770,16 +804,94 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
                    u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
                    u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
 
+    //  the grab u3o_check_corrupt asks for: times asked, by cause;
+    //  grabs run, their time, and the words they freed as leaks
+    //
+    fprintf(fil_u, "V %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.ccs_d[0], u3e_Meter.ccs_d[1], u3e_Meter.ccs_d[2],
+                   u3e_Meter.ccg_d, u3e_Meter.ccm_d, u3e_Meter.ccl_d);
+
     //  alignment of the new arvo states with the old
     //
     fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                    u3e_Meter.aln_all_d, u3e_Meter.aln_pos_d,
                    u3e_Meter.aln_exc_d);
+
+    //  unification: senior merges, give-ups, slot writes (outside home
+    //  memory, in it), home writes refused
+    //
+    fprintf(fil_u, "W %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 "\n",
+                   u3e_Meter.wvm_d, u3e_Meter.wsg_d,
+                   u3e_Meter.wsw_d[0], u3e_Meter.wsw_d[1],
+                   u3e_Meter.wsk_d);
+
+    //  the lose lists, home then inner
+    //
+    fprintf(fil_u, "X %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.wlp_d[0], u3e_Meter.wlf_d[0], u3e_Meter.wll_d[0],
+                   u3e_Meter.wlm_d[0], u3e_Meter.wlx_d[0],
+                   u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
+                   u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
+
+    //  canonicalizing on inner roads (u3m_sole_try())
+    //
+    fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.eic_d[0], u3e_Meter.eic_d[1],
+                   u3e_Meter.eij_d, u3e_Meter.eiv_d,
+                   u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
+
+    //  exits to home: the canonicalizing take, time; then the pass
+    //  after the takes: exits with one, its time in all and the most
+    //  at one exit, and slots repointed and words freed by the take
+    //  that noted the noun
+    //
+    fprintf(fil_u, "Z %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64,
+                   u3e_Meter.ctk_d, u3e_Meter.ctf_d, u3e_Meter.ctr_d,
+                   u3e_Meter.cus_d[0], u3e_Meter.cus_d[1],
+                   u3e_Meter.cam_d[0], u3e_Meter.cam_d[1],
+                   u3e_Meter.cmn_d, u3e_Meter.cmu_d[0], u3e_Meter.cmu_d[1]);
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cms_d[i_w]);
+    }
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cmw_d[i_w]);
+    }
+    fputc('\n', fil_u);
+
+    //  cribs, the yards' users and the yards, one line each
+    //
+    u3m_yard_meas();
+    {
+      static const c3_c* nam_c[7] = { "visited-set", "lose-list", "notes",
+                                      "home-marks", "walk-frames",
+                                      "yard-scratch", "yard-result" };
+
+      for ( i_w = 0; i_w < 7; i_w++ ) {
+        if ( u3e_Meter.cib_u[i_w].max_d ) {
+          fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                         " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                         " %" PRIu64 "\n",
+                         nam_c[i_w],
+                         u3e_Meter.cib_u[i_w].cap_d, u3e_Meter.cib_u[i_w].top_d,
+                         u3e_Meter.cib_u[i_w].max_d, u3e_Meter.cib_u[i_w].pek_d,
+                         u3e_Meter.cib_u[i_w].gro_d, u3e_Meter.cib_u[i_w].shr_d,
+                         u3e_Meter.cib_u[i_w].clg_d, u3e_Meter.cib_u[i_w].cdp_d,
+                         u3e_Meter.cib_u[i_w].ovf_d);
+        }
+      }
+    }
   }
   fflush(fil_u);
 
   memset(_ce_meas.tal_d, 0, sizeof(_ce_meas.tal_d));
-  memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+  _ce_meter_zero();
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
   memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
@@ -1037,7 +1149,7 @@ u3e_measure_init(const c3_c* dir_c,
     {
       u3e_meter met_u = u3e_Meter;
 
-      memset(&u3e_Meter, 0, sizeof(u3e_Meter));
+      _ce_meter_zero();
       u3e_Meter.hcr_d = met_u.hcr_d;
       u3e_Meter.hcm_d = met_u.hcm_d;
       memcpy(u3e_Meter.hcc_d, met_u.hcc_d, sizeof(met_u.hcc_d));
@@ -1060,6 +1172,17 @@ u3e_measure_ms(void)
 
   gettimeofday(&tim_u, 0);
   return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
+}
+
+/* u3e_measure_us(): wall-clock microseconds, for short steps.
+*/
+c3_d
+u3e_measure_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
 }
 
 /* _ce_meas_op(): write an O line: time, event, operation, why, melt

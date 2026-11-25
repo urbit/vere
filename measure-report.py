@@ -100,6 +100,77 @@ Log lines (one snapshot interval ends at each S line):
                                             home-road page records and allocation
   M <resident> <anonymous> <file-backed> <swapped>
                                             process memory in bytes at the snapshot
+  P <programs> <bytes> <formula-only> <looked-up> <compiled> <added>
+                                            bytecode: the home table at the snapshot,
+                                            then compiles and additions to it
+  H <atoms> <cells> <bytes> <added> <removed> <rebuilds> <rebuild-ms>
+    <per> <for> <byc> <war> <bas> <hot> <cod>
+                                            home hashcons set at the snapshot, its
+                                            traffic, and cells added per root at the
+                                            last rebuild
+  D <probe-take> <probe-older> <probe-try> <hit-new> <hit-cache> <hit-warm>
+    <hit-cold> <buckets> <table-pages> <faults-major> <faults-minor>
+    <tab-steps> <tab-compared> <tab-grow-between> <tab-grow-limit>
+    <tab-resize-us> <tab-max-distance>
+                                            home hashcons probes by path, hits by the
+                                            member's origin, the last rebuild's faults,
+                                            and the compact table's buckets visited,
+                                            members compared, resizes and longest probe
+                                            (logs from verstable builds, such as
+                                            develop's, have the first 11)
+  G <windows> <gains> <nouns> <most-pending> <cancelled> <direct> <written>
+    <written-nouns> <shrinks>               deferred gains across the state swap
+  Y <references> <same-position> <refcount-1>
+                                            new arvo state's alignment with the old
+  W <senior-merges> <give-ups> <wrote-outside-home> <wrote-home>
+    <home-refused>
+                                            unification (u3a_wed()): merges on senior
+                                            inner roads, and when no road can merge,
+                                            slot writes by place and home writes
+                                            refused
+  X <home-put> <home-leaked> <home-lost> <home-most-lost> <home-left>
+    <inner-put> <inner-leaked> <inner-lost> <inner-most-lost> <inner-left>
+    <inner-copied>
+                                            the lose lists: values put, leaked with
+                                            the list full (inner: no room on the
+                                            loom), lost after an exit's takes (and most
+                                            at one exit), left by an interrupted exit
+                                            (inner: dropped with its road), and inner
+                                            entries copied up a road at an exit
+  I <calls-home> <calls-inner> <junior-cells> <visited-hits>
+    <home-probes-inner> <home-hits-inner>
+                                            canonicalizing (u3m_sole_try): calls by
+                                            road, and on inner roads cells walked,
+                                            visited-set hits, home-set probes and hits
+  Z <looked-up> <found> <noted> <us-takes> <us-drain> <most-added>
+    <members-then> <passes> <us-pass> <us-pass-most>
+    <slots-jet> <slots-byc> <slots-per> <slots-for>
+    <words-jet> <words-byc> <words-per> <words-for>
+                                            exits to home: junior nouns looked up by the
+                                            canonicalizing take and those found (not
+                                            copied); taken nouns noted and canonicalized
+                                            after the takes; microseconds in each step; the
+                                            most members added at one exit, before its
+                                            drain, and the set's size then. the pass after
+                                            the takes: exits with one, its microseconds
+                                            (part of us-takes) and the most at one exit;
+                                            then, by the take that noted the noun (jet
+                                            state, bytecode, persistent memo, ford memo),
+                                            slots repointed at a member, and words in the
+                                            nouns that freed at once. a Z line without
+                                            the pass's fields reads as zeros there
+  N <crib> <capacity> <largest> <ceiling> <peak-entries> <grows> <shrinks>
+    <clears-logged> <clears-dropped> <at-ceiling>
+                                            use in the interval. cribs, in entries:
+                                            visited-set, lose-list. the yards' users, in
+                                            entries, with a ceiling, a peak and fills but
+                                            no capacity of their own: notes (the exit
+                                            home's), home-marks and walk-frames (the home
+                                            walk's). the yards, in bytes: yard-scratch,
+                                            yard-result
+
+W, X, I, Z and N lines of other widths (from prototype builds) are
+skipped; measure-piers/scripts/measure-report-proto.py reads them.
   O <time> <eve> <pack|meld|melt> <why> <options> <ms> <freed-words>
                                             a pack, meld or melt, logged when it ran.
                                             why: live (|pack, |meld, conn), memory
@@ -118,6 +189,13 @@ import glob
 import os
 import sys
 from collections import defaultdict
+
+
+#  fields in each hash-consing line (see the legend above)
+WIDTH = {"W": 5, "X": 11, "I": 6, "Z": 18}
+
+#  a Z line from before the pass was metered
+Z_OLD = 7
 
 
 def pct(a, b):
@@ -163,6 +241,12 @@ def new_interval():
         "P": None,
         "G": None,
         "Y": None,
+        "V": None,
+        "W": None,
+        "X": None,
+        "I": None,
+        "Z": None,
+        "N": {},
         "ops": [],
     }
 
@@ -286,6 +370,21 @@ def parse(path):
                 cur["G"] = tuple(int(x) for x in line.split()[1:])
             elif t == "Y" and cur is not None:
                 cur["Y"] = tuple(int(x) for x in line.split()[1:])
+            elif t == "V" and cur is not None:
+                v = tuple(int(x) for x in line.split()[1:])
+                if len(v) == 6:  # prototype logs have V lines of other shapes
+                    cur["V"] = v
+            elif t in WIDTH and cur is not None:
+                #  take only lines of this shape
+                v = line.split()[1:]
+                if t == "Z" and len(v) == Z_OLD:
+                    v += ["0"] * (WIDTH[t] - Z_OLD)
+                if len(v) == WIDTH[t] and all(x.isdigit() for x in v):
+                    cur[t] = tuple(int(x) for x in v)
+            elif t == "N" and cur is not None:
+                p = line.split()
+                if len(p) == 11 and all(x.isdigit() for x in p[2:]):
+                    cur["N"][p[1]] = tuple(int(x) for x in p[2:])
             elif t == "L" and cur is not None:
                 p = line.split()
                 cur["L"][p[1]] = tuple(int(x) for x in p[2:])
@@ -740,7 +839,7 @@ def main():
         hit = sum(D[3:7])
         per = lambda x: f"{x / tasks if tasks else 0:.1f}"
         print(f"  probes: {pro} ({per(pro)} per task): road-exit take {D[0]}, "
-              f"older home nouns in it {D[1]}, u3m_dedup {D[2]}")
+              f"the pass after it {D[1]}, u3m_sole_try {D[2]}")
         print(f"  hits: {hit} ({pct(hit, pro).strip()} of probes), by the member's origin:")
         for name, c in zip(["added since the last rebuild", "caches (per for byc)",
                             "warm jet state (war bas hot)", "cold state alone (cod)"],
@@ -754,6 +853,14 @@ def main():
             sp = sorted(pgs)
             print(f"  pages an on-loom cell table would write per interval "
                   f"(by home bucket): median {sp[len(sp) // 2]}, max {sp[-1]}")
+        #  the compact table (not in logs from verstable builds)
+        tab = [i["D"] for i in dis if len(i["D"]) == 17]
+        if tab:
+            T = [sum(d[k] for d in tab) for k in range(11, 16)]
+            print(f"  compact table: {T[0] / pro if pro else 0:.2f} buckets visited "
+                  f"and {T[1] / pro if pro else 0:.2f} members compared per probe; "
+                  f"resizes {T[2]} between events, {T[3]} at the limit "
+                  f"({T[4] / 1000:.0f} ms); largest distance {max(d[16] for d in tab)}")
     if rebuilds:
         n = sum(h[5] for h, _ in rebuilds)
         ms = sum(h[6] for h, _ in rebuilds)
@@ -780,6 +887,17 @@ def main():
         print(f"  written at close: {rit}  {pct(rit, gan)}  on {ent} nouns")
         print(f"  written directly, table at its cap: {spl}  {pct(spl, gan + spl)}")
         print(f"  most nouns pending in one window: {mx}   table shrinks: {shr}")
+    vis = [i for i in intervals if i["V"]]
+    if vis and any(any(i["V"]) for i in vis):
+        v = [sum(i["V"][j] for i in vis) for j in range(6)]
+        print("\n== grabs asked for by u3o_check_corrupt ==")
+        print(f"  asked: {v[0]} by a signal recovered on the home road, "
+              f"{v[1]} by an overflow with signals held, "
+              f"{v[2]} by a full home lose list")
+        print(f"  grabs run: {v[3]}   time: {v[4]} ms"
+              f" ({v[4] / v[3] if v[3] else 0:.0f} ms each,"
+              f" longest interval {max(i['V'][4] for i in vis)} ms)")
+        print(f"  words freed as leaks: {v[5]}")
     yis = [i for i in intervals if i["Y"]]
     if yis and any(i["Y"][0] for i in yis):
         y = [sum(i["Y"][j] for i in yis) for j in range(3)]
@@ -787,6 +905,71 @@ def main():
         print(f"  home nouns referenced from the new state's new cells: {y[0]}")
         print(f"    same noun at the same position in the old state: {y[1]}  {pct(y[1], y[0])}")
         print(f"      and below old cells with a refcount of 1: {y[2]}  {pct(y[2], y[0])}")
+    wis = [i for i in intervals if i["W"]]
+    xis = [i for i in intervals if i["X"]]
+    if (wis and any(any(i["W"]) for i in wis)) or (xis and any(any(i["X"]) for i in xis)):
+        tasks = sum(i["tasks"] for i in intervals)
+        per = lambda x: f"{x / tasks if tasks else 0:.2f}"
+        print("\n== unification of home values on inner roads ==")
+        if wis:
+            w = [sum(i["W"][j] for i in wis) for j in range(5)]
+            print(f"  merges on senior inner roads: {w[0]}")
+            g = w[1]
+            print(f"  give-ups, no road could merge: {g} ({per(g)} per task)")
+            for name, c in (("written, outside home memory", w[2]),
+                            ("written, in home memory", w[3]),
+                            ("not written: home write refused", w[4])):
+                print(f"    {name:<36}{c:>12}  {pct(c, g)}")
+        if xis:
+            x = [sum(i["X"][j] for i in xis) for j in range(11)]
+            x[3] = max(i["X"][3] for i in xis)
+            x[8] = max(i["X"][8] for i in xis)
+            for name, o in (("home", 0), ("inner", 5)):
+                print(f"  {name} lose list: {x[o]} put, {x[o + 1]} leaked (full), "
+                      f"{x[o + 2]} lost after takes (most at one exit: {x[o + 3]}), "
+                      f"{x[o + 4]} left by interrupted exits")
+            print(f"  inner entries copied up a road at an exit: {x[10]}")
+    iis = [i for i in intervals if i["I"]]
+    if iis and any(any(i["I"]) for i in iis):
+        e = [sum(i["I"][j] for i in iis) for j in range(6)]
+        print("\n== canonicalizing on inner roads (u3m_sole_try) ==")
+        print(f"  calls: home road {e[0]}, inner roads {e[1]}")
+        print(f"  junior cells walked: {e[2]}   visited-set hits: {e[3]}")
+        print(f"  home-set probes from inner roads: {e[4]}, hits {e[5]} {pct(e[5], e[4])}")
+    zis = [i for i in intervals if i["Z"]]
+    if zis and any(any(i["Z"]) for i in zis):
+        z = [sum(i["Z"][j] for i in zis) for j in range(5)]
+        top = max(zis, key=lambda i: i["Z"][5])["Z"]
+        print("\n== exits to home: canonicalizing take ==")
+        print(f"  junior nouns looked up {z[0]}, found a member {z[1]}  {pct(z[1], z[0])}")
+        print(f"  taken nouns canonicalized after the takes: {z[2]}")
+        print(f"  time, ms: takes {z[3] / 1000:.1f}, pins and drain {z[4] / 1000:.1f}; "
+              f"total {(z[3] + z[4]) / 1000:.1f}")
+        print(f"  most members added at one exit, before its drain: {top[5]} "
+              f"(set then {top[6]}, {pct(top[5], top[6])})")
+        m = [sum(i["Z"][j] for i in zis) for j in range(7, 18)]
+        if any(m):
+            most = max(i["Z"][9] for i in zis)
+            print("\n== the pass after an exit home's takes (u3m_sole_mend) ==")
+            print(f"  exits with a pass: {m[0]}   time, ms: {m[1] / 1000:.1f} "
+                  f"(of the takes' {z[3] / 1000:.1f}), most at one exit {most / 1000:.1f}")
+            print(f"  {'noted by the take of':<22}{'slots repointed':>17}{'words freed at once':>21}")
+            for k, n in enumerate(("jet state", "bytecode", "persistent memo", "ford memo")):
+                print(f"  {n:<22}{m[3 + k]:>17}{m[7 + k]:>21}")
+            print(f"  {'all':<22}{sum(m[3:7]):>17}{sum(m[7:11]):>21}")
+    names = sorted({n for i in intervals for n in i["N"]})
+    if names:
+        print("\n== cribs ==")
+        print(f"  {'crib':<22}{'cap now':>10}{'largest':>10}{'ceiling':>10}"
+              f"{'peak':>10}{'grows':>8}{'shrinks':>8}{'clr-log':>9}{'clr-drop':>9}"
+              f"{'at-ceil':>9}")
+        for n in names:
+            rows = [i["N"][n] for i in intervals if n in i["N"]]
+            c = rows[-1]
+            print(f"  {n:<22}{c[0]:>10}{max(r[1] for r in rows):>10}{c[2]:>10}"
+                  f"{max(r[3] for r in rows):>10}{sum(r[4] for r in rows):>8}"
+                  f"{sum(r[5] for r in rows):>8}{sum(r[6] for r in rows):>9}"
+                  f"{sum(r[7] for r in rows):>9}{sum(r[8] for r in rows):>9}")
 
     # ---- formula / battery identity ----------------------------------------
     have_b = any(i["B"] for i in intervals)

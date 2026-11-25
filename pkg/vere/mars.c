@@ -120,9 +120,12 @@ static u3_noun
 _mars_grab(u3_noun sac, c3_o pri_o)
 {
   if ( u3_nul == sac) {
-    if ( u3C.wag_h & (u3o_debug_ram | u3o_check_corrupt) ) {
+    if ( u3C.wag_h & u3o_debug_ram ) {
       u3m_grab(sac, u3_none);
       u3C.wag_h &= ~u3o_check_corrupt;
+    }
+    else {
+      u3m_grab_check(sac, u3_none);
     }
     return u3_nul;
   }
@@ -791,6 +794,14 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
 void
 _mars_post(u3_mars* mar_u)
 {
+  //  the cribs (see crib.h): any that reached its ceiling during the event
+  //
+  u3m_crib_report();
+
+  //  resize the home-road hashcons set's tables, if need be
+  //
+  u3m_sole_tend();
+
   if ( mar_u->fag_w & _mars_fag_hit1 ) {
     if ( u3C.wag_h & u3o_verbose ) {
       u3l_log("mars: threshold 1: %"PRIc3_w, u3h_wyt(u3R->cax.per_p));
@@ -1093,6 +1104,7 @@ _mars_poke_play(u3_mars* mar_u, const u3_fact* tac_u)
 
   u3z(gon);
   u3a_defer_close();
+  u3m_sole_tend();
   u3e_Phase = pha_y;
   u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
   u3e_measure_event(u3A->eve_d, "poke");
@@ -1213,13 +1225,13 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
   //  hashcons the events first, so that their subtrees become canonical,
   //  then hashcons the cache keys and values against them
   //
-  eve = u3m_dedup(eve);
+  eve = u3m_sole_home(eve);
 
   //  prime memo cache
   //
   u3_noun xev = cax;
   while ( u3_nul != cax ) {
-    u3z(u3z_save_m_dedup(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
+    u3z(u3z_save_m_sole(u3z_memo_keep, 144 + c3__nock, u3h(u3h(cax)),
                          u3k(u3t(u3h(cax)))));
     cax = u3t(cax);
   }
@@ -1236,7 +1248,7 @@ _mars_do_boot(u3_disk* log_u, c3_d eve_d, u3_noun cax)
       exit(1);
     }
 
-    pil = u3m_dedup(pil);
+    pil = u3m_sole_home(pil);
 
     u3s_cue_xeno_done(sil_u);
 

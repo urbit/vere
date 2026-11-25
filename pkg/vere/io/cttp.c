@@ -1132,6 +1132,37 @@ _cttp_io_exit(u3_auto* car_u)
   h2o_timeout_dispose(u3L, &ctp_u->tim_u);
 }
 
+/* _cttp_io_mark(): mark the headers of responses in progress.
+**
+**   a response's headers are a noun from their arrival until its body
+**   is complete (see _cttp_creq_on_head()).
+*/
+static u3m_quac**
+_cttp_io_mark(u3_auto* car_u, c3_w *out_w)
+{
+  u3m_quac** all_u = c3_malloc(2 * sizeof(*all_u));
+  u3_cttp*   ctp_u = (u3_cttp*)car_u;
+  u3_creq*   ceq_u;
+  c3_w       siz_w = 0;
+
+  for ( ceq_u = ctp_u->ceq_u; ceq_u; ceq_u = ceq_u->nex_u ) {
+    if ( ceq_u->res_u ) {
+      siz_w += u3a_mark_noun(ceq_u->res_u->hed);
+    }
+  }
+
+  all_u[0] = c3_malloc(sizeof(**all_u));
+  all_u[0]->nam_c = strdup("response headers");
+  all_u[0]->siz_w = siz_w * sizeof(c3_w);
+  all_u[0]->qua_u = 0;
+
+  all_u[1] = 0;
+
+  *out_w = all_u[0]->siz_w;
+
+  return all_u;
+}
+
 /* u3_cttp_io_init(): initialize http client I/O.
 */
 u3_auto*
@@ -1166,6 +1197,7 @@ u3_cttp_io_init(u3_pier* pir_u)
   car_u->liv_o = c3y;
   car_u->io.talk_f = _cttp_io_talk;
   car_u->io.kick_f = _cttp_io_kick;
+  car_u->io.mark_f = _cttp_io_mark;
   car_u->io.exit_f = _cttp_io_exit;
   //  XX retry up to N?
   //

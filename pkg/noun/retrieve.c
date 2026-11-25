@@ -3,10 +3,12 @@
 #include "retrieve.h"
 
 #include "allocate.h"
+#include "events.h"
 #include "hashtable.h"
 #include "imprison.h"
 #include "murmur3.h"
 #include "trace.h"
+#include "vortex.h"
 #include "xtract.h"
 
 
@@ -244,10 +246,12 @@ _cr_sing_push(u3a_pile* pil_u, u3_noun a, u3_noun b)
 static inline c3_o
 _cr_sing_mug(u3a_noun* a_u, u3a_noun* b_u)
 {
-  //  XX add debug assertions that both mugs are 31-bit
-  //  (ie, not u3a_take() relocation references)
+  //  a noun that has left (u3a_take()) holds the address of its copy in
+  //  its mug slot, not a mug: nothing is known from it
   //
-  if ( a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w) ) {
+  if (  a_u->mug_w && b_u->mug_w && (a_u->mug_w != b_u->mug_w)
+     && !((a_u->mug_w | b_u->mug_w) >> 31) )
+  {
     return c3n;
   }
 
@@ -302,44 +306,8 @@ _cr_sing_atom(u3_atom a, u3_noun b)
   return c3y;
 }
 
-/* _cr_sing_cape_test(): check for previous comparison of [a] and [b].
+/* _cr_sing_wed(): unify the children [*a] and [*b] of equal cells.
 */
-static inline c3_o
-_cr_sing_cape_test(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
-{
-  u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
-                     u3a_to_off(b) >> u3a_vits);
-  u3_noun val;
-
-  u3t_off(euq_o);
-  val = u3h_git(har_p, key);
-  u3t_on(euq_o);
-
-  u3z(key);
-  return ( u3_none != val ) ? c3y : c3n;
-}
-
-/* _cr_sing_cape_keep(): store [a] and [b] to short-circuit subsequent tests.
-**                   NB: [a] and [b] (which MUST be equal nouns)
-**                       are cons'd as offsets (direct atoms) to avoid refcount churn.
-*/
-static inline void
-_cr_sing_cape_keep(u3p(u3h_root) har_p, u3_noun a, u3_noun b)
-{
-  //  only store if [a] and [b] are copies of each other
-  //
-  if ( a != b ) {
-    c3_dessert( (c3n == u3a_is_cat(a)) && (c3n == u3a_is_cat(b)) );
-
-    u3_noun key = u3nc(u3a_to_off(a) >> u3a_vits,
-                       u3a_to_off(b) >> u3a_vits);
-    u3t_off(euq_o);
-    u3h_put(har_p, key, c3y);
-    u3t_on(euq_o);
-    u3z(key);
-  }
-}
-
 static inline __attribute__((always_inline)) void
 _cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
 {
@@ -348,117 +316,24 @@ _cr_sing_wed(u3_noun *restrict a, u3_noun *restrict b)
   }
 }
 
-/* _cr_sing_cape(): unifying equality with comparison deduplication
- *                  (tightly coupled to _cr_sing)
- */
-static c3_o
-_cr_sing_cape(u3a_pile* pil_u, u3p(u3h_root) har_p)
-{
-  eqframe* fam_u = u3a_peek(pil_u);
-  u3_noun   a, b;
-  u3a_cell* a_u;
-  u3a_cell* b_u;
-
-  //  loop while arguments remain on the stack
-  //
-  do {
-    a = fam_u->a;
-    b = fam_u->b;
-
-    switch ( fam_u->sat_y ) {
-
-      //  [a] and [b] are arbitrary nouns
-      //
-      case SING_NONE: {
-        if ( a == b ) {
-          break;
-        }
-        else if ( c3y == u3a_is_atom(a) ) {
-          if ( c3n == _cr_sing_atom(a, b) ) {
-            return c3n;
-          }
-          else {
-            break;
-          }
-        }
-        else if ( c3y == u3a_is_atom(b) ) {
-          return c3n;
-        }
-        //  [a] and [b] are cells
-        //
-        else {
-          a_u = u3a_to_ptr(a);
-          b_u = u3a_to_ptr(b);
-
-          //  short-circuiting mug check
-          //
-          if ( c3n == _cr_sing_mug((u3a_noun*)a_u, (u3a_noun*)b_u) ) {
-            return c3n;
-          }
-          //  short-circuiting re-comparison check
-          //
-          else if ( c3y == _cr_sing_cape_test(har_p, a, b) ) {
-            fam_u = u3a_pop(pil_u);
-            continue;
-          }
-          //  upgrade none-frame to head-frame, check heads
-          //
-          else {
-            fam_u->sat_y = SING_HEAD;
-            fam_u = _cr_sing_push(pil_u, a_u->hed, b_u->hed);
-            continue;
-          }
-        }
-      } break;
-
-      //  cells [a] and [b] have equal heads
-      //
-      case SING_HEAD: {
-        a_u = u3a_to_ptr(a);
-        b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->hed), &(b_u->hed));
-
-        //  upgrade head-frame to tail-frame, check tails
-        //
-        fam_u->sat_y = SING_TAIL;
-        fam_u = _cr_sing_push(pil_u, a_u->tel, b_u->tel);
-        continue;
-      }
-
-      //  cells [a] and [b] are equal
-      //
-      case SING_TAIL: {
-        a_u = u3a_to_ptr(a);
-        b_u = u3a_to_ptr(b);
-        _cr_sing_wed(&(a_u->tel), &(b_u->tel));
-      } break;
-
-      default: {
-        u3_assert(0);
-      } break;
-    }
-
-    //  track equal pairs to short-circuit possible (re-)comparison
-    //
-    _cr_sing_cape_keep(har_p, a, b);
-
-    fam_u = u3a_pop(pil_u);
-  }
-  while ( c3n == u3a_pile_done(pil_u) );
-
-  return c3y;
-}
-
 /* _cr_sing(): unifying equality.
+**
+**   each equal pair of children met is unified: merged on a road, or
+**   (if both are senior to every road below home) through one of their
+**   slots, deferring the loss of the old value (see u3a_wed()). a pair
+**   met again is then pointer-equal, so a comparison, and its repeats,
+**   stay linear on every road, promoting or not. only a pair u3a_wed()
+**   leaves (both on a promoting road's child, a home count at its limit,
+**   or under memory debugging a lose list out of room) is compared again
+**   in full.
 */
 static c3_o
 _cr_sing(u3_noun a, u3_noun b)
 {
-  c3_s     ovr_s = 0;
-  u3a_cell*  a_u;
-  u3a_cell*  b_u;
-  eqframe* fam_u;
-  u3a_pile pil_u;
+  u3a_cell*    a_u;
+  u3a_cell*    b_u;
+  eqframe*     fam_u;
+  u3a_pile     pil_u;
 
   //  initialize stack control, push arguments onto the stack (none-frame)
   //
@@ -541,18 +416,6 @@ _cr_sing(u3_noun a, u3_noun b)
       } break;
     }
 
-    //  [ovr_s] counts comparisons, if it overflows, we've likely hit
-    //  a pathological case (highly duplicated tree), so we de-duplicate
-    //  subsequent comparisons by maintaining a set of equal pairs.
-    //
-    if ( 0 == ++ovr_s ) {
-      u3p(u3h_root) har_p = u3h_new();
-      c3_o ret_o = _cr_sing_cape(&pil_u, har_p);
-      u3h_free(har_p);
-      u3R->cap_p = pil_u.top_p;
-      return ret_o;
-    }
-
     fam_u = u3a_pop(&pil_u);
   }
 
@@ -569,6 +432,32 @@ u3r_sing_imp(u3_noun a, u3_noun b)
   ret_o = _cr_sing(a, b);
   u3t_off(euq_o);
   return ret_o;
+}
+
+/* u3r_sing_wed(): u3r_sing() on two slots, unifying the slots themselves
+**   when equal, as unification does for the children it compares. see
+**   retrieve.h for what a slot must be: a slot off the loom, or on u3R's
+**   stack, is u3R's, and is written as u3R's heap would be. one on an
+**   older road's stack, or off the loom but holding a count on home, is
+**   not allowed.
+*/
+c3_o
+u3r_sing_wed_imp(u3_noun* a, u3_noun* b)
+{
+  if ( *a == *b ) {
+    return c3y;
+  }
+
+  if ( c3n == u3r_sing(*a, *b) ) {
+    return c3n;
+  }
+  else if ( *a != *b ) {
+    //  cores sharing a call site converge on one battery: each check
+    //  keeps the value u3a_wed() prefers, in the cache or the core
+    //
+    u3a_wed(a, b);
+  }
+  return c3y;
 }
 
 c3_o
@@ -1862,9 +1751,14 @@ _cr_mug_next(u3a_pile* pil_u, u3_noun veb)
 
       //  veb has already been mugged, return memoized value
       //
-      //    XX add debug assertion that mug is 31-bit?
+      //    a noun that has left (u3a_take()) holds the address of its
+      //    copy there: the copy's mug is its own
       //
       if ( veb_u->mug_w ) {
+        if ( c3_unlikely(veb_u->mug_w >> 31) ) {
+          veb = (u3_noun)veb_u->mug_w;
+          continue;
+        }
         return (c3_h)veb_u->mug_w;
       }
       //  veb is an indirect atom, mug its bytes and memoize

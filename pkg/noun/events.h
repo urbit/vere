@@ -113,7 +113,9 @@
           u3e_pha_rec_dup   = 32,  //  u3m_reclaim: hash-consing prune
           u3e_pha_trim_per  = 33,  //  _mars_post: persistent memo trim
           u3e_pha_trim_for  = 34,  //  _mars_post: ford memo trim
-          u3e_pha_max       = 35
+          u3e_pha_mend      = 35,  //  u3m_love: the pass after an exit
+                                   //  home's takes (u3m_sole_mend())
+          u3e_pha_max       = 36
         } u3e_phase;
 
       /* u3e_meter: counters reported at each snapshot.
@@ -166,6 +168,15 @@
           c3_d dfe_d;        //    on distinct nouns
           c3_d dfk_d;        //  table shrinks after a large window
 
+          //  the grab u3o_check_corrupt asks for (u3m_vgrab_check())
+          //
+          c3_d ccs_d[3];     //  times asked: a signal recovered on the
+                             //  home road, (unused, 0), a full home
+                             //  lose list
+          c3_d ccg_d;        //  grabs run
+          c3_d ccm_d;        //    their time, ms
+          c3_d ccl_d;        //    words they found leaked, and freed
+
           //  alignment of each new arvo state with the old, per
           //  u3e_measure_align(): home nouns referenced from the new
           //  state's cells on the event's road (which the take gains)
@@ -186,7 +197,8 @@
                              //  per for byc war bas hot cod
           c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
           c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
-                             //  older home nouns met in it, u3m_dedup()
+                             //  the pass after it (u3m_sole_mend()),
+                             //  u3m_sole_try()
           c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
@@ -196,6 +208,78 @@
           //
           c3_d bcc_d;        //  compiled, on any road
           c3_d bca_d;        //  added to the home road's table
+
+          //  unification (u3a_wed()): merges on senior inner roads
+          //  (_ca_wed_stow()), and when no road below home can merge,
+          //  slot writes on an inner road (_ca_wed_home())
+          //
+          c3_d wvm_d;        //  merges on senior inner roads
+          c3_d wsg_d;        //  give-ups: no road could merge
+          c3_d wsw_d[2];     //  slot writes: outside home memory, in home
+                             //  memory
+          c3_d wsk_d;        //  home writes refused (the count at its
+                             //  limit, or, debugging memory, the home lose
+                             //  list full)
+
+          //  the lose lists, home [0] and inner [1] (u3a_lose_drain())
+          //
+          c3_d wlp_d[2];     //  values put
+          c3_d wlf_d[2];     //  values leaked, the list full
+          c3_d wll_d[2];     //  values lost after an exit's takes
+          c3_d wlm_d[2];     //  ... most at one exit
+          c3_d wlx_d[2];     //  left by an interrupted exit: home values
+                             //  lost at the next leap, inner ones dropped
+                             //  with the road they're on
+          c3_d wlc_d;        //  inner entries copied up a road at an exit
+
+          //  canonicalizing on inner roads (u3m_sole_try())
+          //
+          c3_d eic_d[2];     //  calls: home road, inner roads
+          c3_d eij_d;        //  junior cells walked
+          c3_d eiv_d;        //  visited-set hits
+          c3_d eih_d[2];     //  home-set probes on inner roads, hits
+
+          //  exits to home: the canonicalizing take (_ca_take_sole()),
+          //  and time in each step (microseconds, while measuring)
+          //
+          c3_d ctk_d;        //  junior nouns looked up
+          c3_d ctf_d;        //  ... found a member, so not copied
+          c3_d ctr_d;        //  taken nouns noted, and canonicalized
+                             //  in place after the takes
+          c3_d cus_d[2];     //  time: takes, then the lose list
+          c3_d cam_d[2];     //  most members added at one exit, before
+                             //  its drain; the set's size as it began
+
+          //  the pass after an exit home's takes (u3m_sole_mend()); by
+          //  the take that noted the noun: jet state, bytecode,
+          //  persistent memo, ford memo. counted while measuring
+          //
+          c3_d cmn_d;        //  exits with a pass
+          c3_d cmu_d[2];     //  time, microseconds: in all (part of
+                             //  cus_d[0]), the most at one exit
+          c3_d cms_d[4];     //  slots repointed at a member
+          c3_d cmw_d[4];     //  words in the nouns that freed at once
+                             //  (see u3a_lose_ends())
+
+          //  cribs (see crib.h): the visited set [0], the home lose list
+          //  [1]; the yards' users, in entries: the exit home's notes
+          //  [2], the home walk's marks [3] and its frames [4], which
+          //  have a ceiling, a peak and fills, but no capacity of their
+          //  own; and the yards, in bytes: scratch [5] and result [6].
+          //  capacity and ceiling are states, kept across intervals;
+          //  the rest is use in the interval
+          //
+          struct {
+            c3_d cap_d;      //  capacity now, entries (0: not made yet)
+            c3_d top_d;      //  largest capacity
+            c3_d max_d;      //  ceiling
+            c3_d pek_d;      //  most entries in use at once
+            c3_d gro_d;      //  grows
+            c3_d shr_d;      //  shrinks
+            c3_d clg_d;      //  clears through a log of slots (sets)
+            c3_d cdp_d;      //  clears by zeroing the table (sets)
+            c3_d ovf_d;      //  fills or drops at the ceiling
+          } cib_u[7];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
@@ -224,6 +308,11 @@
     */
       c3_d
       u3e_measure_ms(void);
+
+    /* u3e_measure_us(): wall-clock microseconds, for short steps.
+    */
+      c3_d
+      u3e_measure_us(void);
 
     /* u3e_measure_op(): if measuring, log a pack, meld or melt [op_c],
     **                   run because of [why_c], with melt options
