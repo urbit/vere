@@ -126,6 +126,14 @@
 #         define U3_OS_ARCH "macos-x86_64"
 #       endif
 #     endif
+#   elif defined(U3_OS_bsd) && defined(__FreeBSD__)
+#     ifdef __LP64__
+#       ifdef U3_CPU_aarch64
+#         define U3_OS_ARCH "freebsd-aarch64"
+#       else
+#         define U3_OS_ARCH "freebsd-x86_64"
+#       endif
+#     endif
 #   elif defined(U3_OS_windows)
 #define U3_OS_ARCH "windows-x86_64"
 #   endif
@@ -169,7 +177,7 @@
 #       define U3_OS_LoomBase 0x4000000
 #     endif
 #   elif defined(U3_OS_windows)
-#       define U3_OS_LoomBase 0x28000000000
+#       define U3_OS_LoomBase 0x40000000000
 #   else
 #     error "port: LoomBase"
 #   endif

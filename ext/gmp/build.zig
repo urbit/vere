@@ -130,6 +130,40 @@ pub fn build(b: *std.Build) void {
             },
         });
     }
+    if (t.os.tag == .freebsd and t.cpu.arch == .aarch64) {
+        lib.addIncludePath(b.path("gen/aarch64-freebsd"));
+        lib.addIncludePath(b.path("gen/aarch64-freebsd/mpn"));
+        for (aarch64_freebsd_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
+        lib.addCSourceFiles(.{
+            .root = b.path("gen/aarch64-freebsd"),
+            .files = &.{
+                "mpn/mp_bases.c",
+                "mpn/fib_table.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
+        });
+    }
+    if (t.os.tag == .freebsd and t.cpu.arch == .x86_64) {
+        lib.addIncludePath(b.path("gen/x86_64-freebsd"));
+        lib.addIncludePath(b.path("gen/x86_64-freebsd/mpn"));
+        for (x86_64_freebsd_asm_sources) |rel_path| {
+            lib.addAssemblyFile(b.path(rel_path));
+        }
+        lib.addCSourceFiles(.{
+            .root = b.path("gen/x86_64-freebsd"),
+            .files = &.{
+                "mpn/mp_bases.c",
+                "mpn/fib_table.c",
+            },
+            .flags = &.{
+                "-fno-sanitize=all",
+            },
+        });
+    }
 
     if (t.os.tag == .windows and t.cpu.arch == .x86_64) {
         lib.addIncludePath(b.path("gen/x86_64-windows"));
@@ -471,6 +505,117 @@ const x86_64_linux_asm_sources = [_][]const u8{
     "gen/x86_64-linux/mpn/submul_1.s",
     "gen/x86_64-linux/mpn/xnor_n.s",
     "gen/x86_64-linux/mpn/xor_n.s",
+};
+
+const aarch64_freebsd_asm_sources = [_][]const u8{
+    "gen/aarch64-freebsd/mpn/add_n.s",
+    "gen/aarch64-freebsd/mpn/addlsh1_n.s",
+    "gen/aarch64-freebsd/mpn/addlsh2_n.s",
+    "gen/aarch64-freebsd/mpn/addmul_1.s",
+    "gen/aarch64-freebsd/mpn/and_n.s",
+    "gen/aarch64-freebsd/mpn/andn_n.s",
+    "gen/aarch64-freebsd/mpn/bdiv_dbm1c.s",
+    "gen/aarch64-freebsd/mpn/bdiv_q_1.s",
+    "gen/aarch64-freebsd/mpn/cnd_add_n.s",
+    "gen/aarch64-freebsd/mpn/cnd_sub_n.s",
+    "gen/aarch64-freebsd/mpn/com.s",
+    "gen/aarch64-freebsd/mpn/copyd.s",
+    "gen/aarch64-freebsd/mpn/copyi.s",
+    "gen/aarch64-freebsd/mpn/divrem_1.s",
+    "gen/aarch64-freebsd/mpn/gcd_11.s",
+    "gen/aarch64-freebsd/mpn/gcd_22.s",
+    "gen/aarch64-freebsd/mpn/hamdist.s",
+    "gen/aarch64-freebsd/mpn/invert_limb.s",
+    "gen/aarch64-freebsd/mpn/ior_n.s",
+    "gen/aarch64-freebsd/mpn/iorn_n.s",
+    "gen/aarch64-freebsd/mpn/lshift.s",
+    "gen/aarch64-freebsd/mpn/lshiftc.s",
+    "gen/aarch64-freebsd/mpn/mod_34lsub1.s",
+    "gen/aarch64-freebsd/mpn/mul_1.s",
+    "gen/aarch64-freebsd/mpn/nand_n.s",
+    "gen/aarch64-freebsd/mpn/nior_n.s",
+    "gen/aarch64-freebsd/mpn/popcount.s",
+    "gen/aarch64-freebsd/mpn/rsblsh1_n.s",
+    "gen/aarch64-freebsd/mpn/rsblsh2_n.s",
+    "gen/aarch64-freebsd/mpn/rsh1add_n.s",
+    "gen/aarch64-freebsd/mpn/rsh1sub_n.s",
+    "gen/aarch64-freebsd/mpn/rshift.s",
+    "gen/aarch64-freebsd/mpn/sec_tabselect.s",
+    "gen/aarch64-freebsd/mpn/sqr_diag_addlsh1.s",
+    "gen/aarch64-freebsd/mpn/sub_n.s",
+    "gen/aarch64-freebsd/mpn/sublsh1_n.s",
+    "gen/aarch64-freebsd/mpn/sublsh2_n.s",
+    "gen/aarch64-freebsd/mpn/submul_1.s",
+    "gen/aarch64-freebsd/mpn/xnor_n.s",
+    "gen/aarch64-freebsd/mpn/xor_n.s",
+};
+
+const x86_64_freebsd_asm_sources = [_][]const u8{
+    "gen/x86_64-freebsd/mpn/add_err1_n.s",
+    "gen/x86_64-freebsd/mpn/add_err2_n.s",
+    "gen/x86_64-freebsd/mpn/add_err3_n.s",
+    "gen/x86_64-freebsd/mpn/add_n.s",
+    "gen/x86_64-freebsd/mpn/addaddmul_1msb0.s",
+    "gen/x86_64-freebsd/mpn/addlsh1_n.s",
+    "gen/x86_64-freebsd/mpn/addlsh2_n.s",
+    "gen/x86_64-freebsd/mpn/addlsh_n.s",
+    "gen/x86_64-freebsd/mpn/addmul_1.s",
+    "gen/x86_64-freebsd/mpn/addmul_2.s",
+    "gen/x86_64-freebsd/mpn/and_n.s",
+    "gen/x86_64-freebsd/mpn/andn_n.s",
+    "gen/x86_64-freebsd/mpn/bdiv_dbm1c.s",
+    "gen/x86_64-freebsd/mpn/bdiv_q_1.s",
+    "gen/x86_64-freebsd/mpn/cnd_add_n.s",
+    "gen/x86_64-freebsd/mpn/cnd_sub_n.s",
+    "gen/x86_64-freebsd/mpn/com.s",
+    "gen/x86_64-freebsd/mpn/copyd.s",
+    "gen/x86_64-freebsd/mpn/copyi.s",
+    "gen/x86_64-freebsd/mpn/div_qr_1n_pi1.s",
+    "gen/x86_64-freebsd/mpn/div_qr_2n_pi1.s",
+    "gen/x86_64-freebsd/mpn/div_qr_2u_pi1.s",
+    "gen/x86_64-freebsd/mpn/dive_1.s",
+    "gen/x86_64-freebsd/mpn/divrem_1.s",
+    "gen/x86_64-freebsd/mpn/divrem_2.s",
+    "gen/x86_64-freebsd/mpn/gcd_11.s",
+    "gen/x86_64-freebsd/mpn/gcd_22.s",
+    "gen/x86_64-freebsd/mpn/hamdist.s",
+    "gen/x86_64-freebsd/mpn/invert_limb.s",
+    "gen/x86_64-freebsd/mpn/invert_limb_table.s",
+    "gen/x86_64-freebsd/mpn/ior_n.s",
+    "gen/x86_64-freebsd/mpn/iorn_n.s",
+    "gen/x86_64-freebsd/mpn/lshift.s",
+    "gen/x86_64-freebsd/mpn/lshiftc.s",
+    "gen/x86_64-freebsd/mpn/mod_1_1.s",
+    "gen/x86_64-freebsd/mpn/mod_1_2.s",
+    "gen/x86_64-freebsd/mpn/mod_1_4.s",
+    "gen/x86_64-freebsd/mpn/mod_34lsub1.s",
+    "gen/x86_64-freebsd/mpn/mode1o.s",
+    "gen/x86_64-freebsd/mpn/mul_1.s",
+    "gen/x86_64-freebsd/mpn/mul_2.s",
+    "gen/x86_64-freebsd/mpn/mul_basecase.s",
+    "gen/x86_64-freebsd/mpn/mullo_basecase.s",
+    "gen/x86_64-freebsd/mpn/mulmid_basecase.s",
+    "gen/x86_64-freebsd/mpn/nand_n.s",
+    "gen/x86_64-freebsd/mpn/nior_n.s",
+    "gen/x86_64-freebsd/mpn/popcount.s",
+    "gen/x86_64-freebsd/mpn/redc_1.s",
+    "gen/x86_64-freebsd/mpn/rsblsh1_n.s",
+    "gen/x86_64-freebsd/mpn/rsblsh2_n.s",
+    "gen/x86_64-freebsd/mpn/rsblsh_n.s",
+    "gen/x86_64-freebsd/mpn/rsh1add_n.s",
+    "gen/x86_64-freebsd/mpn/rsh1sub_n.s",
+    "gen/x86_64-freebsd/mpn/rshift.s",
+    "gen/x86_64-freebsd/mpn/sec_tabselect.s",
+    "gen/x86_64-freebsd/mpn/sqr_basecase.s",
+    "gen/x86_64-freebsd/mpn/sqr_diag_addlsh1.s",
+    "gen/x86_64-freebsd/mpn/sub_err1_n.s",
+    "gen/x86_64-freebsd/mpn/sub_err2_n.s",
+    "gen/x86_64-freebsd/mpn/sub_err3_n.s",
+    "gen/x86_64-freebsd/mpn/sub_n.s",
+    "gen/x86_64-freebsd/mpn/sublsh1_n.s",
+    "gen/x86_64-freebsd/mpn/submul_1.s",
+    "gen/x86_64-freebsd/mpn/xnor_n.s",
+    "gen/x86_64-freebsd/mpn/xor_n.s",
 };
 
 const generic_c_sources = [_][]const u8{

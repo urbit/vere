@@ -182,7 +182,7 @@ pub fn build(b: *std.Build) !void {
     pkg_noun.addIncludePath(b.path(""));
     if (t.os.tag.isDarwin())
         pkg_noun.addIncludePath(b.path("platform/darwin"));
-    if (t.os.tag == .linux)
+    if (t.os.tag == .linux or t.os.tag == .freebsd)
         pkg_noun.addIncludePath(b.path("platform/linux"));
     if (t.os.tag == .windows)
         pkg_noun.addIncludePath(b.path("platform/windows"));
@@ -217,12 +217,14 @@ pub fn build(b: *std.Build) !void {
 
     for (install_headers) |h| pkg_noun.installHeader(b.path(h), h);
 
-    if (t.os.tag == .windows)
+    if (t.os.tag == .windows) {
         pkg_noun.installHeader(b.path("platform/windows/wloom.h"), "wloom.h");
+        pkg_noun.installHeader(b.path("platform/windows/setjmp.h"), "setjmp.h");
+    }
 
     pkg_noun.installHeader(b.path(switch (t.os.tag) {
         .macos => "platform/darwin/rsignal.h",
-        .linux => "platform/linux/rsignal.h",
+        .linux, .freebsd => "platform/linux/rsignal.h",
         .windows => "platform/windows/rsignal.h",
         else => "",
     }), "rsignal.h");
@@ -232,6 +234,7 @@ pub fn build(b: *std.Build) !void {
 
 const c_source_files = [_][]const u8{
     "allocate.c",
+    "crib.c",
     "events.c",
     "hashtable.c",
     "imprison.c",
@@ -417,7 +420,8 @@ const c_source_files = [_][]const u8{
     "jets/f/ut_redo.c",
     "jets/f/ut_mint.c",
     "jets/f/ut_mull.c",
-    "jets/f/ut_nest.c",
+    "jets/f/ut_nest1.c",
+    "jets/f/ut_nest2.c",
     "jets/f/ut_rest.c",
     "jets/g/plot.c",
     "jets/i/lagoon.c",
@@ -444,7 +448,9 @@ const c_source_files = [_][]const u8{
 
 const install_headers = [_][]const u8{
     "allocate.h",
+    "canon.h",
     "copy_migrate.h",
+    "crib.h",
     "error.h",
     "events.h",
     "hashtable.h",

@@ -116,6 +116,22 @@ pub fn build(b: *std.Build) void {
         });
     }
 
+    // what configure picks on a native FreeBSD host; a cross configure can't
+    // run its fault-handler probes and falls back to handler-none.c
+    if ((t.os.tag == .freebsd)) {
+        config_h.addValues(.{
+            .CFG_FAULT = if (t.cpu.arch == .aarch64)
+                "fault-freebsd-arm.h"
+            else
+                "fault-posix-ucontext.h",
+            .CFG_HANDLER = "handler-unix.c",
+            .CFG_LEAVE = "leave-nop.c",
+            .CFG_MACHFAULT = "fault-none.h",
+            .CFG_SIGNALS = "signals-bsd.h",
+            .CFG_STACKVMA = "stackvma-freebsd.c",
+        });
+    }
+
     const sigsegv_h = b.addConfigHeader(.{
         .style = .{
             .cmake = dep_c.path("src/sigsegv.h.in"),

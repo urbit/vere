@@ -1583,6 +1583,28 @@ _king_copy_file(c3_c* src_c, c3_c* dst_c)
       ret_i = 0;
       goto done3;
     }
+#elif defined(U3_OS_bsd) && defined(__FreeBSD__)
+    //  in-kernel copy (block-cloned on zfs), advancing both file offsets
+    //
+    {
+      ssize_t sen_i;
+
+      do {
+        //  XX fallback on any errors?
+        //
+        if ( 0 > (sen_i = copy_file_range(src_i, NULL, dst_i, NULL,
+                                          SSIZE_MAX, 0)) )
+        {
+          err_i = errno;
+          ret_i = -1;
+          goto done3;
+        }
+      }
+      while ( sen_i );
+
+      ret_i = 0;
+      goto done3;
+    }
 #elif defined(U3_OS_osx)
     if ( !fcopyfile(src_i, dst_i, NULL, COPYFILE_ALL) ) {
       ret_i = 0;

@@ -22,8 +22,8 @@
     c3_o
     u3_wnd_loom_stake(void* bas_v, size_t len_i);
 
-  /* u3_wnd_loom_init(): reserve [len_i] bytes at [bas_v] and back them with
-  **                     a pagefile section. returns c3n if the placeholder
+  /* u3_wnd_loom_init(): reserve [len_i] bytes at [bas_v] as private memory,
+  **                     committed on first touch. returns c3n if the placeholder
   **                     apis are unavailable, in which case the caller must
   **                     fall back to a plain anonymous mapping (and to
   **                     u3o_no_demand).
@@ -64,18 +64,21 @@
     u3_wnd_loom_fault(void* adr_v, size_t len_i);
 
   /* u3_wnd_loom_mapf(): map the low [byt_i] bytes of [fid_i] over the bottom
-  **                     of the loom, backing the remainder with the pagefile
-  **                     section. [byt_i] must be a multiple of the allocation
-  **                     granularity; zero drops the image mapping entirely.
+  **                     of the loom, backing the remainder with fresh
+  **                     private memory. [byt_i] must be a multiple of the
+  **                     allocation granularity; zero drops the image
+  **                     mapping entirely.
   **
   **   the image is mapped copy-on-write but protected read-only, so that
-  **   stores still fault into u3e_fault(). all protections above [byt_i]
-  **   are reset to read/write; the caller must re-establish the guard page.
+  **   stores still fault into u3e_fault(). everything above [byt_i] is
+  **   discarded, and reads as zero; the caller must re-establish the guard
+  **   page.
   */
     c3_o
     u3_wnd_loom_mapf(c3_i fid_i, size_t byt_i);
 
-  /* u3_wnd_loom_unmapf(): drop the image mapping, restoring pagefile backing.
+  /* u3_wnd_loom_unmapf(): drop the image mapping, leaving the whole loom
+  **                       fresh private memory.
   **
   **   windows refuses to truncate or coherently rewrite a mapped file, so
   **   this must be called before a patch is applied to the image.
@@ -112,14 +115,11 @@
 
   /* u3_wnd_loom_toss(): release the physical pages of [len_i] at [adr_v].
   **
-  **   the windows analogue of madvise(MADV_DONTNEED). DiscardVirtualMemory
-  **   frees the pages and leaves them reading as zero, exactly as linux
-  **   does, but rejects anything not committed and accessible -- so the
-  **   range is walked and applied region by region, skipping reserved
-  **   pages and the guard page.
-  **
-  **   NB: resident memory only. committed pages of a section view cannot
-  **   be decommitted, so the loom's commit charge is a high-water mark.
+  **   the windows analogue of madvise(MADV_DONTNEED). private pages are
+  **   decommitted, returning their commit charge, and read as zero on the
+  **   next touch, exactly as linux does. image pages cannot be
+  **   decommitted, and are discarded instead. the range is walked region
+  **   by region, skipping reserved pages and the guard page.
   */
     c3_o
     u3_wnd_loom_toss(void* adr_v, size_t len_i);

@@ -96,7 +96,9 @@ pub fn build(b: *std.Build) void {
     dbus.root_module.addCMacro("DBUS_SYSTEM_BUS_DEFAULT_ADDRESS", "\"unix:tmpdir=/tmp\"");
     dbus.root_module.addCMacro("DBUS_ENABLE_CHECKS", "");
     dbus.root_module.addCMacro("DBUS_ENABLE_ASSERT", "");
-    dbus.root_module.addCMacro("HAVE_ALLOCA_H", "");
+    // the BSDs declare alloca in <stdlib.h> and have no <alloca.h>
+    if (t.os.tag != .freebsd)
+        dbus.root_module.addCMacro("HAVE_ALLOCA_H", "");
     dbus.root_module.addCMacro("_GNU_SOURCE", "");
     dbus.root_module.addCMacro("HAVE_SYSLOG_H", "");
     dbus.root_module.addCMacro("HAVE_SOCKLEN_T", "");
@@ -115,6 +117,11 @@ pub fn build(b: *std.Build) void {
         dbus.root_module.addCMacro("HAVE_LIBAUDIT", "");
         dbus.root_module.addCMacro("HAVE_SELINUX", "");
         dbus.root_module.addCMacro("DBUS_HAVE_LINUX_EPOLL", "");
+    }
+
+    if (t.os.tag == .freebsd) {
+        // credentials are passed as SCM_CREDS control messages
+        dbus.root_module.addCMacro("HAVE_CMSGCRED", "");
     }
 
     // dbus.root_module.addCMacro("DBUS_PREFIX", b.fmt("\"{s}\"", .{

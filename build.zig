@@ -145,6 +145,8 @@ const supported_targets: []const std.Target.Query = &[_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
     .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .glibc_version = std.SemanticVersion{ .major = 2, .minor = 27, .patch = 0 } },
     .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    .{ .cpu_arch = .aarch64, .os_tag = .freebsd, .abi = null },
+    .{ .cpu_arch = .x86_64, .os_tag = .freebsd, .abi = null },
 };
 
 const targets: []const std.Target.Query = main_targets;
@@ -267,17 +269,18 @@ pub fn build(b: *std.Build) !void {
     // Parse short git rev (best-effort: in a git submodule `.git` is a gitlink
     // file and a tarball build has no `.git` at all, so this read can fail; fall
     // back to a placeholder rev. A release build does not embed the rev anyway.)
-    var buf: [4096]u8 = [_]u8{'0'} ** 4096;
+    var git_rev: [7]u8 = [_]u8{'0'} ** 7;
     if (std.fs.cwd().openFile(".git/logs/HEAD", .{})) |file| {
         defer file.close();
+        var buf: [4096]u8 = undefined;
         var reader = file.reader(&buf);
-        var last_line: [4096]u8 = undefined;
+        // Each reflog line starts "<old sha> <new sha> "; the last line's
+        // new sha is the current HEAD.
         while (reader.interface.takeDelimiterInclusive('\n')) |line| {
-            if (line.len > 0)
-                last_line = buf;
+            if (line.len >= 48)
+                @memcpy(&git_rev, line[41..48]);
         } else |err| if (err != error.EndOfStream) return err;
     } else |_| {}
-    const git_rev = buf[41..48];
 
     // Binary version
     const version = if (!release)
@@ -472,10 +475,18 @@ fn buildBinary(
         });
     }
 
+    if (t.os.tag == .freebsd) {
+        try urbit_flags.appendSlice(&.{
+            "-DU3_OS_bsd=1",
+            "-DENT_GETENTROPY_UNISTD", //pkg_ent
+        });
+    }
+
     if (t.os.tag == .windows) {
         try urbit_flags.appendSlice(&.{
             "-DU3_OS_windows=1",
             "-DWIN32_LEAN_AND_MEAN",
+            "-D_FILE_OFFSET_BITS=64", // off_t is 32 bits without it
             "-DENT_GETENTROPY_BCRYPTGENRANDOM", // pkg_ent
             "-DO_CLOEXEC=0",
             "-DH2O_NO_UNIX_SOCKETS",
@@ -868,6 +879,11 @@ fn buildBinary(
             .{
                 .name = "benchmarks",
                 .file = "pkg/vere/benchmarks.c",
+                .deps = vere_test_deps,
+            },
+            .{
+                .name = "soft-test",
+                .file = "pkg/vere/soft_tests.c",
                 .deps = vere_test_deps,
             },
             .{

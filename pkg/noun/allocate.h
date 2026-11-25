@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "manage.h"
+#include "options.h"
 #include "rsignal.h"
 #include "c3/c3.h"
 #include <stddef.h>
@@ -268,7 +269,9 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
   U3_N(S) tim;                                  /*  list of absolute deadlines                */ \
   U3_N(S) dup_p;                                /*  deduplication set                         */ \
                                                                                                  \
-  U3_W(S) fut_w[27];                            /*  futureproof buffer                        */ \
+  U3_W(S) hcz_w;                                /*  hashcons size hint (home road)            */ \
+  U3_W(S) lol_p;                                /*  lose list (inner roads; allocate.c)       */ \
+  U3_W(S) fut_w[25];                            /*  futureproof buffer                        */ \
                                                                                                  \
   U3_PASTE(u3a_road_esc, S) esc;                /*  escape buffer                             */ \
                                                                                                  \
@@ -335,11 +338,17 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
       U3_DEFINE_PAIR(u3a_road, U3A_ROAD_BODY);
       typedef u3a_road u3_road;
 
-    /* u3a_flag: flags for how.fag_w.  All arena related.
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_d),
+                     "64-bit road alignment" );
+      STATIC_ASSERT( _Alignof(c3_d) == _Alignof(u3a_road_h),
+                     "32-bit road alignment" );
+
+    /* u3a_flag: flags for how.fag_w.
     */
       enum u3a_flag {
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
+        u3a_flag_nest  = 1 << 3,              //  root +nest:ut call on the stack
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
@@ -400,7 +409,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
 #     define u3t(som) u3a_t(som)
 
 #     define  u3to(type, x) ((type *)u3a_into(x))
-#     define  u3tn(type, x) (x) ? (type*)u3a_into(x) : (void*)NULL
+#     define  u3tn(type, x) ((x) ? (type*)u3a_into(x) : (void*)NULL)
 
 #     define  u3of(type, x) (u3a_outa((type*)x))
 
@@ -475,8 +484,18 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
                          ?  u3a_north_is_senior(r, som) \
                          :  u3a_south_is_senior(r, som) )
 
+  /* u3a_is_mutable(): [som] may be edited in place on road [r]: a cell
+  **                   on [r] that we hold the only reference to.
+  **
+  **   Never on the home road: the home-road hashcons set refers to its
+  **   members without counting, so a member can look uniquely held, and
+  **   editing it in place would change a value the set has filed. Nock
+  **   rarely runs on the home road, so copying there costs nothing.
+  */
 #     define  u3a_is_mutable(r, som) \
                 ( _(u3a_is_atom(som)) \
+                  ? c3n \
+                  : !(r)->par_p \
                   ? c3n \
                   : _(u3a_is_senior(r, som)) \
                   ? c3n \
@@ -618,6 +637,41 @@ typedef struct {
     return (off >> u3a_vits) | u3a_cell_flag;
   }
 
+  /* u3a_Hcon_w: home-road hashcons membership (off-loom), one bit per
+  **             u3a_minimum words of loom, or 0. see u3m_dedup().
+  */
+    extern c3_w* u3a_Hcon_w;
+
+  /* u3a_hcon_has(): indirect [som] is a member of the home-road
+  **                 hashcons set.
+  */
+    static inline c3_t
+    u3a_hcon_has(u3_noun som)
+    {
+      if ( !u3a_Hcon_w ) {
+        return 0;
+      }
+      else {
+        c3_w idx_w = u3a_to_off(som) >> u3a_min_log;
+        return 1 & (u3a_Hcon_w[idx_w / u3a_word_bits]
+                    >> (idx_w % u3a_word_bits));
+      }
+    }
+
+  /* u3a_dbg_ram(): debugging memory, where a leak fails the checks: a
+  **                unification whose old value can't go on a lose list
+  **                is refused, not leaked.
+  */
+    static inline c3_t
+    u3a_dbg_ram(void)
+    {
+#ifdef U3_MEMORY_DEBUG
+      return 1;
+#else
+      return !!(u3C.wag_h & u3o_debug_ram);
+#endif
+    }
+
     /**  road stack.
     **/
         /* u3a_drop(): drop a road stack frame per [pil_u].
@@ -737,10 +791,41 @@ u3a_post_info(u3_post);
           void*
           u3a_walloc(c3_w len_w);
 
-        /* u3a_celloc(): allocate a cell.  Faster, sometimes.
+        /* u3a_celloc_cold(): allocate a cell, out of line: the home road,
+        **                    an empty cell cache, the profiling build.
         */
           c3_w*
-          u3a_celloc(void);
+          u3a_celloc_cold(void);
+
+        /* u3a_celloc_try(): a cell from the cell cache of an inner road,
+        **                   or 0.  In line: four loads and a store.
+        */
+          static inline c3_w*
+          u3a_celloc_try(void)
+          {
+#ifndef U3_CPU_DEBUG
+            u3a_road* rod_u = u3R;
+            c3_w      hav_w = rod_u->cel.hav_w;
+
+            //  the home road has no cache, and so never has any
+            //
+            if ( c3_likely(hav_w) ) {
+              rod_u->cel.hav_w = --hav_w;
+              return (c3_w*)u3a_into(u3to(u3_post, rod_u->cel.cel_p)[hav_w]);
+            }
+#endif
+            return 0;
+          }
+
+        /* u3a_celloc(): allocate a cell.
+        */
+          static inline c3_w*
+          u3a_celloc(void)
+          {
+            c3_w* cel_w = u3a_celloc_try();
+
+            return c3_likely(cel_w) ? cel_w : u3a_celloc_cold();
+          }
 
         /* u3a_wfree(): free storage.
         */
@@ -824,10 +909,81 @@ u3a_post_info(u3_post);
           c3_w
           u3a_use(u3_noun som);
 
-        /* u3a_wed(): unify noun references.
+        /* u3a_wed(): unify the equal nouns in slots [a] and [b]: merge
+        **            them on this road or a senior one below home, else,
+        **            on an inner road, point one slot at the other's
+        **            value.
         */
           void
           u3a_wed(u3_noun *restrict a, u3_noun *restrict b);
+
+        /* u3a_lose_ent, u3a_lose_chunk: an inner road's lose list
+        **                   (lol_p): a stack of chunks in its heap.
+        */
+          typedef struct {
+            u3_post rod_p;                      //  the road the value is on
+            u3_noun val;                        //  u3_none once lost
+          } u3a_lose_ent;
+
+          typedef struct {
+            u3_post      nex_p;                 //  older chunk
+            c3_w         len_w;                 //  entries published
+            u3a_lose_ent ent_u[];
+          } u3a_lose_chunk;
+
+        /* u3a_lose_drain(): lose the values unification unpointed from
+        **                   slots on this road, and copy the other
+        **                   entries of the child's list [lol_p] up. after
+        **                   every take of the exit from road [kid_p];
+        **                   this road's list stood at entry [bot_w] of
+        **                   chunk [bot_p] as the exit began, after
+        **                   u3m_fall(). (all unused on the home road.)
+        */
+          void
+          u3a_lose_drain(u3_post kid_p,
+                         u3_post lol_p,
+                         u3_post bot_p,
+                         c3_w    bot_w);
+
+        /* u3a_lose_mark(): mark this road's lose list, for a grab.
+        */
+          c3_w
+          u3a_lose_mark(void);
+
+        /* u3a_lose_leap(): a new excursion from the home road, or a
+        **                  signal's reset of it: lose what an interrupted
+        **                  exit left on the home lose list. home road only.
+        */
+          void
+          u3a_lose_leap(void);
+
+        /* u3a_lose_size(): restart the home lose list at [min_w] entries,
+        **                  at most [max_w] (tests). home road only, empty.
+        */
+          void
+          u3a_lose_size(c3_w min_w, c3_w max_w);
+
+        /* u3a_lose_report(): log the home lose list's drops at its ceiling.
+        **                    between events.
+        */
+          void
+          u3a_lose_report(void);
+
+        /* u3a_Defer_max_w: most nouns with deferred gains at once.
+        */
+          extern c3_w u3a_Defer_max_w;
+
+        /* u3a_defer_open(): defer home-road refcount gains, cancelling
+        **                   them against loses, until u3a_defer_close().
+        **                   a hook for u3m_soft_with().
+        */
+          void
+          u3a_defer_open(void);
+
+        /* u3a_defer_close(): write the gains still pending, stop deferring.
+        */
+          void
+          u3a_defer_close(void);
 
         /* u3a_luse(): check refcount sanity.
         */
@@ -848,6 +1004,11 @@ u3a_post_info(u3_post);
         */
           c3_w
           u3a_mark_rptr(void* ptr_v);
+
+        /* u3a_marked(): [som] was marked, without marking it.
+        */
+          c3_t
+          u3a_marked(u3_noun som);
 
         /* u3a_mark_noun(): mark a noun for gc.  Produce size.
         */
@@ -922,6 +1083,17 @@ u3a_dash(void);
         */
           c3_w
           u3a_sweep(void);
+
+        /* u3a_sweep_quiet(): u3a_sweep(), without logging the words it
+        **                    frees as leaks or whose counts it repairs.
+        */
+          c3_w
+          u3a_sweep_quiet(void);
+
+        /* u3a_sweep_leaked(): words the last sweep found leaked, and freed.
+        */
+          c3_w
+          u3a_sweep_leaked(void);
 
         /* u3a_pack_seek(): sweep the heap, modifying boxes to record new addresses.
         */
