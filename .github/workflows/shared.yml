@@ -144,7 +144,7 @@ jobs:
             vere-noun-test unix-test   \
             palloc-test events-test    \
             bytestream-test mesa-test  \
-            benchmarks                 \
+            soft-test benchmarks       \
             -Doptimize=ReleaseFast     \
             -Dpace=${{inputs.pace}}    \
             $VERE64_FLAG               \
@@ -384,6 +384,7 @@ jobs:
             pact-test newt-test              \
             unix-test boot-test              \
             vere-noun-test wloom-test        \
+            soft-test                        \
             -Dtarget=x86_64-windows-gnu      \
             -Doptimize=ReleaseFast           \
             -Dpace=${{ inputs.pace }}        \

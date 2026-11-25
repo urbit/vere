@@ -197,11 +197,48 @@ static void _cm_overflow(void *arg1, void *arg2, void *arg3)
   u3m_signal(c3__over);
 }
 
+/* async signals held (see u3m_hold()).
+*/
+volatile c3_w u3m_Hold_w;
+volatile c3_m u3m_Held_m;
+
+/* u3m_hold_raise(): raise the signal held while signals were held.
+*/
+void
+u3m_hold_raise(void)
+{
+  c3_m sig_m = u3m_Held_m;
+
+  u3m_Held_m = 0;
+  u3m_signal(sig_m);
+}
+
 /* _cm_signal_handle(): handle a signal in general.
 */
 static void
 _cm_signal_handle(c3_m sig_m)
 {
+  //  held: raised by u3m_hold_done(). a term replaces anything else held
+  //
+  if ( u3m_Hold_w && (c3__over != sig_m) ) {
+    if ( !u3m_Held_m || (c3__term == sig_m) ) {
+      u3m_Held_m = sig_m;
+    }
+    return;
+  }
+
+  //  an overflow can't be held, and code that holds signals mustn't
+  //  overflow. if one does anyway, the work it cut short stays half
+  //  done: a road without its tables, a call site with a new program
+  //  and an old battery, the home-road set mid-insert. no grab repairs
+  //  those, and unwinding would carry them on, perhaps into a snapshot.
+  //  so the process ends here, to restart from the last one
+  //
+  if ( u3m_Hold_w ) {
+    _cm_emergency("fatal: stack overflow with signals held", 0);
+    abort();
+  }
+
 #ifndef U3_OS_windows
   if ( c3__over == sig_m ) {
 #ifndef NO_OVERFLOW
@@ -267,6 +304,22 @@ _cm_signal_reset(void)
   u3R->cap_p = u3R->mat_p;
   u3R->ear_p = 0;
   u3R->kid_p = 0;
+  u3m_Hold_w = 0;
+  u3m_Held_m = 0;
+
+  //  a failure in the takes of an exit home (%meme, with no room for the
+  //  product) comes after the exit's hook opened the window of deferred
+  //  gains: the gains still pending are written, as they would have been
+  //  without it. taken nouns can hold them, some already in the parent's
+  //  programs (see u3n_reap())
+  //
+  u3a_defer_close();
+
+  //  a signal can interrupt u3m_love() before it drops a junior heap,
+  //  leaving it poisoned for the next road: unpoison all free memory
+  //  (ASan only)
+  //
+  u3a_drop_heap(u3R->mat_p, u3R->hat_p);
 }
 
 #if 0
@@ -352,6 +405,7 @@ _cm_signal_recover(c3_m sig_m, u3_noun arg)
     //
     _cm_emergency("recover: top", sig_m);
     u3C.wag_h |= u3o_check_corrupt;
+    u3e_Meter.ccs_d[0]++;
 
     //  Reset the top road - the problem could be a fat cap.
     //
@@ -448,6 +502,12 @@ _cm_signal_deep(void)
 static void
 _cm_signal_done(void)
 {
+  //  no signal raised from another thread unwinds this one from here
+  //  (windows: a timer callback already running would, after the
+  //  handlers below are gone)
+  //
+  rsignal_disarm();
+
   rsignal_deinstall_handler(SIGINT);
   rsignal_deinstall_handler(SIGTERM);
   rsignal_deinstall_handler(SIGVTALRM);
@@ -534,6 +594,15 @@ u3m_mark(void)
   return qua_u;
 }
 
+/* u3m_Pave_f: called partway through building a new road's tables
+**             (tests).
+*/
+void (*u3m_Pave_f)(void);
+
+/* u3m_Love_f: called as an exit to home starts its takes (tests).
+*/
+void (*u3m_Love_f)(void);
+
 /* _pave_parts(): build internal tables.
 */
 static void
@@ -551,6 +620,7 @@ _pave_parts(void)
   u3R->jed.cod_p = u3h_new();
   u3R->jed.han_p = u3h_new();
   u3R->jed.bas_p = u3h_new();
+  if ( c3_unlikely(0 != u3m_Pave_f) ) u3m_Pave_f();
   u3R->byc.har_p = u3h_new();
   u3R->lop_p     = u3h_new();
   u3R->tim       = u3_nul;
@@ -1052,6 +1122,19 @@ u3m_bail(u3_noun how)
     u3m_signal(how);
   }
 
+  //  a bail with async signals held skips the u3m_hold_done() that
+  //  would end the hold: end it here, or they'd stay held. a signal
+  //  that arrived meanwhile takes the bail's place, since it would
+  //  have unwound this road anyway. (no held section should bail)
+  //
+  if ( u3m_Hold_w ) {
+    u3m_Hold_w = 0;
+
+    if ( u3m_Held_m ) {
+      u3m_hold_raise();
+    }
+  }
+
   //  release the emergency buffer, ensuring space for cells
   //
   u3z(u3R->bug.mer);
@@ -1126,7 +1209,9 @@ u3m_leap(c3_w pad_w)
       top_p  = u3R->cap_p;
       top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
-      if ( bot_p >= top_p ) {
+      if (  (bot_p >= top_p)
+         || (((top_p - bot_p) >> u3a_page) < u3m_road_min) )
+      {
         u3m_bail(c3__meme);
       }
 
@@ -1159,8 +1244,9 @@ u3m_leap(c3_w pad_w)
       top_p  = u3R->hat_p - pad_w;
       top_p &= ~(((c3_w)1 << u3a_page) - 1);
 
-      //  XX moar
-      if ( (u3R->hat_p < pad_w) || (bot_p >= top_p) ) {
+      if (  (u3R->hat_p < pad_w) || (bot_p >= top_p)
+         || (((top_p - bot_p) >> u3a_page) < u3m_road_min) )
+      {
         u3m_bail(c3__meme);
       }
 
@@ -1190,6 +1276,13 @@ u3m_leap(c3_w pad_w)
     }
   }
 
+  //  until its tables are built, the new road can't be exited, so a
+  //  signal that recovers it (u3m_love() on every live road) must wait.
+  //  nor can it bail: its escape isn't set, and there's room for what
+  //  _pave_parts() allocates (u3m_road_min)
+  //
+  u3m_hold();
+
   /* Attach the new road to its parents.
   */
   {
@@ -1210,6 +1303,7 @@ u3m_leap(c3_w pad_w)
     u3R = rod_u;
     _pave_parts();
   }
+  u3m_hold_done();
 #ifdef U3_MEMORY_DEBUG
   rod_u->all.fre_w = 0;
 #endif
@@ -1481,6 +1575,10 @@ _cm_love(u3_noun pro, void (*hom_f)(void))
     hom_f();
   }
 
+  if ( c3_unlikely(0 != u3m_Love_f) && (&(u3H->rod_u) == u3R) ) {
+    u3m_Love_f();
+  }
+
   //  copy product and caches off our stack
   //
   u3e_Phase = u3e_pha_take_pro;
@@ -1673,6 +1771,11 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     return _cm_signal_recover(sig_m, arg);
   }
 
+  //  the jump buffer is set: signals may unwind to it, until
+  //  _cm_signal_done()
+  //
+  rsignal_arm();
+
   /* Record the cap, and leap.
   */
   u3m_hate(pad_w);
@@ -1706,14 +1809,14 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     pro = u3nc(0, _cm_love(pro, hom_f));
   }
   else {
+    /* Revert to external signal regime.
+    */
+    _cm_signal_done();
+
     /* Overload the error result.
     */
     pro = u3m_love(why);
   }
-
-  /* Revert to external signal regime.
-  */
-  _cm_signal_done();
 
   /* Free the argument.
   */
@@ -2038,10 +2141,11 @@ u3m_mark_mute(void)
   c3_free(arr_u);
 }
 
-/* u3m_vgrab(): garbage-collect the world, plus extra roots.
+/* _cm_vgrab(): garbage-collect the world, plus extra roots; [qui_t] to
+**              log no totals of leaks and repairs.
 */
-void
-u3m_vgrab(u3_noun* som, c3_z len_z)
+static void
+_cm_vgrab(u3_noun* som, c3_z len_z, c3_t qui_t)
 {
   // u3h_free(u3R->cax.har_p);
   // u3R->cax.har_p = u3h_new();
@@ -2052,7 +2156,46 @@ u3m_vgrab(u3_noun* som, c3_z len_z)
   }
 
   u3m_mark_mute();
-  u3a_sweep();
+  if ( qui_t ) {
+    u3a_sweep_quiet();
+  }
+  else {
+    u3a_sweep();
+  }
+}
+
+/* u3m_vgrab_check(): if u3o_check_corrupt is set, garbage-collect the
+**                    world plus extra roots counting references, then
+**                    clear it.
+*/
+void
+u3m_vgrab_check(u3_noun* som, c3_z len_z)
+{
+  if ( u3C.wag_h & u3o_check_corrupt ) {
+    c3_h wag_h = u3C.wag_h;
+    c3_d  ms_d = u3e_measure_ms();
+
+    //  counting references, the sweep rewrites each box's count, so it
+    //  repairs counts left too high as well as freeing leaks. both are
+    //  expected after the interruptions that ask for this grab, so it
+    //  logs neither (but see u3a_sweep_leaked())
+    //
+    u3C.wag_h |= u3o_debug_ram;
+    _cm_vgrab(som, len_z, 1);
+    u3C.wag_h = wag_h & ~u3o_check_corrupt;
+
+    u3e_Meter.ccg_d++;
+    u3e_Meter.ccm_d += u3e_measure_ms() - ms_d;
+    u3e_Meter.ccl_d += u3a_sweep_leaked();
+  }
+}
+
+/* u3m_vgrab(): garbage-collect the world, plus extra roots.
+*/
+void
+u3m_vgrab(u3_noun* som, c3_z len_z)
+{
+  _cm_vgrab(som, len_z, 0);
 }
 
 /* u3m_soft(): top-level wrapper.
@@ -2080,14 +2223,6 @@ u3m_soft_with(c3_w    mil_w,
   u3_noun why;
 
   why = u3m_soft_top(mil_w, (1 << 20), fun_f, arg, hom_f);   // 4M pad
-
-  //  a failure past [hom_f], in the takes (%meme on the home road), leaves
-  //  what it opened open: the window of deferred gains is shut here, for
-  //  the next event to open it again
-  //
-  if ( 0 != u3h(why) ) {
-    u3a_defer_close();
-  }
 
   if ( 0 == u3h(why) ) {
     return why;
@@ -2868,8 +3003,10 @@ u3m_boot(c3_c* dir_c, size_t len_i)
   */
   if ( (c3n == nuu_o) && (u3C.wag_h & u3o_check_corrupt) ) {
     u3l_log("boot: gc requested");
-    u3m_grab();
-    u3C.wag_h &= ~u3o_check_corrupt;
+    u3m_grab_check(u3_none);
+    if ( u3a_sweep_leaked() ) {
+      u3a_print_memory(stderr, "boot: gc: leaked", u3a_sweep_leaked());
+    }
     u3l_log("boot: gc complete");
   }
 
@@ -3223,11 +3360,6 @@ u3m_time_gap_in_mil(c3_w mil_w)
 */
 #include "canon.h"
 
-//  set while reading the home-road set: the profiling signal handler
-//  (u3t_samp()) runs on the home road, and must not change it then
-//
-volatile c3_w u3m_Dup_busy_w;
-
 static struct {
   c3_t         ini_t;  //  initialized
   c3_w         len_w;  //  bitmap length, in words
@@ -3418,9 +3550,14 @@ _cm_dup_get(u3_noun som)
 {
   u3_weak pro;
 
-  u3m_Dup_busy_w++;
+  //  the mug first: computing one can bail, and nothing may with
+  //  signals held. the profiling signal handler (u3t_samp()) runs on
+  //  the home road, and must not change the set while it's read
+  //
+  (void)u3r_mug(som);
+  u3m_hold();
   pro = _cm_dup_get_in(som);
-  u3m_Dup_busy_w--;
+  u3m_hold_done();
 
   _cm_dup_meas_hit(som, pro);
 
@@ -3438,6 +3575,8 @@ _cm_dup_put(u3_noun som)
   u3_noun can;
 
   _cm_dup_init();
+  (void)u3r_mug(som);   //  before the hold, as _cm_dup_get()
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get_or_insert(&_cm_dup_u.vat_u, som);
@@ -3454,6 +3593,7 @@ _cm_dup_put(u3_noun som)
     }
   }
 
+  u3m_hold_done();
   _cm_dup_meas_hit(som, can);
 
   if ( can == som ) {
@@ -3472,6 +3612,7 @@ void
 u3m_dedup_lose(u3_noun som)
 {
   _cm_dup_clr(som);
+  u3m_hold();
 
   if ( c3y == u3a_is_atom(som) ) {
     _canon_atoms_itr vit_u = _canon_atoms_get(&_cm_dup_u.vat_u, som);
@@ -3490,6 +3631,8 @@ u3m_dedup_lose(u3_noun som)
       u3e_Meter.hcd_d++;
     }
   }
+
+  u3m_hold_done();
 }
 
 /* u3m_dedup_stat(): the home-road set's atoms, cells, and estimated

@@ -537,6 +537,14 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.dfx_d, u3e_Meter.dfc_d, u3e_Meter.dfs_d,
                    u3e_Meter.dfr_d, u3e_Meter.dfe_d, u3e_Meter.dfk_d);
 
+    //  the grab u3o_check_corrupt asks for: times asked, by cause;
+    //  grabs run, their time, and the words they freed as leaks
+    //
+    fprintf(fil_u, "V %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.ccs_d[0], u3e_Meter.ccs_d[1], u3e_Meter.ccs_d[2],
+                   u3e_Meter.ccg_d, u3e_Meter.ccm_d, u3e_Meter.ccl_d);
+
     //  alignment of the new arvo states with the old
     //
     fprintf(fil_u, "Y %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
