@@ -6,7 +6,7 @@ description: >
 
 inputs:
   cache:
-    description: 'Which cache to restore: the name of a build leg (linux, windows, cross)'
+    description: 'Which cache to restore: linux, windows, cross, linux-no-lto or windows-no-lto'
     required: true
   pace:
     description: 'Release pace'
@@ -50,7 +50,8 @@ runs:
     #  seconds, beside the link.
     #
     #  the dependencies are built alike for both widths and for the
-    #  debugging options, so a target has one cache.
+    #  debugging options, so a target has one cache, and one more
+    #  where the tests are built without lto.
     #
     - id: key
       shell: bash

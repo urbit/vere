@@ -143,23 +143,36 @@ jobs:
 
       - uses: ./.github/actions/loom-host
 
-      - uses: ./.github/actions/zig
+      - id: zig
+        uses: ./.github/actions/zig
         with:
-          cache: linux
+          cache: linux-no-lto
           pace: ${{ inputs.pace }}
           bits: ${{ matrix.bits }}
 
-      #  most of this job is here: each test is linked with lto, as
-      #  the binary is, and that is a minute of one core apiece.
+      #  without lto: with it, each of twenty tests is a link that
+      #  takes a minute of one core, and all of them again for any
+      #  change. the tests then aren't the code generation that ships;
+      #  the fake ship, migration and replay jobs run that.
+      #
+      #  -Dno-lto reaches the dependencies too, so these builds have
+      #  a cache of their own.
       #
       - name: Build unit tests
-        run: zig build test-bins -Dtarget=x86_64-linux-musl $VERE_FLAGS --summary all
+        run: zig build test-bins -Dtarget=x86_64-linux-musl -Dno-lto $VERE_FLAGS --summary all
+
+      - name: Save build cache
+        if: ${{ steps.zig.outputs.cache-hit != 'true' && matrix.bits == 32 }}
+        uses: actions/cache/save@v4
+        with:
+          path: .zig-cache
+          key: ${{ steps.zig.outputs.cache-key }}
 
       - name: Run unit tests
         run: ./unit-tests.sh zig-out/bin
 
   #  the tests that run on windows are built on linux: cross-compiled,
-  #  as the windows binary that ships is, and from the same cache.
+  #  as the windows binary that ships is.
   #
   windows-tests:
     name: Build windows tests (${{ matrix.bits }}-bit)
@@ -174,14 +187,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/zig
+      - id: zig
+        uses: ./.github/actions/zig
         with:
-          cache: windows
+          cache: windows-no-lto
           pace: ${{ inputs.pace }}
           bits: ${{ matrix.bits }}
 
+      #  without lto, like the linux tests (see the unit job)
+      #
       - name: Build unit tests
-        run: zig build test-bins -Dtarget=x86_64-windows-gnu $VERE_FLAGS --summary all
+        run: zig build test-bins -Dtarget=x86_64-windows-gnu -Dno-lto $VERE_FLAGS --summary all
+
+      - name: Save build cache
+        if: ${{ steps.zig.outputs.cache-hit != 'true' && matrix.bits == 32 }}
+        uses: actions/cache/save@v4
+        with:
+          path: .zig-cache
+          key: ${{ steps.zig.outputs.cache-key }}
 
       - name: Build loom probe
         run: |
