@@ -15,6 +15,13 @@ on:
       - '.github/actions/**'
       - '*.sh'
 
+#  a push supersedes the run of the push before it: when several land
+#  together, only the last is tested through and published to edge.
+#
+concurrency:
+  group: develop
+  cancel-in-progress: true
+
 jobs:
   urbit:
     uses: ./.github/workflows/shared.yml
