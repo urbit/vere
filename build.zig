@@ -867,6 +867,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "mars-test",
+                .file = "pkg/vere/mars_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "vere-noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
