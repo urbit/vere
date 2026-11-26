@@ -280,6 +280,18 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         void
         u3m_sole_visit_size(c3_y log_y, c3_y max_y);
 
+      /* u3m_Ream_tel_t: u3m_sole_ream() measures what it frees.
+      */
+        extern c3_t u3m_Ream_tel_t;
+
+      /* u3m_Ream_fre_ds: bytes the last measured rebuild freed, by root in
+      **                  the order walked: memo, ford, bytecode keys, warm,
+      **                  bash, hot, cold. a duplicate is freed from the
+      **                  later of the roots that hold it.
+      */
+#       define u3m_ream_roots  7
+        extern c3_ds u3m_Ream_fre_ds[u3m_ream_roots];
+
       /* u3m_crib_report(): log every crib's fills and drops at its
       **                    ceiling since the last call. between events.
       */
