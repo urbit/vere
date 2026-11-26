@@ -4408,6 +4408,9 @@ _cm_sole_ream_key(u3_noun kev, void* ptr_v)
   _cm_sole_canon_ptr(ptr_v, &kev_u->hed);
 }
 
+c3_t  u3m_Ream_tel_t;
+c3_ds u3m_Ream_fre_ds[u3m_ream_roots];
+
 /* u3m_sole_ream(): rebuild the home-road set from persistent tables,
 **                  canonicalizing them in place.
 **
@@ -4489,6 +4492,7 @@ u3m_sole_ream(void)
     c3_d add_d = u3e_Meter.hca_d;
     c3_d pre_d = 0;
     c3_w i_w;
+    c3_w idl_w = u3m_Ream_tel_t ? u3a_idle(u3R) : 0;
 
     c3_y pat_y = _cm_sole_u.pat_y;
 
@@ -4503,6 +4507,14 @@ u3m_sole_ream(void)
                     &wal_u);
       u3e_Meter.hcc_d[i_w] = _cm_sole_u.cel_u.len_d - pre_d;
       pre_d = _cm_sole_u.cel_u.len_d;
+
+      if ( u3m_Ream_tel_t ) {
+        c3_w now_w = u3a_idle(u3R);
+
+        u3m_Ream_fre_ds[i_w] = ((c3_ds)now_w - (c3_ds)idl_w)
+                               * (c3_ds)sizeof(c3_w);
+        idl_w = now_w;
+      }
     }
 
     _cm_sole_u.cls_y = 0;
