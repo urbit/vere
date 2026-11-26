@@ -30,12 +30,24 @@ _canon_hash(u3_noun som)
 #define CMPR_FN _canon_cmp_cells
 #include "verstable.h"
 
+/* _melt_root: something melt walks.
+*/
+typedef struct {
+  c3_c*         nam_c;   //  label path
+  c3_y          kin_y;   //  1: noun, 2: arvo's rest, 3: hamt
+  u3_noun         dat;   //  kin 1 (borrowed)
+  u3p(u3h_root) har_p;   //  kin 3
+} _melt_root;
+
 typedef struct {
   _canon_atoms vat_u;
   _canon_cells cel_u;
   c3_w    len_w;
   c3_w    siz_w;
   u3_noun *tac;
+  _melt_root*  rot_u;   //  roots, in the order walked
+  c3_w         rot_w;   //    how many
+  c3_w         rom_w;   //    room for
 } _melt_ctx;
 
 static u3_noun
@@ -128,10 +140,149 @@ _melt_walk_hamt(u3_noun kev, void* ptr_v)
   (void)_melt_canon(can_u, kev);
 }
 
+static c3_c* const* _melt_pax_c;  //  label paths picked
+static c3_w         _melt_pax_w;  //    how many
+static c3_w         _melt_hit_w;  //    roots they matched
+
+/* u3_melt_pick(): limit the next u3_melt_all() to the roots at or
+**                 under the [len_w] label paths [pax_c].
+*/
+void
+u3_melt_pick(c3_c* const* pax_c, c3_w len_w)
+{
+  _melt_pax_c = pax_c;
+  _melt_pax_w = len_w;
+}
+
+/* _melt_pick(): the root labeled [nam_c] is to be walked: nothing is
+**               picked, or it's at or under a picked path.
+*/
+static c3_t
+_melt_pick(const c3_c *nam_c)
+{
+  c3_w i_w;
+
+  if ( !_melt_pax_w ) {
+    return 1;
+  }
+
+  for ( i_w = 0; i_w < _melt_pax_w; i_w++ ) {
+    size_t len_i = strlen(_melt_pax_c[i_w]);
+
+    if (  (0 == strncmp(nam_c, _melt_pax_c[i_w], len_i))
+       && (('/' == nam_c[len_i]) || (0 == nam_c[len_i])) )
+    {
+      _melt_hit_w++;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/* _melt_root_add(): a root named [nam_c] of kind [kin_y], last in the
+**                   order walked.
+*/
+static _melt_root*
+_melt_root_add(_melt_ctx *can_u, const c3_c *nam_c, c3_y kin_y)
+{
+  _melt_root* rot_u;
+
+  if ( can_u->rot_w == can_u->rom_w ) {
+    can_u->rom_w = c3_max(2 * can_u->rom_w, 64);
+    can_u->rot_u = c3_realloc(can_u->rot_u,
+                              sizeof(*can_u->rot_u) * can_u->rom_w);
+  }
+
+  rot_u = &can_u->rot_u[can_u->rot_w++];
+  memset(rot_u, 0, sizeof(*rot_u));
+  rot_u->nam_c = strdup(nam_c);
+  rot_u->kin_y = kin_y;
+  return rot_u;
+}
+
+/* _melt_whey(): arvo's |mass report, as u3_mars_grab() asks for it:
+**               a list of [label %.y noun] and [label %.n list].
+**               null if arvo gives none.
+*/
+static u3_noun
+_melt_whey(void)
+{
+  u3_noun sac = u3_nul;
+  u3_noun sam, gon;
+
+  {
+    u3_noun pax = u3nc(c3__whey, u3_nul);
+    u3_noun lyc = u3nc(u3_nul, u3_nul);
+    sam = u3nt(lyc, c3n, u3nq(c3__once, u3_blip, u3_blip, pax));
+  }
+
+  gon = u3m_soft(0, u3v_peek, sam);
+
+  {
+    u3_noun tag, dat, val;
+
+    if (  (c3y == u3r_cell(gon, &tag, &dat))
+       && (u3_blip == tag)
+       && (c3y == u3du(dat))
+       && (c3y == u3r_pq(u3t(dat), c3__omen, 0, &val))
+       && (c3y == u3r_p(val, c3__mass, &sac)) )
+    {
+      u3k(sac);
+    }
+    else {
+      sac = u3_nul;
+    }
+  }
+
+  u3z(gon);
+  return sac;
+}
+
+/* _melt_mass(): add the leaves of the |mass node [mas] as roots, each
+**               under its label path, below [pre_c]. a leaf's noun is
+**               canonicalized in place; its root cell stays, as the
+**               state holds it.
+*/
+static void
+_melt_mass(_melt_ctx *can_u, u3_noun mas, const c3_c *pre_c)
+{
+  u3_noun lab, tal, yes, dat;
+  c3_c    nam_c[512];
+
+  if (  (c3n == u3r_cell(mas, &lab, &tal))
+     || (c3y == u3du(lab))
+     || (c3n == u3r_cell(tal, &yes, &dat)) )
+  {
+    return;
+  }
+
+  {
+    c3_c* lab_c = u3r_string(lab);
+    c3_c* c;
+
+    for ( c = lab_c; *c; c++ ) {
+      if ( (*c <= ' ') || ('=' == *c) || ('/' == *c) || (*c > '~') ) *c = '_';
+    }
+    snprintf(nam_c, sizeof(nam_c), "%s/%s", pre_c, lab_c);
+    c3_free(lab_c);
+  }
+
+  if ( c3y == yes ) {
+    _melt_root_add(can_u, nam_c, 1)->dat = dat;
+  }
+  else if ( c3n == yes ) {
+    while ( c3y == u3du(dat) ) {
+      _melt_mass(can_u, u3h(dat), nam_c);
+      dat = u3t(dat);
+    }
+  }
+}
+
 c3_w
 u3_melt_all(FILE *fil_u, c3_w opt_w)
 {
   c3_w     pre_w = u3a_idle(u3R);
+  u3_noun    sac = u3_nul;
   _melt_ctx can_u = {0};
 
   // Verify that we're on the main road.
@@ -161,13 +312,62 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
   vt_init(&can_u.vat_u);
   vt_init(&can_u.cel_u);
 
+  _melt_hit_w = 0;
+
+  if ( !(opt_w & u3_melt_mass) ) {
+    _melt_pax_w = 0;
+  }
+  else {
+    //  ask before the reclaim, which then frees what the asking cached
+    //
+    sac = _melt_whey();
+
+    if ( (u3_nul == sac) && fil_u ) {
+      fprintf(fil_u, "melt: no |mass report from arvo\r\n");
+    }
+  }
+
+  //  the roots, in the order walked: the arvo state label by label,
+  //  then whatever no label reached; the runtime's tables
+  //
+  {
+    u3_noun lis = sac;
+
+    while ( c3y == u3du(lis) ) {
+      _melt_mass(&can_u, u3h(lis), "arvo");
+      lis = u3t(lis);
+    }
+  }
+
+  _melt_root_add(&can_u, "arvo/rest", 2);
+  _melt_root_add(&can_u, "runtime/cold", 3)->har_p = u3R->jed.cod_p;
+  _melt_root_add(&can_u, "runtime/memo", 3)->har_p = u3R->cax.per_p;
+  _melt_root_add(&can_u, "runtime/ford", 3)->har_p = u3R->cax.for_p;
+
   u3m_reclaim();
 
-  _melt_canon_ptr(&can_u, &(u3A->roc));
+  {
+    c3_w i_w;
 
-  u3h_walk_with(u3R->jed.cod_p, _melt_walk_hamt, &can_u);
-  u3h_walk_with(u3R->cax.per_p, _melt_walk_hamt, &can_u);
-  u3h_walk_with(u3R->cax.for_p, _melt_walk_hamt, &can_u);
+    for ( i_w = 0; i_w < can_u.rot_w; i_w++ ) {
+      _melt_root* rot_u = &can_u.rot_u[i_w];
+
+      if ( !_melt_pick(rot_u->nam_c) ) continue;
+
+      switch ( rot_u->kin_y ) {
+        case 1: (void)_melt_canon(&can_u, rot_u->dat);         break;
+        case 2: _melt_canon_ptr(&can_u, &(u3A->roc));          break;
+        case 3: u3h_walk_with(rot_u->har_p, _melt_walk_hamt, &can_u); break;
+      }
+    }
+
+    u3z(sac);
+  }
+
+  if ( _melt_pax_w && !_melt_hit_w && fil_u ) {
+    fprintf(fil_u, "melt: no root at or under the paths given\r\n");
+  }
+  _melt_pax_w = 0;
 
   //  drop registrations of unreachable batteries, once everything is
   //  canonical. the home-road hashcons set holds references to them,
@@ -201,6 +401,14 @@ u3_melt_all(FILE *fil_u, c3_w opt_w)
   vt_cleanup(&can_u.vat_u);
   vt_cleanup(&can_u.cel_u);
 
+  {
+    c3_w i_w;
+
+    for ( i_w = 0; i_w < can_u.rot_w; i_w++ ) {
+      c3_free(can_u.rot_u[i_w].nam_c);
+    }
+    c3_free(can_u.rot_u);
+  }
   c3_free(can_u.tac);
 
   u3H->rod_u.bug.mer = u3i_tape("emergency buffer");

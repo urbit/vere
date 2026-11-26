@@ -2053,10 +2053,15 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "prune-cold", no_argument,      NULL, 10 },
     { "memo-drop", no_argument,       NULL, 11 },
     { "ford-drop", no_argument,       NULL, 12 },
+    { "dry",       no_argument,       NULL, 13 },
+    { "at",        required_argument, NULL, 14 },
     { NULL, 0, NULL, 0 }
   };
 
-  c3_w opt_w = 0;
+  c3_w  opt_w = 0;
+  c3_t  dry_t = 0;
+  c3_c* pax_c[32];
+  c3_w  pax_w = 0;
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
@@ -2106,6 +2111,19 @@ _cw_melt(c3_i argc, c3_c* argv[])
         opt_w |= u3_melt_ford;
       } break;
 
+      case 13: {  //  dry: no snapshot, and never roll the epoch
+        dry_t = 1;
+        u3C.wag_h |= u3o_yolo;
+      } break;
+
+      case 14: {  //  at: only the roots at or under this label path
+        if ( pax_w == (sizeof(pax_c) / sizeof(*pax_c)) ) {
+          fprintf(stderr, "too many --at paths\r\n");
+          exit(1);
+        }
+        pax_c[pax_w++] = optarg;
+      } break;
+
       case '?': {
         fprintf(stderr, "invalid argument\r\n");
         exit(1);
@@ -2135,13 +2153,34 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3C.wag_h |= u3o_hashless;
 
+  //  the labels only matter to a partial melt
+  //
+  if ( pax_w ) {
+    opt_w |= u3_melt_mass;
+  }
+
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
   {
     c3_d bef_d = u3e_measure_ms();
-    c3_w gan_w = u3_melt_all(stderr, opt_w);
+    c3_w gan_w;
 
-    _cw_measure_note(log_u, "melt", opt_w, bef_d, gan_w);
+    u3_melt_pick(pax_c, pax_w);
+    gan_w = u3_melt_all(stderr, opt_w);
+
+    if ( dry_t ) {
+      u3a_print_memory(stderr, "urbit: melt: would gain", gan_w);
+      fprintf(stderr, "urbit: melt: dry run, snapshot not saved\r\n");
+      u3_disk_exit(log_u);
+      u3m_stop();
+      return;
+    }
+
+    //  the measure log notes what the melt dropped, as before
+    //
+    _cw_measure_note(log_u, "melt",
+                     opt_w & (u3_melt_memo | u3_melt_ford | u3_melt_cold),
+                     bef_d, gan_w);
     u3a_print_memory(stderr, "urbit: melt: gained", gan_w);
   }
 
