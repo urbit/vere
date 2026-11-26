@@ -53,12 +53,18 @@
     **   so u3m_escape() stashes it in u3R->esc.why_w and longjmps with a
     **   literal 1. The ball is latched here, in the controlling expression,
     **   since esc.why_w lives on the road and is clobbered by the next bail.
+    **
+    **   The road has a trap from here on, so it's no longer marked as
+    **   entered without one (u3a_flag_bare, see u3m_bail()).
     */
 #ifndef VERE64
-#     define u3m_trap(why) ( 0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
+#     define u3m_trap(why)                                    \
+        ( u3R->how.fag_w &= ~u3a_flag_bare,                   \
+          0 == ((why) = (u3_noun)_setjmp(u3R->esc.buf)) )
 #else
-#     define u3m_trap(why) \
-        ( _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
+#     define u3m_trap(why)                                    \
+        ( u3R->how.fag_w &= ~u3a_flag_bare,                   \
+          _setjmp(u3R->esc.buf) ? ((why) = u3R->esc.why_w, 0) : 1 )
 #endif
 
     /* u3m_escape(): raise (how) to the enclosing u3m_trap().  Does not
@@ -299,6 +305,33 @@ _cm_signal_handle_alrm(int x)
   _cm_signal_handle(c3__alrm);
 }
 
+/* _cm_yards: both yards' ends (see crib.h), as recorded wherever a
+**   longjmp is caught: what was taken past them belonged to what the
+**   jump unwound.
+*/
+typedef struct {
+  size_t wok_i;
+  size_t res_i;
+} _cm_yards;
+
+static inline _cm_yards
+_cm_yards_here(void)
+{
+  return (_cm_yards){ u3a_yard_here(&u3a_Yard_wok),
+                      u3a_yard_here(&u3a_Yard_res) };
+}
+
+static inline void
+_cm_yards_back(_cm_yards end_u)
+{
+  u3a_yard_back(&u3a_Yard_wok, end_u.wok_i);
+  u3a_yard_back(&u3a_Yard_res, end_u.res_i);
+}
+
+//  the ends at u3m_soft_top(), for a signal's recovery
+//
+static _cm_yards _cm_yards_top;
+
 /* _cm_signal_reset(): reset top road after signal longjmp.
 */
 static void
@@ -317,10 +350,10 @@ _cm_signal_reset(void)
   u3a_Take_home_t = 0;
   u3a_Take_open_t = 0;
 
-  //  nothing holds the yards' memory across an event (see crib.h)
+  //  the yards' ends go back where u3m_soft_top() found them (see
+  //  crib.h)
   //
-  u3a_yard_back(&u3a_Yard_wok, 0);
-  u3a_yard_back(&u3a_Yard_res, 0);
+  _cm_yards_back(_cm_yards_top);
 
   //  likewise a walk of the home road's hashcons set
   //
@@ -1065,6 +1098,39 @@ u3m_stacktrace()
 #endif
 }
 
+/* _cm_bail_bare(): a bail on a road entered by u3m_hate() alone, with
+**   no u3m_trap() to escape to: bring the ball [how] back to the road
+**   that entered it, as a trap's failure path does (u3m_love()), and bail
+**   there, its trace after this road's, as u3m_soft_run() rebails. on
+**   home, that ends the process, as a bail on home always has; under a
+**   trap, the trap gets it. does not return.
+*/
+static void
+_cm_bail_bare(u3_noun how)
+{
+  u3_noun yod = u3m_love(how);
+  u3_noun pro;
+
+  switch ( u3h(yod) ) {
+    case 2: {
+      pro = u3nc(2, u3kb_weld(u3k(u3t(yod)), u3k(u3R->bug.tax)));
+    } break;
+
+    case 3: {
+      pro = u3nt(3, u3k(u3h(u3t(yod))),
+                    u3kb_weld(u3k(u3t(u3t(yod))), u3k(u3R->bug.tax)));
+    } break;
+
+    default: {
+      pro = yod;
+      yod = u3_nul;
+    } break;
+  }
+
+  u3z(yod);
+  u3m_bail(pro);
+}
+
 /* u3m_bail(): bail out.  Does not return.
 **
 **  Bail motes:
@@ -1185,6 +1251,13 @@ u3m_bail(u3_noun how)
     u3t_Spin->fow_h = u3R->fow_h;
   }
 
+  //  a road entered without a trap has no escape buffer: the ball goes
+  //  back to the road that entered it, and bails there
+  //
+  if ( u3R->how.fag_w & u3a_flag_bare ) {
+    _cm_bail_bare(how);
+  }
+
   u3m_escape(how);
 }
 
@@ -1211,13 +1284,6 @@ u3m_leap(c3_w pad_w)
   if ( &(u3H->rod_u) == u3R ) {
     u3a_lose_leap();
     _cm_vis_leap();
-
-    //  nothing holds the yards' memory across an excursion (see
-    //  crib.h): a user that left some has a bug, and it goes
-    //
-    c3_dessert( !u3a_Yard_wok.use_i && !u3a_Yard_res.use_i );
-    u3a_yard_back(&u3a_Yard_wok, 0);
-    u3a_yard_back(&u3a_Yard_res, 0);
   }
 
   //  push a new road struct onto the stack
@@ -1420,6 +1486,12 @@ u3m_hate(c3_w pad_w)
 
   c3_w fag_w = u3R->how.fag_w;
   u3m_leap(pad_w);
+
+  //  no trap yet: a bail goes back to the road that entered this one,
+  //  until u3m_trap() sets one (see u3m_bail()). set before anything
+  //  is allocated here, the emergency buffer included
+  //
+  u3R->how.fag_w |= u3a_flag_bare;
 
   u3R->bug.mer = u3i_tape("emergency buffer");
 
@@ -1856,9 +1928,10 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
              u3_noun   arg,
              void    (*hom_f)(void))
 {
-  u3_noun pro;
-  c3_m    sig_m = 0;
-  u3_noun why = 0;
+  u3_noun   pro;
+  c3_m      sig_m = 0;
+  u3_noun   why = 0;
+  _cm_yards yar_u = _cm_yards_here();
 
   /* Enter internal signal regime.
    */
@@ -1866,6 +1939,7 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
 
   u3_assert(u3R == &u3H->rod_u);
   u3m_Ford_fresh_road_depth_h = 0;
+  _cm_yards_top = yar_u;
 
   if ( 0 != (sig_m = rsignal_setjmp(u3_Signal)) ) {
     //  reinitialize trace state
@@ -1933,6 +2007,10 @@ u3m_soft_top(c3_w    mil_w,                     //  timer ms
     */
     _cm_signal_done();
 
+    //  what the failed computation took from the yards goes back
+    //
+    _cm_yards_back(yar_u);
+
     /* Overload the error result.
     */
     pro = u3m_love(why);
@@ -1997,9 +2075,10 @@ u3m_soft_cax(u3_funq fun_f,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun pro;
-  u3_noun cax = u3_nul;
-  u3_noun why = 0;
+  u3_noun   pro;
+  u3_noun   cax = u3_nul;
+  u3_noun   why = 0;
+  _cm_yards yar_u = _cm_yards_here();
 
   /* Record the cap, and leap.
   */
@@ -2047,6 +2126,10 @@ u3m_soft_cax(u3_funq fun_f,
   else {
     u3t_init();
 
+    //  what the failed computation took from the yards goes back
+    //
+    _cm_yards_back(yar_u);
+
     /* Produce - or fall again.
     */
     {
@@ -2093,8 +2176,9 @@ u3m_soft_run(u3_noun gul,
              u3_noun aga,
              u3_noun agb)
 {
-  u3_noun pro;
-  u3_noun why = 0;
+  u3_noun   pro;
+  u3_noun   why = 0;
+  _cm_yards yar_u = _cm_yards_here();
 
   c3_t cash_t = !!(u3R->how.fag_w & u3a_flag_cash);
 
@@ -2146,6 +2230,10 @@ u3m_soft_run(u3_noun gul,
   }
   else {
     u3t_init();
+
+    //  what the failed computation took from the yards goes back
+    //
+    _cm_yards_back(yar_u);
 
     /* Produce - or fall again.
     */
@@ -2200,8 +2288,9 @@ u3m_soft_run(u3_noun gul,
 u3_noun
 u3m_soft_esc(u3_noun ref, u3_noun sam)
 {
-  u3_noun gul, pro;
-  u3_noun why = 0;
+  u3_noun   gul, pro;
+  u3_noun   why = 0;
+  _cm_yards yar_u = _cm_yards_here();
 
   /* Assert preconditions.
   */
@@ -2233,6 +2322,10 @@ u3m_soft_esc(u3_noun ref, u3_noun sam)
   }
   else {
     u3t_init();
+
+    //  what the failed computation took from the yards goes back
+    //
+    _cm_yards_back(yar_u);
 
     /* Push the error back up to the calling context - not the run we
     ** are in, but the caller of the run, matching pure nock semantics.
@@ -4646,12 +4739,17 @@ _cm_vis_bit_clr(c3_w* map_w, c3_w idx_w)
 void
 u3m_yard_size(size_t wok_i, size_t res_i)
 {
-  size_t max_i = (u3C.wor_i / 8) * sizeof(c3_w);
+  //  scratch: a word for every cell the loom can hold, so a walk that
+  //  keeps one for each cell of a noun (a jam's tails, serial.c) has
+  //  room for any noun. results: half that
+  //
+  size_t wom_i = (u3C.wor_i / 4) * sizeof(c3_w);
+  size_t rem_i = (u3C.wor_i / 8) * sizeof(c3_w);
 
   u3_assert( !u3a_Yard_wok.use_i && !u3a_Yard_res.use_i );
 
-  u3a_yard_init(&u3a_Yard_wok, wok_i ? wok_i : max_i);
-  u3a_yard_init(&u3a_Yard_res, res_i ? res_i : max_i);
+  u3a_yard_init(&u3a_Yard_wok, wok_i ? wok_i : wom_i);
+  u3a_yard_init(&u3a_Yard_res, res_i ? res_i : rem_i);
   _cm_wak_ovf_d = 0;
   u3e_Meter.cib_u[2].max_d = _cm_note.max_w;
   u3e_Meter.cib_u[3].max_d = u3a_Yard_res.max_i / sizeof(c3_w);

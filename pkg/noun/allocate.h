@@ -349,6 +349,7 @@ STATIC_ASSERT( u3a_vits <= u3a_min_log,
         u3a_flag_sand  = 1 << 1,              //  bump allocation (XX not impl)
         u3a_flag_cash  = 1 << 2,              //  memo cache harvesting, flows forward
         u3a_flag_nest  = 1 << 3,              //  root +nest:ut call on the stack
+        u3a_flag_bare  = 1 << 4,              //  entered without a trap (see u3m_bail())
       };
 
     /* u3a_pile: stack control, abstracted over road direction.
