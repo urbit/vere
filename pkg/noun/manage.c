@@ -4999,7 +4999,10 @@ _cm_sole_next(u3a_pile* pil_u, u3_noun som)
       return _cm_sole_found(som, _cm_sole_get(som), 0);
     }
 
-    jun_t = ( c3n == u3a_is_senior(u3R, som) );
+    //  a cell in this road's sand reads as senior, but is ours to write:
+    //  its slots own their counts
+    //
+    jun_t = ( c3n == u3a_is_senior(u3R, som) ) || u3a_in_sand(u3R, som);
 
     //  a junior cell already canonicalized
     //
