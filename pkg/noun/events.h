@@ -249,7 +249,8 @@
           c3_d ctf_d;        //  ... found a member, so not copied
           c3_d ctr_d;        //  taken nouns noted, and canonicalized
                              //  in place after the takes
-          c3_d cus_d[2];     //  time: takes, then the lose list
+          c3_d cus_d[2];     //  time: takes, the pass and pins, then the
+                             //  lose list
           c3_d cam_d[2];     //  most members added at one exit, before
                              //  its drain; the set's size as it began
 

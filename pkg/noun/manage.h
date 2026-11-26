@@ -272,6 +272,13 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         u3_noun
         u3m_sole_try(u3_noun som);
 
+      /* u3m_sole_pin(): u3m_sole_try(), and on an inner road, put the
+      **                 result in the road's set, to be canonicalized at
+      **                 the exit home.
+      */
+        u3_noun
+        u3m_sole_pin(u3_noun som);
+
       /* u3m_sole_visit_size(): restart u3m_sole_try()'s visited set at
       **                        2^log_y entries, growing up to 2^max_y (0
       **                        for the usual ceiling) (tests). home road
