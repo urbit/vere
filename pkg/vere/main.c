@@ -2055,11 +2055,14 @@ _cw_melt(c3_i argc, c3_c* argv[])
     { "ford-drop", no_argument,       NULL, 12 },
     { "dry",       no_argument,       NULL, 13 },
     { "at",        required_argument, NULL, 14 },
+    { "no-report", no_argument,       NULL, 15 },
+    { "save-report", no_argument,     NULL, 16 },
     { NULL, 0, NULL, 0 }
   };
 
-  c3_w  opt_w = 0;
+  c3_w  opt_w = u3_melt_tell | u3_melt_mass;
   c3_t  dry_t = 0;
+  c3_t  sav_t = 0;
   c3_c* pax_c[32];
   c3_w  pax_w = 0;
 
@@ -2111,7 +2114,7 @@ _cw_melt(c3_i argc, c3_c* argv[])
         opt_w |= u3_melt_ford;
       } break;
 
-      case 13: {  //  dry: no snapshot, and never roll the epoch
+      case 13: {  //  dry: report only; no snapshot, never roll the epoch
         dry_t = 1;
         u3C.wag_h |= u3o_yolo;
       } break;
@@ -2122,6 +2125,14 @@ _cw_melt(c3_i argc, c3_c* argv[])
           exit(1);
         }
         pax_c[pax_w++] = optarg;
+      } break;
+
+      case 15: {  //  no-report: melt only; measure and report nothing
+        opt_w &= ~u3_melt_tell;
+      } break;
+
+      case 16: {  //  save-report: also write the report to <pier>/.urb/put
+        sav_t = 1;
       } break;
 
       case '?': {
@@ -2153,11 +2164,21 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
   u3C.wag_h |= u3o_hashless;
 
-  //  the labels only matter to a partial melt
-  //
-  if ( pax_w ) {
-    opt_w |= u3_melt_mass;
+  if ( sav_t && !(opt_w & u3_melt_tell) ) {
+    fprintf(stderr, "--save-report and --no-report can't both be given\r\n");
+    exit(1);
   }
+
+  //  without the report, the labels only matter to a partial melt
+  //
+  if ( !(opt_w & u3_melt_tell) && !pax_w ) {
+    opt_w &= ~u3_melt_mass;
+  }
+
+  //  the startup rebuild of the home-road hashcons set canonicalizes the
+  //  runtime's caches before melt sees them: have it measure what it frees
+  //
+  u3m_Ream_tel_t = !!(opt_w & u3_melt_tell);
 
   u3_disk* log_u = _cw_load_pier(u3_Host.dir_c);
 
@@ -2167,6 +2188,59 @@ _cw_melt(c3_i argc, c3_c* argv[])
 
     u3_melt_pick(pax_c, pax_w);
     gan_w = u3_melt_all(stderr, opt_w);
+
+    c3_c sum_c[256];
+
+    snprintf(sum_c, sizeof(sum_c),
+             "melt-report: vere=%s bits=%u dry=%u picked=%u event=%" PRIu64
+             " ms=%" PRIu64 " gained=%" PRIu64 "\n",
+             URBIT_VERSION, (c3_h)(8 * sizeof(c3_w)), (c3_h)dry_t,
+             (c3_h)pax_w,
+             u3A->eve_d, u3e_measure_ms() - bef_d,
+             (c3_d)gan_w * sizeof(c3_w));
+    if ( opt_w & u3_melt_tell ) {
+      fprintf(stderr, "%.*s\r\n", (c3_i)strlen(sum_c) - 1, sum_c);
+    }
+
+    //  the report, in the pier, if asked for: named for the event and
+    //  the time, since an offline melt leaves the event where it was,
+    //  and never written over a report that's there
+    //
+    if ( sav_t ) {
+      c3_c        pax_c[8193];
+      c3_d        now_d = (c3_d)time(0);
+      c3_w        num_w = 0;
+      struct stat buf_u;
+      FILE*       rep_u = 0;
+
+      snprintf(pax_c, sizeof(pax_c), "%s/.urb/put", u3_Host.dir_c);
+      c3_mkdir(pax_c, 0700);
+
+      snprintf(pax_c, sizeof(pax_c),
+               "%s/.urb/put/melt-report-%" PRIu64 "-%" PRIu64 ".txt",
+               u3_Host.dir_c, u3A->eve_d, now_d);
+
+      while ( (0 == stat(pax_c, &buf_u)) && (++num_w < 1000) ) {
+        snprintf(pax_c, sizeof(pax_c),
+                 "%s/.urb/put/melt-report-%" PRIu64 "-%" PRIu64
+                 "-%" PRIc3_w ".txt",
+                 u3_Host.dir_c, u3A->eve_d, now_d, num_w);
+      }
+
+      if ( 1000 == num_w ) {
+        fprintf(stderr, "urbit: melt: report not saved: no free name\r\n");
+      }
+      else if ( (rep_u = c3_fopen(pax_c, "w")) ) {
+        fputs(u3_melt_told(), rep_u);
+        fputs(sum_c, rep_u);
+        fclose(rep_u);
+        fprintf(stderr, "urbit: melt: report saved to %s\r\n", pax_c);
+      }
+      else {
+        fprintf(stderr, "urbit: melt: report not saved: %s\r\n",
+                        strerror(errno));
+      }
+    }
 
     if ( dry_t ) {
       u3a_print_memory(stderr, "urbit: melt: would gain", gan_w);
