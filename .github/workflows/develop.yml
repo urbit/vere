@@ -12,7 +12,15 @@ on:
       - 'pkg/**'
       - 'tests/**'
       - '.github/workflows/**.yml'
+      - '.github/actions/**'
       - '*.sh'
+
+#  a push supersedes the run of the push before it: when several land
+#  together, only the last is tested through and published to edge.
+#
+concurrency:
+  group: develop
+  cancel-in-progress: true
 
 jobs:
   urbit:
@@ -22,7 +30,9 @@ jobs:
       upload: true
     secrets: inherit
 
+  #  after the tests, with the binary they ran
   docker:
+    needs: [urbit]
     uses: ./.github/workflows/docker-shared.yml
     with:
       pace: 'edge'

@@ -10,7 +10,14 @@ on:
       - 'pkg/**'
       - 'tests/**'
       - '.github/workflows/**.yml'
+      - '.github/actions/**'
       - '*.sh'
+
+#  a push to a pull request supersedes the run of the push before it
+#
+concurrency:
+  group: feature-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   urbit:
@@ -18,3 +25,12 @@ jobs:
     with:
       pace: 'edge'
       upload: false
+
+  #  a dry run of the image: built from the binary the tests ran, and
+  #  run here. nothing is pushed, and no secrets are used.
+  docker:
+    needs: [urbit]
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'edge'
+      push: false

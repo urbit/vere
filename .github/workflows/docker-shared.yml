@@ -8,45 +8,56 @@ on:
         type: string
         default: 'edge'
         required: false
+      push:
+        description: 'Push the image to DockerHub (false: build it and run it here, and use no secrets)'
+        type: boolean
+        default: true
+        required: false
 
 jobs:
   urbit:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: mlugg/setup-zig@v2
+      #
+      # THE BINARY
+      #
+      #  not built here: the image gets the 32-bit linux binary that
+      #  shared.yml built and tested in this run (and uploads, when
+      #  it uploads). the caller runs shared.yml as a job, and makes
+      #  this one need it.
+      #
+
+      - uses: actions/download-artifact@v4
         with:
-          version: 0.15.2
+          name: bin-linux-32
+          path: dist
 
-      #
-      # BUILD
-      #
-
-      - name: Build binary
+      - name: Take binary
         id: build
         run: |
-          zig build                    \
-            -Dtarget=x86_64-linux-musl \
-            -Doptimize=ReleaseFast     \
-            -Dpace=${{inputs.pace}}    \
-            --summary all
+          cp dist/32/x86_64-linux-musl/urbit docker/.
 
-          cp zig-out/x86_64-linux-musl/urbit docker/.
+          #  an artifact doesn't keep file modes
+          chmod +x docker/urbit
 
-          echo version=v$(sed -nr 's/#define URBIT_VERSION "(.*)"/\1/p' zig-out/include/version.h) >> $GITHUB_OUTPUT
+          test -s dist/32/VERSION
+          echo version=v$(cat dist/32/VERSION) >> $GITHUB_OUTPUT
 
       #
       # UPLOAD TO DOCKER
       #
 
       - uses: docker/docker-login-action@v1.8.0
+        if: ${{ inputs.push }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: christian-korneck/update-container-description-action@v1
+        if: ${{ inputs.push }}
         env:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -60,7 +71,8 @@ jobs:
         if: ${{ inputs.pace != 'live' }}
         uses: docker/build-push-action@v6
         with:
-          push: true
+          push: ${{ inputs.push }}
+          load: ${{ !inputs.push }}
           context: docker
           tags: tloncorp/vere:${{ steps.build.outputs.version }},tloncorp/vere:${{ inputs.pace }}
 
@@ -68,6 +80,18 @@ jobs:
         if: ${{ inputs.pace == 'live' }}
         uses: docker/build-push-action@v6
         with:
-          push: true
+          push: ${{ inputs.push }}
+          load: ${{ !inputs.push }}
           context: docker
           tags: tloncorp/vere:latest
+
+      #  a dry run: the image was built and kept here, so run the
+      #  binary in it and compare its version with the one it was
+      #  built with.
+      #
+      - name: Run the image
+        if: ${{ !inputs.push }}
+        run: |
+          tag=${{ inputs.pace == 'live' && 'latest' || inputs.pace }}
+          docker run --rm --entrypoint /bin/urbit tloncorp/vere:$tag --version | tee version.out
+          grep -F "$(cat dist/32/VERSION)" version.out
