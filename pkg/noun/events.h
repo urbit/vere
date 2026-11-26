@@ -113,7 +113,12 @@
           u3e_pha_rec_dup   = 32,  //  u3m_reclaim: hash-consing prune
           u3e_pha_trim_per  = 33,  //  _mars_post: persistent memo trim
           u3e_pha_trim_for  = 34,  //  _mars_post: ford memo trim
-          u3e_pha_max       = 35
+          u3e_pha_mend      = 35,  //  u3m_love: the pass after an exit
+                                   //  home's takes (u3m_sole_mend())
+          u3e_pha_take_pek  = 36,  //  u3m_love: a peek's product
+          u3e_pha_jam_pek   = 37,  //  encoding a peek's response
+          u3e_pha_free_pek  = 38,  //  freeing a peek's response
+          u3e_pha_max       = 39
         } u3e_phase;
 
       /* u3e_meter: counters reported at each snapshot.
@@ -140,6 +145,19 @@
           c3_d rec_d;        //  reclaims
           c3_d rcb_d;        //  bytecode entries cleared
           c3_d rch_d;        //  hank entries cleared
+          c3_d rcc_d;        //  bytecode cap clears (u3m_reclaim_due())
+          c3_d rcp_d;        //  bytecode entries they cleared
+
+          //  by kind, to see what deferral and alignment act on: atoms
+          //  that fit a word at 64 bits are allocated at 32
+          //
+          c3_d dfa_d;        //  gains deferred on atoms
+          c3_d dfb_d;        //    of which cancelled by a lose
+          c3_d ala_d;        //  alignment: references to atoms
+          c3_d alp_d;        //    of which at the same position
+          c3_d fec_d;        //  home nouns referenced from the effects'
+                             //  cells on the event's road
+          c3_d fea_d;        //    of which atoms
 
           //  deferred gains across the state swap (u3a_defer_open())
           //
@@ -182,7 +200,8 @@
                              //  per for byc war bas hot cod
           c3_d hcf_d[2];     //  last rebuild: page faults, major, minor
           c3_d hcp_d[3];     //  probes outside rebuilds: road-exit take,
-                             //  older home nouns met in it, u3m_dedup()
+                             //  the pass after it (u3m_sole_mend()),
+                             //  u3m_sole_try()
           c3_d hch_d[4];     //  hits (an equal member elsewhere), by the
                              //  member's origin: added since the last
                              //  rebuild, caches (per for byc), warm jet
@@ -216,9 +235,42 @@
                              //  with the road they're on
           c3_d wlc_d;        //  inner entries copied up a road at an exit
 
-          //  cribs (see crib.h): the home lose list is [1]; [0] is kept
-          //  for a set. capacity and ceiling are states, kept across
-          //  intervals; the rest is use in the interval
+          //  canonicalizing on inner roads (u3m_sole_try())
+          //
+          c3_d eic_d[2];     //  calls: home road, inner roads
+          c3_d eij_d;        //  junior cells walked
+          c3_d eiv_d;        //  visited-set hits
+          c3_d eih_d[2];     //  home-set probes on inner roads, hits
+
+          //  exits to home: the canonicalizing take (_ca_take_sole()),
+          //  and time in each step (microseconds, while measuring)
+          //
+          c3_d ctk_d;        //  junior nouns looked up
+          c3_d ctf_d;        //  ... found a member, so not copied
+          c3_d ctr_d;        //  taken nouns noted, and canonicalized
+                             //  in place after the takes
+          c3_d cus_d[2];     //  time: takes, then the lose list
+          c3_d cam_d[2];     //  most members added at one exit, before
+                             //  its drain; the set's size as it began
+
+          //  the pass after an exit home's takes (u3m_sole_mend()); by
+          //  the take that noted the noun: jet state, bytecode,
+          //  persistent memo, ford memo. counted while measuring
+          //
+          c3_d cmn_d;        //  exits with a pass
+          c3_d cmu_d[2];     //  time, microseconds: in all (part of
+                             //  cus_d[0]), the most at one exit
+          c3_d cms_d[4];     //  slots repointed at a member
+          c3_d cmw_d[4];     //  words in the nouns that freed at once
+                             //  (see u3a_lose_ends())
+
+          //  cribs (see crib.h): the visited set [0], the home lose list
+          //  [1]; the yards' users, in entries: the exit home's notes
+          //  [2], the home walk's marks [3] and its frames [4], which
+          //  have a ceiling, a peak and fills, but no capacity of their
+          //  own; and the yards, in bytes: scratch [5] and result [6].
+          //  capacity and ceiling are states, kept across intervals;
+          //  the rest is use in the interval
           //
           struct {
             c3_d cap_d;      //  capacity now, entries (0: not made yet)
@@ -229,8 +281,8 @@
             c3_d shr_d;      //  shrinks
             c3_d clg_d;      //  clears through a log of slots (sets)
             c3_d cdp_d;      //  clears by zeroing the table (sets)
-            c3_d ovf_d;      //  evictions or drops at the ceiling
-          } cib_u[2];
+            c3_d ovf_d;      //  fills or drops at the ceiling
+          } cib_u[7];
         } u3e_meter;
 
       extern volatile c3_y u3e_Phase;
@@ -259,6 +311,11 @@
     */
       c3_d
       u3e_measure_ms(void);
+
+    /* u3e_measure_us(): wall-clock microseconds, for short steps.
+    */
+      c3_d
+      u3e_measure_us(void);
 
     /* u3e_measure_op(): if measuring, log a pack, meld or melt [op_c],
     **                   run because of [why_c], with melt options
@@ -296,6 +353,58 @@
     */
       void
       u3e_measure_event(c3_d eve_d, const c3_c* tag_c);
+
+    /* u3e_measure_effect(): at the end of a poke, on the event's road,
+    **                       count home nouns referenced from the
+    **                       effects [fec].
+    */
+      void
+      u3e_measure_effect(u3_noun fec);
+
+    /* u3e_measure_work(): the task just run, of kind [kin_w] (u3e_wok_*),
+    **                     took [use_d] microseconds. call before
+    **                     u3e_measure_event().
+    */
+#     define u3e_wok_poke  0            //  event computed
+#     define u3e_wok_fail  1            //  event failed (not replayed)
+#     define u3e_wok_peek  2            //  peek
+#     define u3e_wok_max   3
+
+      void
+      u3e_measure_work(c3_w kin_w, c3_d use_d);
+
+    /* u3e_measure_seen(): a message has come off the pipe. call before
+    **                     its task is run.
+    */
+      void
+      u3e_measure_seen(void);
+
+    /* u3e_measure_crud(): an event's first attempt failed with [mot]
+    **                     after [use_d] microseconds. [rec_o] is c3y if
+    **                     its %crud was then computed.
+    */
+      void
+      u3e_measure_crud(u3_noun mot, c3_d use_d, c3_o rec_o);
+
+    /* u3e_measure_vane(): the event just computed was [ovo] (a wire and
+    **                     a card; retained). call after
+    **                     u3e_measure_work(), which has its time.
+    */
+      void
+      u3e_measure_vane(u3_noun ovo);
+
+    /* u3e_measure_hold(): an event's effects were released [use_d]
+    **                     microseconds after it was computed. [fir_o]
+    **                     is c3y for the first released at one time.
+    */
+      void
+      u3e_measure_hold(c3_d use_d, c3_o fir_o);
+
+    /* u3e_dirty(): pages written since the last save, free pages
+    **              included. call on the home road.
+    */
+      c3_w
+      u3e_dirty(void);
 
     /* u3e_measure_align(): at the end of a poke, on the event's road,
     **                      compare the new arvo state [new] with the

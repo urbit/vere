@@ -646,25 +646,44 @@ typedef struct {
     return (off >> u3a_vits) | u3a_cell_flag;
   }
 
-  /* u3a_Hcon_w: home-road hashcons membership (off-loom), one bit per
-  **             u3a_minimum words of loom, or 0. see u3m_dedup().
+  /* u3a_Sole_w: home-road hashcons membership (off-loom), one bit per
+  **             cell-sized step of loom (u3a_sole_log), or 0. see
+  **             u3m_sole_home().
   */
-    extern c3_w* u3a_Hcon_w;
+    extern c3_w* u3a_Sole_w;
 
-  /* u3a_hcon_has(): indirect [som] is a member of the home-road
+  /* u3a_sole_has(): indirect [som] is a member of the home-road
   **                 hashcons set.
   */
+    /* u3a_sole_log: log2 of the bitmap's step, in words: a cell's size,
+    **               the smallest noun box at either width (boxes are
+    **               powers of two, naturally aligned).
+    */
+#     define u3a_sole_log  2
+
+STATIC_ASSERT( (((c3_w)1) << u3a_sole_log) == c3_wiseof(u3a_cell),
+               "sole bitmap step is a cell" );
+
     static inline c3_t
-    u3a_hcon_has(u3_noun som)
+    u3a_sole_has(u3_noun som)
     {
-      if ( !u3a_Hcon_w ) {
+      if ( !u3a_Sole_w ) {
         return 0;
       }
       else {
-        c3_w idx_w = u3a_to_off(som) >> u3a_min_log;
-        return 1 & (u3a_Hcon_w[idx_w / u3a_word_bits]
+        c3_w idx_w = u3a_to_off(som) >> u3a_sole_log;
+        return 1 & (u3a_Sole_w[idx_w / u3a_word_bits]
                     >> (idx_w % u3a_word_bits));
       }
+    }
+
+  /* u3a_is_sole(): [som] is canonical: a cat, or a member of the
+  **                home-road hashcons set.
+  */
+    static inline c3_t
+    u3a_is_sole(u3_noun som)
+    {
+      return ( c3y == u3a_is_cat(som) ) || u3a_sole_has(som);
     }
 
   /* u3a_dbg_ram(): debugging memory, where a leak fails the checks: a
@@ -941,6 +960,30 @@ u3a_post_info(u3_post);
             ( c3y == u3a_is_cat(__som) ) ? __som : u3a_gain(__som);             \
           })
 
+        /* u3a_Take_home_t: an exit to home is taking its caches: takes
+        **                  canonicalize into the home-road hashcons set
+        **                  (_ca_take_sole()), and loses of home nouns go
+        **                  to the home lose list (u3a_lose_later()). set
+        **                  only on the home road.
+        */
+          extern c3_t u3a_Take_home_t;
+
+        /* u3a_Take_open_t: the takes of an exit to home are under way,
+        **                  the product's included: junior memory holds
+        **                  home nouns without counting them, so nothing
+        **                  on the home road is freed until they're done
+        **                  (asserted under -Dc3dbg, in the lose).
+        */
+          extern c3_t u3a_Take_open_t;
+
+        /* u3a_lose_later(): lose [som]; during the takes of an exit
+        **                   home, at the drain instead. with the home
+        **                   lose list full, [som] is leaked, for the
+        **                   next grab to free (u3o_check_corrupt).
+        */
+          void
+          u3a_lose_later(u3_noun som);
+
         /* u3a_take(): gain, copying juniors.
         */
           u3_noun
@@ -1045,6 +1088,14 @@ u3a_post_info(u3_post);
         */
           void
           u3a_defer_close(void);
+
+        /* u3a_lose_ends(): yes if losing [dog], an indirect noun of
+        **                  the home road, on the home road now would
+        **                  free it: its count is 1, and no gain on it
+        **                  is deferred. for measurement.
+        */
+          c3_t
+          u3a_lose_ends(u3_noun dog);
 
         /* u3a_luse(): check refcount sanity.
         */

@@ -670,6 +670,75 @@ _test_reap_part(void)
   return ret_i;
 }
 
+/* _take_big(): u3m_soft() test fn: saves in the persistent memo cache
+**              a list that the home road has no room to copy: it fills
+**              most of this road, and the take needs a frame for each
+**              cell besides.
+*/
+static u3_noun
+_take_big(u3_noun arg)
+{
+  c3_w    len_w = (u3a_open(u3R) / (8 * c3_wiseof(u3a_cell))) * 7;
+  u3_noun lis   = u3_nul;
+  c3_w    i_w;
+
+  for ( i_w = 0; i_w < len_w; i_w++ ) {
+    lis = u3nc(i_w & 0xffff, lis);
+  }
+
+  u3z_save(u3z_memo_keep, u3nc(c3__test, u3k(arg)), lis);
+  u3z(lis);
+  return arg;
+}
+
+/* u3m_soft_top(): manage.c's top-level wrapper, for its [pad_w].
+*/
+u3_noun
+u3m_soft_top(c3_w    mil_w,
+             c3_w    pad_w,
+             u3_funk fun_f,
+             u3_noun   arg,
+             void    (*hom_f)(void));
+
+/* _test_take_fail(): an exit home that fails in its cache takes.
+**
+**   the takes canonicalize under u3a_Take_home_t, which the signal's
+**   reset clears: left set, the next take on an inner road asserts.
+**
+**   the event runs with a small pad: with u3m_soft()'s, half of a 64-bit
+**   loom this size, the home road has room for all the event can make.
+*/
+static c3_i
+_test_take_fail(void)
+{
+  c3_i    ret_i = 1;
+  u3_noun gon   = u3m_soft_top(0, (1 << 16), _take_big, u3_nul, 0);
+
+  if ( 0 == u3h(gon) ) {
+    fprintf(stderr, "take fail: no failure in the takes\r\n");
+    ret_i = 0;
+  }
+
+  u3z(gon);
+
+  if ( u3a_Take_home_t || u3a_Take_open_t ) {
+    fprintf(stderr, "take fail: the takes are marked under way after the failure\r\n");
+    return 0;
+  }
+
+  //  the next event's inner roads exit as they did
+  //
+  gon = u3m_soft(0, _reap_top, 7);
+
+  if ( (0 != u3h(gon)) || (7 != u3t(gon)) ) {
+    u3m_p("take fail: unexpected product", gon);
+    ret_i = 0;
+  }
+
+  u3z(gon);
+  return ret_i;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -704,6 +773,12 @@ main(int argc, char* argv[])
   }
   fprintf(stderr, "test reap part: ok\r\n");
 
+  if ( !_test_take_fail() ) {
+    fprintf(stderr, "test take fail: failed\r\n");
+    exit(1);
+  }
+  fprintf(stderr, "test take fail: ok\r\n");
+
   if ( !_test_edit_road() ) {
     fprintf(stderr, "test edit road: failed\r\n");
     exit(1);
@@ -716,8 +791,9 @@ main(int argc, char* argv[])
   }
   fprintf(stderr, "test sand: ok\r\n");
 
-  //  GC
+  //  GC, failing on a leak
   //
+  u3C.wag_h |= u3o_leak_crash;
   u3m_grab();
 
   fprintf(stderr, "test meme: ok\r\n");

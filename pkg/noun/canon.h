@@ -1,13 +1,12 @@
 /// @file
 ///
-/// Off-loom hash-consing tables, shared by u3m_dedup() and melt.
+/// Comparisons for hash-consing tables off the loom: melt's, and the
+/// home-road set's (soletab.h).
 ///
 /// Members are canonical nouns, and the children of a member cell are
 /// members, so cells compare by mug and child pointers alone: a cell is
 /// looked up only once its children are canonical. Atoms compare by
 /// value. The tables hold no references.
-///
-/// NB: instantiates static functions in each including translation unit.
 
 #ifndef U3_CANON_H
 #define U3_CANON_H
@@ -15,14 +14,6 @@
 #include "c3/c3.h"
 #include "allocate.h"
 #include "retrieve.h"
-
-/* _canon_hash(): table hash, from the (cached) mug.
-*/
-static inline c3_d
-_canon_hash(u3_noun som)
-{
-  return u3r_mug(som) * 11400714819323198485ULL;
-}
 
 /* _canon_cmp_atoms(): compare indirect atoms by value.
 */
@@ -43,12 +34,6 @@ _canon_cmp_atoms(u3_atom a, u3_atom b)
   return 0 == memcmp(a_u->buf_w, b_u->buf_w, a_u->len_w << (u3a_word_bits_log-3));
 }
 
-#define NAME    _canon_atoms
-#define KEY_TY  u3_atom
-#define HASH_FN _canon_hash
-#define CMPR_FN _canon_cmp_atoms
-#include "verstable.h"
-
 /* _canon_cmp_cells(): compare cells with canonical children.
 */
 static inline c3_i
@@ -64,11 +49,5 @@ _canon_cmp_cells(u3_cell a, u3_cell b)
 
   return a_u->hed == b_u->hed && a_u->tel == b_u->tel;
 }
-
-#define NAME    _canon_cells
-#define KEY_TY  u3_cell
-#define HASH_FN _canon_hash
-#define CMPR_FN _canon_cmp_cells
-#include "verstable.h"
 
 #endif /* ifndef U3_CANON_H */

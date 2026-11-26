@@ -98,6 +98,11 @@ _cv_lite(u3_noun pil)
   return pro;
 }
 
+/* u3v_Ivory_canon_t: canonicalize the ivory pill before a lite boot.
+**   tests clear it to keep duplicates on the home road.
+*/
+c3_t u3v_Ivory_canon_t = 1;
+
 /* u3v_boot_lite(): light bootstrap sequence, just making a kernel.
 */
 c3_o
@@ -106,6 +111,13 @@ u3v_boot_lite(u3_noun pil)
   //  ensure zero-initialized kernel
   //
   u3A->roc = 0;
+
+  //  canonicalize the pill here, on the home road, so that the boot's
+  //  inner road finds its nouns as members, by pointer
+  //
+  if ( u3v_Ivory_canon_t ) {
+    pil = u3m_sole_home(pil);
+  }
 
   {
     u3_noun pro = u3m_soft(0, _cv_lite, pil);
@@ -296,6 +308,7 @@ u3v_poke(u3_noun sam)
   //
   if ( c3y == u3a_is_cell(pro) ) {
     u3e_measure_align(u3t(pro), u3A->roc);
+    u3e_measure_effect(u3h(pro));
   }
 
   return pro;

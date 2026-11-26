@@ -18,9 +18,9 @@
 u3_road* u3a_Road;
 u3a_mark u3a_Mark;
 
-//  home-road hashcons membership (see u3m_dedup())
+//  home-road hashcons membership (see u3m_sole_home())
 //
-c3_w* u3a_Hcon_w;
+c3_w* u3a_Sole_w;
 u3a_gack u3a_Gack;
 u3a_hunk_dose u3a_Hunk[u3a_crag_no];
 
@@ -747,7 +747,7 @@ u3a_wash(u3_noun som)
 #define CMPR_FN vt_cmpr_integer
 #include "verstable.h"
 
-c3_w u3a_Defer_max_w = 1U << 20;
+c3_w u3a_Defer_max_w = 1U << 23;
 
 static struct {
   c3_t     ope_t;  //  open
@@ -818,6 +818,7 @@ _ca_defer_gain(u3_noun dog)
   if ( !_ca_pend_is_end(itr_u) ) {
     itr_u.data->val++;
     u3e_Meter.dfg_d++;
+    if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
     return 1;
   }
 
@@ -836,6 +837,7 @@ _ca_defer_gain(u3_noun dog)
 
   u3e_Meter.dfg_d++;
   u3e_Meter.dfn_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfa_d++;
   {
     c3_w siz_w = (c3_w)_ca_pend_size(&_ca_defer_u.pen_u);
 
@@ -865,6 +867,7 @@ _ca_defer_lose(u3_noun dog)
   }
 
   u3e_Meter.dfc_d++;
+  if ( c3n == u3a_is_cell(dog) ) u3e_Meter.dfb_d++;
   return 1;
 }
 
@@ -904,8 +907,23 @@ _ca_defer_lose_cold(u3_noun dog)
 void
 u3a_defer_open(void)
 {
+  //  U3_DEFER_OFF=1 in the environment leaves every window shut, so
+  //  gains are written as they happen: for comparing a live ship with
+  //  and without deferral (its measurement log then has no windows)
+  //
+  static c3_ws off_ws = -1;
+
   u3_assert( !_ca_defer_u.ope_t );
   u3_assert( &(u3H->rod_u) == u3R );
+
+  if ( off_ws < 0 ) {
+    c3_c* env_c = getenv("U3_DEFER_OFF");
+    off_ws = ( env_c && ('1' == *env_c) ) ? 1 : 0;
+  }
+
+  if ( off_ws ) {
+    return;
+  }
 
   if ( !_ca_defer_u.ini_t ) {
     c3_w pag_w = (c3_w)(u3C.wor_i >> u3a_page);
@@ -980,6 +998,21 @@ u3a_defer_close(void)
   }
 }
 
+/* u3a_lose_ends(): see allocate.h.
+*/
+c3_t
+u3a_lose_ends(u3_noun dog)
+{
+  u3a_noun* box_u = u3a_to_ptr(dog);
+
+  if ( 1 != box_u->use_w ) {
+    return 0;
+  }
+  return !(  _ca_defer_on()
+          && _ca_defer_seen(dog)
+          && !_ca_pend_is_end(_ca_pend_get(&_ca_defer_u.pen_u, dog)) );
+}
+
 /* _me_gain_use(): increment use count.
 */
 static void
@@ -1010,6 +1043,14 @@ _me_gain_use(u3_noun dog)
 }
 
 #undef VERBOSE_TAKE
+
+/* u3a_Take_home_t: see allocate.h.
+*/
+c3_t u3a_Take_home_t;
+
+/* u3a_Take_open_t: see allocate.h.
+*/
+c3_t u3a_Take_open_t;
 
 /* _ca_take_atom(): reallocate an indirect atom off the stack.
 */
@@ -1279,6 +1320,187 @@ _ca_take_south(u3_noun veb)
   return pro;
 }
 
+/* the home-only canonicalizing take (u3a_Take_home_t): an exit to
+**   home's cache takes. the home road is north and nothing is senior to it, so
+**   a noun is a cat, a home noun, or junior.
+**
+**   results are owned (a fresh copy: the take holds its count) or
+**   borrowed (an existing home noun, or a cat: no count held). a copy
+**   adopts an owned child as it is and gains a borrowed one; the root
+**   is gained if borrowed. a junior cell whose children are borrowed and
+**   canonical is looked up by value before it's copied: a member found
+**   costs nothing. an owned child rules out a member (no existing cell
+**   holds it), so its parent is copied and added without a lookup. a
+**   home noun that isn't a member is left as it is, and nothing over
+**   it is added: a take that met one notes what it produced
+**   (u3m_sole_note()), to be canonicalized in place once every take is
+**   done (u3m_sole_mend()).
+*/
+typedef struct {
+  u3_weak hed;    //  taken head, or none: head-frame
+  u3_cell old;    //  junior cell
+  c3_t    own_t;  //  [hed] is owned
+} _ca_sole_frame;
+
+static inline void
+_ca_sole_adopt(u3_noun som, c3_t own_t)
+{
+  if ( !own_t && (c3n == u3a_is_cat(som)) ) {
+    _me_gain_use(som);
+  }
+}
+
+/* _ca_sole_odd_t: the take under way produced a noun that isn't a
+**   member: a home noun left as it is, or a copy over one.
+*/
+static c3_t _ca_sole_odd_t;
+
+/* _ca_sole_next(): take [veb], pushing junior cells.
+*/
+static inline u3_noun
+_ca_sole_next(u3a_pile* pil_u, u3_noun veb, c3_t* own_t)
+{
+  while ( 1 ) {
+    if ( c3y == u3a_is_cat(veb) ) {
+      *own_t = 0;
+      return veb;
+    }
+    else if ( c3n == u3a_north_is_junior(u3R, veb) ) {
+      if ( !u3a_sole_has(veb) ) {
+        _ca_sole_odd_t = 1;
+      }
+      *own_t = 0;
+      return veb;
+    }
+    else {
+      u3a_noun* veb_u = u3a_to_ptr(veb);
+
+      if ( veb_u->mug_w >> 31 ) {
+        //  an earlier take's copy: if it isn't a member, that take noted
+        //  it, but whatever this one builds over it isn't one either
+        //
+        if ( !u3a_is_sole((u3_noun)veb_u->mug_w) ) {
+          _ca_sole_odd_t = 1;
+        }
+        *own_t = 0;
+        return (u3_noun)veb_u->mug_w;
+      }
+      else if ( c3y == u3a_is_atom(veb) ) {
+        u3_weak can = u3m_sole_find_atom(veb);
+
+        u3e_Meter.ctk_d++;
+        if ( u3_none != can ) {
+          u3e_Meter.ctf_d++;
+          veb_u->mug_w = can;
+          *own_t = 0;
+          return can;
+        }
+        {
+          u3_atom new = _ca_take_atom((u3a_atom*)veb_u);
+          u3m_sole_add(new);
+          *own_t = 1;
+          return new;
+        }
+      }
+      else {
+        _ca_sole_frame* fam_u = u3a_push(pil_u);
+
+        fam_u->hed = u3_none;
+        fam_u->old = veb;
+        veb = ((u3a_cell*)veb_u)->hed;
+      }
+    }
+  }
+}
+
+/* _ca_sole_cell(): take junior cell [old_u] with taken children.
+*/
+static inline u3_noun
+_ca_sole_cell(u3a_cell* old_u,
+              u3_noun   hed,
+              c3_t      hed_t,
+              u3_noun   tel,
+              c3_t      tel_t,
+              c3_t*     own_t)
+{
+  c3_t can_t = u3a_is_sole(hed) && u3a_is_sole(tel);
+
+  if ( can_t && !hed_t && !tel_t ) {
+    u3_weak can;
+
+    //  the junior's mug, if it's cached, else from the canonical children
+    //  (a junior child's mug slot may hold a forwarding pointer)
+    //
+    if ( !old_u->mug_w ) {
+      old_u->mug_w = u3r_mug_both(u3r_mug(hed), u3r_mug(tel));
+    }
+    can = u3m_sole_find_cell((c3_h)old_u->mug_w, hed, tel);
+
+    u3e_Meter.ctk_d++;
+    if ( u3_none != can ) {
+      u3e_Meter.ctf_d++;
+      old_u->mug_w = can;
+      *own_t = 0;
+      return can;
+    }
+  }
+
+  {
+    u3_cell new = _ca_take_cell(old_u, hed, tel);
+
+    _ca_sole_adopt(hed, hed_t);
+    _ca_sole_adopt(tel, tel_t);
+    if ( can_t ) {
+      u3m_sole_add(new);
+    }
+    *own_t = 1;
+    return new;
+  }
+}
+
+/* _ca_take_sole(): the home-only canonicalizing take (see above).
+*/
+static u3_noun
+_ca_take_sole(u3_noun veb)
+{
+  u3_noun         pro;
+  c3_t            own_t;
+  _ca_sole_frame* fam_u;
+  u3a_pile        pil_u;
+
+  u3_assert( &(u3H->rod_u) == u3R );
+  u3a_pile_prep(&pil_u, sizeof(*fam_u), __alignof__(*fam_u));
+  _ca_sole_odd_t = 0;
+  pro = _ca_sole_next(&pil_u, veb, &own_t);
+
+  if ( c3n == u3a_pile_done(&pil_u) ) {
+    fam_u = u3a_peek(&pil_u);
+
+    do {
+      if ( u3_none == fam_u->hed ) {
+        u3a_cell* old_u = u3a_to_ptr(fam_u->old);
+        fam_u->hed   = pro;
+        fam_u->own_t = own_t;
+        pro          = _ca_sole_next(&pil_u, old_u->tel, &own_t);
+        fam_u        = u3a_peek(&pil_u);
+      }
+      else {
+        u3a_cell* old_u = u3a_to_ptr(fam_u->old);
+        pro   = _ca_sole_cell(old_u, fam_u->hed, fam_u->own_t, pro, own_t, &own_t);
+        fam_u = u3a_pop(&pil_u);
+      }
+    } while ( c3n == u3a_pile_done(&pil_u) );
+  }
+
+  _ca_sole_adopt(pro, own_t);
+
+  if ( _ca_sole_odd_t ) {
+    _ca_sole_odd_t = 0;
+    u3m_sole_note(pro);
+  }
+  return pro;
+}
+
 /* u3a_take(): gain, copying juniors.
 */
 u3_noun
@@ -1289,7 +1511,9 @@ u3a_take(u3_noun veb)
 
   u3_assert(u3_none != veb);
 
-  pro = ( c3y == u3a_is_north(u3R) )
+  pro = ( c3_unlikely(u3a_Take_home_t) )
+        ? _ca_take_sole(veb)
+        : ( c3y == u3a_is_north(u3R) )
         ? _ca_take_north(veb)
         : _ca_take_south(veb);
 
@@ -1426,8 +1650,14 @@ _me_free_home(u3_noun dog, const c3_t nor_t)
       if ( c3_unlikely(0 == use_w) ) {
         u3m_bail(c3__foul);
       }
-      if ( c3_unlikely(&(u3H->rod_u) == rod_u) && u3a_hcon_has(dog) ) {
-        u3m_dedup_lose(dog);
+
+      //  during the takes of an exit home, junior memory can hold
+      //  [dog] without counting it (see u3a_Take_open_t)
+      //
+      c3_dessert( !u3a_Take_open_t );
+
+      if ( c3_unlikely(&(u3H->rod_u) == rod_u) && u3a_sole_has(dog) ) {
+        u3m_sole_lose(dog);
       }
 
       if ( _(u3a_is_pom(dog)) ) {
@@ -2054,6 +2284,22 @@ _ca_lo_put(u3a_road* rod_u, u3_noun old)
   }
 }
 
+/* u3a_lose_later(): see allocate.h.
+*/
+void
+u3a_lose_later(u3_noun som)
+{
+  if (  c3_unlikely(u3a_Take_home_t)
+     && (c3n == u3a_is_cat(som))
+     && (&(u3H->rod_u) == u3R)
+     && (c3n == u3a_is_junior(u3R, som)) )
+  {
+    _ca_lo_home_put(_ca_lo_home_at(), som);
+    return;
+  }
+  u3z(som);
+}
+
 /* u3a_lose_size(): restart the home lose list at [min_w] entries, at most
 **                  [max_w] (tests). home road only, the list empty.
 */
@@ -2123,7 +2369,7 @@ static inline c3_t
 _ca_wed_keep(u3a_road* rod_u, u3_noun a, u3_noun b)
 {
   if ( &(u3H->rod_u) == rod_u ) {
-    c3_t amb_t = u3a_hcon_has(a), bmb_t = u3a_hcon_has(b);
+    c3_t amb_t = u3a_sole_has(a), bmb_t = u3a_sole_has(b);
 
     if ( amb_t != bmb_t ) return amb_t;
   }
@@ -3180,7 +3426,7 @@ u3a_sweep(void)
   //  hashcons set may refer to them
   //
   if ( _sweep_leq_w && (&(u3H->rod_u) == u3R) ) {
-    u3m_dedup_ream();
+    u3m_sole_ream();
   }
 
   return siz_w;

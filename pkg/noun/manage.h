@@ -10,6 +10,7 @@
 #include "types.h"
 #include "version.h"
 #include "rsignal.h"
+#include "crib.h"
 
 extern c3_h u3m_Ford_fresh_road_depth_h;
 
@@ -265,16 +266,100 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
         c3_w
         u3m_pack(void);
         
-      /* u3m_dedup: deduplicate the noun across the hashcons sets
+      /* u3m_sole_try(): canonicalize the noun against the home-road set,
+      **                 on any road (on inner roads, junior cells only).
       */
         u3_noun
-        u3m_dedup(u3_noun som);
-      
-      /* u3m_dedup_ream(): rebuild the home-road hashcons set from
-      **                   persistent tables.
+        u3m_sole_try(u3_noun som);
+
+      /* u3m_sole_visit_size(): restart u3m_sole_try()'s visited set at
+      **                        2^log_y entries, growing up to 2^max_y (0
+      **                        for the usual ceiling) (tests). home road
+      **                        only.
       */
         void
-        u3m_dedup_ream(void);
+        u3m_sole_visit_size(c3_y log_y, c3_y max_y);
+
+      /* u3m_crib_report(): log every crib's fills and drops at its
+      **                    ceiling since the last call. between events.
+      */
+        void
+        u3m_crib_report(void);
+
+      /* u3m_yard_size(): reserve the runtime's yards (see crib.h):
+      **                  [wok_i] bytes of scratch and [res_i] for results
+      **                  (0 for the usual eighth of the loom). from
+      **                  u3m_init(); again from tests, on the home road,
+      **                  with both yards empty.
+      */
+        void
+        u3m_yard_size(size_t wok_i, size_t res_i);
+
+      /* u3m_yard_meas(): measurement: read the yards' meters into
+      **                  u3e_Meter, before it's reported.
+      */
+        void
+        u3m_yard_meas(void);
+
+      /* u3m_sole_visit_cap(): the visited set's capacity (tests).
+      */
+        c3_d
+        u3m_sole_visit_cap(void);
+
+      /* u3m_sole_home(): u3m_sole_try() on the home road; inner roads
+      **                  leave the noun to the exit home.
+      */
+        u3_noun
+        u3m_sole_home(u3_noun som);
+
+      /* u3m_sole_find_cell(): the member equal to a cell of mug [mug_h]
+      **                       and canonical children [hed] [tel], or
+      **                       none (not retained).
+      */
+        u3_weak
+        u3m_sole_find_cell(c3_h mug_h, u3_noun hed, u3_noun tel);
+
+      /* u3m_sole_find_atom(): the member equal to junior atom [jun], or
+      **                       none (not retained).
+      */
+        u3_weak
+        u3m_sole_find_atom(u3_atom jun);
+
+      /* u3m_sole_add(): make [new], equal to no member, a member; 0 if
+      **                 it stays out: past the set's reach (128 GiB of
+      **                 home heap at 64 bits), or one too many with the
+      **                 same mug (255 fit).
+      */
+        c3_t
+        u3m_sole_add(u3_noun new);
+
+      /* u3m_sole_note(): the exit home's take produced [som], which
+      **                  holds a noun that isn't a member (see
+      **                  u3m_sole_mend()). past the notes' ceiling it's
+      **                  left as it is.
+      */
+        void
+        u3m_sole_note(u3_noun som);
+
+      /* u3m_sole_note_size(): the notes' ceiling is [max_w] entries (0
+      **                       for the usual one) (tests). home road only.
+      */
+        void
+        u3m_sole_note_size(c3_w max_w);
+
+      /* u3m_sole_mend(): canonicalize in place every noun noted by the
+      **                  takes of an exit home. the product has been
+      **                  taken: junior memory holds no home noun that
+      **                  isn't counted.
+      */
+        void
+        u3m_sole_mend(void);
+
+      /* u3m_sole_ream(): rebuild the home-road hashcons set from
+      **                  persistent tables.
+      */
+        void
+        u3m_sole_ream(void);
 
       /* u3m_Pave_f: called partway through building a new road's tables
       **             (tests).
@@ -321,30 +406,42 @@ extern c3_h u3m_Ford_fresh_road_depth_h;
           }
         }
 
-      /* u3m_dedup_hint(): record the home-road hashcons set's size,
-      **                   to size its next rebuild.
+      /* u3m_sole_tend(): between events, resize the home-road set's
+      **                  tables if their load has left its range.
       */
         void
-        u3m_dedup_hint(void);
+        u3m_sole_tend(void);
 
-      /* u3m_dedup_lose(): remove [som], about to be freed, from the
-      **                   home-road hashcons set (see u3a_hcon_has()).
+      /* u3m_sole_tab_meas(): the compact table's meters (6) since the
+      **                      last call.
       */
         void
-        u3m_dedup_lose(u3_noun som);
+        u3m_sole_tab_meas(c3_d* met_d);
 
-      /* u3m_dedup_stat(): the home-road hashcons set's atoms, cells,
-      **                   and estimated process memory in bytes.
+      /* u3m_sole_hint(): record the home-road hashcons set's size,
+      **                  to size its next rebuild.
       */
         void
-        u3m_dedup_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
+        u3m_sole_hint(void);
 
-      /* u3m_dedup_meas(): the home-road cell table's buckets, and the
-      **                   pages an on-loom copy would have written since
-      **                   the last call (0 unless measuring).
+      /* u3m_sole_lose(): remove [som], about to be freed, from the
+      **                  home-road hashcons set (see u3a_sole_has()).
       */
         void
-        u3m_dedup_meas(c3_d* buc_d, c3_d* pag_d);
+        u3m_sole_lose(u3_noun som);
+
+      /* u3m_sole_stat(): the home-road hashcons set's atoms, cells,
+      **                  and estimated process memory in bytes.
+      */
+        void
+        u3m_sole_stat(c3_d* vat_d, c3_d* cel_d, c3_d* byt_d);
+
+      /* u3m_sole_meas(): the home-road cell table's buckets, and the
+      **                  pages an on-loom copy would have written since
+      **                  the last call (0 unless measuring).
+      */
+        void
+        u3m_sole_meas(c3_d* buc_d, c3_d* pag_d);
 
     /*  Urbit time: 128 bits, leap-free.
     **

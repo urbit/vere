@@ -101,10 +101,16 @@
 #include "murmur3.h"
 #include "nock.h"
 #include "options.h"
+#include "retrieve.h"
 #include "vortex.h"
 
 #include <sys/time.h>
 #include <time.h>
+
+#ifndef U3_OS_windows
+#include <stdlib.h>
+#include <unistd.h>
+#endif
 
 #ifdef U3_OS_windows
 #include "wloom.h"
@@ -168,7 +174,9 @@ static const c3_c* _ce_pha_names[u3e_pha_max] = {
   "roc-lose", "roc-misc", "mug-roc", "feck", "etch", "jam", "io-free",
   "post", "save", "task", "pack",
   "rec-wish", "rec-han", "rec-byc", "rec-memo", "rec-dup",
-  "trim-per", "trim-for"
+  "trim-per", "trim-for",
+  "mend",
+  "take-pek", "jam-pek", "free-pek"
 };
 
 static const c3_c* _ce_kin_names[_ce_kin_max] = {
@@ -197,6 +205,28 @@ static struct {
   c3_d   tal_d[u3e_pha_max][_ce_kin_max][_CE_MEAS_LOGS];
   c3_d   uns_d;                 //  patch pages with no fault this interval
   c3_d   tak_d;                 //  tasks this interval
+  c3_d   wok_d[u3e_wok_max][2]; //  [kind] tasks, microseconds this interval
+  c3_d   lon_d;                 //  longest event this interval, microseconds
+  c3_d   pek_d;                 //  longest peek this interval, microseconds
+  c3_d   sen_d;                 //  when the last message was seen
+  c3_d   end_d;                 //  when the last task or save ended
+  c3_d   run_d;                 //  when this run of work began
+  c3_t   bak_t;                 //  the last message followed work at once
+  c3_d   wai_d[5];              //  this interval: peeks that followed work
+                                //  at once, the sum and the most of the
+                                //  bound on their wait; events that did;
+                                //  the longest run of work
+  c3_d   hol_d[4];              //  effects this interval: events released,
+                                //  microseconds held, the longest hold,
+                                //  times any were released
+  c3_d   las_d;                 //  the last event computed, microseconds
+  c3_d   van_d[27][3];          //  [vane a-z, other] events this interval,
+                                //  their microseconds, the longest
+  c3_d   vat_d[27];             //  [vane] the longest's card tag
+  c3_d   cru_d[8][3];           //  [cause] first failures this interval,
+                                //  their microseconds, those recovered
+  c3_d   flt_d[2][2];           //  page faults (minor, major) so far, at
+                                //  the last save's end and this save's start
   c3_y*  alf_y;                 //  [pag] page records and allocation:
                                 //        1: dirtied by a free's page
                                 //           record this interval
@@ -204,6 +234,92 @@ static struct {
                                 //        4: first written by a chunk
                                 //           allocation this interval
 } _ce_meas;
+
+/* _ce_meas_us(): wall-clock microseconds.
+*/
+static c3_d
+_ce_meas_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
+/* _CE_MEAS_BACK: a message seen within this many microseconds of the
+**                last task's end counts as having followed it at once.
+*/
+#define _CE_MEAS_BACK  2000
+
+/* _ce_meas_gap(): [now_d] less [was_d], or 0 if a count fell.
+**
+**   on macos, getrusage()'s minor faults are the task's faults less
+**   its page-ins, and one fault can page in a cluster. so the count
+**   falls when page-ins outrun faults, as they do during a save.
+*/
+static c3_d
+_ce_meas_gap(c3_d now_d, c3_d was_d)
+{
+  return ( now_d > was_d ) ? (now_d - was_d) : 0;
+}
+
+/* _ce_cru_names: causes of an event's first failure (u3e_measure_crud()).
+*/
+static const c3_c* _ce_cru_names[8] = {
+  "exit", "meme", "alrm", "intr", "over", "oops", "evil", "other"
+};
+
+/* _ce_meas_load(): the host's 1-minute load average, times 100.
+*/
+static c3_d
+_ce_meas_load(void)
+{
+#ifndef U3_OS_windows
+  double lod_f;
+
+  if ( 1 == getloadavg(&lod_f, 1) ) {
+    return (c3_d)(lod_f * 100.0);
+  }
+#endif
+  return 0;
+}
+
+/* _ce_meas_cpus(): processors online on the host, or 0.
+*/
+static c3_w
+_ce_meas_cpus(void)
+{
+#ifdef U3_OS_windows
+  SYSTEM_INFO inf_u;
+
+  GetSystemInfo(&inf_u);
+  return (c3_w)inf_u.dwNumberOfProcessors;
+#else
+  long num_i = sysconf(_SC_NPROCESSORS_ONLN);
+
+  return ( num_i > 0 ) ? (c3_w)num_i : 0;
+#endif
+}
+
+/* _ce_meas_faults(): the process's page faults so far: minor (no I/O)
+**                    and major (read from disk). zeros on windows.
+*/
+static void
+_ce_meas_faults(c3_d* flt_d)
+{
+  flt_d[0] = flt_d[1] = 0;
+
+#ifndef U3_OS_windows
+  {
+    struct rusage rus_u;
+
+    if ( !getrusage(RUSAGE_SELF, &rus_u) ) {
+      flt_d[0] = (c3_d)rus_u.ru_minflt;
+      flt_d[1] = (c3_d)rus_u.ru_majflt;
+    }
+  }
+#endif
+}
 
 /* _ce_meas_readable(): yes if loom word [som_p] can be read safely.
 */
@@ -408,16 +524,16 @@ _ce_meas_mem(c3_d* res_d, c3_d* ano_d, c3_d* fil_d, c3_d* swp_d)
 static void
 _ce_meter_zero(void)
 {
-  c3_d cap_d[2], max_d[2];
+  c3_d cap_d[7], max_d[7];
   c3_w i_w;
 
-  for ( i_w = 0; i_w < 2; i_w++ ) {
+  for ( i_w = 0; i_w < 7; i_w++ ) {
     cap_d[i_w] = u3e_Meter.cib_u[i_w].cap_d;
     max_d[i_w] = u3e_Meter.cib_u[i_w].max_d;
   }
   memset(&u3e_Meter, 0, sizeof(u3e_Meter));
 
-  for ( i_w = 0; i_w < 2; i_w++ ) {
+  for ( i_w = 0; i_w < 7; i_w++ ) {
     u3e_Meter.cib_u[i_w].cap_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].top_d = cap_d[i_w];
     u3e_Meter.cib_u[i_w].max_d = max_d[i_w];
@@ -428,7 +544,7 @@ _ce_meter_zero(void)
 **   formats are listed in measure-report.py; keep it in step.
 */
 static void
-_ce_meas_save(c3_w pgs_w, c3_w sip_w)
+_ce_meas_save(c3_w pgs_w, c3_w sip_w, c3_d bef_d)
 {
   FILE* fil_u = _ce_meas.fil_u;
   c3_w  i_w, j_w, k_w;
@@ -440,6 +556,119 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   fprintf(fil_u, "S %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
                  (c3_d)u3A->eve_d, (c3_d)time(0),
                  (c3_d)pgs_w, (c3_d)sip_w, _ce_meas.tak_d);
+
+  //  J: events computed, failed events and peeks: count and
+  //  microseconds of each; the longest event; and how long this save
+  //  took, up to here (the serf does no work meanwhile)
+  //
+  fprintf(fil_u, "J %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
+                 _ce_meas.wok_d[u3e_wok_poke][0], _ce_meas.wok_d[u3e_wok_poke][1],
+                 _ce_meas.wok_d[u3e_wok_fail][0], _ce_meas.wok_d[u3e_wok_fail][1],
+                 _ce_meas.wok_d[u3e_wok_peek][0], _ce_meas.wok_d[u3e_wok_peek][1],
+                 _ce_meas.lon_d, _ce_meas_us() - bef_d);
+
+  //  ...and page faults, minor then major: between the last save and
+  //  this one (a save maps the image again, so everything the ship
+  //  uses is faulted back in), then during this save
+  //
+  {
+    c3_d now_d[2];
+
+    _ce_meas_faults(now_d);
+    fprintf(fil_u, " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                   _ce_meas_gap(_ce_meas.flt_d[1][0], _ce_meas.flt_d[0][0]),
+                   _ce_meas_gap(_ce_meas.flt_d[1][1], _ce_meas.flt_d[0][1]),
+                   _ce_meas_gap(now_d[0], _ce_meas.flt_d[1][0]),
+                   _ce_meas_gap(now_d[1], _ce_meas.flt_d[1][1]));
+    _ce_meas.flt_d[0][0] = now_d[0];
+    _ce_meas.flt_d[0][1] = now_d[1];
+  }
+
+  //  w: tasks that waited. a message seen within _CE_MEAS_BACK of the
+  //  last task's end (or a save's) was most likely queued behind it,
+  //  and a run is tasks so joined. peeks that followed work at once,
+  //  and the sum and the most of the bound on their wait (from the
+  //  run's start to when the peek was seen); events that followed work
+  //  at once; the longest run; the longest peek; and the host's
+  //  1-minute load average, times 100 (0 on windows), and its
+  //  processors online
+  //
+  fprintf(fil_u, "w %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 _ce_meas.wai_d[0], _ce_meas.wai_d[1], _ce_meas.wai_d[2],
+                 _ce_meas.wai_d[3], _ce_meas.wai_d[4], _ce_meas.pek_d,
+                 _ce_meas_load(), (c3_d)_ce_meas_cpus());
+
+  //  c: effects held for the log. an event's effects go to the king
+  //  only once the event is committed, and the serf sees a commit only
+  //  between tasks. events whose effects were released, the
+  //  microseconds between computing each and releasing its effects,
+  //  the longest such, and the times any were released (so events per
+  //  release is the size of a batch)
+  //
+  fprintf(fil_u, "c %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                 _ce_meas.hol_d[0], _ce_meas.hol_d[1],
+                 _ce_meas.hol_d[2], _ce_meas.hol_d[3]);
+
+  //  v: events computed, by the vane their wire names (- for none,
+  //  as on a %crud): how many, their microseconds, the longest, and
+  //  the longest's card tag
+  //
+  for ( i_w = 0; i_w < 27; i_w++ ) {
+    if ( _ce_meas.van_d[i_w][0] ) {
+      c3_c tag_c[9];
+
+      for ( j_w = 0; j_w < 8; j_w++ ) {
+        c3_y byt_y = (c3_y)(_ce_meas.vat_d[i_w] >> (8 * j_w));
+
+        if ( !byt_y ) {
+          break;
+        }
+        tag_c[j_w] = (  ((byt_y >= 'a') && (byt_y <= 'z'))
+                     || ((byt_y >= '0') && (byt_y <= '9'))
+                     || ('-' == byt_y) ) ? (c3_c)byt_y : '?';
+      }
+      if ( !j_w ) {
+        tag_c[j_w++] = '-';
+      }
+      tag_c[j_w] = 0;
+
+      fprintf(fil_u, "v %c %" PRIu64 " %" PRIu64 " %" PRIu64 " %s\n",
+                     ( 26 == i_w ) ? '-' : (c3_c)('a' + i_w),
+                     _ce_meas.van_d[i_w][0], _ce_meas.van_d[i_w][1],
+                     _ce_meas.van_d[i_w][2], tag_c);
+    }
+  }
+
+  //  x: events whose first attempt failed, by cause: how many, the
+  //  microseconds the failed attempts took, and how many were then
+  //  recovered (the %crud computed, and was logged in the event's
+  //  place). the J line counts a recovered event as computed, and
+  //  as failed only one that left nothing in the log
+  //
+  for ( i_w = 0; i_w < 8; i_w++ ) {
+    if ( _ce_meas.cru_d[i_w][0] ) {
+      fprintf(fil_u, "x %s %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     _ce_cru_names[i_w], _ce_meas.cru_d[i_w][0],
+                     _ce_meas.cru_d[i_w][1], _ce_meas.cru_d[i_w][2]);
+    }
+  }
+
+  //  the save is work too: a message that came in during it waited
+  //
+  _ce_meas.end_d = _ce_meas_us();
+
+  //  Q 0 (a Q line whose first field is 0 is not a sample): the G and
+  //  Y lines by kind. gains deferred on atoms and of those cancelled;
+  //  alignment's references to atoms and of those at the same
+  //  position; home nouns the effects reference and of those atoms
+  //
+  fprintf(fil_u, "Q 0 %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                 " %" PRIu64 " %" PRIu64 "\n",
+                 u3e_Meter.dfa_d, u3e_Meter.dfb_d,
+                 u3e_Meter.ala_d, u3e_Meter.alp_d,
+                 u3e_Meter.fec_d, u3e_Meter.fea_d);
 
   for ( i_w = 0; i_w < u3e_pha_max; i_w++ ) {
     for ( j_w = 0; j_w < _ce_kin_max; j_w++ ) {
@@ -497,8 +726,14 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3h_wyt(rod_u->byc.har_p), u3h_wyt(rod_u->cax.per_p),
                    u3h_wyt(rod_u->cax.for_p), u3h_wyt(rod_u->dup_p),
                    u3h_wyt(rod_u->cax.har_p), _ce_meas_map_wyt(u3A->yot));
-    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
-                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d);
+    //  C: u3m_reclaim() calls and what they cleared; two retired
+    //  fields (older logs: the dedup prune); then bytecode cap clears
+    //  and the programs they cleared, which u3m_reclaim() doesn't see
+    //
+    fprintf(fil_u, "C %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " 0 0 %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.rec_d, u3e_Meter.rcb_d, u3e_Meter.rch_d,
+                   u3e_Meter.rcc_d, u3e_Meter.rcp_d);
 
     //  bytecode programs: the home table now (count, bytes, formulas only
     //  their key holds), programs looked up from it, and compiles and
@@ -522,7 +757,7 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
       c3_d vat_d, cel_d, byt_d;
       c3_w i_w;
 
-      u3m_dedup_stat(&vat_d, &cel_d, &byt_d);
+      u3m_sole_stat(&vat_d, &cel_d, &byt_d);
       fprintf(fil_u, "H %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      vat_d, cel_d, byt_d,
@@ -539,16 +774,26 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
     //  on-loom table would have written; faults in the last rebuild
     //
     {
-      c3_d buc_d, pag_d;
+      c3_d buc_d, pag_d, tab_d[6];
 
-      u3m_dedup_meas(&buc_d, &pag_d);
+      u3m_sole_meas(&buc_d, &pag_d);
+      u3m_sole_tab_meas(tab_d);
       fprintf(fil_u, "D %" PRIu64 " %" PRIu64 " %" PRIu64
                      " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
-                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                     " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
                      u3e_Meter.hcp_d[0], u3e_Meter.hcp_d[1], u3e_Meter.hcp_d[2],
                      u3e_Meter.hch_d[0], u3e_Meter.hch_d[1],
                      u3e_Meter.hch_d[2], u3e_Meter.hch_d[3],
                      buc_d, pag_d, u3e_Meter.hcf_d[0], u3e_Meter.hcf_d[1]);
+
+      //  the set's tables: lookup steps, members compared, resizes
+      //  between events and at the limit, time resizing (us), the
+      //  largest distance
+      //
+      for ( c3_w i_w = 0; i_w < 6; i_w++ ) {
+        fprintf(fil_u, " %" PRIu64, tab_d[i_w]);
+      }
+      fputc('\n', fil_u);
     }
 
     //  deferred gains across the state swap
@@ -593,13 +838,44 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
                    u3e_Meter.wlp_d[1], u3e_Meter.wlf_d[1], u3e_Meter.wll_d[1],
                    u3e_Meter.wlm_d[1], u3e_Meter.wlx_d[1], u3e_Meter.wlc_d);
 
-    //  cribs, one line each
+    //  canonicalizing on inner roads (u3m_sole_try())
     //
-    {
-      static const c3_c* nam_c[2] = { "visited-set", "lose-list" };
+    fprintf(fil_u, "I %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 "\n",
+                   u3e_Meter.eic_d[0], u3e_Meter.eic_d[1],
+                   u3e_Meter.eij_d, u3e_Meter.eiv_d,
+                   u3e_Meter.eih_d[0], u3e_Meter.eih_d[1]);
 
-      for ( i_w = 0; i_w < 2; i_w++ ) {
-        if ( u3e_Meter.cib_u[i_w].cap_d ) {
+    //  exits to home: the canonicalizing take, time; then the pass
+    //  after the takes: exits with one, its time in all and the most
+    //  at one exit, and slots repointed and words freed by the take
+    //  that noted the noun
+    //
+    fprintf(fil_u, "Z %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64
+                   " %" PRIu64 " %" PRIu64 " %" PRIu64,
+                   u3e_Meter.ctk_d, u3e_Meter.ctf_d, u3e_Meter.ctr_d,
+                   u3e_Meter.cus_d[0], u3e_Meter.cus_d[1],
+                   u3e_Meter.cam_d[0], u3e_Meter.cam_d[1],
+                   u3e_Meter.cmn_d, u3e_Meter.cmu_d[0], u3e_Meter.cmu_d[1]);
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cms_d[i_w]);
+    }
+    for ( i_w = 0; i_w < 4; i_w++ ) {
+      fprintf(fil_u, " %" PRIu64, u3e_Meter.cmw_d[i_w]);
+    }
+    fputc('\n', fil_u);
+
+    //  cribs, the yards' users and the yards, one line each
+    //
+    u3m_yard_meas();
+    {
+      static const c3_c* nam_c[7] = { "visited-set", "lose-list", "notes",
+                                      "home-marks", "walk-frames",
+                                      "yard-scratch", "yard-result" };
+
+      for ( i_w = 0; i_w < 7; i_w++ ) {
+        if ( u3e_Meter.cib_u[i_w].max_d ) {
           fprintf(fil_u, "N %s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
                          " %" PRIu64 "\n",
@@ -619,10 +895,62 @@ _ce_meas_save(c3_w pgs_w, c3_w sip_w)
   _ce_meter_zero();
   _ce_meas.uns_d = 0;
   _ce_meas.tak_d = 0;
+  memset(_ce_meas.wok_d, 0, sizeof(_ce_meas.wok_d));
+  memset(_ce_meas.wai_d, 0, sizeof(_ce_meas.wai_d));
+  memset(_ce_meas.cru_d, 0, sizeof(_ce_meas.cru_d));
+  memset(_ce_meas.hol_d, 0, sizeof(_ce_meas.hol_d));
+  memset(_ce_meas.van_d, 0, sizeof(_ce_meas.van_d));
+  memset(_ce_meas.vat_d, 0, sizeof(_ce_meas.vat_d));
+  _ce_meas.lon_d = 0;
+  _ce_meas.pek_d = 0;
 
   for ( i_w = 0; i_w < _ce_meas.pag_w; i_w++ ) {
     _ce_meas.fla_y[i_w] &= ~(c3_y)3;
   }
+}
+
+/* u3e_measure_effect(): at the end of a poke, on the event's road,
+**                       count the home nouns its effects [fec]
+**                       reference from cells on this road. the take
+**                       gains these too, and u3e_measure_align() walks
+**                       only the state.
+*/
+void
+u3e_measure_effect(u3_noun fec)
+{
+  u3_noun* sac_u;
+  c3_w     len_w = 0, cap_w = 1024;
+
+  if ( !_ce_meas.on_t ) return;
+
+  //  effects are a tree far smaller than the state; cells on this
+  //  road that are shared are walked again, which overcounts a little
+  //
+  sac_u = c3_malloc(cap_w * sizeof(*sac_u));
+  sac_u[len_w++] = fec;
+
+  while ( len_w ) {
+    u3_noun n = sac_u[--len_w];
+
+    if ( c3y == u3a_is_cat(n) ) continue;
+
+    if ( c3y == u3a_is_senior(u3R, n) ) {
+      u3e_Meter.fec_d++;
+      if ( c3n == u3a_is_cell(n) ) u3e_Meter.fea_d++;
+      continue;
+    }
+
+    if ( c3n == u3a_is_cell(n) ) continue;
+
+    if ( (len_w + 2) > cap_w ) {
+      cap_w *= 2;
+      sac_u = c3_realloc(sac_u, cap_w * sizeof(*sac_u));
+    }
+    sac_u[len_w++] = u3h(n);
+    sac_u[len_w++] = u3t(n);
+  }
+
+  c3_free(sac_u);
 }
 
 /* u3e_measuring(): measurement is on.
@@ -673,9 +1001,13 @@ u3e_measure_align(u3_noun new, u3_noun old)
     if ( c3y == u3a_is_cat(n) ) continue;
 
     if ( c3y == u3a_is_senior(u3R, n) ) {
+      c3_t atm_t = ( c3n == u3a_is_cell(n) );
+
       u3e_Meter.aln_all_d++;
+      if ( atm_t ) u3e_Meter.ala_d++;
       if ( n == o ) {
         u3e_Meter.aln_pos_d++;
+        if ( atm_t ) u3e_Meter.alp_d++;
         if ( aln_u.exc_t ) u3e_Meter.aln_exc_d++;
       }
       continue;
@@ -843,6 +1175,17 @@ u3e_measure_ms(void)
   return ((c3_d)tim_u.tv_sec * 1000) + ((c3_d)tim_u.tv_usec / 1000);
 }
 
+/* u3e_measure_us(): wall-clock microseconds, for short steps.
+*/
+c3_d
+u3e_measure_us(void)
+{
+  struct timeval tim_u;
+
+  gettimeofday(&tim_u, 0);
+  return ((c3_d)tim_u.tv_sec * 1000000) + (c3_d)tim_u.tv_usec;
+}
+
 /* _ce_meas_op(): write an O line: time, event, operation, why, melt
 **                options, milliseconds taken, words freed (negative
 **                if the operation shrank free space, as a melt can).
@@ -924,6 +1267,157 @@ u3e_measure_note(const c3_c* dir_c,
   fclose(fil_u);
 }
 
+/* u3e_dirty(): pages written since the last save, free pages included.
+**              call on the home road.
+*/
+c3_w
+u3e_dirty(void)
+{
+  u3_post low_p, hig_p;
+  c3_w    max_w, blk_w, bit_w, i_w, num_w = 0;
+
+  //  pages past the heap are marked dirty, but hold nothing
+  //
+  u3m_water(&low_p, &hig_p);
+  max_w = (low_p + (_ce_len_words(1) - 1)) >> u3a_page;
+  if ( max_w > u3P.pag_w ) max_w = u3P.pag_w;
+
+  blk_w = max_w >> u3a_chub_bits_log;
+  bit_w = max_w & (u3a_chub_bits - 1);
+
+  for ( i_w = 0; i_w < blk_w; i_w++ ) {
+    num_w += __builtin_popcountll(u3P.dit_d[i_w]);
+  }
+
+  if ( bit_w ) {
+    num_w += __builtin_popcountll(u3P.dit_d[blk_w] & (((c3_d)1 << bit_w) - 1));
+  }
+
+  return num_w;
+}
+
+/* u3e_measure_work(): the task just run took [use_d] microseconds.
+*/
+void
+u3e_measure_work(c3_w kin_w, c3_d use_d)
+{
+  if ( _ce_meas.on_t && (kin_w < u3e_wok_max) ) {
+    _ce_meas.wok_d[kin_w][0]++;
+    _ce_meas.wok_d[kin_w][1] += use_d;
+
+    if ( (u3e_wok_poke == kin_w) && (use_d > _ce_meas.lon_d) ) {
+      _ce_meas.lon_d = use_d;
+    }
+    if ( u3e_wok_poke == kin_w ) {
+      _ce_meas.las_d = use_d;
+    }
+    if ( (u3e_wok_peek == kin_w) && (use_d > _ce_meas.pek_d) ) {
+      _ce_meas.pek_d = use_d;
+    }
+
+    if ( _ce_meas.bak_t ) {
+      if ( u3e_wok_peek == kin_w ) {
+        c3_d bon_d = _ce_meas.sen_d - _ce_meas.run_d;
+
+        _ce_meas.wai_d[0]++;
+        _ce_meas.wai_d[1] += bon_d;
+        if ( bon_d > _ce_meas.wai_d[2] ) {
+          _ce_meas.wai_d[2] = bon_d;
+        }
+      }
+      else {
+        _ce_meas.wai_d[3]++;
+      }
+      _ce_meas.bak_t = 0;
+    }
+  }
+}
+
+/* u3e_measure_hold(): an event's effects were released.
+*/
+void
+u3e_measure_hold(c3_d use_d, c3_o fir_o)
+{
+  if ( _ce_meas.on_t ) {
+    _ce_meas.hol_d[0]++;
+    _ce_meas.hol_d[1] += use_d;
+    if ( use_d > _ce_meas.hol_d[2] ) {
+      _ce_meas.hol_d[2] = use_d;
+    }
+    if ( c3y == fir_o ) {
+      _ce_meas.hol_d[3]++;
+    }
+  }
+}
+
+/* u3e_measure_vane(): the event just computed was [ovo].
+*/
+void
+u3e_measure_vane(u3_noun ovo)
+{
+  if ( _ce_meas.on_t && (c3y == u3du(ovo)) ) {
+    u3_noun wir = u3h(ovo);
+    u3_noun cad = u3t(ovo);
+    u3_noun van = ( c3y == u3du(wir) ) ? u3h(wir) : 0;
+    u3_noun tag = ( c3y == u3du(cad) ) ? u3h(cad) : cad;
+    c3_w  idx_w = ( (van >= 'a') && (van <= 'z') ) ? (c3_w)(van - 'a') : 26;
+
+    _ce_meas.van_d[idx_w][0]++;
+    _ce_meas.van_d[idx_w][1] += _ce_meas.las_d;
+
+    if ( _ce_meas.las_d >= _ce_meas.van_d[idx_w][2] ) {
+      _ce_meas.van_d[idx_w][2] = _ce_meas.las_d;
+      _ce_meas.vat_d[idx_w]    = ( c3y == u3ud(tag) ) ? u3r_chub(0, tag) : 0;
+    }
+  }
+}
+
+/* u3e_measure_crud(): an event's first attempt failed with [mot].
+*/
+void
+u3e_measure_crud(u3_noun mot, c3_d use_d, c3_o rec_o)
+{
+  if ( _ce_meas.on_t ) {
+    c3_w kin_w;
+
+    switch ( mot ) {
+      case c3__exit: kin_w = 0; break;
+      case c3__meme: kin_w = 1; break;
+      case c3__alrm: kin_w = 2; break;
+      case c3__intr: kin_w = 3; break;
+      case c3__over: kin_w = 4; break;
+      case c3__oops: kin_w = 5; break;
+      case c3__evil: kin_w = 6; break;
+      default:       kin_w = 7; break;
+    }
+
+    _ce_meas.cru_d[kin_w][0]++;
+    _ce_meas.cru_d[kin_w][1] += use_d;
+    if ( c3y == rec_o ) {
+      _ce_meas.cru_d[kin_w][2]++;
+    }
+  }
+}
+
+/* u3e_measure_seen(): a message has come off the pipe.
+*/
+void
+u3e_measure_seen(void)
+{
+  if ( _ce_meas.on_t ) {
+    c3_d now_d = _ce_meas_us();
+
+    _ce_meas.bak_t = _ce_meas.end_d
+                  && (now_d >= _ce_meas.end_d)
+                  && ((now_d - _ce_meas.end_d) < _CE_MEAS_BACK);
+
+    if ( !_ce_meas.bak_t ) {
+      _ce_meas.run_d = now_d;
+    }
+    _ce_meas.sen_d = now_d;
+  }
+}
+
 /* u3e_measure_event(): record pages changed by the task just completed.
 */
 void
@@ -934,6 +1428,34 @@ u3e_measure_event(c3_d eve_d, const c3_c* tag_c)
   }
 
   _ce_meas.tak_d++;
+
+  //  the task's end, and the run of work it ends so far (not in replay,
+  //  where no message is seen)
+  //
+  if ( _ce_meas.sen_d ) {
+    _ce_meas.end_d = _ce_meas_us();
+
+    if (  (_ce_meas.end_d >= _ce_meas.run_d)
+       && ((_ce_meas.end_d - _ce_meas.run_d) > _ce_meas.wai_d[4]) )
+    {
+      _ce_meas.wai_d[4] = _ce_meas.end_d - _ce_meas.run_d;
+    }
+  }
+
+  //  Q: a sample of the interval so far, at each power of two tasks:
+  //  tasks, events computed and their microseconds, microseconds of
+  //  failed events and of peeks, dirty pages
+  //
+  if ( !(_ce_meas.tak_d & (_ce_meas.tak_d - 1)) ) {
+    fprintf(_ce_meas.fil_u, "Q %" PRIu64 " %" PRIu64 " %" PRIu64
+                            " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n",
+                            _ce_meas.tak_d,
+                            _ce_meas.wok_d[u3e_wok_poke][0],
+                            _ce_meas.wok_d[u3e_wok_poke][1],
+                            _ce_meas.wok_d[u3e_wok_fail][1],
+                            _ce_meas.wok_d[u3e_wok_peek][1],
+                            (c3_d)u3e_dirty());
+  }
 
   if ( !_ce_meas.has_t ) {
     return;
@@ -2348,9 +2870,16 @@ u3e_save(u3_post low_p, u3_post hig_p)
   u3_ce_patch* pat_u;
   c3_w old_w = u3P.img_u.pgs_w;
   c3_w sav_w, sip_w;
+  c3_d bef_d;
 
   if ( u3C.wag_h & u3o_dryrun ) {
     return;
+  }
+
+  bef_d = _ce_meas.on_t ? _ce_meas_us() : 0;
+
+  if ( _ce_meas.on_t ) {
+    _ce_meas_faults(_ce_meas.flt_d[1]);
   }
 
   //  XX discard hig_p and friends
@@ -2433,7 +2962,7 @@ u3e_save(u3_post low_p, u3_post hig_p)
     _ce_loom_mapf(u3P.img_u.fid_i, u3P.img_u.pgs_w, old_w);
   }
 
-  _ce_meas_save(sav_w, sip_w);
+  _ce_meas_save(sav_w, sip_w, bef_d);
 
   u3e_toss(low_p, hig_p);
 }
