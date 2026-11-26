@@ -213,7 +213,9 @@ _main_init(void)
   u3C.per_w = u3_Host.ops_u.per_w;
   u3_Host.ops_u.kno_h = DefaultKernel;
 
-  u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes */
+  u3_Host.ops_u.sap_h = 120;    /* aka 2 minutes of event computation */
+  u3_Host.ops_u.sad_h = 256;    /* MB dirty */
+  u3_Host.ops_u.sat_h = 16384;  /* tasks between checks of dirty memory */
 #ifdef VERE64
   u3_Host.ops_u.lut_y = 34;     /* aka 16G */
 #else
@@ -311,6 +313,8 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "http-port",           required_argument, NULL, c3__http },
     { "https-port",          required_argument, NULL, c3__htls },
     { "snap-time",           required_argument, NULL, c3__snap },
+    { "snap-dirty",          required_argument, NULL, c3__sndi },
+    { "snap-tasks",          required_argument, NULL, c3__snta },
     { "no-conn",             no_argument,       NULL, c3__noco },
     { "no-dock",             no_argument,       NULL, c3__nodo },
     { "quiet",               no_argument,       NULL, 'q' },
@@ -449,6 +453,22 @@ _main_getopt(c3_i argc, c3_c** argv)
           if ( 0 == u3_Host.ops_u.sap_h )
             return c3n;
         }
+        break;
+      }
+      case c3__sndi: {
+        if ( c3n == _main_readw(optarg, 1 << 30, &arg_h) ) {
+          return c3n;
+        }
+        u3_Host.ops_u.sad_h = arg_h;
+        break;
+      }
+      case c3__snta: {
+        if (  (c3n == _main_readw(optarg, 1 << 30, &arg_h))
+           || (0 == arg_h) )
+        {
+          return c3n;
+        }
+        u3_Host.ops_u.sat_h = arg_h;
         break;
       }
       //  opts with args
@@ -907,7 +927,9 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-p, --ames-port PORT          Set the ames port to bind to\n",
     "    --http-port PORT          Set the http port to bind to\n",
     "    --https-port PORT         Set the https port to bind to\n",
-    "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
+    "    --snap-time TIME          Snapshot after TIME minutes of event computation (> 0)\n",
+    "    --snap-dirty MB           Also snapshot once MB of the loom is dirty (0: never)\n",
+    "    --snap-tasks N            Check for dirty memory every N tasks (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-S, --skip-battery-hashes     Disable battery hashing\n",
@@ -3124,6 +3146,8 @@ _cw_work(c3_i argc, c3_c* argv[])
       { "ephemeral-file",        required_argument, NULL, 'e' },
       { "loom",                  required_argument, NULL, 'l' },
       { "snap-time",             required_argument, NULL, 'n' },
+      { "snap-dirty",            required_argument, NULL, 'd' },
+      { "snap-tasks",            required_argument, NULL, 'a' },
       { "persistent-cache-size", required_argument, NULL, 'p' },
       { "runtime-config",        required_argument, NULL, 'r' },
       { "snap-dir",              required_argument, NULL, 's' },
@@ -3136,10 +3160,18 @@ _cw_work(c3_i argc, c3_c* argv[])
     };
 
     while ( -1 != (ch_i=getopt_long(argc, argv,
-                   "c:e:k:l:n:p:r:s:t:u:w:z:",
+                   "a:c:d:e:k:l:n:p:r:s:t:u:w:z:",
                    lop_u, &lid_i) ))
     {
       switch ( ch_i ) {
+        case 'a': {  //  snap-tasks
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.sat_h);
+          break;
+        }
+        case 'd': {  //  snap-dirty
+          sscanf(optarg, "%" SCNu32, &u3_Host.ops_u.sad_h);
+          break;
+        }
         case 'c': {  //  temporary-cache-size
           sscanf(optarg, "%" SCNc3_w, &u3_Host.ops_u.hap_w);
           break;

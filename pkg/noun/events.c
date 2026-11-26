@@ -1054,16 +1054,19 @@ _ce_meas_head(FILE*       fil_u,
               const c3_c* who_c,
               const c3_c* mod_c,
               c3_d        sas_d,
-              c3_d        sae_d)
+              c3_d        sae_d,
+              c3_d        sad_d,
+              c3_d        sat_d)
 {
   fprintf(fil_u, "# measure v1 time=%" PRIu64
                  " word_bits=%u page_bytes=%" PRIu64
                  " pages=%" PRIu64 " event=%" PRIu64
                  " mode=%s snap_secs=%" PRIu64 " snap_events=%" PRIu64
+                 " snap_by=work snap_dirty_mb=%" PRIu64 " snap_tasks=%" PRIu64
                  " ship=%s vere=%s os=%s arch=%s\n",
                  (c3_d)time(0), (unsigned)u3a_word_bits,
                  (c3_d)_ce_page, (c3_d)pag_w, (c3_d)u3A->eve_d,
-                 mod_c, sas_d, sae_d,
+                 mod_c, sas_d, sae_d, sad_d, sat_d,
                  who_c ? who_c : "unknown",
                  ver_c ? ver_c : "unknown",
 #if   defined(U3_OS_linux)
@@ -1095,7 +1098,9 @@ u3e_measure_init(const c3_c* dir_c,
                  const c3_c* who_c,
                  const c3_c* mod_c,
                  c3_d        sas_d,
-                 c3_d        sae_d)
+                 c3_d        sae_d,
+                 c3_d        sad_d,
+                 c3_d        sat_d)
 {
   c3_c* env_c = getenv("U3_MEASURE");
 
@@ -1140,7 +1145,8 @@ u3e_measure_init(const c3_c* dir_c,
       _ce_meas.has_t = ( has_c && *has_c && ('0' != *has_c) );
     }
 
-    _ce_meas_head(_ce_meas.fil_u, pag_w, ver_c, who_c, mod_c, sas_d, sae_d);
+    _ce_meas_head(_ce_meas.fil_u, pag_w, ver_c, who_c, mod_c, sas_d, sae_d,
+                  sad_d, sat_d);
     fflush(_ce_meas.fil_u);
 
     //  keep the startup rebuild of the hashcons set, which ran before
@@ -1262,7 +1268,7 @@ u3e_measure_note(const c3_c* dir_c,
     return;
   }
 
-  _ce_meas_head(fil_u, u3P.pag_w, ver_c, who_c, "offline", 0, 0);
+  _ce_meas_head(fil_u, u3P.pag_w, ver_c, who_c, "offline", 0, 0, 0, 0);
   _ce_meas_op(fil_u, op_c, "offline", opt_w, bef_d, gan_w);
   fclose(fil_u);
 }

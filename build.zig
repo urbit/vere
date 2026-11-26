@@ -867,6 +867,11 @@ fn buildBinary(
                 .deps = vere_test_deps,
             },
             .{
+                .name = "mars-test",
+                .file = "pkg/vere/mars_tests.c",
+                .deps = vere_test_deps,
+            },
+            .{
                 .name = "vere-noun-test",
                 .file = "pkg/vere/noun_tests.c",
                 .deps = vere_test_deps,
@@ -903,6 +908,12 @@ fn buildBinary(
                 .win = true,
             },
         };
+
+        //  every test's executable, installed and not run: ci builds
+        //  them in one job and runs the files themselves, here or on
+        //  another machine (the windows ones are cross-compiled).
+        //
+        const test_bins = b.step("test-bins", "Build & install every test, without running any");
 
         for (tests) |tst| {
             if (tst.win and t.os.tag != .windows) continue;
@@ -970,6 +981,7 @@ fn buildBinary(
             run_unit_tests.skip_foreign_checks = true;
             test_step.dependOn(&run_unit_tests.step);
             test_step.dependOn(&exe_install.step);
+            test_bins.dependOn(&exe_install.step);
         }
     }
 }

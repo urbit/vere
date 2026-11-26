@@ -116,12 +116,12 @@ else
   arvo_dir="$workspace/urbit"
 
   if [ ! -f "$brass_pill" ]; then
-    curl -LJ -o "$brass_pill" \
+    curl -LJ --fail --retry 5 --retry-delay 10 -o "$brass_pill" \
       "https://github.com/urbit/urbit/raw/${ARVO_COMMIT}/bin/brass.pill"
   fi
 
   if [ ! -d "$arvo_dir" ]; then
-    curl -LJ -o "$workspace/urbit.tar.gz" \
+    curl -LJ --fail --retry 5 --retry-delay 10 -o "$workspace/urbit.tar.gz" \
       "https://github.com/urbit/urbit/archive/${ARVO_COMMIT}.tar.gz"
     mkdir "$arvo_dir"
 

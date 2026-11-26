@@ -629,7 +629,10 @@ _mars_work(u3_mars* mar_u, u3_noun jar)
       u3e_Phase = u3e_pha_poke;
       bef_d = uv_hrtime();
       if ( c3y == _mars_poke(mil_h, &job, &pro) ) {
-        u3e_measure_work(u3e_wok_poke, (uv_hrtime() - bef_d) / 1000);
+        c3_d use_d = (uv_hrtime() - bef_d) / 1000;
+
+        u3e_measure_work(u3e_wok_poke, use_d);
+        mar_u->sav_u.use_d += use_d;
         mar_u->dun_d = mar_u->sen_d;
         u3e_Phase = u3e_pha_mug_roc;
         mar_u->mug_h = u3r_mug(u3A->roc);
@@ -944,6 +947,8 @@ top:
     if ( u3_mars_save_e == mar_u->sat_e ) {
       u3m_save();
       mar_u->sav_u.eve_d = mar_u->dun_d;
+      mar_u->sav_u.use_d = 0;
+      mar_u->sav_u.tak_d = 0;
       _mars_gift(mar_u,
         u3nt(c3__sync, u3i_chub(mar_u->dun_d), mar_u->mug_h));
       mar_u->sat_e = u3_mars_work_e;
@@ -977,6 +982,44 @@ _mars_step_trace(const c3_c* dir_c)
     else if ( trace_cnt_w >= 100000 ) {
       u3t_trace_close();
       u3t_trace_open(dir_c);
+    }
+  }
+}
+
+/* _mars_save_due(): after a task, decide whether to snapshot.
+**
+**   a snapshot bounds two things, each measured in its own unit and
+**   neither by the clock: the replay after a crash, by the time
+**   spent computing the events since the last one; and memory that
+**   can only be swapped, by the pages dirty since. nothing changes
+**   either while the serf is idle, so there is no timer.
+**
+**   dirty pages are counted every [sat_h] tasks, so a threshold
+**   below what the ship rewrites after every snapshot costs at most
+**   one snapshot per [sat_h] tasks.
+*/
+static void
+_mars_save_due(u3_mars* mar_u)
+{
+  if ( u3_mars_work_e != mar_u->sat_e ) {
+    return;
+  }
+
+  if (  (mar_u->dun_d > mar_u->sav_u.eve_d)
+     && (mar_u->sav_u.use_d >= (1000000ULL * u3_Host.ops_u.sap_h)) )
+  {
+    mar_u->sat_e = u3_mars_save_e;
+  }
+  else if (  u3_Host.ops_u.sad_h
+          && (++mar_u->sav_u.tak_d >= u3_Host.ops_u.sat_h) )
+  {
+    c3_d max_d = ((c3_d)u3_Host.ops_u.sad_h << 20)
+                 >> (u3a_page + u3a_word_bytes_shift);
+
+    mar_u->sav_u.tak_d = 0;
+
+    if ( u3e_dirty() >= max_d ) {
+      mar_u->sat_e = u3_mars_save_e;
     }
   }
 }
@@ -1018,26 +1061,14 @@ u3_mars_kick(void* ram_u, c3_d len_d, c3_y* hun_y)
 
     u3e_measure_event(u3A->eve_d, ( eve_d != u3A->eve_d ) ? "poke" : "task");
 
+    _mars_save_due(mar_u);
+
     ret_o = c3y;
   }
 
   _mars_flush(mar_u);
 
   return ret_o;
-}
-
-/* _mars_timer_cb(): mars timer callback.
-*/
-static void
-_mars_timer_cb(uv_timer_t* tim_u)
-{
-  u3_mars* mar_u = tim_u->data;
-
-  if ( mar_u->dun_d > mar_u->sav_u.eve_d ) {
-    mar_u->sat_e = u3_mars_save_e;
-  }
-
-  _mars_flush(mar_u);
 }
 
 /* _mars_disk_cb(): mars commit result callback.
@@ -1381,8 +1412,9 @@ _mars_sign_close(void)
 }
 
 /* _mars_measure_init(): start measuring if U3_MEASURE is set, naming
-**                       the ship in the log. a live serf snapshots on
-**                       a timer; a replay every [sap_d] events, if any.
+**                       the ship in the log. a live serf snapshots by
+**                       work done (_mars_save_due()); a replay every
+**                       [sap_d] events, if any.
 */
 static void
 _mars_measure_init(u3_mars* mar_u, c3_d sap_d)
@@ -1419,7 +1451,9 @@ _mars_measure_init(u3_mars* mar_u, c3_d sap_d)
     u3e_measure_init(mar_u->dir_c, URBIT_VERSION, who_c,
                      liv_t ? "live" : "replay",
                      liv_t ? (c3_d)u3_Host.ops_u.sap_h : 0,
-                     liv_t ? 0 : sap_d);
+                     liv_t ? 0 : sap_d,
+                     liv_t ? (c3_d)u3_Host.ops_u.sad_h : 0,
+                     liv_t ? (c3_d)u3_Host.ops_u.sat_h : 0);
   }
   c3_free(who_c);
 }
@@ -1682,14 +1716,9 @@ u3_mars_work(u3_mars* mar_u)
 
   u3_disk_async(mar_u->log_u, mar_u, _mars_disk_cb);
 
-  uv_timer_init(u3L, &(mar_u->sav_u.tim_u));
-  uv_timer_start(&(mar_u->sav_u.tim_u),
-                 _mars_timer_cb,
-                 u3_Host.ops_u.sap_h * 1000,
-                 u3_Host.ops_u.sap_h * 1000);
-
   mar_u->sav_u.eve_d = mar_u->dun_d;
-  mar_u->sav_u.tim_u.data = mar_u;
+  mar_u->sav_u.use_d = 0;
+  mar_u->sav_u.tak_d = 0;
 }
 
 #define VERE_NAME  "vere"
