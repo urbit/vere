@@ -168,7 +168,7 @@ _conn_send_noun(u3_chan* can_u, u3_noun nun)
   c3_y* byt_y;
   c3_d  len_d;
 
-  u3s_jam_xeno(nun, &len_d, &byt_y);
+  u3s_ram_xeno(nun, &len_d, &byt_y);
   u3z(nun);
   u3_newt_send((u3_mojo*)&can_u->mor_u, len_d, byt_y);
 }

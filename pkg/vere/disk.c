@@ -136,20 +136,24 @@ u3_disk_etch(u3_disk* log_u,
   //  XX check version number in log_u
   //  XX needs api redesign to limit allocations
   //
+  //    the deterministic jam: the same event, the same bytes
+  //
   {
-    u3_atom mat = u3qe_jam(eve);
-    c3_w  len_w = u3r_met(3, mat);
+    c3_d  len_d;
+    c3_y* mat_y;
 
-    len_i = 4 + len_w;
+    u3s_jam_xeno(eve, &len_d, &mat_y);
+
+    len_i = 4 + len_d;
     dat_y = c3_malloc(len_i);
 
     dat_y[0] = mug_h & 0xff;
     dat_y[1] = (mug_h >> 8) & 0xff;
     dat_y[2] = (mug_h >> 16) & 0xff;
     dat_y[3] = (mug_h >> 24) & 0xff;
-    u3r_bytes(0, len_w, dat_y + 4, mat);
+    memcpy(dat_y + 4, mat_y, len_d);
 
-    u3z(mat);
+    c3_free(mat_y);
   }
 
 #ifdef DISK_TRACE_JAM

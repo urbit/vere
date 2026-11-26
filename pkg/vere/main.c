@@ -1041,7 +1041,7 @@ _cw_io_send(u3_noun pel)
   c3_d  len_d;
   c3_y* byt_y;
 
-  u3s_jam_xeno(pel, &len_d, &byt_y);
+  u3s_ram_xeno(pel, &len_d, &byt_y);
   u3_newt_send(&out_u, len_d, byt_y);
   u3z(pel);
 }

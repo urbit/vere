@@ -31,6 +31,7 @@
 #include "nock.h"
 #include "options.h"
 #include "retrieve.h"
+#include "serial.h"
 #include "trace.h"
 #include "urcrypt.h"
 #include "vortex.h"

@@ -6,9 +6,12 @@
 #include <fcntl.h>
 
 #include "allocate.h"
+#include "crib.h"
+#include "events.h"
 #include "hashtable.h"
 #include "jets/k.h"
 #include "jets/q.h"
+#include "log.h"
 #include "retrieve.h"
 #include "serial.h"
 #include "ur/ur.h"
@@ -230,11 +233,6 @@ u3s_jam_fib(u3i_slab* sab_u, u3_noun a)
   return fib_u.bit_w;
 }
 
-typedef struct _jam_xeno_s {
-  u3p(u3h_root) har_p;
-  ur_bsw_t      rit_u;
-} _jam_xeno_t;
-
 /* _cs_coin_chub(): shortcircuit u3i_chubs().
 */
 static inline u3_atom
@@ -263,63 +261,246 @@ _cs_jam_bsw_atom(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
   }
 }
 
-/* _cs_jam_bsw_back(): encode in/direct backref in bitstream.
+/*  backreferences, for u3s_jam_xeno() and u3s_ram_xeno().
+**
+**    a table maps each noun met to its position in the output:
+**    open-addressed with linear probing, at most half full, in an array
+**    off the loom (c3_calloc) made for each call. it takes no
+**    references: what it holds, and the walk's stack of tails, are held
+**    only by the noun being jammed. the tails are in the scratch yard
+**    (crib.h).
+**
+**    by value, for u3s_jam_xeno(): keyed by mug and compared with
+**    u3r_sing(), as +jam's table is, so the bytes are +jam's. the jam
+**    runs on a road of its own, where every noun it compares is senior:
+**    the equal ones u3r_sing() unifies lose their old values only when
+**    that road exits (u3a_wed()). on the road that called it, a
+**    unification could free a noun the table or the stack still holds.
+**    the jam still stores the mugs it computes, and the slots it
+**    unifies, in the noun.
+**
+**    by pointer, for u3s_ram_xeno(): keyed by address, so nouns equal
+**    in value but apart in memory are each written out, and the bytes
+**    depend on the noun's layout. nothing on the loom is read but the
+**    noun, or written.
+**
+**    a bail or a signal that unwinds either one leaks the table, as it
+**    does the output; the trap that catches it gives the tails back.
 */
-static inline void
-_cs_jam_bsw_back(ur_bsw_t* rit_u, c3_w met_w, u3_atom a)
-{
-  c3_d bak_d = ( c3y == u3a_is_cat(a) )
-             ? (c3_d)a
-             : u3r_chub(0, a);
+typedef struct {
+  u3_noun key;      //  noun
+  c3_h    has_h;    //  its mug, or its address's hash
+  c3_d    bit_d;    //  its position plus one; 0 if the slot is empty
+} _cs_jam_slot;
 
-  //  XX need a ur_bsw_back32()
-  //
-  ur_bsw_back64(rit_u, (c3_y)met_w, bak_d);
+typedef struct {
+  _cs_jam_slot* tab_u;  //  table
+  c3_w          cap_w;  //  slots, a power of two
+  c3_w          len_w;  //  slots filled
+  c3_t          val_t;  //  keyed by value
+  ur_bsw_t      rit_u;  //  output
+} _cs_jam_back;
+
+#define _CS_JAM_SLOTS  (1 << 10)
+
+/* _cs_ram_hash(): hash a noun's address.
+*/
+static inline c3_h
+_cs_ram_hash(u3_noun a)
+{
+  c3_d x_d = (c3_d)a;
+
+  x_d ^= x_d >> 33;
+  x_d *= 0xff51afd7ed558ccdULL;
+  x_d ^= x_d >> 33;
+  return (c3_h)x_d;
 }
 
-/* _cs_jam_xeno_atom(): encode atom or backref in bitstream.
+/* _cs_jam_find(): [a]'s slot, or the empty slot where it would go.
+*/
+static inline _cs_jam_slot*
+_cs_jam_find(_cs_jam_back* jam_u, u3_noun a, c3_h has_h)
+{
+  c3_w msk_w = jam_u->cap_w - 1;
+  c3_w idx_w = has_h & msk_w;
+
+  while ( 1 ) {
+    _cs_jam_slot* sot_u = &jam_u->tab_u[idx_w];
+
+    if (  !sot_u->bit_d
+       || (a == sot_u->key)
+       || (  jam_u->val_t
+          && (has_h == sot_u->has_h)
+          && (c3y == u3r_sing(a, sot_u->key)) ) )
+    {
+      return sot_u;
+    }
+    idx_w = (idx_w + 1) & msk_w;
+  }
+}
+
+/* _cs_jam_hole(): the empty slot for hash [has_h] in [tab_u]: for
+**   rehashing, where every key is new.
+*/
+static inline _cs_jam_slot*
+_cs_jam_hole(_cs_jam_slot* tab_u, c3_w cap_w, c3_h has_h)
+{
+  c3_w msk_w = cap_w - 1;
+  c3_w idx_w = has_h & msk_w;
+
+  while ( tab_u[idx_w].bit_d ) {
+    idx_w = (idx_w + 1) & msk_w;
+  }
+
+  return &tab_u[idx_w];
+}
+
+/* _cs_jam_fill(): rehash [old_w] slots at [tab_u] into an empty table.
 */
 static void
-_cs_jam_xeno_atom(u3_atom a, void* ptr_v)
+_cs_jam_fill(_cs_jam_slot* new_u, c3_w cap_w, _cs_jam_slot* tab_u, c3_w old_w)
 {
-  _jam_xeno_t* jam_u = ptr_v;
-  ur_bsw_t*    rit_u = &(jam_u->rit_u);
-  u3_weak        bak = u3h_git(jam_u->har_p, a);
-  c3_w         met_w = u3r_met(0, a);
+  c3_w i_w;
 
-  if ( u3_none == bak ) {
-    u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
-    _cs_jam_bsw_atom(rit_u, met_w, a);
-  }
-  else {
-    c3_w bak_w = u3r_met(0, bak);
-
-    if ( met_w <= bak_w ) {
-      _cs_jam_bsw_atom(rit_u, met_w, a);
-    }
-    else {
-      _cs_jam_bsw_back(rit_u, bak_w, bak);
+  for ( i_w = 0; i_w < old_w; i_w++ ) {
+    if ( tab_u[i_w].bit_d ) {
+      *_cs_jam_hole(new_u, cap_w, tab_u[i_w].has_h) = tab_u[i_w];
     }
   }
 }
 
-/* _cs_jam_xeno_cell(): encode cell or backref in bitstream.
+/* _cs_jam_grow(): double the table.
 */
-static c3_o
-_cs_jam_xeno_cell(u3_noun a, void* ptr_v)
+static void
+_cs_jam_grow(_cs_jam_back* jam_u)
 {
-  _jam_xeno_t* jam_u = ptr_v;
-  ur_bsw_t*    rit_u = &(jam_u->rit_u);
-  u3_weak        bak = u3h_git(jam_u->har_p, a);
+  c3_w          old_w = jam_u->cap_w;
+  c3_w          cap_w = old_w << 1;
+  _cs_jam_slot* new_u;
 
-  if ( u3_none == bak ) {
-    u3h_put(jam_u->har_p, a, _cs_coin_chub(rit_u->bits));
+  //  unreachable: the heap runs out first
+  //
+  u3_assert( cap_w > old_w );
+
+  new_u = c3_calloc((size_t)cap_w * sizeof(_cs_jam_slot));
+  _cs_jam_fill(new_u, cap_w, jam_u->tab_u, old_w);
+  c3_free(jam_u->tab_u);
+
+  jam_u->tab_u = new_u;
+  jam_u->cap_w = cap_w;
+}
+
+/* _cs_jam_look(): [a]'s position plus one, or 0 after entering it at
+**   the output's end.
+*/
+static inline c3_d
+_cs_jam_look(_cs_jam_back* jam_u, u3_noun a)
+{
+  c3_h          has_h = jam_u->val_t ? u3r_mug(a) : _cs_ram_hash(a);
+  _cs_jam_slot* sot_u = _cs_jam_find(jam_u, a, has_h);
+
+  if ( sot_u->bit_d ) {
+    return sot_u->bit_d;
+  }
+
+  sot_u->key   = a;
+  sot_u->has_h = has_h;
+  sot_u->bit_d = jam_u->rit_u.bits + 1;
+
+  if ( ++jam_u->len_w > (jam_u->cap_w >> 1) ) {
+    _cs_jam_grow(jam_u);
+  }
+
+  return 0;
+}
+
+/* _cs_jam_back_atom(): encode atom or backref.
+*/
+static inline void
+_cs_jam_back_atom(_cs_jam_back* jam_u, u3_atom a)
+{
+  ur_bsw_t* rit_u = &(jam_u->rit_u);
+  c3_w      met_w = u3r_met(0, a);
+  c3_d      bak_d = _cs_jam_look(jam_u, a);
+  c3_w      bak_w;
+
+  if ( bak_d ) {
+    bak_d--;
+    bak_w = c3_bits_chub(bak_d);
+
+    if ( met_w > bak_w ) {
+      ur_bsw_back64(rit_u, (c3_y)bak_w, bak_d);
+      return;
+    }
+  }
+
+  _cs_jam_bsw_atom(rit_u, met_w, a);
+}
+
+/* _cs_jam_back_cell(): encode cell or backref; c3y if its head and tail
+**   are to follow.
+*/
+static inline c3_o
+_cs_jam_back_cell(_cs_jam_back* jam_u, u3_noun a)
+{
+  ur_bsw_t* rit_u = &(jam_u->rit_u);
+  c3_d      bak_d = _cs_jam_look(jam_u, a);
+
+  if ( !bak_d ) {
     ur_bsw_cell(rit_u);
     return c3y;
   }
-  else {
-    _cs_jam_bsw_back(rit_u, u3r_met(0, bak), bak);
-    return c3n;
+
+  bak_d--;
+  ur_bsw_back64(rit_u, (c3_y)c3_bits_chub(bak_d), bak_d);
+  return c3n;
+}
+
+/* _cs_jam_walk(): encode [a], preorder, with the stack of tails in the
+**   scratch yard: a word for each cell whose head is under way, so never
+**   more than the yard reserves (a word per cell the loom can hold, see
+**   u3m_yard_size()) unless an enclosing user holds the difference.
+*/
+static void
+_cs_jam_walk(_cs_jam_back* jam_u, u3_noun a)
+{
+  u3a_yard* yar_u = &u3a_Yard_wok;
+  size_t    end_i = u3a_yard_here(yar_u);
+  size_t    bot_i;
+  u3_noun*  top;
+
+  //  align the end, so that a frame is the last [sizeof(u3_noun)]
+  //  bytes taken: an enclosing user may have left it anywhere. the end
+  //  goes back where it was
+  //
+  (void)u3a_yard_take(yar_u, 0, alignof(u3_noun));
+  bot_i = u3a_yard_here(yar_u);
+
+  while ( 1 ) {
+    if ( c3y == u3a_is_atom(a) ) {
+      _cs_jam_back_atom(jam_u, a);
+    }
+    else if ( c3y == _cs_jam_back_cell(jam_u, a) ) {
+      top = u3a_yard_take(yar_u, sizeof(u3_noun), alignof(u3_noun));
+
+      //  the yard is full, or the system has no memory to commit: as
+      //  fatal as a table that can't be allocated
+      //
+      u3_assert( top );
+
+      *top = u3t(a);
+      a    = u3h(a);
+      continue;
+    }
+
+    if ( u3a_yard_here(yar_u) > bot_i ) {
+      u3a_yard_give(yar_u, sizeof(u3_noun));
+      a = *(u3_noun*)(void*)(yar_u->buf_y + u3a_yard_here(yar_u));
+    }
+    else {
+      u3a_yard_back(yar_u, end_i);
+      return;
+    }
   }
 }
 
@@ -328,13 +509,42 @@ _cs_jam_xeno_cell(u3_noun a, void* ptr_v)
 c3_d
 u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
 {
-  _jam_xeno_t jam_u = {0};
+  _cs_jam_back jam_u = {0};
+
+  //  a road of its own, for what its comparisons unify (see above), and
+  //  nothing else: the jam takes no memory from it. no trap: a bail
+  //  goes on to the road that called it (u3m_bail())
+  //
+  u3m_hate(0);
+
+  jam_u.val_t = 1;
+  jam_u.cap_w = _CS_JAM_SLOTS;
+  jam_u.tab_u = c3_calloc((size_t)jam_u.cap_w * sizeof(_cs_jam_slot));
   ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
-  jam_u.har_p = u3h_new();
 
-  u3a_walk_fore(a, &jam_u, _cs_jam_xeno_atom, _cs_jam_xeno_cell);
+  _cs_jam_walk(&jam_u, a);
 
-  u3h_free(jam_u.har_p);
+  c3_free(jam_u.tab_u);
+  u3m_love(u3_nul);
+
+  return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
+}
+
+/* u3s_ram_xeno(): jam by pointer, with off-loom buffer (re-)allocation.
+*/
+c3_d
+u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y)
+{
+  _cs_jam_back jam_u = {0};
+
+  jam_u.cap_w = _CS_JAM_SLOTS;
+  jam_u.tab_u = c3_calloc((size_t)jam_u.cap_w * sizeof(_cs_jam_slot));
+  ur_bsw_init(&jam_u.rit_u, ur_fib11, ur_fib12);
+
+  _cs_jam_walk(&jam_u, a);
+
+  c3_free(jam_u.tab_u);
+
   return ur_bsw_done(&jam_u.rit_u, len_d, byt_y);
 }
 

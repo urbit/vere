@@ -29,10 +29,28 @@
         c3_w
         u3s_jam_fib(u3i_slab* sab_u, u3_noun a);
 
-      /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation.
+      /* u3s_jam_xeno(): jam with off-loom buffer (re-)allocation: +jam's
+      **                 bytes. it takes no references, and leaves
+      **                 nothing on the caller's road but the mugs and
+      **                 unified slots its comparisons store: it compares
+      **                 on a road of its own, with its table off the
+      **                 loom and its stack in the scratch yard (crib.h).
       */
         c3_d
         u3s_jam_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
+
+      /* u3s_ram_xeno(): jam by pointer, with off-loom buffer
+      **                 (re-)allocation: equal nouns apart in memory are
+      **                 each written out, so the bytes depend on the
+      **                 noun's layout, not only its value. they cue to
+      **                 the same noun, and are no longer than the noun
+      **                 is in memory. reads nothing on the loom but the
+      **                 noun, and writes nothing there, on any road.
+      **                 for bytes read once and thrown away (ipc); the
+      **                 event log and exports take u3s_jam_xeno().
+      */
+        c3_d
+        u3s_ram_xeno(u3_noun a, c3_d* len_d, c3_y** byt_y);
 
       /* u3s_cue(): cue [a]
       */
