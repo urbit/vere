@@ -25,3 +25,12 @@ jobs:
     with:
       pace: 'edge'
       upload: false
+
+  #  a dry run of the image: built from the binary the tests ran, and
+  #  run here. nothing is pushed, and no secrets are used.
+  docker:
+    needs: [urbit]
+    uses: ./.github/workflows/docker-shared.yml
+    with:
+      pace: 'edge'
+      push: false
