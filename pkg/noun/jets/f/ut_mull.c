@@ -8,12 +8,11 @@
 u3_noun
 u3wfu_mull(u3_noun cor)
 {
-  u3_noun bat, sut, gol, dox, gen, van;
+  u3_noun bat, sut, sam, rib, van;
 
-  if (  (c3n == u3r_mean(cor, {u3x_sam_2, &gol},
-                              {u3x_sam_6, &dox},
-                              {u3x_sam_7, &gen},
-                              {u3x_con, &van}))
+  if (  (c3n == u3r_mean(cor, {u3x_sam, &sam}, {u3x_con, &van}))
+     || (c3n == u3r_trel(sam, 0, 0, 0))
+     || (u3_none == (rib = u3r_at(u3qfu_van_rib, van)))
      || (u3_none == (bat = u3r_at(u3x_bat, van)))
      || (u3_none == (sut = u3r_at(u3x_sam, van))) )
   {
@@ -22,7 +21,9 @@ u3wfu_mull(u3_noun cor)
   else {
     u3_weak vet = u3r_at(u3qfu_van_vet, van);
     c3_m  fun_m = 141 + c3__mull + ((!!vet) << 8);
-    u3_noun key = u3z_key_5(fun_m, sut, gol, dox, gen, bat);
+    //  Wet arms consult rib, and a lazy core type can capture it.
+    //
+    u3_noun key = u3z_key_4(fun_m, sut, sam, rib, bat);
     u3_weak pro = u3z_find(u3z_memo_toss, key);
 
     if ( u3_none != pro ) {

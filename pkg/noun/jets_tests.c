@@ -1,6 +1,7 @@
 /// @file
 
 #include "noun.h"
+#include "jets/w.h"
 
 /* _setup(): prepare for tests.
 */
@@ -1102,6 +1103,29 @@ _test_lug(void)
 }
 
 static c3_i
+_test_mull_rib(void)
+{
+  //  A slot battery returns rib from the enclosing ut core.
+  //
+  c3_w axe_w = u3qc_peg(u3x_con, u3qfu_van_rib);
+  const c3_w val_w[] = {37, 38, 37};
+  c3_i ret_i = 1;
+
+  for ( c3_w i_w = 0; i_w < c3_array_len(val_w); i_w++ ) {
+    u3_noun rib = u3nt(u3nt(1, 2, val_w[i_w]), 0, 0);
+    u3_noun van = u3nq(0, 0, u3nt(0, rib, c3y), 0);
+    u3_noun cor = u3nt(u3nc(0, axe_w), u3nt(0, 0, 0), van);
+    u3_noun pro = u3wfu_mull(cor);
+
+    ret_i &= (c3y == u3r_sing(rib, pro));
+    u3z(pro);
+    u3z(cor);
+  }
+
+  return ret_i;
+}
+
+static c3_i
 _test_jets(void)
 {
   c3_i ret_i = 1;
@@ -1157,6 +1181,11 @@ _test_jets(void)
 
   if ( !_test_mas() ) {
     fprintf(stderr, "test jets: mas: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_mull_rib() ) {
+    fprintf(stderr, "test jets: mull_rib: failed\r\n");
     ret_i = 0;
   }
 
